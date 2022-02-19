@@ -282,14 +282,14 @@ void midiarp::addNote(tick_t start, arp_note_t& note, std::vector<noteevent_t>& 
         return;
     }
     if (retVal != 0) {
-        if (logProcessedNotes) {
+        if constexpr (logProcessedNotes) {
             log_lf(Log::L_DEBUG, "intersecting. ret val %d\n", retVal);
         }
     }
     heldOutputNotes.push_back(note);
 
     if (note.isHeld()) {
-        if (logProcessedNotes) {
+        if constexpr (logProcessedNotes) {
             log_lf(Log::L_DEBUG, "Block %d: %s ARP ON at %d = %d, arp enabled: %d\n", start, noteName(note.pitch), note.start() - start, note.start(), enable);
         }
         noteEvents.emplace_back(note.pitch, note.velocity, note.start() - start, note.start(), true, false);
@@ -325,7 +325,7 @@ void midiarp::initRandomDelays(tick_t tick, tick_t startFrame, tick_t endFrame, 
         }
 #endif
     }
-    if (logProcessedNotes) {
+    if constexpr (logProcessedNotes) {
         log_lf(Log::L_DEBUG, "@%s STEP %d STEPSIZE %d FIRST %s SEED %016llx VEL-SEED %016llx rndTime %d\n",
                    StringAsCStr(tickAsBeatString(tick)),
                    nextStep, stepSize, StringAsCStr(tickAsBeatString(processTimePoints[0])), stepSeed_u64, velocitySeed_u64, rndTime);
@@ -334,8 +334,8 @@ void midiarp::initRandomDelays(tick_t tick, tick_t startFrame, tick_t endFrame, 
 
 bool midiarp::isOutputNoteGateOn(const arp_note_t& noteHeldOut) {
     if (gateOutputNotes) {
-        return std::find_if(heldInput.cbegin(), heldInput.cend(), [&noteHeldOut](const arp_note_t& noteHeldIn) {
-                   return noteHeldIn.arpNoteUid == noteHeldOut.arpNoteUid;
+        return std::find_if(heldInput.cbegin(), heldInput.cend(), [arpnoteUid = noteHeldOut.arpNoteUid](const arp_note_t& noteHeldIn) {
+                   return noteHeldIn.arpNoteUid == arpnoteUid;
                }) != heldInput.cend();
     }
     return true;
@@ -352,11 +352,13 @@ int midiarp::endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopSt
             (forceLoopEndNotesOff || heldNoteOut.end() <= tick || heldNoteOut.end() < start || !isOutputNoteGateOn(heldNoteOut))) {
             auto tickOffsetInBlockEnd = math::min(end - start - 1, tick - start);
 
-            if (logProcessedNotes && heldNoteOut.isHeld()) {
-                if (forceLoopEndNotesOff) {
-                    log_lf(Log::L_DEBUG, "Block %d-%d: %s ARP Force OFF (LOOP END %d) at %d = %d\n", start, end, noteName(heldNoteOut.pitch), loopEnd, tickOffsetInBlockEnd, tick);
-                } else {
-                    log_lf(Log::L_DEBUG, "Block %d-%d: %s@%d ARP OFF at %d = %d\n", start, end, noteName(heldNoteOut.pitch), heldNoteOut.start(), tickOffsetInBlockEnd, tick);
+            if constexpr (logProcessedNotes) {
+                if (heldNoteOut.isHeld()) {
+                    if (forceLoopEndNotesOff) {
+                        log_lf(Log::L_DEBUG, "Block %d-%d: %s ARP Force OFF (LOOP END %d) at %d = %d\n", start, end, noteName(heldNoteOut.pitch), loopEnd, tickOffsetInBlockEnd, tick);
+                    } else {
+                        log_lf(Log::L_DEBUG, "Block %d-%d: %s@%d ARP OFF at %d = %d\n", start, end, noteName(heldNoteOut.pitch), heldNoteOut.start(), tickOffsetInBlockEnd, tick);
+                    }
                 }
             }
             if (tickOffsetInBlockEnd < 0) {
@@ -460,7 +462,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
 
         // handle on/off state changes
         if (this->enable != enabledBefore) {
-            if (logProcessedNotes) {
+            if constexpr (logProcessedNotes) {
                 log_lf(Log::L_DEBUG, "Block %d: ARP STATE CHANGED TO (%s) at %d = %d, %d heldinput, %d heldOutput\n", start, (enable ? "enabled" : "disabled"), tick - start, tick, heldInput.size(), heldOutputNotes.size());
             }
             // end incoming notes when arp was enabled. Restart incoming notes when arp has been disabled
@@ -469,7 +471,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
                     noteInHeld.setIsHeld(!enable);
                     noteevent_t noteEvt(noteInHeld.pitch, noteInHeld.velocity, tick - start, tick, !enable, false);
                     noteEventsProcessed.push_back(noteEvt);
-                    if (logProcessedNotes) {
+                    if constexpr (logProcessedNotes) {
                         log_lf(Log::L_DEBUG, "Block %d: %s ARP PASSTHRU heldIn %s at %d = %d\n", start, noteName(noteInHeld.pitch), (!enable ? "ON" : "OFF"), tick - start, tick);
                     }
                     nSend++;
@@ -484,7 +486,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
                         noteOutHeld.setIsHeld(enable);
                         noteevent_t noteEvt(noteOutHeld.pitch, noteOutHeld.velocity, tick - start, tick, enable, false);
                         noteEventsProcessed.push_back(noteEvt);
-                        if (logProcessedNotes) {
+                        if constexpr (logProcessedNotes) {
                             log_lf(Log::L_DEBUG, "Block %d: %s ARP PASSTRU heldOut %s at %d = %d\n", start, noteName(noteOutHeld.pitch), (enable ? "ON" : "OFF"), tick - start, tick);
                         }
                         nSend++;
@@ -517,7 +519,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
                     log_lf(Log::L_ERROR, "Arp received note off with the corresponding note_on missing %d\n", noteName(evt.pitch));
                 } else {
                     arp_note_t& arpInputNote = *it;
-                    if (logProcessedNotes) {
+                    if constexpr (logProcessedNotes) {
                         log_lf(Log::L_DEBUG, "Block %d: %s ARP INPUT OFF (HELD %s) at %d = %d\n", start, noteName(arpInputNote.pitch), (arpInputNote.isHeld() ? "ON" : "OFF"), tick - start, tick);
                     }
 #ifdef PLACE_MARKERS
@@ -555,7 +557,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
                     arpInputNote.setIsHeld(!enable);
                     arpInputNote.setEnabled(true);
                     arpInputNote.arpNoteUid = this->arpNoteUidCounter++;
-                    if (logProcessedNotes) {
+                    if constexpr (logProcessedNotes) {
                         log_lf(Log::L_DEBUG, "Block %d: %s ARP INPUT ON (HELD %s) at %d = %d\n", start, noteName(arpInputNote.pitch), (arpInputNote.isHeld() ? "ON" : "OFF"), tick - start, tick);
                     }
                     heldInput.push_back(arpInputNote);
@@ -572,7 +574,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
 
             // arp is disabled: pass thru events
             if (!enable) {
-                if (logProcessedNotes) {
+                if constexpr (logProcessedNotes) {
                     log_lf(Log::L_DEBUG, "Block %d: %s ARP PASSTRU evt %s at %d = %d\n", start, noteName(evt.pitch), (evt.isNoteOn ? "ON" : "OFF"), evt.tickOffsetInBlock, evt.globalTick);
                 }
                 noteEventsProcessed.push_back(evt);
@@ -583,7 +585,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
         const auto stepRecalc = (tick - resetTime) / stepSize;
 
 
-        if (logProcessedNotes) {
+        if constexpr (logProcessedNotes) {
             if (tick >= resetTime && (tick - resetTime) % stepSize == 0) {
                 if (DAW::isPlaybackState(state)) {
 #ifdef PLACE_MARKERS
