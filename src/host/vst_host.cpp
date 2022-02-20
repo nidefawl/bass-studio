@@ -26,10 +26,10 @@
 #include "appsettings.h"
 
 #include "logging.h"
+#include "audio_config.h"
 #include "audioblock.h"
 #include "audiobuffer.h"
 #include "platform.h"
-#include "audio_host.h"
 #include "midi_host.h"
 #include "midi-defs.h"
 #include "midi-msg.h"
@@ -177,23 +177,25 @@ public:
  */
 class vsthost::vsthost_impl {
 public:
-    std::vector<std::shared_ptr<resampler_t>> resamplers;
-
-    process_scratch_buf_t singleThreadedBuf;
     WorkerThread threads[MAX_AUDIOPROCESSING_THREADS];
     TrackBlockProcessTask tasks[MAX_AUDIOPROCESSING_THREADS];
-    int scanningState = 0;
-    std::unique_ptr<ProcessThread> vstscannerProcessThread;
+    std::vector<std::shared_ptr<resampler_t>> resamplers;
     std::map<uint32_t, std::shared_ptr<DelayLine>> delayLines;
     std::vector<thread_stats_process_timings_t> blockThreadStats;
     std::vector<thread_stats_process_timings_t> lastBlockThreadStats;
     std::vector<audiostageid_i32> waitingTasks;
     std::mutex mtx;
+    process_scratch_buf_t singleThreadedBuf;
+
+    std::shared_ptr<AudioIO::AudioStream> audioStream;
+
     uint32_t threadsRunningCount = 0;
     uint32_t threadCount = NUM_AUDIOPROCESSING_THREADS_INITIAL;
     uint32_t playThreadId = 0;
-
     VstInt32 vstShellCurrentUniqueId = 0;
+
+    std::unique_ptr<ProcessThread> vstscannerProcessThread;
+    int scanningState = 0;
     vsthost_impl() {
         uint32_t u = 0;
         for (TrackBlockProcessTask& task : tasks) {
@@ -1493,7 +1495,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
     int queueSizeInput = 0;
     int queueSizeOutput = 0;
-    auto *stream = audioHost ? audioHost->getStream(0) : nullptr;
+    auto stream = impl->audioStream;
     if (stream) {
         queueSizeInput = stream->getInputQueueSize();
         queueSizeOutput = stream->getOutputQueueSize();
@@ -1530,7 +1532,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
      * Start processing when the output ring buffer is less than half filled.
      * We also have to wait for the input resampler to have enough data to start processing.
      */
-    const bool canProcess = audioHost && queueSizeOutput < RING_BUF_SIZE / 2 && resamplerInput->numBlocksToPop() >= audioProp.numBlocksInternal;
+    const bool canProcess = queueSizeOutput < RING_BUF_SIZE / 2 && resamplerInput->numBlocksToPop() >= audioProp.numBlocksInternal;
 
     if (enableProfiling) {
         timerProfile.reset();
@@ -2338,18 +2340,19 @@ void vsthost::onTrackLayoutChange() {
     impl->resetDelaylines();
 }
 
-void vsthost::setOutput(audiohost* audioHost) {
-    this->audioHost = audioHost;
+void vsthost::setOutput(std::shared_ptr<AudioIO::AudioStream> stream) {
+    impl->audioStream = stream;
     sampleformat_t sampleFormatExternal = this->m_sampleFormatExternal;
-    samplerate_t extSampleRate = audioHost && audioHost->lSampleRate > 0 ? audioHost->lSampleRate : sampleFormatExternal.sampleRate;
-    uint32_t extBlockSize = audioHost && audioHost->lBlockSize > 0 ? audioHost->lBlockSize : sampleFormatExternal.blockSize;
+    samplerate_t extSampleRate = stream ? stream->getSampleRate() : sampleFormatExternal.sampleRate;
+    uint32_t extBlockSize = stream ? stream->getBlockSize() : sampleFormatExternal.blockSize;
     sampleFormatExternal = { extSampleRate, extBlockSize, sampleformat_bits_t::FLOAT_32 };
     this->m_sampleFormatExternal        = sampleFormatExternal;
     audiocache::getInstance()->setSamplerate(extSampleRate);
 }
 
 bool vsthost::isStreaming() {
-    return this->audioHost && this->audioHost->isStreaming();
+    //watch out for race condition here
+    return impl->audioStream && impl->audioStream->isActive();
 }
 
 /* Function needs to be re-entrant (thread safe) */

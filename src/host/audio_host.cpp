@@ -52,7 +52,7 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer,
     if (!userData) {
         return paComplete;
     }
-    auto* stream = static_cast<audiohost::audiostream*>(userData);
+    auto* stream = static_cast<audiohost::HostIOStream*>(userData);
     if (stream->streamShouldEnd) {
         return paComplete;
     }
@@ -134,43 +134,54 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer,
 */
 static void StreamFinished(void* userData) {
     dbgassert(userData);
-    auto* stream = static_cast<audiohost::audiostream*>(userData);
+    auto* stream = static_cast<audiohost::HostIOStream*>(userData);
     stream->streamFinished         = true;
 }
 
-audiohost::audiostream::audiostream(int32_t _nStreamId, AudioIO::io_cfg_tracks cfg, int32_t _nOutputChannels, int32_t _nInputChannels)
+audiohost::HostIOStream::HostIOStream(int32_t _nStreamId, AudioIO::io_cfg_tracks cfg, int32_t _nOutputChannels, int32_t _nInputChannels)
     : streamId(_nStreamId),
       nInputChannels(_nInputChannels),
       nOutputChannels(_nOutputChannels) {
     using AudioIO::io_cfg_channel;
     allocRingBuffer(ringbuffer, nInputChannels);
-    tracksInput.resize(cfg.input.size());
-    tracksOutput.resize(cfg.output.size());
+    channelsInput.resize(cfg.input.size());
+    channelsOutput.resize(cfg.output.size());
     int32_t channelOffset = 0;
     for (int32_t i = 0; i < cfg.input.size(); i++) {
         io_cfg_channel& track = cfg.input[i];
-        tracksInput[i] = std::make_shared<audiotrack>(i, track.type, channelOffset, &metersInput.channels[channelOffset]);
+        channelsInput[i] = std::make_shared<HostIOStream::IOChannel>(i, track.type, channelOffset, &metersInput.channels[channelOffset]);
         channelOffset += getNumChannelsFromTrackType(track.type);
     }
     channelOffset = 0;
     for (int32_t i = 0; i < cfg.output.size(); i++) {
         io_cfg_channel& track = cfg.output[i];
-        tracksOutput[i]= std::make_shared<audiotrack>(i, track.type, channelOffset, &metersOutput.channels[channelOffset]);
+        channelsOutput[i] = std::make_shared<HostIOStream::IOChannel>(i, track.type, channelOffset, &metersOutput.channels[channelOffset]);
         channelOffset += getNumChannelsFromTrackType(track.type);
     }
 }
 
-audiohost::audiostream::~audiostream() {
+audiohost::HostIOStream::~HostIOStream() {
     freeRingBuffer(ringbuffer);
 }
 
-audiohost::audiostream* audiohost::getStream(int idx) {
+audiohost::HostIOStream* audiohost::getStream(int idx) {
     if (streams.size() > idx) {
-        auto it = std::find_if(streams.begin(), streams.end(), [idx](std::shared_ptr<audiostream>& ptr) {
+        auto it = std::find_if(streams.begin(), streams.end(), [idx](std::shared_ptr<HostIOStream>& ptr) {
             return ptr->idx == idx;
         });
         if (it != streams.end()) {
             return it->get();
+        }
+    }
+    return nullptr;
+}
+std::shared_ptr<audiohost::HostIOStream> audiohost::getStreamSharedPtr(int idx) {
+    if (streams.size() > idx) {
+        auto it = std::find_if(streams.begin(), streams.end(), [idx](std::shared_ptr<HostIOStream>& ptr) {
+            return ptr->idx == idx;
+        });
+        if (it != streams.end()) {
+            return *it;
         }
     }
     return nullptr;
@@ -196,7 +207,7 @@ void audiohost::deinitPa() {
     }
 }
 
-void audiohost::removeStream(audiostream* stream) {
+void audiohost::removeStream(HostIOStream* stream) {
     stream->stream = nullptr;
     AudioBuffer* block = nullptr;
     while (stream->audioQueue.try_dequeue(block)) {
@@ -208,18 +219,18 @@ void audiohost::removeStream(audiostream* stream) {
     streams.erase(std::remove_if(
                           begin(streams),
                           end(streams),
-                          [stream](std::shared_ptr<audiostream>& x) { return x.get() == stream; }),
+                          [stream](std::shared_ptr<HostIOStream>& x) { return x.get() == stream; }),
                   end(streams));
 }
 
-void audiohost::audiostream::enqueueInput(AudioBuffer* buf) {
+void audiohost::HostIOStream::enqueueInput(AudioBuffer* buf) {
     if (streamFinished) {
         return;
     }
     AudioBlock* blockIn = buf->output;
     metersInput.update(blockIn, 1.0f);
     metersInput.onTick(blockIn->samples / (double) this->host->lSampleRate);
-    for (auto & nTrack : tracksInput) {
+    for (auto & nTrack : channelsInput) {
         auto* track = nTrack.get();
         //if (track->buf.channels != buf->output->channels) {
         //    log_printf("mismatch! tracksInput.size %d, track.channels %d, input.channels %d\n", tracksInput.size(), track->buf.channels, buf->output->channels);
@@ -232,21 +243,21 @@ void audiohost::audiostream::enqueueInput(AudioBuffer* buf) {
     this->audioQueueInput.enqueue(buf);
 }
 
-bool audiohost::audiostream::try_dequeueInput(AudioBuffer*& buf) {
+bool audiohost::HostIOStream::try_dequeueInput(AudioBuffer*& buf) {
     if (streamFinished) {
         return false;
     }
     return this->audioQueueInput.try_dequeue(buf);
 }
 
-void audiohost::audiostream::enqueue(AudioBuffer* buf) {
+void audiohost::HostIOStream::enqueue(AudioBuffer* buf) {
     if (streamFinished) {
         return;
     }
     AudioBlock* blockIn = buf->output;
     metersOutput.update(blockIn, 1.0f);
     metersOutput.onTick(blockIn->samples / (double) this->host->lSampleRate);
-    for (auto & nTrack : tracksOutput) {
+    for (auto & nTrack : channelsOutput) {
         auto* track = nTrack.get();
         assert(track->buf.channels <= buf->output->channels);
         track->buf.realloc(blockIn->samples);
@@ -257,7 +268,7 @@ void audiohost::audiostream::enqueue(AudioBuffer* buf) {
     this->audioQueue.enqueue(buf);
 }
 
-bool audiohost::audiostream::try_dequeue(AudioBuffer*& buf) {
+bool audiohost::HostIOStream::try_dequeue(AudioBuffer*& buf) {
     if (streamFinished) {
         return false;
     }
@@ -276,8 +287,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     auto cfg                   = iosettings.getConfig(iosettings.device_api);
     auto asioConfig            = iosettings.asioConfig;
     auto& channelConfig        = iosettings.getChannelConfig(iosettings.device_api);
-    using ptr_audiostream      = std::shared_ptr<audiostream>;
-    std::vector<ptr_audiostream> vecStreams;
+    std::vector<std::shared_ptr<HostIOStream>> vecStreams;
 
     int32_t deviceApiIdxSelected    = paNoDevice;
     int32_t deviceIdxSelectedInput  = paNoDevice;
@@ -308,7 +318,6 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
                 error("!info for Pa_GetDeviceInfo", i);
                 continue;
             }
-            const char* pref = "[ ] ";
             if (info->hostApi == deviceApiIdxSelected) {
                 bool bAsioMatches   = apiIdxASIO == info->hostApi && asioConfig.deviceName == info->name;
                 bool bOutputMatches = bAsioMatches || (apiIdxASIO != info->hostApi && cfg.deviceNameOutput == info->name);
@@ -316,14 +325,10 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
                 if (bOutputMatches && info->maxOutputChannels > 0) {
                     deviceIdxSelectedOutput = i;
                     log_printf("deviceIdxSelectedOutput DEVICE[%d] = %s %d IN/%d OUT channels\n", i, info->name, info->maxInputChannels, info->maxOutputChannels);
-
-                    pref = "[x] ";
                 }
                 if (bInputMatches && info->maxInputChannels > 0) {
                     deviceIdxSelectedInput = i;
                     log_printf("deviceIdxSelectedInput DEVICE[%d] = %s %d IN/%d OUT channels\n", i, info->name, info->maxInputChannels, info->maxOutputChannels);
-
-                    pref = "[x] ";
                 }
             }
         }
@@ -417,7 +422,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
         chCfg.isInit  = true;
         channelConfig = chCfg;
     }
-    auto stream  = std::make_shared<audiostream>(streamId, chCfg, outputParams.channelCount, inputParams.channelCount);
+    auto stream  = std::make_shared<HostIOStream>(streamId, chCfg, outputParams.channelCount, inputParams.channelCount);
     stream->idx  = vecStreams.size();
     stream->host = this;
 
@@ -463,7 +468,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
 bool audiohost::stopAudio() {
     int numStreamsStopped = 0;
 
-    std::vector<std::shared_ptr<audiostream>> streamsCopy = streams;
+    std::vector<std::shared_ptr<HostIOStream>> streamsCopy = streams;
     for (auto& sharedPtrStream : streamsCopy) {
         sharedPtrStream->streamShouldEnd = true;
     }

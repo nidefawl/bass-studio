@@ -223,7 +223,7 @@ void updateSrBs() {
             host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.internalSamplerate),
                                                  settings.iosettings.internalBlocksize, sampleformat_bits_t::FLOAT_32});
             if (ahost->startAudio(settings.iosettings)) {
-                host->setOutput(ahost);
+                host->setOutput(ahost->getStreamSharedPtr(0));
             } else {
                 //settings.startEngine = false;
             }
@@ -239,19 +239,19 @@ void updateSrBs() {
 }
 
 class guictr_input_channel : public guictr_base {
-    std::shared_ptr<audiohost::audiostream::audiotrack> track;
+    std::shared_ptr<audiohost::HostIOStream::IOChannel> ioChannel;
     const bool isInput;
     std::shared_ptr<guibase> guimeter;
     guibutton btnTrackType;
 
 public:
-    guictr_input_channel(std::shared_ptr<audiohost::audiostream::audiotrack>& _track, bool _isInput)
-        : track(_track), isInput(_isInput) {
+    guictr_input_channel(std::shared_ptr<audiohost::HostIOStream::IOChannel>& _ioChannel, bool _isInput)
+        : ioChannel(_ioChannel), isInput(_isInput) {
         add(&btnTrackType);
         btnTrackType.setFontScale(0.3f);
-        btnTrackType.setText(AudioIO::getTrackTypeStr(_track->type));
-        int32_t nChannels = getNumChannelsFromTrackType(track->type);
-        guimeter          = getMeter(nChannels, &track->meter);
+        btnTrackType.setText(AudioIO::getTrackTypeStr(_ioChannel->type));
+        int32_t nChannels = getNumChannelsFromTrackType(_ioChannel->type);
+        guimeter          = getMeter(nChannels, &_ioChannel->meter);
         add(guimeter.get());
         setBackgroundRendered(false);
         setBackgroundRenderedInset(false);
@@ -267,7 +267,7 @@ public:
         remove(&btnTrackType);
     }
 
-    audiohost::audiostream::audiotrack* getTrack() { return track.get(); }
+    // audiohost::HostIOStream::IOChannel* getIOChannel() { return ioChannel.get(); }
 
     void render(NVGcontext* vg) override {
         if (!setScissorTransformContainer(vg)) {
@@ -309,10 +309,10 @@ public:
             auto& newList = isInput ? newConfig.input : newConfig.output;
             newList.clear();
 
-            const AudioIO::tracktype type = AudioIO::getNextTrackType(track->type);
-            const int32_t nChannelsPrev   = AudioIO::getNumChannelsFromTrackType(track->type);
+            const AudioIO::tracktype type = AudioIO::getNextTrackType(ioChannel->type);
+            const int32_t nChannelsPrev   = AudioIO::getNumChannelsFromTrackType(ioChannel->type);
             const int32_t nChannels       = AudioIO::getNumChannelsFromTrackType(type);
-            const int32_t base            = (track->channelOffset / nChannels);
+            const int32_t base            = (ioChannel->channelOffset / nChannels);
             const int32_t begin           = base * nChannels;
             const int32_t end             = begin + nChannels;
 
@@ -462,13 +462,13 @@ public:
         guiMeters.clear();
         if (stream) {
 
-            auto& tracks   = isInput ? stream->tracksInput : stream->tracksOutput;
+            auto& ioChannels = isInput ? stream->channelsInput : stream->channelsOutput;
             String devName = isInput ? stream->inputName : stream->outputName;
 
-            while (guiMeters.size() < tracks.size()) {
+            while (guiMeters.size() < ioChannels.size()) {
                 auto idx         = guiMeters.size();
-                String trackName = audiohost::audiostream::getTrackName(tracks[idx].get(), isInput);
-                auto p           = std::make_shared<guictr_input_channel>(tracks[idx], isInput);
+                String trackName = audiohost::HostIOStream::getTrackName(ioChannels[idx].get(), isInput);
+                auto p           = std::make_shared<guictr_input_channel>(ioChannels[idx], isInput);
                 p->setLabel(trackName);
                 guiMeters.push_back(p);
                 add(p.get());

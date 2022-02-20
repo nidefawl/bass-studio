@@ -14,22 +14,21 @@
 #include "appsettings.h"
 
 namespace AudioIO {
-    extern const std::array<uint32_t, 4> ExtSamplerates;
-    extern const std::array<uint32_t, 4> IntSamplerates;
 }// namespace AudioIO
 
 using PaStream = void;
 class audiohost {
 public:
-    struct audiostream {
-        struct audiotrack {
-            audiotrack(int32_t _index, AudioIO::tracktype _type, int32_t _channelOffset, runningsum<16000>* sums)
+    class HostIOStream : public AudioIO::AudioStream {
+        public:
+        struct IOChannel {
+            IOChannel(int32_t _index, AudioIO::tracktype _type, int32_t _channelOffset, runningsum<16000>* sums)
                 : meter(sums, AudioIO::getNumChannelsFromTrackType(_type)), buf((uint32_t) AudioIO::getNumChannelsFromTrackType(_type), 0),
                   index(_index),
                   channelOffset(_channelOffset),
                   type(_type) {
             }
-            ~audiotrack() = default;
+            ~IOChannel() = default;
             rmsmeter<16000> meter;
             AudioBlock buf;
             int32_t index         = 0;
@@ -66,17 +65,17 @@ public:
         rmsmeterimpl<16000, 32> metersInput;
         rmsmeterimpl<16000, 32> metersOutput;
 
-        std::vector<std::shared_ptr<audiotrack>> tracksInput;
-        std::vector<std::shared_ptr<audiotrack>> tracksOutput;
+        std::vector<std::shared_ptr<IOChannel>> channelsInput;
+        std::vector<std::shared_ptr<IOChannel>> channelsOutput;
 
         int64_t lastAudioCallbackInvocationTime_i64 = 0;
 
-        audiostream(int32_t streamId, AudioIO::io_cfg_tracks cfg, int32_t nOutputChannels = 0, int32_t nInputChannels = 0);
-        ~audiostream();
+        HostIOStream(int32_t streamId, AudioIO::io_cfg_tracks cfg, int32_t nOutputChannels = 0, int32_t nInputChannels = 0);
+        ~HostIOStream();
         audiothread_ringbuffer_t& getRingbuffer() {
             return ringbuffer;
         }
-        static inline String getTrackName(audiotrack* track, bool isInput) {
+        static inline String getTrackName(IOChannel* track, bool isInput) {
             return AudioIO::getTrackName(track->type, track->index, isInput);
         }
         void enqueue(AudioBuffer*);
@@ -89,10 +88,19 @@ public:
         int32_t getInputQueueSize() const {
             return static_cast<int32_t>(audioQueueInput.size_approx());
         }
+        samplerate_t getSampleRate() const {
+            return this->host->lSampleRate;
+        }
+        uint16_t getBlockSize() const {
+            return this->host->lBlockSize;
+        }
+        bool isActive() const {
+            return !streamShouldEnd && !streamFinished;
+        }
     };
 
 private:
-    std::vector<std::shared_ptr<audiostream>> streams;
+    std::vector<std::shared_ptr<HostIOStream>> streams;
     bool paIsInitalized = false;
 
 public:
@@ -111,10 +119,11 @@ public:
     audiohost()  = default;
     ~audiohost() = default;
     static audiohost* getInstance();
-    audiostream* getStream(int idx);
+    HostIOStream* getStream(int idx);
+    std::shared_ptr<audiohost::HostIOStream> getStreamSharedPtr(int idx);
     bool initPa();
     void deinitPa();
-    void removeStream(audiostream* stream);
+    void removeStream(HostIOStream* stream);
 
 public:
     bool startAudio(app_iosettings& settings);

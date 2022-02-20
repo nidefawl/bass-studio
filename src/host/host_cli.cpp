@@ -240,7 +240,7 @@ int runCommandLineHost(const std::vector<String>& args) {
             audioHost->initPa();
             midiHost->initPm();
             if (audioHost->startAudio(settings.iosettings)) {
-                host->setOutput(audioHost.get());
+                host->setOutput(audioHost->getStreamSharedPtr(0));
             } else {
                 log_printf("audioHost->startAudio() failed\n", 0);
                 return 1;

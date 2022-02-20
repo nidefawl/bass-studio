@@ -794,7 +794,7 @@ void DawInstance::setEmptyProject() {
     int totalAllocs = getNumClipAllocations();
     if (totalAllocs != 0) {
         log_printf("getNumClipAllocations == %d!\n", totalAllocs);
-        dbgassert(getNumClipAllocations() == 0);
+        // dbgassert(getNumClipAllocations() == 0);
     }
     insertNewTrack(-1, TRACK_TYPE_MIDI, FLG_TRK_CHANGE_LOAD);
     insertNewTrack(-1, TRACK_TYPE_MASTER, 0);
@@ -1118,7 +1118,8 @@ void DawInstance::initRealtimeResources() {
     tls.midiHost->initPm();
     if (settings.startEngine) {
         if (tls.audioHost->startAudio(settings.iosettings)) {
-            tls.host->setOutput(tls.audioHost);
+            auto stream = tls.audioHost->getStreamSharedPtr(0);
+            tls.host->setOutput(stream);
         } else {
             //notify user
             log_printf("audioHost->startAudio() failed\n", 0);
