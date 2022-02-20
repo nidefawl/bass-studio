@@ -90,7 +90,7 @@ int main(int argc, char **argv)
             const auto& sr = sf.sampleRate;
             const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(sf.blockSize, tempo100, sf.sampleRate);
 
-            tick_t tickPos    = testData.tickPos;
+            double tickPos    = testData.tickPos;
             int32_t samplePos = tickToSampleConvert<int32_t, roundmode::floor>(tickPos, tempo100, sf.sampleRate);
             
             // puts("Benchmark warmup");
