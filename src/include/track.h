@@ -70,11 +70,6 @@ public:
     }
 
     void deepcopy(const trackdata_midi_t& obj) {
-        //this shouldn't be down here
-        for (clip_t* clip : obj.clips) {
-            releaseClipResources(clip, nullptr);
-            delete clip;
-        }
         clips.clear();
         clips.reserve(obj.clips.size());
         for (clip_t* clip : obj.clips) {
