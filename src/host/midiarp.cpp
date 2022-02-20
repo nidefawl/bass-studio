@@ -14,27 +14,31 @@ namespace {
     constexpr bool logProcessedNotes = false;
 }
 
-
-midiarp::midiarp(track_impl_t* _trImpl) : automatable_t(), trackImpl(_trImpl) {
-    curRandTimeOffset.resize(NUM_ARP_MAX_POLY_VOICES);
-    memset(curRandTimeOffset.data(), 0, curRandTimeOffset.size() * sizeof(float));
+static std::array<tick_t, 16 * 3> getStaticReadOnlyTickLengthArray() noexcept {
+    std::array<tick_t, 16 * 3> tickLength{};
     for (int i = 0; i < NUM_ARP_STEPSIZE_OPTIONS; i += 2) {
         tickLength[i + 0] = (TICKS_16TH >> 3) << (i >> 1);
         tickLength[i + 1] = tickLength[i + 0] + (tickLength[i + 0] >> 1);
         dbgassert(tickLength[i + 0] > 0);
     }
-    const std::array<arp_param_entry_t, 8> parameterTypes{
-        {
-                arp_param_entry_t{ PARAM_ENABLE, "Enabled", 0.0f },
-                arp_param_entry_t{ PARAM_GAIN, "Gain", 1.0f },
-                arp_param_entry_t{ ARP_PARAM_CLOCK, "Clock", 10.0f / (float) NUM_ARP_STEPSIZE_OPTIONS },
-                arp_param_entry_t{ ARP_PARAM_GATE, "Gate", 1 / 4.0f },
-                arp_param_entry_t{ ARP_PARAM_PATTERN, "Pattern", 0.0f },
-                arp_param_entry_t{ ARP_PARAM_RAND_TIME, "Random Time", 0.0f },
-                arp_param_entry_t{ ARP_PARAM_RAND_MODE, "Random Time Mode", 0.0f },
-                arp_param_entry_t{ ARP_PARAM_RAND_VEL, "Random Velocity", 0.0f },
-        }
-    };
+    return tickLength;
+}
+
+const std::array<tick_t, 16 * 3> midiarp::tickLength = getStaticReadOnlyTickLengthArray();
+
+midiarp::midiarp(track_impl_t* _trImpl) : automatable_t(), trackImpl(_trImpl) {
+    curRandTimeOffset.resize(NUM_ARP_MAX_POLY_VOICES);
+    memset(curRandTimeOffset.data(), 0, curRandTimeOffset.size() * sizeof(float));
+    const std::array<arp_param_entry_t, 8> parameterTypes{ {
+        arp_param_entry_t{ PARAM_ENABLE, "Enabled", 0.0f },
+        arp_param_entry_t{ PARAM_GAIN, "Gain", 1.0f },
+        arp_param_entry_t{ ARP_PARAM_CLOCK, "Clock", 10.0f / (float) NUM_ARP_STEPSIZE_OPTIONS },
+        arp_param_entry_t{ ARP_PARAM_GATE, "Gate", 1 / 4.0f },
+        arp_param_entry_t{ ARP_PARAM_PATTERN, "Pattern", 0.0f },
+        arp_param_entry_t{ ARP_PARAM_RAND_TIME, "Random Time", 0.0f },
+        arp_param_entry_t{ ARP_PARAM_RAND_MODE, "Random Time Mode", 0.0f },
+        arp_param_entry_t{ ARP_PARAM_RAND_VEL, "Random Velocity", 0.0f },
+    } };
     for (const arp_param_entry_t& paramEntry : parameterTypes) {
         automatable_param_t* regparam = registerParam(paramEntry.id);
         regparam->value               = paramEntry.val;
@@ -403,6 +407,16 @@ void midiarp::process(playback_state state, tick_t cursorPos, const std::vector<
     }
 
     updateMarkersAndAnimation(start, end, loopStart, loopEnd, wallClockTime);
+    /*if (wallClockTime - tmLastLog > 10.0f) {
+        tmLastLog = wallClockTime;
+        log_printf("%zu/%zu/%zu/%zu/%zu/%zu\n",
+                   heldInput.size(),
+                   heldOutputNotes.size(),
+                   curRandTimeOffset.size(),
+                   processTimePoints.size(),
+                   markers.size(),
+                   markers2.size());
+    }*/
 }
 
 /*
