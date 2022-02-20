@@ -189,7 +189,6 @@ int main(int argc, char** argv) {
                 if (isLoopAround && processedBlock) {
                     tickPos   = projGlobals.loopStart;
                     samplePos = tickToSampleConvert<int32_t, roundmode::floor>(tickPos, tempo100, sf.sampleRate);
-                    log_printf("");
                 }
             };
             host->onStopPlayback(dawInstance);

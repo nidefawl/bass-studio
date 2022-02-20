@@ -131,11 +131,11 @@ void processWindowMessages() {}
 
 int runCommandLineHost(const std::vector<String>& args) {
     seqthreads::registerThread("mainthread");
+#ifdef _WIN32
     if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE) ConsoleHandler, TRUE)) {
         fprintf(stderr, "Unable to install handler!\n");
         return EXIT_FAILURE;
     }
-#ifdef _WIN32
     WNDCLASS wc;
 
     wc.style         = CS_HREDRAW | CS_VREDRAW;
@@ -414,11 +414,6 @@ int runCommandLineHost(const std::vector<String>& args) {
             int32_t samplePos = tickToSampleConvert<int32_t, roundmode::floor>(projectGlobals.cursor.cursorPos,
                                                                                projectGlobals.tempo100,
                                                                                host->m_sampleFormatInternal.sampleRate);
-
-            if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE) ConsoleHandler, TRUE)) {
-                fprintf(stderr, "Unable to install handler!\n");
-                return EXIT_FAILURE;
-            }
             if (!bRenderOnly) {
                 playThread->addRequest(REQ_STATE, (int)playback_state::status_playback, true);
             } else {
