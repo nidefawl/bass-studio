@@ -84,16 +84,6 @@ static int logPrefixIdx = 0;
 
 using seqthreads::threadSleep;
 
-void deleteApp() {
-}
-
-std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args) {
-    return nullptr;
-}
-
-void startApp(std::shared_ptr<AppCtrl>& app) {
-}
-
 bool userSentQuitRequest = false;
 bool inConnectNamedPipe  = false;
 #ifdef _WIN32

@@ -1703,16 +1703,13 @@ namespace vst_window_mgr {
 }
 #endif
 
-std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args);  // main.cpp
-void startApp(std::shared_ptr<AppCtrl>& app);                // main.cpp
 
 void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsinstance& tls);// Forward declare from startup.cpp
 void initColor();                               // Forward declare from gui/gui.cpp
-void deleteApp();                               // Forward declare from host/mainctrl.cpp
 void openGlobalLog(const String& logFileName);  // Forward declare from util/logging.cpp
 void closeGlobalLog();                          // Forward declare from util/logging.cpp
 
-int startApplication(const std::vector<String>& args) {
+int startApplication(const std::vector<String>& args, AppInstanceService& appInstance) {
     seqthreads::registerThread("mainthread");
 
 #if !defined(NDEBUG) && defined(_WIN32)
@@ -1798,7 +1795,7 @@ int startApplication(const std::vector<String>& args) {
             exit(EXIT_FAILURE);
         }
 
-        std::shared_ptr<AppCtrl> ctrl = makeApp(args);
+        std::shared_ptr<AppCtrl> ctrl = appInstance.makeApp(args);
 
         std::unique_ptr<appwindow_main> mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl);
         mainWindow->createMainWindow("main window", 1280, 720, nullptr, WINDOW_IS_MAINWINDOW_MASTER);
@@ -1821,7 +1818,7 @@ int startApplication(const std::vector<String>& args) {
 
         glfwSetErrorCallback(glfw_runtime_error_callback);
 
-        startApp(ctrl);
+        appInstance.startApp(ctrl);
 
 #if BUILD_VSTHOST
         daw_tls::tlsinstance& tls = daw_tls::getTls();
@@ -1959,7 +1956,7 @@ int startApplication(const std::vector<String>& args) {
         handleStdException(e);
     }
 
-    deleteApp();
+    appInstance.deleteApp();
     printLeakedGuiBase();
 #if BUILD_VSTHOST
     printClipAllocations();

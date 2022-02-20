@@ -415,14 +415,23 @@ public:
     void closePopup() override;
     void relayout(int32_t w, int32_t h) override;
     void open(guictxtmenu_base* ctxtmenu, ivec2 pos, bool bResizeable);
-    bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
     void initApp(const std::vector<String>& args) override { };
+    bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
+    void startApp() override {};
     bool initPopup(window_overlay* window, NVGcontext* nanovg);
     void focusReceived() override{};
     void focusLost() override;
     void onWindowClose() override;
     void onTick() override;
-    void startApp() override {}; /* OpenGL context exists in postInit */
     bool mouseDownPre() override;
     void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) override;
 };
+
+class AppInstanceService {
+public:
+    virtual ~AppInstanceService() = default;
+    virtual std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args) = 0;
+    virtual void startApp(std::shared_ptr<AppCtrl>& app) = 0;
+    virtual void deleteApp() = 0;
+};
+int startApplication(const std::vector<String>& args, AppInstanceService& service);

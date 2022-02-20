@@ -25,15 +25,6 @@
 
 extern volatile bool fatalError;
 
-void deleteApp() {
-}
-
-std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args) {
-  return nullptr;
-}
-void startApp(std::shared_ptr<AppCtrl>& app) {
-}
-
 int main(int argc, char **argv)
 {
     getGlobalLogger()->setLevel(Log::L_WARN);

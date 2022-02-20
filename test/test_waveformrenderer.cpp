@@ -33,8 +33,6 @@
 #define NUM_RENDERERS 3u
 
 
-int startApplication(const std::vector<String>& args);
-
 struct waveform_test_entry {
     audiofile_t* sample{};
     gui_waveform_texture_ref ref;
@@ -356,32 +354,34 @@ namespace MiniApp {
             view->statusbar.setTitle(s);
         }
     };
-    static std::shared_ptr<AppCtrl> appctrl;
 }// namespace MiniApp
 
+class TestWaveformInstService : public AppInstanceService {
+  waveform_test waveformTest;
+  std::shared_ptr<AppCtrl> appctrl;
 
-static waveform_test waveformTest;
+public:
+  ~TestWaveformInstService() override = default;
 
-std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args) {
-    MiniApp::appctrl = std::make_shared<MiniApp::MiniAppCtrl<MiniApp::ViewContainers_TestNanoVGRenderCache>>(waveformTest);
-    MiniApp::appctrl->initApp(args);
-    return MiniApp::appctrl;
-}
+  std::shared_ptr<AppCtrl> makeApp(const std::vector<String> &args) override {
+    appctrl = std::make_shared<MiniApp::MiniAppCtrl<MiniApp::ViewContainers_TestNanoVGRenderCache>>(waveformTest);
+    appctrl->initApp(args);
+    return appctrl;
+  }
 
-void startApp(std::shared_ptr<AppCtrl>& app) {
-    app->startApp();
-}
+  void startApp(std::shared_ptr<AppCtrl> &app) override { app->startApp(); }
 
-
-void deleteApp() {
-    MiniApp::appctrl.reset();
-}
+  void deleteApp() override {
+    for (auto i = 0u; i < NUM_RENDERERS; i++) {
+      log_printf("Renderer %u took %llumicros\n", i, waveformTest.durations[i]);
+    }
+    appctrl.reset();
+  }
+};
 
 int main(int argc, char* argv[]) {
+    TestWaveformInstService instService;
     std::vector<String> vecArgs(&argv[0], &argv[argc]);
-    int ret = startApplication(vecArgs);
-    for (auto i = 0u; i < NUM_RENDERERS; i++) {
-        log_printf("Renderer %u took %llumicros\n", i, waveformTest.durations[i]);
-    }
+    int ret = startApplication(vecArgs, instService);
     return ret;
 }

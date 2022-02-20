@@ -53,9 +53,8 @@ static BOOL WINAPI ConsoleHandler(DWORD dwType) {
 }
 #endif
 
-static void on_terminate1() {
+static void on_terminate() {
     log_printf("on_terminate\n", 0);
-    //    exit(1); // required on mingw (at least)
 }
 
 #ifdef _WIN32
@@ -160,7 +159,7 @@ int runCommandLineHost(const std::vector<String>& args) {
     _dup2(1, 2); // workaround: redirect stderr to stdout so stderr is visible when using gdb on eclipse (bug)
 #endif
 #endif
-    std::set_terminate(on_terminate1);
+    std::set_terminate(on_terminate);
 
 
     try {
