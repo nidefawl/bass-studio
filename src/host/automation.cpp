@@ -215,17 +215,22 @@ void toggleDeviceEnableState(automatable_t* effect, int flags) {
 }
 
 void loadAutomation(const std::vector<automation_view_t>& automatedParams, automatable_t* at) {
-    log_printf("Loading %d automation lanes for device %s\n", automatedParams.size(), StringAsCStr(at->getAutomatableName()));
+    if (!automatedParams.empty()) {
+        log_lf(Log::L_DEBUG, "Loading %d automation lanes for device %s\n", automatedParams.size(), StringAsCStr(at->getAutomatableName()));
+    }
+
     for (const automation_view_t& automatedParam : automatedParams) {
         int32_t targetParam = automatedParam.targetParam;
-        if (!at->getParam(targetParam) && at->getParam(targetParam + PARAM_OFFSET_EXTERNAL)) {
-            targetParam += PARAM_OFFSET_EXTERNAL;
-            log_printf("Loading %d automation lanes for device %s\n", automatedParams.size(), StringAsCStr(at->getAutomatableName()));
+        automatable_param_t* paramInstance = at->getParam(targetParam);
+        if (!paramInstance) {
+            paramInstance = at->getParam(targetParam + PARAM_OFFSET_EXTERNAL);
         }
-        if (at->getParam(targetParam)) {
-            automation_t* autom = at->getOrCreateAutomation(targetParam);
+        if (paramInstance) {
+            automation_t* autom = at->getOrCreateAutomation(paramInstance->idx);
             autom->points       = automatedParam.points;
             autom->active       = automatedParam.active;
+        } else {
+            log_lf(Log::L_WARN, "Param %d missing for device %s\n", automatedParam.targetParam, StringAsCStr(at->getAutomatableName()));
         }
     }
 }

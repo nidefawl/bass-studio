@@ -218,7 +218,7 @@ public:
      */
     automatable_param_t* getParam(int32_t paramIdx) {
         auto it = mapParams.find(paramIdx);
-        dbgassert(it != mapParams.end());
+        // dbgassert(it != mapParams.end());
         if (it != mapParams.end()) {
             return &it->second;
         }
