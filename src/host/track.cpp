@@ -140,7 +140,9 @@ track_t::track_t(const track_snapshot_t& a)
 
 track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginChunks) {
     if (p) {
-        p->arp->createSnapshot(trackArp);
+        if (p->arp) {
+            p->arp->createSnapshot(trackArp);
+        }
         p->mixer.createSnapshot(trackParams);
         p->createIOSnapshot(trackIO);
         p->createRoutingSnapshot(effectRouting);
@@ -209,7 +211,9 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
     //TODO: test if stageId is in use. Caller is responsible for generating new stageId
 
     audio->mixer.loadSnapshot(implSnapshot.trackParams);
-    audio->arp->loadSnapshot(implSnapshot.trackArp);
+    if (audio->arp) {
+        audio->arp->loadSnapshot(implSnapshot.trackArp);
+    }
     const std::vector<plugin_snapshot_t>& trPluginList = implSnapshot.pluginSnapshots;
     audio->loadPlugins(trPluginList);
     audio->loadIOConfiguration(implSnapshot.trackIO);
@@ -546,7 +550,9 @@ void audio_stage_t::notifyPluginContainers() {
 
 void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targets) {
     targets.push_back(&mixer);
-    targets.push_back(arp);
+    if (arp) {
+        targets.push_back(arp);
+    }
     getStageTargets(targets);
 }
 
@@ -847,19 +853,17 @@ void vsthost::activateDeferred(effectbase* const eff, int flags, effectbase** ou
     //    if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
 }
 
-int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot) {
+void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot) {
     const std::vector<automationlane_snapshot_t>& atls = snapshot.automationLanes;
-    track_t* const track                               = entry->track;
-    int n                                              = atls.size();
-    n                                                  = 0;
+
+    track_t* const track = entry->track;
     for (const automationlane_snapshot_t& ref : atls) {
         gui_track_subtrack* al = NULL;
         if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
             if (ref.type == AUTOMATABLE_EFFECT) {
                 effectbase* plugin = track->getStage()->getPluginById(ref.refId);
                 if (!plugin || plugin->getModuleType() == PLUGIN_TYPE_DEFERRED) {
-                    log_printf("skipping deferred ref.type %d, ref.refId %d, ref.paramIdx %d\n", ref.type, ref.refId, ref.paramIdx);
-                    n++;
+                    log_printf("skipping layout for automation on deferred plugin ref.type %d, ref.refId %d, ref.paramIdx %d\n", ref.type, ref.refId, ref.paramIdx);
                     continue;
                 }
                 al = new gui_track_automationlane(entry, guiTracks->grid, plugin, ref.paramIdx);
@@ -868,7 +872,12 @@ int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const
                 al = new gui_track_automationlane(entry, guiTracks->grid, &track->getStage()->mixer, ref.paramIdx);
             }
             if (ref.type == AUTOMATABLE_ARP) {
-                al = new gui_track_automationlane(entry, guiTracks->grid, track->getStage()->arp, ref.paramIdx);
+                auto arp = track->getStage()->arp;
+                if (!arp) {
+                    log_printf("skipping layout for automation on missing arp ref.type %d, ref.refId %d, ref.paramIdx %d\n", ref.type, ref.refId, ref.paramIdx);
+                    continue;
+                }
+                al = new gui_track_automationlane(entry, guiTracks->grid, arp, ref.paramIdx);
             }
         } else if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
             al = makeGuiSubtrack(entry, MainCtrl::get(), ref.subtrackType);
@@ -878,8 +887,6 @@ int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const
             guiTracks->addSubTrack(entry, al, false);
         }
     }
-
-    return n;
 }
 
 void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, track_layout_snapshot_t& snapshot) {
@@ -1045,10 +1052,12 @@ track_impl_t::track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* 
 }
 
 const std::vector<arp_note_t>& track_impl_t::getArpHeldNotes() {
+    dbgassert(this->arp);
     return this->arp->getHeldNotes();
 }
 
 std::vector<marker_t>& track_impl_t::getArpMarkers(int n) {
+    dbgassert(this->arp);
     dbgassert(midiMutex.isLocked());
     if (n) return this->arp->markers2;
     return this->arp->markers;
@@ -1151,7 +1160,7 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags,
 
         updateProfilingTime(procMidiStats.tm1InputRT, tmr.getTimeReset());
 
-        if (!notes.empty() || !m_heldNotes.empty() || arp != nullptr) {
+        if (!notes.empty() || !m_heldNotes.empty() || arp) {
             ThreadLock lock = midiMutex.lockThread();
 
 
@@ -1227,7 +1236,7 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags,
 
             tmr.reset();
             this->noteEventsProcessed.clear();
-            if (flags & MidiFlags::PROCESS_ARP) {
+            if (arp && (flags & MidiFlags::PROCESS_ARP)) {
                 arp->process(state, cursorPos, noteEvents, blockStart, blockEnd, loopStart, loopEnd, noteEventsProcessed);
             } else {
                 noteEventsProcessed = std::move(noteEvents);
@@ -1480,7 +1489,7 @@ namespace DAW {
             auto stage = host->getAudioStage(AudioStageRefFromId(ref.refId));
             if (stage->getTrack() && stage->getTrack()->getStage()) {
                 auto trImpl = stage->getTrack()->getStage();
-                if (trImpl) {
+                if (trImpl && trImpl->arp) {
                     *out = trImpl->arp;
                     return true;
                 }

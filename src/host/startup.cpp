@@ -4,6 +4,7 @@
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
 #include "vst_host.h"
+#include "midiarp.h"
 #include "track_impl.h"
 #include "logging.h"
 #include "menu.h"
@@ -36,6 +37,130 @@ void setSelection(DawCtrl* dawCtrl, int32_t trackBegin, int32_t trackEnd, float 
     cursor.setEnd(math::roundfS32((fStart+fLength) * TICKS_BAR));
     cursor.setTrackBegin(trackBegin);
     cursor.setTrackEnd(trackEnd);
+}
+void generateDummyProject(DawCtrl* dawCtrl) {
+    DawInstance* dawInstance = dawCtrl->getDaw();
+    auto host = dawInstance->getHost();
+    dawInstance->unloadProject();
+    trackdata_midi_t trDataMidi;
+    {
+        auto clip = new clip_t;
+        for (int i = 0; i < 4; i++) {
+            note_t note;
+            note.time     = i * TICKS_BAR;
+            note.len      = TICKS_BAR;
+            note.velocity = 123;
+            note.pitch    = 32 + 0;
+            clip->notes.add(note);
+            note.pitch = 32 + 3;
+            clip->notes.add(note);
+            note.pitch = 32 + 7;
+            clip->notes.add(note);
+            note.pitch = 32 + 12;
+            clip->notes.add(note);
+        }
+        clip->notes.updateBounds();
+        clip->loopEnabled = true;
+        clip->loopStart   = 0;
+        clip->loopLen     = 4 * TICKS_BAR;
+        clip->len         = 64 * TICKS_BAR;
+        clip->time        = 0 * TICKS_BAR;
+        trDataMidi.addClip(clip);
+    }
+    ThreadLock lock = dawInstance->getPlayThread()->lockThread();
+
+    // create 4 busses that look like:
+    // BUS_TOP_n
+    //   SUB_BUS_1
+    //     TRACK_1
+    //     TRACK_2
+    //     TRACK_3
+    //     TRACK_4
+    //   SUB_BUS_2
+    //     TRACK_1
+    //     TRACK_2
+    //     TRACK_3
+    //     TRACK_4
+    for (int topGrps = 0; topGrps < 4; ++topGrps) {
+        auto trTop = dawInstance->createNewTrack(TRACK_TYPE_AUDIO);
+        trTop->name = StringFormat("Top Bus %d", topGrps);
+        dawInstance->addTrackImpl(-1, trTop, 0);
+        for (int subGrps = 0; subGrps < 2; ++subGrps) {
+            auto trSubGrp = dawInstance->createNewTrack(TRACK_TYPE_AUDIO);
+            trSubGrp->name = StringFormat("Sub Bus %d.%d", topGrps, subGrps);
+            trTop->addChild(trSubGrp);
+            dawInstance->addTrackImpl(-1, trSubGrp, 0);
+            for (int i = 0; i < 4; ++i) {
+                auto track1 = new track_t(TRACK_TYPE_MIDI, StringFormat("Track #%d.%d.%d", topGrps, subGrps, i), true);
+                trSubGrp->addChild(track1);
+                // deep copy (of clip_t instances)
+                track1->getMidi() = trDataMidi;
+                dawInstance->addTrackImpl(-1, track1, 0);
+                track1->getStage()->arp->setParamValue(PARAM_ENABLE, 1.0f, FLG_PAR_UPDATE_INIT);
+                track1->getStage()->arp->setParamValue(ARP_PARAM_CLOCK, 0.4f, FLG_PAR_UPDATE_INIT);
+                track1->getStage()->arp->setParamValue(ARP_PARAM_PATTERN, 1.0f, FLG_PAR_UPDATE_INIT);
+                track1->getStage()->arp->setParamValue(ARP_PARAM_RAND_VEL, 0.7f, FLG_PAR_UPDATE_INIT);
+                track1->getStage()->arp->setParamValue(ARP_PARAM_GATE, 0.55f, FLG_PAR_UPDATE_INIT);
+
+                auto pluginHostInfo = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_HOSTINFO, -1);
+                dbgassert(pluginHostInfo);
+
+                host->insertNewPlugin(track1->getStage(), pluginHostInfo, 0);
+                pluginHostInfo->resume();
+                track1->getStage()->pluginsChanged();
+                pluginHostInfo->setParamValue(PARAM_OFFSET_EXTERNAL+0, 1.0f, FLG_PAR_UPDATE_INIT);
+                //host->postPluginLoaded(track1->getStage(), pluginHostInfo);
+            }
+        }
+    }
+
+    auto trackMaster = new track_t(TRACK_TYPE_MASTER, "master", true);
+    dawInstance->addTrackImpl(0, trackMaster, 0);
+    trDataMidi.deleteClips(nullptr);
+}
+void generateDummyProject2(DawCtrl* dawCtrl) {
+    DawInstance* dawInstance = dawCtrl->getDaw();
+    dawInstance->unloadProject();
+    trackdata_midi_t trDataMidi;
+    {
+        auto clip = new clip_t;
+        for (int i = 0; i < 4; i++) {
+            note_t note;
+            note.time     = i * TICKS_BAR;
+            note.len      = TICKS_BAR;
+            note.velocity = 123;
+            note.pitch    = 32 + 0;
+            clip->notes.add(note);
+            note.pitch = 32 + 3;
+            clip->notes.add(note);
+            note.pitch = 32 + 7;
+            clip->notes.add(note);
+            note.pitch = 32 + 12;
+            clip->notes.add(note);
+        }
+        clip->notes.updateBounds();
+        clip->loopEnabled = true;
+        clip->loopStart   = 0;
+        clip->loopLen     = 4 * TICKS_BAR;
+        clip->len         = 64 * TICKS_BAR;
+        clip->time        = 0 * TICKS_BAR;
+        trDataMidi.addClip(clip);
+    }
+    ThreadLock lock = dawInstance->getPlayThread()->lockThread();
+    for (int i = 0; i < 32; ++i) {
+        auto track1 = new track_t(TRACK_TYPE_MIDI, StringFormat("track%d", i), true);
+        // deep copy (of clip_t instances)
+        track1->getMidi() = trDataMidi;
+        dawInstance->addTrackImpl(-1, track1, 0);
+        delete track1->getStage()->arp;
+        track1->getStage()->arp = nullptr;
+    }
+
+    auto trackMaster = new track_t(TRACK_TYPE_MASTER, "master", true);
+    dawInstance->addTrackImpl(0, trackMaster, 0);
+    delete trackMaster->getStage()->arp;
+    trackMaster->getStage()->arp = nullptr;
+    trDataMidi.deleteClips(nullptr);
 }
 void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t trackIdx) {
     DawInstance* dawInstance = dawCtrl->getDaw();
@@ -169,6 +294,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     //    dawMainCtrl->setVisible(false);
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1));
-    if (dawMainCtrl->getLoadProjectFilePath().empty())
-        dawInstance->loadFile(dawPath + projName, flags);
+    //if (dawMainCtrl->getLoadProjectFilePath().empty())
+    //    dawInstance->loadFile(dawPath + projName, flags);
+    generateDummyProject(dawMainCtrl);
 }

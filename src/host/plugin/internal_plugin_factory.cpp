@@ -12,7 +12,6 @@ extern template effectbase* makeInstance<module_group>(int32_t _projectGlobalId)
 extern template effectbase* makeInstance<module_gain>(int32_t _projectGlobalId);
 
 effectbase* vsthost::makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid) {
-
     effectbase* effect = nullptr;
     switch (moduleType) {
         case PLUGIN_TYPE_EMPTY:
