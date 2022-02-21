@@ -61,6 +61,11 @@ endif()
 if (MSVC)
     add_compile_options(/external:anglebrackets /external:W0)
     add_compile_options(/MP7)
+#    add_compile_options($<IF:$<CONFIG:Debug>,,/Ob3>)
+    add_compile_options($<IF:$<CONFIG:Debug>,,/Gy>)
+    add_link_options($<IF:$<CONFIG:Debug>,,/INCREMENTAL:NO>)
+    add_link_options($<IF:$<CONFIG:Debug>,,/OPT:REF>)
+    add_link_options($<IF:$<CONFIG:Debug>,,/OPT:ICF>)
 else()
     set(PROJECT_CFG_USE_STACK_PROTECTOR "OFF" CACHE STRING "Use fstack-protector (ON/OFF/DebugOnly)")
     set_property(CACHE PROJECT_CFG_USE_STACK_PROTECTOR PROPERTY STRINGS ON OFF DebugOnly)
@@ -100,23 +105,6 @@ else()
     # Disable ADD_POST_BUILD_COMMANDS and set ASAN_SYMBOLIZER_PATH=path\to\bin\llvm-symbolizer
     # add_compile_options(-fsanitize=address)
     # add_link_options(-fsanitize=address)
-endif()
-
-if (NOT MSVC)
-  set(NO_TEMP_OBJECT_A On)
-  # By default cmake generates a temporary object.a archive on windows-gnu 
-  # Resetting the link rules here avoids this step and saves significant time when linking
-  if (WIN32 AND NO_TEMP_OBJECT_A) 
-    message(STATUS "NO TEMP OBJECT")
-    foreach(lang C CXX)
-      set(CMAKE_${lang}_CREATE_SHARED_MODULE
-      "<CMAKE_${lang}_COMPILER> <CMAKE_SHARED_MODULE_${lang}_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_MODULE_CREATE_${lang}_FLAGS> -o <TARGET> ${CMAKE_GNULD_IMAGE_VERSION} <OBJECTS> <LINK_LIBRARIES>")
-      set(CMAKE_${lang}_CREATE_SHARED_LIBRARY
-      "<CMAKE_${lang}_COMPILER> <CMAKE_SHARED_LIBRARY_${lang}_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_${lang}_FLAGS> -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> ${CMAKE_GNULD_IMAGE_VERSION} <OBJECTS> <LINK_LIBRARIES>")
-      set(CMAKE_${lang}_LINK_EXECUTABLE
-      "<CMAKE_${lang}_COMPILER> <FLAGS> <CMAKE_${lang}_LINK_FLAGS> <LINK_FLAGS> <OBJECTS>  -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> ${CMAKE_GNULD_IMAGE_VERSION} <LINK_LIBRARIES>")
-    endforeach()
-  endif()
 endif()
 
 if (WIN32 AND NOT MSVC AND CLANG)
