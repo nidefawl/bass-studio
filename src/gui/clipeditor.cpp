@@ -1081,10 +1081,6 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 
         setStatusText();
     } else if (dragMode == drag_velocity) {
-        int modeMove = SNAP_LEAST;
-        if (isAlt(evt.kbmods)) {
-            modeMove = SNAP_OFF;
-        }
         *evt.dragDistance = ivec2(0);
         //    tick_t tickOver = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
         //    clip_cursor_t& cursor = view.cursor;

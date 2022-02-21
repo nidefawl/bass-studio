@@ -57,7 +57,6 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
         if (data[i]) {
             auto& block = data[i]->data;
             audiotrack_split_t* split = nullptr;
-            bool present = false;
             if (i >= nSamples || !this->samples[i]) {
                 auto sharedSplit = std::make_shared<audiotrack_split_t>();
                 split            = sharedSplit.get();
@@ -67,7 +66,6 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
                 split->sampleId             = host->getNextSampleId(0);
                 split->sample.bitsPerSample = 32;
             } else {
-                present = true;
                 split   = this->samples[i].get();
                 newSplits.push_back(this->samples[i]);
                 dbgassert(split->samplePos == samplePos);

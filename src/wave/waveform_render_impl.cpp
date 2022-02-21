@@ -647,13 +647,5 @@ void waveformrender::draw(NVGcontext* ctxt, const gui_waveform_texture_ref* wave
                    });
     dbgassert(it != atlas.entries.cend());
     auto& entry                          = *it;
-    const audioclip_texture_t* waveImage = &waveformRef->waveform;
     drawImage(ctxt, atlas.fb->image, 1.0f, entry.pos.x, entry.pos.y, entry.size.x, entry.size.y, 0, 0, sizeClipped.x, sizeClipped.y);
-
-    //for (auto& texture : textures) {
-    //    if (texture.idx == fbId) {
-    //        drawImage(ctxt, texture.fb->image, 1.0f, 0, 0, size.x * waveImage->scale, size.y * waveImage->scale, waveImage->startOffset.x, 0, size.x, size.y);
-    //        return;
-    //    }
-    //}
 }

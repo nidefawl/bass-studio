@@ -145,7 +145,7 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
  */
 void tesselateWaveformEnergy(audiosample_t* sample, float x, float y, audioclip_texture_t* waveformshape, std::vector<vec2list>& channels) {
     if (sample->nSamples) {
-        double samplesPerPx       = waveformshape->samplesPerPx;
+        // double samplesPerPx       = waveformshape->samplesPerPx;
         const float width         = waveformshape->size.x * (1.0f / waveformshape->scaleX);
         const auto widthPxRounded = math::floorfS32(width);
         const float height        = waveformshape->size.y;

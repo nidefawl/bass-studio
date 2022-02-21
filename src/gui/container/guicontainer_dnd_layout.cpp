@@ -648,11 +648,9 @@ bool guictr_layout::placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_c
         throw applogicexception(StringFormat("%s - attempt to add element twice", StringAsCStr(getClassName())));
     }
 
-    bool layoutChanged = false;
     if (ctrLayout != updatedCtrLayout) {
         log_printf("Container layout changed to %d\n", static_cast<int>(updatedCtrLayout));
         setLayout(updatedCtrLayout);
-        layoutChanged = true;
     }
     if (dockPos == dock_pos::STACK) {
         if (dockPosOffset <= -1) {

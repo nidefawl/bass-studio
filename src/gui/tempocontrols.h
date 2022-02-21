@@ -178,7 +178,6 @@ public:
 };
 
 class guibutton_audioengine : public guibuttonstate {
-    int32_t lastTickBar = 0;
     host_stats_t stats;
     float cpuUsage = 0.0f;
 

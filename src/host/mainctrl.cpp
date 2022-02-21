@@ -810,7 +810,7 @@ void openDebugWindowWaveformCache(window_main* mainwindow, waveformrender* wfren
     window_dialog* dialog = mainwindow->createDialog("waveform atlas cache", 1280, 720);
     window_init_fn init;
     window_draw_fn drawFn;
-    init.initCallback = [wfrender](NVGcontext* ctx) {
+    init.initCallback = [](NVGcontext* ctx) {
         initDebugWindowWaveformCache(ctx);
     };
     drawFn.drawCallback = [wfrender](NVGcontext* ctx, int winW, int winH, float pxratio) {
@@ -2648,7 +2648,7 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
     }
     renderStats.timePrerender = timer.getTime();
 
-    auto tmNow = getTimeMillis();
+    // auto tmNow = getTimeMillis();
     //if (tmNow - tmLastRenderUpdatesMs >= 1000)
     //if (tmLastRenderUpdatesMs++%2==0)
     {

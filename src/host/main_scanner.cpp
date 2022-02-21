@@ -407,7 +407,6 @@ static int runScannerServer(vstscanner_server_options options) {
         }
 #endif
 
-        recvbuf_t bufferRecv;
         ipc_server server;
         int ipc_status = server.server_open(SCAN_IPC_PIPE_NAME);
         if (ipc_status) {
@@ -542,7 +541,7 @@ static int runScannerServer(vstscanner_server_options options) {
                     LOG("error writeToIPC request_type_vst24_t");
                     resetConnection = true;
                 }
-                if (!options.dryRun && pipeConnected) {
+                if (!options.dryRun) {
                     if (id > 0) {
                         queryDelete.reset();
                         queryDelete.bind(1, id);

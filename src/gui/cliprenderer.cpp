@@ -87,8 +87,6 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
     int64_t sampleStartOffset = tickToSampleConvert<int64_t, roundmode::floor>(tickBeginOffset + m_clip->offsetStart, tempo100, samplerate);
     int64_t sampleEnd  = tickToSampleConvert<int64_t, roundmode::floor>(tickEnd + m_clip->offsetStart, tempo100, samplerate);
 
-    ivec2 startOffset = posClipped - pos;
-
     audioclip_texture_t w;
     w.quality = 1;
 
@@ -433,9 +431,6 @@ void gui_midi_clip::render(NVGcontext* vg) {
 
             int64_t notesRendered = 0;
 
-            NVGcolor rgbNote        = theme->getColor(GuiColor::COL_CLIP_NOTE);
-            NVGcolor rgbNoteOverlap = theme->getColor(GuiColor::COL_CLIP_NOTE_OVERLAP);
-            NVGcolor rgbNoteMuted   = theme->getColor(GuiColor::COL_CLIP_NOTE_MUTED);
             nvgSave(vg);
             nvgTranslate(vg, pos.x, pos.y);
             nvgSave(vg);

@@ -2107,14 +2107,6 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
         audio->updateLatency(); // determine max latency so getLatency() is correct
     }
 
-    tick_t loopCutStart = -1;
-    tick_t loopCutEnd = -1;
-    if (inLoop) {
-        loopCutStart = prjGlobals.loopStart;
-        loopCutEnd = prjGlobals.loopStart+prjGlobals.loopLen;
-    }
-
-
     /**
      * Parallelizing processing:
      * In Host initAppWindow:
@@ -2365,13 +2357,7 @@ void vsthost::processAudio(audio_stage_t* stage,
                            playback_state state,
                            const DAW::effect_processing_graph_t* const processingGraph) const
 {
-
     tick_t processingPos = floor(tickLatencyCompensated);
-    int count = 0;
-    if (!stage->effects.empty()) {
-        count += stage->effects.size();
-    }
-
     hires_timer_t timer;
     int64_t timeTotal = 0;
     if (processingGraph != nullptr) {

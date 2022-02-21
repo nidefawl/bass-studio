@@ -146,8 +146,7 @@ public:
         }
 
         for (auto& entry : splits) {
-            auto& wv          = entry.second;
-            auto& waveformTex = wv.waveformTex;
+            auto& wv = entry.second;
             if (!wv.sample || wv.waveformUpdated.size.x < 1 || wv.waveformUpdated.size.y < 1) {
                 continue;
             }

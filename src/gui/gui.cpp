@@ -122,7 +122,6 @@ float renderTextLabel(NVGcontext* vg,
     nvgTextAlign(vg, alignment);
     const auto* szText = StringAsCStr(text);
 
-    const float margin = fontSize * 0.5f;
     int nrows = 0;
     float f = pos.x;
     NVGtextRow rows[2]{};
@@ -327,7 +326,6 @@ NVGpaint imagePattern(NVGcontext* vg, int width, int ext, int imgId) {
 }
 void drawIcon(NVGcontext* vg, const ivec2& size, RenderResources::NvgImageTexture* image, int32_t extImg) {
     const int32_t iconW   = math::min(size.x, size.y);
-    const int32_t renderW = iconW + extImg * 2;
     NVGpaint paintIcon    = nvgImagePattern(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2, 0, image->perContextId[vg], 1.0f);
     nvgBeginPath(vg);
     nvgRect(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2);

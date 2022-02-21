@@ -678,7 +678,6 @@ gui_graph::guictr_graph_impl::hit_result gui_graph::guictr_graph_impl::hitTest(v
         auto portOutputPos                             = graphNodeInput->getPortOutputPos();
 
         vec2 dInOut         = vec2(portOutputPos) - vec2(portInputPos);
-        vec4 colEdge        = { 0.05f, 0.05f, 0.05f, 1.0f };
         vec2 pos            = portInputPos;
         float edgeMouseDist = 0.0f;
         for (int i = stepStart; i < stepLineSegments - stepStart; i++) {

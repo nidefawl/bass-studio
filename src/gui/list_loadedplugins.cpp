@@ -252,7 +252,6 @@ public:
         }
         //const int fontSize = 12;
         int32_t height = theme->get(GuiConstant::CONST_ROW_HEIGHT);
-        int32_t w = size.x / 128;
 
         auto inset = math::max<int32_t>(5, height / 2);
         int x  = inset;

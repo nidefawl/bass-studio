@@ -448,11 +448,8 @@ void gui_track_automation::render(NVGcontext* vg) {
     }
 
     if (!segments.empty()) {
-
-
         int len     = segments.size();
         int i       = 0;
-        int skipped = 0;
         for (; i < len; i++) {
             path_segment_t& segment = segments[i];
             vec2* pt2               = getPathPointSafe(segment.points.back());
@@ -461,7 +458,6 @@ void gui_track_automation::render(NVGcontext* vg) {
             }
         }
         int start = i;
-        skipped += i;
         if (i < len) {
             GuiColor::constant_t c1 = isActive() ? this->color : this->colorInactive;
             //                nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);

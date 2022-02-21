@@ -1167,11 +1167,6 @@ static void nvg__setPaintTransformTranslate(NVGcontext* ctx, float x, float y)
 	NVGstate* state = nvg__getState(ctx);
 	nvgTransformTranslate(state->fill.xform, x,y);
 }
-static void nvg__setPaintIdentiyTransform(NVGcontext* ctx)
-{
-	NVGstate* state = nvg__getState(ctx);
-	nvgTransformIdentity(state->fill.xform);
-}
 static void nvg__appendCommands(NVGcontext* ctx, float* vals, int nvals)
 {
 	NVGstate* state = nvg__getState(ctx);

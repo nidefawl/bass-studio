@@ -108,7 +108,7 @@ void generateDummyProject(DawCtrl* dawCtrl) {
                 host->insertNewPlugin(track1->getStage(), pluginHostInfo, 0);
                 pluginHostInfo->resume();
                 track1->getStage()->pluginsChanged();
-                //pluginHostInfo->setParamValue(PARAM_OFFSET_EXTERNAL+0, 1.0f, FLG_PAR_UPDATE_INIT);
+                pluginHostInfo->setParamValue(PARAM_OFFSET_EXTERNAL+0, 0.0f, FLG_PAR_UPDATE_INIT);
                 //host->postPluginLoaded(track1->getStage(), pluginHostInfo);
             }
         }
@@ -227,7 +227,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     //projName = "test-send-automation.project";
     //projName = "kshmr-samples-test.project";
     //projName = "kshmr-samples-test.project";
-    int flags = 0x1;// defer load
+    // int flags = 0x1;// defer load
     //  flags = 0; // no defer load
     dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
 

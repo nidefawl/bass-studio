@@ -568,7 +568,6 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot, bool force
     vsthost* host = vsthost::getInstance();
     String path;
     effectbase* effect      = nullptr;
-    vstplugin* loadedPlugin = nullptr;
     if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
         log_printf("Next loading plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
         plugindatabase_t* db = plugindatabase_t::getInstance();
@@ -576,7 +575,6 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot, bool force
             log_printf("Plugin is registered... loading %s, uId %d, forceLoad %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, forceLoad);
             vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
             if (res.result == 0 && res.plugin) {
-                loadedPlugin = res.plugin;
                 effect       = res.plugin;
             } else {
                 log_printf("Failed loading: Error loading plugin %s, uId %d. Res: %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, res.result);
@@ -586,20 +584,7 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot, bool force
         }
     } else {
         effect = host->makeModuleInstance(pluginSnapshot.pluginType, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
-        if (effect && effect->getModuleType() == PLUGIN_TYPE_INTERNAL_EFFECT) {
-            loadedPlugin = dynamic_cast<vstplugin*>(effect);
-        }
     }
-    //if (loadedPlugin && (loadedPlugin->getFlagsVST() & effFlagsProgramChunks) != 0) {
-    //    if (pluginSnapshot.dataChunk.size() > 0) {
-    //        log_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk.size());
-    //        loadedPlugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*) pluginSnapshot.dataChunk.data());
-    //    }
-    //    if (loadPluginPresetWithSnapshot && pluginSnapshot.dataChunk2.size() > 0) {
-    //        log_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk2.size());
-    //        loadedPlugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*) pluginSnapshot.dataChunk2.data());
-    //    }
-    //}
     return effect;
 }
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect) {

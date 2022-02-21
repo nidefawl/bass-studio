@@ -10,7 +10,6 @@
 #include "splitter.h"
 
 void gui_scrollbar::render(NVGcontext* vg) {
-    float fRnd = theme->getFloat(GuiConstant::CONST_ROUND);
     nvgBeginPath(vg);
     nvgRect(vg, pos.x, pos.y, size.x, size.y);
     NVGcolor bg = theme->getColor(GuiColor::COL_BASE_BG);

@@ -916,10 +916,6 @@ public:
 
 #ifdef _WIN32
     LRESULT windowProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) override {
-        if (this->ctrl->hasMenuWindow()) {
-            bool dbg;
-            dbg = !!_hwnd;
-        }
         switch (Msg) {
             case WM_MOVING:
             case WM_MOVE:

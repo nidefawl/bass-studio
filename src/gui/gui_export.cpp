@@ -19,7 +19,6 @@ class guictr_timeframe : public guictr_base {
     gui_timeinput tmTickLen;
     bool* const pIsLocked;
     guibutton btnLock;
-    int32_t widthText = 0;
 
 public:
     guictr_timeframe(tick_t* s, tick_t* d, bool* l)
@@ -106,7 +105,7 @@ class gui_export : public guictr_base {
     guibutton selectFolder;
 
 public:
-    gui_export(export_settings_t& _settings)
+    explicit gui_export(export_settings_t& _settings)
         : guictr_base(),
           settings(_settings), tmFrameExport(&settings.exportPos, &settings.exportLen, &settings.isLocked) {
         ctrType = CTR_TYPE_EXPORT;

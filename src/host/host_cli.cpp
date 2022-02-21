@@ -494,13 +494,11 @@ int runCommandLineHost(const std::vector<String>& args) {
                 playThread->addRequest(REQ_STATE, (int)playback_state::status_no_process, true);
             }
 
-
-            int64_t bytesCopied = 0;
             int trackIndex      = 0;
             for (auto* trackMaster : project.trackMasterCtr) {
                 auto* trImpl = trackMaster->getStage();
                 if (isSet(trImpl->flags, audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::WRITE_OUTPUT)) {
-                    bytesCopied += trImpl->audioOutput.convertToSamples(tls.host);
+                    trImpl->audioOutput.convertToSamples(tls.host);
                     std::vector<audiotrack_split_t*> samples;
                     trImpl->audioOutput.visitSamples_NoLock([&samples](std::shared_ptr<audiotrack_split_t>& split) {
                         auto* ptrSplit = split.get();
