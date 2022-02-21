@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include "platform.h"
 #include "logging.h"
+#include "assert_dbg.h"
 
 namespace DebugAlloc {
     struct AllocInfo;

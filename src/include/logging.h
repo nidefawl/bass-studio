@@ -1,6 +1,5 @@
 #pragma once
 #include "config.h"
-#include "logging.h"
 #include <string_view>
 
 #ifndef ENABLE_LOGGING
