@@ -5,12 +5,13 @@
 #include "audioblock.h"
 #include <cstdlib>
 #include <cstdint>
-#define _USE_MATH_DEFINES
 #include <cmath>
 #include <memory.h>
 #include <algorithm>
 #include <limits>
 #include <cstring>
+#include "math/vec.h"
+#include <glm/geometric.hpp>
 
 namespace dsp_util {
     const float GAIN_DB30    = math::powf(10.0f, 30.0f / 20.0f);// 2.0f
@@ -183,3 +184,23 @@ namespace dsp_util {
         return fromdBFS(f2);
     }
 }// namespace dsp_util
+
+namespace math {
+
+float distvec2(const vec2 a, const vec2 b) {
+    auto vLen = vec2(b - a);
+    return glm::length(vLen);
+}
+
+float distancePointLine(const vec2 pt, const vec2 a, const vec2 b) {
+    vec2 v      = b - a;
+    float lenSq = glm::dot(v, v);
+    if (lenSq < 1E-4F) {
+        return glm::distance(vec2(pt), vec2(a));
+    }
+    float t      = math::max(0.0f, math::min(1.0f, glm::dot(vec2(pt - a), v) / lenSq));
+    const vec2 p = vec2(a) + t * v;
+    return glm::distance(vec2(pt), p);
+}
+
+} // namespace math

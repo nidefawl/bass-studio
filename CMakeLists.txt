@@ -284,7 +284,6 @@ target_precompile_headers(${LINK_TARGET} PUBLIC
     "$<$<COMPILE_LANGUAGE:CXX>:include/fileio.h>"
     "$<$<COMPILE_LANGUAGE:CXX>:include/renderresources.h>"
     "$<$<COMPILE_LANGUAGE:CXX>:gui/gui.h>"
-    "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_DEPS_PATH}/glm/glm/glm.hpp>"
 )
 
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${GLFW_LIB_RELEASE} debug ${GLFW_LIB_DEBUG})

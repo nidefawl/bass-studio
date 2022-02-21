@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include "math/vec.h"
+#include "math/mat.h"
 #include "gl_vbo.h"
 #include "gl_attr.h"
 #include "hires_timer.h"
@@ -93,7 +94,7 @@ public:
 
     virtual void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) = 0;
 
-    virtual void render(BakeGLPath& out, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) = 0;
+    virtual void render(BakeGLPath& out, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) = 0;
 };
 class GLPathRenderer : public IPathRenderer {
     std::vector<VertexAttr> attributes{
@@ -119,7 +120,7 @@ public:
     int init() override;
     void destroy() override;
     void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) override;
-    void render(BakeGLPath& out, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) override;
+    void render(BakeGLPath& out, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };
 
 class GLPathRendererSimple : public IPathRenderer {
@@ -135,7 +136,7 @@ public:
     int init() override;
     void destroy() override;
     void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) override;
-    void render(BakeGLPath& out, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) override;
+    void render(BakeGLPath& out, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };
 
 class GLPathRendererSimple2 : public IPathRenderer {
@@ -154,5 +155,5 @@ public:
     int init() override;
     void destroy() override;
     void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) override;
-    void render(BakeGLPath& out, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) override;
+    void render(BakeGLPath& out, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };

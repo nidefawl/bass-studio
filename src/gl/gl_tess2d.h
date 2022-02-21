@@ -1,8 +1,9 @@
 #pragma once
-#include <vector>
 #include "math/vec.h"
 #include "gl_vbo.h"
 #include "assert_dbg.h"
+#include <vector>
+#include <glm/gtc/type_ptr.hpp>
 
 #define TESS_COLOR 1
 #define TESS_ATTR 2
@@ -83,20 +84,20 @@ public:
         vec2 pos      = v + offset;
         float* bufPos = buf.data() + index;
 
-        memcpy(bufPos, vec_ptr(pos), sizeof(vec2));
+        memcpy(bufPos, value_ptr(pos), sizeof(vec2));
         bufPos += 2;
-        memcpy(bufPos, vec_ptr(uv), sizeof(vec2));
+        memcpy(bufPos, value_ptr(uv), sizeof(vec2));
         bufPos += 2;
         if (flags & TESS_COLOR) {
-            memcpy(bufPos, vec_ptr(rgba), sizeof(vec4));
+            memcpy(bufPos, value_ptr(rgba), sizeof(vec4));
             bufPos += 4;
         }
         if (flags & TESS_ATTR) {
-            memcpy(bufPos, vec_ptr(attr), sizeof(vec4));
+            memcpy(bufPos, value_ptr(attr), sizeof(vec4));
             bufPos += 4;
         }
         if (flags & TESS_ATTR2) {
-            memcpy(bufPos, vec_ptr(attr2), sizeof(vec4));
+            memcpy(bufPos, value_ptr(attr2), sizeof(vec4));
             bufPos += 4;
         }
         vertexcount++;

@@ -4,6 +4,8 @@
 
 #include "platform.h"
 #include "hires_timer.h"
+#include <algorithm>
+#include <glm/gtc/type_ptr.hpp>
 
 hires_timer_t timer;
 extern "C" {
@@ -55,7 +57,7 @@ void glnvg__updateMvpCXX(int u_loc_mvp, float w, float h) {
     matModel = glm::translate(matModel, glm::vec3(-w / 2.0f, -h / 2.0f, 0.0f));
 
     glm::mat4 matViewProj = matProj * matView * matModel;
-    glUniformMatrix4fv(u_loc_mvp, 1, GL_FALSE, mat_ptr(matViewProj));
+    glUniformMatrix4fv(u_loc_mvp, 1, GL_FALSE, value_ptr(matViewProj));
 }
 #endif
 

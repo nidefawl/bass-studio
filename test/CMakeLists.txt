@@ -62,6 +62,7 @@ DEFINE_TEST(
     common/test_stubs.cpp
     ../src/util/testing_environment.cpp
     ../src/util/str_util.cpp
+    ../src/util/dsp_util.cpp
     ../src/threads/thread.cpp
 )
 

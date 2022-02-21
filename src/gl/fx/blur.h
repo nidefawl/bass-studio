@@ -15,6 +15,7 @@
 
 #include "math/vec.h"
 #include "math/mat.h"
+#include <glm/gtc/type_ptr.hpp>
 
 enum class blur_num_passes : int32_t {
     PASSES_2 = 0,
@@ -108,7 +109,7 @@ public:
         glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
         bindVertexAttributes(attributes);
-        glUniformMatrix4fv(u_mvp, 1, GL_FALSE, mat_ptr(matProj));
+        glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(matProj));
 
 
         glViewport(0, 0, wd, hd);

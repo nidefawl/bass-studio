@@ -1,5 +1,4 @@
 #include "glheaders.h"
-#define _USE_MATH_DEFINES
 #include <cmath>
 #include <vector>
 
@@ -19,6 +18,7 @@
 #include "assert_dbg.h"
 #include "polyline/Polyline2D.h"
 #include <algorithm>
+#include <glm/gtc/type_ptr.hpp>
 
 using vec2list = std::vector<vec2>;
 
@@ -123,9 +123,9 @@ void GLPathRendererSimple::bakePaths(std::vector<vec2list> paths, Uniforms pathO
     out.vbo.nIndices = bufFinal.size();// number of vertices for glDrawArrays
 }
 
-void GLPathRendererSimple::render(BakeGLPath& bakedPath, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) {
+void GLPathRendererSimple::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {
     mat4x4 mvp = matProj * (matView * matModel);
-    glUniformMatrix4fv(u_mvp, 1, GL_FALSE, mat_ptr(mvp));
+    glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
     glUniform4f(u_color, 1, 1, 1, 1);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);

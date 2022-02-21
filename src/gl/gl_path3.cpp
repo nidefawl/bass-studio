@@ -1,7 +1,8 @@
 #include "glheaders.h"
-#define _USE_MATH_DEFINES
 #include <cmath>
 #include <vector>
+#include <algorithm>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "math/seq_math.h"
 #include "seq_util.h"
@@ -22,7 +23,6 @@
 #define PAR_STREAMLINES_IMPLEMENTATION
 #endif
 #include <par/par_streamlines.h>
-#include <algorithm>
 
 using vec2list = std::vector<vec2>;
 namespace {
@@ -171,9 +171,9 @@ void GLPathRendererSimple2::bakePaths(std::vector<vec2list> paths, Uniforms path
     out.lineWidth = pathOpt.linewidth;
 }
 
-void GLPathRendererSimple2::render(BakeGLPath& bakedPath, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) {
+void GLPathRendererSimple2::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {
     mat4x4 mvp = matProj * (matView * matModel);
-    glUniformMatrix4fv(u_mvp, 1, GL_FALSE, mat_ptr(mvp));
+    glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
     glUniform4f(u_color, 1, 1, 1, 1);
     glUniform1f(u_linewidth, bakedPath.lineWidth);
     glBindTexture(GL_TEXTURE_2D, 0);

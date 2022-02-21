@@ -2,6 +2,8 @@
 #include "math/seq_math.h"
 #include "logging.h"
 #include <limits>
+#include <vector>
+
 
 namespace test_math {
     constexpr int64_t LIMIT_OFFSET = 129;

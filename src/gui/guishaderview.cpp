@@ -5,6 +5,7 @@
 #include <memory>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "math/seq_math.h"
 #include "math/vec.h"
@@ -108,9 +109,9 @@ void gui_shaderview::prerender(NVGcontext* vg) {
     auto pipeline = impl->pipeTestShader.get();
     auto& vbo     = pipeline->vbo;
     glUseProgram(pipeline->program);
-    glm::mat4x4 matProj = glm::ortho(0.f, (float) w, (float) h, 0.f, 1.0f, -1.0f);
+    mat4x4 matProj = glm::ortho(0.f, (float) w, (float) h, 0.f, 1.0f, -1.0f);
     pipeline->setUniforms(w, h, getTimeMillisF());
-    glUniformMatrix4fv(pipeline->u_mvp, 1, GL_FALSE, mat_ptr(matProj));
+    glUniformMatrix4fv(pipeline->u_mvp, 1, GL_FALSE, value_ptr(matProj));
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, pipeline->texture);
 

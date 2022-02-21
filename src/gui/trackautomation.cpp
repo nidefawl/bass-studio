@@ -70,7 +70,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 
             int32_t ptIdx      = segment.points.front();
             vec2& ptStart      = cachedShape[ptIdx];
-            float distPtEndSeg = glm::distance(ptStart, mpos);
+            float distPtEndSeg = math::distvec2(ptStart, mpos);
             if (distPtEndSeg < 10 && segment.dataOffset > -1) {
 
                 hit_result hitNode{ dragmode::drag_node, segment.dataOffset, ptIdx, distPtEndSeg - 4 };

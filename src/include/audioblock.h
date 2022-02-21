@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <memory.h>
 #include <atomic>
+#include <vector>
 #include "assert_dbg.h"
 #include "math/seq_math.h"
 #include "mem.h"
