@@ -1,6 +1,7 @@
 #include "guimenu.h"
 #include "buildinfo.h"
 #include "renderresources.h"
+#include <nanovg.h>
 
 guimenu_ctxtentry::guimenu_ctxtentry(ngui::Menu* _menu)
     : ctxtmenu_entry(_menu->title, _menu->command.command), menu(_menu) {
@@ -240,16 +241,13 @@ void guictr_menubar::render(NVGcontext* vg) {
     }
     String strInfo = BuildInfo::BUILD_BINARY_VERSION;
     if (strInfo.length() > 0) {
-        auto fontScale     = math::max(12.f, size.y * 0.8f);
-        auto padding       = math::max(0.f, (size.y - fontScale) * 0.5f);
-
         renderTextLabel(vg,
-                        vec2(size.x - padding, padding),
+                        vec2(size.x - size.y*0.25f, size.y * 0.5f),
                         vec2(size),
                         strInfo,
                         theme,
-                        fontScale,
+                        size.y,
                         theme->getColor(GuiColor::COL_LABEL_INACTIVE),
-                        NVG_ALIGN_RIGHT | NVG_ALIGN_TOP);
+                        NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     }
 }
