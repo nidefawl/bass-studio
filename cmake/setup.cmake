@@ -139,7 +139,7 @@ namespace BuildInfo {
     const char* COMPILE_DEFS         = \"$<JOIN:$<TARGET_PROPERTY:${TARGETNAME},COMPILE_DEFINITIONS>, >\";
     const char* COMPILER_ID          = \"${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}\";
     const char* COMPILER_PATH        = \"${CMAKE_CXX_COMPILER}\";
-    const char* BUILD_BINARY_VERSION = \"0.4.4.1\";
+    const char* BUILD_BINARY_VERSION = \"0.4.5.1\";
     const char* BUILD_BINARY_NAME    = \"Daw-${BUILD_BINARY_SUFFIX}\";
     const char* BUILD_TIMESTAMP      = __TIMESTAMP__;
 } // namespace BuildInfo"
