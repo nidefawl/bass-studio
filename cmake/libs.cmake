@@ -13,23 +13,23 @@ find_path(PROJECT_DEPS_PATH
         "${CMAKE_BINARY_DIR}/../daw-deps"
         "C:/dev/daw-deps"
         "D:/dev/daw-deps"
+    NO_DEFAULT_PATH 
     REQUIRED)
 
 message(STATUS "PROJECT_DEPS_PATH ${PROJECT_DEPS_PATH}")
 
 find_path(PROJECT_DEPS_INSTALL_PATH
     NAMES
-        "glfw"
-        "portaudio"
-        "portmidi"
-        "soxr"
-        "glm"
+        "include"
+        "lib"
     PATHS 
         "${DEPS_BUILD_FOLDER}"
         "${CMAKE_SOURCE_DIR}/../build-deps/install"
         "${CMAKE_BINARY_DIR}/../build-deps/install"
+    NO_DEFAULT_PATH
     REQUIRED
 )
+message(STATUS "PROJECT_DEPS_INSTALL_PATH ${PROJECT_DEPS_INSTALL_PATH}")
 
 find_package(Threads REQUIRED)
 
