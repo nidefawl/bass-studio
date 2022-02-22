@@ -149,7 +149,7 @@ if (NOT MSVC)
 endif ()
 
 set(PROJECT_DEPS_SRC_FILES "${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c")
-set(GENERATED_SRC_FILES "${CMAKE_BINARY_DIR}/buildinfo.cpp")
+set(GENERATED_SRC_FILES "${CMAKE_BINARY_DIR}/buildinfo_$<CONFIG>.cpp")
 
 list(APPEND RESOURCE_FILES "")
 if (MSVC)
@@ -210,14 +210,6 @@ endif ()
 target_compile_definitions(${LINK_TARGET} PUBLIC GLFW_INCLUDE_NONE=1 USE_WIN32_EXC_HOOKS BUILD_VSTHOST=1 BUILD_EXTERNAL_PLUGIN=0)
 #target_compile_definitions(${LINK_TARGET} PUBLIC PA_ENABLE_DEBUG_OUTPUT=1)
 target_compile_definitions(${LINK_TARGET} PUBLIC VST_FORCE_DEPRECATED=0 GLM_FORCE_CXX14=1)
-
-if (WIN32)
-    target_compile_definitions(${LINK_TARGET} PUBLIC PA_USE_ASIO=1 PA_USE_DS=1 PA_USE_WASAPI=1 PA_USE_WDMKS=1)
-endif (WIN32)
-
-if (UNIX)
-    target_compile_definitions(${LINK_TARGET} PUBLIC PA_USE_ALSA=1 __cdecl="")
-endif (UNIX)
 
 if (PROJECT_CFG_USE_OPENGL3)
     target_compile_definitions(${LINK_TARGET} PUBLIC NANOVG_GL3=1)
@@ -286,22 +278,20 @@ target_precompile_headers(${LINK_TARGET} PUBLIC
     "$<$<COMPILE_LANGUAGE:CXX>:gui/gui.h>"
 )
 
-target_link_libraries(${LINK_TARGET} PUBLIC optimized ${GLFW_LIB_RELEASE} debug ${GLFW_LIB_DEBUG})
-target_link_libraries(${LINK_TARGET} PUBLIC optimized ${SQLITECPP_LIB_RELEASE} debug ${SQLITECPP_LIB_DEBUG})
-target_link_libraries(${LINK_TARGET} PUBLIC optimized ${SQLITE3_LIB_RELEASE} debug ${SQLITE3_LIB_DEBUG})
-target_link_libraries(${LINK_TARGET} PUBLIC ${SOXR_LIB_RELEASE})
-target_link_libraries(${LINK_TARGET} PUBLIC optimized ${KISSFFT_LIB} debug ${KISSFFT_LIB})
-target_link_libraries(${LINK_TARGET} PUBLIC optimized ${PORTAUDIO_LIB_RELEASE} debug ${PORTAUDIO_LIB_DEBUG})
-target_link_libraries(${LINK_TARGET} PUBLIC optimized ${PORTMIDI_LIB_RELEASE} debug ${PORTMIDI_LIB_DEBUG})
+target_link_libraries(${LINK_TARGET} PUBLIC glfw)
+target_link_libraries(${LINK_TARGET} PUBLIC SQLiteCpp)
+target_link_libraries(${LINK_TARGET} PUBLIC PortAudio::PortAudio)
+target_link_libraries(${LINK_TARGET} PUBLIC PortMidi::portmidi)
+target_link_libraries(${LINK_TARGET} PUBLIC kissfft::kissfft-float)
+target_link_libraries(${LINK_TARGET} PUBLIC ${SOXR_LIB})
 
 if (LINUX)
     find_package(Threads REQUIRED) 
     target_link_libraries(${LINK_TARGET} PUBLIC Threads::Threads)
-    target_link_libraries(${LINK_TARGET} PUBLIC ${X11_X11_LIB} ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS} ${ALSA_LIBRARY} ${GTK3_LIBRARIES} GL rt m)
+    target_link_libraries(${LINK_TARGET} PUBLIC ${X11_X11_LIB} ${CMAKE_DL_LIBS} ${GTK3_LIBRARIES} GL rt m)
 endif (LINUX)
 if (APPLE)
     target_link_libraries(${LINK_TARGET} PUBLIC
-            ${CMAKE_THREAD_LIBS_INIT}
             ${CMAKE_DL_LIBS}
             ${APPLE_COREMIDI_LIBRARY}
             ${APPLE_COREVIDEO_LIBRARY}
@@ -330,7 +320,7 @@ SET_TARGET_PROJECT_INCLUDE_DIRS(${LINK_TARGET})
 
 GENERATE_BUILDINFO_CPP(${LINK_TARGET} src/app/buildinfo.cpp.in)
 
-if (PROJECT_BUILD_BENCHMARKS OR FORCE_BUILD_BENCHMARKS)
+if (PROJECT_BUILD_BENCHMARKS)
     ADD_SUBDIRECTORY(benchmark)
 endif ()
 

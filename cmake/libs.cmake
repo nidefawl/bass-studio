@@ -11,17 +11,11 @@ find_path(PROJECT_DEPS_PATH
     PATHS 
         "${CMAKE_SOURCE_DIR}/../daw-deps"
         "${CMAKE_BINARY_DIR}/../daw-deps"
+        "C:/dev/daw-deps"
         "D:/dev/daw-deps"
     REQUIRED)
 
 message(STATUS "PROJECT_DEPS_PATH ${PROJECT_DEPS_PATH}")
-set(USE_SHARED_LIBS Off)
-
-if (USE_SHARED_LIBS)
-  set(BUILD_PATH_LIB_TYPE "shared")
-else()
-  set(BUILD_PATH_LIB_TYPE "static")
-endif()
 
 find_path(PROJECT_DEPS_INSTALL_PATH
     NAMES
@@ -37,138 +31,21 @@ find_path(PROJECT_DEPS_INSTALL_PATH
     REQUIRED
 )
 
-# find_package* and deps cmakes helpers cannot be used until multi config finds widespread support
-# until then we use this shitty way of defining DEBUG and RELEASE libs separately and
-# taking care of config dependant include paths ourselves
+find_package(Threads REQUIRED)
 
-message(STATUS "${PROJECT_DEPS_INSTALL_PATH}/glfw/debug/lib/")
-find_library(
-    GLFW_LIB_DEBUG
-    NAMES "glfw3" "glfw3dll"
-    PATHS "${PROJECT_DEPS_INSTALL_PATH}/glfw/debug/"
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-    REQUIRED)
-find_library(
-    GLFW_LIB_RELEASE
-    NAMES "glfw3" "glfw3dll"
-    PATHS ${PROJECT_DEPS_INSTALL_PATH}/glfw/release/
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-    REQUIRED)
+find_package(glfw3      PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH)
+find_package(SQLiteCpp  PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH)
+find_package(PortAudio  PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH)
+find_package(PortMidi   PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH)
+find_package(kissfft    PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH)
 
-find_library(
-    SQLITECPP_LIB_DEBUG
-    NAMES "SQLiteCpp"
-    PATHS ${PROJECT_DEPS_INSTALL_PATH}/SQLiteCpp/debug/
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-    REQUIRED)
-find_library(
-    SQLITECPP_LIB_RELEASE
-    NAMES "SQLiteCpp"
-    PATHS ${PROJECT_DEPS_INSTALL_PATH}/SQLiteCpp/release/
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-    REQUIRED)
-
-find_library(
-    SQLITE3_LIB_DEBUG
-    NAMES "sqlite3"
-    PATHS ${PROJECT_DEPS_INSTALL_PATH}/SQLiteCpp/debug/
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-    REQUIRED)
-find_library(
-    SQLITE3_LIB_RELEASE
-    NAMES "sqlite3"
-    PATHS ${PROJECT_DEPS_INSTALL_PATH}/SQLiteCpp/release/
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-    REQUIRED)
-
-find_library(
-    PORTAUDIO_LIB_DEBUG
-    NAMES 
-        "portaudio"
-        "portaudio_static_x64"
-    PATHS 
-        ${PROJECT_DEPS_INSTALL_PATH}/portaudio/debug/
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-    REQUIRED)
-find_library(
-    PORTAUDIO_LIB_RELEASE
-    NAMES 
-        "portaudio"
-        "portaudio_static_x64"
-    PATHS 
-        ${PROJECT_DEPS_INSTALL_PATH}/portaudio/release/
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-    REQUIRED)
-
-find_library(
-    PORTMIDI_LIB_DEBUG
-    NAMES "portmidi"
-    PATHS 
-        ${PROJECT_DEPS_INSTALL_PATH}/portmidi/debug/
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-    REQUIRED)
-find_library(
-    PORTMIDI_LIB_RELEASE
-    NAMES "portmidi"
-    PATHS 
-        ${PROJECT_DEPS_INSTALL_PATH}/portmidi/release/
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-    REQUIRED)
-
-
-# find_package(kissfft REQUIRED PATHS "${PROJECT_DEPS_INSTALL_PATH}/kissfft" "${PROJECT_DEPS_INSTALL_PATH}/kissfft") 
-find_library(
-    KISSFFT_LIB
-    NAMES "kissfft-float"
-    PATHS 
-        ${PROJECT_DEPS_INSTALL_PATH}/kissfft/debug/
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-    REQUIRED)
-find_library(
-    KISSFFT_LIB_RELEASE
-    NAMES "kissfft-float"
-    PATHS 
-        ${PROJECT_DEPS_INSTALL_PATH}/kissfft/release/
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-    REQUIRED)
-
-string(TOLOWER "soxr-${CMAKE_CXX_COMPILER_ID}-debug" SOXR_DEBUG_DLL_NAME)
-string(TOLOWER "soxr-${CMAKE_CXX_COMPILER_ID}-release" SOXR_RELEASE_DLL_NAME)
-find_library(
-    SOXR_LIB_RELEASE
-    NAMES 
-        ${SOXR_DEBUG_DLL_NAME}
-        ${SOXR_RELEASE_DLL_NAME}
-    PATHS
-        ${PROJECT_DEPS_INSTALL_PATH}/soxr/
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-    REQUIRED)
-
-# Need both versions to make CMake happy
-if(NOT GLFW_LIB_DEBUG AND NOT GLFW_LIB_DEBUG)
-    message(FATAL_ERROR "glfw3 not found")
-endif()
-
-# pybind is header only and identical in release and debug.
-# it cannot be used out of the box and has to be installed.
-# for simplicity purposes we just install it in both release and debug and check for presence of either.
 set(PYBIND11_CPP_STANDARD -std=c++17)
-find_package(pybind11 REQUIRED PATHS "${PROJECT_DEPS_INSTALL_PATH}/pybind11") 
+find_package(pybind11   PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH) 
 
-find_package(Threads REQUIRED )
+string(TOLOWER "soxr-${CMAKE_CXX_COMPILER_ID}-release" SOXR_DYNLIB_NAME)
+find_library(SOXR_LIB   PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH NAMES ${SOXR_DYNLIB_NAME} PATH_SUFFIXES lib)
+message(STATUS "SOXR_LIB ${SOXR_LIB}")
+
 
 if (LINUX)
     find_package(X11 REQUIRED)
@@ -210,13 +87,6 @@ FUNCTION(SET_TARGET_PROJECT_INCLUDE_DIRS TARGETNAME)
         ${PROJECT_DEPS_PATH}/glm
         ${PROJECT_DEPS_PATH}/SplineLibrary/spline_library
         ${PROJECT_DEPS_PATH}/cereal/include
-        ${PROJECT_DEPS_INSTALL_PATH}/soxr/include
-        ${PROJECT_DEPS_INSTALL_PATH}/pybind11/include
-        ${PROJECT_DEPS_INSTALL_PATH}/glfw/$<IF:$<CONFIG:Debug>,debug,release>/include
-        ${PROJECT_DEPS_INSTALL_PATH}/SQLiteCpp/$<IF:$<CONFIG:Debug>,debug,release>/include
-        ${PROJECT_DEPS_INSTALL_PATH}/portaudio/$<IF:$<CONFIG:Debug>,debug,release>/include
-        ${PROJECT_DEPS_INSTALL_PATH}/portmidi/$<IF:$<CONFIG:Debug>,debug,release>/include
-        ${PROJECT_DEPS_INSTALL_PATH}/kissfft/$<IF:$<CONFIG:Debug>,debug,release>/include
     )
 
     if (PROJECT_CFG_USE_OPENGL3)

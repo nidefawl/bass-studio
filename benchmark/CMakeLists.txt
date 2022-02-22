@@ -1,9 +1,6 @@
 project("benchmark" C CXX)
-find_package(benchmark
-    NO_DEFAULT_PATH
-    REQUIRED
-    PATHS ${PROJECT_DEPS_INSTALL_PATH}/google-benchmark
-)
+
+find_package(benchmark PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH)
 
 MACRO(DEFINE_BENCHMARK target_name)
     add_executable(${target_name} ${target_name}.cpp)
@@ -15,9 +12,6 @@ MACRO(DEFINE_BENCHMARK target_name)
     SET_APP_BUILD(${target_name})
 ENDMACRO()
 
-if (FORCE_BUILD_BENCHMARKS OR NOT DEFINED CMAKE_BUILD_TYPE OR NOT CMAKE_BUILD_TYPE MATCHES "Debug")
-    DEFINE_BENCHMARK(benchmark-processing)
-    DEFINE_BENCHMARK(benchmark-denormals)
-    DEFINE_BENCHMARK(benchmark-timer)
-endif()
-
+DEFINE_BENCHMARK(benchmark-processing)
+DEFINE_BENCHMARK(benchmark-denormals)
+DEFINE_BENCHMARK(benchmark-timer)

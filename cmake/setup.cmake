@@ -128,24 +128,22 @@ FUNCTION(SET_APP_BUILD appname)
 ENDFUNCTION(SET_APP_BUILD)
 
 FUNCTION(GENERATE_BUILDINFO_CPP TARGETNAME CPP_IN_FILE)
-  # process variables from CMAKE build system towards a buildinfo.cpp file
-  # this only happens at configuration and requires manual deletion of buildinfo.cpp to reflect the latest options
-  get_property(BUILDINFO_COMPILE_OPTIONS DIRECTORY       PROPERTY COMPILE_OPTIONS)
-  get_property(BUILDINFO_COMPILE_DEFS    DIRECTORY       PROPERTY COMPILE_DEFINITIONS)
-  get_property(BUILD_CXX_STANDARD TARGET ${TARGETNAME} PROPERTY CXX_STANDARD)
-  if (CMAKE_BUILD_TYPE)
-    string(TOUPPER ${CMAKE_BUILD_TYPE} BUILD_TYPE_SUFFIX)
-    separate_arguments(GLOBAL_FLAGS UNIX_COMMAND "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${BUILD_TYPE_SUFFIX}}")
-  else()
-    separate_arguments(GLOBAL_FLAGS UNIX_COMMAND "${CMAKE_CXX_FLAGS}")
-  endif()
-  list(APPEND BUILDINFO_COMPILE_OPTIONS ${GLOBAL_FLAGS})
-  list(APPEND BUILDINFO_COMPILE_OPTIONS -std=c++${BUILD_CXX_STANDARD})
-  if (BUILDINFO_COMPILE_OPTIONS)
-    string(REPLACE ";" " " BUILDINFO_COMPILE_OPTIONS "${BUILDINFO_COMPILE_OPTIONS}")
-  endif()
-  if (BUILDINFO_COMPILE_DEFS)
-    string(REPLACE ";" " -D" BUILDINFO_COMPILE_DEFS "-D${BUILDINFO_COMPILE_DEFS}")
-  endif()
-  CONFIGURE_FILE( ${CPP_IN_FILE} ${CMAKE_BINARY_DIR}/buildinfo.cpp ESCAPE_QUOTES)
+  file (GENERATE
+    OUTPUT "${CMAKE_BINARY_DIR}/buildinfo_$<CONFIG>.cpp" 
+    CONTENT
+"#ifndef __TIMESTAMP__
+#define __TIMESTAMP__ \"Undefined\"
+#endif
+namespace BuildInfo {
+    const char* COMPILE_OPTIONS      = \"$<JOIN:${CMAKE_CXX_FLAGS};$<IF:$<CONFIG:Debug>,${CMAKE_CXX_FLAGS_DEBUG},${CMAKE_CXX_FLAGS_RELEASE}>;$<TARGET_PROPERTY:${TARGETNAME},COMPILE_OPTIONS>, >\";
+    const char* COMPILE_DEFS         = \"$<JOIN:$<TARGET_PROPERTY:${TARGETNAME},COMPILE_DEFINITIONS>, >\";
+    const char* COMPILER_ID          = \"${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}\";
+    const char* COMPILER_PATH        = \"${CMAKE_CXX_COMPILER}\";
+    const char* BUILD_BINARY_VERSION = \"0.4.4.1\";
+    const char* BUILD_BINARY_NAME    = \"Daw-${BUILD_BINARY_SUFFIX}\";
+    const char* BUILD_TIMESTAMP      = __TIMESTAMP__;
+} // namespace BuildInfo"
+    NEWLINE_STYLE LF
+  )
+
 ENDFUNCTION()
