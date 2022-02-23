@@ -161,7 +161,6 @@ source_group(TREE ${PROJECT_SRC_PATH} PREFIX "src" FILES
                     ${HDR_FILES}
                     ${C_SRC_FILES}
                     ${MM_SRC_FILES})
-source_group("generated" FILES ${GENERATED_SRC_FILES})
 source_group("deps" FILES ${PROJECT_DEPS_SRC_FILES})
 source_group("res" FILES ${RESOURCE_FILES})
 

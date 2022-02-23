@@ -31,6 +31,11 @@ find_path(PROJECT_DEPS_INSTALL_PATH
 )
 message(STATUS "PROJECT_DEPS_INSTALL_PATH ${PROJECT_DEPS_INSTALL_PATH}")
 
+# MinSizeRel may link against debug libraries (depends on order of definition inside imported library) 
+# Force linkage against Release if no explicit import target for config is provided
+set(CMAKE_MAP_IMPORTED_CONFIG_MINSIZEREL "MinSizeRel;Release;")
+set(CMAKE_MAP_IMPORTED_CONFIG_RELWITHDEBINFO "RelWithDebInfo;Release;")
+
 find_package(Threads REQUIRED)
 
 find_package(glfw3      PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH)
