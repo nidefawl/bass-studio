@@ -1,6 +1,7 @@
 #pragma once
 #include "math/seq_math.h"
 #include "seq_time.h"
+#include <vector>
 
 namespace DAW {
 
