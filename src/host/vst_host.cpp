@@ -333,9 +333,11 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
          * Add a lock free thread-safe way to check (from the callback) if a plugin is ready for processing
          */
         if (plugin->bIsSetup && plugin->trackImpl) {
+            auto parent = plugin->trackImpl;
+            while (parent->parent) parent = parent->parent;
             // get this from the host instead of the tls
             auto projCtrl = project_controller_t::get();
-            if (projCtrl && projCtrl->getTracks().resolveTrack(plugin->trackImpl->toRef())) {
+            if (projCtrl && projCtrl->getTracks().resolveTrack(parent->toRef())) {
                 validProcessingState = true;
             }
         }
