@@ -170,7 +170,7 @@ track_id_snapshot_t getTrackIdSnapshot(const audio_stage_id_t& stageId) {
 track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
     : tracksettings_t(*track),
       stageIds(track->audio ? getTrackIdSnapshot(track->audio->stageId) : track_id_snapshot_t{}), localIdx(track->localIdxFlat),
-      plugins(track->audio, storePluginChunks) {
+      data(track->audio, storePluginChunks) {
     auto& otherClips = track->getConstMidi().getConstClips();
     for (auto clip : otherClips) {
         clips.emplace_back(*clip);
@@ -200,7 +200,7 @@ track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
 void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
     auto audio = this->audio;
     dbgassert(audio);
-    const auto& implSnapshot = snapshot.plugins;
+    const auto& implSnapshot = snapshot.data;
     // if the snapshot holds a stage id then use it, otherwise keep current stageId
     if (snapshot.stageIds.inputStageId != -1) {
         audio->stageId.stageId           = static_cast<audiostageid_i32>(snapshot.stageIds.stageId);
@@ -566,16 +566,17 @@ void project_t::copyFrom(project_snapshot_t& project) {
 
 effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot, bool forceLoad) {
     vsthost* host = vsthost::getInstance();
-    String path;
     effectbase* effect      = nullptr;
     if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
         log_printf("Next loading plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
         plugindatabase_t* db = plugindatabase_t::getInstance();
-        if (db->resolve(pluginSnapshot, &path, forceLoad ? 1 : 0)) {
+        pluginentry_t resolvedPlugin;
+        if (db->resolve(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
             log_printf("Plugin is registered... loading %s, uId %d, forceLoad %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, forceLoad);
-            vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
+            vstpluginloadres res = host->loadPlugin(resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
             if (res.result == 0 && res.plugin) {
-                effect       = res.plugin;
+                res.plugin->localDbId = resolvedPlugin.localDbId;
+                effect = res.plugin;
             } else {
                 log_printf("Failed loading: Error loading plugin %s, uId %d. Res: %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, res.result);
             }

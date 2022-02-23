@@ -65,7 +65,7 @@ struct track_snapshot_t : public tracksettings_t {
     track_id_snapshot_t stageIds;
     int32_t localIdx     = -1;
     track_t* trackLoaded = nullptr;// ref set in first phase of, cleared in second of 2-phase loading
-    track_impl_snapshot_t plugins;
+    track_impl_snapshot_t data;
     std::vector<clip_t> clips;
     std::map<int32_t, track_layout_snapshot_t> layouts;
     track_snapshot_t() = default;

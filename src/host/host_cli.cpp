@@ -342,7 +342,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                     // load plugins
                     for (track_snapshot_t& ts : ctr->tracks) {
                         log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name),
-                                   ts.plugins.pluginSnapshots.size());
+                                   ts.data.pluginSnapshots.size());
                         ts.trackLoaded->loadSnapshot(ts);
                     }
                     if (activateDeferred) {

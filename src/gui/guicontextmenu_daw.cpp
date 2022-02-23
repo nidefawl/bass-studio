@@ -40,7 +40,7 @@ void guictxtmenu_notrack::clicked(int _id) {
                 vsthost* host = vsthost::getInstance();
                 //load plugins
                 for (track_snapshot_t& ts : ctr->tracks) {
-                    log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name), ts.plugins.pluginSnapshots.size());
+                    log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name), ts.data.pluginSnapshots.size());
                     ts.stageIds = track_id_snapshot_t{};
                     ts.trackLoaded->loadSnapshot(ts);
                     std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;

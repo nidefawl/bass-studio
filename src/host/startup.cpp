@@ -219,7 +219,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     auto dawInstance = dawMainCtrl->getDaw();
     //  String dawPath = "C:/dev/daw/run/";
     String dawPath  = "./projects/";
-    String projName = "startup.project";
+    String projName = "als2daw/debug-stuff.project";
     //String projName = "test-wave-2.project";
     //projName = "kshmr-samples-test.project";
     //  projName = "test-empty-midi-loop.project";
@@ -227,8 +227,8 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     //projName = "test-send-automation.project";
     //projName = "kshmr-samples-test.project";
     //projName = "kshmr-samples-test.project";
-    // int flags = 0x1;// defer load
-    //  flags = 0; // no defer load
+    int flags = 0x1;// defer load
+     flags = 0; // no defer load
     dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
 
 
@@ -294,7 +294,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     //    dawMainCtrl->setVisible(false);
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1));
-    //if (dawMainCtrl->getLoadProjectFilePath().empty())
-    //    dawInstance->loadFile(dawPath + projName, flags);
-    generateDummyProject(dawMainCtrl);
+    if (dawMainCtrl->getLoadProjectFilePath().empty())
+       dawInstance->loadFile(dawPath + projName, flags);
+    // generateDummyProject(dawMainCtrl);
 }

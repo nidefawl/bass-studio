@@ -212,7 +212,7 @@ template<class Archive>
 void load(Archive& archive, track_snapshot_t& m, const std::uint32_t version) {
     if (version == 0) {
         make_optional_nvp(archive, "idx", m.localIdx);
-        archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("plugins", m.plugins));
+        archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("plugins", m.data));
         int32_t stageId = m.stageIds.stageId;
         archive(make_nvp("stageId", stageId));
         stageId *= 4;
@@ -222,7 +222,12 @@ void load(Archive& archive, track_snapshot_t& m, const std::uint32_t version) {
         m.stageIds.outputPostStageId = stageId++;
     } else {
         archive(make_nvp("idx", m.localIdx));
-        archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("plugins", m.plugins));
+        archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips));
+        if (version < 2) {
+            archive(make_nvp("plugins", m.data));
+        } else {
+            archive(make_nvp("data", m.data));
+        }
         archive(make_nvp("stageIds", m.stageIds));
     }
 }
@@ -230,7 +235,7 @@ void load(Archive& archive, track_snapshot_t& m, const std::uint32_t version) {
 template<class Archive>
 void save(Archive& archive, const track_snapshot_t& m, const std::uint32_t version) {
     make_optional_nvp(archive, "idx", m.localIdx);
-    archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("plugins", m.plugins));
+    archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("data", m.data));
     archive(make_nvp("stageIds", m.stageIds));
 }
 
@@ -408,7 +413,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 
 CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
 CEREAL_CLASS_VERSION(plugin_snapshot_t, 6);
-CEREAL_CLASS_VERSION(track_snapshot_t, 1);
+CEREAL_CLASS_VERSION(track_snapshot_t, 2);
 
 /**
  * @param projectfile
@@ -420,7 +425,7 @@ bool validateProjectFile(std::shared_ptr<project_file> projectfile) {
         std::vector<int32_t> vec;
         vec.reserve(128);
         for (const track_snapshot_t& tracksnapshot : trackcontainersnapshot.tracks) {
-            for (const plugin_snapshot_t& pluginsnapshot : tracksnapshot.plugins.pluginSnapshots) {
+            for (const plugin_snapshot_t& pluginsnapshot : tracksnapshot.data.pluginSnapshots) {
                 int32_t globalId = pluginsnapshot.projectGlobalId;
                 if (std::binary_search(vec.begin(), vec.end(), globalId)) {
                     log_printf("invalid project: duplicate plugin global id %d found\n", globalId);

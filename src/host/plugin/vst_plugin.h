@@ -49,7 +49,7 @@ public:
     bool bWantsEffIdle = false;
     int pluginCategory = 0;
     int vstVersion     = 0;
-    int localDbId      = 0;
+    int localDbId      = -1;
     int vendorVersion  = 0;
     int uId            = 0;
     vst_window* window = nullptr;

@@ -4,7 +4,7 @@
 
 struct pluginentry_t {
     int moduleFormat;
-    int id;
+    int localDbId;
     int uid;
     bool isSynth;
     String name;
@@ -22,7 +22,7 @@ public:
     plugindatabase_t()  = default;
     ~plugindatabase_t() = default;
 
-    bool resolve(const plugin_snapshot_t& pluginSnapshot, String* _outPath, int loadFlags);
+    bool resolve(const plugin_snapshot_t& pluginSnapshot, pluginentry_t& _outResult, int loadFlags);
     void query(const String& q, std::vector<pluginentry_t>& _out);
     void openDatabase();
     void closeDatabase();

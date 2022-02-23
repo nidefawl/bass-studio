@@ -44,7 +44,8 @@ public:
         createTables(db);
     }
     ~Impl() = default;
-    bool resolve(const plugin_snapshot_t& pluginSnapshot, String* _outPath, int loadFlags) {
+    bool resolve(const plugin_snapshot_t& pluginSnapshot, pluginentry_t& _outResult, int loadFlags) {
+        _outResult = {};
         enum query_type : uint32_t {
             BY_LOCALID_AND_UUID = 0,
             BY_NAME_AND_UUID,
@@ -57,10 +58,10 @@ public:
         auto localId           = pluginSnapshot.localDbId;
         bool loadForceDisabled = (loadFlags & 1) != 0;
 
-        static const char* queryBy_LocalIdAndUUID = "SELECT path FROM plugins where state == 1 and id == ? and uid == ? and __COND__";
-        static const char* queryBy_NameAndUUID    = "SELECT path FROM plugins where state == 1 and name == ? and uid == ? and __COND__ order by forcedisable ASC, version DESC, id DESC";
-        static const char* queryBy_UUID           = "SELECT path FROM plugins where state == 1 and uid == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
-        static const char* queryBy_Name           = "SELECT path FROM plugins where state == 1 and name == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
+        static const char* queryBy_LocalIdAndUUID = "SELECT * FROM plugins where state == 1 and id == ? and uid == ? and __COND__";
+        static const char* queryBy_NameAndUUID    = "SELECT * FROM plugins where state == 1 and name == ? and uid == ? and __COND__ order by forcedisable ASC, version DESC, id DESC";
+        static const char* queryBy_UUID           = "SELECT * FROM plugins where state == 1 and uid == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
+        static const char* queryBy_Name           = "SELECT * FROM plugins where state == 1 and name == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
         const char* queries[NUM_QUERY_TYPES]      = { queryBy_LocalIdAndUUID, queryBy_NameAndUUID, queryBy_UUID, queryBy_Name };
         for (int i = 0; i < NUM_QUERY_TYPES; i++) {
             if (i == BY_LOCALID_AND_UUID && localId <= 0) {
@@ -93,8 +94,16 @@ public:
                     queryPlugin.bind(1, name);
                     break;
             }
-            if (queryPlugin.executeStep()) {
-                *_outPath = queryPlugin.getColumn("path").getString();
+
+            while (queryPlugin.executeStep()) {
+                pluginentry_t entry;
+                entry.localDbId    = queryPlugin.getColumn("id").getInt();
+                entry.moduleFormat = queryPlugin.getColumn("moduleFormat").getInt();
+                entry.uid          = queryPlugin.getColumn("uid").getInt();
+                entry.isSynth      = queryPlugin.getColumn("isSynth").getInt() != 0;
+                entry.name         = queryPlugin.getColumn("name").getString();
+                entry.path         = queryPlugin.getColumn("path").getString();
+                _outResult = std::move(entry);
                 return true;
             }
         }
@@ -131,7 +140,7 @@ public:
 
         pluginentry_t entry;
         while (queryPlugin.executeStep()) {
-            entry.id           = queryPlugin.getColumn("id").getInt();
+            entry.localDbId           = queryPlugin.getColumn("id").getInt();
             entry.moduleFormat = queryPlugin.getColumn("moduleFormat").getInt();
             entry.uid          = queryPlugin.getColumn("uid").getInt();
             entry.isSynth      = queryPlugin.getColumn("isSynth").getInt() != 0;
@@ -142,8 +151,8 @@ public:
     }
 };
 
-bool plugindatabase_t::resolve(const plugin_snapshot_t& pluginSnapshot, String* _outPath, int loadFlags) {
-    return m_impl->resolve(pluginSnapshot, _outPath, loadFlags);
+bool plugindatabase_t::resolve(const plugin_snapshot_t& pluginSnapshot, pluginentry_t& _outResult, int loadFlags) {
+    return m_impl->resolve(pluginSnapshot, _outResult, loadFlags);
 }
 
 void plugindatabase_t::query(const String& q, std::vector<pluginentry_t>& _out) {
