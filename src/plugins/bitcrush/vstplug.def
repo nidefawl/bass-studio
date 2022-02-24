@@ -1,2 +1,0 @@
-LIBRARY     bitcrush
-EXPORTS     main=VSTPluginMain

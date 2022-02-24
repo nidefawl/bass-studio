@@ -1,2 +1,0 @@
-LIBRARY     synth
-EXPORTS     main=VSTPluginMain

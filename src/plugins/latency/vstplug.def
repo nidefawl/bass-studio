@@ -1,2 +1,0 @@
-LIBRARY     latency
-EXPORTS     main=VSTPluginMain

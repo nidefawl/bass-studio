@@ -79,6 +79,10 @@ namespace PluginHostInfo {
         VstInt32 setChunk(void* data, VstInt32 byteSize, bool isPreset = false) override;
 
 
+	    VstIntPtr dispatcher (VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) override;
+        void open() override;
+        void close() override;
+
         bool getEffectName(char* name) override;
         bool getVendorString(char* text) override;
         bool getProductString(char* text) override;
@@ -91,10 +95,6 @@ namespace PluginHostInfo {
         Program* current() {
             return &singleProgram;
         }
-
-#ifdef DISPATCHER_DEBUG_TRACE
-        VstIntPtr dispatcher(VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt);
-#endif// DEBUG
 
     private:
         int getLogVerbosity() {

@@ -3,6 +3,8 @@
 #include <cstdio>
 #include <vector>
 #include <memory>
+#include <vstsdk-host-2.4/aeffect.h>
+#include <vstsdk-host-2.4/aeffectx.h>
 #include "config.h"
 #include "math/seq_math.h"
 #include "str_util.h"
@@ -148,6 +150,36 @@ namespace PluginHostInfo {
         : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs), impl(new PluginVST2_HostInfo_impl_t()) {
         programsAreChunks(true);
         isSynth(true);
+    }
+
+
+    VstIntPtr PluginVST2_HostInfo::dispatcher (VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt)
+    {
+        if (opcode != effEditIdle)
+            log_printf("dispatch %d %d %012X %012X %f\n", opcode, index, value, ptr, opt);
+        return AudioEffectX::dispatcher(opcode, index, value, ptr, opt);
+    }
+
+    void PluginVST2_HostInfo::open() {
+        BasePluginVST2::open();
+        // if (getLogVerbosity() > 0)
+        {
+		    VstIntPtr version = audioMaster (&cEffect, audioMasterVersion, 0, 0, nullptr, 0.0f);
+            log_printf("audioMasterVersion %zd\n", version);
+            char buf[128]{};
+            if (audioMaster (&cEffect, audioMasterGetVendorString, 0, 0, &buf, 0.0f)) {
+                buf[127] = 0;
+                log_printf("audioMasterGetVendorString %s\n", buf);
+            }
+            buf[0] = 0;
+            if (audioMaster (&cEffect, audioMasterGetProductString, 0, 0, &buf, 0.0f)) {
+                buf[127] = 0;
+                log_printf("audioMasterGetProductString %s\n", buf);
+            }
+        }
+    }
+    void PluginVST2_HostInfo::close() {
+        BasePluginVST2::close();
     }
 
 
