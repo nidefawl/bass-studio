@@ -284,7 +284,6 @@ target_link_libraries(${LINK_TARGET} PUBLIC kissfft::kissfft-float)
 target_link_libraries(${LINK_TARGET} PUBLIC ${SOXR_LIB})
 
 if (LINUX)
-    find_package(Threads REQUIRED) 
     target_link_libraries(${LINK_TARGET} PUBLIC Threads::Threads)
     target_link_libraries(${LINK_TARGET} PUBLIC ${X11_X11_LIB} ${CMAKE_DL_LIBS} ${GTK3_LIBRARIES} GL rt m)
 endif (LINUX)
