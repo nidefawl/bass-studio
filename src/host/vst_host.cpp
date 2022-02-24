@@ -500,26 +500,20 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
             logPluginCb(plugin, "audioMasterGetLanguage %d %d %zd\n", opcode, index, value, 0);
         return 0;
     case audioMasterGetDirectory:
-        if (plugin == NULL) {
-            if (!throttleLog)
-                logPluginCb(plugin, "audioMasterGetDirectory plugin == NULL %d %d %zd\n", opcode, index, value, 0);
-            return 0;
-        }
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterGetDirectory %d %d %zd\n", opcode, index, value, 0);
-        return (VstIntPtr)plugin->getDir();
-    case audioMasterUpdateDisplay:
-        if (plugin == NULL) {
-            if (!throttleLog)
-                logPluginCb(plugin, "audioMasterUpdateDisplay plugin == NULL %d %d %zd\n", opcode, index, value, 0);
-            return 0;
+        if (plugin) {
+            return (VstIntPtr)plugin->getDir();
         }
+        return 0;
+    case audioMasterUpdateDisplay:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterUpdateDisplay %d %d %zd\n", opcode, index, value, 0);
-        if (validProcessingState) {
-            //TODO: flag plugin for parameter and program name update. To be executed on the UI thread
+        if (plugin) {
+            plugin->recvProgramNameUpdate();
+            return 1;
         }
-        return true;
+        return 0;
 #ifdef VST_2_1_EXTENSIONS
     case audioMasterBeginEdit:
         if (!throttleLog)

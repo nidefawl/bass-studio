@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <vstsdk-host-2.4/aeffectx.h>
 #include "vst_plugin.h"
 
 #include "math/seq_math.h"
@@ -201,6 +202,7 @@ void vstplugin::load(vsthost* host) {
         int32_t paramIdentifier    = PARAM_OFFSET_EXTERNAL + i;
         automatable_param_t* param = registerParam(paramIdentifier);
         param->internalIdx         = i;
+        param->paramDisplayValState = PARAM_DISPLAY_STR_DIRTY;
         memset(buf, 0, sizeof(buf));
         this->dispatch(effGetParamName, i, 0, buf);
         String label = buf[0] ? buf : StringFormat("Parameter %d", i);
@@ -217,7 +219,7 @@ void vstplugin::load(vsthost* host) {
                 param->shortLabel = properties.shortLabel;
             }
             if (param->flags & ParamUsesFloatStep) {
-                param.min.valFloat = 0.0f;
+                //param.min.valFloat = 0.0f;
                 //param.max.valFloat = 1.0f;
                 param->step.valFloat      = properties.stepFloat;
                 param->stepSmall.valFloat = properties.smallStepFloat;
@@ -262,17 +264,8 @@ void vstplugin::load(vsthost* host) {
         }
     }
 
-
+    this->recvProgramNameUpdate();
     bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
-    //if (bIsEnabled) {
-    //this->resume();
-    //} else {
-    //this->sleep();
-    //}
-    //this->dispatch(effSetBlockSize, 0, format.blockSize);
-    //this->resume();
-
-
     this->bIsSetup = true;
     if (aeffect->numParams)
         getRegisteredAutomation(65536);
@@ -465,10 +458,12 @@ String vstplugin::getParamValueDisplay(int32_t idx) {
     automatable_param_t* param = getParamUnchecked(idx);
     dbgassert(param);
     if (param->internalIdx >= 0) {
-        char buf[1024];
-        memset(buf, 0, sizeof(buf));
-        this->dispatch(effGetParamDisplay, param->internalIdx, 0, buf);
-        return StringFormat("%s", buf);
+        if (param->paramDisplayValState & PARAM_DISPLAY_STR_DIRTY) {
+            recvParamDisplayValueUpdate(param->internalIdx);
+        }
+        if (param->paramDisplayValState & PARAM_DISPLAY_STR_SET) {
+            return param->paramDisplayValStr;
+        }
     }
     return effectbase::getParamValueDisplay(idx);
 }
@@ -485,6 +480,7 @@ void vstplugin::setParamValue(int32_t idx, float val, int flags) {
         }
         if (param->internalIdx >= 0) {
             vst_setParameter(this, handle->aeffect, param->internalIdx, val);
+            param->paramDisplayValState |= PARAM_DISPLAY_STR_DIRTY;
         }
     }
 }
@@ -509,7 +505,7 @@ bool vstplugin::setCurrentProgram(uint32_t idx) {
 }
 
 bool vstplugin::getCurrentProgram(uint32_t& idx) {
-    long curProgram = dispatch(effGetProgram, 0, 0, nullptr, 0);
+    auto curProgram = dispatch(effGetProgram, 0, 0, nullptr, 0);
     dbgassert(curProgram >= 0);
     idx = (uint32_t) curProgram;
     return true;
@@ -521,26 +517,50 @@ bool vstplugin::getNumberOfPrograms(uint32_t& numPrograms) {
 }
 
 bool vstplugin::getCurrentProgramName(String& out) {
-    char buf[1024];
-    memset(buf, 0, sizeof(buf));
-    dispatch(effGetProgramName, 0, 0, buf, 0);
-    if (buf[0]) {
-        out = String(buf);
-        return true;
-    }
-    long curProgram = dispatch(effGetProgram, 0, 0, nullptr, 0);
-    if (curProgram >= 0 && curProgram < programNames.size()) {
-        out = programNames[curProgram];
-        return true;
-    }
-    return "";
+    out = this->currentProgramNameStr;
+    return this->currentProgramNameSet;
 }
 
 void vstplugin::recvPluginEditParamUpdate(int32_t internalIdx) {
     automatable_param_t* param = getEffectParam(internalIdx);
     dbgassert(param && param->internalIdx >= 0);
     param->value = vst_getParameter(this, handle->aeffect, param->internalIdx);
+    param->paramDisplayValState |= PARAM_DISPLAY_STR_DIRTY;
     param->inUse = true;
+}
+
+void vstplugin::recvParamDisplayValueUpdate(int32_t internalIdx) {
+    automatable_param_t* param = getEffectParam(internalIdx);
+    dbgassert(param && param->internalIdx >= 0);
+    param->paramDisplayValState &= ~PARAM_DISPLAY_STR_DIRTY;
+    char buf[128]{};
+    this->dispatch(effGetParamDisplay, param->internalIdx, 0, buf);
+    if (buf[0]) {
+        param->paramDisplayValStr = buf;
+        param->paramDisplayValState |= PARAM_DISPLAY_STR_SET;
+    }
+}
+
+void vstplugin::recvProgramNameUpdate() {
+    char buf[128]{};
+    auto curProgram = dispatch(effGetProgram, 0, 0, nullptr, 0);
+    if (curProgram >= 0) {
+        if (dispatch(effGetProgramNameIndexed, 0, 0, buf, 0)) {
+            if (programNames.size() < curProgram && curProgram+1 < (4096)) {
+                programNames.resize(curProgram+1);
+            }
+            if (curProgram >= 0 && curProgram < programNames.size()) {
+                programNames[curProgram] = buf;
+            }
+            this->currentProgramNameStr = buf;
+            this->currentProgramNameSet = true;
+        }
+    } else {
+        if (dispatch(effGetProgramName, 0, 0, buf, 0)) {
+            this->currentProgramNameStr = buf;
+            this->currentProgramNameSet = true;
+        }
+    }
 }
 
 automationlane_snapshot_t vstplugin::toRef() const {

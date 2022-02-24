@@ -63,7 +63,8 @@ public:
 
 protected:
     vsthost* vstHost = nullptr;
-
+    String currentProgramNameStr = "<no program>";
+    bool currentProgramNameSet = false;
 public:
     std::vector<String> programNames;
 

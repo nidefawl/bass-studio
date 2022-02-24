@@ -81,7 +81,6 @@ union param_step_fi_u {
     float valFloat;
     int32_t valInt;
 };
-
 struct automatable_param_t {
     int32_t idx   = -1;
     float value   = 0.0f;
@@ -103,6 +102,8 @@ struct automatable_param_t {
     //if kVstParameterSupportsDisplayCategory
     int16_t category    = 0;///< 0: no category, else group index + 1
     int32_t internalIdx = -1;
+    String paramDisplayValStr;
+    uint8_t paramDisplayValState = 0; 
 };
 
 struct automatable_t {
