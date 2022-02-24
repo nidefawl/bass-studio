@@ -239,7 +239,6 @@ size_t clip_notes_t::removeDuplicates() {
 }
 
 void clip_notes_t::copy(const clip_notes_t& obj) {
-    //dbgassert(!obj.hasDuplicates());
     m_list = obj.m_list;
     selection.clear();
     if (!obj.selection.empty()) {
@@ -493,28 +492,28 @@ void clip_notes_t::updateBounds() {
     maxNote   = minNote;
     firstNote = minNote;
     lastNote  = minNote;
-    if (m_list.size()) {
-        auto it      = m_list.begin();
-        note_t& firstNote = *it;
+    if (!m_list.empty()) {
+        auto it  = m_list.cbegin();
+        const note_t& beginNote = *it;
 
-        minNote   = firstNote;
-        maxNote   = firstNote;
-        lastNote  = firstNote;
+        minNote                 = beginNote;
+        maxNote                 = beginNote;
+        lastNote                = beginNote;
 
         it++;
-        while (it != m_list.end()) {
-            note_t& note = *it;
-            if (minNote.pitch > note.pitch) {
-                minNote = note;
+        while (it != m_list.cend()) {
+            const note_t& itNode = *it;
+            if (minNote.pitch > itNode.pitch) {
+                minNote = itNode;
             }
-            if (maxNote.pitch < note.pitch) {
-                maxNote = note;
+            if (maxNote.pitch < itNode.pitch) {
+                maxNote = itNode;
             }
-            if (firstNote.time > note.time) {
-                firstNote = note;
+            if (firstNote.time > itNode.time) {
+                firstNote = itNode;
             }
-            if (lastNote.time < note.time) {
-                lastNote = note;
+            if (lastNote.time < itNode.time) {
+                lastNote = itNode;
             }
             it++;
         }

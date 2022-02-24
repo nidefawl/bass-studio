@@ -52,12 +52,12 @@ public:
     clip_notes_t() {
         m_list.reserve(128);
     }
-    clip_notes_t& operator=(const clip_notes_t& a) {
-        copy(a);
+    clip_notes_t& operator=(const clip_notes_t& obj) {
+        copy(obj);
         return *this;
     }
-    clip_notes_t(const clip_notes_t& a) {
-        copy(a);
+    clip_notes_t(const clip_notes_t& obj) {
+        copy(obj);
     }
     void copy(const clip_notes_t& obj);
 
@@ -212,7 +212,7 @@ public:
 
 public:
     clip_t();
-    clip_t(const clip_t& a);
+    clip_t(const clip_t&);
     ~clip_t();
     void setDirty() {
         this->dirty = true;
@@ -220,8 +220,8 @@ public:
     clip_t* clone() const {
         return new clip_t(*this);
     }
-    clip_t& operator=(const clip_t& a) {
-        copy(a);
+    clip_t& operator=(const clip_t& obj) {
+        copy(obj);
         return *this;
     }
     void copy(const clip_t& obj) {

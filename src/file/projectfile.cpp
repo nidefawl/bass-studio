@@ -5,6 +5,7 @@
 #include <sstream>
 #include <algorithm>
 #include <memory>
+#include <functional>
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
@@ -424,8 +425,12 @@ CEREAL_CLASS_VERSION(track_snapshot_t, 2);
  * @param projectfile
  * @return true if project file is valid
  */
-bool validateProjectFile(std::shared_ptr<project_file> projectfile) {
-    auto trackArr = {projectfile->project.trackCtr, projectfile->project.trackReturnCtr, projectfile->project.trackMasterCtr};
+bool validateProjectFile(const std::shared_ptr<project_file>& projectfile) {
+    auto trackArr = {
+        std::cref(projectfile->project.trackCtr), 
+        std::cref(projectfile->project.trackReturnCtr), 
+        std::cref(projectfile->project.trackMasterCtr)
+    };
     for (const trackcontainer_snapshot_t& trackcontainersnapshot : trackArr) {
         std::vector<int32_t> vec;
         vec.reserve(128);
@@ -433,10 +438,15 @@ bool validateProjectFile(std::shared_ptr<project_file> projectfile) {
             for (const plugin_snapshot_t& pluginsnapshot : tracksnapshot.data.pluginSnapshots) {
                 int32_t globalId = pluginsnapshot.projectGlobalId;
                 if (std::binary_search(vec.begin(), vec.end(), globalId)) {
-                    log_printf("invalid project: duplicate plugin global id %d found\n", globalId);
+                    log_lf(Log::L_WARN, "invalid project: duplicate plugin global id %d found\n", globalId);
                     //return false;
                 }
                 vec.push_back(globalId);
+            }
+            for (const clip_t& clip : tracksnapshot.clips) {
+                if (clip.notes.hasDuplicates()) {
+                    log_lf(Log::L_WARN, "Clip %s on Track %s has duplicate notes\n", StringAsCStr(clip.name), StringAsCStr(tracksnapshot.name));
+                }
             }
         }
     }

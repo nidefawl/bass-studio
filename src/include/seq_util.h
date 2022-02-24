@@ -47,8 +47,8 @@ template<typename C1>
 bool any_duplicates(const C1& c) {
     C1 copy = c;
     std::sort(begin(copy), end(copy));
-    auto dupe = std::adjacent_find(copy.begin(), copy.end());
-    return dupe != copy.end();
+    const auto dupe = std::adjacent_find(copy.cbegin(), copy.cend());
+    return dupe != copy.cend();
 }
 
 template<typename C1, typename V1>

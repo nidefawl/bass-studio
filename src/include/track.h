@@ -274,10 +274,10 @@ public:
         //TODO: go thru automation
         return { evtMin, evtMax };
     }
-    track_t(const track_t& a) = delete;
-    explicit track_t(const track_snapshot_t& a);
-    track_t& operator=(const track_snapshot_t& a);
-    track_t& operator=(const track_t& a) = delete;
+    track_t(const track_t&) = delete;
+    explicit track_t(const track_snapshot_t&);
+    track_t& operator=(const track_snapshot_t&);
+    track_t& operator=(const track_t&) = delete;
     track_impl_t* getStage() const {
         return this->audio;
     }
