@@ -105,7 +105,7 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
         archive(make_nvp("vendorVersion", m.vendorVersion));
         archive(make_nvp("localDbId", m.localDbId));
     }
-    if (version > 7) {
+    if (version >= 7) {
         archive(make_nvp("programIdx", m.currentProgram));
         archive(make_nvp("programName", m.currentProgramName));
     }
