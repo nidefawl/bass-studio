@@ -9,6 +9,7 @@ struct pluginentry_t {
     bool isSynth;
     String name;
     String path;
+    String relPath;
 };
 
 struct plugin_snapshot_t;

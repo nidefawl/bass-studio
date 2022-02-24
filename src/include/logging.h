@@ -46,10 +46,10 @@ Logger* getGlobalLogger() noexcept;
 
 
 #if ENABLE_LOGGING
-#define log_to(logger, lvl, fmt, ...) ::Log::log_fmt(logger, lvl, __FILE__, __LINE__, __FUNCTION__, fmt, __VA_ARGS__)
-#define log_lf(lvl, fmt, ...) log_to(getGlobalLogger(), lvl, fmt, __VA_ARGS__)
-#define log_printf(fmt, ...) log_lf(::Log::L_INFO, fmt, __VA_ARGS__)
-#define log_out(fmt, ...) ::Log::log_fmt(getGlobalLogger(), ::Log::L_INFO, nullptr, 0, nullptr, fmt, __VA_ARGS__)
+#define log_to(logger, lvl, fmt, ...) ::Log::log_fmt(logger, lvl, __FILE__, __LINE__, __FUNCTION__, fmt, ##__VA_ARGS__)
+#define log_lf(lvl, fmt, ...) log_to(getGlobalLogger(), lvl, fmt, ##__VA_ARGS__)
+#define log_printf(fmt, ...) log_lf(::Log::L_INFO, fmt, ##__VA_ARGS__)
+#define log_out(fmt, ...) ::Log::log_fmt(getGlobalLogger(), ::Log::L_INFO, nullptr, 0, nullptr, fmt, ##__VA_ARGS__)
 #else
 #define log_to(logger, lvl, fmt, ...)
 #define log_lf(lvl, fmt, ...)

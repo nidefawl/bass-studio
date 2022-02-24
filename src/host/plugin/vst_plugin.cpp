@@ -173,8 +173,8 @@ void vstplugin::load(vsthost* host) {
     this->blockInputs  = new AudioBlock(math::max(2, aeffect->numInputs), format.blockSize);
     this->blockOutputs = new AudioBlock(math::max(2, aeffect->numOutputs), format.blockSize);
 
-    VstPinProperties pin{};
     for (int32_t i = 0; i < aeffect->numInputs; i++) {
+        VstPinProperties pin{};
         if (this->dispatch(effGetInputProperties, i, 0, &pin)) {
             inputNames.emplace_back(pin.label);
         } else {
@@ -182,6 +182,7 @@ void vstplugin::load(vsthost* host) {
         }
     }
     for (int32_t i = 0; i < aeffect->numOutputs; i++) {
+        VstPinProperties pin{};
         if (this->dispatch(effGetOutputProperties, i, 0, &pin)) {
             outputNames.emplace_back(pin.label);
         } else {
@@ -192,18 +193,7 @@ void vstplugin::load(vsthost* host) {
     this->pluginCategory  = this->dispatch(effGetPlugCategory);
     this->isSynth         = (handle->aeffect->flags & effFlagsIsSynth) != 0;
     this->bCanReceiveMidi = this->isSynth || this->dispatch(effCanDo, 0, 0, (void*) PlugCanDos::canDoReceiveVstMidiEvent) > 0;
-    //    char szBuf[256] = "";
-    //    szBuf[0] = 0;
-    //    if (this->dispatch(effGetEffectName, 0, 0, (void*)szBuf) && szBuf[0] != 0) {
-    //        setProductName(szBuf);
-    //    }
-    //    else {
-    //        szBuf[0] = 0;
-    //        if (this->dispatch(effGetProductString, 0, 0, (void*)szBuf) && szBuf[0] != 0) {
-    //            setProductName(szBuf);
-    //        }
-    //    }
-    VstParameterProperties properties = {};
+
 
     char buf[1024];
     vst_param_category fallbackCat = { 0, 0, "Parameters" };
@@ -215,6 +205,7 @@ void vstplugin::load(vsthost* host) {
         this->dispatch(effGetParamName, i, 0, buf);
         String label = buf[0] ? buf : StringFormat("Parameter %d", i);
         param->label = param->shortLabel = label;
+        VstParameterProperties properties = {};
         if (this->dispatch(effGetParameterProperties, i, 0, &properties, 0)) {
             param->flags      = properties.flags | (ParamIsAdvanced);
             param->label      = properties.label;
@@ -226,7 +217,7 @@ void vstplugin::load(vsthost* host) {
                 param->shortLabel = properties.shortLabel;
             }
             if (param->flags & ParamUsesFloatStep) {
-                //param.min.valFloat = 0.0f;
+                param.min.valFloat = 0.0f;
                 //param.max.valFloat = 1.0f;
                 param->step.valFloat      = properties.stepFloat;
                 param->stepSmall.valFloat = properties.smallStepFloat;

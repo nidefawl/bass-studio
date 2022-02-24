@@ -24,6 +24,7 @@ void createTables(SQLite::Database& db) {
               " `moddate` TEXT NOT NULL,\n"
               " `state` INTEGER DEFAULT 0,\n"
               " `path` TEXT NOT NULL,\n"
+              " `relPath` TEXT NOT NULL,\n"
               " `name` TEXT NOT NULL,\n"
               " `vendorName` TEXT NOT NULL,\n"
               " `productName` TEXT NOT NULL,\n"
@@ -103,6 +104,7 @@ public:
                 entry.isSynth      = queryPlugin.getColumn("isSynth").getInt() != 0;
                 entry.name         = queryPlugin.getColumn("name").getString();
                 entry.path         = queryPlugin.getColumn("path").getString();
+                entry.relPath      = queryPlugin.getColumn("relPath").getString();
                 _outResult = std::move(entry);
                 return true;
             }
@@ -140,12 +142,13 @@ public:
 
         pluginentry_t entry;
         while (queryPlugin.executeStep()) {
-            entry.localDbId           = queryPlugin.getColumn("id").getInt();
+            entry.localDbId    = queryPlugin.getColumn("id").getInt();
             entry.moduleFormat = queryPlugin.getColumn("moduleFormat").getInt();
             entry.uid          = queryPlugin.getColumn("uid").getInt();
             entry.isSynth      = queryPlugin.getColumn("isSynth").getInt() != 0;
             entry.name         = queryPlugin.getColumn("name").getString();
             entry.path         = queryPlugin.getColumn("path").getString();
+            entry.relPath      = queryPlugin.getColumn("relPath").getString();
             _out.push_back(entry);
         }
     }

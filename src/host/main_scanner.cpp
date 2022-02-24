@@ -13,6 +13,7 @@
 #include "host/plugin/vst_plugin.h"
 #include "host/plugin/vst_plugin_handles.h"
 #include "host/vst_host.h"
+#include "logging.h"
 #include "threads/childprocessthread.h"
 #include "vstsdk-host-2.4/aeffectx.h"
 #include "appsettings.h"
@@ -40,6 +41,7 @@
 #endif
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
+namespace VSTScannerImpl {
 inline String APPLE_getExecutablePath() {
     String ret = "plugin_scan";
     char path[1024];
@@ -49,20 +51,26 @@ inline String APPLE_getExecutablePath() {
     }
     return ret;
 }
+} // namespace VSTScannerImpl
 #endif
 
-static const char* szLogPrefixes[2] = {
+void createTables(SQLite::Database& db);
+
+namespace VSTScannerImpl {
+
+#define PROC_SIDE_NONE 0
+#define PROC_SIDE_SERVER 1
+#define PROC_SIDE_CLIENT 2
+static const char* szLogPrefixes[3] = {
+    "",
     "SRV: ",
     "CLI: ",
 };
 
 constexpr int32_t timeoutdefault = 120;
-static int logPrefixIdx = 0;
+static int logPrefixIdx = PROC_SIDE_NONE;
 
-#define LOG_MSG(prefix, fmtString, ...) printf("%s" fmtString "\n", prefix, ##__VA_ARGS__);
-#define LOG(fmtString, ...)                                         \
-    LOG_MSG(szLogPrefixes[logPrefixIdx], fmtString, ##__VA_ARGS__); \
-    fflush(stdout)
+#define log_message(fmtString, ...) log_out("%s" fmtString "\n", ::VSTScannerImpl::szLogPrefixes[::VSTScannerImpl::logPrefixIdx], ##__VA_ARGS__)
 
 #define E_WRITE_OK 0
 #define E_WRITE_ERR_PIPE 1
@@ -87,16 +95,13 @@ using seqthreads::threadSleep;
 bool userSentQuitRequest = false;
 bool inConnectNamedPipe  = false;
 #ifdef _WIN32
-static BOOL WINAPI ConsoleHandler(DWORD dwType) {
+BOOL WINAPI ConsoleHandler(DWORD) {
+    log_printf("CTRL_C\n", 0);
     userSentQuitRequest = true;
-    if (dwType == CTRL_C_EVENT) {
-        if (inConnectNamedPipe) {
-            exit(0);
-        }
-        log_printf("CTRL_C\n", 0);
-        return true;
+    if (inConnectNamedPipe) {
+        exit(0);
     }
-    return false;
+    return true;
 }
 #endif
 
@@ -185,7 +190,7 @@ int readFromIPC(IPC& ipcConnection, T& hdr) {
     recvBuf.pos = recvBuf.buf;
     recvBuf.end = nullptr;
     if (!IPCrecvBuffer(ipcConnection, recvBuf)) {
-        LOG("IPCrecvBuffer failed");
+        log_message("IPCrecvBuffer failed");
         return E_READ_ERR_PIPE;
     }
     if (!readFromBuffer(recvBuf, hdr)) {
@@ -203,17 +208,16 @@ int writeToIPC(IPC& ipcConnection, T& hdr) {
     sendBuffer.end = nullptr;
     writeToBuffer(sendBuffer, hdr);
     if (!writeToBuffer(sendBuffer, hdr)) {
-        LOG("writeToBuffer failed");
+        log_message("writeToBuffer failed");
         return E_WRITE_ERR_BUF_SIZE;
     }
     if (!IPCsendBuffer(ipcConnection, sendBuffer)) {
-        LOG("IPCsendBuffer failed");
+        log_message("IPCsendBuffer failed");
         return E_WRITE_ERR_PIPE;
     }
     return E_WRITE_OK;
 }
 
-void createTables(SQLite::Database& db);
 
 struct vstscanner_server_options {
     String vstPlugPath;
@@ -256,34 +260,39 @@ static int readClientResponses(vstscanner_server_options& options, ipc_server& s
         if (peakRdBufSizeResult < sizeof(responseType)) {
             auto timeSince_ms = getTimeMillis() - timeStartScan_ms;
             if (-1 == peakRdBufSizeResult || (timeSince_ms > timeoutPluginScan_ms)) {
-                LOG("TIMEOUT: Plugin %s timed out after %d ms", req.szPath, timeoutPluginScan_ms);
+                log_message("TIMEOUT: Plugin %s timed out after %d ms", req.szPath, timeoutPluginScan_ms);
                 return -4;
             } else {
                 if (notificationStep != (timeSince_ms / 1000)) {
                     uint64_t secondsLeft = math::max<uint64_t>(0, timeoutPluginScan_ms - timeSince_ms) / 1000;
                     notificationStep     = timeSince_ms / 1000;
-                    LOG("Waiting for Plugin %s to respond... %zus left", req.szPath, secondsLeft);
+                    log_message("Waiting for Plugin %s to respond... %zus left", req.szPath, secondsLeft);
                 }
                 threadSleep(50);
                 continue;
             }
         }
         if (E_READ_OK != readFromIPC(server, responseType)) {
-            LOG("failed reading responseType int32_t");
+            log_message("failed reading responseType int32_t");
             return -3;
         }
         timeStartScan_ms = getTimeMillis();
         switch (responseType) {
             case CMD_PLUGIN_LOAD_SUCCESS_PLUGIN: {
                 response_type_vst24_plugin_t respShellPlugin;
-                LOG("READ response_type_vst24_plugin_t");
+                log_message("READ response_type_vst24_plugin_t");
                 if (E_READ_OK != readFromIPC(server, respShellPlugin)) {
-                    LOG("failed reading response_type_vst24_plugin_t");
+                    log_message("failed reading response_type_vst24_plugin_t");
                     return -3;
                 }
 
                 printf("%s %s\n", respShellPlugin.szPath, "GOOD");
                 auto& data = respShellPlugin;
+                String relPath = file.name;
+                if (file.path.length() > options.vstPlugPath.length()) {
+                    relPath = file.path.substr(options.vstPlugPath.length());
+                    replaceString(relPath, FILE_PATHSEP_STR, "/");
+                }
                 try {
                     queryInsertPlugin.reset();
                     int bndIdx = 1;
@@ -295,6 +304,7 @@ static int readClientResponses(vstscanner_server_options& options, ipc_server& s
                     queryInsertPlugin.bind(bndIdx++, (long long int) timeDisk);
                     queryInsertPlugin.bind(bndIdx++, 1);
                     queryInsertPlugin.bind(bndIdx++, file.path);
+                    queryInsertPlugin.bind(bndIdx++, relPath);
                     queryInsertPlugin.bind(bndIdx++, data.szName);
                     queryInsertPlugin.bind(bndIdx++, data.szVendorName);
                     queryInsertPlugin.bind(bndIdx++, data.szProductName);
@@ -305,26 +315,26 @@ static int readClientResponses(vstscanner_server_options& options, ipc_server& s
                     /*int insertRowsAffected = */ queryInsertPlugin.exec();
                     nPluginsScanned++;
                 } catch (SQLite::Exception& e) {
-                    std::cout << "queryInsertPlugin exception: " << e.getErrorStr() << std::endl;
+                    log_message("queryInsertPlugin failed with SQLite exception: %s (%d)", e.getErrorStr(), e.getErrorCode());
                     return -5;
                 }
 
                 break;
             }
             case CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_SHELL: {
-                LOG("READ response_type_vst24_shell_plugin_t");
+                log_message("READ response_type_vst24_shell_plugin_t");
                 response_type_vst24_shell_plugin_t respShellPlugin;
                 if (E_READ_OK != readFromIPC(server, respShellPlugin)) {
-                    LOG("failed reading response_type_vst24_shell_plugin_t");
+                    log_message("failed reading response_type_vst24_shell_plugin_t");
                     return -3;
                 }
                 break;
             } break;
             case CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN: {
-                LOG("READ response_type_vst24_t");
+                log_message("READ response_type_vst24_t");
                 response_type_vst24_t respShellPluginEntry;
                 if (E_READ_OK != readFromIPC(server, respShellPluginEntry)) {
-                    LOG("failed reading response_type_vst24_t");
+                    log_message("failed reading response_type_vst24_t");
                     return -3;
                 }
 
@@ -352,7 +362,7 @@ static int readClientResponses(vstscanner_server_options& options, ipc_server& s
                     /*int insertRowsAffected = */ queryInsertPlugin.exec();
                     nPluginsScanned++;
                 } catch (SQLite::Exception& e) {
-                    std::cout << "queryInsertPlugin exception: " << e.getErrorStr() << std::endl;
+                    log_message("queryInsertPlugin failed with SQLite exception: %s (%d)", e.getErrorStr(), e.getErrorCode());
                     return -5;
                 }
 
@@ -373,8 +383,9 @@ static int readClientResponses(vstscanner_server_options& options, ipc_server& s
 static int runScannerServer(vstscanner_server_options options) {
 
     if (!options.updatePattern.empty()) {
-        LOG("Update *%s*", StringAsCStr(options.updatePattern));
+        log_message("Update *%s*", StringAsCStr(options.updatePattern));
     }
+    std::unique_ptr<ProcessThread> thread = nullptr;
     try {
         String cwdPathDB = App::Platform::toUserdataPath("data/plugins.db3");
         SQLite::Database db(cwdPathDB, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
@@ -385,7 +396,7 @@ static int runScannerServer(vstscanner_server_options options) {
 
         std::vector<FileFound> files;
         findFilesWithExt(options.vstPlugPath, PLATFORM_PLUGIN_EXT, true, files);
-        LOG("Found %u files", (uint32_t) files.size());
+        log_message("Found %u files", (uint32_t) files.size());
         if (files.empty()) {
             return 1;
         }
@@ -410,15 +421,14 @@ static int runScannerServer(vstscanner_server_options options) {
         ipc_server server;
         int ipc_status = server.server_open(SCAN_IPC_PIPE_NAME);
         if (ipc_status) {
-            LOG("Failed opening ipc_server: %d", ipc_status);
+            log_message("Failed opening ipc_server: %d", ipc_status);
             return 1;
         }
-        std::unique_ptr<ProcessThread> thread = nullptr;
         bool pipeConnected                    = false;
         SQLite::Statement queryPlugin(db, "SELECT id, moddate, forcedisable, requestRescan, uid, shellplugin FROM plugins where path == ?");
         SQLite::Statement queryInsertPlugin(db, "INSERT INTO "
-                                                "plugins(isSynth, uid, version, vstVersion, category, moddate, state, path, name, vendorName, productName, effectName, requestRescan, forcedisable, shellplugin) "
-                                                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                                                "plugins(isSynth, uid, version, vstVersion, category, moddate, state, path, relPath, name, vendorName, productName, effectName, requestRescan, forcedisable, shellplugin) "
+                                                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
         SQLite::Statement queryDelete(db, "DELETE from plugins where id == ? or path == ?");
 
         SQLite::Statement queryAll(db, "SELECT id, path from plugins");
@@ -431,7 +441,7 @@ static int runScannerServer(vstscanner_server_options options) {
                     continue;
                 }
             } catch (std::exception& /*e*/) {
-                LOG("REMOVE plugin: File at %s is missing", StringAsCStr(path));
+                log_message("REMOVE plugin: File at %s is missing", StringAsCStr(path));
             }
             if (!options.dryRun) {
                 queryDelete.reset();
@@ -489,10 +499,10 @@ static int runScannerServer(vstscanner_server_options options) {
             }
             if (!needScan) {
                 //if (options.updatePattern.empty())
-                //    LOG("%s is up to date", StringAsCStr(file.name));
+                //    log_message("%s is up to date", StringAsCStr(file.name));
                 continue;
             }
-            LOG("%s needs update: %s", StringAsCStr(file.path), StringAsCStr(reason));
+            log_message("%s needs update: %s", StringAsCStr(file.path), StringAsCStr(reason));
             if (options.dryRun) {
                 continue;
             }
@@ -512,10 +522,10 @@ static int runScannerServer(vstscanner_server_options options) {
                 threadSleep(250);
                 if (!thread->isRunning()) {
                     thread->checkException();
-                    LOG("Failed starting client");
+                    log_message("Failed starting client");
                     break;
                 }
-                LOG("Thread is up");
+                log_message("Thread is up");
             }
             bool resetConnection = false;
             if (!pipeConnected && (!options.launchProcess || (thread && thread->isRunning()))) {
@@ -523,7 +533,7 @@ static int runScannerServer(vstscanner_server_options options) {
                 int ipcstatus_connect = server.server_accept();
                 inConnectNamedPipe    = false;
                 if (0 != ipcstatus_connect) {
-                    LOG("ipc_server::server_accept() failed: %d", ipcstatus_connect);
+                    log_message("ipc_server::server_accept() failed: %d", ipcstatus_connect);
                     resetConnection = true;
                 } else {
                     pipeConnected = true;
@@ -532,13 +542,13 @@ static int runScannerServer(vstscanner_server_options options) {
             if (pipeConnected) {
                 pipe_msg_hdr hdr = { CMD_PLUGIN_LOAD_REQUEST };
                 if (E_WRITE_OK != writeToIPC(server, hdr)) {
-                    LOG("error writeToIPC pipe_msg_hdr");
+                    log_message("error writeToIPC pipe_msg_hdr");
                     resetConnection = true;
                 }
                 request_type_vst24_t req;
                 strncpy(req.szPath, StringAsCStr(file.path), file.path.length());
                 if (E_WRITE_OK != writeToIPC(server, req)) {
-                    LOG("error writeToIPC request_type_vst24_t");
+                    log_message("error writeToIPC request_type_vst24_t");
                     resetConnection = true;
                 }
                 if (!options.dryRun) {
@@ -561,7 +571,7 @@ static int runScannerServer(vstscanner_server_options options) {
                 break;
             if (resetConnection) {
                 resetConnection = false;
-                LOG("Reset scanner client process");
+                log_message("Reset scanner client process");
                 server.server_disconnect();
                 pipeConnected = false;
                 if (thread && thread->isRunning()) {
@@ -587,18 +597,17 @@ static int runScannerServer(vstscanner_server_options options) {
             thread = nullptr;
         }
     } catch (SQLite::Exception& e) {
-        std::cout << "SQLite exception: " << e.getErrorStr() << std::endl;
-        std::cout << e.what() << std::endl;
+        log_message("SQLite exception: %s (%d)", e.getErrorStr(), e.getErrorCode());
     } catch (std::exception& e) {
-        std::cout << "exception: " << e.what() << std::endl;
+        log_message("exception %s", e.what());
     } catch (...) {
-        std::cout << "Unhandled exception" << std::endl;
+        log_message("Unhandled exception");
     }
     return 0;
 }
 
 static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t& respPlugin) {
-    LOG("runPluginTest");
+    log_message("runPluginTest");
 
     auto vsthostInstance = std::make_unique<vsthost>();
     vsthost::assignMasterCallback(vsthostInstance.get());
@@ -611,11 +620,11 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
     daw_tls::setTls(initTls);
 
     int response = 0;
-    LOG("Load plugin %s", req.szPath);
+    log_message("Load plugin %s", req.szPath);
     try {
 
         vstpluginloadres res = vsthostInstance->loadPlugin(req.szPath, 0);
-        LOG("result: %d", res.result);
+        log_message("result: %d", res.result);
         if (res.result < 0) {
             response = CMD_PLUGIN_LOAD_ERROR;
         } else {
@@ -626,11 +635,11 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
             vsthostInstance->unloadPlugin(res.plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
         }
     } catch (...) {
-        LOG("exception while loading %s", req.szPath);
+        log_message("exception while loading %s", req.szPath);
         response = -1;
     }
 
-    LOG("runPluginTest end");
+    log_message("runPluginTest end");
     threadSleep(25);
     vsthost::getInstance()->destroy();
     return response;
@@ -640,10 +649,10 @@ static int runScannerClient() {
 
     // Open the named pipe
     ipc_client client;
-    LOG("client_connect");
+    log_message("client_connect");
     int ipcstatus = client.client_connect(SCAN_IPC_PIPE_NAME);
     if (ipcstatus) {
-        LOG("Failed opening ipc_client: %d", ipcstatus);
+        log_message("Failed opening ipc_client: %d", ipcstatus);
         return 1;
     }
 
@@ -659,12 +668,12 @@ static int runScannerClient() {
 
     pipe_msg_hdr hdr{};
     recvbuf_t bufferRecv;
-    LOG("listening...");
+    log_message("listening...");
     while (!userSentQuitRequest) {
         int retRead = readFromIPC(client, hdr);
         dbgassert(E_READ_ERR_BUF_SIZE != retRead);
         if (E_READ_OK != retRead) {
-            LOG("hdr readFromIPC E_READ_ERR_PIPE");
+            log_message("hdr readFromIPC E_READ_ERR_PIPE");
             break;
         }
         if (hdr.cmd == CMD_PLUGIN_THREAD_QUIT) {
@@ -673,15 +682,15 @@ static int runScannerClient() {
         if (hdr.cmd == CMD_PLUGIN_LOAD_REQUEST) {
             request_type_vst24_t req;
             if (E_READ_OK != readFromIPC(client, req)) {
-                LOG("req readFromIPC failed");
+                log_message("req readFromIPC failed");
                 break;
             }
 
-            LOG("Load plugin %s", req.szPath);
+            log_message("Load plugin %s", req.szPath);
             try {
 
                 vstpluginloadres res = vsthostInstance->loadPlugin(req.szPath, 0);
-                LOG("result: %d", res.result);
+                log_message("result: %d", res.result);
                 if (res.result < 0) {
                     int response = CMD_PLUGIN_LOAD_ERROR;
                     writeToIPC(client, response);
@@ -722,14 +731,14 @@ static int runScannerClient() {
                         writeToIPC(client, response);
                         respShellPlugin.numPlugins = (int) entries.size();
                         writeToIPC(client, respShellPlugin);
-                        LOG("-- begin of shell plugin list --");
+                        log_message("-- begin of shell plugin list --");
                         for (auto& entry : entries) {
                             if (userSentQuitRequest) break;
-                            LOG("load shell entry: %08X", entry.pluginUID);
+                            log_message("load shell entry: %08X", entry.pluginUID);
 
                             vstpluginloadres resShellPluginEntry = vsthostInstance->loadPlugin(req.szPath, entry.pluginUID);
                             if (resShellPluginEntry.result != 0) {
-                                LOG("FAILED LOADING SHELL PLUGIN: %d", resShellPluginEntry.result);
+                                log_message("FAILED LOADING SHELL PLUGIN: %d", resShellPluginEntry.result);
                             } else {
                                 dbgassert(resShellPluginEntry.plugin);
                                 response = CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN;
@@ -738,11 +747,11 @@ static int runScannerClient() {
                                 getPluginData(resShellPluginEntry.plugin, &respShellPluginEntry);
                                 strncpy(respShellPluginEntry.szName, StringAsCStr(entry.name), math::min<size_t>(255U, entry.name.length() + 1));
                                 writeToIPC(client, respShellPluginEntry);
-                                LOG("unload shell entry: %08X", entry.pluginUID);
+                                log_message("unload shell entry: %08X", entry.pluginUID);
                                 vsthostInstance->unloadPlugin(resShellPluginEntry.plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                             }
                         }
-                        LOG("-- end of shell plugin list --");
+                        log_message("-- end of shell plugin list --");
 #ifdef _WIN32
                         FreeLibrary((HMODULE) handles->hmodule);
 #endif
@@ -761,7 +770,7 @@ static int runScannerClient() {
                     }
                 }
             } catch (...) {
-                LOG("exception while loading %s", req.szPath);
+                log_message("exception while loading %s", req.szPath);
                 int response = -1;
                 writeToIPC(client, response);
             }
@@ -773,12 +782,14 @@ static int runScannerClient() {
         //}
         threadSleep(25);
     }
-    LOG("client_close()");
+    log_message("client_close()");
     client.client_close();
     threadSleep(25);
     vsthost::getInstance()->destroy();
     return 0;
 }
+
+} // namespace VSTScannerImpl
 
 int main(int argc, char* argv[]) {
     seqthreads::registerThread("mainthread");
@@ -786,49 +797,50 @@ int main(int argc, char* argv[]) {
     App::Platform::initPlatformEnvironment("daw");
     if (argc <= 1) {
         String cwdPathDB = App::Platform::toUserdataPath("data/plugins.db3");
-        printf("Daw VST scanner version %s\n\n", BuildInfo::BUILD_BINARY_VERSION);
-        printf("This program can be run in server or client mode.\n");
-        printf("The server starts a client process that loads the VST2 DLL and scans it.\n");
-        printf("The client automatically connects to the server process via IPC and listens for commands.\n");
-        printf("The plugin database is stored here: %s\n", StringAsCStr(cwdPathDB));
-        printf("Command line options:\n");
-        printf("-test <path>\t\ttest single plugin\n");
-        printf("-client \t\trun client\n");
-        printf("-server \t\trun server\n");
-        printf("-wait   \t\t(server only)\tDo not start client process. allows manual start of clients.\n");
-        printf("-dry    \t\t(server only)\tCheck for new plugins but does not scan them\n");
-        printf("-update <plugin-name>\t(server only)\tRescan a specific plugin. Does partial name matching, case-insensitive\n");
-        printf("-rescan \t\t(server only)\tRescan all registered VST2 plugins, even if their disk timestamp has not changed\n");
-        printf("-timeout <seconds>\t(server only)\tSet the timeout for unresponsive plugins. Default is %d seconds\n", timeoutdefault);
-        printf("\nThe default command to scan plugins is:\n");
-        printf("%s -server\n", argv[0]);
-        fflush(stdout);
+        log_message("Daw VST scanner version %s\n", BuildInfo::BUILD_BINARY_VERSION);
+        log_message("This program can be run in server or client mode.");
+        log_message("The server starts a client process that loads the VST2 DLL and scans it.");
+        log_message("The client automatically connects to the server process via IPC and listens for commands.");
+        log_message("The plugin database is stored here: %s", StringAsCStr(cwdPathDB));
+        log_message("Command line options:");
+        log_message("-test <path>\t\ttest single plugin");
+        log_message("-client \t\trun client");
+        log_message("-server \t\trun server");
+        log_message("-wait   \t\t(server only)\tDo not start client process. allows manual start of clients.");
+        log_message("-dry    \t\t(server only)\tCheck for new plugins but does not scan them");
+        log_message("-update <plugin-name>\t(server only)\tRescan a specific plugin. Does partial name matching, case-insensitive");
+        log_message("-rescan \t\t(server only)\tRescan all registered VST2 plugins, even if their disk timestamp has not changed");
+        log_message("-timeout <seconds>\t(server only)\tSet the timeout for unresponsive plugins. Default is %d seconds", VSTScannerImpl::timeoutdefault);
+        log_message("\nThe default command to scan plugins is:");
+        log_message("%s -server\n", argv[0]);
         return 0;
     }
 #ifdef _WIN32
-    if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE) ConsoleHandler, TRUE)) {
-        fprintf(stderr, "Unable to install handler!\n");
+    if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE) VSTScannerImpl::ConsoleHandler, TRUE)) {
+        log_lf(Log::L_ERROR, "Unable to install handler!\n");
         return EXIT_FAILURE;
     }
 #endif
     using DAW::settings;
     settings           = loadSettings();
     String vstPlugPath = settings.pluginPath;
-    LOG("pluginPath '%s'", StringAsCStr(vstPlugPath));
+    App::Platform::sanitizePathToDirectory(vstPlugPath);
+    log_message("pluginPath '%s'", StringAsCStr(vstPlugPath));
     if (vstPlugPath.empty()) {
-        fprintf(stderr, "Error: pluginPath not configured\n");
+        log_lf(Log::L_ERROR, "Error: pluginPath not configured\n");
         return EXIT_FAILURE;
     }
 
     if (argc > 1 && !strcmp("-server", argv[1])) {
-        vstscanner_server_options options;
+        VSTScannerImpl::logPrefixIdx = PROC_SIDE_SERVER;
+        VSTScannerImpl::vstscanner_server_options options;
         options.launchProcess              = true;
         options.dryRun                     = false;
         options.updatePattern              = "";
         options.fullRescan                 = false;
         options.checkDiskTimestamp         = true;
         options.vstPlugPath                = vstPlugPath;
-        options.unresponsiveTimeoutSeconds = timeoutdefault;
+        options.unresponsiveTimeoutSeconds = VSTScannerImpl::timeoutdefault;
         for (int i = 2; i < argc; i++) {
             if (argv[i] && strlen(argv[i]) > 2 && argv[i][0] == '-') {
                 if (!strcmp(argv[i], "-wait")) {
@@ -851,28 +863,27 @@ int main(int argc, char* argv[]) {
         }
         runScannerServer(options);
 
-        LOG("Done.");
-        threadSleep(500);
+        seqthreads::threadSleep(500);
     } else if (argc > 2 && !strcmp("-test", argv[argc - 2])) {
         setExceptionHandler();
-        threadSleep(120);
-        request_type_vst24_t req;
+        seqthreads::threadSleep(120);
+        VSTScannerImpl::request_type_vst24_t req;
         String fPath = argv[argc - 1];
         strncpy(req.szPath, StringAsCStr(fPath), fPath.length());
-        response_type_vst24_plugin_t respPlugin;
-        int retCode = runPluginTest(req, respPlugin);
+        VSTScannerImpl::response_type_vst24_plugin_t respPlugin;
+        int retCode = VSTScannerImpl::runPluginTest(req, respPlugin);
         if (retCode == CMD_PLUGIN_LOAD_SUCCESS_PLUGIN) {
-            log_printf("Plugin %s: Good\n", StringAsCStr(fPath));
+            log_message("Plugin %s: Good", StringAsCStr(fPath));
         } else {
-            log_printf("Plugin %s: Failed %d\n", StringAsCStr(fPath), retCode);
+            log_lf(Log::L_WARN, "Plugin %s: Failed %d\n", StringAsCStr(fPath), retCode);
         }
     } else if (argc > 0 && !strcmp("-client", argv[argc - 1])) {
-        logPrefixIdx = 1;
+        VSTScannerImpl::logPrefixIdx = PROC_SIDE_CLIENT;
         setExceptionHandler();
-        threadSleep(120);
-        runScannerClient();
+        seqthreads::threadSleep(120);
+        VSTScannerImpl::runScannerClient();
     } else {
-        log_printf("No command. Use -server to update plugin database\n", 0);
+        log_lf(Log::L_ERROR, "No command. Use -server to update plugin database\n", 0);
     }
     return 0;
 }

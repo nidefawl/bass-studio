@@ -273,9 +273,9 @@ namespace App::Platform {
         return false;
     }
     void sanitizePathToDirectory(String& pathString) {
-        if (pathString.length() && !StrEndsWith(pathString, "/"))
-            pathString += "/";
         replaceString(pathString, "/", FILE_PATHSEP_STR);
+        if (pathString.length() && !StrEndsWith(pathString, FILE_PATHSEP_STR))
+            pathString += FILE_PATHSEP_STR;
     }
 
     void sanitizePathToFile(String& pathString) {
