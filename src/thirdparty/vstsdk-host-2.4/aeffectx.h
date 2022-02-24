@@ -1363,4 +1363,127 @@ inline const char* getOpCodeName(VstInt32 opCode) {
     }
     return nullptr;
 }
+inline const char* getMasterOpcodeName(VstInt32 opCode) {
+    switch (opCode) {
+        case AudioMasterOpcodes::audioMasterAutomate:
+            return "audioMasterAutomate";
+        case AudioMasterOpcodes::audioMasterVersion:
+            return "audioMasterVersion";
+        case AudioMasterOpcodes::audioMasterCurrentId:
+            return "audioMasterCurrentId";
+        case AudioMasterOpcodes::audioMasterIdle:
+            return "audioMasterIdle";
+        case AudioMasterOpcodes::audioMasterPinConnected:
+            return "audioMasterPinConnected";
+        case AudioMasterOpcodesX::audioMasterWantMidi:
+            return "audioMasterWantMidi";
+
+        case AudioMasterOpcodesX::audioMasterGetTime:
+            return "audioMasterGetTime";
+        case AudioMasterOpcodesX::audioMasterProcessEvents:
+            return "audioMasterProcessEvents";
+
+        case AudioMasterOpcodesX::audioMasterSetTime:
+            return "audioMasterSetTime";
+        case AudioMasterOpcodesX::audioMasterTempoAt:
+            return "audioMasterTempoAt";
+        case AudioMasterOpcodesX::audioMasterGetNumAutomatableParameters:
+            return "audioMasterGetNumAutomatableParameters";
+        case AudioMasterOpcodesX::audioMasterGetParameterQuantization:
+            return "audioMasterGetParameterQuantization";
+
+        case AudioMasterOpcodesX::audioMasterIOChanged:
+            return "audioMasterIOChanged";
+
+        case AudioMasterOpcodesX::audioMasterNeedIdle:
+            return "audioMasterNeedIdle";
+
+        case AudioMasterOpcodesX::audioMasterSizeWindow:
+            return "audioMasterSizeWindow";
+        case AudioMasterOpcodesX::audioMasterGetSampleRate:
+            return "audioMasterGetSampleRate";
+        case AudioMasterOpcodesX::audioMasterGetBlockSize:
+            return "audioMasterGetBlockSize";
+        case AudioMasterOpcodesX::audioMasterGetInputLatency:
+            return "audioMasterGetInputLatency";
+        case AudioMasterOpcodesX::audioMasterGetOutputLatency:
+            return "audioMasterGetOutputLatency";
+
+        case AudioMasterOpcodesX::audioMasterGetPreviousPlug:
+            return "audioMasterGetPreviousPlug";
+        case AudioMasterOpcodesX::audioMasterGetNextPlug:
+            return "audioMasterGetNextPlug";
+        case AudioMasterOpcodesX::audioMasterWillReplaceOrAccumulate:
+            return "audioMasterWillReplaceOrAccumulate";
+
+        case AudioMasterOpcodesX::audioMasterGetCurrentProcessLevel:
+            return "audioMasterGetCurrentProcessLevel";
+        case AudioMasterOpcodesX::audioMasterGetAutomationState:
+            return "audioMasterGetAutomationState";
+
+        case AudioMasterOpcodesX::audioMasterOfflineStart:
+            return "audioMasterOfflineStart";
+        case AudioMasterOpcodesX::audioMasterOfflineRead:
+            return "audioMasterOfflineRead";
+        case AudioMasterOpcodesX::audioMasterOfflineWrite:
+            return "audioMasterOfflineWrite";
+        case AudioMasterOpcodesX::audioMasterOfflineGetCurrentPass:
+            return "audioMasterOfflineGetCurrentPass";
+        case AudioMasterOpcodesX::audioMasterOfflineGetCurrentMetaPass:
+            return "audioMasterOfflineGetCurrentMetaPass";
+
+        case AudioMasterOpcodesX::audioMasterSetOutputSampleRate:
+            return "audioMasterSetOutputSampleRate";
+        case AudioMasterOpcodesX::audioMasterGetOutputSpeakerArrangement:
+            return "audioMasterGetOutputSpeakerArrangement";
+
+        case AudioMasterOpcodesX::audioMasterGetVendorString:
+            return "audioMasterGetVendorString";
+        case AudioMasterOpcodesX::audioMasterGetProductString:
+            return "audioMasterGetProductString";
+        case AudioMasterOpcodesX::audioMasterGetVendorVersion:
+            return "audioMasterGetVendorVersion";
+        case AudioMasterOpcodesX::audioMasterVendorSpecific:
+            return "audioMasterVendorSpecific";
+
+        case AudioMasterOpcodesX::audioMasterSetIcon:
+            return "audioMasterSetIcon";
+
+        case AudioMasterOpcodesX::audioMasterCanDo:
+            return "audioMasterCanDo";
+        case AudioMasterOpcodesX::audioMasterGetLanguage:
+            return "audioMasterGetLanguage";
+
+        case AudioMasterOpcodesX::audioMasterOpenWindow:
+            return "audioMasterOpenWindow";
+        case AudioMasterOpcodesX::audioMasterCloseWindow:
+            return "audioMasterCloseWindow";
+
+        case AudioMasterOpcodesX::audioMasterGetDirectory:
+            return "audioMasterGetDirectory";
+        case AudioMasterOpcodesX::audioMasterUpdateDisplay:
+            return "audioMasterUpdateDisplay";
+        case AudioMasterOpcodesX::audioMasterBeginEdit:
+            return "audioMasterBeginEdit";
+        case AudioMasterOpcodesX::audioMasterEndEdit:
+            return "audioMasterEndEdit";
+        case AudioMasterOpcodesX::audioMasterOpenFileSelector:
+            return "audioMasterOpenFileSelector";
+        case AudioMasterOpcodesX::audioMasterCloseFileSelector:
+            return "audioMasterCloseFileSelector";
+
+        case AudioMasterOpcodesX::audioMasterEditFile:
+            return "audioMasterEditFile";
+
+        case AudioMasterOpcodesX::audioMasterGetChunkFile:
+            return "audioMasterGetChunkFile";
+
+        case AudioMasterOpcodesX::audioMasterGetInputSpeakerArrangement:
+            return "audioMasterGetInputSpeakerArrangement";
+        default:
+            break;
+    }
+    return nullptr;
+};
+
 #endif //__aeffectx__
