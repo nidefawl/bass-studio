@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <vstsdk-host-2.4/aeffect.h>
 #include <vstsdk-host-2.4/aeffectx.h>
 #include "vst_plugin.h"
 
@@ -317,16 +318,13 @@ namespace {
             ps.params.reserve(numParamsReserve);
             plugin->visitParams([&ps, vstplugin = plugin, usesBinaryChunks](auto& mapEntry) {
                 automatable_param_t& param = mapEntry.second;
-                if (param.internalIdx < 128) {
-                    if (param.inUse || !usesBinaryChunks) {
-                        float curValue = param.value;
-                        int paramFlags = param.inUse ? 1 : 0;
-                        if (param.internalIdx >= 0) {
-                            curValue = vst_getParameter(vstplugin, vstplugin->handle->aeffect, param.internalIdx);
-                        }
-                        ps.params.push_back(param_snapshot_t{ param.idx, curValue, paramFlags });
-                    } else {
+                if (param.inUse || !usesBinaryChunks) {
+                    float curValue = param.value;
+                    int paramFlags = param.inUse ? 1 : 0;
+                    if (param.internalIdx >= 0) {
+                        curValue = vst_getParameter(vstplugin, vstplugin->handle->aeffect, param.internalIdx);
                     }
+                    ps.params.push_back(param_snapshot_t{ param.idx, curValue, paramFlags });
                 }
             });
             storeAutomation(ps.automatedParams, plugin);
@@ -341,9 +339,8 @@ namespace {
 }// namespace
 
 void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
-    if (pluginSnapshot.currentProgram != -1 && pluginSnapshot.currentProgram < programNames.size()) {
-        setCurrentProgram(pluginSnapshot.currentProgram);
-    }
+    const int32_t programIdx = pluginSnapshot.currentProgram >= 0 ? pluginSnapshot.currentProgram : 0;
+    this->dispatch(effBeginSetProgram);
     if ((this->getFlagsVST() & effFlagsProgramChunks) != 0) {
         if (!pluginSnapshot.dataChunk.empty()) {
             auto& localMem = this->handle->dataChunkLocalMemory;
@@ -355,7 +352,16 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
             log_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(this->sName), pluginSnapshot.dataChunk2.size());
             this->dispatch(effSetChunk, 1, (int64_t) pluginSnapshot.dataChunk2.size(), (void*) pluginSnapshot.dataChunk2.data());
         }
+    } else {
+        this->dispatch(effSetProgram, 0, programIdx);
+        if (!pluginSnapshot.currentProgramName.empty()) {
+            this->dispatch(effSetProgramName, 0, 0, (void*)StringAsCStr(pluginSnapshot.currentProgramName));
+        }
+        loadEffectParamsFromSnapshot(pluginSnapshot, this);
     }
+    this->dispatch(effSetProgram, 0, programIdx);
+    this->dispatch(effEndSetProgram);
+    this->recvProgramNameUpdate();
 }
 
 void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
@@ -499,7 +505,8 @@ void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags
 
 bool vstplugin::setCurrentProgram(uint32_t idx) {
     if (idx < this->programNames.size()) {
-        return dispatch(effSetProgram, 0, idx, nullptr, 0) > 0;
+        dispatch(effSetProgram, 0, idx, nullptr, 0);
+        this->recvProgramNameUpdate();
     }
     return false;
 }
@@ -544,22 +551,20 @@ void vstplugin::recvParamDisplayValueUpdate(int32_t internalIdx) {
 void vstplugin::recvProgramNameUpdate() {
     char buf[128]{};
     auto curProgram = dispatch(effGetProgram, 0, 0, nullptr, 0);
-    if (curProgram >= 0) {
-        if (dispatch(effGetProgramNameIndexed, 0, 0, buf, 0)) {
-            if (programNames.size() < curProgram && curProgram+1 < (4096)) {
-                programNames.resize(curProgram+1);
-            }
-            if (curProgram >= 0 && curProgram < programNames.size()) {
-                programNames[curProgram] = buf;
-            }
-            this->currentProgramNameStr = buf;
-            this->currentProgramNameSet = true;
+    if (curProgram >= 0 && dispatch(effGetProgramNameIndexed, curProgram, 0, buf, 0)) {
+        if (programNames.size() < curProgram && curProgram+1 < (4096)) {
+            programNames.resize(curProgram+1);
         }
-    } else {
-        if (dispatch(effGetProgramName, 0, 0, buf, 0)) {
-            this->currentProgramNameStr = buf;
-            this->currentProgramNameSet = true;
+        if (curProgram >= 0 && curProgram < programNames.size()) {
+            programNames[curProgram] = buf;
         }
+        this->currentProgramNameStr = buf;
+        this->currentProgramNameSet = true;
+        return;
+    }
+    if (dispatch(effGetProgramName, 0, 0, buf, 0)) {
+        this->currentProgramNameStr = buf;
+        this->currentProgramNameSet = true;
     }
 }
 

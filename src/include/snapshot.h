@@ -20,6 +20,7 @@ struct plugin_snapshot_t {
     int32_t uId             = 0;
     String name;
     int32_t currentProgram = -1;
+    String currentProgramName;
     std::vector<uint8_t> dataChunk;
     std::vector<uint8_t> dataChunk2;
     std::vector<param_snapshot_t> params;

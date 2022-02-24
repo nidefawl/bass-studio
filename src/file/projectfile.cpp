@@ -97,12 +97,16 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
     if (version > 2) {
         archive(make_nvp("plugins", m.pluginSnapshots));
     }
-    if (version > 4) {
+    if (version > 4 && version < 7) {
         archive(make_nvp("currentProgram", m.currentProgram));
     }
     if (version > 5) {
         archive(make_nvp("vendorVersion", m.vendorVersion));
         archive(make_nvp("localDbId", m.localDbId));
+    }
+    if (version > 7) {
+        archive(make_nvp("programIdx", m.currentProgram));
+        archive(make_nvp("programName", m.currentProgramName));
     }
 }
 
@@ -125,9 +129,10 @@ void save(Archive& archive, plugin_snapshot_t const& m, const std::uint32_t vers
         ((JSONOutputArchive*) &archive)->saveBinaryValue(m.dataChunk.data(), size, "plugindata");
     }
     archive(make_nvp("plugins", m.pluginSnapshots));
-    archive(make_nvp("currentProgram", m.currentProgram));
     archive(make_nvp("vendorVersion", m.vendorVersion));
     archive(make_nvp("localDbId", m.localDbId));
+    archive(make_nvp("programIdx", m.currentProgram));
+    archive(make_nvp("programName", m.currentProgramName));
 }
 
 template<class Archive>
@@ -412,7 +417,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 }
 
 CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
-CEREAL_CLASS_VERSION(plugin_snapshot_t, 6);
+CEREAL_CLASS_VERSION(plugin_snapshot_t, 7);
 CEREAL_CLASS_VERSION(track_snapshot_t, 2);
 
 /**

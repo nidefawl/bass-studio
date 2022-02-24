@@ -67,9 +67,6 @@ public:
     String path;
     String name;
 };
-struct plugin_snapshot_t;
-effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot, bool isForceRequest);
-void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
 
 #define SYNCHRONIZED_RW
 struct AudioBlock;

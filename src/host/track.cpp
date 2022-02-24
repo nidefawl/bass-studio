@@ -564,8 +564,7 @@ void project_t::copyFrom(project_snapshot_t& project) {
     trackList.copyFrom(project);
 }
 
-effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot, bool forceLoad) {
-    vsthost* host = vsthost::getInstance();
+effectbase* loadEffectModule(vsthost* host, const plugin_snapshot_t& pluginSnapshot, bool forceLoad) {
     effectbase* effect      = nullptr;
     if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
         log_printf("Next loading plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
@@ -779,7 +778,7 @@ void vsthost::activateDeferred(effectbase* const eff, int flags, effectbase** ou
     auto defEffect = dynamic_cast<effect_deferred*>(eff);
     plugin_snapshot_t pluginSnapshot = defEffect->getSnapshotConst();
     log_printf("activating deferred plugin loadEffectModule %s\n", StringAsCStr(pluginSnapshot.name));
-    effectbase* effect = loadEffectModule(pluginSnapshot, flags & FLAG_HOST_FORCELOAD_DISABLED_PLUGINS);
+    effectbase* effect = loadEffectModule(this, pluginSnapshot, flags & FLAG_HOST_FORCELOAD_DISABLED_PLUGINS);
     if (out_effectLoaded) {
         *out_effectLoaded = effect;
     }
@@ -796,23 +795,12 @@ void vsthost::activateDeferred(effectbase* const eff, int flags, effectbase** ou
                pluginSnapshot.params.size(),
                pluginSnapshot.automatedParams.size());
 
-    bool loadParamsBeforePluginSnapshot = false;
-    /* check if parameter values are assigned before loadSnapshot */
-    if (loadParamsBeforePluginSnapshot) {
-        loadEffectParamsFromSnapshot(pluginSnapshot, effect);
-    }
-
     effectbase* prevPlugin = nullptr;
     always_assert(removeEntry(eff->trackImpl->deferredEffects, eff));
     replacePlugin(eff->trackImpl, effect, defEffect->getSlot(), &prevPlugin);
 
-    /* Load plugins binary snapshot */
+    /* Load plugins snapshot */
     effect->loadSnapshot(pluginSnapshot);
-
-    /* check if parameter values are assigned after loadSnapshot */
-    if (!loadParamsBeforePluginSnapshot) {
-        loadEffectParamsFromSnapshot(pluginSnapshot, effect);
-    }
 
     effect->inputChannels = prevPlugin->inputChannels;
     effect->sName         = pluginSnapshot.name;

@@ -196,4 +196,7 @@ public:
 };
 
 effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
+effectbase* loadEffectModule(vsthost* host, const plugin_snapshot_t& pluginSnapshot, bool isForceRequest);
+void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
+
 void removePlugin(effectbase* module);

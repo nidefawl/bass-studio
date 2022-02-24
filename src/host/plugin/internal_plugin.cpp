@@ -39,6 +39,7 @@ void internalplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks)
 }
 
 void internalplugin::loadSnapshot(const plugin_snapshot_t& ps) {
+    loadEffectParamsFromSnapshot(ps, this);
 }
 
 String internalplugin::getAutomatableName() {
