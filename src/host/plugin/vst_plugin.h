@@ -51,6 +51,8 @@ public:
     String sDir;
     bool bInEditIdle   = false;
     bool bWantsEffIdle = false;
+    bool bIsLoadingProgram = false;
+    bool bIsPostInit = false;
     int pluginCategory = 0;
     int vstVersion     = 0;
     int localDbId      = -1;
@@ -109,10 +111,12 @@ public:
     bool close() override;
     void unload(vsthost* host, int flags) override;
     void load(vsthost* host) override;
+    void postLoad();
     vst_param_category* getCategory(int idx);
     void recvPluginEditParamUpdate(int32_t internalIdx);
     void recvParamDisplayValueUpdate(int32_t internalIdx);
     void recvProgramNameUpdate();
+    void recvProgramListUpdate();
 
     // automatable_t interface
     String getAutomatableName() override;

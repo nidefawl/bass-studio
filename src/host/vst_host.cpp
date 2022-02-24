@@ -510,7 +510,14 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterUpdateDisplay %d %d %zd\n", opcode, index, value, 0);
         if (plugin) {
-            plugin->recvProgramNameUpdate();
+            if (!plugin->bIsLoadingProgram) {
+                plugin->recvProgramNameUpdate();
+                // NOTE: this loop might kill performance
+                plugin->visitParams([](auto& mapEntry) {
+                    automatable_param_t& param = mapEntry.second;
+                    param.paramDisplayValState |= PARAM_DISPLAY_STR_DIRTY;
+                });
+            }
             return 1;
         }
         return 0;

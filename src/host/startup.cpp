@@ -210,28 +210,18 @@ void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t tra
 }
 
 void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsinstance& tls) {
-    //  if (1==1)
-    //    return;
     auto* const dawMainCtrl = tls.mainCtrl;
     if (!dawMainCtrl) {
         return;
     }
     auto dawInstance = dawMainCtrl->getDaw();
-    //  String dawPath = "C:/dev/daw/run/";
     String dawPath  = "./projects/";
     String projName = "als2daw/debug-stuff.project";
-    //String projName = "test-wave-2.project";
-    //projName = "kshmr-samples-test.project";
-    //  projName = "test-empty-midi-loop.project";
     //projName = "arp-test.project";
-    //projName = "test-send-automation.project";
-    //projName = "kshmr-samples-test.project";
     //projName = "kshmr-samples-test.project";
     int flags = 0x1;// defer load
-     flags = 0; // no defer load
+        flags = 0; // no defer load
     dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
-
-
         /**
          * Code for setting cursor and loop position
          */
@@ -244,7 +234,6 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
         /**
          * Code for inserting a plugin on track at index 0, then placing a deferred copy instance of the same plugin on track at index 1
          */
-
         const bool dbgLoadPlugins = false;
         if (dbgLoadPlugins) {
             loadPluginAndInsertOnTrack(dawMainCtrl, "C:/PluginManager/configs/default/hosts/Ableton/categories/melda/MPowerSynth.dll", 0);

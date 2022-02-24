@@ -72,6 +72,10 @@ void vstplugin::onWindowDestroy() {
 }
 
 void vstplugin::resume() {
+    if (!bIsPostInit) {
+        bIsPostInit = true;
+        postLoad();
+    }
     if (!isInSuspend) {
         return;
     }
@@ -256,20 +260,14 @@ void vstplugin::load(vsthost* host) {
     }
     paramsCategories.push_back(fallbackCat);
 
-
-    for (int i = 0; i < aeffect->numPrograms; i++) {
-        memset(buf, 0, sizeof(buf));
-        if (this->dispatch(effGetProgramNameIndexed, i, 0, &buf, 0)) {
-            buf[sizeof(buf) - 1] = 0;
-            this->programNames.emplace_back(buf);
-        }
-    }
-
-    this->recvProgramNameUpdate();
     bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
     this->bIsSetup = true;
     if (aeffect->numParams)
         getRegisteredAutomation(65536);
+}
+void vstplugin::postLoad() {
+    this->recvProgramListUpdate();
+    this->recvProgramNameUpdate();
 }
 
 namespace {
@@ -339,7 +337,14 @@ namespace {
 }// namespace
 
 void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
+    this->bIsLoadingProgram = true;
     const int32_t programIdx = pluginSnapshot.currentProgram >= 0 ? pluginSnapshot.currentProgram : 0;
+    VstPatchChunkInfo info{};
+    info.version = 1;
+    info.numElements = this->handle->aeffect->numPrograms;
+    info.pluginVersion = pluginSnapshot.vendorVersion;
+    info.pluginUniqueID = pluginSnapshot.uId;
+    this->dispatch(effBeginLoadBank, 0, 0, (void*)&info);
     this->dispatch(effBeginSetProgram);
     if ((this->getFlagsVST() & effFlagsProgramChunks) != 0) {
         if (!pluginSnapshot.dataChunk.empty()) {
@@ -361,7 +366,8 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     }
     this->dispatch(effSetProgram, 0, programIdx);
     this->dispatch(effEndSetProgram);
-    this->recvProgramNameUpdate();
+    this->dispatch(effSetProgram, 0, programIdx);
+    this->bIsLoadingProgram = false;
 }
 
 void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
@@ -506,6 +512,10 @@ void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags
 bool vstplugin::setCurrentProgram(uint32_t idx) {
     if (idx < this->programNames.size()) {
         dispatch(effSetProgram, 0, idx, nullptr, 0);
+        visitParams([](auto& mapEntry) {
+            automatable_param_t& param = mapEntry.second;
+            param.paramDisplayValState |= PARAM_DISPLAY_STR_DIRTY;
+        });
         this->recvProgramNameUpdate();
     }
     return false;
@@ -548,7 +558,26 @@ void vstplugin::recvParamDisplayValueUpdate(int32_t internalIdx) {
     }
 }
 
+void vstplugin::recvProgramListUpdate() {
+    if (bIsLoadingProgram) {
+        return;
+    }
+    this->programNames.resize(0);
+    this->programNames.reserve(handle->aeffect->numPrograms);
+    char buf[1024];
+    for (int i = 0; i < handle->aeffect->numPrograms; i++) {
+        memset(buf, 0, sizeof(buf));
+        if (this->dispatch(effGetProgramNameIndexed, i, 0, &buf, 0)) {
+            buf[sizeof(buf) - 1] = 0;
+            this->programNames.emplace_back(buf);
+        }
+    }
+}
+
 void vstplugin::recvProgramNameUpdate() {
+    if (bIsLoadingProgram) {
+        return;
+    }
     char buf[128]{};
     auto curProgram = dispatch(effGetProgram, 0, 0, nullptr, 0);
     if (curProgram >= 0 && dispatch(effGetProgramNameIndexed, curProgram, 0, buf, 0)) {
