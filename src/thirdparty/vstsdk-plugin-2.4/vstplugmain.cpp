@@ -80,7 +80,7 @@ VST_EXPORT AEffect* main_plugin (audioMasterCallback audioMaster) { return VSTPl
 } // extern "C"
 
 //------------------------------------------------------------------------
-#if WIN32
+#ifdef _WIN32
 #include <Windows.h>
 HINSTANCE hInstance;
 void onModuleLoad(HINSTANCE hInst);
