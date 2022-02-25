@@ -84,7 +84,7 @@ public:
 #endif
     }
     virtual int getModuleType()                                                                                                     = 0;
-    virtual void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks)                                                        = 0;
+    virtual void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts)                                                        = 0;
     virtual guiplugin* makeGui()                                                                                                    = 0;
     virtual guiplugin* getGui()                                                                                                     = 0;
     virtual void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) = 0;
@@ -165,7 +165,7 @@ public:
     int32_t getPluginLatency() override;
     String getInfo(std::vector<String>& list) override;
     int getModuleType() override;
-    void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
+    void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     guiplugin* makeGui() override;
     guiplugin* getGui() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) override;

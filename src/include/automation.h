@@ -289,6 +289,9 @@ public:
         dbgassert(param);
         return { param->value, param->value };
     }
+    void clearAutomations() {
+        this->automatedParams.clear();
+    }
 };
 
 

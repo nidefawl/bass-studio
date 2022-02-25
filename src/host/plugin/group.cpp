@@ -345,14 +345,14 @@ void module_group::getDeferredEffects(std::vector<effectbase*>& targets) {
     audio->getDeferredEffects(targets);
 }
 
-void module_group::makeSnapshot(plugin_snapshot_t& snapshot, bool storePluginChunks) {
+void module_group::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts) {
     dbgassert(audio);
-    internalplugin::makeSnapshot(snapshot, storePluginChunks);
+    internalplugin::makeSnapshot(snapshot, opts);
     std::vector<effectbase*> effects = audio->effects;
     snapshot.pluginSnapshots.reserve(effects.size());
     for (effectbase* effect : effects) {
         plugin_snapshot_t ps;
-        effect->makeSnapshot(ps, storePluginChunks);
+        effect->makeSnapshot(ps, opts);
         snapshot.pluginSnapshots.push_back(std::move(ps));
     }
 }

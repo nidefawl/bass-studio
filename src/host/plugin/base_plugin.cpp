@@ -162,7 +162,7 @@ void effectbase::updateOnEnableParam(automatable_param_t* param, bool wasEnable,
 }
 effect_deferred* effectbase::toDeferred() {
     plugin_snapshot_t snapshot;
-    this->makeSnapshot(snapshot, true);
+    this->makeSnapshot(snapshot, tracksnapshot_store_opts_t::All());
     auto* def   = new effect_deferred();
     def->mImpl             = new effect_deferred_impl();
     def->sName             = snapshot.name;
@@ -198,7 +198,7 @@ String effect_deferred::getInfo(std::vector<String>& list) {
 int effect_deferred::getModuleType() {
     return PLUGIN_TYPE_DEFERRED;
 }
-void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
+void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
     ps = this->mImpl->snapshot;
 }
 void effect_deferred::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {

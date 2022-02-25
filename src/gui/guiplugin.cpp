@@ -1,6 +1,7 @@
 #include "guiplugin.h"
 #include <nanovg.h>
 #include <memory>
+#include "snapshot.h"
 #include "str_util.h"
 #include "logging.h"
 #include "event.h"
@@ -117,7 +118,7 @@ void guiplugin::buttonClicked(guibase* _button) {
         ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 
         plugin_snapshot_t ps;
-        effect->makeSnapshot(ps, true);
+        effect->makeSnapshot(ps, tracksnapshot_store_opts_t::All());
         String path;
         auto window = MainCtrl::get()->window;// hacky
         if (promptUserFilePath(window, 1, vFILE_TYPE_PLUGINSNAPSHOT, path)) {

@@ -165,13 +165,17 @@ void midiarp::postSetParameter(int32_t idx, float preVal, float val, int flags) 
     parameter_ref_t p             = { track->projectIdx, ref.type, 0, idx };
     DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
-void midiarp::createSnapshot(arp_snapshot& snapshot) {
-    snapshot.params.reserve(getNumParameters());
-    visitParams([&snapshot](auto& mapEntry) {
-        automatable_param_t& param = mapEntry.second;
-        snapshot.params.push_back(param_snapshot_t{ param.idx, param.value });
-    });
-    storeAutomation(snapshot.automatedParams, this);
+void midiarp::createSnapshot(arp_snapshot& snapshot, const tracksnapshot_store_opts_t& opts) {
+    if (opts.storePluginPreset) {
+        snapshot.params.reserve(getNumParameters());
+        visitParams([&snapshot](auto& mapEntry) {
+            automatable_param_t& param = mapEntry.second;
+            snapshot.params.push_back(param_snapshot_t{ param.idx, param.value });
+        });
+    }
+    if (opts.storeAutomation) {
+        storeAutomation(snapshot.automatedParams, this);
+    }
 }
 
 template<typename T>

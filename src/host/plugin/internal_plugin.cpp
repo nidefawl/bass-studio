@@ -12,7 +12,7 @@
 
 
 namespace {
-    void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, bool storePluginChunks) {
+    void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, const tracksnapshot_store_opts_t& opts) {
         ps.present         = true;
         ps.slot            = 0;
         ps.projectGlobalId = plugin->projectGlobalId;
@@ -20,7 +20,7 @@ namespace {
         ps.uId             = plugin->uId;
         ps.pluginType      = plugin->pluginType;
         ps.name            = plugin->sName;
-        if (storePluginChunks) {
+        if (opts.storePluginPreset) {
             ps.params.reserve(plugin->getNumParameters());
             plugin->visitParams([&ps](auto& mapEntry) {
                 automatable_param_t& param = mapEntry.second;
@@ -29,12 +29,14 @@ namespace {
                 }
             });
         }
-        storeAutomation(ps.automatedParams, plugin);
+        if (opts.storeAutomation) {
+            storeAutomation(ps.automatedParams, plugin);
+        }
     }
 }// namespace
 
-void internalplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
-    createSnapshot(ps, this, storePluginChunks);
+void internalplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
+    createSnapshot(ps, this, opts);
     ps.slot = this->slot;
 }
 

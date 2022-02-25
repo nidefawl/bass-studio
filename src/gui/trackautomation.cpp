@@ -9,6 +9,7 @@
 #include "clip.h"
 #include "grid.h"
 #include "guicontainer.h"
+#include "str_util.h"
 #include "trackctr.h"
 #include "basectrl.h"
 #include "../host/mainctrl.h"
@@ -102,7 +103,14 @@ void gui_track_automation::trackViewDragBegin(guitrack_editor* view, MouseEvent&
     tick_t tickAt          = grid.screenToTick(trackEditorLocal.x);
     DAW::Cursor& cursor    = view->cursor;
     dragged                = hitTest(local);
+    dataPointsCopy   = data.points;
+    trackstate_t resizePreModifyState;
+    if (dragged.mode != dragmode::drag_none) {
+        resizePreModifyState.tracks.push_back(new track_snapshot_t(this->at->getTrack(), tracksnapshot_store_opts_t::AutomationOnly()));
+        resizePreModifyState.cursor = cursor;
+    }
     if (dragged.mode != dragmode::drag_node && cursor.containsSubtrack(this->m_trackentry->idx, this->subtrackIdx, tickAt)) {
+                
         int32_t steps     = at->getQuantizationSteps(paramIdx);
         float fInitialVal = 0.5f;
         if (at) {
@@ -119,8 +127,11 @@ void gui_track_automation::trackViewDragBegin(guitrack_editor* view, MouseEvent&
         dragged.dataPt    = idx;
         dragged.numPoints = idx2 - idx + 1;
     }
-    dataPointsCopy   = data.points;
-    dataPointsEdited = dataPointsCopy;
+    if (dragged.mode != dragmode::drag_none && dragged.mode != dragmode::drag_empty) {
+        DawInstance::get()->pushHist(new action_modify_track(StringFormat("Edit Automation (%d)", (int)dragged.mode), std::move(resizePreModifyState)));
+    }
+
+    dataPointsEdited = data.points;
 }
 void gui_track_automation::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) {
     //ivec2 trackEditorLocal = evt.relMousepos;
@@ -259,6 +270,11 @@ bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEven
     ivec2 local                                 = toContainerSpace(trackEditorLocal);
     hit_result clicked                          = hitTest(local);
     canSimplify                                 = false;
+
+    trackstate_t resizePreModifyState;
+    resizePreModifyState.tracks.push_back(new track_snapshot_t(this->at->getTrack(), tracksnapshot_store_opts_t::AutomationOnly()));
+    resizePreModifyState.cursor = view->cursor;
+    DawInstance::get()->pushHist(new action_modify_track(StringFormat("Edit Automation (%d)", (int)dragged.mode), std::move(resizePreModifyState)));
     std::vector<automation_point_t>& dataPoints = data.points;
     if (clicked.mode == dragmode::drag_node) {
         int32_t i = clicked.dataPt;

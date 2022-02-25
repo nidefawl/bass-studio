@@ -218,7 +218,7 @@ void loadAutomation(const std::vector<automation_view_t>& automatedParams, autom
     if (!automatedParams.empty()) {
         log_lf(Log::L_DEBUG, "Loading %d automation lanes for device %s\n", automatedParams.size(), StringAsCStr(at->getAutomatableName()));
     }
-
+    at->clearAutomations();
     for (const automation_view_t& automatedParam : automatedParams) {
         int32_t targetParam = automatedParam.targetParam;
         automatable_param_t* paramInstance = at->getParam(targetParam);

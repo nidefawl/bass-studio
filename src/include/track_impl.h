@@ -87,7 +87,7 @@ public:
     bool isEnabled() {
         return getParamUnchecked(PARAM_ENABLE)->value >= 0.5f;
     }
-    void createSnapshot(track_params_snapshot_t& snapshot);
+    void createSnapshot(track_params_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts);
     void loadSnapshot(const track_params_snapshot_t& snapshot);
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
 };
@@ -298,4 +298,20 @@ struct track_impl_t : public audio_stage_t {
     void getAutomatableTrackTargets(std::vector<automatable_t*>& targets);
     void createIOSnapshot(track_io_configuration_snapshot_t& snapshot);
     void loadIOConfiguration(const track_io_configuration_snapshot_t& trPluginList);
+};
+
+class action_modify_track : public action_base {
+protected:
+    trackstate_t before;
+    trackstate_t after;
+
+public:
+    action_modify_track() = default;
+    action_modify_track(String description, trackstate_t&& _tracks) : action_base() {
+        desc   = std::move(description);
+        before = std::move(_tracks);
+    }
+    static void loadTrackSnapshot(DawInstance* daw, track_t* track, const track_snapshot_t* trackStored);
+    void undo(DawInstance* daw) override;
+    void redo(DawInstance* daw) override;
 };

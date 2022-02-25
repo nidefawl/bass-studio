@@ -2996,6 +2996,7 @@ int32_t vsthost::validateIds()
             for (auto* pStageId : stageIds) {
                 dbgassert(static_cast<int32_t>(*pStageId) != id);
             }
+            
         }
     }
 

@@ -272,7 +272,7 @@ void vstplugin::postLoad() {
 
 namespace {
 
-    void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginChunks) {
+    void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, const tracksnapshot_store_opts_t& opts) {
         ps.present         = true;
         ps.slot            = 0;
         ps.projectGlobalId = plugin->projectGlobalId;
@@ -289,7 +289,7 @@ namespace {
         ps.name = plugin->sName;
 
         bool usesBinaryChunks = plugin->getFlagsVST() & effFlagsProgramChunks;
-        if (storePluginChunks && (usesBinaryChunks)) {
+        if (opts.storePluginPreset && (usesBinaryChunks)) {
             {
                 void* pluginData       = nullptr;
                 int32_t pluginDataSize = plugin->dispatch(effGetChunk, 0, 0, &pluginData, 0);
@@ -311,7 +311,7 @@ namespace {
                 }
             }
         }
-        if (storePluginChunks) {
+        if (opts.storePluginPreset) {
             auto numParamsReserve = math::min<int32_t>(150, plugin->getNumParameters());
             ps.params.reserve(numParamsReserve);
             plugin->visitParams([&ps, vstplugin = plugin, usesBinaryChunks](auto& mapEntry) {
@@ -325,12 +325,14 @@ namespace {
                     ps.params.push_back(param_snapshot_t{ param.idx, curValue, paramFlags });
                 }
             });
-            storeAutomation(ps.automatedParams, plugin);
+            if (plugin->programNames.size() > 1) {
+                uint32_t curProgramNr = 0;
+                plugin->getCurrentProgram(curProgramNr);
+                ps.currentProgram = curProgramNr;
+            }
         }
-        if (plugin->programNames.size() > 1) {
-            uint32_t curProgramNr = 0;
-            plugin->getCurrentProgram(curProgramNr);
-            ps.currentProgram = curProgramNr;
+        if (opts.storeAutomation) {
+            storeAutomation(ps.automatedParams, plugin);
         }
     }
 
@@ -370,8 +372,8 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     this->bIsLoadingProgram = false;
 }
 
-void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
-    createSnapshot(ps, this, storePluginChunks);
+void vstplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
+    createSnapshot(ps, this, opts);
     ps.slot = this->slot;
 }
 

@@ -109,15 +109,17 @@ tick_t trackdata_midi_t::end() {
 }
 
 track_t& track_t::operator=(const track_snapshot_t& obj) {
-    dbgassert(midi.getConstClips().empty());
-    for (const clip_t& clip : obj.clips) {
-        midi.addClip(new clip_t(clip));
+    *static_cast<tracksettings_t*>(this) = obj.trackSettings;
+    if (obj.storeOpts.storeClips) {
+        dbgassert(midi.getConstClips().empty());
+        for (const clip_t& clip : obj.clips) {
+            midi.addClip(new clip_t(clip));
+        }
+        midi.sortClips();
     }
-    midi.sortClips();
-    tracksettings_t& dst       = *static_cast<tracksettings_t*>(this);
-    const tracksettings_t& src = *static_cast<const tracksettings_t*>(&obj);
-    dst                        = src;
-    scrolloffset               = 0;
+    if (obj.storeOpts.storeLayouts) {
+        scrolloffset = 0;
+    }
     return *this;
 }
 void track_t::fixClipLengths() {
@@ -130,27 +132,29 @@ void track_t::fixClipLengths() {
 
     }
 }
-track_t::track_t(const track_snapshot_t& a)
-    : tracksettings_t(a), localIdxFlat(a.localIdx) {
-    dbgassert(midi.getConstClips().empty());
-    for (const clip_t& clip : a.clips) {
-        midi.addClip(new clip_t(clip));
+track_t::track_t(const track_snapshot_t& obj)
+    : tracksettings_t(obj.trackSettings), localIdxFlat(obj.localIdx) {
+    if (obj.storeOpts.storeClips) {
+        dbgassert(midi.getConstClips().empty());
+        for (const clip_t& clip : obj.clips) {
+            midi.addClip(new clip_t(clip));
+        }
     }
 }
 
-track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginChunks) {
+track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, const tracksnapshot_store_opts_t& opts) {
     if (p) {
         if (p->arp) {
-            p->arp->createSnapshot(trackArp);
+            p->arp->createSnapshot(trackArp, opts);
         }
-        p->mixer.createSnapshot(trackParams);
+        p->mixer.createSnapshot(trackParams, opts);
         p->createIOSnapshot(trackIO);
         p->createRoutingSnapshot(effectRouting);
         std::vector<effectbase*> effects = p->effects;
         pluginSnapshots.reserve(p->effects.size());
         for (effectbase* effect : p->effects) {
             plugin_snapshot_t ps;
-            effect->makeSnapshot(ps, storePluginChunks);
+            effect->makeSnapshot(ps, opts);
             pluginSnapshots.push_back(std::move(ps));
         }
     }
@@ -166,15 +170,18 @@ track_id_snapshot_t getTrackIdSnapshot(const audio_stage_id_t& stageId) {
         static_cast<int32_t>(stageId.outputPostStageId)
     };
 }
+track_snapshot_t::track_snapshot_t(const track_t* track, const tracksnapshot_store_opts_t& opts)
+    : storeOpts(opts),
+      trackSettings(*track),
+      stageIds(track->audio ? getTrackIdSnapshot(track->audio->stageId) : track_id_snapshot_t{}),
+      localIdx(track->localIdxFlat),
+      data(track->audio, opts) {
 
-track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
-    : tracksettings_t(*track),
-      stageIds(track->audio ? getTrackIdSnapshot(track->audio->stageId) : track_id_snapshot_t{}), localIdx(track->localIdxFlat),
-      data(track->audio, storePluginChunks) {
     auto& otherClips = track->getConstMidi().getConstClips();
     for (auto clip : otherClips) {
         clips.emplace_back(*clip);
     }
+
     track_impl_t* p = track->audio;
     if (p) {
         // get all trackcointainer instances
@@ -1362,13 +1369,17 @@ void track_impl_t::processMidiOutput(playback_state state, int32_t flags, tick_t
     }
 }
 
-void track_params_t::createSnapshot(track_params_snapshot_t& snapshot) {
-    snapshot.params.reserve(getNumParameters());
-    visitParams([&snapshot](auto& mapEntry) {
-        automatable_param_t& param = mapEntry.second;
-        snapshot.params.push_back(param_snapshot_t{ param.idx, param.value, param.inUse ? 1 : 0 });
-    });
-    storeAutomation(snapshot.automatedParams, this);
+void track_params_t::createSnapshot(track_params_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts) {
+    if (opts.storePluginPreset) {
+        snapshot.params.reserve(getNumParameters());
+        visitParams([&snapshot](auto& mapEntry) {
+            automatable_param_t& param = mapEntry.second;
+            snapshot.params.push_back(param_snapshot_t{ param.idx, param.value, param.inUse ? 1 : 0 });
+        });
+    }
+    if (opts.storeAutomation) {
+        storeAutomation(snapshot.automatedParams, this);
+    }
 }
 
 void track_params_t::loadSnapshot(const track_params_snapshot_t& snapshot) {

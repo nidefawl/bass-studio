@@ -250,8 +250,8 @@ void module_gain::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     internalplugin::loadSnapshot(pluginSnapshot);
 }
 
-void module_gain::makeSnapshot(plugin_snapshot_t& snapshot, bool storePluginChunks) {
-    internalplugin::makeSnapshot(snapshot, storePluginChunks);
+void module_gain::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts) {
+    internalplugin::makeSnapshot(snapshot, opts);
 }
 
 String module_gain::formatDisplayValue(int32_t idx) {

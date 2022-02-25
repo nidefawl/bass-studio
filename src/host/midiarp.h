@@ -154,7 +154,7 @@ public:
         ref.refId = static_cast<int32_t>(trackImpl->stageId.stageId);
         return ref;
     }
-    void createSnapshot(arp_snapshot& snapshot);
+    void createSnapshot(arp_snapshot& snapshot, const tracksnapshot_store_opts_t& opts);
     void loadSnapshot(const arp_snapshot& snapshot);
 
     void process(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,

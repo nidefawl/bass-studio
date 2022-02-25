@@ -1711,7 +1711,7 @@ public:
                 track_t* newTrack = DawInstance::get()->createNewTrack(tr->type);
                 String strNewName = StringFormat("%s copy", StringAsCStr(tr->name));
 
-                track_snapshot_t trSnap(tr, true);
+                track_snapshot_t trSnap(tr, tracksnapshot_store_opts_t::All());
                 trSnap.stageIds.inputStageId = -1;
                 *newTrack                    = trSnap;
                 DawInstance::get()->addTrackImpl(tr->localIdxFlat + 1, newTrack, FLG_TRK_CHANGE_USER);
@@ -1735,7 +1735,7 @@ public:
         } else if (_id == 3) {
             auto window = parentCtrl->window;
 
-            track_snapshot_t snapshot(tr, true);
+            track_snapshot_t snapshot(tr, tracksnapshot_store_opts_t::All());
             trackcontainer_snapshot_t trackContainerSnapshot;
             trackContainerSnapshot.tracks.push_back(snapshot);
             // promptUserFilePath initiates a native dialog that would close this context menu

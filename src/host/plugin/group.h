@@ -37,7 +37,7 @@ public:
     void setTrackLink(audio_stage_t* trImpl) override;
     audio_stage_t* getAudioStage() { return audio; };
     void onTick(double since) override;
-    void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
+    void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
     void getChildAudioStages(std::vector<audio_stage_t*>& targets) override;

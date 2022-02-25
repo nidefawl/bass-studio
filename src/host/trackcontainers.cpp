@@ -326,7 +326,7 @@ void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, track
         //TODO: convert trackBegin (gui idx) to track list idx
         if (t->projectIdx >= trackBegin && t->projectIdx <= trackEnd) {
             log_printf("copy track %d\n", t->projectIdx);
-            auto* trackCopy = new track_snapshot_t(t, false);
+            auto* trackCopy = new track_snapshot_t(t, tracksnapshot_store_opts_t::NoPluginPresets());
             _out.tracks.push_back(trackCopy);
         } else {
             log_printf("NOT copy track %d\n", t->projectIdx);
@@ -347,7 +347,7 @@ void serializeTracks(const track_vector& tracksTree, trackcontainer_snapshot_t& 
             if (!current->children.empty()) {
                 stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
             }
-            track_snapshot_t trackCopy(current, true);
+            track_snapshot_t trackCopy(current, tracksnapshot_store_opts_t::All());
             tracksFlat.push_back(current);
             out.tracks.push_back(std::move(trackCopy));
         }

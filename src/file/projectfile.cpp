@@ -16,6 +16,7 @@
 #include "config.h"
 #include "exceptions.h"
 #include "seq_time.h"
+#include "snapshot.h"
 #include "str_util.h"
 #include "clip.h"
 #include "track.h"
@@ -215,10 +216,25 @@ void serialize(Archive& archive, track_id_snapshot_t& m) {
 }
 
 template<class Archive>
+void serialize(Archive& archive, tracksnapshot_store_opts_t& m) {
+    archive(
+        make_nvp("storePluginPreset", m.storePluginPreset),
+        make_nvp("storeAutomation", m.storeAutomation),
+        make_nvp("storeClips", m.storeClips),
+        make_nvp("storeLayouts", m.storeLayouts)
+    );
+}
+
+
+template<class Archive>
 void load(Archive& archive, track_snapshot_t& m, const std::uint32_t version) {
     if (version == 0) {
         make_optional_nvp(archive, "idx", m.localIdx);
-        archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("plugins", m.data));
+        archive(
+            make_nvp("settings", m.trackSettings),
+            make_nvp("clips", m.clips),
+            make_nvp("plugins", m.data)
+        );
         int32_t stageId = m.stageIds.stageId;
         archive(make_nvp("stageId", stageId));
         stageId *= 4;
@@ -227,22 +243,36 @@ void load(Archive& archive, track_snapshot_t& m, const std::uint32_t version) {
         m.stageIds.outputStageId = stageId++;
         m.stageIds.outputPostStageId = stageId++;
     } else {
-        archive(make_nvp("idx", m.localIdx));
-        archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips));
+        archive(
+            make_nvp("idx", m.localIdx),
+            make_nvp("settings", m.trackSettings),
+            make_nvp("clips", m.clips)
+        );
         if (version < 2) {
             archive(make_nvp("plugins", m.data));
         } else {
             archive(make_nvp("data", m.data));
         }
         archive(make_nvp("stageIds", m.stageIds));
+        
+        if (version >= 3) {
+            archive(make_nvp("storeOpts", m.storeOpts));
+        } else {
+            m.storeOpts = tracksnapshot_store_opts_t::All();
+        }
     }
 }
 
 template<class Archive>
 void save(Archive& archive, const track_snapshot_t& m, const std::uint32_t version) {
-    make_optional_nvp(archive, "idx", m.localIdx);
-    archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("data", m.data));
-    archive(make_nvp("stageIds", m.stageIds));
+    archive(
+        make_nvp("idx", m.localIdx),
+        make_nvp("settings", m.trackSettings),
+        make_nvp("clips", m.clips),
+        make_nvp("data", m.data),
+        make_nvp("stageIds", m.stageIds),
+        make_nvp("storeOpts", m.storeOpts)
+    );
 }
 
 template<class Archive>
@@ -304,6 +334,7 @@ template<class Archive>
 void load(Archive& archive, clip_notes_t& m) {
     archive(make_nvp("notes", m.m_list));
     m.updateBounds();
+    m.removeDuplicates();
 }
 
 template<class Archive>
@@ -419,7 +450,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 
 CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
 CEREAL_CLASS_VERSION(plugin_snapshot_t, 7);
-CEREAL_CLASS_VERSION(track_snapshot_t, 2);
+CEREAL_CLASS_VERSION(track_snapshot_t, 3);
 
 /**
  * @param projectfile
@@ -445,7 +476,7 @@ bool validateProjectFile(const std::shared_ptr<project_file>& projectfile) {
             }
             for (const clip_t& clip : tracksnapshot.clips) {
                 if (clip.notes.hasDuplicates()) {
-                    log_lf(Log::L_WARN, "Clip %s on Track %s has duplicate notes\n", StringAsCStr(clip.name), StringAsCStr(tracksnapshot.name));
+                    log_lf(Log::L_WARN, "Clip %s on Track %s has duplicate notes\n", StringAsCStr(clip.name), StringAsCStr(tracksnapshot.trackSettings.name));
                 }
             }
         }

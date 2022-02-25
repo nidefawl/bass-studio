@@ -13,7 +13,6 @@
 class track_t;
 struct track_impl_t;
 
-
 struct io_configuration_snapshot_t {
     int32_t type              = 0;
     int32_t stageId           = -1;
@@ -55,13 +54,15 @@ struct track_impl_snapshot_t {
     std::vector<plugin_snapshot_t> pluginSnapshots;
     track_effect_routing_snapshot_t effectRouting;
     track_impl_snapshot_t() = default;
-    track_impl_snapshot_t(track_impl_t* p, bool storePluginChunks);
+    track_impl_snapshot_t(track_impl_t* p, const tracksnapshot_store_opts_t& opts);
 };
 struct track_layout_snapshot_t {
     tracklayout_settings_t layout;
     std::vector<automationlane_snapshot_t> automationLanes;
 };
-struct track_snapshot_t : public tracksettings_t {
+struct track_snapshot_t {
+    tracksnapshot_store_opts_t storeOpts;
+    tracksettings_t trackSettings;
     track_id_snapshot_t stageIds;
     int32_t localIdx     = -1;
     track_t* trackLoaded = nullptr;// ref set in first phase of, cleared in second of 2-phase loading
@@ -69,9 +70,8 @@ struct track_snapshot_t : public tracksettings_t {
     std::vector<clip_t> clips;
     std::map<int32_t, track_layout_snapshot_t> layouts;
     track_snapshot_t() = default;
-    track_snapshot_t(const track_t* track, bool storePluginChunks);
+    track_snapshot_t(const track_t* track, const tracksnapshot_store_opts_t& opts);
 };
-
 
 struct trackcontainer_snapshot_t {
     std::vector<track_snapshot_t> tracks;

@@ -214,7 +214,7 @@ std::shared_ptr<plugin_clipboard_t> copyPluginSelection(plugin_selection& sel) {
     pluginSnapshots.reserve(selection.size());
     for (effectbase* effect : selection) {
         plugin_snapshot_t ps;
-        effect->makeSnapshot(ps, true);
+        effect->makeSnapshot(ps, tracksnapshot_store_opts_t::All());
         clipboard->plugins.push_back(std::move(ps));
         clipboard->range++;
     }

@@ -32,7 +32,7 @@ void auplugin::load(vsthost* host) {}
 
 String auplugin::getAutomatableName() { return "AU_PLUGIN"; }
 
-void auplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {}
+void auplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {}
 void auplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {}
 guiplugin* auplugin::makeGui() { return nullptr; }
 guiplugin* auplugin::getGui() { return nullptr; }

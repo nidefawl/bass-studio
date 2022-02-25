@@ -131,7 +131,7 @@ public:
     bool getNumberOfPrograms(uint32_t& numPrograms) override;
     bool getCurrentProgramName(String& out) override;
 
-    void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
+    void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override;
     guiplugin* makeGui() override;
     guiplugin* getGui() override;

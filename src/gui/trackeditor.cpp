@@ -27,66 +27,74 @@
 #include "logging.h"
 #include "audiocache.h"
 #include "cliprenderer.h"
+#include "track_impl.h"
+#include "host/midiarp.h"
 #include "logging.h"
 
-class action_modify_track : public action_base {
-protected:
-    trackstate_t before;
-    trackstate_t after;
 
-public:
-    action_modify_track() : action_base() {
+/*static*/ void action_modify_track::loadTrackSnapshot(DawInstance* daw, track_t* track, const track_snapshot_t* trackStored) {
+    if (trackStored->storeOpts.storeClips) {
+        track->getMidi().deleteClips(daw);
+        track->releaseTrackContent();
     }
-    action_modify_track(String description, trackstate_t&& _tracks) : action_base() {
-        desc   = std::move(description);
-        before = std::move(_tracks);
-    }
-
-    void undo(DawInstance* daw) override {
-        log_printf("action_modify_track undo, num tracks: %d\n", before.tracks.size());
-
-        daw->resetMouseContext();
-        daw->resetEditClip();
-        bool initAfter = after.tracks.empty();
-        if (initAfter) {
-            after.cursor = MainCtrl::get()->getCursor();
+    *track = *trackStored;
+    if (trackStored->storeOpts.storeAutomation) {
+        auto host = daw->getHost();
+        track_impl_t* trImpl = track->getStage();
+        if (trImpl->arp) {
+            loadAutomation(trackStored->data.trackArp.automatedParams, trImpl->arp);
         }
-        trackallcontainer_t& trCtr = daw->getTracks();
-        for (track_snapshot_t* trackStored : before.tracks) {
-            log_printf("trackStored: %s %d\n", TrackTypeToName(trackStored->type), trackStored->localIdx);
-            if (trCtr.validTrackTypeIdx(trackStored->type, trackStored->localIdx)) {
-                track_t* track = trCtr.getTrackTypeIdx(trackStored->type, trackStored->localIdx);
-                if (initAfter) {
-                    after.tracks.push_back(new track_snapshot_t(track, false));
-                }
-                track->getMidi().deleteClips(daw);
-                track->releaseTrackContent();
-                log_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->projectIdx, track->getMidi().getConstClips().size());
-                *track = *trackStored;
-                log_printf("TRACKAfterUndo[%d] HAS %d clips\n", track->projectIdx, track->getMidi().getConstClips().size());
-            } else {
-
-                log_printf("idx is now invalid\n", 0);
+        loadAutomation(trackStored->data.trackParams.automatedParams, &trImpl->mixer);
+        std::deque<const std::vector<plugin_snapshot_t>*> pluginSnapshots;
+        pluginSnapshots.push_front(&trackStored->data.pluginSnapshots);
+        while (!pluginSnapshots.empty()) {
+            auto pVecSnaps = pluginSnapshots.front();
+            pluginSnapshots.pop_front();
+            for (auto& snap : *pVecSnaps) {
+                auto stage2 = host->getPluginById(snap.projectGlobalId);
+                dbgassert(stage2);
+                loadAutomation(snap.automatedParams, stage2);
+                pluginSnapshots.push_front(&snap.pluginSnapshots);
             }
         }
-        MainCtrl::get()->getCursor() = before.cursor;
     }
-    void redo(DawInstance* daw) override {
-        daw->resetMouseContext();
-        daw->resetEditClip();
-        trackallcontainer_t& trCtr = daw->getTracks();
-        for (track_snapshot_t* trackStored : after.tracks) {
-            if (trCtr.validTrackTypeIdx(trackStored->type, trackStored->localIdx)) {
-                track_t* track = trCtr.getTrackTypeIdx(trackStored->type, trackStored->localIdx);
-                track->getMidi().deleteClips(daw);
-                track->releaseTrackContent();
-                *track = *trackStored;
-                log_printf("TRACK[%d] HAS %d clips\n", track->projectIdx, track->getMidi().getConstClips().size());
+}
+void action_modify_track::undo(DawInstance* daw) {
+    log_printf("action_modify_track undo, num tracks: %d\n", before.tracks.size());
+
+    daw->resetMouseContext();
+    daw->resetEditClip();
+    bool initAfter = after.tracks.empty();
+    if (initAfter) {
+        after.cursor = MainCtrl::get()->getCursor();
+    }
+    trackallcontainer_t& trCtr = daw->getTracks();
+    for (track_snapshot_t* trackStored : before.tracks) {
+        log_printf("Undo track %s %d\n", TrackTypeToName(trackStored->trackSettings.type), trackStored->localIdx);
+        if (trCtr.validTrackTypeIdx(trackStored->trackSettings.type, trackStored->localIdx)) {
+            track_t* track = trCtr.getTrackTypeIdx(trackStored->trackSettings.type, trackStored->localIdx);
+            if (initAfter) {
+                after.tracks.push_back(new track_snapshot_t(track, trackStored->storeOpts));
             }
+            loadTrackSnapshot(daw, track, trackStored);
+        } else {
+            log_printf("idx is now invalid\n", 0);
         }
-        MainCtrl::get()->getCursor() = after.cursor;
     }
-};
+    MainCtrl::get()->getCursor() = before.cursor;
+}
+void action_modify_track::redo(DawInstance* daw) {
+    daw->resetMouseContext();
+    daw->resetEditClip();
+    trackallcontainer_t& trCtr = daw->getTracks();
+    for (track_snapshot_t* trackStored : after.tracks) {
+        if (trCtr.validTrackTypeIdx(trackStored->trackSettings.type, trackStored->localIdx)) {
+            track_t* track = trCtr.getTrackTypeIdx(trackStored->trackSettings.type, trackStored->localIdx);
+            loadTrackSnapshot(daw, track, trackStored);
+        }
+    }
+    MainCtrl::get()->getCursor() = after.cursor;
+}
 
 void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip) {
     for (clip_t* c : midi.clips) {
