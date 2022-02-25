@@ -206,7 +206,6 @@ Checks: >
     performance-unnecessary-value-param,
     portability-restrict-system-includes,
     portability-simd-intrinsics,
-    readability-avoid-const-params-in-decls,
     readability-const-return-type,
     readability-container-data-pointer,
     readability-container-size-empty,
