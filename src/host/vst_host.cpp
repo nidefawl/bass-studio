@@ -127,18 +127,18 @@ class TrackBlockProcessTask : public WorkerThread::ThreadTask {
     vsthost::track_block_processing_task_t blockProcTask;
     std::atomic_bool isBusy{false};
     bool inUse = false;
-
+    vsthost* host = nullptr;
 public:
     struct process_task_stats_t {
         int64_t timeStart = 0;
         int64_t timeEnd = 0;
     };
 
-    process_task_stats_t stats;
-    uint32_t threadIdx = 0;
-
-    TrackBlockProcessTask() : WorkerThread::ThreadTask() {
+    void init(vsthost* _host) {
+        this->host = _host;
     }
+
+    process_task_stats_t stats;
 
     bool isInUse() const {
         return inUse;
@@ -146,7 +146,7 @@ public:
 
     void run() override {
         stats.timeStart = getTimeMicros();
-        vsthost::getInstance()->processBlockTrack(buf, blockProcTask);
+        host->processBlockTrack(buf, blockProcTask);
         stats.timeEnd = getTimeMicros();
         isBusy=false;
     }
@@ -177,8 +177,8 @@ public:
  */
 class vsthost::vsthost_impl {
 public:
-    WorkerThread threads[MAX_AUDIOPROCESSING_THREADS];
-    TrackBlockProcessTask tasks[MAX_AUDIOPROCESSING_THREADS];
+    std::array<WorkerThread, MAX_AUDIOPROCESSING_THREADS> threads;
+    std::array<TrackBlockProcessTask, MAX_AUDIOPROCESSING_THREADS> tasks;
     std::vector<std::shared_ptr<resampler_t>> resamplers;
     std::map<uint32_t, std::shared_ptr<DelayLine>> delayLines;
     std::vector<thread_stats_process_timings_t> blockThreadStats;
@@ -196,10 +196,9 @@ public:
 
     std::unique_ptr<ProcessThread> vstscannerProcessThread;
     int scanningState = 0;
-    vsthost_impl() {
-        uint32_t u = 0;
+    explicit vsthost_impl(vsthost* host) {
         for (TrackBlockProcessTask& task : tasks) {
-            task.threadIdx = u++;
+            task.init(host);
         }
     }
     ~vsthost_impl() = default;
@@ -392,7 +391,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
             return (VstIntPtr)plugin->getLocalTimeInfoPtr();
         }
         return (VstIntPtr)host->getTimeInfo();
-        
+
     case audioMasterProcessEvents:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterProcessEvents %d %d %zd\n", opcode, index, value, 0);
@@ -634,7 +633,7 @@ uint32_t vsthost::getMaxThreadCount() {
 }
 
 vsthost::vsthost()
-    : impl(new vsthost_impl{}),
+    : impl(new vsthost_impl{this}),
       numChannels(OUTPUT_CHANNELS),
       moduleMgr{new vsthost::ModuleManager{}}
 {
@@ -1606,7 +1605,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
                         }
                     }
                     if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::channel_input_type::INPUT_EXTERNAL_AUDIO) {
-                        
+
                         // TODO: latency compensate (add external output nodes to graph)
 
                         /* Calculate master tracks gain level */
@@ -1935,7 +1934,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 #endif
 
     dbgassert(
-            vsthost::getInstance()->m_sampleFormatInternal == trackImpl->sampleFormat
+            this->m_sampleFormatInternal == trackImpl->sampleFormat
             && trackImpl->input.samples == trackImpl->sampleFormat.blockSize
             && trackImpl->output.samples == trackImpl->sampleFormat.blockSize
             && trackImpl->outputPost.samples == trackImpl->sampleFormat.blockSize
@@ -1957,7 +1956,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
     }
     trackImpl->procStats.numBlocksProcessed++;
 
-    
+
     trackImpl->outputPost.clear();
 
 
@@ -1972,7 +1971,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
             automationRef = DAW::AutomationRef(&trackImpl->mixer, paramIdx);
         }
     }
-    
+
     // evaluate automationRef
     float fValAutomated = 0.0f;
     /*bool bSuccess = */DAW::resolveAutomationAtTime(this, automationRef, tickLatencyCompensated, &fValAutomated);
@@ -2996,7 +2995,7 @@ int32_t vsthost::validateIds()
             for (auto* pStageId : stageIds) {
                 dbgassert(static_cast<int32_t>(*pStageId) != id);
             }
-            
+
         }
     }
 
