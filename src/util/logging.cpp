@@ -3,10 +3,7 @@
 #include "util/testing_environment.h"
 
 #ifdef __GNUC__
-
 #include <cxxabi.h>
-
-
 String demangleName(const char* to_demangle) {
     constexpr size_t SIZE_TEMP_BUF = 128;
     char* szTempHeap = static_cast<char*>(malloc(SIZE_TEMP_BUF));
@@ -14,19 +11,19 @@ String demangleName(const char* to_demangle) {
     int status = 0;
     char * szDemangled = __cxxabiv1::__cxa_demangle(to_demangle, szTempHeap, &length, &status);
     String demangled;
-    if (szDemangled && length && status) {
+    if (szDemangled && length && status == 0) {
         demangled = szDemangled;
     }
     std::free(szDemangled ? szDemangled : szTempHeap);
     return demangled;
 }
-
 #else
 String demangleName(const char* to_demangle)
 {
     return to_demangle;
 }
 #endif
+
 #include <ctime>
 #include <unordered_map>
 #include <vector>
