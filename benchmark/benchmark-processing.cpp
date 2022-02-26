@@ -242,7 +242,7 @@ int main(int argc, char** argv) {
             setupNTracks(dawInstance, 32);
         };
 
-        auto test32TracksEmptyNoArp = [&trDataMidi](TestContext* context) {
+        auto test32TracksEmptyNoArp = [](TestContext* context) {
             DawInstance* dawInstance = context->dawInstance;
             for (int i = 0; i < 32; ++i) {
                 auto track1 = new track_t(TRACK_TYPE_MIDI, StringFormat("track%d", i), true);
@@ -324,17 +324,23 @@ int main(int argc, char** argv) {
                 auto trTop = dawInstance->createNewTrack(TRACK_TYPE_AUDIO);
                 trTop->name = StringFormat("Top Bus %d", topGrps);
                 dawInstance->addTrackImpl(-1, trTop, 0);
+                delete trTop->getStage()->arp;
+                trTop->getStage()->arp = nullptr;
                 for (int subGrps = 0; subGrps < 2; ++subGrps) {
                     auto trSubGrp = dawInstance->createNewTrack(TRACK_TYPE_AUDIO);
                     trSubGrp->name = StringFormat("Sub Bus %d.%d", topGrps, subGrps);
                     trTop->addChild(trSubGrp);
                     dawInstance->addTrackImpl(-1, trSubGrp, 0);
+                    delete trSubGrp->getStage()->arp;
+                    trSubGrp->getStage()->arp = nullptr;
                     for (int i = 0; i < 4; ++i) {
                         auto track1 = new track_t(TRACK_TYPE_MIDI, StringFormat("Track #%d.%d.%d", topGrps, subGrps, i), true);
                         trSubGrp->addChild(track1);
                         // deep copy (of clip_t instances)
                         track1->getMidi() = trDataMidi;
                         dawInstance->addTrackImpl(-1, track1, 0);
+                        delete track1->getStage()->arp;
+                        track1->getStage()->arp = nullptr;
 
                         auto pluginInstance = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_HOSTINFO, -1);
                         dbgassert(pluginInstance);
@@ -347,6 +353,8 @@ int main(int argc, char** argv) {
 
             auto trackMaster = new track_t(TRACK_TYPE_MASTER, "master", true);
             dawInstance->addTrackImpl(0, trackMaster, 0);
+            delete trackMaster->getStage()->arp;
+            trackMaster->getStage()->arp = nullptr;
         };
 
         auto testGroups2 = [&trDataMidi](TestContext* context) {
@@ -408,8 +416,8 @@ int main(int argc, char** argv) {
             TestContext{"Process 32 Tracks (Midi Clip, Arp==null)", false, dawInstance.get(), test32TracksMidiNoArp },
             TestContext{"Process 32 Tracks (Midi Clip, Arp instance)", false, dawInstance.get(), test32TracksMidi },
             TestContext{"Process 32 Tracks (Midi Clip, Arp Active)", false, dawInstance.get(), test32TracksMidiAndArp },
-            TestContext{"Process 32 Tracks (4 Busses x 2 Busses x 4 Tracks, Midi Clip, Arp Instance)", false, dawInstance.get(), testGroups },
-            TestContext{"Process 32 Tracks (4 Busses x 2 Busses x 4 Tracks, Midi Clip, Arp Active)", false, dawInstance.get(), testGroups2 },
+            TestContext{"Process 32 Tracks (2 x 2 x 4 Groups, Arp==null)", false, dawInstance.get(), testGroups },
+            TestContext{"Process 32 Tracks (2 x 2 x 4 Groups, Arp Active)", false, dawInstance.get(), testGroups2 },
         };
 
         for (TestContext& benchmarkCtxt : allBenchmarks) {

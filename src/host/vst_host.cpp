@@ -2010,9 +2010,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
  * @param reqFinishWaitStageIds
  * @param isFinalInvocation
  */
-void vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedStageIds,
-                               const std::vector<audiostageid_i32>& reqFinishWaitStageIds,
-                               bool isFinalInvocation) {
+void vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedStageIds, bool isFinalInvocation) {
     bool allBusyFlag = true;
     while (allBusyFlag) {
         allBusyFlag = true;
@@ -2023,7 +2021,7 @@ void vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedSta
                 auto taskStageId = task.getTask().trackNode->stageId;
                 if (!task.isCompleted()) {
                     impl->waitingTasks.push_back(taskStageId);
-                    if (isFinalInvocation || STL_CONTAINS(reqFinishWaitStageIds, taskStageId)) {
+                    if (isFinalInvocation) {
                         task.wait();
                     } else {
                         continue;
@@ -2167,47 +2165,26 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
         auto funcCheckNodeUnprocessed=[&stagesProcessed](const DAW::track_node_t* trackNode) {
             return !STL_CONTAINS(stagesProcessed, trackNode->stageId);
         };
-        constexpr bool outOfOrderProcessing = true;
         // auto timeEnd = getTimeMicros();
         // int limR = 0;
-        for (bool unprocessed=true; unprocessed; unprocessed=outOfOrderProcessing && tasksQueued.size() != processingGraph->nodesFlatOrdered.size()) {
-            for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
-                const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
-                const DAW::processing_track_node_t& trackNode = *ptrProcessingNode;
+        while (tasksQueued.size() != processingGraph->nodesFlatOrdered.size()) {
+            for (auto itAudioStage : processingGraph->nodesFlatOrdered) {
+                const DAW::processing_track_node_t& trackNode = *itAudioStage;
 
-                bool wasQueued = false;
-                for (auto& taskQueued : tasksQueued) {
-                    if (taskQueued.stageId == ptrProcessingNode->stageId) {
-                        wasQueued = true;
-                        break;
-                    }
-                }
+                bool wasQueued = std::find_if(tasksQueued.cbegin(), tasksQueued.cend(), 
+                                        [stageId=trackNode.stageId](auto& taskQueued) {
+                                                return taskQueued.stageId == stageId;
+                                            }) != tasksQueued.end();
                 if (wasQueued) {
-                    dbgassert(outOfOrderProcessing);
                     continue;
                 }
-                /* If all threads are busy wait for a thread to become free
-                 * if node has unprocessed inputs wait for threads. This works as long as we process in order.
-                 * out of order processing: For processing out of order we skip nodes with unprocessed inputs and loop over nodesFlatOrdered again */
+                /* skip nodes with unprocessed inputs and loop over nodesFlatOrdered again */
 
-                std::vector<audiostageid_i32> tasksToFinish;
-                if (!outOfOrderProcessing) {
-                    tasksToFinish = trackNode.dependencies;
-                }
                 // auto timeStart = getTimeMicros();
-                finishTreadTasks(stagesProcessed, tasksToFinish, false);
+                finishTreadTasks(stagesProcessed, false);
                 // timeEnd = getTimeMicros();
 
-                /* TODO: A lot of stats entries might be created. Especially when one of the threads goes unresponsive (broken plugin for example)
-                 * A forced sleep of this thread might increase latency too much
-                 * Until I know a smarter way to handle this I will put a hard limit on the length of the stats vector to avoid OOM situations */
-                // if (impl->blockThreadStats.size() < 5000) {
-                //     thread_stats_process_timings_t thrdProcStats = {static_cast<uint32_t>(impl->threadCount), TRACKID_INVALID_I32, timeStart, timeEnd};
-                //     impl->blockThreadStats.push_back(thrdProcStats);
-                // } else {
-                //     limR++;// for setting debugger breakpoint
-                // }
-                bool hasUnprocessedInputs = /*!outOfOrderProcessing || */std::any_of(trackNode.children.cbegin(), trackNode.children.cend(), funcCheckNodeUnprocessed);
+                bool hasUnprocessedInputs = std::any_of(trackNode.children.cbegin(), trackNode.children.cend(), funcCheckNodeUnprocessed);
                 if (!hasUnprocessedInputs) {
 
                     bool pushd=false;
@@ -2217,7 +2194,6 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
 
                             vsthost::track_block_processing_task_t blockProcTask;
                             blockProcTask.trackNode = &trackNode;
-                            dbgassert(blockProcTask.trackNode==ptrProcessingNode);
                             blockProcTask.ptrExternalInputs = ptrExternalInputs;
                             blockProcTask.ptrExternalOutputs = ptrExternalOutputs;
                             blockProcTask.audioProp = audioProp;
@@ -2228,7 +2204,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
                             blockProcTask.debugLogProcessing = debugLogProcessing;
 
 
-                            tasksQueued.push_back({ ptrProcessingNode->stageId, static_cast<uint32_t>(i) });
+                            tasksQueued.push_back({ trackNode.stageId, static_cast<uint32_t>(i) });
                             task.setTask(blockProcTask);
                             impl->threads[i].pushTask(&task);
                             pushd = true;
@@ -2244,8 +2220,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
                 }
             }
         }
-        std::vector<audiostageid_i32> empty;
-        finishTreadTasks(stagesProcessed, empty, true);
+        finishTreadTasks(stagesProcessed, true);
         // bool allProcessed = !std::any_of(processingGraph->nodesFlatOrdered.begin(), processingGraph->nodesFlatOrdered.end(), funcCheckNodeUnprocessed);
         // dbgassert(allProcessed);
     }
