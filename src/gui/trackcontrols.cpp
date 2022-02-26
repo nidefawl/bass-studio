@@ -412,7 +412,6 @@ std::shared_ptr<guibase> getMeter(int32_t t, rmsmeter<16000>* meter);
 class ctxtmenu_entry_track_io : public ctxtmenu_entry {
 public:
     ctxtmenu_entry_track_io(int32_t _id, const String& name) : ctxtmenu_entry(name, _id) {
-        log_printf("asddf\n",0);
     }
     ~ctxtmenu_entry_track_io() override = default;
     virtual bool isBus()                = 0;
@@ -475,7 +474,6 @@ public:
 class ctxtmenu_entry_endpoint : public ctxtmenu_entry_track_io {
 public:
     ctxtmenu_entry_endpoint(int32_t _id, const String& name) : ctxtmenu_entry_track_io(_id, name) {
-        log_printf("ctxtmenu_entry_endpoint\n",0);
     }
     virtual DAW::channel_ref_t getEndpoint() = 0;
 };
