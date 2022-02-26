@@ -1,6 +1,14 @@
 #include "str_util.h"
 #include <string_view>
 #include "util/testing_environment.h"
+#include <ctime>
+#include <unordered_map>
+#include <vector>
+#include <mutex>
+#include "logging.h"
+#include "assert_dbg.h"
+#include "fileio.h"
+#include "thread.h"
 
 #ifdef __GNUC__
 #include <cxxabi.h>
@@ -24,57 +32,26 @@ String demangleName(const char* to_demangle)
 }
 #endif
 
-#include <ctime>
-#include <unordered_map>
-#include <vector>
-#include <mutex>
-#include "logging.h"
-#include "assert_dbg.h"
-#include "fileio.h"
-#include "thread.h"
-
-
 class StdOutLogger : public Logger {
 public:
     StdOutLogger() noexcept = default;
     ~StdOutLogger() override = default;
-    void log(const char* data, size_t len) override {
+    void log(Log::Level lvl, const char* data, size_t len) override {
+        if (Log::LEVEL_ALL != getLevel() && lvl < getLevel())
+            return;
         fwrite(data, len, 1, stdout);
         fflush(stdout);
     }
-    void logStr(String s) override {
+    void logStr(Log::Level lvl, String s) override {
+        if (Log::LEVEL_ALL != getLevel() && lvl < getLevel())
+            return;
         if (s.length() && s.back() != '\n')
             s+='\n';
         fprintf(stdout, "%s", StringAsCStr(s));
         fflush(stdout);
     }
 };
-class MultiLogger : public Logger {
-    std::vector<Logger*> loggers;
-public:
-    explicit MultiLogger(Logger* handle = nullptr) noexcept {
-        if (handle)
-            loggers.push_back(handle);
-    }
-    void addLogger(Logger* _logger) {
-        loggers.push_back(_logger);
-    }
-    void removeLogger(Logger* _logger) {
-        loggers.erase(std::remove(loggers.begin(), loggers.end(), _logger), loggers.end());
-        loggers.push_back(_logger);
-    }
-    ~MultiLogger() override = default;
-    void log(const char* data, size_t len) override {
-        for (auto* logger : loggers) {
-            logger->log(data, len);
-        }
-    }
-    void logStr(String s) override {
-        for (auto* logger : loggers) {
-            logger->logStr(s);
-        }
-    }
-};
+
 class ThreadSafeFileLogger : public Logger {
     std::recursive_mutex mutex;
     IOFile* handle = nullptr;
@@ -101,7 +78,9 @@ public:
 
 public:
     //threadsafe
-    void log(const char* data, size_t len) override {
+    void log(Log::Level lvl, const char* data, size_t len) override {
+        if (Log::LEVEL_ALL != getLevel() && lvl < getLevel())
+            return;
         if (handle) {
             std::lock_guard<std::recursive_mutex> lockguard(mutex);
             std::time_t t = std::time(nullptr);
@@ -121,18 +100,18 @@ public:
             }
         }
     }
-    void logStr(String s) override {
+    void logStr(Log::Level lvl, String s) override {
         if (s.back() != '\n')
             s += '\n';
         const char* str = StringAsCStr(s);
-        log(str, s.length());
+        log(lvl, str, s.length());
     }
 };
 static ThreadSafeFileLogger& getFileLogger() noexcept {
     static ThreadSafeFileLogger gGlobalLogger;
     return gGlobalLogger;
 }
-static MultiLogger& getMultiLogger() noexcept {
+MultiLogger& getMultiLogger() noexcept {
     static StdOutLogger gMultiLoggerStdOutInstance;
     static MultiLogger gMultiLogger(&gMultiLoggerStdOutInstance);
     return gMultiLogger;
@@ -152,13 +131,13 @@ void setGlobalLogger(Logger* logger) noexcept {
     globalLogger = logger;
 }
 void closeGlobalLog() {
-    getFileLogger().logStr("End of logfile\n");
+    getFileLogger().logStr(Log::L_DEBUG, "End of logfile\n");
     getFileLogger().closeLog();
     getMultiLogger().removeLogger(&getFileLogger());
 }
 void openGlobalLog(const String& logFileName) {
     getFileLogger().openFile(logFileName);
-    getFileLogger().logStr("Begin of logfile\n");
+    getFileLogger().logStr(Log::L_DEBUG, "Begin of logfile\n");
     getMultiLogger().addLogger(&getFileLogger());
 }
 #define LOG_BUF_SIZE 4096
@@ -226,7 +205,7 @@ void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* 
         szLogStatement = szLogStr;
     }
     if (szLogStatement) {
-        logger->log(szLogStatement, ret);
+        logger->log(lvl, szLogStatement, ret);
     }
 }
 

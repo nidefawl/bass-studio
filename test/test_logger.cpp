@@ -20,7 +20,7 @@ namespace {
         char* recvdLog    = nullptr;
         size_t recvdSize  = 0;
         uint32_t numCalls = 0;
-        void log(const char* data, size_t len) override {
+        void log(Log::Level lvl, const char* data, size_t len) override {
             TEST_ASSERT_THROW(numCalls == 0);
             TEST_ASSERT_THROW(data != nullptr);
             TEST_ASSERT_THROW(len > 0);
@@ -31,7 +31,7 @@ namespace {
             recvdSize = len;
             numCalls++;
         }
-        void logStr(String s) override {
+        void logStr(Log::Level lvl, String s) override {
         }
         void reset() {
             if (recvdLog) free(recvdLog);

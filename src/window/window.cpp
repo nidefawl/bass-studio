@@ -109,7 +109,7 @@ public:
 
 void handleStdException(std::exception& e) {
     try {
-        getGlobalLogger()->logStr(StringFormat("std::exception: %s\n", e.what()));
+        log_lf(Log::L_ERROR, "std::exception: %s\n", e.what());
         logStackTrace();
     } catch (std::exception& e) {
         dbgassert(0);
@@ -118,7 +118,7 @@ void handleStdException(std::exception& e) {
 }
 
 void on_terminate() {
-    getGlobalLogger()->logStr("on_terminate\n");
+    log_lf(Log::L_ERROR, "on_terminate was called\n");
     //exit(1); // required on mingw (at least)
 }
 namespace RenderResources {
@@ -1775,7 +1775,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         try {
             DAW::settings = loadSettings();
         } catch (std::exception& e) {
-            getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
+            log_lf(Log::L_ERROR, "Failed loading settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
             DAW::settings = appsettings();
             ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
         }
@@ -1935,7 +1935,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             try {
                 saveSettings(DAW::settings);
             } catch (std::exception& e) {
-                getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
+                log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
                 ngui::show("Couldn't write config file.", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
             }
         }

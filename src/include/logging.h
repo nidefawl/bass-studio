@@ -1,6 +1,7 @@
 #pragma once
 #include "config.h"
 #include <string_view>
+#include <vector>
 
 #ifndef ENABLE_LOGGING
 #define ENABLE_LOGGING 1
@@ -33,8 +34,8 @@ class Logger {
 public:
     Logger() noexcept = default;
     virtual ~Logger() = default;
-    virtual void log(const char* data, size_t len) = 0;
-    virtual void logStr(String s)                  = 0;
+    virtual void log(Log::Level lvl, const char* data, size_t len) = 0;
+    virtual void logStr(Log::Level lvl, String s)                  = 0;
     virtual void setLevel(Log::Level lvl) noexcept {
         this->lvl = lvl;
     }
@@ -42,6 +43,33 @@ public:
         return this->lvl;
     }
 };
+class MultiLogger : public Logger {
+    std::vector<Logger*> loggers;
+public:
+    explicit MultiLogger(Logger* handle = nullptr) noexcept {
+        if (handle)
+            loggers.push_back(handle);
+    }
+    void addLogger(Logger* _logger) {
+        loggers.push_back(_logger);
+    }
+    void removeLogger(Logger* _logger) {
+        loggers.erase(std::remove(loggers.begin(), loggers.end(), _logger), loggers.end());
+        loggers.push_back(_logger);
+    }
+    ~MultiLogger() override = default;
+    void log(Log::Level lvl, const char* data, size_t len) override {
+        for (auto* logger : loggers) {
+            logger->log(lvl, data, len);
+        }
+    }
+    void logStr(Log::Level lvl, String s) override {
+        for (auto* logger : loggers) {
+            logger->logStr(lvl, s);
+        }
+    }
+};
+MultiLogger& getMultiLogger() noexcept;
 Logger* getGlobalLogger() noexcept;
 
 

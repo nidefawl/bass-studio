@@ -60,7 +60,7 @@ namespace RenderResources {
                     //out.bytes.size());
                 }
             } catch (appexception& e) {
-                getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
+                log_lf(Log::L_ERROR, "Failed loading image %s: %s\n", StringAsCStr(path), e.what());
             }
         }
     } // namespace

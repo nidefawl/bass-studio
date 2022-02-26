@@ -1197,7 +1197,7 @@ public:
                 try {
                     saveSettings(settings);
                 } catch (std::exception& e) {
-                    getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
+                    log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
                 }
             }
             selectFolder->setText(settings.pluginPath);

@@ -5,6 +5,7 @@
 #include "theme.h"
 #include "themefile.h"
 #include "basectrl.h"
+#include "platform.h"
 
 void saveThemeFile(themefile& _settings);
 themefile loadThemeFile();
@@ -54,7 +55,7 @@ void guitheme_mgr::saveThemes() {
     try {
         saveThemeFile(themeFile);
     } catch (std::exception& e) {
-        getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
+        log_lf(Log::L_ERROR, "Failed saving theme file %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(THEMEFILE_NAME)), e.what());
     }
 }
 
@@ -70,7 +71,7 @@ void guitheme_mgr::loadThemes() {
     try {
         themeFile = loadThemeFile();
     } catch (std::exception& e) {
-        getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
+        log_lf(Log::L_ERROR, "Failed loading theme file %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(THEMEFILE_NAME)), e.what());
     }
     String selectedTheme   = themeFile.theme.name;
     auto it                = themeFile.themes.begin();

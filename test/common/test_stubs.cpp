@@ -8,11 +8,11 @@ class StdOutLogger : public Logger {
 public:
     StdOutLogger() noexcept = default;
     ~StdOutLogger() override = default;
-    void log(const char* data, size_t len) override {
+    void log(Log::Level lvl, const char* data, size_t len) override {
         fwrite(data, len, 1, stdout);
         fflush(stdout);
     }
-    void logStr(String s) override {
+    void logStr(Log::Level lvl, String s) override {
         if (s.length() && s.back() != '\n')
             s+='\n';
         fprintf(stdout, "%s", StringAsCStr(s));
@@ -25,10 +25,10 @@ Logger* getGlobalLogger() noexcept {
     return &gTestStub_globalLoggerInstance;
 }
 void closeGlobalLog() {
-    getGlobalLogger()->logStr("End of logfile\n");
+    getGlobalLogger()->logStr(Log::L_DEBUG, "End of logfile\n");
 }
 void openGlobalLog(const String&) {
-    getGlobalLogger()->logStr("Begin of logfile\n");
+    getGlobalLogger()->logStr(Log::L_DEBUG, "Begin of logfile\n");
 }
 #define LOG_BUF_SIZE 4096
 #define MAX_LEN_FILENAME 512
@@ -76,7 +76,7 @@ void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* 
         szLogStatement = szLogStr;
     }
     if (szLogStatement) {
-        logger->log(szLogStatement, ret);
+        logger->log(lvl, szLogStatement, ret);
     }
 }
 

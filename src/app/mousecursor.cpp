@@ -1,6 +1,7 @@
 #include <vector>
 #include <cstdint>
 #include <memory>
+#include "logging.h"
 #include "str_util.h"
 #include "fileio.h"
 #include "mouse.h"
@@ -128,7 +129,7 @@ namespace MouseCursors {
                               out.bytes.size());
                 }
             } catch (appexception& e) {
-                getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
+                log_lf(Log::L_ERROR, "Failed loading cursor %s: %s\n", StringAsCStr(path), e.what());
             }
         }
     } // namespace
