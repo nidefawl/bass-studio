@@ -560,9 +560,9 @@ public:
                         log_printf("menu %s has no parent \n", StringAsCStr(menu->title));
                     }
                 }
+                return 0;
             }
 #endif
-                return 0;
             default:
                 break;
         }
@@ -1860,16 +1860,6 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                 } else {
 
                     switch (msg.message) {
-#if BUILD_VSTHOST
-                        case WM_KEYDOWN:
-                        case WM_SYSKEYDOWN:
-                        case WM_KEYUP:
-                        case WM_SYSKEYUP: {
-                            if (vst_window_mgr::isVstWindow(msg.hwnd)) {
-                                msg.hwnd = mainWindow->getHWND();
-                            }
-                        }
-#endif
                         //no break
                         default:
                             TranslateMessage(&msg);

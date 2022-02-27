@@ -1,9 +1,10 @@
+#include "str_util.h"
+#include <errhandlingapi.h>
 #ifdef _WIN32
 #include "host/vst_window.h"
 #include "host/vst_host.h"
 #include "host/plugin/vst_plugin.h"
 #include "host/mainctrl.h"
-#define WINDOW_HANDLE HWND
 #include <Windows.h>
 #include <winuser.h>
 #include <tchar.h>
@@ -12,7 +13,9 @@
 #include "math/seq_math.h"
 #include "platform/win/platform_win.h"
 
+#define WINDOW_HANDLE HWND
 #define WIN32API_CALLBACK_TYPE __stdcall
+
 LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);// window.cpp
 
 namespace {
@@ -127,7 +130,7 @@ namespace {
                 }
                 case WM_SIZE: {
                     plugin->onResize(window, window->getContentSize());
-                    break;
+                    return 0;
                 }
                 case WM_KEYDOWN:
                 case WM_SYSKEYDOWN:
@@ -139,7 +142,6 @@ namespace {
                             return appWndProc(hwndMain, message, wParam, lParam);
                         }
                     }
-                    break;
                 case WM_SIZING: {
                     RECT* newSize = reinterpret_cast<RECT*>(lParam);
                     RECT oldSize;
@@ -166,7 +168,7 @@ namespace {
                 }
                 case WM_CLOSE: {
                     window->close();
-                    return 1;
+                    return 0;
                 }
                 default:
                     break;
@@ -174,6 +176,7 @@ namespace {
         }
         return DefWindowProc(hwnd, message, wParam, lParam);
     }
+
     void registerWindowClass(HINSTANCE instance) {
         static bool once = true;
         if (!once)
@@ -181,20 +184,16 @@ namespace {
         once = true;
 
         WNDCLASSEX wcex{};
-
         wcex.cbSize = sizeof(WNDCLASSEX);
-
-        wcex.style         = CS_DBLCLKS;
+        wcex.style         = /* CS_HREDRAW | CS_VREDRAW | */ CS_OWNDC | CS_DBLCLKS;
         wcex.lpfnWndProc   = PluginWndProc;
         wcex.hInstance     = instance;
         wcex.hCursor       = LoadCursor(instance, IDC_ARROW);
         wcex.hbrBackground = nullptr;
         wcex.lpszClassName = gWindowClassName;
-
         RegisterClassEx(&wcex);
     }
 }// namespace
-
 
 vst_window* vst_window::make(vstplugin* plugin, const String& name, ivec2 size, bool resizeable) {
     auto* window = new vst_window();
@@ -202,6 +201,7 @@ vst_window* vst_window::make(vstplugin* plugin, const String& name, ivec2 size, 
         return window;
     return nullptr;
 }
+
 namespace vst_window_mgr {
     void destroyAllVSTWindows() {
         for (vst_window* w : vst_window_list) {
@@ -221,27 +221,11 @@ namespace vst_window_mgr {
 
 vst_window* vst_window::getVSTWindow(HWND handle) {
     dbgassert(handle);
-    TCHAR clsName_v[512];
-    String sChain;
-    vst_window* vstwinhandle = nullptr;
-    while (handle /*&& !vstwinhandle*/) {
-        if (GetClassName(handle, clsName_v, 512)) {
-            if (!vstwinhandle && strcmp(clsName_v, "VSTHOSTWINDOW") == 0) {
-                vstwinhandle = getWindowByHWND(handle);
-            }
-            if (!strcmp(clsName_v, "Edit")) {
-                vstwinhandle = nullptr;
-                break;
-            }
-            if (!sChain.length()) {
-                sChain = String(clsName_v);
-            } else {
-                sChain = String(clsName_v) + " > " + sChain;
-            }
-        } else {
-            log_printf("GetClassName failed\n", 0);
+    while (handle) {
+        if (reinterpret_cast<int64_t>(GetProp(handle, "_DAW_VST2WIN")) == int64_t{7}) {
+            return getWindowByHWND(handle);
         }
-        WINDOWINFO info;
+        WINDOWINFO info{};
         info.cbSize = sizeof(info);
         GetWindowInfo(handle, &info);
         if (info.dwStyle & WS_CHILD) {
@@ -249,7 +233,7 @@ vst_window* vst_window::getVSTWindow(HWND handle) {
         } else
             break;
     }
-    return vstwinhandle;
+    return nullptr;
 }
 
 std::vector<vst_window*>& vst_window::getWindows() {
@@ -262,55 +246,53 @@ bool vst_window::init(vstplugin* _plugin, const String& name, ivec2 size, bool r
     this->plugin       = _plugin;
     HINSTANCE instance = GetModuleHandle(nullptr);
     registerWindowClass(instance);
-    DWORD exStyle, dwStyle;
-    HWND parentHWND;
-    if (isChildWindow) {
-        parentHWND = mainHWND;
-        exStyle    = 0;
-        dwStyle    = WS_CHILDWINDOW | WS_CLIPSIBLINGS;
-    } else {
-        parentHWND = getMainHWND();
-        exStyle    = WS_EX_APPWINDOW;
-        dwStyle    = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS;
-        if (resizeable) {
-            dwStyle |= WS_SIZEBOX | WS_MAXIMIZEBOX;
-        }
+
+    DWORD exStyle    = WS_EX_APPWINDOW;
+    DWORD dwStyle    = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS;
+    if (resizeable) {
+        dwStyle |= WS_SIZEBOX | WS_MAXIMIZEBOX;
     }
+
     hwnd = CreateWindowEx(exStyle, gWindowClassName, StringAsCStr(name), dwStyle,
-                          0, 0, size.x, size.y, parentHWND, nullptr, instance, nullptr);
+                          0, 0, size.x, size.y, mainHWND, nullptr, instance, nullptr);
+    if (!hwnd) {
+        log_lf(Log::L_ERROR, "%s", StringAsCStr(FormatErrorMessage(GetLastError(), "Failed creating vst_window: CreateWindowEx returned null")));
+    }
 
     if (hwnd) {
-        if (!isChildWindow) {
-            RECT rcOwner;
-            RECT rcDlg;
-            RECT rc;
-            GetWindowRect(mainHWND, &rcOwner);
-            GetWindowRect(hwnd, &rcDlg);
-            CopyRect(&rc, &rcOwner);
-            OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
-            OffsetRect(&rc, -rc.left, -rc.top);
-            OffsetRect(&rc, -rcDlg.right, -rcDlg.bottom);
-            SetWindowPos(hwnd,
-                         HWND_TOP,
-                         rcOwner.left + (rc.right / 2),
-                         rcOwner.top + (rc.bottom / 2),
-                         0, 0,// Ignores size arguments.
-                         SWP_NOSIZE);
-        }
-        SetWindowLongPtr(hwnd, GWLP_USERDATA, (__int3264) (LONG_PTR) this);
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
+        SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(mainHWND));
+        SetProp(hwnd, "_DAW_VST2WIN", reinterpret_cast<HANDLE>(int64_t{7}));
+
+        RECT rcOwner;
+        RECT rcDlg;
+        RECT rc;
+        GetWindowRect(mainHWND, &rcOwner);
+        GetWindowRect(hwnd, &rcDlg);
+        CopyRect(&rc, &rcOwner);
+        OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
+        OffsetRect(&rc, -rc.left, -rc.top);
+        OffsetRect(&rc, -rcDlg.right, -rcDlg.bottom);
+        SetWindowPos(hwnd,
+                        HWND_TOP,
+                        rcOwner.left + (rc.right / 2),
+                        rcOwner.top + (rc.bottom / 2),
+                        0, 0,// Ignores size arguments.
+                        SWP_NOSIZE);
         addWindow(this);
     }
     return hwnd != nullptr;
 }
 
 void vst_window::close() {
+    SetActiveWindow(getMainHWND());
     plugin->onClose();
     destroy();
 }
 
 void vst_window::destroy() {
     plugin->onWindowDestroy();
-    SetWindowLongPtr(hwnd, GWLP_USERDATA, (__int3264) (LONG_PTR) nullptr);
+    SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
     DestroyWindow(hwnd);
     removeWindow(this);
     delete this;
@@ -318,14 +300,8 @@ void vst_window::destroy() {
 
 void vst_window::show() {
     SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
-    if (isChildWindow) {
-        //ShowWindow(hwnd, SW_SHOWNA);
-    } else {
-        SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR) getMainHWND());
-    }
     plugin->onShow(this);
 }
-
 
 ivec2 vst_window::getContentSize() const {
     RECT r;
@@ -341,12 +317,7 @@ void vst_window::captureWindowFrame() {
 }
 
 void vst_window::updateWindow() const {
-    //InvalidateRect(hwnd, NULL, TRUE);
-    //InvalidateRect(hwnd, NULL, FALSE);
-    //InvalidateRgn(hwnd, NULL, FALSE);
-    //RedrawWindow( hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN );
     UpdateWindow(hwnd);
-    //log_printf("updateDisplay %d\n", getTimeMillis());
 }
 
 void vst_window::resize(ivec2 newSize) const {
@@ -359,13 +330,8 @@ void vst_window::resize(ivec2 newSize) const {
     clientRect.right  = newSize.x;
     clientRect.bottom = newSize.y;
     AdjustWindowRectEx(&clientRect, windowInfo.dwStyle, false, windowInfo.dwExStyle);
-    if (isChildWindow) {
-        SetWindowPos(hwnd, nullptr, 0, 0, clientRect.right - clientRect.left,
-                     clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
-    } else {
-        SetWindowPos(hwnd, HWND_TOP, 0, 0, clientRect.right - clientRect.left,
-                     clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
-    }
+    SetWindowPos(hwnd, HWND_TOP, 0, 0, clientRect.right - clientRect.left,
+                    clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
 }
 
 WINDOW_HANDLE vst_window::getHWND() const {
