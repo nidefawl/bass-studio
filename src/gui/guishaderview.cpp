@@ -21,6 +21,7 @@
 #include "rand.h"
 
 struct testshader : gl_shader_pipeline {
+    bool isValid = false;
     ivec2 lastBufSize = { -1, -1 };
     GLuint texture    = 0;
     testshader() {
@@ -62,6 +63,8 @@ struct testshader : gl_shader_pipeline {
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
         bindVertexAttributes(attributes);
         glBindVertexArray(0);
+        if (checkGLError("glGenVertexArrays and genBuffers"))
+            return -1;
 
         glGenTextures(1, &texture);
         glBindTexture(GL_TEXTURE_2D, texture);
@@ -72,7 +75,9 @@ struct testshader : gl_shader_pipeline {
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
         glBindTexture(GL_TEXTURE_2D, 0);
-        checkGLError("glTexImage2D");
+        if (checkGLError("glGenTextures"))
+            return -1;
+        isValid = true;
         return 0;
     };
 };
@@ -98,6 +103,8 @@ void gui_shaderview::prerender(NVGcontext* vg) {
         shader_src_parser_noise parser;
         impl->pipeTestShader->load(&parser);
     }
+    if (!impl->pipeTestShader->isValid)
+        return;
     int w    = math::min(size.x, size.y);
     int h    = w;
     impl->fb = nvgluCreateTempFramebuffer(vg, w, h, NVG_IMAGE_PREMULTIPLIED);
@@ -122,57 +129,49 @@ void gui_shaderview::prerender(NVGcontext* vg) {
         tess2d::fullscreenQuad(tess, w, h);
         tess2d::uploadVBO(tess, vbo);
     }
-    glDrawElements(GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, NULL);
+    glDrawElements(GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, nullptr);
 
     nvgluBindFramebuffer(nullptr);
 }
 void gui_shaderview::onTick(AppCtrl* appctrl) {
-    if (impl->pipeTestShader) {
-        auto now = getTimeMillis();
-        if (now - impl->initTime > 1000) {
-            impl->initTime = now;
-            seq_rand rnd;
-            rnd.rng_seed(now);
-            const int texW = math::min(size.x, size.y);
-            //const int texW = 128;
-            std::vector<float> texData;
-            texData.resize(texW * texW);
-//            for (int x = 0; x < texW; x++) {
-//                float fx = x / (texW - 1.0f);
-//                for (int y = 0; y < texW; y++) {
-//                    float fy              = y / (texW - 1.0f);
-//                    texData[y * texW + x] = fx * fy;
-//                }
-//            }
-            for (int x = 0; x < texW; x++) {
-                for (int y = 0; y < texW; y++) {
-                    int32_t r             = rnd.rng_rand();
-                    texData[y * texW + x] = (r & 0xFFFF) / (float) 0xFFFF;
-                }
+    if (!impl->pipeTestShader || !impl->pipeTestShader->isValid) {
+        return;
+    }
+    auto now = getTimeMillis();
+    if (now - impl->initTime > 1000) {
+        impl->initTime = now;
+        seq_rand rnd;
+        rnd.rng_seed(now);
+        const int texW = math::min(size.x, size.y);
+        std::vector<float> texData;
+        texData.resize(texW * texW);
+        for (int x = 0; x < texW; x++) {
+            for (int y = 0; y < texW; y++) {
+                int32_t r = rnd.rng_rand();
+                texData[y * texW + x] = (r & 0xFFFF) / (float) 0xFFFF;
             }
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, impl->pipeTestShader->texture);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, texW, texW, 0, GL_RED, GL_FLOAT, texData.data());
         }
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, impl->pipeTestShader->texture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, texW, texW, 0, GL_RED, GL_FLOAT, texData.data());
     }
 }
 void gui_shaderview::render(NVGcontext* vg) {
     if (isBackgroundRendered()) {
         renderWidgetBorder(vg, getStateFlags());
     }
+    if (!impl->fb) {
+        return;
+    }
     if (!setScissorTransform(vg)) {
         return;
     }
-
-    //dbgassert(impl->fb);
-    if (impl->fb) {
-        int w        = math::min(size.x, size.y);
-        int h        = w;
-        NVGpaint img = nvgImagePattern(vg, 0, 0, w, h, 0, impl->fb->image, 1);
-        nvgTranslate(vg, size.x - w, 0);
-        nvgBeginPath(vg);
-        nvgRect(vg, 0, 0, w, h);
-        nvgFillPaint(vg, img);
-        nvgFill(vg);
-    }
+    int w = math::min(size.x, size.y);
+    int h = w;
+    NVGpaint img = nvgImagePattern(vg, 0, 0, w, h, 0, impl->fb->image, 1);
+    nvgTranslate(vg, size.x - w, 0);
+    nvgBeginPath(vg);
+    nvgRect(vg, 0, 0, w, h);
+    nvgFillPaint(vg, img);
+    nvgFill(vg);
 }
