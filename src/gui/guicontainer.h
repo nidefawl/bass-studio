@@ -48,7 +48,6 @@ public:
     guictr_base() : guibase() {
         setBackgroundRendered(false);
         setBackgroundRenderedInset(true);
-        setCanMouseHit(true);
     }
 
     ~guictr_base() override {
