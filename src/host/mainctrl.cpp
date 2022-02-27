@@ -102,6 +102,23 @@ guictr_base* makeCtrTheme();     //guiproperties.cpp
 guictr_base* makeCtrHistory();   //guihistory.cpp
 guictr_base* makeDnDTestCtr();   //apps/drag-drop.cpp
 
+class MainCtrlErrorStatusBarLogger : public Logger {
+    gui_statusbar* const statusbar;
+public:
+    explicit MainCtrlErrorStatusBarLogger(gui_statusbar* _statusbar) noexcept 
+        : statusbar(_statusbar)
+    {
+
+    }
+    void log(Log::Level lvl, const char* data, size_t len) override {
+        if (Log::LEVEL_ALL != getLevel() && lvl < getLevel())
+            return;
+        statusbar->setTitle(data);
+    }
+    void logStr(Log::Level lvl, String s) override {
+    }
+};
+
 class guictr_effectlibrary : public guictr_base {
 public:
     guictr_pluginlibrary ctr_pluginlist;
@@ -360,14 +377,14 @@ public:
         splitters[2]->setMinMax(0.05f, 0.9f);
 
         ctr_tempo.setSnapSides(ivec4(0, 0, 0, 1));
-        statusbar.setSnapSides(ivec4(0, 1, 0, 0));
+        statusbar.setSnapSides(ivec4(0, 1, 0, 1));
         ctr_clipeditorview.setSnapSides(ivec4(0, 1, 0, 0));
         ctr_pluginview.setSnapSides(ivec4(0, 1, 0, 0));
         ctr_clipeditor.setSnapSides(ivec4(0, 1, 0, 0));
         ctr_plugins.setSnapSides(ivec4(0, 1, 0, 0));
         subctr_tabbed2->setSnapSides(ivec4(1, 0, 0, 1));
-        ctr_Left->setSnapSides(ivec4(0, 0, 1, 0));
-        ctr_Right->setSnapSides(ivec4(1, 0, 0, 0));
+        ctr_Left->setSnapSides(ivec4(0, 0, 1, 1));
+        ctr_Right->setSnapSides(ivec4(1, 0, 0, 1));
 
         subctr_tabbed->setSnapSides(ivec4(1, 0, 0, 0));
     }
@@ -403,10 +420,11 @@ public:
         } else if (rightSplitter->getScale() > rightSplitter->getMax()) {
             rightSplitter->setScale(rightSplitter->getMax());
         }
-        int hTopControls = 48;
-        int hStatusBar   = 60;
-        int hCenter      = winH - hTopControls - hStatusBar;
-        int hContent     = winH - hTopControls;
+        int hTopControls     = 48;
+        int heightViewSelect = 60;
+        int heightStatusBar = 16;
+        int hCenter      = winH - hTopControls - heightViewSelect - heightStatusBar;
+        int hContent     = winH - hTopControls - heightStatusBar;
         int hTrackCtr    = getSplitter(SplitterPos::CENTER)->leftOrTop(hCenter);
         int hEditor      = getSplitter(SplitterPos::CENTER)->rightOrBottom(hCenter);
 
@@ -420,23 +438,20 @@ public:
         ctr_nodes.size          = { widthCenter, hTrackCtr };
         ctr_clipeditor.size     = { widthCenter, hEditor };
         ctr_plugins.size        = { widthCenter, hEditor };
-        ctr_pluginview.size     = { 300, hStatusBar };
-        ctr_clipeditorview.size = { 300, hStatusBar };
+        // ctr_pluginview.size     = { widthCenter/2, heightViewSelect };
+        ctr_clipeditorview.size = { widthCenter/2, heightViewSelect };
 
-        int wbottom = widthCenter;
-        wbottom -= 60;//rightmost part
-        wbottom -= ctr_pluginview.size.x;
-        wbottom -= ctr_clipeditorview.size.x;
-        statusbar.size = { wbottom, hStatusBar };
+        statusbar.size = { winW, heightStatusBar };
 
         ctr_tempo.pos          = { winX, winY };
         ctr_tracks.pos         = { widthLeft, winY + hTopControls };
         ctr_nodes.pos          = { widthLeft, winY + hTopControls };
-        statusbar.pos          = { widthLeft, winBottom - hStatusBar };
-        ctr_clipeditorview.pos = { statusbar.right(), winBottom - hStatusBar };
-        ctr_pluginview.pos     = { ctr_clipeditorview.right(), winBottom - hStatusBar };
-        ctr_plugins.pos        = { widthLeft, winBottom - hStatusBar - hEditor };
-        ctr_clipeditor.pos     = { widthLeft, winBottom - hStatusBar - hEditor };
+        statusbar.pos          = { winX, winBottom - heightStatusBar };
+        ctr_clipeditorview.pos = { widthLeft, winBottom - heightViewSelect - heightStatusBar };
+        ctr_pluginview.pos     = { ctr_clipeditorview.right(), winBottom - heightViewSelect - heightStatusBar };
+        ctr_plugins.pos        = { widthLeft, winBottom - heightViewSelect - hEditor - heightStatusBar };
+        ctr_pluginview.size     = { ctr_plugins.right()-ctr_pluginview.left(), heightViewSelect };
+        ctr_clipeditor.pos     = { widthLeft, winBottom - heightViewSelect - hEditor - heightStatusBar };
         ctr_Left->pos          = { winX, winY + hTopControls };
         ctr_Left->size         = { widthLeft, hContent };
 
@@ -453,6 +468,9 @@ public:
 
         ctr_Right->postContentChanged();
         ctr_Left->postContentChanged();
+        log_printf("ctr_pluginview right %d\n", ctr_pluginview.right());
+        log_printf("ctr_plugins right %d\n", ctr_plugins.right());
+        log_printf("ctr_clipeditor right %d\n", ctr_clipeditor.right());
     }
 
     void addTo(std::vector<guictr_base*>& v) override {
@@ -1082,6 +1100,9 @@ void DawCtrl::menuCommand(const menucmd_t&& command) {
 }
 
 void MainCtrl::startApp() {
+    statusbarLogger = new MainCtrlErrorStatusBarLogger(&view->statusbar);
+    statusbarLogger->setLevel(Log::L_WARN);
+    getMultiLogger().addLogger(statusbarLogger);
     BaseCtrl::relayout();
     updateVisibleTrackContents();
 
@@ -1164,7 +1185,6 @@ void DawInstance::destroy() {
         tls.audioHost->stopAudio();
     }
 
-    unloadProject();
     int totalAllocs = getNumClipAllocations();
     if (totalAllocs != 0) {
         log_printf("getNumClipAllocations == %d!\n", totalAllocs);
@@ -1832,6 +1852,9 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
     /** set as current project **/
     this->projectPath = file->path;
     this->tmLastSave  = getTimeMillis();
+    if (tls.mainCtrl) {
+        tls.mainCtrl->setStatusText(StringFormat("Loaded project %s", StringAsCStr(this->projectPath)));
+    }
 
     setAudioThreadState(playback_state::status_stop);
     return true;
@@ -2496,9 +2519,16 @@ void DawInstance::setTempo(int32_t _tempo100) {
 
 void MainCtrl::destroy() {
     DAW::settings.wndMain.dens = grid.grid_dens;
-    daw.destroy();
+    {
+        ThreadLock lock = daw.playThread.lockThread();
+        //TODO: MultiLogger::removeLogger is not thread safe. This will eventually cause a race condition 
+        // and a crash since not all threads and modules are synchronized here (just playthread and workerthreads)
+        getMultiLogger().removeLogger(statusbarLogger);
+        daw.unloadProject();
+    }
     view = nullptr;
     DawCtrl::destroy();
+    daw.destroy();
 }
 
 void CompanionCtrl::destroy() {

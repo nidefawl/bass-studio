@@ -32,9 +32,7 @@ namespace AudioIO {
 
 
 bool error(const char* msg, PaError err) {
-    log_printf("Error in %s\n", msg);
-    log_printf("Error number: %d\n", err);
-    log_printf("Error message: %s\n", Pa_GetErrorText(err));
+    log_lf(Log::L_ERROR, "%s (%d): %s", msg, err, Pa_GetErrorText(err));
     return false;
 }
 
@@ -335,13 +333,13 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     }
 
     if (deviceIdxSelectedOutput == paNoDevice && deviceIdxSelectedInput == paNoDevice) {
-        log_printf("Error: No input or output device.\n", 0);
+        log_lf(Log::L_ERROR, "Error: No input or output device");
         return false;
     }
 
 #ifdef _WIN32
-    if (hostApiType == PaHostApiTypeId::paWASAPI) {
-        log_printf("WASAPI device API. Input is looback: %d\n", PaWasapi_IsLoopback(deviceIdxSelectedInput));
+    if (hostApiType == PaHostApiTypeId::paWASAPI && PaWasapi_IsLoopback(deviceIdxSelectedInput)) {
+        log_lf(Log::L_DEBUG, "Using WASAPI Loopback Device as Input");
     }
 #endif
 

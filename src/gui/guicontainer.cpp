@@ -102,7 +102,7 @@ void guictr_base::renderContainerLabel(NVGcontext* vg) {
 }
 
 void guictr_base::renderBackground(NVGcontext* vg) {
-    dbgassert(isBackgroundRendered());
+    // dbgassert(isBackgroundRendered());
     bool focused = parentCtrl->isCtrOrChildFocused(this);
     drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, isBackgroundRenderedInset());
     renderContainerLabel(vg);
@@ -207,28 +207,22 @@ void guictr_base::drawInsetBackground(NVGcontext* vg, const guitheme_t* theme, i
 }
 
 /*static*/
-void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool focused,
-                                 bool drawInset) {
+void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool focused, bool drawInset) {
     static const ivec2 borderThickness(CTR_SPACING - 2);
     posInset -= ivec2(margin);
     sizeInset += ivec2(margin) * 2;
     if (sizeInset.y > 0 && sizeInset.x > 0) {
-        float fRound = theme->getFloat(GuiConstant::CONST_ROUND);
         nvgTranslateZ(vg, -2.0f);
+        nvgShapeAntiAlias(vg, 0);
         nvgBeginPath(vg);
-        if (fRound < 0.01f) {
-            nvgShapeAntiAlias(vg, 0);
-            nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-            nvgShapeAntiAlias(vg, USE_NANOVG_AA);
-        } else {
-            nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, fRound);
-        }
+        nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
         NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
         if (focused) {
             bg = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);
         }
         nvgFillColor(vg, bg);
         nvgFill(vg);
+        nvgShapeAntiAlias(vg, USE_NANOVG_AA);
         nvgTranslateZ(vg, -2.0f);
         posInset += borderThickness;
         sizeInset -= borderThickness * 2;

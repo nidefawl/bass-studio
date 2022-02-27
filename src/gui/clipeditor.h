@@ -489,52 +489,16 @@ public:
 
 
 class guictr_clipeditorview : public guictr_base {
+    midi_clip_render_cache_t* const cache;
 public:
     guictr_noteeditor& noteeditor;
-    guictr_clipeditorview(guictr_noteeditor& _noteeditor)
-        : guictr_base(),
-          noteeditor(_noteeditor) {
-    }
-    ~guictr_clipeditorview() override = default;
-    vec2 getScale() {
-        ivec2 cs  = this->getSizeContent();
-        ivec2 csp = noteeditor.getSizeContent();
-        return vec2(cs.x / (double) noteeditor.getTotalWidth(), cs.y / (double) csp.y);
-    }
+    guictr_clipeditorview(guictr_noteeditor& _noteeditor);
+    ~guictr_clipeditorview();
+    void prerender(NVGcontext* vg) override;
+    void render(NVGcontext* vg) override;
+    void updateClipRenderCache(NVGcontext* vg);
+    vec2 getScale();
 
-
-    void render(NVGcontext* vg) override {
-        ivec2 cp = this->getPosContent();
-        ivec2 cs = this->getSizeContent();
-        if (MainCtrl::get()->isClipEditorVisible()) {
-            drawAttachedBackground(vg, theme, cp, cs, margin);
-        } else {
-            drawBackground(vg, theme, cp, cs, margin, false);
-        }
-        clip_view& view = MainCtrl::get()->getClipView();
-        clip_t* clip    = view.clip();
-        if (clip && !clip->notes.empty()) {
-            clip_notes_t& notes = clip->notes;
-            tick_t lenTime      = notes.lastNote.end() - notes.firstNote.start();
-            int32_t minPitch    = notes.minNote.pitch;
-            int32_t minTime     = notes.firstNote.start();
-            int32_t distPitch   = notes.maxNote.pitch - notes.minNote.pitch;
-            distPitch++;
-            lenTime = math::max(clip->getLen(), lenTime);
-            dbgassert(distPitch >= 0);
-            dbgassert(lenTime >= 0);
-            double noteScale = cs.y / (double) distPitch;
-            double tickScale = cs.x / (double) lenTime;
-            nvgBeginPath(vg);
-            for (note_t& note : notes.m_list) {
-                float nX = (float) ((note.start() - minTime) * tickScale);
-                float nW = (float) (note.len * tickScale);
-                nvgRect(vg, cp.x + nX, cp.y + (note.pitch - minPitch) * noteScale, nW, noteScale);
-            }
-            nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE));
-            nvgFill(vg);
-        }
-    }
     void handleDraggedBegin(MouseEvent& evt) override {
         if (evt.guiDragged == this) {
             MainCtrl::get()->showClipEditor();

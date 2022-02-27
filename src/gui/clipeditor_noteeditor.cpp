@@ -404,11 +404,11 @@ void guictr_noteeditor::layout() {
     if (size.y < velHeight * 2) {
         velocities.setVisible(false);
         piano.size      = ivec2(100, cs.y - heightTimeLine - heightClipIndicators);
-        velocities.size = ivec2(timeline.size.x, 0);
+        velocities.size = ivec2(cs.x - piano.size.x, 0);
     } else {
         velocities.setVisible(true);
         piano.size      = ivec2(100, cs.y - heightTimeLine - heightClipIndicators - velHeight);
-        velocities.size = ivec2(timeline.size.x, velHeight);
+        velocities.size = ivec2(cs.x - piano.size.x, velHeight);
     }
 
     piano.pos          = ivec2(0, heightTimeLine + heightClipIndicators);

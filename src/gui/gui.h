@@ -154,7 +154,7 @@ public:
         else
             flags |= FLG_RENDER_BACKGROUND;
     }
-    virtual bool isBackgroundRenderedInset() {
+    virtual bool isBackgroundRenderedInset() const {
         return (flags & FLG_RENDER_BACKGROUND_INSET) != 0;
     }
     void setBackgroundRenderedInset(bool b) {
@@ -404,6 +404,15 @@ public:
     }
     virtual int32_t getStateFlags() const;
 
+    virtual GuiColor::constant_t getBackgroundColor() const {
+        if (!isBackgroundRenderedInset()){
+            if (focused()) {
+                return GuiColor::COL_BG_DRK_FOCUSED;
+            }
+            return GuiColor::COL_BG_DRK;
+        }
+        return GuiColor::COL_BG_BRT;
+    }
 
     BaseCtrl* getControl() const {
         return parentCtrl;

@@ -363,16 +363,19 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
         nvgFillColor(vg, color);
         nvgFill(vg);
     };
-    static NVGcolor dbgcolorsa[5] = {
+    static NVGcolor dbgcolorsa[8] = {
             nvgRGBA(255, 0, 0, 55),
             nvgRGBA(0, 255, 0, 55),
             nvgRGBA(0, 0, 255, 55),
+            nvgRGBA(0, 127, 255, 55),
+            nvgRGBA(255, 127, 0, 55),
             nvgRGBA(255, 0, 255, 55),
+            nvgRGBA(255, 127, 255, 55),
             nvgRGBA(255, 255, 0, 55)
     };
 
     for (guictr_base* ctr : containers) {
-        renderDebug(vg, ctr, dbgcolorsa[colorIdx++ % 5]);
+        renderDebug(vg, ctr, dbgcolorsa[colorIdx++ % 8]);
     }
 #endif
 

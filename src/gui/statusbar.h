@@ -1,26 +1,40 @@
 #pragma once
+#include "guicolors.h"
 #include "str_util.h"
 #include "color_util.h"
 #include "guicontainer.h"
+#include "theme.h"
 
 class gui_statusbar : public guictr_base {
 public:
     String text;
     gui_statusbar() : guictr_base() {
-        setBackgroundRendered(true);
+        padding = CONTENT_INSET/2;
+        margin = padding;
+        setBackgroundRendered(false);
     }
     ~gui_statusbar() override = default;
     void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }
+        nvgBeginPath(vg);
+        nvgRect(vg, pos.x, pos.y, size.x, size.y);
+        nvgFillColor(vg, rgbaToNvg(0x7f1f1f1f));
+        nvgFill(vg);
         if (!setScissorTransform(vg)) {
             return;
         }
-        if (this->text[0]) {
-            const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
-            setFont(vg, (int) (hpt * 0.8), G_BLACK, G_TITLE_ALIGN);
-            nvgText(vg, INSET_TITLE, getSizeContent().y / 2, StringAsCStr(text), NULL);
+        const auto cs = getSizeContent();
+        if (!this->text.empty()) {
+            renderTextLabel(vg,
+                            vec2(0, cs.y * 0.5f),
+                            cs,
+                            text,
+                            theme,
+                            cs.y,
+                            theme->getContrastColor(GuiColor::COL_CLEAR_COLOR),
+                            NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         }
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {

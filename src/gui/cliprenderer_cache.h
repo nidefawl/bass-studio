@@ -1,0 +1,53 @@
+#pragma once
+#include "math/vec.h"
+#include "assert_dbg.h"
+#include "tls.h"
+#include <array>
+#include <nanovg.h>
+#include <nanovg_internal.h>
+
+struct noteview_cache_impl_t {
+    std::array<nvg_shape_cache*, 4> arr{};
+    ivec2 pos             = { -1, -1 };
+    ivec2 size            = { -1, -1 };
+    int64_t notesRendered = -1;
+    int32_t revision = -1;
+    bool valid            = false;
+    ~noteview_cache_impl_t() {
+        reset();
+    }
+    void SaveFill(NVGcontext* vg, int n) {
+        dbgassert(n < arr.size());
+        dbgassert(arr[n] == nullptr);
+        arr[n] = nullptr;
+        nvgGetLastCacheResult(vg, &arr[n]);
+        NVGCacheEntryInfo cacheEntryInfo;
+        nvgCacheEntryInfo(nullptr, arr[n], &cacheEntryInfo);
+        nvg_shape_cache* entry = arr[n];
+        dbgassert(entry);
+        daw_tls::tlsinstance& tls = daw_tls::getTls();
+        tls.renderClipCacheStats.sizeCacheAllocatedMemBytes += cacheEntryInfo.allocationSizeBytes;
+    }
+    bool isCacheValid(int n) {
+        return valid && n < arr.size() && arr[n] != nullptr;
+    }
+    void reset() {
+        valid = false;
+        std::for_each(arr.begin(), arr.end(), [](nvg_shape_cache*& ptr) {
+            if (ptr) {
+                NVGCacheEntryInfo cacheEntryInfo;
+                nvgCacheEntryInfo(nullptr, ptr, &cacheEntryInfo);
+                daw_tls::tlsinstance& tls = daw_tls::getTls();
+                tls.renderClipCacheStats.sizeCacheAllocatedMemBytes -= cacheEntryInfo.allocationSizeBytes;
+
+                nvgReleaseCacheResult(ptr);
+                ptr = nullptr;
+            }
+        });
+    }
+};
+
+struct midi_clip_render_cache_t : public noteview_cache_impl_t {
+    midi_clip_render_cache_t() : noteview_cache_impl_t() {
+    }
+};

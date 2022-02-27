@@ -223,6 +223,8 @@ public:
     int lastscrolloffset = 0;
     guictr_plugins* ctr_plugins;
     guictr_pluginview(guictr_plugins* _plugins) : guictr_base() {
+        padding /= 2;
+        margin /= 2;
         this->ctr_plugins = _plugins;
         setCanMouseHit(true);
     }
