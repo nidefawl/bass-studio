@@ -1,7 +1,13 @@
 #!/bin/bash
 BASEDIR=$(dirname "$BASH_SOURCE")
-TMP_BUILD=$(realpath "$BASEDIR/../.cache/cmake_commands")
-PROJECT_DIR=$(realpath "$BASEDIR/..")
+if [ ! -d "${BASEDIR}/../.cache/" ]; then
+    mkdir -p "${BASEDIR}/../.cache/"
+fi
+TMP_BUILD=$(realpath "${BASEDIR}/../.cache/cmake_commands")
+if [ -d "${TMP_BUILD}" ]; then
+    rm -Rf "${TMP_BUILD}"
+fi
+PROJECT_DIR=$(realpath "${BASEDIR}/..")
 builtin type -P "ninja" &> /dev/null
 [[ $? -ne 0 ]] && echo "ninja not found" && exit 1
 builtin type -P "cmake" &> /dev/null
@@ -10,9 +16,7 @@ builtin type -P "clang" &> /dev/null
 [[ $? -ne 0 ]] && echo "clang not found" && exit 1
 builtin type -P "clang++" &> /dev/null
 [[ $? -ne 0 ]] && echo "clang++ not found" && exit 1
-CC=clang
-CXX=clang++
-cmake --log-level=WARNING -GNinja -S"${PROJECT_DIR}" -B"${TMP_BUILD}" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON -DCMAKE_UNITY_BUILD=OFF $*
+CC=clang CXX=clang++ cmake --log-level=WARNING -GNinja -S"${PROJECT_DIR}" -B"${TMP_BUILD}" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON -DCMAKE_UNITY_BUILD=OFF -DPROJECT_WORKING_DIR:PATH=../../run $*
 if [ ! $? -eq 0 ]; then
     echo "CMake failed"
     exit $exit_status
