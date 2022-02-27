@@ -318,7 +318,7 @@ void guictr_cliphandles::render(NVGcontext* vg) {
             float width = (float) (tickEndX - tickBeginX);
             nvgBeginPath(vg);
             nvgRect(vg, (float) tickBeginX, heightLoopInidicator * 2.0f, width, heightSelIndicator);
-            nvgFillColor(vg, G_SELECTION);
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_SELECTION_BACKGROUND));
             nvgFill(vg);
         }
     }

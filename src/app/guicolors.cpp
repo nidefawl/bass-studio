@@ -158,7 +158,8 @@ namespace GuiColor {
     constant_t COL_PLAYHEAD("COL_PLAYHEAD", 0xfffafafa);
     constant_t COL_PLAYHEAD_OUTLINE("COL_PLAYHEAD_OUTLINE", 0xff787878);
     constant_t COL_LOOPHANDLES("COL_LOOPHANDLES", 0xff787878);
-
+    constant_t COL_SELECTION_BACKGROUND("COL_SELECTION_BACKGROUND", 0x60020202);
+    constant_t COL_DRAGDROPMOVE_HIGHLIGHT("COL_DRAGDROPMOVE_HIGHLIGHT", 0xFF0000C0);
 } // namespace GuiColor
 
 NVGcolor rgbaToNvg(uint32_t i);

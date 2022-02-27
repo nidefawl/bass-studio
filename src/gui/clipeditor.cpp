@@ -473,7 +473,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
             float width  = xEnd - xBegin;
             nvgBeginPath(vg);
             nvgRect(vg, xBegin, -2.0f, width, size.y + 2.0f);
-            nvgFillColor(vg, G_SELECTION);
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_SELECTION_BACKGROUND));
             nvgFill(vg);
         }
     }
@@ -836,7 +836,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             float width  = xEnd - xBegin;
             nvgBeginPath(vg);
             nvgRect(vg, xBegin, -2.0f, width, size.y + 2.0f);
-            nvgFillColor(vg, G_SELECTION);
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_SELECTION_BACKGROUND));
             nvgFill(vg);
         }
     }

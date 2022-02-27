@@ -170,7 +170,7 @@ public:
         nvgBeginPath(vg);
         nvgMoveTo(vg, posHL.x, 4);
         nvgLineTo(vg, posHL.x, getSizeContent().y - 4);
-        nvgStrokeColor(vg, G_MOVE_HIGHLIGHT);
+        nvgStrokeColor(vg, theme->getColor(GuiColor::COL_DRAGDROPMOVE_HIGHLIGHT));
         nvgStrokeWidth(vg, 4.0);
         nvgStroke(vg);
         nvgLineCap(vg, NVGlineCap::NVG_BUTT);

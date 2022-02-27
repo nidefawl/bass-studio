@@ -1003,7 +1003,7 @@ void guitrack_editor::render(NVGcontext* vg) {
 
                 nvgBeginPath(vg);
                 nvgRect(vg, (float) tickBeginX, trackYMin, width, height);
-                nvgFillColor(vg, G_SELECTION);
+                nvgFillColor(vg, theme->getColor(GuiColor::COL_SELECTION_BACKGROUND));
                 nvgFill(vg);
             }
 

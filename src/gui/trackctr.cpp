@@ -364,7 +364,7 @@ void horizontalLineAt(guictr_base* gui, NVGcontext* vg, ivec2 posHL) {
     nvgMoveTo(vg, 4, posHL.y);
     int32_t width = gui->getSizeContent().x;
     nvgLineTo(vg, width - 4, posHL.y);
-    nvgStrokeColor(vg, G_MOVE_HIGHLIGHT);
+    nvgStrokeColor(vg, gui->theme->getColor(GuiColor::COL_DRAGDROPMOVE_HIGHLIGHT));
     nvgStrokeWidth(vg, 4.0);
     nvgStroke(vg);
     nvgLineCap(vg, NVGlineCap::NVG_BUTT);

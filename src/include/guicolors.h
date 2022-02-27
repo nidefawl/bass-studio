@@ -104,6 +104,8 @@ namespace GuiColor {
     extern constant_t COL_PLAYHEAD;
     extern constant_t COL_PLAYHEAD_OUTLINE;
     extern constant_t COL_LOOPHANDLES;
+    extern constant_t COL_SELECTION_BACKGROUND;
+    extern constant_t COL_DRAGDROPMOVE_HIGHLIGHT;
 }// namespace GuiColor
 
 

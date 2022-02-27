@@ -911,7 +911,7 @@ void guictr_dragged_container_instance::renderDragged(NVGcontext* vg, ivec2 mous
     // nvgRestore(vg);
     renderContainerLabel(vg);
     if (isDragRendered() && validPreview) {
-        nvgLineCap(vg, NVGlineCap::NVG_ROUND);
+        // nvgLineCap(vg, NVGlineCap::NVG_ROUND);
         //  for (ivec4& box : boxes) {
         //   nvgBeginPath(vg);
         //   nvgRect(vg, box.x, box.y, box.z, box.w);
@@ -919,6 +919,6 @@ void guictr_dragged_container_instance::renderDragged(NVGcontext* vg, ivec2 mous
         //   nvgStrokeWidth(vg, 4.0);
         //   nvgStroke(vg);
         //  }
-        nvgLineCap(vg, NVGlineCap::NVG_BUTT);
+        // nvgLineCap(vg, NVGlineCap::NVG_BUTT);
     }
 }
