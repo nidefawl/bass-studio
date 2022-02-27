@@ -152,7 +152,7 @@ set(PROJECT_DEPS_SRC_FILES "${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c")
 set(GENERATED_SRC_FILES "${CMAKE_BINARY_DIR}/buildinfo_$<CONFIG>.cpp")
 
 list(APPEND RESOURCE_FILES "")
-if (MSVC)
+if (WIN32)
     list(APPEND RESOURCE_FILES "src/icon_resource.h" "src/icon.rc")
 endif ()
 
