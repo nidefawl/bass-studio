@@ -3,8 +3,6 @@
 #include <nanovg_min.h>
 
 
-#define RENDER_DBG_BRD 1
-
 #define G_R(x) x
 #define G_G(x) x
 #define G_B(x) x

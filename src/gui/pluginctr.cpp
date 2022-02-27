@@ -860,12 +860,11 @@ void guictr_pluginview::render(NVGcontext* vg) {
     ivec2 cs = this->getSizeContent();
     bool visible = MainCtrl::get()->isPluginViewVisible();
     bool focused = visible && ctr_plugins->focused();
-    // if (visible) {
-    //     int topOffset = CTR_SPACING / 2 + 1;
-    //     drawBackground(vg, theme, cp + ivec2(0, -topOffset), cs+ivec2(0, topOffset), margin, focused, false);
-    // }
-    // drawInsetBackground(vg, theme, cp, cs);
-    // drawBackground(vg, theme, cp, cs, margin, focused, true);
+    if (visible) {
+        int topOffset = CTR_SPACING / 2 + 1;
+        drawBackground(vg, theme, cp + ivec2(0, -topOffset), cs+ivec2(0, topOffset), margin, focused, false);
+    }
+    drawInsetBackground(vg, theme, cp, cs);
     ivec2 csp = ctr_plugins->getSizeContent();
     int32_t w = ctr_plugins->getTotalWidth();
     if (cs.x > 0 && cs.y > 0 && csp.x > 0 && csp.y > 0) {

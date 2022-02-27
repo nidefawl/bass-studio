@@ -272,7 +272,7 @@ public:
     }
 
     void addProperties(Table::tbl* table) override;
-#if RENDER_DBG_BRD
+
     void renderDebug(NVGcontext* vg, NVGcolor color) {
         nvgBeginPath(vg);
         nvgRect(vg, pos.x, pos.y, size.x, size.y);
@@ -285,7 +285,7 @@ public:
         nvgFillColor(vg, color);
         nvgFill(vg);
     }
-#endif
+
     container_type getContainerType() const {
         return ctrType;
     }

@@ -349,6 +349,8 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
             nvgRestore(vg);
         }
     }
+
+#define RENDER_DBG_BRD 0
 #if RENDER_DBG_BRD
     int colorIdx     = 0;
     auto renderDebug = [](NVGcontext* vg, guictr_base* ctr, NVGcolor color) {
