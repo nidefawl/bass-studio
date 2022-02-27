@@ -13,8 +13,8 @@ void gui_numberinput_field_base::render(NVGcontext* vg) {
     String str = getAsStringLiteral();
     float pX   = nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
     if (!isEditing && this->label.length()) {
-        NVGcolor mDisabledTextColor = GUI_COLORA(255, 80);
-        setFont(vg, G_FONT_SCALE(size.y), mDisabledTextColor, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        NVGcolor mTextColorDisabled = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_DISABLED);
+        setFont(vg, G_FONT_SCALE(size.y), mTextColorDisabled, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         float bounds[4]{ 0 };
         nvgTextBounds(vg, pos.x + 3.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(this->label), nullptr, bounds);
         if (pX - 3 > bounds[2]) {

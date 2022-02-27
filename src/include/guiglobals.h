@@ -2,16 +2,6 @@
 #include <cstdint>
 #include <nanovg_min.h>
 
-
-#define G_R(x) x
-#define G_G(x) x
-#define G_B(x) x
-
-#define GUI_COLOR(x) nvgRGBA(G_R(x), G_G(x), G_B(x), 255)
-#define GUI_COLORA(x, a) nvgRGBA(G_R(x), G_G(x), G_B(x), a)
-#define GUI_COLORRGB(r, g, b, a) nvgRGBA(G_R(r), G_G(g), G_B(b), a)
-#define GUI_COLOR_HEXA(x, a) (((a) << 24) | ((x) << 16) | ((x) << 8) | (x))
-
 #define INSET_TITLE 4
 #define INSET_TRACK_CONTENT 2
 #define INSET_CLIP_CONTENT 2

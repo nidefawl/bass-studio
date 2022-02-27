@@ -191,17 +191,17 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
     if (clipSize.x < 1 || clipSize.y < 1)
         return;
     nvgFontSize(ctx, fontSize());
+    NVGcolor mTextColorDisabled = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_DISABLED);
     UIFont::font_instance instance = theme->getFont(UIFont::FONT_TEXFIELD);
     UIFont::bindFont(ctx, instance);
     if (!mUnits.empty()) {
-        nvgFillColor(ctx, GUI_COLORA(255, mEnabled ? 64 : 32));
+        nvgFillColor(ctx, mTextColorDisabled);
         setTfFont(ctx, this);
         nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
         nvgText(ctx, pos.x + size.x - X_SPACING, drawPos.y, mUnits.c_str(), nullptr);
     }
 
     NVGcolor mTextColor         = theme->getColor(GuiColor::COL_TEXTBOX_TEXT);
-    NVGcolor mTextColorDisabled = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_DISABLED);
     NVGcolor mTextColorMarked   = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_MARKED);
 
     NVGcolor mColor = mEnabled && (!mCommitted || !mValue.empty()) ? mTextColor : mTextColorDisabled;

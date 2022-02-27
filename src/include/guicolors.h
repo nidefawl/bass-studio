@@ -100,6 +100,10 @@ namespace GuiColor {
 
     extern constant_t COL_PLUGIN_VIEW_FRAME;
     extern constant_t COL_LABEL_CONTAINER;
+
+    extern constant_t COL_PLAYHEAD;
+    extern constant_t COL_PLAYHEAD_OUTLINE;
+    extern constant_t COL_LOOPHANDLES;
 }// namespace GuiColor
 
 

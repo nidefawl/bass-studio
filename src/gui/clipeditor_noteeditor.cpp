@@ -229,7 +229,7 @@ void guictr_cliphandles::render(NVGcontext* vg) {
     nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
     nvgFill(vg);
     if (view.clip()) {
-        const NVGcolor colLI        = GUI_COLOR(120);
+        const NVGcolor colLI        = theme->getColor(GuiColor::COL_LOOPHANDLES);
         const NVGcolor colLIStroke  = theme->getFrameColorOutline();
         const float strokeWidthLI   = theme->getFloat(GuiConstant::CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH);
         const float wLoopInidicator = heightLoopInidicator;
@@ -336,13 +336,13 @@ void guictr_cliphandles::render(NVGcontext* vg) {
             nvgBeginPath(vg);
             nvgMoveTo(vg, playBackX, 0);
             nvgLineTo(vg, playBackX, cs.y);
-            nvgStrokeColor(vg, GUI_COLOR(120));
+            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD_OUTLINE));
             nvgStrokeWidth(vg, 3);
             nvgStroke(vg);
             nvgBeginPath(vg);
             nvgMoveTo(vg, playBackX, 0);
             nvgLineTo(vg, playBackX, cs.y);
-            nvgStrokeColor(vg, GUI_COLOR(250));
+            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD));
             nvgStrokeWidth(vg, 1);
             nvgStroke(vg);
         }

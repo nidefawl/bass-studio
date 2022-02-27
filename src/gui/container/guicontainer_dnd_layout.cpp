@@ -447,7 +447,7 @@ void i_ctr_drop_area::render(NVGcontext* vg) {
                     this->label,
                     nullptr,
                     (int) (HEIGHT_CLIP_TITLE * 0.95),
-                    GUI_COLORRGB(125, 255, 125, 255),
+                    rgbaToNvg(0xff7fff7f),
                     NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
 }
 

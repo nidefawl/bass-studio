@@ -434,19 +434,12 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
 
                 nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_SELECTED));
                 nvgFill(vg);
-                //        nvgStrokeWidth(vg, 2.0f);
-                //        nvgStrokeColor(vg, GUI_COLOR(251));
-                //        nvgStroke(vg);
 
                 nvgBeginPath(vg);
                 nvgCircle(vg, nx, size.y - nh, r);
 
                 nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_SELECTED));
                 nvgFill(vg);
-
-                //        nvgStrokeWidth(vg, 2.0f);
-                //        nvgStrokeColor(vg, GUI_COLOR(251));
-                //        nvgStroke(vg);
             }
         }
     }

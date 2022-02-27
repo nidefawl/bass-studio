@@ -155,6 +155,10 @@ namespace GuiColor {
     constant_t COL_TEXTBOX_TEXT_MARKED("COL_TEXTBOX_TEXT_MARKED", 0xff4d60d7);
     constant_t COL_WHITE("COL_WHITE", 0xffe9eafd);
 
+    constant_t COL_PLAYHEAD("COL_PLAYHEAD", 0xfffafafa);
+    constant_t COL_PLAYHEAD_OUTLINE("COL_PLAYHEAD_OUTLINE", 0xff787878);
+    constant_t COL_LOOPHANDLES("COL_LOOPHANDLES", 0xff787878);
+
 } // namespace GuiColor
 
 NVGcolor rgbaToNvg(uint32_t i);

@@ -375,7 +375,7 @@ public:
         nvgFill(vg);
 
 
-        const NVGcolor colLI        = GUI_COLOR(120);
+        const NVGcolor colLI        = theme->getColor(GuiColor::COL_LOOPHANDLES);
         const NVGcolor colLIStroke  = theme->getFrameColorOutline();
         const float strokeWidthLI   = 1.0f;
         const float wLoopInidicator = heightLoopIndicators;

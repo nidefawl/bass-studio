@@ -128,27 +128,12 @@ void guicontainer_stereowidth::prerender(NVGcontext* vg) {
 }
 
 void guicontainer_stereowidth::render(NVGcontext* vg) {
-    //nvgBeginPath(vg);
-    //nvgRect(vg, pos.x, pos.y, size.x, size.y);
-    //nvgFillColor(vg, GUI_COLORRGB(50, 50, 150, 180));
-    //nvgFill(vg);
     if (isBackgroundRendered()) {
         renderBackground(vg);
     }
     if (!setScissorTransform(vg)) {
         return;
     }
-    //ivec2 cs = getSizeContent();
-    //nvgBeginPath(vg);
-    //nvgRect(vg, 0, 0, cs.x, cs.y);
-    //nvgFillColor(vg, GUI_COLORRGB(50, 150, 150, 180));
-    //nvgFill(vg);
-    //nvgBeginPath(vg);
-    //const int INS = 2;
-    //nvgRect(vg, INS, INS, cs.x - INS * 2, cs.y - INS * 2);
-    //nvgFillColor(vg, GUI_COLORRGB(150, 150, 50, 180));
-    //nvgFill(vg);
-
     for (guibase* gui : guis) {
         nvgSave(vg);
         gui->render(vg);

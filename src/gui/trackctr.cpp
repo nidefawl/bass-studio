@@ -496,44 +496,22 @@ void guictr_tracks::render(NVGcontext* vg) {
         nvgIntersectScissor(vg, trackView.pos.x, 0, trackView.size.x, cs.y);
         nvgTranslate(vg, trackView.pos.x, 0);
         tick_t pos = DawInstance::get()->getPlaybackPos();
-        //if (project.loopEnabled) {
-        //if (pos > project.loopStart) {
-        //pos = project.loopStart + (pos - project.loopStart) % project.loopLen;
-        //}
-        //}
+
         float playBackX = (float) grid.tickToScreenD(pos);
         if (playBackX > -4.0f && playBackX < cs.x + 4.0f) {
             nvgBeginPath(vg);
             nvgMoveTo(vg, playBackX, 0);
             nvgLineTo(vg, playBackX, cs.y);
-            nvgStrokeColor(vg, GUI_COLOR(120));
+            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD_OUTLINE));
             nvgStrokeWidth(vg, 3);
             nvgStroke(vg);
             nvgBeginPath(vg);
             nvgMoveTo(vg, playBackX, 0);
             nvgLineTo(vg, playBackX, cs.y);
-            nvgStrokeColor(vg, GUI_COLOR(250));
+            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD));
             nvgStrokeWidth(vg, 1);
             nvgStroke(vg);
         }
-        //nvgIntersectScissor(vg, 0, 0, trackView.size.x, trackView.size.y);
-        //nvgTranslate(vg, 0, trackTimeline.bottom());
-
-        //double playBackX = grid.tickToScreenD(dawCtrl->playbackPos);
-        //if (playBackX > -4 && playBackX < cs.x+4) {
-        //nvgBeginPath(vg);
-        //nvgMoveTo(vg, playBackX, 0);
-        //nvgLineTo(vg, playBackX, cs.y);
-        //nvgStrokeColor(vg, GUI_COLOR(120));
-        //nvgStrokeWidth(vg, 3);
-        //nvgStroke(vg);
-        //nvgBeginPath(vg);
-        //nvgMoveTo(vg, playBackX, 0);
-        //nvgLineTo(vg, playBackX, cs.y);
-        //nvgStrokeColor(vg, GUI_COLOR(250));
-        //nvgStrokeWidth(vg, 1);
-        //nvgStroke(vg);
-        //}
     }
 }
 void guitrack_editor::addSubtrack(track_gui_entry_t* entry, gui_track_subtrack* al, bool insertFront) {

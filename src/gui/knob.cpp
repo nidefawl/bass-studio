@@ -248,10 +248,6 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
         indColor = GuiColor::COL_KNOB_IND;
         valColor = GuiColor::COL_KNOB;
     }
-//    nvgBeginPath(vg);
-//    nvgRect(vg, pos.x, pos.y, size.x, size.y);
-//    nvgFillColor(vg, GUI_COLORRGB(150, 150, 200, 180));
-//    nvgFill(vg);
     ivec2 insetP = pos + ivec2(button_inset, labelHeight);
     ivec2 insetS = size - ivec2(button_inset * 2, labelHeight + valueHeight);
     if (isSlider) {
