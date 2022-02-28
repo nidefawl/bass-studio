@@ -8,6 +8,7 @@
 #include <GLFW/glfw3.h>
 #include "basectrl.h"
 #include "math/seq_math.h"
+#include "str_util.h"
 #include "theme.h"
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"

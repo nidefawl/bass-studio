@@ -468,9 +468,6 @@ public:
 
         ctr_Right->postContentChanged();
         ctr_Left->postContentChanged();
-        log_printf("ctr_pluginview right %d\n", ctr_pluginview.right());
-        log_printf("ctr_plugins right %d\n", ctr_plugins.right());
-        log_printf("ctr_clipeditor right %d\n", ctr_clipeditor.right());
     }
 
     void addTo(std::vector<guictr_base*>& v) override {
@@ -1434,7 +1431,7 @@ void MainCtrl::onTick() {
             ivec2 trackViewLocalPos = toControlsObjectSpace(m_mousePos, &view->ctr_tracks);
             if (ctrMixers.contains(trackViewLocalPos)) {
                 ivec2 posRelative = m_mousePos - ctrMixers.toScreenSpace(ivec2(0));
-                tr                = getTrackFromMouse(this->view->ctr_tracks.guiMgr, posRelative, false);
+                tr = getTrackFromMouse(this->view->ctr_tracks.guiMgr, posRelative);
                 if (tr && tr == lastHoveredTrack && daw.getSelectedTrack() != tr->track) {
                     hoverTicks = lastHoveredTrackTicks + 1;
                     if (lastHoveredTrackTicks >= 6) {

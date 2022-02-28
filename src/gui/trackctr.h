@@ -52,7 +52,8 @@ public:
 };
 
 int32_t getPosYFirstReturnTrack(const track_gui_vector_td& tracksVisibleFlat);
-track_gui_entry_t* getTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap);
+track_gui_entry_t* getTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse);
+track_gui_entry_t* getTrackFromMouseClosest(track_gui_manager_i& iGuiMgr, ivec2 mouse);
 
 gui_track_subtrack* getSubTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap);
 gui_track* createTrackGui(track_gui_entry_t* _entry, scaled_grid&);// trackcontent.cpp
@@ -178,7 +179,7 @@ public:
             ivec2 localMouse = this->toContainerSpace(v);
             for (guibase* gui : guis) {
                 if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
-                    if (!evt.getGuiHit())// respect z-order, not an actual hit
+                    if (!evt.getGuiHit()) 
                         break;
                     return true;
                 }

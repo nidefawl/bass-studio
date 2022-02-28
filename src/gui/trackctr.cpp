@@ -1,4 +1,5 @@
 #include <nanovg.h>
+#include "str_util.h"
 #include "trackctr.h"
 #include "math/seq_math.h"
 #include "gui.h"
@@ -772,12 +773,8 @@ bool guitrack_editor::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
         ivec2 localMouse = this->toContainerSpace(v);
         for (guibase* gui : guis) {
             if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
-
-                // respect z-order, not an actual hit
-                if (!evt.getGuiHit()) {
+                if (!evt.getGuiHit()) 
                     break;
-                }
-
                 return true;
             }
         }
@@ -914,6 +911,16 @@ void guictr_tracks::addTrack(track_t* track, int flags) {
 }
 void guitrack_mixers::handleRightClick(MouseEvent& evt) {
     parentCtrl->openContextMenu(new guictxtmenu_notrack(), evt.mousepos);
+}
+
+void getTrackGuiYBounds(const track_gui_entry_t* track, ivec2& topBottom) {
+    auto minVec = math::minvec2(track->mixer->getLeftTop(), track->content->getLeftTop());
+    auto maxVec = math::maxvec2(track->mixer->getRightBottom(), track->content->getRightBottom());
+    for (auto subtrack : track->subtracks) {
+        maxVec = math::maxvec2(maxVec, subtrack->getRightBottom());
+    }
+    topBottom.x = minVec.y;
+    topBottom.y = maxVec.y;
 }
 
 track_gui_entry_t* getParentOf(track_gui_entry_t* t) {

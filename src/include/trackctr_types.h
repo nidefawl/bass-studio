@@ -4,6 +4,7 @@
 #include <memory>
 #include <map>
 #include "config.h"
+#include "math/seq_math.h"
 #include "math/vec.h"
 #include "seq_util.h"
 #include "track.h"
@@ -24,12 +25,12 @@ struct tracklayout_state_t {
 };
 
 struct track_gui_entry_t {
-    DawCtrl* parentCtrl;
-    int32_t idx = -1;
-    track_t* track;
-    gui_track* content;
-    guictr_tracks* parent;
+    DawCtrl* parentCtrl = nullptr;
+    track_t* track = nullptr;
+    gui_track* content = nullptr;
+    guictr_tracks* parent = nullptr;
     gui_track_controls* mixer = nullptr;
+    int32_t idx = -1;
     tracklayout_settings_t layout;
     tracklayout_state_t state;
     std::vector<gui_track_subtrack*> subtracks;
@@ -39,6 +40,7 @@ struct track_gui_entry_t {
     }
 };
 
+void getTrackGuiYBounds(const track_gui_entry_t* track, ivec2& topBottom);
 track_gui_entry_t* getParentOf(track_gui_entry_t* t);
 using track_gui_vector_td       = std::vector<track_gui_entry_t*>;
 using const_track_gui_vector_td = std::vector<const track_gui_entry_t*>;

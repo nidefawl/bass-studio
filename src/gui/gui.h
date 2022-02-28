@@ -208,6 +208,9 @@ public:
     ivec2 getRightTop() {
         return pos + ivec2(size.x, 0);
     }
+    ivec2 getRightBottom() {
+        return pos + size;
+    }
     int right() {
         return pos.x + size.x;
     }
