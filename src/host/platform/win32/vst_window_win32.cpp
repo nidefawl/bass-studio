@@ -1,6 +1,5 @@
-#include "str_util.h"
-#include <errhandlingapi.h>
 #ifdef _WIN32
+#include "str_util.h"
 #include "host/vst_window.h"
 #include "host/vst_host.h"
 #include "host/plugin/vst_plugin.h"
