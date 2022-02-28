@@ -196,6 +196,7 @@ public:
 
     std::unique_ptr<ProcessThread> vstscannerProcessThread;
     int scanningState = 0;
+    bool isOfflineRendering = false;
     explicit vsthost_impl(vsthost* host) {
         for (TrackBlockProcessTask& task : tasks) {
             task.init(host);
@@ -447,11 +448,14 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         return 0;
     case audioMasterGetCurrentProcessLevel:
         //if (!throttleLog) logPluginCb(plugin, "audioMasterGetCurrentProcessLevel %d %d %zd\n", opcode, index, value);
+        if (impl->isOfflineRendering){
+            return VstProcessLevels::kVstProcessLevelOffline;
+        }
         return VstProcessLevels::kVstProcessLevelRealtime;
     case audioMasterGetAutomationState:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterGetAutomationState %d %d %zd\n", opcode, index, value, 0);
-        return kVstAutomationReadWrite;
+        return kVstAutomationRead;
     case audioMasterOfflineStart:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterOfflineStart %d %d %zd\n", opcode, index, value, 0);
@@ -1169,12 +1173,14 @@ void vsthost::finishRecordingClip(tick_t tickPosBlockStart, tick_t tickBlockEnd,
 }
 
 void vsthost::preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings) {
+    impl->isOfflineRendering = true;
     for (auto* trackMaster : ctrl->getTracks().getMasterTracksFlatVecRef()) {
         trackMaster->getStage()->flags |= audiostageflags_t::WRITE_OUTPUT;
     }
 }
 
 void vsthost::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings) {
+    impl->isOfflineRendering = false;
     const tick_t tickBegin = exportSettings.exportPos;
     const tick_t tickEnd = tickBegin + exportSettings.exportLen;
     const samplerate_t sr = m_sampleFormatInternal.sampleRate;
@@ -1402,15 +1408,15 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 #if 1
     if (enableProfiling) timerProfile.reset();
     /* Update all track meters */
-    for (track_t* track : project->trackList) {
-        track_impl_t* trAudio = track->audio;
-        if (!trAudio)
-            continue;
-        float fGainTrack;
-        dsp_util::getGainLvl(trAudio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack);
-        trAudio->meter.update(&trAudio->output, fGainTrack);
-        trAudio->meterInput.update(&trAudio->input, 1.0f);
-    }
+    // for (track_t* track : project->trackList) {
+    //     track_impl_t* trAudio = track->audio;
+    //     if (!trAudio)
+    //         continue;
+    //     float fGainTrack;
+    //     dsp_util::getGainLvl(trAudio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack);
+    //     trAudio->meter.update(&trAudio->output, fGainTrack);
+    //     trAudio->meterInput.update(&trAudio->input, 1.0f);
+    // }
     if (enableProfiling) {
         stats.timings["Block.UpdateMeters"] = timerProfile.getTimeReset();
     }
@@ -2295,6 +2301,7 @@ void vsthost::onPluginsChanged(audio_stage_t* stage) {
 }
 
 void vsthost::onStopPlayback(project_controller_t* ctrl) {
+    impl->isOfflineRendering = false;
     midiRealtimeInput->m_list.clear();
     midiProcessedInput->m_list.clear();
 

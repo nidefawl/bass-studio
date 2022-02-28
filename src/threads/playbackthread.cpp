@@ -7,6 +7,7 @@
 #include "assert_dbg.h"
 
 #include "error.h"
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "thread.h"
 #include "threadlock.h"
@@ -303,30 +304,29 @@ private:
                         samplePos += blockSize * numBlocksProcessed;
                         tickPos += props.ticksPerBlock * numBlocksProcessed;
                         if (m_status == status_playback) {
-                            if (inLoop) {
-                                if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
-                                    // if (DawInstance::get()) {
-                                    //     DawInstance::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
-                                    // }
-                                    double nextTickPos    = projGlobals.loopStart;
-                                    int32_t nextSamplePos = tickToSampleConvert<int32_t, roundmode::floor>(nextTickPos, bpm100, sampleRate);
-                                    host->onPlaybackJumpFromTo(this->m_prjCtrl, samplePos, tickPos, nextSamplePos, nextTickPos);
-                                    log_printf("JMP FROM %s to %s\n", StringAsCStr(tickAsBeatString(tickPos)), StringAsCStr(tickAsBeatString(nextTickPos)));
-                                    tickPos   = nextTickPos;
-                                    samplePos = nextSamplePos;
-                                    log_printf("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
-                                }
+                            if (inLoop && tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
+                                // if (DawInstance::get()) {
+                                //     DawInstance::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
+                                // }
+                                double nextTickPos    = projGlobals.loopStart;
+                                int32_t nextSamplePos = tickToSampleConvert<int32_t, roundmode::floor>(nextTickPos, bpm100, sampleRate);
+                                host->onPlaybackJumpFromTo(this->m_prjCtrl, samplePos, tickPos, nextSamplePos, nextTickPos);
+                                log_printf("JMP FROM %s to %s\n", StringAsCStr(tickAsBeatString(tickPos)), StringAsCStr(tickAsBeatString(nextTickPos)));
+                                tickPos   = nextTickPos;
+                                samplePos = nextSamplePos;
+                                log_printf("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
                             }
-                            ctrl->getPlaybackPos() = (int32_t) floor(tickPos);
+                        }
+                        if (m_status != status_stop) {
+                            ctrl->getPlaybackPos() = math::rounddS32(tickPos);
+                            playbackDuration += props.microSecsPerBlock * 0.001 * numBlocksProcessed;
                         }
                         if (m_status == status_render) {
                             if (tickPos >= exportSettingsLocal.exportPos + exportSettingsLocal.exportLen) {
                                 m_status = status_stop;
                                 host->postExportEnd(ctrl, exportSettingsLocal);
-                                ctrl->getPlaybackPos() = exportSettingsLocal.exportPos + exportSettingsLocal.exportLen;
                             }
                         }
-                        playbackDuration += props.microSecsPerBlock * 0.001 * numBlocksProcessed;
                     }
                 }
 
