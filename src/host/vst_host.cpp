@@ -347,17 +347,18 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
     switch (opcode)
     {
     case audioMasterAutomate:
-        if (!throttleLog)
-            logPluginCb(plugin, "audioMasterAutomate %d %d %zd %f\n", opcode, index, value, opt);
         if (plugin) {
             auto* effParam = plugin->getEffectParam(index);
             if (!effParam) {
+            if (!throttleLog)
                 log_printf("%s audioMasterAutomate unknown param index %d %zd %f\n", StringAsCStr(plugin->getName()), index, value, opt);
             } else {
-
                 // call to deactivateAutomation is not thread safe,
                 plugin->deactivateAutomation(effParam->idx);
-                plugin->recvPluginEditParamUpdate(effParam->internalIdx);
+                effParam->value = opt;
+                effParam->paramValueState = PARAM_FLAG_SET;
+                effParam->paramDisplayValState |= PARAM_FLAG_DIRTY;
+                effParam->inUse = true;
             }
         }
         return 1;
@@ -514,7 +515,8 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
                 // NOTE: this loop might kill performance
                 plugin->visitParams([](auto& mapEntry) {
                     automatable_param_t& param = mapEntry.second;
-                    param.paramDisplayValState |= PARAM_DISPLAY_STR_DIRTY;
+                    param.paramValueState |= PARAM_FLAG_DIRTY;
+                    param.paramDisplayValState |= PARAM_FLAG_DIRTY;
                 });
             }
             return 1;

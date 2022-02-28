@@ -40,8 +40,8 @@ struct vst_param_category {
     String label;//24
 };
 enum vst_param_state : uint8_t {
-    PARAM_DISPLAY_STR_DIRTY = 1,
-    PARAM_DISPLAY_STR_SET = 2
+    PARAM_FLAG_DIRTY = 1,
+    PARAM_FLAG_SET = 2
 };
 
 class vstplugin : public effectbase {
@@ -113,7 +113,6 @@ public:
     void load(vsthost* host) override;
     void postLoad();
     vst_param_category* getCategory(int idx);
-    void recvPluginEditParamUpdate(int32_t internalIdx);
     void recvParamDisplayValueUpdate(int32_t internalIdx);
     void recvProgramNameUpdate();
     void recvProgramListUpdate();

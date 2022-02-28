@@ -104,6 +104,7 @@ struct automatable_param_t {
     int32_t internalIdx = -1;
     String paramDisplayValStr;
     uint8_t paramDisplayValState = 0; 
+    uint8_t paramValueState = 0; 
 };
 
 struct automatable_t {

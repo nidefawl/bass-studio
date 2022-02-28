@@ -55,7 +55,6 @@ public:
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     bool show() override;
     bool close() override;
-    void recvPluginEditParamUpdate(int32_t idx);
 
     // automatable_t interface
     String getAutomatableName() override;
