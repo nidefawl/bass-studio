@@ -42,16 +42,18 @@ effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGloba
     struct effectbase_param_entry_t {
         int32_t id;
         String name;
+        String unit;
         float val;
     };
     const std::array<effectbase_param_entry_t, 1> parameterTypes{ {
-            { PARAM_ENABLE, "Enabled", 1.0f },
+            { PARAM_ENABLE, "Enabled", "", 1.0f },
     } };
     for (const effectbase_param_entry_t& paramEntry : parameterTypes) {
         automatable_param_t* regparam = registerParam(paramEntry.id);
-        regparam->value               = paramEntry.val;
-        regparam->label               = paramEntry.name;
-        regparam->shortLabel          = paramEntry.name;
+
+        regparam->value = paramEntry.val;
+        regparam->name  = paramEntry.name;
+        regparam->unit  = paramEntry.unit;
     }
     getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
 }

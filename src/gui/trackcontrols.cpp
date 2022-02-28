@@ -1061,7 +1061,7 @@ public:
             std::vector<automatable_param_t*> sortedParams;
             autom->getSortedParams(sortedParams);
             std::for_each(sortedParams.begin(), sortedParams.end(), [this](automatable_param_t* param) {
-                addEntry(new ctxtmenu_entry(param->label, 1 + param->idx));
+                addEntry(new ctxtmenu_entry(param->name, 1 + param->idx));
             });
         }
     }

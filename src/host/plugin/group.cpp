@@ -178,18 +178,20 @@ module_group::module_group(int32_t _projectGlobalId)
     struct effectgroup_param_entry_t {
         int32_t id;
         String name;
+        String unit;
         float val;
     };
     const std::array<effectgroup_param_entry_t, 3> parameterTypes{ {
-            { PARAM_GAIN, "Output Gain", 1.0f },
-            { PARAM_PAN, "Pan", 0.5f },
-            { PARAM_GROUPPLUGIN_INPUT_GAIN, "Input Gain", 1.0f },
+            { PARAM_GAIN, "Output Gain", "dB", 1.0f },
+            { PARAM_PAN, "Pan", "", 0.5f },
+            { PARAM_GROUPPLUGIN_INPUT_GAIN, "Input Gain", "dB", 1.0f },
     } };
     for (const effectgroup_param_entry_t& paramEntry : parameterTypes) {
         automatable_param_t* regparam = registerParam(paramEntry.id);
-        regparam->value               = paramEntry.val;
-        regparam->label               = paramEntry.name;
-        regparam->shortLabel          = paramEntry.name;
+
+        regparam->value = paramEntry.val;
+        regparam->name  = paramEntry.name;
+        regparam->unit  = paramEntry.unit;
     }
 }
 

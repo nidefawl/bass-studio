@@ -308,41 +308,18 @@ public:
     void clicked(int _id) override {
         ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
         if (_id == CMD_SHOW_PARAM_LIST) {
-//            class guitable_params : public guictr_base {
-//                gui_ctr_
-//                guitable_params() {
-//                }
-//
-//                void renderBackground(NVGcontext* vg) {
-//                    dbgassert(isBackgroundRendered());
-//                    bool focused = parentCtrl->isCtrOrChildFocused(this);
-//                    drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, isBackgroundRenderedInset());
-//                }
-//                virtual void render(NVGcontext* vg) {
-//                    guictr_base::render(vg);
-//                }
-//            };
-//            setDebugPropertyHandle(this);
             auto* gui = effect->getGui();
             if (gui) {
                 debugproperties* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
-                guictxtmenu_base* ctxtMenu             = new guictxtmenu_base();
-                ctxtMenu->size                         = { 240, 480 };
+                guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
+                ctxtMenu->size = { 840, 480 };
                 ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
                 ivec2 wndPos{ 0 };
                 this->parentCtrl->window->getPos(&wndPos);
                 auto ctrl = MainCtrl::get();
                 closeContextMenu();
                 dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
-//                dbgPropertiesCtrPopup->setTheme(ctrl->getTheme());
-//                dbgPropertiesCtrPopup->layout();
                 ctrl->openContextMenu(ctxtMenu, wndPos, 2);
-//                dbgPropertiesCtrPopup->layout();
-//                dbgPropertiesCtrPopup->setDebugPropertyHandle(nullptr);
-//                closeContextMenu();
-//                MainCtrl::get()->openContextMenu(ctxtMenu, wndPos, 2);
-//                dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
-//                assert(ctxtMenu->parentCtrl);
                 return;
             }
         }
@@ -523,7 +500,7 @@ public:
         dbgassert(knobTest.parent == this);
     }
     String getText() override {
-        return entry->label;
+        return entry->name;
     }
     void layout() override {
         knobTest.pos  = pos + ivec2(spacing);
@@ -542,12 +519,12 @@ public:
         nvgTranslate(vg, pos.x, pos.y);
         if (rowHeight > 32) {
             setFont(vg, (int) (rowHeight * 0.4), G_WHITE, G_TITLE_ALIGN);
-            nvgText(vg, x, rowHeight * 0.25, StringAsCStr(getText()), NULL);
+            nvgText(vg, x, rowHeight * 0.25, StringAsCStr(getText()), nullptr);
             String sValue = effect->getParamValueDisplay(entry->idx);
-            nvgText(vg, x, rowHeight * 0.5 + rowHeight * 0.25, StringAsCStr(sValue), NULL);
+            nvgText(vg, x, rowHeight * 0.5 + rowHeight * 0.25, StringAsCStr(sValue), nullptr);
         } else {
             setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
-            nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
+            nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), nullptr);
         }
         nvgTranslate(vg, -pos.x, -pos.y);
 
@@ -646,7 +623,7 @@ void guipluginview::updateParamList(const String& strParamNameFilter) {
     std::vector<gui_list_entry*> listEntries;
     listEntries.reserve(sortedParams.size());
     std::for_each(sortedParams.begin(), sortedParams.end(), [&listEntries, eff = this->effect, &strParamNameFilter](auto* param) {
-        if (strParamNameFilter.empty() || StringContainsCI(param->label, strParamNameFilter) >= 0) {
+        if (strParamNameFilter.empty() || StringContainsCI(param->name, strParamNameFilter) >= 0) {
             listEntries.push_back(new gui_plugin_paramlist_entry(eff, param));
         }
     });

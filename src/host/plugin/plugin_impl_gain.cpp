@@ -151,18 +151,19 @@ module_gain::module_gain(int32_t _projectGlobalId)
     struct effectgain_param_entry {
         int32_t id;
         String name;
+        String unit;
         float val;
     };
     const std::array<effectgain_param_entry, 2> parameterTypes{ {
-            { PARAM_GAIN, "Gain", dsp_util::gainToLinScale(1.0f) },
-            { PARAM_PAN,  "Pan",  0.5f },
-            //{PARAM_GROUPPLUGIN_INPUT_GAIN, "Input Gain", 1.0f},
+            { PARAM_GAIN, "Gain", "dB", dsp_util::gainToLinScale(1.0f) },
+            { PARAM_PAN,  "Pan",  "", 0.5f }
     } };
     for (const effectgain_param_entry& paramEntry : parameterTypes) {
         automatable_param_t* regparam = registerParam(paramEntry.id);
-        regparam->value               = paramEntry.val;
-        regparam->label               = paramEntry.name;
-        regparam->shortLabel          = paramEntry.name;
+
+        regparam->value = paramEntry.val;
+        regparam->name  = paramEntry.name;
+        regparam->unit  = paramEntry.unit;
     }
 }
 module_gain::~module_gain() {

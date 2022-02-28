@@ -41,6 +41,7 @@ class midiarp : public automatable_t {
     struct arp_param_entry_t {
         int32_t id = 0;
         String name;
+        String unit;
         float val = 0.0f;
     };
     std::vector<arp_note_t> heldInput;

@@ -211,18 +211,20 @@ void vstplugin::load(vsthost* host) {
         param->paramValueState = PARAM_FLAG_DIRTY;
         memset(buf, 0, sizeof(buf));
         this->dispatch(effGetParamName, i, 0, buf);
-        String label = buf[0] ? buf : StringFormat("Parameter %d", i);
-        param->label = param->shortLabel = label;
+        String paramName = buf[0] ? buf : StringFormat("Parameter %d", i);
+        param->name = paramName;
+        memset(buf, 0, sizeof(buf));
+        this->dispatch(effGetParamLabel, i, 0, buf);
+        String paramUnit = buf[0] ? buf : "";
+        param->unit = paramUnit;
         VstParameterProperties properties = {};
         if (this->dispatch(effGetParameterProperties, i, 0, &properties, 0)) {
-            param->flags      = properties.flags | (ParamIsAdvanced);
-            param->label      = properties.label;
-            param->shortLabel = properties.shortLabel;
+            param->flags = properties.flags | (ParamIsAdvanced);
             if (properties.label[0]) {
-                param->label = properties.label;
+                // param->unit = properties.label;
             }
             if (properties.shortLabel[0]) {
-                param->shortLabel = properties.shortLabel;
+                // param->shortLabel = properties.shortLabel;
             }
             if (param->flags & ParamUsesFloatStep) {
                 //param.min.valFloat = 0.0f;
@@ -269,6 +271,11 @@ void vstplugin::load(vsthost* host) {
 void vstplugin::postLoad() {
     this->recvProgramListUpdate();
     this->recvProgramNameUpdate();
+    visitParams([](auto& mapEntry) {
+        automatable_param_t& param = mapEntry.second;
+        param.paramValueState |= PARAM_FLAG_DIRTY;
+        param.paramDisplayValState |= PARAM_FLAG_DIRTY;
+    });
 }
 
 namespace {
@@ -480,7 +487,9 @@ String vstplugin::getParamValueDisplay(int32_t idx) {
             recvParamDisplayValueUpdate(param->internalIdx);
         }
         if (param->paramDisplayValState & PARAM_FLAG_SET) {
-            return param->paramDisplayValStr;
+            if (param->unit.empty())
+                return param->paramDisplayValStr;
+            return param->paramDisplayValStr + " " + param->unit;
         }
     }
     return effectbase::getParamValueDisplay(idx);
@@ -564,11 +573,10 @@ void vstplugin::recvProgramListUpdate() {
     }
     this->programNames.resize(0);
     this->programNames.reserve(handle->aeffect->numPrograms);
-    char buf[1024];
+    char buf[128];
     for (int i = 0; i < handle->aeffect->numPrograms; i++) {
         memset(buf, 0, sizeof(buf));
-        if (this->dispatch(effGetProgramNameIndexed, i, 0, &buf, 0)) {
-            buf[sizeof(buf) - 1] = 0;
+        if (this->dispatch(effGetProgramNameIndexed, i, 0, buf)) {
             this->programNames.emplace_back(buf);
         }
     }
@@ -578,9 +586,10 @@ void vstplugin::recvProgramNameUpdate() {
     if (bIsLoadingProgram) {
         return;
     }
-    char buf[128]{};
-    auto curProgram = dispatch(effGetProgram, 0, 0, nullptr, 0);
-    if (curProgram >= 0 && dispatch(effGetProgramNameIndexed, curProgram, 0, buf, 0)) {
+    char buf[128];
+    memset(buf, 0, sizeof(buf));
+    auto curProgram = dispatch(effGetProgram);
+    if (curProgram >= 0 && dispatch(effGetProgramNameIndexed, curProgram, 0, buf)) {
         if (programNames.size() < curProgram && curProgram+1 < (4096)) {
             programNames.resize(curProgram+1);
         }
@@ -591,7 +600,8 @@ void vstplugin::recvProgramNameUpdate() {
         this->currentProgramNameSet = true;
         return;
     }
-    if (dispatch(effGetProgramName, 0, 0, buf, 0)) {
+    memset(buf, 0, sizeof(buf));
+    if (dispatch(effGetProgramName, 0, 0, buf)) {
         this->currentProgramNameStr = buf;
         this->currentProgramNameSet = true;
     }

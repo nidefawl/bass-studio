@@ -93,8 +93,9 @@ struct automatable_param_t {
     param_step_fi_u step{ 0.0f };
     param_step_fi_u stepLarge{ 0.0f };
 
-    String shortLabel;//8
-    String label;     //64
+    String name;
+    String unit;
+    String shortLabel;
 
     //if kVstParameterSupportsDisplayIndex
     int16_t displayIndex = 0;///< index where this parameter should be displayed (starting with 0)
@@ -179,7 +180,7 @@ public:
     String getParamName(int32_t paramIdx) {
         auto it = mapParams.find(paramIdx);
         dbgassert(it != mapParams.end());
-        return it->second.label;
+        return it->second.name;
     }
     void getAutomated(std::vector<int32_t>& targets) {
         for (const automated_param_t& t : automatedParams) {

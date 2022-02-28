@@ -30,20 +30,21 @@ midiarp::midiarp(track_impl_t* _trImpl) : automatable_t(), trackImpl(_trImpl) {
     curRandTimeOffset.resize(NUM_ARP_MAX_POLY_VOICES);
     memset(curRandTimeOffset.data(), 0, curRandTimeOffset.size() * sizeof(float));
     const std::array<arp_param_entry_t, 8> parameterTypes{ {
-        arp_param_entry_t{ PARAM_ENABLE, "Enabled", 0.0f },
-        arp_param_entry_t{ PARAM_GAIN, "Gain", 1.0f },
-        arp_param_entry_t{ ARP_PARAM_CLOCK, "Clock", 10.0f / (float) NUM_ARP_STEPSIZE_OPTIONS },
-        arp_param_entry_t{ ARP_PARAM_GATE, "Gate", 1 / 4.0f },
-        arp_param_entry_t{ ARP_PARAM_PATTERN, "Pattern", 0.0f },
-        arp_param_entry_t{ ARP_PARAM_RAND_TIME, "Random Time", 0.0f },
-        arp_param_entry_t{ ARP_PARAM_RAND_MODE, "Random Time Mode", 0.0f },
-        arp_param_entry_t{ ARP_PARAM_RAND_VEL, "Random Velocity", 0.0f },
+        arp_param_entry_t{ PARAM_ENABLE, "Enabled", "", 0.0f },
+        arp_param_entry_t{ PARAM_GAIN, "Gain", "dB", 1.0f },
+        arp_param_entry_t{ ARP_PARAM_CLOCK, "Clock", "Ticks", 10.0f / (float) NUM_ARP_STEPSIZE_OPTIONS },
+        arp_param_entry_t{ ARP_PARAM_GATE, "Gate", "Ticks", 1 / 4.0f },
+        arp_param_entry_t{ ARP_PARAM_PATTERN, "Pattern", "", 0.0f },
+        arp_param_entry_t{ ARP_PARAM_RAND_TIME, "Random Time", "Ticks", 0.0f },
+        arp_param_entry_t{ ARP_PARAM_RAND_MODE, "Random Time Mode", "", 0.0f },
+        arp_param_entry_t{ ARP_PARAM_RAND_VEL, "Random Velocity", "", 0.0f },
     } };
     for (const arp_param_entry_t& paramEntry : parameterTypes) {
         automatable_param_t* regparam = registerParam(paramEntry.id);
-        regparam->value               = paramEntry.val;
-        regparam->label               = paramEntry.name;
-        regparam->shortLabel          = paramEntry.name;
+
+        regparam->value = paramEntry.val;
+        regparam->name  = paramEntry.name;
+        regparam->unit  = paramEntry.unit;
     }
 
     getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;

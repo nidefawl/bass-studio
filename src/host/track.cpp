@@ -1408,22 +1408,22 @@ void track_params_t::postSetParameter(int32_t idx, float preVal, float val, int 
 
 track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), audiostage(_audiostage) {
     const std::array<track_param_entry_t, 2> parameterTypes{ {
-            { PARAM_ENABLE, "Enabled", 1.0f },
-            { PARAM_TRACK_GAIN, "Gain", dsp_util::gainToLinScale(1.0f) },
+            { PARAM_ENABLE, "Enabled", "", 1.0f },
+            { PARAM_TRACK_GAIN, "Gain", "dB", dsp_util::gainToLinScale(1.0f) },
     } };
     for (const track_param_entry_t& paramEntry : parameterTypes) {
         automatable_param_t* regparam = registerParam(paramEntry.id);
 
-        regparam->value      = paramEntry.val;
-        regparam->label      = paramEntry.name;
-        regparam->shortLabel = paramEntry.name;
+        regparam->value = paramEntry.val;
+        regparam->name  = paramEntry.name;
+        regparam->unit  = paramEntry.unit;
     }
     for (int i = 0; i < MAX_SEND_CHANNELS; i++) {
         automatable_param_t* regparam = registerParam(PARAM_OFFSET_SEND + i);
 
-        regparam->value      = 0.0f;
-        regparam->label      = StringFormat("Send %d", (i + 1));
-        regparam->shortLabel = regparam->label;
+        regparam->value = 0.0f;
+        regparam->name  = StringFormat("Send %d", (i + 1));
+        regparam->unit  = "dB";
     }
     getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
 }

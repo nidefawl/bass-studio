@@ -458,8 +458,8 @@ void guibase::handleMouseDownBegin(MouseEvent& evt) {
 
 
             debugproperties* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
-            guictxtmenu_base* ctxtMenu             = new guictxtmenu_base();
-            ctxtMenu->size                         = { 240, 480 };
+            guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
+            ctxtMenu->size = { 840, 480 };
             ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
             dbgPropertiesCtrPopup->setDebugPropertyHandle(this);
             dbgPropertiesCtrPopup->setTheme(theme);

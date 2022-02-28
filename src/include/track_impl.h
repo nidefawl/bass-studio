@@ -61,6 +61,7 @@ private:
     struct track_param_entry_t {
         int32_t id;
         String name;
+        String unit;
         float val;
     };
 
