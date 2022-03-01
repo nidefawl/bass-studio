@@ -8,7 +8,7 @@
 #include "seq_time.h"
 #include "dsp_util.h"
 #include "audiobuffer.h"
-#include <readerwriterqueue/readerwriterqueue.h>
+#include <readerwriterqueue/readerwriterqueue.hpp>
 #include "meter.h"
 #include "audio_config.h"
 #include "appsettings.h"

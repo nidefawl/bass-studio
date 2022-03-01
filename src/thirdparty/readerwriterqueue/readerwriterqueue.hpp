@@ -1,10 +1,9 @@
+#pragma once
 // ©2013-2016 Cameron Desrochers.
 // Distributed under the simplified BSD license (see the license file that
 // should have come with this header).
 
-#pragma once
-
-#include "atomicops.h"
+#include "atomicops.hpp"
 #include <type_traits>
 #include <utility>
 #include "assert_dbg.h"

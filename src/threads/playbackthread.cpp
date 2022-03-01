@@ -13,7 +13,7 @@
 #include "threadlock.h"
 #include "seq_time.h"
 #include "hires_timer.h"
-#include <readerwriterqueue/readerwriterqueue.h>
+#include <readerwriterqueue/readerwriterqueue.hpp>
 #include "host/mainctrl.h"
 #include "host/vst_host.h"
 #include "host/midi_host.h"
