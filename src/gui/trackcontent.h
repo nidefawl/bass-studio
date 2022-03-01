@@ -33,41 +33,43 @@ public:
     }
     ~gui_clip() override = default;
 
-    bool isClipTitleBar(ivec2 mpos) {
+    bool isClipTitleBar(ivec2 mpos, int32_t heightTitle) {
         return mpos.x >= pos.x &&
                mpos.y >= pos.y &&
                mpos.x < pos.x + size.x &&
-               mpos.y < pos.y + HEIGHT_CLIP_TITLE;
+               mpos.y < pos.y + heightTitle;
     }
-    bool isLeftDragZone(ivec2 mpos) {
+    bool isLeftDragZone(ivec2 mpos, int32_t heightTitle) {
         return mpos.x >= pos.x &&
                mpos.y >= pos.y &&
                mpos.x < pos.x + DRAG_RANGE &&
-               mpos.y < pos.y + HEIGHT_CLIP_TITLE;
+               mpos.y < pos.y + heightTitle;
     }
-    bool isRightDragZone(ivec2 mpos) {
+    bool isRightDragZone(ivec2 mpos, int32_t heightTitle) {
         return mpos.x >= pos.x + size.x - DRAG_RANGE &&
                mpos.y >= pos.y &&
                mpos.x < pos.x + size.x &&
-               mpos.y < pos.y + HEIGHT_CLIP_TITLE;
+               mpos.y < pos.y + heightTitle;
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (culled) {
             return false;
         }
-        if (isLeftDragZone(mpos)) {
+        
+        const auto heightTitle = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+        if (isLeftDragZone(mpos, heightTitle)) {
             if (evt.type <= MouseHitType::MOUSE_RIGHT)
                 evt.requestCursor(CURSOR_CLIP_SIZE_LEFT);
             evt.requestFocus(this);
             return true;
         }
-        if (isRightDragZone(mpos)) {
+        if (isRightDragZone(mpos, heightTitle)) {
             if (evt.type <= MouseHitType::MOUSE_RIGHT)
                 evt.requestCursor(CURSOR_CLIP_SIZE_RIGHT);
             evt.requestFocus(this);
             return true;
         }
-        if (isClipTitleBar(mpos)) {
+        if (isClipTitleBar(mpos, heightTitle)) {
             evt.requestFocus(this);
             return true;
         }

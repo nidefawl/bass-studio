@@ -77,6 +77,7 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
     if (cl->getLen() <= 0) {
         return;
     }
+    const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     NVGcolor color = rgbToNvg(cl->rgb);
     nvgBeginPath(vg);
     nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
@@ -161,6 +162,7 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
         return;
     }
 
+    const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     ivec2 sizeContents  = ivec2(size.x, size.y - HEIGHT_CLIP_TITLE - INSET_CLIP_CONTENT * 2);
     ivec2 clipPosScreen = toScreenSpace(ivec2(0, 0));
 
@@ -351,6 +353,7 @@ void gui_midi_clip::render(NVGcontext* vg) {
         if (!cl->enabled) {
             color = rgbToNvg(0x333333);
         }
+        const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         nvgBeginPath(vg);
         nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
         nvgFillColor(vg, color);
@@ -409,6 +412,8 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
     if (!cl->enabled) {
         color = rgbToNvg(0x333333);
     }
+    
+    const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     nvgBeginPath(vg);
     nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
     nvgFillColor(vg, color);
@@ -469,124 +474,6 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
             nvgFillFromCache(vg, notesView.data->arr[3]);
         }
         nvgRestore(vg);
-    } else if (0) {
-        NVGcolor rgbNote        = theme->getColor(GuiColor::COL_CLIP_NOTE);
-        NVGcolor rgbNoteOverlap = theme->getColor(GuiColor::COL_CLIP_NOTE_OVERLAP);
-        NVGcolor rgbNoteMuted   = theme->getColor(GuiColor::COL_CLIP_NOTE_MUTED);
-        nvgCachePath(vg, useCaching);
-        nvgSave(vg);
-        nvgTranslate(vg, posContents.x, posContents.y);
-        if (sizeContents.x > 0 && sizeContents.y > 0) {
-            clip_notes_t& notes = notesView;
-            if (!notes.empty()) {
-                note_t minN      = notesView.minNote;
-                note_t maxN      = notesView.maxNote;
-                int32_t numNotes = math::max((int32_t) 8, maxN.pitch - minN.pitch);
-                float scale      = sizeContents.y / (float) numNotes;
-                std::vector<const note_t*> notesClipped;
-                std::vector<const note_t*> notesMuted;
-                int begin = 0;
-                for (const note_t& note: notes.m_list) {
-                    tick_t noteTime = note.time;
-                    if (noteTime >= clipLen) {
-                        notesClipped.push_back(&note);
-                        continue;
-                    }
-                    if (noteTime < 0) {
-                        notesClipped.push_back(&note);
-                        continue;
-                    }
-                    if (!note.isEnabled()) {
-                        notesMuted.push_back(&note);
-                        continue;
-                    }
-                    if (!begin) {
-                        nvgBeginPath(vg);
-                        begin++;
-                    }
-                    float objPosNote = noteTime / (float) TICKS_BAR;
-                    float objLenNote = note.len / (float) TICKS_BAR;
-                    float ny     = noteToScreen(note.pitch - minN.pitch, scale, 0, sizeContents.y);
-                    float nx     = math::max(0.0f, objPosNote * barSize);
-                    float nw     = math::min(objLenNote * barSize, sizeContents.x - nx);
-                    float nh     = scale;
-                    float insetx = calcInset(1, nw);
-                    float insety = calcInset(1, nh);
-                    nvgRect(vg, nx + insetx, ny + insety, nw - insetx * 2, nh - insety * 2);
-                    notesRendered++;
-                }
-                if (begin) {
-                    nvgFillColor(vg, rgbNote);
-                    nvgSetShapeExtents(vg, 0, 0, sizeContents.x, sizeContents.y);
-                    nvgFill(vg);
-                    if (useCaching) {
-                        notesView.data->SaveFill(vg, 0);
-                    }
-                }
-
-                for (int j = 0; j < 2; j++) {
-                    auto& list = j == 0 ? notesClipped : notesMuted;
-                    if (!list.empty()) {
-                        nvgBeginPath(vg);
-                        for (const note_t* noteClipped: list) {
-                            const note_t& note = *noteClipped;
-                            tick_t noteTime    = note.time;
-
-                            float objPosNote = noteTime / (float) TICKS_BAR;
-                            float objLenNote = note.len / (float) TICKS_BAR;
-                            float ny         = noteToScreen(note.pitch - minN.pitch, scale, 0, sizeContents.y);
-                            float nx         = objPosNote * barSize;
-                            float nw         = objLenNote * barSize;
-                            float nh         = scale;
-                            float insetx     = calcInset(1, nw);
-                            float insety     = calcInset(1, nh);
-                            nvgRect(vg, nx + insetx, ny + insety, nw - insetx * 2, nh - insety * 2);
-                            notesRendered++;
-                        }
-                        nvgFillColor(vg, j == 0 ? rgbNoteOverlap : rgbNoteMuted);
-                        nvgSetShapeExtents(vg, 0, 0, sizeContents.x, sizeContents.y);
-                        nvgFill(vg);
-                        if (useCaching) {
-                            if (j == 0) {
-                                notesView.data->SaveFill(vg, 1);
-                            } else {
-                                notesView.data->SaveFill(vg, 2);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        nvgRestore(vg);
-
-        if (cl->isLoopEnabled()) {
-            tick_t posLoopIndicator = cl->getLoopBegin();
-            int n                   = 0;
-            while (posLoopIndicator < clipLen) {
-                if (posLoopIndicator >= 0) {
-                    float objPos = posLoopIndicator / (float) TICKS_BAR;
-                    float nx     = barSize * objPos;
-                    if (n == 0) {
-                        nvgBeginPath(vg);
-                    }
-                    nvgMoveTo(vg, pos.x + nx, pos.y);
-                    nvgLineTo(vg, pos.x + nx, pos.y + HEIGHT_CLIP_TITLE / 4);
-                    nvgMoveTo(vg, pos.x + nx, pos.y + HEIGHT_CLIP_TITLE * 3 / 4);
-                    nvgLineTo(vg, pos.x + nx, pos.y + HEIGHT_CLIP_TITLE);
-                    n++;
-                }
-                posLoopIndicator += cl->loopLen;
-            }
-            if (n) {
-                nvgStrokeColor(vg, theme->getFrameColorBase());
-                nvgStrokeWidth(vg, 1.f);
-                nvgStroke(vg);
-                if (useCaching) {
-                    notesView.data->SaveFill(vg, 3);
-                }
-            }
-        }
-        nvgCachePath(vg, 0);
     }
 
     if (useCaching && notesView.data) {

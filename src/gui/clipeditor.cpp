@@ -1471,8 +1471,6 @@ guictr_clipeditorview::~guictr_clipeditorview() {
     delete cache;
 }
 
-void guictr_clipeditorview::updateClipRenderCache(NVGcontext* vg) {
-}
 void guictr_clipeditorview::prerender(NVGcontext* vg) {
     clip_view& view  = dawCtrl->getClipView();
     clip_t* const cl = view.clip();
@@ -1670,23 +1668,6 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
         if (!cl->enabled) {
             color = rgbToNvg(0x333333);
         }
-        // nvgBeginPath(vg);
-        // nvgRect(vg, cp.x, cp.y, cs.x, HEIGHT_CLIP_TITLE);
-        // nvgFillColor(vg, color);
-        // nvgFill(vg);
-        // nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
-        // nvgStrokeWidth(vg, 1.f);
-        // nvgStroke(vg);
-        // if (cl->name.length()) {
-        //     renderTextLabel(vg,
-        //                     vec2(cp)+vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0),
-        //                     cs-ivec2(INSET_TITLE * 3, 0),
-        //                     cl->name,
-        //                     theme,
-        //                     HEIGHT_CLIP_TITLE,
-        //                     getContrastFontColor(cl->rgb),
-        //                     NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        // }
         dbgassert(cache->valid);
         if (cache->valid && std::any_of(cache->arr.cbegin(), cache->arr.cend(), [](const auto* ptr) { return !!ptr; })) {
 
@@ -1695,7 +1676,6 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
             nvgSave(vg);
             nvgTranslate(vg, posContents.x, posContents.y);
             nvgSave(vg);
-            nvgTranslate(vg, 0, HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
             if (cache->isCacheValid(0)) {
                 nvgFillFromCache(vg, cache->arr[0]);
             }
@@ -1718,40 +1698,6 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
         daw_tls::getTls().renderStats.clipsRendered++;
     }
 }
-
-// void guictr_clipeditorview::render(NVGcontext* vg) {
-//     ivec2 cp = this->getPosContent();
-//     ivec2 cs = this->getSizeContent();
-//     if (MainCtrl::get()->isClipEditorVisible()) {
-//         drawAttachedBackground(vg, theme, cp, cs, margin);
-//     } else {
-//         drawBackground(vg, theme, cp, cs, margin, false);
-//     }
-//     clip_view& view = MainCtrl::get()->getClipView();
-//     clip_t* clip    = view.clip();
-//     if (clip && !clip->notes.empty()) {
-//         clip_notes_t& notes = clip->notes;
-//         tick_t lenTime      = notes.lastNote.end() - notes.firstNote.start();
-//         int32_t minPitch    = notes.minNote.pitch;
-//         int32_t minTime     = notes.firstNote.start();
-//         int32_t distPitch   = notes.maxNote.pitch - notes.minNote.pitch;
-//         distPitch++;
-//         lenTime = math::max(clip->getLen(), lenTime);
-//         dbgassert(distPitch >= 0);
-//         dbgassert(lenTime >= 0);
-//         double noteScale = cs.y / (double) distPitch;
-//         double tickScale = cs.x / (double) lenTime;
-//         nvgBeginPath(vg);
-//         for (note_t& note : notes.m_list) {
-//             float nX = (float) ((note.start() - minTime) * tickScale);
-//             float nW = (float) (note.len * tickScale);
-//             nvgRect(vg, cp.x + nX, cp.y + (note.pitch - minPitch) * noteScale, nW, noteScale);
-//         }
-//         nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE));
-//         nvgSetShapeExtents(vg, cp.x, cp.y, cs.x, cs.y);
-//         nvgFill(vg);
-//     }
-// }
 
 float guictr_cliphandles::clipStartScrX() {
     return (float) (grid.tickToScreenD(view.clip()->offsetStart));

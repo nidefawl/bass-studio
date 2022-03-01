@@ -496,7 +496,6 @@ public:
     ~guictr_clipeditorview();
     void prerender(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
-    void updateClipRenderCache(NVGcontext* vg);
     vec2 getScale();
 
     void handleDraggedBegin(MouseEvent& evt) override {

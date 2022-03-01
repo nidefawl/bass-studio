@@ -106,6 +106,7 @@ void gui_midi_clip::onRemove() {
 
 void gui_audio_clip::renderDebugPass(NVGcontext* vg) {
     if (!culled) {
+        const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         ivec2 shrink = ivec2(0, (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2));
         ivec2 sizeClipped = size - shrink;
         ivec2 posClipped = pos + shrink;
@@ -126,6 +127,7 @@ void gui_audio_clip::renderDebugPass(NVGcontext* vg) {
 
 void gui_audio_clip::render(NVGcontext* vg) {
     if (!culled) {
+        const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         ivec2 shrink = ivec2(0, (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2));
         ivec2 sizeClipped = size - shrink;
         ivec2 posClipped = pos + shrink;
@@ -171,6 +173,7 @@ void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& gri
 
     dbgassert(size.x > 0);
 
+    const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     ivec2 shrink = ivec2(0, (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2));
     ivec2 sizeClipped = size - shrink;
     ivec2 posClipped = pos + shrink;
