@@ -44,7 +44,7 @@ public:
     int32_t msgId = 0;
     int32_t param = 0;
     std::function<void()> fn;
-    PlaybackThreadReq(int32_t _msgId, int32_t _param, std::function<void()> _fn)
+    PlaybackThreadReq(int32_t _msgId, int32_t _param, std::function<void()>&& _fn)
         : msgId(_msgId), param(_param), fn(_fn) {
     }
     PlaybackThreadReq(int32_t _msgId, int32_t _param)
@@ -151,8 +151,9 @@ public:
 private:
     void run() {
         project_controller_t* const ctrl = this->m_prjCtrl;
-        vsthost* host      = vsthost::getInstance();
-        midihost* midiHost = midihost::getInstance();
+        vsthost* host        = m_threadTls.host;
+        midihost* midiHost   = m_threadTls.midiHost;
+        std::function<void()> renderCompleteFn = nullptr;
         export_settings_t exportSettingsLocal{};
         double playbackDuration = 0;
         hires_timer_t timer;
@@ -167,16 +168,20 @@ private:
                 if (m_q.try_dequeue(req)) {
                     switch (req->msgId) {
                         case REQ_STATE: {
-                            playback_state reqState = (playback_state) req->param;
-
+                            auto reqState = static_cast<playback_state>(req->param);
                             if (m_status == playback_state::status_render && reqState != playback_state::status_render) {
+                                log_lf(Log::L_WARN, "status_render cancelled\n");
                                 host->postExportEnd(ctrl, exportSettingsLocal);
+                                if (renderCompleteFn) {
+                                    renderCompleteFn();
+                                    renderCompleteFn = nullptr;
+                                }
                             }
-
                             switch (reqState) {
                                 case playback_state::status_render: {
                                     dbgassert(host->m_sampleFormatInternal.sampleRate != 0);
                                     dbgassert(host->m_sampleFormatInternal.blockSize != 0);
+                                    renderCompleteFn = std::move(req->fn);
                                     // copy export settings to this thread
                                     exportSettingsLocal    = ctrl->getExportSettings();
                                     tick_t startPos        = exportSettingsLocal.exportPos;
@@ -185,6 +190,7 @@ private:
                                     ctrl->getPlaybackPos() = startPos;
                                     samplePos              = tickToSampleConvert<int32_t, roundmode::floor>(startPos, bpm100, host->m_sampleFormatInternal.sampleRate);
                                     log_printf("START EXPORT ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
+
                                     host->preExportBegin(ctrl, exportSettingsLocal);
                                     host->onStartPlayback(this->m_prjCtrl);
                                     timer.reset();
@@ -323,8 +329,12 @@ private:
                         }
                         if (m_status == status_render) {
                             if (tickPos >= exportSettingsLocal.exportPos + exportSettingsLocal.exportLen) {
-                                m_status = status_stop;
+                                m_status = status_no_process;
                                 host->postExportEnd(ctrl, exportSettingsLocal);
+                                if (renderCompleteFn) {
+                                    renderCompleteFn();
+                                    renderCompleteFn = nullptr;
+                                }
                             }
                         }
                     }
@@ -341,6 +351,9 @@ private:
 
                         seqthreads::threadSleep(1);
                     }
+                }
+                if (m_status == playback_state::status_no_process) {
+                    seqthreads::threadSleep(100);
                 }
 
 
@@ -365,7 +378,7 @@ PlaybackThread::PlaybackThread() : _M_impl{ new PlaybackThread::Impl{} } {
 }
 
 void PlaybackThread::call(std::function<void()> fn, bool wait) {
-    auto r = std::make_shared<PlaybackThreadReq>(GUI_CALL, 0, fn);
+    auto r = std::make_shared<PlaybackThreadReq>(GUI_CALL, 0, std::move(fn));
     bool s = _M_impl->addRequest(r);
     if (s && wait) {
         r->wait();
@@ -373,6 +386,13 @@ void PlaybackThread::call(std::function<void()> fn, bool wait) {
 }
 void PlaybackThread::addRequest(int32_t _msgId, int32_t _param, bool wait) {
     auto r = std::make_shared<PlaybackThreadReq>(_msgId, _param);
+    bool s = _M_impl->addRequest(r);
+    if (s && wait) {
+        r->wait();
+    }
+}
+void PlaybackThread::addRequestWithCallback(int32_t _msgId, int32_t _param, std::function<void()> fn, bool wait) {
+    auto r = std::make_shared<PlaybackThreadReq>(_msgId, _param, std::move(fn));
     bool s = _M_impl->addRequest(r);
     if (s && wait) {
         r->wait();

@@ -184,30 +184,37 @@ public:
             nvgRestore(vg);
         }
     }
+    void promptExportPath() {
+        selectFolder.setText(settings.exportPath);
+        //select folder
+        String lastPath = settings.exportPath;
+        App::Platform::sanitizePathToDirectory(lastPath);
+        auto window = parentCtrl->window;
 
+        String path = lastPath;
+        if (promptUserFilePath(window, 1, vFILE_TYPE_EXPORT, path)) {
+            settings.exportPath = path;
+        } else {
+            settings.exportPath = "";
+        }
+        selectFolder.setText(settings.exportPath);
+        selectFolder.setTooltipText(settings.exportPath);
+    }
     void buttonClicked(guibase* button) override {
 
         if (button->id == 0x10) {
-            selectFolder.setText(settings.exportPath);
-            //select folder
-            String lastPath = settings.exportPath;
-            App::Platform::sanitizePathToDirectory(lastPath);
-            auto window = parentCtrl->window;
-
-            String path = lastPath;
-            if (promptUserFilePath(window, 1, vFILE_TYPE_EXPORT, path)) {
-                settings.exportPath = path;
-            } else {
-                settings.exportPath = "";
-            }
-            selectFolder.setText(settings.exportPath);
-            selectFolder.setTooltipText(settings.exportPath);
+            promptExportPath();
             return;
         }
 
 
         if (button->id == 0x20) {
-            DawInstance::get()->startExport();
+            if (settings.exportPath.empty()) {
+                promptExportPath();
+            }
+            if (!settings.exportPath.empty()) {
+                dawCtrl->getDaw()->startExport();
+            }
             return;
         }
     }

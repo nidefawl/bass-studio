@@ -23,6 +23,7 @@ public:
     ThreadLock lockThread();
     ThreadLock tryLockThread();
     void addRequest(int32_t msgId, int32_t param, bool wait);
+    void addRequestWithCallback(int32_t _msgId, int32_t _param, std::function<void()> fn, bool wait);
     void call(std::function<void()> fn, bool wait);
     playback_state getState();
     int32_t getThreadId() override;

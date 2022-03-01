@@ -214,9 +214,9 @@ void updateSrBs() {
     daw->setAudioThreadState(playback_state::status_no_process);
     {
 
-        ThreadLock lock  = MainCtrl::getPlayThread()->lockThread();
+        ThreadLock lock  = daw->getPlayThread()->lockThread();
         vsthost* host    = daw->getHost();
-        audiohost* ahost = audiohost::getInstance();
+        audiohost* ahost = daw->getAudioHost();
         ahost->stopAudio();
         host->setOutput(nullptr);
         if (settings.startEngine) {

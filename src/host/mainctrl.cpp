@@ -2277,7 +2277,26 @@ void DawInstance::startPlaying() {
 }
 
 void DawInstance::startExport() {
-    setAudioThreadState(playback_state::status_render);
+    setAudioThreadState(playback_state::status_no_process);
+    if (tls.audioHost) {
+        tls.audioHost->stopAudio();
+    }
+    if (tls.midiHost) {
+        tls.midiHost->stopMidi();
+    }
+    tls.host->setOutput(nullptr);
+    playThread.addRequestWithCallback(REQ_STATE, (int) playback_state::status_render, []() {
+        auto& tls = daw_tls::getTls();
+        if (DAW::settings.startEngine) {
+            if (tls.audioHost->startAudio(DAW::settings.iosettings)) {
+                auto stream = tls.audioHost->getStreamSharedPtr(0);
+                tls.host->setOutput(stream);
+            }
+        }
+        if (tls.midiHost) {
+            tls.midiHost->startMidi();
+        }
+    }, true);
 }
 
 void DawInstance::stopPlaying() {
