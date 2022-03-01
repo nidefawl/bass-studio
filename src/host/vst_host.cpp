@@ -2440,7 +2440,7 @@ void vsthost::processAudio(audio_stage_t* stage,
                 if (isBypass || bypassEffectProcessing) {
                     samplerate_t delay = effect->getPluginLatency();
                     if (delay > 0) {
-                        if (!effect->delayLine.get()) {
+                        if (!effect->delayLine) {
                             effect->delayLine.reset(new DelayLine(this->numChannels, m_sampleFormatInternal.blockSize));
                         }
                         AudioBlock *blockOut = effect->blockOutputs;

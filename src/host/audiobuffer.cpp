@@ -149,29 +149,8 @@ void delayLineWrite(DelayLine* delayLine, AudioBlock* input, samplerate_t delay)
 }
 
 void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplerate_t delay) {
-    dbgassert(delayLine);
-    delayLine->updateSize(input->samples, static_cast<uint8_t>(input->channels), delay);
-    auto& delayBlock = delayLine->block;
-    const auto delayLineSize = static_cast<int32_t>(delayBlock.samples);
-    delayLine->writeOffset += delayLine->blockSize;
-    if (delayLine->writeOffset >= delayLine->block.samples) {
-        delayLine->writeOffset = 0;
-    }
-    dbgassert(delayLine->writeOffset + input->samples <= delayLine->block.samples);
-    delayBlock.copyFromPosToPos(input->buf, 0, delayLine->writeOffset, input->samples, input->channels);
-    const auto readSamples = static_cast<int32_t>(output->samples);
-    int32_t readPos = delayLine->writeOffset - static_cast<int32_t>(delay);
-    if (readPos < 0) {
-        readPos += delayLineSize;
-    }
-    if (readPos + readSamples > delayLineSize) {
-        int32_t read1Len = delayLineSize - readPos;
-        int32_t read2Len = readSamples - read1Len;
-        output->copyFromPosToPos(delayBlock.buf, readPos, 0, read1Len, delayBlock.channels);
-        output->copyFromPosToPos(delayBlock.buf, 0, read1Len, read2Len, delayBlock.channels);
-    } else {
-        output->copyFromPosToPos(delayBlock.buf, readPos, 0, output->samples, delayBlock.channels);
-    }
+    delayLineWrite(delayLine, input, delay);
+    output->addFromDelayLineOp(delayLine, delay, AudioBlock::MIX, 1.0f);
 }
 
 
