@@ -1049,8 +1049,24 @@ public:
 };
 class guidropdown_popup_sel_automation_param : public guictxtmenu {
     track_gui_entry_t* const m_trackentry;
-
 public:
+    class ctxt_menu_entry_param : public ctxtmenu_entry {
+        bool m_automated;
+    public:
+        ctxt_menu_entry_param(int32_t _id, const String& name, bool automated)
+            : ctxtmenu_entry(name, _id),
+            m_automated(automated)
+        {
+            if (m_automated) {
+                setIcon(&RenderResources::imgIcons[ICON_AUTOMATION], GuiColor::COL_AUTOMATED);
+            }
+        }
+        ~ctxt_menu_entry_param() override = default;
+        void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
+            ctxtmenu_entry::render(ctxtSize, vg, idx, mouse);
+            
+        }
+    };
     explicit guidropdown_popup_sel_automation_param(track_gui_entry_t* const trackentry) : m_trackentry(trackentry) {
         this->size.x         = 120;
         this->fontSize       = FONT_SIZE_CTXT_SMALL;
@@ -1058,10 +1074,15 @@ public:
         automatable_t* autom = m_trackentry->state.selectedAutomationCtr;
         addEntry(new ctxtmenu_entry("None", 0));
         if (autom) {
-            std::vector<automatable_param_t*> sortedParams;
-            autom->getSortedParams(sortedParams);
-            std::for_each(sortedParams.begin(), sortedParams.end(), [this](automatable_param_t* param) {
-                addEntry(new ctxtmenu_entry(param->name, 1 + param->idx));
+            std::vector<automatable_param_t*> paramsAutomated;
+            std::vector<automatable_param_t*> paramsRest;
+            autom->getSortedParamsSeperate(paramsAutomated, paramsRest);
+            // paramsAutomated.insert(paramsAutomated.end(), paramsRest.cbegin(), paramsRest.cend());
+            std::for_each(paramsAutomated.cbegin(), paramsAutomated.cend(), [this](const auto* param) {
+                addEntry(new ctxt_menu_entry_param(1 + param->idx, param->name, true));
+            });
+            std::for_each(paramsRest.cbegin(), paramsRest.cend(), [this](const auto* param) {
+                addEntry(new ctxt_menu_entry_param(1 + param->idx, param->name, false));
             });
         }
     }

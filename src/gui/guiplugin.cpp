@@ -618,11 +618,13 @@ public:
     }
 };
 void guipluginview::updateParamList(const String& strParamNameFilter) {
-    std::vector<automatable_param_t*> sortedParams;
-    effect->getSortedParams(sortedParams);
+    std::vector<automatable_param_t*> paramsAutomated;
+    std::vector<automatable_param_t*> paramsRest;
+    effect->getSortedParamsSeperate(paramsAutomated, paramsRest);
     std::vector<gui_list_entry*> listEntries;
-    listEntries.reserve(sortedParams.size());
-    std::for_each(sortedParams.begin(), sortedParams.end(), [&listEntries, eff = this->effect, &strParamNameFilter](auto* param) {
+    paramsAutomated.insert(paramsAutomated.end(), paramsRest.cbegin(), paramsRest.cend());
+    listEntries.reserve(paramsAutomated.size());
+    std::for_each(paramsAutomated.begin(), paramsAutomated.end(), [&listEntries, eff = this->effect, &strParamNameFilter](auto* param) {
         if (strParamNameFilter.empty() || StringContainsCI(param->name, strParamNameFilter) >= 0) {
             listEntries.push_back(new gui_plugin_paramlist_entry(eff, param));
         }

@@ -24,6 +24,7 @@ public:
     guitheme_t* theme     = nullptr;
 
     RenderResources::NvgImageTexture* icon = nullptr;
+    GuiColor::constant_t iconColor;
 
     ctxtmenu_entry(String _title, int _id)
         : id(_id), title(std::move(_title))
@@ -32,8 +33,9 @@ public:
 
     virtual ~ctxtmenu_entry() = default;
 
-    void setIcon(RenderResources::NvgImageTexture* _icon) {
+    void setIcon(RenderResources::NvgImageTexture* _icon, GuiColor::constant_t color) {
         this->icon = _icon;
+        this->iconColor = color;
     }
 
     virtual void layout(ivec2 size, float _fontSize, determine_string_width& strw) {
@@ -59,6 +61,11 @@ public:
             nvgRect(vg, 0, y, ctxtSize.x, height);
             nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
             nvgFill(vg);
+        }
+        if (this->icon) {
+            nvgTranslate(vg, height / 4, y+2);
+            drawIconColored(vg, ivec2(height - 4), icon, theme->getColor(iconColor), 4);
+            nvgTranslate(vg, -height / 4, -(y+2));
         }
 
         renderTextLabel(vg,

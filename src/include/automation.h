@@ -136,6 +136,27 @@ public:
             return a->idx < b->idx;
         });
     }
+    void getSortedParamsSeperate(std::vector<automatable_param_t*>& _outAutomated, std::vector<automatable_param_t*>& _outRest) {
+        _outAutomated.reserve(automatedParams.size());
+        _outRest.reserve(mapParams.size());
+        std::for_each(mapParams.begin(), mapParams.end(), [&](auto& mapEntry) {
+            const auto paramIdx = mapEntry.first;
+            auto it = std::find_if(automatedParams.cbegin(), automatedParams.cend(), [paramIdx](const auto& ap) {
+                return ap.paramIdx == paramIdx && ap.src.isAutomated();
+            });
+            if (it == automatedParams.cend()) {
+                _outRest.push_back(&mapEntry.second);
+            } else {
+                _outAutomated.push_back(&mapEntry.second);
+            }
+        });
+        std::sort(_outAutomated.begin(), _outAutomated.end(), [](const auto* a, const auto* b) {
+            return a->idx < b->idx;
+        });
+        std::sort(_outRest.begin(), _outRest.end(), [](const auto* a, const auto* b) {
+            return a->idx < b->idx;
+        });
+    }
 
     virtual String getAutomatableName()      = 0;
     virtual float getParamValue(int32_t idx) = 0;

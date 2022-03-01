@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <nanovg_min.h>
 #include <typeinfo>
 #include "math/vec.h"
 #include "math/seq_math.h"
@@ -324,14 +325,21 @@ NVGpaint imagePattern(NVGcontext* vg, int width, int ext, int imgId) {
     RenderResources::NvgImageTexture& image = RenderResources::imgIcons[imgId];
     return nvgImagePattern(vg, -ext, -ext, width + ext * 2, width + ext * 2, 0, image.perContextId[vg], 1.0f);
 }
-void drawIcon(NVGcontext* vg, const ivec2& size, RenderResources::NvgImageTexture* image, int32_t extImg) {
+
+void drawIconColored(NVGcontext* vg, const ivec2& size, RenderResources::NvgImageTexture* image, NVGcolor color, int32_t extImg) {
     const int32_t iconW   = math::min(size.x, size.y);
     NVGpaint paintIcon    = nvgImagePattern(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2, 0, image->perContextId[vg], 1.0f);
+	paintIcon.innerColor = paintIcon.outerColor = color;
     nvgBeginPath(vg);
     nvgRect(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2);
     nvgFillPaint(vg, paintIcon);
     nvgFill(vg);
 }
+
+void drawIcon(NVGcontext* vg, const ivec2& size, RenderResources::NvgImageTexture* image, int32_t extImg) {
+    drawIconColored(vg, size, image, nvgRGBAf(1,1,1,1), extImg);
+}
+
 void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
     int32_t inset = 3;
     //  iconPos.y -= inset;

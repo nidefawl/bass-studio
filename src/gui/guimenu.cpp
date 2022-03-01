@@ -1,5 +1,6 @@
 #include "guimenu.h"
 #include "buildinfo.h"
+#include "guicolors.h"
 #include "renderresources.h"
 #include <nanovg.h>
 
@@ -7,7 +8,7 @@ guimenu_ctxtentry::guimenu_ctxtentry(ngui::Menu* _menu)
     : ctxtmenu_entry(_menu->title, _menu->command.command), menu(_menu) {
     int32_t iconId = menu->icon;
     if (iconId > -1) {
-        setIcon(&RenderResources::imgIcons[iconId]);
+        setIcon(&RenderResources::imgIcons[iconId], GuiColor::COL_WHITE);
     }
 }
 
@@ -30,7 +31,7 @@ void guimenu_ctxtentry::render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mo
     }
     if (this->icon) {
         nvgTranslate(vg, height / 4, y+2);
-        drawIcon(vg, ivec2(height - 4), icon);
+        drawIconColored(vg, ivec2(height - 4), icon, theme->getColor(iconColor));
         nvgTranslate(vg, -height / 4, -(y+2));
     }
 
