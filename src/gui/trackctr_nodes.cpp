@@ -484,7 +484,7 @@ void gui_graph_port::dragReleaseOn(guibase* target, ivec2 mousepos) {
                                                                        : ptr->parentGraphNode->getProcessingNodePointer();
         auto ptrNodeOutput = isStageBufferPointInput(stageBufferPoint) ? ptr->parentGraphNode->getProcessingNodePointer()
                                                                        : parentGraphNode->getProcessingNodePointer();
-        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+        ThreadLock lock = dawCtrl->lockPlayThread();
         DAW::connectNodes(ptrNodeInput, ptrNodeOutput);
         DawInstance::get()->onPluginsChanged();
         vsthost::getInstance()->onTrackLayoutChange();

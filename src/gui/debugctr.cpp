@@ -56,7 +56,6 @@ enum ID_BTN : int32_t {
     ID_BTN_TOGGLE_SAMPLECONVERSION,
     ID_BTN_TOGGLE_THREADING,
     ID_BTN_TOGGLE_CLIP_RENDER_CACHE,
-    ID_BTN_UPDATE_GRID,
     ID_BTN_UPDATE_VISIBLE_TRACK_CONTENTS,
     ID_BTN_TOGGLE_WAVEFORM_UPDATES,
     ID_BTN_TOGGLE_CLIPRENDERER_DEBUGLAYER
@@ -216,13 +215,6 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_TOGGLE_THREADING;
             btn3->setText("Multithreaded processing (ON)");
-            btn3->setFontSize(BTN_FONT_SIZE);
-            debugGuis.push_back(btn3);
-        }
-        {
-            auto btn3 = new guibutton;
-            btn3->id  = ID_BTN_UPDATE_GRID;
-            btn3->setText("Update grid");
             btn3->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn3);
         }
@@ -544,9 +536,6 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
     switch (button->id) {
         case ID_BTN_UPDATE_VISIBLE_TRACK_CONTENTS:
             DawInstance::get()->updateVisibleTrackContents();
-            break;
-        case ID_BTN_UPDATE_GRID:
-            DawInstance::get()->updateGrid();
             break;
         case ID_BTN_RESET_HIST:
             resetHistAndCheck();

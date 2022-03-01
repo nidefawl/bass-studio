@@ -299,13 +299,14 @@ effectbase* audio_stage_t::getPluginById(int32_t projectGlobalId) const {
 }
 
 void track_impl_t::removePlugin(effectbase* _effect, bool notifyUp) {
-    for (auto gui : track->audio->guiInstances) {
-        gui->state.selectedAutomationCtr = nullptr;
-    }
     audio_stage_t::removePlugin(_effect, notifyUp);
 }
 
 void audio_stage_t::removePlugin(effectbase* _effect, bool notifyUp) {
+    for (auto trackentry : _effect->getTrackLink()->getTrack()->getStage()->guiInstances) {
+        trackentry->state.selectedAutomationCtr = nullptr;
+        trackentry->parent->removeAllAutomationLanes(trackentry, _effect);
+    }
     removeEntry(deferredEffects, _effect);
     if (!removeEntry(effects, _effect)) {
         return;
@@ -326,6 +327,10 @@ bool audio_stage_t::replaceEffect(int32_t idx, effectbase* _effect, effectbase**
     if (idx >= 0 && idx < (int32_t) effects.size()) {
         auto cur   = effects[idx];
         auto stage = cur->getTrackLink();
+        for (auto trackentry : cur->getTrackLink()->getTrack()->getStage()->guiInstances) {
+            trackentry->state.selectedAutomationCtr = nullptr;
+            trackentry->parent->removeAllAutomationLanes(trackentry, _effect);
+        }
         cur->breakTrackLink();
         if (stage) {
             stage->notifyPluginContainers();
@@ -504,7 +509,6 @@ void audio_stage_t::pluginsChanged() {
     }
     DAW::validateEffectRoutings(this->host, this);
 
-    //host->onPluginsChanged(this);
     updateLatency();
 }
 

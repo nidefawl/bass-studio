@@ -488,7 +488,7 @@ public:
             grid.grid_dens.dynamicDensity = _id - 100;
             grid.grid_dens.isfixed        = false;
         }
-        grid.notifyChange();
+        DawInstance::get()->updateVisibleTrackContents();
         closeContextMenu();
     }
 };

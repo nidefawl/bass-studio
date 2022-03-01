@@ -116,7 +116,7 @@ public:
     /* holds guictrs of internal vstplugins with custom gui (non-steinberg api) */
     std::vector<guictr_base*> viewCtrs;
     /* holds size for internal vstplugins with custom gui (non-steinberg api) */
-    ivec2 sizeCtrs;
+    ivec2 sizeCtrs{};
 
     guictr_base* ctrPreview = nullptr;
     void updateParamList(const String& strParamNameFilter);

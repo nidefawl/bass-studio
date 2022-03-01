@@ -139,8 +139,8 @@ int32_t guictr_tracks::setTrackPosition(track_gui_entry_t* e, int32_t y, bool is
 void guictr_tracks::showAutomationLane(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx) {
     entry->state.selectedAutomationCtr   = at;
     entry->state.selectedAutomationParam = paramIdx;
-    updateVisibleTrackContents();
 }
+
 void guictr_tracks::addSubTrack(track_gui_entry_t* entry, gui_track_subtrack* subtrack, bool insertFront) {
     trackView.addSubtrack(entry, subtrack, insertFront);
     entry->mixer->addSubtrackMixer(entry, subtrack);
@@ -222,7 +222,7 @@ void guictr_tracks::scrollOffsetChanged(int dir, float offset) {
         }
     }
 
-    updateVisibleTrackContents();
+    // updateVisibleTrackContents();
 }
 
 void guictr_tracks::scrollTo(guibase* g) {
@@ -255,17 +255,14 @@ void guictr_tracks::updateVisibleTracks() {
         }
     }
 }
-
-void guictr_tracks::updateVisibleTrackContents() {
-    updateVisibleTracks();
-}
-
-void guictr_tracks::relayout() {
-    double f = scrollbar.toPixels();
-    dawCtrl->updateGrid();
-    dawCtrl->updateVisibleTrackContents();
-    layout();
-    scrollbar.scrollTo(f);
+void guictr_tracks::layoutVisibleTracks() {
+    track_gui_vector_td& tracks = guiMgr.tracksVisibleFlat;
+    for (track_gui_entry_t* entry : tracks) {
+        entry->content->updateVisibleTrackContents(projectGlobals, grid);
+        for (gui_track_subtrack* au : entry->subtracks) {
+            au->updateVisibleTrackContents(grid);
+        }
+    }
 }
 
 void guictr_tracks::layout() {
@@ -746,18 +743,18 @@ namespace {
         treePos.trackTypeCtr = TRACKTYPE_TO_CTR(track->type);
         std::vector<track_t*> selectedTracks;
         selectedTracks.push_back(track);
-        ThreadLock lock  = MainCtrl::getPlayThread()->lockThread();
-        bool failed      = !DawInstance::get()->getTracks().moveTracks(selectedTracks, treePos);
+        auto daw = DawInstance::get();
+        ThreadLock lock  = daw->lockPlayThread();
+        bool failed      = !daw->getTracks().moveTracks(selectedTracks, treePos);
         String strTarget = "<root>";
         if (treePos.parent) {
             strTarget = treePos.parent->name;
         }
         log_printf("Moving %d tracks to %s[%d] %s\n", selectedTracks.size(), StringAsCStr(strTarget), treePos.treeIdx, failed ? "Failed" : "Success");
 
-        vsthost::getInstance()->onTrackLayoutChange();
-        DawInstance::get()->layoutTrackEditors();
-        DawInstance::get()->updateVisibleTrackContents();
-        ////TODO: edithistory entry
+        daw->getHost()->onTrackLayoutChange();
+        daw->updateVisibleTrackContents();
+        //TODO: edithistory entry
     }
 }// namespace
 bool guitrack_editor::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
@@ -948,8 +945,6 @@ void guitrack_topleft::buttonClicked(guibase* _button) {
                 updateStoreLoadSubtracks(entry->parent, entry);
             }
         }
-        ctrTracks.updateVisibleTrackContents();
-        ctrTracks.layout();
-        ctrTracks.updateVisibleTrackContents();
+        dawCtrl->updateVisibleTrackContents();
     }
 }

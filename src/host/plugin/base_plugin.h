@@ -24,6 +24,7 @@ struct audio_stage_t;
 struct plugin_snapshot_t;
 struct plugin_snapshot_t;
 class effect_deferred;
+class DawInstance;
 
 extern bool storePluginPresetWithSnapshot;// = true;
 extern bool loadPluginPresetWithSnapshot; // = false;
@@ -198,5 +199,4 @@ public:
 effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
 effectbase* loadEffectModule(vsthost* host, const plugin_snapshot_t& pluginSnapshot, bool isForceRequest);
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
-
-void removePlugin(effectbase* module);
+void removePlugin(DawInstance* daw, effectbase* module);

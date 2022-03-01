@@ -43,12 +43,12 @@ public:
     void onChildLayoutChanged(guibase* g) override;
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
 
-    ivec2 getScrollTotalSize() override {
+    ivec2 getScrollTotalSize() const override {
         ivec2 cs = getSizeContent();
         cs.y     = contentHeight;
         return cs;
     }
-    ivec2 getScrollViewSize() override {
+    ivec2 getScrollViewSize() const override {
         return getSizeContent();
     }
     void scrollOffsetChanged(int dir, float offset) override;

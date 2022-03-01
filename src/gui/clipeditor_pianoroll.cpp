@@ -73,19 +73,13 @@ void gui_pianoroll::handleDraggedMove(MouseEvent& evt) {
             if ((!lockGesture && math::abs(disty) > 0) || (lockGesture && isMove)) {
                 evt.dragDistance->y = 0;
                 setOffset(layoutRoll.offset() + disty);
-                //        grid.setOffset(grid.offset - distx);
             }
             if ((!lockGesture && math::abs(distx) > 0) || (lockGesture && !isMove)) {
                 evt.dragDistance->x = 0;
-                //        disty = 1.0f + disty * -0.01f;
-                //        float anchor_dragposx = (float)(startDrag.x < 50 ? 0 : evt.relMousepos.x);
                 setScale(layoutRoll.scale() + distx * 0.05f);
                 int32_t rel  = math::min(size.y - 1, math::max(0, size.y - evt.relMousepos.y));
                 float offset = (size.y - toScreenF(dragPosObjSpace)) + layoutRoll.offset();
                 setOffset(offset - rel);
-                //        double newOffset = grid.calcOffset(anchor_dragposx, dragPosObjSpace);
-                //        grid.setOffset((float)newOffset);
-                //        MainCtrl::get()->updateGrid();
             }
         }
     } else if (dragMode == dragmode::drag_piano_key) {

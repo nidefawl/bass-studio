@@ -75,24 +75,22 @@ public:
     }
     void handleDraggedMove(MouseEvent& evt) override {
         if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
+            auto daw = dawCtrl->getDaw();
             int disty = (int) evt.dragDistance->y / 20;
             if (math::abs(disty) < 1)
                 return;
             evt.dragDistance->y = 0;
             if (idx == 0) {
-                int n = project_controller_t::get()->sigNum();
+                int n = daw->sigNum();
                 n     = CLAMP_I(n - disty, 0, 32);
-                project_controller_t::get()->setNum(n);
-                DawInstance::get()->updateGrid();
-                DawInstance::get()->updateVisibleTrackContents();
+                daw->setNum(n);
             } else {
-                int prev = project_controller_t::get()->sigDen();
+                int prev = daw->sigDen();
                 int now  = 1 << CLAMP_I((int) log2(prev) - disty, 0, 4);
                 printf("old %d new %d\n", prev, now);
-                project_controller_t::get()->setDen(now);
-                DawInstance::get()->updateGrid();
-                DawInstance::get()->updateVisibleTrackContents();
+                daw->setDen(now);
             }
+            daw->updateVisibleTrackContents();
         }
     }
     void handleDraggedRelease(MouseEvent& evt) override {

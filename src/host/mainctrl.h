@@ -313,6 +313,10 @@ public:
     PlaybackThread* getPlayThread() {
         return &playThread;
     }
+    ThreadLock lockPlayThread() {
+        ThreadLock t = playThread.lockThread();
+        return std::move(t);//CANNOT RELY ON RVO
+    }
     vsthost* getHost() {
         return tls.host;
     }
@@ -417,7 +421,6 @@ public:
     void setMainControl(MainCtrl*);
     MainCtrl* getMainControl();
     void getTrackContainers(std::vector<guictr_tracks*>& trackCointainers);
-    void updateGrid();
     void updateVisibleTrackContents();
     void onPluginsChanged();
     void layoutTrackEditors();
@@ -468,6 +471,9 @@ public:
     clip_view& getClipView() {
         return clipView;
     }
+    DawInstance* getDaw() {
+        return &daw;
+    }
     dragdrop_target_indicator_t& getDragDropTarget() {
         return daw.dragdropTarget;
     }
@@ -479,6 +485,13 @@ public:
     }
     WorkerThread* getWorkerThread() {
         return &daw.workerThread;
+    }
+    ThreadLock lockPlayThread() {
+        ThreadLock t = daw.playThread.lockThread();
+        return std::move(t);//CANNOT RELY ON RVO
+    }
+    waveformrender* getWaveformRenderer() {
+        return this->waveformRenderer;
     }
 
 
@@ -515,13 +528,9 @@ public:
     virtual void setupView()                      = 0;
     virtual void layoutView(int32_t w, int32_t h) = 0;
 
-    virtual void updateVisibleTrackContents() {
-    }
+    void updateVisibleTrackContents();
 
     virtual void onPluginsChanged() {
-    }
-
-    virtual void updateGrid() {
     }
 
     virtual void setStatusText(String s) {
@@ -532,14 +541,6 @@ public:
     }
 
     virtual void resetAutomationContext() {
-    }
-
-    DawInstance* getDaw() {
-        return &daw;
-    }
-
-    waveformrender* getWaveformRenderer() {
-        return this->waveformRenderer;
     }
 
     virtual void addTrackToView(track_t* track, int flags)      = 0;
@@ -554,6 +555,7 @@ public:
     view_mode_t getViewMode() const;
 
     virtual void getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) = 0;
+    virtual guictr_tracks* getTrackContainer() = 0;
 };
 
 class MainCtrl : public DawCtrl {
@@ -588,8 +590,6 @@ public:
     bool isPluginViewVisible();
     void showPluginView();
     void showClipEditor();
-    void updateGrid() override;
-    void updateVisibleTrackContents() override;
     void onPluginsChanged() override;
     bool processGlobalKeyevent(KeyEvent& event) override;
     guitrack_editor& getTrackEditor();
@@ -615,6 +615,7 @@ public:
                                                         std::shared_ptr<guictr_layout> newContainer) override;
     void dragContainerRelayout(drag_ctr_event evt) override;
     void getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) override;
+    guictr_tracks* getTrackContainer() override;
 };
 
 class CompanionCtrl : public DawCtrl {
@@ -635,9 +636,7 @@ public:
     bool isCompanion() const override {
         return true;
     }
-    void updateVisibleTrackContents() override;
     void onPluginsChanged() override;
-    void updateGrid() override;
     DAW::Cursor& getCursor() override {
         return cursor;
     }
@@ -650,4 +649,5 @@ public:
     void setViewMode(view_mode_t mode) override;
     void setEditClip(gui_clip* gclip) override;
     void getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) override;
+    guictr_tracks* getTrackContainer() override;
 };

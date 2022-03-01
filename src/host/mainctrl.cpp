@@ -950,9 +950,8 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
                         for (track_t* tr : project.trackList) {
                             companionCtrlStdPtr->view->ctr_tracks2.addTrack(tr, FLG_TRK_CHANGE_LOAD);
                         }
-                        companionCtrlStdPtr->updateVisibleTrackContents();
-                        companionCtrlStdPtr->layoutView();
                         companionCtrlStdPtr->fixCursor();
+                        companionCtrlStdPtr->updateVisibleTrackContents();
                     }
                     if (companionCtrlStdPtr->isOk()) {
                         this->dawCtrls.push_back(companionCtrlStdPtr.get());
@@ -1369,7 +1368,6 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
         grid.grid_dens = settings.wndMain.dens;
     }
 
-    updateGrid();
     isOK = true;
     return isOK;
 }
@@ -1460,13 +1458,6 @@ void MainCtrl::onTick() {
     }
 }
 
-void DawInstance::updateGrid() {
-    for (DawCtrl* pDawCtrl : dawCtrls) {
-        dbgassert(pDawCtrl->isOk());
-        pDawCtrl->updateGrid();
-    }
-}
-
 void DawInstance::onPluginsChanged() {
     for (DawCtrl* pDawCtrl : dawCtrls) {
         dbgassert(pDawCtrl->isOk());
@@ -1546,9 +1537,7 @@ void DawInstance::onTick() {
     const bool bWroteMidiData = tls.host->writeRecordedData(&project);
 
     if (bWroteMidiData) {
-        for (auto ctrl : dawCtrls) {
-            ctrl->updateVisibleTrackContents();
-        }
+        updateVisibleTrackContents();
     }
 
     tls.host->onTick();
@@ -1821,28 +1810,11 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
         ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackCtr);
         ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackReturnCtr);
         ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackMasterCtr);
-
         ctrl->grid.setLayout(file->layout.layoutGrid);
-        ctrl->view->ctr_tracks.layout();
-        ctrl->view->ctr_plugins.layout();
-
-        ctrl->updateVisibleTrackContents();
-        ctrl->view->ctr_tracks.layout();
         ctrl->view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
-        auto& cursor = ctrl->getCursor();
-        auto& guiMgr = ctrl->view->ctr_tracks.guiMgr;
-        if (cursor.isSubtrackSelection() && guiMgr.validTrackIdx(cursor.cursorTrack)) {
-            const track_gui_entry_t* tr = guiMgr.at(cursor.cursorTrack);
-            fixCursorSubRange(cursor, tr->subtracks.size());
-        } else {
-            fixCursorTrackRange(cursor, guiMgr.getTracksVisibleFlat().size());
-        }
     }
+    updateVisibleTrackContents();
     for (DawCtrl* pDawCtrl : dawCtrls) {
-        if (pDawCtrl == tls.mainCtrl)
-            continue;
-        pDawCtrl->updateVisibleTrackContents();
-        pDawCtrl->layoutView();
         pDawCtrl->fixCursor();
     }
 
@@ -1872,6 +1844,14 @@ void CompanionCtrl::getTrackContainers(std::vector<guictr_tracks*>& trackCointai
     trackCointainers.push_back(&view->ctr_tracks2);
 }
 
+guictr_tracks* MainCtrl::getTrackContainer() {
+    return &view->ctr_tracks;
+}
+
+guictr_tracks* CompanionCtrl::getTrackContainer() {
+    return &view->ctr_tracks2;
+}
+
 void MainCtrl::layoutView(int32_t w, int32_t h) {
     w = math::max(640, w);
     h = math::max(480, h);
@@ -1879,7 +1859,7 @@ void MainCtrl::layoutView(int32_t w, int32_t h) {
 
     view->ctr_plugins.layout();
     view->ctr_clipeditor.layout();
-    view->ctr_tracks.relayout();
+    view->ctr_tracks.layout();
     view->ctr_nodes.layout();
     for (guictr_base* ctr : containers) {
         if (ctr == &view->ctr_clipeditor)
@@ -1899,7 +1879,7 @@ void CompanionCtrl::layoutView(int32_t w, int32_t h) {
     h = math::max(480, h);
     viewContainers->layout(w, h);
 
-    view->ctr_tracks2.relayout();
+    view->ctr_tracks2.layout();
     view->ctr_nodes.layout();
     view->ctr_dnd_test->layout();
     view->ctr_clipeditor.layout();
@@ -1951,27 +1931,30 @@ guictr_tracks* MainCtrl::getGuiTrackCtr() {
     auto ctrlThis = get();
     return ctrlThis ? &ctrlThis->view->ctr_tracks : nullptr;
 }
-void MainCtrl::updateGrid() {
-    static int n = 0;
-    if (n++ % 20 == 0) {
-        log_printf("updateGrid call #%d\n", n);
-    }
-    grid.update(view->ctr_tracks.trackView.getSizeContent());
-    view->ctr_tracks.updateVisibleTrackContents();
-}
 
 guitrack_editor& MainCtrl::getTrackEditor() {
     return view->ctr_tracks.trackView;
 }
 
 void MainCtrl::onPluginsChanged() {
+    log_printf("onPluginsChanged\n");
     view->ctr_nodes.reset();
     view->ctr_nodes.refresh();
     view->ctr_plugins.relayout();
 }
 
-void MainCtrl::updateVisibleTrackContents() {
-    view->ctr_tracks.updateVisibleTrackContents();
+void DawCtrl::updateVisibleTrackContents() {
+    static int n = 0;
+    if (n++ % 20 == 0) {
+        log_printf("updateVisibleTrackContents call #%d\n", n);
+    }
+    guictr_tracks* trackContainer = getTrackContainer();
+    trackContainer->updateVisibleTracks();
+    double scrollPixelOffset = trackContainer->getScrollOffsetPixels();
+    trackContainer->layout();
+    grid.update(trackContainer->trackView.getSizeContent());
+    trackContainer->layoutVisibleTracks();
+    trackContainer->scrollToPixelOffset(scrollPixelOffset);
 }
 
 bool MainCtrl::isZooming() {
@@ -2559,15 +2542,6 @@ void CompanionCtrl::onPluginsChanged() {
     view->ctr_nodes.refresh();
 }
 
-void CompanionCtrl::updateVisibleTrackContents() {
-    view->ctr_tracks2.updateVisibleTrackContents();
-}
-
-void CompanionCtrl::updateGrid() {
-    grid.update(view->ctr_tracks2.trackView.getSizeContent());
-    view->ctr_tracks2.updateVisibleTrackContents();
-}
-
 void MainCtrl::addTrackToView(track_t* track, int flags) {
     view->ctr_tracks.addTrack(track, flags);
 }
@@ -2593,11 +2567,11 @@ void MainCtrl::resetView() {
 }
 
 void CompanionCtrl::layoutView() {
-    view->ctr_tracks2.relayout();
+    // view->ctr_tracks2.layout();
 }
 
 void MainCtrl::layoutView() {
-    view->ctr_tracks.relayout();
+    // view->ctr_tracks.layout();
 }
 
 bool CompanionCtrl::isZooming() {

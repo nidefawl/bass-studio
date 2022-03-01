@@ -70,12 +70,12 @@ public:
     void setRowHeight(int h) {
         rowHeight = h;
     }
-    ivec2 getScrollTotalSize() override {
+    ivec2 getScrollTotalSize() const override {
         ivec2 cs = getSizeContent();
         cs.y     = rowHeight * (int32_t) listGuis.size();
         return cs;
     }
-    ivec2 getScrollViewSize() override {
+    ivec2 getScrollViewSize() const override {
         return getSizeContent();
     }
     void updateVisible() {

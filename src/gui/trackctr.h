@@ -632,7 +632,6 @@ public:
 class guictr_tracks : public guictr_base, grid_changed_cb, te_constants, public gui_scrollcontainer {
     friend class guitrack_editor;
     int32_t globalIndex = 0;
-    DawCtrl* const dawCtrl;
 
 public:
     scaled_grid& grid;
@@ -651,10 +650,8 @@ protected:
     int32_t contentViewSize = 0;
 
 public:
-public:
     guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
         : guictr_base(),
-          dawCtrl(_dawCtrl),
           grid(_grid),
           project(_project),
           projectGlobals(_projectGlobals),
@@ -665,6 +662,7 @@ public:
           trackTimeline(_grid),
           loophandles(_project, _projectGlobals, _grid),
           scrollbar(1, 0.0f, *this) {
+        dawCtrl = _dawCtrl,
         setCanMouseHit(true);
         setBackgroundRendered(true);
         _grid.addCallback(this);
@@ -687,32 +685,24 @@ public:
     int32_t setTrackPosition(track_gui_entry_t* e, int32_t y, bool isBottom);
     int32_t getTrackTotalHeight(track_gui_entry_t* e);
     void render(NVGcontext* vg) override;
-    void scrollTo(guibase* g);
     void layout() override;
-    void relayout();
-
-private:
     void updateVisibleTracks();
-
-public:
-    void updateVisibleTrackContents();
+    void layoutVisibleTracks();
 
     void onChildLayoutChanged(guibase* g) override {
-        //updateVisibleTracks();
-        //layout();
     }
     void gridChanged(scaled_grid& _grid) override {
-        dawCtrl->updateGrid();
+        dawCtrl->updateVisibleTrackContents();
     }
     bool handleKeyInput(KeyEvent& kevt) override {
         return trackView.handleKeyInput(kevt);
     }
-    ivec2 getScrollTotalSize() override {
+    ivec2 getScrollTotalSize() const override {
         ivec2 cs = getSizeContent();
         cs.y     = contentHeight;
         return cs;
     }
-    ivec2 getScrollViewSize() override {
+    ivec2 getScrollViewSize() const override {
         ivec2 cs = getSizeContent();
         cs.y     = contentViewSize;
         return cs;
@@ -733,8 +723,15 @@ public:
     void setScrollOffset(float offset) {
         this->scrollbar.setScrollOffset(offset);
     }
+    void scrollToPixelOffset(double pixelOffset) {
+        this->scrollbar.scrollTo(pixelOffset);
+    }
+    void scrollTo(guibase* g);
     float getScrollOffset() const {
         return this->scrollbar.scrollOffset;
+    }
+    double getScrollOffsetPixels() const {
+        return this->scrollbar.toPixels();
     }
     void removeTrack(track_t* track, int flags);
     void addTrack(track_t* track, int flags);

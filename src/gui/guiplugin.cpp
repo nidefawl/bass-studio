@@ -111,11 +111,11 @@ void guiplugin::buttonClicked(guibase* _button) {
         return;
     }
     if (_button == &buttonBypass) {
-        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+        ThreadLock lock = dawCtrl->lockPlayThread();
         toggleDeviceEnableState(effect, FLG_PAR_UPDATE_USER);
     }
     if (_button == &buttonSave) {
-        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+        ThreadLock lock = dawCtrl->lockPlayThread();
 
         plugin_snapshot_t ps;
         effect->makeSnapshot(ps, tracksnapshot_store_opts_t::All());
@@ -127,7 +127,7 @@ void guiplugin::buttonClicked(guibase* _button) {
         return;
     }
     if (_button == &buttonDelete) {
-        removePlugin(effect);
+        removePlugin(dawCtrl->getDaw(), effect);
     }
 }
 bool guiplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
@@ -144,7 +144,7 @@ bool guiplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             }
         }
         if (isShift(evt.kbmods)) {
-            if (MainCtrl::get()->getPluginSel().pluginCtr != this->parent) {
+            if (dawCtrl->getPluginSel().pluginCtr != this->parent) {
                 return true;
             }
         }
@@ -251,18 +251,18 @@ void guiplugin::renderBase(NVGcontext* vg) {
 void guiplugin::handleDraggedMove(MouseEvent& evt) {
     hasDragged = false;
     if (isSelected()) {
-        auto& sel = MainCtrl::get()->getPluginSel();
+        auto& sel = dawCtrl->getPluginSel();
         if (sel.hasSelection()) {
             setDraggedPluginsUI(sel.pluginCtr->dragged, sel);
             parentCtrl->setDragged(&sel.pluginCtr->dragged);
             hasDragged = true;
         }
     } else {
-        MainCtrl::get()->objectDragMove(this, evt);
+        dawCtrl->objectDragMove(this, evt);
     }
 }
 void guiplugin::handleDraggedRelease(MouseEvent& evt) {
-    MainCtrl::get()->objectDragRelease(this, evt);
+    dawCtrl->objectDragRelease(this, evt);
     if (hasDragged) {
         assert(0);
         return;
@@ -285,6 +285,8 @@ void guiplugin::handleDraggedBegin(MouseEvent& evt) {
 //bool handlePluginCtrCommand(action_plugin_ctr action);
 debugproperties* makeUniquePropertiesCtr();
 class guictxtmenu_plugin : public guictxtmenu {
+    DawCtrl* const dawCtrl;
+    effectbase* const effect;
 public:
     static constexpr int CMD_SHOW_AUTOMATION = 1;
     static constexpr int CMD_SHOW_PARAM_LIST = 2;
@@ -293,8 +295,10 @@ public:
     static constexpr int CMD_COPY            = 5;
     static constexpr int CMD_CUT             = 6;
     static constexpr int CMD_PASTE           = 7;
-    effectbase* const effect;
-    guictxtmenu_plugin(effectbase* _effect) : effect(_effect) {
+    guictxtmenu_plugin(DawCtrl* _dawCtrl, effectbase* _effect)
+        : dawCtrl(_dawCtrl),
+          effect(_effect)
+    {
         this->size.x = 260;
         addEntry(new ctxtmenu_entry("Show all automation", CMD_SHOW_AUTOMATION));
         addEntry(new ctxtmenu_entry("Show parameter list", CMD_SHOW_PARAM_LIST));
@@ -306,7 +310,7 @@ public:
         addEntry(new ctxtmenu_entry("Delete", CMD_DELETE));
     }
     void clicked(int _id) override {
-        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+        ThreadLock lock = dawCtrl->lockPlayThread();
         if (_id == CMD_SHOW_PARAM_LIST) {
             auto* gui = effect->getGui();
             if (gui) {
@@ -316,43 +320,42 @@ public:
                 ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
                 ivec2 wndPos{ 0 };
                 this->parentCtrl->window->getPos(&wndPos);
-                auto ctrl = MainCtrl::get();
                 closeContextMenu();
                 dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
-                ctrl->openContextMenu(ctxtMenu, wndPos, 2);
+                dawCtrl->openContextMenu(ctxtMenu, wndPos, 2);
                 return;
             }
         }
         if (_id == CMD_DELETE) {
             log_printf("CMD_DELETE %s\n", StringAsCStr(effect->sName));
-            handlePluginCtrCommand(action_plugin_ctr::PLUGINS_DELETE);
+            handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_DELETE);
         }
         if (_id == CMD_COPY) {
             log_printf("CMD_COPY %s\n", StringAsCStr(effect->sName));
-            handlePluginCtrCommand(action_plugin_ctr::PLUGINS_COPY);
+            handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_COPY);
         }
         if (_id == CMD_CUT) {
             log_printf("CMD_CUT %s\n", StringAsCStr(effect->sName));
-            handlePluginCtrCommand(action_plugin_ctr::PLUGINS_CUT);
+            handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_CUT);
         }
         if (_id == CMD_PASTE) {
             log_printf("CMD_PASTE %s\n", StringAsCStr(effect->sName));
-            handlePluginCtrCommand(action_plugin_ctr::PLUGINS_PASTE);
+            handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_PASTE);
         }
         if (_id == CMD_PASTE) {
             log_printf("CMD_COPY %s\n", StringAsCStr(effect->sName));
-            handlePluginCtrCommand(action_plugin_ctr::PLUGINS_COPY);
+            handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_COPY);
         }
         if (_id == CMD_DUPLICATE) {
             log_printf("CMD_DUPLICATE %s\n", StringAsCStr(effect->sName));
-            handlePluginCtrCommand(action_plugin_ctr::PLUGINS_DUPLICATE);
+            handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_DUPLICATE);
         }
         if (_id == CMD_SHOW_AUTOMATION) {
-            auto tr                          = effect->getTrack();
-            auto trCtr                       = MainCtrl::getGuiTrackCtr();
-            gui_track_automationlane* gtr_at = NULL;
+            auto tr = effect->getTrack();
+            auto trCtr = dawCtrl->getTrackContainer();
+            gui_track_automationlane* gtr_at = nullptr;
             if (tr) {
-                track_gui_entry_t* entry;
+                track_gui_entry_t* entry = nullptr;
                 if (!trCtr->getTrackEntry(tr, &entry)) {
                     dbgassert(0);
                 } else {
@@ -371,8 +374,7 @@ public:
                 }
             }
             if (trCtr && gtr_at) {
-                trCtr->layout();
-                trCtr->updateVisibleTrackContents();
+                dawCtrl->updateVisibleTrackContents();
                 trCtr->scrollTo(gtr_at);
             }
         }
@@ -389,7 +391,7 @@ void guiplugin::handleRightClick(MouseEvent& evt) {
         b = evt.relMousepos.x < hpt;
     }
     if (b) {
-        parentCtrl->openContextMenu(new guictxtmenu_plugin(effect), evt.mousepos);
+        parentCtrl->openContextMenu(new guictxtmenu_plugin(dawCtrl, effect), evt.mousepos);
     }
 }
 void guiplugin::dragMoveOn(guibase* target, ivec2 mousepos) {
@@ -413,7 +415,7 @@ bool guiplugin::isSelected() {
     if (!this->parentCtrl->guiCtrFocused) {
         return false;
     }
-    auto& sel = MainCtrl::get()->getPluginSel();
+    auto& sel = dawCtrl->getPluginSel();
     if (!sel.hasSelection())
         return false;
     if (sel.pluginCtr == this->parent) {
@@ -507,10 +509,9 @@ public:
         knobTest.size = ivec2(size.y, size.y) - ivec2(spacing * 2);
     }
     void render(NVGcontext* vg) override {
-        MainCtrl* ctrl  = MainCtrl::get();
         float rowHeight = size.y;
         float x         = knobTest.right() + spacing;
-        if (ctrl->isCtrOrChildFocused(this)) {
+        if (dawCtrl->isCtrOrChildFocused(this)) {
             nvgBeginPath(vg);
             nvgRect(vg, pos.x, pos.y, size.x, size.y);
             nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER));

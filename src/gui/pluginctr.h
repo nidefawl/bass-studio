@@ -21,7 +21,7 @@ enum class action_plugin_ctr {
     PLUGINS_PASTE,
     PLUGINS_DUPLICATE
 };
-bool handlePluginCtrCommand(action_plugin_ctr action);
+bool handlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action);
 
 class guictr_test : public guictr_base {
 public:

@@ -31,19 +31,20 @@ bool handleAutomatbleContextMenu(automatable_t* atl, int paramIdx, int _id) {
     auto* track = atl->getTrack();
     dbgassert(track);
     automation_t* param = atl->getRegisteredAutomation(paramIdx);
-    auto* guiTrackCtr   = MainCtrl::getGuiTrackCtr();
+    auto dawCtrl = MainCtrl::get();
+    auto* guiTrackCtr   = dawCtrl->getTrackContainer();
     switch (_id) {
         case ID_SHOW_NEW: {
             track_gui_entry_t* entry;
             dbgassert(guiTrackCtr->getPointerEntry(track, &entry));
-            gui_track_automationlane* lane = MainCtrl::getGuiTrackCtr()->addAutomationLane(entry, atl, paramIdx, true);
-            guiTrackCtr->layout();
-            guiTrackCtr->updateVisibleTrackContents();
+            gui_track_automationlane* lane = guiTrackCtr->addAutomationLane(entry, atl, paramIdx, true);
+            dawCtrl->updateVisibleTrackContents();
             guiTrackCtr->scrollTo(lane);
             return true;
         }
         case ID_SHOW: {
-            MainCtrl::get()->showAutomation(track, atl, paramIdx);
+            dawCtrl->showAutomation(track, atl, paramIdx);
+            dawCtrl->updateVisibleTrackContents();
             track_gui_entry_t* entry;
             if (guiTrackCtr->getTrackEntry(track, &entry)) {
                 guiTrackCtr->scrollTo(entry->content);
@@ -53,13 +54,14 @@ bool handleAutomatbleContextMenu(automatable_t* atl, int paramIdx, int _id) {
         case ID_DELETE: {
             if (param) {
                 param->points.clear();
-                MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+                dawCtrl->updateVisibleTrackContents();
             }
             return true;
         }
         case ID_REENABLE: {
             if (param && !param->isActive()) {
-                MainCtrl::get()->showAutomation(track, atl, paramIdx);
+                dawCtrl->showAutomation(track, atl, paramIdx);
+                dawCtrl->updateVisibleTrackContents();
                 param->active = true;
             }
             return true;

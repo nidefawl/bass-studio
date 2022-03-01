@@ -161,11 +161,11 @@ public:
         layout();
     }
 
-    ivec2 getScrollTotalSize() override {
+    ivec2 getScrollTotalSize() const override {
         ivec2 cs = getSizeContent();
         return cs;
     }
-    ivec2 getScrollViewSize() override {
+    ivec2 getScrollViewSize() const override {
         return graph.size;
     }
     void scrollOffsetChanged(int dir, float offset) override;

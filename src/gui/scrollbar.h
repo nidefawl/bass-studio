@@ -8,8 +8,8 @@ class gui_scrollcontainer {
 public:
     gui_scrollcontainer() = default;
     virtual ~gui_scrollcontainer() = default;
-    virtual ivec2 getScrollTotalSize()                                              = 0;
-    virtual ivec2 getScrollViewSize()                                               = 0;
+    virtual ivec2 getScrollTotalSize() const = 0;
+    virtual ivec2 getScrollViewSize() const = 0;
     virtual void scrollOffsetChanged(int dir, float offset)                         = 0;
     virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) = 0;
 };
@@ -41,7 +41,7 @@ public:
         }
         return size[dir] - barS[dir];
     }
-    double toPixels() {
+    double toPixels() const {
         ivec2 vcS    = ctr.getScrollTotalSize();
         ivec2 vs     = ctr.getScrollViewSize();
         int32_t dist = vcS[dir] - vs[dir];

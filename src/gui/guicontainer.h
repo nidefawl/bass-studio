@@ -97,7 +97,7 @@ public:
     virtual ivec2 getPosContent() const {
         return pos + paddingTL(padding);
     }
-    virtual ivec2 getSizeContent() {
+    virtual ivec2 getSizeContent() const {
         return size - (paddingTL(padding) + paddingBR(padding));
     }
     ivec2 getPadding() {

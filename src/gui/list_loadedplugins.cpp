@@ -535,8 +535,9 @@ public:
         if (&btnLoadAll == button) {
 
             log_printf("load all deferred\n", 0);
-            ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-            auto* host      = vsthost::getInstance();
+            DawInstance* daw = DawInstance::get();
+            ThreadLock lock = daw->getPlayThread()->lockThread();
+            auto* host = daw->getHost();
             std::vector<effectbase*> pluginsDeferred;
             std::vector<audio_stage_t*> audioStagesAffected;
             host->getDeferredEffects(pluginsDeferred);
@@ -552,9 +553,9 @@ public:
                 }
             }
             for (audio_stage_t* stage : audioStagesAffected) {
-                vsthost::getInstance()->postPluginLoaded(stage, nullptr);
+                host->postPluginLoaded(stage, nullptr);
             }
-            DawInstance::get()->onPluginsChanged();
+            daw->onPluginsChanged();
         }
     }
     void layout() override {
