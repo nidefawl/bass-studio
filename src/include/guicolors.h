@@ -106,6 +106,7 @@ namespace GuiColor {
     extern constant_t COL_LOOPHANDLES;
     extern constant_t COL_SELECTION_BACKGROUND;
     extern constant_t COL_DRAGDROPMOVE_HIGHLIGHT;
+    extern constant_t COL_LABEL_AUTOMATION_TRACK;
 }// namespace GuiColor
 
 

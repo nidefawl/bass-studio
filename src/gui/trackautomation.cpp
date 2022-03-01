@@ -1,5 +1,8 @@
 #include "trackautomation.h"
 
+#include "guicolors.h"
+#include "guiconstant.h"
+#include "guiglobals.h"
 #include "math/seq_math.h"
 #include "gui.h"
 #include "cursor.h"
@@ -17,6 +20,7 @@
 #include "track.h"
 #include "track_impl.h"
 #include "renderresources.h"
+#include <nanovg.h>
 
 float dataToCtr(float x, float ctrHeight) {
     return (1.0f - x) * ctrHeight;
@@ -419,25 +423,28 @@ void gui_track_automation::render(NVGcontext* vg) {
     if (!this->at || this->paramIdx < 0) {
         return;
     }
-//    if (MainCtrl::get()->getSelectedTrack() == m_track) {
-//        nvgBeginPath(vg);
-//        nvgRect(vg, pos.x, pos.y, size.x, size.y);
-//        nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_SELECTEDTRACK));
-//        nvgFill(vg);
-//    }
+
     ivec2 sizeInset = getSizeContent();
     if (sizeInset.y <= 0 || sizeInset.x <= 0) {
         return;
     }
     ivec2 posInset = getPosContent();
-    nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
+
+    const int htt = theme->get(GuiConstant::CONST_SMALL_LABEL_HEIGHT);
+    String strTitle = this->at->getAutomatableName();
+    strTitle += " ";
+    strTitle += this->at->getParamName(paramIdx);
+    renderTextLabel(vg,
+                    vec2(pos) + vec2(htt/4, size.y),
+                    vec2(size.x, math::min(htt, size.y)),
+                    strTitle,
+                    theme,
+                    htt,
+                    theme->getColor(GuiColor::COL_LABEL_AUTOMATION_TRACK),
+                    NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM
+                    );
     nvgTranslate(vg, posInset.x, posInset.y);
-//    nvgBeginPath(vg);
-//    nvgMoveTo(vg, -4, size.y / 2);
-//    nvgLineTo(vg, size.x + 4, size.y);
-//    nvgStrokeColor(vg, rgbToNvg(0xEFDF62));
-//    nvgStrokeWidth(vg, 3.0f);
-//    nvgStroke(vg);
+
     ivec2 imouse = toControlsObjectSpace(MainCtrl::get()->m_mousePos, this);
 
     const bool bGlbCfg_DrawAutomationLaneMouseCursor = true;

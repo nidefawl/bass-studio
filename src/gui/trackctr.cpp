@@ -262,9 +262,9 @@ void guictr_tracks::updateVisibleTrackContents() {
 
 void guictr_tracks::relayout() {
     double f = scrollbar.toPixels();
-    layout();
     dawCtrl->updateGrid();
     dawCtrl->updateVisibleTrackContents();
+    layout();
     scrollbar.scrollTo(f);
 }
 

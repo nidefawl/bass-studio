@@ -503,7 +503,7 @@ void guitrack_editor::handleRightClick(MouseEvent& evt) {
     parentCtrl->openContextMenu(new guictxtmenu_trackcontent(dawCtrl, nullptr), evt.mousepos);
 }
 
-void gui_track_subtrack::renderMixerInfo(NVGcontext* vg) {
+void gui_track_subtrack::renderMixerInfo(NVGcontext* vg, ivec2 pos, ivec2 size) {
     DAW::Cursor& cursor = m_trackentry->parentCtrl->getCursor();
     String curvalue     = "UNDEF";
     String target       = "<NULL>";

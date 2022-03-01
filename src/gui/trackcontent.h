@@ -214,7 +214,7 @@ public:
         guiTrAutomation.render(vg);
         nvgRestore(vg);
     }
-    virtual void renderMixerInfo(NVGcontext* vg);
+    virtual void renderMixerInfo(NVGcontext* vg, ivec2 pos, ivec2 size);
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (guiTrAutomation.mouseHitTest(mpos, evt)) {
             return true;

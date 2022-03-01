@@ -1400,7 +1400,7 @@ public:
             g->render(vg);
         }
 
-        subtrack->renderMixerInfo(vg);
+        subtrack->renderMixerInfo(vg, getPosContent(), getSizeContent());
     }
     bool isResize(ivec2 mpos) {
         int32_t resizeTopOrBottom = bottom();
