@@ -390,7 +390,7 @@ public:
         rowHeight += w * 4;
         list.setRowHeight(rowHeight);
         //const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
-        const int32_t inset = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
+        const int32_t inset = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
         list.pos            = { inset, inset };
         list.size           = { cs.x - inset * 2, cs.y - inset * 2 };
         for (auto* g : guis) {
@@ -559,7 +559,7 @@ public:
     }
     void layout() override {
         ivec2 cs                               = getSizeContent();
-        const int32_t inset                    = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
+        const int32_t inset                    = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
         const int32_t CONST_FIXED_TITLE_HEIGHT = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
 
         int posLists    = 0;

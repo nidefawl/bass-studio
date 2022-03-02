@@ -608,7 +608,7 @@ public:
     }
     void buttonClicked(guibase* _button) override;
     void layout() override {
-        const int32_t CONST_LAYOUT_MARGIN = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
+        const int32_t CONST_LAYOUT_MARGIN = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
         const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         int32_t inset                     = CONST_LAYOUT_MARGIN;
         int32_t i2                        = inset * 2;

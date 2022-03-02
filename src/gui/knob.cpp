@@ -270,9 +270,6 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
         return;
     }
     const int INS_BRD = 2;
-//    renderWidgetBorder(vg);
-//    renderWidgetBorderPosSize(vg, getStateFlags(), pos + glm::ivec2(0, labelHeight + INS_BRD),
-//                              size - glm::ivec2(0, labelHeight+valueHeight+INS_BRD*2));
     auto renderBorder = [this](NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size, GuiColor::constant_t bgColor) {
         nvgBeginPath(vg);
         nvgRect(vg, pos.x, pos.y, size.x, size.y);
@@ -282,7 +279,7 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
         nvgFillColor(vg, theme->getColor(bgColor));
         nvgFill(vg);
     };
-    auto bgColor       = getBackgroundColor(getStateFlags());
+    auto bgColor       = theme->getColor(getBackgroundColor());
     auto contrastColor = getContrastFontColor(nvgToRGB(bgColor));
     renderButtonAt(vg, insetP, insetS);
     if (labelHeight) {

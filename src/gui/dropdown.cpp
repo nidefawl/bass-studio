@@ -56,18 +56,12 @@ void guidropdownbase::select(dropdown_field_selectitem req, uint32_t idxOffset) 
 }
 
 void guidropdownbase::render(NVGcontext* vg) {
-    //    nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
-    auto stateFlags = getStateFlags();
-    renderWidgetBorder(vg, stateFlags
-                       );
+    const auto stateFlags = getStateFlags();
+    renderWidgetBorder(vg, stateFlags);
     GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
     auto fontSizeScaled = (this->fontSize > 0 ? this->fontSize : size.y) * fFontScale;
 
     if (this->label.length()) {
-        //setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-        //String str = getString();
-        //float pX   = nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), nullptr);
-
         float posXContent = renderTextLabel(vg,
                         vec2(pos) + vec2(size.x - 3, size.y * 0.5f),
                         vec2(size),
@@ -77,12 +71,10 @@ void guidropdownbase::render(NVGcontext* vg) {
                         theme->getColor(c),
                         NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
 
-
         determine_string_width strw(parentCtrl, theme);
         auto widthLabel = strw.getStringWidth(label, fontSizeScaled, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 
         if (posXContent-pos.x + 3.0f >= widthLabel) {
-
             renderTextLabel(vg,
                             vec2(pos) + vec2(3.0f, size.y * 0.5f),
                             vec2(size),
@@ -93,8 +85,6 @@ void guidropdownbase::render(NVGcontext* vg) {
                             NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         }
     } else {
-
-
         renderTextLabel(vg,
                         vec2(pos) + vec2(size) * 0.5f,
                         vec2(size),

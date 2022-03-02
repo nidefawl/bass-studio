@@ -385,7 +385,6 @@ void guictr_layout_entry_handle::render(NVGcontext* vg) {
     }
     int32_t stateFlags = getStateFlags();
     nvgBeginPath(vg);
-    //nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
     nvgRect(vg, 0, 0, size.x, size.y);
     NVGcolor bg = theme->getColor(GuiColor::COL_BASE_BG);
     if (parentCtr->getGui()->isVisible()) {
@@ -393,21 +392,16 @@ void guictr_layout_entry_handle::render(NVGcontext* vg) {
     }
     nvgFillColor(vg, bg);
     nvgFill(vg);
-    //renderWidgetBorder(vg, fl);
-    //renderButtonLabel(vg, fl);
     String str = parentCtr->getGui()->label;
     if (str.length()) {
 
         ivec2 renderPos(size.y / 2, size.y / 2);
         if (str.length() > 0) {
             int fontScale = 12;
-            // math::round((this->fontSize > 0 ? this->fontSize : math::min(size.y, size.x)) * fFontScale);
             GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
             NVGcolor color         = theme->getColor(c);
             UTIL_setFont(vg, theme, fontScale, color, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
             nvgText(vg, renderPos.x, renderPos.y, StringAsCStr(str), NULL);
-            //nvgDrawText(vg, this, pos, size, str, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-            // renderCenteredMultilineText(vg, theme, str, fontScale, c, renderPos, size);
         }
     }
     for (auto c: guis) {
@@ -429,7 +423,6 @@ void guictr_layout_entry_handle::render(NVGcontext* vg) {
 
 void i_ctr_drop_area::render(NVGcontext* vg) {
     nvgBeginPath(vg);
-    //nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
     nvgRect(vg, pos.x, pos.y, size.x, size.y);
     auto handleColor = rgbaToNvg(0x3f00ff00);
     switch (this->dockPos) {

@@ -386,14 +386,16 @@ public:
           m_trackentry(_entry) {
         setText("S");
     }
-    NVGcolor getBackgroundColor(int stateflags) const override {
+    
+
+    GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const override {
         if ((m_track->audio->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE) {
-            return theme->getColor(GuiColor::COL_BTN_SOLO_BG_ENABLED);
+            return GuiColor::COL_BTN_SOLO_BG_ENABLED;
         }
         if ((m_track->audio->flags & audiostageflags_t::SOLO_PARENT) != audiostageflags_t::NONE) {
-            return theme->getColor(GuiColor::COL_BTN_SOLO_BG_PARENT);
+            return GuiColor::COL_BTN_SOLO_BG_PARENT;
         }
-        return theme->getBgColor(stateflags);
+        return guibuttonstate::getBackgroundColorFromState(stateflags);
     }
     bool getState() const override {
         if (m_track->audio) {
@@ -560,10 +562,6 @@ public:
     ctxtmenu_entry_default_channel(int32_t _id, const String& name)
         : ctxtmenu_entry_endpoint(_id, name) {
     }
-    //
-    //void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
-    //    ctxtmenu_entry_endpoint::render(ctxtSize, vg, idx, mouse);
-    //}
 
     bool isBus() override {
         return false;
@@ -767,9 +765,6 @@ public:
                     if (DAW::resolveDefaultConnection(host, project, trImpl, isInput, out)) {
                         return out.name;
                     }
-                    //if (stageEndpoint.isInput) {
-                    //return "Default";
-                    //}
                     return "Default";
                 }
             }
@@ -791,32 +786,12 @@ public:
     }
 };
 class gui_trackcontrols_io : public guictr_base {
-    /* previous dropdown version. external channels only! */
-    //    class guidropdown_select_channel : public guidropdownbase {
-    //        track_t* const m_track;
-    //        const bool isInput;
-    //
-    //    public:
-    //        guidropdown_select_channel(track_t* _track, bool _isInput) : guidropdownbase(), m_track(_track), isInput(_isInput) {
-    //        }
-    //        String getString() {
-    //            return isInput ? m_track->audio->inputChannel.name : m_track->audio->outputChannel.name;
-    //        }
-    //        virtual void handleDraggedRelease(MouseEvent& evt) {
-    //            guictxtmenu_base* popup = new guidropdown_select_channel_ctxt(m_track, isInput);
-    //            popup->size             = size;
-    //            popup->setFontSize(size.y);
-    //            popup->size.x = math::max(250, popup->size.x);
-    //            this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
-    //        }
-    //    };
     guidropdown_select_bus selectInput;
     guidropdown_select_bus selectOutput;
 
 public:
     explicit gui_trackcontrols_io(track_gui_entry_t* _entry)
         : guictr_base(),
-          /* m_track(_track), */
           selectInput(_entry, true),
           selectOutput(_entry, false) {
         add(&selectInput);
@@ -829,7 +804,7 @@ public:
     }
     void layout() override {
         const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-        const int32_t CONST_LAYOUT_MARGIN = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
+        const int32_t CONST_LAYOUT_MARGIN = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
         int32_t inset                     = CONST_LAYOUT_MARGIN;
         selectInput.pos                   = ivec2(inset, inset);
         selectOutput.pos                  = ivec2(inset, TRACK_HEIGHT_STEP + inset);
@@ -951,7 +926,7 @@ public:
     }
     void layout() override {
 
-        const int32_t CONST_LAYOUT_MARGIN = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
+        const int32_t CONST_LAYOUT_MARGIN = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
         const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         int32_t inset                     = CONST_LAYOUT_MARGIN;
         int32_t i2                        = inset * 2;
@@ -1184,7 +1159,7 @@ public:
         return false;
     }
     void layout() override {
-        const int32_t CONST_LAYOUT_MARGIN = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
+        const int32_t CONST_LAYOUT_MARGIN = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
         const int titleHeight             = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         //TODO: this is not optimal!

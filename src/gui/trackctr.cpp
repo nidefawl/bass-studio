@@ -439,9 +439,8 @@ void guictr_tracks::render(NVGcontext* vg) {
         auto& dragDropTarget = dawCtrl->getDragDropTarget();
         if (dragDropTarget.src) {
             auto* trackMixers = static_cast<guitrack_mixers*>(dragDropTarget.src);
-            //dragDropTarget.src->renderWidgetBorderPosSize(vg, flags, pos, size)
             int n       = trackMixers->theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
-            auto bgPos  = /*trackMixers->getPosContent()+*/ ivec2(n);
+            auto bgPos  = ivec2(n);
             auto bgSize = trackMixers->getSizeContent() - ivec2(n * 2);
             if (bgSize.x > 0 && bgSize.y > 0) {
                 nvgGlobalAlpha(vg, 0.5f);
@@ -452,8 +451,7 @@ void guictr_tracks::render(NVGcontext* vg) {
                     nvgRect(vg, target.dst->pos.x, target.dst->pos.y, target.dst->size.x, target.dst->size.y);
                     nvgPathWinding(vg, NVGwinding::NVG_CCW);
                 }
-                auto color = getBackgroundColor(0);
-                nvgFillColor(vg, color);
+                nvgFillColor(vg, theme->getColor(getBackgroundColor()));
                 nvgFill(vg);
                 nvgGlobalAlpha(vg, 1.0f);
             }

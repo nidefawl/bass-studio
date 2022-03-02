@@ -176,15 +176,14 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
     int32_t fl = getStateFlags();
     renderWidgetBorder(ctx, fl);
 
-    nvgBeginPath(ctx);
-    nvgRoundedRect(ctx, pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2, 3);
+    // nvgBeginPath(ctx);
+    // nvgRect(ctx, pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2);
+    // if (mEditable && mFocused)
+    //     nvgFillColor(ctx, theme->getColor(mValidFormat ? GuiColor::COL_BG_DRK_FOCUSED : GuiColor::COL_INVALID_INPUT));
+    // else
+    //     nvgFillColor(ctx, theme->getColor(GuiColor::COL_BG_DRK));
 
-    if (mEditable && mFocused)
-        nvgFillColor(ctx, mValidFormat ? theme->getColor(GuiColor::COL_BG_DRK_FOCUSED) : nvgRGBA(200, 90, 90, 255));
-    else
-        nvgFillColor(ctx, theme->getColor(GuiColor::COL_BG_DRK));
-
-    nvgFill(ctx);
+    // nvgFill(ctx);
 
 
     // clip visible text area

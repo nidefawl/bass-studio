@@ -181,16 +181,14 @@ class guibutton_audioengine : public guibuttonstate {
     float cpuUsage = 0.0f;
 
 public:
-    guibutton_audioengine() : guibuttonstate() {
-    }
+    guibutton_audioengine() = default;
     bool getState() const override {
         return vsthost::getInstance()->isStreaming();
     }
     void render(NVGcontext* vg) override;
     void prerender(NVGcontext* vg) override;
-    void onTick(AppCtrl* appctrl) override {
-    }
-    NVGcolor getBackgroundColor(int stateflags) const override;
+    void renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const override;
+
 };
 class guictr_tempocontrols : public guictr_base {
     project_globals_t& projectGlobals;

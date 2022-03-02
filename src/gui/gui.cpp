@@ -379,6 +379,7 @@ void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& 
         nvgTranslate(vg, -ledPos.x, -ledPos.y);
     }
 }
+
 void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
     float inset = math::max(2.0f, size.x / 8.0f);
     nvgBeginPath(vg);
@@ -386,6 +387,7 @@ void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& col
     nvgFillColor(vg, getContrastFontColorNvg(color));
     nvgFill(vg);
 }
+
 void drawAttachedBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin) {
     static const ivec2 borderThickness(6);
     posInset -= ivec2(margin);
@@ -420,41 +422,32 @@ void drawAttachedBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posIn
     nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
     nvgFill(vg);
 }
+
 void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) const {
     if (flags & FLG_RENDER_BACKGROUND) {
         renderWidgetBorderPosSize(vg, flags, pos, size);
     }
 }
+
 void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const {
     nvgBeginPath(vg);
-    //  nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
     nvgRect(vg, pos.x, pos.y, size.x, size.y);
     nvgFillColor(vg, theme->getBgStrokeColor(flags));
     nvgFill(vg);
-    //  nvgStrokeColor(vg, theme->getBgStrokeColor(flags));
-    //  nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
-    //  nvgStroke(vg);
     int n       = theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
     auto bgPos  = pos + ivec2(n);
     auto bgSize = size - ivec2(n * 2);
     if (bgSize.x > 0 && bgSize.y > 0) {
+        NVGcolor bgColor = theme->getColor(getBackgroundColor());
         nvgBeginPath(vg);
         nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
-        auto color = getBackgroundColor(flags);
-        nvgFillColor(vg, color);
+        nvgFillColor(vg, bgColor);
         nvgFill(vg);
     }
-    //
-    //  nvgBeginPath(vg);
-    //  nvgRect(vg, pos.x-1, pos.y-1, size.x+2, size.y+2);
-    //  nvgFillColor(vg, rgbToNvg(0x00FF00));
-    //  nvgFill(vg);
-    //  nvgBeginPath(vg);
-    //  nvgRect(vg, pos.x, pos.y, size.x, size.y);
-    //  nvgFillColor(vg, theme->getBgStrokeColor(flags));
-    //  nvgFill(vg);
 }
+
 debugproperties* makeUniquePropertiesCtr();
+
 void guibase::handleMouseDownBegin(MouseEvent& evt) {
     if (evt.button == 0) {
         handleDraggedBegin(evt);
@@ -462,46 +455,39 @@ void guibase::handleMouseDownBegin(MouseEvent& evt) {
         handleRightClick(evt);
     } else if (evt.button > 1) {
 #if BUILD_VSTHOST
-        {
-
-
-            debugproperties* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
-            guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
-            ctxtMenu->size = { 640, 480 };
-            ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
-            dbgPropertiesCtrPopup->setDebugPropertyHandle(this);
-            dbgPropertiesCtrPopup->setTheme(theme);
-            dbgPropertiesCtrPopup->layout();
-            dbgPropertiesCtrPopup->theme = nullptr;
-            this->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
-            dbgPropertiesCtrPopup->setDebugPropertyHandle(this);
-            dbgPropertiesCtrPopup->layout();
-            setDebugPropertyHandle(this);
-        }
+        debugproperties* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
+        guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
+        ctxtMenu->size = { 640, 480 };
+        ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
+        dbgPropertiesCtrPopup->setDebugPropertyHandle(this);
+        dbgPropertiesCtrPopup->setTheme(theme);
+        dbgPropertiesCtrPopup->layout();
+        dbgPropertiesCtrPopup->theme = nullptr;
+        this->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
+        dbgPropertiesCtrPopup->setDebugPropertyHandle(this);
+        dbgPropertiesCtrPopup->layout();
+        setDebugPropertyHandle(this);
 #endif
     }
 }
+
 guitheme_t* getDefaultTheme() {
     static guitheme_t theme;
     return &theme;
 }
+
 bool guibase::isChildOf(guibase* g) {
     if (this == g) return true;
     return parent && parent->isChildOf(g);
 }
+
 void guibase::setFont(NVGcontext* vg, float size, NVGcolor color, int alignment) {
     dbgassert(theme);
     UTIL_setFont(vg, theme, size, color, alignment);
 }
+
 void guibase::setTheme(guitheme_t* theme) {
     this->theme = theme;
-}
-
-NVGcolor guibutton::getBackgroundColor(int stateflags) const {
-    if ((stateflags & FLG_HAS_COLOR_BG) && getState()) {
-        return theme->getColor(buttonColor);
-    }
-    return theme->getBgColor(stateflags);
 }
 
 void guibuttontoggle::render(NVGcontext* vg) {
@@ -583,9 +569,6 @@ void guibase::setParent(guibase* parent) {
     if (!parentCtrl && parent) {
         setTheme(parent->theme);
     }
-}
-NVGcolor guibase::getBackgroundColor(int stateflags) const {
-    return theme->getBgColor(stateflags);
 }
 String guibase::getClassName() const {
     return typeName(*this);

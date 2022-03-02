@@ -858,7 +858,6 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 }
 
 void guictr_pluginview::render(NVGcontext* vg) {
-    renderBackground(vg);
     ivec2 cp = this->getPosContent();
     ivec2 cs = this->getSizeContent();
     bool visible = dawCtrl->isPluginViewVisible();

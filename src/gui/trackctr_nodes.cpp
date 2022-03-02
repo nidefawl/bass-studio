@@ -60,10 +60,9 @@ void gui_graph_entry::render(NVGcontext* vg) {
         return;
     }
     renderFrameBase(vg);
-    String text       = getText();
-    int flags         = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
-    ivec2 sizeContent = getSizeContent();
-    renderTitleBar(vg, sizeContent, text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, 0, flags, true);
+    String text = getText();
+    int flags   = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
+    renderTitleBar(vg, getSizeContent(), text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, 0, flags, true);
     renderFrameOutline(vg);
     for (guibase* gui : guis) {
         nvgSave(vg);

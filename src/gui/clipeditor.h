@@ -425,7 +425,7 @@ public:
         nvgTranslate(vg, posInset.x, posInset.y);
 
         ivec2 center = getSizeContent() / 2;
-        if (view.clip() != NULL) {
+        if (view.clip()) {
             nvgSave(vg);
             settings.render(vg);
             nvgRestore(vg);
@@ -459,6 +459,7 @@ public:
         nvgResetTransform(vg);
     }
     void layout() override {
+        const int32_t CONST_LAYOUT_MARGIN = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
         ivec2 cs      = getSizeContent();
         settings.pos  = ivec2(0, 0);
         settings.size = ivec2(250, cs.y);
@@ -466,13 +467,13 @@ public:
         guibase* leftContainer = &settings;
         if (arp.isVisible()) {
             leftContainer = &arp;
-            arp.pos       = ivec2(settings.right() + margin, 0);
+            arp.pos       = ivec2(settings.right() + CONST_LAYOUT_MARGIN, 0);
             arp.size      = ivec2(250, cs.y);
         }
 
-        noteeditor.pos   = ivec2(leftContainer->right() + margin, 0);
+        noteeditor.pos   = ivec2(leftContainer->right() + CONST_LAYOUT_MARGIN, 0);
         noteeditor.size  = ivec2(cs.x - leftContainer->right(), cs.y);
-        audioeditor.pos  = ivec2(leftContainer->right() + margin, 0);
+        audioeditor.pos  = ivec2(leftContainer->right() + CONST_LAYOUT_MARGIN, 0);
         audioeditor.size = ivec2(cs.x - leftContainer->right(), cs.y);
 
         for (guibase* gui : guis) {

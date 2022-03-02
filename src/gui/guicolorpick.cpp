@@ -83,7 +83,7 @@ void gui_color_pick::render(NVGcontext* vg) {
         inset = 4;
         nvgBeginPath(vg);
         nvgRect(vg, knH.left() - sizeQuad, 0, sizeQuad, sizeQuad);
-        nvgFillColor(vg, getBackgroundColor(getStateFlags()));
+        nvgFillColor(vg, theme->getColor(getBackgroundColor()));
         nvgFill(vg);
     }
     nvgBeginPath(vg);

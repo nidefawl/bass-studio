@@ -75,8 +75,7 @@ void PopupCtrl::open(guictxtmenu_base* _ctxtmenu, ivec2 pos, bool bResizeable) {
     canTakeInputFocus           = _ctxtmenu->canTakeInputFocus;
     popupCtrs->maxHeight        = _ctxtmenu->maxHeight;
     popupCtrs->scrollbarOutside = _ctxtmenu->scrollbarOutside;
-    bool hasThemeAndRound       = !_ctxtmenu->theme ? false : _ctxtmenu->theme->getFloat(GuiConstant::CONST_ROUND) > 0;
-    popupCtrs->setBackgroundRendered(_ctxtmenu->isBackgroundRendered() && !hasThemeAndRound);
+    popupCtrs->setBackgroundRendered(_ctxtmenu->isBackgroundRendered());
     _ctxtmenu->setParent(popupCtrs);
     _ctxtmenu->setControl(this);
     _ctxtmenu->determineSize(_ctxtmenu->size);

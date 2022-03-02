@@ -10,7 +10,7 @@
 
 template<uint32_t NCHANNELS = 1, typename METER>
 void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const ivec2& size, METER* meter) {
-    const int32_t CONST_LAYOUT_MARGIN = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
+    const int32_t CONST_LAYOUT_MARGIN = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
     const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     UIFont::font_instance instance    = theme->getFont(UIFont::FONT_DECIMAL);
     UIFont::bindFont(vg, instance);
@@ -207,7 +207,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
 }
 template<uint32_t NCHANNELS = 1, typename METER>
 void renderMeterAt2(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const ivec2& size, METER* meter) {
-    const int32_t CONST_LAYOUT_MARGIN = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
+    const int32_t CONST_LAYOUT_MARGIN = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
     const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     int32_t spacing                   = CONST_LAYOUT_MARGIN;
     ivec2 inset(spacing);

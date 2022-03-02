@@ -80,6 +80,7 @@ namespace GuiColor {
     extern constant_t COL_TEXTBOX_TEXT;
     extern constant_t COL_TEXTBOX_TEXT_DISABLED;
     extern constant_t COL_TEXTBOX_TEXT_MARKED;
+    extern constant_t COL_INVALID_INPUT;
     extern constant_t COL_BTN_BG_DEFAULT_INACTIVE;
     extern constant_t COL_BTN_BG_DEFAULT_ACTIVE;
     extern constant_t COL_BTN_BG_BYPASS_ACTIVE;

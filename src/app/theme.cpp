@@ -195,14 +195,9 @@ NVGcolor guitheme_t::getBgColor(int32_t flags) const {
     if (flags & FLG_DRG) {
         return getColor(GuiColor::COL_BASE_BG_PRESSED);
     }
-    //if (flags & FLG_FOC) {
-    //return colorBgFocused;
-    //}
-    //if (flags & FLG_HVRD) {
-    //return colorBgHover;
-    //}
     return getColor(GuiColor::COL_BASE_BG);
 }
+
 NVGcolor guitheme_t::getBgStrokeColor(int32_t flags) const {
     if (flags & FLG_FOC) {
         return getColor(GuiColor::COL_BASE_BG_FOCUSED);
@@ -210,11 +205,9 @@ NVGcolor guitheme_t::getBgStrokeColor(int32_t flags) const {
     if (flags & FLG_HVRD) {
         return getColor(GuiColor::COL_BASE_BG_HOVER);
     }
-    //if (!(flags & FLG_ENBL)) {
-    //return colorBgDisabled;
-    //}
     return getColor(GuiColor::COL_BASE_BG_STROKE);
 }
+
 NVGcolor guitheme_t::getFrameColorOutline() const {
     return getColor(GuiColor::COL_BASE_BG_FRAME_OUTLINE);
 }

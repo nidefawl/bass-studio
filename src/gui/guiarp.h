@@ -69,9 +69,10 @@ public:
         if (!setScissorTransformContainer(vg)) {
             return;
         }
+        ivec2 cs = getSizeContent();
         renderFrameBase(vg);
         int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
-        renderTitleBar(vg, size, this->text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, buttonBypass.right(), flags, true);
+        renderTitleBar(vg, cs, this->text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, buttonBypass.right(), flags, true);
         renderFrameOutline(vg);
         buttonBypass.render(vg);
         midiarp* arp = getArp();
@@ -81,18 +82,18 @@ public:
             }
             for (guiknob* knob : knobs) {
                 nvgBeginPath(vg);
-                int32_t widthParam = this->getSizeContent().x - knob->right() - INSET_TITLE * 2;
+                int32_t widthParam = cs.x - knob->right() - INSET_TITLE * 2;
                 nvgRect(vg, knob->right() + INSET_TITLE, knob->pos.y, widthParam, knob->size.y);
                 nvgFillColor(vg, theme->getFrameColorHighlight());
                 nvgFill(vg);
                 String text = knob->label;
                 if (text[0]) {
                     setFont(vg, (int) ((knob->size.y / 2.0)), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-                    nvgText(vg, knob->right() + INSET_TITLE + INSET_TITLE, knob->pos.y + INSET_TITLE, StringAsCStr(text), NULL);
+                    nvgText(vg, knob->right() + INSET_TITLE + INSET_TITLE, knob->pos.y + INSET_TITLE, StringAsCStr(text), nullptr);
                     text = formatParameterValue(knob);
                     if (text[0]) {
                         setFont(vg, (int) ((knob->size.y / 2.0) * 0.8), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
-                        nvgText(vg, knob->right() + INSET_TITLE + INSET_TITLE, knob->bottom() - INSET_TITLE, StringAsCStr(text), NULL);
+                        nvgText(vg, knob->right() + INSET_TITLE + INSET_TITLE, knob->bottom() - INSET_TITLE, StringAsCStr(text), nullptr);
                     }
                 }
             }

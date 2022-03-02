@@ -259,7 +259,7 @@ public:
     }
     guibase* getTopParent() {
         guibase* parentGui = parent;
-        while (parentGui != NULL) {
+        while (parentGui) {
             parentGui = parentGui->parent;
         }
         return parentGui;
@@ -350,7 +350,7 @@ public:
         vpos.y      = math::max(posTL.y, pos.y);
         vsize.x     = math::min(posBR.x, (pos + size).x) - vpos.x;
         vsize.y     = math::min(posBR.y, (pos + size).y) - vpos.y;
-        if (parent != NULL) {
+        if (parent) {
             parent->scissorClip(vpos, vsize);
         }
         vpos = toContainerSpace(vpos);
@@ -369,13 +369,13 @@ public:
     }
     void getHierachy(std::vector<guibase*>& stack) {
         guibase* p = this->parent;
-        while (p != NULL) {
+        while (p) {
             stack.push_back(p);
             p = p->parent;
         }
     }
     virtual void onChildLayoutChanged(guibase* g) {
-        if (this->parent != NULL) {
+        if (this->parent) {
             this->parent->onChildLayoutChanged(this);
         }
     }
@@ -389,16 +389,16 @@ public:
         return true;
     }
     virtual guibase* getFocusedContainer() {
-        if (this->parent != NULL) {
+        if (this->parent) {
             return this->parent->getFocusedContainer();
         }
-        return NULL;
+        return nullptr;
     }
     void renderWidgetBorder(NVGcontext* vg, int32_t flags) const;
-    void renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const;
+    virtual void renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const;
     virtual ivec2 toScreenSpace(ivec2 in) const {
         in += this->pos;
-        if (this->parent != NULL) {
+        if (this->parent) {
             in = this->parent->toScreenSpace(in);
         }
         return in;
@@ -409,13 +409,17 @@ public:
     virtual int32_t getStateFlags() const;
 
     virtual GuiColor::constant_t getBackgroundColor() const {
-        if (!isBackgroundRenderedInset()){
-            if (focused()) {
-                return GuiColor::COL_BG_DRK_FOCUSED;
-            }
-            return GuiColor::COL_BG_DRK;
+        return getBackgroundColorFromState(getStateFlags());
+    }
+
+    virtual GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const {
+        if (!(stateflags & FLG_ENBL)) {
+            return GuiColor::COL_BASE_BG_DISABLED;
         }
-        return GuiColor::COL_BG_BRT;
+        if (stateflags & FLG_DRG) {
+            return GuiColor::COL_BASE_BG_PRESSED;
+        }
+        return GuiColor::COL_BASE_BG;
     }
 
     BaseCtrl* getControl() const {
@@ -432,7 +436,6 @@ public:
     }
 
 protected:
-    virtual NVGcolor getBackgroundColor(int stateflags) const;
     bool isChildOf(guibase* parentSearch);
     void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment);
     void setTheme(guitheme_t* theme);

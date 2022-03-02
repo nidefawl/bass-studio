@@ -104,6 +104,16 @@ public:
         return (paddingTL(padding) + paddingBR(padding));
     }
 
+    GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const override {
+        if (!isBackgroundRenderedInset()){
+            if (focused()) {
+                return GuiColor::COL_BG_DRK_FOCUSED;
+            }
+            return GuiColor::COL_BG_DRK;
+        }
+        return GuiColor::COL_BG_BRT;
+    }
+
     void renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle);
     void renderFrameBase(NVGcontext* vg);
     void renderFrameOutline(NVGcontext* vg);

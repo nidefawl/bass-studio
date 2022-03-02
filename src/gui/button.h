@@ -32,7 +32,9 @@ public:
         buttonColor = color;
         setFlagInternal(FLG_HAS_COLOR_BG);
     }
-    NVGcolor getBackgroundColor(int stateflags) const override;
+
+    GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const override;
+
     void handleDraggedMove(MouseEvent& evt) override {
     }
     void handleDraggedRelease(MouseEvent& evt) override {

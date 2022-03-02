@@ -242,29 +242,42 @@ void guibutton_audioengine::render(NVGcontext* vg) {
     renderButtonLabel(vg, fl);
 }
 
-NVGcolor guibutton_audioengine::getBackgroundColor(int stateflags) const {
-    NVGcolor c = theme->getBgColor(stateflags);
-    auto const daw = dawCtrl ? dawCtrl->getDaw() : nullptr;
-    if (daw) {
-        const auto& globals      = daw->getGlobals();
-        const float fBarNumFloor = (int32_t) stats.tickBar / (int32_t) TICKS_BAR;
+void guibutton_audioengine::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const {
+    nvgBeginPath(vg);
+    nvgRect(vg, pos.x, pos.y, size.x, size.y);
+    nvgFillColor(vg, theme->getBgStrokeColor(flags));
+    nvgFill(vg);
+    int n       = theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
+    auto bgPos  = pos + ivec2(n);
+    auto bgSize = size - ivec2(n * 2);
+    if (bgSize.x > 0 && bgSize.y > 0) {
 
-        // yikes, this sucks. Taking the tickBar from non-determenistic host stats _and_ using own timer to get per GPU frame progress
-        const auto tmConstantBar  = 60000.0 * 100.0 / static_cast<double>(globals.tempo100);
-        const auto barProgress    = getTimeMillisD() / tmConstantBar;
-        const auto fBarTmAbsolute = fBarNumFloor + fmod(barProgress, 1.0);
+        
+        NVGcolor bgColor = theme->getColor(getBackgroundColor());
+        auto const daw = dawCtrl ? dawCtrl->getDaw() : nullptr;
+        if (daw) {
+            const auto& globals      = daw->getGlobals();
+            const float fBarNumFloor = (int32_t) stats.tickBar / (int32_t) TICKS_BAR;
 
-        float t = static_cast<float>(std::sin(fBarTmAbsolute * M_PI * 2.0) * 0.5 + 0.5);
+            // yikes, this sucks. Taking the tickBar from non-determenistic host stats _and_ using own timer to get per GPU frame progress
+            const auto tmConstantBar  = 60000.0 * 100.0 / static_cast<double>(globals.tempo100);
+            const auto barProgress    = getTimeMillisD() / tmConstantBar;
+            const auto fBarTmAbsolute = fBarNumFloor + fmod(barProgress, 1.0);
 
-        vec4 v{ c.r, c.g, c.b, c.a };
-        vec4 v2 = v;
-        v2.r    = math::min(1.0f, v.r * this->cpuUsage);
-        v2.b    = math::min(1.0f, v.b * t);
-        float d = (float) (math::clamp(t, 0.0f, 1.0f));
-        v       = v + d * (v2 - v);
-        return NVGcolor{ v.x, v.y, v.z, v.w };
+            float t = static_cast<float>(std::sin(fBarTmAbsolute * M_PI * 2.0) * 0.5 + 0.5);
+
+            vec4 v{ bgColor.r, bgColor.g, bgColor.b, bgColor.a };
+            vec4 v2 = v;
+            v2.r    = math::min(1.0f, v.r * this->cpuUsage);
+            v2.b    = math::min(1.0f, v.b * t);
+            float d = (float) (math::clamp(t, 0.0f, 1.0f));
+            v       = v + d * (v2 - v);
+            bgColor = NVGcolor{ v.x, v.y, v.z, v.w };
+        }
+        nvgBeginPath(vg);
+        nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
+        nvgFillColor(vg, bgColor);
+        nvgFill(vg);
     }
-
-
-    return c;
 }
+

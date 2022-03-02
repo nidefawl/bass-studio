@@ -227,9 +227,8 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     }
     auto dawInstance = dawMainCtrl->getDaw();
     String dawPath  = "./projects/";
+    // String projName = "test-deferred.project";
     String projName = "1clip.project";
-    //projName = "arp-test.project";
-    //projName = "kshmr-samples-test.project";
     int flags = 0x1;// defer load
         // flags = 0; // no defer load
     dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
