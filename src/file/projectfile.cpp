@@ -252,12 +252,14 @@ void load(Archive& archive, track_snapshot_t& m, const std::uint32_t version) {
             make_nvp("plugins", m.data)
         );
         int32_t stageId = m.stageIds.stageId;
-        archive(make_nvp("stageId", stageId));
-        stageId *= 4;
-        m.stageIds.stageId = stageId++;
-        m.stageIds.inputStageId = stageId++;
-        m.stageIds.outputStageId = stageId++;
-        m.stageIds.outputPostStageId = stageId++;
+        make_optional_nvp(archive, "stageId", stageId);
+        if (stageId >= 0) {
+            stageId *= 4;
+            m.stageIds.stageId = stageId++;
+            m.stageIds.inputStageId = stageId++;
+            m.stageIds.outputStageId = stageId++;
+            m.stageIds.outputPostStageId = stageId++;
+        }
     } else {
         archive(
             make_nvp("idx", m.localIdx),
