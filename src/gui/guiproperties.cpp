@@ -1,3 +1,4 @@
+#include <glm/ext/vector_float2.hpp>
 #include <glm/geometric.hpp>
 #include <nanovg.h>
 #include <vector>
@@ -86,6 +87,15 @@ namespace Table {
 
     template<>
     void cellClicked(const click_ctxt_t& ctxt, const tbltypesaferef<float>& obj) {
+        if (safeRefOk(obj.saferef)) {
+            if (ctxt.callback) {
+                ctxt.callback->onClick(ctxt, obj.t);
+            }
+        }
+    }
+
+    template<>
+    void cellClicked(const click_ctxt_t& ctxt, const tbltypesaferef<glm::ivec2>& obj) {
         if (safeRefOk(obj.saferef)) {
             if (ctxt.callback) {
                 ctxt.callback->onClick(ctxt, obj.t);
