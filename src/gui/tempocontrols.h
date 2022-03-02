@@ -23,7 +23,7 @@ public:
     }
     void render(NVGcontext* vg) override {
         renderWidgetBorder(vg, getStateFlags());
-        String tempo = FormatTempo(project_controller_t::get()->getCurrentTempoBPM());
+        String tempo = FormatTempo(dawCtrl->getDaw()->getCurrentTempoBPM());
         setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(tempo), NULL);
     }
@@ -38,9 +38,10 @@ public:
             if (math::abs(disty) < 1)
                 return;
             evt.dragDistance->y = 0;
-            int tempo           = project_controller_t::get()->getCurrentTempo();
-            DawInstance::get()->setTempo(tempo - disty * 100);
-            DawInstance::get()->updateVisibleTrackContents();
+            auto const daw = dawCtrl->getDaw();
+            int tempo = daw->getCurrentTempo();
+            daw->setTempo(tempo - disty * 100);
+            daw->updateVisibleTrackContents();
         }
     }
     void handleDraggedRelease(MouseEvent& evt) override {
@@ -61,9 +62,9 @@ public:
         setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         int n;
         if (idx == 0) {
-            n = project_controller_t::get()->sigNum();
+            n = dawCtrl->getDaw()->sigNum();
         } else {
-            n = project_controller_t::get()->sigDen();
+            n = dawCtrl->getDaw()->sigDen();
         }
         String str = StringFormat("%d", n);
         nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);

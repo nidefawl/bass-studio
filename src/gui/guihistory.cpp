@@ -53,41 +53,31 @@ public:
     }
     void rebuildList() {
         std::vector<gui_list_entry*> _newList;
-        DawInstance* daw    = DawInstance::get();
+        auto const daw = dawCtrl->getDaw();
         int32_t selectedIdx = -1;
-        if (daw) {
-            auto& editHistory = daw->getHist();
-            std::vector<action_base*> m_undo;
-            std::vector<action_base*> m_redo;
-            editHistory.getActions(m_undo, m_redo);
-            for (auto it = m_redo.begin(); it != m_redo.end(); it++) {
-                action_base* entry          = *it;
-                gui_history_list_entry_t* g = new gui_history_list_entry_t(entry);
-                _newList.push_back(g);
-            }
-            for (auto it = m_undo.rbegin(); it != m_undo.rend(); it++) {
-                action_base* entry          = *it;
-                gui_history_list_entry_t* g = new gui_history_list_entry_t(entry);
-                _newList.push_back(g);
-            }
-            selectedIdx  = m_redo.size();
-            histRevision = editHistory.getRevision();
+        auto& editHistory = daw->getHist();
+        std::vector<action_base*> m_undo;
+        std::vector<action_base*> m_redo;
+        editHistory.getActions(m_undo, m_redo);
+        for (auto it = m_redo.begin(); it != m_redo.end(); ++it) {
+            _newList.push_back(new gui_history_list_entry_t(*it));
         }
+        for (auto it = m_undo.rbegin(); it != m_undo.rend(); ++it) {
+            _newList.push_back(new gui_history_list_entry_t(*it));
+        }
+        selectedIdx  = m_redo.size();
+        histRevision = editHistory.getRevision();
         historyList.setList(_newList);
         historyList.setSelectedIdx(selectedIdx);
         layout();
     }
     void onTick(AppCtrl* ctrl) override {
-        DawInstance* daw = DawInstance::get();
-        if (daw) {
-            if (histRevision != daw->getHist().getRevision()) {
-                rebuildList();
-            }
+        if (histRevision != dawCtrl->getDaw()->getHist().getRevision()) {
+            rebuildList();
         }
     }
     void render(NVGcontext* vg) override {
-        DawInstance* daw = DawInstance::get();
-        if (!daw || histRevision != daw->getHist().getRevision()) {
+        if (histRevision != dawCtrl->getDaw()->getHist().getRevision()) {
             return;
         }
         if (!setScissorTransform(vg)) {
@@ -98,24 +88,6 @@ public:
             c->render(vg);
             nvgRestore(vg);
         }
-//        int colorIdx      = 0;
-//        auto renderDebugF = [](NVGcontext* vg, guibase* gui, NVGcolor color) {
-//            nvgBeginPath(vg);
-//            nvgRect(vg, gui->pos.x, gui->pos.y, gui->size.x, gui->size.y);
-//            nvgFillColor(vg, color);
-//            nvgFill(vg);
-//        };
-//        static NVGcolor dbgcolorsa[5] = {
-//            nvgRGBA(255, 0, 0, 55),
-//            nvgRGBA(0, 255, 0, 55),
-//            nvgRGBA(0, 0, 255, 55),
-//            nvgRGBA(255, 0, 255, 55),
-//            nvgRGBA(255, 255, 0, 55)
-//        };
-
-//        for (guibase* g : guis) {
-//            //renderDebugF(vg, g, dbgcolorsa[colorIdx++ % 5]);
-//        }
     }
     void buttonClicked(guibase* button) override {
     }

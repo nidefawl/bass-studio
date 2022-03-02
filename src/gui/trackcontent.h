@@ -190,7 +190,7 @@ public:
         return false;
     }
     void handleDraggedBegin(MouseEvent& evt) override {
-        DawInstance::get()->setSelectedTrack(m_track);
+        dawCtrl->getDaw()->setSelectedTrack(m_track);
         evt.relMousepos += getPosContent();
         parent->handleDraggedBegin(evt);
     }
@@ -206,7 +206,7 @@ public:
     }
 
     void render(NVGcontext* vg) override {
-        if (DawInstance::get()->getSelectedTrack() == m_track) {
+        if (dawCtrl->getDaw()->getSelectedTrack() == m_track) {
             nvgBeginPath(vg);
             nvgRect(vg, pos.x, pos.y, size.x, size.y);
             nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_SELECTEDTRACK));
@@ -296,7 +296,7 @@ public:
         return parent->handleKeyInput(kevt);
     }
     void handleDraggedBegin(MouseEvent& evt) override {
-        DawInstance::get()->setSelectedTrack(m_track);
+        dawCtrl->getDaw()->setSelectedTrack(m_track);
         evt.relMousepos += getPosContent();
         parent->handleDraggedBegin(evt);
     }
@@ -334,7 +334,7 @@ public:
     }
 
     void render(NVGcontext* vg) override {
-        if (DawInstance::get()->getSelectedTrack() == m_track) {
+        if (dawCtrl->getDaw()->getSelectedTrack() == m_track) {
             nvgBeginPath(vg);
             nvgRect(vg, pos.x, pos.y, size.x, size.y);
             nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_SELECTEDTRACK));

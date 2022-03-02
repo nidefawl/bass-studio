@@ -7,8 +7,8 @@
 #include "logging.h"
 
 guictxtmenu_at_param::guictxtmenu_at_param(DawCtrl* _dawCtrl, automatable_t* _atl, int32_t _paramIdx)
-    : dawCtrl(_dawCtrl), atl(_atl), paramIdx(_paramIdx) {
-    dbgassert(_atl);
+    : atl(_atl), paramIdx(_paramIdx) {
+    this->dawCtrl = _dawCtrl;
     this->size.x = 240;
     addContextEntriesAutomation(this, _atl, paramIdx);
 }

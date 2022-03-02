@@ -62,8 +62,6 @@ void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, 
 
 
 class guitrack_editor : public guictr_base {
-    DawCtrl* const dawCtrl;
-
 public:
     track_gui_manager_i& iGuiMgr;
     DAW::Cursor& cursor;
@@ -83,13 +81,13 @@ public:
     bool selectionMoved = false;
     guitrack_editor(DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
         : guictr_base(),
-          dawCtrl(_dawCtrl),
           iGuiMgr(_iGuiMgr),
           cursor(_cursor),
           project(_project),
           projectGlobals(_projectGlobals),
           grid(_grid),
           dragdrop(_dragdropclip) {
+        this->dawCtrl = _dawCtrl;
         padding      = 0;
         sortChildren = true;
     }
@@ -418,8 +416,8 @@ public:
                 drawTri(vg, tickEndX, yOffset, wLoopInidicator, 1, colLI, colLIStroke, strokeWidthLI);
             }
         }
-        float xJmpFrom = grid.tickToScreenD(DawInstance::get()->tickJmpFrom);
-        float xJmpTo   = grid.tickToScreenD(DawInstance::get()->tickJmpTo);
+        float xJmpFrom = grid.tickToScreenD(dawCtrl->getDaw()->tickJmpFrom);
+        float xJmpTo   = grid.tickToScreenD(dawCtrl->getDaw()->tickJmpTo);
         nvgBeginPath(vg);
         nvgMoveTo(vg, xJmpFrom, yOffset);
         nvgLineTo(vg, xJmpFrom, cs.y - yOffset + 1);
@@ -581,7 +579,6 @@ public:
 };
 class guitrack_topleft : public guictr_base {
     guictr_tracks& ctrTracks;
-    DawCtrl* const dawCtrl;
     track_gui_manager_i& iGuiMgr;
     project_t& project;
     guibuttontoggle btnFoldAll;
@@ -592,9 +589,9 @@ public:
     guitrack_topleft(guictr_tracks& _ctrTracks, DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, project_t& _project)
         : guictr_base(),
           ctrTracks(_ctrTracks),
-          dawCtrl(_dawCtrl),
           iGuiMgr(_iGuiMgr),
           project(_project) {
+        this->dawCtrl = _dawCtrl;
         padding = 0;
         //btnFoldAll.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);
         btnFoldAll.setLabel("Fold All Tracks");

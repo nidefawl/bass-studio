@@ -190,7 +190,6 @@ public:
 
 
 class guictxtmenu_at_param : public guictxtmenu {
-    DawCtrl* const dawCtrl;
     automatable_t* const atl;
     int32_t const paramIdx;
 

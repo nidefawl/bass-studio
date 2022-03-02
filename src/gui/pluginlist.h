@@ -75,7 +75,7 @@ public:
         std::vector<gui_list_entry*> _newList;
         pluginsLibList.clear();
         try {
-            DawInstance::get()->getPluginDatabase().query(curquery, pluginsLibList);
+            dawCtrl->getDaw()->getPluginDatabase().query(curquery, pluginsLibList);
             for (pluginentry_t& entry : pluginsLibList) {
                 gui_pluginlist_entry* g = new gui_vstpluginlist_entry(entry);
                 _newList.push_back(g);

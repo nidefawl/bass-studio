@@ -579,9 +579,11 @@ class guidropdown_select_bus_ctxt : public guictxtmenu {
     const audio_channel_ref_t stageEndpoint;
 
 public:
-    guidropdown_select_bus_ctxt(audio_stage_ref_t _busStage, audio_channel_ref_t _dstStage)
-        : busStage(_busStage), stageEndpoint(_dstStage) {
-
+    guidropdown_select_bus_ctxt(DawCtrl * _dawCtrl, audio_stage_ref_t _busStage, audio_channel_ref_t _dstStage)
+        : busStage(_busStage),
+          stageEndpoint(_dstStage)
+    {
+        this->dawCtrl = _dawCtrl;
         int32_t idx = 0;
         if (_dstStage.buffer != stagebuffer_point::INPUT) {
             addEntry(new ctxtmenu_entry_stage_channel(idx++, "Input", audio_channel_ref_t{ _busStage, stagebuffer_point::INPUT }));
@@ -603,8 +605,11 @@ public:
             }
         }
     }
-    guidropdown_select_bus_ctxt(const AudioIO::io_cfg_tracks& cfg, audio_channel_ref_t _dstStage)
-        : busStage(AudioStageRefNULL()), stageEndpoint(_dstStage) {
+    guidropdown_select_bus_ctxt(DawCtrl * _dawCtrl, const AudioIO::io_cfg_tracks& cfg, audio_channel_ref_t _dstStage)
+        : busStage(AudioStageRefNULL()),
+          stageEndpoint(_dstStage) 
+    {
+        this->dawCtrl = _dawCtrl;
         int32_t idx = 0;
         auto& list  = stageEndpoint.buffer == stagebuffer_point::INPUT ? cfg.input : cfg.output;
         for (auto& channel : list) {
@@ -613,16 +618,18 @@ public:
         }
     }
 
-    explicit guidropdown_select_bus_ctxt(audio_channel_ref_t _stageEndpoint, int lvl = 0)
-        : busStage(AudioStageRefNULL()), stageEndpoint(_stageEndpoint) {
+    explicit guidropdown_select_bus_ctxt(DawCtrl * _dawCtrl, audio_channel_ref_t _stageEndpoint, int lvl = 0)
+        : busStage(AudioStageRefNULL()),
+          stageEndpoint(_stageEndpoint)
+    {
+        this->dawCtrl = _dawCtrl;
         int32_t idx      = 0;
         String inputName = stageEndpoint.buffer == stagebuffer_point::INPUT ? "External input" : "External output";
         addEntry(new ctxtmenu_entry_stage_channel(idx++, "None", AudioChannelRefNULL()));
         addEntry(new ctxtmenu_entry_default_channel(idx++, "Default"));
         addEntry(new ctxtmenu_entry_bus_external(idx++, inputName, stageEndpoint));
-        //        auto& cfg          = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
-        //        auto& list         = isInput ? cfg.input : cfg.output;
-        project_t* project = project_controller_t::get()->getProject();
+
+        project_t* project = dawCtrl->getDaw()->getProject();
         dbgassert(project);
         if (project) {
             auto& tracks = project->trackList;
@@ -647,8 +654,7 @@ public:
         closeContextMenu();
         if (parentCtrl)
             parentCtrl->closeAllContextMenus();
-        if (MainCtrl::get())
-            MainCtrl::get()->closeAllContextMenus();
+        dawCtrl->closeAllContextMenus();
         dbgassert(dynamic_cast<ctxtmenu_entry_endpoint*>(e));
         auto entry           = static_cast<ctxtmenu_entry_endpoint*>(e);
         audio_stage_t* stage = vsthost::getInstance()->getAudioStage(stageEndpoint.stageRef);
@@ -709,13 +715,13 @@ public:
                     auto stageEntry = dynamic_cast<ctxtmenu_entry_bus_internal*>(entry);
                     dbgassert(stageEntry);
                     if (stageEntry) {
-                        popup = new guidropdown_select_bus_ctxt(stageEntry->getStageRef(), stageEndpoint);
+                        popup = new guidropdown_select_bus_ctxt(dawCtrl, stageEntry->getStageRef(), stageEndpoint);
                     }
                 }
                 if (entry->busType == DAW::bus_type::external) {
                     using DAW::settings;
                     auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
-                    popup     = new guidropdown_select_bus_ctxt(cfg, stageEndpoint);
+                    popup     = new guidropdown_select_bus_ctxt(dawCtrl, cfg, stageEndpoint);
                 }
                 dbgassert(popup);
                 if (popup) {
@@ -755,7 +761,7 @@ public:
         dbgassert(trImpl);
         if (trImpl) {
             auto& channel      = isInput ? trImpl->inputChannel : trImpl->outputChannel;
-            project_t* project = project_controller_t::get()->getProject();
+            project_t* project = dawCtrl->getDaw()->getProject();
             dbgassert(project);
             if (project) {
                 vsthost* const host = vsthost::getInstance();
@@ -780,7 +786,7 @@ public:
         if (!trImpl)
             return;
         auto stageBufferPoint = isInput ? stagebuffer_point::INPUT : stagebuffer_point::OUTPUT_POST;
-        auto* popup = new guidropdown_select_bus_ctxt(audio_channel_ref_t{ trImpl->toRef(),  stageBufferPoint});
+        auto* popup = new guidropdown_select_bus_ctxt(dawCtrl, audio_channel_ref_t{ trImpl->toRef(),  stageBufferPoint});
         popup->size             = size;
         popup->setFontSize(size.y);
         popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
@@ -906,8 +912,8 @@ public:
         remove(&btnBypass);
     }
     void buttonClicked(guibase* button) override {
-        auto daw = DawInstance::get();
-        ThreadLock lock = daw->getPlayThread()->lockThread();
+        auto const daw = dawCtrl->getDaw();
+        ThreadLock lock = daw->lockPlayThread();
         if (&btnSolo == button) {
             bool isSolo = (m_track->audio->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE;
             daw->setSoloState(m_track->audio->toRef(), !isSolo);
@@ -969,11 +975,12 @@ public:
 
         meter.size = ivec2(mW - i2, size.y - i2);
         meter.pos  = ivec2(size.x - mW + inset, inset);
-        if (sendGains.size()) {
+        if (!sendGains.empty()) {
             const int32_t HEIGHT_SEND_GAIN = h;
             const int32_t SEND_PER_ROW     = 1;
-            ivec2 sendPos                  = { inset, btnActivate.bottom() + i2 };
-            project_t* project             = project_controller_t::get()->getProject();
+
+            ivec2 sendPos      = { inset, btnActivate.bottom() + i2 };
+            project_t* project = dawCtrl->getDaw()->getProject();
             dbgassert(project);
             int32_t numReturnChannels = project->trackReturnCtr.size();
             int pos                   = 0;
@@ -1014,8 +1021,10 @@ class guidropdown_popup_sel_automation_device : public guictxtmenu {
     track_gui_entry_t* const m_trackentry;
 
 public:
-    explicit guidropdown_popup_sel_automation_device(track_gui_entry_t* const trackentry)
-        : m_trackentry(trackentry) {
+    explicit guidropdown_popup_sel_automation_device(DawCtrl* _dawCtrl, track_gui_entry_t* const trackentry)
+        : m_trackentry(trackentry)
+    {
+        this->dawCtrl = _dawCtrl;
         this->size.x   = 120;
         this->fontSize = FONT_SIZE_CTXT_SMALL;
         this->paddingV = 0;
@@ -1034,7 +1043,7 @@ public:
         auto* trImpl = m_trackentry->track->getStage();
         trImpl->getAutomatableTrackTargets(targets);
         if (_id == 0) {
-            m_trackentry->state.selectedAutomationCtr = NULL;
+            m_trackentry->state.selectedAutomationCtr = nullptr;
         } else {
             _id--;
             if (_id >= 0 && _id < (int) targets.size()) {
@@ -1044,7 +1053,7 @@ public:
                 m_trackentry->state.selectedAutomationParam = numParams ? 0 : -1;
             }
         }
-        DawInstance::get()->updateVisibleTrackContents();
+        dawCtrl->updateVisibleTrackContents();
         closeContextMenu();
     }
 };
@@ -1068,7 +1077,7 @@ public:
             
         }
     };
-    explicit guidropdown_popup_sel_automation_param(track_gui_entry_t* const trackentry) : m_trackentry(trackentry) {
+    explicit guidropdown_popup_sel_automation_param(DawCtrl* _dawCtrl, track_gui_entry_t* const trackentry) : m_trackentry(trackentry) {
         this->size.x         = 120;
         this->fontSize       = FONT_SIZE_CTXT_SMALL;
         this->paddingV       = 0;
@@ -1097,7 +1106,7 @@ public:
                 m_trackentry->state.selectedAutomationParam = paramIdx;
             }
         }
-        DawInstance::get()->updateVisibleTrackContents();
+        dawCtrl->getDaw()->updateVisibleTrackContents();
         closeContextMenu();
     }
 };
@@ -1114,7 +1123,7 @@ public:
         return !automatable ? "None" : automatable->getAutomatableName();
     }
     void handleDraggedRelease(MouseEvent& evt) override {
-        guictxtmenu_base* popup = new guidropdown_popup_sel_automation_device(m_trackentry);
+        guictxtmenu_base* popup = new guidropdown_popup_sel_automation_device(dawCtrl, m_trackentry);
         m_trackentry->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
     }
 };
@@ -1132,7 +1141,7 @@ public:
         return !automatable || paramIdx < 0 ? "None" : automatable->getParamName(paramIdx);
     }
     void handleDraggedRelease(MouseEvent& evt) override {
-        guictxtmenu_base* popup = new guidropdown_popup_sel_automation_param(m_trackentry);
+        guictxtmenu_base* popup = new guidropdown_popup_sel_automation_param(dawCtrl, m_trackentry);
         popup->size.x           = 250;
         m_trackentry->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
     }
@@ -1235,7 +1244,7 @@ public:
         return mpos.x >= left() && mpos.x < right() && mpos.y >= resizeTopOrBottom - resizeHitY && mpos.y < resizeTopOrBottom + resizeHitY;
     }
     void handleDraggedBegin(MouseEvent& evt) override {
-        DawInstance::get()->setSelectedTrack(m_track);
+        dawCtrl->getDaw()->setSelectedTrack(m_track);
         if (isResize(evt.relMousepos + this->pos)) {
             dragMode = DRAG_RESIZE;
         }
@@ -1263,7 +1272,6 @@ public:
     void buttonClicked(guibase* button) override {
         if (button == &hideTrack) {
             m_trackentry->layout.hideTrack = !m_trackentry->layout.hideTrack;
-            DawInstance::get()->updateVisibleTrackContents();
         }
         if (button == &hideAutomation) {
             m_trackentry->layout.hideSubtracks = !m_trackentry->layout.hideSubtracks;
@@ -1271,9 +1279,7 @@ public:
         if (button == &addAutomationLane) {
             m_trackentry->layout.hideTrack     = false;
             m_trackentry->layout.hideSubtracks = false;
-            DawInstance::get()->updateVisibleTrackContents();
         }
-        updateStoreLoadSubtracks(m_trackentry->parent, m_trackentry);
         if (button == &addAutomationLane) {
             automatable_t* autom = m_trackentry->state.selectedAutomationCtr;
             int32_t param        = m_trackentry->state.selectedAutomationParam;
@@ -1281,29 +1287,21 @@ public:
                 m_trackentry->parent->addAutomationLane(m_trackentry, autom, param, true);
             }
         }
-        dawCtrl->updateVisibleTrackContents();
+        updateStoreLoadSubtracks(m_trackentry->parent, m_trackentry);
+        m_trackentry->parentCtrl->updateVisibleTrackContents();
     }
     void render(NVGcontext* vg) override {
         if (!setScissorTransform(vg)) {
             return;
         }
         NVGcolor color = rgbToNvg(m_track->rgb);
-        DawInstance* daw      = DawInstance::get();
+        DawInstance* daw      = dawCtrl->getDaw();
         const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         const int rectHeight  = math::min(titleHeight, size.y);
         nvgBeginPath(vg);
         nvgRect(vg, 0, 0, size.x, rectHeight);
         nvgFillColor(vg, color);
         nvgFill(vg);
-
-        //if (ctrl->getSelectedTrack() == m_track) {
-        //    color    = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK_TITLE);
-        //    int posX = hideTrack.right() + INSET_TITLE;
-        //    nvgBeginPath(vg);
-        //    nvgRect(vg, posX, 0, size.x - posX, rectHeight);
-        //    nvgFillColor(vg, color);
-        //    nvgFill(vg);
-        //}
 
         if (daw->getSelectedTrack() == m_track) {
             NVGcolor color2 = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK_TITLE);
@@ -1426,7 +1424,7 @@ public:
         return false;
     }
     void handleDraggedBegin(MouseEvent& evt) override {
-        DawInstance::get()->setSelectedTrack(m_track);
+        dawCtrl->getDaw()->setSelectedTrack(m_track);
         if (isResize(evt.relMousepos + this->pos)) {
             dragMode = DRAG_RESIZE;
         }
@@ -1665,7 +1663,6 @@ String makeUniqueTrackName(DawInstance* daw, const String& strNewName) {
     return strNewName;
 }
 class guictxtmenu_track : public guictxtmenu {
-    DawCtrl* const dawCtrl;
     track_gui_entry_t* const m_trackentry;
     ctxtmenu_entry* cmdPickColor;
     ctxtmenu_entry* cmdDuplicateTrack;
@@ -1678,8 +1675,8 @@ class guictxtmenu_track : public guictxtmenu {
 public:
     guictxtmenu_track(DawCtrl* _dawCtrl, track_gui_entry_t* const trackentry)
         : guictxtmenu(),
-          dawCtrl(_dawCtrl),
           m_trackentry(trackentry) {
+        this->dawCtrl = _dawCtrl;
         this->size.x = 120;
         addEntry(cmdDuplicateTrack = new ctxtmenu_entry("Duplicate track", 1));
         addEntry(cmdRenameTrack = new ctxtmenu_entry("Rename track", 6));

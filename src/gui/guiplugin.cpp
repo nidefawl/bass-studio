@@ -285,7 +285,6 @@ void guiplugin::handleDraggedBegin(MouseEvent& evt) {
 //bool handlePluginCtrCommand(action_plugin_ctr action);
 debugproperties* makeUniquePropertiesCtr();
 class guictxtmenu_plugin : public guictxtmenu {
-    DawCtrl* const dawCtrl;
     effectbase* const effect;
 public:
     static constexpr int CMD_SHOW_AUTOMATION = 1;
@@ -296,9 +295,9 @@ public:
     static constexpr int CMD_CUT             = 6;
     static constexpr int CMD_PASTE           = 7;
     guictxtmenu_plugin(DawCtrl* _dawCtrl, effectbase* _effect)
-        : dawCtrl(_dawCtrl),
-          effect(_effect)
+        : effect(_effect)
     {
+        this->dawCtrl = _dawCtrl;
         this->size.x = 260;
         addEntry(new ctxtmenu_entry("Show all automation", CMD_SHOW_AUTOMATION));
         addEntry(new ctxtmenu_entry("Show parameter list", CMD_SHOW_PARAM_LIST));

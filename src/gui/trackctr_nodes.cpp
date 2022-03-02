@@ -392,16 +392,15 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override {
         gui_graph_entry::handleDraggedBegin(evt);
         if (node->trackOptional)
-            DawInstance::get()->setSelectedTrack(node->trackOptional);
+            dawCtrl->getDaw()->setSelectedTrack(node->trackOptional);
     }
     void handleDraggedRelease(MouseEvent& evt) override {
         parentCtrl->objectDragRelease(this, evt);
         if (wasDragReleaseOnGuiCtrNodes) {
-            auto screenPos                                       = evt.mousepos + evt.dragOffset;
-            ivec2 localPos                                       = toControlsObjectSpace(screenPos, parent);
-            pos                                                  = localPos;
-            project_t* project                                   = project_controller_t::get()->getProject();
-            std::map<int32_t, graph_node_layout_t>& graphLayouts = project->graphLayouts;
+            auto screenPos     = evt.mousepos + evt.dragOffset;
+            ivec2 localPos     = toControlsObjectSpace(screenPos, parent);
+            pos                = localPos;
+            std::map<int32_t, graph_node_layout_t>& graphLayouts = dawCtrl->getDaw()->getProject()->graphLayouts;
             if (graphLayouts.count(id)) {
                 graphLayouts[id].pos = pos;
             }

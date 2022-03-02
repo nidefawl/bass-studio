@@ -569,7 +569,9 @@ int32_t guibase::getStateFlags() const {
 void guibase::setControl(BaseCtrl* parentCtrl) {
     this->parentCtrl = parentCtrl;
 #if BUILD_VSTHOST
-    this->dawCtrl = dynamic_cast<DawCtrl*>(parentCtrl);
+    if (parentCtrl == nullptr || this->dawCtrl == nullptr) {
+        this->dawCtrl = dynamic_cast<DawCtrl*>(parentCtrl);
+    }
 #endif
     if (parentCtrl) {
         setTheme(parentCtrl->getTheme());

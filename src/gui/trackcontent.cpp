@@ -426,13 +426,13 @@ gui_track_subtrack::gui_track_subtrack(track_gui_entry_t* _entry, scaled_grid& _
 }
 
 class guictxtmenu_trackcontent : public guictxtmenu {
-    DawCtrl* const m_dawCtrl;
     track_gui_entry_t* const m_trackentry;
 
 public:
     //TODO make this take a safe reference to a track
     guictxtmenu_trackcontent(DawCtrl* const _dawCtrl, track_gui_entry_t* const _trackentry)
-        : m_dawCtrl(_dawCtrl), m_trackentry(_trackentry) {
+        : m_trackentry(_trackentry) {
+        this->dawCtrl = _dawCtrl;
         this->size.x = 320;
         if (_trackentry) {
 
@@ -451,10 +451,10 @@ public:
         addEntry(fixed);
     }
     void clicked(int _id) override {
-        scaled_grid& grid = m_dawCtrl->getGrid();
+        scaled_grid& grid = dawCtrl->getGrid();
         if (_id == 20) {
             dbgassert(m_trackentry);
-            DAW::Cursor cursor = m_dawCtrl->getCursor().getLeftAligned();
+            DAW::Cursor cursor = dawCtrl->getCursor().getLeftAligned();
             if (cursor.selRange) {
                 track_t* tr = m_trackentry->track;
                 clip_t* cl  = nullptr;
@@ -488,7 +488,7 @@ public:
             grid.grid_dens.dynamicDensity = _id - 100;
             grid.grid_dens.isfixed        = false;
         }
-        DawInstance::get()->updateVisibleTrackContents();
+        dawCtrl->getDaw()->updateVisibleTrackContents();
         closeContextMenu();
     }
 };

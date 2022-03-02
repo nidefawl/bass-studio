@@ -125,14 +125,14 @@ void gui_track_automation::trackViewDragBegin(guitrack_editor* view, MouseEvent&
         int32_t idx2 = addPointAt(data.points, cursor.getTickEnd(), steps, fInitialVal);
         addPointAt(data.points, cursor.getTickEnd(), steps, fInitialVal);
 
-        DawInstance::get()->updateVisibleTrackContents();
+        dawCtrl->getDaw()->updateVisibleTrackContents();
         dragged           = hitTest(local);
         dragged.mode      = dragmode::drag_selection;
         dragged.dataPt    = idx;
         dragged.numPoints = idx2 - idx + 1;
     }
     if (dragged.mode != dragmode::drag_none && dragged.mode != dragmode::drag_empty) {
-        DawInstance::get()->pushHist(new action_modify_track(StringFormat("Edit Automation (%d)", (int)dragged.mode), std::move(resizePreModifyState)));
+        dawCtrl->getDaw()->pushHist(new action_modify_track(StringFormat("Edit Automation (%d)", (int)dragged.mode), std::move(resizePreModifyState)));
     }
 
     dataPointsEdited = data.points;
@@ -266,7 +266,7 @@ void gui_track_automation::postEdit() {
         if (activate)
             automation->active = true;
     }
-    DawInstance::get()->updateVisibleTrackContents();
+    dawCtrl->getDaw()->updateVisibleTrackContents();
 }
 bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEvent& evt) {
     dragged                                     = hit_result(dragmode::drag_none, -1, -1, 0.0f);
@@ -278,7 +278,7 @@ bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEven
     trackstate_t resizePreModifyState;
     resizePreModifyState.tracks.push_back(new track_snapshot_t(this->at->getTrack(), tracksnapshot_store_opts_t::AutomationOnly()));
     resizePreModifyState.cursor = view->cursor;
-    DawInstance::get()->pushHist(new action_modify_track(StringFormat("Edit Automation (%d)", (int)dragged.mode), std::move(resizePreModifyState)));
+    dawCtrl->getDaw()->pushHist(new action_modify_track(StringFormat("Edit Automation (%d)", (int)dragged.mode), std::move(resizePreModifyState)));
     std::vector<automation_point_t>& dataPoints = data.points;
     if (clicked.mode == dragmode::drag_node) {
         int32_t i = clicked.dataPt;
@@ -307,7 +307,7 @@ bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEven
 }
 
 void gui_track_automation::handleDraggedBegin(MouseEvent& evt) {
-    DawInstance::get()->setSelectedTrack(m_track);
+    dawCtrl->getDaw()->setSelectedTrack(m_track);
     evt.relMousepos += getPosContent();
     parent->handleDraggedBegin(evt);
 }

@@ -60,7 +60,7 @@ void gui_timeinput_field::render(NVGcontext* vg) {
     renderWidgetBorder(vg, flags);
     setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     int32_t _time      = time ? *time : 0;
-    beatbar16th_t step = project_controller_t::get()->toBeatBar16th(_time);
+    beatbar16th_t step = dawCtrl->getDaw()->toBeatBar16th(_time);
     int32_t val        = step[idx];
     if (val >= 0 && !isRelative) {
         val++;
@@ -201,10 +201,10 @@ void updateSrBs();
 
 void guictr_tempocontrols::buttonClicked(guibase* button) {
     if (button == &this->btnPlay) {
-        DawInstance::get()->startPlaying();
+        dawCtrl->getDaw()->startPlaying();
     }
     if (button == &this->btnStop) {
-        DawInstance::get()->stopPlaying();
+        dawCtrl->getDaw()->stopPlaying();
     }
     if (button == &this->btnRecord) {
         projectGlobals.recordArmed = !projectGlobals.recordArmed;
@@ -244,11 +244,10 @@ void guibutton_audioengine::render(NVGcontext* vg) {
 
 NVGcolor guibutton_audioengine::getBackgroundColor(int stateflags) const {
     NVGcolor c = theme->getBgColor(stateflags);
-    //lastTickBar = stats.tickBar;
-    auto projCtrl = project_controller_t::get();
-    if (projCtrl) {
-        const auto& globals        = projCtrl->getGlobals();
-        const float fBarNumFloor   = (int32_t) stats.tickBar / (int32_t) TICKS_BAR;
+    auto const daw = dawCtrl ? dawCtrl->getDaw() : nullptr;
+    if (daw) {
+        const auto& globals      = daw->getGlobals();
+        const float fBarNumFloor = (int32_t) stats.tickBar / (int32_t) TICKS_BAR;
 
         // yikes, this sucks. Taking the tickBar from non-determenistic host stats _and_ using own timer to get per GPU frame progress
         const auto tmConstantBar  = 60000.0 * 100.0 / static_cast<double>(globals.tempo100);

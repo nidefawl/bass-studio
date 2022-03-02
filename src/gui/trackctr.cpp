@@ -493,7 +493,7 @@ void guictr_tracks::render(NVGcontext* vg) {
     if (trackView.size.x > 0) {
         nvgIntersectScissor(vg, trackView.pos.x, 0, trackView.size.x, cs.y);
         nvgTranslate(vg, trackView.pos.x, 0);
-        tick_t pos = DawInstance::get()->getPlaybackPos();
+        tick_t pos = dawCtrl->getDaw()->getPlaybackPos();
 
         float playBackX = (float) grid.tickToScreenD(pos);
         if (playBackX > -4.0f && playBackX < cs.x + 4.0f) {
