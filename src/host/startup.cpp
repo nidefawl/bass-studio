@@ -162,6 +162,17 @@ void generateDummyProject2(DawCtrl* dawCtrl) {
     trackMaster->getStage()->arp = nullptr;
     trDataMidi.deleteClips(nullptr);
 }
+void openPluginWindows(DawCtrl* dawCtrl, String pluginName) {
+    DawInstance* dawInstance = dawCtrl->getDaw();
+    auto* host = dawInstance->getHost();
+    std::vector<effectbase*> effects;
+    host->getAllInstances(effects);
+    for (auto eff : effects) {
+        if (eff->getName().find(pluginName) != String::npos) {
+            eff->show();
+        }
+    }
+}
 void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t trackIdx) {
     DawInstance* dawInstance = dawCtrl->getDaw();
     auto* project = dawInstance->getProject();
@@ -173,7 +184,7 @@ void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t tra
         return;
     }
 
-    vstpluginloadres loadRes = vsthost::getInstance()->loadPlugin(modulePath, 0);
+    vstpluginloadres loadRes = host->loadPlugin(modulePath, 0);
 
     if (loadRes.result != 0) {
         dbgassert(0);
@@ -183,7 +194,7 @@ void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t tra
     audio_stage_t* trImpl1 = trackList[trackIdx]->getStage();
     host->insertNewPlugin(trImpl1, loadRes.plugin, 0);
     loadRes.plugin->resume();
-    vsthost::getInstance()->postPluginLoaded(trImpl1, loadRes.plugin);
+    host->postPluginLoaded(trImpl1, loadRes.plugin);
 
 
 #if 0
@@ -279,6 +290,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
 
         daw_tls::getTls().config->enableClipRendererDebugLayer=true;
 #endif
+        // openPluginWindows(dawMainCtrl, "OTT");
     };
     //    dawMainCtrl->setVisible(false);
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
