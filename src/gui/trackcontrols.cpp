@@ -1,5 +1,6 @@
 #include "trackcontrols.h"
 
+#include "assert_dbg.h"
 #include "math/seq_math.h"
 #include "host/mainctrl.h"
 #include "host/plugin/vst_plugin.h"
@@ -647,29 +648,25 @@ public:
     }
 
     void clickedElement(ctxtmenu_entry* e, int _id) override {
-        auto ctxtEndpointEntry = static_cast<ctxtmenu_entry_track_io*>(e);
+        auto const ctxtEndpointEntry = static_cast<ctxtmenu_entry_track_io*>(e);
         if (ctxtEndpointEntry->isBus()) {
             return;
         }
-        closeContextMenu();
-        if (parentCtrl)
-            parentCtrl->closeAllContextMenus();
-        dawCtrl->closeAllContextMenus();
         dbgassert(dynamic_cast<ctxtmenu_entry_endpoint*>(e));
-        auto entry           = static_cast<ctxtmenu_entry_endpoint*>(e);
-        audio_stage_t* stage = vsthost::getInstance()->getAudioStage(stageEndpoint.stageRef);
+        auto const entry = static_cast<ctxtmenu_entry_endpoint*>(e);
+        auto const stage = dawCtrl->getDaw()->getHost()->getAudioStage(stageEndpoint.stageRef);
         if (!stage)
             return;
-
-        track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
+        auto const trImpl = dynamic_cast<track_impl_t*>(stage);
         dbgassert(trImpl);
-        if (!trImpl)
+        if (!assert_expr(trImpl))
             return;
         if (stageEndpoint.buffer == stagebuffer_point::INPUT) {
             trImpl->inputChannel = entry->getEndpoint();
         } else {
             trImpl->outputChannel = entry->getEndpoint();
         }
+        dawCtrl->closeAllContextMenus();
     }
 
     void closeAllSubmenus() {
