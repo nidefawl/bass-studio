@@ -432,7 +432,7 @@ bool guiplugin::isSelected() {
 
 template<>
 void guitooltip<guiplugin>::layout() {
-    size.x          = 250;
+    size.x          = 650;
     table.rowHeight = FONT_SIZE_TOOLTIP + INSET_TABLE_CELL_PADDING * 2;
     table.rows.clear();
     table.titleCols.clear();
@@ -445,6 +445,8 @@ void guitooltip<guiplugin>::layout() {
         table.rows.push_back({ { tblstr{ "bIsEnabled" }, tblint{ ptr->effect->bIsEnabled } } });
         table.rows.push_back({ { tblstr{ "PARAM_ENABLE" }, tblfloat{ ptr->effect->getParamValue(PARAM_ENABLE) } } });
     }
+    table.colSizes.push_back(250);
+    table.colSizes.push_back(650-250);
     Table::AdjustColSizes(table, getSizeContent() - ivec2(INSET_TABLE << 1));
     size.y = table.rows.size() * table.rowHeight;
 }
@@ -912,7 +914,7 @@ void guidropdownprogram::handleDraggedRelease(MouseEvent& evt) {
 
 template<>
 void guitooltip<guivstplugin>::layout() {
-    size.x          = 250;
+    size.x          = 650;
     table.rowHeight = FONT_SIZE_TOOLTIP + INSET_TABLE_CELL_PADDING * 2;
     table.rows.clear();
     table.titleCols.clear();
@@ -948,6 +950,8 @@ void guitooltip<guivstplugin>::layout() {
             n++;
         }
     }
+    table.colSizes.push_back(250);
+    table.colSizes.push_back(650-250);
     Table::AdjustColSizes(table, getSizeContent() - ivec2(INSET_TABLE << 1));
     size.y = table.rows.size() * table.rowHeight;
 }

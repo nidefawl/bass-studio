@@ -182,7 +182,12 @@ void vstplugin::load(vsthost* host) {
     for (int32_t i = 0; i < aeffect->numInputs; i++) {
         VstPinProperties pin{};
         if (this->dispatch(effGetInputProperties, i, 0, &pin)) {
-            inputNames.emplace_back(pin.label);
+            String pinName = pin.label;
+            String pinAttr = StringFormat("Active %d, Stereo %d, UseSpeaker %d",
+                                          (pin.flags&VstPinPropertiesFlags::kVstPinIsActive)!=0,
+                                          (pin.flags&VstPinPropertiesFlags::kVstPinIsStereo)!=0,
+                                          (pin.flags&VstPinPropertiesFlags::kVstPinUseSpeaker)!=0);
+            inputNames.push_back(StringFormat("%s (%s)", pin.label, StringAsCStr(pinAttr)));
         } else {
             inputNames.push_back(StringFormat("Input %d", i));
         }
@@ -190,7 +195,12 @@ void vstplugin::load(vsthost* host) {
     for (int32_t i = 0; i < aeffect->numOutputs; i++) {
         VstPinProperties pin{};
         if (this->dispatch(effGetOutputProperties, i, 0, &pin)) {
-            outputNames.emplace_back(pin.label);
+            String pinName = pin.label;
+            String pinAttr = StringFormat("Active %d, Stereo %d, UseSpeaker %d",
+                                          (pin.flags&VstPinPropertiesFlags::kVstPinIsActive)!=0,
+                                          (pin.flags&VstPinPropertiesFlags::kVstPinIsStereo)!=0,
+                                          (pin.flags&VstPinPropertiesFlags::kVstPinUseSpeaker)!=0);
+            outputNames.push_back(StringFormat("%s (%s)", pin.label, StringAsCStr(pinAttr)));
         } else {
             outputNames.push_back(StringFormat("Output %d", i));
         }
