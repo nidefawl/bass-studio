@@ -47,7 +47,8 @@ enum vst_param_state : uint8_t {
 class vstplugin : public effectbase {
 public:
     handles_t* const handle;
-    const uint32_t internalModuleId;
+    /** -1 for external, >= 0 for internal plugins */
+    const int32_t internalModuleId;
     String sDir;
     bool bInEditIdle       = false;
     bool bWantsEffIdle     = false;

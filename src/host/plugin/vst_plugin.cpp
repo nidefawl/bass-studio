@@ -287,7 +287,7 @@ namespace {
         ps.enabled         = plugin->bIsEnabled;
         if (plugin->internalModuleId >= 0) {
             ps.pluginType = PLUGIN_TYPE_INTERNAL_EFFECT;
-            ps.uId        = plugin->internalModuleId;
+            ps.uId        = static_cast<uint32_t>(plugin->internalModuleId);
         } else {
             ps.pluginType    = PLUGIN_TYPE_VST;
             ps.vendorVersion = plugin->vendorVersion;
