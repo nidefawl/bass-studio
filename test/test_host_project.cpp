@@ -10,7 +10,7 @@ int main(int, char*[]) {
     std::vector<String> args{
         "-f", "cpp-test-data/serum-test.project",
         "-s", "32.0",
-        "-l", "12.0",
+        "-l", "4.0",
         "-o", "test-render",
         "--render"
     };

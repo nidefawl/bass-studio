@@ -116,10 +116,6 @@ struct vsthost::track_block_processing_task_t {
 struct process_scratch_buf_t {
     VstTimeInfo timeinfo{};
     SYNCHRONIZED_RW hires_timer_t timer;// timer for cpu-time profiling
-    process_scratch_buf_t() {
-    }
-
-    ~process_scratch_buf_t() = default;
 };
 
 class TrackBlockProcessTask : public WorkerThread::ThreadTask {
@@ -202,7 +198,9 @@ public:
             task.init(host);
         }
     }
-    ~vsthost_impl() = default;
+    ~vsthost_impl() {
+        stopThreads();
+    };
 
     void resetDelaylines() {
         //delayLines.clear();//TODO: this might free a lot of memory and be expensive: profile!
@@ -275,6 +273,7 @@ public:
             thread.joinThread();
             countStopped++;
         }
+        threadsRunningCount = 0;
     }
 };
 

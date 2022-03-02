@@ -499,7 +499,7 @@ class trackallcontainer_t {
 public:
     void rebuildTrackList();
     trackallcontainer_t()  = default;
-    ~trackallcontainer_t() = default;
+    ~trackallcontainer_t();
 
     trackallcontainer_t(const trackallcontainer_t& a) = delete;
     trackallcontainer_t& operator=(const trackallcontainer_t& a) = delete;

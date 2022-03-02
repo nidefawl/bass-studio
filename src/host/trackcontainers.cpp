@@ -9,13 +9,22 @@
 
 #include "mainctrl.h"
 
-trackbasecontainer_t::~trackbasecontainer_t() {
-    for (auto track : tracksFlat) {
+void releaseTrackContainer(track_vector& vec) {
+    for (auto track : vec) {
         releaseTrackResources(track, nullptr);
     }
-    for (auto track : tracksFlat) {
+    for (auto track : vec) {
         delete track;
     }
+}
+
+trackbasecontainer_t::~trackbasecontainer_t() {
+    releaseTrackContainer(tracksFlat);
+    clear();
+}
+
+trackallcontainer_t::~trackallcontainer_t() {
+    releaseTrackContainer(trackAllCtr.tracksFlat);
     clear();
 }
 

@@ -10,7 +10,7 @@ namespace daw_test {
     extern uint32_t currentTest;
     extern bool testThrowAssertEnabled;
     inline bool runTest(TestCases testcase) {
- #if defined(BUILD_TESTS) || defined(__CLION_IDE__)
+ #if defined(PROJECT_BUILD_TESTS) || defined(__CLION_IDE__)
         return currentTest == testcase;
 #else
         return false;

@@ -480,7 +480,8 @@ int runCommandLineHost(const std::vector<String>& args) {
                 processWindowMessages();
 
                 if (daw_test::runTest(daw_test::TestCases::TEST_HOST_EXCEPTIONS)) {
-                    static int nTestLoops = 10;
+                    seqthreads::threadSleep(20);
+                    static int nTestLoops = 100;
                     if (nTestLoops-- == 0) {
                         log_printf("Invoking test code\n", 0);
                         throw applogicexception("TEST_HOST_EXCEPTIONS: Testing exception handling");
