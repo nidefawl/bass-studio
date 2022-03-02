@@ -52,6 +52,7 @@ void guictxtmenu_notrack::clicked(int _id) {
                 }
                 host->onTrackLayoutChange();
                 daw->onPluginsChanged();
+                daw->updateVisibleTrackContents();
             }
         }
     } else {
