@@ -1505,7 +1505,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
     int queueSizeInput = 0;
     int queueSizeOutput = 0;
-    auto stream = impl->audioStream;
+    auto const stream = impl->audioStream;
     if (stream) {
         queueSizeInput = stream->getInputQueueSize();
         queueSizeOutput = stream->getOutputQueueSize();
@@ -1521,7 +1521,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
     while (queueSizeInput) {
         AudioBuffer* ptrExternalInputs = nullptr;
-        if (stream->try_dequeueInput(ptrExternalInputs)) {
+        if (stream && stream->try_dequeueInput(ptrExternalInputs)) {
             if (enableProfiling) timerProfile.reset();
             resamplerInput->push(*ptrExternalInputs->output);
             if (enableProfiling) stats.timings["Block.ResampleInput"] = timerProfile.getTime();
@@ -1661,7 +1661,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
     if (enableProfiling) timerProfile.reset();
     int32_t nResampledOutputBlocks = resamplerOutput->numBlocksToPop();
-    if (nResampledOutputBlocks > 0 && stream->getOutputQueueSize() < RING_BUF_SIZE*2/3) {
+    if (nResampledOutputBlocks > 0 && stream && stream->getOutputQueueSize() < RING_BUF_SIZE*2/3) {
         int32_t& writePos = ringbuffer.writePos;
         //TODO: this is incorrect, the resampler should keep track of sample/tick position, but right now these fields are not read on output side
         double blockPosSample = sample;
