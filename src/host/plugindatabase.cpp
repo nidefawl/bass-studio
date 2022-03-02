@@ -45,9 +45,6 @@ public:
     explicit Impl(const String& path)
         : db(path, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE) {
         createTables(db);
-        if (DAW::settings.pluginsettings.configVst2.uidRemapping.empty()) {
-            DAW::settings.pluginsettings.configVst2.uidRemapping[1314010470] = 1314010730;
-        }
         remapVst2 = DAW::settings.pluginsettings.configVst2.uidRemapping;
     }
     ~Impl() = default;
