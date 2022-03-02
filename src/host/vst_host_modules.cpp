@@ -31,7 +31,6 @@ vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId)
     auto it = std::find_if(builtinModules.begin(), builtinModules.end(), [moduleId](auto& reg) {
         return reg.id == moduleId;
     });
-    dbgassert(it != builtinModules.end());
 
     if (it == builtinModules.end())
         return {-2, nullptr};

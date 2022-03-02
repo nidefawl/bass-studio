@@ -27,10 +27,9 @@ effectbase* vsthost::makeModuleInstance(int32_t moduleType, int32_t moduleId, in
             vstpluginloadres res = loadInternalPlugin(moduleId, globalid);
             if (res.result == 0 && res.plugin) {
                 effect = res.plugin;
-                break;
             }
-            dbgassert(0);
-        } break;
+            break;
+        } 
         default:
             break;
     }
