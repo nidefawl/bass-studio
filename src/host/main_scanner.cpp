@@ -823,11 +823,11 @@ int main(int argc, char* argv[]) {
 #endif
     using DAW::settings;
     settings           = loadSettings();
-    String vstPlugPath = settings.pluginPath;
+    String vstPlugPath = settings.pluginsettings.pathVst2;
     App::Platform::sanitizePathToDirectory(vstPlugPath);
-    log_message("pluginPath '%s'", StringAsCStr(vstPlugPath));
+    log_message("settings.pluginsettings.pathVst2 '%s'", StringAsCStr(vstPlugPath));
     if (vstPlugPath.empty()) {
-        log_lf(Log::L_ERROR, "Error: pluginPath not configured\n");
+        log_lf(Log::L_ERROR, "Error: settings.pluginsettings.pathVst2 not configured\n");
         return EXIT_FAILURE;
     }
 

@@ -3,9 +3,9 @@
 #include <vector>
 
 struct pluginentry_t {
-    int moduleFormat;
-    int localDbId;
-    int uid;
+    int32_t moduleFormat;
+    int32_t localDbId;
+    uint32_t uid;
     bool isSynth;
     String name;
     String path;

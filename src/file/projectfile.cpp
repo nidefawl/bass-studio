@@ -60,7 +60,23 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
     if (version > 2) {
         archive(make_nvp("pluginType", m.pluginType), make_nvp("plugins", m.pluginSnapshots));
     }
-    archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot), make_nvp("present", m.present));
+    if (version < 8) {
+        int32_t uid_i32 = 0;
+        archive(
+            make_nvp("name", m.name),
+            make_nvp("uId", uid_i32),
+            make_nvp("slot", m.slot),
+            make_nvp("present", m.present)
+        );
+        m.uId = static_cast<uint32_t>(uid_i32);
+    } else {
+        archive(
+            make_nvp("name", m.name),
+            make_nvp("uId", m.uId),
+            make_nvp("slot", m.slot),
+            make_nvp("present", m.present)
+        );
+    }
     if (version == 1)
         make_optional_nvp(archive, "dataProgram", m.dataChunk2);
     if (version < 4) {
@@ -449,7 +465,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 }
 
 CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
-CEREAL_CLASS_VERSION(plugin_snapshot_t, 7);
+CEREAL_CLASS_VERSION(plugin_snapshot_t, 8);
 CEREAL_CLASS_VERSION(track_snapshot_t, 3);
 
 /**

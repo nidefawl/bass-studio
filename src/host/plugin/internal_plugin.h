@@ -28,9 +28,9 @@ public:
     std::vector<std::shared_ptr<PluginViewContainers>> views;
     String sDir;
     bool bInEditIdle   = false;
-    int pluginCategory = 0;
-    int vstVersion     = 0;
-    int uId            = 0;
+    int32_t pluginCategory = 0;
+    int32_t vstVersion     = 0;
+    uint32_t uId            = 0;
     internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
     ~internalplugin() override;
 

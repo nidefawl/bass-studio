@@ -44,9 +44,9 @@ struct app_iomidiconfig {
 
 struct app_iosettings {
     uint32_t samplerate = 44100;
-    uint32_t blocksize = 256;
+    uint32_t blocksize = 512;
     uint32_t internalSamplerate = 44100;
-    uint32_t internalBlocksize = 256;
+    uint32_t internalBlocksize = 512;
     app_ioasioconfig asioConfig;
     std::map<String, app_ioaudioconfig> configs;
     std::map<String, app_iomidiconfig> midiconfigs;
@@ -125,16 +125,24 @@ public:
     }
 };
 
+struct app_vst2_config {
+    std::map<uint32_t, uint32_t> uidRemapping;
+};
+
+struct app_plugin_configuration {
+    String pathVst2;
+    app_vst2_config configVst2;
+};
+
 struct appsettings {
     appsettings() noexcept = default; // need noexcept for static storage
     appwindowsettings wndMain;
     appwindowsettings wndCompanion;
-    //String device_selected;
     bool startEngine = false;
     bool vmmode = false;
-    String pluginPath;
     app_iosettings iosettings;
     recentfilelist recentfiles;
+    app_plugin_configuration pluginsettings;
 };
 
 #if HAS_APP_SETTINGS

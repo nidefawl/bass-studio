@@ -33,7 +33,7 @@ struct plugin_snapshot_t {
     int32_t pluginType      = 0;
     int32_t localDbId       = 0;
     int32_t vendorVersion   = 0;
-    int32_t uId             = 0;
+    uint32_t uId            = 0;
     String name;
     int32_t currentProgram = -1;
     String currentProgramName;

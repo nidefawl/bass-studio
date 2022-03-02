@@ -8,7 +8,7 @@ struct audio_stage_t;
 class AudioEffectX;
 class PluginViewContainers;
 struct handles_t {
-    int32_t localCurrentUniqueId = 0;
+    uint32_t localCurrentUniqueId = 0;
     VstTimeInfo localTimeInfo{};
     AudioEffectX* axEffect = nullptr;// Optional/Internal plugin only: handle to plugin implementation instance
     AEffect* aeffect       = nullptr;// hmodule owns if axEffect == null

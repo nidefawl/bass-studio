@@ -4,7 +4,9 @@
 #include "assert_dbg.h"
 #include "fileio.h"
 #include "platform.h"
+#include "appsettings.h"
 #include "snapshot.h"
+#include <stdint.h>
 #include <vector>
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
@@ -38,11 +40,15 @@ void createTables(SQLite::Database& db) {
 
 class plugindatabase_t::Impl {
     SQLite::Database db;
-
+    std::map<uint32_t, uint32_t> remapVst2;
 public:
     explicit Impl(const String& path)
         : db(path, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE) {
         createTables(db);
+        if (DAW::settings.pluginsettings.configVst2.uidRemapping.empty()) {
+            DAW::settings.pluginsettings.configVst2.uidRemapping[1314010470] = 1314010730;
+        }
+        remapVst2 = DAW::settings.pluginsettings.configVst2.uidRemapping;
     }
     ~Impl() = default;
     bool resolve(const plugin_snapshot_t& pluginSnapshot, pluginentry_t& _outResult, int loadFlags) {
@@ -58,6 +64,10 @@ public:
         auto uId               = pluginSnapshot.uId;
         auto localId           = pluginSnapshot.localDbId;
         bool loadForceDisabled = (loadFlags & 1) != 0;
+
+        if (remapVst2.find(uId) != remapVst2.end()) {
+            uId = remapVst2[uId];
+        }
 
         static const char* queryBy_LocalIdAndUUID = "SELECT * FROM plugins where state == 1 and id == ? and uid == ? and __COND__";
         static const char* queryBy_NameAndUUID    = "SELECT * FROM plugins where state == 1 and name == ? and uid == ? and __COND__ order by forcedisable ASC, version DESC, id DESC";
@@ -100,7 +110,7 @@ public:
                 pluginentry_t entry;
                 entry.localDbId    = queryPlugin.getColumn("id").getInt();
                 entry.moduleFormat = queryPlugin.getColumn("moduleFormat").getInt();
-                entry.uid          = queryPlugin.getColumn("uid").getInt();
+                entry.uid          = queryPlugin.getColumn("uid").getUInt();
                 entry.isSynth      = queryPlugin.getColumn("isSynth").getInt() != 0;
                 entry.name         = queryPlugin.getColumn("name").getString();
                 entry.path         = queryPlugin.getColumn("path").getString();
@@ -144,7 +154,7 @@ public:
         while (queryPlugin.executeStep()) {
             entry.localDbId    = queryPlugin.getColumn("id").getInt();
             entry.moduleFormat = queryPlugin.getColumn("moduleFormat").getInt();
-            entry.uid          = queryPlugin.getColumn("uid").getInt();
+            entry.uid          = queryPlugin.getColumn("uid").getUInt();
             entry.isSynth      = queryPlugin.getColumn("isSynth").getInt() != 0;
             entry.name         = queryPlugin.getColumn("name").getString();
             entry.path         = queryPlugin.getColumn("path").getString();

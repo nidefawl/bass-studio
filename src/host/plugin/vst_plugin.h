@@ -47,17 +47,17 @@ enum vst_param_state : uint8_t {
 class vstplugin : public effectbase {
 public:
     handles_t* const handle;
-    const int internalModuleId;
+    const uint32_t internalModuleId;
     String sDir;
-    bool bInEditIdle   = false;
-    bool bWantsEffIdle = false;
+    bool bInEditIdle       = false;
+    bool bWantsEffIdle     = false;
     bool bIsLoadingProgram = false;
-    bool bIsPostInit = false;
-    int pluginCategory = 0;
-    int vstVersion     = 0;
-    int localDbId      = -1;
-    int vendorVersion  = 0;
-    int uId            = 0;
+    bool bIsPostInit       = false;
+    int32_t pluginCategory = 0;
+    int32_t vstVersion     = 0;
+    int32_t localDbId      = -1;
+    int32_t vendorVersion  = 0;
+    uint32_t uId           = 0;
     vst_window* window = nullptr;
     bool isInSuspend   = true;
     std::vector<vst_param_category> paramsCategories;
@@ -138,5 +138,5 @@ public:
     int32_t getPluginLatency() override;
     int32_t getFlagsVST();
     VstTimeInfo* getLocalTimeInfoPtr();
-    int32_t getLocalCurrentUniqueId();
+    uint32_t getLocalCurrentUniqueId();
 };

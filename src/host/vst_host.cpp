@@ -3065,7 +3065,7 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
 
 #endif
 
-vstpluginloadres vsthost::loadPlugin(String filepath, int32_t uId, int32_t globalId) {
+vstpluginloadres vsthost::loadPlugin(String filepath, uint32_t uId, int32_t globalId) {
     dbgassert(masterCallBackSlot);
 
     String path, name, nameWithoutExt;

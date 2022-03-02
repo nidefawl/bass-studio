@@ -452,7 +452,7 @@ VstTimeInfo* vstplugin::getLocalTimeInfoPtr() {
     return handle ? &handle->localTimeInfo : nullptr;
 }
 
-int32_t vstplugin::getLocalCurrentUniqueId() {
+uint32_t vstplugin::getLocalCurrentUniqueId() {
     return handle ? handle->localCurrentUniqueId : 0;
 }
 

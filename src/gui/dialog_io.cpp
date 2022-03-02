@@ -1116,7 +1116,7 @@ public:
     {
         setBackgroundRendered(true);
         selectFolder->id = 0x10;
-        selectFolder->setText(settings.pluginPath);
+        selectFolder->setText(settings.pluginsettings.pathVst2);
         selectFolder->setLabel("VST2 Plugin Path");
         scanNow->id = 0x11;
         scanNow->setText("Scan VST2 folder");
@@ -1148,7 +1148,7 @@ public:
                             NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         }
 
-        selectFolder->setText(settings.pluginPath);
+        selectFolder->setText(settings.pluginsettings.pathVst2);
         for (auto c : guis) {
             nvgSave(vg);
             c->render(vg);
@@ -1186,21 +1186,21 @@ public:
             return;
         }
         if (button->id == 0x10) {
-            selectFolder->setText(settings.pluginPath);
+            selectFolder->setText(settings.pluginsettings.pathVst2);
             // select folder
             String out   = DAW_PLATFORM_VST2_PATH_DEFAULT;
-            String curre = settings.pluginPath;
+            String curre = settings.pluginsettings.pathVst2;
             App::Platform::sanitizePathToDirectory(curre);
 
             if (0 == browseForFolder("Select VST2 Plugin Path", curre, out)) {
-                settings.pluginPath = out;
+                settings.pluginsettings.pathVst2 = out;
                 try {
                     saveSettings(settings);
                 } catch (std::exception& e) {
                     log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
                 }
             }
-            selectFolder->setText(settings.pluginPath);
+            selectFolder->setText(settings.pluginsettings.pathVst2);
             return;
         }
         if (this->parent) {
