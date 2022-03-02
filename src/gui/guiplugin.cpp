@@ -315,7 +315,7 @@ public:
             if (gui) {
                 debugproperties* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
                 guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
-                ctxtMenu->size = { 840, 480 };
+                ctxtMenu->size = { 640, 480 };
                 ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
                 ivec2 wndPos{ 0 };
                 this->parentCtrl->window->getPos(&wndPos);

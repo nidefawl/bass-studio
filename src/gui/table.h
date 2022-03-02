@@ -1,4 +1,5 @@
 #pragma once
+#include "logging.h"
 #include "math/vec.h"
 #include <memory>
 #include <numeric>
@@ -114,12 +115,14 @@ namespace Table {
         T& t;
         const char* format = nullptr;
     };
+
+    template<typename T>
+    void drawTbl(const table_ctxt_t& ctxt, const T& obj);
+
     template<typename T>
     inline void drawTbl(const table_ctxt_t& ctxt, T& obj) {
         drawTbl(ctxt, const_cast<const T&>(obj));
     }
-    template<typename T>
-    void drawTbl(const table_ctxt_t& ctxt, const T& obj);
 
     template<typename T>
     void drawTbl(const table_ctxt_t& ctxt, const tbltype<T>& obj);
@@ -128,12 +131,14 @@ namespace Table {
     inline void drawTbl(const table_ctxt_t& ctxt, const tbltyperef<T>& obj) {
         drawTbl(ctxt, const_cast<const T&>(obj.t));
     }
+
     template <typename T>
     inline void drawTbl(const table_ctxt_t& ctxt, const tbltypesaferef<T>& obj) {
         if (safeRefOk(obj.saferef)) {
             drawTbl(ctxt, const_cast<const T&>(obj.t));
         }
     }
+
     void drawTbl(const table_ctxt_t& ctxt, const SafeRef<guibase>& obj);
     void drawTbl(const table_ctxt_t& ctxt, const tblfloat& obj);
     void drawTbl(const table_ctxt_t& ctxt, const tblString& obj);
@@ -147,7 +152,21 @@ namespace Table {
     void drawTbl(const table_ctxt_t& ctxt, const GuiConstant::constant_t& obj);
     void drawTbl(const table_ctxt_t& ctxt, const GuiColor::constant_t& obj);
 
+
     template<typename T>
     inline void cellClicked(const click_ctxt_t& ctxt, T& obj) {
     }
+
+    template<typename T>
+    inline void cellClicked(const click_ctxt_t& ctxt, const tbltype<T>& obj) {
+        cellClicked(ctxt, obj.t);
+    }
+
+    template<typename T>
+    inline void cellClicked(const click_ctxt_t& ctxt, const tbltyperef<T>& obj) {
+        cellClicked(ctxt, obj.t);
+    }
+
+    template <typename T>
+    void cellClicked(const click_ctxt_t& ctxt, const tbltypesaferef<T>& obj);
 }// namespace Table
