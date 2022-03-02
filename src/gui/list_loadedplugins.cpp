@@ -404,9 +404,8 @@ public:
             if (effectbase) {
                 track_t* tr = effectbase->getTrack();
                 if (tr) {
-                    DawInstance::get()->setSelectedTrack(tr);
+                    dawCtrl->getDaw()->setSelectedTrack(tr);
                     MainCtrl::get()->showPluginView();
-//                    MainCtrl::get()->getPluginCtr()->makeVisibleTo(effectbase);//scrollTo
                 }
             }
         }

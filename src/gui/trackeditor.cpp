@@ -132,19 +132,19 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
         }
     }
     if (kevt.type != STATE_REPEAT && isAltKey(kevt.keyCode)) {
-//        if ((action.dragtype == DRAG_CLIPS_MOVE || action.dragtype == DRAG_CLIPS_COPY)) {
-//            if ((action.dragtype == DRAG_CLIPS_COPY) != isCtrl(kevt.mods)) {
-//                if (action.dragtype == DRAG_CLIPS_MOVE) {
-//                    action.dragtype             = DRAG_CLIPS_COPY;
-//                    MainCtrl::get()->cursorIcon = CURSOR_DUPLICATE;
-//                } else {
-//                    action.dragtype             = DRAG_CLIPS_MOVE;
-//                    MainCtrl::get()->cursorIcon = CURSOR_DEFAULT;
-//                }
-//            }
-//            return false;
-//        }
-        MainCtrl::get()->window->fireMouseMoved();
+        /* if ((action.dragtype == DRAG_CLIPS_MOVE || action.dragtype == DRAG_CLIPS_COPY)) {
+            if ((action.dragtype == DRAG_CLIPS_COPY) != isCtrl(kevt.mods)) {
+                if (action.dragtype == DRAG_CLIPS_MOVE) {
+                    action.dragtype     = DRAG_CLIPS_COPY;
+                    dawCtrl->cursorIcon = CURSOR_DUPLICATE;
+                } else {
+                    action.dragtype     = DRAG_CLIPS_MOVE;
+                    dawCtrl->cursorIcon = CURSOR_DEFAULT;
+                }
+            }
+            return false;
+        } */
+        dawCtrl->window->fireMouseMoved();
         return false;
     }
     if (action.dragtype) {

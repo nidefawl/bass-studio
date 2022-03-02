@@ -16,6 +16,9 @@
 #include "logging.h"
 #include "automation.h"
 #include "host/mainctrl.h"
+#if BUILD_VSTHOST
+#include "trackcontent.h"
+#endif
 
 using Table::table_entry_t;
 using Table::tbl;
@@ -217,7 +220,16 @@ void guiknob::setAutomationHandlers() {
     };
     fnFocus = [this](MouseHitEvt& evt, bool focused) {
         if (paramAutomatable) {
-            MainCtrl::get()->showAutomation(paramAutomatable->getTrack(), paramAutomatable, paramIdx);
+            auto* track = paramAutomatable->getTrack();
+            if (!track)
+                return;
+            auto* guiTrackCtr   = dawCtrl->getTrackContainer();
+            track_gui_entry_t* entry{};
+            if (!guiTrackCtr->getPointerEntry(track, &entry))
+                return;
+            guiTrackCtr->showAutomationLane(entry, paramAutomatable, paramIdx);
+            dawCtrl->updateVisibleTrackContents();
+            guiTrackCtr->scrollTo(entry->content);
         }
     };
 #endif
@@ -311,7 +323,7 @@ void guiknob::handleRightClick(MouseEvent& evt) {
         dbgassert(dawCtrl);
         if (dawCtrl) {
             dbgassert(paramAutomatable->getParam(paramIdx));
-            dawCtrl->openContextMenu(new guictxtmenu_at_param(paramAutomatable, paramIdx), evt.mousepos);
+            dawCtrl->openContextMenu(new guictxtmenu_at_param(dawCtrl, paramAutomatable, paramIdx), evt.mousepos);
         }
         return;
     }

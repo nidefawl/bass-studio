@@ -12,11 +12,6 @@
 #define ID_SHOW 3
 #define ID_SHOW_NEW 4
 void addContextEntriesAutomation(guictxtmenu* ctxt, automatable_t* atl, int paramIdx) {
-
-    auto* track = atl->getTrack();
-    if (track) {
-        MainCtrl::get()->showAutomation(track, atl, paramIdx);
-    }
     const automation_t* at = atl->getRegisteredAutomation(paramIdx);
     if (at && at->isAutomated()) {
         if (!at->active) {
@@ -27,31 +22,28 @@ void addContextEntriesAutomation(guictxtmenu* ctxt, automatable_t* atl, int para
     ctxt->addEntry(new ctxtmenu_entry("Show Automation", ID_SHOW));
     ctxt->addEntry(new ctxtmenu_entry("Show in new Automation Lane", ID_SHOW_NEW));
 }
-bool handleAutomatbleContextMenu(automatable_t* atl, int paramIdx, int _id) {
+bool handleAutomatableContextMenu(DawCtrl* dawCtrl, automatable_t* atl, int paramIdx, int _id) {
     auto* track = atl->getTrack();
     dbgassert(track);
-    automation_t* param = atl->getRegisteredAutomation(paramIdx);
-    auto dawCtrl = MainCtrl::get();
     auto* guiTrackCtr   = dawCtrl->getTrackContainer();
+    track_gui_entry_t* entry{};
+    if(!guiTrackCtr->getPointerEntry(track, &entry))
+        return false;
     switch (_id) {
         case ID_SHOW_NEW: {
-            track_gui_entry_t* entry;
-            dbgassert(guiTrackCtr->getPointerEntry(track, &entry));
-            gui_track_automationlane* lane = guiTrackCtr->addAutomationLane(entry, atl, paramIdx, true);
+            auto const lane = guiTrackCtr->addAutomationLane(entry, atl, paramIdx, true);
             dawCtrl->updateVisibleTrackContents();
             guiTrackCtr->scrollTo(lane);
             return true;
         }
         case ID_SHOW: {
-            dawCtrl->showAutomation(track, atl, paramIdx);
+            guiTrackCtr->showAutomationLane(entry, atl, paramIdx);
             dawCtrl->updateVisibleTrackContents();
-            track_gui_entry_t* entry;
-            if (guiTrackCtr->getTrackEntry(track, &entry)) {
-                guiTrackCtr->scrollTo(entry->content);
-            }
+            guiTrackCtr->scrollTo(entry->content);
             return true;
         }
         case ID_DELETE: {
+            automation_t* param = atl->getRegisteredAutomation(paramIdx);
             if (param) {
                 param->points.clear();
                 dawCtrl->updateVisibleTrackContents();
@@ -59,13 +51,16 @@ bool handleAutomatbleContextMenu(automatable_t* atl, int paramIdx, int _id) {
             return true;
         }
         case ID_REENABLE: {
+            automation_t* param = atl->getRegisteredAutomation(paramIdx);
             if (param && !param->isActive()) {
-                dawCtrl->showAutomation(track, atl, paramIdx);
+                guiTrackCtr->showAutomationLane(entry, atl, paramIdx);
                 dawCtrl->updateVisibleTrackContents();
                 param->active = true;
             }
             return true;
         }
+        default:
+            break;
     }
     return false;
 }

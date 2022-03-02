@@ -45,13 +45,11 @@ void gui_numberinput_field_base::endEdit(bool success) {
 
 void gui_numberinput_field_base::startEdit(bool keepcontent) {
     if (!isEditing) {
-//        mValueTemp = mValue;
         if (keepcontent) {
             this->field.setValue(getAsStringLiteral());
         } else {
             this->field.setValue("");
         }
-//        this->field.focusEvent(true);//MainCtrl::get()->setFocused(this);
         this->field.beginEdit();
         this->field.setSelectionRange(-1, -1);
     }

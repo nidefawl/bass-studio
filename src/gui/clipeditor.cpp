@@ -252,14 +252,14 @@ note_t* getMinDistNoteVel(clip_notes_t& notes, int32_t tickExact, int32_t tickDi
     return minDistNote;
 }
 
-void duplicateClipLoop(clip_view& view) {
+void duplicateClipLoop(DawInstance* daw, clip_view& view) {
     clip_t* clip = view.clip();
     if (!clip) {
         return;
     }
 
     if (clip->loopLen > 0) {
-        ThreadLock lock                = MainCtrl::getPlayThread()->lockThread();
+        ThreadLock lock                = daw->lockPlayThread();
         clip_t clipBefore              = *clip;
         clip_notes_t& notes            = clip->notes;
         clip_cursor_t& cursor          = view.cursor;
@@ -297,7 +297,7 @@ void duplicateClipLoop(clip_view& view) {
             clip->loopLen *= 2;
 
             String desc = "Duplicate clip loop";
-            DawInstance::get()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
+            daw->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
             clip->setDirty();
             view.updateNotePitches(false);
         }
@@ -413,8 +413,8 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
     if (dragMode <= drag_frame) {
         const int32_t nw = 6;
         const float r    = 6;
-        ivec2 imouse     = toControlsObjectSpace(MainCtrl::get()->m_mousePos, this);
-        bool mouseIn     = MainCtrl::get()->guiOver == this && contains(imouse + getPosContent());
+        ivec2 imouse     = toControlsObjectSpace(dawCtrl->m_mousePos, this);
+        bool mouseIn     = dawCtrl->guiOver == this && contains(imouse + getPosContent());
         if (mouseIn) {
             tick_t mouseTick = !mouseIn ? INVALID_TICK : grid.screenToTickSnap(imouse.x, SNAP_OFF);
             //    vec2 fmouse = vec2(imouse);
@@ -982,7 +982,7 @@ void gui_clipcontent::setGlobalSelectionFromClipSelection() {
     if (!clip) {
         return;
     }
-    DAW::Cursor& cursor = MainCtrl::get()->getCursor();
+    DAW::Cursor& cursor = dawCtrl->getCursor();
     cursor.cursorPos    = view.cursor.start + clip->start() - clip->offsetStart;
     cursor.selRange     = view.cursor.end - view.cursor.start;
 }
@@ -1653,7 +1653,7 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
     ivec2 posContents = this->getPosContent();
     ivec2 sizeContents = this->getSizeContent();
 
-    bool visible = MainCtrl::get()->isClipEditorVisible();
+    bool visible = dawCtrl->isClipEditorVisible();
     bool focused = visible && noteeditor.focused();
     if (visible) {
         int topOffset = CTR_SPACING / 2 + 1;
@@ -1661,7 +1661,7 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
     }
     drawInsetBackground(vg, theme, posContents, sizeContents);
 
-    clip_view& view  = MainCtrl::get()->getClipView();
+    clip_view& view  = dawCtrl->getClipView();
     clip_t* const cl = view.clip();
     if (cl && cache->valid) {
         NVGcolor color = rgbToNvg(cl->rgb);

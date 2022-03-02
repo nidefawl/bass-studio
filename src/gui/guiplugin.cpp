@@ -120,7 +120,7 @@ void guiplugin::buttonClicked(guibase* _button) {
         plugin_snapshot_t ps;
         effect->makeSnapshot(ps, tracksnapshot_store_opts_t::All());
         String path;
-        auto window = MainCtrl::get()->window;// hacky
+        auto window = dawCtrl->window;
         if (promptUserFilePath(window, 1, vFILE_TYPE_PLUGINSNAPSHOT, path)) {
             savePluginSnapshot(ps, path);
         }
@@ -186,7 +186,7 @@ void guiplugin::rightClicked(MouseEvent& evt, guibase* button) {
         clickedParamIdx = PARAM_ENABLE;
     }
     if (clickedParamIdx != -1) {
-        auto* ctxt = new guictxtmenu_at_param(effect, clickedParamIdx);
+        auto* ctxt = new guictxtmenu_at_param(dawCtrl, effect, clickedParamIdx);
         parentCtrl->openContextMenu(ctxt, evt.mousepos);
     }
 }
@@ -475,7 +475,7 @@ public:
         knobTest.setParent(this);
     }
     void handleRightClick(MouseEvent& evt) override {
-        parentCtrl->openContextMenu(new guictxtmenu_at_param(effect, entry->idx), evt.mousepos);
+        parentCtrl->openContextMenu(new guictxtmenu_at_param(dawCtrl, effect, entry->idx), evt.mousepos);
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (this->contains(mpos)) {

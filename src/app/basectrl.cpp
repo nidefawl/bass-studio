@@ -1,4 +1,5 @@
 #include "glheaders.h"
+#include <cstddef>
 #include <nanovg.h>
 #include <ctime>
 #include <algorithm>
@@ -7,6 +8,7 @@
 #include <memory>
 #include <GLFW/glfw3.h>
 #include "basectrl.h"
+#include "logging.h"
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "theme.h"
@@ -466,9 +468,20 @@ void AppCtrl::onAppTick() {
     garbageGuis.clear();
 }
 void AppCtrl::destroyControl() {
+    String sname;
+    if (this->ctxtmenu != nullptr) {
+        sname = this->ctxtmenu->getClassName()+","+this->ctxtmenu->getLabel();
+    }
+    bool hadContextMenu = this->ctxtmenu != nullptr;
+    bool hadWindow = contextWindow != nullptr;
     closeAllContextMenus();
+    bool hadContextMenu2 = this->ctxtmenu != nullptr;
+    bool hadWindow2 = contextWindow != nullptr;
     contextWindow = nullptr;
-    dbgassert(!this->ctxtmenu);
+    if (this->ctxtmenu) {
+        log_lf(Log::L_WARN, "Context menu not closed in destroyControl: %s %d %d %d %d %d\n", 
+            StringAsCStr(sname), hadContextMenu, hadWindow, hadContextMenu2, hadWindow2, garbageGuis.size());
+    }
     for (auto gui : garbageGuis) {
         delete gui;
     }

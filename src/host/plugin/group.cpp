@@ -91,7 +91,7 @@ void guimodule_group::onChildLayoutChanged(guibase* g) {
 
 void guimodule_group::render(NVGcontext* vg) {
     dbgassert(ctr.parent == this);
-    dragdrop_target_indicator_t& target = MainCtrl::get()->getDragDropTarget();
+    dragdrop_target_indicator_t& target = dawCtrl->getDragDropTarget();
     bool extend                         = target.src == &this->ctr;
     int extX                            = 8;
     if (extend) {

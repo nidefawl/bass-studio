@@ -69,8 +69,8 @@ void gui_clipsettings::renderBackground(NVGcontext* vg) {
     drawInsetBackground(vg, theme, getPosContent(), getSizeContent());
 }
 
-void duplicateClipLoop(clip_view& view);//clipeditor.cpp;
-void selectAllMuted(clip_view& view) {
+void duplicateClipLoop(DawInstance* daw, clip_view& view);//clipeditor.cpp;
+void selectAllMuted(DawInstance* daw, clip_view& view) {
     clip_notes_t& notes = view.clip()->notes;
     notes.selection.clear();
     notes.visitNotes([&notes](note_t& n) {
@@ -79,7 +79,7 @@ void selectAllMuted(clip_view& view) {
         }
     });
     String selStatus = StringFormat("%d notes selected", notes.selection.size());
-    MainCtrl::get()->setStatusText(selStatus);
+    daw->getMainControl()->setStatusText(selStatus);
 }
 void gui_clipsettings::buttonClicked(guibase* button) {
     if (&btnLoop == button) {
@@ -89,10 +89,10 @@ void gui_clipsettings::buttonClicked(guibase* button) {
         }
     }
     if (&btnDuplicateLoop == button) {
-        duplicateClipLoop(view);
+        duplicateClipLoop(dawCtrl->getDaw(), view);
     }
     if (&btnSelectMuted == button) {
-        selectAllMuted(view);
+        selectAllMuted(dawCtrl->getDaw(), view);
     }
 
     if (&btnLoop == button || &clipTimeStart == button || &clipLoopStart == button || &clipTimeLen == button

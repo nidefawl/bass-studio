@@ -550,6 +550,8 @@ public:
     virtual void layoutView() = 0;
     virtual void fixCursor()  = 0;
     virtual bool isZooming()  = 0;
+    virtual bool isClipEditorVisible() = 0;
+    virtual bool isPluginViewVisible() = 0;
 
     virtual void setViewMode(view_mode_t mode) = 0;
     view_mode_t getViewMode() const;
@@ -586,8 +588,8 @@ public:
 
     void onTick() override;
     void setupView() override;
-    bool isClipEditorVisible();
-    bool isPluginViewVisible();
+    bool isClipEditorVisible() override;
+    bool isPluginViewVisible() override;
     void showPluginView();
     void showClipEditor();
     void onPluginsChanged() override;
@@ -597,7 +599,6 @@ public:
     void resetMouseContext() override;
     void setEditClip(gui_clip* gclip) override;
     void layoutView(int32_t w, int32_t h) override;
-    void showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx);
     void setStatusText(String s) override;
     void destroy() override;
     DAW::Cursor& getCursor() override {
@@ -646,6 +647,8 @@ public:
     void layoutView() override;
     void fixCursor() override;
     bool isZooming() override;
+    bool isClipEditorVisible() override;
+    bool isPluginViewVisible() override;
     void setViewMode(view_mode_t mode) override;
     void setEditClip(gui_clip* gclip) override;
     void getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) override;

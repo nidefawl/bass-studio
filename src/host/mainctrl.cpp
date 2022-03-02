@@ -651,6 +651,14 @@ bool MainCtrl::isPluginViewVisible() {
     return containers[view->indexContent + 1] == &view->ctr_plugins;
 }
 
+bool CompanionCtrl::isClipEditorVisible() {
+    return this->viewMode == view_mode_t::NODE_EDITOR;
+}
+
+bool CompanionCtrl::isPluginViewVisible() {
+    return false;
+}
+
 void MainCtrl::addDebug(String s) {
 }
 
@@ -2018,7 +2026,7 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbm
         }
         if (StrEndsWith(path, ".mid")) {
             LoadMidiTask task(files.front());
-            if (!MainCtrl::get()->getWorkerThread()->pushTask(&task)) {
+            if (!daw.workerThread.pushTask(&task)) {
                 return false;
             }
             if (task.isInQueue()) {
@@ -2504,12 +2512,6 @@ void DawInstance::preTrackDelete(track_t* track) {
     resetMouseContext();
 }
 
-void MainCtrl::showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx) {
-    track_gui_entry_t* entry;
-    if (view->ctr_tracks.getTrackEntry(tr, &entry)) {
-        view->ctr_tracks.showAutomationLane(entry, at, paramIdx);
-    }
-}
 void DawInstance::setTempo(int32_t _tempo100) {
     playThread.call([this, _tempo100]() {
         projectGlobals.tempo100 = CLAMP_I(_tempo100, 100, 99900);

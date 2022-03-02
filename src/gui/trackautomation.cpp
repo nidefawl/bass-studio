@@ -445,7 +445,7 @@ void gui_track_automation::render(NVGcontext* vg) {
                     );
     nvgTranslate(vg, posInset.x, posInset.y);
 
-    ivec2 imouse = toControlsObjectSpace(MainCtrl::get()->m_mousePos, this);
+    ivec2 imouse = toControlsObjectSpace(dawCtrl->m_mousePos, this);
 
     const bool bGlbCfg_DrawAutomationLaneMouseCursor = true;
     if (bGlbCfg_DrawAutomationLaneMouseCursor) {
@@ -457,8 +457,8 @@ void gui_track_automation::render(NVGcontext* vg) {
         nvgFill(vg);
     }
 
-    bool mouseIn              = MainCtrl::get()->guiOver == this && contains(imouse + getPosContent());
-    tick_t mouseTick          = !mouseIn ? INVALID_TICK : MainCtrl::get()->getGrid().screenToTickSnap(imouse.x, SNAP_OFF);
+    bool mouseIn              = dawCtrl->guiOver == this && contains(imouse + getPosContent());
+    tick_t mouseTick          = !mouseIn ? INVALID_TICK : dawCtrl->getGrid().screenToTickSnap(imouse.x, SNAP_OFF);
     vec2 fmouse               = vec2(imouse);
     hit_result currentDragged = dragged.mode || !mouseIn ? dragged : hitTest(fmouse);
     if (currentDragged.mode == dragmode::drag_node) {

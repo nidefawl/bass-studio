@@ -551,8 +551,6 @@ void audio_stage_t::notifyPluginContainers() {
             if (sel.pluginCtr == pluginCtr) {
                 sel.clear();
             }
-            log_printf("Update audiostage of %s which is %s\n", StringAsCStr(pluginCtr->getClassName()),
-                      pluginCtr->isDefaultPluginCtr ? "default" : "group");
             pluginCtr->showTrack(audioStage);
         }
         audioStage = audioStage->parent;
@@ -865,7 +863,7 @@ void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, cons
                 al = new gui_track_automationlane(entry, guiTracks->grid, arp, ref.paramIdx);
             }
         } else if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
-            al = makeGuiSubtrack(entry, MainCtrl::get(), ref.subtrackType);
+            al = makeGuiSubtrack(entry, guiTracks->dawCtrl, ref.subtrackType);
         }
         if (al) {
             al->height = ref.height;
@@ -886,7 +884,6 @@ void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, trac
         subtrackSnapshot.paramIdx     = atl->param;
         subtrackSnapshot.height       = atl->height;
         subtrackSnapshot.subtrackType = atl->subtrackType();
-        log_printf("save ref.type %d, ref.refId %d, ref.paramIdx %d\n", subtrackSnapshot.type, subtrackSnapshot.refId, subtrackSnapshot.paramIdx);
         snapshot.automationLanes.push_back(std::move(subtrackSnapshot));
     }
 }

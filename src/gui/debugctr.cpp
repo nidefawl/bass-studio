@@ -352,8 +352,8 @@ void gui_ctr_debug::render(NVGcontext* vg) {
     }
 
     if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_1) {
-        MainCtrl* ctrl   = MainCtrl::get();
-        DawInstance* daw = DawInstance::get();
+        auto const ctrl   = dawCtrl;
+        auto const daw = DawInstance::get();
 
         vector<String> strings;
         String str;
@@ -414,7 +414,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         if (track && track->audio) {
             strings.push_back(StringFormat("level: %.4f", track->audio->meter.getMaxRMS()));
         }
-        if (ctrl->guiFocused && ctrl->guiFocused->parent == (guibase*) ctrl->getPluginCtr()) {
+        if (ctrl->guiFocused && ctrl->guiFocused->parent == (guibase*) MainCtrl::get()->getPluginCtr()) {
             guiplugin* gplugin = dynamic_cast<guiplugin*>(ctrl->guiFocused);
             if (gplugin) {
                 effectbase* vst = gplugin->getModule();

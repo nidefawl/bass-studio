@@ -162,8 +162,8 @@ void gui_pianoroll::render(NVGcontext* vg) {
     float yOff      = offset - firstKey * scale - scale;
     ivec2 noteMouse = { -1, -1 };
     if (dragMode == dragmode::drag_none || dragMode == dragmode::drag_piano_key) {
-        ivec2 imouse = toControlsObjectSpace(MainCtrl::get()->m_mousePos, this);
-        bool mouseIn = MainCtrl::get()->guiOver == this && contains(imouse + pos) && imouse.x >= keysX;
+        ivec2 imouse = toControlsObjectSpace(dawCtrl->m_mousePos, this);
+        bool mouseIn = dawCtrl->guiOver == this && contains(imouse + pos) && imouse.x >= keysX;
         if (mouseIn) {
             vec2 note = getNoteFromPos(imouse);
             if (note.y >= 0 && note.y < MAX_OCTAVES * 12) {

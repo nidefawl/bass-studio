@@ -163,7 +163,7 @@ public:
     }
     void handleRightClick(MouseEvent& evt) override {
         dbgassert(paramAutomatable && paramIdx > -1 && paramAutomatable->getParam(paramIdx));
-        parentCtrl->openContextMenu(new guictxtmenu_at_param(paramAutomatable, paramIdx), evt.mousepos);
+        parentCtrl->openContextMenu(new guictxtmenu_at_param(dawCtrl, paramAutomatable, paramIdx), evt.mousepos);
     }
     bool isAutomated() {
         dbgassert(paramAutomatable && paramIdx > -1 && paramAutomatable->getParam(paramIdx));
@@ -370,7 +370,7 @@ public:
         return trackenabled();
     }
     void handleRightClick(MouseEvent& evt) override {
-        parentCtrl->openContextMenu(new guictxtmenu_at_param(&m_track->audio->mixer, PARAM_ENABLE), evt.mousepos);
+        parentCtrl->openContextMenu(new guictxtmenu_at_param(dawCtrl, &m_track->audio->mixer, PARAM_ENABLE), evt.mousepos);
     }
 };
 
@@ -1387,9 +1387,8 @@ public:
             if (cursor.inSubTrack(m_trackentry->idx, laneIdx)) {
                 fixCursorSubRange(cursor, m_trackentry->subtracks.size() - 1);
             }
-            MainCtrl::getGuiTrackCtr()->removeSubtrack(m_trackentry, subtrack);
-            DawInstance::get()->layoutTrackEditors();
-            DawInstance::get()->updateVisibleTrackContents();
+            dawCtrl->getTrackContainer()->removeSubtrack(m_trackentry, subtrack);
+            dawCtrl->getDaw()->updateVisibleTrackContents();
         }
     }
     void render(NVGcontext* vg) override {
@@ -1440,7 +1439,7 @@ public:
     }
     void handleRightClick(MouseEvent& evt) override {
         if (subtrack->at) {
-            parentCtrl->openContextMenu(new guictxtmenu_at_param(subtrack->at, subtrack->param), evt.mousepos);
+            parentCtrl->openContextMenu(new guictxtmenu_at_param(dawCtrl, subtrack->at, subtrack->param), evt.mousepos);
         }
     }
 };
@@ -1525,8 +1524,7 @@ void gui_track_controls::render(NVGcontext* vg) {
         return;
     }
     auto bgColor     = theme->getColor(GuiColor::COL_BG_BRT);
-    DawInstance* daw = DawInstance::get();
-    if (daw->getSelectedTrack() == m_track) {
+    if (dawCtrl->getDaw()->getSelectedTrack() == m_track) {
         bgColor = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK);
     }
     nvgBeginPath(vg);
@@ -1649,8 +1647,7 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
         dawCtrl->updateVisibleTrackContents();
     }
 }
-String makeUniqueTrackName(const String& strNewName) {
-    DawInstance* daw = DawInstance::get();
+String makeUniqueTrackName(DawInstance* daw, const String& strNewName) {
     auto& trackCtr   = daw->getTracks();
     int offset       = 0;
     while (offset < 100) {
@@ -1699,8 +1696,9 @@ public:
     }
     ~guictxtmenu_track() override = default;
     void clicked(int _id) override {
-        ThreadLock lock = dawCtrl->lockPlayThread();
-        track_t* tr     = m_trackentry->track;
+        auto const daw          = dawCtrl->getDaw();
+        ThreadLock lock   = daw->lockPlayThread();
+        track_t* const tr = m_trackentry->track;
         if (_id >= cmdPickColor->id) {
             _id -= cmdPickColor->id;
             if (tr) {
@@ -1724,47 +1722,37 @@ public:
                 }
             }
             if (gtr_at) {
-                m_trackentry->parent->dawCtrl->updateVisibleTrackContents();
+                dawCtrl->updateVisibleTrackContents();
                 m_trackentry->parent->scrollTo(gtr_at);
             }
         } else if (_id == cmdDuplicateTrack->id) {
             if (tr) {
-                //TODO: generate unique stage ids and assign them to track audio stage and plugin instances
-                track_t* newTrack = DawInstance::get()->createNewTrack(tr->type);
+                track_t* newTrack = daw->createNewTrack(tr->type);
                 String strNewName = StringFormat("%s copy", StringAsCStr(tr->name));
-
                 track_snapshot_t trSnap(tr, tracksnapshot_store_opts_t::All());
                 trSnap.stageIds.inputStageId = -1;
                 *newTrack                    = trSnap;
-                DawInstance::get()->addTrackImpl(tr->localIdxFlat + 1, newTrack, FLG_TRK_CHANGE_USER);
-                //trSnap.stageId = static_cast<int32_t>(newTrack->audio->stageId);
+                daw->addTrackImpl(tr->localIdxFlat + 1, newTrack, FLG_TRK_CHANGE_USER);
                 newTrack->loadSnapshot(trSnap);
-                newTrack->name = makeUniqueTrackName(strNewName);
-                //make stuff unique
-                dbgassert(vsthost::getInstance()->validateIds());
+                newTrack->name = makeUniqueTrackName(dawCtrl->getDaw(), strNewName);
+                //ensure unique IDs
+                dbgassert(daw->getHost()->validateIds());
                 m_trackentry->parent->layout();
-                DawInstance::get()->updateVisibleTrackContents();
+                daw->updateVisibleTrackContents();
                 track_gui_entry_t* entry{};
                 if (m_trackentry->parent->getTrackEntry(tr, &entry)) {
                     m_trackentry->parent->scrollTo(entry->content);
                 }
             }
         } else if (_id == cmdDeleteTrack->id) {
-            auto trackparent = m_trackentry->parent;
-            DawInstance::get()->removeTrackId(m_trackentry->track->projectIdx);
-            trackparent->layout();
-            DawInstance::get()->updateVisibleTrackContents();
-        } else if (_id == cmdDuplicateTrack->id) {
+            daw->removeTrackId(m_trackentry->track->projectIdx);
+            daw->updateVisibleTrackContents();
+        } else if (_id == cmdSaveTrack->id) {
             auto window = parentCtrl->window;
-
             track_snapshot_t snapshot(tr, tracksnapshot_store_opts_t::All());
             trackcontainer_snapshot_t trackContainerSnapshot;
             trackContainerSnapshot.tracks.push_back(snapshot);
-            // promptUserFilePath initiates a native dialog that would close this context menu
-            // so we do it ourself controlled here
-            closeContextMenu();// deletes this
-            // now we make sure not to access heap (this) after this point
-
+            closeContextMenu();
             String path;
             if (promptUserFilePath(window, 1, vFILE_TYPES_TRACKSNAPSHOT, path)) {
                 saveTrackContainer(trackContainerSnapshot, path);
@@ -1772,33 +1760,29 @@ public:
             return;
         } else if (_id == cmdAddChildMidiTrack->id) {
             auto trackCtr     = m_trackentry->parent;
-            track_t* newTrack = DawInstance::get()->createNewTrack(tr->type);
+            track_t* newTrack = daw->createNewTrack(tr->type);
             tr->addChild(newTrack);
-            DawInstance::get()->addTrackImpl(0, newTrack, FLG_TRK_CHANGE_USER);
-            newTrack->name = makeUniqueTrackName(tr->name);
-
-            trackCtr->layout();
-            DawInstance::get()->updateVisibleTrackContents();
+            daw->addTrackImpl(0, newTrack, FLG_TRK_CHANGE_USER);
+            newTrack->name = makeUniqueTrackName(dawCtrl->getDaw(), tr->name);
+            daw->updateVisibleTrackContents();
             track_gui_entry_t* entry{};
             if (trackCtr->getTrackEntry(newTrack, &entry)) {
                 trackCtr->scrollTo(entry->content);
             }
-            closeContextMenu();// deletes this
-            return;
         } else if (_id == cmdRenameTrack->id) {
             const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
-            auto title           = m_trackentry->mixer->getTitle();
-            auto popupPos        = title->toScreenSpace(ivec2(0));//+ivec2(title->hideTrack.right() + INSET_TITLE*2, 0);
-            gui_textfield* field = new gui_textfield();
-            field->size          = title->size;
-            field->size.y        = titleHeight;
-            field->pos           = { 0, 0 };
+            auto title       = m_trackentry->mixer->getTitle();
+            auto popupPos    = title->toScreenSpace(ivec2(0));//+ivec2(title->hideTrack.right() + INSET_TITLE*2, 0);
+            auto const field = new gui_textfield();
+            field->size      = title->size;
+            field->size.y    = titleHeight;
+            field->pos       = { 0, 0 };
             field->setFontSize((int) (titleHeight * 0.9));
             field->mReturnCommits = true;
 
-            guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
-            ctxtMenu->size             = field->size;
+            auto const ctxtMenu = new guictxtmenu_base();
+            ctxtMenu->size      = field->size;
             ctxtMenu->add(field);
             ctxtMenu->layout();
             ctxtMenu->canTakeInputFocus = true;
@@ -1811,11 +1795,13 @@ public:
                 return true;
             };
             field->setEndEditCallback(cb);
+            closeContextMenu();
             m_trackentry->parentCtrl->openContextMenu(ctxtMenu, popupPos);
-
+            // m_trackentry is not valid here
             field->setValue(m_trackentry->track->name);
             field->setSelectionRange(-1, -1);
             field->parentCtrl->focusGui(field);
+            return;
         } else if (_id == cmdShowWaveform->id) {
 
             auto trackCtr = m_trackentry->parent;
@@ -1831,15 +1817,12 @@ public:
                 }
             } else {
                 tr->audio->flags |= audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::WRITE_OUTPUT;
-                auto gui = makeGuiSubtrack(m_trackentry, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
+                auto gui = makeGuiSubtrack(m_trackentry, dawCtrl, gui_track_subtrack::SUBTRACK_TYPE_WAVE);
                 trackCtr->addSubTrack(m_trackentry, gui, true);
             }
 
             trackCtr->layout();
-            DawInstance::get()->updateVisibleTrackContents();
-
-            closeContextMenu();// deletes this
-            return;
+            daw->updateVisibleTrackContents();
         }
         closeContextMenu();
     }
@@ -1848,7 +1831,7 @@ void gui_track_controls::handleRightClick(MouseEvent& evt) {
     m_trackentry->parentCtrl->openContextMenu(new guictxtmenu_track(dawCtrl, this->m_trackentry), evt.mousepos);
 }
 gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry) {
-    gui_track_controls* const guicontrols = new gui_track_controls(_entry);
+    auto const guicontrols = new gui_track_controls(_entry);
     guicontrols->setZOrder(_entry->track->type >= TRACK_TYPE_MIDI ? 0 : 1);
     return guicontrols;
 }

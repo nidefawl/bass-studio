@@ -190,10 +190,11 @@ public:
 
 
 class guictxtmenu_at_param : public guictxtmenu {
+    DawCtrl* const dawCtrl;
     automatable_t* const atl;
     int32_t const paramIdx;
 
 public:
-    guictxtmenu_at_param(automatable_t* _atl, int32_t _paramIdx);
+    guictxtmenu_at_param(DawCtrl* _dawCtrl, automatable_t* _atl, int32_t _paramIdx);
     void clicked(int _id) override;
 };

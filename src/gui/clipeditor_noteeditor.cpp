@@ -306,7 +306,7 @@ void guictr_cliphandles::render(NVGcontext* vg) {
     }
 
     /* render track-editor selection range in clipview */
-    DAW::Cursor& c = MainCtrl::get()->getCursor();
+    DAW::Cursor& c = dawCtrl->getCursor();
     if (c.selRange) {
         int32_t tickBegin = c.getTickBegin() - clipOffset;
         int32_t tickEnd   = c.getTickEnd() - clipOffset;

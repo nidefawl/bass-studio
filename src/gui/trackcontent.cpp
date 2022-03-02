@@ -204,7 +204,7 @@ void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& gri
     if (!canQueue) {
         limit.x = waveform.size.x / 4;
     }
-    if (waveform.clipped || (MainCtrl::get() && !MainCtrl::get()->isZooming())) {
+    if (waveform.clipped || (dawCtrl && !dawCtrl->isZooming())) {
         limit = { 0, 0 };
     }
     if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {

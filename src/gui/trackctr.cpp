@@ -638,7 +638,7 @@ gui_track_drop_position_t slotFromCoord(guictr_tracks* parent, track_gui_entry_t
 namespace {
     using drop_type = gui_track_drop_position_t::drop_type;
     void handleTrackEntryDragMove(guictr_tracks* parent, track_gui_entry_t* entry, ivec2 mousepos) {
-        MainCtrl::get()->getDragDropTarget().reset();
+        parent->dawCtrl->getDragDropTarget().reset();
         gui_track_drop_position_t slot = slotFromCoord(parent, entry, mousepos);
 
         dbgassert(slot.droptype == drop_type::none || slot.droppedTrack);
@@ -694,7 +694,7 @@ namespace {
                 dbgassert(0);
                 return;
         }
-        MainCtrl::get()->getDragDropTarget() = target;
+        parent->dawCtrl->getDragDropTarget() = target;
     }
     void handleTrackEntryDragRelease(guictr_tracks* parent, track_gui_entry_t* entry, ivec2 mousepos) {
         gui_track_drop_position_t slot = slotFromCoord(parent, entry, mousepos);
@@ -743,7 +743,7 @@ namespace {
         treePos.trackTypeCtr = TRACKTYPE_TO_CTR(track->type);
         std::vector<track_t*> selectedTracks;
         selectedTracks.push_back(track);
-        auto daw = DawInstance::get();
+        auto daw = parent->dawCtrl->getDaw();
         ThreadLock lock  = daw->lockPlayThread();
         bool failed      = !daw->getTracks().moveTracks(selectedTracks, treePos);
         String strTarget = "<root>";

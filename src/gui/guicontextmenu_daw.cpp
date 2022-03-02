@@ -6,14 +6,14 @@
 #include "track_snapshot.h"
 #include "logging.h"
 
-guictxtmenu_at_param::guictxtmenu_at_param(automatable_t* _atl, int32_t _paramIdx)
-    : atl(_atl), paramIdx(_paramIdx) {
+guictxtmenu_at_param::guictxtmenu_at_param(DawCtrl* _dawCtrl, automatable_t* _atl, int32_t _paramIdx)
+    : dawCtrl(_dawCtrl), atl(_atl), paramIdx(_paramIdx) {
     dbgassert(_atl);
     this->size.x = 240;
     addContextEntriesAutomation(this, _atl, paramIdx);
 }
 void guictxtmenu_at_param::clicked(int _id) {
-    handleAutomatbleContextMenu(atl, paramIdx, _id);
+    handleAutomatableContextMenu(dawCtrl, atl, paramIdx, _id);
     closeContextMenu();
 }
 
