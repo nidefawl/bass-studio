@@ -137,7 +137,7 @@ public:
                         vsthost* host           = vsthost::getInstance();
                         effect->projectGlobalId = 0;// generate new id
                         if (!host->addDeferredEffect(effect)) {
-                            log_printf("Failed loading effect\n", 0);
+                            log_printf("Failed loading effect\n");
                             delete effect;
                             return;
                         }
@@ -188,7 +188,7 @@ void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_
             effect->projectGlobalId = 0;// generate new id
             stage->deferredEffects.push_back(effect);
             if (!host->addDeferredEffect(effect)) {
-                log_printf("Failed loading effect\n", 0);
+                log_printf("Failed loading effect\n");
                 delete effect;
                 continue;
             }
@@ -542,8 +542,6 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
     effectbase* effect = g->makeInstance();
     if (effect) {
         log_printf("Insert effect on %s, parent %s\n", StringAsCStr(getClassName()), parent ? StringAsCStr(parent->getClassName()) : "<null>");
-
-
         vsthost::getInstance()->insertNewPlugin(stage, effect, dstSlot);
         effect->resume();
         audio_stage_ref_t refdst = stage->toRef();

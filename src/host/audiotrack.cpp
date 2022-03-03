@@ -97,7 +97,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 #endif
                 bytesCopied += sizeof(float) * srcSize;
             }
-            //log_printf("block #%d copy %d bytes, present %d, resized %d, version %d/%d\n", i, bytesCopied, present, resized, preVersion, data[i]->version);
+            //log_lf(Log::L_DEBUG, "block #%d copy %d bytes, present %d, resized %d, version %d/%d\n", i, bytesCopied, present, resized, preVersion, data[i]->version);
         } else {
             newSplits.push_back(nullptr);
         }
@@ -136,11 +136,11 @@ void audiotrack_t::store(AudioBlock* input, int32_t samplePos) {
     }
     auto split = std::make_shared<audiotrack_split_t>();
     if (!data[startBlock]) {
-        //log_printf("alloc new block #%d\n", startBlock);
+        //log_lf(Log::L_DEBUG, "alloc new block #%d\n", startBlock);
         data[startBlock] = std::make_shared<audiotrack_block_t>(OUTPUT_CHANNELS, PER_BLOCK_SAMPLES);
     }
     if (!data[endBlock]) {
-        //log_printf("alloc new block #%d\n", endBlock);
+        //log_lf(Log::L_DEBUG, "alloc new block #%d\n", endBlock);
         data[endBlock] = std::make_shared<audiotrack_block_t>(OUTPUT_CHANNELS, PER_BLOCK_SAMPLES);
     }
     int32_t readLen    = input->samples;
@@ -157,7 +157,7 @@ void audiotrack_t::store(AudioBlock* input, int32_t samplePos) {
     int32_t lenBlock0         = math::min(PER_BLOCK_SAMPLES - startOffsetBlock0, readLen);
     int32_t lenOver           = readLen - lenBlock0;
     auto* blockStart          = data[startBlock].get();
-    //log_printf("write %d samples to block #%d{%d:%d}\n", lenBlock0, startBlock, startOffsetBlock0, startOffsetBlock0+lenBlock0);
+    //log_lf(Log::L_DEBUG, "write %d samples to block #%d{%d:%d}\n", lenBlock0, startBlock, startOffsetBlock0, startOffsetBlock0+lenBlock0);
     blockStart->version++;
     blockStart->data.copyFromPosToPos(input->buf, readOffset, startOffsetBlock0, lenBlock0, input->channels);
     //  if (samples.size() > startBlock && samples[startBlock]) {
@@ -167,7 +167,7 @@ void audiotrack_t::store(AudioBlock* input, int32_t samplePos) {
     if (startBlock != endBlock) {
         dbgassert(lenOver > 0);
         auto* blockEnd = data[endBlock].get();
-        //log_printf("write %d samples to block #%d{%d:%d}\n", lenOver, endBlock, 0, lenOver);
+        //log_lf(Log::L_DEBUG, "write %d samples to block #%d{%d:%d}\n", lenOver, endBlock, 0, lenOver);
         blockEnd->version++;
         blockEnd->data.copyFromPosToPos(input->buf, lenBlock0, 0, lenOver, input->channels);
         //if (samples.size() > endBlock && samples[endBlock]) {

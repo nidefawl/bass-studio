@@ -119,21 +119,21 @@ namespace DAW {
     bool buildProcessingGraph(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph) {
         std::shared_ptr<DAW::track_graph_t> dependencyGraph;
         if (!DAW::buildTrackRoutingGraph(host, project, tracksFlat, dependencyGraph)) {
-            log_printf("Failed building track graph\n", 0);
+            log_printf("Failed building track graph\n");
             return false;
         }
         track_node_t root;
         root.children.insert(root.children.begin(), dependencyGraph->roots.begin(), dependencyGraph->roots.end());
         dependency_graph_flattened_t graphFlattened;
         if (!dep_resolve(graphFlattened, &root)) {
-            log_printf("Failed flattening track graph\n", 0);
+            log_printf("Failed flattening track graph\n");
             return false;
         }
 
         track_vector tracksVisited;
         std::shared_ptr<processing_graph_t> shrdPtrProcGraph = std::make_shared<processing_graph_t>();
         //std::shared_ptr<processing_graph_t> shrdPtrProcGraph(new processing_graph_t(), [](processing_graph_t *gr) {
-        //  log_printf("free proc_graph %08X\n", reinterpret_cast<uint64_t>(gr));
+        //  log_lf(Log::L_DEBUG, "free proc_graph %08X\n", reinterpret_cast<uint64_t>(gr));
         //});
 
         shrdPtrProcGraph->nodes.reserve(dependencyGraph->nodes.size());
@@ -215,7 +215,7 @@ namespace DAW {
                 });
 
                 if (itDependency >= itStageIdx) {
-                    log_printf("unexpected: dependecy index >= this index!!\n", 0);
+                    log_printf("unexpected: dependecy index >= this index!!\n");
                 }
                 auto itDependencyChildren = std::find_if(trackNode.children.begin(), trackNode.children.end(), [depNodeIdx](const track_node_t* ptr) {
                     return ptr->stageId == depNodeIdx;
@@ -318,7 +318,7 @@ namespace DAW {
     void updateSoloFlag(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat) {
         std::shared_ptr<DAW::track_graph_t> dependencyGraph;
         if (!DAW::buildTrackRoutingGraph(host, project, tracksFlat, dependencyGraph)) {
-            log_printf("Failed building track graph\n", 0);
+            log_printf("Failed building track graph\n");
             return;
         }
         for (track_t* track : tracksFlat) {
@@ -443,7 +443,7 @@ namespace DAW {
         }
         auto trackGraph = std::make_shared<track_graph_t>();
         //std::shared_ptr<track_graph_t> trackGraph(new track_graph_t(), [](track_graph_t *gr) {
-        //  log_printf("free track_graph %08X\n", reinterpret_cast<uint64_t>(gr));
+        //  log_lf(Log::L_DEBUG, "free track_graph %08X\n", reinterpret_cast<uint64_t>(gr));
         //});
         trackGraph->nodes.reserve(map.size());
         for (auto mapIt = map.begin(); mapIt != map.end(); ++mapIt) {
@@ -456,7 +456,7 @@ namespace DAW {
         if (gEnableLog) {
             for (track_node_ptr& ptr : trackGraph->nodes) {
                 for (audiostageid_i32 src : ptr->dependencies) {
-                    log_printf("%d => %d\n", src, ptr->stageId);
+                    log_lf(Log::L_DEBUG, "%d => %d\n", src, ptr->stageId);
                 }
             }
         }

@@ -127,7 +127,7 @@ public:
             index++;
         }
         if (!entriesToRemove.empty()) {
-            log_printf("remove %d container entries\n", entriesToRemove.size());
+            log_lf(Log::L_DEBUG, "remove %d container entries\n", entriesToRemove.size());
         }
         for (const auto& entry: entriesToRemove) {
             std::shared_ptr<guictr_layout_entry> out;

@@ -297,7 +297,7 @@ namespace MiniApp {
                 renderStep++;
             }
             if (renderStep >= 100) {
-                log_printf("request close!\n", 0);
+                log_printf("request close!\n");
                 this->mainWindow->requestClose();
             }
         }

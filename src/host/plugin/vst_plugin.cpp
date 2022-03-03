@@ -315,7 +315,7 @@ namespace {
                     auto* ptrData = reinterpret_cast<uint8_t*>(pluginData);
                     ps.dataChunk.reserve(pluginDataSize);
                     ps.dataChunk.assign(ptrData, ptrData + pluginDataSize);
-                    log_printf("Plugin %s: Save data1[%d]\n", StringAsCStr(plugin->sName), pluginDataSize);
+                    log_lf(Log::L_DEBUG, "Plugin %s: Save data1[%d]\n", StringAsCStr(plugin->sName), pluginDataSize);
                 }
             }
             if (storePluginPresetWithSnapshot) {
@@ -325,7 +325,7 @@ namespace {
                     auto* ptrData = reinterpret_cast<uint8_t*>(pluginData2);
                     ps.dataChunk2.reserve(pluginDataSize2);
                     ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
-                    log_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
+                    log_lf(Log::L_DEBUG, "Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
                 }
             }
         }
@@ -370,11 +370,11 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
         if (!pluginSnapshot.dataChunk.empty()) {
             auto& localMem = this->handle->dataChunkLocalMemory;
             localMem       = pluginSnapshot.dataChunk;
-            log_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(this->sName), localMem.size());
+            log_lf(Log::L_DEBUG, "Plugin %s: Load data1[%d]\n", StringAsCStr(this->sName), localMem.size());
             this->dispatch(effSetChunk, 0, (int64_t) localMem.size(), (void*) localMem.data());
         }
         if (loadPluginPresetWithSnapshot && !pluginSnapshot.dataChunk2.empty()) {
-            log_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(this->sName), pluginSnapshot.dataChunk2.size());
+            log_lf(Log::L_DEBUG, "Plugin %s: Load data2[%d]\n", StringAsCStr(this->sName), pluginSnapshot.dataChunk2.size());
             this->dispatch(effSetChunk, 1, (int64_t) pluginSnapshot.dataChunk2.size(), (void*) pluginSnapshot.dataChunk2.data());
         }
     } else {
@@ -740,7 +740,7 @@ void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, int32_t sa
 
 extern "C" void vst_onException(vstplugin* plugin)
 {
-    log_printf("segfault/fatal exception\n", 0);
+    log_printf("segfault/fatal exception\n");
     if (!plugin->isBypass()) {
         plugin->setParamValue(PARAM_ENABLE, 0, FLG_PAR_UPDATE_NOSTORE);
         log_printf("segfault/fatal exception on %s\n", StringAsCStr(plugin->getName()));

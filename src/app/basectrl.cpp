@@ -60,14 +60,6 @@ String menuName(String s, KeyCombo combo) {
 }
 MouseEvent mouseEvent(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, MouseEventType evtType) {
     MouseEvent mevt;
-    /*MouseEventType type;
-    int button;
-    guibase* guiDragged;
-    ivec2 mousepos;
-    ivec2 localpos;
-    ivec2& dragStart;
-    ivec2& dragOffset;
-    ivec2& dragDistance;*/
     mevt.type         = evtType;
     mevt.guiDragged   = gui;
     mevt.button       = button;
@@ -108,7 +100,6 @@ ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui) {
         guiHierachy.pop_back();
         posOS = b->toContainerSpace(posOS);
     }
-    // return posOS - gui->pos;
     return gui->toContainerSpace(posOS);
 }
 void processScrollEvt(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffset, double yoffset) {
@@ -125,11 +116,6 @@ void BaseCtrl::mouseUp(ivec2 mousePos, int button) {
         guiCaptured = nullptr;
     }
     if (guiDragged) {
-        //  cursorIcon = CURSOR_DEFAULT;
-        //  if (guiDragged!=guiFocused&&guiFocused) {
-        //   MouseEvent evt = mouseEvent(this, guiFocused, mousePos, button, M_EVT_BTN_UP);
-        //   guiFocused->handleDraggedRelease(evt);
-        //  }
         cursorIcon     = CURSOR_DEFAULT;
         MouseEvent evt = mouseEvent(this, guiDragged, mousePos, button, M_EVT_BTN_UP);
         guiDragged->handleDraggedRelease(evt);
@@ -313,7 +299,7 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
 
     for (guictr_base* ctr : containers) {
         if (ctr->size == ivec2{0, 0}) {
-            log_printf("warning, rendering container with size 0 0\n", 0);
+            log_lf(Log::L_WARN, "warning, rendering container with size 0 0\n");
             continue;
         }
         nvgSave(vg);
@@ -330,7 +316,7 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
                 auto shrdPtrTarget = weakPtrTarget.lock();
                 if (shrdPtrTarget.get()) {
                     if (shrdPtrTarget->size == ivec2{0, 0}) {
-                        log_printf("warning, rendering container with size 0 0\n", 0);
+                        log_lf(Log::L_WARN, "warning, rendering container with size 0 0\n");
                         continue;
                     }
                     if (shrdPtrTarget->contains(ctrDragHandler.pos)) {
@@ -345,7 +331,7 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
     }
     if (guiDragged) {
         if (guiDragged->size == ivec2{0, 0}) {
-            log_printf("warning, rendering container with size 0 0\n", 0);
+            log_lf(Log::L_WARN, "warning, rendering container with size 0 0\n");
         } else {
             nvgSave(vg);
             guiDragged->renderDragged(vg, this->m_mousePos, dragOffset);
@@ -383,24 +369,6 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
         renderDebug(vg, ctr, dbgcolorsa[colorIdx++ % 8]);
     }
 #endif
-
-//    int lx = 20;
-//    int ly = 20;
-//    int lw = 300;
-//    renderDashedLineFrame(vg, lx, ly, lw, lw, 1.0f);
-//    RenderResources::NvgImageTexture& image = RenderResources::imgDashedLine;
-//
-//
-//    nvgBeginPath(vg);
-//    nvgRect(vg, 0, 0, 100, 100);
-//    nvgFillColor(vg, rgbToNvg(0x333333));
-//    nvgFill(vg);
-//    NVGpaint paintDown = nvgImagePattern(vg, 0, 0, image.width, image.height, 0, image.id, 1.0f);
-//
-//    nvgBeginPath(vg);
-//    nvgRect(vg, 20, 20, 60, 60);
-//    nvgFillPaint(vg, paintDown);
-//    nvgFill(vg);
 
     nvgEndFrame(vg);
 }
@@ -461,7 +429,7 @@ void AppCtrl::onAppTick() {
     getTheme()->updateAnimation();
     onTick();
 
-    // move this in some garbageCollect() method and trigger garbage collection after every window-msg on win32 (linux?)
+    /* run deferred delete of contextmenus */
     for (auto gui : garbageGuis) {
         delete gui;
     }
@@ -607,7 +575,6 @@ void AppCtrl::openDialog(guidialog_base* _guidialog) {
     popupCtrl->open(_guidialog, wndPos, (dialogWindow->getCreationFlags() & WINDOW_IS_RESIZABLE));
 }
 void AppCtrl::openContextMenu(guictxtmenu_base* b, ivec2 pos, int flags) {
-    // log_printf("open ctxtmenu_base %s\n", StringAsCStr(b->getLabel()));
     openOverlayGui(b, pos, flags | BASECTRL_OVERLAY_TYPE_CONTEXTMENU);
 }
 void AppCtrl::closeContextMenu() {
@@ -745,13 +712,10 @@ void BaseCtrl::dragContainerBegin(MouseEvent& evt, guictr_layout_entry* ctrDragS
     if (ctrDragSrc->getContainerRef(ctrContent, false)) {
         dbgassert(ctrContent.get());
         auto* szLabel1 = StringAsCStr(ctrContent->getGui()->label);
-        log_printf("dragContainerBegin %s\n", szLabel1);
-        //            ctrDragHandler.pos = ctrContent->getGui()->pos;
         auto vecSizeScaled  = vec2(ctrContent->getGui()->size) * 0.3f;
         ctrDragHandler.size = math::maxvec2(ivec2(32, 12), vecSizeScaled);
         ctrDragHandler.setLabel("Move " + ctrDragSrc->getGui()->label);
         setDragged(&ctrDragHandler);
-        //            ctrDragHandler.validPreview = false;
         dragContainerMove(evt);
         dragContainerRelayout(drag_ctr_event{drag_ctr_event_type::DRAG_BEGIN});
     }
@@ -774,10 +738,8 @@ void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i
     container_layout ctrLayout        = layoutCtr->getLayout();
     container_layout updatedCtrLayout = dock_pos_to_container_layout(dockPos);
     if (area->childContainerIndex > -1 || (ctrLayout != updatedCtrLayout && ctrLayout != container_layout::SOLE)) {
-
         auto newContainer = std::make_shared<guictr_layout>();
         newContainer->setLayout(updatedCtrLayout);
-        log_printf("replace guictr_layout container\n", 0);
         if (updatedCtrLayout == container_layout::TABBED) {
             auto& ctrEntries = layoutCtr->getEntries();
             dbgassert(area->dockPosOffset >= 0 && area->dockPosOffset <= ctrEntries.size());
@@ -811,7 +773,6 @@ void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i
                     area->childContainerIndex > -1 ? layoutCtr->getEntries()[area->childContainerIndex]->getGui() : layoutCtr;
             auto parentLayoutCtr = dynamic_cast<guictr_layout*>(containerToReplace->parent);
             if (!parentLayoutCtr) {
-                log_printf("replace top level container\n", 0);
                 std::shared_ptr<guictr_layout> prevCtr = this->replaceContainerWith(containerToReplace, newContainer);
                 if (prevCtr) {
                     std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(prevCtr);
@@ -828,17 +789,14 @@ void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i
                 newContainer->placeContainer(layoutCtrEntry, area);
             }
         }
-        log_printf("cannot directly insert into %s. need to change layout from %d to %d first\n", szLabel2, ctrLayout,
-                    updatedCtrLayout);
-
+        log_lf(Log::L_DEBUG, "cannot directly insert into %s. need to change layout from %d to %d first\n", szLabel2, ctrLayout, updatedCtrLayout);
     } else {
         hasRemovedContainer = true;
         hasPlacedContainer  = area->getLayoutCtr()->placeContainer(ctrContent, area);
-        log_printf("attempt to place container %s on %s result %d\n", szLabel1, szLabel2, hasPlacedContainer);
+        log_lf(Log::L_DEBUG, "attempt to place container %s on %s result %d\n", szLabel1, szLabel2, hasPlacedContainer);
     }
     if (hasRemovedContainer && !hasPlacedContainer) {
-        log_printf("Container was removed from its parent could not be placed on target. Container is now dangling %s\n",
-                   StringAsCStr(ctrContent->getGui()->label));
+        log_lf(Log::L_DEBUG, "Container was removed from its parent could not be placed on target. Container is now dangling %s\n", StringAsCStr(ctrContent->getGui()->label));
     }
 }
 void BaseCtrl::dragContainerRelease(MouseEvent& evt) {
@@ -871,7 +829,6 @@ std::vector<std::weak_ptr<i_ctr_drop_area>> BaseCtrl::getTargets(MouseEvent& mev
                 }
             }
         }
-        //      log_printf("ctrtargets %X %d\n", reinterpret_cast<int64_t>(ctr), ctrtargets.size());
         targets.insert(targets.begin(), ctrtargets.begin(), ctrtargets.end());
     }
     return targets;
@@ -908,8 +865,6 @@ std::vector<i_ctr_layout*> BaseCtrl::getContainers() {
             ifMatches.push_back(ifMatch);
         }
     }
-    //  log_printf("matched %d instances\n", ifMatches.size());
-
     return ifMatches;
 }
 

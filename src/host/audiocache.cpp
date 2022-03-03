@@ -65,16 +65,15 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
 
     log_printf("Loading %s...\n", path.c_str());
     if (drwav_init_file(&wav, StringAsCStr(path))) {
-        log_printf("%s\n", StringAsCStr(path));
         std::vector<float> pSamples(wav.totalSampleCount);
         memset(pSamples.data(), 0, sizeof(float) * pSamples.size());
         size_t nSamples = drwav_read_f32(&wav, wav.totalSampleCount, pSamples.data());
 
-        log_printf("totalSampleCount: %d\n", wav.totalSampleCount);
-        log_printf("channels: %d\n", wav.fmt.channels);
-        log_printf("sampleRate: %d\n", wav.fmt.sampleRate);
-        log_printf("bitsPerSample: %d\n", wav.fmt.bitsPerSample);
-        log_printf("samples: %d\n", nSamples);
+        log_lf(Log::L_DEBUG, "totalSampleCount: %d\n", wav.totalSampleCount);
+        log_lf(Log::L_DEBUG, "channels: %d\n", wav.fmt.channels);
+        log_lf(Log::L_DEBUG, "sampleRate: %d\n", wav.fmt.sampleRate);
+        log_lf(Log::L_DEBUG, "bitsPerSample: %d\n", wav.fmt.bitsPerSample);
+        log_lf(Log::L_DEBUG, "samples: %d\n", nSamples);
 
         std::unique_ptr<audiosample_t> sample = std::make_unique<audiosample_t>();
 
@@ -110,9 +109,9 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
             }
 
 
-            //log_printf("soxr_oneshot from %d to %d, samples %d -> %d, channels %d\n", wav.sampleRate, this->samplerate, wav.totalSampleCount, olen, wav.channels);
-            //log_printf("pSamples.size %d\n", pSamples.size());
-            //log_printf("pSamples2.size %d\n", pSamples2.size());
+            //log_lf(Log::L_DEBUG, "soxr_oneshot from %d to %d, samples %d -> %d, channels %d\n", wav.sampleRate, this->samplerate, wav.totalSampleCount, olen, wav.channels);
+            //log_lf(Log::L_DEBUG, "pSamples.size %d\n", pSamples.size());
+            //log_lf(Log::L_DEBUG, "pSamples2.size %d\n", pSamples2.size());
 
             soxr_quality_spec_t q_spec             = soxr_quality_spec(0, 0);
             soxr_io_spec_t io_spec                 = soxr_io_spec(SOXR_FLOAT32_S, SOXR_FLOAT32_S);
@@ -126,10 +125,10 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
                 log_printf("soxr_create failed: %d %s\n", error, soxr_strerror(error));
             } else {
                 error = soxr_process(soxr, channelPtrsIn.data(), numSamplesInput, nullptr, channelPtrsOut.data(), numSamplesResampled, &offset);
-                log_printf("offset %d, pSamples.size: %d\n", offset, pSamples.size());
+                log_lf(Log::L_DEBUG, "offset %d, pSamples.size: %d\n", offset, pSamples.size());
 
 
-                log_printf("soxr_process post %d\n", error);
+                log_lf(Log::L_DEBUG, "soxr_process post %d\n", error);
                 if (!!error) {
                     log_printf("soxr_process failed: %d %s\n", error, soxr_strerror(error));
                 } else {
@@ -141,7 +140,6 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
                     }
                 }
             }
-            log_printf("%-26s\n", soxr_strerror(error));
             soxr_delete(soxr);
         } else {
             sample->nSamples   = numSamplesInput;
@@ -173,7 +171,7 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
             sample->downsampled.push_back(std::move(downsampledChannels));
         }
         int64_t timeDiffDownsample = getTimeMicros() - timeBeginDownsample;
-        log_printf("Downsampling %s took %fsec\n", path.c_str(), timeDiffDownsample / 1000000.0);
+        log_lf(Log::L_DEBUG, "Downsampling %s took %fsec\n", path.c_str(), timeDiffDownsample / 1000000.0);
         //int nDownSmplSteps = maxDownS - 1;
         //dbgassert(sample->downsampled.size() == nDownSmplSteps);
         int32_t _id = id;

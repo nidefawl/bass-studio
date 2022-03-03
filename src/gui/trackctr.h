@@ -530,9 +530,6 @@ public:
                 } else {
                     trackEntriesBottom.push_back(entry);
                 }
-                if (entry->idx != vecNewTracksFlat.size()) {
-                    log_printf("entry idx changed from %d to %d (track_t idx: %d)\n", entry->idx, vecNewTracksFlat.size(), current->projectIdx);
-                }
                 entry->idx = vecNewTracksFlat.size();
                 vecNewTracksFlat.push_back(entry);
             }

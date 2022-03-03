@@ -302,7 +302,7 @@ public:
 
     void buttonClicked(guibase* gui) override {
         if (gui == &btnTrackType) {
-            log_printf("Switch track type\n", 0);
+            log_printf("Switch track type\n");
             auto& cnf = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
             AudioIO::io_cfg_tracks newConfig = cnf;
             auto& list    = isInput ? cnf.input : cnf.output;
@@ -415,7 +415,7 @@ public:
             }
             bool validConfig = !foundDblAssignment && numUnused == 0;
             if (!validConfig) {
-                log_printf("Invalid channel configuration\n", 0);
+                log_printf("Invalid channel configuration\n");
             } else {
                 cnf = newConfig;
                 { updateSrBs(); }

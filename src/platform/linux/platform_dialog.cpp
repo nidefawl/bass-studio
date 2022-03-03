@@ -82,13 +82,13 @@ namespace GTKFileDialogImpl {
         }
         gtk_widget_destroy(dialog);
         WaitForCleanup();
-        log_printf("Exit loop\n", 0);
+        log_printf("Exit loop\n");
     }
 
 }// namespace GTKFileDialogImpl
 
 int browseForFolder(const String& title, const String& pathStart, String& _out) {
-    log_printf("not implemented\n", 0);
+    log_printf("not implemented\n");
     return 0;
 }
 
@@ -151,7 +151,7 @@ int promptUserFilePath(window_base* w,
     GTKFileDialogImpl::handleGuiEvents(w, dialog);
     if (res.result == GTK_RESPONSE_ACCEPT) {
         _out = res.selected;
-        log_printf("SELECTED PATH: %s\n", StringAsCStr(_out));
+        log_lf(Log::L_DEBUG, "SELECTED PATH: %s\n", StringAsCStr(_out));
         return 1;
     }
     _out = "";

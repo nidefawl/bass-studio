@@ -157,7 +157,7 @@ namespace PluginEmptyVST2 {
                 dsp_util::fillChannels(inputs, this->getAeffect()->numInputs, sampleFrames, 0.0f);
             dsp_util::fillChannels(outputs, this->getAeffect()->numOutputs, sampleFrames, 0.0f);
 #if defined(PLUGIN_BUILD_CRASHVERSION)
-            //log_printf("producing segfault\n", 0);
+            //log_printf("producing segfault\n");
             int64_t* ptr = nullptr;
             ptr          = static_cast<int64_t*>((void*) 0xBAADF00D);
             int64_t val  = *ptr;

@@ -108,7 +108,7 @@ void waveformrender::releaseQueued(gui_waveform_texture_ref* waveformRef) {
                     dbgassert(taskEntry.queuedRefCount > 0);
                     taskEntry.queuedRefCount--;
                     if (taskEntry.queuedRefCount <= 0) {
-                        //log_printf("Atlas QTask refcount <= 0. erasing.\n", 0);
+                        //log_lf(Log::L_DEBUG, "Atlas QTask refcount <= 0. erasing.\n");
                         vecQTasks.erase(it);
                     }
                 }
@@ -127,7 +127,7 @@ void waveformrender::releaseQueued(gui_waveform_texture_ref* waveformRef) {
                 dbgassert(taskEntry.queuedRefCount > 0);
                 taskEntry.queuedRefCount--;
                 if (taskEntry.queuedRefCount <= 0) {
-                    //log_printf("Renderer QTask refcount <= 0. erasing.\n", 0);
+                    //log_lf(Log::L_DEBUG, "Renderer QTask refcount <= 0. erasing.\n");
                     vecQTasks.erase(it);
                 }
             }
@@ -161,7 +161,7 @@ void waveformrender::releaseRendered(gui_waveform_texture_ref* waveformRef) {
         entry.refCount--;
         if (entry.refCount <= 0) {
             entry.tmRelease = getTimeMillis();
-            //log_printf("AtlasEntry refcount <= 0. erasing.\n", 0);
+            //log_lf(Log::L_DEBUG, "AtlasEntry refcount <= 0. erasing.\n");
             //vec.erase(it);
         }
     }
@@ -199,7 +199,7 @@ int waveformrender::queueUpdate(samplesource_t* audio, gui_waveform_texture_ref*
     queuedTasks.push_back(waveform_update_task);
     waveformRef->queued = true;
     if (queuedTasks.size() % 20 == 0)
-        log_printf("queuedTasks.size() %zu\n", queuedTasks.size());
+        log_lf(Log::L_DEBUG, "queuedTasks.size() %zu\n", queuedTasks.size());
     return 1;
 }
 bool collides(const ivec2& pos1, const ivec2& size1, const ivec2& pos2, const ivec2& size2, ivec2& offset) {
@@ -423,7 +423,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
         impl->renderTimings.tmFindSimiliar += impl->timer3.getTime();
         if (bFndSimiliar) {
             // bind to similiar waveform
-            //log_printf("bind to previous\n", 0);
+            //log_lf(Log::L_DEBUG, "bind to previous\n");
             itQTask++;
             continue;
         }
@@ -576,7 +576,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             _atlas.entries.push_back(e);
             numRendered++;
             impl->renderTimings.tmPassed = impl->timer.getTime();
-            //log_printf("rendered update\n", 0);
+            //log_lf(Log::L_DEBUG, "rendered update\n");
         }
         totalRendered += numRendered;
         int size1 = (int)_atlas.queuedTasks.size();

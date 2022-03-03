@@ -54,7 +54,7 @@ static BOOL WINAPI ConsoleHandler(DWORD dwType) {
 #endif
 
 static void on_terminate() {
-    log_printf("on_terminate\n", 0);
+    log_printf("on_terminate\n");
 }
 
 #ifdef _WIN32
@@ -180,11 +180,11 @@ int runCommandLineHost(const std::vector<String>& args) {
         }
 
         if (file.empty()) {
-            log_printf("please specify project file with -f <file>\n", 0);
+            log_printf("please specify project file with -f <file>\n");
             return EXIT_FAILURE;
         }
         if (bRenderOnly && fOutWave.empty()) {
-            log_printf("--render requires -o <file>\n", 0);
+            log_printf("--render requires -o <file>\n");
             return EXIT_FAILURE;
         }
         std::shared_ptr<project_file> projectFile;
@@ -195,7 +195,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                 log_printf("exception %s\n", e.what());
                 return EXIT_FAILURE;
             } catch (...) {
-                log_printf("unhandled exception\n", 0);
+                log_printf("unhandled exception\n");
                 return EXIT_FAILURE;
             }
             if (!projectFile) {
@@ -242,7 +242,7 @@ int runCommandLineHost(const std::vector<String>& args) {
             if (audioHost->startAudio(settings.iosettings)) {
                 host->setOutput(audioHost->getStreamSharedPtr(0));
             } else {
-                log_printf("audioHost->startAudio() failed\n", 0);
+                log_printf("audioHost->startAudio() failed\n");
                 return 1;
             }
             midiHost->startMidi();
@@ -261,7 +261,7 @@ int runCommandLineHost(const std::vector<String>& args) {
 #endif
 
 
-        log_printf("START\n", 0);
+        log_printf("START\n");
         {
             std::unique_ptr<PlaybackThread> playThread;
             if (!bRenderOnly) {
@@ -422,7 +422,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                  */
                 std::shared_ptr<DAW::processing_graph_t> processingGraph;
                 if (!DAW::buildProcessingGraph(host.get(), &project, project.trackList.getAllTracksFlatVecRef(), processingGraph)) {
-                    log_printf("Failed building track graph\n", 0);
+                    log_printf("Failed building track graph\n");
                     return -1;
                 }
                 log_printf("START ON seconds: %.2f - sample %d\n", toSeconds(tickPos, host->prjGlobals.tempo100), samplePos);
@@ -483,13 +483,13 @@ int runCommandLineHost(const std::vector<String>& args) {
                     seqthreads::threadSleep(20);
                     static int nTestLoops = 100;
                     if (nTestLoops-- == 0) {
-                        log_printf("Invoking test code\n", 0);
+                        log_printf("Invoking test code\n");
                         throw applogicexception("TEST_HOST_EXCEPTIONS: Testing exception handling");
                     }
                 }
             }
 
-            log_printf("playback end..\n", 0);
+            log_printf("playback end..\n");
 
             if (playThread) {
                 playThread->addRequest(REQ_STATE, (int)playback_state::status_no_process, true);
@@ -580,12 +580,12 @@ int runCommandLineHost(const std::vector<String>& args) {
             audioHost->deinitPa();
         }
         host->destroy();
-        log_printf("END\n", 0);
+        log_printf("END\n");
     } catch (std::exception& e) {
         log_printf("exception %s\n", e.what());
         return 1;
     } catch (...) {
-        log_printf("unhandled exception\n", 0);
+        log_printf("unhandled exception\n");
         return 1;
     }
     closeGlobalLog();

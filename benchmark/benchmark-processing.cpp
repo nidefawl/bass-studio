@@ -434,7 +434,7 @@ int main(int argc, char** argv) {
     } catch (std::exception& e) {
         log_printf("exception %s\n", e.what());
     } catch (...) {
-        log_printf("unhandled exception\n", 0);
+        log_printf("unhandled exception\n");
     }
 
     dawInstance->destroy();

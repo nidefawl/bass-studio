@@ -27,7 +27,7 @@ void LoadMidiTask::loadFile() {
                 // tick_t scale = TICKS_QUARTER / tpqMidiFile; // they better use multiple of 8 or something
                 int tracks = midiFile.getTrackCount();
                 if (!tracks) {
-                    log_printf("No tracks in midi file\n", 0);
+                    log_printf("No tracks in midi file\n");
                 }
 
                 tick_t tickClipMin = -1;
@@ -63,7 +63,7 @@ void LoadMidiTask::loadFile() {
                                         //log_printf("note %d %d - %d\n", key, start, end);
                                     }
                                 } else {
-                                    log_printf("midi lib failed to link the events\n", 0);
+                                    log_printf("midi lib failed to link the events\n");
                                 }
                             }
                     }

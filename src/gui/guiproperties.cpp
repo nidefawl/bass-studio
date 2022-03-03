@@ -959,11 +959,9 @@ public:
         int32_t idx = 0;
         _themeMgr->getThemeNames(strThemeNames);
         for (auto str : strThemeNames) {
-            log_printf("added %s\n", StringAsCStr(str));
             addEntry(new ctxtmenu_entry(str, idx));
             idx++;
         }
-        log_printf("added %d themes \n", idx);
     }
     void clicked(int _id) override {
         closeContextMenu();
@@ -1030,7 +1028,7 @@ public:
         }
         for (auto c : guis) {
             if (c->size.x <= 0 || c->size.y <= 0) {
-                log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
+                log_printf("warning, skip rendering child container with size <= 0 0\n");
                 continue;
             }
             nvgSave(vg);

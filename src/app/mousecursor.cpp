@@ -58,13 +58,13 @@ namespace MouseCursors {
         ReleaseDC(NULL, dc);
 
         if (!color) {
-            log_printf("Win32: Failed to create RGBA bitmap", 0);
+            log_printf("Win32: Failed to create RGBA bitmap");
             return NULL;
         }
 
         mask = CreateBitmap(image->w, image->h, 1, 1, NULL);
         if (!mask) {
-            log_printf("Win32: Failed to create mask bitmap", 0);
+            log_lf(Log::L_ERROR, "Win32: Failed to create mask bitmap");
             DeleteObject(color);
             return NULL;
         }
@@ -92,9 +92,9 @@ namespace MouseCursors {
 
         if (!handle) {
             if (icon) {
-                log_printf("Win32: Failed to create icon", 0);
+                log_lf(Log::L_ERROR, "Win32: Failed to create icon");
             } else {
-                log_printf("Win32: Failed to create cursor", 0);
+                log_lf(Log::L_ERROR, "Win32: Failed to create cursor");
             }
         }
 
@@ -123,10 +123,9 @@ namespace MouseCursors {
         void load(String path, ImageBuf& out) {
             try {
                 if (ReadImage(path, out) < 0) {
-                    log_printf("Error loading image %s\n", StringAsCStr(path));
+                    log_lf(Log::L_ERROR, "Error loading image %s\n", StringAsCStr(path));
                 } else {
-                    log_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth,
-                              out.bytes.size());
+                    log_lf(Log::L_DEBUG, "%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
                 }
             } catch (appexception& e) {
                 log_lf(Log::L_ERROR, "Failed loading cursor %s: %s\n", StringAsCStr(path), e.what());

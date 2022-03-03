@@ -732,7 +732,7 @@ namespace {
         }
         track_t* track = entry->track;
         if (TRACKTYPE_TO_CTR(slot.droppedTrack->track->type) != TRACKTYPE_TO_CTR(track->type)) {
-            log_printf("Cannot move there\n", 0);
+            log_printf("Cannot move there\n");
             return;
         }
         track_tree_pos_t treePos{};
@@ -865,7 +865,7 @@ void guictr_tracks::removeAllTracks() {
 void guictr_tracks::removeTrack(track_t* track, int flags) {
     track_gui_entry_t* entry = nullptr;
     if (!guiMgr.getPointerEntry(track, &entry)) {
-        log_printf("attempt to double remove track from container\n", 0);
+        log_printf("attempt to double remove track from container\n");
         return;
     }
     dbgassert(track->audio);

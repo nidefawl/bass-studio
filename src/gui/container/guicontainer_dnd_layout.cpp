@@ -374,7 +374,7 @@ void guictr_layout_entry_handle::handleDraggedRelease(MouseEvent& evt) {
 }
 void guictr_layout_entry_handle::render(NVGcontext* vg) {
     if (!isVisible()) {
-        log_printf("warning, skip rendering container with state !isVisible()\n", 0);
+        log_printf("warning, skip rendering container with state !isVisible()\n");
         return;
     }
     if (isBackgroundRendered()) {
@@ -406,11 +406,11 @@ void guictr_layout_entry_handle::render(NVGcontext* vg) {
     }
     for (auto c: guis) {
         if (!c->isVisible()) {
-            //log_printf("warning, skip rendering child container with state !isVisible()\n", 0);
+            //log_printf("warning, skip rendering child container with state !isVisible()\n");
             continue;
         }
         if (c->size.x <= 0 || c->size.y <= 0) {
-            log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
+            log_printf("warning, skip rendering child container with size <= 0 0\n");
             continue;
         }
         {
@@ -680,7 +680,7 @@ bool guictr_layout::placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_c
 }
 void guictr_layout::render(NVGcontext* vg) {
     if (!isVisible()) {
-        log_printf("warning, skip rendering container with state !isVisible()\n", 0);
+        log_printf("warning, skip rendering container with state !isVisible()\n");
         return;
     }
     if (isBackgroundRendered()) {
@@ -717,7 +717,7 @@ void guictr_layout::render(NVGcontext* vg) {
         if (!container || !container->isVisible())
             continue;
         if (container->size.x <= 0 || container->size.y <= 0) {
-            log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
+            log_printf("warning, skip rendering child container with size <= 0 0\n");
             continue;
         }
         {
@@ -729,7 +729,7 @@ void guictr_layout::render(NVGcontext* vg) {
     }
     for (auto& handle: handles) {
         if (handle->size.x <= 0 || handle->size.y <= 0) {
-            log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
+            log_printf("warning, skip rendering child container with size <= 0 0\n");
             continue;
         }
         {
@@ -740,7 +740,7 @@ void guictr_layout::render(NVGcontext* vg) {
     }
     for (auto& splitter: splitters) {
         if (splitter->size.x <= 0 || splitter->size.y <= 0) {
-            log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
+            log_printf("warning, skip rendering child container with size <= 0 0\n");
             continue;
         }
         {

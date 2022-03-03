@@ -151,7 +151,6 @@ void gui_audio_clip::handleRightClick(MouseEvent& evt) {
 }
 
 void gui_audio_clip::releaseRendered() {
-    //log_printf("releaseRendered\n", 0);
     dbgassert(dawCtrl->getWaveformRenderer()->isValid(waveformRef));
     dawCtrl->getWaveformRenderer()->release(waveformRef);
     waveformRef->rendered = false;

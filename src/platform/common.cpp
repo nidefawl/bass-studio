@@ -147,7 +147,7 @@ int64_t ReadFileText(const String& filename, String& out, int resourceType) {
     FILE* fp = fopen(fname, "r");
     if (!fp) {
         int err = errno;
-        printf("Failed opening file %s: %s (%d)\n", fname, strerror(err), err);
+        log_lf(Log::L_WARN, "Failed opening file %s: %s (%d)\n", fname, strerror(err), err);
     }
     if (fp != nullptr) {
         char* buf;

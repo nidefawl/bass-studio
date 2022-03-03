@@ -133,9 +133,9 @@ public:
             wv->sampleVersion        = wv->sample->version;
             wv->flagUpdated          = false;
 
-            //log_printf("split[%zd] version %zd update!\n", wv->sample->sampleId, wv->sampleVersion);
+            //log_lf(Log::L_DEBUG, "split[%zd] version %zd update!\n", wv->sample->sampleId, wv->sampleVersion);
             if (!dawCtrl->getWaveformRenderer()->queueUpdate(wv->sample.get(), &wv->waveformTex)) {
-                log_printf("WORLD ENDS!\n", 0);
+                log_lf(Log::L_WARN, "Failed queuing waveform update\n");
             }
         }
     }
@@ -336,7 +336,7 @@ public:
                 if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
                     //dawCtrl->getWaveformRenderer()->release(&entry.waveformTex);
                     //entry.waveformTex.rendered = false;
-                    //log_printf("layoutUpdated pos %d %d\n", entry.layoutUpdated.splitTexPos.x, entry.layoutUpdated.splitTexPos.y);
+                    //log_lf(Log::L_DEBUG, "layoutUpdated pos %d %d\n", entry.layoutUpdated.splitTexPos.x, entry.layoutUpdated.splitTexPos.y);
                 }
             }
         }

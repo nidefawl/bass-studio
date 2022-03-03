@@ -50,15 +50,7 @@ namespace GuiColor {
         }
         return v;
     }
-    void changeConstantDefault(const constant_t& c, int32_t v) {
-        for (auto p : _getConstants()) {
-            if (p == &c) {
-                p->defValue = v;
-            } else if (p->idx == c.idx) {
-                log_printf("failed changing default for constant %d\n", p->idx);
-            }
-        }
-    }
+
     int32_t getNextId() {
         static int32_t constantsNextId = 1;
         return constantsNextId++;
@@ -239,7 +231,7 @@ namespace UIFont {
         const int fontIdx = math::clamp<int32_t>(font.fontInstanceIdx, 0, fonts.fontsLoaded.size());
         auto& fontloaded  = fonts.fontsLoaded[fontIdx];
         if (fontloaded.nvgId == -999) {
-            log_printf("loading font %s %s\n", StringAsCStr(fontloaded.font.name), StringAsCStr(fontloaded.font.path));
+            log_lf(Log::L_DEBUG, "loading font %s %s\n", StringAsCStr(fontloaded.font.name), StringAsCStr(fontloaded.font.path));
             fontloaded.nvgId = nvgCreateFont(ctx, StringAsCStr(fontloaded.font.name), StringAsCStr(fontloaded.font.path));
         }
         nvgFontFaceId(ctx, fontloaded.nvgId);

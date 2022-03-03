@@ -85,7 +85,7 @@ namespace {
             total += time.getTimeDouble();
             if (++calls % 60 == 0) {
                 double perCall = total / calls;
-                log_printf("bitblt %f\n", perCall);
+                log_lf(Log::L_DEBUG, "bitblt %f\n", perCall);
                 total = 0;
                 calls = 0;
             }
@@ -114,7 +114,7 @@ namespace {
         total2 += time2.getTimeDouble();
         if (++calls2 % 60 == 0) {
             double perCall = total2 / calls2;
-            log_printf("total %f\n", perCall);
+            log_lf(Log::L_DEBUG, "total %f\n", perCall);
             total2 = 0;
             calls2 = 0;
         }

@@ -19,15 +19,15 @@ namespace DebugAlloc {
     template<>
     void printLeaked(int64_t allocId, int64_t allocCount, std::vector<clip_t*>& allocList, std::unordered_map<int64_t, DebugAlloc::AllocInfo>& allocInfo) {
         dbgassert(static_cast<int64_t>(allocList.size()) == allocCount);
-        log_printf("clip_t allocations: %lld\n", allocCount);
+        log_lf(Log::L_DEBUG, "clip_t allocations: %lld\n", allocCount);
         for (auto clip : allocList) {
             auto it = allocInfo.find(clip->allocId);
             if (it != allocInfo.end()) {
                 AllocInfo& info = it->second;
 
-                log_printf("leaked %lld %s\n", clip->allocId, StringAsCStr(clip->name));// add debug info to clip instance (track/time )
+                log_lf(Log::L_DEBUG, "leaked %lld %s\n", clip->allocId, StringAsCStr(clip->name));// add debug info to clip instance (track/time )
                 for (String s : info.stacktrace) {
-                    log_printf("%s\n", StringAsCStr(s));
+                    log_lf(Log::L_DEBUG, "%s\n", StringAsCStr(s));
                 }
                 break;
             }
@@ -275,9 +275,9 @@ int clip_notes_t::getStartsInRangeV(tick_t timeS, tick_t timeE, int32_t velL, in
     while (it != m_list.end()) {
         note_t& note = *it;
         //if (!note.isIntersectVel(velL, velH))
-        //    log_printf("note vel %d intersect vel velLow %d, velHigh %d\n", note.velocity, velL, velH);
+        //    log_lf(Log::L_DEBUG, "note vel %d intersect vel velLow %d, velHigh %d\n", note.velocity, velL, velH);
         //if (note.isIntersectTime(timeS, timeE))
-        //    log_printf("note isIntersectTime vel timeS %d, timeE %d\n", timeS, timeE);
+        //    log_lf(Log::L_DEBUG, "note isIntersectTime vel timeS %d, timeE %d\n", timeS, timeE);
 
         if (note.isIntersectTime(timeS, timeE) && note.start() > timeS && note.isIntersectVel(velL, velH)) {
             list.push_back(&note);
@@ -618,7 +618,7 @@ tick_t clip_t::getLen() const {
     if (this->lenSamples > 0 && this->clipType == CLIP_AUDIO && project_controller_t::get()) {
         auto lenConverted  = project_controller_t::get()->samplesToTicks(this->lenSamples);
         if (lenConverted != len) {
-            log_printf("tick vs sample len missmatch. Did the samplerate change?", 0);
+            log_printf("tick vs sample len missmatch. Did the samplerate change?");
             dbgassert(0);
         }
         dbgassert(len > 0 && lenConverted > 0);

@@ -601,16 +601,16 @@ static int glnvg__createShader(GLNVGshader* shader, const char* name, const char
 	str[1] = opts != NULL ? opts : "";
 
 //	printf("Compiling nanovg shader %s %s %s\n", name, header, opts);
-//	printf("---BEGIN nanovg vshader---\n", 0);
+//	printf("---BEGIN nanovg vshader---\n");
 //	printf("%s\n", header);
 //	printf("%s\n", opts);
 //	printf("%s\n", vshader);
-//	printf("---    END      ---\n", 0);
-//	printf("---BEGIN nanovg fshader---\n", 0);
+//	printf("---    END      ---\n");
+//	printf("---BEGIN nanovg fshader---\n");
 //	printf("%s\n", header);
 //	printf("%s\n", opts);
 //	printf("%s\n", fshader);
-//	printf("---    END      ---\n", 0);
+//	printf("---    END      ---\n");
 	memset(shader, 0, sizeof(*shader));
 
 	prog = glCreateProgram();

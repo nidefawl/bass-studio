@@ -31,7 +31,9 @@ String demangleName(const char* to_demangle)
     return to_demangle;
 }
 #endif
-
+static const char* TERM_COL_YELLOW = "\x1b[93m";
+static const char* TERM_COL_RED = "\x1b[91m";
+static const char* TERM_COL_RESET = "\x1b[0m";
 class StdOutLogger : public Logger {
 public:
     StdOutLogger() noexcept = default;
@@ -39,15 +41,27 @@ public:
     void log(Log::Level lvl, const char* data, size_t len) override {
         if (Log::LEVEL_ALL != getLevel() && lvl < getLevel())
             return;
+        if (lvl >= Log::L_ERROR)
+            fwrite(TERM_COL_RED, 5, 1, stdout);
+        else if (lvl >= Log::L_WARN)
+            fwrite(TERM_COL_YELLOW, 5, 1, stdout);
         fwrite(data, len, 1, stdout);
+        if (lvl >= Log::L_WARN)
+            fwrite(TERM_COL_RESET, 4, 1, stdout);
         fflush(stdout);
     }
     void logStr(Log::Level lvl, String s) override {
         if (Log::LEVEL_ALL != getLevel() && lvl < getLevel())
             return;
+        if (lvl >= Log::L_ERROR)
+            fwrite(TERM_COL_RED, 5, 1, stdout);
+        else if (lvl >= Log::L_WARN)
+            fwrite(TERM_COL_YELLOW, 5, 1, stdout);
         if (s.length() && s.back() != '\n')
             s+='\n';
         fprintf(stdout, "%s", StringAsCStr(s));
+        if (lvl >= Log::L_WARN)
+            fwrite(TERM_COL_RESET, 4, 1, stdout);
         fflush(stdout);
     }
 };

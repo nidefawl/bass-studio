@@ -291,7 +291,6 @@ protected:
         int64_t ret1 = ReadFileText("nanovg.vsh", strShaderSrcVertex);
         int64_t ret2 = ReadFileText("nanovg.fsh", strShaderSrcFragment);
         if (ret1 != -1 && ret2 != -1) {
-            log_printf("loading custom shaders\n", 0);
             int statusErr = nvgReloadShaders(nanovgCtxt, StringAsCStr(strShaderSrcVertex), StringAsCStr(strShaderSrcFragment));
             if (statusErr && bIsFirstTimeReload) {
                 throw appexception("Couldn't initialize nanovg");
@@ -841,10 +840,10 @@ public:
     void onWindowSizeChanged(int width, int height) override {
         if (ctrl->isOK) {
             if (ctrl->m_size.x != width || ctrl->m_size.y != height) {
-                // log_printf("size change from %dx%d to %dx%d on window %08X: parent %08X\n", ctrl->m_size.x, ctrl->m_size.y, width, height, (uint64_t) (this), (uint64_t) (parent));
+                // log_lf(Log::L_DEBUG, "size change from %dx%d to %dx%d on window %08X: parent %08X\n", ctrl->m_size.x, ctrl->m_size.y, width, height, (uint64_t) (this), (uint64_t) (parent));
                 ctrl->windowSizeChanged(width, height);
             } else {
-                // log_printf("skip window resize to %dx%d on window %08X: parent %08X\n", ctrl->m_size.x, ctrl->m_size.y, (uint64_t) (this), (uint64_t) (parent));
+                // log_lf(Log::L_DEBUG, "skip window resize to %dx%d on window %08X: parent %08X\n", ctrl->m_size.x, ctrl->m_size.y, (uint64_t) (this), (uint64_t) (parent));
             }
             flagNeedsRedraw();
         }
@@ -932,15 +931,15 @@ public:
 #endif
 
     void onCharInput(unsigned int codepoint) override {
-        //log_printf("main onCharInput 0x%04X\n", codepoint);
+        //log_lf(Log::L_DEBUG, "main onCharInput 0x%04X\n", codepoint);
         ctrl->onCharInput(codepoint);
         flagNeedsRedraw();
     }
     void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) override {
         /*if (action == GLFW_PRESS)*/
-        //log_printf("keyname %s, key %d, scancode %d\n", key_name, key, scancode);
-        //log_printf("mods %08X\n", mods);
-        //log_printf("main onKeyInput %d (%c) %d\n", key, key, scancode);
+        //log_lf(Log::L_DEBUG, "keyname %s, key %d, scancode %d\n", key_name, key, scancode);
+        //log_lf(Log::L_DEBUG, "mods %08X\n", mods);
+        //log_lf(Log::L_DEBUG, "main onKeyInput %d (%c) %d\n", key, key, scancode);
         ctrl->onKeyInput(key, scancode, action, mods, key_name);
         flagNeedsRedraw();
     }
@@ -1187,7 +1186,7 @@ public:
         glfwSetWindowUserPointer(glfw, nullptr);
         if (parent)
             this->parent->onChildDialogClose(this);
-        log_printf("END\n", 0);
+        log_printf("END\n");
     }
 
     void onTick() override {
@@ -1725,6 +1724,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
     bool openConsole      = false;
     int centerScreenIdx   = -1;
     String strLogFilename;
+    auto logLevel = Log::LEVEL_ALL;
     try {
         for (size_t i = 0; i < args.size(); ++i) {
             if (args[i] == "--center" && i + 1 < args.size()) {
@@ -1735,6 +1735,23 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             if (args[i] == "--logfile" && i + 1 < args.size()) {
                 strLogFilename = args[i + 1]; 
                 i++; 
+                continue;
+            }
+            if (args[i] == "--log" && i + 1 < args.size()) {
+                String level = StringToUpper(args[i + 1]);
+                if (StrStartsWith(level, "ALL"))
+                    logLevel = Log::LEVEL_ALL;
+                if (StrStartsWith(level, "TRACE"))
+                    logLevel = Log::L_TRACE;
+                if (StrStartsWith(level, "DEBUG"))
+                    logLevel = Log::L_DEBUG;
+                if (StrStartsWith(level, "INFO"))
+                    logLevel = Log::L_INFO;
+                if (StrStartsWith(level, "WARN"))
+                    logLevel = Log::L_WARN;
+                if (StrStartsWith(level, "ERROR"))
+                    logLevel = Log::L_ERROR;
+                i++;
                 continue;
             }
             if (args[i] == "--console") {
@@ -1750,23 +1767,30 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         if (openConsole) {
             allocConsole();
         }
+#ifdef _WIN32
+        enableVirtTermProc();
+#endif
 
         if (strLogFilename.length()) {
             openGlobalLog(App::Platform::toUserdataPath(strLogFilename));
         }
 
-        char* pPath = getenv("PATH");
-        if (pPath != nullptr) {
-            log_printf("getenv PATH: %s\n", pPath);
-        }
+        getGlobalLogger()->setLevel(logLevel);
 
-        log_out("BUILD_BINARY_NAME %s\n", BuildInfo::BUILD_BINARY_NAME);
-        log_out("COMPILER_ID %s\n", BuildInfo::COMPILER_ID);
-        log_out("COMPILE_OPTIONS %s\n", BuildInfo::COMPILE_OPTIONS);
-        log_out("COMPILE_DEFS %s\n", BuildInfo::COMPILE_DEFS);
+        if (logLevel <= Log::L_DEBUG) {
+            char* pPath = getenv("PATH");
+            if (pPath != nullptr) {
+                log_out("PATH: %s\n", pPath);
+            }
+
+            log_out("BUILD_BINARY_NAME %s\n", BuildInfo::BUILD_BINARY_NAME);
+            log_out("COMPILER_ID %s\n", BuildInfo::COMPILER_ID);
+            log_out("COMPILE_OPTIONS %s\n", BuildInfo::COMPILE_OPTIONS);
+            log_out("COMPILE_DEFS %s\n", BuildInfo::COMPILE_DEFS);
 #ifdef _ITERATOR_DEBUG_LEVEL
-        log_out("_ITERATOR_DEBUG_LEVEL %d\n", (int) _ITERATOR_DEBUG_LEVEL);
+            log_out("_ITERATOR_DEBUG_LEVEL %d\n", (int) _ITERATOR_DEBUG_LEVEL);
 #endif
+        }
 
         setMinimumResolutionTimer();
         initColor();
@@ -1855,8 +1879,6 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                     int64_t tmDuration = (getTimeMillis() - tmLRMsgSent);
                     tmLRMsgSent        = 0;
                     log_printf("MSG took %d ms to get through, %d messages since sent\n", tmDuration, cntMessages);
-                    //String applicationCWD = getCurrentWorkingDirectory();
-                    //log_printf("getCurrentWorkingDirectory: %s\n", StringAsCStr(applicationCWD));
                 } else {
 
                     switch (msg.message) {
@@ -1904,7 +1926,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             if (debugMessageLoop) {
                 if (getTimeMillis() - tmLRDbgPrint >= 1000) {
                     tmLRDbgPrint = getTimeMillis();
-                    log_printf("maxMsgProcessesed %d tmMsgLoop %zd, tmUpdateInternals %zd\n", static_cast<int>(1024 - maxMsgProcess), tmMsgLoop, tmUpdateInternals);
+                    log_lf(Log::L_DEBUG, "maxMsgProcessesed %d tmMsgLoop %zd, tmUpdateInternals %zd\n", static_cast<int>(1024 - maxMsgProcess), tmMsgLoop, tmUpdateInternals);
                 }
                 if (tmLRMsgSent > 0 && getTimeMillis() - tmLRMsgSent >= 1000) {
                     tmLRMsgSent = 0;
@@ -1912,7 +1934,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                 if (getTimeMillis() - tmLRLastCheck >= 1000 && tmLRMsgSent == 0) {
                     tmLRLastCheck = tmLRMsgSent = getTimeMillis();
                     cntMessages = 0;
-                    log_printf("PostMessage WM_APP + 42\n", 0);
+                    log_lf(Log::L_DEBUG, "PostMessage WM_APP + 42\n");
                     PostMessage(mainWindow->getHWND(), WM_APP + 42, 0, 0);
                 }
             }
@@ -1949,9 +1971,9 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
     printLeakedAudioBuffers();
 #endif
     if (fatalError) {
-        log_printf("EXIT_FAILURE\n", 0);
+        log_printf("EXIT_FAILURE\n");
     } else {
-        log_printf("EXIT_SUCCESS\n", 0);
+        log_printf("EXIT_SUCCESS\n");
     }
     if (strLogFilename.length()) {
         closeGlobalLog();
@@ -1997,7 +2019,7 @@ public:
 
     ~appwindow_plugin() override {
         if (isInitialized) {
-            log_printf("Plugin window was not correctly de-initialized\n", 0);
+            log_printf("Plugin window was not correctly de-initialized\n");
         }
     }
 

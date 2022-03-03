@@ -96,7 +96,7 @@ bool userSentQuitRequest = false;
 bool inConnectNamedPipe  = false;
 #ifdef _WIN32
 BOOL WINAPI ConsoleHandler(DWORD) {
-    log_printf("CTRL_C\n", 0);
+    log_printf("CTRL_C\n");
     userSentQuitRequest = true;
     if (inConnectNamedPipe) {
         exit(0);
@@ -883,7 +883,7 @@ int main(int argc, char* argv[]) {
         seqthreads::threadSleep(120);
         VSTScannerImpl::runScannerClient();
     } else {
-        log_lf(Log::L_ERROR, "No command. Use -server to update plugin database\n", 0);
+        log_lf(Log::L_ERROR, "No command. Use -server to update plugin database\n");
     }
     return 0;
 }

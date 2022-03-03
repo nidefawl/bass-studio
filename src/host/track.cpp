@@ -61,19 +61,13 @@ void releaseClipResources(clip_t* cl, delete_cb* cb) {
     }
 }
 void releaseTrackResources(track_t* tr, delete_cb* cb) {
-    log_printf("release track %016X\n", reinterpret_cast<size_t>(tr));
+    log_lf(Log::L_DEBUG, "release track %016X\n", reinterpret_cast<size_t>(tr));
     dbgassert(tr && tr->audio);
     if (cb)
         cb->preTrackDelete(tr);
     vsthost* host = vsthost::getInstance();
     host->unloadTrack(tr);
     tr->getMidi().deleteClips(cb);
-    //    if (tr->mixer) {
-    //        delete (tr->mixer);
-    //    }
-    //    if (tr->content) {
-    //        delete (tr->content);
-    //    }
     dbgassert(tr->audio->guiInstances.empty());
     host->releaseAudio(tr);
     dbgassert(tr && !tr->audio);
@@ -581,7 +575,7 @@ effectbase* loadEffectModule(vsthost* host, const plugin_snapshot_t& pluginSnaps
         plugindatabase_t* db = plugindatabase_t::getInstance();
         pluginentry_t resolvedPlugin;
         if (db->resolve(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
-            log_printf("Plugin is registered... loading %s, uId %d, forceLoad %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, forceLoad);
+            log_lf(Log::L_DEBUG, "Plugin is registered... loading %s, uId %d, forceLoad %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, forceLoad);
             vstpluginloadres res = host->loadPlugin(resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
             if (res.result == 0 && res.plugin) {
                 res.plugin->localDbId = resolvedPlugin.localDbId;
@@ -704,14 +698,14 @@ void audio_stage_t::loadRoutingSnapshot(const track_effect_routing_snapshot_t& s
                     }
                 }
                 log += "]";
-                log_printf("%s\n", StringAsCStr(log));
+                log_lf(Log::L_DEBUG, "%s\n", StringAsCStr(log));
                 String log2 = "snapshot.inputRoutingEffects = [";
                 for (auto& p : snapshot.inputRoutingEffects) {
                     log2 += StringFormat("%d, ", static_cast<int32_t>(p.first));
                 }
                 log2 += "]";
-                log_printf("%s\n", StringAsCStr(log2));
-                log_printf("Plugin with id %d not found\n", static_cast<int32_t>(mapEntry.first));
+                log_lf(Log::L_DEBUG, "%s\n", StringAsCStr(log2));
+                log_lf(Log::L_DEBUG, "Plugin with id %d not found\n", static_cast<int32_t>(mapEntry.first));
                 snapshotRoutingState = audiostagerouting_state_t::INVALID;
             } else {
                 dbgassert(plugin->inputChannels.empty());
@@ -749,7 +743,7 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
         if (effect) {
             //this->deferredEffects.push_back(effect);
             if (!host->addDeferredEffect(effect)) {
-                log_printf("Failed loading effect\n", 0);
+                log_printf("Failed loading effect\n");
                 delete effect;
                 continue;
             }
@@ -819,7 +813,7 @@ void vsthost::activateDeferred(effectbase* const eff, int flags, effectbase** ou
     /* Load plugin parameter automation lanes */
     loadAutomation(pluginSnapshot.automatedParams, effect);
 
-    log_printf("done activating deferred plugin %s: isenabled %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.enabled);
+    log_lf(Log::L_DEBUG, "done activating deferred plugin %s: isenabled %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.enabled);
     if (pluginSnapshot.enabled) {
         effect->resume();
     }
@@ -908,7 +902,7 @@ void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry
 }
 
 audio_stage_t::~audio_stage_t() {
-    log_printf("delete track %08X\n", reinterpret_cast<uint64_t>(this));
+    log_lf(Log::L_DEBUG, "delete audio_stage_t %08X\n", reinterpret_cast<uint64_t>(this));
 }
 
 void audio_stage_t::onTick(double since) {
@@ -1093,7 +1087,7 @@ void track_impl_t::sendNotesOff(int32_t bpm100) {
         if (vst && vst->bCanReceiveMidi) {
             //TODO: decide if we should make a copy, plugin may manipulate data
             //VstEvent_t midiEventsBufTemp = *midiEventsBuf;
-            //log_printf("send %d midi events to %s\n", midiEventsBuf->vstEvents->numEvents, StringAsCStr(vst->getName()));
+            //log_lf(Log::L_DEBUG, "send %d midi events to %s\n", midiEventsBuf->vstEvents->numEvents, StringAsCStr(vst->getName()));
             vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
         }
     }
@@ -1159,7 +1153,7 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags,
                 // Find beginning notes
                 if (note.start() >= blockLoopStart && note.start() < blockLoopEnd) {
                     if (logProcessedNotes)
-                        log_printf("Block %d-%d: %s ON at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.start() - blockStart, note.time, note.len);
+                        log_lf(Log::L_DEBUG, "Block %d-%d: %s ON at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.start() - blockStart, note.time, note.len);
 
                     noteEvents.emplace_back(note.pitch, note.velocity, note.start() - blockStart, note.start(), true, false);
                     m_heldNotes.push_back(note);
@@ -1168,7 +1162,7 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags,
                 if (note.end() > blockLoopStart && note.end() <= blockLoopEnd) {
                     if (removeEntry(m_heldNotes, note)) {
                         if (logProcessedNotes)
-                            log_printf("Block %d-%d: %s OFF at %d/%f\n", blockStart, blockEnd, noteName(note.pitch), note.end() - blockStart - 1, ticksPerBlock);
+                            log_lf(Log::L_DEBUG, "Block %d-%d: %s OFF at %d/%f\n", blockStart, blockEnd, noteName(note.pitch), note.end() - blockStart - 1, ticksPerBlock);
                         noteEvents.emplace_back(note.pitch, note.velocity, note.end() - blockStart - 1, note.end() - 1, false, false);
                     }
                 }
@@ -1191,7 +1185,7 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags,
                 }
                 if (!found) {
                     if (logProcessedNotes)
-                        log_printf("Block %d-%d: %s Force OFF at %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), 0);
+                        log_lf(Log::L_DEBUG, "Block %d-%d: %s Force OFF at %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), 0);
                     noteEvents.emplace_back(noteHeld.pitch, noteHeld.velocity, 0, blockStart, false, false);
                     it = m_heldNotes.erase(it);
                     continue;
@@ -1205,7 +1199,7 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags,
 
                     auto tickOffsetInBlockEnd = math::min(blockEnd - blockStart - 1, loopEnd - blockStart - 1);
                     if (logProcessedNotes)
-                        log_printf("Block %d-%d: %s Force OFF (LOOP END @%d) at %d/%f = %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), loopEnd, tickOffsetInBlockEnd, ticksPerBlock, blockStart + tickOffsetInBlockEnd);
+                        log_lf(Log::L_DEBUG, "Block %d-%d: %s Force OFF (LOOP END @%d) at %d/%f = %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), loopEnd, tickOffsetInBlockEnd, ticksPerBlock, blockStart + tickOffsetInBlockEnd);
                     noteEvents.emplace_back(noteHeld.pitch, noteHeld.velocity, tickOffsetInBlockEnd, blockStart + tickOffsetInBlockEnd, false, true);
                     it = m_heldNotes.erase(it);
                 }
@@ -1278,7 +1272,7 @@ void track_impl_t::processMidiOutput(playback_state state, int32_t flags, tick_t
         if (!newNotes.empty()) {
             if (logProcessedNotes)
                 for (auto& note : newNotes) {
-                    log_printf("Block %d, note open %d (%s)\n", blockStart, note.start(), noteName(note.pitch));
+                    log_lf(Log::L_DEBUG, "Block %d, note open %d (%s)\n", blockStart, note.start(), noteName(note.pitch));
                 }
             midiProcessed->addAll(newNotes);
             notesProcessed = true;
@@ -1288,20 +1282,20 @@ void track_impl_t::processMidiOutput(playback_state state, int32_t flags, tick_t
                 int32_t pitch   = msg.pitch;
                 int32_t tickEnd = blockStart + msg.tickOffsetInBlock;
                 if (logProcessedNotes)
-                    log_printf("%s@%d Looking for NOTE_ON evt\n", noteName(pitch), tickEnd);
+                    log_lf(Log::L_DEBUG, "%s@%d Looking for NOTE_ON evt\n", noteName(pitch), tickEnd);
                 bool fnd = false;
                 for (note_t& noteHeld : midiProcessed->m_list) {
                     if (noteHeld.pitch == pitch) {
                         if (!noteHeld.isHeld()) {
-                            //log_printf("%s@%d note was released before (@%d), looking for next one\n", noteName(noteHeld.pitch), noteHeld.start(), noteHeld.end());
+                            //log_lf(Log::L_WARN, "%s@%d note was released before (@%d), looking for next one\n", noteName(noteHeld.pitch), noteHeld.start(), noteHeld.end());
                             continue;
                         }
                         if (noteHeld.start() > tickEnd) {
-                            //log_printf("%s@%d note starts after this release\n", noteName(noteHeld.pitch), noteHeld.start());
+                            //log_lf(Log::L_WARN, "%s@%d note starts after this release\n", noteName(noteHeld.pitch), noteHeld.start());
                             continue;
                         }
                         if (noteHeld.start() == tickEnd) {
-                            //log_printf("%s noteHeld.start() == tickEnd %d, adding TICKS_16TH/4\n", noteName(noteHeld.pitch), tickEnd);
+                            //log_lf(Log::L_WARN, "%s noteHeld.start() == tickEnd %d, adding TICKS_16TH/4\n", noteName(noteHeld.pitch), tickEnd);
                             tickEnd += TICKS_16TH / 4;
                         }
                         noteHeld.len = tickEnd - noteHeld.start();
@@ -1310,12 +1304,12 @@ void track_impl_t::processMidiOutput(playback_state state, int32_t flags, tick_t
                         fnd            = true;
                         notesProcessed = true;
                         if (logProcessedNotes)
-                            log_printf("Block %d, note complete %d END %d (%s)\n", blockStart, noteHeld.start(), noteHeld.end(), noteName(noteHeld.pitch));
+                            log_lf(Log::L_DEBUG, "Block %d, note complete %d END %d (%s)\n", blockStart, noteHeld.start(), noteHeld.end(), noteName(noteHeld.pitch));
                         break;
                     }
                 }
                 if (!fnd) {
-                    log_printf("MIDI_OFF_NOTE note not found %s tickEnd %d\n", noteName(pitch), tickEnd);
+                    log_lf(Log::L_WARN, "MIDI_OFF_NOTE note not found %s tickEnd %d\n", noteName(pitch), tickEnd);
                 }
             }
         }
@@ -1343,7 +1337,7 @@ void track_impl_t::processMidiOutput(playback_state state, int32_t flags, tick_t
                         if (c.start() >= n.end() || c.end() <= n.start()) {
                             continue;
                         }
-                        log_printf("Found notes overlapping (%s@%d-%d and @%d-%d)\n", noteName(n.pitch), n.start(), n.end(), c.start(), c.end());
+                        log_lf(Log::L_WARN, "Found notes overlapping (%s@%d-%d and @%d-%d)\n", noteName(n.pitch), n.start(), n.end(), c.start(), c.end());
                     }
                 }
             }
@@ -1356,8 +1350,8 @@ void track_impl_t::processMidiOutput(playback_state state, int32_t flags, tick_t
                 String strTmStart = tickAsBeatString(note.start());
                 String strTmEnd   = tickAsBeatString(note.end());
                 if (logProcessedNotes) {
-                    log_printf("Note %s recorded from %s to %s\n", noteName(note.pitch), StringAsCStr(strTmStart), StringAsCStr(strTmEnd));
-                    log_printf("Note %s recorded from %d to %d\n", noteName(note.pitch), note.start(), note.end());
+                    log_lf(Log::L_DEBUG, "Note %s recorded from %s to %s\n", noteName(note.pitch), StringAsCStr(strTmStart), StringAsCStr(strTmEnd));
+                    log_lf(Log::L_DEBUG, "Note %s recorded from %d to %d\n", noteName(note.pitch), note.start(), note.end());
                 }
                 notesProcessed = true;
                 it             = midiProcessed->m_list.erase(it);

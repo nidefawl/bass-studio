@@ -54,10 +54,7 @@ namespace RenderResources {
         void load(NVGcontext* vg, String path, ImageBuf& out) {
             try {
                 if (ReadImage(path, out) < 0) {
-                    log_printf("Error loading image %s\n", StringAsCStr(path));
-                } else {
-                    //log_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth,
-                    //out.bytes.size());
+                    log_lf(Log::L_ERROR, "Error loading image %s\n", StringAsCStr(path));
                 }
             } catch (appexception& e) {
                 log_lf(Log::L_ERROR, "Failed loading image %s: %s\n", StringAsCStr(path), e.what());
@@ -138,13 +135,13 @@ namespace RenderResources {
             }
             if (fontsInstalled.empty()) fontsInstalled = fonts.fontsInstalled;
             fonts.fontsLoaded.clear();
-            String fntList = "";
+            String fntList;
             int loaded     = 0;
             for (int i = 0; i < MAX_FONTS && i < files.size(); i++) {
                 String fontPath = (files[i].path);
                 LoadedFont lf;
                 String fntKey = StringFormat("font%d", i);
-                log_printf("loading font %s %s\n", StringAsCStr(fntKey), StringAsCStr(fontPath));
+                log_lf(Log::L_DEBUG, "loading font %s %s\n", StringAsCStr(fntKey), StringAsCStr(fontPath));
                 if (i == 0) {
                     lf.nvgId = nvgCreateFont(vg, StringAsCStr(fntKey), StringAsCStr(fontPath));
                 } else {
@@ -160,7 +157,7 @@ namespace RenderResources {
                 }
                 fonts.fontsLoaded.push_back(lf);
             }
-            log_printf("loaded %d fonts: %s\n", loaded, StringAsCStr(fntList));
+            log_lf(Log::L_DEBUG, "loaded %d fonts: %s\n", loaded, StringAsCStr(fntList));
             perContextFonts[vg] = fonts;
         }
     }

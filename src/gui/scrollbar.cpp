@@ -52,7 +52,7 @@ gui_scrollbar::gui_scrollbar(int _dir, float _offset, gui_scrollcontainer& _ctr)
 
 void Splitter::render(NVGcontext* vg) {
     if (!isVisible()) {
-        log_printf("warning, skip rendering container with state !isVisible()\n", 0);
+        log_printf("warning, skip rendering container with state !isVisible()\n");
         return;
     }
     if (isBackgroundRendered()) {
@@ -63,11 +63,10 @@ void Splitter::render(NVGcontext* vg) {
     }
     for (auto c : guis) {
         if (!c->isVisible()) {
-//            log_printf("warning, skip rendering child container with state !isVisible()\n", 0);
             continue;
         }
         if (c->size.x <= 0 || c->size.y <= 0) {
-            log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
+            log_printf("warning, skip rendering child container with size <= 0 0\n");
             continue;
         }
     }
@@ -101,11 +100,6 @@ void gui_scrollbar::setScrollOffset(float f) {
 //    }
     bool canSkip = math::abs(fRange - prevScrollRange) < 1 && math::abs(scrollOffset - _newOffset) < 0.001f;
     if (canSkip) {
-        static int skipped = 0;
-        skipped++;
-        if (skipped % 20 == 0) {
-            log_printf("setScrollOffset skipped %d\n", skipped);
-        }
         return;
     }
     prevScrollRange = fRange;

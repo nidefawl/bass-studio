@@ -116,7 +116,7 @@ void findFilesWithExtRecursive(
     App::Platform::sanitizePathToDirectory(strSearchPath);
     String findPattern = strSearchPath + "*";
     if (depth == 0)
-        log_printf("findPattern '%s'\n", findPattern.c_str());
+        log_lf(Log::L_DEBUG, "findPattern '%s'\n", findPattern.c_str());
 
     HANDLE hFile = FindFirstFile(findPattern.c_str(), &file);
     if (hFile != INVALID_HANDLE_VALUE) {

@@ -90,7 +90,7 @@ void resetShaderTimeOffset();
 void dragdrop_midifile::reset() {
     if (isLoaded) {
 
-        log_printf("meeeh, reset!\n", 0);
+        log_printf("meeeh, reset!\n");
     }
     isValidTarget = false;
     isLoaded      = false;
@@ -720,17 +720,17 @@ void DawInstance::unloadProject() {
 
     std::vector<track_t*> _tracks     = project.trackList.getAllTracksFlatVec();// iterate a copy
     std::vector<track_t*> _rootTracks = project.trackList.getAllTracksTreeVec();
-    log_printf("unloading project with %d tracks\n", _tracks.size());
+    log_lf(Log::L_DEBUG, "unloading project with %d tracks\n", _tracks.size());
     for (auto it = _tracks.rbegin(); it != _tracks.rend(); it++) {
         track_t* track = *it;
 
-        log_printf("remove track %s\n", StringAsCStr(track->name));
+        log_lf(Log::L_DEBUG, "remove track %s\n", StringAsCStr(track->name));
         removeTrackImpl(track, FLG_TRK_CHANGE_LOAD);
     }
     project.trackList.clear();
     for (auto it = _tracks.rbegin(); it != _tracks.rend(); it++) {
         track_t* track = *it;
-        log_printf("delete track %s\n", StringAsCStr(track->name));
+        log_lf(Log::L_DEBUG, "delete track %s\n", StringAsCStr(track->name));
         releaseTrackResources(track, this);
         delete track;
     }
@@ -839,7 +839,7 @@ void DawInstance::setEmptyProject() {
     unloadProject();
     int totalAllocs = getNumClipAllocations();
     if (totalAllocs != 0) {
-        log_printf("getNumClipAllocations == %d!\n", totalAllocs);
+        log_lf(Log::L_WARN, "getNumClipAllocations == %d!\n", totalAllocs);
         // dbgassert(getNumClipAllocations() == 0);
     }
     insertNewTrack(-1, TRACK_TYPE_MIDI, FLG_TRK_CHANGE_LOAD);
@@ -1168,7 +1168,7 @@ void DawInstance::initRealtimeResources() {
             tls.host->setOutput(stream);
         } else {
             //notify user
-            log_printf("audioHost->startAudio() failed\n", 0);
+            log_lf(Log::L_ERROR, "audioHost->startAudio() failed\n");
         }
     }
     tls.midiHost->startMidi();
@@ -1182,10 +1182,6 @@ void DawInstance::initRealtimeResources() {
     this->workerThread.startThread();
 
     setAudioThreadState(playback_state::status_stop);
-
-    this->workerThread.call([]() {
-      log_printf("WorkerThreadCallTest\n", 0);
-    })->wait();
 }
 
 void DawInstance::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
@@ -1411,7 +1407,7 @@ void DawCtrl::onTick() {
     //if (rand.rng_rand(100000) == 0) {
     //    throw std::bad_alloc();
     //}
-    //log_printf("onTick %d\n", std::this_thread::get_id());
+    //log_lf(Log::L_DEBUG, "onTick %d\n", std::this_thread::get_id());
     mainWindow->requestRedraw();
 
     if (!guiDragged && !guiCaptured && guiOver && (!this->ctxtmenu || ctxtmenu->isTransient())) {
@@ -1583,8 +1579,8 @@ void DawInstance::onTick() {
     }
     if (noPopups && projectToLoad) {
         std::shared_ptr<project_to_load_t> projectToLoadCpy = projectToLoad;
-        projectToLoad                                       = nullptr;
-        bool projectLoadErrored                             = false;
+        projectToLoad = nullptr;
+        bool projectLoadErrored = false;
         AppWndProc_enableBlockReentrant();
         try {
             setLoadedProject(projectToLoadCpy->projectfile, projectToLoadCpy->loadflags);
@@ -1592,7 +1588,7 @@ void DawInstance::onTick() {
             log_printf("Failed loading project: %s\n", e.what());
             projectLoadErrored = true;
         } catch (...) {
-            log_printf("Failed loading project. Unhandled exception\n", 0);
+            log_printf("Failed loading project. Unhandled exception\n");
             projectLoadErrored = true;
         }
         AppWndProc_disableBlockReentrant();
@@ -1600,7 +1596,7 @@ void DawInstance::onTick() {
             cbProjectLoadCompleteCallback(this, projectToLoadCpy->projectfile, projectLoadErrored ? 1 : 0);
             cbProjectLoadCompleteCallback = nullptr;
         }
-        log_printf("end of setLoadedProject\n", 0);
+        log_printf("Project load completed %s\n", projectLoadErrored ? "with errors" : "succesfully");
     }
     if (canOpenAutosave && autosaveState.isEnabled && tls.mainCtrl) {
         if (0 == autosaveState.tmLastTrigger) {
@@ -1668,7 +1664,7 @@ bool DawInstance::setProjectToLoad(std::shared_ptr<project_file> file, int flags
 bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 
     setAudioThreadState(playback_state::status_no_process);
-    log_printf("loading %s: %d tracks\n", StringAsCStr(file->path), project.trackList.size());
+    log_printf("Loading project %s: %d tracks\n", StringAsCStr(file->path), project.trackList.size());
     ThreadLock lock = playThread.lockThread();
     unloadProject();
     /** make sure call to unloadProject unloaded all vst2 instances **/
@@ -1761,7 +1757,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
              */
             std::vector<effectbase*> pluginsLoaded;
             pluginsLoaded.reserve(pluginsDeferred.size());
-            log_printf("begin plugin list loading\n", 0);
+            log_printf("begin plugin list loading\n");
             int len = pluginsDeferred.size();
             for (int i = 0; i < len; i++) {
                 dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
@@ -1789,15 +1785,13 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
                 /** TODO: vsync **/
                 seqthreads::threadSleep(16);
-                log_printf("pre activateDeferred %s\n", StringAsCStr(ctr.text));
                 effectbase* pluginLoaded;
                 tls.host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
-                log_printf("post activateDeferred %s\n", StringAsCStr(ctr.text));
                 if (pluginLoaded) {
                     pluginsLoaded.push_back(pluginLoaded);
                 }
             }
-            log_printf("end plugin list loading\n", 0);
+            log_printf("end plugin list loading\n");
         }
         const int32_t numSamplesToLoad = file->sampleFileIndex.list.size();
         {
@@ -1818,11 +1812,11 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
             windowMain->postRender();
             /** TODO: vsync **/
             seqthreads::threadSleep(16);
-            log_printf("pre load samplefileindex\n", 0);
+            log_printf("pre load samplefileindex\n");
             tls.audioCache->load(file->sampleFileIndex);
-            log_printf("post load samplefileindex\n", 0);
+            log_printf("post load samplefileindex\n");
         }
-        log_printf("end sample loading\n", 0);
+        log_printf("end sample loading\n");
         ctr.setControl(nullptr);
         AppWndProc_disableBlockReentrant();
         for (track_t* tr : project.trackList) {
@@ -1966,7 +1960,7 @@ guitrack_editor& MainCtrl::getTrackEditor() {
 }
 
 void MainCtrl::onPluginsChanged() {
-    log_printf("onPluginsChanged\n");
+    log_lf(Log::L_DEBUG, "onPluginsChanged\n");
     view->ctr_nodes.reset();
     view->ctr_nodes.refresh();
     view->ctr_plugins.relayout();
@@ -1975,7 +1969,7 @@ void MainCtrl::onPluginsChanged() {
 void DawCtrl::updateVisibleTrackContents() {
     static int n = 0;
     if (n++ % 20 == 0) {
-        log_printf("updateVisibleTrackContents call #%d\n", n);
+        log_lf(Log::L_DEBUG, "updateVisibleTrackContents call #%d\n", n);
     }
     guictr_tracks* trackContainer = getTrackContainer();
     trackContainer->updateVisibleTracks();
@@ -2012,7 +2006,7 @@ void DawCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 }
 
 bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbmods) {
-    log_printf("filesDropBegin %d %d isdragging=%d\n", mousepos.x, mousepos.y, daw.dragdropclip.isLoaded);
+    log_lf(Log::L_DEBUG, "filesDropBegin %d %d isdragging=%d\n", mousepos.x, mousepos.y, daw.dragdropclip.isLoaded);
     daw.dragdropclip.reset();
     if (guiDragged || guiCaptured) {
         return false;
@@ -2058,9 +2052,9 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbm
                         daw.dragdropclip.reset();
                         daw.dragdropclip.clipboard = fileloadedClipboard;
                         daw.dragdropclip.isLoaded  = true;
-                        log_printf("got clip\n", 0);
+                        log_lf(Log::L_DEBUG, "drag-drop clipboard loaded\n");
                     } else {
-                        log_printf("FAIL: no clip\n", 0);
+                        log_lf(Log::L_WARN, "Failed loading drag-drop clipboard\n");
                     }
                 }
             }
@@ -2130,7 +2124,7 @@ bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, int kbm
         return false;
     }
     if (daw.dragdropclip.isLoaded && daw.dragdropclip.isValidTarget) {
-        log_printf("filesDropFinal %d %d isdragging=%d\n", mousepos.x, mousepos.y, daw.dragdropclip.isLoaded);
+        log_lf(Log::L_DEBUG, "filesDropFinal %d %d isdragging=%d\n", mousepos.x, mousepos.y, daw.dragdropclip.isLoaded);
         MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP);
         evt.setDraggedThing(&daw.dragdropclip);
         for (guictr_base* ctr : containers) {
@@ -2706,15 +2700,15 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
         if (nUpdates > 15 || renderStats.timeUpdateWaveforms > 20 * 1000) {
             log_printf("%d updates took %zd\n", nUpdates, renderStats.timeUpdateWaveforms);
             auto timings = waveformRenderer->getTimings();
-            log_printf("waveform.tmPassed\t\t%zd\n", timings.tmPassed);
-            log_printf("waveform.tmProcessInputQ\t%zd\n", timings.tmProcessInputQ);
-            log_printf("waveform.tmFindSimiliar\t%zd\n", timings.tmFindSimiliar);
-            log_printf("waveform.tmFindSpot\t\t%zd\n", timings.tmFindSpot);
-            log_printf("waveform.tmTesselate\t\t%zd\n", timings.tmTesselate);
-            log_printf("waveform.tmBakePaths\t\t%zd\n", timings.tmBakePaths);
-            log_printf("waveform.tmDrawGL\t\t%zd\n", timings.tmDrawGL);
-            log_printf("waveform.comparisonsA\t%zd\n", timings.comparisonsA);
-            log_printf("waveform.comparisonsB\t%zd\n", timings.comparisonsB);
+            log_lf(Log::L_DEBUG, "waveform.tmPassed\t\t%zd\n", timings.tmPassed);
+            log_lf(Log::L_DEBUG, "waveform.tmProcessInputQ\t%zd\n", timings.tmProcessInputQ);
+            log_lf(Log::L_DEBUG, "waveform.tmFindSimiliar\t%zd\n", timings.tmFindSimiliar);
+            log_lf(Log::L_DEBUG, "waveform.tmFindSpot\t\t%zd\n", timings.tmFindSpot);
+            log_lf(Log::L_DEBUG, "waveform.tmTesselate\t\t%zd\n", timings.tmTesselate);
+            log_lf(Log::L_DEBUG, "waveform.tmBakePaths\t\t%zd\n", timings.tmBakePaths);
+            log_lf(Log::L_DEBUG, "waveform.tmDrawGL\t\t%zd\n", timings.tmDrawGL);
+            log_lf(Log::L_DEBUG, "waveform.comparisonsA\t%zd\n", timings.comparisonsA);
+            log_lf(Log::L_DEBUG, "waveform.comparisonsB\t%zd\n", timings.comparisonsB);
         }
     }
 }

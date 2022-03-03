@@ -93,14 +93,14 @@ namespace DAW {
     bool buildEffectProcessingGraph(const vsthost* const host, const project_t* const project, const audio_stage_t* stage, std::shared_ptr<effect_processing_graph_t>& out_procgraph) {
         std::shared_ptr<DAW::effect_graph_t> dependencyGraph;
         if (!DAW::buildEffectRoutingGraph(host, project, stage, dependencyGraph)) {
-            log_printf("Failed building track graph\n", 0);
+            log_printf("Failed building track graph\n");
             return false;
         }
         effect_node_t root;
         root.children.insert(root.children.begin(), dependencyGraph->roots.begin(), dependencyGraph->roots.end());
         dependency_graph_flattened_t graphFlattened;
         if (!dep_resolve_graph(graphFlattened, &root)) {
-            log_printf("Failed flattening track graph\n", 0);
+            log_printf("Failed flattening track graph\n");
             return false;
         }
 
@@ -188,7 +188,7 @@ namespace DAW {
                 });
 
                 if (itDependency >= itStageIdx) {
-                    log_printf("unexpected: dependecy index >= this index!!\n", 0);
+                    log_printf("unexpected: dependecy index >= this index!!\n");
                 }
                 auto itDependencyChildren = std::find_if(trackNode.children.begin(), trackNode.children.end(), [depNodeIdx](const effect_node_t* ptr) {
                     return ptr->stageId == depNodeIdx;
@@ -326,7 +326,7 @@ namespace DAW {
                     } else if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
                         trackCfg.pulls.push_back(DAW::effect_source_t{ trackEdgeId++, inputChannel, DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE });
                     } else {
-                        log_printf("missing track input routing\n", 0);
+                        log_printf("missing track input routing\n");
                     }
                 }
             }
@@ -376,7 +376,7 @@ namespace DAW {
                 } else if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
                     nodeOutput.pulls.push_back(DAW::effect_source_t{ trackEdgeId++, inputChannel, DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE });
                 } else {
-                    log_printf("missing track input routing\n", 0);
+                    log_printf("missing track input routing\n");
                 }
             }
         }
@@ -404,7 +404,7 @@ namespace DAW {
         //if (gEnableLog) {
         //    for (effect_node_ptr& ptr : trackGraph->nodes) {
         //        for (int32_t src : ptr->dependencies) {
-        //            log_printf("%d => %d\n", src, ptr->projectGlobalId);
+        //            log_lf(Log::L_DEBUG, "%d => %d\n", src, ptr->projectGlobalId);
         //        }
         //    }
         //}

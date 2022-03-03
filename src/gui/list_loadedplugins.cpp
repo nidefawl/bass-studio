@@ -532,8 +532,6 @@ public:
     }
     void buttonClicked(guibase* button) override {
         if (&btnLoadAll == button) {
-
-            log_printf("load all deferred\n", 0);
             DawInstance* daw = DawInstance::get();
             ThreadLock lock = daw->getPlayThread()->lockThread();
             auto* host = daw->getHost();

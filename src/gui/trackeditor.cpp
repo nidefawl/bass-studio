@@ -60,7 +60,7 @@
     }
 }
 void action_modify_track::undo(DawInstance* daw) {
-    log_printf("action_modify_track undo, num tracks: %d\n", before.tracks.size());
+    log_lf(Log::L_DEBUG, "action_modify_track undo, num tracks: %d\n", before.tracks.size());
 
     daw->resetMouseContext();
     daw->resetEditClip();
@@ -78,7 +78,7 @@ void action_modify_track::undo(DawInstance* daw) {
             }
             loadTrackSnapshot(daw, track, trackStored);
         } else {
-            log_printf("idx is now invalid\n", 0);
+            log_printf("idx is now invalid\n");
         }
     }
     MainCtrl::get()->getCursor() = before.cursor;
@@ -112,7 +112,7 @@ void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip) {
             cutClipRight(c, c->end() - clip->start());
             c->setDirty();
         } else {
-            log_printf("WHUT!\n", 0);
+            log_printf("WHUT!\n");
         }
     }
 }
@@ -755,7 +755,7 @@ void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const 
             static int logOnce = 0;
             if (!logOnce) {
                 logOnce = 1;
-                log_printf("dragged waveform rendering not implemented\n", 0);
+                log_printf("dragged waveform rendering not implemented\n");
             }
 #ifdef TODO_IMPLEMENT_DRAGGED_WAVE_FORM_RENDERING
 //track_gui_entry_t entry;

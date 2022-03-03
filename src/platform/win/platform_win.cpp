@@ -104,7 +104,7 @@ void setMinimumResolutionTimer() {
         wTimerRes = math::min(math::max((uint32_t) tc.wPeriodMin, (uint32_t) TARGET_RESOLUTION), (uint32_t) tc.wPeriodMax);
         timeBeginPeriod(wTimerRes);
     } else {
-        log_printf("timeGetDevCaps failed, cannot call timeBeginPeriod\n", 0);
+        log_printf("timeGetDevCaps failed, cannot call timeBeginPeriod\n");
     }
 }
 
@@ -115,6 +115,23 @@ void allocConsole() {
     FILE* f;
     freopen_s(&f, "CON", "w", stdout);
 #endif
+}
+void enableVirtTermProc() {
+    // Set output mode to handle virtual terminal sequences
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut != INVALID_HANDLE_VALUE)
+    {
+        DWORD dwOriginalOutMode = 0;
+        if (GetConsoleMode(hOut, &dwOriginalOutMode)) {
+            if (!SetConsoleMode(hOut, dwOriginalOutMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING | DISABLE_NEWLINE_AUTO_RETURN)
+                && !SetConsoleMode(hOut, dwOriginalOutMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING))
+            {
+                log_lf(Log::L_TRACE, "Failed enabling console ENABLE_VIRTUAL_TERMINAL_PROCESSING: SetConsoleMode failed\n");
+            }
+        } else {
+            log_lf(Log::L_TRACE, "Failed enabling console ENABLE_VIRTUAL_TERMINAL_PROCESSING: Not a console\n");
+        }
+    }
 }
 
 #ifdef USE_WIN32_EXC_HOOKS

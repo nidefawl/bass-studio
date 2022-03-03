@@ -129,7 +129,6 @@ String effect_deferred::getDfrdPluginName() const {
     return mImpl->snapshot.name;
 }
 void effect_deferred::onPreUnload(int flags) {
-    log_printf("onPreUnload effect_deferred %08X %s\n", (int64_t) mImpl, StringAsCStr(mImpl->snapshot.name));
 }
 const plugin_snapshot_t& effect_deferred::getSnapshotConst() const {
     return mImpl->snapshot;

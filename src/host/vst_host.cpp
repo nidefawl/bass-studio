@@ -85,7 +85,7 @@ void logPluginCb(vstplugin* plugin, const char* fmt, int opcode, int index, int6
     if (filterOpCode(opcode)) {
         char buf[MAX_LEN_MY_DBF];
         snprintf(buf, MAX_LEN_MY_DBF - 1, fmt, opcode, index, value, opt);
-        log_printf("%s %s", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), buf);
+        log_lf(Log::L_DEBUG, "%s %s", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), buf);
     }
 }
 
@@ -341,7 +341,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
             }
         }
         if (!validProcessingState) {
-            log_printf("%s opCode %d in !validProcessingState\n", StringAsCStr(plugin->sName), opcode);
+            log_lf(Log::L_WARN, "%s opCode %s in !validProcessingState\n", StringAsCStr(plugin->sName), getMasterOpcodeName(opcode));
         }
     }
     switch (opcode)
@@ -495,9 +495,9 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         return 0;
     case audioMasterCanDo:
         if (!throttleLog) {
-            log_printf("%s audioMasterCanDo %s\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), (const char*)ptr);
+            log_lf(Log::L_DEBUG, "%s audioMasterCanDo %s\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), (const char*)ptr);
         }
-        return host->canDo((const char*)ptr);
+        return vsthost::canDo((const char*)ptr);
     case audioMasterGetLanguage:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterGetLanguage %d %d %zd\n", opcode, index, value, 0);
@@ -506,7 +506,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterGetDirectory %d %d %zd\n", opcode, index, value, 0);
         if (plugin) {
-            return (VstIntPtr)plugin->getDir();
+            return (VstIntPtr) plugin->getDir();
         }
         return 0;
     case audioMasterUpdateDisplay:
@@ -1524,13 +1524,6 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
             if (enableProfiling) timerProfile.reset();
             resamplerInput->push(*ptrExternalInputs->output);
             if (enableProfiling) stats.timings["Block.ResampleInput"] = timerProfile.getTime();
-            //if (queueSizeOutput < 4 && resamplerInput->numBlocksToPop() <= 2) {
-            //    //log_printf("enqueue fake input to get ahead\n", 0);
-            //    //resamplerInput->push(*ptrExternalInputs->output);
-            //} else {
-            //
-            //    log_printf("enough input for processing: queueSizeOutput %d, blocksToPop %d\n", queueSizeOutput, resamplerInput->numBlocksToPop());
-            //}
             ptrExternalInputs->inUse = false;
         }
         queueSizeInput--;
@@ -2794,21 +2787,17 @@ bool vsthost::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t 
     int32_t end = dst+len;
     for (;itOut!=tmpEffects.cend();) {
         if (curEffects.cbegin()+src == itIn) {
-            log_printf("jump input iterator from %d to %d\n", itIn-curEffects.cbegin(), itIn-curEffects.cbegin()+len);
             itIn+=len;
         }
         int srcPos;
         int outPos = itOut-tmpEffects.begin();
         if (dst2 < end && tmpEffects.cbegin()+dst2 == itOut) {
-            log_printf("dst2 %d\n", dst2);
             srcPos = src2;
             *itOut++ = curEffects[src2++];
             dst2++;
-            log_printf("b writing %d to %d\n", srcPos, outPos);
         } else {
             srcPos = itIn-curEffects.cbegin();
             *itOut++ = *itIn++;
-            log_printf("a writing %d to %d\n", srcPos, outPos);
         }
     }
     trp->effects = std::move(tmpEffects);
@@ -2891,13 +2880,8 @@ bool vsthost::writeRecordedData(project_t* project) {
             std::swap(recordDataProcessed, pClip);
             track_t* tr = project->trackMidiAudioCtr.front();
             if (tr) {
-                //String s = "Recorded notes: ";
-                //for (note_t& note : pClip->notes.m_list) {
-                //    s += String(noteName(note.pitch)) + ",";
-                //}
-                //log_printf("%s\n", StringAsCStr(s));
-                log_printf("Processing recorded clip with %d notes\n", pClip->notes.m_list.size());
-                log_printf("Processing recorded clip. Last note time %d\n", pClip->notes.lastNote.time);
+                log_lf(Log::L_DEBUG, "Processing recorded clip. Recorded %d notes\n", pClip->notes.m_list.size());
+                log_lf(Log::L_DEBUG, "Processing recorded clip. Last note time %d\n", pClip->notes.lastNote.time);
                 tick_t tickBegin = pClip->time;
                 tick_t tickEnd = pClip->end();
                 DawInstance::get()->cutIntersecting(tr, tickBegin, tickEnd);

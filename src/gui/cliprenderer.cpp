@@ -68,7 +68,7 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
     w.method  = SampleMethod::sample_straight;
     w.audioId = m_clip->audio.id;
     w.clipped = size.x != sizeClipped.x;
-    //log_printf("waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%d]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scale);
+    //log_lf(Log::L_DEBUG, "waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%d]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scale);
 
     return w;
 }

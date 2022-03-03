@@ -210,7 +210,7 @@ bool trackallcontainer_t::moveTracks(const std::vector<track_t*>& tracks, track_
     auto* p = treePos.parent;
     while (p) {
         if (STL_CONTAINS(tracks, p)) {
-            log_printf("cannot move here\n", 0);
+            log_printf("cannot move here\n");
             return false;
         }
         p = p->parent;
@@ -223,7 +223,7 @@ bool trackallcontainer_t::moveTracks(const std::vector<track_t*>& tracks, track_
         dbgassert(trackTypeCtrIdx == TRACKTYPE_TO_CTR(track->type));
     }
     if (treePos.trackTypeCtr != trackTypeCtrIdx) {
-        log_printf("cannot move here\n", 0);
+        log_printf("cannot move here\n");
         return false;
     }
     trackcontainer_tracktype_t* const trackTypeCtr = trackTypeUniqueCtrs[trackTypeCtrIdx];
@@ -294,7 +294,7 @@ void trackallcontainer_t::copyTo(project_snapshot_t& project) {
     trackReturnCtr.copyTo(project.trackReturnCtr);
 }
 void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
-    log_printf("project.tracks: midi: %d returN: %d master: %d\n",
+    log_lf(Log::L_DEBUG, "project.tracks: audio/midi: %d return: %d master: %d\n",
               project.trackCtr.tracks.size(),
               project.trackReturnCtr.tracks.size(),
               project.trackMasterCtr.tracks.size());
@@ -334,11 +334,11 @@ void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, track
 
         //TODO: convert trackBegin (gui idx) to track list idx
         if (t->projectIdx >= trackBegin && t->projectIdx <= trackEnd) {
-            log_printf("copy track %d\n", t->projectIdx);
+            log_lf(Log::L_DEBUG, "copy track %d\n", t->projectIdx);
             auto* trackCopy = new track_snapshot_t(t, tracksnapshot_store_opts_t::NoPluginPresets());
             _out.tracks.push_back(trackCopy);
         } else {
-            log_printf("NOT copy track %d\n", t->projectIdx);
+            log_lf(Log::L_DEBUG, "NOT copy track %d\n", t->projectIdx);
         }
     }
 }
@@ -459,7 +459,7 @@ track_t* trackallcontainer_t::resolveTrack(const audio_stage_ref_t& ref) const {
     if (it != trackAllCtr.end()) {
         return *it;
     }
-    log_printf("null track for %d\n", static_cast<int32_t>(ref.stageId));
+    log_lf(Log::L_DEBUG, "null track for %d\n", static_cast<int32_t>(ref.stageId));
     return nullptr;
 }
 

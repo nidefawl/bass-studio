@@ -43,7 +43,6 @@ struct guitheme_t::guitheme_override_state_t {
             if (this->animationTime > 15) {
                 this->overrideState ^= 1 << 4;
                 this->animationTime = 0;
-                // this->overrideState = 0;
             }
         }
     }

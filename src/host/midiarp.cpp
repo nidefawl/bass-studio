@@ -287,7 +287,7 @@ void midiarp::addNote(tick_t start, arp_note_t& note, std::vector<noteevent_t>& 
     //find overlapping held notes;
     int retVal = cutNoteOutOfList(heldOutputNotes, note, true);
     if (retVal == -1) {
-        log_lf(Log::L_ERROR, "exact duplicate in list!\n", 0);
+        log_lf(Log::L_ERROR, "exact duplicate in list!\n");
         return;
     }
     if (retVal != 0) {
@@ -372,7 +372,7 @@ int midiarp::endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopSt
             }
             if (tickOffsetInBlockEnd < 0) {
                 dbgassert(heldNoteOut.end() <= start);
-                log_lf(Log::L_ERROR, "ending output note with end() < blockStart\n", 0);
+                log_lf(Log::L_ERROR, "ending output note with end() < blockStart\n");
                 tickOffsetInBlockEnd = 0;
             }
             heldNoteOut.cutRight(tick);
@@ -414,7 +414,7 @@ void midiarp::process(playback_state state, tick_t cursorPos, const std::vector<
     updateMarkersAndAnimation(start, end, loopStart, loopEnd, wallClockTime);
     /*if (wallClockTime - tmLastLog > 10.0f) {
         tmLastLog = wallClockTime;
-        log_printf("%zu/%zu/%zu/%zu/%zu/%zu\n",
+        log_lf(Log::L_DEBUG, "%zu/%zu/%zu/%zu/%zu/%zu\n",
                    heldInput.size(),
                    heldOutputNotes.size(),
                    curRandTimeOffset.size(),
@@ -644,7 +644,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
                     return t < tick;
                 });
                 if (stepCompleted2) {
-                    log_lf(Log::L_WARN, "all generated timepoints are before the current tick\n", 0);
+                    log_lf(Log::L_WARN, "all generated timepoints are before the current tick\n");
                 }
                 auto stepSomeCompleted2 = std::count_if(std::cbegin(processTimePoints), std::cend(processTimePoints), [tick](auto t) {
                     return t < tick;
@@ -670,7 +670,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
                 continue;
             int actualStep = stepGenerated;
             if (stepGenerated < 0) {
-                log_lf(Log::L_ERROR, "stepGenerated < 0, unexpected...\n", 0);
+                log_lf(Log::L_ERROR, "stepGenerated < 0, unexpected...\n");
                 actualStep = 0;
             }
 #ifdef PLACE_MARKERS

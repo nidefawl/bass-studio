@@ -398,7 +398,7 @@ namespace PluginHostInfo {
             memcpy(impl->dataPreset.data(), data, byteSize);
             return byteSize;
         } else {
-            log_printf("mismatch :( \n", 0);
+            log_printf("mismatch :( \n");
         }
 
         return 0;
@@ -420,7 +420,7 @@ namespace PluginHostInfo {
             log_printf("Process block %d\n", sampleFrames);
             VstTimeInfo* timeinfo = getTimeInfo(flags);
             if (!timeinfo) {
-                log_printf("getTimeInfo() == nullptr\n", 0);
+                log_printf("getTimeInfo() == nullptr\n");
                 assert(timeinfo);
                 timeInfoToStrings(timeinfo, strings);
             }

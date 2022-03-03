@@ -31,7 +31,7 @@ gui_ctr_main::gui_ctr_main()
     add(&field);
     field.setRef(&this->nr);
     textField.setChangeCallback([](const String& str) {
-        log_printf("text callback %s\n", StringAsCStr(str));
+        log_lf(Log::L_DEBUG, "text callback %s\n", StringAsCStr(str));
         return true;
     });
 }
@@ -189,7 +189,7 @@ public:
 
 void gui_ctr_main::buttonClicked(guibase* button) {
     if (&field == button) {
-        log_printf("numberinput_field input: %d\n", this->nr);
+        log_lf(Log::L_DEBUG, "numberinput_field input: %d\n", this->nr);
     }
 }
 

@@ -412,7 +412,7 @@ public:
     };
     void dragReleaseOn(guibase* target, ivec2 mousepos) override {
         ivec2 localPos = toControlsObjectSpace(mousepos, parent->parent);
-        log_printf("dragReleaseOn %s on %s\n", StringAsCStr(this->getClassName()), StringAsCStr(target->getClassName()));
+        log_lf(Log::L_DEBUG, "dragReleaseOn %s on %s\n", StringAsCStr(this->getClassName()), StringAsCStr(target->getClassName()));
         if (parent->contains(localPos)) {
             wasDragReleaseOnGuiCtrNodes = true;
         }
@@ -466,7 +466,7 @@ public:
     }
 };
 void gui_graph_port::dragReleaseOn(guibase* target, ivec2 mousepos) {
-    log_printf("dragReleaseOn %s on %s\n", StringAsCStr(this->getClassName()), StringAsCStr(target->getClassName()));
+    log_lf(Log::L_DEBUG, "dragReleaseOn %s on %s\n", StringAsCStr(this->getClassName()), StringAsCStr(target->getClassName()));
     auto* ptr = dynamic_cast<gui_graph_port*>(target);
     if (ptr != nullptr) {
         //auto node = ptr->parentGraphNode->getProcessingNode();
@@ -491,7 +491,7 @@ void gui_graph_port::dragReleaseOn(guibase* target, ivec2 mousepos) {
 
 void gui_graph_port::dragMoveOn(guibase* target, ivec2 mousepos) {
 //    wasDragReleaseOnGuiCtrNodes = false;
-    log_printf("dragMoveOn %s on %s\n", StringAsCStr(this->getClassName()), StringAsCStr(target->getClassName()));
+    log_lf(Log::L_DEBUG, "dragMoveOn %s on %s\n", StringAsCStr(this->getClassName()), StringAsCStr(target->getClassName()));
 }
 
 class guictr_nodes_editor::guictr_nodes_editor_impl {
@@ -801,7 +801,7 @@ void gui_graph::updateList(bool resetPositions) {
             dbgassert(project);
             auto tracksFlatAll = project->trackList.getAllTracksFlatVec();//TODO: get rid of copy
             if (!DAW::buildProcessingGraph(vsthost::getInstance(), project, tracksFlatAll, processingGraph)) {
-                log_printf("Failed building track graph\n", 0);
+                log_printf("Failed building track graph\n");
             } else {
                 lastProcessingList = processingGraph;
             }
@@ -811,7 +811,7 @@ void gui_graph::updateList(bool resetPositions) {
             if (track && track->audio) {
                 std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
                 if (!DAW::buildEffectProcessingGraph(vsthost::getInstance(), nullptr, track->audio, effProcessingGraph)) {
-                    log_printf("Failed building effect graph\n", 0);
+                    log_printf("Failed building effect graph\n");
                 } else {
                     lastProcessingList = effProcessingGraph;
                 }

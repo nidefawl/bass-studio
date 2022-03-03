@@ -176,7 +176,7 @@ namespace test_math {
             /* Negative rounding is off by 1 when using to int truncation */
             return static_cast<int32_t>(f + 0.5f) - (std::signbit(f) ? 1 : 0);
         };
-        log_printf("Value  int truncation           funcRoundF\n", 0);
+        log_printf("Value  int truncation           funcRoundF\n");
         for (auto fValue : fValues) {
             auto iRounded  = traditionalIntTrunc(fValue);
             auto iRounded2 = funcRoundF(fValue);
@@ -249,7 +249,7 @@ namespace test_math {
             /* Negative rounding is off by 1 when using to int truncation */
             return static_cast<int64_t>(f + 0.5f) - (std::signbit(f) ? 1 : 0);
         };
-        log_printf("Value  int truncation           funcRoundF\n", 0);
+        log_printf("Value  int truncation           funcRoundF\n");
         for (auto fValue : fValues) {
             auto iRounded  = traditionalIntTrunc(fValue);
             auto iRounded2 = funcRoundF(fValue);

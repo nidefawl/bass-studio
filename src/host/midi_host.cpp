@@ -56,7 +56,7 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
     int command; /* the current command */
     int chan;    /* the midi channel of the current event */
 
-    /* log_printf("output data %8x; ", data); */
+    /* log_lf(Log::L_DEBUG, "output data %8x; ", data); */
 
     command = Pm_MessageStatus(data) & MIDI_CODE_MASK;
     chan = Pm_MessageStatus(data) & MIDI_CHN_MASK;
@@ -76,7 +76,7 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
             i++; /* include the EOX byte in output */
         }
         if (verbose) showbytes(data, i);
-        if (verbose) log_printf("System Exclusive\n", 0);
+        if (verbose) log_lf(Log::L_DEBUG, "System Exclusive\n");
     } else if (command == MIDI_ON_NOTE && Pm_MessageData2(data) != 0) {
         if (verbose) showbytes(data, 3);
         if (verbose) {
@@ -102,7 +102,7 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
     } else if (command == MIDI_CH_PROGRAM) {
         if (verbose) showbytes(data, 2);
         if (verbose) {
-            log_printf("  ProgChg Chan %2d Prog %2d\n", chan, Pm_MessageData1(data) + 1);
+            log_lf(Log::L_DEBUG, "  ProgChg Chan %2d Prog %2d\n", chan, Pm_MessageData1(data) + 1);
         }
     } else if (command == MIDI_CTRL) {
         /* controls 121 (MIDI_RESET_CONTROLLER) to 127 are channel
@@ -110,38 +110,38 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
         if (Pm_MessageData1(data) < MIDI_ALL_SOUND_OFF) {
             if (verbose) showbytes(data, 3);
             if (verbose) {
-                log_printf("CtrlChg Chan %2d Ctrl %2d Val %2d\n", chan, Pm_MessageData1(data), Pm_MessageData2(data));
+                log_lf(Log::L_DEBUG, "CtrlChg Chan %2d Ctrl %2d Val %2d\n", chan, Pm_MessageData1(data), Pm_MessageData2(data));
             }
         } else /* channel mode */ /*if (chmode)*/ {
             if (verbose) showbytes(data, 3);
             if (verbose) {
                 switch (Pm_MessageData1(data)) {
                     case MIDI_ALL_SOUND_OFF:
-                        log_printf("All Sound Off, Chan %2d\n", chan);
+                        log_lf(Log::L_DEBUG, "All Sound Off, Chan %2d\n", chan);
                         break;
                     case MIDI_RESET_CONTROLLERS:
-                        log_printf("Reset All Controllers, Chan %2d\n", chan);
+                        log_lf(Log::L_DEBUG, "Reset All Controllers, Chan %2d\n", chan);
                         break;
                     case MIDI_LOCAL:
-                        log_printf("LocCtrl Chan %2d %s\n", chan, Pm_MessageData2(data) ? "On" : "Off");
+                        log_lf(Log::L_DEBUG, "LocCtrl Chan %2d %s\n", chan, Pm_MessageData2(data) ? "On" : "Off");
                         break;
                     case MIDI_ALL_OFF:
-                        log_printf("All Off Chan %2d\n", chan);
+                        log_lf(Log::L_DEBUG, "All Off Chan %2d\n", chan);
                         break;
                     case MIDI_OMNI_OFF:
-                        log_printf("OmniOff Chan %2d\n", chan);
+                        log_lf(Log::L_DEBUG, "OmniOff Chan %2d\n", chan);
                         break;
                     case MIDI_OMNI_ON:
-                        log_printf("Omni On Chan %2d\n", chan);
+                        log_lf(Log::L_DEBUG, "Omni On Chan %2d\n", chan);
                         break;
                     case MIDI_MONO_ON:
-                        log_printf("Mono On Chan %2d\n", chan);
-                        if (Pm_MessageData2(data)) log_printf(" to %d received channels\n", Pm_MessageData2(data));
+                        log_lf(Log::L_DEBUG, "Mono On Chan %2d\n", chan);
+                        if (Pm_MessageData2(data)) log_lf(Log::L_DEBUG, " to %d received channels\n", Pm_MessageData2(data));
                         else
-                            log_printf(" to all received channels\n", 0);
+                            log_lf(Log::L_DEBUG, " to all received channels\n");
                         break;
                     case MIDI_POLY_ON:
-                        log_printf("Poly On Chan %2d\n", chan);
+                        log_lf(Log::L_DEBUG, "Poly On Chan %2d\n", chan);
                         break;
                 }
             }
@@ -159,65 +159,65 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
     } else if (command == MIDI_TOUCH) {
         if (verbose) showbytes(data, 2);
         if (verbose) {
-            log_printf("  A.Touch Chan %2d Val %2d\n", chan, Pm_MessageData1(data));
+            log_lf(Log::L_DEBUG, "  A.Touch Chan %2d Val %2d\n", chan, Pm_MessageData1(data));
         }
     } else if (command == MIDI_BEND) {
         if (verbose) showbytes(data, 3);
         if (verbose) {
-            log_printf("P.Bend  Chan %2d Val %2d\n", chan, (Pm_MessageData1(data) + (Pm_MessageData2(data) << 7)));
+            log_lf(Log::L_DEBUG, "P.Bend  Chan %2d Val %2d\n", chan, (Pm_MessageData1(data) + (Pm_MessageData2(data) << 7)));
         }
         messages.push_back({data, 0});
     } else if (Pm_MessageStatus(data) == MIDI_SONG_POINTER) {
         if (verbose) showbytes(data, 3);
         if (verbose) {
-            log_printf("    Song Position %d\n", (Pm_MessageData1(data) + (Pm_MessageData2(data) << 7)));
+            log_lf(Log::L_DEBUG, "    Song Position %d\n", (Pm_MessageData1(data) + (Pm_MessageData2(data) << 7)));
         }
     } else if (Pm_MessageStatus(data) == MIDI_SONG_SELECT) {
         if (verbose) showbytes(data, 2);
         if (verbose) {
-            log_printf("    Song Select %d\n", Pm_MessageData1(data));
+            log_lf(Log::L_DEBUG, "    Song Select %d\n", Pm_MessageData1(data));
         }
     } else if (Pm_MessageStatus(data) == MIDI_TUNE_REQ) {
         if (verbose) showbytes(data, 1);
         if (verbose) {
-            log_printf("    Tune Request\n", 0);
+            log_lf(Log::L_DEBUG, "    Tune Request\n");
         }
     } else if (Pm_MessageStatus(data) == MIDI_Q_FRAME /* && realdata */) {
         if (verbose) showbytes(data, 2);
         if (verbose) {
-            log_printf("    Time Code Quarter Frame Type %d Values %d\n",
+            log_lf(Log::L_DEBUG, "    Time Code Quarter Frame Type %d Values %d\n",
                        (Pm_MessageData1(data) & 0x70) >> 4,
                        Pm_MessageData1(data) & 0xf);
         }
     } else if (Pm_MessageStatus(data) == MIDI_START /* && realdata */) {
         if (verbose) showbytes(data, 1);
         if (verbose) {
-            log_printf("    Start\n", 0);
+            log_lf(Log::L_DEBUG, "    Start\n");
         }
     } else if (Pm_MessageStatus(data) == MIDI_CONTINUE /* && realdata */) {
         if (verbose) showbytes(data, 1);
         if (verbose) {
-            log_printf("    Continue\n", 0);
+            log_lf(Log::L_DEBUG, "    Continue\n");
         }
     } else if (Pm_MessageStatus(data) == MIDI_STOP /* && realdata */) {
         if (verbose) showbytes(data, 1);
         if (verbose) {
-            log_printf("    Stop\n", 0);
+            log_lf(Log::L_DEBUG, "    Stop\n");
         }
     } else if (Pm_MessageStatus(data) == MIDI_SYS_RESET /* && realdata */) {
         if (verbose) showbytes(data, 1);
         if (verbose) {
-            log_printf("    System Reset\n", 0);
+            log_lf(Log::L_DEBUG, "    System Reset\n");
         }
     } else if (Pm_MessageStatus(data) == MIDI_TIME_CLOCK) {
         if (verbose) showbytes(data, 1);
         if (verbose) {
-            log_printf("    Clock\n", 0);
+            log_lf(Log::L_DEBUG, "    Clock\n");
         }
     } else if (Pm_MessageStatus(data) == MIDI_ACTIVE_SENSING) {
         if (verbose) showbytes(data, 1);
         if (verbose) {
-            log_printf("    Active Sensing\n", 0);
+            log_lf(Log::L_DEBUG, "    Active Sensing\n");
         }
     } else if (verbose)
         showbytes(data, 3);
@@ -231,7 +231,7 @@ int32_t getMidiTime(void* userData) {
 #define TIMEOUT_TEMP_NOTES 2000
 // HACK: inject midi preview note
 int32_t midihost::triggerNote(int32_t deviceIdx, int32_t channel, int32_t pitch, int32_t velocity) {
-    //    log_printf("trigger %d\n", pitch);
+    //    log_lf(Log::L_DEBUG, "trigger %d\n", pitch);
     int32_t status = 0x90 | (channel & 0xF);
     int32_t msg = Pm_Message(status, pitch, velocity);
     int32_t current_timestamp = getMidiTime(nullptr);
@@ -246,7 +246,7 @@ int32_t midihost::triggerNote(int32_t deviceIdx, int32_t channel, int32_t pitch,
 }
 int32_t midihost::killNote(int32_t deviceIdx, int32_t channel, int32_t pitch) {
 
-    //    log_printf("kill %d\n", pitch);
+    //    log_lf(Log::L_DEBUG, "kill %d\n", pitch);
     int32_t status = 0x80 | (channel & 0xF);
     int32_t msg = Pm_Message(status, pitch, 0);
     int32_t current_timestamp = getMidiTime(nullptr);
@@ -270,7 +270,7 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
     PmError result;
     PmEvent buffer; /* just one message at a time */
     /* if (current_timestamp % 1000 == 0)
-        log_printf("time %d\n", current_timestamp); */
+        log_lf(Log::L_DEBUG, "time %d\n", current_timestamp); */
 
     int32_t current_timestamp = getMidiTime(nullptr);
     /* do nothing until initialization completes */
@@ -537,12 +537,12 @@ void midihost::reopenAllConfiguredDevices(bool forceClose) {
     }
 }
 bool midihost::startMidi() {
-    printf("MIDI input devices:\n");
+    log_printf("MIDI input devices:\n");
     for (int i = 0; i < Pm_CountDevices(); i++) {
         const PmDeviceInfo* info = Pm_GetDeviceInfo(i);
         if (info->input) log_printf("%d: %s, %s\n", i, info->interf, info->name);
     }
-    printf("MIDI output devices:\n");
+    log_printf("MIDI output devices:\n");
     for (int i = 0; i < Pm_CountDevices(); i++) {
         const PmDeviceInfo* info = Pm_GetDeviceInfo(i);
         if (info->output) log_printf("%d: %s, %s\n", i, info->interf, info->name);
@@ -553,7 +553,7 @@ bool midihost::startMidi() {
     return isStreaming();
 }
 bool midihost::stopMidi() {
-    log_printf("stopMidi.\n", 0);
+    log_printf("stopMidi.\n");
     bool ret = !this->devicesInput.empty() || !this->devicesInput.empty();
     std::vector<midi_channel> empty;
     syncOpenCloseDeviceList(empty, this->devicesInput);
@@ -583,7 +583,7 @@ std::vector<MidiIOEvent> midihost::getInputMessages() {
     //        for (auto &a : ret) {
     //            int32_t status = Pm_MessageStatus(a.message) & MIDI_CODE_MASK;
     //            if (status & 0x80) {
-    //                log_printf("note[%d] %s %s %d\n", idx, (status==0x80)!=0?"kill":"trig",
+    //                log_lf(Log::L_DEBUG, "note[%d] %s %s %d\n", idx, (status==0x80)!=0?"kill":"trig",
     //                noteName(Pm_MessageData1(a.message)), a.timestamp);
     //            }
     //            idx++;

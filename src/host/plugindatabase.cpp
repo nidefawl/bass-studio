@@ -141,7 +141,7 @@ public:
         }
         String strSQLQuery = "SELECT * FROM plugins where " + strSQLCond + " " + strSQLOrder;
         if (customQuery)
-            log_printf("str: %s\n", StringAsCStr(strSQLQuery));
+            log_lf(Log::L_DEBUG, "str: %s\n", StringAsCStr(strSQLQuery));
         SQLite::Statement queryPlugin(db, strSQLQuery);
         if (!customQuery) {
             queryPlugin.bind(1, strSearchQuery);

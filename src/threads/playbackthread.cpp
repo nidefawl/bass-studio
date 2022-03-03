@@ -229,7 +229,7 @@ private:
                             break;
                         case PLAYBACK_THREAD_EXIT:
 #ifndef NDEBUG
-                            log_printf("PLAYBACK_THREAD_EXIT", 0);
+                            log_printf("PLAYBACK_THREAD_EXIT\n");
                             seqthreads::threadSleep(200);
 #endif
                             req->notify();
@@ -317,10 +317,10 @@ private:
                                 double nextTickPos    = projGlobals.loopStart;
                                 int32_t nextSamplePos = tickToSampleConvert<int32_t, roundmode::floor>(nextTickPos, bpm100, sampleRate);
                                 host->onPlaybackJumpFromTo(this->m_prjCtrl, samplePos, tickPos, nextSamplePos, nextTickPos);
-                                log_printf("JMP FROM %s to %s\n", StringAsCStr(tickAsBeatString(tickPos)), StringAsCStr(tickAsBeatString(nextTickPos)));
+                                log_lf(Log::L_DEBUG, "JMP FROM %s to %s\n", StringAsCStr(tickAsBeatString(tickPos)), StringAsCStr(tickAsBeatString(nextTickPos)));
                                 tickPos   = nextTickPos;
                                 samplePos = nextSamplePos;
-                                log_printf("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
+                                log_lf(Log::L_DEBUG, "JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
                             }
                         }
                         if (m_status != status_stop) {
@@ -359,7 +359,7 @@ private:
 
                 if (playbackDuration > 10000 && m_status == status_playback) {
                     double wallTimeMs = timer.getTimeDouble() * 1000.0;
-                    log_printf("playbackDuration %.4f wallTime %.4f error %.4f\n", playbackDuration, wallTimeMs, playbackDuration - wallTimeMs);
+                    log_lf(Log::L_DEBUG, "playbackDuration %.4f wallTime %.4f error %.4f\n", playbackDuration, wallTimeMs, playbackDuration - wallTimeMs);
                     playbackDuration = 0;
                     timer.reset();
                 }

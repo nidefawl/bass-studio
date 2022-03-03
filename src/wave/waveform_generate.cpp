@@ -76,7 +76,7 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
                 }
                 const double renderOffset = math::max(0.0, (double) (samplePosRender - samplePosClip));
                 float lastPtX             = -vOffset;
-                //log_printf("channel %d offset %f\n", iChannel, lastPtX);
+                //log_lf(Log::L_DEBUG, "channel %d offset %f\n", iChannel, lastPtX);
                 for (; samplePos < waveformScaled.sampleEnd;) {
                     double sampleOffset = math::max(0.0, (double) (samplePos - samplePosClip));
                     if (sampleOffset >= lenSamplesCh) {//TODO: no loop!
@@ -123,7 +123,7 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
                 //    float c = glm::distance(a, b);
                 //    if (c < 0.125f) {
                 //        vecs.erase(it);
-                //        log_printf("short dist: %f\n", c);
+                //        log_lf(Log::L_DEBUG, "short dist: %f\n", c);
                 //        continue;
                 //    }
                 //    a = b;

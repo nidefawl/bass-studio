@@ -133,9 +133,9 @@ void BasePluginVST2::open() {
     AttachConsole(GetCurrentProcessId());
     FILE* f;
     freopen_s(&f, "CON", "w", stdout);
-    log_printf("open!\n", 0);
+    log_printf("open!\n");
     if (editor) {
-        log_printf("Editor already exists!\n", 0);
+        log_printf("Editor already exists!\n");
     }
 #endif//BUILD_EXTERNAL_PLUGIN
     createEditorWindow(createView());
@@ -173,11 +173,11 @@ void initColor();// gui/gui.cpp
 void onModuleLoad(HINSTANCE hInst) {
     isFirstPluginLoad = true;
     String moduleName = getModuleName(hInst);
-    log_printf("moduleName %s\n", StringAsCStr(moduleName));
+    log_lf(Log::L_DEBUG, "moduleName %s\n", StringAsCStr(moduleName));
     String path = "";
     SplitPath(moduleName, &path, nullptr, nullptr, nullptr);
     App::Platform::initPlatformEnvironment("daw", path);
-    log_printf("resPath %s\n", StringAsCStr(App::Platform::toResourcePath("")));
+    log_lf(Log::L_DEBUG, "resPath %s\n", StringAsCStr(App::Platform::toResourcePath("")));
     try {
         initColor();
         glfwSetErrorCallback(glfw_plugin_error_callback);

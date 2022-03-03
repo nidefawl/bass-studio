@@ -575,10 +575,8 @@ void gui_audiocontent::render(NVGcontext* vg) {
     renderAudioClip(vg);
 }
 void gui_audiocontent::releaseRendered() {
-    //log_printf("release %012x from releaseRendered()\n", waveformRef);
     dbgassert(dawCtrl->getWaveformRenderer()->isValid(waveformRef));
     dawCtrl->getWaveformRenderer()->release(waveformRef);
-    //m_clip->audio.waveformRef.fbId = -1;
     waveformRef->rendered = false;
 }
 
@@ -631,8 +629,8 @@ audioclip_texture_t makeWaveformFromSample(const int32_t tempo100, const sampler
     w.method  = SampleMethod::sample_straight;
     w.audioId = clipAudio.id;
     w.clipped = true;
-    //log_printf("waveform %d - %d - %d - %d %f %f %f\n", w.audioId, w.sampleBegin, w.sampleBeginOffset, w.sampleEnd, w.samplesPerPx, grid.zoom, lenSamples);
-    //log_printf("waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%f]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scaleX);
+    //log_lf(Log::L_DEBUG, "waveform %d - %d - %d - %d %f %f %f\n", w.audioId, w.sampleBegin, w.sampleBeginOffset, w.sampleEnd, w.samplesPerPx, grid.zoom, lenSamples);
+    //log_lf(Log::L_DEBUG, "waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%f]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scaleX);
 
 
     return w;

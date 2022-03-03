@@ -24,6 +24,7 @@ int64_t getTimeMicros();
 void setMinimumResolutionTimer();
 
 void allocConsole();
+void enableVirtTermProc();
 void setExceptionHandler();
 String getKeyName(int scancode);
 

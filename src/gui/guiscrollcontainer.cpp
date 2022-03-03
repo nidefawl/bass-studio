@@ -18,7 +18,7 @@ void guictr_scrollbar::render(NVGcontext* vg) {
         if (gui == &scrollbar)
             continue;
         if (gui->size == ivec2{ 0, 0 }) {
-            log_printf("warning, rendering container with size 0 0\n", 0);
+            log_lf(Log::L_WARN, "warning, rendering container with size 0 0\n");
         } else {
             gui->render(vg);
         }

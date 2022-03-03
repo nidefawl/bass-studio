@@ -41,16 +41,6 @@ namespace GuiConstant {
         return v;
     }
 
-    void changeConstantDefault(const constant_t& c, int32_t v) {
-        for (auto p : _getConstants()) {
-            if (p == &c) {
-                p->defValue = v;
-            } else if (p->idx == c.idx) {
-                log_printf("failed changing default for constant %d\n", p->idx);
-            }
-        }
-    }
-
     int32_t getNextId() {
         static int32_t constantsNextId = 1;
         return constantsNextId++;

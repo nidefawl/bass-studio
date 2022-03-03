@@ -205,7 +205,7 @@ void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t tra
         return;
     }
     if (!host->addDeferredEffect(defEffect)) {
-        log_printf("Failed loading effect\n", 0);
+        log_printf("Failed loading effect\n");
         delete defEffect;
         dbgassert(0);
         return;

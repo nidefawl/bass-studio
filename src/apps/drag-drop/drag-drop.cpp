@@ -114,7 +114,7 @@ public:
         }
         for (auto c : guis) {
             if (c->size == ivec2{0, 0}) {
-                log_printf("warning, rendering container with size 0 0\n", 0);
+                log_lf(Log::L_WARN, "warning, rendering container with size 0 0\n");
             } else {
                 nvgSave(vg);
                 c->render(vg);
