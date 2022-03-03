@@ -1044,9 +1044,11 @@ public:
         }
     };
     explicit guidropdown_popup_sel_automation_param(DawCtrl* _dawCtrl, track_gui_entry_t* const trackentry) : m_trackentry(trackentry) {
-        this->size.x         = 120;
-        this->fontSize       = FONT_SIZE_CTXT_SMALL;
-        this->paddingV       = 0;
+        this->dawCtrl  = _dawCtrl;
+        this->size.x   = 120;
+        this->fontSize = FONT_SIZE_CTXT_SMALL;
+        this->paddingV = 0;
+
         automatable_t* autom = m_trackentry->state.selectedAutomationCtr;
         addEntry(new ctxtmenu_entry("None", 0));
         if (autom) {
