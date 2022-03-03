@@ -2789,14 +2789,10 @@ bool vsthost::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t 
         if (curEffects.cbegin()+src == itIn) {
             itIn+=len;
         }
-        int srcPos;
-        int outPos = itOut-tmpEffects.begin();
         if (dst2 < end && tmpEffects.cbegin()+dst2 == itOut) {
-            srcPos = src2;
             *itOut++ = curEffects[src2++];
             dst2++;
         } else {
-            srcPos = itIn-curEffects.cbegin();
             *itOut++ = *itIn++;
         }
     }

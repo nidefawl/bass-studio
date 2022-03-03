@@ -43,9 +43,7 @@ float renderTextLabel(NVGcontext* vg,
                      const NVGcolor color,
                      const int32_t alignment);
 void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* theme, const String& str, float fontScale, GuiColor::constant_t c, ivec2 renderPos, ivec2 size);
-
 void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, float thickness);
-void drawAttachedBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin);
 
 void drawIcon(NVGcontext* vg, const ivec2& size, RenderResources::NvgImageTexture* image, int32_t extImg = 2);
 void drawIconColored(NVGcontext* vg, const ivec2& size, RenderResources::NvgImageTexture* image, NVGcolor color, int32_t extImg = 2);

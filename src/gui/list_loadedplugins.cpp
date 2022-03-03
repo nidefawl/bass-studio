@@ -487,9 +487,11 @@ public:
         });
         for (effectbase* eff : deferredEffects) {
             SafeRef<effectbase> safeRef = eff->makeSafeRef();
-            auto it                     = std::find_if(STL_RANGE(listEntriesDef), [&safeRef](gui_pluginsloaded_list_entry* p) {
-                return p->getRef().refId == safeRef.refId;
-                                });
+
+            auto it = std::find_if(listEntriesDef.begin(), listEntriesDef.end(),
+                                    [&safeRef](gui_pluginsloaded_list_entry* p) {
+                                        return p->getRef().refId == safeRef.refId;
+                                    });
             gui_pluginsloaded_list_entry* g;
             if (it == listEntriesDef.end()) {
                 g = new gui_pluginsloaded_list_entry(safeRef);
@@ -501,9 +503,10 @@ public:
         }
         for (effectbase* eff : effects) {
             SafeRef<effectbase> safeRef = eff->makeSafeRef();
-            auto it                     = std::find_if(STL_RANGE(listEntriesLoadedPlugins), [&safeRef](gui_pluginsloaded_list_entry* p) {
-                return p->getRef().refId == safeRef.refId;
-                                });
+            auto it = std::find_if(listEntriesLoadedPlugins.begin(), listEntriesLoadedPlugins.end(),
+                                    [&safeRef](gui_pluginsloaded_list_entry* p) {
+                                        return p->getRef().refId == safeRef.refId;
+                                    });
             gui_pluginsloaded_list_entry* g;
             if (it == listEntriesLoadedPlugins.end()) {
                 g = new gui_pluginsloaded_list_entry(safeRef);

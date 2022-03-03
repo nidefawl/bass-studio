@@ -36,7 +36,7 @@ String StringFormat(const char* fmt, ...) {
         str = strp;
     }
     if (strp) {
-        insane_free(strp);
+        free(strp);
     }
     return str;
 }
@@ -57,7 +57,7 @@ int _________vasprintf(char** strp, const char* fmt, va_list ap) {
         if (*strp) {
             r = vsnprintf(*strp, size + 1, fmt, ap);//+1 for null
             if ((r < 0) || (r > size)) {
-                insane_free(*strp);
+                free(*strp);
                 r = -1;
             }
         }

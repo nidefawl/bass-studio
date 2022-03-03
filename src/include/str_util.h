@@ -6,12 +6,6 @@
 extern "C" {
 #endif
 
-#define insane_free(ptr) \
-    {                    \
-        free((ptr));     \
-        (ptr) = nullptr; \
-    }
-
 int _________vasprintf(char** strp, const char* fmt, va_list ap);
 int _________asprintf(char** strp, const char* fmt, ...);
 

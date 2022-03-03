@@ -53,7 +53,7 @@ void releaseClipResources(clip_t* cl, delete_cb* cb) {
                 auto* pGui = entry->clipsGuis[cl];
                 dbgassert(pGui);
                 entry->content->remove(pGui);
-                DELETE_PTR(pGui);
+                delete pGui;
             } else {
                 dbgassert(0);
             }

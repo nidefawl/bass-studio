@@ -111,10 +111,6 @@ namespace GuiColor {
 }// namespace GuiColor
 
 
-#define NVG_KAPPA90 0.5522847493f// Length proportional to radius of a cubic bezier handle for 90deg arcs.
-#define PT1 (r * (1 - NVG_KAPPA90))
-
-
 struct NVGcolor;
 #define COLOR_PALETTE_ROWS 4
 #define COLOR_PALETTE_COLS 15

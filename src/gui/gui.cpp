@@ -419,41 +419,6 @@ void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& col
     nvgFill(vg);
 }
 
-void drawAttachedBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin) {
-    static const ivec2 borderThickness(6);
-    posInset -= ivec2(margin);
-    sizeInset += ivec2(margin) * 2;
-
-    int topOffset = CTR_SPACING / 2 - 1;
-    float r       = 4;
-    float x       = posInset.x;
-    float y       = posInset.y - topOffset;
-    int w         = sizeInset.x;
-    int h         = sizeInset.y + topOffset;
-    nvgBeginPath(vg);
-    nvgMoveTo(vg, x - r, y - 1);
-    nvgLineTo(vg, x - r, y);
-    nvgBezierTo(vg, x - r + PT1, y, x, y + PT1, x, y + r);
-    nvgLineTo(vg, x, y + h - r);
-    nvgBezierTo(vg, x, y + h - PT1, x + PT1, y + h, x + r, y + h);
-    nvgLineTo(vg, x + w - r, y + h);
-    nvgBezierTo(vg, x + w - PT1, y + h, x + w, y + h - PT1, x + w, y + h - r);
-    nvgLineTo(vg, x + w, y + r);
-    nvgBezierTo(vg, x + w, y + PT1, x + w + r - PT1, y, x + w + r, y);
-    nvgLineTo(vg, x + w + r, y - 1);
-    nvgClosePath(vg);
-
-
-    nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRK));
-    nvgFill(vg);
-    posInset += borderThickness;
-    sizeInset -= borderThickness * 2;
-    nvgBeginPath(vg);
-    nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-    nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
-    nvgFill(vg);
-}
-
 void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) const {
     if (flags & FLG_RENDER_BACKGROUND) {
         renderWidgetBorderPosSize(vg, flags, pos, size);
