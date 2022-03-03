@@ -3,9 +3,6 @@
 #include <atomic>
 #include "assert_dbg.h"
 
-#define UNUSED(expr) \
-    do { (void) (expr); } while (0)
-
 #define ARR_SIZE(x) (sizeof(x) / sizeof(x[0]))
 #define DELETE_PTR(x) \
     do {              \

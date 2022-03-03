@@ -879,7 +879,7 @@ std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path) 
     try {
         std::vector<uint8_t> vec;
         ReadFileVector(App::Platform::toUserdataPath(path), vec);
-        Stringstream sstream(std::string(vec.begin(), vec.end()));
+        Stringstream sstream(std::string(vec.cbegin(), vec.cend()));
         std::shared_ptr<dawview_layout_t> snapshot = std::make_shared<dawview_layout_t>();
         dawview_layout_t& ref                      = *snapshot.get();
         {

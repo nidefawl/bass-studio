@@ -550,22 +550,7 @@ void gui_audiocontent::renderAudioClip(NVGcontext* vg) {
 
     nvgSave(vg);
     nvgTranslate(vg, pos.x, pos.y);
-    //    int colorIdx = 0;
-    //    static NVGcolor dbgcolorsa[5] = {
-    //        nvgRGBA(255, 0, 0, 55),
-    //        nvgRGBA(0, 255, 0, 55),
-    //        nvgRGBA(0, 0, 255, 55),
-    //        nvgRGBA(255, 0, 255, 55),
-    //        nvgRGBA(255, 255, 0, 55)
-    //    };
-
     if (waveformRef->rendered) {
-        //        nvgBeginPath(vg);
-        //        nvgRect(vg, 2, 2, size.x - 4, size.y - 4);
-        //        NVGcolor bgWave = dbgcolorsa[colorIdx % 5];
-        //        bgWave.a        = 0.3f;
-        //        nvgFillColor(vg, bgWave);
-        //        nvgFill(vg);
         dawCtrl->getWaveformRenderer()->draw(vg, waveformRef, size);
     }
 

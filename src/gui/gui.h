@@ -29,6 +29,8 @@ class gui_track;
 struct guitheme_t;
 struct dragdrop_midifile;
 
+extern NVGcolor dbgcolorsArray[8];
+
 void UTIL_setFont(NVGcontext* vg, const guitheme_t* const theme, float size, NVGcolor color, int alignment);
 float textWidth(NVGcontext* vg, const String& str);
 void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* string);

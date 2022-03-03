@@ -1,6 +1,7 @@
 #include "trackcontrols.h"
 
 #include "assert_dbg.h"
+#include "guiglobals.h"
 #include "math/seq_math.h"
 #include "host/mainctrl.h"
 #include "host/plugin/vst_plugin.h"
@@ -422,7 +423,7 @@ public:
 
         renderTextLabel(vg,
                         vec2(leftOffset(), y + height * 0.5f),
-                        vec2(width, height),
+                        vec2(width-leftOffset(), height),
                         title,
                         theme,
                         fontSize,
@@ -1282,7 +1283,7 @@ public:
 
         renderTextLabel(vg,
                         vec2(hideTrack.right() + INSET_TITLE * 2.0f, titleHeight / 2.0f),
-                        vec2(size) - vec2(INSET_TITLE) * 4.0f,
+                        vec2(size.x-INSET_TITLE*4.0, titleHeight),
                         m_track->name,
                         theme,
                         titleHeight,

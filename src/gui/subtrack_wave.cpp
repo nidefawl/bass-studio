@@ -2,7 +2,6 @@
 #include "subtrack.h"
 #include "basectrl.h"
 #include "host/mainctrl.h"
-#include "subtrack.h"
 #include <nanovg.h>
 #include "str_util.h"
 #include "math/vec.h"
@@ -62,13 +61,6 @@ public:
 
     void renderDebugPass(NVGcontext* vg) override {
         int colorIdx                  = 0;
-        static NVGcolor dbgcolorsa[5] = {
-            nvgRGBA(255, 0, 0, 55),
-            nvgRGBA(0, 255, 0, 55),
-            nvgRGBA(0, 0, 255, 55),
-            nvgRGBA(255, 0, 255, 55),
-            nvgRGBA(255, 255, 0, 55)
-        };
 
         nvgSave(vg);
         nvgTranslate(vg, pos.x, pos.y);
@@ -80,7 +72,7 @@ public:
 
             nvgBeginPath(vg);
             nvgRect(vg, wvLC.splitTexPos.x, wvLC.splitTexPos.y, wvLC.spliTexSize.x, wvLC.spliTexSize.y);
-            NVGcolor bgWave = dbgcolorsa[colorIdx % 5];
+            NVGcolor bgWave = dbgcolorsArray[colorIdx % 5];
             bgWave.a        = 0.3f;
 
             nvgFillColor(vg, bgWave);

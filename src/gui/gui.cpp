@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <nanovg.h>
 #include <nanovg_min.h>
 #include <typeinfo>
 #include "math/vec.h"
@@ -22,18 +23,21 @@
 
 NVGcolor g_colorPalette[COLOR_PALETTE_LEN];
 
-static NVGcolor dbgcolors[5] = {
-    nvgRGBA(255, 0, 0, 55),
-    nvgRGBA(0, 255, 0, 55),
-    nvgRGBA(0, 0, 255, 55),
-    nvgRGBA(255, 0, 255, 55),
-    nvgRGBA(255, 255, 0, 55)
+
+NVGcolor dbgcolorsArray[8] = {
+        nvgRGBA(255, 0, 0, 55),
+        nvgRGBA(0, 255, 0, 55),
+        nvgRGBA(0, 0, 255, 55),
+        nvgRGBA(0, 127, 255, 55),
+        nvgRGBA(255, 127, 0, 55),
+        nvgRGBA(255, 0, 255, 55),
+        nvgRGBA(255, 127, 255, 55),
+        nvgRGBA(255, 255, 0, 55)
 };
 namespace GuiColor {
     void initConstants(int colorVal);
 }
 void initColor() {
-    UNUSED(dbgcolors);
     const int ROWS = COLOR_PALETTE_ROWS;
     const int COLS = COLOR_PALETTE_COLS;
 
@@ -117,15 +121,35 @@ float renderTextLabel(NVGcontext* vg,
         UIFont::bindFont(vg, instance);
         fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
     }
+#if 0
+    auto col = getContrastFontColorNvg(color);
+    col.a *= 0.3f;
+    nvgBeginPath(vg);
+    vec2 offsetPos = pos;
+    if (alignment&NVG_ALIGN_CENTER) {
+        offsetPos.x -= bounds.x * 0.5f;
+    }
+    if (alignment&NVG_ALIGN_RIGHT) {
+        offsetPos.x -= bounds.x * 1.0f;
+    }
+    if (alignment&NVG_ALIGN_MIDDLE) {
+        offsetPos.y -= bounds.y * 0.5f;
+    }
+    if (alignment&NVG_ALIGN_BOTTOM) {
+        offsetPos.y -= bounds.y * 1.0f;
+    }
+    nvgRect(vg, offsetPos.x, offsetPos.y, bounds.x, bounds.y);
+    nvgFillColor(vg, col);
+    nvgFill(vg);
+#endif
     nvgTranslateZ(vg, -2.0f);
     nvgFontSize(vg, fontSizeScaled);
     nvgFillColor(vg, color);
     nvgTextAlign(vg, alignment);
     const auto* szText = StringAsCStr(text);
-
     int nrows = 0;
     float f = pos.x;
-    NVGtextRow rows[2]{};
+    NVGtextRow rows[1]{};
     if ((nrows = nvgTextBreakLines(vg, szText, nullptr, bounds.x, rows, 2))) {
         NVGtextRow* row = &rows[0];
         if (row->maxx-row->minx <= bounds.x || row->width <= bounds.x) {
@@ -136,7 +160,7 @@ float renderTextLabel(NVGcontext* vg,
     return f;
 }
 
-void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, const String& str, float fontSize, GuiColor::constant_t c, ivec2 renderPos, ivec2 size) {
+void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, const String& str, float fontSize, GuiColor::constant_t c, ivec2 pos, ivec2 bounds) {
 
     float fontSizeScaled = fontSize;
     if (theme) {
@@ -144,14 +168,25 @@ void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, 
         UIFont::bindFont(vg, instance);
         fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
     }
-    NVGcolor color = theme->getColor(c);
+    const NVGcolor color = theme->getColor(c);
+    const auto alignment = NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE;
+
+#if 0
+    auto col = getContrastFontColorNvg(color);
+    col.a *= 0.3f;
+    col.r = 1.0f;
+    nvgBeginPath(vg);
+    nvgRect(vg, pos.x, pos.y, bounds.x, bounds.y);
+    nvgFillColor(vg, col);
+    nvgFill(vg);
+#endif
 
     nvgFontSize(vg, fontSizeScaled);
     nvgFillColor(vg, color);
-    nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+    nvgTextAlign(vg, alignment);
 
     float lineh = 0;
-    nvgTextMetrics(vg, NULL, NULL, &lineh);
+    nvgTextMetrics(vg, nullptr, nullptr, &lineh);
 
     auto getNvgMultiLineTextBounds = [lineh](NVGcontext* vg, String s, float maxLineWidth, float* bounds) -> void {
         auto* btncstr = StringAsCStr(s);
@@ -170,17 +205,13 @@ void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, 
         bounds[1] = textBoundsY;
     };
 
-    renderPos.y += size.y * 0.5f;
+    vec2 vPos = pos;
+    float textBounds[2];
+    getNvgMultiLineTextBounds(vg, str, bounds.x, textBounds);
+    vPos.y += bounds.y / 2.0f - (textBounds[1] / 2.0f);
+    vPos.y += lineh / 2.0f;
 
-    if (str.find('\n') != String::npos) {
-        float bounds[2];
-        getNvgMultiLineTextBounds(vg, str, size.x, bounds);
-        renderPos.x = size.x / 2.0f - (bounds[0] / 2.0f);
-        renderPos.y = size.y / 2.0f - (bounds[1] / 2.0f);
-        renderPos.y += lineh / 2.0f;
-    }
-
-    nvgTextBox(vg, 0, renderPos.y, size.x, StringAsCStr(str), NULL);
+    nvgTextBox(vg, vPos.x, vPos.y, bounds.x, StringAsCStr(str), nullptr);
 }
 
 void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* string) {

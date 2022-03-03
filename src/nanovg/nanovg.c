@@ -3195,6 +3195,8 @@ enum NVGcodepointType {
 
 int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, float breakRowWidth, NVGtextRow* rows, int maxRows)
 {
+    if (breakRowWidth <= 0)
+        return 0;
 	NVGstate* state = nvg__getState(ctx);
 	float scale = nvg__getFontScale(state) * ctx->devicePxRatio;
 	float invscale = 1.0f / scale;
@@ -3311,8 +3313,12 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 				}
 			} else {
 				float nextWidth = iter.nextx - rowStartX;
-
-
+                // track last beginning of a word
+                if ((ptype == NVG_SPACE && (type == NVG_CHAR || type == NVG_CJK_CHAR)) || type == NVG_CJK_CHAR) {
+                    wordStart = iter.str;
+                    wordStartX = iter.x;
+                    wordMinX = q.x0;
+                }
 
 				// Break to new line when a character is beyond break width.
 				if ((type == NVG_CHAR || type == NVG_CJK_CHAR) && nextWidth > breakRowWidth) {
@@ -3326,8 +3332,10 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 						rows[nrows].maxx = rowMaxX * invscale;
 						rows[nrows].next = iter.str;
 						nrows++;
-						if (nrows >= maxRows)
+						if (nrows >= maxRows) {
+                            // dbgassert(rows[nrows].maxx-rows[nrows].minx <= breakRowWidth || rows[nrows].width <= breakRowWidth);
 							return nrows;
+                        }
 						rowStartX = iter.x;
 						rowStart = iter.str;
 						rowEnd = iter.next;
@@ -3346,8 +3354,10 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 						rows[nrows].maxx = breakMaxX * invscale;
 						rows[nrows].next = wordStart;
 						nrows++;
-						if (nrows >= maxRows)
+						if (nrows >= maxRows) {
+                            // dbgassert(rows[nrows].maxx-rows[nrows].minx <= breakRowWidth || rows[nrows].width <= breakRowWidth);
 							return nrows;
+                        }
 						// Update row
 						rowStartX = wordStartX;
 						rowStart = wordStart;
@@ -3360,26 +3370,20 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 					breakEnd = rowStart;
 					breakWidth = 0.0;
 					breakMaxX = 0.0;
-				} else {
+				}
 
-                    // track last non-white space character
-                    if (type == NVG_CHAR || type == NVG_CJK_CHAR) {
-                        rowEnd = iter.next;
-                        rowWidth = iter.nextx - rowStartX;
-                        rowMaxX = q.x1 - rowStartX;
-                    }
-                    // track last end of a word
-                    if (((ptype == NVG_CHAR || ptype == NVG_CJK_CHAR) && type == NVG_SPACE) || type == NVG_CJK_CHAR) {
-                        breakEnd = iter.str;
-                        breakWidth = rowWidth;
-                        breakMaxX = rowMaxX;
-                    }
-                    // track last beginning of a word
-                    if ((ptype == NVG_SPACE && (type == NVG_CHAR || type == NVG_CJK_CHAR)) || type == NVG_CJK_CHAR) {
-                        wordStart = iter.str;
-                        wordStartX = iter.x;
-                        wordMinX = q.x0;
-                    }
+
+                // track last non-white space character
+                if (type == NVG_CHAR || type == NVG_CJK_CHAR) {
+                    rowEnd = iter.next;
+                    rowWidth = iter.nextx - rowStartX;
+                    rowMaxX = q.x1 - rowStartX;
+                }
+                // track last end of a word
+                if (((ptype == NVG_CHAR || ptype == NVG_CJK_CHAR) && type == NVG_SPACE) || type == NVG_CJK_CHAR) {
+                    breakEnd = iter.str;
+                    breakWidth = rowWidth;
+                    breakMaxX = rowMaxX;
                 }
 			}
 		}

@@ -39,7 +39,6 @@ void guibutton::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
             GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
             renderCenteredMultilineText(vg, theme, str, fontScale, c, renderPos, size);
         }
-        // renderCenteredMultilineText(vg, theme, "ad 4 Plugins", 22.0, GuiColor::COL_LABEL_ACTIVE, renderPos, size);
         if (drawFn) {
             int drawParm2 = isFlag(FLG_RENDER_BUTTON_WITH_LED) ? (getState() ? IMG_LED : IMG_LED_OFF) : getState();
             drawFn(vg, renderPos, size, theme->getColor(getBackgroundColor()), drawParm, drawParm2);
