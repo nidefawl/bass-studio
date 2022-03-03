@@ -39,7 +39,10 @@ struct membuf : std::streambuf
 };
 
 class MiniAppCtrl : public AppCtrl {
-    std::vector<String> strings;
+    std::vector<String> strings;    
+    int numFrames = 0;
+    float fTime = 0.0f;
+    float fTimeStart = 0.0f;
 public:
 
     void startApp() override {
@@ -74,6 +77,7 @@ public:
         } catch (const std::exception& e) {
             log_printf("While reading cpp-test-data/word_dict.txt: %s\n", e.what());
         }
+        fTimeStart = getTimeMillisF();
     }
 
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override {
@@ -103,13 +107,11 @@ public:
     }
 
     void onTick() override {
-        // for (guictr_base* ctr : containers) {
-        //     ctr->onTick(this);
-        // }
-        // mainWindow->requestRedraw();
+        if (getTimeMillisF() - fTimeStart > 20000.0f) {
+            mainWindow->requestClose();
+        }
     }
-    int numFrames = 0;
-    float fTime = 0.0f;
+
     void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) override {
         BaseCtrl::render(nanovgCtxt, x, y, w, h, pixelRatio);
         nvgBeginFrame(vg, w, h, pixelRatio);
@@ -190,6 +192,7 @@ public:
             nvgRestore(vg); 
         }
         nvgEndFrame(vg);
+        
     }
 };
 
