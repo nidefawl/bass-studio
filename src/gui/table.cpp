@@ -12,17 +12,24 @@
 
 namespace Table {
 
-    void AdjustColSizes(tbl& table, vec2 size) {
+    void AdjustColSizes(tbl& table) {
         int maxCols = 0;
         for (tbl_row_t& row : table.rows) {
             maxCols = math::max((int) row.cols.size(), maxCols);
+            break;
+        }
+        int32_t nDefined = table.colSizes.size();
+        float fDefinedWidth = 0;
+        for (int i = 0; i < nDefined; i++) {
+            fDefinedWidth += table.colSizes[i];
         }
         if ((int) table.colSizes.size() != maxCols) {
             table.colSizes.resize(maxCols);
         }
-        if (maxCols > 0) {
-            int colWidth = std::round(size.x / (float) maxCols);
-            for (int i = 0; i < maxCols; i++) {
+        if (maxCols > nDefined) {
+            float fLeftWidth = table.tableWidth - fDefinedWidth;
+            int colWidth = math::roundfS32(fLeftWidth / (float) (maxCols-nDefined));
+            for (int i = nDefined; i < maxCols; i++) {
                 table.colSizes[i] = colWidth;
             }
         }

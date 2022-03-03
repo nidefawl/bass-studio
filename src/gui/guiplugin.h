@@ -79,6 +79,7 @@ public:
     void setControl(BaseCtrl* parentCtrl) override;
     bool isSelected() override;
     void addProperties(Table::tbl* table) override;
+    void addPropertiesTooltip(Table::tbl& table);
 };
 
 class guidropdown_select_program : public guictxtmenu {

@@ -29,20 +29,9 @@ using Table::tblstr;
 using Table::tblString;
 
 template<>
-void guitooltip<guiknob>::layout() {
-    size.x          = 220;
-    table.rowHeight = FONT_SIZE_TOOLTIP + INSET_TABLE_CELL_PADDING * 2;
-    table.rows.clear();
-    table.titleCols.clear();
-    table.colSizes.clear();
-    //row1.cols.push_back();
-    using tbl_rows = std::vector<table_entry_t>;
-    {
-        tbl_rows vec{ tblstr{ "value" }, tblfloat{ ptr->getValue() } };
-        table.rows.push_back(tbl_row_t{ vec });
-    }
-    Table::AdjustColSizes(table, getSizeContent() - ivec2(INSET_TABLE << 1));
-    size.y = table.rows.size() * table.rowHeight;
+void guitooltip<guiknob>::setContent() {
+    table.tableWidth = 80;
+    table.rows.push_back({ { tblfloat{ ptr->getValue() } } });
 }
 
 guictxtmenu_base* guiknob::getTooltip(AppCtrl* appctrl) {

@@ -266,12 +266,8 @@ using Table::tblstr;
 using Table::tblString;
 
 template<>
-void guitooltip<clip_t>::layout() {
-    size.x          = 400;
-    table.rowHeight = FONT_SIZE_TOOLTIP + INSET_TABLE_CELL_PADDING * 2;
-    table.rows.clear();
-    table.titleCols.clear();
-    table.colSizes.clear();
+void guitooltip<clip_t>::setContent() {
+    table.tableWidth = 400;
     using tbl_rows = std::vector<table_entry_t>;
     {
         //TODO: fix dawCtrl in tooltips/popups
@@ -312,8 +308,6 @@ void guitooltip<clip_t>::layout() {
         table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveformRef atlasEntryId" }, tblint{ waveformRef.atlasEntryId } } } });
     }
 #endif
-    Table::AdjustColSizes(table, getSizeContent() - ivec2(INSET_TABLE << 1));
-    size.y = table.rows.size() * table.rowHeight;
 }
 
 guictxtmenu_base* gui_audio_clip::getTooltip(AppCtrl* appctrl) {

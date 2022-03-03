@@ -608,32 +608,6 @@ public:
 template<typename T>
 void addPropertiesFromGui(T& gui, Table::tbl* table);
 
-template<>
-void addPropertiesFromGui(guiplugin& gui, Table::tbl* table) {
-    std::vector<tbl_row_t>& rows = table->rows;
-    auto effect = gui.effect;
-    std::vector<automatable_param_t*> sortedParams;
-    effect->getSortedParams(sortedParams);
-    rows.push_back({{tblString{"Name"}, tblString{"Unit"}, tblString{"Value"}, tblString{"idx"}, tblString{"internalIdx"}, tblString{"flags"}, tblString{"category"}, tblString{"Step"}}});
-    for (automatable_param_t* param : sortedParams) {
-        tbl_row_t row;
-        row.cols.push_back(tblString{param->name});
-        row.cols.push_back(tblString{param->unit});
-        row.cols.push_back(tblString{StringFormat("%0.4f", param->value)});
-        row.cols.push_back(tblint{param->idx});
-        row.cols.push_back(tblint{param->internalIdx});
-        row.cols.push_back(tblint{param->flags});
-        row.cols.push_back(tblint{param->category});
-        if (param->flags & ParamUsesFloatStep) {
-            row.cols.push_back(tblString{StringFormat("Float %f %f %f", param->stepSmall.valFloat, param->step.valFloat, param->stepLarge.valFloat)});
-        } else if (param->flags & ParamUsesIntStep) {
-            row.cols.push_back(tblString{StringFormat("Int %d %d %d", param->stepSmall.valInt, param->step.valInt, param->stepLarge.valInt)});
-        } else {
-            row.cols.push_back(tblString{"None"});
-        }
-        rows.push_back(row);
-    }
-}
 
 template<>
 void addPropertiesFromGui(guibase& gui, Table::tbl* table) {
@@ -722,11 +696,11 @@ void addPropertiesFromGui(guictr_base& gui, Table::tbl* table) {
 
 template <>
 void guiproperties_table<guiproperties_t>::layout() {
-    ivec2 tableSize = getSizeContent()-ivec2(INSET_TABLE<<1);
-    AdjustColSizes(m_table, tableSize);
+    m_table.tableWidth = getSizeContent().x - (INSET_TABLE<<1);
+    AdjustColSizes(m_table);
     if (m_table.colSizes.size() == 2) {
-        m_table.colSizes[0] = math::max(100.0f, math::min(250.0f, 0.25f*tableSize.x));
-        m_table.colSizes[1] = tableSize.x - m_table.colSizes[0];
+        m_table.colSizes[0] = math::max(100.0f, math::min(250.0f, 0.25f*m_table.tableWidth));
+        m_table.colSizes[1] = m_table.tableWidth - m_table.colSizes[0];
     }
 }
 template <>
@@ -899,11 +873,11 @@ void cellClicked(const click_ctxt_t& ctxt, const tbltype_theme_font& obj) {
 
 template <>
 void guiproperties_table<guitheme_t>::layout() {
-    ivec2 tableSize = getSizeContent()-ivec2(INSET_TABLE<<1);
-    AdjustColSizes(m_table, tableSize);
+    m_table.tableWidth = getSizeContent().x - (INSET_TABLE<<1);
+    AdjustColSizes(m_table);
     if (m_table.colSizes.size() == 2) {
-        m_table.colSizes[0] = math::max(220.0f, math::min(450.0f, 0.25f*tableSize.x));
-        m_table.colSizes[1] = tableSize.x - m_table.colSizes[0];
+        m_table.colSizes[0] = math::max(220.0f, math::min(450.0f, 0.25f*m_table.tableWidth));
+        m_table.colSizes[1] = m_table.tableWidth - m_table.colSizes[0];
     }
 }
 

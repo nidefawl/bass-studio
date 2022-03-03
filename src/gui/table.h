@@ -72,6 +72,7 @@ namespace Table {
         std::vector<table_entry_t> cols;
     };
     struct tbl {
+        float tableWidth  = 0;
         float titleHeight = 0;
         float rowHeight   = 0;
         std::vector<float> colSizes;
@@ -82,7 +83,7 @@ namespace Table {
     void DrawTableNVG(tbl& table, NVGcontext* vg, guitheme_t* theme, vec2 pos, vec2 size, float fontSize);
     table_entry_t& GetCell(tbl& table, int32_t x, int32_t y);
     bool GetCellClicked(tbl& table, const guitheme_t* theme, vec2 mouse, ivec2& idx, ivec2& cellPos, ivec2& cellSize);
-    void AdjustColSizes(tbl& table, vec2 size);
+    void AdjustColSizes(tbl& table);
 
     struct tblString {
         String str;

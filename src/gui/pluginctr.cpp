@@ -587,7 +587,7 @@ void guictr_dragged_plugins::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2
     Table::DrawTableNVG(this->table, vg, theme, pos + inset, size - inset * 2, HEIGHT_ENTRY - 4);
 }
 void guictr_dragged_plugins::setStrings(std::vector<String>& list) {
-    size = ivec2(200, list.size() * HEIGHT_ENTRY + 4);
+    table.tableWidth  = 200 - (INSET_TABLE<<1);
     table.titleHeight = HEIGHT_ENTRY;
     table.rowHeight   = HEIGHT_ENTRY;
     table.rows.clear();
@@ -596,7 +596,8 @@ void guictr_dragged_plugins::setStrings(std::vector<String>& list) {
         row.cols.push_back(s);
         table.rows.push_back(row);
     }
-    Table::AdjustColSizes(table, size);
+    Table::AdjustColSizes(table);
+    size = ivec2(table.tableWidth, table.rows.size() * table.rowHeight) + ivec2(INSET_TABLE << 1);
 }
 void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) {
     //    log_printf("pluginMultiDragMove %d %d on guictr_plugins %12X\n", mousepos.x, mousepos.y, (int64_t)this);

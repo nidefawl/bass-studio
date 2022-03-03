@@ -14,20 +14,11 @@ using Table::tblstr;
 using Table::tblString;
 
 template<>
-void guitooltip<guibutton>::layout() {
-    size.x          = 140;
-    table.rowHeight = FONT_SIZE_TOOLTIP + INSET_TABLE_CELL_PADDING * 2;
-    table.rows.clear();
-    table.titleCols.clear();
-    table.colSizes.clear();
-    //row1.cols.push_back();
-    {
-        tbl_row_t row{};
-        row.cols.push_back(tblString{ptr->getTooltipText()});
-        table.rows.push_back(row);
-    }
-    Table::AdjustColSizes(table, getSizeContent() - ivec2(INSET_TABLE << 1));
-    size.y = table.rows.size() * table.rowHeight;
+void guitooltip<guibutton>::setContent() {
+    table.tableWidth = 140;
+    tbl_row_t row{};
+    row.cols.push_back(tblString{ptr->getTooltipText()});
+    table.rows.push_back(row);
 }
 
 GuiColor::constant_t guibutton::getBackgroundColorFromState(int32_t stateflags) const {

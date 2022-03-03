@@ -110,7 +110,7 @@ struct audio_info_t {
     track_impl_t* audio;
 };
 template<>
-void guitooltip<audio_info_t>::layout() {
+void guitooltip<audio_info_t>::setContent() {
 
     using Table::table_entry_t;
     using Table::tbl;
@@ -119,11 +119,7 @@ void guitooltip<audio_info_t>::layout() {
     using Table::tblint;
     using Table::tblstr;
     using Table::tblString;
-    size.x          = 250;
-    table.rowHeight = FONT_SIZE_TOOLTIP + INSET_TABLE_CELL_PADDING * 2;
-    table.rows.clear();
-    table.titleCols.clear();
-    table.colSizes.clear();
+    table.tableWidth = 250;
     {
         table.rows.push_back({ { tblstr{ "track" }, tblString{ ptr->name } } });
         auto audio = ptr->audio;
@@ -138,8 +134,6 @@ void guitooltip<audio_info_t>::layout() {
         table.rows.push_back({ { tblstr{ "delayToPostReturn" }, tblint{ audio->latencyInfo.delayToPostReturn } } });
         table.rows.push_back({ { tblstr{ "sampleRate" }, tblint{ audio->sampleFormat.sampleRate } } });
     }
-    Table::AdjustColSizes(table, getSizeContent() - ivec2(INSET_TABLE << 1));
-    size.y = table.rows.size() * table.rowHeight;
 }
 
 template<>

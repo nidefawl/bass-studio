@@ -140,4 +140,5 @@ public:
     int32_t getFlagsVST();
     VstTimeInfo* getLocalTimeInfoPtr();
     uint32_t getLocalCurrentUniqueId();
+    void addPropertiesTooltip(Table::tbl& table) override;
 };

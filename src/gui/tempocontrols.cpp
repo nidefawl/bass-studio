@@ -30,22 +30,12 @@ using Table::tblstr;
 using Table::tblString;
 
 template<>
-void guitooltip<gui_timeinput>::layout() {
-    size.x          = 140;
-    table.rowHeight = FONT_SIZE_TOOLTIP + INSET_TABLE_CELL_PADDING * 2;
-    table.rows.clear();
-    table.titleCols.clear();
-    table.colSizes.clear();
-
-    {
-        tbl_row_t row{};
-        row.cols.push_back(tblString{ "Tick" });
-        row.cols.push_back(tblint{ ptr->getTime() });
-        table.rows.push_back(row);
-    }
-
-    Table::AdjustColSizes(table, getSizeContent() - ivec2(INSET_TABLE << 1));
-    size.y = table.rows.size() * table.rowHeight;
+void guitooltip<gui_timeinput>::setContent() {
+    table.tableWidth = 140;
+    tbl_row_t row{};
+    row.cols.push_back(tblString{ "Tick" });
+    row.cols.push_back(tblint{ ptr->getTime() });
+    table.rows.push_back(row);
 }
 guictxtmenu_base* gui_timeinput::getTooltip(AppCtrl* appctrl) {
     auto tooltip = new guitooltip<gui_timeinput>(this);

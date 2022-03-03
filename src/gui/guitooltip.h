@@ -55,7 +55,18 @@ public:
     void onTick(AppCtrl* appctrl) override {
         layout();
     }
-    void layout() override;
+    void setContent();
+    void layout() override {
+        table.tableWidth = 50;
+        table.rowHeight = FONT_SIZE_TOOLTIP + INSET_TABLE_CELL_PADDING * 2;
+        table.rows.clear();
+        table.colSizes.clear();
+        table.titleCols.clear();
+        setContent();
+        size.y = table.rows.size() * table.rowHeight;
+        size = ivec2(table.tableWidth, table.rows.size() * table.rowHeight) + ivec2(INSET_TABLE << 1);
+        Table::AdjustColSizes(table);
+    }
     void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);

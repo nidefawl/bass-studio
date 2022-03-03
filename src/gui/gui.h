@@ -10,11 +10,9 @@
 #include <cmath>
 #include "saferef.h"
 #include "guicolors.h"
+#include "table_fwd.h"
 
 struct NVGcontext;
-namespace Table {
-    struct tbl;
-}
 namespace RenderResources {
     struct NvgImageTexture;
 }

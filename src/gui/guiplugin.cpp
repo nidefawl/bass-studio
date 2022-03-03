@@ -13,10 +13,10 @@
 #include "button.h"
 #include "knob.h"
 #include "list.h"
+#include "theme.h"
 #include "table.h"
 #include "guicolors.h"
 #include "guiconstant.h"
-#include "theme.h"
 #include "guitooltip.h"
 #include "pluginviewcontainers.h"
 #include "guicontainer.h"
@@ -422,26 +422,48 @@ bool guiplugin::isSelected() {
     }
     return false;
 }
-
-template<>
-void guitooltip<guiplugin>::layout() {
-    size.x          = 650;
-    table.rowHeight = FONT_SIZE_TOOLTIP + INSET_TABLE_CELL_PADDING * 2;
-    table.rows.clear();
-    table.titleCols.clear();
-    table.colSizes.clear();
-    {
-        table.rows.push_back({ { String("projectGlobalId"), (int) ptr->effect->projectGlobalId } });
-        table.rows.push_back({ { tblstr{ "track" }, tblint{ (int64_t) ptr->effect->getTrack(), "%12x" } } });
-        table.rows.push_back({ { tblstr{ "tracklink" }, tblint{ (int64_t) ptr->effect->getTrackLink(), "%12x" } } });
-        table.rows.push_back({ { tblstr{ "bIsSetup" }, tblint{ ptr->effect->bIsSetup } } });
-        table.rows.push_back({ { tblstr{ "bIsEnabled" }, tblint{ ptr->effect->bIsEnabled } } });
-        table.rows.push_back({ { tblstr{ "PARAM_ENABLE" }, tblfloat{ ptr->effect->getParamValue(PARAM_ENABLE) } } });
+void effectbase::addPropertiesParameterList(Table::tbl& table) {
+    table.tableWidth = 450;
+    table.colSizes.push_back(180);
+    table.colSizes.push_back(30);
+    table.colSizes.push_back(60);
+    table.colSizes.push_back(60);
+    std::vector<tbl_row_t>& rows = table.rows;
+    std::vector<automatable_param_t*> sortedParams;
+    this->getSortedParams(sortedParams);
+    rows.push_back({{tblString{"Name"}, tblString{"Unit"}, tblString{"Value"}, tblString{"idx"}, tblString{"internalIdx"}, tblString{"flags"}, tblString{"category"}, tblString{"Step"}}});
+    for (automatable_param_t* param : sortedParams) {
+        tbl_row_t row;
+        row.cols.push_back(tblString{param->name});
+        row.cols.push_back(tblString{param->unit});
+        row.cols.push_back(tblString{StringFormat("%0.4f", param->value)});
+        row.cols.push_back(tblint{param->idx});
+        row.cols.push_back(tblint{param->internalIdx});
+        row.cols.push_back(tblint{param->flags});
+        row.cols.push_back(tblint{param->category});
+        if (param->flags & ParamUsesFloatStep) {
+            row.cols.push_back(tblString{StringFormat("Float %f %f %f", param->stepSmall.valFloat, param->step.valFloat, param->stepLarge.valFloat)});
+        } else if (param->flags & ParamUsesIntStep) {
+            row.cols.push_back(tblString{StringFormat("Int %d %d %d", param->stepSmall.valInt, param->step.valInt, param->stepLarge.valInt)});
+        } else {
+            row.cols.push_back(tblString{"None"});
+        }
+        rows.push_back(row);
     }
-    table.colSizes.push_back(250);
-    table.colSizes.push_back(650-250);
-    Table::AdjustColSizes(table, getSizeContent() - ivec2(INSET_TABLE << 1));
-    size.y = table.rows.size() * table.rowHeight;
+}
+void effectbase::addPropertiesTooltip(Table::tbl& table) {
+    table.tableWidth = 350;
+    table.colSizes.push_back(150);
+    table.rows.push_back({ { String("projectGlobalId"), (int) this->projectGlobalId } });
+    table.rows.push_back({ { tblstr{ "track" }, tblint{ (int64_t) this->getTrack(), "%12x" } } });
+    table.rows.push_back({ { tblstr{ "tracklink" }, tblint{ (int64_t) this->getTrackLink(), "%12x" } } });
+    table.rows.push_back({ { tblstr{ "bIsSetup" }, tblint{ this->bIsSetup } } });
+    table.rows.push_back({ { tblstr{ "bIsEnabled" }, tblint{ this->bIsEnabled } } });
+    table.rows.push_back({ { tblstr{ "PARAM_ENABLE" }, tblfloat{ this->getParamValue(PARAM_ENABLE) } } });
+}
+template<>
+void guitooltip<guiplugin>::setContent() {
+    ptr->effect->addPropertiesTooltip(table);
 }
 
 guictxtmenu_base* guiplugin::getTooltip(AppCtrl* appctrl) {
@@ -905,48 +927,41 @@ void guidropdownprogram::handleDraggedRelease(MouseEvent& evt) {
     }
 }
 
-template<>
-void guitooltip<guivstplugin>::layout() {
-    size.x          = 650;
-    table.rowHeight = FONT_SIZE_TOOLTIP + INSET_TABLE_CELL_PADDING * 2;
-    table.rows.clear();
-    table.titleCols.clear();
-    table.colSizes.clear();
-    {
-        table.rows.push_back({ { String("projectGlobalId"), (int) ptr->effect->projectGlobalId } });
-        table.rows.push_back({ { String("isSynth"), (int) ptr->vst->isSynth } });
-        auto vst     = ptr->vst;
-        auto aeffect = vst->handle->aeffect;
-        table.rows.push_back({ { tblstr{ "numInputs" }, tblint{ aeffect->numInputs } } });
-        table.rows.push_back({ { tblstr{ "numOutputs" }, tblint{ aeffect->numOutputs } } });
-        table.rows.push_back({ { tblstr{ "numParams" }, tblint{ aeffect->numParams } } });
-        table.rows.push_back({ { tblstr{ "numPrograms" }, tblint{ aeffect->numPrograms } } });
-        table.rows.push_back({ { tblstr{ "uniqueID" }, tblint{ aeffect->uniqueID, "%8X" } } });
-        table.rows.push_back({ { tblstr{ "version" }, tblint{ aeffect->version } } });
-        table.rows.push_back({ { tblstr{ "bIsEnabled" }, tblint{ ptr->vst->bIsEnabled } } });
-        table.rows.push_back({ { String("bCanReceiveMidi"), (int) ptr->vst->bCanReceiveMidi } });
-        table.rows.push_back({ { String("midiEventsDispatched"), (int) ptr->vst->midiEventsDispatched } });
-        table.rows.push_back({ { tblstr{ "PARAM_ENABLE" }, tblfloat{ ptr->vst->getParamValue(PARAM_ENABLE) } } });
-        table.rows.push_back({ { tblstr{ "flags" }, tblint{ aeffect->flags } } });
-        table.rows.push_back({ { tblstr{ "initialDelay" }, tblint{ aeffect->initialDelay } } });
-        table.rows.push_back({ { tblstr{ "magic" }, tblint{ aeffect->magic } } });
-        table.rows.push_back({ { tblstr{ "offQualities" }, tblint{ aeffect->offQualities } } });
-        table.rows.push_back({ { tblstr{ "realQualities" }, tblint{ aeffect->realQualities } } });
-        int n = 0;
-        for (auto& in : vst->inputNames) {
-            table.rows.push_back({ { tblString{ StringFormat("input[%d]", n) }, tblstr{ StringAsCStr(in) } } });
-            n++;
-        }
-        n = 0;
-        for (auto& out : vst->outputNames) {
-            table.rows.push_back({ { tblString{ StringFormat("output[%d]", n) }, tblstr{ StringAsCStr(out) } } });
-            n++;
-        }
+void vstplugin::addPropertiesTooltip(Table::tbl& table) {
+    table.tableWidth = 350;
+    table.colSizes.push_back(150);
+    auto const aeffect = this->handle->aeffect;
+    table.rows.push_back({ { String( "projectGlobalId"), (int) this->projectGlobalId } });
+    table.rows.push_back({ { String( "isSynth"), (int) this->isSynth } });
+    table.rows.push_back({ { tblstr{ "numInputs" }, tblint{ aeffect->numInputs } } });
+    table.rows.push_back({ { tblstr{ "numOutputs" }, tblint{ aeffect->numOutputs } } });
+    table.rows.push_back({ { tblstr{ "numParams" }, tblint{ aeffect->numParams } } });
+    table.rows.push_back({ { tblstr{ "numPrograms" }, tblint{ aeffect->numPrograms } } });
+    table.rows.push_back({ { tblstr{ "uniqueID" }, tblint{ aeffect->uniqueID, "%8X" } } });
+    table.rows.push_back({ { tblstr{ "version" }, tblint{ aeffect->version } } });
+    table.rows.push_back({ { tblstr{ "bIsEnabled" }, tblint{ this->bIsEnabled } } });
+    table.rows.push_back({ { String( "bCanReceiveMidi"), (int) this->bCanReceiveMidi } });
+    table.rows.push_back({ { String( "midiEventsDispatched"), (int) this->midiEventsDispatched } });
+    table.rows.push_back({ { tblstr{ "PARAM_ENABLE" }, tblfloat{ this->getParamValue(PARAM_ENABLE) } } });
+    table.rows.push_back({ { tblstr{ "flags" }, tblint{ aeffect->flags } } });
+    table.rows.push_back({ { tblstr{ "initialDelay" }, tblint{ aeffect->initialDelay } } });
+    table.rows.push_back({ { tblstr{ "magic" }, tblint{ aeffect->magic } } });
+    table.rows.push_back({ { tblstr{ "offQualities" }, tblint{ aeffect->offQualities } } });
+    table.rows.push_back({ { tblstr{ "realQualities" }, tblint{ aeffect->realQualities } } });
+    int n = 0;
+    for (auto& in : this->inputNames) {
+        table.rows.push_back({ { tblString{ StringFormat("input[%d]", n) }, tblstr{ StringAsCStr(in) } } });
+        n++;
     }
-    table.colSizes.push_back(250);
-    table.colSizes.push_back(650-250);
-    Table::AdjustColSizes(table, getSizeContent() - ivec2(INSET_TABLE << 1));
-    size.y = table.rows.size() * table.rowHeight;
+    n = 0;
+    for (auto& out : this->outputNames) {
+        table.rows.push_back({ { tblString{ StringFormat("output[%d]", n) }, tblstr{ StringAsCStr(out) } } });
+        n++;
+    }
+}
+template<>
+void guitooltip<guivstplugin>::setContent() {
+    ptr->effect->addPropertiesTooltip(table);
 }
 
 guivstplugin::guivstplugin(vstplugin* _effect) : guipluginview(_effect), vst(_effect) {
@@ -980,12 +995,8 @@ guiinternalpluginview::~guiinternalpluginview() {
     }
 }
 
-template<typename T>
-void addPropertiesFromGui(T& gui, Table::tbl* table);
-template<>
-void addPropertiesFromGui(guiplugin& gui, Table::tbl* table);
 void guiplugin::addProperties(Table::tbl* table) {
-    addPropertiesFromGui(*this, table);
+    effect->addPropertiesParameterList(*table);
 }
 
 void guidropdownprogram::setSelectedIndex(uint32_t idx) {

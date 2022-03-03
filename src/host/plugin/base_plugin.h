@@ -14,6 +14,7 @@
 #include "profiling.h"
 #include "saferef.h"
 #include "host/daw_channel.h"
+#include "gui/table_fwd.h"
 
 struct AudioBlock;
 struct handles_t;
@@ -30,6 +31,8 @@ extern bool storePluginPresetWithSnapshot;// = true;
 extern bool loadPluginPresetWithSnapshot; // = false;
 
 class effectbase : public automatable_t {
+    friend class vsthost;
+    friend class guiplugin;
     SafeRef<effectbase> safeRef;
 #ifndef NDEBUG
     //helper indicator in gdb.
@@ -154,7 +157,10 @@ public:
     virtual String formatDisplayValue(int32_t idx);
     void updateOnEnableParam(automatable_param_t* param, bool wasEnable, bool isEnable, int flags);
     virtual void getDeferredEffects(std::vector<effectbase*>& effects){};
+    virtual void addPropertiesParameterList(Table::tbl& table);
+    virtual void addPropertiesTooltip(Table::tbl& table);
 };
+
 struct effect_deferred_impl;
 class effect_deferred : public effectbase {
 public:
