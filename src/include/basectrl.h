@@ -200,6 +200,7 @@ public:
     void dragContainerBegin(MouseEvent& evt, guictr_layout_entry* ctrDragSrc);
     void dragContainerMove(MouseEvent& evt);
     void dragContainerRelease(MouseEvent& evt);
+    void dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i_ctr_drop_area* area);
     virtual void dragContainerRelayout(drag_ctr_event evt) = 0;
     bool isDraggingContainer() const { return ctrContent != nullptr || bShowDebugFrames; }
     bool bShowDebugFrames      = false;

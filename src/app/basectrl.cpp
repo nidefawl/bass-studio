@@ -763,85 +763,89 @@ void BaseCtrl::dragContainerMove(MouseEvent& evt) {
     dragDropTargets_ContainerMove                       = targets;
     ctrDragHandler.pos                                  = evt.mousepos;
 }
-void BaseCtrl::dragContainerRelease(MouseEvent& evt) {
+void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i_ctr_drop_area* area) {
     bool hasRemovedContainer = false;
     bool hasPlacedContainer  = false;
-    i_ctr_drop_area* area    = determineDropCtrArea(evt);
-    if (area && ctrContent) {
-        auto* szLabel1 = StringAsCStr(ctrContent->getGui()->label);
-        auto layoutCtr = dynamic_cast<guictr_layout*>(area->getLayoutCtr());
-        auto* szLabel2 = StringAsCStr(layoutCtr->label);
+    auto* szLabel1 = StringAsCStr(ctrContent->getGui()->label);
+    auto layoutCtr = dynamic_cast<guictr_layout*>(area->getLayoutCtr());
+    auto* szLabel2 = StringAsCStr(layoutCtr->label);
 
-        dock_pos dockPos                  = area->getDockPos();
-        container_layout ctrLayout        = layoutCtr->getLayout();
-        container_layout updatedCtrLayout = dock_pos_to_container_layout(dockPos);
-        if (area->childContainerIndex > -1 || (ctrLayout != updatedCtrLayout && ctrLayout != container_layout::SOLE)) {
+    dock_pos dockPos                  = area->getDockPos();
+    container_layout ctrLayout        = layoutCtr->getLayout();
+    container_layout updatedCtrLayout = dock_pos_to_container_layout(dockPos);
+    if (area->childContainerIndex > -1 || (ctrLayout != updatedCtrLayout && ctrLayout != container_layout::SOLE)) {
 
-            auto newContainer = std::make_shared<guictr_layout>();
-            newContainer->setLayout(updatedCtrLayout);
-            log_printf("replace guictr_layout container\n", 0);
-            if (updatedCtrLayout == container_layout::TABBED) {
-                auto& ctrEntries = layoutCtr->getEntries();
-                dbgassert(area->dockPosOffset >= 0 && area->dockPosOffset <= ctrEntries.size());
-                auto entryToReplace            = ctrEntries[math::min<int32_t>(ctrEntries.size() - 1, area->dockPosOffset)];
-                auto oldEntryThatIsNowTabEntry = layoutCtr->replaceContainerWith(entryToReplace->getGui(), newContainer);
+        auto newContainer = std::make_shared<guictr_layout>();
+        newContainer->setLayout(updatedCtrLayout);
+        log_printf("replace guictr_layout container\n", 0);
+        if (updatedCtrLayout == container_layout::TABBED) {
+            auto& ctrEntries = layoutCtr->getEntries();
+            dbgassert(area->dockPosOffset >= 0 && area->dockPosOffset <= ctrEntries.size());
+            auto entryToReplace            = ctrEntries[math::min<int32_t>(ctrEntries.size() - 1, area->dockPosOffset)];
+            auto oldEntryThatIsNowTabEntry = layoutCtr->replaceContainerWith(entryToReplace->getGui(), newContainer);
 
-                newContainer->placeContainer(ctrContent, area);
-                newContainer->placeContainer(oldEntryThatIsNowTabEntry, area);
+            newContainer->placeContainer(ctrContent, area);
+            newContainer->placeContainer(oldEntryThatIsNowTabEntry, area);
 
-            } else { // SPLIT_V or SPLIT_H
-                auto newDockPos = dock_pos::NONE;
+        } else { // SPLIT_V or SPLIT_H
+            auto newDockPos = dock_pos::NONE;
 
-                switch (area->dockPos) {
-                    case dock_pos::LEFT:
-                        newDockPos = dock_pos::RIGHT;
-                        break;
-                    case dock_pos::RIGHT:
-                        newDockPos = dock_pos::LEFT;
-                        break;
-                    case dock_pos::TOP:
-                        newDockPos = dock_pos::BOTTOM;
-                        break;
-                    case dock_pos::BOTTOM:
-                        newDockPos = dock_pos::TOP;
-                        break;
-                    default:
-                        dbgassert(0);
-                        break;
-                }
-                auto containerToReplace =
-                        area->childContainerIndex > -1 ? layoutCtr->getEntries()[area->childContainerIndex]->getGui() : layoutCtr;
-                auto parentLayoutCtr = dynamic_cast<guictr_layout*>(containerToReplace->parent);
-                if (!parentLayoutCtr) {
-                    log_printf("replace top level container\n", 0);
-                    std::shared_ptr<guictr_layout> prevCtr = this->replaceContainerWith(containerToReplace, newContainer);
-                    if (prevCtr) {
-                        std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(prevCtr);
-                        newContainer->placeContainer(ctrContent, area);
-                        area->dockPos = newDockPos;
-                        newContainer->placeContainer(entry1, area);
-                    }
-
-                } else {
-                    auto layoutCtrEntry = parentLayoutCtr->replaceContainerWith(containerToReplace, newContainer);
-
+            switch (area->dockPos) {
+                case dock_pos::LEFT:
+                    newDockPos = dock_pos::RIGHT;
+                    break;
+                case dock_pos::RIGHT:
+                    newDockPos = dock_pos::LEFT;
+                    break;
+                case dock_pos::TOP:
+                    newDockPos = dock_pos::BOTTOM;
+                    break;
+                case dock_pos::BOTTOM:
+                    newDockPos = dock_pos::TOP;
+                    break;
+                default:
+                    dbgassert(0);
+                    break;
+            }
+            auto containerToReplace =
+                    area->childContainerIndex > -1 ? layoutCtr->getEntries()[area->childContainerIndex]->getGui() : layoutCtr;
+            auto parentLayoutCtr = dynamic_cast<guictr_layout*>(containerToReplace->parent);
+            if (!parentLayoutCtr) {
+                log_printf("replace top level container\n", 0);
+                std::shared_ptr<guictr_layout> prevCtr = this->replaceContainerWith(containerToReplace, newContainer);
+                if (prevCtr) {
+                    std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(prevCtr);
                     newContainer->placeContainer(ctrContent, area);
                     area->dockPos = newDockPos;
-                    newContainer->placeContainer(layoutCtrEntry, area);
+                    newContainer->placeContainer(entry1, area);
                 }
-            }
-            log_printf("cannot directly insert into %s. need to change layout from %d to %d first\n", szLabel2, ctrLayout,
-                       updatedCtrLayout);
 
-        } else {
-            hasRemovedContainer = true;
-            hasPlacedContainer  = area->getLayoutCtr()->placeContainer(ctrContent, area);
-            log_printf("attempt to place container %s on %s result %d\n", szLabel1, szLabel2, hasPlacedContainer);
+            } else {
+                auto layoutCtrEntry = parentLayoutCtr->replaceContainerWith(containerToReplace, newContainer);
+
+                newContainer->placeContainer(ctrContent, area);
+                area->dockPos = newDockPos;
+                newContainer->placeContainer(layoutCtrEntry, area);
+            }
         }
+        log_printf("cannot directly insert into %s. need to change layout from %d to %d first\n", szLabel2, ctrLayout,
+                    updatedCtrLayout);
+
+    } else {
+        hasRemovedContainer = true;
+        hasPlacedContainer  = area->getLayoutCtr()->placeContainer(ctrContent, area);
+        log_printf("attempt to place container %s on %s result %d\n", szLabel1, szLabel2, hasPlacedContainer);
     }
     if (hasRemovedContainer && !hasPlacedContainer) {
         log_printf("Container was removed from its parent could not be placed on target. Container is now dangling %s\n",
                    StringAsCStr(ctrContent->getGui()->label));
+    }
+}
+void BaseCtrl::dragContainerRelease(MouseEvent& evt) {
+    i_ctr_drop_area* area    = determineDropCtrArea(evt);
+
+    if (area && ctrContent) {
+        this->dropContainer(ctrContent, area);
     }
     // end the extension of the dragged containers lifetime
     ctrContent                  = nullptr;

@@ -182,6 +182,29 @@ void addLayoutEntry(T& t, const std::shared_ptr<guictr_base>& ctr, String title)
     std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(ctr);
     t->addEntry(entry1);
 }
+template<typename T>
+void addLayoutEntryRelayout(BaseCtrl* ctrl, T& t, const std::shared_ptr<guictr_base>& ctr, String title) {
+    ctr->setLabel(std::move(title));
+    std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(ctr);
+    i_ctr_drop_area area(t.get());
+    switch (t->getLayout()) {
+            break;
+        case container_layout::SOLE:
+        case container_layout::SPLIT_H:
+            area.dockPos = dock_pos::RIGHT;
+            break;
+        case container_layout::SPLIT_V:
+            area.dockPos = dock_pos::BOTTOM;
+            break;
+        case container_layout::TABBED:
+            area.dockPos = dock_pos::STACK;
+            break;
+        default:
+            break;
+    }
+    ctrl->dropContainer(entry1, &area);
+    ctrl->dragContainerRelayout(BaseCtrl::drag_ctr_event{BaseCtrl::drag_ctr_event_type::DRAG_END});
+}
 
 std::shared_ptr<guictr_layout> makeTabListCtr1() {
     auto ctr = std::make_shared<guictr_layout>();
@@ -938,9 +961,7 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
                     std::shared_ptr<guictr_base> ctr;
                     if (makeContainer(static_cast<container_type>(command.argInt), ctr)) {
                         auto ctrLayoutLeft = getMainControl()->view->ctr_Left;
-                        addLayoutEntry(ctrLayoutLeft, ctr, ctr->label);
-                        ctrLayoutLeft->postContentChanged();
-                        ctrLayoutLeft->layout();
+                        addLayoutEntryRelayout(getMainControl(), ctrLayoutLeft, ctr, ctr->label);
                     }
                 }
                 break;

@@ -597,8 +597,7 @@ void guictr_layout::addEntry(std::shared_ptr<guictr_layout_entry> ctr, int32_t p
     if (it != entries.end()) {
         throw applogicexception(StringFormat("%s - attempt to add element twice", StringAsCStr(getClassName())));
     }
-    auto insertPos =
-            posOffset == -1 ? entries.begin() : (posOffset == -2 || posOffset >= entries.size() ? entries.end() : (entries.begin() + posOffset));
+    auto insertPos = posOffset == -1 ? entries.begin() : (posOffset == -2 || posOffset >= entries.size() ? entries.end() : (entries.begin() + posOffset));
     entries.insert(insertPos, ctr);
     auto guiCtr = ctr->getGui();
     // a handle is present if the child is not a guictr_layout, or if this container is using tabbed layout
