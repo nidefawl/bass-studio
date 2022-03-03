@@ -319,34 +319,27 @@ public:
                 ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
                 ivec2 wndPos{ 0 };
                 this->parentCtrl->window->getPos(&wndPos);
-                closeContextMenu();
                 dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
                 dawCtrl->openContextMenu(ctxtMenu, wndPos, 2);
                 return;
             }
         }
         if (_id == CMD_DELETE) {
-            log_printf("CMD_DELETE %s\n", StringAsCStr(effect->sName));
             handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_DELETE);
         }
         if (_id == CMD_COPY) {
-            log_printf("CMD_COPY %s\n", StringAsCStr(effect->sName));
             handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_COPY);
         }
         if (_id == CMD_CUT) {
-            log_printf("CMD_CUT %s\n", StringAsCStr(effect->sName));
             handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_CUT);
         }
         if (_id == CMD_PASTE) {
-            log_printf("CMD_PASTE %s\n", StringAsCStr(effect->sName));
             handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_PASTE);
         }
         if (_id == CMD_PASTE) {
-            log_printf("CMD_COPY %s\n", StringAsCStr(effect->sName));
             handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_COPY);
         }
         if (_id == CMD_DUPLICATE) {
-            log_printf("CMD_DUPLICATE %s\n", StringAsCStr(effect->sName));
             handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_DUPLICATE);
         }
         if (_id == CMD_SHOW_AUTOMATION) {
