@@ -111,7 +111,7 @@ void handleStdException(std::exception& e) {
     try {
         log_lf(Log::L_ERROR, "std::exception: %s\n", e.what());
         logStackTrace();
-    } catch (std::exception& e) {
+    } catch (std::exception&) {
         dbgassert(0);
     }
     fatalError = true;
@@ -1880,14 +1880,8 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                     tmLRMsgSent        = 0;
                     log_printf("MSG took %d ms to get through, %d messages since sent\n", tmDuration, cntMessages);
                 } else {
-
-                    switch (msg.message) {
-                        //no break
-                        default:
-                            TranslateMessage(&msg);
-                            DispatchMessageW(&msg);
-                            break;
-                    }
+                    TranslateMessage(&msg);
+                    DispatchMessageW(&msg);
                     if (msg.message == WM_PAINT)
                         appStats.numMessagesWmPaint++;
                     if (msgCounterEnabled) {
