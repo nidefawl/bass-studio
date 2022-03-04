@@ -1168,195 +1168,195 @@ enum VstAutomationStates
 //-------------------------------------------------------------------------------------------------------
 inline const char* getOpCodeName(VstInt32 opCode) {
     switch (opCode) {
-        case /*AEffectOpcodes::*/effOpen:
+        case AEffectOpcodes::effOpen:
             return "effOpen";
-        case /*AEffectOpcodes::*/effClose:
+        case AEffectOpcodes::effClose:
             return "effClose";
 
-        case /*AEffectOpcodes::*/effSetProgram:
+        case AEffectOpcodes::effSetProgram:
             return "effSetProgram";
-        case /*AEffectOpcodes::*/effGetProgram:
+        case AEffectOpcodes::effGetProgram:
             return "effGetProgram";
-        case /*AEffectOpcodes::*/effSetProgramName:
+        case AEffectOpcodes::effSetProgramName:
             return "effSetProgramName";
-        case /*AEffectOpcodes::*/effGetProgramName:
+        case AEffectOpcodes::effGetProgramName:
             return "effGetProgramName";
 
-        case /*AEffectOpcodes::*/effGetParamLabel:
+        case AEffectOpcodes::effGetParamLabel:
             return "effGetParamLabel";
-        case /*AEffectOpcodes::*/effGetParamDisplay:
+        case AEffectOpcodes::effGetParamDisplay:
             return "effGetParamDisplay";
-        case /*AEffectOpcodes::*/effGetParamName:
+        case AEffectOpcodes::effGetParamName:
             return "effGetParamName";
 
-        case /*AEffectOpcodes::*/effGetVu:
+        case AEffectOpcodes::effGetVu:
             return "effGetVu";
 
-        case /*AEffectOpcodes::*/effSetSampleRate:
+        case AEffectOpcodes::effSetSampleRate:
             return "effSetSampleRate";
-        case /*AEffectOpcodes::*/effSetBlockSize:
+        case AEffectOpcodes::effSetBlockSize:
             return "effSetBlockSize";
-        case /*AEffectOpcodes::*/effMainsChanged:
+        case AEffectOpcodes::effMainsChanged:
             return "effMainsChanged";
 
-        case /*AEffectOpcodes::*/effEditGetRect:
+        case AEffectOpcodes::effEditGetRect:
             return "effEditGetRect";
-        case /*AEffectOpcodes::*/effEditOpen:
+        case AEffectOpcodes::effEditOpen:
             return "effEditOpen";
-        case /*AEffectOpcodes::*/effEditClose:
+        case AEffectOpcodes::effEditClose:
             return "effEditClose";
 
-        case /*AEffectOpcodes::*/effEditDraw:
+        case AEffectOpcodes::effEditDraw:
             return "effEditDraw";
-        case /*AEffectOpcodes::*/effEditMouse:
+        case AEffectOpcodes::effEditMouse:
             return "effEditMouse";
-        case /*AEffectOpcodes::*/effEditKey:
+        case AEffectOpcodes::effEditKey:
             return "effEditKey";
 
-        case /*AEffectOpcodes::*/effEditIdle:
+        case AEffectOpcodes::effEditIdle:
             return "effEditIdle";
 
-        case /*AEffectOpcodes::*/effEditTop:
+        case AEffectOpcodes::effEditTop:
             return "effEditTop";
-        case /*AEffectOpcodes::*/effEditSleep:
+        case AEffectOpcodes::effEditSleep:
             return "effEditSleep";
-        case /*AEffectOpcodes::*/effIdentify:
+        case AEffectOpcodes::effIdentify:
             return "effIdentify";
 
-        case /*AEffectOpcodes::*/effGetChunk:
+        case AEffectOpcodes::effGetChunk:
             return "effGetChunk";
-        case /*AEffectOpcodes::*/effSetChunk:
+        case AEffectOpcodes::effSetChunk:
             return "effSetChunk";
 
-        case /*AEffectXOpcodes::*/effProcessEvents:
+        case AEffectXOpcodes::effProcessEvents:
             return "effProcessEvents";
 
-        case /*AEffectXOpcodes::*/effCanBeAutomated:
+        case AEffectXOpcodes::effCanBeAutomated:
             return "effCanBeAutomated";
-        case /*AEffectXOpcodes::*/effString2Parameter:
+        case AEffectXOpcodes::effString2Parameter:
             return "effString2Parameter";
 
-        case /*AEffectXOpcodes::*/effGetNumProgramCategories:
+        case AEffectXOpcodes::effGetNumProgramCategories:
             return "effGetNumProgramCategories";
 
-        case /*AEffectXOpcodes::*/effGetProgramNameIndexed:
+        case AEffectXOpcodes::effGetProgramNameIndexed:
             return "effGetProgramNameIndexed";
 
-        case /*AEffectXOpcodes::*/effCopyProgram:
+        case AEffectXOpcodes::effCopyProgram:
             return "effCopyProgram";
-        case /*AEffectXOpcodes::*/effConnectInput:
+        case AEffectXOpcodes::effConnectInput:
             return "effConnectInput";
-        case /*AEffectXOpcodes::*/effConnectOutput:
+        case AEffectXOpcodes::effConnectOutput:
             return "effConnectOutput";
 
-        case /*AEffectXOpcodes::*/effGetInputProperties:
+        case AEffectXOpcodes::effGetInputProperties:
             return "effGetInputProperties";
-        case /*AEffectXOpcodes::*/effGetOutputProperties:
+        case AEffectXOpcodes::effGetOutputProperties:
             return "effGetOutputProperties";
-        case /*AEffectXOpcodes::*/effGetPlugCategory:
+        case AEffectXOpcodes::effGetPlugCategory:
             return "effGetPlugCategory";
 
-        case /*AEffectXOpcodes::*/effGetCurrentPosition:
+        case AEffectXOpcodes::effGetCurrentPosition:
             return "effGetCurrentPosition";
-        case /*AEffectXOpcodes::*/effGetDestinationBuffer:
+        case AEffectXOpcodes::effGetDestinationBuffer:
             return "effGetDestinationBuffer";
 
-        case /*AEffectXOpcodes::*/effOfflineNotify:
+        case AEffectXOpcodes::effOfflineNotify:
             return "effOfflineNotify";
-        case /*AEffectXOpcodes::*/effOfflinePrepare:
+        case AEffectXOpcodes::effOfflinePrepare:
             return "effOfflinePrepare";
-        case /*AEffectXOpcodes::*/effOfflineRun:
+        case AEffectXOpcodes::effOfflineRun:
             return "effOfflineRun";
 
-        case /*AEffectXOpcodes::*/effProcessVarIo:
+        case AEffectXOpcodes::effProcessVarIo:
             return "effProcessVarIo";
-        case /*AEffectXOpcodes::*/effSetSpeakerArrangement:
+        case AEffectXOpcodes::effSetSpeakerArrangement:
             return "effSetSpeakerArrangement";
 
-        case /*AEffectXOpcodes::*/effSetBlockSizeAndSampleRate:
+        case AEffectXOpcodes::effSetBlockSizeAndSampleRate:
             return "effSetBlockSizeAndSampleRate";
 
-        case /*AEffectXOpcodes::*/effSetBypass:
+        case AEffectXOpcodes::effSetBypass:
             return "effSetBypass";
-        case /*AEffectXOpcodes::*/effGetEffectName:
+        case AEffectXOpcodes::effGetEffectName:
             return "effGetEffectName";
 
-        case /*AEffectXOpcodes::*/effGetErrorText:
+        case AEffectXOpcodes::effGetErrorText:
             return "effGetErrorText";
 
-        case /*AEffectXOpcodes::*/effGetVendorString:
+        case AEffectXOpcodes::effGetVendorString:
             return "effGetVendorString";
-        case /*AEffectXOpcodes::*/effGetProductString:
+        case AEffectXOpcodes::effGetProductString:
             return "effGetProductString";
-        case /*AEffectXOpcodes::*/effGetVendorVersion:
+        case AEffectXOpcodes::effGetVendorVersion:
             return "effGetVendorVersion";
-        case /*AEffectXOpcodes::*/effVendorSpecific:
+        case AEffectXOpcodes::effVendorSpecific:
             return "effVendorSpecific";
-        case /*AEffectXOpcodes::*/effCanDo:
+        case AEffectXOpcodes::effCanDo:
             return "effCanDo";
-        case /*AEffectXOpcodes::*/effGetTailSize:
+        case AEffectXOpcodes::effGetTailSize:
             return "effGetTailSize";
 
-        case /*AEffectXOpcodes::*/effIdle:
+        case AEffectXOpcodes::effIdle:
             return "effIdle";
-        case /*AEffectXOpcodes::*/effGetIcon:
+        case AEffectXOpcodes::effGetIcon:
             return "effGetIcon";
-        case /*AEffectXOpcodes::*/effSetViewPosition:
+        case AEffectXOpcodes::effSetViewPosition:
             return "effSetViewPosition";
 
-        case /*AEffectXOpcodes::*/effGetParameterProperties:
+        case AEffectXOpcodes::effGetParameterProperties:
             return "effGetParameterProperties";
 
-        case /*AEffectXOpcodes::*/effKeysRequired:
+        case AEffectXOpcodes::effKeysRequired:
             return "effKeysRequired";
 
-        case /*AEffectXOpcodes::*/effGetVstVersion:
+        case AEffectXOpcodes::effGetVstVersion:
             return "effGetVstVersion";
-        case /*AEffectXOpcodes::*/effEditKeyDown:
+        case AEffectXOpcodes::effEditKeyDown:
             return "effEditKeyDown";
-        case /*AEffectXOpcodes::*/effEditKeyUp:
+        case AEffectXOpcodes::effEditKeyUp:
             return "effEditKeyUp";
-        case /*AEffectXOpcodes::*/effSetEditKnobMode:
+        case AEffectXOpcodes::effSetEditKnobMode:
             return "effSetEditKnobMode";
 
-        case /*AEffectXOpcodes::*/effGetMidiProgramName:
+        case AEffectXOpcodes::effGetMidiProgramName:
             return "effGetMidiProgramName";
-        case /*AEffectXOpcodes::*/effGetCurrentMidiProgram:
+        case AEffectXOpcodes::effGetCurrentMidiProgram:
             return "effGetCurrentMidiProgram";
-        case /*AEffectXOpcodes::*/effGetMidiProgramCategory:
+        case AEffectXOpcodes::effGetMidiProgramCategory:
             return "effGetMidiProgramCategory";
-        case /*AEffectXOpcodes::*/effHasMidiProgramsChanged:
+        case AEffectXOpcodes::effHasMidiProgramsChanged:
             return "effHasMidiProgramsChanged";
-        case /*AEffectXOpcodes::*/effGetMidiKeyName:
+        case AEffectXOpcodes::effGetMidiKeyName:
             return "effGetMidiKeyName";
 
-        case /*AEffectXOpcodes::*/effBeginSetProgram:
+        case AEffectXOpcodes::effBeginSetProgram:
             return "effBeginSetProgram";
-        case /*AEffectXOpcodes::*/effEndSetProgram:
+        case AEffectXOpcodes::effEndSetProgram:
             return "effEndSetProgram";
-        case /*AEffectXOpcodes::*/effGetSpeakerArrangement:
+        case AEffectXOpcodes::effGetSpeakerArrangement:
             return "effGetSpeakerArrangement";
-        case /*AEffectXOpcodes::*/effShellGetNextPlugin:
+        case AEffectXOpcodes::effShellGetNextPlugin:
             return "effShellGetNextPlugin";
 
-        case /*AEffectXOpcodes::*/effStartProcess:
+        case AEffectXOpcodes::effStartProcess:
             return "effStartProcess";
-        case /*AEffectXOpcodes::*/effStopProcess:
+        case AEffectXOpcodes::effStopProcess:
             return "effStopProcess";
-        case /*AEffectXOpcodes::*/effSetTotalSampleToProcess:
+        case AEffectXOpcodes::effSetTotalSampleToProcess:
             return "effSetTotalSampleToProcess";
-        case /*AEffectXOpcodes::*/effSetPanLaw:
+        case AEffectXOpcodes::effSetPanLaw:
             return "effSetPanLaw";
 
-        case /*AEffectXOpcodes::*/effBeginLoadBank:
+        case AEffectXOpcodes::effBeginLoadBank:
             return "effBeginLoadBank";
-        case /*AEffectXOpcodes::*/effBeginLoadProgram:
+        case AEffectXOpcodes::effBeginLoadProgram:
             return "effBeginLoadProgram";
-        case /*AEffectXOpcodes::*/effSetProcessPrecision:
+        case AEffectXOpcodes::effSetProcessPrecision:
             return "effSetProcessPrecision";
-        case /*AEffectXOpcodes::*/effGetNumMidiInputChannels:
+        case AEffectXOpcodes::effGetNumMidiInputChannels:
             return "effGetNumMidiInputChannels";
-        case /*AEffectXOpcodes::*/effGetNumMidiOutputChannels:
+        case AEffectXOpcodes::effGetNumMidiOutputChannels:
             return "effGetNumMidiOutputChannels";
         default:
             break;
