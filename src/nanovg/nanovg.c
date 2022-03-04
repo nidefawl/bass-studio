@@ -242,7 +242,7 @@ static NVGpathCache* nvg__allocPathCache(void)
 
 	return c;
 error:
-    dbgassert(0);
+	dbgassert(0);
 	nvg__deletePathCache(c);
 	return NULL;
 }
@@ -381,14 +381,14 @@ NVGcontext* nvgCreateInternal(NVGparams* params)
 	return ctx;
 
 error:
-    dbgassert(0);
+	dbgassert(0);
 	nvgDeleteInternal(ctx);
 	return 0;
 }
 
 NVGparams* nvgInternalParams(NVGcontext* ctx)
 {
-    return &ctx->params;
+	return &ctx->params;
 }
 
 void nvgDeleteInternal(NVGcontext* ctx)
@@ -664,20 +664,20 @@ float nvgRadToDeg(float rad)
 
 static void nvg__setPaintColor(NVGpaint* p, NVGcolor color)
 {
-    float w = p->extent[0];
-    float h = p->extent[1];
-    float x = p->xform[4];
-    float y = p->xform[5];
+	float w = p->extent[0];
+	float h = p->extent[1];
+	float x = p->xform[4];
+	float y = p->xform[5];
 	memset(p, 0, sizeof(*p));
 	nvgTransformIdentity(p->xform);
 	p->radius = 0.0f;
 	p->feather = 1.0f;
 	p->innerColor = color;
 	p->outerColor = color;
-    p->extent[0] = w;
-    p->extent[1] = h;
-    p->xform[4] = x;
-    p->xform[5] = y;
+	p->extent[0] = w;
+	p->extent[1] = h;
+	p->xform[4] = x;
+	p->xform[5] = y;
 }
 
 
@@ -1427,7 +1427,7 @@ static void nvg__tesselateBezier(NVGcontext* ctx,
 // Adaptive forward differencing for bezier tesselation.
 // See Lien, Sheue-Ling, Michael Shantz, and Vaughan Pratt. "Adaptive forward differencing for rendering curves and surfaces." ACM SIGGRAPH Computer Graphics. Vol. 21. No. 4. ACM, 1987.
 void nvg__tesselateBezierAFD(NVGcontext* ctx, float x1, float y1, float x2, float y2,
-                               float x3, float y3, float x4, float y4, int type)
+								float x3, float y3, float x4, float y4, int type)
 {
 
 	// Power basis.
@@ -2208,13 +2208,13 @@ void nvgBezierTo(NVGcontext* ctx, float c1x, float c1y, float c2x, float c2y, fl
 
 void nvgQuadTo(NVGcontext* ctx, float cx, float cy, float x, float y)
 {
-    float x0 = ctx->commandx;
-    float y0 = ctx->commandy;
-    float vals[] = { NVG_BEZIERTO,
-        x0 + 2.0f/3.0f*(cx - x0), y0 + 2.0f/3.0f*(cy - y0),
-        x + 2.0f/3.0f*(cx - x), y + 2.0f/3.0f*(cy - y),
-        x, y };
-    nvg__appendCommands(ctx, vals, NVG_COUNTOF(vals));
+	float x0 = ctx->commandx;
+	float y0 = ctx->commandy;
+	float vals[] = { NVG_BEZIERTO,
+		x0 + 2.0f/3.0f*(cx - x0), y0 + 2.0f/3.0f*(cy - y0),
+		x + 2.0f/3.0f*(cx - x), y + 2.0f/3.0f*(cy - y),
+		x, y };
+	nvg__appendCommands(ctx, vals, NVG_COUNTOF(vals));
 }
 
 void nvgArcTo(NVGcontext* ctx, float x1, float y1, float x2, float y2, float radius)
@@ -2353,10 +2353,10 @@ void nvgArc(NVGcontext* ctx, float cx, float cy, float r, float a0, float a1, in
 void nvg__setShapeExtents(NVGcontext* ctx, float x, float y, float w, float h)
 {
 	NVGstate* state = nvg__getState(ctx);
-    float matTranslate[6];
-    nvgTransformTranslate(matTranslate, x, y);
-    nvgTransformMultiply(matTranslate, state->xform);
-    memcpy(state->fill.xform, matTranslate, sizeof(float) * 6);
+	float matTranslate[6];
+	nvgTransformTranslate(matTranslate, x, y);
+	nvgTransformMultiply(matTranslate, state->xform);
+	memcpy(state->fill.xform, matTranslate, sizeof(float) * 6);
 	state->fill.extent[0] = w;
 	state->fill.extent[1] = h;
 }
@@ -2464,7 +2464,7 @@ void nvgCircleFastNDivs(NVGcontext* ctx, float cx, float cy, float r, int ndivs)
 	int nInstr = 3 + ndivs*3 + 1;
 	int power = 1;
 	while(power < nInstr)
-	    power*=2;
+		power*=2;
 	float* vals = alloca(power*sizeof(float));
 	int i, nvals;
 	nvals = 0;
@@ -2589,7 +2589,7 @@ void nvgCacheEntryInfo(NVGcontext* ctx, nvg_shape_cache* shapeCache, NVGCacheEnt
 void nvgGetLastCacheResult(NVGcontext* ctx, nvg_shape_cache** pShapeCache)
 {
 	nvg_cache_storage** pStorage = (nvg_cache_storage**)pShapeCache;
-    dbgassert(!ctx->cacheStorage || ctx->cacheStorage->ptrPath || ctx->cacheStorage->ptrBatchedVerts);
+	dbgassert(!ctx->cacheStorage || ctx->cacheStorage->ptrPath || ctx->cacheStorage->ptrBatchedVerts);
 	*pStorage = ctx->cacheStorage;
 	ctx->cacheStorage = NULL;
 }
@@ -2625,133 +2625,133 @@ void nvgReleaseCacheResult(nvg_shape_cache* pShapeCache)
 }
 nvg_cache_storage* deepCopyPathCache(NVGpathCache* cache, int type, float strokeWidth, NVGpaint* pFillPaint, NVGstate* pState) {
 
-    nvg_cache_storage* cacheStorage = malloc(sizeof(nvg_cache_storage));
-    if (!cacheStorage) goto error;
-    memset(cacheStorage, 0, sizeof(nvg_cache_storage));
-    nvg_cache_entry_path_t* pCache = malloc(sizeof(nvg_cache_entry_path_t));
-    if (!pCache) goto error;
-    memset(pCache, 0, sizeof(nvg_cache_entry_path_t));
-    pCache->type          = type;
-    pCache->strokeWidth   = strokeWidth;
-    pCache->fillPaint     = *pFillPaint;
-    pCache->state         = *pState;
-    pCache->len           = cache->npaths;
-    pCache->arrPath       = malloc(sizeof(NVGpath) * (pCache->len));
-    if (!pCache->arrPath) goto error;
-    cacheStorage->ptrPath = pCache;
-    cacheStorage->allocationSizeBytes += sizeof(nvg_cache_entry_path_t);
-    cacheStorage->allocationSizeBytes += sizeof(NVGpath) * (pCache->len);
-    memcpy(pCache->arrPath, cache->paths, sizeof(NVGpath) * pCache->len);
-    for (int i = 0; i < pCache->len; i++) {
-        NVGpath* path = &pCache->arrPath[i];
-        if (path->nfill) {
-            NVGvertex* fill = malloc(sizeof(NVGvertex) * (path->nfill));
-            if (!fill) goto error;
-            cacheStorage->allocationSizeBytes += sizeof(NVGvertex) * (path->nfill);
-            memcpy(fill, path->fill, sizeof(NVGvertex) * path->nfill);
-            path->fill = fill;
-        } else {
-            dbgassert(NULL == path->fill);
-        }
-        if (path->nstroke) {
-            NVGvertex* stroke = malloc(sizeof(NVGvertex) * ((size_t) path->nstroke));
-            if (!stroke) goto error;
-            cacheStorage->allocationSizeBytes += sizeof(NVGvertex) * (path->nstroke);
-            memcpy(stroke, path->stroke, sizeof(NVGvertex) * path->nstroke);
-            path->stroke = stroke;
-        } else {
-            dbgassert(NULL == path->stroke);
-        }
-    }
-    memcpy(pCache->bounds, cache->bounds, sizeof(float) * 4);
-    return cacheStorage;
+	nvg_cache_storage* cacheStorage = malloc(sizeof(nvg_cache_storage));
+	if (!cacheStorage) goto error;
+	memset(cacheStorage, 0, sizeof(nvg_cache_storage));
+	nvg_cache_entry_path_t* pCache = malloc(sizeof(nvg_cache_entry_path_t));
+	if (!pCache) goto error;
+	memset(pCache, 0, sizeof(nvg_cache_entry_path_t));
+	pCache->type = type;
+	pCache->strokeWidth = strokeWidth;
+	pCache->fillPaint = *pFillPaint;
+	pCache->state = *pState;
+	pCache->len = cache->npaths;
+	pCache->arrPath = malloc(sizeof(NVGpath) * (pCache->len));
+	if (!pCache->arrPath) goto error;
+	cacheStorage->ptrPath = pCache;
+	cacheStorage->allocationSizeBytes += sizeof(nvg_cache_entry_path_t);
+	cacheStorage->allocationSizeBytes += sizeof(NVGpath) * (pCache->len);
+	memcpy(pCache->arrPath, cache->paths, sizeof(NVGpath) * pCache->len);
+	for (int i = 0; i < pCache->len; i++) {
+		NVGpath* path = &pCache->arrPath[i];
+		if (path->nfill) {
+			NVGvertex* fill = malloc(sizeof(NVGvertex) * (path->nfill));
+			if (!fill) goto error;
+			cacheStorage->allocationSizeBytes += sizeof(NVGvertex) * (path->nfill);
+			memcpy(fill, path->fill, sizeof(NVGvertex) * path->nfill);
+			path->fill = fill;
+		} else {
+			dbgassert(NULL == path->fill);
+		}
+		if (path->nstroke) {
+			NVGvertex* stroke = malloc(sizeof(NVGvertex) * ((size_t) path->nstroke));
+			if (!stroke) goto error;
+			cacheStorage->allocationSizeBytes += sizeof(NVGvertex) * (path->nstroke);
+			memcpy(stroke, path->stroke, sizeof(NVGvertex) * path->nstroke);
+			path->stroke = stroke;
+		} else {
+			dbgassert(NULL == path->stroke);
+		}
+	}
+	memcpy(pCache->bounds, cache->bounds, sizeof(float) * 4);
+	return cacheStorage;
 error:
-    dbgassert(0);
-    return NULL;
+	dbgassert(0);
+	return NULL;
 }
 void nvgFill(NVGcontext* ctx) {
-    if (ctx->ncommands == 0) {
-        return;
-    }
-    if (ctx->dbgCount > 1) {
-        //dbgassert(0);
-    }
-    NVGstate* state    = nvg__getState(ctx);
-    NVGpaint fillPaint = state->fill;
-    int i;
+	if (ctx->ncommands == 0) {
+		return;
+	}
+	if (ctx->dbgCount > 1) {
+		//dbgassert(0);
+	}
+	NVGstate* state	= nvg__getState(ctx);
+	NVGpaint fillPaint = state->fill;
+	int i;
 
-    nvg__flattenPaths(ctx);
-    if (ctx->params.edgeAntiAlias && state->shapeAntiAlias)
-        nvg__expandFill(ctx, ctx->fringeWidth, NVG_MITER, 2.4f);
-    else
-        nvg__expandFill(ctx, 0.0f, NVG_MITER, 2.4f);
+	nvg__flattenPaths(ctx);
+	if (ctx->params.edgeAntiAlias && state->shapeAntiAlias)
+		nvg__expandFill(ctx, ctx->fringeWidth, NVG_MITER, 2.4f);
+	else
+		nvg__expandFill(ctx, 0.0f, NVG_MITER, 2.4f);
 
-    // Apply global alpha
-    if (ctx->cacheNextPath) {
-        dbgassert(!ctx->cacheStorage);
-        ctx->cacheStorage = deepCopyPathCache(ctx->cache, 0, 0.0f, &fillPaint, state);
-    } else {
-        fillPaint.innerColor.a *= state->alpha;
-        fillPaint.outerColor.a *= state->alpha;
-        ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-                               ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths, state->zOffset);
-    }
+	// Apply global alpha
+	if (ctx->cacheNextPath) {
+		dbgassert(!ctx->cacheStorage);
+		ctx->cacheStorage = deepCopyPathCache(ctx->cache, 0, 0.0f, &fillPaint, state);
+	} else {
+		fillPaint.innerColor.a *= state->alpha;
+		fillPaint.outerColor.a *= state->alpha;
+		ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
+							   ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths, state->zOffset);
+	}
 
-    // Count triangles
-    for (i = 0; i < ctx->cache->npaths; i++) {
-        const NVGpath* path = &ctx->cache->paths[i];
-        ctx->fillTriCount += path->nfill - 2;
-        ctx->fillTriCount += path->nstroke - 2;
-        ctx->drawCallCount += 2;
-    }
+	// Count triangles
+	for (i = 0; i < ctx->cache->npaths; i++) {
+		const NVGpath* path = &ctx->cache->paths[i];
+		ctx->fillTriCount += path->nfill - 2;
+		ctx->fillTriCount += path->nstroke - 2;
+		ctx->drawCallCount += 2;
+	}
 }
 
 void nvgStroke(NVGcontext* ctx) {
-    if (ctx->ncommands == 0) {
-        return;
-    }
-    NVGstate* state      = nvg__getState(ctx);
-    float scale          = nvg__getAverageScale(state->xform);
-    float strokeWidth    = nvg__clampf(state->strokeWidth * scale, 0.0f, 200.0f);
-    NVGpaint strokePaint = state->stroke;
-    int i;
+	if (ctx->ncommands == 0) {
+		return;
+	}
+	NVGstate* state		= nvg__getState(ctx);
+	float scale			= nvg__getAverageScale(state->xform);
+	float strokeWidth	= nvg__clampf(state->strokeWidth * scale, 0.0f, 200.0f);
+	NVGpaint strokePaint = state->stroke;
+	int i;
 
-    if (strokeWidth < ctx->fringeWidth) {
-        // If the stroke width is less than pixel size, use alpha to emulate coverage.
-        // Since coverage is area, scale by alpha*alpha.
-        float alpha = nvg__clampf(strokeWidth / ctx->fringeWidth, 0.0f, 1.0f);
-        strokePaint.innerColor.a *= alpha * alpha;
-        strokePaint.outerColor.a *= alpha * alpha;
-        strokeWidth = ctx->fringeWidth;
-    }
+	if (strokeWidth < ctx->fringeWidth) {
+		// If the stroke width is less than pixel size, use alpha to emulate coverage.
+		// Since coverage is area, scale by alpha*alpha.
+		float alpha = nvg__clampf(strokeWidth / ctx->fringeWidth, 0.0f, 1.0f);
+		strokePaint.innerColor.a *= alpha * alpha;
+		strokePaint.outerColor.a *= alpha * alpha;
+		strokeWidth = ctx->fringeWidth;
+	}
 
 
-    nvg__flattenPaths(ctx);
+	nvg__flattenPaths(ctx);
 
-    if (ctx->params.edgeAntiAlias && state->shapeAntiAlias)
-        nvg__expandStroke(ctx, strokeWidth * 0.5f, ctx->fringeWidth, state->lineCap, state->lineJoin, state->miterLimit);
-    else
-        nvg__expandStroke(ctx, strokeWidth * 0.5f, 0.0f, state->lineCap, state->lineJoin, state->miterLimit);
+	if (ctx->params.edgeAntiAlias && state->shapeAntiAlias)
+		nvg__expandStroke(ctx, strokeWidth * 0.5f, ctx->fringeWidth, state->lineCap, state->lineJoin, state->miterLimit);
+	else
+		nvg__expandStroke(ctx, strokeWidth * 0.5f, 0.0f, state->lineCap, state->lineJoin, state->miterLimit);
 
-    if (ctx->cacheNextPath) {
-        dbgassert(!ctx->cacheStorage);
-        ctx->cacheStorage = deepCopyPathCache(ctx->cache, 1, strokeWidth, &strokePaint, state);
-    } else {
+	if (ctx->cacheNextPath) {
+		dbgassert(!ctx->cacheStorage);
+		ctx->cacheStorage = deepCopyPathCache(ctx->cache, 1, strokeWidth, &strokePaint, state);
+	} else {
 
-        // Apply global alpha
-        strokePaint.innerColor.a *= state->alpha;
-        strokePaint.outerColor.a *= state->alpha;
+		// Apply global alpha
+		strokePaint.innerColor.a *= state->alpha;
+		strokePaint.outerColor.a *= state->alpha;
 
-        ctx->params.renderStroke(ctx->params.userPtr, &strokePaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-                                 strokeWidth, ctx->cache->paths, ctx->cache->npaths, state->zOffset);
-    }
+		ctx->params.renderStroke(ctx->params.userPtr, &strokePaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
+								 strokeWidth, ctx->cache->paths, ctx->cache->npaths, state->zOffset);
+	}
 
-    // Count triangles
-    for (i = 0; i < ctx->cache->npaths; i++) {
-        const NVGpath* path = &ctx->cache->paths[i];
-        ctx->strokeTriCount += path->nstroke - 2;
-        ctx->drawCallCount++;
-    }
+	// Count triangles
+	for (i = 0; i < ctx->cache->npaths; i++) {
+		const NVGpath* path = &ctx->cache->paths[i];
+		ctx->strokeTriCount += path->nstroke - 2;
+		ctx->drawCallCount++;
+	}
 }
 
 // Add fonts
@@ -3028,7 +3028,7 @@ static void nvg_appendRect(NVGcontext* ctx, float x, float y, float w, float h)
 		ctx->cache->batchedVerts[ctx->cache->nbatchedVerts+i].w = 1.0f;
 	}
 #endif
-    dbgassert(nverts <= ctx->cache->cbatchedVerts);
+	dbgassert(nverts <= ctx->cache->cbatchedVerts);
 	ctx->cache->nbatchedVerts = nverts;
 
 }
@@ -3048,23 +3048,23 @@ static void nvg__renderBatched(NVGcontext* ctx)
 
 	if (ctx->cacheNextPath) {
 		dbgassert(!ctx->cacheStorage);
-        ctx->cacheStorage = malloc(sizeof(nvg_cache_storage));
-        dbgassert(ctx->cacheStorage);
-        memset(ctx->cacheStorage, 0, sizeof(nvg_cache_storage));
-        nvg_cache_entry_batchedverts_t* pCache = malloc(sizeof(nvg_cache_entry_batchedverts_t));
-        dbgassert(pCache);
-        memset(pCache, 0, sizeof(nvg_cache_entry_batchedverts_t));
-        if (pCache) {
-            pCache->verts = (NVGvertex*)malloc(sizeof(NVGvertex) * nverts);
-            dbgassert(pCache->verts);
-            if (pCache->verts) {
-                pCache->nVerts = nverts;
+		ctx->cacheStorage = malloc(sizeof(nvg_cache_storage));
+		dbgassert(ctx->cacheStorage);
+		memset(ctx->cacheStorage, 0, sizeof(nvg_cache_storage));
+		nvg_cache_entry_batchedverts_t* pCache = malloc(sizeof(nvg_cache_entry_batchedverts_t));
+		dbgassert(pCache);
+		memset(pCache, 0, sizeof(nvg_cache_entry_batchedverts_t));
+		if (pCache) {
+			pCache->verts = (NVGvertex*)malloc(sizeof(NVGvertex) * nverts);
+			dbgassert(pCache->verts);
+			if (pCache->verts) {
+				pCache->nVerts = nverts;
 				memcpy(pCache->verts, verts, sizeof(NVGvertex) * nverts);
 				memcpy(pCache->scissor.extent, state->scissor.extent,  sizeof(float) * 2);
-                memcpy(pCache->scissor.xform,  state->scissor.xform,   sizeof(float) * 6);
-                pCache->compositeOperation = state->compositeOperation;
-                pCache->fillPaint = paint;
-                ctx->cacheStorage->ptrBatchedVerts = pCache;
+				memcpy(pCache->scissor.xform,  state->scissor.xform,   sizeof(float) * 6);
+				pCache->compositeOperation = state->compositeOperation;
+				pCache->fillPaint = paint;
+				ctx->cacheStorage->ptrBatchedVerts = pCache;
 				ctx->cacheStorage->allocationSizeBytes += sizeof(nvg_cache_entry_batchedverts_t);
 				ctx->cacheStorage->allocationSizeBytes += sizeof(NVGvertex)*(nverts);
 			} else {
@@ -3195,8 +3195,9 @@ enum NVGcodepointType {
 
 int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, float breakRowWidth, NVGtextRow* rows, int maxRows)
 {
-    if (breakRowWidth <= 0)
-        return 0;
+	if (breakRowWidth <= 0)
+		return 0;
+
 	NVGstate* state = nvg__getState(ctx);
 	float scale = nvg__getFontScale(state) * ctx->devicePxRatio;
 	float invscale = 1.0f / scale;
@@ -3313,12 +3314,12 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 				}
 			} else {
 				float nextWidth = iter.nextx - rowStartX;
-                // track last beginning of a word
-                if ((ptype == NVG_SPACE && (type == NVG_CHAR || type == NVG_CJK_CHAR)) || type == NVG_CJK_CHAR) {
-                    wordStart = iter.str;
-                    wordStartX = iter.x;
-                    wordMinX = q.x0;
-                }
+				// track last beginning of a word
+				if ((ptype == NVG_SPACE && (type == NVG_CHAR || type == NVG_CJK_CHAR)) || type == NVG_CJK_CHAR) {
+					wordStart = iter.str;
+					wordStartX = iter.x;
+					wordMinX = q.x0;
+				}
 
 				// Break to new line when a character is beyond break width.
 				if ((type == NVG_CHAR || type == NVG_CJK_CHAR) && nextWidth > breakRowWidth) {
@@ -3333,9 +3334,9 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 						rows[nrows].next = iter.str;
 						nrows++;
 						if (nrows >= maxRows) {
-                            // dbgassert(rows[nrows].maxx-rows[nrows].minx <= breakRowWidth || rows[nrows].width <= breakRowWidth);
+							// dbgassert(rows[nrows].maxx-rows[nrows].minx <= breakRowWidth || rows[nrows].width <= breakRowWidth);
 							return nrows;
-                        }
+						}
 						rowStartX = iter.x;
 						rowStart = iter.str;
 						rowEnd = iter.next;
@@ -3355,9 +3356,9 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 						rows[nrows].next = wordStart;
 						nrows++;
 						if (nrows >= maxRows) {
-                            // dbgassert(rows[nrows].maxx-rows[nrows].minx <= breakRowWidth || rows[nrows].width <= breakRowWidth);
+							// dbgassert(rows[nrows].maxx-rows[nrows].minx <= breakRowWidth || rows[nrows].width <= breakRowWidth);
 							return nrows;
-                        }
+						}
 						// Update row
 						rowStartX = wordStartX;
 						rowStart = wordStart;
@@ -3373,18 +3374,18 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 				}
 
 
-                // track last non-white space character
-                if (type == NVG_CHAR || type == NVG_CJK_CHAR) {
-                    rowEnd = iter.next;
-                    rowWidth = iter.nextx - rowStartX;
-                    rowMaxX = q.x1 - rowStartX;
-                }
-                // track last end of a word
-                if (((ptype == NVG_CHAR || ptype == NVG_CJK_CHAR) && type == NVG_SPACE) || type == NVG_CJK_CHAR) {
-                    breakEnd = iter.str;
-                    breakWidth = rowWidth;
-                    breakMaxX = rowMaxX;
-                }
+				// track last non-white space character
+				if (type == NVG_CHAR || type == NVG_CJK_CHAR) {
+					rowEnd = iter.next;
+					rowWidth = iter.nextx - rowStartX;
+					rowMaxX = q.x1 - rowStartX;
+				}
+				// track last end of a word
+				if (((ptype == NVG_CHAR || ptype == NVG_CJK_CHAR) && type == NVG_SPACE) || type == NVG_CJK_CHAR) {
+					breakEnd = iter.str;
+					breakWidth = rowWidth;
+					breakMaxX = rowMaxX;
+				}
 			}
 		}
 

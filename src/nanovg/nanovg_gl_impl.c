@@ -540,57 +540,57 @@ static void glnvg__checkError(GLNVGcontext* gl, const char* str)
 
 static int glnvg__recompileShader(GLNVGshader* shader, const char* name, const char* header, const char* opts, const char* vshader, const char* fshader)
 {
-    GLint status;
-    GLuint prog, vert, frag;
-    const char* str[3] = { NULL, NULL, NULL };
-    str[0] = header;
-    str[1] = opts != NULL ? opts : "";
+	GLint status;
+	GLuint prog, vert, frag;
+	const char* str[3] = { NULL, NULL, NULL };
+	str[0] = header;
+	str[1] = opts != NULL ? opts : "";
 
-    //memset(shader, 0, sizeof(*shader));
-    glUseProgram(0);
-    prog = glCreateProgram();
-    vert = glCreateShader(GL_VERTEX_SHADER);
-    frag = glCreateShader(GL_FRAGMENT_SHADER);
-    str[2] = vshader;
-    glShaderSource(vert, 3, str, 0);
-    str[2] = fshader;
-    glShaderSource(frag, 3, str, 0);
+	//memset(shader, 0, sizeof(*shader));
+	glUseProgram(0);
+	prog = glCreateProgram();
+	vert = glCreateShader(GL_VERTEX_SHADER);
+	frag = glCreateShader(GL_FRAGMENT_SHADER);
+	str[2] = vshader;
+	glShaderSource(vert, 3, str, 0);
+	str[2] = fshader;
+	glShaderSource(frag, 3, str, 0);
 
-    glCompileShader(vert);
-    glGetShaderiv(vert, GL_COMPILE_STATUS, &status);
-    if (status != GL_TRUE) {
-        glnvg__dumpShaderError(vert, status, name, "vert");
-        return 0;
-    }
+	glCompileShader(vert);
+	glGetShaderiv(vert, GL_COMPILE_STATUS, &status);
+	if (status != GL_TRUE) {
+		glnvg__dumpShaderError(vert, status, name, "vert");
+		return 0;
+	}
 
-    glCompileShader(frag);
-    glGetShaderiv(frag, GL_COMPILE_STATUS, &status);
-    if (status != GL_TRUE) {
-        glnvg__dumpShaderError(frag, status, name, "frag");
-        return 0;
-    }
+	glCompileShader(frag);
+	glGetShaderiv(frag, GL_COMPILE_STATUS, &status);
+	if (status != GL_TRUE) {
+		glnvg__dumpShaderError(frag, status, name, "frag");
+		return 0;
+	}
 
-    glAttachShader(prog, vert);
-    glAttachShader(prog, frag);
+	glAttachShader(prog, vert);
+	glAttachShader(prog, frag);
 
-    glBindAttribLocation(prog, 0, "vertex");
-    glBindAttribLocation(prog, 1, "tcoord");
+	glBindAttribLocation(prog, 0, "vertex");
+	glBindAttribLocation(prog, 1, "tcoord");
 
-    glLinkProgram(prog);
-    glGetProgramiv(prog, GL_LINK_STATUS, &status);
-    if (status != GL_TRUE) {
-        glnvg__dumpProgramError(prog, name);
-        return 0;
-    }
+	glLinkProgram(prog);
+	glGetProgramiv(prog, GL_LINK_STATUS, &status);
+	if (status != GL_TRUE) {
+		glnvg__dumpProgramError(prog, name);
+		return 0;
+	}
 
-    glDeleteProgram(shader->prog);
-    glDeleteShader(shader->vert);
-    glDeleteShader(shader->frag);
-    shader->prog = prog;
-    shader->vert = vert;
-    shader->frag = frag;
+	glDeleteProgram(shader->prog);
+	glDeleteShader(shader->vert);
+	glDeleteShader(shader->frag);
+	shader->prog = prog;
+	shader->vert = vert;
+	shader->frag = frag;
 
-    return 1;
+	return 1;
 }
 static int glnvg__createShader(GLNVGshader* shader, const char* name, const char* header, const char* opts, const char* vshader, const char* fshader)
 {
@@ -723,13 +723,12 @@ static int glnvg__renderCreate(void* uptr)
 
 	if (glnvg__createShader(&gl->shader, "shader", NVG_GLSL_DEF_HEADER, opts, NVG_GLSL_VERT, NVG_GLSL_FRAG) == 0)
 		return 0;
-    
 
 	glnvg__checkError(gl, "uniform locations");
 	glnvg__getUniforms(&gl->shader);
 
-    // only do this once
-    if (gl->vertBuf == 0) {
+	// only do this once
+	if (gl->vertBuf == 0) {
 	// Create dynamic vertex array
 #if defined NANOVG_GL3
 	if (gl->vertArr == 0) {
@@ -757,7 +756,7 @@ static int glnvg__renderCreate(void* uptr)
 	glnvg__checkError(gl, "create done");
 
 	//glFinish();
-    }
+	}
 
 	return 1;
 }
@@ -813,10 +812,10 @@ static int glnvg__renderCreateTexture(void* uptr, int type, int w, int h, int im
 
 	if (type == NVG_TEXTURE_RGBA)
 		if (imageFlags & NVG_IMAGE_16BIT) {
-//        	int format = GL_RGBA16F;
-//        	int colorTexExtFmt = GL_BGRA;
-//        	int colorTexExtType = GL_UNSIGNED_INT_8_8_8_8_REV;
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+//			int format = GL_RGBA16F;
+//			int colorTexExtFmt = GL_BGRA;
+//			int colorTexExtType = GL_UNSIGNED_INT_8_8_8_8_REV;
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 		} else {
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 		}

@@ -87,8 +87,8 @@ enum NVGalign {
 	NVG_ALIGN_TOP 		= 1<<3,	// Align text vertically to top.
 	NVG_ALIGN_MIDDLE	= 1<<4,	// Align text vertically to middle.
 	NVG_ALIGN_BOTTOM	= 1<<5,	// Align text vertically to bottom.
-    NVG_ALIGN_BASELINE	= 1<<6, // Default, align text vertically to baseline.
-    NVG_ALIGN_MIDDLE_DESCENDER = 1<<7, // align text vertically to baseline, including descender.
+	NVG_ALIGN_BASELINE	= 1<<6, // Default, align text vertically to baseline.
+	NVG_ALIGN_MIDDLE_DESCENDER = 1<<7, // align text vertically to baseline, including descender.
 };
 
 enum NVGblendFactor {
@@ -144,7 +144,7 @@ struct NVGtextRow {
 typedef struct NVGtextRow NVGtextRow;
 
 enum NVGimageFlags {
-    NVG_IMAGE_GENERATE_MIPMAPS	= 1<<0,     // Generate mipmaps during creation of the image.
+	NVG_IMAGE_GENERATE_MIPMAPS	= 1<<0,		// Generate mipmaps during creation of the image.
 	NVG_IMAGE_REPEATX			= 1<<1,		// Repeat image in X direction.
 	NVG_IMAGE_REPEATY			= 1<<2,		// Repeat image in Y direction.
 	NVG_IMAGE_FLIPY				= 1<<3,		// Flips (inverses) image in Y direction when rendered.
@@ -154,8 +154,8 @@ enum NVGimageFlags {
 };
 
 enum NVGtess {
-	NVG_TESS_SUBDIVISION,  // De Casteljau subdivision. Default.
-	NVG_TESS_AFD           // Adaptive forward differencing. Try this algorithm for better tessellation performance.
+	NVG_TESS_SUBDIVISION,	// De Casteljau subdivision. Default.
+	NVG_TESS_AFD			// Adaptive forward differencing. Try this algorithm for better tessellation performance.
 };
 
 // Begin drawing a new frame
