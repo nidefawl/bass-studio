@@ -317,8 +317,8 @@ public:
         int hStatusBar      = 0;
         int hCenter         = winH - hTopControls - hStatusBar;
         int hTrackCtr       = hCenter;
-        splitterCenter.pos  = ivec2(winX, winY + hTrackCtr - 5);
-        splitterCenter.size = ivec2(winW, 10);
+        splitterCenter.pos  = ivec2(winX, winY + hTrackCtr - Splitter::SPLITTER_LAYOUT_THICKNESS/2);
+        splitterCenter.size = ivec2(winW, Splitter::SPLITTER_LAYOUT_THICKNESS);
         ctr_clipeditor.size = ctr_dnd_test->size = ctr_nodes.size = centerCtr.size = { winW, hTrackCtr };
         ctr_clipeditor.pos = ctr_dnd_test->pos = ctr_nodes.pos = centerCtr.pos = { winX, winY };
     }
@@ -478,16 +478,16 @@ public:
         ctr_Left->pos          = { winX, winY + hTopControls };
         ctr_Left->size         = { widthLeft, hContent };
 
-        getSplitter(SplitterPos::LEFT)->pos    = ivec2(widthLeft - 5, hTopControls);
-        getSplitter(SplitterPos::LEFT)->size   = ivec2(10, hContent);
-        getSplitter(SplitterPos::CENTER)->pos  = ivec2(widthLeft, ctr_clipeditor.pos.y - 5);
-        getSplitter(SplitterPos::CENTER)->size = ivec2(widthCenter, 10);
+        getSplitter(SplitterPos::LEFT)->pos    = ivec2(widthLeft - Splitter::SPLITTER_LAYOUT_THICKNESS/2, hTopControls);
+        getSplitter(SplitterPos::LEFT)->size   = ivec2(Splitter::SPLITTER_LAYOUT_THICKNESS, hContent);
+        getSplitter(SplitterPos::CENTER)->pos  = ivec2(widthLeft, ctr_clipeditor.pos.y - Splitter::SPLITTER_LAYOUT_THICKNESS/2);
+        getSplitter(SplitterPos::CENTER)->size = ivec2(widthCenter, Splitter::SPLITTER_LAYOUT_THICKNESS);
 
         ctr_Right->pos  = { widthLeft + widthCenter, winY + hTopControls };
         ctr_Right->size = { widthRight, hContent };
 
-        getSplitter(SplitterPos::RIGHT)->pos  = ivec2(ctr_Right->pos.x - 5, hTopControls);
-        getSplitter(SplitterPos::RIGHT)->size = ivec2(10, hContent);
+        getSplitter(SplitterPos::RIGHT)->pos  = ivec2(ctr_Right->pos.x - Splitter::SPLITTER_LAYOUT_THICKNESS/2, hTopControls);
+        getSplitter(SplitterPos::RIGHT)->size = ivec2(Splitter::SPLITTER_LAYOUT_THICKNESS, hContent);
 
         ctr_Right->postContentChanged();
         ctr_Left->postContentChanged();

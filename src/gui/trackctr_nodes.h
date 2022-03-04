@@ -191,7 +191,7 @@ public:
     }
 };
 
-class guictr_nodes_splitview : public guictr_base {
+class guictr_nodes_splitview : public guictr_base, public splitter_cb {
 public:
     project_t& project;
 
@@ -208,4 +208,6 @@ public:
     void reset();
     void refresh();
     void buttonClicked(guibase* _button) override;
+    void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override;
+    ivec2 getContainerSize() override;
 };

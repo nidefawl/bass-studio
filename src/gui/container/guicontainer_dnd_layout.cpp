@@ -332,9 +332,9 @@ void guictr_layout::layout() {
                     splitterPos  = guiHandle->pos;
                     splitterSize = entry->size + guiHandle->size;
                 }
-                splitters[entryIdx - 1]->pos  = splitterPos - ivec2(vec2(5) * axis);
+                splitters[entryIdx - 1]->pos  = splitterPos - ivec2(vec2(Splitter::SPLITTER_LAYOUT_THICKNESS/2) * axis);
                 auto invAxis                  = ivec2(axis.y, axis.x);
-                splitters[entryIdx - 1]->size = (splitterSize) *invAxis + ivec2(vec2(10) * axis);
+                splitters[entryIdx - 1]->size = (splitterSize) *invAxis + ivec2(vec2(Splitter::SPLITTER_LAYOUT_THICKNESS) * axis);
             }
             entryIdx++;
         }

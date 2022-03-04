@@ -1,5 +1,6 @@
 #include <nanovg.h>
 
+#include <stdint.h>
 #include <utility>
 #include "trackctr.h"
 #include "math/seq_math.h"
@@ -225,13 +226,21 @@ class gui_graph_n;
 class gui_graph_port : public guibase {
     gui_graph_n* parentGraphNode;
     stagebuffer_point stageBufferPoint;
+    int32_t inputChannelOffset; 
 
 public:
-    gui_graph_port(gui_graph_n* _parentGraphNode, stagebuffer_point _stageBufferPoint)
+    gui_graph_port(gui_graph_n* _parentGraphNode, stagebuffer_point _stageBufferPoint, int32_t _inputChannelOffset)
         : guibase(),
           parentGraphNode(_parentGraphNode),
-          stageBufferPoint(_stageBufferPoint) {
+          stageBufferPoint(_stageBufferPoint),
+          inputChannelOffset(_inputChannelOffset) {
         setCanMouseHit(true);
+    }
+    stagebuffer_point getBufferPoint() const {
+        return stageBufferPoint;
+    }
+    int32_t getInputChannelOffset() const {
+        return inputChannelOffset;
     }
     vec2 getCenterPos2f() const {
         return vec2(pos) + vec2(size) * 0.5f;
@@ -337,8 +346,18 @@ private:
             delete guiPort;
         }
         guiPorts.clear();
-        guiPorts.push_back(new gui_graph_port{ this, stagebuffer_point::INPUT });
-        guiPorts.push_back(new gui_graph_port{ this, stagebuffer_point::OUTPUT_POST });
+    
+        if (node->type == DAW::track_node_type_t::EFFECT) {
+            for (int i = 0; i < node->effectOptional->blockInputs->channels; i += 2) {
+                guiPorts.push_back(new gui_graph_port{ this, stagebuffer_point::INPUT, i});
+            }
+            for (int i = 0; i < node->effectOptional->blockOutputs->channels; i += 2) {
+                guiPorts.push_back(new gui_graph_port{ this, stagebuffer_point::OUTPUT_POST, i});
+            }
+        } else {
+            guiPorts.push_back(new gui_graph_port{ this, stagebuffer_point::INPUT, 0});
+            guiPorts.push_back(new gui_graph_port{ this, stagebuffer_point::OUTPUT_POST, 0 });
+        }
         for (auto guiPort : guiPorts) {
             add(guiPort);
         }
@@ -369,20 +388,40 @@ public:
         return node;
     }
     vec2 getPortOutputPos() const {
-        return toParentSpace2f(guiPorts[1]->getCenterPos2f());
+        for (auto guiPort : guiPorts) {
+            if (guiPort->getBufferPoint() != stagebuffer_point::INPUT)
+                return toParentSpace2f(guiPort->getCenterPos2f());
+        }
+        return vec2{};
     }
     vec2 getPortInputPos() const {
-        return toParentSpace2f(guiPorts[0]->getCenterPos2f());
+        for (auto guiPort : guiPorts) {
+            if (guiPort->getBufferPoint() == stagebuffer_point::INPUT)
+                return toParentSpace2f(guiPort->getCenterPos2f());
+        }
+        return vec2{};
     }
 
     void layout() override {
+        const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
         ivec2 pos         = vec2(0);
         ivec2 size        = getSizeContent();
-        guiPorts[0]->size = { nodePortRadius * 2, nodePortRadius * 2 };
-        guiPorts[1]->size = guiPorts[0]->size;
-        const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
-        guiPorts[0]->pos  = pos + ivec2(0, hpt / 2) - ivec2(nodePortRadius);
-        guiPorts[1]->pos  = pos + ivec2(size.x, hpt / 2) - ivec2(nodePortRadius);
+        int inputIndex = 0;
+        int outputIndex = 0;
+        for (auto port : guiPorts) {
+            port->size = { nodePortRadius * 2, nodePortRadius * 2 };
+            switch (port->getBufferPoint()) {
+                case stagebuffer_point::INPUT:
+                    port->pos = pos + ivec2(0, hpt / 2) - ivec2(nodePortRadius) + ivec2(0, inputIndex*nodePortRadius*3);
+                    ++inputIndex;
+                    break;
+                default:
+                    port->pos = pos + ivec2(size.x, hpt / 2) - ivec2(nodePortRadius) + ivec2(0, outputIndex*nodePortRadius*3);
+                    ++outputIndex;
+                    break;
+            }
+        }
+
         for (guibase* gui : guis) {
             gui->layout();
         }
@@ -584,7 +623,6 @@ void gui_graph::render(NVGcontext* vg) {
         gui_graph_n* graphNodeInput  = edge.grphNodeSrc;
 
         const DAW::processing_track_node_t* nodeInput  = graphNodeInput->getProcessingNode();
-        //const DAW::processing_track_node_t* nodeOutput = graphNodeOutput->getProcessingNode();
 
         auto portInputPos  = graphNodeOutput->getPortInputPos();
         auto portOutputPos = graphNodeInput->getPortOutputPos();
@@ -602,25 +640,6 @@ void gui_graph::render(NVGcontext* vg) {
             ptrMeter = &nodeInput->stage->meterInput;
         }
 
-        if (ptrMeter) {
-            float maxRms = ptrMeter->getMaxRMS();
-            if (maxRms > dsp_util::GAIN_DBFLOOR) {
-                nvgBeginPath(vg);
-                nvgMoveTo(vg, portInputPos.x, portInputPos.y);
-                const vec2 dInOut = vec2(portOutputPos) - vec2(portInputPos);
-                for (int i = stepStart; i < stepLineSegments - stepStart; i++) {
-                    float t  = i / (float) (stepLineSegments - 1);
-                    float f  = t * t * (3.0 - 2.0 * t);
-                    vec2 pos = vec2(portInputPos) + vec2(dInOut.x * t, dInOut.y * f);
-                    nvgLineTo(vg, pos.x, pos.y);
-                }
-                nvgLineTo(vg, portOutputPos.x, portOutputPos.y);
-                nvgStrokeColor(vg, vec4ToNvg(colEdgeSignal));
-                nvgStrokeWidth(vg, fLineWidth + 2.0f);
-                nvgStroke(vg);
-            }
-        }
-
 
         guictr_graph_impl::hit_result hitResult = impl->hitTest(mouseLocal);
         NVGcolor colEdge = theme->getColor(GuiColor::COL_NODES_EDGE);
@@ -628,21 +647,27 @@ void gui_graph::render(NVGcontext* vg) {
             colEdge = NVGcolor{ 0.45f, 0.05f, 0.45f, 1.0f };
         }
 
-        vec2 dInOut  = vec2(portOutputPos) - vec2(portInputPos);
-        vec2 lastPos = portInputPos;
-        nvgBeginPath(vg);
-        nvgMoveTo(vg, portInputPos.x, portInputPos.y);
-        for (int i = stepStart; i < stepLineSegments - stepStart; i++) {
-            float t  = i / (float) (stepLineSegments - 1);
-            float f  = t * t * (3.0 - 2.0 * t);
-            vec2 pos = vec2(portInputPos) + vec2(dInOut.x * t, dInOut.y * f);
-            nvgLineTo(vg, pos.x, pos.y);
-            lastPos = pos;
+        const vec2 dInOut = vec2(portOutputPos) - vec2(portInputPos);
+        int numPaths = 1;
+        if (ptrMeter && ptrMeter->getMaxRMS() > dsp_util::GAIN_DBFLOOR) {
+            numPaths++;
         }
-        nvgLineTo(vg, portOutputPos.x, portOutputPos.y);
-        nvgStrokeColor(vg, colEdge);
-        nvgStrokeWidth(vg, fLineWidth);
-        nvgStroke(vg);
+        for (int iPath = 0; iPath < numPaths; ++iPath) {
+            NVGcolor pathColor = iPath == 0 ? colEdge : vec4ToNvg(colEdgeSignal);
+            float fPathLineWidth = iPath == 0 ? fLineWidth : (fLineWidth + 2.0f);
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, portInputPos.x, portInputPos.y);
+            for (int i = stepStart; i < stepLineSegments - stepStart; i++) {
+                float t  = i / (float) (stepLineSegments - 1);
+                float f  = t * t * (3.0f - 2.0f * t);
+                vec2 pos = vec2(portInputPos) + vec2(dInOut.x * t, dInOut.y * f);
+                nvgLineTo(vg, pos.x, pos.y);
+            }
+            nvgLineTo(vg, portOutputPos.x, portOutputPos.y);
+            nvgStrokeColor(vg, pathColor);
+            nvgStrokeWidth(vg, fPathLineWidth);
+            nvgStroke(vg);
+        }
     }
     for (auto c : guis) {
         nvgSave(vg);
@@ -668,12 +693,10 @@ gui_graph::guictr_graph_impl::hit_result gui_graph::guictr_graph_impl::hitTest(v
     float minEdgeDist = 0.0f;
     edge_t* minEdge   = nullptr;
     for (edge_t& edge : edgeList) {
-        gui_graph_n* graphNodeOutput                   = edge.grphNodeDest;
-        gui_graph_n* graphNodeInput                    = edge.grphNodeSrc;
-        //const DAW::processing_track_node_t* nodeInput  = graphNodeInput->getProcessingNode();
-        //const DAW::processing_track_node_t* nodeOutput = graphNodeOutput->getProcessingNode();
-        auto portInputPos                              = graphNodeOutput->getPortInputPos();
-        auto portOutputPos                             = graphNodeInput->getPortOutputPos();
+        gui_graph_n* graphNodeOutput = edge.grphNodeDest;
+        gui_graph_n* graphNodeInput  = edge.grphNodeSrc;
+        auto portInputPos            = graphNodeOutput->getPortInputPos();
+        auto portOutputPos           = graphNodeInput->getPortOutputPos();
 
         vec2 dInOut         = vec2(portOutputPos) - vec2(portInputPos);
         vec2 pos            = portInputPos;
@@ -1149,7 +1172,10 @@ guictr_nodes_splitview::guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& 
       trackView(_cursor, _project, _dragdropclip),
       splitter(0, 0.5) {
     trackView.graph.isTrackGraph = true;
+    splitter.setMinMax(0.1f, 0.9f);
+    splitter.setCallback(this);
     setCanMouseHit(true);
+    add(&splitter);
     add(&projectView);
     add(&trackView);
     padding = 0;
@@ -1181,24 +1207,24 @@ void guictr_nodes_splitview::buttonClicked(guibase* _button) {
     }
 }
 
+void guictr_nodes_splitview::handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) {
+    layout();
+}
+ivec2 guictr_nodes_splitview::getContainerSize() {
+    return size;
+}
 void guictr_nodes_splitview::layout() {
 
     ivec2 cs         = getSizeContent();
+    auto topHeight = splitter.leftOrTop(cs.y);
     projectView.pos  = ivec2(0);
-    trackView.pos    = ivec2(0, cs.y / 2);
-    projectView.size = ivec2(cs.x, cs.y / 2);
-    trackView.size   = ivec2(cs.x, cs.y / 2);
-//    scrollbar.pos    = ivec2(cs.x - scrollW, 0);
-//    scrollbar.size   = ivec2(scrollW, cs.y);
-//    cs.x -= scrollW;
-//    graph.pos  = { 0, 0 };
-//    graph.size = cs;
-//    graph.determineSize(graph.size);
-//    double f        = scrollbar.toPixels();
-//    contentHeight   = graph.size.y;
-//    contentViewSize = cs.y;
-//    scrollbar.scrollTo(f);
-//    scrollOffsetChanged(1, scrollbar.scrollOffset);
+    trackView.pos    = ivec2(0, topHeight);
+    projectView.size = ivec2(cs.x, topHeight);
+    trackView.size   = ivec2(cs.x, cs.y - topHeight);
+    
+    splitter.pos  = ivec2(0, topHeight - Splitter::SPLITTER_LAYOUT_THICKNESS/2);
+    splitter.size = ivec2(cs.x, Splitter::SPLITTER_LAYOUT_THICKNESS);
+    
     for (guibase* gui : guis) {
         gui->layout();
     }

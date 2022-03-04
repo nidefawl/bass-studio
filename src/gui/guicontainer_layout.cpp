@@ -116,7 +116,11 @@ struct guictr_stacked::stacked_entry {
     guictr_base* tabCtr;
     bool active = true;
     float splitterScale;
-    stacked_entry(guictr_base* _ctr, String title) : splitter(0, 0.5), btnHideEntry(), tabCtr(_ctr) {
+    stacked_entry(guictr_base* _ctr, String title)
+        : splitter(0, 0.5),
+        btnHideEntry(),
+        tabCtr(_ctr)
+    {
         splitterScale = splitter.getScale();
         btnHideEntry.setText(title);
         //TODO: mark as active
@@ -172,7 +176,7 @@ guictr_stacked::~guictr_stacked() {
     removeGuis();
 }
 void guictr_stacked::addEntry(guictr_base* ctr, String title) {
-    guictr_stacked::stacked_entry* entry = new guictr_stacked::stacked_entry{ ctr, title };
+    auto const entry = new guictr_stacked::stacked_entry{ ctr, std::move(title) };
     ctr->add(&entry->btnHideEntry);
     guictr_base::add(ctr);
     entry->splitter.setCallback(this);
@@ -204,7 +208,7 @@ void guictr_stacked::handleSplitterChanged(Splitter& splitter, float scale, int 
             int len        = entries.size();
             for (int i = 0; i < len; i++) {
                 auto* entry = entries[i];
-                int32_t verticalHeight;
+                int32_t verticalHeight = 0;
                 if (entry->active || i == idx) {
                     verticalHeight = entry->splitter.leftOrTop(totalH);
                     if (i == len - 1) {

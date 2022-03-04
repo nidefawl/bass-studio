@@ -14,7 +14,7 @@ protected:
     ~splitter_cb() = default;
 public:
     virtual void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) = 0;
-    virtual ivec2 getContainerSize()                                                   = 0;
+    virtual ivec2 getContainerSize() = 0;
 };
 
 class Splitter : public guictr_base {
@@ -23,7 +23,7 @@ class Splitter : public guictr_base {
     float scaleMin, scaleMax;
     splitter_cb* notifyCtrl = nullptr;
 public:
-    static constexpr int SPLITTER_LAYOUT_THICKNESS = 10;
+    static constexpr int SPLITTER_LAYOUT_THICKNESS = SPLITTER_HANDLE_SIZE;
 
     Splitter(int _type, float _scale)
         : guictr_base(),
