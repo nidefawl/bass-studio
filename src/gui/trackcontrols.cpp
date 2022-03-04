@@ -1787,7 +1787,6 @@ public:
                 trackCtr->addSubTrack(m_trackentry, gui, true);
             }
 
-            trackCtr->layout();
             daw->updateVisibleTrackContents();
         }
         closeContextMenu();

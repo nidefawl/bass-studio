@@ -135,6 +135,7 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
+    void handleRightClick(MouseEvent& evt) override;
 };
 
 class guictr_nodes_editor : public guictr_base, te_constants, public gui_scrollcontainer {
@@ -180,6 +181,7 @@ public:
     }
     void reset();
     void refresh();
+    void resetPositions();
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& event) override;
     void onTick(AppCtrl* appctrl) override;
@@ -189,6 +191,7 @@ public:
     bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override {
         return false;
     }
+    void handleRightClick(MouseEvent& evt) override;
 };
 
 class guictr_nodes_splitview : public guictr_base, public splitter_cb {

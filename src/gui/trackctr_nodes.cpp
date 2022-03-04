@@ -100,8 +100,16 @@ namespace DAW {
             case track_node_type_t::AUDIOSTAGE:
                 dbgassert(nodeInput->stage);
                 if (nodeInput->stage) {
-                    ref = DAW::ChannelStage(nodeInput->stage, stagebuffer_point::OUTPUT_POST);
-                    return true;
+                    if (nodeInput->stage->stageId.inputStageId == nodeInput->stageId) {
+                        ref = DAW::ChannelStage(nodeInput->stage, stagebuffer_point::INPUT);
+                        return true;
+                    } else if (nodeInput->stage->stageId.outputStageId == nodeInput->stageId) {
+                        ref = DAW::ChannelStage(nodeInput->stage, stagebuffer_point::OUTPUT);
+                        return true;
+                    } else if (nodeInput->stage->stageId.outputPostStageId == nodeInput->stageId) {
+                        ref = DAW::ChannelStage(nodeInput->stage, stagebuffer_point::OUTPUT_POST);
+                        return true;
+                    }
                 }
                 break;
             case track_node_type_t::EFFECT:
@@ -166,7 +174,10 @@ namespace DAW {
                     dbgassert(nodeDest->stage);
                     if (nodeDest->stage) {
                         /*bool b = hasDuplicateRoutings(nodeDest->stage->postEffectRouting, ref);*/
-                        removeDuplicateRoutings(nodeDest->stage->postEffectRouting, ref);
+                        if (nodeDest->stage->postEffectRouting.size() == 1)
+                            nodeDest->stage->postEffectRouting.clear();
+                        else
+                            removeDuplicateRoutings(nodeDest->stage->postEffectRouting, ref);
                         return true;
                     }
                     break;
@@ -174,7 +185,10 @@ namespace DAW {
                     dbgassert(nodeDest->effectOptional);
                     if (nodeDest->effectOptional) {
                         /*bool b = hasDuplicateRoutings(nodeDest->effectOptional->inputChannels, ref);*/
-                        removeDuplicateRoutings(nodeDest->effectOptional->inputChannels, ref);
+                        if (nodeDest->effectOptional->inputChannels.size() == 1)
+                            nodeDest->effectOptional->inputChannels.clear();
+                        else
+                            removeDuplicateRoutings(nodeDest->effectOptional->inputChannels, ref);
                         return true;
                     }
 
@@ -198,6 +212,7 @@ namespace DAW {
                 case track_node_type_t::AUDIOSTAGE:
                     dbgassert(nodeInput->stage);
                     if (nodeInput->stage) {
+                        // ref = DAW::ChannelStage(nodeInput->stage, stagebuffer_point::INPUT);
                         /*bool b = hasDuplicateRoutings(nodeInput->stage->postEffectRouting, ref);*/
                         removeDuplicateRoutings(nodeInput->stage->postEffectRouting, ref);
                         nodeInput->stage->postEffectRouting.push_back(ref);
@@ -848,15 +863,12 @@ void gui_graph::updateList(bool resetPositions) {
     cs.y = math::max(400, cs.y);
     std::vector<gui_graph_n*> listNodes;
     std::vector<gui_graph_entry*> listEntries;
-    if (resetPositions) {
-        impl->listNodes.clear();
-    }
     if (lastProcessingList) {
 
         project_t* project    = project_controller_t::get()->getProject();
         auto& graphLayouts    = project->graphLayouts;
         const auto& procGraph = *lastProcessingList;
-        const auto& allNodes  = procGraph.nodes;
+        const auto& allNodes  = procGraph.nodesFlatOrdered;
 
         float fontScale      = 14 * theme->getFloat(GuiConstant::CONST_NODES_SCALE);
         int32_t nodeWidth    = 180 * math::max<float>(1.0f, (theme->getFloat(GuiConstant::CONST_NODES_SCALE) * (1.0 / 10.0f)));
@@ -869,7 +881,7 @@ void gui_graph::updateList(bool resetPositions) {
             entry->id        = static_cast<int32_t>(node->stageId);
             entry->rowHeight = fontScale;
 
-            if (!graphLayouts.count(entry->id) && !resetPositions) {
+            if (!graphLayouts.count(entry->id) || resetPositions) {
                 graphLayouts[entry->id] = graph_node_layout_t{ posGrid, nodeSize };
                 posGrid.x += posGridStepX;
                 if (posGrid.x + posGridStepX > cs.x) {
@@ -884,12 +896,10 @@ void gui_graph::updateList(bool resetPositions) {
             guiText->pos                          = { 0, hpt };
             if (node->trackOptional) {
                 int32_t meterWidth = fontScale;
-                // meter is updated on audio thread. Copy is not atomic, but should not pose a UB risk since object lifetime is ensured
                 auto* meter = new gui_trackmeter<16000, 2>(&node->trackOptional->audio->meter);
                 meter->size                     = { meterWidth, entry->getSizeContent().y - hpt };
                 meter->pos                      = { entry->getSizeContent().x - meter->size.x, hpt };
                 entry->add(meter);
-                // meter is updated on audio thread. Copy is not atomic, but should not pose a UB risk since object lifetime is ensured
                 auto* guimeterInput = new gui_trackmeter<16000, 2>(&node->trackOptional->audio->meterInput);
                 guimeterInput->size                     = { meterWidth, entry->getSizeContent().y - hpt };
                 guimeterInput->pos                      = { 0, hpt };
@@ -901,12 +911,10 @@ void gui_graph::updateList(bool resetPositions) {
             }
             if (node->effectOptional) {
                 int32_t meterWidth = fontScale;
-                // meter is updated on audio thread. Copy is not atomic, but should not pose a UB risk since object lifetime is ensured
                 auto* meter = new gui_trackmeter<16000, 2>(&node->effectOptional->meter);
                 meter->size                     = { meterWidth, entry->getSizeContent().y - hpt };
                 meter->pos                      = { entry->getSizeContent().x - meter->size.x, hpt };
                 entry->add(meter);
-                // meter is updated on audio thread. Copy is not atomic, but should not pose a UB risk since object lifetime is ensured
                 auto* guimeterInput = new gui_trackmeter<16000, 2>(&node->effectOptional->meterIn);
                 guimeterInput->size                     = { meterWidth, entry->getSizeContent().y - hpt };
                 guimeterInput->pos                      = { 0, hpt };
@@ -918,8 +926,11 @@ void gui_graph::updateList(bool resetPositions) {
             }
             if (node->stage) {
                 int32_t meterWidth = fontScale;
-                // meter is updated on audio thread. Copy is not atomic, but should not pose a UB risk since object lifetime is ensured
-                auto* meter = new gui_trackmeter<16000, 2>(node->stageId == TRACKID_DEFAULT_I32 ? &node->stage->meter : &node->stage->meterInput);
+                auto rmsmeter = &node->stage->meter;
+                if (node->stageId == node->stage->stageId.inputStageId) {
+                    rmsmeter = &node->stage->meterInput;
+                }
+                auto* meter = new gui_trackmeter<16000, 2>(rmsmeter);
                 meter->size                     = { meterWidth, entry->getSizeContent().y - hpt };
                 meter->pos                      = { entry->getSizeContent().x - meter->size.x, hpt };
                 entry->add(meter);
@@ -1051,6 +1062,9 @@ void guictr_nodes_editor::render(NVGcontext* vg) {
 void guictr_nodes_editor::refresh() {
     impl->refreshQueued = 1;
 }
+void guictr_nodes_editor::resetPositions() {
+    impl->refreshQueued = 2;
+}
 void guictr_nodes_editor::reset() {
     graph.reset();
 }
@@ -1061,11 +1075,11 @@ bool guictr_nodes_editor::handleKeyInput(KeyEvent& event) {
             KeyCombo kc = KC_REFRESH;
             kc.keyMod   = KB_MOD_CTRL;
             if (isKC(kc, event)) {
-                impl->refreshQueued = 2;
+                resetPositions();
                 return true;
             }
             if (isKC(KC_REFRESH, event)) {
-                impl->refreshQueued = 1;
+                refresh();
                 return true;
             }
         }
@@ -1119,6 +1133,9 @@ void gui_graph::handleDraggedMove(MouseEvent& evt) {
 }
 void gui_graph::handleDraggedRelease(MouseEvent& evt) {
     prevOffset = offset;
+}
+void gui_graph::handleRightClick(MouseEvent& evt) {
+    parent->handleRightClick(evt);
 }
 bool gui_graph::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
     if (yoffset) {
@@ -1252,4 +1269,43 @@ vec2 gui_graph::toContainerSpace2f(vec2 in) const {
 
 vec2 gui_graph::toParentSpace2f(vec2 localCoord) const {
     return (vec2(getPosContent()) + localCoord) * scale + offset;
+}
+
+class guictxtmenu_nodes : public guictxtmenu {
+    guictr_nodes_editor* const m_nodesEditor;
+    ctxtmenu_entry* cmdRefresh;
+    ctxtmenu_entry* cmdResetPositions;
+    ctxtmenu_entry* cmdResetRouting;
+public:
+    guictxtmenu_nodes(DawCtrl* _dawCtrl, guictr_nodes_editor* _nodesEditor)
+        : guictxtmenu(),
+          m_nodesEditor(_nodesEditor) {
+        this->dawCtrl = _dawCtrl;
+        this->size.x = 120;
+        addEntry(cmdRefresh = new ctxtmenu_entry("Refresh", 1));
+        addEntry(cmdResetPositions = new ctxtmenu_entry("Reset Positions", 2));
+        addEntry(cmdResetRouting = new ctxtmenu_entry("Reset Routing", 3));
+    }
+    ~guictxtmenu_nodes() override = default;
+    void clicked(int _id) override {
+        auto const daw          = dawCtrl->getDaw();
+        // ThreadLock lock   = daw->lockPlayThread();
+        if (_id == cmdRefresh->id) {
+            m_nodesEditor->refresh();
+        }
+        if (_id == cmdResetPositions->id) {
+            m_nodesEditor->resetPositions();
+        }
+        if (_id == cmdResetRouting->id) {
+            auto track = DawInstance::get()->getSelectedTrack();
+            if (track && track->audio) {
+                track->audio->configureDefaultRoutings();
+                m_nodesEditor->refresh();
+            }
+        }
+        closeContextMenu();
+    }
+};
+void guictr_nodes_editor::handleRightClick(MouseEvent& evt) {
+    parentCtrl->openContextMenu(new guictxtmenu_nodes(dawCtrl, this), evt.mousepos);
 }
