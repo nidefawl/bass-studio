@@ -1,6 +1,9 @@
+#include <cmath>
+#include <glm/geometric.hpp>
 #include <nanovg.h>
 
-#include <stdint.h>
+#include <cstdint>
+#include <nanovg_min.h>
 #include <utility>
 #include "trackctr.h"
 #include "math/seq_math.h"
@@ -23,12 +26,111 @@
 #include "guimeter.h"
 #include "host/plugin/base_plugin.h"
 #include "host/plugin/internal_plugin.h"
+#include <splines/generic_b_spline.h>
+#include <splines/uniform_cubic_bspline.h>
+#include <splines/uniform_cr_spline.h>
+#include <splines/natural_spline.h>
+
+#include <glm/vec2.hpp>
+#include <glm/gtx/norm.hpp>
+
+template<typename T>
+float lengthSquared(T a) { return glm::length2(a); }
+
+using floating_t = float;
 
 const float fLineWidth     = 4.0f;
-const int stepLineSegments = 32;
-const int stepStart        = 1;
-const vec4 colEdgeSignal   = { 0.1f, 0.6f, 0.1f, 1.0f };
 const float nodePortRadius = 6.0f;
+const auto colEdgeSignal   = NVGcolor{ 0.1f, 0.6f, 0.1f, 1.0f };
+
+class edge_spline {
+public:
+    static constexpr bool _c_renderCtrls = false;
+
+private:
+    static constexpr float _c_portStraightLen = 8.0f;
+    static constexpr float _c_scX             = 1.3f;
+    static constexpr float _c_scY             = 1.0f;
+    static constexpr float _c_minKnotDist     = 8.0f;
+    static constexpr float _c_maxKnotDist     = 16.0f;
+    static constexpr float _c_alpha           = 0.5f;
+    static constexpr bool _c_inc              = false;
+    static constexpr bool _c_endIsKnot        = true;
+    float perPixelSegments = 1.0f / 64.0f;
+    std::vector<vec2> ctrlPts;
+    std::vector<vec2> vec;
+    static void calculateCtrlPts(std::vector<vec2>& ctrlPts, vec2 portInputAbsPos, vec2 portOutputAbsPos) {
+        const auto portInputPos  = portInputAbsPos - vec2(_c_portStraightLen, 0.0f);
+        const auto portOutputPos = portOutputAbsPos + vec2(_c_portStraightLen, 0.0f);
+        ctrlPts.resize(2 + 3 + 2);
+        auto outIt          = ctrlPts.begin();
+        *outIt++            = portInputAbsPos;
+        *outIt++            = portInputPos;
+        const auto delta    = portOutputPos - portInputPos;
+        const auto middlePt = portInputPos + delta * 0.5f;
+        if (delta.x > 0.0f) {
+            const auto portOffset = vec2(1.0f, delta.y > 0 ? -1.0f : 1.0f) * math::clamp(delta.x, _c_minKnotDist, _c_maxKnotDist) * vec2(_c_scX, _c_scY);
+            *outIt++              = portInputPos - portOffset;
+            *outIt++              = middlePt;
+            *outIt++              = portOutputPos + portOffset;
+        } else {
+            const auto deltaNorm    = glm::normalize(delta);
+            const auto ctrlPtInput  = glm::normalize(-vec2(1.0f, 0.0f) + deltaNorm * 2.5f);
+            const auto ctrlPtOutput = glm::normalize(+vec2(1.0f, 0.0f) - deltaNorm * 2.5f);
+            const auto ctrlScale    = glm::length(delta) * 0.15f;
+            *outIt++                = portInputPos + ctrlPtInput * ctrlScale;
+            *outIt++                = middlePt;
+            *outIt++                = portOutputPos + ctrlPtOutput * ctrlScale;
+        }
+        *outIt++ = portOutputPos;
+        *outIt++ = portOutputAbsPos;
+    }
+    static void calculateVectors(std::vector<vec2>& ctrlPts, std::vector<vec2>& vec, float perPixelSegments) {
+        using SplineType = NaturalSpline<vec2, floating_t>;
+        const SplineType spline(ctrlPts, _c_inc, _c_alpha, _c_endIsKnot ? SplineType::Natural : SplineType::NotAKnot);
+        const auto numSegments = math::floorfS32(8.0f + glm::length(ctrlPts.back() - ctrlPts.front()) * perPixelSegments);
+        const auto maxT        = spline.getMaxT();
+        vec.resize(numSegments + (_c_inc ? 0 : 2));
+        auto outIt = vec.begin();
+        if (!_c_inc) {
+            *outIt++ = ctrlPts.front();
+        }
+        for (int iPt = 0; iPt < numSegments; ++iPt) {
+            float x = (iPt / (float) (numSegments - 1));
+            // float t = x * x * (3.0f - 2.0f * x);
+            float t = math::calcTanhLike(x, 1.2f);
+            *outIt++ = spline.getPosition(t * maxT);
+        }
+        if (!_c_inc) {
+            *outIt++ = ctrlPts.back();
+        }
+    }
+
+public:
+    std::vector<vec2>& calculateSplineVectors(vec2 portInputAbsPos, vec2 portOutputAbsPos) {
+        if (ctrlPts.size() >= 2 && !vec.empty()) {
+            if (ctrlPts.front() == portInputAbsPos && ctrlPts.back() == portOutputAbsPos) {
+                return this->vec;
+            }
+        }
+        vec.clear();
+        ctrlPts.clear();
+        calculateCtrlPts(ctrlPts, portInputAbsPos, portOutputAbsPos);
+        if (ctrlPts.size() > 2) {
+            calculateVectors(ctrlPts, vec, perPixelSegments);
+        }
+        return vec;
+    }
+    std::vector<vec2>& getCtrlPts() {
+        return this->ctrlPts;
+    }
+    std::vector<vec2>& getVecs() {
+        return this->vec;
+    }
+    void setPerPixelSegments(float f) {
+        this->perPixelSegments = f;
+    }
+};
 
 void guictr_nodes_editor::scrollTo(guibase* g) {
 }
@@ -242,6 +344,7 @@ class gui_graph_port : public guibase {
     gui_graph_n* parentGraphNode;
     stagebuffer_point stageBufferPoint;
     int32_t inputChannelOffset; 
+    edge_spline spline;
 
 public:
     gui_graph_port(gui_graph_n* _parentGraphNode, stagebuffer_point _stageBufferPoint, int32_t _inputChannelOffset)
@@ -250,6 +353,7 @@ public:
           stageBufferPoint(_stageBufferPoint),
           inputChannelOffset(_inputChannelOffset) {
         setCanMouseHit(true);
+        spline.setPerPixelSegments(1.0f/4.0f);
     }
     stagebuffer_point getBufferPoint() const {
         return stageBufferPoint;
@@ -316,21 +420,21 @@ public:
             posSS       = parent->parent->toParentSpace(posSS);
 
             ivec2 mouseposSS      = toControlsObjectSpace(mousepos, parent->parent->parent);
-            ivec2 nodeEditorPosSS = parent->parent->parent->toScreenSpace(ivec2(0));
+            ivec2 editorPosSS = parent->parent->parent->toScreenSpace(ivec2(0));
 
+            std::vector<vec2>& pts = spline.calculateSplineVectors(mouseposSS, posSS);
+            if (pts.empty())
+                return;
             nvgSave(vg);
-            nvgTranslate(vg, nodeEditorPosSS.x, nodeEditorPosSS.y);
+            nvgTranslate(vg, editorPosSS.x, editorPosSS.y);
             nvgBeginPath(vg);
-            nvgMoveTo(vg, posSS.x, posSS.y);
-            const vec2 dInOut = vec2(mouseposSS) - vec2(posSS);
-            for (int i = stepStart; i < stepLineSegments - stepStart; i++) {
-                float t  = i / (float) (stepLineSegments - 1);
-                float f  = t * t * (3.0 - 2.0 * t);
-                vec2 pos = vec2(posSS) + vec2(dInOut.x * t, dInOut.y * f);
-                nvgLineTo(vg, pos.x, pos.y);
+            auto it = pts.cbegin();
+            nvgMoveTo(vg, (*it).x, (*it).y);
+            for (; it != pts.cend(); ++it) {
+                const auto& pt = *it;
+                nvgLineTo(vg, pt.x, pt.y);
             }
-            nvgLineTo(vg, mouseposSS.x, mouseposSS.y);
-            nvgStrokeColor(vg, vec4ToNvg(colEdgeSignal));
+            nvgStrokeColor(vg, colEdgeSignal);
             nvgStrokeWidth(vg, fLineWidth + 2.0f);
             nvgStroke(vg);
             nvgRestore(vg);
@@ -560,6 +664,7 @@ public:
     struct edge_t {
         gui_graph_n* grphNodeDest;
         gui_graph_n* grphNodeSrc;
+        edge_spline spline;
     };
     std::shared_ptr<DAW::processing_graph_t> procList;
     std::vector<gui_graph_entry*> listGuis;
@@ -622,8 +727,8 @@ void gui_graph::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
-    ivec2 posIn      = ivec2(parentCtrl->m_mousePos);
-    ivec2 mouseLocal = toControlsObjectSpace(posIn, this);
+    const auto posIn = ivec2(parentCtrl->m_mousePos);
+    const auto mouseLocal = toControlsObjectSpace(posIn, this);
     nvgSave(vg);
     nvgTranslate(vg, offset.x, offset.y);
     nvgScale(vg, scale, scale);
@@ -632,15 +737,14 @@ void gui_graph::render(NVGcontext* vg) {
     nvgFillColor(vg, nvgRGBAf(1, 0, 1, 1));
     nvgFill(vg);
 
+    const auto colAutomated = theme->getColor(GuiColor::COL_AUTOMATED);
     for (gui_graph::guictr_graph_impl::edge_t& edge : impl->edgeList) {
 
-        gui_graph_n* graphNodeOutput = edge.grphNodeDest;
-        gui_graph_n* graphNodeInput  = edge.grphNodeSrc;
+        const gui_graph_n* graphNodeOutput = edge.grphNodeDest;
+        const gui_graph_n* graphNodeInput  = edge.grphNodeSrc;
 
         const DAW::processing_track_node_t* nodeInput  = graphNodeInput->getProcessingNode();
 
-        auto portInputPos  = graphNodeOutput->getPortInputPos();
-        auto portOutputPos = graphNodeInput->getPortOutputPos();
 
         using meterType     = rmsmeterimpl<16000>;
         meterType* ptrMeter = nullptr;
@@ -656,32 +760,50 @@ void gui_graph::render(NVGcontext* vg) {
         }
 
 
-        guictr_graph_impl::hit_result hitResult = impl->hitTest(mouseLocal);
+        const guictr_graph_impl::hit_result hitResult = impl->hitTest(mouseLocal);
         NVGcolor colEdge = theme->getColor(GuiColor::COL_NODES_EDGE);
         if (hitResult.hitType == guictr_graph_impl::hit_result_type::HIT_EDGE && (&edge == hitResult.edge)) {
             colEdge = NVGcolor{ 0.45f, 0.05f, 0.45f, 1.0f };
         }
 
-        const vec2 dInOut = vec2(portOutputPos) - vec2(portInputPos);
         int numPaths = 1;
         if (ptrMeter && ptrMeter->getMaxRMS() > dsp_util::GAIN_DBFLOOR) {
             numPaths++;
         }
+
+        std::vector<vec2>& pts = edge.spline.calculateSplineVectors(graphNodeOutput->getPortInputPos(), graphNodeInput->getPortOutputPos());
+        if (pts.empty())
+            return;
         for (int iPath = 0; iPath < numPaths; ++iPath) {
-            NVGcolor pathColor = iPath == 0 ? colEdge : vec4ToNvg(colEdgeSignal);
+            NVGcolor pathColor = iPath == 0 ? colEdge : colEdgeSignal;
             float fPathLineWidth = iPath == 0 ? fLineWidth : (fLineWidth + 2.0f);
+            auto it = pts.cbegin();
             nvgBeginPath(vg);
-            nvgMoveTo(vg, portInputPos.x, portInputPos.y);
-            for (int i = stepStart; i < stepLineSegments - stepStart; i++) {
-                float t  = i / (float) (stepLineSegments - 1);
-                float f  = t * t * (3.0f - 2.0f * t);
-                vec2 pos = vec2(portInputPos) + vec2(dInOut.x * t, dInOut.y * f);
-                nvgLineTo(vg, pos.x, pos.y);
+            nvgMoveTo(vg, (*it).x, (*it).y);
+            for (; it != pts.cend(); ++it) {
+                const auto& pt = *it;
+                nvgLineTo(vg, pt.x, pt.y);
             }
-            nvgLineTo(vg, portOutputPos.x, portOutputPos.y);
             nvgStrokeColor(vg, pathColor);
             nvgStrokeWidth(vg, fPathLineWidth);
             nvgStroke(vg);
+            
+            // for (it = pts.cbegin(); it != pts.cend(); ++it) {
+            //     const auto& pt = *it;
+            //     nvgBeginPath(vg);
+            //     nvgCircle(vg, pt.x, pt.y, 1.5f);
+            //     nvgFillColor(vg, colAutomated);
+            //     nvgFill(vg);
+            // }
+        }
+        if (edge_spline::_c_renderCtrls) {
+            auto& ctrlPts = edge.spline.getCtrlPts();
+            for (auto pt : ctrlPts) {
+                nvgBeginPath(vg);
+                nvgCircle(vg, pt.x, pt.y, 6.0f);
+                nvgFillColor(vg, theme->getColor(GuiColor::COL_AUTOMATED));
+                nvgFill(vg);
+            }
         }
     }
     for (auto c : guis) {
@@ -710,21 +832,17 @@ gui_graph::guictr_graph_impl::hit_result gui_graph::guictr_graph_impl::hitTest(v
     for (edge_t& edge : edgeList) {
         gui_graph_n* graphNodeOutput = edge.grphNodeDest;
         gui_graph_n* graphNodeInput  = edge.grphNodeSrc;
-        auto portInputPos            = graphNodeOutput->getPortInputPos();
-        auto portOutputPos           = graphNodeInput->getPortOutputPos();
-
-        vec2 dInOut         = vec2(portOutputPos) - vec2(portInputPos);
-        vec2 pos            = portInputPos;
-        float edgeMouseDist = 0.0f;
-        for (int i = stepStart; i < stepLineSegments - stepStart; i++) {
-            float t      = i / (float) (stepLineSegments - 1);
-            float f      = t * t * (3.0 - 2.0 * t);
-            vec2 nextPos = vec2(portInputPos) + vec2(dInOut.x * t, dInOut.y * f);
-            float fDist  = math::distancePointLine(mouseLocal, pos, nextPos);
-            if (i == stepStart || fDist < edgeMouseDist) {
+        
+        std::vector<vec2>& pts = edge.spline.calculateSplineVectors(graphNodeOutput->getPortInputPos(), graphNodeInput->getPortOutputPos());
+        if (pts.size() < 2)
+            continue;
+        float edgeMouseDist = math::distancePointLine(mouseLocal, pts[0], pts[1]);
+        auto it = pts.cbegin();
+        for (++it; it != pts.cend(); ++it) {
+            float fDist  = math::distancePointLine(mouseLocal, *(it - 1), *it);
+            if (edgeMouseDist < 0 || fDist < edgeMouseDist) {
                 edgeMouseDist = fDist;
             }
-            pos = nextPos;
         }
         if (minEdge == nullptr || edgeMouseDist < minEdgeDist) {
             minEdgeDist = edgeMouseDist;

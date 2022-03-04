@@ -231,7 +231,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     String projName = "1clip.project";
     int flags = 0x1;// defer load
         // flags = 0; // no defer load
-    dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
+    dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance* daw, std::shared_ptr<project_file> file, int errorState) {
         /**
          * Code for setting cursor and loop position
          */
@@ -248,6 +248,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
         if (dbgLoadPlugins) {
             loadPluginAndInsertOnTrack(dawMainCtrl, "C:/PluginManager/configs/default/hosts/Ableton/categories/melda/MPowerSynth.dll", 0);
         }
+        daw->getMainControl()->setViewMode(view_mode_t::NODE_EDITOR);
 #if 0
         const bool loadPlugins = 0;
         if (loadPlugins) {

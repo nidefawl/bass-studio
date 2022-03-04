@@ -58,7 +58,7 @@ void drawImage(NVGcontext* vg, int image, float alpha,
                float x, float y, float w, float h);   // position and size of the sprite rectangle on screen
 
 guitheme_t* getDefaultTheme();
-ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);
+ivec2 toControlsObjectSpace(ivec2 pos, guibase* gui);
 
 inline float calcInset(float desiredInset, float size) {
     return math::min(desiredInset, math::max(0.f, (size - 4.0f) / 2.0f));

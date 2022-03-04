@@ -91,16 +91,15 @@ KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key
     kevt.keyname  = key_name;
     return kevt;
 }
-ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui) {
+ivec2 toControlsObjectSpace(ivec2 pos, guibase* gui) {
     vector<guibase*> guiHierachy;
     gui->getHierachy(guiHierachy);
-    ivec2 posOS = pos;
     while (!guiHierachy.empty()) {
         guibase* b = guiHierachy.back();
         guiHierachy.pop_back();
-        posOS = b->toContainerSpace(posOS);
+        pos = b->toContainerSpace(pos);
     }
-    return gui->toContainerSpace(posOS);
+    return gui->toContainerSpace(pos);
 }
 void processScrollEvt(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffset, double yoffset) {
     MouseEvent evt = mouseEvent(ctrl, gui, mousePos, -1, M_EVT_SCROLL);

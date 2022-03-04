@@ -67,7 +67,6 @@ class gui_graph : public guictr_base {
 private:
     class guictr_graph_impl;
     guictr_graph_impl* const impl;
-
 protected:
     int32_t first       = 0;
     int32_t last        = 0;
