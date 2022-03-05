@@ -114,8 +114,8 @@ struct AudioBlock {
 
     AudioBlock SubChannelsSamplesBlock(const uint32_t channelOffset, const uint32_t numChannels, const uint32_t sampleOffset, const uint32_t numSamples) const {
         dbgassert(sampleOffset + numSamples <= this->samples);
-        if (this->channels == 1 && numChannels == 2 && channelOffset == 0) {
-            return AudioBlock(*this, 0, 1, sampleOffset, numSamples);
+        if (this->channels < numChannels && channelOffset == 0) {
+            return AudioBlock(*this, 0, this->channels, sampleOffset, numSamples);
         }
         dbgassert(channelOffset + numChannels <= this->channels);
         return AudioBlock(*this, channelOffset, numChannels, sampleOffset, numSamples);

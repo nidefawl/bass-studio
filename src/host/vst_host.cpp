@@ -909,7 +909,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
                     track_audio_src src;
                     for (uint32_t i = desc.offset; i < desc.offset+desc.count; ++i) {
                         if (i >= eff->blockOutputs->channels) {
-                            log_lf(Log::L_WARN, "%s Output buffer has invalid size. Expected %d channels, found %d\n", StringAsCStr(eff->getName()), desc.offset+desc.count, eff->blockOutputs->channels);
+                            // log_lf(Log::L_WARN, "%s Output buffer has invalid size. Expected %d channels, found %d\n", StringAsCStr(eff->getName()), desc.offset+desc.count, eff->blockOutputs->channels);
                             return false;
                         }
                         src.channels.push_back(eff->blockOutputs->buf[i]);
@@ -921,7 +921,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
                     return true;
                 }
             }
-            log_lf(Log::L_WARN, "%s Does not have output with offset %d\n", StringAsCStr(eff->getName()), inputChannel.inputChannelOffset);
+            // log_lf(Log::L_WARN, "%s Does not have output with offset %d\n", StringAsCStr(eff->getName()), inputChannel.inputChannelOffset);
         }
     }
     return false;
@@ -2445,6 +2445,7 @@ void vsthost::processAudio(audio_stage_t* stage,
                             effect->delayLine.reset(new DelayLine(this->numChannels, m_sampleFormatInternal.blockSize));
                         }
                         AudioBlock *blockOut = effect->blockOutputs;
+                        blockOut->clear();
                         delayAudio(effect->delayLine.get(), blockIn, blockOut, delay);
                     } else {
                         effect->blockOutputs->copyFrom(blockIn);
