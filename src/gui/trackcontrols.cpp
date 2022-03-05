@@ -910,12 +910,13 @@ public:
     void layout() override {
 
         const int32_t CONST_LAYOUT_MARGIN = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
+        const int32_t mW = theme->get(GuiConstant::CONST_METER_WIDTH);
         const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         int32_t inset                     = CONST_LAYOUT_MARGIN;
         int32_t i2                        = inset * 2;
         int32_t h                         = TRACK_HEIGHT_STEP - i2;
 
-        int32_t mW      = TRACK_HEIGHT_STEP * 3;
+        // int32_t mW      = TRACK_HEIGHT_STEP * 3;
         int32_t bW      = size.x - mW;
         int32_t gW      = size.x - mW;
         btnBypass.size  = ivec2(bW - inset * 3 - h, h);
