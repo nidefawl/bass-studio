@@ -7,16 +7,14 @@
 #include "dsp_util.h"
 #include "meter.h"
 
-template<uint32_t T, uint32_t C = 2>
+void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const ivec2& size, DAW::rmsmeter* meter);
+
 class gui_trackmeter : public guibase {
+    DAW::rmsmeter* const meter;
 public:
-    rmsmeter<T>* const meter;
-    rmsmeterimpl<T, C>* const meterImpl;
-    gui_trackmeter(rmsmeter<T>* _meter)
-        : guibase(), meter(_meter), meterImpl(nullptr) {
-    }
-    gui_trackmeter(rmsmeterimpl<T, C>* _meterImpl)
-        : guibase(), meter(nullptr), meterImpl(_meterImpl) {
+    gui_trackmeter(DAW::rmsmeter* _meter)
+        : meter(_meter)
+    {
     }
     void render(NVGcontext* vg) override;
 };

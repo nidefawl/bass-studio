@@ -82,8 +82,9 @@ void module_empty::unload(vsthost* host, int flags) {
 
 void module_empty::load(vsthost* host) {
     effectbase::load(host);
-    this->blockInputs  = new AudioBlock(math::max(2, 2), format.blockSize);
-    this->blockOutputs = new AudioBlock(math::max(2, 2), format.blockSize);
+    this->blockInputs  = new AudioBlock(2, format.blockSize);
+    this->blockOutputs = new AudioBlock(2, format.blockSize);
+    initMeters();
     bIsEnabled         = this->getParamValue(PARAM_ENABLE) > 0.5;
     if (bIsEnabled) {
         this->resume();

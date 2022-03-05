@@ -805,8 +805,7 @@ void gui_graph::render(NVGcontext* vg) {
         const DAW::processing_track_node_t* nodeInput  = edge.portSrc->getNode()->getProcessingNode();
 
 
-        using meterType     = rmsmeterimpl<16000>;
-        meterType* ptrMeter = nullptr;
+        DAW::rmsmeter* ptrMeter = nullptr;
 
         if (nodeInput->effectOptional) {
             ptrMeter = &nodeInput->effectOptional->meter;
@@ -816,6 +815,9 @@ void gui_graph::render(NVGcontext* vg) {
         }
         if (nodeInput->stage) {
             ptrMeter = &nodeInput->stage->meterInput;
+        }
+        if (ptrMeter && ptrMeter->getNumChannels() == 0) {
+            ptrMeter = nullptr;
         }
 
 
@@ -1068,22 +1070,21 @@ void gui_graph::updateList(bool resetPositions) {
             auto guiText  = new guinodeinfo_text{ node };
             guiText->size = { entry->size.x, entry->size.y - hpt };
             guiText->pos  = { 0, hpt };
-            using GuiRmsMeterType = gui_trackmeter<16000, 2>;
-            GuiRmsMeterType* meterIn = nullptr;
-            GuiRmsMeterType* meterOut = nullptr;
+            gui_trackmeter* meterIn = nullptr;
+            gui_trackmeter* meterOut = nullptr;
             if (node->trackOptional) {
-                meterOut = new GuiRmsMeterType(&node->trackOptional->audio->meter);
-                meterIn = new GuiRmsMeterType(&node->trackOptional->audio->meterInput);
+                meterOut = new gui_trackmeter(&node->trackOptional->audio->meter);
+                meterIn = new gui_trackmeter(&node->trackOptional->audio->meterInput);
             }
             if (node->effectOptional) {
-                meterOut = new GuiRmsMeterType(&node->effectOptional->meter);
-                meterIn = new GuiRmsMeterType(&node->effectOptional->meterIn);
+                meterOut = new gui_trackmeter(&node->effectOptional->meter);
+                meterIn = new gui_trackmeter(&node->effectOptional->meterIn);
             }
             if (node->stage) {
                 if (node->stageId == node->stage->stageId.inputStageId) {
-                    meterIn = new GuiRmsMeterType(&node->stage->meterInput);
+                    meterIn = new gui_trackmeter(&node->stage->meterInput);
                 } else {
-                    meterOut = new GuiRmsMeterType(&node->stage->meter);
+                    meterOut = new gui_trackmeter(&node->stage->meter);
                 }
             }
             if (meterOut) {

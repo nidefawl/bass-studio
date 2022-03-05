@@ -55,7 +55,7 @@ guiplugin::~guiplugin() {
     remove(&buttonDelete);
     remove(&buttonBypass);
     remove(&buttonSave);
-    remove(&meter);
+    remove(&guiMeter);
     for (auto g : guiButtonsTitlebar) {
         dbgassert(!stl_contains(guis, g));
     }
@@ -156,7 +156,7 @@ bool guiplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 guiplugin::guiplugin(effectbase* _effect)
     : guictr_base(),
       effect(_effect),
-      meter(&_effect->meter) {
+      guiMeter(&_effect->meter) {
     padding = 0;
     margin  = 0;
     text[0] = 0;
@@ -173,7 +173,7 @@ guiplugin::guiplugin(effectbase* _effect)
     buttonLayout.setLabel("Hide");
     buttonSave.icon = ICON_SAVE;
     buttonSave.setLabel("Save");
-    add(&meter);
+    add(&guiMeter);
     addGuiBtnTitlebar(&buttonBypass);
     addGuiBtnTitlebar(&buttonLayout);
     addGuiBtnTitlebar(&buttonDelete);
@@ -228,8 +228,8 @@ void guiplugin::layout() {
         contentS  = ivec2(size.x - hpt - meterW, size.y);
         titlePosX = buttonDelete.top();
     }
-    meter.pos  = ivec2(size.x - meterW, hpt);
-    meter.size = ivec2(meterW, size.y - hpt);
+    guiMeter.pos  = ivec2(size.x - meterW, hpt);
+    guiMeter.size = ivec2(meterW, size.y - hpt);
     layoutModule(contentP, contentS, inset1);
     for (auto btn : guis) {
         btn->layout();
@@ -754,8 +754,8 @@ void guipluginview::render(NVGcontext* vg) {
                 nvgRestore(vg);
             }
         }
-        if (meter.isVisible())
-            meter.render(vg);
+        if (guiMeter.isVisible())
+            guiMeter.render(vg);
         if (dropdownProgram.isVisible()) {
             dropdownProgram.render(vg);
         }
@@ -832,7 +832,7 @@ void guipluginview::buttonClicked(guibase* _button) {
 
     dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size());
     params.setVisible(layoutMode == 0);
-    meter.setVisible(layoutMode == 0);
+    guiMeter.setVisible(layoutMode == 0);
     this->onChildLayoutChanged(this);
 }
 void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {

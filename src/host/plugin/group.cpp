@@ -111,7 +111,7 @@ void guimodule_group::render(NVGcontext* vg) {
         nvgTranslate(vg, extX, 0);
     }
 
-    meter.render(vg);
+    guiMeter.render(vg);
     if (extend) {
         size.x -= extX;
     }
@@ -261,6 +261,7 @@ void module_group::load(vsthost* host) {
     this->audio        = host->createAudioStage();
     this->blockInputs  = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
     this->blockOutputs = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
+    initMeters();
     bIsEnabled         = this->getParamValue(PARAM_ENABLE) > 0.5;
     if (bIsEnabled) {
         this->resume();

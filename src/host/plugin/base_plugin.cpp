@@ -57,11 +57,13 @@ effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGloba
         regparam->unit  = paramEntry.unit;
     }
     getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
+    initDefaultIODesc();
 }
 effectbase::effectbase() 
-    : pluginType(0),
-    projectGlobalId(0)
 {
+    initDefaultIODesc();
+}
+void effectbase::initDefaultIODesc() {
     inputChannelsDesc.emplace_back(DAW::channel_desc{0, 2, String("Stereo Input")});
     outputChannelsDesc.emplace_back(DAW::channel_desc{0, 2, String("Stereo Output")});
 }
@@ -107,7 +109,7 @@ public:
         isHorizontalTitle        = false;
         buttonBypass.icon        = -1;
         buttonBypass.colorActive = GuiColor::COL_BTN_BG_DEFAULT_ACTIVE;
-        meter.setVisible(false);
+        guiMeter.setVisible(false);
         add(&btnLoad);
     }
     ~guideferred() override {
@@ -166,6 +168,13 @@ void effectbase::updateOnEnableParam(automatable_param_t* param, bool wasEnable,
             param->inUse = true;
         }
     }
+}
+
+void effectbase::initMeters() {
+    meterDataOutput = std::shared_ptr<DAW::meter_runningsum[]>(new DAW::meter_runningsum[blockOutputs->channels]);
+    meterDataInput = std::shared_ptr<DAW::meter_runningsum[]>(new DAW::meter_runningsum[blockInputs->channels]);
+    meter = DAW::rmsmeter(&meterDataOutput[0], blockOutputs->channels);
+    meterIn = DAW::rmsmeter(&meterDataInput[0], blockInputs->channels);
 }
 
 effect_deferred* effectbase::toDeferred() {
@@ -240,6 +249,7 @@ void effect_deferred::load(vsthost* host) {
     effectbase::load(host);
     this->blockInputs  = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
     this->blockOutputs = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
+    initMeters();
 }
 String effect_deferred::getAutomatableName() {
     return "plugin";

@@ -850,7 +850,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
             size_t size = math::min<uint32_t>(AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType), numChannelsTrack);
             if (idx >= 0 && idx+size <= ptrExternalInputs->channels) {
                 track_audio_src src;
-                for (int i = 0; i < size; i++) {
+                for (int i = 0; i < size; ++i) {
                     src.channels.push_back(ptrExternalInputs->buf[idx+i]);
                 }
                 src.sampleFormat = host->m_sampleFormatExternal;
@@ -887,7 +887,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
                 break;
             }
             dbgassert(idx <= (int32_t)buff->channels);
-            for (uint32_t i = 0; i < buff->channels; i++) {
+            for (uint32_t i = 0; i < buff->channels; ++i) {
                 src.channels.push_back(buff->buf[i + idx]);
             }
             src.sampleFormat = stage->sampleFormat;
@@ -904,15 +904,24 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
             if (!eff  || !eff->blockOutputs) {
                 return false;
             }
-            track_audio_src src;
-            for (uint32_t i = inputChannel.inputChannelOffset; i < eff->blockOutputs->channels; i++) {
-                src.channels.push_back(eff->blockOutputs->buf[i]);
+            for (auto& desc : eff->outputChannelsDesc) {
+                if (desc.offset == inputChannel.inputChannelOffset) {
+                    track_audio_src src;
+                    for (uint32_t i = desc.offset; i < desc.offset+desc.count; ++i) {
+                        if (i >= eff->blockOutputs->channels) {
+                            log_lf(Log::L_WARN, "%s Output buffer has invalid size. Expected %d channels, found %d\n", StringAsCStr(eff->getName()), desc.offset+desc.count, eff->blockOutputs->channels);
+                            return false;
+                        }
+                        src.channels.push_back(eff->blockOutputs->buf[i]);
+                    }
+                    src.sampleFormat = stage->sampleFormat;
+                    src.samples = eff->blockOutputs->samples;
+                    src.latency = 0;
+                    out = std::move(src);
+                    return true;
+                }
             }
-            src.sampleFormat = stage->sampleFormat;
-            src.samples = eff->blockOutputs->samples;
-            src.latency = 0;
-            out = std::move(src);
-            return true;
+            log_lf(Log::L_WARN, "%s Does not have output with offset %d\n", StringAsCStr(eff->getName()), inputChannel.inputChannelOffset);
         }
     }
     return false;
@@ -2377,9 +2386,6 @@ void vsthost::processAudio(audio_stage_t* stage,
                     continue;
                 if (DAW::isChannelConnected(tracksrc.channel)) {
                     track_audio_src src;
-                    //if (dbg == 0) {
-                    //    log_printf("track %s has input %s\n", StringAsCStr(track->name), StringAsCStr(tracksrc.channel.name));
-                    //}
 
                     if (DAW::resolveAudioChannel(this, numChannelsTrack, tracksrc.channel, /*ptrExternalInputs*/ nullptr, src)) {
                         /**

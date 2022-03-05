@@ -27,7 +27,7 @@ public:
     guibuttontoggle buttonDelete;
     guibuttontoggle buttonLayout;
     guibuttontoggle buttonSave;
-    gui_trackmeter<16000, 2> meter;
+    gui_trackmeter  guiMeter;
     float titlePosX        = 0;
     bool hasDragged        = false;
     bool isHorizontalTitle = true;

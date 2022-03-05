@@ -22,18 +22,21 @@ public:
     class HostIOStream : public AudioIO::AudioStream {
         public:
         struct IOChannel {
-            IOChannel(int32_t _index, AudioIO::tracktype _type, int32_t _channelOffset, runningsum<16000>* sums)
-                : meter(sums, AudioIO::getNumChannelsFromTrackType(_type)), buf((uint32_t) AudioIO::getNumChannelsFromTrackType(_type), 0),
-                  index(_index),
-                  channelOffset(_channelOffset),
-                  type(_type) {
-            }
-            ~IOChannel() = default;
-            rmsmeter<16000> meter;
+            DAW::rmsmeter meter;
             AudioBlock buf;
             int32_t index         = 0;
             int32_t channelOffset = 0;
             AudioIO::tracktype type;
+
+            IOChannel(int32_t _index, AudioIO::tracktype _type, int32_t _channelOffset, DAW::rmsmeter&& _meter)
+                : meter(_meter),
+                buf((uint32_t) AudioIO::getNumChannelsFromTrackType(_type), 0),
+                index(_index),
+                channelOffset(_channelOffset),
+                type(_type)
+            {
+            }
+            ~IOChannel() = default;
         };
 
         enum StreamDirection {
@@ -62,8 +65,10 @@ public:
         moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueueInput;
         audiothread_ringbuffer_t ringbuffer;
 
-        rmsmeterimpl<16000, 32> metersInput;
-        rmsmeterimpl<16000, 32> metersOutput;
+        std::array<DAW::meter_runningsum, 32> meterDataInput;
+        std::array<DAW::meter_runningsum, 32> meterDataOutput;
+        DAW::rmsmeter metersInput;
+        DAW::rmsmeter metersOutput;
 
         std::vector<std::shared_ptr<IOChannel>> channelsInput;
         std::vector<std::shared_ptr<IOChannel>> channelsOutput;

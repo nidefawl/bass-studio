@@ -41,14 +41,16 @@ class effectbase : public automatable_t {
 #endif
     int nLoadCalls = 0;
 
+    std::shared_ptr<DAW::meter_runningsum[]> meterDataInput;
+    std::shared_ptr<DAW::meter_runningsum[]> meterDataOutput;
 public:
-    rmsmeterimpl<16000> meterIn;
-    rmsmeterimpl<16000> meter;
+    DAW::rmsmeter meter;
+    DAW::rmsmeter meterIn;
     sampleformat_t format;
     AudioBlock* blockInputs  = nullptr;// guaranteed to have at least 2 channels
     AudioBlock* blockOutputs = nullptr;// guaranteed to have at least 2 channels
     int32_t pluginType       = 0;
-    int32_t projectGlobalId;
+    int32_t projectGlobalId  = 0;
     bool bIsEnabled           = false;
     bool bIsSetup             = false;
     bool bEditOpen            = false;
@@ -90,6 +92,8 @@ public:
         this->szName = this->sName.c_str();
 #endif
     }
+    void initDefaultIODesc();
+    void initMeters();
     virtual int getModuleType()  = 0;
     virtual guiplugin* makeGui() = 0;
     virtual guiplugin* getGui()  = 0;

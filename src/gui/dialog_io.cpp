@@ -29,25 +29,9 @@ namespace DialogSettings {
 using ::DAW::settings;
 using namespace ::AudioIO;
 
-using meterType          = ::rmsmeter<16000>;
-using guimeterTypeMono   = ::gui_trackmeter<16000, 1>;
-using guimeterTypeStereo = ::gui_trackmeter<16000, 2>;
-using guimeterType4Ch    = ::gui_trackmeter<16000, 4>;
-using guimeterType6Ch    = ::gui_trackmeter<16000, 6>;
-
 constexpr int ID_BTN_CLOSE    = 1;
 constexpr int TEXT_FONT_SIZE  = 20;
 constexpr int BTN_FONT_SIZE   = 16;
-
-std::shared_ptr<guibase> getMeter(int32_t t, meterType* meter) {
-    if (t < 2) return std::make_shared<guimeterTypeMono>(meter);
-
-    if (t < 3) return std::make_shared<guimeterTypeStereo>(meter);
-
-    if (t < 5) return std::make_shared<guimeterType4Ch>(meter);
-
-    return std::make_shared<guimeterType6Ch>(meter);
-}
 
 class guidropdown_setting_options_t;
 class guidropdown_setting_options_ctxt_t : public guictxtmenu {
@@ -250,8 +234,7 @@ public:
         add(&btnTrackType);
         btnTrackType.setFontScale(0.3f);
         btnTrackType.setText(AudioIO::getTrackTypeStr(_ioChannel->type));
-        int32_t nChannels = getNumChannelsFromTrackType(_ioChannel->type);
-        guimeter          = getMeter(nChannels, &_ioChannel->meter);
+        guimeter = std::make_shared<gui_trackmeter>(&_ioChannel->meter);
         add(guimeter.get());
         setBackgroundRendered(false);
         setBackgroundRenderedInset(false);

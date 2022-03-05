@@ -275,7 +275,9 @@ void vstplugin::configureIOChannels() {
 
     this->blockInputs  = new AudioBlock(math::max(2, inputCount), format.blockSize);
     this->blockOutputs = new AudioBlock(math::max(2, outputCount), format.blockSize);
+    initMeters();
 }
+
 void vstplugin::load(vsthost* host) {
     effectbase::load(host);
     dbgassert(!this->bIsSetup);

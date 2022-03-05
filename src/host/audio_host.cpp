@@ -139,7 +139,10 @@ static void StreamFinished(void* userData) {
 audiohost::HostIOStream::HostIOStream(int32_t _nStreamId, AudioIO::io_cfg_tracks cfg, int32_t _nOutputChannels, int32_t _nInputChannels)
     : streamId(_nStreamId),
       nInputChannels(_nInputChannels),
-      nOutputChannels(_nOutputChannels) {
+      nOutputChannels(_nOutputChannels),
+      metersInput(meterDataInput.data(), meterDataInput.size()),
+      metersOutput(meterDataOutput.data(), meterDataOutput.size())
+{
     using AudioIO::io_cfg_channel;
     allocRingBuffer(ringbuffer, nInputChannels);
     channelsInput.resize(cfg.input.size());
@@ -147,13 +150,13 @@ audiohost::HostIOStream::HostIOStream(int32_t _nStreamId, AudioIO::io_cfg_tracks
     int32_t channelOffset = 0;
     for (int32_t i = 0; i < cfg.input.size(); i++) {
         io_cfg_channel& track = cfg.input[i];
-        channelsInput[i] = std::make_shared<HostIOStream::IOChannel>(i, track.type, channelOffset, &metersInput.channels[channelOffset]);
+        channelsInput[i] = std::make_shared<HostIOStream::IOChannel>(i, track.type, channelOffset, metersInput.getSubChannelMeter(channelOffset, AudioIO::getNumChannelsFromTrackType(track.type)));
         channelOffset += getNumChannelsFromTrackType(track.type);
     }
     channelOffset = 0;
     for (int32_t i = 0; i < cfg.output.size(); i++) {
         io_cfg_channel& track = cfg.output[i];
-        channelsOutput[i] = std::make_shared<HostIOStream::IOChannel>(i, track.type, channelOffset, &metersOutput.channels[channelOffset]);
+        channelsOutput[i] = std::make_shared<HostIOStream::IOChannel>(i, track.type, channelOffset, metersOutput.getSubChannelMeter(channelOffset, AudioIO::getNumChannelsFromTrackType(track.type)));
         channelOffset += getNumChannelsFromTrackType(track.type);
     }
 }

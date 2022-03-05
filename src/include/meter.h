@@ -1,9 +1,12 @@
 #pragma once
 #include <cstdint>
+#include "assert_dbg.h"
 #include "math/seq_math.h"
 #include "audioblock.h"
 #include "seq_util.h"
 #include "seq_time.h"
+
+namespace DAW {
 
 //TODO: make samplerate dependent
 struct meter_lvls {
@@ -73,82 +76,85 @@ public:
             }
         }
     }
-    meter_lvls getLevels() {
+    meter_lvls getLevels() const {
         return meter_lvls{ fMax, fPeak, fLvl };
     }
 };
 
-template<uint32_t N>
-struct rmsmeter {
-    runningsum<N>* channels;
-    int32_t numChannels;
-    rmsmeter(runningsum<N>* _channels, int32_t _numChannels)
-        : channels(_channels), numChannels(_numChannels) {
-    }
-    float getRms(int i) {
-        return channels[i].fLvl;
-    }
-    float getMax(int i) {
-        return channels[i].fMax;
-    }
-    float getStandingPeak(int i) {
-        return channels[i].fPeak;
-    }
-    void onTick(double since) {
-        for (decltype(numChannels) i = 0; i < numChannels; i++) {
-            channels[i].onTick(since);
-        }
-    }
-    std::vector<meter_lvls> getLevels() {
-        std::vector<meter_lvls> v;
-        for (decltype(numChannels) i = 0; i < numChannels; i++) {
-            v.push_back(std::move(channels[i].getLevels()));
-        }
-        return v;
-    }
-};
-template<uint32_t N, uint32_t C = 2>
-class rmsmeterimpl {
+using meter_runningsum = runningsum<16000>;
+
+class rmsmeter {
+    bool isDefaultCstr=true;
+    int count = 0;
+    std::vector<meter_runningsum*> channels;
 public:
-    runningsum<N> channels[C];
-    void update(const AudioBlock* block, float fTrackGain) {
-        for (uint32_t i = 0; i < math::min(block->channels, C); i++) {
-            channels[i].update(block->buf[i], block->samples, fTrackGain);
+    rmsmeter(meter_runningsum* _channels, uint8_t _numChannels)
+        : channels(_numChannels)
+    {
+        dbgassert(channels.size());
+        isDefaultCstr = false;
+        count = _numChannels;
+        for (uint8_t idx = 0; idx < _numChannels; ++idx) {
+            channels[idx] = _channels++;
         }
     }
-    float getMaxRMS() {
-        float f = channels[0].fLvl;
+    rmsmeter() = default;
+    float getRms(int i) const {
+        dbgassert(channels.size());
+        return channels[i]->fLvl;
+    }
+    float getMax(int i) const {
+        dbgassert(channels.size());
+        return channels[i]->fMax;
+    }
+    float getMaxRMS() const {
+        dbgassert(channels.size());
+        float f = channels[0]->fLvl;
         for (auto& cn : channels) {
-            f = std::max(f, cn.fLvl);
+            f = std::max(f, cn->fLvl);
         }
         return f;
     }
-    float getMaxPeak() {
-        float f = channels[0].fMax;
+    float getMaxPeak() const {
+        dbgassert(channels.size());
+        float f = channels[0]->fMax;
         for (auto& cn : channels) {
-            f = std::max(f, cn.fMax);
+            f = std::max(f, cn->fMax);
         }
         return f;
     }
-    float getRms(int i) {
-        return channels[i].fLvl;
-    }
-    float getMax(int i) {
-        return channels[i].fMax;
-    }
-    float getStandingPeak(int i) {
-        return channels[i].fPeak;
+    float getStandingPeak(int i) const {
+        dbgassert(channels.size());
+        return channels[i]->fPeak;
     }
     void onTick(double since) {
-        for (uint32_t i = 0; i < C; i++) {
-            channels[i].onTick(since);
+        for (auto& cn : channels) {
+            cn->onTick(since);
         }
     }
-    std::vector<meter_lvls> getLevels() {
-        std::vector<meter_lvls> v;
-        for (uint32_t i = 0; i < C; i++) {
-            v.push_back(std::move(channels[i].getLevels()));
+    std::vector<meter_lvls> getLevels() const {
+        std::vector<meter_lvls> v(channels.size());
+        auto it = v.begin();
+        for (auto& cn : channels) {
+            *it++ = cn->getLevels();
         }
         return v;
     }
+    
+    void update(const AudioBlock* block, float fTrackGain) {
+        for (size_t i = 0; i < math::min<size_t>(block->channels, channels.size()); i++) {
+            channels[i]->update(block->buf[i], block->samples, fTrackGain);
+        }
+    }
+    rmsmeter getSubChannelMeter(uint8_t channelOffset, uint8_t channelCount) {
+        dbgassert(channels.size());
+        dbgassert(channelOffset + channelCount <= channels.size());
+        return {channels[channelOffset], channelCount};
+    }
+    uint8_t getNumChannels() const {
+        return channels.size();
+    }
 };
+
+
+}

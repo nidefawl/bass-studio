@@ -105,8 +105,10 @@ struct audio_stage_t {
      * Used in drag/move handling
      */
     guictr_plugins* m_pluginCtr;
-    rmsmeterimpl<16000> meter;
-    rmsmeterimpl<16000> meterInput;
+    std::shared_ptr<DAW::meter_runningsum[]> meterDataInput;
+    std::shared_ptr<DAW::meter_runningsum[]> meterDataOutput;
+    DAW::rmsmeter meter;
+    DAW::rmsmeter meterInput;
     /**
      * Internal pre-process per-block input buffer
      * guaranteed to have at least 2 channels
@@ -146,10 +148,17 @@ struct audio_stage_t {
       mixer(this),
       type(_type)
     {
-          sampleFormat.blockSize = _blockSize;
-          sampleFormat.sampleRate = _sampleRate;
-          sampleFormat.sampleformat = sampleformat_bits_t::FLOAT_32;
-          configureDefaultRoutings();
+        initMeters();
+        sampleFormat.blockSize    = _blockSize;
+        sampleFormat.sampleRate   = _sampleRate;
+        sampleFormat.sampleformat = sampleformat_bits_t::FLOAT_32;
+        configureDefaultRoutings();
+    }
+    void initMeters() {
+        meterDataOutput = std::shared_ptr<DAW::meter_runningsum[]>(new DAW::meter_runningsum[output.channels]);
+        meterDataInput = std::shared_ptr<DAW::meter_runningsum[]>(new DAW::meter_runningsum[input.channels]);
+        meter = DAW::rmsmeter(meterDataOutput.get(), output.channels);
+        meterInput = DAW::rmsmeter(meterDataInput.get(), input.channels);
     }
     virtual ~audio_stage_t();
     void getDeferredEffects(std::vector<effectbase*>& out_effects) {

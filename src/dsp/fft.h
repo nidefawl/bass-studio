@@ -157,11 +157,9 @@ public:
     double processedTime = 0;
     int init             = 0;
     std::array<std::array<float, INPUTLEN>, OUTPUT_CHANNELS> ins{};
-    //  int32_t numBands;
-    //  std::array<std::vector<float>, OUTPUT_CHANNELS> bands{};
-    //  std::array<std::vector<float>, OUTPUT_CHANNELS> mags{};
     std::vector<float> freq{};
-    rmsmeterimpl<16000> meter;
+    std::array<DAW::meter_runningsum, OUTPUT_CHANNELS> meterData;
+    DAW::rmsmeter meter;
     //  audio_spectrum_t(const int32_t _blocksize, const int32_t _samplerate);
     //  ~audio_spectrum_t();
     //  void setNumBands(int bands);
@@ -222,7 +220,10 @@ public:
         }
     }
     fft_processor(const int32_t _blocksize, const int32_t _samplerate)
-        : audio_spectrum(_blocksize, _samplerate, INPUTLEN * T, 64), fftctxt(new fft_ctxt_t<INPUTLEN>(fftlen, srOverFFT)) {
+        : audio_spectrum(_blocksize, _samplerate, INPUTLEN * T, 64),
+        fftctxt(new fft_ctxt_t<INPUTLEN>(fftlen, srOverFFT)),
+        meter(meterData.data(), static_cast<uint8_t>(meterData.size()))
+    {
         updateBands();
         assert(freq.size() == bands[0].size());
         for (int i = 0; i < OUTPUT_CHANNELS; i++) {

@@ -34,7 +34,7 @@
 #include "appsettings.h"
 #include "host/audio_host.h"
 #include "host/projectcontroller.h"
-#include "guimeter_render.h"
+#include "guimeter.h"
 #include "trackctr_types.h"
 
 const int resizeHitY  = 8;
@@ -404,8 +404,6 @@ public:
 
 class gui_subtrack_waveview;
 
-std::shared_ptr<guibase> getMeter(int32_t t, rmsmeter<16000>* meter);
-
 /* track io menus */
 class ctxtmenu_entry_track_io : public ctxtmenu_entry {
 public:
@@ -493,15 +491,11 @@ public:
         ctxtmenu_entry_track_io::render(ctxtSize, vg, idx, mouse);
 
         if (channel.idx > -1) {
-            auto* stream = audiohost::getInstance()->getStream(0);
-            if (stream) {
-
-                auto& allMeters   = isInput == stagebuffer_point::INPUT ? stream->metersInput : stream->metersOutput;
-                int32_t nChannels = AudioIO::getNumChannelsFromTrackType(channel.type);
-                auto rmsMtr       = rmsmeter<16000>(allMeters.channels + channel.channelOffset, nChannels);
-                ivec2 sizeMeter{ height - 2, height - 2 };
-                renderMeterAt(vg, theme, { width - sizeMeter.x + 1, y + 1 }, sizeMeter, &rmsMtr);
-            }
+            // auto* stream = audiohost::getInstance()->getStream(0);
+            // if (stream) {
+                // ivec2 sizeMeter{ height - 2, height - 2 };
+                // renderMeterAt(vg, theme, { width - sizeMeter.x + 1, y + 1 }, sizeMeter, &rmsMtr);
+            // }
         }
     }
     bool isBus() override {
@@ -526,13 +520,7 @@ public:
 
         audio_stage_t* stage = vsthost::getInstance()->getAudioStage(endpoint.stageRef);
         if (stage) {
-            track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
-            dbgassert(trImpl);
-            if (trImpl) {
-                auto rmsMtr = rmsmeter<16000>(trImpl->meter.channels, trImpl->input.channels);
-                ivec2 sizeMeter{ height - 2, height - 2 };
-                renderMeterAt(vg, theme, { width - sizeMeter.x + 1, y + 1 }, sizeMeter, &rmsMtr);
-            }
+ 
         }
     }
 
@@ -828,7 +816,7 @@ public:
 class gui_trackcontrols_mixer : public guictr_base {
     track_t* const m_track;
     track_gui_entry_t* const m_trackentry;
-    gui_trackmeter<16000, 2> meter;
+    gui_trackmeter m_guiMeter;
 
 public:
     gui_trackgain gain;
@@ -840,7 +828,7 @@ public:
         : guictr_base(),
           m_track(_entry->track),
           m_trackentry(_entry),
-          meter(&_entry->track->audio->meter),
+          m_guiMeter(&_entry->track->audio->meter),
           btnBypass(_entry),
           btnSolo(_entry) {
         gain.setAutomationRef(&m_track->audio->mixer, PARAM_TRACK_GAIN);
@@ -855,7 +843,7 @@ public:
         add(&btnSolo);
         add(&btnActivate);
         add(&gain);
-        add(&meter);
+        add(&m_guiMeter);
         if (m_track->type != TRACK_TYPE_MASTER && m_track->type != TRACK_TYPE_RETURN) {
             sendGains.resize(MAX_SEND_CHANNELS);
             for (int i = 0; i < MAX_SEND_CHANNELS; i++) {
@@ -872,7 +860,7 @@ public:
             remove(sendGainCtrl);
             delete sendGainCtrl;
         }
-        remove(&meter);
+        remove(&m_guiMeter);
         remove(&gain);
         remove(&btnActivate);
         remove(&btnSolo);
@@ -940,8 +928,8 @@ public:
         btnActivate.setFontSize(h - 2);
         btnActivate.size = { h, h };
 
-        meter.size = ivec2(mW - i2, size.y - i2);
-        meter.pos  = ivec2(size.x - mW + inset, inset);
+        m_guiMeter.size = ivec2(mW - i2, size.y - i2);
+        m_guiMeter.pos  = ivec2(size.x - mW + inset, inset);
         if (!sendGains.empty()) {
             const int32_t HEIGHT_SEND_GAIN = h;
             const int32_t SEND_PER_ROW     = 1;
