@@ -83,7 +83,6 @@ public:
     ~effectbase() override;
     SafeRef<effectbase> makeSafeRef();
     String getName() const { return sName; };
-    const char* getDebugName() const { return szName; };
     String getProductName() const { return sProductName; };
     void setProductName(String _name) {
         replaceString(_name, "[jBridge]", "");
