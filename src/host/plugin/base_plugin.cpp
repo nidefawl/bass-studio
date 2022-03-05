@@ -1,6 +1,7 @@
 #include <utility>
 #include <vector>
 #include "base_plugin.h"
+#include "host/daw_channel.h"
 #include "track.h"
 #include "track_impl.h"
 #include "str_util.h"
@@ -57,7 +58,12 @@ effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGloba
     }
     getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
 }
-effectbase::effectbase() : pluginType(0), projectGlobalId(0) {
+effectbase::effectbase() 
+    : pluginType(0),
+    projectGlobalId(0)
+{
+    inputChannelsDesc.emplace_back(DAW::channel_desc{0, 2, String("Stereo Input")});
+    outputChannelsDesc.emplace_back(DAW::channel_desc{0, 2, String("Stereo Output")});
 }
 void effectbase::onTick(double since) {
     meter.onTick(since);

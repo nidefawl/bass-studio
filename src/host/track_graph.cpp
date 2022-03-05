@@ -1,3 +1,4 @@
+#include "logging.h"
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "seq_util.h"
@@ -30,7 +31,7 @@ namespace DAW {
             } else if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
                 auto* stage = host->getAudioStage(inputChannel.stage.stageRef);
                 if (!stage) {
-                    log_printf("Input audiostage with id %d not found\n", inputChannel.stage.stageRef);
+                    log_lf(Log::L_WARN, "Input audiostage with id %d not found\n", inputChannel.stage.stageRef);
                     trackImpl->inputChannel = ChannelNone();
                     numRemoved++;
                 } else {
@@ -48,7 +49,7 @@ namespace DAW {
             } else if (outputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
                 auto* stage = host->getAudioStage(outputChannel.stage.stageRef);
                 if (!stage) {
-                    log_printf("Output audiostage with id %d not found\n", outputChannel.stage.stageRef);
+                    log_lf(Log::L_WARN, "Output audiostage with id %d not found\n", outputChannel.stage.stageRef);
                     trackImpl->outputChannel = ChannelNone();
                     numRemoved++;
                 } else {
@@ -58,6 +59,9 @@ namespace DAW {
                 dbgassert(outputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
                 //outputChannel.stage.stageRef.stageId = TRACKID_INVALID_I32; //FIX: old project files have stageId == 0
             }
+        }
+        if (numRemoved) {
+          log_lf(Log::L_WARN, "Removed %d track routings\n");
         }
         return numRemoved == 0;
     }

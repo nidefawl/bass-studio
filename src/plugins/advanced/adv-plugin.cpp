@@ -91,38 +91,6 @@ namespace PluginTestAdv {
         return value;
     }
 
-
-    bool GuiAdvPluginVST2::getInputProperties(VstInt32 index, VstPinProperties* properties) {
-        if (index == 0 || index == 1) {
-            properties->flags = kVstPinIsActive | kVstPinIsStereo;
-        }
-        if (index == 0) {
-            strcpy(properties->label, "Left input");
-            strcpy(properties->shortLabel, "L in");
-            return true;
-        } else if (index == 1) {
-            strcpy(properties->label, "Right input");
-            strcpy(properties->shortLabel, "R in");
-            return true;
-        }
-        return false;
-    }
-    bool GuiAdvPluginVST2::getOutputProperties(VstInt32 index, VstPinProperties* properties) {
-        if (index == 0 || index == 1) {
-            properties->flags = kVstPinIsActive | kVstPinIsStereo;
-        }
-        if (index == 0) {
-            strcpy(properties->label, "Left output");
-            strcpy(properties->shortLabel, "L out");
-            return true;
-        } else if (index == 1) {
-            strcpy(properties->label, "Right output");
-            strcpy(properties->shortLabel, "R out");
-            return true;
-        }
-        return false;
-    }
-
     bool GuiAdvPluginVST2::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
         if (index >= 0 && index < kNumPrograms) {
             vst_strncpy(text, programs[index].name, kVstMaxProgNameLen);

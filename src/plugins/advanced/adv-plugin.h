@@ -67,9 +67,6 @@ namespace PluginTestAdv {
         void getParameterDisplay(VstInt32 index, char* text) override;
         void getParameterName(VstInt32 index, char* text) override;
 
-        bool getInputProperties(VstInt32 index, VstPinProperties* properties) override;
-        bool getOutputProperties(VstInt32 index, VstPinProperties* properties) override;
-
         bool getEffectName(char* name) override;
         bool getVendorString(char* text) override;
         bool getProductString(char* text) override;

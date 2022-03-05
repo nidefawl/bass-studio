@@ -20,7 +20,7 @@ struct io_configuration_snapshot_t {
     int32_t externalInputType = 0;
     int32_t externalInputId   = 0;
     int32_t channelOffset     = 0;
-    int32_t inputType         = 0;
+    int32_t projectGlobalId   = 0;
 };
 struct track_io_configuration_snapshot_t {
     io_configuration_snapshot_t input;

@@ -626,18 +626,20 @@ namespace DAW {
     void loadDawChannelRefSnapshot(const io_configuration_snapshot_t& cfg, channel_ref_t& channel);
 
     void createDawChannelRefSnapshot(const DAW::channel_ref_t& channel, io_configuration_snapshot_t& cfg) {
-        cfg.inputType         = static_cast<int32_t>(channel.type);
-        cfg.channelOffset     = channel.inputChannelOffset;
+        cfg.type              = static_cast<int32_t>(channel.type);
         cfg.stageId           = static_cast<int32_t>(channel.stage.stageRef.stageId);
         cfg.stageEndPointType = static_cast<int32_t>(channel.stage.buffer);
-        cfg.externalInputId   = channel.externalInputIdx;
         cfg.externalInputType = static_cast<int32_t>(channel.externalInputType);
+        cfg.externalInputId   = channel.externalInputIdx;
+        cfg.channelOffset     = channel.inputChannelOffset;
+        cfg.projectGlobalId   = channel.projectGlobalId;
     }
     void loadDawChannelRefSnapshot(const io_configuration_snapshot_t& cfg, channel_ref_t& channel) {
-        channel.type                   = static_cast<DAW::channel_input_type>(cfg.inputType);
+        channel.type                   = static_cast<DAW::channel_input_type>(cfg.type);
         channel.inputChannelOffset     = cfg.channelOffset;
         channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
         channel.stage.buffer           = static_cast<stagebuffer_point>(cfg.stageEndPointType);
+        channel.projectGlobalId        = cfg.projectGlobalId;
         channel.externalInputIdx       = cfg.externalInputId;
         channel.externalInputType      = static_cast<AudioIO::tracktype>(cfg.externalInputType);
     }

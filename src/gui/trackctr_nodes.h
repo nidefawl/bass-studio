@@ -30,7 +30,6 @@ class gui_graph_entry : public guictr_base {
 protected:
     int icon        = 0;
     bool selected   = false;
-    float rowHeight = 0;
 
 public:
     gui_graph_entry() : guictr_base() {

@@ -74,4 +74,9 @@ namespace DAW {
     bool resolveDefaultConnection(const vsthost* host, const project_t* project, track_impl_t* trImpl, bool isInput, channel_ref_t& out);
     bool resolveAudioChannel(const vsthost* host, int32_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* ptrExternalInputs, track_audio_src& out);
 
+    struct channel_desc {
+        int offset = -1;
+        int count = -1;
+        String name;
+    };
 }// namespace DAW

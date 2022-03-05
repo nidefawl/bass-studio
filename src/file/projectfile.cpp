@@ -165,13 +165,20 @@ void serialize(Archive& archive, arp_snapshot& m) {
 
 template<class Archive>
 void serialize(Archive& archive, io_configuration_snapshot_t& m) {
-    archive(make_nvp("channelOffset", m.channelOffset),
-            make_nvp("externalInputId", m.externalInputId),
-            make_nvp("externalInputId", m.externalInputId),
-            make_nvp("externalInputType", m.externalInputType),
-            make_nvp("inputType", m.inputType),
+    try {
+        archive(
+            make_nvp("type", m.type),
+            make_nvp("stageId", m.stageId),
             make_nvp("stageEndPointType", m.stageEndPointType),
-            make_nvp("stageId", m.stageId));
+            make_nvp("externalInputType", m.externalInputType),
+            make_nvp("externalInputId", m.externalInputId),
+            make_nvp("channelOffset", m.channelOffset),
+            make_nvp("projectGlobalId", m.projectGlobalId)
+        );
+    } catch (const std::exception& e) {
+        m = {};
+        log_lf(Log::L_WARN, "Failed loading io_configuration_snapshot_t: %s\n", e.what());
+    }
 }
 
 template<class Archive>
@@ -181,9 +188,11 @@ void serialize(Archive& archive, track_io_configuration_snapshot_t& m) {
 
 template<class Archive>
 void serialize(Archive& archive, track_effect_routing_snapshot_t& m) {
-    //archive(make_nvp("inputRoutingOutputStage", m.inputRoutingOutputStage));
-    archive(make_nvp("inputRoutingOutputStage", m.inputRoutingOutputStage), make_nvp("inputRoutingEffects", m.inputRoutingEffects),
-            make_nvp("routingState", m.routingState));
+    archive(
+        make_nvp("inputRoutingOutputStage", m.inputRoutingOutputStage),
+        make_nvp("inputRoutingEffects", m.inputRoutingEffects),
+        make_nvp("routingState", m.routingState)
+    );
 }
 
 template<class Archive>

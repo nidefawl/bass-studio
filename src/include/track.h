@@ -594,8 +594,8 @@ struct project_layout_t {
 };
 
 struct graph_node_layout_t {
-    ivec2 pos;
-    ivec2 size;
+    vec2 pos;
+    vec2 size;
 };
 
 class project_t {

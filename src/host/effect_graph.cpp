@@ -19,25 +19,29 @@
 
 
 namespace DAW {
-    size_t validateInput(const vsthost* const host, audio_stage_t* stage, DAW::channel_ref_t& inputChannel) {
+    size_t validateEffectRouting(const vsthost* const host, audio_stage_t* stage, DAW::channel_ref_t& inputChannel) {
         size_t numRemoved = 0;
-        if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
+        if (inputChannel.getType() == channel_input_type::INPUT_DEFAULT) {
+            inputChannel = DAW::ChannelDefaultNone();
+        } else if (inputChannel.getType() == channel_input_type::INPUT_EMPTY) {
+            inputChannel = DAW::ChannelDefaultNone();
+        } else if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
             int32_t idx  = inputChannel.externalInputIdx;
             String name  = "External " + AudioIO::getTrackNameShort(inputChannel.externalInputType, idx, stagebuffer_point::INPUT);
             inputChannel = ChannelAudioInput(idx, inputChannel.inputChannelOffset, name, inputChannel.externalInputType);
         } else if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
             auto* srcstage = host->getAudioStage(inputChannel.stage.stageRef);
             if (!srcstage) {
-                log_printf("Input audiostage with id %d not found\n", inputChannel.stage.stageRef);
+                log_lf(Log::L_WARN, "Input audiostage with id %d not found\n", inputChannel.stage.stageRef);
                 inputChannel = ChannelNone();
                 numRemoved++;
             } else {
-                inputChannel = DAW::ChannelStage(srcstage, stagebuffer_point::OUTPUT_POST);
+                inputChannel = DAW::ChannelStage(srcstage, inputChannel.stage.buffer);
             }
         } else if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE_EFFECT) {
             auto* eff = host->getPluginById(inputChannel.projectGlobalId);
             if (!eff) {
-                log_printf("Input effect with id %d not found\n", inputChannel.projectGlobalId);
+                log_lf(Log::L_WARN, "Input effect with id %d not found\n", inputChannel.projectGlobalId);
                 inputChannel = ChannelNone();
                 numRemoved++;
             } else {
@@ -45,7 +49,10 @@ namespace DAW {
             }
         } else {
             dbgassert(inputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
-            //inputChannel.stage.stageRef.stageId = TRACKID_INVALID_I32; //FIX: old project files have stageId == 0
+            // inputChannel.stage.stageRef.stageId = TRACKID_INVALID_I32; //FIX: old project files have stageId == 0
+        }
+        if (numRemoved) {
+          log_lf(Log::L_WARN, "Removed %d effect routings\n");
         }
         return numRemoved;
     }
@@ -53,11 +60,11 @@ namespace DAW {
         size_t numRemoved = 0;
         for (effectbase* effect : stage->effects) {
             for (auto& inputChannel : effect->inputChannels) {
-                numRemoved += validateInput(host, stage, inputChannel);
+                numRemoved += validateEffectRouting(host, stage, inputChannel);
             }
         }
         for (auto& inputChannel : stage->postEffectRouting) {
-            numRemoved += validateInput(host, stage, inputChannel);
+            numRemoved += validateEffectRouting(host, stage, inputChannel);
         }
         return numRemoved == 0;
     }

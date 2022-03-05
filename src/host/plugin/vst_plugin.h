@@ -70,8 +70,6 @@ public:
         auto& map = incoming ? opCodeIn : opCodeOut;
         return map[opCode];
     }
-    std::vector<String> inputNames;
-    std::vector<String> outputNames;
     vstplugin(handles_t* _handle, int32_t globalId, String _sDir, String sName, int32_t _moduleId)
         : effectbase(std::move(sName), PLUGIN_TYPE_VST, globalId),
           handle(_handle),
@@ -112,6 +110,7 @@ public:
     bool close() override;
     void unload(vsthost* host, int flags) override;
     void load(vsthost* host) override;
+    void configureIOChannels();
     void postLoad();
     vst_param_category* getCategory(int idx);
     void recvParamDisplayValueUpdate(int32_t internalIdx);

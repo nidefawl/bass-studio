@@ -157,7 +157,119 @@ void vstplugin::unload(vsthost* host, int flags) {
     this->bIsSetup = false;
     log_printf("UNLOAD %s\n", StringAsCStr(this->sName));
 }
+void vstplugin::configureIOChannels() {
+    const auto inputCount = this->handle->aeffect->numInputs;
+    const auto outputCount = this->handle->aeffect->numOutputs;
+    for (int side = 0; side < 2; ++side) {
+        const auto channelCountSide = side == 0 ? inputCount : outputCount;
+        auto& channelDescs          = side == 0 ? inputChannelsDesc : outputChannelsDesc;
+        const char* sideName        = side == 0 ? "Input" : "Output";
+        const auto dispatchOpCode   = side == 0 ? effGetInputProperties : effGetOutputProperties;
+        channelDescs.clear();
+        int32_t pinIndex = 0;
+        VstPinProperties pin{};
+        if (pinIndex < channelCountSide && this->dispatch(dispatchOpCode, pinIndex, 0, &pin)) {
+            int32_t channelOffset = 0;
+            do {
+                const String pinName = pin.label;
+                // const String pinAttr = StringFormat("Active %d, Stereo %d, UseSpeaker %d",
+                //                             (pin.flags&VstPinPropertiesFlags::kVstPinIsActive)!=0,
+                //                             (pin.flags&VstPinPropertiesFlags::kVstPinIsStereo)!=0,
+                //                             (pin.flags&VstPinPropertiesFlags::kVstPinUseSpeaker)!=0);
+                // outputNames.push_back(StringFormat("%s (%s)", pin.label, StringAsCStr(pinAttr)));
+                bool handled = false;
+                if (pin.flags&VstPinPropertiesFlags::kVstPinIsStereo) {
+                    channelDescs.emplace_back(DAW::channel_desc{channelOffset, 2, pinName});
+                    channelOffset += 2;
+                    pinIndex += 2;
+                    handled = true;
+                } else if (pin.flags&VstPinPropertiesFlags::kVstPinUseSpeaker && pin.arrangementType > 0) {
+                    switch (pin.arrangementType) {
+                        case kSpeakerArr40Music:       ///< L R Ls  Rs (Quadro)
+                            channelDescs.emplace_back(DAW::channel_desc{channelOffset, 2, "L R"});
+                            channelOffset += 2;
+                            channelDescs.emplace_back(DAW::channel_desc{channelOffset, 2, "Ls Rs"});
+                            channelOffset += 2;
+                            pinIndex += 4;
+                            handled = true;
+                            break;
+                        case kSpeakerArrStereo:        ///< L R
+                        case kSpeakerArrStereoSurround:///< Ls Rs
+                        case kSpeakerArrStereoCenter:  ///< Lc Rc
+                        case kSpeakerArrStereoSide:    ///< Sl Sr
+                        case kSpeakerArr30Cine:        ///< L R C
+                        case kSpeakerArr30Music:       ///< L R S
+                        case kSpeakerArr31Cine:        ///< L R C Lfe
+                        case kSpeakerArr31Music:       ///< L R Lfe S
+                        case kSpeakerArr40Cine:        ///< L R C   S (LCRS)
+                        case kSpeakerArr41Cine:        ///< L R C   Lfe S (LCRS+Lfe)
+                        case kSpeakerArr41Music:       ///< L R Lfe Ls Rs (Quadro+Lfe)
+                        case kSpeakerArr50:            ///< L R C Ls  Rs
+                        case kSpeakerArr51:            ///< L R C Lfe Ls Rs
+                        case kSpeakerArr60Cine:        ///< L R C   Ls  Rs Cs
+                        case kSpeakerArr60Music:       ///< L R Ls  Rs  Sl Sr
+                        case kSpeakerArr61Cine:        ///< L R C   Lfe Ls Rs Cs
+                        case kSpeakerArr61Music:       ///< L R Lfe Ls  Rs Sl Sr
+                        case kSpeakerArr70Cine:        ///< L R C Ls  Rs Lc Rc
+                        case kSpeakerArr70Music:       ///< L R C Ls  Rs Sl Sr
+                        case kSpeakerArr71Cine:        ///< L R C Lfe Ls Rs Lc Rc
+                        case kSpeakerArr71Music:       ///< L R C Lfe Ls Rs Sl Sr
+                        case kSpeakerArr80Cine:        ///< L R C Ls  Rs Lc Rc Cs
+                        case kSpeakerArr80Music:       ///< L R C Ls  Rs Cs Sl Sr
+                        case kSpeakerArr81Cine:        ///< L R C Lfe Ls Rs Lc Rc Cs
+                        case kSpeakerArr81Music:       ///< L R C Lfe Ls Rs Cs Sl Sr
+                        case kSpeakerArr102:           ///< L R C Lfe Ls Rs Tfl Tfc Tfr Trl Trr Lfe2
+                            channelDescs.emplace_back(DAW::channel_desc{channelOffset, 2, pinName});
+                            channelOffset += 2;
+                            pinIndex += 2;
+                            handled = true;
+                            break;
+                        case kSpeakerArrStereoCLfe:    ///< C Lfe
+                            break;
+                    }
+                } 
+                if (!handled) {
+                    channelDescs.emplace_back(DAW::channel_desc{channelOffset, 1, pinName});
+                    channelOffset += 1;
+                    pinIndex += 1;
+                }
+                pin = {};
+            } while (pinIndex < channelCountSide && this->dispatch(dispatchOpCode, pinIndex, 0, &pin));
+        } else {
+            if (channelCountSide == 1) {
+                channelDescs.emplace_back(DAW::channel_desc{0, 1, StringFormat("Mono %s", sideName)});
+            } else if (channelCountSide == 2) {
+                channelDescs.emplace_back(DAW::channel_desc{0, 2, StringFormat("Stereo %s", sideName)});
+            } else if (channelCountSide == 4) {
+                channelDescs.emplace_back(DAW::channel_desc{0, 2, StringFormat("Stereo %s", sideName)});
+                if (side == 0) {
+                    channelDescs.emplace_back(DAW::channel_desc{2, 2, StringFormat("Sidechain %s", sideName)});
+                } else {
+                    channelDescs.emplace_back(DAW::channel_desc{2, 2, StringFormat("Stereo %s", sideName)});
+                }
+            } else {
+                for (int i = 0; i < channelCountSide;) {
+                    if (i + 1 < channelCountSide) {
+                        channelDescs.emplace_back(DAW::channel_desc{i, 2, StringFormat("Stereo %s #", sideName, i)});
+                        i += 2;
+                    } else {
+                        channelDescs.emplace_back(DAW::channel_desc{i, 1, StringFormat("Mono %s #", sideName, i)});
+                        i += 1;
+                    }
+                }
+            }
+        }
+        for (auto& chanDesc : channelDescs) {
+            if (chanDesc.count + chanDesc.offset > channelCountSide) {
+                log_lf(Log::L_WARN, "Invalid %s channel configuration for %s: Channel %s with offset %d, count %d exceeds advertised input channel count of %d\n", 
+                    sideName, StringAsCStr(getName()), StringAsCStr(chanDesc.name), chanDesc.offset, chanDesc. count, channelCountSide);
+            }
+        }
+    }
 
+    this->blockInputs  = new AudioBlock(math::max(2, inputCount), format.blockSize);
+    this->blockOutputs = new AudioBlock(math::max(2, outputCount), format.blockSize);
+}
 void vstplugin::load(vsthost* host) {
     effectbase::load(host);
     dbgassert(!this->bIsSetup);
@@ -176,35 +288,7 @@ void vstplugin::load(vsthost* host) {
     this->dispatch(effSetSampleRate, 0, 0, nullptr, (float) format.sampleRate);
     this->dispatch(effSetBlockSize, 0, format.blockSize, nullptr, 0);
 
-    this->blockInputs  = new AudioBlock(math::max(2, aeffect->numInputs), format.blockSize);
-    this->blockOutputs = new AudioBlock(math::max(2, aeffect->numOutputs), format.blockSize);
-
-    for (int32_t i = 0; i < aeffect->numInputs; i++) {
-        VstPinProperties pin{};
-        if (this->dispatch(effGetInputProperties, i, 0, &pin)) {
-            String pinName = pin.label;
-            String pinAttr = StringFormat("Active %d, Stereo %d, UseSpeaker %d",
-                                          (pin.flags&VstPinPropertiesFlags::kVstPinIsActive)!=0,
-                                          (pin.flags&VstPinPropertiesFlags::kVstPinIsStereo)!=0,
-                                          (pin.flags&VstPinPropertiesFlags::kVstPinUseSpeaker)!=0);
-            inputNames.push_back(StringFormat("%s (%s)", pin.label, StringAsCStr(pinAttr)));
-        } else {
-            inputNames.push_back(StringFormat("Input %d", i));
-        }
-    }
-    for (int32_t i = 0; i < aeffect->numOutputs; i++) {
-        VstPinProperties pin{};
-        if (this->dispatch(effGetOutputProperties, i, 0, &pin)) {
-            String pinName = pin.label;
-            String pinAttr = StringFormat("Active %d, Stereo %d, UseSpeaker %d",
-                                          (pin.flags&VstPinPropertiesFlags::kVstPinIsActive)!=0,
-                                          (pin.flags&VstPinPropertiesFlags::kVstPinIsStereo)!=0,
-                                          (pin.flags&VstPinPropertiesFlags::kVstPinUseSpeaker)!=0);
-            outputNames.push_back(StringFormat("%s (%s)", pin.label, StringAsCStr(pinAttr)));
-        } else {
-            outputNames.push_back(StringFormat("Output %d", i));
-        }
-    }
+    configureIOChannels();
 
     this->pluginCategory  = this->dispatch(effGetPlugCategory);
     this->isSynth         = (handle->aeffect->flags & effFlagsIsSynth) != 0;

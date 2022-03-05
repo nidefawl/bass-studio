@@ -949,13 +949,13 @@ void vstplugin::addPropertiesTooltip(Table::tbl& table) {
     table.rows.push_back({ { tblstr{ "offQualities" }, tblint{ aeffect->offQualities } } });
     table.rows.push_back({ { tblstr{ "realQualities" }, tblint{ aeffect->realQualities } } });
     int n = 0;
-    for (auto& in : this->inputNames) {
-        table.rows.push_back({ { tblString{ StringFormat("input[%d]", n) }, tblstr{ StringAsCStr(in) } } });
+    for (auto& in : this->inputChannelsDesc) {
+        table.rows.push_back({ { tblString{ StringFormat("input[%d,%d]", in.offset, in.count) }, tblstr{ StringAsCStr(in.name) } } });
         n++;
     }
     n = 0;
-    for (auto& out : this->outputNames) {
-        table.rows.push_back({ { tblString{ StringFormat("output[%d]", n) }, tblstr{ StringAsCStr(out) } } });
+    for (auto& out : this->outputChannelsDesc) {
+        table.rows.push_back({ { tblString{ StringFormat("output[%d,%d]", out.offset, out.count) }, tblstr{ StringAsCStr(out.name) } } });
         n++;
     }
 }
