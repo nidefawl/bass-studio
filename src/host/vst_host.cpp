@@ -3061,7 +3061,7 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
 
 #endif
 
-vstpluginloadres vsthost::loadPlugin(String filepath, uint32_t uId, int32_t globalId) {
+vstpluginloadres vsthost::loadPlugin(String filepath, uint32_t uId, int32_t globalId, uint64_t bugfixFlags) {
     dbgassert(masterCallBackSlot);
 
     String path, name, nameWithoutExt;
@@ -3128,7 +3128,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, uint32_t uId, int32_t glob
 
     globalId = getNextGlobalModuleId(globalId);
 
-    auto* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, path, nameWithoutExt, -1);
+    auto* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, path, nameWithoutExt, -1, bugfixFlags);
 
     aeffect->user = plugin;
     plugin->handle->localCurrentUniqueId = uId;

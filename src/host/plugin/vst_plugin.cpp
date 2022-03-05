@@ -158,24 +158,29 @@ void vstplugin::unload(vsthost* host, int flags) {
     log_printf("UNLOAD %s\n", StringAsCStr(this->sName));
 }
 void vstplugin::configureIOChannels() {
-    const auto inputCount = this->handle->aeffect->numInputs;
+    const bool useGetPinProperties = (this->bugfixFlags & vst_workarounds::VST2_R4_BUG_STEREO_PLUGIN_REPORTS_MONO) == 0;
+
+    const auto inputCount  = this->handle->aeffect->numInputs;
     const auto outputCount = this->handle->aeffect->numOutputs;
     for (int side = 0; side < 2; ++side) {
         const auto channelCountSide = side == 0 ? inputCount : outputCount;
         auto& channelDescs          = side == 0 ? inputChannelsDesc : outputChannelsDesc;
         const char* sideName        = side == 0 ? "Input" : "Output";
         const auto dispatchOpCode   = side == 0 ? effGetInputProperties : effGetOutputProperties;
+
         channelDescs.clear();
         int32_t pinIndex = 0;
         VstPinProperties pin{};
-        if (pinIndex < channelCountSide && this->dispatch(dispatchOpCode, pinIndex, 0, &pin)) {
+
+        if (useGetPinProperties && pinIndex < channelCountSide && this->dispatch(dispatchOpCode, pinIndex, 0, &pin)) {
             int32_t channelOffset = 0;
             do {
                 const String pinName = pin.label;
-                // const String pinAttr = StringFormat("Active %d, Stereo %d, UseSpeaker %d",
-                //                             (pin.flags&VstPinPropertiesFlags::kVstPinIsActive)!=0,
-                //                             (pin.flags&VstPinPropertiesFlags::kVstPinIsStereo)!=0,
-                //                             (pin.flags&VstPinPropertiesFlags::kVstPinUseSpeaker)!=0);
+                const String pinAttr = StringFormat("Active %d, Stereo %d, UseSpeaker %d",
+                                            (pin.flags&VstPinPropertiesFlags::kVstPinIsActive)!=0,
+                                            (pin.flags&VstPinPropertiesFlags::kVstPinIsStereo)!=0,
+                                            (pin.flags&VstPinPropertiesFlags::kVstPinUseSpeaker)!=0);
+                log_lf(Log::L_WARN, "Pin %d: %s %s arrangementType %d\n", pinIndex, StringAsCStr(pinName), StringAsCStr(pinAttr), pin.arrangementType);
                 // outputNames.push_back(StringFormat("%s (%s)", pin.label, StringAsCStr(pinAttr)));
                 bool handled = false;
                 if (pin.flags&VstPinPropertiesFlags::kVstPinIsStereo) {
@@ -267,6 +272,7 @@ void vstplugin::configureIOChannels() {
         }
     }
 
+
     this->blockInputs  = new AudioBlock(math::max(2, inputCount), format.blockSize);
     this->blockOutputs = new AudioBlock(math::max(2, outputCount), format.blockSize);
 }
@@ -276,23 +282,47 @@ void vstplugin::load(vsthost* host) {
     auto aeffect = handle->aeffect;
 
     aeffect->resvd2     = 0;
-    this->vstVersion    = dispatch(effGetVstVersion);
     this->uId           = aeffect->uniqueID;
-    this->vendorVersion = dispatch(effGetVendorVersion);
-
-    this->dispatch(effIdentify, 0, 0, nullptr, 0);
-    this->dispatch(effOpen);
-    this->dispatch(effStopProcess);
-    this->dispatch(effMainsChanged, 0, false);
-
-    this->dispatch(effSetSampleRate, 0, 0, nullptr, (float) format.sampleRate);
-    this->dispatch(effSetBlockSize, 0, format.blockSize, nullptr, 0);
-
-    configureIOChannels();
-
-    this->pluginCategory  = this->dispatch(effGetPlugCategory);
     this->isSynth         = (handle->aeffect->flags & effFlagsIsSynth) != 0;
-    this->bCanReceiveMidi = this->isSynth || this->dispatch(effCanDo, 0, 0, (void*) PlugCanDos::canDoReceiveVstMidiEvent) > 0;
+    this->bCanReceiveMidi = this->isSynth;
+    this->vstVersion    = dispatch(effGetVstVersion);
+    this->vendorVersion = dispatch(effGetVendorVersion);
+// this->dispatch(effIdentify, 0, 0, nullptr, 0);
+    this->pluginCategory  = this->dispatch(effGetPlugCategory);
+
+    #if 0
+        this->dispatch(effIdentify, 0, 0, nullptr, 0);
+        this->dispatch(effSetSampleRate, 0, 0, nullptr, (float) format.sampleRate);
+        this->dispatch(effSetBlockSize, 0, format.blockSize, nullptr, 0);
+
+        this->dispatch(effOpen);
+        this->dispatch(effSetSampleRate, 0, 0, nullptr, (float) format.sampleRate);
+        this->dispatch(effSetBlockSize, 0, format.blockSize, nullptr, 0);
+        this->bCanSendMidi    |= this->dispatch(effCanDo, 0, 0, (void*) PlugCanDos::canDoSendVstMidiEvent) > 0;
+        this->bCanReceiveMidi |= this->dispatch(effCanDo, 0, 0, (void*) PlugCanDos::canDoReceiveVstMidiEvent) > 0;
+        this->bMPESupport     |= this->dispatch(effCanDo, 0, 0, (void*) "MPE") > 0;
+        VstPinProperties pin{};
+        this->dispatch(effGetInputProperties, 0, 0, &pin);
+        pin = {};
+        this->dispatch(effGetOutputProperties, 0, 0, &pin);
+        this->dispatch(effMainsChanged, 0, true);
+        this->dispatch(effMainsChanged, 0, false);
+        configureIOChannels();  
+    #else
+        this->dispatch(effOpen);
+        this->dispatch(effStopProcess);
+        this->dispatch(effMainsChanged, 0, false);
+        this->dispatch(effSetSampleRate, 0, 0, nullptr, (float) format.sampleRate);
+        this->dispatch(effSetBlockSize, 0, format.blockSize, nullptr, 0);
+        this->bCanSendMidi    |= this->dispatch(effCanDo, 0, 0, (void*) PlugCanDos::canDoSendVstMidiEvent) > 0;
+        this->bCanReceiveMidi |= this->dispatch(effCanDo, 0, 0, (void*) PlugCanDos::canDoReceiveVstMidiEvent) > 0;
+        this->bMPESupport     |= this->dispatch(effCanDo, 0, 0, (void*) "MPE") > 0;
+
+        configureIOChannels();  
+    #endif
+
+
+
 
 
     char buf[1024];

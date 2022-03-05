@@ -32,7 +32,8 @@ void createTables(SQLite::Database& db) {
               " `productName` TEXT NOT NULL,\n"
               " `effectName` TEXT NOT NULL,\n"
               " `requestRescan` INTEGER DEFAULT 0,\n"
-              " `forcedisable` INTEGER DEFAULT 0\n"
+              " `forcedisable` INTEGER DEFAULT 0,\n"
+              " `bugfixFlags` INTEGER DEFAULT 0\n"
            ");";
         db.exec(queryCreate);
     }
@@ -112,6 +113,7 @@ public:
                 entry.name         = queryPlugin.getColumn("name").getString();
                 entry.path         = queryPlugin.getColumn("path").getString();
                 entry.relPath      = queryPlugin.getColumn("relPath").getString();
+                entry.bugfixFlags  = queryPlugin.getColumn("bugfixFlags").getUInt();
                 _outResult = std::move(entry);
                 return true;
             }
@@ -156,6 +158,7 @@ public:
             entry.name         = queryPlugin.getColumn("name").getString();
             entry.path         = queryPlugin.getColumn("path").getString();
             entry.relPath      = queryPlugin.getColumn("relPath").getString();
+            entry.bugfixFlags  = queryPlugin.getColumn("bugfixFlags").getUInt();
             _out.push_back(entry);
         }
     }

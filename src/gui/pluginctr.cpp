@@ -478,7 +478,7 @@ int guictr_plugins::slotFromCoord(ivec2 _pos) {
     return slot;
 }
 effectbase* gui_vstpluginlist_entry::makeInstance() {
-    vstpluginloadres res = vsthost::getInstance()->loadPlugin(entry.path, entry.uid);
+    vstpluginloadres res = vsthost::getInstance()->loadPlugin(entry.path, entry.uid, 0, entry.bugfixFlags);
     if (res.result == 0) {
         res.plugin->localDbId = entry.localDbId;
         return res.plugin;

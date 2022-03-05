@@ -292,7 +292,7 @@ public:
     void removePlugin(effectbase* plugin);
     void unloadTrack(track_t* track);
     effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1);
-    vstpluginloadres loadPlugin(String filepath, uint32_t uId, int32_t globalId = 0);
+    vstpluginloadres loadPlugin(String filepath, uint32_t uId, int32_t globalId = 0, uint64_t bugfixFlags = 0);
     void activateDeferred(effectbase* eff, int flags, effectbase** out_effectLoaded = nullptr);
 
     void createAudio(track_t* track);

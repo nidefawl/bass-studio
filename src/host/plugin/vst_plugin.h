@@ -43,6 +43,9 @@ enum vst_param_state : uint8_t {
     PARAM_FLAG_DIRTY = 1,
     PARAM_FLAG_SET = 2
 };
+enum vst_workarounds : uint64_t {
+    VST2_R4_BUG_STEREO_PLUGIN_REPORTS_MONO = 1
+};
 
 class vstplugin : public effectbase {
 public:
@@ -61,6 +64,8 @@ public:
     uint32_t uId           = 0;
     vst_window* window = nullptr;
     bool isInSuspend   = true;
+    uint64_t bugfixFlags = 0;
+
     std::vector<vst_param_category> paramsCategories;
 
     //TODO: this is not thread safe
@@ -70,11 +75,13 @@ public:
         auto& map = incoming ? opCodeIn : opCodeOut;
         return map[opCode];
     }
-    vstplugin(handles_t* _handle, int32_t globalId, String _sDir, String sName, int32_t _moduleId)
+    vstplugin(handles_t* _handle, int32_t globalId, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags)
         : effectbase(std::move(sName), PLUGIN_TYPE_VST, globalId),
           handle(_handle),
           internalModuleId(_moduleId),
-          sDir(std::move(_sDir)) {
+          sDir(std::move(_sDir)),
+          bugfixFlags(_bugfixFlags)
+    {
     }
     ~vstplugin() override;
     void resume() override;

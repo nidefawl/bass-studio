@@ -44,7 +44,7 @@ vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId)
 
     globalId = getNextGlobalModuleId(globalId);
     AEffect* aeffect  = axeffect->getAeffectHandle();
-    auto* plugin = new vstplugin(new handles_t(axeffect, aeffect, nullptr), globalId, "", reg.name, moduleId);
+    auto* plugin = new vstplugin(new handles_t(axeffect, aeffect, nullptr), globalId, "", reg.name, moduleId, 0);
     pluginInstancesVST2.push_back(plugin);
     pluginInstances.push_back(plugin);
     plugin->load(this);

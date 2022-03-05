@@ -458,8 +458,6 @@ static int runScannerServer(vstscanner_server_options options) {
             FileTimeGetter filetime(file.path);
             int64_t timeDisk   = filetime.getWriteTimeI64();
             int id             = -1;
-            int32_t uid        = -1;
-            bool isShellPlugin = false;
             bool needScan      = true;
             bool forcedisable  = false;
             queryPlugin.reset();
@@ -467,8 +465,6 @@ static int runScannerServer(vstscanner_server_options options) {
             String reason = "New or not a VST dll";
             if (queryPlugin.executeStep()) {
                 id            = queryPlugin.getColumn(0).getInt();
-                uid           = queryPlugin.getColumn(4).getInt();
-                isShellPlugin = queryPlugin.getColumn(5).getInt() > 0;
                 forcedisable  = queryPlugin.getColumn(2).getInt() > 0;
                 if (options.checkDiskTimestamp) {
 
@@ -667,7 +663,6 @@ static int runScannerClient() {
     daw_tls::setTls(initTls);
 
     pipe_msg_hdr hdr{};
-    recvbuf_t bufferRecv;
     log_message("listening...");
     while (!userSentQuitRequest) {
         int retRead = readFromIPC(client, hdr);

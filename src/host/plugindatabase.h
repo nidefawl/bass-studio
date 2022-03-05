@@ -10,6 +10,7 @@ struct pluginentry_t {
     String name;
     String path;
     String relPath;
+    uint64_t bugfixFlags;
 };
 
 struct plugin_snapshot_t;

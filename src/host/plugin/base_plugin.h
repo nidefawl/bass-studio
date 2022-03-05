@@ -54,6 +54,8 @@ public:
     bool bEditOpen            = false;
     bool bCaptureGUI          = false;
     bool bCanReceiveMidi      = false;
+    bool bCanSendMidi         = false;
+    bool bMPESupport          = false;
     int32_t requestCaptureGUI = 0;
     bool isSynth              = false;
     String sName;
@@ -64,7 +66,6 @@ public:
     stats_processing_timings_t procStats;
     int midiEventsDispatched = 0;
     std::vector<DAW::channel_ref_t> inputChannels;
-
 protected:
     vsthost* vstHost = nullptr;
     String currentProgramNameStr = "<no program>";
