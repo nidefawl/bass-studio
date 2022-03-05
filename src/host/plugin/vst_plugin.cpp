@@ -375,10 +375,12 @@ void vstplugin::postLoad() {
 namespace {
 
     void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, const tracksnapshot_store_opts_t& opts) {
-        ps.present         = true;
-        ps.slot            = 0;
-        ps.projectGlobalId = plugin->projectGlobalId;
-        ps.enabled         = plugin->bIsEnabled;
+        ps.version           = 9;
+        ps.slot              = 0;
+        ps.projectGlobalId   = plugin->projectGlobalId;
+        ps.enabled           = plugin->bIsEnabled;
+        ps.ioChannels.input  = plugin->inputChannelsDesc;
+        ps.ioChannels.output = plugin->outputChannelsDesc;
         if (plugin->internalModuleId >= 0) {
             ps.pluginType = PLUGIN_TYPE_INTERNAL_EFFECT;
             ps.uId        = static_cast<uint32_t>(plugin->internalModuleId);

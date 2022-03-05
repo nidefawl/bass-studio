@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <vector>
+#include "host/daw_channel.h"
 #include "str_util.h"
 
 struct tracksnapshot_store_opts_t {
@@ -24,10 +25,14 @@ struct param_snapshot_t {
     float val   = 0;
     int flags   = 0;
 };
+struct plugin_iodesc_snapshot_t {
+    std::vector<DAW::channel_desc> input;
+    std::vector<DAW::channel_desc> output;
+};
 struct automation_view_t;
 struct plugin_snapshot_t {
+    int32_t version = 0;
     int32_t projectGlobalId = 0;
-    bool present            = false;
     bool enabled            = false;
     int32_t slot            = 0;
     int32_t pluginType      = 0;
@@ -37,6 +42,7 @@ struct plugin_snapshot_t {
     String name;
     int32_t currentProgram = -1;
     String currentProgramName;
+    plugin_iodesc_snapshot_t ioChannels;
     std::vector<uint8_t> dataChunk;
     std::vector<uint8_t> dataChunk2;
     std::vector<param_snapshot_t> params;

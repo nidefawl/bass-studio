@@ -167,35 +167,47 @@ void effectbase::updateOnEnableParam(automatable_param_t* param, bool wasEnable,
         }
     }
 }
+
 effect_deferred* effectbase::toDeferred() {
     plugin_snapshot_t snapshot;
     this->makeSnapshot(snapshot, tracksnapshot_store_opts_t::All());
-    auto* def   = new effect_deferred();
-    def->mImpl             = new effect_deferred_impl();
-    def->sName             = snapshot.name;
-    def->projectGlobalId   = snapshot.projectGlobalId;
-    def->bIsEnabled        = snapshot.enabled;
-    def->mImpl->snapshot   = snapshot;
-    def->mImpl->moduleType = snapshot.pluginType;
+    auto* def               = new effect_deferred();
+    def->mImpl              = new effect_deferred_impl();
+    def->sName              = snapshot.name;
+    def->projectGlobalId    = snapshot.projectGlobalId;
+    def->bIsEnabled         = snapshot.enabled;
+    def->mImpl->snapshot    = snapshot;
+    def->mImpl->moduleType  = snapshot.pluginType;
+    def->inputChannelsDesc  = snapshot.ioChannels.input;
+    def->outputChannelsDesc = snapshot.ioChannels.output;
     return def;
 }
 
 effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot) {
-    auto def               = new effect_deferred();
-    def->mImpl             = new effect_deferred_impl();
-    def->sName             = snapshot.name;
-    def->projectGlobalId   = snapshot.projectGlobalId;
-    def->bIsEnabled        = snapshot.enabled;
-    def->mImpl->snapshot   = snapshot;
-    def->mImpl->moduleType = snapshot.pluginType;
+    auto def                = new effect_deferred();
+    def->mImpl              = new effect_deferred_impl();
+    def->sName              = snapshot.name;
+    def->projectGlobalId    = snapshot.projectGlobalId;
+    def->bIsEnabled         = snapshot.enabled;
+    def->mImpl->snapshot    = snapshot;
+    def->mImpl->moduleType  = snapshot.pluginType;
+    if (snapshot.version >= 9) {
+        def->inputChannelsDesc  = snapshot.ioChannels.input;
+        def->outputChannelsDesc = snapshot.ioChannels.output;
+    }
+    def->setProductName(snapshot.name);
     return def;
 }
 
-
 void effect_deferred::loadSnapshot(const plugin_snapshot_t& snapshot) {
-    this->mImpl->snapshot   = snapshot;
-    this->mImpl->moduleType = snapshot.pluginType;
+    this->mImpl->snapshot    = snapshot;
+    this->mImpl->moduleType  = snapshot.pluginType;
+    if (snapshot.version >= 9) {
+        this->inputChannelsDesc  = snapshot.ioChannels.input;
+        this->outputChannelsDesc = snapshot.ioChannels.output;
+    }
 }
+
 int32_t effect_deferred::getPluginLatency() {
     return 0;
 }

@@ -45,7 +45,17 @@ namespace DAW {
                 inputChannel = ChannelNone();
                 numRemoved++;
             } else {
-                inputChannel = DAW::ChannelAudioEffect(eff, stagebuffer_point::OUTPUT_POST);
+                auto& effChannels = eff->outputChannelsDesc;
+                auto it = std::find_if(effChannels.cbegin(), effChannels.cend(), [offset = inputChannel.inputChannelOffset](auto ch) {
+                    return ch.offset == offset;
+                });
+                if (it != effChannels.cend()) {
+                    inputChannel = DAW::ChannelAudioEffect(eff, stagebuffer_point::OUTPUT_POST, *it);
+                } else {
+                    log_lf(Log::L_WARN, "Channel %d not found on effect %s\n", inputChannel.inputChannelOffset, StringAsCStr(eff->getName()));
+                    inputChannel = ChannelNone();
+                    numRemoved++;
+                }
             }
         } else {
             dbgassert(inputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
@@ -62,10 +72,18 @@ namespace DAW {
             for (auto& inputChannel : effect->inputChannels) {
                 numRemoved += validateEffectRouting(host, stage, inputChannel);
             }
+            auto it = std::remove_if(effect->inputChannels.begin(), effect->inputChannels.end(), [](auto& ch) {
+                return ch.type == INPUT_EMPTY;
+            });
+            effect->inputChannels.erase(it, effect->inputChannels.end());
         }
         for (auto& inputChannel : stage->postEffectRouting) {
             numRemoved += validateEffectRouting(host, stage, inputChannel);
         }
+        auto it = std::remove_if(stage->postEffectRouting.begin(), stage->postEffectRouting.end(), [](auto& ch) {
+            return ch.type == INPUT_EMPTY;
+        });
+        stage->postEffectRouting.erase(it, stage->postEffectRouting.end());
         return numRemoved == 0;
     }
     struct dependency_graph_flattened_t {
@@ -146,8 +164,6 @@ namespace DAW {
         for (const effect_node_t* const ptrTrackNode : graphFlattened.resolved) {
             const DAW::effect_node_t& trackNode = *ptrTrackNode;
             auto nodeIdx                        = trackNode.stageId;
-            //effectbase* eff = stage->getPluginById(static_cast<int32_t>(nodeIdx));
-            //dbgassert(eff);
             if (STL_CONTAINS(effsVisited, ptrTrackNode)) {
                 // expected
                 continue;
@@ -320,16 +336,17 @@ namespace DAW {
 
                     } else if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE_EFFECT) {
                         effectbase* effSrc = host->getPluginById(inputChannel.projectGlobalId);
-                        dbgassert(effSrc);
-                        auto effSrcId_I32 = static_cast<audiostageid_i32>(effSrc->projectGlobalId);
-                        if (!map.count(effSrcId_I32)) {
-                            map[effSrcId_I32] = makeEffectNode(effSrc->projectGlobalId, effSrc->getPluginLatency());
+                        if (effSrc) {
+                            auto effSrcId_I32 = static_cast<audiostageid_i32>(effSrc->projectGlobalId);
+                            if (!map.count(effSrcId_I32)) {
+                                map[effSrcId_I32] = makeEffectNode(effSrc->projectGlobalId, effSrc->getPluginLatency());
+                            }
+                            effect_node_t& trackSrcCfg = getEffNode(map, effSrcId_I32);
+                            trackCfg.dependencies.push_back(effSrcId_I32);
+                            trackCfg.pulls.push_back(DAW::effect_source_t{ trackEdgeId++, inputChannel, DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE });
+                            trackCfg.children.push_back(&trackSrcCfg);
+                            trackSrcCfg.parents.push_back(&trackCfg);
                         }
-                        effect_node_t& trackSrcCfg = getEffNode(map, effSrcId_I32);
-                        trackCfg.dependencies.push_back(effSrcId_I32);
-                        trackCfg.pulls.push_back(DAW::effect_source_t{ trackEdgeId++, inputChannel, DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE });
-                        trackCfg.children.push_back(&trackSrcCfg);
-                        trackSrcCfg.parents.push_back(&trackCfg);
                     } else if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
                         trackCfg.pulls.push_back(DAW::effect_source_t{ trackEdgeId++, inputChannel, DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE });
                     } else {
@@ -370,16 +387,17 @@ namespace DAW {
 
                 } else if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE_EFFECT) {
                     effectbase* effSrc = host->getPluginById(inputChannel.projectGlobalId);
-                    dbgassert(effSrc);
-                    auto effSrcId_I32 = static_cast<audiostageid_i32>(effSrc->projectGlobalId);
-                    if (!map.count(effSrcId_I32)) {
-                        map[effSrcId_I32] = makeEffectNode(effSrc->projectGlobalId, effSrc->getPluginLatency());
+                    if (effSrc) {
+                        auto effSrcId_I32 = static_cast<audiostageid_i32>(effSrc->projectGlobalId);
+                        if (!map.count(effSrcId_I32)) {
+                            map[effSrcId_I32] = makeEffectNode(effSrc->projectGlobalId, effSrc->getPluginLatency());
+                        }
+                        effect_node_t& trackSrcCfg = getEffNode(map, effSrcId_I32);
+                        nodeOutput.dependencies.push_back(effSrcId_I32);
+                        nodeOutput.pulls.push_back(DAW::effect_source_t{ trackEdgeId++, inputChannel, DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE });
+                        nodeOutput.children.push_back(&trackSrcCfg);
+                        trackSrcCfg.parents.push_back(&nodeOutput);
                     }
-                    effect_node_t& trackSrcCfg = getEffNode(map, effSrcId_I32);
-                    nodeOutput.dependencies.push_back(effSrcId_I32);
-                    nodeOutput.pulls.push_back(DAW::effect_source_t{ trackEdgeId++, inputChannel, DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE });
-                    nodeOutput.children.push_back(&trackSrcCfg);
-                    trackSrcCfg.parents.push_back(&nodeOutput);
                 } else if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
                     nodeOutput.pulls.push_back(DAW::effect_source_t{ trackEdgeId++, inputChannel, DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE });
                 } else {

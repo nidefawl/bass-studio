@@ -21,6 +21,7 @@
 #include "clip.h"
 #include "track.h"
 #include "track_snapshot.h"
+#include "host/daw_channel.h"
 #include "fileio.h"
 #include "layout.h"
 #include "project.h"
@@ -28,6 +29,18 @@
 #include "logging.h"
 
 using namespace cereal;
+
+namespace DAW {
+template<class Archive>
+void serialize(Archive& archive, channel_desc& m) {
+    archive(make_nvp("input", m.name), make_nvp("count", m.count), make_nvp("offset", m.offset));
+}
+}
+
+template<class Archive>
+void serialize(Archive& archive, plugin_iodesc_snapshot_t& m) {
+    archive(make_nvp("input", m.input), make_nvp("output", m.output));
+}
 
 template<class Archive>
 void serialize(Archive& archive, trackcontainer_snapshot_t& m) {
@@ -60,22 +73,28 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
     if (version > 2) {
         archive(make_nvp("pluginType", m.pluginType), make_nvp("plugins", m.pluginSnapshots));
     }
+    m.version = version;
+    bool bPresent = false;
     if (version < 8) {
         int32_t uid_i32 = 0;
         archive(
             make_nvp("name", m.name),
             make_nvp("uId", uid_i32),
             make_nvp("slot", m.slot),
-            make_nvp("present", m.present)
+            make_nvp("present", bPresent)
         );
         m.uId = static_cast<uint32_t>(uid_i32);
     } else {
         archive(
             make_nvp("name", m.name),
             make_nvp("uId", m.uId),
-            make_nvp("slot", m.slot),
-            make_nvp("present", m.present)
+            make_nvp("slot", m.slot)
         );
+        if (version < 9) {
+            archive(
+                make_nvp("present", bPresent)
+            );
+        }
     }
     if (version == 1)
         make_optional_nvp(archive, "dataProgram", m.dataChunk2);
@@ -126,12 +145,16 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
         archive(make_nvp("programIdx", m.currentProgram));
         archive(make_nvp("programName", m.currentProgramName));
     }
+    if (version >= 9) {
+        archive(make_nvp("ioChannels", m.ioChannels));
+        archive(make_nvp("version", m.version));
+    }
 }
 
 template<class Archive>
 void save(Archive& archive, plugin_snapshot_t const& m, const std::uint32_t version) {
     archive(make_nvp("pluginType", m.pluginType));
-    archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot), make_nvp("present", m.present));
+    archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot));
     archive(make_nvp("parameters", m.params));
     archive(make_nvp("automatedParams", m.automatedParams));
     archive(make_nvp("globalId", m.projectGlobalId));
@@ -151,6 +174,8 @@ void save(Archive& archive, plugin_snapshot_t const& m, const std::uint32_t vers
     archive(make_nvp("localDbId", m.localDbId));
     archive(make_nvp("programIdx", m.currentProgram));
     archive(make_nvp("programName", m.currentProgramName));
+    archive(make_nvp("ioChannels", m.ioChannels));
+    archive(make_nvp("version", m.version));
 }
 
 template<class Archive>
@@ -476,7 +501,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 }
 
 CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
-CEREAL_CLASS_VERSION(plugin_snapshot_t, 8);
+CEREAL_CLASS_VERSION(plugin_snapshot_t, 9);
 CEREAL_CLASS_VERSION(track_snapshot_t, 3);
 
 /**

@@ -238,7 +238,7 @@ struct AudioBlock {
         if (srcChannels == 1 && channels == 2) {
             nChannels = 2;
         }
-        bool bdbgProcessed = false;
+        // bool bdbgProcessed = false;
         for (uint32_t i = 0; i < nChannels; i++) {
             uint32_t srcChannelIdx = i % srcChannels;
             uint32_t dstChannelIdx = i % channels;
@@ -248,10 +248,10 @@ struct AudioBlock {
                 const float fSrc = (srcBufChannel[j] * srcGain * gain);
                 const float fDst = dstBufChannel[j] * (op == MIX ? 1.0f - gain : 1.0f);
                 dstBufChannel[j] = fSrc + fDst;
-                bdbgProcessed    = true;
+                // bdbgProcessed    = true;
             }
         }
-        dbgassert(bdbgProcessed);
+        // dbgassert(bdbgProcessed);
     }
 
     void addFromDelayLineOp(DelayLine* delayLine, const samplerate_t delay, const mix_op op, float gain);

@@ -331,7 +331,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
          * TODO: This check is not well implemented
          * Add a lock free thread-safe way to check (from the callback) if a plugin is ready for processing
          */
-        if (plugin->bIsSetup && plugin->trackImpl) {
+        if (plugin->bIsSetup && plugin->hasTrackLink()) {
             auto parent = plugin->trackImpl;
             while (parent->parent) parent = parent->parent;
             // get this from the host instead of the tls
@@ -796,22 +796,25 @@ std::vector<note_t> vsthost::getRealtimeNotes() {
 
 namespace DAW {
 bool resolveEffectDefaultConnection(const vsthost* const host, const project_t* const project, const audio_stage_t* const stage, effectbase* const effect, channel_ref_t& out) {
-    if (effect == nullptr) {
-        if (!stage->effects.empty()) {
-            out = DAW::ChannelAudioEffect(stage->effects.back(), stagebuffer_point::OUTPUT_POST);
-        } else {
-            out = DAW::ChannelStage(stage, stagebuffer_point::INPUT);
-        }
-    } else {
-        int32_t effIdx = indexOfCtr(stage->effects, effect);
-        dbgassert(effIdx > -1);
-        if (effIdx == 0) {
-            out = DAW::ChannelStage(stage, stagebuffer_point::INPUT);
-        } else {
-            out = DAW::ChannelAudioEffect(stage->effects[effIdx - 1u], stagebuffer_point::OUTPUT_POST);
-        }
-
+    if (effect && effect->inputChannelsDesc.empty()) {
+        out = DAW::ChannelNone();
+        return true;
     }
+    int32_t effIdx = 0;
+    if (effect) {
+        effIdx = indexOfCtr(stage->effects, effect);
+    } else {
+        effIdx = static_cast<int32_t>(stage->effects.size());
+    }
+    while (effIdx > 0) {
+        auto effectBefore = stage->effects[effIdx - 1];
+        if (!effectBefore->outputChannelsDesc.empty()) {
+            out = DAW::ChannelAudioEffect(effectBefore, stagebuffer_point::OUTPUT_POST, effectBefore->outputChannelsDesc.front());
+            return true;
+        }
+        effIdx -= 1;
+    }
+    out = DAW::ChannelStage(stage, stagebuffer_point::INPUT);
     return true;
 }
 
@@ -902,7 +905,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
                 return false;
             }
             track_audio_src src;
-            for (uint32_t i = 0; i < eff->blockOutputs->channels; i++) {
+            for (uint32_t i = inputChannel.inputChannelOffset; i < eff->blockOutputs->channels; i++) {
                 src.channels.push_back(eff->blockOutputs->buf[i]);
             }
             src.sampleFormat = stage->sampleFormat;
@@ -1870,7 +1873,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
     const uint32_t numChannelsTrack = trackImpl->input.channels;
 
     std::vector<DAW::track_source_t> allSources = trackNode.pulls; // copy
-    allSources.insert(allSources.end(), trackNode.pushs.begin(), trackNode.pushs.end()); // copy
+    allSources.insert(allSources.end(), trackNode.pushs.cbegin(), trackNode.pushs.cend()); // copy
 
 #if 1
     bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), DAW::isTrackSrcSolod);
@@ -2564,26 +2567,40 @@ vstplugin* vsthost::getPlugin(AEffect* aeffect) {
     return nullptr;
 }
 
-effectbase* vsthost::getPluginById(int32_t projectGlobalId) const {
+effectbase* vsthost::getPluginById(int32_t projectGlobalId, bool activeOnly) const {
     auto it = std::find_if(pluginInstances.begin(), pluginInstances.end(),
-        [projectGlobalId] (const effectbase* ptr) {
-            return ptr->projectGlobalId == projectGlobalId;
+        [projectGlobalId, activeOnly] (const effectbase* ptr) {
+            return ptr->projectGlobalId == projectGlobalId && (!activeOnly || ptr->hasTrackLink());
         });
     if (it != pluginInstances.end()) {
         return *it;
     }
     it = std::find_if(pluginsDeferred.begin(), pluginsDeferred.end(),
-                      [projectGlobalId](const effectbase* ptr)
-                      {
-                        if (ptr->projectGlobalId == projectGlobalId)
-                            return true;
-                        auto plugDeferred = dynamic_cast<const effect_deferred*>(ptr);
-                        return plugDeferred->getSnapshotConst().projectGlobalId == projectGlobalId;
-                      });
+        [projectGlobalId, activeOnly](const effectbase* ptr) {
+            if (activeOnly && !ptr->hasTrackLink())
+                return false;
+            if (ptr->projectGlobalId == projectGlobalId)
+                return true;
+            auto plugDeferred = dynamic_cast<const effect_deferred*>(ptr);
+            return plugDeferred->getSnapshotConst().projectGlobalId == projectGlobalId;
+        });
     if (it != pluginsDeferred.end()) {
         return *it;
     }
     return nullptr;
+}
+
+bool vsthost::addDeferredEffect(effectbase* plugin) {
+    plugin->projectGlobalId = getNextGlobalModuleId(plugin->projectGlobalId);
+    while (getPluginById(plugin->projectGlobalId, false) != nullptr) {
+        plugin->projectGlobalId = getNextGlobalModuleId(0);
+    }
+    auto it = std::find_if(pluginsDeferred.begin(), pluginsDeferred.end(), [plugin](auto* eff) { return eff->projectGlobalId == plugin->projectGlobalId; });
+    if (it != pluginsDeferred.end()) {
+        return false;
+    }
+    pluginsDeferred.push_back(plugin);
+    return true;
 }
 
 void vsthost::unloadTrack(track_t* track) {

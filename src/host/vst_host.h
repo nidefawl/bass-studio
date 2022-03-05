@@ -276,7 +276,7 @@ public:
     }
 
     vstplugin* getPlugin(AEffect* aeffect);
-    effectbase* getPluginById(int32_t projectGlobalId) const;
+    effectbase* getPluginById(int32_t projectGlobalId, bool activeOnly = true) const;
     void getAllInstances(std::vector<effectbase*>& effects);
     std::vector<vstplugin*> getVst2Instances() {
         return pluginInstancesVST2;

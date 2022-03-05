@@ -80,10 +80,10 @@ public:
     ~effectbase() override;
     SafeRef<effectbase> makeSafeRef();
     String getName() const { return sName; };
+    const char* getDebugName() const { return szName; };
     String getProductName() const { return sProductName; };
     void setProductName(String _name) {
         replaceString(_name, "[jBridge]", "");
-        this->sName        = _name;
         this->sProductName = _name;
 #ifndef NDEBUG
         this->szName = this->sName.c_str();
@@ -148,6 +148,9 @@ public:
     }
     virtual bool getNumberOfPrograms(uint32_t& index) {
         return false;
+    }
+    bool hasTrackLink() const {
+        return trackImpl != nullptr;
     }
 
 protected:

@@ -245,7 +245,7 @@ inline channel_ref_t ChannelStage(const audio_stage_t* stage, stagebuffer_point 
     }
     return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE, AudioIO::getTrackTypeFromNumChannels(stage->input.channels), -1, 0, {stage->toRef(), isInput}, 0, str};
 }
-inline channel_ref_t ChannelAudioEffect(effectbase* effect, stagebuffer_point isInput) {
+inline channel_ref_t ChannelAudioEffect(effectbase* effect, stagebuffer_point isInput, const channel_desc& channelDesc) {
     dbgassert(effect);
     String str;
     auto stage = effect->getTrackLink();
@@ -255,15 +255,9 @@ inline channel_ref_t ChannelAudioEffect(effectbase* effect, stagebuffer_point is
         str = track->name;
     }
     str += effect->getName();
-    uint32_t numChannels;
-    if (isInput == stagebuffer_point::INPUT) {
-        str += " IN";
-        numChannels = effect->blockInputs ? effect->blockInputs->channels : 2;
-    } else {
-        str += " OUT";
-        numChannels = effect->blockOutputs ? effect->blockOutputs->channels : 2;
-    }
-    return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE_EFFECT, AudioIO::getTrackTypeFromNumChannels(numChannels), -1, 0, {stage->toRef(), isInput}, effect->projectGlobalId, str};
+    str += " ";
+    str += channelDesc.name;
+    return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE_EFFECT, AudioIO::getTrackTypeFromNumChannels(channelDesc.count), -1, channelDesc.offset, {stage->toRef(), isInput}, effect->projectGlobalId, str};
 }
 }
 struct track_gui_entry_t;

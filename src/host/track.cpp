@@ -762,20 +762,6 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
     }
 }
 
-bool vsthost::addDeferredEffect(effectbase* plugin) {
-    plugin->projectGlobalId = getNextGlobalModuleId(plugin->projectGlobalId);// hell is lose
-                                                                             //    plugin->projectGlobalId = getNextGlobalModuleId(0); // everything goochy
-    while (getPluginById(plugin->projectGlobalId) != nullptr) {
-        plugin->projectGlobalId = getNextGlobalModuleId(0);
-    }
-    auto it = std::find_if(pluginsDeferred.begin(), pluginsDeferred.end(), [plugin](auto* eff) { return eff->projectGlobalId == plugin->projectGlobalId; });
-    if (it != pluginsDeferred.end()) {
-        return false;
-    }
-    pluginsDeferred.push_back(plugin);
-    return true;
-}
-
 void vsthost::activateDeferred(effectbase* const eff, int flags, effectbase** out_effectLoaded) {
     dbgassert(eff->trackImpl);
     dbgassert(eff->trackImpl->effects.size());
@@ -810,6 +796,7 @@ void vsthost::activateDeferred(effectbase* const eff, int flags, effectbase** ou
 
     effect->inputChannels = prevPlugin->inputChannels;
     effect->sName         = pluginSnapshot.name;
+    effect->setProductName(pluginSnapshot.name);
     effect->setParamValue(PARAM_ENABLE, pluginSnapshot.enabled ? 1.0f : 0.0f, FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE);
 
     /* Load plugin parameter automation lanes */
