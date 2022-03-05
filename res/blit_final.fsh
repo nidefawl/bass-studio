@@ -118,5 +118,5 @@ vec3 shadeNone(float fTime, vec2 tc) {
 
 void main(void) {
 	float fTm1 = triFade(u_time+bpm2Tm(u_bpm)*8.0, bpm2Tm(u_bpm)*16.0, bpm2Tm(u_bpm)*16.0);
-	out_Color = vec4(shade1(u_time, pass_texcoord), 1.0);
+	out_Color = vec4(shadeNone(u_time, pass_texcoord), 1.0);
 }
