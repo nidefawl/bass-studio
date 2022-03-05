@@ -443,12 +443,12 @@ namespace math {
     }
     
     inline float calcTanhLike(float x, float steepness) {
-        const float j = 0.39; // range 0.01 - 4.0
+        const float j = 0.39f; // range 0.01 - 4.0
         float h = steepness; // range 1.01 - 3.0
         float t = std::powf(math::abs(2.0f * x - 1.0f), j);
         float a = h * t + (h - 2.0f) * std::powf(t, 3.0f);
-        float b = 1 + (2.0f * h - 3.0f) * (t * t);
-        float fSign = (2.0f * x - 1.0f) < 0 ? -1.0f : 1.0f;
+        float b = 1.0f + (2.0f * h - 3.0f) * (t * t);
+        float fSign = (2.0f * x - 1.0f) < 0.0f ? -1.0f : 1.0f;
         return (fSign * std::powf(a / b, 1.0f / j) + 1.0f) * 0.5f;
     }
 }// namespace math
