@@ -575,7 +575,7 @@ effectbase* loadEffectModule(vsthost* host, const plugin_snapshot_t& pluginSnaps
         pluginentry_t resolvedPlugin;
         if (db->resolve(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
             log_lf(Log::L_DEBUG, "Plugin is registered... loading %s, uId %d, forceLoad %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, forceLoad);
-            vstpluginloadres res = host->loadPlugin(resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
+            vstpluginloadres res = host->loadPlugin(resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags);
             if (res.result == 0 && res.plugin) {
                 res.plugin->localDbId = resolvedPlugin.localDbId;
                 effect = res.plugin;
