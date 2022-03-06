@@ -1,4 +1,5 @@
 #pragma once
+#include "host/mainctrl.h"
 #include "math/vec.h"
 #include "str_util.h"
 #include "knob.h"
@@ -10,7 +11,6 @@
 class gui_ctr_debug : public guictr_base {
     struct ctr_debug_impl_t;
     ctr_debug_impl_t* const impl;
-
 public:
     static constexpr int BTN_FONT_SIZE = 16;
 

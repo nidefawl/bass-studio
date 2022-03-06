@@ -420,7 +420,7 @@ public:
     void onTick();
     void setMainControl(MainCtrl*);
     MainCtrl* getMainControl();
-    void getTrackContainers(std::vector<guictr_tracks*>& trackCointainers);
+    void getTrackContainers(std::vector<guictr_tracks*>& trackContainers);
     void updateVisibleTrackContents();
     void onPluginsChanged();
     void layoutTrackEditors();
@@ -556,7 +556,7 @@ public:
     virtual void setViewMode(view_mode_t mode) = 0;
     view_mode_t getViewMode() const;
 
-    virtual void getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) = 0;
+    virtual void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) = 0;
     virtual guictr_tracks* getTrackContainer() = 0;
 };
 
@@ -615,7 +615,7 @@ public:
     std::shared_ptr<guictr_layout> replaceContainerWith(guictr_base* ctr,
                                                         std::shared_ptr<guictr_layout> newContainer) override;
     void dragContainerRelayout(drag_ctr_event evt) override;
-    void getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) override;
+    void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) override;
     guictr_tracks* getTrackContainer() override;
 };
 
@@ -651,6 +651,6 @@ public:
     bool isPluginViewVisible() override;
     void setViewMode(view_mode_t mode) override;
     void setEditClip(gui_clip* gclip) override;
-    void getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) override;
+    void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) override;
     guictr_tracks* getTrackContainer() override;
 };

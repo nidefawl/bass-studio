@@ -1504,9 +1504,9 @@ void DawInstance::layoutTrackEditors() {
     }
 }
 
-void DawInstance::getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) {
+void DawInstance::getTrackContainers(std::vector<guictr_tracks*>& trackContainers) {
     for (int i = 0; i < dawCtrls.size(); i++) {
-        dawCtrls[i]->getTrackContainers(trackCointainers);
+        dawCtrls[i]->getTrackContainers(trackContainers);
     }
 }
 
@@ -1859,12 +1859,12 @@ void MainCtrl::dragContainerRelayout(drag_ctr_event evt) {
     }
 }
 
-void MainCtrl::getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) {
-    trackCointainers.push_back(&view->ctr_tracks);
+void MainCtrl::getTrackContainers(std::vector<guictr_tracks*>& trackContainers) {
+    trackContainers.push_back(&view->ctr_tracks);
 }
 
-void CompanionCtrl::getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) {
-    trackCointainers.push_back(&view->ctr_tracks2);
+void CompanionCtrl::getTrackContainers(std::vector<guictr_tracks*>& trackContainers) {
+    trackContainers.push_back(&view->ctr_tracks2);
 }
 
 guictr_tracks* MainCtrl::getTrackContainer() {

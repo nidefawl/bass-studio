@@ -87,6 +87,7 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             ctrType = CTR_TYPE_DEBUG_2;
             break;
     }
+    auto const host = vsthost::getInstance();
 #ifdef _WIN32
     msgCounterEnabled = true;
 #endif
@@ -112,18 +113,18 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
     if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_2) {
         auto knob        = new guiknob;
         knob->id         = ID_KNOB_SET_THREAD_COUNT;
-        knob->fnSetValue = [knob](float f, int flags) {
-            uint32_t thrdCntMax = vsthost::getInstance()->getMaxThreadCount();
+        knob->fnSetValue = [dawCtrl=this->dawCtrl, knob, host](float f, int flags) {
+            uint32_t thrdCntMax = host->getMaxThreadCount();
             uint32_t thrdCnt    = math::clamp<uint32_t>(math::roundfU32(f * thrdCntMax), 1U, thrdCntMax);
-            ThreadLock lock     = MainCtrl::getPlayThread()->lockThread();
-            vsthost::getInstance()->setThreadCount(thrdCnt);
-            String strThrdCnt = StringFormat("Number of Threads: %d", vsthost::getInstance()->getThreadCount());
+            ThreadLock lock     = dawCtrl->lockPlayThread();
+            host->setThreadCount(thrdCnt);
+            String strThrdCnt = StringFormat("Number of Threads: %d", host->getThreadCount());
             knob->setLabel(strThrdCnt);
         };
-        String strThrdCnt = StringFormat("Number of Threads: %d", vsthost::getInstance()->getThreadCount());
+        String strThrdCnt = StringFormat("Number of Threads: %d", host->getThreadCount());
         knob->setLabel(strThrdCnt);
-        knob->fnGetValue = [](void) {
-            return vsthost::getInstance()->getThreadCount() / (float) vsthost::getInstance()->getMaxThreadCount();
+        knob->fnGetValue = [host](void) {
+            return host->getThreadCount() / (float) host->getMaxThreadCount();
         };
         debugGuis.push_back(knob);
     }
@@ -345,15 +346,15 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         auto knobTestThreadCnt = getByID(ID_KNOB_SET_THREAD_COUNT);
         if (knobTestThreadCnt) {
             setFont(vg, 14, G_WHITE, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
-            String strThrdCnt = StringFormat("Number of Threads: %d", vsthost::getInstance()->getThreadCount());
+            String strThrdCnt = StringFormat("Number of Threads: %d", dawCtrl->getDaw()->getHost()->getThreadCount());
             ivec2 lblPos{ knobTestThreadCnt->right(), knobTestThreadCnt->bottom() - knobTestThreadCnt->size.y / 2 };
             nvgText(vg, lblPos.x, lblPos.y, StringAsCStr(strThrdCnt), NULL);
         }
     }
 
     if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_1) {
-        auto const ctrl   = dawCtrl;
-        auto const daw = DawInstance::get();
+        auto const ctrl = dawCtrl;
+        auto const daw = ctrl->getDaw();
 
         vector<String> strings;
         String str;
@@ -404,11 +405,11 @@ void gui_ctr_debug::render(NVGcontext* vg) {
             strings.push_back(StringFormat("Notes: %d", clipView.clip()->notes.m_list.size()));
             strings.push_back(StringFormat("Selection size: %d", clipView.clip()->notes.selection.size()));
         }
-
+        auto host = dawCtrl->getDaw()->getHost();
         strings.push_back("sample format");
-        strings.push_back(StringFormat(" samplerate: %u", vsthost::getInstance()->m_sampleFormatInternal.sampleRate));
-        strings.push_back(StringFormat(" blockSize : %u", vsthost::getInstance()->m_sampleFormatInternal.blockSize));
-        strings.push_back(StringFormat(" bit depth : %u", static_cast<int32_t>(vsthost::getInstance()->m_sampleFormatInternal.sampleformat)));
+        strings.push_back(StringFormat(" samplerate: %u", host->m_sampleFormatInternal.sampleRate));
+        strings.push_back(StringFormat(" blockSize : %u", host->m_sampleFormatInternal.blockSize));
+        strings.push_back(StringFormat(" bit depth : %u", static_cast<int32_t>(host->m_sampleFormatInternal.sampleformat)));
 
         track_t* track = daw->getTrackId(0);
         if (track && track->audio) {
@@ -513,11 +514,13 @@ void gui_ctr_debug::layout() {
 }
 
 int32_t getNumClipAllocations();//clip.cpp
-void resetHistAndCheck() {
-    auto daw          = DawInstance::get();
-    auto& trackEditor = MainCtrl::getGuiTrackCtr()->trackView;
-    trackEditor.action.clipboard.reset();
-    trackEditor.m_clipboard.reset();
+void resetHistAndCheck(DawInstance* daw) {
+    std::vector<guictr_tracks *> trackContainers;
+    daw->getTrackContainers(trackContainers);
+    for (auto guiTracks : trackContainers) {
+        guiTracks->trackView.action.clipboard.reset();
+        guiTracks->trackView.m_clipboard.reset();
+    }
     daw->getHist().clear(daw);
 
     auto& tracks = daw->getTracks();
@@ -533,21 +536,22 @@ void resetHistAndCheck() {
     dbgassert(n == nAlloc);
 }
 void gui_ctr_debug::buttonClicked(guibase* button) {
+    auto const daw = dawCtrl->getDaw();
+    auto const host = daw->getHost();
     switch (button->id) {
         case ID_BTN_UPDATE_VISIBLE_TRACK_CONTENTS:
-            DawInstance::get()->updateVisibleTrackContents();
+            daw->updateVisibleTrackContents();
             break;
         case ID_BTN_RESET_HIST:
-            resetHistAndCheck();
+            resetHistAndCheck(daw);
             break;
         case ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD:
-            MainCtrl::getPlayThread()->call([]() {
+            daw->getPlayThread()->call([]() {
                 debugRaiseSegFault();
-            },
-                                            false);
+            }, false);
             break;
         case ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD:
-            MainCtrl::getPlayThread()->call([]() {
+            daw->getPlayThread()->call([]() {
                 throw std::bad_alloc();
             }, false);
             break;
@@ -566,18 +570,18 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
             }
             break;
         case ID_BTN_TOGGLE_PLAYBACKPROCESSING:
-            vsthost::getInstance()->bypassPlaybackProcessing = !vsthost::getInstance()->bypassPlaybackProcessing;
-            static_cast<guibutton*>(button)->setText(String(vsthost::getInstance()->bypassPlaybackProcessing ? "Bypass Playback Proc. (ON)" : "Bypass Playback Proc. (OFF)"));
+            host->bypassPlaybackProcessing = !host->bypassPlaybackProcessing;
+            static_cast<guibutton*>(button)->setText(String(host->bypassPlaybackProcessing ? "Bypass Playback Proc. (ON)" : "Bypass Playback Proc. (OFF)"));
 
             break;
         case ID_BTN_TOGGLE_EFFECTPROCESSING:
-            vsthost::getInstance()->bypassEffectProcessing = !vsthost::getInstance()->bypassEffectProcessing;
-            static_cast<guibutton*>(button)->setText(String(vsthost::getInstance()->bypassEffectProcessing ? "Bypass Effect Processing (ON)" : "Bypass Effect Processing (OFF)"));
+            host->bypassEffectProcessing = !host->bypassEffectProcessing;
+            static_cast<guibutton*>(button)->setText(String(host->bypassEffectProcessing ? "Bypass Effect Processing (ON)" : "Bypass Effect Processing (OFF)"));
 
             break;
         case ID_BTN_TOGGLE_SAMPLECONVERSION:
-            vsthost::getInstance()->bypassSampleConversion = !vsthost::getInstance()->bypassSampleConversion;
-            static_cast<guibutton*>(button)->setText(String(vsthost::getInstance()->bypassSampleConversion ? "Bypass Sample conversion (ON)" : "Bypass Sample conversion (OFF)"));
+            host->bypassSampleConversion = !host->bypassSampleConversion;
+            static_cast<guibutton*>(button)->setText(String(host->bypassSampleConversion ? "Bypass Sample conversion (ON)" : "Bypass Sample conversion (OFF)"));
 
             break;
         case ID_BTN_TOGGLE_CLIP_RENDER_CACHE:
@@ -596,12 +600,10 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 
             break;
         case ID_BTN_TOGGLE_THREADING:
-            auto h = vsthost::getInstance();
-            MainCtrl::getPlayThread()->call([]() {
-                auto h                     = vsthost::getInstance();
-                h->multithreadedProcessing = 1 - h->multithreadedProcessing;
+            daw->getPlayThread()->call([host]() {
+                host->multithreadedProcessing = 1 - host->multithreadedProcessing;
             }, true);
-            static_cast<guibutton*>(button)->setText(String(h->multithreadedProcessing ? "Multithreaded processing (ON)" : "Multithreaded processing (OFF)"));
+            static_cast<guibutton*>(button)->setText(String(host->multithreadedProcessing ? "Multithreaded processing (ON)" : "Multithreaded processing (OFF)"));
 
             break;
     }
@@ -612,10 +614,11 @@ void gui_ctr_debug::onTick(AppCtrl* ctrl) {
         gui->onTick(ctrl);
     }
     {
-        ThreadLock lock = MainCtrl::getPlayThread()->tryLockThread();
+        ThreadLock lock = dawCtrl->getDaw()->getPlayThread()->tryLockThread();
         if (lock.isLocked()) {
-            vsthost::getInstance()->getBlockThreadStats(impl->lastProcessingList);
-            impl->sampleformat = vsthost::getInstance()->m_sampleFormatInternal;
+            auto const host = dawCtrl->getDaw()->getHost();
+            host->getBlockThreadStats(impl->lastProcessingList);
+            impl->sampleformat = host->m_sampleFormatInternal;
         }
     }
 }

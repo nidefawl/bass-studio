@@ -154,14 +154,6 @@ public:
     }
 };
 void guictr_plugins::handleRightClick(MouseEvent& evt) {
-    //    handleDraggedBegin(evt);
-    //    const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
-    //    bool b = false;
-    //    if (isHorizontalTitle) {
-    //        b = evt.relMousepos.y < hpt;
-    //    } else {
-    //        b = evt.relMousepos.x < hpt;
-    //    }
     if (this->stage) {
         parentCtrl->openContextMenu(new guictxtmenu_pluginctr(this->stage), evt.mousepos);
     }

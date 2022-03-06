@@ -180,11 +180,10 @@ track_snapshot_t::track_snapshot_t(const track_t* track, const tracksnapshot_sto
     track_impl_t* p = track->audio;
     if (p) {
         // get all trackcointainer instances
-        std::vector<guictr_tracks*> trackCointainers;
-        DawInstance::get()->getTrackContainers(trackCointainers);
-        // should use UUID for serialization
+        std::vector<guictr_tracks*> trackContainers;
+        DawInstance::get()->getTrackContainers(trackContainers);
         int32_t trackCtrIdx = 0;
-        for (auto* ctr : trackCointainers) {
+        for (auto* ctr : trackContainers) {
             if (ctr) {
                 track_gui_entry_t* out;
                 if (ctr->guiMgr.getTrackEntry(track, &out)) {

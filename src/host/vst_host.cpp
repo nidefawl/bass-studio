@@ -3156,6 +3156,9 @@ void vsthost::scanPlugins() {
             impl->vstscannerProcessThread = std::make_unique<ProcessThread>();
             String nameScannerExe = "daw-vstscanner.exe";
             if (!FileExists(nameScannerExe)) {
+                nameScannerExe = "vstscanner-Clang-debug.exe";
+            }
+            if (!FileExists(nameScannerExe)) {
                 nameScannerExe = "vstscanner-MSVC-debug.exe";
             }
             impl->vstscannerProcessThread->startProcess(nameScannerExe, "-server -auto", "");
