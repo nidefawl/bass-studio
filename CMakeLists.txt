@@ -269,6 +269,8 @@ target_precompile_headers(${LINK_TARGET} PUBLIC
     "$<$<COMPILE_LANGUAGE:CXX>:<array$<ANGLE-R>>"
     "$<$<COMPILE_LANGUAGE:CXX>:<fstream$<ANGLE-R>>"
     "$<$<COMPILE_LANGUAGE:CXX>:include/math/vec.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:include/math/mat.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:include/track_impl.h>"
     "$<$<COMPILE_LANGUAGE:CXX>:include/basectrl.h>"
     "$<$<COMPILE_LANGUAGE:CXX>:host/mainctrl.h>"
     "$<$<COMPILE_LANGUAGE:CXX>:include/fileio.h>"
