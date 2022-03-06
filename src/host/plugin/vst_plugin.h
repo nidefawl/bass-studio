@@ -44,7 +44,8 @@ enum vst_param_state : uint8_t {
     PARAM_FLAG_SET = 2
 };
 enum vst_workarounds : uint64_t {
-    VST2_R4_BUG_STEREO_PLUGIN_REPORTS_MONO = 1
+    VST2_R4_BUG_STEREO_PLUGIN_REPORTS_MONO = 1,
+    VST2_BUG_NEED_SHOW_WINDOW_TO_LOAD_PRESET = 2
 };
 
 class vstplugin : public effectbase {

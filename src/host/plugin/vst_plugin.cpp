@@ -75,6 +75,9 @@ void vstplugin::resume() {
     if (!bIsPostInit) {
         bIsPostInit = true;
         postLoad();
+        if (this->bugfixFlags & VST2_BUG_NEED_SHOW_WINDOW_TO_LOAD_PRESET) {
+            show();
+        }
     }
     if (!isInSuspend) {
         return;
