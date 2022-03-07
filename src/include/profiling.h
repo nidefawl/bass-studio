@@ -62,26 +62,26 @@ struct render_clip_cache_stats_t {
     int64_t clipsCached;
     int64_t sizeCacheAllocatedMemBytes;
 };
-struct application_stats_t {
+struct alignas(64) application_stats_t {
     int64_t tickTimerDelay       = 0;
     int64_t tickTimerDuration    = 0;
-    int64_t timeSwapBuffersMain  = 0;
     int64_t timeRefreshAll       = 0;
     int64_t numMessagesProcessed = 0;
     int64_t numMessagesWmPaint   = 0;
     int64_t numRedrawReq         = 0;
 };
-struct render_stats_t {
-    float fps                       = 0.0f;
+struct alignas(64) render_stats_t {
     int64_t timeRender              = 0;
-    int64_t clipsRendered           = 0;
-    int64_t notesRendered           = 0;
+    int64_t timeSwapBuffers         = 0;
+    int64_t timePrerender           = 0;
     int64_t timeRenderEditor        = 0;
     int64_t timeRenderTrackControls = 0;
     int64_t timeUpdateWaveforms     = 0;
+    int64_t clipsRendered           = 0;
+    int64_t notesRendered           = 0;
     int64_t numWaveFormsRendered    = 0;
-    int64_t timePrerender           = 0;
     int64_t playThreadLockCount     = 0;
+    float fps                       = 0.0f;
     render_stats_t()                = default;
 };
 struct vst_opcode_stats_t {

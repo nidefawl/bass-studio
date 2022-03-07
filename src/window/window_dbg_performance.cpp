@@ -4,9 +4,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <memory>
 #include <utility>
+#include "logging.h"
 #include "math/vec.h"
 #include "math/mat.h"
 #include "fileio.h"
+#include "profiling.h"
 #include "str_util.h"
 #include "gl/gl_util.h"
 #include "gl/gl_attr.h"
@@ -20,26 +22,119 @@
 #include "host/profiling_impl.h"
 
 namespace windowdebug_performance {
+
 #define DBG_PERF_HIST_SIZE 512
-#define DBG_PERF_INSTANCE_CHANNELS 32
+
+struct ProfilingDataChannelBase {
+    std::array<float, DBG_PERF_HIST_SIZE> valuesRaw{};
+    std::array<float, DBG_PERF_HIST_SIZE> valuesNormalized{};
+    int64_t valueLast     = 0;
+    int64_t valueMax      = 0;
+    int64_t valueMin      = 0;
+    int64_t valueAvg      = 0;
+    size_t offsetStMember = 0;
+    size_t texChannel     = 0;
+    vec2 graphPos{};
+    vec2 graphSize{};
+    float scaleClampMax = 1.0f;
+    float scaleMin      = 0.0f;
+    String name;
+    String unit;
+};
+
+struct ProfilingDataRenderInstance {
+    const void* instancePtr = nullptr;
+    std::vector<std::shared_ptr<ProfilingDataChannelBase>> channels;
+    GLuint tex0 = 0;
+    vec2 instancePos{};
+    String name;
+    int32_t nextFreeChannelIdx = 0;
+};
+
+
+void normalizeData(ProfilingDataChannelBase* ch) {
+    dbgassert(ch->valuesRaw.size() == DBG_PERF_HIST_SIZE);
+    dbgassert(ch->valuesNormalized.size() == DBG_PERF_HIST_SIZE);
+    memcpy(ch->valuesNormalized.data(), ch->valuesRaw.data(), sizeof(float) * DBG_PERF_HIST_SIZE);
+    const float minFl = 0;
+    float maxFl = 10;
+    int64_t tmpMax = ch->valueMax;
+    while (tmpMax > 10) {
+        maxFl *= 10;
+        tmpMax /= 10;
+    }
+    const float sc        = 1.0f / (maxFl - minFl);
+    const float* rawData  = ch->valuesRaw.data();
+    float* normalizedData = ch->valuesNormalized.data();
+    for (int i = 0; i < DBG_PERF_HIST_SIZE; ++i) {
+        *normalizedData++ = (*rawData++ - minFl) * sc;
+    }
+}
+
+void setSamples(ProfilingDataChannelBase* const ch,
+                const int64_t* const arrBase,
+                const size_t arrLen,
+                const size_t stride,
+                size_t readIdx,
+                const size_t offsetMember) {
+    dbgassert(ch->valuesRaw.size() == DBG_PERF_HIST_SIZE);
+    dbgassert(readIdx < arrLen);
+    int64_t valSample   = *(arrBase + readIdx * stride + offsetMember);
+    ch->valueLast = valSample;
+    int64_t valueMin    = valSample;
+    int64_t valueMax    = valSample;
+    int64_t valueAvg    = 0;
+    // step thru time backwards
+    for (size_t pos = DBG_PERF_HIST_SIZE - 1; pos < DBG_PERF_HIST_SIZE; --pos) {
+        valSample = *(arrBase + readIdx * stride + offsetMember);
+        ch->valuesRaw[pos] = valSample;
+        valueMax  = math::max(valueMax, valSample);
+        valueMin  = math::min(valueMin, valSample);
+        valueAvg += valSample;
+        if (--readIdx > arrLen - 1)
+            readIdx = arrLen - 1;
+    }
+    ch->valueAvg  = valueAvg / static_cast<int64_t>(DBG_PERF_HIST_SIZE);
+    ch->valueMin  = valueMin;
+    ch->valueMax  = valueMax;
+}
+
+static GLuint generateTexture() {
+    GLuint tex0 = 0;
+    glGenTextures(1, &tex0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, tex0);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+    checkGLError("glTexImage2D");
+    glBindTexture(GL_TEXTURE_2D, 0);
+    return tex0;
+}
+
+class window_impl {
+    const size_t texW = DBG_PERF_HIST_SIZE;
+    std::vector<VertexAttr> attributes {
+        { "in_position", 2, GL_FLOAT },
+        { "in_texcoord", 2, GL_FLOAT },
+    };
     GLuint program2dTexture = 0;
     GLint u_mvp             = 0;
     GLint u_renderColor     = 0;
     GLint u_renderInfo      = 0;
+    DrawVBO vbo;
+    std::vector<float> texData;
+    
     int64_t tmLastUpdate    = 0;
     int64_t tmLastReload    = 0;
-    float quadSize          = 1024;
     seq_rand rnd;
-    const int texW = DBG_PERF_HIST_SIZE;
-    std::vector<float> texData;
     int nCall = 0;
-    std::vector<VertexAttr> attributes{
-        { "in_position", 2, GL_FLOAT },
-        { "in_texcoord", 2, GL_FLOAT },
-    };
-    DrawVBO vbo;
+
+    std::vector<ProfilingDataRenderInstance> profDataInstances;
     int loadShader() {
-        tmLastReload = getTimeMillis();
         String srcVertex;
         String srcFragment;
         int64_t ret = ReadFileText("textured.vsh", srcVertex);
@@ -53,12 +148,11 @@ namespace windowdebug_performance {
             return 1;
         }
 
-        GLuint vertex_shader, fragment_shader;
-        vertex_shader = compileShader(GL_VERTEX_SHADER, srcVertex);
+        GLuint vertex_shader = compileShader(GL_VERTEX_SHADER, srcVertex);
         if (!vertex_shader) {
             return 1;
         }
-        fragment_shader = compileShader(GL_FRAGMENT_SHADER, srcFragment);
+        GLuint fragment_shader = compileShader(GL_FRAGMENT_SHADER, srcFragment);
         if (!fragment_shader) {
             return 1;
         }
@@ -75,7 +169,8 @@ namespace windowdebug_performance {
             checkGLError("getStatus");
             printf("Link error: %s\n", StringAsCStr(log));
             return 1;
-        } else if (!log.empty()) {
+        }
+        if (!log.empty()) {
             printf("Link log: %s\n", StringAsCStr(log));
         }
         checkGLError("linkProgram");
@@ -84,7 +179,7 @@ namespace windowdebug_performance {
         u_renderInfo  = glGetUniformLocation(program, "renderInfo");
         u_renderColor = glGetUniformLocation(program, "renderColor");
         glUniform1i(glGetUniformLocation(program, "tex0"), 0);
-        for (auto & attribute : attributes) {
+        for (auto& attribute : attributes) {
             attribute.bindingPt = glGetAttribLocation(program, attribute.name);
         }
         checkGLError("glGetAttribLocation");
@@ -92,455 +187,263 @@ namespace windowdebug_performance {
         program2dTexture = program;
         return 0;
     }
-    GLuint generateTexture() {
-        GLuint tex0 = 0;
-        glGenTextures(1, &tex0);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, tex0);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-        checkGLError("glTexImage2D");
-        glBindTexture(GL_TEXTURE_2D, 0);
-        return tex0;
-    }
 
-
-    using ImgData = std::shared_ptr<uint8_t>;
-
-    void setColor(uint8_t* b, int i) {
-        b[0] = i & 0xFF;
-        i    = i >> 8;
-        b[1] = i & 0xFF;
-        i    = i >> 8;
-        b[2] = i & 0xFF;
-        i    = i >> 8;
-        b[3] = i & 0xFF;
-    };
-    ImgData createQuadTexture(int w) {
-        int size = w * w * 4;
-        std::shared_ptr<uint8_t> imageData(new uint8_t[size], std::default_delete<uint8_t[]>());
-
-        uint8_t* dataBuf = imageData.get();
-        for (int x = 0; x < w; x++) {
-            for (int y = 0; y < w; y++) {
-                int idx   = (x * w + y) * 4;
-                int scale = 16;
-                int ix    = x % scale;
-                setColor(dataBuf + idx, ix < 10 ? 0xffffffff : 0x00ffffff);
+    template<typename T>
+    ProfilingDataRenderInstance* getOrInitProfInstance(
+        const ProfilingImpl::profiling_channel_descs* const channelDesc, 
+        const ProfilingImpl::profiling_entry_t<T>& instance)
+    {
+        for (ProfilingDataRenderInstance& prevChannel : profDataInstances) {
+            if (prevChannel.instancePtr == instance.instancePtr) {
+                return &prevChannel;
             }
         }
-        return imageData;
-    }
-    //RenderResources::NvgImageTexture imgQuad;
-
-
-    struct ProfilingDataChannelBase {
-        int32_t texChannel = -1;
-        String name;
-        String unit;
-        int64_t valueLast  = 0;
-        int64_t valueMax   = 0;
-        int64_t valueMin   = 0;
-        int64_t valueAvg   = 0;
-        std::array<float, DBG_PERF_HIST_SIZE> valuesRaw{};
-        std::array<float, DBG_PERF_HIST_SIZE> valuesNormalized{};
-        vec2 graphPos{};
-        vec2 graphSize{};
-        float scaleClampMax = 1.0f;
-        float scaleMin = 0.0f;
-    };
-    void setChannel(ProfilingDataChannelBase* ch, String name, String unit, int32_t texChannel) {
-        dbgassert(ch->valuesNormalized.size() == DBG_PERF_HIST_SIZE);
-        if (unit == "us")
-            ch->scaleClampMax = 10000.0f;
-        ch->name       = std::move(name);
-        ch->unit       = std::move(unit);
-        ch->texChannel = texChannel;
-    }
-    void normalizeData(ProfilingDataChannelBase* ch) {
-        dbgassert(ch->valuesRaw.size() == DBG_PERF_HIST_SIZE);
-        dbgassert(ch->valuesNormalized.size() == DBG_PERF_HIST_SIZE);
-        const float* rawData  = &ch->valuesRaw[0];
-        const float minFl     = math::min(ch->scaleMin, 0.0f);
-        const float maxFl     = math::max(ch->scaleClampMax, ch->valueMax * 0.2f + ch->valueAvg * 0.8f);
-        const float sc        = (maxFl - minFl);
-        float* normalizedData = &ch->valuesNormalized[0];
-        if (sc < 1.0f / 1024.0f) {
-            for (int i = 0; i < DBG_PERF_HIST_SIZE; ++i) {
-                *normalizedData++ = 0.5f;
-            }
-            return;
+        profDataInstances.push_back(ProfilingDataRenderInstance{instance.instancePtr});
+        ProfilingDataRenderInstance* windowInstance = &profDataInstances.back();
+        // windowInstance->instancePtr = instance.instancePtr;
+        windowInstance->tex0        = generateTexture();
+        windowInstance->name        = instance.name;
+        auto& chs                   = windowInstance->channels;
+        chs.reserve(channelDesc->size());
+        int32_t texChannel = 0;
+        for (auto& entry : *channelDesc) {
+            dbgassert(entry.offsetStMember % 8 == 0);
+            auto ch = std::make_shared<ProfilingDataChannelBase>();
+            if (entry.unit == "us")
+                ch->scaleClampMax = 10000.0f;
+            ch->name           = entry.name;
+            ch->unit           = entry.unit;
+            ch->offsetStMember = entry.offsetStMember >> 3;
+            ch->texChannel     = texChannel++;
+            chs.push_back(ch);
         }
-        for (int i = 0; i < DBG_PERF_HIST_SIZE; ++i) {
-            *normalizedData++ = (*rawData++ - minFl) / sc;
-            //dbgassert(*(normalizedData-1) <= 1.0f);
-        }
+        return windowInstance;
     }
-    void setSample(ProfilingDataChannelBase* ch, int32_t pos, int64_t value) {
-        dbgassert(ch->valuesRaw.size() == DBG_PERF_HIST_SIZE);
-        if (pos + 1 == DBG_PERF_HIST_SIZE) {
-            ch->valueMax  = value;
-            ch->valueMin  = value;
-            ch->valueAvg  = value;
-            ch->valueLast = value;
-        } else {
-            ch->valueMax = math::max(ch->valueMax, value);
-            ch->valueMin = math::min(ch->valueMin, value);
-            ch->valueAvg += value;
-        }
-        dbgassert(pos >= 0 && pos < ch->valuesRaw.size());
-        dbgassert(pos >= 0 && pos < ch->valuesNormalized.size());
-        ch->valuesRaw[pos]        = value;
-        ch->valuesNormalized[pos] = value;
-        if (pos == 0) {
-            ch->valueAvg /= DBG_PERF_HIST_SIZE;
-        }
-    }
-    struct ProfilingDataRenderInstance {
-        void* instancePtr = nullptr;
-        std::vector<std::shared_ptr<ProfilingDataChannelBase>> channels;
-        int32_t lastWriteIdx = -1;
-        GLuint tex0          = 0;
-        std::vector<ProfilingDataChannelBase*> allChannels;
-        vec2 instancePos{};
-        String name;
-        int32_t nextFreeChannelIdx = 0;
-    };
-    std::vector<ProfilingDataRenderInstance> instancesRenderStats;
-    void updateProfilingData() {
-        using namespace ProfilingImpl;
-        profiled_instances<render_stats_t>* renderWindowStatsVec;
-        profilingGetData(&renderWindowStatsVec);
-        for (auto& renderWindowStats : *renderWindowStatsVec) {
-            ProfilingDataRenderInstance* windowInstance = nullptr;
-            for (ProfilingDataRenderInstance& prevChannel : instancesRenderStats) {
-                if (prevChannel.instancePtr == renderWindowStats.instancePtr) {
-                    windowInstance = &prevChannel;
-                }
+    template<typename T>
+    void updateProfilingData(ProfilingImpl::profiling_data_t<T>& profData) {
+        static_assert(sizeof(T) % 64 == 0, "Type must provide 64 byte size");
+        static_assert(alignof(T) % 64 == 0, "Type must provide 64 byte alignment");
+        static_assert((sizeof(T) >> 3) % 8 == 0, "Stride expected to be multiple of 8");
+        using ProfilingImpl::profiling_data_t;
+        dbgassert(profData.channelDesc);
+        dbgassert(profData.instanceList);
+        for (auto& profDataInstance : *profData.instanceList) {
+            auto const windowInstance = this->getOrInitProfInstance(profData.channelDesc, profDataInstance);
+
+            auto& statsArray    = profDataInstance.stats;
+            const size_t stride = sizeof(statsArray[0]) >> 3;
+            const auto basePtr  = reinterpret_cast<int64_t*>(statsArray.data());
+            const auto dataSize = statsArray.size();
+            const auto readIdx  = profDataInstance.writeIdx ? profDataInstance.writeIdx - 1 : dataSize - 1;
+            auto& channels      = windowInstance->channels;
+            for (auto& channel : channels) {
+                setSamples(channel.get(), basePtr, dataSize, stride, readIdx, channel->offsetStMember);
             }
-            if (!windowInstance) {
-                instancesRenderStats.push_back(ProfilingDataRenderInstance{});
-                windowInstance              = &instancesRenderStats.back();
-                windowInstance->instancePtr = renderWindowStats.instancePtr;
-                windowInstance->tex0        = generateTexture();
-                windowInstance->name        = renderWindowStats.name;
-            }
-
-            auto& statsArray            = renderWindowStats.stats;
-            const int32_t statsArrayLen = statsArray.size();
-
-            auto& chs = windowInstance->channels;
-            if (chs.empty()) {
-                chs.resize(8);
-                for (auto& ch : chs) {
-                    ch = std::make_shared<ProfilingDataChannelBase>();
-                }
-                setChannel(chs[0].get(), "tm ctrl::render", "us", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[1].get(), "tm ctrl::prerender", "us", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[2].get(), "tm editor::render", "us", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[3].get(), "tm track_controls::render", "us", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[4].get(), "tm waveforms::update", "us", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[5].get(), "# waveforms updates", " ", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[6].get(), "# notes rendered", " ", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[7].get(), "# clips rendered", " ", windowInstance->nextFreeChannelIdx++);
-            }
-
-            //step thru time backwards
-            int32_t idx      = renderWindowStats.writeIdx - 1;
-            int32_t dataSize = math::min<int32_t>(texW, statsArrayLen);
-            for (; dataSize && idx < statsArrayLen;) {
-                if (idx < 0) {
-                    idx = statsArray.size() - 1;
-                }
-                setSample(chs[0].get(), dataSize - 1, statsArray[idx].stats.timeRender);
-                setSample(chs[1].get(), dataSize - 1, statsArray[idx].stats.timePrerender);
-                setSample(chs[2].get(), dataSize - 1, statsArray[idx].stats.timeRenderEditor);
-                setSample(chs[3].get(), dataSize - 1, statsArray[idx].stats.timeRenderTrackControls);
-                setSample(chs[4].get(), dataSize - 1, statsArray[idx].stats.timeUpdateWaveforms);
-                setSample(chs[5].get(), dataSize - 1, statsArray[idx].stats.numWaveFormsRendered);
-                setSample(chs[6].get(), dataSize - 1, statsArray[idx].stats.notesRendered);
-                setSample(chs[7].get(), dataSize - 1, statsArray[idx].stats.clipsRendered);
-
-
-                idx--;
-                dataSize--;
-            }
-            for (auto& channel : chs) {
+            for (auto& channel : channels) {
                 normalizeData(channel.get());
             }
-            texData.resize(texW * texW);
-            memset(texData.data(), 0, sizeof(float) * texData.size());
-            for (int j = 0; j < texW; ++j) {
-                texData[j] = 0.5f;
-            }
-            for (auto& channel : chs) {
+            // memset(texData.data(), 0, sizeof(float) * texData.size());
+            for (auto& channel : channels) {
                 memcpy(&texData[channel->texChannel * texW], channel->valuesNormalized.data(), sizeof(float) * texW);
-                //if (i % 2 == 1) {
-                //    for (int j = 0; j < texW; ++j) texData[i * texW + j] = 0.5f;
-                //}
-                //if (i % 4 == 3) {
-                //    for (int j = 0; j < texW; ++j) texData[i * texW + j] = 0.75f;
-                //}
-                //if (i == 0) {
-                //    for (int j = 0; j < texW; ++j) texData[i * texW + j] = 0.25f;
-                //}
-                //i++;
-            }
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, windowInstance->tex0);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, texW, texW, 0, GL_RED, GL_FLOAT, texData.data());
-        }
-        profiled_instances<application_stats_t>* appStatsVec;
-        profilingGetData(&appStatsVec);
-        for (auto& appStats : *appStatsVec) {
-            ProfilingDataRenderInstance* windowInstance = nullptr;
-            for (ProfilingDataRenderInstance& prevChannel : instancesRenderStats) {
-                if (prevChannel.instancePtr == appStats.instancePtr) {
-                    windowInstance = &prevChannel;
-                }
-            }
-            if (!windowInstance) {
-                instancesRenderStats.push_back(ProfilingDataRenderInstance{});
-                windowInstance              = &instancesRenderStats.back();
-                windowInstance->instancePtr = appStats.instancePtr;
-                windowInstance->tex0        = generateTexture();
-                windowInstance->name        = appStats.name;
-            }
-            
-            auto& statsArray            = appStats.stats;
-            const int32_t statsArrayLen = statsArray.size();
-
-            auto& chs = windowInstance->channels;
-            if (chs.empty()) {
-                chs.resize(7);
-                for (auto& ch : chs) {
-                    ch = std::make_shared<ProfilingDataChannelBase>();
-                }
-                setChannel(chs[0].get(), "Render All duration", "us", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[1].get(), "SwapBuffer duration", "us", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[2].get(), "TickTimer delay", "us", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[3].get(), "TickTimer duration", "us", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[4].get(), "#window msgs", "msgs", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[5].get(), "#WM_PAINT msgs", "msgs", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[6].get(), "#redraw req", "req", windowInstance->nextFreeChannelIdx++);
-            }
-
-            //step thru time backwards
-            int32_t idx      = appStats.writeIdx - 1;
-            int32_t dataSize = math::min<int32_t>(texW, statsArrayLen);
-            for (; dataSize && idx < statsArrayLen;) {
-                if (idx < 0) {
-                    idx = statsArray.size() - 1;
-                }
-                setSample(chs[0].get(), dataSize - 1, statsArray[idx].stats.timeRefreshAll);
-                setSample(chs[1].get(), dataSize - 1, statsArray[idx].stats.timeSwapBuffersMain);
-                setSample(chs[2].get(), dataSize - 1, statsArray[idx].stats.tickTimerDelay);
-                setSample(chs[3].get(), dataSize - 1, statsArray[idx].stats.tickTimerDuration);
-                setSample(chs[4].get(), dataSize - 1, statsArray[idx].stats.numMessagesProcessed);
-                setSample(chs[5].get(), dataSize - 1, statsArray[idx].stats.numMessagesWmPaint);
-                setSample(chs[6].get(), dataSize - 1, statsArray[idx].stats.numRedrawReq);
-
-
-                idx--;
-                dataSize--;
-            }
-            for (auto& channel : chs) {
-                normalizeData(channel.get());
-            }
-            texData.resize(texW * texW);
-            memset(texData.data(), 0, sizeof(float) * texData.size());
-            for (int j = 0; j < texW; ++j) {
-                texData[j] = 0.5f;
-            }
-            for (auto& channel : chs) {
-                memcpy(&texData[channel->texChannel * texW], channel->valuesNormalized.data(), sizeof(float) * texW);
-                //if (i % 2 == 1) {
-                //    for (int j = 0; j < texW; ++j) texData[i * texW + j] = 0.5f;
-                //}
-                //if (i % 4 == 3) {
-                //    for (int j = 0; j < texW; ++j) texData[i * texW + j] = 0.75f;
-                //}
-                //if (i == 0) {
-                //    for (int j = 0; j < texW; ++j) texData[i * texW + j] = 0.25f;
-                //}
-                //i++;
             }
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, windowInstance->tex0);
             glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, texW, texW, 0, GL_RED, GL_FLOAT, texData.data());
         }
     }
+public:
+    window_impl() {
+        tmLastReload = getTimeMillis();
+        texData.resize(texW * texW);
+    }
+
+    int init() {
+        glBindVertexArray(0);
+        int ret = loadShader();
+        if (ret)
+            return ret;
+        tess2d tess;
+        checkGLError("uploadVBO");
+        glGenVertexArrays(1, &vbo.vaoId);
+        glBindVertexArray(vbo.vaoId);
+        tess2d::uploadVBO(tess, vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
+        bindVertexAttributes(attributes);
+        glBindVertexArray(0);
+        checkGLError("initDebugWindow");
+        return 0;
+    }
+
+    void render(NVGcontext* vg, int winW, int winH, float pxratio) {
+        nCall++;
+        auto tmNow = getTimeMillis();
+        if (tmNow - tmLastUpdate >= 20) {
+            tmLastUpdate = tmNow;
+
+            auto tmStart = getTimeMicros();
+            ProfilingImpl::profiling_data_t<application_stats_t> profDataApp;
+            profilingGetData(&profDataApp);
+            updateProfilingData(profDataApp);
+            ProfilingImpl::profiling_data_t<render_stats_t> profDataRenderStats;
+            profilingGetData(&profDataRenderStats);
+            updateProfilingData(profDataRenderStats);
+            auto tmEnd = getTimeMicros();
+            if (nCall++ % 100 == 0) {
+                log_printf("took %zd\n", tmEnd - tmStart);
+            }
+        }
+        // if (tmNow - tmLastReload >= 1600) {
+        //     if (loadShader()) {
+        //        //return;
+        //     }
+        // }
+
+        glUseProgram(program2dTexture);
+
+
+        const int FONTSIZE_TITLE  = 18;
+        const int FONTSIZE_GRAPH  = 16;
+        const int FONTSIZE_LEGEND = 14;
+        const int WND_PADDING     = 6;
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
+        const glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.0f, -1.0f);
+        const int32_t cols      = 4;
+        const auto renderSize   = vec2(winW, winH) - vec2(WND_PADDING * 2.0f);
+        const vec2 graphSize    = vec2(renderSize.x / static_cast<float>(cols)) * vec2(1.0, 1.0 / 3.0f);
+        const vec2 grphInset    = vec2(8.0f);
+        const auto legendSize   = vec2(graphSize.x * 1.0f/3.0f, FONTSIZE_LEGEND*4.0f + grphInset.x*0.5f * 2.0f);
+        tess2d tess;
+        const vec2 graphSizeInset = graphSize - grphInset * 2.0f;
+        {
+            tess.setOffset(grphInset);
+            tess.add(graphSizeInset.x, 0.0f, 1, 1);
+            tess.add(0.0f, 0.0f, 0, 1);
+            tess.add(0.0f, graphSizeInset.y, 0, 0);
+            tess.add(graphSizeInset.x, graphSizeInset.y, 1, 0);
+        }
+        tess2d::uploadVBO(tess, vbo);
+
+
+        // note that we have to call the next 2 lines every frame when not on OpenGL 3.0 or higher contexts.
+        // OpenGL documentation does not mention this directly
+        glBindVertexArray(vbo.vaoId);
+        bindVertexAttributes(attributes);
+        glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
+
+        glm::mat4 mvp;
+
+        vec2 graphPos = vec2(WND_PADDING);
+        for (ProfilingDataRenderInstance& renderInstance : profDataInstances) {
+            renderInstance.instancePos = graphPos;
+            graphPos.y += (FONTSIZE_TITLE + grphInset.y*2.0f);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, renderInstance.tex0);
+            for (int pass = 0; pass < renderInstance.channels.size(); pass++) {
+                auto channel = renderInstance.channels[pass];
+                auto color   = rgbToNvg(colorOnlyPalette[(pass * 4 + 2) % colorOnlyPaletteLen]);
+                color.a      = 0.77f;
+                mvp          = matProj * glm::translate(glm::mat4(1.0), glm::vec3(graphPos.x, graphPos.y, 0));
+                glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
+                glUniform4f(u_renderColor, color.r, color.g, color.b, color.a);
+                glUniform4f(u_renderInfo, tmNow * 0.001f, pass, graphSizeInset.x, graphSizeInset.y);
+                glDrawElements(GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, nullptr);
+                channel->graphPos  = graphPos;
+                channel->graphSize = graphSize;
+                if (pass % cols == cols - 1) {
+                    graphPos.y += graphSize.y;
+                    graphPos.x = WND_PADDING;
+                } else {
+                    graphPos.x += graphSize.x;
+                }
+            }
+            graphPos.y += graphSize.y;
+            graphPos.y += WND_PADDING;
+            graphPos.x = WND_PADDING;
+        }
+
+        glBindVertexArray(0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        glStencilMask(~0U);
+        glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+        nvgBeginFrame(vg, winW, winH, pxratio);
+
+
+        nvgSave(vg);
+        nvgShapeAntiAlias(vg, 1);
+
+        for (ProfilingDataRenderInstance& renderInstance : profDataInstances) {
+            for (const auto& channel : renderInstance.channels) {
+                auto legendPos = channel->graphPos + vec2(0, channel->graphSize.y - legendSize.y);
+                nvgBatchedRect(vg, legendPos.x, legendPos.y, legendSize.x, legendSize.y);
+            }
+        }
+        NVGpaint paint{};
+        paint.image      = -1;
+        paint.innerColor = rgbaToNvg(0x7F333333);
+        nvgFillPaint(vg, paint);
+        nvgBatchedRender(vg);
+        nvgFillColor(vg, rgbaToNvg(0xFFFFFFFF));
+        nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
+        nvgFontSize(vg, FONTSIZE_TITLE);
+        for (ProfilingDataRenderInstance& renderInstance : profDataInstances) {
+            auto titlePos = renderInstance.instancePos + vec2(0, FONTSIZE_TITLE) * 0.5f + grphInset;
+            nvgText(vg, titlePos.x, titlePos.y, StringAsCStr(renderInstance.name), nullptr);
+        }
+        nvgFillColor(vg, rgbaToNvg(0xFFCCCCCC));
+        nvgFontSize(vg, FONTSIZE_GRAPH);
+        for (ProfilingDataRenderInstance& renderInstance : profDataInstances) {
+            for (const auto& channel : renderInstance.channels) {
+                auto subTitlePos = channel->graphPos + vec2(0, FONTSIZE_GRAPH) * 0.5f;
+                nvgText(vg, subTitlePos.x, subTitlePos.y, StringAsCStr(channel->name), nullptr);
+            }
+        }
+        nvgFillColor(vg, rgbaToNvg(0xFFAAAAAA));
+        nvgFontSize(vg, FONTSIZE_LEGEND);
+        for (ProfilingDataRenderInstance& renderInstance : profDataInstances) {
+            for (const auto& channel : renderInstance.channels) {
+                auto legendPos = channel->graphPos + vec2(0, channel->graphSize.y - legendSize.y);
+                vec2 textPos = legendPos + grphInset * 0.5f + vec2(0,  FONTSIZE_LEGEND * 0.5);
+                {
+                    String strFormatted = StringFormat("%d%s", channel->valueLast, StringAsCStr(channel->unit));
+                    nvgText(vg, textPos.x, textPos.y, StringAsCStr(strFormatted), nullptr);
+                    textPos.y += FONTSIZE_LEGEND;
+                }
+                {
+                    String strFormatted = StringFormat("Avg: %d%s", channel->valueAvg, StringAsCStr(channel->unit));
+                    nvgText(vg, textPos.x, textPos.y, StringAsCStr(strFormatted), nullptr);
+                    textPos.y += FONTSIZE_LEGEND;
+                }
+                {
+                    String strFormatted = StringFormat("Max: %d%s", channel->valueMax, StringAsCStr(channel->unit));
+                    nvgText(vg, textPos.x, textPos.y, StringAsCStr(strFormatted), nullptr);
+                    textPos.y += FONTSIZE_LEGEND;
+                }
+                {
+                    String strFormatted = StringFormat("Min: %d%s", channel->valueMin, StringAsCStr(channel->unit));
+                    nvgText(vg, textPos.x, textPos.y, StringAsCStr(strFormatted), nullptr);
+                    textPos.y += FONTSIZE_LEGEND;
+                }
+            }
+        }
+        nvgRestore(vg);
+
+
+        nvgEndFrame(vg);
+    }
+};
 }// namespace windowdebug_performance
 
-using namespace windowdebug_performance;
-
+static std::shared_ptr<windowdebug_performance::window_impl> window;
 int initDebugWindowPerformance(NVGcontext* vg) {
-    glBindVertexArray(0);
-    int ret = loadShader();
-    if (ret)
-        return ret;
-    tess2d tess;
-    tess.add(quadSize, 0.0f, 1, 1);
-    tess.add(0.0f, 0.0f, 0, 1);
-    tess.add(0.0f, quadSize, 0, 0);
-    tess.add(quadSize, quadSize, 1, 0);
-    checkGLError("uploadVBO");
-    glGenVertexArrays(1, &vbo.vaoId);
-    glBindVertexArray(vbo.vaoId);
-    tess2d::uploadVBO(tess, vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
-    bindVertexAttributes(attributes);
-    glBindVertexArray(0);
-    checkGLError("initDebugWindow");
-    return 0;
+    if (window) {
+        return 1;
+    }
+    window = std::make_shared<windowdebug_performance::window_impl>();
+    return window->init();
 }
 void drawDebugWindowPerformance(NVGcontext* vg, int winW, int winH, float pxratio) {
-
-    nCall++;
-    auto tmNow = getTimeMillis();
-    if (tmNow - tmLastUpdate >= 250) {
-        tmLastUpdate = tmNow;
-        updateProfilingData();
+    if (!window) {
+        return;
     }
-    if (tmNow - tmLastReload >= 1600) {
-        //if (loadShader()) {
-        //    //return;
-        //}
-    }
-
-    glUseProgram(program2dTexture);
-
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
-    glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.0f, -1.0f);
-    int32_t cols      = 4;
-    ivec2 renderSize  = ivec2(winW - 32, winH - 32);
-    ivec2 renderPos   = ivec2(16);
-    vec2 graphSize    = vec2(renderSize.x / cols);
-    graphSize.y /= 4;
-    tess2d tess;
-    vec2 grphInset      = vec2(2.0f);
-    vec2 graphSizeInset = graphSize - grphInset * 2.0f;
-    {
-        tess.setOffset(grphInset);
-        tess.add(graphSizeInset.x, 0.0f, 1, 1);
-        tess.add(0.0f, 0.0f, 0, 1);
-        tess.add(0.0f, graphSizeInset.y, 0, 0);
-        tess.add(graphSizeInset.x, graphSizeInset.y, 1, 0);
-    }
-    tess2d::uploadVBO(tess, vbo);
-
-
-    // note that we have to call the next 2 lines every frame when not on OpenGL 3.0 or higher contexts.
-    // OpenGL documentation does not mention this directly
-    glBindVertexArray(vbo.vaoId);
-    bindVertexAttributes(attributes);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
-
-    glm::mat4 mvp;
-
-    vec2 graphPos = vec2(renderPos);
-    for (ProfilingDataRenderInstance& renderInstance : instancesRenderStats) {
-        renderInstance.instancePos = graphPos;
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, renderInstance.tex0);
-        for (int pass = 0; pass < renderInstance.channels.size(); pass++) {
-            auto channel = renderInstance.channels[pass];
-            auto color   = rgbToNvg(colorOnlyPalette[(pass * 4 + 2) % colorOnlyPaletteLen]);
-            color.a      = 0.77f;
-            mvp          = matProj * glm::translate(glm::mat4(1.0), glm::vec3(graphPos.x, graphPos.y, 0));
-            glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
-            glUniform4f(u_renderColor, color.r, color.g, color.b, color.a);
-            glUniform4f(u_renderInfo, tmNow * 0.001f, pass, graphSizeInset.x, graphSizeInset.y);
-            glDrawElements(GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, nullptr);
-            channel->graphPos  = graphPos;
-            channel->graphSize = graphSize;
-            if (pass % cols == cols - 1) {
-                graphPos.y += graphSize.y;
-                graphPos.x = renderPos.x;
-            } else {
-                graphPos.x += graphSize.x;
-            }
-        }
-        graphPos.y += graphSize.y;
-        graphPos.x = renderPos.x;
-    }
-
-    glBindVertexArray(0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glStencilMask(~0U);
-    glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    nvgBeginFrame(vg, winW, winH, pxratio);
-
-
-    nvgSave(vg);
-    nvgShapeAntiAlias(vg, 1);
-
-    //UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
-    //UIFont::bindFont(vg, instance);
-    float lineh;
-    nvgTextMetrics(vg, nullptr, nullptr, &lineh);
-    int TEXT_FONT_SIZE = 18;
-    nvgFontSize(vg, TEXT_FONT_SIZE);
-    int inset = 0;
-
-    for (ProfilingDataRenderInstance& renderInstance : instancesRenderStats) {
-        for (const auto& channel : renderInstance.channels) {
-            nvgBatchedRect(vg, channel->graphPos.x, channel->graphPos.y + lineh, (channel->graphSize.x - inset * 2) / 3.5, channel->graphSize.y - inset - (lineh));
-        }
-    }
-    NVGpaint paint{};
-    paint.image      = -1;
-    paint.innerColor = rgbaToNvg(0x7F333333);
-    nvgFillPaint(vg, paint);
-    nvgBatchedRender(vg);
-    nvgFillColor(vg, rgbaToNvg(0xFFFFFFFF));
-    nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-    for (ProfilingDataRenderInstance& renderInstance : instancesRenderStats) {
-        nvgText(vg, renderInstance.instancePos.x + 4, renderInstance.instancePos.y - TEXT_FONT_SIZE - inset / 2, StringAsCStr(renderInstance.name), nullptr);
-        for (const auto& channel : renderInstance.channels) {
-            float y      = channel->graphPos.y;
-            nvgText(vg, channel->graphPos.x + 4, y + inset / 2, StringAsCStr(channel->name), nullptr);
-            y += lineh;
-        }
-    }
-    TEXT_FONT_SIZE -= 4;
-    nvgTranslate(vg, 6, 3);
-    nvgFontSize(vg, TEXT_FONT_SIZE);
-    nvgFillColor(vg, rgbaToNvg(0xFFAAAAAA));
-    nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-    nvgTextMetrics(vg, nullptr, nullptr, &lineh);
-    for (ProfilingDataRenderInstance& renderInstance : instancesRenderStats) {
-        for (const auto& channel : renderInstance.channels) {
-            float y      = channel->graphPos.y + TEXT_FONT_SIZE + inset;
-            {
-                String strFormatted = StringFormat("%d%s", channel->valueLast, StringAsCStr(channel->unit));
-                nvgText(vg, channel->graphPos.x + inset / 2, y + inset / 2, StringAsCStr(strFormatted), nullptr);
-            }
-            y += lineh;
-            {
-                String strFormatted = StringFormat("Avg: %d%s", channel->valueAvg, StringAsCStr(channel->unit));
-                nvgText(vg, channel->graphPos.x + inset / 2, y + inset / 2, StringAsCStr(strFormatted), nullptr);
-            }
-            y += lineh;
-            {
-                String strFormatted = StringFormat("Max: %d%s", channel->valueMax, StringAsCStr(channel->unit));
-                nvgText(vg, channel->graphPos.x + inset / 2, y + inset / 2, StringAsCStr(strFormatted), nullptr);
-            }
-            y += lineh;
-            {
-                String strFormatted = StringFormat("Min: %d%s", channel->valueMin, StringAsCStr(channel->unit));
-                nvgText(vg, channel->graphPos.x + inset / 2, y + inset / 2, StringAsCStr(strFormatted), nullptr);
-            }
-            y += lineh;
-        }
-    }
-    nvgRestore(vg);
-
-
-    nvgEndFrame(vg);
+    window->render(vg, winW, winH, pxratio);
 }

@@ -794,24 +794,23 @@ public:
 
 #if BUILD_VSTHOST
             if (!this->parent) {
+                daw_tls::tlsinstance& tls  = daw_tls::getTls();
                 // NVGGLRenderStats nvglRenderStats;
                 // nvglGetRenderStats(this->nanovgCtxt, &nvglRenderStats);
-                daw_tls::tlsinstance& tls  = daw_tls::getTls();
+                timer.reset();
+                glfwSwapBuffers(glfw);
+                tls.renderStats.timeSwapBuffers = timer.getTime();
                 tls.renderStats.timeRender = timer.getTime();
                 Profiling::profilingCommitStats(this, frameNumber, tls.renderStats);
                 tls.prevRenderStats = tls.renderStats;
-                memset(&tls.renderStats, 0, sizeof(tls.renderStats));
+                tls.renderStats = {};
                 tls.renderStats.fps = tls.prevRenderStats.fps;
-                timer.reset();
-                glfwSwapBuffers(glfw);
-                appStats.timeSwapBuffersMain = timer.getTime();
             } else {
                 glfwSwapBuffers(glfw);
             }
 #endif
         }
     }
-    int64_t tmPrintSwapDuration  = 0;
 
     void onMouseMoved(ivec2 deltapos) override {
         if (math::abs(deltapos.x) + math::abs(deltapos.y) > 2)
