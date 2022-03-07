@@ -13,9 +13,17 @@
 
 void CPP_failedAssert(const char* expr, const char *file, int line);
 
+#if defined(_MSC_VER) && !defined(__INTEL_COMPILER)
+#define hint_likely(expr) (expr)
+#define hint_unlikely(expr) (expr)
+#else
+#define hint_likely(expr) __builtin_expect((expr), 1)
+#define hint_unlikely(expr) __builtin_expect((expr), 0)
+#endif
+
 #define dbgassert(_Expression) \
  (void) \
- ((!!(_Expression)) || \
+ (hint_unlikely(!!(_Expression)) || \
   (CPP_failedAssert(#_Expression,__FILE__,__LINE__),0))
 
 #define assert_expr(_Expression) \
