@@ -28,7 +28,6 @@ public:
     virtual void setClipboardText(String s) = 0;
     virtual String getClipboardText()       = 0;
     virtual int getKeyMods()                = 0;
-    virtual void hideSystemCursor()         = 0;
     virtual void captureMouse()             = 0;
     virtual void releaseMouse()             = 0;
     virtual bool isMouseCaptured()          = 0;
@@ -68,6 +67,9 @@ public:
     virtual AppCtrl* getCtrl()     = 0;
     virtual bool canResize()       = 0;
     virtual int getCreationFlags() = 0;
+    virtual void initControl()     = 0;
+    virtual void setInvalid()      = 0;
+    // virtual void destroy()     = 0;
 
     virtual void positionOnScreen(ivec2 pos, ivec2 size)     = 0;
     virtual void setSizeLimits(ivec2 minSize, ivec2 maxSize) = 0;

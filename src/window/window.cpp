@@ -99,7 +99,6 @@ public:
 };
 
 #define PREVENT_REENTRANT(reentrant_err_msg)        \
-    static bool reentrant = false;                  \
     reentrantblocker block(reentrant);              \
     if (!block.check()) {                           \
         dbgassert(0 && (reentrant_err_msg));        \
@@ -205,56 +204,55 @@ bool checkGLError(const char* s);
 class appwindow : protected DropTargetListener {
 protected:
     appwindow* const parent;
-    std::vector<appwindow*> children;
-
-private:
-    uint64_t last = 0;
-
-protected:
-    char name[32]{ 0 };
-    int cursorIcon = CURSOR_DEFAULT;
-    vec2 lastclickpos{ -10000, -10000 };
-    vec2 lastmousepos{ -10000, -10000 };
-    vec2 mousepos{ -10000, -10000 };
-
-public:
-    GLFWwindow* glfw = nullptr;
-
-protected:
-    NVGcontext* nanovgCtxt    = nullptr;
-    bool isExternalWindow     = false;
-    bool isSharedContextSlave = false;
-    bool noRawInput           = false;
+    NVGcontext* nanovgCtxt = nullptr;
 #ifdef _WIN32
     DropTarget* dropTarget = nullptr;
     HWND hwnd              = nullptr;
     WNDPROC defWndProc     = nullptr;
 #endif
-    bool bCanResize = false;
-    bool shown      = false;
-    bool valid      = true;
 
-    int frameNumber   = 0;
-    int frameCountFPS = 0;
+    std::vector<appwindow*> children;
 
-public:
-    bool isValid() {
-        return valid;
-    }
-    void setInvalid() {
-        this->valid = false;
-    }
-    void setValid() {
-        this->valid = true;
-    }
-    const int64_t minFrameDelayMicros = 1'000'000LL / 288LL;
+    bool isSharedContextSlave = false;
+    bool noRawInput           = false;
+    bool bCanResize           = false;
+    bool bIsVisible           = false;
+    bool valid                = true;
+
+    bool redrawFlagged       = false;
+    bool reentrant           = false;
+    bool bIsFirstTimeReload  = true;
+    int frameNumber          = 0;
+    int frameCountFPS        = 0;
+    int64_t tmLastFps        = 0;
+    int64_t tmLastDrawMicros = 0;
+    int skipFrames           = 0;
+
+    vec2 mousepos{ -10000, -10000 };
+    int cursorIcon = CURSOR_DEFAULT;
+    vec2 lastclickpos{ -10000, -10000 };
+    vec2 lastmousepos{ -10000, -10000 };
+
+    char nameDbg[32]{ 0 };
+    char name[32]{ 0 };
+    String fpsStats;
+
 
 private:
-    int64_t tmLastFps = 0;
-    String fpsStats;
-    int64_t tmLastDrawMicros = 0;
-    int skipFrames         = 0;
-    bool redrawFlagged     = false;
+
+    void reloadCustomShaders() {
+        String strShaderSrcVertex;
+        String strShaderSrcFragment;
+        int64_t ret1 = ReadFileText("nanovg.vsh", strShaderSrcVertex);
+        int64_t ret2 = ReadFileText("nanovg.fsh", strShaderSrcFragment);
+        if (ret1 != -1 && ret2 != -1) {
+            int statusErr = nvgReloadShaders(nanovgCtxt, StringAsCStr(strShaderSrcVertex), StringAsCStr(strShaderSrcFragment));
+            if (statusErr && bIsFirstTimeReload) {
+                throw appexception("Couldn't initialize nanovg");
+            }
+            bIsFirstTimeReload = false;
+        }
+    }
 
     void initContext() {
         if (isSharedContextSlave) {
@@ -283,25 +281,20 @@ private:
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
-protected:
-    bool bIsFirstTimeReload = true;
-    void reloadCustomShaders() {
-        String strShaderSrcVertex;
-        String strShaderSrcFragment;
-        int64_t ret1 = ReadFileText("nanovg.vsh", strShaderSrcVertex);
-        int64_t ret2 = ReadFileText("nanovg.fsh", strShaderSrcFragment);
-        if (ret1 != -1 && ret2 != -1) {
-            int statusErr = nvgReloadShaders(nanovgCtxt, StringAsCStr(strShaderSrcVertex), StringAsCStr(strShaderSrcFragment));
-            if (statusErr && bIsFirstTimeReload) {
-                throw appexception("Couldn't initialize nanovg");
-            }
-            bIsFirstTimeReload = false;
-        }
+public:
+    GLFWwindow* glfw = nullptr;
+
+    bool isValid() {
+        return valid;
     }
+    const int64_t minFrameDelayMicros = 1'000'000LL / 288LL;
+
 
 public:
-    explicit appwindow(appwindow* _parent) : parent(_parent), tmLastFps(getTimeMillis()) {
-        name[0] = 0;
+    explicit appwindow(appwindow* _parent) 
+        : parent(_parent),
+        tmLastFps(getTimeMillis()) 
+    {
 #if HAS_APP_SETTINGS
         noRawInput = DAW::settings.vmmode;
 #endif
@@ -368,7 +361,10 @@ public:
 
     virtual void onRefresh() {
         PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
-#ifdef __linux__
+        for (appwindow* ow : this->children) {
+            ow->onRefresh();
+        }
+// #ifdef __linux__
         auto tmNowMicros   = getTimeMicros();
         auto tmSinceMicros = tmNowMicros - tmLastDrawMicros;
         if (tmSinceMicros < minFrameDelayMicros) {
@@ -376,14 +372,14 @@ public:
             return;
         }
         skipFrames = 0;
-#endif
+// #endif
         render();
         endFrame();
     }
 
     virtual void flagNeedsRedraw() {
         appStats.numRedrawReq++;
-        invalidateWindowContents(glfw);
+        // invalidateWindowContents(glfw);
     }
 
     void endFrame() {
@@ -461,13 +457,6 @@ public:
     virtual void destroy()              = 0;
     virtual void onTick()               = 0;
 
-    virtual void hideSystemCursor() {
-        glfwSetInputMode(glfw, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-        if (!noRawInput) {
-            glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 0);
-        }
-    }
-
     virtual void captureMouse() {
         if (!noRawInput) {
             glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 1);
@@ -489,9 +478,9 @@ public:
     void createBaseWindow(const char* title, int w, int h, GLFWwindow* share = nullptr, void* parentWindowHandle = nullptr);
 
     void showWindow() {
-        if (shown)
+        if (bIsVisible)
             return;
-        shown = true;
+        bIsVisible = true;
         glfwShowWindow(glfw);
 #ifdef __linux__
         glfwFocusWindow(glfw);
@@ -499,9 +488,9 @@ public:
     }
 
     void hideWindow() {
-        if (!shown)
+        if (!bIsVisible)
             return;
-        shown = false;
+        bIsVisible = false;
         glfwHideWindow(glfw);
         onWindowClose();
     }
@@ -634,20 +623,25 @@ class appwindow_main : public appwindow, public window_main {
     std::shared_ptr<AppCtrl> sharedCtrl;
     int32_t windowCreationFlags      = 0;
     int64_t tmDblClick               = 0;
-    int64_t tmLastShaderReloadMillis = 0;
+    // int64_t tmLastShaderReloadMillis = 0;
 
 protected:
     void destroyOverlayWindows();
 
 public:
-    String nameDbg;
     std::vector<std::shared_ptr<appwindow>> overlayWindows;
     std::vector<std::shared_ptr<appwindow>> overlayWindowsToClose;
-    appwindow_main(appwindow* _parent, std::shared_ptr<AppCtrl> _ctrl)
+    appwindow_main(appwindow_main* _parent, const std::shared_ptr<AppCtrl>& _ctrl)
         : appwindow(_parent),
           window_main(),
           ctrl(_ctrl.get()),
           sharedCtrl(_ctrl) {
+        String windowName = typeName(*_ctrl);
+        strncpy(name, StringAsCStr(windowName), sizeof(name));
+        if (_parent) {
+            windowName = String(_parent->nameDbg) + ".child[" + windowName + "]";
+        }
+        strncpy(nameDbg, StringAsCStr(windowName), sizeof(nameDbg));
     }
 
     AppCtrl* getCtrl() override {
@@ -672,8 +666,8 @@ public:
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
-    void createMainWindow(const char* title, int w, int h, appwindow_main* parentWindowHandle, int flags = 0);
-    void initControl();
+    void createMainWindow(int w, int h, appwindow_main* parentWindowHandle, int flags = 0);
+    void initControl() override;
 
     void updateMenu() override {
 #if WINDOW_HAS_MENUBAR
@@ -689,10 +683,6 @@ public:
 
     void flagNeedsRedraw() override {
         appwindow::flagNeedsRedraw();
-        if (cursorIcon != ctrl->cursorIcon) {
-            glfwSetCursor(glfw, MouseCursors::cursors[ctrl->cursorIcon]);
-            cursorIcon = ctrl->cursorIcon;
-        }
     }
 
     window_main* createOverlay(std::shared_ptr<AppCtrl> ctrl, ivec2 windowSize, int flags) override;
@@ -719,17 +709,30 @@ public:
 
     void destroy() override;
 
+    void setInvalid() override {
+        this->valid = false;
+    }
+
     void onTick() override {
         static bool reentrant = false;
         reentrantblocker block(reentrant);
         if (!block.check()) {
             return;
         }
-        //        flagNeedsRedraw();
         glfwMakeContextCurrent(glfw);
         checkGLError("onTick");
 
         //overlay/child window lifetime management
+        releaseOverlayWindows();
+
+        /* if (getTimeMillis() - tmLastShaderReloadMillis >= 1000) {
+            tmLastShaderReloadMillis = getTimeMillis();
+            reloadCustomShaders();
+        } */
+
+        ctrl->onAppTick();
+    }
+    void releaseOverlayWindows() {
         if (!overlayWindowsToClose.empty()) {
             for (auto& window : overlayWindowsToClose) {
                 auto handlerListSize = windowTimerHandleList.size();
@@ -741,23 +744,17 @@ public:
             }
             overlayWindowsToClose.clear();
         }
-
-        if (getTimeMillis() - tmLastShaderReloadMillis >= 1000) {
-            tmLastShaderReloadMillis = getTimeMillis();
-            //            reloadCustomShaders();
-        }
-
-        ctrl->onAppTick();
-        flagNeedsRedraw();
     }
 
     void onRefresh() override {
+        if (cursorIcon != ctrl->cursorIcon) {
+            glfwSetCursor(glfw, MouseCursors::cursors[ctrl->cursorIcon]);
+            cursorIcon = ctrl->cursorIcon;
+        }
         appwindow::onRefresh();
 
-#ifdef __APPLE__
         for (auto& w : overlayWindows)
             w->onRefresh();
-#endif
     }
 
     void render() override {
@@ -815,12 +812,10 @@ public:
         if (math::abs(deltapos.x) + math::abs(deltapos.y) > 2)
             this->tmDblClick = 0;
         ctrl->mouseMoved(getMousePos(1.0f / ctrl->m_scale), deltapos);
-        flagNeedsRedraw();
     }
 
     void onMouseScrolled(double xoffset, double yoffset) override {
         ctrl->mouseScrolled(xoffset, yoffset);
-        flagNeedsRedraw();
     }
 
     void onMouseButton(int button, int action, int mods) override {
@@ -834,18 +829,13 @@ public:
             ctrl->mouseUp(getMousePos(1.0f / ctrl->m_scale), button);
         }
         lastclickpos = mousepos;
-        flagNeedsRedraw();
     }
 
     void onWindowSizeChanged(int width, int height) override {
         if (ctrl->isOK) {
             if (ctrl->m_size.x != width || ctrl->m_size.y != height) {
-                // log_lf(Log::L_DEBUG, "size change from %dx%d to %dx%d on window %08X: parent %08X\n", ctrl->m_size.x, ctrl->m_size.y, width, height, (uint64_t) (this), (uint64_t) (parent));
                 ctrl->windowSizeChanged(width, height);
-            } else {
-                // log_lf(Log::L_DEBUG, "skip window resize to %dx%d on window %08X: parent %08X\n", ctrl->m_size.x, ctrl->m_size.y, (uint64_t) (this), (uint64_t) (parent));
             }
-            flagNeedsRedraw();
         }
     }
 
@@ -856,7 +846,6 @@ public:
             releaseMouse();// fix mouse sometimes not getting released from controls that capture the mouse cursor
             ctrl->focusLost();
         }
-        flagNeedsRedraw();
     }
 
     void onWindowCloseRequest() override {
@@ -882,23 +871,19 @@ public:
     }
 
     bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override {
-        flagNeedsRedraw();
         return ctrl->filesDropBegin(files, pos, kbmods);
     }
 
     bool filesDropMove(ivec2 pos, int kbmods) override {
-        flagNeedsRedraw();
         return ctrl->filesDropMove(pos, kbmods);
     }
 
     bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override {
-        flagNeedsRedraw();
         return ctrl->filesDropFinal(files, pos, kbmods);
     }
 
     void requestClose() override {
         glfwSetWindowShouldClose(glfw, 1);
-        //        onWindowClose();
     }
 
     void menuCommand(const menucmd_t&& command) override {
@@ -933,7 +918,6 @@ public:
     void onCharInput(unsigned int codepoint) override {
         //log_lf(Log::L_DEBUG, "main onCharInput 0x%04X\n", codepoint);
         ctrl->onCharInput(codepoint);
-        flagNeedsRedraw();
     }
     void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) override {
         /*if (action == GLFW_PRESS)*/
@@ -941,11 +925,9 @@ public:
         //log_lf(Log::L_DEBUG, "mods %08X\n", mods);
         //log_lf(Log::L_DEBUG, "main onKeyInput %d (%c) %d\n", key, key, scancode);
         ctrl->onKeyInput(key, scancode, action, mods, key_name);
-        flagNeedsRedraw();
     }
 
     void onChildDialogClose(appwindow* child) override {
-        //glfwFocusWindow(this->glfw);
         appwindow::onChildDialogClose(child);
     }
 
@@ -957,10 +939,6 @@ public:
 
     void releaseMouse() override {
         appwindow::releaseMouse();
-    }
-
-    void hideSystemCursor() override {
-        //        appwindow::hideSystemCursor();
     }
 
     bool isMouseCaptured() override {
@@ -996,7 +974,6 @@ public:
     }
 
     void requestRedraw() override {
-        //flagNeedsRedraw();
     }
 
     void setClipboardText(String s) override {
@@ -1190,7 +1167,6 @@ public:
     }
 
     void onTick() override {
-        flagNeedsRedraw();
     }
 
     void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) override {
@@ -1234,7 +1210,6 @@ public:
     }
 
     void requestRedraw() override {
-        flagNeedsRedraw();
     }
 
     void setClipboardText(String s) override {
@@ -1262,10 +1237,6 @@ public:
         appwindow::releaseMouse();
     }
 
-    void hideSystemCursor() override {
-        //appwindow::hideSystemCursor();
-    }
-
     bool isMouseCaptured() override {
         return appwindow::isMouseCaptured();
     }
@@ -1280,7 +1251,7 @@ public:
 };
 
 window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> overlayCtrl, ivec2 windowSize, int flags) {
-    String sName = StringFormat("%s.child", this->name);
+
 
     //TODO: document lifetime of control
     std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, overlayCtrl);
@@ -1290,8 +1261,7 @@ window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> overlayCtrl,
     // appwindow_main* parentHandle = ((flags & WINDOW_IS_MAINWINDOW_SLAVE) != 0) ? this : nullptr;
 
     appwindow_main* parentHandle = nullptr;
-
-    ow->createMainWindow(StringAsCStr(sName), windowSize.x, windowSize.y, parentHandle, flags);
+    ow->createMainWindow(windowSize.x, windowSize.y, parentHandle, flags);
     if (!(flags & WINDOW_IS_MAINWINDOW_SLAVE)) {
         ow->initControl();
     }
@@ -1302,6 +1272,7 @@ window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> overlayCtrl,
 }
 
 void appwindow_main::destroyOverlayWindows() {
+    releaseOverlayWindows();
     for (std::shared_ptr<appwindow>& ow : this->overlayWindows) {
         ow->destroy();
         ow.reset();
@@ -1315,8 +1286,14 @@ void appwindow_main::destroyOverlayWindows() {
 }
 
 void appwindow_main::destroy() {
-    if (!glfw)
-        throw appexception("glfw null");
+    dbgassert(glfw);
+    if (this->ctrl) {
+        glfwMakeContextCurrent(glfw);
+        this->ctrl->closeAllContextMenus();
+        glfwMakeContextCurrent(glfw);
+        this->ctrl->releaseGarbageGuis();
+        glfwMakeContextCurrent(glfw);
+    }
     destroyOverlayWindows();
     appwindow::killTimer();
 #if BUILD_VSTHOST
@@ -1382,9 +1359,8 @@ void appwindow_main::initControl() {
     this->onWindowSizeChanged(w, h);
 }
 
-void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow_main* parentWindowHandle, int flags) {
+void appwindow_main::createMainWindow(int w, int h, appwindow_main* parentWindowHandle, int flags) {
     windowCreationFlags = flags;
-    nameDbg             = title;
     bCanResize          = flags & WINDOW_IS_RESIZABLE;
     setAppWindowHints();
     glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
@@ -1399,7 +1375,7 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
     }
 
     //glfwWindowHint(GLFW_FLOATING, parent != nullptr);
-    appwindow::createBaseWindow(title, w, h, parentWindowHandle ? parentWindowHandle->glfw : nullptr, nullptr);
+    appwindow::createBaseWindow(this->name, w, h, parentWindowHandle ? parentWindowHandle->glfw : nullptr, nullptr);
 
     if (flags & WINDOW_IS_MAINWINDOW_SLAVE) {
         //NOTE: GL context sharing with companion window is disabled!
@@ -1656,7 +1632,6 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
     }
 
     registerWindowTimer(this);
-    last = getTimeMillis();
 }
 
 void printLeakedGuiBase();
@@ -1676,15 +1651,6 @@ void makeWindowContextCurrent(window_base* w) {
     }
 }
 
-void initWindowControl(window_main* windowInitialize) {
-    dynamic_cast<appwindow_main*>(windowInitialize)->initControl();
-    // dynamic_cast<appwindow_main*>(windowInitialize)->showWindow();
-}
-
-void destroyWindowControl(window_main* windowInitialize) {
-    dynamic_cast<appwindow_main*>(windowInitialize)->setInvalid();
-    //dynamic_cast<appwindow_main*>(windowInitialize)->destroy();
-}
 
 #if HAS_MAIN_LOOP
 #include "platform/win/debug_msg_count.h"
@@ -1818,7 +1784,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         std::shared_ptr<AppCtrl> ctrl = appInstance.makeApp(args);
 
         std::unique_ptr<appwindow_main> mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl);
-        mainWindow->createMainWindow("main window", 1280, 720, nullptr, WINDOW_IS_MAINWINDOW_MASTER);
+        mainWindow->createMainWindow(1280, 720, nullptr, WINDOW_IS_MAINWINDOW_MASTER);
 #ifdef _WIN32
         setMainHWND(mainWindow->getHWND());
 #endif
@@ -1857,8 +1823,8 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         int64_t cntMessages   = 0;
         int64_t tmLRDbgPrint  = getTimeMillis();
         bool debugMessageLoop = false;
-#else
         int64_t tmHRLastFrame = 0;
+#else
 #endif
         while (!fatalError && !glfwWindowShouldClose(glfwHandle)) {
 #ifdef _WIN32
@@ -1910,12 +1876,11 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             }
 #if defined(__linux__) || defined(__APPLE__)
             glfwWaitEventsTimeout(0.001);
-
+#endif
             if (tmHRNow - tmHRLastFrame >= mainWindow->minFrameDelayMicros) {
                 mainWindow->onRefresh();
                 tmHRLastFrame = tmHRNow;
             }
-#endif
 #ifdef _WIN32
             if (debugMessageLoop) {
                 if (getTimeMillis() - tmLRDbgPrint >= 1000) {
@@ -1934,7 +1899,6 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             }
 #endif
         }
-        mainWindow->setInvalid();
         mainWindow->destroy();
 
         if (!fatalError) {
@@ -2008,7 +1972,6 @@ public:
           pluginwindow(_ctrl) {
         this->effect = _effect;
         setRect(0, 0, w, h);
-        isExternalWindow = true;
     }
 
     ~appwindow_plugin() override {
@@ -2074,10 +2037,10 @@ public:
                 int windowWidth  = _rect.right - _rect.left;
                 int windowHeight = _rect.bottom - _rect.top;
                 createPluginWindow("plugin-window", windowWidth, windowHeight, ptr);
-                setValid();
+                this->valid = true;
                 glfwGetWindowSize(glfw, &windowWidth, &windowHeight);
                 this->onWindowSizeChanged(windowWidth, windowHeight);
-                showWindow();
+                this->valid = false;
                 ctrlShared->onGuiOpen(effect);
                 return true;
             }
@@ -2101,7 +2064,7 @@ public:
                 hideWindow();
                 destroyContextAndWindow();
             }
-            setInvalid();
+            this->valid = false;
         } catch (std::exception& e) {
             String excDesc = StringFormat("Fatal error: %s", e.what());
             ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);

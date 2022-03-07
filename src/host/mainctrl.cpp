@@ -100,7 +100,6 @@ void dragdrop_midifile::reset() {
 guictr_base* makeCtrProperties();//guiproperties.cpp
 guictr_base* makeCtrTheme();     //guiproperties.cpp
 guictr_base* makeCtrHistory();   //guihistory.cpp
-guictr_base* makeDnDTestCtr();   //apps/drag-drop.cpp
 
 class MainCtrlErrorStatusBarLogger : public Logger {
     gui_statusbar* const statusbar;
@@ -285,7 +284,6 @@ public:
     guictr_nodes_splitview ctr_nodes;
     guictr_tracks ctr_tracks2;
     guictr_clipeditor ctr_clipeditor;
-    guictr_base* ctr_dnd_test;
     Splitter splitterCenter;
     DawViewContainersCompanion(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
         : dawCtrl(_dawCtrl),
@@ -293,7 +291,6 @@ public:
           ctr_nodes(_cursor, _project, dragdropclip),
           ctr_tracks2(_dawCtrl, _cursor, _trackSelection, _project, _projectGlobals, grid, dragdropclip),
           ctr_clipeditor(clipView),
-          ctr_dnd_test(makeDnDTestCtr()),
           splitterCenter(0, 0.8f) {
         indexContent = 1;
         splitterCenter.setMinMax(0.2f, 0.86f);
@@ -319,14 +316,13 @@ public:
         int hTrackCtr       = hCenter;
         splitterCenter.pos  = ivec2(winX, winY + hTrackCtr - Splitter::SPLITTER_LAYOUT_THICKNESS/2);
         splitterCenter.size = ivec2(winW, Splitter::SPLITTER_LAYOUT_THICKNESS);
-        ctr_clipeditor.size = ctr_dnd_test->size = ctr_nodes.size = centerCtr.size = { winW, hTrackCtr };
-        ctr_clipeditor.pos = ctr_dnd_test->pos = ctr_nodes.pos = centerCtr.pos = { winX, winY };
+        ctr_clipeditor.size = ctr_nodes.size = centerCtr.size = { winW, hTrackCtr };
+        ctr_clipeditor.pos  = ctr_nodes.pos  = centerCtr.pos  = { winX, winY };
     }
     void addTo(std::vector<guictr_base*>& v) override {
         ctr_clipeditor.setControl(dawCtrl);
         ctr_tracks2.setControl(dawCtrl);
         ctr_nodes.setControl(dawCtrl);
-        ctr_dnd_test->setControl(dawCtrl);
 
         v.push_back(&splitterCenter);
         dbgassert(v.size() == indexContent);
@@ -341,7 +337,6 @@ public:
         this->ctr_tracks2.setVisible(dawCtrl->containers[indexContent] == &this->ctr_tracks2);
         this->ctr_nodes.setVisible(dawCtrl->containers[indexContent] == &this->ctr_nodes);
         this->ctr_clipeditor.setVisible(dawCtrl->containers[indexContent] == &this->ctr_clipeditor);
-        this->ctr_dnd_test->setVisible(dawCtrl->containers[indexContent] == this->ctr_dnd_test);
     }
 };
 
@@ -906,9 +901,6 @@ void openDebugWindowNanoVG(window_main* mainwindow) {
 }
 #endif
 
-void initWindowControl(window_main* windowInitialize);
-void destroyWindowControl(window_main* windowInitialize);
-
 void DawInstance::onDawCompanionWindowClose(DawWindowCompanion& entry) {
     auto it = std::find_if(dawCtrls.begin(), dawCtrls.end(), [pDawCtrlClosing = entry.ctrl.get()](auto* pDawCtrl) {
         return pDawCtrl == pDawCtrlClosing;
@@ -916,7 +908,7 @@ void DawInstance::onDawCompanionWindowClose(DawWindowCompanion& entry) {
     if (it != dawCtrls.end()) {
         dawCtrls.erase(it);
     }
-    destroyWindowControl(entry.wnd);
+    entry.wnd->setInvalid();
 }
 
 void DawInstance::setSoloState(audio_stage_ref_t ref, bool enableSolo) {
@@ -971,9 +963,8 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
                     ivec2 windowSize;
                     mainCtrl->mainWindow->getSize(&windowSize);
                     auto compWindowNew       = mainCtrl->mainWindow->createOverlay(companionCtrlStdPtr, windowSize, WINDOW_IS_MAINWINDOW_SLAVE);
-                    dbgassert(compWindowNew);
                     companionWindows.push_back(DawWindowCompanion{ compWindowNew, companionCtrlStdPtr });
-                    initWindowControl(compWindowNew);
+                    compWindowNew->initControl();
                     if (companionCtrlStdPtr->isOk()) {
                         companionWindows[0].wnd->show();
                         for (track_t* tr : project.trackList) {
@@ -1904,7 +1895,6 @@ void CompanionCtrl::layoutView(int32_t w, int32_t h) {
 
     view->ctr_tracks2.layout();
     view->ctr_nodes.layout();
-    view->ctr_dnd_test->layout();
     view->ctr_clipeditor.layout();
     for (guictr_base* ctr : containers) {
         if (ctr == &view->ctr_tracks2)
@@ -1912,8 +1902,6 @@ void CompanionCtrl::layoutView(int32_t w, int32_t h) {
         if (ctr == &view->ctr_clipeditor)
             continue;
         if (ctr == &view->ctr_nodes)
-            continue;
-        if (ctr == view->ctr_dnd_test)
             continue;
         ctr->layout();
     }

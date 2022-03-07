@@ -419,30 +419,19 @@ void AppCtrl::onAppTick() {
     onTick();
 
     /* run deferred delete of contextmenus */
+    releaseGarbageGuis();
+}
+void AppCtrl::releaseGarbageGuis() {
     for (auto gui : garbageGuis) {
         delete gui;
     }
     garbageGuis.clear();
 }
 void AppCtrl::destroyControl() {
-    String sname;
-    if (this->ctxtmenu != nullptr) {
-        sname = this->ctxtmenu->getClassName()+","+this->ctxtmenu->getLabel();
-    }
-    bool hadContextMenu = this->ctxtmenu != nullptr;
-    bool hadWindow = contextWindow != nullptr;
-    closeAllContextMenus();
-    bool hadContextMenu2 = this->ctxtmenu != nullptr;
-    bool hadWindow2 = contextWindow != nullptr;
-    contextWindow = nullptr;
-    if (this->ctxtmenu) {
-        log_lf(Log::L_WARN, "Context menu not closed in destroyControl: %s %d %d %d %d %d\n", 
-            StringAsCStr(sname), hadContextMenu, hadWindow, hadContextMenu2, hadWindow2, garbageGuis.size());
-    }
-    for (auto gui : garbageGuis) {
-        delete gui;
-    }
-    garbageGuis.clear();
+    dbgassert(!this->ctxtmenu);
+    dbgassert(garbageGuis.empty());
+    this->contextWindow = nullptr;
+    menuWindows.clear();
     dbgassert(isOk());
     destroy();
 }

@@ -334,6 +334,7 @@ public:
     void openContextMenu(guictxtmenu_base* b, ivec2 pos, int flags=1) override;
     void openDialog(guidialog_base* b);
     void closeContextMenu() override;
+    void releaseGarbageGuis();
     void closeDialogs() override;
     void openAppMenu(int lvl, guictxtmenu_base* b, ivec2 pos) override;
     void closeAppMenusAtLvl(int startlvl) override;
