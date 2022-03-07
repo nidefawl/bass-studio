@@ -12,6 +12,7 @@
 #include "math/seq_math.h"
 #include "error.h"
 #include "basectrl.h"
+#include "profiling.h"
 #include "window.h"
 #include "platform.h"
 #include "keyboard.h"
@@ -1119,6 +1120,8 @@ void MainCtrl::startApp() {
     statusbarLogger = new MainCtrlErrorStatusBarLogger(&view->statusbar);
     statusbarLogger->setLevel(Log::L_WARN);
     getMultiLogger().addLogger(statusbarLogger);
+    Profiling::profilingRegisterEntry<prof_stats_render_t>(this, "Main Render Stats");
+
     BaseCtrl::relayout();
     updateVisibleTrackContents();
 
@@ -2657,7 +2660,13 @@ void CompanionCtrl::setEditClip(gui_clip* gclip) {
     clipView.set(gclip);
     view->ctr_clipeditor.showEditClip();
 }
-
+void MainCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
+    DawCtrl::render(nanovgCtxt, x, y, w, h, ratio);
+    daw_tls::tlsinstance& tls = daw_tls::getTls();
+    Profiling::profilingCommitStats(this, 0, tls.renderStats);
+    tls.prevRenderStats = tls.renderStats;
+    tls.renderStats     = {};
+}
 void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
 
     auto& renderStats = daw_tls::getTls().renderStats;

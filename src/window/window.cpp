@@ -63,7 +63,7 @@
 
 class appwindow;
 static std::vector<appwindow*> windowTimerHandleList;
-static application_stats_t appStats;
+static prof_stats_applicaton_t appStats;
 
 void registerWindowTimer(appwindow* wnd) {
     windowTimerHandleList.push_back(wnd);
@@ -233,8 +233,8 @@ protected:
     vec2 lastclickpos{ -10000, -10000 };
     vec2 lastmousepos{ -10000, -10000 };
 
-    char nameDbg[32]{ 0 };
-    char name[32]{ 0 };
+    char nameDbg[128]{ 0 };
+    char name[128]{ 0 };
     String fpsStats;
 
 
@@ -388,10 +388,6 @@ public:
         auto tmNow = tmNowMicros / 1000LL;
         if (frameCountFPS > 0 && tmNow - tmLastFps >= 1000) {
             float fps = frameCountFPS*1000.0f / static_cast<float>(tmNow - tmLastFps);
-#if BUILD_VSTHOST
-            daw_tls::tlsinstance& tls = daw_tls::getTls();
-            tls.renderStats.fps       = fps;
-#endif
             fpsStats = StringFormat("%.2f fps, %f", fps, static_cast<double>(tmLastDrawMicros)/1.0e6);
             glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
             tmLastFps    = tmNow;
@@ -624,7 +620,8 @@ class appwindow_main : public appwindow, public window_main {
     int32_t windowCreationFlags      = 0;
     int64_t tmDblClick               = 0;
     // int64_t tmLastShaderReloadMillis = 0;
-
+    bool bEnableWindowProfiling = false;
+    prof_stats_window_t renderStatsWindow{};
 protected:
     void destroyOverlayWindows();
 
@@ -642,6 +639,11 @@ public:
             windowName = String(_parent->nameDbg) + ".child[" + windowName + "]";
         }
         strncpy(nameDbg, StringAsCStr(windowName), sizeof(nameDbg));
+        bEnableWindowProfiling = true;
+        if (bEnableWindowProfiling) {
+            window_base* ptr = this;
+            Profiling::profilingRegisterEntry<prof_stats_window_t>(ptr, nameDbg);
+        }
     }
 
     AppCtrl* getCtrl() override {
@@ -762,6 +764,8 @@ public:
     }
 
     void renderMain() {
+        hires_timer_t timer;
+        timer.reset();
         glfwMakeContextCurrent(glfw);
 
         int winwidth = 0, winheight = 0;
@@ -773,8 +777,6 @@ public:
             if (!ctrl->isOk()) {
                 throw std::logic_error("invalid application state");
             }
-            hires_timer_t timer;
-            timer.reset();
             float pxratio = fbwidth / (float) winwidth;
             glViewport(0, 0, fbwidth, fbheight);
             glEnable(GL_BLEND);
@@ -782,6 +784,7 @@ public:
             glDisable(GL_DEPTH_TEST);
             glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             ctrl->prerender(this->nanovgCtxt, 0, 0, winwidth, winheight, pxratio);
+            renderStatsWindow.timePrerender = timer.getTime();
             glViewport(0, 0, fbwidth, fbheight);
             static const vec4 clearc = int32vec4(0xff121212);
             glClearColor(clearc[0], clearc[1], clearc[2], clearc[3]);
@@ -791,24 +794,18 @@ public:
             if (ctrl->isVisible()) {
                 ctrl->render(this->nanovgCtxt, 0, 0, winwidth, winheight, pxratio);
             }
-
+            renderStatsWindow.timeRender = timer.getTime();
+            glfwSwapBuffers(glfw);
+            renderStatsWindow.timeSwapBuffers = timer.getTime();
 #if BUILD_VSTHOST
-            if (!this->parent) {
-                daw_tls::tlsinstance& tls  = daw_tls::getTls();
+            if (bEnableWindowProfiling) {
                 // NVGGLRenderStats nvglRenderStats;
                 // nvglGetRenderStats(this->nanovgCtxt, &nvglRenderStats);
-                timer.reset();
-                glfwSwapBuffers(glfw);
-                tls.renderStats.timeSwapBuffers = timer.getTime();
-                tls.renderStats.timeRender = timer.getTime();
-                Profiling::profilingCommitStats(this, frameNumber, tls.renderStats);
-                tls.prevRenderStats = tls.renderStats;
-                tls.renderStats = {};
-                tls.renderStats.fps = tls.prevRenderStats.fps;
-            } else {
-                glfwSwapBuffers(glfw);
+                window_base* ptr = this;
+                Profiling::profilingCommitStats(ptr, frameNumber, renderStatsWindow);
             }
 #endif
+            renderStatsWindow = {};
         }
     }
 
@@ -1092,14 +1089,15 @@ public:
     }
 
     void createDialogWindow(const char* title, int w, int h, GLFWwindow* share = nullptr, NVGcontext* nanovgCtxt = nullptr) {
+        bCanResize = true;
         setAppWindowHints();
-        glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, bCanResize);
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
         glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
         this->nanovgCtxt = nanovgCtxt;
         //glfwWindowHint(GLFW_FLOATING, 1);
         appwindow::createBaseWindow(title, w, h, share);
-#ifdef _WIN32
+#ifdef _WIN3232
         LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
         if (parent) {
             SetWindowLong(hwnd, GWL_EXSTYLE, l & ~WS_EX_APPWINDOW);
@@ -1799,8 +1797,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             mainWindow->centerOnScreen(centerScreenIdx);
         }
 
-        Profiling::profilingRegisterEntry<application_stats_t>(ctrl.get(), "Application Stats");
-        Profiling::profilingRegisterEntry<render_stats_t>(mainWindow.get(), "Main Window Renderstats");
+        Profiling::profilingRegisterEntry<prof_stats_applicaton_t>(&appInstance, "Application Stats");
 
 #ifndef NDEBUG
         enableGlDebugCallback();
@@ -1887,8 +1884,8 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                 hiresTimer1.reset();
                 windowTickTimerRun();
                 appStats.tickTimerDuration = hiresTimer1.getTime();
-                Profiling::profilingCommitStats(ctrl.get(), frameNumberStats, appStats);
-                appStats = application_stats_t{};
+                Profiling::profilingCommitStats(&appInstance, frameNumberStats, appStats);
+                appStats = prof_stats_applicaton_t{};
                 frameNumberStats++;
             }
             hiresTimer1.reset();

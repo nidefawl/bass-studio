@@ -62,7 +62,7 @@ struct render_clip_cache_stats_t {
     int64_t clipsCached;
     int64_t sizeCacheAllocatedMemBytes;
 };
-struct alignas(64) application_stats_t {
+struct alignas(64) prof_stats_applicaton_t {
     int64_t tickTimerDelay       = 0;
     int64_t tickTimerDuration    = 0;
     int64_t timeRefreshAll       = 0;
@@ -70,9 +70,7 @@ struct alignas(64) application_stats_t {
     int64_t numMessagesWmPaint   = 0;
     int64_t numRedrawReq         = 0;
 };
-struct alignas(64) render_stats_t {
-    int64_t timeRender              = 0;
-    int64_t timeSwapBuffers         = 0;
+struct alignas(64) prof_stats_render_t {
     int64_t timePrerender           = 0;
     int64_t timeRenderEditor        = 0;
     int64_t timeRenderTrackControls = 0;
@@ -81,8 +79,11 @@ struct alignas(64) render_stats_t {
     int64_t notesRendered           = 0;
     int64_t numWaveFormsRendered    = 0;
     int64_t playThreadLockCount     = 0;
-    float fps                       = 0.0f;
-    render_stats_t()                = default;
+};
+struct alignas(64) prof_stats_window_t {
+    int64_t timeRender              = 0;
+    int64_t timeSwapBuffers         = 0;
+    int64_t timePrerender           = 0;
 };
 struct vst_opcode_stats_t {
     int32_t tmMillis      = 0;
@@ -90,7 +91,9 @@ struct vst_opcode_stats_t {
 };
 namespace Profiling {
     template<typename T>
-    void profilingRegisterEntry(void* entry, const String& name);
+    void profilingRegisterEntry(void* instance, const String& name);
     template<typename T>
-    void profilingCommitStats(void* entry, int frameNumber, T& stats);
+    void profilingCommitStats(void* instance, int frameNumber, T& stats);
+    template<typename T>
+    bool profilingGetRecentFrame(void* instance, T* out);
 }// namespace Profiling

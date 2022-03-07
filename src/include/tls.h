@@ -13,8 +13,8 @@ struct app_config_t;
 namespace daw_tls {
     struct tlsinstance {
         render_clip_cache_stats_t renderClipCacheStats{};
-        render_stats_t renderStats;
-        render_stats_t prevRenderStats;
+        prof_stats_render_t renderStats;
+        prof_stats_render_t prevRenderStats;
         app_config_t* config             = nullptr;
         vsthost* host                    = nullptr;
         audiohost* audioHost             = nullptr;

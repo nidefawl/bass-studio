@@ -1,4 +1,5 @@
 #include <algorithm>
+#include "profiling.h"
 #include "list.h"
 #include "gui.h"
 #include "guicontainer.h"
@@ -274,8 +275,11 @@ public:
         auto& renderStats = daw_tls::getTls().prevRenderStats;
         printL(0, "Usage", StringFormat("%.2f%% (%.2f%%)", stats.usage * 100.0f, stats.usageRaw * 100.0f));
         nvgFillColor(vg, G_WHITE);
-        printL(0, "FPS", StringFormat("%.2f", renderStats.fps));
-        printL(0, "Render", StringFormat("%d µs", renderStats.timeRender));
+        
+        prof_stats_window_t profDataWindow;
+        if (Profiling::profilingGetRecentFrame(dawCtrl->window, &profDataWindow)) {
+            printL(0, "Render", StringFormat("%d µs", profDataWindow.timeRender));
+        }
         printL(1, "Prerender", StringFormat("%d µs", renderStats.timePrerender));
         printL(1, "UpdateWaveforms", StringFormat("%d µs", renderStats.timeUpdateWaveforms));
         printL(1, "RenderEditor", StringFormat("%d µs", renderStats.timeRenderEditor));

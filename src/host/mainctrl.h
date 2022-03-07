@@ -586,7 +586,7 @@ public:
     const String& getLoadProjectFilePath() {
         return loadProject;
     }
-
+    void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) override;
     void onTick() override;
     void setupView() override;
     bool isClipEditorVisible() override;

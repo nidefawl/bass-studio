@@ -32,12 +32,11 @@ struct ProfilingDataChannelBase {
     int64_t valueMax      = 0;
     int64_t valueMin      = 0;
     int64_t valueAvg      = 0;
+    int64_t fixedScale    = -1;
     size_t offsetStMember = 0;
     size_t texChannel     = 0;
     vec2 graphPos{};
     vec2 graphSize{};
-    float scaleClampMax = 1.0f;
-    float scaleMin      = 0.0f;
     String name;
     String unit;
 };
@@ -58,10 +57,14 @@ void normalizeData(ProfilingDataChannelBase* ch) {
     memcpy(ch->valuesNormalized.data(), ch->valuesRaw.data(), sizeof(float) * DBG_PERF_HIST_SIZE);
     const float minFl = 0;
     float maxFl = 10;
-    int64_t tmpMax = ch->valueMax;
-    while (tmpMax > 10) {
-        maxFl *= 10;
-        tmpMax /= 10;
+    if (ch->fixedScale < 0 || ch->valueAvg > ch->fixedScale * 0.9f) {
+        int64_t tmpMax = ch->valueAvg;
+        while (tmpMax > 10) {
+            maxFl *= 10;
+            tmpMax /= 10;
+        }
+    } else {
+        maxFl = static_cast<float>(ch->fixedScale);
     }
     const float sc        = 1.0f / (maxFl - minFl);
     const float* rawData  = ch->valuesRaw.data();
@@ -210,7 +213,7 @@ class window_impl {
             dbgassert(entry.offsetStMember % 8 == 0);
             auto ch = std::make_shared<ProfilingDataChannelBase>();
             if (entry.unit == "us")
-                ch->scaleClampMax = 10000.0f;
+                ch->fixedScale = 20000;
             ch->name           = entry.name;
             ch->unit           = entry.unit;
             ch->offsetStMember = entry.offsetStMember >> 3;
@@ -281,12 +284,15 @@ public:
             tmLastUpdate = tmNow;
 
             auto tmStart = getTimeMicros();
-            ProfilingImpl::profiling_data_t<application_stats_t> profDataApp;
+            ProfilingImpl::profiling_data_t<prof_stats_applicaton_t> profDataApp;
             profilingGetData(&profDataApp);
             updateProfilingData(profDataApp);
-            ProfilingImpl::profiling_data_t<render_stats_t> profDataRenderStats;
-            profilingGetData(&profDataRenderStats);
-            updateProfilingData(profDataRenderStats);
+            ProfilingImpl::profiling_data_t<prof_stats_render_t> profDataRender;
+            profilingGetData(&profDataRender);
+            updateProfilingData(profDataRender);
+            ProfilingImpl::profiling_data_t<prof_stats_window_t> profDataWindow;
+            profilingGetData(&profDataWindow);
+            updateProfilingData(profDataWindow);
             auto tmEnd = getTimeMicros();
             if (nCall++ % 100 == 0) {
                 log_printf("took %zd\n", tmEnd - tmStart);
@@ -301,17 +307,23 @@ public:
         glUseProgram(program2dTexture);
 
 
-        const int FONTSIZE_TITLE  = 18;
-        const int FONTSIZE_GRAPH  = 16;
-        const int FONTSIZE_LEGEND = 14;
+        const int FONTSIZE_TITLE  = 16;
+        const int FONTSIZE_GRAPH  = 14;
+        const int FONTSIZE_LEGEND = 12;
         const int WND_PADDING     = 6;
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
         const glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.0f, -1.0f);
-        const int32_t cols      = 4;
         const auto renderSize   = vec2(winW, winH) - vec2(WND_PADDING * 2.0f);
-        const vec2 graphSize    = vec2(renderSize.x / static_cast<float>(cols)) * vec2(1.0, 1.0 / 3.0f);
-        const vec2 grphInset    = vec2(8.0f);
-        const auto legendSize   = vec2(graphSize.x * 1.0f/3.0f, FONTSIZE_LEGEND*4.0f + grphInset.x*0.5f * 2.0f);
+        int layoutCols = 3;
+        vec2 layoutSize(0);
+        do {
+            layoutCols++;
+            layoutSize = vec2(renderSize.x / static_cast<float>(layoutCols)) * vec2(1.0, 1.0 / 4.0f);
+        } while(layoutSize.x > 320);
+        const int32_t cols      = layoutCols;
+        const vec2 graphSize    = layoutSize;
+        const vec2 grphInset    = vec2(4.0f);
+        const auto legendSize   = vec2(graphSize.x * 1.0f/3.5f, FONTSIZE_LEGEND*4.0f + grphInset.x*0.5f * 2.0f);
         tess2d tess;
         const vec2 graphSizeInset = graphSize - grphInset * 2.0f;
         {
@@ -333,12 +345,24 @@ public:
         glm::mat4 mvp;
 
         vec2 graphPos = vec2(WND_PADDING);
+        int colFill = 0;
+        int prevEntryNumRows = 1;
         for (ProfilingDataRenderInstance& renderInstance : profDataInstances) {
+            const auto channelsSize = renderInstance.channels.size();
+            if (prevEntryNumRows > 1 || (colFill > 0 && colFill + channelsSize > cols)) {
+                graphPos.y += graphSize.y;
+                graphPos.y += WND_PADDING;
+                graphPos.x = WND_PADDING;
+                colFill = 0;
+            } else if (colFill) {
+                graphPos.y -= (FONTSIZE_TITLE + grphInset.y*2.0f);
+            }
             renderInstance.instancePos = graphPos;
             graphPos.y += (FONTSIZE_TITLE + grphInset.y*2.0f);
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, renderInstance.tex0);
-            for (int pass = 0; pass < renderInstance.channels.size(); pass++) {
+            prevEntryNumRows = 1;
+            for (int pass = 0; pass < channelsSize; pass++) {
                 auto channel = renderInstance.channels[pass];
                 auto color   = rgbToNvg(colorOnlyPalette[(pass * 4 + 2) % colorOnlyPaletteLen]);
                 color.a      = 0.77f;
@@ -349,16 +373,16 @@ public:
                 glDrawElements(GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, nullptr);
                 channel->graphPos  = graphPos;
                 channel->graphSize = graphSize;
-                if (pass % cols == cols - 1) {
-                    graphPos.y += graphSize.y;
+                colFill++;
+                if (pass % cols == cols - 1 && channelsSize > pass + 1) {
+                    graphPos.y += graphSize.y + grphInset.y;
                     graphPos.x = WND_PADDING;
+                    colFill = 0;
+                    prevEntryNumRows++;
                 } else {
                     graphPos.x += graphSize.x;
                 }
             }
-            graphPos.y += graphSize.y;
-            graphPos.y += WND_PADDING;
-            graphPos.x = WND_PADDING;
         }
 
         glBindVertexArray(0);
@@ -397,7 +421,7 @@ public:
                 nvgText(vg, subTitlePos.x, subTitlePos.y, StringAsCStr(channel->name), nullptr);
             }
         }
-        nvgFillColor(vg, rgbaToNvg(0xFFAAAAAA));
+        nvgFillColor(vg, rgbaToNvg(0xFF00FF7F));
         nvgFontSize(vg, FONTSIZE_LEGEND);
         for (ProfilingDataRenderInstance& renderInstance : profDataInstances) {
             for (const auto& channel : renderInstance.channels) {

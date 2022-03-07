@@ -28,58 +28,99 @@ namespace ProfilingImpl {
             memset(last.stats.data(), 0, sizeof(T) * last.stats.size());
             last.name        = name;
             last.instancePtr = ptr;
+
+            // enforce template instantiation
+            T dummy{};
+            Profiling::profilingGetRecentFrame(ptr, &dummy);
         }
     };
 
-    profiling_impl_t<render_stats_t> renderStats;
-    profiling_impl_t<application_stats_t> appStats;
+    profiling_impl_t<prof_stats_window_t> windowStats;
+    profiling_impl_t<prof_stats_render_t> renderStats;
+    profiling_impl_t<prof_stats_applicaton_t> appStats;
 
     template<>
-    void profilingGetData(profiling_data_t<render_stats_t>* out) {
+    void profilingGetData(profiling_data_t<prof_stats_window_t>* out) {
         static const profiling_channel_descs channels = { {
-            { "ctrl::render", "us", offsetof(render_stats_t, timeRender) },
-            { "ctrl::swapbuffer", "us", offsetof(render_stats_t, timeSwapBuffers) },
-            { "ctrl::prerender", "us", offsetof(render_stats_t, timePrerender) },
-            { "tm editor::render", "us", offsetof(render_stats_t, timeRenderEditor) },
-            { "tm track_controls::render", "us", offsetof(render_stats_t, timeRenderTrackControls) },
-            { "tm waveforms::update", "us", offsetof(render_stats_t, timeUpdateWaveforms) },
-            { "# waveforms updates", " ", offsetof(render_stats_t, numWaveFormsRendered) },
-            { "# notes rendered", " ", offsetof(render_stats_t, notesRendered) },
-            { "# clips rendered", " ", offsetof(render_stats_t, clipsRendered) }
+            { "ctrl->prerender", "us", offsetof(prof_stats_window_t, timePrerender) },
+            { "ctrl->render", "us", offsetof(prof_stats_window_t, timeRender) },
+            { "glSwapBuffer", "us", offsetof(prof_stats_window_t, timeSwapBuffers) }
+        } };
+        out->instanceList = &windowStats.regWindowProfStats;
+        out->channelDesc = &channels;
+    }
+
+    template<>
+    void profilingGetData(profiling_data_t<prof_stats_render_t>* out) {
+        static const profiling_channel_descs channels = { {
+            { "containers[]->prerender", "us", offsetof(prof_stats_render_t, timePrerender) },
+            { "editor->render", "us", offsetof(prof_stats_render_t, timeRenderEditor) },
+            { "track_controls->render", "us", offsetof(prof_stats_render_t, timeRenderTrackControls) },
+            { "waveforms->update", "us", offsetof(prof_stats_render_t, timeUpdateWaveforms) },
+            { "# waveforms updates", " ", offsetof(prof_stats_render_t, numWaveFormsRendered) },
+            { "# notes rendered", " ", offsetof(prof_stats_render_t, notesRendered) },
+            { "# clips rendered", " ", offsetof(prof_stats_render_t, clipsRendered) }
         } };
         out->instanceList = &renderStats.regWindowProfStats;
         out->channelDesc = &channels;
     }
 
     template<>
-    void profilingGetData(profiling_data_t<application_stats_t>* out) {
+    void profilingGetData(profiling_data_t<prof_stats_applicaton_t>* out) {
         static const profiling_channel_descs channels = { {
-            { "Render All duration", "us", offsetof(application_stats_t, timeRefreshAll) },
-            { "TickTimer delay", "us", offsetof(application_stats_t, tickTimerDelay) },
-            { "TickTimer duration", "us", offsetof(application_stats_t, tickTimerDuration) },
-            { "#window msgs", "msgs", offsetof(application_stats_t, numMessagesProcessed) },
-            { "#WM_PAINT msgs", "msgs", offsetof(application_stats_t, numMessagesWmPaint) },
-            { "#redraw req", "req", offsetof(application_stats_t, numRedrawReq) },
+            { "Render All duration", "us", offsetof(prof_stats_applicaton_t, timeRefreshAll) },
+            { "TickTimer delay", "us", offsetof(prof_stats_applicaton_t, tickTimerDelay) },
+            { "TickTimer duration", "us", offsetof(prof_stats_applicaton_t, tickTimerDuration) },
+            { "#window msgs", "msgs", offsetof(prof_stats_applicaton_t, numMessagesProcessed) },
+            { "#WM_PAINT msgs", "msgs", offsetof(prof_stats_applicaton_t, numMessagesWmPaint) },
+            { "#redraw req", "req", offsetof(prof_stats_applicaton_t, numRedrawReq) },
         } };
         out->instanceList = &appStats.regWindowProfStats;
         out->channelDesc = &channels;
     }
 }// namespace ProfilingImpl
 namespace Profiling {
-    template<>
-    void profilingRegisterEntry<render_stats_t>(void* entry, const String& name) {
-        ProfilingImpl::renderStats.registerInstance(entry, name);
+    template<typename T>
+    bool profilingGetRecentFrame(void* instance, T* out) {
+        using namespace ProfilingImpl;
+        profiling_data_t<T> data{};
+        profilingGetData(&data);
+        for (profiling_entry_t<T>& entry : *data.instanceList) {
+            if (entry.instancePtr == instance) {
+                auto prevFramIdx = entry.writeIdx;
+                if (entry.writeIdx == 0) {
+                    prevFramIdx = PROFILING_MAX_LEN - 1;
+                } else {
+                    --prevFramIdx;
+                }
+                *out = entry.stats[prevFramIdx];
+                return true;
+            }
+        }
+        return false;
     }
     template<>
-    void profilingCommitStats(void* entry, int frameNumber, render_stats_t& stats) {
-        ProfilingImpl::renderStats.commit(entry, frameNumber, stats);
+    void profilingRegisterEntry<prof_stats_render_t>(void* instance, const String& name) {
+        ProfilingImpl::renderStats.registerInstance(instance, name);
     }
     template<>
-    void profilingRegisterEntry<application_stats_t>(void* entry, const String& name) {
-        ProfilingImpl::appStats.registerInstance(entry, name);
+    void profilingCommitStats(void* instance, int frameNumber, prof_stats_render_t& stats) {
+        ProfilingImpl::renderStats.commit(instance, frameNumber, stats);
     }
     template<>
-    void profilingCommitStats(void* entry, int frameNumber, application_stats_t& stats) {
-        ProfilingImpl::appStats.commit(entry, frameNumber, stats);
+    void profilingRegisterEntry<prof_stats_applicaton_t>(void* instance, const String& name) {
+        ProfilingImpl::appStats.registerInstance(instance, name);
+    }
+    template<>
+    void profilingCommitStats(void* instance, int frameNumber, prof_stats_applicaton_t& stats) {
+        ProfilingImpl::appStats.commit(instance, frameNumber, stats);
+    }
+    template<>
+    void profilingRegisterEntry<prof_stats_window_t>(void* instance, const String& name) {
+        ProfilingImpl::windowStats.registerInstance(instance, name);
+    }
+    template<>
+    void profilingCommitStats(void* instance, int frameNumber, prof_stats_window_t& stats) {
+        ProfilingImpl::windowStats.commit(instance, frameNumber, stats);
     }
 }// namespace Profiling
