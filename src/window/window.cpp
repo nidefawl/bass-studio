@@ -258,7 +258,7 @@ private:
         if (isSharedContextSlave) {
             return;
         }
-        glfwSwapInterval(1);
+        // glfwSwapInterval(-1);
         int flags = NVG_ANTIALIAS;
 #ifndef NDEBUG
         flags |= NVG_DEBUG;
@@ -287,7 +287,7 @@ public:
     bool isValid() {
         return valid;
     }
-    const int64_t minFrameDelayMicros = 1'000'000LL / 288LL;
+    const int64_t minFrameDelayMicros = 1'000'000LL / 100LL;
 
 
 public:
@@ -364,17 +364,17 @@ public:
         for (appwindow* ow : this->children) {
             ow->onRefresh();
         }
-// #ifdef __linux__
-        auto tmNowMicros   = getTimeMicros();
-        auto tmSinceMicros = tmNowMicros - tmLastDrawMicros;
-        if (tmSinceMicros < minFrameDelayMicros) {
-            skipFrames++;
-            return;
+        if (valid && bIsVisible) {
+            auto tmNowMicros   = getTimeMicros();
+            auto tmSinceMicros = tmNowMicros - tmLastDrawMicros;
+            if (tmSinceMicros < minFrameDelayMicros) {
+                skipFrames++;
+                return;
+            }
+            skipFrames = 0;
+            render();
+            endFrame();
         }
-        skipFrames = 0;
-// #endif
-        render();
-        endFrame();
     }
 
     virtual void flagNeedsRedraw() {
@@ -802,11 +802,16 @@ public:
                 tls.prevRenderStats = tls.renderStats;
                 memset(&tls.renderStats, 0, sizeof(tls.renderStats));
                 tls.renderStats.fps = tls.prevRenderStats.fps;
+                timer.reset();
+                glfwSwapBuffers(glfw);
+                appStats.timeSwapBuffersMain = timer.getTime();
+            } else {
+                glfwSwapBuffers(glfw);
             }
 #endif
-            glfwSwapBuffers(glfw);
         }
     }
+    int64_t tmPrintSwapDuration  = 0;
 
     void onMouseMoved(ivec2 deltapos) override {
         if (math::abs(deltapos.x) + math::abs(deltapos.y) > 2)
@@ -1521,7 +1526,7 @@ static void glfw_cb_charinput(GLFWwindow* w, unsigned int codepoint, int mods) {
     }
 }
 
-static void glfw_cb_refresh(GLFWwindow* w) {
+/* static void glfw_cb_refresh(GLFWwindow* w) {
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
         if (wu && wu->isValid())
@@ -1529,7 +1534,7 @@ static void glfw_cb_refresh(GLFWwindow* w) {
     } catch (std::exception& e) {
         handleStdException(e);
     }
-}
+} */
 
 static void glfw_cb_windowclose(GLFWwindow* w) {
     try {
@@ -1591,7 +1596,7 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
     glfwSetWindowUserPointer(glfw, this);
     glfwSetWindowCloseCallback(glfw, glfw_cb_windowclose);
     glfwSetWindowSizeCallback(glfw, glfw_cb_windowwize);
-    glfwSetWindowRefreshCallback(glfw, glfw_cb_refresh);
+    // glfwSetWindowRefreshCallback(glfw, glfw_cb_refresh);
     glfwSetWindowFocusCallback(glfw, glfw_cb_windowfocus);
     glfwSetFramebufferSizeCallback(glfw, glfw_cb_framebuffersize);
     glfwSetCursorPosCallback(glfw, glfw_cb_mousepos);
@@ -1811,88 +1816,97 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         dawinstance_startup_commands(args, tls);
 #endif
 
-        hires_timer_t hiresTimer;
+        hires_timer_t hiresRuntime;
         hires_timer_t hiresTimer1;
         GLFWwindow* glfwHandle = mainWindow->getGLFW();
-        int64_t tmHRLastTick   = hiresTimer.getTime();
+        int64_t tmHRLastTick   = hiresRuntime.getTime();
         int frameNumberStats   = 0;
 
 #ifdef _WIN32
-        int64_t tmLRLastCheck = getTimeMillis();
-        int64_t tmLRMsgSent   = 0;
-        int64_t cntMessages   = 0;
-        int64_t tmLRDbgPrint  = getTimeMillis();
-        bool debugMessageLoop = false;
-        int64_t tmHRLastFrame = 0;
+        int64_t tmLRLastCheck = tmHRLastTick / 1000L;
+        int64_t tmHRMsgSent   = 0;
+        int64_t tmLRDbgPrint  = tmHRLastTick / 1000L;
+        char clsName_v[256];
+        const bool debugMessageLoop = true;
+        const DWORD timeout = 1;
 #else
+        const double timeoutEvent = 0.001;
 #endif
-        while (!fatalError && !glfwWindowShouldClose(glfwHandle)) {
+        while (!fatalError) {
 #ifdef _WIN32
-            int64_t maxMsgProcess = 1024;
-            DWORD timeout         = 5;
-            MsgWaitForMultipleObjects(0, nullptr, FALSE, timeout, QS_ALLEVENTS);
-            MSG msg;
             hiresTimer1.reset();
-            while (!fatalError && PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE) && maxMsgProcess-- > 0) {
+            /*auto timeoutResult = */MsgWaitForMultipleObjects(0, nullptr, FALSE, timeout, QS_ALLINPUT);
+            int64_t maxMsgProcess = 1024;
+            while (!fatalError && maxMsgProcess > 0) {
+                MSG msg{};
+                if (!PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+                    break;
+                }
+                maxMsgProcess--;
                 appStats.numMessagesProcessed++;
-                cntMessages++;
-                //            logEveryMsec(0, 5000, "Main msg loop");
-                if (msg.message == WM_QUIT) {
-                    glfwSetWindowShouldClose(glfwHandle, 1);
-                } else if (msg.message == WM_APP + 42) {
-                    if (tmLRMsgSent != 0) {
-                    }
-                    int64_t tmDuration = (getTimeMillis() - tmLRMsgSent);
-                    tmLRMsgSent        = 0;
-                    log_printf("MSG took %d ms to get through, %d messages since sent\n", tmDuration, cntMessages);
-                } else {
-                    TranslateMessage(&msg);
-                    DispatchMessageW(&msg);
-                    if (msg.message == WM_PAINT)
-                        appStats.numMessagesWmPaint++;
-                    if (msgCounterEnabled) {
-                        msgCounter.incrMessage(msg.message);
-                        if (msg.message == WM_PAINT) {
-                            char clsName_v[256];
-                            GetClassNameA(msg.hwnd, clsName_v, 256);
-                            msgCounter.incrPaints(clsName_v);
+                switch (msg.message) {
+                    case WM_QUIT:
+                        glfwSetWindowShouldClose(glfwHandle, 1);
+                        break;
+                    case (WM_APP + 42):
+                        log_lf(Log::L_DEBUG, "MSG took %d ms to get through\n", (hiresRuntime.getTime() - tmHRMsgSent));
+                        tmHRMsgSent = 0;
+                        break;
+                    case WM_PAINT: 
+                        if (msgCounterEnabled) {
+                            if (GetClassNameA(msg.hwnd, clsName_v, 256))
+                                msgCounter.incrPaints(clsName_v);
                         }
-                    }
+                        appStats.numMessagesWmPaint++;
+                        // no break
+                    default:
+                        if (msgCounterEnabled) {
+                            msgCounter.incrMessage(msg.message);
+                        }
+                        TranslateMessage(&msg);
+                        DispatchMessageW(&msg);
+                        break;
                 }
             }
             int64_t tmMsgLoop = hiresTimer1.getTime();
             hiresTimer1.reset();
             glfwUpdateWin32Internals();
+#endif
             int64_t tmUpdateInternals = hiresTimer1.getTime();
-#endif//_WIN32
-            int64_t tmHRNow = hiresTimer.getTime();
-            if (tmHRNow - tmHRLastTick >= 20 * 1000) {//TODO: figure out good tick rate
-                appStats.tickTimerDelay = tmHRNow - tmHRLastTick;
+#ifndef _WIN32
+            glfwWaitEventsTimeout(timeoutEvent);
+#endif
+            if (glfwWindowShouldClose(glfwHandle)) {
+                break;
+            }
+            int64_t tmHRNow = hiresRuntime.getTime();
+            int64_t tmLRNow = tmHRNow/1000L;
+            const auto timerDelayTarget_us = 20000L;
+            if (tmHRNow - tmHRLastTick >= timerDelayTarget_us) {//TODO: figure out good tick rate
+                appStats.tickTimerDelay = tmHRNow - tmHRLastTick - timerDelayTarget_us;
                 tmHRLastTick            = tmHRNow;
+                hiresTimer1.reset();
+                windowTickTimerRun();
+                appStats.tickTimerDuration = hiresTimer1.getTime();
                 Profiling::profilingCommitStats(ctrl.get(), frameNumberStats, appStats);
                 appStats = application_stats_t{};
                 frameNumberStats++;
-                windowTickTimerRun();
             }
-#if defined(__linux__) || defined(__APPLE__)
-            glfwWaitEventsTimeout(0.001);
-#endif
-            if (tmHRNow - tmHRLastFrame >= mainWindow->minFrameDelayMicros) {
-                mainWindow->onRefresh();
-                tmHRLastFrame = tmHRNow;
-            }
+            hiresTimer1.reset();
+            mainWindow->onRefresh();
+            appStats.timeRefreshAll = hiresTimer1.getTime();
 #ifdef _WIN32
             if (debugMessageLoop) {
-                if (getTimeMillis() - tmLRDbgPrint >= 1000) {
-                    tmLRDbgPrint = getTimeMillis();
+                if (tmLRNow - tmLRDbgPrint >= 1000) {
+                    tmLRDbgPrint = tmLRNow;
                     log_lf(Log::L_DEBUG, "maxMsgProcessesed %d tmMsgLoop %zd, tmUpdateInternals %zd\n", static_cast<int>(1024 - maxMsgProcess), tmMsgLoop, tmUpdateInternals);
                 }
-                if (tmLRMsgSent > 0 && getTimeMillis() - tmLRMsgSent >= 1000) {
-                    tmLRMsgSent = 0;
+                if (tmHRMsgSent > 0 && tmHRNow - tmHRMsgSent >= 1000000L) {
+                    tmHRMsgSent = 0;
                 }
-                if (getTimeMillis() - tmLRLastCheck >= 1000 && tmLRMsgSent == 0) {
-                    tmLRLastCheck = tmLRMsgSent = getTimeMillis();
-                    cntMessages = 0;
+                if (tmLRNow - tmLRLastCheck >= 1000 && tmHRMsgSent == 0) {
+                    tmLRLastCheck = tmLRNow;
+                    tmHRMsgSent = hiresRuntime.getTime();
                     log_lf(Log::L_DEBUG, "PostMessage WM_APP + 42\n");
                     PostMessage(mainWindow->getHWND(), WM_APP + 42, 0, 0);
                 }

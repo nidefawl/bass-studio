@@ -64,6 +64,9 @@ struct render_clip_cache_stats_t {
 };
 struct application_stats_t {
     int64_t tickTimerDelay       = 0;
+    int64_t tickTimerDuration    = 0;
+    int64_t timeSwapBuffersMain  = 0;
+    int64_t timeRefreshAll       = 0;
     int64_t numMessagesProcessed = 0;
     int64_t numMessagesWmPaint   = 0;
     int64_t numRedrawReq         = 0;

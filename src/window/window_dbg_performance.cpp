@@ -150,9 +150,13 @@ namespace windowdebug_performance {
         std::array<float, DBG_PERF_HIST_SIZE> valuesNormalized{};
         vec2 graphPos{};
         vec2 graphSize{};
+        float scaleClampMax = 1.0f;
+        float scaleMin = 0.0f;
     };
     void setChannel(ProfilingDataChannelBase* ch, String name, String unit, int32_t texChannel) {
         dbgassert(ch->valuesNormalized.size() == DBG_PERF_HIST_SIZE);
+        if (unit == "us")
+            ch->scaleClampMax = 10000.0f;
         ch->name       = std::move(name);
         ch->unit       = std::move(unit);
         ch->texChannel = texChannel;
@@ -161,8 +165,8 @@ namespace windowdebug_performance {
         dbgassert(ch->valuesRaw.size() == DBG_PERF_HIST_SIZE);
         dbgassert(ch->valuesNormalized.size() == DBG_PERF_HIST_SIZE);
         const float* rawData  = &ch->valuesRaw[0];
-        const float minFl     = 0;
-        const float maxFl     = math::max(1.0, ch->valueMax * 0.2 + ch->valueAvg * 0.8);
+        const float minFl     = math::min(ch->scaleMin, 0.0f);
+        const float maxFl     = math::max(ch->scaleClampMax, ch->valueMax * 0.2f + ch->valueAvg * 0.8f);
         const float sc        = (maxFl - minFl);
         float* normalizedData = &ch->valuesNormalized[0];
         if (sc < 1.0f / 1024.0f) {
@@ -312,14 +316,17 @@ namespace windowdebug_performance {
 
             auto& chs = windowInstance->channels;
             if (chs.empty()) {
-                chs.resize(4);
+                chs.resize(7);
                 for (auto& ch : chs) {
                     ch = std::make_shared<ProfilingDataChannelBase>();
                 }
-                setChannel(chs[0].get(), "tm tick delay", "us", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[1].get(), "#window msgs", "msgs", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[2].get(), "#WM_PAINT msgs", "msgs", windowInstance->nextFreeChannelIdx++);
-                setChannel(chs[3].get(), "#redraw req", "req", windowInstance->nextFreeChannelIdx++);
+                setChannel(chs[0].get(), "Render All duration", "us", windowInstance->nextFreeChannelIdx++);
+                setChannel(chs[1].get(), "SwapBuffer duration", "us", windowInstance->nextFreeChannelIdx++);
+                setChannel(chs[2].get(), "TickTimer delay", "us", windowInstance->nextFreeChannelIdx++);
+                setChannel(chs[3].get(), "TickTimer duration", "us", windowInstance->nextFreeChannelIdx++);
+                setChannel(chs[4].get(), "#window msgs", "msgs", windowInstance->nextFreeChannelIdx++);
+                setChannel(chs[5].get(), "#WM_PAINT msgs", "msgs", windowInstance->nextFreeChannelIdx++);
+                setChannel(chs[6].get(), "#redraw req", "req", windowInstance->nextFreeChannelIdx++);
             }
 
             //step thru time backwards
@@ -329,10 +336,13 @@ namespace windowdebug_performance {
                 if (idx < 0) {
                     idx = statsArray.size() - 1;
                 }
-                setSample(chs[0].get(), dataSize - 1, statsArray[idx].stats.tickTimerDelay);
-                setSample(chs[1].get(), dataSize - 1, statsArray[idx].stats.numMessagesProcessed);
-                setSample(chs[2].get(), dataSize - 1, statsArray[idx].stats.numMessagesWmPaint);
-                setSample(chs[3].get(), dataSize - 1, statsArray[idx].stats.numRedrawReq);
+                setSample(chs[0].get(), dataSize - 1, statsArray[idx].stats.timeRefreshAll);
+                setSample(chs[1].get(), dataSize - 1, statsArray[idx].stats.timeSwapBuffersMain);
+                setSample(chs[2].get(), dataSize - 1, statsArray[idx].stats.tickTimerDelay);
+                setSample(chs[3].get(), dataSize - 1, statsArray[idx].stats.tickTimerDuration);
+                setSample(chs[4].get(), dataSize - 1, statsArray[idx].stats.numMessagesProcessed);
+                setSample(chs[5].get(), dataSize - 1, statsArray[idx].stats.numMessagesWmPaint);
+                setSample(chs[6].get(), dataSize - 1, statsArray[idx].stats.numRedrawReq);
 
 
                 idx--;
