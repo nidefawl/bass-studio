@@ -34,6 +34,23 @@ namespace ProfilingImpl {
 
     template<typename T>
     void profilingGetData(profiling_data_t<T>* out);
+
     template<typename T>
-    bool profilingGetRecentFrame(void* instance, T* out);
+    bool profilingGetRecentFrame(void* instance, T* out) {
+        profiling_data_t<T> data{};
+        profilingGetData(&data);
+        for (profiling_entry_t<T>& entry : *data.instanceList) {
+            if (entry.instancePtr == instance) {
+                auto prevFramIdx = entry.writeIdx;
+                if (entry.writeIdx == 0) {
+                    prevFramIdx = PROFILING_MAX_LEN - 1;
+                } else {
+                    --prevFramIdx;
+                }
+                *out = entry.stats[prevFramIdx];
+                return true;
+            }
+        }
+        return false;
+    }
 }// namespace ProfilingImpl

@@ -36,7 +36,7 @@ void main(void) {
         float sampleHeight = max(0.0, sampleVal - pass_texcoord.y);
         sampleHeight = smoothstep(0.0, 2.0/HEIGHT_GRAPH, sampleHeight);
         sampleHeight = aastep(0.0f, sampleHeight);
-        float colorIntens = 0.7 + 0.8*max(0, pow(max(0.0, sampleVal - 0.75), .25));
+        float colorIntens = 0.9 + 0.3 * pow(max(0.0, sampleVal - 0.5), .125);
 
         vec4 result = vec4(u_renderColor.rgb * colorIntens * sampleHeight, 1.0);
         // outColor = vec4(vec3(1), float(result.r!=0))
