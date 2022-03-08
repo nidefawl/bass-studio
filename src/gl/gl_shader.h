@@ -2,6 +2,7 @@
 #include "glheaders.h"
 
 #include <cstdint>
+#include "logging.h"
 #include "str_util.h"
 #include "gl/gl_util.h"
 #include "gl/gl_attr.h"
@@ -51,9 +52,9 @@ struct gl_shader_program_base_t {
             if (checkGLError("glGetAttribLocation"))
                 return -1;
             if (attr.bindingPt < 0) {
-                //      printf("%s %d\n", attributes[i].name, attr.bindingPt);
-                //      printf("Missing attribLocation %s\n", attr.name);
-                //      return 1;
+                log_lf(Log::L_WARN, "%s %d\n", attributes[i].name, attr.bindingPt);
+                log_lf(Log::L_WARN, "Missing attribLocation %s\n", attr.name);
+                return 1;
             }
         }
         return 0;

@@ -356,26 +356,13 @@ void preGLState() {
 
     checkGLError("waveformrender::render start");
 
-    GLboolean b;
-    glGetBooleanv(GL_CULL_FACE, &b);
-    dbgassert(!b);
-    glGetBooleanv(GL_BLEND, &b);
-    dbgassert(b);
-    glGetBooleanv(GL_DEPTH_TEST, &b);
-    dbgassert(!b);
     //entry->inuse = true;
     //entry->props = *waveform;
 
     // Draw some stuff to an FBO as a test
     glViewport(0, 0, FBO_WIDTH, FBO_HEIGHT);
-    glClearColor(0, 0, 0, 0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LEQUAL);
-    //glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    //glDisable(GL_CULL_FACE);
+    glDisable(GL_CULL_FACE);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -502,7 +489,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
         glClearColor(0, 0, 0, 0);
         if (clearFB) {
             glDisable(GL_SCISSOR_TEST);
-            glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         glEnable(GL_SCISSOR_TEST);
 
@@ -556,7 +543,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             glScissor(pos.x, FBO_HEIGHT - pos.y - size.y, size.x, size.y);
             glBindVertexArray(bakedPath.vbo.vaoId);
 
-            glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             renderer->render(bakedPath, matProj, matView, matModel);
             impl->renderTimings.tmDrawGL += impl->timer2.getTime();
             TextureAtlasEntry e;
@@ -587,11 +574,9 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
         }
     }
     if (preGlSet) {
-
-        glClearColor(0, 0, 0, 0);
         glDisable(GL_SCISSOR_TEST);
         glDisable(GL_DEPTH_TEST);
-
+        glEnable(GL_CULL_FACE);
         glBindVertexArray(0);
         checkGLError("fb postrender");
         nvgluBindFramebuffer(nullptr);

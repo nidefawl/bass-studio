@@ -141,7 +141,7 @@ int initDebugWindowNanoVG(NVGcontext* vg) {
     return 0;
 }
 
-void drawDebugWindowNanoVG(NVGcontext* vg, int winW, int winH, float pxratio) {
+int drawDebugWindowNanoVG(NVGcontext* vg, int winW, int winH, float pxratio) {
 
 
     glActiveTexture(GL_TEXTURE0);
@@ -167,7 +167,9 @@ void drawDebugWindowNanoVG(NVGcontext* vg, int winW, int winH, float pxratio) {
     glBindVertexArray(0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glStencilMask(~0U);
-    glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     nvgBeginFrame(vg, winW, winH, pxratio);
     ivec2 pos  = { 10, 20 };
     ivec2 size = { 300, 40 };
@@ -349,4 +351,5 @@ void drawDebugWindowNanoVG(NVGcontext* vg, int winW, int winH, float pxratio) {
         strPos.y += strBoxSize.y+10;
     }
     nvgEndFrame(vg);
+    return 1;
 }

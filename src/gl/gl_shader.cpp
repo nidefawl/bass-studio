@@ -65,7 +65,8 @@ int buildShaderProgram(const std::vector<glshader_src>& srcList) {
         checkGLError("getStatus");
         printf("Link error: %s\n", StringAsCStr(log));
         return -1;
-    } else if (!log.empty()) {
+    }
+    if (!log.empty()) {
         printf("Link log: %s\n", StringAsCStr(log));
     }
     checkGLError("linkProgram");

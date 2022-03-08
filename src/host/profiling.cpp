@@ -19,6 +19,7 @@ namespace ProfilingImpl {
                         entry.loopCount++;
                     } else
                         entry.writeIdx++;
+                    entry.frameNum++;
                 }
             }
         }
@@ -38,7 +39,9 @@ namespace ProfilingImpl {
     profiling_impl_t<prof_stats_window_t> windowStats;
     profiling_impl_t<prof_stats_render_t> renderStats;
     profiling_impl_t<prof_stats_applicaton_t> appStats;
-
+    // constexpr auto sizeof_windowStats = sizeof(profiling_entry_t<prof_stats_window_t>);
+    // constexpr auto sizeof_renderStats = sizeof(profiling_entry_t<prof_stats_render_t>);
+    // constexpr auto sizeof_appStats = sizeof(profiling_entry_t<prof_stats_applicaton_t>);
     template<>
     void profilingGetData(profiling_data_t<prof_stats_window_t>* out) {
         static const profiling_channel_descs channels = { {

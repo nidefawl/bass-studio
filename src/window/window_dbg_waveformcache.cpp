@@ -65,7 +65,7 @@ namespace windowdebug_waveformcache {
         }
         checkGLError("linkProgram");
         glUseProgram(program);
-        u_mvp  = glGetUniformLocation(program, "mvp");
+        u_mvp  = glGetUniformLocation(program, "u_mvp");
         u_tex0 = glGetUniformLocation(program, "tex0");
         for (auto & attribute : attributes) {
             attribute.bindingPt = glGetAttribLocation(program, attribute.name);
@@ -102,7 +102,7 @@ int initDebugWindowWaveformCache(NVGcontext*) {
     return 0;
 }
 
-void drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxratio, waveformrender* wfrender) {
+int drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxratio, waveformrender* wfrender) {
 
     std::vector<TextureAtlas> rendered;
     wfrender->getRenderedTextures(rendered);
@@ -160,7 +160,7 @@ void drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxr
     }
     glBindVertexArray(0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glStencilMask(~0U);
+    glClearColor(0, 0, 0, 0);
     glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     nvgBeginFrame(ctx, winW, winH, pxratio);
 
@@ -195,4 +195,5 @@ void drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxr
         }
     }
     nvgEndFrame(ctx);
+    return 1;
 }

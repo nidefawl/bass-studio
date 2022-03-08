@@ -64,7 +64,7 @@ static const char* getGlErrorString(int error_code) {
 bool checkGLError(const char* s) {
     int i = glGetError();
     if (i != 0) {
-        printf("%s: %s\n", s, getGlErrorString(i));
+        log_lf(Log::L_ERROR, "%s: %s\n", s, getGlErrorString(i));
         return true;
     }
     return false;
@@ -120,10 +120,11 @@ int compileShader(int type, const String& src) {
     if (getStatus(iShader, GL_COMPILE_STATUS) != 1) {
         glDeleteShader(iShader);
         checkGLError("getStatus");
-        printf("Compile error: %s\n", StringAsCStr(log));
+        log_lf(Log::L_ERROR, "Compile error: %s\n", StringAsCStr(log));
         return 0;
-    } else if (!log.empty()) {
-        printf("Compile log: %s\n", StringAsCStr(log));
+    }
+    if (!log.empty()) {
+        log_lf(Log::L_WARN, "Compile log: %s\n", StringAsCStr(log));
     }
     return iShader;
 }

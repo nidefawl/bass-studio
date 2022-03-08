@@ -844,7 +844,7 @@ void DawInstance::setEmptyProject() {
 }
 
 #if CREATE_DEBUG_COMPANION_WINDOW
-void drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxratio, waveformrender* wfrender);
+int drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxratio, waveformrender* wfrender);
 int initDebugWindowWaveformCache(NVGcontext* ctx);
 
 void openDebugWindowWaveformCache(window_main* mainwindow, waveformrender* wfrender) {
@@ -855,15 +855,15 @@ void openDebugWindowWaveformCache(window_main* mainwindow, waveformrender* wfren
     init.initCallback = [](NVGcontext* ctx) {
         initDebugWindowWaveformCache(ctx);
     };
-    drawFn.drawCallback = [wfrender](NVGcontext* ctx, int winW, int winH, float pxratio) {
-        drawDebugWindowWaveformCache(ctx, winW, winH, pxratio, wfrender);
+    drawFn.drawCallback = [wfrender](NVGcontext* ctx, int winW, int winH, float pxratio) -> int {
+        return drawDebugWindowWaveformCache(ctx, winW, winH, pxratio, wfrender);
     };
     dialog->setDrawFunction(drawFn);
     dialog->setInitFunction(init);
     dialog->show();
 }
 
-void drawDebugWindowPerformance(NVGcontext* ctx, int winW, int winH, float pxratio);
+int drawDebugWindowPerformance(NVGcontext* ctx, int winW, int winH, float pxratio);
 int initDebugWindowPerformance(NVGcontext* ctx);
 
 void openDebugWindowPerformance(window_main* mainwindow) {
@@ -874,15 +874,15 @@ void openDebugWindowPerformance(window_main* mainwindow) {
     init.initCallback = [](NVGcontext* ctx) {
         initDebugWindowPerformance(ctx);
     };
-    drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) {
-        drawDebugWindowPerformance(ctx, winW, winH, pxratio);
+    drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) -> int {
+        return drawDebugWindowPerformance(ctx, winW, winH, pxratio);
     };
     dialog->setDrawFunction(drawFn);
     dialog->setInitFunction(init);
     dialog->show();
 }
 
-void drawDebugWindowNanoVG(NVGcontext* ctx, int winW, int winH, float pxratio);
+int drawDebugWindowNanoVG(NVGcontext* ctx, int winW, int winH, float pxratio);
 int initDebugWindowNanoVG(NVGcontext* ctx);
 
 void openDebugWindowNanoVG(window_main* mainwindow) {
@@ -893,8 +893,8 @@ void openDebugWindowNanoVG(window_main* mainwindow) {
     init.initCallback = [](NVGcontext* ctx) {
         initDebugWindowNanoVG(ctx);
     };
-    drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) {
-        drawDebugWindowNanoVG(ctx, winW, winH, pxratio);
+    drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) -> int {
+        return drawDebugWindowNanoVG(ctx, winW, winH, pxratio);
     };
     dialog->setDrawFunction(drawFn);
     dialog->setInitFunction(init);
@@ -1760,7 +1760,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
                 NVGcolor col = renderCtrl->getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
                 glClearColor(col.r, col.g, col.b, col.a);
-                glClear(GL_COLOR_BUFFER_BIT);
+                glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
                 float ratio = 1.0;
                 auto vg     = renderCtrl->vg;
@@ -1792,7 +1792,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
             windowMain->preRender();
             NVGcolor col = renderCtrl->getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
             glClearColor(col.r, col.g, col.b, col.a);
-            glClear(GL_COLOR_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
             float ratio = 1.0;
             auto vg     = renderCtrl->vg;
             nvgBeginFrame(vg, renderCtrl->m_size.x, renderCtrl->m_size.y, ratio);

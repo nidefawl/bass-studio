@@ -5,15 +5,16 @@
 #include <array>
 #include <vector>
 
-#define PROFILING_MAX_LEN 1024
+#define PROFILING_MAX_LEN 512
 namespace ProfilingImpl {
     template<typename T>
     struct profiling_entry_t {
-        void* instancePtr{};
-        String name;
         std::array<T, PROFILING_MAX_LEN> stats;
+        void* instancePtr{};
         size_t writeIdx  = 0;
+        int64_t frameNum = -1;
         size_t loopCount = 0;
+        String name;
     };
     struct profiledata_channel_desc_t {
         String name;

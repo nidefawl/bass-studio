@@ -290,7 +290,7 @@ void BaseCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w
 void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
     NVGcolor col = getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
     glClearColor(col.r, col.g, col.b, col.a);
-    glClear(GL_COLOR_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     nvgBeginFrame(vg, w, h, ratio);
     nvgScale(vg, m_scale, m_scale);
     nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);

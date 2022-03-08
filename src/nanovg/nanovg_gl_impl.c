@@ -1266,11 +1266,6 @@ static void glnvg__renderFlush(void* uptr)
 		// Setup require GL state.
 		glUseProgram(gl->shader.prog);
 
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		glFrontFace(GL_CCW);
-		glEnable(GL_BLEND);
-		glDisable(GL_DEPTH_TEST);
 		glDisable(GL_SCISSOR_TEST);
 		glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 		glStencilMask(0xffffffff);
@@ -1339,7 +1334,6 @@ static void glnvg__renderFlush(void* uptr)
 #endif
 #ifdef NVG_3D_DEPTH_TEST_ENABLE
 		glEnable(GL_DEPTH_TEST);
-		glDepthFunc(GL_LEQUAL);
 #endif
 		for (i = 0; i < gl->ncalls; i++) {
 			GLNVGcall* call = &gl->calls[i];
@@ -1362,10 +1356,10 @@ static void glnvg__renderFlush(void* uptr)
 		glStencilMask(0xffffffff);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 		glStencilFunc(GL_ALWAYS, 0, 0xffffffff);
-		glDisable(GL_CULL_FACE);
 #ifdef NVG_3D_DEPTH_TEST_ENABLE
 		glDisable(GL_DEPTH_TEST);
 #endif
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glUseProgram(0);
 		glnvg__bindTexture(gl, 0);

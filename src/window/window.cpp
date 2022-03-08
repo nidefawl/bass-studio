@@ -156,6 +156,7 @@ static void setAppWindowHints() {
     glfwWindowHint(GLFW_CONTEXT_DEBUG, GL_FALSE);
 #endif
 
+    glfwWindowHint(GLFW_SAMPLES, 0);
     glfwWindowHint(GLFW_STENCIL_BITS, 8);
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
@@ -255,10 +256,22 @@ private:
     }
 
     void initContext() {
+		glCullFace(GL_BACK);
+		glFrontFace(GL_CCW);
+        glEnable(GL_BLEND);
+        glEnable(GL_CULL_FACE);
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_STENCIL_TEST);
+        glDisable(GL_MULTISAMPLE);  
+        glDepthFunc(GL_LEQUAL);
+        glClearColor(0, 0, 0, 0);
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glBindVertexArray(0);
+        glActiveTexture(GL_TEXTURE0);
         if (isSharedContextSlave) {
             return;
         }
-        // glfwSwapInterval(-1);
+        glfwSwapInterval(1);
         int flags = NVG_ANTIALIAS;
 #ifndef NDEBUG
         flags |= NVG_DEBUG;
@@ -274,11 +287,6 @@ private:
         nvgShapeAntiAlias(nanovgCtxt, USE_NANOVG_AA);
 
         reloadCustomShaders();
-
-        glEnable(GL_BLEND);
-        glDisable(GL_CULL_FACE);
-        glDisable(GL_DEPTH_TEST);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
 public:
@@ -662,10 +670,6 @@ public:
         glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
 
         glViewport(0, 0, fbwidth, fbheight);
-        glEnable(GL_BLEND);
-        glDisable(GL_CULL_FACE);
-        glDisable(GL_DEPTH_TEST);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
 
     void createMainWindow(int w, int h, appwindow_main* parentWindowHandle, int flags = 0);
@@ -779,18 +783,9 @@ public:
             }
             float pxratio = fbwidth / (float) winwidth;
             glViewport(0, 0, fbwidth, fbheight);
-            glEnable(GL_BLEND);
-            glDisable(GL_CULL_FACE);
-            glDisable(GL_DEPTH_TEST);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
             ctrl->prerender(this->nanovgCtxt, 0, 0, winwidth, winheight, pxratio);
             renderStatsWindow.timePrerender = timer.getTime();
             glViewport(0, 0, fbwidth, fbheight);
-            static const vec4 clearc = int32vec4(0xff121212);
-            glClearColor(clearc[0], clearc[1], clearc[2], clearc[3]);
-            glStencilMask(~0U);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
             if (ctrl->isVisible()) {
                 ctrl->render(this->nanovgCtxt, 0, 0, winwidth, winheight, pxratio);
             }
@@ -1071,10 +1066,9 @@ void appwindow_main::onChildOverlayClose(appwindow* child) {
 }
 
 class appwindow_dialog : public appwindow, public window_dialog {
-    std::function<void(NVGcontext*, int, int, float)> drawFn;
+    std::function<int(NVGcontext*, int, int, float)> drawFn;
     std::function<void(NVGcontext*)> initCallback;
     const bool disablesParent = false;
-    bool init                 = false;
 
 public:
     explicit appwindow_dialog(appwindow* _parent) : appwindow(_parent) {
@@ -1127,27 +1121,23 @@ public:
 
     void render() override {
         glfwMakeContextCurrent(glfw);
-        if (!init) {
-            init = true;
-            if (initCallback) {
-                initCallback(nanovgCtxt);
-            }
+        if (initCallback) {
+            initCallback(nanovgCtxt);
+            initCallback = nullptr;
         }
-        int winwidth = 0, winheight = 0;
-        int fbwidth = 0, fbheight = 0;
-        glfwGetWindowSize(glfw, &winwidth, &winheight);
-        glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
-        float pxratio = fbwidth / (float) winwidth;
-        glViewport(0, 0, fbwidth, fbheight);
-        static const vec4 clearc = int32vec4(0xFF000000);
-        glClearColor(clearc[0], clearc[1], clearc[2], clearc[3]);
-        glStencilMask(~0U);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         if (drawFn) {
-            drawFn(nanovgCtxt, winwidth, winheight, pxratio);
+            int winwidth = 0, winheight = 0;
+            int fbwidth = 0, fbheight = 0;
+            glfwGetWindowSize(glfw, &winwidth, &winheight);
+            glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
+            float pxratio = fbwidth / (float) winwidth;
+            glViewport(0, 0, fbwidth, fbheight);
+            int frameRendered = drawFn(nanovgCtxt, winwidth, winheight, pxratio);
+            if (frameRendered) {
+                glfwSwapBuffers(glfw);
+            }
         }
-        glfwSwapBuffers(glfw);
     }
 
     void onWindowCloseRequest() override {
@@ -1902,8 +1892,8 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                 }
                 if (tmLRNow - tmLRLastCheck >= 1000 && tmHRMsgSent == 0) {
                     tmLRLastCheck = tmLRNow;
-                    tmHRMsgSent = hiresRuntime.getTime();
                     log_lf(Log::L_DEBUG, "PostMessage WM_APP + 42\n");
+                    tmHRMsgSent = hiresRuntime.getTime();
                     PostMessage(mainWindow->getHWND(), WM_APP + 42, 0, 0);
                 }
             }

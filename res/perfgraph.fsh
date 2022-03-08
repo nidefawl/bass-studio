@@ -1,25 +1,22 @@
-#ifdef GL_ES
-#if defined(GL_FRAGMENT_PRECISION_HIGH) || defined(NANOVG_GL3)
- precision highp float;
-#else
- precision mediump float;
-#endif
-#endif
-
-// #define NANOVG_GL3
+#define NANOVG_GL3
 
 #ifdef NANOVG_GL3
-	uniform sampler2D tex;
-    uniform vec4 renderInfo;
-    uniform vec4 renderColor;
+	uniform sampler2D tex0;
+    uniform vec4 u_renderInfo;
+    uniform vec4 u_renderColor;
+    uniform vec2 u_viewport;
+    uniform float u_time;
     in vec2 pass_texcoord;
+    in vec4 pass_position;
 	out vec4 outColor;
 #else
-	uniform sampler2D tex;
-	uniform vec4 renderInfo;
-	uniform vec4 renderColor;
+	uniform sampler2D tex0;
+	uniform vec4 u_renderInfo;
+	uniform vec4 u_renderColor;
 	varying vec2 pass_texcoord;
 #endif
+
+const vec2 INV_TEXSIZE = vec2(1.0/TEXTURE_WIDTH, 1.0/TEXTURE_HEIGHT);
 
 #define fRenderTime (23.0/7.0)
 
@@ -101,51 +98,55 @@ float aastep(float threshold, float value) {
   #endif  
 }
 
-const float texW = 512.0;
-const float oneOverTexSize = 1.0/texW;
 
 void main(void) {
    		vec4 result = vec4(0,0,0,1);
-#ifdef NANOVG_GL3
-		vec4 texSample = texture(tex, pass_texcoord);
-#else
-		vec4 texSample = texture2D(tex, pass_texcoord);
-#endif
 #if 1
-        float pixX = floor((pass_texcoord.x) * renderInfo.z) + floor(texW-renderInfo.z);
-        vec2 samplePos = vec2(pixX+0.5, renderInfo.y+0.5);
-		float sampleVal = texture2D(tex, samplePos * oneOverTexSize).r;
-        // float ssteps = 2.0;
+        #define CHANNEL u_renderInfo.y
+        #define WIDTH_GRAPH u_renderInfo.z
+        #define HEIGHT_GRAPH u_renderInfo.w
+        // float pixX = (pass_texcoord.x * WIDTH_GRAPH) + (TEXTURE_WIDTH-WIDTH_GRAPH);
+        float pixX = (1.0-pass_texcoord.x)*WIDTH_GRAPH;
+
+        ivec2 texelPos = ivec2(TEXTURE_WIDTH - 1 - floor(pixX), int(CHANNEL));
+		float sampleVal = texelFetch(tex0, texelPos, 0).r;
+        int ssteps = 0;
         // float stepRange = 0.5;
         // float sampleVal2 = 0.0;
-        // for (float i = 0.0; i < ssteps; i++) {
-
-		//     sampleVal2 += texture2D(tex, vec2(pass_texcoord.x-((i+1.0)*oneOverTexSize)*stepRange, (renderInfo.y+0.5) * oneOverTexSize * vec2(r, 1.0))).r;
-        //     sampleVal2 += texture2D(tex, vec2(pass_texcoord.x+((i+1.0)*oneOverTexSize)*stepRange, (renderInfo.y+0.5) * oneOverTexSize * vec2(r, 1.0))).r;
-        // }
-        // sampleVal2 /= (ssteps*2.0);
-        float d = sampleVal-pass_texcoord.y;
-        float f2 = 0.5*fwidth(d);
-        float f3 = smoothstep(-f2, f2, d);
-		float intens = aastep(0.0, sampleVal-pass_texcoord.y); //aastep(sampleVal, pass_texcoord.y);
+        for (float i = 0; i < ssteps; i++) {
+		    sampleVal += texelFetch(tex0, texelPos + ivec2(i, 0), 0).r;
+		    sampleVal += texelFetch(tex0, texelPos - ivec2(i, 0), 0).r;
+        }
+        sampleVal /= float(ssteps*2 + 1);
+        // sampleVal = float(texelPos.x % 8 == 0);
+        float d = max(0, pow(max(0.0, sampleVal - pass_texcoord.y), .25));
+        // float f2 = 0.5*dFdx(pass_texcoord.x*TEXTURE_WIDTH);
+        // float f3 = smoothstep(-f2, f2, d);
+            
+        // float a=2.*WIDTH_GRAPH/TEXTURE_WIDTH;
+        // float b=smoothstep(a,a,fwidth(d));
+		// float intens = aastep(0.0, sampleVal - pass_texcoord.y); //aastep(sampleVal, pass_texcoord.y);
         // intens *= 0.5+0.5*sampleVal;
-        result = vec4(vec3(renderColor.rgb * vec3(f3)), 1.0);
+        // result = vec4(vec3(sampleVal), 1.0);
+        float fPixPos = (pass_position.x * 0.5 + 0.5) * u_viewport.x;
+        int stride = int(floor(u_time/200.0))%16 + 1;
+        result = vec4(u_renderColor.rgb * d, 1.0);
 #endif
 #if 0
-        float pixX = floor(pass_texcoord.x * renderInfo.z) + floor(texW-renderInfo.z);
-        vec2 samplePos = vec2(pixX+0.5, renderInfo.y+0.5);
-		float sampleVal = texture2D(tex, samplePos * oneOverTexSize).r;
+        float pixX = floor(pass_texcoord.x * u_renderInfo.z) + floor(TEXTURE_WIDTH-u_renderInfo.z);
+        vec2 samplePos = vec2(pixX+0.5, u_renderInfo.y+0.5);
+		float sampleVal = texture2D(tex0, samplePos * INV_TEXSIZE).r;
 		float intens = aastep(0.0, sampleVal-pass_texcoord.y); //aastep(sampleVal, pass_texcoord.y);
         intens *= 0.5+0.5*sampleVal;
-        result = vec4(vec3(renderColor.rgb * vec3(intens)), 1);
+        result = vec4(vec3(u_renderColor.rgb * vec3(intens)), 1);
 #endif
 #if 0
         //nice looking
-        float pixX = floor(pass_texcoord.x * renderInfo.z) + floor(texW-renderInfo.z);
-        vec2 samplePos = vec2(pixX+0.5, renderInfo.y+0.5);
-		float sampleVal = texture2D(tex, samplePos * oneOverTexSize).r;
-		float sampleVal2 = texture2D(tex, samplePos * oneOverTexSize - vec2(oneOverTexSize, 0)).r;
-		float sampleVal3 = texture2D(tex, samplePos * oneOverTexSize + vec2(oneOverTexSize, 0)).r;
+        float pixX = floor(pass_texcoord.x * u_renderInfo.z) + floor(TEXTURE_WIDTH-u_renderInfo.z);
+        vec2 samplePos = vec2(pixX+0.5, u_renderInfo.y+0.5);
+		float sampleVal = texture2D(tex0, samplePos * INV_TEXSIZE).r;
+		float sampleVal2 = texture2D(tex0, samplePos * INV_TEXSIZE - vec2(INV_TEXSIZE, 0)).r;
+		float sampleVal3 = texture2D(tex0, samplePos * INV_TEXSIZE + vec2(INV_TEXSIZE, 0)).r;
         float neighboursIntens = (sampleVal2+sampleVal3) * 0.5;
 		float intens = 1.0-smoothstep(0.0, sampleVal, pass_texcoord.y); //aastep(sampleVal, pass_texcoord.y);
         intens*=intens;
@@ -153,18 +154,18 @@ void main(void) {
         intens*=0.8+neighboursIntens;
 		intens *= 1.0-aastep(sampleVal, pass_texcoord.y);
         intens *= 0.5+0.5*sampleVal;
-        result = vec4(vec3(renderColor.rgb * vec3(intens)), 1);
+        result = vec4(vec3(u_renderColor.rgb * vec3(intens)), 1);
 #endif
 
 #if 0
-        float nSteps = renderInfo.z/4.0;
+        float nSteps = u_renderInfo.z/4.0;
         float xOffsetNext = abs(round(pass_texcoord.x * nSteps)-(pass_texcoord.x * nSteps))*nSteps;
-        float pixX = floor(pass_texcoord.x * nSteps) + floor(texW-nSteps);
-        vec2 samplePos = vec2(pixX+0.5, renderInfo.y+0.5);
-		float sampleVal = texture2D(tex, samplePos * oneOverTexSize).r;
+        float pixX = floor(pass_texcoord.x * nSteps) + floor(TEXTURE_WIDTH-nSteps);
+        vec2 samplePos = vec2(pixX+0.5, u_renderInfo.y+0.5);
+		float sampleVal = texture2D(tex0, samplePos * INV_TEXSIZE).r;
 		float intens = aastep(0.0, sampleVal-pass_texcoord.y);
 		float w = 0.5*fwidth(xOffsetNext); 
-        vec4 colShape = vec4(renderColor);
+        vec4 colShape = vec4(u_renderColor);
 		intens *= smoothstep(-w,w, xOffsetNext-(nSteps/4.0));
         result = mix(vec4(0), colShape, intens);
 
@@ -173,7 +174,9 @@ void main(void) {
 		// 	discard;
 
 #ifdef NANOVG_GL3
-        outColor = result;
+        // outColor = vec4(vec3(1), float(result.r!=0))
+        // outColor = vec4(result.rgb, 1.0);
+        outColor = vec4(result.rgb + u_renderColor.bgr*(1.0-pass_texcoord.y)*0.2, 1.0);
 #else
         gl_FragColor = result;
 #endif
