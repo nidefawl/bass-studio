@@ -988,8 +988,6 @@ void guitrack_editor::render(NVGcontext* vg) {
                 if (trBEntry->validSubtrack(ssTrIdx) && trBEntry->validSubtrack(esTrIdx)) {
                     trackYMin = trBEntry->subtracks[ssTrIdx]->top();
                     trackYMax = trBEntry->subtracks[esTrIdx]->bottom();
-                } else {
-                    dbgassert(0);
                 }
             }
 
@@ -1021,8 +1019,6 @@ void guitrack_editor::render(NVGcontext* vg) {
                     if (trEntry->validSubtrack(ssTrIdx) && trEntry->validSubtrack(esTrIdx)) {
                         trackYMin = trEntry->subtracks[ssTrIdx]->top();
                         trackYMax = trEntry->subtracks[esTrIdx]->bottom();
-                    } else {
-                        dbgassert(0);
                     }
                 }
                 cursorScreenX += 0.5;
