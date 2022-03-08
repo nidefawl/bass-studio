@@ -39,6 +39,10 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override {
         ivec2 local = evt.relMousepos;
         for (ctxtmenu_entry* e : entries) {
+            if (pos.y+e->y > parent->size.y)
+                break;
+            if (pos.y+e->y+e->height<0)
+                continue;
             int n = e->getClicked(size, local);
             if (n >= 0) {
                 clickedElement(e, n);
@@ -56,6 +60,7 @@ public:
         }
     }
     void determineSize(ivec2& prefSize) override {
+        log_printf("determine size input: %d %d\n", prefSize.x, prefSize.y);
         ivec2 newMaxSize = { size.x, paddingV };
         for (ctxtmenu_entry* e : entries) {
             newMaxSize.x = math::max(newMaxSize.x, e->width);
@@ -65,6 +70,7 @@ public:
             newMaxSize.y += paddingV;
         }
         prefSize = newMaxSize;
+        log_printf("determined size: %d %d\n", prefSize.x, prefSize.y);
     }
 
     void render(NVGcontext* vg) override {
@@ -76,6 +82,10 @@ public:
         ivec2 mouse = parentCtrl->m_mousePos;
         mouse       = toContainerSpace(mouse);
         for (ctxtmenu_entry* e : entries) {
+            if (pos.y+e->y > parent->size.y)
+                break;
+            if (pos.y+e->y+e->height<0)
+                continue;
             e->render(size, vg, idx, mouse);
             idx++;
         }

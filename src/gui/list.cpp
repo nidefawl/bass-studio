@@ -103,20 +103,5 @@ void gui_list::render(NVGcontext* vg) {
         }
     }
     nvgRestore(vg);
-//    int x = 0;
-//    int y = 0;
-//    nvgBeginPath(vg);
-//    for (int32_t idx = first; idx < last; idx++) {
-//        if (y > 0) {
-//            nvgMoveTo(vg, x, y);
-//            nvgLineTo(vg, x + cs.x, y);
-//        }
-//        y += rowHeight;
-//    }
-//    nvgStrokeWidth(vg, 1.0f);
-//    nvgStrokeColor(vg, G_BLACK);
-//    nvgStroke(vg);
     scrollbar.render(vg);
-//    nvgResetScissor(vg);
-//    nvgResetTransform(vg);
 }
