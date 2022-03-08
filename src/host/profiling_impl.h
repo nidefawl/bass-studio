@@ -34,4 +34,6 @@ namespace ProfilingImpl {
 
     template<typename T>
     void profilingGetData(profiling_data_t<T>* out);
+    template<typename T>
+    bool profilingGetRecentFrame(void* instance, T* out);
 }// namespace ProfilingImpl

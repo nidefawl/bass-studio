@@ -94,6 +94,4 @@ namespace Profiling {
     void profilingRegisterEntry(void* instance, const String& name);
     template<typename T>
     void profilingCommitStats(void* instance, int frameNumber, T& stats);
-    template<typename T>
-    bool profilingGetRecentFrame(void* instance, T* out);
 }// namespace Profiling

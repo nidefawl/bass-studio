@@ -32,7 +32,7 @@ namespace ProfilingImpl {
 
             // enforce template instantiation
             T dummy{};
-            Profiling::profilingGetRecentFrame(ptr, &dummy);
+            ProfilingImpl::profilingGetRecentFrame(ptr, &dummy);
         }
     };
 
@@ -81,11 +81,8 @@ namespace ProfilingImpl {
         out->instanceList = &appStats.regWindowProfStats;
         out->channelDesc = &channels;
     }
-}// namespace ProfilingImpl
-namespace Profiling {
     template<typename T>
     bool profilingGetRecentFrame(void* instance, T* out) {
-        using namespace ProfilingImpl;
         profiling_data_t<T> data{};
         profilingGetData(&data);
         for (profiling_entry_t<T>& entry : *data.instanceList) {
@@ -102,6 +99,8 @@ namespace Profiling {
         }
         return false;
     }
+}// namespace ProfilingImpl
+namespace Profiling {
     template<>
     void profilingRegisterEntry<prof_stats_render_t>(void* instance, const String& name) {
         ProfilingImpl::renderStats.registerInstance(instance, name);

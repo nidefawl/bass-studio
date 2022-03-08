@@ -1,5 +1,6 @@
 #include <algorithm>
 #include "profiling.h"
+#include "host/profiling_impl.h"
 #include "list.h"
 #include "gui.h"
 #include "guicontainer.h"
@@ -277,7 +278,7 @@ public:
         nvgFillColor(vg, G_WHITE);
         
         prof_stats_window_t profDataWindow;
-        if (Profiling::profilingGetRecentFrame(dawCtrl->window, &profDataWindow)) {
+        if (ProfilingImpl::profilingGetRecentFrame(dawCtrl->window, &profDataWindow)) {
             printL(0, "Render", StringFormat("%d µs", profDataWindow.timeRender));
         }
         printL(1, "Prerender", StringFormat("%d µs", renderStats.timePrerender));

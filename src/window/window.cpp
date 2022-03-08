@@ -1017,7 +1017,7 @@ public:
         /* calling setSize on a hidden window makes the window visible (at the wrong location!)
          * As workaround on linux positionOnScreen is must be called twice:
          * Once before and once after appwindow::show() */
-        if (shown) {
+        if (bIsVisible) {
             appwindow::setSize(size);
         }
 #else
