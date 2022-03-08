@@ -306,7 +306,7 @@ public:
         auto const pipeline = pipePerfShader.get();
         if (!pipeline->isValid)
             return 0;
-        auto tmEndUpload = getTimeMicros();
+        // auto tmEndUpload = getTimeMicros();
 
         const int FONTSIZE_TITLE  = 16;
         const int FONTSIZE_GRAPH  = 14;
@@ -390,10 +390,10 @@ public:
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
         glBindVertexArray(0);
-        auto tmEndGraphs = getTimeMicros();
-        if (nCall % 50 == 0) {
-            log_printf("tmEndGraphs %zd\n", tmEndGraphs - tmEndUpload);
-        }
+        // auto tmEndGraphs = getTimeMicros();
+        // if (nCall % 50 == 0) {
+        //     log_printf("tmEndGraphs %zd\n", tmEndGraphs - tmEndUpload);
+        // }
         nvgBeginFrame(vg, fbWidth, fbHeight, pxratio);
 
 
@@ -458,10 +458,10 @@ public:
 
 
         nvgEndFrame(vg);
-        auto tmEndNvg = getTimeMicros();
-        if (nCall % 50 == 0) {
-            log_printf("tmEndNvg %zd\n", tmEndNvg - tmEndGraphs);
-        }
+        // auto tmEndNvg = getTimeMicros();
+        // if (nCall % 50 == 0) {
+        //     log_printf("tmEndNvg %zd\n", tmEndNvg - tmEndGraphs);
+        // }
         return 1;
     }
 };
