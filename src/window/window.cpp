@@ -630,6 +630,7 @@ class appwindow_main : public appwindow, public window_main {
     // int64_t tmLastShaderReloadMillis = 0;
     bool bEnableWindowProfiling = false;
     prof_stats_window_t renderStatsWindow{};
+    hires_timer_t timerProfileWindow;
 protected:
     void destroyOverlayWindows();
 
@@ -768,8 +769,7 @@ public:
     }
 
     void renderMain() {
-        hires_timer_t timer;
-        timer.reset();
+        timerProfileWindow.reset();
         glfwMakeContextCurrent(glfw);
 
         int winwidth = 0, winheight = 0;
@@ -784,14 +784,14 @@ public:
             float pxratio = fbwidth / (float) winwidth;
             glViewport(0, 0, fbwidth, fbheight);
             ctrl->prerender(this->nanovgCtxt, 0, 0, winwidth, winheight, pxratio);
-            renderStatsWindow.timePrerender = timer.getTime();
+            renderStatsWindow.timePrerender = timerProfileWindow.getTimeReset();
             glViewport(0, 0, fbwidth, fbheight);
             if (ctrl->isVisible()) {
                 ctrl->render(this->nanovgCtxt, 0, 0, winwidth, winheight, pxratio);
             }
-            renderStatsWindow.timeRender = timer.getTime();
+            renderStatsWindow.timeRender = timerProfileWindow.getTimeReset();
             glfwSwapBuffers(glfw);
-            renderStatsWindow.timeSwapBuffers = timer.getTime();
+            renderStatsWindow.timeSwapBuffers = timerProfileWindow.getTimeReset();
 #if BUILD_VSTHOST
             if (bEnableWindowProfiling) {
                 // NVGGLRenderStats nvglRenderStats;
@@ -1813,7 +1813,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         int64_t tmHRMsgSent   = 0;
         int64_t tmLRDbgPrint  = tmHRLastTick / 1000L;
         char clsName_v[256];
-        const bool debugMessageLoop = true;
+        const bool debugMessageLoop = false;
         const DWORD timeout = 1;
 #else
         const double timeoutEvent = 0.001;
@@ -1854,11 +1854,10 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                         break;
                 }
             }
-            int64_t tmMsgLoop = hiresTimer1.getTime();
-            hiresTimer1.reset();
+            int64_t tmMsgLoop = hiresTimer1.getTimeReset();
             glfwUpdateWin32Internals();
 #endif
-            int64_t tmUpdateInternals = hiresTimer1.getTime();
+            int64_t tmUpdateInternals = hiresTimer1.getTimeReset();
 #ifndef _WIN32
             glfwWaitEventsTimeout(timeoutEvent);
 #endif
@@ -1873,14 +1872,14 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                 tmHRLastTick            = tmHRNow;
                 hiresTimer1.reset();
                 windowTickTimerRun();
-                appStats.tickTimerDuration = hiresTimer1.getTime();
+                appStats.tickTimerDuration = hiresTimer1.getTimeReset();
                 Profiling::profilingCommitStats(&appInstance, frameNumberStats, appStats);
                 appStats = prof_stats_applicaton_t{};
                 frameNumberStats++;
             }
             hiresTimer1.reset();
             mainWindow->onRefresh();
-            appStats.timeRefreshAll = hiresTimer1.getTime();
+            appStats.timeRefreshAll = hiresTimer1.getTimeReset();
 #ifdef _WIN32
             if (debugMessageLoop) {
                 if (tmLRNow - tmLRDbgPrint >= 1000) {

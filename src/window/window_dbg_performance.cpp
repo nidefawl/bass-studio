@@ -6,6 +6,7 @@
 #include <memory>
 #include <utility>
 #include "logging.h"
+#include "math/seq_math.h"
 #include "math/vec.h"
 #include "math/mat.h"
 #include "fileio.h"
@@ -60,15 +61,16 @@ void normalizeData(ProfilingDataChannelBase* ch) {
     dbgassert(ch->valuesNormalized.size() == DBG_PERF_HIST_SIZE);
     // memcpy(ch->valuesNormalized.data(), ch->valuesRaw.data(), sizeof(float) * DBG_PERF_HIST_SIZE);
     const float minFl = 0;
+    const float valAvg = ch->valueAvg;
     float maxFl = 10;
-    if (ch->fixedScale < 0 || ch->valueAvg > ch->fixedScale * 0.7f) {
-        int64_t tmpMax = ch->valueAvg;
-        while (tmpMax > 10) {
-            maxFl *= 10;
-            tmpMax /= 10;
-        }
-    } else {
+    if (ch->fixedScale > 0 && valAvg >= ch->fixedScale * 0.05) {
         maxFl = static_cast<float>(ch->fixedScale);
+    }
+    while (maxFl > 100 && valAvg < maxFl * 0.05) {
+        maxFl /= 10;
+    }
+    while (valAvg > maxFl * 0.85) {
+        maxFl *= 10;
     }
     const float sc        = 1.0f / (maxFl - minFl);
     const float* rawData  = ch->valuesRaw.data();
@@ -287,34 +289,35 @@ public:
         return numUpdated;
     }
     int render(NVGcontext* vg, int winW, int winH, float pxratio) {
+        float zoom = 1.0f;
+        float fbWidth = winW * zoom;
+        float fbHeight = winH * zoom;
         auto tmMillis = getTimeMicros() / 1000UL;
         nCall++;
         int32_t numUpdated = updateProfilingData();
         if (!numUpdated) {
             return 0;
         }
-        // if (tmMillis - tmLastReload >= 1600) {
-        //     if (init()) {
-        //        return 0;
-        //     }
-        // }
+        if (tmMillis - tmLastReload >= 1600) {
+            if (init()) {
+               return 0;
+            }
+        }
         auto const pipeline = pipePerfShader.get();
         if (!pipeline->isValid)
             return 0;
         auto tmEndUpload = getTimeMicros();
 
-
-
         const int FONTSIZE_TITLE  = 16;
         const int FONTSIZE_GRAPH  = 14;
         const int FONTSIZE_LEGEND = 12;
         const int WND_PADDING     = 6;
-        const auto renderSize   = vec2(winW, winH) - vec2(WND_PADDING * 2.0f);
-        int layoutCols = math::min(6, winW/280);
+        const auto renderSize   = vec2(fbWidth, fbHeight) - vec2(WND_PADDING * 2.0f);
+        int layoutCols = math::floorfS32(math::min(6.0f, fbWidth/280.0f));
         vec2 layoutSize(0);
         do {
             layoutSize = vec2(renderSize.x / static_cast<float>(layoutCols)) * vec2(1.0, 1.0 / 4.0f);
-        } while(layoutSize.x > winW/2.0 && layoutCols++);
+        } while(layoutSize.x > fbWidth/2.0 && layoutCols++);
         while(layoutSize.y > 100.0) {
             layoutSize.y *= 0.75;
         } 
@@ -340,8 +343,8 @@ public:
         auto& vbo = pipeline->vbo;
         pipeline->bindBuffer(vbo);
         tess2d::uploadVBO(tess, vbo);
-        const glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.0f, -1.0f);
-        pipeline->setUniforms(winW, winH, getTimeMillisF());
+        const glm::mat4 matProj = glm::ortho(0.f, (float) fbWidth, (float) fbHeight, 0.f, 1.0f, -1.0f);
+        pipeline->setUniforms(fbWidth, fbHeight, getTimeMillisF());
         glUniformMatrix4fv(pipeline->u_mvp, 1, GL_FALSE, value_ptr(matProj));
         glm::mat4 mvp;
 
@@ -391,7 +394,7 @@ public:
         if (nCall % 50 == 0) {
             log_printf("tmEndGraphs %zd\n", tmEndGraphs - tmEndUpload);
         }
-        nvgBeginFrame(vg, winW, winH, pxratio);
+        nvgBeginFrame(vg, fbWidth, fbHeight, pxratio);
 
 
         nvgSave(vg);
