@@ -44,10 +44,17 @@ namespace AudioIO {
     }
     template <class Archive>
     void serialize(Archive& ar, io_cfg_channel& settings) {
-        ar(make_nvp("idx", settings.idx),
-           make_nvp("channelOffset", settings.channelOffset),
-           make_nvp("name", settings.name),
-           make_nvp("type", settings.type));
+        try {
+            ar(make_nvp("idx", settings.idx),
+                make_nvp("offset", settings.offset),
+                make_nvp("name", settings.name),
+                make_nvp("type", settings.type));
+        } catch (const std::runtime_error& e) {
+            ar(make_nvp("idx", settings.idx),
+                make_nvp("channelOffset", settings.offset),
+                make_nvp("name", settings.name),
+                make_nvp("type", settings.type));
+        }
     }
 } // namespace AudioIO
 template <class Archive>

@@ -26,9 +26,9 @@ public:
             AudioBlock buf;
             int32_t index         = 0;
             int32_t channelOffset = 0;
-            AudioIO::tracktype type;
+            AudioIO::channelcount type;
 
-            IOChannel(int32_t _index, AudioIO::tracktype _type, int32_t _channelOffset, DAW::rmsmeter&& _meter)
+            IOChannel(int32_t _index, AudioIO::channelcount _type, int32_t _channelOffset, DAW::rmsmeter&& _meter)
                 : meter(_meter),
                 buf((uint32_t) AudioIO::getNumChannelsFromTrackType(_type), 0),
                 index(_index),

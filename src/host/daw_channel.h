@@ -45,7 +45,7 @@ inline bool audioStageIdMatches(const audio_stage_id_t& stageIds, const audiosta
 
 namespace DAW {
 
-    enum channel_input_type {
+    enum class channel_type {
         INPUT_DEFAULT,
         INPUT_EMPTY,
         INPUT_EXTERNAL_AUDIO,
@@ -54,16 +54,22 @@ namespace DAW {
     };
 
     struct channel_ref_t {
-        channel_input_type type = INPUT_EMPTY;
-        AudioIO::tracktype externalInputType;
-        int32_t externalInputIdx   = -1;
-        int32_t inputChannelOffset = 0;
+        channel_type type                    = channel_type::INPUT_EMPTY;
+        AudioIO::channelcount externalInputType = AudioIO::channelcount::STEREO;
         audio_channel_ref_t stage{ { TRACKID_INVALID_I32 }, stagebuffer_point::OUTPUT_POST };
-        int32_t projectGlobalId = 0;
-        String name             = "None";
-        channel_input_type getType() const {
+        int32_t projectGlobalId     = 0;
+        int32_t externalInputIdx    = 0;
+        int32_t srcChannelOffset    = 0;
+        int32_t dstChannelOffset    = 0;
+        String name                 = "None";
+        channel_type getType() const {
             return type;
         }
+    };
+    struct channel_desc {
+        int offset = 0;
+        int count = 2;
+        String name;
     };
 
     enum bus_type {
@@ -74,9 +80,4 @@ namespace DAW {
     bool resolveDefaultConnection(const vsthost* host, const project_t* project, track_impl_t* trImpl, bool isInput, channel_ref_t& out);
     bool resolveAudioChannel(const vsthost* host, int32_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* ptrExternalInputs, track_audio_src& out);
 
-    struct channel_desc {
-        int offset = -1;
-        int count = -1;
-        String name;
-    };
 }// namespace DAW

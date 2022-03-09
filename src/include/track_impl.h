@@ -224,21 +224,28 @@ static constexpr int PROCESS_ARP = 4;
 }
 namespace DAW {
 inline bool isChannelConnected(const DAW::channel_ref_t& ch) {
-    return ch.stage.stageRef.stageId != TRACKID_INVALID_I32 || ch.externalInputIdx > -1;
+    return ch.type != channel_type::INPUT_EMPTY;
 }
 inline bool isTrackSrcSolod(const DAW::track_source_t& src) {
     return (src.flags & (audiostageflags_t::SOLO|audiostageflags_t::SOLO_PARENT)) != audiostageflags_t::NONE;
 }
 inline channel_ref_t ChannelNone() {
-    return channel_ref_t{};
+    return channel_ref_t{channel_type::INPUT_EMPTY};
 }
 inline channel_ref_t ChannelDefaultNone() {
-    channel_ref_t ref = ChannelNone();
-    ref.type = channel_input_type::INPUT_DEFAULT;
-    return ref;
+    return channel_ref_t{channel_type::INPUT_DEFAULT};
 }
-inline channel_ref_t ChannelAudioInput(int32_t idx, int32_t channelOffset, String name, AudioIO::tracktype type) {
-    return channel_ref_t{channel_input_type::INPUT_EXTERNAL_AUDIO, type, idx, channelOffset, {{TRACKID_INVALID_I32}, stagebuffer_point::OUTPUT}, 0, std::move(name)};
+inline channel_ref_t ChannelAudioInput(int32_t idx, int32_t channelOffset, String name, AudioIO::channelcount type) {
+    return channel_ref_t {
+        channel_type::INPUT_EXTERNAL_AUDIO, 
+        type,
+        { { TRACKID_INVALID_I32 }, stagebuffer_point::OUTPUT }, 
+        0, 
+        idx,
+        channelOffset,
+        0,
+        std::move(name)
+    };
 }
 inline channel_ref_t ChannelStage(const audio_stage_t* stage, stagebuffer_point isInput) {
     dbgassert(stage);
@@ -252,9 +259,18 @@ inline channel_ref_t ChannelStage(const audio_stage_t* stage, stagebuffer_point 
     } else {
         str += " OUT";
     }
-    return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE, AudioIO::getTrackTypeFromNumChannels(stage->input.channels), -1, 0, {stage->toRef(), isInput}, 0, str};
+    return channel_ref_t {
+        channel_type::INPUT_AUDIOSTAGE,
+        AudioIO::getTrackTypeFromNumChannels(stage->input.channels),
+        { stage->toRef(), isInput },
+        0,
+        0,
+        0,
+        0,
+        str
+    };
 }
-inline channel_ref_t ChannelAudioEffect(effectbase* effect, stagebuffer_point isInput, const channel_desc& channelDesc) {
+inline channel_ref_t ChannelAudioEffect(effectbase* effect, stagebuffer_point isInput, const channel_desc& channelDescSrc, const channel_desc& channelDescDst) {
     dbgassert(effect);
     String str;
     auto stage = effect->getTrackLink();
@@ -265,8 +281,17 @@ inline channel_ref_t ChannelAudioEffect(effectbase* effect, stagebuffer_point is
     }
     str += effect->getName();
     str += " ";
-    str += channelDesc.name;
-    return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE_EFFECT, AudioIO::getTrackTypeFromNumChannels(channelDesc.count), -1, channelDesc.offset, {stage->toRef(), isInput}, effect->projectGlobalId, str};
+    str += channelDescSrc.name;
+    return channel_ref_t {
+        channel_type::INPUT_AUDIOSTAGE_EFFECT,
+        AudioIO::getTrackTypeFromNumChannels(channelDescSrc.count),
+        { stage->toRef(), isInput },
+        effect->projectGlobalId,
+        0,
+        channelDescSrc.offset,
+        channelDescDst.offset,
+        str
+    };
 }
 }
 struct track_gui_entry_t;

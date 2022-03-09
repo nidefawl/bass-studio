@@ -196,9 +196,10 @@ void serialize(Archive& archive, io_configuration_snapshot_t& m) {
             make_nvp("stageId", m.stageId),
             make_nvp("stageEndPointType", m.stageEndPointType),
             make_nvp("externalInputType", m.externalInputType),
-            make_nvp("externalInputId", m.externalInputId),
-            make_nvp("channelOffset", m.channelOffset),
-            make_nvp("projectGlobalId", m.projectGlobalId)
+            make_nvp("projectGlobalId", m.projectGlobalId),
+            make_nvp("externalInputIdx", m.externalInputIdx),
+            make_nvp("srcChannelOffset", m.srcChannelOffset),
+            make_nvp("dstChannelOffset", m.dstChannelOffset)
         );
     } catch (const std::exception& e) {
         m = {};

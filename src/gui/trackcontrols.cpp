@@ -484,7 +484,7 @@ public:
           channel(_channel),
           isInput(_isInput) {
     }
-    explicit ctxtmenu_entry_external_channel(int32_t _id, String name, stagebuffer_point _isInput)
+    explicit ctxtmenu_entry_external_channel(int32_t _id, const String& name, stagebuffer_point _isInput)
         : ctxtmenu_entry_endpoint(_id, name), channel(), isInput(_isInput) {
     }
     void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
@@ -503,7 +503,7 @@ public:
     }
     DAW::channel_ref_t getEndpoint() override {
         return DAW::ChannelAudioInput(channel.idx,
-                                      channel.channelOffset,
+                                      channel.offset,
                                       "External " + AudioIO::getTrackNameShort(channel.type, channel.idx, isInput),
                                       channel.type);
     }
@@ -512,7 +512,7 @@ class ctxtmenu_entry_stage_channel : public ctxtmenu_entry_endpoint {
 public:
     const audio_channel_ref_t endpoint;
 
-    ctxtmenu_entry_stage_channel(int32_t _id, String name, audio_channel_ref_t _endpoint)
+    ctxtmenu_entry_stage_channel(int32_t _id, const String& name, audio_channel_ref_t _endpoint)
         : ctxtmenu_entry_endpoint(_id, name), endpoint(_endpoint) {
     }
     void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
@@ -743,7 +743,7 @@ public:
             dbgassert(project);
             if (project) {
                 vsthost* const host = vsthost::getInstance();
-                if (channel.type == DAW::channel_input_type::INPUT_DEFAULT) {
+                if (channel.type == DAW::channel_type::INPUT_DEFAULT) {
                     DAW::channel_ref_t out;
                     if (DAW::resolveDefaultConnection(host, project, trImpl, isInput, out)) {
                         return out.name;

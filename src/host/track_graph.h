@@ -14,11 +14,11 @@ namespace DAW {
      * track_node_t - represents a node in the audio chain dependency graph
      */
     struct track_source_t {
-        uint32_t trackEdgeId{};
-        channel_ref_t channel;
-        automation_ref_t gainAutomation;
-        samplerate_t latency    = 0U;
-        audiostageflags_t flags = audiostageflags_t::NONE;
+        uint32_t trackEdgeId = 0;
+        channel_ref_t channel{};
+        automation_ref_t gainAutomation{};
+        samplerate_t latency     = 0U;
+        audiostageflags_t flags  = audiostageflags_t::NONE;
     };
 
     enum class track_node_type_t : int32_t {

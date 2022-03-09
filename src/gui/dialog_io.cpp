@@ -292,7 +292,7 @@ public:
             auto& newList = isInput ? newConfig.input : newConfig.output;
             newList.clear();
 
-            const AudioIO::tracktype type = AudioIO::getNextTrackType(ioChannel->type);
+            const AudioIO::channelcount type = AudioIO::getNextTrackType(ioChannel->type);
             const int32_t nChannelsPrev   = AudioIO::getNumChannelsFromTrackType(ioChannel->type);
             const int32_t nChannels       = AudioIO::getNumChannelsFromTrackType(type);
             const int32_t base            = (ioChannel->channelOffset / nChannels);
@@ -304,57 +304,57 @@ public:
                 AudioIO::io_cfg_channel channels;
                 channels.idx           = 0;
                 channels.type          = type;
-                channels.channelOffset = (base + c) * nChannels;
+                channels.offset = (base + c) * nChannels;
                 newList.push_back(channels);
             }
             for (auto& existChannelCnf : list) {
                 int32_t existChCnfChannels = AudioIO::getNumChannelsFromTrackType(existChannelCnf.type);
-                if (existChannelCnf.channelOffset >= end || existChannelCnf.channelOffset + existChCnfChannels <= begin) {
+                if (existChannelCnf.offset >= end || existChannelCnf.offset + existChCnfChannels <= begin) {
                     newList.push_back(existChannelCnf);
                 }
             }
             std::sort(newList.begin(), newList.end(),
                       [](const AudioIO::io_cfg_channel& entryA, const AudioIO::io_cfg_channel& entryB) {
-                          return entryA.channelOffset < entryB.channelOffset;
+                          return entryA.offset < entryB.offset;
                       });
             while (true) {
                 // Find unassigned channels
                 int32_t endPrevChannel = 0;
                 auto it = std::find_if(newList.begin(), newList.end(),
                               [&endPrevChannel](const AudioIO::io_cfg_channel& entryA) {
-                                if (entryA.channelOffset > endPrevChannel)
+                                if (entryA.offset > endPrevChannel)
                                     return true;
-                                endPrevChannel = entryA.channelOffset + AudioIO::getNumChannelsFromTrackType(entryA.type);
+                                endPrevChannel = entryA.offset + AudioIO::getNumChannelsFromTrackType(entryA.type);
                                 return false;
                               });
                 if (it == newList.end()) {
                     break;
                 }
 
-                int32_t endChannel = it->channelOffset;
+                int32_t endChannel = it->offset;
                 int32_t free       = endChannel - endPrevChannel;
                 log_printf("found %d unassigned channels %d to %d\n", free, endPrevChannel, endChannel);
 
                 // create tracks for unassigned channels
                 while (free > 0) {
-                    const AudioIO::tracktype type2 = AudioIO::getTrackTypeFromNumChannels(free);
+                    const AudioIO::channelcount type2 = AudioIO::getTrackTypeFromNumChannels(free);
                     AudioIO::io_cfg_channel channel2;
                     channel2.idx           = -1;
                     channel2.type          = type2;
-                    channel2.channelOffset = endPrevChannel;
+                    channel2.offset = endPrevChannel;
                     int32_t nChannels2     = AudioIO::getNumChannelsFromTrackType(channel2.type);
                     endPrevChannel += nChannels2;
                     free -= nChannels2;
                     newList.push_back(channel2);
-                    log_printf("add track %s channels %d to %d\n", StringAsCStr(channel2.name), channel2.channelOffset,
-                               channel2.channelOffset + nChannels2);
+                    log_printf("add track %s channels %d to %d\n", StringAsCStr(channel2.name), channel2.offset,
+                               channel2.offset + nChannels2);
                 }
 
                 // make sure we did not assign too many channels
                 dbgassert(free >= 0);
                 std::sort(newList.begin(), newList.end(),
                           [](const AudioIO::io_cfg_channel& entryA, const AudioIO::io_cfg_channel& entryB) {
-                              return entryA.channelOffset < entryB.channelOffset;
+                              return entryA.offset < entryB.offset;
                           });
             }
 
@@ -369,7 +369,7 @@ public:
             int32_t maxChannel = -1;
             for (auto& ch : newList) {
                 auto chCount  = AudioIO::getNumChannelsFromTrackType(ch.type);
-                auto chEndIdx = ch.channelOffset + chCount;
+                auto chEndIdx = ch.offset + chCount;
                 maxChannel = math::max(maxChannel, chEndIdx);
             }
 
@@ -381,9 +381,9 @@ public:
             for (auto& ch : newList) {
                 auto chCount = AudioIO::getNumChannelsFromTrackType(ch.type);
                 for (int j = 0; j < chCount; j++) {
-                    foundDblAssignment |= vChannelIdc[j + ch.channelOffset] != -1;
+                    foundDblAssignment |= vChannelIdc[j + ch.offset] != -1;
                     dbgassert (!foundDblAssignment);
-                    vChannelIdc[j + ch.channelOffset] = ch.idx;
+                    vChannelIdc[j + ch.offset] = ch.idx;
                 }
             }
 

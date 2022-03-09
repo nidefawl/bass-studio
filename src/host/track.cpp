@@ -621,26 +621,25 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
     //}
 }
 namespace DAW {
-    void createDawChannelRefSnapshot(const channel_ref_t& channel, io_configuration_snapshot_t& cfg);
-    void loadDawChannelRefSnapshot(const io_configuration_snapshot_t& cfg, channel_ref_t& channel);
-
     void createDawChannelRefSnapshot(const DAW::channel_ref_t& channel, io_configuration_snapshot_t& cfg) {
         cfg.type              = static_cast<int32_t>(channel.type);
         cfg.stageId           = static_cast<int32_t>(channel.stage.stageRef.stageId);
         cfg.stageEndPointType = static_cast<int32_t>(channel.stage.buffer);
         cfg.externalInputType = static_cast<int32_t>(channel.externalInputType);
-        cfg.externalInputId   = channel.externalInputIdx;
-        cfg.channelOffset     = channel.inputChannelOffset;
         cfg.projectGlobalId   = channel.projectGlobalId;
+        cfg.externalInputIdx  = channel.externalInputIdx;
+        cfg.srcChannelOffset  = channel.srcChannelOffset;
+        cfg.dstChannelOffset  = channel.dstChannelOffset;
     }
     void loadDawChannelRefSnapshot(const io_configuration_snapshot_t& cfg, channel_ref_t& channel) {
-        channel.type                   = static_cast<DAW::channel_input_type>(cfg.type);
-        channel.inputChannelOffset     = cfg.channelOffset;
+        channel.type                   = static_cast<DAW::channel_type>(cfg.type);
         channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
         channel.stage.buffer           = static_cast<stagebuffer_point>(cfg.stageEndPointType);
+        channel.externalInputType      = static_cast<AudioIO::channelcount>(cfg.externalInputType);
         channel.projectGlobalId        = cfg.projectGlobalId;
-        channel.externalInputIdx       = cfg.externalInputId;
-        channel.externalInputType      = static_cast<AudioIO::tracktype>(cfg.externalInputType);
+        channel.externalInputIdx       = cfg.externalInputIdx;
+        channel.srcChannelOffset       = cfg.srcChannelOffset;
+        channel.dstChannelOffset       = cfg.dstChannelOffset;
     }
 }
 

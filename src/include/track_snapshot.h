@@ -14,13 +14,14 @@ class track_t;
 struct track_impl_t;
 
 struct io_configuration_snapshot_t {
-    int32_t type              = 0;
-    int32_t stageId           = -1;
-    int32_t stageEndPointType = 0;
-    int32_t externalInputType = 0;
-    int32_t externalInputId   = 0;
-    int32_t channelOffset     = 0;
-    int32_t projectGlobalId   = 0;
+    int32_t type                = 0;
+    int32_t stageId             = -1;
+    int32_t stageEndPointType   = 0;
+    int32_t externalInputType   = 0;
+    int32_t projectGlobalId     = 0;
+    int32_t externalInputIdx    = 0;
+    int32_t srcChannelOffset    = 0;
+    int32_t dstChannelOffset    = 0;
 };
 struct track_io_configuration_snapshot_t {
     io_configuration_snapshot_t input;

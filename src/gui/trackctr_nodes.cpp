@@ -189,19 +189,28 @@ void gui_graph_entry::handleDraggedBegin(MouseEvent& evt) {
     if (parent) parent->buttonClicked(this);
 }
 namespace DAW {
-    bool channelRefEquals(const DAW::channel_ref_t& existingRef, const DAW::channel_ref_t& ref) {
+    bool channelRefEquals(const DAW::channel_ref_t& existingRef, const DAW::channel_ref_t& ref, int matchSrcDstAll) {
         if (existingRef.type == ref.type) {
             switch (ref.type) {
-                case channel_input_type::INPUT_EXTERNAL_AUDIO:
+                case channel_type::INPUT_EXTERNAL_AUDIO:
                     return ref.externalInputType == existingRef.externalInputType
-                           && ref.inputChannelOffset == existingRef.inputChannelOffset;
-                case channel_input_type::INPUT_AUDIOSTAGE:
+                            && ref.externalInputIdx == existingRef.externalInputIdx
+                            && ref.srcChannelOffset == existingRef.srcChannelOffset;
+                case channel_type::INPUT_AUDIOSTAGE:
                     return ref.stage.buffer == existingRef.stage.buffer
                            && ref.stage.stageRef.stageId == existingRef.stage.stageRef.stageId;
-                case channel_input_type::INPUT_AUDIOSTAGE_EFFECT:
-                    return ref.projectGlobalId == existingRef.projectGlobalId && ref.inputChannelOffset == existingRef.inputChannelOffset;
-                case channel_input_type::INPUT_DEFAULT:
-                case channel_input_type::INPUT_EMPTY:
+                case channel_type::INPUT_AUDIOSTAGE_EFFECT:
+                    if (ref.projectGlobalId == existingRef.projectGlobalId) {
+                        if (matchSrcDstAll == 0)
+                            return ref.srcChannelOffset == existingRef.srcChannelOffset;
+                        if (matchSrcDstAll == 1)
+                            return ref.dstChannelOffset == existingRef.dstChannelOffset;
+                        return ref.srcChannelOffset == existingRef.srcChannelOffset
+                                && ref.dstChannelOffset == existingRef.dstChannelOffset;
+                    }
+                    return false;
+                case channel_type::INPUT_DEFAULT:
+                case channel_type::INPUT_EMPTY:
                     return true;
             }
         }
@@ -209,7 +218,7 @@ namespace DAW {
     }
     bool removeRouting(std::vector<DAW::channel_ref_t>& list, const DAW::channel_ref_t& ref, bool removeDefaultRouting) {
         auto it = std::remove_if(list.begin(), list.end(), [ref](DAW::channel_ref_t& existingRef) {
-            return channelRefEquals(existingRef, ref);
+            return channelRefEquals(existingRef, ref, 2);
         });
         if (it != list.end()) {
             list.erase(it, list.end());
@@ -217,7 +226,7 @@ namespace DAW {
         }
         if (removeDefaultRouting) {
             it = std::remove_if(list.begin(), list.end(), [ref](DAW::channel_ref_t& existingRef) {
-                return existingRef.getType() == channel_input_type::INPUT_DEFAULT;
+                return existingRef.getType() == channel_type::INPUT_DEFAULT;
             });
             if (it != list.end()) {
                 list.erase(it, list.end());
@@ -537,8 +546,8 @@ namespace NodeGraph {
         gui_graph_port* portSrc;
         edge_spline spline;
     };
-    bool getChannelRef(const gui_graph_port* portInput, DAW::channel_ref_t& ref) {
-        auto graphNodeInput = portInput->getNode();
+    bool getChannelRef(const gui_graph_port* port, const bool isSrc, DAW::channel_ref_t& ref) {
+        auto graphNodeInput = port->getNode();
         auto nodeInput = graphNodeInput->getProcessingNode();
         switch (nodeInput->type) {
             case DAW::track_node_type_t::TRACK:
@@ -569,7 +578,14 @@ namespace NodeGraph {
             case DAW::track_node_type_t::EFFECT:
                 dbgassert(nodeInput->effectOptional);
                 if (nodeInput->effectOptional) {
-                    ref = DAW::ChannelAudioEffect(nodeInput->effectOptional, stagebuffer_point::OUTPUT_POST, portInput->getChannelDesc());
+                    DAW::channel_desc srcDesc{};
+                    DAW::channel_desc dstDesc{};
+                    if (isSrc) {
+                        srcDesc = port->getChannelDesc();
+                    } else {
+                        dstDesc = port->getChannelDesc();
+                    }
+                    ref = DAW::ChannelAudioEffect(nodeInput->effectOptional, stagebuffer_point::OUTPUT_POST, srcDesc, dstDesc);
                     return true;
                 }
                 break;
@@ -580,10 +596,9 @@ namespace NodeGraph {
 
     gui_graph_port* getOutputPort(const std::vector<gui_graph_port*>& portsOutput, const DAW::channel_ref_t& channelRef) {
         DAW::channel_ref_t refTmp;
-        //TODO: store getChannelRef value with port
         auto it = std::find_if(portsOutput.begin(), portsOutput.end(), [&refTmp, &channelRef](gui_graph_port* gn) {
-            if (NodeGraph::getChannelRef(gn, refTmp)) {
-                return DAW::channelRefEquals(channelRef, refTmp);
+            if (NodeGraph::getChannelRef(gn, true, refTmp)) {
+                return DAW::channelRefEquals(channelRef, refTmp, 0);
             }
             return false;
         });
@@ -591,7 +606,6 @@ namespace NodeGraph {
     }
 
     bool connectPorts(gui_graph_port* portDst, gui_graph_port* portSrc) {
-        
         /* allow no connection to self */
         if (portDst == portSrc) { // TODO: check at lower level
             return false;
@@ -607,7 +621,7 @@ namespace NodeGraph {
             std::swap(isInputDst, isInputSrc);
         }
         DAW::channel_ref_t ref;
-        if (getChannelRef(portSrc, ref)) {
+        if (getChannelRef(portSrc, true, ref)) {
             auto nodeDest = portDst->getNode()->getProcessingNodePointer();
             switch (nodeDest->type) {
                 case DAW::track_node_type_t::TRACK:
@@ -629,6 +643,7 @@ namespace NodeGraph {
                 case DAW::track_node_type_t::EFFECT:
                     dbgassert(nodeDest->effectOptional);
                     if (nodeDest->effectOptional) {
+                        ref.dstChannelOffset = portDst->getChannelDesc().offset;
                         removeRouting(nodeDest->effectOptional->inputChannels, ref, false);
                         nodeDest->effectOptional->inputChannels.push_back(ref);
                         nodeDest->effectOptional->getTrackLink()->routingState = audiostagerouting_state_t::CUSTOM;
@@ -643,7 +658,7 @@ namespace NodeGraph {
     }
     bool disconnectEdge(edge_t* edge) {
         DAW::channel_ref_t ref;
-        if (getChannelRef(edge->portSrc, ref)) {
+        if (getChannelRef(edge->portSrc, true, ref)) {
             auto nodeDest = edge->portDst->getNode()->getProcessingNodePointer();
             switch (nodeDest->type) {
                 case DAW::track_node_type_t::TRACK:
@@ -663,6 +678,7 @@ namespace NodeGraph {
                 case DAW::track_node_type_t::EFFECT:
                     dbgassert(nodeDest->effectOptional);
                     if (nodeDest->effectOptional) {
+                        ref.dstChannelOffset = edge->portDst->getChannelDesc().offset;
                         removeRouting(nodeDest->effectOptional->inputChannels, ref, true);
                         return true;
                     }
@@ -706,8 +722,8 @@ public:
         procList  = _graph;
         edgeList.clear();
         std::vector<DAW::track_source_t> allSources;
-        for (gui_graph_n* graphNode : listNodes) {
-            auto procNode = graphNode->getProcessingNode();
+        for (gui_graph_n* const graphNode : listNodes) {
+            const auto* const procNode = graphNode->getProcessingNode();
             allSources.clear();
             allSources.insert(allSources.end(), procNode->pushs.cbegin(), procNode->pushs.cend()); // copy
             allSources.insert(allSources.end(), procNode->pulls.cbegin(), procNode->pulls.cend()); // copy
@@ -715,16 +731,20 @@ public:
                 log_lf(Log::L_WARN, "Node has pushs/pulls but no input ports %d\n", procNode->stageId);
                 continue;
             }
-            for (const DAW::track_source_t& nodeInput : allSources) {
-                gui_graph_port* port = nullptr;
+            for (const DAW::track_source_t& channelSrc : allSources) {
+                auto it = std::find_if(graphNode->portsInput.begin(), graphNode->portsInput.end(), [dstChannelOffset=channelSrc.channel.dstChannelOffset](gui_graph_port* gn) {
+                    return gn->getChannelDesc().offset == dstChannelOffset;
+                });
+                gui_graph_port* portInput = it != graphNode->portsInput.end() ? *it : nullptr;
+                gui_graph_port* portOutput = nullptr;
                 for (auto& listNode : listNodes) {
-                    port = NodeGraph::getOutputPort(listNode->portsOutput, nodeInput.channel);
-                    if (port) {
+                    portOutput = NodeGraph::getOutputPort(listNode->portsOutput, channelSrc.channel);
+                    if (portOutput) {
                         break;
                     }
                 }
-                if (port) {
-                    edgeList.push_back(NodeGraph::edge_t{ graphNode->portsInput[0], port });
+                if (portInput && portOutput) {
+                    edgeList.push_back(NodeGraph::edge_t{ portInput, portOutput });
                 } else {
                     log_lf(Log::L_WARN, "Did not find UI graph entry for stage %d\n", procNode->stageId);
                 }

@@ -19,7 +19,7 @@ namespace AudioIO {
     extern const std::array<uint32_t, 4> ExtSamplerates;
     extern const std::array<uint32_t, 4> IntSamplerates;
 
-    enum tracktype {
+    enum class channelcount {
         MONO,
         STEREO,
         MULTI_CHANNEL_4,
@@ -28,9 +28,9 @@ namespace AudioIO {
 
     struct io_cfg_channel {
         String name;
-        int32_t idx           = -1;
-        int32_t channelOffset = -1;
-        tracktype type        = MONO;
+        int32_t idx       = -1;
+        int32_t offset    = -1;
+        channelcount type = channelcount::MONO;
     };
 
     struct io_cfg_tracks {
@@ -39,14 +39,14 @@ namespace AudioIO {
         std::vector<io_cfg_channel> output;
     };
 
-    int32_t getNumChannelsFromTrackType(tracktype t);
-    tracktype getTrackTypeFromNumChannels(int32_t t);
+    int32_t getNumChannelsFromTrackType(channelcount t);
+    channelcount getTrackTypeFromNumChannels(int32_t t);
     int32_t getNumChannelsInConfig(const std::vector<io_cfg_channel>& cfg);
 
-    String getTrackNameShort(AudioIO::tracktype type, int32_t index, stagebuffer_point isInput);
-    String getTrackName(AudioIO::tracktype type, int32_t index, bool isInput);
-    String getTrackTypeStr(tracktype type);
-    tracktype getNextTrackType(tracktype type);
+    String getTrackNameShort(AudioIO::channelcount type, int32_t index, stagebuffer_point isInput);
+    String getTrackName(AudioIO::channelcount type, int32_t index, bool isInput);
+    String getTrackTypeStr(channelcount type);
+    channelcount getNextTrackType(channelcount type);
 
     class AudioStream {
         public:

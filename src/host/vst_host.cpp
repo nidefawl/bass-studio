@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory.h>
+#include "host/daw_channel.h"
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "seq_util.h"
@@ -809,7 +810,8 @@ bool resolveEffectDefaultConnection(const vsthost* const host, const project_t* 
     while (effIdx > 0) {
         auto effectBefore = stage->effects[effIdx - 1];
         if (!effectBefore->outputChannelsDesc.empty()) {
-            out = DAW::ChannelAudioEffect(effectBefore, stagebuffer_point::OUTPUT_POST, effectBefore->outputChannelsDesc.front());
+            auto dstChDesc = effect ? effect->inputChannelsDesc.front() : DAW::channel_desc{};
+            out = DAW::ChannelAudioEffect(effectBefore, stagebuffer_point::OUTPUT_POST, effectBefore->outputChannelsDesc.front(), dstChDesc);
             return true;
         }
         effIdx -= 1;
@@ -844,9 +846,9 @@ bool resolveDefaultConnection(const vsthost* const host, const project_t* const 
 }
 
 bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs, track_audio_src& out) {
-    if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
+    if (inputChannel.getType() == channel_type::INPUT_EXTERNAL_AUDIO) {
         if (ptrExternalInputs != nullptr) {
-            int32_t idx = inputChannel.inputChannelOffset;
+            int32_t idx = inputChannel.srcChannelOffset;
             size_t size = math::min<uint32_t>(AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType), numChannelsTrack);
             if (idx >= 0 && idx+size <= ptrExternalInputs->channels) {
                 track_audio_src src;
@@ -861,7 +863,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
             }
         }
     }
-    if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
+    if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE) {
         audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
         if (stage) {
             /* Calculate audio/midi tracks gain level */
@@ -871,7 +873,6 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
             }
             track_audio_src src;
             auto* buff = &stage->input;
-            int32_t idx = inputChannel.inputChannelOffset;
             switch (inputChannel.stage.buffer) {
             case stagebuffer_point::INPUT:
                 buff = &stage->input;
@@ -886,9 +887,8 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
                 src.latency = stage->getOutputLatency();
                 break;
             }
-            dbgassert(idx <= (int32_t)buff->channels);
             for (uint32_t i = 0; i < buff->channels; ++i) {
-                src.channels.push_back(buff->buf[i + idx]);
+                src.channels.push_back(buff->buf[i]);
             }
             src.sampleFormat = stage->sampleFormat;
             src.samples = buff->samples;
@@ -897,7 +897,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
         }
     }
 
-    if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE_EFFECT) {
+    if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE_EFFECT) {
         audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
         if (stage) {
             effectbase* eff = stage->getPluginById(inputChannel.projectGlobalId);
@@ -905,11 +905,11 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
                 return false;
             }
             for (auto& desc : eff->outputChannelsDesc) {
-                if (desc.offset == inputChannel.inputChannelOffset) {
+                if (desc.offset == inputChannel.srcChannelOffset) {
                     track_audio_src src;
                     for (uint32_t i = desc.offset; i < desc.offset+desc.count; ++i) {
                         if (i >= eff->blockOutputs->channels) {
-                            // log_lf(Log::L_WARN, "%s Output buffer has invalid size. Expected %d channels, found %d\n", StringAsCStr(eff->getName()), desc.offset+desc.count, eff->blockOutputs->channels);
+                            log_lf(Log::L_WARN, "%s Output buffer has invalid size. Expected %d channels, found %d\n", StringAsCStr(eff->getName()), desc.offset+desc.count, eff->blockOutputs->channels);
                             return false;
                         }
                         src.channels.push_back(eff->blockOutputs->buf[i]);
@@ -921,7 +921,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
                     return true;
                 }
             }
-            // log_lf(Log::L_WARN, "%s Does not have output with offset %d\n", StringAsCStr(eff->getName()), inputChannel.inputChannelOffset);
+            log_lf(Log::L_WARN, "%s Does not have output with offset %d\n", StringAsCStr(eff->getName()), inputChannel.srcChannelOffset);
         }
     }
     return false;
@@ -1377,25 +1377,22 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
         track_impl_t* const trackImpl = track->audio;
         if (trackImpl->mixer.isEnabled()) {
             auto tracDst = trackImpl->outputChannel;
-            if (tracDst.type == DAW::channel_input_type::INPUT_DEFAULT) {
+            if (tracDst.type == DAW::channel_type::INPUT_DEFAULT) {
                 DAW::channel_ref_t tmp;
                 if (DAW::resolveDefaultConnection(this, project, trackImpl, false, tmp)) {
                     tracDst = tmp;
                 }
             }
-            if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::channel_input_type::INPUT_EXTERNAL_AUDIO) {
-
+            if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::channel_type::INPUT_EXTERNAL_AUDIO) {
                 // TODO: latency compensate (add external output nodes to graph)
-                //int offset = tracDst.inputChannelOffset;
-
                 /* Calculate master tracks gain level */
                 float fGainMaster;
                 if (dsp_util::getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainMaster)) {
                 }
                 int routedOutputChannelCount = AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
                 auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
-                blockExtOut.SubChannelsBlock(tracDst.inputChannelOffset, numChannels)
-                           .addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
+                blockExtOut.SubChannelsBlock(tracDst.srcChannelOffset, numChannels)
+                            .addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
 
             }
         }
@@ -1610,24 +1607,22 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
                 track_impl_t* const trackImpl = track->audio;
                 if (trackImpl->mixer.isEnabled()) {
                     auto tracDst = trackImpl->outputChannel;
-                    if (tracDst.type == DAW::channel_input_type::INPUT_DEFAULT) {
+                    if (tracDst.type == DAW::channel_type::INPUT_DEFAULT) {
                         DAW::channel_ref_t tmp;
                         if (DAW::resolveDefaultConnection(this, project, trackImpl, false, tmp)) {
                             tracDst = tmp;
                         }
                     }
-                    if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::channel_input_type::INPUT_EXTERNAL_AUDIO) {
-
+                    if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::channel_type::INPUT_EXTERNAL_AUDIO) {
                         // TODO: latency compensate (add external output nodes to graph)
-
                         /* Calculate master tracks gain level */
                         float fGainMaster;
                         if (dsp_util::getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainMaster)) {
                         }
                         int routedOutputChannelCount = AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
                         auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
-                        blockExtOut.SubChannelsBlock(tracDst.inputChannelOffset, routedOutputChannelCount).addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
-
+                        blockExtOut.SubChannelsBlock(tracDst.srcChannelOffset, routedOutputChannelCount)
+                                    .addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
                     }
                 }
             }
@@ -2419,11 +2414,12 @@ void vsthost::processAudio(audio_stage_t* stage,
                             /* Calculate audio/midi tracks gain level */
                             float fGainTrack;
                             if (dsp_util::getGainLvl(fGainRaw, fGainTrack)) {
+                                auto blockInOffset = blockIn->SubChannelsBlock(tracksrc.channel.dstChannelOffset, srcBlock.channels);
                                 if (delayToMaxInputLatency > 0) {
                                     dbgassert(delayLine);
-                                    blockIn->addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, fGainTrack);
+                                    blockInOffset.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, fGainTrack);
                                 } else {
-                                    blockIn->addFromOp(&srcBlock, AudioBlock::mix_op::ADD, fGainTrack);
+                                    blockInOffset.addFromOp(&srcBlock, AudioBlock::mix_op::ADD, fGainTrack);
                                 }
                             }
                         }
