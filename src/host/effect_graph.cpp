@@ -45,7 +45,7 @@ namespace DAW {
                 inputChannel = ChannelNone();
                 numRemoved++;
             } else {
-                const auto& ownInputCh = eff->outputChannelsDesc;
+                const auto& ownInputCh = eff->inputChannelsDesc;
                 auto itOwnInput = std::find_if(ownInputCh.cbegin(), ownInputCh.cend(), [offset = inputChannel.dstChannelOffset](auto ch) {
                     return ch.offset == offset;
                 });
