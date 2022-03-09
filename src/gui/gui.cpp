@@ -150,7 +150,7 @@ float renderTextLabel(NVGcontext* vg,
     int nrows = 0;
     float f = pos.x;
     NVGtextRow rows[1]{};
-    if ((nrows = nvgTextBreakLines(vg, szText, nullptr, bounds.x, rows, 2))) {
+    if ((nrows = nvgTextBreakLines(vg, szText, nullptr, bounds.x, rows, 1))) {
         NVGtextRow* row = &rows[0];
         if (row->maxx-row->minx <= bounds.x || row->width <= bounds.x) {
            f = nvgText(vg, pos.x, pos.y, row->start, row->end);
