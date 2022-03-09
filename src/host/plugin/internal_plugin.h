@@ -31,16 +31,13 @@ public:
     int32_t pluginCategory = 0;
     int32_t vstVersion     = 0;
     uint32_t uId            = 0;
+
     internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
     ~internalplugin() override;
 
-protected:
-    void onEnable() override;
-    void onDisable() override;
-
     virtual float dispatchGetParameter(int32_t idx)           = 0;
     virtual void dispatchSetParameter(int32_t idx, float val) = 0;
-public:
+
     int32_t getPluginLatency() override = 0;
     void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) override = 0;
 

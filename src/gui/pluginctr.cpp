@@ -144,6 +144,7 @@ public:
                         effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
                         effect->load(host);
                         host->insertNewPlugin(stage, effect, -2);// insert at end
+                        host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                         host->postPluginLoaded(stage, effect);
                         dbgassert(effect->trackImpl == stage);
                         dbgassert(!stage->effects.empty());
@@ -527,21 +528,24 @@ public:
 };
 
 void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
-    int32_t dstSlot = dawCtrl->getDragDropTarget().slotIdx;
-    dawCtrl->getDragDropTarget().reset();
+    auto const daw = dawCtrl->getDaw();
+    auto const host = daw->getHost();
+    auto& dragDropTarget = dawCtrl->getDragDropTarget();
+    int32_t dstSlot = dragDropTarget.slotIdx;
+    dragDropTarget.reset();
     if (!this->stage) return;
-    ThreadLock lock    = MainCtrl::getPlayThread()->lockThread();
+    ThreadLock lock    = daw->lockPlayThread();
     effectbase* effect = g->makeInstance();
     if (effect) {
         log_printf("Insert effect on %s, parent %s\n", StringAsCStr(getClassName()), parent ? StringAsCStr(parent->getClassName()) : "<null>");
-        vsthost::getInstance()->insertNewPlugin(stage, effect, dstSlot);
-        effect->resume();
+        host->insertNewPlugin(stage, effect, dstSlot);
+        effect->onEnable();
         audio_stage_ref_t refdst = stage->toRef();
         auto* track_action = new action_insert_effect("Insert plugin", effect, refdst, dstSlot);
-        DawInstance::get()->pushHist(track_action);
-        vsthost::getInstance()->postPluginLoaded(stage, effect);
+        daw->pushHist(track_action);
+        host->postPluginLoaded(stage, effect);
         //    if (res.result == 0 && res.plugin) {
-        //        res.plugin->resume();
+        //        res.plugin->onEnable();
         //    }
     }
     showTrack(stage);

@@ -345,7 +345,7 @@ int main(int argc, char** argv) {
                         auto pluginInstance = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_HOSTINFO, -1);
                         dbgassert(pluginInstance);
                         host->insertNewPlugin(track1->getStage(), pluginInstance, 0);
-                        pluginInstance->resume();
+                        pluginInstance->onEnable();
                         track1->getStage()->pluginsChanged();
                     }
                 }
@@ -396,7 +396,7 @@ int main(int argc, char** argv) {
                         auto pluginInstance = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_HOSTINFO, -1);
                         dbgassert(pluginInstance);
                         host->insertNewPlugin(track1->getStage(), pluginInstance, 0);
-                        pluginInstance->resume();
+                        pluginInstance->onEnable();
                         track1->getStage()->pluginsChanged();
                         //pluginHostInfo->setParamValue(PARAM_OFFSET_EXTERNAL+0, 1.0f, FLG_PAR_UPDATE_INIT);
 

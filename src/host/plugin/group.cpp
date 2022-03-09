@@ -230,10 +230,10 @@ int32_t module_group::getPluginLatency() {
     return static_cast<int32_t>(audio->getInternalLatency());
 }
 
-void module_group::resume() {
+void module_group::onEnable() {
 }
 
-void module_group::sleep() {
+void module_group::onDisable() {
 }
 
 void module_group::onPreUnload(int flags) {

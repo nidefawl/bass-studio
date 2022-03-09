@@ -76,6 +76,7 @@ public:
         auto& map = incoming ? opCodeIn : opCodeOut;
         return map[opCode];
     }
+public:
     vstplugin(handles_t* _handle, int32_t globalId, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags)
         : effectbase(std::move(sName), PLUGIN_TYPE_VST, globalId),
           handle(_handle),
@@ -85,14 +86,8 @@ public:
     {
     }
     ~vstplugin() override;
-    void resume() override;
-    void sleep() override;
-
-protected:
     void onEnable() override;
     void onDisable() override;
-
-public:
     int getModuleType() override { return internalModuleId >= 0 ? PLUGIN_TYPE_INTERNAL_EFFECT : PLUGIN_TYPE_VST; };
 
     const char* getDir() const {

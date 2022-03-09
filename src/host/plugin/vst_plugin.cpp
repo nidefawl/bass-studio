@@ -71,7 +71,7 @@ void vstplugin::onWindowDestroy() {
     this->window = nullptr;
 }
 
-void vstplugin::resume() {
+void vstplugin::onEnable() {
     if (!bIsPostInit) {
         bIsPostInit = true;
         postLoad();
@@ -80,6 +80,7 @@ void vstplugin::resume() {
         }
     }
     if (!isInSuspend) {
+        log_lf(Log::L_WARN, "Plugin %s is already in active state\n", StringAsCStr(getName()));
         return;
     }
     isInSuspend = false;
@@ -87,13 +88,15 @@ void vstplugin::resume() {
     this->dispatch(effStartProcess);
 }
 
-void vstplugin::sleep() {
+void vstplugin::onDisable() {
     if (isInSuspend) {
+        log_lf(Log::L_WARN, "Plugin %s is already in suspended state\n", StringAsCStr(getName()));
         return;
     }
     isInSuspend = true;
     this->dispatch(effStopProcess);
     this->dispatch(effMainsChanged, 0, false);
+    vsthost::getInstance()->sendNotesOff(this);
 }
 
 void vstplugin::printNames() {
@@ -179,13 +182,14 @@ void vstplugin::configureIOChannels() {
         if (useGetPinProperties && pinIndex < channelCountSide && this->dispatch(dispatchOpCode, pinIndex, 0, &pin)) {
             int32_t channelOffset = 0;
             do {
+                log_lf(Log::L_DEBUG, "Pin %d: %s Active %d Stereo %d UseSpeaker %d ArrangementType %d\n", 
+                    pinIndex,
+                    pin.label,
+                    (pin.flags&VstPinPropertiesFlags::kVstPinIsActive)!=0,
+                    (pin.flags&VstPinPropertiesFlags::kVstPinIsStereo)!=0,
+                    (pin.flags&VstPinPropertiesFlags::kVstPinUseSpeaker)!=0,
+                    pin.arrangementType);
                 const String pinName = pin.label;
-                const String pinAttr = StringFormat("Active %d, Stereo %d, UseSpeaker %d",
-                                            (pin.flags&VstPinPropertiesFlags::kVstPinIsActive)!=0,
-                                            (pin.flags&VstPinPropertiesFlags::kVstPinIsStereo)!=0,
-                                            (pin.flags&VstPinPropertiesFlags::kVstPinUseSpeaker)!=0);
-                log_lf(Log::L_WARN, "Pin %d: %s %s arrangementType %d\n", pinIndex, StringAsCStr(pinName), StringAsCStr(pinAttr), pin.arrangementType);
-                // outputNames.push_back(StringFormat("%s (%s)", pin.label, StringAsCStr(pinAttr)));
                 bool handled = false;
                 if (pin.flags&VstPinPropertiesFlags::kVstPinIsStereo) {
                     channelDescs.emplace_back(DAW::channel_desc{channelOffset, 2, pinName});
@@ -312,11 +316,14 @@ void vstplugin::load(vsthost* host) {
         this->dispatch(effMainsChanged, 0, false);
         configureIOChannels();  
     #else
-        this->dispatch(effOpen);
-        this->dispatch(effStopProcess);
-        this->dispatch(effMainsChanged, 0, false);
         this->dispatch(effSetSampleRate, 0, 0, nullptr, (float) format.sampleRate);
         this->dispatch(effSetBlockSize, 0, format.blockSize, nullptr, 0);
+        this->dispatch(effOpen);
+        this->dispatch(effSetSampleRate, 0, 0, nullptr, (float) format.sampleRate);
+        this->dispatch(effSetBlockSize, 0, format.blockSize, nullptr, 0);
+        this->dispatch(effMainsChanged, 0, true);
+        this->dispatch(effMainsChanged, 0, false);
+        this->dispatch(effStopProcess);
         this->bCanSendMidi    |= this->dispatch(effCanDo, 0, 0, (void*) PlugCanDos::canDoSendVstMidiEvent) > 0;
         this->bCanReceiveMidi |= this->dispatch(effCanDo, 0, 0, (void*) PlugCanDos::canDoReceiveVstMidiEvent) > 0;
         this->bMPESupport     |= this->dispatch(effCanDo, 0, 0, (void*) "MPE") > 0;
@@ -393,11 +400,6 @@ void vstplugin::load(vsthost* host) {
         getRegisteredAutomation(65536);
 
     bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
-    if (bIsEnabled) {
-        this->resume();
-    } else {
-        this->sleep();
-    }
 }
 void vstplugin::postLoad() {
     this->recvProgramListUpdate();
@@ -746,17 +748,6 @@ automationlane_snapshot_t vstplugin::toRef() const {
     return ref;
 }
 
-void vstplugin::onEnable() {
-    //TODO: check current thread, check if playthread is locked
-    resume();
-}
-
-void vstplugin::onDisable() {
-    //TODO: check current thread, check if playthread is locked
-    sleep();
-    vsthost::getInstance()->sendNotesOff(this);
-}
-
 bool vstplugin::close() {
     if (this->window != nullptr) {
         this->window->close();
@@ -863,9 +854,9 @@ void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, int32_t sa
 
 extern "C" void vst_onException(vstplugin* plugin)
 {
-    log_printf("segfault/fatal exception\n");
+    log_lf(Log::L_ERROR, "segfault/fatal exception\n");
     if (!plugin->isBypass()) {
         plugin->setParamValue(PARAM_ENABLE, 0, FLG_PAR_UPDATE_NOSTORE);
-        log_printf("segfault/fatal exception on %s\n", StringAsCStr(plugin->getName()));
+        log_lf(Log::L_ERROR, "segfault/fatal exception on %s\n", StringAsCStr(plugin->getName()));
     }
 }

@@ -804,7 +804,7 @@ void vsthost::activateDeferred(effectbase* const eff, int flags, effectbase** ou
 
     log_lf(Log::L_DEBUG, "done activating deferred plugin %s: isenabled %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.enabled);
     if (pluginSnapshot.enabled) {
-        effect->resume();
+        effect->onEnable();
     }
 
     /* Unload the (previous) deferred placeholder plugin */

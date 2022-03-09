@@ -38,8 +38,6 @@ public:
         this->sDir = sDir;
     }
     ~auplugin() override = default;
-    void resume() override;
-    void sleep() override;
 
 protected:
     void onEnable() override;

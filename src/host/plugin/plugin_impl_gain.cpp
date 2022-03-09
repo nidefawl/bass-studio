@@ -183,12 +183,6 @@ int32_t module_gain::getPluginLatency() {
     return 0;
 }
 
-void module_gain::resume() {
-}
-
-void module_gain::sleep() {
-}
-
 String module_gain::getInfo(std::vector<String>& list) {
     return "";
 }

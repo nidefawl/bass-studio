@@ -33,6 +33,7 @@ extern bool loadPluginPresetWithSnapshot; // = false;
 class effectbase : public automatable_t {
     friend class vsthost;
     friend class guiplugin;
+    friend class effect_deferred;
     SafeRef<effectbase> safeRef;
 #ifndef NDEBUG
     //helper indicator in gdb.
@@ -83,14 +84,11 @@ protected:
     void initBuffers();
     void initMeters();
 
-    virtual void onEnable(){};
-    virtual void onDisable(){};
-    friend class effect_deferred;
-
 public:
     effectbase();
     effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
     ~effectbase() override;
+    
     SafeRef<effectbase> makeSafeRef();
     String getName() const { return sName; };
     String getProductName() const { return sProductName; };
@@ -101,6 +99,9 @@ public:
         this->szName = this->sName.c_str();
 #endif
     }
+
+    virtual void onEnable(){};
+    virtual void onDisable(){};
     virtual int getModuleType()  = 0;
     virtual guiplugin* makeGui() = 0;
     virtual guiplugin* getGui()  = 0;
@@ -110,8 +111,6 @@ public:
     virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed);
     virtual bool show()   = 0;
     virtual bool close()  = 0;
-    virtual void resume() = 0;
-    virtual void sleep()  = 0;
     virtual void unload(vsthost* host, int flags);
     virtual void load(vsthost* host);
     virtual int32_t getPluginLatency()                = 0;
@@ -191,8 +190,6 @@ public:
     void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) override;
     bool show() override;
     bool close() override;
-    void resume() override;
-    void sleep() override;
 
     // automatable_t interface
     String getAutomatableName() override;

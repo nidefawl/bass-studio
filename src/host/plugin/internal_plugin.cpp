@@ -95,14 +95,6 @@ automationlane_snapshot_t internalplugin::toRef() const {
     return ref;
 }
 
-void internalplugin::onEnable() {
-    resume();
-}
-
-void internalplugin::onDisable() {
-    sleep();
-}
-
 bool internalplugin::close() {
     return true;
 }

@@ -83,11 +83,6 @@ void effectbase::load(vsthost* host) {
     dbgassert(nLoadCalls == 0);
     nLoadCalls++;
     bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
-    if (bIsEnabled) {
-        this->resume();
-    } else {
-        this->sleep();
-    }
 }
 void effectbase::unload(vsthost* host, int flags) {
     dbgassert(host == vstHost);
@@ -256,10 +251,6 @@ bool effect_deferred::show() {
 }
 bool effect_deferred::close() {
     return false;
-}
-void effect_deferred::resume() {
-}
-void effect_deferred::sleep() {
 }
 int effect_deferred::getModuleStoredType() const {
     return this->mImpl->moduleType;

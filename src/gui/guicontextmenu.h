@@ -60,7 +60,6 @@ public:
         }
     }
     void determineSize(ivec2& prefSize) override {
-        log_printf("determine size input: %d %d\n", prefSize.x, prefSize.y);
         ivec2 newMaxSize = { size.x, paddingV };
         for (ctxtmenu_entry* e : entries) {
             newMaxSize.x = math::max(newMaxSize.x, e->width);
@@ -70,7 +69,6 @@ public:
             newMaxSize.y += paddingV;
         }
         prefSize = newMaxSize;
-        log_printf("determined size: %d %d\n", prefSize.x, prefSize.y);
     }
 
     void render(NVGcontext* vg) override {

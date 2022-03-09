@@ -513,16 +513,14 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
     case audioMasterUpdateDisplay:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterUpdateDisplay %d %d %zd\n", opcode, index, value, 0);
-        if (plugin) {
-            if (!plugin->bIsLoadingProgram) {
-                plugin->recvProgramNameUpdate();
-                // NOTE: this loop might kill performance
-                plugin->visitParams([](auto& mapEntry) {
-                    automatable_param_t& param = mapEntry.second;
-                    param.paramValueState |= PARAM_FLAG_DIRTY;
-                    param.paramDisplayValState |= PARAM_FLAG_DIRTY;
-                });
-            }
+        if (plugin && validProcessingState && !plugin->bIsLoadingProgram) {
+            plugin->recvProgramNameUpdate();
+            // NOTE: this loop might kill performance
+            plugin->visitParams([](auto& mapEntry) {
+                automatable_param_t& param = mapEntry.second;
+                param.paramValueState |= PARAM_FLAG_DIRTY;
+                param.paramDisplayValState |= PARAM_FLAG_DIRTY;
+            });
             return 1;
         }
         return 0;
@@ -693,10 +691,10 @@ void vsthost::setSampleFormat(const sampleformat_t& _sampleFormat) {
             plugin->setSampleFormat(_sampleFormat);
         }
         for (vstplugin* plugin : this->pluginInstancesVST2) {
-            plugin->sleep();
+            plugin->onDisable();
             plugin->dispatch(effSetBlockSize, 0, _sampleFormat.blockSize, 0, 0);
             plugin->dispatch(effSetSampleRate, 0, 0, NULL, (float) _sampleFormat.sampleRate);
-            plugin->resume();
+            plugin->onEnable();
         }
         for (auto* stage : this->allAudioStages) {
             stage->pluginsChanged();

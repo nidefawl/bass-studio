@@ -24,8 +24,6 @@ public:
     int32_t getPluginLatency() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) override;
     String getInfo(std::vector<String>& list) override;
-    void resume() override;
-    void sleep() override;
     void onTick(double since) override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;

@@ -9,9 +9,6 @@
 #include "track_impl.h"
 #include "au_plugin.h"
 
-void auplugin::resume() {}
-void auplugin::sleep() {}
-
 String auplugin::getInfo(std::vector<String>& list) { return "NOT IMPLEMENTED"; }
 
 bool auplugin::getNameString(char* szBuf) {
@@ -88,10 +85,7 @@ automationlane_snapshot_t auplugin::toRef() const {
 }
 
 void auplugin::onEnable() {
-    //TODO: check current thread, check if playthread is locked
-    resume();
 }
+
 void auplugin::onDisable() {
-    //TODO: check current thread, check if playthread is locked
-    sleep();
 }

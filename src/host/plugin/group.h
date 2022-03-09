@@ -28,8 +28,8 @@ public:
     int32_t getPluginLatency() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) override;
     String getInfo(std::vector<String>& list) override;
-    void resume() override;
-    void sleep() override;
+    void onEnable() override;
+    void onDisable() override;
     void unload(vsthost* host, int flags) override;
     void onPreUnload(int flags) override;
     void load(vsthost* host) override;

@@ -70,12 +70,6 @@ int32_t module_empty::getPluginLatency() {
     return 0;
 }
 
-void module_empty::resume() {
-}
-
-void module_empty::sleep() {
-}
-
 void module_empty::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
     dbgassert(getTrackLink()->sampleFormat == this->format
               && in->samples == format.blockSize
