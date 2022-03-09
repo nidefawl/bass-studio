@@ -73,7 +73,7 @@ namespace DAW {
             // inputChannel.stage.stageRef.stageId = TRACKID_INVALID_I32; //FIX: old project files have stageId == 0
         }
         if (numRemoved) {
-          log_lf(Log::L_WARN, "Removed %d effect routings\n");
+          log_lf(Log::L_WARN, "Removed %d effect routings\n", numRemoved);
         }
         return numRemoved;
     }
