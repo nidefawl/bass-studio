@@ -146,8 +146,10 @@ void AppWndProc_disableBlockReentrant();
 void AppWndProc_enableBlockReentrant();
 
 void vstplugin::unload(vsthost* host, int flags) {
-    effectbase::unload(host, flags);
-    dbgassert(this->bIsSetup);
+    dbgassert(host == vstHost);
+    vstHost = nullptr;
+    dbgassert(nLoadCalls == 1);
+    nLoadCalls--;
     if (this->window) {
         this->window->close();
     }
@@ -157,8 +159,7 @@ void vstplugin::unload(vsthost* host, int flags) {
     AppWndProc_enableBlockReentrant();
     this->dispatch(effClose);
     AppWndProc_disableBlockReentrant();
-    this->bIsSetup = false;
-    log_printf("UNLOAD %s\n", StringAsCStr(this->sName));
+    log_printf("unload %s\n", StringAsCStr(this->sName));
 }
 void vstplugin::configureIOChannels() {
     const bool useGetPinProperties = (this->bugfixFlags & vst_workarounds::VST2_R4_BUG_STEREO_PLUGIN_REPORTS_MONO) == 0;
@@ -274,16 +275,13 @@ void vstplugin::configureIOChannels() {
             }
         }
     }
-
-
-    this->blockInputs  = new AudioBlock(math::max(2, inputCount), format.blockSize);
-    this->blockOutputs = new AudioBlock(math::max(2, outputCount), format.blockSize);
-    initMeters();
 }
 
 void vstplugin::load(vsthost* host) {
-    effectbase::load(host);
-    dbgassert(!this->bIsSetup);
+    dbgassert(nLoadCalls == 0);
+    nLoadCalls++;
+    vstHost = host;
+    setSampleFormat(host->m_sampleFormatInternal);
     auto aeffect = handle->aeffect;
 
     aeffect->resvd2     = 0;
@@ -326,9 +324,8 @@ void vstplugin::load(vsthost* host) {
         configureIOChannels();  
     #endif
 
-
-
-
+    initBuffers();
+    initMeters();
 
     char buf[1024];
     vst_param_category fallbackCat = { 0, 0, "Parameters" };
@@ -392,10 +389,15 @@ void vstplugin::load(vsthost* host) {
     }
     paramsCategories.push_back(fallbackCat);
 
-    bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
-    this->bIsSetup = true;
     if (aeffect->numParams)
         getRegisteredAutomation(65536);
+
+    bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
+    if (bIsEnabled) {
+        this->resume();
+    } else {
+        this->sleep();
+    }
 }
 void vstplugin::postLoad() {
     this->recvProgramListUpdate();

@@ -236,14 +236,6 @@ void module_group::resume() {
 void module_group::sleep() {
 }
 
-void module_group::unload(vsthost* host, int flags) {
-    dbgassert(vstHost == host);
-    effectbase::unload(host, flags);
-    onPreUnload(flags);
-    host->releaseAudioStage(audio);
-    this->audio = nullptr;
-}
-
 void module_group::onPreUnload(int flags) {
     dbgassert(this->audio);
     if (this->audio->m_pluginCtr == &this->handle->gui->ctr) {
@@ -258,16 +250,14 @@ void module_group::onPreUnload(int flags) {
 
 void module_group::load(vsthost* host) {
     effectbase::load(host);
-    this->audio        = host->createAudioStage();
-    this->blockInputs  = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
-    this->blockOutputs = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
-    initMeters();
-    bIsEnabled         = this->getParamValue(PARAM_ENABLE) > 0.5;
-    if (bIsEnabled) {
-        this->resume();
-    } else {
-        this->sleep();
-    }
+    this->audio = host->createAudioStage();
+}
+
+void module_group::unload(vsthost* host, int flags) {
+    effectbase::unload(host, flags);
+    //onPreunload(flags);
+    host->releaseAudioStage(audio);
+    this->audio = nullptr;
 }
 
 void module_group::breakTrackLink() {

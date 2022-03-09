@@ -76,23 +76,6 @@ void module_empty::resume() {
 void module_empty::sleep() {
 }
 
-void module_empty::unload(vsthost* host, int flags) {
-    effectbase::unload(host, flags);
-}
-
-void module_empty::load(vsthost* host) {
-    effectbase::load(host);
-    this->blockInputs  = new AudioBlock(2, format.blockSize);
-    this->blockOutputs = new AudioBlock(2, format.blockSize);
-    initMeters();
-    bIsEnabled         = this->getParamValue(PARAM_ENABLE) > 0.5;
-    if (bIsEnabled) {
-        this->resume();
-    } else {
-        this->sleep();
-    }
-}
-
 void module_empty::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
     dbgassert(getTrackLink()->sampleFormat == this->format
               && in->samples == format.blockSize

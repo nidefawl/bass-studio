@@ -26,14 +26,6 @@ public:
     String getInfo(std::vector<String>& list) override;
     void resume() override;
     void sleep() override;
-    void unload(vsthost* host, int flags) override;
-    void load(vsthost* host) override;
-    void breakTrackLink() override {
-        internalplugin::breakTrackLink();
-    }
-    void setTrackLink(audio_stage_t* trImpl) override {
-        internalplugin::setTrackLink(trImpl);
-    }
     bool isBypass() override {
         return true;
     }

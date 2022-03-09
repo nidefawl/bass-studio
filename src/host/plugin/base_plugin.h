@@ -39,7 +39,6 @@ class effectbase : public automatable_t {
     //gdb cannot display std::string when built without clib-debug flag (SLOW)
     const char* szName = nullptr;
 #endif
-    int nLoadCalls = 0;
 
     std::shared_ptr<DAW::meter_runningsum[]> meterDataInput;
     std::shared_ptr<DAW::meter_runningsum[]> meterDataOutput;
@@ -52,7 +51,6 @@ public:
     int32_t pluginType       = 0;
     int32_t projectGlobalId  = 0;
     bool bIsEnabled           = false;
-    bool bIsSetup             = false;
     bool bEditOpen            = false;
     bool bCaptureGUI          = false;
     bool bCanReceiveMidi      = false;
@@ -68,7 +66,9 @@ public:
     stats_processing_timings_t procStats;
     int midiEventsDispatched = 0;
     std::vector<DAW::channel_ref_t> inputChannels;
+
 protected:
+    int nLoadCalls   = 0;
     vsthost* vstHost = nullptr;
     String currentProgramNameStr = "<no program>";
     bool currentProgramNameSet = false;
@@ -77,6 +77,16 @@ public:
     
     std::vector<DAW::channel_desc> inputChannelsDesc;
     std::vector<DAW::channel_desc> outputChannelsDesc;
+
+protected:
+    void initDefaultIODesc();
+    void initBuffers();
+    void initMeters();
+
+    virtual void onEnable(){};
+    virtual void onDisable(){};
+    friend class effect_deferred;
+
 public:
     effectbase();
     effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
@@ -91,8 +101,6 @@ public:
         this->szName = this->sName.c_str();
 #endif
     }
-    void initDefaultIODesc();
-    void initMeters();
     virtual int getModuleType()  = 0;
     virtual guiplugin* makeGui() = 0;
     virtual guiplugin* getGui()  = 0;
@@ -157,11 +165,6 @@ public:
         return trackImpl != nullptr;
     }
 
-protected:
-    virtual void onEnable(){};
-    virtual void onDisable(){};
-    friend class effect_deferred;
-
 public:
     virtual effect_deferred* toDeferred();
     virtual String formatDisplayValue(int32_t idx);
@@ -201,11 +204,9 @@ public:
     String getDfrdPluginName() const;
     const plugin_snapshot_t& getSnapshotConst() const;
     plugin_snapshot_t& getSnapshot();
-    void onPreUnload(int flags) override;
     bool isDeferred() override {
         return true;
     }
-    void load(vsthost* host) override;
     bool isBypass() override {
         return true;
     }

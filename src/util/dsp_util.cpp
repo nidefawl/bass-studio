@@ -46,14 +46,8 @@ namespace dsp_util {
             }
         }
     }
-    void fillBlock(AudioBlock& block, float f) {
-        fillChannels(block.buf, block.channels, block.samples, f);
-    }
-    void fillNoiseBlock(AudioBlock& block) {
-        fillNoise(block.buf, block.channels, block.samples);
-    }
-    void fillChannels(float** buffer, int32_t channels, uint32_t samples, float f = 0.0f) {
-        for (int32_t ch = 0; ch < (channels + 1) / 2; ch++) {
+    void fillAllChannelsStereo(float** buffer, int32_t channels, uint32_t samples, float f = 0.0f) {
+        for (int32_t ch = 0; ch < channels / 2; ch++) {
             float* input0 = buffer[ch * 2 + 0];
             float* input1 = buffer[ch * 2 + 1];
             for (uint32_t s = 0; s < samples; s++) {
@@ -62,6 +56,28 @@ namespace dsp_util {
                 input0++;
                 input1++;
             }
+        }
+    }
+    void fillAllChannels(float** buffer, int32_t channels, uint32_t samples, float f = 0.0f) {
+        for (int32_t ch = 0; ch < channels; ch++) {
+            float* input0 = buffer[ch];
+            for (uint32_t s = 0; s < samples; s++) {
+                *input0 = f;
+            }
+        }
+    }
+    void fillChannels(float** buffer, int32_t channels, uint32_t samples, float f = 0.0f) {
+        if (channels % 2 == 0) {
+            fillAllChannelsStereo(buffer, channels, samples, f);
+        } else {
+            fillAllChannels(buffer, channels, samples, f);
+        }
+    }
+    void fillBlock(AudioBlock& block, float f) {
+        if (block.channels % 2 == 0) {
+            fillAllChannelsStereo(block.buf, block.channels, block.samples, f);
+        } else {
+            fillAllChannels(block.buf, block.channels, block.samples, f);
         }
     }
     float dBFS(float f) {
@@ -145,6 +161,9 @@ namespace dsp_util {
                 g_x2 += g_x1;
             }
         }
+    }
+    void fillNoiseBlock(AudioBlock& block) {
+        fillNoise(block.buf, block.channels, block.samples);
     }
     void fillSqare(samplerate_t samplerate, float freq, float** buffer, uint32_t samples) {
         float gain    = 0.05f;

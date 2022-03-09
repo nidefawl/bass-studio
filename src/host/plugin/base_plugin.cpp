@@ -78,8 +78,16 @@ sampleformat_t effectbase::getSampleFormat() {
 void effectbase::load(vsthost* host) {
     vstHost = host;
     setSampleFormat(host->m_sampleFormatInternal);
+    initBuffers();
+    initMeters();
     dbgassert(nLoadCalls == 0);
     nLoadCalls++;
+    bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
+    if (bIsEnabled) {
+        this->resume();
+    } else {
+        this->sleep();
+    }
 }
 void effectbase::unload(vsthost* host, int flags) {
     dbgassert(host == vstHost);
@@ -136,8 +144,6 @@ effect_deferred::~effect_deferred() {
 String effect_deferred::getDfrdPluginName() const {
     return mImpl->snapshot.name;
 }
-void effect_deferred::onPreUnload(int flags) {
-}
 const plugin_snapshot_t& effect_deferred::getSnapshotConst() const {
     return mImpl->snapshot;
 }
@@ -168,6 +174,19 @@ void effectbase::updateOnEnableParam(automatable_param_t* param, bool wasEnable,
             param->inUse = true;
         }
     }
+}
+
+void effectbase::initBuffers() {
+    int32_t maxInputChannels = 1;
+    for (auto& desc : inputChannelsDesc) {
+        maxInputChannels = math::max(maxInputChannels, desc.offset + desc.count);
+    }
+    this->blockInputs         = new AudioBlock(maxInputChannels, format.blockSize);
+    int32_t maxOutputChannels = 1;
+    for (auto& desc : outputChannelsDesc) {
+        maxOutputChannels = math::max(maxOutputChannels, desc.offset + desc.count);
+    }
+    this->blockOutputs = new AudioBlock(maxOutputChannels, format.blockSize);
 }
 
 void effectbase::initMeters() {
@@ -244,12 +263,6 @@ void effect_deferred::sleep() {
 }
 int effect_deferred::getModuleStoredType() const {
     return this->mImpl->moduleType;
-}
-void effect_deferred::load(vsthost* host) {
-    effectbase::load(host);
-    this->blockInputs  = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
-    this->blockOutputs = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
-    initMeters();
 }
 String effect_deferred::getAutomatableName() {
     return "plugin";

@@ -457,7 +457,6 @@ void effectbase::addPropertiesTooltip(Table::tbl& table) {
     table.rows.push_back({ { String("projectGlobalId"), (int) this->projectGlobalId } });
     table.rows.push_back({ { tblstr{ "track" }, tblint{ (int64_t) this->getTrack(), "%12x" } } });
     table.rows.push_back({ { tblstr{ "tracklink" }, tblint{ (int64_t) this->getTrackLink(), "%12x" } } });
-    table.rows.push_back({ { tblstr{ "bIsSetup" }, tblint{ this->bIsSetup } } });
     table.rows.push_back({ { tblstr{ "bIsEnabled" }, tblint{ this->bIsEnabled } } });
     table.rows.push_back({ { tblstr{ "PARAM_ENABLE" }, tblfloat{ this->getParamValue(PARAM_ENABLE) } } });
 }

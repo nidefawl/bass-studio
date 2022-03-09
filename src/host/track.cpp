@@ -664,7 +664,9 @@ void audio_stage_t::configureDefaultRoutings() {
     this->postEffectRouting.push_back(DAW::ChannelDefaultNone());
     for (effectbase* effect : effects) {
         effect->inputChannels.clear();
-        effect->inputChannels.push_back(DAW::ChannelDefaultNone());
+        if (!effect->inputChannelsDesc.empty()) {
+            effect->inputChannels.push_back(DAW::ChannelDefaultNone());
+        }
     }
     routingState = audiostagerouting_state_t::DEFAULT;
 }

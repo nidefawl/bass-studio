@@ -332,7 +332,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
          * TODO: This check is not well implemented
          * Add a lock free thread-safe way to check (from the callback) if a plugin is ready for processing
          */
-        if (plugin->bIsSetup && plugin->hasTrackLink()) {
+        if (plugin->hasTrackLink()) {
             auto parent = plugin->trackImpl;
             while (parent->parent) parent = parent->parent;
             // get this from the host instead of the tls
@@ -901,7 +901,12 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
         audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
         if (stage) {
             effectbase* eff = stage->getPluginById(inputChannel.projectGlobalId);
-            if (!eff  || !eff->blockOutputs) {
+            if (!eff) {
+                log_lf(Log::L_WARN, "Effect with id %d is not found on stage", inputChannel.projectGlobalId);
+                return false;
+            }
+            if (!eff->blockOutputs) {
+                log_lf(Log::L_WARN, "%s Output buffer is null\n", StringAsCStr(eff->getName()));
                 return false;
             }
             for (auto& desc : eff->outputChannelsDesc) {

@@ -19,7 +19,7 @@
 
 
 namespace DAW {
-    size_t validateEffectRouting(const vsthost* const host, audio_stage_t* stage, channel_ref_t& inputChannel) {
+    size_t validateEffectRouting(const vsthost* const host, const DAW::channel_desc& dstDesc, channel_ref_t& inputChannel) {
         size_t numRemoved = 0;
         if (inputChannel.getType() == channel_type::INPUT_DEFAULT) {
             inputChannel = ChannelDefaultNone();
@@ -41,29 +41,18 @@ namespace DAW {
         } else if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE_EFFECT) {
             auto* eff = host->getPluginById(inputChannel.projectGlobalId);
             if (!eff) {
-                log_lf(Log::L_WARN, "Input effect with id %d not found\n", inputChannel.projectGlobalId);
+                log_lf(Log::L_WARN, "Input effect with id %d not found on effect %s\n", inputChannel.projectGlobalId, StringAsCStr(eff->getName()));
                 inputChannel = ChannelNone();
                 numRemoved++;
             } else {
-                const auto& ownInputCh = eff->inputChannelsDesc;
-                auto itOwnInput = std::find_if(ownInputCh.cbegin(), ownInputCh.cend(), [offset = inputChannel.dstChannelOffset](auto ch) {
+                auto& effChannels        = eff->outputChannelsDesc;
+                auto it                  = std::find_if(effChannels.cbegin(), effChannels.cend(), [offset = inputChannel.srcChannelOffset](auto ch) {
                     return ch.offset == offset;
                 });
-                if (itOwnInput != ownInputCh.cend()) {
-                    const auto& ownInputDesc = *itOwnInput;
-                    auto& effChannels = eff->outputChannelsDesc;
-                    auto it = std::find_if(effChannels.cbegin(), effChannels.cend(), [offset = inputChannel.srcChannelOffset](auto ch) {
-                        return ch.offset == offset;
-                    });
-                    if (it != effChannels.cend()) {
-                        inputChannel = ChannelAudioEffect(eff, stagebuffer_point::OUTPUT_POST, *it, ownInputDesc);
-                    } else {
-                        log_lf(Log::L_WARN, "Src Channel %d not found on effect %s\n", inputChannel.srcChannelOffset, StringAsCStr(eff->getName()));
-                        inputChannel = ChannelNone();
-                        numRemoved++;
-                    }
+                if (it != effChannels.cend()) {
+                    inputChannel = ChannelAudioEffect(eff, stagebuffer_point::OUTPUT_POST, *it, dstDesc);
                 } else {
-                    log_lf(Log::L_WARN, "Dst Channel %d not found on effect %d\n", inputChannel.dstChannelOffset, inputChannel.stage.stageRef.stageId);
+                    log_lf(Log::L_WARN, "Src Channel %d not found on effect %s\n", inputChannel.srcChannelOffset, StringAsCStr(eff->getName()));
                     inputChannel = ChannelNone();
                     numRemoved++;
                 }
@@ -72,29 +61,45 @@ namespace DAW {
             dbgassert(inputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
             // inputChannel.stage.stageRef.stageId = TRACKID_INVALID_I32; //FIX: old project files have stageId == 0
         }
-        if (numRemoved) {
-          log_lf(Log::L_WARN, "Removed %d effect routings\n", numRemoved);
-        }
         return numRemoved;
     }
     bool validateEffectRoutings(const vsthost* const host, audio_stage_t* stage) {
         size_t numRemoved = 0;
         for (effectbase* effect : stage->effects) {
             for (auto& inputChannel : effect->inputChannels) {
-                numRemoved += validateEffectRouting(host, stage, inputChannel);
+                if (effect->inputChannelsDesc.empty()) {
+                    log_lf(Log::L_WARN, "0 Input channels on effect %s\n", StringAsCStr(effect->getName()));
+                    inputChannel = ChannelNone();
+                    numRemoved++;
+                    continue;
+                }
+                auto itOwnInput = std::find_if(effect->inputChannelsDesc.cbegin(), effect->inputChannelsDesc.cend(), [offset = inputChannel.dstChannelOffset](auto ch) {
+                    return ch.offset == offset;
+                });
+                if (itOwnInput == effect->inputChannelsDesc.cend()) {
+                    log_lf(Log::L_WARN, "Dst Channel %d not found on effect %s\n", inputChannel.dstChannelOffset, StringAsCStr(effect->getName()));
+                    inputChannel = ChannelNone();
+                    numRemoved++;
+                    continue;
+                }
+                numRemoved += validateEffectRouting(host, *itOwnInput, inputChannel);
             }
             auto it = std::remove_if(effect->inputChannels.begin(), effect->inputChannels.end(), [](auto& ch) {
                 return ch.type == channel_type::INPUT_EMPTY;
             });
             effect->inputChannels.erase(it, effect->inputChannels.end());
         }
+        DAW::channel_desc defaultDesc{};
         for (auto& inputChannel : stage->postEffectRouting) {
-            numRemoved += validateEffectRouting(host, stage, inputChannel);
+            numRemoved += validateEffectRouting(host, defaultDesc, inputChannel);
         }
         auto it = std::remove_if(stage->postEffectRouting.begin(), stage->postEffectRouting.end(), [](auto& ch) {
             return ch.type == channel_type::INPUT_EMPTY;
         });
         stage->postEffectRouting.erase(it, stage->postEffectRouting.end());
+        if (numRemoved) {
+            log_lf(Log::L_WARN, "Removed %d effect stage routings\n", numRemoved);
+        }
         return numRemoved == 0;
     }
     struct dependency_graph_flattened_t {

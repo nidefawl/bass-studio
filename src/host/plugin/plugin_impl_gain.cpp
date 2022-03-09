@@ -189,36 +189,6 @@ void module_gain::resume() {
 void module_gain::sleep() {
 }
 
-void module_gain::unload(vsthost* host, int flags) {
-    dbgassert(vstHost == host);
-    effectbase::unload(host, flags);
-    onPreUnload(flags);
-}
-
-void module_gain::onPreUnload(int flags) {
-}
-
-void module_gain::load(vsthost* host) {
-    effectbase::load(host);
-    this->blockInputs  = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
-    this->blockOutputs = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
-    initMeters();
-    bIsEnabled         = this->getParamValue(PARAM_ENABLE) > 0.5;
-    if (bIsEnabled) {
-        this->resume();
-    } else {
-        this->sleep();
-    }
-}
-
-void module_gain::breakTrackLink() {
-    internalplugin::breakTrackLink();
-}
-
-void module_gain::setTrackLink(audio_stage_t* trImpl) {
-    internalplugin::setTrackLink(trImpl);
-}
-
 String module_gain::getInfo(std::vector<String>& list) {
     return "";
 }

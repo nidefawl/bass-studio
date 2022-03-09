@@ -26,11 +26,6 @@ public:
     String getInfo(std::vector<String>& list) override;
     void resume() override;
     void sleep() override;
-    void unload(vsthost* host, int flags) override;
-    void onPreUnload(int flags) override;
-    void load(vsthost* host) override;
-    void breakTrackLink() override;
-    void setTrackLink(audio_stage_t* trImpl) override;
     void onTick(double since) override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
