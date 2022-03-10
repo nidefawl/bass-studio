@@ -268,9 +268,6 @@ private:
         glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glBindVertexArray(0);
         glActiveTexture(GL_TEXTURE0);
-        if (isSharedContextSlave) {
-            return;
-        }
         glfwSwapInterval(1);
         int flags = NVG_ANTIALIAS;
 #ifndef NDEBUG
@@ -286,6 +283,8 @@ private:
         }
         nvgShapeAntiAlias(nanovgCtxt, USE_NANOVG_AA);
 
+        RenderResources::initResources(nanovgCtxt);
+        MouseCursors::initCursors();//TODO: call MouseCursors::destroy() on exit of last instance
         reloadCustomShaders();
     }
 
@@ -1082,24 +1081,20 @@ public:
         this->initCallback = fn.initCallback;
     }
 
-    void createDialogWindow(const char* title, int w, int h, GLFWwindow* share = nullptr, NVGcontext* nanovgCtxt = nullptr) {
+    void createDialogWindow(const char* title, int w, int h, GLFWwindow* share = nullptr) {
         bCanResize = true;
         setAppWindowHints();
         glfwWindowHint(GLFW_RESIZABLE, bCanResize);
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
         glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
-        this->nanovgCtxt = nanovgCtxt;
         //glfwWindowHint(GLFW_FLOATING, 1);
         appwindow::createBaseWindow(title, w, h, share);
-#ifdef _WIN3232
+#if 0
         LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
         if (parent) {
             SetWindowLong(hwnd, GWL_EXSTYLE, l & ~WS_EX_APPWINDOW);
         }
         SetWindowLong(hwnd, GWL_STYLE, WS_CAPTION | WS_POPUP | WS_CLIPSIBLINGS | WS_SYSMENU);
-#endif
-#ifdef __linux__
-        //TODO: implement linux
 #endif
         if (parent) {
             this->parent->onChildDialogCreate(this);
@@ -1113,7 +1108,7 @@ public:
             throw appexception("window null");
         appwindow::killTimer();
         glfwMakeContextCurrent(glfw);
-        //appwindow::destroyGL();
+        appwindow::destroyGL();
         glfwSetWindowUserPointer(glfw, nullptr);
         glfwDestroyWindow(glfw);
         glfw = nullptr;
@@ -1312,11 +1307,7 @@ void appwindow_main::destroy() {
         this->ctrl->destroyControl();
     }
     glfwMakeContextCurrent(glfw);
-    if (!isSharedContextSlave) {
-        appwindow::destroyGL();
-    } else {
-        nanovgCtxt = nullptr;
-    }
+    appwindow::destroyGL();
     glfwDestroyWindow(glfw);
     glfw = nullptr;
 }
@@ -1399,8 +1390,6 @@ void appwindow_main::createMainWindow(int w, int h, appwindow_main* parentWindow
     } else {
         glfwSetWindowAttrib(glfw, GLFW_FOCUS_ON_SHOW, 1);
     }
-    RenderResources::initResources(nanovgCtxt);
-    MouseCursors::initCursors();//TODO: call MouseCursors::destroy() on exit of last instance
 }
 
 #if defined(__linux__) || defined(__APPLE__)
@@ -1447,7 +1436,7 @@ LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LP
 
 window_dialog* appwindow_main::createDialog(const String& sTitle, int w, int h) {
     auto* windowDialog = new appwindow_dialog(this);
-    windowDialog->createDialogWindow(StringAsCStr(sTitle), w, h, this->glfw, this->nanovgCtxt);
+    windowDialog->createDialogWindow(StringAsCStr(sTitle), w, h, this->glfw);
     return windowDialog;
 }
 
@@ -1991,11 +1980,7 @@ public:
         destroyOverlayWindows();
         appwindow::killTimer();
         glfwMakeContextCurrent(glfw);
-        if (!isSharedContextSlave) {
-            appwindow::destroyGL();
-        } else {
-            nanovgCtxt = nullptr;
-        }
+        // appwindow::destroyGL();
         glfwDestroyWindow(glfw);
         glfw = nullptr;
 #ifdef _WIN32

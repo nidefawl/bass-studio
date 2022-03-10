@@ -42,6 +42,7 @@ struct gl_shader_program_base_t {
         if (isGLContextPresent()) {
             if (program) {
                 glDeleteProgram(program);
+                checkGLError("glDeleteProgram");
             }
         }
     }

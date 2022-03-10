@@ -259,6 +259,7 @@ public:
     int init() {
         tmLastReload = getTimeMillis();
         pipePerfShader = std::make_shared<gl_shader_perfgraph>();
+        checkGLError("pipePerfShader reset");
         struct gl_srcparser_perfgraph {
             void preprocessSources(std::vector<glshader_src>& srcList) {
                 for (auto& src : srcList) {
@@ -272,6 +273,7 @@ public:
         };
         gl_srcparser_perfgraph parser;
         int ret = pipePerfShader->load(&parser);
+        checkGLError("pipePerfShader load");
         updateProfilingData();
         return ret;
     }
