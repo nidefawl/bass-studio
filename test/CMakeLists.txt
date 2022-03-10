@@ -56,6 +56,12 @@ function( DEFINE_TEST test_name link_lib first_source_file)
 endfunction()
 
 DEFINE_TEST(
+    test_seh_exception_handling FALSE 
+    test_seh_exception_handling.cpp
+)
+target_compile_options(test_seh_exception_handling PRIVATE -O0 -fno-lto -g0)
+
+DEFINE_TEST(
     test_math FALSE 
     test_math.cpp
     common/test_common.cpp 
