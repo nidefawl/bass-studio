@@ -11,7 +11,7 @@
 #include "meter.h"
 #include "snapshot.h"
 #include "modules.h"
-#include "profiling.h"
+#include "util/profiling.h"
 #include "saferef.h"
 #include "host/daw_channel.h"
 #include "gui/table_fwd.h"

@@ -1,6 +1,6 @@
 #include <algorithm>
-#include "profiling.h"
-#include "host/profiling_impl.h"
+#include "util/profiling.h"
+#include "util/profiling_impl.h"
 #include "list.h"
 #include "gui.h"
 #include "guicontainer.h"

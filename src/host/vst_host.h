@@ -22,7 +22,7 @@
 #include "track_graph.h"
 #include "effect_graph.h"
 #include "daw_channel.h"
-#include "profiling.h"
+#include "util/profiling.h"
 
 
 #include <memory>

@@ -24,7 +24,7 @@
 #include "host/plugin/base_plugin.h"
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
-#include "profiling.h"
+#include "util/profiling.h"
 #include "threads/threadlock.h"
 
 #define PARAM_TRACK_GAIN 1

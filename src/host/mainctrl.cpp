@@ -13,7 +13,7 @@
 #include "math/seq_math.h"
 #include "error.h"
 #include "basectrl.h"
-#include "profiling.h"
+#include "util/profiling.h"
 #include "window.h"
 #include "platform.h"
 #include "keyboard.h"

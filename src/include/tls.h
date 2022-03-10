@@ -1,5 +1,5 @@
 #pragma once
-#include "profiling.h"
+#include "util/profiling.h"
 
 class audiohost;
 class midihost;

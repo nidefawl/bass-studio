@@ -10,7 +10,7 @@
 #include "math/vec.h"
 #include "math/mat.h"
 #include "fileio.h"
-#include "profiling.h"
+#include "util/profiling.h"
 #include "str_util.h"
 #include "gl/gl_util.h"
 #include "gl/gl_attr.h"
@@ -22,7 +22,7 @@
 #include "color_util.h"
 #include "rand.h"
 #include "platform.h"
-#include "host/profiling_impl.h"
+#include "util/profiling_impl.h"
 
 namespace windowdebug_performance {
 
