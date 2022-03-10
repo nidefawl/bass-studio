@@ -1,11 +1,42 @@
 {
     "version": "2.0.0",
+    "windows": {
+        "options": {
+            "shell": {
+                "executable": "C:/Program Files/Git/bin/bash.exe",
+                "args": ["-c"]
+            }
+        }
+    },
     "tasks": [
         {
-            "label": "shell_run_cmake_build",
+            "label": "Build (CMake target)",
             "type": "process",
-            "args": ["-c", "${command:cmake.tasksBuildCommand}"],
-            "command": "zsh",
+            "windows": {
+                "args": [
+                    "/C",
+                    "${command:cmake.tasksBuildCommand}"
+                ],
+                "command": "cmd.exe",
+            }, 
+            "linux": {
+                "args": ["-c", "${command:cmake.tasksBuildCommand}"],
+                "command": "zsh",
+            },
+            "command": "",
+            "problemMatcher": []
+        },
+        {
+            "label": "Update compile_commands.json",
+            "type": "shell",
+            "command": "./local-update-cc.sh",
+            "problemMatcher": []
+        },
+        {
+            "label": "Delete .cache/clangd",
+            "type": "shell",
+            "args": ["-Rf", ".cache/clangd"],
+            "command": "rm",
             "problemMatcher": []
         }
     ]
