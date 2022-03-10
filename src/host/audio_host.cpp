@@ -20,16 +20,130 @@
 #include <functional>
 
 
-namespace AudioIO {
+namespace DAW::AudioIO {
     const std::array<uint32_t, 4> IntSamplerates = {
         44100, 48000, 96000, 192000
     };
     const std::array<uint32_t, 4> ExtSamplerates = {
         44100, 48000, 96000, 192000
     };
-}// namespace AudioIO
+    channelcount getTrackTypeFromNumChannels(int32_t t) {
+        if (t < 2)
+            return channelcount::MONO;
+
+        if (t < 3)
+            return channelcount::STEREO;
+
+        if (t < 5)
+            return channelcount::MULTI_CHANNEL_4;
+
+        return channelcount::MULTI_CHANNEL_6;
+    }
+
+    int32_t getNumChannelsFromTrackType(channelcount t) {
+        switch (t) {
+            default:
+            case channelcount::MONO:
+                return 1;
+            case channelcount::STEREO:
+                return 2;
+            case channelcount::MULTI_CHANNEL_4:
+                return 4;
+            case channelcount::MULTI_CHANNEL_6:
+                return 6;
+        }
+    }
+
+    int32_t getNumChannelsInConfig(const std::vector<io_cfg_channel>& cfg) {
+        int32_t val = std::accumulate(cfg.cbegin(), cfg.cend(), 0, [](int cnt, auto& cfgEntry) {
+            return cnt + getNumChannelsFromTrackType(cfgEntry.type);
+        });
+        return val;
+    }
+    //static_assert(getNumChannelsFromTrackType(tracktype::MULTI_CHANNEL_6) == 6);
+
+    String getTrackNameShort(channelcount type, int32_t index, stage_bufferpoint isInput) {
+        String s = StringFormat("%d", index);
+        if (isInput == stage_bufferpoint::INPUT) {
+            s += " IN";
+        } else {
+            s += " OUT";
+        }
+        switch (type) {
+            default:
+            case channelcount::MONO:
+                s = "Mono " + s;
+                break;
+            case channelcount::STEREO:
+                s = "St. " + s;
+                break;
+            case channelcount::MULTI_CHANNEL_4:
+                s = "4CH " + s;
+                break;
+            case channelcount::MULTI_CHANNEL_6:
+                s = "6CH " + s;
+                break;
+        }
+        return s;
+    }
+
+    String getTrackName(channelcount type, int32_t index, bool isInput) {
+        String s = StringFormat("%d", index);
+        if (isInput) {
+            s += " Input";
+        } else {
+            s += " Output";
+        }
+        switch (type) {
+            default:
+            case channelcount::MONO:
+                s = "Mono " + s;
+                break;
+            case channelcount::STEREO:
+                s = "Stereo " + s;
+                break;
+            case channelcount::MULTI_CHANNEL_4:
+                s = "4 Channel " + s;
+                break;
+            case channelcount::MULTI_CHANNEL_6:
+                s = "6 Channel " + s;
+                break;
+        }
+        return s;
+    }
+
+    channelcount getNextTrackType(channelcount type) {
+        switch (type) {
+            default:
+            case channelcount::MONO:
+                return channelcount::STEREO;
+            case channelcount::STEREO:
+                return channelcount::MONO;
+        //    case channelcount::MULTI_CHANNEL_4:
+        //        return channelcount::MULTI_CHANNEL_6;
+        //    case channelcount::MULTI_CHANNEL_6:
+        //        return channelcount::MONO;
+        }
+    }
+
+    String getTrackTypeStr(channelcount type) {
+        switch (type) {
+            default:
+            case channelcount::MONO:
+                return "MONO";
+            case channelcount::STEREO:
+                return "STEREO";
+            case channelcount::MULTI_CHANNEL_4:
+                return "4CH";
+            case channelcount::MULTI_CHANNEL_6:
+                return "6CH";
+        }
+    }
+}// namespace DAW::AudioIO
 
 
+using namespace DAW::AudioIO;
+using DAW::channelcount;
 
 bool error(const char* msg, PaError err) {
     log_lf(Log::L_ERROR, "%s (%d): %s", msg, err, Pa_GetErrorText(err));
@@ -136,27 +250,26 @@ static void StreamFinished(void* userData) {
     stream->streamFinished         = true;
 }
 
-audiohost::HostIOStream::HostIOStream(int32_t _nStreamId, AudioIO::io_cfg_tracks cfg, int32_t _nOutputChannels, int32_t _nInputChannels)
+audiohost::HostIOStream::HostIOStream(int32_t _nStreamId, io_cfg_tracks cfg, int32_t _nOutputChannels, int32_t _nInputChannels)
     : streamId(_nStreamId),
       nInputChannels(_nInputChannels),
       nOutputChannels(_nOutputChannels),
       metersInput(meterDataInput.data(), meterDataInput.size()),
       metersOutput(meterDataOutput.data(), meterDataOutput.size())
 {
-    using AudioIO::io_cfg_channel;
     allocRingBuffer(ringbuffer, nInputChannels);
     channelsInput.resize(cfg.input.size());
     channelsOutput.resize(cfg.output.size());
     int32_t channelOffset = 0;
     for (int32_t i = 0; i < cfg.input.size(); i++) {
         io_cfg_channel& track = cfg.input[i];
-        channelsInput[i] = std::make_shared<HostIOStream::IOChannel>(i, track.type, channelOffset, metersInput.getSubChannelMeter(channelOffset, AudioIO::getNumChannelsFromTrackType(track.type)));
+        channelsInput[i] = std::make_shared<HostIOStream::IOChannel>(i, track.type, channelOffset, metersInput.getSubChannelMeter(channelOffset, getNumChannelsFromTrackType(track.type)));
         channelOffset += getNumChannelsFromTrackType(track.type);
     }
     channelOffset = 0;
     for (int32_t i = 0; i < cfg.output.size(); i++) {
         io_cfg_channel& track = cfg.output[i];
-        channelsOutput[i] = std::make_shared<HostIOStream::IOChannel>(i, track.type, channelOffset, metersOutput.getSubChannelMeter(channelOffset, AudioIO::getNumChannelsFromTrackType(track.type)));
+        channelsOutput[i] = std::make_shared<HostIOStream::IOChannel>(i, track.type, channelOffset, metersOutput.getSubChannelMeter(channelOffset, getNumChannelsFromTrackType(track.type)));
         channelOffset += getNumChannelsFromTrackType(track.type);
     }
 }
@@ -277,7 +390,6 @@ bool audiohost::HostIOStream::try_dequeue(AudioBuffer*& buf) {
 }
 
 bool audiohost::startAudio(app_iosettings& iosettings) {
-    using AudioIO::io_cfg_tracks;
     if (!initPa())
         return false;
     stopAudio();
@@ -390,8 +502,6 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
         getNumChannelsInConfig(channelConfig.output) == outputParams.channelCount) {
         chCfg = channelConfig;
     } else {
-        using AudioIO::io_cfg_channel;
-        using AudioIO::channelcount;
         int32_t chIdx = 0;
         for (int i = 0; i < outputParams.channelCount;) {
             io_cfg_channel channels;
@@ -401,7 +511,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
             } else {
                 channels.type = channelcount::MONO;
             }
-            channels.name = AudioIO::getTrackName(channels.type, channels.idx, false);
+            channels.name = getTrackName(channels.type, channels.idx, false);
             channels.offset = i;
             i += getNumChannelsFromTrackType(channels.type);
             chCfg.output.push_back(channels);
@@ -415,7 +525,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
             } else {
                 channels.type = channelcount::MONO;
             }
-            channels.name = AudioIO::getTrackName(channels.type, channels.idx, true);
+            channels.name = getTrackName(channels.type, channels.idx, true);
             channels.offset = i;
             i += getNumChannelsFromTrackType(channels.type);
             chCfg.input.push_back(channels);
@@ -490,119 +600,4 @@ bool audiohost::stopAudio() {
     }
     assert(streams.empty());
     return numStreamsStopped > 0;
-}
-
-namespace AudioIO {
-    channelcount getTrackTypeFromNumChannels(int32_t t) {
-        if (t < 2)
-            return channelcount::MONO;
-
-        if (t < 3)
-            return channelcount::STEREO;
-
-        if (t < 5)
-            return channelcount::MULTI_CHANNEL_4;
-
-        return channelcount::MULTI_CHANNEL_6;
-    }
-
-    int32_t getNumChannelsFromTrackType(channelcount t) {
-        switch (t) {
-            default:
-            case channelcount::MONO:
-                return 1;
-            case channelcount::STEREO:
-                return 2;
-            case channelcount::MULTI_CHANNEL_4:
-                return 4;
-            case channelcount::MULTI_CHANNEL_6:
-                return 6;
-        }
-    }
-
-    int32_t getNumChannelsInConfig(const std::vector<io_cfg_channel>& cfg) {
-        int32_t val = std::accumulate(cfg.cbegin(), cfg.cend(), 0, [](int cnt, auto& cfgEntry) {
-            return cnt + getNumChannelsFromTrackType(cfgEntry.type);
-        });
-        return val;
-    }
-    //static_assert(getNumChannelsFromTrackType(AudioIO::tracktype::MULTI_CHANNEL_6) == 6);
-
-    String getTrackNameShort(channelcount type, int32_t index, stagebuffer_point isInput) {
-        String s = StringFormat("%d", index);
-        if (isInput == stagebuffer_point::INPUT) {
-            s += " IN";
-        } else {
-            s += " OUT";
-        }
-        switch (type) {
-            default:
-            case channelcount::MONO:
-                s = "Mono " + s;
-                break;
-            case channelcount::STEREO:
-                s = "St. " + s;
-                break;
-            case channelcount::MULTI_CHANNEL_4:
-                s = "4CH " + s;
-                break;
-            case channelcount::MULTI_CHANNEL_6:
-                s = "6CH " + s;
-                break;
-        }
-        return s;
-    }
-
-    String getTrackName(channelcount type, int32_t index, bool isInput) {
-        String s = StringFormat("%d", index);
-        if (isInput) {
-            s += " Input";
-        } else {
-            s += " Output";
-        }
-        switch (type) {
-            default:
-            case channelcount::MONO:
-                s = "Mono " + s;
-                break;
-            case channelcount::STEREO:
-                s = "Stereo " + s;
-                break;
-            case channelcount::MULTI_CHANNEL_4:
-                s = "4 Channel " + s;
-                break;
-            case channelcount::MULTI_CHANNEL_6:
-                s = "6 Channel " + s;
-                break;
-        }
-        return s;
-    }
-
-    channelcount getNextTrackType(channelcount type) {
-        switch (type) {
-            default:
-            case channelcount::MONO:
-                return channelcount::STEREO;
-            case channelcount::STEREO:
-                return channelcount::MONO;
-        //    case channelcount::MULTI_CHANNEL_4:
-        //        return channelcount::MULTI_CHANNEL_6;
-        //    case channelcount::MULTI_CHANNEL_6:
-        //        return channelcount::MONO;
-        }
-    }
-
-    String getTrackTypeStr(channelcount type) {
-        switch (type) {
-            default:
-            case channelcount::MONO:
-                return "MONO";
-            case channelcount::STEREO:
-                return "STEREO";
-            case channelcount::MULTI_CHANNEL_4:
-                return "4CH";
-            case channelcount::MULTI_CHANNEL_6:
-                return "6CH";
-        }
-    }
 }

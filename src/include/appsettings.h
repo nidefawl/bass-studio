@@ -50,12 +50,12 @@ struct app_iosettings {
     app_ioasioconfig asioConfig;
     std::map<String, app_ioaudioconfig> configs;
     std::map<String, app_iomidiconfig> midiconfigs;
-    std::map<String, AudioIO::io_cfg_tracks> channelConfigs;
+    std::map<String, DAW::AudioIO::io_cfg_tracks> channelConfigs;
     String device_api;
     app_ioasioconfig& getAsioConfig() { return asioConfig; }
-    AudioIO::io_cfg_tracks& getChannelConfig(const String& devApi) {
+    DAW::AudioIO::io_cfg_tracks& getChannelConfig(const String& devApi) {
         if (!channelConfigs.count(devApi)) {
-            channelConfigs[devApi] = AudioIO::io_cfg_tracks();
+            channelConfigs[devApi] = DAW::AudioIO::io_cfg_tracks();
         }
         return channelConfigs[devApi];
     }

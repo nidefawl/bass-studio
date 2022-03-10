@@ -67,63 +67,63 @@ bool getContainerLabel(container_type type, String& out) {
     }
     return false;
 }
-std::map<container_type, ContainerBuilder>& getContainerFactory() {
+ContainerFactory& getContainerFactory() {
     static bool init = false;
     static std::map<container_type, ContainerBuilder> containerFactory;
     if (!init) {
 #if BUILD_VSTHOST
-        containerFactory[container_type::CTR_TYPE_DEBUG_0] = []() {
+        containerFactory[container_type::CTR_TYPE_DEBUG_0] = [](auto& ctxt) {
             return std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
         };
-        containerFactory[container_type::CTR_TYPE_DEBUG_1] = []() {
+        containerFactory[container_type::CTR_TYPE_DEBUG_1] = [](auto& ctxt) {
             return std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1);
         };
-        containerFactory[container_type::CTR_TYPE_DEBUG_2] = []() {
+        containerFactory[container_type::CTR_TYPE_DEBUG_2] = [](auto& ctxt) {
             return std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2);
         };
-        containerFactory[container_type::CTR_TYPE_HISTORY] = []() {
+        containerFactory[container_type::CTR_TYPE_HISTORY] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(makeCtrHistory());
         };
-        containerFactory[container_type::CTR_TYPE_SHADERVIEW] = []() {
+        containerFactory[container_type::CTR_TYPE_SHADERVIEW] = [](auto& ctxt) {
             return std::make_shared<gui_shaderview>();
         };
-        containerFactory[container_type::CTR_TYPE_SETTINGS] = []() {
-            return std::make_shared<DialogSettings::guidialog_settings>();
+        containerFactory[container_type::CTR_TYPE_SETTINGS] = [](auto& ctxt) {
+            return std::make_shared<DAW::DialogSettings::guidialog_settings>(ctxt.daw);
         };
-        containerFactory[container_type::CTR_TYPE_EFFECTLIBRARY] = []() {
+        containerFactory[container_type::CTR_TYPE_EFFECTLIBRARY] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(makeGuiEffectLibrary());
         };
-        containerFactory[container_type::CTR_TYPE_PLUGINSLOADED] = []() {
+        containerFactory[container_type::CTR_TYPE_PLUGINSLOADED] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(makeGuiPluginsLoadedList());
         };
-        containerFactory[container_type::CTR_TYPE_PERFORMANCE] = []() {
+        containerFactory[container_type::CTR_TYPE_PERFORMANCE] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(makeGuiPerformance());
         };
-        containerFactory[container_type::CTR_TYPE_EXPORT] = []() {
+        containerFactory[container_type::CTR_TYPE_EXPORT] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(makeGuiExport());
         };
-        containerFactory[container_type::CTR_TYPE_CLIPEDITOR] = []() {
+        containerFactory[container_type::CTR_TYPE_CLIPEDITOR] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(makeGuiClipEditor());
         };
 #endif
-        containerFactory[container_type::CTR_TYPE_PROPERTIES] = []() {
+        containerFactory[container_type::CTR_TYPE_PROPERTIES] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(makeCtrProperties());
         };
-        containerFactory[container_type::CTR_TYPE_THEME] = []() {
+        containerFactory[container_type::CTR_TYPE_THEME] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(makeCtrTheme());
         };
-        containerFactory[container_type::CTR_TYPE_LAYOUT] = []() {
+        containerFactory[container_type::CTR_TYPE_LAYOUT] = [](auto& ctxt) {
             return std::make_shared<guictr_layout>();
         };
     }
     return containerFactory;
 }
-bool makeContainer(container_type type, std::shared_ptr<guictr_base>& out) {
+bool makeContainer(ContainerInstanceContext& ctxt, container_type type, std::shared_ptr<guictr_base>& out) {
     auto& fac = getContainerFactory();
     out       = nullptr;
     if (fac.count(type)) {
         ContainerBuilder& builder = fac[type];
-        std::shared_ptr<guictr_base> sharedContainer = builder();
+        std::shared_ptr<guictr_base> sharedContainer = builder(ctxt);
         if (!sharedContainer) {
             log_printf("Failed building container of type %d\n", type);
             return false;

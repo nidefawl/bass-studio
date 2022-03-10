@@ -26,10 +26,10 @@ inline audio_stage_ref_t AudioStageRefFromId(int32_t id) {
 }
 struct audio_channel_ref_t {
     audio_stage_ref_t stageRef;
-    stagebuffer_point buffer;
+    DAW::stage_bufferpoint buffer;
 };
 inline audio_channel_ref_t AudioChannelRefNULL() {
-    return { { TRACKID_INVALID_I32 }, stagebuffer_point::OUTPUT_POST };
+    return { { TRACKID_INVALID_I32 }, DAW::stage_bufferpoint::OUTPUT_POST };
 }
 
 struct audio_stage_id_t {
@@ -45,23 +45,15 @@ inline bool audioStageIdMatches(const audio_stage_id_t& stageIds, const audiosta
 
 namespace DAW {
 
-    enum class channel_type {
-        INPUT_DEFAULT,
-        INPUT_EMPTY,
-        INPUT_EXTERNAL_AUDIO,
-        INPUT_AUDIOSTAGE,
-        INPUT_AUDIOSTAGE_EFFECT
-    };
-
     struct channel_ref_t {
-        channel_type type                    = channel_type::INPUT_EMPTY;
-        AudioIO::channelcount externalInputType = AudioIO::channelcount::STEREO;
-        audio_channel_ref_t stage{ { TRACKID_INVALID_I32 }, stagebuffer_point::OUTPUT_POST };
-        int32_t projectGlobalId     = 0;
-        int32_t externalInputIdx    = 0;
-        int32_t srcChannelOffset    = 0;
-        int32_t dstChannelOffset    = 0;
-        String name                 = "None";
+        channel_type type              = channel_type::INPUT_EMPTY;
+        channelcount externalInputType = channelcount::STEREO;
+        audio_channel_ref_t stage{ { TRACKID_INVALID_I32 }, stage_bufferpoint::OUTPUT_POST };
+        int32_t projectGlobalId  = 0;
+        int32_t externalInputIdx = 0;
+        int32_t srcChannelOffset = 0;
+        int32_t dstChannelOffset = 0;
+        String name              = "None";
         channel_type getType() const {
             return type;
         }

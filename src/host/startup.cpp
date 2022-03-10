@@ -106,7 +106,7 @@ void generateDummyProject(DawCtrl* dawCtrl) {
                 dbgassert(pluginHostInfo);
 
                 host->insertNewPlugin(track1->getStage(), pluginHostInfo, 0);
-                pluginHostInfo->resume();
+                pluginHostInfo->onEnable();
                 track1->getStage()->pluginsChanged();
                 pluginHostInfo->setParamValue(PARAM_OFFSET_EXTERNAL+0, 0.0f, FLG_PAR_UPDATE_INIT);
                 //host->postPluginLoaded(track1->getStage(), pluginHostInfo);
@@ -193,7 +193,7 @@ void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t tra
 
     audio_stage_t* trImpl1 = trackList[trackIdx]->getStage();
     host->insertNewPlugin(trImpl1, loadRes.plugin, 0);
-    loadRes.plugin->resume();
+    loadRes.plugin->onEnable();
     host->postPluginLoaded(trImpl1, loadRes.plugin);
 
 
@@ -227,7 +227,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     }
     auto dawInstance = dawMainCtrl->getDaw();
     String dawPath  = "./projects/";
-    String projName = "test-routing2.project";
+    String projName = "serum-fx-noise-osc.project";
     int flags = 0x1;// defer load
         // flags = 0; // no defer load
     dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance* daw, std::shared_ptr<project_file> file, int errorState) {
@@ -247,7 +247,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
         if (dbgLoadPlugins) {
             loadPluginAndInsertOnTrack(dawMainCtrl, "C:/PluginManager/configs/default/hosts/Ableton/categories/melda/MPowerSynth.dll", 0);
         }
-        daw->getMainControl()->setViewMode(view_mode_t::NODE_EDITOR);
+        // daw->getMainControl()->setViewMode(view_mode_t::NODE_EDITOR);
 #if 0
         const bool loadPlugins = 0;
         if (loadPlugins) {
@@ -294,7 +294,8 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     //    dawMainCtrl->setVisible(false);
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1));
-    if (dawMainCtrl->getLoadProjectFilePath().empty())
-       dawInstance->loadFile(dawPath + projName, flags);
+       dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
+    // if (dawMainCtrl->getLoadProjectFilePath().empty())
+    //    dawInstance->loadFile(dawPath + projName, flags);
     // generateDummyProject(dawMainCtrl);
 }

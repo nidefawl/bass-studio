@@ -185,10 +185,6 @@ void gui_timeinput::render(NVGcontext* vg) {
     }
 }
 
-namespace DialogSettings {
-void updateSrBs();
-}
-
 void guictr_tempocontrols::buttonClicked(guibase* button) {
     if (button == &this->btnPlay) {
         dawCtrl->getDaw()->startPlaying();
@@ -205,7 +201,7 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
     if (button == &this->btnAudioOnOff) {
         using DAW::settings;
         settings.startEngine = !settings.startEngine;
-        DialogSettings::updateSrBs();
+        dawCtrl->getDaw()->configureSampleRate();
     }
 }
 

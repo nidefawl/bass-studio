@@ -27,7 +27,7 @@ namespace DAW {
             inputChannel = ChannelDefaultNone();
         } else if (inputChannel.getType() == channel_type::INPUT_EXTERNAL_AUDIO) {
             int32_t idx  = inputChannel.externalInputIdx;
-            String name  = "External " + AudioIO::getTrackNameShort(inputChannel.externalInputType, idx, stagebuffer_point::INPUT);
+            String name  = "External " + AudioIO::getTrackNameShort(inputChannel.externalInputType, idx, stage_bufferpoint::INPUT);
             inputChannel = ChannelAudioInput(idx, inputChannel.srcChannelOffset, name, inputChannel.externalInputType);
         } else if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE) {
             auto* srcstage = host->getAudioStage(inputChannel.stage.stageRef);
@@ -50,7 +50,7 @@ namespace DAW {
                     return ch.offset == offset;
                 });
                 if (it != effChannels.cend()) {
-                    inputChannel = ChannelAudioEffect(eff, stagebuffer_point::OUTPUT_POST, *it, dstDesc);
+                    inputChannel = ChannelAudioEffect(eff, stage_bufferpoint::OUTPUT_POST, *it, dstDesc);
                 } else {
                     log_lf(Log::L_WARN, "Src Channel %d not found on effect %s\n", inputChannel.srcChannelOffset, StringAsCStr(eff->getName()));
                     inputChannel = ChannelNone();

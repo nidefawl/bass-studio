@@ -830,12 +830,14 @@ void storeContainerEntrySnapshot(guictr_layout_entry* ctrlayoutEntry, std::share
     snapshot->label = ctrlayoutEntry->getLabel();
 }
 
-void loadContainerEntrySnapshot(std::shared_ptr<guictrlayout_entry_snapshot_t>& snapshot, std::shared_ptr<guictr_layout_entry>& out) {
-    auto& fac = getContainerFactory();
-    out       = nullptr;
+void loadContainerEntrySnapshot(ContainerFactory& fac,
+                                ContainerInstanceContext& ctxt,
+                                std::shared_ptr<guictrlayout_entry_snapshot_t>& snapshot,
+                                std::shared_ptr<guictr_layout_entry>& out) {
+    out  = nullptr;
     if (fac.count(snapshot->type)) {
-        ContainerBuilder& builder                    = fac[snapshot->type];
-        std::shared_ptr<guictr_base> sharedContainer = builder();
+        ContainerBuilder& builder  = fac[snapshot->type];
+        std::shared_ptr<guictr_base> sharedContainer = builder(ctxt);
         if (!sharedContainer) {
             log_printf("Failed building container of type %d\n", snapshot->type);
             return;
@@ -844,11 +846,11 @@ void loadContainerEntrySnapshot(std::shared_ptr<guictrlayout_entry_snapshot_t>& 
         getContainerLabel(snapshot->type, sharedContainer->label);
         out = createGuiCtrLayoutEntry(sharedContainer);
         if (out->getFrameType() == layout_ctr_type::GUICTR_LAYOUT) {
-            guictrlayout_snapshot_t* ctrLayoutSnapshot = dynamic_cast<guictrlayout_snapshot_t*>(snapshot.get());
-            guictr_layout* ctrLayout                   = dynamic_cast<guictr_layout*>(out->getGui());
+            auto* ctrLayoutSnapshot = dynamic_cast<guictrlayout_snapshot_t*>(snapshot.get());
+            auto* ctrLayout = dynamic_cast<guictr_layout*>(out->getGui());
             dbgassert(ctrLayout);
             dbgassert(ctrLayoutSnapshot);
-            loadContainerSnapshot(ctrLayout, ctrLayoutSnapshot);
+            loadContainerSnapshot(fac, ctxt, ctrLayout, ctrLayoutSnapshot);
         }
     } else {
         log_printf("Failed loading container of type %d\n", snapshot->type);
@@ -881,7 +883,7 @@ std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path) 
         ReadFileVector(App::Platform::toUserdataPath(path), vec);
         Stringstream sstream(std::string(vec.cbegin(), vec.cend()));
         std::shared_ptr<dawview_layout_t> snapshot = std::make_shared<dawview_layout_t>();
-        dawview_layout_t& ref                      = *snapshot.get();
+        dawview_layout_t& ref = *snapshot.get();
         {
             JSONInputArchive ar(sstream);
             ar(make_nvp("layout", ref));
@@ -907,11 +909,14 @@ void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* s
         snapshot->entries.emplace_back(std::move(shrdEntrySnapshot));
     }
 }
-void loadContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* snapshot) {
+void loadContainerSnapshot(ContainerFactory& fac,
+                            ContainerInstanceContext& ctxt,
+                            guictr_layout* ctrlayout,
+                            guictrlayout_snapshot_t* snapshot) {
     ctrlayout->setLayout(snapshot->ctrLayout);
     for (auto& shrdEntrySnapshot: snapshot->entries) {
         std::shared_ptr<guictr_layout_entry> sharedEntry;
-        loadContainerEntrySnapshot(shrdEntrySnapshot, sharedEntry);
+        loadContainerEntrySnapshot(fac, ctxt, shrdEntrySnapshot, sharedEntry);
         if (sharedEntry) {
             ctrlayout->addEntry(sharedEntry, -2);
         }

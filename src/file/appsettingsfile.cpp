@@ -37,7 +37,7 @@ void serialize(Archive& ar, windowsize& settings) {
 }
 #endif
 
-namespace AudioIO {
+namespace DAW::AudioIO {
     template <class Archive>
     void serialize(Archive& ar, io_cfg_tracks& cfg) {
         ar(make_nvp("isInit", cfg.isInit), make_nvp("inputs", cfg.input), make_nvp("outputs", cfg.output));
@@ -56,7 +56,8 @@ namespace AudioIO {
                 make_nvp("type", settings.type));
         }
     }
-} // namespace AudioIO
+} // namespace DAW::AudioIO
+
 template <class Archive>
 void serialize(Archive& ar, io_channel& cfg) {
     ar(make_nvp("channels", cfg.channels), make_nvp("idx", cfg.idx));

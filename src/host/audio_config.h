@@ -6,25 +6,37 @@
 
 struct AudioBuffer;
 
-enum class stagebuffer_point {
+namespace DAW {
+
+enum class channelcount {
+    MONO,
+    STEREO,
+    MULTI_CHANNEL_4,
+    MULTI_CHANNEL_6
+};
+
+enum class stage_bufferpoint {
     INPUT,
     OUTPUT,
     OUTPUT_POST
 };
-inline bool isStageBufferPointInput(const stagebuffer_point stBufPt) {
-    return stBufPt == stagebuffer_point::INPUT;
+
+enum class channel_type {
+    INPUT_DEFAULT,
+    INPUT_EMPTY,
+    INPUT_EXTERNAL_AUDIO,
+    INPUT_AUDIOSTAGE,
+    INPUT_AUDIOSTAGE_EFFECT
+};
+
+inline bool isStageBufferPointInput(const stage_bufferpoint stBufPt) {
+    return stBufPt == stage_bufferpoint::INPUT;
 }
+
 namespace AudioIO {
 
     extern const std::array<uint32_t, 4> ExtSamplerates;
     extern const std::array<uint32_t, 4> IntSamplerates;
-
-    enum class channelcount {
-        MONO,
-        STEREO,
-        MULTI_CHANNEL_4,
-        MULTI_CHANNEL_6
-    };
 
     struct io_cfg_channel {
         String name;
@@ -43,8 +55,8 @@ namespace AudioIO {
     channelcount getTrackTypeFromNumChannels(int32_t t);
     int32_t getNumChannelsInConfig(const std::vector<io_cfg_channel>& cfg);
 
-    String getTrackNameShort(AudioIO::channelcount type, int32_t index, stagebuffer_point isInput);
-    String getTrackName(AudioIO::channelcount type, int32_t index, bool isInput);
+    String getTrackNameShort(channelcount type, int32_t index, stage_bufferpoint isInput);
+    String getTrackName(channelcount type, int32_t index, bool isInput);
     String getTrackTypeStr(channelcount type);
     channelcount getNextTrackType(channelcount type);
 
@@ -62,4 +74,6 @@ namespace AudioIO {
         virtual uint16_t getBlockSize() const = 0;
         virtual bool isActive() const = 0;
     };
-}// namespace AudioIO
+} // namespace AudioIO
+
+} // namespace DAW

@@ -13,24 +13,21 @@
 #include "audio_config.h"
 #include "appsettings.h"
 
-namespace AudioIO {
-}// namespace AudioIO
-
 using PaStream = void;
 class audiohost {
 public:
-    class HostIOStream : public AudioIO::AudioStream {
+    class HostIOStream : public DAW::AudioIO::AudioStream {
         public:
         struct IOChannel {
             DAW::rmsmeter meter;
             AudioBlock buf;
             int32_t index         = 0;
             int32_t channelOffset = 0;
-            AudioIO::channelcount type;
+            DAW::channelcount type;
 
-            IOChannel(int32_t _index, AudioIO::channelcount _type, int32_t _channelOffset, DAW::rmsmeter&& _meter)
+            IOChannel(int32_t _index, DAW::channelcount _type, int32_t _channelOffset, DAW::rmsmeter&& _meter)
                 : meter(_meter),
-                buf((uint32_t) AudioIO::getNumChannelsFromTrackType(_type), 0),
+                buf((uint32_t) DAW::AudioIO::getNumChannelsFromTrackType(_type), 0),
                 index(_index),
                 channelOffset(_channelOffset),
                 type(_type)
@@ -75,13 +72,13 @@ public:
 
         int64_t lastAudioCallbackInvocationTime_i64 = 0;
 
-        HostIOStream(int32_t streamId, AudioIO::io_cfg_tracks cfg, int32_t nOutputChannels = 0, int32_t nInputChannels = 0);
+        HostIOStream(int32_t streamId, DAW::AudioIO::io_cfg_tracks cfg, int32_t nOutputChannels = 0, int32_t nInputChannels = 0);
         ~HostIOStream();
         audiothread_ringbuffer_t& getRingbuffer() {
             return ringbuffer;
         }
         static inline String getTrackName(IOChannel* track, bool isInput) {
-            return AudioIO::getTrackName(track->type, track->index, isInput);
+            return DAW::AudioIO::getTrackName(track->type, track->index, isInput);
         }
         void enqueue(AudioBuffer*);
         bool try_dequeue(AudioBuffer*&);

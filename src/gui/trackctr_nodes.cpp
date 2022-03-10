@@ -36,6 +36,8 @@
 #include <glm/vec2.hpp>
 #include <glm/gtx/norm.hpp>
 
+using DAW::stage_bufferpoint;
+
 template<typename T>
 float lengthSquared(T a) { return glm::length2(a); }
 
@@ -240,11 +242,11 @@ class gui_graph_n;
 class gui_graph_port : public guibase {
     friend class gui_graph::guictr_graph_impl;
     gui_graph_n* parentGraphNode;
-    stagebuffer_point stageBufferPoint;
+    stage_bufferpoint stageBufferPoint;
     DAW::channel_desc channelDesc; 
     edge_spline spline;
 public:
-    gui_graph_port(gui_graph_n* _parentGraphNode, stagebuffer_point _stageBufferPoint, DAW::channel_desc _channelDesc)
+    gui_graph_port(gui_graph_n* _parentGraphNode, stage_bufferpoint _stageBufferPoint, DAW::channel_desc _channelDesc)
         : guibase(),
           parentGraphNode(_parentGraphNode),
           stageBufferPoint(_stageBufferPoint),
@@ -262,7 +264,7 @@ public:
         table.tableWidth = widthLabel + INSET_TABLE_CELL_PADDING * 3;
     }
 
-    stagebuffer_point getBufferPoint() const {
+    stage_bufferpoint getBufferPoint() const {
         return stageBufferPoint;
     }
 
@@ -311,11 +313,11 @@ public:
 
     virtual String getText() {
         switch (stageBufferPoint) {
-            case stagebuffer_point::INPUT:
+            case stage_bufferpoint::INPUT:
                 return "INPUT";
-            case stagebuffer_point::OUTPUT:
+            case stage_bufferpoint::OUTPUT:
                 return "OUTPUT";
-            case stagebuffer_point::OUTPUT_POST:
+            case stage_bufferpoint::OUTPUT_POST:
                 return "OUTPUT_POST";
         }
         dbgassert(0);
@@ -346,7 +348,7 @@ public:
             ivec2 mouseposSS  = toControlsObjectSpace(mousepos, parent->parent->parent);
             ivec2 editorPosSS = parent->parent->parent->toScreenSpace(ivec2(0));
 
-            if (getBufferPoint() == stagebuffer_point::INPUT) {
+            if (getBufferPoint() == stage_bufferpoint::INPUT) {
                 std::swap(mouseposSS, posSS);
             }
             std::vector<vec2>& pts = spline.calculateSplineVectors(mouseposSS, posSS);
@@ -393,14 +395,14 @@ private:
         dbgassert(guiPorts.empty());
         if (node->type == DAW::track_node_type_t::EFFECT) {
             for (auto& desc : node->effectOptional->inputChannelsDesc) {
-                portsInput.push_back(new gui_graph_port{ this, stagebuffer_point::INPUT, desc});
+                portsInput.push_back(new gui_graph_port{ this, stage_bufferpoint::INPUT, desc});
             }
             for (auto& desc : node->effectOptional->outputChannelsDesc) {
-                portsOutput.push_back(new gui_graph_port{ this, stagebuffer_point::OUTPUT_POST, desc});
+                portsOutput.push_back(new gui_graph_port{ this, stage_bufferpoint::OUTPUT_POST, desc});
             }
         } else {
-            portsInput.push_back(new gui_graph_port{ this, stagebuffer_point::INPUT, DAW::channel_desc{0, 2, "Stereo Input"}});
-            portsOutput.push_back(new gui_graph_port{ this, stagebuffer_point::OUTPUT_POST, DAW::channel_desc{0, 2, "Stereo Output"} });
+            portsInput.push_back(new gui_graph_port{ this, stage_bufferpoint::INPUT, DAW::channel_desc{0, 2, "Stereo Input"}});
+            portsOutput.push_back(new gui_graph_port{ this, stage_bufferpoint::OUTPUT_POST, DAW::channel_desc{0, 2, "Stereo Output"} });
         }
         addAll(guiPorts, portsInput);
         addAll(guiPorts, portsOutput);
@@ -453,7 +455,7 @@ public:
             float topOffsetInputs = portsInput.size() > 1 ? (hpt + nodePortRadius * 1.5f) : (hpt * 0.5f - nodePortRadius);
             float topOffsetOutputs = portsOutput.size() > 1 ? (hpt + nodePortRadius * 1.5f) : (hpt * 0.5f - nodePortRadius);
             switch (port->getBufferPoint()) {
-                case stagebuffer_point::INPUT:
+                case stage_bufferpoint::INPUT:
                     port->pos = pos + vec2(0, topOffsetInputs) + vec2(-nodePortRadius, inputIndex * nodePortRadius * 3);
                     ++inputIndex;
                     break;
@@ -554,7 +556,7 @@ namespace NodeGraph {
                 dbgassert(nodeInput->trackOptional);
                 if (nodeInput->trackOptional) {
                     dbgassert(nodeInput->trackOptional->audio);
-                    ref = DAW::ChannelStage(nodeInput->trackOptional->audio, stagebuffer_point::OUTPUT_POST);
+                    ref = DAW::ChannelStage(nodeInput->trackOptional->audio, stage_bufferpoint::OUTPUT_POST);
                     return true;
                 }
                 break;
@@ -562,15 +564,15 @@ namespace NodeGraph {
                 dbgassert(nodeInput->stage);
                 if (nodeInput->stage) {
                     if (nodeInput->stage->stageId.inputStageId == nodeInput->stageId) {
-                        ref = DAW::ChannelStage(nodeInput->stage, stagebuffer_point::INPUT);
+                        ref = DAW::ChannelStage(nodeInput->stage, stage_bufferpoint::INPUT);
                         return true;
                     }
                     if (nodeInput->stage->stageId.outputStageId == nodeInput->stageId) {
-                        ref = DAW::ChannelStage(nodeInput->stage, stagebuffer_point::OUTPUT);
+                        ref = DAW::ChannelStage(nodeInput->stage, stage_bufferpoint::OUTPUT);
                         return true;
                     }
                     if (nodeInput->stage->stageId.outputPostStageId == nodeInput->stageId) {
-                        ref = DAW::ChannelStage(nodeInput->stage, stagebuffer_point::OUTPUT_POST);
+                        ref = DAW::ChannelStage(nodeInput->stage, stage_bufferpoint::OUTPUT_POST);
                         return true;
                     }
                 }
@@ -585,7 +587,7 @@ namespace NodeGraph {
                     } else {
                         dstDesc = port->getChannelDesc();
                     }
-                    ref = DAW::ChannelAudioEffect(nodeInput->effectOptional, stagebuffer_point::OUTPUT_POST, srcDesc, dstDesc);
+                    ref = DAW::ChannelAudioEffect(nodeInput->effectOptional, stage_bufferpoint::OUTPUT_POST, srcDesc, dstDesc);
                     return true;
                 }
                 break;
@@ -611,8 +613,8 @@ namespace NodeGraph {
             return false;
         }
         /* only allow input to output connections */
-        auto isInputDst = isStageBufferPointInput(portDst->getBufferPoint());
-        auto isInputSrc = isStageBufferPointInput(portSrc->getBufferPoint());
+        auto isInputDst = DAW::isStageBufferPointInput(portDst->getBufferPoint());
+        auto isInputSrc = DAW::isStageBufferPointInput(portSrc->getBufferPoint());
         if (isInputDst == isInputSrc) {
             return false;
         }

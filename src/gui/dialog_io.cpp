@@ -24,10 +24,9 @@
 #include <portmidi.h>
 
 
-namespace DialogSettings {
+namespace DAW::DialogSettings {
 
 using ::DAW::settings;
-using namespace ::AudioIO;
 
 constexpr int ID_BTN_CLOSE    = 1;
 constexpr int TEXT_FONT_SIZE  = 20;
@@ -71,7 +70,6 @@ public:
     }
 };
 
-
 guidropdown_setting_options_ctxt_t::guidropdown_setting_options_ctxt_t(guidropdown_setting_options_t* _parent)
     : parent(_parent) {
     this->size.x                 = 120;
@@ -84,6 +82,7 @@ guidropdown_setting_options_ctxt_t::guidropdown_setting_options_ctxt_t(guidropdo
         addEntry(new ctxtmenu_entry(option, idx++));
     }
 }
+
 void guidropdown_setting_options_ctxt_t::clicked(int _id) {
     closeContextMenu();
     parent->clicked(_id);
@@ -186,42 +185,6 @@ public:
     }
 };
 
-// TODO: this should be member of DawInstance
-void updateSrBs() {
-    DawInstance* daw = DawInstance::get();
-    bool b     = daw->isPlaying();
-    if (b) {
-
-        daw->stopPlaying();
-    }
-    daw->setAudioThreadState(playback_state::status_stop);
-    daw->setAudioThreadState(playback_state::status_no_process);
-    {
-
-        ThreadLock lock  = daw->getPlayThread()->lockThread();
-        vsthost* host    = daw->getHost();
-        audiohost* ahost = daw->getAudioHost();
-        ahost->stopAudio();
-        host->setOutput(nullptr);
-        if (settings.startEngine) {
-            host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.internalSamplerate),
-                                                 settings.iosettings.internalBlocksize, sampleformat_bits_t::FLOAT_32});
-            if (ahost->startAudio(settings.iosettings)) {
-                host->setOutput(ahost->getStreamSharedPtr(0));
-            } else {
-                //settings.startEngine = false;
-            }
-        }
-    }
-    if (settings.startEngine) {
-        if (b) {
-            daw->startPlaying();
-        } else {
-            daw->setAudioThreadState(playback_state::status_stop);
-        }
-    }
-}
-
 class guictr_input_channel : public guictr_base {
     std::shared_ptr<audiohost::HostIOStream::IOChannel> ioChannel;
     const bool isInput;
@@ -233,7 +196,7 @@ public:
         : ioChannel(_ioChannel), isInput(_isInput) {
         add(&btnTrackType);
         btnTrackType.setFontScale(0.3f);
-        btnTrackType.setText(AudioIO::getTrackTypeStr(_ioChannel->type));
+        btnTrackType.setText(DAW::AudioIO::getTrackTypeStr(_ioChannel->type));
         guimeter = std::make_shared<gui_trackmeter>(&_ioChannel->meter);
         add(guimeter.get());
         setBackgroundRendered(false);
@@ -284,47 +247,48 @@ public:
     }
 
     void buttonClicked(guibase* gui) override {
+        using namespace DAW::AudioIO;
         if (gui == &btnTrackType) {
             log_printf("Switch track type\n");
             auto& cnf = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
-            AudioIO::io_cfg_tracks newConfig = cnf;
+            io_cfg_tracks newConfig = cnf;
             auto& list    = isInput ? cnf.input : cnf.output;
             auto& newList = isInput ? newConfig.input : newConfig.output;
             newList.clear();
 
-            const AudioIO::channelcount type = AudioIO::getNextTrackType(ioChannel->type);
-            const int32_t nChannelsPrev   = AudioIO::getNumChannelsFromTrackType(ioChannel->type);
-            const int32_t nChannels       = AudioIO::getNumChannelsFromTrackType(type);
-            const int32_t base            = (ioChannel->channelOffset / nChannels);
-            const int32_t begin           = base * nChannels;
-            const int32_t end             = begin + nChannels;
+            const channelcount type     = getNextTrackType(ioChannel->type);
+            const int32_t nChannelsPrev = getNumChannelsFromTrackType(ioChannel->type);
+            const int32_t nChannels     = getNumChannelsFromTrackType(type);
+            const int32_t base          = (ioChannel->channelOffset / nChannels);
+            const int32_t begin         = base * nChannels;
+            const int32_t end           = begin + nChannels;
 
             int32_t ratio = math::max(1, nChannelsPrev / nChannels);
             for (int32_t c = 0; c < ratio; c++) {
-                AudioIO::io_cfg_channel channels;
-                channels.idx           = 0;
-                channels.type          = type;
+                io_cfg_channel channels;
+                channels.idx    = 0;
+                channels.type   = type;
                 channels.offset = (base + c) * nChannels;
                 newList.push_back(channels);
             }
             for (auto& existChannelCnf : list) {
-                int32_t existChCnfChannels = AudioIO::getNumChannelsFromTrackType(existChannelCnf.type);
+                int32_t existChCnfChannels = getNumChannelsFromTrackType(existChannelCnf.type);
                 if (existChannelCnf.offset >= end || existChannelCnf.offset + existChCnfChannels <= begin) {
                     newList.push_back(existChannelCnf);
                 }
             }
             std::sort(newList.begin(), newList.end(),
-                      [](const AudioIO::io_cfg_channel& entryA, const AudioIO::io_cfg_channel& entryB) {
+                      [](const io_cfg_channel& entryA, const io_cfg_channel& entryB) {
                           return entryA.offset < entryB.offset;
                       });
             while (true) {
                 // Find unassigned channels
                 int32_t endPrevChannel = 0;
                 auto it = std::find_if(newList.begin(), newList.end(),
-                              [&endPrevChannel](const AudioIO::io_cfg_channel& entryA) {
+                              [&endPrevChannel](const io_cfg_channel& entryA) {
                                 if (entryA.offset > endPrevChannel)
                                     return true;
-                                endPrevChannel = entryA.offset + AudioIO::getNumChannelsFromTrackType(entryA.type);
+                                endPrevChannel = entryA.offset + getNumChannelsFromTrackType(entryA.type);
                                 return false;
                               });
                 if (it == newList.end()) {
@@ -337,12 +301,12 @@ public:
 
                 // create tracks for unassigned channels
                 while (free > 0) {
-                    const AudioIO::channelcount type2 = AudioIO::getTrackTypeFromNumChannels(free);
-                    AudioIO::io_cfg_channel channel2;
-                    channel2.idx           = -1;
-                    channel2.type          = type2;
-                    channel2.offset = endPrevChannel;
-                    int32_t nChannels2     = AudioIO::getNumChannelsFromTrackType(channel2.type);
+                    const channelcount type2 = getTrackTypeFromNumChannels(free);
+                    io_cfg_channel channel2;
+                    channel2.idx       = -1;
+                    channel2.type      = type2;
+                    channel2.offset    = endPrevChannel;
+                    int32_t nChannels2 = getNumChannelsFromTrackType(channel2.type);
                     endPrevChannel += nChannels2;
                     free -= nChannels2;
                     newList.push_back(channel2);
@@ -353,22 +317,22 @@ public:
                 // make sure we did not assign too many channels
                 dbgassert(free >= 0);
                 std::sort(newList.begin(), newList.end(),
-                          [](const AudioIO::io_cfg_channel& entryA, const AudioIO::io_cfg_channel& entryB) {
+                          [](const io_cfg_channel& entryA, const io_cfg_channel& entryB) {
                               return entryA.offset < entryB.offset;
                           });
             }
 
             int32_t idx = 0;
-            for (AudioIO::io_cfg_channel& entry : newList) {
+            for (io_cfg_channel& entry : newList) {
                 entry.idx  = idx++;
-                entry.name = AudioIO::getTrackName(entry.type, entry.idx, isInput);
+                entry.name = getTrackName(entry.type, entry.idx, isInput);
             }
 
 
             // find maximum channel idx used
             int32_t maxChannel = -1;
             for (auto& ch : newList) {
-                auto chCount  = AudioIO::getNumChannelsFromTrackType(ch.type);
+                auto chCount  = getNumChannelsFromTrackType(ch.type);
                 auto chEndIdx = ch.offset + chCount;
                 maxChannel = math::max(maxChannel, chEndIdx);
             }
@@ -379,7 +343,7 @@ public:
             // make sure we have no channel double assignment
             bool foundDblAssignment = false;
             for (auto& ch : newList) {
-                auto chCount = AudioIO::getNumChannelsFromTrackType(ch.type);
+                auto chCount = getNumChannelsFromTrackType(ch.type);
                 for (int j = 0; j < chCount; j++) {
                     foundDblAssignment |= vChannelIdc[j + ch.offset] != -1;
                     dbgassert (!foundDblAssignment);
@@ -401,7 +365,7 @@ public:
                 log_printf("Invalid channel configuration\n");
             } else {
                 cnf = newConfig;
-                { updateSrBs(); }
+                dawCtrl->getDaw()->configureSampleRate();
             }
         }
     }
@@ -497,6 +461,7 @@ public:
     }
 };
 class guidialog_audio_io : public setting_dialog {
+    DawInstance* const daw;
     guibutton_audioengine* audioEngineOn;
     guidropdownbase* audioBlockSize;
     guidropdownbase* audioSampleRate;
@@ -573,14 +538,17 @@ public:
         delete audioEngineOn;
     }
 
-    guidialog_audio_io()
+    guidialog_audio_io(DawInstance* _daw)
         : setting_dialog(),
+          daw(_daw),
           audioEngineOn(new guibutton_audioengine{}),
           deviceListInput(new gui_list()),
           deviceListOutput(new gui_list()),
           metersInput(true),
           metersOutput(false)
     {
+        using namespace DAW::AudioIO;
+
         auto api  = new guidropdown_setting_options_t();
         auto asio = new guidropdown_setting_options_t();
         auto extBlockSize       = new guidropdown_setting_options_t();
@@ -596,53 +564,53 @@ public:
         this->audioInternalSampleRate = intSampleRate;
 
         for (int i = 0; i < 4; i++) {
-            extSampleRate->options.push_back(StringFormat("%d", AudioIO::ExtSamplerates[i]));
+            extSampleRate->options.push_back(StringFormat("%d", ExtSamplerates[i]));
         }
         for (int i = 0; i < 4; i++) {
-            intSampleRate->options.push_back(StringFormat("%d", AudioIO::IntSamplerates[i]));
+            intSampleRate->options.push_back(StringFormat("%d", IntSamplerates[i]));
         }
-        extSampleRate->cbOnOptionSelected = [](int option) {
+        extSampleRate->cbOnOptionSelected = [this](int option) {
             if (option >= 0 && option < 4) {
-                settings.iosettings.samplerate = AudioIO::ExtSamplerates[option];
-                updateSrBs();
+                settings.iosettings.samplerate = ExtSamplerates[option];
+                daw->configureSampleRate();
             }
         };
         extSampleRate->fnGetCurrentVal = []() -> String {
             return StringFormat("%d", settings.iosettings.samplerate);
         };
         extSampleRate->fnGetCurrentIdx = []() -> uint32_t {
-            return indexOfCtr(AudioIO::ExtSamplerates, settings.iosettings.samplerate);
+            return indexOfCtr(ExtSamplerates, settings.iosettings.samplerate);
         };
-        intSampleRate->cbOnOptionSelected = [](int option) {
+        intSampleRate->cbOnOptionSelected = [this](int option) {
             if (option >= 0 && option < 4) {
-                settings.iosettings.internalSamplerate = AudioIO::IntSamplerates[option];
-                updateSrBs();
+                settings.iosettings.internalSamplerate = IntSamplerates[option];
+                daw->configureSampleRate();
             }
         };
         intSampleRate->fnGetCurrentVal = []() -> String {
             return StringFormat("%d", settings.iosettings.internalSamplerate);
         };
         intSampleRate->fnGetCurrentIdx = []() -> uint32_t {
-            return indexOfCtr(AudioIO::IntSamplerates, settings.iosettings.internalSamplerate);
+            return indexOfCtr(IntSamplerates, settings.iosettings.internalSamplerate);
         };
         for (int i = 0; i < 10; i++) {
             int blockSize = 1 << (4 + i);
             extBlockSize->options.push_back(StringFormat("%d", blockSize));
             intBlockSize->options.push_back(StringFormat("%d", blockSize));
         }
-        extBlockSize->cbOnOptionSelected = [](int option) {
+        extBlockSize->cbOnOptionSelected = [this](int option) {
             if (option >= 0 && option < 10) {
-                int blockSize                 = 1 << (4 + option);
+                int blockSize = 1 << (4 + option);
                 settings.iosettings.blocksize = blockSize;
-                updateSrBs();
+                daw->configureSampleRate();
             }
         };
         extBlockSize->fnGetCurrentVal = []() -> String { return StringFormat("%d", settings.iosettings.blocksize); };
-        intBlockSize->cbOnOptionSelected = [](int option) {
+        intBlockSize->cbOnOptionSelected = [this](int option) {
             if (option >= 0 && option < 10) {
-                int blockSize                         = 1 << (4 + option);
+                int blockSize = 1 << (4 + option);
                 settings.iosettings.internalBlocksize = blockSize;
-                updateSrBs();
+                daw->configureSampleRate();
             }
         };
         intBlockSize->fnGetCurrentVal = []() -> String {
@@ -679,11 +647,11 @@ public:
             if (option >= 0 && option < api->options.size()) {
                 settings.iosettings.device_api = api->options[option];
                 updateOptions();
-                updateSrBs();
+                daw->configureSampleRate();
             }
         };
         api->fnGetCurrentVal     = []() -> String { return settings.iosettings.device_api; };
-        asio->cbOnOptionSelected = [asio](int option) {
+        asio->cbOnOptionSelected = [this, asio](int option) {
             if (option >= 0 && option < asio->options.size()) {
                 auto devOption               = asio->options[option];
                 app_ioasioconfig& asioconfig = settings.iosettings.asioConfig;
@@ -696,7 +664,7 @@ public:
                     channel.channels.push_back(1);
                     asioconfig.outputs.push_back(channel);
                 }
-                updateSrBs();
+                daw->configureSampleRate();
             }
         };
         asio->fnGetCurrentVal = []() -> String {
@@ -838,11 +806,11 @@ public:
     void buttonClicked(guibase* button) override {
         if (button == this->audioEngineOn) {
             settings.startEngine = !settings.startEngine;
-            updateSrBs();
+            daw->configureSampleRate();
             return;
         }
         if ((button->id & 0x0F) == 0xF) {
-            updateSrBs();
+            daw->configureSampleRate();
             return;
         }
         if (this->parent) {
@@ -962,6 +930,7 @@ public:
 
 
 class guidialog_midi_io : public setting_dialog {
+    DawInstance* const daw;
     gui_list* deviceListInput;
     gui_list* deviceListOutput;
 
@@ -974,8 +943,9 @@ public:
         delete deviceListInput;
     }
 
-    guidialog_midi_io()
+    guidialog_midi_io(DawInstance* _daw)
         : setting_dialog(),
+          daw(_daw),
           deviceListInput(new gui_list()),
           deviceListOutput(new gui_list())
     {
@@ -1029,8 +999,7 @@ public:
     }
     void buttonClicked(guibase* button) override {
         if ((button->id & 0x0F) == 0xF) {
-            midihost::getInstance()->reopenAllConfiguredDevices(false);
-            //updateSrBs();
+            daw->getMidiHost()->reopenAllConfiguredDevices(false);
             return;
         }
         if (this->parent) {
@@ -1081,6 +1050,7 @@ public:
 };
 
 class guidialog_plugin_settings : public setting_dialog {
+    DawInstance* const daw;
     guibutton* scanNow;
     guibutton* selectFolder;
 
@@ -1092,8 +1062,9 @@ public:
         delete selectFolder;
         delete scanNow;
     }
-    guidialog_plugin_settings()
+    guidialog_plugin_settings(DawInstance* _daw)
         : setting_dialog(),
+          daw(_daw),
           scanNow(new guibutton()),
           selectFolder(new guibutton())
     {
@@ -1156,7 +1127,7 @@ public:
     }
     void buttonClicked(guibase* button) override {
         if (button->id == 0x11) {
-            auto plughost = vsthost::getInstance();
+            auto plughost = daw->getHost();
             if (!plughost->isScanning()) {
                 plughost->scanPlugins();
                 scanNow->setText("Cancel Scanning");
@@ -1193,7 +1164,7 @@ public:
 
 
     void updateOptions() {
-        auto plughost = vsthost::getInstance();
+        auto plughost = daw->getHost();
         if (!plughost->isScanning()) {
             scanNow->setText("Scan VST2 folder");
         } else {
@@ -1214,11 +1185,11 @@ struct guidialog_settings::dialog_entry {
         tabButton.setFontScale(0.7f);
     }
 };
-void guidialog_settings::init() {
+void guidialog_settings::init(DawInstance* daw) {
     ctrType = CTR_TYPE_SETTINGS;
-    addEntry(new guidialog_audio_io(), "Audio I/O");
-    addEntry(new guidialog_midi_io(), "Midi I/O");
-    addEntry(new guidialog_plugin_settings(), "Plugins");
+    addEntry(new guidialog_audio_io(daw), "Audio I/O");
+    addEntry(new guidialog_midi_io(daw), "Midi I/O");
+    addEntry(new guidialog_plugin_settings(daw), "Plugins");
     add(&btnClose);
     btnClose.id = ID_BTN_CLOSE;
     btnClose.setText("Close");
@@ -1226,10 +1197,10 @@ void guidialog_settings::init() {
     setLabel("Settings");
     setActiveEntry(0);
 }
-guidialog_settings::guidialog_settings(ivec2 _dialogSize, bool _resizeable) : guidialog_base(_dialogSize, _resizeable) {
-    init();
-}
-guidialog_settings::guidialog_settings() : guidialog_base(ivec2{640, 760}, true) { init(); }
+// guidialog_settings::guidialog_settings(ivec2 _dialogSize, bool _resizeable) : guidialog_base(_dialogSize, _resizeable) {
+//     init();
+// }
+guidialog_settings::guidialog_settings(DawInstance* daw) : guidialog_base(ivec2{640, 760}, true) { init(daw); }
 void guidialog_settings::addEntry(setting_dialog* ctr, String title) {
     auto* entry = new guidialog_settings::dialog_entry{ctr, title};
     guictr_base::add(&entry->tabButton);

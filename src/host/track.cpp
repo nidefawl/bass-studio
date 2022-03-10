@@ -634,8 +634,8 @@ namespace DAW {
     void loadDawChannelRefSnapshot(const io_configuration_snapshot_t& cfg, channel_ref_t& channel) {
         channel.type                   = static_cast<DAW::channel_type>(cfg.type);
         channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
-        channel.stage.buffer           = static_cast<stagebuffer_point>(cfg.stageEndPointType);
-        channel.externalInputType      = static_cast<AudioIO::channelcount>(cfg.externalInputType);
+        channel.stage.buffer           = static_cast<stage_bufferpoint>(cfg.stageEndPointType);
+        channel.externalInputType      = static_cast<DAW::channelcount>(cfg.externalInputType);
         channel.projectGlobalId        = cfg.projectGlobalId;
         channel.externalInputIdx       = cfg.externalInputIdx;
         channel.srcChannelOffset       = cfg.srcChannelOffset;

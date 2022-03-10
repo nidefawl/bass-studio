@@ -210,7 +210,7 @@ public:
     int32_t getPlayThreadId();
 
     void setSampleFormat(const sampleformat_t& _sampleFormat);
-    void setOutput(std::shared_ptr<AudioIO::AudioStream> stream);
+    void setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream);
     audiostream_properties_t getAudioStreamProperties() const;
     bool isStreaming();
 

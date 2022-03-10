@@ -3,6 +3,7 @@
 #include "dialog.h"
 #include "guicontainer.h"
 #include "guicontextmenu_base.h"
+#include "host/mainctrl.h"
 #include "knob.h"
 #include "math/vec.h"
 #include "str_util.h"
@@ -11,7 +12,7 @@
 class gui_list;
 class guidropdownbase;
 
-namespace DialogSettings {
+namespace DAW::DialogSettings {
     
 class setting_dialog : public guictr_base {
 public:
@@ -23,11 +24,10 @@ class guidialog_settings : public guidialog_base {
     std::vector<dialog_entry*> entries;
     dialog_entry* activeEntry = nullptr;
     guibutton btnClose;
-    void init();
+    void init(DawInstance* daw);
 
 public:
-    guidialog_settings();
-    explicit guidialog_settings(ivec2 _dialogSize, bool _resizeable = false);
+    explicit guidialog_settings(DawInstance* daw);
     ~guidialog_settings() override;
     void render(NVGcontext* vg) override;
     void layout() override;

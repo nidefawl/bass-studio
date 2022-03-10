@@ -37,6 +37,11 @@
 #include "guimeter.h"
 #include "trackctr_types.h"
 
+using namespace DAW::AudioIO;
+using DAW::bus_type;
+using DAW::stage_bufferpoint;
+using DAW::channel_ref_t;
+
 const int resizeHitY  = 8;
 const int DRAG_RESIZE = 1;
 
@@ -432,12 +437,12 @@ public:
 
 class ctxtmenu_entry_bus : public ctxtmenu_entry_track_io {
 public:
-    const DAW::bus_type busType;
+    const bus_type busType;
     const String busName;
     const audio_channel_ref_t stageEndpoint;
     bool isMenuOpen = false;
 
-    ctxtmenu_entry_bus(int32_t _id, const String& name, DAW::bus_type bustype, audio_channel_ref_t _stageEndpoint)
+    ctxtmenu_entry_bus(int32_t _id, const String& name, bus_type bustype, audio_channel_ref_t _stageEndpoint)
         : ctxtmenu_entry_track_io(_id, name),
           busType(bustype),
           busName(name),
@@ -451,7 +456,7 @@ public:
 class ctxtmenu_entry_bus_external : public ctxtmenu_entry_bus {
 public:
     ctxtmenu_entry_bus_external(int32_t _id, const String& name, audio_channel_ref_t _stageEndpoint)
-        : ctxtmenu_entry_bus(_id, name, DAW::bus_type::external, _stageEndpoint) {
+        : ctxtmenu_entry_bus(_id, name, bus_type::external, _stageEndpoint) {
     }
 };
 class ctxtmenu_entry_bus_internal : public ctxtmenu_entry_bus {
@@ -459,7 +464,7 @@ class ctxtmenu_entry_bus_internal : public ctxtmenu_entry_bus {
 
 public:
     ctxtmenu_entry_bus_internal(int32_t _id, const String& name, audio_stage_ref_t _stageBus, audio_channel_ref_t _stageEndpoint)
-        : ctxtmenu_entry_bus(_id, name, DAW::bus_type::internal, _stageEndpoint), busStage(_stageBus) {
+        : ctxtmenu_entry_bus(_id, name, bus_type::internal, _stageEndpoint), busStage(_stageBus) {
     }
     audio_stage_ref_t getStageRef() {
         return busStage;
@@ -471,20 +476,20 @@ class ctxtmenu_entry_endpoint : public ctxtmenu_entry_track_io {
 public:
     ctxtmenu_entry_endpoint(int32_t _id, const String& name) : ctxtmenu_entry_track_io(_id, name) {
     }
-    virtual DAW::channel_ref_t getEndpoint() = 0;
+    virtual channel_ref_t getEndpoint() = 0;
 };
 
 class ctxtmenu_entry_external_channel : public ctxtmenu_entry_endpoint {
 public:
-    const AudioIO::io_cfg_channel channel;
-    const stagebuffer_point isInput;
+    const io_cfg_channel channel;
+    const stage_bufferpoint isInput;
 
-    explicit ctxtmenu_entry_external_channel(int32_t _id, const AudioIO::io_cfg_channel& _channel, stagebuffer_point _isInput)
+    explicit ctxtmenu_entry_external_channel(int32_t _id, const io_cfg_channel& _channel, stage_bufferpoint _isInput)
         : ctxtmenu_entry_endpoint(_id, _channel.name),
           channel(_channel),
           isInput(_isInput) {
     }
-    explicit ctxtmenu_entry_external_channel(int32_t _id, const String& name, stagebuffer_point _isInput)
+    explicit ctxtmenu_entry_external_channel(int32_t _id, const String& name, stage_bufferpoint _isInput)
         : ctxtmenu_entry_endpoint(_id, name), channel(), isInput(_isInput) {
     }
     void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
@@ -501,10 +506,10 @@ public:
     bool isBus() override {
         return false;
     }
-    DAW::channel_ref_t getEndpoint() override {
+    channel_ref_t getEndpoint() override {
         return DAW::ChannelAudioInput(channel.idx,
                                       channel.offset,
-                                      "External " + AudioIO::getTrackNameShort(channel.type, channel.idx, isInput),
+                                      "External " + getTrackNameShort(channel.type, channel.idx, isInput),
                                       channel.type);
     }
 };
@@ -528,7 +533,7 @@ public:
         return false;
     }
 
-    DAW::channel_ref_t getEndpoint() override {
+    channel_ref_t getEndpoint() override {
         audio_stage_t* stage = vsthost::getInstance()->getAudioStage(endpoint.stageRef);
         if (stage) {
             track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
@@ -550,7 +555,7 @@ public:
         return false;
     }
 
-    DAW::channel_ref_t getEndpoint() override {
+    channel_ref_t getEndpoint() override {
         return DAW::ChannelDefaultNone();
     }
 };
@@ -567,10 +572,10 @@ public:
     {
         this->dawCtrl = _dawCtrl;
         int32_t idx = 0;
-        if (_dstStage.buffer != stagebuffer_point::INPUT) {
-            addEntry(new ctxtmenu_entry_stage_channel(idx++, "Input", audio_channel_ref_t{ _busStage, stagebuffer_point::INPUT }));
+        if (_dstStage.buffer != stage_bufferpoint::INPUT) {
+            addEntry(new ctxtmenu_entry_stage_channel(idx++, "Input", audio_channel_ref_t{ _busStage, stage_bufferpoint::INPUT }));
         } else {
-            addEntry(new ctxtmenu_entry_stage_channel(idx++, "Output", audio_channel_ref_t{ _busStage, stagebuffer_point::OUTPUT_POST }));
+            addEntry(new ctxtmenu_entry_stage_channel(idx++, "Output", audio_channel_ref_t{ _busStage, stage_bufferpoint::OUTPUT_POST }));
         }
         audio_stage_t* stage = vsthost::getInstance()->getAudioStage(stageEndpoint.stageRef);
         if (stage) {
@@ -587,13 +592,13 @@ public:
             }
         }
     }
-    guidropdown_select_bus_ctxt(DawCtrl * _dawCtrl, const AudioIO::io_cfg_tracks& cfg, audio_channel_ref_t _dstStage)
+    guidropdown_select_bus_ctxt(DawCtrl * _dawCtrl, const io_cfg_tracks& cfg, audio_channel_ref_t _dstStage)
         : busStage(AudioStageRefNULL()),
           stageEndpoint(_dstStage) 
     {
         this->dawCtrl = _dawCtrl;
         int32_t idx = 0;
-        auto& list  = stageEndpoint.buffer == stagebuffer_point::INPUT ? cfg.input : cfg.output;
+        auto& list  = stageEndpoint.buffer == stage_bufferpoint::INPUT ? cfg.input : cfg.output;
         for (auto& channel : list) {
             addEntry(new ctxtmenu_entry_external_channel(idx, channel, _dstStage.buffer));
             idx++;
@@ -606,7 +611,7 @@ public:
     {
         this->dawCtrl = _dawCtrl;
         int32_t idx      = 0;
-        String inputName = stageEndpoint.buffer == stagebuffer_point::INPUT ? "External input" : "External output";
+        String inputName = stageEndpoint.buffer == stage_bufferpoint::INPUT ? "External input" : "External output";
         addEntry(new ctxtmenu_entry_stage_channel(idx++, "None", AudioChannelRefNULL()));
         addEntry(new ctxtmenu_entry_default_channel(idx++, "Default"));
         addEntry(new ctxtmenu_entry_bus_external(idx++, inputName, stageEndpoint));
@@ -642,7 +647,7 @@ public:
         dbgassert(trImpl);
         if (!assert_expr(trImpl))
             return;
-        if (stageEndpoint.buffer == stagebuffer_point::INPUT) {
+        if (stageEndpoint.buffer == stage_bufferpoint::INPUT) {
             trImpl->inputChannel = entry->getEndpoint();
         } else {
             trImpl->outputChannel = entry->getEndpoint();
@@ -689,14 +694,14 @@ public:
 
                 //and open new one
                 guictxtmenu_base* popup = nullptr;
-                if (entry->busType == DAW::bus_type::internal) {
+                if (entry->busType == bus_type::internal) {
                     auto stageEntry = dynamic_cast<ctxtmenu_entry_bus_internal*>(entry);
                     dbgassert(stageEntry);
                     if (stageEntry) {
                         popup = new guidropdown_select_bus_ctxt(dawCtrl, stageEntry->getStageRef(), stageEndpoint);
                     }
                 }
-                if (entry->busType == DAW::bus_type::external) {
+                if (entry->busType == bus_type::external) {
                     using DAW::settings;
                     auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
                     popup     = new guidropdown_select_bus_ctxt(dawCtrl, cfg, stageEndpoint);
@@ -760,7 +765,7 @@ public:
         dbgassert(trImpl);
         if (!trImpl)
             return;
-        auto stageBufferPoint = isInput ? stagebuffer_point::INPUT : stagebuffer_point::OUTPUT_POST;
+        auto stageBufferPoint = isInput ? stage_bufferpoint::INPUT : stage_bufferpoint::OUTPUT_POST;
         auto* popup = new guidropdown_select_bus_ctxt(dawCtrl, audio_channel_ref_t{ trImpl->toRef(),  stageBufferPoint});
         popup->size             = size;
         popup->setFontSize(size.y);

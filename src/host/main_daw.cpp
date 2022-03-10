@@ -36,7 +36,7 @@ public:
 int main(int argc, char* argv[]) {
     DawAppInstService instService;
     std::vector<String> vecArgs(&argv[0], &argv[argc]);
-    vecArgs.insert(vecArgs.end(), {"--logfile", "daw.log", "--log", "INFO"});
+    vecArgs.insert(vecArgs.end(), {"--logfile", "daw.log", "--log", "TRACE"});
     int retVal = startApplication(vecArgs, instService);
     return retVal;
 }

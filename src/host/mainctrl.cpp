@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 
+#include "gui/container/guicontainer_layout_types.h"
 #include "mainctrl.h"
 #include "math/seq_math.h"
 #include "error.h"
@@ -206,7 +207,7 @@ void addLayoutEntryRelayout(BaseCtrl* ctrl, T& t, const std::shared_ptr<guictr_b
     ctrl->dragContainerRelayout(BaseCtrl::drag_ctr_event{BaseCtrl::drag_ctr_event_type::DRAG_END});
 }
 
-std::shared_ptr<guictr_layout> makeTabListCtr1() {
+std::shared_ptr<guictr_layout> makeTabListCtr1(DawCtrl* const dawCtrl) {
     auto ctr = std::make_shared<guictr_layout>();
 
     auto ctr_dbg0       = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
@@ -216,7 +217,7 @@ std::shared_ptr<guictr_layout> makeTabListCtr1() {
     auto ctr_theme      = std::shared_ptr<guictr_base>(makeCtrTheme());
     auto ctr_history    = std::shared_ptr<guictr_base>(makeCtrHistory());
     auto shaderView     = std::make_shared<gui_shaderview>();
-    auto settings       = std::make_shared<DialogSettings::guidialog_settings>();
+    auto settings       = std::make_shared<DAW::DialogSettings::guidialog_settings>(dawCtrl->getDaw());
     auto layout         = std::make_shared<guictr_layout>();
 
     ctr->setLayout(container_layout::TABBED);
@@ -244,14 +245,14 @@ std::shared_ptr<guictr_layout> makeTabListCtr1() {
     return ctr;
 }
 
-std::shared_ptr<guictr_layout> makeTabListCtr2() {
+std::shared_ptr<guictr_layout> makeTabListCtr2(DawCtrl* const dawCtrl) {
     auto ctr = std::make_shared<guictr_layout>();
 
     auto ctr_effectlib     = std::make_shared<guictr_effectlibrary>();
     auto ctr_properties    = std::shared_ptr<guictr_base>(makeCtrProperties());
     auto ctr_loadedplugins = std::shared_ptr<guictr_base>(makeGuiPluginsLoadedList());
     auto ctr_performance   = std::shared_ptr<guictr_base>(makeGuiPerformance());
-    auto settings          = std::make_shared<DialogSettings::guidialog_settings>();
+    auto settings          = std::make_shared<DAW::DialogSettings::guidialog_settings>(dawCtrl->getDaw());
 
     auto ctr_dbg0 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
     auto ctr_dbg1 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1);
@@ -374,8 +375,8 @@ public:
           ctr_nodes(_cursor, _project, dragdropclip),
           ctr_Right() {
         indexContent        = 3;
-        auto subctr_tabbed  = makeTabListCtr1();
-        auto subctr_tabbed2 = makeTabListCtr2();
+        auto subctr_tabbed  = makeTabListCtr1(_mainCtrl);
+        auto subctr_tabbed2 = makeTabListCtr2(_mainCtrl);
         splitters.push_back(std::make_shared<Splitter>(1, 0.02f));//left
         splitters.push_back(std::make_shared<Splitter>(0, 0.5f)); //center
         splitters.push_back(std::make_shared<Splitter>(1, 0.8f)); //right
@@ -542,9 +543,14 @@ public:
     void loadLayout(const dawview_layout_t* viewLayout) {
         ctr_Right->removeAllEntries();
         ctr_Left->removeAllEntries();
+        dbgassert(ctr_Left->dawCtrl);
+        DawInstance* const daw = ctr_Left->dawCtrl->getDaw();
+        dbgassert(daw);
         if (viewLayout->left && viewLayout->right) {
-            loadContainerSnapshot(ctr_Right.get(), viewLayout->right.get());
-            loadContainerSnapshot(ctr_Left.get(), viewLayout->left.get());
+            auto& fac = getContainerFactory();
+            auto context = ContainerInstanceContext{daw};
+            loadContainerSnapshot(fac, context, ctr_Right.get(), viewLayout->right.get());
+            loadContainerSnapshot(fac, context, ctr_Left.get(), viewLayout->left.get());
         }
         if (viewLayout->splitterPositions.size() == splitters.size()) {
             for (int i = 0; i < splitters.size(); i++) {
@@ -952,7 +958,8 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
                 if (getMainControl()) {
                     dbgassert(command.argInt >= 0);
                     std::shared_ptr<guictr_base> ctr;
-                    if (makeContainer(static_cast<container_type>(command.argInt), ctr)) {
+                    auto context = ContainerInstanceContext{this};
+                    if (makeContainer(context, static_cast<container_type>(command.argInt), ctr)) {
                         auto ctrLayoutLeft = getMainControl()->view->ctr_Left;
                         addLayoutEntryRelayout(getMainControl(), ctrLayoutLeft, ctr, ctr->label);
                     }
@@ -1090,7 +1097,7 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
 #endif
                 break;
             case CMD_PREFERENCES:
-                mainCtrl->openDialog(new DialogSettings::guidialog_settings());
+                mainCtrl->openDialog(new DAW::DialogSettings::guidialog_settings(this));
                 break;
             case CMD_EXIT:
                 mainCtrl->mainWindow->requestClose();
@@ -1551,7 +1558,39 @@ void DawInstance::triggerAutoSave() {
 String DawInstance::getAutoSaveFilename() {
     return getProjectAutosaveFilename(projectPath);
 }
+void DawInstance::configureSampleRate() {
+    const bool wasPlaying = isPlaying();
+    if (wasPlaying) {
+        stopPlaying();
+    }
+    setAudioThreadState(playback_state::status_stop);
+    setAudioThreadState(playback_state::status_no_process);
+    using DAW::settings;
+    {
 
+        ThreadLock lock  = getPlayThread()->lockThread();
+        vsthost* host    = getHost();
+        audiohost* ahost = getAudioHost();
+        ahost->stopAudio();
+        host->setOutput(nullptr);
+        if (settings.startEngine) {
+            host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.internalSamplerate),
+                                                 settings.iosettings.internalBlocksize, sampleformat_bits_t::FLOAT_32});
+            if (ahost->startAudio(settings.iosettings)) {
+                host->setOutput(ahost->getStreamSharedPtr(0));
+            } else {
+                //settings.startEngine = false;
+            }
+        }
+    }
+    if (settings.startEngine) {
+        if (wasPlaying) {
+            startPlaying();
+        } else {
+            setAudioThreadState(playback_state::status_stop);
+        }
+    }
+}
 void DawInstance::onTick() {
     const bool bWroteMidiData = tls.host->writeRecordedData(&project);
 

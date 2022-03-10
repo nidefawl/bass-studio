@@ -30,7 +30,7 @@
 
 extern volatile bool fatalError;
 namespace {
-class FakeAudioStream : public AudioIO::AudioStream {
+class FakeAudioStream : public DAW::AudioIO::AudioStream {
     const sampleformat_t sampleformat;
     AudioBuffer* const bufferInput;
     //AudioBuffer* const bufferOutput;
@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
         log_out("Deadline for block: %uns\n", (sampleformat.blockSize*1000000000ULL)/sampleformat.sampleRate);
         getGlobalLogger()->setLevel(Log::L_WARN);
 
-        std::shared_ptr<AudioIO::AudioStream> audiostream = std::make_shared<FakeAudioStream>(sampleformat);
+        std::shared_ptr<DAW::AudioIO::AudioStream> audiostream = std::make_shared<FakeAudioStream>(sampleformat);
 
         using DAW::settings;
         settings = loadSettings();

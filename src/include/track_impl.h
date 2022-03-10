@@ -235,11 +235,11 @@ inline channel_ref_t ChannelNone() {
 inline channel_ref_t ChannelDefaultNone() {
     return channel_ref_t{channel_type::INPUT_DEFAULT};
 }
-inline channel_ref_t ChannelAudioInput(int32_t idx, int32_t channelOffset, String name, AudioIO::channelcount type) {
+inline channel_ref_t ChannelAudioInput(int32_t idx, int32_t channelOffset, String name, channelcount type) {
     return channel_ref_t {
         channel_type::INPUT_EXTERNAL_AUDIO, 
         type,
-        { { TRACKID_INVALID_I32 }, stagebuffer_point::OUTPUT }, 
+        { { TRACKID_INVALID_I32 }, stage_bufferpoint::OUTPUT }, 
         0, 
         idx,
         channelOffset,
@@ -247,14 +247,14 @@ inline channel_ref_t ChannelAudioInput(int32_t idx, int32_t channelOffset, Strin
         std::move(name)
     };
 }
-inline channel_ref_t ChannelStage(const audio_stage_t* stage, stagebuffer_point isInput) {
+inline channel_ref_t ChannelStage(const audio_stage_t* stage, stage_bufferpoint isInput) {
     dbgassert(stage);
     String str;
     auto track = stage->getTrack();
     if (track) {
         str = track->name;
     }
-    if (isInput == stagebuffer_point::INPUT) {
+    if (isInput == stage_bufferpoint::INPUT) {
         str += " IN";
     } else {
         str += " OUT";
@@ -270,7 +270,7 @@ inline channel_ref_t ChannelStage(const audio_stage_t* stage, stagebuffer_point 
         str
     };
 }
-inline channel_ref_t ChannelAudioEffect(effectbase* effect, stagebuffer_point isInput, const channel_desc& channelDescSrc, const channel_desc& channelDescDst) {
+inline channel_ref_t ChannelAudioEffect(effectbase* effect, stage_bufferpoint isInput, const channel_desc& channelDescSrc, const channel_desc& channelDescDst) {
     dbgassert(effect);
     String str;
     auto stage = effect->getTrackLink();

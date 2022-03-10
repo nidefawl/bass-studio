@@ -429,7 +429,7 @@ public:
     void setSoloState(audio_stage_ref_t ref, bool enableSolo);
     void triggerAutoSave();
     String getAutoSaveFilename();
-
+    void configureSampleRate();
 private:
     void onDawCompanionWindowClose(DawWindowCompanion& entry);
 };

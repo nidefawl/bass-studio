@@ -26,7 +26,7 @@ namespace DAW {
             const auto outputChannel = trackImpl->outputChannel;
             if (inputChannel.getType() == channel_type::INPUT_EXTERNAL_AUDIO) {
                 int32_t idx             = inputChannel.externalInputIdx;
-                String name             = "External " + AudioIO::getTrackNameShort(inputChannel.externalInputType, idx, stagebuffer_point::INPUT);
+                String name             = "External " + AudioIO::getTrackNameShort(inputChannel.externalInputType, idx, stage_bufferpoint::INPUT);
                 trackImpl->inputChannel = ChannelAudioInput(idx, inputChannel.srcChannelOffset, name, inputChannel.externalInputType);
             } else if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE) {
                 auto* stage = host->getAudioStage(inputChannel.stage.stageRef);
@@ -35,7 +35,7 @@ namespace DAW {
                     trackImpl->inputChannel = ChannelNone();
                     numRemoved++;
                 } else {
-                    trackImpl->inputChannel = ChannelStage(stage, stagebuffer_point::OUTPUT_POST);
+                    trackImpl->inputChannel = ChannelStage(stage, stage_bufferpoint::OUTPUT_POST);
                 }
             } else {
                 dbgassert(inputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
@@ -43,7 +43,7 @@ namespace DAW {
             }
             if (outputChannel.getType() == channel_type::INPUT_EXTERNAL_AUDIO) {
                 int32_t idx = outputChannel.externalInputIdx;
-                String name = "External " + AudioIO::getTrackNameShort(outputChannel.externalInputType, idx, stagebuffer_point::OUTPUT_POST);
+                String name = "External " + AudioIO::getTrackNameShort(outputChannel.externalInputType, idx, stage_bufferpoint::OUTPUT_POST);
 
                 trackImpl->outputChannel = ChannelAudioInput(idx, outputChannel.srcChannelOffset, name, outputChannel.externalInputType);
             } else if (outputChannel.getType() == channel_type::INPUT_AUDIOSTAGE) {
@@ -53,7 +53,7 @@ namespace DAW {
                     trackImpl->outputChannel = ChannelNone();
                     numRemoved++;
                 } else {
-                    trackImpl->outputChannel = ChannelStage(stage, stagebuffer_point::INPUT);
+                    trackImpl->outputChannel = ChannelStage(stage, stage_bufferpoint::INPUT);
                 }
             } else {
                 dbgassert(outputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
@@ -407,7 +407,7 @@ namespace DAW {
                         }
                         track_node_t& trackDstCfg = getNode(map, dstStageId);
                         trackDstCfg.dependencies.push_back(stageId);
-                        trackDstCfg.pushs.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stagebuffer_point::OUTPUT_POST), AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, trackImpl->flags });
+                        trackDstCfg.pushs.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT_POST), AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, trackImpl->flags });
                         trackDstCfg.children.push_back(&trackCfg);
                         trackCfg.parents.push_back(&trackDstCfg);
                     }
@@ -439,7 +439,7 @@ namespace DAW {
                     }
                     track_node_t& trackReturnCfg = getNode(map, srcStageId);
                     trackReturnCfg.dependencies.push_back(trackImpl->stageId.stageId);
-                    trackReturnCfg.pushs.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stagebuffer_point::OUTPUT_POST), automationRef, 0, trackImpl->flags });
+                    trackReturnCfg.pushs.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT_POST), automationRef, 0, trackImpl->flags });
                     trackReturnCfg.children.push_back(&trackCfg);
                     trackCfg.parents.push_back(&trackReturnCfg);
                 }
