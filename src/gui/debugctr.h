@@ -33,6 +33,5 @@ public:
         g_debugStrings.push_back(std::move(str));
     }
     void buttonClicked(guibase* button) override;
-    //bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void onTick(AppCtrl* ctrl) override;
 };
