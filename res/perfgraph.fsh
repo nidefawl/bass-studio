@@ -9,16 +9,10 @@ out vec4 outColor;
 
 const vec2 INV_TEXSIZE = vec2(1.0/TEXTURE_WIDTH, 1.0/TEXTURE_HEIGHT);
 
-
 float aastep(float threshold, float value) {
-  #ifdef GL_OES_standard_derivatives
     float afwidth = length(vec2(dFdx(value), dFdy(value))) * 0.70710678118654757;
     return smoothstep(threshold-afwidth, threshold+afwidth, value);
-  #else
-    return step(threshold, value);
-  #endif  
 }
-
 
 #define CHANNEL u_renderInfo.y
 #define WIDTH_GRAPH u_renderInfo.z
@@ -35,7 +29,7 @@ void main(void) {
         // float sampleValB = getGraphSample(pass_texcoord + vec2(1.0/TEXTURE_WIDTH, 0.0));
         float sampleHeight = max(0.0, sampleVal - pass_texcoord.y);
         sampleHeight = smoothstep(0.0, 2.0/HEIGHT_GRAPH, sampleHeight);
-        sampleHeight = aastep(0.0f, sampleHeight);
+        sampleHeight = aastep(0.5, sampleHeight);
         float colorIntens = 0.9 + 0.3 * pow(max(0.0, sampleVal - 0.5), .125);
 
         vec4 result = vec4(u_renderColor.rgb * colorIntens * sampleHeight, 1.0);
