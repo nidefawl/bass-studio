@@ -4,11 +4,13 @@
 #include <cstdio>
 #ifdef _WIN32
 #include <Windows.h>
-
+#endif
 #ifdef __MINGW32__
 #include <excpt.h>
 #include "platform/mingw/mingw.exc.h"
 #endif
+
+
 
 using std::int64_t;
 
@@ -17,7 +19,6 @@ struct teststruct {
     int64_t data2;
     int64_t *data3;
 };
-
 
 extern "C" {
     int64_t unsafeFunction(void* userptr, int userdata) {
@@ -45,10 +46,7 @@ extern "C" {
         return EXCEPTION_CONTINUE_SEARCH;
     }
 #endif
-
-
 }
-#endif // _WIN32
 
 int64_t invoke_unsafe_and_catch(void* userptr, int userdata)
 {

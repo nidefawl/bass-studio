@@ -83,6 +83,7 @@ DEFINE_TEST(
   ../src/platform/${PROJECT_PLATFORM}/fileio.cpp
   ../src/platform/${PROJECT_PLATFORM}/platform_${PROJECT_PLATFORM}.cpp
 )
+set_source_files_properties("../src/platform/${PROJECT_PLATFORM}/platform_${PROJECT_PLATFORM}.cpp" PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 
 DEFINE_TEST(test_fileio TRUE test_fileio.cpp common/test_common.cpp)
 DEFINE_TEST(test_midifile TRUE test_midifile.cpp common/test_common.cpp)

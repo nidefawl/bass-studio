@@ -111,7 +111,9 @@ foreach (f ${CPP_ALL_FILES})
 if (f MATCHES ".*host/plugin/.*"
     OR f MATCHES ".*window/window_dbg.*" 
     OR f MATCHES ".*plugins/.*"
-    OR f MATCHES ".*main/.*")
+    OR f MATCHES ".*main/.*"
+    OR f MATCHES ".*platform/linux/.*")
+    message(STATUS "Exclude from Unity Build: ${f}")
     set_source_files_properties(${f} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
 endif ()
 
