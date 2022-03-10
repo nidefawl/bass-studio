@@ -143,7 +143,7 @@ if (NOT MSVC)
     set(SRC_FILES_NO_OPTIMIZE
             src/host/plugin/vst_plugin_dispatch.cpp
             )
-    set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-O0")
+    set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-O0;-fno-lto;-g0")
     set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 
 endif ()
@@ -228,6 +228,10 @@ include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
 if (COMPILER_SUPPORTS_MARCH_NATIVE)
     target_compile_options(${LINK_TARGET} PUBLIC -march=native)
+endif ()
+CHECK_CXX_COMPILER_FLAG("-mtune=native" COMPILER_SUPPORTS_MTUNE_NATIVE)
+if (COMPILER_SUPPORTS_MTUNE_NATIVE)
+    target_compile_options(${LINK_TARGET} PUBLIC -mtune=native)
 endif ()
 
 

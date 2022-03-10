@@ -10,8 +10,9 @@
     ".text\n" \
     );
 #define __mingw_except_begin(suffix) \
-    asm ("jmp .l_excend_" suffix "\n" \
+    asm ("nop\n" \
     ".l_endw_" suffix ":\n" \
+    "jmp .l_excend_" suffix "\n" \
     ".l_exchandler_" suffix ":\n");
 
 #define __mingw_except_end(suffix) \

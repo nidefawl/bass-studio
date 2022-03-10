@@ -101,9 +101,6 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             float guiScale      = math::max(0.05f, f * 2.0f);
             parentCtrl->m_scale = guiScale;
             parentCtrl->relayout();
-            //curVal = 0+math::max(0, math::min(255, (int32_t)math::floor(f*255)));
-            //GuiColor::initConstants(curVal);
-            //parentCtrl->getTheme()->initTheme();
         };
         knob->fnGetValue = [this](void) {
             return math::max(0.05f, math::min(1.0f, parentCtrl->m_scale * 0.5f));
@@ -318,8 +315,6 @@ void gui_ctr_debug::render(NVGcontext* vg) {
                     maxThread = math::max(maxThread, static_cast<int32_t>(entry.threadIdx));
                 }
                 if (pass == 0) {
-                    //uint64_t stageColorIdx = stageIdInt*1047299;
-                    //auto graphColor = colorOnlyPalette[(stageColorIdx>>3)%(colorOnlyPaletteLen)];
                     auto graphColor = colorOnlyPalette[(pass * 4 + 2) % colorOnlyPaletteLen];
                     nvgStrokeColor(vg, rgbToNvg(graphColor));
                     nvgStrokeWidth(vg, 2.0f);
