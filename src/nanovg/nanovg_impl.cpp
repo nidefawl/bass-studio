@@ -7,13 +7,13 @@
 #include <algorithm>
 #include <glm/gtc/type_ptr.hpp>
 
-hires_timer_t timer;
+hires_timer_t globalNanoVgTimer;
 extern "C" {
 void resetShaderTimeOffset() {
-	timer.reset();
+	globalNanoVgTimer.reset();
 }
 float glnvg__getTimeMillisf() {
-	return (float) timer.getTimeDouble() * 1000.0;
+	return (float) globalNanoVgTimer.getTimeDouble() * 1000.0;
 }
 }
 
