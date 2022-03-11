@@ -26,6 +26,22 @@ int main(int argc, char** argv) {
         AudioBlock block(32, 512, false);
         AudioBlock block1024(32, 1024, false);
         // getGlobalLogger()->setLevel(Log::L_WARN);
+        benchmark::RegisterBenchmark("running_sum.update", [&block](benchmark::State& state) {
+            block.fillNoise(4123123);
+            log_printf("block.samples %u\n", block.samples);
+            DAW::meter_runningsum rs;
+            for (auto _ : state) {
+                rs.update(block.buf[0], block.samples/16, 1.0f);
+            };
+        });
+        benchmark::RegisterBenchmark("running_sum.update512Fixed", [&block](benchmark::State& state) {
+            block.fillNoise(4123123);
+            log_printf("block.samples %u\n", block.samples);
+            DAW::meter_runningsum rs;
+            for (auto _ : state) {
+                rs.update512Fixed(block.buf[0]);
+            };
+        });
 
         struct BenchmarkMeter {
             const char* benchmarkName;
