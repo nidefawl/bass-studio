@@ -6,11 +6,7 @@
 
 
 void handleStdException(std::exception& e);
-#define EXC_TRY try {
-#define EXC_CATCH \
-    } catch (std::exception& e) {                                   \
-        handleStdException(e);                                      \
-    }
+
 class DropTargetImpl : public IDropTarget {
 public:
     DropTargetImpl(HWND hwnd, DropTargetListener* dropTargetListener);
@@ -73,7 +69,7 @@ ULONG __stdcall DropTargetImpl::Release() {
 ivec2 toScreenSpace(HWND hwnd, POINTL pt) {
     POINT pos = { 0, 0 };
     ClientToScreen(hwnd, &pos);
-    return {pt.x - pos.x, pt.y - pos.y};
+    return { pt.x - pos.x, pt.y - pos.y };
 }
 int toInternalKeyboardMods(DWORD grfKeyState) {
     int mods = 0;
@@ -88,40 +84,44 @@ int toInternalKeyboardMods(DWORD grfKeyState) {
 
 HRESULT __stdcall DropTargetImpl::DragEnter(IDataObject* pDataObject, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {
     // does the dataobject contain data we want?
-    EXC_TRY
-    m_validDropType = IsOfType(pDataObject, CF_HDROP);
-    if (m_validDropType) {
-        *pdwEffect = (*pdwEffect) & DROPEFFECT_COPY;
-        if (((*pdwEffect) & DROPEFFECT_COPY) != 0) {
-            std::vector<String> filePaths;
-            getFilePaths(pDataObject, filePaths);
-            bool result = this->m_pDropTargetListener->filesDropBegin(filePaths, toScreenSpace(m_hwnd, pt), toInternalKeyboardMods(grfKeyState));
-            if (!result) {
-                *pdwEffect = DROPEFFECT_NONE;
+    try {
+        m_validDropType = IsOfType(pDataObject, CF_HDROP);
+        if (m_validDropType) {
+            *pdwEffect = (*pdwEffect) & DROPEFFECT_COPY;
+            if (((*pdwEffect) & DROPEFFECT_COPY) != 0) {
+                std::vector<String> filePaths;
+                getFilePaths(pDataObject, filePaths);
+                bool result = this->m_pDropTargetListener->filesDropBegin(filePaths, toScreenSpace(m_hwnd, pt), toInternalKeyboardMods(grfKeyState));
+                if (!result) {
+                    *pdwEffect = DROPEFFECT_NONE;
+                }
             }
+        } else {
+            *pdwEffect = DROPEFFECT_NONE;
         }
-    } else {
-        *pdwEffect = DROPEFFECT_NONE;
+
+    } catch (std::exception& e) {
+        handleStdException(e);
     }
-    EXC_CATCH
     return S_OK;
 }
 HRESULT __stdcall DropTargetImpl::DragOver(DWORD grfKeyState, POINTL pt,
                                            DWORD* pdwEffect) {
-    EXC_TRY
-    if (m_validDropType) {
-        *pdwEffect = (*pdwEffect) & DROPEFFECT_COPY;
-        if (((*pdwEffect) & DROPEFFECT_COPY) != 0) {
-            bool result = this->m_pDropTargetListener->filesDropMove(toScreenSpace(m_hwnd, pt), toInternalKeyboardMods(grfKeyState));
-            if (!result) {
-                *pdwEffect = DROPEFFECT_NONE;
+    try {
+        if (m_validDropType) {
+            *pdwEffect = (*pdwEffect) & DROPEFFECT_COPY;
+            if (((*pdwEffect) & DROPEFFECT_COPY) != 0) {
+                bool result = this->m_pDropTargetListener->filesDropMove(toScreenSpace(m_hwnd, pt), toInternalKeyboardMods(grfKeyState));
+                if (!result) {
+                    *pdwEffect = DROPEFFECT_NONE;
+                }
             }
+        } else {
+            *pdwEffect = DROPEFFECT_NONE;
         }
-    } else {
-        *pdwEffect = DROPEFFECT_NONE;
+    } catch (std::exception& e) {
+        handleStdException(e);
     }
-
-    EXC_CATCH
     return S_OK;
 }
 
@@ -132,22 +132,25 @@ HRESULT __stdcall DropTargetImpl::DragLeave() {
 HRESULT __stdcall DropTargetImpl::Drop(IDataObject* pDataObject, DWORD grfKeyState,
                                        POINTL pt, DWORD* pdwEffect) {
 
-    EXC_TRY
-    if (m_validDropType) {
-        *pdwEffect = (*pdwEffect) & DROPEFFECT_COPY;
-        if (((*pdwEffect) & DROPEFFECT_COPY) != 0) {
-            std::vector<String> filePaths;
-            getFilePaths(pDataObject, filePaths);
+    try {
+        if (m_validDropType) {
+            *pdwEffect = (*pdwEffect) & DROPEFFECT_COPY;
+            if (((*pdwEffect) & DROPEFFECT_COPY) != 0) {
+                std::vector<String> filePaths;
+                getFilePaths(pDataObject, filePaths);
 
-            bool result = this->m_pDropTargetListener->filesDropFinal(filePaths, toScreenSpace(m_hwnd, pt), toInternalKeyboardMods(grfKeyState));
-            if (!result) {
-                *pdwEffect = DROPEFFECT_NONE;
+                bool result = this->m_pDropTargetListener->filesDropFinal(filePaths, toScreenSpace(m_hwnd, pt), toInternalKeyboardMods(grfKeyState));
+                if (!result) {
+                    *pdwEffect = DROPEFFECT_NONE;
+                }
             }
+        } else {
+            *pdwEffect = DROPEFFECT_NONE;
         }
-    } else {
-        *pdwEffect = DROPEFFECT_NONE;
+
+    } catch (std::exception& e) {
+        handleStdException(e);
     }
-    EXC_CATCH
 
     return S_OK;
 }
@@ -165,16 +168,15 @@ void DropTargetImpl::getFilePaths(IDataObject* pDataObject, std::vector<String>&
             // we asked for the data as a HGLOBAL, so access it appropriately
             PVOID data = GlobalLock(stgmed.hGlobal);
 
-            HDROP& hdrop = (HDROP&) data;
+            auto hdrop = static_cast<HDROP>(data);
 
-            UINT uNumFiles = DragQueryFile(hdrop, (UINT)-1, nullptr, 0U);
+            UINT uNumFiles = DragQueryFile(hdrop, (UINT) -1, nullptr, 0U);
 
             for (UINT uFile = 0; uFile < uNumFiles; uFile++) {
                 // Get the next filename from the HDROP info.
-                TCHAR buf[MAX_PATH];
-                LPSTR szNextFile = buf;
+                TCHAR szNextFile[MAX_PATH]{};
                 if (DragQueryFile(hdrop, uFile, szNextFile, MAX_PATH) > 0) {
-                    files.push_back(szNextFile);
+                    files.emplace_back(szNextFile);
                 }
             }
 
