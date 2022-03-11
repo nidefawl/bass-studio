@@ -22,6 +22,7 @@
 #include "util/testing_environment.h"
 
 #include <memory>
+#include <functional>
 
 #ifdef _WIN32
 #include "platform/win/windowsize.h"

@@ -1,14 +1,12 @@
 #pragma once
-#include <cmath>
 #include <cstdint>
-#include <iterator>
 #include "assert_dbg.h"
 #include "math/seq_math.h"
 #include "audioblock.h"
 #include "seq_util.h"
 #include "seq_time.h"
 
-namespace DAW {
+namespace DAW::MeterOld {
 
 //TODO: make samplerate dependent
 struct meter_lvls {
@@ -19,63 +17,33 @@ struct meter_lvls {
 
 
 template<uint32_t N>
-struct runningsum {
-    alignas(1024) float rsBuffer[N]{};
-    double runningSum = 0;
-    int rsIdx         = 0;
-    float fMax        = 0;
-    float fPeak       = 0;
-    float fLvl        = 0;
+class runningsum {
+public:
+    float rsBuffer[N]       = { 0 };
+    double runningSum       = 0;
+    int rsIdx               = 0;
+    float fMax              = 0;
+    float fPeak             = 0;
+    float fLvl              = 0;
     float fPeakFalloffDelay = 0;
-    inline void update(const float* fBuf, const uint16_t samples16, const float fGain) {
+    void update(const float* fBuf, uint32_t samples, float fGain) {
+        //TODO: find out if this could be done more efficiently. Think about SIMD or look at the assembly
+        uint32_t i;
         float fMaxBlock = 0.0f;
-        auto it = std::begin(rsBuffer) + rsIdx;
-        double newSum   = runningSum;
-#ifndef _MSC_VER
-#pragma unroll
-#endif
-        for (uint32_t i = 0; i < samples16 * 16; i++) {
-            float f = *fBuf++;
+        for (i = 0; i < samples; i++) {
+            float f = *fBuf;
+            f *= fGain;
             f = f * f;
             fMaxBlock = math::max(fMaxBlock, f);
-            newSum += f - *it;
-            *it++ = f;
-            if (it == std::end(rsBuffer)) BRANCH_UNLIKELY {
-                it = std::begin(rsBuffer);
+            runningSum += f;
+            runningSum -= rsBuffer[rsIdx];
+            rsBuffer[rsIdx] = f;
+            rsIdx++;
+            if (rsIdx >= (int32_t) N) {
+                rsIdx = 0;
             }
+            fBuf++;
         }
-        rsIdx = (rsIdx + samples16 * 16) % N;
-        runningSum = newSum;
-        if (fMaxBlock > math::F_MIN) {
-            fMax = math::max(sqrtf(fMaxBlock), fMax);
-        }
-        if (fMax > fPeak) {
-            fPeak = fMax;
-            fPeakFalloffDelay = 2.0f;
-        }
-        fLvl = runningSum > math::F_MIN ? (float) sqrt(runningSum / (double) N) : 0.0f;
-    }
-
-    inline void update512Fixed(const float* fBuf) {
-        float fMaxBlock = 0.0f;
-        double newSum = runningSum;
-        auto it = std::begin(rsBuffer) + rsIdx;
-
-#ifndef _MSC_VER
-#pragma unroll
-#endif
-        for (uint32_t i = 0; i < 512; i++) {
-            float f = *fBuf++;
-            f = f * f;
-            fMaxBlock = math::max(fMaxBlock, f);
-            newSum += f - *it;
-            *it++ = f;
-            if (it == std::end(rsBuffer)) BRANCH_UNLIKELY {
-                it = std::begin(rsBuffer);
-            }
-        }
-        rsIdx = (rsIdx + 512) % N;
-        runningSum = newSum;
         if (fMaxBlock > math::F_MIN) {
             fMax = math::max(sqrtf(fMaxBlock), fMax);
         }
@@ -114,7 +82,7 @@ struct runningsum {
 };
 
 using meter_runningsum = runningsum<16384>;
-// static_assert(sizeof(meter_runningsum)>0, "sizeof(meter_runningsum)");
+
 class rmsmeter {
     bool isDefaultCstr=true;
     int count = 0;
@@ -174,13 +142,8 @@ public:
     }
     
     void update(const AudioBlock* block, float fTrackGain) {
-        if (block->samples == 512 && channels.size() == 2 && fTrackGain == 1.0f) {
-            channels[0]->update512Fixed(block->buf[0]);
-            channels[1]->update512Fixed(block->buf[1]);
-        } else {
-            for (size_t i = 0; i < math::min<size_t>(block->channels, channels.size()); i++) {
-                channels[i]->update(block->buf[i], block->samples/16, fTrackGain);
-            }
+        for (size_t i = 0; i < math::min<size_t>(block->channels, channels.size()); i++) {
+            channels[i]->update(block->buf[i], block->samples, fTrackGain);
         }
     }
     rmsmeter getSubChannelMeter(uint8_t channelOffset, uint8_t channelCount) {
