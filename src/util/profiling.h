@@ -66,6 +66,7 @@ struct alignas(64) prof_stats_applicaton_t {
     int64_t tickTimerDelay       = 0;
     int64_t tickTimerDuration    = 0;
     int64_t timeRefreshAll       = 0;
+    int64_t timeSwapBuffersAll   = 0;
     int64_t numMessagesProcessed = 0;
     int64_t numMessagesWmPaint   = 0;
     int64_t numRedrawReq         = 0;

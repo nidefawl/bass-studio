@@ -71,7 +71,8 @@ namespace ProfilingImpl {
     template<>
     void profilingGetData(profiling_data_t<prof_stats_applicaton_t>* out) {
         static const profiling_channel_descs channels = { {
-            { "Render All duration", "us", offsetof(prof_stats_applicaton_t, timeRefreshAll) },
+            { "Render All Windows", "us", offsetof(prof_stats_applicaton_t, timeRefreshAll) },
+            { "SwapBuffersAll", "us", offsetof(prof_stats_applicaton_t, timeSwapBuffersAll) },
             { "TickTimer delay", "us", offsetof(prof_stats_applicaton_t, tickTimerDelay) },
             { "TickTimer duration", "us", offsetof(prof_stats_applicaton_t, tickTimerDuration) },
             { "#window msgs", "msgs", offsetof(prof_stats_applicaton_t, numMessagesProcessed) },

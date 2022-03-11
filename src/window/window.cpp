@@ -268,7 +268,7 @@ private:
         glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glBindVertexArray(0);
         glActiveTexture(GL_TEXTURE0);
-        glfwSwapInterval(1);
+        glfwSwapInterval(-1);
         int flags = NVG_ANTIALIAS;
 #ifndef NDEBUG
         flags |= NVG_DEBUG;
@@ -366,10 +366,10 @@ public:
 #endif
     }
 
-    virtual void onRefresh() {
+    virtual void renderWindowAndChildren() {
         PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
         for (appwindow* ow : this->children) {
-            ow->onRefresh();
+            ow->renderWindowAndChildren();
         }
         if (valid && bIsVisible) {
             auto tmNowMicros   = getTimeMicros();
@@ -379,8 +379,18 @@ public:
                 return;
             }
             skipFrames = 0;
-            render();
-            endFrame();
+            renderWindow();
+            updateStats();
+        }
+    }
+
+    virtual void swapBufferAndChildren() {
+        PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
+        for (appwindow* ow : this->children) {
+            ow->swapBufferAndChildren();
+        }
+        if (valid && bIsVisible) {
+            swapBuffers();
         }
     }
 
@@ -389,8 +399,7 @@ public:
         // invalidateWindowContents(glfw);
     }
 
-    void endFrame() {
-
+    void updateStats() {
         auto tmNowMicros = getTimeMicros();
         auto tmNow = tmNowMicros / 1000LL;
         if (frameCountFPS > 0 && tmNow - tmLastFps >= 1000) {
@@ -431,7 +440,8 @@ public:
     }
 
     /* glfw callbacks */
-    virtual void render() = 0;
+    virtual void renderWindow() = 0;
+    virtual void swapBuffers() = 0;
     virtual void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) = 0;
     virtual void onMouseMoved(ivec2 deltapos) {
     }
@@ -659,8 +669,14 @@ public:
     }
 
     void postRender() override {
+        swapBuffers();
+    }
+
+    void swapBuffers() override {
+        timerProfileWindow.reset();
         glfwMakeContextCurrent(glfw);
         glfwSwapBuffers(glfw);
+        renderStatsWindow.timeSwapBuffers = timerProfileWindow.getTimeReset();
     }
 
     void preRender() override {
@@ -752,22 +768,23 @@ public:
         }
     }
 
-    void onRefresh() override {
+    void renderWindowAndChildren() override {
         if (cursorIcon != ctrl->cursorIcon) {
             glfwSetCursor(glfw, MouseCursors::cursors[ctrl->cursorIcon]);
             cursorIcon = ctrl->cursorIcon;
         }
-        appwindow::onRefresh();
-
         for (auto& w : overlayWindows)
-            w->onRefresh();
+            w->renderWindowAndChildren();
+        appwindow::renderWindowAndChildren();
     }
 
-    void render() override {
-        renderMain();
+    void swapBufferAndChildren() override {
+        for (auto& w : overlayWindows)
+            w->swapBufferAndChildren();
+        appwindow::swapBufferAndChildren();
     }
 
-    void renderMain() {
+    void renderWindow() override {
         timerProfileWindow.reset();
         glfwMakeContextCurrent(glfw);
 
@@ -789,8 +806,6 @@ public:
                 ctrl->render(this->nanovgCtxt, 0, 0, winwidth, winheight, pxratio);
             }
             renderStatsWindow.timeRender = timerProfileWindow.getTimeReset();
-            glfwSwapBuffers(glfw);
-            renderStatsWindow.timeSwapBuffers = timerProfileWindow.getTimeReset();
 #if BUILD_VSTHOST
             if (bEnableWindowProfiling) {
                 // NVGGLRenderStats nvglRenderStats;
@@ -989,7 +1004,8 @@ public:
     }
 
     void updateWindowFromDlg() override {
-        onRefresh();
+        renderWindowAndChildren();
+        swapBufferAndChildren();
     }
 
     void fireMouseMoved() override {
@@ -1068,7 +1084,7 @@ class appwindow_dialog : public appwindow, public window_dialog {
     std::function<int(NVGcontext*, int, int, float)> drawFn;
     std::function<void(NVGcontext*)> initCallback;
     const bool disablesParent = false;
-
+    int frameRendered = 0;
 public:
     explicit appwindow_dialog(appwindow* _parent) : appwindow(_parent) {
     }
@@ -1114,7 +1130,7 @@ public:
         glfw = nullptr;
     }
 
-    void render() override {
+    void renderWindow() override {
         glfwMakeContextCurrent(glfw);
         if (initCallback) {
             initCallback(nanovgCtxt);
@@ -1128,11 +1144,16 @@ public:
             glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
             float pxratio = fbwidth / (float) winwidth;
             glViewport(0, 0, fbwidth, fbheight);
-            int frameRendered = drawFn(nanovgCtxt, winwidth, winheight, pxratio);
-            if (frameRendered) {
-                glfwSwapBuffers(glfw);
-            }
+            frameRendered = drawFn(nanovgCtxt, winwidth, winheight, pxratio);
         }
+    }
+
+    void swapBuffers() override {
+        if (frameRendered) {
+            glfwMakeContextCurrent(glfw);
+            glfwSwapBuffers(glfw);
+        }
+        frameRendered = 0;
     }
 
     void onWindowCloseRequest() override {
@@ -1229,7 +1250,8 @@ public:
     }
 
     void updateWindowFromDlg() override {
-        onRefresh();
+        renderWindowAndChildren();
+        swapBufferAndChildren();
     }
 
     void fireMouseMoved() override {
@@ -1506,7 +1528,7 @@ static void glfw_cb_charinput(GLFWwindow* w, unsigned int codepoint, int mods) {
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
         if (wu && wu->isValid())
-            wu->onRefresh();
+            wu->renderWindowAndChildren();
     } catch (std::exception& e) {
         handleStdException(e);
     }
@@ -1867,8 +1889,10 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                 frameNumberStats++;
             }
             hiresTimer1.reset();
-            mainWindow->onRefresh();
+            mainWindow->renderWindowAndChildren();
             appStats.timeRefreshAll = hiresTimer1.getTimeReset();
+            mainWindow->swapBufferAndChildren();
+            appStats.timeSwapBuffersAll = hiresTimer1.getTimeReset();
 #ifdef _WIN32
             if (debugMessageLoop) {
                 if (tmLRNow - tmLRDbgPrint >= 1000) {

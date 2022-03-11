@@ -300,11 +300,11 @@ public:
         if (!numUpdated) {
             return 0;
         }
-        if (tmMillis - tmLastReload >= 1600) {
-            if (init()) {
-               return 0;
-            }
-        }
+        // if (tmMillis - tmLastReload >= 1600) {
+        //     if (init()) {
+        //        return 0;
+        //     }
+        // }
         auto const pipeline = pipePerfShader.get();
         if (!pipeline->isValid)
             return 0;
