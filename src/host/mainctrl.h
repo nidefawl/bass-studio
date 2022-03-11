@@ -315,8 +315,7 @@ public:
         return &playThread;
     }
     ThreadLock lockPlayThread() {
-        ThreadLock t = playThread.lockThread();
-        return std::move(t);//CANNOT RELY ON RVO
+        return playThread.lockThread();
     }
     vsthost* getHost() {
         return tls.host;
@@ -488,8 +487,7 @@ public:
         return &daw.workerThread;
     }
     ThreadLock lockPlayThread() {
-        ThreadLock t = daw.playThread.lockThread();
-        return std::move(t);//CANNOT RELY ON RVO
+        return daw.playThread.lockThread();
     }
     waveformrender* getWaveformRenderer() {
         return this->waveformRenderer;
