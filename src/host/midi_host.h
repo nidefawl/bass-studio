@@ -5,6 +5,7 @@
 #include "seq_time.h"
 #include "str_util.h"
 #include <cstdint>
+#include <vector>
 
 class project_controller_t;
 typedef void PmStream;
