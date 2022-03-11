@@ -136,9 +136,6 @@ namespace DAW {
 
         track_vector tracksVisited;
         std::shared_ptr<processing_graph_t> shrdPtrProcGraph = std::make_shared<processing_graph_t>();
-        //std::shared_ptr<processing_graph_t> shrdPtrProcGraph(new processing_graph_t(), [](processing_graph_t *gr) {
-        //  log_lf(Log::L_DEBUG, "free proc_graph %08X\n", reinterpret_cast<uint64_t>(gr));
-        //});
 
         shrdPtrProcGraph->nodes.reserve(dependencyGraph->nodes.size());
         shrdPtrProcGraph->trackGraph = dependencyGraph;
@@ -147,12 +144,7 @@ namespace DAW {
             dbgassert(audioStage);
             track_t* const track = audioStage->getTrack();
             dbgassert(track);
-            auto procTrackNode = new processing_track_node_t();//std::make_unique<processing_track_node_t>();
-
-            //procTrackNode->children = trackNode->children;
-            //procTrackNode->parents = trackNode->parents;
-
-
+            auto const procTrackNode = new processing_track_node_t();
             procTrackNode->type            = trackNode->type;
             procTrackNode->pushs           = trackNode->pushs;
             procTrackNode->pulls           = trackNode->pulls;
