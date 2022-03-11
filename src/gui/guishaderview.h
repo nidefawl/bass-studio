@@ -2,7 +2,7 @@
 #include "gui/gui.h"
 #include "gui/guicontainer.h"
 
-struct gui_shaderview_impl_t;
+class gui_shaderview_impl_t;
 class gui_shaderview : public guictr_base {
     gui_shaderview_impl_t* impl = nullptr;
 

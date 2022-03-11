@@ -81,10 +81,85 @@ struct testshader : gl_shader_pipeline {
         return 0;
     };
 };
-struct gui_shaderview_impl_t {
+class gui_shaderview_impl_t {
     NVGLUframebuffer* fb = nullptr;
     std::shared_ptr<testshader> pipeTestShader;
     int64_t initTime = 0;
+    std::vector<float> texData;
+    bool hasTextureUpdate = false;
+    int texWidth = 0;
+
+public:
+    void prerender(NVGcontext* vg, ivec2 size) {
+        if (!pipeTestShader) {
+            pipeTestShader = std::make_shared<testshader>();
+            struct shader_src_parser_noise {
+                void preprocessSources(std::vector<glshader_src>& srcList) {
+                }
+            };
+            shader_src_parser_noise parser;
+            pipeTestShader->load(&parser);
+        }
+        if (!pipeTestShader->isValid)
+            return;
+        if (hasTextureUpdate) {
+            hasTextureUpdate = false;
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, pipeTestShader->texture);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, texWidth, texWidth, 0, GL_RED, GL_FLOAT, texData.data());
+        }
+        int w    = math::min(size.x, size.y);
+        int h    = w;
+        fb = nvgluCreateTempFramebuffer(vg, w, h, NVG_IMAGE_PREMULTIPLIED);
+        nvgluBindFramebuffer(fb);
+        glViewport(0, 0, w, h);
+        glClearColor(0, 0, 0, 0);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+        auto pipeline = pipeTestShader.get();
+        auto& vbo     = pipeline->vbo;
+        glUseProgram(pipeline->program);
+        mat4x4 matProj = glm::ortho(0.f, (float) w, (float) h, 0.f, 1.0f, -1.0f);
+        pipeline->setUniforms(w, h, getTimeMillisF());
+        glUniformMatrix4fv(pipeline->u_mvp, 1, GL_FALSE, value_ptr(matProj));
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, pipeline->texture);
+
+        glBindVertexArray(vbo.vaoId);
+        if (pipeline->lastBufSize.x != w || pipeline->lastBufSize.y != h) {
+            pipeline->lastBufSize = { w, h };
+            tess2d tess(0);
+            tess2d::fullscreenQuad(tess, w, h);
+            tess2d::uploadVBO(tess, vbo);
+        }
+        glDrawElements(GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, nullptr);
+
+        nvgluBindFramebuffer(nullptr);
+    }
+    void onTick(ivec2 size) {
+        if (!pipeTestShader || !pipeTestShader->isValid) {
+            return;
+        }
+        auto now = getTimeMillis();
+        if (now - initTime > 1000) {
+            initTime = now;
+            seq_rand rnd;
+            rnd.rng_seed(now);
+            const auto texW = math::min(size.x, size.y);
+            texData.resize(texW * texW);
+            for (int x = 0; x < texW; x++) {
+                for (int y = 0; y < texW; y++) {
+                    int32_t r = rnd.rng_rand();
+                    texData[y * texW + x] = (r & 0xFFFF) / (float) 0xFFFF;
+                }
+            }
+            texWidth = texW;
+            hasTextureUpdate = true;
+        }
+    }
+    int getNvgImageId() {
+        return fb ? fb->image : -1;
+    }
 };
 gui_shaderview::gui_shaderview() : guictr_base(), impl(new gui_shaderview_impl_t) {
     ctrType = CTR_TYPE_SHADERVIEW;
@@ -94,73 +169,17 @@ gui_shaderview::~gui_shaderview() {
     delete impl;
 }
 void gui_shaderview::prerender(NVGcontext* vg) {
-    if (!impl->pipeTestShader) {
-        impl->pipeTestShader = std::make_shared<testshader>();
-        struct shader_src_parser_noise {
-            void preprocessSources(std::vector<glshader_src>& srcList) {
-            }
-        };
-        shader_src_parser_noise parser;
-        impl->pipeTestShader->load(&parser);
-    }
-    if (!impl->pipeTestShader->isValid)
-        return;
-    int w    = math::min(size.x, size.y);
-    int h    = w;
-    impl->fb = nvgluCreateTempFramebuffer(vg, w, h, NVG_IMAGE_PREMULTIPLIED);
-    nvgluBindFramebuffer(impl->fb);
-    glViewport(0, 0, w, h);
-    glClearColor(0, 0, 0, 0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-    auto pipeline = impl->pipeTestShader.get();
-    auto& vbo     = pipeline->vbo;
-    glUseProgram(pipeline->program);
-    mat4x4 matProj = glm::ortho(0.f, (float) w, (float) h, 0.f, 1.0f, -1.0f);
-    pipeline->setUniforms(w, h, getTimeMillisF());
-    glUniformMatrix4fv(pipeline->u_mvp, 1, GL_FALSE, value_ptr(matProj));
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, pipeline->texture);
-
-    glBindVertexArray(vbo.vaoId);
-    if (pipeline->lastBufSize.x != w || pipeline->lastBufSize.y != h) {
-        pipeline->lastBufSize = { w, h };
-        tess2d tess(0);
-        tess2d::fullscreenQuad(tess, w, h);
-        tess2d::uploadVBO(tess, vbo);
-    }
-    glDrawElements(GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, nullptr);
-
-    nvgluBindFramebuffer(nullptr);
+    impl->prerender(vg, size);
 }
 void gui_shaderview::onTick(AppCtrl* appctrl) {
-    if (!impl->pipeTestShader || !impl->pipeTestShader->isValid) {
-        return;
-    }
-    auto now = getTimeMillis();
-    if (now - impl->initTime > 1000) {
-        impl->initTime = now;
-        seq_rand rnd;
-        rnd.rng_seed(now);
-        const int texW = math::min(size.x, size.y);
-        std::vector<float> texData;
-        texData.resize(texW * texW);
-        for (int x = 0; x < texW; x++) {
-            for (int y = 0; y < texW; y++) {
-                int32_t r = rnd.rng_rand();
-                texData[y * texW + x] = (r & 0xFFFF) / (float) 0xFFFF;
-            }
-        }
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, impl->pipeTestShader->texture);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_R32F, texW, texW, 0, GL_RED, GL_FLOAT, texData.data());
-    }
+    impl->onTick(size);
 }
 void gui_shaderview::render(NVGcontext* vg) {
     if (isBackgroundRendered()) {
         renderWidgetBorder(vg, getStateFlags());
     }
-    if (!impl->fb) {
+    int nvgImageId = impl->getNvgImageId();
+    if (nvgImageId <= 0) {
         return;
     }
     if (!setScissorTransform(vg)) {
@@ -168,7 +187,7 @@ void gui_shaderview::render(NVGcontext* vg) {
     }
     int w = math::min(size.x, size.y);
     int h = w;
-    NVGpaint img = nvgImagePattern(vg, 0, 0, w, h, 0, impl->fb->image, 1);
+    NVGpaint img = nvgImagePattern(vg, 0, 0, w, h, 0, nvgImageId, 1);
     nvgTranslate(vg, size.x - w, 0);
     nvgBeginPath(vg);
     nvgRect(vg, 0, 0, w, h);
