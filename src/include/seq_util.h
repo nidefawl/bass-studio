@@ -4,6 +4,11 @@
 #include "assert_dbg.h"
 
 #define STL_CONTAINS(x, y) (std::find(x.cbegin(), x.cend(), y) != x.cend())
+#if !defined(_MSC_VER) || __cplusplus > 202002L
+#define BRANCH_UNLIKELY [[unlikely]]
+#else
+#define BRANCH_UNLIKELY
+#endif
 
 template<typename Container>
 Container&& sort_unique_erase(Container&& c) {

@@ -14,7 +14,7 @@ enum alloc_type {
     external_array
 };
 struct DelayLine;
-struct AudioBlock {
+struct alignas(64) AudioBlock {
     enum mix_op : int32_t {
         MIX,
         ADD
@@ -26,9 +26,9 @@ struct AudioBlock {
     static void BeginTrace();
     static void EndTrace();
 
+    float** buf{};
     uint32_t channels{};
     uint32_t samples{};
-    float** buf{};
     alloc_type allocType = internal;
     bool debug           = false;
 
@@ -56,7 +56,7 @@ struct AudioBlock {
     }
 
     explicit AudioBlock(uint32_t _channels, uint32_t _samples, bool _bIsDebug = false)
-        : channels(_channels), samples(0), buf(new float*[_channels]), allocType(alloc_type::internal), debug(_bIsDebug) {
+        : buf(new float*[_channels]), channels(_channels), samples(0), allocType(alloc_type::internal), debug(_bIsDebug) {
         instanceCount++;
         instanceCstrd++;
         for (uint32_t i = 0; i < _channels; i++) {
@@ -66,13 +66,13 @@ struct AudioBlock {
     }
 
     explicit AudioBlock(float** buf, uint32_t _channels, uint32_t _samples)
-        : channels(_channels), samples(_samples), buf(buf), allocType(alloc_type::external_array) {
+        : buf(buf), channels(_channels), samples(_samples), allocType(alloc_type::external_array) {
         instanceCount++;
         instanceCstrd++;
     }
 
     explicit AudioBlock(const std::vector<float*>& vecChannels, uint32_t _samples)
-        : channels(static_cast<uint32_t>(vecChannels.size())), samples(_samples), buf(new float*[vecChannels.size()]), allocType(alloc_type::external_channels_only) {
+        : buf(new float*[vecChannels.size()]), channels(static_cast<uint32_t>(vecChannels.size())), samples(_samples), allocType(alloc_type::external_channels_only) {
         instanceCount++;
         instanceCstrd++;
         memcpy(buf, vecChannels.data(), vecChannels.size() * sizeof(decltype(vecChannels[0])));
@@ -83,7 +83,7 @@ struct AudioBlock {
     }
 
     explicit AudioBlock(const AudioBlock& src, const uint32_t channelOffset, const uint32_t numChannels, const uint32_t sampleOffset, const uint32_t numSamples)
-        : channels(numChannels), samples(numSamples), buf(new float*[numChannels]), allocType(alloc_type::external_channels_only) {
+        : buf(new float*[numChannels]), channels(numChannels), samples(numSamples), allocType(alloc_type::external_channels_only) {
         instanceCount++;
         instanceCstrd++;
         dbgassert(samples);
@@ -99,7 +99,8 @@ struct AudioBlock {
             if (allocType == alloc_type::internal) {
                 for (uint32_t i = 0; i < channels; i++) {
                     if (buf[i]) {
-                        delete[] buf[i];
+                        // delete[] buf[i];
+                        aligned_free(buf[i]);
                     }
                 }
             }

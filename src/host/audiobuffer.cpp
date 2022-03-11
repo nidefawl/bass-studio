@@ -23,12 +23,8 @@ void AudioBlock::EndTrace() {
 }
 
 AudioBuffer* allocateBuffer(int32_t nChannels) {
-    auto buffer = static_cast<AudioBuffer*>(aligned_malloc(sizeof(AudioBuffer), 128));
-    memset(buffer, 0, sizeof(AudioBuffer));
-    buffer->output = new AudioBlock(nChannels, 1);
-    buffer->inUse  = false;
-    buffer->submitted = false;
-    std::atomic_init(&buffer->inUse, false);
+    auto* buffer = new AudioBuffer{};
+    buffer->output = new AudioBlock(nChannels, 512);
     return buffer;
 }
 
@@ -41,7 +37,7 @@ void freeRingBuffer(audiothread_ringbuffer_t& ringbuffer) {
     for (auto& buffer : ringbuffer.buffers) {
         if (buffer) {
             delete buffer->output;
-            aligned_free(buffer);
+            delete buffer;
             buffer = nullptr;
         }
     }
@@ -63,7 +59,7 @@ void AudioBlock::realloc(uint32_t _samples) {
             if (recordAllocs)
                 numAllocs++;
             for (uint32_t i = 0; i < channels; i++) {
-                float* const newBuf = new float[_samples];
+                float* const newBuf = static_cast<float*>(aligned_malloc(sizeof(float) * _samples, 512));
                 if (debug) {
                     log_lf(Log::L_TRACE, "AudioBlock buffer[%d] allocate 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
                 }
@@ -80,7 +76,7 @@ void AudioBlock::realloc(uint32_t _samples) {
                             log_lf(Log::L_TRACE, "AudioBlock buffer[%d] release 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
                         }
 
-                        delete[] buf[i];
+                        aligned_free(buf[i]);
                     }
                 }
                 buf[i] = newBuf;
