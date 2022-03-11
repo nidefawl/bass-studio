@@ -263,25 +263,25 @@ if (PROJECT_REQUIRE_LIB)
 endif ()
 
 if (WIN32)
-    # target_precompile_headers(${LINK_TARGET} PUBLIC <Windows.h>)
+    target_precompile_headers(${LINK_TARGET} PUBLIC <Windows.h>)
 endif (WIN32)
 
-# target_precompile_headers(${LINK_TARGET} PUBLIC 
-#     "$<$<COMPILE_LANGUAGE:CXX>:<cstddef$<ANGLE-R>>"
-#     "$<$<COMPILE_LANGUAGE:CXX>:<vector$<ANGLE-R>>"
-#     "$<$<COMPILE_LANGUAGE:CXX>:<algorithm$<ANGLE-R>>"
-#     "$<$<COMPILE_LANGUAGE:CXX>:<functional$<ANGLE-R>>"
-#     "$<$<COMPILE_LANGUAGE:CXX>:<array$<ANGLE-R>>"
-#     "$<$<COMPILE_LANGUAGE:CXX>:<fstream$<ANGLE-R>>"
-#     "$<$<COMPILE_LANGUAGE:CXX>:include/math/vec.h>"
-#     "$<$<COMPILE_LANGUAGE:CXX>:include/math/mat.h>"
-#     "$<$<COMPILE_LANGUAGE:CXX>:include/track_impl.h>"
-#     "$<$<COMPILE_LANGUAGE:CXX>:include/basectrl.h>"
-#     "$<$<COMPILE_LANGUAGE:CXX>:host/mainctrl.h>"
-#     "$<$<COMPILE_LANGUAGE:CXX>:include/fileio.h>"
-#     "$<$<COMPILE_LANGUAGE:CXX>:include/renderresources.h>"
-#     "$<$<COMPILE_LANGUAGE:CXX>:gui/gui.h>"
-# )
+target_precompile_headers(${LINK_TARGET} PUBLIC 
+    "$<$<COMPILE_LANGUAGE:CXX>:<cstddef$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:<vector$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:<algorithm$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:<functional$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:<array$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:<fstream$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:include/math/vec.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:include/math/mat.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:include/track_impl.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:include/basectrl.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:host/mainctrl.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:include/fileio.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:include/renderresources.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:gui/gui.h>"
+)
 
 target_link_libraries(${LINK_TARGET} PUBLIC glfw)
 target_link_libraries(${LINK_TARGET} PUBLIC SQLiteCpp)
