@@ -55,17 +55,67 @@ public:
 };
 class gui_textfield : public guibase {
 public:
-    static constexpr int MAX_CHARS = 1024;
-    /// How to align the text in the text box.
     enum class Alignment {
         Left,
         Center,
         Right
     };
-    gui_textfield();
+private:
+    struct text_metrics_t {
+        std::vector<NVGglyphPosition> glyphPositions;
+        int numGlyphs{ 0 };
+        float textBounds[4]{ 0 };
+        float lineH{ 0 };
+    };
+    std::string mValue;
+    std::string mDefaultValue;
+    std::string mUnits;
+    std::string mFormat;
+    std::string mValueTemp;
+    std::string mPlaceholder;
+
+    bool mCommitted = true;
+    bool mFocused = false;
+    bool mEditable = true;
+    bool mValidFormat = true;
+    bool mReturnCommits = false;
+
+    text_metrics_t metrics;
+    Alignment mAlignment = Alignment::Left;
+    float mFontSize = 28.0f;
+
+    int mCursorPos    = -1;
+    int mSelectionPos = -1;
+    float mTextOffset = 0;
+    vec2 drawPos{};
+    vec2 clipPos{};
+    vec2 clipSize{};
+    ivec2 mMouseDownPos{-1, -1};
+    ivec2 mMouseDragPos{-1, -1};
+    int mMouseDownModifier = 0;
+    int64_t m_tmLastClick = 0;
+
+public:
+    input_filter* filter = nullptr;
+    std::function<bool(const std::string& str)> mCallback    = nullptr;
+    std::function<bool(const std::string& str)> mCallbackEnd = nullptr;
+    std::function<void(MouseHitEvt&, bool)> fnFocus          = nullptr;
+    gui_textfield() = default;
+
+    float fontSize() const {
+        return mFontSize;
+    }
+    void setFontSize(float f) {
+        mFontSize = f;
+    }
 
     bool editable() const { return mEditable; }
     void setEditable(bool editable);
+
+    bool isTextCommitted() const { return mCommitted; }
+
+    bool returnCommits() const { return mReturnCommits; }
+    void setReturnCommits(bool bReturnCommits) { mReturnCommits = bReturnCommits; }
 
     const std::string& value() const { return mValue; }
     std::string getEditValue() const {
@@ -149,54 +199,4 @@ protected:
     void updateShiftCursorVisible();
     float cursorIndex2Position(int index, float lastx) const;
     int position2CursorIndex(float posx, float lastx) const;
-
-
-public:
-    bool mEditable;
-    bool mCommitted;
-    bool mReturnCommits = false;
-    std::string mValue;
-    std::string mDefaultValue;
-    Alignment mAlignment;
-    std::string mUnits;
-    std::string mFormat;
-    input_filter* filter                                     = nullptr;
-    std::function<bool(const std::string& str)> mCallback    = nullptr;
-    std::function<bool(const std::string& str)> mCallbackEnd = nullptr;
-    std::function<void(MouseHitEvt&, bool)> fnFocus          = nullptr;
-    bool mValidFormat;
-    std::string mValueTemp;
-    std::string mPlaceholder;
-    int mCursorPos    = -1;
-    int mSelectionPos = -1;
-    ivec2 mMouseDownPos;
-    ivec2 mMouseDragPos;
-    int mMouseDownModifier;
-    float mTextOffset;
-    int64_t m_tmLastClick = 0;
-
-protected:
-    bool mVisible;
-    bool mEnabled;
-    bool mFocused;
-    float mFontSize;
-    bool mMouseFocus;
-    struct text_metrics_t {
-        NVGglyphPosition glyphPositions[MAX_CHARS]{ { 0 } };
-        int numGlyphs{ 0 };
-        float textBounds[4]{ 0 };
-        float lineH{ 0 };
-    };
-    text_metrics_t metrics;
-    vec2 drawPos;
-    vec2 clipPos;
-    vec2 clipSize;
-
-public:
-    float fontSize() const {
-        return mFontSize;
-    }
-    void setFontSize(float f) {
-        mFontSize = f;
-    }
 };

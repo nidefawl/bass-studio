@@ -359,7 +359,7 @@ bool gui_input_filtered::handleCharInput(unsigned int codepoint) {
     bool b = this->field.handleCharInput(codepoint);
     if (b) {
         if (this->number) {
-            int newVal = filter.parseString(this->field.mValueTemp);
+            int newVal = filter.parseString(this->field.getEditValue());
             *number    = newVal;
         }
         if (parent)

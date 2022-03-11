@@ -17,30 +17,6 @@
 #include <regex>
 #endif
 
-gui_textfield::gui_textfield()
-    : guibase(),
-      mEditable(true),
-      mCommitted(true),
-      mValue(""),
-      mDefaultValue(""),
-      mAlignment(Alignment::Left),
-      mUnits(""),
-      mFormat(""),
-      mValidFormat(true),
-      mValueTemp(""),
-      mCursorPos(-1),
-      mSelectionPos(-1),
-      mMouseDownPos(ivec2(-1, -1)),
-      mMouseDragPos(ivec2(-1, -1)),
-      mMouseDownModifier(0),
-      mTextOffset(0),
-      mVisible(true),
-      mEnabled(true),
-      mFocused(false),
-      mFontSize(28.0f),
-      mMouseFocus(false) {
-}
-
 void gui_textfield::setEditable(bool editable) {
     mEditable = editable;
 }
@@ -141,8 +117,12 @@ void gui_textfield::updateTextLayout(NVGcontext* ctx) {
     metrics.lineH = metrics.textBounds[3] - metrics.textBounds[1];
 
     // find cursor positions
-    metrics.numGlyphs = nvgTextGlyphPositions(ctx, 0, 0, mValueTemp.c_str(), nullptr, metrics.glyphPositions, MAX_CHARS);
-
+    if (metrics.glyphPositions.size() < mValueTemp.length()) {
+        metrics.glyphPositions.resize(mValueTemp.length());
+    }
+    metrics.numGlyphs = nvgTextGlyphPositions(ctx, 0, 0, mValueTemp.c_str(), nullptr, metrics.glyphPositions.data(), metrics.glyphPositions.size());
+    metrics.numGlyphs = math::min<int>(metrics.numGlyphs, metrics.glyphPositions.size());
+    
     ivec2 insetPos(pos.x, pos.y + size.y * 0.5f + 1);
 
 
@@ -203,7 +183,7 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
     NVGcolor mTextColor         = theme->getColor(GuiColor::COL_TEXTBOX_TEXT);
     NVGcolor mTextColorMarked   = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_MARKED);
 
-    NVGcolor mColor = mEnabled && (!mCommitted || !mValue.empty()) ? mTextColor : mTextColorDisabled;
+    NVGcolor mColor = isEnabled() && (!mCommitted || !mValue.empty()) ? mTextColor : mTextColorDisabled;
 
 
     nvgSave(ctx);
@@ -600,7 +580,7 @@ void gui_textfield::updateCursor(NVGcontext*, float lastx) {
 
 float gui_textfield::cursorIndex2Position(int index, float lastx) const {
     float pos = 0;
-    if (index == metrics.numGlyphs)
+    if (index >= metrics.numGlyphs)
         pos = lastx;// last character
     else
         pos = metrics.glyphPositions[index].x;
@@ -611,11 +591,12 @@ float gui_textfield::cursorIndex2Position(int index, float lastx) const {
 int gui_textfield::position2CursorIndex(float posx, float lastx) const {
     //posx += drawPos.x;
     int mCursorId = 0;
-    float caretx  = metrics.glyphPositions[mCursorId].x;
-    for (int j = 1; j < metrics.numGlyphs; j++) {
-        if (math::abs(caretx - posx) > math::abs(metrics.glyphPositions[j].x - posx)) {
+    float caretx  = 0;
+    for (int j = 0; j < metrics.numGlyphs; j++) {
+        float x = metrics.glyphPositions[j].x;
+        if (math::abs(caretx - posx) > math::abs(x - posx)) {
+            caretx = x;
             mCursorId = j;
-            caretx    = metrics.glyphPositions[mCursorId].x;
         }
     }
     if (math::abs(caretx - posx) > math::abs(lastx - posx))

@@ -156,7 +156,7 @@ public:
     gui_trackgain() : gui_textfield() {
         setCanMouseHit(true);
         setAlignment(gui_textfield::Alignment::Center);
-        mReturnCommits = true;
+        setReturnCommits(true);
     }
     void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
         this->paramAutomatable = _paramAutomatable;
@@ -202,7 +202,7 @@ public:
                 nvgFill(vg);
             }
 
-            if (mCommitted) {
+            if (isTextCommitted()) {
                 const String strLvl = getValueAsString();
 
                 renderTextLabel(vg,
@@ -215,7 +215,7 @@ public:
                                 NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             }
         }
-        if (!mCommitted) {
+        if (!isTextCommitted()) {
             gui_textfield::render(vg);
         }
     }
@@ -234,7 +234,7 @@ public:
         return true;
     }
     bool handleCharInput(unsigned int codepoint) override {
-        if (mCommitted && codepoint < 0xFF) {
+        if (isTextCommitted() && codepoint < 0xFF) {
             char keyChar = (char) codepoint;
             if ((keyChar >= '0' && keyChar <= '9') || (keyChar == '-')) {
                 MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
@@ -243,14 +243,14 @@ public:
                 gui_textfield::setSelectionRange(-1, -1);
             }
         }
-        if (!mCommitted) {
+        if (!isTextCommitted()) {
             return gui_textfield::handleCharInput(codepoint);
         }
         return false;
     }
     bool keyboardEvent(int key, int scancode, KeyEventType action, int modifiers) override {
 
-        if (action == KeyEventType::K_PRESS && mCommitted) {
+        if (action == KeyEventType::K_PRESS && isTextCommitted()) {
             if ((key == KEY_ENTER || key == KEY_KP_ENTER)) {
                 MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
                 gui_textfield::setValue(getValueAsString());
@@ -259,7 +259,7 @@ public:
             }
         }
 
-        if (!mCommitted) {
+        if (!isTextCommitted()) {
             return gui_textfield::keyboardEvent(key, scancode, action, modifiers);
         }
         if (action == KeyEventType::K_PRESS || action == KeyEventType::K_REPEAT) {
@@ -293,7 +293,7 @@ public:
         paramAutomatable->getParam(paramIdx)->value = dsp_util::gainToLinScale(fNew);
     }
     void handleDraggedBegin(MouseEvent& evt) override {
-        if (!mCommitted) {
+        if (!isTextCommitted()) {
             gui_textfield::handleDraggedBegin(evt);
             return;
         }
@@ -329,7 +329,7 @@ public:
         paramAutomatable->getParam(paramIdx)->value = dsp_util::gainToLinScale(fNew);
     }
     void handleDraggedMove(MouseEvent& evt) override {
-        if (!mCommitted) {
+        if (!isTextCommitted()) {
             gui_textfield::handleDraggedMove(evt);
             return;
         }
@@ -346,7 +346,7 @@ public:
         }
     }
     void handleDraggedRelease(MouseEvent& evt) override {
-        if (!mCommitted) {
+        if (!isTextCommitted()) {
             gui_textfield::handleDraggedRelease(evt);
             return;
         }
@@ -1739,7 +1739,7 @@ public:
             field->size.y    = titleHeight;
             field->pos       = { 0, 0 };
             field->setFontSize((int) (titleHeight * 0.9));
-            field->mReturnCommits = true;
+            field->setReturnCommits(true);
 
             auto const ctxtMenu = new guictxtmenu_base();
             ctxtMenu->size      = field->size;
