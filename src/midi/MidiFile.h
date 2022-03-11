@@ -16,7 +16,7 @@
 // Last Modified: Fri Jun 12 22:58:34 PDT 2009 Renamed SigCollection class
 // Last Modified: Thu Jul 22 23:28:54 PDT 2010 Added tick to time mapping
 // Last Modified: Thu Jul 22 23:28:54 PDT 2010 Changed _MidiEvent to MidiEvent
-// Last Modified: Tue Feb 22 13:26:40 PST 2011 Added write(ostream)
+// Last Modified: Tue Feb 22 13:26:40 PST 2011 Added write(std::ostream)
 // Last Modified: Mon Nov 18 13:10:37 PST 2013 Added .printHex function.
 // Last Modified: Mon Feb  9 14:01:31 PST 2015 Removed FileIO dependency.
 // Last Modified: Sat Feb 14 22:35:25 PST 2015 Split out subclasses.
@@ -193,15 +193,15 @@ class MidiFile {
       MidiFile& operator=(MidiFile other);
 
       // static functions:
-      static unsigned char    readByte                (std::istream& input);
-      static unsigned short   readLittleEndian2Bytes  (std::istream& input);
-      static unsigned long    readLittleEndian4Bytes  (std::istream& input);
-      static std::ostream& writeLittleEndianUShort (std::ostream& out, unsigned short value);
-      static std::ostream& writeBigEndianUShort    (std::ostream& out, unsigned short value);
+      static unsigned char readByte                (std::istream& input);
+      static uint16_t      readLittleEndian2Bytes  (std::istream& input);
+      static uint32_t      readLittleEndian4Bytes  (std::istream& input);
+      static std::ostream& writeLittleEndianUShort (std::ostream& out, uint16_t value);
+      static std::ostream& writeBigEndianUShort    (std::ostream& out, uint16_t value);
       static std::ostream& writeLittleEndianShort  (std::ostream& out, short  value);
       static std::ostream& writeBigEndianShort     (std::ostream& out, short  value);
-      static std::ostream& writeLittleEndianULong  (std::ostream& out, unsigned long  value);
-      static std::ostream& writeBigEndianULong     (std::ostream& out, unsigned long  value);
+      static std::ostream& writeLittleEndianULong  (std::ostream& out, uint32_t  value);
+      static std::ostream& writeBigEndianULong     (std::ostream& out, uint32_t  value);
       static std::ostream& writeLittleEndianLong   (std::ostream& out, long   value);
       static std::ostream& writeBigEndianLong      (std::ostream& out, long   value);
       static std::ostream& writeLittleEndianFloat  (std::ostream& out, float  value);
@@ -210,22 +210,22 @@ class MidiFile {
       static std::ostream& writeBigEndianDouble    (std::ostream& out, double value);
 
    protected:
-      std::vector<MidiEventList*> events;             // MIDI file events
-      int              ticksPerQuarterNote;      // time base of file
-      int              trackCount;               // # of tracks in file
-      int              theTrackState;            // joined or split
-      int              theTimeState;             // absolute or delta
-      std::vector<char>     readFileName;             // read file name
+       std::vector<MidiEventList*> events;// MIDI file events
+       int ticksPerQuarterNote;           // time base of file
+       int trackCount;                    // # of tracks in file
+       int theTrackState;                 // joined or split
+       int theTimeState;                  // absolute or delta
+       std::vector<char> readFileName;    // read file name
 
-      int               timemapvalid;
-      std::vector<_TickTime> timemap;
-      int               rwstatus;                // read/write success flag
+       int timemapvalid;
+       std::vector<_TickTime> timemap;
+       int rwstatus;                      // read/write success flag
 
    private:
       int        extractMidiData  (std::istream& inputfile, std::vector<unsigned char>& array,
                                        unsigned char& runningCommand);
-      unsigned long      readVLValue      (std::istream& inputfile);
-      unsigned long      unpackVLV        (unsigned char a = 0, unsigned char b = 0, unsigned char c = 0,
+      uint32_t   readVLValue      (std::istream& input);
+      uint32_t   unpackVLV        (unsigned char a = 0, unsigned char b = 0, unsigned char c = 0,
                                    unsigned char d = 0);
       void       writeVLValue     (long aValue, std::vector<unsigned char>& data);
       int        makeVLV          (unsigned char *buffer, int number);

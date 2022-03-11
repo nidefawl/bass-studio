@@ -15,7 +15,7 @@
 // Last Modified: Tue Apr  7 09:23:48 PDT 2009 Added addMetaEvent.
 // Last Modified: Fri Jun 12 22:58:34 PDT 2009 Renamed SigCollection class.
 // Last Modified: Mon Jul 26 13:38:23 PDT 2010 Added timing in seconds.
-// Last Modified: Tue Feb 22 13:26:40 PST 2011 Added write(ostream).
+// Last Modified: Tue Feb 22 13:26:40 PST 2011 Added write(std::ostream).
 // Last Modified: Mon Nov 18 13:10:37 PST 2013 Added .printHex function.
 // Last Modified: Mon Feb  9 12:22:18 PST 2015 Remove dep. on FileIO class.
 // Last Modified: Sat Feb 14 23:40:17 PST 2015 Split out subclasses.
@@ -41,13 +41,6 @@
 #include <sstream>
 #include <algorithm>
 #include <iterator>
-
-
-using namespace std;
-
-typedef unsigned char uchar;
-typedef unsigned short ushort;
-typedef unsigned long ulong;
 
 
 //////////////////////////////
@@ -86,7 +79,7 @@ MidiFile::MidiFile(const char* filename) {
 }
 
 
-MidiFile::MidiFile(const string& filename) {
+MidiFile::MidiFile(const std::string& filename) {
    ticksPerQuarterNote = 120;            // TQP time base of file
    trackCount = 1;                       // # of tracks in file
    theTrackState = TRACK_STATE_SPLIT;    // joined or split
@@ -102,7 +95,7 @@ MidiFile::MidiFile(const string& filename) {
 }
 
 
-MidiFile::MidiFile(istream& input) {
+MidiFile::MidiFile(std::istream& input) {
    ticksPerQuarterNote = 120;            // TQP time base of file
    trackCount = 1;                       // # of tracks in file
    theTrackState = TRACK_STATE_SPLIT;    // joined or split
@@ -206,8 +199,8 @@ int MidiFile::read(const char* filename) {
       setFilename(filename);
    }
 
-   fstream input;
-   input.open(filename, ios::binary | ios::in);
+   std::fstream input;
+   input.open(filename, std::ios::binary | std::ios::in);
 
    if (!input.is_open()) {
       return 0;
@@ -219,17 +212,17 @@ int MidiFile::read(const char* filename) {
 
 
 //
-// string version of read().
+// std::string version of read().
 //
 
 
-int MidiFile::read(const string& filename) {
+int MidiFile::read(const std::string& filename) {
    timemapvalid = 0;
    setFilename(filename);
    rwstatus = 1;
 
-   fstream input;
-   input.open(filename.data(), ios::binary | ios::in);
+   std::fstream input;
+   input.open(filename.data(), std::ios::binary | std::ios::in);
 
    if (!input.is_open()) {
       return 0;
@@ -244,7 +237,9 @@ int MidiFile::read(const string& filename) {
 // istream version of read().
 //
 
-int MidiFile::read(istream& input) {
+int MidiFile::read(std::istream& input) {
+   using std::cerr;
+   using std::endl;
    rwstatus = 1;
    if (input.peek() != 'M') {
       cerr << "Bad MIDI data input" << endl;
@@ -254,9 +249,9 @@ int MidiFile::read(istream& input) {
    const char* filename = getFilename();
 
    int    character;
-   // uchar  buffer[123456] = {0};
-   ulong  longdata;
-   ushort shortdata;
+   // uint8_t  buffer[123456] = {0};
+   uint32_t longdata;
+   uint16_t shortdata;
 
 
    // Read the MIDI header (4 bytes of ID, 4 byte data size,
@@ -388,9 +383,9 @@ int MidiFile::read(istream& input) {
    // now read individual tracks:
    //
 
-   uchar runningCommand;
+   uint8_t runningCommand;
    MidiEvent event;
-   vector<uchar> bytes;
+   std::vector<uint8_t> bytes;
    int absticks;
    int xstatus;
    // int barline;
@@ -526,10 +521,10 @@ int MidiFile::read(istream& input) {
 //
 
 int MidiFile::write(const char* filename) {
-   fstream output(filename, ios::binary | ios::out);
+   std::fstream output(filename, std::ios::binary | std::ios::out);
 
    if (!output.is_open()) {
-      cerr << "Error: could not write: " << filename << endl;
+      std::cerr << "Error: could not write: " << filename << std::endl;
       return 0;
    }
    rwstatus = write(output);
@@ -538,12 +533,12 @@ int MidiFile::write(const char* filename) {
 }
 
 
-int MidiFile::write(const string& filename) {
+int MidiFile::write(const std::string& filename) {
    return MidiFile::write(filename.data());
 }
 
 
-int MidiFile::write(ostream& out) {
+int MidiFile::write(std::ostream& out) {
    int oldTimeState = getTickState();
    if (oldTimeState == TIME_STATE_ABSOLUTE) {
       deltaTicks();
@@ -559,13 +554,13 @@ int MidiFile::write(ostream& out) {
    ch = 'h'; out << ch;
    ch = 'd'; out << ch;
 
-   // 2. write the size of the header (always a "6" stored in unsigned long
+   // 2. write the size of the header (always a "6" stored in uint32_t
    //    (4 bytes).
-   ulong longdata = 6;
+   uint32_t longdata = 6;
    writeBigEndianULong(out, longdata);
 
    // 3. MIDI file format, type 0, 1, or 2
-   ushort shortdata;
+   uint16_t shortdata;
    shortdata = (getNumTracks() == 1) ? 0 : 1;
    writeBigEndianUShort(out,shortdata);
 
@@ -578,8 +573,8 @@ int MidiFile::write(ostream& out) {
    writeBigEndianUShort(out, shortdata);
 
    // now write each track.
-   vector<uchar> trackdata;
-   uchar endoftrack[4] = {0, 0xff, 0x2f, 0x00};
+   std::vector<uint8_t> trackdata;
+   uint8_t endoftrack[4] = {0, 0xff, 0x2f, 0x00};
    int i, j, k;
    int size;
    for (i=0; i<getNumTracks(); i++) {
@@ -1028,9 +1023,9 @@ void MidiFile::deltaTicks(void) {
          temp = (*events[i])[j].tick;
          int deltatick = temp - timedata[i];
          if (deltatick < 0) {
-            cerr << "Error: negative delta tick value: " << deltatick << endl
+            std::cerr << "Error: negative delta tick value: " << deltatick << std::endl
                  << "Timestamps must be sorted first"
-                 << " (use MidiFile::sortTracks() before writing)." << endl;
+                 << " (use MidiFile::sortTracks() before writing)." << std::endl;
          }
          (*events[i])[j].tick = deltatick;
          timedata[i] = temp;
@@ -1153,7 +1148,7 @@ void MidiFile::setFilename(const char* aname) {
 }
 
 
-void MidiFile::setFilename(const string& aname) {
+void MidiFile::setFilename(const std::string& aname) {
    MidiFile::setFilename(aname.data());
 }
 
@@ -1193,7 +1188,7 @@ const char* MidiFile::getFilename(void) {
 // MidiFile::addEvent --
 //
 
-int MidiFile::addEvent(int aTrack, int aTick, vector<uchar>& midiData) {
+int MidiFile::addEvent(int aTrack, int aTick, std::vector<uint8_t>& midiData) {
    timemapvalid = 0;
    MidiEvent anEvent;
    anEvent.tick = aTick;
@@ -1228,13 +1223,12 @@ int MidiFile::addEvent(MidiEvent& mfevent) {
 // MidiFile::addMetaEvent --
 //
 
-int MidiFile::addMetaEvent(int aTrack, int aTick, int aType,
-      vector<uchar>& metaData) {
+int MidiFile::addMetaEvent(int aTrack, int aTick, int aType, std::vector<uint8_t>& metaData) {
    timemapvalid = 0;
    int i;
    int length = (int)metaData.size();
-   vector<uchar> fulldata;
-   uchar size[23] = {0};
+   std::vector<uint8_t> fulldata;
+   uint8_t size[23] = {0};
    int lengthsize = makeVLV(size, length);
 
    fulldata.resize(2+lengthsize+length);
@@ -1255,11 +1249,11 @@ int MidiFile::addMetaEvent(int aTrack, int aTick, int aType,
       const char* metaData) {
 
    int length = (int)strlen(metaData);
-   vector<uchar> buffer;
+   std::vector<uint8_t> buffer;
    buffer.resize(length);
    int i;
    for (i=0; i<length; i++) {
-      buffer[i] = (uchar)metaData[i];
+      buffer[i] = (uint8_t)metaData[i];
    }
    return addMetaEvent(aTrack, aTick, aType, buffer);
 }
@@ -1271,7 +1265,7 @@ int MidiFile::addMetaEvent(int aTrack, int aTick, int aType,
 // MidiFile::addCopyright --  Add a copyright notice meta-message (#2).
 //
 
-int MidiFile::addCopyright(int aTrack, int aTick, const string& text) {
+int MidiFile::addCopyright(int aTrack, int aTick, const std::string& text) {
    MidiEvent* me = new MidiEvent;
    me->makeCopyright(text);
    me->tick = aTick;
@@ -1286,7 +1280,7 @@ int MidiFile::addCopyright(int aTrack, int aTick, const string& text) {
 // MidiFile::addTrackName --  Add an track name meta-message (#3).
 //
 
-int MidiFile::addTrackName(int aTrack, int aTick, const string& name) {
+int MidiFile::addTrackName(int aTrack, int aTick, const std::string& name) {
    MidiEvent* me = new MidiEvent;
    me->makeTrackName(name);
    me->tick = aTick;
@@ -1301,7 +1295,7 @@ int MidiFile::addTrackName(int aTrack, int aTick, const string& name) {
 // MidiFile::addInstrumentName --  Add an instrument name meta-message (#4).
 //
 
-int MidiFile::addInstrumentName(int aTrack, int aTick, const string& name) {
+int MidiFile::addInstrumentName(int aTrack, int aTick, const std::string& name) {
    MidiEvent* me = new MidiEvent;
    me->makeInstrumentName(name);
    me->tick = aTick;
@@ -1316,7 +1310,7 @@ int MidiFile::addInstrumentName(int aTrack, int aTick, const string& name) {
 // MidiFile::addLyric -- Add a lyric meta-message (meta #5).
 //
 
-int MidiFile::addLyric(int aTrack, int aTick, const string& text) {
+int MidiFile::addLyric(int aTrack, int aTick, const std::string& text) {
    MidiEvent* me = new MidiEvent;
    me->makeLyric(text);
    me->tick = aTick;
@@ -1331,7 +1325,7 @@ int MidiFile::addLyric(int aTrack, int aTick, const string& text) {
 // MidiFile::addMarker -- Add a marker meta-message (meta #6).
 //
 
-int MidiFile::addMarker(int aTrack, int aTick, const string& text) {
+int MidiFile::addMarker(int aTrack, int aTick, const std::string& text) {
    MidiEvent* me = new MidiEvent;
    me->makeMarker(text);
    me->tick = aTick;
@@ -1346,7 +1340,7 @@ int MidiFile::addMarker(int aTrack, int aTick, const string& text) {
 // MidiFile::addCue -- Add a cue-point meta-message (meta #7).
 //
 
-int MidiFile::addCue(int aTrack, int aTick, const string& text) {
+int MidiFile::addCue(int aTrack, int aTick, const std::string& text) {
    MidiEvent* me = new MidiEvent;
    me->makeCue(text);
    me->tick = aTick;
@@ -1433,12 +1427,12 @@ int MidiFile::addCompoundTimeSignature(int aTrack, int aTick, int top,
 //   should (?) be specified as a VLV.
 //
 
-int MidiFile::makeVLV(uchar *buffer, int number) {
+int MidiFile::makeVLV(uint8_t *buffer, int number) {
 
-   unsigned long value = (unsigned long)number;
+   uint32_t value = (uint32_t)number;
 
    if (value >= (1 << 28)) {
-      cerr << "Error: Meta-message size too large to handle" << endl;
+      std::cerr << "Error: Meta-message size too large to handle" << std::endl;
       buffer[0] = 0;
       buffer[1] = 0;
       buffer[2] = 0;
@@ -1602,16 +1596,16 @@ int MidiFile::addPitchBend(int aTrack, int aTick, int aChannel, double amount) {
    int lsbint = 0x7f & value;
    int msbint = 0x7f & (value  >> 7);
 
-   vector<uchar> mididata;
+   std::vector<uint8_t> mididata;
    mididata.resize(3);
    if (aChannel < 0) {
       aChannel = 0;
    } else if (aChannel > 15) {
       aChannel = 15;
    }
-   mididata[0] = uchar(0xe0 | aChannel);
-   mididata[1] = uchar(lsbint);
-   mididata[2] = uchar(msbint);
+   mididata[0] = uint8_t(0xe0 | aChannel);
+   mididata[1] = uint8_t(lsbint);
+   mididata[2] = uint8_t(msbint);
 
    return addEvent(aTrack, aTick, mididata);
 }
@@ -2343,11 +2337,12 @@ void MidiFile::buildTimeMap(void) {
 //    stream.  Return value is 0 if failure; otherwise, returns 1.
 //
 
-int MidiFile::extractMidiData(istream& input, vector<uchar>& array,
-   uchar& runningCommand) {
-
+int MidiFile::extractMidiData(std::istream& input, std::vector<uint8_t>& array,
+   uint8_t& runningCommand) {
+   using std::cerr;
+   using std::endl;
    int character;
-   uchar byte;
+   uint8_t byte;
    array.clear();
    int runningQ;
 
@@ -2356,7 +2351,7 @@ int MidiFile::extractMidiData(istream& input, vector<uchar>& array,
       cerr << "Error: unexpected end of file." << endl;
       return 0;
    } else {
-      byte = (uchar)character;
+      byte = (uint8_t)character;
    }
 
    if (byte < 0x80) {
@@ -2381,7 +2376,7 @@ int MidiFile::extractMidiData(istream& input, vector<uchar>& array,
    }
 
    int i;
-   uchar metai;
+   uint8_t metai;
    switch (runningCommand & 0xf0) {
       case 0x80:        // note off (2 more bytes)
       case 0x90:        // note on (2 more bytes)
@@ -2412,7 +2407,7 @@ int MidiFile::extractMidiData(istream& input, vector<uchar>& array,
                }
                metai = MidiFile::readByte(input); // meta type
                array.push_back(metai);
-               for (uchar j=0; j<metai; j++) {
+               for (uint8_t j=0; j<metai; j++) {
                   byte = MidiFile::readByte(input); // meta type
                   array.push_back(byte);
                }
@@ -2444,8 +2439,8 @@ int MidiFile::extractMidiData(istream& input, vector<uchar>& array,
          }
          break;
       default:
-         cout << "Error reading midifile" << endl;
-         cout << "Command byte was " << (int)runningCommand << endl;
+         std::cout << "Error reading midifile" << std::endl;
+         std::cout << "Command byte was " << (int)runningCommand << std::endl;
          return 0;
    }
    return 1;
@@ -2463,8 +2458,8 @@ int MidiFile::extractMidiData(istream& input, vector<uchar>& array,
 //   incorrectly as a MIDI command.
 //
 
-ulong MidiFile::readVLValue(istream& input) {
-   uchar b[4] = {0};
+uint32_t MidiFile::readVLValue(std::istream& input) {
+   uint8_t b[4] = {0};
 
    for (int i=0; i<4; i++) {
       b[i] = MidiFile::readByte(input);
@@ -2480,26 +2475,26 @@ ulong MidiFile::readVLValue(istream& input) {
 
 //////////////////////////////
 //
-// MidiFile::unpackVLV -- converts a VLV value to an unsigned long value.
+// MidiFile::unpackVLV -- converts a VLV value to an uint32_t value.
 //     The bytes a, b, c, d are in big-endian order (the order they would
 //     be read out of the MIDI file).
 // default values: a = b = c = d = 0;
 //
 
-ulong MidiFile::unpackVLV(uchar a, uchar b, uchar c, uchar d) {
+uint32_t MidiFile::unpackVLV(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
    if (d > 0x7f) {
-      cerr << "Error: VLV value was too long" << endl;
+      std::cerr << "Error: VLV value was too long" << std::endl;
       return 0;
    }
 
-   uchar bytes[4] = {a, b, c, d};
+   uint8_t bytes[4] = {a, b, c, d};
    int count = 0;
    while (bytes[count] > 0x7f && count < 4) {
       count++;
    }
    count++;
 
-   ulong output = 0;
+   uint32_t output = 0;
    for (int i=0; i<count; i++) {
       output = output << 7;
       output = output | (bytes[i] & 0x7f);
@@ -2518,18 +2513,18 @@ ulong MidiFile::unpackVLV(uchar a, uchar b, uchar c, uchar d) {
 //    aValue is 0x0FFFffff.
 //
 
-void MidiFile::writeVLValue(long aValue, vector<uchar>& outdata) {
-   uchar bytes[4] = {0};
+void MidiFile::writeVLValue(long aValue, std::vector<uint8_t>& outdata) {
+   uint8_t bytes[4] = {0};
 
-   if ((unsigned long)aValue >= (1 << 28)) {
-      cerr << "Error: number too large to convert to VLV" << endl;
+   if ((uint32_t)aValue >= (1 << 28)) {
+      std::cerr << "Error: number too large to convert to VLV" << std::endl;
       aValue = 0x0FFFffff;
    }
 
-   bytes[0] = (uchar)(((ulong)aValue >> 21) & 0x7f);  // most significant 7 bits
-   bytes[1] = (uchar)(((ulong)aValue >> 14) & 0x7f);
-   bytes[2] = (uchar)(((ulong)aValue >> 7)  & 0x7f);
-   bytes[3] = (uchar)(((ulong)aValue)       & 0x7f);  // least significant 7 bits
+   bytes[0] = (uint8_t)(((uint32_t)aValue >> 21) & 0x7f);  // most significant 7 bits
+   bytes[1] = (uint8_t)(((uint32_t)aValue >> 14) & 0x7f);
+   bytes[2] = (uint8_t)(((uint32_t)aValue >> 7)  & 0x7f);
+   bytes[3] = (uint8_t)(((uint32_t)aValue)       & 0x7f);  // least significant 7 bits
 
    int start = 0;
    while ((start<4) && (bytes[start] == 0))  start++;
@@ -2688,11 +2683,11 @@ int MidiFile::secondsearch(const void* A, const void* B) {
 //      the order of the bytes to create the return value.
 //
 
-ulong MidiFile::readLittleEndian4Bytes(istream& input) {
-   uchar buffer[4] = {0};
+uint32_t MidiFile::readLittleEndian4Bytes(std::istream& input) {
+   uint8_t buffer[4] = {0};
    input.read((char*)buffer, 4);
    if (input.eof()) {
-      cerr << "Error: unexpected end of file." << endl;
+      std::cerr << "Error: unexpected end of file." << std::endl;
       return 0;
    }
    return buffer[3] | (buffer[2] << 8) | (buffer[1] << 16) | (buffer[0] << 24);
@@ -2707,11 +2702,11 @@ ulong MidiFile::readLittleEndian4Bytes(istream& input) {
 //       the order of the bytes to create the return value.
 //
 
-ushort MidiFile::readLittleEndian2Bytes(istream& input) {
-   uchar buffer[2] = {0};
+uint16_t MidiFile::readLittleEndian2Bytes(std::istream& input) {
+   uint8_t buffer[2] = {0};
    input.read((char*)buffer, 2);
    if (input.eof()) {
-      cerr << "Error: unexpected end of file." << endl;
+      std::cerr << "Error: unexpected end of file." << std::endl;
       return 0;
    }
    return buffer[1] | (buffer[0] << 8);
@@ -2725,11 +2720,11 @@ ushort MidiFile::readLittleEndian2Bytes(istream& input) {
 //     was an error.
 //
 
-uchar MidiFile::readByte(istream& input) {
-   uchar buffer[1] = {0};
+uint8_t MidiFile::readByte(std::istream& input) {
+   uint8_t buffer[1] = {0};
    input.read((char*)buffer, 1);
    if (input.eof()) {
-      cerr << "Error: unexpected end of file." << endl;
+      std::cerr << "Error: unexpected end of file." << std::endl;
       return 0;
    }
    return buffer[0];
@@ -2742,8 +2737,8 @@ uchar MidiFile::readByte(istream& input) {
 // MidiFile::writeLittleEndianUShort --
 //
 
-ostream& MidiFile::writeLittleEndianUShort(ostream& out, ushort value) {
-   union { char bytes[2]; ushort us; } data;
+std::ostream& MidiFile::writeLittleEndianUShort(std::ostream& out, uint16_t value) {
+   union { char bytes[2]; uint16_t us; } data;
    data.us = value;
    out << data.bytes[0];
    out << data.bytes[1];
@@ -2757,8 +2752,8 @@ ostream& MidiFile::writeLittleEndianUShort(ostream& out, ushort value) {
 // MidiFile::writeBigEndianUShort --
 //
 
-ostream& MidiFile::writeBigEndianUShort(ostream& out, ushort value) {
-   union { char bytes[2]; ushort us; } data;
+std::ostream& MidiFile::writeBigEndianUShort(std::ostream& out, uint16_t value) {
+   union { char bytes[2]; uint16_t us; } data;
    data.us = value;
    out << data.bytes[1];
    out << data.bytes[0];
@@ -2772,7 +2767,7 @@ ostream& MidiFile::writeBigEndianUShort(ostream& out, ushort value) {
 // MidiFile::writeLittleEndianShort --
 //
 
-ostream& MidiFile::writeLittleEndianShort(ostream& out, short value) {
+std::ostream& MidiFile::writeLittleEndianShort(std::ostream& out, short value) {
    union { char bytes[2]; short s; } data;
    data.s = value;
    out << data.bytes[0];
@@ -2787,7 +2782,7 @@ ostream& MidiFile::writeLittleEndianShort(ostream& out, short value) {
 // MidiFile::writeBigEndianShort --
 //
 
-ostream& MidiFile::writeBigEndianShort(ostream& out, short value) {
+std::ostream& MidiFile::writeBigEndianShort(std::ostream& out, short value) {
    union { char bytes[2]; short s; } data;
    data.s = value;
    out << data.bytes[1];
@@ -2802,8 +2797,8 @@ ostream& MidiFile::writeBigEndianShort(ostream& out, short value) {
 // MidiFile::writeLittleEndianULong --
 //
 
-ostream& MidiFile::writeLittleEndianULong(ostream& out, ulong value) {
-   union { char bytes[4]; ulong ul; } data;
+std::ostream& MidiFile::writeLittleEndianULong(std::ostream& out, uint32_t value) {
+   union { char bytes[4]; uint32_t ul; } data;
    data.ul = value;
    out << data.bytes[0];
    out << data.bytes[1];
@@ -2819,7 +2814,7 @@ ostream& MidiFile::writeLittleEndianULong(ostream& out, ulong value) {
 // MidiFile::writeBigEndianULong --
 //
 
-ostream& MidiFile::writeBigEndianULong(ostream& out, ulong value) {
+std::ostream& MidiFile::writeBigEndianULong(std::ostream& out, uint32_t value) {
    union { char bytes[4]; long ul; } data;
    data.ul = value;
    out << data.bytes[3];
@@ -2836,7 +2831,7 @@ ostream& MidiFile::writeBigEndianULong(ostream& out, ulong value) {
 // MidiFile::writeLittleEndianLong --
 //
 
-ostream& MidiFile::writeLittleEndianLong(ostream& out, long value) {
+std::ostream& MidiFile::writeLittleEndianLong(std::ostream& out, long value) {
    union { char bytes[4]; long l; } data;
    data.l = value;
    out << data.bytes[0];
@@ -2853,7 +2848,7 @@ ostream& MidiFile::writeLittleEndianLong(ostream& out, long value) {
 // MidiFile::writeBigEndianLong --
 //
 
-ostream& MidiFile::writeBigEndianLong(ostream& out, long value) {
+std::ostream& MidiFile::writeBigEndianLong(std::ostream& out, long value) {
    union { char bytes[4]; long l; } data;
    data.l = value;
    out << data.bytes[3];
@@ -2871,7 +2866,7 @@ ostream& MidiFile::writeBigEndianLong(ostream& out, long value) {
 // MidiFile::writeBigEndianFloat --
 //
 
-ostream& MidiFile::writeBigEndianFloat(ostream& out, float value) {
+std::ostream& MidiFile::writeBigEndianFloat(std::ostream& out, float value) {
    union { char bytes[4]; float f; } data;
    data.f = value;
    out << data.bytes[3];
@@ -2888,7 +2883,7 @@ ostream& MidiFile::writeBigEndianFloat(ostream& out, float value) {
 // MidiFile::writeLittleEndianFloat --
 //
 
-ostream& MidiFile::writeLittleEndianFloat(ostream& out, float value) {
+std::ostream& MidiFile::writeLittleEndianFloat(std::ostream& out, float value) {
    union { char bytes[4]; float f; } data;
    data.f = value;
    out << data.bytes[0];
@@ -2905,7 +2900,7 @@ ostream& MidiFile::writeLittleEndianFloat(ostream& out, float value) {
 // MidiFile::writeBigEndianDouble --
 //
 
-ostream& MidiFile::writeBigEndianDouble(ostream& out, double value) {
+std::ostream& MidiFile::writeBigEndianDouble(std::ostream& out, double value) {
    union { char bytes[8]; double d; } data;
    data.d = value;
    out << data.bytes[7];
@@ -2926,7 +2921,7 @@ ostream& MidiFile::writeBigEndianDouble(ostream& out, double value) {
 // MidiFile::writeLittleEndianDouble --
 //
 
-ostream& MidiFile::writeLittleEndianDouble(ostream& out, double value) {
+std::ostream& MidiFile::writeLittleEndianDouble(std::ostream& out, double value) {
    union { char bytes[8]; double d; } data;
    data.d = value;
    out << data.bytes[0];

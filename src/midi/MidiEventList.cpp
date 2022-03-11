@@ -19,12 +19,6 @@
 #include <iterator>
 #include <utility>
 
-using namespace std;
-
-typedef unsigned char uchar;
-typedef unsigned short ushort;
-typedef unsigned long ulong;
-
 //////////////////////////////
 //
 // MidiEventList::MidiEventList -- Constructor.
@@ -219,7 +213,8 @@ int MidiEventList::linkEventPairs(void) {
 
 
 int MidiEventList::linkNotePairs(void) {
-
+   using std::vector;
+   using std::pair;
    // Note-on states:
    // dimension 1: MIDI channel (0-15)
    // dimension 2: MIDI key     (0-127)  (but 0 not used for note-ons)

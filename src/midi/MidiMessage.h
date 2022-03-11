@@ -16,26 +16,23 @@
 
 #include <vector>
 #include <string>
+#include <stdint.h>
 
 
  //TODO: make this more memory friendly by not using std::vector
-class MidiMessage : public std::vector<unsigned char> {
+class MidiMessage : public std::vector<uint8_t> {
     public:
                      MidiMessage          (void);
                      MidiMessage          (int command);
                      MidiMessage          (int command, int p1);
                      MidiMessage          (int command, int p1, int p2);
                      MidiMessage          (const MidiMessage& message);
-                     MidiMessage          (const std::vector<unsigned char>& message);
-                     MidiMessage          (const std::vector<char>& message);
-                     MidiMessage          (const std::vector<int>& message);
+                     MidiMessage          (const std::vector<uint8_t>& message);
 
                     ~MidiMessage         ();
 
       MidiMessage&   operator=            (const MidiMessage& message);
-      MidiMessage&   operator=            (const std::vector<unsigned char>& bytes);
-      MidiMessage&   operator=            (const std::vector<char>& bytes);
-      MidiMessage&   operator=            (const std::vector<int>& bytes);
+      MidiMessage&   operator=            (const std::vector<uint8_t>& bytes);
       void           setSize              (int asize);
       int            getSize              (void) const;
       int            setSizeToCommand     (void);
@@ -88,9 +85,7 @@ class MidiMessage : public std::vector<unsigned char> {
       void           setChannel           (int value);
       void           setParameters        (int p1, int p2);
       void           setParameters        (int p1);
-      void           setMessage           (const std::vector<unsigned char>& message);
-      void           setMessage           (const std::vector<char>& message);
-      void           setMessage           (const std::vector<int>& message);
+      void           setMessage           (const std::vector<uint8_t>& message);
 
       void           setSpelling          (int base7, int accidental);
       void           getSpelling          (int& base7, int& accidental);

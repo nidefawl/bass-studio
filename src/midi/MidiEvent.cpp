@@ -14,11 +14,6 @@
 #include "MidiEvent.h"
 #include <cstdlib>
 
-using namespace std;
-
-typedef unsigned char  uchar;
-typedef unsigned short ushort;
-typedef unsigned long  ulong;
 
 //////////////////////////////
 //
@@ -46,7 +41,7 @@ MidiEvent::MidiEvent(int command, int p1, int p2)
 }
 
 
-MidiEvent::MidiEvent(int aTime, int aTrack, vector<uchar>& message)
+MidiEvent::MidiEvent(int aTime, int aTrack, std::vector<uint8_t>& message)
       : MidiMessage(message) {
    tick      = aTime;
    track     = aTrack;
@@ -132,7 +127,10 @@ MidiEvent& MidiEvent::operator=(const MidiMessage& message) {
 }
 
 
-MidiEvent& MidiEvent::operator=(const vector<uchar>& bytes) {
+MidiEvent& MidiEvent::operator=(const std::vector<uint8_t>& bytes) {
+   if (this == &bytes) {
+      return *this;
+   }
    clearVariables();
    this->resize(bytes.size());
    for (int i=0; i<(int)this->size(); i++) {
@@ -140,22 +138,6 @@ MidiEvent& MidiEvent::operator=(const vector<uchar>& bytes) {
    }
    return *this;
 }
-
-
-MidiEvent& MidiEvent::operator=(const vector<char>& bytes) {
-   clearVariables();
-   setMessage(bytes);
-   return *this;
-}
-
-
-MidiEvent& MidiEvent::operator=(const vector<int>& bytes) {
-   clearVariables();
-   setMessage(bytes);
-   return *this;
-}
-
-
 
 //////////////////////////////
 //
