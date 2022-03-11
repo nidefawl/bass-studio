@@ -59,7 +59,9 @@ DEFINE_TEST(
     test_seh_exception_handling FALSE 
     test_seh_exception_handling.cpp
 )
-target_compile_options(test_seh_exception_handling PRIVATE -O0 -fno-lto -g0)
+if (NOT MSVC)
+    target_compile_options(test_seh_exception_handling PRIVATE -O0 -fno-lto -g0)
+endif()
 
 DEFINE_TEST(
     test_math FALSE 
