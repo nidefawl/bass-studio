@@ -223,11 +223,12 @@ protected:
     bool redrawFlagged       = false;
     bool reentrant           = false;
     bool bIsFirstTimeReload  = true;
+    bool bFameRendered = false;
     int frameNumber          = 0;
     int frameCountFPS        = 0;
     int64_t tmLastFps        = 0;
     int64_t tmLastDrawMicros = 0;
-    int skipFrames           = 0;
+    // int skipFrames           = 0;
 
     vec2 mousepos{ -10000, -10000 };
     int cursorIcon = CURSOR_DEFAULT;
@@ -237,7 +238,31 @@ protected:
     char nameDbg[128]{ 0 };
     char name[128]{ 0 };
     String fpsStats;
+    prof_stats_window_t renderStatsWindow{};
+    hires_timer_t timerProfileWindow;
 
+public:
+    GLFWwindow* glfw = nullptr;
+
+
+    explicit appwindow(appwindow* _parent) 
+        : parent(_parent),
+        tmLastFps(getTimeMillis()) 
+    {
+#if HAS_APP_SETTINGS
+        noRawInput = DAW::settings.vmmode;
+#endif
+    }
+
+    ~appwindow() override {
+        //dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), this) == windowTimerHandleList.end());
+
+#ifdef _WIN32
+        if (hwnd) {
+            RemovePropW(hwnd, L"GLFW");
+        }
+#endif
+    }
 
 private:
 
@@ -289,32 +314,9 @@ private:
     }
 
 public:
-    GLFWwindow* glfw = nullptr;
 
     bool isValid() {
         return valid;
-    }
-    const int64_t minFrameDelayMicros = 1'000'000LL / 100LL;
-
-
-public:
-    explicit appwindow(appwindow* _parent) 
-        : parent(_parent),
-        tmLastFps(getTimeMillis()) 
-    {
-#if HAS_APP_SETTINGS
-        noRawInput = DAW::settings.vmmode;
-#endif
-    }
-
-    ~appwindow() override {
-        //dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), this) == windowTimerHandleList.end());
-
-#ifdef _WIN32
-        if (hwnd) {
-            RemovePropW(hwnd, L"GLFW");
-        }
-#endif
     }
 
     GLFWwindow* getGLFW() {
@@ -372,15 +374,11 @@ public:
             ow->renderWindowAndChildren();
         }
         if (valid && bIsVisible) {
-            auto tmNowMicros   = getTimeMicros();
-            auto tmSinceMicros = tmNowMicros - tmLastDrawMicros;
-            if (tmSinceMicros < minFrameDelayMicros) {
-                skipFrames++;
-                return;
-            }
-            skipFrames = 0;
             renderWindow();
-            updateStats();
+            if (bFameRendered) {
+                // log_printf("render %012zx %s\n", (uint64_t)this, nameDbg);
+                updateStats();
+            }
         }
     }
 
@@ -441,7 +439,16 @@ public:
 
     /* glfw callbacks */
     virtual void renderWindow() = 0;
-    virtual void swapBuffers() = 0;
+    void swapBuffers() {
+        if (bFameRendered) {
+            // log_printf("swapBuffers %012zx %s\n", (uint64_t)this, nameDbg);
+            timerProfileWindow.reset();
+            glfwMakeContextCurrent(glfw);
+            glfwSwapBuffers(glfw);
+            renderStatsWindow.timeSwapBuffers = timerProfileWindow.getTimeReset();
+        }
+        bFameRendered = false;
+    }
     virtual void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) = 0;
     virtual void onMouseMoved(ivec2 deltapos) {
     }
@@ -638,8 +645,6 @@ class appwindow_main : public appwindow, public window_main {
     int64_t tmDblClick               = 0;
     // int64_t tmLastShaderReloadMillis = 0;
     bool bEnableWindowProfiling = false;
-    prof_stats_window_t renderStatsWindow{};
-    hires_timer_t timerProfileWindow;
 protected:
     void destroyOverlayWindows();
 
@@ -670,13 +675,6 @@ public:
 
     void postRender() override {
         swapBuffers();
-    }
-
-    void swapBuffers() override {
-        timerProfileWindow.reset();
-        glfwMakeContextCurrent(glfw);
-        glfwSwapBuffers(glfw);
-        renderStatsWindow.timeSwapBuffers = timerProfileWindow.getTimeReset();
     }
 
     void preRender() override {
@@ -804,6 +802,7 @@ public:
             glViewport(0, 0, fbwidth, fbheight);
             if (ctrl->isVisible()) {
                 ctrl->render(this->nanovgCtxt, 0, 0, winwidth, winheight, pxratio);
+                bFameRendered = true;
             }
             renderStatsWindow.timeRender = timerProfileWindow.getTimeReset();
 #if BUILD_VSTHOST
@@ -1084,7 +1083,6 @@ class appwindow_dialog : public appwindow, public window_dialog {
     std::function<int(NVGcontext*, int, int, float)> drawFn;
     std::function<void(NVGcontext*)> initCallback;
     const bool disablesParent = false;
-    int frameRendered = 0;
 public:
     explicit appwindow_dialog(appwindow* _parent) : appwindow(_parent) {
     }
@@ -1104,6 +1102,7 @@ public:
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
         glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
         //glfwWindowHint(GLFW_FLOATING, 1);
+        strncpy(this->nameDbg, title, sizeof(this->nameDbg));
         appwindow::createBaseWindow(title, w, h, share);
 #if 0
         LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
@@ -1144,16 +1143,8 @@ public:
             glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
             float pxratio = fbwidth / (float) winwidth;
             glViewport(0, 0, fbwidth, fbheight);
-            frameRendered = drawFn(nanovgCtxt, winwidth, winheight, pxratio);
+            bFameRendered = drawFn(nanovgCtxt, winwidth, winheight, pxratio) > 0;
         }
-    }
-
-    void swapBuffers() override {
-        if (frameRendered) {
-            glfwMakeContextCurrent(glfw);
-            glfwSwapBuffers(glfw);
-        }
-        frameRendered = 0;
     }
 
     void onWindowCloseRequest() override {
@@ -1575,7 +1566,7 @@ static void glfw_cb_framebuffersize(GLFWwindow* w, int width, int height) {
 }
 
 void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* share, void* parentWindowHandle) {
-    strncpy(this->name, title, 32);
+    strncpy(this->name, title, sizeof(this->name));
     if (glfw)
         throw appexception("window not null");
     if (parentWindowHandle) {
@@ -1817,6 +1808,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         hires_timer_t hiresTimer1;
         GLFWwindow* glfwHandle = mainWindow->getGLFW();
         int64_t tmHRLastTick   = hiresRuntime.getTime();
+        int64_t tmHRLastDraw   = 0;
         int frameNumberStats   = 0;
 
 #ifdef _WIN32
@@ -1887,12 +1879,19 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                 Profiling::profilingCommitStats(&appInstance, frameNumberStats, appStats);
                 appStats = prof_stats_applicaton_t{};
                 frameNumberStats++;
+                tmHRNow = hiresRuntime.getTime();
             }
-            hiresTimer1.reset();
-            mainWindow->renderWindowAndChildren();
-            appStats.timeRefreshAll = hiresTimer1.getTimeReset();
-            mainWindow->swapBufferAndChildren();
-            appStats.timeSwapBuffersAll = hiresTimer1.getTimeReset();
+            const int64_t minFrameDelayMicros = 1'000'000LL / 100LL;
+            if (tmHRNow - tmHRLastDraw >= minFrameDelayMicros) {
+                hiresTimer1.reset();
+
+                mainWindow->renderWindowAndChildren();
+                appStats.timeRefreshAll = hiresTimer1.getTimeReset();
+                mainWindow->swapBufferAndChildren();
+                appStats.timeSwapBuffersAll = hiresTimer1.getTimeReset();
+
+                tmHRLastDraw = tmHRNow = hiresRuntime.getTime();
+            }
 #ifdef _WIN32
             if (debugMessageLoop) {
                 if (tmLRNow - tmLRDbgPrint >= 1000) {
