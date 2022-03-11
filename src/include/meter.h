@@ -34,7 +34,7 @@ struct runningsum {
 #ifndef _MSC_VER
 #pragma unroll
 #endif
-        for (uint32_t i = 0; i < samples16 * 16; i++) {
+        for (uint32_t i = 0; i < samples16 * 16U; i++) {
             float f = *fBuf++;
             f = f * f;
             fMaxBlock = math::max(fMaxBlock, f);
