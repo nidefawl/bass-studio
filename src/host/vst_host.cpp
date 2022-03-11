@@ -241,6 +241,10 @@ public:
         this->blockThreadStats.clear();
         for (auto i = threadsRunningCount; i < threadCount && i < MAX_AUDIOPROCESSING_THREADS; i++) {
             threads[i].startThread();
+            auto task = threads[i].call([]() {
+                setSSEFlushDenormals();
+            });
+            task->wait();
             threadsRunningCount++;
         }
     }
@@ -249,6 +253,10 @@ public:
         uint32_t countStarted = 0;
         for (WorkerThread& thread : threads) {
             thread.startThread();
+            auto task = thread.call([]() {
+                setSSEFlushDenormals();
+            });
+            task->wait();
             countStarted++;
             if (countStarted == this->threadCount) {
                 break;

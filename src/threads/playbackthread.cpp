@@ -18,6 +18,7 @@
 #include "host/vst_host.h"
 #include "host/midi_host.h"
 #include "logging.h"
+#include "sse.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -95,6 +96,7 @@ public:
 
         m_t = std::thread([this]() {
             seqthreads::registerThread("audiothread");
+            setSSEFlushDenormals();
             this->m_threadId = seqthreads::getCurrentThreadId();
             dbgassert(m_threadTls.tlsInitialized);
             daw_tls::setTls(m_threadTls);

@@ -79,6 +79,7 @@
 #include "audio_host.h"
 #include "midi_host.h"
 #include "appconfig.h"
+#include "sse.h"
 
 const int FLAG_DEFER_LOAD               = 0x1;
 const int FLAG_INVOKE_USER_CB_DEFERLOAD = 0x2;
@@ -1294,6 +1295,7 @@ void DawInstance::initDaw() {
 
     daw_tls::setTls(initTls);
 
+    setSSEFlushDenormals();
     initTls.host->setSampleFormat(sampleformat_t{
         static_cast<samplerate_t>(settings.iosettings.internalSamplerate),
         settings.iosettings.internalBlocksize,
