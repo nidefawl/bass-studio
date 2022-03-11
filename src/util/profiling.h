@@ -43,7 +43,7 @@ struct host_stats_t {
     int64_t timeProcessPlugins;
     int64_t timeBlockRaw;
     int64_t timeBlock;
-    std::map<String, int64_t> timings;
+    std::map<const char*, int64_t> timings;
     track_midiprocess_profiling_t blockMidiStats;
     float usage;
     float usageRaw;
