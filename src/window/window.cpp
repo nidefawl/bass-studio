@@ -254,16 +254,6 @@ public:
 #endif
     }
 
-    ~appwindow() override {
-        //dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), this) == windowTimerHandleList.end());
-
-#ifdef _WIN32
-        if (hwnd) {
-            RemovePropW(hwnd, L"GLFW");
-        }
-#endif
-    }
-
 private:
 
     void reloadCustomShaders() {
@@ -418,6 +408,9 @@ public:
     }
 
     void destroyGL() {
+        if (glfw) {
+            glfwMakeContextCurrent(glfw);
+        }
         if (nanovgCtxt) {
 #ifdef NANOVG_GL2
             nvgDeleteGL2(nanovgCtxt);
@@ -425,6 +418,17 @@ public:
             nvgDeleteGL3(nanovgCtxt);
 #endif
             nanovgCtxt = nullptr;
+        }
+#ifdef _WIN32
+        if (hwnd) {
+            RemovePropW(hwnd, L"GLFW");
+            hwnd = nullptr;
+        }
+#endif
+        if (glfw) {
+            glfwSetWindowUserPointer(glfw, nullptr);
+            glfwDestroyWindow(glfw);
+            glfw = nullptr;
         }
     }
 
@@ -1122,9 +1126,6 @@ public:
         glfwMakeContextCurrent(glfw);
         impl->destroy(nanovgCtxt);
         appwindow::destroyGL();
-        glfwSetWindowUserPointer(glfw, nullptr);
-        glfwDestroyWindow(glfw);
-        glfw = nullptr;
     }
 
     void renderWindow() override {
@@ -1309,10 +1310,7 @@ void appwindow_main::destroy() {
         glfwMakeContextCurrent(glfw);
         this->ctrl->destroyControl();
     }
-    glfwMakeContextCurrent(glfw);
     appwindow::destroyGL();
-    glfwDestroyWindow(glfw);
-    glfw = nullptr;
 }
 
 void appwindow_main::initControl() {
@@ -1995,11 +1993,14 @@ public:
         appwindow::killTimer();
         glfwMakeContextCurrent(glfw);
         // appwindow::destroyGL();
+#ifdef _WIN32
+        if (hwnd) {
+            RemovePropW(hwnd, L"GLFW");
+            hwnd = nullptr;
+        }
+#endif
         glfwDestroyWindow(glfw);
         glfw = nullptr;
-#ifdef _WIN32
-        hwnd = nullptr;
-#endif
     }
     // end pluginwindow overrides
 

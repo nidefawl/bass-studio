@@ -12,9 +12,7 @@
 class BaseCtrl;
 class AppCtrl;
 class PopupCtrl;
-struct window_draw_fn;
-struct window_init_fn;
-struct window_abstract_t;
+class window_abstract_t;
 
 class window_base {
 public:
