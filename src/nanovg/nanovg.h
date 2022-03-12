@@ -546,6 +546,8 @@ void nvgSetPaintColor(NVGcontext* ctx, NVGpaint* paint, NVGcolor color);
 void nvgSetZ(NVGcontext* ctx, float z);
 void nvgTranslateZ(NVGcontext* ctx, float z);
 void nvgFontKerningAdvance(NVGcontext* ctx, int i);
+float nvgTextW(NVGcontext* ctx, float x, float y, const float maxWidth, const char* string, const char* end);
+
 //
 // Text
 //

@@ -13,6 +13,12 @@ struct layout_pianoroll_t {
     float& scale() {
         return fold ? this->yscalefold : this->yscale;
     }
+    float offset() const {
+        return fold ? this->yoffsetfold : this->yoffset;
+    }
+    float scale() const {
+        return fold ? this->yscalefold : this->yscale;
+    }
 };
 struct layout_grid_t {
     int offset  = 0;

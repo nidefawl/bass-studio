@@ -90,7 +90,7 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
     if (cl->name.length()) {
         renderTextLabel(vg,
                         vec2(pos)+vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0),
-                        vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE * 2, 0),
+                        vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE + 2, 0),
                         cl->name,
                         theme,
                         HEIGHT_CLIP_TITLE,
@@ -364,7 +364,7 @@ void gui_midi_clip::render(NVGcontext* vg) {
         if (cl->name.length()) {
             renderTextLabel(vg,
                             vec2(pos)+vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0),
-                            vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE * 2, 0),
+                            vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE + 2, 0),
                             cl->name,
                             theme,
                             HEIGHT_CLIP_TITLE,
@@ -424,7 +424,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
     if (cl->name.length()) {
         renderTextLabel(vg,
                         vec2(pos)+vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0),
-                        vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE * 2, 0),
+                        vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE + 2, 0),
                         cl->name,
                         theme,
                         HEIGHT_CLIP_TITLE,

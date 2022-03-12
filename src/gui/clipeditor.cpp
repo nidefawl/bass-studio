@@ -17,6 +17,7 @@
 #include "track.h"
 #include "track_impl.h"
 #include "host/vst_host.h"
+#include <nanovg.h>
 
 constexpr int32_t VEL_SELECT_DISTANCE = 16;
 class action_modify_notes : public action_base {
@@ -179,14 +180,19 @@ void renderNote(NVGcontext* vg, gui_clipcontent* c, T* note, float yscale, tick_
     float insety = calcInset(1, nh);
     nvgBatchedRect(vg, nx + insetx, ny - yscale + insety, nw - insetx * 2, nh - insety * 2);
 }
-void renderNoteName(NVGcontext* vg, gui_clipcontent* c, note_t* note, int idx, float yscale, tick_t absPos) {
+void renderNoteName(NVGcontext* vg, const gui_clipcontent* c, note_t* note, int idx, float yscale, tick_t absPos) {
 
-    float ny     = c->toScreenF(note->pitch);
-    float nx     = c->grid.tickToScreenD(note->time);
-    float nw     = c->grid.tickLenToScreen(note->len);
-    float nh     = yscale;
-    float insetx = calcInset(5, nw);
-    renderText(vg, nx + insetx, ny - yscale + nh / 2.0f, nw - insetx * 2, StringAsCStr(StringFormat("%s @%d %d", noteName(note->pitch), absPos, note->len)));
+    const float ny     = c->toScreenF(note->pitch);
+    const float nx     = c->grid.tickToScreenD(note->time);
+    const float nw     = c->grid.tickLenToScreen(note->len);
+    const float nh     = yscale;
+    const float insetx = calcInset(5, nw);
+    const String strNoteName = StringFormat("%s @%d %d", noteName(note->pitch), absPos, note->len);
+    renderTextLabel(vg, 
+        vec2(nx + insetx, ny - yscale + nh / 2.0f),
+        vec2(nw - insetx + 2, nh),
+        strNoteName,
+        c->theme, 18, c->theme->getColor(GuiColor::COL_NOTE_TEXT), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 }
 void renderFrame(NVGcontext* vg, ivec2 posA, ivec2 posB) {
     float x = math::min(posA.x, posB.x);
@@ -805,7 +811,6 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 
     if (scale >= 18) {
         int idx = 0;
-        setFont(vg, 18, theme->getColor(GuiColor::COL_NOTE_TEXT), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         for (note_t& note: notes.m_list) {
             tick_t absPos = note.start();
             if (view.clip()) {

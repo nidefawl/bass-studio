@@ -351,22 +351,34 @@ public:
         ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
         gui_track_subtrack::renderMixerInfo(vg, pos, size);
         const int htt         = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-        const int titleHeight = htt * 4 / 5;
-        const int fontSize    = titleHeight - 4;
-        int32_t y             = INSET_TITLE;
-        y += titleHeight * 2;
-        setFont(vg, fontSize, G_WHITE, G_TITLE_ALIGN);
-        renderText(vg, 0 + INSET_TITLE, y + titleHeight / 2, size.x, StringAsCStr(StringFormat("updateCalls: %d", updateCalls)));
-        y += titleHeight;
-        renderText(vg, 0 + INSET_TITLE, y + titleHeight / 2, size.x, StringAsCStr(StringFormat("culled: %s", culled ? "true" : "false")));
-        y += titleHeight;
-        renderText(vg, 0 + INSET_TITLE, y + titleHeight / 2, size.x, StringAsCStr(StringFormat("Splits: %d", splits.size())));
-        y += titleHeight;
-        //TODO: Next line is not thread-safe
-        renderText(vg, 0 + INSET_TITLE, y + titleHeight / 2, size.x, StringAsCStr(StringFormat("samples.size: %d", this->m_track->audio->audioOutput.samples.size())));
-        y += titleHeight;
-        //TODO: Next line is not thread-safe
-        renderText(vg, 0 + INSET_TITLE, y + titleHeight / 2, size.x, StringAsCStr(StringFormat("data.size: %d", this->m_track->audio->audioOutput.data.size())));
+        const int fontSize    = htt;
+        for (int i = 0; i < 5; ++i) {
+            String strInfo;
+            switch (i) {
+                case 0:
+                    strInfo = StringFormat("updateCalls: %d", updateCalls);
+                    break;
+                case 1:
+                    strInfo = StringFormat("culled: %s", culled ? "true" : "false");
+                    break;
+                case 2:
+                    strInfo = StringFormat("Splits: %d", splits.size());
+                    break;
+                case 3:
+                    //TODO: Next line is not thread-safe
+                    strInfo = StringFormat("samples.size: %d", this->m_track->audio->audioOutput.samples.size());
+                    break;
+                case 4:
+                    //TODO: Next line is not thread-safe
+                    strInfo = StringFormat("data.size: %d", this->m_track->audio->audioOutput.data.size());
+                    break;
+            }
+            renderTextLabel(vg, 
+                vec2(0, htt * (0.5f + i + 2)) + vec2(INSET_TITLE),
+                vec2(size.x - INSET_TITLE, htt),
+                strInfo,
+                theme, fontSize, theme->getColor(GuiColor::COL_WHITE), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        }
     }
 };
 

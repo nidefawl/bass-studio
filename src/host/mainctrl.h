@@ -147,7 +147,7 @@ public:
         out = notePitches;
     }
 
-    float toFoldNote(float note) {
+    float toFoldNote(float note) const {
         auto len = notePitches.size();
         for (uint32_t i = 0; i < len; i++) {
             if (notePitches[i] >= (int32_t) note) {

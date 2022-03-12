@@ -6,6 +6,7 @@
 #include "event.h"
 #include "button.h"
 #include "dropdown.h"
+#include "guicolors.h"
 #include "table.h"
 #include "guitooltip.h"
 #include "guicontextmenu_daw.h"
@@ -519,13 +520,15 @@ void gui_track_subtrack::renderMixerInfo(NVGcontext* vg, ivec2 pos, ivec2 size) 
         }
     }
     const int htt         = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-    const int titleHeight = htt * 4 / 5;
-    const int fontSize    = titleHeight - 4;
-
-    //debug
-    setFont(vg, fontSize, G_WHITE, G_TITLE_ALIGN);
-    int32_t y = INSET_TITLE;
-    renderText(vg, 0 + INSET_TITLE, y + titleHeight / 2, size.x, StringAsCStr(target));
-    y += titleHeight;
-    renderText(vg, 0 + INSET_TITLE, y + titleHeight / 2, size.x, StringAsCStr(curvalue));
+    const int fontSize    = htt;
+    renderTextLabel(vg, 
+        vec2(0, htt * 0.5f) + vec2(INSET_TITLE),
+        vec2(size.x - INSET_TITLE, htt),
+        target,
+        theme, fontSize, theme->getColor(GuiColor::COL_WHITE), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    renderTextLabel(vg, 
+        vec2(0, htt * 1.5f) + vec2(INSET_TITLE),
+        vec2(size.x - INSET_TITLE, htt),
+        curvalue,
+        theme, fontSize, theme->getColor(GuiColor::COL_WHITE), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 }

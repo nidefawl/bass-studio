@@ -2925,7 +2925,7 @@ static int nvg__isTransformFlipped(const float *xform)
 	return( det < 0);
 }
 
-float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char* end)
+float nvgTextImpl(NVGcontext* ctx, float x, float y, const float maxWidth, const char* string, const char* end)
 {
 	NVGstate* state = nvg__getState(ctx);
 	FONStextIter iter, prevIter;
@@ -2968,6 +2968,9 @@ float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char*
 			if (iter.prevGlyphIndex == -1) // still can not find glyph?
 				break;
 		}
+		if (maxWidth >= 0 && iter.nextx > (x+maxWidth) * scale) {
+			break;
+		}
 		prevIter = iter;
 		if(isFlipped) {
 			float tmp;
@@ -2981,13 +2984,16 @@ float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char*
 		nvgTransformPoint(&c[4],&c[5], state->xform, q.x1*invscale, q.y1*invscale);
 		nvgTransformPoint(&c[6],&c[7], state->xform, q.x0*invscale, q.y1*invscale);
 		// Create triangles
-		if (nverts+6 <= cverts) {
-			nvg__vset(&verts[nverts], c[0], c[1], q.s0, q.t0); nverts++;
-			nvg__vset(&verts[nverts], c[4], c[5], q.s1, q.t1); nverts++;
-			nvg__vset(&verts[nverts], c[2], c[3], q.s1, q.t0); nverts++;
-			nvg__vset(&verts[nverts], c[0], c[1], q.s0, q.t0); nverts++;
-			nvg__vset(&verts[nverts], c[6], c[7], q.s0, q.t1); nverts++;
-			nvg__vset(&verts[nverts], c[4], c[5], q.s1, q.t1); nverts++;
+		dbgassert(nverts+6 <= cverts);
+		nvg__vset(&verts[nverts], c[0], c[1], q.s0, q.t0); nverts++;
+		nvg__vset(&verts[nverts], c[4], c[5], q.s1, q.t1); nverts++;
+		nvg__vset(&verts[nverts], c[2], c[3], q.s1, q.t0); nverts++;
+		nvg__vset(&verts[nverts], c[0], c[1], q.s0, q.t0); nverts++;
+		nvg__vset(&verts[nverts], c[6], c[7], q.s0, q.t1); nverts++;
+		nvg__vset(&verts[nverts], c[4], c[5], q.s1, q.t1); nverts++;
+		// Create triangles
+		if (nverts+6 > cverts) {
+			break;
 		}
 	}
 
@@ -2998,6 +3004,16 @@ float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char*
 
 	return iter.nextx / scale;
 }
+
+float nvgTextW(NVGcontext* ctx, float x, float y, const float maxWidth, const char* string, const char* end) {
+	return nvgTextImpl(ctx, x, y, nvg__maxf(0.0f, maxWidth), string, end);
+}
+
+float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char* end)
+{
+	return nvgTextImpl(ctx, x, y, -1.0f, string, end);
+}
+
 static void nvg_appendRect(NVGcontext* ctx, float x, float y, float w, float h)
 {
 	NVGstate* state = nvg__getState(ctx);

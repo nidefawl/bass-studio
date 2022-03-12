@@ -76,9 +76,8 @@ public:
     float toNoteF(int32_t y) {
         return toNoteFImpl(y, false);
     }
-    float toScreenF(float note) {
+    float toScreenF(float note) const {
         if (layoutRoll.fold) {
-            std::vector<int32_t> pitches;
             note = this->clipview.toFoldNote(note);
         }
         float offsetKey = note * layoutRoll.scale();
