@@ -52,7 +52,7 @@
 extern "C" {
 #endif
 
-#define NANOVG_GL_USE_STATE_FILTER (0)
+#define NANOVG_GL_USE_STATE_FILTER (1)
 
 // Creates NanoVG contexts for different OpenGL (ES) versions.
 // Flags should be combination of the create flags above.
