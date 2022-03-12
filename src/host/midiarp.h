@@ -49,7 +49,7 @@ class midiarp : public automatable_t {
     std::vector<tick_t> curRandTimeOffset;
     std::vector<tick_t> processTimePoints;
     track_impl_t* const trackImpl;
-    ResetMode resetMode       = ResetMode::NOTE;
+    // ResetMode resetMode       = ResetMode::NOTE;
     bool enable               = false;
     int32_t step              = 0;
     int32_t stepGenerated     = 0;
@@ -63,7 +63,7 @@ class midiarp : public automatable_t {
     bool syncClock               = true;
     bool bEnableStateUserToggled = false;
     bool bEnableNextState        = false;
-    float tmLastLog              = 0.0f;
+    // float tmLastLog              = 0.0f;
 
     void initRandomDelays(tick_t tick, tick_t startFrame, tick_t endFrame, int32_t nextStep, tick_t stepSize, uint64_t seed, bool reset);
     bool isOutputNoteGateOn(const arp_note_t& noteHeldOut);
