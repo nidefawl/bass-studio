@@ -109,7 +109,6 @@ endforeach ()
 
 foreach (f ${CPP_ALL_FILES})
 if (f MATCHES ".*host/plugin/.*"
-    OR f MATCHES ".*window/window_dbg.*" 
     OR f MATCHES ".*plugins/.*"
     OR f MATCHES ".*main/.*"
     OR f MATCHES ".*platform/linux/.*")
