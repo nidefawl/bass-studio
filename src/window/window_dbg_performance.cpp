@@ -23,6 +23,7 @@
 #include "rand.h"
 #include "platform.h"
 #include "util/profiling_impl.h"
+#include "window_impl.h"
 
 namespace windowdebug_performance {
 
@@ -159,7 +160,7 @@ struct gl_shader_perfgraph : gl_shader_pipeline {
 };
 // static constexpr uint64_t nextPowerOfTwo64 (uint64_t x) { return 1ULL<<(sizeof(uint64_t) * 8 - __builtin_clzll(x)); }
 
-class window_impl {
+class window_impl : public window_abstract_t {
     static constexpr size_t TEXTURE_WIDTH  = DBG_PERF_HIST_SIZE;
     static constexpr size_t TEXTURE_HEIGHT = 16;
     std::vector<float> texData;
@@ -255,8 +256,10 @@ public:
     window_impl() {
         texData.resize(TEXTURE_WIDTH * TEXTURE_HEIGHT);
     }
+    ~window_impl() {
+    }
 
-    int init() {
+    int init(NVGcontext*) {
         tmLastReload = getTimeMillis();
         pipePerfShader = std::make_shared<gl_shader_perfgraph>();
         checkGLError("pipePerfShader reset");
@@ -315,7 +318,7 @@ public:
         const int FONTSIZE_LEGEND = 12;
         const int WND_PADDING     = 6;
         const auto renderSize   = vec2(fbWidth, fbHeight) - vec2(WND_PADDING * 2.0f);
-        int layoutCols = math::floorfS32(math::min(6.0f, fbWidth/280.0f));
+        int layoutCols = math::floorfS32(math::clamp(fbWidth/220.0f, 1.0f, 8.0f));
         vec2 layoutSize(0);
         do {
             layoutSize = vec2(renderSize.x / static_cast<float>(layoutCols)) * vec2(1.0, 1.0 / 4.0f);
@@ -466,20 +469,12 @@ public:
         // }
         return 1;
     }
+    int destroy(NVGcontext*) {
+        return 0;
+    }
 };
 }// namespace windowdebug_performance
 
-static std::shared_ptr<windowdebug_performance::window_impl> window;
-int initDebugWindowPerformance(NVGcontext* vg) {
-    if (window) {
-        return 1;
-    }
-    window = std::make_shared<windowdebug_performance::window_impl>();
-    return window->init();
-}
-int drawDebugWindowPerformance(NVGcontext* vg, int winW, int winH, float pxratio) {
-    if (!window) {
-        return 0;
-    }
-    return window->render(vg, winW, winH, pxratio);
+std::shared_ptr<window_abstract_t> getWindowPerf() {
+    return std::make_shared<windowdebug_performance::window_impl>();
 }

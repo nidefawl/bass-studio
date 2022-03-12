@@ -14,6 +14,7 @@ class AppCtrl;
 class PopupCtrl;
 struct window_draw_fn;
 struct window_init_fn;
+struct window_abstract_t;
 
 class window_base {
 public:
@@ -38,8 +39,6 @@ class window_dialog : public window_base {
 public:
     ~window_dialog() override = default;
     virtual void show()                                    = 0;
-    virtual void setDrawFunction(const window_draw_fn& fn) = 0;
-    virtual void setInitFunction(const window_init_fn& fn) = 0;
 };
 
 class window_overlay : public window_base {
@@ -53,7 +52,7 @@ public:
 class window_main : public window_base {
 public:
     ~window_main() override = default;
-    virtual window_dialog* createDialog(const String& sTitle, int w, int h)      = 0;
+    virtual window_dialog* createDialog(const String& sTitle, int w, int h, std::shared_ptr<window_abstract_t>&& windowImpl) = 0;
     virtual window_main* createOverlay(std::shared_ptr<AppCtrl> ctrl, ivec2 windowSize, int flags) = 0;
     virtual void closeOverlay(window_main* wnd)                                  = 0;
 

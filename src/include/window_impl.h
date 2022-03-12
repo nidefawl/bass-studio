@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include <nanovg_min.h>
 #include <functional>
 
@@ -10,5 +11,14 @@ struct window_draw_fn {
 };
 
 struct window_init_fn {
-    std::function<void(NVGcontext*)> initCallback;
+    std::function<int(NVGcontext*)> initCallback;
+};
+
+class window_abstract_t {
+public:
+    window_abstract_t() = default;
+    virtual ~window_abstract_t() = default;
+    virtual int init(NVGcontext*) = 0;
+    virtual int render(NVGcontext*, int, int, float) = 0;
+    virtual int destroy(NVGcontext*) = 0;
 };

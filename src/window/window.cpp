@@ -960,7 +960,7 @@ public:
             glfwSetCursor(glfw, MouseCursors::cursors[cursorIcon]);
     }
 
-    window_dialog* createDialog(const String& sTitle, int w, int h) override;
+    window_dialog* createDialog(const String& sTitle, int w, int h, std::shared_ptr<window_abstract_t>&& windowImpl) override;
 
     bool isShown() override {
         return appwindow::isWindowNotHidden();
@@ -1080,19 +1080,13 @@ void appwindow_main::onChildOverlayClose(appwindow* child) {
 }
 
 class appwindow_dialog : public appwindow, public window_dialog {
-    std::function<int(NVGcontext*, int, int, float)> drawFn;
-    std::function<void(NVGcontext*)> initCallback;
+    std::shared_ptr<window_abstract_t> impl;
     const bool disablesParent = false;
 public:
-    explicit appwindow_dialog(appwindow* _parent) : appwindow(_parent) {
-    }
-
-    void setDrawFunction(const window_draw_fn& fn) override {
-        this->drawFn = fn.drawCallback;
-    }
-
-    void setInitFunction(const window_init_fn& fn) override {
-        this->initCallback = fn.initCallback;
+    explicit appwindow_dialog(appwindow* _parent, std::shared_ptr<window_abstract_t>&& windowImpl)
+    : appwindow(_parent),
+    impl(windowImpl)
+    {
     }
 
     void createDialogWindow(const char* title, int w, int h, GLFWwindow* share = nullptr) {
@@ -1116,6 +1110,9 @@ public:
             //glfwSetWindowAttrib(glfw, GLFW_FLOATING, GL_TRUE);
         }
         //glfwWindowHint(GLFW_FLOATING, 0);
+        if (0 != impl->init(nanovgCtxt)) {
+            glfwSetWindowShouldClose(glfw, 1);
+        }
     }
 
     void destroy() override {
@@ -1123,6 +1120,7 @@ public:
             throw appexception("window null");
         appwindow::killTimer();
         glfwMakeContextCurrent(glfw);
+        impl->destroy(nanovgCtxt);
         appwindow::destroyGL();
         glfwSetWindowUserPointer(glfw, nullptr);
         glfwDestroyWindow(glfw);
@@ -1131,20 +1129,13 @@ public:
 
     void renderWindow() override {
         glfwMakeContextCurrent(glfw);
-        if (initCallback) {
-            initCallback(nanovgCtxt);
-            initCallback = nullptr;
-        }
-
-        if (drawFn) {
-            int winwidth = 0, winheight = 0;
-            int fbwidth = 0, fbheight = 0;
-            glfwGetWindowSize(glfw, &winwidth, &winheight);
-            glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
-            float pxratio = fbwidth / (float) winwidth;
-            glViewport(0, 0, fbwidth, fbheight);
-            bFameRendered = drawFn(nanovgCtxt, winwidth, winheight, pxratio) > 0;
-        }
+        int winwidth = 0, winheight = 0;
+        int fbwidth = 0, fbheight = 0;
+        glfwGetWindowSize(glfw, &winwidth, &winheight);
+        glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
+        float pxratio = fbwidth / (float) winwidth;
+        glViewport(0, 0, fbwidth, fbheight);
+        bFameRendered = impl->render(nanovgCtxt, winwidth, winheight, pxratio) > 0;
     }
 
     void onWindowCloseRequest() override {
@@ -1162,7 +1153,6 @@ public:
         glfwSetWindowUserPointer(glfw, nullptr);
         if (parent)
             this->parent->onChildDialogClose(this);
-        log_printf("END\n");
     }
 
     void onTick() override {
@@ -1447,8 +1437,8 @@ LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LP
 }
 #endif
 
-window_dialog* appwindow_main::createDialog(const String& sTitle, int w, int h) {
-    auto* windowDialog = new appwindow_dialog(this);
+window_dialog* appwindow_main::createDialog(const String& sTitle, int w, int h, std::shared_ptr<window_abstract_t>&& windowImpl) {
+    auto* windowDialog = new appwindow_dialog(this, std::move(windowImpl));
     windowDialog->createDialogWindow(StringAsCStr(sTitle), w, h, this->glfw);
     return windowDialog;
 }

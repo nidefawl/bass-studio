@@ -850,65 +850,6 @@ void DawInstance::setEmptyProject() {
     resetShaderTimeOffset();
 }
 
-#if CREATE_DEBUG_COMPANION_WINDOW
-int drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxratio, waveformrender* wfrender);
-int initDebugWindowWaveformCache(NVGcontext* ctx);
-
-void openDebugWindowWaveformCache(window_main* mainwindow, waveformrender* wfrender) {
-    dbgassert(mainwindow);
-    window_dialog* dialog = mainwindow->createDialog("waveform atlas cache", 1280, 720);
-    window_init_fn init;
-    window_draw_fn drawFn;
-    init.initCallback = [](NVGcontext* ctx) {
-        initDebugWindowWaveformCache(ctx);
-    };
-    drawFn.drawCallback = [wfrender](NVGcontext* ctx, int winW, int winH, float pxratio) -> int {
-        return drawDebugWindowWaveformCache(ctx, winW, winH, pxratio, wfrender);
-    };
-    dialog->setDrawFunction(drawFn);
-    dialog->setInitFunction(init);
-    dialog->show();
-}
-
-int drawDebugWindowPerformance(NVGcontext* ctx, int winW, int winH, float pxratio);
-int initDebugWindowPerformance(NVGcontext* ctx);
-
-void openDebugWindowPerformance(window_main* mainwindow) {
-    dbgassert(mainwindow);
-    window_dialog* dialog = mainwindow->createDialog("performance graphs", 1280, 720);
-    window_init_fn init;
-    window_draw_fn drawFn;
-    init.initCallback = [](NVGcontext* ctx) {
-        initDebugWindowPerformance(ctx);
-    };
-    drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) -> int {
-        return drawDebugWindowPerformance(ctx, winW, winH, pxratio);
-    };
-    dialog->setDrawFunction(drawFn);
-    dialog->setInitFunction(init);
-    dialog->show();
-}
-
-int drawDebugWindowNanoVG(NVGcontext* ctx, int winW, int winH, float pxratio);
-int initDebugWindowNanoVG(NVGcontext* ctx);
-
-void openDebugWindowNanoVG(window_main* mainwindow) {
-    dbgassert(mainwindow);
-    window_dialog* dialog = mainwindow->createDialog("nanovg debug", 1280, 720);
-    window_init_fn init;
-    window_draw_fn drawFn;
-    init.initCallback = [](NVGcontext* ctx) {
-        initDebugWindowNanoVG(ctx);
-    };
-    drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) -> int {
-        return drawDebugWindowNanoVG(ctx, winW, winH, pxratio);
-    };
-    dialog->setDrawFunction(drawFn);
-    dialog->setInitFunction(init);
-    dialog->show();
-}
-#endif
-
 void DawInstance::onDawCompanionWindowClose(DawWindowCompanion& entry) {
     auto it = std::find_if(dawCtrls.begin(), dawCtrls.end(), [pDawCtrlClosing = entry.ctrl.get()](auto* pDawCtrl) {
         return pDawCtrl == pDawCtrlClosing;
@@ -949,6 +890,10 @@ void MainCtrl::onChildOverlayWindowClose(window_main* window) {
         DawCtrl::onChildOverlayWindowClose(window);
     }
 }
+
+std::shared_ptr<window_abstract_t> getWindowDebugWaveformCache();
+std::shared_ptr<window_abstract_t> getWindowPerf();
+std::shared_ptr<window_abstract_t> getWindowDebugNanoVG();
 
 void DawInstance::menuCommand(const menucmd_t&& command) {
     try {
@@ -1084,15 +1029,18 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
                 }
 #if CREATE_DEBUG_COMPANION_WINDOW
                 if (command.argInt == 0) {
-                    openDebugWindowWaveformCache(dynamic_cast<window_main*>(mainCtrl->window), mainCtrl->getWaveformRenderer());
+                    window_dialog* dialog = mainCtrl->mainWindow->createDialog("waveform atlas cache", 1280, 720, getWindowDebugWaveformCache());
+                    dialog->show();
                     return;
                 }
                 if (command.argInt == 1) {
-                    openDebugWindowNanoVG(dynamic_cast<window_main*>(mainCtrl->window));
+                    window_dialog* dialog = mainCtrl->mainWindow->createDialog("nanovg debug", 1280, 720, getWindowDebugNanoVG());
+                    dialog->show();
                     return;
                 }
                 if (command.argInt == 2) {
-                    openDebugWindowPerformance(dynamic_cast<window_main*>(mainCtrl->window));
+                    window_dialog* dialog = mainCtrl->mainWindow->createDialog("performance graphs", 1280, 720, getWindowPerf());
+                    dialog->show();
                     return;
                 }
 #endif
