@@ -119,34 +119,11 @@ endif ()
 endforeach ()
 
 
-if (NOT MSVC)
-    # These files are especially important to have optimized, even in debug builds
-    # Right now this is disabled because of the ODR rule on inline functions (in library headers)
-    set(SRC_FILES_SUBDIR_FILES
-            src/file/fileloader.cpp
-            src/file/projectfile.cpp
-            src/file/themefile.cpp
-            src/file/appsettingsfile.cpp
-            )
-    # TODO: what does -O without a number/s produce?
-    # TODO: don't lower -O level for release builds when reenabling -On files in debug builds
-    # set_source_files_properties(${SRC_FILES_SUBDIR_FILES} PROPERTIES COMPILE_OPTIONS "-g;-O")
-    set(SRC_FILES_OPTIMIZE
-            src/gl/gl_path.cpp
-            src/wave/waveform_generate.cpp
-            src/wave/clip.cpp
-            src/host/vsthost.cpp
-            src/host/track_graph.cpp
-            )
-    # set_source_files_properties(${SRC_FILES_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-g;-O")
-
+if (IS_MINGW_BUILD)
     # The SEH assembly will not work correctly on clang mingw if any level of optimization is applied
-    set(SRC_FILES_NO_OPTIMIZE
-            src/host/plugin/vst_plugin_dispatch.cpp
-            )
-    set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-O0;-fno-lto;-g0")
+    set(SRC_FILES_NO_OPTIMIZE src/host/plugin/vst_plugin_dispatch.cpp)
+    set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-fno-lto;-mtune=generic")
     set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
-
 endif ()
 
 set(PROJECT_DEPS_SRC_FILES "${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c")

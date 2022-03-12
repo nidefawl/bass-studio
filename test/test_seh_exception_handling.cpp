@@ -1,15 +1,13 @@
 #include "TestBase.hpp"
+#include "str_util.h"
+#include <stdint.h>
 #include <vector>
 #include <cstdint>
 #include <cstdio>
 #ifdef _WIN32
+#include "platform/mingw/mingw.exc.h"
 #include <Windows.h>
 #endif
-#ifdef __MINGW32__
-#include <excpt.h>
-#include "platform/mingw/mingw.exc.h"
-#endif
-
 
 
 using std::int64_t;
@@ -20,19 +18,25 @@ struct teststruct {
     int64_t *data3;
 };
 
+void* gUserPtrExpected = nullptr;
+int64_t unsafeFunction(void* userptr, int userdata, void* somePtr, int64_t someVal, void* morePtrs, void* morePtrs2, int someInt) {
+    TEST_ASSERT_EQUAL(gUserPtrExpected, userptr);
+    printf("gUserPtrExpected %012zx\n", (uint64_t)gUserPtrExpected);
+    printf("userptr %012zx\n", (uint64_t)userptr);
+    teststruct* tst = (teststruct*) userptr;
+    if (userdata == 0) {
+        return tst->data + tst->data2;
+    }
+    return *tst->data3;
+}
+
+int64_t handleException(void* userptr) {
+    TEST_ASSERT_EQUAL(gUserPtrExpected, userptr);
+    printf("gUserPtrExpected %012zx\n", (uint64_t)gUserPtrExpected);
+    printf("userptr %012zx\n", (uint64_t)userptr);
+    return 0xAA55AA;
+}
 extern "C" {
-    int64_t unsafeFunction(void* userptr, int userdata) {
-        teststruct* tst = (teststruct*) userptr;
-        if (userdata == 0) {
-            return tst->data + tst->data2;
-        }
-        return *tst->data3;
-    }
-
-    int64_t handleException(void* userptr) {
-        return 0xAA55AA;
-    }
-
     static bool isHandledExc(int n) {
         return true;
     }
@@ -45,36 +49,30 @@ extern "C" {
         }
         return EXCEPTION_CONTINUE_SEARCH;
     }
+#define SEH_EXC_HANDLER ExceptionHandler
 #endif
 }
 
+__declspec(noinline)
 int64_t invoke_unsafe_and_catch(void* userptr, int userdata)
 {
-    int64_t l = 0;
-#if defined(_MSC_VER)
-    __try
-#elif defined(__MINGW32__)
-    __mingw_try("testsehasm", ExceptionHandler)
-#endif
+    volatile int64_t l = 0;
+    seh_try("testsehasm")
     {
-        l = unsafeFunction(userptr, userdata);
+        l = unsafeFunction(userptr, userdata, gUserPtrExpected, 123123, nullptr, userptr, userdata);
     }
-#if defined(_MSC_VER)
-    __except (isHandledExc(GetExceptionCode()) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
+    seh_catch("testsehasm")
+    {
         l = handleException(userptr);
     }
-#elif defined(__MINGW32__)
-    __mingw_except_begin("testsehasm") {
-        l = handleException(userptr);
-    }
-    __mingw_except_end("testsehasm")
-#endif
+    seh_finally("testsehasm")
     return l;
 }
 
 void test_seh_try_catch() {
     TEST_BEGIN("test_seh_try_catch");
     teststruct testhandleImpl{ 1, 2, nullptr };
+    gUserPtrExpected = &testhandleImpl;
     TEST_ASSERT_EQUAL(invoke_unsafe_and_catch(&testhandleImpl, 0), 3);
     TEST_ASSERT_EQUAL(invoke_unsafe_and_catch(&testhandleImpl, 1), 0xAA55AA);
     TEST_END();

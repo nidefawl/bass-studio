@@ -59,8 +59,8 @@ DEFINE_TEST(
     test_seh_exception_handling FALSE 
     test_seh_exception_handling.cpp
 )
-if (NOT MSVC)
-    target_compile_options(test_seh_exception_handling PRIVATE -O0 -fno-lto -g0)
+if (IS_MINGW_BUILD)
+    target_compile_options(test_seh_exception_handling PRIVATE "-fno-lto;-mtune=generic")
 endif()
 
 DEFINE_TEST(

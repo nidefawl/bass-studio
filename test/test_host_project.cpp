@@ -8,7 +8,7 @@
 
 int main(int, char*[]) {
     std::vector<String> args{
-        "-f", "cpp-test-data/serum-test.project",
+        "-f", "cpp-test-data/test-crash-vst.project",
         "-s", "32.0",
         "-l", "4.0",
         "-o", "test-render",

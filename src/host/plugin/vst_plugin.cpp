@@ -22,10 +22,10 @@
 #include "host/history.h"
 
 
-float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx);
-void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float value);
-void vst_process(vstplugin* plugin, AEffect* aeffect, float** bufIn, float** bufOut, int32_t numSamples);
-int64_t vst_dispatch(vstplugin* plugin,
+__declspec(noinline) float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx);
+__declspec(noinline) void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float value);
+__declspec(noinline) void vst_process(vstplugin* plugin, AEffect* aeffect, float** bufIn, float** bufOut, int32_t numSamples);
+__declspec(noinline) int64_t vst_dispatch(vstplugin* plugin,
                   AEffect* aeffect,
                   int32_t opcode,
                   int32_t index,
@@ -848,11 +848,12 @@ int64_t vstplugin::dispatch(
 }
 void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
     dbgassert(!isInSuspend);
+    dbgassert(this->handle->aeffect);
     dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
     vst_process(this, this->handle->aeffect, in->buf, out->buf, numSamples);
 }
 
-extern "C" void vst_onException(vstplugin* plugin)
+__declspec(noinline) void vst_onException(vstplugin* plugin)
 {
     log_lf(Log::L_ERROR, "segfault/fatal exception\n");
     if (!plugin->isBypass()) {
