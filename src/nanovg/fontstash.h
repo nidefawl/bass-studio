@@ -21,9 +21,12 @@
 
 #define FONS_INVALID -1
 
+#include "assert_dbg.h"
+
 enum FONSflags {
-    FONS_ZERO_TOPLEFT = 1,
+    FONS_ZERO_TOPLEFT    = 1,
     FONS_ZERO_BOTTOMLEFT = 2,
+    FONS_KERNING_ADVANCE = 4,
 };
 
 enum FONSalign {
@@ -1218,8 +1221,11 @@ static void fons__getQuad(FONScontext* stash, FONSfont* font,
     float rx,ry,xoff,yoff,x0,y0,x1,y1;
 
     if (prevGlyphIndex != -1) {
-        float adv = fons__tt_getGlyphKernAdvance(&font->font, prevGlyphIndex, glyph->index) * scale;
-        *x += (int)(adv + spacing + 0.5f);
+        float adv = 0.0f;
+        if (stash->params.flags & FONS_KERNING_ADVANCE) {
+            adv = fons__tt_getGlyphKernAdvance(&font->font, prevGlyphIndex, glyph->index) * scale;
+        }
+        *x += (int) (adv + spacing + 0.5f);
     }
 
     // Each glyph has 2px border to allow good interpolation,

@@ -545,6 +545,7 @@ void nvgBatchedRect(NVGcontext* ctx, float x, float y, float w, float h);
 void nvgSetPaintColor(NVGcontext* ctx, NVGpaint* paint, NVGcolor color);
 void nvgSetZ(NVGcontext* ctx, float z);
 void nvgTranslateZ(NVGcontext* ctx, float z);
+void nvgFontKerningAdvance(NVGcontext* ctx, int i);
 //
 // Text
 //

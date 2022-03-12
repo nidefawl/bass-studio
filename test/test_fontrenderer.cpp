@@ -33,8 +33,10 @@ namespace TestFontRenderer {
 struct membuf : std::streambuf
 {
     template<typename T>
-    membuf(T begin, T end) {
-        this->setg(reinterpret_cast<char*>(&(*begin)), reinterpret_cast<char*>(&(*begin)), reinterpret_cast<char*>(&(*end)));
+    membuf(T* data, size_t len) {
+        auto const begin = reinterpret_cast<char*>(data);
+        auto const end = reinterpret_cast<char*>(data + len);
+        this->setg(begin, begin, end);
     }
 };
 
@@ -53,10 +55,15 @@ public:
         _tls.tlsInitialized = true;
         _tls.config         = new app_config_t{};
         daw_tls::setTls(_tls);
+        const auto filepath = "cpp-test-data/word_dict.txt";
         try {
             std::vector<uint8_t> vec;
-            ReadFileVector("cpp-test-data/word_dict.txt", vec);
-            membuf sbuf(vec.begin(), vec.end());
+            ReadFileVector(filepath, vec);
+            if (vec.empty()) {
+                log_printf("%s is empty\n", filepath);
+                return;
+            }
+            membuf sbuf(vec.data(), vec.size());
             std::istream in(&sbuf);
             std::string line;
             while (strings.size() < 25 && std::getline(in, line)) {
@@ -75,7 +82,7 @@ public:
                 strings.push_back(concat);
             }
         } catch (const std::exception& e) {
-            log_printf("While reading cpp-test-data/word_dict.txt: %s\n", e.what());
+            log_printf("While reading %s: %s\n", filepath, e.what());
         }
         fTimeStart = getTimeMillisF();
     }
@@ -94,9 +101,6 @@ public:
             return;
         }
         isOK = false;
-        daw_tls::tlsinstance& tls = daw_tls::getTls();
-        delete tls.audioCache;
-        tls.audioCache = nullptr;
     }
     void focusReceived() override { }
     void focusLost() override { }

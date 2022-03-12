@@ -3109,6 +3109,15 @@ void nvgTranslateZ(NVGcontext* ctx, float z)
 #endif
 }
 
+void nvgFontKerningAdvance(NVGcontext* ctx, int enabled)
+{
+    if (enabled) {
+        ctx->fs->params.flags |= FONS_KERNING_ADVANCE;
+    } else {
+        ctx->fs->params.flags &= ~FONS_KERNING_ADVANCE;
+    }
+}
+
 
 void nvgTextBox(NVGcontext* ctx, float x, float y, float breakRowWidth, const char* string, const char* end)
 {
