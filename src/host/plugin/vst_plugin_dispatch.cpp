@@ -10,7 +10,8 @@
 class vstplugin;
 
 
-__declspec(noinline) void vst_onException(vstplugin* eff);
+[[gnu::noinline]] void vst_onException(vstplugin* eff);
+
 #ifdef _WIN32
 extern "C" {
 static bool isHandledExc(int n) {
@@ -31,78 +32,66 @@ int vstdispatch_exchandler(_In_ EXCEPTION_POINTERS* lpEP) {
 }
 #endif // _WIN32
 
-__declspec(noinline)
+[[gnu::noinline]]
 int64_t vst_dispatch(
-    vstplugin* plugin,
-    AEffect* aeffect,
-    int32_t opcode,
-    int32_t index,
-    int64_t value,
-    void* ptr,
-    float opt)
-{
+        vstplugin* plugin,
+        AEffect* aeffect,
+        int32_t opcode,
+        int32_t index,
+        int64_t value,
+        void* ptr,
+        float opt) {
     volatile int64_t l = 0;
-    seh_try("ehvstdisp")
-    {
+    seh_try("ehvstdisp") {
         l = aeffect->dispatcher(aeffect, opcode, index, value, ptr, opt);
     }
-    seh_catch("ehvstdisp")
-    {
+    seh_catch("ehvstdisp") {
         vst_onException(plugin);
     }
-    seh_finally("ehvstdisp")
-    return l;
+    seh_finally("ehvstdisp") return l;
 }
 
-__declspec(noinline)
+[[gnu::noinline]]
 float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx) {
     volatile float f = 0;
-    seh_try("ehvstgetp")
-    {
+    seh_try("ehvstgetp") {
         f = aeffect->getParameter(aeffect, idx);
     }
-    seh_catch("ehvstgetp")
-    {
+    seh_catch("ehvstgetp") {
         vst_onException(plugin);
     }
-    seh_finally("ehvstgetp")
-    return f;
+    seh_finally("ehvstgetp") return f;
 }
 
-__declspec(noinline)
+[[gnu::noinline]]
 void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float value) {
-    seh_try("ehvstsetp")
-    {
+    seh_try("ehvstsetp") {
         aeffect->setParameter(aeffect, idx, value);
     }
-    seh_catch("ehvstsetp")
-    {
+    seh_catch("ehvstsetp") {
         vst_onException(plugin);
     }
     seh_finally("ehvstsetp")
 }
 
-__declspec(noinline)
+[[gnu::noinline]]
 void vst_process(vstplugin* plugin, AEffect* aeffect, float** bufIn, float** bufOut, int32_t numSamples) {
-    seh_try("ehvstproc")
-    {
+    seh_try("ehvstproc") {
 
         if (aeffect->flags & effFlagsCanReplacing) {
             aeffect->processReplacing(aeffect, bufIn, bufOut, numSamples);
         } else {
             aeffect->process(aeffect, bufIn, bufOut, numSamples);
         }
-
     }
-    seh_catch("ehvstproc")
-    {
+    seh_catch("ehvstproc") {
         vst_onException(plugin);
     }
     seh_finally("ehvstproc")
 }
 
 #ifdef _WIN32
-__declspec(noinline)
+[[gnu::noinline]]
 HMODULE safeLoadLib(const char* szLibName) {
     volatile HMODULE hmodule = nullptr;
     seh_try("ehsafeLoadLib")

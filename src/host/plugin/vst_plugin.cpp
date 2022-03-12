@@ -22,10 +22,10 @@
 #include "host/history.h"
 
 
-__declspec(noinline) float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx);
-__declspec(noinline) void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float value);
-__declspec(noinline) void vst_process(vstplugin* plugin, AEffect* aeffect, float** bufIn, float** bufOut, int32_t numSamples);
-__declspec(noinline) int64_t vst_dispatch(vstplugin* plugin,
+[[gnu::noinline]] float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx);
+[[gnu::noinline]] void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float value);
+[[gnu::noinline]] void vst_process(vstplugin* plugin, AEffect* aeffect, float** bufIn, float** bufOut, int32_t numSamples);
+[[gnu::noinline]] int64_t vst_dispatch(vstplugin* plugin,
                   AEffect* aeffect,
                   int32_t opcode,
                   int32_t index,
@@ -853,7 +853,8 @@ void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, int32_t sa
     vst_process(this, this->handle->aeffect, in->buf, out->buf, numSamples);
 }
 
-__declspec(noinline) void vst_onException(vstplugin* plugin)
+[[gnu::noinline]]
+void vst_onException(vstplugin* plugin)
 {
     log_lf(Log::L_ERROR, "segfault/fatal exception\n");
     if (!plugin->isBypass()) {
