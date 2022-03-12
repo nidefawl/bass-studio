@@ -5,6 +5,10 @@
 #ifdef _WIN32
 #include "platform/mingw/mingw.exc.h"
 #include <Windows.h>
+#else
+#define seh_try(label)
+#define seh_catch(label) if(0)
+#define seh_finally(label)
 #endif
 
 class vstplugin;
