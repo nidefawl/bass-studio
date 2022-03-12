@@ -516,15 +516,16 @@ public:
     }
 
     bool isWindowNotHidden() {
-        //TODO: keep track of window visible state locally
-#ifdef _WIN32
-        if (hwnd == nullptr)
-            return false;
-        return IsWindowVisible(hwnd) == 1;
-#else
-        //TODO: implement linux
-        return true;
-#endif
+        return bIsVisible;
+//         //TODO: keep track of window visible state locally
+// #ifdef _WIN32
+//         if (hwnd == nullptr)
+//             return false;
+//         return IsWindowVisible(hwnd) == 1;
+// #else
+//         //TODO: implement linux
+//         return true;
+// #endif
     }
 
     void maximize() {
@@ -739,8 +740,6 @@ public:
         if (!block.check()) {
             return;
         }
-        glfwMakeContextCurrent(glfw);
-        checkGLError("onTick");
 
         //overlay/child window lifetime management
         releaseOverlayWindows();
@@ -750,6 +749,7 @@ public:
             reloadCustomShaders();
         } */
 
+        // glfwMakeContextCurrent(nullptr);
         ctrl->onAppTick();
     }
     void releaseOverlayWindows() {
@@ -1770,6 +1770,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 #ifdef _WIN32
         glfwSetWin32WindowClassName(L"DAWWINDOW01");
 #endif
+        glfwInitHint(GLFW_CONTEXT_KEEPCURRENT, 1);
         if (!glfwInit()) {
             showerror("Initialization failed. Couldn't initialize glfw");
             exit(EXIT_FAILURE);
