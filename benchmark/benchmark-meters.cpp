@@ -12,11 +12,6 @@
 #include <functional>
 #include <memory>
 
-#ifdef _WIN32
-#include "platform/win/windowsize.h"
-#include "platform/win/platform_win.h"
-#endif
-
 extern volatile bool fatalError;
 
 int main(int argc, char** argv) {
