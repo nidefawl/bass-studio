@@ -49,7 +49,7 @@ public:
     std::function<uint32_t()> fnGetCurrentIdx;
 
 public:
-    uint32_t getSelectIndex() override { return fnGetCurrentIdx(); }
+    uint32_t getSelectIndex() override { return fnGetCurrentIdx ? fnGetCurrentIdx() : 0xFFFFFFFF; }
     uint32_t getLastIndex()  override { return options.size(); }
     void setSelectedIndex(uint32_t idx)  override { clicked(idx); }
     String getString() override { return fnGetCurrentVal ? fnGetCurrentVal() : "<null>"; }
