@@ -178,7 +178,7 @@ private:
     int32_t getNextGlobalModuleId(int32_t n);
     audio_stage_id_t getNextGlobalAudioStageId(int32_t as);
     bool unloadAllPlugins();
-    void updateTime(VstTimeInfo& timeinfo, int32_t samplePos, double dTickPos, playback_state state) const;
+    void updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPos, playback_state state) const;
     void setBlockSize(uint16_t blockSize);
     void registerPlugins();
     void processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state);

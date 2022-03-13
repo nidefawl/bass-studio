@@ -651,7 +651,7 @@ vsthost::vsthost()
 {
     memset(&m_sharedTimeInfo, 0, sizeof(m_sharedTimeInfo));
     allocRingBuffer(ringbuffer, 32);
-    updateTime(m_sharedTimeInfo, 0, 0.0, playback_state::status_stop);
+    updateTime(m_sharedTimeInfo, 0.0, 0.0, playback_state::status_stop);
     midiRealtimeInput = new clip_notes_t;
     midiProcessedInput = new clip_notes_t;
     registerPlugins();
@@ -730,7 +730,7 @@ inline double PPQ24TickToSample(double midiTickPPQ24, uint32_t bpm100, samplerat
 //        this will either be negative such that the previous MIDI clock is addressed,
 //        or positive when referencing the following (future) MIDI clock.
 
-void vsthost::updateTime(VstTimeInfo& timeinfo, int32_t samplePos, double dTickPos, playback_state state) const {
+void vsthost::updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPos, playback_state state) const {
     timeinfo.samplePos = samplePos;
     timeinfo.sampleRate = (double) m_sampleFormatInternal.sampleRate;
     timeinfo.nanoSeconds = getTimeMicros() * 1000.0;
@@ -749,7 +749,7 @@ void vsthost::updateTime(VstTimeInfo& timeinfo, int32_t samplePos, double dTickP
     }
 
     {
-        double dPosSeconds = timeinfo.samplePos / timeinfo.sampleRate;
+        double dPosSeconds = samplePos / timeinfo.sampleRate;
         /* offset in fractions of a second   */
         double dOffsetInSecond = dPosSeconds - floor(dPosSeconds);
         timeinfo.smpteFrameRate = VstSmpteFrameRate::kVstSmpte24fps;
