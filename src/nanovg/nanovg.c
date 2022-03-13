@@ -2953,6 +2953,8 @@ float nvgTextImpl(NVGcontext* ctx, float x, float y, const float maxWidth, const
 	if (verts == NULL) return x;
 
 	fonsTextIterInit(ctx->fs, &iter, x*scale, y*scale, string, end, FONS_GLYPH_BITMAP_REQUIRED);
+	float minX = x;
+	float maxX = x;
 	prevIter = iter;
 	while (fonsTextIterNext(ctx->fs, &iter, &q)) {
 		float c[4*2];
@@ -2971,13 +2973,19 @@ float nvgTextImpl(NVGcontext* ctx, float x, float y, const float maxWidth, const
 		if (maxWidth >= 0 && iter.nextx > (x+maxWidth) * scale) {
 			break;
 		}
+
+		minX = nvg__minf(minX, q.x0);
+		maxX = nvg__maxf(minX, q.x1);
+
 		prevIter = iter;
+
 		if(isFlipped) {
 			float tmp;
 
 			tmp = q.y0; q.y0 = q.y1; q.y1 = tmp;
 			tmp = q.t0; q.t0 = q.t1; q.t1 = tmp;
 		}
+
 		// Transform corners.
 		nvgTransformPoint(&c[0],&c[1], state->xform, q.x0*invscale, q.y0*invscale);
 		nvgTransformPoint(&c[2],&c[3], state->xform, q.x1*invscale, q.y0*invscale);
@@ -3002,7 +3010,7 @@ float nvgTextImpl(NVGcontext* ctx, float x, float y, const float maxWidth, const
 
 	nvg__renderText(ctx, verts, nverts);
 
-	return iter.nextx / scale;
+	return maxX - minX;
 }
 
 float nvgTextW(NVGcontext* ctx, float x, float y, const float maxWidth, const char* string, const char* end) {

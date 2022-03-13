@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <nanovg.h>
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "gui.h"
@@ -190,24 +191,24 @@ public:
             RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
             drawIcon(vg, size, &image);
         }
-        setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
-        nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), nullptr);
+        setFont(vg, (int) (rowHeight * 0.8), G_WHITE, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
+        float xText = size.x * 3 / 4;
         auto* _entry = safeRefGet(ref);
         if (_entry) {
             host_stats_reducted_t stats;
             auto host = vsthost::getInstance();
             host->getShortStats(stats);
             float fPercentLoad = stats.timePerBlock_usec <= 0 ? 0 : _entry->procStats.timeTrackProcessPlugins * 100.0f / stats.timePerBlock_usec;
-            nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
             String str = StringFormat("%.2f%%", fPercentLoad);
-            float x2   = size.x - spacing;
-            float x1   = nvgText(vg, size.x - spacing, rowHeight / 2, StringAsCStr(str), nullptr);
-            float xw   = x2 - x1;
-            if (size.x / 4 > xw) {
-                str = StringFormat("%dmicsec", _entry->procStats.timeTrackProcessPlugins);
-                nvgText(vg, size.x * 3 / 4, rowHeight / 2, StringAsCStr(str), nullptr);
+            float x2 = size.x - spacing;
+            xText = x2 - nvgText(vg, x2, rowHeight / 2, StringAsCStr(str), nullptr);
+            if (size.x / 4 > x2 - xText) {
+                str = StringFormat("%dµsec", _entry->procStats.timeTrackProcessPlugins);
+                xText = size.x * 3 / 4 - nvgText(vg, size.x * 3 / 4, rowHeight / 2, StringAsCStr(str), nullptr);
             }
         }
+        nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
+        nvgTextW(vg, x, rowHeight / 2, xText - x, StringAsCStr(getText()), nullptr);
         nvgTranslate(vg, -pos.x, -pos.y);
     }
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override {
