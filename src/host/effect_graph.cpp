@@ -150,7 +150,7 @@ namespace DAW {
         shrdPtrProcGraph->nodes.reserve(dependencyGraph->nodes.size());
         shrdPtrProcGraph->trackGraph = dependencyGraph;
         for (effect_node_ptr trackNode : dependencyGraph->nodes) {
-            processing_effect_node_t* procTrackNode = new processing_effect_node_t();
+            auto const procTrackNode = new processing_effect_node_t();
 
             procTrackNode->type            = trackNode->type;
             procTrackNode->pulls           = trackNode->pulls;
@@ -158,6 +158,9 @@ namespace DAW {
             procTrackNode->stageId         = trackNode->stageId;
             procTrackNode->internalLatency = trackNode->internalLatency;
             procTrackNode->inputLatency    = trackNode->inputLatency;
+#ifndef NDEBUG
+            procTrackNode->inputLatency = INVALID_SAMPLE_OFFSET_U32;
+#endif
             switch (trackNode->type) {
                 case track_node_type_t::TRACK:
                     procTrackNode->trackOptional = nullptr;
@@ -175,39 +178,29 @@ namespace DAW {
             }
             shrdPtrProcGraph->nodes.push_back(procTrackNode);
         }
-        effect_processing_graph_t& graph = *shrdPtrProcGraph;
 
-        for (const effect_node_t* const ptrTrackNode : graphFlattened.resolved) {
-            const effect_node_t& trackNode = *ptrTrackNode;
-            auto nodeIdx                        = trackNode.stageId;
+        effect_processing_graph_t& graph = *shrdPtrProcGraph;
+        effsVisited.reserve(graph.nodes.size());
+        for (const auto ptrTrackNode : graphFlattened.resolved) {
             if (STL_CONTAINS(effsVisited, ptrTrackNode)) {
                 // expected
                 continue;
             }
             effsVisited.push_back(ptrTrackNode);
-            auto itProcGraphNode = std::find_if(graph.nodes.begin(), graph.nodes.end(), [nodeIdx](const processing_effect_node_ptr& ptr) {
-                return ptr->stageId == nodeIdx;
-            });
-            dbgassert(itProcGraphNode != graph.nodes.end());
-            processing_effect_node_t* procTrackNode = *itProcGraphNode;
-
-            for (effect_node_t* tnChild : trackNode.children) {
-                auto itProcGraphNodeChild = std::find_if(graph.nodes.begin(), graph.nodes.end(), [nodeIdx = tnChild->stageId](const processing_effect_node_ptr& ptr) {
-                    return ptr->stageId == nodeIdx;
-                });
-                dbgassert(itProcGraphNodeChild != graph.nodes.end());
-                processing_effect_node_t* procTrackNodeChild = *itProcGraphNodeChild;
+            const auto& trackNode = *ptrTrackNode;
+            const auto nodeIdx = trackNode.stageId;
+            auto procTrackNode = getNode(graph.nodes, nodeIdx);
+            dbgassert(procTrackNode);
+            for (auto tnChild : trackNode.children) {
+                auto procTrackNodeChild = getNode(graph.nodes, tnChild->stageId);
+                dbgassert(procTrackNodeChild);
                 dbgassert(procTrackNodeChild->stageId != trackNode.stageId);
                 procTrackNode->children.push_back(procTrackNodeChild);
             }
 
-
-            for (effect_node_t* tnParent : trackNode.parents) {
-                auto itProcGraphNodeParent = std::find_if(graph.nodes.begin(), graph.nodes.end(), [nodeIdx = tnParent->stageId](const processing_effect_node_ptr& ptr) {
-                    return ptr->stageId == nodeIdx;
-                });
-                dbgassert(itProcGraphNodeParent != graph.nodes.end());
-                processing_effect_node_t* procTrackNodeParent = *itProcGraphNodeParent;
+            for (auto tnParent : trackNode.parents) {
+                auto procTrackNodeParent = getNode(graph.nodes, tnParent->stageId);
+                dbgassert(procTrackNodeParent);
                 dbgassert(procTrackNodeParent->stageId != trackNode.stageId);
                 procTrackNode->parents.push_back(procTrackNodeParent);
             }
@@ -235,63 +228,40 @@ namespace DAW {
                 dbgassert(itDependencyChildren != trackNode.children.end());
             }
         }
-        for (auto itNodes = graph.nodes.begin(); itNodes != graph.nodes.end(); itNodes++) {
-            auto ptrNode          = *itNodes;
-            ptrNode->inputLatency = INVALID_SAMPLE_OFFSET_U32;
-        }
 #endif
 
         /* Determine nodes accumulated inputLatency (own internalLatency + max_latency(all_children)) */
         /* This has to be done in bottom up/child first */
-        for (auto itNodes = graph.nodesFlatOrdered.begin(); itNodes != graph.nodesFlatOrdered.end(); itNodes++) {
-            auto ptrNode          = *itNodes;
+        for (auto const ptrNode : graph.nodesFlatOrdered) {
             ptrNode->inputLatency = 0;
-            dbgassert(ptrNode->children.size() == ptrNode->dependencies.size());
-            for (effect_node_t* trNodeChild : ptrNode->children) {
-                dbgassert(ptrNode->stageId != trNodeChild->stageId);
-                auto itProcNode = std::find_if(graph.nodesFlatOrdered.begin(), graph.nodesFlatOrdered.end(), [nodeIdx = trNodeChild->stageId](processing_effect_node_t* ptr) {
-                    return ptr->stageId == nodeIdx;
-                });
-                dbgassert(itProcNode != graph.nodesFlatOrdered.end());
-                auto ptrChNode = *itProcNode;
-                dbgassert(ptrChNode == trNodeChild);
-            }
-            for (auto nodeIdx : ptrNode->dependencies) {
-                auto itProcNode = std::find_if(graph.nodesFlatOrdered.begin(), graph.nodesFlatOrdered.end(), [nodeIdx](processing_effect_node_t* ptr) {
-                    return ptr->stageId == nodeIdx;
-                });
-                dbgassert(itProcNode != graph.nodesFlatOrdered.end());
-                auto ptrChNode = *itProcNode;
 #ifndef NDEBUG
-                dbgassert(ptrChNode->inputLatency != INVALID_SAMPLE_OFFSET_U32);
+            dbgassert(ptrNode->children.size() == ptrNode->dependencies.size());
+            for (const auto trNodeChild : ptrNode->children) {
+                dbgassert(ptrNode->stageId != trNodeChild->stageId);
+                dbgassert(getNodeConst(graph.nodesFlatOrdered, trNodeChild->stageId) == trNodeChild);
+            }
+#endif
+            for (const auto nodeIdx : ptrNode->dependencies) {
+                const auto ptrChNode = getNodeConst(graph.nodesFlatOrdered, nodeIdx);
+#ifndef NDEBUG
+                dbgassert(ptrChNode && ptrChNode->inputLatency != INVALID_SAMPLE_OFFSET_U32);
 #endif
                 ptrNode->inputLatency = std::max(ptrNode->inputLatency, ptrChNode->inputLatency + ptrChNode->internalLatency);
             }
-            for (auto nodeIdx : ptrNode->dependencies) {
-                auto itProcNode = std::find_if(graph.nodesFlatOrdered.begin(), graph.nodesFlatOrdered.end(), [nodeIdx](processing_effect_node_t* ptr) {
-                    return ptr->stageId == nodeIdx;
-                });
-                dbgassert(itProcNode != graph.nodesFlatOrdered.end());
-                auto ptrChNode = *itProcNode;
-                dbgassert(ptrNode->inputLatency >= ptrChNode->inputLatency + ptrChNode->internalLatency);
-            }
-            for (effect_node_t* trNodeChild : ptrNode->children) {
+#ifndef NDEBUG
+            for (auto const trNodeChild : ptrNode->children) {
                 dbgassert(STL_CONTAINS(ptrNode->dependencies, trNodeChild->stageId));
-
                 dbgassert(ptrNode->inputLatency >= trNodeChild->inputLatency + trNodeChild->internalLatency);
             }
+#endif
         }
         /* Assign the resolved latencies to the previously populated push/pull inputs of each node */
-        for (auto itNodes = graph.nodesFlatOrdered.begin(); itNodes != graph.nodesFlatOrdered.end(); itNodes++) {
-            auto ptrNode = *itNodes;
+        for (auto const ptrNode : graph.nodesFlatOrdered) {
             for (auto& pulls : ptrNode->pulls) {
                 if (isChannelConnected(pulls.channel) && pulls.channel.getType() == channel_type::INPUT_AUDIOSTAGE_EFFECT) {
                     const auto effId = static_cast<audiostageid_i32>(pulls.channel.projectGlobalId);
-                    auto itStageIdx  = std::find_if(graph.nodesFlatOrdered.begin(), graph.nodesFlatOrdered.end(), [effId](processing_effect_node_t* ptr) {
-                        return ptr->stageId == effId;
-                     });
-                    dbgassert(itStageIdx != graph.nodesFlatOrdered.end());
-                    auto ptrChNode = *itStageIdx;
+                    const auto ptrChNode = getNodeConst(graph.nodesFlatOrdered, effId);
+                    dbgassert(ptrChNode);
                     pulls.latency  = ptrChNode->inputLatency + ptrChNode->internalLatency;
                 }
             }

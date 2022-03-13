@@ -83,6 +83,23 @@ namespace DAW {
         processing_graph_t& operator=(const processing_graph_t& graph) = delete;
     };
 
+    inline const processing_track_node_t* getNodeConst(const std::vector<processing_track_node_t*>& nodes, audiostageid_i32 stageId) {
+        for (const auto* ptr : nodes) {
+            if (ptr->stageId == stageId) {
+                return ptr;
+            }
+        }
+        return nullptr;
+    }
+    inline processing_track_node_t* getNode(const std::vector<processing_track_node_t*>& nodes, audiostageid_i32 stageId) {
+        for (auto* ptr : nodes) {
+            if (ptr->stageId == stageId) {
+                return ptr;
+            }
+        }
+        return nullptr;
+    }
+
 
     bool removeTrackRoutings(const track_vector& tracksFlat, audiostageid_i32 stageId);
     /**
