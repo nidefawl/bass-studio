@@ -242,7 +242,7 @@ int effect_deferred::getModuleType() {
 void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
     ps = this->mImpl->snapshot;
 }
-void effect_deferred::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
+void effect_deferred::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
     dbgassert(vstHost->m_sampleFormatInternal == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 }
 bool effect_deferred::show() {

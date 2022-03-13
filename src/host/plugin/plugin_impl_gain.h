@@ -22,7 +22,7 @@ public:
 public:
     int getModuleType() override { return PLUGIN_TYPE_GAIN; };
     int32_t getPluginLatency() override;
-    void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) override;
+    void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     String getInfo(std::vector<String>& list) override;
     void onTick(double since) override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;

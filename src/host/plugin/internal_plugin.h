@@ -39,7 +39,7 @@ public:
     virtual void dispatchSetParameter(int32_t idx, float val) = 0;
 
     int32_t getPluginLatency() override = 0;
-    void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) override = 0;
+    void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override = 0;
 
     guiplugin* makeGui() override;
     guiplugin* getGui() override;

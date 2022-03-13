@@ -561,12 +561,14 @@ void audio_stage_t::notifyPluginContainers() {
     }
 }
 
-void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targets) {
+void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targets, bool includeEffects) {
     targets.push_back(&mixer);
     if (arp) {
         targets.push_back(arp);
     }
-    getStageTargets(targets);
+    if (includeEffects) {
+        getStageTargets(targets);
+    }
 }
 
 void project_t::copyTo(project_snapshot_t& project) {

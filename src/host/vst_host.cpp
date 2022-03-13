@@ -1838,7 +1838,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
      */
     if (DAW::isPlaybackState(playbackState)) {
         std::vector<automatable_t*> targets;
-        trackImpl->getAutomatableTrackTargets(targets);
+        trackImpl->getAutomatableTrackTargets(targets, false);
         for (automatable_t* at : targets) {
             at->updateAutomatedParameters(processingPos);
         }
@@ -1873,7 +1873,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
     }
 
     tmp.timer.reset();
-    trackImpl->sendNotes(playbackState, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, sampleLatencyCompensated, *midiRealtimeInput);
+    trackImpl->sendNotes(playbackState, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, math::floordS32(sampleLatencyCompensated), *midiRealtimeInput);
 //    if ((trackImpl->flags & audiostageflags_t::RECORD_PROCESSED_MIDI) != audiostageflags_t::NONE) {
     if (isSet(trackImpl->flags, audiostageflags_t::RECORD_PROCESSED_MIDI)) {
         processMidiProcessedOutput(playbackState, processingPos, tickBlockEnd, trackImpl->noteEventsProcessed);
@@ -1882,7 +1882,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
     track->getStage()->procStats.timeTrackProcessMidi = tmp.timer.getTime();
 
     if (DAW::isPlaybackState(playbackState)) {
-        trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, sampleLatencyCompensated, trackImpl->input.buf, (int32_t)sampleFormat.blockSize);
+        trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, math::floordS32(sampleLatencyCompensated), trackImpl->input.buf, (int32_t)sampleFormat.blockSize);
     }
 
     const uint32_t numChannelsTrack = trackImpl->input.channels;
@@ -2347,19 +2347,26 @@ bool vsthost::isStreaming() {
 void vsthost::processAudio(audio_stage_t* stage,
                            AudioBlock* input,
                            AudioBlock* output,
-                           const double tickLatencyCompensated,
-                           int32_t samplePos,
+                           const double tickStageLatencyCompensated,
+                           const double sampleStageLatencyCompensated,
                            int32_t numSamples,
-                           playback_state state,
+                           playback_state playbackState,
                            const DAW::effect_processing_graph_t* const processingGraph) const
 {
-    tick_t processingPos = floor(tickLatencyCompensated);
+    // tick_t processingPos = floor(tickStageLatencyCompensated);
     hires_timer_t timer;
     int64_t timeTotal = 0;
     if (processingGraph != nullptr) {
         for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
             const DAW::processing_effect_node_t* ptrProcessingNode = *itAudioStage;
             const DAW::processing_effect_node_t& effNode = *ptrProcessingNode;
+
+            const double ticksLatency = sampleToTickConvert<double, roundmode::none>(effNode.inputLatency, prjGlobals.tempo100, stage->sampleFormat.sampleRate);
+            const double sampleLatencyCompensated = sampleStageLatencyCompensated - effNode.inputLatency;
+            const double tickLatencyCompensated = tickStageLatencyCompensated - ticksLatency;
+            tick_t processingPosLatencyCompensate = floor(tickLatencyCompensated);
+
+
             AudioBlock* blockIn = nullptr;
             switch (effNode.type) {
             case DAW::track_node_type_t::TRACK:
@@ -2420,7 +2427,8 @@ void vsthost::processAudio(audio_stage_t* stage,
 
                         //TODO: apply filtered sample accurate volume automation
                         float fGainRaw = 0.0f;
-                        bool bSuccess = DAW::resolveAutomationAtTime(this, tracksrc.gainAutomation, processingPos, &fGainRaw);
+                        //TODO: validate that processingPosLatencyCompensate is correct here. (post delay line/pre delay line timepos)
+                        bool bSuccess = DAW::resolveAutomationAtTime(this, tracksrc.gainAutomation, processingPosLatencyCompensate, &fGainRaw);
                         if (bSuccess) {
                             /* Calculate audio/midi tracks gain level */
                             float fGainTrack;
@@ -2455,11 +2463,23 @@ void vsthost::processAudio(audio_stage_t* stage,
                         blockOut->clear();
                         delayAudio(effect->delayLine.get(), blockIn, blockOut, delay);
                     } else {
+                        if (effect->blockOutputs->channels > blockIn->channels) {
+                            effect->blockOutputs->clear();
+                        }
                         effect->blockOutputs->copyFrom(blockIn);
                     }
                     blockPostProcess = effect->blockOutputs;
                 } else {
-                    effect->process(effect->blockInputs, effect->blockOutputs, tickLatencyCompensated, samplePos, numSamples, state);
+                    if (effect->pluginType == PLUGIN_TYPE_VST) {
+                        VstTimeInfo timeinfo{};
+                        updateTime(timeinfo, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
+                        auto* ptr = dynamic_cast<vstplugin*>(effect)->getLocalTimeInfoPtr();
+                        if (ptr) {
+                            *ptr = timeinfo;
+                        }
+                    }
+                    effect->updateAutomatedParameters(processingPosLatencyCompensate);
+                    effect->process(effect->blockInputs, effect->blockOutputs, tickLatencyCompensated, sampleLatencyCompensated, numSamples, playbackState);
                     blockPostProcess = effect->blockOutputs;
                 }
                 effect->postProcess(blockPostProcess, numSamples, !isBypass);

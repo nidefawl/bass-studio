@@ -192,7 +192,7 @@ void module_gain::onTick(double since) {
     meterIn.onTick(since);
 }
 
-void module_gain::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
+void module_gain::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
     dbgassert(getTrackLink()->sampleFormat == this->format
               && in->samples == format.blockSize
               && out->samples == format.blockSize

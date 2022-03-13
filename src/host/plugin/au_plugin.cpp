@@ -33,7 +33,7 @@ void auplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opt
 void auplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {}
 guiplugin* auplugin::makeGui() { return nullptr; }
 guiplugin* auplugin::getGui() { return nullptr; }
-void auplugin::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
+void auplugin::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
 }
 int32_t auplugin::getPluginLatency() { return 0; }
 

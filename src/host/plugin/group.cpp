@@ -292,7 +292,7 @@ void module_group::getChildAudioStages(std::vector<audio_stage_t*>& targets) {
     targets.push_back(this->audio);
 }
 
-void module_group::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
+void module_group::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
     dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
     audio->input.copyFrom(in);
 

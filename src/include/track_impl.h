@@ -324,7 +324,7 @@ struct track_impl_t : public audio_stage_t {
     void removePlugin(effectbase* _vst, bool notifyUp) override;
     const std::vector<arp_note_t>& getArpHeldNotes();
     std::vector<marker_t>& getArpMarkers(int n);
-    void getAutomatableTrackTargets(std::vector<automatable_t*>& targets);
+    void getAutomatableTrackTargets(std::vector<automatable_t*>& targets, bool includeEffects = true);
     void createIOSnapshot(track_io_configuration_snapshot_t& snapshot);
     void loadIOConfiguration(const track_io_configuration_snapshot_t& trPluginList);
 };
