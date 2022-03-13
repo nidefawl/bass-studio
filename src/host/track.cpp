@@ -516,17 +516,27 @@ void audio_stage_t::updateLatency() {
 }
 
 void audio_stage_t::getStageTargets(std::vector<automatable_t*>& targets) {
+    // already added mixer in track_impl to have it before arp
     if (std::find(targets.begin(), targets.end(), &mixer) == targets.end()) {
         targets.push_back(&mixer);
     }
+    // avoid vector construction
+    if (effects.empty())
+        return;
+    std::vector<audio_stage_t*> childStages;
     for (effectbase* child : effects) {
         targets.push_back(child);
-        std::vector<audio_stage_t*> childStages;
+        childStages.clear();
         child->getChildAudioStages(childStages);
         for (audio_stage_t* childStage : childStages) {
             childStage->getStageTargets(targets);
         }
     }
+    // Instead we could get the child targets by:
+    /* for (audio_stage_t* childStage : this->children) {
+        childStage->getStageTargets(targets);
+    } */
+    // But then we would have to sort the list
 }
 
 void audio_stage_t::onStopPlayback() {
