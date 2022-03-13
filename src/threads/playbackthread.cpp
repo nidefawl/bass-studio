@@ -1,6 +1,7 @@
 #include "playbackthread.h"
 #include <atomic>
 #include <queue>
+#include <stdint.h>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -164,7 +165,7 @@ private:
         std::shared_ptr<PlaybackThreadReq> req;
         int32_t samplePos = 0;
         double tickPos    = 0;
-
+        int32_t numBlocksRendered = 0;
         try {
             while (true) {
                 if (m_q.try_dequeue(req)) {
@@ -181,6 +182,7 @@ private:
                             }
                             switch (reqState) {
                                 case playback_state::status_render: {
+                                    numBlocksRendered = 0;
                                     dbgassert(host->m_sampleFormatInternal.sampleRate != 0);
                                     dbgassert(host->m_sampleFormatInternal.blockSize != 0);
                                     renderCompleteFn = std::move(req->fn);
@@ -338,6 +340,7 @@ private:
                                     renderCompleteFn = nullptr;
                                 }
                             }
+                            numBlocksRendered += numBlocksProcessed;
                         }
                     }
                 }
@@ -352,6 +355,11 @@ private:
                     } else {
 
                         seqthreads::threadSleep(1);
+                    }
+                } else {
+                    if (numBlocksRendered > 100) {
+                        numBlocksRendered = 0;
+                        seqthreads::threadSleep(10);
                     }
                 }
                 if (m_status == playback_state::status_no_process) {
