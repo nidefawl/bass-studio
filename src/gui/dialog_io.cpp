@@ -195,7 +195,6 @@ public:
     guictr_input_channel(std::shared_ptr<audiohost::HostIOStream::IOChannel>& _ioChannel, bool _isInput)
         : ioChannel(_ioChannel), isInput(_isInput) {
         add(&btnTrackType);
-        btnTrackType.setFontScale(0.3f);
         btnTrackType.setText(DAW::AudioIO::getTrackTypeStr(_ioChannel->type));
         guimeter = std::make_shared<gui_trackmeter>(&_ioChannel->meter);
         add(guimeter.get());
@@ -674,8 +673,6 @@ public:
             return "None";
         };
 
-        selectAPI->setFontScale(0.77f);
-        asioDevice->setFontScale(0.77f);
         deviceListInput->setRenderHR(true);
         deviceListInput->setRowMargin(ivec4(0, 1, 0, 1));
         deviceListOutput->setRenderHR(true);
@@ -1182,7 +1179,6 @@ struct guidialog_settings::dialog_entry {
         tabButton.setText(title);
         tabButton.setButtonColor(GuiColor::COL_BASE_BG_FOCUSED);
         tabButton.setStateRef(&active);
-        tabButton.setFontScale(0.7f);
     }
 };
 void guidialog_settings::init(DawInstance* daw) {
@@ -1193,7 +1189,6 @@ void guidialog_settings::init(DawInstance* daw) {
     add(&btnClose);
     btnClose.id = ID_BTN_CLOSE;
     btnClose.setText("Close");
-    btnClose.setFontSize(BTN_FONT_SIZE);
     setLabel("Settings");
     setActiveEntry(0);
 }

@@ -115,7 +115,6 @@ void guidialog_about::render(NVGcontext* vg) {
 void guidialog_about::layout() {
     ivec2 cs      = getSizeContent();
     const auto rowHeight = theme->get(GuiConstant::CONST_ROW_HEIGHT);
-    btnClose.setFontSize(rowHeight);
     btnClose.size = ivec2(rowHeight * 4, rowHeight);
     btnClose.pos  = ivec2(cs.x - btnClose.size.x, cs.y - btnClose.size.y);
     for (auto gui : guis) {

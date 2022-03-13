@@ -708,8 +708,6 @@ void guiproperties_table<guiproperties_t>::determineSize(glm::ivec2& prefSize) {
     //if (size.x == 0)
     prefSize.x = math::max(250, prefSize.x);
     m_fontSize = G_FONT_SCALE(theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE));
-    m_selectFont.setFontSize(m_fontSize);
-    m_textField.setFontSize(m_fontSize);
     m_table.rowHeight = m_fontSize +INSET_TABLE_CELL_PADDING*2;
     m_table.rows.clear();
     m_table.titleCols.clear();
@@ -887,9 +885,6 @@ void guiproperties_table<guitheme_t>::determineSize(glm::ivec2& prefSize) {
     //    size.x = 250;
     m_fontSize = G_FONT_SCALE(theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE));
     m_fontSize = math::max(8.0f, m_fontSize);
-
-    m_selectFont.setFontSize(m_fontSize);
-    m_textField.setFontSize(m_fontSize);
     m_table.rowHeight = m_fontSize +INSET_TABLE_CELL_PADDING*2;
     m_table.rows.clear();
     m_table.titleCols.clear();

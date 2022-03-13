@@ -131,7 +131,6 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             auto btn = new guibutton;
             btn->id  = ID_BTN_RESET_HIST;
             btn->setText("Reset history");
-            btn->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn);
         }
         {
@@ -139,12 +138,10 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             auto btn2 = new guibutton;
             btn2->id  = ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD;
             btn2->setText("Segfault on Audiothread");
-            btn2->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn2);
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD;
             btn3->setText("BadAlloc on Audiothread");
-            btn3->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn3);
         }
         {
@@ -152,75 +149,64 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             auto btn2 = new guibutton;
             btn2->id  = ID_BTN_INJECT_SEGFAULT_MAIN_THREAD;
             btn2->setText("Segfault on Mainthread");
-            btn2->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn2);
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD;
             btn3->setText("BadAlloc on Mainthread");
-            btn3->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn3);
         }
         {
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_TOGGLE_STACKTRACE;
             btn3->setText("Enable Stacktraces");
-            btn3->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn3);
         }
         {
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_TOGGLE_EFFECTPROCESSING;
             btn3->setText("Bypass Eff. Proc. (OFF)");
-            btn3->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn3);
         }
         {
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_TOGGLE_SAMPLECONVERSION;
             btn3->setText("Bypass Sample conversion (OFF)");
-            btn3->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn3);
         }
         {
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_TOGGLE_PLAYBACKPROCESSING;
             btn3->setText("Bypass Playback Proc. (OFF)");
-            btn3->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn3);
         }
         {
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_TOGGLE_CLIP_RENDER_CACHE;
             btn3->setText("Disable clip render cache");
-            btn3->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn3);
         }
         {
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_TOGGLE_WAVEFORM_UPDATES;
             btn3->setText("Disable audio waveform updates");
-            btn3->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn3);
         }
         {
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_TOGGLE_CLIPRENDERER_DEBUGLAYER;
             btn3->setText("Enable clip renderer debug layer");
-            btn3->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn3);
         }
         {
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_TOGGLE_THREADING;
             btn3->setText("Multithreaded processing (ON)");
-            btn3->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn3);
         }
         {
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_UPDATE_VISIBLE_TRACK_CONTENTS;
             btn3->setText("Update trackcontents");
-            btn3->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn3);
         }
     }

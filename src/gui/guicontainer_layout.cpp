@@ -23,9 +23,6 @@ struct guictr_tabbed::tabbed_entry {
     bool active = false;
     tabbed_entry(guibase* _ctr, String title) : tabButton(), tabCtr(_ctr) {
         tabButton.setText(title);
-        //TODO: mark as active
-        //tabButton.setEnabledRef(&active);
-        tabButton.setFontScale(0.7f);
     }
 };
 int32_t guictr_tabbed::getNumEntries() {

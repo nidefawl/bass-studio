@@ -59,7 +59,7 @@ void guidropdownbase::render(NVGcontext* vg) {
     const auto stateFlags = getStateFlags();
     renderWidgetBorder(vg, stateFlags);
     GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
-    auto fontSizeScaled = (this->fontSize > 0 ? this->fontSize : size.y) * fFontScale;
+    auto fontSizeScaled = math::clamp(size.y, 4, 48) * fFontScale;
 
     if (this->label.length()) {
         auto posText = vec2(pos) + vec2(size.x - 3, size.y * 0.5f);

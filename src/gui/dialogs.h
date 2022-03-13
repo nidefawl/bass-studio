@@ -20,8 +20,6 @@ public:
         btnNo.setText("No");
         add(&btnYes);
         add(&btnNo);
-        btnYes.setFontSize(BTN_FONT_SIZE);
-        btnNo.setFontSize(BTN_FONT_SIZE);
         setBackgroundRendered(true);
         dbgassert(getAllocId() > 0);// make sure we are heap allocated
     }

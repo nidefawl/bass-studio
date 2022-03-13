@@ -124,7 +124,6 @@ public:
         btnLoad.pos  = pos;
         btnLoad.size = contentS;
         btnLoad.layout();
-        btnLoad.setFontSize(math::max(12, size.y / 8));
         btnLoad.setText(String("Load\n") + module->getName());
     }
 };

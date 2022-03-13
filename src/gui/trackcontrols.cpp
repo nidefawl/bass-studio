@@ -931,7 +931,6 @@ public:
         btnSolo.size    = ivec2(h, h);
         gain.pos        = ivec2(inset, TRACK_HEIGHT_STEP + inset);
         btnActivate.pos = { inset, gain.bottom() + i2 };
-        btnActivate.setFontSize(h - 2);
         btnActivate.size = { h, h };
 
         m_guiMeter.size = ivec2(mW - i2, size.y - i2);

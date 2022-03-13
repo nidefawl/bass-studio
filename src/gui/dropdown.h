@@ -19,8 +19,6 @@ public:
         SELECT_FIRST,
         SELECT_LAST,
     };
-    guidropdownbase() : guibutton() {
-    }
     void render(NVGcontext* vg) override;
     void handleDraggedRelease(MouseEvent& evt) override {
         if (parent)

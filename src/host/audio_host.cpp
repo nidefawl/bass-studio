@@ -146,7 +146,7 @@ using namespace DAW::AudioIO;
 using DAW::channelcount;
 
 bool error(const char* msg, PaError err) {
-    log_lf(Log::L_ERROR, "%s (%d): %s", msg, err, Pa_GetErrorText(err));
+    log_lf(Log::L_ERROR, "%s (%d): %s\n", msg, err, Pa_GetErrorText(err));
     return false;
 }
 
@@ -448,13 +448,13 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     }
 
     if (deviceIdxSelectedOutput == paNoDevice && deviceIdxSelectedInput == paNoDevice) {
-        log_lf(Log::L_ERROR, "Error: No input or output device");
+        log_lf(Log::L_ERROR, "Error: No input or output device\n");
         return false;
     }
 
 #ifdef _WIN32
     if (hostApiType == PaHostApiTypeId::paWASAPI && PaWasapi_IsLoopback(deviceIdxSelectedInput)) {
-        log_lf(Log::L_DEBUG, "Using WASAPI Loopback Device as Input");
+        log_lf(Log::L_DEBUG, "Using WASAPI Loopback Device as Input\n");
     }
 #endif
 

@@ -144,10 +144,7 @@ public:
                         effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
                         effect->load(host);
                         host->insertNewPlugin(stage, effect, -2);// insert at end
-                        host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
-                        host->postPluginLoaded(stage, effect);
-                        dbgassert(effect->trackImpl == stage);
-                        dbgassert(!stage->effects.empty());
+                        // host->activateDeferred(effect, 0);
                     }
                 }
             }
