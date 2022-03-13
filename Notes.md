@@ -4,7 +4,6 @@ Add optional horizontal grid steps to automation (allow offset/scale?)
 Cleanup automation stuff: setParamValue is called with inconsistent flags  
 Resizing a clip can stop held notes. This has to be handled somehow  
 Add a keyboard on the bottom, make it small so its not using up screenspace. Display all held notes from all tracks in different colors so I can quickly see what key the song is currently in etc.  
-Exported audio files are incorrect length  
 Automation sub tracks are not removed from track when moving plugin to another track  
 Exp/Log slopes for automation data  
 Basic +/- pitch for wave samples  
@@ -13,7 +12,6 @@ Categories for plugins (at least effects/instruments for now)
 Selection info (Show duration in bars/secs/samples)  
 Add a way to copy clips + automation or only clips (keybind? key modifier?)  
 Parallel groups for plugins  
-Handle multi-channel audio effects correctly  
 Make startup.cpp only compile into daw-application  
 Allow sonogram to be used in a mouse over popup window (not working)  
 Tool to auto process samples: run samples thru specific vst preset, run samples thru my effect chains (that I extract from ableton projects)  
@@ -45,7 +43,6 @@ Implement a drum seq into the timeline:
 
 arpeggiator as per clip setting  
 midi arpeggiator freeze function (drag from arp to new clip on timeline)  
-add list of all inputs to track, so one can navigate to connected track based on input routing  
 add bypass all, add bypass track plugins, does override, but not deactivate automation  
 make volume slider that modifies only exponent of float32  
 clip transformation tool (select tool from toolbar -> mouse cursor is adjusted(?) -> click clip -> applys transformation operation)   
@@ -61,7 +58,8 @@ scrubbing with beat sync
 add vertical plugin chain in mix view (like cubase mixer)  
 # Bugs
 Meters are buggy after sample rate or blocksize changes 
-solo buttons not update after track routing changes  
+solo buttons do not update after track routing changes  
+solo on nested tracks that route to master does not work
 Add Un-solo all button  
 Fix recent file list: state should be saved to disk each load/save  
 fix shift-clicking not extending selection to clicked clips boundaries  
@@ -74,8 +72,6 @@ ALT key sometimes stuck, wonderful old bug from GLFW.
 ALT key to disable grid is not allowing note-resize below grid size  
 notes border rendering not respecting z-order when note rectangles overlap  
 
-while having a selection with no time range, sitting on subtrack 0 of a midi track (first automation lane, just having a cursor sitting in an automation lane):  
-if the track is dragged onto another track to put it as child the program will assert in subtrack range check with out of bounds. see screenshot 02.05.2021 22:58
 # TODO high priority
 custom block length processing  
 per track samplerate / blocksize   
@@ -95,7 +91,6 @@ global midi pitch offset (and per track global offset bypass)
 randomize note velocity + offset (shuffle/humanize/groove)  
 per track velocity scaling (min max curve?!)  
 Render drop shadow on popups or use other background color or outline to make them stand outline  
-height track title should be equal height clip title, at least on folded tracks  
 
 
 
@@ -153,12 +148,6 @@ Type Conversions
 
 Implement or adapt these functions  
 
-    platform.h
-      int32_t getTimeMillis()
-    math.h
-      tick_t math::round(double) // or seqMath roundtick
-    seq_time.h
-      int32_t tickToSample(double tick)
     audiocache(uint32_t samplerate)
     sampleformat_t
       uint16 blockSize // no narrowing when assigning to int32
@@ -271,22 +260,6 @@ plugin->isInCallback[threadId]--
 TODOs Code Architecture
 ------------------------
 
-### Initialization and lifetime of DawInstance should be controlled top level, not by a GUI-Ctrl:
-- MainCtrl::init(window, nanovg) renamed to MainCtrl::initAppWindow(window, nanovg) to avoid confusion
-- refactor makeApp() to main.cpp::makeApp(argc, argv) 
-- makeApp(argc, argv) generates the AppCtrl and DawInstance instances (stored in the shared pointers) as before
-- the call to the AppCtrl::initApp(argc, argv) is moved inside main.cpp::makeApp(argc, argv) 
-- remove all calls made MainCtrl::initApp(argc, argv) and move them into makeApp(argc, argv)
-- now makeApp(argc, argv) calls DawInstance::initDaw(argc, argv) directly
-- after return from makeApp all required instances in the tls are alive
-- create main.cpp::startApp, replace AppCtrl::postInit with call to main.cpp::startApp
-- main.cpp::startApp calls AppCtrl::postInit
-- main.cpp::startApp calls DawInstance::startDaw(); DawInstance::postInit();
-- main.cpp::startApp calls AppCtrl::postInit()
-- move the project loading from DawInstance::startDaw to DawInstance::postInit
-- Consider moving DawInstance::postInit() after AppCtrl::postInit
-- Consider moving showWindow after startApp
-
 DawInstance should be usable without a GUI-Ctrl instance  
 MainCtrl::getPlayThread() is bad interface for no-GUI headless applications  
 
@@ -333,11 +306,9 @@ change to initializer braces assignment for ivec2 (so we can easily change the t
 
     find: \s*=\s*ivec2\s*\(\s*([^, ]*),\s*([^, ]*)\s*\)\s*;  
     replace: = {\1, \2};
-TODOs GUI consistency
+TODOs GUI / Rendering
 ---------------------
-Fix the usage of macros in guiglobals.h  
-The macros hide color and other constants in the code and should be replaced by functions.
-
+determine_string_width can access opengl context in rare cases from guibase::layout() when context isn't present/bound
 # Warnings
 
 TODOs Warnings
@@ -439,38 +410,3 @@ It is quite memory intense:
 ### Problems
 
 - Comment blocks are intended incorrectly -> remove tabs first
-
-COMPLETED
-=========
-clip loop gets notes stuck  
-select all muted notes  
-make hostinfo plugin a synth and detect stuck notes, (test converted projects for stuck notes by replacing all synths with hostinfo)  
-Load/Save current view quickbuttons: F1-F12 keys, hold ctrl to save  
-latency compensated automation (write a simple test case for this)  
-further optimize waveform rendering  
-dynamic scaling for all of the UI (50%-200%)  
-seperate internal samplerate / external (audiointerface) samplerate  
-Make the backing audio track on midi tracks optional, only active when subtrack waveview is shown  
-Performance regression: midi clip processing runtime scales linear to number of loops (expected to scale linearly with loop length)  
-audio track routing options  
-group tracks  
-audio settings dialog  
-track snapshots  
-plugin gui preset select   
-multiselection of plugins (only single consectuive range based)  
-make splitter ctr  
-implement basic arpeggiator  
-optimize waveform rendering  
-Missing undo/redo for adding/moving/removing plugins  
-Missing undo/redo for plugin parameters  
-reordering tracks   
-plugin groups  
-vu-meters on plugins  
-Fold piano roll  
-Catch key presses from plugin windows  
-implemented tooltips for object inspection (using template class)  
-duplicate plugin/plugin groups  
-Sends/Return tracks  
-UI settings for internal/external samplerate/blocksize settings  
-mousewheel scrolling on noteeditor not working  
-Remove the networking source code for DAW builds until I use it (rgb-master uses UDP)  
