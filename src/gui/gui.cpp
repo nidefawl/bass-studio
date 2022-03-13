@@ -2,6 +2,7 @@
 #include <nanovg.h>
 #include <nanovg_min.h>
 #include <typeinfo>
+#include "assert_dbg.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "color_util.h"
@@ -527,8 +528,8 @@ int32_t guibase::getStateFlags() const {
 void guibase::setControl(BaseCtrl* parentCtrl) {
     this->parentCtrl = parentCtrl;
 #if BUILD_VSTHOST
-    if (parentCtrl == nullptr || this->dawCtrl == nullptr) {
-        this->dawCtrl = dynamic_cast<DawCtrl*>(parentCtrl);
+    if (parentCtrl) {
+        dawCtrl = parentCtrl->getDawCtrl();
     }
 #endif
     if (parentCtrl) {

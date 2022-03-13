@@ -458,9 +458,9 @@ public:
     view_mode_t viewMode = view_mode_t::TRACK_TIMELINE;
 
     explicit DawCtrl(DawInstance& _daw)
-        : AppCtrl(),
-          daw(_daw)
+    : daw(_daw)
     {
+        this->parentDawCtrl = this;
     }
 
     ~DawCtrl() override = default;

@@ -470,6 +470,9 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) 
     if (!menuWindows[lvl].wnd) {
         const int createflags = WINDOW_BORDERLESS_POPUP;
         auto popupCtrl = std::make_shared<PopupCtrl>();
+#if BUILD_VSTHOST
+        popupCtrl->parentDawCtrl = this->parentDawCtrl;
+#endif
         popupCtrl->m_scale = m_scale;
         popupCtrl->m_size = math::maxvec2(ivec2(20, 20), guicontextmenu->size);
         *popupCtrl->getTheme() = *getTheme();
@@ -515,6 +518,9 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
         dbgassert(!this->contextWindow);
 
         auto popupCtrl = std::make_shared<PopupCtrl>();
+#if BUILD_VSTHOST
+        popupCtrl->parentDawCtrl = this->parentDawCtrl;
+#endif
         popupCtrl->m_scale = m_scale;
         popupCtrl->m_size = math::maxvec2(ivec2(20, 20), guicontextmenu->size);
         *popupCtrl->getTheme() = *getTheme();
@@ -541,6 +547,9 @@ void AppCtrl::openDialog(guidialog_base* _guidialog) {
     determineWindowPos(_guidialog, mainWindow, m_scale, 0, ivec2(0), wndPos);
 
     auto popupCtrl = std::make_shared<PopupCtrl>();
+#if BUILD_VSTHOST
+        popupCtrl->parentDawCtrl = this->parentDawCtrl;
+#endif
     popupCtrl->m_scale = m_scale;
     popupCtrl->m_size = math::maxvec2(ivec2(20, 20), _guidialog->size);
     *popupCtrl->getTheme() = *getTheme();

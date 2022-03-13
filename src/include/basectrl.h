@@ -302,6 +302,12 @@ public:
     bool isVisible() const { return bIsVisible; }
     void setVisible(bool b) { this->bIsVisible = b; }
     virtual bool hasDialogWindows() { return false; }
+#if BUILD_VSTHOST
+    DawCtrl* parentDawCtrl = nullptr;
+    virtual DawCtrl* getDawCtrl() {
+        return parentDawCtrl;
+    }
+#endif
 };
 
 class AppCtrl : public BaseCtrl {

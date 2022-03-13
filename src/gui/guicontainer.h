@@ -60,7 +60,6 @@ public:
         for (guibase* g : guis) {
             g->onRemove();
             g->setParent(nullptr);
-            //g->setControl(nullptr);
             delete g;
         }
         guis.clear();
@@ -70,7 +69,6 @@ public:
         for (guibase* g : guis) {
             g->onRemove();
             g->setParent(nullptr);
-            //g->setControl(nullptr);
         }
         guis.clear();
     }
@@ -169,7 +167,9 @@ public:
             });
         }
         gui->setParent(this);
-        gui->setControl(getControl());
+        auto thisCtrl = getControl(); 
+        if (thisCtrl)
+            gui->setControl(thisCtrl);
         gui->onAdded();
     }
 
@@ -202,7 +202,6 @@ public:
         gui->onRemove();
         guis.erase(it);
         gui->setParent(nullptr);
-        //gui->setControl(nullptr);
     }
 
     virtual void addUNCHECKED(guibase* gui) {
@@ -217,7 +216,9 @@ public:
             });
         }
         gui->setParent(this);
-        gui->setControl(getControl());
+        auto thisCtrl = getControl(); 
+        if (thisCtrl)
+            gui->setControl(thisCtrl);
     }
 
     virtual void removeUNCHECKED(guibase* gui) {
@@ -225,10 +226,8 @@ public:
         if (it == guis.end()) {
             return;
         }
-        //gui->onRemove();
         guis.erase(it);
         gui->setParent(nullptr);
-        //gui->setControl(nullptr);
     }
 
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {

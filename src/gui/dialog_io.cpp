@@ -56,6 +56,7 @@ public:
     void handleDraggedRelease(MouseEvent& evt) override {
         if (options.empty()) return;
         guictxtmenu_base* popup = new guidropdown_setting_options_ctxt_t(this);
+        popup->dawCtrl = dawCtrl;
         popup->size = size;
         popup->setFontSize(size.y);
         this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
@@ -381,7 +382,7 @@ class guictr_input_meters : public guictr_base {
     int32_t prevStream = 0;
 
 public:
-    explicit guictr_input_meters(const bool _isInput) : guictr_base(), isInput(_isInput) {}
+    explicit guictr_input_meters(const bool _isInput) : isInput(_isInput) {}
     void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
@@ -418,6 +419,7 @@ public:
                 p->setLabel(trackName);
                 guiMeters.push_back(p);
                 add(p.get());
+                p->dawCtrl = this->dawCtrl;
             }
             String s = isInput ? "Input" : "Output";
             s += " Channels ";
@@ -429,6 +431,7 @@ public:
         layout();
     }
     void onTick(AppCtrl* ctrl) override {
+        dbgassert(this->dawCtrl);
         for (guibase* gui : guis) {
             gui->onTick(ctrl);
         }
@@ -548,6 +551,8 @@ public:
     {
         using namespace DAW::AudioIO;
 
+        dawCtrl = daw->getMainControl();
+        dbgassert(dawCtrl);
         auto api  = new guidropdown_setting_options_t();
         auto asio = new guidropdown_setting_options_t();
         auto extBlockSize       = new guidropdown_setting_options_t();
@@ -717,6 +722,11 @@ public:
         add(intSampleRate);
         add(&metersInput);
         add(&metersOutput);
+        for (auto g : guis) {
+            g->dawCtrl = this->dawCtrl;
+        }
+        dbgassert(metersInput.dawCtrl);
+        dbgassert(metersOutput.dawCtrl);
     }
 
     void onTick(AppCtrl* ctrl) override {
