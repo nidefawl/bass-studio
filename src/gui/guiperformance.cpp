@@ -35,7 +35,7 @@ public:
         auto const audioHost = daw->getAudioHost();
         if (getTimeMicros() - timeLastUpdate >= 250000) {
             timeLastUpdate  = getTimeMicros();
-            ThreadLock lock = daw->lockPlayThread();
+            ThreadLock lock = daw->getPlayThread()->tryLockThread();
             if (lock.isLocked()) {
                 state = daw->getPlayThread()->getState();
                 host->getStats(stats);
