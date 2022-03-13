@@ -62,28 +62,23 @@ void guidropdownbase::render(NVGcontext* vg) {
     auto fontSizeScaled = (this->fontSize > 0 ? this->fontSize : size.y) * fFontScale;
 
     if (this->label.length()) {
-        float posXContent = renderTextLabel(vg,
-                        vec2(pos) + vec2(size.x - 3, size.y * 0.5f),
+        auto posText = vec2(pos) + vec2(size.x - 3, size.y * 0.5f);
+        float textWidth = renderTextLabel(vg,
+                        posText,
                         vec2(size),
                         getString(),
                         theme,
                         fontSizeScaled,
                         theme->getColor(c),
                         NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-
-        determine_string_width strw(parentCtrl, theme);
-        auto widthLabel = strw.getStringWidth(label, fontSizeScaled, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-
-        if (posXContent-pos.x + 3.0f >= widthLabel) {
-            renderTextLabel(vg,
-                            vec2(pos) + vec2(3.0f, size.y * 0.5f),
-                            vec2(size),
-                            label,
-                            theme,
-                            fontSizeScaled,
-                            theme->getColor(GuiColor::COL_LABEL_INACTIVE),
-                            NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        }
+        renderTextLabel(vg,
+                        vec2(pos) + vec2(3.0f, size.y * 0.5f),
+                        vec2(size.x - textWidth - 6.0f, size.y),
+                        label,
+                        theme,
+                        fontSizeScaled,
+                        theme->getColor(GuiColor::COL_LABEL_INACTIVE),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     } else {
         renderTextLabel(vg,
                         vec2(pos) + vec2(size) * 0.5f,

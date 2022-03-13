@@ -40,7 +40,7 @@ void guibutton::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
             renderCenteredMultilineText(vg, theme, str, fontScale, c, renderPos, size);
         }
         if (drawFn) {
-            int drawParm2 = isFlag(FLG_RENDER_BUTTON_WITH_LED) ? (getState() ? IMG_LED : IMG_LED_OFF) : getState();
+            int drawParm2 = isFlag(FLG_RENDER_BUTTON_WITH_LED) ? (getState() ? IMG_LED : IMG_LED_OFF) : -1;
             drawFn(vg, renderPos, size, theme->getColor(getBackgroundColor()), drawParm, drawParm2);
         }
         nvgRestore(vg);

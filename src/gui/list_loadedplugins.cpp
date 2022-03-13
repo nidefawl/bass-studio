@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <nanovg.h>
+#include "color_util.h"
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "gui.h"
@@ -191,8 +192,10 @@ public:
             RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
             drawIcon(vg, size, &image);
         }
+        const auto fontSize = rowHeight * 0.8;
         setFont(vg, (int) (rowHeight * 0.8), G_WHITE, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
-        float xText = size.x * 3 / 4;
+        const float percWidth = size.x / 4;
+        float xText = size.x - spacing;
         auto* _entry = safeRefGet(ref);
         if (_entry) {
             host_stats_reducted_t stats;
@@ -202,9 +205,10 @@ public:
             String str = StringFormat("%.2f%%", fPercentLoad);
             float x2 = size.x - spacing;
             xText = x2 - nvgText(vg, x2, rowHeight / 2, StringAsCStr(str), nullptr);
-            if (size.x / 4 > x2 - xText) {
-                str = StringFormat("%dµsec", _entry->procStats.timeTrackProcessPlugins);
-                xText = size.x * 3 / 4 - nvgText(vg, size.x * 3 / 4, rowHeight / 2, StringAsCStr(str), nullptr);
+            if (size.x > fontSize*10) {
+                str = StringFormat("%dµs", _entry->procStats.timeTrackProcessPlugins);
+                x2 = size.x - percWidth - spacing;
+                xText = x2 - nvgText(vg, x2, rowHeight / 2, StringAsCStr(str), nullptr);
             }
         }
         nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
