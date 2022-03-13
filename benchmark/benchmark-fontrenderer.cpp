@@ -218,7 +218,18 @@ int main(int argc, char** argv) {
                 }
             };
         });
+        benchmark::RegisterBenchmark("glfwMakeContextCurrent", [&](benchmark::State& state) {
+            for (auto _ : state) {
+                glfwMakeContextCurrent(nullptr);
+                glfwMakeContextCurrent(glfw);
+            };
+        });
 
+        benchmark::RegisterBenchmark("glfwSwapBuffers", [&](benchmark::State& state) {
+            for (auto _ : state) {
+                glfwSwapBuffers(glfw);
+            };
+        });
 
         benchmark::Initialize(&argc, argv);
         if (::benchmark::ReportUnrecognizedArguments(argc, argv))
