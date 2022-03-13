@@ -1689,9 +1689,33 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
     /** inform host about track layout changes so it resets and updates internal structures **/
     tls.host->onTrackLayoutChange();
-
+    /**
+     * The following loop calls activateDeferred on all tracks, effectively doing the following sequence for each track:
+     *  - load shared libraries
+     *  - create audioeffect instance
+     *  - load binary plugin snapshots
+     *  - load plugin, mixer, arp parameter values
+     *  - load plugin, mixer, arp automation
+     *
+     * plugin loading can take a long time and will block the main thread.
+     * Ideally this would happen on another thread, but that might not work for all vst plugins.
+     */
+    std::vector<effectbase*> pluginsDeferred;
+    tls.host->getDeferredEffects(pluginsDeferred);
     MainCtrl* renderCtrl = tls.mainCtrl;
-    if (renderCtrl) {
+    bool showLoadingScreen = renderCtrl != nullptr && false;
+    if (!showLoadingScreen || !renderCtrl) {
+        if ((flags & FLAG_DEFER_LOAD) == 0) {
+            int len = pluginsDeferred.size();
+            for (int i = 0; i < len; i++) {
+                dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
+                auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
+                effectbase* pluginLoaded;
+                tls.host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
+            }
+            tls.audioCache->load(file->sampleFileIndex);
+        }
+    } else {
         /**
          * plugin loading was not deferred.
          * handle request to load all plugins.
@@ -1721,26 +1745,9 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
         auto windowMain = dynamic_cast<window_main*>(renderCtrl->window);
         dbgassert(windowMain);
 
-        if ((flags & FLAG_DEFER_LOAD) == 0) {
 
             /** get the list of all plugins in deferred loading state **/
-            std::vector<effectbase*> pluginsDeferred;
-            tls.host->getDeferredEffects(pluginsDeferred);
 
-            /**
-             * The following loop calls activateDeferred on all tracks, effectively doing the following sequence for each track:
-             *  - load shared libraries
-             *  - create audioeffect instance
-             *  - load binary plugin snapshots
-             *  - load plugin, mixer, arp parameter values
-             *  - load plugin, mixer, arp automation
-             *
-             * plugin loading can take a long time and will block the main thread.
-             * Ideally this would happen on another thread, but that might not work for all vst plugins.
-             */
-            std::vector<effectbase*> pluginsLoaded;
-            pluginsLoaded.reserve(pluginsDeferred.size());
-            log_printf("begin plugin list loading\n");
             int len = pluginsDeferred.size();
             for (int i = 0; i < len; i++) {
                 dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
@@ -1770,12 +1777,8 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
                 seqthreads::threadSleep(16);
                 effectbase* pluginLoaded;
                 tls.host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
-                if (pluginLoaded) {
-                    pluginsLoaded.push_back(pluginLoaded);
-                }
             }
             log_printf("end plugin list loading\n");
-        }
         const int32_t numSamplesToLoad = file->sampleFileIndex.list.size();
         {
             windowMain->preRender();
@@ -1795,20 +1798,15 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
             windowMain->postRender();
             /** TODO: vsync **/
             seqthreads::threadSleep(16);
-            log_printf("pre load samplefileindex\n");
             tls.audioCache->load(file->sampleFileIndex);
-            log_printf("post load samplefileindex\n");
         }
-        log_printf("end sample loading\n");
         ctr.setControl(nullptr);
         AppWndProc_disableBlockReentrant();
-        for (track_t* tr : project.trackList) {
-            tr->getStage()->pluginsChanged();
-        }
-        tls.host->onTrackLayoutChange();
-    } else {
-        //TODO: implement
     }
+    for (track_t* tr : project.trackList) {
+        tr->getStage()->pluginsChanged();
+    }
+    tls.host->onTrackLayoutChange();
 
     /** validate cursor state **/
     auto ctrl = tls.mainCtrl;

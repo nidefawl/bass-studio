@@ -128,12 +128,8 @@ namespace MouseCursors {
     void initCursors();// mousecursor.cpp
 }
 
-static void glfw_startup_error_callback(int error, const char* description) {
-    log_printf("glfw-error %d: %s\n", error, description);
-}
-
 static void glfw_runtime_error_callback(int error, const char* description) {
-    log_printf("glfw-error %d: %s\n", error, description);
+    log_lf(Log::L_ERROR, "glfw-error %d: %s\n", error, description);
 }
 
 static void setAppWindowHints() {
@@ -284,6 +280,7 @@ private:
         glBindVertexArray(0);
         glActiveTexture(GL_TEXTURE0);
         glfwSwapInterval(-1);
+        // glfwSwapInterval(0);
         int flags = NVG_ANTIALIAS;
 #ifndef NDEBUG
         flags |= NVG_DEBUG;
@@ -753,8 +750,9 @@ public:
             reloadCustomShaders();
         } */
 
-        // glfwMakeContextCurrent(nullptr);
+        glfwMakeContextCurrent(nullptr);
         ctrl->onAppTick();
+        glfwMakeContextCurrent(glfw);
     }
     void releaseOverlayWindows() {
         if (!overlayWindowsToClose.empty()) {
@@ -1753,12 +1751,12 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         }
 #endif
 
-        glfwSetErrorCallback(glfw_startup_error_callback);
+        glfwSetErrorCallback(glfw_runtime_error_callback);
         
 #ifdef _WIN32
         glfwSetWin32WindowClassName(L"DAWWINDOW01");
 #endif
-        glfwInitHint(GLFW_CONTEXT_KEEPCURRENT, 1);
+        // glfwInitHint(GLFW_CONTEXT_KEEPCURRENT, 1);
         if (!glfwInit()) {
             showerror("Initialization failed. Couldn't initialize glfw");
             exit(EXIT_FAILURE);
