@@ -144,8 +144,11 @@ void fonsDrawDebug(FONScontext* s, float x, float y);
 
 #endif // FONTSTASH_H
 
+#define FONTSTASH_IMPLEMENTATION
 
 #ifdef FONTSTASH_IMPLEMENTATION
+
+#include <stdio.h>
 
 #define FONS_NOTUSED(v)  (void)sizeof(v)
 
