@@ -750,9 +750,7 @@ public:
             reloadCustomShaders();
         } */
 
-        glfwMakeContextCurrent(nullptr);
         ctrl->onAppTick();
-        glfwMakeContextCurrent(glfw);
     }
     void releaseOverlayWindows() {
         if (!overlayWindowsToClose.empty()) {
@@ -1872,10 +1870,12 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             if (tmHRNow - tmHRLastDraw >= minFrameDelayMicros) {
                 hiresTimer1.reset();
 
+                // glfwMakeContextCurrent(mainWindow->getGLFW());
                 mainWindow->renderWindowAndChildren();
                 appStats.timeRefreshAll = hiresTimer1.getTimeReset();
                 mainWindow->swapBufferAndChildren();
                 appStats.timeSwapBuffersAll = hiresTimer1.getTimeReset();
+                glfwMakeContextCurrent(nullptr);
 
                 tmHRLastDraw = tmHRNow = hiresRuntime.getTime();
             }
