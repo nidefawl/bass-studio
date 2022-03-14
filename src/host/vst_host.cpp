@@ -207,10 +207,9 @@ public:
         //delayLines.clear();//TODO: this might free a lot of memory and be expensive: profile!
     }
 
-    //TODO: THIS IS NOT THREADSAFE!
+    //TODO: Try avoid this lock
     DelayLine* getDelayLine(uint32_t id, int32_t numChannels) {
-        using namespace std;
-        lock_guard<mutex> hold(mtx);
+        std::lock_guard<std::mutex> hold(mtx);
         if (!delayLines.count(id)) {
             delayLines[id] = std::shared_ptr<DelayLine>(new DelayLine((uint32_t)numChannels, 16));
         }

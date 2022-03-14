@@ -171,7 +171,6 @@ struct audio_stage_t {
         }
     }
     DelayLine* getEffectDelayLine(uint32_t id, uint32_t numChannels) {
-        using namespace std;
 //        lock_guard<mutex> hold(mtx);
         if (!effDelayLines.count(id) || effDelayLines[id]->block.channels != numChannels) {
             effDelayLines[id] = std::make_shared<DelayLine>(numChannels, 16);

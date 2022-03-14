@@ -37,7 +37,6 @@
 #define DISPLAY_WIN_MSG_STATS 0
 #define DISPLAY_HWND_DRAWS 0
 #endif
-using namespace std;
 
 namespace GuiColor {
     void initConstants(int colorVal);
@@ -337,7 +336,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         auto const ctrl = dawCtrl;
         auto const daw = ctrl->getDaw();
 
-        vector<String> strings;
+        std::vector<String> strings;
         String str;
         str = StringFormat("%012X", (int64_t) ctrl->getTheme());
         strings.push_back(String("ctrl->getTheme: ") + str);
@@ -488,7 +487,7 @@ void gui_ctr_debug::layout() {
             continue;
         if (gui == knobTestThreadCnt)
             continue;
-        gui->size = ivec2(max(size * 6, cs.x - size * 3), size);
+        gui->size = ivec2(math::max(size * 6, cs.x - size * 3), size);
         gui->pos  = ivec2(posX, posY - gui->size.y);
         posY      = gui->top() - INSET_TRACK_CONTENT;
     }

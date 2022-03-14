@@ -13,6 +13,7 @@
 #include "wave/waveform_render_impl.h"
 #include "color_util.h"
 #include "window_impl.h"
+#include "host/mainctrl.h"
 
 namespace windowdebug_waveformcache {
 

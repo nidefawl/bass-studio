@@ -30,8 +30,6 @@
 
 #include "project.h"
 
-using namespace std;
-
 String getModKeyName(int modKey) {
     switch (modKey) {
         case KB_MOD_SHIFT:
@@ -92,7 +90,7 @@ KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key
     return kevt;
 }
 ivec2 toControlsObjectSpace(ivec2 pos, guibase* gui) {
-    vector<guibase*> guiHierachy;
+    std::vector<guibase*> guiHierachy;
     gui->getHierachy(guiHierachy);
     while (!guiHierachy.empty()) {
         guibase* b = guiHierachy.back();

@@ -14,8 +14,6 @@
 
 using namespace cereal;
 
-using std::ifstream;
-using std::ofstream;
 
 #ifdef _WIN32
 #include "platform/win/windowsize.h"
@@ -134,7 +132,7 @@ void serialize(Archive& ar, appsettings& settings) {
 appsettings loadSettings() {
     Stringstream ss;
     String cwdPathSettings = App::Platform::toUserdataPath(SETTINGS_NAME);
-    ifstream file(cwdPathSettings, ifstream::in);
+    std::ifstream file(cwdPathSettings, std::ifstream::in);
     if (file) {
         ss << file.rdbuf();
         std::streampos length = file.tellg();
@@ -150,9 +148,9 @@ appsettings loadSettings() {
 
 void saveSettings(appsettings& _settings) {
     String cwdPathSettings = App::Platform::toUserdataPath(SETTINGS_NAME);
-    ofstream file;
-    file.exceptions(~ofstream::goodbit);
-    file.open(cwdPathSettings, ofstream::out);
+    std::ofstream file;
+    file.exceptions(~std::ofstream::goodbit);
+    file.open(cwdPathSettings, std::ofstream::out);
     cereal::JSONOutputArchive ar(file);
     ar(_settings);
 }

@@ -15,9 +15,6 @@ bool CreateDirectoryIfNotExists(const String& DirPath) {
     return 0 != CreateDirectoryA(StringAsCStr(DirPath), nullptr);
 }
 
-using namespace std;
-
-
 void ThrowLastErrorIf(bool expression, const String& msg) {
     if (expression) {
         throw FileIOException(GetLastError(), msg);
@@ -77,14 +74,14 @@ size_t GetFileSizeSafe(const String& filename) {
     BOOL result = GetFileSizeEx(fobj.GetHandle(), &filesize);
     ThrowLastErrorIf(result == FALSE, "GetFileSizeEx failed: " + filename);
 
-    if (filesize.QuadPart < (numeric_limits<int64_t>::max)()) {
+    if (filesize.QuadPart < (std::numeric_limits<int64_t>::max)()) {
         return filesize.QuadPart;
     } else {
         throw;
     }
 }
 
-int32_t WriteFileVector(const String& filename, vector<uint8_t>& writebuffer) {
+int32_t WriteFileVector(const String& filename, std::vector<uint8_t>& writebuffer) {
     FileImpl fobj(filename, OpenFileMode::WRITE);
     DWORD bytesWrite = 0;
 
@@ -94,7 +91,7 @@ int32_t WriteFileVector(const String& filename, vector<uint8_t>& writebuffer) {
     return (int32_t) bytesWrite;
 }
 
-void ReadFileVector(const String& filename, vector<uint8_t>& out) {
+void ReadFileVector(const String& filename, std::vector<uint8_t>& out) {
     FileImpl fobj(filename, OpenFileMode::READ);
     size_t filesize = GetFileSizeSafe(filename);
     DWORD bytesRead = 0;

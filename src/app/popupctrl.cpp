@@ -18,8 +18,6 @@
 #include "../gui/scrollbar.h"
 
 
-using namespace std;
-
 void PopupCtrl::focusLost() {
     //parentCtrl->closeContextMenu();
 }

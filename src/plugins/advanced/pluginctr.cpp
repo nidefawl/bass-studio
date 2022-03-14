@@ -63,7 +63,7 @@ void gui_ctr_main::render(NVGcontext* vg) {
     //nvgFill(vg);
     BaseCtrl* ctrl = parentCtrl;
 
-    vector<String> strings;
+    std::vector<String> strings;
     String str;
     str = ctrl->guiOver ? ctrl->guiOver->getClassName() : "<null>";
     strings.push_back(String("guiOver: ") + str);

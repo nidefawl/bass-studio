@@ -25,7 +25,6 @@
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/polymorphic.hpp>
 
-using namespace std;
 using namespace cereal;
 
 
@@ -133,7 +132,7 @@ themefile loadThemeFile() {
     Stringstream ss;
 
     String cwdPathTheme = App::Platform::toUserdataPath(THEMEFILE_NAME);
-    ifstream file(cwdPathTheme, ifstream::in);
+    std::ifstream file(cwdPathTheme, std::ifstream::in);
     if (file) {
         ss << file.rdbuf();
         std::streampos length = file.tellg();
@@ -148,9 +147,9 @@ themefile loadThemeFile() {
 }
 void saveThemeFile(themefile& _settings) {
     String cwdPathTheme = App::Platform::toUserdataPath(THEMEFILE_NAME);
-    ofstream file;
-    file.exceptions(~ofstream::goodbit);
-    file.open(cwdPathTheme, ofstream::out);
+    std::ofstream file;
+    file.exceptions(~std::ofstream::goodbit);
+    file.open(cwdPathTheme, std::ofstream::out);
     cereal::JSONOutputArchive ar(file);
     ar(_settings);
 }
