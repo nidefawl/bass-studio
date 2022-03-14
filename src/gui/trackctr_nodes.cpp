@@ -166,7 +166,7 @@ void gui_graph_entry::render(NVGcontext* vg) {
     }
     renderFrameBase(vg);
     String text = getText();
-    int flags   = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
+    int flags   = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : 0;
     renderTitleBar(vg, getSizeContent(), text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, 0, flags, true);
     renderFrameOutline(vg);
     for (guibase* gui : guis) {

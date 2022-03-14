@@ -218,7 +218,7 @@ public:
             return;
         }
         renderFrameBase(vg);
-        int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
+        int flags = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : 0;
         renderTitleBar(vg, getSizeContent(), this->label, GuiConstant::CONST_SMALL_LABEL_HEIGHT, getSizeContent().y, flags, false);
         renderFrameOutline(vg);
         for (auto c : guis) {

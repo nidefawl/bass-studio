@@ -7,6 +7,7 @@
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "renderresources.h"
+#include "gui/gui.h"
 #include "assert_dbg.h"
 
 

@@ -2,7 +2,6 @@
 #include <cstdint>
 #include <nanovg_min.h>
 #include <vector>
-#include "guiglobals.h"
 #include "str_util.h"
 
 namespace UIFont {

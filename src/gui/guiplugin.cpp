@@ -240,9 +240,9 @@ void guiplugin::renderBase(NVGcontext* vg) {
         return;
     }
     renderFrameBase(vg);
-    int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
+    int flags = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : TITLEBAR_FLG_NONE;
     if (isSelected()) {
-        flags |= FLAG_SELECTED;
+        flags |= TITLEBAR_FLG_SELECTED;
     }
     renderTitleBar(vg, getSizeContent(), this->text, GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, titlePosX, flags, isHorizontalTitle);
     renderFrameOutline(vg);

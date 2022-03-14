@@ -6,6 +6,7 @@
 #include "str_util.h"
 #include "renderresources.h"
 #include "guifonts.h"
+#include "guiglobals.h"
 #include <nanovg.h>
 
 

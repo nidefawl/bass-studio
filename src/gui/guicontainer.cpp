@@ -135,9 +135,9 @@ void guictr_base::renderFrameOutline(NVGcontext* vg) {
 
 void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle) {
     NVGcolor c;
-    if (flags & FLAG_SELECTED) {
+    if (flags & TITLEBAR_FLG_SELECTED) {
         c = theme->getColor(GuiColor::COL_PLUG_TITLE_SELECTED);
-    } else if (flags & FLAG_FOCUSED) {
+    } else if (flags & TITLEBAR_FLG_FOCUSED) {
         c = theme->getColor(GuiColor::COL_PLUG_TITLE_FOCUSED);
     } else {
         c = theme->getColor(GuiColor::COL_PLUG_TITLE);

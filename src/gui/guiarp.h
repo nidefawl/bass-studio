@@ -71,7 +71,7 @@ public:
         }
         ivec2 cs = getSizeContent();
         renderFrameBase(vg);
-        int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
+        int flags = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : 0;
         renderTitleBar(vg, cs, this->text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, buttonBypass.right(), flags, true);
         renderFrameOutline(vg);
         buttonBypass.render(vg);

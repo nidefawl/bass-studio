@@ -62,27 +62,43 @@ ivec2 toControlsObjectSpace(ivec2 pos, guibase* gui);
 inline float calcInset(float desiredInset, float size) {
     return math::min(desiredInset, math::max(0.f, (size - 4.0f) / 2.0f));
 }
-
-enum TextInputState : signed int {
-    DISABLED = 0,
-    ENABLED  = 1
+enum guiflag : int32_t {
+    FLG_NONE                     = 0x00000000,
+    FLG_VISIBLE                  = 0x00000001,
+    FLG_RENDER_BACKGROUND        = 0x00000002,
+    FLG_RENDER_BACKGROUND_INSET  = 0x00000004,
+    FLG_ENBL                     = 0x00000008,
+    FLG_HVRD                     = 0x00000010,
+    FLG_FOC                      = 0x00000020,
+    FLG_ACT                      = 0x00000040,
+    FLG_DRG                      = 0x00000080,
+    FLG_HAS_COLOR_BG             = 0x00000100,
+    FLG_CANFOCUS                 = 0x00000200,
+    FLG_RENDER_DRAGGED           = 0x00000400,
+    FLG_RENDER_LABEL             = 0x00000800,
+    FLG_VERTICAL_LABEL           = 0x00001000,
+    FLG_IMPL_SPEC1               = 0x00002000,
+    FLG_IMPL_SPEC2               = 0x00004000,
+    FLG_RENDER_BUTTON_WITH_LED   = 0x00008000
 };
-
-#define FLAG_FOCUSED 1
-#define FLAG_SELECTED 2
+enum guiflag_titlebar : int32_t {
+    TITLEBAR_FLG_NONE = 0,
+    TITLEBAR_FLG_FOCUSED = 1,
+    TITLEBAR_FLG_SELECTED = 2
+};
 namespace DebugAlloc {
     template<typename T>
     class Tracker;
 }
 class guibase {
 private:
-    int flags = FLG_ENBL | FLG_VISIBLE | FLG_RENDER_BACKGROUND;
+    int32_t flags = FLG_ENBL | FLG_VISIBLE | FLG_RENDER_BACKGROUND;
 
 public:
     ivec2 pos{ 0 };
     ivec2 size{ 0 };
-    int id               = 0;
-    int zOrder           = 0;
+    int32_t id               = 0;
+    int32_t zOrder           = 0;
     BaseCtrl* parentCtrl = nullptr;
     DawCtrl* dawCtrl     = nullptr;
     guibase* parent      = nullptr;
