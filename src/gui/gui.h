@@ -88,7 +88,7 @@ public:
     guibase* parent      = nullptr;
     guitheme_t* theme    = nullptr;
     SafeRef<guibase> safeRef;
-    String label = "";
+    String label;
 
 public:
     int allocId;
@@ -98,8 +98,6 @@ public:
     guibase& operator=(const guibase& graph) = delete;
     guibase(guibase&& graph)                 = delete;
     guibase& operator=(guibase&& graph) = delete;
-    //guibase(const guibase&) = default; guibase& operator=(const guibase&) = default;
-    //guibase(guibase&&) = default; guibase& operator=(guibase&&) = default;
 protected:
     void setFlagInternal(int flag) {
         this->flags |= flag;

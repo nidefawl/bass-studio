@@ -172,12 +172,8 @@ void gui_clipsettings::render(NVGcontext* vg) {
     nvgTranslate(vg, 0, 0);
     int32_t inset = 4;
     int32_t i2    = inset * 2;
-    int32_t h     = TRACK_HEIGHT_STEP - i2;
-    setFont(vg, G_FONT_SCALE(h), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     for (guibase* gui: guis) {
-
-        //gui->render(vg);
-        nvgText(vg, i2, gui->top() + G_FONT_MIDDLE_OFFSET(gui->size.y), StringAsCStr(gui->label), nullptr);
+        renderText(vg, vec2(i2, gui->top() + gui->size.y * 0.5), vec2(gui->pos.x-i2, size.y), gui->label, TRACK_HEIGHT_STEP);
     }
     nvgRestore(vg);
 }

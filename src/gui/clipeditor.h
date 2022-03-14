@@ -422,8 +422,6 @@ public:
         //guictr_base::setScissorTransform(vg);
         ivec2 posInset = getPosContent();
         nvgTranslate(vg, posInset.x, posInset.y);
-
-        ivec2 center = getSizeContent() / 2;
         if (view.clip()) {
             nvgSave(vg);
             settings.render(vg);
@@ -440,8 +438,8 @@ public:
                 audioeditor.render(vg);
             }
         } else {
-            setFont(vg, 18, THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-            nvgText(vg, center.x, center.y, "No clip selected", NULL);
+            auto cs = vec2(getSizeContent());
+            renderText(vg, cs * 0.5f, size, "No clip selected", 18, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         }
         for (guibase* gui : guis) {
             if (gui == &audioeditor)

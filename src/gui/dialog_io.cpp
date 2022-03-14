@@ -4,6 +4,7 @@
 #include "dialog.h"
 #include "dropdown.h"
 #include "gui/guimeter.h"
+#include "gui/textfield.h"
 #include "guicontainer.h"
 #include "guicontextmenu.h"
 #include "guicontextmenu_base.h"
@@ -958,6 +959,8 @@ public:
         add(deviceListOutput);
         deviceListInput->setLabel("Midi input device");
         deviceListOutput->setLabel("Midi output device");
+        deviceListInput->setFlag(FLG_RENDER_LABEL, true);
+        deviceListOutput->setFlag(FLG_RENDER_LABEL, true);
         setLabel("Midi I/O");
         updateOptions();
     }
@@ -969,11 +972,6 @@ public:
         if (!setScissorTransform(vg)) {
             return;
         }
-
-        setFont(vg, TEXT_FONT_SIZE, THEMECOL_TEXT, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
-        nvgText(vg, 5, this->deviceListInput->top() - 2, StringAsCStr(this->deviceListInput->label), nullptr);
-        nvgText(vg, 5, this->deviceListOutput->top() - 2, StringAsCStr(this->deviceListOutput->label), nullptr);
-
         for (auto c : guis) {
             nvgSave(vg);
             c->render(vg);
@@ -989,9 +987,9 @@ public:
 
         int32_t heightList     = math::max(230, cs.y * 2 / 5);
 
-        deviceListInput->pos   = ivec2(inset, inset + (int32_t)(TEXT_FONT_SIZE * 1.2));
+        deviceListInput->pos   = ivec2(inset);
         deviceListInput->size  = ivec2((cs.x) - inset * 2, heightList);
-        deviceListOutput->pos  = ivec2(inset, deviceListInput->bottom() + inset + (int32_t)(TEXT_FONT_SIZE * 1.2));
+        deviceListOutput->pos  = ivec2(inset, deviceListInput->bottom() + inset);
         deviceListOutput->size = ivec2((cs.x) - inset * 2, math::min(cs.y - deviceListOutput->pos.y, heightList));
 
         for (auto gui : guis) {
@@ -1055,32 +1053,31 @@ public:
 
 class guidialog_plugin_settings : public setting_dialog {
     DawInstance* const daw;
-    guibutton* scanNow;
-    guibutton* selectFolder;
-
+    guibutton scanNow;
+    guibutton selectFolder;
+    gui_textfield pathVstVal;
 public:
     void onDialogShow() override { updateOptions(); }
 
     ~guidialog_plugin_settings() override {
         removeGuis();
-        delete selectFolder;
-        delete scanNow;
     }
     guidialog_plugin_settings(DawInstance* _daw)
         : setting_dialog(),
-          daw(_daw),
-          scanNow(new guibutton()),
-          selectFolder(new guibutton())
+          daw(_daw)
     {
         setBackgroundRendered(true);
-        selectFolder->id = 0x10;
-        selectFolder->setText(settings.pluginsettings.pathVst2);
-        selectFolder->setLabel("VST2 Plugin Path");
-        scanNow->id = 0x11;
-        scanNow->setText("Scan VST2 folder");
-        scanNow->setLabel("Scan");
-        add(selectFolder);
-        add(scanNow);
+        selectFolder.id = 0x10;
+        selectFolder.setLabel("Select VST2 Plugin Directory");
+        selectFolder.setText(selectFolder.getLabel());
+        scanNow.id = 0x11;
+        scanNow.setLabel("Scan VST2 Plugins");
+        scanNow.setText(scanNow.getLabel());
+        pathVstVal.setEditable(true);
+        pathVstVal.setValue(settings.pluginsettings.pathVst2);
+        add(&pathVstVal);
+        add(&selectFolder);
+        add(&scanNow);
         setLabel("Plugins");
         updateOptions();
     }
@@ -1092,21 +1089,6 @@ public:
         if (!setScissorTransform(vg)) {
             return;
         }
-
-        guibase* vstOptions[2]{selectFolder, scanNow};
-
-        for (guibase* option : vstOptions) {
-            renderTextLabel(vg,
-                            vec2(5, option->pos.y) + vec2(0, option->size.y) * 0.5f,
-                            vec2(option->size) - vec2(10, 0),
-                            option->label,
-                            theme,
-                            option->size.y,
-                            theme->getContrastColor(GuiColor::COL_BG_DRKER),
-                            NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        }
-
-        selectFolder->setText(settings.pluginsettings.pathVst2);
         for (auto c : guis) {
             nvgSave(vg);
             c->render(vg);
@@ -1117,13 +1099,14 @@ public:
         ivec2 cs = getSizeContent();
 
         const int32_t inset   = 5;
-        const int32_t buttonW = math::max(120, cs.x * 2 / 3);
         const int32_t height  = theme->get(GuiConstant::CONST_ROW_HEIGHT);
 
-        selectFolder->size = ivec2(buttonW, height);
-        selectFolder->pos  = ivec2(cs.x - inset * 2 - buttonW, inset);
-        scanNow->size      = ivec2(buttonW, height);
-        scanNow->pos       = ivec2(cs.x - inset * 2 - buttonW, selectFolder->bottom() + inset);
+        pathVstVal.size   = ivec2(cs.x - inset * 2, height);
+        pathVstVal.pos    = ivec2(inset);
+        selectFolder.size = ivec2(cs.x - inset * 2, height);
+        selectFolder.pos  = ivec2(inset, pathVstVal.bottom() + inset);
+        scanNow.size      = ivec2(cs.x - inset * 2, height);
+        scanNow.pos       = ivec2(inset, selectFolder.bottom() + inset);
 
         for (auto gui : guis) {
             gui->layout();
@@ -1134,23 +1117,22 @@ public:
             auto plughost = daw->getHost();
             if (!plughost->isScanning()) {
                 plughost->scanPlugins();
-                scanNow->setText("Cancel Scanning");
+                scanNow.setText("Cancel Scanning");
             } else {
                 plughost->checkScanner();
                 plughost->stopScanner();
-                scanNow->setText("Scan VST2 folder");
+                scanNow.setText("Scan VST2 Plugins");
             }
 
             return;
         }
         if (button->id == 0x10) {
-            selectFolder->setText(settings.pluginsettings.pathVst2);
             // select folder
             String out   = DAW_PLATFORM_VST2_PATH_DEFAULT;
             String curre = settings.pluginsettings.pathVst2;
             App::Platform::sanitizePathToDirectory(curre);
 
-            if (0 == browseForFolder("Select VST2 Plugin Path", curre, out)) {
+            if (0 == browseForFolder(selectFolder.getLabel(), curre, out)) {
                 settings.pluginsettings.pathVst2 = out;
                 try {
                     saveSettings(settings);
@@ -1158,7 +1140,6 @@ public:
                     log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
                 }
             }
-            selectFolder->setText(settings.pluginsettings.pathVst2);
             return;
         }
         if (this->parent) {
@@ -1170,11 +1151,15 @@ public:
     void updateOptions() {
         auto plughost = daw->getHost();
         if (!plughost->isScanning()) {
-            scanNow->setText("Scan VST2 folder");
+            scanNow.setText("Scan VST2 Plugins");
         } else {
-            scanNow->setText("Cancel Scanning");
+            scanNow.setText("Cancel Scanning");
         }
-    };
+    }
+    void onTick(AppCtrl* appctrl) override {
+        pathVstVal.setValue(settings.pluginsettings.pathVst2);
+        updateOptions();
+    }
 };
 
 

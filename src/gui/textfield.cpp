@@ -99,6 +99,11 @@ void setTfFont(NVGcontext* ctx, const gui_textfield* tf) {
             break;
     }
 }
+void gui_textfield::layout() {
+    if (this->mFontSize < 0) {
+        this->mFontSize = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
+    }
+}
 void gui_textfield::render(NVGcontext* ctx) {
 
     //TODO: find a better place to do this: font metrics require nano-vg context but should be calculated in drag/move on the fly

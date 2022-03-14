@@ -56,7 +56,6 @@ public:
             nvgRestore(vg);
         }
         int sizeH = getSizeContent().y / 4;
-        setFont(vg, G_FONT_SCALE(TITLE_FONT_SIZE), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        nvgText(vg, TITLE_FONT_SIZE * 2, sizeH, message.c_str(), nullptr);
+        renderText(vg, vec2(TITLE_FONT_SIZE * 2, sizeH), vec2(size.x, sizeH), message, TITLE_FONT_SIZE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     }
 };

@@ -82,7 +82,7 @@ private:
 
     text_metrics_t metrics;
     Alignment mAlignment = Alignment::Left;
-    float mFontSize = 28.0f;
+    float mFontSize = -1.0f;
 
     int mCursorPos    = -1;
     int mSelectionPos = -1;
@@ -169,6 +169,7 @@ public:
     void beginEdit();
     void endEdit(bool success);
 
+    void layout() override;
     void render(NVGcontext* ctx) override;
     void updateTextLayout(NVGcontext* ctx);
     void renderTextField(NVGcontext* ctx) const;
