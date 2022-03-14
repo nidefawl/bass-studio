@@ -90,15 +90,15 @@ void AudioBlock::realloc(uint32_t _samples) {
 
 void AudioBlock::addFromDelayLineOp(DelayLine* delayLine, const samplerate_t delay, const mix_op op, float gain) {
     auto& delayBlock = delayLine->block;
-    const auto readSamples = static_cast<int32_t>(this->samples);
-    const auto delayLineSize = static_cast<int32_t>(delayBlock.samples);
-    int32_t readPos = delayLine->writeOffset - static_cast<int32_t>(delay);
-    if (readPos < 0) {
-        readPos += delayLineSize;
+    const auto readSamples = this->samples;
+    const auto delayLineSize = delayBlock.samples;
+    auto readPos = delayLine->writeOffset - delay;
+    if (delay > delayLine->writeOffset) {
+        readPos = delayLine->writeOffset + delayLineSize - delay;
     }
     if (readPos + readSamples > delayLineSize) {
-        int32_t read1Len = delayLineSize - readPos;
-        int32_t read2Len = readSamples - read1Len;
+        const auto read1Len = delayLineSize - readPos;
+        const auto read2Len = readSamples - read1Len;
         AudioBlock subBlock1 = delayBlock.SubChannelsSamplesBlock(0, this->channels, readPos, read1Len);
         this->addFromOp(&subBlock1, op, gain);
         AudioBlock subBlock2 = delayBlock.SubChannelsSamplesBlock(0, this->channels, 0, read2Len);
@@ -112,22 +112,18 @@ void AudioBlock::addFromDelayLineOp(DelayLine* delayLine, const samplerate_t del
 void DelayLine::updateSize(uint16_t _blockSize, uint8_t _numChannels, samplerate_t _delay) {
     dbgassert(_delay < (1 << 20));
     dbgassert(_blockSize);
-    int32_t bufDelay  = static_cast<int32_t>(_delay);
-    int32_t delayBlocks = 1;
-    while (bufDelay > 0) {
-        bufDelay -= static_cast<int32_t>(_blockSize);
-        delayBlocks++;
-    }
+    auto delayBlocks = (_delay + _blockSize - 1) / _blockSize;
+    auto newBufferSize = delayBlocks * _blockSize;
     if (this->blockSize != _blockSize
-        || this->block.samples != delayBlocks * _blockSize
+        || this->block.samples != newBufferSize
         || this->block.channels != _numChannels) {
-        this->block = AudioBlock(_numChannels, delayBlocks * _blockSize);
+        this->block = AudioBlock(_numChannels, newBufferSize);
         this->blockSize = _blockSize;
         if (this->writeOffset % _blockSize != 0) {
             this->writeOffset = (this->writeOffset / _blockSize) * _blockSize;
-            dbgassert(this->writeOffset <= block.samples);
+            dbgassert(this->writeOffset <= newBufferSize);
         }
-        if (this->writeOffset >= block.samples) {
+        if (this->writeOffset >= newBufferSize) {
             this->writeOffset = 0;
         }
     }
@@ -135,6 +131,7 @@ void DelayLine::updateSize(uint16_t _blockSize, uint8_t _numChannels, samplerate
 void delayLineWrite(DelayLine* delayLine, AudioBlock* input, samplerate_t delay) {
     dbgassert(delayLine);
     dbgassert(input->channels < 256);
+    dbgassert(input->samples < std::numeric_limits<uint16_t>::max());
     delayLine->updateSize(input->samples, static_cast<uint8_t>(input->channels), delay);
     delayLine->writeOffset += delayLine->blockSize;
     if (delayLine->writeOffset >= delayLine->block.samples) {

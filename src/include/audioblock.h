@@ -269,7 +269,7 @@ struct alignas(64) AudioBlock {
 
 struct DelayLine {
     AudioBlock block;
-    int32_t writeOffset = 0;
+    uint32_t writeOffset = 0;
     uint16_t blockSize = 0;
     static std::atomic<int32_t> instanceCount;
     DelayLine(uint32_t _channels, uint32_t _samples)
