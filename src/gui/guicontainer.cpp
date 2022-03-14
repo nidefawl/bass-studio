@@ -176,20 +176,19 @@ void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, Strin
         return;
     }
     if (text[0]) {
+        // const auto contrastColor = getContrastFontColorNvg(c);
+        const auto fontScaled = hpt * 0.8f;
         if (isHorizontalTitle) {
             nvgSave(vg);
             nvgIntersectScissor(vg, textOffsetX + INSET_TITLE - 1, 0, textMaxWidth + 2, hpt);
-            setFont(vg, (int) (hpt * 0.8), getContrastFontColorNvg(c), G_TITLE_ALIGN);
-            //            text = StringFormat("%d %d %d", (int32_t)(textOffsetX + INSET_TITLE), (int32_t)textMaxWidth, size.x);
-            nvgText(vg, textOffsetX + INSET_TITLE, hpt / 2, StringAsCStr(text), nullptr);
+            renderText(vg, vec2(textOffsetX + INSET_TITLE, hpt * 0.5f), vec2(textMaxWidth, hpt), text, fontScaled);
             nvgRestore(vg);
         } else {
-            setFont(vg, (int) (hpt * 0.8), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
             nvgSave(vg);
             nvgTranslate(vg, hpt / 2, textOffsetX);
             nvgRotate(vg, (float) (-M_PI / 2.0));
             nvgIntersectScissor(vg, INSET_TITLE * 2 - 1, -hpt / 2, textMaxWidth, hpt);
-            nvgText(vg, INSET_TITLE * 2, 0, StringAsCStr(text), nullptr);
+            renderText(vg, vec2(INSET_TITLE * 2, 0), vec2(textMaxWidth, hpt), text, fontScaled);
             nvgRestore(vg);
         }
     }

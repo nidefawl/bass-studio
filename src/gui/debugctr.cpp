@@ -265,7 +265,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         for (int i = 0; i < graphLegendSteps.x; i++) {
             float fPos = i / (graphLegendSteps.x - 1.0f);
             float xPos = legendX + graphStepLen.x * (i);
-            setFont(vg, 14, G_WHITE, NVG_ALIGN_MIDDLE | NVG_ALIGN_CENTER);
+            setFont(vg, 14, THEMECOL_TEXT, NVG_ALIGN_MIDDLE | NVG_ALIGN_CENTER);
             String strThrdCnt = StringFormat("%dµs", static_cast<int32_t>(math::roundfS32(fPos * mikrosPerBlock)));
             if (i == graphLegendSteps.x - 1) {
                 strThrdCnt = StringFormat("%dµs deadline", static_cast<int32_t>(mikrosPerBlock));
@@ -312,7 +312,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
                 }
             }
             nvgRestore(vg);
-            setFont(vg, 14, G_WHITE, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
+            setFont(vg, 14, THEMECOL_TEXT, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
             float lineh;
             nvgTextMetrics(vg, NULL, NULL, &lineh);
             for (int i = 0; i <= maxThread; i++) {
@@ -326,7 +326,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         nvgRestore(vg);
         auto knobTestThreadCnt = getByID(ID_KNOB_SET_THREAD_COUNT);
         if (knobTestThreadCnt) {
-            setFont(vg, 14, G_WHITE, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
+            setFont(vg, 14, THEMECOL_TEXT, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
             String strThrdCnt = StringFormat("Number of Threads: %d", dawCtrl->getDaw()->getHost()->getThreadCount());
             ivec2 lblPos{ knobTestThreadCnt->right(), knobTestThreadCnt->bottom() - knobTestThreadCnt->size.y / 2 };
             nvgText(vg, lblPos.x, lblPos.y, StringAsCStr(strThrdCnt), NULL);
@@ -442,7 +442,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 #endif
         int x = 5;
 
-        setFont(vg, 14, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+        setFont(vg, 14, THEMECOL_TEXT, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
         float lineh;
         nvgTextMetrics(vg, NULL, NULL, &lineh);
 

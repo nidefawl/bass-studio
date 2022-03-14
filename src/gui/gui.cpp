@@ -3,6 +3,7 @@
 #include <nanovg_min.h>
 #include <typeinfo>
 #include "assert_dbg.h"
+#include "guiglobals.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "color_util.h"
@@ -150,6 +151,17 @@ float renderTextLabel(NVGcontext* vg,
     float f = nvgTextW(vg, pos.x, pos.y, bounds.x, text.c_str(), &text.back() + 1);
     nvgTranslateZ(vg, 2.0f);
     return f;
+}
+float guibase::renderText(NVGcontext* vg,
+                const vec2& pos,
+                const vec2& bounds,
+                const String& text,
+                const float fontSize,
+                const int32_t alignment) {
+    const GuiColor::constant_t c = (this->flags & FLG_ENBL) ? GuiColor::COL_TEXT : GuiColor::COL_LABEL_INACTIVE;
+    const auto fontSizeScaled = math::clamp<float>(fontSize > 4 ? fontSize : size.y, 4, 48);
+    const int32_t align = alignment == 0 ? NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE : alignment;
+    return renderTextLabel(vg, pos, bounds, text, theme, fontSizeScaled, theme->getColor(c), align);
 }
 
 void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, const String& str, float fontSize, GuiColor::constant_t c, ivec2 pos, ivec2 bounds) {
@@ -575,7 +587,7 @@ void guibase::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
         //    ivec2 inset = { 2, 2 };
         //    UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
         //    UIFont::bindFont(vg, instance);
-        //    nvgFillColor(vg, G_WHITE);
+        //    nvgFillColor(vg, THEMECOL_TEXT);
         //    Table::DrawTableNVG(this->table, vg, theme, pos + inset, size - inset * 2, HEIGHT_ENTRY - 4);
         render(vg);
     }

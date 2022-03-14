@@ -29,7 +29,7 @@ public:
     }
 
     void render(ivec2, NVGcontext* vg, int idx, ivec2 mouse) override {
-        UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        UTIL_setFont(vg, theme, this->fontSize, THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         nvgText(vg, leftOffset(), y + this->fontSize / 2, StringAsCStr(title), NULL);
         nvgFontSize(vg, this->fontSize - 4);
         int focusIdx = -1;
@@ -46,7 +46,7 @@ public:
                 nvgRect(vg, cX, y + cY, WH, WH);
                 nvgFillColor(vg, g_colorPalette[colorIdx]);
                 nvgFill(vg);
-                nvgStrokeColor(vg, G_WHITE);
+                nvgStrokeColor(vg, THEMECOL_WHITE);
                 nvgStrokeWidth(vg, 0.5f);
                 nvgStroke(vg);
             }
@@ -61,7 +61,7 @@ public:
             nvgRect(vg, cX - extent, y + cY - extent, WH + extent * 2, WH + extent * 2);
             nvgFillColor(vg, g_colorPalette[focusIdx]);
             nvgFill(vg);
-            nvgStrokeColor(vg, G_WHITE);
+            nvgStrokeColor(vg, THEMECOL_WHITE);
             nvgStrokeWidth(vg, 1.0f);
             nvgStroke(vg);
         }

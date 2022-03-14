@@ -180,7 +180,7 @@ void gui_graph_entry::render(NVGcontext* vg) {
     int32_t i2                      = inset * 2;
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     int32_t h                       = TRACK_HEIGHT_STEP - i2;
-    setFont(vg, G_FONT_SCALE(h), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    setFont(vg, G_FONT_SCALE(h), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     for (guibase* gui : guis) {
         nvgText(vg, i2, gui->top() + G_FONT_MIDDLE_OFFSET(gui->size.y), StringAsCStr(gui->label), nullptr);
     }
@@ -899,7 +899,7 @@ void gui_graph::render(NVGcontext* vg) {
         auto portOutputPos     = edge.portSrc->getPortPos();
         auto edgeLabelPos      = ivec2(portInputPos + vec2(portOutputPos - portInputPos) * 0.5f);
         auto procNode          = edge.portSrc->getNode()->getProcessingNode();
-        setFont(vg, 14, G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        setFont(vg, 14, THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         auto text = StringFormat("%d samples", procNode->internalLatency + procNode->inputLatency);
         nvgText(vg, edgeLabelPos.x, edgeLabelPos.y, StringAsCStr(text), nullptr);
     }
@@ -981,7 +981,7 @@ public:
             return;
         }
         this->posY = GRAPH_FONT_SIZE * 1.2f;
-        setFont(vg, GRAPH_FONT_SIZE, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+        setFont(vg, GRAPH_FONT_SIZE, THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
         text(vg, StringFormat("Stage #%d", static_cast<int32_t>(node->stageId)));
         if (node->effectOptional) {
             text(vg, StringFormat("Global Id #%d", static_cast<int32_t>(node->effectOptional->projectGlobalId)));
@@ -1000,9 +1000,9 @@ public:
             if (maxRmsOut > dsp_util::GAIN_DBFLOOR)
                 nvgFillColor(vg, G_GREEN);
             else
-                nvgFillColor(vg, G_WHITE);
+                nvgFillColor(vg, THEMECOL_TEXT);
             text(vg, StringFormat("Output max rms: %f", maxRmsOut));
-            nvgFillColor(vg, G_WHITE);
+            nvgFillColor(vg, THEMECOL_TEXT);
             auto numBlocks = node->trackOptional->audio->procStats.numBlocksProcessed;
             text(vg, StringFormat("Blocks processed: %d", numBlocks));
         }

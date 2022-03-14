@@ -49,7 +49,7 @@ void guimenu_ctxtentry::render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mo
                     t1,
                     theme,
                     fontSize,
-                    theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                    theme->getColor(GuiColor::COL_TEXT),
                     NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 
     String rightSide;
@@ -66,7 +66,7 @@ void guimenu_ctxtentry::render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mo
                         rightSide,
                         theme,
                         fontSize,
-                        theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                        THEMECOL_TEXT,
                         NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     }
 
@@ -110,7 +110,7 @@ void guictr_menubar_entry::render(NVGcontext* vg) {
                     menu->title,
                     theme,
                     fontSize,
-                    theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                    THEMECOL_TEXT,
                     NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 }
 

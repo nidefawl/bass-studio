@@ -7,6 +7,8 @@
 #define INSET_CLIP_CONTENT 2
 #define INSET_CTR_SPACING 4
 
+#define FONT_AUTOSCALE 0.75f
+
 #define HEIGHT_DEFAULT_INPUT 30
 
 #define CONTEXT_MENU_MIN_WIDTH 16
@@ -43,7 +45,8 @@
 #define CTR_SPACING 8
 #define CONTENT_INSET 14
 
-#define G_WHITE (theme->getColor(GuiColor::COL_WHITE))
+#define THEMECOL_TEXT (theme->getColor(GuiColor::COL_TEXT))
+#define THEMECOL_WHITE (theme->getColor(GuiColor::COL_WHITE))
 #define G_BLACK (theme->getColor(GuiColor::COL_BLACK))
 
 #define G_GREEN (theme->getColor(GuiColor::COL_LEVEL_IND_GREEN))

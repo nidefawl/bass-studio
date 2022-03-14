@@ -1564,7 +1564,7 @@ namespace PluginSynth {
             strings.push_back(StringFormat("samplesToNextClock %d", timeinfo->samplesToNextClock));
             strings.push_back(String("flags ") + FormatBinaryString<int16_t>(timeinfo->flags & 0xFFFF));
             //this->
-            setFont(vg, 16, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+            setFont(vg, 16, THEMECOL_TEXT, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
             float lineh;
             nvgTextMetrics(vg, NULL, NULL, &lineh);
             int y = INSET_CTR_SPACING;

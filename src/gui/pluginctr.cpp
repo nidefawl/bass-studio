@@ -574,7 +574,7 @@ void guictr_dragged_plugins::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2
     ivec2 inset = { 2, 2 };
     UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
     UIFont::bindFont(vg, instance);
-    nvgFillColor(vg, G_WHITE);
+    nvgFillColor(vg, THEMECOL_TEXT);
     Table::DrawTableNVG(this->table, vg, theme, pos + inset, size - inset * 2, HEIGHT_ENTRY - 4);
 }
 void guictr_dragged_plugins::setStrings(std::vector<String>& list) {

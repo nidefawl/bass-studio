@@ -193,7 +193,7 @@ public:
             drawIcon(vg, size, &image);
         }
         const auto fontSize = rowHeight * 0.8;
-        setFont(vg, (int) (rowHeight * 0.8), G_WHITE, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
+        setFont(vg, (int) (rowHeight * 0.8), THEMECOL_TEXT, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
         const float percWidth = size.x / 4;
         float xText = size.x - spacing;
         auto* _entry = safeRefGet(ref);

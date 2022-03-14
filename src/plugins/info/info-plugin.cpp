@@ -565,7 +565,7 @@ namespace PluginHostInfo {
             VstTimeInfo* timeinfo = effx->getTimeInfo(flags);
             assert(timeinfo);
             PluginHostInfo::timeInfoToStrings(timeinfo, strings);
-            setFont(vg, 16, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+            setFont(vg, 16, THEMECOL_TEXT, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
             float lineh;
             nvgTextMetrics(vg, NULL, NULL, &lineh);
 

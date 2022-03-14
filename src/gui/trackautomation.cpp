@@ -593,7 +593,7 @@ void gui_track_automation::render(NVGcontext* vg) {
     }
     if (mouseTick != INVALID_TICK) {
         float valAtMouse = data.getValueAt(mouseTick);
-        setFont(vg, 18, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+        setFont(vg, 18, THEMECOL_TEXT, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
         nvgText(vg, fmouse.x, INSET_TITLE, StringAsCStr(StringFormat("%.2f %d", valAtMouse, mouseTick)), NULL);
     }
 }

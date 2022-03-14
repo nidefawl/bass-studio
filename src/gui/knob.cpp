@@ -127,7 +127,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
         float height  = insetS.y;
         nvgBeginPath(vg);
         nvgRect(vg, cx, cy, insetS.x, height);
-        nvgFillColor(vg, G_WHITE);
+        nvgFillColor(vg, THEMECOL_TEXT);
         nvgFill(vg);
         float heightRange = insetS.y * val;
         nvgBeginPath(vg);
@@ -147,7 +147,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
         vec2 center(cx, cy);
         nvgBeginPath(vg);
         nvgArc(vg, cx, cy, r, start, start + range, NVG_CW);
-        nvgStrokeColor(vg, G_WHITE);
+        nvgStrokeColor(vg, THEMECOL_TEXT);
         nvgStrokeWidth(vg, lineThickness);
         nvgStroke(vg);
         float end = start + val * range;
@@ -276,7 +276,7 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
     }
     renderBorder(vg, getStateFlags(), pos + glm::ivec2(0, size.y - valueHeight + INS_BRD), glm::ivec2(size.x, valueHeight - INS_BRD * 2), GuiColor::COL_BG_BRT);
     nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-//    setFont(vg, (int) ((knob->size.y / 2.0)), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
+//    setFont(vg, (int) ((knob->size.y / 2.0)), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
 
     UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
     UIFont::bindFont(vg, instance);

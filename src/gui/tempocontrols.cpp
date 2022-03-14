@@ -48,7 +48,7 @@ gui_timeinput_field::gui_timeinput_field(int _idx, int32_t* _time, const bool _i
 void gui_timeinput_field::render(NVGcontext* vg) {
     int32_t flags = getStateFlags();
     renderWidgetBorder(vg, flags);
-    setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+    setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     int32_t _time      = time ? *time : 0;
     beatbar16th_t step = dawCtrl->getDaw()->toBeatBar16th(_time);
     int32_t val        = step[idx];
@@ -178,7 +178,7 @@ void gui_timeinput::render(NVGcontext* vg) {
     this->sixteenths.render(vg);
     if (isBackgroundRendered()) {
         String str = ".";
-        setFont(vg, G_FONT_SCALE(this->sixteenths.size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+        setFont(vg, G_FONT_SCALE(this->sixteenths.size.y), THEMECOL_TEXT, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
         nvgText(vg, this->beat.pos.x, this->beat.pos.y + G_FONT_MIDDLE_OFFSET(this->beat.size.y), StringAsCStr(str), NULL);
         nvgText(vg, this->sixteenths.pos.x, this->sixteenths.pos.y + G_FONT_MIDDLE_OFFSET(this->sixteenths.size.y), StringAsCStr(str),
                 NULL);

@@ -430,7 +430,7 @@ public:
                         title,
                         theme,
                         fontSize,
-                        theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                        THEMECOL_TEXT,
                         NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     }
 };

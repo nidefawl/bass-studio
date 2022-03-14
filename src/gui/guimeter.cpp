@@ -45,13 +45,13 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
     /*if (mtrSize.y > 4) {
         nvgBeginPath(vg);
         nvgRect(vg, mtrPos.x, mtrPos.y, mtrSize.x, mtrSize.y);
-        nvgFillColor(vg, G_WHITE);
+        nvgFillColor(vg, THEMECOL_TEXT);
         nvgFill(vg);
         nvgBeginPath(vg);
         nvgRect(vg, mtrPos.x + 1, mtrPos.y + 1, mtrSize.x - 2, mtrSize.y - 2);
         nvgFillColor(vg, G_GREEN_DRK);
         nvgFill(vg);
-        nvgFillColor(vg, G_WHITE);
+        nvgFillColor(vg, THEMECOL_WHITE);
     }*/
     for (int i = 0; i < NCHANNELS; i++) {
         auto& chLvl     = lvls[i];
@@ -143,7 +143,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
         nvgStrokeWidth(vg, 0.75f);
         nvgStroke(vg);
         nvgFontSize(vg, lW * 0.7);
-        nvgFillColor(vg, G_WHITE);
+        nvgFillColor(vg, THEMECOL_TEXT);
         nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
         float prevStopY = -4;
         for (int i = 0; i < steps; i++) {
@@ -168,7 +168,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
     getContrastFontColor(nvgToRGBA(theme->getBgColor(0)));
     nvgIntersectScissor(vg, gainPos.x, gainPos.y, gainSize.x, gainSize.y);
     nvgFontSize(vg, gainSize.y * 0.7);
-    nvgFillColor(vg, G_WHITE);
+    nvgFillColor(vg, THEMECOL_TEXT);
     nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
 
     String strLevel = ".";

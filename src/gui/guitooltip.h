@@ -75,7 +75,7 @@ public:
             return;
         }
 
-        setFont(vg, FONT_SIZE_TOOLTIP_TITLE, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+        setFont(vg, FONT_SIZE_TOOLTIP_TITLE, THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
         Table::DrawTableNVG(table, vg, theme, ivec2(INSET_TABLE), getSizeContent() - ivec2(INSET_TABLE << 1), FONT_SIZE_TOOLTIP);
         if (textField.isVisible()) {
             textField.render(vg);

@@ -51,19 +51,19 @@ public:
 
         auto printL = [&](int inset, const char* caption, const String& str) {
             float offsetX = (inset + 1) * x;
-            renderTextLabel(vg, vec2(offsetX, y), vec2(size.x - inset*2, height), caption, theme, height, theme->getContrastColor(GuiColor::COL_BG_DRKER), NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-            renderTextLabel(vg, vec2(x2, y), vec2(size.x - inset*2, height), str, theme, height, theme->getContrastColor(GuiColor::COL_BG_DRKER), NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
+            renderText(vg, vec2(offsetX, y), vec2(size.x - inset*2, height), caption, height, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+            renderText(vg, vec2(x2, y), vec2(size.x - inset*2, height), str, height, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
             y += height;
         };
 
         if (stats.usageRaw >= 1.0) {
             nvgFillColor(vg, theme->getColor(GuiColor::COL_LEVEL_IND_YELLOW_DRKER));
         } else {
-            nvgFillColor(vg, G_WHITE);
+            nvgFillColor(vg, THEMECOL_TEXT);
         }
         auto& renderStats = daw_tls::getTls().prevRenderStats;
         printL(0, "Usage", StringFormat("%.2f%% (%.2f%%)", stats.usage * 100.0f, stats.usageRaw * 100.0f));
-        nvgFillColor(vg, G_WHITE);
+        nvgFillColor(vg, THEMECOL_TEXT);
         
         prof_stats_window_t profDataWindow;
         if (ProfilingImpl::profilingGetRecentFrame(dawCtrl->window, &profDataWindow)) {

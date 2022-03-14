@@ -35,7 +35,7 @@ void guibutton::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
 
         ivec2 renderPos(0);
         if (str.length() > 0) {
-            auto fontScale = math::clamp(math::min(size.y, size.x), 4, 48) * fFontScale;
+            auto fontScale = math::clamp(math::min(size.y, size.x), 4, 48) * FONT_AUTOSCALE;
             GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
             renderCenteredMultilineText(vg, theme, str, fontScale, c, renderPos, size);
         }

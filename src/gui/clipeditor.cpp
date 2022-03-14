@@ -791,7 +791,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                     nvgStroke(vg);
                     if (m.desc[0]) {
                         String cstr = m.desc;
-                        setFont(vg, G_FONT_SCALE(24), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+                        setFont(vg, G_FONT_SCALE(24), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
                         float bounds[4];
                         float textX = nx + INSET_TRACK_CONTENT;
                         float textY = m.yOffset * 24 + 24 / 2.0 + INSET_TRACK_CONTENT + yoff;
@@ -800,7 +800,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                         nvgRect(vg, bounds[0], bounds[1], bounds[2] - bounds[0], bounds[3] - bounds[1]);
                         nvgFillColor(vg, rgbaToNvg(i == 0 ? 0xFF121212 : 0xFF444412));
                         nvgFill(vg);
-                        nvgFillColor(vg, G_WHITE);
+                        nvgFillColor(vg, THEMECOL_TEXT);
                         nvgText(vg, textX, textY, cstr.c_str(), nullptr);
                     }
                     yoff += 3;

@@ -146,14 +146,11 @@ public:
             drawIcon(vg, inner, &image);
         }
 
-        renderTextLabel(vg,
-                        vec2(x, rowHeight * 0.5f),
-                        vec2(size),
-                        getText(),
-                        theme,
-                        rowHeight,
-                        theme->getContrastColor(GuiColor::COL_BG_DRKER),
-                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        renderText(vg,
+                   vec2(x, rowHeight * 0.5f),
+                   vec2(size),
+                   getText(),
+                   rowHeight);
 
         ivec2 sizeIcon = ivec2(inner.y - 4);
         ivec2 posIcon  = {inner.x - (int)spacing - sizeIcon.y, (inner.y - sizeIcon.y) / 2};
@@ -743,7 +740,7 @@ public:
             return;
         }
 
-        setFont(vg, TEXT_FONT_SIZE, G_WHITE, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
+        setFont(vg, TEXT_FONT_SIZE, THEMECOL_TEXT, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
 
         for (auto c : guis) {
             nvgSave(vg);
@@ -899,7 +896,7 @@ public:
                         getText(),
                         theme,
                         rowHeight,
-                        theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                        THEMECOL_TEXT,
                         NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 
         ivec2 sizeIcon = ivec2(inner.y - 4);
@@ -973,7 +970,7 @@ public:
             return;
         }
 
-        setFont(vg, TEXT_FONT_SIZE, G_WHITE, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
+        setFont(vg, TEXT_FONT_SIZE, THEMECOL_TEXT, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
         nvgText(vg, 5, this->deviceListInput->top() - 2, StringAsCStr(this->deviceListInput->label), nullptr);
         nvgText(vg, 5, this->deviceListOutput->top() - 2, StringAsCStr(this->deviceListOutput->label), nullptr);
 

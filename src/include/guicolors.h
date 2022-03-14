@@ -43,7 +43,6 @@ namespace GuiColor {
     extern constant_t COL_BG_BRT;
     extern constant_t COL_LINE_SEPERATOR;
     extern constant_t COL_CTXTMNU_OUTLINE;
-    extern constant_t COL_CTXTMNU_BG;
     extern constant_t COL_CTXTMNU_HILIGHT;
     extern constant_t COL_GUI_STROKE;
     extern constant_t COL_BG_DRK_FOCUSED;
@@ -77,6 +76,7 @@ namespace GuiColor {
     extern constant_t COL_PLUG_TITLE_FOCUSED;
     extern constant_t COL_ON;
     extern constant_t COL_OFF;
+    extern constant_t COL_TEXT;
     extern constant_t COL_TEXTBOX_TEXT;
     extern constant_t COL_TEXTBOX_TEXT_DISABLED;
     extern constant_t COL_TEXTBOX_TEXT_MARKED;

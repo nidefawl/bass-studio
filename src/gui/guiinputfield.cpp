@@ -9,7 +9,7 @@ void gui_numberinput_field_base::render(NVGcontext* vg) {
         this->field.render(vg);
         return;
     }
-    setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+    setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     String str = getAsStringLiteral();
     float pX   = nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
     if (!isEditing && this->label.length()) {

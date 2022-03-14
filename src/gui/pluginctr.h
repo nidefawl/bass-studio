@@ -72,7 +72,7 @@ public:
         }
         nvgFillColor(vg, theme->getFrameColorBase());
         nvgFill(vg);
-        setFont(vg, 18, G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        setFont(vg, 18, THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         nvgText(vg, pos.x + size.x / 2.0f, pos.y + size.y / 2.0f, StringAsCStr(message), NULL);
     }
     void determineSize(ivec2& prefSize) override {

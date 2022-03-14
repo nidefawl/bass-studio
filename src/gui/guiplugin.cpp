@@ -534,12 +534,12 @@ public:
         }
         nvgTranslate(vg, pos.x, pos.y);
         if (rowHeight > 32) {
-            setFont(vg, (int) (rowHeight * 0.4), G_WHITE, G_TITLE_ALIGN);
+            setFont(vg, (int) (rowHeight * 0.4), THEMECOL_TEXT, G_TITLE_ALIGN);
             nvgText(vg, x, rowHeight * 0.25, StringAsCStr(getText()), nullptr);
             String sValue = effect->getParamValueDisplay(entry->idx);
             nvgText(vg, x, rowHeight * 0.5 + rowHeight * 0.25, StringAsCStr(sValue), nullptr);
         } else {
-            setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
+            setFont(vg, (int) (rowHeight * 0.8), THEMECOL_TEXT, G_TITLE_ALIGN);
             nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), nullptr);
         }
         nvgTranslate(vg, -pos.x, -pos.y);

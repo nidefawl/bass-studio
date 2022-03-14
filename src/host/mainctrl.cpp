@@ -1080,6 +1080,11 @@ void MainCtrl::startApp() {
     statusbarLogger->setLevel(Log::L_WARN);
     getMultiLogger().addLogger(statusbarLogger);
     Profiling::profilingRegisterEntry<prof_stats_render_t>(this, "Main Render Stats");
+    daw_tls::getTls().config->runtime = runtime_info_t{
+        String((char*)glGetString(GL_RENDERER)),
+        String((char*)glGetString(GL_VENDOR)),
+        String((char*)glGetString(GL_VERSION))
+    };
 
     BaseCtrl::relayout();
     updateVisibleTrackContents();
@@ -1735,7 +1740,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
                 guictr_base::render(vg);
                 vec2 cs       = getSizeContent();
                 auto cStrText = StringAsCStr(text);
-                setFont(vg, 32, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_CENTER);
+                setFont(vg, 32, THEMECOL_TEXT, NVG_ALIGN_TOP | NVG_ALIGN_CENTER);
                 nvgText(vg, cs.x / 2.0f, cs.y / 2.0f, cStrText, nullptr);
             }
         };

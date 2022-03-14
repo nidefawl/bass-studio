@@ -24,7 +24,7 @@ public:
     void render(NVGcontext* vg) override {
         renderWidgetBorder(vg, getStateFlags());
         String tempo = FormatTempo(dawCtrl->getDaw()->getCurrentTempoBPM());
-        setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(tempo), NULL);
     }
     void handleDraggedBegin(MouseEvent& evt) override {
@@ -59,7 +59,7 @@ public:
     void render(NVGcontext* vg) override {
         int32_t fl = getStateFlags();
         renderWidgetBorder(vg, fl);
-        setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         int n;
         if (idx == 0) {
             n = dawCtrl->getDaw()->sigNum();
@@ -131,7 +131,7 @@ public:
         String sigSep = "/";
         this->inputNum.render(vg);
         this->inputDen.render(vg);
-        setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         nvgText(vg, size.x / 2.0f, G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(sigSep), NULL);
     }
 };

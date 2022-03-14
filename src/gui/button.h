@@ -17,7 +17,6 @@ protected:
     GuiColor::constant_t buttonColor;
     String str         = "";
     String tooltipText = "";
-    float fFontScale   = 0.75f;
 
 public:
     void (*drawFn)(NVGcontext*, ivec2&, ivec2&, const NVGcolor&, int drawParm, int drawParm2) = NULL;
@@ -52,9 +51,6 @@ public:
     }
     String getTooltipText() {
         return tooltipText.empty() ? label : tooltipText;
-    }
-    void setFontScale(float fScale) {
-        fFontScale = fScale;
     }
     void render(NVGcontext* vg) override {
         int32_t fl = getStateFlags();

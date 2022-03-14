@@ -78,7 +78,7 @@ void Splitter::render(NVGcontext* vg) {
         } else {
             nvgRect(vg, 0, 0, size.x, size.y);
         }
-        nvgStrokeColor(vg, G_WHITE);
+        nvgStrokeColor(vg, THEMECOL_WHITE);
         nvgStrokeWidth(vg, 1.0f);
         nvgStroke(vg);
         nvgRestore(vg);

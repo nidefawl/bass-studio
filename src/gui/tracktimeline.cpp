@@ -128,7 +128,7 @@ void guitrack_timeline::render(NVGcontext* vg) {
                         nvgMoveTo(vg, n.screenpos, this->size.y);
                         nvgLineTo(vg, n.screenpos, this->size.y - h * scale);
                         nvgStrokeWidth(vg, 1.f);
-                        nvgStrokeColor(vg, G_WHITE);
+                        nvgStrokeColor(vg, THEMECOL_WHITE);
                         nvgStroke(vg);
                     } else {
                         int color = -1;

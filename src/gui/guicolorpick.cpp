@@ -205,7 +205,7 @@ void gui_input_filtered::layout() {
 void gui_input_filtered::render(NVGcontext* vg) {
     int32_t fl = getStateFlags();
     renderWidgetBorder(vg, fl);
-//    setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+//    setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 //    String str2 = StringFormat("mValue '%s'", StringAsCStr(field.mValue));
 //    String str3 = StringFormat("mValueTemp '%s'", StringAsCStr(field.mValueTemp));
 //    String str4 = StringFormat("mCursorPos %d", field.mCursorPos);
@@ -222,7 +222,7 @@ void gui_input_filtered::render(NVGcontext* vg) {
         return;
     }
     int align = isAlignCenter ? NVG_ALIGN_CENTER : NVG_ALIGN_RIGHT;
-    setFont(vg, G_FONT_SCALE((int32_t) (size.y * 0.8)), G_WHITE, align | NVG_ALIGN_MIDDLE);
+    setFont(vg, G_FONT_SCALE((int32_t) (size.y * 0.8)), THEMECOL_TEXT, align | NVG_ALIGN_MIDDLE);
     int32_t _number = number ? *number : 0;
     String str      = filter.formatNumber(_number);
     nvgText(vg, pos.x + size.x - 3 + (isAlignCenter ? size.x * -0.5 : 0), pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);

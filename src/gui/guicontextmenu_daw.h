@@ -112,7 +112,7 @@ public:
                         title,
                         theme,
                         fontSize,
-                        theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                        theme->getColor(GuiColor::COL_TEXT),
                         NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 
         n = 0;
@@ -123,7 +123,7 @@ public:
                             e.name,
                             theme,
                             fontSize * 0.9f,
-                            theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                            theme->getColor(GuiColor::COL_TEXT),
                             NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
             n++;
         }

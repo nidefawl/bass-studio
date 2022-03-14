@@ -74,7 +74,7 @@ public:
                         title,
                         theme,
                         fontSize,
-                        theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                        theme->getColor(GuiColor::COL_TEXT),
                         NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     }
     virtual bool contains(ivec2& ctxtSize, ivec2& mouse) const {

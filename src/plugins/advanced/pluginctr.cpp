@@ -93,7 +93,7 @@ void gui_ctr_main::render(NVGcontext* vg) {
 
     int x = 5;
 
-    setFont(vg, 26, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+    setFont(vg, 26, THEMECOL_TEXT, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
     //String proj = StringFormat("Project: %s", StringAsCStr(ctrl->getProjectPath()));
     //nvgText(vg, x, 0, StringAsCStr(proj), NULL);
     float lineh;

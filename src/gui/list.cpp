@@ -24,9 +24,6 @@ void gui_list_entry::render(NVGcontext* vg) {
     float spacing   = INSET_TITLE;
     float x         = spacing;
     float rowHeight = size.y;
-    if (icon > -1) {
-        x += rowHeight + spacing;
-    }
     bool focused = ctrl->isCtrOrChildFocused(this);
     if (focused || selected) {
         auto color = theme->getColor(focused ? GuiColor::COL_BG_DRKER : GuiColor::COL_BG_DRK);
@@ -39,9 +36,9 @@ void gui_list_entry::render(NVGcontext* vg) {
     if (icon > -1) {
         RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
         drawIcon(vg, size, &image);
+        x += rowHeight + spacing;
     }
-    setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
-    nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
+    renderText(vg, vec2(x, rowHeight*0.5f), size, getText());
     nvgTranslate(vg, -pos.x, -pos.y);
 }
 

@@ -224,6 +224,12 @@ public:
     void setZOrder(int _zOrder) {
         zOrder = _zOrder;
     }
+    float renderText(NVGcontext* vg,
+                    const vec2& pos,
+                    const vec2& bounds,
+                    const String& text,
+                    const float fontSize    = 0.0f,
+                    const int32_t alignment = 0);
     virtual void render(NVGcontext* vg) {
     }
     virtual void determineSize(ivec2& prefSize) /* const */ {

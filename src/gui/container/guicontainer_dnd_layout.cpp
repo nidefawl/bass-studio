@@ -690,7 +690,7 @@ void guictr_layout::render(NVGcontext* vg) {
         nvgBeginPath(vg);
         nvgRect(vg, pos.x, pos.y, size.x, size.y);
         nvgStrokeWidth(vg, 1.0f);
-        nvgStrokeColor(vg, G_WHITE);
+        nvgStrokeColor(vg, THEMECOL_WHITE);
         nvgStroke(vg);
     }
     if (!setScissorTransform(vg)) {

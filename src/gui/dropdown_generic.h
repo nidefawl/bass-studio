@@ -33,8 +33,8 @@ public:
         }
         auto* popup   = createContextMenu(std::move(strOptions));
         popup->size   = size;
-        int fontScale = math::roundfS32((this->fontSize > 0 ? this->fontSize : size.y) * fFontScale);
-        popup->setFontSize(fontScale);
+        auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
+        popup->setFontSize(fontSizeScaled);
         this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
     }
     String getString() override {

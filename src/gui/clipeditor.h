@@ -440,7 +440,7 @@ public:
                 audioeditor.render(vg);
             }
         } else {
-            setFont(vg, 18, G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+            setFont(vg, 18, THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             nvgText(vg, center.x, center.y, "No clip selected", NULL);
         }
         for (guibase* gui : guis) {

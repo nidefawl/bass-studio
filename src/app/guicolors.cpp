@@ -100,7 +100,6 @@ namespace GuiColor {
     constant_t COL_CLIP_NOTE_MUTED("COL_CLIP_NOTE_MUTED", 0xff121212);
     constant_t COL_CLIP_NOTE_OVERLAP("COL_CLIP_NOTE_OVERLAP", 0xff0000ff);
     constant_t COL_CLIP_OUTLINE("COL_CLIP_OUTLINE", 0x7f000000);
-    constant_t COL_CTXTMNU_BG("COL_CTXTMNU_BG", 0xff050505);
     constant_t COL_CTXTMNU_HILIGHT("COL_CTXTMNU_HILIGHT", 0xff363636);
     constant_t COL_CTXTMNU_OUTLINE("COL_CTXTMNU_OUTLINE", 0xffffffff);
     constant_t COL_FOLD_BUTTON("COL_FOLD_BUTTON", 0xffff9933);
@@ -144,6 +143,7 @@ namespace GuiColor {
     constant_t COL_PLUG_TITLE_FOCUSED("COL_PLUG_TITLE_FOCUSED", 0xffb6c4fe);
     constant_t COL_PLUG_TITLE_SELECTED("COL_PLUG_TITLE_SELECTED", 0xff8f67ff);
     constant_t COL_TEXTBOX_TEXT("COL_TEXTBOX_TEXT", 0xffe9eafd);
+    constant_t COL_TEXT("COL_TEXT", 0xffe9eafd);
     constant_t COL_TEXTBOX_TEXT_DISABLED("COL_TEXTBOX_TEXT_DISABLED", 0xff666666);
     constant_t COL_TEXTBOX_TEXT_MARKED("COL_TEXTBOX_TEXT_MARKED", 0xff4d60d7);
     constant_t COL_INVALID_INPUT("COL_INVALID_INPUT", 0xffc85a5a);

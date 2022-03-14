@@ -88,11 +88,11 @@ public:
                 nvgFill(vg);
                 String text = knob->label;
                 if (text[0]) {
-                    setFont(vg, (int) ((knob->size.y / 2.0)), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
+                    setFont(vg, (int) ((knob->size.y / 2.0)), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
                     nvgText(vg, knob->right() + INSET_TITLE + INSET_TITLE, knob->pos.y + INSET_TITLE, StringAsCStr(text), nullptr);
                     text = formatParameterValue(knob);
                     if (text[0]) {
-                        setFont(vg, (int) ((knob->size.y / 2.0) * 0.8), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+                        setFont(vg, (int) ((knob->size.y / 2.0) * 0.8), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
                         nvgText(vg, knob->right() + INSET_TITLE + INSET_TITLE, knob->bottom() - INSET_TITLE, StringAsCStr(text), nullptr);
                     }
                 }

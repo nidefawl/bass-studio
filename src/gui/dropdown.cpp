@@ -1,4 +1,5 @@
 #include "dropdown.h"
+#include "guiglobals.h"
 #include "str_util.h"
 
 bool guidropdownbase::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
@@ -59,7 +60,7 @@ void guidropdownbase::render(NVGcontext* vg) {
     const auto stateFlags = getStateFlags();
     renderWidgetBorder(vg, stateFlags);
     GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
-    auto fontSizeScaled = math::clamp(size.y, 4, 48) * fFontScale;
+    auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
 
     if (this->label.length()) {
         auto posText = vec2(pos) + vec2(size.x - 3, size.y * 0.5f);
