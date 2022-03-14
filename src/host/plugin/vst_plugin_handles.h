@@ -1,10 +1,11 @@
 #pragma once
 #include <vstsdk-host-2.4/aeffectx.h>
 #include <memory>
-
-#include "../../gui/guiplugin.h"
+#include <vector>
+#include <cstdio>
 
 struct audio_stage_t;
+class guiplugin;
 class AudioEffectX;
 class PluginViewContainers;
 struct handles_t {
@@ -13,7 +14,7 @@ struct handles_t {
     AudioEffectX* axEffect = nullptr;// Optional/Internal plugin only: handle to plugin implementation instance
     AEffect* aeffect       = nullptr;// hmodule owns if axEffect == null
     void* hmodule          = nullptr;// we dont own
-    std::unique_ptr<guiplugin> gui;
+    std::shared_ptr<guiplugin> gui;
     std::vector<uint8_t> dataChunkLocalMemory;
     handles_t(AudioEffectX* ex, AEffect* e, void* m) {
         axEffect = ex;

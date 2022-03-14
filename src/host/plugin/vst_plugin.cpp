@@ -544,7 +544,7 @@ guiplugin* vstplugin::makeGui() {
         //auto vstPluginView = std::make_unique<guivstplugin>(this);
         //view = vstPluginView;
         //handle->gui = vstPluginView;
-        handle->gui = std::make_unique<guivstplugin>(this);
+        handle->gui = std::make_shared<guivstplugin>(this);
         handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
         if (handle->axEffect) {//only provided by internal vst2 instance (not a DLL)
             guiplugin* pGuiPlugin = handle->gui.get();
