@@ -25,11 +25,10 @@ public:
     static constexpr int FONT_SIZE_TOOLTIP_BIG = 15;
     static constexpr int FONT_SIZE_TOOLTIP = 16;
     
-    guitooltip(T* _ptr) : guictxtmenu(), ptr(_ptr) {
+    guitooltip(T* _ptr) : ptr(_ptr) {
         add(&textField);
-        setBackgroundRendered(true);
+        setBackgroundRendered(false);
         setBackgroundRenderedInset(false);
-//        setSnapSides(ivec4(1));
         textField.setVisible(false);
         scrollbarOutside = true;
         maxHeight        = 220;

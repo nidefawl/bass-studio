@@ -122,7 +122,7 @@ public:
     bool canTakeInputFocus = false;
     int maxHeight          = 360;
 
-    guictxtmenu_base() : guictr_base() {
+    guictxtmenu_base() {
         margin  = 0;
         padding = 0;
     }

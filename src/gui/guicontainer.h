@@ -45,7 +45,7 @@ public:
     bool sortChildren = false;
 
 public:
-    guictr_base() : guibase() {
+    guictr_base() {
         setBackgroundRendered(false);
         setBackgroundRenderedInset(true);
     }
