@@ -349,7 +349,7 @@ NVGpaint imagePattern(NVGcontext* vg, int width, int ext, int imgId) {
 void drawIconColored(NVGcontext* vg, const ivec2& size, RenderResources::NvgImageTexture* image, NVGcolor color, int32_t extImg) {
     const int32_t iconW   = math::min(size.x, size.y);
     NVGpaint paintIcon    = nvgImagePattern(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2, 0, image->perContextId[vg], 1.0f);
-	paintIcon.innerColor = paintIcon.outerColor = color;
+    paintIcon.innerColor = paintIcon.outerColor = color;
     nvgBeginPath(vg);
     nvgRect(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2);
     nvgFillPaint(vg, paintIcon);

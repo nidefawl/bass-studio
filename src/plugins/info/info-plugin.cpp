@@ -164,7 +164,7 @@ namespace PluginHostInfo {
         BasePluginVST2::open();
         // if (getLogVerbosity() > 0)
         {
-		    VstIntPtr version = audioMaster (&cEffect, audioMasterVersion, 0, 0, nullptr, 0.0f);
+            VstIntPtr version = audioMaster (&cEffect, audioMasterVersion, 0, 0, nullptr, 0.0f);
             log_printf("audioMasterVersion %zd\n", version);
             char buf[128]{};
             if (audioMaster (&cEffect, audioMasterGetVendorString, 0, 0, &buf, 0.0f)) {

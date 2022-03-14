@@ -267,8 +267,8 @@ private:
     }
 
     void initContext() {
-		glCullFace(GL_BACK);
-		glFrontFace(GL_CCW);
+        glCullFace(GL_BACK);
+        glFrontFace(GL_CCW);
         glEnable(GL_BLEND);
         glEnable(GL_CULL_FACE);
         glDisable(GL_DEPTH_TEST);
