@@ -562,19 +562,14 @@ String guibase::getClassName() const {
 namespace DebugAlloc {
     Tracker<guibase> trackerGUIs;
     template<>
-    void printLeaked(int64_t allocId, int64_t allocCount, std::vector<guibase*>& allocList, std::unordered_map<int64_t, DebugAlloc::AllocInfo>& allocInfo) {
-        log_printf("guibase allocations %lld\n", allocCount);
-        for (auto gui : allocList) {
-            log_printf("leaked %lld %s \n", gui->allocId, StringAsCStr(gui->getClassName()));// add debug info to clip instance (track/time )
-        }
-    }
-    template<>
     Tracker<guibase>* getTracker() {
         return &trackerGUIs;
     }
 }// namespace DebugAlloc
 void printLeakedGuiBase() {
+#ifdef TRACK_ALLOCATIONS_GUIBASE
     DebugAlloc::getTracker<guibase>()->onExit();
+#endif
 }
 void guibase::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
     //    mousepos += dragOffset;
@@ -593,10 +588,14 @@ void guibase::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
     }
 }
 guibase::guibase() {
+#ifdef TRACK_ALLOCATIONS_GUIBASE
     allocId = DebugAlloc::getTracker<guibase>()->objConstructor(this);
+#endif
 }
 guibase::~guibase() {
+#ifdef TRACK_ALLOCATIONS_GUIBASE
     DebugAlloc::getTracker<guibase>()->objDestructor(this);
+#endif
     BaseCtrl* ctrl = parentCtrl;
     if (ctrl) {
         ctrl->onGuiRemoved(this);

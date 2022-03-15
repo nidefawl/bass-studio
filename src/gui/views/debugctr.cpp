@@ -26,7 +26,6 @@
 #include "host/plugin/vst_plugin_handles.h"
 #include "edithistory.h"
 #include "gui/plugin/plugin.h"
-#include "util/debug_alloc.h"
 #include "appconfig.h"
 
 #ifdef _WIN32
@@ -49,7 +48,6 @@ enum ID_BTN : int32_t {
     ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD,
     ID_BTN_INJECT_SEGFAULT_MAIN_THREAD,
     ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD,
-    ID_BTN_TOGGLE_STACKTRACE,
     ID_BTN_TOGGLE_AUDIOGRAPHCACHE,
     ID_BTN_TOGGLE_PLAYBACKPROCESSING,
     ID_BTN_TOGGLE_EFFECTPROCESSING,
@@ -153,12 +151,6 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD;
             btn3->setText("BadAlloc on Mainthread");
-            debugGuis.push_back(btn3);
-        }
-        {
-            auto btn3 = new guibutton;
-            btn3->id  = ID_BTN_TOGGLE_STACKTRACE;
-            btn3->setText("Enable Stacktraces");
             debugGuis.push_back(btn3);
         }
         {
@@ -547,14 +539,6 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
             break;
         case ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD:
             throw std::bad_alloc();
-            break;
-
-        case ID_BTN_TOGGLE_STACKTRACE:
-            {
-            auto tracker = DebugAlloc::getTracker<clip_t>();
-            tracker->setPrintAllocationStackTraces(!tracker->getPrintAllocationStackTraces());
-            static_cast<guibutton*>(button)->setText(String(tracker->getPrintAllocationStackTraces() ? "Disable Stacktraces" : "Enable Stacktraces"));
-            }
             break;
         case ID_BTN_TOGGLE_PLAYBACKPROCESSING:
             host->bypassPlaybackProcessing = !host->bypassPlaybackProcessing;

@@ -7,6 +7,9 @@
 #include "logging.h"
 #include "assert_dbg.h"
 
+
+#define RECORD_ALLOC_STACKTRACES 0
+
 namespace DebugAlloc {
     struct AllocInfo;
     template<typename T>
@@ -23,14 +26,24 @@ namespace DebugAlloc {
     }
 
 
-    template<typename T>
-    void printLeaked(int64_t allocId, int64_t allocCount, std::vector<T*>& allocList, std::unordered_map<int64_t, AllocInfo>& allocInfo) {
-        log_printf("allocCount %lld\n", allocCount);
-    }
-
     struct AllocInfo {
+        int64_t allocId;
         std::vector<String> stacktrace;
     };
+
+    template<typename T>
+    void printLeaked(int64_t allocCount, const std::vector<T*>& allocList, const std::unordered_map<T*, AllocInfo>& mapAllocInfo) {
+        log_lf(Log::L_DEBUG, "allocations: %lld\n", allocCount);
+    #if RECORD_ALLOC_STACKTRACES
+        for (auto tStar : allocList) {
+            auto& allocInfo = mapAllocInfo.at(tStar);
+            log_lf(Log::L_DEBUG, "leaked %012zX %zd allocated from:\n", reinterpret_cast<int64_t>(tStar), allocInfo.allocId);// add debug info to clip instance (track/time )
+            for (auto& s : allocInfo.stacktrace) {
+                log_lf(Log::L_DEBUG, "  %s\n", StringAsCStr(s));
+            }
+        }
+    #endif
+    }
 
     template<typename T>
     class Tracker {
@@ -38,38 +51,15 @@ namespace DebugAlloc {
         int64_t allocId    = 0;
         int64_t allocCount = 0;
         std::vector<T*> allocList;
-        std::unordered_map<int64_t, AllocInfo> allocInfo;
-        bool recordAllocStackTraces = false;
-        bool printAllocStackTraces  = false;
-        void setRecordAllocationStackTraces(bool bRecordStacktraces) {
-            this->recordAllocStackTraces = bRecordStacktraces;
-        }
-        bool getRecordAllocationStackTraces() {
-            return this->recordAllocStackTraces;
-        }
-        void setPrintAllocationStackTraces(bool b) {
-            this->printAllocStackTraces = b;
-        }
-        bool getPrintAllocationStackTraces() {
-            return this->printAllocStackTraces;
-        }
+        std::unordered_map<T*, AllocInfo> mapAllocInfo;
         int64_t objConstructor(T* ref) {
             const auto refAllocId = allocId++;
-            if (recordAllocStackTraces || printAllocStackTraces) {
-
-                // could be way more efficient
-                AllocInfo info;
-                getStackTrace(info.stacktrace);
-                if (printAllocStackTraces) {
-                    int len = info.stacktrace.size();
-                    for (int i = 0; i < len; i++) {
-                        log_printf("%s\n", StringAsCStr(info.stacktrace[i]));
-                    }
-                }
-                if (recordAllocStackTraces) {
-                    allocInfo[refAllocId] = std::move(info);
-                }
-            }
+#if RECORD_ALLOC_STACKTRACES
+            AllocInfo info;
+            info.allocId = refAllocId;
+            getStackTrace(info.stacktrace);
+            mapAllocInfo[ref] = std::move(info);
+#endif
             allocCount++;
             allocList.push_back(ref);
             return refAllocId;
@@ -79,16 +69,17 @@ namespace DebugAlloc {
             if (it != allocList.end()) {
                 allocList.erase(it);
                 allocCount--;
+#if RECORD_ALLOC_STACKTRACES
+                mapAllocInfo.erase(ref);
+#endif
                 return;
             }
             throwUntrackked(*this, ref);
         }
-        void printAllocations() {
-            printLeaked(allocId, allocCount, allocList, allocInfo);
-        }
         void onExit() {
-            printLeaked(allocId, allocCount, allocList, allocInfo);
+            printLeaked(allocCount, allocList, mapAllocInfo);
             allocList.clear();
+            mapAllocInfo.clear();
         }
     };
 }// namespace DebugAlloc

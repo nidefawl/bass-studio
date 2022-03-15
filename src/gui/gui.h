@@ -12,6 +12,10 @@
 #include "guicolors.h"
 #include "gui/table/table_fwd.h"
 
+#ifndef NDEBUG
+#define TRACK_ALLOCATIONS_GUIBASE
+#endif
+
 struct NVGcontext;
 namespace RenderResources {
     struct NvgImageTexture;
@@ -107,7 +111,9 @@ public:
     String label;
 
 public:
+#ifdef TRACK_ALLOCATIONS_GUIBASE
     int allocId;
+#endif
     guibase();
     virtual ~guibase();
     guibase(const guibase& graph) = delete;
@@ -448,9 +454,6 @@ public:
 
 public:
     virtual bool isSelected();
-    int32_t getAllocId() {
-        return allocId;
-    }
 
 protected:
     bool isChildOf(guibase* parentSearch);

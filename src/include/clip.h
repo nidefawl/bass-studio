@@ -13,6 +13,11 @@
 #include "logging.h"
 #include "assert_dbg.h"
 
+
+#ifndef NDEBUG
+#define TRACK_ALLOCATIONS_CLIP_T
+#endif
+
 #define CLIP_MIDI 0
 #define CLIP_AUDIO 1
 
@@ -208,12 +213,15 @@ public:
     clip_editor_layout_t editorLayout;
 
 public:
+#ifdef TRACK_ALLOCATIONS_CLIP_T
     int64_t allocId;
-
-public:
     clip_t();
-    clip_t(const clip_t&);
     ~clip_t();
+#else
+    clip_t() = default;
+    ~clip_t() = default;
+#endif
+    clip_t(const clip_t&);
     void setDirty() {
         this->dirty = true;
     }

@@ -85,6 +85,8 @@ const int FLAG_DEFER_LOAD               = 0x1;
 const int FLAG_INVOKE_USER_CB_DEFERLOAD = 0x2;
 
 int32_t getNumClipAllocations();
+void printLeakedAudioBuffers();
+void printClipAllocations();
 
 extern "C" {
 void resetShaderTimeOffset();
@@ -1164,6 +1166,8 @@ void DawInstance::destroy() {
         tls.audioHost->stopAudio();
     }
 
+    printClipAllocations();
+    printLeakedAudioBuffers();
     int totalAllocs = getNumClipAllocations();
     if (totalAllocs != 0) {
         log_printf("getNumClipAllocations == %d!\n", totalAllocs);

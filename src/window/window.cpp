@@ -1613,10 +1613,6 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
 }
 
 void printLeakedGuiBase();
-#if BUILD_VSTHOST
-void printLeakedAudioBuffers();
-void printClipAllocations();
-#endif
 
 GLFWwindow* getGlfwFromWindowBase(window_base* w) {
     return dynamic_cast<appwindow*>(w)->getGLFW();
@@ -1922,10 +1918,6 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 
     appInstance.deleteApp();
     printLeakedGuiBase();
-#if BUILD_VSTHOST
-    printClipAllocations();
-    printLeakedAudioBuffers();
-#endif
     if (fatalError) {
         log_printf("EXIT_FAILURE\n");
     } else {

@@ -21,7 +21,6 @@ public:
         add(&btnYes);
         add(&btnNo);
         setBackgroundRendered(true);
-        dbgassert(getAllocId() > 0);// make sure we are heap allocated
     }
     ~guidialog_cb_yes_no() override {
         remove(&btnNo);

@@ -14,25 +14,9 @@
 #include "projectcontroller.h"
 #include "util/debug_alloc.h"
 
+#ifdef TRACK_ALLOCATIONS_CLIP_T
 namespace DebugAlloc {
     Tracker<clip_t> trackerClips;
-    template<>
-    void printLeaked(int64_t allocId, int64_t allocCount, std::vector<clip_t*>& allocList, std::unordered_map<int64_t, DebugAlloc::AllocInfo>& allocInfo) {
-        dbgassert(static_cast<int64_t>(allocList.size()) == allocCount);
-        log_lf(Log::L_DEBUG, "clip_t allocations: %lld\n", allocCount);
-        for (auto clip : allocList) {
-            auto it = allocInfo.find(clip->allocId);
-            if (it != allocInfo.end()) {
-                AllocInfo& info = it->second;
-
-                log_lf(Log::L_DEBUG, "leaked %lld %s\n", clip->allocId, StringAsCStr(clip->name));// add debug info to clip instance (track/time )
-                for (String s : info.stacktrace) {
-                    log_lf(Log::L_DEBUG, "%s\n", StringAsCStr(s));
-                }
-                break;
-            }
-        }
-    }
     template<>
     Tracker<clip_t>* getTracker() {
         return &trackerClips;
@@ -46,19 +30,28 @@ int32_t getNumClipAllocations() {
 }
 
 void printClipAllocations() {
-    DebugAlloc::getTracker<clip_t>()->printAllocations();
+    DebugAlloc::getTracker<clip_t>()->onExit();
 }
 
 clip_t::clip_t() {
     allocId = DebugAlloc::getTracker<clip_t>()->objConstructor(this);
 }
 
-clip_t::clip_t(const clip_t& a) : clip_t() {
-    copy(a);
-}
-
 clip_t::~clip_t() {
     DebugAlloc::getTracker<clip_t>()->objDestructor(this);
+}
+#else
+
+int32_t getNumClipAllocations() {
+    return 0;
+}
+
+void printClipAllocations() {
+}
+#endif
+
+clip_t::clip_t(const clip_t& a) {
+    copy(a);
 }
 
 note_t& clip_notes_t::addSingle(note_t& t) {
