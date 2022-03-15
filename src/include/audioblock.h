@@ -50,7 +50,7 @@ struct alignas(16) AudioBlock {
     AudioBlock& operator=(AudioBlock&& other) noexcept {
         channels = other.channels;
         samples = other.samples;
-        if (other.channelsAlloc == heap) {
+        if (other.channelsAlloc == stack) {
             memcpy(heapBuf.data(), other.heapBuf.data(), sizeof(float*) * heapBuf.size());
             buf = heapBuf.data();
         } else {
