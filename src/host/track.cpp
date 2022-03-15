@@ -505,6 +505,7 @@ void audio_stage_t::pluginsChanged() {
     DAW::validateEffectRoutings(this->host, this);
 
     updateLatency();
+    this->processingGraph.reset();
 }
 
 void audio_stage_t::updateLatency() {
@@ -560,6 +561,7 @@ void audio_stage_t::notifyPluginContainers() {
         }
         audioStage = audioStage->parent;
     }
+    this->processingGraph.reset();
 }
 
 void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targets, bool includeEffects) {

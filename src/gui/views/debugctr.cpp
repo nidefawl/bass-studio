@@ -50,6 +50,7 @@ enum ID_BTN : int32_t {
     ID_BTN_INJECT_SEGFAULT_MAIN_THREAD,
     ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD,
     ID_BTN_TOGGLE_STACKTRACE,
+    ID_BTN_TOGGLE_AUDIOGRAPHCACHE,
     ID_BTN_TOGGLE_PLAYBACKPROCESSING,
     ID_BTN_TOGGLE_EFFECTPROCESSING,
     ID_BTN_TOGGLE_SAMPLECONVERSION,
@@ -176,6 +177,12 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_TOGGLE_PLAYBACKPROCESSING;
             btn3->setText("Bypass Playback Proc. (OFF)");
+            debugGuis.push_back(btn3);
+        }
+        {
+            auto btn3 = new guibutton;
+            btn3->id  = ID_BTN_TOGGLE_AUDIOGRAPHCACHE;
+            btn3->setText("Use Audio Graph Cache (OFF)");
             debugGuis.push_back(btn3);
         }
         {
@@ -552,12 +559,14 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
         case ID_BTN_TOGGLE_PLAYBACKPROCESSING:
             host->bypassPlaybackProcessing = !host->bypassPlaybackProcessing;
             static_cast<guibutton*>(button)->setText(String(host->bypassPlaybackProcessing ? "Bypass Playback Proc. (ON)" : "Bypass Playback Proc. (OFF)"));
-
+            break;
+        case ID_BTN_TOGGLE_AUDIOGRAPHCACHE:
+            host->cacheAudioGraph = !host->cacheAudioGraph;
+            static_cast<guibutton*>(button)->setText(String(host->cacheAudioGraph ? "Use Audio Graph Cache (ON)" : "Use Audio Graph Cache (OFF)"));
             break;
         case ID_BTN_TOGGLE_EFFECTPROCESSING:
             host->bypassEffectProcessing = !host->bypassEffectProcessing;
             static_cast<guibutton*>(button)->setText(String(host->bypassEffectProcessing ? "Bypass Effect Processing (ON)" : "Bypass Effect Processing (OFF)"));
-
             break;
         case ID_BTN_TOGGLE_SAMPLECONVERSION:
             host->bypassSampleConversion = !host->bypassSampleConversion;

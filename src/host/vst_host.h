@@ -130,6 +130,7 @@ public:
     SYNCHRONIZED_RW std::atomic<int32_t> multithreadedProcessing{ 1 };
     SYNCHRONIZED_RW std::atomic<int32_t> bypassPlaybackProcessing{ false };
     SYNCHRONIZED_RW std::atomic<int32_t> bypassSampleConversion{ false };
+    SYNCHRONIZED_RW std::atomic<int32_t> cacheAudioGraph{ false };
     std::atomic<int32_t> pluginId{ 1 << 16 };
     std::atomic<int32_t> audioStageId{ 100 };
     std::atomic<int32_t> sampleId{ (1 << 30) };//TODO: collides with audiocache::nextIdx
@@ -141,8 +142,7 @@ public:
     SYNCHRONIZED_RW hires_timer_t timerAudioTick;// timer for cpu-time profiling
     SYNCHRONIZED_RW hires_timer_t timerBlock;    // timer for cpu-time profiling
     SYNCHRONIZED_RW hires_timer_t timerProfile;  // timer for cpu-time profiling
-    //  SYNCHRONIZED_RW hires_timer_t timer4;// timer for cpu-time profiling
-    bool forceProcess = false;
+
 private:
     SYNCHRONIZED_RW clip_t* recordingClip = nullptr;
     SYNCHRONIZED_RW std::atomic<bool> hasNewRecordedData{};

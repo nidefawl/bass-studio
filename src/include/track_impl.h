@@ -141,6 +141,7 @@ struct audio_stage_t {
     guictr_plugins* m_pluginCtr = nullptr;
 
     stats_processing_timings_t procStats;
+    std::shared_ptr<DAW::effect_processing_graph_t> processingGraph;
 
     audio_stage_t(vsthost* const _host, const audio_stage_id_t _id, const sampleformat_t _sampleFormat, const channelnum_t _numChannels, int _type = 1)
     : input(_numChannels, _sampleFormat.blockSize),

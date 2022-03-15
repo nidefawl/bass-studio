@@ -34,6 +34,7 @@ namespace DebugAlloc {
     void beginTrace();
     void endTrace();
 }
+extern bool traceAllocs;
 extern volatile bool fatalError;
 namespace {
 class FakeAudioStream : public DAW::AudioIO::AudioStream {
@@ -194,9 +195,11 @@ int main(int argc, char** argv) {
                 }
                 // if (!once)
                 //     DebugAlloc::beginTrace();
+                    // traceAllocs = true;
                 int32_t processedBlock = host->processPlayback(dawInstance, samplePos, tickPos, playback_state::status_playback, inLoop, isLoopAround);
                 // if (!once)
                 //     DebugAlloc::endTrace();
+                    // traceAllocs = false;
                 once = true;
                 while (stream->getOutputQueueSize() > 0) {
                     AudioBuffer* dequeuedBuf = nullptr;

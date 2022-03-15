@@ -187,6 +187,7 @@ public:
     process_scratch_buf_t singleThreadedBuf;
 
     std::shared_ptr<DAW::AudioIO::AudioStream> audioStream;
+    std::shared_ptr<DAW::processing_graph_t> processingGraph;
 
     channelnum_t inputChannels = 0;
     channelnum_t outputChannels = 0;
@@ -207,7 +208,8 @@ public:
         stopThreads();
     };
 
-    void resetDelaylines() {
+    void resetProjectCache() {
+        processingGraph.reset();
         //delayLines.clear();//TODO: this might free a lot of memory and be expensive: profile!
     }
 
@@ -1326,6 +1328,29 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
     stats.lastInvocationTime_i64 = timeNow_i64;
 
 
+
+    if (enableProfiling) {
+        timerProfile.reset();
+    }
+
+    /** Build the audio graph **/
+    if (!cacheAudioGraph || !impl->processingGraph) {
+        if (!DAW::buildProcessingGraph(this, project, project->trackList.getAllTracksFlatVecRef(), impl->processingGraph)) {
+            log_printf("Failed building track graph\n", 0);
+            return 0;
+        }
+    }
+
+    if (enableProfiling) {
+        stats.timings["Block.GraphBuild"] = timerProfile.getTimeReset();
+    }
+
+    auto& processingGraph = impl->processingGraph;
+#if DAW_DEBUG_AUDIOGRAPH
+    this->lastTrackGraph = processingGraph->trackGraph;
+    this->lastProcessingList= processingGraph;
+#endif
+
     timerBlock.reset();
     const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
     const audiostream_properties_t audioProp = getAudioStreamProperties();
@@ -1335,26 +1360,6 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
     const playback_state state = playback_state::status_render;
 
     updateTime(m_sharedTimeInfo, sample, posDouble, state);
-
-    if (enableProfiling) {
-        timerProfile.reset();
-    }
-
-    //TODO: move outside
-    /** Build the audio graph **/
-    std::shared_ptr<DAW::processing_graph_t> processingGraph;
-    if (!DAW::buildProcessingGraph(this, project, project->trackList.getAllTracksFlatVecRef(), processingGraph)) {
-        log_printf("Failed building track graph\n", 0);
-    }
-
-    if (enableProfiling) {
-        stats.timings["Block.GraphBuild"] = timerProfile.getTimeReset();
-    }
-
-#if DAW_DEBUG_AUDIOGRAPH
-    this->lastTrackGraph = processingGraph->trackGraph;
-    this->lastProcessingList= processingGraph;
-#endif
 
     int32_t samplePosProcess = sample;
     double tickPosProcess = posDouble;
@@ -1495,8 +1500,6 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
     dbgassert(m_sampleFormatInternal.sampleRate > 0);
     const bool enableProfiling = (dbgStep%333) != 0;
 
-    //AudioBlock::BeginTrace();
-
     project_t* project = ctrl->getProject();
 
     auto timeNow_i64 = getTimeMicros();
@@ -1567,12 +1570,14 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
             timerProfile.reset();
         }
 
-        //TODO: add caching layer for audio graphs
         /** Build the audio graph **/
-        std::shared_ptr<DAW::processing_graph_t> processingGraph;
-        if (!DAW::buildProcessingGraph(this, project, project->trackList.getAllTracksFlatVecRef(), processingGraph)) {
-            log_printf("Failed building track graph\n", 0);
+        if (!cacheAudioGraph || !impl->processingGraph) 
+        {
+            if (!DAW::buildProcessingGraph(this, project, project->trackList.getAllTracksFlatVecRef(), impl->processingGraph)) {
+                log_printf("Failed building track graph\n", 0);
+            }
         }
+
         if (enableProfiling) {
             stats.timings["Block.GraphBuild"] = timerProfile.getTimeReset();
         }
@@ -1581,11 +1586,14 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
         this->lastTrackGraph = processingGraph->trackGraph;
         this->lastProcessingList= processingGraph;
 #endif
+    }
+
+    if (canProcess && impl->processingGraph) {
         int64_t timeRouting = 0;
         int64_t timeProcessing = 0;
         int64_t timeResampleOutput = 0;
 
-
+        auto& processingGraph = impl->processingGraph;
         for (uint32_t i = 0; i < audioProp.numBlocksInternal; i++) {
             int32_t samplePosProcess = sample + sampleFormat.blockSize*i;
             double tickPosProcess = posDouble + audioProp.ticksPerBlock*i;
@@ -1747,7 +1755,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
         dbgStep++;
     }
-    //AudioBlock::EndTrace();
+
     if (nBlocksProcessed) {
 
         stats.blocksProcessed += nBlocksProcessed;
@@ -1951,7 +1959,8 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
             && trackImpl->sampleFormat.blockSize > 0
             && trackImpl->sampleFormat.sampleRate > 0);
     {
-        std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
+        auto& effProcessingGraph = trackImpl->processingGraph;
+        if (!cacheAudioGraph || !effProcessingGraph)
         {
             if (!DAW::buildEffectProcessingGraph(this, nullptr, trackImpl, effProcessingGraph)) {
                 log_printf("Failed building effect graph\n", 0);
@@ -2317,7 +2326,7 @@ void vsthost::onStopPlayback(project_controller_t* ctrl) {
 }
 
 void vsthost::onTrackLayoutChange() {
-    impl->resetDelaylines();
+    impl->resetProjectCache();
 }
 
 void vsthost::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
