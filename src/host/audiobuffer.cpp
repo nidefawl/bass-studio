@@ -52,18 +52,18 @@ void AudioBlock::fillNoise(uint32_t seed) {
         }
     }
 }
-
+#define DEBUG_PRINT_AUDIOBUFFER_ALLOC 0
 void AudioBlock::realloc(samplecount_t _samples) {
 
     if (samples != _samples) {
-        if (allocType == alloc_type::internal) {
+        if (channelsAlloc != alloc_type::empty && dataAlloc == alloc_type::heap) {
             if (recordAllocs)
                 numAllocs++;
             for (channelnum_t i = 0; i < channels; i++) {
                 float* const newBuf = static_cast<float*>(aligned_malloc(sizeof(float) * _samples, 512));
-                if (debug) {
-                    log_lf(Log::L_TRACE, "AudioBlock buffer[%d] allocate 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
-                }
+#if DEBUG_PRINT_AUDIOBUFFER_ALLOC
+                log_lf(Log::L_TRACE, "AudioBlock buffer[%d] allocate 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
+#endif
                 if (!newBuf) {
                     handleFailedAllocation(0x1000, _samples * sizeof(float));
                 } else {
@@ -72,11 +72,9 @@ void AudioBlock::realloc(samplecount_t _samples) {
                         if (math::min(_samples, samples) > 0) {
                             memcpy(newBuf, buf[i], math::min(_samples, samples) * sizeof(float));
                         }
-
-                        if (debug) {
-                            log_lf(Log::L_TRACE, "AudioBlock buffer[%d] release 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
-                        }
-
+#if DEBUG_PRINT_AUDIOBUFFER_ALLOC
+                        log_lf(Log::L_TRACE, "AudioBlock buffer[%d] release 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
+#endif
                         aligned_free(buf[i]);
                     }
                 }

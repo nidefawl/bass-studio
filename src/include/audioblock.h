@@ -12,13 +12,13 @@
 #include "types.h"
 
 enum alloc_type {
-    empty,
-    internal,
-    external_channels_only,
-    external_array
+    empty = 0,
+    stack = 1,
+    heap = 2,
+    external = 4
 };
 class DelayLine;
-struct alignas(64) AudioBlock {
+struct alignas(16) AudioBlock {
     enum mix_op : int32_t {
         MIX,
         ADD
@@ -32,11 +32,10 @@ struct alignas(64) AudioBlock {
     std::array<float*, 8> heapBuf{};
 
     float** buf{};
-    channelnum_t channels{};
     samplecount_t samples{};
-    alloc_type allocType = empty;
-    bool isHeap = true;
-    bool debug  = false;
+    channelnum_t channels{};
+    alloc_type channelsAlloc = empty;
+    alloc_type dataAlloc = empty;
 
 
     AudioBlock()                  = default;
@@ -49,51 +48,57 @@ struct alignas(64) AudioBlock {
     }
 
     AudioBlock& operator=(AudioBlock&& other) noexcept {
-        allocType = other.allocType;
         channels = other.channels;
         samples = other.samples;
-        debug = other.debug;
-        if (other.isHeap) {
+        if (other.channelsAlloc == heap) {
             memcpy(heapBuf.data(), other.heapBuf.data(), sizeof(float*) * heapBuf.size());
             buf = heapBuf.data();
-            isHeap = false;
         } else {
             buf = other.buf;
-            isHeap = false;
         }
-        other.allocType = empty;
-        other.isHeap = true;
+        channelsAlloc = other.channelsAlloc;
+        dataAlloc = other.dataAlloc;
+        other.channelsAlloc = empty;
+        other.dataAlloc = empty;
         other.buf = nullptr;
         return *this;
     }
     
-    float** allocChannelsArray(channelnum_t _channels) {
-        if (_channels <= heapBuf.size())
-            return heapBuf.data();
-        isHeap = false; 
-        return new float*[_channels];
+    void allocChannelsArray() {
+        if (channels <= heapBuf.size()) {
+            channelsAlloc = alloc_type::stack; 
+            buf = heapBuf.data();
+        } else {
+            channelsAlloc = alloc_type::heap; 
+            buf = new float*[channels];
+            memset(buf, 0, sizeof(float*) * channels);
+        } 
     }
 
     explicit AudioBlock(channelnum_t _channels, samplecount_t _samples, bool _bIsDebug = false)
-        : channels(_channels), allocType(alloc_type::internal), debug(_bIsDebug) {
-        buf = allocChannelsArray(_channels);
+        : channels(_channels), dataAlloc(heap) {
+        allocChannelsArray();
         instanceCount++;
         instanceCstrd++;
-        for (channelnum_t i = 0; i < _channels; i++) {
-            buf[i] = nullptr;
-        }
         realloc(_samples);
     }
 
     explicit AudioBlock(float** _buf, channelnum_t _channels, samplecount_t _samples)
-        : buf(_buf), channels(_channels), samples(_samples), allocType(alloc_type::external_array) {
+        : buf(_buf),
+        samples(_samples),
+        channels(_channels),
+        channelsAlloc(external),
+        dataAlloc(external) {
         instanceCount++;
         instanceCstrd++;
     }
 
     explicit AudioBlock(const std::vector<float*>& vecChannels, samplecount_t _samples)
-        : channels(static_cast<channelnum_t>(vecChannels.size())), samples(_samples), allocType(alloc_type::external_channels_only) {
-        buf = allocChannelsArray(vecChannels.size());
+        : samples(_samples),
+        channels(static_cast<channelnum_t>(vecChannels.size())),
+        dataAlloc(external) 
+    {
+        allocChannelsArray();
         instanceCount++;
         instanceCstrd++;
         memcpy(buf, vecChannels.data(), vecChannels.size() * sizeof(decltype(vecChannels[0])));
@@ -104,8 +109,10 @@ struct alignas(64) AudioBlock {
     }
 
     explicit AudioBlock(const AudioBlock& src, const channelnum_t channelOffset, const channelnum_t numChannels, const samplecount_t sampleOffset, const samplecount_t numSamples)
-        : channels(numChannels), samples(numSamples), allocType(alloc_type::external_channels_only) {
-        buf = allocChannelsArray(numChannels);
+        : samples(numSamples),
+        channels(numChannels),
+        dataAlloc(external) {
+        allocChannelsArray();
         instanceCount++;
         instanceCstrd++;
         dbgassert(samples);
@@ -117,7 +124,7 @@ struct alignas(64) AudioBlock {
 
     ~AudioBlock() {
         instanceCount--;
-        if (allocType == alloc_type::internal) {
+        if (dataAlloc == alloc_type::heap) {
             for (channelnum_t i = 0; i < channels; i++) {
                 if (buf[i]) {
                     // delete[] buf[i];
@@ -125,7 +132,7 @@ struct alignas(64) AudioBlock {
                 }
             }
         }
-        if (!isHeap) {
+        if (channelsAlloc == alloc_type::heap) {
             delete[] buf;
         }
     }

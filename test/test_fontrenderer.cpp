@@ -29,7 +29,7 @@
 #include "TestBase.hpp"
 #include "assert_dbg.h"
 
-namespace TestFontRenderer {
+namespace test_fontrenderer {
 struct membuf : std::streambuf
 {
     template<typename T>
@@ -214,10 +214,10 @@ public:
   void deleteApp() override { appctrl.reset(); }
 };
 
-}// namespace TestFontRenderer
+}// namespace test_fontrenderer
 
 int main(int argc, char* argv[]) {
-    TestFontRenderer::Instance instService;
+    test_fontrenderer::Instance instService;
     std::vector<String> vecArgs(&argv[0], &argv[argc]);
     int ret = startApplication(vecArgs, instService);
     return ret;
