@@ -460,8 +460,10 @@ int main(int argc, char** argv) {
             return 1;
         benchmark::RunSpecifiedBenchmarks();
         benchmark::Shutdown();
+        // getGlobalLogger()->setLevel(Log::LEVEL_ALL);
         trDataMidi.deleteClips(nullptr);
         host->setOutput(nullptr);
+        dawInstance->unloadProject();
     } catch (std::exception& e) {
         log_printf("exception %s\n", e.what());
     } catch (...) {
