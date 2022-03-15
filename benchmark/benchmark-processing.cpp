@@ -156,6 +156,7 @@ int main(int argc, char** argv) {
         host->prjGlobals           = projectGlobals;
         host->setThreadCount(8);
         host->setOutput(audiostream);
+        host->cacheAudioGraph = false;
 
         struct TestContext {
             const char* benchmarkName;
@@ -185,7 +186,7 @@ int main(int argc, char** argv) {
             tickPos   = projGlobals.loopStart;
             samplePos = tickToSampleConvert<int32_t, roundmode::floor>(tickPos, tempo100, sr);
             //log_lf(Log::L_WARN, "START ON %s seconds: %.2f - sample %d\n", StringAsCStr(tickAsBeatString(tickPos)), toSeconds(tickPos, tempo100), samplePos);
-            bool once = false;
+            // bool once = false;
             host->onStartPlayback(dawInstance);
             for (auto _ : state) {
                 const bool isLoopAround = tickPos + ticksPerBlock >= projGlobals.loopStart + projGlobals.loopLen;
@@ -200,7 +201,7 @@ int main(int argc, char** argv) {
                 // if (!once)
                 //     DebugAlloc::endTrace();
                     // traceAllocs = false;
-                once = true;
+                // once = true;
                 while (stream->getOutputQueueSize() > 0) {
                     AudioBuffer* dequeuedBuf = nullptr;
                     dbgassert(stream->try_dequeue(dequeuedBuf));
@@ -432,17 +433,22 @@ int main(int argc, char** argv) {
             auto trackMaster = new track_t(TRACK_TYPE_MASTER, "master", true);
             dawInstance->addTrackImpl(0, trackMaster, 0);
         };
+        auto testGroupsCached = [&testGroups2, host](TestContext* context) {
+            testGroups2(context);
+            host->cacheAudioGraph = true;
+        };
 
-        std::array<TestContext, 9> allBenchmarks = {
-            TestContext{"Process 0 Tracks (Empty)", false, dawInstance.get(), testCase0Tracks },
-            TestContext{"Process 2 Tracks (Empty)", false, dawInstance.get(), testCase2Tracks },
-            TestContext{"Process 32 Tracks (Empty)", false, dawInstance.get(), test32TracksEmpty },
-            TestContext{"Process 32 Tracks (Empty, Arp==null)", false, dawInstance.get(), test32TracksEmptyNoArp },
-            TestContext{"Process 32 Tracks (Midi Clip, Arp==null)", false, dawInstance.get(), test32TracksMidiNoArp },
-            TestContext{"Process 32 Tracks (Midi Clip, Arp instance)", false, dawInstance.get(), test32TracksMidi },
-            TestContext{"Process 32 Tracks (Midi Clip, Arp Active)", false, dawInstance.get(), test32TracksMidiAndArp },
-            TestContext{"Process 32 Tracks (2 x 2 x 4 Groups, Arp==null)", false, dawInstance.get(), testGroups },
-            TestContext{"Process 32 Tracks (2 x 2 x 4 Groups, Arp Active)", false, dawInstance.get(), testGroups2 },
+        std::array<TestContext, 10> allBenchmarks = {
+            TestContext{"0 Tracks (Empty)", false, dawInstance.get(), testCase0Tracks },
+            TestContext{"2 Tracks (Empty)", false, dawInstance.get(), testCase2Tracks },
+            TestContext{"32 Tracks (Empty)", false, dawInstance.get(), test32TracksEmpty },
+            TestContext{"32 Tracks (Empty, Arp==null)", false, dawInstance.get(), test32TracksEmptyNoArp },
+            TestContext{"32 Tracks (Midi Clip, Arp==null)", false, dawInstance.get(), test32TracksMidiNoArp },
+            TestContext{"32 Tracks (Midi Clip, Arp instance)", false, dawInstance.get(), test32TracksMidi },
+            TestContext{"32 Tracks (Midi Clip, Arp Active)", false, dawInstance.get(), test32TracksMidiAndArp },
+            TestContext{"32 Tracks (2x2x4 Groups, Arp==null)", false, dawInstance.get(), testGroups },
+            TestContext{"32 Tracks (2x2x4 Groups, Arp Active)", false, dawInstance.get(), testGroups2 },
+            TestContext{"32 Tracks (2x2x4 Groups, Arp, Graph Cache)", false, dawInstance.get(), testGroupsCached },
         };
 
         for (TestContext& benchmarkCtxt : allBenchmarks) {
