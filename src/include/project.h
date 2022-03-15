@@ -39,16 +39,4 @@ struct project_globals_t {
     DAW::TrackSelection trackSelection;
     /** (synced but not mutex locked)  */
     bool recordArmed = false;
-    project_globals_t& operator    =(project_globals_t const& other) {
-        tempo100       = other.tempo100;
-        signatureNum   = other.signatureNum;
-        signatureDenom = other.signatureDenom;
-        loopStart      = other.loopStart;
-        loopLen        = other.loopLen;
-        loopEnabled    = other.loopEnabled;
-        playbackPos    = other.playbackPos;
-        cursor         = other.cursor;
-        recordArmed    = other.recordArmed;
-        return *this;
-    }
 };
