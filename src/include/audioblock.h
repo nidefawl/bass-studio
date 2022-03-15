@@ -152,6 +152,9 @@ struct alignas(16) AudioBlock {
     }
 
     AudioBlock SubChannelsBlock(const channelnum_t channelOffset, const channelnum_t numChannels) const {
+        if (this->channels < numChannels && channelOffset == 0) {
+            return AudioBlock(*this, 0, this->channels, 0, this->samples);
+        }
         dbgassert(channelOffset + numChannels <= this->channels);
         return AudioBlock(*this, channelOffset, numChannels, 0, this->samples);
     }
