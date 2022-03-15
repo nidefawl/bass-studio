@@ -1,11 +1,13 @@
 #include "TestBase.hpp"
-#include "str_util.h"
-#include <stdint.h>
 #include <vector>
-#include "types.h"
 #include <cstdio>
-#ifdef _WIN32
+#include "str_util.h"
+#include "seq_util.h"
+#include "types.h"
+#include "types.h"
 #include "platform/mingw/mingw.exc.h"
+
+#ifdef _WIN32
 #include <Windows.h>
 #endif
 
@@ -53,7 +55,7 @@ extern "C" {
 #endif
 }
 
-__declspec(noinline)
+FUNC_NOINLINE
 int64_t invoke_unsafe_and_catch(void* userptr, int userdata)
 {
     volatile int64_t l = 0;

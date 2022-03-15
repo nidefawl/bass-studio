@@ -28,4 +28,8 @@
 #define seh_try(label) __try
 #define seh_catch(label) __except (isHandledExc(GetExceptionCode()) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 #define seh_finally(label) 
+#else
+#define seh_try(label)
+#define seh_catch(label)
+#define seh_finally(label)
 #endif
