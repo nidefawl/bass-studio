@@ -14,7 +14,10 @@
 #include "appsettings.h"
 
 using PaStream = void;
+class audiohost_callback;
 class audiohost {
+    friend class HostIOStream;
+    friend class audiohost_callback;
 public:
     class HostIOStream : public DAW::AudioIO::AudioStream {
         public:
@@ -97,19 +100,16 @@ public:
 private:
     std::vector<std::shared_ptr<HostIOStream>> streams;
     bool paIsInitalized = false;
-
-public:
-    int32_t nextStreamId{ 0 };
+    int32_t nextStreamId = 0;
     samplerate_t lSampleRate = 0;
     blocksize_t lBlockSize      = 0;
 
+public:
     uint32_t blockReads          = 0;
     uint32_t bufferUnderuns      = 0;
     uint32_t inputBufferUnderuns = 0;
 
     int32_t audioCallbackInvocationDelay_usec = 0;
-
-private:
 public:
     audiohost()  = default;
     ~audiohost() = default;
@@ -119,8 +119,6 @@ public:
     bool initPa();
     void deinitPa();
     void removeStream(HostIOStream* stream);
-
-public:
     bool startAudio(app_iosettings& settings);
     bool stopAudio();
     bool isStreaming() {

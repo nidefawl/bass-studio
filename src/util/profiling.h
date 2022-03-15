@@ -47,7 +47,6 @@ struct host_stats_t {
     track_midiprocess_profiling_t blockMidiStats;
     float usage;
     float usageRaw;
-    int32_t inputBufferUnderuns    = 0;
     int32_t inputQueueLen          = 0;
     int32_t outputQueueLen         = 0;
     int32_t resamplerInNumBlocks   = 0;

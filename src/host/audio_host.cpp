@@ -158,96 +158,100 @@ bool error(const char* msg, PaError err) {
 ** that could mess up the system like calling malloc() or free().
 */
 
-static int audioCallback(const void* inputBuffer, void* outputBuffer,
-                         unsigned long framesPerBuffer,
-                         const PaStreamCallbackTimeInfo* timeInfo,
-                         PaStreamCallbackFlags statusFlags,
-                         void* userData) {
-    if (!userData) {
-        return paComplete;
-    }
-    auto* stream = static_cast<audiohost::HostIOStream*>(userData);
-    audiohost* host = stream->host;
-    float** inputs  = (float**) inputBuffer;
-    float** outputs = (float**) outputBuffer;
-    if (stream->streamShouldEnd) {
-        for (channelnum_t i = 0; outputs && i < stream->nOutputChannels; i++) {
-            if (outputs[i]) {
-                memset(outputs[i], 0, framesPerBuffer * sizeof(float));
-            }
+class audiohost_callback {
+    public:
+    static int audioCallback(const void* inputBuffer, void* outputBuffer,
+                            unsigned long framesPerBuffer,
+                            const PaStreamCallbackTimeInfo* timeInfo,
+                            PaStreamCallbackFlags statusFlags,
+                            void* userData) {
+        if (!userData) {
+            return paComplete;
         }
-        return paComplete;
-    }
-
-    dsp_util::fillChannels(outputs, stream->nOutputChannels, framesPerBuffer, 0.0f);
-    if (!host) {
-        return paAbort;
-    }
-    auto timeNow_i64 = getTimeMicros();
-    if (0 != stream->lastAudioCallbackInvocationTime_i64) {
-        host->audioCallbackInvocationDelay_usec = timeNow_i64 - stream->lastAudioCallbackInvocationTime_i64;
-    }
-    stream->lastAudioCallbackInvocationTime_i64 = timeNow_i64;
-    //TODO: still a race condition on_terminate here
-    AudioBuffer* block        = nullptr;
-    channelnum_t numOutChannelsWritten = 0;
-    if (stream->try_dequeue(block)) {
-        dbgassert(block);
-        if (framesPerBuffer == block->output->samples) {
-            channelnum_t channels = math::min<channelnum_t>(block->output->channels, stream->nOutputChannels);
-            for (channelnum_t i = 0; i < channels; i++) {
-                float* channel = block->output->buf[i];
-                memcpy(outputs[i], channel, framesPerBuffer * sizeof(float));
+        auto* stream = static_cast<audiohost::HostIOStream*>(userData);
+        audiohost* host = stream->host;
+        float** inputs  = (float**) inputBuffer;
+        float** outputs = (float**) outputBuffer;
+        if (stream->streamShouldEnd) {
+            for (channelnum_t i = 0; outputs && i < stream->nOutputChannels; i++) {
+                if (outputs[i]) {
+                    memset(outputs[i], 0, framesPerBuffer * sizeof(float));
+                }
             }
-            numOutChannelsWritten = channels;
+            return paComplete;
         }
-        block->inUse = false;
-    } else {
-        host->bufferUnderuns++;
-    }
 
-    // fill channels that haven't been written to with zeroes
-    for (channelnum_t i = numOutChannelsWritten; i < stream->nOutputChannels; i++) {
-        memset(outputs[i], 0, framesPerBuffer * sizeof(float));
-    }
-
-    dsp_util::fillSaturate(outputs, stream->nOutputChannels, framesPerBuffer);
-    host->blockReads++;
-
-    auto& ringbuffer      = stream->getRingbuffer();
-    auto& writePos        = ringbuffer.writePos;
-    AudioBuffer** buffers = ringbuffer.buffers;
-
-    AudioBuffer* bufferWrite = buffers[writePos];
-    if (bufferWrite->inUse) {
-        host->inputBufferUnderuns++;
-    } else {
-        bufferWrite->output->realloc(framesPerBuffer);
-        if (inputs) {
-            channelnum_t nChannels = math::min<channelnum_t>(bufferWrite->output->channels, stream->nInputChannels);
-            bufferWrite->output->copyFrom(inputs, framesPerBuffer, nChannels);
-            for (channelnum_t i = nChannels; i < stream->nInputChannels; i++) {
-                memset(bufferWrite->output->buf[i], 0, bufferWrite->output->samples * sizeof(float));
+        dsp_util::fillChannels(outputs, stream->nOutputChannels, framesPerBuffer, 0.0f);
+        if (!host) {
+            return paAbort;
+        }
+        auto timeNow_i64 = getTimeMicros();
+        if (0 != stream->lastAudioCallbackInvocationTime_i64) {
+            host->audioCallbackInvocationDelay_usec = timeNow_i64 - stream->lastAudioCallbackInvocationTime_i64;
+        }
+        stream->lastAudioCallbackInvocationTime_i64 = timeNow_i64;
+        //TODO: still a race condition on_terminate here
+        AudioBuffer* block        = nullptr;
+        channelnum_t numOutChannelsWritten = 0;
+        if (stream->try_dequeue(block)) {
+            dbgassert(block);
+            if (framesPerBuffer == block->output->samples) {
+                channelnum_t channels = math::min<channelnum_t>(block->output->channels, stream->nOutputChannels);
+                for (channelnum_t i = 0; i < channels; i++) {
+                    float* channel = block->output->buf[i];
+                    memcpy(outputs[i], channel, framesPerBuffer * sizeof(float));
+                }
+                numOutChannelsWritten = channels;
             }
+            block->inUse = false;
         } else {
-            bufferWrite->output->clear();
+            host->bufferUnderuns++;
         }
-        bufferWrite->submitted      = true;
-        bufferWrite->inUse          = true;
-        bufferWrite->blockPosSample = timeInfo->inputBufferAdcTime;
-        bufferWrite->blockPosTick   = 0;
-        writePos++;
-        writePos &= RING_BUF_MASK;
-        if (stream) {
-            stream->enqueueInput(bufferWrite);
+
+        // fill channels that haven't been written to with zeroes
+        for (channelnum_t i = numOutChannelsWritten; i < stream->nOutputChannels; i++) {
+            memset(outputs[i], 0, framesPerBuffer * sizeof(float));
+        }
+
+        dsp_util::fillSaturate(outputs, stream->nOutputChannels, framesPerBuffer);
+        host->blockReads++;
+
+        auto& ringbuffer      = stream->getRingbuffer();
+        auto& writePos        = ringbuffer.writePos;
+        AudioBuffer** buffers = ringbuffer.buffers;
+
+        AudioBuffer* bufferWrite = buffers[writePos];
+        if (bufferWrite->inUse) {
+            host->inputBufferUnderuns++;
         } else {
-            bufferWrite->inUse = false;
+            bufferWrite->output->realloc(framesPerBuffer);
+            if (inputs) {
+                channelnum_t nChannels = math::min<channelnum_t>(bufferWrite->output->channels, stream->nInputChannels);
+                bufferWrite->output->copyFrom(inputs, framesPerBuffer, nChannels);
+                for (channelnum_t i = nChannels; i < stream->nInputChannels; i++) {
+                    memset(bufferWrite->output->buf[i], 0, bufferWrite->output->samples * sizeof(float));
+                }
+            } else {
+                bufferWrite->output->clear();
+            }
+            bufferWrite->submitted      = true;
+            bufferWrite->inUse          = true;
+            bufferWrite->blockPosSample = timeInfo->inputBufferAdcTime;
+            bufferWrite->blockPosTick   = 0;
+            writePos++;
+            writePos &= RING_BUF_MASK;
+            if (stream) {
+                stream->enqueueInput(bufferWrite);
+            } else {
+                bufferWrite->inUse = false;
+            }
         }
+
+
+        return paContinue;
     }
+};
 
-
-    return paContinue;
-}
 /*
 * This routine is called by portaudio when playback is done.
 */
@@ -572,7 +576,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
             (double) samplerate,
             blocksize,
             paClipOff, /* Portaudio internal clipping is disabled */
-            audioCallback,
+            audiohost_callback::audioCallback,
             stream.get());
 
     if (err != paNoError) {

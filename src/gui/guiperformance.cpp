@@ -118,9 +118,8 @@ public:
         }
         y += height / 2;
         printL(0, "audioCallback tDelta", StringFormat("%d µs", audioHost ? audioHost->audioCallbackInvocationDelay_usec : 0));
-        printL(0, "inputBufferUnderuns", StringFormat("%d", stats.inputBufferUnderuns));
         printL(0, "outputBufferUnderuns", StringFormat("%u", audioHost ? audioHost->bufferUnderuns : 0));
-        printL(0, "inputBufferOverrun", StringFormat("%u", audioHost ? audioHost->inputBufferUnderuns : 0));
+        printL(0, "inputBufferUnderuns", StringFormat("%u", audioHost ? audioHost->inputBufferUnderuns : 0));
         printL(0, "input q len", StringFormat("%d", stats.inputQueueLen));
         printL(0, "output q len", StringFormat("%d", stats.outputQueueLen));
         printL(0, "INPUT  resampler", StringFormat("%d samples|%d blocks", stats.resamplerInNumSamples, stats.resamplerInNumBlocks));
