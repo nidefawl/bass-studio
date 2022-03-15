@@ -1,6 +1,5 @@
 #pragma once
-
-#include "types.h"
+#include <cstdint>
 
 using int8_t = std::int8_t;
 using int16_t = std::int16_t;
