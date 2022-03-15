@@ -30,7 +30,6 @@ struct oversample_config_t {
     samplecount_t numSamplesResampled = 0;
     void setInputLength(uint32_t numSamples) {
         numSamplesInput = numSamples;
-        dbgassert(FitsTypeRange<samplecount_t>((int64_t) numSamplesInput * (int64_t) outputSampleRate / (double) inputSampleRate + .5));
         numSamplesResampled = (samplecount_t) ((int64_t) numSamplesInput * (int64_t) outputSampleRate / (double) inputSampleRate + .5);
         dbgassert(numSamplesResampled > 0);
     }
@@ -145,15 +144,21 @@ struct resampler_t {
         }
         buf_t* buf = getFreeOutputBuffer();
         //TODO: avoid this copy step by setting the resamplers channel count equal to the external input/output channel count
-        bufScratch.copyFrom(&block);
+
         uint32_t nOutputProcessed = 0;
 #ifdef RESAMPLER_H_ENABLE_BUFFER_CHECKS
         for (buf_t* b : outputBuffers) {
             dbgassert(b->inUse == (b->samplesAvail > 0));
         }
 #endif
-        if (!resampler.runResample(bufScratch, *buf->block, nOutputProcessed)) {
-            return false;
+
+        if (numChannels == 0) {
+            nOutputProcessed = resampler.numSamplesResampled;
+        } else {
+            bufScratch.copyFrom(&block);
+            if (!resampler.runResample(bufScratch, *buf->block, nOutputProcessed)) {
+                return false;
+            }
         }
         dbgassert(nOutputProcessed);
         buf->inUse        = true;

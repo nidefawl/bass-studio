@@ -1,8 +1,10 @@
 #pragma once
 #include "types.h"
+#include <cwchar>
 #include <memory.h>
 #include <atomic>
 #include <vector>
+#include <array>
 #include "assert_dbg.h"
 #include "math/seq_math.h"
 #include "mem.h"
@@ -10,11 +12,12 @@
 #include "types.h"
 
 enum alloc_type {
+    empty,
     internal,
     external_channels_only,
     external_array
 };
-struct DelayLine;
+class DelayLine;
 struct alignas(64) AudioBlock {
     enum mix_op : int32_t {
         MIX,
@@ -26,39 +29,54 @@ struct alignas(64) AudioBlock {
     static volatile bool recordAllocs;
     static void BeginTrace();
     static void EndTrace();
+    std::array<float*, 8> heapBuf{};
 
     float** buf{};
     channelnum_t channels{};
     samplecount_t samples{};
-    alloc_type allocType = internal;
-    bool debug           = false;
+    alloc_type allocType = empty;
+    bool isHeap = true;
+    bool debug  = false;
 
 
-    AudioBlock()                  = delete;
+    AudioBlock()                  = default;
     AudioBlock(const AudioBlock&) = delete;
     AudioBlock& operator=(const AudioBlock&) = delete;
 
     AudioBlock(AudioBlock&& other) noexcept {
-        //instanceCount++;
-        std::swap(allocType, other.allocType);
-        std::swap(channels, other.channels);
-        std::swap(samples, other.samples);
-        std::swap(buf, other.buf);
-        std::swap(debug, other.debug);
+        instanceCount++;
+        *this = std::move(other);
     }
 
-    AudioBlock& operator=(AudioBlock&& other)  noexcept {
-        std::swap(allocType, other.allocType);
-        std::swap(channels, other.channels);
-        std::swap(samples, other.samples);
-        std::swap(buf, other.buf);
-        std::swap(debug, other.debug);
+    AudioBlock& operator=(AudioBlock&& other) noexcept {
+        allocType = other.allocType;
+        channels = other.channels;
+        samples = other.samples;
+        debug = other.debug;
+        if (other.isHeap) {
+            memcpy(heapBuf.data(), other.heapBuf.data(), sizeof(float*) * heapBuf.size());
+            buf = heapBuf.data();
+            isHeap = false;
+        } else {
+            buf = other.buf;
+            isHeap = false;
+        }
+        other.allocType = empty;
+        other.isHeap = true;
+        other.buf = nullptr;
         return *this;
+    }
+    
+    float** allocChannelsArray(channelnum_t _channels) {
+        if (_channels <= heapBuf.size())
+            return heapBuf.data();
+        isHeap = false; 
+        return new float*[_channels];
     }
 
     explicit AudioBlock(channelnum_t _channels, samplecount_t _samples, bool _bIsDebug = false)
-        : buf(new float*[_channels]), channels(_channels), samples(0), allocType(alloc_type::internal), debug(_bIsDebug) {
-        dbgassert(channels > 0);
+        : channels(_channels), allocType(alloc_type::internal), debug(_bIsDebug) {
+        buf = allocChannelsArray(_channels);
         instanceCount++;
         instanceCstrd++;
         for (channelnum_t i = 0; i < _channels; i++) {
@@ -67,16 +85,15 @@ struct alignas(64) AudioBlock {
         realloc(_samples);
     }
 
-    explicit AudioBlock(float** buf, channelnum_t _channels, samplecount_t _samples)
-        : buf(buf), channels(_channels), samples(_samples), allocType(alloc_type::external_array) {
-        dbgassert(channels > 0);
+    explicit AudioBlock(float** _buf, channelnum_t _channels, samplecount_t _samples)
+        : buf(_buf), channels(_channels), samples(_samples), allocType(alloc_type::external_array) {
         instanceCount++;
         instanceCstrd++;
     }
 
     explicit AudioBlock(const std::vector<float*>& vecChannels, samplecount_t _samples)
-        : buf(new float*[vecChannels.size()]), channels(static_cast<channelnum_t>(vecChannels.size())), samples(_samples), allocType(alloc_type::external_channels_only) {
-        dbgassert(channels > 0);
+        : channels(static_cast<channelnum_t>(vecChannels.size())), samples(_samples), allocType(alloc_type::external_channels_only) {
+        buf = allocChannelsArray(vecChannels.size());
         instanceCount++;
         instanceCstrd++;
         memcpy(buf, vecChannels.data(), vecChannels.size() * sizeof(decltype(vecChannels[0])));
@@ -87,8 +104,8 @@ struct alignas(64) AudioBlock {
     }
 
     explicit AudioBlock(const AudioBlock& src, const channelnum_t channelOffset, const channelnum_t numChannels, const samplecount_t sampleOffset, const samplecount_t numSamples)
-        : buf(new float*[numChannels]), channels(numChannels), samples(numSamples), allocType(alloc_type::external_channels_only) {
-        dbgassert(channels > 0);
+        : channels(numChannels), samples(numSamples), allocType(alloc_type::external_channels_only) {
+        buf = allocChannelsArray(numChannels);
         instanceCount++;
         instanceCstrd++;
         dbgassert(samples);
@@ -100,15 +117,15 @@ struct alignas(64) AudioBlock {
 
     ~AudioBlock() {
         instanceCount--;
-        if (allocType != alloc_type::external_array) {
-            if (allocType == alloc_type::internal) {
-                for (channelnum_t i = 0; i < channels; i++) {
-                    if (buf[i]) {
-                        // delete[] buf[i];
-                        aligned_free(buf[i]);
-                    }
+        if (allocType == alloc_type::internal) {
+            for (channelnum_t i = 0; i < channels; i++) {
+                if (buf[i]) {
+                    // delete[] buf[i];
+                    aligned_free(buf[i]);
                 }
             }
+        }
+        if (!isHeap) {
             delete[] buf;
         }
     }
@@ -186,8 +203,8 @@ struct alignas(64) AudioBlock {
         const samplecount_t nSamples  = math::min(len, samples);
         dbgassert(offsetOut + nSamples <= samples);
         for (channelnum_t i = 0; i < nChannels; i++) {
-            auto srcChannelIdx = math::min<channelnum_t>(srcChannels - 1, i);
-            auto dstChannelIdx = math::min<channelnum_t>(channels - 1, i);
+            auto srcChannelIdx = srcChannels < 1 ? 0 : math::min<channelnum_t>(srcChannels - 1, i);
+            auto dstChannelIdx = channels < 1 ? 0 : math::min<channelnum_t>(channels - 1, i);
             auto srcBufChannel     = srcBuf[srcChannelIdx];
             float* dstBufChannel   = buf[dstChannelIdx];
             //TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
@@ -204,8 +221,8 @@ struct alignas(64) AudioBlock {
         dbgassert(srcChannels == channels);//remove when adding sub-track mixers (between plugins)
         const channelnum_t nChannels = math::max(srcChannels, channels);
         for (channelnum_t i = 0; i < nChannels; i++) {
-            auto srcChannelIdx = math::min<channelnum_t>(srcChannels - 1, i);
-            auto dstChannelIdx = math::min<channelnum_t>(channels - 1, i);
+            auto srcChannelIdx = srcChannels < 1 ? 0 : math::min<channelnum_t>(srcChannels - 1, i);
+            auto dstChannelIdx = channels < 1 ? 0 : math::min<channelnum_t>(channels - 1, i);
             auto   srcBufChannel   = srcBuf[srcChannelIdx];
             float* dstBufChannel   = buf[dstChannelIdx];
             //TODO: this does 2 additions to the same destination when going from stereo to mono (MIX FIRST)
@@ -241,8 +258,8 @@ struct alignas(64) AudioBlock {
         }
         // bool bdbgProcessed = false;
         for (channelnum_t i = 0; i < nChannels; i++) {
-            channelnum_t srcChannelIdx = i % srcChannels;
-            channelnum_t dstChannelIdx = i % channels;
+            channelnum_t srcChannelIdx = srcChannels < 1 ? 0 : i % srcChannels;
+            channelnum_t dstChannelIdx = channels < 1 ? 0 : i % channels;
             auto   srcBufChannel   = srcBuf[srcChannelIdx];
             float* dstBufChannel   = buf[dstChannelIdx];
             for (samplecount_t j = 0; j < nSamples; j++) {
@@ -264,28 +281,29 @@ struct alignas(64) AudioBlock {
 };
 
 
-struct DelayLine {
+class DelayLine {
     AudioBlock block;
     samplecount_t writeOffset = 0;
+public:
     static std::atomic<int32_t> instanceCount;
-    DelayLine(channelnum_t _channels, samplecount_t _samples)
-        : block(_channels, _samples) {
-        block.debug = true;
+    DelayLine() {
         instanceCount++;
     }
-    DelayLine(const DelayLine& other)
-        : block(other.block.channels, other.block.samples) {
-        block.debug = true;
-        instanceCount++;
+    ~DelayLine() {
+        instanceCount--;
     }
-    DelayLine()                  = delete;
+    DelayLine(const DelayLine& other) = delete;
     DelayLine(DelayLine&& other) = delete;
     DelayLine& operator=(const DelayLine& other) = delete;
     DelayLine& operator=(DelayLine&& other) = delete;
     void updateSize(blocksize_t _blockSize, channelnum_t _numChannels, samplecount_t _delay);
-    ~DelayLine() {
-        instanceCount--;
+    void write(AudioBlock* input, samplecount_t delay);
+    samplecount_t getWriteOffset() const {
+        return writeOffset;
+    }
+    AudioBlock& getBlock() {
+        return block;
     }
 };
+
 void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplecount_t delay);
-void delayLineWrite(DelayLine* delayLine, AudioBlock* input, samplecount_t delay);

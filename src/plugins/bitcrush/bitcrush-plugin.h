@@ -7,7 +7,7 @@
 #define BITCRUSH_BITS_MIN 0
 #define BITCRUSH_BITS_MAX 4
 
-struct DelayLine;
+class DelayLine;
 namespace PluginBitcrush {
 
     class PluginVST2_Bitcrush;

@@ -90,12 +90,13 @@ void AudioBlock::realloc(samplecount_t _samples) {
 }
 
 void AudioBlock::addFromDelayLineOp(DelayLine* delayLine, const samplecount_t delay, const mix_op op, float gain) {
-    auto& delayBlock = delayLine->block;
+    auto& delayBlock = delayLine->getBlock();
     const auto readSamples = this->samples;
     const auto delayLineSize = delayBlock.samples;
-    auto readPos = delayLine->writeOffset - delay;
-    if (delay > delayLine->writeOffset) {
-        readPos = delayLine->writeOffset + delayLineSize - delay;
+    const auto writeOffset = delayLine->getWriteOffset();
+    auto readPos = writeOffset - delay;
+    if (delay > writeOffset) {
+        readPos = writeOffset + delayLineSize - delay;
     }
     if (readPos + readSamples > delayLineSize) {
         const auto read1Len = delayLineSize - readPos;
@@ -127,21 +128,20 @@ void DelayLine::updateSize(blocksize_t _blockSize, channelnum_t _numChannels, sa
         }
     }
 }
-void delayLineWrite(DelayLine* delayLine, AudioBlock* input, samplecount_t delay) {
-    dbgassert(delayLine);
+void DelayLine::write(AudioBlock* input, samplecount_t delay) {
     dbgassert(input->channels < std::numeric_limits<channelnum_t>::max());
     dbgassert(input->samples < std::numeric_limits<blocksize_t>::max());
-    delayLine->updateSize(static_cast<blocksize_t>(input->samples), static_cast<channelnum_t>(input->channels), delay);
-    delayLine->writeOffset += input->samples;
-    if (delayLine->writeOffset >= delayLine->block.samples) {
-        delayLine->writeOffset = 0;
+    updateSize(static_cast<blocksize_t>(input->samples), static_cast<channelnum_t>(input->channels), delay);
+    writeOffset += input->samples;
+    if (writeOffset >= block.samples) {
+        writeOffset = 0;
     }
-    dbgassert(delayLine->writeOffset + input->samples <= delayLine->block.samples);
-    delayLine->block.copyFromPosToPos(input->buf, 0, delayLine->writeOffset, input->samples, input->channels);
+    dbgassert(writeOffset + input->samples <= block.samples);
+    block.copyFromPosToPos(input->buf, 0, writeOffset, input->samples, input->channels);
 }
 
 void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplecount_t delay) {
-    delayLineWrite(delayLine, input, delay);
+    delayLine->write(input, delay);
     output->addFromDelayLineOp(delayLine, delay, AudioBlock::MIX, 1.0f);
 }
 

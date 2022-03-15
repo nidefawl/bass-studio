@@ -177,10 +177,11 @@ struct audio_stage_t {
             addAll(out_effects, deferredEffects);
         }
     }
-    DelayLine* getEffectDelayLine(uint32_t id, uint32_t numChannels) {
-//        lock_guard<mutex> hold(mtx);
-        if (!effDelayLines.count(id) || effDelayLines[id]->block.channels != numChannels) {
-            effDelayLines[id] = std::make_shared<DelayLine>(numChannels, 16);
+    DelayLine* getEffectDelayLine(uint32_t id) {
+        // no lock required here
+        // std::lock_guard<mutex> hold(mtx);
+        if (!effDelayLines.count(id)) {
+            effDelayLines[id] = std::make_shared<DelayLine>();
         }
         return effDelayLines[id].get();
     }

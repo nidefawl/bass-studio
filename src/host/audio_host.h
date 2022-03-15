@@ -95,6 +95,12 @@ public:
         bool isActive() const override {
             return !streamShouldEnd && !streamFinished;
         }
+        channelnum_t getNumInputChannels() const override {
+            return this->nInputChannels;
+        }
+        channelnum_t getNumOutputChannels() const override {
+            return this->nOutputChannels;
+        }
     };
 
 private:

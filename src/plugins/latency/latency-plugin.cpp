@@ -176,11 +176,11 @@ namespace PluginLatency {
         dbgassert(this->curLatency >= 0 && this->curLatency <= (1 << 20));
         int32_t nChannels = this->getAeffect()->numOutputs;
         if (!this->delayLine) {
-            this->delayLine = new DelayLine(nChannels, sampleFrames);
+            this->delayLine = std::make_unique<DelayLine>();
         }
         AudioBlock inputBlock(inputs, nChannels, sampleFrames);
         AudioBlock outputBlock(outputs, nChannels, sampleFrames);
-        delayAudio(this->delayLine, &inputBlock, &outputBlock, this->curLatency);
+        delayAudio(this->delayLine.get(), &inputBlock, &outputBlock, this->curLatency);
     }
 
 

@@ -1,11 +1,12 @@
 #pragma once
+#include <memory>
 #include <vector>
 #include <cmath>
 #include "../plugin-base.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 
 
-struct DelayLine;
+class DelayLine;
 namespace PluginLatency {
 
     class PluginVST2_Latency;
@@ -91,7 +92,7 @@ namespace PluginLatency {
     private:
         void setNewLatency(int32_t nSamplesLatency);
         Program singleProgram;
-        DelayLine* delayLine = nullptr;
+        std::unique_ptr<DelayLine> delayLine = nullptr;
         int32_t curLatency   = 0;
         int32_t newLatency   = 0;
         std::atomic<bool> latencyChanged{ false };

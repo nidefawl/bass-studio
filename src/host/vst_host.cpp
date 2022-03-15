@@ -24,6 +24,7 @@
 #include "plugin/vst_plugin_handles.h"
 #include "vst_window.h"
 
+#include <memory>
 #include <vstsdk-host-2.4/aeffectx.h>
 #include "appsettings.h"
 
@@ -187,6 +188,8 @@ public:
 
     std::shared_ptr<DAW::AudioIO::AudioStream> audioStream;
 
+    channelnum_t inputChannels = 0;
+    channelnum_t outputChannels = 0;
     uint32_t threadsRunningCount = 0;
     uint32_t threadCount = NUM_AUDIOPROCESSING_THREADS_INITIAL;
     uint32_t playThreadId = 0;
@@ -209,31 +212,34 @@ public:
     }
 
     //TODO: Try avoid this lock
-    DelayLine* getDelayLine(uint32_t id, int32_t numChannels) {
+    DelayLine* getDelayLine(uint32_t id) {
         std::lock_guard<std::mutex> hold(mtx);
         if (!delayLines.count(id)) {
-            delayLines[id] = std::shared_ptr<DelayLine>(new DelayLine((uint32_t)numChannels, 16));
+            delayLines[id] = std::make_shared<DelayLine>();
         }
         return delayLines[id].get();
     }
 
-    std::shared_ptr<resampler_t> getResampler(sampleformat_t in, sampleformat_t out, uint32_t idx) {
-        auto it = std::find_if(resamplers.begin(), resamplers.end(), [&in,&out,idx](std::shared_ptr<resampler_t>& ptr){
-            return ptr->in == in && ptr->out == out && ptr->idx == idx;
+    std::shared_ptr<resampler_t> getResampler(sampleformat_t in, sampleformat_t out, channelnum_t numChannels, uint32_t idx) {
+        auto it = std::find_if(resamplers.begin(), resamplers.end(), [&in,&out,numChannels,idx](std::shared_ptr<resampler_t>& ptr){
+            return ptr->in == in && ptr->out == out && ptr->idx == idx && ptr->idx == idx && ptr->numChannels == numChannels;
         });
         if (it == resamplers.end()) {
-
             oversample_config_t config;
             config.inputSampleRate = in.sampleRate;
             config.outputSampleRate = out.sampleRate;
-            config.numChannels = 32;
+            config.numChannels = numChannels;
             config.setInputLength(in.blockSize);
             std::shared_ptr<resampler_t> resampler = std::make_shared<resampler_t>(idx, in, out, config);
             resamplers.push_back(resampler);
             return resampler;
-
         }
         return *it;
+    }
+
+    void resetResamplers() {
+        resamplers.clear();
+        resamplers.shrink_to_fit();
     }
 
     void resetBlock() {
@@ -649,7 +655,7 @@ vsthost::vsthost()
       moduleMgr{new vsthost::ModuleManager{}}
 {
     memset(&m_sharedTimeInfo, 0, sizeof(m_sharedTimeInfo));
-    allocRingBuffer(ringbuffer, 32);
+    allocRingBuffer(ringbuffer, 2);
     updateTime(m_sharedTimeInfo, 0.0, 0.0, playback_state::status_stop);
     midiRealtimeInput = new clip_notes_t;
     midiProcessedInput = new clip_notes_t;
@@ -1352,8 +1358,8 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 
     int32_t samplePosProcess = sample;
     double tickPosProcess = posDouble;
-    AudioBlock blockExtIn(32, sampleFormat.blockSize);
-    AudioBlock blockExtOut(32, sampleFormat.blockSize);
+    AudioBlock blockExtIn(impl->inputChannels, sampleFormat.blockSize);
+    AudioBlock blockExtOut(impl->outputChannels, sampleFormat.blockSize);
     dsp_util::fillBlock(blockExtOut, 0.0f);
 
     if (enableProfiling) {
@@ -1505,8 +1511,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
     const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
     const audiostream_properties_t audioProp = getAudioStreamProperties();
 
-    std::shared_ptr<resampler_t> resamplerOutput = impl->getResampler(sampleFormat, m_sampleFormatExternal, 0);
-    std::shared_ptr<resampler_t> resamplerInput = impl->getResampler(m_sampleFormatExternal, sampleFormat, 1);
+    std::shared_ptr<resampler_t> resamplerOutput = impl->getResampler(sampleFormat, m_sampleFormatExternal, impl->outputChannels, 0);
+    std::shared_ptr<resampler_t> resamplerInput = impl->getResampler(m_sampleFormatExternal, sampleFormat, impl->inputChannels, 1);
 
     int queueSizeInput = 0;
     int queueSizeOutput = 0;
@@ -1907,8 +1913,8 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
                 AudioBlock srcBlock = src.toAudioBlock();
                 DelayLine* delayLine = nullptr;
                 if (delayToMaxInputLatency > 0) {
-                    delayLine = impl->getDelayLine(tracksrc.trackEdgeId, srcBlock.channels);
-                    delayLineWrite(delayLine, &srcBlock, delayToMaxInputLatency);
+                    delayLine = impl->getDelayLine(tracksrc.trackEdgeId);
+                    delayLine->write(&srcBlock, delayToMaxInputLatency);
                 }
                 float fGainRaw = 0.0f;
                 //TODO: apply per-track latency compensation
@@ -2316,6 +2322,21 @@ void vsthost::onTrackLayoutChange() {
 
 void vsthost::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
     impl->audioStream = stream;
+    if (stream) {
+        const auto numInputChannels = math::max<channelnum_t>(stream->getNumInputChannels(), impl->inputChannels);
+        const auto numOutputChannels = math::max<channelnum_t>(stream->getNumOutputChannels(), impl->outputChannels);
+
+        if (numInputChannels != impl->inputChannels || numOutputChannels != impl->outputChannels) {
+            impl->resetResamplers();
+        }
+        if (numOutputChannels != impl->outputChannels) {
+            freeRingBuffer(ringbuffer);
+            allocRingBuffer(ringbuffer, numOutputChannels);
+        }
+        
+        impl->inputChannels = numInputChannels;
+        impl->outputChannels = numOutputChannels;
+    }
     auto sampleFormatExternal = this->m_sampleFormatExternal;
     auto extSampleRate = stream ? stream->getSampleRate() : sampleFormatExternal.sampleRate;
     auto extBlockSize = stream ? stream->getBlockSize() : sampleFormatExternal.blockSize;
@@ -2407,8 +2428,8 @@ void vsthost::processAudio(audio_stage_t* stage,
                         AudioBlock srcBlock = src.toAudioBlock();
                         DelayLine* delayLine = nullptr;
                         if (delayToMaxInputLatency > 0) {
-                            delayLine = stage->getEffectDelayLine(tracksrc.trackEdgeId, srcBlock.channels);
-                            delayLineWrite(delayLine, &srcBlock, delayToMaxInputLatency);
+                            delayLine = stage->getEffectDelayLine(tracksrc.trackEdgeId);
+                            delayLine->write(&srcBlock, delayToMaxInputLatency);
                         }
 
                         //TODO: apply filtered sample accurate volume automation
@@ -2444,7 +2465,7 @@ void vsthost::processAudio(audio_stage_t* stage,
                     if (delay > 0) {
                         AudioBlock *blockOut = effect->blockOutputs;
                         if (!effect->delayLine) {
-                            effect->delayLine.reset(new DelayLine(math::max(blockIn->channels, blockOut->channels), m_sampleFormatInternal.blockSize));
+                            effect->delayLine = std::make_unique<DelayLine>();
                         }
                         blockOut->clear();
                         delayAudio(effect->delayLine.get(), blockIn, blockOut, delay);

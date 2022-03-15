@@ -19,6 +19,7 @@
 #include "host/mainctrl.h"
 #include "host/projectcontroller.h"
 #include "host/vst_host.h"
+#include "types.h"
 #include "util/testing_environment.h"
 
 #include <memory>
@@ -29,18 +30,25 @@
 #include "platform/win/platform_win.h"
 #endif
 
+namespace DebugAlloc {
+    void beginTrace();
+    void endTrace();
+}
 extern volatile bool fatalError;
 namespace {
 class FakeAudioStream : public DAW::AudioIO::AudioStream {
     const sampleformat_t sampleformat;
+    const channelnum_t numInputChannels;
+    const channelnum_t numOutputChannels;
     AudioBuffer* const bufferInput;
-    //AudioBuffer* const bufferOutput;
     int32_t inputQueueSize = 0;
     int32_t outputQueueSize = 0;
 public:
-    explicit FakeAudioStream(sampleformat_t sf)
+    explicit FakeAudioStream(sampleformat_t sf, channelnum_t _numInputChannels, channelnum_t _numOutputChannels)
             : sampleformat(sf),
-              bufferInput(allocateBuffer(32))
+              numInputChannels(_numInputChannels),
+              numOutputChannels(_numOutputChannels),
+              bufferInput(allocateBuffer(_numInputChannels))
           //,
           //    bufferOutput(allocateBuffer(32))
     {
@@ -90,11 +98,17 @@ public:
     samplerate_t getSampleRate() const override {
         return sampleformat.sampleRate;
     }
-    uint16_t getBlockSize() const override {
+    blocksize_t getBlockSize() const override {
         return sampleformat.blockSize;
     }
     bool isActive() const override {
         return true;
+    }
+    channelnum_t getNumInputChannels() const override {
+        return numInputChannels;
+    }
+    channelnum_t getNumOutputChannels() const override {
+        return numOutputChannels;
     }
 };
 }
@@ -106,12 +120,14 @@ int main(int argc, char** argv) {
 
     auto dawInstance = std::make_shared<DawInstance>();
     try {
-        sampleformat_t sampleformat = {44100, 512, sampleformat_bits_t::FLOAT_32};
+        const channelnum_t inputChannels = 2;
+        const channelnum_t outputChannels = 2;
+        const sampleformat_t sampleformat = {44100, 512, sampleformat_bits_t::FLOAT_32};
         log_out("Testing Samplerate %uHz at Blocksize %u\n", sampleformat.sampleRate, sampleformat.blockSize);
         log_out("Deadline for block: %uns\n", (sampleformat.blockSize*1000000000ULL)/sampleformat.sampleRate);
         getGlobalLogger()->setLevel(Log::L_WARN);
 
-        std::shared_ptr<DAW::AudioIO::AudioStream> audiostream = std::make_shared<FakeAudioStream>(sampleformat);
+        std::shared_ptr<DAW::AudioIO::AudioStream> audiostream = std::make_shared<FakeAudioStream>(sampleformat, inputChannels, outputChannels);
 
         using DAW::settings;
         settings = loadSettings();
@@ -168,7 +184,7 @@ int main(int argc, char** argv) {
             tickPos   = projGlobals.loopStart;
             samplePos = tickToSampleConvert<int32_t, roundmode::floor>(tickPos, tempo100, sr);
             //log_lf(Log::L_WARN, "START ON %s seconds: %.2f - sample %d\n", StringAsCStr(tickAsBeatString(tickPos)), toSeconds(tickPos, tempo100), samplePos);
-
+            bool once = false;
             host->onStartPlayback(dawInstance);
             for (auto _ : state) {
                 const bool isLoopAround = tickPos + ticksPerBlock >= projGlobals.loopStart + projGlobals.loopLen;
@@ -176,7 +192,12 @@ int main(int argc, char** argv) {
                 while (stream->getInputQueueSize() < 2) {
                     stream->enqueueInput(nullptr);
                 }
+                // if (!once)
+                //     DebugAlloc::beginTrace();
                 int32_t processedBlock = host->processPlayback(dawInstance, samplePos, tickPos, playback_state::status_playback, inLoop, isLoopAround);
+                // if (!once)
+                //     DebugAlloc::endTrace();
+                once = true;
                 while (stream->getOutputQueueSize() > 0) {
                     AudioBuffer* dequeuedBuf = nullptr;
                     dbgassert(stream->try_dequeue(dequeuedBuf));

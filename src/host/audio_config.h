@@ -73,6 +73,8 @@ namespace AudioIO {
         virtual samplerate_t getSampleRate() const = 0;
         virtual blocksize_t getBlockSize() const = 0;
         virtual bool isActive() const = 0;
+        virtual channelnum_t getNumInputChannels() const = 0;
+        virtual channelnum_t getNumOutputChannels() const = 0;
     };
 } // namespace AudioIO
 
