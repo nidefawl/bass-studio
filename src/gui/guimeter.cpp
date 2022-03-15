@@ -53,7 +53,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
         nvgFill(vg);
         nvgFillColor(vg, THEMECOL_WHITE);
     }*/
-    for (int i = 0; i < NCHANNELS; i++) {
+    for (channelnum_t i = 0; i < NCHANNELS; i++) {
         auto& chLvl     = lvls[i];
         float fMax      = chLvl.fMax;
         float fRms      = chLvl.fLvl;

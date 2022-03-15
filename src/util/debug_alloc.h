@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include <algorithm>
-#include <cstdint>
+#include "types.h"
 #include <unordered_map>
 #include "platform.h"
 #include "logging.h"

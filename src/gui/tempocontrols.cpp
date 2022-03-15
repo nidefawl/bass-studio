@@ -1,6 +1,6 @@
 #include "tempocontrols.h"
 
-#include <cstdint>
+#include "types.h"
 
 #include "math/seq_math.h"
 #include "str_util.h"

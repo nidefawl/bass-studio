@@ -17,7 +17,7 @@
  */
 
 #include <cassert>
-#include <cstdint>
+#include "types.h"
 #include <cstdio>
 #include <algorithm>
 

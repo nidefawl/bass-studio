@@ -47,7 +47,7 @@ namespace DAW::AudioIO {
                 make_nvp("offset", settings.offset),
                 make_nvp("name", settings.name),
                 make_nvp("type", settings.type));
-        } catch (const std::runtime_error& e) {
+        } catch (const std::runtime_error&) {
             ar(make_nvp("idx", settings.idx),
                 make_nvp("channelOffset", settings.offset),
                 make_nvp("name", settings.name),

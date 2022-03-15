@@ -165,8 +165,7 @@ class window_impl : public window_abstract_t {
     static constexpr size_t TEXTURE_HEIGHT = 16;
     std::vector<float> texData;
     
-    int64_t tmLastUpdate    = 0;
-    int64_t tmLastReload    = 0;
+    int64_t tmLastReload = 0;
     seq_rand rnd;
     int nCall = 0;
 

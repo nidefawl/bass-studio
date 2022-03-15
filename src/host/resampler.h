@@ -13,7 +13,7 @@
 #include "midi-defs.h"
 #include "midi-msg.h"
 
-#include <cstdint>
+#include "types.h"
 #include "assert_dbg.h"
 
 #include <deque>
@@ -23,15 +23,15 @@
 //#define RESAMPLER_H_ENABLE_BUFFER_CHECKS
 
 struct oversample_config_t {
-    uint32_t inputSampleRate     = 0;
-    uint32_t outputSampleRate    = 0;
-    uint32_t numChannels         = 0;
-    uint32_t numSamplesInput     = 0;
-    uint32_t numSamplesResampled = 0;
+    samplerate_t inputSampleRate     = 0;
+    samplerate_t outputSampleRate    = 0;
+    channelnum_t numChannels         = 0;
+    samplecount_t numSamplesInput     = 0;
+    samplecount_t numSamplesResampled = 0;
     void setInputLength(uint32_t numSamples) {
         numSamplesInput = numSamples;
-        dbgassert(FitsTypeRange<uint32_t>((int64_t) numSamplesInput * (int64_t) outputSampleRate / (double) inputSampleRate + .5));
-        numSamplesResampled = (uint32_t) ((int64_t) numSamplesInput * (int64_t) outputSampleRate / (double) inputSampleRate + .5);
+        dbgassert(FitsTypeRange<samplecount_t>((int64_t) numSamplesInput * (int64_t) outputSampleRate / (double) inputSampleRate + .5));
+        numSamplesResampled = (samplecount_t) ((int64_t) numSamplesInput * (int64_t) outputSampleRate / (double) inputSampleRate + .5);
         dbgassert(numSamplesResampled > 0);
     }
 };
@@ -65,7 +65,7 @@ struct oversampler_t : public oversample_config_t {
         dbgassert(dstBlock.samples >= this->numSamplesResampled);
         dbgassert(dstBlock.channels >= this->numChannels);
 
-        for (uint32_t i = 0; i < numChannels; i++) {
+        for (channelnum_t i = 0; i < numChannels; i++) {
             if (i < srcBlock.channels) {
                 channelPtrsIn[i] = srcBlock.buf[i];
             } else {
@@ -96,22 +96,29 @@ struct oversampler_t : public oversample_config_t {
 };
 
 struct resampler_t {
-    const uint32_t idx;
-    const uint32_t numChannels;
+    AudioBlock bufScratch;
     oversampler_t resampler;
     sampleformat_t in;
     sampleformat_t out;
-    AudioBlock bufScratch;
+    const uint32_t idx;
+    const channelnum_t numChannels;
     struct buf_t {
         AudioBlock* block{ nullptr };
-        uint32_t samplesAvail{ 0 };
-        uint32_t readOffset{ 0 };
+        samplecount_t samplesAvail{ 0 };
+        samplecount_t readOffset{ 0 };
         bool inUse{ false };
     };
-    uint32_t numSamplesQueued = 0;
+    samplecount_t numSamplesQueued = 0;
     std::vector<buf_t*> outputBuffers;
     std::deque<buf_t*> outputQueue;
-    resampler_t(const uint32_t _idx, sampleformat_t _in, sampleformat_t _out, oversample_config_t config) : idx(_idx), numChannels(config.numChannels), resampler(config), in(_in), out(_out), bufScratch(config.numChannels, _in.blockSize) {
+    resampler_t(const uint32_t _idx, sampleformat_t _in, sampleformat_t _out, oversample_config_t config)
+        : bufScratch(config.numChannels, _in.blockSize),
+          resampler(config),
+          in(_in),
+          out(_out),
+          idx(_idx),
+          numChannels(config.numChannels)
+    {
     }
     ~resampler_t() {
         for (auto& b : outputBuffers) {
@@ -178,7 +185,7 @@ struct resampler_t {
         while (writeOffset < out.blockSize) {
             buf_t* b                = outputQueue.front();
             auto* ptrBlockResampled = b->block;
-            auto maxCopy            = math::min<uint32_t>(b->samplesAvail - b->readOffset, blockOut.samples - writeOffset);
+            auto maxCopy            = math::min<samplecount_t>(b->samplesAvail - b->readOffset, blockOut.samples - writeOffset);
 
             auto srcBlock = ptrBlockResampled->SubChannelsSamplesBlock(0, ptrBlockResampled->channels, b->readOffset, maxCopy);
             blockOut.SubChannelsSamplesBlock(0, numChannels, writeOffset, maxCopy).addFromOp(&srcBlock, AudioBlock::mix_op::MIX, 1.0f);
@@ -210,7 +217,7 @@ struct resampler_t {
 
         return blockOut;
     }
-    uint32_t getNumSamplesOutputBuffer() const {
+    samplecount_t getNumSamplesOutputBuffer() const {
 #ifdef RESAMPLER_H_ENABLE_BUFFER_CHECKS
         uint32_t numSamples = 0;
 
@@ -222,8 +229,8 @@ struct resampler_t {
         return numSamplesQueued;
     }
     uint32_t numBlocksToPop() const {
-        uint32_t numSamples = getNumSamplesOutputBuffer();
-        uint32_t numBlocks  = numSamples / out.blockSize;
+        auto numSamples = getNumSamplesOutputBuffer();
+        auto numBlocks  = numSamples / out.blockSize;
 #ifdef RESAMPLER_H_ENABLE_BUFFER_CHECKS
         dbgassert(numBlocks == 0 || outputQueue.size() > 0);
 #endif

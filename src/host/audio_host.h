@@ -1,7 +1,7 @@
 #pragma once
-#include <cstdint>
 #include <memory>
 #include <array>
+#include "types.h"
 #include "config.h"
 #include "samplerate.h"
 #include "str_util.h"
@@ -19,15 +19,15 @@ public:
     class HostIOStream : public DAW::AudioIO::AudioStream {
         public:
         struct IOChannel {
-            DAW::rmsmeter meter;
             AudioBlock buf;
-            int32_t index         = 0;
-            int32_t channelOffset = 0;
-            DAW::channelcount type;
+            DAW::rmsmeter meter;
+            int32_t index;
+            channelnum_t channelOffset;
+            DAW::channel_pairing type;
 
-            IOChannel(int32_t _index, DAW::channelcount _type, int32_t _channelOffset, DAW::rmsmeter&& _meter)
-                : meter(_meter),
-                buf((uint32_t) DAW::AudioIO::getNumChannelsFromTrackType(_type), 0),
+            IOChannel(int32_t _index, DAW::channel_pairing _type, channelnum_t _channelOffset, DAW::rmsmeter&& _meter)
+                : buf(DAW::AudioIO::getNumChannelsFromTrackType(_type), 0),
+                meter(_meter),
                 index(_index),
                 channelOffset(_channelOffset),
                 type(_type)
@@ -36,31 +36,9 @@ public:
             ~IOChannel() = default;
         };
 
-        enum StreamDirection {
-            DIR_IN  = 1,
-            DIR_OUT = 2,
-        };
-
-        int streamId = 1;
-        audiohost* host{ nullptr };
-        PaStream* stream{ nullptr };
-
-        int flagsIO = DIR_IN | DIR_OUT;
-        int idx     = 0;
-
-        int32_t nInputChannels  = 0;
-        int32_t nOutputChannels = 0;
-
-        String inputName;
-        String outputName;
-        String device_api;
-
-        std::atomic<bool> streamShouldEnd{ false };
-        std::atomic<bool> streamFinished{ false };
-
+        audiothread_ringbuffer_t ringbuffer;
         moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
         moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueueInput;
-        audiothread_ringbuffer_t ringbuffer;
 
         std::array<DAW::meter_runningsum, 32> meterDataInput;
         std::array<DAW::meter_runningsum, 32> meterDataOutput;
@@ -70,33 +48,48 @@ public:
         std::vector<std::shared_ptr<IOChannel>> channelsInput;
         std::vector<std::shared_ptr<IOChannel>> channelsOutput;
 
+        audiohost* const host;
+        const int streamId;
+        const size_t streamIdx;
+        const channelnum_t nInputChannels;
+        const channelnum_t nOutputChannels;
+
+        PaStream* stream{ nullptr };
+    
+        String inputName;
+        String outputName;
+        String device_api;
+
+        std::atomic<bool> streamShouldEnd{ false };
+        std::atomic<bool> streamFinished{ false };
+
         int64_t lastAudioCallbackInvocationTime_i64 = 0;
 
-        HostIOStream(int32_t streamId, DAW::AudioIO::io_cfg_tracks cfg, int32_t nOutputChannels = 0, int32_t nInputChannels = 0);
-        ~HostIOStream();
+        HostIOStream(audiohost* const _host, int32_t _streamId, int32_t _streamIdx, DAW::AudioIO::io_cfg_tracks& cfg, channelnum_t nOutputChannels, channelnum_t nInputChannels);
+        ~HostIOStream() override;
         audiothread_ringbuffer_t& getRingbuffer() {
             return ringbuffer;
         }
         static inline String getTrackName(IOChannel* track, bool isInput) {
             return DAW::AudioIO::getTrackName(track->type, track->index, isInput);
         }
-        void enqueue(AudioBuffer*);
-        bool try_dequeue(AudioBuffer*&);
-        void enqueueInput(AudioBuffer*);
-        bool try_dequeueInput(AudioBuffer*&);
-        int32_t getOutputQueueSize() const {
+        void enqueue(AudioBuffer*) override;
+        bool try_dequeue(AudioBuffer*&) override;
+        void enqueueInput(AudioBuffer*) override;
+        bool try_dequeueInput(AudioBuffer*&) override;
+        int32_t getOutputQueueSize() const override {
             return static_cast<int32_t>(audioQueue.size_approx());
         }
-        int32_t getInputQueueSize() const {
+        int32_t getInputQueueSize() const override {
             return static_cast<int32_t>(audioQueueInput.size_approx());
         }
-        samplerate_t getSampleRate() const {
+        samplerate_t getSampleRate() const override {
             return this->host->lSampleRate;
         }
-        uint16_t getBlockSize() const {
-            return this->host->lBlockSize;
+        blocksize_t getBlockSize() const override {
+                return this->host->lBlockSize;
         }
-        bool isActive() const {
+        bool isActive() const override {
             return !streamShouldEnd && !streamFinished;
         }
     };
@@ -108,7 +101,7 @@ private:
 public:
     int32_t nextStreamId{ 0 };
     samplerate_t lSampleRate = 0;
-    uint16_t lBlockSize      = 0;
+    blocksize_t lBlockSize      = 0;
 
     uint32_t blockReads          = 0;
     uint32_t bufferUnderuns      = 0;
@@ -121,8 +114,8 @@ public:
     audiohost()  = default;
     ~audiohost() = default;
     static audiohost* getInstance();
-    HostIOStream* getStream(int idx);
-    std::shared_ptr<audiohost::HostIOStream> getStreamSharedPtr(int idx);
+    HostIOStream* getStream(size_t idx);
+    std::shared_ptr<audiohost::HostIOStream> getStreamSharedPtr(size_t idx);
     bool initPa();
     void deinitPa();
     void removeStream(HostIOStream* stream);

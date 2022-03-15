@@ -2,7 +2,7 @@
 #include <list>
 #include <vector>
 #include <set>
-#include <cstdint>
+#include "types.h"
 #include <memory>
 
 #include "math/vec.h"

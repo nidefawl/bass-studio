@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include <cstdint>
+#include "types.h"
 #include "assert_dbg.h"
 
 #define TRACK_TYPE_MASTER 0

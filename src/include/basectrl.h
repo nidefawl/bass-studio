@@ -4,7 +4,7 @@
 #include <map>
 #include <memory>
 #include <set>
-#include <cstdint>
+#include "types.h"
 #include <vector>
 
 #include "assert_dbg.h"

@@ -696,7 +696,6 @@ void BaseCtrl::dragContainerBegin(MouseEvent& evt, guictr_layout_entry* ctrDragS
     // extends the lifetime of that container so we can safely access it in render and mouse move callbacks.
     if (ctrDragSrc->getContainerRef(ctrContent, false)) {
         dbgassert(ctrContent.get());
-        auto* szLabel1 = StringAsCStr(ctrContent->getGui()->label);
         auto vecSizeScaled  = vec2(ctrContent->getGui()->size) * 0.3f;
         ctrDragHandler.size = math::maxvec2(ivec2(32, 12), vecSizeScaled);
         ctrDragHandler.setLabel("Move " + ctrDragSrc->getGui()->label);

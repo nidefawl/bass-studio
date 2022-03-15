@@ -2,7 +2,7 @@
 #include <glm/geometric.hpp>
 #include <nanovg.h>
 
-#include <cstdint>
+#include "types.h"
 #include <nanovg_min.h>
 #include <type_traits>
 #include <utility>
@@ -194,14 +194,14 @@ namespace DAW {
     bool channelRefEquals(const DAW::channel_ref_t& existingRef, const DAW::channel_ref_t& ref, int matchSrcDstAll) {
         if (existingRef.type == ref.type) {
             switch (ref.type) {
-                case channel_type::INPUT_EXTERNAL_AUDIO:
+                case stage_type::INPUT_EXTERNAL_AUDIO:
                     return ref.externalInputType == existingRef.externalInputType
                             && ref.externalInputIdx == existingRef.externalInputIdx
                             && ref.srcChannelOffset == existingRef.srcChannelOffset;
-                case channel_type::INPUT_AUDIOSTAGE:
+                case stage_type::INPUT_AUDIOSTAGE:
                     return ref.stage.buffer == existingRef.stage.buffer
                            && ref.stage.stageRef.stageId == existingRef.stage.stageRef.stageId;
-                case channel_type::INPUT_AUDIOSTAGE_EFFECT:
+                case stage_type::INPUT_AUDIOSTAGE_EFFECT:
                     if (ref.projectGlobalId == existingRef.projectGlobalId) {
                         if (matchSrcDstAll == 0)
                             return ref.srcChannelOffset == existingRef.srcChannelOffset;
@@ -211,8 +211,8 @@ namespace DAW {
                                 && ref.dstChannelOffset == existingRef.dstChannelOffset;
                     }
                     return false;
-                case channel_type::INPUT_DEFAULT:
-                case channel_type::INPUT_EMPTY:
+                case stage_type::INPUT_DEFAULT:
+                case stage_type::INPUT_EMPTY:
                     return true;
             }
         }
@@ -228,7 +228,7 @@ namespace DAW {
         }
         if (removeDefaultRouting) {
             it = std::remove_if(list.begin(), list.end(), [ref](DAW::channel_ref_t& existingRef) {
-                return existingRef.getType() == channel_type::INPUT_DEFAULT;
+                return existingRef.getType() == stage_type::INPUT_DEFAULT;
             });
             if (it != list.end()) {
                 list.erase(it, list.end());
@@ -266,10 +266,6 @@ public:
 
     stage_bufferpoint getBufferPoint() const {
         return stageBufferPoint;
-    }
-
-    int32_t getInputChannelOffset() const {
-        return channelDesc.offset;
     }
 
     vec2 getCenterPos2f() const {
@@ -419,6 +415,7 @@ public:
     {
         padding = 0;
         setPorts();
+        (void)graphImpl;
     }
 
     ~gui_graph_n() override {

@@ -11,6 +11,7 @@
 #include "samplerate.h"
 
 #include "project.h"
+#include "types.h"
 #include "util/profiling.h"
 #include "vst_host.h"
 #include "fileio.h"
@@ -645,7 +646,6 @@ uint32_t vsthost::getMaxThreadCount() {
 
 vsthost::vsthost()
     : impl(new vsthost_impl{this}),
-      numChannels(OUTPUT_CHANNELS),
       moduleMgr{new vsthost::ModuleManager{}}
 {
     memset(&m_sharedTimeInfo, 0, sizeof(m_sharedTimeInfo));
@@ -658,7 +658,6 @@ vsthost::vsthost()
 
 vsthost::~vsthost() {
     delete moduleMgr;
-    delete blockZero;
     delete impl;
     delete midiRealtimeInput;
     delete midiProcessedInput;
@@ -684,7 +683,6 @@ vsthost::audiostream_properties_t vsthost::getAudioStreamProperties() const {
 void vsthost::setSampleFormat(const sampleformat_t& _sampleFormat) {
     if (this->m_sampleFormatInternal != _sampleFormat) {
         this->m_sampleFormatInternal = _sampleFormat;
-        setBlockSize(_sampleFormat.blockSize);
         for (auto* audio : this->allAudioStages) {
             audio->sampleFormat = _sampleFormat;
             audio->input.realloc(_sampleFormat.blockSize);
@@ -708,13 +706,6 @@ void vsthost::setSampleFormat(const sampleformat_t& _sampleFormat) {
         }
     }
 }
-
-void vsthost::setBlockSize(uint16_t _blockSize) {
-    if (!blockZero)
-        blockZero = new AudioBlock(numChannels, _blockSize);
-    this->blockZero->realloc(_blockSize);
-}
-
 
 inline double PPQ24TickToSample(double midiTickPPQ24, uint32_t bpm100, samplerate_t samplerate, uint32_t blocksize) {
     double seconds = (midiTickPPQ24/(double)(bpm100*24.0)) * 100.0 * 60.0;
@@ -850,15 +841,15 @@ bool resolveDefaultConnection(const vsthost* const host, const project_t* const 
     return false;
 }
 
-bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs, track_audio_src& out) {
-    if (inputChannel.getType() == channel_type::INPUT_EXTERNAL_AUDIO) {
+bool resolveAudioChannel(const vsthost* const host, channelnum_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs, track_audio_src& out) {
+    if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
         if (ptrExternalInputs != nullptr) {
-            int32_t idx = inputChannel.srcChannelOffset;
-            size_t size = math::min<uint32_t>(AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType), numChannelsTrack);
+            const auto idx = inputChannel.srcChannelOffset;
+            const auto size = math::min<channelnum_t>(AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType), numChannelsTrack);
             if (idx >= 0 && idx+size <= ptrExternalInputs->channels) {
                 track_audio_src src;
-                for (int i = 0; i < size; ++i) {
-                    src.channels.push_back(ptrExternalInputs->buf[idx+i]);
+                for (channelnum_t ch = 0; ch < size; ++ch) {
+                    src.channels.push_back(ptrExternalInputs->buf[idx+ch]);
                 }
                 src.sampleFormat = host->m_sampleFormatExternal;
                 src.samples = ptrExternalInputs->samples;
@@ -868,7 +859,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
             }
         }
     }
-    if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE) {
+    if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
         audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
         if (stage) {
             /* Calculate audio/midi tracks gain level */
@@ -902,7 +893,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
         }
     }
 
-    if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE_EFFECT) {
+    if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE_EFFECT) {
         audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
         if (stage) {
             effectbase* eff = stage->getPluginById(inputChannel.projectGlobalId);
@@ -917,12 +908,12 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
             for (auto& desc : eff->outputChannelsDesc) {
                 if (desc.offset == inputChannel.srcChannelOffset) {
                     track_audio_src src;
-                    for (uint32_t i = desc.offset; i < desc.offset+desc.count; ++i) {
-                        if (i >= eff->blockOutputs->channels) {
-                            log_lf(Log::L_WARN, "%s Output buffer has invalid size. Expected %d channels, found %d\n", StringAsCStr(eff->getName()), desc.offset+desc.count, eff->blockOutputs->channels);
+                    for (auto chIdx = desc.offset; chIdx < desc.offset+desc.count; ++chIdx) {
+                        if (chIdx >= eff->blockOutputs->channels) {
+                            log_lf(Log::L_WARN, "%s Output buffer has invalid size. Expected %u channels, found %u\n", StringAsCStr(eff->getName()), desc.offset+desc.count, eff->blockOutputs->channels);
                             return false;
                         }
-                        src.channels.push_back(eff->blockOutputs->buf[i]);
+                        src.channels.push_back(eff->blockOutputs->buf[chIdx]);
                     }
                     src.sampleFormat = stage->sampleFormat;
                     src.samples = eff->blockOutputs->samples;
@@ -931,7 +922,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
                     return true;
                 }
             }
-            log_lf(Log::L_WARN, "%s Does not have output with offset %d\n", StringAsCStr(eff->getName()), inputChannel.srcChannelOffset);
+            log_lf(Log::L_WARN, "%s Does not have output with offset %u\n", StringAsCStr(eff->getName()), inputChannel.srcChannelOffset);
         }
     }
     return false;
@@ -1218,7 +1209,7 @@ void vsthost::postExportEnd(project_controller_t* ctrl, export_settings_t& expor
     }
 }
 
-int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplerate_t samplePos, samplerate_t numSamples) {
+int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplecount_t samplePos, samplecount_t numSamples) {
     if (fOutWave.empty()) {
         dbgassert(0);
         return 0;
@@ -1227,22 +1218,18 @@ int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, 
         dbgassert(0);
         return 0;
     }
-    if (trImpl->output.channels != this->numChannels || trImpl->output.channels != 2) {
-        dbgassert(0);
-        return 0;
-    }
 
-    log_printf("writeTrackSamplesToDisk %s pos %d len %d\n", StringAsCStr(trImpl->getTrack()->name), samplePos, numSamples);
-    const int64_t SPLIT_SAMPLECOUNT = audiotrack_t::GetSplitSampleLength();
-    const int64_t samplePosEnd = samplePos + numSamples;
-    const int64_t numChannels = trImpl->output.channels;
+    log_printf("writeTrackSamplesToDisk %zd pos %zd len %d\n", StringAsCStr(trImpl->getTrack()->name), samplePos, numSamples);
+    const samplecount_t SPLIT_SAMPLECOUNT = audiotrack_t::GetSplitSampleLength();
+    const samplecount_t samplePosEnd = samplePos + numSamples;
+    const channelnum_t numChannels = trImpl->output.channels;
 
     trImpl->audioOutput.convertToSamples(this);
 
     std::vector<audiotrack_split_t*> samples;
     trImpl->audioOutput.visitSamples_NoLock([&samples, SPLIT_SAMPLECOUNT, samplePos, samplePosEnd](std::shared_ptr<audiotrack_split_t>& split) {
         auto* ptrSplit = split.get();
-        if (ptrSplit && ptrSplit->samplePos + SPLIT_SAMPLECOUNT >= (int64_t)samplePos && ptrSplit->samplePos < samplePosEnd) {
+        if (ptrSplit && ptrSplit->samplePos + SPLIT_SAMPLECOUNT >= samplePos && ptrSplit->samplePos < samplePosEnd) {
             samples.push_back(ptrSplit);
         }
     });
@@ -1270,22 +1257,22 @@ int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, 
 
 
     AudioBlock blockFull(1, SPLIT_SAMPLECOUNT*numChannels);
-    int64_t samplesWritten = 0;
-    int64_t samplesWritten2 = 0;
+    samplecount_t samplesWritten = 0;
+    samplecount_t samplesWritten2 = 0;
     int64_t sampleIdx = 0;
     for (audiotrack_split_t* split : samples) {
         auto* sample = split->getSample();
         dbgassert(split->samplePos + SPLIT_SAMPLECOUNT >= samplePos && split->samplePos < samplePosEnd);
 
-        const size_t readBeginOffset = math::clamp<int64_t>((int64_t)samplePos - split->samplePos, 0, SPLIT_SAMPLECOUNT);
-        const size_t readEndOffset = math::clamp<int64_t>((int64_t)samplePosEnd - split->samplePos, 0, SPLIT_SAMPLECOUNT);
-        const size_t readLen = math::clamp<int64_t>(readEndOffset - readBeginOffset, 0, SPLIT_SAMPLECOUNT);
+        const size_t readBeginOffset = math::clamp<samplecount_t>(samplePos - split->samplePos, 0, SPLIT_SAMPLECOUNT);
+        const size_t readEndOffset = math::clamp<samplecount_t>(samplePosEnd - split->samplePos, 0, SPLIT_SAMPLECOUNT);
+        const size_t readLen = math::clamp<samplecount_t>(readEndOffset - readBeginOffset, 0, SPLIT_SAMPLECOUNT);
 
         dbgassert(sample->nChannels == numChannels);
         dbgassert(sample->nChannels == sample->samples.size());
-        dbgassert((int64_t) sample->nSamples == SPLIT_SAMPLECOUNT);
-        dbgassert(sample->nSamples == static_cast<int64_t>(sample->samples[0].size()));
-        dbgassert(sample->nSamples == static_cast<int64_t>(sample->samples[1].size()));
+        dbgassert(sample->nSamples == SPLIT_SAMPLECOUNT);
+        dbgassert(sample->nSamples == static_cast<samplecount_t>(sample->samples[0].size()));
+        dbgassert(sample->nSamples == static_cast<samplecount_t>(sample->samples[1].size()));
         dbgassert(blockFull.samples == sample->nSamples*sample->nChannels);
 
         if (sample->samples.size() >= 2) {
@@ -1387,13 +1374,13 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
         track_impl_t* const trackImpl = track->audio;
         if (trackImpl->mixer.isEnabled()) {
             auto tracDst = trackImpl->outputChannel;
-            if (tracDst.type == DAW::channel_type::INPUT_DEFAULT) {
+            if (tracDst.type == DAW::stage_type::INPUT_DEFAULT) {
                 DAW::channel_ref_t tmp;
                 if (DAW::resolveDefaultConnection(this, project, trackImpl, false, tmp)) {
                     tracDst = tmp;
                 }
             }
-            if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::channel_type::INPUT_EXTERNAL_AUDIO) {
+            if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::stage_type::INPUT_EXTERNAL_AUDIO) {
                 // TODO: latency compensate (add external output nodes to graph)
                 /* Calculate master tracks gain level */
                 float fGainMaster;
@@ -1401,8 +1388,8 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
                 }
                 int routedOutputChannelCount = DAW::AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
                 auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
-                blockExtOut.SubChannelsBlock(tracDst.srcChannelOffset, numChannels)
-                            .addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
+                blockExtOut.SubChannelsBlock(tracDst.srcChannelOffset, routedOutputChannelCount)
+                        .addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
 
             }
         }
@@ -1617,13 +1604,13 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
                 track_impl_t* const trackImpl = track->audio;
                 if (trackImpl->mixer.isEnabled()) {
                     auto tracDst = trackImpl->outputChannel;
-                    if (tracDst.type == DAW::channel_type::INPUT_DEFAULT) {
+                    if (tracDst.type == DAW::stage_type::INPUT_DEFAULT) {
                         DAW::channel_ref_t tmp;
                         if (DAW::resolveDefaultConnection(this, project, trackImpl, false, tmp)) {
                             tracDst = tmp;
                         }
                     }
-                    if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::channel_type::INPUT_EXTERNAL_AUDIO) {
+                    if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::stage_type::INPUT_EXTERNAL_AUDIO) {
                         // TODO: latency compensate (add external output nodes to graph)
                         /* Calculate master tracks gain level */
                         float fGainMaster;
@@ -1671,7 +1658,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
     if (enableProfiling) timerProfile.reset();
     int32_t nResampledOutputBlocks = resamplerOutput->numBlocksToPop();
     if (nResampledOutputBlocks > 0 && stream && stream->getOutputQueueSize() < RING_BUF_SIZE*2/3) {
-        int32_t& writePos = ringbuffer.writePos;
+        auto& writePos = ringbuffer.writePos;
         //TODO: this is incorrect, the resampler should keep track of sample/tick position, but right now these fields are not read on output side
         double blockPosSample = sample;
         double blockPosTick = posDouble;
@@ -1884,7 +1871,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
         trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, math::floordS32(sampleLatencyCompensated), trackImpl->input.buf, (int32_t)sampleFormat.blockSize);
     }
 
-    const uint32_t numChannelsTrack = trackImpl->input.channels;
+    const auto numChannelsTrack = trackImpl->input.channels;
 
     std::vector<DAW::track_source_t> allSources = trackNode.pulls; // copy
     allSources.insert(allSources.end(), trackNode.pushs.cbegin(), trackNode.pushs.cend()); // copy
@@ -2329,9 +2316,9 @@ void vsthost::onTrackLayoutChange() {
 
 void vsthost::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
     impl->audioStream = stream;
-    sampleformat_t sampleFormatExternal = this->m_sampleFormatExternal;
-    samplerate_t extSampleRate = stream ? stream->getSampleRate() : sampleFormatExternal.sampleRate;
-    uint32_t extBlockSize = stream ? stream->getBlockSize() : sampleFormatExternal.blockSize;
+    auto sampleFormatExternal = this->m_sampleFormatExternal;
+    auto extSampleRate = stream ? stream->getSampleRate() : sampleFormatExternal.sampleRate;
+    auto extBlockSize = stream ? stream->getBlockSize() : sampleFormatExternal.blockSize;
     sampleFormatExternal = { extSampleRate, extBlockSize, sampleformat_bits_t::FLOAT_32 };
     this->m_sampleFormatExternal        = sampleFormatExternal;
     audiocache::getInstance()->setSamplerate(extSampleRate);
@@ -2384,7 +2371,7 @@ void vsthost::processAudio(audio_stage_t* stage,
                 blockIn = effNode.effectOptional->blockInputs;
                 break;
             }
-            const uint32_t numChannelsTrack = blockIn->channels;
+            const auto numChannelsTrack = blockIn->channels;
             dsp_util::fillBlock(*blockIn, 0.0f);
 
             effectbase* const effect = effNode.effectOptional;
@@ -2455,10 +2442,10 @@ void vsthost::processAudio(audio_stage_t* stage,
                 if (isBypass || bypassEffectProcessing) {
                     samplerate_t delay = effect->getPluginLatency();
                     if (delay > 0) {
-                        if (!effect->delayLine) {
-                            effect->delayLine.reset(new DelayLine(this->numChannels, m_sampleFormatInternal.blockSize));
-                        }
                         AudioBlock *blockOut = effect->blockOutputs;
+                        if (!effect->delayLine) {
+                            effect->delayLine.reset(new DelayLine(math::max(blockIn->channels, blockOut->channels), m_sampleFormatInternal.blockSize));
+                        }
                         blockOut->clear();
                         delayAudio(effect->delayLine.get(), blockIn, blockOut, delay);
                     } else {
@@ -2741,9 +2728,8 @@ void vsthost::createAudio(track_t* track) {
     auto audio = new track_impl_t(this,
                                   getNextGlobalAudioStageId(0),
                                   track,
-                                  m_sampleFormatInternal.sampleRate,
-                                  m_sampleFormatInternal.blockSize,
-                                  OUTPUT_CHANNELS);
+                                  m_sampleFormatInternal,
+                                  DEFAULT_CHANNEL_COUNT);
     allAudioStages.push_back(audio);
     trackAudioStages.push_back(audio);
     track->audio = audio;
@@ -2766,9 +2752,8 @@ void vsthost::releaseAudio(track_t* track) {
 audio_stage_t* vsthost::createAudioStage() {
     auto audio = new audio_stage_t(this,
                                    getNextGlobalAudioStageId(0),
-                                   m_sampleFormatInternal.sampleRate,
-                                   m_sampleFormatInternal.blockSize,
-                                   OUTPUT_CHANNELS);
+                                   m_sampleFormatInternal,
+                                   DEFAULT_CHANNEL_COUNT);
     allAudioStages.push_back(audio);
     return audio;
 }

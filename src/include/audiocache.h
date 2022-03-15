@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <atomic>
 #include <memory>
+#include "types.h"
 #include "str_util.h"
 #include "audiosample.h"
 #include "wave/waveform_render.h"
@@ -26,13 +27,13 @@ struct audiofile_t : public samplesource_t {
     }
 };
 class audiocache {
-    int32_t samplerate = 0;
+    samplerate_t samplerate = 0;
     std::atomic<int32_t> nextIdx{ 0 };
     std::vector<std::unique_ptr<audiofile_t>> list;
     std::unordered_map<int, audiofile_t*> mapId;
 
 public:
-    explicit audiocache(int32_t _samplerate) {
+    explicit audiocache(samplerate_t _samplerate) {
         setSamplerate(_samplerate);
     }
     ~audiocache() {
@@ -42,7 +43,7 @@ public:
     static audiocache* getInstance();
     void getLoaded(std::vector<audiofile_t*>& v);
     audiofile_t* loadFile(const String& s, int32_t id = -1);
-    void setSamplerate(int32_t samplerate);
+    void setSamplerate(samplerate_t samplerate);
     void unloadSampleId(int32_t id);
     audiofile_t* get(int32_t i);
     void store(samplefile_index_t& v);

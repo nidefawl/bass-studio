@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 
 class hires_timer_t {
     class Impl;

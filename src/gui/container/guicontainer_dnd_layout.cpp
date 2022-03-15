@@ -42,7 +42,11 @@ class guictr_layout_entry_handle : public guictr_base {
     bool hasClicked = false;
 
 public:
-    guictr_layout_entry_handle(guictr_layout_entry* _parentCtr, guictr_base* _ctr) : parentCtr(_parentCtr), ctr(_ctr) {
+    guictr_layout_entry_handle(guictr_layout_entry* _parentCtr, guictr_base* _ctr) 
+      : parentCtr(_parentCtr),
+      ctr(_ctr) 
+    {
+        (void) ctr;
         add(&btnClose);
         btnClose.drawFn = drawCross;
         setBackgroundRendered(false);

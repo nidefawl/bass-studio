@@ -1,16 +1,16 @@
+#include "types.h"
 #include "audiotrack.h"
 #include "audiosample.h"
 #include "audioblock.h"
 #include "logging.h"
 #include "host/vst_host.h"
 #include "mainctrl.h"
-#include <cstdint>
 #include <memory>
 
-static constexpr int32_t PER_BLOCK_BYTES   = (1024 * 512);
-static constexpr int32_t PER_BLOCK_SAMPLES = (PER_BLOCK_BYTES / (sizeof(float)));
+static constexpr size_t PER_BLOCK_BYTES          = (1024ULL * 512ULL);
+static constexpr samplecount_t PER_BLOCK_SAMPLES = (PER_BLOCK_BYTES / (sizeof(float)));
 
-/*static*/ int32_t audiotrack_t::GetSplitSampleLength() {
+/*static*/ samplecount_t audiotrack_t::GetSplitSampleLength() {
     return PER_BLOCK_SAMPLES;
 }
 std::shared_ptr<audiotrack_split_t> audiotrack_t::getSampleById(int64_t sampleId) {
@@ -22,17 +22,17 @@ std::shared_ptr<audiotrack_split_t> audiotrack_t::getSampleById(int64_t sampleId
     }
     return nullptr;
 }
-std::shared_ptr<audiotrack_split_t> audiotrack_t::getSample(int32_t samplePos) {
+std::shared_ptr<audiotrack_split_t> audiotrack_t::getSample(samplecount_t samplePos) {
     //TODO: this lock could be narrowed
     ThreadLock lock    = MainCtrl::getPlayThread()->lockThread();
-    int32_t startBlock = (samplePos) / PER_BLOCK_SAMPLES;
+    auto startBlock = static_cast<size_t>((samplePos) / PER_BLOCK_SAMPLES);
     if (samples.size() > startBlock && samples[startBlock]) {
         return samples[startBlock];
     }
     return nullptr;
 }
-int32_t audiotrack_t::convertToSamples(vsthost* host) {
-    auto isInSync = [this]() {
+size_t audiotrack_t::convertToSamples(vsthost* host) {
+    auto isInSync = [this]() -> bool {
         if (data.size() != this->samples.size()) {
             return false;
         }
@@ -50,10 +50,10 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 
     std::vector<std::shared_ptr<audiotrack_split_t>> newSplits;
     newSplits.reserve(data.size());
-    int32_t nSamples    = samples.size();
-    int32_t bytesCopied = 0;
-    for (int32_t i = 0; i < data.size(); i++) {
-        int32_t samplePos = i * PER_BLOCK_SAMPLES;
+    const auto nSamples = samples.size();
+    size_t bytesCopied = 0;
+    for (size_t i = 0; i < data.size(); i++) {
+        samplecount_t samplePos = i * PER_BLOCK_SAMPLES;
         if (data[i]) {
             auto& block = data[i]->data;
             audiotrack_split_t* split = nullptr;
@@ -62,7 +62,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
                 split            = sharedSplit.get();
                 newSplits.push_back(std::move(sharedSplit));
                 split->samplePos            = samplePos;
-                split->sample.sampleRate    = vsthost::getInstance()->m_sampleFormatInternal.sampleRate;
+                split->sample.sampleRate    = host->m_sampleFormatInternal.sampleRate;
                 split->sampleId             = host->getNextSampleId(0);
                 split->sample.bitsPerSample = 32;
             } else {
@@ -84,7 +84,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
                 channels.resize(block.channels);
                 //resized = true;
             }
-            for (uint32_t j = 0; j < block.channels; j++) {
+            for (channelnum_t j = 0; j < block.channels; j++) {
                 float* srcPtr  = block.buf[j];
                 size_t srcSize = block.samples;
                 channels[j].resize(srcSize);
@@ -106,74 +106,64 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
     return bytesCopied;
 }
 
-void copyFromToSample(audiosample_t* dstSample, float** srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t srcSamples, uint32_t srcChannels) {
-    //dbgassert(srcSamples == samples);
-    auto nChannels = math::max<uint32_t>(srcChannels, dstSample->nChannels);
-    auto nSamples  = math::min<uint32_t>(srcSamples, dstSample->nSamples);
-    for (uint32_t i = 0; i < nChannels; i++) {
-        auto srcChannelIdx = math::min<uint32_t>(srcChannels - 1, i);
-        auto dstChannelIdx = math::min<uint32_t>(dstSample->nChannels - 1, i);
+void copyFromToSample(audiosample_t* dstSample, float** srcBuf, samplecount_t offsetIn, samplecount_t offsetOut, samplecount_t srcSamples, channelnum_t srcChannels) {
+    const auto nChannels = math::max<channelnum_t>(srcChannels, dstSample->nChannels);
+    const auto nSamples  = math::min<samplecount_t>(srcSamples, dstSample->nSamples);
+    for (channelnum_t i = 0; i < nChannels; i++) {
+        auto srcChannelIdx = math::min<channelnum_t>(srcChannels - 1, i);
+        auto dstChannelIdx = math::min<channelnum_t>(dstSample->nChannels - 1, i);
         float* srcBufChannel   = srcBuf[srcChannelIdx];
         float* dstBufChannel   = dstSample->samples[dstChannelIdx].data();
         //TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
         memcpy(dstBufChannel + offsetOut, srcBufChannel + offsetIn, nSamples * sizeof(float));
     }
 }
-void copyBlockChannelsToSample(audiosample_t* dstSample, AudioBlock* input, uint32_t offsetIn, uint32_t offsetOut, uint32_t len) {
+void copyBlockChannelsToSample(audiosample_t* dstSample, AudioBlock* input, samplecount_t offsetIn, samplecount_t offsetOut, samplecount_t len) {
     dbgassert(input->channels >= dstSample->nChannels);
-    for (uint32_t i = 0; i < dstSample->nChannels; i++) {
+    for (channelnum_t i = 0; i < dstSample->nChannels; i++) {
         float* srcBufChannel = input->buf[i];
         float* dstBufChannel = dstSample->samples[i].data();
         //TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
         memcpy(dstBufChannel + offsetOut, srcBufChannel + offsetIn, len * sizeof(float));
     }
 }
-void audiotrack_t::store(AudioBlock* input, int32_t samplePos) {
-    int32_t startBlock = math::max(0, (samplePos) / PER_BLOCK_SAMPLES);
-    int32_t endBlock   = math::max(0, (samplePos + (int32_t) input->samples - 1) / PER_BLOCK_SAMPLES);
+void audiotrack_t::store(AudioBlock* input, const samplecount_t samplePos) {
+    auto startBlock = math::max<size_t>(0, (samplePos) / PER_BLOCK_SAMPLES);
+    auto endBlock   = math::max<size_t>(0, (samplePos + input->samples - 1) / PER_BLOCK_SAMPLES);
     while (data.size() <= endBlock) {
         data.push_back(nullptr);
     }
     auto split = std::make_shared<audiotrack_split_t>();
     if (!data[startBlock]) {
         //log_lf(Log::L_DEBUG, "alloc new block #%d\n", startBlock);
-        data[startBlock] = std::make_shared<audiotrack_block_t>(OUTPUT_CHANNELS, PER_BLOCK_SAMPLES);
+        data[startBlock] = std::make_shared<audiotrack_block_t>(input->channels, PER_BLOCK_SAMPLES);
     }
     if (!data[endBlock]) {
         //log_lf(Log::L_DEBUG, "alloc new block #%d\n", endBlock);
-        data[endBlock] = std::make_shared<audiotrack_block_t>(OUTPUT_CHANNELS, PER_BLOCK_SAMPLES);
+        data[endBlock] = std::make_shared<audiotrack_block_t>(input->channels, PER_BLOCK_SAMPLES);
     }
-    int32_t readLen    = input->samples;
-    int32_t readOffset = 0;
-    if (samplePos < 0) {
-        if (samplePos < -PER_BLOCK_SAMPLES) {
+    samplecount_t readLen    = input->samples;
+    samplecount_t readOffset = 0;
+    samplecount_t readbegin = samplePos;
+    if (readbegin < 0) {
+        if (readbegin < -PER_BLOCK_SAMPLES) {
             return;
         }
-        readLen    = samplePos + input->samples;
-        readOffset = -samplePos;
-        samplePos  = 0;
+        readLen    = readbegin + input->samples;
+        readOffset = -readbegin;
+        readbegin  = 0;
     }
-    int32_t startOffsetBlock0 = samplePos - (startBlock * PER_BLOCK_SAMPLES);
-    int32_t lenBlock0         = math::min(PER_BLOCK_SAMPLES - startOffsetBlock0, readLen);
-    int32_t lenOver           = readLen - lenBlock0;
+    samplecount_t startOffsetBlock0 = readbegin - (startBlock * PER_BLOCK_SAMPLES);
+    samplecount_t lenBlock0         = math::min(PER_BLOCK_SAMPLES - startOffsetBlock0, readLen);
+    samplecount_t lenOver           = readLen - lenBlock0;
     auto* blockStart          = data[startBlock].get();
-    //log_lf(Log::L_DEBUG, "write %d samples to block #%d{%d:%d}\n", lenBlock0, startBlock, startOffsetBlock0, startOffsetBlock0+lenBlock0);
     blockStart->version++;
     blockStart->data.copyFromPosToPos(input->buf, readOffset, startOffsetBlock0, lenBlock0, input->channels);
-    //  if (samples.size() > startBlock && samples[startBlock]) {
-    //    samples[startBlock]->version++;
-    //    copyBlockChannelsToSample(samples[startBlock]->getSample(), input, 0, startOffsetBlock0, lenBlock0);
-    //  }
     if (startBlock != endBlock) {
         dbgassert(lenOver > 0);
         auto* blockEnd = data[endBlock].get();
-        //log_lf(Log::L_DEBUG, "write %d samples to block #%d{%d:%d}\n", lenOver, endBlock, 0, lenOver);
         blockEnd->version++;
         blockEnd->data.copyFromPosToPos(input->buf, lenBlock0, 0, lenOver, input->channels);
-        //if (samples.size() > endBlock && samples[endBlock]) {
-        //  samples[endBlock]->version++;
-        //  copyBlockChannelsToSample(samples[endBlock]->getSample(), input, lenBlock0, 0, lenOver);
-        //}
     } else {
         dbgassert(lenOver == 0);
     }

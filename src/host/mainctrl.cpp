@@ -57,7 +57,7 @@
 #include "../gui/debugctr.h"
 #include "wave/waveform_render_impl.h"
 #include "../gui/guishaderview.h"
-#include "../gui/about.h"
+#include "gui/dialog/about.h"
 #include "../gui/dialog_io.h"
 #include "../gui/dialogs.h"
 

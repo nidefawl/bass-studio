@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include <cstdint>
+#include "types.h"
 #include "seq_time.h"
 #include "automation.h"
 #include "track.h"

@@ -4,13 +4,14 @@
 #include "math/seq_math.h"
 #include "audioblock.h"
 #include <cstdlib>
-#include <cstdint>
+#include "types.h"
 #include <cmath>
 #include <memory.h>
 #include <algorithm>
 #include <limits>
 #include <cstring>
 #include "math/vec.h"
+#include "types.h"
 #include <glm/geometric.hpp>
 
 namespace dsp_util {
@@ -20,12 +21,12 @@ namespace dsp_util {
     const float GAIN_DBINF   = math::powf(10.0f, DBFS_INF_POS / 20.0f);
 
 #define TABLE_SIZE (200)
-    typedef struct
-    {
+    struct paTestData {
         float sine[TABLE_SIZE];
         int left_phase;
         int right_phase;
-    } paTestData;
+    };
+
     float Saturate(float input, float fMax) {
         static const float fGrdDiv = 0.5f;
 
@@ -33,12 +34,13 @@ namespace dsp_util {
         float x2 = fabsf(input - fMax);
         return fGrdDiv * (x1 - x2);
     }
-    void fillSaturate(float** buffer, int32_t channels, uint32_t samples) {
+    void fillSaturate(float** buffer, channelnum_t channels, samplecount_t samples) {
         const float maxGain = 1.0;
-        for (int32_t ch = 0; ch < (channels + 1) / 2; ch++) {
+        const auto maxChannels = static_cast<channelnum_t>((channels + 1U) / 2U);
+        for (channelnum_t ch = 0; ch < maxChannels; ch++) {
             float* output0 = buffer[ch * 2 + 0];
             float* output1 = buffer[ch * 2 + 1];
-            for (uint32_t s = 0; s < samples; s++) {
+            for (samplecount_t s = 0; s < samples; s++) {
                 *output0 = dsp_util::Saturate(*output0, maxGain);
                 *output1 = dsp_util::Saturate(*output1, maxGain);
                 output0++;
@@ -46,11 +48,11 @@ namespace dsp_util {
             }
         }
     }
-    void fillAllChannelsStereo(float** buffer, int32_t channels, uint32_t samples, float f = 0.0f) {
-        for (int32_t ch = 0; ch < channels / 2; ch++) {
+    void fillAllChannelsStereo(float** buffer, channelnum_t channels, samplecount_t samples, float f = 0.0f) {
+        for (channelnum_t ch = 0; ch < channels / 2; ch++) {
             float* input0 = buffer[ch * 2 + 0];
             float* input1 = buffer[ch * 2 + 1];
-            for (uint32_t s = 0; s < samples; s++) {
+            for (samplecount_t s = 0; s < samples; s++) {
                 *input0 = f; /* left */
                 *input1 = f; /* right */
                 input0++;
@@ -58,15 +60,15 @@ namespace dsp_util {
             }
         }
     }
-    void fillAllChannels(float** buffer, int32_t channels, uint32_t samples, float f = 0.0f) {
-        for (int32_t ch = 0; ch < channels; ch++) {
+    void fillAllChannels(float** buffer, channelnum_t channels, samplecount_t samples, float f = 0.0f) {
+        for (channelnum_t ch = 0; ch < channels; ch++) {
             float* input0 = buffer[ch];
-            for (uint32_t s = 0; s < samples; s++) {
+            for (samplecount_t s = 0; s < samples; s++) {
                 *input0 = f;
             }
         }
     }
-    void fillChannels(float** buffer, int32_t channels, uint32_t samples, float f = 0.0f) {
+    void fillChannels(float** buffer, channelnum_t channels, samplecount_t samples, float f = 0.0f) {
         if (channels % 2 == 0) {
             fillAllChannelsStereo(buffer, channels, samples, f);
         } else {
@@ -121,7 +123,7 @@ namespace dsp_util {
         float lvlRange = lvlFloor - lvlCeil;
         return (math::max(lvlFloor, math::min(db, lvlCeil)) - lvlCeil) / lvlRange;
     }
-    void fillSine(float** buffer, uint32_t samples) {
+    void fillSine(float** buffer, samplecount_t samples) {
         static paTestData* data = NULL;
         if (data == NULL) {
             data = (paTestData*) malloc(sizeof(paTestData));
@@ -134,7 +136,7 @@ namespace dsp_util {
         float gain    = 0.1f;
         float* input0 = buffer[0];
         float* input1 = buffer[1];
-        for (uint32_t i = 0; i < samples; i++) {
+        for (samplecount_t i = 0; i < samples; i++) {
             *input0++ = data->sine[data->left_phase] * gain;  /* left */
             *input1++ = data->sine[data->right_phase] * gain; /* right */
             data->left_phase += 1;
@@ -143,19 +145,19 @@ namespace dsp_util {
             if (data->right_phase >= TABLE_SIZE) data->right_phase -= TABLE_SIZE;
         }
     }
-    void fillNoise(float** buffer, int32_t channels, uint32_t samples) {
+    void fillNoise(float** buffer, channelnum_t channels, samplecount_t samples) {
         //TODO: make this thread safe
         float gain = 0.1f;
 
 
-        for (int channelIdx = 0; channelIdx < channels; channelIdx++) {
+        for (channelnum_t channelIdx = 0; channelIdx < channels; channelIdx++) {
             float* input0 = buffer[channelIdx];
-
-            float g_fScale  = 2.0f / 0xffffffffUL;
+            static float fU32_Max = 4294967296; // off by 1
+            float g_fScale  = 2.0f / fU32_Max;
             static int g_x1 = 0x67452301UL;
             static int g_x2 = 0xefcdab89UL;
             gain *= g_fScale;
-            for (uint32_t i = 0; i < samples; i++) {
+            for (samplecount_t i = 0; i < samples; i++) {
                 g_x1 ^= g_x2;
                 *input0++ = g_x2 * gain;
                 g_x2 += g_x1;
@@ -165,7 +167,7 @@ namespace dsp_util {
     void fillNoiseBlock(AudioBlock& block) {
         fillNoise(block.buf, block.channels, block.samples);
     }
-    void fillSqare(samplerate_t samplerate, float freq, float** buffer, uint32_t samples) {
+    void fillSqare(samplerate_t samplerate, float freq, float** buffer, samplecount_t samples) {
         float gain    = 0.05f;
         float* input0 = buffer[0];
         float* input1 = buffer[1];
@@ -179,7 +181,7 @@ namespace dsp_util {
         uint32_t intIncr        = (uint32_t) ((4294967296.0 / samplerate) * freq);
         //static int lastSign = (intOver & 0x80000000);
         // loop:
-        for (uint32_t i = 0; i < samples; i++) {
+        for (samplecount_t i = 0; i < samples; i++) {
             one.i &= 0x7FFFFFFF;// mask out sign bit
             one.i |= (intOver & 0x80000000);
             *input0++ = one.f * gain;

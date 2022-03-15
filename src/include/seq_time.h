@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 #include <cmath>
 #include <limits>
 #include "math/seq_math.h"

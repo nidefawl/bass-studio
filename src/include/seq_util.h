@@ -4,10 +4,16 @@
 #include "assert_dbg.h"
 
 #define STL_CONTAINS(x, y) (std::find(x.cbegin(), x.cend(), y) != x.cend())
-#if !defined(_MSC_VER) || __cplusplus > 202002L
+#ifdef _MSC_VER
+#if __cplusplus > 202002L
 #define BRANCH_UNLIKELY [[unlikely]]
 #else
 #define BRANCH_UNLIKELY
+#endif
+#define FUNC_NOINLINE __declspec(noinline)
+#else
+#define BRANCH_UNLIKELY [[unlikely]]
+#define FUNC_NOINLINE [[gnu::noinline]]
 #endif
 
 template<typename Container>

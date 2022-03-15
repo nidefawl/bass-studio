@@ -5,12 +5,13 @@
 #include <array>
 #include <memory>
 #include <type_traits>
+#include "types.h"
 #include "config.h"
+#include "samplerate.h"
 #include "math/seq_math.h"
+#include "audioblock.h"
 #include "automation.h"
 #include "meter.h"
-#include "audioblock.h"
-#include "samplerate.h"
 #include "note.h"
 #include "dsp_util.h"
 #include "str_util.h"
@@ -93,22 +94,6 @@ public:
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
 };
 struct audio_stage_t {
-    vsthost* host;
-//    audiostageid_i32 stageId = TRACKID_INVALID_I32;
-    audio_stage_id_t stageId = {TRACKID_INVALID_I32, TRACKID_INVALID_I32, TRACKID_INVALID_I32};
-    audiostageflags_t flags = audiostageflags_t::NONE;
-    audiostagerouting_state_t routingState = audiostagerouting_state_t::INVALID;
-    audio_stage_t* parent;
-    effectbase* owner;
-    /**
-     * backward pointer to gui containing this effect stage.
-     * Used in drag/move handling
-     */
-    guictr_plugins* m_pluginCtr;
-    std::shared_ptr<DAW::meter_runningsum[]> meterDataInput;
-    std::shared_ptr<DAW::meter_runningsum[]> meterDataOutput;
-    DAW::rmsmeter meter;
-    DAW::rmsmeter meterInput;
     /**
      * Internal pre-process per-block input buffer
      * guaranteed to have at least 2 channels
@@ -120,39 +105,61 @@ struct audio_stage_t {
      */
     AudioBlock output;
     AudioBlock outputPost;
+
     track_params_t mixer;
-    audiotrack_t audioOutput;
+
+    const int type;
+    audio_stage_id_t stageId = {TRACKID_INVALID_I32, TRACKID_INVALID_I32, TRACKID_INVALID_I32};
+    audiostageflags_t flags = audiostageflags_t::NONE;
+    audiostagerouting_state_t routingState = audiostagerouting_state_t::INVALID;
+    sampleformat_t sampleFormat;
+
     samplerate_t latencyInternal = 0;
     samplerate_t latencyInput = 0;
     samplerate_t latencyOuput = 0;
-    int type;
-    sampleformat_t sampleFormat;
+
+
+    audiotrack_t audioOutput;
+    std::shared_ptr<DAW::meter_runningsum[]> meterDataInput;
+    std::shared_ptr<DAW::meter_runningsum[]> meterDataOutput;
+    DAW::rmsmeter meter;
+    DAW::rmsmeter meterInput;
+    std::map<uint32_t, std::shared_ptr<DelayLine>> effDelayLines;
 
     std::vector<effectbase*> effects;
     std::vector<effectbase*> deferredEffects;
     std::vector<DAW::channel_ref_t> postEffectRouting;
     std::vector<audio_stage_t*> children;
-    stats_processing_timings_t procStats;
-    struct latency_info_t {
-        int32_t delayToPreReturn = 0;
-        int32_t delayToPostReturn = 0;
-    } latencyInfo;
-    std::map<uint32_t, std::shared_ptr<DelayLine>> effDelayLines;
 
-    audio_stage_t(vsthost* const _host, const audio_stage_id_t _id,/*track_t* _track, */const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels, int _type = 1)
-    : host(_host), stageId(_id), parent(nullptr), owner(nullptr),/*track(_track),*/
-          m_pluginCtr(nullptr),
-      input(nChannels, _blockSize),
-      output(nChannels, _blockSize),
-      outputPost(nChannels, _blockSize),
+    vsthost* const host = nullptr;
+    audio_stage_t* parent = nullptr;
+    effectbase* owner = nullptr;
+    /**
+     * backward pointer to gui containing this effect stage.
+     * Used in drag/move handling
+     */
+    guictr_plugins* m_pluginCtr = nullptr;
+
+    stats_processing_timings_t procStats;
+
+    audio_stage_t(vsthost* const _host, const audio_stage_id_t _id, const sampleformat_t _sampleFormat, const channelnum_t _numChannels, int _type = 1)
+    : input(_numChannels, _sampleFormat.blockSize),
+      output(_numChannels, _sampleFormat.blockSize),
+      outputPost(_numChannels, _sampleFormat.blockSize),
       mixer(this),
-      type(_type)
+      type(_type),
+      stageId(_id),
+      host(_host)
     {
         initMeters();
-        sampleFormat.blockSize    = _blockSize;
-        sampleFormat.sampleRate   = _sampleRate;
-        sampleFormat.sampleformat = sampleformat_bits_t::FLOAT_32;
+        setSampleFormat(_sampleFormat);
         configureDefaultRoutings();
+    }
+    void setSampleFormat(const sampleformat_t _sampleFormat) {
+        sampleFormat = _sampleFormat;
+        input.realloc(_sampleFormat.blockSize);
+        output.realloc(_sampleFormat.blockSize);
+        outputPost.realloc(_sampleFormat.blockSize);
     }
     void initMeters() {
         meterDataOutput = std::shared_ptr<DAW::meter_runningsum[]>(new DAW::meter_runningsum[output.channels]);
@@ -223,20 +230,20 @@ static constexpr int PROCESS_ARP = 4;
 }
 namespace DAW {
 inline bool isChannelConnected(const DAW::channel_ref_t& ch) {
-    return ch.type != channel_type::INPUT_EMPTY;
+    return ch.type != stage_type::INPUT_EMPTY;
 }
 inline bool isTrackSrcSolod(const DAW::track_source_t& src) {
     return (src.flags & (audiostageflags_t::SOLO|audiostageflags_t::SOLO_PARENT)) != audiostageflags_t::NONE;
 }
 inline channel_ref_t ChannelNone() {
-    return channel_ref_t{channel_type::INPUT_EMPTY};
+    return channel_ref_t{stage_type::INPUT_EMPTY};
 }
 inline channel_ref_t ChannelDefaultNone() {
-    return channel_ref_t{channel_type::INPUT_DEFAULT};
+    return channel_ref_t{stage_type::INPUT_DEFAULT};
 }
-inline channel_ref_t ChannelAudioInput(int32_t idx, int32_t channelOffset, String name, channelcount type) {
+inline channel_ref_t ChannelAudioInput(channelnum_t idx, channelnum_t channelOffset, String name, channel_pairing type) {
     return channel_ref_t {
-        channel_type::INPUT_EXTERNAL_AUDIO, 
+        stage_type::INPUT_EXTERNAL_AUDIO, 
         type,
         { { TRACKID_INVALID_I32 }, stage_bufferpoint::OUTPUT }, 
         0, 
@@ -259,7 +266,7 @@ inline channel_ref_t ChannelStage(const audio_stage_t* stage, stage_bufferpoint 
         str += " OUT";
     }
     return channel_ref_t {
-        channel_type::INPUT_AUDIOSTAGE,
+        stage_type::INPUT_AUDIOSTAGE,
         AudioIO::getTrackTypeFromNumChannels(stage->input.channels),
         { stage->toRef(), isInput },
         0,
@@ -282,7 +289,7 @@ inline channel_ref_t ChannelAudioEffect(effectbase* effect, stage_bufferpoint is
     str += " ";
     str += channelDescSrc.name;
     return channel_ref_t {
-        channel_type::INPUT_AUDIOSTAGE_EFFECT,
+        stage_type::INPUT_AUDIOSTAGE_EFFECT,
         AudioIO::getTrackTypeFromNumChannels(channelDescSrc.count),
         { stage->toRef(), isInput },
         effect->projectGlobalId,
@@ -309,7 +316,7 @@ struct track_impl_t : public audio_stage_t {
     clip_notes_t* midiProcessed = nullptr;
     ThreadMutex midiMutex;
     track_midiprocess_profiling_t procMidiStats;
-    track_impl_t(vsthost* _host, audio_stage_id_t _id, track_t* _track, samplerate_t _sampleRate, uint16_t _blockSize, int32_t nChannels);
+    track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels);
     ~track_impl_t() override;
     void sendNotesOff(int32_t bpm100) override;
     void onStartPlayback();

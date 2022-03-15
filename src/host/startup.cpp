@@ -228,8 +228,8 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     auto dawInstance = dawMainCtrl->getDaw();
     String dawPath  = "./projects/";
     String projName = "serum-fx-noise-osc.project";
-    int flags = 0x1;// defer load
-        // flags = 0; // no defer load
+     int flags = 0x1;// defer load
+         flags = 0; // no defer load
     dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance* daw, std::shared_ptr<project_file> file, int errorState) {
         /**
          * Code for setting cursor and loop position
@@ -295,7 +295,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1));
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
-    // if (dawMainCtrl->getLoadProjectFilePath().empty())
-    //    dawInstance->loadFile(dawPath + projName, flags);
+     if (dawMainCtrl->getLoadProjectFilePath().empty())
+        dawInstance->loadFile(dawPath + projName, flags);
     // generateDummyProject(dawMainCtrl);
 }

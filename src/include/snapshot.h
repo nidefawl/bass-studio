@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 #include <vector>
 #include "host/daw_channel.h"
 #include "str_util.h"

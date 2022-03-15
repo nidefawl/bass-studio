@@ -6,7 +6,7 @@
 #endif
 #include <nanovg.h>
 #include <nanovg_gl.h>
-#include <cstdint>
+#include "types.h"
 
 #ifdef _WIN32
 #include <Windows.h>

@@ -6,7 +6,7 @@
 #include "samplerate.h"
 #include "str_util.h"
 #include <portmidi.h>
-#include <cstdint>
+#include "types.h"
 
 #define IN_QUEUE_SIZE  1024
 #define OUT_QUEUE_SIZE 1024

@@ -136,8 +136,6 @@ void guitooltip<audio_info_t>::setContent() {
         table.rows.push_back({ { tblstr{ "latency input " }, tblint{ (int32_t) audio->getInputLatency() } } });
         table.rows.push_back({ { tblstr{ "latency intern" }, tblint{ (int32_t) audio->getInternalLatency() } } });
         table.rows.push_back({ { tblstr{ "latency output" }, tblint{ (int32_t) audio->getOutputLatency() } } });
-        table.rows.push_back({ { tblstr{ "delayToPreReturn" }, tblint{ audio->latencyInfo.delayToPreReturn } } });
-        table.rows.push_back({ { tblstr{ "delayToPostReturn" }, tblint{ audio->latencyInfo.delayToPostReturn } } });
         table.rows.push_back({ { tblstr{ "sampleRate" }, tblint{ audio->sampleFormat.sampleRate } } });
     }
 }
@@ -363,6 +361,7 @@ public:
         : guibuttonstate(),
           m_track(_entry->track),
           m_trackentry(_entry) {
+        (void) m_trackentry;
     }
     bool trackenabled() const {
         return m_track->audio && m_track->audio->mixer.isEnabled();
@@ -384,6 +383,7 @@ public:
         : guibuttonstate(),
           m_track(_entry->track),
           m_trackentry(_entry) {
+        (void) m_trackentry;
         setText("S");
     }
     
@@ -748,7 +748,7 @@ public:
             dbgassert(project);
             if (project) {
                 vsthost* const host = vsthost::getInstance();
-                if (channel.type == DAW::channel_type::INPUT_DEFAULT) {
+                if (channel.type == DAW::stage_type::INPUT_DEFAULT) {
                     DAW::channel_ref_t out;
                     if (DAW::resolveDefaultConnection(host, project, trImpl, isInput, out)) {
                         return out.name;
@@ -836,6 +836,7 @@ public:
           m_guiMeter(&_entry->track->audio->meter),
           btnBypass(_entry),
           btnSolo(_entry) {
+        (void) m_trackentry;
         gain.setAutomationRef(&m_track->audio->mixer, PARAM_TRACK_GAIN);
         padding            = 0;
         btnBypass.drawFn   = drawTextureSymbol;

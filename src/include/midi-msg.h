@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 
 struct MidiIOEvent {
     int32_t message;

@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 #include <memory.h>
 #include <atomic>
 #include <vector>
@@ -7,6 +7,7 @@
 #include "math/seq_math.h"
 #include "mem.h"
 #include "samplerate.h"
+#include "types.h"
 
 enum alloc_type {
     internal,
@@ -27,8 +28,8 @@ struct alignas(64) AudioBlock {
     static void EndTrace();
 
     float** buf{};
-    uint32_t channels{};
-    uint32_t samples{};
+    channelnum_t channels{};
+    samplecount_t samples{};
     alloc_type allocType = internal;
     bool debug           = false;
 
@@ -55,24 +56,27 @@ struct alignas(64) AudioBlock {
         return *this;
     }
 
-    explicit AudioBlock(uint32_t _channels, uint32_t _samples, bool _bIsDebug = false)
+    explicit AudioBlock(channelnum_t _channels, samplecount_t _samples, bool _bIsDebug = false)
         : buf(new float*[_channels]), channels(_channels), samples(0), allocType(alloc_type::internal), debug(_bIsDebug) {
+        dbgassert(channels > 0);
         instanceCount++;
         instanceCstrd++;
-        for (uint32_t i = 0; i < _channels; i++) {
+        for (channelnum_t i = 0; i < _channels; i++) {
             buf[i] = nullptr;
         }
         realloc(_samples);
     }
 
-    explicit AudioBlock(float** buf, uint32_t _channels, uint32_t _samples)
+    explicit AudioBlock(float** buf, channelnum_t _channels, samplecount_t _samples)
         : buf(buf), channels(_channels), samples(_samples), allocType(alloc_type::external_array) {
+        dbgassert(channels > 0);
         instanceCount++;
         instanceCstrd++;
     }
 
-    explicit AudioBlock(const std::vector<float*>& vecChannels, uint32_t _samples)
-        : buf(new float*[vecChannels.size()]), channels(static_cast<uint32_t>(vecChannels.size())), samples(_samples), allocType(alloc_type::external_channels_only) {
+    explicit AudioBlock(const std::vector<float*>& vecChannels, samplecount_t _samples)
+        : buf(new float*[vecChannels.size()]), channels(static_cast<channelnum_t>(vecChannels.size())), samples(_samples), allocType(alloc_type::external_channels_only) {
+        dbgassert(channels > 0);
         instanceCount++;
         instanceCstrd++;
         memcpy(buf, vecChannels.data(), vecChannels.size() * sizeof(decltype(vecChannels[0])));
@@ -82,12 +86,13 @@ struct alignas(64) AudioBlock {
         }
     }
 
-    explicit AudioBlock(const AudioBlock& src, const uint32_t channelOffset, const uint32_t numChannels, const uint32_t sampleOffset, const uint32_t numSamples)
+    explicit AudioBlock(const AudioBlock& src, const channelnum_t channelOffset, const channelnum_t numChannels, const samplecount_t sampleOffset, const samplecount_t numSamples)
         : buf(new float*[numChannels]), channels(numChannels), samples(numSamples), allocType(alloc_type::external_channels_only) {
+        dbgassert(channels > 0);
         instanceCount++;
         instanceCstrd++;
         dbgassert(samples);
-        for (uint32_t i = 0; i < channels; i++) {
+        for (channelnum_t i = 0; i < channels; i++) {
             dbgassert(src.buf[i]);
             buf[i] = src.buf[channelOffset + i] + sampleOffset;
         }
@@ -97,7 +102,7 @@ struct alignas(64) AudioBlock {
         instanceCount--;
         if (allocType != alloc_type::external_array) {
             if (allocType == alloc_type::internal) {
-                for (uint32_t i = 0; i < channels; i++) {
+                for (channelnum_t i = 0; i < channels; i++) {
                     if (buf[i]) {
                         // delete[] buf[i];
                         aligned_free(buf[i]);
@@ -108,12 +113,12 @@ struct alignas(64) AudioBlock {
         }
     }
 
-    AudioBlock getOffsetBlock(const uint32_t sampleOffset) const {
+    AudioBlock getOffsetBlock(const samplecount_t sampleOffset) const {
         dbgassert(sampleOffset < this->samples);
         return AudioBlock(*this, 0, this->channels, sampleOffset, this->samples - sampleOffset);
     }
 
-    AudioBlock SubChannelsSamplesBlock(const uint32_t channelOffset, const uint32_t numChannels, const uint32_t sampleOffset, const uint32_t numSamples) const {
+    AudioBlock SubChannelsSamplesBlock(const channelnum_t channelOffset, const channelnum_t numChannels, const samplecount_t sampleOffset, const samplecount_t numSamples) const {
         dbgassert(sampleOffset + numSamples <= this->samples);
         if (this->channels < numChannels && channelOffset == 0) {
             return AudioBlock(*this, 0, this->channels, sampleOffset, numSamples);
@@ -122,27 +127,19 @@ struct alignas(64) AudioBlock {
         return AudioBlock(*this, channelOffset, numChannels, sampleOffset, numSamples);
     }
 
-    AudioBlock SubChannelsBlock(const uint32_t channelOffset, const uint32_t numChannels) const {
+    AudioBlock SubChannelsBlock(const channelnum_t channelOffset, const channelnum_t numChannels) const {
         dbgassert(channelOffset + numChannels <= this->channels);
         return AudioBlock(*this, channelOffset, numChannels, 0, this->samples);
     }
 
     void clear() {
-        for (uint32_t i = 0; i < channels; i++) {
+        for (channelnum_t i = 0; i < channels; i++) {
             memset(buf[i], 0, samples * sizeof(float));
         }
     }
 
-    void shiftBegin(uint32_t numSamples) {
-        dbgassert(samples > numSamples);
-        for (uint32_t i = 0; i < channels; i++) {
-            buf[i] += numSamples;
-        }
-        samples -= numSamples;
-    }
-
     void copyTo(float** outputs) {
-        for (uint32_t i = 0; i < channels; i++) {
+        for (channelnum_t i = 0; i < channels; i++) {
             memcpy(outputs[i], buf[i], samples * sizeof(float));
         }
     }
@@ -151,13 +148,13 @@ struct alignas(64) AudioBlock {
         copyFrom(src->buf, src->samples, src->channels);
     }
 
-    void copyFrom(const float * const * const srcBuf, uint32_t srcSamples, uint32_t srcChannels, uint32_t channelOffset = 0) {
+    void copyFrom(const float * const * const srcBuf, samplecount_t srcSamples, channelnum_t srcChannels, channelnum_t channelOffset = 0) {
         dbgassert(srcSamples == samples);
-        uint32_t nChannels = math::min(srcChannels, channels);
-        uint32_t nSamples  = math::min(srcSamples, samples);
-        for (uint32_t i = 0; i < nChannels; i++) {
-            uint32_t srcChannelIdx = math::min(srcChannels - 1, i + channelOffset);
-            uint32_t dstChannelIdx = math::min(channels - 1, i);
+        const channelnum_t nChannels = math::min(srcChannels, channels);
+        const samplecount_t nSamples  = math::min(srcSamples, samples);
+        for (channelnum_t i = 0; i < nChannels; i++) {
+            auto srcChannelIdx = math::min<channelnum_t>(srcChannels - 1, i + channelOffset);
+            auto dstChannelIdx = math::min<channelnum_t>(channels - 1, i);
             auto   srcBufChannel   = srcBuf[srcChannelIdx];
             float* dstBufChannel   = buf[dstChannelIdx];
             memcpy(dstBufChannel, srcBufChannel, nSamples * sizeof(float));
@@ -165,13 +162,13 @@ struct alignas(64) AudioBlock {
     }
 
     template<class T>
-    void copyFrom(const float * const * const srcBuf, uint32_t srcSamples, uint32_t srcChannels, T getMappedSrcChannel) {
+    void copyFrom(const float * const * const srcBuf, samplecount_t srcSamples, channelnum_t srcChannels, T getMappedSrcChannel) {
         dbgassert(srcSamples == samples);
-        uint32_t nChannels = math::min(srcChannels, channels);
-        uint32_t nSamples  = math::min(srcSamples, samples);
-        for (uint32_t i = 0; i < nChannels; i++) {
-            uint32_t dstChannelIdx = math::min(channels - 1, i);
-            uint32_t srcChannelIdx = math::min(srcChannels - 1, getMappedSrcChannel(dstChannelIdx, i));
+        const channelnum_t nChannels = math::min(srcChannels, channels);
+        const samplecount_t nSamples  = math::min(srcSamples, samples);
+        for (channelnum_t i = 0; i < nChannels; i++) {
+            auto dstChannelIdx = math::min<channelnum_t>(channels - 1, i);
+            auto srcChannelIdx = math::min<channelnum_t>(srcChannels - 1, getMappedSrcChannel(dstChannelIdx, i));
             auto   srcBufChannel   = srcBuf[srcChannelIdx];
             float* dstBufChannel   = buf[dstChannelIdx];
             memcpy(dstBufChannel, srcBufChannel, nSamples * sizeof(float));
@@ -183,14 +180,14 @@ struct alignas(64) AudioBlock {
         copyFrom(src->buf, src->samples, src->channels, getMappedSrcChannel);
     }
 
-    void copyFromPosToPos(const float * const * const srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t len, uint32_t srcChannels) {
+    void copyFromPosToPos(const float * const * const srcBuf, samplecount_t offsetIn, samplecount_t offsetOut, samplecount_t len, channelnum_t srcChannels) {
         dbgassert(srcChannels > 0);
-        uint32_t nChannels = math::max(srcChannels, channels);
-        uint32_t nSamples  = math::min(len, samples);
+        const channelnum_t nChannels = math::max(srcChannels, channels);
+        const samplecount_t nSamples  = math::min(len, samples);
         dbgassert(offsetOut + nSamples <= samples);
-        for (uint32_t i = 0; i < nChannels; i++) {
-            uint32_t srcChannelIdx = math::min(srcChannels - 1, i);
-            uint32_t dstChannelIdx = math::min(channels - 1, i);
+        for (channelnum_t i = 0; i < nChannels; i++) {
+            auto srcChannelIdx = math::min<channelnum_t>(srcChannels - 1, i);
+            auto dstChannelIdx = math::min<channelnum_t>(channels - 1, i);
             auto srcBufChannel     = srcBuf[srcChannelIdx];
             float* dstBufChannel   = buf[dstChannelIdx];
             //TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
@@ -202,17 +199,17 @@ struct alignas(64) AudioBlock {
         addFrom(src->buf, src->samples, src->channels, gain);
     }
 
-    void addFrom(const float * const * const srcBuf, uint32_t srcSamples, uint32_t srcChannels, float gain) {
+    void addFrom(const float * const * const srcBuf, samplecount_t srcSamples, channelnum_t srcChannels, float gain) {
         dbgassert(srcSamples == samples);
         dbgassert(srcChannels == channels);//remove when adding sub-track mixers (between plugins)
-        uint32_t nChannels = math::max(srcChannels, channels);
-        for (uint32_t i = 0; i < nChannels; i++) {
-            uint32_t srcChannelIdx = math::min(srcChannels - 1, i);
-            uint32_t dstChannelIdx = math::min(channels - 1, i);
+        const channelnum_t nChannels = math::max(srcChannels, channels);
+        for (channelnum_t i = 0; i < nChannels; i++) {
+            auto srcChannelIdx = math::min<channelnum_t>(srcChannels - 1, i);
+            auto dstChannelIdx = math::min<channelnum_t>(channels - 1, i);
             auto   srcBufChannel   = srcBuf[srcChannelIdx];
             float* dstBufChannel   = buf[dstChannelIdx];
             //TODO: this does 2 additions to the same destination when going from stereo to mono (MIX FIRST)
-            for (uint32_t j = 0; j < samples; j++) {
+            for (samplecount_t j = 0; j < samples; j++) {
                 dstBufChannel[j] += srcBufChannel[j] * gain;
             }
         }
@@ -222,11 +219,11 @@ struct alignas(64) AudioBlock {
         addFromOp(src->buf, src->samples, src->channels, op, gain);
     }
 
-    void addFromOp(const float * const * const srcBuf, const uint32_t srcSamples, const uint32_t srcChannels, const mix_op op, float gain) {
+    void addFromOp(const float * const * const srcBuf, const samplecount_t srcSamples, const channelnum_t srcChannels, const mix_op op, float gain) {
         dbgassert(srcSamples <= samples);
         //dbgassert(srcChannels == channels);//remove when adding sub-track mixers (between plugins)
-        uint32_t nChannels = math::min(srcChannels, channels);
-        uint32_t nSamples  = math::min(srcSamples, samples);
+        const auto nSamples  = math::min<samplecount_t>(srcSamples, samples);
+        auto nChannels = math::min<channelnum_t>(srcChannels, channels);
         float srcGain      = 1.0f;
         //if (srcChannels > channels) {
         //    if (srcChannels == 2 && channels == 1) {
@@ -243,12 +240,12 @@ struct alignas(64) AudioBlock {
             nChannels = 2;
         }
         // bool bdbgProcessed = false;
-        for (uint32_t i = 0; i < nChannels; i++) {
-            uint32_t srcChannelIdx = i % srcChannels;
-            uint32_t dstChannelIdx = i % channels;
+        for (channelnum_t i = 0; i < nChannels; i++) {
+            channelnum_t srcChannelIdx = i % srcChannels;
+            channelnum_t dstChannelIdx = i % channels;
             auto   srcBufChannel   = srcBuf[srcChannelIdx];
             float* dstBufChannel   = buf[dstChannelIdx];
-            for (uint32_t j = 0; j < nSamples; j++) {
+            for (samplecount_t j = 0; j < nSamples; j++) {
                 const float fSrc = (srcBufChannel[j] * srcGain * gain);
                 const float fDst = dstBufChannel[j] * (op == MIX ? 1.0f - gain : 1.0f);
                 dstBufChannel[j] = fSrc + fDst;
@@ -258,21 +255,20 @@ struct alignas(64) AudioBlock {
         // dbgassert(bdbgProcessed);
     }
 
-    void addFromDelayLineOp(DelayLine* delayLine, const samplerate_t delay, const mix_op op, float gain);
+    void addFromDelayLineOp(DelayLine* delayLine, const samplecount_t delay, const mix_op op, float gain);
 
     void fillNoise(uint32_t seed);
 
-    void realloc(uint32_t _samples);
+    void realloc(samplecount_t _samples);
 
 };
 
 
 struct DelayLine {
     AudioBlock block;
-    uint32_t writeOffset = 0;
-    uint16_t blockSize = 0;
+    samplecount_t writeOffset = 0;
     static std::atomic<int32_t> instanceCount;
-    DelayLine(uint32_t _channels, uint32_t _samples)
+    DelayLine(channelnum_t _channels, samplecount_t _samples)
         : block(_channels, _samples) {
         block.debug = true;
         instanceCount++;
@@ -286,10 +282,10 @@ struct DelayLine {
     DelayLine(DelayLine&& other) = delete;
     DelayLine& operator=(const DelayLine& other) = delete;
     DelayLine& operator=(DelayLine&& other) = delete;
-    void updateSize(uint16_t _blockSize, uint8_t _numChannels, samplerate_t _delay);
+    void updateSize(blocksize_t _blockSize, channelnum_t _numChannels, samplecount_t _delay);
     ~DelayLine() {
         instanceCount--;
     }
 };
-void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplerate_t delay);
-void delayLineWrite(DelayLine* delayLine, AudioBlock* input, samplerate_t delay);
+void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplecount_t delay);
+void delayLineWrite(DelayLine* delayLine, AudioBlock* input, samplecount_t delay);

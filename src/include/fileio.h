@@ -3,7 +3,7 @@
 #include <fstream>
 #include <utility>
 #include <vector>
-#include <cstdint>
+#include "types.h"
 #include <sstream>
 
 #ifdef _WIN32

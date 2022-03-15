@@ -33,7 +33,7 @@ void audiocache::unloadSampleId(int32_t id) {
     }
 }
 
-void audiocache::setSamplerate(int32_t _samplerate) {
+void audiocache::setSamplerate(samplerate_t _samplerate) {
     this->samplerate = _samplerate;
     std::vector<audiofile_path_t> reloadFiles;
     for (auto it = list.begin(); it != list.end();) {
@@ -78,38 +78,42 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
         std::unique_ptr<audiosample_t> sample = std::make_unique<audiosample_t>();
 
         sample->bitsPerSample = wav.bitsPerSample;
-        sample->nChannels     = wav.channels;
+        sample->nChannels     = math::clamp<channelnum_t>(wav.channels, 0, 255);
         sample->sampleRate    = wav.sampleRate;
         sample->nSamples      = 0;
 
         std::vector<samplechannel_t> loadedSampleChannels;
-        int64_t numSamplesInput = 0;
-        for (int i = 0; i < wav.channels; i++) {
-            samplechannel_t channel(wav.totalSampleCount / wav.channels);
+        samplecount_t numSamplesInput = 0;
+        auto wavSamples = static_cast<samplecount_t>(wav.totalSampleCount);
+        // deinterleave
+        for (channelnum_t i = 0; i < sample->nChannels; i++) {
+            samplechannel_t channel(wavSamples / wav.channels);
             float* out = channel.data();
-            for (unsigned j = i; j < wav.totalSampleCount; j += wav.channels) {
+            // interleaved sample is at samples[ chIdx + sampleIdx * chCount ]
+            for (samplecount_t j = i; j < wavSamples; j += wav.channels) {
                 *out = pSamples[j];
                 out++;
             }
-            numSamplesInput = i == 0 ? static_cast<int64_t>(channel.size()) : math::min<int64_t>(numSamplesInput, channel.size());
+            auto samplesInChannel = static_cast<samplecount_t>(channel.size());
+            numSamplesInput = i == 0 ? samplesInChannel : math::min<samplecount_t>(numSamplesInput, samplesInChannel);
             loadedSampleChannels.push_back(std::move(channel));
         }
-        if ((int32_t) wav.sampleRate != this->samplerate) {
+        if ((samplerate_t) sample->sampleRate != this->samplerate) {
 
             std::vector<samplechannel_t> resampledChannels;
-            std::vector<float*> channelPtrsOut(wav.channels);
-            std::vector<float*> channelPtrsIn(wav.channels);
-            size_t numSamplesResampled = (size_t) (numSamplesInput * this->samplerate / (double) wav.sampleRate + .5); /* Assay output len. */
+            std::vector<float*> channelPtrsOut(sample->nChannels);
+            std::vector<float*> channelPtrsIn(sample->nChannels);
+            auto numSamplesResampled = static_cast<samplecount_t>(numSamplesInput * this->samplerate / (double) wav.sampleRate + .5); /* Assay output len. */
 
-            for (int i = 0; i < wav.channels; i++) {
-                channelPtrsIn[i] = loadedSampleChannels[i].data();
+            for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
+                channelPtrsIn[ch] = loadedSampleChannels[ch].data();
                 samplechannel_t channel(numSamplesResampled);
                 resampledChannels.push_back(std::move(channel));
-                channelPtrsOut[i] = resampledChannels[i].data();
+                channelPtrsOut[ch] = resampledChannels[ch].data();
             }
 
 
-            //log_lf(Log::L_DEBUG, "soxr_oneshot from %d to %d, samples %d -> %d, channels %d\n", wav.sampleRate, this->samplerate, wav.totalSampleCount, olen, wav.channels);
+            //log_lf(Log::L_DEBUG, "soxr_oneshot from %d to %d, samples %d -> %d, channels %d\n", wav.sampleRate, this->samplerate, wavSamples, olen, wav.channels);
             //log_lf(Log::L_DEBUG, "pSamples.size %d\n", pSamples.size());
             //log_lf(Log::L_DEBUG, "pSamples2.size %d\n", pSamples2.size());
 
@@ -120,7 +124,7 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
             soxr_error_t error = 0;
             size_t offset = 0;
 
-            soxr_t soxr = soxr_create(wav.sampleRate, this->samplerate, wav.channels, &error, &io_spec, &q_spec, &runtime_spec);
+            soxr_t soxr = soxr_create(sample->sampleRate, this->samplerate, sample->nChannels, &error, &io_spec, &q_spec, &runtime_spec);
             if (!!error) {
                 log_printf("soxr_create failed: %d %s\n", error, soxr_strerror(error));
             } else {
@@ -135,7 +139,7 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
                     sample->nSamples   = static_cast<int64_t>(offset);
                     sample->sampleRate = this->samplerate;
                     sample->samples.resize(sample->nChannels);
-                    for (int i = 0; i < sample->nChannels; i++) {
+                    for (channelnum_t i = 0; i < sample->nChannels; i++) {
                         sample->samples[i] = std::move(resampledChannels[i]);
                     }
                 }
@@ -145,50 +149,45 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
             sample->nSamples   = numSamplesInput;
             sample->sampleRate = this->samplerate;
             sample->samples.resize(sample->nChannels);
-            for (int i = 0; i < sample->nChannels; i++) {
-                sample->samples[i] = std::move(loadedSampleChannels[i]);
-            }
+            sample->samples = std::move(loadedSampleChannels);
         }
         int64_t timeBeginDownsample = getTimeMicros();
         log_printf("Downsampling %s...\n", path.c_str());
 
         uint8_t maxDownS = 1;
         for (uint8_t downsampleStep = 1; downsampleStep < maxDownS; downsampleStep++) {
-            int64_t lenSamplesDownsampled = sample->nSamples >> downsampleStep;
+            samplecount_t lenSamplesDownsampled = sample->nSamples >> downsampleStep;
 
             if (lenSamplesDownsampled < 10)
                 break;
 
             std::vector<samplechannel_t> downsampledChannels(2);
-            for (int32_t i = 0; i < wav.channels; i++) {
+            for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
                 samplechannel_t chDownSmpld(static_cast<size_t>(lenSamplesDownsampled));
                 downsample(sample->sampleRate,
-                           sample->samples.at(i).data(),
+                           sample->samples.at(ch).data(),
                            sample->nSamples,
                            chDownSmpld, downsampleStep);
-                downsampledChannels[i] = std::move(chDownSmpld);
+                downsampledChannels[ch] = std::move(chDownSmpld);
             }
             sample->downsampled.push_back(std::move(downsampledChannels));
         }
         int64_t timeDiffDownsample = getTimeMicros() - timeBeginDownsample;
         log_lf(Log::L_DEBUG, "Downsampling %s took %fsec\n", path.c_str(), timeDiffDownsample / 1000000.0);
-        //int nDownSmplSteps = maxDownS - 1;
-        //dbgassert(sample->downsampled.size() == nDownSmplSteps);
         int32_t _id = id;
         if (_id < 0) {
             _id = this->nextIdx++;
         }
-        this->nextIdx                            = math::max(this->nextIdx.load(), _id + 1);
-        std::unique_ptr<audiofile_t> cachedaudio = std::make_unique<audiofile_t>();
-        cachedaudio->sample                      = std::move(sample);
-        cachedaudio->id                          = _id;
-        cachedaudio->path                        = path;
+        this->nextIdx       = math::max(this->nextIdx.load(), _id + 1);
+        auto cachedaudio    = std::make_unique<audiofile_t>();
+        cachedaudio->sample = std::move(sample);
+        cachedaudio->id     = _id;
+        cachedaudio->path   = path;
         String a, b, c, d;
         SplitPath(path, &a, &b, &c, &d);
         cachedaudio->name = b;
         cachedaudio->ext  = c;
         this->mapId[_id]  = cachedaudio.get();
-        log_printf("%d\n", cachedaudio->id);
         audiofile_t* audio = cachedaudio.get();
         list.push_back(std::move(cachedaudio));
         dbgassert(mapId[_id] == audio);
@@ -221,5 +220,5 @@ void audiocache::load(samplefile_index_t& v) {
 }
 
 bool audiocache::isEmpty() const {
-    return list.size() == 0 && mapId.size() == 0;
+    return list.empty() && mapId.empty();
 }

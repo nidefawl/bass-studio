@@ -3,7 +3,7 @@
 #include <utility>
 #include <vector>
 #include <set>
-#include <cstdint>
+#include "types.h"
 #include <memory>
 
 #include "config.h"

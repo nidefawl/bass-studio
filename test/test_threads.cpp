@@ -1,6 +1,6 @@
 #include "TestBase.hpp"
 #include <vector>
-#include <cstdint>
+#include "types.h"
 #include <chrono>
 #include "common/test_common.h"
 #include "thread.h"

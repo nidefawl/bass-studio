@@ -1,9 +1,8 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 #include "seq_util.h"
 #include "assert_dbg.h"
 
-using samplerate_t = uint32_t;
 #define SAMPLERATE_T_MAX_VALUE_U32 ((samplerate_t) (0xFFFFFFFFUL))
 #define INVALID_SAMPLE_OFFSET_U32 ((samplerate_t) (0xFFFFFFFFUL))
 
@@ -13,8 +12,8 @@ enum class sampleformat_bits_t : int32_t {
     FLOAT_64 = 1 << 1,
 };
 struct sampleformat_t {
-    samplerate_t sampleRate          = 0;
-    uint32_t blockSize               = 0;
+    samplerate_t sampleRate = 0;
+    blocksize_t blockSize = 0;
     sampleformat_bits_t sampleformat = sampleformat_bits_t::NONE;
 };
 inline const char* sampleformat_bits_to_str(sampleformat_bits_t t) {

@@ -24,11 +24,10 @@ namespace DAW {
             track_impl_t* trackImpl  = track->getStage();
             const auto inputChannel  = trackImpl->inputChannel;
             const auto outputChannel = trackImpl->outputChannel;
-            if (inputChannel.getType() == channel_type::INPUT_EXTERNAL_AUDIO) {
-                int32_t idx             = inputChannel.externalInputIdx;
-                String name             = "External " + AudioIO::getTrackNameShort(inputChannel.externalInputType, idx, stage_bufferpoint::INPUT);
-                trackImpl->inputChannel = ChannelAudioInput(idx, inputChannel.srcChannelOffset, name, inputChannel.externalInputType);
-            } else if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE) {
+            if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
+                String name = "External " + AudioIO::getTrackNameShort(inputChannel.externalInputType, inputChannel.externalInputIdx, stage_bufferpoint::INPUT);
+                trackImpl->inputChannel = ChannelAudioInput(inputChannel.externalInputIdx, inputChannel.srcChannelOffset, name, inputChannel.externalInputType);
+            } else if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
                 auto* stage = host->getAudioStage(inputChannel.stage.stageRef);
                 if (!stage) {
                     log_lf(Log::L_WARN, "Input audiostage with id %d not found\n", inputChannel.stage.stageRef);
@@ -41,12 +40,12 @@ namespace DAW {
                 dbgassert(inputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
                 //inputChannel.stage.stageRef.stageId = TRACKID_INVALID_I32; //FIX: old project files have stageId == 0
             }
-            if (outputChannel.getType() == channel_type::INPUT_EXTERNAL_AUDIO) {
+            if (outputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
                 int32_t idx = outputChannel.externalInputIdx;
                 String name = "External " + AudioIO::getTrackNameShort(outputChannel.externalInputType, idx, stage_bufferpoint::OUTPUT_POST);
 
                 trackImpl->outputChannel = ChannelAudioInput(idx, outputChannel.srcChannelOffset, name, outputChannel.externalInputType);
-            } else if (outputChannel.getType() == channel_type::INPUT_AUDIOSTAGE) {
+            } else if (outputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
                 auto* stage = host->getAudioStage(outputChannel.stage.stageRef);
                 if (!stage) {
                     log_lf(Log::L_WARN, "Output audiostage with id %d not found\n", outputChannel.stage.stageRef);
@@ -72,7 +71,7 @@ namespace DAW {
             track_impl_t* trackImpl  = track->getStage();
             const auto inputChannel  = trackImpl->inputChannel;
             const auto outputChannel = trackImpl->outputChannel;
-            if (inputChannel.getType() != channel_type::INPUT_DEFAULT && isChannelConnected(inputChannel)) {
+            if (inputChannel.getType() != stage_type::INPUT_DEFAULT && isChannelConnected(inputChannel)) {
                 if (inputChannel.stage.stageRef.stageId == stageId) {
                     trackImpl->inputChannel = ChannelNone();
                     numRemoved++;
@@ -80,7 +79,7 @@ namespace DAW {
             } else {
                 dbgassert(inputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
             }
-            if (outputChannel.getType() != channel_type::INPUT_DEFAULT && isChannelConnected(outputChannel)) {
+            if (outputChannel.getType() != stage_type::INPUT_DEFAULT && isChannelConnected(outputChannel)) {
                 if (inputChannel.stage.stageRef.stageId == stageId) {
                     trackImpl->outputChannel = ChannelNone();
                     numRemoved++;
@@ -245,7 +244,7 @@ namespace DAW {
         /* Assign the resolved latencies to the previously populated push/pull inputs of each node */
         for (auto const ptrNode : graph.nodesFlatOrdered) {
             for (auto& push : ptrNode->pushs) {
-                if (isChannelConnected(push.channel) && push.channel.getType() == channel_type::INPUT_AUDIOSTAGE) {
+                if (isChannelConnected(push.channel) && push.channel.getType() == stage_type::INPUT_AUDIOSTAGE) {
                     const auto pushId = push.channel.stage.stageRef.stageId;
                     const auto ptrChNode = getNodeConst(graph.nodesFlatOrdered, pushId);
                     dbgassert(ptrChNode);
@@ -253,7 +252,7 @@ namespace DAW {
                 }
             }
             for (auto& pulls : ptrNode->pulls) {
-                if (isChannelConnected(pulls.channel) && pulls.channel.getType() == channel_type::INPUT_AUDIOSTAGE) {
+                if (isChannelConnected(pulls.channel) && pulls.channel.getType() == stage_type::INPUT_AUDIOSTAGE) {
                     const auto pullId = pulls.channel.stage.stageRef.stageId;
                     const auto ptrChNode = getNodeConst(graph.nodesFlatOrdered, pullId);
                     dbgassert(ptrChNode);
@@ -315,7 +314,7 @@ namespace DAW {
             auto inputChannel  = trackImpl->inputChannel;
             auto outputChannel = trackImpl->outputChannel;
 
-            if (inputChannel.type == channel_type::INPUT_DEFAULT) {
+            if (inputChannel.type == stage_type::INPUT_DEFAULT) {
                 channel_ref_t tmp;
                 if (resolveDefaultConnection(host, project, trackImpl, true, tmp)) {
                     inputChannel = tmp;
@@ -323,7 +322,7 @@ namespace DAW {
                     //log_printf("Default input of stage #%d cannot be mapped\n", stageId);
                 }
             }
-            if (outputChannel.type == channel_type::INPUT_DEFAULT) {
+            if (outputChannel.type == stage_type::INPUT_DEFAULT) {
                 channel_ref_t tmp;
                 if (resolveDefaultConnection(host, project, trackImpl, false, tmp)) {
                     outputChannel = tmp;
@@ -332,7 +331,7 @@ namespace DAW {
                 }
             }
             if (isChannelConnected(inputChannel)) {
-                if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE) {
+                if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
                     audio_stage_t* src = host->getAudioStage(inputChannel.stage.stageRef);
                     dbgassert(src);
                     auto srcStageId = src->stageId.stageId;
@@ -344,14 +343,14 @@ namespace DAW {
                     trackCfg.pulls.push_back(track_source_t{ trackEdgeId++, inputChannel, AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, src->flags });
                     trackCfg.children.push_back(&trackSrcCfg);
                     trackSrcCfg.parents.push_back(&trackCfg);
-                } else if (inputChannel.getType() == channel_type::INPUT_EXTERNAL_AUDIO) {
+                } else if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
                     trackCfg.pulls.push_back(track_source_t{ trackEdgeId++, inputChannel, AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE });
-                } else if (inputChannel.type != channel_type::INPUT_DEFAULT) {
+                } else if (inputChannel.type != stage_type::INPUT_DEFAULT) {
                     log_printf("missing track input routing on track %s\n", StringAsCStr(track->name));
                 }
             }
             if (isChannelConnected(outputChannel)) {
-                if (outputChannel.getType() == channel_type::INPUT_AUDIOSTAGE && trackImpl->mixer.isEnabled()) {
+                if (outputChannel.getType() == stage_type::INPUT_AUDIOSTAGE && trackImpl->mixer.isEnabled()) {
                     audio_stage_t* dst = host->getAudioStage(outputChannel.stage.stageRef);
                     if (!dst) {
                         log_printf("missing track output routing on track %s\n", StringAsCStr(track->name));

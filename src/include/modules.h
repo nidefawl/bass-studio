@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 #include "assert_dbg.h"
 
 #define PLUGIN_TYPE_VST 1

@@ -57,7 +57,7 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
         const int nVecsEstimate   = width * verticesPerPx;
         // int nVecsProduced         = 0;
 
-        for (int iChannel = 0; iChannel < sample->nChannels; iChannel++) {
+        for (channelnum_t iChannel = 0; iChannel < sample->nChannels; iChannel++) {
             vec2list vecs;
             if (nVecsEstimate > 0)
                 vecs.reserve(nVecsEstimate + 500);
@@ -162,7 +162,7 @@ void tesselateWaveformEnergy(audiosample_t* sample, float x, float y, audioclip_
         const int64_t nSamples    = waveformScaled.sampleEnd - waveformScaled.sampleBeginOffset;
 
 
-        for (int iChannel = 0; iChannel < sample->nChannels; iChannel++) {
+        for (channelnum_t iChannel = 0; iChannel < sample->nChannels; iChannel++) {
             const auto& samplesCh     = smpCh[iChannel];
             const float* samplesChPtr = samplesCh.data();
             const int64_t lenSamplesCh   = samplesCh.size();

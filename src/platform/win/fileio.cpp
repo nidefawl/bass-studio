@@ -1,7 +1,7 @@
 #ifdef _WIN32
 #include "fileio.h"
 #include "exceptions.h"
-#include <cstdint>
+#include "types.h"
 #include <Windows.h>
 #include <vector>
 #include <limits>

@@ -21,15 +21,14 @@
 namespace DAW {
     size_t validateEffectRouting(const vsthost* const host, const DAW::channel_desc& dstDesc, channel_ref_t& inputChannel) {
         size_t numRemoved = 0;
-        if (inputChannel.getType() == channel_type::INPUT_DEFAULT) {
+        if (inputChannel.getType() == stage_type::INPUT_DEFAULT) {
             inputChannel = ChannelDefaultNone();
-        } else if (inputChannel.getType() == channel_type::INPUT_EMPTY) {
+        } else if (inputChannel.getType() == stage_type::INPUT_EMPTY) {
             inputChannel = ChannelDefaultNone();
-        } else if (inputChannel.getType() == channel_type::INPUT_EXTERNAL_AUDIO) {
-            int32_t idx  = inputChannel.externalInputIdx;
-            String name  = "External " + AudioIO::getTrackNameShort(inputChannel.externalInputType, idx, stage_bufferpoint::INPUT);
-            inputChannel = ChannelAudioInput(idx, inputChannel.srcChannelOffset, name, inputChannel.externalInputType);
-        } else if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE) {
+        } else if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
+            String name  = "External " + AudioIO::getTrackNameShort(inputChannel.externalInputType, inputChannel.externalInputIdx, stage_bufferpoint::INPUT);
+            inputChannel = ChannelAudioInput(inputChannel.externalInputIdx, inputChannel.srcChannelOffset, name, inputChannel.externalInputType);
+        } else if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
             auto* srcstage = host->getAudioStage(inputChannel.stage.stageRef);
             if (!srcstage) {
                 log_lf(Log::L_WARN, "Input audiostage with id %d not found\n", inputChannel.stage.stageRef.stageId);
@@ -38,7 +37,7 @@ namespace DAW {
             } else {
                 inputChannel = ChannelStage(srcstage, inputChannel.stage.buffer);
             }
-        } else if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE_EFFECT) {
+        } else if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE_EFFECT) {
             auto* eff = host->getPluginById(inputChannel.projectGlobalId);
             if (!eff) {
                 log_lf(Log::L_WARN, "Input effect with id %d not found on effect %s\n", inputChannel.projectGlobalId, StringAsCStr(eff->getName()));
@@ -85,7 +84,7 @@ namespace DAW {
                 numRemoved += validateEffectRouting(host, *itOwnInput, inputChannel);
             }
             auto it = std::remove_if(effect->inputChannels.begin(), effect->inputChannels.end(), [](auto& ch) {
-                return ch.type == channel_type::INPUT_EMPTY;
+                return ch.type == stage_type::INPUT_EMPTY;
             });
             effect->inputChannels.erase(it, effect->inputChannels.end());
         }
@@ -94,7 +93,7 @@ namespace DAW {
             numRemoved += validateEffectRouting(host, defaultDesc, inputChannel);
         }
         auto it = std::remove_if(stage->postEffectRouting.begin(), stage->postEffectRouting.end(), [](auto& ch) {
-            return ch.type == channel_type::INPUT_EMPTY;
+            return ch.type == stage_type::INPUT_EMPTY;
         });
         stage->postEffectRouting.erase(it, stage->postEffectRouting.end());
         if (numRemoved) {
@@ -258,7 +257,7 @@ namespace DAW {
         /* Assign the resolved latencies to the previously populated push/pull inputs of each node */
         for (auto const ptrNode : graph.nodesFlatOrdered) {
             for (auto& pulls : ptrNode->pulls) {
-                if (isChannelConnected(pulls.channel) && pulls.channel.getType() == channel_type::INPUT_AUDIOSTAGE_EFFECT) {
+                if (isChannelConnected(pulls.channel) && pulls.channel.getType() == stage_type::INPUT_AUDIOSTAGE_EFFECT) {
                     const auto effId = static_cast<audiostageid_i32>(pulls.channel.projectGlobalId);
                     const auto ptrChNode = getNodeConst(graph.nodesFlatOrdered, effId);
                     dbgassert(ptrChNode);
@@ -297,14 +296,14 @@ namespace DAW {
             }
             effect_node_t& trackCfg = getEffNode(map, effectIdI32);
             for (channel_ref_t inputChannel : effect->inputChannels) {
-                if (inputChannel.type == channel_type::INPUT_DEFAULT) {
+                if (inputChannel.type == stage_type::INPUT_DEFAULT) {
                     channel_ref_t tmp;
                     if (resolveEffectDefaultConnection(host, project, stage, effect, tmp)) {
                         inputChannel = tmp;
                     }
                 }
                 if (isChannelConnected(inputChannel)) {
-                    if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE) {
+                    if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
                         audio_stage_t* src = host->getAudioStage(inputChannel.stage.stageRef);
                         dbgassert(src);
                         auto outputPostStageId = src->stageId.inputStageId;
@@ -320,7 +319,7 @@ namespace DAW {
                         trackCfg.children.push_back(&trackSrcCfg);
                         trackSrcCfg.parents.push_back(&trackCfg);
 
-                    } else if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE_EFFECT) {
+                    } else if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE_EFFECT) {
                         effectbase* effSrc = host->getPluginById(inputChannel.projectGlobalId);
                         if (effSrc) {
                             auto effSrcId_I32 = static_cast<audiostageid_i32>(effSrc->projectGlobalId);
@@ -333,7 +332,7 @@ namespace DAW {
                             trackCfg.children.push_back(&trackSrcCfg);
                             trackSrcCfg.parents.push_back(&trackCfg);
                         }
-                    } else if (inputChannel.getType() == channel_type::INPUT_EXTERNAL_AUDIO) {
+                    } else if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
                         trackCfg.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE });
                     } else {
                         log_printf("missing track input routing\n");
@@ -346,14 +345,14 @@ namespace DAW {
 
         //effect_node_t& trackCfg = getEffNode(audioStageOutputs, audioStageOutputs[TRACKID_DEFAULT_I32]);
         for (channel_ref_t inputChannel : stage->postEffectRouting) {
-            if (inputChannel.type == channel_type::INPUT_DEFAULT) {
+            if (inputChannel.type == stage_type::INPUT_DEFAULT) {
                 channel_ref_t tmp;
                 if (resolveEffectDefaultConnection(host, project, stage, nullptr, tmp)) {
                     inputChannel = tmp;
                 }
             }
             if (isChannelConnected(inputChannel)) {
-                if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE) {
+                if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
                     audio_stage_t* src = host->getAudioStage(inputChannel.stage.stageRef);
                     dbgassert(src);
                     auto outputPostStageId = src->stageId.inputStageId;
@@ -371,7 +370,7 @@ namespace DAW {
                     //trackCfg.children.push_back(&trackSrcCfg);
                     //trackSrcCfg.parents.push_back(&trackCfg);
 
-                } else if (inputChannel.getType() == channel_type::INPUT_AUDIOSTAGE_EFFECT) {
+                } else if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE_EFFECT) {
                     effectbase* effSrc = host->getPluginById(inputChannel.projectGlobalId);
                     if (effSrc) {
                         auto effSrcId_I32 = static_cast<audiostageid_i32>(effSrc->projectGlobalId);
@@ -384,7 +383,7 @@ namespace DAW {
                         nodeOutput.children.push_back(&trackSrcCfg);
                         trackSrcCfg.parents.push_back(&nodeOutput);
                     }
-                } else if (inputChannel.getType() == channel_type::INPUT_EXTERNAL_AUDIO) {
+                } else if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
                     nodeOutput.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE });
                 } else {
                     log_printf("missing track input routing\n");

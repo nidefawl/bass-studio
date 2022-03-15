@@ -1,6 +1,6 @@
 #pragma once
 #include "math/vec.h"
-#include <cstdint>
+#include "types.h"
 #include <vector>
 #include "math/seq_math.h"
 #include "seq_time.h"

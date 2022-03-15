@@ -9,7 +9,7 @@
 #include <shlobj.h>//for knownFolder
 #include <sstream>
 #ifdef _WIN32
-#include <cstdint>
+#include "types.h"
 #include <cstdio>
 #include <cstdlib>
 #include <csignal>

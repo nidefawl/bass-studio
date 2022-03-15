@@ -1,6 +1,6 @@
 #include <thread>
 #include <mutex>
-#include <cstdint>
+#include "types.h"
 #include <unordered_map>
 #include <atomic>
 #include "str_util.h"

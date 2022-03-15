@@ -21,6 +21,7 @@
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
 #include "plugin/vst_plugin_handles.h"
+#include "types.h"
 #include "vst_host.h"
 #include "track_impl.h"
 
@@ -644,10 +645,10 @@ namespace DAW {
         cfg.dstChannelOffset  = channel.dstChannelOffset;
     }
     void loadDawChannelRefSnapshot(const io_configuration_snapshot_t& cfg, channel_ref_t& channel) {
-        channel.type                   = static_cast<DAW::channel_type>(cfg.type);
+        channel.type                   = static_cast<DAW::stage_type>(cfg.type);
         channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
         channel.stage.buffer           = static_cast<stage_bufferpoint>(cfg.stageEndPointType);
-        channel.externalInputType      = static_cast<DAW::channelcount>(cfg.externalInputType);
+        channel.externalInputType      = static_cast<DAW::channel_pairing>(cfg.externalInputType);
         channel.projectGlobalId        = cfg.projectGlobalId;
         channel.externalInputIdx       = cfg.externalInputIdx;
         channel.srcChannelOffset       = cfg.srcChannelOffset;
@@ -1019,14 +1020,13 @@ void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
     });
 }
 
-track_impl_t::track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels)
-    : audio_stage_t(_host, _id, /*_track, */ _sampleRate, _blockSize, nChannels, 0),
+track_impl_t::track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels)
+    : audio_stage_t(_host, _id, _sampleFormat, _numChannels, 0),
       arp(new midiarp(this)), track(_track),
       inputChannel(DAW::ChannelDefaultNone()),
       outputChannel(DAW::ChannelDefaultNone()), 
-      midiProcessed(new clip_notes_t()) {
-    
-    
+      midiProcessed(new clip_notes_t())
+{
 }
 
 const std::vector<arp_note_t>& track_impl_t::getArpHeldNotes() {

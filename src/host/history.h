@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 #include "edithistory.h"
 #include "plugin/base_plugin.h"
 #include "mainctrl.h"

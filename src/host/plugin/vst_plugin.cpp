@@ -22,10 +22,10 @@
 #include "host/history.h"
 
 
-[[gnu::noinline]] float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx);
-[[gnu::noinline]] void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float value);
-[[gnu::noinline]] void vst_process(vstplugin* plugin, AEffect* aeffect, float** bufIn, float** bufOut, int32_t numSamples);
-[[gnu::noinline]] int64_t vst_dispatch(vstplugin* plugin,
+FUNC_NOINLINE float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx);
+FUNC_NOINLINE void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float value);
+FUNC_NOINLINE void vst_process(vstplugin* plugin, AEffect* aeffect, float** bufIn, float** bufOut, int32_t numSamples);
+FUNC_NOINLINE int64_t vst_dispatch(vstplugin* plugin,
                   AEffect* aeffect,
                   int32_t opcode,
                   int32_t index,
@@ -167,8 +167,8 @@ void vstplugin::unload(vsthost* host, int flags) {
 void vstplugin::configureIOChannels() {
     const bool useGetPinProperties = (this->bugfixFlags & vst_workarounds::VST2_R4_BUG_STEREO_PLUGIN_REPORTS_MONO) == 0;
 
-    const auto inputCount  = this->handle->aeffect->numInputs;
-    const auto outputCount = this->handle->aeffect->numOutputs;
+    const auto inputCount  = static_cast<channelnum_t>(math::clamp(this->handle->aeffect->numInputs, 0, 255));
+    const auto outputCount = static_cast<channelnum_t>(math::clamp(this->handle->aeffect->numOutputs, 0, 255));
     for (int side = 0; side < 2; ++side) {
         const auto channelCountSide = side == 0 ? inputCount : outputCount;
         auto& channelDescs          = side == 0 ? inputChannelsDesc : outputChannelsDesc;
@@ -176,11 +176,11 @@ void vstplugin::configureIOChannels() {
         const auto dispatchOpCode   = side == 0 ? effGetInputProperties : effGetOutputProperties;
 
         channelDescs.clear();
-        int32_t pinIndex = 0;
+        channelnum_t pinIndex = 0;
         VstPinProperties pin{};
 
         if (useGetPinProperties && pinIndex < channelCountSide && this->dispatch(dispatchOpCode, pinIndex, 0, &pin)) {
-            int32_t channelOffset = 0;
+            channelnum_t channelOffset = 0;
             do {
                 log_lf(Log::L_DEBUG, "Pin %d: %s Active %d Stereo %d UseSpeaker %d ArrangementType %d\n", 
                     pinIndex,
@@ -261,12 +261,12 @@ void vstplugin::configureIOChannels() {
                     channelDescs.emplace_back(DAW::channel_desc{2, 2, StringFormat("Stereo %s", sideName)});
                 }
             } else {
-                for (int i = 0; i < channelCountSide;) {
+                for (channelnum_t i = 0; i < channelCountSide;) {
                     if (i + 1 < channelCountSide) {
-                        channelDescs.emplace_back(DAW::channel_desc{i, 2, StringFormat("Stereo %s #", sideName, i)});
+                        channelDescs.emplace_back(DAW::channel_desc{i, 2, StringFormat("Stereo %s #%u", sideName, i)});
                         i += 2;
                     } else {
-                        channelDescs.emplace_back(DAW::channel_desc{i, 1, StringFormat("Mono %s #", sideName, i)});
+                        channelDescs.emplace_back(DAW::channel_desc{i, 1, StringFormat("Mono %s #%u", sideName, i)});
                         i += 1;
                     }
                 }
@@ -724,10 +724,10 @@ void vstplugin::recvProgramNameUpdate() {
     memset(buf, 0, sizeof(buf));
     auto curProgram = dispatch(effGetProgram);
     if (curProgram >= 0 && dispatch(effGetProgramNameIndexed, curProgram, 0, buf)) {
-        if (programNames.size() < curProgram && curProgram+1 < (4096)) {
+        if (programNames.size() < size_t(curProgram) && curProgram+1 < (4096)) {
             programNames.resize(curProgram+1);
         }
-        if (curProgram >= 0 && curProgram < programNames.size()) {
+        if (curProgram >= 0 && size_t(curProgram) < programNames.size()) {
             programNames[curProgram] = buf;
         }
         this->currentProgramNameStr = buf;
@@ -853,7 +853,7 @@ void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, double sam
     vst_process(this, this->handle->aeffect, in->buf, out->buf, numSamples);
 }
 
-[[gnu::noinline]]
+FUNC_NOINLINE
 void vst_onException(vstplugin* plugin)
 {
     log_lf(Log::L_ERROR, "segfault/fatal exception\n");

@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 #include <atomic>
-#include <cstdint>
+#include "types.h"
 #include <map>
 
 #include <vstsdk-host-2.4/aeffectx.h>
@@ -110,17 +110,17 @@ public:
     static const int FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY    = 1;
     static const int FLAG_HOST_FORCELOAD_DISABLED_PLUGINS = 2;
 
+    // create tracks with 2 channels
+    static constexpr channelnum_t DEFAULT_CHANNEL_COUNT = 2;
+
 private:
     vsthost_impl* const impl;
 
 public:
-    //  samplerate_t lSampleRate = 0;
-    //  uint16_t lBlockSize = 0;
     sampleformat_t m_sampleFormatInternal = { 44100, 512, sampleformat_bits_t::NONE };
     sampleformat_t m_sampleFormatExternal = { 44100, 512, sampleformat_bits_t::NONE };
 
     int32_t hostSlot    = -1;
-    uint8_t numChannels;
 
     project_globals_t prjGlobals;
     audioMasterCallback masterCallBackSlot = nullptr;
@@ -153,7 +153,6 @@ private:
     SYNCHRONIZED_RW host_stats_t stats{};
     SYNCHRONIZED_RW host_processing_stats_t processing{ 0 };
 
-    AudioBlock* blockZero = nullptr;
     SYNCHRONIZED_RW audiothread_ringbuffer_t ringbuffer;
     SYNCHRONIZED_RW clip_notes_t* midiRealtimeInput; //TODO: per device and channel
     SYNCHRONIZED_RW clip_notes_t* midiProcessedInput;//TODO: per device and channel
@@ -179,11 +178,10 @@ private:
     audio_stage_id_t getNextGlobalAudioStageId(int32_t as);
     bool unloadAllPlugins();
     void updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPos, playback_state state) const;
-    void setBlockSize(uint16_t blockSize);
     void registerPlugins();
     void processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state);
     int32_t processBlock(project_controller_t* ctrl, const audiostream_properties_t& audioProp, const DAW::processing_graph_t* processingGraph, AudioBlock* ptrExternalInputs, AudioBlock* ptrExternalOutputs, int32_t samplePosProcess, double tickPosProcess, playback_state state, bool inLoop, bool isLoopAround);
-    int64_t writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplerate_t samplePos, samplerate_t numSamples);
+    int64_t writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplecount_t samplePos, samplecount_t numSamples);
     void finishTreadTasks(std::vector<audiostageid_i32>& processFinishedStageIds, bool isFinalInvocation);
     void updateRecordingClip(tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<note_t>& m_list);
     void finishRecordingClip(tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<note_t>& m_list);

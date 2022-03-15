@@ -1,14 +1,14 @@
 #pragma once
 #include "str_util.h"
 #include "samplerate.h"
-#include <cstdint>
+#include "types.h"
 #include <vector>
 
 struct AudioBuffer;
 
 namespace DAW {
 
-enum class channelcount {
+enum class channel_pairing {
     MONO,
     STEREO,
     MULTI_CHANNEL_4,
@@ -21,7 +21,7 @@ enum class stage_bufferpoint {
     OUTPUT_POST
 };
 
-enum class channel_type {
+enum class stage_type {
     INPUT_DEFAULT,
     INPUT_EMPTY,
     INPUT_EXTERNAL_AUDIO,
@@ -35,14 +35,14 @@ inline bool isStageBufferPointInput(const stage_bufferpoint stBufPt) {
 
 namespace AudioIO {
 
-    extern const std::array<uint32_t, 4> ExtSamplerates;
-    extern const std::array<uint32_t, 4> IntSamplerates;
+    extern const std::array<samplerate_t, 4> ExtSamplerates;
+    extern const std::array<samplerate_t, 4> IntSamplerates;
 
     struct io_cfg_channel {
         String name;
-        int32_t idx       = -1;
-        int32_t offset    = -1;
-        channelcount type = channelcount::MONO;
+        int32_t idx          = 0;
+        channelnum_t offset  = 0;
+        channel_pairing type = channel_pairing::MONO;
     };
 
     struct io_cfg_tracks {
@@ -51,14 +51,14 @@ namespace AudioIO {
         std::vector<io_cfg_channel> output;
     };
 
-    int32_t getNumChannelsFromTrackType(channelcount t);
-    channelcount getTrackTypeFromNumChannels(int32_t t);
-    int32_t getNumChannelsInConfig(const std::vector<io_cfg_channel>& cfg);
+    channelnum_t getNumChannelsFromTrackType(channel_pairing t);
+    channel_pairing getTrackTypeFromNumChannels(channelnum_t t);
+    channelnum_t getNumChannelsInConfig(const std::vector<io_cfg_channel>& cfg);
 
-    String getTrackNameShort(channelcount type, int32_t index, stage_bufferpoint isInput);
-    String getTrackName(channelcount type, int32_t index, bool isInput);
-    String getTrackTypeStr(channelcount type);
-    channelcount getNextTrackType(channelcount type);
+    String getTrackNameShort(channel_pairing type, channelnum_t index, stage_bufferpoint isInput);
+    String getTrackName(channel_pairing type, channelnum_t index, bool isInput);
+    String getTrackTypeStr(channel_pairing type);
+    channel_pairing getNextTrackType(channel_pairing type);
 
     class AudioStream {
         public:
@@ -71,7 +71,7 @@ namespace AudioIO {
         virtual int32_t getOutputQueueSize() const = 0;
         virtual int32_t getInputQueueSize() const = 0;
         virtual samplerate_t getSampleRate() const = 0;
-        virtual uint16_t getBlockSize() const = 0;
+        virtual blocksize_t getBlockSize() const = 0;
         virtual bool isActive() const = 0;
     };
 } // namespace AudioIO

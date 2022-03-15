@@ -1,5 +1,5 @@
 #if defined(__linux__) || defined(__APPLE__)
-#include <cstdint>
+#include "types.h"
 #include <sys/time.h>
 #include <sys/types.h>
 #include "msgbox.h"

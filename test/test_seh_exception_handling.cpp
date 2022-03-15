@@ -2,7 +2,7 @@
 #include "str_util.h"
 #include <stdint.h>
 #include <vector>
-#include <cstdint>
+#include "types.h"
 #include <cstdio>
 #ifdef _WIN32
 #include "platform/mingw/mingw.exc.h"

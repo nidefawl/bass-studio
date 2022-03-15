@@ -30,8 +30,6 @@ namespace DAW::DialogSettings {
 using ::DAW::settings;
 
 constexpr int ID_BTN_CLOSE    = 1;
-constexpr int TEXT_FONT_SIZE  = 20;
-constexpr int BTN_FONT_SIZE   = 16;
 
 class guidropdown_setting_options_t;
 class guidropdown_setting_options_ctxt_t : public guictxtmenu {
@@ -254,15 +252,15 @@ public:
             auto& newList = isInput ? newConfig.input : newConfig.output;
             newList.clear();
 
-            const channelcount type     = getNextTrackType(ioChannel->type);
-            const int32_t nChannelsPrev = getNumChannelsFromTrackType(ioChannel->type);
-            const int32_t nChannels     = getNumChannelsFromTrackType(type);
-            const int32_t base          = (ioChannel->channelOffset / nChannels);
-            const int32_t begin         = base * nChannels;
-            const int32_t end           = begin + nChannels;
+            const channel_pairing type = getNextTrackType(ioChannel->type);
+            const auto nChannelsPrev = getNumChannelsFromTrackType(ioChannel->type);
+            const auto nChannels     = getNumChannelsFromTrackType(type);
+            const auto base          = (ioChannel->channelOffset / nChannels);
+            const auto begin         = base * nChannels;
+            const auto end           = begin + nChannels;
 
-            int32_t ratio = math::max(1, nChannelsPrev / nChannels);
-            for (int32_t c = 0; c < ratio; c++) {
+            auto ratio = math::max(1, nChannelsPrev / nChannels);
+            for (channelnum_t c = 0; c < ratio; c++) {
                 io_cfg_channel channels;
                 channels.idx    = 0;
                 channels.type   = type;
@@ -270,7 +268,7 @@ public:
                 newList.push_back(channels);
             }
             for (auto& existChannelCnf : list) {
-                int32_t existChCnfChannels = getNumChannelsFromTrackType(existChannelCnf.type);
+                auto existChCnfChannels = getNumChannelsFromTrackType(existChannelCnf.type);
                 if (existChannelCnf.offset >= end || existChannelCnf.offset + existChCnfChannels <= begin) {
                     newList.push_back(existChannelCnf);
                 }
@@ -281,7 +279,7 @@ public:
                       });
             while (true) {
                 // Find unassigned channels
-                int32_t endPrevChannel = 0;
+                channelnum_t endPrevChannel = 0;
                 auto it = std::find_if(newList.begin(), newList.end(),
                               [&endPrevChannel](const io_cfg_channel& entryA) {
                                 if (entryA.offset > endPrevChannel)
@@ -293,22 +291,22 @@ public:
                     break;
                 }
 
-                int32_t endChannel = it->offset;
-                int32_t free       = endChannel - endPrevChannel;
-                log_printf("found %d unassigned channels %d to %d\n", free, endPrevChannel, endChannel);
+                channelnum_t endChannel = it->offset;
+                channelnum_t free       = endChannel - endPrevChannel;
+                log_printf("found %u unassigned channels %u to %u\n", free, endPrevChannel, endChannel);
 
                 // create tracks for unassigned channels
                 while (free > 0) {
-                    const channelcount type2 = getTrackTypeFromNumChannels(free);
+                    const channel_pairing type2 = getTrackTypeFromNumChannels(free);
                     io_cfg_channel channel2;
                     channel2.idx       = -1;
                     channel2.type      = type2;
                     channel2.offset    = endPrevChannel;
-                    int32_t nChannels2 = getNumChannelsFromTrackType(channel2.type);
+                    auto nChannels2 = getNumChannelsFromTrackType(channel2.type);
                     endPrevChannel += nChannels2;
                     free -= nChannels2;
                     newList.push_back(channel2);
-                    log_printf("add track %s channels %d to %d\n", StringAsCStr(channel2.name), channel2.offset,
+                    log_printf("add track %s channels %u to %u\n", StringAsCStr(channel2.name), channel2.offset,
                                channel2.offset + nChannels2);
                 }
 
@@ -328,11 +326,11 @@ public:
 
 
             // find maximum channel idx used
-            int32_t maxChannel = -1;
+            channelnum_t maxChannel = 0;
             for (auto& ch : newList) {
                 auto chCount  = getNumChannelsFromTrackType(ch.type);
                 auto chEndIdx = ch.offset + chCount;
-                maxChannel = math::max(maxChannel, chEndIdx);
+                maxChannel = math::max<channelnum_t>(maxChannel, chEndIdx);
             }
 
             std::vector<int32_t> vChannelIdc(maxChannel);
@@ -444,11 +442,11 @@ public:
         }
     }
     void layout() override {
-        ivec2 cs            = getSizeContent();
-        int32_t maxChannels = math::max<int32_t>(guiMeters.size(), 6);
-        int32_t nMeters     = math::max<int32_t>(1, maxChannels);
-        ivec2 meterSize     = {math::min(128, math::max(8, (cs.x) / nMeters)), cs.y - INSET_CTR_SPACING * 2};
-        ivec2 meterPos      = {INSET_CTR_SPACING, INSET_CTR_SPACING};
+        ivec2 cs         = getSizeContent();
+        auto maxChannels = math::max<channelnum_t>(guiMeters.size(), 6);
+        auto nMeters     = math::max<channelnum_t>(1, maxChannels);
+        ivec2 meterSize  = { math::min(128, math::max(8, (cs.x) / nMeters)), cs.y - INSET_CTR_SPACING * 2 };
+        ivec2 meterPos   = { INSET_CTR_SPACING, INSET_CTR_SPACING };
 
         for (auto& meter : guiMeters) {
             meter->pos  = meterPos;
@@ -565,58 +563,59 @@ public:
         this->audioInternalBlockSize  = intBlockSize;
         this->audioInternalSampleRate = intSampleRate;
 
-        for (int i = 0; i < 4; i++) {
-            extSampleRate->options.push_back(StringFormat("%d", ExtSamplerates[i]));
+        for (int i = 0; i < ExtSamplerates.size(); i++) {
+            extSampleRate->options.push_back(StringFormat("%u", ExtSamplerates[i]));
         }
-        for (int i = 0; i < 4; i++) {
-            intSampleRate->options.push_back(StringFormat("%d", IntSamplerates[i]));
+        for (int i = 0; i < IntSamplerates.size(); i++) {
+            intSampleRate->options.push_back(StringFormat("%u", IntSamplerates[i]));
         }
         extSampleRate->cbOnOptionSelected = [this](int option) {
-            if (option >= 0 && option < 4) {
+            if (option >= 0 && option < ExtSamplerates.size()) {
                 settings.iosettings.samplerate = ExtSamplerates[option];
                 daw->configureSampleRate();
             }
         };
         extSampleRate->fnGetCurrentVal = []() -> String {
-            return StringFormat("%d", settings.iosettings.samplerate);
+            return StringFormat("%u", settings.iosettings.samplerate);
         };
         extSampleRate->fnGetCurrentIdx = []() -> uint32_t {
             return indexOfCtr(ExtSamplerates, settings.iosettings.samplerate);
         };
         intSampleRate->cbOnOptionSelected = [this](int option) {
-            if (option >= 0 && option < 4) {
+            if (option >= 0 && option < IntSamplerates.size()) {
                 settings.iosettings.internalSamplerate = IntSamplerates[option];
                 daw->configureSampleRate();
             }
         };
         intSampleRate->fnGetCurrentVal = []() -> String {
-            return StringFormat("%d", settings.iosettings.internalSamplerate);
+            return StringFormat("%u", settings.iosettings.internalSamplerate);
         };
         intSampleRate->fnGetCurrentIdx = []() -> uint32_t {
             return indexOfCtr(IntSamplerates, settings.iosettings.internalSamplerate);
         };
-        for (int i = 0; i < 10; i++) {
-            int blockSize = 1 << (4 + i);
-            extBlockSize->options.push_back(StringFormat("%d", blockSize));
-            intBlockSize->options.push_back(StringFormat("%d", blockSize));
+        static constexpr blocksize_t BLOCK_SIZE_BITS = 10;
+        for (auto i = 0U; i < BLOCK_SIZE_BITS; i++) {
+            blocksize_t blockSize = 1U << (4U + i);
+            extBlockSize->options.push_back(StringFormat("%u", blockSize));
+            intBlockSize->options.push_back(StringFormat("%u", blockSize));
         }
         extBlockSize->cbOnOptionSelected = [this](int option) {
-            if (option >= 0 && option < 10) {
+            if (option >= 0 && option < BLOCK_SIZE_BITS) {
                 int blockSize = 1 << (4 + option);
                 settings.iosettings.blocksize = blockSize;
                 daw->configureSampleRate();
             }
         };
-        extBlockSize->fnGetCurrentVal = []() -> String { return StringFormat("%d", settings.iosettings.blocksize); };
+        extBlockSize->fnGetCurrentVal = []() -> String { return StringFormat("%u", settings.iosettings.blocksize); };
         intBlockSize->cbOnOptionSelected = [this](int option) {
-            if (option >= 0 && option < 10) {
+            if (option >= 0 && option < BLOCK_SIZE_BITS) {
                 int blockSize = 1 << (4 + option);
                 settings.iosettings.internalBlocksize = blockSize;
                 daw->configureSampleRate();
             }
         };
         intBlockSize->fnGetCurrentVal = []() -> String {
-            return StringFormat("%d", settings.iosettings.internalBlocksize);
+            return StringFormat("%u", settings.iosettings.internalBlocksize);
         };
 
         dbgassert(audiohost::getInstance()->initPa());
@@ -740,8 +739,6 @@ public:
         if (!setScissorTransform(vg)) {
             return;
         }
-
-        setFont(vg, TEXT_FONT_SIZE, THEMECOL_TEXT, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
 
         for (auto c : guis) {
             nvgSave(vg);

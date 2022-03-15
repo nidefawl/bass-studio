@@ -1,4 +1,5 @@
 #pragma once
+#include "types.h"
 #include "config.h"
 #include "grid.h"
 #include "host/audio_config.h"
@@ -13,14 +14,14 @@ struct windowsize;
 #endif
 
 struct io_channel {
-    int idx;
-    std::vector<int32_t> channels;
+    int32_t idx;
+    std::vector<channelnum_t> channels;
 };
 
 struct midi_channel {
-    int idx;
+    int32_t idx;
     String deviceName;
-    std::vector<int32_t> channels;
+    std::vector<channelnum_t> channels;
 };
 
 struct app_ioaudioconfig {
@@ -43,10 +44,10 @@ struct app_iomidiconfig {
 };
 
 struct app_iosettings {
-    uint32_t samplerate = 44100;
-    uint32_t blocksize = 512;
-    uint32_t internalSamplerate = 44100;
-    uint32_t internalBlocksize = 512;
+    samplerate_t samplerate = 44100;
+    blocksize_t blocksize = 512;
+    samplerate_t internalSamplerate = 44100;
+    blocksize_t internalBlocksize = 512;
     app_ioasioconfig asioConfig;
     std::map<String, app_ioaudioconfig> configs;
     std::map<String, app_iomidiconfig> midiconfigs;

@@ -1,6 +1,6 @@
 #include "TestBase.hpp"
 #include <vector>
-#include <cstdint>
+#include "types.h"
 #include "seq_time.h"
 #include "math/seq_math.h"
 #include "clip.h"

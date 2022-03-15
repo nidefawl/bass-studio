@@ -4,7 +4,7 @@
 #include "samplerate.h"
 #include "seq_time.h"
 #include "str_util.h"
-#include <cstdint>
+#include "types.h"
 #include <vector>
 
 class project_controller_t;

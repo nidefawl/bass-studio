@@ -12,7 +12,7 @@
 #include <nanovg_gl.h>
 #include <benchmark/benchmark.h>
 #include <array>
-#include <cstdint>
+#include "types.h"
 #include <cstdio>
 #include <functional>
 #include <memory>

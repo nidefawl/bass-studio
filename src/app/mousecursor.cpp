@@ -1,5 +1,5 @@
 #include <vector>
-#include <cstdint>
+#include "types.h"
 #include <memory>
 #include "logging.h"
 #include "str_util.h"

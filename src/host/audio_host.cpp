@@ -1,9 +1,11 @@
 #include "audio_host.h"
 #include "config.h"
+#include "host/audio_config.h"
 #include "samplerate.h"
 #include "str_util.h"
 #include "seq_time.h"
 #include "seq_util.h"
+#include "thread.h"
 #include "dsp_util.h"
 #include "audiobuffer.h"
 #include "audioblock.h"
@@ -21,49 +23,49 @@
 
 
 namespace DAW::AudioIO {
-    const std::array<uint32_t, 4> IntSamplerates = {
-        44100, 48000, 96000, 192000
+    const std::array<samplerate_t, 4> IntSamplerates = {
+        44100U, 48000U, 96000U, 192000U
     };
-    const std::array<uint32_t, 4> ExtSamplerates = {
-        44100, 48000, 96000, 192000
+    const std::array<samplerate_t, 4> ExtSamplerates = {
+        44100U, 48000U, 96000U, 192000U
     };
-    channelcount getTrackTypeFromNumChannels(int32_t t) {
+    channel_pairing getTrackTypeFromNumChannels(channelnum_t t) {
         if (t < 2)
-            return channelcount::MONO;
+            return channel_pairing::MONO;
 
         if (t < 3)
-            return channelcount::STEREO;
+            return channel_pairing::STEREO;
 
         if (t < 5)
-            return channelcount::MULTI_CHANNEL_4;
+            return channel_pairing::MULTI_CHANNEL_4;
 
-        return channelcount::MULTI_CHANNEL_6;
+        return channel_pairing::MULTI_CHANNEL_6;
     }
 
-    int32_t getNumChannelsFromTrackType(channelcount t) {
+    channelnum_t getNumChannelsFromTrackType(channel_pairing t) {
         switch (t) {
             default:
-            case channelcount::MONO:
+            case channel_pairing::MONO:
                 return 1;
-            case channelcount::STEREO:
+            case channel_pairing::STEREO:
                 return 2;
-            case channelcount::MULTI_CHANNEL_4:
+            case channel_pairing::MULTI_CHANNEL_4:
                 return 4;
-            case channelcount::MULTI_CHANNEL_6:
+            case channel_pairing::MULTI_CHANNEL_6:
                 return 6;
         }
     }
 
-    int32_t getNumChannelsInConfig(const std::vector<io_cfg_channel>& cfg) {
-        int32_t val = std::accumulate(cfg.cbegin(), cfg.cend(), 0, [](int cnt, auto& cfgEntry) {
+    channelnum_t getNumChannelsInConfig(const std::vector<io_cfg_channel>& cfg) {
+        channelnum_t val = std::accumulate(cfg.cbegin(), cfg.cend(), 0, [](auto cnt, auto& cfgEntry) -> channelnum_t {
             return cnt + getNumChannelsFromTrackType(cfgEntry.type);
         });
         return val;
     }
     //static_assert(getNumChannelsFromTrackType(tracktype::MULTI_CHANNEL_6) == 6);
 
-    String getTrackNameShort(channelcount type, int32_t index, stage_bufferpoint isInput) {
-        String s = StringFormat("%d", index);
+    String getTrackNameShort(channel_pairing type, channelnum_t index, stage_bufferpoint isInput) {
+        String s = StringFormat("%u", index);
         if (isInput == stage_bufferpoint::INPUT) {
             s += " IN";
         } else {
@@ -71,24 +73,24 @@ namespace DAW::AudioIO {
         }
         switch (type) {
             default:
-            case channelcount::MONO:
+            case channel_pairing::MONO:
                 s = "Mono " + s;
                 break;
-            case channelcount::STEREO:
+            case channel_pairing::STEREO:
                 s = "St. " + s;
                 break;
-            case channelcount::MULTI_CHANNEL_4:
+            case channel_pairing::MULTI_CHANNEL_4:
                 s = "4CH " + s;
                 break;
-            case channelcount::MULTI_CHANNEL_6:
+            case channel_pairing::MULTI_CHANNEL_6:
                 s = "6CH " + s;
                 break;
         }
         return s;
     }
 
-    String getTrackName(channelcount type, int32_t index, bool isInput) {
-        String s = StringFormat("%d", index);
+    String getTrackName(channel_pairing type, channelnum_t index, bool isInput) {
+        String s = StringFormat("%u", index);
         if (isInput) {
             s += " Input";
         } else {
@@ -96,46 +98,46 @@ namespace DAW::AudioIO {
         }
         switch (type) {
             default:
-            case channelcount::MONO:
+            case channel_pairing::MONO:
                 s = "Mono " + s;
                 break;
-            case channelcount::STEREO:
+            case channel_pairing::STEREO:
                 s = "Stereo " + s;
                 break;
-            case channelcount::MULTI_CHANNEL_4:
+            case channel_pairing::MULTI_CHANNEL_4:
                 s = "4 Channel " + s;
                 break;
-            case channelcount::MULTI_CHANNEL_6:
+            case channel_pairing::MULTI_CHANNEL_6:
                 s = "6 Channel " + s;
                 break;
         }
         return s;
     }
 
-    channelcount getNextTrackType(channelcount type) {
+    channel_pairing getNextTrackType(channel_pairing type) {
         switch (type) {
             default:
-            case channelcount::MONO:
-                return channelcount::STEREO;
-            case channelcount::STEREO:
-                return channelcount::MONO;
-        //    case channelcount::MULTI_CHANNEL_4:
-        //        return channelcount::MULTI_CHANNEL_6;
-        //    case channelcount::MULTI_CHANNEL_6:
-        //        return channelcount::MONO;
+            case channel_pairing::MONO:
+                return channel_pairing::STEREO;
+            case channel_pairing::STEREO:
+                return channel_pairing::MONO;
+        //    case channel_pairing::MULTI_CHANNEL_4:
+        //        return channel_pairing::MULTI_CHANNEL_6;
+        //    case channel_pairing::MULTI_CHANNEL_6:
+        //        return channel_pairing::MONO;
         }
     }
 
-    String getTrackTypeStr(channelcount type) {
+    String getTrackTypeStr(channel_pairing type) {
         switch (type) {
             default:
-            case channelcount::MONO:
+            case channel_pairing::MONO:
                 return "MONO";
-            case channelcount::STEREO:
+            case channel_pairing::STEREO:
                 return "STEREO";
-            case channelcount::MULTI_CHANNEL_4:
+            case channel_pairing::MULTI_CHANNEL_4:
                 return "4CH";
-            case channelcount::MULTI_CHANNEL_6:
+            case channel_pairing::MULTI_CHANNEL_6:
                 return "6CH";
         }
     }
@@ -143,7 +145,7 @@ namespace DAW::AudioIO {
 
 
 using namespace DAW::AudioIO;
-using DAW::channelcount;
+using DAW::channel_pairing;
 
 bool error(const char* msg, PaError err) {
     log_lf(Log::L_ERROR, "%s (%d): %s\n", msg, err, Pa_GetErrorText(err));
@@ -165,12 +167,17 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer,
         return paComplete;
     }
     auto* stream = static_cast<audiohost::HostIOStream*>(userData);
-    if (stream->streamShouldEnd) {
-        return paComplete;
-    }
     audiohost* host = stream->host;
     float** inputs  = (float**) inputBuffer;
     float** outputs = (float**) outputBuffer;
+    if (stream->streamShouldEnd) {
+        for (channelnum_t i = 0; outputs && i < stream->nOutputChannels; i++) {
+            if (outputs[i]) {
+                memset(outputs[i], 0, framesPerBuffer * sizeof(float));
+            }
+        }
+        return paComplete;
+    }
 
     dsp_util::fillChannels(outputs, stream->nOutputChannels, framesPerBuffer, 0.0f);
     if (!host) {
@@ -183,12 +190,12 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer,
     stream->lastAudioCallbackInvocationTime_i64 = timeNow_i64;
     //TODO: still a race condition on_terminate here
     AudioBuffer* block        = nullptr;
-    int numOutChannelsWritten = 0;
+    channelnum_t numOutChannelsWritten = 0;
     if (stream->try_dequeue(block)) {
         dbgassert(block);
         if (framesPerBuffer == block->output->samples) {
-            int32_t channels = math::min<int32_t>(block->output->channels, stream->nOutputChannels);
-            for (int32_t i = 0; i < channels; i++) {
+            channelnum_t channels = math::min<channelnum_t>(block->output->channels, stream->nOutputChannels);
+            for (channelnum_t i = 0; i < channels; i++) {
                 float* channel = block->output->buf[i];
                 memcpy(outputs[i], channel, framesPerBuffer * sizeof(float));
             }
@@ -200,16 +207,16 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer,
     }
 
     // fill channels that haven't been written to with zeroes
-    for (int32_t i = numOutChannelsWritten; i < stream->nOutputChannels; i++) {
+    for (channelnum_t i = numOutChannelsWritten; i < stream->nOutputChannels; i++) {
         memset(outputs[i], 0, framesPerBuffer * sizeof(float));
     }
 
     dsp_util::fillSaturate(outputs, stream->nOutputChannels, framesPerBuffer);
     host->blockReads++;
 
-    audiothread_ringbuffer_t& ringbuffer = stream->getRingbuffer();
-    int32_t& writePos                    = ringbuffer.writePos;
-    AudioBuffer** buffers                = ringbuffer.buffers;
+    auto& ringbuffer      = stream->getRingbuffer();
+    auto& writePos        = ringbuffer.writePos;
+    AudioBuffer** buffers = ringbuffer.buffers;
 
     AudioBuffer* bufferWrite = buffers[writePos];
     if (bufferWrite->inUse) {
@@ -217,9 +224,9 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer,
     } else {
         bufferWrite->output->realloc(framesPerBuffer);
         if (inputs) {
-            int32_t nChannels = math::min<int32_t>(bufferWrite->output->channels, stream->nInputChannels);
+            channelnum_t nChannels = math::min<channelnum_t>(bufferWrite->output->channels, stream->nInputChannels);
             bufferWrite->output->copyFrom(inputs, framesPerBuffer, nChannels);
-            for (int32_t i = nChannels; i < stream->nInputChannels; i++) {
+            for (channelnum_t i = nChannels; i < stream->nInputChannels; i++) {
                 memset(bufferWrite->output->buf[i], 0, bufferWrite->output->samples * sizeof(float));
             }
         } else {
@@ -250,27 +257,35 @@ static void StreamFinished(void* userData) {
     stream->streamFinished         = true;
 }
 
-audiohost::HostIOStream::HostIOStream(int32_t _nStreamId, io_cfg_tracks cfg, int32_t _nOutputChannels, int32_t _nInputChannels)
-    : streamId(_nStreamId),
+audiohost::HostIOStream::HostIOStream(audiohost* const _host, int32_t _streamId, int32_t _streamIdx, io_cfg_tracks& cfg, channelnum_t _nOutputChannels, channelnum_t _nInputChannels)
+    : metersInput(meterDataInput.data(), meterDataInput.size()),
+      metersOutput(meterDataOutput.data(), meterDataOutput.size()),
+      host(_host), streamId(_streamId), streamIdx(_streamIdx),
       nInputChannels(_nInputChannels),
-      nOutputChannels(_nOutputChannels),
-      metersInput(meterDataInput.data(), meterDataInput.size()),
-      metersOutput(meterDataOutput.data(), meterDataOutput.size())
+      nOutputChannels(_nOutputChannels)
 {
-    allocRingBuffer(ringbuffer, nInputChannels);
+    allocRingBuffer(ringbuffer, math::max<channelnum_t>(nInputChannels, 2));
     channelsInput.resize(cfg.input.size());
     channelsOutput.resize(cfg.output.size());
-    int32_t channelOffset = 0;
-    for (int32_t i = 0; i < cfg.input.size(); i++) {
-        io_cfg_channel& track = cfg.input[i];
-        channelsInput[i] = std::make_shared<HostIOStream::IOChannel>(i, track.type, channelOffset, metersInput.getSubChannelMeter(channelOffset, getNumChannelsFromTrackType(track.type)));
-        channelOffset += getNumChannelsFromTrackType(track.type);
+    for (io_cfg_channel& track : cfg.input) {
+        dbgassert(track.idx < channelsInput.size());
+        if (track.idx >= channelsInput.size()) {
+            continue;
+        }
+        channelsInput[track.idx] = std::make_shared<HostIOStream::IOChannel>(track.idx,
+                                                                     track.type,
+                                                                     track.offset,
+                                                                     metersInput.getSubChannelMeter(track.offset, getNumChannelsFromTrackType(track.type)));
     }
-    channelOffset = 0;
-    for (int32_t i = 0; i < cfg.output.size(); i++) {
-        io_cfg_channel& track = cfg.output[i];
-        channelsOutput[i] = std::make_shared<HostIOStream::IOChannel>(i, track.type, channelOffset, metersOutput.getSubChannelMeter(channelOffset, getNumChannelsFromTrackType(track.type)));
-        channelOffset += getNumChannelsFromTrackType(track.type);
+    for (io_cfg_channel& track : cfg.output) {
+        dbgassert(track.idx < channelsOutput.size());
+        if (track.idx >= channelsOutput.size()) {
+            continue;
+        }
+        channelsOutput[track.idx] = std::make_shared<HostIOStream::IOChannel>(track.idx,
+                                                                      track.type,
+                                                                      track.offset,
+                                                                      metersOutput.getSubChannelMeter(track.offset, getNumChannelsFromTrackType(track.type)));
     }
 }
 
@@ -278,10 +293,10 @@ audiohost::HostIOStream::~HostIOStream() {
     freeRingBuffer(ringbuffer);
 }
 
-audiohost::HostIOStream* audiohost::getStream(int idx) {
+audiohost::HostIOStream* audiohost::getStream(size_t idx) {
     if (streams.size() > idx) {
         auto it = std::find_if(streams.begin(), streams.end(), [idx](std::shared_ptr<HostIOStream>& ptr) {
-            return ptr->idx == idx;
+            return ptr->streamIdx == idx;
         });
         if (it != streams.end()) {
             return it->get();
@@ -289,10 +304,10 @@ audiohost::HostIOStream* audiohost::getStream(int idx) {
     }
     return nullptr;
 }
-std::shared_ptr<audiohost::HostIOStream> audiohost::getStreamSharedPtr(int idx) {
+std::shared_ptr<audiohost::HostIOStream> audiohost::getStreamSharedPtr(size_t idx) {
     if (streams.size() > idx) {
         auto it = std::find_if(streams.begin(), streams.end(), [idx](std::shared_ptr<HostIOStream>& ptr) {
-            return ptr->idx == idx;
+            return ptr->streamIdx == idx;
         });
         if (it != streams.end()) {
             return *it;
@@ -373,7 +388,7 @@ void audiohost::HostIOStream::enqueue(AudioBuffer* buf) {
     metersOutput.onTick(blockIn->samples / (double) this->host->lSampleRate);
     for (auto & nTrack : channelsOutput) {
         auto* track = nTrack.get();
-        assert(track->buf.channels <= buf->output->channels);
+        dbgassert(track->buf.channels <= buf->output->channels);
         track->buf.realloc(blockIn->samples);
         track->buf.copyFrom(blockIn, [offset = track->channelOffset](uint32_t dstIdx, uint32_t srcIdx) {
             return offset + dstIdx;
@@ -490,7 +505,8 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     } else {
         inputParams.channelCount = 0;
     }
-
+    inputParams.channelCount = math::clamp(inputParams.channelCount, 0, 255);
+    outputParams.channelCount = math::clamp(outputParams.channelCount, 0, 255);
     log_printf("With %d output channels\n", outputParams.channelCount);
     log_printf("With %d input channels\n", inputParams.channelCount);
 
@@ -502,14 +518,14 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
         getNumChannelsInConfig(channelConfig.output) == outputParams.channelCount) {
         chCfg = channelConfig;
     } else {
-        int32_t chIdx = 0;
-        for (int i = 0; i < outputParams.channelCount;) {
+        channelnum_t chIdx = 0;
+        for (channelnum_t i = 0; i < outputParams.channelCount;) {
             io_cfg_channel channels;
             channels.idx = chIdx++;
             if (i + 1 < outputParams.channelCount) {
-                channels.type = channelcount::STEREO;
+                channels.type = channel_pairing::STEREO;
             } else {
-                channels.type = channelcount::MONO;
+                channels.type = channel_pairing::MONO;
             }
             channels.name = getTrackName(channels.type, channels.idx, false);
             channels.offset = i;
@@ -517,13 +533,13 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
             chCfg.output.push_back(channels);
         }
         chIdx = 0;
-        for (int i = 0; devInfoInput && i < inputParams.channelCount;) {
+        for (channelnum_t i = 0; devInfoInput && i < inputParams.channelCount;) {
             io_cfg_channel channels;
             channels.idx = chIdx++;
             if (i + 1 < outputParams.channelCount) {
-                channels.type = channelcount::STEREO;
+                channels.type = channel_pairing::STEREO;
             } else {
-                channels.type = channelcount::MONO;
+                channels.type = channel_pairing::MONO;
             }
             channels.name = getTrackName(channels.type, channels.idx, true);
             channels.offset = i;
@@ -533,16 +549,18 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
         chCfg.isInit  = true;
         channelConfig = chCfg;
     }
-    auto stream  = std::make_shared<HostIOStream>(streamId, chCfg, outputParams.channelCount, inputParams.channelCount);
-    stream->idx  = vecStreams.size();
-    stream->host = this;
 
-    stream->outputName      = devInfo ? devInfo->name : devInfoInput->name;
-    stream->nOutputChannels = outputParams.channelCount;
-    stream->device_api      = selApiNameCStr;
+    const auto streamIdx = vecStreams.size();
+    auto stream  = std::make_shared<HostIOStream>(this,
+                                                 streamId,
+                                                 streamIdx,
+                                                 chCfg,
+                                                 static_cast<channelnum_t>(outputParams.channelCount),
+                                                 static_cast<channelnum_t>(inputParams.channelCount));
+    stream->outputName = devInfo ? devInfo->name : devInfoInput->name;
+    stream->device_api = selApiNameCStr;
     if (devInfoInput) {
-        stream->nInputChannels = inputParams.channelCount;
-        stream->inputName      = devInfoInput->name;
+        stream->inputName = devInfoInput->name;
     }
 
     PaStream* paStream = nullptr;
@@ -583,13 +601,35 @@ bool audiohost::stopAudio() {
     for (auto& sharedPtrStream : streamsCopy) {
         sharedPtrStream->streamShouldEnd = true;
     }
+    auto now = getTimeMillis();
+    while (getTimeMillis() - now < 2000) {
+        bool anyRunning = false;
+        for (auto& sharedPtrStream : streamsCopy) {
+            anyRunning |= !sharedPtrStream->streamFinished;
+        }
+        if (!anyRunning) {
+            break;
+        }
+        seqthreads::threadSleep(100);
+    }
     for (auto& sharedPtrStream : streamsCopy) {
-        assert(sharedPtrStream->stream);
+        dbgassert(sharedPtrStream->stream);
         PaError err = Pa_StopStream(sharedPtrStream->stream);
         if (err != paNoError) {
             error("Pa_StopStream", err);
         }
         numStreamsStopped++;
+    }
+    now = getTimeMillis();
+    while (getTimeMillis() - now < 2000) {
+        bool anyRunning = false;
+        for (auto& sharedPtrStream : streamsCopy) {
+            anyRunning |= !sharedPtrStream->streamFinished;
+        }
+        if (!anyRunning) {
+            break;
+        }
+        seqthreads::threadSleep(100);
     }
     for (auto& sharedPtrStream : streamsCopy) {
         PaError err = Pa_CloseStream(sharedPtrStream->stream);
@@ -598,6 +638,6 @@ bool audiohost::stopAudio() {
         }
         removeStream(sharedPtrStream.get());
     }
-    assert(streams.empty());
+    dbgassert(streams.empty());
     return numStreamsStopped > 0;
 }

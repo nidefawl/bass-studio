@@ -1,12 +1,13 @@
 #pragma once
 #include <cmath>
-#include <cstdint>
+#include "types.h"
 #include <iterator>
 #include "assert_dbg.h"
 #include "math/seq_math.h"
 #include "audioblock.h"
 #include "seq_util.h"
 #include "seq_time.h"
+#include "types.h"
 
 namespace DAW {
 
@@ -120,13 +121,13 @@ class rmsmeter {
     int count = 0;
     std::vector<meter_runningsum*> channels;
 public:
-    rmsmeter(meter_runningsum* _channels, uint8_t _numChannels)
+    rmsmeter(meter_runningsum* _channels, channelnum_t _numChannels)
         : channels(_numChannels)
     {
         dbgassert(channels.size());
         isDefaultCstr = false;
         count = _numChannels;
-        for (uint8_t idx = 0; idx < _numChannels; ++idx) {
+        for (channelnum_t idx = 0; idx < _numChannels; ++idx) {
             channels[idx] = _channels++;
         }
     }
@@ -183,12 +184,12 @@ public:
             }
         }
     }
-    rmsmeter getSubChannelMeter(uint8_t channelOffset, uint8_t channelCount) {
+    rmsmeter getSubChannelMeter(channelnum_t channelOffset, channelnum_t channelCount) {
         dbgassert(channels.size());
         dbgassert(channelOffset + channelCount <= channels.size());
         return {channels[channelOffset], channelCount};
     }
-    uint8_t getNumChannels() const {
+    channelnum_t getNumChannels() const {
         return channels.size();
     }
 };

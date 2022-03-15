@@ -1,6 +1,6 @@
 #ifdef __APPLE__
 #endif
-#include <cstdint>
+#include "types.h"
 #include "math/vec.h"
 #include "str_util.h"
 #include "seq_time.h"

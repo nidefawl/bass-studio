@@ -13,7 +13,7 @@ namespace {
     public:
         std::vector<std::shared_ptr<resampler_t>> resamplers;
 
-        std::shared_ptr<resampler_t> getResampler(sampleformat_t in, sampleformat_t out, uint32_t numChannels) {
+        std::shared_ptr<resampler_t> getResampler(sampleformat_t in, sampleformat_t out, channelnum_t numChannels) {
             auto it = std::find_if(resamplers.begin(), resamplers.end(), [&](std::shared_ptr<resampler_t>& ptr) {
                 return ptr->in == in && ptr->out == out && ptr->numChannels == numChannels;
             });
@@ -24,14 +24,14 @@ namespace {
                 config.outputSampleRate = out.sampleRate;
                 config.numChannels      = numChannels;
                 config.setInputLength(in.blockSize);
-                auto idx = (int32_t) resamplers.size();
+                auto idx = static_cast<int32_t>(resamplers.size());
                 std::shared_ptr<resampler_t> resampler = std::make_shared<resampler_t>(idx, in, out, config);
                 resamplers.push_back(resampler);
                 return resampler;
             }
             return *it;
         }
-        void testResamplerConfig(sampleformat_t sfIn, sampleformat_t sfOut, uint32_t numChannels) {
+        void testResamplerConfig(sampleformat_t sfIn, sampleformat_t sfOut, channelnum_t numChannels) {
             auto strTestConfig = StringFormat("%u channels %u Hz@%u Samples -> %u Hz@%u Samples",
                                               numChannels, sfIn.sampleRate, sfIn.blockSize, sfOut.sampleRate, sfOut.blockSize);
             TEST_BEGIN("testResampler with "+strTestConfig);
@@ -72,11 +72,11 @@ namespace {
     };
     void testResampler() {
         test_impl impl;
-        std::vector<uint32_t> blockSizes;
-        for (uint32_t i = 16; i <= 1024*8; i<<=2) {
+        std::vector<blocksize_t> blockSizes;
+        for (blocksize_t i = 16; i <= 1024*8; i<<=2) {
             blockSizes.push_back(i);
         }
-        for (uint32_t i = 16; i <= 1024*8; i<<=2) {
+        for (blocksize_t i = 16; i <= 1024*8; i<<=2) {
             blockSizes.push_back(i + 13);
         }
 

@@ -1,8 +1,8 @@
 #include <atomic>
 #include <memory.h>
-#include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include "types.h"
 #include "audiobuffer.h"
 #include "config.h"
 #include "seq_util.h"
@@ -10,6 +10,7 @@
 #include "audioblock.h"
 #include "rand.h"
 #include "math/seq_math.h"
+#include "types.h"
 
 void AudioBlock::BeginTrace() {
     AudioBlock::instanceCstrd = 0;
@@ -22,13 +23,13 @@ void AudioBlock::EndTrace() {
     log_printf("AudioBlock stats: %d blocks, %d allocs\n", AudioBlock::instanceCstrd.load(), AudioBlock::numAllocs.load());
 }
 
-AudioBuffer* allocateBuffer(int32_t nChannels) {
+AudioBuffer* allocateBuffer(channelnum_t nChannels) {
     auto* buffer = new AudioBuffer{};
     buffer->output = new AudioBlock(nChannels, 512);
     return buffer;
 }
 
-void allocRingBuffer(audiothread_ringbuffer_t& ringbuffer, int32_t nChannels) {
+void allocRingBuffer(audiothread_ringbuffer_t& ringbuffer, channelnum_t nChannels) {
     for (auto& buffer : ringbuffer.buffers) {
         buffer = allocateBuffer(nChannels);
     }
@@ -45,20 +46,20 @@ void freeRingBuffer(audiothread_ringbuffer_t& ringbuffer) {
 void AudioBlock::fillNoise(uint32_t seed) {
     seq_rand rnd;
     rnd.rng_seed(seed);
-    for (uint32_t i = 0; i < channels; i++) {
-        for (uint32_t s = 0; s < samples; s++) {
+    for (channelnum_t i = 0; i < channels; i++) {
+        for (samplecount_t s = 0; s < samples; s++) {
             buf[i][s] = (rnd.rng_rand(1<<16)/(float)(1<<16))*0.4f;
         }
     }
 }
 
-void AudioBlock::realloc(uint32_t _samples) {
+void AudioBlock::realloc(samplecount_t _samples) {
 
     if (samples != _samples) {
         if (allocType == alloc_type::internal) {
             if (recordAllocs)
                 numAllocs++;
-            for (uint32_t i = 0; i < channels; i++) {
+            for (channelnum_t i = 0; i < channels; i++) {
                 float* const newBuf = static_cast<float*>(aligned_malloc(sizeof(float) * _samples, 512));
                 if (debug) {
                     log_lf(Log::L_TRACE, "AudioBlock buffer[%d] allocate 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
@@ -88,7 +89,7 @@ void AudioBlock::realloc(uint32_t _samples) {
     }
 }
 
-void AudioBlock::addFromDelayLineOp(DelayLine* delayLine, const samplerate_t delay, const mix_op op, float gain) {
+void AudioBlock::addFromDelayLineOp(DelayLine* delayLine, const samplecount_t delay, const mix_op op, float gain) {
     auto& delayBlock = delayLine->block;
     const auto readSamples = this->samples;
     const auto delayLineSize = delayBlock.samples;
@@ -109,16 +110,14 @@ void AudioBlock::addFromDelayLineOp(DelayLine* delayLine, const samplerate_t del
     }
 }
 
-void DelayLine::updateSize(uint16_t _blockSize, uint8_t _numChannels, samplerate_t _delay) {
+void DelayLine::updateSize(blocksize_t _blockSize, channelnum_t _numChannels, samplecount_t _delay) {
     dbgassert(_delay < (1 << 20));
     dbgassert(_blockSize);
-    auto delayBlocks = (_delay + _blockSize - 1) / _blockSize;
-    auto newBufferSize = delayBlocks * _blockSize;
-    if (this->blockSize != _blockSize
-        || this->block.samples != newBufferSize
+    const auto delayBlocks = (_delay + _blockSize + _blockSize - 1) / _blockSize;
+    const auto newBufferSize = delayBlocks * _blockSize;
+    if (this->block.samples != newBufferSize
         || this->block.channels != _numChannels) {
         this->block = AudioBlock(_numChannels, newBufferSize);
-        this->blockSize = _blockSize;
         if (this->writeOffset % _blockSize != 0) {
             this->writeOffset = (this->writeOffset / _blockSize) * _blockSize;
             dbgassert(this->writeOffset <= newBufferSize);
@@ -128,12 +127,12 @@ void DelayLine::updateSize(uint16_t _blockSize, uint8_t _numChannels, samplerate
         }
     }
 }
-void delayLineWrite(DelayLine* delayLine, AudioBlock* input, samplerate_t delay) {
+void delayLineWrite(DelayLine* delayLine, AudioBlock* input, samplecount_t delay) {
     dbgassert(delayLine);
-    dbgassert(input->channels < 256);
-    dbgassert(input->samples < std::numeric_limits<uint16_t>::max());
-    delayLine->updateSize(input->samples, static_cast<uint8_t>(input->channels), delay);
-    delayLine->writeOffset += delayLine->blockSize;
+    dbgassert(input->channels < std::numeric_limits<channelnum_t>::max());
+    dbgassert(input->samples < std::numeric_limits<blocksize_t>::max());
+    delayLine->updateSize(static_cast<blocksize_t>(input->samples), static_cast<channelnum_t>(input->channels), delay);
+    delayLine->writeOffset += input->samples;
     if (delayLine->writeOffset >= delayLine->block.samples) {
         delayLine->writeOffset = 0;
     }
@@ -141,7 +140,7 @@ void delayLineWrite(DelayLine* delayLine, AudioBlock* input, samplerate_t delay)
     delayLine->block.copyFromPosToPos(input->buf, 0, delayLine->writeOffset, input->samples, input->channels);
 }
 
-void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplerate_t delay) {
+void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplecount_t delay) {
     delayLineWrite(delayLine, input, delay);
     output->addFromDelayLineOp(delayLine, delay, AudioBlock::MIX, 1.0f);
 }
@@ -151,7 +150,7 @@ std::atomic<int32_t> DelayLine::instanceCount{ 0 };
 std::atomic<int32_t> AudioBlock::instanceCstrd{ 0 };
 std::atomic<int32_t> AudioBlock::numAllocs{ 0 };
 std::atomic<int32_t> AudioBlock::instanceCount{ 0 };
-volatile bool AudioBlock::recordAllocs{ 0 };
+volatile bool AudioBlock::recordAllocs{ false };
 
 
 void printLeakedAudioBuffers() {

@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 #include "audio_config.h"
 
 class vsthost;
@@ -46,21 +46,21 @@ inline bool audioStageIdMatches(const audio_stage_id_t& stageIds, const audiosta
 namespace DAW {
 
     struct channel_ref_t {
-        channel_type type              = channel_type::INPUT_EMPTY;
-        channelcount externalInputType = channelcount::STEREO;
+        stage_type type              = stage_type::INPUT_EMPTY;
+        channel_pairing externalInputType = channel_pairing::STEREO;
         audio_channel_ref_t stage{ { TRACKID_INVALID_I32 }, stage_bufferpoint::OUTPUT_POST };
         int32_t projectGlobalId  = 0;
-        int32_t externalInputIdx = 0;
-        int32_t srcChannelOffset = 0;
-        int32_t dstChannelOffset = 0;
+        channelnum_t externalInputIdx = 0;
+        channelnum_t srcChannelOffset = 0;
+        channelnum_t dstChannelOffset = 0;
         String name              = "None";
-        channel_type getType() const {
+        stage_type getType() const {
             return type;
         }
     };
     struct channel_desc {
-        int offset = 0;
-        int count = 2;
+        channelnum_t offset = 0;
+        channelnum_t count = 2;
         String name;
     };
 
@@ -70,6 +70,6 @@ namespace DAW {
     };
 
     bool resolveDefaultConnection(const vsthost* host, const project_t* project, track_impl_t* trImpl, bool isInput, channel_ref_t& out);
-    bool resolveAudioChannel(const vsthost* host, int32_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* ptrExternalInputs, track_audio_src& out);
+    bool resolveAudioChannel(const vsthost* host, channelnum_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* ptrExternalInputs, track_audio_src& out);
 
 }// namespace DAW

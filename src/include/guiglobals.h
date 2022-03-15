@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 #include <nanovg_min.h>
 
 #define INSET_TITLE 4

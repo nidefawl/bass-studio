@@ -25,7 +25,7 @@
 #error "Platform not supported"
 #endif
 #include <vector>
-#include <cstdint>
+#include "types.h"
 #include "math/vec.h"
 #include "str_util.h"
 #include "fileio.h"

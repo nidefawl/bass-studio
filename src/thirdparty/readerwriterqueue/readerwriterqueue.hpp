@@ -9,7 +9,7 @@
 #include "assert_dbg.h"
 #include <stdexcept>
 #include <new>
-#include <cstdint>
+#include "types.h"
 #include <cstdlib>		// For malloc/free/abort & size_t
 #if __cplusplus > 199711L || _MSC_VER >= 1700 // C++11 or VS2012
 #include <chrono>

@@ -171,14 +171,14 @@ void effectbase::updateOnEnableParam(automatable_param_t* param, bool wasEnable,
 }
 
 void effectbase::initBuffers() {
-    int32_t maxInputChannels = 1;
+    channelnum_t maxInputChannels = 1;
     for (auto& desc : inputChannelsDesc) {
-        maxInputChannels = math::max(maxInputChannels, desc.offset + desc.count);
+        maxInputChannels = math::max<channelnum_t>(maxInputChannels, desc.offset + desc.count);
     }
     this->blockInputs         = new AudioBlock(maxInputChannels, format.blockSize);
-    int32_t maxOutputChannels = 1;
+    channelnum_t maxOutputChannels = 1;
     for (auto& desc : outputChannelsDesc) {
-        maxOutputChannels = math::max(maxOutputChannels, desc.offset + desc.count);
+        maxOutputChannels = math::max<channelnum_t>(maxOutputChannels, desc.offset + desc.count);
     }
     this->blockOutputs = new AudioBlock(maxOutputChannels, format.blockSize);
 }

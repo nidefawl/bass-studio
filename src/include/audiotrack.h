@@ -1,15 +1,15 @@
 #pragma once
+#include "types.h"
 #include "audiosample.h"
 #include "audioblock.h"
 #include "host/mainctrl.h"
-#include <cstdint>
 #include <memory>
 
 class vsthost;
 struct audiotrack_split_t : public samplesource_t {
     int64_t sampleId = 0;
     int64_t version  = 0;
-    int64_t samplePos;
+    samplecount_t samplePos;
     audiosample_t sample;
     audiosample_t* getSample() override {
         return &sample;
@@ -18,13 +18,13 @@ struct audiotrack_split_t : public samplesource_t {
 struct audiotrack_block_t {
     int64_t version = 0;
     AudioBlock data;
-    audiotrack_block_t(uint32_t _channels, uint32_t _samples) : data(_channels, _samples) {
+    audiotrack_block_t(channelnum_t _channels, samplecount_t _samples) : data(_channels, _samples) {
     }
 };
 struct audiotrack_t {
     std::vector<std::shared_ptr<audiotrack_block_t>> data;
     std::vector<std::shared_ptr<audiotrack_split_t>> samples;
-    std::shared_ptr<audiotrack_split_t> getSample(int32_t samplePos);
+    std::shared_ptr<audiotrack_split_t> getSample(samplecount_t samplePos);
     std::shared_ptr<audiotrack_split_t> getSampleById(int64_t sampleId);
     template<typename Functor>
     void visitSamples(Functor f) {
@@ -35,7 +35,12 @@ struct audiotrack_t {
     void visitSamples_NoLock(Functor f) {
         std::for_each(samples.begin(), samples.end(), f);
     }
-    int32_t convertToSamples(vsthost* host);
-    void store(AudioBlock* input, int32_t samplePos);
-    static int32_t GetSplitSampleLength();
+    /**
+     * Convert tracks backing buffers to audiotrack_split_t
+     * @param host
+     * @return number of bytes copied
+     */
+    size_t convertToSamples(vsthost* host);
+    void store(AudioBlock* input, const samplecount_t samplePos);
+    static samplecount_t GetSplitSampleLength();
 };

@@ -14,7 +14,7 @@
 
 #include <limits>
 #include <cstdio>
-#include <cstdint>
+#include "types.h"
 #include <cstdlib>
 #include <stdexcept>
 #include <sys/types.h>

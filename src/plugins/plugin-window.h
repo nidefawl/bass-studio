@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 #include <vstsdk-plugin-2.4/aeffeditor.h>
 #include "plugincontrol.h"
 

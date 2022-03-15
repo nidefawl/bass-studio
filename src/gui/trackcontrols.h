@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 #include "guicontainer.h"
 #include "track.h"
 #include "trackctr_types.h"

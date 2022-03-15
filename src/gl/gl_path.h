@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include <cstdint>
+#include "types.h"
 
 #include "math/vec.h"
 #include "math/mat.h"

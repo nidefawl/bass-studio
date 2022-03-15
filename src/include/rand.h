@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 
 
 class seq_rand {

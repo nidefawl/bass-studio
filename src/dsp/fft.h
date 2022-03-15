@@ -1,6 +1,6 @@
 #pragma once
-#include <cstdint>
 #include <array>
+#include "types.h"
 #include "config.h"
 #include "meter.h"
 #include <kissfft/kiss_fftr.h>
@@ -10,17 +10,17 @@ constexpr float MAX_FREQ = 11000;
 // constexpr size_t INPUTLEN = 512*8;
 
 
-void applyWindowAndPadding(float* in, size_t inLen, std::vector<float>& windowedPadded, int32_t fftlen, float fGain = 1.0f);
-void fillbands(std::vector<float> const& mags, std::vector<float> const& freq, std::vector<float>& bands, int32_t fftlen, double srOverFFT);
+void applyWindowAndPadding(float* in, samplecount_t inLen, std::vector<float>& windowedPadded, samplecount_t fftlen, float fGain = 1.0f);
+void fillbands(std::vector<float> const& mags, std::vector<float> const& freq, std::vector<float>& bands, samplecount_t fftlen, double srOverFFT);
 
 // using fft_input_array = std::array<float, INPUTLEN>;
-template <size_t INPUTLEN>
+template <samplecount_t INPUTLEN>
 struct fft_ctxt_t {
     kiss_fftr_cfg cfg;
-    const int32_t fftLen;
+    const samplecount_t fftLen;
     const double srOverFFT;
     std::vector<kiss_fft_cpx> tmp{};
-    fft_ctxt_t(int32_t _fftLen, double _srOverFFT) : fftLen(_fftLen), srOverFFT(_srOverFFT) {
+    fft_ctxt_t(samplecount_t _fftLen, double _srOverFFT) : fftLen(_fftLen), srOverFFT(_srOverFFT) {
         tmp.resize(fftLen);
         cfg = kiss_fftr_alloc(fftLen, 0 /*is_inverse_fft*/, NULL, NULL);
         if (!cfg) {
@@ -42,14 +42,14 @@ struct fft_ctxt_t {
         }
     }
 };
-template <size_t INPUTLEN, int32_t NUM_CHANNELS = OUTPUT_CHANNELS>
+template <samplecount_t INPUTLEN, channelnum_t NUM_CHANNELS>
 struct overlap_buffer_t {
     AudioBlock blockA;
     AudioBlock blockB;
     AudioBlock* dst     = &blockA;
     AudioBlock* dst2    = &blockB;
-    int64_t blockOffset = 0;
-    const int32_t nChannels;
+    samplecount_t blockOffset = 0;
+    const channelnum_t nChannels;
     overlap_buffer_t() : blockA(NUM_CHANNELS, INPUTLEN), blockB(NUM_CHANNELS, INPUTLEN), nChannels(NUM_CHANNELS) {}
     bool feed(const AudioBlock* block, std::array<std::array<float, INPUTLEN>, NUM_CHANNELS>& ins) {
         bool processBlock = false;
@@ -57,7 +57,7 @@ struct overlap_buffer_t {
 
         blockOffset += block->samples;
         if (blockOffset >= INPUTLEN) {
-            for (int i = 0; i < NUM_CHANNELS; i++) {
+            for (channelnum_t i = 0; i < NUM_CHANNELS; i++) {
                 memcpy(ins[i].data(), dst->buf[i], INPUTLEN * sizeof(float));
             }
             processBlock = true;
@@ -73,28 +73,29 @@ struct overlap_buffer_t {
 };
 class audio_spectrum {
 public:
-    const int32_t samplerate;
-    const int32_t blocksize;
-    const int32_t fftlen;
+    static constexpr channelnum_t NUM_CHANNELS = 2;
+    const samplerate_t samplerate;
+    const blocksize_t blocksize;
+    const samplecount_t fftlen;
     const double srOverFFT;
     int32_t numBands;
     int32_t minFreq;
     int32_t maxFreq;
-    std::array<std::vector<float>, OUTPUT_CHANNELS> bands{};
-    std::array<std::vector<float>, OUTPUT_CHANNELS> mags{};
+    std::array<std::vector<float>, NUM_CHANNELS> bands{};
+    std::array<std::vector<float>, NUM_CHANNELS> mags{};
     audio_spectrum(const audio_spectrum& ref)
         : samplerate(ref.samplerate), blocksize(ref.blocksize), fftlen(ref.fftlen), srOverFFT(ref.srOverFFT), numBands(ref.numBands),
           minFreq(MIN_FREQ), maxFreq(MAX_FREQ) {
-        for (int i = 0; i < OUTPUT_CHANNELS; i++) {
+        for (channelnum_t i = 0; i < NUM_CHANNELS; i++) {
             mags[i]  = ref.mags[i];
             bands[i] = ref.bands[i];
         }
     }
-    audio_spectrum(const int32_t _blocksize, const int32_t _samplerate, const int32_t _fftLen, const int32_t _numBands)
+    audio_spectrum(const blocksize_t _blocksize, const samplerate_t _samplerate, const samplecount_t _fftLen, const int32_t _numBands)
         : samplerate(_samplerate), blocksize(_blocksize), fftlen(_fftLen), srOverFFT(_samplerate / (double)fftlen), numBands(_numBands),
           minFreq(MIN_FREQ), maxFreq(MAX_FREQ) {}
     void clear() {
-        for (int ch = 0; ch < OUTPUT_CHANNELS; ch++) {
+        for (channelnum_t ch = 0; ch < NUM_CHANNELS; ch++) {
             memset(bands[ch].data(), 0, sizeof(float) * bands[ch].size());
             memset(mags[ch].data(), 0, sizeof(float) * mags[ch].size());
         }
@@ -121,12 +122,12 @@ inline void mixSpectrum(audio_spectrum const* lf, audio_spectrum const* hf, audi
     //  assert(a->mags[0].size() == b->fftlen);
     //  assert(out.mags[0].size() == a->mags[0].size());
     //  assert(out.fftlen == a->fftlen);
-    for (int i = 0; i < OUTPUT_CHANNELS; i++) {
+    for (channelnum_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
         out.mags[i] = lf->mags[i];
         //    out.bands[i] = b->bands[i];
     }
     constexpr float fstep = 0.22;
-    for (int i = 0; i < OUTPUT_CHANNELS; i++) {
+    for (channelnum_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
         auto& bandsA = lf->bands[i];
         auto& bandsB = hf->bands[i];
         auto& bandsM = out.bands[i];
@@ -152,13 +153,13 @@ template <int INPUTLEN, int T>
 class fft_processor : public audio_spectrum {
 public:
     fft_ctxt_t<INPUTLEN>* fftctxt;
-    overlap_buffer_t<INPUTLEN> buffer;
+    overlap_buffer_t<INPUTLEN, NUM_CHANNELS> buffer;
     int blocksProcessed  = 0;
     double processedTime = 0;
     int init             = 0;
-    std::array<std::array<float, INPUTLEN>, OUTPUT_CHANNELS> ins{};
+    std::array<std::array<float, INPUTLEN>, NUM_CHANNELS> ins{};
     std::vector<float> freq{};
-    std::array<DAW::meter_runningsum, OUTPUT_CHANNELS> meterData;
+    std::array<DAW::meter_runningsum, NUM_CHANNELS> meterData;
     DAW::rmsmeter meter;
     //  audio_spectrum_t(const int32_t _blocksize, const int32_t _samplerate);
     //  ~audio_spectrum_t();
@@ -186,12 +187,12 @@ public:
             }
             float delta = f - binIdx;
             float fout  = 0.0f;
-            for (int ch = 0; ch < OUTPUT_CHANNELS; ch++) {
+            for (channelnum_t ch = 0; ch < NUM_CHANNELS; ch++) {
                 // bad cache locality, maybe store interleaved for mono mixdown
                 auto& channelMags = mags[ch];
                 fout += channelMags[binIdx] + (channelMags[binIdx + 1] - channelMags[binIdx]) * delta;
             }
-            *it++ = fout / OUTPUT_CHANNELS;
+            *it++ = fout / NUM_CHANNELS;
         }
     }
 
@@ -206,7 +207,7 @@ public:
         assert(maxFreq > 0);
         freq.resize(numBands);
         memset(freq.data(), 0, sizeof(float) * freq.size());
-        for (int ch = 0; ch < OUTPUT_CHANNELS; ch++) {
+        for (channelnum_t ch = 0; ch < NUM_CHANNELS; ch++) {
             bands[ch].resize(numBands);
             memset(bands[ch].data(), 0, sizeof(float) * bands[ch].size());
         }
@@ -219,14 +220,14 @@ public:
             freq[i]   = fX;
         }
     }
-    fft_processor(const int32_t _blocksize, const int32_t _samplerate)
+    fft_processor(const blocksize_t _blocksize, const samplerate_t _samplerate)
         : audio_spectrum(_blocksize, _samplerate, INPUTLEN * T, 64),
         fftctxt(new fft_ctxt_t<INPUTLEN>(fftlen, srOverFFT)),
         meter(meterData.data(), static_cast<uint8_t>(meterData.size()))
     {
         updateBands();
         assert(freq.size() == bands[0].size());
-        for (int i = 0; i < OUTPUT_CHANNELS; i++) {
+        for (channelnum_t i = 0; i < NUM_CHANNELS; i++) {
             memset(ins[i].data(), 0, sizeof(float) * ins[i].size());
             this->mags[i].resize(this->fftlen);
         }
@@ -235,7 +236,7 @@ public:
     void onTick(double since) { meter.onTick(since); }
     void processSlice(AudioBlock* block) {
         std::vector<float> paddedInput(this->fftlen);
-        for (int i = 0; i < OUTPUT_CHANNELS; i++) {
+        for (channelnum_t i = 0; i < NUM_CHANNELS; i++) {
             if (i > 0) {
                 memset(paddedInput.data(), 0, sizeof(float) * paddedInput.size());
             }
@@ -253,7 +254,7 @@ public:
         meter.update(block, 1.0f);
         bool processBlock = false;
         if (block->samples == INPUTLEN) {
-            for (int i = 0; i < OUTPUT_CHANNELS; i++) {
+            for (channelnum_t i = 0; i < NUM_CHANNELS; i++) {
                 memcpy(this->ins[i].data(), block->buf[i], INPUTLEN * sizeof(float));
             }
             processBlock = true;
@@ -262,7 +263,7 @@ public:
         }
         if (processBlock) {
             std::vector<float> paddedInput(this->fftlen);
-            for (int i = 0; i < OUTPUT_CHANNELS; i++) {
+            for (channelnum_t i = 0; i < NUM_CHANNELS; i++) {
                 assert(mags[i].size() == this->fftlen && "fftlen must not change at runtime");
                 memset(mags[i].data(), 0, sizeof(float) * this->fftlen);
                 applyWindowAndPadding(ins[i].data(), ins[i].size(), paddedInput, fftlen, fGain);

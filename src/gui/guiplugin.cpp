@@ -980,6 +980,7 @@ guictxtmenu_base* guiinternalpluginview::getTooltip(AppCtrl* appctrl) {
     return nullptr;
 }
 guiinternalpluginview::guiinternalpluginview(internalplugin* _effect) : guipluginview(_effect), plugin(_effect) {
+    (void) plugin;
     viewCtr = _effect->createInternalView();
     if (viewCtr) {
         viewCtr->addTo(viewCtrs);

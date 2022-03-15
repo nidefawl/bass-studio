@@ -1,4 +1,4 @@
-#include <cstdint>
+#include "types.h"
 #include <nanovg.h>
 #include <algorithm>
 #include "math/seq_math.h"

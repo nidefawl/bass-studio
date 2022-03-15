@@ -588,6 +588,8 @@ public:
           ctrTracks(_ctrTracks),
           iGuiMgr(_iGuiMgr),
           project(_project) {
+        (void) ctrTracks;
+        (void) project;
         this->dawCtrl = _dawCtrl;
         padding = 0;
         //btnFoldAll.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);

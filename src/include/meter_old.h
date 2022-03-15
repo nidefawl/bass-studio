@@ -1,5 +1,5 @@
 #pragma once
-#include <cstdint>
+#include "types.h"
 #include "assert_dbg.h"
 #include "math/seq_math.h"
 #include "audioblock.h"
