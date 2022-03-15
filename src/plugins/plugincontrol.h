@@ -16,7 +16,7 @@
 #include "event.h"
 #include "logging.h"
 #include "plugin.h"
-#include "../gui/pluginviewcontainers.h"
+#include "gui/plugin/pluginviewcontainers.h"
 
 struct NVGcontext;
 class guibase;

@@ -27,12 +27,12 @@
 #include "msgbox.h"
 
 #include "../gui/gui.h"
-#include "../gui/guicontainer.h"
-#include "../gui/button.h"
-#include "../gui/guicontextmenu_base.h"
-#include "../gui/scrollbar.h"
-#include "../gui/statusbar.h"
-#include "../gui/guimenu.h"
+#include "gui/container/container.h"
+#include "gui/controls/button.h"
+#include "gui/contextmenu/contextmenu_base.h"
+#include "gui/controls/scrollbar.h"
+#include "gui/controls/statusbar.h"
+#include "gui/menu/menu.h"
 #include "plugin.h"
 
 

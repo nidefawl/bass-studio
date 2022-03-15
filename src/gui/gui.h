@@ -10,7 +10,7 @@
 #include <cmath>
 #include "saferef.h"
 #include "guicolors.h"
-#include "table_fwd.h"
+#include "gui/table/table_fwd.h"
 
 struct NVGcontext;
 namespace RenderResources {

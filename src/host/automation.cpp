@@ -1,6 +1,6 @@
 #include "automation.h"
 #include "plugin/vst_plugin.h"
-#include "../gui/automatable.h"
+#include "gui/automation/automatable.h"
 
 int32_t indexOfTick(const std::vector<automation_point_t>& dataPoints, tick_t tick) {
     int32_t idx;

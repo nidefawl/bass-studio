@@ -14,7 +14,7 @@
 #include "util/profiling.h"
 #include "saferef.h"
 #include "host/daw_channel.h"
-#include "gui/table_fwd.h"
+#include "gui/table/table_fwd.h"
 
 struct AudioBlock;
 struct handles_t;

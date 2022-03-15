@@ -12,10 +12,10 @@
 
 #include "../gui/gui.h"
 #include "guiconstant.h"
-#include "../gui/guicontainer.h"
-#include "../gui/guicontextmenu_base.h"
-#include "../gui/guiscrollcontainer.h"
-#include "../gui/scrollbar.h"
+#include "gui/container/container.h"
+#include "gui/contextmenu/contextmenu_base.h"
+#include "gui/container/scrollcontainer.h"
+#include "gui/controls/scrollbar.h"
 
 
 void PopupCtrl::focusLost() {

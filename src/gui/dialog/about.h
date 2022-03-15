@@ -1,13 +1,13 @@
 #pragma once
 #include "math/vec.h"
 #include "str_util.h"
-#include "gui/knob.h"
-#include "gui/guicontainer.h"
-#include "gui/guicontextmenu_base.h"
-#include "gui/button.h"
+#include "gui/controls/knob.h"
+#include "gui/container/container.h"
+#include "gui/contextmenu/contextmenu_base.h"
+#include "gui/controls/button.h"
 #include <vector>
 #include <tuple>
-#include "gui/dialog.h"
+#include "dialog.h"
 
 class guidialog_about : public guidialog_base {
     using AboutLine = std::tuple<String, String>;

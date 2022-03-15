@@ -21,7 +21,7 @@
 #include "tls.h"
 
 #include "gui/gui.h"
-#include "gui/guicontainer.h"
+#include "gui/container/container.h"
 
 #include "audiocache.h"
 #include "wave/waveform_render.h"

@@ -2,8 +2,8 @@
 #include <vector>
 #include "types.h"
 #include "gui/gui.h"
-#include "gui/guicontainer.h"
-#include "gui/pluginviewcontainers.h"
+#include "gui/container/container.h"
+#include "gui/plugin/pluginviewcontainers.h"
 
 #if defined(_WIN32) && defined(_PLUGIN_EXPORT_DLL)
 /* We are building GLFW as a Win32 DLL */

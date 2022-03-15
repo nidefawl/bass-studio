@@ -35,7 +35,7 @@
 #include "rand.h"
 #include "projectcontroller.h"
 #include "dragdrop.h"
-#include "../gui/container/guicontainer_dnd_layout.h"
+#include "../gui/container/container_dnd_layout.h"
 
 struct automatable_t;
 struct KeyEvent;

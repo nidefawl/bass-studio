@@ -20,7 +20,7 @@
 #include "plugins/plugin.h"
 #include "plugins/plugincontrol.h"
 #include "plugins/plugin-window.h"
-#include "../gui/pluginviewcontainers.h"
+#include "gui/plugin/pluginviewcontainers.h"
 #include "exceptions.h"
 #include "msgbox.h"
 #include "platform.h"

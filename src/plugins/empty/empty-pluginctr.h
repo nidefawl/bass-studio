@@ -7,9 +7,9 @@
 #include "str_util.h"
 #include "color_util.h"
 #include "gui/gui.h"
-#include "gui/guicontainer.h"
-#include "gui/knob.h"
-#include "gui/button.h"
+#include "gui/container/container.h"
+#include "gui/controls/knob.h"
+#include "gui/controls/button.h"
 
 
 class vstplugin;

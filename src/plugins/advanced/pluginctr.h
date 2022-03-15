@@ -4,11 +4,11 @@
 
 #include "str_util.h"
 
-#include "../../gui/guiinputfield.h"
-#include "gui/knob.h"
-#include "gui/button.h"
-#include "gui/guicontainer.h"
-#include "gui/guicolorpick.h"
+#include "gui/controls/guiinputfield.h"
+#include "gui/controls/knob.h"
+#include "gui/controls/button.h"
+#include "gui/container/container.h"
+#include "gui/controls/colorpick.h"
 
 
 class vstplugin;

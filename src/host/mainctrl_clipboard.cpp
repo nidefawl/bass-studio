@@ -15,8 +15,8 @@
 #include "clip.h"
 
 #include "gui/gui.h"
-#include "gui/trackctr.h"
-#include "gui/trackcontent.h"
+#include "gui/track/trackctr.h"
+#include "gui/track/trackcontent.h"
 
 
 using std::make_shared;

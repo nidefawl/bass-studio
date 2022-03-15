@@ -13,10 +13,10 @@
 #include "str_util.h"
 #include "theme.h"
 #include "../gui/gui.h"
-#include "../gui/guicontainer.h"
-#include "../gui/guicontextmenu_base.h"
-#include "../gui/container/guicontainer_dnd_layout.h"
-#include "../gui/container/guicontainer_layout_types.h"
+#include "gui/container/container.h"
+#include "gui/contextmenu/contextmenu_base.h"
+#include "../gui/container/container_dnd_layout.h"
+#include "../gui/container/container_layout_types.h"
 
 #include "window.h"
 #include "platform.h"
@@ -25,7 +25,7 @@
 #include "mouse.h"
 #include "event.h"
 #include "commands.h"
-#include "gui/dialog.h"
+#include "gui/dialog/dialog.h"
 #include "assert_dbg.h"
 
 #include "project.h"

@@ -11,7 +11,7 @@
 #include "config.h"
 #include "event.h"
 #include "gui/gui.h"
-#include "gui/guicontainer.h"
+#include "gui/container/container.h"
 #include "hires_timer.h"
 #include "keyboard.h"
 #include "logging.h"

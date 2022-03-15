@@ -9,15 +9,15 @@
 #include "color_util.h"
 #include "basectrl.h"
 #include "gui.h"
-#include "button.h"
+#include "gui/controls/button.h"
 #include "platform.h"
 #include "theme.h"
 #include "saferef.h"
 #include "seq_util.h"
 #include "guicolors.h"
 #include "guiconstant.h"
-#include "debugproperties.h"
-#include "guicontextmenu_base.h"
+#include "gui/properties/properties_table.h"
+#include "gui/contextmenu/contextmenu_base.h"
 #include "renderresources.h"
 #include "util/debug_alloc.h"
 #include "guifonts.h"
@@ -431,7 +431,7 @@ void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos
     }
 }
 
-debugproperties* makeUniquePropertiesCtr();
+guictr_properties_table* makeUniquePropertiesCtr();
 
 void guibase::handleMouseDownBegin(MouseEvent& evt) {
     if (evt.button == 0) {
@@ -440,7 +440,7 @@ void guibase::handleMouseDownBegin(MouseEvent& evt) {
         handleRightClick(evt);
     } else if (evt.button > 1) {
 #if BUILD_VSTHOST
-        debugproperties* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
+        guictr_properties_table* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
         guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
         ctxtMenu->size = { 640, 480 };
         ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));

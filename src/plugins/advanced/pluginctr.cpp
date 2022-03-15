@@ -4,14 +4,14 @@
 
 #include "str_util.h"
 #include "color_util.h"
-#include "gui/knob.h"
+#include "gui/controls/knob.h"
 #include "gui/gui.h"
-#include "gui/guicontainer.h"
+#include "gui/container/container.h"
 #include "pluginctr.h"
 #include "basectrl.h"
 #include "platform.h"
 #include "plugins/plugin.h"
-#include "gui/pluginviewcontainers.h"
+#include "gui/plugin/pluginviewcontainers.h"
 #include "host/plugin/vst_plugin.h"
 
 #include "adv-plugin.h"

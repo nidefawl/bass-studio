@@ -4,9 +4,9 @@
 #include "str_util.h"
 #include "renderresources.h"
 #include "gui/gui.h"
-#include "gui/guicontainer.h"
-#include "gui/pluginctr.h"
-#include "gui/pluginlist.h"
+#include "gui/container/container.h"
+#include "gui/plugin/pluginctr.h"
+#include "gui/views/pluginlist.h"
 
 #include "base_plugin.h"
 #include "internal_plugin.h"
@@ -18,7 +18,7 @@
 
 #include "track.h"
 #include "track_impl.h"
-#include "gui/guiplugin.h"
+#include "gui/plugin/plugin.h"
 
 
 class guimodule_empty : public guiplugin {

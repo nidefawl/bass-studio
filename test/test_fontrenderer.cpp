@@ -24,7 +24,7 @@
 #include "tls.h"
 
 #include "gui/gui.h"
-#include "gui/guicontainer.h"
+#include "gui/container/container.h"
 
 #include "TestBase.hpp"
 #include "assert_dbg.h"

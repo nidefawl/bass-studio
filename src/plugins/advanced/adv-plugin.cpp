@@ -10,7 +10,7 @@
 
 #include "../plugin.h"
 #include "adv-plugin.h"
-#include "../../gui/pluginviewcontainers.h"
+#include "gui/plugin/pluginviewcontainers.h"
 #include "vstsdk-plugin-2.4/audioeffect.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 

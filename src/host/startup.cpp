@@ -8,10 +8,10 @@
 #include "track_impl.h"
 #include "logging.h"
 #include "menu.h"
-#include "gui/trackcontrols.h"
-#include "gui/trackcontent.h"
+#include "gui/track/trackcontrols.h"
+#include "gui/track/trackcontent.h"
 #include "commands.h"
-#include "gui/subtrack.h"
+#include "gui/track/subtrack.h"
 #include "appconfig.h"
 
 void setLoopPosition(DawCtrl* dawCtrl, float fStart, float fLength) {

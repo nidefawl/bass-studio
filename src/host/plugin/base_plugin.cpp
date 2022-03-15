@@ -11,10 +11,10 @@
 
 #include "gui/gui.h"
 #include "meter.h"
-#include "gui/guicontainer.h"
-#include "gui/guiplugin.h"
-#include "gui/button.h"
-#include "gui/pluginctr.h"
+#include "gui/container/container.h"
+#include "gui/plugin/plugin.h"
+#include "gui/controls/button.h"
+#include "gui/plugin/pluginctr.h"
 #include "host/mainctrl.h"
 #include "host/vst_host.h"
 

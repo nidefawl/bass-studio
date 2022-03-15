@@ -1,18 +1,18 @@
 #include "plugin_impl_gain.h"
 #include "event.h"
 #include "str_util.h"
-#include "gui/guicontainer.h"
+#include "gui/container/container.h"
 
 #include "modules.h"
 #include "internal_plugin.h"
 
 #include "host/mainctrl.h"
-#include "gui/pluginctr.h"
-#include "gui/pluginviewcontainers.h"
+#include "gui/plugin/pluginctr.h"
+#include "gui/plugin/pluginviewcontainers.h"
 
 #include "track.h"
 #include "track_impl.h"
-#include "gui/guiplugin.h"
+#include "gui/plugin/plugin.h"
 
 #include "audioblock.h"
 #include "meter.h"

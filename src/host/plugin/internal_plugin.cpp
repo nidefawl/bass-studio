@@ -6,7 +6,7 @@
 #include "base_plugin.h"
 #include "internal_plugin.h"
 #include "track.h"
-#include "gui/pluginctr.h"
+#include "gui/plugin/pluginctr.h"
 #include "host/mainctrl.h"
 #include "host/history.h"
 

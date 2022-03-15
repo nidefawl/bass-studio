@@ -7,10 +7,10 @@
 #include "seq_util.h"
 #include "seq_time.h"
 
-#include "../gui/pluginctr.h"
-#include "../gui/trackctr.h"
-#include "../gui/trackcontrols.h"
-#include "../gui/trackcontent.h"
+#include "gui/plugin/pluginctr.h"
+#include "gui/track/trackctr.h"
+#include "gui/track/trackcontrols.h"
+#include "gui/track/trackcontent.h"
 
 #include "note.h"
 #include "clip.h"
@@ -33,7 +33,7 @@
 #include "history.h"
 #include "plugindatabase.h"
 #include "wave/waveform_render_impl.h"
-#include "gui/subtrack.h"
+#include "gui/track/subtrack.h"
 #include "midi-msg.h"
 #include "fileio.h"
 #include "clip.h"

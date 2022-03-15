@@ -9,14 +9,14 @@
 #include "color_util.h"
 
 #include "gui/gui.h"
-#include "gui/guicontainer.h"
-#include "gui/pluginviewcontainers.h"
-#include "gui/button.h"
-#include "gui/knob.h"
-#include "gui/guiinputfield.h"
-#include "gui/knobpluginparam.h"
-#include "gui/guicontainer.h"
-#include "gui/guicontextmenu_daw.h"
+#include "gui/container/container.h"
+#include "gui/plugin/pluginviewcontainers.h"
+#include "gui/controls/button.h"
+#include "gui/controls/knob.h"
+#include "gui/controls/guiinputfield.h"
+#include "gui/controls/knobpluginparam.h"
+#include "gui/container/container.h"
+#include "gui/contextmenu/contextmenu_daw.h"
 
 #include "basectrl.h"
 
