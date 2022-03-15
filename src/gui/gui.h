@@ -112,7 +112,7 @@ public:
 
 public:
 #ifdef TRACK_ALLOCATIONS_GUIBASE
-    int allocId;
+    int allocId = 0;
 #endif
     guibase();
     virtual ~guibase();

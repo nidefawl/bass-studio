@@ -22,37 +22,34 @@ namespace DebugAlloc {
         return &trackerClips;
     }
 }
-
 int32_t getNumClipAllocations() {
     auto tracker = DebugAlloc::getTracker<clip_t>();
     dbgassert(tracker->allocCount < (std::numeric_limits<int32_t>::max()));
     return tracker->allocCount;
 }
-
 void printClipAllocations() {
     DebugAlloc::getTracker<clip_t>()->onExit();
 }
-
 clip_t::clip_t() {
     allocId = DebugAlloc::getTracker<clip_t>()->objConstructor(this);
 }
-
 clip_t::~clip_t() {
     DebugAlloc::getTracker<clip_t>()->objDestructor(this);
 }
+clip_t::clip_t(const clip_t& a) : clip_t() {
+    copy(a);
+}
 #else
-
 int32_t getNumClipAllocations() {
     return 0;
 }
-
 void printClipAllocations() {
 }
-#endif
-
 clip_t::clip_t(const clip_t& a) {
     copy(a);
 }
+#endif
+
 
 note_t& clip_notes_t::addSingle(note_t& t) {
     dbgassert(selection.empty());

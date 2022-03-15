@@ -214,7 +214,7 @@ public:
 
 public:
 #ifdef TRACK_ALLOCATIONS_CLIP_T
-    int64_t allocId;
+    int64_t allocId = 0;
     clip_t();
     ~clip_t();
 #else
