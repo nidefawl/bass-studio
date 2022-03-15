@@ -65,12 +65,16 @@ public:
     }
 
     trackdata_midi_t& operator=(const trackdata_midi_t& a) {
+        for (clip_t* clip : clips) {
+            releaseClipResources(clip, nullptr);
+            delete clip;
+        }
+        clips.clear();
         deepcopy(a);
         return *this;
     }
 
     void deepcopy(const trackdata_midi_t& obj) {
-        clips.clear();
         clips.reserve(obj.clips.size());
         for (clip_t* clip : obj.clips) {
             addClip(new clip_t(*clip));
