@@ -1485,11 +1485,6 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
     }
     noteview_render_t& notesView = cl->getNoteViewRender();
 
-    nvgBeginFrame(vg, 1024, 1024, 1.0);
-    nvgScale(vg, parentCtrl->m_scale, parentCtrl->m_scale);
-    nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
-    nvgCachePath(vg, 1);
-
     // ivec2 cp = this->getPosContent();
     ivec2 sizeContents  = this->getSizeContent();
     ivec2 clipPosScreen = toScreenSpace(ivec2(0, 0));
@@ -1503,6 +1498,11 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
     cacheValid &= cache->pos == clipPosScreen;
     cacheValid &= cache->size == sizeContents;
     if (!cacheValid) {
+
+	    nvgReset(vg);
+        nvgScale(vg, parentCtrl->m_scale, parentCtrl->m_scale);
+        nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
+        nvgCachePath(vg, 1);
         int64_t notesRendered = 0;
 
         cache->reset();
@@ -1632,6 +1632,7 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
             }
         }
         nvgRestore(vg);
+        nvgCachePath(vg, 0);
 
         cache->valid          = true;
         cache->pos            = clipPosScreen;
@@ -1640,8 +1641,6 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
         cache->revision       = notesView.reqRevision;
     }
     
-    nvgCachePath(vg, 0);
-    nvgEndFrame(vg);
     for (guibase* gui : guis) {
         gui->prerender(vg);
     }

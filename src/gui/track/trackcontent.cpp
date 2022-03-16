@@ -216,7 +216,7 @@ void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& gri
 }
 
 void gui_track::prerender(NVGcontext* vg) {
-    nvgBeginFrame(vg, 1024, 1024, 1.0);
+	nvgReset(vg);
     nvgScale(vg, parentCtrl->m_scale, parentCtrl->m_scale);
     nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
     nvgCachePath(vg, 1);
@@ -226,7 +226,6 @@ void gui_track::prerender(NVGcontext* vg) {
         }
     }
     nvgCachePath(vg, 0);
-    nvgEndFrame(vg);
     for (guibase* gui : guis) {
         gui->prerender(vg);
     }
