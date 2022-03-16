@@ -45,7 +45,7 @@ public:
     void setCompleted() {
         task->status = status_complete;
     }
-    bool isCompleted() {
+    bool isCompleted() const {
         return m_finished;
     }
     void wait() {
@@ -58,6 +58,7 @@ public:
         std::unique_lock<std::mutex> lock(m_mtx);
         m_finished = true;
         m_cond.notify_all();
+        task->notifyCustom();
     }
 };
 WorkerThread::ThreadTask::~ThreadTask() {
@@ -72,7 +73,7 @@ void WorkerThread::ThreadTask::wait() {
 void WorkerThread::ThreadTask::reset() {
     this->m_taskImpl->reset();
 }
-bool WorkerThread::ThreadTask::isCompleted() {
+bool WorkerThread::ThreadTask::isCompleted() const {
     return this->m_taskImpl->isCompleted();
 }
 class WorkerThread::Impl {
@@ -80,14 +81,11 @@ class WorkerThread::Impl {
     std::queue<ThreadTaskImpl*> m_q;
     std::mutex m_mtx;
     std::condition_variable m_cond;
-    std::atomic<bool> m_stop;
+    std::atomic<bool> m_stop{};
     int32_t threadid = 0;
     daw_tls::tlsinstance threadTLS;
     bool isRealtimePriority = false;
 public:
-    Impl() {
-        std::atomic_init(&m_stop, false);
-    }
     void setTls(daw_tls::tlsinstance tls) {
         dbgassert(!t.joinable());
         threadTLS = tls;

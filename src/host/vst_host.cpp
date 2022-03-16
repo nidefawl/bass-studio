@@ -1,3 +1,4 @@
+#include <atomic>
 #include <cstdlib>
 #include <algorithm>
 #include <cmath>
@@ -50,6 +51,7 @@
 #include "sse.h"
 
 #include <deque>
+#include <winnt.h>
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -59,6 +61,15 @@
 #endif
 
 #include <dr_libs/dr_wav.h>
+#define THREADSYNC_NONE 0
+#define THREADSYNC_SEMAPHORE 1
+#define THREADSYNC_ATOMIC 2
+
+
+#define THREADSYNC THREADSYNC_NONE
+#if THREADSYNC == THREADSYNC_SEMAPHORE
+#include <semaphore>
+#endif
 
 #define DBG_PRINT_CALLBACKS
 #ifdef DBG_PRINT_CALLBACKS
@@ -114,6 +125,11 @@ struct vsthost::track_block_processing_task_t {
     bool inLoop = false;
     playback_state playbackState = playback_state::status_no_process;
     int debugLogProcessing = 0;
+#if THREADSYNC == THREADSYNC_SEMAPHORE
+    std::binary_semaphore* cond;
+#elif THREADSYNC == THREADSYNC_ATOMIC
+    std::atomic_int_fast8_t* atomicWorkerCount;
+#endif
 };
 
 struct process_scratch_buf_t {
@@ -124,7 +140,6 @@ struct process_scratch_buf_t {
 class TrackBlockProcessTask : public WorkerThread::ThreadTask {
     process_scratch_buf_t buf;
     vsthost::track_block_processing_task_t blockProcTask;
-    std::atomic_bool isBusy{false};
     bool inUse = false;
     vsthost* host = nullptr;
 public:
@@ -147,13 +162,11 @@ public:
         stats.timeStart = getTimeMicros();
         host->processBlockTrack(buf, blockProcTask);
         stats.timeEnd = getTimeMicros();
-        isBusy=false;
     }
 
     void setTask(vsthost::track_block_processing_task_t task) {
         reset();
         this->blockProcTask = task;
-        isBusy=true;
         inUse = true;
     }
 
@@ -161,13 +174,20 @@ public:
         inUse = false;
     }
 
-    bool getIsBusy() const {
-        return isBusy;
-    }
-
     vsthost::track_block_processing_task_t& getTask() {
         return blockProcTask;
     }
+#if THREADSYNC == THREADSYNC_SEMAPHORE
+    void notifyCustom() override {
+        blockProcTask.cond->release();
+    }
+#elif THREADSYNC == THREADSYNC_ATOMIC
+    void notifyCustom() override {
+        auto* atomicCount = blockProcTask.atomicWorkerCount;
+        atomicCount->fetch_sub(1, std::memory_order_relaxed);
+        atomicCount->notify_all();
+    }
+#endif
 };
 
 
@@ -182,7 +202,6 @@ public:
     std::map<uint32_t, std::shared_ptr<DelayLine>> delayLines;
     std::vector<thread_stats_process_timings_t> blockThreadStats;
     std::vector<thread_stats_process_timings_t> lastBlockThreadStats;
-    std::vector<audiostageid_i32> waitingTasks;
     std::mutex mtx;
     process_scratch_buf_t singleThreadedBuf;
 
@@ -195,6 +214,11 @@ public:
     uint32_t threadCount = NUM_AUDIOPROCESSING_THREADS_INITIAL;
     uint32_t playThreadId = 0;
     VstInt32 vstShellCurrentUniqueId = 0;
+#if THREADSYNC == THREADSYNC_SEMAPHORE
+    std::binary_semaphore conditionSingleTaskFinished{0};
+#elif THREADSYNC == THREADSYNC_ATOMIC
+    std::atomic_int_fast8_t atomicWorkerCount{0};
+#endif
 
     std::unique_ptr<ProcessThread> vstscannerProcessThread;
     int scanningState = 0;
@@ -2029,64 +2053,87 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
  * @param reqFinishWaitStageIds
  * @param isFinalInvocation
  */
-void vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedStageIds, bool isFinalInvocation) {
-    bool allBusyFlag = true;
-    while (allBusyFlag) {
-        allBusyFlag = true;
-        impl->waitingTasks.clear();
+int32_t vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedStageIds, int32_t tasksRunning, bool wait) {
+    int32_t finishedTasks = 0;
+    // int64_t numspin = 0;
+    while (true) {
+        // numspin++;
         for (size_t i = 0; i < impl->threadCount; i++) {
             TrackBlockProcessTask& task = impl->tasks[i];
             if (task.isInUse()) {
-                auto taskStageId = task.getTask().trackNode->stageId;
                 if (!task.isCompleted()) {
-                    impl->waitingTasks.push_back(taskStageId);
-                    if (isFinalInvocation) {
-                        task.wait();
-                    } else {
+                    // if (!wait) {
                         continue;
-                    }
-
+                    // }
+                    // task.wait();
                 }
+                finishedTasks++;
                 dbgassert(task.isCompleted());
-                //log_printf("Thread[%d] completed stageId %d\n", i, taskStageId);
                 vsthost::track_block_processing_task_t& procTask = task.getTask();
+                //log_printf("Thread[%d] completed stageId %d\n", i, procTask.trackNode->stageId);
                 if (task.isError()) {
                     std::exception_ptr eptr = task.getException();
                     if (eptr != nullptr) {
-                        try{
+                        try {
                             std::rethrow_exception(eptr);
                         }
                         catch(const std::exception &ex) {
                             printf("task[%d] had exception: %s\n", (int)i, ex.what());
                         }
                     }
-                } else if (!task.isGood()) {
-                    /* Logic error. Cannot reach */
-                    dbgassert(0);
+                } else {
+                    dbgassert(task.isGood());
                 }
                 processFinishedStageIds.push_back(procTask.trackNode->stageId);
-                auto thrdProcStats = thread_stats_process_timings_t{
-                                        static_cast<uint32_t>(i),
-                                        procTask.trackNode->stageId,
-                                        task.stats.timeStart,
-                                        task.stats.timeEnd
-                                     };
 #if DAW_DEBUG_AUDIOGRAPH
                 lastProcessingGraphs[procTask.trackNode->stageId] = procTask.effectProcessingGraph;
                 procTask.effectProcessingGraph = nullptr;
 #endif
-                impl->blockThreadStats.push_back(thrdProcStats);
+                impl->blockThreadStats.emplace_back(static_cast<uint32_t>(i),
+                                        procTask.trackNode->stageId,
+                                        task.stats.timeStart,
+                                        task.stats.timeEnd);
                 task.resetTask();
+                // if (!wait)
+                    // break;
             }
-            allBusyFlag = false;
         }
-        //allBusyFlag |= std::any_of(reqFinishWaitStageIds.begin(), reqFinishWaitStageIds.end(), [](const audiostageid_i32 stageId) {
-        //    return !STL_CONTAINS(processFinishedStageIds, stageId);
-        //});
-        //if (allBusyFlag) {
-        //    seqthreads::threadSleep(500);
-        //}
+        if (!wait || finishedTasks)
+            break;
+
+#if THREADSYNC == THREADSYNC_SEMAPHORE
+        impl->conditionSingleTaskFinished.acquire();
+#elif THREADSYNC == THREADSYNC_ATOMIC
+        int_fast8_t maxWorkCount = static_cast<int_fast8_t>(tasksRunning);
+        // auto countPre = impl->atomicWorkerCount.load();
+#if 0
+        auto const atomicImpl = reinterpret_cast<std::__cxx_atomic_impl<int_fast8_t>*>(&impl->atomicWorkerCount);
+        auto const atomicMonitoryImpl = __libcpp_atomic_monitor(atomicImpl);
+        if(std::__cxx_nonatomic_compare_equal(__cxx_atomic_load(atomicImpl, std::memory_order_relaxed), maxWorkCount))
+            __libcpp_atomic_wait(atomicImpl, atomicMonitoryImpl);
+#else
+        impl->atomicWorkerCount.wait(maxWorkCount, std::memory_order_relaxed);
+#endif
+        tasksRunning--;
+        // auto coountPost = impl->atomicWorkerCount.load();
+        // static int invoc = 0;
+        // if (invoc%500==0) {
+        //     log_lf(Log::L_FATAL, "impl->atomicWorkerCount pre  %d\n", countPre);
+        //     log_lf(Log::L_FATAL, "impl->atomicWorkerCount post %d\n", coountPost);
+        // }
+        // invoc++;
+#else
+        _mm_pause();
+        _mm_pause();
+        _mm_pause();
+        _mm_pause();
+#endif
     }
+    // static int invoc = 0;
+    // if (invoc++%800==0) {
+    //     log_lf(Log::L_FATAL, "numspin  %zd\n", numspin);
+    // }
+    return finishedTasks;
 }
 
 int32_t vsthost::processBlock(project_controller_t* ctrl,
@@ -2101,19 +2148,13 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
                               bool isLoopAround)
 {
     dbgassert(ctrl);
-    project_t* project = ctrl->getProject();
-    const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
-
-    bool debugLogProcessing = false;
-
-#ifndef NDEBUG
-    lastState = playbackState;
-#endif
-    this->impl->resetBlock();
+    project_t* const project = ctrl->getProject();
 
     /*
      * Clear all channels
      */
+#if 1
+    const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
     for (track_t* track : project->trackList) {
         dbgassert(track->audio);
         track_impl_t* audio = track->audio;
@@ -2125,6 +2166,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
         dsp_util::fillBlock(audio->outputPost, 0.0f);
         audio->updateLatency(); // determine max latency so getLatency() is correct
     }
+#endif
 
     /**
      * Parallelizing processing:
@@ -2144,6 +2186,10 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
         audiostageid_i32 stageId;
         uint32_t threadIdx;
     };
+
+    constexpr bool debugLogProcessing = false;
+
+    this->impl->resetBlock();
 
     impl->playThreadId = seqthreads::getCurrentThreadId();
 
@@ -2184,25 +2230,38 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
         auto funcCheckNodeUnprocessed=[&stagesProcessed](const DAW::track_node_t* trackNode) {
             return !STL_CONTAINS(stagesProcessed, trackNode->stageId);
         };
-        // auto timeEnd = getTimeMicros();
-        // int limR = 0;
-        while (tasksQueued.size() != processingGraph->nodesFlatOrdered.size()) {
-            for (auto itAudioStage : processingGraph->nodesFlatOrdered) {
-                const DAW::processing_track_node_t& trackNode = *itAudioStage;
+        auto itBegin = processingGraph->nodesFlatOrdered.begin();
+        const auto itEnd = processingGraph->nodesFlatOrdered.end();
+        const auto graphSize = processingGraph->nodesFlatOrdered.size();
+        int32_t tasksRunning = 0;
+        // int64_t numouter = 0;
+        // int64_t numinner = 0;
+#if THREADSYNC == THREADSYNC_SEMAPHORE
+        impl->conditionSingleTaskFinished.acquire();
+#elif THREADSYNC == THREADSYNC_ATOMIC
+        impl->atomicWorkerCount.store(0);
+#else
+#endif
+        while (tasksQueued.size() != graphSize) {
+            // numouter++;
+            int32_t numQd = 0;
+            for (auto itAudioStage = itBegin; itAudioStage != itEnd; ++itAudioStage) {
+                // numinner++;
+                const DAW::processing_track_node_t& trackNode = **itAudioStage;
 
-                bool wasQueued = std::find_if(tasksQueued.cbegin(), tasksQueued.cend(), 
+                const bool wasQueued = std::find_if(tasksQueued.cbegin(), tasksQueued.cend(), 
                                         [stageId=trackNode.stageId](auto& taskQueued) {
                                                 return taskQueued.stageId == stageId;
                                             }) != tasksQueued.end();
+                // dbgassert(!wasQueued);
                 if (wasQueued) {
+                    if (itAudioStage == itBegin) {
+                        itBegin++;
+                    }
                     continue;
                 }
+
                 /* skip nodes with unprocessed inputs and loop over nodesFlatOrdered again */
-
-                // auto timeStart = getTimeMicros();
-                finishTreadTasks(stagesProcessed, false);
-                // timeEnd = getTimeMicros();
-
                 bool hasUnprocessedInputs = std::any_of(trackNode.children.cbegin(), trackNode.children.cend(), funcCheckNodeUnprocessed);
                 if (!hasUnprocessedInputs) {
 
@@ -2221,27 +2280,47 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
                             blockProcTask.playbackState = playbackState;
                             blockProcTask.inLoop = inLoop;
                             blockProcTask.debugLogProcessing = debugLogProcessing;
-
+#if THREADSYNC == THREADSYNC_SEMAPHORE
+                            blockProcTask.cond = &impl->conditionSingleTaskFinished;
+#elif THREADSYNC == THREADSYNC_ATOMIC
+                            impl->atomicWorkerCount.fetch_add(1, std::memory_order_relaxed);
+                            blockProcTask.atomicWorkerCount = &impl->atomicWorkerCount;
+#endif
 
                             tasksQueued.push_back({ trackNode.stageId, static_cast<uint32_t>(i) });
                             task.setTask(blockProcTask);
                             impl->threads[i].pushTask(&task);
+                            tasksRunning++;
                             pushd = true;
+                            if (itAudioStage == itBegin) {
+                                itBegin++;
+                            }
+                            numQd++;
                             break;
                         }
-                        dbgassert(i+1 != MAX_AUDIOPROCESSING_THREADS);
                     }
-                    dbgassert(pushd);
-                } else {
-#ifdef _WIN32
-                    YieldProcessor();
-#endif
+                    if (!pushd || tasksRunning == impl->threadCount) {
+                        break;
+                    }
+                    // dbgassert(pushd);
                 }
             }
+            if (tasksRunning > 0) {
+                bool waitForTask = !numQd || tasksRunning == impl->threadCount;
+                tasksRunning -= finishTreadTasks(stagesProcessed, tasksRunning, waitForTask);
+
+            }
         }
-        finishTreadTasks(stagesProcessed, true);
-        // bool allProcessed = !std::any_of(processingGraph->nodesFlatOrdered.begin(), processingGraph->nodesFlatOrdered.end(), funcCheckNodeUnprocessed);
-        // dbgassert(allProcessed);
+        while (tasksRunning > 0) {
+            tasksRunning -= finishTreadTasks(stagesProcessed, tasksRunning, true);
+        }
+        dbgassert(tasksRunning == 0);
+        dbgassert(!std::any_of(processingGraph->nodesFlatOrdered.begin(), processingGraph->nodesFlatOrdered.end(), funcCheckNodeUnprocessed));
+        // static int invoc = 0;
+        // if (invoc++%100==0) {
+        //     log_lf(Log::L_FATAL, "numouter %zd\n", numouter);
+        //     log_lf(Log::L_FATAL, "numinner %zd\n", numinner);
+        // }
     }
 
     /* Profiling/Timings: Accumulate timings */
@@ -2295,7 +2374,6 @@ void vsthost::onPlaybackJumpFromTo(project_controller_t* ctrl, int32_t fromSampl
 
 void vsthost::onStartPlayback(project_controller_t* ctrl) {
     lastTickEndPos = 0;
-    lastState = playback_state::status_stop;
     project_t* project = ctrl->getProject();
     for (track_t* track : project->trackList) {
         auto trackImpl = track->audio;

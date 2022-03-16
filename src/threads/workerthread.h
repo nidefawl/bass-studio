@@ -36,20 +36,8 @@ public:
         void clearException() {
             this->eptr = nullptr;
         }
-        std::exception_ptr getException() {
-            return this->eptr;
-        }
         void setError() {
             this->status = status_error;
-        }
-        bool isInQueue() {
-            return this->status != status_init;
-        }
-        bool isError() {
-            return this->status >= status_error;
-        }
-        bool isGood() {
-            return this->status == status_complete;
         }
         void setInQueue() {
             this->status = status_accepted;
@@ -57,10 +45,23 @@ public:
         void setCompleted() {
             this->status = status_complete;
         }
+        std::exception_ptr getException() const {
+            return this->eptr;
+        }
+        bool isInQueue() const {
+            return this->status != status_init;
+        }
+        bool isError() const {
+            return this->status >= status_error;
+        }
+        bool isGood() const {
+            return this->status == status_complete;
+        }
         void wait();
         void reset();
-        bool isCompleted();
+        bool isCompleted() const;
         virtual void run() = 0;
+        virtual void notifyCustom() {};
 
     private:
         ThreadTaskImpl* m_taskImpl;
