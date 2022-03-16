@@ -179,9 +179,9 @@ private:
     void updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPos, playback_state state) const;
     void registerPlugins();
     void processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state);
-    int32_t processBlock(project_controller_t* ctrl, const audiostream_properties_t& audioProp, const DAW::processing_graph_t* processingGraph, AudioBlock* ptrExternalInputs, AudioBlock* ptrExternalOutputs, int32_t samplePosProcess, double tickPosProcess, playback_state state, bool inLoop, bool isLoopAround);
+    int32_t processGraph(project_controller_t* ctrl, const audiostream_properties_t& audioProp, DAW::processing_graph_t* processingGraph, AudioBlock* ptrExternalInputs, AudioBlock* ptrExternalOutputs, int32_t samplePosProcess, double tickPosProcess, playback_state state, bool inLoop, bool isLoopAround);
     int64_t writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplecount_t samplePos, samplecount_t numSamples);
-    int32_t finishTreadTasks(std::vector<audiostageid_i32>& processFinishedStageIds, int32_t tasksRunning, bool wait);
+    int32_t finishTreadTasks(int32_t tasksRunning, bool wait);
     void updateRecordingClip(tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<note_t>& m_list);
     void finishRecordingClip(tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<note_t>& m_list);
     void processMidiProcessedOutput(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<noteevent_t>& noteEventsProcessed);
@@ -213,7 +213,7 @@ public:
 
     int32_t processRender(project_controller_t* ctrl, int32_t sample, double posDouble);
     int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
-    int32_t processBlockTrack(process_scratch_buf_t& tmp, track_block_processing_task_t& task) /*const*/;
+    int32_t processGraphNode(process_scratch_buf_t& tmp, track_block_processing_task_t& task) /*const*/;
     void processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* output, const double tickLatencyCompensated, const double sampleLatencyCompensated, int32_t numSamples, playback_state state, const DAW::effect_processing_graph_t* const processingGraph) const;
 
 

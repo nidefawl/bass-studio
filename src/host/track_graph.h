@@ -42,11 +42,17 @@ namespace DAW {
             : type(_type), stageId(_stageId), internalLatency(_internalLatency) {
         }
     };
+    enum class processing_track_node_state_t {
+        UNPROCESSED = 0,
+        PROCESSING,
+        PROCESSED
+    };
     struct processing_track_node_t : public track_node_t {
         processing_track_node_t()  = default;
         track_t* trackOptional     = nullptr;
         effectbase* effectOptional = nullptr;
         audio_stage_t* stage       = nullptr;
+        processing_track_node_state_t state = processing_track_node_state_t::UNPROCESSED;
     };
 
     using track_node_ptr            = track_node_t*;
