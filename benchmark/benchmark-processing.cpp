@@ -186,22 +186,22 @@ int main(int argc, char** argv) {
             tickPos   = projGlobals.loopStart;
             samplePos = tickToSampleConvert<int32_t, roundmode::floor>(tickPos, tempo100, sr);
             //log_lf(Log::L_WARN, "START ON %s seconds: %.2f - sample %d\n", StringAsCStr(tickAsBeatString(tickPos)), toSeconds(tickPos, tempo100), samplePos);
-            // bool once = false;
+            // int nIt = 0;
             host->onStartPlayback(dawInstance);
             for (auto _ : state) {
                 const bool isLoopAround = tickPos + ticksPerBlock >= projGlobals.loopStart + projGlobals.loopLen;
                 const bool inLoop = projGlobals.loopEnabled && (tickPos >= projGlobals.loopStart) && (tickPos < projGlobals.loopStart + projGlobals.loopLen);
-                while (stream->getInputQueueSize() < 2) {
+                while (stream->getInputQueueSize() < 1) {
                     stream->enqueueInput(nullptr);
                 }
-                // if (!once)
+                // if (nIt == 8)
                 //     DebugAlloc::beginTrace();
-                    // traceAllocs = true;
+                //     // traceAllocs = true;
                 int32_t processedBlock = host->processPlayback(dawInstance, samplePos, tickPos, playback_state::status_playback, inLoop, isLoopAround);
-                // if (!once)
+                // if (nIt == 8)
                 //     DebugAlloc::endTrace();
-                    // traceAllocs = false;
-                // once = true;
+                //     // traceAllocs = false;
+                // nIt++;
                 while (stream->getOutputQueueSize() > 0) {
                     AudioBuffer* dequeuedBuf = nullptr;
                     dbgassert(stream->try_dequeue(dequeuedBuf));
