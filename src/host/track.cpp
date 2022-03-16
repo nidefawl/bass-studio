@@ -574,6 +574,13 @@ void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targe
     }
 }
 
+void track_impl_t::updateAutomatableTargets(tick_t processingPos) {
+    mixer.updateAutomatedParameters(processingPos);
+    if (arp) {
+        arp->updateAutomatedParameters(processingPos);
+    }
+}
+
 void project_t::copyTo(project_snapshot_t& project) {
     trackList.copyTo(project);
 }
@@ -1116,9 +1123,9 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags,
         const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(sampleFormat.blockSize, bpm100, sampleFormat.sampleRate);
         const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, bpm100, sampleFormat.sampleRate);
 
-        std::vector<note_t> notes;
-        hires_timer_t tmr;
+        tmr.reset();
 
+        std::vector<note_t> notes;
         if (flags & MidiFlags::PROCESS_CLIPS) {
             tick_t heldBegin = blockStart;
             tick_t heldEnd   = blockEnd;

@@ -1861,11 +1861,7 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
      * Read and apply automation.
      */
     if (DAW::isPlaybackState(playbackState)) {
-        std::vector<automatable_t*> targets;
-        trackImpl->getAutomatableTrackTargets(targets, false);
-        for (automatable_t* at : targets) {
-            at->updateAutomatedParameters(processingPos);
-        }
+        trackImpl->updateAutomatableTargets(processingPos);
     }
 
     track->getStage()->procStats.timeTrackApplyAutomation = tmp.timer.getTime();

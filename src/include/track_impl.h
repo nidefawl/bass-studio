@@ -318,6 +318,7 @@ struct track_impl_t : public audio_stage_t {
     clip_notes_t* midiProcessed = nullptr;
     ThreadMutex midiMutex;
     track_midiprocess_profiling_t procMidiStats;
+    hires_timer_t tmr;
     track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels);
     ~track_impl_t() override;
     void sendNotesOff(int32_t bpm100) override;
@@ -332,6 +333,7 @@ struct track_impl_t : public audio_stage_t {
     void removePlugin(effectbase* _vst, bool notifyUp) override;
     const std::vector<arp_note_t>& getArpHeldNotes();
     std::vector<marker_t>& getArpMarkers(int n);
+    void updateAutomatableTargets(tick_t processingPos);
     void getAutomatableTrackTargets(std::vector<automatable_t*>& targets, bool includeEffects = true);
     void createIOSnapshot(track_io_configuration_snapshot_t& snapshot);
     void loadIOConfiguration(const track_io_configuration_snapshot_t& trPluginList);
