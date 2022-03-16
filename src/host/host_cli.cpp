@@ -247,6 +247,7 @@ int runCommandLineHost(const std::vector<String>& args) {
             }
             midiHost->startMidi();
         }
+        host->cacheAudioGraph = true;
 
         plugindb.openDatabase();
         host->initThreads();
