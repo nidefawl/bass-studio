@@ -108,7 +108,7 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
     if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_2) {
         auto knob        = new guiknob;
         knob->id         = ID_KNOB_SET_THREAD_COUNT;
-        knob->fnSetValue = [dawCtrl=this->dawCtrl, knob, host](float f, int flags) {
+        knob->fnSetValue = [this, knob, host](float f, int flags) {
             uint32_t thrdCntMax = host->getMaxThreadCount();
             uint32_t thrdCnt    = math::clamp<uint32_t>(math::roundfU32(f * thrdCntMax), 1U, thrdCntMax);
             ThreadLock lock     = dawCtrl->lockPlayThread();
