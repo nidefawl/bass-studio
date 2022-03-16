@@ -51,12 +51,12 @@
 #include "sse.h"
 
 #include <deque>
-#include <winnt.h>
 
 #ifdef _WIN32
 #include <Windows.h>
 #endif
 #if defined(__linux__) || defined(__APPLE__)
+#include <emmintrin.h>
 #include <dlfcn.h>
 #endif
 
