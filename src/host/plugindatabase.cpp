@@ -6,6 +6,7 @@
 #include "platform.h"
 #include "appsettings.h"
 #include "snapshot.h"
+#include "tls.h"
 #include <stdint.h>
 #include <vector>
 #include <SQLiteCpp/SQLiteCpp.h>
@@ -46,7 +47,8 @@ public:
     explicit Impl(const String& path)
         : db(path, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE) {
         createTables(db);
-        remapVst2 = DAW::settings.pluginsettings.configVst2.uidRemapping;
+        auto& settings = daw_tls::getSettings();
+        remapVst2 = settings.pluginsettings.configVst2.uidRemapping;
     }
     ~Impl() = default;
     bool resolve(const plugin_snapshot_t& pluginSnapshot, pluginentry_t& _outResult, int loadFlags) {

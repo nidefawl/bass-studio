@@ -5,6 +5,7 @@
 #include "platform.h"
 #include "appsettings.h"
 #include "projectfile.h"
+#include "tls.h"
 #include "track_snapshot.h"
 #include "project.h"
 #include "projectcontroller.h"
@@ -164,8 +165,10 @@ int runCommandLineHost(const std::vector<String>& args) {
 
     try {
         App::Platform::initPlatformEnvironment("daw");
-        using DAW::settings;
-        settings  = loadSettings();
+        auto& tls = daw_tls::initNewTls();
+        loadSettings(*tls.settings);
+        auto& settings = *tls.settings;
+
         String file           = getCmdOption(args, "-f", "");
         String fOutWave       = getCmdOption(args, "-o", "");
         String strLogFilename = getCmdOption(args, "--logfile", "");
@@ -203,10 +206,6 @@ int runCommandLineHost(const std::vector<String>& args) {
                 return EXIT_FAILURE;
             }
         }
-        daw_tls::tlsinstance initTls;
-        initTls.tlsInitialized = true;
-        initTls.config         = new app_config_t{};
-        daw_tls::setTls(initTls);
 
         auto host = std::make_unique<vsthost>();
         vsthost::assignMasterCallback(host.get());
@@ -221,7 +220,6 @@ int runCommandLineHost(const std::vector<String>& args) {
         project_controller_t projectController{&project, &projectGlobals};
         plugindatabase_t plugindb;
         audiocache cache(settings.iosettings.samplerate);
-        daw_tls::tlsinstance& tls = daw_tls::getTls();
         tls.mainCtrl              = nullptr;
         tls.project               = &projectController;
         tls.host                  = host.get();

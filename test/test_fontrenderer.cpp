@@ -51,10 +51,7 @@ public:
     }
 
     void initApp(const std::vector<String>& args) override {
-        daw_tls::tlsinstance _tls;
-        _tls.tlsInitialized = true;
-        _tls.config         = new app_config_t{};
-        daw_tls::setTls(_tls);
+        daw_tls::initNewTls();
         const auto filepath = "cpp-test-data/word_dict.txt";
         try {
             std::vector<uint8_t> vec;

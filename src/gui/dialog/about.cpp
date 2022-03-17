@@ -21,9 +21,9 @@ guidialog_about::guidialog_about() : guidialog_base(ivec2{560, 640}) {
     btnClose.setText("Close");
     setLabel("About");
     strings.emplace_back(String("Version: "), String(BuildInfo::BUILD_BINARY_NAME) + " "+ String(BuildInfo::BUILD_BINARY_VERSION));
-    auto& runtime = daw_tls::getTls().config->runtime;
-    strings2.emplace_back("GL_RENDERER: ", runtime.glRenderer.c_str());
-    strings2.emplace_back("GL_VERSION: ", runtime.glVersion.c_str());
+    auto& systeminfo = daw_tls::getTls().runtime->systeminfo;
+    strings2.emplace_back("GL_RENDERER: ", systeminfo.glRenderer.c_str());
+    strings2.emplace_back("GL_VERSION: ", systeminfo.glVersion.c_str());
     strings2.emplace_back("BUILD_TIMESTAMP: ", BuildInfo::BUILD_TIMESTAMP);
     strings2.emplace_back("COMPILER_ID: ", BuildInfo::COMPILER_ID);
     strings2.emplace_back("COMPILER_PATH: ", BuildInfo::COMPILER_PATH);

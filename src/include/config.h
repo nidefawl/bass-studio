@@ -37,9 +37,3 @@
 #ifndef HAS_MAIN_LOOP
 #define HAS_MAIN_LOOP (BUILD_EXTERNAL_PLUGIN == 0)
 #endif
-
-#if HAS_MAIN_LOOP
-#define HAS_APP_SETTINGS 1
-#else
-#define HAS_APP_SETTINGS 0
-#endif

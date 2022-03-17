@@ -1,7 +1,7 @@
 #include "playbackthread.h"
+#include "types.h"
 #include <atomic>
 #include <queue>
-#include <stdint.h>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
@@ -20,6 +20,7 @@
 #include "host/midi_host.h"
 #include "logging.h"
 #include "sse.h"
+#include "appconfig.h"
 
 #ifdef _WIN32
 #include <Windows.h>
@@ -427,7 +428,7 @@ playback_state PlaybackThread::getState() {
     return _M_impl->getState();
 }
 ThreadLock PlaybackThread::lockThread() {
-    daw_tls::getTls().renderStats.playThreadLockCount++;
+    daw_tls::getTls().runtime->renderStats.playThreadLockCount++;
     ThreadLock t = _M_impl->lockThread();
     return std::move(t);//CANNOT RELY ON RVO
 }
@@ -435,7 +436,7 @@ ThreadLock PlaybackThread::lockThread() {
 ThreadLock PlaybackThread::tryLockThread() {
     ThreadLock t = _M_impl->tryLockThread();
     if (t.isLocked()) {
-        daw_tls::getTls().renderStats.playThreadLockCount++;
+        daw_tls::getTls().runtime->renderStats.playThreadLockCount++;
     }
     return std::move(t);//CANNOT RELY ON RVO
 }

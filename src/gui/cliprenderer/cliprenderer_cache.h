@@ -2,6 +2,7 @@
 #include "math/vec.h"
 #include "assert_dbg.h"
 #include "tls.h"
+#include "appconfig.h"
 #include <array>
 #include <nanovg.h>
 #include <nanovg_internal.h>
@@ -26,7 +27,7 @@ struct noteview_cache_impl_t {
         nvg_shape_cache* entry = arr[n];
         dbgassert(entry);
         daw_tls::tlsinstance& tls = daw_tls::getTls();
-        tls.renderClipCacheStats.sizeCacheAllocatedMemBytes += cacheEntryInfo.allocationSizeBytes;
+        tls.runtime->renderClipCacheStats.sizeCacheAllocatedMemBytes += cacheEntryInfo.allocationSizeBytes;
     }
     bool isCacheValid(int n) {
         return valid && n < arr.size() && arr[n] != nullptr;
@@ -38,7 +39,7 @@ struct noteview_cache_impl_t {
                 NVGCacheEntryInfo cacheEntryInfo;
                 nvgCacheEntryInfo(nullptr, ptr, &cacheEntryInfo);
                 daw_tls::tlsinstance& tls = daw_tls::getTls();
-                tls.renderClipCacheStats.sizeCacheAllocatedMemBytes -= cacheEntryInfo.allocationSizeBytes;
+                tls.runtime->renderClipCacheStats.sizeCacheAllocatedMemBytes -= cacheEntryInfo.allocationSizeBytes;
 
                 nvgReleaseCacheResult(ptr);
                 ptr = nullptr;

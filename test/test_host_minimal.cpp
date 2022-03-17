@@ -1,3 +1,4 @@
+#include "TestBase.hpp"
 #include "str_util.h"
 #include "common/test_common.h"
 #include "../host/vst_host.h"
@@ -6,14 +7,11 @@
 
 
 int main(int argc, char* argv[]) {
-    auto audiohost = std::make_unique<vsthost>();
-    vsthost::assignMasterCallback(audiohost.get());
-    daw_tls::tlsinstance _tls;
-    _tls.tlsInitialized = true;
-    _tls.config         = new app_config_t{};
-    _tls.host           = audiohost.get();
-    daw_tls::setTls(_tls);
-    vsthost::getInstance()->onTick();
-    vsthost::getInstance()->unload();
-    vsthost::getInstance()->destroy();
+    auto host = std::make_unique<vsthost>();
+    vsthost::assignMasterCallback(host.get());
+    daw_tls::initNewTls().host = host.get();
+    TEST_ASSERT_EQUAL(vsthost::getInstance(), host.get());
+    host->onTick();
+    host->unload();
+    host->destroy();
 }

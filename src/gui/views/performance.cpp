@@ -11,6 +11,7 @@
 #include "host/mainctrl.h"
 #include "host/vst_host.h"
 #include "host/audio_host.h"
+#include "appconfig.h"
 
 class gui_performance_stats : public guictr_base {
     int32_t minHTop = 66;
@@ -61,7 +62,7 @@ public:
         } else {
             nvgFillColor(vg, THEMECOL_TEXT);
         }
-        auto& renderStats = daw_tls::getTls().prevRenderStats;
+        auto& renderStats = daw_tls::getTls().runtime->prevRenderStats;
         printL(0, "Usage", StringFormat("%.2f%% (%.2f%%)", stats.usage * 100.0f, stats.usageRaw * 100.0f));
         nvgFillColor(vg, THEMECOL_TEXT);
         
@@ -130,7 +131,7 @@ public:
         {
             const char* sufArr[3] = { "B", "KB", "MB" };
             size_t clipSufIdx     = 0;
-            int64_t clipCacheSize        = daw_tls::getTls().renderClipCacheStats.sizeCacheAllocatedMemBytes;
+            int64_t clipCacheSize        = daw_tls::getTls().runtime->renderClipCacheStats.sizeCacheAllocatedMemBytes;
             double clipCacheSizeAsDouble = clipCacheSize;
             while (clipCacheSizeAsDouble >= 1024.0 && clipSufIdx < 2) {
                 clipCacheSizeAsDouble /= 1024.0;

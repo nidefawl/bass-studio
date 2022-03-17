@@ -9,6 +9,7 @@
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "theme.h"
+#include "tls.h"
 #include "track.h"
 #include "track_impl.h"
 #include "gui/contextmenu/contextmenu_base.h"
@@ -702,7 +703,7 @@ public:
                     }
                 }
                 if (entry->busType == bus_type::external) {
-                    using DAW::settings;
+                    auto& settings = daw_tls::getSettings();
                     auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
                     popup     = new guidropdown_select_bus_ctxt(dawCtrl, cfg, stageEndpoint);
                 }

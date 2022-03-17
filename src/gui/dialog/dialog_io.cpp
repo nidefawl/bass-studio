@@ -19,6 +19,7 @@
 #include "renderresources.h"
 #include "str_util.h"
 #include "gui/views/controls.h"
+#include "tls.h"
 #include <array>
 #include <utility>
 #include <portaudio.h>
@@ -26,8 +27,6 @@
 
 
 namespace DAW::DialogSettings {
-
-using ::DAW::settings;
 
 constexpr int ID_BTN_CLOSE    = 1;
 
@@ -108,7 +107,7 @@ public:
     void dragMoveOn(guibase* target, ivec2 mousepos) override {}
     void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
     void handleDraggedBegin(MouseEvent& evt) override { toggle(); }
-    app_ioaudioconfig& getCnf() { return settings.iosettings.getConfig(deviceAPI); }
+    app_ioaudioconfig& getCnf() { return daw_tls::getSettings().iosettings.getConfig(deviceAPI); }
     bool enabled() {
         const auto& c = getCnf();
         return isInput ? c.deviceNameInput == deviceName : c.deviceNameOutput == deviceName;
@@ -209,8 +208,6 @@ public:
         remove(&btnTrackType);
     }
 
-    // audiohost::HostIOStream::IOChannel* getIOChannel() { return ioChannel.get(); }
-
     void render(NVGcontext* vg) override {
         if (!setScissorTransformContainer(vg)) {
             return;
@@ -246,6 +243,7 @@ public:
         using namespace DAW::AudioIO;
         if (gui == &btnTrackType) {
             log_printf("Switch track type\n");
+            auto& settings = daw_tls::getSettings();
             auto& cnf = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
             io_cfg_tracks newConfig = cnf;
             auto& list    = isInput ? cnf.input : cnf.output;
@@ -386,7 +384,7 @@ public:
         if (!setScissorTransform(vg)) {
             return;
         }
-        auto* stream = audiohost::getInstance()->getStream(0);
+        auto* stream = dawCtrl->getDaw()->getAudioHost()->getStream(0);
         if (stream && prevStream && prevStream == stream->streamId) {
             for (auto c : guis) {
                 if (c->isVisible()) {
@@ -397,8 +395,7 @@ public:
             }
         }
     }
-    void updateChannels() {
-        auto* stream = audiohost::getInstance()->getStream(0);
+    void updateChannels(audiohost::HostIOStream* stream) {
         for (auto& gui : guiMeters) {
             remove(gui.get());
         }
@@ -431,9 +428,9 @@ public:
         for (guibase* gui : guis) {
             gui->onTick(ctrl);
         }
-        auto* stream = audiohost::getInstance()->getStream(0);
+        auto* stream = dawCtrl->getDaw()->getAudioHost()->getStream(0);
         if ((prevStream && !stream) || (stream && prevStream != stream->streamId)) {
-            updateChannels();
+            updateChannels(stream);
         }
     }
     ~guictr_input_meters() override {
@@ -460,6 +457,7 @@ public:
 };
 class guidialog_audio_io : public setting_dialog {
     DawInstance* const daw;
+    appsettings& settings;
     guibutton_audioengine* audioEngineOn;
     guidropdownbase* audioBlockSize;
     guidropdownbase* audioSampleRate;
@@ -475,8 +473,9 @@ class guidialog_audio_io : public setting_dialog {
 public:
     void onDialogShow() override { updateOptions(); }
     void updateOptions() {
-
-        if (audiohost::getInstance()->initPa()) {
+        auto& settings = daw_tls::getSettings();
+        auto audiohost = daw->getAudioHost();
+        if (audiohost->initPa()) {
             String deviceAPIName     = settings.iosettings.device_api;
             int apiCount             = Pa_GetHostApiCount();
             int deviceApiIdxSelected = -1;
@@ -539,6 +538,7 @@ public:
     guidialog_audio_io(DawInstance* _daw)
         : setting_dialog(),
           daw(_daw),
+          settings(daw_tls::getSettings()),
           audioEngineOn(new guibutton_audioengine{}),
           deviceListInput(new gui_list()),
           deviceListOutput(new gui_list()),
@@ -575,10 +575,10 @@ public:
                 daw->configureSampleRate();
             }
         };
-        extSampleRate->fnGetCurrentVal = []() -> String {
+        extSampleRate->fnGetCurrentVal = [this]() -> String {
             return StringFormat("%u", settings.iosettings.samplerate);
         };
-        extSampleRate->fnGetCurrentIdx = []() -> uint32_t {
+        extSampleRate->fnGetCurrentIdx = [this]() -> uint32_t {
             return indexOfCtr(ExtSamplerates, settings.iosettings.samplerate);
         };
         intSampleRate->cbOnOptionSelected = [this](int option) {
@@ -587,10 +587,10 @@ public:
                 daw->configureSampleRate();
             }
         };
-        intSampleRate->fnGetCurrentVal = []() -> String {
+        intSampleRate->fnGetCurrentVal = [this]() -> String {
             return StringFormat("%u", settings.iosettings.internalSamplerate);
         };
-        intSampleRate->fnGetCurrentIdx = []() -> uint32_t {
+        intSampleRate->fnGetCurrentIdx = [this]() -> uint32_t {
             return indexOfCtr(IntSamplerates, settings.iosettings.internalSamplerate);
         };
         static constexpr blocksize_t BLOCK_SIZE_BITS = 10;
@@ -606,7 +606,7 @@ public:
                 daw->configureSampleRate();
             }
         };
-        extBlockSize->fnGetCurrentVal = []() -> String { return StringFormat("%u", settings.iosettings.blocksize); };
+        extBlockSize->fnGetCurrentVal = [this]() -> String { return StringFormat("%u", settings.iosettings.blocksize); };
         intBlockSize->cbOnOptionSelected = [this](int option) {
             if (option >= 0 && option < BLOCK_SIZE_BITS) {
                 int blockSize = 1 << (4 + option);
@@ -614,11 +614,10 @@ public:
                 daw->configureSampleRate();
             }
         };
-        intBlockSize->fnGetCurrentVal = []() -> String {
+        intBlockSize->fnGetCurrentVal = [this]() -> String {
             return StringFormat("%u", settings.iosettings.internalBlocksize);
         };
 
-        dbgassert(audiohost::getInstance()->initPa());
         {
             int apiCnt     = Pa_GetHostApiCount();
             int apiIdxASIO = -1;
@@ -651,7 +650,7 @@ public:
                 daw->configureSampleRate();
             }
         };
-        api->fnGetCurrentVal     = []() -> String { return settings.iosettings.device_api; };
+        api->fnGetCurrentVal     = [this]() -> String { return settings.iosettings.device_api; };
         asio->cbOnOptionSelected = [this, asio](int option) {
             if (option >= 0 && option < asio->options.size()) {
                 auto devOption               = asio->options[option];
@@ -668,7 +667,7 @@ public:
                 daw->configureSampleRate();
             }
         };
-        asio->fnGetCurrentVal = []() -> String {
+        asio->fnGetCurrentVal = [this]() -> String {
             if (settings.iosettings.asioConfig.deviceName.length()) {
                 return settings.iosettings.asioConfig.deviceName;
             }
@@ -821,6 +820,7 @@ public:
     }
 };
 class gui_listentry_mididevice : public gui_list_entry {
+    appsettings& settings;
     String deviceAPI;
     String deviceName;
     const bool isInput;
@@ -828,6 +828,7 @@ class gui_listentry_mididevice : public gui_list_entry {
 public:
     gui_listentry_mididevice(String _deviceAPI, String _deviceName, bool _isInput)
         : gui_list_entry(),
+          settings(daw_tls::getSettings()),
           deviceAPI(std::move(_deviceAPI)),
           deviceName(std::move(_deviceName)),
           isInput(_isInput)
@@ -1050,6 +1051,7 @@ public:
 
 class guidialog_plugin_settings : public setting_dialog {
     DawInstance* const daw;
+    appsettings& settings;
     guibutton scanNow;
     guibutton selectFolder;
     gui_textfield pathVstVal;
@@ -1061,7 +1063,8 @@ public:
     }
     guidialog_plugin_settings(DawInstance* _daw)
         : setting_dialog(),
-          daw(_daw)
+          daw(_daw),
+          settings(daw_tls::getSettings())
     {
         setBackgroundRendered(true);
         selectFolder.id = 0x10;

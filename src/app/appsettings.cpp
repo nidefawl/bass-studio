@@ -38,9 +38,3 @@ appwindowsettings& appwindowsettings::operator=(const appwindowsettings& other) 
     this->dens = other.dens;
     return *this;
 }
-
-#if HAS_APP_SETTINGS
-namespace DAW {
-    appsettings settings;
-}
-#endif

@@ -1,4 +1,6 @@
 #include "glheaders.h"
+#include "tls.h"
+#include "util/profiling.h"
 #include <GLFW/glfw3.h>
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -245,8 +247,9 @@ public:
         : parent(_parent),
         tmLastFps(getTimeMillis()) 
     {
-#if HAS_APP_SETTINGS
-        noRawInput = DAW::settings.vmmode;
+#if BUILD_VSTHOST
+        //TODO: settings might not be loaded at this point
+        noRawInput = daw_tls::getSettings().vmmode;
 #endif
     }
 
@@ -1290,7 +1293,7 @@ void appwindow_main::destroy() {
         this->dropTarget = nullptr;
     }
     if (!parent) {
-        using DAW::settings;
+        auto& settings = daw_tls::getSettings();
         if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
             saveWindowPos(hwnd, settings.wndCompanion.size.get());
         } else {
@@ -1317,7 +1320,7 @@ void appwindow_main::initControl() {
 #ifdef _WIN32
     this->dropTarget = RegisterDropWindow(hwnd, this);
     if (!parent) {
-        using DAW::settings;
+        auto& settings = daw_tls::getSettings();
         if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
             if (!restoreWindowPos(hwnd, settings.wndCompanion.size.get())) {
                 this->maximize();
@@ -1735,18 +1738,8 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         setMinimumResolutionTimer();
         initColor();
 
-#if HAS_APP_SETTINGS
-        try {
-            DAW::settings = loadSettings();
-        } catch (std::exception& e) {
-            log_lf(Log::L_ERROR, "Failed loading settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
-            DAW::settings = appsettings();
-            ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
-        }
-#endif
-
         glfwSetErrorCallback(glfw_runtime_error_callback);
-        
+
 #ifdef _WIN32
         glfwSetWin32WindowClassName(L"DAWWINDOW01");
 #endif
@@ -1894,15 +1887,6 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 #endif
         }
         mainWindow->destroy();
-
-        if (!fatalError) {
-            try {
-                saveSettings(DAW::settings);
-            } catch (std::exception& e) {
-                log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
-                ngui::show("Couldn't write config file.", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
-            }
-        }
 
 #if defined(_WIN32) && BUILD_VSTHOST
         vst_window_mgr::destroyAllVSTWindows();

@@ -80,6 +80,9 @@
 #include "midi_host.h"
 #include "appconfig.h"
 #include "sse.h"
+#ifdef _WIN32
+#include "platform/win/windowsize.h"
+#endif
 
 const int FLAG_DEFER_LOAD               = 0x1;
 const int FLAG_INVOKE_USER_CB_DEFERLOAD = 0x2;
@@ -785,7 +788,8 @@ void DawCtrl::updateMenubar() {
     }
     menus.recent.clear();
 
-    for (auto& strFileRecentPath : DAW::settings.recentfiles.sortedEntries) {
+    auto& settings = daw_tls::getSettings();
+    for (auto& strFileRecentPath : settings.recentfiles.sortedEntries) {
         String a, b, c, d;//path, name, ext, nameExt
         SplitPath(strFileRecentPath, &a, &b, &c, &d);
         menus.recent.addCommand(menucmd_t{ CMD_FILE_OPEN, strFileRecentPath, 0 }, d);
@@ -815,7 +819,7 @@ void DawInstance::loadFile(String path, int flags) {
             tls.mainCtrl->setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
         }
     } else {
-        DAW::settings.recentfiles.add(path);
+        tls.settings->recentfiles.add(path);
         const bool wasUserCallback = (flags & FLAG_INVOKE_USER_CB_DEFERLOAD) != 0;
         auto cb                    = [this, path, projFile = f, wasUserCallback](int n) {
             int loadFlags = 0;
@@ -978,7 +982,7 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
                     }
                 }
                 saveFile(path);
-                DAW::settings.recentfiles.add(path);
+                tls.settings->recentfiles.add(path);
                 break;
             }
             case CMD_FILE_CLOSE:
@@ -1082,7 +1086,7 @@ void MainCtrl::startApp() {
     statusbarLogger->setLevel(Log::L_WARN);
     getMultiLogger().addLogger(statusbarLogger);
     Profiling::profilingRegisterEntry<prof_stats_render_t>(this, "Main Render Stats");
-    daw_tls::getTls().config->runtime = runtime_info_t{
+    daw_tls::getTls().runtime->systeminfo = appsysteminfo{
         String((char*)glGetString(GL_RENDERER)),
         String((char*)glGetString(GL_VENDOR)),
         String((char*)glGetString(GL_VERSION))
@@ -1118,12 +1122,11 @@ void DawInstance::initProcessingResources() {
 
 void DawInstance::initRealtimeResources() {
     dbgassert(initState == 3);
-    using DAW::settings;
     initState++;
     tls.audioHost->initPa();
     tls.midiHost->initPm();
-    if (settings.startEngine) {
-        if (tls.audioHost->startAudio(settings.iosettings)) {
+    if (tls.settings->startEngine) {
+        if (tls.audioHost->startAudio(tls.settings->iosettings)) {
             auto stream = tls.audioHost->getStreamSharedPtr(0);
             tls.host->setOutput(stream);
         } else {
@@ -1195,10 +1198,20 @@ void DawInstance::destroy() {
     tls.host->unload();
     tls.host->destroy();
 
+    try {
+        saveSettings(*tls.settings);
+    } catch (std::exception& e) {
+        log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
+        ngui::show("Couldn't write config file.", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
+    }
+    delete tls.runtime;
+    delete tls.settings;
     delete tls.audioCache;
     delete tls.midiHost;
     delete tls.audioHost;
     tls.host           = nullptr;
+    tls.runtime        = nullptr;
+    tls.settings       = nullptr;
     tls.midiHost       = nullptr;
     tls.audioHost      = nullptr;
     tls.mainCtrl       = nullptr;
@@ -1233,27 +1246,32 @@ void DawInstance::startDaw() {
 
 void DawInstance::initDaw() {
     dbgassert(initState == 0);
-    using DAW::settings;
     initState++;
 
-    daw_tls::tlsinstance& initTls = tls;
-    initTls.tlsInitialized = true;
+    auto& initTls = daw_tls::initNewTls();
+    auto& settings = *initTls.settings;
 
-    initTls.project        = this;
-    initTls.config         = new app_config_t{};
-    initTls.host           = new vsthost();
-    initTls.audioHost      = new audiohost();
-    initTls.midiHost       = new midihost();
-    initTls.pluginDatabase = &plugindb;
-    initTls.audioCache     = new audiocache(settings.iosettings.samplerate);
+    try {
+        loadSettings(settings);
+    } catch (std::exception& e) {
+        log_lf(Log::L_ERROR, "Failed loading settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
+        ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
+    }
 
+    initTls.host = new vsthost();
     if (!vsthost::assignMasterCallback(initTls.host)) {
         delete initTls.host;
         dbgassert(0);
         throw applogicexception("no empty vst callback slot");
     }
 
-    daw_tls::setTls(initTls);
+    initTls.project        = this;
+    initTls.audioHost      = new audiohost();
+    initTls.midiHost       = new midihost();
+    initTls.pluginDatabase = &plugindb;
+    initTls.audioCache     = new audiocache(settings.iosettings.samplerate);
+
+    this->tls = initTls;
 
     setSSEFlushDenormals();
     initTls.host->setSampleFormat(sampleformat_t{
@@ -1349,7 +1367,7 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     this->mainWindow->updateMenu();
 #endif
 
-    using DAW::settings;
+    auto& settings = daw_tls::getSettings();
     if (isCompanion()) {
         grid.grid_dens = settings.wndCompanion.dens;
     } else {
@@ -1527,7 +1545,7 @@ void DawInstance::configureSampleRate() {
     }
     setAudioThreadState(playback_state::status_stop);
     setAudioThreadState(playback_state::status_no_process);
-    using DAW::settings;
+    auto& settings = daw_tls::getSettings();
     {
 
         ThreadLock lock  = getPlayThread()->lockThread();
@@ -2283,8 +2301,9 @@ void DawInstance::startExport() {
     tls.host->setOutput(nullptr);
     playThread.addRequestWithCallback(REQ_STATE, (int) playback_state::status_render, []() {
         auto& tls = daw_tls::getTls();
-        if (DAW::settings.startEngine) {
-            if (tls.audioHost->startAudio(DAW::settings.iosettings)) {
+        auto& settings = daw_tls::getSettings();
+        if (settings.startEngine) {
+            if (tls.audioHost->startAudio(settings.iosettings)) {
                 auto stream = tls.audioHost->getStreamSharedPtr(0);
                 tls.host->setOutput(stream);
             }
@@ -2524,7 +2543,8 @@ void DawInstance::setTempo(int32_t _tempo100) {
 }
 
 void MainCtrl::destroy() {
-    DAW::settings.wndMain.dens = grid.grid_dens;
+    auto& settings = daw_tls::getSettings();
+    settings.wndMain.dens = grid.grid_dens;
     {
         ThreadLock lock = daw.playThread.lockThread();
         //TODO: MultiLogger::removeLogger is not thread safe. This will eventually cause a race condition 
@@ -2538,7 +2558,8 @@ void MainCtrl::destroy() {
 }
 
 void CompanionCtrl::destroy() {
-    DAW::settings.wndCompanion.dens = grid.grid_dens;
+    auto& settings = daw_tls::getSettings();
+    settings.wndCompanion.dens = grid.grid_dens;
     view->ctr_tracks2.removeAllTracks();
     view = nullptr;
     DawCtrl::destroy();
@@ -2662,13 +2683,13 @@ void CompanionCtrl::setEditClip(gui_clip* gclip) {
 void MainCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
     DawCtrl::render(nanovgCtxt, x, y, w, h, ratio);
     daw_tls::tlsinstance& tls = daw_tls::getTls();
-    Profiling::profilingCommitStats(this, 0, tls.renderStats);
-    tls.prevRenderStats = tls.renderStats;
-    tls.renderStats     = {};
+    Profiling::profilingCommitStats(this, 0, tls.runtime->renderStats);
+    tls.runtime->prevRenderStats = tls.runtime->renderStats;
+    tls.runtime->renderStats     = {};
 }
 void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
 
-    auto& renderStats = daw_tls::getTls().renderStats;
+    auto& renderStats = daw_tls::getTls().runtime->renderStats;
 
     renderStats.playThreadLockCount = 0;
     renderStats.clipsRendered       = 0;

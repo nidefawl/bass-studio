@@ -146,11 +146,5 @@ struct appsettings {
     app_plugin_configuration pluginsettings;
 };
 
-#if HAS_APP_SETTINGS
-namespace DAW {
-    extern appsettings settings;
-}
-#endif
-
 void saveSettings(appsettings& _settings);
-appsettings loadSettings();
+void loadSettings(appsettings& settings);

@@ -198,10 +198,7 @@ namespace MiniApp {
             }
         }
         void initApp(const std::vector<String>& args) override {
-            daw_tls::tlsinstance _tls;
-            _tls.tlsInitialized = true;
-            _tls.config         = new app_config_t{};
-            daw_tls::setTls(_tls);
+            daw_tls::initNewTls();
             waveformTest.init();
         }
 

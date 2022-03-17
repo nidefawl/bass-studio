@@ -609,11 +609,7 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
     vsthost::assignMasterCallback(vsthostInstance.get());
     vsthostInstance->setSampleFormat(sampleformat_t{ static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32 });
 
-    daw_tls::tlsinstance initTls;
-    initTls.tlsInitialized = true;
-    initTls.config         = new app_config_t{};
-    initTls.host           = vsthostInstance.get();
-    daw_tls::setTls(initTls);
+    daw_tls::getTls().host = vsthostInstance.get();
 
     int response = 0;
     log_message("Load plugin %s", req.szPath);
@@ -656,11 +652,7 @@ static int runScannerClient() {
     vsthost::assignMasterCallback(vsthostInstance.get());
     vsthostInstance->setSampleFormat(sampleformat_t{ static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32 });
 
-    daw_tls::tlsinstance initTls;
-    initTls.tlsInitialized = true;
-    initTls.config         = new app_config_t{};
-    initTls.host           = vsthostInstance.get();
-    daw_tls::setTls(initTls);
+    daw_tls::getTls().host = vsthostInstance.get();
 
     pipe_msg_hdr hdr{};
     log_message("listening...");
@@ -788,7 +780,6 @@ static int runScannerClient() {
 
 int main(int argc, char* argv[]) {
     seqthreads::registerThread("mainthread");
-    String cwdPath;
     App::Platform::initPlatformEnvironment("daw");
     if (argc <= 1) {
         String cwdPathDB = App::Platform::toUserdataPath("data/plugins.db3");
@@ -816,9 +807,9 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 #endif
-    using DAW::settings;
-    settings           = loadSettings();
-    String vstPlugPath = settings.pluginsettings.pathVst2;
+    auto& tls = daw_tls::initNewTls();
+    loadSettings(*tls.settings);
+    String vstPlugPath = tls.settings->pluginsettings.pathVst2;
     App::Platform::sanitizePathToDirectory(vstPlugPath);
     log_message("settings.pluginsettings.pathVst2 '%s'", StringAsCStr(vstPlugPath));
     if (vstPlugPath.empty()) {

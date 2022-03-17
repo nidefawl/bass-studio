@@ -6,6 +6,7 @@
 #include "samplerate.h"
 #include "str_util.h"
 #include <portmidi.h>
+#include "tls.h"
 #include "types.h"
 
 #define IN_QUEUE_SIZE  1024
@@ -469,7 +470,8 @@ void midihost::reopenAllConfiguredDevices(bool forceClose) {
         syncOpenCloseDeviceList(empty, this->devicesInput);
         syncOpenCloseDeviceList(empty, this->devicesOutput);
     }
-    app_iomidiconfig& midiSettings = DAW::settings.iosettings.getIOConfigMidi("stdmidi");
+    auto& settings = daw_tls::getSettings();
+    app_iomidiconfig& midiSettings = settings.iosettings.getIOConfigMidi("stdmidi");
     {
 
         std::vector<midi_channel> toOpen = syncOpenCloseDeviceList(midiSettings.inputs, this->devicesInput);

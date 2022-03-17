@@ -2,14 +2,18 @@
 #include "types.h"
 #include <map>
 #include "str_util.h"
+#include "util/profiling.h"
 
-struct runtime_info_t {
+struct appsysteminfo {
     String glRenderer;
     String glVendor;
     String glVersion;
 };
-struct app_config_t {
-    runtime_info_t runtime;
+struct appruntime {
+    render_clip_cache_stats_t renderClipCacheStats{};
+    prof_stats_render_t renderStats{};
+    prof_stats_render_t prevRenderStats{};
+    appsysteminfo systeminfo{};
     bool enableCache                  = true;
     bool disableWaveformUpdates       = false;
     bool enableClipRendererDebugLayer = false;

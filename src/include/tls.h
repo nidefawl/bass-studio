@@ -1,5 +1,4 @@
 #pragma once
-#include "util/profiling.h"
 
 class audiohost;
 class midihost;
@@ -9,13 +8,12 @@ class MainCtrl;
 class audiocache;
 class plugindatabase_t;
 class project_controller_t;
-struct app_config_t;
+struct appruntime;
+struct appsettings;
 namespace daw_tls {
     struct tlsinstance {
-        render_clip_cache_stats_t renderClipCacheStats{};
-        prof_stats_render_t renderStats;
-        prof_stats_render_t prevRenderStats;
-        app_config_t* config             = nullptr;
+        appruntime* runtime              = nullptr;
+        appsettings* settings            = nullptr;
         vsthost* host                    = nullptr;
         audiohost* audioHost             = nullptr;
         midihost* midiHost               = nullptr;
@@ -26,6 +24,8 @@ namespace daw_tls {
         bool tlsInitialized              = false;
     };
 
+    tlsinstance& initNewTls();
     void setTls(tlsinstance& tls);
     tlsinstance& getTls();
+    appsettings& getSettings();
 };// namespace daw_tls

@@ -1,3 +1,4 @@
+#include <functional>
 #include <vector>
 #include "assert_dbg.h"
 
@@ -37,12 +38,9 @@
 #define DISPLAY_HWND_DRAWS 0
 #endif
 
-namespace GuiColor {
-    void initConstants(int colorVal);
-}
 enum ID_BTN : int32_t {
     ID_BTN_RESET_HIST = 0,
-    ID_KNOB_SET_COLOR,
+    ID_OPTION_SCALE_GLOBAL,
     ID_KNOB_SET_THREAD_COUNT,
     ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD,
     ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD,
@@ -94,7 +92,7 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
     std::vector<guibase*>& debugGuis = impl->debugGuis;
     if (dgbCtrType != gui_ctr_debug_type_i32::TYPE_2) {
         auto knob        = new guiknob;
-        knob->id         = ID_KNOB_SET_COLOR;
+        knob->id         = ID_OPTION_SCALE_GLOBAL;
         knob->fnSetValue = [this](float f, int flags) {
             float guiScale      = math::max(0.05f, f * 2.0f);
             parentCtrl->m_scale = guiScale;
@@ -468,7 +466,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 void gui_ctr_debug::layout() {
     ivec2 cs      = getSizeContent();
     int32_t size  = 32;
-    auto knobTest = getByID(ID_KNOB_SET_COLOR);
+    auto knobTest = getByID(ID_OPTION_SCALE_GLOBAL);
     if (knobTest) {
         knobTest->size = ivec2(size);
         knobTest->pos  = ivec2(cs.x - knobTest->size.x, cs.y - knobTest->size.y);
@@ -558,18 +556,18 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 
             break;
         case ID_BTN_TOGGLE_CLIP_RENDER_CACHE:
-            daw_tls::getTls().config->enableCache = !daw_tls::getTls().config->enableCache;
-            static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().config->enableCache ? "Disable clip render cache" : "Enable clip render cache"));
+            daw_tls::getTls().runtime->enableCache = !daw_tls::getTls().runtime->enableCache;
+            static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().runtime->enableCache ? "Disable clip render cache" : "Enable clip render cache"));
 
             break;
         case ID_BTN_TOGGLE_WAVEFORM_UPDATES:
-            daw_tls::getTls().config->disableWaveformUpdates = !daw_tls::getTls().config->disableWaveformUpdates;
-            static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().config->disableWaveformUpdates ? "Enable waveform updates" : "Disable waveform updates"));
+            daw_tls::getTls().runtime->disableWaveformUpdates = !daw_tls::getTls().runtime->disableWaveformUpdates;
+            static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().runtime->disableWaveformUpdates ? "Enable waveform updates" : "Disable waveform updates"));
 
             break;
         case ID_BTN_TOGGLE_CLIPRENDERER_DEBUGLAYER:
-            daw_tls::getTls().config->enableClipRendererDebugLayer = !daw_tls::getTls().config->enableClipRendererDebugLayer;
-            static_cast<guibutton*>(button)->setText(String(!daw_tls::getTls().config->enableClipRendererDebugLayer ? "Enable clip renderer debug layer" : "Disable clip renderer debug layer"));
+            daw_tls::getTls().runtime->enableClipRendererDebugLayer = !daw_tls::getTls().runtime->enableClipRendererDebugLayer;
+            static_cast<guibutton*>(button)->setText(String(!daw_tls::getTls().runtime->enableClipRendererDebugLayer ? "Enable clip renderer debug layer" : "Disable clip renderer debug layer"));
 
             break;
         case ID_BTN_TOGGLE_THREADING:

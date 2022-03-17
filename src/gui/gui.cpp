@@ -36,9 +36,7 @@ NVGcolor dbgcolorsArray[8] = {
         nvgRGBA(255, 127, 255, 55),
         nvgRGBA(255, 255, 0, 55)
 };
-namespace GuiColor {
-    void initConstants(int colorVal);
-}
+
 void initColor() {
     const int ROWS = COLOR_PALETTE_ROWS;
     const int COLS = COLOR_PALETTE_COLS;
@@ -212,6 +210,10 @@ void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, 
     vec2 vPos = pos;
     float textBounds[2];
     getNvgMultiLineTextBounds(vg, str, bounds.x, textBounds);
+    if (textBounds[1] > bounds.y && fontSizeScaled > 6) {
+        nvgFontSize(vg, fontSizeScaled - 6);
+        getNvgMultiLineTextBounds(vg, str, bounds.x, textBounds);
+    }
     vPos.y += bounds.y / 2.0f - (textBounds[1] / 2.0f);
     vPos.y += lineh / 2.0f;
 

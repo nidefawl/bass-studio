@@ -1,4 +1,6 @@
 #include "tls.h"
+#include "appconfig.h"
+#include "appsettings.h"
 #include "host/mainctrl.h"
 #include "host/vst_host.h"
 #include "host/audio_host.h"
@@ -8,10 +10,22 @@
 #include "audiocache.h"
 #include "wave/waveform_render_impl.h"
 #include "thread.h"
+#ifdef _WIN32
+#include "platform/win/windowsize.h"
+#endif
 
 namespace daw_tls {
     static thread_local tlsinstance tls;
-
+    daw_tls::tlsinstance& initNewTls() {
+        if (!tls.tlsInitialized) {
+            tlsinstance localTls{};
+            localTls.tlsInitialized = true;
+            localTls.runtime = new appruntime{};
+            localTls.settings = new appsettings{};
+            daw_tls::setTls(localTls);
+        }
+        return tls;
+    }
     void setTls(tlsinstance& _tls) {
         dbgassert(_tls.tlsInitialized != tls.tlsInitialized);
         tls = _tls;
@@ -20,6 +34,11 @@ namespace daw_tls {
         tlsinstance& localTls = tls;
         dbgassert(localTls.tlsInitialized);
         return localTls;
+    }
+    
+    appsettings& getSettings() {
+        dbgassert(tls.settings);
+        return *tls.settings;
     }
 }// namespace daw_tls
 

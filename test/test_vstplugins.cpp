@@ -146,13 +146,10 @@ int main(int, char*[]) {
 #endif
 
     int retVal     = 0;
-    auto audiohost = std::make_unique<vsthost>();
-    vsthost::assignMasterCallback(audiohost.get());
-    daw_tls::tlsinstance _tls;
-    _tls.tlsInitialized = true;
-    _tls.config         = new app_config_t{};
-    _tls.host           = audiohost.get();
-    daw_tls::setTls(_tls);
+    auto host = std::make_unique<vsthost>();
+    vsthost::assignMasterCallback(host.get());
+    auto& tls = daw_tls::initNewTls();
+    tls.host = host.get();
     try {
 
 #ifdef _WIN32
@@ -183,7 +180,7 @@ int main(int, char*[]) {
         printf("std::exception: %s\n", e.what());
         fatalError = true;
     }
-    _tls.host->unload();
-    _tls.host->destroy();
+    tls.host->unload();
+    tls.host->destroy();
     return fatalError ? 0x5A5A5A5A : retVal;
 }

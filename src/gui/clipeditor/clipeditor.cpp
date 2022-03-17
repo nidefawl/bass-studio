@@ -17,6 +17,7 @@
 #include "track.h"
 #include "track_impl.h"
 #include "host/vst_host.h"
+#include "appconfig.h"
 #include <nanovg.h>
 
 constexpr int32_t VEL_SELECT_DISTANCE = 16;
@@ -1697,9 +1698,9 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
                 }
             }
             nvgRestore(vg);
-            daw_tls::getTls().renderStats.notesRendered += notesRendered;
+            daw_tls::getTls().runtime->renderStats.notesRendered += notesRendered;
         }
-        daw_tls::getTls().renderStats.clipsRendered++;
+        daw_tls::getTls().runtime->renderStats.clipsRendered++;
     }
 }
 

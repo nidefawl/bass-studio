@@ -126,7 +126,7 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
         nvgStroke(vg);
     }
 
-    daw_tls::getTls().renderStats.clipsRendered++;
+    daw_tls::getTls().runtime->renderStats.clipsRendered++;
 }
 
 noteview_render_t::~noteview_render_t() {
@@ -399,9 +399,9 @@ void gui_midi_clip::render(NVGcontext* vg) {
                 }
             }
             nvgRestore(vg);
-            daw_tls::getTls().renderStats.notesRendered += notesRendered;
+            daw_tls::getTls().runtime->renderStats.notesRendered += notesRendered;
         }
-        daw_tls::getTls().renderStats.clipsRendered++;
+        daw_tls::getTls().runtime->renderStats.clipsRendered++;
     }
 }
 void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_entry_t* const entry, const clip_t* cl, ivec2 pos, ivec2 size) {
@@ -435,7 +435,8 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
     ivec2 sizeContents = ivec2(size.x, size.y - HEIGHT_CLIP_TITLE - INSET_CLIP_CONTENT * 2);
 
     int64_t notesRendered = 0;
-    const bool useCaching = daw_tls::getTls().config->enableCache;
+    const auto& tls = daw_tls::getTls();
+    const bool useCaching = tls.runtime->enableCache;
     noteview_render_t& notesView = cl->getNoteViewRender();
     bool cacheValid = notesView.reqRevision == notesView.curRevision;
     cacheValid &= notesView.data != nullptr && notesView.data->valid;
@@ -479,6 +480,6 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
         notesView.data->notesRendered = notesRendered;
         notesView.curRevision         = notesView.reqRevision;
     }
-    daw_tls::getTls().renderStats.clipsRendered++;
-    daw_tls::getTls().renderStats.notesRendered += notesRendered;
+    tls.runtime->renderStats.clipsRendered++;
+    tls.runtime->renderStats.notesRendered += notesRendered;
 }

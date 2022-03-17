@@ -11,6 +11,7 @@
 #include "basectrl.h"
 #include "samplerate.h"
 #include "seq_time.h"
+#include "tls.h"
 #include "track.h"
 #include "track_impl.h"
 #include "project.h"
@@ -130,8 +131,9 @@ int main(int argc, char** argv) {
 
         std::shared_ptr<DAW::AudioIO::AudioStream> audiostream = std::make_shared<FakeAudioStream>(sampleformat, inputChannels, outputChannels);
 
-        using DAW::settings;
-        settings = loadSettings();
+        auto& tls = daw_tls::initNewTls();
+        auto& settings = *tls.settings;
+        loadSettings(settings);
         settings.iosettings.midiconfigs.clear();
         settings.iosettings.configs.clear();
         settings.iosettings.asioConfig = {};

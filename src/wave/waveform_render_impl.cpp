@@ -18,7 +18,6 @@
 #include "appconfig.h"
 #include "tls.h"
 #include "gui/gui.h"
-//#include "host/mainctrl.h"
 
 
 bool checkGLError(const char* s);
@@ -179,7 +178,7 @@ int waveformrender::queueUpdate(samplesource_t* audio, gui_waveform_texture_ref*
         return 0;
     }
 
-    const bool disableWaveformUpdates = daw_tls::getTls().config->disableWaveformUpdates;
+    const bool disableWaveformUpdates = daw_tls::getTls().runtime->disableWaveformUpdates;
     if (disableWaveformUpdates)
         return 0;
     //if (!canQueueUpdate()) {

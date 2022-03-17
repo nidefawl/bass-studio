@@ -129,7 +129,7 @@ void serialize(Archive& ar, appsettings& settings) {
     );
 }
 
-appsettings loadSettings() {
+void loadSettings(appsettings& settings) {
     Stringstream ss;
     String cwdPathSettings = App::Platform::toUserdataPath(SETTINGS_NAME);
     std::ifstream file(cwdPathSettings, std::ifstream::in);
@@ -140,7 +140,8 @@ appsettings loadSettings() {
             cereal::JSONInputArchive ar(ss);
             appsettings tmpSettings;
             ar(tmpSettings);
-            return tmpSettings;
+            settings = tmpSettings;
+            return;
         }
     }
     throw std::runtime_error("Failed reading application settings file " + cwdPathSettings);

@@ -199,7 +199,7 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
         projectGlobals.loopEnabled = !projectGlobals.loopEnabled;
     }
     if (button == &this->btnAudioOnOff) {
-        using DAW::settings;
+        auto& settings = daw_tls::getSettings();
         settings.startEngine = !settings.startEngine;
         dawCtrl->getDaw()->configureSampleRate();
     }

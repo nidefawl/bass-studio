@@ -387,7 +387,7 @@ void guictr_tracks::render(NVGcontext* vg) {
     nvgSave(vg);
     timer.reset();
     trackView.render(vg);
-    dawtls.renderStats.timeRenderEditor = timer.getTime();
+    dawtls.runtime->renderStats.timeRenderEditor = timer.getTime();
     nvgRestore(vg);
 
     nvgSave(vg);
@@ -396,7 +396,7 @@ void guictr_tracks::render(NVGcontext* vg) {
     nvgSave(vg);
     timer.reset();
     trackControls.render(vg);
-    dawtls.renderStats.timeRenderTrackControls = timer.getTime();
+    dawtls.runtime->renderStats.timeRenderTrackControls = timer.getTime();
     nvgRestore(vg);
 
 
@@ -484,7 +484,7 @@ void guictr_tracks::render(NVGcontext* vg) {
     scrollbar.render(vg);
     nvgRestore(vg);
 
-    if (dawtls.config->enableClipRendererDebugLayer) {
+    if (dawtls.runtime->enableClipRendererDebugLayer) {
         trackView.renderDebugPass(vg);
     }
 
