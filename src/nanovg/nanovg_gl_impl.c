@@ -526,8 +526,7 @@ static void glnvg__dumpProgramError(GLuint prog, const char* name)
 	str[len] = '\0';
 	printf("Program %s error:\n%s\n", name, str);
 }
-
-static void glnvg__checkError(GLNVGcontext* gl, const char* str)
+static void glnvg__debugCheckError(GLNVGcontext* gl, const char* str)
 {
 	GLenum err;
 	if ((gl->flags & NVG_DEBUG) == 0) return;
@@ -537,6 +536,11 @@ static void glnvg__checkError(GLNVGcontext* gl, const char* str)
 		return;
 	}
 }
+#ifndef NDEBUG
+#define glnvg__checkError(gl, str) glnvg__debugCheckError(gl, str)
+#else
+#define glnvg__checkError(gl, str)
+#endif
 
 static int glnvg__recompileShader(GLNVGshader* shader, const char* name, const char* header, const char* opts, const char* vshader, const char* fshader)
 {
@@ -1131,9 +1135,11 @@ static void glnvg__convexFill(GLNVGcontext* gl, GLNVGcall* call)
 	glnvg__setUniforms(gl, call->uniformOffset, call->image);
 	glnvg__checkError(gl, "convex fill");
 	
+#ifndef NDEBUG
 	for (i = 0; i < npaths; i++) {
 		dbgassert((paths[i].fillCount>0) || (paths[i].strokeCount>0));
 	}
+#endif
 	for (i = 0; i < npaths; i++) {
 		glDrawArrays(GL_TRIANGLE_FAN, paths[i].fillOffset, paths[i].fillCount);
 		// Draw fringes
@@ -1148,9 +1154,11 @@ static void glnvg__stroke(GLNVGcontext* gl, GLNVGcall* call)
 	GLNVGpath* paths = &gl->paths[call->pathOffset];
 	int npaths = call->pathCount, i;
 	
+#ifndef NDEBUG
 	for (i = 0; i < npaths; i++) {
 		dbgassert(paths[i].strokeCount>0);
 	}
+#endif
 	if (gl->flags & NVG_STENCIL_STROKES) {
 
 		glEnable(GL_STENCIL_TEST);
