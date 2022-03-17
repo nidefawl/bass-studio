@@ -64,7 +64,7 @@ namespace dsp_util {
         for (channelnum_t ch = 0; ch < channels; ch++) {
             float* input0 = buffer[ch];
             for (samplecount_t s = 0; s < samples; s++) {
-                *input0 = f;
+                *input0++ = f;
             }
         }
     }
