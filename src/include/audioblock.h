@@ -248,17 +248,9 @@ struct alignas(16) AudioBlock {
 
     void addFromOp(const float * const * const srcBuf, const samplecount_t srcSamples, const channelnum_t srcChannels, const mix_op op, float gain) {
         dbgassert(srcSamples <= samples);
-        //dbgassert(srcChannels == channels);//remove when adding sub-track mixers (between plugins)
         const auto nSamples  = math::min<samplecount_t>(srcSamples, samples);
         auto nChannels = math::min<channelnum_t>(srcChannels, channels);
         float srcGain      = 1.0f;
-        //if (srcChannels > channels) {
-        //    if (srcChannels == 2 && channels == 1) {
-        //        srcGain = 0.5f;
-        //    } else {
-        //        dbgassert(0 && "conversion not implemented");
-        //    }
-        //}
         if (srcChannels == 2 && channels == 1) {
             srcGain   = 0.5f;
             nChannels = 2;
@@ -266,7 +258,6 @@ struct alignas(16) AudioBlock {
         if (srcChannels == 1 && channels == 2) {
             nChannels = 2;
         }
-        // bool bdbgProcessed = false;
         for (channelnum_t i = 0; i < nChannels; i++) {
             channelnum_t srcChannelIdx = srcChannels < 1 ? 0 : i % srcChannels;
             channelnum_t dstChannelIdx = channels < 1 ? 0 : i % channels;
@@ -276,10 +267,8 @@ struct alignas(16) AudioBlock {
                 const float fSrc = (srcBufChannel[j] * srcGain * gain);
                 const float fDst = dstBufChannel[j] * (op == MIX ? 1.0f - gain : 1.0f);
                 dstBufChannel[j] = fSrc + fDst;
-                // bdbgProcessed    = true;
             }
         }
-        // dbgassert(bdbgProcessed);
     }
 
     void addFromDelayLineOp(DelayLine* delayLine, const samplecount_t delay, const mix_op op, float gain);

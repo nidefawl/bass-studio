@@ -2510,7 +2510,16 @@ void vsthost::processAudio(audio_stage_t* stage,
                             /* Calculate audio/midi tracks gain level */
                             float fGainTrack;
                             if (dsp_util::getGainLvl(fGainRaw, fGainTrack)) {
-                                auto blockInOffset = blockIn->SubChannelsBlock(tracksrc.channel.dstChannelOffset, srcBlock.channels);
+                                channelnum_t dstChannelCount = blockIn->channels;
+                                if (effNode.type == DAW::track_node_type_t::EFFECT) {
+                                    for (auto& desc : effNode.effectOptional->inputChannelsDesc) {
+                                        if (desc.offset == tracksrc.channel.dstChannelOffset) {
+                                            dstChannelCount = desc.count;
+                                            break;
+                                        }
+                                    }
+                                }
+                                auto blockInOffset = blockIn->SubChannelsBlock(tracksrc.channel.dstChannelOffset, dstChannelCount);
                                 if (delayToMaxInputLatency > 0) {
                                     dbgassert(delayLine);
                                     blockInOffset.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, fGainTrack);
