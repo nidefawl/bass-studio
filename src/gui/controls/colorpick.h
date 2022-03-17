@@ -2,7 +2,7 @@
 #include "gui/container/container.h"
 #include "gui/controls/knoblabeled.h"
 #include "keyboard.h"
-#include "gui/controls/guiinputfield.h"
+#include "gui/controls/inputfield.h"
 #include "textfield.h"
 
 

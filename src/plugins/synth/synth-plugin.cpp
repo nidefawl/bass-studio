@@ -16,7 +16,7 @@
 #include "gui/plugin/pluginviewcontainers.h"
 #include "gui/controls/button.h"
 #include "gui/controls/knob.h"
-#include "gui/controls/guiinputfield.h"
+#include "gui/controls/inputfield.h"
 #include "gui/controls/knobpluginparam.h"
 #include "gui/container/container.h"
 #include "gui/contextmenu/contextmenu_daw.h"

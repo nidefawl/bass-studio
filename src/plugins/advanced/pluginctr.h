@@ -4,7 +4,7 @@
 
 #include "str_util.h"
 
-#include "gui/controls/guiinputfield.h"
+#include "gui/controls/inputfield.h"
 #include "gui/controls/knob.h"
 #include "gui/controls/button.h"
 #include "gui/container/container.h"

@@ -23,7 +23,7 @@
 
 #include "container.h"
 #include "gui/controls/colorpick.h"
-#include "gui/controls/guiinputfield.h"
+#include "gui/controls/inputfield.h"
 #include "gui/controls/button.h"
 #include "gui/controls/splitter.h"
 #if BUILD_VSTHOST

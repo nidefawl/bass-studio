@@ -19,7 +19,7 @@
 #include "edithistory.h"
 #include "host/mainctrl.h"
 #include "gui/arp/arp.h"
-#include "gui/controls/guiinputfield.h"
+#include "gui/controls/inputfield.h"
 
 #define MAX_OCTAVES (8 - (-2))
 #define PIANOROLL_MIN_SCALE 4

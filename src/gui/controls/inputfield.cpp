@@ -1,4 +1,4 @@
-#include "guiinputfield.h"
+#include "inputfield.h"
 
 #include "keyboard.h"
 

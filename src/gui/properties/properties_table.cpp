@@ -32,7 +32,7 @@
 #include "gui/controls/colorpick.h"
 #include "gui/dropdown/dropdown.h"
 #include "properties_table.h"
-#include "gui/controls/guiinputfield.h"
+#include "gui/controls/inputfield.h"
 #include "automation.h"
 #include "host/plugin/base_plugin.h"
 #include "host/plugin/vst_plugin.h"

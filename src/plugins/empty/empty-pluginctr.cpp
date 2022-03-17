@@ -12,7 +12,7 @@
 #include "gui/controls/button.h"
 #include "gui/container/container.h"
 #include "gui/controls/colorpick.h"
-#include "gui/controls/guiinputfield.h"
+#include "gui/controls/inputfield.h"
 #include "gui/plugin/pluginviewcontainers.h"
 
 #include "basectrl.h"
