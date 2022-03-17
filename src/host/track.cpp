@@ -486,15 +486,15 @@ VstEvent_t* track_impl_t::reallocEvts(size_t size) {
     return m_midiEventsBuf;
 }
 
-samplerate_t audio_stage_t::getInternalLatency() const {
+samplecount_t audio_stage_t::getInternalLatency() const {
     return latencyInternal;
 }
 
-samplerate_t audio_stage_t::getOutputLatency() const {
+samplecount_t audio_stage_t::getOutputLatency() const {
     return latencyOuput;
 }
 
-samplerate_t audio_stage_t::getInputLatency() const {
+samplecount_t audio_stage_t::getInputLatency() const {
     return latencyInput;
 }
 
@@ -510,7 +510,7 @@ void audio_stage_t::pluginsChanged() {
 
 void audio_stage_t::updateLatency() {
     //combined stage latency needs to be determined differently when using custom routing
-    samplerate_t latency = 0;
+    samplecount_t latency = 0;
     for (effectbase* effect : effects) {
         latency += effect->getPluginLatency();
     }

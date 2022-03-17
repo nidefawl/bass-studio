@@ -226,8 +226,8 @@ guiplugin* module_group::getGui() {
     //return handle->gui;
 }
 
-int32_t module_group::getPluginLatency() {
-    return static_cast<int32_t>(audio->getInternalLatency());
+samplecount_t module_group::getPluginLatency() {
+    return audio->getInternalLatency();
 }
 
 void module_group::onEnable() {

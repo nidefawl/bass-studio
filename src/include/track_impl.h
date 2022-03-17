@@ -42,18 +42,10 @@ extern const std::vector<SupportedFileType> vFILE_TYPES_TRACKSNAPSHOT;
 
 struct track_audio_src {
     std::vector<float*> channels;
-    uint32_t samples = 0;
-    int32_t latency  = 0;
+    samplecount_t samples = 0;
     sampleformat_t sampleFormat;
     AudioBlock toAudioBlock() const {
-
-        const bool bFitsNumChannels = FitsTypeRange<uint32_t, decltype(channels.size())>(channels.size());
-        const bool bFitsNumSamples  = FitsTypeRange<uint32_t, decltype(samples)>(samples);
-        dbgassert(bFitsNumChannels && bFitsNumSamples);
-        if (!(bFitsNumChannels && bFitsNumSamples)) {
-            return AudioBlock(0, 0);
-        }
-        return AudioBlock(channels, static_cast<uint32_t>(samples));
+        return AudioBlock(channels, static_cast<samplecount_t>(samples));
     }
 };
 struct track_params_t : public automatable_t {
@@ -188,9 +180,9 @@ struct audio_stage_t {
     }
     virtual void removePlugin(effectbase* _vst, bool notifyUp);
     void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
-    samplerate_t getInternalLatency() const;
-    samplerate_t getOutputLatency() const;
-    samplerate_t getInputLatency() const;
+    samplecount_t getInternalLatency() const;
+    samplecount_t getOutputLatency() const;
+    samplecount_t getInputLatency() const;
     void insertEffect(int32_t idx, effectbase* _instrument);
     bool replaceEffect(int32_t idx, effectbase* _effect, effectbase** _prevEffect);
     void pluginsChanged();

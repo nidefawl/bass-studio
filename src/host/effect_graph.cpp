@@ -268,11 +268,11 @@ namespace DAW {
         out_procgraph = shrdPtrProcGraph;
         return true;
     }
-    effect_node_ptr makeEffectNode(int32_t effectId, samplerate_t b) {
-        return new effect_node_t(track_node_type_t::EFFECT, static_cast<audiostageid_i32>(effectId), b);// std::make_unique<effect_node_t>
+    effect_node_ptr makeEffectNode(int32_t effectId, samplecount_t latency) {
+        return new effect_node_t(track_node_type_t::EFFECT, static_cast<audiostageid_i32>(effectId), latency);// std::make_unique<effect_node_t>
     }
-    effect_node_ptr makeAudioStageNode(audiostageid_i32 stageId, samplerate_t b) {
-        return new effect_node_t(track_node_type_t::AUDIOSTAGE, stageId, b);// std::make_unique<effect_node_t>
+    effect_node_ptr makeAudioStageNode(audiostageid_i32 stageId, samplecount_t latency) {
+        return new effect_node_t(track_node_type_t::AUDIOSTAGE, stageId, latency);// std::make_unique<effect_node_t>
     }
     template<typename M, typename I>
     inline effect_node_t& getEffNode(M map, I idx) {

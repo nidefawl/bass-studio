@@ -263,8 +263,8 @@ namespace DAW {
         out_procgraph = shrdPtrProcGraph;
         return true;
     }
-    track_node_ptr makeTrackNode(audiostageid_i32 a, samplerate_t b) {
-        return new track_node_t(track_node_type_t::TRACK, a, b);
+    track_node_ptr makeTrackNode(audiostageid_i32 a, samplecount_t latency) {
+        return new track_node_t(track_node_type_t::TRACK, a, latency);
     }
     processing_track_node_ptr makeProcTrackNode() {
         return new processing_track_node_t();

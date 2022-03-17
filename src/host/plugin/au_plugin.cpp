@@ -35,7 +35,7 @@ guiplugin* auplugin::makeGui() { return nullptr; }
 guiplugin* auplugin::getGui() { return nullptr; }
 void auplugin::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
 }
-int32_t auplugin::getPluginLatency() { return 0; }
+samplecount_t auplugin::getPluginLatency() { return 0; }
 
 float auplugin::getParamValue(int32_t idx) {
     automatable_param_t* param = getParamUnchecked(idx);

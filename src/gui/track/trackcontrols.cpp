@@ -133,9 +133,9 @@ void guitooltip<audio_info_t>::setContent() {
         table.rows.push_back({ { tblstr{ "inputStageId" }, tblint{ static_cast<int32_t>(ptr->audio->stageId.inputStageId) } } });
         table.rows.push_back({ { tblstr{ "outputStageId" }, tblint{ static_cast<int32_t>(ptr->audio->stageId.outputStageId) } } });
         table.rows.push_back({ { tblstr{ "outputPostStageId" }, tblint{ static_cast<int32_t>(ptr->audio->stageId.outputPostStageId) } } });
-        table.rows.push_back({ { tblstr{ "latency input " }, tblint{ (int32_t) audio->getInputLatency() } } });
-        table.rows.push_back({ { tblstr{ "latency intern" }, tblint{ (int32_t) audio->getInternalLatency() } } });
-        table.rows.push_back({ { tblstr{ "latency output" }, tblint{ (int32_t) audio->getOutputLatency() } } });
+        table.rows.push_back({ { tblstr{ "latency input " }, tblint{ audio->getInputLatency() } } });
+        table.rows.push_back({ { tblstr{ "latency intern" }, tblint{ audio->getInternalLatency() } } });
+        table.rows.push_back({ { tblstr{ "latency output" }, tblint{ audio->getOutputLatency() } } });
         table.rows.push_back({ { tblstr{ "sampleRate" }, tblint{ audio->sampleFormat.sampleRate } } });
     }
 }

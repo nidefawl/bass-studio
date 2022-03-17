@@ -1,4 +1,5 @@
 #include <atomic>
+#include <cstddef>
 #include <cstdlib>
 #include <algorithm>
 #include <cmath>
@@ -406,7 +407,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
     case audioMasterVersion:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterVersion %d %d %zd\n", opcode, index, value, 0);
-        return 2400L; //VST 2.4
+        return 2400; //VST 2.4
     case audioMasterCurrentId:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterCurrentId %d %d %zd\n", opcode, index, value, 0);
@@ -419,7 +420,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterIdle %d %d %zd\n", opcode, index, value, 0);
         //return OnIdle(nEffect);
-        return 0L;
+        return 0;
     case audioMasterGetTime:
         //{
         //    int32_t playThreadId = host->getPlayThreadId();
@@ -460,20 +461,20 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterGetSampleRate %d %d %zd\n", opcode, index, value, 0);
         if (plugin) {
-            return (long)plugin->format.sampleRate;
+            return plugin->format.sampleRate;
         }
         if (host) {
-            return (long)host->m_sampleFormatInternal.sampleRate;
+            return host->m_sampleFormatInternal.sampleRate;
         }
         return 0;
     case audioMasterGetBlockSize:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterGetBlockSize %d %d %zd\n", opcode, index, value, 0);
         if (plugin) {
-            return (long)plugin->format.blockSize;
+            return plugin->format.blockSize;
         }
         if (host) {
-            return (long)host->m_sampleFormatInternal.blockSize;
+            return host->m_sampleFormatInternal.blockSize;
         }
         return 0;
     case audioMasterGetInputLatency:
@@ -519,17 +520,23 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
     case audioMasterGetVendorString:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterGetVendorString %d %d %zd\n", opcode, index, value, 0);
-         strcpy((char *)ptr, "NFMH");
-        return 1L;
+        if (ptr) {
+            strcpy(static_cast<char*>(ptr), "NFMH");
+            return 1;
+        }
+        return 0;
     case audioMasterGetProductString:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterGetProductString %d %d %zd\n", opcode, index, value, 0);
-        strcpy((char *)ptr, "DAW");
-        return 1L;
+        if (ptr) {
+            strcpy(static_cast<char*>(ptr), "DAW");
+            return 1;
+        }
+        return 0;
     case audioMasterGetVendorVersion:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterGetVendorVersion %d %d %zd\n", opcode, index, value, 0);
-        return 1L;
+        return 1;
     case audioMasterVendorSpecific:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterVendorSpecific %d %d %zd\n", opcode, index, value, 0);
@@ -593,7 +600,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
             logPluginCb(plugin, "unhandled %d %d %zd %f\n", opcode, index, value, opt);
 
     }
-    return 0L;
+    return 0;
 }
 
 VstIntPtr VSTCALLBACK audioMaster1(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
@@ -729,8 +736,8 @@ void vsthost::setSampleFormat(const sampleformat_t& _sampleFormat) {
         }
         for (vstplugin* plugin : this->pluginInstancesVST2) {
             plugin->onDisable();
-            plugin->dispatch(effSetBlockSize, 0, _sampleFormat.blockSize, 0, 0);
-            plugin->dispatch(effSetSampleRate, 0, 0, NULL, (float) _sampleFormat.sampleRate);
+            plugin->dispatch(effSetBlockSize, 0, _sampleFormat.blockSize);
+            plugin->dispatch(effSetSampleRate, 0, 0, nullptr, (float) _sampleFormat.sampleRate);
             plugin->onEnable();
         }
         for (auto* stage : this->allAudioStages) {
@@ -775,7 +782,7 @@ void vsthost::updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPo
         /* offset in fractions of a second   */
         double dOffsetInSecond = dPosSeconds - floor(dPosSeconds);
         timeinfo.smpteFrameRate = VstSmpteFrameRate::kVstSmpte24fps;
-        timeinfo.smpteOffset = (long)(dOffsetInSecond * fSmpteDiv[timeinfo.smpteFrameRate] * 80.L);
+        timeinfo.smpteOffset = math::floordS32(dOffsetInSecond * fSmpteDiv[timeinfo.smpteFrameRate] * 80.);
     }
 
 
@@ -885,7 +892,6 @@ bool resolveAudioChannel(const vsthost* const host, channelnum_t numChannelsTrac
                 }
                 src.sampleFormat = host->m_sampleFormatExternal;
                 src.samples = ptrExternalInputs->samples;
-                src.latency = 0;
                 out = std::move(src);
                 return true;
             }
@@ -904,15 +910,12 @@ bool resolveAudioChannel(const vsthost* const host, channelnum_t numChannelsTrac
             switch (inputChannel.stage.buffer) {
             case stage_bufferpoint::INPUT:
                 buff = &stage->input;
-                src.latency = stage->getInputLatency();
                 break;
             case stage_bufferpoint::OUTPUT:
                 buff = &stage->output;
-                src.latency = stage->getOutputLatency();
                 break;
             case stage_bufferpoint::OUTPUT_POST:
                 buff = &stage->outputPost;
-                src.latency = stage->getOutputLatency();
                 break;
             }
             for (uint32_t i = 0; i < buff->channels; ++i) {
@@ -949,7 +952,6 @@ bool resolveAudioChannel(const vsthost* const host, channelnum_t numChannelsTrac
                     }
                     src.sampleFormat = stage->sampleFormat;
                     src.samples = eff->blockOutputs->samples;
-                    src.latency = 0;
                     out = std::move(src);
                     return true;
                 }
@@ -1936,7 +1938,7 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
                 /* delay signal by max_child_input_latency - src_output_latency */
                 /* Compensate audio midi track to pre-return latency */
                 dbgassert(trackNode.inputLatency >= tracksrc.latency);
-                samplerate_t delayToMaxInputLatency = trackNode.inputLatency - tracksrc.latency;
+                samplecount_t delayToMaxInputLatency = trackNode.inputLatency - tracksrc.latency;
 
                 AudioBlock srcBlock = src.toAudioBlock();
                 DelayLine* delayLine = nullptr;
@@ -2034,7 +2036,7 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
                 //log_printf("store track %s block %d at sample offset %d (samplepos %d - stage.latencyOutput %u)\n", StringAsCStr(trName), blockIdx, offset, sample, trackImpl->getOutputLatency());
                 trackImpl->audioOutput.store(&trackImpl->outputPost, offset);
             } else {
-                log_printf("cannot write to negative offset %d (samplepos %d - stage.latencyOutput %d)\n", offset, samplePosProcess, trackImpl->getOutputLatency());
+                log_printf("cannot write to negative offset %d (samplepos %zd - stage.latencyOutput %zd)\n", offset, samplePosProcess, trackImpl->getOutputLatency());
             }
         }
 
@@ -2149,7 +2151,7 @@ int32_t vsthost::processGraph(project_controller_t* ctrl,
     /*
      * Clear all channels
      */
-#if 1
+#if 0
     const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
     for (track_t* track : project->trackList) {
         dbgassert(track->audio);
@@ -2491,7 +2493,7 @@ void vsthost::processAudio(audio_stage_t* stage,
                         /* delay signal by maxLatency - trackImpl->getLatency() */
                         /* Compensate audio midi track to pre-return latency */
                         dbgassert(effNode.inputLatency >= tracksrc.latency);
-                        samplerate_t delayToMaxInputLatency = effNode.inputLatency - tracksrc.latency;
+                        samplecount_t delayToMaxInputLatency = effNode.inputLatency - tracksrc.latency;
 
                         AudioBlock srcBlock = src.toAudioBlock();
                         DelayLine* delayLine = nullptr;
@@ -2529,7 +2531,7 @@ void vsthost::processAudio(audio_stage_t* stage,
             if (effect) {
                 bool isBypass = effect->isBypass();
                 if (isBypass || bypassEffectProcessing) {
-                    samplerate_t delay = effect->getPluginLatency();
+                    auto delay = effect->getPluginLatency();
                     if (delay > 0) {
                         AudioBlock *blockOut = effect->blockOutputs;
                         if (!effect->delayLine) {

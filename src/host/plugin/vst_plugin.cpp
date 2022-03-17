@@ -575,7 +575,7 @@ guiplugin* vstplugin::getGui() {
     return handle->gui.get();
 }
 
-int32_t vstplugin::getPluginLatency() {
+samplecount_t vstplugin::getPluginLatency() {
     return handle && handle->aeffect ? handle->aeffect->initialDelay : 0;
 }
 

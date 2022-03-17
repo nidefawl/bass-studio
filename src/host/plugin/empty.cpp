@@ -66,7 +66,7 @@ guiplugin* module_empty::getGui() {
     return handle->gui.get();
 }
 
-int32_t module_empty::getPluginLatency() {
+samplecount_t module_empty::getPluginLatency() {
     return 0;
 }
 

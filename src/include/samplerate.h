@@ -4,7 +4,7 @@
 #include "assert_dbg.h"
 
 #define SAMPLERATE_T_MAX_VALUE_U32 ((samplerate_t) (0xFFFFFFFFUL))
-#define INVALID_SAMPLE_OFFSET_U32 ((samplerate_t) (0xFFFFFFFFUL))
+#define INVALID_SAMPLE_OFFSET_U32 ((samplecount_t) (0xFFFFFFFFUL))
 
 enum class sampleformat_bits_t : int32_t {
     NONE     = 0,
@@ -24,11 +24,10 @@ inline const char* sampleformat_bits_to_str(sampleformat_bits_t t) {
     return "NONE";
 }
 namespace DAW {
-    inline samplerate_t NumSamplesResampled(samplerate_t numSamples, samplerate_t sampleRateA, samplerate_t sampleRateB) {
+    inline samplecount_t NumSamplesResampled(samplecount_t numSamples, samplerate_t sampleRateA, samplerate_t sampleRateB) {
         uint64_t n = numSamples;
         n = n * sampleRateB / sampleRateA;
-        dbgassert(FitsTypeRange<samplerate_t>(n));
-        return static_cast<samplerate_t>(n);
+        return static_cast<samplecount_t>(n);
     }
 }// namespace DAW
 inline bool operator==(sampleformat_t const& a, sampleformat_t const& b) {

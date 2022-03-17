@@ -179,7 +179,7 @@ float module_gain::dispatchGetParameter(int32_t idx) {
 void module_gain::dispatchSetParameter(int32_t idx, float val) {
 }
 
-int32_t module_gain::getPluginLatency() {
+samplecount_t module_gain::getPluginLatency() {
     return 0;
 }
 

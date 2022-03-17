@@ -34,11 +34,11 @@ namespace DAW {
         std::vector<track_source_t> pushs;
         std::vector<track_node_t*> parents;
         std::vector<track_node_t*> children;
-        samplerate_t internalLatency = INVALID_SAMPLE_OFFSET_U32;
-        samplerate_t inputLatency    = INVALID_SAMPLE_OFFSET_U32;
+        samplecount_t internalLatency = INVALID_SAMPLE_OFFSET_U32;
+        samplecount_t inputLatency    = INVALID_SAMPLE_OFFSET_U32;
 
         track_node_t() = default;
-        track_node_t(track_node_type_t _type, audiostageid_i32 _stageId, samplerate_t _internalLatency)
+        track_node_t(track_node_type_t _type, audiostageid_i32 _stageId, samplecount_t _internalLatency)
             : type(_type), stageId(_stageId), internalLatency(_internalLatency) {
         }
     };

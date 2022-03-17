@@ -230,7 +230,7 @@ void effect_deferred::loadSnapshot(const plugin_snapshot_t& snapshot) {
     }
 }
 
-int32_t effect_deferred::getPluginLatency() {
+samplecount_t effect_deferred::getPluginLatency() {
     return 0;
 }
 String effect_deferred::getInfo(std::vector<String>& list) {

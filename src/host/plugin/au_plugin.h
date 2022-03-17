@@ -76,5 +76,5 @@ public:
     guiplugin* makeGui() override;
     guiplugin* getGui() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
-    int32_t getPluginLatency() override;
+    samplecount_t getPluginLatency() override;
 };
