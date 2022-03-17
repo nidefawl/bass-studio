@@ -3079,7 +3079,7 @@ int32_t vsthost::validateIds()
     for (auto plugin : pluginsDeferred) {
         auto id = plugin->projectGlobalId;
         for (auto stage : allAudioStages) {
-            audiostageid_i32* stageIds[4] = {&stage->stageId.stageId, &stage->stageId.inputStageId, &stage->stageId.outputStageId,
+            auto stageIds = {&stage->stageId.stageId, &stage->stageId.inputStageId, &stage->stageId.outputStageId,
                                              &stage->stageId.outputPostStageId};
             for (auto* pStageId : stageIds) {
                 dbgassert(static_cast<int32_t>(*pStageId) != id);
@@ -3091,7 +3091,7 @@ int32_t vsthost::validateIds()
     for (auto plugin : pluginInstances) {
         auto id = plugin->projectGlobalId;
         for (auto stage : allAudioStages) {
-            audiostageid_i32* stageIds[4] = {&stage->stageId.stageId, &stage->stageId.inputStageId, &stage->stageId.outputStageId,
+            std::array<audiostageid_i32*,4> stageIds = {&stage->stageId.stageId, &stage->stageId.inputStageId, &stage->stageId.outputStageId,
                                              &stage->stageId.outputPostStageId};
             for (auto* pStageId : stageIds) {
                 dbgassert(static_cast<int32_t>(*pStageId) != id);
@@ -3112,16 +3112,15 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, HMODULE* out_hmodule)
         return -3;
     }
 
-    VSTPluginMain_t* fn = (VSTPluginMain_t*)GetProcAddress(hmodule, "VSTPluginMain");
-    if (fn == NULL)
-    {
-        fn = (VSTPluginMain_t*)GetProcAddress(hmodule, "main");
-    }
-    if (fn == NULL)
+    auto fn = reinterpret_cast<VSTPluginMain_t*>(GetProcAddress(hmodule, "VSTPluginMain"));
+    if (!fn) fn = reinterpret_cast<VSTPluginMain_t*>(GetProcAddress(hmodule, "main"));
+
+    if (!fn)
     {
         FreeLibrary(hmodule);
         return -4;
     }
+
     *out_hmodule = hmodule;
     *out_fn = fn;
 
