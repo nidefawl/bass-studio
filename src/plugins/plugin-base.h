@@ -7,7 +7,6 @@
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 
 #define PLUGIN_VENDOR_NAME "MichaelH"
-#define MAX_PARAM_STR_LEN 128
 
 class PluginViewContainers;
 class BasePluginVST2 : public AudioEffectX {

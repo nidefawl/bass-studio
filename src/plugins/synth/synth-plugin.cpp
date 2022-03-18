@@ -41,7 +41,6 @@
 #define PLUGIN_PRODUCT_NAME "Synth VST2.4"
 
 #if BUILD_EXTERNAL_PLUGIN
-#define MAX_PARAM_STR_LEN kVstMaxParamStrLen
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
     return PluginSynth::createPlugin(audioMaster);
 }
@@ -490,10 +489,10 @@ namespace PluginSynth {
             return 0.0f;
         }
         virtual void getValueDisplay(char* _out) {
-            vst_strncpy(_out, "", MAX_PARAM_STR_LEN);
+            vst_strncpy(_out, "", kVstMaxParamStrLen);
         }
         virtual void getLabel(char* _out) {
-            vst_strncpy(_out, "", MAX_PARAM_STR_LEN);
+            vst_strncpy(_out, "", kVstMaxParamStrLen);
         }
     };
     struct SynthParam_Float : public SynthParamBase {
@@ -527,7 +526,7 @@ namespace PluginSynth {
             return valDouble;
         }
         void getValueDisplay(char* _out) override {
-            snprintf(_out, MAX_PARAM_STR_LEN, StringAsCStr(format), Value());
+            snprintf(_out, kVstMaxParamStrLen, StringAsCStr(format), Value());
         }
     };
     struct SynthParam_Int : public SynthParamBase {
@@ -560,7 +559,7 @@ namespace PluginSynth {
         }
         void getValueDisplay(char* _out) override {
 
-            snprintf(_out, MAX_PARAM_STR_LEN, StringAsCStr(format), Value());
+            snprintf(_out, kVstMaxParamStrLen, StringAsCStr(format), Value());
         }
     };
     struct SynthParam_Enum : public SynthParam_Int {
@@ -578,7 +577,7 @@ namespace PluginSynth {
             if (val >= 0 && val < strings.size()) {
                 s = strings[val];
             }
-            snprintf(_out, MAX_PARAM_STR_LEN, "%s", StringAsCStr(s));
+            snprintf(_out, kVstMaxParamStrLen, "%s", StringAsCStr(s));
         }
         template<typename T>
         T getEnumValue() {
@@ -1303,7 +1302,7 @@ namespace PluginSynth {
     void PluginVST2_Synth::getParameterName(VstInt32 index, char* label) {
         if (index >= 0 && index < vecParams.size()) {
             SynthParamBase* param = vecParams[index];
-            vst_strncpy(label, StringAsCStr(param->shortName), MAX_PARAM_STR_LEN);
+            vst_strncpy(label, StringAsCStr(param->shortName), kVstMaxParamStrLen);
         }
     }
 
