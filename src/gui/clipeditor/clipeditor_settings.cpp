@@ -47,8 +47,8 @@ gui_clipsettings::gui_clipsettings(scaled_grid&, clip_view& _view)
     clipTimeStartOffsetTicks.setLabel("Tick offset");
     clipTimeStartOffsedSamples.setLabel("Sample offset");
     clipAudioId.setLabel("Sample ID");
-    btnDuplicateLoop.setLabel("Duplicate Loop");
-    btnSelectMuted.setLabel("Select all muted");
+    btnDuplicateLoop.setText("Duplicate Loop");
+    btnSelectMuted.setText("Select all muted");
     add(&btnLoop);
     add(&clipLoopStart);
     add(&clipLoopLen);
@@ -82,6 +82,7 @@ void selectAllMuted(DawInstance* daw, clip_view& view) {
     daw->getMainControl()->setStatusText(selStatus);
 }
 void gui_clipsettings::buttonClicked(guibase* button) {
+    auto const daw = dawCtrl->getDaw();
     if (&btnLoop == button) {
         clip_t* clip = view.clip();
         if (clip != NULL) {
@@ -89,10 +90,10 @@ void gui_clipsettings::buttonClicked(guibase* button) {
         }
     }
     if (&btnDuplicateLoop == button) {
-        duplicateClipLoop(dawCtrl->getDaw(), view);
+        duplicateClipLoop(daw, view);
     }
     if (&btnSelectMuted == button) {
-        selectAllMuted(dawCtrl->getDaw(), view);
+        selectAllMuted(daw, view);
     }
 
     if (&btnLoop == button || &clipTimeStart == button || &clipLoopStart == button || &clipTimeLen == button
@@ -104,9 +105,8 @@ void gui_clipsettings::buttonClicked(guibase* button) {
                 track_t* track = entry->track;
                 if (track) {
                     resizeOtherClips(track->getMidi(), clip);
-
-                    DawInstance::get()->layoutTrackEditors();
-                    DawInstance::get()->updateVisibleTrackContents();
+                    daw->layoutTrackEditors();
+                    daw->updateVisibleTrackContents();
                 }
             }
         }
@@ -173,6 +173,7 @@ void gui_clipsettings::render(NVGcontext* vg) {
     int32_t inset = 4;
     int32_t i2    = inset * 2;
     for (guibase* gui: guis) {
+        if (gui == &clipTimeStartOffsedSamples) break;
         renderText(vg, vec2(i2, gui->top() + gui->size.y * 0.5), vec2(gui->pos.x-i2, size.y), gui->label, TRACK_HEIGHT_STEP);
     }
     nvgRestore(vg);
@@ -182,12 +183,9 @@ void gui_clipsettings::layout() {
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     int32_t inset                   = 4;
     int32_t w                       = getSizeContent().x;
-    int32_t btnW                    = math::max(math::min(w, 120), w / 3);
-    int32_t labelWidth              = w - btnW;
-
+    int32_t btnW                    = (w-inset*3)/2;
     int32_t btnH = TRACK_HEIGHT_STEP;
-    int32_t btnX = labelWidth + inset;
-    btnW -= inset * 2;
+    int32_t btnX = inset + btnW + inset;
     btnLoop.size                    = ivec2(btnW, btnH);
     btnLoop.pos                     = ivec2(btnX, inset + theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT));
     clipLoopStart.size              = ivec2(btnW, btnH);
@@ -201,9 +199,9 @@ void gui_clipsettings::layout() {
     clipTimeStartOffsetTicks.size   = ivec2(btnW, btnH);
     clipTimeStartOffsetTicks.pos    = ivec2(clipTimeStart.left(), clipTimeLen.bottom() + inset);
     clipTimeStartOffsedSamples.size = ivec2(btnW, btnH);
-    clipTimeStartOffsedSamples.pos  = ivec2(clipTimeStartOffsetTicks.left(), clipTimeStartOffsetTicks.bottom() + inset);
+    clipTimeStartOffsedSamples.pos  = ivec2(inset, clipTimeStartOffsetTicks.bottom() + inset);
     clipAudioId.size                = ivec2(btnW, btnH);
-    clipAudioId.pos                 = ivec2(clipTimeStartOffsedSamples.left(), clipTimeStartOffsedSamples.bottom() + inset);
+    clipAudioId.pos                 = ivec2(clipTimeStartOffsedSamples.right() + inset, clipTimeStartOffsetTicks.bottom() + inset);
     btnDuplicateLoop.pos            = ivec2(inset, clipAudioId.bottom() + inset);
     btnDuplicateLoop.size           = ivec2(w - inset * 2, btnH);
     btnSelectMuted.pos              = ivec2(inset, btnDuplicateLoop.bottom() + inset);

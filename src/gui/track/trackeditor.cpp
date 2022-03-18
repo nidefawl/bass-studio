@@ -112,7 +112,7 @@ void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip) {
             cutClipRight(c, c->end() - clip->start());
             c->setDirty();
         } else {
-            log_printf("WHUT!\n");
+            dbgassert(0);
         }
     }
 }

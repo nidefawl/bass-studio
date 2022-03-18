@@ -39,7 +39,7 @@ void gui_numberinput_field_base::render(NVGcontext* vg) {
                         theme,
                         fontSizeScaled,
                         theme->getColor(c),
-                        NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+                        NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     }
 }
 

@@ -44,6 +44,8 @@ public:
             parent->rightClicked(evt, this);
     }
     void setText(String _str) {
+        if (getLabel().empty())
+            setLabel(_str);
         str = _str;
     }
     void setTooltipText(String _tooltipText) {

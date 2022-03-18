@@ -86,14 +86,15 @@ public:
                 nvgRect(vg, knob->right() + INSET_TITLE, knob->pos.y, widthParam, knob->size.y);
                 nvgFillColor(vg, theme->getFrameColorHighlight());
                 nvgFill(vg);
-                String text = knob->label;
-                if (text[0]) {
-                    setFont(vg, (int) ((knob->size.y / 2.0)), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-                    nvgText(vg, knob->right() + INSET_TITLE + INSET_TITLE, knob->pos.y + INSET_TITLE, StringAsCStr(text), nullptr);
-                    text = formatParameterValue(knob);
-                    if (text[0]) {
-                        setFont(vg, (int) ((knob->size.y / 2.0) * 0.8), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
-                        nvgText(vg, knob->right() + INSET_TITLE + INSET_TITLE, knob->bottom() - INSET_TITLE, StringAsCStr(text), nullptr);
+                if (!knob->label.empty()) {
+                    auto textPos = vec2(knob->right() + INSET_TITLE + INSET_TITLE, knob->pos.y + knob->size.y * 0.25f);
+                    auto textBounds = vec2(widthParam, knob->size.y * 0.5f);
+                    renderText(vg, textPos, textBounds, knob->label, textBounds.y);
+
+                    auto text = formatParameterValue(knob);
+                    if (!text.empty()) {
+                        textPos.y += knob->size.y * 0.5f;
+                        renderText(vg, textPos, textBounds, text, textBounds.y * 0.8f);
                     }
                 }
             }
