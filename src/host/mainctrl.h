@@ -460,7 +460,9 @@ public:
     explicit DawCtrl(DawInstance& _daw)
     : daw(_daw)
     {
+#if BUILD_VSTHOST
         this->parentDawCtrl = this;
+#endif
     }
 
     ~DawCtrl() override = default;

@@ -3,23 +3,43 @@
 #include "keyboard.h"
 
 void gui_numberinput_field_base::render(NVGcontext* vg) {
-    int32_t fl = getStateFlags();
-    renderWidgetBorder(vg, fl);
+    const auto stateFlags = getStateFlags();
+    renderWidgetBorder(vg, stateFlags);
     if (isEditing) {
         this->field.render(vg);
         return;
     }
-    setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-    String str = getAsStringLiteral();
-    float pX   = nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
-    if (!isEditing && this->label.length()) {
-        NVGcolor mTextColorDisabled = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_DISABLED);
-        setFont(vg, G_FONT_SCALE(size.y), mTextColorDisabled, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        float bounds[4]{ 0 };
-        nvgTextBounds(vg, pos.x + 3.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(this->label), nullptr, bounds);
-        if (pX - 3 > bounds[2]) {
-            nvgText(vg, pos.x + 3.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(this->label), NULL);
-        }
+    GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
+    const auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
+    const String str = getAsStringLiteral();
+
+    if (this->label.length()) {
+        auto posText = vec2(pos) + vec2(size.x - 3, size.y * 0.5f);
+        float textWidth = renderTextLabel(vg,
+                        posText,
+                        vec2(size),
+                        str,
+                        theme,
+                        fontSizeScaled,
+                        theme->getColor(c),
+                        NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+        renderTextLabel(vg,
+                        vec2(pos) + vec2(3.0f, size.y * 0.5f),
+                        vec2(size.x - textWidth - 6.0f, size.y),
+                        label,
+                        theme,
+                        fontSizeScaled,
+                        theme->getColor(GuiColor::COL_LABEL_INACTIVE),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    } else {
+        renderTextLabel(vg,
+                        vec2(pos) + vec2(size) * 0.5f,
+                        vec2(size),
+                        str,
+                        theme,
+                        fontSizeScaled,
+                        theme->getColor(c),
+                        NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     }
 }
 

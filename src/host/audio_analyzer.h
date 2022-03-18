@@ -24,13 +24,11 @@ public:
     bool processInput     = true;
     audioanaylzer() : tLast(getTimeMicros()) {
     }
-    void init(audiohost* _host) {
+    void init(audiohost* _host, blocksize_t _blockSize, samplerate_t _sampleRate) {
         assert(_host);
-        assert(_host->lBlockSize > 0);
-        assert(_host->lSampleRate > 0);
         this->host = _host;
-        analyzerHf = std::make_unique<fft_processor_hf>(_host->lBlockSize, _host->lSampleRate);
-        analyzerLf = std::make_unique<fft_processor_lf>(_host->lBlockSize, _host->lSampleRate);
+        analyzerHf = std::make_unique<fft_processor_hf>(_blockSize, _sampleRate);
+        analyzerLf = std::make_unique<fft_processor_lf>(_blockSize, _sampleRate);
     }
     void onTick() {
         int64_t tNow   = getTimeMicros();
@@ -52,6 +50,6 @@ public:
             analyzerLf->processBuffer(buf, fGain);
         }
         nSamples += buf->samples;
-        processedTime = nSamples / (double) host->lSampleRate;
+        processedTime = nSamples / (double) analyzerHf->samplerate;
     }
 };
