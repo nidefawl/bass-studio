@@ -2,6 +2,7 @@ if (MSVC)
     set(MSVC_WARNINGS_DEBUG 
         /W4
         # Disabled warnings
+        /wd4324 # structure was padded due to alignment requirements
         /wd4267 # size_t to int
         /wd4244 # float to int
         /wd4100 # unreferenced formal parameter
