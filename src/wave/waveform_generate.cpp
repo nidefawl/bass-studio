@@ -1,3 +1,4 @@
+#include <cmath>
 #include <vector>
 
 #include "math/vec.h"
@@ -36,7 +37,7 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
         std::vector<samplechannel_t>& smpCh = nLevel == 0 ? sample->samples : sample->downsampled[nLevel - 1];
         int stepSize                        = 1;
         double dres                         = samplesPerPx;
-        while (dres >= 4.0 && stepSize < 32) {
+        while (dres >= 64.0) {
             dres /= 2.0;
             stepSize *= 2;
         }
@@ -46,10 +47,11 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
 
 
         int verticesPerPx = waveformScaled.quality;
-        while (dres >= 2.0 && verticesPerPx < 16) {
-            dres /= 2.0;
-            verticesPerPx *= 2;
-        }
+        // while (dres >= 16.0 && verticesPerPx < 4) {
+        //     dres /= 2.0;
+        //     stepSize *= 2;
+        //     verticesPerPx *= 2;
+        // }
 
         const float channelHeight = height / (float) sample->nChannels;
         const float vOffset       = 1.0f / (float) verticesPerPx;
@@ -77,39 +79,44 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
                 const double renderOffset = math::max(0.0, (double) (samplePosRender - samplePosClip));
                 float lastPtX             = -vOffset;
                 //log_lf(Log::L_DEBUG, "channel %d offset %f\n", iChannel, lastPtX);
+                float fAbsMax = 0.0f;
                 for (; samplePos < waveformScaled.sampleEnd;) {
                     double sampleOffset = math::max(0.0, (double) (samplePos - samplePosClip));
-                    if (sampleOffset >= lenSamplesCh) {//TODO: no loop!
+                    if (sampleOffset >= lenSamplesCh) {
                         //End of sample, render next channel
                         break;
                     }
                     int32_t sampleIdx = std::round(sampleOffset);//TODO: std::round is slow
                     dbgassert((int) sampleIdx % stepSize == 0);
                     float fCurX = (sampleOffset - renderOffset) * samplesToPx;
-                    if (fCurX >= lastPtX + vOffset) {
-                        float data = samplesChPtr[sampleIdx];
-                        if (samplesPerPx >= 256) {
-                            int sumRange = 0;// samplesPerPx / 32;
-                            for (int noffset = -sumRange; noffset <= sumRange; noffset++) {
-                                if (noffset != 0 && sampleIdx + noffset > 0 && sampleIdx + noffset < lenSamplesCh) {
-                                    data = math::absMax(data, samplesChPtr[sampleIdx + noffset]);
-                                }
-                            }
-                        }
-                        float fY = -data * channelHeight / 2.0f;
+                    const float data = samplesChPtr[sampleIdx];
+                    fAbsMax = math::absMax(fAbsMax, data);
+                    if (fCurX >= lastPtX + 1/16.0f) {
+                        // if (samplesPerPx >= 256) {
+                        //     int sumRange = 0;// samplesPerPx / 32;
+                        //     for (int noffset = -sumRange; noffset <= sumRange; noffset++) {
+                        //         if (noffset != 0 && sampleIdx + noffset > 0 && sampleIdx + noffset < lenSamplesCh) {
+                        //             data = math::absMax(data, samplesChPtr[sampleIdx + noffset]);
+                        //         }
+                        //     }
+                        // }
+                        float fY = -fAbsMax * channelHeight / 2.0f;
                         //dbgassert(px + fCurX>0);
-                        vec2 vec{ px + fCurX, py + fY };
-                        vecs.push_back(std::move(vec));
+                        // vec2 vec{ px + fCurX, py + fY };
+                        vecs.emplace_back(px + fCurX, py + fY);
                         if (fCurX >= width) {
                             break;
                         }
+                        if (vecs.size() > 50000)break;
                         lastPtX = fCurX;
+                        fAbsMax = 0.0f;
                     }
                     samplePos += stepSize;
                 }
             }
             // nVecsProduced += vecs.size();
 
+            #ifndef NDEBUG
             if (!vecs.empty()) {
                 for (int i = 1; i < (int) vecs.size(); i++) {
                     dbgassert(vecs[i].x > vecs[i - 1].x);
@@ -130,6 +137,7 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
                 //    it++;
                 //}
             }
+            #endif
             channels.push_back(std::move(vecs));
         }
     }

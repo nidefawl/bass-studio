@@ -42,12 +42,18 @@ public:
     }
     void onOptionSelected(int _id) override {
         if (_id >= 0) {
-            auto& option = options[_id];
+            auto& option = options.at(_id);
             if (fnOptionSelected) {
                 current = fnOptionSelected(_id, option);
             } else {
                 current = optionToString(option);
             }
+        }
+    }
+    void setSelectedIdx(int _id) {
+        if (_id >= 0) {
+            auto& option = options.at(_id);
+            current = optionToString(option);
         }
     }
     guictxtmenu_base* createContextMenu(std::vector<String>&& strOptions);

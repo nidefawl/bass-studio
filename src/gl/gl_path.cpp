@@ -2,6 +2,7 @@
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <array>
 #include <glm/gtc/type_ptr.hpp>
 
 
@@ -23,18 +24,19 @@
 
 using vec2list = std::vector<vec2>;
 
-
-void buildIndices(int nV, int offset, std::vector<int>& _out) {
-    static int quadIdx[] = { 0, 1, 2, 1, 2, 3 };
-    for (int i = 0; i < nV; i++) {
-        for (int j = 0; j < 6; j++)
-            _out.push_back(offset + quadIdx[j] + i * 4);
+void buildIndices(uint32_t numVertices, uint32_t offset, std::vector<uint32_t>& _out) {
+    // static int quadIdx[] = { 0, 1, 2, 2, 1, 3 };
+    // static int quadIdx[] = { 2, 1, 0, 3, 1, 2 };
+    static std::array<uint32_t, 6> quadIndices { 0, 1, 2, 1, 2, 3 };
+    for (uint32_t i = 0; i < numVertices; i++) {
+        for (uint32_t idx : quadIndices)
+            _out.push_back(offset + idx + i * 4);
     }
 }
 
 static inline float fast_atan2(float y, float x) {
-    static const float c1 = (float) (M_PI / 4.0);
-    static const float c2 = (float) (M_PI * 3.0 / 4.0);
+    static const auto c1 = static_cast<float>(M_PI / 4.0);
+    static const auto c2 = static_cast<float>(M_PI * 3.0 / 4.0);
     if (y == 0 && x == 0)
         return 0;
     float abs_y = fabsf(y);
@@ -48,147 +50,6 @@ static inline float fast_atan2(float y, float x) {
     return angle;
 }
 
-struct attribute_data_t {
-    std::vector<vec2> pos;
-    std::vector<vec2> seg;
-    std::vector<vec2> angles;
-    std::vector<vec2> tangent0;
-    std::vector<vec2> tangent1;
-    std::vector<vec2> tex;
-    std::vector<float> index;
-};
-static inline void reserve(attribute_data_t& t, int n) {
-    t.pos.resize(n);
-    t.seg.resize(n);
-    t.angles.resize(n);
-    t.tangent0.resize(n);
-    t.tangent1.resize(n);
-    t.tex.resize(n);
-    t.index.resize(n);
-    memset(t.pos.data(), 0, n * sizeof(vec2));
-    memset(t.seg.data(), 0, n * sizeof(vec2));
-    memset(t.angles.data(), 0, n * sizeof(vec2));
-    memset(t.tangent0.data(), 0, n * sizeof(vec2));
-    memset(t.tangent1.data(), 0, n * sizeof(vec2));
-    memset(t.tex.data(), 0, n * sizeof(vec2));
-    memset(t.index.data(), 0, n * sizeof(float));
-}
-static inline void storeVertex(attribute_data_t& data, int idx, vert& v) {
-    v.pos      = data.pos[idx];
-    v.seg      = data.seg[idx];
-    v.angles   = data.angles[idx];
-    v.tangent0 = data.tangent0[idx];
-    v.tangent1 = data.tangent1[idx];
-    v.tex      = data.tex[idx];
-    v.index    = data.index[idx];
-}
-float packVertexData(vec2list& verticesIn, std::vector<vert>& outVdata, int index = 0, bool closed = false) {
-    vec2list vertices = verticesIn;
-    float dist        = glm::distance(vertices.front(), vertices.back());
-    if (closed && dist > 1e-10) {
-        vertices.push_back(verticesIn.front());
-    }
-
-
-    int n = vertices.size();
-    attribute_data_t data;
-    reserve(data, n);
-    data.pos = vertices;
-    for (int i = 0; i < n; i++) {
-        data.index[i] = index;
-    }
-    vec2list T(n - 1);
-    std::vector<float> N(n - 1);
-#define OPT_PATH 1
-#if OPT_PATH == 0
-    for (int i = 1; i < n; i++) {
-        vec2 v   = vertices[i] - vertices[i - 1];
-        T[i - 1] = v;
-        //    printf("T[%d] = %f %f\n", i-1, T[i-1].x, T[i-1].y);
-    }
-    for (int i = 1; i < n; i++) {
-        vec2 v   = T[i - 1];
-        N[i - 1] = sqrtf(v.x * v.x + v.y * v.y);
-    }
-#endif
-#if OPT_PATH == 1
-    for (int i = 1; i < n; i++) {
-        vec2 v   = vertices[i] - vertices[i - 1];
-        T[i - 1] = v;
-        N[i - 1] = glm::length(v);
-    }
-#endif
-    auto itOut  = data.tangent0.begin() + 1;
-    auto itOut2 = data.tangent1.begin();
-    for (int i = 0; i < n - 1; i++) {
-        *itOut++  = T[i];
-        *itOut2++ = T[i];
-        //    vectangent1[i - 1] = T[i - 1];
-    }
-    if (closed) {
-        data.tangent0[0]     = T[n - 2];
-        data.tangent1[n - 1] = T[0];
-    } else {
-        data.tangent0[0]     = T[0];
-        data.tangent1[n - 1] = T[n - 2];
-    }
-    std::vector<float> atans(n);
-    for (int i = 0; i < n; i++) {
-        float x  = data.tangent0[i].x * data.tangent1[i].y - data.tangent0[i].y * data.tangent1[i].x;
-        float y  = data.tangent0[i].x * data.tangent1[i].x + data.tangent0[i].y * data.tangent1[i].y;
-        atans[i] = fast_atan2(x, y);
-    }
-    for (int i = 0; i < n - 1; i++) {
-        data.angles[i].x = atans[i];
-        data.angles[i].y = atans[i + 1];
-    }
-    float fLength = 0;
-    for (int i = 0; i < n - 1; i++) {
-        fLength += N[i];
-        data.seg[i + 1].x = fLength;
-        data.seg[i].y     = fLength;
-    }
-
-    int idxOut = 0;
-    std::vector<vert> vdata2;
-    //  vdata2.reserve(n*2+4);
-    vdata2.resize(n * 2 - 2);
-    storeVertex(data, 0, vdata2[idxOut++]);
-
-    for (int i = 1; i < n - 1; i++) {
-        vert& p = vdata2[idxOut++];
-        storeVertex(data, i, p);
-        p.seg    = data.seg[i - 1];
-        p.angles = data.angles[i - 1];
-        vert& p2 = vdata2[idxOut++];
-        storeVertex(data, i, p2);
-    }
-    storeVertex(data, n - 1, vdata2[idxOut]);
-    dbgassert(idxOut + 1 == (int) vdata2.size());
-    dbgassert(idxOut + 1 == n * 2 - 2);
-    vert& p  = vdata2[idxOut];
-    p.seg    = data.seg[n - 2];
-    p.angles = data.angles[n - 2];
-
-    dbgassert((int) vdata2.size() % 2 == 0);
-    n = vdata2.size();
-    for (int i = 0; i < n; i += 2) {
-        vdata2[i].tex     = {-1, -1};
-        vdata2[i + 1].tex = {1, 1};
-    }
-    outVdata.resize(n * 2);
-    for (int i = 0; i < n; ++i) {
-        outVdata[i * 2 + 0] = vdata2[i];
-        outVdata[i * 2 + 1] = vdata2[i];
-    }
-    for (int i = 0; i < n; ++i) {
-        outVdata[i * 2 + 0].tex.y = -1;
-        outVdata[i * 2 + 1].tex.y = 1;
-    }
-
-    return fLength;
-}
-
 float packVertexData2(vec2list& verticesIn, std::vector<vert>& outVdata, int index = 0, bool closed = false) {
 
     vec2list vertices = verticesIn;
@@ -197,23 +58,23 @@ float packVertexData2(vec2list& verticesIn, std::vector<vert>& outVdata, int ind
         vertices.push_back(verticesIn.front());
     }
 
-    int n = vertices.size();
+    auto n = vertices.size();
     std::vector<vert> vdata(n);
     memset(vdata.data(), 0, vdata.size() * sizeof(vert));
     vec2list T(n - 1);
     std::vector<float> N(n - 1);
-    int idx = 0;
+    size_t idx = 0;
     for (vec2& v : vertices) {
         vert& vd = vdata[idx++];
         vd.pos   = v;
         vd.index = index;
     }
-    for (int i = 1; i < n; i++) {
+    for (size_t i = 1; i < n; i++) {
         T[i - 1] = vertices[i] - vertices[i - 1];
         N[i - 1] = glm::length(T[i - 1]);
         //    printf("T[%d] = %f %f\n", i-1, T[i-1].x, T[i-1].y);
     }
-    for (int i = 1; i < n; i++) {
+    for (size_t i = 1; i < n; i++) {
         vdata[i].tangent0     = T[i - 1];
         vdata[i - 1].tangent1 = T[i - 1];
     }
@@ -225,18 +86,18 @@ float packVertexData2(vec2list& verticesIn, std::vector<vert>& outVdata, int ind
         vdata[n - 1].tangent1 = T[n - 2];
     }
     std::vector<float> atans(n);
-    for (int i = 0; i < n; i++) {
+    for (size_t i = 0; i < n; i++) {
         vert& p  = vdata[i];
         float x  = p.tangent0.x * p.tangent1.y - p.tangent0.y * p.tangent1.x;
         float y  = p.tangent0.x * p.tangent1.x + p.tangent0.y * p.tangent1.y;
         atans[i] = fast_atan2(x, y);
     }
-    for (int i = 0; i < n - 1; i++) {
+    for (size_t i = 0; i < n - 1; i++) {
         vdata[i].angles.x = atans[i];
         vdata[i].angles.y = atans[i + 1];
     }
     float fLength = 0;
-    for (int i = 0; i < n - 1; i++) {
+    for (size_t i = 0; i < n - 1; i++) {
         fLength += N[i];
         vdata[i + 1].seg.x = fLength;
         vdata[i].seg.y     = fLength;
@@ -245,7 +106,7 @@ float packVertexData2(vec2list& verticesIn, std::vector<vert>& outVdata, int ind
     std::vector<vert> vdata2;
     vdata2.resize(n * 2 - 2);
     vdata2[0] = vdata[0];
-    for (int i = 1, j = 1; i < n - 1; i++, j += 2) {
+    for (size_t i = 1, j = 1; i < n - 1; i++, j += 2) {
         vert p        = vdata[i];
         p.seg         = vdata[i - 1].seg;
         p.angles      = vdata[i - 1].angles;
@@ -255,16 +116,16 @@ float packVertexData2(vec2list& verticesIn, std::vector<vert>& outVdata, int ind
     vert p   = vdata[n - 1];
     p.seg    = vdata[n - 2].seg;
     p.angles = vdata[n - 2].angles;
-    dbgassert((int) vdata2.size() == n * 2 - 2);
+    dbgassert(vdata2.size() == n * 2 - 2);
     vdata2[n * 2 - 3] = p;
 
     n = vdata2.size();
-    for (int i = 0; i < n; i += 2) {
+    for (size_t i = 0; i < n; i += 2) {
         vdata2[i].tex     = vec2(-1);
         vdata2[i + 1].tex = vec2(1);
     }
     outVdata.resize(n * 2);
-    for (int i = 0; i < n; ++i) {
+    for (size_t i = 0; i < n; ++i) {
         outVdata[i * 2 + 0]       = vdata2[i];
         outVdata[i * 2 + 1]       = vdata2[i];
         outVdata[i * 2].tex.y     = -1;
@@ -318,7 +179,8 @@ int GLPathRenderer::init() {
         checkGLError("getStatus");
         printf("Link error: %s\n", StringAsCStr(log));
         return 3;
-    } else if (!log.empty()) {
+    }
+    if (!log.empty()) {
         printf("Link log: %s\n", StringAsCStr(log));
     }
     checkGLError("linkProgram");
@@ -329,18 +191,12 @@ int GLPathRenderer::init() {
     u_projection     = glGetUniformLocation(program, "u_projection");
     u_uniforms       = glGetUniformLocation(program, "u_uniforms");
     u_uniforms_shape = glGetUniformLocation(program, "u_uniforms_shape");
-    //
-    //  for (int i = 0; i < attributes.size(); i++) {
-    //    attributes[i].bindingPt = glGetAttribLocation(program, attributes[i].name);
-    //  }
-    for (int i = 0; i < (int) attributes.size(); i++) {
-        VertexAttr& attr = attributes[i];
+
+    for (VertexAttr& attr : attributes) {
         attr.bindingPt   = glGetAttribLocation(program, attr.name);
         checkGLError("glGetAttribLocation");
-        //    printf("%s %d\n", attributes[i].name, attr.bindingPt);
     }
 
-    checkGLError("glEnableVertexAttribArray");
     glUniform1i(u_uniforms, 0);
     glUniform1i(u_dash_atlas, 1);
     checkGLError("glUniform1i");
@@ -351,8 +207,6 @@ void GLPathRenderer::destroy() {
     glDeleteProgram(program2dLines);
 }
 void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) {
-
-    //  paths.clear();
     std::vector<vert> outVdata;
     vbuf bufFinal;
     std::vector<float> bufUniforms;
@@ -366,16 +220,11 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
     int idx                  = 0;
     for (vec2list& list : paths) {
         if (list.size() > 1) {
-            //      timer.reset();
             float len = packVertexData2(list, outVdata, idx);
-            //      int64_t t = timer.getTime();
-            //      dbgassert(t);
-            //      log_printf("%d\n", t+2);
             size_t flBufPos    = flBufVertsPos * sizeFloatsVert;
             size_t flBakedSize = outVdata.size() * sizeFloatsVert;
             bufFinal.v.resize(flBufPos + flBakedSize);
             memcpy(bufFinal.v.data() + flBufPos, outVdata.data(), flBakedSize * sizeof(float));
-            //      log_printf("processed %d into %d bytes of data\n", list.size()*sizeof(vec2), flBakedSize*sizeof(float));
             buildIndices(outVdata.size() / 4, flBufVertsPos, bufFinal.i);
             Uniforms uniforms = pathOpt;
             uniforms.length   = len;
@@ -387,7 +236,7 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
             idx++;
         }
     }
-    int nPaths = 0;
+    size_t nPaths = 0;
     if (flBufVertsPos == 0) {
         bufFinal.v.resize(0);
         bufFinal.i.resize(0);
@@ -400,10 +249,6 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
     return;
 #endif
 
-    //
-    //  for (float f : bufFinal.v) {
-    //    dbgassert(!std::isnan(f) && !std::isinf(f));
-    //  }
     bool newBuffer = false;
     DrawVBO& vbo   = out.vbo;
     if (vbo.vaoId == 0) {
@@ -414,20 +259,13 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
     }
     glBindVertexArray(vbo.vaoId);
     vbo.uploadBuffer(GL_ARRAY_BUFFER, bufFinal.v.data(), sizeof(float) * bufFinal.v.size());
-    //  glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
-    //  glBufferData(GL_ARRAY_BUFFER, sizeof(float)*bufFinal.v.size(), bufFinal.v.data(), GL_DYNAMIC_DRAW);
-
-    vbo.uploadBuffer(GL_ELEMENT_ARRAY_BUFFER, bufFinal.i.data(), sizeof(int) * bufFinal.i.size());
-    //  glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
-    //  glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int)*bufFinal.i.size(), bufFinal.i.data(), GL_DYNAMIC_DRAW);
-    //  checkGLError("upload index data");
+    vbo.uploadBuffer(GL_ELEMENT_ARRAY_BUFFER, bufFinal.i.data(), sizeof(uint32_t) * bufFinal.i.size());
 
     if (newBuffer) {
         bindVertexAttributes(attributes, ATTR_STRIDE);
     }
 
-
-    int texSize = bufUniforms.size() / 4;
+    auto texSize = static_cast<int32_t>(bufUniforms.size() / 4);
     glActiveTexture(GL_TEXTURE0);
     if (out.uniforms_texture && nPaths * countUniforms != texSize) {
         log_printf("tex shape changed %d %d\n", out.numPaths * countUniforms, texSize);
@@ -463,5 +301,5 @@ void GLPathRenderer::render(BakeGLPath& bakedPath, const mat4x4& matProj, const 
     glBindTexture(GL_TEXTURE_2D, bakedPath.uniforms_texture);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
     glBindTexture(GL_TEXTURE_2D, bakedPath.uniforms_texture);
-    glDrawElements(GL_TRIANGLES, bakedPath.vbo.nIndices, GL_UNSIGNED_INT, NULL);
+    glDrawElements(GL_TRIANGLES, bakedPath.vbo.nIndices, GL_UNSIGNED_INT, nullptr);
 }

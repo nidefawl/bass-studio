@@ -372,6 +372,23 @@ private:
 		return vertices;
 	}
 
+
+    static float __fast_atan2(float y, float x) {
+        static constexpr float c1 = (float) (pi / 4.0);
+        static constexpr float c2 = (float) (pi * 3.0 / 4.0);
+        if (y == 0 && x == 0)
+            return 0;
+        float abs_y = fabsf(y);
+        float angle;
+        if (x >= 0)
+            angle = c1 - c1 * ((x - abs_y) / (x + abs_y));
+        else
+            angle = c2 - c1 * ((x + abs_y) / (abs_y - x));
+        if (y < 0)
+            return -angle;
+        return angle;
+    }
+
 	/**
 	 * Creates a partial circle between two points.
 	 * The points must be equally far away from the origin.
@@ -390,8 +407,8 @@ private:
 		auto point2 = Vec2Maths::subtract(end, origin);
 
 		// calculate the angle between the two points
-		auto angle1 = atan2(point1.y, point1.x);
-		auto angle2 = atan2(point2.y, point2.x);
+		auto angle1 = __fast_atan2(point1.y, point1.x);
+		auto angle2 = __fast_atan2(point2.y, point2.x);
 
 		// ensure the outer angle is calculated
 		if (clockwise) {

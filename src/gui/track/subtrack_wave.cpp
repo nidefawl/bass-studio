@@ -228,7 +228,7 @@ public:
         w.sampleBeginOffset = sampleBeginOffset;
         w.sampleEnd         = entry.sample->sample.nSamples;
         w.samplesPerPx      = samplesPerPx;
-        w.linewidth         = 1.5f;//+min(0.75, max(0.0, grid.zoom*32.0));
+        w.linewidth         = 2;//+min(0.75, max(0.0, grid.zoom*32.0));
         w.method            = SampleMethod::sample_straight;
         w.audioId           = entry.sample->sampleId;
         w.sampleVersion     = entry.sample->version;

@@ -154,7 +154,7 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
         int64_t timeBeginDownsample = getTimeMicros();
         log_printf("Downsampling %s...\n", path.c_str());
 
-        uint8_t maxDownS = 1;
+        uint8_t maxDownS = 4;
         for (uint8_t downsampleStep = 1; downsampleStep < maxDownS; downsampleStep++) {
             samplecount_t lenSamplesDownsampled = sample->nSamples >> downsampleStep;
 

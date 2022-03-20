@@ -323,7 +323,7 @@ parsl_mesh* parsl_mesh_from_lines(parsl_context* context,
 
     const Position* src_position = spines.vertices;
     uint32_t base_index = 0;
-
+    const bool useMiter = false;
     for (uint16_t spine = 0; spine < spines.num_spines; spine++) {
         const bool thin = context->guideline_start > 0 &&
             spine >= context->guideline_start;
@@ -353,7 +353,7 @@ parsl_mesh* parsl_mesh_from_lines(parsl_context* context,
             // NOTE: sin(pi / 2 - acos(X) / 2) == sqrt(1 + X) / sqrt(2)
             float extent = 0.5 * thickness;
             const float dotp = (pnx * nx + pny * ny);
-            if (dotp < miter_acos_max && dotp > miter_acos_min) {
+            if (dotp < miter_acos_max && dotp > miter_acos_min&&useMiter) {
                 const float phi = acos(dotp) / 2;
                 const float theta = PAR_PI / 2 - phi;
                 extent = PAR_CLAMP(extent / sin(theta), -miter_limit,
@@ -411,7 +411,7 @@ parsl_mesh* parsl_mesh_from_lines(parsl_context* context,
             // NOTE: sin(pi / 2 - acos(X) / 2) == sqrt(1 + X) / sqrt(2)
             float extent = 0.5 * thickness;
             const float dotp = (pnx * nx + pny * ny);
-            if (dotp < miter_acos_max && dotp > miter_acos_min) {
+            if (dotp < miter_acos_max && dotp > miter_acos_min&&useMiter) {
                 const float phi = acos(dotp) / 2;
                 const float theta = PAR_PI / 2 - phi;
                 extent = PAR_CLAMP(extent / sin(theta), -miter_limit,
@@ -485,7 +485,7 @@ parsl_mesh* parsl_mesh_from_lines(parsl_context* context,
             // NOTE: sin(pi / 2 - acos(X) / 2) == sqrt(1 + X) / sqrt(2)
             float extent = 0.5 * thickness;
             const float dotp = (pnx * nx + pny * ny);
-            if (dotp < miter_acos_max && dotp > miter_acos_min) {
+            if (dotp < miter_acos_max && dotp > miter_acos_min&&useMiter) {
                 const float phi = acos(dotp) / 2;
                 const float theta = PAR_PI / 2 - phi;
                 extent = PAR_CLAMP(extent / sin(theta), -miter_limit,

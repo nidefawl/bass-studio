@@ -361,7 +361,7 @@ void preGLState() {
     // Draw some stuff to an FBO as a test
     glViewport(0, 0, FBO_WIDTH, FBO_HEIGHT);
     glEnable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
+    // glDisable(GL_CULL_FACE);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -491,6 +491,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         glEnable(GL_SCISSOR_TEST);
+        glFrontFace(GL_CW);
 
         // go over all queue updates in that fb and tesselate + draw them
 
@@ -536,7 +537,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             mat4x4 matModel = mat4x4(1.0);
             matModel[0][0]  = waveform.scaleX;
             matView         = glm::translate(matView, glm::vec3(pos.x, pos.y, 0));
-            mat4x4 matProj  = glm::ortho(0.f, (float) FBO_WIDTH, (float) FBO_HEIGHT, 0.f, 1.0f, -1.0f);
+            mat4x4 matProj  = glm::ortho(0.f, (float) FBO_WIDTH, (float) FBO_HEIGHT, 0.f, -1.0f, 1.0f);
             dbgassert(pos.x + size.x <= FBO_WIDTH);
             impl->timer2.reset();
             glScissor(pos.x, FBO_HEIGHT - pos.y - size.y, size.x, size.y);
@@ -572,10 +573,11 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             break;
         }
     }
+    glFrontFace(GL_CCW);
     if (preGlSet) {
         glDisable(GL_SCISSOR_TEST);
         glDisable(GL_DEPTH_TEST);
-        glEnable(GL_CULL_FACE);
+        // glEnable(GL_CULL_FACE);
         glBindVertexArray(0);
         checkGLError("fb postrender");
         nvgluBindFramebuffer(nullptr);

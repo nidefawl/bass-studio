@@ -20,8 +20,8 @@ struct glshader_srcloader {
     bool reload();
 };
 
-int prependGLSL(String& s, String src);
-int buildShaderProgram(const std::vector<glshader_src>& srcList);
+int32_t prependGLSL(String& s, const String& src);
+int32_t buildShaderProgram(const std::vector<glshader_src>& srcList);
 template<typename T>
 int compileShaderCombo(T* owner, const char* fnameVsh, const char* fnameFsh) {
     auto glSourceLoader = std::make_unique<glshader_srcloader>();
@@ -47,13 +47,12 @@ struct gl_shader_program_base_t {
         }
     }
     int setAttributeLocations() {
-        for (int i = 0; i < (int) attributes.size(); i++) {
-            VertexAttr& attr = attributes[i];
+        for (VertexAttr& attr : attributes) {
             attr.bindingPt   = glGetAttribLocation(program, attr.name);
             if (checkGLError("glGetAttribLocation"))
                 return -1;
             if (attr.bindingPt < 0) {
-                log_lf(Log::L_WARN, "%s %d\n", attributes[i].name, attr.bindingPt);
+                log_lf(Log::L_WARN, "%s %d\n", attr.name, attr.bindingPt);
                 log_lf(Log::L_WARN, "Missing attribLocation %s\n", attr.name);
                 return 1;
             }

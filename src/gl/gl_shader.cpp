@@ -3,14 +3,14 @@
 #include "logging.h"
 
 
-int prependGLSL(String& s, String src) {
+int32_t prependGLSL(String& s, const String& src) {
     auto it = s.find("#version");
     if (it != String::npos) {
         it = s.find_first_of('\n', it);
         if (it != String::npos && it < s.length() - 4) {
             it++;
             s.insert(it, src);
-            return (int) it;
+            return static_cast<int>(it);
         }
     }
     return -1;
@@ -39,25 +39,24 @@ bool glshader_srcloader::reload() {
     }
     return true;
 }
-int buildShaderProgram(const std::vector<glshader_src>& srcList) {
-    const int numStages = srcList.size();
-    std::vector<GLuint> compiledShaders(numStages);
-    for (int i = 0; i < numStages; i++) {
-        auto& srcEntry  = srcList[i];
+int32_t buildShaderProgram(const std::vector<glshader_src>& srcList) {
+    std::vector<GLuint> compiledShaders;
+    compiledShaders.reserve(srcList.size());
+    for (auto& srcEntry : srcList) {
         GLuint glshader = compileShader(srcEntry.stage, srcEntry.source);
         if (!glshader) {
             log_printf("failed compiling %s\n", StringAsCStr(srcEntry.filepath));
             return -1;
         }
-        compiledShaders[i] = glshader;
+        compiledShaders.push_back(glshader);
     }
     GLuint newprogram = glCreateProgram();
-    for (int i = 0; i < numStages; i++) {
-        glAttachShader(newprogram, compiledShaders[i]);
+    for (auto shader : compiledShaders) {
+        glAttachShader(newprogram, shader);
     }
     glLinkProgram(newprogram);
-    for (int i = 0; i < numStages; i++) {
-        glDeleteShader(compiledShaders[i]);
+    for (auto shader : compiledShaders) {
+        glDeleteShader(shader);
     }
     String log = getLog(1, newprogram);
     if (getStatus(newprogram, GL_LINK_STATUS) != 1) {
@@ -70,5 +69,5 @@ int buildShaderProgram(const std::vector<glshader_src>& srcList) {
         printf("Link log: %s\n", StringAsCStr(log));
     }
     checkGLError("linkProgram");
-    return newprogram;
+    return static_cast<int32_t>(newprogram);
 }

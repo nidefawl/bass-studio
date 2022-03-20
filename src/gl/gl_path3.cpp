@@ -19,36 +19,33 @@
 #include "gl_tess2d.h"
 #include "hires_timer.h"
 #include "assert_dbg.h"
-#if BUILD_VSTHOST
 #define PAR_STREAMLINES_IMPLEMENTATION
-#endif
 #include <par/par_streamlines.h>
 
 using vec2list = std::vector<vec2>;
 namespace {
-    String srcShaderVertex   = R"END(
+    constexpr const char* srcShaderVertex   = R"END(
 #version 150 core
 
 uniform mat4 u_mvp;
-in vec2 a_position;
-in vec4 a_annotation;
-out vec4 vannotation;
+in vec4 a_vertex;
+out vec2 uv;
 void main() {
-  gl_Position = u_mvp * vec4(a_position.xy, 0.0, 1.0);
-  vannotation = a_annotation;
+  gl_Position = u_mvp * vec4(a_vertex.xy, 1.0-a_vertex.z*2.0, 1.0);
+  uv = a_vertex.zw;
 }
 )END";
-    String srcShaderFragment = R"END(
+    constexpr const char* srcShaderFragment = R"END(
 #version 150 core
 
 uniform vec4 u_color;
 uniform float u_linewidth;
-in vec4 vannotation;
+in vec2 uv;
 out vec4 frag_color;
 void main() {
-  float L = vannotation.w;
-  float a = min(1.0, (1.0 - abs(L)) * u_linewidth);
-  frag_color = vec4(u_color.rgb, u_color.a * a);
+  float a = min(1.0, (1.0 - abs(uv.y)) * u_linewidth * 0.5);
+  frag_color = vec4(u_color.rgb*(0.005+1.5*uv.x*uv.x)*(1.0 - abs(uv.y)), u_color.a * a);
+//   frag_color = vec4(u_color.rgb, u_color.a * a);
 }
 )END";
 }// namespace
@@ -73,7 +70,8 @@ int GLPathRendererSimple2::init() {
         checkGLError("getStatus");
         printf("Link error: %s\n", StringAsCStr(log));
         return 1;
-    } else if (!log.empty()) {
+    }
+    if (!log.empty()) {
         printf("Link log: %s\n", StringAsCStr(log));
     }
     checkGLError("linkProgram");
@@ -81,15 +79,10 @@ int GLPathRendererSimple2::init() {
     u_mvp       = glGetUniformLocation(program, "u_mvp");
     u_color     = glGetUniformLocation(program, "u_color");
     u_linewidth = glGetUniformLocation(program, "u_linewidth");
-    //
-    //for (int i = 0; i < attributes.size(); i++) {
-    //attributes[i].bindingPt = glGetAttribLocation(program, attributes[i].name);
-    //}
-    for (int i = 0; i < (int) attributes.size(); i++) {
-        VertexAttr& attr = attributes[i];
+
+    for (VertexAttr& attr : attributes) {
         attr.bindingPt   = glGetAttribLocation(program, attr.name);
         checkGLError("glGetAttribLocation");
-        //printf("%s %d\n", attributes[i].name, attr.bindingPt);
     }
 
     program2dLines = program;
@@ -114,15 +107,15 @@ void GLPathRendererSimple2::bakePaths(std::vector<vec2list> paths, Uniforms path
     }
     parsl_spine_list spinelist{};
     spinelist.num_vertices  = bufFinal.size();
-    spinelist.vertices      = (parsl_position*) bufFinal.data();
+    spinelist.vertices      = reinterpret_cast<parsl_position*>(bufFinal.data());
     spinelist.num_spines    = spineLengths.size();
     spinelist.spine_lengths = spineLengths.data();
 
     float miterLimit = 2.0f;
     parsl_config config{};
     config.flags |= PARSL_FLAG_ANNOTATIONS;
-    config.thickness       = pathOpt.linewidth;
-    config.miter_limit     = config.thickness * miterLimit;
+    config.thickness       = pathOpt.linewidth*2.0f;
+    config.miter_limit     = 0.0f;
     parsl_context* context = nullptr;
     context                = parsl_create_context(config);
     parsl_mesh* mesh       = parsl_mesh_from_lines(context, spinelist);
@@ -130,22 +123,15 @@ void GLPathRendererSimple2::bakePaths(std::vector<vec2list> paths, Uniforms path
 #ifdef NO_OPENGL
     return;
 #endif
-    dbgassert((sizeof(parsl_position) + sizeof(parsl_annotation)) == 6 * sizeof(float));
-    tmpBuffer.resize((sizeof(parsl_position) + sizeof(parsl_annotation)) * mesh->num_vertices);
+    tmpBuffer.resize(4ULL * mesh->num_vertices);
     for (uint32_t i = 0; i < mesh->num_vertices; ++i) {
-        int32_t index      = i * 6 + 0;
+        size_t index = i * 4ULL;
         tmpBuffer[index++] = mesh->positions[i].x;
         tmpBuffer[index++] = mesh->positions[i].y;
-        tmpBuffer[index++] = mesh->annotations[i].spine_to_edge_x;
-        tmpBuffer[index++] = mesh->annotations[i].spine_to_edge_y;
         tmpBuffer[index++] = mesh->annotations[i].u_along_curve;
         tmpBuffer[index++] = mesh->annotations[i].v_across_curve;
     }
 
-    //
-    //for (float f : bufFinal.v) {
-    //dbgassert(!std::isnan(f) && !std::isinf(f));
-    //}
     bool newBuffer = false;
     DrawVBO& vbo   = out.vbo;
     if (vbo.vaoId == 0) {
@@ -155,7 +141,7 @@ void GLPathRendererSimple2::bakePaths(std::vector<vec2list> paths, Uniforms path
         newBuffer = true;
     }
     glBindVertexArray(vbo.vaoId);
-    vbo.uploadBuffer(GL_ARRAY_BUFFER, tmpBuffer.data(), tmpBuffer.size());
+    vbo.uploadBuffer(GL_ARRAY_BUFFER, tmpBuffer.data(), sizeof(float)*tmpBuffer.size());
     vbo.uploadBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->triangle_indices, sizeof(uint32_t) * mesh->num_triangles * 3);
     vbo.nIndices = mesh->num_triangles * 3;
 
@@ -178,5 +164,5 @@ void GLPathRendererSimple2::render(BakeGLPath& bakedPath, const mat4x4& matProj,
     glUniform1f(u_linewidth, bakedPath.lineWidth);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
-    glDrawElements(GL_TRIANGLES, bakedPath.vbo.nIndices, GL_UNSIGNED_INT, NULL);
+    glDrawElements(GL_TRIANGLES, bakedPath.vbo.nIndices, GL_UNSIGNED_INT, nullptr);
 }

@@ -1,3 +1,4 @@
+#include "assert_dbg.h"
 #include "glheaders.h"
 #include <vector>
 #include "str_util.h"
@@ -38,7 +39,6 @@ void enableGlDebugCallback() {
                               true);
 }
 static const char* getGlErrorString(int error_code) {
-    static char buf[256];
     switch (error_code) {
         case GL_NO_ERROR:
             return "No error";
@@ -57,8 +57,7 @@ static const char* getGlErrorString(int error_code) {
         case GL_INVALID_FRAMEBUFFER_OPERATION:
             return "Invalid framebuffer operation";
         default:
-            snprintf(buf, 256, "ErrorCode %d", error_code);
-            return buf;
+            return "Unknown error enum";
     }
 }
 bool checkGLError(const char* s) {
@@ -129,22 +128,22 @@ int compileShader(int type, const String& src) {
     return iShader;
 }
 
-/*static*/ void tess2d::uploadVBO(tess2d& tess, DrawVBO& out) {
+/*static*/ void tess2d::uploadVBO(tess2d& tess, DrawVBO& vbo) {
     std::vector<float> vertices;
-    std::vector<int> indices;
+    std::vector<uint32_t> indices;
     tess.store(vertices, indices);
-    if (out.vboVertId == 0) {
-        glGenBuffers(1, &out.vboVertId);
-        glGenBuffers(1, &out.vboIdxId);
+    if (vbo.vboVertId == 0) {
+        glGenBuffers(1, &vbo.vboVertId);
+        glGenBuffers(1, &vbo.vboIdxId);
     }
-    glBindBuffer(GL_ARRAY_BUFFER, out.vboVertId);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
     glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(sizeof(float) * vertices.size()), vertices.data(), GL_STREAM_DRAW);
     checkGLError("upload vertex data");
 
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, out.vboIdxId);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(sizeof(int) * indices.size()), indices.data(), GL_STREAM_DRAW);
     checkGLError("upload index data");
-    out.nIndices = (int64_t)indices.size();
+    vbo.nIndices = (int64_t)indices.size();
 }
 void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
     int32_t vertStrideBytes = fixedStride;
@@ -182,14 +181,20 @@ void DrawVBO::genBuffers() {
     vboIdxId  = buffers[1];
 }
 
-#define MIN_BUF_SIZE (16384)
-void DrawVBO::uploadBuffer(uint32_t bufferType, void* ptr, int64_t len) {
-    uint32_t buffer  = (bufferType == GL_ARRAY_BUFFER) ? vboVertId : vboIdxId;
-    int64_t& vboSize = (bufferType == GL_ARRAY_BUFFER) ? vboVertSize : vboIdxSize;
-
+#define MIN_BUF_SIZE (16384UL)
+#define MAX_BUF_SIZE (268435456UL)
+void DrawVBO::uploadBuffer(uint32_t bufferType, void* ptr, size_t len) {
+    auto buffer  = (bufferType == GL_ARRAY_BUFFER) ? vboVertId : vboIdxId;
+    auto& vboSize = (bufferType == GL_ARRAY_BUFFER) ? vboVertSize : vboIdxSize;
+    if (len > MAX_BUF_SIZE) {
+        log_lf(Log::L_ERROR, "Buffer size exceeds hard limit: %zd > %zd\n", (int64_t)len, (int64_t) MAX_BUF_SIZE);
+        dbgassert(len <= MAX_BUF_SIZE);
+        return;
+    }
     glBindBuffer(bufferType, buffer);
     const GLenum usage = GL_DYNAMIC_DRAW;
     if (vboSize < MIN_BUF_SIZE && len < MIN_BUF_SIZE) {
+        log_lf(Log::L_DEBUG, "Allocating %zd bytes for buffer data of len %zd bytes\n", (int64_t)MIN_BUF_SIZE, (int64_t) len);
         glBufferData(bufferType, MIN_BUF_SIZE, nullptr, usage);
         vboSize = MIN_BUF_SIZE;
     }
@@ -198,7 +203,7 @@ void DrawVBO::uploadBuffer(uint32_t bufferType, void* ptr, int64_t len) {
     //           buffer, vboSize, len, ptr);
     if (vboSize < len) {
         vboSize = len;
-        //log_printf("len changed to %d, orphan buffer\n", len);
+        log_lf(Log::L_DEBUG, "len changed to %zd bytes. orphan buffer\n", (int64_t)len);
         glBufferData(bufferType, len, nullptr, usage);//invalidate previous buffer ('handoff' to driver as explained by some guru)
         glBufferData(bufferType, len, ptr, usage);
     } else {
