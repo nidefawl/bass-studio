@@ -122,10 +122,14 @@ void GLPathRendererPolyline2d::bakePaths(std::vector<vec2list> paths, Uniforms p
 }
 
 void GLPathRendererPolyline2d::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {
-    mat4x4 mvp = matProj * (matView * matModel);
+    const mat4x4 mvp = matProj * (matView * matModel);
+    const auto& bakeOpt = bakedPath.bakeOpts;
+    glDisable(GL_CULL_FACE);
     glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
     glUniform4f(u_color, 1, 1, 1, 1);
+    glUniform4f(u_color, bakeOpt.color.r, bakeOpt.color.g, bakeOpt.color.b, bakeOpt.color.a);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glDrawArrays(GL_TRIANGLES, 0, bakedPath.vbo.nIndices);
+    glEnable(GL_CULL_FACE);
 }
