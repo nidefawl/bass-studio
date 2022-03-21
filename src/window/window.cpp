@@ -1553,7 +1553,9 @@ static void glfw_cb_framebuffersize(GLFWwindow* w, int width, int height) {
 }
 
 void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* share, void* parentWindowHandle) {
-    strncpy(this->name, title, sizeof(this->name));
+    if (title != this->name) {
+        strncpy(this->name, title, sizeof(this->name));
+    }
     if (glfw)
         throw appexception("window not null");
     if (parentWindowHandle) {
