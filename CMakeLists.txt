@@ -118,7 +118,7 @@ endif ()
 endforeach ()
 
 
-if (IS_MINGW_BUILD)
+if (MINGW AND CLANG)
     # The SEH assembly will not work correctly on clang mingw if any level of optimization is applied
     set(SRC_FILES_NO_OPTIMIZE src/host/plugin/vst_plugin_dispatch.cpp)
     set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-fno-lto;-mtune=generic")
@@ -184,7 +184,7 @@ endif ()
 
 target_compile_definitions(${LINK_TARGET} PUBLIC GLFW_INCLUDE_NONE=1 USE_WIN32_EXC_HOOKS BUILD_VSTHOST=1 BUILD_EXTERNAL_PLUGIN=0)
 #target_compile_definitions(${LINK_TARGET} PUBLIC PA_ENABLE_DEBUG_OUTPUT=1)
-target_compile_definitions(${LINK_TARGET} PUBLIC VST_FORCE_DEPRECATED=0 GLM_FORCE_CXX14=1)
+target_compile_definitions(${LINK_TARGET} PUBLIC VST_FORCE_DEPRECATED=0)
 
 if (PROJECT_CFG_USE_OPENGL3)
     target_compile_definitions(${LINK_TARGET} PUBLIC NANOVG_GL3=1)
@@ -249,6 +249,7 @@ target_precompile_headers(${LINK_TARGET} PUBLIC
     "$<$<COMPILE_LANGUAGE:CXX>:<functional$<ANGLE-R>>"
     "$<$<COMPILE_LANGUAGE:CXX>:<array$<ANGLE-R>>"
     "$<$<COMPILE_LANGUAGE:CXX>:<fstream$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:include/types.h>"
     "$<$<COMPILE_LANGUAGE:CXX>:include/math/vec.h>"
     "$<$<COMPILE_LANGUAGE:CXX>:include/math/mat.h>"
     "$<$<COMPILE_LANGUAGE:CXX>:include/track_impl.h>"
