@@ -203,7 +203,7 @@ void DrawVBO::uploadBuffer(uint32_t bufferType, void* ptr, size_t len) {
     //           buffer, vboSize, len, ptr);
     if (vboSize < len) {
         vboSize = len;
-        log_lf(Log::L_DEBUG, "len changed to %zd bytes. orphan buffer\n", (int64_t)len);
+        // log_lf(Log::L_DEBUG, "len changed to %zd bytes. orphan buffer\n", (int64_t)len);
         glBufferData(bufferType, len, nullptr, usage);//invalidate previous buffer ('handoff' to driver as explained by some guru)
         glBufferData(bufferType, len, ptr, usage);
     } else {
