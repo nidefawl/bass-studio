@@ -59,7 +59,7 @@ DEFINE_TEST(
     test_seh_exception_handling FALSE 
     test_seh_exception_handling.cpp
 )
-if (IS_MINGW_BUILD)
+if (MINGW AND CLANG)
     target_compile_options(test_seh_exception_handling PRIVATE "-fno-lto;-mtune=generic")
 endif()
 

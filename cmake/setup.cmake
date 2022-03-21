@@ -33,11 +33,6 @@ if (WIN32)
     set(PROJECT_PLATFORM "win")
 endif()
 
-set(IS_MINGW_BUILD OFF)
-if (WIN32 AND NOT MSVC)
-  set(IS_MINGW_BUILD ON)
-endif()
-
 set(CLANG FALSE)
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CLANG TRUE)
