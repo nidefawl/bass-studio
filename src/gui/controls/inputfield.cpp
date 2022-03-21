@@ -13,16 +13,16 @@ void gui_numberinput_field_base::render(NVGcontext* vg) {
     const auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
     const String str = getAsStringLiteral();
 
+    const auto posText = vec2(pos) + vec2(size.x - 3, size.y * 0.5f);
+    float textWidth = renderTextLabel(vg,
+                    posText,
+                    vec2(size),
+                    str,
+                    theme,
+                    fontSizeScaled,
+                    theme->getColor(c),
+                    NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     if (this->label.length()) {
-        auto posText = vec2(pos) + vec2(size.x - 3, size.y * 0.5f);
-        float textWidth = renderTextLabel(vg,
-                        posText,
-                        vec2(size),
-                        str,
-                        theme,
-                        fontSizeScaled,
-                        theme->getColor(c),
-                        NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
         renderTextLabel(vg,
                         vec2(pos) + vec2(3.0f, size.y * 0.5f),
                         vec2(size.x - textWidth - 6.0f, size.y),
@@ -31,15 +31,6 @@ void gui_numberinput_field_base::render(NVGcontext* vg) {
                         fontSizeScaled,
                         theme->getColor(GuiColor::COL_LABEL_INACTIVE),
                         NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-    } else {
-        renderTextLabel(vg,
-                        vec2(pos) + vec2(size) * 0.5f,
-                        vec2(size),
-                        str,
-                        theme,
-                        fontSizeScaled,
-                        theme->getColor(c),
-                        NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     }
 }
 
