@@ -223,7 +223,7 @@ void guimenu::clickedElement(ctxtmenu_entry* e, int _id) {
         if (_id > 0) {
             auto* entry = static_cast<guimenu_ctxtentry*>(e);
             auto menuCommand = entry->menu->command;
-            appCtrl->menuCommand(std::move(menuCommand));//possibly deletes this
+            appCtrl->menuCommand(menuCommand);//possibly deletes this
         }
         appCtrl->closeAllAppMenus();
     }

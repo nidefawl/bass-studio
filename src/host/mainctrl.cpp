@@ -901,7 +901,7 @@ std::shared_ptr<window_abstract_t> getWindowDebugWaveformCache();
 std::shared_ptr<window_abstract_t> getWindowPerf();
 std::shared_ptr<window_abstract_t> getWindowDebugNanoVG();
 
-void DawInstance::menuCommand(const menucmd_t&& command) {
+void DawInstance::menuCommand(menucmd_t command) {
     try {
         auto mainCtrl = tls.mainCtrl;
         switch (command.command) {
@@ -1066,7 +1066,7 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
     }
 }
 
-void DawCtrl::menuCommand(const menucmd_t&& command) {
+void DawCtrl::menuCommand(menucmd_t command) {
     switch (command.command) {
 
         case CMD_GUI_GLOBAL_ZOOM_DECREASE:

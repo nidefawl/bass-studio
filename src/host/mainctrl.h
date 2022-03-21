@@ -414,7 +414,7 @@ public:
     //    void copyClipsInRange(trackcontents_t* in, trackcontents_t* out, int32_t srcPos, int32_t dstPos, int32_t len);
 
     track_t* getSelectedTrack();
-    void menuCommand(const menucmd_t&& command);
+    void menuCommand(menucmd_t command);
     void destroy();
     void updateClipViews(clip_t* notifyClip, clip_cursor_t cursor);
     void onTick();
@@ -501,7 +501,7 @@ public:
     bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override;
     bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override;
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
-    void menuCommand(const menucmd_t&& command) override;
+    void menuCommand(menucmd_t command) override;
     void updateMenubar() override;
     void onTick() override;
     void destroy() override;

@@ -117,27 +117,27 @@ inline void mixSpectrum(audio_spectrum const* lf, audio_spectrum const* hf, audi
     //  out.fftlen = a->fftlen;
     //  out.srOverFFT = a->srOverFFT;
     //  out.numBands = a->numBands;
-    //  assert(a->mags[0].size() == a->fftlen);
-    //  assert(b->mags[0].size() == b->fftlen);
-    //  assert(a->mags[0].size() == b->fftlen);
-    //  assert(out.mags[0].size() == a->mags[0].size());
-    //  assert(out.fftlen == a->fftlen);
+    //  dbgassert(a->mags[0].size() == a->fftlen);
+    //  dbgassert(b->mags[0].size() == b->fftlen);
+    //  dbgassert(a->mags[0].size() == b->fftlen);
+    //  dbgassert(out.mags[0].size() == a->mags[0].size());
+    //  dbgassert(out.fftlen == a->fftlen);
     for (channelnum_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
         out.mags[i] = lf->mags[i];
         //    out.bands[i] = b->bands[i];
     }
-    constexpr float fstep = 0.22;
+    constexpr float fstep = 0.22f;
     for (channelnum_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
         auto& bandsA = lf->bands[i];
         auto& bandsB = hf->bands[i];
         auto& bandsM = out.bands[i];
         float f      = 1.0f / (lf->numBands - 1);
         for (int j = 0; j < lf->numBands; j++) {
-            float fInterp = smoothstep(fstep, 1.0 - fstep, f * j);
+            float fInterp = smoothstep(fstep, 1.0f - fstep, f * j);
             bandsM[j]     = lerp(bandsA[j], bandsB[j], fInterp);
         }
     }
-    assert(out.fftlen == out.mags[0].size());
+    dbgassert(static_cast<size_t>(out.fftlen) == out.mags[0].size());
     //  for (int i = 0; i < OUTPUT_CHANNELS; i++) {
     //    auto& A = a->mags[i];
     //    auto& B = b->mags[i];
@@ -202,9 +202,9 @@ public:
         this->maxFreq = _maxFreq;
     }
     void updateBands() {
-        assert(numBands > 0);
-        assert(minFreq > 0);
-        assert(maxFreq > 0);
+        dbgassert(numBands > 0);
+        dbgassert(minFreq > 0);
+        dbgassert(maxFreq > 0);
         freq.resize(numBands);
         memset(freq.data(), 0, sizeof(float) * freq.size());
         for (channelnum_t ch = 0; ch < NUM_CHANNELS; ch++) {
@@ -226,7 +226,7 @@ public:
         meter(meterData.data(), static_cast<uint8_t>(meterData.size()))
     {
         updateBands();
-        assert(freq.size() == bands[0].size());
+        dbgassert(freq.size() == bands[0].size());
         for (channelnum_t i = 0; i < NUM_CHANNELS; i++) {
             memset(ins[i].data(), 0, sizeof(float) * ins[i].size());
             this->mags[i].resize(this->fftlen);
@@ -240,7 +240,7 @@ public:
             if (i > 0) {
                 memset(paddedInput.data(), 0, sizeof(float) * paddedInput.size());
             }
-            assert(mags[i].size() == this->fftlen && "fftlen must not change at runtime");
+            dbgassert(mags[i].size() == this->fftlen && "fftlen must not change at runtime");
             memset(mags[i].data(), 0, sizeof(float) * this->fftlen);
             applyWindowAndPadding(block->buf[i], block->samples, paddedInput, fftlen);
             fftctxt->processFFT(paddedInput, mags[i]);
@@ -249,8 +249,8 @@ public:
         blocksProcessed++;
     }
     void processBuffer(AudioBlock* block, float fGain = 1.0f) {
-        assert(INPUTLEN % block->samples == 0 && "blocksize must be multiple of INPUTLEN");
-        assert(block->samples == this->blocksize && "blocksize must not change during runtime");
+        dbgassert(INPUTLEN % block->samples == 0 && "blocksize must be multiple of INPUTLEN");
+        dbgassert(block->samples == this->blocksize && "blocksize must not change during runtime");
         meter.update(block, 1.0f);
         bool processBlock = false;
         if (block->samples == INPUTLEN) {
@@ -264,7 +264,7 @@ public:
         if (processBlock) {
             std::vector<float> paddedInput(this->fftlen);
             for (channelnum_t i = 0; i < NUM_CHANNELS; i++) {
-                assert(mags[i].size() == this->fftlen && "fftlen must not change at runtime");
+                dbgassert(static_cast<size_t>(this->fftlen) == mags[i].size() && "fftlen must not change at runtime");
                 memset(mags[i].data(), 0, sizeof(float) * this->fftlen);
                 applyWindowAndPadding(ins[i].data(), ins[i].size(), paddedInput, fftlen, fGain);
                 fftctxt->processFFT(paddedInput, mags[i]);

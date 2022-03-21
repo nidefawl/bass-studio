@@ -548,7 +548,7 @@ public:
         return true;
     }
 
-    virtual void menuCommand(const menucmd_t&& command) {
+    virtual void menuCommand(menucmd_t command) {
     }
     virtual void onMenuOpen(ngui::Menu* menu) {
     }
@@ -898,7 +898,7 @@ public:
         glfwSetWindowShouldClose(glfw, 1);
     }
 
-    void menuCommand(const menucmd_t&& command) override {
+    void menuCommand(menucmd_t command) override {
 #if WINDOW_HAS_MENUBAR
         ctrl->menuCommand(std::move(command));
 #endif
