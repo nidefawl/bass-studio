@@ -454,7 +454,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
                 bInputMatches |= cfg.deviceNameInput == "default" && apiSelectedInfo->defaultInputDevice == i;
                 bOutputMatches |= cfg.deviceNameOutput == "default" && apiSelectedInfo->defaultOutputDevice == i;
 #ifdef _WIN32
-                if (apiSelectedInfo->type == PaHostApiTypeId::paWASAPI && cfg.deviceNameInput == "loopback" && PaWasapi_IsLoopback(i)) {
+                if (apiSelectedInfo->type == PaHostApiTypeId::paWASAPI && cfg.deviceNameInput == "loopback" && PaWasapi_IsLoopback(i) && deviceIdxSelectedInput == paNoDevice) {
                     bInputMatches = true;
                     log_lf(Log::L_DEBUG, "Using WASAPI Loopback Device as Input\n");
                 }
