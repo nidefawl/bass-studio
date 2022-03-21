@@ -1,6 +1,7 @@
 #include "audio_host.h"
 #include "config.h"
 #include "host/audio_config.h"
+#include "math/seq_math.h"
 #include "samplerate.h"
 #include "str_util.h"
 #include "seq_time.h"
@@ -12,6 +13,7 @@
 #include "logging.h"
 #include "appsettings.h"
 #include "platform.h"
+#include "types.h"
 #include <portaudio.h>
 #ifdef _WIN32
 #include <pa_win_wasapi.h>
@@ -424,25 +426,20 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     int32_t deviceApiIdxSelected    = paNoDevice;
     int32_t deviceIdxSelectedInput  = paNoDevice;
     int32_t deviceIdxSelectedOutput = paNoDevice;
-    PaHostApiTypeId hostApiType = PaHostApiTypeId::paInDevelopment;
-    int apiIdxASIO                  = -1;
+    const PaHostApiInfo* apiSelectedInfo = nullptr;
     for (int i = 0; i < apiCount; i++) {
         const PaHostApiInfo* info = Pa_GetHostApiInfo(i);
         if (info) {
-            if (info->type == PaHostApiTypeId::paASIO) {
-                apiIdxASIO = i;
-            }
             const char* pref = "[ ] ";
             if (!strcmp(selApiNameCStr, info->name)) {
+                apiSelectedInfo = info;
                 deviceApiIdxSelected = i;
-                hostApiType = info->type;
-
                 pref = "[x] ";
             }
             log_printf("%sAPI[%d] = %s %d devices\n", pref, i, info->name, info->deviceCount);
         }
     }
-    if (deviceApiIdxSelected >= 0) {
+    if (apiSelectedInfo) {
         int deviceCount = Pa_GetDeviceCount();
         for (int i = 0; i < deviceCount; i++) {
             const PaDeviceInfo* info = Pa_GetDeviceInfo(i);
@@ -451,14 +448,28 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
                 continue;
             }
             if (info->hostApi == deviceApiIdxSelected) {
-                bool bAsioMatches   = apiIdxASIO == info->hostApi && asioConfig.deviceName == info->name;
-                bool bOutputMatches = bAsioMatches || (apiIdxASIO != info->hostApi && cfg.deviceNameOutput == info->name);
-                bool bInputMatches  = bAsioMatches || (apiIdxASIO != info->hostApi && cfg.deviceNameInput == info->name);
+                bool bAsioMatches   = apiSelectedInfo->type == PaHostApiTypeId::paASIO && asioConfig.deviceName == info->name;
+                bool bOutputMatches = bAsioMatches || (apiSelectedInfo->type != PaHostApiTypeId::paASIO && cfg.deviceNameOutput == info->name);
+                bool bInputMatches  = bAsioMatches || (apiSelectedInfo->type != PaHostApiTypeId::paASIO && cfg.deviceNameInput == info->name);
+                bInputMatches |= cfg.deviceNameInput == "default" && apiSelectedInfo->defaultInputDevice == i;
+                bOutputMatches |= cfg.deviceNameOutput == "default" && apiSelectedInfo->defaultOutputDevice == i;
+#ifdef _WIN32
+                if (apiSelectedInfo->type == PaHostApiTypeId::paWASAPI && cfg.deviceNameInput == "loopback" && PaWasapi_IsLoopback(i)) {
+                    bInputMatches = true;
+                    log_lf(Log::L_DEBUG, "Using WASAPI Loopback Device as Input\n");
+                }
+#endif
                 if (bOutputMatches && info->maxOutputChannels > 0) {
+                    if (samplerate == 0 && info->defaultSampleRate > 0) {
+                        samplerate = static_cast<samplerate_t>(info->defaultSampleRate);
+                    }
                     deviceIdxSelectedOutput = i;
                     log_printf("deviceIdxSelectedOutput DEVICE[%d] = %s %d IN/%d OUT channels\n", i, info->name, info->maxInputChannels, info->maxOutputChannels);
                 }
                 if (bInputMatches && info->maxInputChannels > 0) {
+                    if (samplerate == 0 && info->defaultSampleRate > 0) {
+                        samplerate = static_cast<samplerate_t>(info->defaultSampleRate);
+                    }
                     deviceIdxSelectedInput = i;
                     log_printf("deviceIdxSelectedInput DEVICE[%d] = %s %d IN/%d OUT channels\n", i, info->name, info->maxInputChannels, info->maxOutputChannels);
                 }
@@ -471,16 +482,8 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
         return false;
     }
 
-#ifdef _WIN32
-    if (hostApiType == PaHostApiTypeId::paWASAPI && PaWasapi_IsLoopback(deviceIdxSelectedInput)) {
-        log_lf(Log::L_DEBUG, "Using WASAPI Loopback Device as Input\n");
-    }
-#endif
-
-
     const PaDeviceInfo* devInfo      = deviceIdxSelectedOutput == paNoDevice ? nullptr : Pa_GetDeviceInfo(deviceIdxSelectedOutput);
     const PaDeviceInfo* devInfoInput = deviceIdxSelectedInput == paNoDevice ? nullptr : Pa_GetDeviceInfo(deviceIdxSelectedInput);
-    const PaHostApiInfo* apiInfo     = Pa_GetHostApiInfo(deviceApiIdxSelected);
 
     PaStreamParameters* pOutputParams = nullptr;
     PaStreamParameters outputParams;
@@ -495,7 +498,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     } else {
         outputParams.channelCount = 0;
     }
-    log_printf("Open stream on device %s | %s\n", apiInfo->name, devInfo ? devInfo->name : devInfoInput->name);
+    log_printf("Open stream on device %s | %s\n", apiSelectedInfo->name, devInfo ? devInfo->name : devInfoInput->name);
     PaStreamParameters* pInputParams = nullptr;
     PaStreamParameters inputParams;
     if (devInfoInput) {
@@ -575,14 +578,16 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
             pOutputParams,
             (double) samplerate,
             blocksize,
-            paClipOff, /* Portaudio internal clipping is disabled */
+            paClipOff | paDitherOff, /* Portaudio internal clipping is disabled */
             audiohost_callback::audioCallback,
             stream.get());
 
     if (err != paNoError) {
         return error("Pa_OpenStream", err);
     }
-
+    auto info = Pa_GetStreamInfo(paStream);
+    if (info->sampleRate > 0)
+        samplerate = static_cast<samplerate_t>(info->sampleRate);
     err = Pa_SetStreamFinishedCallback(paStream, &StreamFinished);
     if (err != paNoError)
         return error("Pa_SetStreamFinishedCallback", err);

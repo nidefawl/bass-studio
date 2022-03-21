@@ -26,8 +26,8 @@ struct midi_channel {
 
 struct app_ioaudioconfig {
     String device_api;
-    String deviceNameInput;
-    String deviceNameOutput;
+    String deviceNameInput = "default";
+    String deviceNameOutput = "default";
 };
 
 struct app_ioasioconfig {
