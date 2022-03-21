@@ -13,7 +13,7 @@
 #include "fileio.h"
 #include "audiocache.h"
 
-#include "gl_path.h"
+#include "gl_pathrenderer.h"
 #include "gl_util.h"
 #include "gl_attr.h"
 #include "gl_vbo.h"
@@ -22,7 +22,6 @@
 #include "logging.h"
 #include "assert_dbg.h"
 
-using vec2list = std::vector<vec2>;
 
 void buildIndices(uint32_t numVertices, uint32_t offset, std::vector<uint32_t>& _out) {
     // static int quadIdx[] = { 0, 1, 2, 2, 1, 3 };
@@ -147,7 +146,7 @@ bool readShaderSrc(const String& filename, String& out) {
     }
     return true;
 }
-int GLPathRenderer::init() {
+int GLPathRendererDashLines::init() {
 
     String srcVertex;
     String srcFragment;
@@ -203,10 +202,10 @@ int GLPathRenderer::init() {
     program2dLines = program;
     return 0;
 }
-void GLPathRenderer::destroy() {
+void GLPathRendererDashLines::destroy() {
     glDeleteProgram(program2dLines);
 }
-void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) {
+void GLPathRendererDashLines::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) {
     std::vector<vert> outVdata;
     vbuf bufFinal;
     std::vector<float> bufUniforms;
@@ -290,8 +289,8 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
     out.vbo.nIndices = bufFinal.i.size();
 }
 
-void GLPathRenderer::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {
-
+void GLPathRendererDashLines::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {
+    glDisable(GL_CULL_FACE);
 
     glUniformMatrix4fv(u_projection, 1, GL_FALSE, value_ptr(matProj));
     glUniformMatrix4fv(u_view, 1, GL_FALSE, value_ptr(matView));
@@ -302,4 +301,5 @@ void GLPathRenderer::render(BakeGLPath& bakedPath, const mat4x4& matProj, const 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
     glBindTexture(GL_TEXTURE_2D, bakedPath.uniforms_texture);
     glDrawElements(GL_TRIANGLES, bakedPath.vbo.nIndices, GL_UNSIGNED_INT, nullptr);
+    glEnable(GL_CULL_FACE);
 }

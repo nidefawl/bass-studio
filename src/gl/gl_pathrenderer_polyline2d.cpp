@@ -9,20 +9,18 @@
 #include "fileio.h"
 #include "audiocache.h"
 
-#include "gl_path.h"
+#include "gl_pathrenderer.h"
 #include "gl_util.h"
 #include "gl_attr.h"
 #include "gl_vbo.h"
 #include "gl_tess2d.h"
 #include "hires_timer.h"
 #include "assert_dbg.h"
-#include "polyline/Polyline2D.h"
+#include <polyline/Polyline2D.h>
 #include <algorithm>
 #include <glm/gtc/type_ptr.hpp>
 
-using vec2list = std::vector<vec2>;
-
-int GLPathRendererSimple::init() {
+int GLPathRendererPolyline2d::init() {
     String srcVertex;
     String srcFragment;
     int64_t ret = ReadFileText("polyline2d.vsh", srcVertex);
@@ -75,10 +73,10 @@ int GLPathRendererSimple::init() {
     program2dLines = program;
     return 0;
 }
-void GLPathRendererSimple::destroy() {
+void GLPathRendererPolyline2d::destroy() {
     glDeleteProgram(program2dLines);
 }
-void GLPathRendererSimple::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) {
+void GLPathRendererPolyline2d::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) {
 
     using namespace crushedpixel;
     float thickness = pathOpt.linewidth;
@@ -123,7 +121,7 @@ void GLPathRendererSimple::bakePaths(std::vector<vec2list> paths, Uniforms pathO
     out.vbo.nIndices = bufFinal.size();// number of vertices for glDrawArrays
 }
 
-void GLPathRendererSimple::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {
+void GLPathRendererPolyline2d::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {
     mat4x4 mvp = matProj * (matView * matModel);
     glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
     glUniform4f(u_color, 1, 1, 1, 1);

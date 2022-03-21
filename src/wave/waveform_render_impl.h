@@ -4,7 +4,7 @@
 #include <array>
 #include "audiocache.h"
 #include "waveform_render.h"
-#include "gl/gl_path.h"
+#include "gl/gl_pathrenderer.h"
 
 const int FBO_WIDTH  = 1024 * 2;
 const int FBO_HEIGHT = 1024 * 2;

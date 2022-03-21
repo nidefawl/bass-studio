@@ -3,6 +3,7 @@
 #include "LineSegment.h"
 #include <vector>
 #include <iterator>
+#include <cassert>
 
 namespace crushedpixel {
 
@@ -150,8 +151,8 @@ public:
 		Vec2 end2{0, 0};
 
 		// calculate the path's global start and end points
-		auto &firstSegment = segments.front();
-		auto &lastSegment = segments.back();
+		auto &firstSegment = segments[0];
+		auto &lastSegment = segments[segments.size() - 1];
 
 		auto pathStart1 = firstSegment.edge1.a;
 		auto pathStart2 = firstSegment.edge2.a;
@@ -276,13 +277,11 @@ private:
 		if (jointStyle == JointStyle::MITER) {
 			// calculate each edge's intersection point
 			// with the next segment's central line
-			Vec2 sec1;
-			Vec2 sec2;
-			auto hasSec1 = LineSegment<Vec2>::intersection(segment1.edge1, segment2.edge1, true, sec1);
-			auto hasSec2 = LineSegment<Vec2>::intersection(segment1.edge2, segment2.edge2, true, sec2);
+			auto sec1 = LineSegment<Vec2>::intersection(segment1.edge1, segment2.edge1, true);
+			auto sec2 = LineSegment<Vec2>::intersection(segment1.edge2, segment2.edge2, true);
 
-			end1 = hasSec1 ? sec1 : segment1.edge1.b;
-			end2 = hasSec2 ? sec2 : segment1.edge2.b;
+			end1 = sec1 ? *sec1 : segment1.edge1.b;
+			end2 = sec2 ? *sec2 : segment1.edge2.b;
 
 			nextStart1 = end1;
 			nextStart2 = end2;
@@ -317,18 +316,17 @@ private:
 			}
 
 			// calculate the intersection point of the inner edges
-			Vec2 innerSecOpt;
-			auto hasInnerSecOpt = LineSegment<Vec2>::intersection(*inner1, *inner2, allowOverlap, innerSecOpt);
+			auto innerSecOpt = LineSegment<Vec2>::intersection(*inner1, *inner2, allowOverlap);
 
-			auto innerSec = hasInnerSecOpt
-			                ? innerSecOpt
+			auto innerSec = innerSecOpt
+			                ? *innerSecOpt
 			                // for parallel lines, simply connect them directly
 			                : inner1->b;
 
 			// if there's no inner intersection, flip
 			// the next start position for near-180° turns
 			Vec2 innerStart;
-			if (hasInnerSecOpt) {
+			if (innerSecOpt) {
 				innerStart = innerSec;
 			} else if (angle > pi / 2) {
 				innerStart = outer1->b;
@@ -372,8 +370,7 @@ private:
 		return vertices;
 	}
 
-
-    static float __fast_atan2(float y, float x) {
+    static float fast_atan2(float y, float x) {
         static constexpr float c1 = (float) (pi / 4.0);
         static constexpr float c2 = (float) (pi * 3.0 / 4.0);
         if (y == 0 && x == 0)
@@ -407,8 +404,8 @@ private:
 		auto point2 = Vec2Maths::subtract(end, origin);
 
 		// calculate the angle between the two points
-		auto angle1 = __fast_atan2(point1.y, point1.x);
-		auto angle2 = __fast_atan2(point2.y, point2.x);
+		auto angle1 = fast_atan2(point1.y, point1.x);
+		auto angle2 = fast_atan2(point2.y, point2.x);
 
 		// ensure the outer angle is calculated
 		if (clockwise) {

@@ -1304,7 +1304,7 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     this->window     = window;
     this->vg         = nanovg;
 
-    this->waveformRenderer = new waveformrender(pathrenderer_type_e::PAR);
+    this->waveformRenderer = new waveformrender(pathrenderer_type_e::PAR_BASIC);
     this->waveformRenderer->init();
 
     themes.loadThemes();

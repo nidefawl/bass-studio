@@ -12,18 +12,16 @@
 #include "fileio.h"
 #include "audiocache.h"
 
-#include "gl_path.h"
+#include "gl_pathrenderer.h"
 #include "gl_util.h"
 #include "gl_attr.h"
 #include "gl_vbo.h"
 #include "gl_tess2d.h"
 #include "hires_timer.h"
 #include "assert_dbg.h"
-#define PAR_STREAMLINES_IMPLEMENTATION
 #include <par/par_streamlines.h>
 
-using vec2list = std::vector<vec2>;
-namespace {
+namespace GLPathRendererParBasicSrc {
     constexpr const char* srcShaderVertex   = R"END(
 #version 150 core
 
@@ -38,24 +36,21 @@ void main() {
     constexpr const char* srcShaderFragment = R"END(
 #version 150 core
 
-uniform vec4 u_color;
 uniform float u_linewidth;
 in vec2 uv;
 out vec4 frag_color;
 void main() {
   float a = min(1.0, (1.0 - abs(uv.y)) * u_linewidth * 0.5);
-  frag_color = vec4(u_color.rgb*(0.005+1.5*uv.x*uv.x)*(1.0 - abs(uv.y)), u_color.a * a);
-//   frag_color = vec4(u_color.rgb, u_color.a * a);
+  frag_color = vec4(vec3(1.0), a);
 }
 )END";
 }// namespace
-int GLPathRendererSimple2::init() {
-    GLuint vertex_shader, fragment_shader;
-    vertex_shader = compileShader(GL_VERTEX_SHADER, srcShaderVertex);
+int GLPathRendererParBasic::init() {
+    GLuint vertex_shader = compileShader(GL_VERTEX_SHADER, GLPathRendererParBasicSrc::srcShaderVertex);
     if (!vertex_shader) {
         return 1;
     }
-    fragment_shader = compileShader(GL_FRAGMENT_SHADER, srcShaderFragment);
+    GLuint fragment_shader = compileShader(GL_FRAGMENT_SHADER, GLPathRendererParBasicSrc::srcShaderFragment);
     if (!fragment_shader) {
         return 1;
     }
@@ -77,7 +72,6 @@ int GLPathRendererSimple2::init() {
     checkGLError("linkProgram");
     glUseProgram(program);
     u_mvp       = glGetUniformLocation(program, "u_mvp");
-    u_color     = glGetUniformLocation(program, "u_color");
     u_linewidth = glGetUniformLocation(program, "u_linewidth");
 
     for (VertexAttr& attr : attributes) {
@@ -88,11 +82,11 @@ int GLPathRendererSimple2::init() {
     program2dLines = program;
     return 0;
 }
-void GLPathRendererSimple2::destroy() {
+void GLPathRendererParBasic::destroy() {
     glDeleteProgram(program2dLines);
 }
-void GLPathRendererSimple2::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) {
-
+void GLPathRendererParBasic::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) {
+    out.bakeOpts = pathOpt;
 
     int idx = 0;
     std::vector<uint16_t> spineLengths;
@@ -111,7 +105,7 @@ void GLPathRendererSimple2::bakePaths(std::vector<vec2list> paths, Uniforms path
     spinelist.num_spines    = spineLengths.size();
     spinelist.spine_lengths = spineLengths.data();
 
-    float miterLimit = 2.0f;
+    // float miterLimit = 2.0f;
     parsl_config config{};
     config.flags |= PARSL_FLAG_ANNOTATIONS;
     config.thickness       = pathOpt.linewidth*2.0f;
@@ -157,10 +151,9 @@ void GLPathRendererSimple2::bakePaths(std::vector<vec2list> paths, Uniforms path
     out.lineWidth = pathOpt.linewidth;
 }
 
-void GLPathRendererSimple2::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {
-    mat4x4 mvp = matProj * (matView * matModel);
+void GLPathRendererParBasic::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {
+    const mat4x4 mvp = matProj * (matView * matModel);
     glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
-    glUniform4f(u_color, 1, 1, 1, 1);
     glUniform1f(u_linewidth, bakedPath.lineWidth);
     glBindTexture(GL_TEXTURE_2D, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);

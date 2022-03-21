@@ -13,12 +13,6 @@
 #endif
 using vec2list = std::vector<vec2>;
 
-struct BakeGLPath {
-    DrawVBO vbo;
-    int32_t numPaths = 0;
-    uint32_t uniforms_texture = 0;
-    float lineWidth = 1.0f;
-};
 namespace LineJoin {
     enum {
         miter,
@@ -76,14 +70,22 @@ struct Uniforms {
     float closed{0};
 };
 #pragma pack(pop)
+struct BakeGLPath {
+    DrawVBO vbo;
+    int32_t numPaths = 0;
+    uint32_t uniforms_texture = 0;
+    float lineWidth = 1.0f;
+    Uniforms bakeOpts;
+};
 struct vbuf {
     std::vector<float> v;
     std::vector<uint32_t> i;
 };
 enum class pathrenderer_type_e : int32_t {
-    ADV = 0,
+    DASHLINES = 0,
     POLYLINE2D,
-    PAR
+    PAR_BASIC,
+    PAR_ADVANCED
 };
 class IPathRenderer {
 public:
@@ -96,7 +98,7 @@ public:
 
     virtual void render(BakeGLPath& out, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) = 0;
 };
-class GLPathRenderer : public IPathRenderer {
+class GLPathRendererDashLines : public IPathRenderer {
     std::vector<VertexAttr> attributes{
         {"a_position", 2, GL_FLOAT},
         {"a_segment", 2, GL_FLOAT},
@@ -122,7 +124,7 @@ public:
     void render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };
 
-class GLPathRendererSimple : public IPathRenderer {
+class GLPathRendererPolyline2d : public IPathRenderer {
     std::vector<VertexAttr> attributes{
             {"a_position", 2, GL_FLOAT},
     };
@@ -138,13 +140,29 @@ public:
     void render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };
 
-class GLPathRendererSimple2 : public IPathRenderer {
+class GLPathRendererParBasic : public IPathRenderer {
     std::vector<VertexAttr> attributes{
             {"a_vertex", 4, GL_FLOAT}
     };
     std::vector<float> tmpBuffer;
 
+    int32_t u_mvp;
+    int32_t u_linewidth;
+
 public:
+    int init() override;
+    void destroy() override;
+    void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) override;
+    void render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
+};
+
+
+class GLPathRendererParAdvanced : public IPathRenderer {
+    std::vector<VertexAttr> attributes{
+            {"a_vertex", 4, GL_FLOAT}
+    };
+    std::vector<float> tmpBuffer;
+
     int32_t u_mvp;
     int32_t u_color;
     int32_t u_linewidth;

@@ -1,7 +1,7 @@
 #include "glheaders.h"
 #include "seq_util.h"
 #include "waveform_render_impl.h"
-#include "gl/gl_path.h"
+#include "gl/gl_pathrenderer.h"
 
 #include <nanovg.h>
 #include <nanovg_gl.h>
@@ -30,14 +30,17 @@ struct waveformrender::Impl {
     explicit Impl(pathrenderer_type_e t) {
         switch (t) {
             default:
-            case pathrenderer_type_e::ADV:
-                renderer = new GLPathRenderer();
+            case pathrenderer_type_e::DASHLINES:
+                renderer = new GLPathRendererDashLines();
                 break;
             case pathrenderer_type_e::POLYLINE2D:
-                renderer = new GLPathRendererSimple();
+                renderer = new GLPathRendererPolyline2d();
                 break;
-            case pathrenderer_type_e::PAR:
-                renderer = new GLPathRendererSimple2();
+            case pathrenderer_type_e::PAR_BASIC:
+                renderer = new GLPathRendererParBasic();
+                break;
+            case pathrenderer_type_e::PAR_ADVANCED:
+                renderer = new GLPathRendererParBasic();
                 break;
         }
     }

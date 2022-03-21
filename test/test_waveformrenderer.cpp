@@ -41,20 +41,20 @@ struct waveform_test_entry {
 struct waveform_test {
     std::vector<std::vector<waveform_test_entry>> vecs;
     uint64_t durations[NUM_RENDERERS]{};
-    waveformrender* rendererAdv{};
+    waveformrender* rendererDashLines{};
     waveformrender* rendererPolyline{};
-    waveformrender* rendererPar{};
+    waveformrender* rendererParBasic{};
     std::vector<waveformrender*> renderers;
     void init() {
         daw_tls::tlsinstance& tls = daw_tls::getTls();
         int sampleRate            = 44100;
         tls.audioCache            = new audiocache(sampleRate);
-        rendererAdv               = new waveformrender(pathrenderer_type_e::ADV);
+        rendererDashLines               = new waveformrender(pathrenderer_type_e::DASHLINES);
         rendererPolyline          = new waveformrender(pathrenderer_type_e::POLYLINE2D);
-        rendererPar               = new waveformrender(pathrenderer_type_e::PAR);
-        renderers.push_back(rendererAdv);
+        rendererParBasic               = new waveformrender(pathrenderer_type_e::PAR_BASIC);
+        renderers.push_back(rendererDashLines);
         renderers.push_back(rendererPolyline);
-        renderers.push_back(rendererPar);
+        renderers.push_back(rendererParBasic);
         std::vector<waveform_test_entry> vec;
         std::vector<FileFound> files;
         findFilesWithExt("./cpp-test-data/", "wav", false, files);

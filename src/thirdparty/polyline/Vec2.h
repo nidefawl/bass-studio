@@ -9,7 +9,17 @@ namespace crushedpixel {
  * It exposes the x and y fields
  * as required by the Polyline2D functions.
  */
+struct Vec2 {
+	Vec2() :
+			Vec2(0, 0) {}
 
+	Vec2(float x, float y) :
+			x(x), y(y) {}
+
+	virtual ~Vec2() = default;
+
+	float x, y;
+};
 
 namespace Vec2Maths {
 
