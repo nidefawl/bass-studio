@@ -1620,13 +1620,20 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
 void printLeakedGuiBase();
 
 GLFWwindow* getGlfwFromWindowBase(window_base* w) {
-    return dynamic_cast<appwindow*>(w)->getGLFW();
+    dbgassert(w);
+    auto glfwWindow = dynamic_cast<appwindow*>(w);
+    return glfwWindow ? glfwWindow->getGLFW() : nullptr;
 }
 
 void makeWindowContextCurrent(window_base* w) {
-    auto glfw = getGlfwFromWindowBase(w);
-    if (glfw) {
-        glfwMakeContextCurrent(glfw);
+    if (w) {
+        auto glfw = getGlfwFromWindowBase(w);
+        dbgassert(glfw);
+        if (glfw) {
+            glfwMakeContextCurrent(glfw);
+        }
+    } else {
+        glfwMakeContextCurrent(nullptr);
     }
 }
 
