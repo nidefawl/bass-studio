@@ -1823,7 +1823,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                                 msgCounter.incrPaints(clsName_v);
                         }
                         appStats.numMessagesWmPaint++;
-                        // no break
+                        [[fallthrough]];
                     default:
                         if (msgCounterEnabled) {
                             msgCounter.incrMessage(msg.message);
