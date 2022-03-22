@@ -103,8 +103,7 @@ void GLPathRendererPolyline2d::bakePaths(std::vector<vec2list> paths, Uniforms p
     DrawVBO& vbo   = out.vbo;
     if (vbo.vaoId == 0) {
         glGenVertexArrays(1, &vbo.vaoId);
-        glGenBuffers(1, &vbo.vboVertId);
-        glGenBuffers(1, &vbo.vboIdxId);
+        vbo.genBuffers();
         newBuffer = true;
     }
     glBindVertexArray(vbo.vaoId);
@@ -118,10 +117,16 @@ void GLPathRendererPolyline2d::bakePaths(std::vector<vec2list> paths, Uniforms p
     glBindVertexArray(0);
 
     out.numPaths     = nPaths;
-    out.vbo.nIndices = bufFinal.size();// number of vertices for glDrawArrays
+    out.vbo.nIndices = static_cast<int32_t>(bufFinal.size());
 }
 
 void GLPathRendererPolyline2d::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {
+    glUseProgram(program2dLines);
+
+    dbgassert(bakedPath.vbo.vaoId > 0);
+    glBindVertexArray(bakedPath.vbo.vaoId);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
+
     const mat4x4 mvp = matProj * (matView * matModel);
     const auto& bakeOpt = bakedPath.bakeOpts;
     glDisable(GL_CULL_FACE);
@@ -132,4 +137,5 @@ void GLPathRendererPolyline2d::render(BakeGLPath& bakedPath, const mat4x4& matPr
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
     glDrawArrays(GL_TRIANGLES, 0, bakedPath.vbo.nIndices);
     glEnable(GL_CULL_FACE);
+
 }

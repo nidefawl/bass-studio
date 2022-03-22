@@ -1,6 +1,7 @@
 #include "glheaders.h"
 #include "seq_util.h"
 #include "waveform_render_impl.h"
+#include "gl/gl_util.h"
 #include "gl/gl_pathrenderer.h"
 
 #include <nanovg.h>
@@ -20,7 +21,6 @@
 #include "gui/gui.h"
 
 
-bool checkGLError(const char* s);
 struct waveformrender::Impl {
     hires_timer_t timer;
     hires_timer_t timer2;
@@ -358,13 +358,9 @@ void preGLState() {
 
     checkGLError("waveformrender::render start");
 
-    //entry->inuse = true;
-    //entry->props = *waveform;
-
-    // Draw some stuff to an FBO as a test
     glViewport(0, 0, FBO_WIDTH, FBO_HEIGHT);
     glEnable(GL_DEPTH_TEST);
-    // glDisable(GL_CULL_FACE);
+    glFrontFace(GL_CW);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -485,19 +481,12 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 
         // bind fb
         nvgluBindFramebuffer(_atlas.fb);
-        //GLboolean isScissor = 0;
-        //glGetBooleanv(GL_SCISSOR_TEST, &isScissor);
-        //dbgassert(!isScissor);
         glClearColor(0, 0, 0, 0);
         if (clearFB) {
             glDisable(GL_SCISSOR_TEST);
             glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         glEnable(GL_SCISSOR_TEST);
-        glFrontFace(GL_CW);
-
-        // go over all queue updates in that fb and tesselate + draw them
-
         int numRendered            = 0;
         int64_t timeoutMikros = 60000;
         auto it                    = _atlas.queuedTasks.begin();
@@ -544,8 +533,6 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             dbgassert(pos.x + size.x <= FBO_WIDTH);
             impl->timer2.reset();
             glScissor(pos.x, FBO_HEIGHT - pos.y - size.y, size.x, size.y);
-            glBindVertexArray(bakedPath.vbo.vaoId);
-
             glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             renderer->render(bakedPath, matProj, matView, matModel);
             impl->renderTimings.tmDrawGL += impl->timer2.getTime();
@@ -566,7 +553,6 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             _atlas.entries.push_back(e);
             numRendered++;
             impl->renderTimings.tmPassed = impl->timer.getTime();
-            //log_lf(Log::L_DEBUG, "rendered update\n");
         }
         totalRendered += numRendered;
         int size1 = (int)_atlas.queuedTasks.size();
@@ -576,11 +562,10 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             break;
         }
     }
-    glFrontFace(GL_CCW);
     if (preGlSet) {
+        glFrontFace(GL_CCW);
         glDisable(GL_SCISSOR_TEST);
         glDisable(GL_DEPTH_TEST);
-        // glEnable(GL_CULL_FACE);
         glBindVertexArray(0);
         checkGLError("fb postrender");
         nvgluBindFramebuffer(nullptr);

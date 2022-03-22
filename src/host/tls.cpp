@@ -17,6 +17,7 @@
 namespace daw_tls {
     static thread_local tlsinstance tls;
     daw_tls::tlsinstance& initNewTls() {
+        dbgassert(!tls.tlsInitialized);
         if (!tls.tlsInitialized) {
             tlsinstance localTls{};
             localTls.tlsInitialized = true;

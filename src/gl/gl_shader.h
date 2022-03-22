@@ -67,6 +67,9 @@ struct gl_shader_program_base_t {
      * Note that GL_ELEMENT_ARRAY_BUFFER is not state of vao!
      */
     void bindBuffer(const DrawVBO& vbo) {
+        dbgassert(vbo.vaoId > 0);
+        dbgassert(vbo.vboVertId > 0);
+        dbgassert(vbo.vboIdxId > 0);
         glBindVertexArray(vbo.vaoId);
         glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);

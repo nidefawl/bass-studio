@@ -33,16 +33,12 @@
 #include "color_util.h"
 #include "mouse.h"
 #include "keyboard.h"
-
 #include "window.h"
 #include "msgbox.h"
 #include "menu.h"
-
 #include "basectrl.h"
 #include "droptargetlistener.h"
-
 #include "platform.h"
-
 #include "logging.h"
 #include "appsettings.h"
 #include "renderresources.h"
@@ -51,16 +47,19 @@
 #include "thread.h"
 #include "error.h"
 #include "buildinfo.h"
-#include "../threads/workerthread.h"
+#include "threads/workerthread.h"
+#include "gl/gl_framebuffer.h"
+#include "gl/gl_vbo.h"
+#include "gl/gl_util.h"
 #include "window_impl.h"
 
 #ifdef _WIN32
 #include "platform/win/windowsize.h"
-#include "../platform/win/platform_win.h"
-#include "../platform/win/DropTarget.h"
+#include "platform/win/platform_win.h"
+#include "platform/win/DropTarget.h"
 #endif
 #ifdef __linux__
-#include "../platform/linux/x11_gtk_util.h"
+#include "platform/linux/x11_gtk_util.h"
 #endif
 
 class appwindow;
@@ -78,8 +77,6 @@ void unregisterWindowTimer(appwindow* wnd) {
 void windowTickTimerRun();
 
 volatile bool fatalError = false;
-
-void enableGlDebugCallback();
 
 class reentrantblocker {
     bool& boolField;
@@ -197,8 +194,6 @@ void saveWindowPos(HWND hwnd, windowsize* size);
 #define IDT_TIMER1 0
 
 #endif
-
-bool checkGLError(const char* s);
 
 class appwindow : protected DropTargetListener {
 protected:
@@ -1911,6 +1906,8 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 
     appInstance.deleteApp();
     printLeakedGuiBase();
+    FrameBuffer::printLeaked();
+    DrawVBO::printLeaked();
     if (fatalError) {
         log_printf("EXIT_FAILURE\n");
     } else {

@@ -1,5 +1,8 @@
 #pragma once
 #include <array>
+#include <cstdint>
+#include "types.h"
+#include "logging.h"
 #include "glheaders.h"
 #include "math/seq_math.h"
 #include "math/vec.h"
@@ -11,42 +14,46 @@
 
 class FrameBuffer {
 public:
-    static int frambuffersRefCount;
-    static FrameBuffer* lastBound;
+    static int32_t instanceCount;
     static void unbindFramebuffer() {
-        lastBound = nullptr;
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         if (GL_ERROR_CHECKS)
             checkGLError("FrameBuffers.glUnbindCurrentFrameBuffer");
     }
     static void unbindReadFramebuffer() {
-        lastBound = nullptr;
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
         if (GL_ERROR_CHECKS)
             checkGLError("FrameBuffers.glUnbindCurrentReadBuffer");
     }
 
-    const int renderWidth;
-    const int renderHeight;
+    static void printLeaked() {
+        if (instanceCount != 0) {
+            log_lf(Log::L_WARN, "FrameBuffer::instanceCount: %d\n", instanceCount);
+        }
+    }
+
+
+    const GLint renderWidth;
+    const GLint renderHeight;
     GLuint fb                = 0;
     bool isComplete          = false;
     bool hasDepth            = false;
     bool isShadowDepthBuffer = false;
     bool hasCustomClearColor = false;
-    int numColorTextures     = 0;
-    int highestColorAtt      = 0;
-    int depthTexture         = 0;
+    GLint numColorTextures     = 0;
+    GLenum highestColorAtt   = 0;
+    GLuint depthTexture         = 0;
     std::array<vec4, MAX_COLOR_ATT> clearColor{};
     std::array<GLuint, MAX_COLOR_ATT> colorAttTextures{};
-    std::array<int, MAX_COLOR_ATT> colorAttFormats{};
-    std::array<int, MAX_COLOR_ATT> colorAttMinFilters{};
-    std::array<int, MAX_COLOR_ATT> colorAttMagFilters{};
-    int colorTexExtFmt         = GL_BGRA;
-    int colorTexExtType        = GL_UNSIGNED_INT_8_8_8_8_REV;
-    int textureType            = GL_TEXTURE_2D;
-    int depthFmt               = GL_DEPTH_COMPONENT32;
-    int mipmapLevels           = 0;
-    int anisotropicFilterLevel = -1;
+    std::array<GLint, MAX_COLOR_ATT> colorAttFormats{};
+    std::array<GLint, MAX_COLOR_ATT> colorAttMinFilters{};
+    std::array<GLint, MAX_COLOR_ATT> colorAttMagFilters{};
+    GLint colorTexExtFmt         = GL_BGRA;
+    GLint colorTexExtType        = GL_UNSIGNED_INT_8_8_8_8_REV;
+    GLint textureType            = GL_TEXTURE_2D;
+    GLint depthFmt               = GL_DEPTH_COMPONENT32;
+    GLint mipmapLevels           = 0;
+    GLint anisotropicFilterLevel = -1;
 
     FrameBuffer(int w, int h, int type = GL_RGBA16F, bool depthBuffer = true, vec4 clrCol = vec4(0.0f)) : renderWidth(w), renderHeight(h) {
         setColorAtt(GL_COLOR_ATTACHMENT0, type);
@@ -59,6 +66,7 @@ public:
     FrameBuffer() : FrameBuffer(0, 0) {
     }
     ~FrameBuffer() {
+        dbgassert(isGLContextPresent());
         if (isGLContextPresent())
             destroy();
     }
@@ -95,10 +103,10 @@ public:
     }
 
     void setup() {
-        frambuffersRefCount++;
-        int numTextures = 0;
-        for (int i = 0; i < MAX_COLOR_ATT; i++) {
-            if (colorAttFormats[i] != 0) {
+        instanceCount++;
+        GLint numTextures = 0;
+        for (auto colorAttFormat : colorAttFormats) {
+            if (colorAttFormat != 0) {
                 numTextures++;
             }
         }
@@ -123,18 +131,13 @@ public:
         if (GL_ERROR_CHECKS) checkGLError("FrameBuffers.glReadBuffer");
 
 
-        for (int i = 0; i < MAX_COLOR_ATT; i++) {
+        for (GLenum i = 0; i < MAX_COLOR_ATT; i++) {
             highestColorAtt = math::max(i, highestColorAtt);
             if (highestColorAtt < i)
                 highestColorAtt = i;
-            //            if (!end) {
-            //                end = colorAttFormats[i] == 0;
-            //            } else if (colorAttFormats[i] != 0) {
-            //                throw new GameError("Attachments must be in adjacent order");
-            //            }
             if (colorAttFormats[i] != 0) {
-                int att    = GL_COLOR_ATTACHMENT0 + i;
-                GLuint tex = colorTextures[i];
+                GLuint att = GL_COLOR_ATTACHMENT0 + i;
+                auto tex   = colorTextures[i];
                 setupTexture(tex, colorAttFormats[i], colorAttMinFilters[i], colorAttMagFilters[i]);
                 colorAttTextures[i] = tex;
                 if (textureType == GL_TEXTURE_CUBE_MAP) {
@@ -164,7 +167,7 @@ public:
         if (GL_ERROR_CHECKS) checkGLError("glBindFramebuffer 0");
         isComplete = true;
     }
-    void bindCubeMapFace(int i) {
+    void bindCubeMapFace(GLint i) {
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, colorAttTextures[0], 0);
     }
 
@@ -173,7 +176,7 @@ public:
         clearFrameBuffer();
     }
     void bind() {
-        lastBound = this;
+        // lastBound = this;
         glBindFramebuffer(GL_FRAMEBUFFER, fb);
         if (GL_ERROR_CHECKS) checkGLError("FrameBuffers.glBindFramebuffer");
         //        Engine.setViewport(0, 0, getWidth(), getHeight());
@@ -183,7 +186,7 @@ public:
         if (GL_ERROR_CHECKS) checkGLError("FrameBuffers.glBindFramebuffer");
     }
 
-    void setupTexture(int texture, int format, int minfilter, int magFilter) {
+    void setupTexture(GLuint texture, GLint format, GLint minfilter, GLint magFilter) {
         glBindTexture(textureType, texture);
         if (GL_ERROR_CHECKS) checkGLError("FrameBuffers.glBindTexture");
         glTexParameteri(textureType, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -194,7 +197,7 @@ public:
         if (textureType == GL_TEXTURE_CUBE_MAP) {
             glTexParameteri(textureType, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
             if (GL_ERROR_CHECKS) checkGLError("glTexParameteri GL_TEXTURE_WRAP_R");
-            for (int i = 0; i < 6; i++) {
+            for (GLint i = 0; i < 6; i++) {
                 glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, format, renderWidth, renderHeight, 0, GL_RGBA, GL_UNSIGNED_INT, nullptr);
                 if (GL_ERROR_CHECKS) checkGLError("glTexImage2D GL13.GL_TEXTURE_CUBE_MAP_n");
             }
@@ -207,7 +210,7 @@ public:
         }
         if (anisotropicFilterLevel > 0) {
 
-            float f;
+            float f = 0.0f;
             glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &f);
             if (anisotropicFilterLevel < f) {
                 f = anisotropicFilterLevel;
@@ -221,7 +224,7 @@ public:
         glBindTexture(textureType, 0);
     }
 
-    void createDepthTextureAttachment(int texture) {
+    void createDepthTextureAttachment(GLuint texture) {
         glBindTexture(GL_TEXTURE_2D, texture);
         if (GL_ERROR_CHECKS) checkGLError("FrameBuffers.glBindTexture (depth)");
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -254,7 +257,7 @@ public:
         glBindTexture(GL_TEXTURE_2D, 0);
     }
 
-    void setColorAtt(int att, int fmt) {
+    void setColorAtt(GLenum att, GLint fmt) {
         att -= GL_COLOR_ATTACHMENT0;
         dbgassert(colorAttFormats[att] == 0 && "GL_COLOR_ATTACHMENT already set");
         colorAttFormats[att]    = fmt;
@@ -262,42 +265,42 @@ public:
         colorAttMagFilters[att] = GL_LINEAR;
     }
 
-    void setFilter(int att, int filter, int magfilter) {
+    void setFilter(GLenum att, GLint filter, GLint magfilter) {
         att -= GL_COLOR_ATTACHMENT0;
         dbgassert(colorAttFormats[att] != 0 && "GL_COLOR_ATTACHMENT not set");
         colorAttMinFilters[att] = filter;
         colorAttMagFilters[att] = magfilter;
     }
-    void setClearColor(int att, vec4 v) {
+    void setClearColor(GLenum att, vec4 v) {
         att -= GL_COLOR_ATTACHMENT0;
         dbgassert(colorAttFormats[att] != 0 && "GL_COLOR_ATTACHMENT not set");
         clearColor[att]     = v;
         hasCustomClearColor = att > 0;
     }
-    GLuint detachColorTexture(int att) {
+    GLuint detachColorTexture(GLenum att) {
         dbgassert(colorAttFormats[att] != 0 && "GL_COLOR_ATTACHMENT not set");
         if (att == highestColorAtt) {
             highestColorAtt--;
         }
         numColorTextures--;
-        GLuint t              = colorAttTextures[att];
+        auto t = colorAttTextures[att];
         colorAttTextures[att] = 0;
         return t;
     }
     void setDrawAll() {
-        setDrawMask(-1);
+        setDrawMask(~0UL);
     }
-    void setDrawMask(int mask) {
-        dbgassert(lastBound == this && "trying to setDrawMask on unbound buffer");
+    void setDrawMask(GLenum mask) {
+        // dbgassert(lastBound == this && "trying to setDrawMask on unbound buffer");
         std::vector<GLenum> drawBufAtt;
         drawMask(drawBufAtt, mask);
         glDrawBuffers(drawBufAtt.size(), drawBufAtt.data());
     }
-    void drawMask(std::vector<GLenum>& drawBufAtt, int mask) {
-        int n = 0;
-        for (int i = 0; i <= highestColorAtt; i++) {
-            if (colorAttFormats[i] != 0 && (mask & (1 << i)) != 0) {
-                int att = GL_COLOR_ATTACHMENT0 + i;
+    void drawMask(std::vector<GLenum>& drawBufAtt, GLuint mask) {
+        GLint n = 0;
+        for (GLenum i = 0; i <= highestColorAtt; i++) {
+            if (colorAttFormats[i] != 0 && (mask & (1U << i)) != 0) {
+                GLenum att = GL_COLOR_ATTACHMENT0 + i;
                 drawBufAtt.push_back(att);
                 n++;
             }
@@ -309,17 +312,17 @@ public:
         }
     }
     void clearFrameBuffer() {
-        dbgassert(lastBound == this && "trying to clearFrameBuffer unbound buffer");
+        // dbgassert(lastBound == this && "trying to clearFrameBuffer unbound buffer");
         if (!hasCustomClearColor) {
             setDrawAll();
-            int flags = GL_COLOR_BUFFER_BIT;
+            GLbitfield flags = GL_COLOR_BUFFER_BIT;
             if (hasDepth)
                 flags |= GL_DEPTH_BUFFER_BIT;
             glClearColor(clearColor[0][0], clearColor[0][1], clearColor[0][2], clearColor[0][3]);
             glClear(flags);
         } else {
             glClear(GL_DEPTH_BUFFER_BIT);
-            for (int i = 0; i <= highestColorAtt; i++) {
+            for (GLenum i = 0; i <= highestColorAtt; i++) {
                 if (colorAttFormats[i] != 0) {
                     GLenum att = GL_COLOR_ATTACHMENT0 + i;
                     glDrawBuffers(1, &att);
@@ -332,24 +335,24 @@ public:
         if (GL_ERROR_CHECKS) checkGLError("clearFrameBuffer");
     }
     void clearColorBuffer() {
-        dbgassert(lastBound == this && "trying to clear unbound buffer");
+        // dbgassert(lastBound == this && "trying to clear unbound buffer");
         setDrawMask(1);
         glClear(GL_COLOR_BUFFER_BIT);
-        setDrawMask(-1);
+        setDrawMask(~0UL);
     }
 
     void clearColorBufferBlack() {
-        dbgassert(lastBound == this && "trying to clear unbound buffer");
+        // dbgassert(lastBound == this && "trying to clear unbound buffer");
         setDrawMask(1);
         glClearColor(0, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT);
         vec4& ccv = clearColor[0];
         glClearColor(ccv.x, ccv.y, ccv.z, ccv.w);
-        setDrawMask(-1);
+        setDrawMask(~0UL);
     }
 
     void clearDepth() {
-        dbgassert(lastBound == this && "trying to clearFrameBuffer unbound buffer");
+        // dbgassert(lastBound == this && "trying to clearFrameBuffer unbound buffer");
         if (hasDepth) {
             glClear(GL_DEPTH_BUFFER_BIT);
 
@@ -364,9 +367,9 @@ public:
             fb = 0;
             if (GL_ERROR_CHECKS) checkGLError("FrameBuffers.glDeleteFramebuffers");
             std::vector<GLuint> colorTextures;
-            for (int i = 0; i < MAX_COLOR_ATT; i++) {
-                if (colorAttTextures[i] != 0) {
-                    colorTextures.push_back(colorAttTextures[i]);
+            for (auto colorAttTexture : colorAttTextures) {
+                if (colorAttTexture != 0) {
+                    colorTextures.push_back(colorAttTexture);
                 }
             }
             if (hasDepth) {
@@ -374,7 +377,7 @@ public:
             }
             glDeleteTextures(colorTextures.size(), colorTextures.data());
             if (GL_ERROR_CHECKS) checkGLError("FrameBuffers.glDeleteTextures");
-            frambuffersRefCount--;
+            instanceCount--;
         }
     }
 };

@@ -132,14 +132,13 @@ void GLPathRendererParAdvanced::bakePaths(std::vector<vec2list> paths, Uniforms 
     DrawVBO& vbo   = out.vbo;
     if (vbo.vaoId == 0) {
         glGenVertexArrays(1, &vbo.vaoId);
-        glGenBuffers(1, &vbo.vboVertId);
-        glGenBuffers(1, &vbo.vboIdxId);
+        vbo.genBuffers();
         newBuffer = true;
     }
     glBindVertexArray(vbo.vaoId);
     vbo.uploadBuffer(GL_ARRAY_BUFFER, tmpBuffer.data(), sizeof(float)*tmpBuffer.size());
     vbo.uploadBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->triangle_indices, sizeof(uint32_t) * mesh->num_triangles * 3);
-    vbo.nIndices = mesh->num_triangles * 3;
+    vbo.nIndices = static_cast<int32_t>(mesh->num_triangles * 3);
 
     parsl_destroy_context(context);
     if (newBuffer) {
@@ -154,12 +153,18 @@ void GLPathRendererParAdvanced::bakePaths(std::vector<vec2list> paths, Uniforms 
 }
 
 void GLPathRendererParAdvanced::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {
+    glUseProgram(program2dLines);
+
+    dbgassert(bakedPath.vbo.vaoId > 0);
+    glBindVertexArray(bakedPath.vbo.vaoId);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
+
     const mat4x4 mvp = matProj * (matView * matModel);
     const auto& bakeOpt = bakedPath.bakeOpts;
     glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
     glUniform4f(u_color, bakeOpt.color.r, bakeOpt.color.g, bakeOpt.color.b, bakeOpt.color.a);
     glUniform1f(u_linewidth, bakedPath.lineWidth);
     glBindTexture(GL_TEXTURE_2D, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
     glDrawElements(GL_TRIANGLES, bakedPath.vbo.nIndices, GL_UNSIGNED_INT, nullptr);
+
 }

@@ -252,8 +252,7 @@ void GLPathRendererDashLines::bakePaths(std::vector<vec2list> paths, Uniforms pa
     DrawVBO& vbo   = out.vbo;
     if (vbo.vaoId == 0) {
         glGenVertexArrays(1, &vbo.vaoId);
-        glGenBuffers(1, &vbo.vboVertId);
-        glGenBuffers(1, &vbo.vboIdxId);
+        vbo.genBuffers();
         newBuffer = true;
     }
     glBindVertexArray(vbo.vaoId);
@@ -286,20 +285,25 @@ void GLPathRendererDashLines::bakePaths(std::vector<vec2list> paths, Uniforms pa
     glBindVertexArray(0);
 
     out.numPaths     = nPaths;
-    out.vbo.nIndices = bufFinal.i.size();
+    out.vbo.nIndices = static_cast<int32_t>(bufFinal.i.size());
 }
 
-void GLPathRendererDashLines::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {
-    glDisable(GL_CULL_FACE);
 
+void GLPathRendererDashLines::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {
+    glUseProgram(program2dLines);
+
+    dbgassert(bakedPath.vbo.vaoId > 0);
+    glBindVertexArray(bakedPath.vbo.vaoId);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
+
+    glDisable(GL_CULL_FACE);
     glUniformMatrix4fv(u_projection, 1, GL_FALSE, value_ptr(matProj));
     glUniformMatrix4fv(u_view, 1, GL_FALSE, value_ptr(matView));
     glUniformMatrix4fv(u_model, 1, GL_FALSE, value_ptr(matModel));
     glUniform3f(u_uniforms_shape, 1, bakedPath.numPaths * countUniforms, countUniforms);
-
     glBindTexture(GL_TEXTURE_2D, bakedPath.uniforms_texture);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
     glBindTexture(GL_TEXTURE_2D, bakedPath.uniforms_texture);
     glDrawElements(GL_TRIANGLES, bakedPath.vbo.nIndices, GL_UNSIGNED_INT, nullptr);
     glEnable(GL_CULL_FACE);
+
 }

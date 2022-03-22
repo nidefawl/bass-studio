@@ -61,11 +61,13 @@ static const char* getGlErrorString(int error_code) {
     }
 }
 bool checkGLError(const char* s) {
+#ifndef NDEBUG
     int i = glGetError();
     if (i != 0) {
         log_lf(Log::L_ERROR, "%s: %s\n", s, getGlErrorString(i));
         return true;
     }
+#endif
     return false;
 }
 int getStatus(GLuint obj, GLenum type) {
@@ -133,17 +135,16 @@ int compileShader(int type, const String& src) {
     std::vector<uint32_t> indices;
     tess.store(vertices, indices);
     if (vbo.vboVertId == 0) {
-        glGenBuffers(1, &vbo.vboVertId);
-        glGenBuffers(1, &vbo.vboIdxId);
+        vbo.genBuffers();
     }
     glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
     glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(sizeof(float) * vertices.size()), vertices.data(), GL_STREAM_DRAW);
     checkGLError("upload vertex data");
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(sizeof(int) * indices.size()), indices.data(), GL_STREAM_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(sizeof(uint32_t) * indices.size()), indices.data(), GL_STREAM_DRAW);
     checkGLError("upload index data");
-    vbo.nIndices = (int64_t)indices.size();
+    vbo.nIndices = static_cast<int32_t>(indices.size());
 }
 void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
     int32_t vertStrideBytes = fixedStride;
@@ -173,6 +174,7 @@ void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
     }
 }
 void DrawVBO::genBuffers() {
+    ++instanceCount;
     dbgassert(!vboVertId);
     dbgassert(!vboIdxId);
     GLuint buffers[2]{};
@@ -215,6 +217,9 @@ void DrawVBO::destroy() {
     if (vaoId) {
         glDeleteVertexArrays(1, &vaoId);
     }
+    if (vboIdxId || vboVertId) {
+        --instanceCount;
+    }
     if (vboIdxId && vboVertId) {
         const GLuint buffers[] = {vboIdxId, vboVertId};
         glDeleteBuffers(2, buffers);
@@ -236,5 +241,5 @@ DrawVBO::~DrawVBO() {
         destroy();
     }
 }
-int FrameBuffer::frambuffersRefCount = 0;
-FrameBuffer* FrameBuffer::lastBound  = nullptr;
+int32_t FrameBuffer::instanceCount = 0;
+int32_t DrawVBO::instanceCount = 0;

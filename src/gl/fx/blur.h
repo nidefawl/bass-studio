@@ -1,7 +1,6 @@
 #pragma once
 #include "glheaders.h"
-
-#include <stdint.h>
+#include "types.h"
 #include "logging.h"
 #include "str_util.h"
 #include "fileio.h"
@@ -30,7 +29,7 @@ namespace blur_pass_parameters {
     std::vector<int32_t> BLUR_5PASS{0, 1, 2, 2, 3};
     std::vector<int32_t> BLUR_7PASS{0, 1, 2, 3, 4, 4, 5};
     std::vector<int32_t> BLUR_10PASS{0, 1, 2, 3, 4, 5, 7, 8, 9, 10};
-    std::vector<int32_t>& getPassConstants(blur_num_passes n) {
+    inline std::vector<int32_t>& getPassConstants(blur_num_passes n) {
         switch (n) {
             case blur_num_passes::PASSES_2:
                 return BLUR_2PASS;
@@ -49,15 +48,17 @@ namespace blur_pass_parameters {
 struct blur_tex_shader : gl_shader_pipeline {
 public:
     struct rendercontext_t {
-        int w, h;
-        double timeAbs;
-        GLint inputTexture  = 0;
-        GLint outputTexture = 0;
+        int w = 0;
+        int h = 0;
+        GLuint inputTexture  = 0;
+        GLuint outputTexture = 0;
+        double timeAbs = 0.0;
     };
     blur_tex_shader() {
         attributes = {
-                {"a_position", 2, GL_FLOAT},
-                {"a_texcoord", 2, GL_FLOAT}};
+            {"a_position", 2, GL_FLOAT},
+            {"a_texcoord", 2, GL_FLOAT}
+        };
     }
     ~blur_tex_shader() {
         if (isGLContextPresent()) {
@@ -96,26 +97,26 @@ public:
             ctxt->outputTexture = ctxt->inputTexture;
             return;
         }
-        int w = ctxt->w;
-        int h = ctxt->h;
+        const auto w = ctxt->w;
+        const auto h = ctxt->h;
         glUseProgram(program);
         setCommonUniforms(ctxt);
-        mat4x4 matProj = glm::ortho(0.f, (float) w, (float) h, 0.f, 1.0f, -1.0f);
-        tess2d tess(0);
-        tess2d::fullscreenQuad(tess, w, h);
-        glBindVertexArray(vbo.vaoId);
-        tess2d::uploadVBO(tess, vbo);
-        checkGLError("uploadVBO");
-        glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
-        bindVertexAttributes(attributes);
+        mat4x4 matProj = glm::ortho(0.f, (float) w, (float) h, 0.f, -1.0f, 1.0f);
         glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(matProj));
-
-
         glViewport(0, 0, wd, hd);
         glActiveTexture(GL_TEXTURE0);
 
-        int input                 = ctxt->inputTexture;
+        glBindVertexArray(vbo.vaoId);
+        if (this->w != w || this->h != h) {
+            tess2d tess(0);
+            tess2d::fullscreenQuad(tess, w, h);
+            tess2d::uploadVBO(tess, vbo);
+            checkGLError("uploadVBO");
+            bindVertexAttributes(attributes);
+        }
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
+        
+        auto input = ctxt->inputTexture;
         FrameBuffer* bufferTarget = framebuffers[0].get();
 
         std::vector<int32_t>& kawaseKernPasses = blur_pass_parameters::getPassConstants(passes);
@@ -124,14 +125,15 @@ public:
             bufferTarget->bind();
             bufferTarget->clearFrameBuffer();
             glBindTexture(GL_TEXTURE_2D, input);
-            glDrawElements(GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, NULL);
-            checkGLError("glDrawElements");
+            glDrawElements(GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, nullptr);
             input        = bufferTarget->colorAttTextures[0];
             bufferTarget = framebuffers[(p + 1) % 2].get();
         }
+        checkGLError("glDrawElements");
         ctxt->outputTexture = input;
         FrameBuffer::unbindFramebuffer();
         glViewport(0, 0, w, h);
+        glBindVertexArray(0);
     }
     void setupFramebuffers(int w, int h, int downsample) {
         for (auto& fb: framebuffers) {
@@ -151,14 +153,15 @@ private:
         if (u_viewport >= 0)
             glUniform2f(u_viewport, ctxt->w, ctxt->h);
         if (u_time >= 0)
-            glUniform1f(u_time, ctxt->timeAbs);
+            glUniform1f(u_time, static_cast<float>(ctxt->timeAbs));
     }
 
 private:
+    int w = 0;
+    int h = 0;
     int wd = 0;
     int hd = 0;
     std::vector<std::shared_ptr<FrameBuffer>> framebuffers;
     DrawVBO vbo;
     GLint u_blurPassProp    = 0;
-    GLuint texturePrevFrame = 0;
 };
