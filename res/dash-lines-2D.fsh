@@ -1,3 +1,4 @@
+#version 150 core
 // -----------------------------------------------------------------------------
 // Copyright (C) 2013 Nicolas P. Rougier. All rights reserved.
 // 
