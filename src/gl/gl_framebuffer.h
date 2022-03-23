@@ -51,7 +51,7 @@ public:
     GLint colorTexExtFmt         = GL_BGRA;
     GLint colorTexExtType        = GL_UNSIGNED_INT_8_8_8_8_REV;
     GLint textureType            = GL_TEXTURE_2D;
-    GLint depthFmt               = GL_DEPTH_COMPONENT32;
+    GLint depthFmt               = GL_DEPTH24_STENCIL8; //GL_DEPTH_COMPONENT32
     GLint mipmapLevels           = 0;
     GLint anisotropicFilterLevel = -1;
 
@@ -59,7 +59,6 @@ public:
         setColorAtt(GL_COLOR_ATTACHMENT0, type);
         setFilter(GL_COLOR_ATTACHMENT0, GL_LINEAR, GL_LINEAR);
         setClearColor(GL_COLOR_ATTACHMENT0, clrCol);
-        //    depthBuffer = false;
         if (depthBuffer)
             setHasDepthAttachment();
     }
@@ -90,11 +89,6 @@ public:
     }
     void setHasDepthAttachment() {
         hasDepth = true;
-
-        //if clipcontrol is not supported we need this depth buffer format to get glDepthRangedNV working
-        //    if (Engine.INVERSE_Z_BUFFER && GL.isNVDepthBufferFloatSupported() && !GL.isClipControlSupported()) {
-        //      depthFmt = /*NVDepthBufferFloat*/GL_DEPTH_COMPONENT32F_NV;
-        //    }
     }
 
     void setShadowBuffer() {
@@ -176,10 +170,8 @@ public:
         clearFrameBuffer();
     }
     void bind() {
-        // lastBound = this;
         glBindFramebuffer(GL_FRAMEBUFFER, fb);
         if (GL_ERROR_CHECKS) checkGLError("FrameBuffers.glBindFramebuffer");
-        //        Engine.setViewport(0, 0, getWidth(), getHeight());
     }
     void bindRead() {
         glBindFramebuffer(GL_READ_FRAMEBUFFER, fb);
@@ -233,24 +225,17 @@ public:
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            //            glTexParameteri(GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL30.GL_COMPARE_REF_TO_TEXTURE);
+            // glTexParameteri(GL_TEXTURE_2D, GL14.GL_TEXTURE_COMPARE_MODE, GL30.GL_COMPARE_REF_TO_TEXTURE);
         } else {
 
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            //            glTexParameteri(GL_TEXTURE_2D, GL14.GL_DEPTH_TEXTURE_MODE, GL_LUMINANCE);//TODO: not working wiht core profile
+            // glTexParameteri(GL_TEXTURE_2D, GL14.GL_DEPTH_TEXTURE_MODE, GL_LUMINANCE);//TODO: not working wiht core profile
         }
         if (GL_ERROR_CHECKS) checkGLError("FrameBuffers.glTexParameteri (depth)");
-
-        //        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        //        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        //        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        //        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        //        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
-        //        glTexParameteri (GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
         glTexImage2D(GL_TEXTURE_2D, 0, depthFmt, renderWidth, renderHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
 
-        //        glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, renderWidth, renderHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
+        // glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, renderWidth, renderHeight, 0, GL_DEPTH_COMPONENT, GL_FLOAT, nullptr);
         if (GL_ERROR_CHECKS) checkGLError("FrameBuffers.glTexImage2D (depth)");
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, texture, 0);
         if (GL_ERROR_CHECKS) checkGLError("FrameBuffers.glFramebufferTexture (depth)");
@@ -291,7 +276,6 @@ public:
         setDrawMask(~0UL);
     }
     void setDrawMask(GLenum mask) {
-        // dbgassert(lastBound == this && "trying to setDrawMask on unbound buffer");
         std::vector<GLenum> drawBufAtt;
         drawMask(drawBufAtt, mask);
         glDrawBuffers(drawBufAtt.size(), drawBufAtt.data());
@@ -312,16 +296,16 @@ public:
         }
     }
     void clearFrameBuffer() {
-        // dbgassert(lastBound == this && "trying to clearFrameBuffer unbound buffer");
         if (!hasCustomClearColor) {
             setDrawAll();
             GLbitfield flags = GL_COLOR_BUFFER_BIT;
             if (hasDepth)
-                flags |= GL_DEPTH_BUFFER_BIT;
+                flags |= GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT;
             glClearColor(clearColor[0][0], clearColor[0][1], clearColor[0][2], clearColor[0][3]);
             glClear(flags);
         } else {
-            glClear(GL_DEPTH_BUFFER_BIT);
+            if (hasDepth)
+                glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
             for (GLenum i = 0; i <= highestColorAtt; i++) {
                 if (colorAttFormats[i] != 0) {
                     GLenum att = GL_COLOR_ATTACHMENT0 + i;
@@ -335,14 +319,12 @@ public:
         if (GL_ERROR_CHECKS) checkGLError("clearFrameBuffer");
     }
     void clearColorBuffer() {
-        // dbgassert(lastBound == this && "trying to clear unbound buffer");
         setDrawMask(1);
         glClear(GL_COLOR_BUFFER_BIT);
         setDrawMask(~0UL);
     }
 
     void clearColorBufferBlack() {
-        // dbgassert(lastBound == this && "trying to clear unbound buffer");
         setDrawMask(1);
         glClearColor(0, 0, 0, 0);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -352,10 +334,8 @@ public:
     }
 
     void clearDepth() {
-        // dbgassert(lastBound == this && "trying to clearFrameBuffer unbound buffer");
         if (hasDepth) {
             glClear(GL_DEPTH_BUFFER_BIT);
-
             if (GL_ERROR_CHECKS)
                 checkGLError("clearFrameBuffer Depth");
         }
