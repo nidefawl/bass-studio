@@ -102,29 +102,17 @@ public:
     }
 };
 inline float smoothstep(float a, float b, float x) {
-    if (x < a) return 0.0;
-    if (x > b) return 1.0;
+    if (x < a) return 0.0f;
+    if (x > b) return 1.0f;
     float y = (x - a) / (b - a);
-    return y * y * (3.0 - 2.0 * y);
+    return y * y * (3.0f - 2.0f * y);
 }
 inline float lerp(float a, float b, float c) {
-
     return a + (b - a) * c;
 }
 inline void mixSpectrum(audio_spectrum const* lf, audio_spectrum const* hf, audio_spectrum& out) {
-    //  out.samplerate = a->samplerate;
-    //  out.blocksize = a->blocksize;
-    //  out.fftlen = a->fftlen;
-    //  out.srOverFFT = a->srOverFFT;
-    //  out.numBands = a->numBands;
-    //  dbgassert(a->mags[0].size() == a->fftlen);
-    //  dbgassert(b->mags[0].size() == b->fftlen);
-    //  dbgassert(a->mags[0].size() == b->fftlen);
-    //  dbgassert(out.mags[0].size() == a->mags[0].size());
-    //  dbgassert(out.fftlen == a->fftlen);
     for (channelnum_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
         out.mags[i] = lf->mags[i];
-        //    out.bands[i] = b->bands[i];
     }
     constexpr float fstep = 0.22f;
     for (channelnum_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
@@ -138,16 +126,6 @@ inline void mixSpectrum(audio_spectrum const* lf, audio_spectrum const* hf, audi
         }
     }
     dbgassert(static_cast<size_t>(out.fftlen) == out.mags[0].size());
-    //  for (int i = 0; i < OUTPUT_CHANNELS; i++) {
-    //    auto& A = a->mags[i];
-    //    auto& B = b->mags[i];
-    //    auto& M = out.mags[i];
-    //    float f = 1.0f/(a->fftlen-1);
-    //    for (int j = 0; j < a->fftlen; j++) {
-    //      float fInterp = smoothstep(fstep, 1.0-fstep, f*j);
-    //      M[j] = lerp(A[j], B[j], fInterp);
-    //    }
-    //  }
 }
 template <int INPUTLEN, int T>
 class fft_processor : public audio_spectrum {
