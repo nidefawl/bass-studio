@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 set(PROJECT_NAME "DAW" CACHE STRING "Project name")
 project(${PROJECT_NAME} C CXX)
 include("cmake/setup.cmake")
