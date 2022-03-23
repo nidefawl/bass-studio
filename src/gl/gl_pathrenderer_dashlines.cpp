@@ -23,11 +23,11 @@
 #include "assert_dbg.h"
 
 
-void buildIndices(uint32_t numVertices, uint32_t offset, std::vector<uint32_t>& _out) {
+void buildIndices(uint32_t numQuads, uint32_t offset, std::vector<uint32_t>& _out) {
     // static int quadIdx[] = { 0, 1, 2, 2, 1, 3 };
     // static int quadIdx[] = { 2, 1, 0, 3, 1, 2 };
     static std::array<uint32_t, 6> quadIndices { 0, 1, 2, 1, 2, 3 };
-    for (uint32_t i = 0; i < numVertices; i++) {
+    for (uint32_t i = 0; i < numQuads; i++) {
         for (uint32_t idx : quadIndices)
             _out.push_back(offset + idx + i * 4);
     }

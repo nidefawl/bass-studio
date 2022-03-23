@@ -146,7 +146,7 @@ int compileShader(int type, const String& src) {
     checkGLError("upload index data");
     vbo.nIndices = static_cast<int32_t>(indices.size());
 }
-void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
+void bindVertexAttributes(std::vector<VertexAttr>& attrs, int32_t fixedStride) {
     int32_t vertStrideBytes = fixedStride;
     if (!vertStrideBytes) {
         for (auto & attr : attrs) {
@@ -154,23 +154,25 @@ void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
         }
     }
 
-    size_t offset = 0;
-    for (auto & attr : attrs) {
-        if (attr.bindingPt >= 0) {
-            glVertexAttribPointer(attr.bindingPt,
-                                  attr.elements,
-                                  attr.type,
-                                  GL_FALSE,
-                                  vertStrideBytes,
-                                  (const void*) offset);
-            checkGLError("glVertexAttribPointer");
-            glEnableVertexAttribArray(attr.bindingPt);
-            checkGLError("glEnableVertexAttribArray");
-        }
-        offset += attr.elements * sizeof(float);
-    }
     for (int i = (int)attrs.size(); i < 6; i++) {
         glDisableVertexAttribArray(i);
+    }
+    size_t offset = 0;
+    for (auto & attr : attrs) {
+        if (attr.bindingPt < 0 || attr.bindingPt >= attrs.size()) {
+            dbgassert(0);
+            continue;
+        }
+        glVertexAttribPointer(attr.bindingPt,
+                                attr.elements,
+                                attr.type,
+                                GL_FALSE,
+                                vertStrideBytes,
+                                (const void*) offset);
+        checkGLError("glVertexAttribPointer");
+        glEnableVertexAttribArray(attr.bindingPt);
+        checkGLError("glEnableVertexAttribArray");
+        offset += attr.elements * sizeof(float);
     }
 }
 void DrawVBO::genBuffers() {

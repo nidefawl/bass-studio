@@ -128,13 +128,14 @@ public:
     void store(std::vector<float>& _outFloat, std::vector<uint32_t>& _outInt) {
         _outFloat.resize(vertexcount * getVSize());
         memcpy(_outFloat.data(), buf.data(), vertexcount * getVSize() * sizeof(float));
-        _outInt.reserve(vertexcount * 6ULL / 4ULL);
-        buildQuadIndices(vertexcount, 0, _outInt);
+        const auto numQuads = vertexcount / 4ULL;
+        buildQuadIndices(numQuads, 0, _outInt);
     }
 
-    static void buildQuadIndices(uint32_t numVertices, uint32_t offset, std::vector<uint32_t>& _out) {
+    static void buildQuadIndices(uint32_t numQuads, uint32_t offset, std::vector<uint32_t>& _out) {
+        _out.reserve(numQuads * 6ULL);
         static std::array<uint32_t, 6> quadIndices { 0, 1, 2, 0, 2, 3 };
-        for (uint32_t i = 0; i < numVertices; i++) {
+        for (uint32_t i = 0; i < numQuads; i++) {
             for (uint32_t idx : quadIndices)
                 _out.push_back(offset + idx + i * 4);
         }
