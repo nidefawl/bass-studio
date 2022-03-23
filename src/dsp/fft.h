@@ -1,5 +1,6 @@
 #pragma once
 #include <array>
+#include "dsp_util.h"
 #include "types.h"
 #include "config.h"
 #include "meter.h"
@@ -74,15 +75,16 @@ struct overlap_buffer_t {
 class audio_spectrum {
 public:
     static constexpr channelnum_t NUM_CHANNELS = 2;
-    const samplerate_t samplerate;
-    const blocksize_t blocksize;
-    const samplecount_t fftlen;
-    const double srOverFFT;
-    int32_t numBands;
-    int32_t minFreq;
-    int32_t maxFreq;
+    samplerate_t samplerate = 0;
+    blocksize_t blocksize = 0;
+    samplecount_t fftlen = 0;
+    double srOverFFT = 0;
+    int32_t numBands = 0;
+    int32_t minFreq = 0;
+    int32_t maxFreq = 0;
     std::array<std::vector<float>, NUM_CHANNELS> bands{};
     std::array<std::vector<float>, NUM_CHANNELS> mags{};
+    audio_spectrum() = default;
     audio_spectrum(const audio_spectrum& ref)
         : samplerate(ref.samplerate), blocksize(ref.blocksize), fftlen(ref.fftlen), srOverFFT(ref.srOverFFT), numBands(ref.numBands),
           minFreq(MIN_FREQ), maxFreq(MAX_FREQ) {
@@ -110,7 +112,7 @@ inline float smoothstep(float a, float b, float x) {
 inline float lerp(float a, float b, float c) {
     return a + (b - a) * c;
 }
-inline void mixSpectrum(audio_spectrum const* lf, audio_spectrum const* hf, audio_spectrum& out) {
+inline void mixSpectrum(const audio_spectrum* lf, const audio_spectrum* hf, audio_spectrum& out) {
     for (channelnum_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
         out.mags[i] = lf->mags[i];
     }
@@ -125,6 +127,24 @@ inline void mixSpectrum(audio_spectrum const* lf, audio_spectrum const* hf, audi
             bandsM[j]     = lerp(bandsA[j], bandsB[j], fInterp);
         }
     }
+    dbgassert(static_cast<size_t>(out.fftlen) == out.mags[0].size());
+}
+inline void mixDbfsScaleBands(const audio_spectrum* lf, const audio_spectrum* hf, audio_spectrum& out) {
+    constexpr float fstep = 0.22f;
+    for (channelnum_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
+        const auto& bandsA = lf->bands[i];
+        const auto& bandsB = hf->bands[i];
+        dbgassert(bandsA.size() == bandsB.size());
+        auto& bandsM = out.bands[i];
+        bandsM.resize(bandsA.size());
+        const float f = 1.0f / (lf->numBands - 1);
+        for (int j = 0; j < lf->numBands; ++j) {
+            float fInterp = smoothstep(fstep, 1.0f - fstep, f * j);
+            float mixedBand = lerp(bandsA[j], bandsB[j], fInterp);
+            bandsM[j]   = dsp_util::scaledRange(dsp_util::dBFS(mixedBand), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+        }
+    }
+                            
     dbgassert(static_cast<size_t>(out.fftlen) == out.mags[0].size());
 }
 template <int INPUTLEN, int T>

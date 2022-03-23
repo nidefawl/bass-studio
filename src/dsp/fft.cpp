@@ -1,4 +1,5 @@
 #include "fft.h"
+#include "math/seq_math.h"
 #include <cmath>
 #include <vector>
 #include <array>
@@ -20,11 +21,10 @@ void applyWindowAndPadding(float* in, samplecount_t inLen, std::vector<float>& w
 void fillbands(std::vector<float> const& mags, std::vector<float> const& freq, std::vector<float>& bands, samplecount_t fftlen,
                double srOverFFT) {
     std::vector<float> newBands(freq.size());
-    int numBands = freq.size();
-    for (int i = 0; i < numBands; i++) {
-        double f = freq[i] / srOverFFT;
-
-        int binIdx  = std::floor(f);
+    auto numBands = freq.size();
+    for (size_t i = 0; i < numBands; i++) {
+        auto f = freq[i] / srOverFFT;
+        int binIdx  = math::floorfS32(f);
         float lower = 0;
         float upper = 0;
         if (binIdx > 0) {
@@ -42,7 +42,7 @@ void fillbands(std::vector<float> const& mags, std::vector<float> const& freq, s
     }
     for (int i = 0; i < numBands; i++) {
         //    bands[i] = bands[i] * 0.5 + newBands[i] * 0.5;
-        bands[i] = bands[i] * 0.15 + newBands[i] * 0.85;
+        bands[i] = bands[i] * 0.15f + newBands[i] * 0.85f;
 
         //    bands[i] = newBands[i];
 
