@@ -108,10 +108,11 @@ if (NOT MSVC AND CLANG)
     add_compile_options(-fcolor-diagnostics -fansi-escape-codes)  
     add_link_options(-fcolor-diagnostics -fansi-escape-codes)
 endif()
-if (WIN32 AND NOT MSVC AND CLANG)
-    add_compile_options($<$<CONFIG:Debug,RelWithDebInfo>:-gcodeview>)
-    add_link_options($<$<CONFIG:Debug,RelWithDebInfo>:-Wl,-pdb=>)
-endif()
+
+# if (WIN32 AND NOT MSVC AND CLANG)
+#     add_compile_options($<$<CONFIG:Debug,RelWithDebInfo>:-gcodeview>)
+#     add_link_options($<$<CONFIG:Debug,RelWithDebInfo>:-Wl,-pdb=>)
+# endif()
 
 FUNCTION(ADD_POST_BUILD_COMMANDS targetBuildName)
   # Nothing
