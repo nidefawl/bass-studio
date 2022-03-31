@@ -483,6 +483,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                     static int nTestLoops = 100;
                     if (nTestLoops-- == 0) {
                         log_printf("Invoking test code\n");
+                        logStackTrace();
                         throw applogicexception("TEST_HOST_EXCEPTIONS: Testing exception handling");
                     }
                 }
