@@ -5,6 +5,7 @@
 #include "platform.h"
 #include "str_util.h"
 #include <stb/stb_image.h>
+#include <slowstacktrace.h>
 
 namespace App::Platform {
 
@@ -180,4 +181,24 @@ int64_t ReadImage(const String& Filename, ImageBuf& ref) {
     ref.bytes.assign(data, data + bufSize);
     stbi_image_free(data);
     return bufSize;
+}
+
+
+void getStackTrace(std::vector<String>& vec) {
+    char buf[4096]{};
+    get_thread_stacktrace(buf, sizeof(buf));
+    auto bufPtr = &buf[0];
+    while (bufPtr < buf + sizeof(buf)) {
+        auto lineEnd = std::strstr(bufPtr, "\n");
+        if (!lineEnd)
+            return;
+        vec.emplace_back(bufPtr, lineEnd);
+        bufPtr = lineEnd + 1;
+    }
+}
+void logStackTrace() {
+    char buf[4096]{};
+    get_thread_stacktrace(buf, sizeof(buf));
+    ::getGlobalLogger()->log(Log::L_INFO, buf, strnlen(buf, sizeof(buf)));
+    // print_thread_stacktrace();
 }

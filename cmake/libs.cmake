@@ -35,7 +35,7 @@ message(STATUS "PROJECT_DEPS_INSTALL_PATH ${PROJECT_DEPS_INSTALL_PATH}")
 # Force linkage against Release if no explicit import target for config is provided
 set(CMAKE_MAP_IMPORTED_CONFIG_MINSIZEREL "MinSizeRel;Release;")
 set(CMAKE_MAP_IMPORTED_CONFIG_RELWITHDEBINFO "RelWithDebInfo;Release;")
-
+add_subdirectory("${PROJECT_DEPS_PATH}/slowstacktrace" "libstracktrace")
 find_package(Threads REQUIRED)
 
 find_package(glfw3      PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH)

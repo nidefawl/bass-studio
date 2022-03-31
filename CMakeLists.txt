@@ -265,6 +265,7 @@ target_link_libraries(${LINK_TARGET} PUBLIC PortAudio::PortAudio)
 target_link_libraries(${LINK_TARGET} PUBLIC PortMidi::portmidi)
 target_link_libraries(${LINK_TARGET} PUBLIC kissfft::kissfft-float)
 target_link_libraries(${LINK_TARGET} PUBLIC ${SOXR_LIB})
+target_link_libraries(${LINK_TARGET} PUBLIC slowstacktrace)
 
 if (LINUX)
     target_link_libraries(${LINK_TARGET} PUBLIC Threads::Threads)
