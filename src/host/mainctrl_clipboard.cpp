@@ -22,8 +22,7 @@
 
 void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len) {
     auto it = in.clips.cbegin();
-    while (it != in.clips.cend()) {
-        const clip_t* c = *it;
+    for (const auto* const c : in.clips) {
         if (c->end() > srcPos && c->time < srcPos + len) {
             clip_t clone(*c);
             if (c->time < srcPos && c->end() > srcPos) {
@@ -55,9 +54,8 @@ namespace DAW {
             track_gui_entry_t* tr = trackList.atNC(trackIdx);
             //if (tr->track->type == TRACK_TYPE_MIDI) {
             trackdata_midi_t& midi = tr->track->getMidi();
-            for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
-                clip_t* cl     = (*it).get();
-                clip_t* cloned = cl->clone();
+            for (auto & clip : trClipboard->clips) {
+                clip_t* cloned = clip->clone();
                 cloned->time += tickOffset;
                 tick_t tickBegin = cloned->time;
                 tick_t tickEnd   = cloned->end();
@@ -133,7 +131,7 @@ namespace DAW {
             clipboard->selTrackRange = trackEnd - trackBegin;
             clipboard->selRange      = tickEnd - tickBegin;
             clipboard->type          = clip_clipboard::ClipboardFull;
-            for (auto& shPtrClipboard : pClipboardIn->tracks) {
+            for (const auto& shPtrClipboard : pClipboardIn->tracks) {
                 track_clipboard_t trackClipboardOut;
                 clip_t clip;
                 clip.clipType    = CLIP_MIDI;
@@ -143,10 +141,9 @@ namespace DAW {
                 clip.loopEnabled = false;
                 //consolidated.time = tickBegin;
                 //consolidated.setLen(tickEnd - tickBegin);
-                std::vector<std::shared_ptr<clip_t>>& clips = shPtrClipboard->clips;
+                const auto& clips = shPtrClipboard->clips;
                 std::vector<note_t> notes;
-                for (auto& shPtrClip : clips) {
-
+                for (const auto& shPtrClip : clips) {
                     if (shPtrClip->end() <= tickBegin || shPtrClip->start() > tickEnd) {
                         continue;
                     }
