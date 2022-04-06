@@ -1627,6 +1627,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
             AudioBlock block = resamplerInput->pop();
             int32_t post = resamplerInput->numBlocksToPop();
             dbgassert(post == pre-1);
+
+            //TODO: avoid allocation
             AudioBlock blockExtOut(resamplerOutput->numChannels, sampleFormat.blockSize);
             dsp_util::fillBlock(blockExtOut, 0.0f);
             if (enableProfiling) {
