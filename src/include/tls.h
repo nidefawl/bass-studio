@@ -23,7 +23,7 @@ namespace daw_tls {
         project_controller_t* project    = nullptr;
         bool tlsInitialized              = false;
     };
-
+    bool isTlsInitialized();
     tlsinstance& initNewTls();
     void setTls(tlsinstance& tls);
     tlsinstance& getTls();

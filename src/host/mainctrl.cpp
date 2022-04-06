@@ -1247,15 +1247,18 @@ void DawInstance::startDaw() {
 void DawInstance::initDaw() {
     dbgassert(initState == 0);
     initState++;
-
-    auto& initTls = daw_tls::initNewTls();
+    //TODO allow passing in optional tls or refactor loadSettings in seperate function
+    bool isAlreadyInitialized = daw_tls::isTlsInitialized();
+    auto& initTls = isAlreadyInitialized ? daw_tls::getTls() : daw_tls::initNewTls();
     auto& settings = *initTls.settings;
 
-    try {
-        loadSettings(settings);
-    } catch (std::exception& e) {
-        log_lf(Log::L_ERROR, "Failed loading settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
-        ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
+    if (!isAlreadyInitialized) {
+        try {
+            loadSettings(settings);
+        } catch (std::exception& e) {
+            log_lf(Log::L_ERROR, "Failed loading settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
+            ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
+        }
     }
 
     initTls.host = new vsthost();
