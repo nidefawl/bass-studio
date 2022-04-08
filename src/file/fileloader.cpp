@@ -1,12 +1,10 @@
+#include <exception>
 #include <memory>
 
 #include "fileloader.h"
+#include "logging.h"
 #include "track.h"
 #include "clipboard.h"
-
-using std::make_shared;
-using std::move;
-using std::shared_ptr;
 
 tick_t roundUp(tick_t len) {
     if (len > 0 && (len & (TICKS_BAR - 1)) == 0) return len;
@@ -17,17 +15,18 @@ tick_t roundUp(tick_t len) {
     return ((len + rndLen) / rndLen) * rndLen;
 }
 void LoadMidiTask::loadFile() {
+    using std::make_shared;
+    using std::shared_ptr;
     try {
         if (StrEndsWith(path, ".mid") && FileExists(path)) {
             MidiFile midiFile;
             if (midiFile.read(path)) {
                 shared_ptr<clip_clipboard> fileClipboard = make_shared<clip_clipboard>();
-                printf("read %s success\n", StringAsCStr(path));
                 tick_t tpqMidiFile = midiFile.getTicksPerQuarterNote();
                 // tick_t scale = TICKS_QUARTER / tpqMidiFile; // they better use multiple of 8 or something
                 int tracks = midiFile.getTrackCount();
                 if (!tracks) {
-                    log_printf("No tracks in midi file\n");
+                    log_lf(Log::L_WARN, "No tracks in midi file\n");
                 }
 
                 tick_t tickClipMin = -1;
@@ -36,38 +35,36 @@ void LoadMidiTask::loadFile() {
                     clip_notes_t notes;
                     MidiEventList& list = midiFile[track];
                     list.linkEventPairs();
-                    int events = list.size();
-                    if (!events) {
-                        log_printf("No events in midi track %d\n", track);
+                    auto numEventsTrack = list.size();
+                    if (!numEventsTrack) {
+                        log_lf(Log::L_WARN, "No events in midi track %d\n", track);
                     }
+                    int numBrokenEvents = 0;
                     int noteOnEvents = 0;
-                    for (int event = 0; event < events; event++) {
+                    for (int event = 0; event < numEventsTrack; event++) {
                         MidiEvent& evt = list[event];
-                        int evtSize    = evt.size();
-                        if (evtSize)
-                            //log_printf("Event[%d] = %02X\n", event, evt[0]);
-                            if (evt.isNoteOn()) {
-                                noteOnEvents++;
-                                MidiEvent* evt2 = evt.getLinkedEvent();
-                                if (evt2 != NULL) {
-                                    if (evt2->isNoteOff()) {
-                                        // yay
-                                        tick_t start = evt.tick;
-                                        tick_t end   = evt2->tick;
-                                        int32_t key  = evt2->getKeyNumber();
-                                        note_t note;
-                                        note.time  = (((start * 100) / tpqMidiFile) * TICKS_QUARTER) / 100;
-                                        note.len   = ((((end - start) * 100) / tpqMidiFile) * TICKS_QUARTER) / 100;
-                                        note.pitch = key;
-                                        notes.m_list.push_back(note);
-                                        //log_printf("note %d %d - %d\n", key, start, end);
-                                    }
-                                } else {
-                                    log_printf("midi lib failed to link the events\n");
-                                }
+                        if (!evt.empty() && evt.isNoteOn()) {
+                            noteOnEvents++;
+                            MidiEvent* evt2 = evt.getLinkedEvent();
+                            if (evt2 && evt2->isNoteOff()) {
+                                tick_t start = evt.tick;
+                                tick_t end   = evt2->tick;
+                                int32_t key  = evt2->getKeyNumber();
+                                note_t note;
+                                note.time  = (((start * 100) / tpqMidiFile) * TICKS_QUARTER) / 100;
+                                note.len   = ((((end - start) * 100) / tpqMidiFile) * TICKS_QUARTER) / 100;
+                                note.pitch = key;
+                                notes.m_list.push_back(note);
+                                //log_printf("note %d %d - %d\n", key, start, end);
+                                continue;
                             }
+                            numBrokenEvents++;
+                        }
                     }
-                    log_printf("%d noteOnEvents in midi track %d\n", noteOnEvents, track);
+                    log_lf(Log::L_DEBUG, "%d noteOnEvents in midi track %d\n", noteOnEvents, track);
+                    if (numBrokenEvents) {
+                        log_lf(Log::L_WARN, "%d invalid midi events on track %d\n", numBrokenEvents, track);
+                    }
                     if (!notes.empty()) {
                         shared_ptr<track_clipboard_t> trClipboard = make_shared<track_clipboard_t>();
                         notes.updateBounds();
@@ -75,7 +72,6 @@ void LoadMidiTask::loadFile() {
 
                         String filepath, name, ext;
                         SplitPath(path, &filepath, &name, &ext);
-                        //log_printf("%s %s %s\n", StringAsCStr(path), StringAsCStr(name), StringAsCStr(ext));
                         clip_t clip;
                         clip.clipType = CLIP_MIDI;
                         clip.name     = name;
@@ -92,11 +88,11 @@ void LoadMidiTask::loadFile() {
                             tickClipMin = math::min(tickClipMin, clip.start());
                             tickClipMax = math::max(tickClipMax, clip.end());
                         }
-                        trClipboard->clips.push_back(make_shared<clip_t>(move(clip)));
+                        trClipboard->clips.push_back(make_shared<clip_t>(std::move(clip)));
                         fileClipboard->tracks.push_back(trClipboard);
                     }
                 }
-                if (fileClipboard->tracks.size()) {
+                if (!fileClipboard->tracks.empty()) {
                     for (auto& track : fileClipboard->tracks) {
                         for (auto& clip : track->clips) {
                             clip->setLen(tickClipMax - tickClipMin);
@@ -106,15 +102,14 @@ void LoadMidiTask::loadFile() {
                     fileClipboard->srcTrack      = 0;
                     fileClipboard->srcPos        = 0;
                     fileClipboard->selRange      = tickClipMax - tickClipMin;
-                    fileClipboard->selTrackRange = fileClipboard->tracks.size() - 1;
+                    fileClipboard->selTrackRange = static_cast<int32_t>(fileClipboard->tracks.size()) - 1;
                     this->clipboard              = fileClipboard;
                 }
             } else {
-
-                log_printf("failed reading %s, its hard\n", StringAsCStr(path));
+                log_lf(Log::L_WARN, "failed reading %s, its hard\n", StringAsCStr(path));
             }
         }
-    } catch (...) {
-        printf("Exception loading midi file %s\n", StringAsCStr(path));
+    } catch (std::exception& e) {
+        log_lf(Log::L_ERROR, "Exception loading midi file %s: %s\n", StringAsCStr(path), e.what());
     }
 }
