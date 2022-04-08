@@ -27,16 +27,6 @@
 
 using namespace cereal;
 
-
-namespace GuiColor {
-    constant_t getConstantById(int32_t id);
-    constant_t getConstantByName(String name);
-} // namespace GuiColor
-namespace GuiConstant {
-    constant_t getConstantById(int32_t id);
-    constant_t getConstantByName(String name);
-} // namespace GuiConstant
-
 struct theme_data {
     std::unordered_map<String, uint32_t> mapColors;
     std::unordered_map<String, int32_t> mapProperties;
@@ -44,52 +34,52 @@ struct theme_data {
 };
 
 void storeThemeData(guitheme_t const& m, theme_data& out) {
-    for (auto it = m.mapColors.begin(); it != m.mapColors.end(); ++it) {
-        int32_t key = it->first;
+    for (const auto& mapColor : m.mapColors) {
+        int32_t key = mapColor.first;
         auto c      = GuiColor::getConstantById(key);
         if (c.idx <= 0) continue;
-        out.mapColors[c.name] = it->second;
+        out.mapColors[c.name] = mapColor.second;
     }
-    for (auto it = m.mapProperties.begin(); it != m.mapProperties.end(); ++it) {
-        int32_t key               = it->first;
+    for (const auto& mapPropertie : m.mapProperties) {
+        int32_t key               = mapPropertie.first;
         GuiConstant::constant_t c = GuiConstant::getConstantById(key);
         if (c.idx <= 0) continue;
-        out.mapProperties[c.name] = it->second;
+        out.mapProperties[c.name] = mapPropertie.second;
     }
-    for (auto it = m.mapFonts.begin(); it != m.mapFonts.end(); ++it) {
-        int32_t key           = it->first;
+    for (const auto & mapFont : m.mapFonts) {
+        int32_t key           = mapFont.first;
         UIFont::font_type_t c = UIFont::getConstantById(key);
         if (c.idx <= 0) continue;
-        out.mapFonts[c.name] = it->second.name;
+        out.mapFonts[c.name] = mapFont.second.name;
     }
 }
 void loadThemeData(theme_data& data, guitheme_t& out) {
-    for (auto it = data.mapColors.begin(); it != data.mapColors.end(); ++it) {
-        String key = it->first;
+    for (const auto& mapColor : data.mapColors) {
+        String key = mapColor.first;
         auto c     = GuiColor::getConstantByName(key);
         if (c.idx <= 0) {
             continue;
         }
-        out.mapColors[c.idx] = it->second;
+        out.mapColors[c.idx] = mapColor.second;
         dbgassert(c.idx < out.vecNVGColors.size());
-        out.vecNVGColors[c.idx] = rgbaToNvg(it->second);
+        out.vecNVGColors[c.idx] = rgbaToNvg(mapColor.second);
     }
-    for (auto it = data.mapProperties.begin(); it != data.mapProperties.end(); ++it) {
-        String key                = it->first;
+    for (const auto& mapPropertie : data.mapProperties) {
+        String key                = mapPropertie.first;
         GuiConstant::constant_t c = GuiConstant::getConstantByName(key);
 
         //dbgassert(c.idx > 0);
         // some constants may not be defined, and thats ok
         if (c.idx > 0) {
-            out.mapProperties[c.idx] = math::clamp<int32_t>(it->second, c.rangeMin, c.rangeMax);
+            out.mapProperties[c.idx] = math::clamp<int32_t>(mapPropertie.second, c.rangeMin, c.rangeMax);
         }
     }
-    for (auto it = data.mapFonts.begin(); it != data.mapFonts.end(); ++it) {
-        String key            = it->first;
+    for (const auto& mapFont : data.mapFonts) {
+        String key            = mapFont.first;
         UIFont::font_type_t c = UIFont::getConstantByName(key);
         // some constants may not be defined, and thats ok
         if (c.idx > 0) {
-            out.mapFonts[c.idx] = UIFont::font_instance{it->second};
+            out.mapFonts[c.idx] = UIFont::font_instance{mapFont.second};
         }
     }
 }
