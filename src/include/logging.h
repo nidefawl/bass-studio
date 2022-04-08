@@ -1,14 +1,14 @@
 #pragma once
-#include "config.h"
 #include <string_view>
 #include <vector>
+#include <typeinfo>
+#include "config.h"
+#include "str_util.h"
 
 #ifndef ENABLE_LOGGING
 #define ENABLE_LOGGING 1
 #endif
 
-#include <typeinfo>
-#include "str_util.h"
 
 String demangleName(const char* toDemangle);
 template<class T>
@@ -43,6 +43,7 @@ public:
         return this->lvl;
     }
 };
+
 class MultiLogger : public Logger {
     std::vector<Logger*> loggers;
 public:
