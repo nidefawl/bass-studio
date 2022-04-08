@@ -421,7 +421,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                  */
                 std::shared_ptr<DAW::processing_graph_t> processingGraph;
                 if (!DAW::buildProcessingGraph(host.get(), &project, project.trackList.getAllTracksFlatVecRef(), processingGraph)) {
-                    log_printf("Failed building track graph\n");
+                    log_lf(Log::L_ERROR, "Failed building track graph\n");
                     return -1;
                 }
                 log_printf("START ON seconds: %.2f - sample %d\n", toSeconds(tickPos, host->prjGlobals.tempo100), samplePos);

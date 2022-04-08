@@ -122,14 +122,14 @@ namespace DAW {
     bool buildProcessingGraph(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph) {
         std::shared_ptr<track_graph_t> dependencyGraph;
         if (!buildTrackRoutingGraph(host, project, tracksFlat, dependencyGraph)) {
-            log_printf("Failed building track graph\n");
+            log_lf(Log::L_ERROR, "Failed building track graph\n");
             return false;
         }
         track_node_t root;
         root.children.insert(root.children.begin(), dependencyGraph->roots.begin(), dependencyGraph->roots.end());
         dependency_graph_flattened_t graphFlattened;
         if (!dep_resolve(graphFlattened, &root)) {
-            log_printf("Failed flattening track graph\n");
+            log_lf(Log::L_ERROR, "Failed flattening track graph\n");
             return false;
         }
 
@@ -199,7 +199,7 @@ namespace DAW {
                 });
 
                 if (itDependency >= itStageIdx) {
-                    log_printf("unexpected: dependecy index >= this index!!\n");
+                    log_lf(Log::L_ERROR, "unexpected: dependecy index >= this index!!\n");
                 }
                 auto itDependencyChildren = std::find_if(trackNode.children.begin(), trackNode.children.end(), [depNodeIdx](const track_node_t* ptr) {
                     return ptr->stageId == depNodeIdx;
@@ -276,7 +276,7 @@ namespace DAW {
     void updateSoloFlag(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat) {
         std::shared_ptr<track_graph_t> dependencyGraph;
         if (!buildTrackRoutingGraph(host, project, tracksFlat, dependencyGraph)) {
-            log_printf("Failed building track graph\n");
+            log_lf(Log::L_ERROR, "Failed building track graph\n");
             return;
         }
         for (track_t* track : tracksFlat) {
@@ -346,14 +346,14 @@ namespace DAW {
                 } else if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
                     trackCfg.pulls.push_back(track_source_t{ trackEdgeId++, inputChannel, AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE });
                 } else if (inputChannel.type != stage_type::INPUT_DEFAULT) {
-                    log_printf("missing track input routing on track %s\n", StringAsCStr(track->name));
+                    log_lf(Log::L_ERROR, "missing track input routing on track %s\n", StringAsCStr(track->name));
                 }
             }
             if (isChannelConnected(outputChannel)) {
                 if (outputChannel.getType() == stage_type::INPUT_AUDIOSTAGE && trackImpl->mixer.isEnabled()) {
                     audio_stage_t* dst = host->getAudioStage(outputChannel.stage.stageRef);
                     if (!dst) {
-                        log_printf("missing track output routing on track %s\n", StringAsCStr(track->name));
+                        log_lf(Log::L_ERROR, "missing track output routing on track %s\n", StringAsCStr(track->name));
                     } else {
                         auto dstStageId = dst->stageId.stageId;
                         if (!map.count(dstStageId)) {

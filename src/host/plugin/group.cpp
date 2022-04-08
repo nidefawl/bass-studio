@@ -298,7 +298,7 @@ void module_group::process(AudioBlock* in, AudioBlock* out, double tick, double 
 
     std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
     if (!DAW::buildEffectProcessingGraph(vstHost, nullptr, audio, effProcessingGraph)) {
-        log_printf("Failed building effect graph\n");
+        log_lf(Log::L_ERROR, "Failed building effect graph\n");
     }
 
     vstHost->processAudio(audio, &audio->input, &audio->output, tick, samplePos, numSamples, state, effProcessingGraph.get());

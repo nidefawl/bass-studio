@@ -1362,7 +1362,7 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
     /** Build the audio graph **/
     if (!cacheAudioGraph || !impl->processingGraph) {
         if (!DAW::buildProcessingGraph(this, project, project->trackList.getAllTracksFlatVecRef(), impl->processingGraph)) {
-            log_printf("Failed building track graph\n", 0);
+            log_lf(Log::L_ERROR, "Failed building track graph\n", 0);
             return 0;
         }
     }
@@ -1600,7 +1600,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
         if (!cacheAudioGraph || !impl->processingGraph) 
         {
             if (!DAW::buildProcessingGraph(this, project, project->trackList.getAllTracksFlatVecRef(), impl->processingGraph)) {
-                log_printf("Failed building track graph\n", 0);
+                log_lf(Log::L_ERROR, "Failed building track graph\n", 0);
             }
         }
 
@@ -1968,7 +1968,7 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
         } else {
 
             if (req.debugLogProcessing) {
-                log_printf("track %s has no connected input %s\n", StringAsCStr(trackImpl->inputChannel.name));
+                log_lf(Log::L_WARN, "track %s has no connected input %s\n", StringAsCStr(trackImpl->inputChannel.name));
             }
         }
     }
@@ -1987,7 +1987,7 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
         if (!cacheAudioGraph || !effProcessingGraph)
         {
             if (!DAW::buildEffectProcessingGraph(this, nullptr, trackImpl, effProcessingGraph)) {
-                log_printf("Failed building effect graph\n", 0);
+                log_lf(Log::L_ERROR, "Failed building effect graph\n", 0);
             }
 #if DAW_DEBUG_AUDIOGRAPH
             req.effectProcessingGraph = effProcessingGraph;
@@ -3277,15 +3277,13 @@ void vsthost::scanPlugins() {
             seqthreads::threadSleep(200);
             if (!impl->vstscannerProcessThread->isRunning()) {
                 impl->vstscannerProcessThread->checkException();
-                log_printf("Failed starting vstscanner", 0);
+                log_lf(Log::L_ERROR, "Failed starting vstscanner", 0);
             } else {
                 this->impl->scanningState = 1;
-                log_printf("vstscanner is running", 0);
+                log_lf(Log::L_DEBUG, "vstscanner is running", 0);
             }
         } catch (std::exception& e) {
-            std::cout << "exception: " << e.what() << std::endl;
-        } catch (...) {
-            std::cout << "Unhandled exception" << std::endl;
+            log_lf(Log::L_ERROR, "Failed starting vstscanner: %s", e.what());
         }
     }
 }

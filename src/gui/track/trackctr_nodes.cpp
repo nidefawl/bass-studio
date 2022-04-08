@@ -1018,7 +1018,7 @@ void gui_graph::updateList(bool resetPositions) {
             auto const project = daw->getProject();
             auto tracksFlatAll = project->trackList.getAllTracksFlatVec();//TODO: get rid of copy
             if (!DAW::buildProcessingGraph(host, project, tracksFlatAll, processingGraph)) {
-                log_printf("Failed building track graph\n");
+                log_lf(Log::L_ERROR, "Failed building track graph\n");
             } else {
                 lastProcessingList = std::move(processingGraph);
             }
@@ -1027,7 +1027,7 @@ void gui_graph::updateList(bool resetPositions) {
             if (track && track->audio) {
                 std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
                 if (!DAW::buildEffectProcessingGraph(host, nullptr, track->audio, effProcessingGraph)) {
-                    log_printf("Failed building effect graph\n");
+                    log_lf(Log::L_ERROR, "Failed building effect graph\n");
                 } else {
                     lastProcessingList = std::move(effProcessingGraph);
                 }
