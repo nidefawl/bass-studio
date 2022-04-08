@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include "dsp_util.h"
+#include "math/seq_math.h"
 #include "types.h"
 #include "config.h"
 #include "meter.h"
@@ -176,9 +177,9 @@ public:
         auto it              = out.begin();
         for (int i = 0; i < outputBins; i++) {
             float step = i / (float)outputBins; //-1?
-            float freq = powf(10, range * step + minLog10);
+            float freq = math::powf(10, range * step + minLog10);
             double f   = freq / srOverFFT;
-            int binIdx = std::floor(f);
+            int binIdx = math::floorfS32(f);
             if (binIdx < 1) continue;
             if (binIdx + 1 >= fftlen / 2 + 1) {
                 break;
@@ -214,7 +215,7 @@ public:
         float bandwidth = 1.0f / numBands;
         for (int i = 0; i < numBands; i++) {
             float min = i / ((float)(numBands)) + 0.5 * bandwidth;
-            float fX  = powf(10.0f, (min * (maxLog - minLog)) + minLog);
+            float fX  = math::powf(10.0f, (min * (maxLog - minLog)) + minLog);
             freq[i]   = fX;
         }
     }
