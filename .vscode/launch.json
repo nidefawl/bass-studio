@@ -5,73 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "type": "lldb-mi",
-            "request": "launch",
-            "name": "Launch Program (SSH + X11)",
-            "target": "./bin/executable",
-            "cwd": "${workspaceRoot}",
-            "ssh": {
-                "host": "127.0.0.1",
-                "cwd": "/home/remote_user/project/",
-                "keyfile": "/home/my_user/.ssh/id_rsa",
-                "user": "remote_user",
-                "forwardX11": true,
-                "x11host": "localhost",
-                "x11port": 6000
-            },
-            "valuesFormatting": "parseText"
-        },
-        {
-            "name": "(lldb-mi) Run CMake target",
-            "type": "lldb",
-            "request": "launch",
-            "program": "${command:cmake.launchTargetPath}",
-            "args": [],
-            "cwd": "/home/michael/run",
-            "environment": [],
-            "stopAtEntry": true,
-            "externalConsole": false,
-            "preLaunchTask": "shell_run_cmake_build",
-            "setupCommands": [
-                {
-                    "description": "Enable pretty-printing for gdb",
-                    "text": "-enable-pretty-printing",
-                    "ignoreFailures": true
-                },
-                {
-                    "description":  "Set Disassembly Flavor to Intel",
-                    "text": "-gdb-set disassembly-flavor intel",
-                    "ignoreFailures": true
-                }
-            ]
-        },
-        {
-            "type": "cppdbg",
-            "request": "launch",
-            "name": "gdb-windows",
-            // "target": "${workspaceFolder}/run/DAW-Clang-debug.exe",
-            "cwd": "${workspaceRoot}/run",
-            "valuesFormatting": "parseText",
-            "MIMode": "gdb",
-            "program": null,
-            "windows": {
-                "program": "${command:cmake.launchTargetPath}",
-                "miDebuggerPath": "C:\\dev\\gdb\\bin\\gdb.exe",
-            },
-            "stopAtEntry": true,
-        },
-        {
-            "name": "MacOS (lldb) Launch",
-            "type": "cppdbg",
-            "request": "launch",
-            "program": "/Users/mac-user/run/DAW-Clang-debug",
-            "args": [],
-            "stopAtEntry": false,
-            "cwd": "/Users/mac-user/run/",
-            "environment": [],
-            "externalConsole": false,
-            "MIMode": "lldb",
-            "preLaunchTask": "make ~/dev/build"
+          "type": "lldb-vscode",
+          "request": "launch",
+          "name": "lldb-vscode",
+          "program": "${command:cmake.launchTargetPath}",
+          "args": [],
+          "env": [],
+          "cwd": "${workspaceFolder}/run",
+          "stopOnEntry": false
         }
     ]
 }
