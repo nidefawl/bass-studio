@@ -40,7 +40,7 @@ namespace DAW {
         } else if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE_EFFECT) {
             auto* eff = host->getPluginById(inputChannel.projectGlobalId);
             if (!eff) {
-                log_lf(Log::L_WARN, "Input effect with id %d not found on effect %s\n", inputChannel.projectGlobalId, StringAsCStr(eff->getName()));
+                log_lf(Log::L_WARN, "Input effect with id %d not found\n", inputChannel.projectGlobalId);
                 inputChannel = ChannelNone();
                 numRemoved++;
             } else {
