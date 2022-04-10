@@ -1,7 +1,10 @@
 #include <cmath>
+#include <functional>
 #include <glm/geometric.hpp>
 #include <nanovg.h>
 
+#include "host/vst_host.h"
+#include "track_snapshot.h"
 #include "types.h"
 #include <nanovg_min.h>
 #include <type_traits>
@@ -546,37 +549,36 @@ namespace NodeGraph {
         edge_spline spline;
     };
     bool getChannelRef(const gui_graph_port* port, const bool isSrc, DAW::channel_ref_t& ref) {
-        auto graphNodeInput = port->getNode();
-        auto nodeInput = graphNodeInput->getProcessingNode();
-        switch (nodeInput->type) {
+        auto procNode = port->getNode()->getProcessingNode();
+        switch (procNode->type) {
             case DAW::track_node_type_t::TRACK:
-                dbgassert(nodeInput->trackOptional);
-                if (nodeInput->trackOptional) {
-                    dbgassert(nodeInput->trackOptional->audio);
-                    ref = DAW::ChannelStage(nodeInput->trackOptional->audio, stage_bufferpoint::OUTPUT_POST);
+                dbgassert(procNode->trackOptional);
+                if (procNode->trackOptional) {
+                    dbgassert(procNode->trackOptional->audio);
+                    ref = DAW::ChannelStage(procNode->trackOptional->audio, stage_bufferpoint::OUTPUT_POST);
                     return true;
                 }
                 break;
             case DAW::track_node_type_t::AUDIOSTAGE:
-                dbgassert(nodeInput->stage);
-                if (nodeInput->stage) {
-                    if (nodeInput->stage->stageId.inputStageId == nodeInput->stageId) {
-                        ref = DAW::ChannelStage(nodeInput->stage, stage_bufferpoint::INPUT);
+                dbgassert(procNode->stage);
+                if (procNode->stage) {
+                    if (procNode->stage->stageId.inputStageId == procNode->stageId) {
+                        ref = DAW::ChannelStage(procNode->stage, stage_bufferpoint::INPUT);
                         return true;
                     }
-                    if (nodeInput->stage->stageId.outputStageId == nodeInput->stageId) {
-                        ref = DAW::ChannelStage(nodeInput->stage, stage_bufferpoint::OUTPUT);
+                    if (procNode->stage->stageId.outputStageId == procNode->stageId) {
+                        ref = DAW::ChannelStage(procNode->stage, stage_bufferpoint::OUTPUT);
                         return true;
                     }
-                    if (nodeInput->stage->stageId.outputPostStageId == nodeInput->stageId) {
-                        ref = DAW::ChannelStage(nodeInput->stage, stage_bufferpoint::OUTPUT_POST);
+                    if (procNode->stage->stageId.outputPostStageId == procNode->stageId) {
+                        ref = DAW::ChannelStage(procNode->stage, stage_bufferpoint::OUTPUT_POST);
                         return true;
                     }
                 }
                 break;
             case DAW::track_node_type_t::EFFECT:
-                dbgassert(nodeInput->effectOptional);
-                if (nodeInput->effectOptional) {
+                dbgassert(procNode->effectOptional);
+                if (procNode->effectOptional) {
                     DAW::channel_desc srcDesc{};
                     DAW::channel_desc dstDesc{};
                     if (isSrc) {
@@ -584,7 +586,7 @@ namespace NodeGraph {
                     } else {
                         dstDesc = port->getChannelDesc();
                     }
-                    ref = DAW::ChannelAudioEffect(nodeInput->effectOptional, stage_bufferpoint::OUTPUT_POST, srcDesc, dstDesc);
+                    ref = DAW::ChannelAudioEffect(procNode->effectOptional, stage_bufferpoint::OUTPUT_POST, srcDesc, dstDesc);
                     return true;
                 }
                 break;
@@ -603,8 +605,74 @@ namespace NodeGraph {
         });
         return it != portsOutput.end() ? *it : nullptr;
     }
-
-    bool connectPorts(gui_graph_port* portDst, gui_graph_port* portSrc) {
+    
+class action_modify_track_routing : public action_base {
+    audio_stage_ref_t ref;
+    track_io_configuration_snapshot_t snapshotBefore;
+    track_io_configuration_snapshot_t snapshotAfter;
+public:
+    action_modify_track_routing(audio_stage_ref_t _ref, track_io_configuration_snapshot_t _snapshot)
+        : ref(_ref), snapshotBefore(_snapshot) {
+        desc = "Modify track routing";
+    }
+    void undo(DawInstance* daw) override {
+        auto track = daw->getTracks().resolveTrack(ref);
+        if (!track) {
+            setError("Failed undoing routing change");
+        } else {
+            track->audio->createIOSnapshot(snapshotAfter);
+            track->audio->loadIOConfiguration(snapshotBefore);
+            daw->onPluginsChanged();
+            daw->getHost()->onTrackLayoutChange();
+        }
+    }
+    void redo(DawInstance* daw) override {
+        auto track = daw->getTracks().resolveTrack(ref);
+        if (!track) {
+            setError("Failed undoing routing change");
+        } else {
+            track->audio->createIOSnapshot(snapshotBefore);
+            track->audio->loadIOConfiguration(snapshotAfter);
+            daw->onPluginsChanged();
+            daw->getHost()->onTrackLayoutChange();
+        }
+    }
+};
+class action_modify_stage_routing : public action_base {
+    audio_stage_ref_t ref;
+    track_effect_routing_snapshot_t snapshotBefore;
+    track_effect_routing_snapshot_t snapshotAfter;
+public:
+    action_modify_stage_routing(audio_stage_ref_t _ref, track_effect_routing_snapshot_t _snapshot)
+        : ref(_ref), snapshotBefore(_snapshot) {
+        desc = "Modify effect routing";
+    }
+    void undo(DawInstance* daw) override {
+        auto stage = daw->getHost()->getAudioStage(ref);
+        if (!stage) {
+            setError("Failed undoing routing change");
+        } else {
+            snapshotAfter = {};
+            stage->createRoutingSnapshot(snapshotAfter);
+            stage->loadRoutingSnapshot(snapshotBefore);
+            daw->onPluginsChanged();
+            daw->getHost()->onTrackLayoutChange();
+        }
+    }
+    void redo(DawInstance* daw) override {
+        auto stage = daw->getHost()->getAudioStage(ref);
+        if (!stage) {
+            setError("Failed undoing routing change");
+        } else {
+            snapshotBefore = {};
+            stage->createRoutingSnapshot(snapshotBefore);
+            stage->loadRoutingSnapshot(snapshotAfter);
+            daw->onPluginsChanged();
+            daw->getHost()->onTrackLayoutChange();
+        }
+    }
+};
+    bool connectPorts(DawInstance* daw, gui_graph_port* portDst, gui_graph_port* portSrc) {
         /* allow no connection to self */
         if (portDst == portSrc) { // TODO: check at lower level
             return false;
@@ -619,74 +687,97 @@ namespace NodeGraph {
             std::swap(portDst, portSrc);
             std::swap(isInputDst, isInputSrc);
         }
-        DAW::channel_ref_t ref;
-        if (getChannelRef(portSrc, true, ref)) {
-            auto nodeDest = portDst->getNode()->getProcessingNodePointer();
+        auto nodeSrc = portSrc->getNode()->getProcessingNodePointer();
+        auto nodeDest = portDst->getNode()->getProcessingNodePointer();
+        if (nodeSrc->type == DAW::track_node_type_t::TRACK || nodeDest->type == DAW::track_node_type_t::TRACK) {
+            DAW::channel_ref_t refDst;
+            if (getChannelRef(portDst, false, refDst)) {
+                track_io_configuration_snapshot_t snapshot;
+                nodeSrc->trackOptional->audio->createIOSnapshot(snapshot);
+                auto action = new action_modify_track_routing(nodeSrc->trackOptional->audio->toRef(), snapshot);
+                nodeSrc->trackOptional->audio->outputChannel = refDst;
+                daw->pushHist(action);
+                return true;
+            }
+            return false;
+        }
+
+        DAW::channel_ref_t refSrc;
+        if (getChannelRef(portSrc, true, refSrc)) {
+            audio_stage_ref_t stageRef;
+            track_effect_routing_snapshot_t snapshot;
+            //TODO: make sure this is correct for all cases and not just ::EFFECT
             switch (nodeDest->type) {
-                case DAW::track_node_type_t::TRACK:
-                    dbgassert(nodeDest->trackOptional);
-                    if (nodeDest->trackOptional) {
-                        nodeDest->trackOptional->audio->inputChannel = ref;
-                        return true;
-                    }
-                    break;
                 case DAW::track_node_type_t::AUDIOSTAGE:
                     dbgassert(nodeDest->stage);
-                    if (nodeDest->stage) {
-                        removeRouting(nodeDest->stage->postEffectRouting, ref, false);
-                        nodeDest->stage->postEffectRouting.push_back(ref);
-                        nodeDest->stage->routingState = audiostagerouting_state_t::CUSTOM;
-                        return true;
-                    }
+                    nodeDest->stage->createRoutingSnapshot(snapshot);
+                    stageRef = nodeDest->stage->toRef();
+                    removeRouting(nodeDest->stage->postEffectRouting, refSrc, false);
+                    nodeDest->stage->postEffectRouting.push_back(refSrc);
+                    nodeDest->stage->routingState = audiostagerouting_state_t::CUSTOM;
                     break;
                 case DAW::track_node_type_t::EFFECT:
                     dbgassert(nodeDest->effectOptional);
-                    if (nodeDest->effectOptional) {
-                        ref.dstChannelOffset = portDst->getChannelDesc().offset;
-                        removeRouting(nodeDest->effectOptional->inputChannels, ref, false);
-                        nodeDest->effectOptional->inputChannels.push_back(ref);
-                        nodeDest->effectOptional->getTrackLink()->routingState = audiostagerouting_state_t::CUSTOM;
-                        return true;
-                    }
-
+                    nodeDest->effectOptional->getTrackLink()->createRoutingSnapshot(snapshot);
+                    stageRef = nodeDest->effectOptional->getTrackLink()->toRef();
+                    refSrc.dstChannelOffset = portDst->getChannelDesc().offset;
+                    removeRouting(nodeDest->effectOptional->inputChannels, refSrc, false);
+                    nodeDest->effectOptional->inputChannels.push_back(refSrc);
+                    nodeDest->effectOptional->getTrackLink()->routingState = audiostagerouting_state_t::CUSTOM;
                     break;
+                default:
+                    unreachable();
             }
+            auto action = new action_modify_stage_routing(stageRef, snapshot);
+            daw->pushHist(action);
+            return true;
         }
         dbgassert(0);
         return false;
     }
-    bool disconnectEdge(edge_t* edge) {
-        DAW::channel_ref_t ref;
-        if (getChannelRef(edge->portSrc, true, ref)) {
-            auto nodeDest = edge->portDst->getNode()->getProcessingNodePointer();
+    bool disconnectEdge(DawInstance* daw, edge_t* edge) {
+        auto nodeSrc = edge->portSrc->getNode()->getProcessingNodePointer();
+        auto nodeDest = edge->portDst->getNode()->getProcessingNodePointer();
+        if (nodeSrc->type == DAW::track_node_type_t::TRACK || nodeDest->type == DAW::track_node_type_t::TRACK) {
+            auto stage = nodeSrc->trackOptional->audio;
+            track_io_configuration_snapshot_t snapshot;
+            stage->createIOSnapshot(snapshot);
+            auto action = new action_modify_track_routing(stage->toRef(), snapshot);
+            stage->outputChannel = DAW::ChannelNone();
+            daw->pushHist(action);
+            return true;
+        }
+        DAW::channel_ref_t refSrc;
+        if (getChannelRef(edge->portSrc, true, refSrc)) {
+            audio_stage_ref_t stageRef;
+            track_effect_routing_snapshot_t snapshot;
             switch (nodeDest->type) {
-                case DAW::track_node_type_t::TRACK:
-                    dbgassert(nodeDest->trackOptional);
-                    if (nodeDest->trackOptional) {
-                        nodeDest->trackOptional->audio->inputChannel = DAW::ChannelNone();
-                        return true;
-                    }
-                    break;
                 case DAW::track_node_type_t::AUDIOSTAGE:
                     dbgassert(nodeDest->stage);
-                    if (nodeDest->stage) {
-                        removeRouting(nodeDest->stage->postEffectRouting, ref, true);
-                        return true;
-                    }
+                    nodeDest->stage->createRoutingSnapshot(snapshot);
+                    stageRef = nodeDest->stage->toRef();
+                    removeRouting(nodeDest->stage->postEffectRouting, refSrc, true);
+                    nodeDest->stage->routingState = audiostagerouting_state_t::CUSTOM;
                     break;
                 case DAW::track_node_type_t::EFFECT:
                     dbgassert(nodeDest->effectOptional);
-                    if (nodeDest->effectOptional) {
-                        ref.dstChannelOffset = edge->portDst->getChannelDesc().offset;
-                        removeRouting(nodeDest->effectOptional->inputChannels, ref, true);
-                        return true;
-                    }
+                    nodeDest->effectOptional->getTrackLink()->createRoutingSnapshot(snapshot);
+                    stageRef = nodeDest->effectOptional->getTrackLink()->toRef();
+                    refSrc.dstChannelOffset = edge->portDst->getChannelDesc().offset;
+                    removeRouting(nodeDest->effectOptional->inputChannels, refSrc, true);
+                    nodeDest->effectOptional->getTrackLink()->routingState = audiostagerouting_state_t::CUSTOM;
                     break;
+                default:
+                    unreachable();
             }
+            auto action = new action_modify_stage_routing(stageRef, snapshot);
+            daw->pushHist(action);
+            return true;
         }
         return false;
     }
 }
+
 void gui_graph_port::dragMoveOn(guibase* target, ivec2 mousepos) {
     log_lf(Log::L_DEBUG, "dragMoveOn %s on %s\n", StringAsCStr(this->getClassName()), StringAsCStr(target->getClassName()));
 }
@@ -758,7 +849,7 @@ void gui_graph_port::dragReleaseOn(guibase* target, ivec2 mousepos) {
     if (ptr != nullptr) {
         auto const daw = dawCtrl->getDaw();
         ThreadLock lock = daw->lockPlayThread();
-        NodeGraph::connectPorts(this, ptr);
+        NodeGraph::connectPorts(daw, this, ptr);
         daw->onPluginsChanged();
         daw->getHost()->onTrackLayoutChange();
     }
@@ -1277,7 +1368,7 @@ void gui_graph::handleDraggedBegin(MouseEvent& evt) {
         if (isCtrl(evt.kbmods)) {
             auto const daw = dawCtrl->getDaw();
             ThreadLock lock = daw->lockPlayThread();
-            NodeGraph::disconnectEdge(hitResult.edge);
+            NodeGraph::disconnectEdge(daw, hitResult.edge);
             daw->onPluginsChanged();
             daw->getHost()->onTrackLayoutChange();
             return;
