@@ -672,10 +672,11 @@ void audio_stage_t::createRoutingSnapshot(track_effect_routing_snapshot_t& snaps
         snapshot.inputRoutingOutputStage.push_back(cfg);
     }
     for (effectbase* effect : effects) {
+        auto& vec = snapshot.inputRoutingEffects[static_cast<int32_t>(effect->projectGlobalId)];
         for (DAW::channel_ref_t& channel : effect->inputChannels) {
             io_configuration_snapshot_t cfg;
             createDawChannelRefSnapshot(channel, cfg);
-            snapshot.inputRoutingEffects[static_cast<int32_t>(effect->projectGlobalId)].push_back(cfg);
+            vec.push_back(cfg);
         }
     }
     snapshot.routingState = static_cast<int32_t>(this->routingState);
@@ -696,13 +697,12 @@ void audio_stage_t::configureDefaultRoutings() {
 void audio_stage_t::loadRoutingSnapshot(const track_effect_routing_snapshot_t& snapshot) {
     this->postEffectRouting.clear();
     this->routingState = audiostagerouting_state_t::INVALID;
-    for (int i = 0; i < snapshot.inputRoutingOutputStage.size(); i++) {
-        const io_configuration_snapshot_t& cfg = snapshot.inputRoutingOutputStage[i];
-        DAW::channel_ref_t channel;
+    for (const auto & cfg : snapshot.inputRoutingOutputStage) {
+         DAW::channel_ref_t channel;
         loadDawChannelRefSnapshot(cfg, channel);
         this->postEffectRouting.push_back(channel);
     }
-    audiostagerouting_state_t snapshotRoutingState = static_cast<audiostagerouting_state_t>(snapshot.routingState);
+    auto snapshotRoutingState = static_cast<audiostagerouting_state_t>(snapshot.routingState);
     //for (plugin in effectsVec)
     //    plugin->inputChannels.clear();
     //if (snapshotRoutingState != audiostagerouting_state_t::INVALID)
@@ -714,7 +714,7 @@ void audio_stage_t::loadRoutingSnapshot(const track_effect_routing_snapshot_t& s
                 String log = "stage.effects = [";
                 for (auto p : effects) {
                     if (p->isDeferred()) {
-                        effect_deferred* def = dynamic_cast<effect_deferred*>(p);
+                        auto* def = dynamic_cast<effect_deferred*>(p);
                         const plugin_snapshot_t& plugSnapshot = def->getSnapshotConst();
                         log += StringFormat("%d(%d), ", static_cast<int32_t>(p->projectGlobalId), plugSnapshot.projectGlobalId);
                     } else {
@@ -732,7 +732,7 @@ void audio_stage_t::loadRoutingSnapshot(const track_effect_routing_snapshot_t& s
                 log_lf(Log::L_DEBUG, "Plugin with id %d not found\n", static_cast<int32_t>(mapEntry.first));
                 snapshotRoutingState = audiostagerouting_state_t::INVALID;
             } else {
-                dbgassert(plugin->inputChannels.empty());
+                plugin->inputChannels.clear();
                 for (const io_configuration_snapshot_t& effInputSnapshot : mapEntry.second) {
                     DAW::channel_ref_t channel;
                     loadDawChannelRefSnapshot(effInputSnapshot, channel);
