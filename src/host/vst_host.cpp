@@ -1982,22 +1982,26 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
             && trackImpl->outputPost.samples == trackImpl->sampleFormat.blockSize
             && trackImpl->sampleFormat.blockSize > 0
             && trackImpl->sampleFormat.sampleRate > 0);
+
     {
         auto& effProcessingGraph = trackImpl->processingGraph;
         if (!cacheAudioGraph || !effProcessingGraph)
         {
             if (!DAW::buildEffectProcessingGraph(this, nullptr, trackImpl, effProcessingGraph)) {
+                effProcessingGraph = nullptr;
                 log_lf(Log::L_ERROR, "Failed building effect graph\n", 0);
             }
 #if DAW_DEBUG_AUDIOGRAPH
             req.effectProcessingGraph = effProcessingGraph;
 #endif
         }
-        /* Processes audio/midi tracks plugin chain */
-        processAudio(trackImpl, &trackImpl->input, &trackImpl->output, tickLatencyCompensated, sampleLatencyCompensated, (int32_t)sampleFormat.blockSize, playbackState,
-                     effProcessingGraph.get());
+        if (effProcessingGraph) {
+            /* Processes audio/midi tracks plugin chain */
+            processAudio(trackImpl, &trackImpl->input, &trackImpl->output, tickLatencyCompensated, sampleLatencyCompensated, (int32_t)sampleFormat.blockSize, playbackState,
+                        effProcessingGraph.get());
+            trackImpl->procStats.numBlocksProcessed++;
+        }
     }
-    trackImpl->procStats.numBlocksProcessed++;
 
 
     trackImpl->outputPost.clear();
