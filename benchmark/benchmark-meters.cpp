@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
         // getGlobalLogger()->setLevel(Log::L_WARN);
         benchmark::RegisterBenchmark("running_sum.update", [&block](benchmark::State& state) {
             block.fillNoise(4123123);
-            log_printf("block.samples %u\n", block.samples);
+            // log_printf("block.samples %u\n", block.samples);
             DAW::meter_runningsum rs;
             for (auto _ : state) {
                 rs.update(block.buf[0], block.samples/16, 1.0f);
@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
         });
         benchmark::RegisterBenchmark("running_sum.update512Fixed", [&block](benchmark::State& state) {
             block.fillNoise(4123123);
-            log_printf("block.samples %u\n", block.samples);
+            // log_printf("block.samples %u\n", block.samples);
             DAW::meter_runningsum rs;
             for (auto _ : state) {
                 rs.update512Fixed(block.buf[0]);
@@ -57,9 +57,9 @@ int main(int argc, char** argv) {
                     context->meter.update(context->blockInput, 1.0f);
                 }
                 auto lvls = context->meter.getLevels();
-                for (auto& level : lvls) {
-                    log_printf("Levels: fMax %f, fPeak %f, fLvl %f\n", level.fMax, level.fPeak, level.fLvl);
-                }
+                // for (auto& level : lvls) {
+                //     log_printf("Levels: fMax %f, fPeak %f, fLvl %f\n", level.fMax, level.fPeak, level.fLvl);
+                // }
                 context->isSetupComplete = true;
             }
             for (auto _ : state) {
@@ -67,11 +67,11 @@ int main(int argc, char** argv) {
             };
         };
         std::array<BenchmarkMeter, 5> allBenchmarks = {
-            BenchmarkMeter{ "Process 1 Channel 512 Samples", 1, &block },
-            BenchmarkMeter{ "Process 2 Channel 512 Samples", 2, &block },
-            BenchmarkMeter{ "Process 4 Channel 512 Samples", 4, &block },
-            BenchmarkMeter{ "Process 2 Channel 1024 Samples", 2, &block1024 },
-            BenchmarkMeter{ "Process 4 Channel 1024 Samples", 4, &block1024 },
+            BenchmarkMeter{ "Old 1 Channel 512 Samples", 1, &block },
+            BenchmarkMeter{ "Old 2 Channel 512 Samples", 2, &block },
+            BenchmarkMeter{ "Old 4 Channel 512 Samples", 4, &block },
+            BenchmarkMeter{ "Old 2 Channel 1024 Samples", 2, &block1024 },
+            BenchmarkMeter{ "Old 4 Channel 1024 Samples", 4, &block1024 },
         };
 
         for (BenchmarkMeter& benchmarkCtxt : allBenchmarks) {
@@ -97,9 +97,9 @@ int main(int argc, char** argv) {
                     context->meter.update(context->blockInput, 1.0f);
                 }
                 auto lvls = context->meter.getLevels();
-                for (auto& level : lvls) {
-                    log_printf("Levels: fMax %f, fPeak %f, fLvl %f\n", level.fMax, level.fPeak, level.fLvl);
-                }
+                // for (auto& level : lvls) {
+                //     log_printf("Levels: fMax %f, fPeak %f, fLvl %f\n", level.fMax, level.fPeak, level.fLvl);
+                // }
                 context->isSetupComplete = true;
             }
             for (auto _ : state) {
@@ -107,11 +107,11 @@ int main(int argc, char** argv) {
             };
         };
         std::array<BenchmarkMeterMulti, 5> allBenchmarks2 = {
-            BenchmarkMeterMulti{ "Multi Process 1 Channel 512 Samples", 1, &block },
-            BenchmarkMeterMulti{ "Multi Process 2 Channel 512 Samples", 2, &block },
-            BenchmarkMeterMulti{ "Multi Process 4 Channel 512 Samples", 4, &block },
-            BenchmarkMeterMulti{ "Multi Process 2 Channel 1024 Samples", 2, &block1024 },
-            BenchmarkMeterMulti{ "Multi Process 4 Channel 1024 Samples", 4, &block1024 },
+            BenchmarkMeterMulti{ "New 1 Channel 512 Samples", 1, &block },
+            BenchmarkMeterMulti{ "New 2 Channel 512 Samples", 2, &block },
+            BenchmarkMeterMulti{ "New 4 Channel 512 Samples", 4, &block },
+            BenchmarkMeterMulti{ "New 2 Channel 1024 Samples", 2, &block1024 },
+            BenchmarkMeterMulti{ "New 4 Channel 1024 Samples", 4, &block1024 },
         };
 
         for (BenchmarkMeterMulti& benchmarkCtxt : allBenchmarks2) {
