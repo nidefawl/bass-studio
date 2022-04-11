@@ -730,9 +730,13 @@ void vsthost::setSampleFormat(const sampleformat_t& _sampleFormat) {
         }
         for (effectbase* plugin : this->pluginInstances) {
             plugin->setSampleFormat(_sampleFormat);
+            plugin->initBuffers();
+            plugin->initMeters();
         }
         for (effectbase* plugin : this->pluginsDeferred) {
             plugin->setSampleFormat(_sampleFormat);
+            plugin->initBuffers();
+            plugin->initMeters();
         }
         for (vstplugin* plugin : this->pluginInstancesVST2) {
             plugin->onDisable();
