@@ -38,7 +38,7 @@ struct runningsum {
         rsIdx = 0;
     }
     inline void update(const float* fBuf, const uint16_t samples16, const float fGain) {
-        if (static_cast<int32_t>(rsIdx) + samples16 * 16U > N) {
+        if (static_cast<int32_t>(rsIdx) + samples16 * 16U > N) BRANCH_UNLIKELY {
             if (samples16*16U > N) {
                 dbgassert(0);
                 return;
@@ -72,7 +72,7 @@ struct runningsum {
     }
 
     inline void update512Fixed(const float* fBuf) {
-        if (static_cast<uint32_t>(rsIdx) + 512U > N) {
+        if (static_cast<uint32_t>(rsIdx) + 512U > N) BRANCH_UNLIKELY {
             reset();
         }
         float fMaxBlock = 0.0f;
