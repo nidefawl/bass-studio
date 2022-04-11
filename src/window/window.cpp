@@ -1654,10 +1654,6 @@ void closeGlobalLog();                          // Forward declare from util/log
 int startApplication(const std::vector<String>& args, AppInstanceService& appInstance) {
     seqthreads::registerThread("mainthread");
 
-#if !defined(NDEBUG) && defined(_WIN32)
-    _dup2(1, 2);//workaround: redirect stderr to stdout so stderr is visible when using gdb on eclipse (bug)
-#endif
-
 #ifdef _WIN32
     OleInitialize(0);
 #endif
