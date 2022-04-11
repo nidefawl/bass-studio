@@ -19,33 +19,47 @@ struct meter_lvls {
 };
 
 
-template<uint32_t N>
+template<uint16_t N>
 struct runningsum {
     alignas(1024) float rsBuffer[N]{};
     double runningSum = 0;
-    int rsIdx         = 0;
     float fMax        = 0;
     float fPeak       = 0;
     float fLvl        = 0;
     float fPeakFalloffDelay = 0;
+    uint16_t rsIdx    = 0;
+    void reset() {
+        fMax = 0;
+        fPeak = 0;
+        fLvl = 0;
+        fPeakFalloffDelay = 0;
+        runningSum = 0;
+        memset(rsBuffer, 0, sizeof(float) * N);
+        rsIdx = 0;
+    }
     inline void update(const float* fBuf, const uint16_t samples16, const float fGain) {
+        if (static_cast<int32_t>(rsIdx) + samples16 * 16U > N) {
+            if (samples16*16U > N) {
+                dbgassert(0);
+                return;
+            }
+            reset();
+        }
         float fMaxBlock = 0.0f;
         auto it = std::begin(rsBuffer) + rsIdx;
         double newSum   = runningSum;
-#ifndef _MSC_VER
-#pragma unroll
-#endif
-        for (uint32_t i = 0; i < samples16 * 16U; i++) {
+
+        for (decltype(N) i = 0; i < samples16 * 16U; i++) {
             float f = *fBuf++ * fGain;
             f = f * f;
             fMaxBlock = math::max(fMaxBlock, f);
             newSum += f - *it;
             *it++ = f;
-            if (it == std::end(rsBuffer)) BRANCH_UNLIKELY {
-                it = std::begin(rsBuffer);
-            }
         }
-        rsIdx = (rsIdx + samples16 * 16) % N;
+        if (it == std::end(rsBuffer)) BRANCH_UNLIKELY {
+            it = std::begin(rsBuffer);
+        }
+        rsIdx = (rsIdx + samples16 * 16U) % N;
         runningSum = newSum;
         if (fMaxBlock > math::F_MIN) {
             fMax = math::max(sqrtf(fMaxBlock), fMax);
@@ -58,24 +72,24 @@ struct runningsum {
     }
 
     inline void update512Fixed(const float* fBuf) {
+        if (static_cast<uint32_t>(rsIdx) + 512U > N) {
+            reset();
+        }
         float fMaxBlock = 0.0f;
         double newSum = runningSum;
         auto it = std::begin(rsBuffer) + rsIdx;
 
-#ifndef _MSC_VER
-#pragma unroll
-#endif
-        for (uint32_t i = 0; i < 512; i++) {
+        for (decltype(N) i = 0; i < 512U; i++) {
             float f = *fBuf++;
             f = f * f;
             fMaxBlock = math::max(fMaxBlock, f);
             newSum += f - *it;
             *it++ = f;
-            if (it == std::end(rsBuffer)) BRANCH_UNLIKELY {
-                it = std::begin(rsBuffer);
-            }
         }
-        rsIdx = (rsIdx + 512) % N;
+        if (it == std::end(rsBuffer)) BRANCH_UNLIKELY {
+            it = std::begin(rsBuffer);
+        }
+        rsIdx = (rsIdx + 512U) % N;
         runningSum = newSum;
         if (fMaxBlock > math::F_MIN) {
             fMax = math::max(sqrtf(fMaxBlock), fMax);
