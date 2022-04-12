@@ -56,9 +56,6 @@ struct runningsum {
             newSum += f - *it;
             *it++ = f;
         }
-        if (it == std::end(rsBuffer)) BRANCH_UNLIKELY {
-            it = std::begin(rsBuffer);
-        }
         rsIdx = (rsIdx + samples16 * 16U) % N;
         runningSum = newSum;
         if (fMaxBlock > math::F_MIN) {
@@ -85,9 +82,6 @@ struct runningsum {
             fMaxBlock = math::max(fMaxBlock, f);
             newSum += f - *it;
             *it++ = f;
-        }
-        if (it == std::end(rsBuffer)) BRANCH_UNLIKELY {
-            it = std::begin(rsBuffer);
         }
         rsIdx = (rsIdx + 512U) % N;
         runningSum = newSum;
