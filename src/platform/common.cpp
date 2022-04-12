@@ -186,7 +186,7 @@ int64_t ReadImage(const String& Filename, ImageBuf& ref) {
 
 void getStackTrace(std::vector<String>& vec) {
     char buf[4096]{};
-    get_thread_stacktrace(buf, sizeof(buf));
+    get_thread_stacktrace(buf, sizeof(buf), nullptr);
     auto bufPtr = &buf[0];
     while (bufPtr < buf + sizeof(buf)) {
         auto lineEnd = std::strstr(bufPtr, "\n");
@@ -198,7 +198,7 @@ void getStackTrace(std::vector<String>& vec) {
 }
 void logStackTrace() {
     char buf[4096]{};
-    get_thread_stacktrace(buf, sizeof(buf));
+    get_thread_stacktrace(buf, sizeof(buf), nullptr);
     ::getGlobalLogger()->log(Log::L_INFO, buf, strnlen(buf, sizeof(buf)));
     // print_thread_stacktrace();
 }
