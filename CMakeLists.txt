@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.21)
 set(PROJECT_NAME "DAW" CACHE STRING "Project name")
+set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/init_flags.cmake")
 project(${PROJECT_NAME} C CXX)
 include("cmake/setup.cmake")
-set(CMAKE_USER_MAKE_RULES_OVERRIDE "${PROJECT_SRC_PATH}/../cmake/msvc-init-override.cmake")
 include("cmake/libs.cmake")
 include("cmake/warnings.cmake")
 

@@ -11,32 +11,40 @@
 
 #include <functional>
 #include <memory>
-
+#include "sse.h"
 extern volatile bool fatalError;
 
 int main(int argc, char** argv) {
     std::vector<String> args(&argv[0], &argv[argc]);
+    setSSEFlushDenormals();
     // App::Platform::initPlatformEnvironment("daw");
     try {
         AudioBlock block(32, 512, false);
         AudioBlock block1024(32, 1024, false);
         // getGlobalLogger()->setLevel(Log::L_WARN);
         benchmark::RegisterBenchmark("running_sum.update", [&block](benchmark::State& state) {
+            setSSEFlushDenormals();
             block.fillNoise(4123123);
-            // log_printf("block.samples %u\n", block.samples);
             DAW::meter_runningsum rs;
+            rs.update(block.buf[0], block.samples/16, 1.0f);
             for (auto _ : state) {
+                benchmark::ClobberMemory();
                 rs.update(block.buf[0], block.samples/16, 1.0f);
+                benchmark::DoNotOptimize(rs.getLevels());
             };
         });
         benchmark::RegisterBenchmark("running_sum.update512Fixed", [&block](benchmark::State& state) {
+            setSSEFlushDenormals();
             block.fillNoise(4123123);
-            // log_printf("block.samples %u\n", block.samples);
             DAW::meter_runningsum rs;
+            rs.update(block.buf[0], block.samples/16, 1.0f);
             for (auto _ : state) {
+                benchmark::ClobberMemory();
                 rs.update512Fixed(block.buf[0]);
+                benchmark::DoNotOptimize(rs.getLevels());
             };
         });
+#if 1
 
         struct BenchmarkMeter {
             const char* benchmarkName;
@@ -117,7 +125,7 @@ int main(int argc, char** argv) {
         for (BenchmarkMeterMulti& benchmarkCtxt : allBenchmarks2) {
             benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRunMulti, &benchmarkCtxt);
         }
-
+#endif
 
         benchmark::Initialize(&argc, argv);
         if (::benchmark::ReportUnrecognizedArguments(argc, argv))
