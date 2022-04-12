@@ -1,0 +1,15 @@
+set(GIT_SHA1 "unknown")
+set(GIT_SHA1_DIRTY "unknown")
+find_package(Git)
+if(Git_FOUND)
+  execute_process(COMMAND
+    ${GIT_EXECUTABLE} describe --always --abbrev=16
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    OUTPUT_VARIABLE GIT_SHA1
+    COMMAND_ERROR_IS_FATAL ANY OUTPUT_STRIP_TRAILING_WHITESPACE)
+  execute_process(COMMAND
+    ${GIT_EXECUTABLE} describe --always --abbrev=16 --dirty
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    OUTPUT_VARIABLE GIT_SHA1_DIRTY
+    COMMAND_ERROR_IS_FATAL ANY OUTPUT_STRIP_TRAILING_WHITESPACE)
+endif()

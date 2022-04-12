@@ -1,29 +1,27 @@
-CONFIGURE_FILE( TestBase.hpp.in ${CMAKE_CURRENT_LIST_DIR}/TestBase.hpp )
+configure_file( TestBase.hpp.in ${CMAKE_CURRENT_LIST_DIR}/TestBase.hpp )
 
-INCLUDE( CheckCXXCompilerFlag )
+include(CheckCXXCompilerFlag)
 
 set(TC_WARNING_FLAGS "")
 
 add_compile_definitions("PROJECT_UNITTEST")
 
-
-IF( CLANG )
+if( CLANG )
   # Ignore warnings related to the GNU statement expressions if we
   # compile with clang.
   # ENABLE_IF_SUPPORTED("-Wno-gnu-statement-expression" )
-ENDIF()
+endif()
 
 # Enable high warning levels
-IF (MSVC) 
+if (MSVC) 
  list(APPEND TC_WARNING_FLAGS /W3)
-ELSE()
-
+else()
   # Set optimization level to "debug"
   #list(APPEND TC_WARNING_FLAGS -Og )
   list(APPEND TC_WARNING_FLAGS -Wall -Wextra -pedantic -Wnon-virtual-dtor -Woverloaded-virtual)
   list(APPEND TC_WARNING_FLAGS -Wconversion)
   list(APPEND TC_WARNING_FLAGS -w)
-ENDIF()
+endif()
 
 message(STATUS "TESTS WARNINGS ${TC_WARNING_FLAGS}")
 
@@ -42,7 +40,7 @@ function( DEFINE_TEST test_name link_lib first_source_file)
   if (${link_lib})
     target_link_libraries(${test_name} PUBLIC dawlib)
   else()
-    SET_TARGET_PROJECT_INCLUDE_DIRS(${test_name})
+    CONFIGURE_TARGET_DEPS(${test_name})
     # hacky: copy interface libs from dawlib, but don't acutally use dawlib (or all of the libs)
     get_property(DAWLIBTARGETLIBS TARGET dawlib PROPERTY INTERFACE_LINK_LIBRARIES)
     # message(STATUS "COPY PASTA INTERFACE_LINK_LIBRARIES ${DAWLIBTARGETLIBS}")
@@ -52,26 +50,25 @@ function( DEFINE_TEST test_name link_lib first_source_file)
     endif ()
   endif()
   add_test(NAME ${test_name} COMMAND ${test_name} WORKING_DIRECTORY ${ABS_WORKING_DIR})
-  ADD_POST_BUILD_COMMANDS(${test_name})
 endfunction()
 
 DEFINE_TEST(
-    test_seh_exception_handling FALSE 
-    test_seh_exception_handling.cpp
+  test_seh_exception_handling FALSE 
+  test_seh_exception_handling.cpp
 )
 if (MINGW AND CLANG)
-    target_compile_options(test_seh_exception_handling PRIVATE "-fno-lto;-mtune=generic")
+  target_compile_options(test_seh_exception_handling PRIVATE "-fno-lto;-mtune=generic")
 endif()
 
 DEFINE_TEST(
-    test_math FALSE 
-    test_math.cpp
-    common/test_common.cpp 
-    common/test_stubs.cpp
-    ../src/util/testing_environment.cpp
-    ../src/util/str_util.cpp
-    ../src/util/dsp_util.cpp
-    ../src/threads/thread.cpp
+  test_math FALSE 
+  test_math.cpp
+  common/test_common.cpp 
+  common/test_stubs.cpp
+  ../src/util/testing_environment.cpp
+  ../src/util/str_util.cpp
+  ../src/util/dsp_util.cpp
+  ../src/threads/thread.cpp
 )
 
 DEFINE_TEST(
