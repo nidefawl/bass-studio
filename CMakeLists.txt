@@ -16,6 +16,7 @@ option(PROJECT_BUILD_TESTS "Build tests" ON)
 option(PROJECT_BUILD_BENCHMARKS "Build benchmarks" ON)
 option(PROJECT_CFG_USE_OPENGL3 "Use OpenGL 3.x instead of OpenGL 2" ON)
 option(PROJECT_FORCE_LIB "Force building a lib" ON)
+option(PROJECT_GENERATE_LINKER_MAP "Generate <build-dir>/<exe>_linker.map" OFF)
 
 
 if (PROJECT_BUILD_BENCHMARKS
@@ -123,7 +124,7 @@ endforeach ()
 if (MINGW AND CLANG)
   # The SEH assembly will not work correctly on clang mingw if any level of optimization is applied
   set(SRC_FILES_NO_OPTIMIZE src/host/plugin/vst_plugin_dispatch.cpp)
-  set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-fno-lto;-mtune=generic")
+  set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections")
   set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 endif()
 
@@ -197,17 +198,6 @@ if (PROJECT_BUILD_TESTS)
 endif()
 
 target_compile_options(${LINK_TARGET} PUBLIC ${BUILD_WARNING_FLAGS})
-
-# march=native optimization. Turn off for dist build
-include(CheckCXXCompilerFlag)
-check_cxx_compiler_flag("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
-if (COMPILER_SUPPORTS_MARCH_NATIVE)
-  target_compile_options(${LINK_TARGET} PUBLIC -march=native)
-endif()
-check_cxx_compiler_flag("-mtune=native" COMPILER_SUPPORTS_MTUNE_NATIVE)
-if (COMPILER_SUPPORTS_MTUNE_NATIVE)
-  target_compile_options(${LINK_TARGET} PUBLIC -mtune=native)
-endif()
 
 if (PROJECT_REQUIRE_LIB)
   MACRO(DEFINE_EXECUTABLE target_name target_sources)

@@ -8,6 +8,9 @@ FUNCTION(CONFIGURE_TARGET_OUTPUT buildtarget)
   if (NOT WIN32)
     set_target_properties(${buildtarget} PROPERTIES LINK_FLAGS "-Wl,--build-id=${GIT_SHA1}")
   endif()
+  if (NOT MSVC AND PROJECT_GENERATE_LINKER_MAP) 
+    set_target_properties(${buildtarget} PROPERTIES LINK_FLAGS "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/${buildtarget}_linker.map")
+  endif()
   set(TARGET_VERSION "0.0.0.0")
   if (NOT ${PROJECT_VERSION} STREQUAL "")
     set(TARGET_VERSION ${PROJECT_VERSION})
@@ -34,12 +37,14 @@ FUNCTION(CONFIGURE_TARGET_OUTPUT buildtarget)
     )
     target_sources(${buildtarget} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/${buildtarget}_version.rc")
   endif()
-  add_custom_command(
-    TARGET ${buildtarget} POST_BUILD
-    DEPENDS ${buildtarget}
-    COMMAND $<$<CONFIG:Release>:${CMAKE_STRIP}>
-    ARGS --strip-all $<TARGET_FILE:${buildtarget}>
-  )
+  if (NOT MSVC) 
+    add_custom_command(
+      TARGET ${buildtarget} POST_BUILD
+      DEPENDS ${buildtarget}
+      COMMAND $<$<CONFIG:Release>:${CMAKE_STRIP}>
+      ARGS --strip-all $<TARGET_FILE:${buildtarget}>
+    )
+  endif()
 ENDFUNCTION(CONFIGURE_TARGET_OUTPUT)
 
 FUNCTION(GENERATE_TARGET_BUILD_INFO buildtarget)
