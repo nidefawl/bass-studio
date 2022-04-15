@@ -22,13 +22,6 @@
 #include "gui/controls/knob.h"
 
 #include "container.h"
-#include "gui/controls/colorpick.h"
-#include "gui/controls/inputfield.h"
-#include "gui/controls/button.h"
-#include "gui/controls/splitter.h"
-#if BUILD_VSTHOST
-#include "gui/views/debugctr.h"
-#endif
 #include "gui/controls/splitter.h"
 #include "gui/container/container_layout_types.h"
 

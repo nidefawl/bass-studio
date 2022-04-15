@@ -2,18 +2,15 @@
 #include "event.h"
 #include "str_util.h"
 #include "gui/container/container.h"
-
-#include "modules.h"
-#include "internal_plugin.h"
-
-#include "host/mainctrl.h"
+#include "gui/controls/knoblabeled.h"
+#include "gui/plugin/plugin.h"
 #include "gui/plugin/pluginctr.h"
 #include "gui/plugin/pluginviewcontainers.h"
-
+#include "modules.h"
+#include "internal_plugin.h"
+#include "host/mainctrl.h"
 #include "track.h"
 #include "track_impl.h"
-#include "gui/plugin/plugin.h"
-
 #include "audioblock.h"
 #include "meter.h"
 #include "snapshot.h"

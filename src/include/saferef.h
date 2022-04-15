@@ -12,12 +12,6 @@ public:
     SafeRefHandler()                        = default;
     virtual int safeRefCreate(T*)           = 0;
     virtual T* safeRefGetPtr(int32_t refId) = 0;
-
-
-    /**
-     * this should be called before delete
-     * calling it in the base class destructor is not safe
-     */
     virtual void safeRefDestroy(int32_t refId) = 0;
 };
 

@@ -1,13 +1,12 @@
 #pragma once
-#include "math/seq_math.h"
-#include "math/vec.h"
 #include <nanovg.h>
 #include <vector>
 #include <algorithm>
-
+#include "types.h"
+#include "math/seq_math.h"
+#include "math/vec.h"
 #include "str_util.h"
 #include "event.h"
-#include <cmath>
 #include "saferef.h"
 #include "guicolors.h"
 #include "gui/table/table_fwd.h"
