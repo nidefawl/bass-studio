@@ -5,21 +5,21 @@ About
 
 Runtime & Installation
 ======================
-- Read-Write resources are stored in "C:\User\AppData\Roaming\daw\":
+- Read-Write resources are stored in "C:\Users\<user>\AppData\Roaming\daw\":
   - logfile, settings.json
   - plugin database (SQLite)
   - view-layout json files (F1-F10 keys)
   - theme presets (important)
 - Read-only resources are stored in "./res"
     - Fonts, Icons, GLSL shader code
-- Extract daw-userdata.zip to "C:\User\AppData\Roaming\daw\"
+- Extract daw-userdata.zip to "C:\Users\<user>\AppData\Roaming\daw\"
 - Build scripts will generate the executable to "./run/" 
-- The program must be started inside ./run/ to find the sibling ./res/ directory 
+- The program must be executed inside ./run/ to find the sibling ./res/ directory 
 
 Build requirements
 ==================
-- CMake v3.20+
-- Python 3
+- CMake v3.23+
+- Python 3.8+
 - Compiler with C++17 feature support:
     - Windows: Visual Studio 2019 or llvm-mingw 14.0.0 toolchain
     - Linux: clang minimum version 12
@@ -33,7 +33,7 @@ Clone both repositories:
 ```
 # create folder C:/dev or some other location (avoid spaces in path)
 cd C:/dev
-git clone 'https://github.com/nidefawl/daw-deps.git'
+git clone --recurse-submodules 'https://github.com/nidefawl/daw-deps.git'
 git clone 'https://github.com/nidefawl/daw.git'
 ```
 
@@ -60,7 +60,7 @@ cmake --build build -config Release
 ```
 - Copy soxr-msvc-release.dll from ../build-deps/install/soxr/bin to ./run
 
-- If dependencies were build at some other location `-PROJECT_DEPS_INSTALL_PATH=D:/somefolder/build-deps/build/install` has to be provided.
+- If dependencies were built at some other location `-PROJECT_DEPS_INSTALL_PATH=D:/somefolder/build-deps/build/install` has to be provided.
 
 
 Windows + Clang/GCC
@@ -88,12 +88,29 @@ cmake --build build
 - Copy libsoxr-clang-release.dll from ../build-deps/install/soxr/bin to ./run
 
 ## Other toolchains: 
-- Not supported: GCC MinGW64 from MSys2
+- Not tested: GCC MinGW64 from MSys2
 - Not supported: clang-cl from the Windows LLVM release
 
-macOS + clang
+Linux
+=====
+Required system dependeciesn:  
+
+```
+libx11-dev
+libxrandr-dev
+libxinerama-dev
+libxcursor-dev
+libxi-dev
+libasound2-dev
+python3-distutils
+libgtk-3-dev
+```
+- Build deps and daw same way as on windows
+- Copy user-data to ~/daw
+
+MacOS
 =============
-# OUTDATED MACOS BUILD INSTRUCTIONS
+- MacOS version is experimental/broken/untested
 - install brew
 ```
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
@@ -103,20 +120,11 @@ macOS + clang
 brew install llvm
 brew install cmake
 ```
-- building
+- Build deps with
 ```
-export BUILD_DIR=~/dev
-mkdir $BUILD_DIR
-cd ~$BUILD_DIR
-mkdir build
-mkdir build-deps
-git clone 'https://github.com/nidefawl/daw-deps.git'
-git clone 'https://github.com/nidefawl/daw.git'
-cd build-deps
-python $BUILD_DIR/daw-deps/build.py ./build ./install
-mkdir $BUILD_DIR/build
-cmake $BUILD_DIR/daw/ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DDAW_DEPS_PATH=$BUILD_DIR/daw-deps/ -DDEPS_BUILD_FOLDER=$BUILD_DIR/build-deps/install/
+python ../daw-deps/build.py -DCMAKE_OSX_DEPLOYMENT_TARGET=10.12
 ```
+- Build daw same way as on windows
 
 Running tests
 =============
