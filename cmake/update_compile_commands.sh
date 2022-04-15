@@ -21,5 +21,5 @@ if [ ! $? -eq 0 ]; then
     echo "CMake failed"
     exit $exit_status
 fi
-cp "${TMP_BUILD}/compile_commands.json" "${PROJECT_DIR}/compile_commands.json"
-echo "Updated ${PROJECT_DIR}/compile_commands.json"
+mv "${TMP_BUILD}/compile_commands.json" "${PROJECT_DIR}/build/compile_commands.json"
+echo "Updated ${PROJECT_DIR}/build/compile_commands.json"
