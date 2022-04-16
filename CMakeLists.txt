@@ -298,26 +298,27 @@ endif()
 if (WIN32 AND PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
   find_program(NSIS_MAKE NAMES makensis PATH_SUFFIXES NSIS)
   if (NOT NSIS_MAKE)
-    message(FATAL_ERROR "makensis not found")
+    message(STATUS "Skip windows-installer: makensis not found")
+  else()
+    execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)
+    get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
+    get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
+    set(PATH_RUNTIMES "${PATH_RUNTIMES}/bin")
+    add_custom_target(windows-installer
+      DEPENDS DAW vstscanner
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      COMMAND ${CMAKE_COMMAND} -E make_directory dist/bin
+      COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE:DAW> dist/bin/DAW.debug
+      COMMAND ${CMAKE_OBJCOPY} --strip-all $<TARGET_FILE:DAW> dist/bin/DAW${CMAKE_EXECUTABLE_SUFFIX}
+      COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=dist/bin/DAW.debug dist/bin/DAW${CMAKE_EXECUTABLE_SUFFIX}
+      COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE:vstscanner> dist/bin/vstscanner.debug
+      COMMAND ${CMAKE_OBJCOPY} --strip-all $<TARGET_FILE:vstscanner> dist/bin/vstscanner${CMAKE_EXECUTABLE_SUFFIX}
+      COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=dist/bin/vstscanner.debug dist/bin/vstscanner${CMAKE_EXECUTABLE_SUFFIX}
+      COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX} dist/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}
+      COMMAND ${CMAKE_COMMAND} -E copy ${PATH_RUNTIMES}/libc++${CMAKE_SHARED_MODULE_SUFFIX} dist/bin/libc++${CMAKE_SHARED_MODULE_SUFFIX}
+      COMMAND ${CMAKE_COMMAND} -E copy ${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX} dist/bin/libunwind${CMAKE_SHARED_MODULE_SUFFIX}
+      COMMAND ${NSIS_MAKE} /DAPP_VERSION=${CMAKE_PROJECT_VERSION} /DPRODUCT_VERSION=${CMAKE_PROJECT_VERSION}.0 /DPROJ_LOC=${CMAKE_CURRENT_SOURCE_DIR} /DDIST_LOC=${CMAKE_CURRENT_SOURCE_DIR}/dist/bin installer/NSIS-build-installer.nsi
+    )
+    add_dependencies(windows-installer DAW vstscanner)
   endif()
-  execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)
-  get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
-  get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
-  set(PATH_RUNTIMES "${PATH_RUNTIMES}/bin")
-  add_custom_target(windows-installer
-    DEPENDS DAW vstscanner
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    COMMAND ${CMAKE_COMMAND} -E make_directory dist/bin
-    COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE:DAW> dist/bin/DAW.debug
-    COMMAND ${CMAKE_OBJCOPY} --strip-all $<TARGET_FILE:DAW> dist/bin/DAW${CMAKE_EXECUTABLE_SUFFIX}
-    COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=dist/bin/DAW.debug dist/bin/DAW${CMAKE_EXECUTABLE_SUFFIX}
-    COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE:vstscanner> dist/bin/vstscanner.debug
-    COMMAND ${CMAKE_OBJCOPY} --strip-all $<TARGET_FILE:vstscanner> dist/bin/vstscanner${CMAKE_EXECUTABLE_SUFFIX}
-    COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=dist/bin/vstscanner.debug dist/bin/vstscanner${CMAKE_EXECUTABLE_SUFFIX}
-    COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX} dist/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}
-    COMMAND ${CMAKE_COMMAND} -E copy ${PATH_RUNTIMES}/libc++${CMAKE_SHARED_MODULE_SUFFIX} dist/bin/libc++${CMAKE_SHARED_MODULE_SUFFIX}
-    COMMAND ${CMAKE_COMMAND} -E copy ${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX} dist/bin/libunwind${CMAKE_SHARED_MODULE_SUFFIX}
-    COMMAND ${NSIS_MAKE} /DAPP_VERSION=${CMAKE_PROJECT_VERSION} /DPRODUCT_VERSION=${CMAKE_PROJECT_VERSION}.0 /DPROJ_LOC=${CMAKE_CURRENT_SOURCE_DIR} /DDIST_LOC=${CMAKE_CURRENT_SOURCE_DIR}/dist/bin installer/NSIS-build-installer.nsi
-  )
-  add_dependencies(windows-installer DAW vstscanner)
 endif()
