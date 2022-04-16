@@ -1327,7 +1327,7 @@ int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, 
         sampleIdx++;
     }
 
-    log_printf("wrote %lld samples to %s\n", samplesWritten, StringAsCStr(nameWaveFileTrack));
+    log_printf("Wrote %zd chunks/%zd samples into %s\n", sampleIdx, samplesWritten, StringAsCStr(nameWaveFileTrack));
     log_printf("processed %lld splits and %lld samples\n", samples.size(), samplesWritten2);
     drwav_close(pWav);
 
@@ -2612,25 +2612,17 @@ void vsthost::updatePluginWindows() {
     }
 }
 bool vsthost::onTick() {
-    {
-        int iDispatched = 0;
-        //ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-        for (auto* current : pluginInstancesVST2) {
-            if (current->bEditOpen && !current->bInEditIdle) {
-                current->bInEditIdle = true;
-                current->dispatch(effEditIdle);
-                current->bInEditIdle = false;
-                if (current->window) {
-                    //current->window->captureWindowFrame();
-                    current->updateWindow();
-                }
-                iDispatched++;
-            }
-            if (current->bWantsEffIdle && !current->bInEditIdle) {
-                current->bInEditIdle = true;
-                //current->dispatch(effIdle);
-                current->bInEditIdle = false;
-                iDispatched++;
+    // Currently no lock
+    //ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+    for (auto* current : pluginInstancesVST2) {
+        //TODO: should we skip dispatching if current->bWantsEffIdle == false ?!
+        if (current->bEditOpen && !current->bInEditIdle) {
+            current->bInEditIdle = true;
+            current->dispatch(effEditIdle);
+            current->bInEditIdle = false;
+            if (current->window) {
+                //current->window->captureWindowFrame();
+                current->updateWindow();
             }
         }
     }
