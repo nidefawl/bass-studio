@@ -24,7 +24,7 @@ FUNCTION(CONFIGURE_TARGET_OUTPUT buildtarget)
     string(REPLACE "." "," WIN_EXE_VERSION "${TARGET_VERSION}")
     set(VER_FILEVERSION ${WIN_EXE_VERSION})
     set(VER_FILEVERSION_STR "${TARGET_VERSION}")
-    set(VER_FILDESCRIPTION_STR "git ${GIT_SHA1_DIRTY}")
+    set(VER_FILDESCRIPTION_STR "${PROJECT_NAME} ${TARGET_VERSION}")
     set(VER_PRODUCTVERSION ${WIN_EXE_VERSION})
     set(VER_PRODUCTVERSION_STR "${TARGET_VERSION}")
     set(VER_PRODUCTNAME_STR "${PROJECT_NAME}")
@@ -36,15 +36,7 @@ FUNCTION(CONFIGURE_TARGET_OUTPUT buildtarget)
       NEWLINE_STYLE LF
     )
     target_sources(${buildtarget} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/${buildtarget}_version.rc")
-  endif()
-  if (NOT MSVC) 
-    add_custom_command(
-      TARGET ${buildtarget} POST_BUILD
-      DEPENDS ${buildtarget}
-      COMMAND $<$<CONFIG:Release>:${CMAKE_STRIP}>
-      ARGS --strip-all $<TARGET_FILE:${buildtarget}>
-    )
-  endif()
+  endif()  
 ENDFUNCTION(CONFIGURE_TARGET_OUTPUT)
 
 FUNCTION(GENERATE_TARGET_BUILD_INFO buildtarget)

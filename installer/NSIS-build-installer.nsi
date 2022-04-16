@@ -3,15 +3,24 @@
 ######################################################################
 
 Unicode True
-
+!ifndef PROJ_LOC
 !define PROJ_LOC "C:\Users\Michael\daw"
+!endif
+!ifndef DIST_LOC
+!define DIST_LOC "C:\Users\Michael\daw\dist\bin"
+!endif
+!ifndef APP_VERSION
 !define APP_VERSION "0.4.5.1"
+!endif
+!ifndef PRODUCT_VERSION
+!define PRODUCT_VERSION "0.4.5.1"
+!endif
 !define APP_SHORTNAME "daw"
 !define APP_NAME "DAW"
 !define COMP_NAME "Hept"
 !define WEB_SITE "tbd"
 !define VERSION ${APP_VERSION}
-!define COPYRIGHT "Michael Hept © 2022"
+!define COPYRIGHT "Michael Hept ï¿½ 2022"
 !define DESCRIPTION "DAW"
 !define LICENSE_TXT "${PROJ_LOC}\installer\license_en.rtf"
 !define INSTALLER_NAME "${PROJ_LOC}\installer\daw-v${APP_VERSION}-setup.exe"
@@ -27,7 +36,7 @@ var SM_Folder
 
 ######################################################################
 
-VIProductVersion  "${VERSION}"
+VIProductVersion "${PRODUCT_VERSION}"
 VIAddVersionKey "ProductName"  "${APP_NAME}"
 VIAddVersionKey "CompanyName"  "${COMP_NAME}"
 VIAddVersionKey "LegalCopyright"  "${COPYRIGHT}"
@@ -59,7 +68,7 @@ InstallDir "$PROGRAMFILES64\${APP_SHORTNAME}-${APP_VERSION}"
 !insertmacro MUI_PAGE_DIRECTORY
 
 !ifdef REG_START_MENU
-!define MUI_STARTMENUPAGE_DEFAULTFOLDER "${APP_SHORTNAME}-${APP_VERSION}"
+!define MUI_STARTMENUPAGE_DEFAULTFOLDER "${APP_NAME}\${APP_NAME}-${APP_VERSION}"
 !define MUI_STARTMENUPAGE_REGISTRY_ROOT "${REG_ROOT}"
 !define MUI_STARTMENUPAGE_REGISTRY_KEY "${UNINSTALL_PATH}"
 !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "${REG_START_MENU}"
@@ -84,13 +93,11 @@ Section -MainProgram
 ${INSTALL_TYPE}
 SetOverwrite ifnewer
 SetOutPath "$INSTDIR"
-File /oname=${MAIN_APP_EXE} "${PROJ_LOC}\run\DAW-Clang-relwithdebinfo.exe"
-File "${PROJ_LOC}\run\DAW-Clang-relwithdebinfo.pdb"
-File /oname=daw-vstscanner.exe "${PROJ_LOC}\run\vstscanner-Clang-relwithdebinfo.exe"
-File "${PROJ_LOC}\run\vstscanner-Clang-relwithdebinfo.pdb"
-File "${PROJ_LOC}\run\libsoxr-clang-release.dll"
-File "${PROJ_LOC}\run\libunwind.dll"
-File "${PROJ_LOC}\run\libc++.dll"
+File /oname=${MAIN_APP_EXE} "${DIST_LOC}\DAW.exe"
+File /oname=daw-vstscanner.exe "${DIST_LOC}\vstscanner.exe"
+File "${DIST_LOC}\libsoxr-clang-release.dll"
+File "${DIST_LOC}\libunwind.dll"
+File "${DIST_LOC}\libc++.dll"
 SetOutPath "$INSTDIR\res"
 File "${PROJ_LOC}\res\led.png"
 File "${PROJ_LOC}\res\led_glow.png"
@@ -176,9 +183,9 @@ WriteUninstaller "$INSTDIR\uninstall.exe"
 !ifdef REG_START_MENU
 !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
 CreateDirectory "$SMPROGRAMS\$SM_Folder"
-CreateShortCut "$SMPROGRAMS\$SM_Folder\${APP_NAME}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
-CreateShortCut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
-CreateShortCut "$SMPROGRAMS\$SM_Folder\Uninstall ${APP_NAME}.lnk" "$INSTDIR\uninstall.exe"
+CreateShortCut "$SMPROGRAMS\$SM_Folder\${APP_NAME}-${APP_VERSION}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
+CreateShortCut "$DESKTOP\${APP_NAME}-${APP_VERSION}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
+CreateShortCut "$SMPROGRAMS\$SM_Folder\Uninstall ${APP_NAME}-${APP_VERSION}.lnk" "$INSTDIR\uninstall.exe"
 
 !ifdef WEB_SITE
 WriteIniStr "$INSTDIR\${APP_NAME} website.url" "InternetShortcut" "URL" "${WEB_SITE}"
