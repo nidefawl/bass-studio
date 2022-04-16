@@ -57,7 +57,7 @@ DEFINE_TEST(
   test_seh_exception_handling.cpp
 )
 if (MINGW AND CLANG)
-  target_compile_options(test_seh_exception_handling PRIVATE "-fno-lto;-mtune=generic")
+  target_compile_options(test_seh_exception_handling PRIVATE "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections")
 endif()
 
 DEFINE_TEST(
