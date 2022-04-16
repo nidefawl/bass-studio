@@ -3306,9 +3306,7 @@ void vsthost::checkScanner() {
 
         }
     } catch (std::exception& e) {
-        std::cout << "exception: " << e.what() << std::endl;
-    } catch (...) {
-        std::cout << "Unhandled exception" << std::endl;
+        log_lf(Log::L_ERROR, "checkScanner: %s", e.what());
     }
 }
 
@@ -3326,9 +3324,7 @@ void vsthost::stopScanner() {
 
         }
     } catch (std::exception& e) {
-        std::cout << "exception: " << e.what() << std::endl;
-    } catch (...) {
-        std::cout << "Unhandled exception" << std::endl;
+        log_lf(Log::L_ERROR, "stopScanner: %s", e.what());
     }
 }
 

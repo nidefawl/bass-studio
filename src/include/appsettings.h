@@ -4,8 +4,8 @@
 #include "grid.h"
 #include "host/audio_config.h"
 #include "str_util.h"
-#include <ctime>
-#include <iostream>
+#include <vector>
+#include <memory>
 #include <map>
 
 
@@ -96,34 +96,7 @@ class recentfilelist {
 public:
     std::vector<String> sortedEntries;
     std::map<String, recentfilelistentry> recentFilesMeta;
-    void add(const String& path) {
-        while (sortedEntries.size() > 31) {
-            String& s = sortedEntries.back();
-            auto it = recentFilesMeta.find(s);
-            if (it != recentFilesMeta.end()) {
-                recentFilesMeta.erase(it);
-            }
-            sortedEntries.pop_back();
-        }
-        auto it = sortedEntries.begin();
-        while (it != sortedEntries.end()) {
-            String& s = *it;
-            if (s == path) {
-                it = sortedEntries.erase(it);
-            } else {
-                it++;
-            }
-        }
-
-        sortedEntries.insert(sortedEntries.begin(), path);
-
-        std::time_t t = std::time(nullptr); // get time now
-        std::tm* now = std::localtime(&t);
-        auto strDate = std::to_string(now->tm_year + 1900) +
-                       "-" + std::to_string(now->tm_mon + 1) +
-                       "-" + std::to_string(now->tm_mday) + "\n";
-        recentFilesMeta[path] = recentfilelistentry{path, strDate};
-    }
+    void add(const String& path);
 };
 
 struct app_vst2_config {
