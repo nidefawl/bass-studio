@@ -58,6 +58,7 @@ int _________vasprintf(char** strp, const char* fmt, va_list ap) {
             r = vsnprintf(*strp, size + 1, fmt, ap);//+1 for null
             if ((r < 0) || (r > size)) {
                 free(*strp);
+                *strp = NULL;
                 r = -1;
             }
         }
