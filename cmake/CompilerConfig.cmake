@@ -10,8 +10,7 @@ if (POLICY CMP0065)
 endif ()
 
 set(PROJECT_SRC_PATH "${CMAKE_SOURCE_DIR}/src" CACHE PATH "Project source directory")
-# instead of an installation step we only copy the executable to PROJECT_WORKING_DIR
-set(PROJECT_WORKING_DIR "../run/" CACHE PATH "working directory (run)")
+set(PROJECT_WORKING_DIR "${CMAKE_CURRENT_SOURCE_DIR}/run" CACHE PATH "working directory (run)")
 get_filename_component(ABS_WORKING_DIR "${PROJECT_WORKING_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}") # CMAKE_SOURCE_DIR for out of source builds?!
 
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
