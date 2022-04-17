@@ -29,7 +29,7 @@ inline std::string stringify(T* val) {
     constexpr size_t MAX_LEN = 512U;
     char stringBuf[MAX_LEN];
 #ifdef _WIN32
-    auto ret = _snprintf_s(stringBuf, MAX_LEN, _TRUNCATE, "%012ZX", reinterpret_cast<size_t>(val));
+    auto ret = _snprintf_s(stringBuf, MAX_LEN, _TRUNCATE, "%012zx", reinterpret_cast<size_t>(val));
     if (ret == -1) {
         ret = MAX_LEN - 2;
         stringBuf[MAX_LEN - 1] = '\0';
@@ -49,6 +49,16 @@ inline std::string stringify(const float& val) {
 template<>
 inline std::string stringify(const bool& val) {
     return val ? "true" : "false";
+}
+
+template<>
+inline std::string stringify(const std::string& val) {
+    return val;
+}
+
+template<>
+inline std::string stringify(const char* val) {
+    return val;
 }
 
 template<>
