@@ -1,6 +1,6 @@
 #pragma once
+#include <memory>
 #include "glheaders.h"
-
 #include "types.h"
 #include "logging.h"
 #include "str_util.h"

@@ -81,14 +81,16 @@ else()
   elseif (PROJECT_CFG_DEBUG_STD_LIB)
     add_compile_definitions(_GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC _LIBCPP_DEBUG)
   endif()
-  add_compile_definitions(_LIBCPP_NO_EXCEPTIONS) 
+  if (CLANG)
+    add_compile_definitions(_LIBCPP_NO_EXCEPTIONS)  
+    add_compile_options(-ffunction-sections -fdata-sections)
+  endif()
   # add_compile_options(-ftime-trace) # profile compilation times
   # address sanitizer: 
   # Disable ADD_POST_BUILD_COMMANDS and set ASAN_SYMBOLIZER_PATH=path\to\bin\llvm-symbolizer
   # add_compile_options(-fsanitize=address)
   # add_link_options(-fsanitize=address)
 
-  add_compile_options(-ffunction-sections -fdata-sections)
   # march=native optimization. Turn off for dist build
   add_compile_options(-march=native -mtune=native)
   add_link_options(-Wl,--gc-sections)
@@ -99,7 +101,7 @@ if (NOT MSVC AND CLANG)
   add_link_options(-fcolor-diagnostics -fansi-escape-codes)
 endif()
 
-# if (WIN32 AND NOT MSVC AND CLANG)
+# if (MINGW AND CLANG)
 #   add_compile_options($<$<CONFIG:Debug,RelWithDebInfo>:-gcodeview>)
 #   add_link_options($<$<CONFIG:Debug,RelWithDebInfo>:-Wl,-pdb=>)
 # endif()

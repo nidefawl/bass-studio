@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <atomic>
+#include <limits>
 #include "assert_dbg.h"
 
 #define STL_CONTAINS(x, y) (std::find(x.cbegin(), x.cend(), y) != x.cend())

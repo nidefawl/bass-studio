@@ -56,7 +56,7 @@ DEFINE_TEST(
   test_seh_exception_handling FALSE 
   test_seh_exception_handling.cpp
 )
-if (MINGW AND CLANG)
+if (MINGW)
   target_compile_options(test_seh_exception_handling PRIVATE "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections")
 endif()
 

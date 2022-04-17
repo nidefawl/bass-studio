@@ -121,7 +121,7 @@ foreach (f ${CPP_ALL_FILES})
 endforeach ()
 
 
-if (MINGW AND CLANG)
+if (MINGW)
   # The SEH assembly will not work correctly on clang mingw if any level of optimization is applied
   set(SRC_FILES_NO_OPTIMIZE src/host/plugin/vst_plugin_dispatch.cpp)
   set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections")
