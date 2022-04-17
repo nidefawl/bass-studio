@@ -1,72 +1,52 @@
-#include "str_util.h"
-#include <cstdarg>
+#include <array>
 #include <climits>
+#include <cstdarg>
+#include <stdlib.h>
 #include <vector>
+#include "assert_dbg.h"
 #include "math/seq_math.h"
 #include "seq_time.h"
-#include "assert_dbg.h"
+#include "str_util.h"
 
 #ifdef _WIN32
 #include <Windows.h>
 #endif
+
 #if __linux__
 #include <cstdio>
 #endif
 
-#if __linux__ || defined(__APPLE__)
-int _vscprintf(const char* format, va_list pargs) {
-    int retval;
-    va_list argcopy;
-    va_copy(argcopy, pargs);
-    retval = vsnprintf(NULL, 0, format, argcopy);
-    va_end(argcopy);
-    return retval;
-}
-#endif
-
 String StringFormat(const char* fmt, ...) {
-    char* strp = NULL;
-    String str;
-    int r;
-    va_list ap;
-    va_start(ap, fmt);
-    r = _________vasprintf(&strp, fmt, ap);
-    va_end(ap);
-    if (r > 0) {
-        str = strp;
+    std::array<char, 4096> FormatBuffer{};
+    va_list args;
+#ifdef _WIN32
+    va_start(args, fmt);
+    int ret = vsnprintf_s(FormatBuffer.data(), FormatBuffer.size(), _TRUNCATE, fmt, args);
+    va_end(args);
+    if (ret == -1) {
+        ret = FormatBuffer.size() - 1;
     }
-    if (strp) {
-        free(strp);
+    if (ret < 0 || ret >= FormatBuffer.size()) {
+        dbgassert(0);
+        return {};
     }
-    return str;
-}
-int _________asprintf(char** strp, const char* fmt, ...) {
-    int r;
-    va_list ap;
-    va_start(ap, fmt);
-    r = _________vasprintf(strp, fmt, ap);
-    va_end(ap);
-    return (r);
-}
-
-int _________vasprintf(char** strp, const char* fmt, va_list ap) {
-    int r = -1, size = _vscprintf(fmt, ap);
-
-    if ((size >= 0) && (size < INT_MAX)) {
-        *strp = (char*) malloc(size + 1);//+1 for null
-        if (*strp) {
-            r = vsnprintf(*strp, size + 1, fmt, ap);//+1 for null
-            if ((r < 0) || (r > size)) {
-                free(*strp);
-                *strp = NULL;
-                r = -1;
-            }
-        }
-    } else {
-        *strp = 0;
+#else
+    //TODO test truncation on apple
+    va_start(args, fmt);
+    int ret = vsnprintf(FormatBuffer.data(), FormatBuffer.size(), fmt, args);
+    va_end(args);
+    if (ret == -1) {
+        dbgassert(0);
+        return {};
     }
-
-    return (r);
+    // linux does the right thing: 
+    // write up to FormatBuffer.size()-2 chars and put \0 at FormatBuffer.size()-1
+    if (ret >= FormatBuffer.size()) {
+        ret = FormatBuffer.size();
+        dbgassert(FormatBuffer[ret - 1] == '\0');
+    }
+#endif
+    return String{FormatBuffer.data(), static_cast<String::size_type>(ret)};
 }
 
 String FormatTempo(float tempo) {
@@ -87,16 +67,16 @@ void replaceString(String& s, String f, String r) {
     }
 }
 String tickAsBeatString(int32_t tick) {
-    static const size_t buf_size        = 32;
-    static thread_local char* const buf = (char*) malloc(buf_size);
-    auto beatBarNth                     = tickToBarBeat16th(tick, 4, 2);
+    std::array<char, 32> FormatBuffer{};
+    const auto beatBarNth  = tickToBarBeat16th(tick, 4, 2);
     constexpr const char format[]       = "%d.%d.%d.%d";
 #ifdef __APPLE__
-    snprintf(buf, buf_size, format, beatBarNth.bar + 1, beatBarNth.beat + 1, beatBarNth.th + 1);
+    int ret = snprintf(FormatBuffer.data(), FormatBuffer.size(), format, beatBarNth.bar + 1, beatBarNth.beat + 1, beatBarNth.th + 1);
 #else
-    _snprintf_s(buf, buf_size, _TRUNCATE, format, beatBarNth.bar + 1, beatBarNth.beat + 1, beatBarNth.th + 1, beatBarNth.subticks);
+    int ret = _snprintf_s(FormatBuffer.data(), FormatBuffer.size(), _TRUNCATE, format, beatBarNth.bar + 1, beatBarNth.beat + 1, beatBarNth.th + 1, beatBarNth.subticks);
 #endif
-    return String(buf);
+    if (ret < 0) return {};
+    return String{FormatBuffer.data(), static_cast<String::size_type>(ret)};
 }
 
 static const char* const noteNames[12]{
@@ -104,15 +84,16 @@ static const char* const noteNames[12]{
 };
 
 const char* noteName(int note) {//DONT KEEP REFERENCE
-    static const size_t buf_size        = 32;
-    static thread_local char* const buf = (char*) malloc(buf_size);
+    static thread_local std::array<char, 32> FormatBuffer{};
     int noteNameIdx                     = math::clamp(note % 12, 0, 11);
 #ifdef __APPLE__
-    snprintf(buf, buf_size, "%s%d", noteNames[noteNameIdx], (note / 12) - 2);
+    int ret = snprintf(FormatBuffer.data(), FormatBuffer.size(), "%s%d", noteNames[noteNameIdx], (note / 12) - 2);
 #else
-    _snprintf_s(buf, buf_size, _TRUNCATE, "%s%d", noteNames[noteNameIdx], (note / 12) - 2);
+    int ret = _snprintf_s(FormatBuffer.data(), FormatBuffer.size(), _TRUNCATE, "%s%d", noteNames[noteNameIdx], (note / 12) - 2);
 #endif
-    return buf;
+    if (ret < 0) ret = 0;
+    FormatBuffer[ret] = 0;
+    return FormatBuffer.data();
 }
 #ifdef _WIN32
 #ifndef USE_WSTRING
@@ -133,7 +114,6 @@ uint32_t wcharToSring(uint32_t codepage, const wchar_t *utf16, size_t utf16_len,
 #endif
 
 uint32_t stringToWchar(uint32_t codepage, const char* mbsz, size_t mbsz_len, std::vector<wchar_t>& converted) {
-      WINBASEAPI int WINAPI MultiByteToWideChar (UINT CodePage, DWORD dwFlags, LPCCH lpMultiByteStr, int cbMultiByte, LPWSTR lpWideCharStr, int cchWideChar);
     int len  = MultiByteToWideChar(codepage, 0, mbsz, (int)mbsz_len, converted.data(), 0);
     if (len  > 0) {
         converted.reserve(len);
@@ -150,6 +130,8 @@ uint32_t stringToWchar(uint32_t codepage, const char* mbsz, size_t mbsz_len, std
 #endif//_WIN32
 
 /**
+ * relFileName
+ *
  * finds the path segment /src/ by reverse search on input
  * then returns everything after /src/
  *  C:\Users\Michael\daw\src\host\vst_host.cpp -> \host\vst_host.cpp

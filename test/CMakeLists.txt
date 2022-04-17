@@ -6,12 +6,6 @@ set(TC_WARNING_FLAGS "")
 
 add_compile_definitions("PROJECT_UNITTEST")
 
-if( CLANG )
-  # Ignore warnings related to the GNU statement expressions if we
-  # compile with clang.
-  # ENABLE_IF_SUPPORTED("-Wno-gnu-statement-expression" )
-endif()
-
 # Enable high warning levels
 if (MSVC) 
  list(APPEND TC_WARNING_FLAGS /W3)
@@ -68,6 +62,16 @@ DEFINE_TEST(
   ../src/util/testing_environment.cpp
   ../src/util/str_util.cpp
   ../src/util/dsp_util.cpp
+  ../src/threads/thread.cpp
+)
+
+DEFINE_TEST(
+  test_strings FALSE
+  test_strings.cpp
+  common/test_common.cpp
+  common/test_stubs.cpp
+  ../src/util/testing_environment.cpp
+  ../src/util/str_util.cpp
   ../src/threads/thread.cpp
 )
 

@@ -6,9 +6,6 @@
 extern "C" {
 #endif
 
-int _________vasprintf(char** strp, const char* fmt, va_list ap);
-int _________asprintf(char** strp, const char* fmt, ...);
-
 #ifdef __cplusplus
 }
 #endif
