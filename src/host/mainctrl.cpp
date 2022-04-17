@@ -2350,15 +2350,6 @@ track_t* DawInstance::createNewTrack(int trackType) {
     String name       = StringFormat("%s %d", TrackTypeToName(trackType), tryTypeOffset + 1);
     track_t* newTrack = new track_t(trackType, name, true);
     newTrack->rgb     = colorPalette[rand.rng_rand(COLOR_PALETTE_LEN)];
-
-    switch (trackType) {
-        case TRACK_TYPE_MIDI:
-            break;
-        case TRACK_TYPE_RETURN:
-            break;
-        case TRACK_TYPE_MASTER:
-            break;
-    }
     return newTrack;
 }
 
@@ -2366,7 +2357,6 @@ track_t* DawInstance::insertNewTrack(int trackInsertPos, int trackType, int flag
     track_t* newTrack = createNewTrack(trackType);
     ThreadLock lock   = playThread.lockThread();
     addTrackImpl(trackInsertPos, newTrack, flags);
-
     return newTrack;
 }
 
