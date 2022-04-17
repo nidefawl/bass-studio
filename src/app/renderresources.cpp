@@ -51,13 +51,13 @@ namespace RenderResources {
     std::unordered_map<NVGcontext*, NvgFonts> perContextFonts;
     std::vector<FontDesc> fontsInstalled;
     namespace {
-        void load(NVGcontext* vg, String path, ImageBuf& out) {
+        void load(NVGcontext* vg, const char* path, ImageBuf& out) {
             try {
                 if (ReadImage(path, out) < 0) {
-                    log_lf(Log::L_ERROR, "Error loading image %s\n", StringAsCStr(path));
+                    log_lf(Log::L_ERROR, "Error loading image %s\n", path);
                 }
             } catch (appexception& e) {
-                log_lf(Log::L_ERROR, "Failed loading image %s: %s\n", StringAsCStr(path), e.what());
+                log_lf(Log::L_ERROR, "Failed loading image %s: %s\n", path, e.what());
             }
         }
     } // namespace
@@ -68,36 +68,36 @@ namespace RenderResources {
                 ImageBuf& buf = imgIconsBuf[i];
                 dbgassert((int)buf.bytes.size() == buf.w * buf.h * 4);
             }
-            load(vg, StringFormat("icons/synth.png"), imgIconsBuf[ICON_SYNTH]);
-            load(vg, StringFormat("icons/effect.png"), imgIconsBuf[ICON_EFFECT]);
-            load(vg, StringFormat("icons/folder.png"), imgIconsBuf[ICON_FOLDER]);
-            load(vg, StringFormat("icons/folder_open.png"), imgIconsBuf[ICON_FOLDER_OPEN]);
-            load(vg, StringFormat("icons/file.png"), imgIconsBuf[ICON_FILE]);
-            load(vg, StringFormat("icons/save.png"), imgIconsBuf[ICON_SAVE]);
-            load(vg, StringFormat("icons/copy.png"), imgIconsBuf[ICON_COPY]);
-            load(vg, StringFormat("icons/paste.png"), imgIconsBuf[ICON_PASTE]);
-            load(vg, StringFormat("icons/cut.png"), imgIconsBuf[ICON_CUT]);
-            load(vg, StringFormat("icons/adjust.png"), imgIconsBuf[ICON_ADJUST]);
-            load(vg, StringFormat("icons/close.png"), imgIconsBuf[ICON_CLOSE]);
-            load(vg, StringFormat("icons/bypass.png"), imgIconsBuf[ICON_BYPASS]);
-            load(vg, StringFormat("icons/loop.png"), imgIconsBuf[ICON_LOOP]);
-            load(vg, StringFormat("icons/arr_down.png"), imgIconsBuf[ICON_ARR_DOWN]);
-            load(vg, StringFormat("icons/arr_left.png"), imgIconsBuf[ICON_ARR_LEFT]);
-            load(vg, StringFormat("icons/arr_right.png"), imgIconsBuf[ICON_ARR_RIGHT]);
-            load(vg, StringFormat("icons/arr_up.png"), imgIconsBuf[ICON_ARR_UP]);
-            load(vg, StringFormat("icons/plus.png"), imgIconsBuf[ICON_PLUS]);
-            load(vg, StringFormat("icons/minus.png"), imgIconsBuf[ICON_MINUS]);
-            load(vg, StringFormat("icons/automation.png"), imgIconsBuf[ICON_AUTOMATION]);
-            load(vg, StringFormat("led.png"), imgIconsBuf[IMG_LED]);
-            load(vg, StringFormat("led_off.png"), imgIconsBuf[IMG_LED_OFF]);
-            load(vg, StringFormat("led_glow.png"), imgIconsBuf[IMG_LED_GLOW]);
-            load(vg, StringFormat("icons/speaker.png"), imgIconsBuf[ICON_SPEAKER]);
-            load(vg, StringFormat("icons/x.png"), imgIconsBuf[ICON_X]);
-            load(vg, StringFormat("icons/daw_icon.png"), imgIconsBuf[ICON_DAW_EXE]);
-            load(vg, StringFormat("icons/opt_unlocked.png"), imgIconsBuf[ICON_OPT_UNLOCKED]);
-            load(vg, StringFormat("icons/opt_locked.png"), imgIconsBuf[ICON_OPT_LOCKED]);
-            load(vg, StringFormat("icons/midiplug.png"), imgIconsBuf[ICON_MIDIPLUG]);
-            load(vg, StringFormat("icons/duplicate.png"), imgIconsBuf[ICON_DUPLICATE]);
+            load(vg, "icons/synth.png", imgIconsBuf[ICON_SYNTH]);
+            load(vg, "icons/effect.png", imgIconsBuf[ICON_EFFECT]);
+            load(vg, "icons/folder.png", imgIconsBuf[ICON_FOLDER]);
+            load(vg, "icons/folder_open.png", imgIconsBuf[ICON_FOLDER_OPEN]);
+            load(vg, "icons/file.png", imgIconsBuf[ICON_FILE]);
+            load(vg, "icons/save.png", imgIconsBuf[ICON_SAVE]);
+            load(vg, "icons/copy.png", imgIconsBuf[ICON_COPY]);
+            load(vg, "icons/paste.png", imgIconsBuf[ICON_PASTE]);
+            load(vg, "icons/cut.png", imgIconsBuf[ICON_CUT]);
+            load(vg, "icons/adjust.png", imgIconsBuf[ICON_ADJUST]);
+            load(vg, "icons/close.png", imgIconsBuf[ICON_CLOSE]);
+            load(vg, "icons/bypass.png", imgIconsBuf[ICON_BYPASS]);
+            load(vg, "icons/loop.png", imgIconsBuf[ICON_LOOP]);
+            load(vg, "icons/arr_down.png", imgIconsBuf[ICON_ARR_DOWN]);
+            load(vg, "icons/arr_left.png", imgIconsBuf[ICON_ARR_LEFT]);
+            load(vg, "icons/arr_right.png", imgIconsBuf[ICON_ARR_RIGHT]);
+            load(vg, "icons/arr_up.png", imgIconsBuf[ICON_ARR_UP]);
+            load(vg, "icons/plus.png", imgIconsBuf[ICON_PLUS]);
+            load(vg, "icons/minus.png", imgIconsBuf[ICON_MINUS]);
+            load(vg, "icons/automation.png", imgIconsBuf[ICON_AUTOMATION]);
+            load(vg, "led.png", imgIconsBuf[IMG_LED]);
+            load(vg, "led_off.png", imgIconsBuf[IMG_LED_OFF]);
+            load(vg, "led_glow.png", imgIconsBuf[IMG_LED_GLOW]);
+            load(vg, "icons/speaker.png", imgIconsBuf[ICON_SPEAKER]);
+            load(vg, "icons/x.png", imgIconsBuf[ICON_X]);
+            load(vg, "icons/daw_icon.png", imgIconsBuf[ICON_DAW_EXE]);
+            load(vg, "icons/opt_unlocked.png", imgIconsBuf[ICON_OPT_UNLOCKED]);
+            load(vg, "icons/opt_locked.png", imgIconsBuf[ICON_OPT_LOCKED]);
+            load(vg, "icons/midiplug.png", imgIconsBuf[ICON_MIDIPLUG]);
+            load(vg, "icons/duplicate.png", imgIconsBuf[ICON_DUPLICATE]);
 
             for (int i = 0; i < NUM_IMGS; i++) {
                 ImageBuf& buf = imgIconsBuf[i];
