@@ -546,6 +546,8 @@ namespace NodeGraph {
         gui_graph_port* portDst;
         gui_graph_port* portSrc;
         edge_spline spline;
+        edge_t(gui_graph_port* _portDst, gui_graph_port* _portSrc) : portDst(_portDst), portSrc(_portSrc) {
+        }
     };
     bool getChannelRef(const gui_graph_port* port, const bool isSrc, DAW::channel_ref_t& ref) {
         auto procNode = port->getNode()->getProcessingNode();

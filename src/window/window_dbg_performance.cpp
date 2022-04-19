@@ -54,6 +54,9 @@ struct ProfilingDataRenderInstance {
     vec2 instancePos{};
     String name;
     int32_t nextFreeChannelIdx = 0;
+    explicit ProfilingDataRenderInstance(const void* instancePtr) : instancePtr(instancePtr) {
+        
+    };
 };
 
 

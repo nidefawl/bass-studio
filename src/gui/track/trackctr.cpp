@@ -885,7 +885,7 @@ void guictr_tracks::removeTrack(track_t* track, int flags) {
 
 void guictr_tracks::addTrack(track_t* track, int flags) {
     dbgassert(track->audio);
-    auto* entry = new track_gui_entry_t{ nullptr };
+    auto* entry = new track_gui_entry_t{};
 
     entry->parentCtrl = this->dawCtrl;
     entry->track      = track;

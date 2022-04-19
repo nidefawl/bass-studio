@@ -13,7 +13,7 @@ struct parameter_ref_t {
 };
 
 class action_modify_effect_parameter : public action_base {
-    parameter_ref_t ref{ 0 };
+    parameter_ref_t ref{};
     float valBefore = 0;
     float valAfter  = 0;
 
