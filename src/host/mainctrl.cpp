@@ -92,7 +92,7 @@ void printLeakedAudioBuffers();
 void printClipAllocations();
 
 extern "C" {
-void resetShaderTimeOffset();
+void resetShaderTimeOffset(void);
 }
 
 void dragdrop_midifile::reset() {

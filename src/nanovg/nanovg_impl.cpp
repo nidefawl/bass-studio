@@ -9,11 +9,11 @@
 
 hires_timer_t globalNanoVgTimer;
 extern "C" {
-void resetShaderTimeOffset() {
+void resetShaderTimeOffset(void) {
 	globalNanoVgTimer.reset();
 }
-float glnvg__getTimeMillisf() {
-	return (float) globalNanoVgTimer.getTimeDouble() * 1000.0;
+float glnvg__getTimeMillisf(void) {
+	return (float) (globalNanoVgTimer.getTimeDouble() * 1000.0);
 }
 }
 

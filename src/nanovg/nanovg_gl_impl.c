@@ -1263,7 +1263,7 @@ static GLNVGblend glnvg__blendCompositeOperation(NVGcompositeOperationState op)
 
 void glnvg__updateMvp(int, float, float);
 
-float glnvg__getTimeMillisf();
+float glnvg__getTimeMillisf(void);
 
 static void glnvg__renderFlush(void* uptr)
 {
