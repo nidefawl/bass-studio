@@ -27,7 +27,7 @@ namespace {
         dbgassert(!tlsThreadInfo || !tlsThreadInfo->isKnownThread);
         auto* threadInfo          = new threadlocal_threadinfo_t{};
         threadInfo->threadId      = getNextThreadId();
-        threadInfo->threadName    = threadName + StringFormat("-%d", threadInfo->threadId);
+        threadInfo->threadName    = threadName + "-" + std::to_string(threadInfo->threadId);
         threadInfo->isKnownThread = isKnownThread;
         tlsThreadInfo             = threadInfo;
     }

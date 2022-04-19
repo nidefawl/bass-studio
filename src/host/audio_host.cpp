@@ -274,8 +274,8 @@ audiohost::HostIOStream::HostIOStream(audiohost* const _host, int32_t _streamId,
     channelsInput.resize(cfg.input.size());
     channelsOutput.resize(cfg.output.size());
     for (io_cfg_channel& track : cfg.input) {
-        dbgassert(track.idx < channelsInput.size());
-        if (track.idx >= channelsInput.size()) {
+        dbgassert(track.idx < CtrSize(channelsInput));
+        if (track.idx >= CtrSize(channelsInput)) {
             continue;
         }
         channelsInput[track.idx] = std::make_shared<HostIOStream::IOChannel>(track.idx,
@@ -284,8 +284,8 @@ audiohost::HostIOStream::HostIOStream(audiohost* const _host, int32_t _streamId,
                                                                      metersInput.getSubChannelMeter(track.offset, getNumChannelsFromTrackType(track.type)));
     }
     for (io_cfg_channel& track : cfg.output) {
-        dbgassert(track.idx < channelsOutput.size());
-        if (track.idx >= channelsOutput.size()) {
+        dbgassert(track.idx < CtrSize(channelsOutput));
+        if (track.idx >= CtrSize(channelsOutput)) {
             continue;
         }
         channelsOutput[track.idx] = std::make_shared<HostIOStream::IOChannel>(track.idx,

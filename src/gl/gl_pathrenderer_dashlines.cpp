@@ -209,7 +209,7 @@ void GLPathRendererDashLines::bakePaths(std::vector<vec2list> paths, Uniforms pa
     std::vector<vert> outVdata;
     vbuf bufFinal;
     std::vector<float> bufUniforms;
-    dbgassert((int) sizeof(Uniforms) <= sizeUniforms);
+    dbgassert(sizeof(Uniforms) <= sizeUniforms);
     bufUniforms.resize(paths.size() * sizeUniforms);
     bufFinal.i.clear();
     const int sizeFloatsVert = sizeof(vert) / sizeof(float);
@@ -263,7 +263,7 @@ void GLPathRendererDashLines::bakePaths(std::vector<vec2list> paths, Uniforms pa
         bindVertexAttributes(attributes, ATTR_STRIDE);
     }
 
-    auto texSize = static_cast<int32_t>(bufUniforms.size() / 4);
+    auto texSize = bufUniforms.size() / 4;
     glActiveTexture(GL_TEXTURE0);
     if (out.uniforms_texture && nPaths * countUniforms != texSize) {
         log_printf("tex shape changed %d %d\n", out.numPaths * countUniforms, texSize);
@@ -279,7 +279,7 @@ void GLPathRendererDashLines::bakePaths(std::vector<vec2list> paths, Uniforms pa
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, texSize, 1, 0, GL_RGBA, GL_FLOAT, bufUniforms.data());
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, static_cast<GLsizei>(texSize), 1, 0, GL_RGBA, GL_FLOAT, bufUniforms.data());
     checkGLError("glTexImage2D");
 
     glBindVertexArray(0);

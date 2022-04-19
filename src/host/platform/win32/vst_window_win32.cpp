@@ -322,7 +322,7 @@ void vst_window::updateWindow() const {
 void vst_window::resize(ivec2 newSize) const {
     if (getContentSize() == newSize)
         return;
-    WINDOWINFO windowInfo{ 0 };
+    WINDOWINFO windowInfo{};
     windowInfo.cbSize = sizeof(WINDOWINFO);
     GetWindowInfo(hwnd, &windowInfo);
     RECT clientRect{};

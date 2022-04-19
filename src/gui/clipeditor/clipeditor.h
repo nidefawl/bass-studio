@@ -148,8 +148,8 @@ public:
     gui_timeinput clipTimeStart;
     gui_timeinput clipTimeLen;
     gui_timeinput clipTimeStartOffsetTicks;
-    gui_numberinput_field clipTimeStartOffsedSamples;
-    gui_numberinput_field clipAudioId;
+    gui_numberinput_i32 clipTimeStartOffsedSamples;
+    gui_numberinput_i32 clipAudioId;
     guibutton btnDuplicateLoop;
     guibutton btnSelectMuted;
     gui_clipsettings(scaled_grid& _grid, clip_view& _view);

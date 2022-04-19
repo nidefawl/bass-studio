@@ -74,7 +74,7 @@ public:
         static const char* queryBy_UUID           = "SELECT * FROM plugins where state == 1 and uid == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
         static const char* queryBy_Name           = "SELECT * FROM plugins where state == 1 and name == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
         const char* queries[NUM_QUERY_TYPES]      = { queryBy_LocalIdAndUUID, queryBy_NameAndUUID, queryBy_UUID, queryBy_Name };
-        for (int i = 0; i < NUM_QUERY_TYPES; i++) {
+        for (size_t i = 0; i < NUM_QUERY_TYPES; i++) {
             if (i == BY_LOCALID_AND_UUID && localId <= 0) {
                 continue;
             }

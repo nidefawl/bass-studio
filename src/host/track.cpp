@@ -1000,7 +1000,7 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
             dbgassert(!sample->samples.empty());
             for (uint32_t i = 0; i < this->input.channels; i++) {
                 float* dst      = buffer[i];
-                auto& srcVector = i >= (int) sample->samples.size() ? sample->samples[sample->samples.size() - 1] : sample->samples[i];
+                auto& srcVector = i >= sample->samples.size() ? sample->samples[sample->samples.size() - 1] : sample->samples[i];
                 int32_t len     = math::min((int32_t) blockSize - math::max(0, -srcStartOffset),
                                             math::min(clipEndSampleLen, math::min(clipStartSampleLen, (int32_t) srcVector.size() - srcStartOffset)));
                 dbgassert(len >= 0);

@@ -2061,8 +2061,8 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
  * @param reqFinishWaitStageIds
  * @param isFinalInvocation
  */
-int32_t vsthost::finishTreadTasks(int32_t tasksRunning, bool wait) {
-    int32_t finishedTasks = 0;
+uint32_t vsthost::finishTreadTasks(uint32_t tasksRunning, bool wait) {
+    uint32_t finishedTasks = 0;
     // int64_t numspin = 0;
     while (true) {
         // numspin++;
@@ -2240,7 +2240,7 @@ int32_t vsthost::processGraph(project_controller_t* ctrl,
         const auto itEnd = processingGraph->nodesFlatOrdered.end();
         const auto graphSize = processingGraph->nodesFlatOrdered.size();
         size_t numNodesQueued = 0;
-        int32_t tasksRunning = 0;
+        uint32_t tasksRunning = 0;
         // int64_t numouter = 0;
         // int64_t numinner = 0;
 #if THREADSYNC == THREADSYNC_SEMAPHORE

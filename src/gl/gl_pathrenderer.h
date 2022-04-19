@@ -109,8 +109,8 @@ class GLPathRendererDashLines : public IPathRenderer {
     };
 
 public:
-    const int32_t countUniforms = 32;
-    const int32_t sizeUniforms  = countUniforms * 4;
+    const uint32_t countUniforms = 32;
+    const uint32_t sizeUniforms  = countUniforms * 4;
     int32_t u_dash_atlas;
     int32_t u_model;
     int32_t u_view;

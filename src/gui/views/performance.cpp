@@ -15,7 +15,7 @@
 
 class gui_performance_stats : public guictr_base {
     int32_t minHTop = 66;
-    host_stats_t stats{ 0 };
+    host_stats_t stats{};
     int64_t timeLastUpdate = 0L;
     playback_state state{ status_stop };
 

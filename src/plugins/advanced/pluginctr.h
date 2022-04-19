@@ -18,7 +18,7 @@ class gui_ctr_main : public guictr_base {
     AudioEffect* curEffect = nullptr;
     gui_color_pick colorPicker;
     guibutton btnLoop;
-    gui_numberinput_field field;
+    gui_numberinput_i32 field;
     gui_textfield textField;
     int nr;
 

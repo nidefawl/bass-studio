@@ -7,7 +7,7 @@
 namespace GuiConstant {
 
     struct constant_t {
-        int32_t idx;
+        uint32_t idx;
         const char* name;
         int32_t defValue;
         int rangeMin = 1;
@@ -19,8 +19,8 @@ namespace GuiConstant {
     };
 
     std::vector<constant_t> getAllConstants();
-    constant_t getConstantById(int32_t id);
-    constant_t getConstantByName(String name);
+    constant_t getConstantById(uint32_t id);
+    constant_t getConstantByName(const String& name);
 
     extern constant_t CONST_PLUGIN_TITLE_HEIGHT;
     extern constant_t CONST_TRACK_HEIGHT_STEP;

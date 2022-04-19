@@ -10,14 +10,14 @@ namespace UIFont {
         int fontInstanceIdx = -1;
     };
     struct font_type_t {
-        int32_t idx;
+        uint32_t idx;
         const char* name;
         const char* defValue;
         font_type_t() noexcept;
         font_type_t(const char* _name, const char* _defValue) noexcept;
     };
     std::vector<font_type_t> getAllConstants();
-    font_type_t getConstantById(int32_t id);
+    font_type_t getConstantById(uint32_t id);
     font_type_t getConstantByName(const String& name);
     extern const font_type_t FONT_DEFAULT;
     extern const font_type_t FONT_LABEL;

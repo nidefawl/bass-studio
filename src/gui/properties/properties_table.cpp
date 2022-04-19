@@ -133,7 +133,7 @@ public:
     }
     void clicked(int _id) override {
         closeContextMenu();
-        if (_id >= 0 && _id < strFontNames.size()) {
+        if (_id >= 0 && _id < CtrSize(strFontNames)) {
             themeMgr->getRef().setFont(fonttype, strFontNames[_id]);
             //TODO: reload fonts (repopulate RenderResources::fontsLoaded
 
@@ -185,7 +185,7 @@ protected:
     T* m_currentObjPtr;
 
     gui_textfield m_textField;
-    gui_numberinput_field m_numberInputI32;
+    gui_numberinput_i32 m_numberInputI32;
     gui_numberinput_field_generic<float> m_numberInputFloat;
     gui_color_pick m_colorPick;
     guidropdown_selectfont m_selectFont;
@@ -410,7 +410,7 @@ public:
                     void onClick(const click_ctxt_t& ctxt, int32_t& value) override {
                         click();
                         int32_t posRight = clickedcell.pos.x+clickedcell.size.x-100;
-                        gui_numberinput_field& numberInput = table->m_numberInputI32;
+                        auto& numberInput = table->m_numberInputI32;
                         numberInput.pos = ivec2(posRight, clickedcell.pos.y);
                         numberInput.size.x = 100;
                         numberInput.setRef(&value);
@@ -435,7 +435,7 @@ public:
                         click();
                         int32_t posRight = clickedcell.pos.x+clickedcell.size.x-100;
                         bool wasRightSide = evt.relMousepos.x > posRight;
-                        gui_numberinput_field& numberInput = table->m_numberInputI32;
+                        auto& numberInput = table->m_numberInputI32;
                         numberInput.size = clickedcell.size;
                         if (wasRightSide) {
                             numberInput.pos = ivec2(posRight, clickedcell.pos.y);
@@ -459,7 +459,7 @@ public:
                             int32_t posRight = clickedcell.pos.x+clickedcell.size.x-(w*(3-i));
                             bool inside = evt.relMousepos.x >= posLeft && evt.relMousepos.x < posRight;
                             if (inside) {
-                                gui_numberinput_field& numberInput = table->m_numberInputI32;
+                                auto& numberInput = table->m_numberInputI32;
                                 numberInput.size = clickedcell.size;
                                 numberInput.pos = ivec2(posLeft, clickedcell.pos.y);
                                 numberInput.size.x = w;
@@ -475,7 +475,7 @@ public:
                         click();
                         if (theme == nullptr)
                             return;
-                        gui_numberinput_field& numberInput = table->m_numberInputI32;
+                        auto& numberInput = table->m_numberInputI32;
                         table->m_numberInputTmp            = theme->get(constant);
                         numberInput.setRef(&table->m_numberInputTmp);
                         numberInput.pos = clickedcell.pos;
@@ -524,7 +524,7 @@ public:
                         color->size = {480, 240};
                         color->pos = {0, 0};
                         //color->setRefNvg(&value);
-                        color->setInt32(theme->getColorInt32(constant));
+                        color->setU32(theme->getColorInt32(constant));
                         color->layout();
                         color->fnSetValue = [theme, constant](int32_t rgba) {
                             theme->setColor(constant, rgba);
@@ -548,7 +548,7 @@ public:
                         color->size = { 480, 240 };
                         color->pos = { 0, 0 };
                         color->setRefNvg(&value);
-                        color->setInt32(nvgToRGBA(value));
+                        color->setU32(nvgToRGBA(value));
                         color->layout();
                         guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
                         ctxtMenu->size = color->size;
@@ -799,7 +799,7 @@ struct tbltype_theme_font {
 };
 
 namespace Table {
-void drawColor(NVGcontext* vg, ivec2 pos, ivec2 size, int32_t rgba) {
+void drawColor(NVGcontext* vg, ivec2 pos, ivec2 size, uint32_t rgba) {
     nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
     String strColorHex = StringFormat("%08X", rgba);
     int sizeQuad = size.y - INSET_TABLE_CELL_PADDING * 2;
@@ -960,7 +960,7 @@ public:
     }
     void clicked(int _id) override {
         closeContextMenu();
-        if (_id >= 0 && _id < strThemeNames.size()) {
+        if (_id >= 0 && _id < CtrSize(strThemeNames)) {
             themeMgr->setThemeName(strThemeNames[_id]);
         }
     }

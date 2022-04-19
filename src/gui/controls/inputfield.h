@@ -54,7 +54,7 @@ public:
     std::function<void(gui_numberinput_field_base*, T)> fnValueEditChanged;
     std::function<T(T)> fnClamp;
 
-    gui_numberinput_field_generic(T* _number) : gui_numberinput_field_base(), number(_number) {
+    explicit gui_numberinput_field_generic(T* _number) : gui_numberinput_field_base(), number(_number) {
     }
     void setRef(T* number) {
         this->number = number;
@@ -92,37 +92,26 @@ private:
         }
     }
 };
-//TODO: rename to gui_numberinput_int32
-class gui_numberinput_field : public gui_numberinput_field_generic<int32_t> {
-public:
-    gui_numberinput_field(int32_t* _number) : gui_numberinput_field_generic<int32_t>(_number) {
-    }
-//    int32_t parseLiteral(const char* szNumber) override {
-//        return atoi(szNumber);
-//    }
-//    String valueToStringLiteral(int32_t val) override {
-//        return StringFormat("%d", val);
-//    }
-};
-uint32_t nvgToRGB(NVGcolor c);
 
+using gui_numberinput_i32 = gui_numberinput_field_generic<int32_t>;
+using gui_numberinput_u32 = gui_numberinput_field_generic<uint32_t>;
 
 class gui_input_filtered : public guibutton {
-    int32_t* number;
+    uint32_t* number;
     gui_textfield field;
     input_filter_hex32 filter;
     bool isAlignCenter = false;
     bool isEditing     = false;
-    int draggedByte    = -1;
+    uint8_t draggedByte    = 0xFF;
 
 public:
-    gui_input_filtered(int32_t* _number);
+    explicit gui_input_filtered(uint32_t* _number);
     void setAlignCenter(bool b);
     void setControl(BaseCtrl* parentCtrl) override {
         guibase::setControl(parentCtrl);
         field.setControl(parentCtrl);
     }
-    void setRef(int32_t* number) {
+    void setRef(uint32_t* number) {
         this->number = number;
     }
     gui_textfield& getField() {

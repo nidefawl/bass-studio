@@ -661,7 +661,7 @@ namespace {
                 {
                     int idx = slot.droppedTrack->track->childIdxTree + 1;
                     auto* p = getParentOf(slot.droppedTrack);
-                    while (p && idx == p->track->children.size()) {
+                    while (p && idx == CtrSize(p->track->children)) {
                         idx = p->track->childIdxTree + 1;
                         p   = getParentOf(p);
                     }
@@ -718,7 +718,7 @@ namespace {
                 {
                     int idx = slot.droppedTrack->track->childIdxTree + 1;
                     auto* p = getParentOf(slot.droppedTrack);
-                    while (p && idx == p->track->children.size()) {
+                    while (p && idx == CtrSize(p->track->children)) {
                         idx = p->track->childIdxTree + 1;
                         p   = getParentOf(p);
                     }

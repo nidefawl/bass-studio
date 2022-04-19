@@ -179,7 +179,7 @@ void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t tra
     auto* host = dawInstance->getHost();
     auto trackList = project->getTracksFlatVec();
 
-    if (trackList.size() < trackIdx) {
+    if (CtrSize(trackList) < trackIdx) {
         dbgassert(0);
         return;
     }

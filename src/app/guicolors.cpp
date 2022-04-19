@@ -24,23 +24,23 @@ namespace GuiColor {
         static std::vector<constant_t*> allconstants;
         return allconstants;
     }
-    constant_t getConstantById(int32_t id) {
+    constant_t getConstantById(uint32_t id) {
         auto& v = _getConstants();
         for (auto* c : v) {
             if (c->idx == id) {
                 return *c;
             }
         }
-        return constant_t();
+        return {};
     }
-    constant_t getConstantByName(String name) {
+    constant_t getConstantByName(const String& name) {
         auto& v = _getConstants();
         for (auto* c : v) {
             if (c->name == name) {
                 return *c;
             }
         }
-        return constant_t();
+        return {};
     }
     std::vector<constant_t> getAllConstants() {
         std::vector<constant_t> v;
@@ -52,8 +52,8 @@ namespace GuiColor {
         return v;
     }
 
-    int32_t getNextId() {
-        static int32_t constantsNextId = 1;
+    uint32_t getNextId() {
+        static uint32_t constantsNextId = 1;
         return constantsNextId++;
     }
 
@@ -166,7 +166,7 @@ namespace UIFont {
         static std::vector<font_type_t*> allconstants;
         return allconstants;
     }
-    font_type_t getConstantById(int32_t id) {
+    font_type_t getConstantById(uint32_t id) {
         auto& v = _getConstants();
         for (auto* c : v) {
             if (c->idx == id) {
@@ -193,8 +193,8 @@ namespace UIFont {
         }
         return v;
     }
-    int32_t getNextId() {
-        static int32_t constantsNextId = 1;
+    uint32_t getNextId() {
+        static uint32_t constantsNextId = 1;
         return constantsNextId++;
     }
 
@@ -229,7 +229,7 @@ namespace UIFont {
         if (fonts.fontsLoaded.empty()) {
             return;
         }
-        const int fontIdx = math::clamp<int32_t>(font.fontInstanceIdx, 0, fonts.fontsLoaded.size());
+        const auto fontIdx = math::clamp<uint32_t>(font.fontInstanceIdx, 0, fonts.fontsLoaded.size());
         auto& fontloaded  = fonts.fontsLoaded[fontIdx];
         if (fontloaded.nvgId == -999) {
             log_lf(Log::L_DEBUG, "loading font %s %s\n", StringAsCStr(fontloaded.font.name), StringAsCStr(fontloaded.font.path));

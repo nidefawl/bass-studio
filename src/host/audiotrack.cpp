@@ -36,7 +36,7 @@ size_t audiotrack_t::convertToSamples(vsthost* host) {
         if (data.size() != this->samples.size()) {
             return false;
         }
-        for (int32_t i = 0; i < data.size(); i++) {
+        for (size_t i = 0; i < data.size(); i++) {
             if (data[i]) {
                 if (!this->samples[i] || this->samples[i]->version != data[i]->version) {
                     return false;

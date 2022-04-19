@@ -563,14 +563,14 @@ public:
         this->audioInternalBlockSize  = intBlockSize;
         this->audioInternalSampleRate = intSampleRate;
 
-        for (int i = 0; i < ExtSamplerates.size(); i++) {
-            extSampleRate->options.push_back(StringFormat("%u", ExtSamplerates[i]));
+        for (auto sr : ExtSamplerates) {
+            extSampleRate->options.push_back(StringFormat("%u", sr));
         }
-        for (int i = 0; i < IntSamplerates.size(); i++) {
-            intSampleRate->options.push_back(StringFormat("%u", IntSamplerates[i]));
+        for (auto sr : IntSamplerates) {
+            intSampleRate->options.push_back(StringFormat("%u", sr));
         }
         extSampleRate->cbOnOptionSelected = [this](int option) {
-            if (option >= 0 && option < ExtSamplerates.size()) {
+            if (option >= 0 && option < CtrSize(ExtSamplerates)) {
                 settings.iosettings.samplerate = ExtSamplerates[option];
                 daw->configureSampleRate();
             }
@@ -582,7 +582,7 @@ public:
             return indexOfCtr(ExtSamplerates, settings.iosettings.samplerate);
         };
         intSampleRate->cbOnOptionSelected = [this](int option) {
-            if (option >= 0 && option < IntSamplerates.size()) {
+            if (option >= 0 && option < CtrSize(IntSamplerates)) {
                 settings.iosettings.internalSamplerate = IntSamplerates[option];
                 daw->configureSampleRate();
             }
@@ -644,7 +644,7 @@ public:
         }
         updateOptions();
         api->cbOnOptionSelected = [this, api](int option) {
-            if (option >= 0 && option < api->options.size()) {
+            if (option >= 0 && option < CtrSize(api->options)) {
                 settings.iosettings.device_api = api->options[option];
                 updateOptions();
                 daw->configureSampleRate();
@@ -652,7 +652,7 @@ public:
         };
         api->fnGetCurrentVal     = [this]() -> String { return settings.iosettings.device_api; };
         asio->cbOnOptionSelected = [this, asio](int option) {
-            if (option >= 0 && option < asio->options.size()) {
+            if (option >= 0 && option < CtrSize(asio->options)) {
                 auto devOption               = asio->options[option];
                 app_ioasioconfig& asioconfig = settings.iosettings.asioConfig;
                 asioconfig.device_api        = "ASIO";
@@ -1194,7 +1194,7 @@ void guidialog_settings::addEntry(setting_dialog* ctr, String title) {
     this->entries.push_back(entry);
 }
 void guidialog_settings::setActiveEntry(int32_t idx) {
-    if (idx >= 0 && idx < entries.size()) {
+    if (idx >= 0 && idx < CtrSize(entries)) {
         guidialog_settings::dialog_entry* entry = entries[idx];
         if (this->activeEntry) {
             this->activeEntry->active = false;

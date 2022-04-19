@@ -18,7 +18,7 @@ struct noteview_cache_impl_t {
         reset();
     }
     void SaveFill(NVGcontext* vg, int n) {
-        dbgassert(n < arr.size());
+        dbgassert(n < CtrSize(arr));
         dbgassert(arr[n] == nullptr);
         arr[n] = nullptr;
         nvgGetLastCacheResult(vg, &arr[n]);
@@ -30,7 +30,7 @@ struct noteview_cache_impl_t {
         tls.runtime->renderClipCacheStats.sizeCacheAllocatedMemBytes += cacheEntryInfo.allocationSizeBytes;
     }
     bool isCacheValid(int n) {
-        return valid && n < arr.size() && arr[n] != nullptr;
+        return valid && n < CtrSize(arr) && arr[n] != nullptr;
     }
     void reset() {
         valid = false;

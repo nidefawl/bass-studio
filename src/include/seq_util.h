@@ -24,6 +24,11 @@
 inline void unreachable() {}
 #endif
 
+template<typename C1>
+inline int32_t CtrSize(const C1& c) {
+    return static_cast<int32_t>(c.size());
+}
+
 template<typename Container>
 Container&& sort_unique_erase(Container&& c) {
     using std::begin;

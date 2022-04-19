@@ -16,6 +16,7 @@
 #include "gui/controls/button.h"
 #include "gui/controls/splitter.h"
 #include "host/mainctrl.h"
+#include "seq_util.h"
 
 struct guictr_tabbed::tabbed_entry {
     guibutton tabButton;
@@ -26,10 +27,10 @@ struct guictr_tabbed::tabbed_entry {
     }
 };
 int32_t guictr_tabbed::getNumEntries() {
-    return entries.size();
+    return CtrSize(entries);
 }
 void guictr_tabbed::setActiveEntry(int32_t idx) {
-    if (idx >= 0 && idx < entries.size()) {
+    if (idx >= 0 && idx < CtrSize(entries)) {
         guictr_tabbed::tabbed_entry* entry = entries[idx];
         if (this->activeEntry) {
             this->activeEntry->active = false;
@@ -128,10 +129,10 @@ struct guictr_stacked::stacked_entry {
     }
 };
 int32_t guictr_stacked::getNumEntries() {
-    return entries.size();
+    return CtrSize(entries);
 }
 void guictr_stacked::toggleEntry(int32_t idx, int flags) {
-    if (idx >= 0 && idx < entries.size()) {
+    if (idx >= 0 && idx < CtrSize(entries)) {
         guictr_stacked::stacked_entry* entry = entries[idx];
         if ((flags & 2) && entry->active) {
             return;

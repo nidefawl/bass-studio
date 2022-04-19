@@ -127,7 +127,7 @@ public:
         for (; wTexPreview > 1;) {
             xCols = (winW + wTexPreview - 1) / wTexPreview;
             yCols = (winH + wTexPreview - 1) / wTexPreview;
-            if (xCols * yCols >= rendered.size()) {
+            if (xCols * yCols >= CtrSize(rendered)) {
                 break;
             }
             wTexPreview /= 2;

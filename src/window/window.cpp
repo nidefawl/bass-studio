@@ -1942,7 +1942,7 @@ class appwindow_plugin : public appwindow_main, public pluginwindow {
     bool isInitialized = false;
 
 public:
-    ERect _rect{ 0 };
+    ERect _rect{};
     appwindow_plugin(AudioEffect* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h)
         : appwindow_main(nullptr, _ctrl),
           pluginwindow(_ctrl) {

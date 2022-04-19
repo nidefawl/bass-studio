@@ -245,17 +245,17 @@ void gui_textfield::beginEdit() {
 
     if (begin > end)
         std::swap(begin, end);
-    if (begin < 0 || end > mValue.length()) {
+    if (begin < 0 || end > static_cast<int32_t>(mValue.length())) {
         mCursorPos    = 0;
         mSelectionPos = -1;
     }
-    mValidFormat = (mValueTemp == "") || checkFormat(mValueTemp, mFormat);
+    mValidFormat = (mValueTemp.empty()) || checkFormat(mValueTemp, mFormat);
 }
 void gui_textfield::endEdit(bool success) {
     if (success) {
-        mValidFormat = (mValueTemp == "") || checkFormat(mValueTemp, mFormat);
+        mValidFormat = (mValueTemp.empty()) || checkFormat(mValueTemp, mFormat);
         if (mValidFormat) {
-            if (mValueTemp == "")
+            if (mValueTemp.empty())
                 mValue = mDefaultValue;
             else
                 mValue = mValueTemp;
@@ -403,15 +403,12 @@ bool gui_textfield::handleCharInput(unsigned int codepoint) {
                 for (int i = 0; i < len; i++) {
                     mValueTemp[i + mincursor] = cvchar;
                 }
-                if (mCursorPos > mValueTemp.length() - 1) {
-                    mCursorPos = mValueTemp.length() - 1;
-                }
 
                 if (mSelectionPos < 0) {
                     mCursorPos++;
-                    if (mCursorPos == mValueTemp.length()) {
-                        mCursorPos = 2;
-                    }
+                }
+                if (mCursorPos > static_cast<int32_t>(mValueTemp.length())) {
+                    mCursorPos = static_cast<int32_t>(mValueTemp.length());
                 }
             } else {
                 deleteSelection();
@@ -429,8 +426,8 @@ void gui_textfield::onChange() {
     mValidFormat = (mValueTemp == "") || checkFormat(mValueTemp, mFormat);
     if (filter) {
         mValueTemp = filter->parse(mValueTemp);
-        if (mCursorPos > mValueTemp.length()) {
-            mCursorPos = mValueTemp.length();
+        if (mCursorPos > static_cast<int32_t>(mValueTemp.length())) {
+            mCursorPos = static_cast<int32_t>(mValueTemp.length());
         }
     }
     onTextChange();

@@ -79,7 +79,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 
 bool hasCmdOption(const std::vector<String>& args, const String& option) {
-    for (int i = 0; i < args.size(); ++i) {
+    for (size_t i = 0; i < args.size(); ++i) {
         const String& arg = args[i];
         if (0 == arg.find(option)) {
             std::size_t found = arg.find_last_of(option);
@@ -92,7 +92,7 @@ bool hasCmdOption(const std::vector<String>& args, const String& option) {
 }
 
 String getCmdOption(const std::vector<String>& args, const String& option, String defaultVal) {
-    for (int i = 0; i < args.size(); ++i) {
+    for (size_t i = 0; i < args.size(); ++i) {
         const String& arg = args[i];
         if (0 == arg.find(option)) {
             std::size_t found = arg.find_last_of(option);

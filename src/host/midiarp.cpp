@@ -450,7 +450,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
 
     int nSend = 0;
     size_t eventIdx = 0;
-    int32_t evtsProcessed = 0;
+    size_t evtsProcessed = 0;
 
     const tick_t arpLoopStart = loopStart > -1 ? math::max(loopStart, start) : start;
     const tick_t arpLoopEnd   = loopEnd > -1 ? math::min(loopEnd, end) : end;
@@ -660,11 +660,11 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
         if (processTimePoints.size() != NUM_ARP_MAX_POLY_VOICES && !heldInput.empty()) {
             log_lf(Log::L_WARN, "processTimePoints.size() is %d, waiting for reset...\n", processTimePoints.size());
         }
-        auto maxProcPts = math::min<int32_t>(isChordPattern ? NUM_ARP_MAX_POLY_VOICES : 1, (int32_t)heldInput.size());
-        maxProcPts      = math::min<int32_t>(maxProcPts, (int32_t)processTimePoints.size());
+        auto maxProcPts = math::min<size_t>(isChordPattern ? NUM_ARP_MAX_POLY_VOICES : 1, heldInput.size());
+        maxProcPts      = math::min<size_t>(maxProcPts, processTimePoints.size());
 
         // only in polyphonic chord mode this loop will iterate past 0
-        for (int32_t prIdx = 0; prIdx < maxProcPts; prIdx++) {
+        for (size_t prIdx = 0; prIdx < maxProcPts; prIdx++) {
             tick_t timeStepPreGenerated = processTimePoints[prIdx];
             if (timeStepPreGenerated != tick)
                 continue;
@@ -681,7 +681,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
             if (isChordPattern && prIdx < heldInput.size()) {
                 noteStpIdx = prIdx;
             } else if (!isChordPattern && !heldInput.empty()) {
-                noteStpIdx = getArpStepIdx(actualStep, (int32_t)heldInput.size());
+                noteStpIdx = getArpStepIdx(actualStep, CtrSize(heldInput));
             }
             if (noteStpIdx > -1) {
                 const arp_note_t& noteArpInput = heldInput[noteStpIdx];
@@ -695,7 +695,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
                 if (rndVelIntensity) {
                     uint64_t stepSeed_u64 = (velocitySeed_u64 + noteArpInput.time * 2888443ULL + noteArpInput.pitch * 341123ULL + stepRecalc) * 484751ULL;
                     arpRand.rng_seed(stepSeed_u64);
-                    tick_t randVel       = -rndVelIntensity + (int32_t)arpRand.rng_rand(rndVelIntensity * 2);
+                    tick_t randVel       = -rndVelIntensity + static_cast<int32_t>(arpRand.rng_rand(rndVelIntensity * 2));
                     noteArpStep.velocity = math::clamp(noteArpStep.velocity + randVel, 1, 127);
                 }
                 addNote(start, noteArpStep, noteEventsProcessed);
@@ -713,7 +713,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
 
     // sanity check, remove later on
     if (evtsProcessed != noteEventsIn.size()) {
-        log_lf(Log::L_ERROR, "Block %d-%d: ARP did not process all events. Processed %d of %d\n", start, end, evtsProcessed, noteEventsIn.size());
+        log_lf(Log::L_ERROR, "Block %d-%d: ARP did not process all events. Processed %zu of %d\n", start, end, evtsProcessed, noteEventsIn.size());
         log_lf(Log::L_ERROR, "Block %d-%d: loopStart %d, loopEnd %d\n", start, end, loopStart, loopEnd);
         for (noteevent_t& evt : noteEvents) {
             log_lf(Log::L_ERROR, "Block %d-%d: Event %s %d %d %s\n", start, end, evt.isNoteOn ? "ON" : "OFF", evt.globalTick, evt.tickOffsetInBlock, noteName(evt.pitch));

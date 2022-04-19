@@ -4,6 +4,7 @@
 #include <vector>
 #include <nanovg.h>
 #include "math/seq_math.h"
+#include "seq_util.h"
 #include "str_util.h"
 #include "theme.h"
 #include "event.h"
@@ -155,9 +156,9 @@ namespace Table {
 
 
     table_entry_t& GetCell(tbl& table, int32_t x, int32_t y) {
-        dbgassert(y >= 0 && y < table.rows.size());
+        dbgassert(y >= 0 && y < CtrSize(table.rows));
         tbl_row_t& rowRef = table.rows[y];
-        dbgassert(x >= 0 && x < rowRef.cols.size());
+        dbgassert(x >= 0 && x < CtrSize(rowRef.cols));
         return rowRef.cols[x];
     }
 

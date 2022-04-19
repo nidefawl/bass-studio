@@ -18,7 +18,7 @@
 using ImgData = std::shared_ptr<uint8_t>;
 
 namespace {
-    void setColor(uint8_t* b, int i) {
+    void setColor(uint8_t* b, uint32_t i) {
         b[0] = i & 0xFF;
         i    = i >> 8;
         b[1] = i & 0xFF;
@@ -129,7 +129,7 @@ namespace RenderResources {
             }
             fonts.fontsInstalled.clear();
             fonts.fontsInstalled.resize(files.size());
-            for (int i = 0; i < files.size(); i++) {
+            for (size_t i = 0; i < files.size(); i++) {
                 fonts.fontsInstalled[i].name = files[i].name;
                 fonts.fontsInstalled[i].path = files[i].path;
             }
@@ -137,10 +137,10 @@ namespace RenderResources {
             fonts.fontsLoaded.clear();
             String fntList;
             int loaded     = 0;
-            for (int i = 0; i < MAX_FONTS && i < files.size(); i++) {
+            for (size_t i = 0; i < MAX_FONTS && i < files.size(); i++) {
                 String fontPath = (files[i].path);
                 LoadedFont lf;
-                String fntKey = StringFormat("font%d", i);
+                String fntKey = StringFormat("font%u", i);
                 log_lf(Log::L_DEBUG, "loading font %s %s\n", StringAsCStr(fntKey), StringAsCStr(fontPath));
                 if (i == 0) {
                     lf.nvgId = nvgCreateFont(vg, StringAsCStr(fntKey), StringAsCStr(fontPath));

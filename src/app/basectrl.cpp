@@ -458,7 +458,7 @@ void determineWindowPos(guibase* guicontextmenu, window_main* mainWindow, float 
 }
 
 void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) {
-    while (menuWindows.size() <= lvl) {
+    while (CtrSize(menuWindows) <= lvl) {
         menuWindows.push_back({nullptr, nullptr});
     }
 
@@ -726,8 +726,8 @@ void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i
         newContainer->setLayout(updatedCtrLayout);
         if (updatedCtrLayout == container_layout::TABBED) {
             auto& ctrEntries = layoutCtr->getEntries();
-            dbgassert(area->dockPosOffset >= 0 && area->dockPosOffset <= ctrEntries.size());
-            auto entryToReplace            = ctrEntries[math::min<int32_t>(ctrEntries.size() - 1, area->dockPosOffset)];
+            dbgassert(area->dockPosOffset >= 0 && area->dockPosOffset <= CtrSize(ctrEntries));
+            auto entryToReplace            = ctrEntries[math::min<int32_t>(CtrSize(ctrEntries) - 1, area->dockPosOffset)];
             auto oldEntryThatIsNowTabEntry = layoutCtr->replaceContainerWith(entryToReplace->getGui(), newContainer);
 
             newContainer->placeContainer(ctrContent, area);

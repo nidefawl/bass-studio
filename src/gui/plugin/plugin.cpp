@@ -906,7 +906,7 @@ guidropdown_select_program::guidropdown_select_program(effectbase* _plugin) : pl
 
 void guidropdown_select_program::clicked(int _id) {
     closeContextMenu();
-    if (_id >= 0 && _id < plugin->programNames.size()) {
+    if (_id >= 0 && _id < CtrSize(plugin->programNames)) {
         plugin->setCurrentProgram(_id);
     }
 }

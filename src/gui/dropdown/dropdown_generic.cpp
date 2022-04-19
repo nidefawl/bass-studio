@@ -21,7 +21,7 @@ public:
     }
     void clicked(int _id) override {
         closeContextMenu();
-        if (_id >= 0 && _id < options.size()) {
+        if (_id >= 0 && _id < CtrSize(options)) {
             parent->onOptionSelected(_id);
         }
     }

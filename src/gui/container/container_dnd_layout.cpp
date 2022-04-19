@@ -133,10 +133,11 @@ bool guictr_layout::setOverlayPosForTab(i_ctr_drop_area* area, const dock_pos do
     ivec2 relPos  = ivec2(0);
     ivec2 relSize = size;
     dbgassert(dockPos == dock_pos::STACK);
-    if (dockOffset > -1 && dockOffset <= entries.size()) {
-        uint32_t dockIndex                                = dockOffset >= entries.size() ? entries.size() - 1U : static_cast<uint32_t>(dockOffset);
+    auto numEntries = CtrSize(entries);
+    if (dockOffset > -1 && dockOffset <= numEntries && numEntries > 0) {
+        auto dockIndex = dockOffset >= numEntries ? static_cast<int32_t>(entries.size()) - 1U : dockOffset;
         const std::shared_ptr<guictr_layout_entry>& entry = entries[dockIndex];
-        const guibase* entryHandle                        = entry.get()->getHandle();
+        const guibase* entryHandle = entry->getHandle();
         if (entryHandle) {
             if (rightSideHandle) {
                 relPos = paddingTL(padding) + entryHandle->pos + ivec2(entryHandle->size.x - dropIndicatorWidth / 2, 0);
@@ -146,7 +147,7 @@ bool guictr_layout::setOverlayPosForTab(i_ctr_drop_area* area, const dock_pos do
             relSize = ivec2(dropIndicatorWidth, entryHandle->size.y);
         } else {
             // not expected to be called, backup code path
-            relPos  = paddingTL(padding) + entry.get()->getGui()->pos - ivec2(FONT_SIZE_CTXT_SMALL + dropIndicatorWidth / 2, 0);
+            relPos  = paddingTL(padding) + entry->getGui()->pos - ivec2(FONT_SIZE_CTXT_SMALL + dropIndicatorWidth / 2, 0);
             relSize = ivec2(dropIndicatorWidth, FONT_SIZE_CTXT_SMALL);
         }
         area->dockPos = dockPos;
@@ -164,7 +165,7 @@ bool guictr_layout::setOverlayPosForTab(i_ctr_drop_area* area, const dock_pos do
 }
 i_ctr_drop_area* guictr_layout::makeDropArea(int32_t idx) {
     auto& vec = dragdropContainerAreaHelpers;
-    while (vec.size() <= idx) {
+    while (CtrSize(vec) <= idx) {
         vec.push_back(std::make_shared<i_ctr_drop_area>(this));
     }
     vec[idx]->childContainerIndex = -1;
@@ -172,18 +173,18 @@ i_ctr_drop_area* guictr_layout::makeDropArea(int32_t idx) {
     return vec[idx].get();
 }
 void guictr_layout::getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<i_ctr_drop_area>>& vecHandles) {
-    if (!this->entries.size()) {
+    if (this->entries.empty()) {
         setOverlayPos(makeDropArea(0), dock_pos::CENTER, ivec2(0), size, -1, -1);
         vecHandles.push_back(dragdropContainerAreaHelpers[0]);
     } else {
         int32_t areaOffset = 0;
-        for (int i = 0; i < entries.size(); i++) {
+        for (size_t i = 0; i < entries.size(); i++) {
             if (entries[i]->hasHandle) {
                 setOverlayPosForTab(makeDropArea(areaOffset), dock_pos::STACK, i, false);
                 vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
                 areaOffset++;
                 // for non tabbed always emit droparea for left and right side of handle
-                if ((size_t) i + 1 == entries.size() || this->ctrLayout != container_layout::TABBED) {
+                if (i + 1 == entries.size() || this->ctrLayout != container_layout::TABBED) {
                     setOverlayPosForTab(makeDropArea(areaOffset), dock_pos::STACK, i, true);
                     vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
                     areaOffset++;
@@ -200,7 +201,7 @@ void guictr_layout::getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<i_ctr
         }
         if (ctrLayout == container_layout::SPLIT_H || ctrLayout == container_layout::SPLIT_V || ctrLayout == container_layout::SOLE) {
             // return overlays for all 4 sides of each container entry that is not of type guictr_layout
-            for (int i = 0; i < entries.size(); i++) {
+            for (size_t i = 0; i < entries.size(); i++) {
                 for (int j = 0; j < 4; j++) {
                     setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::LEFT) + j), entries[i]->pos, entries[i]->size, -1, i);
                     vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
@@ -263,7 +264,7 @@ void guictr_layout::layout() {
     }
     vec2 segSizeF    = vec2(cs);
     vec2 axis        = vec2(0);
-    int32_t nEntries = math::max<int32_t>(1, entries.size());
+    auto nEntries = math::max<size_t>(1U, entries.size());
 
     switch (this->ctrLayout) {
         case container_layout::TABBED:
@@ -280,11 +281,11 @@ void guictr_layout::layout() {
             axis.y   = 1.0f;
             break;
     }
-
     static const int32_t handleHeight  = 20;
     static const int32_t paddingHandle = 1;
-    float tabW                         = segSizeF.x;
-    int32_t entryIdx                   = 0;
+
+    float tabW      = segSizeF.x;
+    size_t entryIdx = 0;
     if (this->ctrLayout == container_layout::TABBED) {
         axis.x                          = 1;
         static const int32_t ctrPadding = 1;
@@ -312,11 +313,11 @@ void guictr_layout::layout() {
                     curScale = splitters[entryIdx]->getScale();
                 }
                 float prevScale = 0.0f;
-                if (entryIdx - 1 >= 0) {
+                if (entryIdx >= 1) {
                     prevScale = splitters[entryIdx - 1]->getScale();
                 }
                 segSizeF = (curScale - prevScale) * vec2(cs) * axis + vec2(cs) * vec2(axis.y, axis.x);
-                if (entryIdx - 1 >= 0) {
+                if (entryIdx >= 1) {
                     segPos = splitters[entryIdx - 1]->getScale() * vec2(cs) * axis;
                 }
                 if (this->ctrLayout == container_layout::SPLIT_V) {
@@ -601,7 +602,10 @@ void guictr_layout::addEntry(std::shared_ptr<guictr_layout_entry> ctr, int32_t p
     if (it != entries.end()) {
         throw applogicexception(StringFormat("%s - attempt to add element twice", StringAsCStr(getClassName())));
     }
-    auto insertPos = posOffset == -1 ? entries.begin() : (posOffset == -2 || posOffset >= entries.size() ? entries.end() : (entries.begin() + posOffset));
+    auto insertPos = entries.begin();
+    if (!entries.empty()) {
+        insertPos = posOffset == -1 ? entries.begin() : (posOffset == -2 || posOffset >= CtrSize(entries) ? entries.end() : (entries.begin() + posOffset));
+    }
     entries.insert(insertPos, ctr);
     auto guiCtr = ctr->getGui();
     // a handle is present if the child is not a guictr_layout, or if this container is using tabbed layout
@@ -651,7 +655,7 @@ bool guictr_layout::placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_c
     if (dockPos == dock_pos::STACK) {
         if (dockPosOffset <= -1) {
             entries.insert(entries.begin(), ctr);
-        } else if (dockPosOffset >= entries.size()) {
+        } else if (dockPosOffset >= CtrSize(entries)) {
             entries.insert(entries.end(), ctr);
         } else {
             entries.insert(entries.begin() + dockPosOffset, ctr);

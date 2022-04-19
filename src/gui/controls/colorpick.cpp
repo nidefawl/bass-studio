@@ -4,9 +4,10 @@
 #include "gui/container/container.h"
 #include "gui/contextmenu/contextmenu_daw.h"
 #include "gui/contextmenu/contextmenu_color.h"
+#include "math/seq_math.h"
 
 gui_color_pick::gui_color_pick()
-    : guictr_base(), knH(false), knS(false), knL(false), knA(false), hexInput(&colorInt32) {
+    : guictr_base(), knH(false), knS(false), knL(false), knA(false), hexInput(&colorU32) {
     padding = 0;
     margin  = 0;
     setCanMouseHit(true);
@@ -52,7 +53,7 @@ void gui_color_pick::init() {
         int32_t alpha = CLAMP_I((int32_t) (255.0f * val), 0, 255);
         return StringFormat("%d", alpha);
     };
-    setInt32(0xFF7f7f7f);
+    setU32(0xFF7f7f7f);
 }
 void gui_color_pick::layout() {
     int sizeQuad  = size.y;
@@ -104,20 +105,21 @@ void gui_color_pick::render(NVGcontext* vg) {
 
 void gui_color_pick::buttonClicked(guibase* button) {
     if (button == &hexInput) {
-        setInt32(colorInt32);
+        setU32(colorU32);
     }
 }
-void gui_color_pick::setInt32(int32_t rgba) {
+void gui_color_pick::setU32(uint32_t rgba) {
     glm::vec4 color = colorHex(rgba);
     glm::vec4 hsla  = rgbToHSL(color.x, color.y, color.z);
     this->knH.setValueInit(hsla.x);
     this->knS.setValueInit(hsla.y);
     this->knL.setValueInit(hsla.z);
     this->knA.setValueInit(color.w);
-    this->colorInt32 = rgba;
-    this->nvgColor   = rgbaToNvg(rgba);
-    if (ptrColorInt32) {
-        *ptrColorInt32 = colorInt32;
+    this->colorU32 = rgba;
+    this->nvgColor = rgbaToNvg(rgba);
+
+    if (ptrColorU32) {
+        *ptrColorU32 = colorU32;
     }
     if (ptrNvgColor) {
         *ptrNvgColor = nvgColor;
@@ -131,14 +133,15 @@ void gui_color_pick::setHSL(float h, float s, float l, float a) {
     this->knS.setValueInit(s);
     this->knL.setValueInit(l);
     this->knA.setValueInit(a);
-    auto col         = nvgHSL(h, s, l);
-    int32_t rgb      = nvgToRGB(col) & 0xFFFFFF;
-    int32_t alpha    = CLAMP_I((int32_t) (255.0f * a), 0, 255) << 24;
-    int32_t rgba     = rgb | alpha;
-    this->colorInt32 = rgba;
+    auto col   = nvgHSL(h, s, l);
+    auto rgb   = nvgToRGB(col) & 0xFFFFFF;
+    auto alpha = CLAMP_I(math::roundfU32(255.0f * a), 0, 255) << 24;
+    auto rgba  = rgb | alpha;
+
+    this->colorU32 = rgba;
     this->nvgColor   = rgbaToNvg(rgba);
-    if (ptrColorInt32) {
-        *ptrColorInt32 = colorInt32;
+    if (ptrColorU32) {
+        *ptrColorU32 = colorU32;
     }
     if (ptrNvgColor) {
         *ptrNvgColor = nvgColor;
@@ -148,15 +151,15 @@ void gui_color_pick::setHSL(float h, float s, float l, float a) {
     }
 }
 void gui_color_pick::setHSL_(float h, float s, float l, float a) {
-    auto col      = nvgHSL(h, s, l);
-    int32_t rgb   = nvgToRGB(col) & 0xFFFFFF;
-    int32_t alpha = CLAMP_I((int32_t) (255.0f * a), 0, 255) << 24;
-    //  setInt32(rgb | alpha);
-    int32_t rgba     = rgb | alpha;
-    this->colorInt32 = rgba;
+    auto col   = nvgHSL(h, s, l);
+    auto rgb   = nvgToRGB(col) & 0xFFFFFF;
+    auto alpha = CLAMP_I(math::roundfU32(255.0f * a), 0, 255) << 24;
+    auto rgba  = rgb | alpha;
+
+    this->colorU32 = rgba;
     this->nvgColor   = rgbaToNvg(rgba);
-    if (ptrColorInt32) {
-        *ptrColorInt32 = colorInt32;
+    if (ptrColorU32) {
+        *ptrColorU32 = colorU32;
     }
     if (ptrNvgColor) {
         *ptrNvgColor = nvgColor;
@@ -165,22 +168,22 @@ void gui_color_pick::setHSL_(float h, float s, float l, float a) {
         fnSetValue(rgba);
     }
 }
-void gui_color_pick::setRefInt32(int32_t* ptrInt32) {
-    ptrColorInt32 = ptrInt32;
+void gui_color_pick::setRefU32(uint32_t* ptrU32) {
+    ptrColorU32 = ptrU32;
 }
 void gui_color_pick::setRefNvg(NVGcolor* ptrNvg) {
     ptrNvgColor = ptrNvg;
 }
 void gui_color_pick::handleRightClick(MouseEvent& evt) {
-    guictxtmenu_colorpalette* ctxt = new guictxtmenu_colorpalette();
-    ctxt->callback                 = [this](int32_t val) {
-        this->setInt32(val);
+    auto* ctxt = new guictxtmenu_colorpalette();
+    ctxt->callback = [this](uint32_t val) {
+        this->setU32(val);
     };
     parentCtrl->openContextMenu(ctxt, evt.mousepos);
 }
 
 
-gui_input_filtered::gui_input_filtered(int32_t* _number) : guibutton(), number(_number) {
+gui_input_filtered::gui_input_filtered(uint32_t* _number) : guibutton(), number(_number) {
     field.setParent(this);
     field.setFilter(&filter);
     setAlignCenter(false);
@@ -242,8 +245,7 @@ void gui_input_filtered::endEdit(bool success) {
     if (isEditing) {
         this->field.endEdit(success);
         if (success && this->number) {
-            int newVal = filter.parseString(this->field.value());
-            *number    = newVal;
+            *number = filter.parseString(this->field.value());
             if (parent)
                 parent->buttonClicked(this);
         }
@@ -267,18 +269,15 @@ void gui_input_filtered::handleDraggedBegin(MouseEvent& evt) {
     if (isEditing) {
         this->field.handleDraggedBegin(evt);
     } else {
+        this->draggedByte = 0xFF;
         if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
             startEdit(true);
         } else {
             if (evt.guiDragged == this) {
-                int32_t rel = (int32_t) evt.relMousepos.x * 4.0f / size.x;
-                if (rel < 0)
-                    rel = 0;
-                if (rel > 3)
-                    rel = 3;
-                rel = 3 - rel;
-                log_printf("relMousepos %d/%d %f %d \n", evt.relMousepos.x, size.x, evt.relMousepos.x * 4.0f / size.x, rel);
-                this->draggedByte = rel;
+                auto inset = size.y * 0.6f;
+                auto scale = size.x - inset * 2.0f;
+                auto rel = math::clamp((evt.relMousepos.x-inset) * 4.0f / scale, 0.0f, 3.0f);
+                this->draggedByte = (3 - math::floorfU32(rel)) & 0xFF;
                 parentCtrl->captureMouse(this);
             }
         }
@@ -291,32 +290,26 @@ void gui_input_filtered::handleDraggedMove(MouseEvent& evt) {
         return;
     }
     if (number && evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
-        if (this->draggedByte >= 0 && draggedByte < 4) {
-            int disty = (int) (evt.dragDistance->y) / 2;
+        if (draggedByte < sizeof(uint32_t)) {
+            auto disty = evt.dragDistance->y / 2;
             if (math::abs(disty) < 1)
                 return;
 
             evt.dragDistance->y = 0;
-            int absy            = math::abs(disty);
+            auto absy = math::abs(disty);
             if (absy >= 4)
                 absy = 64;
             else if (absy >= 2)
                 absy = 4;
-
-            int current = *number;
-            int byte    = (current >> (draggedByte * 8)) & 0xFF;
-            byte -= (disty < 0 ? -1 : 1) * absy;
-            if (byte < 0) {
-                byte = 0;
-            } else if (byte > 255) {
-                byte = 255;
-            }
+            auto current = *number;
+            uint8_t byte = (current >> (draggedByte * 8)) & 0xFF;
+            auto byte_u32 = static_cast<int32_t>(byte) + (disty < 0 ? 1 : -1) * absy;
+            byte = math::clamp(byte_u32, 0, 0xFF);
 
             *number = (current & (~(0xFF << (draggedByte * 8)))) | byte << (draggedByte * 8);
             if (parent)
                 parent->buttonClicked(this);
         }
-        return;
     }
 }
 
@@ -324,7 +317,7 @@ void gui_input_filtered::handleDraggedRelease(MouseEvent& evt) {
     if (isEditing) {
         this->field.handleDraggedRelease(evt);
     }
-    this->draggedByte = -1;
+    this->draggedByte = 0xFF;
 }
 
 bool gui_input_filtered::handleKeyInput(KeyEvent& kevt) {

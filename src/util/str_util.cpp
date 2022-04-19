@@ -26,7 +26,7 @@ String StringFormat(const char* fmt, ...) {
     if (ret == -1) {
         ret = FormatBuffer.size() - 1;
     }
-    if (ret < 0 || ret >= FormatBuffer.size()) {
+    if (ret < 0 || ret >= CtrSize(FormatBuffer)) {
         dbgassert(0);
         return {};
     }

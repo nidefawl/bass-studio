@@ -333,7 +333,7 @@ public:
         ctr_nodes.setControl(dawCtrl);
 
         v.push_back(&splitterCenter);
-        dbgassert(v.size() == indexContent);
+        dbgassert(CtrSize(v) == indexContent);
 
         v.push_back(&ctr_tracks2);
 
@@ -502,7 +502,7 @@ public:
         this->ctr_nodes.setControl(mainCtrl);
         for (auto& s : splitters)
             v.push_back(s.get());
-        dbgassert(v.size() == indexContent);
+        dbgassert(CtrSize(v) == indexContent);
         v.push_back(&ctr_tracks);
         v.push_back(&ctr_clipeditor);
         v.push_back(&ctr_tempo);
@@ -559,7 +559,7 @@ public:
             loadContainerSnapshot(fac, context, ctr_Left.get(), viewLayout->left.get());
         }
         if (viewLayout->splitterPositions.size() == splitters.size()) {
-            for (int i = 0; i < splitters.size(); i++) {
+            for (size_t i = 0; i < splitters.size(); i++) {
                 splitters[i]->setScale(viewLayout->splitterPositions[i]);
             }
         }
@@ -571,7 +571,7 @@ public:
         storeContainerSnapshot(ctr_Right.get(), layout->right.get());
         storeContainerSnapshot(ctr_Left.get(), layout->left.get());
         layout->splitterPositions.resize(splitters.size());
-        for (int i = 0; i < splitters.size(); i++) {
+        for (size_t i = 0; i < splitters.size(); i++) {
             layout->splitterPositions[i] = splitters[i]->getScale();
         }
     }
@@ -1103,8 +1103,8 @@ void MainCtrl::startApp() {
     }
     
     view->storeLayout(&layouts[0]);
-    for (auto i = 1; i < layouts.size(); i++) {
-        std::shared_ptr<dawview_layout_t> viewLayout = loadDawViewLayoutSnapshot(StringFormat("data/view%d.layout", i));
+    for (size_t i = 1; i < layouts.size(); i++) {
+        std::shared_ptr<dawview_layout_t> viewLayout = loadDawViewLayoutSnapshot(StringFormat("data/view%zu.layout", i));
         if (viewLayout) {
             layouts[i] = *viewLayout.get();
         }
@@ -1288,7 +1288,7 @@ MainCtrl::MainCtrl(DawInstance& _daw) : DawCtrl(_daw) {
 }
 
 void MainCtrl::initApp(const std::vector<String>& args) {
-    for (int i = 1; i < args.size(); i++) {
+    for (size_t i = 1; i < args.size(); i++) {
         if (args[i] == "--load" && i + 1 < args.size()) {
             loadProject = args[i + 1];
             i++;
@@ -1489,7 +1489,7 @@ void DawInstance::layoutTrackEditors() {
 }
 
 void DawInstance::getTrackContainers(std::vector<guictr_tracks*>& trackContainers) {
-    for (int i = 0; i < dawCtrls.size(); i++) {
+    for (size_t i = 0; i < dawCtrls.size(); i++) {
         dawCtrls[i]->getTrackContainers(trackContainers);
     }
 }

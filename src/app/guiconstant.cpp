@@ -11,24 +11,24 @@ namespace GuiConstant {
         return allconstants;
     }
 
-    constant_t getConstantById(int32_t id) {
+    constant_t getConstantById(uint32_t id) {
         auto& v = _getConstants();
         for (auto* c : v) {
             if (c->idx == id) {
                 return *c;
             }
         }
-        return constant_t();
+        return {};
     }
 
-    constant_t getConstantByName(String name) {
+    constant_t getConstantByName(const String& name) {
         auto& v = _getConstants();
         for (auto* c : v) {
             if (c->name == name) {
                 return *c;
             }
         }
-        return constant_t();
+        return {};
     }
 
     std::vector<constant_t> getAllConstants() {
@@ -41,8 +41,8 @@ namespace GuiConstant {
         return v;
     }
 
-    int32_t getNextId() {
-        static int32_t constantsNextId = 1;
+    uint32_t getNextId() {
+        static uint32_t constantsNextId = 1;
         return constantsNextId++;
     }
 

@@ -325,7 +325,7 @@ public:
         while(layoutSize.y > 100.0) {
             layoutSize.y *= 0.75;
         } 
-        const int32_t cols      = layoutCols;
+        const size_t cols       = layoutCols;
         const vec2 graphSize    = layoutSize;
         const vec2 grphInset    = vec2(4.0f);
         const auto legendSize   = vec2(FONTSIZE_LEGEND*8.0f, FONTSIZE_LEGEND*4.0f + grphInset.x*0.5f * 2.0f);
@@ -369,7 +369,7 @@ public:
             graphPos.y += (FONTSIZE_TITLE + grphInset.y*2.0f);
             glBindTexture(GL_TEXTURE_2D, renderInstance.texActive);
             prevEntryNumRows = 1;
-            for (int pass = 0; pass < channelsSize; pass++) {
+            for (size_t pass = 0; pass < channelsSize; pass++) {
                 auto channel = renderInstance.channels[pass];
                 auto color   = rgbToNvg(colorOnlyPalette[(pass * 4 + 2) % colorOnlyPaletteLen]);
                 color.a      = 0.77f;

@@ -7,15 +7,15 @@
 
 namespace GuiColor {
     struct constant_t {
-        int32_t idx;
+        uint32_t idx;
         const char* name;
         uint32_t defValue;
         constant_t() noexcept;
         constant_t(const char* _name, uint32_t _defValue) noexcept;
     };
     std::vector<constant_t> getAllConstants();
-    constant_t getConstantById(int32_t id);
-    constant_t getConstantByName(String name);
+    constant_t getConstantById(uint32_t id);
+    constant_t getConstantByName(const String& name);
     extern constant_t COL_BASE_BG;
     extern constant_t COL_BASE_BG_HOVER;
     extern constant_t COL_BASE_BG_PRESSED;

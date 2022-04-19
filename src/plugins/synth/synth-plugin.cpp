@@ -7,6 +7,7 @@
 #include <memory>
 #include "config.h"
 #include "math/seq_math.h"
+#include "seq_util.h"
 #include "str_util.h"
 #include "dsp_util.h"
 #include "color_util.h"
@@ -574,7 +575,7 @@ namespace PluginSynth {
         void getValueDisplay(char* _out) override {
             String s;
             int val = this->Value();
-            if (val >= 0 && val < strings.size()) {
+            if (val >= 0 && val < CtrSize(strings)) {
                 s = strings[val];
             }
             snprintf(_out, kVstMaxParamStrLen, "%s", StringAsCStr(s));
@@ -1285,7 +1286,7 @@ namespace PluginSynth {
     }
 
     void PluginVST2_Synth::getParameterLabel(VstInt32 index, char* label) {
-        if (index >= 0 && index < vecParams.size()) {
+        if (index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
             param->getLabel(label);
         }
@@ -1293,21 +1294,21 @@ namespace PluginSynth {
 
     void PluginVST2_Synth::getParameterDisplay(VstInt32 index, char* text) {
         text[0] = 0;
-        if (index >= 0 && index < vecParams.size()) {
+        if (index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
             param->getValueDisplay(text);
         }
     }
 
     void PluginVST2_Synth::getParameterName(VstInt32 index, char* label) {
-        if (index >= 0 && index < vecParams.size()) {
+        if (index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
             vst_strncpy(label, StringAsCStr(param->shortName), kVstMaxParamStrLen);
         }
     }
 
     void PluginVST2_Synth::setParameter(VstInt32 index, float value) {
-        if (index >= 0 && index < vecParams.size()) {
+        if (index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
             param->set(value);
             this->impl->OnParamChange(param->enumParam);
@@ -1327,7 +1328,7 @@ namespace PluginSynth {
 
     float PluginVST2_Synth::getParameter(VstInt32 index) {
         float value = 0;
-        if (index >= 0 && index < vecParams.size()) {
+        if (index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
             value                 = param->getAsFloat();
         }

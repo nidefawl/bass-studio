@@ -403,8 +403,8 @@ void trackcontainer_tracktype_t::copyFrom(trackcontainer_snapshot_t& in) {
     dbgassert(empty());
     // fix up old project files, assume all tracks are top level tracks with no parent
     if (in.hierachy.empty() && !in.tracks.empty()) {
-        for (int i = 0; i < in.tracks.size(); ++i)
-            in.hierachy.push_back(-1);
+        in.hierachy.resize(in.tracks.size(), -1);
+        std::fill(in.hierachy.begin(), in.hierachy.end(), -1);
     }
     track_vector newTrackVecTree;
     deserializeTrackTree(in, newTrackVecTree);

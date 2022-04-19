@@ -10,17 +10,6 @@
 #include "gui/gui.h"
 #include "assert_dbg.h"
 
-
-uint32_t nvgToRGBA(NVGcolor c);
-NVGcolor getContrastFontColor(uint32_t color);
-
-namespace GuiColor {
-    std::vector<constant_t> getAllConstants();
-}
-namespace GuiConstant {
-    std::vector<constant_t> getAllConstants();
-}
-
 bool nvgColorEqual(NVGcolor a, NVGcolor b) {
 #define F_EPS 0.000001f
     if (fabs(a.r - b.r) > F_EPS) return false;
@@ -69,7 +58,7 @@ void guitheme_t::initTheme() {
     mapColors.clear();
     mapProperties.clear();
     mapFonts.clear();
-    int32_t maxIdx = 0;
+    uint32_t maxIdx = 0;
 
     std::vector<GuiColor::constant_t> v = GuiColor::getAllConstants();
     for (auto c : v) {
@@ -126,7 +115,7 @@ NVGcolor guitheme_t::getContrastColor(GuiColor::constant_t _constant) const {
     dbgassert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
     return getContrastFontColor(nvgToRGBA(this->vecNVGColors[_constant.idx]));
 }
-int32_t guitheme_t::getColorInt32(GuiColor::constant_t _constant) {
+uint32_t guitheme_t::getColorInt32(GuiColor::constant_t _constant) {
     if (pOverrideState->overrideState == 1 && pOverrideState->_overrideColorConstant.idx == _constant.idx) {
         return this->pOverrideState->_overrideColorValue;
     }
@@ -140,11 +129,11 @@ int32_t guitheme_t::getColorInt32(GuiColor::constant_t _constant) {
     dbgassert(nvgColorEqual(this->vecNVGColors[_constant.idx], rgbaToNvg(mapColors[_constant.idx])));
     return mapColors[_constant.idx];
 }
-void guitheme_t::setColor(GuiColor::constant_t _constant, int32_t _newValue) {
+void guitheme_t::setColor(GuiColor::constant_t _constant, uint32_t _value) {
     if (isDefault) return;
     dbgassert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
-    mapColors[_constant.idx]          = _newValue;
-    this->vecNVGColors[_constant.idx] = rgbaToNvg(_newValue);
+    mapColors[_constant.idx]          = _value;
+    this->vecNVGColors[_constant.idx] = rgbaToNvg(_value);
 }
 
 float guitheme_t::getFloat(GuiConstant::constant_t _constant) const {
@@ -167,11 +156,10 @@ UIFont::font_instance guitheme_t::getFont(UIFont::font_type_t _fonttype) const {
     return mapFonts.at(_fonttype.idx);
 }
 void guitheme_t::bindFonts() {
-    for (auto it = mapFonts.begin(); it != mapFonts.end(); ++it) {
-        int32_t key           = it->first;
-        UIFont::font_type_t c = UIFont::getConstantById(key);
-        if (c.idx <= 0) continue;
-        it->second.fontInstanceIdx = -1;
+    for (auto& mapFont : mapFonts) {
+        UIFont::font_type_t c = UIFont::getConstantById(mapFont.first);
+        if (c.idx == 0) continue;
+        mapFont.second.fontInstanceIdx = -1;
         //for (int i = 0; i < MAX_FONTS; i++) {
         //if (RenderResources::fontsLoaded[i].name == it->second.name) {
         //it->second.fontInstanceIdx = i;

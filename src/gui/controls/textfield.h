@@ -14,34 +14,34 @@ public:
 };
 
 class input_filter_hex32 : public input_filter {
-    int32_t toInt(int32_t c) {
+    uint32_t toInt(uint32_t c) {
         if (c >= '0' && c <= '9') return c - '0';
         if (c >= 'A' && c <= 'F') return 10 + c - 'A';
         if (c >= 'a' && c <= 'f') return 10 + c - 'a';
-        return -1;
+        return 16;
     };
 
 public:
     bool isAllowedChar(uint32_t codepoint) override {
-        return toInt(codepoint) != -1;
+        return toInt(codepoint) < 16;
     }
     void setString(String string, bool trigger = false) override {
     }
     bool isReplaceInput() override {
         return true;
     }
-    String formatNumber(int32_t number) {
+    String formatNumber(uint32_t number) {
         return StringFormat("%08X", number);
     }
-    int32_t parseString(String string) {
+    uint32_t parseString(String string) {
         for (auto it = string.begin(); it != string.end();) {
-            if (toInt(*it) == -1) {
+            if (toInt(*it) > 15) {
                 it = string.erase(it);
             } else {
                 it++;
             }
         }
-        int32_t nr = 0;
+        uint32_t nr = 0;
         for (auto it = string.begin(); it - string.begin() < 8 && it != string.end(); it++) {
             auto nInt = toInt(*it);
             nr <<= 4;

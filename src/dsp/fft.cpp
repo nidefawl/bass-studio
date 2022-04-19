@@ -40,7 +40,7 @@ void fillbands(std::vector<float> const& mags, std::vector<float> const& freq, s
             //      log_printf("Band #%d is %f * [%d] + %f * [%d]\n", i, delta, binIdx, 1.0f-delta, binIdx+1);
         }
     }
-    for (int i = 0; i < numBands; i++) {
+    for (size_t i = 0; i < numBands; i++) {
         //    bands[i] = bands[i] * 0.5 + newBands[i] * 0.5;
         bands[i] = bands[i] * 0.15f + newBands[i] * 0.85f;
 

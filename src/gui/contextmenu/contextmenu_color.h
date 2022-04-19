@@ -90,15 +90,15 @@ public:
 };
 class guictxtmenu_colorpalette : public guictxtmenu {
 public:
-    std::function<void(int32_t)> callback = nullptr;
+    std::function<void(uint32_t)> callback = nullptr;
     guictxtmenu_colorpalette() {
-        ctxtmenu_color_select* colorSelect = new ctxtmenu_color_select("Pick Color", 100);
+        auto* colorSelect = new ctxtmenu_color_select("Pick Color", 100);
         addEntry(colorSelect);
     }
     void clicked(int _id) override {
         if (_id >= 100) {
             _id -= 100;
-            int32_t col = colorPalette[_id];
+            uint32_t col = colorPalette[_id];
             if (callback) {
                 callback(col);
             }

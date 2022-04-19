@@ -487,7 +487,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         }
         glEnable(GL_SCISSOR_TEST);
-        int numRendered            = 0;
+        size_t numRendered = 0;
         int64_t timeoutMikros = 60000;
         auto it                    = _atlas.queuedTasks.begin();
         for (; it != _atlas.queuedTasks.end() && impl->renderTimings.tmPassed < timeoutMikros; ++it) {
@@ -516,7 +516,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             bakeOpt.antialias     = 1.0f;
             bakeOpt.scale         = 1;
             BakeGLPath& bakedPath = this->bakedPaths[this->nextPathIdx++];
-            if (this->nextPathIdx >= this->bakedPaths.size()) {
+            if (this->nextPathIdx >= CtrSize(this->bakedPaths)) {
                 this->nextPathIdx = 0;
             }
             impl->timer2.reset();
@@ -555,9 +555,9 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             impl->renderTimings.tmPassed = impl->timer.getTime();
         }
         totalRendered += numRendered;
-        int size1 = (int)_atlas.queuedTasks.size();
+        auto sizeBefore = _atlas.queuedTasks.size();
         _atlas.queuedTasks.erase(_atlas.queuedTasks.begin(), it);
-        dbgassert((size1 - numRendered) == _atlas.queuedTasks.size());
+        dbgassert((sizeBefore - numRendered) == _atlas.queuedTasks.size());
         if (impl->renderTimings.tmPassed >= timeoutMikros) {
             break;
         }
