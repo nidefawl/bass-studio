@@ -18,34 +18,34 @@ class ipc_server::Impl {
     struct sockaddr_un remote {
         0
     };
-    String pathUnlink;
+    const char* pathUnlink;
 
 public:
     Impl()  = default;
     ~Impl() = default;
 
-    int server_open(String path) {
+    int server_open(const char* path) {
         int newSocket = socket(AF_UNIX, SOCK_STREAM, 0);
         if (m_fdSockListen == -1) {
             return IPC_SOCKET_ERROR;
         }
         m_fdSockListen = newSocket;
-        int ret        = unlink(StringAsCStr(path));
-        log_printf("unlink %s returned %d.\n", StringAsCStr(path), ret);
+        int ret        = unlink(path);
+        log_printf("unlink %s returned %d.\n", path, ret);
 
         struct sockaddr_un local {
             0
         };
         local.sun_family = AF_UNIX;
-        strncpy(local.sun_path, StringAsCStr(path), sizeof(local.sun_path));
+        strncpy(local.sun_path, path, sizeof(local.sun_path));
         local.sun_path[sizeof(local.sun_path) - 1] = '\0';
 
         socklen_t len = (offsetof(struct sockaddr_un, sun_path) + strlen(local.sun_path));
         ret = bind(m_fdSockListen, (struct sockaddr*) &local, len);
         if (0 != ret) {
-            log_printf("bind returned %d. Unlinking unix socket %s\n", ret, StringAsCStr(path));
-            ret = unlink(StringAsCStr(path));
-            log_printf("second unlink %s returned %d.\n", StringAsCStr(path), ret);
+            log_printf("bind returned %d. Unlinking unix socket %s\n", ret, path);
+            ret = unlink(path);
+            log_printf("second unlink %s returned %d.\n", path, ret);
             ret = bind(m_fdSockListen, (struct sockaddr*) &local, len);
             log_printf("second bind returned %d\n", ret);
             if (0 != ret) {
@@ -103,7 +103,7 @@ ipc_server::~ipc_server() {
     delete m_impl;
 }
 
-int ipc_server::server_open(String path) {
+int ipc_server::server_open(const char* path) {
     return m_impl->server_open(path);
 }
 
@@ -138,7 +138,7 @@ class ipc_client::Impl {
 public:
     Impl()  = default;
     ~Impl() = default;
-    int client_connect(String path) {
+    int client_connect(const char* path) {
         m_fdSock = socket(AF_UNIX, SOCK_STREAM, 0);
         if (m_fdSock == -1) {
             return IPC_SOCKET_ERROR;
@@ -149,7 +149,7 @@ public:
             0
         };
         remote.sun_family = AF_UNIX;
-        strncpy(remote.sun_path, StringAsCStr(path), sizeof(remote.sun_path));
+        strncpy(remote.sun_path, path, sizeof(remote.sun_path));
         remote.sun_path[sizeof(remote.sun_path) - 1] = '\0';
 
         uint32_t len = (offsetof(struct sockaddr_un, sun_path) + strlen(remote.sun_path));
@@ -179,7 +179,7 @@ ipc_client::~ipc_client() {
     delete m_impl;
 }
 
-int ipc_client::client_connect(String path) {
+int ipc_client::client_connect(const char* path) {
     return m_impl->client_connect(path);
 }
 

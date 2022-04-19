@@ -21,7 +21,7 @@ class ipc_server : public ipc_connection {
 public:
     ipc_server();
     ~ipc_server() override;
-    int server_open(String path);
+    int server_open(const char* path);
     int server_accept();
     void server_disconnect();
     void server_close();
@@ -38,7 +38,7 @@ class ipc_client : public ipc_connection {
 public:
     ipc_client();
     ~ipc_client() override;
-    int client_connect(String path);
+    int client_connect(const char* path);
     void client_close();
     int sendData(char* buf, uint32_t len) override;
     int readData(char* buf, uint32_t len) override;

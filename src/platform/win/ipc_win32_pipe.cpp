@@ -1,4 +1,5 @@
 #include "ipc.h"
+#include "logging.h"
 #include "str_util.h"
 #include "platform.h"
 #include "thread.h"
@@ -8,25 +9,22 @@
 #include <cstdlib>
 
 
-void printLastError(String fn) {
-    DWORD err   = GetLastError();
-    String desc = StringFormat("%s failed (%d)", StringAsCStr(fn), (int32_t) err);
-    printf("%s\n", StringAsCStr(FormatErrorMessage(err, desc)));
-    fflush(stdout);
+void printLastError(const char* fn) {
+    const DWORD err = GetLastError();
+    const auto errorMsg = FormatErrorMessage(err, StringFormat("%s failed (%lu)", fn, err));
+    log_lf(Log::L_ERROR, "%s", errorMsg.c_str());
 }
 
 class ipc_server::Impl {
     HANDLE pipe = nullptr;
 
 public:
-    Impl() {
-    }
+    Impl() = default;
     ~Impl() {
         server_close();
     }
-    int server_open(String path) {
-        String pipeName = StringFormat("\\\\.\\pipe\\%s", StringAsCStr(path));
-
+    int server_open(const char* path) {
+        const String pipeName = StringFormat(R"(\\.\pipe\%s)", path);
         pipe = CreateNamedPipe(
                 StringAsCStr(pipeName),    // name of the pipe
                 PIPE_ACCESS_DUPLEX,        // bidirectional
@@ -61,9 +59,9 @@ public:
     }
     int server_read(char* buf, unsigned int buflen) {
         memset(buf, 0, buflen);
-        DWORD bytesSent;
+        DWORD bytesSent = 0;
         if (ReadFile(pipe, buf, buflen, &bytesSent, nullptr)) {
-            return bytesSent;
+            return static_cast<int>(bytesSent);
         }
         printLastError("ReadFile");
         return 0;
@@ -74,12 +72,12 @@ public:
             printLastError("PeekNamedPipe");
             return -1;
         }
-        return bytesAvail;
+        return static_cast<int>(bytesAvail);
     }
     int server_send(char* buf, unsigned int buflen) {
-        DWORD bytesSent;
+        DWORD bytesSent = 0;
         if (WriteFile(pipe, buf, buflen, &bytesSent, nullptr)) {
-            return bytesSent;
+            return static_cast<int>(bytesSent);
         }
         printLastError("WriteFile");
         return 0;
@@ -103,7 +101,7 @@ ipc_server::ipc_server() : m_impl{ new ipc_server::Impl{} } {
 ipc_server::~ipc_server() {
     delete m_impl;
 }
-int ipc_server::server_open(String path) {
+int ipc_server::server_open(const char* path) {
     return m_impl->server_open(path);
 }
 int ipc_server::server_accept() {
@@ -134,8 +132,8 @@ public:
     ~Impl() {
         client_close();
     }
-    int client_connect(String path) {
-        String pipeName = StringFormat("\\\\.\\pipe\\%s", StringAsCStr(path));
+    int client_connect(const char* path) {
+        const String pipeName = StringFormat(R"(\\.\pipe\%s)", path);
         if (!WaitNamedPipe(StringAsCStr(pipeName), 5000)) {
             client_close();
             return IPC_CONNECT_FAILED;
@@ -156,18 +154,18 @@ public:
     }
     int client_read(char* buf, unsigned int buflen) {
         memset(buf, 0, buflen);
-        DWORD bytesSent;
+        DWORD bytesSent = 0;
         if (ReadFile(pipe, buf, buflen, &bytesSent, nullptr)) {
-            return bytesSent;
+            return static_cast<int>(bytesSent);
         }
         printf("ReadFile: %lu\n", bytesSent);
         printLastError("ReadFile");
         return 0;
     }
     int client_send(char* buf, unsigned int buflen) {
-        DWORD bytesSent;
+        DWORD bytesSent = 0;
         if (WriteFile(pipe, buf, buflen, &bytesSent, nullptr)) {
-            return bytesSent;
+            return static_cast<int>(bytesSent);
         }
         printf("WriteFile: %lu\n", bytesSent);
         printLastError("WriteFile");
@@ -186,7 +184,7 @@ ipc_client::ipc_client() : m_impl{ new ipc_client::Impl{} } {
 ipc_client::~ipc_client() {
     delete m_impl;
 }
-int ipc_client::client_connect(String path) {
+int ipc_client::client_connect(const char* path) {
     return m_impl->client_connect(path);
 }
 void ipc_client::client_close() {
