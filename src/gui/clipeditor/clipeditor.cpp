@@ -530,13 +530,15 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 
         nvgSave(vg);
         nvgTranslate(vg, 0, yOff);
-        int numRowsSharp = 0;
-        nvgBeginPath(vg);
-        int len = (int) pitches.size();
         float y = 0;
+        int numRowsSharp = 0;
+        int len = CtrSize(pitches);
         for (int i = firstKey; i < len; i++) {
             int32_t pitch = pitches[i];
             if (isSharp(pitch)) {
+                if (numRowsSharp == 0) {
+                    nvgBeginPath(vg);
+                }
                 nvgRect(vg, 0, h - y, w, scale);
                 numRowsSharp++;
             }
@@ -545,8 +547,10 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                 break;
             }
         }
-        nvgFillColor(vg, theme->getColor(GuiColor::COL_CLIPEDITOR_SHARP));
-        nvgFill(vg);
+        if (numRowsSharp) {
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_CLIPEDITOR_SHARP));
+            nvgFill(vg);
+        }
 
         renderGridLines(vg, theme, grid, size);
 
