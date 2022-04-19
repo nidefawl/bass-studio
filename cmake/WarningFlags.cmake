@@ -32,7 +32,7 @@ if (MSVC)
   set(MSVC_WARNINGS_RELEASE /W3 /wd4267 /wd4244 /wd4100 /wd4458 /wd4305)
   set(BUILD_WARNING_FLAGS $<IF:$<CONFIG:Debug>,${MSVC_WARNINGS_DEBUG},${MSVC_WARNINGS_RELEASE}>)
 else ()
-  set(BUILD_WARNING_FLAGS -Wall -Wno-unused-parameter)
+  set(BUILD_WARNING_FLAGS -Wall -Wextra -pedantic -Wno-unused-parameter)
   if (NOT CLANG)
     # GCC warns in cases like 'if (x_s32 < 0) return; if (x_s32 >= len_u32) x_s32 = len_u32 - 1;'
     list(APPEND BUILD_WARNING_FLAGS -Wno-sign-compare)

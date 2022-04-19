@@ -27,7 +27,7 @@ namespace Log {
         L_ERROR,
         L_FATAL
     };
-    void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* func, const char* fmt, ...) noexcept;
+    void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* func, const char* fmt, ...) noexcept FORMAT(6, 7);
 }
 class Logger {
     Log::Level lvl = Log::LEVEL_ALL;

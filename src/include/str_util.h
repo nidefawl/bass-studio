@@ -39,7 +39,14 @@ using String       = std::string;
 using Stringstream = std::stringstream;
 #endif
 #define StringAsCStr(x) ((x).c_str())
-String StringFormat(const char* fmt, ...);
+
+#if defined(_MSC_VER)
+# define FORMAT(f, a)
+#else  // _MSC_VER
+# define FORMAT(f, a)  __attribute__((format(printf, f, a)))
+#endif  // _MSC_VER
+
+String StringFormat(const char* fmt, ...) FORMAT(1, 2);
 String FormatTempo(float tempo);
 String StringLimit(String s, int limit);
 void replaceString(String& s, String f, String r);
