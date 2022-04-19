@@ -162,7 +162,6 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
                 tick_t evtMax            = INVALID_TICK;
                 track_gui_entry_t* trMin = nullptr;
                 track_gui_entry_t* trMax = nullptr;
-                int idx                  = 0;
                 for (track_gui_entry_t* t : iGuiMgr.getTracksVisibleFlat()) {
                     auto minMax = t->track->getMinMaxEvents();
                     if (minMax.min != INVALID_TICK) {
@@ -175,7 +174,6 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
                             trMax = t;
                         }
                     }
-                    idx++;
                 }
                 if (evtMin != INVALID_TICK) {
                     cursor.cursorPos = evtMin;

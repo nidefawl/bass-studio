@@ -283,7 +283,6 @@ namespace DAW {
         std::map<audiostageid_i32, effect_node_ptr> map;
         std::map<audiostageid_i32, effect_node_ptr> audioStageInputs;
         std::map<audiostageid_i32, effect_node_ptr> audioStageOutputs;
-        int32_t effIdx = 0;
 
         audioStageInputs[stage->stageId.inputStageId]   = makeAudioStageNode(stage->stageId.inputStageId, 0);
         audioStageOutputs[stage->stageId.outputStageId] = makeAudioStageNode(stage->stageId.outputStageId, 0);
@@ -339,8 +338,6 @@ namespace DAW {
                     }
                 }
             }
-
-            effIdx++;
         }
 
         //effect_node_t& trackCfg = getEffNode(audioStageOutputs, audioStageOutputs[TRACKID_DEFAULT_I32]);

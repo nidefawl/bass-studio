@@ -215,8 +215,7 @@ void GLPathRendererDashLines::bakePaths(std::vector<vec2list> paths, Uniforms pa
     const int sizeFloatsVert = sizeof(vert) / sizeof(float);
     size_t flBufUniformsPos  = 0;
     size_t flBufVertsPos     = 0;
-    int packed               = 0;
-    int idx                  = 0;
+    int idx    = 0;
     for (vec2list& list : paths) {
         if (list.size() > 1) {
             float len = packVertexData2(list, outVdata, idx);
@@ -230,7 +229,6 @@ void GLPathRendererDashLines::bakePaths(std::vector<vec2list> paths, Uniforms pa
             memcpy(bufUniforms.data() + flBufUniformsPos, &uniforms, sizeof(Uniforms));
             flBufUniformsPos += sizeUniforms;
             flBufVertsPos += outVdata.size();
-            packed++;
             outVdata.clear();
             idx++;
         }
