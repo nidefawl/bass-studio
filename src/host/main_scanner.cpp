@@ -70,7 +70,12 @@ static const char* szLogPrefixes[3] = {
 constexpr int32_t timeoutdefault = 120;
 static int logPrefixIdx = PROC_SIDE_NONE;
 
-#define log_message(fmtString, ...) log_out("%s" fmtString "\n", ::VSTScannerImpl::szLogPrefixes[::VSTScannerImpl::logPrefixIdx], ##__VA_ARGS__)
+#define log_message(...)                                                                                   \
+    do {                                                                                                   \
+        String msg = StringFormat(__VA_ARGS__);                                                            \
+        msg        = String(::VSTScannerImpl::szLogPrefixes[::VSTScannerImpl::logPrefixIdx]) + msg + "\n"; \
+        getGlobalLogger()->log(Log::L_INFO, msg.c_str(), msg.length());                                    \
+    } while (0)
 
 #define E_WRITE_OK 0
 #define E_WRITE_ERR_PIPE 1
