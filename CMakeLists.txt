@@ -276,7 +276,7 @@ endif (APPLE)
 
 if (WIN32)
   set_target_properties(${LINK_TARGET} PROPERTIES MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-  target_link_libraries(${LINK_TARGET} PUBLIC dbghelp winmm opengl32 kernel32 gdi32 ole32 uuid comdlg32 setupapi mswsock ws2_32)
+  target_link_libraries(${LINK_TARGET} PUBLIC user32 advapi32 shell32 dbghelp winmm opengl32 kernel32 gdi32 ole32 uuid comdlg32 setupapi mswsock ws2_32)
 endif (WIN32)
 
 if (WIN32 AND PROJECT_CFG_USE_STACK_PROTECTOR)
@@ -295,7 +295,7 @@ if (PROJECT_BUILD_TESTS)
   ADD_SUBDIRECTORY(test)
 endif()
 
-if (WIN32 AND PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
+if (WIN32 AND NOT MSVC AND PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
   find_program(NSIS_MAKE NAMES makensis PATH_SUFFIXES NSIS)
   if (NOT NSIS_MAKE)
     message(STATUS "Skip windows-installer: makensis not found")
