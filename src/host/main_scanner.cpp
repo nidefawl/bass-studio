@@ -263,7 +263,7 @@ static int readClientResponses(vstscanner_server_options& options, ipc_server& s
     while (!userSentQuitRequest) {
         int32_t responseType    = 0;
         int peakRdBufSizeResult = server.peekReadBufferSize();
-        if (peakRdBufSizeResult < sizeof(responseType)) {
+        if (peakRdBufSizeResult < static_cast<int>(sizeof(responseType))) {
             auto timeSince_ms = getTimeMillis() - timeStartScan_ms;
             if (-1 == peakRdBufSizeResult || (timeSince_ms > timeoutPluginScan_ms)) {
                 log_message("TIMEOUT: Plugin %s timed out after %d ms", req.szPath, timeoutPluginScan_ms);
