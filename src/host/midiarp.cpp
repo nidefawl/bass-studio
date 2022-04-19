@@ -482,7 +482,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
         // handle on/off state changes
         if (this->enable != enabledBefore) {
             if constexpr (logProcessedNotes) {
-                log_lf(Log::L_DEBUG, "Block %d: ARP STATE CHANGED TO (%s) at %d = %d, %d heldinput, %d heldOutput\n", start, (enable ? "enabled" : "disabled"), tick - start, tick, heldInput.size(), heldOutputNotes.size());
+                log_lf(Log::L_DEBUG, "Block %d: ARP STATE CHANGED TO (%s) at %d = %d, %zu heldinput, %zu heldOutput\n", start, (enable ? "enabled" : "disabled"), tick - start, tick, heldInput.size(), heldOutputNotes.size());
             }
             // end incoming notes when arp was enabled. Restart incoming notes when arp has been disabled
             for (arp_note_t& noteInHeld : this->heldInput) {
@@ -535,7 +535,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
                 });
                 if (it == heldInput.end()) {
                     // arp received a note off with the corresponding note_on missing
-                    log_lf(Log::L_ERROR, "Arp received note off with the corresponding note_on missing %d\n", noteName(evt.pitch));
+                    log_lf(Log::L_ERROR, "Arp received note off with the corresponding note_on missing %s\n", noteName(evt.pitch));
                 } else {
                     arp_note_t& arpInputNote = *it;
                     if constexpr (logProcessedNotes) {
@@ -650,7 +650,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
                     return t < tick;
                 });
                 if (stepSomeCompleted2) {
-                    log_lf(Log::L_WARN, "some steps (%d) generated lay before current tick (at step %d range %s %s)\n", stepSomeCompleted2, stepToGenerate, StringAsCStr(tickAsBeatString(start)), StringAsCStr(tickAsBeatString(end)));
+                    log_lf(Log::L_WARN, "some steps (%zd) generated lay before current tick (at step %d range %s %s)\n", stepSomeCompleted2, stepToGenerate, StringAsCStr(tickAsBeatString(start)), StringAsCStr(tickAsBeatString(end)));
                 }
                 stepGenerated = stepToGenerate;
             }
@@ -658,7 +658,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
 
         // generate heldOutput notes even when arp is disabled
         if (processTimePoints.size() != NUM_ARP_MAX_POLY_VOICES && !heldInput.empty()) {
-            log_lf(Log::L_WARN, "processTimePoints.size() is %d, waiting for reset...\n", processTimePoints.size());
+            log_lf(Log::L_WARN, "processTimePoints.size() is %zu, waiting for reset...\n", processTimePoints.size());
         }
         auto maxProcPts = math::min<size_t>(isChordPattern ? NUM_ARP_MAX_POLY_VOICES : 1, heldInput.size());
         maxProcPts      = math::min<size_t>(maxProcPts, processTimePoints.size());
@@ -713,7 +713,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
 
     // sanity check, remove later on
     if (evtsProcessed != noteEventsIn.size()) {
-        log_lf(Log::L_ERROR, "Block %d-%d: ARP did not process all events. Processed %zu of %d\n", start, end, evtsProcessed, noteEventsIn.size());
+        log_lf(Log::L_ERROR, "Block %d-%d: ARP did not process all events. Processed %zu of %zu\n", start, end, evtsProcessed, noteEventsIn.size());
         log_lf(Log::L_ERROR, "Block %d-%d: loopStart %d, loopEnd %d\n", start, end, loopStart, loopEnd);
         for (noteevent_t& evt : noteEvents) {
             log_lf(Log::L_ERROR, "Block %d-%d: Event %s %d %d %s\n", start, end, evt.isNoteOn ? "ON" : "OFF", evt.globalTick, evt.tickOffsetInBlock, noteName(evt.pitch));

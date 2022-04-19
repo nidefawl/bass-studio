@@ -69,11 +69,11 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
         memset(pSamples.data(), 0, sizeof(float) * pSamples.size());
         size_t nSamples = drwav_read_f32(&wav, wav.totalSampleCount, pSamples.data());
 
-        log_lf(Log::L_DEBUG, "totalSampleCount: %d\n", wav.totalSampleCount);
+        log_lf(Log::L_DEBUG, "totalSampleCount: %zu\n", wav.totalSampleCount);
         log_lf(Log::L_DEBUG, "channels: %d\n", wav.fmt.channels);
         log_lf(Log::L_DEBUG, "sampleRate: %d\n", wav.fmt.sampleRate);
         log_lf(Log::L_DEBUG, "bitsPerSample: %d\n", wav.fmt.bitsPerSample);
-        log_lf(Log::L_DEBUG, "samples: %d\n", nSamples);
+        log_lf(Log::L_DEBUG, "samples: %zu\n", nSamples);
 
         std::unique_ptr<audiosample_t> sample = std::make_unique<audiosample_t>();
 
@@ -126,15 +126,11 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
 
             soxr_t soxr = soxr_create(sample->sampleRate, this->samplerate, sample->nChannels, &error, &io_spec, &q_spec, &runtime_spec);
             if (!!error) {
-                log_printf("soxr_create failed: %d %s\n", error, soxr_strerror(error));
+                log_printf("soxr_create failed: %s\n", soxr_strerror(error));
             } else {
                 error = soxr_process(soxr, channelPtrsIn.data(), numSamplesInput, nullptr, channelPtrsOut.data(), numSamplesResampled, &offset);
-                log_lf(Log::L_DEBUG, "offset %d, pSamples.size: %d\n", offset, pSamples.size());
-
-
-                log_lf(Log::L_DEBUG, "soxr_process post %d\n", error);
                 if (!!error) {
-                    log_printf("soxr_process failed: %d %s\n", error, soxr_strerror(error));
+                    log_printf("soxr_process failed: %s\n", soxr_strerror(error));
                 } else {
                     sample->nSamples   = static_cast<int64_t>(offset);
                     sample->sampleRate = this->samplerate;

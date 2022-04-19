@@ -362,15 +362,15 @@ public:
                     strInfo = StringFormat("culled: %s", culled ? "true" : "false");
                     break;
                 case 2:
-                    strInfo = StringFormat("Splits: %d", splits.size());
+                    strInfo = StringFormat("Splits: %zu", splits.size());
                     break;
                 case 3:
                     //TODO: Next line is not thread-safe
-                    strInfo = StringFormat("samples.size: %d", this->m_track->audio->audioOutput.samples.size());
+                    strInfo = StringFormat("samples.size: %zu", this->m_track->audio->audioOutput.samples.size());
                     break;
                 case 4:
                     //TODO: Next line is not thread-safe
-                    strInfo = StringFormat("data.size: %d", this->m_track->audio->audioOutput.data.size());
+                    strInfo = StringFormat("data.size: %zu", this->m_track->audio->audioOutput.data.size());
                     break;
             }
             renderTextLabel(vg, 

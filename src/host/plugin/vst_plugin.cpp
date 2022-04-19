@@ -495,11 +495,11 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
         if (!pluginSnapshot.dataChunk.empty()) {
             auto& localMem = this->handle->dataChunkLocalMemory;
             localMem       = pluginSnapshot.dataChunk;
-            log_lf(Log::L_DEBUG, "Plugin %s: Load data1[%d]\n", StringAsCStr(this->sName), localMem.size());
+            log_lf(Log::L_DEBUG, "Plugin %s: Load data1[%zu]\n", StringAsCStr(this->sName), localMem.size());
             this->dispatch(effSetChunk, 0, (int64_t) localMem.size(), (void*) localMem.data());
         }
         if (loadPluginPresetWithSnapshot && !pluginSnapshot.dataChunk2.empty()) {
-            log_lf(Log::L_DEBUG, "Plugin %s: Load data2[%d]\n", StringAsCStr(this->sName), pluginSnapshot.dataChunk2.size());
+            log_lf(Log::L_DEBUG, "Plugin %s: Load data2[%zu]\n", StringAsCStr(this->sName), pluginSnapshot.dataChunk2.size());
             this->dispatch(effSetChunk, 1, (int64_t) pluginSnapshot.dataChunk2.size(), (void*) pluginSnapshot.dataChunk2.data());
         }
     } else {
@@ -794,7 +794,7 @@ String vstplugin::getInfo(std::vector<String>& list) {
             sUID[i] = ' ';
     }
     sUID[i] = '\0';
-    list.push_back(StringFormat("VstID: '%s' (%08lXH)", sUID, handle->uniqueID));
+    list.push_back(StringFormat("VstID: '%s' (%08X)", sUID, handle->uniqueID));
     list.push_back(StringFormat("Version %d", handle->version));
     list.push_back(StringFormat("initialDelay: %d", handle->initialDelay));
 
@@ -803,7 +803,7 @@ String vstplugin::getInfo(std::vector<String>& list) {
     list.push_back(StringFormat("%d programs", handle->numPrograms));
     list.push_back(StringFormat("%d parameters", handle->numParams));
 
-    list.push_back(StringFormat("Flags: %08lXH", handle->flags));
+    list.push_back(StringFormat("Flags: %08X", handle->flags));
     if (handle->flags & effFlagsNoSoundInStop)
         out += "effFlagsNoSoundInStop\n";
     if (handle->flags & effFlagsIsSynth)

@@ -78,7 +78,7 @@ void selectAllMuted(DawInstance* daw, clip_view& view) {
             notes.selection.insert(&n);
         }
     });
-    String selStatus = StringFormat("%d notes selected", notes.selection.size());
+    String selStatus = StringFormat("%zu notes selected", notes.selection.size());
     daw->getMainControl()->setStatusText(selStatus);
 }
 void gui_clipsettings::buttonClicked(guibase* button) {

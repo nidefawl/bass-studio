@@ -56,7 +56,7 @@ struct oversampler_t : public oversample_config_t {
 
         soxr = soxr_create((double) inputSampleRate, (double) outputSampleRate, numChannels, &soxrError, &io_spec, &q_spec, &runtime_spec);
         if (!!soxrError) {
-            log_lf(Log::L_ERROR, "soxr_create failed: %d %s\n", soxrError, soxr_strerror(soxrError));
+            log_lf(Log::L_ERROR, "soxr_create failed: %s\n", soxr_strerror(soxrError));
         }
     }
     bool runResample(AudioBlock& srcBlock, AudioBlock& dstBlock, uint32_t& nOutputProcessed) {
@@ -84,7 +84,7 @@ struct oversampler_t : public oversample_config_t {
                 nOutputProcessed = static_cast<uint32_t>(outputProcessed);
                 return outputProcessed > 0;
             } 
-            log_lf(Log::L_ERROR, "soxr_process failed: %d %s\n", soxrError, soxr_strerror(soxrError));
+            log_lf(Log::L_ERROR, "soxr_process failed: %s\n", soxr_strerror(soxrError));
         }
         return false;
     }
@@ -132,13 +132,13 @@ struct resampler_t {
         }
         outputBuffers.push_back(new buf_t{ new AudioBlock(numChannels, resampler.numSamplesResampled), 0, 0, false });
         if (outputBuffers.size() % 128 == 0)
-            log_printf("Allocate new output buffer, total %d buffers\n", outputBuffers.size());
+            log_printf("Allocate new output buffer, total %zu buffers\n", outputBuffers.size());
         return outputBuffers.back();
     }
 
     bool push(AudioBlock& block) {
         if (numSamplesQueued > out.blockSize * 32) {
-            log_lf(Log::L_WARN, "Output queue is not processed, flushing %u samples. %zu output buffers\n", numSamplesQueued, outputBuffers.size());
+            log_lf(Log::L_WARN, "Output queue is not processed, flushing %zd samples. %zu output buffers\n", numSamplesQueued, outputBuffers.size());
             releaseBuffers();
         }
         buf_t* buf = getFreeOutputBuffer();

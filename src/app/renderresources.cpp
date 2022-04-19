@@ -140,7 +140,7 @@ namespace RenderResources {
             for (size_t i = 0; i < MAX_FONTS && i < files.size(); i++) {
                 String fontPath = (files[i].path);
                 LoadedFont lf;
-                String fntKey = StringFormat("font%u", i);
+                String fntKey = StringFormat("font%zu", i);
                 log_lf(Log::L_DEBUG, "loading font %s %s\n", StringAsCStr(fntKey), StringAsCStr(fontPath));
                 if (i == 0) {
                     lf.nvgId = nvgCreateFont(vg, StringAsCStr(fntKey), StringAsCStr(fontPath));

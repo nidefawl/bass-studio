@@ -728,7 +728,7 @@ void DawInstance::unloadProject() {
 
     std::vector<track_t*> _tracks     = project.trackList.getAllTracksFlatVec();// iterate a copy
     std::vector<track_t*> _rootTracks = project.trackList.getAllTracksTreeVec();
-    log_lf(Log::L_DEBUG, "unloading project with %d tracks\n", _tracks.size());
+    log_lf(Log::L_DEBUG, "unloading project with %zu tracks\n", _tracks.size());
     for (auto it = _tracks.rbegin(); it != _tracks.rend(); it++) {
         track_t* track = *it;
 
@@ -1680,7 +1680,7 @@ bool DawInstance::setProjectToLoad(std::shared_ptr<project_file> file, int flags
 bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 
     setAudioThreadState(playback_state::status_no_process);
-    log_printf("Loading project %s: %d tracks\n", StringAsCStr(file->path), project.trackList.size());
+    log_printf("Loading project %s: %zu tracks\n", StringAsCStr(file->path), project.trackList.size());
     ThreadLock lock = playThread.lockThread();
     unloadProject();
     /** make sure call to unloadProject unloaded all vst2 instances **/

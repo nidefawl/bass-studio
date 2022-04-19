@@ -987,7 +987,7 @@ void gui_graph::render(NVGcontext* vg) {
         auto edgeLabelPos      = ivec2(portInputPos + vec2(portOutputPos - portInputPos) * 0.5f);
         auto procNode          = edge.portSrc->getNode()->getProcessingNode();
         setFont(vg, 14, THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-        auto text = StringFormat("%d samples", procNode->internalLatency + procNode->inputLatency);
+        auto text = StringFormat("%zd samples", procNode->internalLatency + procNode->inputLatency);
         nvgText(vg, edgeLabelPos.x, edgeLabelPos.y, StringAsCStr(text), nullptr);
     }
     nvgRestore(vg);
@@ -1076,8 +1076,8 @@ public:
         text(vg, StringFormat("inputs: %d", static_cast<int32_t>(node->children.size())));
         text(vg, StringFormat("outputs: %d", static_cast<int32_t>(node->parents.size())));
         text(vg, StringFormat("Latency"));
-        text(vg, StringFormat("Input: %d", node->inputLatency));
-        text(vg, StringFormat("Internal: %d", node->internalLatency));
+        text(vg, StringFormat("Input: %zd", node->inputLatency));
+        text(vg, StringFormat("Internal: %zd", node->internalLatency));
         if (node->trackOptional && node->trackOptional->audio) {
             float maxRmsOut = node->trackOptional->audio->meter.getMaxRMS();
             float maxRmsIn  = node->trackOptional->audio->meterInput.getMaxRMS();
@@ -1091,7 +1091,7 @@ public:
             text(vg, StringFormat("Output max rms: %f", maxRmsOut));
             nvgFillColor(vg, THEMECOL_TEXT);
             auto numBlocks = node->trackOptional->audio->procStats.numBlocksProcessed;
-            text(vg, StringFormat("Blocks processed: %d", numBlocks));
+            text(vg, StringFormat("Blocks processed: %zd", numBlocks));
         }
     }
 };

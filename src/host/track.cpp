@@ -62,7 +62,7 @@ void releaseClipResources(clip_t* cl, delete_cb* cb) {
     }
 }
 void releaseTrackResources(track_t* tr, delete_cb* cb) {
-    log_lf(Log::L_DEBUG, "release track %016X\n", reinterpret_cast<size_t>(tr));
+    log_lf(Log::L_DEBUG, "release track %016zX\n", reinterpret_cast<uint64_t>(tr));
     dbgassert(tr && tr->audio);
     if (cb)
         cb->preTrackDelete(tr);
@@ -632,7 +632,7 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
         //TODO: notify users thru UI
         log_printf("Some parameters could not be mapped: %s has %d missing parameters\n", StringAsCStr(effect->getName()), missingParams);
     } else {
-        log_printf("%s: Loaded %d params\n", StringAsCStr(effect->getName()), pluginSnapshotParams.size());
+        log_printf("%s: Loaded %zu params\n", StringAsCStr(effect->getName()), pluginSnapshotParams.size());
     }
     //const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
     //for (const param_snapshot_t& param : pluginHostSideParams) {
@@ -804,7 +804,7 @@ void vsthost::activateDeferred(effectbase* const eff, int flags, effectbase** ou
 
     /* Begin of loading plugin state (parameter values, binary preset, automation lanes) */
 
-    log_printf("Activate Plugin %s: %d Parameters, %d Automated parameters\n",
+    log_printf("Activate Plugin %s: %zu Parameters, %zu Automated parameters\n",
                StringAsCStr(pluginSnapshot.name),
                pluginSnapshot.params.size(),
                pluginSnapshot.automatedParams.size());
@@ -913,7 +913,7 @@ void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry
 }
 
 audio_stage_t::~audio_stage_t() {
-    log_lf(Log::L_DEBUG, "delete audio_stage_t %08X\n", reinterpret_cast<uint64_t>(this));
+    log_lf(Log::L_DEBUG, "delete audio_stage_t %08zX\n", reinterpret_cast<uint64_t>(this));
 }
 
 void audio_stage_t::onTick(double since) {

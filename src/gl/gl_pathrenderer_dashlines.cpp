@@ -266,7 +266,7 @@ void GLPathRendererDashLines::bakePaths(std::vector<vec2list> paths, Uniforms pa
     auto texSize = bufUniforms.size() / 4;
     glActiveTexture(GL_TEXTURE0);
     if (out.uniforms_texture && nPaths * countUniforms != texSize) {
-        log_printf("tex shape changed %d %d\n", out.numPaths * countUniforms, texSize);
+        log_printf("tex shape changed %u %zu\n", out.numPaths * countUniforms, texSize);
         glDeleteTextures(1, &out.uniforms_texture);
         out.uniforms_texture = 0;
     }

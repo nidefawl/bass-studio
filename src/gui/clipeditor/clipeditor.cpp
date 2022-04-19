@@ -994,7 +994,7 @@ void gui_clipcontent::setGlobalSelectionFromClipSelection() {
 }
 void gui_clipcontent::setStatusText() {
     clip_notes_t& notes = view.clip()->notes;
-    String selStatus    = StringFormat("%d notes selected", notes.selection.size());
+    String selStatus    = StringFormat("%zu notes selected", notes.selection.size());
     if (!view.draggedSelection.empty()) {
         auto pair = getMinMaxSemitones(view.draggedSelection);
         if (pair.first && pair.second) {

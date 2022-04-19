@@ -97,7 +97,7 @@ namespace DAW {
         });
         stage->postEffectRouting.erase(it, stage->postEffectRouting.end());
         if (numRemoved) {
-            log_lf(Log::L_WARN, "Removed %d effect stage routings\n", numRemoved);
+            log_lf(Log::L_WARN, "Removed %zu effect stage routings\n", numRemoved);
         }
         return numRemoved == 0;
     }

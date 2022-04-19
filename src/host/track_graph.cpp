@@ -30,7 +30,7 @@ namespace DAW {
             } else if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
                 auto* stage = host->getAudioStage(inputChannel.stage.stageRef);
                 if (!stage) {
-                    log_lf(Log::L_WARN, "Input audiostage with id %d not found\n", inputChannel.stage.stageRef);
+                    log_lf(Log::L_WARN, "Input audiostage with id %d not found\n", static_cast<int32_t>(inputChannel.stage.stageRef.stageId));
                     trackImpl->inputChannel = ChannelNone();
                     numRemoved++;
                 } else {
@@ -48,7 +48,7 @@ namespace DAW {
             } else if (outputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
                 auto* stage = host->getAudioStage(outputChannel.stage.stageRef);
                 if (!stage) {
-                    log_lf(Log::L_WARN, "Output audiostage with id %d not found\n", outputChannel.stage.stageRef);
+                    log_lf(Log::L_WARN, "Output audiostage with id %d not found\n", static_cast<int32_t>(outputChannel.stage.stageRef.stageId));
                     trackImpl->outputChannel = ChannelNone();
                     numRemoved++;
                 } else {
@@ -60,7 +60,7 @@ namespace DAW {
             }
         }
         if (numRemoved) {
-          log_lf(Log::L_WARN, "Removed %d track routings\n");
+          log_lf(Log::L_WARN, "Removed %zu track routings\n", numRemoved);
         }
         return numRemoved == 0;
     }

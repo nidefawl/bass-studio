@@ -1257,7 +1257,7 @@ int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, 
         return 0;
     }
 
-    log_printf("writeTrackSamplesToDisk %zd pos %zd len %d\n", StringAsCStr(trImpl->getTrack()->name), samplePos, numSamples);
+    log_printf("writeTrackSamplesToDisk %s pos %zd len %zd\n", StringAsCStr(trImpl->getTrack()->name), samplePos, numSamples);
     const samplecount_t SPLIT_SAMPLECOUNT = audiotrack_t::GetSplitSampleLength();
     const samplecount_t samplePosEnd = samplePos + numSamples;
     const channelnum_t numChannels = trImpl->output.channels;
@@ -1366,7 +1366,7 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
     /** Build the audio graph **/
     if (!cacheAudioGraph || !impl->processingGraph) {
         if (!DAW::buildProcessingGraph(this, project, project->trackList.getAllTracksFlatVecRef(), impl->processingGraph)) {
-            log_lf(Log::L_ERROR, "Failed building track graph\n", 0);
+            log_lf(Log::L_ERROR, "Failed building track graph\n");
             return 0;
         }
     }
@@ -1604,7 +1604,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
         if (!cacheAudioGraph || !impl->processingGraph) 
         {
             if (!DAW::buildProcessingGraph(this, project, project->trackList.getAllTracksFlatVecRef(), impl->processingGraph)) {
-                log_lf(Log::L_ERROR, "Failed building track graph\n", 0);
+                log_lf(Log::L_ERROR, "Failed building track graph\n");
             }
         }
 
@@ -1972,7 +1972,7 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
         } else {
 
             if (req.debugLogProcessing) {
-                log_lf(Log::L_WARN, "track %s has no connected input %s\n", StringAsCStr(trackImpl->inputChannel.name));
+                log_lf(Log::L_WARN, "track %s has no connected input\n", StringAsCStr(trackImpl->inputChannel.name));
             }
         }
     }
@@ -1993,7 +1993,7 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
         {
             if (!DAW::buildEffectProcessingGraph(this, nullptr, trackImpl, effProcessingGraph)) {
                 effProcessingGraph = nullptr;
-                log_lf(Log::L_ERROR, "Failed building effect graph\n", 0);
+                log_lf(Log::L_ERROR, "Failed building effect graph\n");
             }
 #if DAW_DEBUG_AUDIOGRAPH
             req.effectProcessingGraph = effProcessingGraph;
@@ -2041,12 +2041,9 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
         if (static_cast<bool>(trackImpl->flags & audiostageflags_t::WRITE_OUTPUT)) {
             int32_t offset = samplePosProcess - (int32_t)(trackImpl->getOutputLatency());
             if (offset >= 0) {
-                String trName = track ? track->name : "?";
-                //int32_t blockIdx = samplePosProcess/(int32_t)sampleFormat.blockSize;
-                //log_printf("store track %s block %d at sample offset %d (samplepos %d - stage.latencyOutput %u)\n", StringAsCStr(trName), blockIdx, offset, sample, trackImpl->getOutputLatency());
                 trackImpl->audioOutput.store(&trackImpl->outputPost, offset);
             } else {
-                log_printf("cannot write to negative offset %d (samplepos %zd - stage.latencyOutput %zd)\n", offset, samplePosProcess, trackImpl->getOutputLatency());
+                log_printf("cannot write to negative offset %d (samplepos %d - stage.latencyOutput %zd)\n", offset, samplePosProcess, trackImpl->getOutputLatency());
             }
         }
 
@@ -2540,7 +2537,7 @@ void vsthost::processAudio(audio_stage_t* stage,
                         }
                     }
                 } else {
-                    log_printf("effect %s has no connected input %s\n", StringAsCStr(effect->getName()));
+                    log_printf("effect %s has no connected input\n", StringAsCStr(effect->getName()));
                 }
             }
 
@@ -3013,7 +3010,7 @@ bool vsthost::writeRecordedData(project_t* project) {
             std::swap(recordDataProcessed, pClip);
             track_t* tr = project->trackMidiAudioCtr.front();
             if (tr) {
-                log_lf(Log::L_DEBUG, "Processing recorded clip. Recorded %d notes\n", pClip->notes.m_list.size());
+                log_lf(Log::L_DEBUG, "Processing recorded clip. Recorded %zu notes\n", pClip->notes.m_list.size());
                 log_lf(Log::L_DEBUG, "Processing recorded clip. Last note time %d\n", pClip->notes.lastNote.time);
                 tick_t tickBegin = pClip->time;
                 tick_t tickEnd = pClip->end();
@@ -3277,10 +3274,10 @@ void vsthost::scanPlugins() {
             seqthreads::threadSleep(200);
             if (!impl->vstscannerProcessThread->isRunning()) {
                 impl->vstscannerProcessThread->checkException();
-                log_lf(Log::L_ERROR, "Failed starting vstscanner", 0);
+                log_lf(Log::L_ERROR, "Failed starting vstscanner");
             } else {
                 this->impl->scanningState = 1;
-                log_lf(Log::L_DEBUG, "vstscanner is running", 0);
+                log_lf(Log::L_DEBUG, "vstscanner is running");
             }
         } catch (std::exception& e) {
             log_lf(Log::L_ERROR, "Failed starting vstscanner: %s", e.what());

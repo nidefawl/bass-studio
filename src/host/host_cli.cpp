@@ -298,7 +298,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                 if (activateDeferred) {
                     std::vector<effectbase*> pluginsDeferred;
                     host->getDeferredEffects(pluginsDeferred);
-                    log_printf("loading %d plugins\n", pluginsDeferred.size());
+                    log_printf("loading %zu plugins\n", pluginsDeferred.size());
                     for (auto plugin : pluginsDeferred) {
                         log_printf("activate %s\n", StringAsCStr(plugin->sName));
 
@@ -340,8 +340,7 @@ int runCommandLineHost(const std::vector<String>& args) {
 
                     // load plugins
                     for (track_snapshot_t& ts : ctr->tracks) {
-                        log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name),
-                                   ts.data.pluginSnapshots.size());
+                        log_printf("track '%s' loading %zu plugins\n", StringAsCStr(ts.trackLoaded->name), ts.data.pluginSnapshots.size());
                         ts.trackLoaded->loadSnapshot(ts);
                     }
                     if (activateDeferred) {
@@ -555,7 +554,7 @@ int runCommandLineHost(const std::vector<String>& args) {
 
 
             std::vector<track_t*> _tracks = project.trackList.getAllTracksFlatVec();
-            log_printf("DELETE _tracks %d\n", _tracks.size());
+            log_printf("DELETE _tracks %zu\n", _tracks.size());
             for (track_t* tr : _tracks) {
                 log_printf("DELETE TRACK %s\n", StringAsCStr(tr->name));
                 host->unloadTrack(tr);

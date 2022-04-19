@@ -68,14 +68,14 @@ public:
         
         prof_stats_window_t profDataWindow;
         if (ProfilingImpl::profilingGetRecentFrame(dawCtrl->window, &profDataWindow)) {
-            printL(0, "Render", StringFormat("%d µs", profDataWindow.timeRender));
+            printL(0, "Render", StringFormat("%zd µs", profDataWindow.timeRender));
         }
-        printL(1, "Prerender", StringFormat("%d µs", renderStats.timePrerender));
-        printL(1, "UpdateWaveforms", StringFormat("%d µs", renderStats.timeUpdateWaveforms));
-        printL(1, "RenderEditor", StringFormat("%d µs", renderStats.timeRenderEditor));
-        printL(1, "RenderTrackControls", StringFormat("%d µs", renderStats.timeRenderTrackControls));
-        printL(0, "Clips in view", StringFormat("%d", renderStats.clipsRendered));
-        printL(0, "Notes in view", StringFormat("%d", renderStats.notesRendered));
+        printL(1, "Prerender", StringFormat("%zd µs", renderStats.timePrerender));
+        printL(1, "UpdateWaveforms", StringFormat("%zd µs", renderStats.timeUpdateWaveforms));
+        printL(1, "RenderEditor", StringFormat("%zd µs", renderStats.timeRenderEditor));
+        printL(1, "RenderTrackControls", StringFormat("%zd µs", renderStats.timeRenderTrackControls));
+        printL(0, "Clips in view", StringFormat("%zd", renderStats.clipsRendered));
+        printL(0, "Notes in view", StringFormat("%zd", renderStats.notesRendered));
         y += height / 2;
 
         printL(0, "Blocks Processed", StringFormat("%d", stats.blocksProcessed));
@@ -127,7 +127,7 @@ public:
         printL(0, "OUTPUT resampler", StringFormat("%d samples|%d blocks", stats.resamplerOutNumSamples, stats.resamplerOutNumBlocks));
         printL(0, "output q len", StringFormat("%d", stats.outputQueueLen));
 
-        printL(0, "playThreadLockCount (frame)", StringFormat("%d", renderStats.playThreadLockCount));
+        printL(0, "playThreadLockCount (frame)", StringFormat("%zd", renderStats.playThreadLockCount));
         {
             const char* sufArr[3] = { "B", "KB", "MB" };
             size_t clipSufIdx     = 0;

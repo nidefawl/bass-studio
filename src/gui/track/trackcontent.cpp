@@ -505,7 +505,7 @@ void gui_track_subtrack::renderMixerInfo(NVGcontext* vg, ivec2 pos, ivec2 size) 
     String target       = "<NULL>";
     automatable_t* ctr  = at;
     if (ctr) {
-        target      = StringFormat("%s %08X", StringAsCStr(ctr->getAutomatableName()), ctr);
+        target      = StringFormat("%s %12zX", StringAsCStr(ctr->getAutomatableName()), reinterpret_cast<uint64_t>(ctr));
         int32_t paramIdx = param;
         if (paramIdx >= 0) {
             automation_t* automation = ctr->getRegisteredAutomation(paramIdx);

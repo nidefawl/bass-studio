@@ -294,7 +294,7 @@ void trackallcontainer_t::copyTo(project_snapshot_t& project) {
     trackReturnCtr.copyTo(project.trackReturnCtr);
 }
 void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
-    log_lf(Log::L_DEBUG, "project.tracks: audio/midi: %d return: %d master: %d\n",
+    log_lf(Log::L_DEBUG, "project.tracks: audio/midi: %zu return: %zu master: %zu\n",
               project.trackCtr.tracks.size(),
               project.trackReturnCtr.tracks.size(),
               project.trackMasterCtr.tracks.size());

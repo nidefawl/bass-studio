@@ -60,7 +60,7 @@
     }
 }
 void action_modify_track::undo(DawInstance* daw) {
-    log_lf(Log::L_DEBUG, "action_modify_track undo, num tracks: %d\n", before.tracks.size());
+    log_lf(Log::L_DEBUG, "action_modify_track undo, num tracks: %zd\n", before.tracks.size());
 
     daw->resetMouseContext();
     daw->resetEditClip();

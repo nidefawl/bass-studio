@@ -437,22 +437,22 @@ public:
                 auto legendPos = channel->graphPos + vec2(0, channel->graphSize.y - legendSize.y);
                 vec2 textPos = legendPos + grphInset * 0.5f + vec2(0,  FONTSIZE_LEGEND * 0.5);
                 {
-                    String strFormatted = StringFormat("%d%s", channel->valueLast, StringAsCStr(channel->unit));
+                    String strFormatted = StringFormat("%zu%s", channel->valueLast, StringAsCStr(channel->unit));
                     nvgText(vg, textPos.x, textPos.y, StringAsCStr(strFormatted), nullptr);
                     textPos.y += FONTSIZE_LEGEND;
                 }
                 {
-                    String strFormatted = StringFormat("Avg: %d%s", channel->valueAvg, StringAsCStr(channel->unit));
+                    String strFormatted = StringFormat("Avg: %zu%s", channel->valueAvg, StringAsCStr(channel->unit));
                     nvgText(vg, textPos.x, textPos.y, StringAsCStr(strFormatted), nullptr);
                     textPos.y += FONTSIZE_LEGEND;
                 }
                 {
-                    String strFormatted = StringFormat("Max: %d%s", channel->valueMax, StringAsCStr(channel->unit));
+                    String strFormatted = StringFormat("Max: %zu%s", channel->valueMax, StringAsCStr(channel->unit));
                     nvgText(vg, textPos.x, textPos.y, StringAsCStr(strFormatted), nullptr);
                     textPos.y += FONTSIZE_LEGEND;
                 }
                 {
-                    String strFormatted = StringFormat("Min: %d%s", channel->valueMin, StringAsCStr(channel->unit));
+                    String strFormatted = StringFormat("Min: %zu%s", channel->valueMin, StringAsCStr(channel->unit));
                     nvgText(vg, textPos.x, textPos.y, StringAsCStr(strFormatted), nullptr);
                     textPos.y += FONTSIZE_LEGEND;
                 }

@@ -633,7 +633,7 @@ void addPropertiesFromGui(guibase& gui, Table::tbl* table) {
     } else {
         rows.push_back({{tblstr{"parent"}, tblstr{"<null>", 1}}});
     }
-    String strTheme = gui.theme->name+StringFormat("[%7X]", (int64_t)gui.theme);
+    String strTheme = gui.theme->name+StringFormat("[%7zX]", reinterpret_cast<uint64_t>(gui.theme));
     rows.push_back({{tblstr{"theme"}, tblString{strTheme, 1}}});
     rows.push_back({{tblstr{"theme2"}, tblString{strTheme, 1}}});
 }
@@ -689,9 +689,8 @@ void addPropertiesFromGui(guictr_base& gui, Table::tbl* table) {
     } else {
         rows.push_back({{tblstr{"parent"}, tblstr{"<null>", 1}}});
     }
-    String strTheme = gui.theme->name+StringFormat("[%7X]", (int64_t)gui.theme);
+    String strTheme = gui.theme->name+StringFormat("[%7zX]", reinterpret_cast<uint64_t>(gui.theme));
     rows.push_back({{tblstr{"theme"}, tblString{strTheme, 1}}});
-    rows.push_back({{tblstr{"theme2"}, tblString{strTheme, 1}}});
 }
 
 template <>

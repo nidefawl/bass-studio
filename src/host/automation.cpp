@@ -216,7 +216,7 @@ void toggleDeviceEnableState(automatable_t* effect, int flags) {
 
 void loadAutomation(const std::vector<automation_view_t>& automatedParams, automatable_t* at) {
     if (!automatedParams.empty()) {
-        log_lf(Log::L_DEBUG, "Loading %d automation lanes for device %s\n", automatedParams.size(), StringAsCStr(at->getAutomatableName()));
+        log_lf(Log::L_DEBUG, "Loading %zu automation lanes for device %s\n", automatedParams.size(), StringAsCStr(at->getAutomatableName()));
     }
     at->clearAutomations();
     for (const automation_view_t& automatedParam : automatedParams) {

@@ -335,11 +335,11 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 
         std::vector<String> strings;
         String str;
-        str = StringFormat("%012X", (int64_t) ctrl->getTheme());
+        str = StringFormat("%012zX", reinterpret_cast<int64_t>(ctrl->getTheme()));
         strings.push_back(String("ctrl->getTheme: ") + str);
-        str = StringFormat("%012X", (int64_t) (parentCtrl ? parentCtrl->getTheme() : 0));
+        str = StringFormat("%012zX", parentCtrl ? reinterpret_cast<int64_t>(parentCtrl->getTheme()) : 0);
         strings.push_back(String("parentCtrl->getTheme: ") + str);
-        str = StringFormat("%012X", (int64_t) (theme));
+        str = StringFormat("%012zX", reinterpret_cast<int64_t>(theme));
         strings.push_back(String("this->theme: ") + str);
         str = ctrl->guiOver ? ctrl->guiOver->getClassName() : "<null>";
         strings.push_back(String("guiOver: ") + str);
@@ -354,7 +354,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         str = "<null>";
         if (ctrl->getDragDropTarget().src) {
             str = static_cast<guibase*>(ctrl->getDragDropTarget().src)->getClassName();
-            str += StringFormat(" %d", ctrl->getDragDropTarget().src);
+            str += StringFormat(" %012zX", reinterpret_cast<int64_t>(ctrl->getDragDropTarget().src));
         }
         strings.push_back(String("target: ") + str);
 
@@ -374,13 +374,13 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         }
 
         strings.push_back(String("lastKey: ") + ctrl->lastKey);
-        strings.push_back(StringFormat("undo size: %d", daw->getHist().getNumUndoSteps()));
-        strings.push_back(StringFormat("redo size: %d", daw->getHist().getNumRedoSteps()));
+        strings.push_back(StringFormat("undo size: %zu", daw->getHist().getNumUndoSteps()));
+        strings.push_back(StringFormat("redo size: %zu", daw->getHist().getNumRedoSteps()));
         clip_view& clipView = ctrl->getClipView();
         if (clipView.clip()) {
             strings.push_back(StringFormat("Clip: %s", StringAsCStr(clipView.clip()->name)));
-            strings.push_back(StringFormat("Notes: %d", clipView.clip()->notes.m_list.size()));
-            strings.push_back(StringFormat("Selection size: %d", clipView.clip()->notes.selection.size()));
+            strings.push_back(StringFormat("Notes: %zu", clipView.clip()->notes.m_list.size()));
+            strings.push_back(StringFormat("Selection size: %zu", clipView.clip()->notes.selection.size()));
         }
         auto host = dawCtrl->getDaw()->getHost();
         strings.push_back("sample format");

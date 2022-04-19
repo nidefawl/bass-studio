@@ -144,7 +144,7 @@ namespace Table {
         guibase* ref = safeRefGet(obj);
         if (ref)
         {
-            String strAddr = StringFormat("0x%6X (refId %d)", (int64_t)ref, obj.refId);
+            String strAddr = StringFormat("0x%6zX (refId %d)", reinterpret_cast<uint64_t>(ref), obj.refId);
             String className = ref->getClassName();
             nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(StringFormat("%s [%s]", StringAsCStr(className), StringAsCStr(strAddr))), nullptr);
 

@@ -896,7 +896,7 @@ public:
             daw->onPluginsChanged();
 
 #ifndef NDEBUG
-            log_printf("deferredEffects post activateDeferred on track %s: %d\n", m_track->szName, m_track->audio->deferredEffects.size());
+            log_printf("deferredEffects post activateDeferred on track %s: %zu\n", m_track->szName, m_track->audio->deferredEffects.size());
 #endif
         }
     }

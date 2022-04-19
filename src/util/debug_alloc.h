@@ -21,7 +21,7 @@ namespace DebugAlloc {
 
     template<typename T>
     void throwUntrackked(Tracker<T>& t, T* g) {
-        log_printf("object with allocId %lld was not tracked\n", g->allocId);
+        log_printf("object with allocId %zd was not tracked\n", g->allocId);
         dbgassert(0);
     }
 

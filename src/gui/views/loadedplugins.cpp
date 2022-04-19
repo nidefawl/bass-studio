@@ -206,7 +206,7 @@ public:
             float x2 = size.x - spacing;
             xText = x2 - nvgText(vg, x2, rowHeight / 2, StringAsCStr(str), nullptr);
             if (size.x > fontSize*10) {
-                str = StringFormat("%dµs", _entry->procStats.timeTrackProcessPlugins);
+                str = StringFormat("%zdµs", _entry->procStats.timeTrackProcessPlugins);
                 x2 = size.x - percWidth - spacing;
                 xText = x2 - nvgText(vg, x2, rowHeight / 2, StringAsCStr(str), nullptr);
             }
@@ -386,11 +386,11 @@ public:
             _newList.push_back(g);
             _newListLoadedPlugins.push_back(g);
         }
-        int numDeferred = deferredEffects.size();
+        auto numDeferred = deferredEffects.size();
         btnLoadAll.setLabel("Load all deferred");
         btnLoadAll.setEnabled(numDeferred > 0);
         if (numDeferred) {
-            btnLoadAll.setText(StringFormat("Load %d Plugins", deferredEffects.size()));
+            btnLoadAll.setText(StringFormat("Load %zu Plugins", numDeferred));
         } else {
             btnLoadAll.setText(btnLoadAll.getLabel());
         }
@@ -411,7 +411,7 @@ public:
             std::vector<effectbase*> pluginsDeferred;
             std::vector<audio_stage_t*> audioStagesAffected;
             host->getDeferredEffects(pluginsDeferred);
-            log_printf("loading %d plugins\n", pluginsDeferred.size());
+            log_printf("loading %zu plugins\n", pluginsDeferred.size());
             for (auto plugin : pluginsDeferred) {
                 log_printf("activate %s\n", StringAsCStr(plugin->sName));
                 effectbase* effectLoaded = nullptr;

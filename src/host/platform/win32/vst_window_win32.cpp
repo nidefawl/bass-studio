@@ -68,7 +68,7 @@ namespace {
             void* pVoidBitmap;
             HBITMAP bitmap = CreateDIBSection(hdc, &info, DIB_RGB_COLORS, &pVoidBitmap, nullptr, 0);
             if (!bitmap) {
-                log_printf("Failed creating bitmap: %d\n", GetLastError());
+                log_printf("Failed creating bitmap: %lu\n", GetLastError());
             }
 
             HDC memDC       = CreateCompatibleDC(hdc);
@@ -78,7 +78,7 @@ namespace {
             //}
             time.reset();
             if (!BitBlt(memDC, 0, 0, width, height, hdc, 0, 0, SRCCOPY)) {
-                log_printf("BitBlt failed: %d\n", GetLastError());
+                log_printf("BitBlt failed: %lu\n", GetLastError());
             }
             static int calls    = 0;
             static double total = 0.0;

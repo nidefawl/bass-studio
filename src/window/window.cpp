@@ -1812,7 +1812,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                         glfwSetWindowShouldClose(glfwHandle, 1);
                         break;
                     case (WM_APP + 42):
-                        log_lf(Log::L_DEBUG, "MSG took %d ms to get through\n", (hiresRuntime.getTime() - tmHRMsgSent));
+                        log_lf(Log::L_DEBUG, "MSG took %zd ms to get through\n", (hiresRuntime.getTime() - tmHRMsgSent));
                         tmHRMsgSent = 0;
                         break;
                     case WM_PAINT: 

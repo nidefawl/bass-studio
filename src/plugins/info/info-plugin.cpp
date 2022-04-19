@@ -156,7 +156,7 @@ namespace PluginHostInfo {
     VstIntPtr PluginVST2_HostInfo::dispatcher (VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt)
     {
         if (opcode != effEditIdle)
-            log_printf("dispatch %d %d %012X %012X %f\n", opcode, index, value, ptr, opt);
+            log_printf("dispatch %d %d %012zX %012zX %f\n", opcode, index, static_cast<uint64_t>(value), reinterpret_cast<uint64_t>(ptr), opt);
         return AudioEffectX::dispatcher(opcode, index, value, ptr, opt);
     }
 
@@ -332,7 +332,7 @@ namespace PluginHostInfo {
                 auto pEvent = events->events[i];
                 if (pEvent->type == VstEventTypes::kVstMidiType) {
                     if (getLogVerbosity() > 6)
-                        log_printf("pEvent->type kVstMidiType\n", pEvent->type);
+                        log_printf("pEvent->type kVstMidiType\n");
                     VstMidiEvent* pME = (VstMidiEvent*) pEvent;
                     IMidiMsg msg(pME->deltaFrames, pME->midiData[0], pME->midiData[1], pME->midiData[2]);
                     impl->ProcessMidiMsg(msg);
@@ -371,7 +371,7 @@ namespace PluginHostInfo {
     ///< Host stores plug-in state. Returns the size in bytes of the chunk (plug-in allocates the data array)
     VstInt32 PluginVST2_HostInfo::getChunk(void** data, bool isPreset) {
         if (getLogVerbosity() > 2)
-            log_printf("getChunk isPreset = %d: PTR %08X\n", isPreset, (uint64_t) (data));
+            log_printf("getChunk isPreset = %d: PTR %08zX\n", isPreset, (uint64_t) (data));
         if (isPreset) {
             impl->dataPreset.resize(1000);
             std::fill(impl->dataPreset.begin(), impl->dataPreset.end(), 0xAA);
@@ -388,7 +388,7 @@ namespace PluginHostInfo {
     ///< Host restores plug-in state
     VstInt32 PluginVST2_HostInfo::setChunk(void* data, VstInt32 byteSize, bool isPreset) {
         if (getLogVerbosity() > 2)
-            log_printf("setChunk size %d, isPreset = %d: PTR %08X\n", byteSize, isPreset, (uint64_t) (data));
+            log_printf("setChunk size %d, isPreset = %d: PTR %08zX\n", byteSize, isPreset, reinterpret_cast<uint64_t>(data));
         if (isPreset && byteSize == 1000) {
             impl->dataPreset.resize(byteSize);
             memcpy(impl->dataPreset.data(), data, byteSize);
