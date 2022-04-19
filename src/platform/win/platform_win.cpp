@@ -85,7 +85,7 @@ String getModuleName(HMODULE module) {
     DWORD copied;
     do {
         pathBuf.resize(pathBuf.size() + MAX_PATH);
-        copied = GetModuleFileName(module, &pathBuf.at(0), pathBuf.size());
+        copied = GetModuleFileName(module, &pathBuf.at(0), static_cast<DWORD>(pathBuf.size()));
     } while (copied >= pathBuf.size());
 
     pathBuf.resize(copied);
@@ -263,7 +263,7 @@ namespace App::Platform {
         DWORD copied;
         do {
             pathBuf.resize(pathBuf.size() + MAX_PATH);
-            copied = GetCurrentDirectory(pathBuf.size(), &pathBuf.at(0));
+            copied = GetCurrentDirectory(static_cast<DWORD>(pathBuf.size()), &pathBuf.at(0));
         } while (copied >= pathBuf.size());
         pathBuf.resize(copied);
         String path(pathBuf.begin(), pathBuf.end());

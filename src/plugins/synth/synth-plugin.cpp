@@ -1126,9 +1126,9 @@ namespace PluginSynth {
         setParamName(getParam(Parameters::ModEnvR), "Mod envelope release time", "EnvM Rel", "%f");
         setParamName(getParam(Parameters::ModEnvV), "Mod envelope velocity sensitivity", "EnvM Vel", "%f");
 
-        addFloatParam(Parameters::LfoAmount)->setRange(-0.1, 0.1)->setRangedValue(0.0);
-        addFloatParam(Parameters::LfoFrequency)->setRange(0.1, 10.0)->setRangedValue(4.0);
-        addFloatParam(Parameters::LfoDelay)->setRange(0.1, 1000.0)->setRangedValue(0.1);
+        addFloatParam(Parameters::LfoAmount)->setRange(-0.1f, 0.1f)->setRangedValue(0.0);
+        addFloatParam(Parameters::LfoFrequency)->setRange(0.1f, 10.0)->setRangedValue(4.0);
+        addFloatParam(Parameters::LfoDelay)->setRange(0.1f, 1000.0)->setRangedValue(0.1);
         setParamName(getParam(Parameters::LfoAmount), "LFO amount", "LFO amt", "%f");
         setParamName(getParam(Parameters::LfoFrequency), "LFO frequency", "LFO freq", "%f");
         setParamName(getParam(Parameters::LfoDelay), "LFO ramp", "LFO ramp", "%f");

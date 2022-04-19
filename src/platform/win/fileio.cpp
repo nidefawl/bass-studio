@@ -84,9 +84,7 @@ size_t GetFileSizeSafe(const String& filename) {
 int32_t WriteFileVector(const String& filename, std::vector<uint8_t>& writebuffer) {
     FileImpl fobj(filename, OpenFileMode::WRITE);
     DWORD bytesWrite = 0;
-
-    BOOL result = WriteFile(fobj.GetHandle(), writebuffer.data(), writebuffer.size(),
-                            &bytesWrite, nullptr);
+    BOOL result = WriteFile(fobj.GetHandle(), writebuffer.data(), static_cast<DWORD>(writebuffer.size()), &bytesWrite, nullptr);
     ThrowLastErrorIf(result == FALSE, "WriteFile failed: " + filename);
     return (int32_t) bytesWrite;
 }
@@ -95,10 +93,8 @@ void ReadFileVector(const String& filename, std::vector<uint8_t>& out) {
     FileImpl fobj(filename, OpenFileMode::READ);
     size_t filesize = GetFileSizeSafe(filename);
     DWORD bytesRead = 0;
-
     out.resize(filesize);
-
-    BOOL result = ReadFile(fobj.GetHandle(), out.data(), filesize, &bytesRead, nullptr);
+    BOOL result = ReadFile(fobj.GetHandle(), out.data(), static_cast<DWORD>(filesize), &bytesRead, nullptr);
     ThrowLastErrorIf(result == FALSE, "ReadFile failed: " + filename);
 }
 
@@ -205,8 +201,7 @@ IOFile::~IOFile() {
 }
 void IOFile::write(const char* data, size_t len) {
     DWORD bytesWrite = 0;
-
-    BOOL result = WriteFile(impl->GetHandle(), data, len, &bytesWrite, nullptr);
+    BOOL result      = WriteFile(impl->GetHandle(), data, static_cast<DWORD>(len), &bytesWrite, nullptr);
     if (!result) {
         validHandle = false;
     }

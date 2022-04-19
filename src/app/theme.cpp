@@ -84,7 +84,7 @@ void guitheme_t::initTheme() {
 }
 
 NVGcolor& guitheme_t::getColorRef(GuiColor::constant_t _constant) {
-    dbgassert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
+    dbgassert(_constant.idx < this->vecNVGColors.size());
 #ifndef NDEBUG
     // Make sure the 2 are in sync
     auto it = mapColors.find(_constant.idx);
@@ -95,7 +95,7 @@ NVGcolor& guitheme_t::getColorRef(GuiColor::constant_t _constant) {
     return this->vecNVGColors[_constant.idx];
 }
 NVGcolor guitheme_t::getColor(GuiColor::constant_t _constant) const {
-    dbgassert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
+    dbgassert(_constant.idx < this->vecNVGColors.size());
     if (pOverrideState->overrideState == 1 && pOverrideState->_overrideColorConstant.idx == _constant.idx) {
         return rgbaToNvg(this->pOverrideState->_overrideColorValue);
     }
@@ -112,7 +112,7 @@ NVGcolor guitheme_t::getContrastColor(GuiColor::constant_t _constant) const {
     if (pOverrideState->overrideState == 1 && pOverrideState->_overrideColorConstant.idx == _constant.idx) {
         return getContrastFontColor(this->pOverrideState->_overrideColorValue);
     }
-    dbgassert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
+    dbgassert(_constant.idx < this->vecNVGColors.size());
     return getContrastFontColor(nvgToRGBA(this->vecNVGColors[_constant.idx]));
 }
 uint32_t guitheme_t::getColorInt32(GuiColor::constant_t _constant) {
@@ -131,7 +131,7 @@ uint32_t guitheme_t::getColorInt32(GuiColor::constant_t _constant) {
 }
 void guitheme_t::setColor(GuiColor::constant_t _constant, uint32_t _value) {
     if (isDefault) return;
-    dbgassert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
+    dbgassert(_constant.idx < this->vecNVGColors.size());
     mapColors[_constant.idx]          = _value;
     this->vecNVGColors[_constant.idx] = rgbaToNvg(_value);
 }

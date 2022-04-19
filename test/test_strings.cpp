@@ -14,7 +14,7 @@ namespace {
         String str = "String";
         log(CppTest::stringify(str));
         int a = 13;
-        int* p = p;
+        int* p = &a;
         log(CppTest::stringify(p));
         log(CppTest::stringify(a));
         float f = 1.0f / 3.0f;

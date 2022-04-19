@@ -135,7 +135,7 @@ void gui_color_pick::setHSL(float h, float s, float l, float a) {
     this->knA.setValueInit(a);
     auto col   = nvgHSL(h, s, l);
     auto rgb   = nvgToRGB(col) & 0xFFFFFF;
-    auto alpha = CLAMP_I(math::roundfU32(255.0f * a), 0, 255) << 24;
+    auto alpha = math::clamp(math::roundfU32(255.0f * a), 0U, 255U) << 24;
     auto rgba  = rgb | alpha;
 
     this->colorU32 = rgba;
@@ -153,7 +153,7 @@ void gui_color_pick::setHSL(float h, float s, float l, float a) {
 void gui_color_pick::setHSL_(float h, float s, float l, float a) {
     auto col   = nvgHSL(h, s, l);
     auto rgb   = nvgToRGB(col) & 0xFFFFFF;
-    auto alpha = CLAMP_I(math::roundfU32(255.0f * a), 0, 255) << 24;
+    auto alpha = math::clamp(math::roundfU32(255.0f * a), 0U, 255U) << 24;
     auto rgba  = rgb | alpha;
 
     this->colorU32 = rgba;

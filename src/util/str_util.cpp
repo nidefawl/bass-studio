@@ -24,7 +24,7 @@ String StringFormat(const char* fmt, ...) {
     int ret = vsnprintf_s(FormatBuffer.data(), FormatBuffer.size(), _TRUNCATE, fmt, args);
     va_end(args);
     if (ret == -1) {
-        ret = FormatBuffer.size() - 1;
+        ret = CtrSize(FormatBuffer) - 1;
     }
     if (ret < 0 || ret >= CtrSize(FormatBuffer)) {
         dbgassert(0);
