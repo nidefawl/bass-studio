@@ -64,9 +64,8 @@ public:
         if (layoutRoll.fold) {
             if (clamp) {
                 return this->clipview.unfoldNoteClamped(note);
-            } else {
-                return this->clipview.unfoldNote(note);
             }
+            return this->clipview.unfoldNote(note);
         }
         return note;
     }

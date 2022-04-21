@@ -148,17 +148,16 @@ public:
     }
 
     float toFoldNote(float note) const {
-        auto len = notePitches.size();
+        const auto len = notePitches.size();
+        const auto iNote = math::floorfS32(note);
         for (uint32_t i = 0; i < len; i++) {
-            if (notePitches[i] >= (int32_t) note) {
+            if (notePitches[i] >= iNote) {
                 return i;
             }
         }
         if (len) {
-            if (note >= notePitches[len - 1])
+            if (iNote >= notePitches[len - 1])
                 return len + (note - notePitches[len - 1]);
-            if (note < 0)
-                return note;
         }
         return note;
     }
@@ -169,35 +168,26 @@ public:
     }
 
     float unfoldNoteClamped(float note) {
-        const auto len = notePitches.size();
-        if (!len) {
-            return 0;
+        const auto len = CtrSize(notePitches);
+        if (len) {
+            const auto idx = math::clamp<int32_t>(math::floorfS32(note), 0, len - 1);
+            return notePitches[idx];
         }
-        
-        int32_t iNote = math::floorfS32(note);
-        if (iNote < 0)
-            return notePitches[0];
-        
-        if (iNote >= len)
-            return notePitches[len - 1];
-        
-        return notePitches[iNote];
+        return 0;
     }
 
     float unfoldNote(float note) {
-        const auto len = notePitches.size();
-        if (!len) {
-            return 0;
+        const auto len = CtrSize(notePitches);
+        if (len) {
+            const auto iNote = math::floorfS32(note);
+            if (iNote < 0)
+                return notePitches[0] + note;
+
+            if (iNote >= len)
+                return note - len + 1 + notePitches[len - 1];
+            return notePitches[iNote];
         }
-
-        int32_t iNote = math::floorfS32(note);
-        if (iNote < 0)
-            return notePitches[0] + note;
-
-        if (iNote >= len)
-            return note - len + 1 + notePitches[len - 1];
-
-        return notePitches[iNote];
+        return 0;
     }
 
     void updateNotePitches(bool reset) {

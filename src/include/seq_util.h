@@ -5,24 +5,6 @@
 #include "assert_dbg.h"
 
 #define STL_CONTAINS(x, y) (std::find(x.cbegin(), x.cend(), y) != x.cend())
-#ifdef _MSC_VER
-#if __cplusplus > 202002L
-#define BRANCH_UNLIKELY [[unlikely]]
-#else
-#define BRANCH_UNLIKELY
-#endif
-#define FUNC_NOINLINE __declspec(noinline)
-#else
-#define BRANCH_UNLIKELY [[unlikely]]
-#define FUNC_NOINLINE [[gnu::noinline]]
-#endif
-#ifdef __GNUC__ // GCC 4.8+, Clang, Intel and other compilers compatible with GCC (-std=c++0x or above)
-[[noreturn]] inline __attribute__((always_inline)) void unreachable() {__builtin_unreachable();}
-#elif defined(_MSC_VER) // MSVC
-[[noreturn]] __forceinline void unreachable() {__assume(false);}
-#else // ???
-inline void unreachable() {}
-#endif
 
 template<typename C1>
 inline int32_t CtrSize(const C1& c) {
