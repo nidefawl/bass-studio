@@ -15,6 +15,7 @@
 #endif
 #include "logging.h"
 #include "platform.h"
+#include "assert_dbg.h"
 
 struct ImageBuf {
     std::vector<uint8_t> bytes;
@@ -47,8 +48,7 @@ int browseForFolder(const String& title, const String& pathStart, String& _out);
 size_t GetFileSizeSafe(const String& filename);
 
 inline void writeStringStream(const String& path, Stringstream& sstream) {
-    Stringstream::pos_type len = sstream.tellp();
-    std::vector<uint8_t> buf(len);
+    std::vector<uint8_t> buf(sstream.tellp());
     buf.assign(std::istreambuf_iterator<char>(sstream), std::istreambuf_iterator<char>());
     WriteFileVector(path, buf);
 }
@@ -68,28 +68,22 @@ inline int64_t FileSize(const String& fileName) {
 
     file.seekg(0, std::ios::end);
     size_t fileSize = file.tellg();
-    file.close();
 
-    return (int64_t) fileSize;
+    return static_cast<int64_t>(fileSize);
 }
 
 int64_t ReadImage(const String& Filename, ImageBuf& ref);
 inline int64_t ReadFileFully(const String& Filename, ByteBuf& ref) {
     if (FileExists(Filename)) {
         int64_t size = FileSize(Filename);
-        if (size > 0) {
-            std::ifstream file(Filename.c_str(), std::ifstream::in | std::ifstream::binary);
+        if (size >= 0) {
+            std::ifstream file(StringAsCStr(Filename), std::ifstream::in | std::ifstream::binary);
             if (file) {
                 ref.reserve(size);
                 ref.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
             }
-            size_t cur = file.tellg();
-            if (size != (int64_t) cur) {
-                log_printf("read %d bytes, expected %d bytes, BAD!\n", cur, size);
-            } else {
-
-                return size;
-            }
+            dbgassert(size == static_cast<int64_t>(file.tellg()));
+            return size;
         }
     }
     return -1;
@@ -105,7 +99,7 @@ inline void SplitPath(const String& in, String* path, String* name, String* ext,
     } else {
         _nameExt = pathSep + 1 < in.length() ? in.substr(pathSep + 1) : "";
     }
-    if (path != nullptr) {
+    if (path) {
         if (pathSep == String::npos) {
             *path = "";
         } else {
@@ -113,21 +107,21 @@ inline void SplitPath(const String& in, String* path, String* name, String* ext,
         }
     }
     std::size_t fileExtSep = _nameExt.find_last_of('.');
-    if (name != nullptr) {
+    if (name) {
         if (fileExtSep == String::npos || fileExtSep < 1) {
             *name = _nameExt;
         } else {
             *name = _nameExt.substr(0, fileExtSep);
         }
     }
-    if (ext != nullptr) {
+    if (ext) {
         if (fileExtSep == String::npos || fileExtSep >= _nameExt.length() - 1) {
             *ext = "";
         } else {
             *ext = _nameExt.substr(fileExtSep + 1);
         }
     }
-    if (nameExt != nullptr) {
+    if (nameExt) {
         *nameExt = _nameExt;
     }
 }
