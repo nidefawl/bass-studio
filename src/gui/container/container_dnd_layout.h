@@ -44,7 +44,7 @@ private:
     std::vector<std::shared_ptr<Splitter>> splitters;
     String getLayoutCtrName() {
         if (this->label.empty()) {
-            return StringFormat("%8X", reinterpret_cast<uint64_t>(this));
+            return StringFormat("%12zX", reinterpret_cast<uint64_t>(this));
         }
         return this->label;
     }
@@ -120,7 +120,7 @@ public:
             index++;
         }
         if (!entriesToRemove.empty()) {
-            log_lf(Log::L_DEBUG, "remove %d container entries\n", entriesToRemove.size());
+            log_lf(Log::L_DEBUG, "remove %zu container entries\n", entriesToRemove.size());
         }
         for (const auto& entry: entriesToRemove) {
             std::shared_ptr<guictr_layout_entry> out;

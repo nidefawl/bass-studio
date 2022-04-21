@@ -23,6 +23,6 @@ inline void aligned_free(void* ptr) {
 }
 
 inline void handleFailedAllocation(int allocId, size_t allocSize) {
-    log_printf("Failed allocation of size %d at %d\n", allocSize, allocId);
+    log_printf("Failed allocation of size %zu at %d\n", allocSize, allocId);
     dbgassert(0);
 }
