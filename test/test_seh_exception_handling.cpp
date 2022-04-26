@@ -4,7 +4,7 @@
 #include "str_util.h"
 #include "seq_util.h"
 #include "types.h"
-#include "types.h"
+#include "compiler.h"
 #include "platform/mingw/mingw.exc.h"
 
 #ifdef _WIN32

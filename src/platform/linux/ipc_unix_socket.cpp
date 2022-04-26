@@ -15,10 +15,8 @@
 class ipc_server::Impl {
     int32_t m_fdSockListen = 0;
     int32_t m_fdSockClient = 0;
-    struct sockaddr_un remote {
-        0
-    };
-    const char* pathUnlink;
+    struct sockaddr_un remote{};
+    String pathUnlink;
 
 public:
     Impl()  = default;
@@ -33,9 +31,7 @@ public:
         int ret        = unlink(path);
         log_printf("unlink %s returned %d.\n", path, ret);
 
-        struct sockaddr_un local {
-            0
-        };
+        struct sockaddr_un local{};
         local.sun_family = AF_UNIX;
         strncpy(local.sun_path, path, sizeof(local.sun_path));
         local.sun_path[sizeof(local.sun_path) - 1] = '\0';
@@ -83,7 +79,7 @@ public:
             close(m_fdSockListen);
             m_fdSockListen = 0;
         }
-        if (pathUnlink.length()) {
+        if (!pathUnlink.empty()) {
             unlink(StringAsCStr(pathUnlink));
         }
     }
@@ -145,9 +141,7 @@ public:
         }
 
 
-        struct sockaddr_un remote {
-            0
-        };
+        struct sockaddr_un remote{};
         remote.sun_family = AF_UNIX;
         strncpy(remote.sun_path, path, sizeof(remote.sun_path));
         remote.sun_path[sizeof(remote.sun_path) - 1] = '\0';
@@ -160,10 +154,10 @@ public:
         return IPC_OK;
     }
     int client_read(char* buf, uint32_t buflen) {
-        return recv(m_fdSock, buf, buflen, 0);
+        return static_cast<int32_t>(recv(m_fdSock, buf, buflen, 0));
     }
     int client_send(char* buf, uint32_t buflen) {
-        return send(m_fdSock, buf, buflen, 0);
+        return static_cast<int32_t>(send(m_fdSock, buf, buflen, 0));
     }
     void client_close() {
         if (m_fdSock) {
