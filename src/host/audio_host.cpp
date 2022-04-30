@@ -197,8 +197,8 @@ class audiohost_callback {
         channelnum_t numOutChannelsWritten = 0;
         if (stream->try_dequeue(block)) {
             dbgassert(block);
-            if (framesPerBuffer == block->output->samples) {
-                channelnum_t channels = math::min<channelnum_t>(block->output->channels, stream->nOutputChannels);
+            if (framesPerBuffer == static_cast<decltype(framesPerBuffer)>(block->output->samples)) {
+                auto channels = math::min<channelnum_t>(block->output->channels, stream->nOutputChannels);
                 for (channelnum_t i = 0; i < channels; i++) {
                     float* channel = block->output->buf[i];
                     memcpy(outputs[i], channel, framesPerBuffer * sizeof(float));

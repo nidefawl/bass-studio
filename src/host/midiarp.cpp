@@ -335,7 +335,7 @@ void midiarp::initRandomDelays(tick_t tick, tick_t startFrame, tick_t endFrame, 
 #endif
     }
     if constexpr (logProcessedNotes) {
-        log_lf(Log::L_DEBUG, "@%s STEP %d STEPSIZE %d FIRST %s SEED %016llx VEL-SEED %016llx rndTime %d\n",
+        log_lf(Log::L_DEBUG, "@%s STEP %d STEPSIZE %d FIRST %s SEED %016zx VEL-SEED %016zx rndTime %d\n",
                    StringAsCStr(tickAsBeatString(tick)),
                    nextStep, stepSize, StringAsCStr(tickAsBeatString(processTimePoints[0])), stepSeed_u64, velocitySeed_u64, rndTime);
     }

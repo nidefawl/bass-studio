@@ -544,7 +544,7 @@ int runCommandLineHost(const std::vector<String>& args) {
 
                                 samplesWritten += drwav_write(pWav, blockTrack.samples, blockTrack.buf[0]);
                             }
-                            log_printf("wrote %lld samples to %s\n", samplesWritten, StringAsCStr(nameWaveFileTrack));
+                            log_printf("wrote %zd samples to %s\n", samplesWritten, StringAsCStr(nameWaveFileTrack));
                             drwav_close(pWav);
                         }
                     }

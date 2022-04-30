@@ -33,7 +33,7 @@ namespace DebugAlloc {
 
     template<typename T>
     void printLeaked(int64_t allocCount, const std::vector<T*>& allocList, const std::unordered_map<T*, AllocInfo>& mapAllocInfo) {
-        log_lf(Log::L_DEBUG, "allocations: %lld\n", allocCount);
+        log_lf(Log::L_DEBUG, "allocations: %zd\n", allocCount);
     #if RECORD_ALLOC_STACKTRACES
         for (auto tStar : allocList) {
             auto& allocInfo = mapAllocInfo.at(tStar);

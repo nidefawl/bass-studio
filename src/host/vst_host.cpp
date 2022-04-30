@@ -1328,7 +1328,7 @@ int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, 
     }
 
     log_printf("Wrote %zd chunks/%zd samples into %s\n", sampleIdx, samplesWritten, StringAsCStr(nameWaveFileTrack));
-    log_printf("processed %lld splits and %lld samples\n", samples.size(), samplesWritten2);
+    log_printf("processed %zu splits and %zd samples\n", samples.size(), samplesWritten2);
     drwav_close(pWav);
 
     return samplesWritten;
