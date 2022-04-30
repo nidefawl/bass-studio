@@ -512,8 +512,8 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     } else {
         inputParams.channelCount = 0;
     }
-    inputParams.channelCount = math::clamp(inputParams.channelCount, 0, 255);
-    outputParams.channelCount = math::clamp(outputParams.channelCount, 0, 255);
+    inputParams.channelCount = math::clamp<int>(inputParams.channelCount, 0, MAX_AUDIO_IO_CHANNELS);
+    outputParams.channelCount = math::clamp<int>(outputParams.channelCount, 0, MAX_AUDIO_IO_CHANNELS);
     log_printf("With %d output channels\n", outputParams.channelCount);
     log_printf("With %d input channels\n", inputParams.channelCount);
 

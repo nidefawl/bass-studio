@@ -22,6 +22,7 @@
 #define PARAM_OFFSET_SEND (1 << 12)
 #define MAX_SEND_CHANNELS (1 << 4)
 
+#define MAX_AUDIO_IO_CHANNELS channelnum_t(255)
 
 #ifndef BUILD_VSTHOST
 #define BUILD_VSTHOST 1
