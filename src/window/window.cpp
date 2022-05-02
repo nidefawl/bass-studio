@@ -686,7 +686,7 @@ public:
         glViewport(0, 0, fbwidth, fbheight);
     }
 
-    void createMainWindow(int w, int h, appwindow_main* parentWindowHandle, int flags = 0);
+    void createMainWindow(int w, int h, int flags = 0);
     void initControl() override;
 
     void updateMenu() override {
@@ -1241,12 +1241,7 @@ window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> overlayCtrl,
     //TODO: document lifetime of control
     std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, overlayCtrl);
 
-    //NOTE: GL context sharing is disabled (commented next line)
-    // pass down parent window handle if overlayCtrl is companion overlayCtrl of daw (signaled by WINDOW_IS_MAINWINDOW_SLAVE)
-    // appwindow_main* parentHandle = ((flags & WINDOW_IS_MAINWINDOW_SLAVE) != 0) ? this : nullptr;
-
-    appwindow_main* parentHandle = nullptr;
-    ow->createMainWindow(windowSize.x, windowSize.y, parentHandle, flags);
+    ow->createMainWindow(windowSize.x, windowSize.y, flags);
     if (!(flags & WINDOW_IS_MAINWINDOW_SLAVE)) {
         ow->initControl();
     }
@@ -1337,7 +1332,7 @@ void appwindow_main::initControl() {
     this->onWindowSizeChanged(w, h);
 }
 
-void appwindow_main::createMainWindow(int w, int h, appwindow_main* parentWindowHandle, int flags) {
+void appwindow_main::createMainWindow(int w, int h, int flags) {
     windowCreationFlags = flags;
     bCanResize          = flags & WINDOW_IS_RESIZABLE;
     setAppWindowHints();
@@ -1347,18 +1342,10 @@ void appwindow_main::createMainWindow(int w, int h, appwindow_main* parentWindow
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
         glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
         glfwWindowHint(GLFW_DECORATED, GL_FALSE);
-        //glfwWindowHint(GLFW_UTILITY_WINDOW, GL_TRUE);
-        //glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GL_TRUE);
-        glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GL_FALSE);
+        glfwWindowHint(GLFW_HIDE_FROM_TASKBAR, GL_TRUE);
     }
 
-    //glfwWindowHint(GLFW_FLOATING, parent != nullptr);
-    appwindow::createBaseWindow(this->name, w, h, parentWindowHandle ? parentWindowHandle->glfw : nullptr, nullptr);
-
-    if (flags & WINDOW_IS_MAINWINDOW_SLAVE) {
-        //NOTE: GL context sharing with companion window is disabled!
-        //this->nanovgCtxt = parentWindowHandle->nanovgCtxt;
-    }
+    appwindow::createBaseWindow(this->name, w, h, nullptr, nullptr);
 
     if (flags & (WINDOW_IS_MAINWINDOW_SLAVE | WINDOW_IS_MAINWINDOW_MASTER)) {
         glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
@@ -1372,7 +1359,6 @@ void appwindow_main::createMainWindow(int w, int h, appwindow_main* parentWindow
 #endif
     }
     if (flags & WINDOW_BORDERLESS_POPUP) {
-        glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GL_FALSE);//set global state back to default
         glfwSetWindowAttrib(glfw, GLFW_FOCUS_ON_SHOW, 0);
 #ifdef _WIN32
         //SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)parent->getHWND());
@@ -1553,6 +1539,7 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
     }
     if (glfw)
         throw appexception("window not null");
+
     if (parentWindowHandle) {
         glfw = glfwCreateChildWindow(parentWindowHandle, w, h, title, share);
     } else {
@@ -1752,7 +1739,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         std::shared_ptr<AppCtrl> ctrl = appInstance.makeApp(args);
 
         std::unique_ptr<appwindow_main> mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl);
-        mainWindow->createMainWindow(1280, 720, nullptr, WINDOW_IS_MAINWINDOW_MASTER);
+        mainWindow->createMainWindow(1280, 720, WINDOW_IS_MAINWINDOW_MASTER);
 #ifdef _WIN32
         setMainHWND(mainWindow->getHWND());
 #endif
@@ -1834,8 +1821,8 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             int64_t tmMsgLoop = hiresTimer1.getTimeReset();
             glfwUpdateWin32Internals();
 #endif
-            int64_t tmUpdateInternals = hiresTimer1.getTimeReset();
 #ifndef _WIN32
+            int64_t tmUpdateInternals = hiresTimer1.getTimeReset();
             glfwWaitEventsTimeout(timeoutEvent);
 #endif
             if (glfwWindowShouldClose(glfwHandle)) {
