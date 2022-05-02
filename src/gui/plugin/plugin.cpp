@@ -318,9 +318,8 @@ public:
                 ctxtMenu->size = { 640, 480 };
                 ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
                 ivec2 wndPos{ 0 };
-                this->parentCtrl->window->getPos(&wndPos);
                 dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
-                dawCtrl->openContextMenu(ctxtMenu, wndPos, 2);
+                dawCtrl->openContextMenu(ctxtMenu, gui->toScreenSpace({gui->size.x, 0}));
                 return;
             }
         }

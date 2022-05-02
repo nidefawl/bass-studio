@@ -40,7 +40,6 @@ String menuName(String s, KeyCombo combo);
 
 #define BASECTRL_WND_POS_RELATIVE         1
 #define BASECTRL_WND_POS_ABSOLUTE         2
-#define BASECTRL_OVERLAY_TYPE_CONTEXTMENU 8
 
 void determineWindowPos(guibase* guicontextmenu, window_main* mainWindow, float m_scale, int flags, ivec2 pos, ivec2& wndPos);
 
@@ -275,7 +274,7 @@ public:
     virtual void relayout();
     virtual void relayout(int32_t w, int32_t h);
     virtual void windowSizeChanged(int32_t w, int32_t h);
-    virtual void openContextMenu(guictxtmenu_base* b, ivec2 pos, int flags = 1);
+    virtual void openContextMenu(guictxtmenu_base* b, ivec2 pos);
     virtual void closeContextMenu(){};
     void closeAllAppMenus() { closeAppMenusAtLvl(0); };
     virtual void closeAppMenusAtLvl(int startlvl){};
@@ -337,7 +336,7 @@ public:
     ~AppCtrl() override = default;
     void relayout(int32_t w, int32_t h) override = 0;
     virtual void onChildOverlayWindowClose(window_main*);
-    void openContextMenu(guictxtmenu_base* b, ivec2 pos, int flags=1) override;
+    void openContextMenu(guictxtmenu_base* b, ivec2 pos) override;
     void openDialog(guidialog_base* b);
     void closeContextMenu() override;
     void releaseGarbageGuis();
@@ -394,6 +393,11 @@ public:
         return dialog != nullptr;
     }
 
+    ivec2 toScreenSpace(ivec2 p) override {
+        ivec2 windowPos;
+        this->mainWindow->getPos(&windowPos);
+        return windowPos + ivec2(vec2(p) * (1.0f / m_scale));
+    }
 protected:
     /**
      * openOverlayGui
@@ -402,11 +406,6 @@ protected:
      * @param flags @see BASECTRL_WND_* defines
      */
     void openOverlayGui(guictxtmenu_base* b, ivec2 pos, int flags);
-    ivec2 toScreenSpace(ivec2 p) override {
-        ivec2 windowPos;
-        this->mainWindow->getPos(&windowPos);
-        return windowPos + ivec2(vec2(p) * (1.0f / m_scale));
-    }
     void dragContainerRelayout(drag_ctr_event evt) override {}
 };
 class guictr_scrollbar;

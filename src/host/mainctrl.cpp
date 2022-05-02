@@ -1626,7 +1626,7 @@ void DawInstance::onTick() {
                 auto ctrlSize               = tls.mainCtrl->m_size;
                 tooltip->size               = ivec2(420, 90);
                 tooltip->maxHeight          = tooltip->size.y;
-                tls.mainCtrl->openContextMenu(tooltip, ivec2(ctrlSize.x / 2, ctrlSize.y - 100) - tooltip->size / 2, BASECTRL_WND_POS_RELATIVE);
+                tls.mainCtrl->openContextMenu(tooltip, ivec2(ctrlSize.x / 2, ctrlSize.y - 100) - tooltip->size / 2);
             }
         }
     }

@@ -657,7 +657,7 @@ public:
     }
 
     void closeAllSubmenus() {
-        BaseCtrl* appCtrlParent = getControl();
+        BaseCtrl* appCtrlParent = this->dawCtrl;
         bool anyOpen            = false;
         for (ctxtmenu_entry* ctxtEntry : entries) {
             auto entry = dynamic_cast<ctxtmenu_entry_bus*>(ctxtEntry);
@@ -675,7 +675,7 @@ public:
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (this->contains(mpos)) {
             ivec2 localMouse         = this->toContainerSpace(mpos);
-            ctxtmenu_entry* entryHit = NULL;
+            ctxtmenu_entry* entryHit = nullptr;
             for (ctxtmenu_entry* e : entries) {
                 int n = e->getClicked(size, localMouse);
                 if (n >= 0) {
@@ -712,8 +712,10 @@ public:
                     popup->size = size;
                     popup->setFontSize(entry->fontSize);
                     popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-                    ivec2 vPos(right() + 2, pos.y + entryHit->y);
-                    parentCtrl->openAppMenu(1, popup, vPos);
+                    ivec2 screenPosThis = this->parentCtrl->toScreenSpace(ivec2(0, 0));
+                    ivec2 screenPosParent = dawCtrl->toScreenSpace(ivec2(0, 0));
+                    ivec2 screenPos       = screenPosThis - screenPosParent + ivec2(right() + 2, top() + entryHit->y);
+                    this->dawCtrl->openAppMenu(1, popup, screenPos);
                     entry->isMenuOpen = true;
                 }
             }
@@ -771,7 +773,7 @@ public:
         popup->size             = size;
         popup->setFontSize(size.y);
         popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-        this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
+        this->dawCtrl->openAppMenu(0, popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
     }
 };
 class gui_trackcontrols_io : public guictr_base {

@@ -397,7 +397,7 @@ bool BaseCtrl::captureMouse(guibase* gui) {
 String BaseCtrl::getClipboardText() {
     return this->window->getClipboardText();
 }
-void BaseCtrl::openContextMenu(guictxtmenu_base* b, ivec2 pos, int flags) {
+void BaseCtrl::openContextMenu(guictxtmenu_base* b, ivec2 pos) {
     delete b; // TODO: defer delete
 }
 void BaseCtrl::closeDialogs() {
@@ -434,7 +434,7 @@ void AppCtrl::destroyControl() {
     destroy();
 }
 void AppCtrl::closeAppMenusAtLvl(int startlvl) {
-    for (int i = startlvl; i < (int)menuWindows.size(); i++) {
+    for (int i = startlvl; i < CtrSize(menuWindows); i++) {
         auto menuWnd = menuWindows[i];
         if (menuWnd.ctxt) {
             menuWnd.wnd->getCtrl()->closePopup();
@@ -461,6 +461,9 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) 
     while (CtrSize(menuWindows) <= lvl) {
         menuWindows.push_back({nullptr, nullptr});
     }
+
+    // TODO: allow caller/guicontextmenu to decide what font size to apply here
+    // guicontextmenu->setFontSize(getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
 
     ivec2 wndPos(0);
     determineWindowPos(guicontextmenu, mainWindow, m_scale, BASECTRL_WND_POS_RELATIVE, pos, wndPos);
@@ -491,10 +494,6 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) 
 }
 
 void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int flags) {
-    if (!(flags & BASECTRL_OVERLAY_TYPE_CONTEXTMENU)) {
-        dbgassert(0);
-        return;
-    }
     if (this->ctxtmenu) {
         closeContextMenu();
     }
@@ -559,8 +558,9 @@ void AppCtrl::openDialog(guidialog_base* _guidialog) {
 
     popupCtrl->open(_guidialog, wndPos, (dialogWindow->getCreationFlags() & WINDOW_IS_RESIZABLE));
 }
-void AppCtrl::openContextMenu(guictxtmenu_base* b, ivec2 pos, int flags) {
-    openOverlayGui(b, pos, flags | BASECTRL_OVERLAY_TYPE_CONTEXTMENU);
+void AppCtrl::openContextMenu(guictxtmenu_base* b, ivec2 pos) {
+    openOverlayGui(b, pos, BASECTRL_WND_POS_RELATIVE);
+    // openAppMenu(0, b, pos);
 }
 void AppCtrl::closeContextMenu() {
     if (this->ctxtmenu) {
