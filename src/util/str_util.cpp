@@ -41,8 +41,8 @@ String StringFormat(const char* fmt, ...) {
     }
     // linux does the right thing: 
     // write up to FormatBuffer.size()-2 chars and put \0 at FormatBuffer.size()-1
-    if (ret >= FormatBuffer.size()) {
-        ret = FormatBuffer.size();
+    if (ret >= CtrSize(FormatBuffer)) {
+        ret = CtrSize(FormatBuffer);
         dbgassert(FormatBuffer[ret - 1] == '\0');
     }
 #endif

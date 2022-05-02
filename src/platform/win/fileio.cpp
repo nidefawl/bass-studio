@@ -81,7 +81,7 @@ size_t GetFileSizeSafe(const String& filename) {
     }
 }
 
-int32_t WriteFileVector(const String& filename, std::vector<uint8_t>& writebuffer) {
+int32_t WriteFileVector(const String& filename, const std::vector<uint8_t>& writebuffer) {
     FileImpl fobj(filename, OpenFileMode::WRITE);
     DWORD bytesWrite = 0;
     BOOL result = WriteFile(fobj.GetHandle(), writebuffer.data(), static_cast<DWORD>(writebuffer.size()), &bytesWrite, nullptr);

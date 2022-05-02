@@ -82,11 +82,12 @@ size_t GetFileSizeSafe(const String& filename) {
     return 0;
 }
 
-int32_t WriteFileVector(const String& filename, std::vector<uint8_t>& writebuffer) {
+int32_t WriteFileVector(const String& filename, const std::vector<uint8_t>& writebuffer) {
     File fobj(filename, O_CREAT | O_WRONLY | O_TRUNC, 0644);
+    const auto bufferSize = static_cast<ssize_t>(writebuffer.size());
     ssize_t written = 0;
-    while (written < writebuffer.size()) {
-        ssize_t len = write(fobj.GetHandle(), writebuffer.data(), writebuffer.size());
+    while (written < bufferSize) {
+        ssize_t len = write(fobj.GetHandle(), writebuffer.data(), bufferSize);
         if (len < 0) {
             int err = errno;
             if (err == EAGAIN) {
@@ -99,12 +100,12 @@ int32_t WriteFileVector(const String& filename, std::vector<uint8_t>& writebuffe
         }
         written += len;
     }
-    return (int32_t) written;
+    return static_cast<int32_t>(written);
 }
 
 void ReadFileVector(const String& filename, std::vector<uint8_t>& out) {
     File fobj(filename, O_RDONLY, 0);
-    size_t filesize   = GetFileSizeSafe(filename);
+    auto filesize   = static_cast<ssize_t>(GetFileSizeSafe(filename));
     ssize_t bytesRead = 0;
 
     out.resize(filesize);

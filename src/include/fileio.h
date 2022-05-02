@@ -39,7 +39,7 @@ using ByteBuf = std::vector<uint8_t>;
 
 class window_base;
 
-int32_t WriteFileVector(const String& filename, std::vector<uint8_t>& writebuffer);
+int32_t WriteFileVector(const String& filename, const std::vector<uint8_t>& writebuffer);
 void ReadFileVector(const String& filename, std::vector<uint8_t>& out);
 int64_t ReadFileText(const String& filename, String& out, int resourceType = 0);
 int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out);
