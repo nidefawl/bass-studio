@@ -80,8 +80,8 @@ public:
 
         printL(0, "Blocks Processed", StringFormat("%d", stats.blocksProcessed));
         printL(0, "Samples Processed", StringFormat("%d", stats.samplesProcessed));
-        printL(0, "All Plugins", StringFormat("%lld µs (%lld µs)", stats.timeProcessPlugins, stats.timeProcessPluginsRaw));
-        printL(0, "Block", StringFormat("%lld µs (%lld µs)", stats.timeBlock, stats.timeBlockRaw));
+        printL(0, "All Plugins", StringFormat("%zd µs (%zd µs)", stats.timeProcessPlugins, stats.timeProcessPluginsRaw));
+        printL(0, "Block", StringFormat("%zd µs (%zd µs)", stats.timeBlock, stats.timeBlockRaw));
         for (auto& entry : stats.timings) {
             const String& entryKey = entry.first;
 
@@ -94,9 +94,9 @@ public:
                 }
             }
 
-            String format = "%lld µs";
+            String format = "%zd µs";
             if (entryKey.find("Bytes") != String::npos) {
-                format = "%lld bytes";
+                format = "%zd bytes";
             }
             if (entryKey.find("SSE") != String::npos) {
                 format = "%08X";
@@ -107,14 +107,14 @@ public:
             printL(ident, StringAsCStr(label), StringFormat(StringAsCStr(format), entry.second));
             if (ident && label == "ProcessMidi") {
                 ident++;
-                printL(ident, "InputClips", StringFormat("%lld µs", stats.blockMidiStats.tm0InputClips));
-                printL(ident, "InputRealtime", StringFormat("%lld µs", stats.blockMidiStats.tm1InputRT));
-                printL(ident, "ProcessNotes", StringFormat("%lld µs", stats.blockMidiStats.tm2ProcNotes));
-                printL(ident, "RevalidateEnds", StringFormat("%lld µs", stats.blockMidiStats.tm3RevalidateEnds));
-                printL(ident, "SortEvents", StringFormat("%lld µs", stats.blockMidiStats.tm4SortEvents));
-                printL(ident, "ProcArp", StringFormat("%lld µs", stats.blockMidiStats.tm5ProcArp));
-                printL(ident, "WriteVstEvents", StringFormat("%lld µs", stats.blockMidiStats.tm6WriteVstEvents));
-                printL(ident, "ProcessOutput", StringFormat("%lld µs", stats.blockMidiStats.tm7ProcessOutput));
+                printL(ident, "InputClips", StringFormat("%zd µs", stats.blockMidiStats.tm0InputClips));
+                printL(ident, "InputRealtime", StringFormat("%zd µs", stats.blockMidiStats.tm1InputRT));
+                printL(ident, "ProcessNotes", StringFormat("%zd µs", stats.blockMidiStats.tm2ProcNotes));
+                printL(ident, "RevalidateEnds", StringFormat("%zd µs", stats.blockMidiStats.tm3RevalidateEnds));
+                printL(ident, "SortEvents", StringFormat("%zd µs", stats.blockMidiStats.tm4SortEvents));
+                printL(ident, "ProcArp", StringFormat("%zd µs", stats.blockMidiStats.tm5ProcArp));
+                printL(ident, "WriteVstEvents", StringFormat("%zd µs", stats.blockMidiStats.tm6WriteVstEvents));
+                printL(ident, "ProcessOutput", StringFormat("%zd µs", stats.blockMidiStats.tm7ProcessOutput));
             }
         }
         y += height / 2;
