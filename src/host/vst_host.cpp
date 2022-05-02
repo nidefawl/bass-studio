@@ -3029,9 +3029,8 @@ bool vsthost::writeRecordedData(project_t* project) {
 int32_t vsthost::getNextSampleId(int32_t id) {
     if (id <= 0) {
         return ++sampleId;
-    } else {
-        update_maximum(sampleId, id);
     }
+    update_maximum(sampleId, id);
     return id;
 }
 

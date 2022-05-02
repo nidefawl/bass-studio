@@ -173,8 +173,8 @@ private:
 
 private:
     vstpluginloadres loadInternalPlugin(int32_t type, int32_t globalId = 0);
-    int32_t getNextGlobalModuleId(int32_t n);
-    audio_stage_id_t getNextGlobalAudioStageId(int32_t as);
+    int32_t getNextGlobalModuleId(int32_t globalId);
+    audio_stage_id_t getNextGlobalAudioStageId(int32_t globalId);
     bool unloadAllPlugins();
     void updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPos, playback_state state) const;
     void registerPlugins();
