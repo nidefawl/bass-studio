@@ -1822,8 +1822,9 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             glfwUpdateWin32Internals();
 #endif
 #ifndef _WIN32
-            int64_t tmUpdateInternals = hiresTimer1.getTimeReset();
             glfwWaitEventsTimeout(timeoutEvent);
+#else
+            int64_t tmUpdateInternals = hiresTimer1.getTimeReset();
 #endif
             if (glfwWindowShouldClose(glfwHandle)) {
                 break;
