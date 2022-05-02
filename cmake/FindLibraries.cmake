@@ -10,22 +10,23 @@ find_path(PROJECT_DEPS_PATH
   NAMES "build.py"
   PATHS 
     "${CMAKE_SOURCE_DIR}/../daw-deps"
-    "${CMAKE_BINARY_DIR}/../daw-deps"
     "C:/dev/daw-deps"
-    "D:/dev/daw-deps"
   NO_DEFAULT_PATH 
   REQUIRED)
 
-message(STATUS "PROJECT_DEPS_PATH ${PROJECT_DEPS_PATH}")
+if (DEFINED DEPS_BUILD_FOLDER)
+  list(APPEND DEPS_SEARCH_PATHS ${DEPS_BUILD_FOLDER})
+endif()
+list(APPEND DEPS_SEARCH_PATHS 
+  "${CMAKE_SOURCE_DIR}/../build-deps/install"
+)
 
 find_path(PROJECT_DEPS_INSTALL_PATH
   NAMES
     "include"
     "lib"
   PATHS 
-    "${DEPS_BUILD_FOLDER}"
-    "${CMAKE_SOURCE_DIR}/../build-deps/install"
-    "${CMAKE_BINARY_DIR}/../build-deps/install"
+    ${DEPS_SEARCH_PATHS}
   NO_DEFAULT_PATH
   REQUIRED
 )
