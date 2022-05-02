@@ -47,7 +47,7 @@ namespace ngui {
                 case IDNO:
                     return Selection::No;
                 default:
-                    return Selection::None;
+                    return Selection::NoSelection;
             }
         }
 

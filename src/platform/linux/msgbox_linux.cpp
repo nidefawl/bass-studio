@@ -49,7 +49,7 @@ namespace ngui {
                 case GTK_RESPONSE_CLOSE:
                     return Selection::Quit;
                 default:
-                    return Selection::None;
+                    return Selection::NoSelection;
             }
         }
 

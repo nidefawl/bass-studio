@@ -32,7 +32,7 @@ namespace ngui {
         Yes,
         No,
         Quit,
-        None,
+        NoSelection,
         Error
     };
 

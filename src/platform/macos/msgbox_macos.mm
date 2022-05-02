@@ -67,14 +67,14 @@ void setButtons(NSAlert *alert, Buttons buttons) {
 Selection getSelection(int index, Buttons buttons) {
    switch (buttons) {
       case Buttons::OK:
-         return index == NSAlertFirstButtonReturn ? Selection::OK : Selection::None;
+         return index == NSAlertFirstButtonReturn ? Selection::OK : Selection::NoSelection;
       case Buttons::OKCancel:
          if (index == NSAlertFirstButtonReturn) {
             return Selection::OK;
          } else if (index == NSAlertSecondButtonReturn) {
             return Selection::Cancel;
          } else {
-            return Selection::None;
+            return Selection::NoSelection;
          }
       case Buttons::YesNo:
          if (index == NSAlertFirstButtonReturn) {
@@ -82,12 +82,12 @@ Selection getSelection(int index, Buttons buttons) {
          } else if (index == NSAlertSecondButtonReturn) {
             return Selection::No;
          } else {
-            return Selection::None;
+            return Selection::NoSelection;
          }
       case Buttons::Quit:
-         return index == NSAlertFirstButtonReturn ? Selection::Quit : Selection::None;
+         return index == NSAlertFirstButtonReturn ? Selection::Quit : Selection::NoSelection;
       default:
-         return Selection::None;
+         return Selection::NoSelection;
    }
 }
 
