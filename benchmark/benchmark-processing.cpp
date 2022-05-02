@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
         const channelnum_t outputChannels = 2;
         const sampleformat_t sampleformat = {44100, 512, sampleformat_bits_t::FLOAT_32};
         log_out("Testing Samplerate %uHz at Blocksize %u\n", sampleformat.sampleRate, sampleformat.blockSize);
-        log_out("Deadline for block: %uns\n", (sampleformat.blockSize*1000000000ULL)/sampleformat.sampleRate);
+        log_out("Deadline for block: %zuns\n", (sampleformat.blockSize*1000000000UL)/sampleformat.sampleRate);
         getGlobalLogger()->setLevel(Log::L_WARN);
 
         std::shared_ptr<DAW::AudioIO::AudioStream> audiostream = std::make_shared<FakeAudioStream>(sampleformat, inputChannels, outputChannels);
