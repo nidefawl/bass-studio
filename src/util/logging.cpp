@@ -199,7 +199,7 @@ void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* 
         String threadName        = seqthreads::getCurrentThreadName();
         const char* szThreadName = StringAsCStr(threadName);
 #ifndef _WIN32
-        ret = snprintf(szLogBuf, LOG_BUF_SIZE - 1, "%s %s %s", szThreadName, szFileShort, szLogStr);
+        ret = snprintf(szLogBuf, LOG_BUF_SIZE - 1, "%s %s:%d %s  %s", szThreadName, szFileShort, line, func, szLogStr);
         if (ret >= LOG_BUF_SIZE) {
             ret = LOG_BUF_SIZE;
             dbgassert(szLogStr[ret - 1] == '\0');
