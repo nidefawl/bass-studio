@@ -254,7 +254,7 @@ target_link_libraries(${LINK_TARGET} PUBLIC slowstacktrace)
 
 if (LINUX)
   target_link_libraries(${LINK_TARGET} PUBLIC Threads::Threads)
-  target_link_libraries(${LINK_TARGET} PUBLIC ${X11_X11_LIB} ${CMAKE_DL_LIBS} ${GTK3_LIBRARIES} GL rt m)
+  target_link_libraries(${LINK_TARGET} PUBLIC ${X11_X11_LIB} ${CMAKE_DL_LIBS} ${GTK3_LIBRARIES} GL m)
 endif (LINUX)
 
 if (APPLE)
