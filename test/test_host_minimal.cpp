@@ -10,6 +10,7 @@ int main(int argc, char* argv[]) {
     auto host = std::make_unique<vsthost>();
     vsthost::assignMasterCallback(host.get());
     daw_tls::initNewTls().host = host.get();
+    host->setTls(daw_tls::getTls());
     TEST_ASSERT_EQUAL(vsthost::getInstance(), host.get());
     host->onTick();
     host->unload();

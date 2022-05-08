@@ -10,8 +10,9 @@
 namespace {
     struct threadlocal_threadinfo_t {
         int32_t threadId = 0;
-        String threadName;
         bool isKnownThread = false;
+        bool isInternalThread = false;
+        String threadName;
     };
 
     int32_t getNextThreadId() noexcept {
@@ -21,7 +22,7 @@ namespace {
 
     thread_local threadlocal_threadinfo_t* tlsThreadInfo = nullptr;
 
-    void registerThreadInternal(const String& threadName, bool isKnownThread) {
+    void registerThreadInternal(const String& threadName, bool isKnownThread, bool isInternalThread) {
         static std::mutex gRegisterMutex;
         std::lock_guard<std::mutex> lock(gRegisterMutex);
         dbgassert(!tlsThreadInfo || !tlsThreadInfo->isKnownThread);
@@ -29,13 +30,14 @@ namespace {
         threadInfo->threadId      = getNextThreadId();
         threadInfo->threadName    = threadName + "-" + std::to_string(threadInfo->threadId);
         threadInfo->isKnownThread = isKnownThread;
+        threadInfo->isInternalThread = isInternalThread;
         tlsThreadInfo             = threadInfo;
     }
 }// namespace
 namespace seqthreads {
 
-    void registerThread(String threadName) {
-        registerThreadInternal(threadName, true);
+    void registerThread(String threadName, bool isInternalThread) {
+        registerThreadInternal(threadName, true, isInternalThread);
     }
 
     int32_t getCurrentThreadId() noexcept {
@@ -44,13 +46,27 @@ namespace seqthreads {
     }
     bool isInternalThread() noexcept {
         threadlocal_threadinfo_t* threadInfo = tlsThreadInfo;
+        return threadInfo && threadInfo->isInternalThread;
+    }
+    bool isKnownThread() noexcept {
+        threadlocal_threadinfo_t* threadInfo = tlsThreadInfo;
         return threadInfo && threadInfo->isKnownThread;
+    }
+    void getThreadInfo(bool& isKnown, bool& isInternal) noexcept {
+        threadlocal_threadinfo_t* threadInfo = tlsThreadInfo;
+        if (threadInfo) {
+            isKnown = threadInfo->isKnownThread;
+            isInternal = threadInfo->isInternalThread;
+        } else {
+            isKnown = false;
+            isInternal = false;
+        }
     }
 
     String getCurrentThreadName() {
         threadlocal_threadinfo_t* threadInfo = tlsThreadInfo;
         if (!threadInfo) {
-            registerThreadInternal("unknown", false);
+            registerThreadInternal("unknown", false, false);
             threadInfo = tlsThreadInfo;
         }
         return threadInfo ? threadInfo->threadName : "unknown";

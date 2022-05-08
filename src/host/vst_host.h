@@ -6,6 +6,7 @@
 #include <utility>
 #include <vector>
 #include <atomic>
+#include "tls.h"
 #include "types.h"
 #include <map>
 
@@ -197,6 +198,8 @@ public:
 
     static vsthost* getInstance();
     static bool assignMasterCallback(vsthost* host);
+
+    void setTls(daw_tls::tlsinstance& tls);
 
     void destroy();
 

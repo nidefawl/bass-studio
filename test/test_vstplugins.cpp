@@ -150,6 +150,7 @@ int main(int, char*[]) {
     vsthost::assignMasterCallback(host.get());
     auto& tls = daw_tls::initNewTls();
     tls.host = host.get();
+    host->setTls(tls);
     try {
 
 #ifdef _WIN32

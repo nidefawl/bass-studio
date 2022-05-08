@@ -1273,7 +1273,7 @@ void DawInstance::initDaw() {
     initTls.midiHost       = new midihost();
     initTls.pluginDatabase = &plugindb;
     initTls.audioCache     = new audiocache(settings.iosettings.samplerate);
-
+    initTls.host->setTls(initTls);
     this->tls = initTls;
 
     setSSEFlushDenormals();
@@ -1497,8 +1497,8 @@ void DawInstance::getTrackContainers(std::vector<guictr_tracks*>& trackContainer
 void DawInstance::setMainControl(MainCtrl* _mainCtrl) {
     dbgassert(!tls.mainCtrl);
     tls.mainCtrl = _mainCtrl;
-
     daw_tls::getTls().mainCtrl = tls.mainCtrl;
+    tls.host->setTls(tls);
     this->dawCtrls.push_back(tls.mainCtrl);
 }
 

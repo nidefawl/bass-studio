@@ -5,8 +5,10 @@
 
 namespace seqthreads {
     int32_t getCurrentThreadId() noexcept;
-    void registerThread(String threadName);
+    void registerThread(String threadName, bool isInternalThread = true);
     bool isInternalThread() noexcept;
+    bool isKnownThread() noexcept;
+    void getThreadInfo(bool& isKnown, bool& isInternal) noexcept;
     String getCurrentThreadName();
 
     void threadSleep(int32_t millis);

@@ -1,3 +1,4 @@
+#include "hires_timer.h"
 #if defined(__linux__) || defined(__APPLE__)
 #include "assert_dbg.h"
 #include "str_util.h"
@@ -64,11 +65,18 @@ namespace GTKFileDialogImpl {
     }
 
     void handleGuiEvents(window_base* w, GtkWidget* dialog) {
+        int64_t tmHRLastDraw   = 0;
+        hires_timer_t hiresRuntime;
         while (gtk_widget_is_visible(dialog)) {
             glfwWaitEventsTimeout(0.001);
             if (gtk_events_pending())
                 gtk_main_iteration();
-            w->updateWindowFromDlg();
+            const int64_t minFrameDelayMicros = 1'000'000LL / 30LL;
+            auto tmHRNow = hiresRuntime.getTime();
+            if (tmHRNow - tmHRLastDraw >= minFrameDelayMicros) {
+                tmHRLastDraw = tmHRNow = hiresRuntime.getTime();
+                w->updateWindowFromDlg();
+            }
             // GdkWindow* gtk_window = gtk_widget_get_window(dialog);
             // if (gtk_window) {
             //     GtkWindow* parent = nullptr;

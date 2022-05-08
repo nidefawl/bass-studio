@@ -13,6 +13,7 @@
 #include "samplerate.h"
 
 #include "project.h"
+#include "tls.h"
 #include "types.h"
 #include "util/profiling.h"
 #include "vst_host.h"
@@ -197,6 +198,7 @@ public:
  */
 class vsthost::vsthost_impl {
 public:
+    daw_tls::tlsinstance tls;
     std::array<WorkerThread, MAX_AUDIOPROCESSING_THREADS> threads;
     std::array<TrackBlockProcessTask, MAX_AUDIOPROCESSING_THREADS> tasks;
     std::vector<std::shared_ptr<resampler_t>> resamplers;
@@ -344,11 +346,20 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
      * TODO: Find out what exact thread we got called from. @see notes
      */
     vstplugin *plugin = host->getPlugin(effect);
-    if (!seqthreads::isInternalThread()) {
 
-        log_printf("Ignore %s (own thread) opcode %d %d %zd %f\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), opcode, index, value, opt);
-        return 0;
+    bool bIsKnownThread = false;
+    bool bIsInternalThread = false;
+    seqthreads::getThreadInfo(bIsKnownThread, bIsInternalThread);
+    if (!bIsKnownThread) {
+        seqthreads::registerThread("External", false);
+        daw_tls::setTls(impl->tls);
+        log_lf(Log::L_WARN, "(First) Request from external thread: Plugin '%s' opcode %d %d %zd %f\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), opcode, index, value, opt);
+        bIsInternalThread = false;
     }
+    /* if (!bIsInternalThread) {
+        log_lf(Log::L_WARN, "Request from external thread: Plugin '%s' opcode %d %d %zd %f\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), opcode, index, value, opt);
+    } */
+
     /**
      * TODO: Detect reentrance and guard against it. @see notes
      */
@@ -2673,6 +2684,10 @@ bool vsthost::assignMasterCallback(vsthost* host)
     }
     dbgassert(0&&"Out of host slots");
     return false;
+}
+
+void vsthost::setTls(daw_tls::tlsinstance& tls) {
+    this->impl->tls = tls;
 }
 
 vstplugin* vsthost::getPlugin(AEffect* aeffect) {

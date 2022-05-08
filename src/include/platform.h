@@ -46,6 +46,7 @@ void initPlatformEnvironment(const String& appname, const String& optionalCwd = 
  * @param pathString path to a directory
  */
 void sanitizePathToDirectory(String& pathString);
+void shellExpandPath(String& pathString);
 
 /**
  * @brief Win32 only: Replace forward slash with backslash

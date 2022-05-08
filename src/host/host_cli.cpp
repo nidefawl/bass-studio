@@ -233,6 +233,7 @@ int runCommandLineHost(const std::vector<String>& args) {
         tls.midiHost       = midiHost.get();
         tls.audioCache     = &cache;
         tls.pluginDatabase = &plugindb;
+        host->setTls(tls);
 
         if (!bRenderOnly) {
             audioHost->initPa();
