@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <pwd.h>
 #endif
+#include <wordexp.h>
 
 void timespec_diff(struct timespec* start, struct timespec* stop, struct timespec* result) {
     if ((stop->tv_nsec - start->tv_nsec) < 0) {
@@ -126,6 +127,20 @@ bool determineUserdataPath(String& path) {
 void sanitizePathToDirectory(String& pathString) {
     if (pathString.length() && !StrEndsWith(pathString, FILE_PATHSEP_STR))
         pathString += FILE_PATHSEP_STR;
+}
+
+void shellExpandPath(String& pathString) {
+    wordexp_t result{};
+    switch (wordexp(StringAsCStr(pathString), &result, WRDE_NOCMD)) {
+        case 0:
+            pathString = result.we_wordv[0];
+        case WRDE_NOSPACE:
+            /* If the error was WRDE_NOSPACE,
+         then perhaps part of the result was allocated.  */
+            wordfree(&result);
+        default: /* Some other error.  */
+            break;
+    }
 }
 
 void sanitizePathToFile(String& pathString) {

@@ -816,6 +816,7 @@ int main(int argc, char* argv[]) {
     auto& tls = daw_tls::initNewTls();
     loadSettings(*tls.settings);
     String vstPlugPath = tls.settings->pluginsettings.pathVst2;
+    App::Platform::shellExpandPath(vstPlugPath);
     App::Platform::sanitizePathToDirectory(vstPlugPath);
     log_message("settings.pluginsettings.pathVst2 '%s'", StringAsCStr(vstPlugPath));
     if (vstPlugPath.empty()) {
