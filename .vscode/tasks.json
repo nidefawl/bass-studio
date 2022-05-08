@@ -3,7 +3,7 @@
     "windows": {
         "options": {
             "shell": {
-                "executable": "C:/Program Files/Git/bin/bash.exe",
+                "executable": "bash.exe",
                 "args": ["-c"]
             }
         }
