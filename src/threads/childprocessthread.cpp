@@ -48,7 +48,7 @@ public:
         argv[strings.size()+1] = nullptr;
         const char* bin      = StringAsCStr(binary);
         argv[0] = bin;
-        procSpawnStatus      = posix_spawn(&pid, bin, NULL, NULL, (char* const*) argv, environ);
+        procSpawnStatus = posix_spawn(&pid, bin, NULL, NULL, (char* const*) argv, environ);
         if (procSpawnStatus != 0) {
             String errmsg = StringFormat("posix_spawn(%s, %s) failed",
                                          StringAsCStr(binary), StringAsCStr(params));
@@ -67,6 +67,9 @@ public:
     }
     void killProcess() {
         kill(pid, SIGKILL);
+    }
+    pid_t getPid() {
+        return pid;
     }
     ~ProcessRunScope() = default;
 };
@@ -205,6 +208,8 @@ class ProcessThread::Impl {
     bool m_started = false;
 #ifdef _WIN32
     HANDLE m_processHandle = nullptr;
+#else
+    pid_t m_pid = 0;
 #endif
 public:
     volatile int32_t m_processExitCode = 0;
@@ -248,6 +253,8 @@ public:
 #ifdef _WIN32
                 std::array<char, 2048> TEMP{};
                 m_processHandle = scopedProcess.processInformation.hProcess;
+#else
+                m_pid = scopedProcess.getPid();
 #endif
                 if (argpipe) {
                     while (!m_readFailed) {
@@ -287,6 +294,8 @@ public:
             // handle might be invalid
             TerminateProcess(m_processHandle, 1);
         }
+#else
+        kill(m_pid, SIGKILL);
 #endif
     }
     bool isRunning() {
