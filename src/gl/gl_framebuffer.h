@@ -273,7 +273,7 @@ public:
         return t;
     }
     void setDrawAll() {
-        setDrawMask(~0UL);
+        setDrawMask(0xFFFFFFFF);
     }
     void setDrawMask(GLenum mask) {
         std::vector<GLenum> drawBufAtt;
@@ -321,7 +321,7 @@ public:
     void clearColorBuffer() {
         setDrawMask(1);
         glClear(GL_COLOR_BUFFER_BIT);
-        setDrawMask(~0UL);
+        setDrawAll();
     }
 
     void clearColorBufferBlack() {
@@ -330,7 +330,7 @@ public:
         glClear(GL_COLOR_BUFFER_BIT);
         vec4& ccv = clearColor[0];
         glClearColor(ccv.x, ccv.y, ccv.z, ccv.w);
-        setDrawMask(~0UL);
+        setDrawAll();
     }
 
     void clearDepth() {
