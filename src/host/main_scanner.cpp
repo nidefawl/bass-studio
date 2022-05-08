@@ -28,6 +28,7 @@
 #include "appconfig.h"
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #ifdef _WIN32
@@ -253,29 +254,37 @@ static void getPluginData(vstplugin* plugin, response_type_vst24_t* _out) {
     }
     _out->isSynth = plugin->isSynth;
 }
-
-static int readClientResponses(vstscanner_server_options& options, ipc_server& server, request_type_vst24_t& req, SQLite::Statement& queryInsertPlugin, FileFound& file, int64_t timeDisk, bool forcedisable) {
-
-    auto timeStartScan_ms     = getTimeMillis();
-    auto timeoutPluginScan_ms = options.unresponsiveTimeoutSeconds * 1000;
+static int waitTimeout(ipc_server& server, const char* plugName, int minReadBuffSize, int64_t timeStartScan_ms, int64_t timeoutPluginScan_ms) {
     uint32_t notificationStep     = 0;
-    int nPluginsScanned           = 0;
-    while (!userSentQuitRequest) {
-        int32_t responseType    = 0;
+    while (true) {
         int peakRdBufSizeResult = server.peekReadBufferSize();
-        if (peakRdBufSizeResult < static_cast<int>(sizeof(responseType))) {
+        if (peakRdBufSizeResult < minReadBuffSize) {
             auto timeSince_ms = getTimeMillis() - timeStartScan_ms;
             if (-1 == peakRdBufSizeResult || (timeSince_ms > timeoutPluginScan_ms)) {
-                log_message("TIMEOUT: Plugin %s timed out after %d ms", req.szPath, timeoutPluginScan_ms);
-                return -4;
+                log_message("TIMEOUT: Plugin %s timed out after %zd ms", plugName, timeoutPluginScan_ms);
+                return 1;
             }
             if (notificationStep != (timeSince_ms / 1000)) {
-                uint64_t secondsLeft = math::max<uint64_t>(0, timeoutPluginScan_ms - timeSince_ms) / 1000;
+                int64_t secondsLeft = math::max<int64_t>(0, timeoutPluginScan_ms - timeSince_ms) / 1000;
                 notificationStep     = timeSince_ms / 1000;
-                log_message("Waiting for Plugin %s to respond... %zus left", req.szPath, secondsLeft);
+                log_message("Waiting for Plugin %s to respond... %zds left", plugName, secondsLeft);
             }
             threadSleep(50);
             continue;
+        }
+        break;
+    }
+    return 0;
+}
+
+static int readClientResponses(const vstscanner_server_options& options, ipc_server& server, const request_type_vst24_t& req, SQLite::Statement& queryInsertPlugin, FileFound& file, int64_t timeDisk, bool forcedisable) {
+    auto timeStartScan_ms     = getTimeMillis();
+    int64_t timeoutPluginScan_ms = options.unresponsiveTimeoutSeconds * int64_t(1000);
+    int nPluginsScanned           = 0;
+    while (!userSentQuitRequest) {
+        int32_t responseType    = 0;
+        if (waitTimeout(server, req.szPath, static_cast<int>(sizeof(responseType)), timeStartScan_ms, timeoutPluginScan_ms)) {
+            return -4;
         }
         if (E_READ_OK != readFromIPC(server, responseType)) {
             log_message("failed reading responseType int32_t");
@@ -284,15 +293,18 @@ static int readClientResponses(vstscanner_server_options& options, ipc_server& s
         timeStartScan_ms = getTimeMillis();
         switch (responseType) {
             case CMD_PLUGIN_LOAD_SUCCESS_PLUGIN: {
-                response_type_vst24_plugin_t respShellPlugin;
+                response_type_vst24_plugin_t respLoadSinglePlugin;
+                if (waitTimeout(server, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                    return -4;
+                }
                 log_message("READ response_type_vst24_plugin_t");
-                if (E_READ_OK != readFromIPC(server, respShellPlugin)) {
+                if (E_READ_OK != readFromIPC(server, respLoadSinglePlugin)) {
                     log_message("failed reading response_type_vst24_plugin_t");
                     return -3;
                 }
 
-                printf("%s %s\n", respShellPlugin.szPath, "GOOD");
-                auto& data = respShellPlugin;
+                printf("%s %s\n", respLoadSinglePlugin.szPath, "GOOD");
+                auto& data = respLoadSinglePlugin;
                 String relPath = file.name;
                 if (file.path.length() > options.vstPlugPath.length()) {
                     relPath = file.path.substr(options.vstPlugPath.length());
@@ -329,6 +341,9 @@ static int readClientResponses(vstscanner_server_options& options, ipc_server& s
             case CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_SHELL: {
                 log_message("READ response_type_vst24_shell_plugin_t");
                 response_type_vst24_shell_plugin_t respShellPlugin;
+                if (waitTimeout(server, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                    return -4;
+                }
                 if (E_READ_OK != readFromIPC(server, respShellPlugin)) {
                     log_message("failed reading response_type_vst24_shell_plugin_t");
                     return -3;
@@ -338,6 +353,9 @@ static int readClientResponses(vstscanner_server_options& options, ipc_server& s
             case CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN: {
                 log_message("READ response_type_vst24_t");
                 response_type_vst24_t respShellPluginEntry;
+                if (waitTimeout(server, req.szPath, static_cast<int>(sizeof(respShellPluginEntry)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                    return -4;
+                }
                 if (E_READ_OK != readFromIPC(server, respShellPluginEntry)) {
                     log_message("failed reading response_type_vst24_t");
                     return -3;
