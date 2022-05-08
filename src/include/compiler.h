@@ -10,5 +10,5 @@
 #define hint_unlikely(expr) __builtin_expect((expr), 0)
 #define FUNC_NOINLINE [[gnu::noinline]]
 #else
-inline void unreachable() {}
+#error "Compiler not supported"
 #endif

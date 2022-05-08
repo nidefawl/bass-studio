@@ -1,6 +1,7 @@
 #include <vstsdk-host-2.4/aeffect.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "compiler.h"
 #include "seq_util.h"
 
 #ifdef _WIN32
