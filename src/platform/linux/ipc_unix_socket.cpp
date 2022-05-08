@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <sys/un.h>
 #include "logging.h"
 
@@ -69,8 +70,11 @@ public:
     }
 
     int server_peekreadbuf() {
-        char peekBuf[32];
-        return recv(m_fdSockClient, peekBuf, 32, MSG_PEEK);
+        int bytesAv = 0;
+        if (ioctl(m_fdSockClient,FIONREAD,&bytesAv) == 0) {
+            return bytesAv;
+        }
+        return 0;
     }
 
     void server_close() {
