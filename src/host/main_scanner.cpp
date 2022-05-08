@@ -268,15 +268,14 @@ static int readClientResponses(vstscanner_server_options& options, ipc_server& s
             if (-1 == peakRdBufSizeResult || (timeSince_ms > timeoutPluginScan_ms)) {
                 log_message("TIMEOUT: Plugin %s timed out after %d ms", req.szPath, timeoutPluginScan_ms);
                 return -4;
-            } else {
-                if (notificationStep != (timeSince_ms / 1000)) {
-                    uint64_t secondsLeft = math::max<uint64_t>(0, timeoutPluginScan_ms - timeSince_ms) / 1000;
-                    notificationStep     = timeSince_ms / 1000;
-                    log_message("Waiting for Plugin %s to respond... %zus left", req.szPath, secondsLeft);
-                }
-                threadSleep(50);
-                continue;
             }
+            if (notificationStep != (timeSince_ms / 1000)) {
+                uint64_t secondsLeft = math::max<uint64_t>(0, timeoutPluginScan_ms - timeSince_ms) / 1000;
+                notificationStep     = timeSince_ms / 1000;
+                log_message("Waiting for Plugin %s to respond... %zus left", req.szPath, secondsLeft);
+            }
+            threadSleep(50);
+            continue;
         }
         if (E_READ_OK != readFromIPC(server, responseType)) {
             log_message("failed reading responseType int32_t");
@@ -616,6 +615,7 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
     vsthostInstance->setSampleFormat(sampleformat_t{ static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32 });
 
     daw_tls::getTls().host = vsthostInstance.get();
+    vsthostInstance->setTls(daw_tls::getTls());
 
     int response = 0;
     log_message("Load plugin %s", req.szPath);
@@ -659,6 +659,7 @@ static int runScannerClient() {
     vsthostInstance->setSampleFormat(sampleformat_t{ static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32 });
 
     daw_tls::getTls().host = vsthostInstance.get();
+    vsthostInstance->setTls(daw_tls::getTls());
 
     pipe_msg_hdr hdr{};
     log_message("listening...");
