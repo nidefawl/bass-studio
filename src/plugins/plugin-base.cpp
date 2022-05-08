@@ -10,7 +10,7 @@
 #include <GLFW/glfw3.h>
 
 #ifdef _WIN32
-#include <Windows.h>//this include SUCKS
+#include <windows.h>//this include SUCKS
 #include <direct.h> //_getcwd
 #include "str_win32.h"
 #define GLFW_EXPOSE_NATIVE_WIN32

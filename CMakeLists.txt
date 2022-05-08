@@ -222,7 +222,7 @@ if (PROJECT_REQUIRE_LIB)
 endif()
 
 if (WIN32)
-  target_precompile_headers(${LINK_TARGET} PUBLIC <Windows.h>)
+  target_precompile_headers(${LINK_TARGET} PUBLIC <windows.h>)
 endif (WIN32)
 
 target_precompile_headers(${LINK_TARGET} PUBLIC 

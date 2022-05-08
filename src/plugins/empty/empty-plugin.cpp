@@ -15,7 +15,7 @@
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 #include "logging.h"
 #ifdef _MSC_VER
-#include <Windows.h>
+#include <windows.h>
 #endif
 #define PLUGIN_BUILD_CRASHVERSION
 #if defined(PLUGIN_BUILD_CRASHVERSION)

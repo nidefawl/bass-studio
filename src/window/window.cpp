@@ -11,8 +11,8 @@
 #include "types.h"
 
 #ifdef _WIN32
-#include <Windows.h>
-#include <Ole2.h>
+#include <windows.h>
+#include <ole2.h>
 #endif
 #define WIN32API_CALLBACK_TYPE __stdcall
 

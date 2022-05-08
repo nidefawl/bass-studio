@@ -11,7 +11,7 @@
 
 #ifdef _WIN32
 #include "platform/win/platform_win.h"
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 #include <exception>

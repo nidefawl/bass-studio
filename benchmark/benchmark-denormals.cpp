@@ -16,7 +16,7 @@
 #include <cmath>
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #include <intrin.h>
 #include "platform/win/windowsize.h"
 #include "platform/win/platform_win.h"

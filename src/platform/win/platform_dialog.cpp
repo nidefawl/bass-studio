@@ -2,7 +2,7 @@
 #include "fileio.h"
 #include "exceptions.h"
 #include "types.h"
-#include <Windows.h>
+#include <windows.h>
 #include <vector>
 #include <limits>
 #include <stdexcept>

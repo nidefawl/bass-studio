@@ -17,7 +17,7 @@
 #include <functional>
 #include <memory>
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #endif
 #include "logging.h"
 #include "str_util.h"

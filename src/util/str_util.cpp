@@ -9,7 +9,7 @@
 #include "str_util.h"
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 #if __linux__

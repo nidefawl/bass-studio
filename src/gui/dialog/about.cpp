@@ -10,7 +10,7 @@
 #include "appconfig.h"
 #include <nanovg.h>
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #endif
 
 constexpr int ID_BTN_CLOSE    = 1;

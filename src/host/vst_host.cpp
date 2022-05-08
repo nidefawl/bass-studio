@@ -54,7 +54,7 @@
 #include <deque>
 
 #ifdef _WIN32
-#include <Windows.h>
+#include <windows.h>
 #endif
 #if defined(__linux__) || defined(__APPLE__)
 #include <emmintrin.h>

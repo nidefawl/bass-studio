@@ -14,7 +14,7 @@
 #include <cstdlib>
 #include <csignal>
 #include <excpt.h>
-#include <Windows.h>
+#include <windows.h>
 #ifdef __MINGW32__
 #include "mmsystem.h"
 #else

@@ -5,7 +5,7 @@
 
 #ifdef _WIN32
 #include "platform/mingw/mingw.exc.h"
-#include <Windows.h>
+#include <windows.h>
 #else
 #define seh_try(label)
 #define seh_catch(label) if(0)

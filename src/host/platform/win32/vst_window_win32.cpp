@@ -4,7 +4,7 @@
 #include "host/vst_host.h"
 #include "host/plugin/vst_plugin.h"
 #include "host/mainctrl.h"
-#include <Windows.h>
+#include <windows.h>
 #include <winuser.h>
 #include <tchar.h>
 
