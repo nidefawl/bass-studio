@@ -53,6 +53,8 @@ int main(int argc, char** argv) {
             std::shared_ptr<DAW::MeterOld::meter_runningsum[]> meterData;
             DAW::MeterOld::rmsmeter meter;
             bool isSetupComplete = false;
+            BenchmarkMeter(const char* benchmarkName, int numChannels, AudioBlock* blockInput)
+                : benchmarkName(benchmarkName), numChannels(numChannels), blockInput(blockInput) {}
         };
 
         auto BenchMarkRun = [](benchmark::State& state, BenchmarkMeter* context) {
@@ -86,7 +88,6 @@ int main(int argc, char** argv) {
             benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
         }
 
-
         struct BenchmarkMeterMulti {
             const char* benchmarkName;
             int numChannels;
@@ -94,7 +95,10 @@ int main(int argc, char** argv) {
             std::shared_ptr<DAW::meter_runningsum[]> meterData;
             DAW::rmsmeter meter;
             bool isSetupComplete = false;
+            BenchmarkMeterMulti(const char* benchmarkName, int numChannels, AudioBlock* blockInput)
+                : benchmarkName(benchmarkName), numChannels(numChannels), blockInput(blockInput) {}
         };
+
         auto BenchMarkRunMulti = [](benchmark::State& state, BenchmarkMeterMulti* context) {
             if (!context->isSetupComplete) {
                 context->meterData = std::shared_ptr<DAW::meter_runningsum[]>(new DAW::meter_runningsum[context->numChannels]);
