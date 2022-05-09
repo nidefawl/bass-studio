@@ -18,7 +18,6 @@
 #ifdef _WIN32
 #include <windows.h>
 #include <intrin.h>
-#include "platform/win/windowsize.h"
 #include "platform/win/platform_win.h"
 #endif
 
@@ -36,8 +35,6 @@ void generateDenormals(float y[16]) {
     }
 }
 
-void generateDenormals(float y[16]);
-
 #define NUM_LOOPS 1
 
 static void runTest(bool isFZM) {
@@ -51,7 +48,7 @@ static void runTest(bool isFZM) {
     double sumOfResult = std::accumulate(std::cbegin(y), std::cend(y), 0.0);
     double sumInDbFS   = 20.0 * std::log10(std::abs(sumOfResult));
     // clang-format off
-    log_out("%s %6s %12llu mysec\ty[0] %f\tsum %.2f dBFS\n",
+    log_out("%s %6s %12zd mysec\ty[0] %f\tsum %.2f dBFS\n",
             (isFZM ? "_MM_FLUSH_ZERO_ON " : "_MM_FLUSH_ZERO_OFF"),
             "Denormals",
             result,

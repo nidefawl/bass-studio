@@ -27,7 +27,6 @@
 #include "appconfig.h"
 
 #ifdef _WIN32
-#include "platform/win/windowsize.h"
 #include "platform/win/platform_win.h"
 #endif
 #ifdef __linux__

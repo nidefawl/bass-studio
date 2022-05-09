@@ -26,11 +26,6 @@
 #include <memory>
 #include <functional>
 
-#ifdef _WIN32
-#include "platform/win/windowsize.h"
-#include "platform/win/platform_win.h"
-#endif
-
 namespace DebugAlloc {
     void beginTrace();
     void endTrace();

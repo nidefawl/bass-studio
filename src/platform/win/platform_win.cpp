@@ -1,3 +1,5 @@
+#ifdef _WIN32
+#include "config.h"
 #include "str_util.h"
 #include "math/seq_math.h"
 #include "error.h"
@@ -8,7 +10,6 @@
 #include "msgbox.h"
 #include <shlobj.h>//for knownFolder
 #include <sstream>
-#ifdef _WIN32
 #include "types.h"
 #include <cstdio>
 #include <cstdlib>
@@ -23,6 +24,28 @@
 #include <fcntl.h>
 #include <io.h>
 #include <vector>
+
+#include <GLFW/glfw3.h>
+
+#if WINDOW_RESTORE_POS
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+#include "platform/win/windowsize.h"
+
+bool saveWindowPos(GLFWwindow* glfw, windowsize* size) {
+    HWND hwnd = glfwGetWin32Window(glfw);
+    size->valid = GetWindowPlacement(hwnd, &(size->p)) != 0;
+    return true;
+}
+
+bool restoreWindowPos(GLFWwindow* glfw, windowsize* size) {
+    if (size->valid) {
+        HWND hwnd = glfwGetWin32Window(glfw);
+        return SetWindowPlacement(hwnd, &(size->p)) != 0;
+    }
+    return false;
+}
+#endif
 
 
 static HWND mainHWND = nullptr;
@@ -289,6 +312,7 @@ namespace App::Platform {
         }
         return false;
     }
+
     void sanitizePathToDirectory(String& pathString) {
         replaceString(pathString, "/", FILE_PATHSEP_STR);
         if (pathString.length() && !StrEndsWith(pathString, FILE_PATHSEP_STR))
@@ -297,6 +321,9 @@ namespace App::Platform {
 
     void sanitizePathToFile(String& pathString) {
         replaceString(pathString, "/", FILE_PATHSEP_STR);
+    }
+    
+    void shellExpandPath(String& pathString) {
     }
 } // namespace App::Platform
 

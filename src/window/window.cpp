@@ -59,6 +59,7 @@
 #include "platform/win/DropTarget.h"
 #endif
 #ifdef __linux__
+#include "platform/linux/windowsize.h"
 #include "platform/linux/x11_gtk_util.h"
 #endif
 
@@ -185,14 +186,9 @@ class appwindow_dialog;
 class appwindow_overlay;
 
 #ifdef _WIN32
-
 void syncMenu(HWND hwnd, ngui::MenuBar& menubar);       // menu_win32.cpp
 ngui::Menu* getUserDataFromMenu(HMENU hmenu, UINT uPos);// menu_win32.cpp
 LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
-bool restoreWindowPos(HWND hwnd, windowsize* size);
-void saveWindowPos(HWND hwnd, windowsize* size);
-#define IDT_TIMER1 0
-
 #endif
 
 class appwindow : protected DropTargetListener {
@@ -923,14 +919,9 @@ public:
 #endif
 
     void onCharInput(unsigned int codepoint) override {
-        //log_lf(Log::L_DEBUG, "main onCharInput 0x%04X\n", codepoint);
         ctrl->onCharInput(codepoint);
     }
     void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) override {
-        /*if (action == GLFW_PRESS)*/
-        //log_lf(Log::L_DEBUG, "keyname %s, key %d, scancode %d\n", key_name, key, scancode);
-        //log_lf(Log::L_DEBUG, "mods %08X\n", mods);
-        //log_lf(Log::L_DEBUG, "main onKeyInput %d (%c) %d\n", key, key, scancode);
         ctrl->onKeyInput(key, scancode, action, mods, key_name);
     }
 
@@ -1282,17 +1273,16 @@ void appwindow_main::destroy() {
         UnregisterDropWindow(hwnd, this->dropTarget);
         this->dropTarget = nullptr;
     }
+#endif
+#if WINDOW_RESTORE_POS
     if (!parent) {
         auto& settings = daw_tls::getSettings();
         if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
-            saveWindowPos(hwnd, settings.wndCompanion.size.get());
+            saveWindowPos(glfw, settings.wndCompanion.size.get());
         } else {
-            saveWindowPos(hwnd, settings.wndMain.size.get());
+            saveWindowPos(glfw, settings.wndMain.size.get());
         }
     }
-#endif
-#ifdef __linux__
-    //TODO: implement linux
 #endif
 #endif
     if (this->ctrl) {
@@ -1309,22 +1299,24 @@ void appwindow_main::initControl() {
 #if BUILD_VSTHOST
 #ifdef _WIN32
     this->dropTarget = RegisterDropWindow(hwnd, this);
+#endif
+#if WINDOW_RESTORE_POS
+#ifdef __linux__
+    this->showWindow();
+#endif
     if (!parent) {
         auto& settings = daw_tls::getSettings();
         if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
-            if (!restoreWindowPos(hwnd, settings.wndCompanion.size.get())) {
+            if (!restoreWindowPos(glfw, settings.wndCompanion.size.get())) {
                 this->maximize();
             }
         } else {
 
-            if (!restoreWindowPos(hwnd, settings.wndMain.size.get())) {
+            if (!restoreWindowPos(glfw, settings.wndMain.size.get())) {
                 this->maximize();
             }
         }
     }
-#endif
-#ifdef __linux__
-    //TODO: implement linux window pos
 #endif
 #endif
     int w, h;

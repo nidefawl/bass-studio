@@ -83,6 +83,9 @@
 #ifdef _WIN32
 #include "platform/win/windowsize.h"
 #endif
+#ifdef __linux__
+#include "platform/linux/windowsize.h"
+#endif
 
 const int FLAG_DEFER_LOAD               = 0x1;
 const int FLAG_INVOKE_USER_CB_DEFERLOAD = 0x2;

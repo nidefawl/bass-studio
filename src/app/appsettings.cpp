@@ -2,31 +2,27 @@
 #include <memory>
 #include "appsettings.h"
 
+
+#if WINDOW_RESTORE_POS
+#ifdef __linux__
+#include "platform/linux/windowsize.h"
+#endif
 #ifdef _WIN32
 #include "platform/win/windowsize.h"
-
-void saveWindowPos(HWND hwnd, windowsize* size) {
-    size->valid = GetWindowPlacement(hwnd, &(size->p)) != 0;
-}
-
-bool restoreWindowPos(HWND hwnd, windowsize* size) {
-    if (size->valid) {
-        return SetWindowPlacement(hwnd, &(size->p)) != 0;
-    }
-    return false;
-}
-
+#endif
 #endif
 
 appwindowsettings::appwindowsettings() noexcept
-#ifdef _WIN32
+
+#if WINDOW_RESTORE_POS
     : size(std::make_unique<windowsize>())
 #endif
 {
 }
 
 appwindowsettings::appwindowsettings(const appwindowsettings& other)
-#ifdef _WIN32
+
+#if WINDOW_RESTORE_POS
     : size(std::make_unique<windowsize>())
 #endif
 {
@@ -35,7 +31,8 @@ appwindowsettings::appwindowsettings(const appwindowsettings& other)
 
 appwindowsettings& appwindowsettings::operator=(const appwindowsettings& other) {
     if (this != &other) {
-#ifdef _WIN32
+
+#if WINDOW_RESTORE_POS
         *this->size = *other.size;
 #endif
         this->dens = other.dens;

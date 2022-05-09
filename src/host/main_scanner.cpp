@@ -32,7 +32,6 @@
 #include <iostream>
 #include <memory>
 #ifdef _WIN32
-#include "platform/win/windowsize.h"
 #include "platform/win/platform_win.h"
 #include <windows.h>
 #endif

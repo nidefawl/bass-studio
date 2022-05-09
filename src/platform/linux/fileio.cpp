@@ -24,22 +24,6 @@
 #include <dirent.h>
 #include <fts.h>
 
-#ifdef __linux__
-#include <gtk/gtk.h>
-#include <gdk/gdk.h>
-#include <gdk/gdkx.h>
-#include <X11/Xlib.h>
-#include <X11/extensions/Xrandr.h>
-#endif
-
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
-
-
-Display* getX11Display();
-Window getX11FromWindowBase(window_base* w);
-
-
 using std::size_t;
 using std::vector;
 

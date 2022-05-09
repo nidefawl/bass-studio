@@ -13,6 +13,11 @@
 #ifndef WINDOW_HAS_MENUBAR
 #define WINDOW_HAS_MENUBAR 1
 #endif
+#if defined (_WIN32) || defined (__linux__)
+#define WINDOW_RESTORE_POS 1
+#else
+#define WINDOW_RESTORE_POS 0
+#endif
 #define SETTINGS_NAME "data/settings.json"
 #define THEMEFILE_NAME "data/theme.json"
 #define CREATE_DEBUG_COMPANION_WINDOW 1

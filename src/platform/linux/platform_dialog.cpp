@@ -8,20 +8,17 @@
 #include <vector>
 #include <GLFW/glfw3.h>
 #ifdef __linux__
+#define GLFW_EXPOSE_NATIVE_X11 1
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
-#endif
-
-
-Display* getX11Display();
 Window getX11FromWindowBase(window_base* w);
-
+#endif
+#include <GLFW/glfw3native.h>
 
 #ifdef __linux__
-
 namespace GTKFileDialogImpl {
 
     void AddFiltersToDialog(GtkWidget* dialog, std::vector<SupportedFileType>& fileTypes) {
@@ -153,7 +150,7 @@ int promptUserFilePath(window_base* w,
     if (gtk_window) {
         Window fopenx11w = gdk_x11_window_get_xid(gtk_window);
         Window x11w      = getX11FromWindowBase(w);
-        XSetTransientForHint(getX11Display(), fopenx11w, x11w);
+        XSetTransientForHint(glfwGetX11Display(), fopenx11w, x11w);
     }
 
     GTKFileDialogImpl::handleGuiEvents(w, dialog);

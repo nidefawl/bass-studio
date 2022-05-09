@@ -8,8 +8,7 @@
 #include <memory>
 #include <map>
 
-
-#ifdef _WIN32
+#if WINDOW_RESTORE_POS
 struct windowsize;
 #endif
 
@@ -75,7 +74,7 @@ struct app_iosettings {
 };
 
 struct appwindowsettings {
-#ifdef _WIN32
+#if WINDOW_RESTORE_POS
     std::unique_ptr<windowsize> size;
 #endif
     grid_density dens;

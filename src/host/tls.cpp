@@ -13,6 +13,9 @@
 #ifdef _WIN32
 #include "platform/win/windowsize.h"
 #endif
+#ifdef __linux__
+#include "platform/linux/windowsize.h"
+#endif
 
 namespace daw_tls {
     static thread_local tlsinstance tls;

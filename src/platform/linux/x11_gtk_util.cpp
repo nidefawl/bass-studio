@@ -1,13 +1,61 @@
+#include <cstddef>
 #if defined(__linux__)
+#include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_X11 1
+#include <GLFW/glfw3native.h>
+#include <gtk/gtk.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
 #include <X11/Xatom.h>
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
-#include <gtk/gtk.h>
 #include "platform.h"
+#include "platform/linux/windowsize.h"
 
+extern "C" {
+    static bool IsWindowManagerStateSet(Display* display,
+                                        Window window,
+                                        const char* atom_name) {
+        Atom net_wm_state = XInternAtom(display, "_NET_WM_STATE", False);
+        if (net_wm_state == None) {
+            return false;
+        }
+
+        Atom atom = XInternAtom(display, atom_name, False);
+        if (atom == None) {
+            return false;
+        }
+
+        bool set = false;
+
+        Atom actual_type{};
+        int actual_format{};
+        unsigned long tmp_num_items{};
+        unsigned long bytes_after{};
+        unsigned char* prop{};
+        if (Success == XGetWindowProperty(display,         /* display */
+                                        window,          /* window */
+                                        net_wm_state,        /* property */
+                                        0,               /* long_offset */
+                                        ~0L,             /* long_length */
+                                        False,           /* delete */
+                                        AnyPropertyType, /* req_type */
+                                        &actual_type,    /* actual_type_return */
+                                        &actual_format,  /* actual_format_return */
+                                        &tmp_num_items,  /* nitems_return */
+                                        &bytes_after,    /* bytes_after_return */
+                                        &prop))          /* prop_return */
+        {
+            auto ws = (Atom*) prop;
+            for (unsigned long ws_idx = 0; ws_idx < tmp_num_items; ++ws_idx) {
+                if (ws[ws_idx] == atom) {
+                    set = true;
+                    break;
+                }
+            }
+            XFree(ws);
+        }
+        return set;
+    }
+}
 void sendExposeEvent(GLFWwindow* glfw) {
     // int w, h;
     // glfwGetWindowSize(glfw, &w, &h);
@@ -28,37 +76,102 @@ Window getX11FromWindowBase(window_base* w) {
 	return x11Window;
 }
 
-Display* getX11Display() {;
-	return glfwGetX11Display();
+static void SetWindowMaximizedFlag(Display* display,
+                                   Window window,
+                                   const char* name,
+                                   bool state) {
+    Atom net_wm_state = XInternAtom(display, "_NET_WM_STATE", False);
+    if (net_wm_state == None) {
+        return;
+    }
+
+    Atom atom = XInternAtom(display, name, False);
+    if (atom == None) {
+        return;
+    }
+
+    XEvent e;
+    memset(&e, 0, sizeof e);
+
+    e.xany.type            = ClientMessage;
+    e.xclient.message_type = net_wm_state;
+    e.xclient.format       = 32;
+    e.xclient.window       = window;
+    e.xclient.data.l[0]    = state ? 1 : 0;
+    e.xclient.data.l[1]    = (long) atom;
+    // http://standards.freedesktop.org/wm-spec/1.3/ar01s07.html#sourceindication
+    e.xclient.data.l[3] = 1; /* "pagers and other Clients that represent direct user actions" */
+
+    XSendEvent(display,
+               XDefaultRootWindow(display),
+               True,
+               SubstructureNotifyMask | SubstructureRedirectMask,
+               &e);
 }
 
-struct MwmHints {
-    unsigned long flags;
-    unsigned long functions;
-    unsigned long decorations;
-    long input_mode;
-    unsigned long status;
-};
+bool restoreWindowPos(GLFWwindow* glfw, windowsize* placement) {
+    if (!placement->valid) {
+        return false;
+    }
 
-enum {
-    MWM_HINTS_FUNCTIONS   = (1L << 0),
-    MWM_HINTS_DECORATIONS = (1L << 1),
+    Display* display = glfwGetX11Display();
+    Window window    = glfwGetX11Window(glfw);
+    if (!display || !window) {
+        return false;
+    }
 
-    MWM_FUNC_ALL      = (1L << 0),
-    MWM_FUNC_RESIZE   = (1L << 1),
-    MWM_FUNC_MOVE     = (1L << 2),
-    MWM_FUNC_MINIMIZE = (1L << 3),
-    MWM_FUNC_MAXIMIZE = (1L << 4),
-    MWM_FUNC_CLOSE    = (1L << 5)
-};
+    SetWindowMaximizedFlag(display, window, "_NET_WM_STATE_MAXIMIZED_HORZ", false);
+    SetWindowMaximizedFlag(display, window, "_NET_WM_STATE_MAXIMIZED_VERT", false);
 
-void setIsTransientFor(GLFWwindow* glfw, GLFWwindow* glfwChild) {
-    XSetTransientForHint(getX11Display(), glfwGetX11Window(glfwChild), glfwGetX11Window(glfw));
-    // // MwmHints hints;
-    // // hints.flags           = MWM_HINTS_DECORATIONS;
-    // // hints.decorations     = 0;
-    // Atom mwmHintsProperty = XInternAtom(getX11Display(), "_NET_WM_STATE_SKIP_TASKBAR", 1);
-    // XChangeProperty(getX11Display(), glfwGetX11Window(glfwChild), XInternAtom(getX11Display(), "_NET_WM_STATE", False), XA_ATOM, 32, PropModeReplace, (const unsigned char*) &mwmHintsProperty, 1);
+    if (placement->w > 0 && placement->h > 0) {
+        XMoveWindow(display, window, placement->x, placement->y);
+    }
+
+    if (placement->hmax) {
+        SetWindowMaximizedFlag(display, window, "_NET_WM_STATE_MAXIMIZED_HORZ", true);
+    }
+
+    if (placement->vmax) {
+        SetWindowMaximizedFlag(display, window, "_NET_WM_STATE_MAXIMIZED_VERT", true);
+    }
+
+    if (!placement->vmax && !placement->hmax) {
+        XResizeWindow(display, window, placement->w, placement->h);
+    }
+    return true;
+}
+
+bool saveWindowPos(GLFWwindow* glfw, windowsize* placement) {
+    *placement = windowsize{};
+    
+    Display* display = glfwGetX11Display();
+    Window window    = glfwGetX11Window(glfw);
+    if (!display || !window) {
+        return false;
+    }
+
+    XWindowAttributes xwa;
+    if (!XGetWindowAttributes(display, window, &xwa)) {
+        return false;
+    }
+
+    Window child{};
+    if (!XTranslateCoordinates(display, window, xwa.root, 0, 0, &xwa.x, &xwa.y, &child)) {
+        return false;
+    }
+
+    if (xwa.width < 0 || xwa.height < 0) {
+        return false;
+    }
+    placement->valid = true;
+    placement->hmax  = IsWindowManagerStateSet(display, window, "_NET_WM_STATE_MAXIMIZED_HORZ");
+    placement->vmax  = IsWindowManagerStateSet(display, window, "_NET_WM_STATE_MAXIMIZED_VERT");
+
+    placement->x = xwa.x;
+    placement->w = xwa.width;
+    placement->y = xwa.y;
+    placement->h = xwa.height;
+    return true;
 }
 
 #endif
