@@ -170,10 +170,6 @@ static void initOGL() {
     }
 }
 
-static void showerror(const char* description) {
-    ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);
-}
-
 void invalidateWindowContents(GLFWwindow* glfw) {
 #ifdef _WIN32
     InvalidateRect(glfwGetWin32Window(glfw), nullptr, FALSE);
@@ -1722,8 +1718,10 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         glfwSetWin32WindowClassName(L"DAWWINDOW01");
 #endif
         // glfwInitHint(GLFW_CONTEXT_KEEPCURRENT, 1);
-        if (!glfwInit()) {
-            showerror("Initialization failed. Couldn't initialize glfw");
+        auto glfwInitRet = glfwInit();
+        if (!glfwInitRet) {
+            log_lf(Log::L_ERROR, "glfwInit() returned %d\n", glfwInitRet);
+            ngui::showNotification(ngui::Style::Error, "Error", "glfwInit() reported an error. See logfile for detailed information.");
             exit(EXIT_FAILURE);
         }
 
@@ -2002,10 +2000,7 @@ public:
                 return true;
             }
         } catch (std::exception& e) {
-            String excDesc = StringFormat("Fatal error: %s", e.what());
-            ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);
-        } catch (...) {
-            ngui::show("FATAL", "Error", ngui::Style::Error, ngui::Buttons::OK);
+        ngui::showNotification(ngui::Style::Error, "Fatal error", e.what());
         }
         AEffEditor::close();
         return false;
@@ -2023,10 +2018,7 @@ public:
             }
             this->valid = false;
         } catch (std::exception& e) {
-            String excDesc = StringFormat("Fatal error: %s", e.what());
-            ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);
-        } catch (...) {
-            ngui::show("FATAL", "Error", ngui::Style::Error, ngui::Buttons::OK);
+            ngui::showNotification(ngui::Style::Error, "Fatal error", e.what());
         }
         AEffEditor::close();
     }

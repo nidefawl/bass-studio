@@ -289,11 +289,7 @@ VstIntPtr AudioEffectX::dispatcher (VstInt32 opcode, VstInt32 index, VstIntPtr v
 			v = AudioEffect::dispatcher (opcode, index, value, ptr, opt);
 	}
     } catch (std::exception& e) {
-        String excDesc = StringFormat("Fatal error: %s", e.what());
-        ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);
-        throw;
-    } catch (...) {
-        ngui::show("FATAL", "Error", ngui::Style::Error, ngui::Buttons::OK);
+        ngui::showNotification(ngui::Style::Error, "Fatal error", e.what());
         throw;
     }
 	return v;

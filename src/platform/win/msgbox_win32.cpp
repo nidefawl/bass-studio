@@ -15,51 +15,18 @@ namespace ngui {
                     return MB_ICONWARNING;
                 case Style::Error:
                     return MB_ICONERROR;
-                case Style::Question:
-                    return MB_ICONQUESTION;
                 default:
-                    return MB_ICONINFORMATION;
+                    break;
             }
-        }
-
-        UINT getButtons(Buttons buttons) {
-            switch (buttons) {
-                case Buttons::OK:
-                case Buttons::Quit:// There is no 'Quit' button on Windows :(
-                    return MB_OK;
-                case Buttons::OKCancel:
-                    return MB_OKCANCEL;
-                case Buttons::YesNo:
-                    return MB_YESNO;
-                default:
-                    return MB_OK;
-            }
-        }
-
-        Selection getSelection(int response, Buttons buttons) {
-            switch (response) {
-                case IDOK:
-                    return buttons == Buttons::Quit ? Selection::Quit : Selection::OK;
-                case IDCANCEL:
-                    return Selection::Cancel;
-                case IDYES:
-                    return Selection::Yes;
-                case IDNO:
-                    return Selection::No;
-                default:
-                    return Selection::NoSelection;
-            }
+            return MB_ICONINFORMATION;
         }
 
     }// namespace
 
-    Selection show(const char* message, const char* title, Style style, Buttons buttons) {
-        UINT flags = MB_TASKMODAL;
-
+    void showNotification(Style style, const char* title, const char* message) {
+        UINT flags = MB_TASKMODAL | MB_OK;
         flags |= getIcon(style);
-        flags |= getButtons(buttons);
-
-        return getSelection(MessageBoxA(nullptr, message, title, flags), buttons);
+        MessageBoxA(nullptr, message, title, flags);
     }
 
 }// namespace ngui

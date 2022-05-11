@@ -153,7 +153,6 @@ AudioEffect::AudioEffect (audioMasterCallback audioMaster, VstInt32 numPrograms,
 //-------------------------------------------------------------------------------------------------------
 AudioEffect::~AudioEffect ()
 {
-//	ngui::show("~AudioEffect()", "Error", ngui::Style::Error, ngui::Buttons::OK);
 	if (editor)
 		delete editor;
 }

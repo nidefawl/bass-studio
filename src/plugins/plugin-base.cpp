@@ -52,11 +52,7 @@ void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> vi
         pluginwindow* pluginWindow = createPluginWindow(this, ctrl, ctrlWidth, ctrlHeight);
         setEditor(pluginWindow);
     } catch (std::exception& e) {
-        String excDesc = StringFormat("Fatal error: %s", e.what());
-        ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);
-        throw;
-    } catch (...) {
-        ngui::show("FATAL", "Error", ngui::Style::Error, ngui::Buttons::OK);
+        ngui::showNotification(ngui::Style::Error, "Fatal error", e.what());
         throw;
     }
 }
@@ -168,7 +164,7 @@ static void glfw_plugin_error_callback(int error, const char* description) {
 }
 
 static void showerror(const char* description) {
-    ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);
+    ngui::showNotification(ngui::Style::Error, "Error", description);
 }
 
 void initColor();// gui/gui.cpp
@@ -204,20 +200,14 @@ void onModuleLoad(HINSTANCE hInst) {
             //exit(EXIT_FAILURE);
         }
     } catch (std::exception& e) {
-        String excDesc = StringFormat("Fatal error: %s", e.what());
-        ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);
-    } catch (...) {
-        ngui::show("FATAL", "Error", ngui::Style::Error, ngui::Buttons::OK);
+        ngui::showNotification(ngui::Style::Error, "Fatal error", e.what());
     }
 }
 void onModuleUnload() {
     try {
         glfwTerminate();
     } catch (std::exception& e) {
-        String excDesc = StringFormat("Fatal error: %s", e.what());
-        ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);
-    } catch (...) {
-        ngui::show("FATAL", "Error", ngui::Style::Error, ngui::Buttons::OK);
+        ngui::showNotification(ngui::Style::Error, "Fatal error", e.what());
     }
 }
 #endif//BUILD_EXTERNAL_PLUGIN

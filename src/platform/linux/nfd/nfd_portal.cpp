@@ -18,6 +18,9 @@
 #include <unistd.h>      // for access()
 
 #include "nfd.h"
+#include "str_util.h"
+
+int getTopLevelWindowXID();
 
 /*
 Define NFD_PORTAL_AUTO_APPEND_FILE_EXTENSION to 0 if you don't want the file extension to be
@@ -130,6 +133,16 @@ void AppendOpenFileQueryTitle<false, true>(DBusMessageIter& iter) {
 
 void AppendSaveFileQueryTitle(DBusMessageIter& iter) {
     dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &STR_SAVE_FILE);
+}
+
+void AppendParentWindow(DBusMessageIter& iter) {
+    int x11WindowId = getTopLevelWindowXID();
+    String parentWindowId;
+    if (x11WindowId) {
+        parentWindowId = StringFormat("x11:%d", x11WindowId);
+    }
+    const char* buf = StringAsCStr(parentWindowId);
+    dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &buf);
 }
 
 void AppendOpenFileQueryDictEntryHandleToken(DBusMessageIter& sub_iter, const char* handle_token) {
@@ -533,7 +546,7 @@ void AppendOpenFileQueryParams(DBusMessage* query,
     DBusMessageIter iter;
     dbus_message_iter_init_append(query, &iter);
 
-    dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &STR_EMPTY);
+    AppendParentWindow(iter);
 
     AppendOpenFileQueryTitle<Multiple, Directory>(iter);
 
@@ -556,7 +569,7 @@ void AppendSaveFileQueryParams(DBusMessage* query,
     DBusMessageIter iter;
     dbus_message_iter_init_append(query, &iter);
 
-    dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &STR_EMPTY);
+    AppendParentWindow(iter);
 
     AppendSaveFileQueryTitle(iter);
 
@@ -1054,7 +1067,7 @@ nfdresult_t NFD_DBus_OpenFile(DBusMessage*& outMsg,
         query, handle_token_ptr, filterList, filterCount);
 
     DBusMessage* reply =
-        dbus_connection_send_with_reply_and_block(dbus_conn, query, DBUS_TIMEOUT_INFINITE, &err);
+        dbus_connection_send_with_reply_and_block(dbus_conn, query, DBUS_TIMEOUT_USE_DEFAULT, &err);
     if (!reply) {
         dbus_error_free(&dbus_err);
         dbus_move_error(&err, &dbus_err);
@@ -1104,6 +1117,39 @@ nfdresult_t NFD_DBus_OpenFile(DBusMessage*& outMsg,
     return NFD_ERROR;
 }
 
+void AppendDesktopNotificationParams(DBusMessage* query,
+                               const char *application,
+                               const char *icon,
+                               const char *summary,
+                               const char *body,
+                               int urgency0to2,
+                               int timeoutMilliseconds) {
+    DBusMessageIter iter[4]{};
+    dbus_message_iter_init_append(query, iter);
+
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &application);
+	unsigned id = 0;
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_UINT32, &id);
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &icon);
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &summary);
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &body);
+	dbus_message_iter_open_container(iter, DBUS_TYPE_ARRAY, "s", iter + 1);
+	dbus_message_iter_close_container(iter, iter + 1);
+	dbus_message_iter_open_container(iter, DBUS_TYPE_ARRAY, "{sv}", iter + 1);
+	dbus_message_iter_open_container(iter + 1, DBUS_TYPE_DICT_ENTRY, 0, iter + 2);
+	const char *urgency = "urgency";
+	dbus_message_iter_append_basic(iter + 2, DBUS_TYPE_STRING, &urgency);
+	dbus_message_iter_open_container(iter + 2, DBUS_TYPE_VARIANT, "y", iter + 3);
+	enum {LOW, NORMAL, CRITICAL};
+	unsigned char level = urgency0to2;
+	dbus_message_iter_append_basic(iter + 3, DBUS_TYPE_BYTE, &level);
+	dbus_message_iter_close_container(iter + 2, iter + 3);
+	dbus_message_iter_close_container(iter + 1, iter + 2);
+	dbus_message_iter_close_container(iter, iter + 1);
+	int timeout = timeoutMilliseconds;
+	dbus_message_iter_append_basic(iter, DBUS_TYPE_INT32, &timeout);
+}
+
 // DBus wrapper function that helps invoke the portal for the SaveFile() API.
 // This function returns NFD_OKAY iff outMsg gets set (to the returned message).
 // Caller is responsible for freeing the outMsg using dbus_message_unref() (or use
@@ -1138,7 +1184,7 @@ nfdresult_t NFD_DBus_SaveFile(DBusMessage*& outMsg,
         query, handle_token_ptr, filterList, filterCount, defaultPath, defaultName);
 
     DBusMessage* reply =
-        dbus_connection_send_with_reply_and_block(dbus_conn, query, DBUS_TIMEOUT_INFINITE, &err);
+        dbus_connection_send_with_reply_and_block(dbus_conn, query, DBUS_TIMEOUT_USE_DEFAULT, &err);
     if (!reply) {
         dbus_error_free(&dbus_err);
         dbus_move_error(&err, &dbus_err);
@@ -1411,4 +1457,40 @@ nfdresult_t NFD_PathSet_EnumNextN(nfdpathsetenum_t* enumerator, nfdnchar_t** out
     if (res != NFD_OKAY) return res;
     dbus_message_iter_next(&uri_iter);
     return NFD_OKAY;
+}
+
+
+int DBus_DesktopNotification(const String& source, const String& title, const String& body, int timeoutMilliseconds) {
+
+    DBusError err;
+    dbus_error_init(&err);
+    DBusMessage* query = dbus_message_new_method_call("org.freedesktop.Notifications",
+                                                      "/org/freedesktop/Notifications",
+                                                      "org.freedesktop.Notifications",
+                                                      "Notify");
+    DBusMessage_Guard query_guard(query);
+    AppendDesktopNotificationParams(query, StringAsCStr(source), "dialog-information", StringAsCStr(title), StringAsCStr(body), 0, timeoutMilliseconds);
+
+    DBusMessage* reply =
+            dbus_connection_send_with_reply_and_block(dbus_conn, query, DBUS_TIMEOUT_USE_DEFAULT, &err);
+    if (!reply) {
+        dbus_error_free(&dbus_err);
+        dbus_move_error(&err, &dbus_err);
+        NFDi_SetError(dbus_err.message);
+        return NFD_ERROR;
+    }
+    DBusMessage_Guard reply_guard(reply);
+
+    DBusMessageIter iter;
+    if (!dbus_message_iter_init(reply, &iter)) {
+        NFDi_SetError("D-Bus response signal is missing one or more arguments.");
+        return NFD_ERROR;
+    }
+    if (dbus_message_iter_get_arg_type(&iter) != DBUS_TYPE_UINT32) {
+        NFDi_SetError("D-Bus response signal argument is not a uint32.");
+        return NFD_ERROR;
+    }
+    dbus_uint32_t notificationId_u32 = 0;
+    dbus_message_iter_get_basic(&iter, &notificationId_u32);
+    return static_cast<int>(notificationId_u32);
 }

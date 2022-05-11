@@ -1205,7 +1205,7 @@ void DawInstance::destroy() {
         saveSettings(*tls.settings);
     } catch (std::exception& e) {
         log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
-        ngui::show("Couldn't write config file.", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
+        ngui::showNotification(ngui::Style::Warning, "Couldn't write config file", "Some settings may have been reset");
     }
     delete tls.runtime;
     delete tls.settings;
@@ -1260,7 +1260,7 @@ void DawInstance::initDaw() {
             loadSettings(settings);
         } catch (std::exception& e) {
             log_lf(Log::L_ERROR, "Failed loading settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
-            ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
+            ngui::showNotification(ngui::Style::Warning, "Couldn't read config file", "Some settings may have been reset");
         }
     }
 

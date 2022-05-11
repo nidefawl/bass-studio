@@ -74,6 +74,15 @@ Window getX11FromWindowBase(window_base* w) {
 	Window x11Window = glfwGetX11Window(glfw);
 	return x11Window;
 }
+GLFWwindow* getTopLevelGlfwWindow();
+
+int getTopLevelWindowXID() {
+	GLFWwindow* glfw = getTopLevelGlfwWindow();
+    if (glfw) {
+	    return static_cast<int>(glfwGetX11Window(glfw));
+    }
+	return 0;
+}
 
 static void SetWindowMaximizedFlag(Display* display,
                                    Window window,

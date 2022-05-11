@@ -93,7 +93,8 @@ Selection getSelection(int index, Buttons buttons) {
 
 } // namespace
 
-Selection show(const char *message, const char *title, Style style, Buttons buttons) {
+Selection showNotification(Style style, const char* title, const char* message) {
+   auto buttons = Buttons::OK;
    NSAlert *alert = [[NSAlert alloc] init];
 
    [alert setMessageText:[NSString stringWithCString:title
