@@ -63,13 +63,11 @@ bool ThreadMutex::isLocked() {
 }
 
 ThreadLock ThreadMutex::lockThread() {
-    ThreadLock t = ThreadLock::MakeThreadLock(mutex, this->mLockCount, false);
-    return std::move(t);//CANNOT RELY ON RVO
+    return ThreadLock::MakeThreadLock(mutex, this->mLockCount, false);
 }
 
 ThreadLock ThreadMutex::tryLockThread() {
-    ThreadLock t = ThreadLock::MakeThreadLock(mutex, this->mLockCount, true);
-    return std::move(t);//CANNOT RELY ON RVO
+    return ThreadLock::MakeThreadLock(mutex, this->mLockCount, true);
 }
 
 #ifndef _MSC_VER

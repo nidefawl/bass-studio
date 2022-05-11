@@ -688,13 +688,10 @@ public:
 
     void updateMenu() override {
 #if WINDOW_HAS_MENUBAR
-        ngui::MenuBar& menubar = ctrl->getMenubar();
 #ifdef _WIN32
+        ngui::MenuBar& menubar = ctrl->getMenubar();
         syncMenu(hwnd, menubar);
 #endif// _WIN32
-#ifdef __linux__
-        //TODO: implement linux
-#endif// __linux__
 #endif// WINDOW_HAS_MENUBAR
     }
 

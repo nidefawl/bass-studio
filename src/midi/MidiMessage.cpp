@@ -49,7 +49,10 @@ MidiMessage::MidiMessage(int command, int p1, int p2) {
 }
 
 
-MidiMessage::MidiMessage(const MidiMessage& message) {
+MidiMessage::MidiMessage(const MidiMessage& message)
+   : std::vector<uint8_t>(message) 
+{
+
    (*this) = message;
 }
 

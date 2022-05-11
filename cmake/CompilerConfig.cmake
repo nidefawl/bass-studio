@@ -1,7 +1,7 @@
 
 message(STATUS "CMake version: ${CMAKE_VERSION}")
 if(NOT DEFINED PROJECT_NAME) 
-  message(WARNING "Compiler not supported")
+  message(FATAL_ERROR "PROJECT_NAME is not set")
 endif()
 
 # Don't use -rdynamic
@@ -32,7 +32,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   set(CLANG TRUE)
 endif()
 
-if(NOT MSVC AND NOT CLANG) 
+if(NOT MSVC AND NOT CLANG AND NOT (LINUX AND CMAKE_COMPILER_IS_GNUCXX)) 
   message(WARNING "Compiler not supported")
 endif()
 
@@ -45,6 +45,12 @@ set(CMAKE_C_STANDARD_REQUIRED OFF)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 set(CMAKE_CXX_EXTENSIONS OFF)
+if (CMAKE_COMPILER_IS_GNUCC)
+  set(CMAKE_C_EXTENSIONS ON)
+endif()
+if (CMAKE_COMPILER_IS_GNUCXX)
+  set(CMAKE_CXX_EXTENSIONS ON)
+endif()
 
 if (MSVC)
   add_compile_definitions(_CRT_SECURE_NO_WARNINGS NOMINMAX) 

@@ -24,18 +24,18 @@ WINDOW_HANDLE glfwGetX11Window(GLFWwindow* window);
 #endif
 
 namespace {
-	static std::vector<vst_window*> vst_window_list;
-	static void addWindow (vst_window* window)
+	std::vector<vst_window*> vst_window_list;
+	void addWindow (vst_window* window)
 	{
 		vst_window_list.push_back (window);
 	}
-	static void removeWindow (vst_window* window)
+	void removeWindow (vst_window* window)
 	{
 		auto it = std::find (vst_window_list.begin (), vst_window_list.end (), window);
 		if (it != vst_window_list.end ())
 			vst_window_list.erase(it);
 	}
-	static vst_window* getWindowByHWND (WINDOW_HANDLE hwnd)
+	/* vst_window* getWindowByHWND (WINDOW_HANDLE hwnd)
 	{
 		auto it = std::find_if(vst_window_list.begin (), vst_window_list.end (), [hwnd](vst_window* window) {
 			return window->getHWND() == hwnd;
@@ -43,7 +43,7 @@ namespace {
 		if (it != vst_window_list.end ())
 			return *it;
 		return nullptr;
-	}
+	} */
 }
 
 
@@ -72,7 +72,6 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
 {
 	this->plugin = plugin;
 
-	GLFWwindow* window = getTopLevelGlfwWindow();
 	glfwDefaultWindowHints();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfw = glfwCreateWindow(size.x, size.y, StringAsCStr(name), NULL, NULL);

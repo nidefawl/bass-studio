@@ -373,9 +373,6 @@ void gui_midi_clip::render(NVGcontext* vg) {
         }
         dbgassert(impl->valid);
         if (impl->valid && std::any_of(impl->arr.cbegin(), impl->arr.cend(), [](const auto* ptr) { return !!ptr; })) {
-            ivec2 posContents  = ivec2(pos.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
-            ivec2 sizeContents = ivec2(size.x, size.y - HEIGHT_CLIP_TITLE - INSET_CLIP_CONTENT * 2);
-
             int64_t notesRendered = 0;
 
             nvgSave(vg);

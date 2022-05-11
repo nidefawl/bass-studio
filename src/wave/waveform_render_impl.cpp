@@ -370,7 +370,7 @@ waveformrender::render_timings waveformrender::getTimings() {
     return impl->renderTimings;
 }
 int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
-    memset(&impl->renderTimings, 0, sizeof(impl->renderTimings));
+    impl->renderTimings = {};
     auto renderer = impl->renderer;
 
     bool preGlSet = false;

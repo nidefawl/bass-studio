@@ -79,7 +79,7 @@ struct testshader : gl_shader_pipeline {
             return -1;
         isValid = true;
         return 0;
-    };
+    }
 };
 class gui_shaderview_impl_t {
     NVGLUframebuffer* fb = nullptr;

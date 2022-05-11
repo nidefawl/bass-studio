@@ -26,7 +26,9 @@ namespace ProfilingImpl {
         void registerInstance(void* ptr, const String& name) {
             regWindowProfStats.resize(regWindowProfStats.size() + 1);
             profiling_entry_t<T>& last = regWindowProfStats.back();
-            memset(last.stats.data(), 0, sizeof(T) * last.stats.size());
+            // memsetting a POD is still UB
+            // memset(last.stats.data(), 0, sizeof(T) * last.stats.size());
+            last.stats.fill({});
             last.name        = name;
             last.instancePtr = ptr;
 

@@ -768,7 +768,7 @@ static int glnvg__renderGetGLImage(void* uptr, int image)
 {
 	GLNVGcontext* gl = (GLNVGcontext*)uptr;
 	GLNVGtexture* tex = glnvg__findTexture(gl, image);
-	return tex != NULL ? tex->tex : -1;
+	return tex != NULL ? (int) tex->tex : -1;
 }
 static int glnvg__renderCreateTexture(void* uptr, int type, int w, int h, int imageFlags, const unsigned char* data)
 {

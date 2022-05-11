@@ -1044,7 +1044,7 @@ namespace PluginSynth {
     };
     void PluginVST2_Synth::initPrograms() {
         for (SynthProgram& program : staticPrograms) {
-            memset(&program, 0, sizeof(SynthProgram));
+            program = {};
         }
         auto& prog        = staticPrograms[0];
         prog.FilterCutoff = 1.0f;

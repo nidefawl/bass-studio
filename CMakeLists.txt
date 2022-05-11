@@ -102,6 +102,9 @@ if (MINGW)
 endif()
 
 set(PROJECT_DEPS_SRC_FILES "${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c")
+if (CMAKE_COMPILER_IS_GNUCC)
+  set_source_files_properties("${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c" PROPERTIES COMPILE_OPTIONS "-Wno-pedantic")
+endif()
 
 list(APPEND RESOURCE_FILES "")
 if (WIN32 AND NOT PROJECT_NO_WINDRES)

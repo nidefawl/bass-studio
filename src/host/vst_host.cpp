@@ -900,7 +900,7 @@ bool resolveAudioChannel(const vsthost* const host, channelnum_t numChannelsTrac
         if (ptrExternalInputs != nullptr) {
             const auto idx = inputChannel.srcChannelOffset;
             const auto size = math::min<channelnum_t>(AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType), numChannelsTrack);
-            if (idx >= 0 && idx+size <= ptrExternalInputs->channels) {
+            if (idx+size <= ptrExternalInputs->channels) {
                 track_audio_src src;
                 for (channelnum_t ch = 0; ch < size; ++ch) {
                     src.channels.push_back(ptrExternalInputs->buf[idx+ch]);

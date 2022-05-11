@@ -154,12 +154,12 @@ namespace dsp_util {
             float* input0 = buffer[channelIdx];
             static float fU32_Max = 4294967296; // off by 1
             float g_fScale  = 2.0f / fU32_Max;
-            static int g_x1 = 0x67452301UL;
-            static int g_x2 = 0xefcdab89UL;
+            static uint32_t g_x1 = 0x67452301UL;
+            static uint32_t g_x2 = 0xefcdab89UL;
             gain *= g_fScale;
             for (samplecount_t i = 0; i < samples; i++) {
                 g_x1 ^= g_x2;
-                *input0++ = g_x2 * gain;
+                *input0++ = static_cast<int64_t>(g_x2) * gain;
                 g_x2 += g_x1;
             }
         }

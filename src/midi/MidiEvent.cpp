@@ -51,7 +51,9 @@ MidiEvent::MidiEvent(int aTime, int aTrack, std::vector<uint8_t>& message)
 }
 
 
-MidiEvent::MidiEvent(const MidiEvent& mfevent) {
+MidiEvent::MidiEvent(const MidiEvent& mfevent)
+      : MidiMessage(mfevent)
+{
    tick    = mfevent.tick;
    track   = mfevent.track;
    seconds = mfevent.seconds;

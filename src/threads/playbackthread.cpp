@@ -144,12 +144,10 @@ public:
         return this->m_threadId > 0 && !m_exited;
     }
     ThreadLock lockThread() {
-        ThreadLock t = ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, false);
-        return std::move(t);//CANNOT RELY ON RVO
+        return ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, false);
     }
     ThreadLock tryLockThread() {
-        ThreadLock t = ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, true);
-        return std::move(t);//CANNOT RELY ON RVO
+        return ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, true);
     }
 
 private:
@@ -429,8 +427,7 @@ playback_state PlaybackThread::getState() {
 }
 ThreadLock PlaybackThread::lockThread() {
     daw_tls::getTls().runtime->renderStats.playThreadLockCount++;
-    ThreadLock t = _M_impl->lockThread();
-    return std::move(t);//CANNOT RELY ON RVO
+    return _M_impl->lockThread();
 }
 
 ThreadLock PlaybackThread::tryLockThread() {
@@ -438,7 +435,7 @@ ThreadLock PlaybackThread::tryLockThread() {
     if (t.isLocked()) {
         daw_tls::getTls().runtime->renderStats.playThreadLockCount++;
     }
-    return std::move(t);//CANNOT RELY ON RVO
+    return t;
 }
 
 bool PlaybackThread::isLocked() {

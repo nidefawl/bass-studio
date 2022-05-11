@@ -159,7 +159,7 @@ struct gl_shader_perfgraph : gl_shader_pipeline {
             return -1;
         isValid = true;
         return 0;
-    };
+    }
 };
 // static constexpr uint64_t nextPowerOfTwo64 (uint64_t x) { return 1ULL<<(sizeof(uint64_t) * 8 - __builtin_clzll(x)); }
 

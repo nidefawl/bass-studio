@@ -134,6 +134,7 @@ void shellExpandPath(String& pathString) {
     switch (wordexp(StringAsCStr(pathString), &result, WRDE_NOCMD)) {
         case 0:
             pathString = result.we_wordv[0];
+            [[fallthrough]];
         case WRDE_NOSPACE:
             /* If the error was WRDE_NOSPACE,
          then perhaps part of the result was allocated.  */
