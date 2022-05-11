@@ -58,6 +58,7 @@ if (LINUX)
   find_package(ALSA REQUIRED)
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+  pkg_check_modules(DBUS REQUIRED dbus-1)
 endif(LINUX)
 
 if (APPLE)
@@ -76,10 +77,12 @@ endif(APPLE)
 
 FUNCTION(CONFIGURE_TARGET_DEPS TARGETNAME)
   if (LINUX)
+    target_link_libraries(${TARGETNAME} PUBLIC ${DBUS_LIBRARIES})
     target_link_directories(${TARGETNAME} PUBLIC ${GTK3_LIBRARY_DIRS})
     target_compile_options(${TARGETNAME} PUBLIC ${GTK3_CFLAGS_OTHER})
     target_include_directories(${TARGETNAME} SYSTEM PUBLIC 
         ${GTK3_INCLUDE_DIRS}
+        ${DBUS_INCLUDE_DIRS}
         ${X11_X11_INCLUDE_PATH}
         ${ALSA_INCLUDE_DIR})
   endif(LINUX)

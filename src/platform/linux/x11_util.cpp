@@ -3,7 +3,6 @@
 #include <GLFW/glfw3.h>
 #define GLFW_EXPOSE_NATIVE_X11 1
 #include <GLFW/glfw3native.h>
-#include <gtk/gtk.h>
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
 #include <X11/Xatom.h>

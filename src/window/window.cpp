@@ -60,7 +60,8 @@
 #endif
 #ifdef __linux__
 #include "platform/linux/windowsize.h"
-#include "platform/linux/x11_gtk_util.h"
+#include "platform/linux/x11_util.h"
+#include "platform/linux/nfd/nfd.h"
 #endif
 
 class appwindow;
@@ -994,6 +995,7 @@ public:
     void updateWindowFromDlg() override {
         renderWindowAndChildren();
         swapBufferAndChildren();
+        glfwMakeContextCurrent(nullptr);
     }
 
     void fireMouseMoved() override {
@@ -1219,6 +1221,7 @@ public:
     void updateWindowFromDlg() override {
         renderWindowAndChildren();
         swapBufferAndChildren();
+        glfwMakeContextCurrent(nullptr);
     }
 
     void fireMouseMoved() override {
@@ -1365,20 +1368,6 @@ void appwindow_main::createMainWindow(int w, int h, int flags) {
     }
 }
 
-#if defined(__linux__) || defined(__APPLE__)
-void AppWndProc_enableBlockReentrant() {
-}
-void AppWndProc_disableBlockReentrant() {
-}
-#endif
-
-
-static appwindow* getUserPointerFromGlfw(GLFWwindow* w) {
-    if (!w) return nullptr;
-    return static_cast<appwindow*>(glfwGetWindowUserPointer(w));
-}
-
-#ifdef _WIN32
 int32_t AppWndProc_BlockReentrantEnabled = 0;
 
 void AppWndProc_enableBlockReentrant() {
@@ -1389,6 +1378,15 @@ void AppWndProc_disableBlockReentrant() {
     AppWndProc_BlockReentrantEnabled--;
 }
 
+static appwindow* getUserPointerFromGlfw(GLFWwindow* w) {
+    if (AppWndProc_BlockReentrantEnabled > 0) {
+        return nullptr;
+    }
+    if (!w) return nullptr;
+    return static_cast<appwindow*>(glfwGetWindowUserPointer(w));
+}
+
+#ifdef _WIN32
 LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
     if (AppWndProc_BlockReentrantEnabled > 0) {
         return DefWindowProc(hwnd, Msg, wParam, lParam);
@@ -1456,10 +1454,11 @@ static void glfw_cb_mousescroll(GLFWwindow* w, double xoffset, double yoffset) {
 
 static void glfw_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int mods) {
     try {
-        const char* key_name = glfwGetKeyName(key, scancode);
         appwindow* wu        = getUserPointerFromGlfw(w);
-        if (wu && wu->isValid())
+        if (wu && wu->isValid()) {
+            const char* key_name = glfwGetKeyName(key, scancode);
             wu->onKeyInput(key, scancode, action, mods, key_name);
+        }
     } catch (std::exception& e) {
         handleStdException(e);
     }
@@ -1692,6 +1691,9 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 #ifdef _WIN32
         enableVirtTermProc();
 #endif
+#ifdef __linux__
+        NFD_Init();
+#endif
 
         if (strLogFilename.length()) {
             openGlobalLog(App::Platform::toUserdataPath(strLogFilename));
@@ -1892,6 +1894,9 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
     if (strLogFilename.length()) {
         closeGlobalLog();
     }
+#ifdef __linux__
+    NFD_Quit();
+#endif
 #ifdef _WIN32
     OleUninitialize();
 #endif
