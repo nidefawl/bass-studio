@@ -74,6 +74,13 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
 
 	glfwDefaultWindowHints();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+#ifdef __linux__
+        glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "DAW");
+        glfwWindowHintString(GLFW_X11_CLASS_NAME, "DAW");
+#endif
+#ifdef __APPLE__
+        glfwWindowHintString(GLFW_COCOA_FRAME_NAME, "DAW");
+#endif
 	glfw = glfwCreateWindow(size.x, size.y, StringAsCStr(name), NULL, NULL);
 	#ifdef __linux__
 	WINDOW_HANDLE x11Window = glfwGetX11Window(glfw);

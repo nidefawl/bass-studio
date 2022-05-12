@@ -157,6 +157,14 @@ static void setAppWindowHints() {
     glfwWindowHint(GLFW_STENCIL_BITS, 8);
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+
+#ifdef __linux__
+    glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "DAW");
+    glfwWindowHintString(GLFW_X11_CLASS_NAME, "DAW");
+#endif
+#ifdef __APPLE__
+    glfwWindowHintString(GLFW_COCOA_FRAME_NAME, "DAW");
+#endif
 }
 
 static void initOGL() {
@@ -1716,8 +1724,9 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         glfwSetErrorCallback(glfw_runtime_error_callback);
 
 #ifdef _WIN32
-        glfwSetWin32WindowClassName(L"DAWWINDOW01");
+        glfwSetWin32WindowClassName(L"DAW");
 #endif
+
         // glfwInitHint(GLFW_CONTEXT_KEEPCURRENT, 1);
         auto glfwInitRet = glfwInit();
         if (!glfwInitRet) {
@@ -1976,6 +1985,13 @@ public:
 
     void createPluginWindow(const char* title, int w, int h, void* parentWindowHandle) {
         setAppWindowHints();
+#ifdef __linux__
+        glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "DAW");
+        glfwWindowHintString(GLFW_X11_CLASS_NAME, "DAW");
+#endif
+#ifdef __APPLE__
+        glfwWindowHintString(GLFW_COCOA_FRAME_NAME, "DAW");
+#endif
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
         glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
         glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
