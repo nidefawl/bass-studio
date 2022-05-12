@@ -1328,7 +1328,6 @@ void appwindow_main::createMainWindow(int w, int h, int flags) {
     glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
     if (flags & WINDOW_BORDERLESS_POPUP) {
         glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
-        glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
         glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
         glfwWindowHint(GLFW_DECORATED, GL_FALSE);
         glfwWindowHint(GLFW_HIDE_FROM_TASKBAR, GL_TRUE);
