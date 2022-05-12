@@ -131,9 +131,12 @@ void sanitizePathToDirectory(String& pathString) {
 
 void shellExpandPath(String& pathString) {
     wordexp_t result{};
-    switch (wordexp(StringAsCStr(pathString), &result, WRDE_NOCMD)) {
+    auto ret = wordexp(StringAsCStr(pathString), &result, WRDE_NOCMD);
+    switch (ret) {
         case 0:
-            pathString = result.we_wordv[0];
+            if (result.we_wordc) {
+                pathString = result.we_wordv[0];
+            }
             [[fallthrough]];
         case WRDE_NOSPACE:
             /* If the error was WRDE_NOSPACE,
