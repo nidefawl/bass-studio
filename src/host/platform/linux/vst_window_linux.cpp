@@ -15,12 +15,7 @@
 GLFWwindow* getTopLevelGlfwWindow();
 
 #ifdef __linux__
-//struct Display;
 void sendExposeEvent(GLFWwindow* glfw);
-extern "C" {
-WINDOW_HANDLE glfwGetX11Window(GLFWwindow* window);
-//Display* glfwGetX11Display();
-}
 #endif
 
 namespace {
@@ -49,7 +44,7 @@ namespace {
 
 vst_window* vst_window::make (vstplugin* plugin, const String& name, ivec2 size, bool resizeable)
 {
-	vst_window* vstWindow = new vst_window();
+	auto vstWindow = new vst_window();
 	vstWindow->init(plugin, name, size, resizeable);
 	return vstWindow;
 }
@@ -60,14 +55,18 @@ vst_window* vst_window::getVSTWindow(WINDOW_HANDLE handle)
 	return vstwinhandle;
 }
 
-
-//------------------------------------------------------------------------
 std::vector<vst_window*>& vst_window::getWindows ()
 {
 	return vst_window_list;
 }
 
-//------------------------------------------------------------------------
+static void glfw_cb_windowclose(GLFWwindow* w) {
+	auto* userpointer = static_cast<vst_window*>(glfwGetWindowUserPointer(w));
+	if (userpointer) {
+		userpointer->close();
+	}
+}
+
 bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool resizeable)
 {
 	this->plugin = plugin;
@@ -82,6 +81,8 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
         glfwWindowHintString(GLFW_COCOA_FRAME_NAME, "DAW");
 #endif
 	glfw = glfwCreateWindow(size.x, size.y, StringAsCStr(name), NULL, NULL);
+    glfwSetWindowCloseCallback(glfw, glfw_cb_windowclose);
+	glfwSetWindowUserPointer(glfw, this);
 	#ifdef __linux__
 	WINDOW_HANDLE x11Window = glfwGetX11Window(glfw);
 	hwnd = x11Window;
@@ -96,67 +97,44 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
 	return hwnd != 0;
 }
 
-//------------------------------------------------------------------------
 void vst_window::close()
 {
 	plugin->onClose();
 	glfwHideWindow(glfw);
-//	ShowWindow(hwnd, false);
 }
 
-//------------------------------------------------------------------------
 void vst_window::destroy()
 {
 	plugin->onWindowDestroy();
-//	SetWindowLongPtr (hwnd, GWLP_USERDATA, (__int3264) (LONG_PTR) nullptr);
-//	DestroyWindow(hwnd);
 	glfwDestroyWindow(glfw);
 	removeWindow (this);
 }
-//------------------------------------------------------------------------
 void vst_window::show()
 {
 	glfwShowWindow(glfw);
-//	SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
 	plugin->onShow(this);
 }
 
-//------------------------------------------------------------------------
 ivec2 vst_window::getContentSize() const
 {
-	ivec2 s;
+	ivec2 s{};
 	glfwGetWindowSize(glfw, &s.x, &s.y);
-//	RECT r;
-//	GetClientRect (hwnd, &r);
-//	return {r.right - r.left, r.bottom - r.top};
-	return s;//{0, 0};
+	return s;;
 }
 
-
-
 void vst_window::updateWindow() const {
-//	InvalidateRgn(hwnd, NULL, TRUE);
 #ifdef __linux__
 	// sendExposeEvent(glfw);
 #endif
 }
-//------------------------------------------------------------------------
+
 void vst_window::resize (ivec2 newSize) const
 {
 	if (getContentSize () == newSize)
 		return;
 	glfwSetWindowSize(glfw, newSize.x, newSize.y);
-//	WINDOWINFO windowInfo;
-//	GetWindowInfo (hwnd, &windowInfo);
-//	RECT clientRect {};
-//	clientRect.right = newSize.width;
-//	clientRect.bottom = newSize.height;
-//	AdjustWindowRectEx (&clientRect, windowInfo.dwStyle, false, windowInfo.dwExStyle);
-//	SetWindowPos (hwnd, HWND_TOP, 0, 0, clientRect.right - clientRect.left,
-//	              clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
 }
 
-//------------------------------------------------------------------------
 WINDOW_HANDLE vst_window::getHWND () const
 {
 	return hwnd;
