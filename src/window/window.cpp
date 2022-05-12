@@ -471,10 +471,10 @@ public:
     virtual void onTick()               = 0;
 
     virtual void captureMouse() {
+        glfwSetInputMode(glfw, GLFW_CURSOR, noRawInput ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_DISABLED);
         if (!noRawInput) {
             glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 1);
         }
-        glfwSetInputMode(glfw, GLFW_CURSOR, noRawInput ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_DISABLED);
     }
 
     virtual void releaseMouse() {
