@@ -186,7 +186,6 @@ void onModuleLoad(HINSTANCE hInst) {
         if (len > 0 && len <  128) {
             glfwSetWin32WindowClassName(pluginWindowClassName);
         }
-        
 #endif
 
         if (!glfwInit()) {

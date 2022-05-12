@@ -130,7 +130,7 @@ ivec2 vst_window::getContentSize() const
 void vst_window::updateWindow() const {
 //	InvalidateRgn(hwnd, NULL, TRUE);
 #ifdef __linux__
-	sendExposeEvent(glfw);
+	// sendExposeEvent(glfw);
 #endif
 }
 //------------------------------------------------------------------------

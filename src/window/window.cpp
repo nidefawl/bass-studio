@@ -373,7 +373,7 @@ public:
 
     virtual void flagNeedsRedraw() {
         appStats.numRedrawReq++;
-        // invalidateWindowContents(glfw);
+        invalidateWindowContents(glfw);
     }
 
     void updateStats() {
@@ -1467,15 +1467,17 @@ static void glfw_cb_charinput(GLFWwindow* w, unsigned int codepoint, int mods) {
     }
 }
 
-/* static void glfw_cb_refresh(GLFWwindow* w) {
+static void glfw_cb_refresh(GLFWwindow* w) {
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
-        if (wu && wu->isValid())
+        if (wu && wu->isValid()) {
             wu->renderWindowAndChildren();
+            wu->swapBufferAndChildren();
+        }
     } catch (std::exception& e) {
         handleStdException(e);
     }
-} */
+}
 
 static void glfw_cb_windowclose(GLFWwindow* w) {
     try {
@@ -1540,7 +1542,6 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
     glfwSetWindowUserPointer(glfw, this);
     glfwSetWindowCloseCallback(glfw, glfw_cb_windowclose);
     glfwSetWindowSizeCallback(glfw, glfw_cb_windowwize);
-    // glfwSetWindowRefreshCallback(glfw, glfw_cb_refresh);
     glfwSetWindowFocusCallback(glfw, glfw_cb_windowfocus);
     glfwSetFramebufferSizeCallback(glfw, glfw_cb_framebuffersize);
     glfwSetCursorPosCallback(glfw, glfw_cb_mousepos);
@@ -1975,6 +1976,11 @@ public:
 
     void createPluginWindow(const char* title, int w, int h, void* parentWindowHandle) {
         setAppWindowHints();
+        glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+        glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
+        glfwWindowHint(GLFW_DECORATED, GL_FALSE);
+        // glfwWindowHint(GLFW_HIDE_FROM_TASKBAR, GL_TRUE);
         appwindow::createBaseWindow(title, w, h, nullptr, parentWindowHandle);
         RenderResources::initResources(nanovgCtxt);
 
@@ -1992,15 +1998,16 @@ public:
                 int windowWidth  = _rect.right - _rect.left;
                 int windowHeight = _rect.bottom - _rect.top;
                 createPluginWindow("plugin-window", windowWidth, windowHeight, ptr);
+                showWindow();
                 this->valid = true;
                 glfwGetWindowSize(glfw, &windowWidth, &windowHeight);
                 this->onWindowSizeChanged(windowWidth, windowHeight);
-                this->valid = false;
                 ctrlShared->onGuiOpen(effect);
+                glfwSetWindowRefreshCallback(glfw, glfw_cb_refresh);
                 return true;
             }
         } catch (std::exception& e) {
-        ngui::showNotification(ngui::Style::Error, "Fatal error", e.what());
+            ngui::showNotification(ngui::Style::Error, "Fatal error", e.what());
         }
         AEffEditor::close();
         return false;
@@ -2012,11 +2019,11 @@ public:
                 glfwMakeContextCurrent(glfw);
             }
             ctrlShared->onGuiClose(effect);
+            this->valid = false;
             if (isInitialized) {
                 hideWindow();
                 destroyContextAndWindow();
             }
-            this->valid = false;
         } catch (std::exception& e) {
             ngui::showNotification(ngui::Style::Error, "Fatal error", e.what());
         }

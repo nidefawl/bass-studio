@@ -59,7 +59,7 @@ void PluginControl::menuCommand(menucmd_t command) {
 void PluginControl::initApp(const std::vector<String>& args) {
 }
 
-PluginControl::PluginControl(std::shared_ptr<PluginViewContainers> _view) : AppCtrl(), view(_view) {
+PluginControl::PluginControl(std::shared_ptr<PluginViewContainers> _view) : AppCtrl(), view(std::move(_view)) {
 }
 
 PluginControl::~PluginControl() {
@@ -87,6 +87,9 @@ bool PluginControl::initAppWindow(window_main* window, NVGcontext* nanovg) {
 
     isOK = true;
     return isOK;
+}
+void PluginControl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
+    AppCtrl::render(nanovgCtxt, x, y, w, h, ratio);
 }
 
 void PluginControl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {

@@ -56,11 +56,11 @@ extern "C" {
     }
 }
 void sendExposeEvent(GLFWwindow* glfw) {
-    // int w, h;
-    // glfwGetWindowSize(glfw, &w, &h);
+    int w, h;
+    glfwGetWindowSize(glfw, &w, &h);
     Display* x11display = glfwGetX11Display();
     Window x11Window    = glfwGetX11Window(glfw);
-    XExposeEvent ev     = { Expose, 0, 1, x11display, x11Window, 0, 0, 1, 1, 0 };
+    XExposeEvent ev     = { Expose, 0, 1, x11display, x11Window, 0, 0, w, h, 0 };
     XSendEvent(x11display, x11Window, false, ExposureMask, (XEvent*) &ev);
     // XFlush(x11display);
     // XClearArea(x11display, x11Window, 0, 0, w, h, True);
