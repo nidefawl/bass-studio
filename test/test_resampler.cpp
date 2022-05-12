@@ -1,6 +1,7 @@
 #include "TestBase.hpp"
 #include <vector>
 #include <memory>
+#include "rand.h"
 #include "seq_time.h"
 #include "host/resampler.h"
 #include "audioblock.h"
@@ -42,15 +43,16 @@ namespace {
 
             AudioBlock block(numChannels, sfIn.blockSize);
 
-            uint32_t noiseSeed = 13;
             int32_t popped     = 0;
             int32_t pushed     = 0;
             int32_t maxIterations = 10000;
+            seq_rand rnd;
+            rnd.rng_seed(123123123);
             while (true) {
                 if (maxIterations > 0) {
                     maxIterations--;
                     if (ptr->numBlocksToPop() < 4) {
-                        block.fillNoise(noiseSeed++);
+                        block.fillNoise(rnd, 0.4f);
                         ptr->push(block);
                         pushed++;
                     }

@@ -18,6 +18,7 @@ enum alloc_type {
     external = 4
 };
 class DelayLine;
+class seq_rand;
 struct alignas(16) AudioBlock {
     enum mix_op : int32_t {
         MIX,
@@ -273,7 +274,7 @@ struct alignas(16) AudioBlock {
 
     void addFromDelayLineOp(DelayLine* delayLine, const samplecount_t delay, const mix_op op, float gain);
 
-    void fillNoise(uint32_t seed);
+    void fillNoise(seq_rand& rnd, float gain);
 
     void realloc(samplecount_t _samples);
 

@@ -43,12 +43,10 @@ void freeRingBuffer(audiothread_ringbuffer_t& ringbuffer) {
         }
     }
 }
-void AudioBlock::fillNoise(uint32_t seed) {
-    seq_rand rnd;
-    rnd.rng_seed(seed);
+void AudioBlock::fillNoise(seq_rand& rnd, float gain) {
     for (channelnum_t i = 0; i < channels; i++) {
         for (samplecount_t s = 0; s < samples; s++) {
-            buf[i][s] = (rnd.rng_rand(1<<16)/(float)(1<<16))*0.4f;
+            buf[i][s] = (rnd.rng_rand(1<<16)/(float)(1<<16))*gain;
         }
     }
 }

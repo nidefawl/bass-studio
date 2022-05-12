@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <memory>
+#include "audioblock.h"
 #include "config.h"
 #include "str_util.h"
 #include "dsp_util.h"
@@ -34,6 +35,7 @@ namespace PluginTestAdv {
         programs[0].reportLatency = true;
 
         curProgram = 0;
+        rnd.rng_seed(87654323);
     }
 
     void GuiAdvPluginVST2::setProgram(VstInt32 program) {
@@ -126,27 +128,6 @@ namespace PluginTestAdv {
         return -1;// explicitly can't do; 0 => don't know
     }
 
-    static void fillNoiseMono(float** inputs, float** outputs, VstInt32 sampleFrames, float noiseGain) {
-        float* out1 = outputs[0];
-        float* in1  = inputs[0];
-        for (int a = 0; a < sampleFrames; a++) {
-            float random = (float) (rand() - rand());
-            random       = random / 32767.f * noiseGain;
-            (*out1++)    = (*in1++) + random;
-        }
-    }
-    static void fillNoiseStereo(float** inputs, float** outputs, VstInt32 sampleFrames, float noiseGain) {
-        float* out1 = outputs[0];
-        float* out2 = outputs[1];
-        float* in1  = inputs[0];
-        float* in2  = inputs[1];
-        for (int a = 0; a < sampleFrames; a++) {
-            float random = (float) (rand() - rand());
-            random       = random / 32767.f * noiseGain;
-            (*out1++)    = (*in1++) + random;
-            (*out2++)    = (*in2++) + random;
-        }
-    }
     void GuiAdvPluginVST2::processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) {
         if (issetprogram)
             return;
@@ -156,13 +137,8 @@ namespace PluginTestAdv {
         }
         BaseVST2_Program* ap = current();
         float noiseGain      = dsp_util::clampGain(ap->noiseVolume);
-        if (this->getAeffect()->numOutputs == 1) {
-            fillNoiseMono(inputs, outputs, sampleFrames, noiseGain);
-        } else if (this->getAeffect()->numOutputs == 2) {
-            fillNoiseStereo(inputs, outputs, sampleFrames, noiseGain);
-        } else {
-            //log_printf("unsupported this->getAeffect()->numOutputs");
-        }
+        AudioBlock block(outputs, this->getAeffect()->numOutputs, sampleFrames);
+        block.fillNoise(rnd, noiseGain);
     }
 
 

@@ -3,6 +3,7 @@
 #include <cstdio>
 #include "audioblock.h"
 #include "logging.h"
+#include "rand.h"
 #include "str_util.h"
 #include "exceptions.h"
 #include "meter.h"
@@ -24,7 +25,9 @@ int main(int argc, char** argv) {
         // getGlobalLogger()->setLevel(Log::L_WARN);
         benchmark::RegisterBenchmark("running_sum.update", [&block](benchmark::State& state) {
             setSSEFlushDenormals();
-            block.fillNoise(4123123);
+            seq_rand rnd;
+            rnd.rng_seed(4123123);
+            block.fillNoise(rnd, 1.0f);
             DAW::meter_runningsum rs;
             rs.update(block.buf[0], block.samples/16, 1.0f);
             for (auto _ : state) {
@@ -35,7 +38,9 @@ int main(int argc, char** argv) {
         });
         benchmark::RegisterBenchmark("running_sum.update512Fixed", [&block](benchmark::State& state) {
             setSSEFlushDenormals();
-            block.fillNoise(4123123);
+            seq_rand rnd;
+            rnd.rng_seed(4123123);
+            block.fillNoise(rnd, 1.0f);
             DAW::meter_runningsum rs;
             rs.update(block.buf[0], block.samples/16, 1.0f);
             for (auto _ : state) {

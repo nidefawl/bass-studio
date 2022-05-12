@@ -3,6 +3,7 @@
 #include <vector>
 #include <cmath>
 #include "../plugin-base.h"
+#include "rand.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 
 namespace PluginTestAdv {
@@ -86,6 +87,7 @@ namespace PluginTestAdv {
 
     private:
         BaseVST2_Program programs[kNumPrograms];
+        seq_rand rnd;
     };
     AudioEffectX* createPlugin(audioMasterCallback audioMaster);
     const char* getName();
