@@ -300,6 +300,12 @@ private:
         reloadCustomShaders();
     }
 
+    void initMousePos() {
+        double mposx = 0., mposy = 0.;
+        glfwGetCursorPos(glfw, &mposx, &mposy);
+        lastmousepos = mousepos = ivec2((int) mposx, (int) mposy);
+    }
+
 public:
 
     bool isValid() {
@@ -490,6 +496,7 @@ public:
             glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 0);
         }
         glfwSetInputMode(glfw, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        initMousePos();
     }
 
     virtual bool isMouseCaptured() {
@@ -1560,9 +1567,7 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
     glfwSetCharModsCallback(glfw, glfw_cb_charinput);
     glfwSetCursorEnterCallback(glfw, glfw_cb_cursorenter);
 
-    double mposx = 0., mposy = 0.;
-    glfwGetCursorPos(glfw, &mposx, &mposy);
-    mousepos = ivec2((int) mposx, (int) mposy);
+    initMousePos();
 
 #ifdef _WIN32
     hwnd = glfwGetWin32Window(glfw);
