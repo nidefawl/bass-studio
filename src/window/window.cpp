@@ -239,6 +239,7 @@ public:
         //TODO: settings might not be loaded at this point
         noRawInput = daw_tls::getSettings().vmmode;
 #endif
+        noRawInput |= glfwRawMouseMotionSupported() == GLFW_FALSE;
     }
 
 private:
