@@ -120,7 +120,7 @@ public:
         FrameBuffer* bufferTarget = framebuffers[0].get();
 
         std::vector<int32_t>& kawaseKernPasses = blur_pass_parameters::getPassConstants(passes);
-        for (int p = 0; p < kawaseKernPasses.size(); p++) {
+        for (size_t p = 0; p < kawaseKernPasses.size(); p++) {
             glUniform3f(u_blurPassProp, pixelScale / (float) w, pixelScale / (float) h, kawaseKernPasses[p]);
             bufferTarget->bind();
             bufferTarget->clearFrameBuffer();

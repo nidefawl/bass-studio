@@ -94,6 +94,22 @@ public:
             bands[i] = ref.bands[i];
         }
     }
+    audio_spectrum& operator=(const audio_spectrum& ref) {
+        if (this != &ref) {
+            samplerate = ref.samplerate;
+            blocksize = ref.blocksize;
+            fftlen    = ref.fftlen;
+            srOverFFT = ref.srOverFFT;
+            numBands  = ref.numBands;
+            minFreq   = ref.minFreq;
+            maxFreq   = ref.maxFreq;
+            for (channelnum_t i = 0; i < NUM_CHANNELS; i++) {
+                mags[i]  = ref.mags[i];
+                bands[i] = ref.bands[i];
+            }
+        }
+        return *this;
+    }
     audio_spectrum(const blocksize_t _blocksize, const samplerate_t _samplerate, const samplecount_t _fftLen, const int32_t _numBands)
         : samplerate(_samplerate), blocksize(_blocksize), fftlen(_fftLen), srOverFFT(_samplerate / (double)fftlen), numBands(_numBands),
           minFreq(MIN_FREQ), maxFreq(MAX_FREQ) {}

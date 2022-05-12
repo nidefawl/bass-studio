@@ -33,7 +33,7 @@ public:
     void onTick() {
         int64_t tNow   = getTimeMicros();
         int64_t tSince = tNow - tLast;
-        if (tSince >= 5000ULL) {
+        if (tSince >= 5000) {
             double tickSince = tSince / 1000000.0;
             analyzerLf->onTick(tickSince);
             analyzerHf->onTick(tickSince);
