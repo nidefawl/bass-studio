@@ -80,8 +80,10 @@ int loadPlugin_jbridge(audioMasterCallback audiomasterCallback, const String& fi
 
     *aeffect = pfnBridgeMain(audiomasterCallback, const_cast<char*>(szPath));
     if (!aeffect) {
+        FreeLibrary(hModuleProxy);
         return -23;
     }
+    *hmodule = hModuleProxy;
     return 0;
 }
 #endif
