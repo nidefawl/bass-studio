@@ -85,7 +85,7 @@ void gui_textfield::onTextEndEdit() {
 }
 void setTfFont(NVGcontext* ctx, const gui_textfield* tf) {
     nvgFontSize(ctx, tf->fontSize());
-    UIFont::font_instance instance = tf->theme->getFont(UIFont::FONT_TEXFIELD);
+    UIFont::font_instance instance = tf->theme->getFont(UIFont::FONT_TEXTFIELD);
     UIFont::bindFont(ctx, instance);
     switch (tf->alignment()) {
         case gui_textfield::Alignment::Left:
@@ -176,7 +176,7 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
         return;
     nvgFontSize(ctx, fontSize());
     NVGcolor mTextColorDisabled = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_DISABLED);
-    UIFont::font_instance instance = theme->getFont(UIFont::FONT_TEXFIELD);
+    UIFont::font_instance instance = theme->getFont(UIFont::FONT_TEXTFIELD);
     UIFont::bindFont(ctx, instance);
     if (!mUnits.empty()) {
         nvgFillColor(ctx, mTextColorDisabled);

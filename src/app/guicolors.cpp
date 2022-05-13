@@ -208,7 +208,7 @@ namespace UIFont {
 
     const font_type_t FONT_DEFAULT      = font_type_t("FONT_DEFAULT", "Roboto-Regular.ttf");
     const font_type_t FONT_LABEL        = font_type_t("FONT_LABEL", "Roboto-Regular.ttf");
-    const font_type_t FONT_TEXFIELD     = font_type_t("FONT_TEXFIELD", "Roboto-Regular.ttf");
+    const font_type_t FONT_TEXTFIELD    = font_type_t("FONT_TEXTFIELD", "Roboto-Regular.ttf");
     const font_type_t FONT_CONTEXT_MENU = font_type_t("FONT_CONTEXT_MENU", "Roboto-Regular.ttf");
     const font_type_t FONT_DECIMAL      = font_type_t("FONT_DECIMAL", "Roboto-Regular.ttf");
     const font_type_t FONT_TEST         = font_type_t("FONT_TEST", "jbmononf.ttf");

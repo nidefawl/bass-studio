@@ -345,8 +345,8 @@
                         "value": "Roboto-Regular.ttf"
                     },
                     {
-                        "key": "FONT_TEXFIELD",
-                        "value": "out.ttf"
+                        "key": "FONT_TEXTFIELD",
+                        "value": "Roboto-Regular.ttf"
                     },
                     {
                         "key": "FONT_DEFAULT",
@@ -748,8 +748,8 @@
                         "value": "Roboto-Regular.ttf"
                     },
                     {
-                        "key": "FONT_TEXFIELD",
-                        "value": "out.ttf"
+                        "key": "FONT_TEXTFIELD",
+                        "value": "Roboto-Regular.ttf"
                     },
                     {
                         "key": "FONT_DEFAULT",
@@ -1152,8 +1152,8 @@
                             "value": "Roboto-Regular.ttf"
                         },
                         {
-                            "key": "FONT_TEXFIELD",
-                            "value": "out.ttf"
+                            "key": "FONT_TEXTFIELD",
+                            "value": "Roboto-Regular.ttf"
                         },
                         {
                             "key": "FONT_LABEL",
@@ -1507,7 +1507,7 @@
                             "value": "Roboto-Medium.ttf"
                         },
                         {
-                            "key": "FONT_TEXFIELD",
+                            "key": "FONT_TEXTFIELD",
                             "value": "Roboto-Medium.ttf"
                         },
                         {
@@ -1870,7 +1870,7 @@
                             "value": "Roboto-Medium.ttf"
                         },
                         {
-                            "key": "FONT_TEXFIELD",
+                            "key": "FONT_TEXTFIELD",
                             "value": "Roboto-Medium.ttf"
                         },
                         {
@@ -2226,11 +2226,11 @@
                     "fonts": [
                         {
                             "key": "FONT_LABEL",
-                            "value": "out.ttf"
+                            "value": "Roboto-Regular.ttf"
                         },
                         {
-                            "key": "FONT_TEXFIELD",
-                            "value": "out.ttf"
+                            "key": "FONT_TEXTFIELD",
+                            "value": "Roboto-Regular.ttf"
                         },
                         {
                             "key": "FONT_DEFAULT",
@@ -2238,7 +2238,7 @@
                         },
                         {
                             "key": "FONT_CONTEXT_MENU",
-                            "value": "out.ttf"
+                            "value": "Roboto-Regular.ttf"
                         },
                         {
                             "key": "FONT_DECIMAL",
@@ -2588,7 +2588,7 @@
                             "value": "Roboto-Medium.ttf"
                         },
                         {
-                            "key": "FONT_TEXFIELD",
+                            "key": "FONT_TEXTFIELD",
                             "value": "Roboto-Medium.ttf"
                         },
                         {
@@ -2955,7 +2955,7 @@
                             "value": "Roboto-Medium.ttf"
                         },
                         {
-                            "key": "FONT_TEXFIELD",
+                            "key": "FONT_TEXTFIELD",
                             "value": "Roboto-Medium.ttf"
                         },
                         {
@@ -3315,11 +3315,11 @@
                     "fonts": [
                         {
                             "key": "FONT_LABEL",
-                            "value": "out.ttf"
+                            "value": "Roboto-Regular.ttf"
                         },
                         {
-                            "key": "FONT_TEXFIELD",
-                            "value": "out.ttf"
+                            "key": "FONT_TEXTFIELD",
+                            "value": "Roboto-Regular.ttf"
                         },
                         {
                             "key": "FONT_DEFAULT",
@@ -3327,7 +3327,7 @@
                         },
                         {
                             "key": "FONT_CONTEXT_MENU",
-                            "value": "out.ttf"
+                            "value": "Roboto-Regular.ttf"
                         },
                         {
                             "key": "FONT_DECIMAL",
@@ -3717,8 +3717,8 @@
                             "value": "Roboto-Regular.ttf"
                         },
                         {
-                            "key": "FONT_TEXFIELD",
-                            "value": "out.ttf"
+                            "key": "FONT_TEXTFIELD",
+                            "value": "Roboto-Regular.ttf"
                         },
                         {
                             "key": "FONT_DEFAULT",
@@ -4080,8 +4080,8 @@
                             "value": "Roboto-Regular.ttf"
                         },
                         {
-                            "key": "FONT_TEXFIELD",
-                            "value": "out.ttf"
+                            "key": "FONT_TEXTFIELD",
+                            "value": "Roboto-Regular.ttf"
                         },
                         {
                             "key": "FONT_DEFAULT",
