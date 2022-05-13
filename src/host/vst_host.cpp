@@ -3190,6 +3190,9 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
 #define CLOSE_MODULE_HANDLE(handle) dlclose(handle)
 
 #endif
+#ifdef _WIN32
+int loadPlugin_jbridge(audioMasterCallback audiomasterCallback, const String& filepath, HMODULE* hmodule, AEffect** aeffect, uint64_t bugfixFlags);
+#endif //_WIN32
 
 vstpluginloadres vsthost::loadPlugin(String filepath, uint32_t uId, int32_t globalId, uint64_t bugfixFlags) {
     dbgassert(masterCallBackSlot);
@@ -3210,20 +3213,25 @@ vstpluginloadres vsthost::loadPlugin(String filepath, uint32_t uId, int32_t glob
     int32_t ret = loadLib(filepath, &fn, &hmodule);
     moduleHandle = hmodule;
 
-    if (ret != 0) {
-        return {ret, nullptr};
-    }
-
     if (uId != 0) {
         this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(uId);
     } else {
         this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
     }
 
-    aeffect = fn(masterCallBackSlot);
+    if (ret == 0) {
+        aeffect = fn(masterCallBackSlot);
+#ifdef _WIN32
+    } else if (ret == -3) {
+        ret = loadPlugin_jbridge(masterCallBackSlot, filepath, &hmodule, &aeffect, bugfixFlags);
+        moduleHandle = hmodule;
+#endif //_WIN32
+    }
 
-    if (uId != 0) {
-        this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
+    this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
+    
+    if (ret != 0) {
+        return {ret, nullptr};
     }
 
     if (!aeffect) {
