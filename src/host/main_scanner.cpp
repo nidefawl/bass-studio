@@ -651,7 +651,7 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
         }
     } catch (...) {
         log_message("exception while loading %s", req.szPath);
-        response = -1;
+        response = CMD_PLUGIN_LOAD_ERROR;
     }
 
     log_message("runPluginTest end");
@@ -698,99 +698,87 @@ static int runScannerClient() {
             }
 
             log_message("Load plugin %s", req.szPath);
-            try {
-
-                vstpluginloadres res = vsthostInstance->loadPlugin(req.szPath, 0);
-                log_message("result: %d", res.result);
-                if (res.result < 0) {
-                    int response = CMD_PLUGIN_LOAD_ERROR;
-                    writeToIPC(client, response);
-                } else {
-                    if (res.result == 1) {
-                        handles_t* handles     = res.shellPluginHandle;
-                        String nameShellPlugin = res.name;
-                        log_printf("loading shell plugin: %s\n", StringAsCStr(nameShellPlugin));
-
-                        char tempName[64] = { 0 };
-                        struct shell_plugin_entry_t {
-                            String name;
-                            int32_t pluginUID;
-                        };
-
-                        std::vector<shell_plugin_entry_t> entries;
-
-                        response_type_vst24_shell_plugin_t respShellPlugin;
-                        strncpy(respShellPlugin.szName, StringAsCStr(res.name), math::min<size_t>(255, res.name.length() + 1));
-                        respShellPlugin.szName[255] = 0;
-                        // loop over all shell plugin entries
-                        VstIntPtr dispatchRet;
-                        while ((dispatchRet = handles->aeffect->dispatcher(handles->aeffect, effShellGetNextPlugin, 0, 0, tempName, 0)) != 0) {
-                            if (dispatchRet < 0)
-                                log_printf("WARN: expected positive value for VST UID %zd\n", dispatchRet);
-
-                            auto plugUniqueID = (VstInt32) (static_cast<uint64_t>(dispatchRet) & 0xFFFFFFFFULL);
-                            // subplug needs a name
-                            if (tempName[0] != 0) {
-                                log_printf("plugUniqueID %d\t%s\n", plugUniqueID, tempName);
-                                entries.push_back(shell_plugin_entry_t{ tempName, plugUniqueID });
-                            } else {
-                                log_printf("plugUniqueID %d\tNAME == NULL!\n", plugUniqueID);
-                            }
-                            tempName[0] = 0;
-                        }
-                        int32_t response = CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_SHELL;
-                        writeToIPC(client, response);
-                        respShellPlugin.numPlugins = (int) entries.size();
-                        writeToIPC(client, respShellPlugin);
-                        log_message("-- begin of shell plugin list --");
-                        for (auto& entry : entries) {
-                            if (userSentQuitRequest) break;
-                            log_message("load shell entry: %08X", entry.pluginUID);
-
-                            vstpluginloadres resShellPluginEntry = vsthostInstance->loadPlugin(req.szPath, entry.pluginUID);
-                            if (resShellPluginEntry.result != 0) {
-                                log_message("FAILED LOADING SHELL PLUGIN: %d", resShellPluginEntry.result);
-                            } else {
-                                dbgassert(resShellPluginEntry.plugin);
-                                response = CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN;
-                                writeToIPC(client, response);
-                                response_type_vst24_t respShellPluginEntry;
-                                getPluginData(resShellPluginEntry.plugin, &respShellPluginEntry);
-                                strncpy(respShellPluginEntry.szName, StringAsCStr(entry.name), math::min<size_t>(255U, entry.name.length() + 1));
-                                writeToIPC(client, respShellPluginEntry);
-                                log_message("unload shell entry: %08X", entry.pluginUID);
-                                vsthostInstance->unloadPlugin(resShellPluginEntry.plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
-                            }
-                        }
-                        log_message("-- end of shell plugin list --");
-#ifdef _WIN32
-                        FreeLibrary((HMODULE) handles->hmodule);
-#endif
-                        response = CMD_PLUGIN_END_SUCCESS;
-                        writeToIPC(client, response);
-                    } else if (res.result == 0) {
-                        dbgassert(res.plugin);
-                        int response = CMD_PLUGIN_LOAD_SUCCESS_PLUGIN;
-                        writeToIPC(client, response);
-                        response_type_vst24_plugin_t respPlugin;
-                        getPluginData(res.plugin, &respPlugin);
-                        writeToIPC(client, respPlugin);
-                        vsthostInstance->unloadPlugin(res.plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
-                        response = CMD_PLUGIN_END_SUCCESS;
-                        writeToIPC(client, response);
-                    }
-                }
-            } catch (...) {
-                log_message("exception while loading %s", req.szPath);
-                int response = -1;
+            vstpluginloadres res = vsthostInstance->loadPlugin(req.szPath, 0);
+            log_message("result: %d", res.result);
+            if (res.result < 0) {
+                int response = CMD_PLUGIN_LOAD_ERROR;
                 writeToIPC(client, response);
+            } else {
+                if (res.result == 1) {
+                    handles_t* handles     = res.shellPluginHandle;
+                    String nameShellPlugin = res.name;
+                    log_printf("loading shell plugin: %s\n", StringAsCStr(nameShellPlugin));
+
+                    char tempName[64] = { 0 };
+                    struct shell_plugin_entry_t {
+                        String name;
+                        int32_t pluginUID;
+                    };
+
+                    std::vector<shell_plugin_entry_t> entries;
+
+                    response_type_vst24_shell_plugin_t respShellPlugin;
+                    strncpy(respShellPlugin.szName, StringAsCStr(res.name), math::min<size_t>(255, res.name.length() + 1));
+                    respShellPlugin.szName[255] = 0;
+                    // loop over all shell plugin entries
+                    VstIntPtr dispatchRet;
+                    while ((dispatchRet = handles->aeffect->dispatcher(handles->aeffect, effShellGetNextPlugin, 0, 0, tempName, 0)) != 0) {
+                        if (dispatchRet < 0)
+                            log_printf("WARN: expected positive value for VST UID %zd\n", dispatchRet);
+
+                        auto plugUniqueID = (VstInt32) (static_cast<uint64_t>(dispatchRet) & 0xFFFFFFFFULL);
+                        // subplug needs a name
+                        if (tempName[0] != 0) {
+                            log_printf("plugUniqueID %d\t%s\n", plugUniqueID, tempName);
+                            entries.push_back(shell_plugin_entry_t{ tempName, plugUniqueID });
+                        } else {
+                            log_printf("plugUniqueID %d\tNAME == NULL!\n", plugUniqueID);
+                        }
+                        tempName[0] = 0;
+                    }
+                    int32_t response = CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_SHELL;
+                    writeToIPC(client, response);
+                    respShellPlugin.numPlugins = (int) entries.size();
+                    writeToIPC(client, respShellPlugin);
+                    log_message("-- begin of shell plugin list --");
+                    for (auto& entry : entries) {
+                        if (userSentQuitRequest) break;
+                        log_message("load shell entry: %08X", entry.pluginUID);
+
+                        vstpluginloadres resShellPluginEntry = vsthostInstance->loadPlugin(req.szPath, entry.pluginUID);
+                        if (resShellPluginEntry.result != 0) {
+                            log_message("FAILED LOADING SHELL PLUGIN: %d", resShellPluginEntry.result);
+                        } else {
+                            dbgassert(resShellPluginEntry.plugin);
+                            response = CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN;
+                            writeToIPC(client, response);
+                            response_type_vst24_t respShellPluginEntry;
+                            getPluginData(resShellPluginEntry.plugin, &respShellPluginEntry);
+                            strncpy(respShellPluginEntry.szName, StringAsCStr(entry.name), math::min<size_t>(255U, entry.name.length() + 1));
+                            writeToIPC(client, respShellPluginEntry);
+                            log_message("unload shell entry: %08X", entry.pluginUID);
+                            vsthostInstance->unloadPlugin(resShellPluginEntry.plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                        }
+                    }
+                    log_message("-- end of shell plugin list --");
+#ifdef _WIN32
+                    FreeLibrary((HMODULE) handles->hmodule);
+#endif
+                    response = CMD_PLUGIN_END_SUCCESS;
+                    writeToIPC(client, response);
+                } else if (res.result == 0) {
+                    dbgassert(res.plugin);
+                    int response = CMD_PLUGIN_LOAD_SUCCESS_PLUGIN;
+                    writeToIPC(client, response);
+                    response_type_vst24_plugin_t respPlugin;
+                    getPluginData(res.plugin, &respPlugin);
+                    writeToIPC(client, respPlugin);
+                    vsthostInstance->unloadPlugin(res.plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                    response = CMD_PLUGIN_END_SUCCESS;
+                    writeToIPC(client, response);
+                }
             }
         }
-        //LOG("client sendData()");
-        //if (!sendData(&client, &hdr, &data)) {
-        //    LOG("sendData failed");
-        //    break;
-        //}
         threadSleep(25);
     }
     log_message("client_close()");
