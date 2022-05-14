@@ -1,3 +1,0 @@
-{
-    "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json"
-}
