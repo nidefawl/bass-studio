@@ -304,13 +304,13 @@ public:
     }
 };
 class gui_pluginsloaded_list : public guictr_base {
+    std::vector<gui_pluginsloaded_list_entry*> listEntriesLoadedPlugins;
+    std::vector<gui_pluginsloaded_list_entry*> listEntriesDef;
     gui_list_plugins listCtr;
     gui_list_plugins listDeferredCtr;
     guibutton btnLoadAll;
     String curquery     = "";
     int64_t tmLastUpdate = 0;
-    std::vector<gui_pluginsloaded_list_entry*> listEntriesLoadedPlugins;
-    std::vector<gui_pluginsloaded_list_entry*> listEntriesDef;
 
 public:
     gui_pluginsloaded_list() : guictr_base(), listCtr(listEntriesLoadedPlugins), listDeferredCtr(listEntriesDef) {
