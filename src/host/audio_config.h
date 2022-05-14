@@ -3,6 +3,7 @@
 #include "samplerate.h"
 #include "types.h"
 #include <vector>
+#include <array>
 
 struct AudioBuffer;
 
