@@ -3277,8 +3277,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, uint32_t uId, int32_t glob
     plugin->load(this);
 
     dbgassert(plugin->handle && plugin->handle->aeffect);
-
-    return { 0, plugin};
+    return {0, plugin, plugin->handle, filepath, nameWithoutExt};
 };
 
 void vsthost::scanPlugins() {

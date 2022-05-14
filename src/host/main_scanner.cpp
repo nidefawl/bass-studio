@@ -235,13 +235,15 @@ struct vstscanner_server_options {
     int32_t unresponsiveTimeoutSeconds = timeoutdefault;
 };
 
-static void getPluginData(vstplugin* plugin, response_type_vst24_t* _out) {
+static void getPluginData(vstpluginloadres& res, response_type_vst24_t* _out) {
+    auto plugin = res.plugin;
     AEffect* aeffect     = plugin->handle->aeffect;
     _out->uniqueID       = aeffect->uniqueID;
     _out->version        = aeffect->version;
     _out->vstVersion     = plugin->vstVersion;
     _out->pluginCategory = plugin->pluginCategory;
-    strncpy(_out->szName, StringAsCStr(plugin->sName), plugin->sName.length());
+    strncpy(_out->szName, StringAsCStr(plugin->sName), sizeof(_out->szName));
+    strncpy(_out->szPath, StringAsCStr(res.path), sizeof(_out->szPath));
     if (!plugin->dispatch(effGetVendorString, 0, 0, (void*) _out->szVendorName)) {
         _out->szVendorName[0] = 0;
     }
@@ -253,7 +255,7 @@ static void getPluginData(vstplugin* plugin, response_type_vst24_t* _out) {
     }
     _out->isSynth = plugin->isSynth;
 }
-static int waitTimeout(ipc_server& server, const char* plugName, int minReadBuffSize, int64_t timeStartScan_ms, int64_t timeoutPluginScan_ms) {
+static int waitTimeout(ipc_server& server, ProcessThread* thread, const char* plugName, int minReadBuffSize, int64_t timeStartScan_ms, int64_t timeoutPluginScan_ms) {
     uint32_t notificationStep     = 0;
     while (true) {
         int peakRdBufSizeResult = server.peekReadBufferSize();
@@ -268,7 +270,11 @@ static int waitTimeout(ipc_server& server, const char* plugName, int minReadBuff
                 notificationStep     = timeSince_ms / 1000;
                 log_message("Waiting for Plugin %s to respond... %zds left", plugName, secondsLeft);
             }
-            threadSleep(50);
+            if (!thread->isRunning()) {
+                log_message("Client died");
+                return 2;
+            }
+            threadSleep(300);
             continue;
         }
         break;
@@ -276,13 +282,13 @@ static int waitTimeout(ipc_server& server, const char* plugName, int minReadBuff
     return 0;
 }
 
-static int readClientResponses(const vstscanner_server_options& options, ipc_server& server, const request_type_vst24_t& req, SQLite::Statement& queryInsertPlugin, FileFound& file, int64_t timeDisk, bool forcedisable) {
+static int readClientResponses(const vstscanner_server_options& options, ipc_server& server, ProcessThread* thread, const request_type_vst24_t& req, SQLite::Statement& queryInsertPlugin, FileFound& file, int64_t timeDisk, bool forcedisable) {
     auto timeStartScan_ms     = getTimeMillis();
     int64_t timeoutPluginScan_ms = options.unresponsiveTimeoutSeconds * int64_t(1000);
     int nPluginsScanned           = 0;
     while (!userSentQuitRequest) {
         int32_t responseType    = 0;
-        if (waitTimeout(server, req.szPath, static_cast<int>(sizeof(responseType)), timeStartScan_ms, timeoutPluginScan_ms)) {
+        if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(responseType)), timeStartScan_ms, timeoutPluginScan_ms)) {
             return -4;
         }
         if (E_READ_OK != readFromIPC(server, responseType)) {
@@ -293,7 +299,7 @@ static int readClientResponses(const vstscanner_server_options& options, ipc_ser
         switch (responseType) {
             case CMD_PLUGIN_LOAD_SUCCESS_PLUGIN: {
                 response_type_vst24_plugin_t respLoadSinglePlugin;
-                if (waitTimeout(server, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
                 log_message("READ response_type_vst24_plugin_t");
@@ -340,7 +346,7 @@ static int readClientResponses(const vstscanner_server_options& options, ipc_ser
             case CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_SHELL: {
                 log_message("READ response_type_vst24_shell_plugin_t");
                 response_type_vst24_shell_plugin_t respShellPlugin;
-                if (waitTimeout(server, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
                 if (E_READ_OK != readFromIPC(server, respShellPlugin)) {
@@ -352,7 +358,7 @@ static int readClientResponses(const vstscanner_server_options& options, ipc_ser
             case CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN: {
                 log_message("READ response_type_vst24_t");
                 response_type_vst24_t respShellPluginEntry;
-                if (waitTimeout(server, req.szPath, static_cast<int>(sizeof(respShellPluginEntry)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respShellPluginEntry)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
                 if (E_READ_OK != readFromIPC(server, respShellPluginEntry)) {
@@ -564,7 +570,7 @@ static int runScannerServer(vstscanner_server_options options) {
                     resetConnection = true;
                 }
                 request_type_vst24_t req;
-                strncpy(req.szPath, StringAsCStr(file.path), file.path.length());
+                strncpy(req.szPath, StringAsCStr(file.path), sizeof(req.szPath));
                 if (E_WRITE_OK != writeToIPC(server, req)) {
                     log_message("error writeToIPC request_type_vst24_t");
                     resetConnection = true;
@@ -576,7 +582,7 @@ static int runScannerServer(vstscanner_server_options options) {
                         queryDelete.bind(2, req.szPath);
                         queryDelete.exec();
                     }
-                    int ret = readClientResponses(options, server, req, queryInsertPlugin, file, timeDisk, forcedisable);
+                    int ret = readClientResponses(options, server, thread.get(), req, queryInsertPlugin, file, timeDisk, forcedisable);
 
                     if (ret < 0) {
                         resetConnection = true;
@@ -646,7 +652,7 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
             dbgassert(res.result == 0);
             dbgassert(res.plugin);
             response = CMD_PLUGIN_LOAD_SUCCESS_PLUGIN;
-            getPluginData(res.plugin, &respPlugin);
+            getPluginData(res, &respPlugin);
             vsthostInstance->unloadPlugin(res.plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
         }
     } catch (...) {
@@ -718,7 +724,7 @@ static int runScannerClient() {
                     std::vector<shell_plugin_entry_t> entries;
 
                     response_type_vst24_shell_plugin_t respShellPlugin;
-                    strncpy(respShellPlugin.szName, StringAsCStr(res.name), math::min<size_t>(255, res.name.length() + 1));
+                    strncpy(respShellPlugin.szName, StringAsCStr(res.name), sizeof(respShellPlugin.szName));
                     respShellPlugin.szName[255] = 0;
                     // loop over all shell plugin entries
                     VstIntPtr dispatchRet;
@@ -753,8 +759,8 @@ static int runScannerClient() {
                             response = CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN;
                             writeToIPC(client, response);
                             response_type_vst24_t respShellPluginEntry;
-                            getPluginData(resShellPluginEntry.plugin, &respShellPluginEntry);
-                            strncpy(respShellPluginEntry.szName, StringAsCStr(entry.name), math::min<size_t>(255U, entry.name.length() + 1));
+                            getPluginData(resShellPluginEntry, &respShellPluginEntry);
+                            strncpy(respShellPluginEntry.szName, StringAsCStr(entry.name), sizeof(respShellPluginEntry.szName));
                             writeToIPC(client, respShellPluginEntry);
                             log_message("unload shell entry: %08X", entry.pluginUID);
                             vsthostInstance->unloadPlugin(resShellPluginEntry.plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
@@ -771,7 +777,7 @@ static int runScannerClient() {
                     int response = CMD_PLUGIN_LOAD_SUCCESS_PLUGIN;
                     writeToIPC(client, response);
                     response_type_vst24_plugin_t respPlugin;
-                    getPluginData(res.plugin, &respPlugin);
+                    getPluginData(res, &respPlugin);
                     writeToIPC(client, respPlugin);
                     vsthostInstance->unloadPlugin(res.plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                     response = CMD_PLUGIN_END_SUCCESS;
@@ -868,7 +874,7 @@ int main(int argc, char* argv[]) {
         seqthreads::threadSleep(120);
         VSTScannerImpl::request_type_vst24_t req;
         String fPath = argv[argc - 1];
-        strncpy(req.szPath, StringAsCStr(fPath), fPath.length());
+        strncpy(req.szPath, StringAsCStr(fPath), sizeof(req.szPath));
         VSTScannerImpl::response_type_vst24_plugin_t respPlugin;
         int retCode = VSTScannerImpl::runPluginTest(req, respPlugin);
         if (retCode == CMD_PLUGIN_LOAD_SUCCESS_PLUGIN) {
