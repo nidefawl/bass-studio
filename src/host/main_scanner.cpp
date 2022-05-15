@@ -224,7 +224,6 @@ int writeToIPC(IPC& ipcConnection, T& hdr) {
     return E_WRITE_OK;
 }
 
-
 struct vstscanner_server_options {
     String vstPlugPath;
     bool dryRun             = false;
@@ -242,8 +241,8 @@ static void getPluginData(vstpluginloadres& res, response_type_vst24_t* _out) {
     _out->version        = aeffect->version;
     _out->vstVersion     = plugin->vstVersion;
     _out->pluginCategory = plugin->pluginCategory;
-    strncpy(_out->szName, StringAsCStr(plugin->sName), sizeof(_out->szName));
-    strncpy(_out->szPath, StringAsCStr(res.path), sizeof(_out->szPath));
+    safe_strcpy(_out->szName, StringAsCStr(plugin->sName), plugin->sName.length());
+    safe_strcpy(_out->szPath, StringAsCStr(res.path), res.path.length());
     if (!plugin->dispatch(effGetVendorString, 0, 0, (void*) _out->szVendorName)) {
         _out->szVendorName[0] = 0;
     }
@@ -503,8 +502,7 @@ static int runScannerServer(vstscanner_server_options options) {
                         reason = "File date changed";
                     }
                 } else {
-
-                    needScan = false;
+                    needScan = true;
                 }
                 if (queryPlugin.getColumn(3).getInt()) {
                     needScan = true;
@@ -570,7 +568,7 @@ static int runScannerServer(vstscanner_server_options options) {
                     resetConnection = true;
                 }
                 request_type_vst24_t req;
-                strncpy(req.szPath, StringAsCStr(file.path), sizeof(req.szPath));
+                safe_strcpy(req.szPath, file.path);
                 if (E_WRITE_OK != writeToIPC(server, req)) {
                     log_message("error writeToIPC request_type_vst24_t");
                     resetConnection = true;
@@ -724,7 +722,7 @@ static int runScannerClient() {
                     std::vector<shell_plugin_entry_t> entries;
 
                     response_type_vst24_shell_plugin_t respShellPlugin;
-                    strncpy(respShellPlugin.szName, StringAsCStr(res.name), sizeof(respShellPlugin.szName));
+                    safe_strcpy(respShellPlugin.szName, res.name);
                     respShellPlugin.szName[255] = 0;
                     // loop over all shell plugin entries
                     VstIntPtr dispatchRet;
@@ -760,7 +758,7 @@ static int runScannerClient() {
                             writeToIPC(client, response);
                             response_type_vst24_t respShellPluginEntry;
                             getPluginData(resShellPluginEntry, &respShellPluginEntry);
-                            strncpy(respShellPluginEntry.szName, StringAsCStr(entry.name), sizeof(respShellPluginEntry.szName));
+                            safe_strcpy(respShellPluginEntry.szName, entry.name);
                             writeToIPC(client, respShellPluginEntry);
                             log_message("unload shell entry: %08X", entry.pluginUID);
                             vsthostInstance->unloadPlugin(resShellPluginEntry.plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
@@ -874,7 +872,7 @@ int main(int argc, char* argv[]) {
         seqthreads::threadSleep(120);
         VSTScannerImpl::request_type_vst24_t req;
         String fPath = argv[argc - 1];
-        strncpy(req.szPath, StringAsCStr(fPath), sizeof(req.szPath));
+        safe_strcpy(req.szPath, fPath);
         VSTScannerImpl::response_type_vst24_plugin_t respPlugin;
         int retCode = VSTScannerImpl::runPluginTest(req, respPlugin);
         if (retCode == CMD_PLUGIN_LOAD_SUCCESS_PLUGIN) {
