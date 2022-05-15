@@ -502,7 +502,7 @@ static int runScannerServer(vstscanner_server_options options) {
                         reason = "File date changed";
                     }
                 } else {
-                    needScan = true;
+                    needScan = false;
                 }
                 if (queryPlugin.getColumn(3).getInt()) {
                     needScan = true;
