@@ -20,6 +20,7 @@
 #include "str_util.h"
 #include "gui/views/controls.h"
 #include "tls.h"
+#include "types.h"
 #include <array>
 #include <utility>
 #include <portaudio.h>
@@ -290,26 +291,26 @@ public:
                 }
 
                 channelnum_t endChannel = it->offset;
-                channelnum_t free       = endChannel - endPrevChannel;
-                log_printf("found %u unassigned channels %u to %u\n", free, endPrevChannel, endChannel);
+                int freeChannels = endChannel - endPrevChannel;
+                log_printf("found %u unassigned channels %u to %u\n", freeChannels, endPrevChannel, endChannel);
 
                 // create tracks for unassigned channels
-                while (free > 0) {
-                    const channel_pairing type2 = getTrackTypeFromNumChannels(free);
+                while (freeChannels > 0) {
+                    const channel_pairing type2 = getTrackTypeFromNumChannels(static_cast<channelnum_t>(freeChannels));
                     io_cfg_channel channel2;
                     channel2.idx       = -1;
                     channel2.type      = type2;
                     channel2.offset    = endPrevChannel;
                     auto nChannels2 = getNumChannelsFromTrackType(channel2.type);
                     endPrevChannel += nChannels2;
-                    free -= nChannels2;
+                    freeChannels -= nChannels2;
                     newList.push_back(channel2);
                     log_printf("add track %s channels %u to %u\n", StringAsCStr(channel2.name), channel2.offset,
                                channel2.offset + nChannels2);
                 }
 
                 // make sure we did not assign too many channels
-                dbgassert(free >= 0);
+                dbgassert(freeChannels >= 0);
                 std::sort(newList.begin(), newList.end(),
                           [](const io_cfg_channel& entryA, const io_cfg_channel& entryB) {
                               return entryA.offset < entryB.offset;
