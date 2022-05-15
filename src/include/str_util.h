@@ -112,11 +112,13 @@ const char* removeLeadingPathSegments(const char* input, int maxPathSegs = 1);
 
 template<class T, size_t N, class S>
 void safe_strcpy(T (&dest)[N], S src, size_t len) {
+    static_assert(N > 0, "safe_strcpy: buffer cannot be size 0");
     memcpy(dest, src, len > N - 1 ? N - 1 : len);
     dest[len > N - 1 ? N - 1 : len] = 0;
 }
 template<class T, size_t N>
 void safe_strcpy(T (&dest)[N], const String& str) {
+    static_assert(N > 0, "safe_strcpy: buffer cannot be size 0");
     auto len = str.length();
     memcpy(dest, StringAsCStr(str), len > N - 1 ? N - 1 : len);
     dest[len > N - 1 ? N - 1 : len] = 0;

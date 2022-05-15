@@ -55,11 +55,26 @@ namespace {
         TEST_ASSERT_EQUAL(str, "#version 1\n#define A 123.0\n#define B 123.0\n###\n");
         TEST_END();
     }
+    void test_safe_strcpy() {
+        TEST_BEGIN("test_safe_strcpy");
+        char buf[10];
+        safe_strcpy(buf, "1234567890123456", strlen("1234567890123456"));
+        TEST_ASSERT_EQUAL(buf[9], 0);
+        TEST_ASSERT_THROW(strcmp(buf, "123456789") == 0);
+        safe_strcpy(buf, "12345", strlen("12345"));
+        TEST_ASSERT_EQUAL(buf[5], 0);
+        TEST_ASSERT_THROW(strcmp(buf, "12345") == 0);
+        safe_strcpy(buf, "12345", strlen("12345"));
+        TEST_ASSERT_EQUAL(buf[5], 0);
+        TEST_ASSERT_THROW(strcmp(buf, "12345") == 0);
+        TEST_END();
+    }
 }// namespace
 
 int main() {
     test_stringify();
     test_string_format();
     test_append();
+    test_safe_strcpy();
     return 0;
 }
