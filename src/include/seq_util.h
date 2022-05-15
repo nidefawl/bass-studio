@@ -107,7 +107,7 @@ inline int32_t checkedCastInt32(size_t val) {
 
 
 inline int32_t checkedCastInt32(uint32_t val) {
-    dbgassert(static_cast<int64_t>(val) >= 0 && static_cast<int64_t>(val) < std::numeric_limits<int64_t>::max());
+    dbgassert(static_cast<int64_t>(val) < std::numeric_limits<int64_t>::max());
     return static_cast<int32_t>(val);
 }
 
