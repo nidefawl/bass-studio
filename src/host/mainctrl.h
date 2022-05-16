@@ -557,6 +557,7 @@ class MainCtrl : public DawCtrl {
     DawViewContainersMain* view = nullptr;
     std::array<dawview_layout_t, 10> layouts;
     String loadProject;
+    int loadFlags = 0;
     Logger* statusbarLogger = nullptr;
 public:
     static MainCtrl* get();

@@ -1100,7 +1100,7 @@ void MainCtrl::startApp() {
 
     //TODO: move this out of here
     if (!loadProject.empty()) {
-        daw.loadFile(loadProject, FLAG_DEFER_LOAD);
+        daw.loadFile(loadProject, loadFlags);
     } else {
         daw.setEmptyProject();
     }
@@ -1294,6 +1294,12 @@ void MainCtrl::initApp(const std::vector<String>& args) {
     for (size_t i = 1; i < args.size(); i++) {
         if (args[i] == "--load" && i + 1 < args.size()) {
             loadProject = args[i + 1];
+            i++;
+            continue;
+        }
+        if (args[i] == "--defer" && i + 1 < args.size()) {
+            loadProject = args[i + 1];
+            loadFlags = FLAG_DEFER_LOAD;
             i++;
             continue;
         }
