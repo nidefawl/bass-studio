@@ -1749,8 +1749,8 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
                 effectbase* pluginLoaded;
                 tls.host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
             }
-            tls.audioCache->load(file->sampleFileIndex);
         }
+        tls.audioCache->load(file->sampleFileIndex);
     } else {
         /**
          * plugin loading was not deferred.
