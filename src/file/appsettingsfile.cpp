@@ -131,6 +131,10 @@ void serialize(Archive& ar, appwindowsettings& settings) {
 #endif
 }
 template <class Archive>
+void serialize(Archive& ar, app_path_remapping& settings) {
+    ar(make_nvp("pathRemapping", settings.pathRemapping));
+}
+template <class Archive>
 void serialize(Archive& ar, appsettings& settings) {
     ar(
         make_nvp("window.main", settings.wndMain), 
@@ -141,6 +145,7 @@ void serialize(Archive& ar, appsettings& settings) {
         make_nvp("vmmode", settings.vmmode),
         make_nvp("recentfiles", settings.recentfiles)
     );
+    make_optional_nvp(ar, "pathmapping", settings.pathmapping);
 }
 
 void loadSettings(appsettings& settings) {

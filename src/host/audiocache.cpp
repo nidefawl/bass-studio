@@ -1,11 +1,13 @@
 #include "audiocache.h"
 #include <unordered_map>
 #include <atomic>
+#include "appsettings.h"
 #include "assert_dbg.h"
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "audiosample.h"
 #include <dr_libs/dr_wav.h>
+#include "tls.h"
 #include "wave/downsample.h"
 #include "wave/waveform_render_impl.h"
 #include "platform.h"
@@ -52,12 +54,33 @@ void audiocache::setSamplerate(samplerate_t _samplerate) {
     }
 }
 
-audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
+audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
+    String path = pathIn;
+    auto mappings = daw_tls::getSettings().pathmapping;
+    bool replacedPath = false;
     drwav wav;
+    // split path using platform specific path separator
+    // then check if any of the path parents are mapped in the hashmap and if so,
+    // replace the path with the mapped path
+    for (auto& mapping : mappings.pathRemapping) {
+        if (path.find(mapping.first) == 0) {
+            String newPath = path;
+            newPath.replace(0, mapping.first.size(), mapping.second);
+            App::Platform::sanitizePathToFile(newPath);
+            if (FileExists(newPath)) {
+                path = newPath;
+                replacedPath = true;
+                break;
+            }
+        }
+    }
+    if (!replacedPath) {
+        App::Platform::sanitizePathToFile(path);
+    }
 
-    //TODO: satinize path so comparison matches, or ask os if path equals a file we already loaded before
+    //TODO: sanitize path so comparison matches, or ask os if path equals a file we already loaded before
     for (auto& w : list) {
-        if (w.get()->path == path) {
+        if (w->path == path) {
             log_printf("skipping file %s (requested id %d), already loaded (id %d)\n", StringAsCStr(path), id, w.get()->id);
             return w.get();
         }
@@ -188,7 +211,8 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
         list.push_back(std::move(cachedaudio));
         dbgassert(mapId[_id] == audio);
         return audio;
-    }
+    } 
+    log_printf("Could not load audio file %s\n", path.c_str());
     return nullptr;
 }
 

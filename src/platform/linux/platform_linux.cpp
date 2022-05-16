@@ -148,6 +148,7 @@ void shellExpandPath(String& pathString) {
 }
 
 void sanitizePathToFile(String& pathString) {
+    replaceString(pathString, "\\", FILE_PATHSEP_STR);
 }
 
 } // namespace App::Platform

@@ -107,6 +107,10 @@ struct app_plugin_configuration {
     app_vst2_config configVst2;
 };
 
+struct app_path_remapping {
+    std::map<String, String> pathRemapping;
+};
+
 struct appsettings {
     appsettings() noexcept = default; // need noexcept for static storage
     appwindowsettings wndMain;
@@ -116,6 +120,7 @@ struct appsettings {
     app_iosettings iosettings;
     recentfilelist recentfiles;
     app_plugin_configuration pluginsettings;
+    app_path_remapping pathmapping;
 };
 
 void saveSettings(appsettings& _settings);
