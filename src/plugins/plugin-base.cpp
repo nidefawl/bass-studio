@@ -91,13 +91,13 @@ bool BasePluginVST2::getInputProperties(VstInt32 index, VstPinProperties* proper
         properties->flags = kVstPinIsActive | kVstPinIsStereo;
     }
     if (index == 0) {
-        strcpy(properties->label, "Stereo Input");
-        strcpy(properties->shortLabel, "Input");
+        safe_strcpy(properties->label, "Stereo Input");
+        safe_strcpy(properties->shortLabel, "Input");
         return true;
     }
     if (index == 1) {
-        strcpy(properties->label, "Stereo Input R");
-        strcpy(properties->shortLabel, "In R");
+        safe_strcpy(properties->label, "Stereo Input R");
+        safe_strcpy(properties->shortLabel, "In R");
         return true;
     }
     return false;
@@ -108,13 +108,13 @@ bool BasePluginVST2::getOutputProperties(VstInt32 index, VstPinProperties* prope
         properties->flags = kVstPinIsActive | kVstPinIsStereo;
     }
     if (index == 0) {
-        strcpy(properties->label, "Stereo Output");
-        strcpy(properties->shortLabel, "Output");
+        safe_strcpy(properties->label, "Stereo Output");
+        safe_strcpy(properties->shortLabel, "Output");
         return true;
     }
     if (index == 1) {
-        strcpy(properties->label, "Stereo Output R");
-        strcpy(properties->shortLabel, "Out R");
+        safe_strcpy(properties->label, "Stereo Output R");
+        safe_strcpy(properties->shortLabel, "Out R");
         return true;
     }
     return false;

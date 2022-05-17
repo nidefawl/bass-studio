@@ -61,8 +61,6 @@ namespace PluginBitcrush {
     void PluginVST2_Bitcrush::getProgramName(char* name) {
         if (name)
             name[0] = 0;
-        //if (name != NULL && curProgram >= 0)
-        //    vst_strncpy(name, programs[curProgram].name, kVstMaxProgNameLen);
     }
 
     void PluginVST2_Bitcrush::getParameterLabel(VstInt32 index, char* label) {

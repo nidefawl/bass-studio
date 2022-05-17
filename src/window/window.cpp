@@ -666,11 +666,11 @@ public:
           ctrl(_ctrl.get()),
           sharedCtrl(_ctrl) {
         String windowName = typeName(*_ctrl);
-        strncpy(name, StringAsCStr(windowName), sizeof(name));
+        safe_strcpy(name, windowName);
         if (_parent) {
             windowName = String(_parent->nameDbg) + ".child[" + windowName + "]";
         }
-        strncpy(nameDbg, StringAsCStr(windowName), sizeof(nameDbg));
+        safe_strcpy(nameDbg, windowName);
         bEnableWindowProfiling = true;
         if (bEnableWindowProfiling) {
             window_base* ptr = this;
@@ -1096,7 +1096,7 @@ public:
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
         glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
         //glfwWindowHint(GLFW_FLOATING, 1);
-        strncpy(this->nameDbg, title, sizeof(this->nameDbg));
+        safe_strcpy(this->nameDbg, title , strlen(title));
         appwindow::createBaseWindow(title, w, h, share);
 #if 0
         LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
@@ -1536,7 +1536,7 @@ static void glfw_cb_framebuffersize(GLFWwindow* w, int width, int height) {
 
 void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* share, void* parentWindowHandle) {
     if (title != this->name) {
-        strncpy(this->name, title, sizeof(this->name));
+        safe_strcpy(this->name, title , strlen(title));
     }
     if (glfw)
         throw appexception("window not null");

@@ -520,7 +520,7 @@ public:
             default:
                 break;
         }
-        return StringFormat("Stage id %d", node->stageId);
+        return StringFormat("Stage id %d", static_cast<int32_t>(node->stageId));
     }
 
     void render(NVGcontext* vg) override {
@@ -819,7 +819,7 @@ public:
             allSources.insert(allSources.end(), procNode->pushs.cbegin(), procNode->pushs.cend()); // copy
             allSources.insert(allSources.end(), procNode->pulls.cbegin(), procNode->pulls.cend()); // copy
             if (graphNode->portsInput.empty() && !allSources.empty()) {
-                log_lf(Log::L_WARN, "Node has pushs/pulls but no input ports %d\n", procNode->stageId);
+                log_lf(Log::L_WARN, "Node has pushs/pulls but no input ports %d\n", static_cast<int32_t>(procNode->stageId));
                 continue;
             }
             for (const DAW::track_source_t& channelSrc : allSources) {
@@ -837,7 +837,7 @@ public:
                 if (portInput && portOutput) {
                     edgeList.push_back(NodeGraph::edge_t{ portInput, portOutput });
                 } else {
-                    log_lf(Log::L_WARN, "Did not find UI graph entry for stage %d\n", procNode->stageId);
+                    log_lf(Log::L_WARN, "Did not find UI graph entry for stage %d\n", static_cast<int32_t>(procNode->stageId));
                 }
             }
         }

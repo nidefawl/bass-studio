@@ -1143,7 +1143,7 @@ void MidiFile::setFilename(const char* aname) {
    } else {
       len = (int)strlen(aname);
       readFileName.resize(len+1);
-      strncpy(readFileName.data(), aname, len);
+      strncpy(readFileName.data(), aname, len + 1);
    }
 }
 

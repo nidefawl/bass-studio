@@ -426,7 +426,7 @@ void AppendSaveFileQueryDictEntryFilters(DBusMessageIter& sub_iter,
             if (*p) extn = p;
         }
         bool extn_matched = false;
-        size_t selected_filter_index;
+        size_t selected_filter_index = 0;
 
         // filters
         dbus_message_iter_open_container(&sub_iter, DBUS_TYPE_DICT_ENTRY, nullptr, &sub_sub_iter);

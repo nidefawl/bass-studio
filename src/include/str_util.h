@@ -123,3 +123,11 @@ void safe_strcpy(T (&dest)[N], const String& str) {
     memcpy(dest, StringAsCStr(str), len > N - 1 ? N - 1 : len);
     dest[len > N - 1 ? N - 1 : len] = 0;
 }
+
+template<class T, size_t N>
+void safe_strcpy(T (&dest)[N], const char* src) {
+    static_assert(N > 0, "safe_strcpy: buffer cannot be size 0");
+    const auto len = strnlen(src, N-1);
+    memcpy(dest, src, len > N - 1 ? N - 1 : len);
+    dest[len > N - 1 ? N - 1 : len] = 0;
+}

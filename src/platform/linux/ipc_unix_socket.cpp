@@ -34,7 +34,7 @@ public:
 
         struct sockaddr_un local{};
         local.sun_family = AF_UNIX;
-        strncpy(local.sun_path, path, sizeof(local.sun_path));
+        safe_strcpy(local.sun_path, path);
         local.sun_path[sizeof(local.sun_path) - 1] = '\0';
 
         socklen_t len = (offsetof(struct sockaddr_un, sun_path) + strlen(local.sun_path));
@@ -147,7 +147,7 @@ public:
 
         struct sockaddr_un remote{};
         remote.sun_family = AF_UNIX;
-        strncpy(remote.sun_path, path, sizeof(remote.sun_path));
+        safe_strcpy(remote.sun_path, path);
         remote.sun_path[sizeof(remote.sun_path) - 1] = '\0';
 
         uint32_t len = (offsetof(struct sockaddr_un, sun_path) + strlen(remote.sun_path));

@@ -199,8 +199,6 @@ namespace PluginHostInfo {
     void PluginVST2_HostInfo::getProgramName(char* name) {
         if (name)
             name[0] = 0;
-        //if (name != NULL && curProgram >= 0)
-        //    vst_strncpy(name, programs[curProgram].name, kVstMaxProgNameLen);
     }
 
     void PluginVST2_HostInfo::getParameterLabel(VstInt32 index, char* label) {
@@ -282,13 +280,13 @@ namespace PluginHostInfo {
             return false;
         memset(p, 0, sizeof(VstParameterProperties));
         if (index == kLogVerbosity) {
-            vst_strncpy(p->label, "Logging Verbosity", kVstMaxLabelLen);
-            vst_strncpy(p->shortLabel, "Log Verbosity", kVstMaxShortLabelLen);
+            safe_strcpy(p->label, "Logging Verbosity");
+            safe_strcpy(p->shortLabel, "Log Verbosity");
             return true;
         }
         if (index == kLogBlocksProcessed) {
-            vst_strncpy(p->label, "Log Blocks", kVstMaxLabelLen);
-            vst_strncpy(p->shortLabel, "Log Blocks", kVstMaxShortLabelLen);
+            safe_strcpy(p->label, "Log Blocks");
+            safe_strcpy(p->shortLabel, "Log Blocks");
             return true;
         }
         return false;

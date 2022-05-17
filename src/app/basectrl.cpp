@@ -7,28 +7,26 @@
 #include <vector>
 #include <memory>
 #include <GLFW/glfw3.h>
+#include "assert_dbg.h"
 #include "basectrl.h"
-#include "logging.h"
-#include "math/seq_math.h"
-#include "str_util.h"
-#include "theme.h"
-#include "../gui/gui.h"
+#include "commands.h"
+#include "event.h"
+#include "gui/container/container_dnd_layout.h"
+#include "gui/container/container_layout_types.h"
 #include "gui/container/container.h"
 #include "gui/contextmenu/contextmenu_base.h"
-#include "../gui/container/container_dnd_layout.h"
-#include "../gui/container/container_layout_types.h"
-
-#include "window.h"
-#include "platform.h"
-
-#include "keyboard.h"
-#include "mouse.h"
-#include "event.h"
-#include "commands.h"
 #include "gui/dialog/dialog.h"
-#include "assert_dbg.h"
-
+#include "gui/gui.h"
+#include "keyboard.h"
+#include "logging.h"
+#include "math/seq_math.h"
+#include "mouse.h"
+#include "platform.h"
 #include "project.h"
+#include "str_util.h"
+#include "theme.h"
+#include "types.h"
+#include "window.h"
 
 String getModKeyName(int modKey) {
     switch (modKey) {
@@ -773,7 +771,7 @@ void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i
                 newContainer->placeContainer(layoutCtrEntry, area);
             }
         }
-        log_lf(Log::L_DEBUG, "cannot directly insert into %s. need to change layout from %d to %d first\n", szLabel2, ctrLayout, updatedCtrLayout);
+        log_lf(Log::L_DEBUG, "cannot directly insert into %s. need to change layout from %d to %d first\n", szLabel2, static_cast<int32_t>(ctrLayout), static_cast<int32_t>(updatedCtrLayout));
     } else {
         hasRemovedContainer = true;
         hasPlacedContainer  = area->getLayoutCtr()->placeContainer(ctrContent, area);

@@ -31,7 +31,7 @@ namespace DAW {
         } else if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
             auto* srcstage = host->getAudioStage(inputChannel.stage.stageRef);
             if (!srcstage) {
-                log_lf(Log::L_WARN, "Input audiostage with id %d not found\n", inputChannel.stage.stageRef.stageId);
+                log_lf(Log::L_WARN, "Input audiostage with id %d not found\n", static_cast<int32_t>(inputChannel.stage.stageRef.stageId));
                 inputChannel = ChannelNone();
                 numRemoved++;
             } else {

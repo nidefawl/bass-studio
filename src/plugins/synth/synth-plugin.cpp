@@ -1337,7 +1337,6 @@ namespace PluginSynth {
 
     bool PluginVST2_Synth::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
         if (index >= 0 && index < kNumPrograms) {
-            //vst_strncpy(text, "Default", kVstMaxProgNameLen);
             String progName = StringFormat("Program %d", index);
             vst_strncpy(text, progName.c_str(), kVstMaxProgNameLen);
             return true;

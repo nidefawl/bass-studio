@@ -414,7 +414,7 @@ namespace DAW {
         if (gEnableLog) {
             for (track_node_ptr& ptr : trackGraph->nodes) {
                 for (audiostageid_i32 src : ptr->dependencies) {
-                    log_lf(Log::L_DEBUG, "%d => %d\n", src, ptr->stageId);
+                    log_lf(Log::L_DEBUG, "%d => %d\n", static_cast<int32_t>(src), static_cast<int32_t>(ptr->stageId));
                 }
             }
         }
