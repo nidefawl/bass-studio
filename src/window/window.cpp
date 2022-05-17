@@ -1460,7 +1460,7 @@ static void glfw_cb_mousescroll(GLFWwindow* w, double xoffset, double yoffset) {
     }
 }
 
-static void glfw_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int mods) {
+void glfw_main_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int mods) {
     try {
         appwindow* wu        = getUserPointerFromGlfw(w);
         if (wu && wu->isValid()) {
@@ -1562,7 +1562,7 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
     glfwSetCursorPosCallback(glfw, glfw_cb_mousepos);
     glfwSetMouseButtonCallback(glfw, glfw_cb_mousebutton);
     glfwSetScrollCallback(glfw, glfw_cb_mousescroll);
-    glfwSetKeyCallback(glfw, glfw_cb_keyinput);
+    glfwSetKeyCallback(glfw, glfw_main_cb_keyinput);
     //glfwSetCharCallback(glfw, glfw_cb_charinput);
     glfwSetCharModsCallback(glfw, glfw_cb_charinput);
     glfwSetCursorEnterCallback(glfw, glfw_cb_cursorenter);

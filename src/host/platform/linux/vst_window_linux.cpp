@@ -1,3 +1,4 @@
+#include "logging.h"
 #if defined(__linux__) || defined(__APPLE__)
 #include "../../vst_window.h"
 #include "../../vst_host.h"
@@ -60,10 +61,19 @@ std::vector<vst_window*>& vst_window::getWindows ()
 	return vst_window_list;
 }
 
+
 static void glfw_cb_windowclose(GLFWwindow* w) {
 	auto* userpointer = static_cast<vst_window*>(glfwGetWindowUserPointer(w));
 	if (userpointer) {
 		userpointer->close();
+	}
+}
+GLFWwindow* getTopLevelGlfwWindow();
+void glfw_main_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int mods);
+static void glfw_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int mods) {
+	GLFWwindow* mainWindow = getTopLevelGlfwWindow();
+	if (mainWindow) {
+		glfw_main_cb_keyinput(mainWindow, key, scancode, action, mods);	
 	}
 }
 
@@ -82,6 +92,7 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
 #endif
 	glfw = glfwCreateWindow(size.x, size.y, StringAsCStr(name), NULL, NULL);
     glfwSetWindowCloseCallback(glfw, glfw_cb_windowclose);
+    glfwSetKeyCallback(glfw, glfw_cb_keyinput);
 	glfwSetWindowUserPointer(glfw, this);
 	#ifdef __linux__
 	WINDOW_HANDLE x11Window = glfwGetX11Window(glfw);
