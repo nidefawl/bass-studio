@@ -50,7 +50,7 @@ MidiMessage::MidiMessage(int command, int p1, int p2) {
 
 
 MidiMessage::MidiMessage(const MidiMessage& message)
-   : std::vector<uint8_t>(message) 
+   : std::vector<uint8_t>() 
 {
 
    (*this) = message;
@@ -82,7 +82,7 @@ MidiMessage& MidiMessage::operator=(const MidiMessage& message) {
    if (this == &message) {
       return *this;
    }
-   (*this) = message;
+   setMessage(message);
    return *this;
 }
 
