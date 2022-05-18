@@ -322,6 +322,8 @@ public:
     virtual bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
         return false;
     }
+    virtual void clipDropCancel() {
+    }
     virtual void pluginDragMove(guiplugin* g, ivec2 mousepos) {
     }
     virtual void pluginDragRelease(guiplugin* g, ivec2 mousepos) {

@@ -13,6 +13,7 @@
 #include "math/seq_math.h"
 #include "error.h"
 #include "basectrl.h"
+#include "saferef.h"
 #include "util/profiling.h"
 #include "window.h"
 #include "platform.h"
@@ -99,10 +100,11 @@ void resetShaderTimeOffset(void);
 }
 
 void dragdrop_midifile::reset() {
-    if (isLoaded) {
-
-        log_printf("meeeh, reset!\n");
+    auto dragTarget = safeRefGet(this->target);
+    if (dragTarget) {
+        dragTarget->clipDropCancel();
     }
+    target = {};
     isValidTarget = false;
     isLoaded      = false;
     clipboard.reset();
@@ -2138,6 +2140,9 @@ public:
     }
 };
 
+void DawCtrl::filesDropCancel() {
+    daw.dragdropclip.reset();
+}
 bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, int kbmods) {
     clipreset rst(daw.dragdropclip);
     if (guiDragged || guiCaptured) {

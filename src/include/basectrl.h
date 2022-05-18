@@ -357,6 +357,7 @@ public:
 
     virtual void focusReceived() = 0;
     virtual void focusLost()     = 0;
+    virtual void filesDropCancel() { };
     virtual bool filesDropMove(ivec2 pos, int kbmods) { return false; };
     virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
     virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };

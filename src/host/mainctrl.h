@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 #include <set>
+#include "saferef.h"
 #include "types.h"
 #include <memory>
 
@@ -81,6 +82,7 @@ struct dragdrop_midifile {
     std::shared_ptr<clip_clipboard> clipboard;
     bool isLoaded      = false;
     bool isValidTarget = false;
+    SafeRef<guibase> target;
     void reset();
 };
 
@@ -489,6 +491,7 @@ public:
     void resetMouseContext() override;
     bool filesDropMove(ivec2 pos, int kbmods) override;
     bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override;
+    void filesDropCancel() override;
     bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override;
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
     void menuCommand(menucmd_t command) override;

@@ -108,7 +108,7 @@ public:
     bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) override;
     bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) override;
     bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) override;
-
+    void clipDropCancel() override;
 
     void handleRightClick(MouseEvent& evt) override;
 

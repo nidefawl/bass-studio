@@ -126,6 +126,13 @@ HRESULT __stdcall DropTargetImpl::DragOver(DWORD grfKeyState, POINTL pt,
 }
 
 HRESULT __stdcall DropTargetImpl::DragLeave() {
+    try {
+        if (m_validDropType) {
+            this->m_pDropTargetListener->filesDropCancel();
+        }
+    } catch (std::exception& e) {
+        handleStdException(e);
+    }
     return S_OK;
 }
 

@@ -548,6 +548,9 @@ public:
         return true;
     }
 
+    void filesDropCancel() override {
+    }
+
     bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override {
         return true;
     }
@@ -889,6 +892,10 @@ public:
 
     bool filesDropMove(ivec2 pos, int kbmods) override {
         return ctrl->filesDropMove(pos, kbmods);
+    }
+
+    void filesDropCancel() override {
+        ctrl->filesDropCancel();
     }
 
     bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override {
@@ -1286,6 +1293,9 @@ void appwindow_main::destroy() {
         this->dropTarget = nullptr;
     }
 #endif
+#ifdef __linux__
+    glfwSetDropCallback(glfw, nullptr);
+#endif
 #if WINDOW_RESTORE_POS
     if (!parent) {
         auto& settings = daw_tls::getSettings();
@@ -1302,38 +1312,6 @@ void appwindow_main::destroy() {
         this->ctrl->destroyControl();
     }
     appwindow::destroyGL();
-}
-
-void appwindow_main::initControl() {
-    if (!ctrl->initAppWindow(this, this->nanovgCtxt)) {
-        throw appexception("Couldn't start application");
-    }
-#if BUILD_VSTHOST
-#ifdef _WIN32
-    this->dropTarget = RegisterDropWindow(hwnd, this);
-#endif
-#if WINDOW_RESTORE_POS
-#ifdef __linux__
-    this->showWindow();
-#endif
-    if (!parent) {
-        auto& settings = daw_tls::getSettings();
-        if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
-            if (!restoreWindowPos(glfw, settings.wndCompanion.size.get())) {
-                this->maximize();
-            }
-        } else {
-
-            if (!restoreWindowPos(glfw, settings.wndMain.size.get())) {
-                this->maximize();
-            }
-        }
-    }
-#endif
-#endif
-    int w, h;
-    glfwGetWindowSize(glfw, &w, &h);
-    this->onWindowSizeChanged(w, h);
 }
 
 void appwindow_main::createMainWindow(int w, int h, int flags) {
@@ -1532,6 +1510,65 @@ static void glfw_cb_framebuffersize(GLFWwindow* w, int width, int height) {
     } catch (std::exception& e) {
         handleStdException(e);
     }
+}
+
+static void glfw_cb_dragdrop(GLFWwindow* w, int path_count, const char* paths[], int event) {
+    try {
+        appwindow* wu = getUserPointerFromGlfw(w);
+        if (wu && wu->isValid()) {
+            if (event == GLFW_DRAG_ENTER && paths && path_count > 0) {
+                std::vector<String> filePaths(&paths[0], &paths[path_count]);
+                wu->filesDropBegin(filePaths, wu->getMousePos(1.0f), 0);
+            }
+            if (event == GLFW_DRAG_MOVE) {
+                wu->filesDropMove(wu->getMousePos(1.0f), 0);
+            }
+            if (event == GLFW_DRAG_DROP && paths && path_count > 0) {
+                std::vector<String> filePaths(&paths[0], &paths[path_count]);
+                wu->filesDropFinal(filePaths, wu->getMousePos(1.0f), 0);
+            }
+            if (event == GLFW_DRAG_CANCEL) {
+                wu->filesDropCancel();
+            }
+        }
+    } catch (std::exception& e) {
+        handleStdException(e);
+    }
+}
+
+void appwindow_main::initControl() {
+    if (!ctrl->initAppWindow(this, this->nanovgCtxt)) {
+        throw appexception("Couldn't start application");
+    }
+#if BUILD_VSTHOST
+#ifdef _WIN32
+    this->dropTarget = RegisterDropWindow(hwnd, this);
+#endif
+#ifdef __linux__
+    glfwSetDropCallback(glfw, glfw_cb_dragdrop);
+#endif
+#if WINDOW_RESTORE_POS
+#ifdef __linux__
+    this->showWindow();
+#endif
+    if (!parent) {
+        auto& settings = daw_tls::getSettings();
+        if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
+            if (!restoreWindowPos(glfw, settings.wndCompanion.size.get())) {
+                this->maximize();
+            }
+        } else {
+
+            if (!restoreWindowPos(glfw, settings.wndMain.size.get())) {
+                this->maximize();
+            }
+        }
+    }
+#endif
+#endif
+    int w, h;
+    glfwGetWindowSize(glfw, &w, &h);
+    this->onWindowSizeChanged(w, h);
 }
 
 void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* share, void* parentWindowHandle) {

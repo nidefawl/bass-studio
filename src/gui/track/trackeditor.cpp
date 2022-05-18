@@ -649,9 +649,16 @@ bool guitrack_editor::clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, int
         action.clipboard   = clip.clipboard;
         action.cursorBegin = dragCursor;
         clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
+        clip.target = makeSafeRef();
         return true;
     }
     return false;
+}
+void guitrack_editor::clipDropCancel() {
+    if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
+        action.clipboard   = nullptr;
+        action.dragtype    = DRAG_NONE;
+    }
 }
 bool guitrack_editor::clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
     if (!action.dragtype) {
@@ -661,6 +668,7 @@ bool guitrack_editor::clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, int 
     if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
         dragClipboardMove(mousepos, kbmods);
         clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
+        clip.target = makeSafeRef();
         return true;
     }
     return false;
@@ -679,6 +687,7 @@ bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, int
         action.clipboard   = nullptr;
         action.dragtype    = DRAG_NONE;
         clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
+        clip.target = makeSafeRef();
         return true;
     }
     return false;
