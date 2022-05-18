@@ -2,6 +2,9 @@
 #include "types.h"
 #include "tls.h"
 #include "str_util.h"
+#ifdef __linux__
+bool set_thread_priority_realtime() noexcept;
+#endif
 
 namespace seqthreads {
     int32_t getCurrentThreadId() noexcept;

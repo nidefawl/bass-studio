@@ -106,6 +106,9 @@ public:
             HANDLE h = reinterpret_cast<HANDLE*>(GetCurrentThread());
             SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
 #endif
+#ifdef __linux__
+            set_thread_priority_realtime();
+#endif
             this->run();
         });
     }

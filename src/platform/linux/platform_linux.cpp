@@ -8,8 +8,19 @@
 #ifdef __linux__
 #include <unistd.h>
 #include <pwd.h>
+#include <sched.h>
 #endif
 #include <wordexp.h>
+
+#ifdef __linux__
+
+bool set_thread_priority_realtime() noexcept {
+    sched_param params{};
+    params.sched_priority = 5;
+    return sched_setscheduler(0, SCHED_FIFO, &params) == 0;
+}
+
+#endif
 
 void timespec_diff(struct timespec* start, struct timespec* stop, struct timespec* result) {
     if ((stop->tv_nsec - start->tv_nsec) < 0) {
