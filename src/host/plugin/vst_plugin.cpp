@@ -139,7 +139,6 @@ bool vstplugin::onShow(vst_window* _window) {
     if (this->window == _window) {
         bEditOpen = true;
         this->dispatch(effEditOpen, 0, 0, (void*) _window->getHWND());
-        updateWindowSize();
         this->updateWindow();
     }
     return true;
