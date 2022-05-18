@@ -11,6 +11,7 @@
 #include "host/plugindatabase.h"
 #include "host/vst_host.h"
 #include "modules.h"
+#include "gui/tooltip/tooltip.h"
 
 class effectbase;
 class gui_pluginlist_entry : public gui_list_entry {
@@ -21,8 +22,8 @@ public:
     virtual bool isSynth()             = 0;
 };
 class gui_vstpluginlist_entry : public gui_pluginlist_entry {
-public:
     const pluginentry_t entry;
+public:
     gui_vstpluginlist_entry(const pluginentry_t _entry) : gui_pluginlist_entry(), entry(_entry) {
         icon = _entry.isSynth ? ICON_SYNTH : ICON_EFFECT;
     }
@@ -39,6 +40,11 @@ public:
     bool isSynth() override {
         return entry.isSynth;
     }
+    const pluginentry_t& getEntry() const {
+        return entry;
+    }
+
+    guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };
 class guictr_pluginlibrary : public guictr_base {
     const int32_t heightTextField = HEIGHT_DEFAULT_INPUT;
