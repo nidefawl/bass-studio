@@ -350,7 +350,7 @@ public:
         }
         return lvl;
     }
-    void fixClipLengths();
+    void updateAudioClipLengths();
 };
 struct trackcontainer_snapshot_t;
 

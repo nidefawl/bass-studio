@@ -1707,7 +1707,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
     /** create all audio instances **/
     for (track_t* t : project.trackList) {
-        t->fixClipLengths();
+        t->updateAudioClipLengths();
         tls.host->createAudio(t);
     }
 
@@ -2546,6 +2546,9 @@ void DawInstance::preTrackDelete(track_t* track) {
 void DawInstance::setTempo(int32_t _tempo100) {
     playThread.call([this, _tempo100]() {
         projectGlobals.tempo100 = CLAMP_I(_tempo100, 100, 99900);
+        for (track_t* t : project.trackList) {
+            t->updateAudioClipLengths();
+        }
     }, true);
 }
 
