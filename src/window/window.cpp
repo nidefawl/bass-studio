@@ -208,6 +208,7 @@ protected:
 
     std::vector<appwindow*> children;
 
+    int32_t windowCreationFlags      = 0;
     bool isSharedContextSlave = false;
     bool noRawInput           = false;
     bool bCanResize           = false;
@@ -503,7 +504,7 @@ public:
         return glfwGetInputMode(glfw, GLFW_CURSOR) != GLFW_CURSOR_NORMAL;
     }
 
-    void createBaseWindow(const char* title, int w, int h, GLFWwindow* share = nullptr, void* parentWindowHandle = nullptr);
+    void createBaseWindow(int flags, const char* title, int w, int h, GLFWwindow* share = nullptr, void* parentWindowHandle = nullptr);
 
     void showWindow() {
         if (bIsVisible)
@@ -511,7 +512,8 @@ public:
         bIsVisible = true;
         glfwShowWindow(glfw);
 #ifdef __linux__
-        glfwFocusWindow(glfw);
+        if ((windowCreationFlags & WINDOW_BORDERLESS_POPUP) == 0)
+            glfwFocusWindow(glfw);
 #endif
     }
 
@@ -653,7 +655,6 @@ public:
 class appwindow_main : public appwindow, public window_main {
     AppCtrl* const ctrl;
     std::shared_ptr<AppCtrl> sharedCtrl;
-    int32_t windowCreationFlags      = 0;
     int64_t tmDblClick               = 0;
     // int64_t tmLastShaderReloadMillis = 0;
     bool bEnableWindowProfiling = false;
@@ -1065,7 +1066,8 @@ public:
             SetActiveWindow(hwnd);
         }
 #else
-        glfwFocusWindow(glfw);
+        if ((windowCreationFlags & WINDOW_BORDERLESS_POPUP) == 0)
+            glfwFocusWindow(glfw);
 #endif
     }
 
@@ -1097,14 +1099,12 @@ public:
     }
 
     void createDialogWindow(const char* title, int w, int h, GLFWwindow* share = nullptr) {
-        bCanResize = true;
         setAppWindowHints();
-        glfwWindowHint(GLFW_RESIZABLE, bCanResize);
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
         glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
         //glfwWindowHint(GLFW_FLOATING, 1);
         safe_strcpy(this->nameDbg, title , strlen(title));
-        appwindow::createBaseWindow(title, w, h, share);
+        appwindow::createBaseWindow(WINDOW_IS_RESIZABLE, title, w, h, share);
 #if 0
         LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
         if (parent) {
@@ -1315,18 +1315,15 @@ void appwindow_main::destroy() {
 }
 
 void appwindow_main::createMainWindow(int w, int h, int flags) {
-    windowCreationFlags = flags;
-    bCanResize          = flags & WINDOW_IS_RESIZABLE;
     setAppWindowHints();
     glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
     if (flags & WINDOW_BORDERLESS_POPUP) {
-        glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
         glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
         glfwWindowHint(GLFW_DECORATED, GL_FALSE);
         glfwWindowHint(GLFW_HIDE_FROM_TASKBAR, GL_TRUE);
     }
 
-    appwindow::createBaseWindow(this->name, w, h, nullptr, nullptr);
+    appwindow::createBaseWindow(flags, this->name, w, h, nullptr, nullptr);
 
     if (flags & (WINDOW_IS_MAINWINDOW_SLAVE | WINDOW_IS_MAINWINDOW_MASTER)) {
         glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
@@ -1549,7 +1546,8 @@ void appwindow_main::initControl() {
 #endif
 #if WINDOW_RESTORE_POS
 #ifdef __linux__
-    this->showWindow();
+    if ((windowCreationFlags & WINDOW_BORDERLESS_POPUP) == 0)
+        this->showWindow();
 #endif
     if (!parent) {
         auto& settings = daw_tls::getSettings();
@@ -1571,13 +1569,16 @@ void appwindow_main::initControl() {
     this->onWindowSizeChanged(w, h);
 }
 
-void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* share, void* parentWindowHandle) {
+void appwindow::createBaseWindow(int flags, const char* title, int w, int h, GLFWwindow* share, void* parentWindowHandle) {
+    windowCreationFlags = flags;
+    bCanResize  = flags & WINDOW_IS_RESIZABLE;
     if (title != this->name) {
         safe_strcpy(this->name, title , strlen(title));
     }
     if (glfw)
         throw appexception("window not null");
 
+    glfwWindowHint(GLFW_RESIZABLE, bCanResize);
     if (parentWindowHandle) {
         glfw = glfwCreateChildWindow(parentWindowHandle, w, h, title, share);
     } else {
@@ -1780,7 +1781,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         std::shared_ptr<AppCtrl> ctrl = appInstance.makeApp(args);
 
         std::unique_ptr<appwindow_main> mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl);
-        mainWindow->createMainWindow(1280, 720, WINDOW_IS_MAINWINDOW_MASTER);
+        mainWindow->createMainWindow(1280, 720, WINDOW_IS_MAINWINDOW_MASTER | WINDOW_IS_RESIZABLE);
 #ifdef _WIN32
         setMainHWND(mainWindow->getHWND());
 #endif
@@ -2039,7 +2040,7 @@ public:
         glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
         glfwWindowHint(GLFW_DECORATED, GL_FALSE);
         // glfwWindowHint(GLFW_HIDE_FROM_TASKBAR, GL_TRUE);
-        appwindow::createBaseWindow(title, w, h, nullptr, parentWindowHandle);
+        appwindow::createBaseWindow(0, title, w, h, nullptr, parentWindowHandle);
         RenderResources::initResources(nanovgCtxt);
 
         if (!ctrlShared->initAppWindow(this, this->nanovgCtxt)) {

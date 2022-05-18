@@ -488,7 +488,7 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) 
     // copy theme (again) from this control to contextWindows control
     *popupCtrl->getTheme() = *getTheme();
 
-    static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, false);
+    static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (entry.wnd->getCreationFlags() & GLFW_RESIZABLE), false);
 }
 
 void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int flags) {
@@ -528,7 +528,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
         popupCtrl->m_scale = m_scale;
         // copy theme (again) from this control to contextWindows control
         *popupCtrl->getTheme() = *getTheme();
-        static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, false);
+        static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (ctxtWindow->getCreationFlags() & GLFW_RESIZABLE), (flags & BASECTRL_WND_IS_TOOLTIP) == 0);
     } else {
         dbgassert(0);
     }
@@ -554,7 +554,7 @@ void AppCtrl::openDialog(guidialog_base* _guidialog) {
 
     dialogWindow->setSizeLimits(windowSize, windowSize*2);
 
-    popupCtrl->open(_guidialog, wndPos, (dialogWindow->getCreationFlags() & WINDOW_IS_RESIZABLE));
+    popupCtrl->open(_guidialog, wndPos, (dialogWindow->getCreationFlags() & WINDOW_IS_RESIZABLE), true);
 }
 void AppCtrl::openContextMenu(guictxtmenu_base* b, ivec2 pos) {
     openOverlayGui(b, pos, BASECTRL_WND_POS_RELATIVE);

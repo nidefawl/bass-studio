@@ -927,7 +927,7 @@ void DawInstance::menuCommand(menucmd_t command) {
                     auto companionCtrlStdPtr = std::make_shared<CompanionCtrl>(*this);
                     ivec2 windowSize;
                     mainCtrl->mainWindow->getSize(&windowSize);
-                    auto compWindowNew       = mainCtrl->mainWindow->createOverlay(companionCtrlStdPtr, windowSize, WINDOW_IS_MAINWINDOW_SLAVE);
+                    auto compWindowNew = mainCtrl->mainWindow->createOverlay(companionCtrlStdPtr, windowSize, WINDOW_IS_MAINWINDOW_SLAVE | WINDOW_IS_RESIZABLE);
                     companionWindows.push_back(DawWindowCompanion{ compWindowNew, companionCtrlStdPtr });
                     compWindowNew->initControl();
                     if (companionCtrlStdPtr->isOk()) {
@@ -1037,7 +1037,7 @@ void DawInstance::menuCommand(menucmd_t command) {
                     if (popupCtrl->isOk()) {
                         ivec2 wndPos(0);
                         determineWindowPos(guidialog, mainCtrl->mainWindow, mainCtrl->m_scale, 0, ivec2(0), wndPos);
-                        popupCtrl->open(guidialog, wndPos, true);
+                        popupCtrl->open(guidialog, wndPos, true, true);
                     }
                     return;
                 }
@@ -1421,7 +1421,7 @@ void DawCtrl::onTick() {
                     newContextMenu->theme = getTheme();
                     lastTooltipSrc        = guiOver;
                     daw.nextTooltipId++;
-                    openContextMenu(newContextMenu, m_mousePos + ivec2(-16, 26));
+                    openOverlayGui(newContextMenu, m_mousePos + ivec2(-16, 26), BASECTRL_WND_POS_RELATIVE| BASECTRL_WND_IS_TOOLTIP);
                 }
                 hoverTime = 0;
             } else if (guiOver != lastHoveredTooltip) {

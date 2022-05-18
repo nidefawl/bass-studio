@@ -61,7 +61,7 @@ bool PopupCtrl::mouseDownPre() {
 }
 
 
-void PopupCtrl::open(guictxtmenu_base* _ctxtmenu, ivec2 pos, bool bResizeable) {
+void PopupCtrl::open(guictxtmenu_base* _ctxtmenu, ivec2 pos, bool bResizeable, bool bFocused) {
     this->closed = false;
     //dbgassert(!isShown());
     mouseInside       = false;
@@ -101,7 +101,8 @@ void PopupCtrl::open(guictxtmenu_base* _ctxtmenu, ivec2 pos, bool bResizeable) {
 #ifndef _WIN32
         appW->positionOnScreen(pos - insetCtxtMenu, scaledSize);
 #endif
-        appW->focus();
+        if (bFocused)
+            appW->focus();
     }
     int32_t clearc = getTheme()->getColorInt32(GuiColor::COL_CLEAR_COLOR);
     if (popupCtrs->isBackgroundRendered()) {

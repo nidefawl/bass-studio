@@ -40,6 +40,7 @@ String menuName(String s, KeyCombo combo);
 
 #define BASECTRL_WND_POS_RELATIVE         1
 #define BASECTRL_WND_POS_ABSOLUTE         2
+#define BASECTRL_WND_IS_TOOLTIP           4
 
 void determineWindowPos(guibase* guicontextmenu, window_main* mainWindow, float m_scale, int flags, ivec2 pos, ivec2& wndPos);
 
@@ -422,7 +423,7 @@ public:
     bool isShown() { return this->window && this->window->isShown(); }
     void closePopup() override;
     void relayout(int32_t w, int32_t h) override;
-    void open(guictxtmenu_base* ctxtmenu, ivec2 pos, bool bResizeable);
+    void open(guictxtmenu_base* ctxtmenu, ivec2 pos, bool bResizeable, bool bFocused);
     void initApp(const std::vector<String>& args) override { };
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
     void startApp() override {};
