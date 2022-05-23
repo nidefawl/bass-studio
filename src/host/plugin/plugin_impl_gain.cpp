@@ -21,12 +21,12 @@ class guiknob_pluginparameter : public guiknob_labeled_base {
 public:
     explicit guiknob_pluginparameter(int _paramIdx) : guiknob_labeled_base(false) {
         paramIdx           = _paramIdx;
-        fnValueEditChanged = [this](float preVal, float val) {
+        /* fnValueEditChanged = [this](float preVal, float val) {
             if (hostSidePlugin) {
                 hostSidePlugin->setParamValue(paramIdx, val, FLG_PAR_UPDATE_USER);
                 setDisplayValueFromEffect();
             }
-        };
+        }; */
         setAutomationHandlers();
     }
 
