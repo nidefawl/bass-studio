@@ -106,10 +106,12 @@ void guicontainer_stereowidth::onGuiOpen(AudioEffect* eff) {
 }
 void guicontainer_stereowidth::onGuiClose(AudioEffect* eff) {
     this->curEffect = nullptr;
+    knobwidth.setAudioEffect(nullptr);
+    knobgain.setAudioEffect(nullptr);
 }
 void guicontainer_stereowidth::setVSTPlugin(vstplugin* _vstHostSide) {
-    this->vstHostSide = _vstHostSide;
 #if BUILD_VSTHOST
+    this->vstHostSide = _vstHostSide;
     knobwidth.setEffectInstance(_vstHostSide);
     knobgain.setEffectInstance(_vstHostSide);
 #endif
@@ -182,8 +184,8 @@ public:
         ctr_main.onSetParameter(index, value);
     }
     void getFixedSize(int32_t* w, int32_t* h) override {
-        *w = this->width;
-        *h = this->height;
+        *w = static_cast<int32_t>(width);
+        *h = static_cast<int32_t>(height);
     }
     void setVSTPlugin(vstplugin* _hostsideplugin) override {
         ctr_main.setVSTPlugin(_hostsideplugin);

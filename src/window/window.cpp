@@ -2111,6 +2111,12 @@ public:
     void idle() override {
         if (isInitialized) {
             flagNeedsRedraw();
+#ifndef _WIN32
+            const double timeoutEvent = 0.001;
+            glfwWaitEventsTimeout(timeoutEvent);
+#else
+            glfwUpdateWin32Internals();
+#endif
         }
     }
 };

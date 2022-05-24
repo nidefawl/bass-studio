@@ -31,12 +31,23 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //----------------------------------------------------------------------------------
-#if 1
 #include "audioeffect.h"
 
 //------------------------------------------------------------------------
 /** Must be implemented externally. */
 extern AudioEffect* createEffectInstance (audioMasterCallback audioMaster);
+
+#ifndef _WIN32
+
+void onModuleLoad();
+void onModuleUnload();
+void initLinuxSharedModule() {
+	static struct init {
+		init() { onModuleLoad(); };
+		~init() { onModuleUnload(); }
+	} force_init;
+}
+#endif
 
 extern "C" {
 
@@ -55,6 +66,10 @@ extern "C" {
 //------------------------------------------------------------------------
 VST_EXPORT AEffect* VSTPluginMain (audioMasterCallback audioMaster)
 {
+#ifndef _WIN32
+	initLinuxSharedModule();
+#endif
+
 	// Get VST Version of the Host
 	if (!audioMaster (0, audioMasterVersion, 0, 0, 0, 0))
 		return 0;  // old version
@@ -98,6 +113,4 @@ BOOL WINAPI DllMain (HINSTANCE hInst, DWORD dwReason, LPVOID lpvReserved)
 	return 1;
 }
 } // extern "C"
-#endif
-
 #endif

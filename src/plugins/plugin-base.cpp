@@ -32,13 +32,47 @@
 namespace MouseCursors {
     void initCursors();// mousecursor.cpp
 }
+#ifdef __linux__
+#include  <link.h>
+static int cb_(struct dl_phdr_info *Info, size_t Sz, void *Data)
+{
+    //printf("Name=%s\n",Info->dlpi_name);
+    uintptr_t a = (uintptr_t)cb_;
+
+    //for each elf-header, iterate thru program headers
+    for(size_t i=0; i<Info->dlpi_phnum; i++){
+        // [b,e) is the corresponding segment
+        uintptr_t b = Info->dlpi_addr + Info->dlpi_phdr[i].p_paddr;
+        uintptr_t e = b + Info->dlpi_phdr[i].p_memsz;
+        if(a>=b && a<e){
+            //if this is cb_'s segment, we're done
+            printf("NAME=%s\n", Info->dlpi_name);
+            *((String*)Data) = Info->dlpi_name;
+            //nonzero signals end of iteration
+            return 1;
+        }
+
+    }
+    return 0;
+}
+
+String getModuleNameLinux() {
+    //iterate thru elf-headers
+    String s;
+    dl_iterate_phdr(cb_, &s);
+    return s;
+}
+#endif
 #endif//BUILD_EXTERNAL_PLUGIN
+
 
 
 #if BUILD_EXTERNAL_PLUGIN
 bool isFirstPluginLoad = false;
+#ifdef _WIN32
 extern HMODULE hInstance;
 String getModuleName(HMODULE module);//platform_win.cpp
+#endif
 #endif //BUILD_EXTERNAL_PLUGIN
 
 pluginwindow* createPluginWindow(AudioEffect* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h);
@@ -127,10 +161,12 @@ bool BasePluginVST2::getVendorString(char* text) {
 
 void BasePluginVST2::open() {
 #if BUILD_EXTERNAL_PLUGIN
+#ifdef _WIN32
     AllocConsole();
     AttachConsole(GetCurrentProcessId());
     FILE* f;
     freopen_s(&f, "CON", "w", stdout);
+#endif
     log_printf("open!\n");
     if (editor) {
         log_printf("Editor already exists!\n");
@@ -167,14 +203,23 @@ static void showerror(const char* description) {
     ngui::showNotification(ngui::Style::Error, "Error", description);
 }
 
+GLFWwindow* getTopLevelGlfwWindow() {
+    return nullptr;
+}
+
 void initColor();// gui/gui.cpp
+#ifdef _WIN32
 void onModuleLoad(HINSTANCE hInst) {
-    isFirstPluginLoad = true;
     String moduleName = getModuleName(hInst);
+#else
+void onModuleLoad() {
+    String moduleName = getModuleNameLinux();
+#endif
     log_lf(Log::L_DEBUG, "moduleName %s\n", StringAsCStr(moduleName));
     String path = "";
     SplitPath(moduleName, &path, nullptr, nullptr, nullptr);
     App::Platform::initPlatformEnvironment("daw", path);
+    isFirstPluginLoad = true;
     log_lf(Log::L_DEBUG, "resPath %s\n", StringAsCStr(App::Platform::toResourcePath("")));
     try {
         initColor();
