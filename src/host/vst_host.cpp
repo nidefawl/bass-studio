@@ -3168,6 +3168,10 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
     }
     void* module = dlopen(StringAsCStr(filepath), RTLD_NOW);
     if (!module) {
+        auto dl_err = dlerror();
+        if (dl_err) {
+            log_lf(Log::L_ERROR, "dlopen failed: %s\n", dl_err);
+        }
         return -3;
     }
 
