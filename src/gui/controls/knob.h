@@ -62,7 +62,7 @@ public:
     }
     bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
     void handleRightClick(MouseEvent& evt) override;
-    void renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS);
+    void renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float value);
     void render(NVGcontext* vg) override;
     float getValueInternal() {
         return value;
@@ -72,7 +72,6 @@ public:
         if (valuePtr) {
             *valuePtr = newValue;
         }
-        setDisplayValue(newValue);
     }
     void setValue(float newValue, int flags) {
         float curval = getValue();
@@ -86,9 +85,6 @@ public:
         if (fnValueEditChanged) {
             fnValueEditChanged(curval, getValue());
         }
-        setDisplayValue(newValue);
-    }
-    virtual void setDisplayValue(float f) {
     }
     virtual void onValueEditFinish(float from, float to) {
         if (fnValueEditFinish) {

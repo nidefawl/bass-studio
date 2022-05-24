@@ -70,6 +70,4 @@ public:
             this->valueDisplay = "???";
         }
     }
-    void setDisplayValue(float f) override {
-    }
 };

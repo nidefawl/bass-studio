@@ -58,7 +58,7 @@ void guiknob::render(NVGcontext* vg) {
     }
     ivec2 insetP = pos + ivec2(0);
     ivec2 insetS = size - ivec2(0);
-    renderButtonAt(vg, insetP, insetS);
+    renderButtonAt(vg, insetP, insetS, getValue());
 }
 void guiknob::handleDraggedBegin(MouseEvent& evt) {
     if (isShift(evt.kbmods) || (bDoubleClickSetsDefault && evt.type == MouseEventType::M_EVT_DOUBLECLICK)) {
@@ -101,7 +101,7 @@ bool guiknob::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset)
     setValue(value, FLG_PAR_UPDATE_USER);
     return true;
 }
-void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
+void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float value) {
     renderWidgetBorder(vg, getStateFlags());
 
     NVGcolor c2 = theme->getColor(GuiColor::COL_BG_BRT);
@@ -115,11 +115,11 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
 //        nvgFillColor(vg, c2);
 //        nvgFill(vg);
     }
+    float val = CLAMP_F(value);
     float minSize       = math::min(insetS.x, insetS.y);
     float r             = (minSize * 0.8f) / 2.0f;
     float lineThickness = math::max(1.0f, roundf((minSize / 8.0f) * 2.0f) / 2.0f);
     nvgLineCap(vg, NVGlineCap::NVG_ROUND);
-    float val = getValueClamped();
     if (isSlider) {
         lineThickness = math::max(1.0f, roundf((minSize / 32.0f) * 2.0f) / 2.0f);
         float cx      = insetP.x;
@@ -268,9 +268,15 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
         nvgFillColor(vg, theme->getColor(bgColor));
         nvgFill(vg);
     };
+    float value = getValue();
+
+    if (fnGetDisplayValue) {
+        valueDisplay = fnGetDisplayValue(value);
+    }
+
     auto bgColor       = theme->getColor(getBackgroundColor());
     auto contrastColor = getContrastFontColor(nvgToRGB(bgColor));
-    renderButtonAt(vg, insetP, insetS);
+    renderButtonAt(vg, insetP, insetS, value);
     if (labelHeight) {
         renderBorder(vg, getStateFlags(), pos + glm::ivec2(0, +INS_BRD), glm::ivec2(size.x, labelHeight - INS_BRD * 2), GuiColor::COL_BG_BRT);
     }

@@ -15,21 +15,18 @@ class guiknob_labeled_base : public guiknob {
 public:
     const int button_inset = 10;
     std::function<String(float)> fnGetDisplayValue;
+    String valueDisplay = "  ";
 
 protected:
     int labelHeight     = 0;
     int valueHeight     = 0;
-    String valueDisplay = "  ";
 
 public:
-    guiknob_labeled_base(const bool _renderBackground = true, const bool _isSlider = false) : guiknob(_renderBackground, _isSlider) {
+    explicit guiknob_labeled_base(const bool _renderBackground = true, const bool _isSlider = false)
+        : guiknob(_renderBackground, _isSlider)
+    {
     }
     ~guiknob_labeled_base() override = default;
-    void setDisplayValue(float f) override {
-        if (fnGetDisplayValue) {
-            valueDisplay = fnGetDisplayValue(f);
-        }
-    }
     void layout() override;
     void render(NVGcontext* vg) override;
 };

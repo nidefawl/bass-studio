@@ -65,9 +65,6 @@ public:
             this->valueDisplay = "???";
         }
     }
-
-    void setDisplayValue(float f) override {
-    }
 };
 
 //base class for plugin UIs of internal effects
