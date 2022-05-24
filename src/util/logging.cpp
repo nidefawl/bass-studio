@@ -134,15 +134,18 @@ static Logger& getExclusiveLoggerInstance() noexcept {
     static StdOutLogger logger;
     return logger;
 }
-static Logger* globalLogger = &getMultiLogger();
 Logger* getExclusiveLogger() {
     return &getExclusiveLoggerInstance();
 }
+Logger** getGlobalLoggerRef() noexcept {
+    static Logger* globalLogger = &getMultiLogger();
+    return &globalLogger;
+}
 Logger* getGlobalLogger() noexcept {
-    return globalLogger;
+    return *getGlobalLoggerRef();
 }
 void setGlobalLogger(Logger* logger) noexcept {
-    globalLogger = logger;
+    *getGlobalLoggerRef() = logger;
 }
 void closeGlobalLog() {
     getFileLogger().logStr(Log::L_DEBUG, "End of logfile\n");
@@ -226,6 +229,14 @@ void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* 
 } // namespace Log 
 
 extern "C" {
+
+#ifndef _WIN32
+void __attribute__((constructor(1000))) C_logger_init()
+{
+	getGlobalLogger();
+}
+#endif
+
 static bool failedAssert = false;
 void C_failedAssert(const char* expr, const char* file, int line) noexcept {
     if (!failedAssert) {
