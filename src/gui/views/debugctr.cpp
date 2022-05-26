@@ -98,7 +98,7 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             parentCtrl->m_scale = guiScale;
             parentCtrl->relayout();
         };
-        knob->fnGetValue = [this](void) {
+        knob->fnGetValue = [this]() {
             return math::max(0.05f, math::min(1.0f, parentCtrl->m_scale * 0.5f));
         };
         debugGuis.push_back(knob);
@@ -116,7 +116,7 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
         };
         String strThrdCnt = StringFormat("Number of Threads: %d", host->getThreadCount());
         knob->setLabel(strThrdCnt);
-        knob->fnGetValue = [host](void) {
+        knob->fnGetValue = [host]() {
             return host->getThreadCount() / (float) host->getMaxThreadCount();
         };
         debugGuis.push_back(knob);
