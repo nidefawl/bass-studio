@@ -215,6 +215,7 @@ public:
     void getEffects(std::vector<effectbase*>& out);
     bool isSelected() override;
     void handleRightClick(MouseEvent& evt) override;
+    bool getSelected(std::vector<effectbase*>& out);
 };
 class guictr_pluginview : public guictr_base {
 public:

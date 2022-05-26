@@ -17,10 +17,12 @@
 #include "gui/meter/guimeter.h"
 #include "gui/tooltip/tooltip.h"
 #include "gui/plugin/pluginviewcontainers.h"
+#include "gui/plugin/pluginctr.h"
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
 #include "host/mainctrl.h"
 #include "host/plugin/base_plugin.h"
+#include "host/plugin/group.h"
 #include "host/plugin/internal_plugin.h"
 #include "host/vst_host.h"
 #include "logging.h"
@@ -796,7 +798,6 @@ public:
     std::shared_ptr<DAW::processing_graph_t> procList;
     std::vector<gui_graph_entry*> listGuis;
     std::vector<gui_graph_n*> listNodes;
-    int updateTick = 2220;
     std::vector<NodeGraph::edge_t> edgeList;
     guictr_graph_impl() = default;
     enum hit_result_type {
@@ -891,7 +892,6 @@ void gui_graph::reset() {
     impl->listNodes.clear();
     destroyGuis();
     impl->procList   = nullptr;
-    impl->updateTick = 2220;
 }
 
 void gui_graph::render(NVGcontext* vg) {
@@ -1103,26 +1103,58 @@ void gui_graph::updateList(bool resetPositions) {
     auto const daw = dawCtrl->getDaw();
     std::shared_ptr<DAW::processing_graph_t> lastProcessingList;
     {
+        module_group* groupSelected = nullptr;
         auto const host = daw->getHost();
-        // A lock is not required here
-        lastProcessingList = nullptr;
-        if (!isTrackGraph) { /* project graph */
-            std::shared_ptr<DAW::processing_graph_t> processingGraph;
-            auto const project = daw->getProject();
-            auto tracksFlatAll = project->trackList.getAllTracksFlatVec();//TODO: get rid of copy
-            if (!DAW::buildProcessingGraph(host, project, tracksFlatAll, processingGraph)) {
-                log_lf(Log::L_ERROR, "Failed building track graph\n");
-            } else {
-                lastProcessingList = std::move(processingGraph);
+        plugin_selection& sel = daw->getMainControl()->getPluginSel();
+        if (sel.getSelectionCount() > 0) {
+            std::vector<effectbase *> out;
+            if (sel.pluginCtr->getSelected(out)) {
+                for (auto& plugin : out) {
+                    auto p = plugin->getTrackLink()->owner;
+                    if (p && p->getModuleType() == PLUGIN_TYPE_GROUP) {
+                        groupSelected = static_cast<module_group*>(p);
+                        break;
+                    }
+                }
+                if (out.size() && out[0]->getModuleType() == PLUGIN_TYPE_GROUP) {
+                    groupSelected = static_cast<module_group*>(out[0]);
+                }
             }
-        } else {
-            auto track = daw->getSelectedTrack();
-            if (track && track->audio) {
-                std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
-                if (!DAW::buildEffectProcessingGraph(host, nullptr, track->audio, effProcessingGraph)) {
-                    log_lf(Log::L_ERROR, "Failed building effect graph\n");
+        }
+        if (graphType == GraphType::Top) {
+            if (groupSelected) {
+                // get track from group
+                auto track = groupSelected->getTrack();
+                if (track && track->audio) {
+                    std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
+                    if (!DAW::buildEffectProcessingGraph(host, nullptr, track->audio, effProcessingGraph)) {
+                        log_lf(Log::L_ERROR, "Failed building effect graph\n");
+                    } else {
+                        lastProcessingList = std::move(effProcessingGraph);
+                    }
+                }
+            } else { /* project graph */
+                std::shared_ptr<DAW::processing_graph_t> processingGraph;
+                auto const project = daw->getProject();
+                auto tracksFlatAll = project->trackList.getAllTracksFlatVec();//TODO: get rid of copy
+                if (!DAW::buildProcessingGraph(host, project, tracksFlatAll, processingGraph)) {
+                    log_lf(Log::L_ERROR, "Failed building track graph\n");
                 } else {
-                    lastProcessingList = std::move(effProcessingGraph);
+                    lastProcessingList = std::move(processingGraph);
+                }
+            }
+        } else { /* bottom graph */
+            if (groupSelected) {
+                lastProcessingList = groupSelected->getLastProcessingGraph();
+            } else {
+                auto track = daw->getSelectedTrack();
+                if (track && track->audio) {
+                    std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
+                    if (!DAW::buildEffectProcessingGraph(host, nullptr, track->audio, effProcessingGraph)) {
+                        log_lf(Log::L_ERROR, "Failed building effect graph\n");
+                    } else {
+                        lastProcessingList = std::move(effProcessingGraph);
+                    }
                 }
             }
         }
@@ -1442,16 +1474,16 @@ void guictr_nodes_editor::layout() {
 
 guictr_nodes_splitview::guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip)
     : project(_project),
-      projectView(_cursor, _project, _dragdropclip),
-      trackView(_cursor, _project, _dragdropclip),
+      graphTop(_cursor, _project, _dragdropclip),
+      graphBottom(_cursor, _project, _dragdropclip),
       splitter(0, 0.5) {
-    trackView.graph.isTrackGraph = true;
+    graphBottom.graph.graphType = GraphType::Bottom;
     splitter.setMinMax(0.1f, 0.9f);
     splitter.setCallback(this);
     setCanMouseHit(true);
     add(&splitter);
-    add(&projectView);
-    add(&trackView);
+    add(&graphTop);
+    add(&graphBottom);
     padding = 0;
     margin  = 0;
     setBackgroundRendered(false);
@@ -1466,19 +1498,19 @@ void guictr_nodes_splitview::onChildLayoutChanged(guibase* g) {
 }
 
 void guictr_nodes_splitview::reset() {
-    projectView.reset();
-    trackView.reset();
+    graphTop.reset();
+    graphBottom.reset();
 }
 void guictr_nodes_splitview::refresh() {
-    projectView.refresh();
-    trackView.refresh();
+    graphTop.refresh();
+    graphBottom.refresh();
 }
 void guictr_nodes_splitview::buttonClicked(guibase* _button) {
     //if (parent) parent->buttonClicked(_button);
-    if (_button->parent == &projectView.graph) {
-        trackView.refresh();
+    if (_button->parent == &graphTop.graph) {
+        graphBottom.refresh();
     }
-    if (_button->parent == &trackView.graph) {
+    if (_button->parent == &graphBottom.graph) {
     }
 }
 
@@ -1489,15 +1521,17 @@ void guictr_nodes_splitview::handleSplitterChanged(Splitter& splitter, float sca
 ivec2 guictr_nodes_splitview::getContainerSize() {
     return size;
 }
-
+void guictr_nodes_splitview::onPluginSelected() {
+    refresh();
+}
 void guictr_nodes_splitview::layout() {
 
     ivec2 cs         = getSizeContent();
     auto topHeight = splitter.leftOrTop(cs.y);
-    projectView.pos  = ivec2(0);
-    trackView.pos    = ivec2(0, topHeight);
-    projectView.size = ivec2(cs.x, topHeight);
-    trackView.size   = ivec2(cs.x, cs.y - topHeight);
+    graphTop.pos  = ivec2(0);
+    graphBottom.pos    = ivec2(0, topHeight);
+    graphTop.size = ivec2(cs.x, topHeight);
+    graphBottom.size   = ivec2(cs.x, cs.y - topHeight);
     
     splitter.pos  = ivec2(0, topHeight - Splitter::SPLITTER_LAYOUT_THICKNESS/2);
     splitter.size = ivec2(cs.x, Splitter::SPLITTER_LAYOUT_THICKNESS);

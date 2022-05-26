@@ -23,6 +23,11 @@
 #include "host/mainctrl.h"
 #include "trackctr.h"
 
+enum class GraphType {
+    Top,
+    Bottom,
+};
+
 class gui_graph_entry : public guictr_base {
     friend class gui_graph;
     friend class guictr_nodes_editor;
@@ -79,7 +84,7 @@ protected:
     vec2 prevOffset{ 0 };
 
 public:
-    bool isTrackGraph = false;
+    GraphType graphType = GraphType::Top;
     gui_graph();
     ~gui_graph() override;
     ivec2 toParentSpace(ivec2 localCoord) const override;
@@ -198,8 +203,8 @@ public:
     project_t& project;
 
 private:
-    guictr_nodes_editor projectView;
-    guictr_nodes_editor trackView;
+    guictr_nodes_editor graphTop;
+    guictr_nodes_editor graphBottom;
     Splitter splitter;
 
 public:
@@ -212,4 +217,5 @@ public:
     void buttonClicked(guibase* _button) override;
     void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override;
     ivec2 getContainerSize() override;
+    void onPluginSelected();
 };

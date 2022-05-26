@@ -292,6 +292,10 @@ void module_group::getChildAudioStages(std::vector<audio_stage_t*>& targets) {
     targets.push_back(this->audio);
 }
 
+std::shared_ptr<DAW::effect_processing_graph_t> module_group::getLastProcessingGraph() {
+    return lastEffProcessingGraph;
+}
+
 void module_group::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
     dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
     audio->input.copyFrom(in);
@@ -302,7 +306,7 @@ void module_group::process(AudioBlock* in, AudioBlock* out, double tick, double 
     }
 
     vstHost->processAudio(audio, &audio->input, &audio->output, tick, samplePos, numSamples, state, effProcessingGraph.get());
-
+    lastEffProcessingGraph = effProcessingGraph;;
 #ifdef DAW_DEBUG_TRACK_GRAPHS
     //TODO: this code path runs on a workerthread. Store processing-graph add to vsthost::lastProcessingGraphs from playback-thread
 #endif

@@ -10,11 +10,15 @@ struct audio_stage_t;
 class guiplugin;
 class guibase;
 class vsthost;
+namespace DAW {
+    struct processing_graph_t;
+    using effect_processing_graph_t  = processing_graph_t;
+}
 class module_group : public internalplugin {
     struct internal_handles_t;
     internal_handles_t* handle;
     audio_stage_t* audio;
-
+    std::shared_ptr<DAW::effect_processing_graph_t> lastEffProcessingGraph;
 public:
     explicit module_group(int32_t _projectGlobalId);
     ~module_group() override;
@@ -42,4 +46,5 @@ public:
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
     void getChildAudioStages(std::vector<audio_stage_t*>& targets) override;
     void getDeferredEffects(std::vector<effectbase*>& effects) override;
+    std::shared_ptr<DAW::effect_processing_graph_t> getLastProcessingGraph();
 };

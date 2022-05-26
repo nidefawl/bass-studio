@@ -94,6 +94,9 @@ public:
     bool hasSelection() const {
         return firstSelection >= 0 && lastSelection >= 0 && pluginCtr;
     }
+    int32_t getSelectionCount() const {
+        return hasSelection() ? lastSelection - firstSelection + 1 : 0;
+    }
     void clear() {
         firstSelection = -1;
         lastSelection  = -1;
@@ -552,6 +555,8 @@ public:
 
     virtual void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) = 0;
     virtual guictr_tracks* getTrackContainer() = 0;
+    virtual guictr_nodes_splitview* getNodesContainer() = 0;
+    virtual void onPluginSelected();
 };
 
 class MainCtrl : public DawCtrl {
@@ -612,6 +617,7 @@ public:
     void dragContainerRelayout(drag_ctr_event evt) override;
     void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) override;
     guictr_tracks* getTrackContainer() override;
+    guictr_nodes_splitview* getNodesContainer() override;
 };
 
 class CompanionCtrl : public DawCtrl {
@@ -648,4 +654,5 @@ public:
     void setEditClip(gui_clip* gclip) override;
     void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) override;
     guictr_tracks* getTrackContainer() override;
+    guictr_nodes_splitview* getNodesContainer() override;
 };

@@ -670,6 +670,9 @@ void CompanionCtrl::setViewMode(view_mode_t mode) {
 view_mode_t DawCtrl::getViewMode() const {
     return this->viewMode;
 }
+void DawCtrl::onPluginSelected() {
+    getNodesContainer()->onPluginSelected();
+}
 
 void MainCtrl::showPluginView() {
     containers[view->indexContent + 1] = &view->ctr_plugins;
@@ -1896,8 +1899,16 @@ guictr_tracks* MainCtrl::getTrackContainer() {
     return &view->ctr_tracks;
 }
 
+guictr_nodes_splitview* MainCtrl::getNodesContainer() {
+    return &view->ctr_nodes;
+}
+
 guictr_tracks* CompanionCtrl::getTrackContainer() {
     return &view->ctr_tracks2;
+}
+
+guictr_nodes_splitview* CompanionCtrl::getNodesContainer() {
+    return &view->ctr_nodes;
 }
 
 void MainCtrl::layoutView(int32_t w, int32_t h) {

@@ -107,6 +107,12 @@ bool guictr_plugins::isSelected() {
     return parent && parent->isSelected();
 }
 
+bool guictr_plugins::getSelected(std::vector<effectbase*>& out) {
+    auto& sel = MainCtrl::get()->getPluginSel();
+    getSelectedEffects(sel, out);
+    return true;
+}
+
 effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
 class guictxtmenu_pluginctr : public guictxtmenu {
 public:
@@ -363,6 +369,7 @@ void guictr_plugins::onSelected(MouseEvent& evt, guiplugin* plugin) {
         sel.firstSelection = plugin->effect->getSlot();
         sel.lastSelection  = plugin->effect->getSlot();
     }
+    dawCtrl->onPluginSelected();
 }
 void guictr_plugins::onChildLayoutChanged(guibase* g) {
     if (!isDefaultPluginCtr) {
