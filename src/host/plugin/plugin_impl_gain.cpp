@@ -3,6 +3,7 @@
 #include "str_util.h"
 #include "gui/container/container.h"
 #include "gui/controls/knoblabeled.h"
+#include "gui/controls/knobpluginparam.h"
 #include "gui/plugin/plugin.h"
 #include "gui/plugin/pluginctr.h"
 #include "gui/plugin/pluginviewcontainers.h"
@@ -15,85 +16,32 @@
 #include "meter.h"
 #include "snapshot.h"
 
-class guiknob_pluginparameter : public guiknob_labeled_base {
-    effectbase* hostSidePlugin = nullptr;
-
-public:
-    explicit guiknob_pluginparameter(int _paramIdx) : guiknob_labeled_base(false) {
-        paramIdx           = _paramIdx;
-        /* fnValueEditChanged = [this](float preVal, float val) {
-            if (hostSidePlugin) {
-                hostSidePlugin->setParamValue(paramIdx, val, FLG_PAR_UPDATE_USER);
-                setDisplayValueFromEffect();
-            }
-        }; */
-        setAutomationHandlers();
-    }
-
-    ~guiknob_pluginparameter() override = default;
-
-    void setEffectInstance(effectbase* eff) {
-        this->hostSidePlugin = eff;
-        paramAutomatable     = eff;
-        if (eff) {
-            setValueInit(hostSidePlugin->getParamValue(paramIdx));
-            setLabel(hostSidePlugin->getParamName(paramIdx));
-        }
-        setDisplayValueFromEffect();
-    }
-
-    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-        if (this->contains(mpos)) {
-            if (evt.type != MouseHitType::MOUSE_RIGHT) {
-                if (guiknob::mouseHitTest(mpos, evt)) {
-                    return true;
-                }
-            }
-            evt.requestFocus(this);
-            return true;
-        }
-        return false;
-    }
-
-    void setDisplayValueFromEffect() {
-        if (this->hostSidePlugin) {
-            String display = hostSidePlugin->formatDisplayValue(paramIdx);
-            //String displayUnit = curEffect->getParamName(internalEffectIdx);
-            this->valueDisplay = display;
-        } else {
-
-            this->valueDisplay = "???";
-        }
-    }
-};
-
-//base class for plugin UIs of internal effects
-class guieffect_internal : public guictr_base {
-protected:
+class guimodule_gain : public guictr_base {
+    std::vector<guiknob_pluginparam*> knobs;
     internalplugin* const module;
-    std::vector<guiknob_pluginparameter*> knobs;
-    void addKnob(guiknob_pluginparameter* knob) {
+    guiknob_pluginparam knobgain;
+    void addKnob(guiknob_pluginparam* knob) {
         knobs.push_back(knob);
         add(knob);
     }
-
-public:
-    explicit guieffect_internal(module_gain* _eff);
-    ~guieffect_internal() override {
-        removeGuis();
-    }
-};
-
-class guimodule_gain : public guieffect_internal {
-    guiknob_pluginparameter knobgain;
-
 public:
     explicit guimodule_gain(module_gain* _eff);
     ~guimodule_gain() override {
         removeGuis();
     }
+
     void determineSize(ivec2& prefSize) override {
     }
+
+    void onSetParameter(int32_t index, float value) {
+        guiknob_pluginparam* knob = getKnobFromParameter(index);
+        if (knob) {
+            knob->setValueInit(value);
+            knob->setDisplayValueFromEffect();
+        }
+    }
+    guiknob_pluginparam* getKnobFromParameter(int32_t index);
+
     void layout() override {
         ivec2 layoutpos = ivec2(0);
         ivec2 cs        = getSizeContent();
@@ -107,6 +55,7 @@ public:
             gui->layout();
         }
     }
+
     void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
@@ -120,28 +69,32 @@ public:
             nvgRestore(vg);
         }
     }
+    void onGuiOpen() {
+        knobgain.setEffectInstance(module);
+    }
+    void onGuiClose() {
+    }
 };
 
-guieffect_internal::guieffect_internal(module_gain* _eff)
-    : guictr_base(),
-      module(_eff) {
-}
-
 guimodule_gain::guimodule_gain(module_gain* _eff)
-    : guieffect_internal(_eff), knobgain(PARAM_GAIN) {
+    : module(_eff), knobgain(PARAM_GAIN) {
     setBackgroundRendered(true);
     padding = 4;
     margin  = 4;
     addKnob(&knobgain);
-    knobgain.setEffectInstance(module);
 }
 
-
-struct module_gain::internal_handles_t {
-};
+guiknob_pluginparam* guimodule_gain::getKnobFromParameter(int32_t index) {
+    switch (index) {
+        case PARAM_GAIN:
+            return &knobgain;
+    }
+    return nullptr;
+}
 
 module_gain::module_gain(int32_t _projectGlobalId)
-    : internalplugin("Gain", PLUGIN_TYPE_GAIN, _projectGlobalId), handle(new module_gain::internal_handles_t{}) {
+    : internalplugin("Gain", PLUGIN_TYPE_GAIN, _projectGlobalId)
+{
     struct effectgain_param_entry {
         int32_t id;
         String name;
@@ -161,7 +114,6 @@ module_gain::module_gain(int32_t _projectGlobalId)
     }
 }
 module_gain::~module_gain() {
-    delete handle;
     delete blockInputs;
     delete blockOutputs;
 }
@@ -171,6 +123,15 @@ float module_gain::dispatchGetParameter(int32_t idx) {
 }
 
 void module_gain::dispatchSetParameter(int32_t idx, float val) {
+}
+
+void module_gain::postSetParameter(int32_t idx, float preVal, float val, int flags) {
+    internalplugin::postSetParameter(idx, preVal, val, flags);
+    for (auto& pviewctr : this->views) {
+        if (pviewctr->isInUse()) {
+            pviewctr->onSetParameter(idx, val);
+        }
+    }
 }
 
 samplecount_t module_gain::getPluginLatency() {
@@ -241,17 +202,18 @@ public:
     void addTo(std::vector<guictr_base*>& v) override {
         v.push_back(&ctr_main);
     }
-    void onGuiOpen(AudioEffect* eff) override {
+    void onGuiOpen() override {
+        ctr_main.onGuiOpen();
     }
-    void onGuiClose(AudioEffect* eff) override {
+    void onGuiClose() override {
+        ctr_main.onGuiClose();
     }
     void onSetParameter(int32_t index, float value) override {
+        ctr_main.onSetParameter(index, value);
     }
     void getFixedSize(int32_t* w, int32_t* h) override {
         *w = (int32_t) width;
         *h = (int32_t) height;
-    }
-    void setVSTPlugin(vstplugin* hostsideplugin) override {
     }
 };
 

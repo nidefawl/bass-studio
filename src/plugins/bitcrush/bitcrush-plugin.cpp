@@ -220,13 +220,14 @@ namespace PluginBitcrush {
 
 
     class guicontainer_plugin_latency : public guictr_base {
-        vstplugin* vstHostSide = nullptr;
-        AudioEffect* curEffect = nullptr;
+        PluginVST2_Bitcrush* const plugin;
         guiknob_pluginparam knoblatency;
 
     public:
-        guicontainer_plugin_latency()
-            : guictr_base(), knoblatency(PARAM_OFFSET_EXTERNAL + kBitcrush, kBitcrush) {
+        explicit guicontainer_plugin_latency(PluginVST2_Bitcrush* plugin)
+            : guictr_base(),
+            plugin(plugin),
+            knoblatency(PARAM_OFFSET_EXTERNAL + kBitcrush, kBitcrush) {
             setBackgroundRendered(true);
             padding = 4;
             margin  = 4;
@@ -259,49 +260,20 @@ namespace PluginBitcrush {
             return nullptr;
         }
         void onSetParameter(int32_t index, float value) {
+#if BUILD_EXTERNAL_PLUGIN
             guiknob_pluginparam* knob = getKnobFromParameter(index);
-            if (knob && curEffect) {
+            if (knob) {
                 knob->setValueInit(value);
                 knob->setDisplayValueFromEffect();
             }
-        }
-        void onGuiOpen(AudioEffect* eff) {
-            this->curEffect = eff;
-            knoblatency.setAudioEffect(eff);
-        }
-        void onGuiClose(AudioEffect* eff) {
-            this->curEffect = nullptr;
-        }
-        void setVSTPlugin(vstplugin* _vstHostSide) {
-            this->vstHostSide = _vstHostSide;
-#if BUILD_VSTHOST
-            knoblatency.setEffectInstance(_vstHostSide);
 #endif
         }
-        void onTick(AppCtrl* ctrl) override {
-            for (guibase* gui : guis) {
-                gui->onTick(ctrl);
-            }
+        void onGuiOpen() {
+#if BUILD_VSTHOST
+            knoblatency.setEffectInstance(plugin->getHostSideHandle());
+#endif
         }
-        void prerender(NVGcontext* vg) override {
-            for (guibase* gui : guis) {
-                gui->prerender(vg);
-            }
-        }
-
-        void render(NVGcontext* vg) override {
-            if (isBackgroundRendered()) {
-                renderBackground(vg);
-            }
-            if (!setScissorTransform(vg)) {
-                return;
-            }
-
-            for (guibase* gui : guis) {
-                nvgSave(vg);
-                gui->render(vg);
-                nvgRestore(vg);
-            }
+        void onGuiClose() {
         }
         void layout() override {
             ivec2 cs           = getSizeContent();
@@ -314,48 +286,7 @@ namespace PluginBitcrush {
                 gui->layout();
             }
         }
-        bool handleKeyInput(KeyEvent& event) override {
-            if (event.type != KeyEventType::K_RELEASE) {
-            }
-            return false;
-        }
-        void buttonClicked(guibase* button) override {
-        }
     };
-
-
-    class ViewContainers_Plugin_Bitcrush : public PluginViewContainersImpl {
-    public:
-        guicontainer_plugin_latency ctr_main;
-        ViewContainers_Plugin_Bitcrush() : PluginViewContainersImpl(220, 150) {
-        }
-        ~ViewContainers_Plugin_Bitcrush() override = default;
-
-        void layout(int32_t winW, int32_t winH) override {
-            ctr_main.pos  = { 0, 0 };
-            ctr_main.size = { winW, winH };
-        }
-        void addTo(std::vector<guictr_base*>& v) override {
-            v.push_back(&ctr_main);
-        }
-        void onGuiOpen(AudioEffect* eff) override {
-            ctr_main.onGuiOpen(eff);
-        }
-        void onGuiClose(AudioEffect* eff) override {
-            ctr_main.onGuiClose(eff);
-        }
-        void onSetParameter(int32_t index, float value) override {
-            ctr_main.onSetParameter(index, value);
-        }
-        void getFixedSize(int32_t* w, int32_t* h) override {
-            *w = this->width;
-            *h = this->height;
-        }
-        void setVSTPlugin(vstplugin* hostsideplugin) override {
-            ctr_main.setVSTPlugin(hostsideplugin);
-        }
-    };
-
 
     const char* getName() {
         return PLUGIN_EFFECT_NAME;
@@ -364,7 +295,7 @@ namespace PluginBitcrush {
         return new PluginVST2_Bitcrush(audioMaster);
     }
     std::shared_ptr<PluginViewContainers> PluginVST2_Bitcrush::createView() {
-        std::shared_ptr<PluginViewContainers> view = std::make_shared<ViewContainers_Plugin_Bitcrush>();
+        auto view = std::make_shared<SinglePluginViewContainers<guicontainer_plugin_latency, PluginVST2_Bitcrush>>(this);
         this->views.push_back(view);
         return view;
     }

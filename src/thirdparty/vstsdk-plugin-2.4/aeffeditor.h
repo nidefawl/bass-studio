@@ -43,7 +43,7 @@ class AEffEditor
 {
 public:
 //-------------------------------------------------------------------------------------------------------
-	AEffEditor (AudioEffect* effect = 0)	///< Editor class constructor. Requires pointer to associated effect instance.
+	AEffEditor (AudioEffectX* effect = 0)	///< Editor class constructor. Requires pointer to associated effect instance.
 	: effect (effect)
 	, systemWindow (0)
 	{}
@@ -51,7 +51,7 @@ public:
 	virtual ~AEffEditor () ///< Editor class destructor.
 	{}
 
-	virtual AudioEffect* getEffect ()	{ return effect; }					///< Returns associated effect instance
+	virtual AudioEffectX* getEffect ()	{ return effect; }					///< Returns associated effect instance
 	virtual bool getRect (ERect** rect)	{ *rect = 0; return false; }		///< Query editor size as #ERect
 	virtual bool open (void* ptr)		{ systemWindow = ptr; return 0; }	///< Open editor, pointer to parent windows is platform-dependent (HWND on Windows, WindowRef on Mac).
 	virtual void close ()				{ systemWindow = 0; }				///< Close editor (detach from parent window)
@@ -75,6 +75,6 @@ public:
 
 //-------------------------------------------------------------------------------------------------------
 protected:
-	AudioEffect* effect;	///< associated effect instance
+	AudioEffectX* effect;	///< associated effect instance
 	void* systemWindow;		///< platform-dependent parent window (HWND or WindowRef)
 };

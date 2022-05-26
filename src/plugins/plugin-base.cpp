@@ -75,7 +75,7 @@ String getModuleName(HMODULE module);//platform_win.cpp
 #endif
 #endif //BUILD_EXTERNAL_PLUGIN
 
-pluginwindow* createPluginWindow(AudioEffect* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h);
+pluginwindow* createPluginWindow(AudioEffectX* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h);
 
 void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> view) {
     try {

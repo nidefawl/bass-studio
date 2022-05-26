@@ -13,12 +13,12 @@
 struct automatable_t;
 class guiknob : public guibase {
 protected:
-    const float angleOpen = 90;
-    const float range     = (360 - angleOpen) * M_PI / 180.0f;
-    const float start     = -FLOAT_PI * 1.5f + (angleOpen / 2.0f) * M_PI / 180.0f;
-    bool* enabledPtr      = NULL;
-    float* valuePtr       = NULL;
-    float value           = 0.0f;
+    const double angleOpen = 90.0;
+    const float range      = static_cast<float>((360.0 - angleOpen) * M_PI / 180.0);
+    const float start      = static_cast<float>(-M_PI * 1.5 + (angleOpen / 2.0) * M_PI / 180.0);
+    bool* enabledPtr       = nullptr;
+    float* valuePtr        = nullptr;
+    float value            = 0.0f;
     bool isSlider;
     bool changedValue            = false;
     float fModifyBeginValue      = 0.0f;
@@ -32,12 +32,13 @@ protected:
 public:
     std::function<float()> fnGetValue;
     std::function<void(float, int)> fnSetValue;
+    std::function<void(float, float)> fnValueEditBegin;
     std::function<void(float, float)> fnValueEditChanged;
     std::function<void(float, float)> fnValueEditFinish;
     std::function<void(MouseHitEvt&, bool)> fnFocus;
     GuiColor::constant_t valColor = GuiColor::COL_KNOB;
     GuiColor::constant_t indColor = GuiColor::COL_KNOB_IND;
-    guiknob(const bool _renderBackground = true, const bool _isSlider = false) : guibase(), isSlider(_isSlider) {
+    explicit guiknob(const bool _renderBackground = true, const bool _isSlider = false) : guibase(), isSlider(_isSlider) {
         setBackgroundRendered(_renderBackground);
         setCanMouseHit(true);
     }
@@ -46,7 +47,7 @@ public:
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
     }
-    void setAutomationHandlers();
+    void setKnobInternalHandlers();
 
     bool isAutomated();
     void setIsSlider(bool b) {
@@ -86,14 +87,11 @@ public:
             fnValueEditChanged(curval, getValue());
         }
     }
-    virtual void onValueEditFinish(float from, float to) {
-        if (fnValueEditFinish) {
-            fnValueEditFinish(from, to);
-        }
-    }
+
     float getValueClamped() {
         return CLAMP_F(getValue());
     }
+
     virtual float getValue() {
         if (fnGetValue) {
             return fnGetValue();
@@ -103,17 +101,21 @@ public:
             return value;
         }
     }
+
     void setEnabledRef(bool* _enabledPtr) {
         enabledPtr = _enabledPtr;
     }
+
     void setValueRef(float* _valuePtr) {
         valuePtr = _valuePtr;
     }
+
     virtual bool enabled() {
         if (enabledPtr)
             return *enabledPtr;
         return true;
     }
+
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
     void setToDefaultValue();
 };

@@ -148,14 +148,12 @@ void PluginControl::onTick() {
     mainWindow->requestRedraw();
 }
 
-class AudioEffect;
-
-void PluginControl::onGuiOpen(AudioEffect* eff) {
-    this->view->onGuiOpen(eff);
+void PluginControl::onGuiOpen() {
+    this->view->onGuiOpen();
 }
 
-void PluginControl::onGuiClose(AudioEffect* eff) {
-    this->view->onGuiClose(eff);
+void PluginControl::onGuiClose() {
+    this->view->onGuiClose();
 }
 
 void PluginControl::onSetParameter(int32_t index, float value) {

@@ -81,6 +81,9 @@ void guiknob::handleDraggedMove(MouseEvent& evt) {
         float delta = disty / scale;
         if (math::abs(delta) > 1e-2f) {
             value -= delta;
+            if (!changedValue && fnValueEditBegin) {
+                fnValueEditBegin(lastVal, value);
+            }
             setValue(value, FLG_PAR_UPDATE_USER);
             evt.dragDistance->y = 0;
             lastVal             = value;
@@ -89,8 +92,8 @@ void guiknob::handleDraggedMove(MouseEvent& evt) {
     }
 }
 void guiknob::handleDraggedRelease(MouseEvent& evt) {
-    if (changedValue) {
-        onValueEditFinish(fModifyBeginValue, lastVal);
+    if (changedValue && fnValueEditFinish) {
+        fnValueEditFinish(fModifyBeginValue, lastVal);
     }
     changedValue = false;
 }
@@ -184,7 +187,7 @@ void guiknob::setToDefaultValue() {
     setValue(fDefaultValue, FLG_PAR_UPDATE_USER);
 }
 
-void guiknob::setAutomationHandlers() {
+void guiknob::setKnobInternalHandlers() {
 #if BUILD_VSTHOST
     fnGetValue = [this]() {
         if (paramAutomatable) {
@@ -208,7 +211,7 @@ void guiknob::setAutomationHandlers() {
         }
     };
     fnFocus = [this](MouseHitEvt& evt, bool focused) {
-        if (paramAutomatable) {
+        if (paramAutomatable && dawCtrl) {
             auto* track = paramAutomatable->getTrack();
             if (!track)
                 return;

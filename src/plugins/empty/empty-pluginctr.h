@@ -12,18 +12,18 @@
 #include "gui/controls/button.h"
 
 
-class vstplugin;
-class AudioEffect;
 
 namespace PluginEmptyVST2 {
     class EmptyPluginVST2;
 
     class guictr_emptyvst : public guictr_base {
-        vstplugin* vstHostSide     = nullptr;
-        EmptyPluginVST2* curEffect = nullptr;
+        EmptyPluginVST2* const plugin;
 
     public:
-        guictr_emptyvst() : guictr_base() {
+        explicit guictr_emptyvst(EmptyPluginVST2* plugin)
+            : guictr_base(),
+            plugin(plugin)
+        {
             setBackgroundRendered(true);
         }
         ~guictr_emptyvst() override {
@@ -32,9 +32,8 @@ namespace PluginEmptyVST2 {
         bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
         void render(NVGcontext* vg) override;
         bool handleKeyInput(KeyEvent& event) override;
-        void onGuiOpen(AudioEffect* eff);
-        void onGuiClose(AudioEffect* eff);
-        void setVSTPlugin(vstplugin* vstHostSide);
+        void onGuiOpen();
+        void onGuiClose();
         void onSetParameter(int32_t index, float value);
     };
 

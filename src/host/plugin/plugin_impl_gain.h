@@ -10,16 +10,13 @@ class vsthost;
 struct audio_stage_t;
 
 class module_gain : public internalplugin {
-    struct internal_handles_t;
-    internal_handles_t* handle;
-
 public:
     explicit module_gain(int32_t _projectGlobalId);
     ~module_gain() override;
+
     float dispatchGetParameter(int32_t idx) override;
     void dispatchSetParameter(int32_t idx, float val) override;
-
-public:
+    void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     int getModuleType() override { return PLUGIN_TYPE_GAIN; };
     samplecount_t getPluginLatency() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;

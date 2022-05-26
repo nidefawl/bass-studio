@@ -1443,8 +1443,7 @@ namespace PluginSynth {
 
 
     class guicontainer_plugin_synth : public guictr_base {
-        vstplugin* vstHostSide      = nullptr;
-        PluginVST2_Synth* curEffect = nullptr;
+        PluginVST2_Synth* const plugin;
         struct _synth_gui_param_knob {
             guiknob* knob;
             Parameters param;
@@ -1454,8 +1453,9 @@ namespace PluginSynth {
         std::map<Parameters, guiknob_pluginparam*> mapKnobs;
 
     public:
-        guicontainer_plugin_synth()
+        explicit guicontainer_plugin_synth(PluginVST2_Synth* plugin)
             : guictr_base(),
+              plugin(plugin),
               knobParam0(PARAM_OFFSET_EXTERNAL + (int) Parameters::FilterCutoff, (int) Parameters::FilterCutoff) {
             setBackgroundRendered(true);
             padding = 4;
@@ -1489,26 +1489,31 @@ namespace PluginSynth {
             return nullptr;
         }
         void onSetParameter(int32_t index, float value) {
+#if BUILD_EXTERNAL_PLUGIN
             guiknob_pluginparam* knob = getKnobFromParameter(index);
-            if (knob && curEffect) {
+            if (knob) {
                 knob->setValueInit(value);
                 knob->setDisplayValueFromEffect();
             }
-        }
-        void onGuiOpen(AudioEffect* eff) {
-            this->curEffect = dynamic_cast<PluginVST2_Synth*>(eff);
-            assert(this->curEffect);
-            knobParam0.setAudioEffect(eff);
-        }
-        void onGuiClose(AudioEffect* eff) {
-            this->curEffect = nullptr;
-        }
-        void setVSTPlugin(vstplugin* _vstHostSide) {
-            this->vstHostSide = _vstHostSide;
-#if BUILD_VSTHOST
-            knobParam0.setEffectInstance(_vstHostSide);
 #endif
         }
+        void onGuiOpen() {
+#if BUILD_VSTHOST
+            knobParam0.setEffectInstance(plugin->getHostSideHandle());
+#endif
+#if BUILD_EXTERNAL_PLUGIN
+            knobParam0.setAudioEffect(plugin);
+#endif
+        }
+        void onGuiClose() {
+#if BUILD_VSTHOST
+            knobParam0.setEffectInstance(nullptr);
+#endif
+#if BUILD_EXTERNAL_PLUGIN
+            knobParam0.setAudioEffect(nullptr);
+#endif
+        }
+
         void onTick(AppCtrl* ctrl) override {
             for (guibase* gui : guis) {
                 gui->onTick(ctrl);
@@ -1533,14 +1538,13 @@ namespace PluginSynth {
                 gui->render(vg);
                 nvgRestore(vg);
             }
-            PluginVST2_Synth* thisImpl = this->curEffect;
+            PluginVST2_Synth* thisImpl = this->plugin;
             PluginVST2_Synth::ThreadLock lock(thisImpl->getMutex());
             std::vector<String> strings;
-            //this->curEffect->
             String str;
-            str = StringFormat("Blocksize %d", this->curEffect->getBlockSize());
+            str = StringFormat("Blocksize %d", this->plugin->getBlockSize());
             strings.push_back(str);
-            str = StringFormat("Samplerate %f", this->curEffect->getSampleRate());
+            str = StringFormat("Samplerate %f", this->plugin->getSampleRate());
             strings.push_back(str);
             int flags = 0;
             for (int i = 8; i < 16; i++) {
@@ -1606,44 +1610,12 @@ namespace PluginSynth {
         bool handleKeyInput(KeyEvent& event) override {
             if (event.type != KeyEventType::K_RELEASE) {
                 if (event.keyCode == KEY_ENTER) {
-                    this->curEffect->writeCurrentProgram();
+                    this->plugin->writeCurrentProgram();
                 }
             }
             return false;
         }
         void buttonClicked(guibase* button) override {
-        }
-    };
-
-
-    class ViewContainers_Plugin_Synth : public PluginViewContainersImpl {
-    public:
-        guicontainer_plugin_synth ctr_main;
-        ViewContainers_Plugin_Synth() : PluginViewContainersImpl(280, 360) {
-        }
-        ~ViewContainers_Plugin_Synth() override = default;
-        void layout(int32_t winW, int32_t winH) override {
-            ctr_main.pos  = { 0, 0 };
-            ctr_main.size = { winW, winH };
-        }
-        void addTo(std::vector<guictr_base*>& v) override {
-            v.push_back(&ctr_main);
-        }
-        void onGuiOpen(AudioEffect* eff) override {
-            ctr_main.onGuiOpen(eff);
-        }
-        void onGuiClose(AudioEffect* eff) override {
-            ctr_main.onGuiClose(eff);
-        }
-        void onSetParameter(int32_t index, float value) override {
-            ctr_main.onSetParameter(index, value);
-        }
-        void getFixedSize(int32_t* w, int32_t* h) override {
-            *w = this->width;
-            *h = this->height;
-        }
-        void setVSTPlugin(vstplugin* _hostsideplugin) override {
-            ctr_main.setVSTPlugin(_hostsideplugin);
         }
     };
 
@@ -1655,7 +1627,7 @@ namespace PluginSynth {
         return new PluginVST2_Synth(audioMaster);
     }
     std::shared_ptr<PluginViewContainers> PluginVST2_Synth::createView() {
-        std::shared_ptr<PluginViewContainers> view = std::make_shared<ViewContainers_Plugin_Synth>();
+        auto view = std::make_shared<SinglePluginViewContainers<guicontainer_plugin_synth, PluginVST2_Synth>>(this, 280, 360);
         this->views.push_back(view);
         return view;
     }

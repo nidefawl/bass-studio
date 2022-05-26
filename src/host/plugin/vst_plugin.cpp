@@ -555,8 +555,6 @@ guiplugin* vstplugin::makeGui() {
             if (viewCtr && baseVst2 && pGuiVstPlugin) {
                 pGuiVstPlugin->viewCtr = viewCtr;
                 viewCtr->addTo(pGuiVstPlugin->viewCtrs);
-                viewCtr->onGuiOpen(handle->axEffect);
-                viewCtr->setVSTPlugin(this);
             }
         }
     }

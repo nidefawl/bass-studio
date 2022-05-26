@@ -22,7 +22,6 @@ struct NVGcontext;
 class guibase;
 class guictr_base;
 class guictxtmenu_base;
-class AudioEffect;
 
 class PluginControl : public AppCtrl {
     std::shared_ptr<PluginViewContainers> view;
@@ -48,7 +47,7 @@ public:
     void initApp(const std::vector<String>& args) override;
     void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) override;
 
-    void onGuiOpen(AudioEffect* eff);
-    void onGuiClose(AudioEffect* eff);
+    void onGuiOpen();
+    void onGuiClose();
     void onSetParameter(int32_t index, float value);
 };

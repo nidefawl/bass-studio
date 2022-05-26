@@ -19,7 +19,6 @@
 #define DAW_PLUGINAPI
 #endif
 
-class AudioEffect;
 class PluginViewContainersImpl : public PluginViewContainers {
 protected:
     uint32_t width;

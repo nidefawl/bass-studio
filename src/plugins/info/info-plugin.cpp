@@ -458,13 +458,15 @@ namespace PluginHostInfo {
 
 
     class guicontainer_plugin_HostInfo : public guictr_base {
-        vstplugin* vstHostSide         = nullptr;
-        PluginVST2_HostInfo* curEffect = nullptr;
+        PluginVST2_HostInfo* const plugin;
         guiknob_pluginparam knobParam0;
 
     public:
-        guicontainer_plugin_HostInfo()
-            : guictr_base(), knobParam0(PARAM_OFFSET_EXTERNAL + kLogVerbosity, kLogVerbosity) {
+        explicit guicontainer_plugin_HostInfo(PluginVST2_HostInfo* plugin)
+            : guictr_base(),
+            plugin(plugin),
+            knobParam0(PARAM_OFFSET_EXTERNAL + kLogVerbosity, kLogVerbosity)
+        {
             setBackgroundRendered(true);
             padding = 4;
             margin  = 4;
@@ -499,40 +501,29 @@ namespace PluginHostInfo {
         }
 
         void onSetParameter(int32_t index, float value) {
+#if BUILD_EXTERNAL_PLUGIN
             guiknob_pluginparam* knob = getKnobFromParameter(index);
-            if (knob && curEffect) {
+            if (knob) {
                 knob->setValueInit(value);
                 knob->setDisplayValueFromEffect();
             }
-        }
-
-        void onGuiOpen(AudioEffect* eff) {
-            this->curEffect = dynamic_cast<PluginVST2_HostInfo*>(eff);
-            assert(this->curEffect);
-            knobParam0.setAudioEffect(eff);
-        }
-
-        void onGuiClose(AudioEffect* eff) {
-            this->curEffect = nullptr;
-        }
-
-        void setVSTPlugin(vstplugin* _vstHostSide) {
-            this->vstHostSide = _vstHostSide;
-#if BUILD_VSTHOST
-            knobParam0.setEffectInstance(_vstHostSide);
 #endif
         }
-
-        void onTick(AppCtrl* ctrl) override {
-            for (guibase* gui : guis) {
-                gui->onTick(ctrl);
-            }
+        void onGuiOpen() {
+#if BUILD_VSTHOST
+            knobParam0.setEffectInstance(plugin->getHostSideHandle());
+#endif
+#if BUILD_EXTERNAL_PLUGIN
+            knobParam0.setAudioEffect(plugin);
+#endif
         }
-
-        void prerender(NVGcontext* vg) override {
-            for (guibase* gui : guis) {
-                gui->prerender(vg);
-            }
+        void onGuiClose() {
+#if BUILD_VSTHOST
+            knobParam0.setEffectInstance(nullptr);
+#endif
+#if BUILD_EXTERNAL_PLUGIN
+            knobParam0.setAudioEffect(nullptr);
+#endif
         }
 
         void render(NVGcontext* vg) override {
@@ -542,20 +533,19 @@ namespace PluginHostInfo {
             if (!setScissorTransform(vg)) {
                 return;
             }
-            PluginVST2_HostInfo_impl_t* curEffectImpl = getImpl(curEffect);
+            PluginVST2_HostInfo_impl_t* curEffectImpl = getImpl(plugin);
             if (!curEffectImpl) {
                 dbgassert(0);
                 return;
             }
 
             std::vector<String> strings;
-            //this->curEffect->
             String str;
-            str = StringFormat("Blocksize %d", this->curEffect->getBlockSize());
+            str = StringFormat("Blocksize %d", this->plugin->getBlockSize());
             strings.push_back(str);
-            str = StringFormat("Samplerate %.0f", this->curEffect->getSampleRate());
+            str = StringFormat("Samplerate %.0f", this->plugin->getSampleRate());
             strings.push_back(str);
-            AudioEffectX* effx = dynamic_cast<AudioEffectX*>(this->curEffect);
+            AudioEffectX* effx = dynamic_cast<AudioEffectX*>(this->plugin);
             int flags          = 0;
             for (int i = 8; i < 16; i++) {
                 flags |= (1 << i);
@@ -615,49 +605,7 @@ namespace PluginHostInfo {
                 gui->layout();
             }
         }
-
-        bool handleKeyInput(KeyEvent& event) override {
-            if (event.type != KeyEventType::K_RELEASE) {
-            }
-            return false;
-        }
-
-        void buttonClicked(guibase* button) override {
-        }
     };
-
-
-    class ViewContainers_Plugin_HostInfo : public PluginViewContainersImpl {
-    public:
-        guicontainer_plugin_HostInfo ctr_main;
-        ViewContainers_Plugin_HostInfo() : PluginViewContainersImpl(280, 360) {
-        }
-        ~ViewContainers_Plugin_HostInfo() override = default;
-        void layout(int32_t winW, int32_t winH) override {
-            ctr_main.pos  = { 0, 0 };
-            ctr_main.size = { winW, winH };
-        }
-        void addTo(std::vector<guictr_base*>& v) override {
-            v.push_back(&ctr_main);
-        }
-        void onGuiOpen(AudioEffect* eff) override {
-            ctr_main.onGuiOpen(eff);
-        }
-        void onGuiClose(AudioEffect* eff) override {
-            ctr_main.onGuiClose(eff);
-        }
-        void onSetParameter(int32_t index, float value) override {
-            ctr_main.onSetParameter(index, value);
-        }
-        void getFixedSize(int32_t* w, int32_t* h) override {
-            *w = this->width;
-            *h = this->height;
-        }
-        void setVSTPlugin(vstplugin* hostsideplugin) override {
-            ctr_main.setVSTPlugin(hostsideplugin);
-        }
-    };
-
 
     const char* getName() {
         return PLUGIN_EFFECT_NAME;
@@ -666,7 +614,7 @@ namespace PluginHostInfo {
         return new PluginVST2_HostInfo(audioMaster);
     }
     std::shared_ptr<PluginViewContainers> PluginVST2_HostInfo::createView() {
-        std::shared_ptr<PluginViewContainers> view = std::make_shared<ViewContainers_Plugin_HostInfo>();
+        auto view = std::make_shared<SinglePluginViewContainers<guicontainer_plugin_HostInfo, PluginVST2_HostInfo>>(this, 280, 360);
         this->views.push_back(view);
         return view;
     }

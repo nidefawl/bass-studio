@@ -1970,13 +1970,14 @@ void windowTickTimerRun() {
 #include <vstsdk-host-2.4/aeffect.h>
 #include <vstsdk-host-2.4/aeffectx.h>
 #include <vstsdk-plugin-2.4/aeffeditor.h>
+#include <vstsdk-plugin-2.4/audioeffectx.h>
 
 class appwindow_plugin : public appwindow_main, public pluginwindow {
     bool isInitialized = false;
 
 public:
     ERect _rect{};
-    appwindow_plugin(AudioEffect* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h)
+    appwindow_plugin(AudioEffectX* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h)
         : appwindow_main(nullptr, _ctrl),
           pluginwindow(_ctrl) {
         this->effect = _effect;
@@ -2061,7 +2062,7 @@ public:
                 this->valid = true;
                 glfwGetWindowSize(glfw, &windowWidth, &windowHeight);
                 this->onWindowSizeChanged(windowWidth, windowHeight);
-                ctrlShared->onGuiOpen(effect);
+                ctrlShared->onGuiOpen();
                 glfwSetWindowRefreshCallback(glfw, glfw_cb_refresh);
                 return true;
             }
@@ -2077,7 +2078,7 @@ public:
             if (isInitialized) {
                 glfwMakeContextCurrent(glfw);
             }
-            ctrlShared->onGuiClose(effect);
+            ctrlShared->onGuiClose();
             this->valid = false;
             if (isInitialized) {
                 hideWindow();
@@ -2121,7 +2122,7 @@ public:
     }
 };
 
-pluginwindow* createPluginWindow(AudioEffect * _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h) {
+pluginwindow* createPluginWindow(AudioEffectX* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h) {
     return new appwindow_plugin(_effect, std::move(_ctrl), w, h);
 }
 

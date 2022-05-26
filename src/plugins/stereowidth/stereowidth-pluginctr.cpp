@@ -36,41 +36,49 @@ using namespace PluginStereoWidth;
 
 
 class guicontainer_stereowidth : public guictr_base {
-    vstplugin* vstHostSide = nullptr;
-    AudioEffect* curEffect = nullptr;
+    PluginVST2_StereoWidth* const plugin;
     guiknob_pluginparam knobgain;
     guiknob_pluginparam knobwidth;
 
 public:
-    guicontainer_stereowidth();
+    explicit guicontainer_stereowidth(PluginVST2_StereoWidth* plugin)
+        : guictr_base(),
+        plugin(plugin),
+        knobgain(PARAM_OFFSET_EXTERNAL + kGain, kGain),
+        knobwidth(PARAM_OFFSET_EXTERNAL + kStereoWidth, kStereoWidth)
+    {
+        setBackgroundRendered(true);
+        padding = 4;
+        margin  = 4;
+        add(&knobwidth);
+        add(&knobgain);
+    }
     ~guicontainer_stereowidth() override {
         remove(&knobgain);
         remove(&knobwidth);
     }
-    void render(NVGcontext* vg) override;
-    void prerender(NVGcontext* vg) override;
-    void onTick(AppCtrl* ctrl) override;
-    void layout() override;
-    void buttonClicked(guibase* button) override;
-    bool handleKeyInput(KeyEvent& kevt) override;
-    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-        if (this->contains(mpos)) {
-            ivec2 localMouse = this->toContainerSpace(mpos);
-            for (guibase* gui : guis) {
-                if (gui->mouseHitTest(localMouse, evt)) {
-                    return true;
-                }
-            }
-            if (evt.type == MouseHitType::MOUSE_LEFT) {
-                evt.requestFocus(this);
-                return true;
-            }
-        }
-        return false;
+
+    void onGuiOpen() {
+#if BUILD_VSTHOST
+        knobwidth.setEffectInstance(plugin->getHostSideHandle());
+        knobgain.setEffectInstance(plugin->getHostSideHandle());
+#endif
+#if BUILD_EXTERNAL_PLUGIN
+        knobwidth.setAudioEffect(plugin);
+        knobgain.setAudioEffect(plugin);
+#endif
     }
-    void onGuiOpen(AudioEffect* eff);
-    void onGuiClose(AudioEffect* eff);
-    void setVSTPlugin(vstplugin* vstHostSide);
+
+    void onGuiClose() {
+#if BUILD_VSTHOST
+        knobwidth.setEffectInstance(nullptr);
+        knobgain.setEffectInstance(nullptr);
+#endif
+#if BUILD_EXTERNAL_PLUGIN
+        knobwidth.setAudioEffect(nullptr);
+        knobgain.setAudioEffect(nullptr);
+#endif
+    }
 
     guiknob_pluginparam* getKnobFromParameter(int32_t index) {
         switch (index) {
@@ -81,122 +89,37 @@ public:
         }
         return nullptr;
     }
+
     void onSetParameter(int32_t index, float value) {
+#if BUILD_EXTERNAL_PLUGIN
         guiknob_pluginparam* knob = getKnobFromParameter(index);
-        if (knob && curEffect) {
+        if (knob) {
             knob->setValueInit(value);
             knob->setDisplayValueFromEffect();
+        }
+#endif
+    }
+
+    void layout() override {
+        ivec2 cs           = getSizeContent();
+        const int inset    = 4;
+        const int knobSize = math::max(32, (cs.x - inset * 3) / 2);
+        knobwidth.size     = ivec2(knobSize, cs.y - inset * 2);
+        knobgain.size      = ivec2(knobSize, cs.y - inset * 2);
+        knobwidth.pos      = ivec2(inset);
+        knobgain.pos       = ivec2(knobwidth.right() + inset, inset);
+        for (guibase* gui : guis) {
+            gui->layout();
         }
     }
 };
 
-
-guicontainer_stereowidth::guicontainer_stereowidth()
-    : guictr_base(), knobgain(PARAM_OFFSET_EXTERNAL + kGain, kGain), knobwidth(PARAM_OFFSET_EXTERNAL + kStereoWidth, kStereoWidth) {
-    setBackgroundRendered(true);
-    padding = 4;
-    margin  = 4;
-    add(&knobwidth);
-    add(&knobgain);
-}
-void guicontainer_stereowidth::onGuiOpen(AudioEffect* eff) {
-    this->curEffect = eff;
-    knobwidth.setAudioEffect(eff);
-    knobgain.setAudioEffect(eff);
-}
-void guicontainer_stereowidth::onGuiClose(AudioEffect* eff) {
-    this->curEffect = nullptr;
-    knobwidth.setAudioEffect(nullptr);
-    knobgain.setAudioEffect(nullptr);
-}
-void guicontainer_stereowidth::setVSTPlugin(vstplugin* _vstHostSide) {
-#if BUILD_VSTHOST
-    this->vstHostSide = _vstHostSide;
-    knobwidth.setEffectInstance(_vstHostSide);
-    knobgain.setEffectInstance(_vstHostSide);
-#endif
-}
-void guicontainer_stereowidth::onTick(AppCtrl* ctrl) {
-    for (guibase* gui : guis) {
-        gui->onTick(ctrl);
-    }
-}
-void guicontainer_stereowidth::buttonClicked(guibase* button) {
-}
-void guicontainer_stereowidth::prerender(NVGcontext* vg) {
-    for (guibase* gui : guis) {
-        gui->prerender(vg);
-    }
-}
-
-void guicontainer_stereowidth::render(NVGcontext* vg) {
-    if (isBackgroundRendered()) {
-        renderBackground(vg);
-    }
-    if (!setScissorTransform(vg)) {
-        return;
-    }
-    for (guibase* gui : guis) {
-        nvgSave(vg);
-        gui->render(vg);
-        nvgRestore(vg);
-    }
-}
-void guicontainer_stereowidth::layout() {
-    ivec2 cs           = getSizeContent();
-    const int inset    = 4;
-    const int knobSize = math::max(32, (cs.x - inset * 3) / 2);
-    knobwidth.size     = ivec2(knobSize, cs.y - inset * 2);
-    knobgain.size      = ivec2(knobSize, cs.y - inset * 2);
-    knobwidth.pos      = ivec2(inset);
-    knobgain.pos       = ivec2(knobwidth.right() + inset, inset);
-    for (guibase* gui : guis) {
-        gui->layout();
-    }
-}
-bool guicontainer_stereowidth::handleKeyInput(KeyEvent& event) {
-    if (event.type != KeyEventType::K_RELEASE) {
-    }
-    return false;
-}
-
-
-class ViewContainersStereoWidth : public PluginViewContainersImpl {
-public:
-    guicontainer_stereowidth ctr_main;
-    ViewContainersStereoWidth() : PluginViewContainersImpl(220, 150) {
-    }
-    ~ViewContainersStereoWidth() override = default;
-    void layout(int32_t winW, int32_t winH) override {
-        ctr_main.pos  = { 0, 0 };
-        ctr_main.size = { winW, winH };
-    }
-    void addTo(std::vector<guictr_base*>& v) override {
-        v.push_back(&ctr_main);
-    }
-    void onGuiOpen(AudioEffect* eff) override {
-        ctr_main.onGuiOpen(eff);
-    }
-    void onGuiClose(AudioEffect* eff) override {
-        ctr_main.onGuiClose(eff);
-    }
-    void onSetParameter(int32_t index, float value) override {
-        ctr_main.onSetParameter(index, value);
-    }
-    void getFixedSize(int32_t* w, int32_t* h) override {
-        *w = static_cast<int32_t>(width);
-        *h = static_cast<int32_t>(height);
-    }
-    void setVSTPlugin(vstplugin* _hostsideplugin) override {
-        ctr_main.setVSTPlugin(_hostsideplugin);
-    }
-};
 namespace PluginStereoWidth {
     AudioEffectX* createPlugin(audioMasterCallback audioMaster) {
         return new PluginVST2_StereoWidth(audioMaster);
     }
     std::shared_ptr<PluginViewContainers> PluginVST2_StereoWidth::createView() {
-        std::shared_ptr<PluginViewContainers> view = std::make_shared<ViewContainersStereoWidth>();
+        auto view = std::make_shared<SinglePluginViewContainers<guicontainer_stereowidth, PluginVST2_StereoWidth>>(this, 220, 150);
         this->views.push_back(view);
         return view;
     }

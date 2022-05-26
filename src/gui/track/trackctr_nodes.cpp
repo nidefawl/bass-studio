@@ -430,6 +430,7 @@ public:
         }
         destroyGuis();
         if (viewCtr) {
+            viewCtr->onGuiClose();
             viewCtr->setFree();
         }
     }
@@ -1217,13 +1218,14 @@ void gui_graph::updateList(bool resetPositions) {
                     entry->viewCtr = intEffect->createInternalView();
                     if (entry->viewCtr) {
                         entry->viewCtr->addTo(entry->viewCtrs);
-                        entry->viewCtr->onGuiOpen(nullptr);
                     }
                 }
             }
             for (auto* ctr : entry->viewCtrs) {
                 entry->add(ctr);
             }
+            if (entry->viewCtr)
+                entry->viewCtr->onGuiOpen();
             int32_t insetCtrls = INSET_TITLE;
             auto layoutPos     = guiText->pos;
             for (auto* ctr : entry->viewCtrs) {

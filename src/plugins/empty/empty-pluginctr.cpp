@@ -26,9 +26,6 @@
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 
 
-class vstplugin;
-class AudioEffect;
-
 namespace PluginEmptyVST2 {
     bool guictr_emptyvst::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         if (this->contains(mpos)) {
@@ -58,10 +55,10 @@ namespace PluginEmptyVST2 {
         int y = line;
         nvgText(vg, 5, y, PluginEmptyVST2::getName(), NULL);
         y += line;
-        String str = StringFormat("%d processBlock calls", this->curEffect->numCalls);
+        String str = StringFormat("%d processBlock calls", this->plugin->numCalls);
         nvgText(vg, 5, y, StringAsCStr(str), NULL);
         y += line;
-        str = StringFormat("%d finished blocks", this->curEffect->numCalls2);
+        str = StringFormat("%d finished blocks", this->plugin->numCalls2);
         nvgText(vg, 5, y, StringAsCStr(str), NULL);
     }
 
@@ -71,59 +68,21 @@ namespace PluginEmptyVST2 {
         return false;
     }
 
-    void guictr_emptyvst::onGuiOpen(AudioEffect* eff) {
-        this->curEffect = static_cast<PluginEmptyVST2::EmptyPluginVST2*>(eff);
+    void guictr_emptyvst::onGuiOpen() {
     }
 
-    void guictr_emptyvst::onGuiClose(AudioEffect* eff) {
-        this->curEffect = nullptr;
-    }
-
-    void guictr_emptyvst::setVSTPlugin(vstplugin* _vstHostSide) {
-        this->vstHostSide = _vstHostSide;
+    void guictr_emptyvst::onGuiClose() {
     }
 
     inline void guictr_emptyvst::onSetParameter(int32_t index, float value) {
     }
 
 
-    class ViewContainersEmptyPlugin : public PluginViewContainersImpl {
-    public:
-        guictr_emptyvst ctr_main;
-        ViewContainersEmptyPlugin() : PluginViewContainersImpl(400, 300) {
-        }
-        ~ViewContainersEmptyPlugin() override = default;
-
-        void layout(int32_t winW, int32_t winH) override {
-            ctr_main.pos  = { 0, 0 };
-            ctr_main.size = { winW, winH };
-        }
-        void addTo(std::vector<guictr_base*>& v) override {
-            v.push_back(&ctr_main);
-        }
-        void onGuiOpen(AudioEffect* eff) override {
-            ctr_main.onGuiOpen(eff);
-        }
-        void onGuiClose(AudioEffect* eff) override {
-            ctr_main.onGuiClose(eff);
-        }
-        void onSetParameter(int32_t index, float value) override {
-            ctr_main.onSetParameter(index, value);
-        }
-        void getFixedSize(int32_t* w, int32_t* h) override {
-            *w = this->width;
-            *h = this->height;
-        }
-        void setVSTPlugin(vstplugin* _hostsideplugin) override {
-            ctr_main.setVSTPlugin(_hostsideplugin);
-        }
-    };
-
     AudioEffectX* createPlugin(audioMasterCallback audioMaster) {
         return new EmptyPluginVST2(audioMaster);
     }
     std::shared_ptr<PluginViewContainers> EmptyPluginVST2::createView() {
-        std::shared_ptr<PluginViewContainers> view = std::make_shared<ViewContainersEmptyPlugin>();
+        auto view = std::make_shared<SinglePluginViewContainers<guictr_emptyvst, EmptyPluginVST2>>(this);
         this->views.push_back(view);
         return view;
     }

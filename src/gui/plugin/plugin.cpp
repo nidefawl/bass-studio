@@ -485,7 +485,7 @@ public:
           knobTest(false) {
         icon = 0;
         knobTest.setAutomationRef(effect, entry->idx);
-        knobTest.setAutomationHandlers();
+        knobTest.setKnobInternalHandlers();
         knobTest.setParent(this);
     }
     void handleRightClick(MouseEvent& evt) override {
@@ -703,6 +703,21 @@ void guipluginview::prerender(NVGcontext* vg) {
         ctr->prerender(vg);
     }
 }
+
+void guipluginview::onAdded() {
+    guictr_base::onAdded();
+    if (viewCtr) {
+        viewCtr->onGuiOpen();
+    }
+}
+
+void guipluginview::onRemove() {
+    guictr_base::onRemove();
+    if (viewCtr) {
+        viewCtr->onGuiClose();
+    }
+}
+
 void guipluginview::determineSize(glm::ivec2& prefSize) {
     if (layoutMode == 1) {
         guiplugin::determineSize(prefSize);
@@ -979,9 +994,6 @@ guiinternalpluginview::guiinternalpluginview(internalplugin* _effect) : guiplugi
     viewCtr = _effect->createInternalView();
     if (viewCtr) {
         viewCtr->addTo(viewCtrs);
-        viewCtr->onGuiOpen(nullptr);
-//        this->viewCtr->setVSTPlugin(this);
-//        handleInt->viewForInternalVst2 = this->viewCtr;
     }
 }
 guiinternalpluginview::~guiinternalpluginview() {

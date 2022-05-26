@@ -129,6 +129,8 @@ public:
     void setControl(BaseCtrl* parentCtrl) override;
     void determineSize(ivec2& prefSize) override;
     void prerender(NVGcontext* vg) override;
+    void onAdded() override;
+    void onRemove() override;
 };
 class guivstplugin : public guipluginview {
 public:

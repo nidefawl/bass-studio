@@ -20,11 +20,11 @@
 
 
 using namespace std;
-using namespace PluginTestAdv;
 
+namespace PluginTestAdv {
 
-gui_ctr_main::gui_ctr_main()
-    : guictr_base(), field(nullptr) {
+gui_ctr_main::gui_ctr_main(GuiAdvPluginVST2* plugin)
+    : guictr_base(), plugin(plugin), field(nullptr) {
     setBackgroundRendered(true);
     add(&colorPicker);
     add(&textField);
@@ -139,18 +139,11 @@ bool gui_ctr_main::handleKeyInput(KeyEvent& event) {
     return false;
 }
 
-void gui_ctr_main::onGuiOpen(AudioEffect* eff) {
-    this->curEffect = eff;
+void gui_ctr_main::onGuiOpen() {
 }
 
-void gui_ctr_main::onGuiClose(AudioEffect* eff) {
-    this->curEffect = nullptr;
+void gui_ctr_main::onGuiClose() {
 }
-
-void gui_ctr_main::setVSTPlugin(vstplugin* _vstHostSide) {
-    this->vstHostSide = _vstHostSide;
-}
-
 
 void gui_ctr_main::onSetParameter(int32_t index, float value) {
 
@@ -159,7 +152,9 @@ void gui_ctr_main::onSetParameter(int32_t index, float value) {
 class ViewContainersAdvPlugin : public PluginViewContainersImpl {
 public:
     gui_ctr_main ctr_main;
-    ViewContainersAdvPlugin() : PluginViewContainersImpl(400, 300) {
+
+    explicit ViewContainersAdvPlugin(GuiAdvPluginVST2* plugin)
+        : PluginViewContainersImpl(400, 300), ctr_main(plugin) {
     }
     ~ViewContainersAdvPlugin() override = default;
     void layout(int32_t winW, int32_t winH) override {
@@ -169,11 +164,11 @@ public:
     void addTo(std::vector<guictr_base*>& v) override {
         v.push_back(&ctr_main);
     }
-    void onGuiOpen(AudioEffect* eff) override {
-        ctr_main.onGuiOpen(eff);
+    void onGuiOpen() override {
+        ctr_main.onGuiOpen();
     }
-    void onGuiClose(AudioEffect* eff) override {
-        ctr_main.onGuiClose(eff);
+    void onGuiClose() override {
+        ctr_main.onGuiClose();
     }
     void onSetParameter(int32_t index, float value) override {
         ctr_main.onSetParameter(index, value);
@@ -181,9 +176,6 @@ public:
     void getFixedSize(int32_t* w, int32_t* h) override {
         *w = this->width;
         *h = this->height;
-    }
-    void setVSTPlugin(vstplugin* _hostsideplugin) override {
-        ctr_main.setVSTPlugin(_hostsideplugin);
     }
 };
 
@@ -193,12 +185,14 @@ void gui_ctr_main::buttonClicked(guibase* button) {
     }
 }
 
+}
+
 namespace PluginTestAdv {
     AudioEffectX* createPlugin(audioMasterCallback audioMaster) {
         return new GuiAdvPluginVST2(audioMaster);
     }
     std::shared_ptr<PluginViewContainers> GuiAdvPluginVST2::createView() {
-        std::shared_ptr<PluginViewContainers> view = std::make_shared<ViewContainersAdvPlugin>();
+        auto view = std::make_shared<ViewContainersAdvPlugin>(this);
         this->views.push_back(view);
         return view;
     }

@@ -57,7 +57,7 @@ public:
             return false;
         };
         for (guiknob* knob : knobs) {
-            knob->setAutomationHandlers();
+            knob->setKnobInternalHandlers();
         }
     }
     void buttonClicked(guibase* _button) override;

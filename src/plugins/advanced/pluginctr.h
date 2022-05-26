@@ -11,19 +11,18 @@
 #include "gui/controls/colorpick.h"
 
 
-class vstplugin;
-class AudioEffect;
+namespace PluginTestAdv {
+class GuiAdvPluginVST2;
 class gui_ctr_main : public guictr_base {
-    vstplugin* vstHostSide = nullptr;
-    AudioEffect* curEffect = nullptr;
+    GuiAdvPluginVST2* const plugin;
     gui_color_pick colorPicker;
     guibutton btnLoop;
     gui_numberinput_i32 field;
     gui_textfield textField;
-    int nr;
+    int nr = 0;
 
 public:
-    gui_ctr_main();
+    explicit gui_ctr_main(GuiAdvPluginVST2* plugin);
     ~gui_ctr_main() override {
         removeGuis();
     }
@@ -52,8 +51,9 @@ public:
         }
         return false;
     }
-    void onGuiOpen(AudioEffect* eff);
-    void onGuiClose(AudioEffect* eff);
+    void onGuiOpen();
+    void onGuiClose();
     void onSetParameter(int32_t index, float value);
-    void setVSTPlugin(vstplugin* vstHostSide);
 };
+
+} // namespace PluginTestAdv

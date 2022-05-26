@@ -195,13 +195,14 @@ namespace PluginLatency {
 
 
     class guicontainer_plugin_latency : public guictr_base {
-        vstplugin* vstHostSide = nullptr;
-        AudioEffect* curEffect = nullptr;
+        PluginVST2_Latency* const plugin;
         guiknob_pluginparam knoblatency;
 
     public:
-        guicontainer_plugin_latency()
-            : guictr_base(), knoblatency(PARAM_OFFSET_EXTERNAL + kLatency, kLatency) {
+        explicit guicontainer_plugin_latency(PluginVST2_Latency* plugin)
+            : guictr_base(),
+            plugin(plugin),
+            knoblatency(PARAM_OFFSET_EXTERNAL + kLatency, kLatency) {
             setBackgroundRendered(true);
             padding = 4;
             margin  = 4;
@@ -209,21 +210,6 @@ namespace PluginLatency {
         }
         ~guicontainer_plugin_latency() override {
             remove(&knoblatency);
-        }
-        bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-            if (this->contains(mpos)) {
-                ivec2 localMouse = this->toContainerSpace(mpos);
-                for (guibase* gui : guis) {
-                    if (gui->mouseHitTest(localMouse, evt)) {
-                        return true;
-                    }
-                }
-                if (evt.type == MouseHitType::MOUSE_LEFT) {
-                    evt.requestFocus(this);
-                    return true;
-                }
-            }
-            return false;
         }
 
         guiknob_pluginparam* getKnobFromParameter(int32_t index) {
@@ -234,34 +220,20 @@ namespace PluginLatency {
             return nullptr;
         }
         void onSetParameter(int32_t index, float value) {
+#if BUILD_EXTERNAL_PLUGIN
             guiknob_pluginparam* knob = getKnobFromParameter(index);
-            if (knob && curEffect) {
+            if (knob) {
                 knob->setValueInit(value);
                 knob->setDisplayValueFromEffect();
             }
-        }
-        void onGuiOpen(AudioEffect* eff) {
-            this->curEffect = eff;
-            knoblatency.setAudioEffect(eff);
-        }
-        void onGuiClose(AudioEffect* eff) {
-            this->curEffect = nullptr;
-        }
-        void setVSTPlugin(vstplugin* _vstHostSide) {
-            this->vstHostSide = _vstHostSide;
-#if BUILD_VSTHOST
-            knoblatency.setEffectInstance(_vstHostSide);
 #endif
         }
-        void onTick(AppCtrl* ctrl) override {
-            for (guibase* gui : guis) {
-                gui->onTick(ctrl);
-            }
+        void onGuiOpen() {
+#if BUILD_VSTHOST
+            knoblatency.setEffectInstance(plugin->getHostSideHandle());
+#endif
         }
-        void prerender(NVGcontext* vg) override {
-            for (guibase* gui : guis) {
-                gui->prerender(vg);
-            }
+        void onGuiClose() {
         }
 
         void render(NVGcontext* vg) override {
@@ -298,40 +270,6 @@ namespace PluginLatency {
         }
     };
 
-
-    class ViewContainers_Plugin_Latency : public PluginViewContainersImpl {
-    public:
-        guicontainer_plugin_latency ctr_main;
-        ViewContainers_Plugin_Latency() : PluginViewContainersImpl(220, 150) {
-        }
-        ~ViewContainers_Plugin_Latency() override = default;
-
-        void layout(int32_t winW, int32_t winH) override {
-            ctr_main.pos  = { 0, 0 };
-            ctr_main.size = { winW, winH };
-        }
-        void addTo(std::vector<guictr_base*>& v) override {
-            v.push_back(&ctr_main);
-        }
-        void onGuiOpen(AudioEffect* eff) override {
-            ctr_main.onGuiOpen(eff);
-        }
-        void onGuiClose(AudioEffect* eff) override {
-            ctr_main.onGuiClose(eff);
-        }
-        void onSetParameter(int32_t index, float value) override {
-            ctr_main.onSetParameter(index, value);
-        }
-        void getFixedSize(int32_t* w, int32_t* h) override {
-            *w = this->width;
-            *h = this->height;
-        }
-        void setVSTPlugin(vstplugin* _hostsideplugin) override {
-            ctr_main.setVSTPlugin(_hostsideplugin);
-        }
-    };
-
-
     const char* getName() {
         return PLUGIN_EFFECT_NAME;
     }
@@ -339,7 +277,7 @@ namespace PluginLatency {
         return new PluginVST2_Latency(audioMaster);
     }
     std::shared_ptr<PluginViewContainers> PluginVST2_Latency::createView() {
-        std::shared_ptr<PluginViewContainers> view = std::make_shared<ViewContainers_Plugin_Latency>();
+        auto view = std::make_shared<SinglePluginViewContainers<guicontainer_plugin_latency, PluginVST2_Latency>>(this);
         this->views.push_back(view);
         return view;
     }
