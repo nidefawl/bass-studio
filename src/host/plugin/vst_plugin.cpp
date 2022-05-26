@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <vstsdk-host-2.4/aeffect.h>
 #include <vstsdk-host-2.4/aeffectx.h>
+#include "automation.h"
 #include "vst_plugin.h"
 
 #include "math/seq_math.h"
@@ -611,7 +612,7 @@ float vstplugin::getParamValue(int32_t idx) {
     return param->value;
 }
 
-String vstplugin::getParamValueDisplay(int32_t idx) {
+param_unit_t vstplugin::getParamValueDisplay(int32_t idx) {
     automatable_param_t* param = getParamUnchecked(idx);
     dbgassert(param);
     if (param->internalIdx >= 0) {
@@ -619,9 +620,7 @@ String vstplugin::getParamValueDisplay(int32_t idx) {
             recvParamDisplayValueUpdate(param->internalIdx);
         }
         if (param->paramDisplayValState & PARAM_FLAG_SET) {
-            if (param->unit.empty())
-                return param->paramDisplayValStr;
-            return param->paramDisplayValStr + " " + param->unit;
+            return {param->paramDisplayValStr, param->unit};
         }
     }
     return effectbase::getParamValueDisplay(idx);

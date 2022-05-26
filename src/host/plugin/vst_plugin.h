@@ -123,7 +123,7 @@ public:
     // automatable_t interface
     String getAutomatableName() override;
     float getParamValue(int32_t idx) override;
-    String getParamValueDisplay(int32_t idx) override;
+    param_unit_t getParamValueDisplay(int32_t idx) override;
     void setParamValue(int32_t idx, float val, int flags) override;
     automationlane_snapshot_t toRef() const override;
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;

@@ -535,8 +535,12 @@ public:
         if (rowHeight > 32) {
             setFont(vg, (int) (rowHeight * 0.4), THEMECOL_TEXT, G_TITLE_ALIGN);
             nvgText(vg, x, rowHeight * 0.25, StringAsCStr(getText()), nullptr);
-            String sValue = effect->getParamValueDisplay(entry->idx);
-            nvgText(vg, x, rowHeight * 0.5 + rowHeight * 0.25, StringAsCStr(sValue), nullptr);
+            auto paramValue = effect->getParamValueDisplay(entry->idx);
+            String paramValueStr = paramValue.value;
+            if (!paramValue.unit.empty()) {
+                paramValueStr += " " + paramValue.unit;
+            }
+            nvgText(vg, x, rowHeight * 0.5 + rowHeight * 0.25, StringAsCStr(paramValueStr), nullptr);
         } else {
             setFont(vg, (int) (rowHeight * 0.8), THEMECOL_TEXT, G_TITLE_ALIGN);
             nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), nullptr);

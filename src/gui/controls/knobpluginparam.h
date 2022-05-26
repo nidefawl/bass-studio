@@ -21,32 +21,40 @@
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 
 class guiknob_pluginparam : public guiknob_labeled_base {
+    int32_t internalEffectIdx;
+#if BUILD_EXTERNAL_PLUGIN
     AudioEffectX* curEffect    = nullptr;
-    int32_t internalEffectIdx = -1;
+#endif
+#if BUILD_VSTHOST
     effectbase* hostSidePlugin = nullptr;
+#endif
 public:
     explicit guiknob_pluginparam(int _paramIdx, int _internalEffectIdx = -1) 
-        : guiknob_labeled_base(false)
+        : guiknob_labeled_base(false), internalEffectIdx(_internalEffectIdx)
     {
+        (void)internalEffectIdx;
         paramIdx = _paramIdx;
-        internalEffectIdx  = _internalEffectIdx;
     }
     ~guiknob_pluginparam() override = default;
     void setEffectInstance(effectbase* _hostSidePlugin) {
+#if BUILD_VSTHOST
         hostSidePlugin   = _hostSidePlugin;
         paramAutomatable = _hostSidePlugin;
         if (hostSidePlugin) {
             setKnobInternalHandlers();
             fnValueEditChanged = [this](float preVal, float val) {
-                if (paramAutomatable) {
-                    setValueInit(val);
-                    setDisplayValueFromEffect();
-                }
+                setValueInit(val);
+            };
+            fnGetDisplayValue = [this](float val) {
+                auto paramDisplay = hostSidePlugin->getParamValueDisplay(paramIdx);
+                if (paramDisplay.unit.empty())
+                    return paramDisplay.value;
+                return paramDisplay.value + " " + paramDisplay.unit;
             };
             setValueInit(hostSidePlugin->getParamValue(paramIdx));
             setLabel(hostSidePlugin->getParamName(paramIdx));
         }
-        setDisplayValueFromEffect();
+#endif
     }
 #if BUILD_EXTERNAL_PLUGIN
     void setAudioEffect(AudioEffectX* eff) {
@@ -56,10 +64,8 @@ public:
             setValueInit(eff->getParameter(internalEffectIdx));
             setLabel(eff->getParameterName(internalEffectIdx));
         }
-        setDisplayValueFromEffect();
     }
     void setKnobVST2Handlers() {
-        log_lf(Log::L_DEBUG, "guiknob_pluginparam::setKnobVST2Handlers()\n");
         fnValueEditBegin = [this](float preVal, float val) {
             if (curEffect) {
                 curEffect->beginEdit(internalEffectIdx);
@@ -75,41 +81,11 @@ public:
                 curEffect->endEdit(internalEffectIdx);
             }
         };
-        // fnGetValue = [this]() {
-        //     if (curEffect) {
-        //         return paramAutomatable->getParamValue(paramIdx);
-        //     }
-        //     return value;
-        // };
-        // fnSetValue = [this](float f, int flags) {
-        //     if (paramAutomatable) {
-        //         ThreadLock lock     = MainCtrl::getPlayThread()->lockThread();
-        //         automation_t* param = paramAutomatable->getRegisteredAutomation(paramIdx);
-        //         if (param) {
-        //             param->active = false;
-        //         }
-        //         paramAutomatable->setParamValue(paramIdx, f, flags);
-        //     }
-        // };
-        // fnValueEditFinish = [this](float preVal, float val) {
-        //     if (paramAutomatable) {
-        //         paramAutomatable->postSetParameter(paramIdx, preVal, val, FLG_PAR_UPDATE_USER);
-        //     }
-        // };
-        // fnFocus = [this](MouseHitEvt& evt, bool focused) {
-        //     if (paramAutomatable) {
-        //         auto* track = paramAutomatable->getTrack();
-        //         if (!track)
-        //             return;
-        //         auto* guiTrackCtr   = dawCtrl->getTrackContainer();
-        //         track_gui_entry_t* entry{};
-        //         if (!guiTrackCtr->getPointerEntry(track, &entry))
-        //             return;
-        //         guiTrackCtr->showAutomationLane(entry, paramAutomatable, paramIdx);
-        //         dawCtrl->updateVisibleTrackContents();
-        //         guiTrackCtr->scrollTo(entry->content);
-        //     }
-        // };
+        fnGetDisplayValue = [this](float val) {
+            String displayValCached = curEffect->getParameterDisplay(internalEffectIdx);
+            displayValCached += curEffect->getParameterLabel(internalEffectIdx);
+            return displayValCached;
+        };
     }
 #endif
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
@@ -123,16 +99,5 @@ public:
             return true;
         }
         return false;
-    }
-    void setDisplayValueFromEffect() {
-        if (this->curEffect) {
-            this->valueDisplay  = curEffect->getParameterDisplay(internalEffectIdx);
-            this->valueDisplay += curEffect->getParameterLabel(internalEffectIdx);
-        } else if (this->hostSidePlugin) {
-            this->valueDisplay = hostSidePlugin->formatDisplayValue(paramIdx);
-        } else {
-
-            this->valueDisplay = "???";
-        }
     }
 };

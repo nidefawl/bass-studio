@@ -37,7 +37,6 @@ public:
         guiknob_pluginparam* knob = getKnobFromParameter(index);
         if (knob) {
             knob->setValueInit(value);
-            knob->setDisplayValueFromEffect();
         }
     }
     guiknob_pluginparam* getKnobFromParameter(int32_t index);

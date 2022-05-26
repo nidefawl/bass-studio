@@ -264,7 +264,6 @@ namespace PluginBitcrush {
             guiknob_pluginparam* knob = getKnobFromParameter(index);
             if (knob) {
                 knob->setValueInit(value);
-                knob->setDisplayValueFromEffect();
             }
 #endif
         }

@@ -81,6 +81,10 @@ union param_step_fi_u {
     float valFloat;
     int32_t valInt;
 };
+struct param_unit_t {
+    String value;
+    String unit;
+};
 struct automatable_param_t {
     int32_t idx   = -1;
     float value   = 0.0f;
@@ -160,8 +164,8 @@ public:
 
     virtual String getAutomatableName()      = 0;
     virtual float getParamValue(int32_t idx) = 0;
-    virtual String getParamValueDisplay(int32_t idx) {
-        return StringFormat("%f", getParamValue(idx));
+    virtual param_unit_t getParamValueDisplay(int32_t idx) {
+        return {StringFormat("%f", getParamValue(idx)), ""};
     }
     /**
      * setParamValue
