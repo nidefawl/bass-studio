@@ -174,6 +174,9 @@ void guictr_plugins::addGui(effectbase* plugin) {
         add(base);
     }
 }
+bool plugin_selection::hasSelection() const {
+    return firstSelection >= 0 && lastSelection >= 0 && pluginCtr && pluginCtr->stage;
+}
 
 void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_stage_t* stage, int32_t pos) {
     auto daw = DawInstance::get();
@@ -219,7 +222,7 @@ std::shared_ptr<plugin_clipboard_t> copyPluginSelection(plugin_selection& sel) {
 }
 bool handlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
     plugin_selection& sel = ctrl->getPluginSel();
-    if (!sel.pluginCtr) {
+    if (!sel.pluginCtr || !sel.pluginCtr->stage) {
         return false;
     }
     auto daw = ctrl->getDaw();
@@ -416,6 +419,11 @@ void guictr_plugins::relayout() {
     showTrack(this->stage);
 }
 void guictr_plugins::getEffects(std::vector<effectbase*>& out) {
+    if (!this->stage) {
+        out.clear();
+        log_lf(Log::L_WARN, "Access into dangling guictr_plugins\n");
+        return;
+    }
     out = this->stage->effects;// copy
 }
 void guictr_plugins::showTrack(audio_stage_t* audio) {

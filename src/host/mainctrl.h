@@ -91,9 +91,7 @@ public:
     int32_t firstSelection    = -1;
     int32_t lastSelection     = -1;
     guictr_plugins* pluginCtr = nullptr;
-    bool hasSelection() const {
-        return firstSelection >= 0 && lastSelection >= 0 && pluginCtr;
-    }
+    bool hasSelection() const;
     int32_t getSelectionCount() const {
         return hasSelection() ? lastSelection - firstSelection + 1 : 0;
     }
