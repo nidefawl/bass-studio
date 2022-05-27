@@ -257,7 +257,7 @@ public:
     VstTimeInfo* getTimeInfo() {
         return &this->m_sharedTimeInfo;
     }
-    static bool canDo(const char* ptr) {
+    static int32_t canDo(const char* ptr) {
         if ((!strcmp(ptr, HostCanDos::canDoSendVstEvents)) ||
             (!strcmp(ptr, HostCanDos::canDoSendVstMidiEvent)) ||
             (!strcmp(ptr, HostCanDos::canDoSendVstTimeInfo)) ||
@@ -269,8 +269,11 @@ public:
             (!strcmp(ptr, HostCanDos::canDoSendVstMidiEventFlagIsRealtime)) ||
             (!strcmp(ptr, HostCanDos::canDoStartStopProcess)) ||
             (!strcmp(ptr, HostCanDos::canDoShellCategory)))
-            return true;
-        return false;
+            return 1;
+        if (!strcmp(ptr, "NIMKPIVendorSpecificCallbacks")) {
+            return -1;
+        }
+        return 0;
     }
 
     vstplugin* getPlugin(AEffect* aeffect);
