@@ -35,25 +35,27 @@ void generateDenormals(float y[16]) {
     }
 }
 
-#define NUM_LOOPS 1
 
-static void runTest(bool isFZM) {
+static void runTest(int state) {
     hires_timer_t timer;
     float y[16]{0};
-    for (int i = 0; i < NUM_LOOPS; i++) {
+    double allSums = 0.0;
+    for (int i = 0; i < 32; i++) {
         generateDenormals(y);
+        double tmp = std::accumulate(std::cbegin(y), std::cend(y), 0.0);
+        allSums +=tmp;
     }
     int64_t result = timer.getTimeReset();
 
     double sumOfResult = std::accumulate(std::cbegin(y), std::cend(y), 0.0);
     double sumInDbFS   = 20.0 * std::log10(std::abs(sumOfResult));
     // clang-format off
-    log_out("%s %6s %12zd mysec\ty[0] %f\tsum %.2f dBFS\n",
-            (isFZM ? "_MM_FLUSH_ZERO_ON " : "_MM_FLUSH_ZERO_OFF"),
+    log_out("%s %6s %12zd mysec\ty[0] %f\tsum %.2f dBFS %.8f\n",
+            (state == 0 ? "default" : (state == 1 ? "_MM_FLUSH_ZERO_ON " : "_MM_FLUSH_ZERO_OFF")),
             "Denormals",
             result,
             y[0],
-            sumInDbFS);
+            sumInDbFS, allSums);
     // clang-format on
 }
 
@@ -62,18 +64,25 @@ void runSseBenchmarkTests() {
     log_out("SSE registerBits %08X\n", sseStatus.registerBits);
     log_out("SSE FlushZeroMode %02X\n", sseStatus.regFlushZeroMode);
     log_out("SSE DenormalsAreZero %02X\n", sseStatus.regDenormalsAreZero);
-    setSSENoFlushDenormals();
-    sseStatus = getSSEControlStatusRegister();
-    log_out("SSE registerBits %08X\n", sseStatus.registerBits);
-    log_out("SSE FlushZeroMode %02X\n", sseStatus.regFlushZeroMode);
-    log_out("SSE DenormalsAreZero %02X\n", sseStatus.regDenormalsAreZero);
-    runTest(false);
+    log_out("SSE ExceptionState %02X\n", sseStatus.regExceptionState);
+    log_out("SSE RoundingMode %02X\n", sseStatus.regRoundingMode);
+    runTest(0);
     setSSEFlushDenormals();
     sseStatus = getSSEControlStatusRegister();
     log_out("SSE registerBits %08X\n", sseStatus.registerBits);
     log_out("SSE FlushZeroMode %02X\n", sseStatus.regFlushZeroMode);
     log_out("SSE DenormalsAreZero %02X\n", sseStatus.regDenormalsAreZero);
-    runTest(true);
+    log_out("SSE ExceptionState %02X\n", sseStatus.regExceptionState);
+    log_out("SSE RoundingMode %02X\n", sseStatus.regRoundingMode);
+    runTest(1);
+    setSSENoFlushDenormals();
+    sseStatus = getSSEControlStatusRegister();
+    log_out("SSE registerBits %08X\n", sseStatus.registerBits);
+    log_out("SSE FlushZeroMode %02X\n", sseStatus.regFlushZeroMode);
+    log_out("SSE DenormalsAreZero %02X\n", sseStatus.regDenormalsAreZero);
+    log_out("SSE ExceptionState %02X\n", sseStatus.regExceptionState);
+    log_out("SSE RoundingMode %02X\n", sseStatus.regRoundingMode);
+    runTest(2);
 }
 
 int main(int argc, char **argv) {
