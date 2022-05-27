@@ -249,3 +249,15 @@ void storeAutomation(std::vector<automation_view_t>& automatedParams, automatabl
     }
     log_printf("Storing %d automation lanes for device %s\n", total, StringAsCStr(at->getAutomatableName()));
 }
+param_unit_t automatable_t::getParamValueDisplay(int32_t idx) {
+    auto param = getParam(idx);
+    dbgassert(param);
+    if (param->unit == "dB") {
+        float fGain = 1.0f;
+        if (dsp_util::getGainLvl(param->value, fGain)) {
+            return {StringFormat("%.3f", dsp_util::dBFS(fGain)), param->unit};
+        }
+        return {"-INF", param->unit};
+    }
+    return { StringFormat("%f", getParamValue(idx)), param->unit};
+}

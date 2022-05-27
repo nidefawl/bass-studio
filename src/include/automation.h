@@ -164,9 +164,7 @@ public:
 
     virtual String getAutomatableName()      = 0;
     virtual float getParamValue(int32_t idx) = 0;
-    virtual param_unit_t getParamValueDisplay(int32_t idx) {
-        return {StringFormat("%f", getParamValue(idx)), ""};
-    }
+    virtual param_unit_t getParamValueDisplay(int32_t idx);
     /**
      * setParamValue
      * @param idx

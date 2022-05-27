@@ -174,14 +174,6 @@ void module_gain::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_
     internalplugin::makeSnapshot(snapshot, opts);
 }
 
-String module_gain::formatDisplayValue(int32_t idx) {
-    float fGain = 1.0f;
-    if (dsp_util::getGainLvl(getParamValue(PARAM_GAIN), fGain)) {
-        return StringFormat("%.3f dB", dsp_util::dBFS(fGain));
-    }
-    return "-INF";
-}
-
 class ViewContainersModuleGain : public PluginViewContainers {
 protected:
     uint32_t width;

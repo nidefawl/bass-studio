@@ -26,5 +26,4 @@ public:
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
     std::shared_ptr<PluginViewContainers> createInternalView() override;
-    String formatDisplayValue(int32_t idx) override;
 };

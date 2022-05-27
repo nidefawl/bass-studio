@@ -167,7 +167,6 @@ public:
 
 public:
     virtual effect_deferred* toDeferred();
-    virtual String formatDisplayValue(int32_t idx);
     void updateOnEnableParam(automatable_param_t* param, bool wasEnable, bool isEnable, int flags);
     virtual void getDeferredEffects(std::vector<effectbase*>& effects){};
     virtual void addPropertiesParameterList(Table::tbl& table);

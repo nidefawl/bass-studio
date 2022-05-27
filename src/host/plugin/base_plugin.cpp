@@ -156,10 +156,7 @@ plugin_snapshot_t& effect_deferred::getSnapshot() {
     }
     return nullptr;
 }
-String effectbase::formatDisplayValue(int32_t idx) {
-    String display = StringFormat("%.3f", getParamValue(idx));
-    return display;
-}
+
 void effectbase::updateOnEnableParam(automatable_param_t* param, bool wasEnable, bool isEnable, int flags) {
     this->bIsEnabled = isEnable;
     if (this->bIsEnabled != wasEnable) {
