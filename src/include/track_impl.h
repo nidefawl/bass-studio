@@ -227,6 +227,10 @@ static constexpr int PROCESS_REALTIME = 1;
 static constexpr int PROCESS_CLIPS = 2;
 static constexpr int PROCESS_ARP = 4;
 }
+struct midi_events_t {
+    std::vector<noteevent_t>* noteEventsProcessed;
+    VstEvent_t* midiEventsBuf;
+};
 namespace DAW {
 inline bool isChannelConnected(const DAW::channel_ref_t& ch) {
     return ch.type != stage_type::INPUT_EMPTY;

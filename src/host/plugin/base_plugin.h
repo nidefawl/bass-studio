@@ -29,7 +29,7 @@ class DawInstance;
 
 extern bool storePluginPresetWithSnapshot;// = true;
 extern bool loadPluginPresetWithSnapshot; // = false;
-
+struct midi_events_t;
 class effectbase : public automatable_t {
     friend class vsthost;
     friend class guiplugin;
@@ -109,6 +109,7 @@ public:
     virtual void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) = 0;
     virtual void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) = 0;
     virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed);
+    virtual void processMidi(midi_events_t& midiEvents);
     virtual bool show()   = 0;
     virtual bool close()  = 0;
     virtual void unload(vsthost* host, int flags);

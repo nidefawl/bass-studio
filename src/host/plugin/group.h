@@ -31,6 +31,7 @@ public:
     guiplugin* getGui() override;
     samplecount_t getPluginLatency() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
+    void processMidi(midi_events_t& midiEvents) override;
     String getInfo(std::vector<String>& list) override;
     void onEnable() override;
     void onDisable() override;

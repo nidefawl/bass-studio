@@ -174,6 +174,7 @@ module_group::module_group(int32_t _projectGlobalId)
       handle(new module_group::internal_handles_t{ nullptr }),
       audio(nullptr)
 {
+    bCanReceiveMidi = true;
 #define PARAM_GROUPPLUGIN_INPUT_GAIN PARAM_OFFSET_IMPL
     struct effectgroup_param_entry_t {
         int32_t id;
@@ -318,6 +319,12 @@ void module_group::process(AudioBlock* in, AudioBlock* out, double tick, double 
         audio->outputPost.addFromOp(&audio->output, AudioBlock::mix_op::ADD, math::clamp(fGain, 0.0f, 1.0f));
     }
     out->copyFrom(&audio->outputPost);
+}
+
+void module_group::processMidi(midi_events_t& midiEvents) {
+    for (effectbase* effect : audio->effects) {
+        effect->processMidi(midiEvents);
+    }
 }
 
 void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {

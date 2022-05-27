@@ -3,6 +3,7 @@
 #include <vstsdk-host-2.4/aeffectx.h>
 #include "automation.h"
 #include "vst_plugin.h"
+#include "host/vst_midi_event.h"
 
 #include "math/seq_math.h"
 #include "str_util.h"
@@ -847,6 +848,15 @@ void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, double sam
     dbgassert(this->handle->aeffect);
     dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
     vst_process(this, this->handle->aeffect, in->buf, out->buf, numSamples);
+}
+
+void vstplugin::processMidi(midi_events_t& midiEvents) {
+    if (bCanReceiveMidi) {
+        //TODO: decide if we should make a copy, plugin may manipulate data
+        //VstEvent_t midiEventsBufTemp = *midiEventsBuf;
+        this->midiEventsDispatched += midiEvents.midiEventsBuf->vstEvents->numEvents;
+        this->dispatch(effProcessEvents, 0, 0, midiEvents.midiEventsBuf->vstEvents);
+    }
 }
 
 FUNC_NOINLINE
