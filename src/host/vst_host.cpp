@@ -376,7 +376,6 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         } else {
             opcodeStats.tmMillis = tmMillisS32;
         }
-
         /**
          * Validate that the plugin is currently fully loaded and setup and connected to an audiostage that is valid.
          * Currently plugins have an extended lifetime after removal inside the edithistory.
@@ -384,7 +383,11 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
          * TODO: This check is not well implemented
          * Add a lock free thread-safe way to check (from the callback) if a plugin is ready for processing
          */
-        if (plugin->hasTrackLink()) {
+        /* Ignore audioMasterVersion, audioMasterGetVendorString and audioMasterGetProductString */
+        if (opcode == audioMasterVersion || opcode == audioMasterGetVendorString || opcode == audioMasterGetProductString) {
+            validProcessingState = true;
+        }
+        if (!validProcessingState && plugin->hasTrackLink()) {
             auto parent = plugin->trackImpl;
             while (parent->parent) parent = parent->parent;
             // get this from the host instead of the tls

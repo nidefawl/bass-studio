@@ -114,6 +114,7 @@ int main(int argc, char** argv) {
     setExceptionHandler();
 
     App::Platform::initPlatformEnvironment("daw");
+    seqthreads::registerThread("mainthread");
 
     auto dawInstance = std::make_shared<DawInstance>();
     try {
