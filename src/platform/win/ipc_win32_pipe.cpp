@@ -12,7 +12,7 @@
 void printLastError(const char* fn) {
     const DWORD err = GetLastError();
     const auto errorMsg = FormatErrorMessage(err, StringFormat("%s failed (%lu)", fn, err));
-    log_lf(Log::L_ERROR, "%s", errorMsg.c_str());
+    log_lf(Log::L_ERROR, "%s\n", errorMsg.c_str());
 }
 
 class ipc_server::Impl {

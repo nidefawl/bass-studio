@@ -58,13 +58,13 @@ namespace MouseCursors {
         ReleaseDC(NULL, dc);
 
         if (!color) {
-            log_printf("Win32: Failed to create RGBA bitmap");
+            log_printf("Win32: Failed to create RGBA bitmap\n");
             return NULL;
         }
 
         mask = CreateBitmap(image->w, image->h, 1, 1, NULL);
         if (!mask) {
-            log_lf(Log::L_ERROR, "Win32: Failed to create mask bitmap");
+            log_lf(Log::L_ERROR, "Win32: Failed to create mask bitmap\n");
             DeleteObject(color);
             return NULL;
         }
@@ -92,9 +92,9 @@ namespace MouseCursors {
 
         if (!handle) {
             if (icon) {
-                log_lf(Log::L_ERROR, "Win32: Failed to create icon");
+                log_lf(Log::L_ERROR, "Win32: Failed to create icon\n");
             } else {
-                log_lf(Log::L_ERROR, "Win32: Failed to create cursor");
+                log_lf(Log::L_ERROR, "Win32: Failed to create cursor\n");
             }
         }
 

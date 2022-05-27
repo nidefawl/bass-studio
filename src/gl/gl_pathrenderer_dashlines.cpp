@@ -137,11 +137,11 @@ bool readShaderSrc(const String& filename, String& out) {
     out         = "";
     int64_t ret = ReadFileText(filename, out);
     if (ret <= 0) {
-        log_printf("%s: Failed reading file", StringAsCStr(filename));
+        log_printf("%s: Failed reading file\n", StringAsCStr(filename));
         return false;
     }
     if (out.empty()) {
-        log_printf("%s: File is empty", StringAsCStr(filename));
+        log_printf("%s: File is empty\n", StringAsCStr(filename));
         return false;
     }
     return true;

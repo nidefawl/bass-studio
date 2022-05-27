@@ -608,7 +608,7 @@ tick_t clip_t::getLen() const {
     if (this->lenSamples > 0 && this->clipType == CLIP_AUDIO && project_controller_t::get()) {
         auto lenConverted  = project_controller_t::get()->samplesToTicks(this->lenSamples);
         if (lenConverted != len) {
-            log_printf("tick vs sample len missmatch. Did the samplerate change?");
+            log_printf("tick vs sample len missmatch. Did the samplerate change?\n");
             dbgassert(0);
         }
         dbgassert(len > 0 && lenConverted > 0);

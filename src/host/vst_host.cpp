@@ -948,7 +948,7 @@ bool resolveAudioChannel(const vsthost* const host, channelnum_t numChannelsTrac
         if (stage) {
             effectbase* eff = stage->getPluginById(inputChannel.projectGlobalId);
             if (!eff) {
-                log_lf(Log::L_WARN, "Effect with id %d is not found on stage", inputChannel.projectGlobalId);
+                log_lf(Log::L_WARN, "Effect with id %d is not found on stage\n", inputChannel.projectGlobalId);
                 return false;
             }
             if (!eff->blockOutputs) {
@@ -2386,7 +2386,7 @@ void vsthost::onStartPlayback(project_controller_t* ctrl) {
 }
 
 void vsthost::onPluginsChanged(audio_stage_t* stage) {
-    log_printf("Plugins changed on audio stage %d", static_cast<int32_t>(stage->stageId.stageId));
+    log_printf("Plugins changed on audio stage %d\n", static_cast<int32_t>(stage->stageId.stageId));
     dbgassert(validateIds());
 }
 
@@ -3299,13 +3299,13 @@ void vsthost::scanPlugins() {
             seqthreads::threadSleep(200);
             if (!impl->vstscannerProcessThread->isRunning()) {
                 impl->vstscannerProcessThread->checkException();
-                log_lf(Log::L_ERROR, "Failed starting vstscanner");
+                log_lf(Log::L_ERROR, "Failed starting vstscanner\n");
             } else {
                 this->impl->scanningState = 1;
-                log_lf(Log::L_DEBUG, "vstscanner is running");
+                log_lf(Log::L_DEBUG, "vstscanner is running\n");
             }
         } catch (std::exception& e) {
-            log_lf(Log::L_ERROR, "Failed starting vstscanner: %s", e.what());
+            log_lf(Log::L_ERROR, "Failed starting vstscanner: %s\n", e.what());
         }
     }
 }
@@ -3328,7 +3328,7 @@ void vsthost::checkScanner() {
 
         }
     } catch (std::exception& e) {
-        log_lf(Log::L_ERROR, "checkScanner: %s", e.what());
+        log_lf(Log::L_ERROR, "checkScanner: %s\n", e.what());
     }
 }
 
@@ -3346,7 +3346,7 @@ void vsthost::stopScanner() {
 
         }
     } catch (std::exception& e) {
-        log_lf(Log::L_ERROR, "stopScanner: %s", e.what());
+        log_lf(Log::L_ERROR, "stopScanner: %s\n", e.what());
     }
 }
 

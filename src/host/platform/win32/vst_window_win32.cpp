@@ -255,7 +255,7 @@ bool vst_window::init(vstplugin* _plugin, const String& name, ivec2 size, bool r
     hwnd = CreateWindowEx(exStyle, gWindowClassName, StringAsCStr(name), dwStyle,
                           0, 0, size.x, size.y, mainHWND, nullptr, instance, nullptr);
     if (!hwnd) {
-        log_lf(Log::L_ERROR, "%s", StringAsCStr(FormatErrorMessage(GetLastError(), "Failed creating vst_window: CreateWindowEx returned null")));
+        log_lf(Log::L_ERROR, "%s\n", StringAsCStr(FormatErrorMessage(GetLastError(), "Failed creating vst_window: CreateWindowEx returned null")));
     }
 
     if (hwnd) {

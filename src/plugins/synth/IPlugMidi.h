@@ -344,7 +344,7 @@ struct IMidiMsg {
 
     /** /todo */
     void LogMsg() {
-        log_printf("midi:(%s:%d:%d:%d)", StatusMsgStr(StatusMsg()), Channel(), mData1, mData2);
+        log_printf("midi:(%s:%d:%d:%d)\n", StatusMsgStr(StatusMsg()), Channel(), mData1, mData2);
     }
 
     /** /todo */
@@ -403,7 +403,7 @@ struct ISysEx {
 
     void LogMsg() {
         char str[96];
-        log_printf("sysex:(%d:%s)", mSize, SysExStr(str, sizeof(str), mData, mSize));
+        log_printf("sysex:(%d:%s)\n", mSize, SysExStr(str, sizeof(str), mData, mSize));
     }
 };
 
