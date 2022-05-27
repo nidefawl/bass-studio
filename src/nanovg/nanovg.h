@@ -41,6 +41,8 @@ enum NVGcreateFlags {
 	NVG_STENCIL_STROKES	= 1<<1,
 	// Flag indicating that additional debug checks are done.
 	NVG_DEBUG 			= 1<<2,
+
+	NVG_SHADER_RENDER_RESPONSIVENESS = 1<<8,
 };
 
 struct NVGpaint {

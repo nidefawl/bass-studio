@@ -176,21 +176,23 @@ return smoothstep(0.0, 1.0, (1.0-abs(ftcoord.x*2.0-1.0))*strokeMult) * smoothste
 #endif
 
 // #define SIMPLE_SHADING
+// #define ANIMATE_RESPONSIVENESS
 #define COLOR_SHADING
 
 vec4 applyShading(vec2 pt, vec2 texcoord, vec4 color) {
 	vec4 result = color;
 	float fTimeSeconds = renderInfo.x;
 	
+#ifdef ANIMATE_RESPONSIVENESS
 	float fPerS = 2.0;
 	float fTmProgr = mod(fTimeSeconds+fPerS/2.0, 4);
 	/* /\________  1s anim 4s sleep (5s cycle)*/
 	float fadeTri = clamp(1.0-abs(fTmProgr*2.0/fPerS-1.0), 0.0, 1.0);
 	fadeTri = pow(fadeTri, 2);
-	float speed = 0.3+pow(fTmProgr/fPerS, 8.0)*20.0;
+	float highlightShade = 0.0 + fadeTri;
+#endif
 	float normalizedNoise = n3rand( pt.xy );
 	float antiBandingDither = (-0.5+2.0*normalizedNoise)/256.0; // for 8 bit output
-	float highlightShade = 0.0 + fadeTri;
 #ifdef COLOR_SHADING
 	//noninverse
 	// vec2 txF = clamp(pow(abs((texcoord*2.0)-1.0), vec2(2.0)), 0.0, 1.0);
@@ -204,6 +206,7 @@ vec4 applyShading(vec2 pt, vec2 texcoord, vec4 color) {
 	vec3 paletteColor = palette( Border.y*Border.y, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.10,0.20) );
 	// result.rgb=mix(result.rgb, result.rgb*paletteColor.x, 0*fFade);
 	result.rgb=mix(result.rgb, paletteColor.rgb, 0.04*fFade)*1.2;
+#ifdef ANIMATE_RESPONSIVENESS
 	{
 		
 		vec2 txF = clamp(1.0-pow(abs((texcoord*2.0)-1.0), vec2(8.0)), 0.0, 1.0);
@@ -212,6 +215,7 @@ vec4 applyShading(vec2 pt, vec2 texcoord, vec4 color) {
 		vec3 paletteColor2 = palette( pal2Idx+fTmProgr, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.3,0.20,0.20) );
 		result.rgb=mix(result.rgb, paletteColor2, 0.13*highlightShade);
 	}
+#endif
 	result.rgb+=vec3(antiBandingDither);
 #endif
 	// result.rgb = mix(result.rgb, paletteColor, intens*1);

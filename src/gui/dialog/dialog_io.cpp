@@ -25,6 +25,12 @@
 #include <utility>
 #include <portaudio.h>
 #include <portmidi.h>
+#ifdef _WIN32
+#include "platform/win/windowsize.h"
+#endif
+#ifdef __linux__
+#include "platform/linux/windowsize.h"
+#endif
 
 
 namespace DAW::DialogSettings {
@@ -707,7 +713,6 @@ public:
         deviceListInput->setFlag(FLG_RENDER_LABEL, true);
         deviceListOutput->setFlag(FLG_RENDER_LABEL, true);
         setLabel("Audio I/O");
-        setBackgroundRendered(true);
         add(selectAPI);
         add(asioDevice);
         add(deviceListInput);
@@ -732,27 +737,10 @@ public:
         }
     }
 
-    void render(NVGcontext* vg) override {
-        if (isBackgroundRendered()) {
-            renderBackground(vg);
-        }
-        if (!setScissorTransform(vg)) {
-            return;
-        }
-
-        for (auto c : guis) {
-            nvgSave(vg);
-            if (c->isVisible()) {
-                c->render(vg);
-            }
-            nvgRestore(vg);
-        }
-    }
-
     void layout() override {
         const ivec2 cs = getSizeContent();
 
-        const int32_t inset  = 5;
+        int32_t inset  = 5;
         const int32_t height = theme->get(GuiConstant::CONST_ROW_HEIGHT);
 
         audioEngineOn->size           = ivec2(cs.x - inset * 2, height);
@@ -776,7 +764,10 @@ public:
         if (asioDevice->isVisible()) {
             pNextGui = asioDevice;
         }
+
         deviceListInput->pos  = ivec2(inset, pNextGui->bottom() + inset);
+        deviceListInput->pos.x = 0;
+        inset = 0;
         deviceListInput->size = ivec2((cs.x) - inset * 2, h1);
         if (deviceListInput->isVisible()) {
             pNextGui = deviceListInput;
@@ -935,68 +926,49 @@ public:
 
 class guidialog_midi_io : public setting_dialog {
     DawInstance* const daw;
-    gui_list* deviceListInput;
-    gui_list* deviceListOutput;
+    gui_list deviceListInput;
+    gui_list deviceListOutput;
 
 public:
     void onDialogShow() override { updateOptions(); }
 
     ~guidialog_midi_io() override {
         removeGuis();
-        delete deviceListOutput;
-        delete deviceListInput;
     }
 
     guidialog_midi_io(DawInstance* _daw)
         : setting_dialog(),
-          daw(_daw),
-          deviceListInput(new gui_list()),
-          deviceListOutput(new gui_list())
+          daw(_daw)
     {
-        setBackgroundRendered(true);
-        add(deviceListInput);
-        add(deviceListOutput);
-        deviceListInput->setLabel("Midi input device");
-        deviceListOutput->setLabel("Midi output device");
-        deviceListInput->setFlag(FLG_RENDER_LABEL, true);
-        deviceListOutput->setFlag(FLG_RENDER_LABEL, true);
+        add(&deviceListInput);
+        add(&deviceListOutput);
+        deviceListInput.setLabel("Midi input device");
+        deviceListOutput.setLabel("Midi output device");
+        deviceListInput.setFlag(FLG_RENDER_LABEL, true);
+        deviceListOutput.setFlag(FLG_RENDER_LABEL, true);
         setLabel("Midi I/O");
         updateOptions();
-    }
-
-    void render(NVGcontext* vg) override {
-        if (isBackgroundRendered()) {
-            renderBackground(vg);
-        }
-        if (!setScissorTransform(vg)) {
-            return;
-        }
-        for (auto c : guis) {
-            nvgSave(vg);
-            c->render(vg);
-            nvgRestore(vg);
-        }
     }
 
     void layout() override {
         const ivec2 cs = getSizeContent();
 
-        const int32_t inset  = 5;
+        const int32_t inset  = 0;
         const int32_t height = theme->get(GuiConstant::CONST_ROW_HEIGHT);
 
         int32_t heightList     = math::max(230, cs.y * 2 / 5);
 
-        deviceListInput->pos   = ivec2(inset);
-        deviceListInput->size  = ivec2((cs.x) - inset * 2, heightList);
-        deviceListOutput->pos  = ivec2(inset, deviceListInput->bottom() + inset);
-        deviceListOutput->size = ivec2((cs.x) - inset * 2, math::min(cs.y - deviceListOutput->pos.y, heightList));
+        deviceListInput.pos   = ivec2(inset);
+        deviceListInput.size  = ivec2((cs.x) - inset * 2, heightList);
+        deviceListOutput.pos  = ivec2(inset, deviceListInput.bottom() + inset);
+        deviceListOutput.size = ivec2((cs.x) - inset * 2, math::min(cs.y - deviceListOutput.pos.y, heightList));
 
         for (auto gui : guis) {
             gui->layout();
         }
 
-        deviceListInput->setRowHeight(height);
-        deviceListOutput->setRowHeight(height);
+        deviceListInput.setRowHeight(height);
+        deviceListOutput.setRowHeight(height);
     }
     void buttonClicked(guibase* button) override {
         if ((button->id & 0x0F) == 0xF) {
@@ -1042,32 +1014,185 @@ public:
             for (auto* p : _newListOut) {
                 p->id = 0x0f | (idx++ << 8);
             }
-            deviceListInput->setList(_newListIn);
-            deviceListOutput->setList(_newListOut);
-            deviceListInput->layout();
-            deviceListOutput->layout();
+            deviceListInput.setList(_newListIn);
+            deviceListOutput.setList(_newListOut);
+            deviceListInput.layout();
+            deviceListOutput.layout();
         }
     };
 };
 
-class guidialog_plugin_settings : public setting_dialog {
+class guidialog_settings_other : public setting_dialog {
+    DawInstance* const daw;
+    enum appsetting_type {
+        VM_MODE,
+        SHADER_RENDER_RESPONSIVENESS,
+    };
+    gui_list listBoolOptions;
+public:
+
+    class gui_listentry_settings_other_bool : public gui_list_entry {
+        appsetting_type type;
+        String title;
+        public:
+        gui_listentry_settings_other_bool(appsetting_type type, String title)
+            : gui_list_entry(),
+            type(type),
+            title(std::move(title))
+        {
+            icon = -1;
+        }
+        String getText() override { return title; }
+        void dragMoveOn(guibase* target, ivec2 mousepos) override {}
+        void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
+        void handleDraggedBegin(MouseEvent& evt) override { toggle(); }
+        bool enabled() {
+            auto& tls = daw_tls::getSettings();
+            switch (type) {
+                case VM_MODE:
+                    return tls.vmmode;
+                case SHADER_RENDER_RESPONSIVENESS:
+                    return tls.shaderDebug;
+            }
+            return false;
+        }
+        void toggle() {
+            auto& tls = daw_tls::getSettings();
+            switch (type) {
+                case VM_MODE:
+                    tls.vmmode = !tls.vmmode;
+                    break;
+                case SHADER_RENDER_RESPONSIVENESS:
+                    tls.shaderDebug = !tls.shaderDebug;
+                    break;
+            }
+        }
+        void render(NVGcontext* vg) override {
+            BaseCtrl* ctrl  = parentCtrl;
+            float spacing   = INSET_TITLE;
+            float x         = spacing;
+            float rowHeight = size.y;
+            if (icon > -1) {
+                x += rowHeight + spacing;
+            }
+
+            ivec2 inner = size;
+            if (ctrl->isCtrOrChildFocused(this)) {
+                nvgBeginPath(vg);
+                nvgRect(vg, pos.x, pos.y, inner.x, inner.y);
+                nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER));
+                nvgFill(vg);
+            }
+            nvgTranslate(vg, pos.x, pos.y);
+
+            if (icon > -1) {
+                RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
+                drawIcon(vg, inner, &image);
+            }
+
+            renderText(vg,
+                    vec2(x, rowHeight * 0.5f),
+                    vec2(size),
+                    getText(),
+                    rowHeight);
+
+            ivec2 sizeIcon = ivec2(inner.y - 4);
+            ivec2 posIcon  = {inner.x - (int)spacing - sizeIcon.y, (inner.y - sizeIcon.y) / 2};
+            bool enbl = enabled();
+
+            /* renderTextLabel(vg,
+                            vec2(posIcon.x - 4, rowHeight * 0.5f),
+                            vec2(size),
+                            "info",
+                            theme,
+                            rowHeight,
+                            theme->getColor(enbl ? GuiColor::COL_ON : GuiColor::COL_OFF),
+                            NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE); */
+
+
+            RenderResources::NvgImageTexture& image = RenderResources::imgIcons[ICON_X];
+            nvgTranslate(vg, posIcon.x, posIcon.y);
+                nvgBeginPath(vg);
+                nvgRect(vg, 0, 0, sizeIcon.x, sizeIcon.y);
+                nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
+                nvgFill(vg);
+                nvgStrokeColor(vg, theme->getBgStrokeColor(parent->getFlags()));
+                nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
+                nvgStroke(vg);
+                if (enbl) {
+                    drawIcon(vg, sizeIcon, &image, 0);
+                }
+            nvgTranslate(vg, -posIcon.x, -posIcon.y);
+            nvgTranslate(vg, -pos.x, -pos.y);
+        }
+    };
+    void onDialogShow() override { updateOptions(); }
+
+    ~guidialog_settings_other() override {
+        removeGuis();
+    }
+    guidialog_settings_other(DawInstance* _daw)
+        : setting_dialog(),
+          daw(_daw)
+    {
+        add(&listBoolOptions);
+        listBoolOptions.setLabel("Other Settings");
+        listBoolOptions.setFlag(FLG_RENDER_LABEL, true);
+        setLabel("Other Settings");
+        updateOptions();
+    }
+    
+    void layout() override {
+        const ivec2 cs = getSizeContent();
+
+        const int32_t inset  = 0;
+        const int32_t height = theme->get(GuiConstant::CONST_ROW_HEIGHT);
+
+        int32_t heightList     = math::max(230, cs.y);
+
+        listBoolOptions.pos   = ivec2(inset);
+        listBoolOptions.size  = ivec2((cs.x) - inset * 2, heightList);
+
+        for (auto gui : guis) {
+            gui->layout();
+        }
+
+        listBoolOptions.setRowHeight(height);
+    }
+    void buttonClicked(guibase* button) override {
+        if ((button->id & 0x0F) == 0xF) {
+            daw->getMidiHost()->reopenAllConfiguredDevices(false);
+            return;
+        }
+        if (this->parent) {
+            this->parent->buttonClicked(button);
+        }
+    }
+    void updateOptions() {
+        std::vector<gui_list_entry*> _newListIn;
+        _newListIn.push_back(new gui_listentry_settings_other_bool{VM_MODE, "Knobs: Disable raw mouse input (for VMs)"});
+        _newListIn.push_back(new gui_listentry_settings_other_bool{SHADER_RENDER_RESPONSIVENESS, "Visual: Animate UI responsiveness"});
+        listBoolOptions.setList(_newListIn);
+        listBoolOptions.layout();
+    }
+};
+class guidialog_settings_plugins_vst2 : public guictr_base {
     DawInstance* const daw;
     appsettings& settings;
     guibutton scanNow;
     guibutton selectFolder;
     gui_textfield pathVstVal;
 public:
-    void onDialogShow() override { updateOptions(); }
+    void onDialogShow() { updateOptions(); }
 
-    ~guidialog_plugin_settings() override {
+    ~guidialog_settings_plugins_vst2() override {
         removeGuis();
     }
-    guidialog_plugin_settings(DawInstance* _daw)
-        : setting_dialog(),
+    guidialog_settings_plugins_vst2(DawInstance* _daw)
+        : guictr_base(),
           daw(_daw),
           settings(daw_tls::getSettings())
     {
-        setBackgroundRendered(true);
         selectFolder.id = 0x10;
         selectFolder.setLabel("Select VST2 Plugin Directory");
         selectFolder.setText(selectFolder.getLabel());
@@ -1079,22 +1204,8 @@ public:
         add(&pathVstVal);
         add(&selectFolder);
         add(&scanNow);
-        setLabel("Plugins");
+        setLabel("VST2 Plugins");
         updateOptions();
-    }
-
-    void render(NVGcontext* vg) override {
-        if (isBackgroundRendered()) {
-            renderBackground(vg);
-        }
-        if (!setScissorTransform(vg)) {
-            return;
-        }
-        for (auto c : guis) {
-            nvgSave(vg);
-            c->render(vg);
-            nvgRestore(vg);
-        }
     }
     void layout() override {
         ivec2 cs = getSizeContent();
@@ -1162,7 +1273,33 @@ public:
         updateOptions();
     }
 };
+class guidialog_settings_plugins : public setting_dialog {
+    guidialog_settings_plugins_vst2 settings_vst2;
+    public:
+    void onDialogShow() override { settings_vst2.onDialogShow(); }
 
+    ~guidialog_settings_plugins() override {
+        removeGuis();
+    }
+    guidialog_settings_plugins(DawInstance* _daw)
+        : setting_dialog(),
+          settings_vst2(_daw)
+    {
+        add(&settings_vst2);
+        settings_vst2.setBackgroundRendered(true);
+        settings_vst2.setFlag(FLG_RENDER_LABEL, true);
+        setLabel("Plugins");
+    }
+
+    void layout() override {
+        const ivec2 cs = getSizeContent();
+        settings_vst2.pos   = ivec2(0);
+        settings_vst2.size  = cs;
+        for (auto gui : guis) {
+            gui->layout();
+        }
+    }
+};
 
 struct guidialog_settings::dialog_entry {
     guibuttonstate tabButton;
@@ -1178,7 +1315,8 @@ void guidialog_settings::init(DawInstance* daw) {
     ctrType = CTR_TYPE_SETTINGS;
     addEntry(new guidialog_audio_io(daw), "Audio I/O");
     addEntry(new guidialog_midi_io(daw), "Midi I/O");
-    addEntry(new guidialog_plugin_settings(daw), "Plugins");
+    addEntry(new guidialog_settings_plugins(daw), "Plugins");
+    addEntry(new guidialog_settings_other(daw), "Other");
     add(&btnClose);
     btnClose.id = ID_BTN_CLOSE;
     btnClose.setText("Close");
@@ -1188,7 +1326,11 @@ void guidialog_settings::init(DawInstance* daw) {
 // guidialog_settings::guidialog_settings(ivec2 _dialogSize, bool _resizeable) : guidialog_base(_dialogSize, _resizeable) {
 //     init();
 // }
-guidialog_settings::guidialog_settings(DawInstance* daw) : guidialog_base(ivec2{640, 760}, true) { init(daw); }
+guidialog_settings::guidialog_settings(DawInstance* daw)
+    : guidialog_base(ivec2{640, 760}, true)
+{
+    init(daw);
+}
 void guidialog_settings::addEntry(setting_dialog* ctr, String title) {
     auto* entry = new guidialog_settings::dialog_entry{ctr, title};
     guictr_base::add(&entry->tabButton);

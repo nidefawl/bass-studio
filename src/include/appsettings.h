@@ -117,6 +117,7 @@ struct appsettings {
     appwindowsettings wndCompanion;
     bool startEngine = false;
     bool vmmode = false;
+    bool shaderDebug = true;
     app_iosettings iosettings;
     recentfilelist recentfiles;
     app_plugin_configuration pluginsettings;

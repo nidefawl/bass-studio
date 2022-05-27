@@ -25,6 +25,7 @@
 #include "glheaders.h"
 #include "assert_dbg.h"
 
+#include <alloca.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -542,23 +543,24 @@ static void glnvg__debugCheckError(GLNVGcontext* gl, const char* str)
 #define glnvg__checkError(gl, str)
 #endif
 
-static int glnvg__recompileShader(GLNVGshader* shader, const char* name, const char* header, const char* opts, const char* vshader, const char* fshader)
+static int glnvg__recompileShader(GLNVGshader* shader, const char* name, const char* header, const char** opts, int numOpts, const char* vshader, const char* fshader)
 {
 	GLint status;
 	GLuint prog, vert, frag;
-	const char* str[3] = { NULL, NULL, NULL };
+	const char** str = (const char**) alloca(sizeof(char*)*(numOpts+2));
 	str[0] = header;
-	str[1] = opts != NULL ? opts : "";
+	for (int i = 0; i < numOpts; i++)
+		str[i+1] = opts[i];
 
 	//memset(shader, 0, sizeof(*shader));
 	glUseProgram(0);
 	prog = glCreateProgram();
 	vert = glCreateShader(GL_VERTEX_SHADER);
 	frag = glCreateShader(GL_FRAGMENT_SHADER);
-	str[2] = vshader;
-	glShaderSource(vert, 3, str, 0);
-	str[2] = fshader;
-	glShaderSource(frag, 3, str, 0);
+	str[numOpts+1] = vshader;
+	glShaderSource(vert, numOpts+2, str, 0);
+	str[numOpts+1] = fshader;
+	glShaderSource(frag, numOpts+2, str, 0);
 
 	glCompileShader(vert);
 	glGetShaderiv(vert, GL_COMPILE_STATUS, &status);
@@ -596,13 +598,14 @@ static int glnvg__recompileShader(GLNVGshader* shader, const char* name, const c
 
 	return 1;
 }
-static int glnvg__createShader(GLNVGshader* shader, const char* name, const char* header, const char* opts, const char* vshader, const char* fshader)
+static int glnvg__createShader(GLNVGshader* shader, const char* name, const char* header, const char** opts, int numOpts, const char* vshader, const char* fshader)
 {
 	GLint status;
 	GLuint prog, vert, frag;
-	const char* str[3] = { NULL, NULL, NULL };
+	const char** str = (const char**) alloca(sizeof(char*)*(numOpts+2));
 	str[0] = header;
-	str[1] = opts != NULL ? opts : "";
+	for (int i = 0; i < numOpts; i++)
+		str[i+1] = opts[i];
 
 //	printf("Compiling nanovg shader %s %s %s\n", name, header, opts);
 //	printf("---BEGIN nanovg vshader---\n");
@@ -620,10 +623,10 @@ static int glnvg__createShader(GLNVGshader* shader, const char* name, const char
 	prog = glCreateProgram();
 	vert = glCreateShader(GL_VERTEX_SHADER);
 	frag = glCreateShader(GL_FRAGMENT_SHADER);
-	str[2] = vshader;
-	glShaderSource(vert, 3, str, 0);
-	str[2] = fshader;
-	glShaderSource(frag, 3, str, 0);
+	str[numOpts+1] = vshader;
+	glShaderSource(vert, numOpts+2, str, 0);
+	str[numOpts+1] = fshader;
+	glShaderSource(frag, numOpts+2, str, 0);
 
 	glCompileShader(vert);
 	glGetShaderiv(vert, GL_COMPILE_STATUS, &status);
@@ -715,6 +718,7 @@ static const char* const NVG_GLSL_DEF_HEADER =
 	"\n";
 
 const char* const NVG_GLSL_DEF_EDGE_AA = "#define EDGE_AA 1\n";
+const char** glnvg_getShaderDefs(int flags, int* numOpts);
 
 static int glnvg__renderCreate(void* uptr)
 {
@@ -723,9 +727,10 @@ static int glnvg__renderCreate(void* uptr)
 
 	glnvg__checkError(gl, "init");
 
-	const char* opts = (gl->flags & NVG_ANTIALIAS) ? NVG_GLSL_DEF_EDGE_AA : NULL;
+	int numOpts = 0;
+	const char** opts = glnvg_getShaderDefs(gl->flags, &numOpts);
 
-	if (glnvg__createShader(&gl->shader, "shader", NVG_GLSL_DEF_HEADER, opts, NVG_GLSL_VERT, NVG_GLSL_FRAG) == 0)
+	if (glnvg__createShader(&gl->shader, "shader", NVG_GLSL_DEF_HEADER, opts, numOpts, NVG_GLSL_VERT, NVG_GLSL_FRAG) == 0)
 		return 0;
 
 	glnvg__checkError(gl, "uniform locations");
@@ -1753,8 +1758,9 @@ int nvgReloadShaders(NVGcontext* ctx, const char* shaderSrcVertex, const char* s
 	GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(ctx)->userPtr;
 	dbgassert(gl);
 
-	const char* opts = (gl->flags & NVG_ANTIALIAS) ? NVG_GLSL_DEF_EDGE_AA : NULL;
-	if (glnvg__recompileShader(&gl->shader, "shader", NVG_GLSL_DEF_HEADER, opts, shaderSrcVertex, shaderSrcFragment) == 0)
+	int numOpts = 0;
+	const char** opts = glnvg_getShaderDefs(gl->flags, &numOpts);
+	if (glnvg__recompileShader(&gl->shader, "shader", NVG_GLSL_DEF_HEADER, opts, numOpts, shaderSrcVertex, shaderSrcFragment) == 0)
 		return 1;
 	return 0;
 }

@@ -68,11 +68,6 @@ void guictr_base::renderContainerLabel(NVGcontext* vg) {
         bool focused  = parentCtrl->isCtrOrChildFocused(this);
         auto sizeF    = theme->get(GuiConstant::CONST_FONT_SIZE_CTR_LABEL);
         auto posInset = getPosContent() + ivec2(INSET_CTR_SPACING, 0);
-        setFont(vg, sizeF, theme->getColor(GuiColor::COL_LABEL_CONTAINER), NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-        nvgFontSize(vg, sizeF);
-        UIFont::font_instance instance = theme->getFont(UIFont::FONT_LABEL);
-        UIFont::bindFont(vg, instance);
-        nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
         auto sizeInset = ivec2(math::min(getSizeContent().x, static_cast<int32_t>(textWidth(vg, label) + sizeF / 2)), sizeF);
 
         if (isFlag(FLG_VERTICAL_LABEL)) {
@@ -82,23 +77,19 @@ void guictr_base::renderContainerLabel(NVGcontext* vg) {
         } else {
             posInset.y -= sizeF;
         }
-        //posInset -= ivec2(margin);
-        //sizeInset += ivec2(margin) * 2;
+        auto bgColor = GuiColor::COL_BG_DRK;
         if (sizeInset.y > 0 && sizeInset.x > 0) {
             nvgBeginPath(vg);
-            // nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, 4);
             nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-            NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
             if (focused) {
-                bg = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);
+                bgColor = GuiColor::COL_BG_DRK_FOCUSED;
             }
-            nvgFillColor(vg, bg);
+            nvgFillColor(vg, theme->getColor(bgColor));
             nvgFill(vg);
         }
-        nvgFillColor(vg, theme->getColor(GuiColor::COL_LABEL_CONTAINER));
+        setFont(vg, sizeF, theme->getContrastColor(bgColor), NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+        UIFont::bindFont(vg, theme->getFont(UIFont::FONT_LABEL));
         nvgText(vg, posInset.x + INSET_CTR_SPACING, posInset.y, StringAsCStr(label), nullptr);
-        if (isFlag(FLG_VERTICAL_LABEL)) {
-        }
     }
 }
 

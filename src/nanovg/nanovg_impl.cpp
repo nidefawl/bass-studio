@@ -15,7 +15,21 @@ void resetShaderTimeOffset(void) {
 float glnvg__getTimeMillisf(void) {
 	return (float) (globalNanoVgTimer.getTimeDouble() * 1000.0);
 }
+const char** glnvg_getShaderDefs(int flags, int* numOpts) {
+	const char* edgeAA = "#define EDGE_AA 1\n";
+	const char* animateResponsiveness = "#define ANIMATE_RESPONSIVENESS 1\n";
+	static const char* opts[2];
+	int numOpts_ = 0;
+	if (flags & NVG_ANTIALIAS) {
+		opts[numOpts_++] = edgeAA;
+	}
+	if (flags & NVG_SHADER_RENDER_RESPONSIVENESS) {
+		opts[numOpts_++] = animateResponsiveness;
+	}
+	*numOpts = numOpts_;
+	return opts;
 }
+} // extern "C"
 
 #ifdef NVG_3D_MODE
 #include <math/vec.h>

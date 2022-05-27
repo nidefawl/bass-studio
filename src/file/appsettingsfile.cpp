@@ -146,6 +146,7 @@ void serialize(Archive& ar, appsettings& settings) {
         make_nvp("recentfiles", settings.recentfiles)
     );
     make_optional_nvp(ar, "pathmapping", settings.pathmapping);
+    make_optional_nvp(ar, "shaderDebug", settings.shaderDebug);
 }
 
 void loadSettings(appsettings& settings) {

@@ -16,6 +16,13 @@ namespace DAW::DialogSettings {
     
 class setting_dialog : public guictr_base {
 public:
+    setting_dialog() : guictr_base() {
+        setBackgroundRendered(false);
+        setBackgroundRenderedInset(false);
+        setCanMouseHit(true);
+        padding = 0;
+        margin  = 4;
+    }
     virtual void onDialogShow() = 0;
 };
 
