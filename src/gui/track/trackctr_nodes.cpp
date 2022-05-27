@@ -1347,6 +1347,51 @@ void guictr_nodes_editor::resetPositions() {
     impl->refreshQueued = 2;
 }
 
+void guictr_nodes_editor::resetRouting() {
+    auto const daw = dawCtrl->getDaw();
+    {
+        module_group* groupSelected = nullptr;
+        plugin_selection& sel = daw->getMainControl()->getPluginSel();
+        if (sel.getSelectionCount() > 0) {
+            std::vector<effectbase *> out;
+            if (sel.pluginCtr->getSelected(out)) {
+                for (auto& plugin : out) {
+                    auto p = plugin->getTrackLink()->owner;
+                    if (p && p->getModuleType() == PLUGIN_TYPE_GROUP) {
+                        groupSelected = static_cast<module_group*>(p);
+                        break;
+                    }
+                }
+                if (out.size() && out[0]->getModuleType() == PLUGIN_TYPE_GROUP) {
+                    groupSelected = static_cast<module_group*>(out[0]);
+                }
+            }
+        }
+        if (graph.graphType == GraphType::Top) {
+            if (groupSelected) {
+                // get track from group
+                auto track = groupSelected->getTrack();
+                if (track && track->audio) {
+                    track->audio->configureDefaultRoutings();
+                }
+            } else { /* project graph */
+            }
+        } else { /* bottom graph */
+            if (groupSelected) {
+                auto audio = groupSelected->getTrackLink();
+                if (audio) {
+                    audio->configureDefaultRoutings();
+                }
+            } else {
+                auto track = daw->getSelectedTrack();
+                if (track && track->audio) {
+                    track->audio->configureDefaultRoutings();
+                }
+            }
+        }
+    }
+}
+
 void guictr_nodes_editor::reset() {
     graph.reset();
 }
@@ -1591,11 +1636,8 @@ public:
             m_nodesEditor->resetPositions();
         }
         if (_id == cmdResetRouting->id) {
-            auto track = daw->getSelectedTrack();
-            if (track && track->audio) {
-                track->audio->configureDefaultRoutings();
-                m_nodesEditor->refresh();
-            }
+            m_nodesEditor->resetRouting();
+            m_nodesEditor->refresh();
         }
         closeContextMenu();
     }

@@ -131,9 +131,7 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
             ((JSONInputArchive*) &archive)->loadBinaryValue((void*) m.dataChunk.data(), size, "plugindata");
         }
     }
-    if (version > 2) {
-        archive(make_nvp("plugins", m.pluginSnapshots));
-    }
+
     if (version > 4 && version < 7) {
         archive(make_nvp("currentProgram", m.currentProgram));
     }
@@ -148,6 +146,10 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
     if (version >= 9) {
         archive(make_nvp("ioChannels", m.ioChannels));
         archive(make_nvp("version", m.version));
+    }
+    if (version >= 10) {
+        archive(make_nvp("stageIds", m.stageIds));
+        archive(make_nvp("routing", m.effectRouting));
     }
 }
 
@@ -176,6 +178,8 @@ void save(Archive& archive, plugin_snapshot_t const& m, const std::uint32_t vers
     archive(make_nvp("programName", m.currentProgramName));
     archive(make_nvp("ioChannels", m.ioChannels));
     archive(make_nvp("version", m.version));
+    archive(make_nvp("stageIds", m.stageIds));
+    archive(make_nvp("routing", m.effectRouting));
 }
 
 template<class Archive>
@@ -502,7 +506,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 }
 
 CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
-CEREAL_CLASS_VERSION(plugin_snapshot_t, 9);
+CEREAL_CLASS_VERSION(plugin_snapshot_t, 10);
 CEREAL_CLASS_VERSION(track_snapshot_t, 3);
 
 /**

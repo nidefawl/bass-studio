@@ -3,6 +3,7 @@
 #include <vector>
 #include "host/daw_channel.h"
 #include "str_util.h"
+#include "track_routing_snapshot.h"
 
 struct tracksnapshot_store_opts_t {
     bool storePluginPreset = true;
@@ -30,6 +31,7 @@ struct plugin_iodesc_snapshot_t {
     std::vector<DAW::channel_desc> output;
 };
 struct automation_view_t;
+struct track_effect_routing_snapshot_t;
 struct plugin_snapshot_t {
     int32_t version = 0;
     int32_t projectGlobalId = 0;
@@ -43,6 +45,8 @@ struct plugin_snapshot_t {
     int32_t currentProgram = -1;
     String currentProgramName;
     plugin_iodesc_snapshot_t ioChannels;
+    track_effect_routing_snapshot_t effectRouting;
+    track_id_snapshot_t stageIds;
     std::vector<uint8_t> dataChunk;
     std::vector<uint8_t> dataChunk2;
     std::vector<param_snapshot_t> params;

@@ -186,6 +186,7 @@ public:
     void reset();
     void refresh();
     void resetPositions();
+    void resetRouting();
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& event) override;
     void onTick(AppCtrl* appctrl) override;

@@ -9,29 +9,12 @@
 #include "automation.h"
 #include "snapshot.h"
 #include "track.h"
+#include "track_routing_snapshot.h"
 
 class track_t;
 struct track_impl_t;
 
-struct io_configuration_snapshot_t {
-    int32_t type                = 0;
-    int32_t stageId             = -1;
-    int32_t stageEndPointType   = 0;
-    int32_t externalInputType   = 0;
-    int32_t projectGlobalId     = 0;
-    int32_t externalInputIdx    = 0;
-    int32_t srcChannelOffset    = 0;
-    int32_t dstChannelOffset    = 0;
-};
-struct track_io_configuration_snapshot_t {
-    io_configuration_snapshot_t input;
-    io_configuration_snapshot_t output;
-};
-struct track_effect_routing_snapshot_t {
-    int32_t routingState = 0;
-    std::vector<io_configuration_snapshot_t> inputRoutingOutputStage;
-    std::map<int32_t, std::vector<io_configuration_snapshot_t>> inputRoutingEffects;
-};
+
 struct track_params_snapshot_t {
     std::vector<param_snapshot_t> params;
     std::vector<automation_view_t> automatedParams;
@@ -42,12 +25,6 @@ struct arp_snapshot {
 };
 struct audio_stage_t;
 struct plugin_snapshot_t;
-struct track_id_snapshot_t {
-    int32_t stageId           = -1;
-    int32_t inputStageId      = -1;
-    int32_t outputStageId     = -1;
-    int32_t outputPostStageId = -1;
-};
 struct track_impl_snapshot_t {
     arp_snapshot trackArp;
     track_io_configuration_snapshot_t trackIO;

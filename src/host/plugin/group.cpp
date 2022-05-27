@@ -334,7 +334,18 @@ void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcess
 
 void module_group::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     dbgassert(audio);
+    // if the snapshot holds a stage id then use it, otherwise keep current stageId
+    if (pluginSnapshot.stageIds.inputStageId != -1) {
+        audio->stageId.stageId           = static_cast<audiostageid_i32>(pluginSnapshot.stageIds.stageId);
+        audio->stageId.inputStageId      = static_cast<audiostageid_i32>(pluginSnapshot.stageIds.inputStageId);
+        audio->stageId.outputStageId     = static_cast<audiostageid_i32>(pluginSnapshot.stageIds.outputStageId);
+        audio->stageId.outputPostStageId = static_cast<audiostageid_i32>(pluginSnapshot.stageIds.outputPostStageId);
+    }
     audio->loadPlugins(pluginSnapshot.pluginSnapshots);
+    audio->loadRoutingSnapshot(pluginSnapshot.effectRouting);
+    if (audio->routingState == audiostagerouting_state_t::INVALID) {
+        audio->configureDefaultRoutings();
+    }
     audio->pluginsChanged();
 }
 
@@ -342,9 +353,11 @@ void module_group::getDeferredEffects(std::vector<effectbase*>& targets) {
     audio->getDeferredEffects(targets);
 }
 
+track_id_snapshot_t getTrackIdSnapshot(const audio_stage_id_t& stageId);
 void module_group::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts) {
     dbgassert(audio);
     internalplugin::makeSnapshot(snapshot, opts);
+    snapshot.stageIds = getTrackIdSnapshot(audio->stageId);
     std::vector<effectbase*> effects = audio->effects;
     snapshot.pluginSnapshots.reserve(effects.size());
     for (effectbase* effect : effects) {
@@ -352,6 +365,7 @@ void module_group::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot
         effect->makeSnapshot(ps, opts);
         snapshot.pluginSnapshots.push_back(std::move(ps));
     }
+    audio->createRoutingSnapshot(snapshot.effectRouting);
 }
 
 template<>
