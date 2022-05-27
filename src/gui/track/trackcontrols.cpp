@@ -1693,7 +1693,8 @@ public:
                 track_t* newTrack = daw->createNewTrack(tr->type);
                 String strNewName = StringFormat("%s copy", StringAsCStr(tr->name));
                 track_snapshot_t trSnap(tr, tracksnapshot_store_opts_t::All());
-                trSnap.stageIds.inputStageId = -1;
+                assignFreeStageIdsTrackSnapshot(daw->getHost(), trSnap);
+                // trSnap.stageIds.inputStageId = -1;
                 *newTrack                    = trSnap;
                 daw->addTrackImpl(tr->localIdxFlat + 1, newTrack, FLG_TRK_CHANGE_USER);
                 newTrack->loadSnapshot(trSnap);

@@ -1,3 +1,4 @@
+#include <deque>
 #include <memory>
 #include "pluginctr.h"
 #include "math/seq_math.h"
@@ -113,7 +114,6 @@ bool guictr_plugins::getSelected(std::vector<effectbase*>& out) {
     return true;
 }
 
-effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
 class guictxtmenu_pluginctr : public guictxtmenu {
 public:
     static constexpr int CMD_LOAD_PLUGIN = 1;
@@ -137,10 +137,10 @@ public:
                 std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(path);
                 dbgassert(pluginSnapshot);
                 if (pluginSnapshot) {
-
+                    vsthost* host = vsthost::getInstance();
+                    assignFreeStageIds(host, *pluginSnapshot);
                     auto effect = loadPluginDeferred(*pluginSnapshot);
                     if (effect) {
-                        vsthost* host           = vsthost::getInstance();
                         effect->projectGlobalId = 0;// generate new id
                         if (!host->addDeferredEffect(effect)) {
                             log_printf("Failed loading effect\n");
@@ -181,7 +181,8 @@ bool plugin_selection::hasSelection() const {
 void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_stage_t* stage, int32_t pos) {
     auto daw = DawInstance::get();
     auto host = daw->getHost();
-    for (const plugin_snapshot_t& pluginSnapshot : clipboard->plugins) {
+    for (plugin_snapshot_t& pluginSnapshot : clipboard->plugins) {
+        assignFreeStageIds(host, pluginSnapshot);
         auto effect = loadPluginDeferred(pluginSnapshot);
         if (effect) {
             effect->projectGlobalId = 0;// generate new id

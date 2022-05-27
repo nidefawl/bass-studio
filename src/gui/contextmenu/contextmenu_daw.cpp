@@ -40,7 +40,7 @@ void guictxtmenu_notrack::clicked(int _id) {
                 //load plugins
                 for (track_snapshot_t& ts : ctr->tracks) {
                     log_printf("track '%s' loading %zu plugins\n", StringAsCStr(ts.trackLoaded->name), ts.data.pluginSnapshots.size());
-                    ts.stageIds = track_id_snapshot_t{};
+                    assignFreeStageIdsTrackSnapshot(host, ts);
                     ts.trackLoaded->loadSnapshot(ts);
                     std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
                     for (auto effect: effects) {

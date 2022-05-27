@@ -353,11 +353,10 @@ void module_group::getDeferredEffects(std::vector<effectbase*>& targets) {
     audio->getDeferredEffects(targets);
 }
 
-track_id_snapshot_t getTrackIdSnapshot(const audio_stage_id_t& stageId);
 void module_group::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts) {
     dbgassert(audio);
     internalplugin::makeSnapshot(snapshot, opts);
-    snapshot.stageIds = getTrackIdSnapshot(audio->stageId);
+    snapshot.stageIds = saveTrackIdSnapshot(audio->stageId);
     std::vector<effectbase*> effects = audio->effects;
     snapshot.pluginSnapshots.reserve(effects.size());
     for (effectbase* effect : effects) {

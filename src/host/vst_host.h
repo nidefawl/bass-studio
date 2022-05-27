@@ -174,8 +174,6 @@ private:
 
 private:
     vstpluginloadres loadInternalPlugin(int32_t type, int32_t globalId = 0);
-    int32_t getNextGlobalModuleId(int32_t globalId);
-    audio_stage_id_t getNextGlobalAudioStageId(int32_t globalId);
     bool unloadAllPlugins();
     void updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPos, playback_state state) const;
     void registerPlugins();
@@ -302,6 +300,9 @@ public:
     audio_stage_t* getAudioStage(const audio_stage_ref_t& ref) const;
     int32_t validateIds();
     void updateMaximumStageId();
+    audio_stage_id_t getNextGlobalAudioStageId(int32_t globalId);
+    bool isStageIdInUse(track_id_snapshot_t stageId);
+    int32_t getNextGlobalModuleId(int32_t globalId);
 
     bool movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
     bool moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);

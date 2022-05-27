@@ -3004,6 +3004,17 @@ audio_stage_id_t vsthost::getNextGlobalAudioStageId(int32_t globalId) {
     return stageId;
 }
 
+bool vsthost::isStageIdInUse(track_id_snapshot_t stageId) {
+    if (stageId.stageId == -1) {
+        return false;
+    }
+    for (auto* id : {&stageId.stageId, &stageId.inputStageId, &stageId.outputStageId, &stageId.outputPostStageId }) {
+        if (static_cast<int32_t>(*id) <= audioStageId)
+            return true;
+    }
+    return false;
+}
+
 void vsthost::updateMaximumStageId() {
     int32_t maximumStageId = 0;
     for (auto* stage : allAudioStages) {
