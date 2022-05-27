@@ -66,9 +66,10 @@ int main(int argc, char** argv) {
             if (!context->isSetupComplete) {
                 context->meterData = std::shared_ptr<DAW::MeterOld::meter_runningsum[]>(new DAW::MeterOld::meter_runningsum[context->numChannels]);
                 context->meter     = DAW::MeterOld::rmsmeter(context->meterData.get(), context->numChannels);
-                uint32_t seed = 13;
+                seq_rand rnd;
+                rnd.rng_seed(13);
                 for (int i = 0; i < 16; i++) {
-                    context->blockInput->fillNoise(seed++);
+                    context->blockInput->fillNoise(rnd, 1.0f);
                     context->meter.update(context->blockInput, 1.0f);
                 }
                 auto lvls = context->meter.getLevels();
@@ -108,9 +109,10 @@ int main(int argc, char** argv) {
             if (!context->isSetupComplete) {
                 context->meterData = std::shared_ptr<DAW::meter_runningsum[]>(new DAW::meter_runningsum[context->numChannels]);
                 context->meter     = DAW::rmsmeter(context->meterData.get(), context->numChannels);
-                uint32_t seed = 13;
+                seq_rand rnd;
+                rnd.rng_seed(13);
                 for (int i = 0; i < 16; i++) {
-                    context->blockInput->fillNoise(seed++);
+                    context->blockInput->fillNoise(rnd, 1.0f);
                     context->meter.update(context->blockInput, 1.0f);
                 }
                 auto lvls = context->meter.getLevels();
