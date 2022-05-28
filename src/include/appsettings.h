@@ -110,7 +110,10 @@ struct app_plugin_configuration {
 struct app_path_remapping {
     std::map<String, String> pathRemapping;
 };
-
+struct app_autosave_settings {
+    int64_t tmSaveDelayMinutes     = 60L;
+    int64_t tmReminderDelayMinutes = 5L;
+};
 struct appsettings {
     appsettings() noexcept = default; // need noexcept for static storage
     appwindowsettings wndMain;
@@ -118,6 +121,7 @@ struct appsettings {
     bool startEngine = false;
     bool vmmode = false;
     bool shaderDebug = true;
+    app_autosave_settings autosave;
     app_iosettings iosettings;
     recentfilelist recentfiles;
     app_plugin_configuration pluginsettings;

@@ -31,8 +31,6 @@ public:
     explicit PluginControl(std::shared_ptr<PluginViewContainers> view);
     ~PluginControl() override;
     static PluginControl* get();
-    void focusReceived() override{};
-    void focusLost() override{};
 
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
     void menuCommand(menucmd_t command) override;

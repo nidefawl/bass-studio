@@ -2,6 +2,7 @@
 #include "appsettings.h"
 #include "gui/controls/button.h"
 #include "dialog.h"
+#include "gui/controls/inputfield.h"
 #include "gui/dropdown/dropdown.h"
 #include "gui/meter/guimeter.h"
 #include "gui/controls/textfield.h"
@@ -14,6 +15,7 @@
 #include "host/midi_host.h"
 #include "host/vst_host.h"
 #include "gui/controls/list.h"
+#include "math/seq_math.h"
 #include "math/vec.h"
 #include "meter.h"
 #include "platform.h"
@@ -23,6 +25,7 @@
 #include "tls.h"
 #include "types.h"
 #include <array>
+#include <cstdint>
 #include <utility>
 #include <portaudio.h>
 #include <portmidi.h>
@@ -1084,15 +1087,16 @@ public:
     };
 };
 
+
 class guidialog_settings_other : public setting_dialog {
     DawInstance* const daw;
     enum appsetting_type {
         VM_MODE,
         SHADER_RENDER_RESPONSIVENESS,
     };
-    gui_list listBoolOptions;
+    guictr_base listOptions;
+    guidropdown_setting_options_t* autosave;
 public:
-
     class gui_listentry_settings_other_bool : public gui_list_entry {
         appsetting_type type;
         String title;
@@ -1107,25 +1111,29 @@ public:
         String getText() override { return title; }
         void dragMoveOn(guibase* target, ivec2 mousepos) override {}
         void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
-        void handleDraggedBegin(MouseEvent& evt) override { toggle(); }
+        void handleDraggedBegin(MouseEvent& evt) override { toggle(); parent->buttonClicked(this); }
         bool enabled() {
-            auto& tls = daw_tls::getSettings();
+            auto& settings = daw_tls::getSettings();
             switch (type) {
                 case VM_MODE:
-                    return tls.vmmode;
+                    return settings.vmmode;
                 case SHADER_RENDER_RESPONSIVENESS:
-                    return tls.shaderDebug;
+                    return settings.shaderDebug;
+                default:
+                    break;
             }
             return false;
         }
         void toggle() {
-            auto& tls = daw_tls::getSettings();
+            auto& settings = daw_tls::getSettings();
             switch (type) {
                 case VM_MODE:
-                    tls.vmmode = !tls.vmmode;
+                    settings.vmmode = !settings.vmmode;
                     break;
                 case SHADER_RENDER_RESPONSIVENESS:
-                    tls.shaderDebug = !tls.shaderDebug;
+                    settings.shaderDebug = !settings.shaderDebug;
+                    break;
+                default:
                     break;
             }
         }
@@ -1188,54 +1196,74 @@ public:
             nvgTranslate(vg, -pos.x, -pos.y);
         }
     };
-    void onDialogShow() override { updateOptions(); }
+    void onDialogShow() override { buttonClicked(nullptr); }
 
     ~guidialog_settings_other() override {
+        listOptions.destroyGuis();
         removeGuis();
     }
     guidialog_settings_other(DawInstance* _daw)
         : setting_dialog(),
           daw(_daw)
     {
-        add(&listBoolOptions);
-        listBoolOptions.setLabel("Other Settings");
-        listBoolOptions.setFlag(FLG_RENDER_LABEL, true);
-        setLabel("Other Settings");
-        updateOptions();
+        setCanMouseHit(true);
+        listOptions.setCanMouseHit(true);
+        listOptions.setBackgroundRendered(true);
+        listOptions.setLabel("Other Settings");
+        listOptions.setFlag(FLG_RENDER_LABEL, true);
+        // setLabel("Other Settings");
+
+        autosave  = new guidropdown_setting_options_t();
+        autosave->setFlag(FLG_RENDER_LABEL, true);
+        autosave->setLabel("Autosave");
+        autosave->options.emplace_back("Disabled");
+        autosave->options.emplace_back("5 Minutes");
+        autosave->options.emplace_back("15 Minutes");
+        autosave->options.emplace_back("30 Minutes");
+        autosave->options.emplace_back("60 Minutes");
+        autosave->options.emplace_back("2 Hours");
+        autosave->options.emplace_back("3 Hours");
+        autosave->cbOnOptionSelected = [](int option) {
+            const int32_t delays[] = {0, 5, 15, 30, 60, 120, 180};
+            auto& autosave = daw_tls::getSettings().autosave;
+            autosave.tmSaveDelayMinutes = delays[math::clamp(option, 0, 6)];
+        };
+        autosave->fnGetCurrentVal = []() -> String {
+            auto& autosave = daw_tls::getSettings().autosave;
+            if (autosave.tmSaveDelayMinutes <= 0) {
+                return "Disabled";
+            }
+            return std::to_string(autosave.tmSaveDelayMinutes) + " Minutes";
+        };
+        listOptions.add(new gui_listentry_settings_other_bool{VM_MODE, "Knobs: Disable raw mouse input (for VMs)"});
+        listOptions.add(new gui_listentry_settings_other_bool{SHADER_RENDER_RESPONSIVENESS, "Visual: Animate UI responsiveness"});
+        listOptions.add(autosave);
+        add(&listOptions);
     }
     
     void layout() override {
-        const ivec2 cs = getSizeContent();
 
-        const int32_t inset  = 0;
-        const int32_t height = theme->get(GuiConstant::CONST_ROW_HEIGHT);
-
-        int32_t heightList     = math::max(230, cs.y);
-
-        listBoolOptions.pos   = ivec2(inset);
-        listBoolOptions.size  = ivec2((cs.x) - inset * 2, heightList);
-
+        listOptions.pos   = {};
+        listOptions.size  = getSizeContent();
+        const auto cs = listOptions.getSizeContent();
+        const auto height = theme->get(GuiConstant::CONST_ROW_HEIGHT);
+        const int32_t inset = 5;
+        int32_t topPos = inset;
+        for (auto g : listOptions.guis) {
+            g->pos = ivec2(inset, topPos);
+            g->size = ivec2(cs.x - inset * 2, height);
+            topPos = g->bottom() + inset;
+        }
         for (auto gui : guis) {
             gui->layout();
         }
 
-        listBoolOptions.setRowHeight(height);
+
     }
     void buttonClicked(guibase* button) override {
-        if ((button->id & 0x0F) == 0xF) {
-            daw->getMidiHost()->reopenAllConfiguredDevices(false);
-            return;
-        }
-        if (this->parent) {
+        if (this->parent && button) {
             this->parent->buttonClicked(button);
         }
-    }
-    void updateOptions() {
-        std::vector<gui_list_entry*> _newListIn;
-        _newListIn.push_back(new gui_listentry_settings_other_bool{VM_MODE, "Knobs: Disable raw mouse input (for VMs)"});
-        _newListIn.push_back(new gui_listentry_settings_other_bool{SHADER_RENDER_RESPONSIVENESS, "Visual: Animate UI responsiveness"});
-        listBoolOptions.setList(_newListIn);
-        listBoolOptions.layout();
     }
 };
 class guidialog_settings_plugins_vst2 : public guictr_base {

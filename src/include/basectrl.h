@@ -221,8 +221,9 @@ public:
     };
     int32_t refIdNext = 1;
     std::vector<stored_ref> refs;
-    bool canTakeInputFocus = false; // TODO: use flags
+    bool canTakeInputFocus = true; // TODO: use flags
     bool bIsVisible        = true;
+    bool bHasFocus         = false;
     int safeRefCreate(guibase* gui) override {
         stored_ref ref{gui, (int32_t)refIdNext++};
         refs.push_back(ref);
@@ -259,7 +260,7 @@ public:
     virtual void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
     virtual bool processGlobalKeyevent(KeyEvent& event) { return false; }
     virtual bool mouseDownPre() { return true; }
-    bool hasInputFocus() const { return guiFocused && canTakeInputFocus; }
+    bool hasInputFocus() const { return bHasFocus && canTakeInputFocus; }
     MouseHitEvt mouseHitEvt(MouseHitType _type);
     void focusGui(guibase* g);
     void mouseDown(ivec2 mousePos, int button, bool doubleclick);
@@ -271,6 +272,8 @@ public:
 
     bool isCtrOrChildFocused(guibase* gui);
     bool isMouseInside() const { return mouseInside; }
+    virtual void focusReceived() { bHasFocus = true; };
+    virtual void focusLost() { bHasFocus = false; };
     virtual void onCursorEnter(int entered) { mouseInside = entered; }
     virtual void relayout();
     virtual void relayout(int32_t w, int32_t h);
@@ -356,8 +359,6 @@ public:
 
     void closePopup() override { }; // close this window if its a popup window
 
-    virtual void focusReceived() = 0;
-    virtual void focusLost()     = 0;
     virtual void filesDropCancel() { };
     virtual bool filesDropMove(ivec2 pos, int kbmods) { return false; };
     virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
@@ -428,8 +429,6 @@ public:
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
     void startApp() override {};
     bool initPopup(window_overlay* window, NVGcontext* nanovg);
-    void focusReceived() override{};
-    void focusLost() override;
     void onWindowClose() override;
     void onTick() override;
     bool mouseDownPre() override;

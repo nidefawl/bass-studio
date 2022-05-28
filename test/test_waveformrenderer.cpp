@@ -165,10 +165,6 @@ namespace MiniApp {
         explicit MiniAppCtrl(waveform_test& _waveformTest)
             : waveformTest(_waveformTest) {
         }
-        void focusReceived() override {
-        }
-        void focusLost() override {
-        }
 
         void destroy() override {
             if (!isOK) {

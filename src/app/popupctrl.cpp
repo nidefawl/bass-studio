@@ -17,11 +17,6 @@
 #include "gui/container/scrollcontainer.h"
 #include "gui/controls/scrollbar.h"
 
-
-void PopupCtrl::focusLost() {
-    //parentCtrl->closeContextMenu();
-}
-
 void PopupCtrl::closePopup() {
     if (isShown()) {
         static_cast<window_main*>(this->window)->hide();

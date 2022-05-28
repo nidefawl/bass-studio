@@ -1599,14 +1599,17 @@ void DawInstance::onTick() {
 
     bool noPopups        = true;
     bool canOpenAutosave = true;
+    bool hasAnyInputFocus = false;
     for (auto* ctrl : dawCtrls) {
         noPopups &= !ctrl->guiDragged && !ctrl->guiCaptured && !ctrl->ctxtmenu;
         canOpenAutosave &= noPopups;
+        canOpenAutosave &= !ctrl->window->isMouseCaptured();
         canOpenAutosave &= !ctrl->hasDialogWindows();
         canOpenAutosave &= !ctrl->hasContextMenu();
-        canOpenAutosave &= ctrl->hasInputFocus();
+        hasAnyInputFocus |= ctrl->hasInputFocus();
         /*canOpenAutosave &= last click was n seconds ago*/
     }
+    canOpenAutosave &= hasAnyInputFocus;
     if (noPopups && projectToLoad) {
         std::shared_ptr<project_to_load_t> projectToLoadCpy = projectToLoad;
         projectToLoad = nullptr;
@@ -1628,19 +1631,23 @@ void DawInstance::onTick() {
         }
         log_printf("Project load completed %s\n", projectLoadErrored ? "with errors" : "succesfully");
     }
-    if (canOpenAutosave && autosaveState.isEnabled && tls.mainCtrl) {
-        if (0 == autosaveState.tmLastTrigger) {
-            autosaveState.tmLastTrigger = getTimeMillis();
-        }
-        int64_t tmNow = getTimeMillis();
-        if (tmNow - tmLastSave > autosaveState.tmSaveDelay) {
-            if (tmNow - autosaveState.tmLastTrigger > autosaveState.tmReminderDelay) {
-                autosaveState.tmLastTrigger = tmNow;
-                auto tooltip                = makeGuiAutosave(5000);
-                auto ctrlSize               = tls.mainCtrl->m_size;
-                tooltip->size               = ivec2(420, 90);
-                tooltip->maxHeight          = tooltip->size.y;
-                tls.mainCtrl->openContextMenu(tooltip, ivec2(ctrlSize.x / 2, ctrlSize.y - 100) - tooltip->size / 2);
+    
+    if (canOpenAutosave && tls.mainCtrl) {
+        auto& settings = daw_tls::getSettings();
+        if (settings.autosave.tmSaveDelayMinutes > 0) {
+            if (0 == autosaveState.tmLastTrigger) {
+                autosaveState.tmLastTrigger = getTimeMillis();
+            }
+            int64_t tmNow = getTimeMillis();
+            if ((tmNow - tmLastSave) / 60000 > settings.autosave.tmSaveDelayMinutes) {
+                if ((tmNow - autosaveState.tmLastTrigger) / 60000 > math::max<int64_t>(settings.autosave.tmReminderDelayMinutes, 1)) {
+                    autosaveState.tmLastTrigger = tmNow;
+                    auto tooltip                = makeGuiAutosave(1500);
+                    auto ctrlSize               = tls.mainCtrl->m_size;
+                    tooltip->size               = ivec2(420, 90);
+                    tooltip->maxHeight          = tooltip->size.y;
+                    tls.mainCtrl->openContextMenu(tooltip, ivec2(ctrlSize.x / 2, ctrlSize.y - 100) - tooltip->size / 2);
+                }
             }
         }
     }

@@ -135,6 +135,11 @@ void serialize(Archive& ar, app_path_remapping& settings) {
     ar(make_nvp("pathRemapping", settings.pathRemapping));
 }
 template <class Archive>
+void serialize(Archive& ar, app_autosave_settings& settings) {
+    ar(make_nvp("saveDelay", settings.tmSaveDelayMinutes));
+    ar(make_nvp("reminderDelay", settings.tmReminderDelayMinutes));
+}
+template <class Archive>
 void serialize(Archive& ar, appsettings& settings) {
     ar(
         make_nvp("window.main", settings.wndMain), 
@@ -147,6 +152,7 @@ void serialize(Archive& ar, appsettings& settings) {
     );
     make_optional_nvp(ar, "pathmapping", settings.pathmapping);
     make_optional_nvp(ar, "shaderDebug", settings.shaderDebug);
+    make_optional_nvp(ar, "autosave", settings.autosave);
 }
 
 void loadSettings(appsettings& settings) {

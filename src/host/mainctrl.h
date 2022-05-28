@@ -243,10 +243,7 @@ public:
 };
 
 struct autosave_state_t {
-    int64_t tmSaveDelay     = 600000L;
     int64_t tmLastTrigger   = 0L;
-    int64_t tmReminderDelay = 30000L;
-    bool isEnabled          = true;
 };
 
 class DawInstance : public project_controller_t, public delete_cb {
@@ -510,13 +507,6 @@ public:
     void initApp(const std::vector<String>& args) override { };
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
     void startApp() override { };
-
-
-    void focusReceived() override {
-    }
-
-    void focusLost() override {
-    }
 
     virtual void setEditClip(gui_clip* gclip);
     virtual DAW::Cursor& getCursor()              = 0;
