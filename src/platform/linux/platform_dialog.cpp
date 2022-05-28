@@ -12,8 +12,19 @@
 
 
 int browseForFolder(const String& title, const String& pathStart, String& _out) {
-    log_printf("not implemented\n");
-    return 0;
+    nfdchar_t* savePath{};
+    nfdresult_t result{};
+    result = NFD_PickFolder(&savePath, pathStart.c_str());
+    if (result == NFD_OKAY) {
+        _out = savePath;
+        // remember to free the memory (since NFD_OKAY is returned)
+        NFD_FreePath(savePath);
+        return 0;
+    } 
+    if (result != NFD_CANCEL) {
+        log_lf(Log::L_ERROR, "Error: %s\n", NFD_GetError());
+    }
+    return 1;
 }
 int promptUserFilePath(window_base* w,
                        int mode,
