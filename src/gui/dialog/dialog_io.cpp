@@ -6,6 +6,7 @@
 #include "gui/meter/guimeter.h"
 #include "gui/controls/textfield.h"
 #include "gui/container/container.h"
+#include "gui/container/scrollcontainer.h"
 #include "gui/contextmenu/contextmenu.h"
 #include "gui/contextmenu/contextmenu_base.h"
 #include "host/audio_host.h"
@@ -377,13 +378,30 @@ public:
         }
     }
 };
-class guictr_input_meters : public guictr_base {
+class guictr_input_meters : public guictr_base, public gui_scrollcontainer  {
     std::vector<std::shared_ptr<guictr_input_channel>> guiMeters;
     const bool isInput;
     int32_t prevStream = 0;
+    gui_scrollbar scrollbar;
+    int scrollOffset  = 0;
+    int contentWidth = 0;
+    bool hasScrollbar = false;
 
 public:
-    explicit guictr_input_meters(const bool _isInput) : isInput(_isInput) {}
+    explicit guictr_input_meters(const bool _isInput)
+        : isInput(_isInput),
+        scrollbar(0, 0.0f, *this)
+    {
+        setCanMouseHit(true);
+        scrollbar.setParent(this);
+        margin /= 2;
+        padding /= 2;
+    }
+
+    ~guictr_input_meters() override {
+        removeGuis();
+    }
+
     void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
@@ -440,26 +458,69 @@ public:
             updateChannels(stream);
         }
     }
-    ~guictr_input_meters() override {
-        for (auto& g : guiMeters) {
-            remove(g.get());
-        }
-    }
-    void layout() override {
-        ivec2 cs         = getSizeContent();
+
+    void setPositions(ivec2 cs, ivec2 offset) {
         auto maxChannels = math::max<channelnum_t>(guiMeters.size(), 6);
         auto nMeters     = math::max<channelnum_t>(1, maxChannels);
-        ivec2 meterSize  = { math::min(128, math::max(8, (cs.x) / nMeters)), cs.y - INSET_CTR_SPACING * 2 };
-        ivec2 meterPos   = { INSET_CTR_SPACING, INSET_CTR_SPACING };
-
+        ivec2 meterSize  = { math::clamp(math::max(8, (cs.x) / nMeters), 96, 256), cs.y };
+        ivec2 meterPos   = { 0, 0 };
+        if (hasScrollbar) {
+            meterSize.y -= gui_scrollbar::defaultW + 2;
+        }
         for (auto& meter : guiMeters) {
-            meter->pos  = meterPos;
+            meter->pos  = meterPos + offset;
             meter->size = meterSize;
             meterPos.x += meterSize.x;
         }
+    }
+
+    void layout() override {
+        auto cs = getSizeContent();
+        setPositions(cs, {0, 0});
+        if (!guiMeters.empty())
+            contentWidth = guiMeters.back()->right();
+        else contentWidth = 0;
+        hasScrollbar = contentWidth >= cs.x;
+        scrollbar.setVisible(hasScrollbar);
+        guis.erase(std::remove_if(guis.begin(), guis.end(), [bar=&scrollbar](const guibase* x) { return x == bar;}), guis.end());
+        if (hasScrollbar) {
+            guis.insert(guis.begin(), &scrollbar);
+            scrollbar.parent = this;
+            scrollbar.size = ivec2(cs.x - 2, gui_scrollbar::defaultW - 2);
+            scrollbar.pos  = ivec2(1, cs.y - gui_scrollbar::defaultW);
+            scrollOffsetChanged(1, scrollbar.scrollOffset);
+        }
         for (auto& gui : guis) {
+            if (gui == &scrollbar)
+                continue;
             gui->layout();
         }
+    }
+
+    ivec2 getScrollTotalSize() const override {
+        return {contentWidth, getSizeContent().y};
+    }
+
+    ivec2 getScrollViewSize() const override {
+        return getSizeContent();
+    }
+
+    void scrollOffsetChanged(int dir, float offset) override {
+        auto cs = getSizeContent();
+        if (hasScrollbar) {
+            this->scrollOffset = -offset * (contentWidth - size.x);
+        } else {
+            this->scrollOffset = 0;
+        }
+        setPositions(cs, {this->scrollOffset, 0});
+    };
+
+    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override {
+        return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
+    }
+    void setControl(BaseCtrl* parentCtrl) override {
+        guictr_base::setControl(parentCtrl);
+        scrollbar.setControl(parentCtrl);
     }
 };
 class guidialog_audio_io : public setting_dialog {
@@ -764,28 +825,29 @@ public:
         if (asioDevice->isVisible()) {
             pNextGui = asioDevice;
         }
+        int topPadding = 5;
+        int leftPadding = 0;
 
-        deviceListInput->pos  = ivec2(inset, pNextGui->bottom() + inset);
-        deviceListInput->pos.x = 0;
-        inset = 0;
-        deviceListInput->size = ivec2((cs.x) - inset * 2, h1);
+        deviceListInput->pos  = ivec2(leftPadding, pNextGui->bottom() + topPadding);
+        deviceListInput->size = ivec2((cs.x) - topPadding * 2, h1);
         if (deviceListInput->isVisible()) {
             pNextGui = deviceListInput;
         }
-        deviceListOutput->pos  = ivec2(inset, pNextGui->bottom() + inset);
-        deviceListOutput->size = ivec2((cs.x) - inset * 2, math::min(cs.y - deviceListOutput->pos.y, h1));
+        deviceListOutput->pos  = ivec2(leftPadding, pNextGui->bottom() + topPadding);
+        deviceListOutput->size = ivec2((cs.x) - topPadding * 2, math::min(cs.y - deviceListOutput->pos.y, h1));
         if (deviceListOutput->isVisible()) {
             pNextGui = deviceListOutput;
         }
-        h                = (cs.y - inset) - (pNextGui->bottom() + inset);
-        int32_t h2       = math::max((int)(h * 0.5), 150);
-        metersInput.pos  = ivec2(inset, pNextGui->bottom() + inset);
-        metersInput.size = ivec2((cs.x) - inset * 2, h2);
+        topPadding += 4;
+        h                = (cs.y - topPadding) - (pNextGui->bottom() + topPadding);
+        int32_t h2       = math::max((int)(h * 0.5), 120);
+        metersInput.pos  = ivec2(leftPadding, pNextGui->bottom() + topPadding);
+        metersInput.size = ivec2((cs.x) - topPadding * 2, h2);
         if (metersInput.isVisible()) {
             pNextGui = &metersInput;
         }
-        metersOutput.pos  = ivec2(inset, pNextGui->bottom() + inset);
-        metersOutput.size = ivec2((cs.x) - inset * 2, h2);
+        metersOutput.pos  = ivec2(leftPadding, pNextGui->bottom() + topPadding);
+        metersOutput.size = ivec2((cs.x) - topPadding * 2, h2);
         if (metersOutput.isVisible()) {
             pNextGui = &metersOutput;
         }

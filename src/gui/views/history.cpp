@@ -1,7 +1,7 @@
-#include "gui/container/container.h"
 #include "host/mainctrl.h"
-#include "gui/controls/list.h"
 #include "edithistory.h"
+#include "gui/container/container.h"
+#include "gui/controls/list.h"
 #include "gui/container/scrollcontainer.h"
 
 class gui_list_history : public gui_list {
