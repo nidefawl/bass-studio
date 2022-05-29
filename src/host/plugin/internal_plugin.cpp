@@ -13,7 +13,7 @@
 
 namespace {
     void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, const tracksnapshot_store_opts_t& opts) {
-        ps.version           = 9;
+        ps.version           = 10;
         ps.slot              = 0;
         ps.projectGlobalId   = plugin->projectGlobalId;
         ps.enabled           = plugin->bIsEnabled;

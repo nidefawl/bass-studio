@@ -33,7 +33,7 @@ struct plugin_iodesc_snapshot_t {
 struct automation_view_t;
 struct track_effect_routing_snapshot_t;
 struct plugin_snapshot_t {
-    int32_t version = 0;
+    uint32_t version = 0;
     int32_t projectGlobalId = 0;
     bool enabled            = false;
     int32_t slot            = 0;

@@ -47,123 +47,77 @@ void serialize(Archive& archive, plugin_iodesc_snapshot_t& m) {
 
 template<class Archive>
 void serialize(Archive& archive, trackcontainer_snapshot_t& m) {
-    archive(make_nvp("tracklist", m.tracks));
-    make_optional_nvp(archive, "hierachy", m.hierachy);
+    archive(make_nvp("tracklist", m.tracks), make_nvp("hierachy", m.hierachy));
 }
 
 template<class Archive>
 void serialize(Archive& archive, param_snapshot_t& m) {
-    archive(make_nvp("idx", m.idx), make_nvp("val", m.val));
-    make_optional_nvp(archive, "flags", m.flags);
+    archive(make_nvp("idx", m.idx), make_nvp("val", m.val), make_nvp("flags", m.flags));
 }
 
 template<class Archive>
 void serialize(Archive& archive, automationlane_snapshot_t& m) {
-    archive(make_nvp("type", m.type), make_nvp("paramIdx", m.paramIdx));
-    make_optional_nvp(archive, "height", m.height);
-    make_optional_nvp(archive, "refId", m.refId);
-    make_optional_nvp(archive, "subtrackType", m.subtrackType);
+    archive(make_nvp("type", m.type),
+        make_nvp("paramIdx", m.paramIdx),
+        make_nvp("height", m.height),
+        make_nvp("refId", m.refId),
+        make_nvp("subtrackType", m.subtrackType));
 }
 
 template<class Archive>
 void serialize(Archive& archive, automation_view_t& m) {
-    archive(make_nvp("param", m.targetParam), make_nvp("data", m.points));
-    make_optional_nvp(archive, "active", m.active);
+    archive(make_nvp("param", m.targetParam),
+        make_nvp("data", m.points),
+        make_nvp("active", m.active));
 }
 
 template<class Archive>
 void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
-    if (version > 2) {
-        archive(make_nvp("pluginType", m.pluginType), make_nvp("plugins", m.pluginSnapshots));
-    }
     m.version = version;
-    bool bPresent = false;
-    if (version < 8) {
-        int32_t uid_i32 = 0;
-        archive(
-            make_nvp("name", m.name),
-            make_nvp("uId", uid_i32),
-            make_nvp("slot", m.slot),
-            make_nvp("present", bPresent)
-        );
-        m.uId = static_cast<uint32_t>(uid_i32);
-    } else {
-        archive(
-            make_nvp("name", m.name),
-            make_nvp("uId", m.uId),
-            make_nvp("slot", m.slot)
-        );
-        if (version < 9) {
-            archive(
-                make_nvp("present", bPresent)
-            );
-        }
+    archive(
+        make_nvp("pluginType", m.pluginType),
+        make_nvp("plugins", m.pluginSnapshots),
+        make_nvp("name", m.name),
+        make_nvp("uId", m.uId),
+        make_nvp("slot", m.slot),
+        make_nvp("parameters", m.params),
+        make_nvp("automatedParams", m.automatedParams),
+        make_nvp("globalId", m.projectGlobalId),
+        make_nvp("enabled", m.enabled));
+    {
+        size_type size;
+        archive(make_nvp("sizeprogramdata", size));
+        m.dataChunk2.resize(size);
+        ((JSONInputArchive*) &archive)->loadBinaryValue((void*) m.dataChunk2.data(), size, "programdata");
     }
-    if (version == 1)
-        make_optional_nvp(archive, "dataProgram", m.dataChunk2);
-    if (version < 4) {
-        std::vector<param_snapshot_t> allParams;
-        std::vector<param_snapshot_t> nonHostParams;
-        make_optional_nvp(archive, "parameters", nonHostParams);
-        make_optional_nvp(archive, "hostParams", allParams);
-        for (auto p : nonHostParams) {
-            p.idx += PARAM_OFFSET_EXTERNAL;
-            allParams.push_back(p);
-        }
-        m.params = allParams;
-    } else {
-        archive(make_nvp("parameters", m.params));
+    {
+        size_type size;
+        archive(make_nvp("sizeplugindata", size));
+        m.dataChunk.resize(size);
+        ((JSONInputArchive*) &archive)->loadBinaryValue((void*) m.dataChunk.data(), size, "plugindata");
     }
-    make_optional_nvp(archive, "automatedParams", m.automatedParams);
-    make_optional_nvp(archive, "globalId", m.projectGlobalId);
-    make_optional_nvp(archive, "enabled", m.enabled);
-    if (version == 1)
-        make_optional_nvp(archive, "data", m.dataChunk);
-
-    if (version > 1) {
-        {
-            size_type size;
-            archive(make_nvp("sizeprogramdata", size));
-            m.dataChunk2.resize(size);
-            ((JSONInputArchive*) &archive)->loadBinaryValue((void*) m.dataChunk2.data(), size, "programdata");
-        }
-        {
-            size_type size;
-            archive(make_nvp("sizeplugindata", size));
-            m.dataChunk.resize(size);
-            ((JSONInputArchive*) &archive)->loadBinaryValue((void*) m.dataChunk.data(), size, "plugindata");
-        }
-    }
-
-    if (version > 4 && version < 7) {
-        archive(make_nvp("currentProgram", m.currentProgram));
-    }
-    if (version > 5) {
-        archive(make_nvp("vendorVersion", m.vendorVersion));
-        archive(make_nvp("localDbId", m.localDbId));
-    }
-    if (version >= 7) {
-        archive(make_nvp("programIdx", m.currentProgram));
-        archive(make_nvp("programName", m.currentProgramName));
-    }
+    archive(make_nvp("vendorVersion", m.vendorVersion),
+        make_nvp("localDbId", m.localDbId),
+        make_nvp("programIdx", m.currentProgram),
+        make_nvp("programName", m.currentProgramName));
     if (version >= 9) {
-        archive(make_nvp("ioChannels", m.ioChannels));
-        archive(make_nvp("version", m.version));
+        archive(make_nvp("ioChannels", m.ioChannels), make_nvp("version", m.version));
     }
     if (version >= 10) {
-        archive(make_nvp("stageIds", m.stageIds));
-        archive(make_nvp("routing", m.effectRouting));
+        archive(make_nvp("stageIds", m.stageIds), make_nvp("routing", m.effectRouting));
     }
 }
 
 template<class Archive>
 void save(Archive& archive, plugin_snapshot_t const& m, const std::uint32_t version) {
-    archive(make_nvp("pluginType", m.pluginType));
-    archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot));
-    archive(make_nvp("parameters", m.params));
-    archive(make_nvp("automatedParams", m.automatedParams));
-    archive(make_nvp("globalId", m.projectGlobalId));
-    archive(make_nvp("enabled", m.enabled));
+    archive(make_nvp("pluginType", m.pluginType),
+        make_nvp("name", m.name), 
+        make_nvp("uId", m.uId), 
+        make_nvp("slot", m.slot),
+        make_nvp("parameters", m.params),
+        make_nvp("automatedParams", m.automatedParams),
+        make_nvp("globalId", m.projectGlobalId),
+        make_nvp("enabled", m.enabled));
     {
         size_type size = m.dataChunk2.size();
         archive(make_nvp("sizeprogramdata", size));
@@ -174,15 +128,17 @@ void save(Archive& archive, plugin_snapshot_t const& m, const std::uint32_t vers
         archive(make_nvp("sizeplugindata", size));
         ((JSONOutputArchive*) &archive)->saveBinaryValue(m.dataChunk.data(), size, "plugindata");
     }
-    archive(make_nvp("plugins", m.pluginSnapshots));
-    archive(make_nvp("vendorVersion", m.vendorVersion));
-    archive(make_nvp("localDbId", m.localDbId));
-    archive(make_nvp("programIdx", m.currentProgram));
-    archive(make_nvp("programName", m.currentProgramName));
-    archive(make_nvp("ioChannels", m.ioChannels));
-    archive(make_nvp("version", m.version));
-    archive(make_nvp("stageIds", m.stageIds));
-    archive(make_nvp("routing", m.effectRouting));
+    archive(
+        make_nvp("vendorVersion", m.vendorVersion),
+        make_nvp("localDbId", m.localDbId),
+        make_nvp("programIdx", m.currentProgram),
+        make_nvp("programName", m.currentProgramName),
+        make_nvp("ioChannels", m.ioChannels),
+        make_nvp("version", m.version),
+        make_nvp("stageIds", m.stageIds),
+        make_nvp("routing", m.effectRouting),
+        make_nvp("plugins", m.pluginSnapshots)
+    );
 }
 
 template<class Archive>
@@ -230,11 +186,11 @@ void serialize(Archive& archive, track_effect_routing_snapshot_t& m) {
 
 template<class Archive>
 void serialize(Archive& archive, track_impl_snapshot_t& m) {
-    archive(make_nvp("plugins", m.pluginSnapshots));
-    make_optional_nvp(archive, "track", m.trackParams);
-    make_optional_nvp(archive, "arp", m.trackArp);
-    make_optional_nvp(archive, "io", m.trackIO);
-    make_optional_nvp(archive, "routing", m.effectRouting);
+    archive(make_nvp("plugins", m.pluginSnapshots),
+        make_nvp("track", m.trackParams),
+        make_nvp("arp", m.trackArp),
+        make_nvp("io", m.trackIO),
+        make_nvp("routing", m.effectRouting));
 }
 
 template<class Archive>
@@ -369,17 +325,15 @@ void serialize(Archive& archive, clip_t& m) {
             make_nvp("offsetStart", m.offsetStart),
             make_nvp("loopLen", m.loopLen),
             make_nvp("enabled", m.enabled),
-            make_nvp("rgb", m.rgb));
-    make_optional_nvp(archive, "loopStart", m.loopStart);
-    make_optional_nvp(archive, "loopEnabled", m.loopEnabled);
-    make_optional_nvp(archive, "noLayout", m.noLayout);
-    make_optional_nvp(archive, "editorLayout", m.editorLayout);
-    make_optional_nvp(archive, "clip_notes", m.notes);
-    make_optional_nvp(archive, "clip_audio", m.audio);
-    make_optional_nvp(archive, "type", m.clipType);
-    int32_t lenSamplesDummy = 0;
-    make_optional_nvp(archive, "offsetSamples", lenSamplesDummy);
-    make_optional_nvp(archive, "lenSamples", m.lenSamples);
+            make_nvp("rgb", m.rgb),
+            make_nvp("loopStart", m.loopStart),
+            make_nvp("loopEnabled", m.loopEnabled),
+            make_nvp("noLayout", m.noLayout),
+            make_nvp("editorLayout", m.editorLayout),
+            make_nvp("clip_notes", m.notes),
+            make_nvp("clip_audio", m.audio),
+            make_nvp("type", m.clipType),
+            make_nvp("lenSamples", m.lenSamples));
     if (m.loopLen == 0) {
         m.loopStart = m.offsetStart;
         m.loopLen = m.len;
@@ -400,12 +354,12 @@ void load(Archive& archive, clip_notes_t& m) {
 
 template<class Archive>
 void save(Archive& archive, clip_audio_t const& m) {
-    make_optional_nvp(archive, "id", m.id);
+    archive(make_nvp("id", m.id));
 }
 
 template<class Archive>
 void load(Archive& archive, clip_audio_t& m) {
-    make_optional_nvp(archive, "id", m.id);
+    archive(make_nvp("id", m.id));
 }
 
 //TODO: don't archive each note seperately
@@ -423,13 +377,8 @@ template<class Archive>
 void load(Archive& archive, note_t& m) {
     archive(make_nvp("time", m.time),
             make_nvp("len", m.len),
-            make_nvp("pitch", m.pitch));
-    //handle old format, pre 2019/06/04
-    if (!make_optional_nvp(archive, "flags", m.flags)) {
-        bool b = true;
-        make_optional_nvp(archive, "enabled", b);
-        m.flags = b ? NoteFlags::ENABLED : 0;
-    }
+            make_nvp("pitch", m.pitch),
+            make_nvp("flags", m.flags));
     float fVel = 0;
     if (make_optional_nvp(archive, "velocity", fVel)) {
         m.velocity = CLAMP_I(static_cast<int32_t>(fVel), 0, 127);
@@ -460,9 +409,9 @@ template<class Archive>
 void serialize(Archive& archive, project_snapshot_t& m) {
     archive(make_nvp("masterTracks", m.trackMasterCtr),
             make_nvp("returnTracks", m.trackReturnCtr),
-            make_nvp("tracks", m.trackCtr));
-    make_optional_nvp(archive, "globals", m.globals);
-    make_optional_nvp(archive, "exportSettings", m.exportSettings);
+            make_nvp("tracks", m.trackCtr),
+            make_nvp("globals", m.globals),
+            make_nvp("exportSettings", m.exportSettings));
 };
 
 template<class Archive>
@@ -498,16 +447,20 @@ void load(Archive& archive, project_file& file, const std::uint32_t version) {
     file.fileFmtVersion = version;
     if (version != FILE_FORMAT_VERSION)
         return;
-    archive(cereal::make_nvp("projectdata", file.project));
-    make_optional_nvp(archive, "layout", file.layout);
-    make_optional_nvp(archive, "samples", file.sampleFileIndex);
+    archive(
+        make_nvp("projectdata", file.project),
+        make_nvp("layout", file.layout),
+        make_nvp("samples", file.sampleFileIndex)
+    );
 }
 
 template<class Archive>
 void save(Archive& archive, project_file const& file, const std::uint32_t version) {
-    archive(cereal::make_nvp("projectdata", file.project));
-    archive(cereal::make_nvp("layout", file.layout));
-    archive(cereal::make_nvp("samples", file.sampleFileIndex));
+    archive(
+        make_nvp("projectdata", file.project),
+        make_nvp("layout", file.layout),
+        make_nvp("samples", file.sampleFileIndex)
+    );
 }
 
 CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
