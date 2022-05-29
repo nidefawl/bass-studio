@@ -101,3 +101,4 @@ DEFINE_TEST(test_host_exception_handling TRUE test_host_exception_handling.cpp c
 DEFINE_TEST(test_host_project TRUE test_host_project.cpp common/test_common.cpp)
 DEFINE_TEST(test_waveformrenderer TRUE test_waveformrenderer.cpp)
 DEFINE_TEST(test_fontrenderer TRUE test_fontrenderer.cpp)
+DEFINE_TEST(test_projectfile TRUE test_projectfile.cpp)
