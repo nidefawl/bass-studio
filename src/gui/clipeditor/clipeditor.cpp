@@ -1,5 +1,6 @@
 
 
+#include "logging.h"
 #include "note.h"
 #include "seq_time.h"
 #include "math/seq_math.h"
@@ -1294,7 +1295,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
     clip_notes_t& notes = clip->notes;
     if (kevt.type != STATE_REPEAT && isCtrlKey(kevt.keyCode)) {
         if ((dragMode == drag_notes_move || dragMode == drag_notes_copy)) {
-            if ((dragMode == drag_notes_copy) != isCtrl(kevt.mods)) {
+            if ((dragMode == drag_notes_copy) != (kevt.type == STATE_PRESS)) {
                 if (dragMode == drag_notes_move) {
                     dragMode               = drag_notes_copy;
                     parentCtrl->cursorIcon = CURSOR_DUPLICATE;

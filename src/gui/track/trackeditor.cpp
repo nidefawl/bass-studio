@@ -119,7 +119,7 @@ void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip) {
 bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
     if (kevt.type != STATE_REPEAT && isCtrlKey(kevt.keyCode)) {
         if ((action.dragtype == DRAG_CLIPS_MOVE || action.dragtype == DRAG_CLIPS_COPY)) {
-            if ((action.dragtype == DRAG_CLIPS_COPY) != isCtrl(kevt.mods)) {
+            if ((action.dragtype == DRAG_CLIPS_COPY) != (kevt.type == STATE_PRESS)) {
                 if (action.dragtype == DRAG_CLIPS_MOVE) {
                     action.dragtype        = DRAG_CLIPS_COPY;
                     parentCtrl->cursorIcon = CURSOR_DUPLICATE;
@@ -133,7 +133,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
     }
     if (kevt.type != STATE_REPEAT && isAltKey(kevt.keyCode)) {
         /* if ((action.dragtype == DRAG_CLIPS_MOVE || action.dragtype == DRAG_CLIPS_COPY)) {
-            if ((action.dragtype == DRAG_CLIPS_COPY) != isCtrl(kevt.mods)) {
+            if ((action.dragtype == DRAG_CLIPS_COPY) != (kevt.type == STATE_PRESS)) {
                 if (action.dragtype == DRAG_CLIPS_MOVE) {
                     action.dragtype     = DRAG_CLIPS_COPY;
                     dawCtrl->cursorIcon = CURSOR_DUPLICATE;
