@@ -525,7 +525,7 @@ bool validateProjectFile(const std::shared_ptr<project_file>& projectfile) {
         for (const track_snapshot_t& tracksnapshot : trackcontainersnapshot.tracks) {
             for (const plugin_snapshot_t& pluginsnapshot : tracksnapshot.data.pluginSnapshots) {
                 int32_t globalId = pluginsnapshot.projectGlobalId;
-                if (std::binary_search(vec.begin(), vec.end(), globalId)) {
+                if (STL_CONTAINS(vec, globalId)) {
                     log_lf(Log::L_WARN, "invalid project: duplicate plugin global id %d found\n", globalId);
                     //return false;
                 }
