@@ -121,7 +121,6 @@ void gui_clipsettings::showEditClip() {
         clipLoopLen.setRef(&clip->loopLen);
         clipTimeStart.setRef(&clip->time);
         clipTimeLen.setRef(&clip->getLenRef());
-        clipTimeStartOffsedSamples.setRef(&clip->offsetSamples);
         clipTimeStartOffsetTicks.setRef(&clip->offsetStart);
         clipAudioId.setRef(&clip->audio.id);
 //        if (clip->noLayout) {

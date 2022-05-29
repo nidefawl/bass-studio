@@ -164,10 +164,20 @@ struct clip_layout_t {
     tick_t len;
     tick_t lenSamples;
     tick_t offsetStart;
-    int32_t offsetSamples;
     tick_t loopLen;
-    clip_layout_t(clip_t* clip, tick_t time, tick_t len, tick_t lenSamples, tick_t offsetStart, int32_t offsetSamples, tick_t loopLen) : clip(clip),
-                                                                                                                                         time(time), len(len), lenSamples(lenSamples), offsetStart(offsetStart), offsetSamples(offsetSamples), loopLen(loopLen) {
+    clip_layout_t(
+            clip_t* clip,
+            tick_t time,
+            tick_t len,
+            tick_t lenSamples,
+            tick_t offsetStart,
+            tick_t loopLen)
+        : clip(clip),
+          time(time),
+          len(len),
+          lenSamples(lenSamples),
+          offsetStart(offsetStart),
+          loopLen(loopLen) {
     }
 };
 
@@ -202,7 +212,12 @@ public:
     void copy(const trackdata_midi_t& a) {
         clips.clear();
         for (clip_t* clip : a.getConstClips()) {
-            clips.emplace_back(clip, clip->time, clip->len, clip->lenSamples, clip->offsetStart, clip->offsetSamples, clip->loopLen);
+            clips.emplace_back(clip,
+            clip->time,
+            clip->len,
+            clip->lenSamples,
+            clip->offsetStart,
+            clip->loopLen);
         }
     }
 
@@ -213,7 +228,6 @@ public:
             clip->len           = clipLayout.len;
             clip->lenSamples    = clipLayout.lenSamples;
             clip->offsetStart   = clipLayout.offsetStart;
-            clip->offsetSamples = clipLayout.offsetSamples;
             clip->loopLen       = clipLayout.loopLen;
         }
     }
@@ -229,7 +243,6 @@ public:
             CLIP_FIELD_EQUAL(len)
             CLIP_FIELD_EQUAL(lenSamples)
             CLIP_FIELD_EQUAL(offsetStart)
-            CLIP_FIELD_EQUAL(offsetSamples)
             CLIP_FIELD_EQUAL(loopLen)
         }
         return false;

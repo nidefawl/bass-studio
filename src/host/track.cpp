@@ -892,7 +892,7 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
             continue;
         int32_t clipEndSampleLen   = math::min((int32_t) blockSize, clipEndSample - blockSamplePos);
         int32_t clipStartSampleLen = blockSize - math::max((int32_t) 0, clipStartSample - blockSamplePos);
-        int32_t srcStartOffset     = blockSamplePos - clipStartSample + clip->offsetSamples;
+        int32_t srcStartOffset     = blockSamplePos - clipStartSample /* + clip->offsetSamples */;
         int32_t dstStartOffset     = math::max(0, clipStartSample - blockSamplePos);
         if (srcStartOffset + blockSize <= 0)
             continue;

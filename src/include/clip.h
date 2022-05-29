@@ -200,7 +200,6 @@ public:
 
 public:
     tick_t offsetStart    = 0;
-    int32_t offsetSamples = 0;
     tick_t lenSamples     = 0;
     tick_t loopStart      = 0;
     tick_t loopLen        = 0;
@@ -240,7 +239,6 @@ public:
         time          = obj.time;
         len           = obj.len;
         offsetStart   = obj.offsetStart;
-        offsetSamples = obj.offsetSamples;
         lenSamples    = obj.lenSamples;
         loopStart     = obj.loopStart;
         loopLen       = obj.loopLen;
@@ -272,7 +270,6 @@ public:
     }
     tick_t getLoopBegin() const;
     tick_t getNumLoops() const;
-    void adjustStartSamples(tick_t offset);
     void adjustStartOffset(tick_t offset) {
         if (clipType == CLIP_AUDIO) {
             //adjustStartSamples(offset);

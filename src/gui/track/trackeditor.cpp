@@ -487,12 +487,6 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
                     if (!(grid.grid_dens.getSnap() == SNAP_OFF || isAlt(evt.kbmods)) && clip->getLen() - offset < grid.getTickLength()) {
                         offset = clip->getLen() - grid.getTickLength();
                     }
-                    if (clip->clipType == CLIP_AUDIO) {
-                        tick_t sampleOffsetTicks = DawInstance::get()->samplesToTicks(clip->offsetSamples);
-                        if (sampleOffsetTicks + offset < 0) {
-                            offset = -sampleOffsetTicks;
-                        }
-                    }
                     clip->time += offset;
                     clip->adjustLen(-offset);
                     clip->adjustStartOffset(offset);
@@ -509,12 +503,6 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
                         }
                         if (!(grid.grid_dens.getSnap() == SNAP_OFF || isAlt(evt.kbmods)) && clip->getLen() - offset < grid.getTickLength()) {
                             offset = clip->getLen() - grid.getTickLength();
-                        }
-                        if (clip->clipType == CLIP_AUDIO) {
-                            tick_t sampleLen = DawInstance::get()->samplesToTicks(clip->audio.lenSamples() - clip->offsetSamples);
-                            if (sampleLen > 0 && clip->getLen() - offset > sampleLen - clip->offsetStart) {
-                                offset = -(sampleLen - clip->offsetStart - clip->getLen());
-                            }
                         }
                         clip->adjustLen(-offset);
                     }

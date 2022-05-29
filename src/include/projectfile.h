@@ -7,6 +7,7 @@
 
 class MainCtrl;
 struct project_file {
+    uint32_t fileFmtVersion = 0;
     String path;
     project_snapshot_t project;
     project_layout_t layout;

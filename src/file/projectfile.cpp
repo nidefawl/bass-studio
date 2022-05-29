@@ -6,16 +6,11 @@
 #include <algorithm>
 #include <memory>
 #include <functional>
-#include <cereal/cereal.hpp>
-#include <cereal/archives/json.hpp>
-#include <cereal/types/map.hpp>
-#include <cereal/types/memory.hpp>
-#include <cereal/types/vector.hpp>
-#include <cereal_optional_nvp/cereal_optional_nvp.hpp>
 
 #include "config.h"
 #include "exceptions.h"
 #include "seq_time.h"
+#include "seq_util.h"
 #include "snapshot.h"
 #include "str_util.h"
 #include "clip.h"
@@ -27,6 +22,14 @@
 #include "project.h"
 #include "automation.h"
 #include "logging.h"
+
+#include <cereal/cereal.hpp>
+#include <cereal/archives/json.hpp>
+#include <cereal/types/map.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal_optional_nvp/cereal_optional_nvp.hpp>
+
 
 using namespace cereal;
 
@@ -374,7 +377,8 @@ void serialize(Archive& archive, clip_t& m) {
     make_optional_nvp(archive, "clip_notes", m.notes);
     make_optional_nvp(archive, "clip_audio", m.audio);
     make_optional_nvp(archive, "type", m.clipType);
-    make_optional_nvp(archive, "offsetSamples", m.offsetSamples);
+    int32_t lenSamplesDummy = 0;
+    make_optional_nvp(archive, "offsetSamples", lenSamplesDummy);
     make_optional_nvp(archive, "lenSamples", m.lenSamples);
     if (m.loopLen == 0) {
         m.loopStart = m.offsetStart;
@@ -491,6 +495,7 @@ void serialize(Archive& archive, samplefile_entry_t& m) {
 
 template<class Archive>
 void load(Archive& archive, project_file& file, const std::uint32_t version) {
+    file.fileFmtVersion = version;
     if (version != FILE_FORMAT_VERSION)
         return;
     archive(cereal::make_nvp("projectdata", file.project));
@@ -552,8 +557,11 @@ std::shared_ptr<project_file> loadProjectFile(String& path) {
             JSONInputArchive ar(sstream);
             ar(make_nvp("project", f));
         }
+        if (f->fileFmtVersion != FILE_FORMAT_VERSION) {
+            log_lf(Log::L_WARN, "legacy project file version %u\n", f->fileFmtVersion);
+            return nullptr;
+        }
         f->path = path;
-        // TODO: Add an option for devs to force-load invalid project files
         if (!validateProjectFile(f)) {
             f.reset();
         }
