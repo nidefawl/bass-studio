@@ -736,6 +736,7 @@ vsthost::audiostream_properties_t vsthost::getAudioStreamProperties() const {
 void vsthost::setSampleFormat(const sampleformat_t& _sampleFormat) {
     if (this->m_sampleFormatInternal != _sampleFormat) {
         this->m_sampleFormatInternal = _sampleFormat;
+        audiocache::getInstance()->setSamplerate(m_sampleFormatInternal.sampleRate);
         for (auto* audio : this->allAudioStages) {
             audio->sampleFormat = _sampleFormat;
             audio->input.realloc(_sampleFormat.blockSize);
@@ -2433,7 +2434,6 @@ void vsthost::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
     auto extBlockSize = stream ? stream->getBlockSize() : sampleFormatExternal.blockSize;
     sampleFormatExternal = { extSampleRate, extBlockSize, sampleformat_bits_t::FLOAT_32 };
     this->m_sampleFormatExternal        = sampleFormatExternal;
-    audiocache::getInstance()->setSamplerate(extSampleRate);
 }
 
 bool vsthost::isStreaming() {
