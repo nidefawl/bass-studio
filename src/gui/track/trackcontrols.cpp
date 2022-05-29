@@ -1634,6 +1634,7 @@ class guictxtmenu_track : public guictxtmenu {
     ctxtmenu_entry* cmdDuplicateTrack;
     ctxtmenu_entry* cmdRenameTrack;
     ctxtmenu_entry* cmdShowAllAutomation;
+    ctxtmenu_entry* cmdReactivateAutomation;
     ctxtmenu_entry* cmdShowWaveform;
     ctxtmenu_entry* cmdAddChildMidiTrack;
     ctxtmenu_entry* cmdSaveTrack;
@@ -1646,10 +1647,11 @@ public:
         this->size.x = 120;
         addEntry(cmdDuplicateTrack = new ctxtmenu_entry("Duplicate track", 1));
         addEntry(cmdRenameTrack = new ctxtmenu_entry("Rename track", 6));
+        addEntry(cmdAddChildMidiTrack = new ctxtmenu_entry("Add child MIDI Track", 4));
         addEntry(new ctxtmenu_splitter());
         addEntry(cmdShowAllAutomation = new ctxtmenu_entry("Show all automation", 0));
         addEntry(cmdShowWaveform = new ctxtmenu_entry("Show waveform", 5));
-        addEntry(cmdAddChildMidiTrack = new ctxtmenu_entry("Add child MIDI Track", 4));
+        addEntry(cmdReactivateAutomation = new ctxtmenu_entry("Reactivate all automation", 7));
         addEntry(new ctxtmenu_splitter());
         addEntry(cmdSaveTrack = new ctxtmenu_entry("Save track", 3));
         addEntry(cmdDeleteTrack = new ctxtmenu_entry("Delete track", 2));
@@ -1667,6 +1669,16 @@ public:
             if (tr) {
                 tr->rgb = colorPalette[_id];
             }
+        } else if (_id == cmdReactivateAutomation->id) {
+            if (tr) {
+                std::vector<automatable_t*> targets;
+                tr->audio->getAutomatableTrackTargets(targets);
+                for (automatable_t* atl : targets) {
+                    atl->visitAutomatedParams([](automated_param_t& param) {
+                        param.src.active = true;
+                    });
+                }
+            }
         } else if (_id == cmdShowAllAutomation->id) {
             gui_track_automationlane* gtr_at = nullptr;
             if (tr) {
@@ -1674,6 +1686,7 @@ public:
                 m_trackentry->layout.hideSubtracks = false;
                 updateStoreLoadSubtracks(m_trackentry->parent, m_trackentry);
                 auto trCtr = m_trackentry->parent;
+                trCtr->removeAllSubtracks(m_trackentry);
                 std::vector<automatable_t*> targets;
                 tr->audio->getAutomatableTrackTargets(targets);
                 for (automatable_t* atl : targets) {

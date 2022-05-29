@@ -131,6 +131,10 @@ public:
     void visitParams(Functor f) {
         std::for_each(mapParams.begin(), mapParams.end(), f);
     }
+    template<typename Functor>
+    void visitAutomatedParams(Functor f) {
+        std::for_each(automatedParams.begin(), automatedParams.end(), f);
+    }
     void getSortedParams(std::vector<automatable_param_t*>& _out) {
         _out.reserve(mapParams.size());
         std::for_each(mapParams.begin(), mapParams.end(), [&_out](auto& mapEntry) {
