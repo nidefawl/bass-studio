@@ -1,4 +1,5 @@
 #pragma once
+#include <cstring>
 #include "event.h"
 
 #define STATE_RELEASE 0
@@ -286,13 +287,13 @@ extern KeyCombo KC_REFRESH;
 extern KeyCombo KC_ZOOM_IN;
 extern KeyCombo KC_ZOOM_OUT;
 extern KeyCombo KC_CONSOLIDATE;
-#include "logging.h"
+
 inline bool isKC(KeyCombo c, KeyEvent& kevt) {
     if (kevt.mods != c.keyMod) {
         return false;
     }
     if (c.keyChar != nullptr) {
-        return kevt.keyname && !strcmp(kevt.keyname, c.keyChar);
+        return kevt.keyname && !std::strcmp(kevt.keyname, c.keyChar);
     } else {
         return kevt.keyCode == c.keyCode;
     }
