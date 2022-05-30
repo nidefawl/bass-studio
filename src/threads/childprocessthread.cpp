@@ -9,7 +9,6 @@
 #include "thread.h"
 #include "exceptions.h"
 #include "assert_dbg.h"
-
 #if defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>
 #include <spawn.h>
@@ -18,6 +17,7 @@
 #include <vector>
 #include <sstream>
 #include <cstdio>
+#include <alloca.h>
 
 extern "C" {
 extern char** environ;

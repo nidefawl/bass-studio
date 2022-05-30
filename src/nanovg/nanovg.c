@@ -21,7 +21,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <memory.h>
-#if defined(_MSC_VER) || defined(__MINGW32__)
+#ifdef _WIN32
 #include <malloc.h>     // alloca
 #else
 #include <alloca.h>     // alloca

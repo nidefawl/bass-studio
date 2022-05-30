@@ -29,6 +29,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#ifdef _WIN32
+#include <malloc.h>     // alloca
+#else
+#include <alloca.h>     // alloca
+#endif
 
 enum GLNVGuniformLoc {
 	GLNVG_LOC_VIEWSIZE,
