@@ -1,36 +1,16 @@
 #include "glheaders.h"
-#include <nanovg.h>
-#include <vector>
-#include <cmath>
-#include <memory>
-
+#include "types.h"
 #include "str_util.h"
 #include "math/seq_math.h"
 #include "color_util.h"
-#include "gui/gui.h"
 #include "gui/container/container.h"
 #include "gui/plugin/pluginviewcontainers.h"
-#include "gui/controls/button.h"
-#include "gui/controls/knob.h"
-#include "gui/controls/inputfield.h"
 #include "gui/controls/knobpluginparam.h"
 #include "gui/container/container.h"
 #include "gui/contextmenu/contextmenu_daw.h"
-#include "basectrl.h"
-#include "platform.h"
-
 #include "plugins/plugin.h"
-#include "plugins/plugin-base.h"
-#include "host/plugin/base_plugin.h"
-#include "host/plugin/vst_plugin.h"
-#if BUILD_VSTHOST
-#include "host/mainctrl.h"
-#endif
-
 #include "stereowidth-plugin.h"
 #include "stereowidth-pluginctr.h"
-#include "vstsdk-plugin-2.4/audioeffect.h"
-#include "vstsdk-plugin-2.4/audioeffectx.h"
 
 using namespace PluginStereoWidth;
 

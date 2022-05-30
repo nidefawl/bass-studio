@@ -57,7 +57,7 @@ namespace PluginStereoWidth {
                 label[1] = 0;
                 return;
             case kGain:
-                snprintf(label, kVstMaxParamStrLen, "dB");
+                vst_strncpy(label, "dB", kVstMaxParamStrLen);
                 return;
             default:
                 vst_strncpy(label, "", kVstMaxParamStrLen);
