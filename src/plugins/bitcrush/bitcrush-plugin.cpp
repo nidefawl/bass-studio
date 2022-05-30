@@ -198,7 +198,6 @@ namespace PluginBitcrush {
         if (this->bitcrushLvlChanged) {
             this->bitcrushLvlChanged         = false;
             this->curBitcrush                = this->newBitcrush;
-            this->getAeffect()->initialDelay = this->curBitcrush;
         }
         dbgassert(this->curBitcrush >= BITCRUSH_BITS_MIN && this->curBitcrush <= (BITCRUSH_BITS_MAX));
 
