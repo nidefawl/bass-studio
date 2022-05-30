@@ -106,7 +106,6 @@ struct audio_stage_t {
     audiostagerouting_state_t routingState = audiostagerouting_state_t::INVALID;
     sampleformat_t sampleFormat;
 
-    samplerate_t latencyInternal = 0;
     samplerate_t latencyInput = 0;
     samplerate_t latencyOuput = 0;
 
@@ -186,7 +185,6 @@ struct audio_stage_t {
     void insertEffect(int32_t idx, effectbase* _instrument);
     bool replaceEffect(int32_t idx, effectbase* _effect, effectbase** _prevEffect);
     void pluginsChanged();
-    void updateLatency();
     void onTick(double since);
     track_t* getTrack() const;
     void addAudioStage(audio_stage_t* stage);

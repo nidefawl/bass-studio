@@ -392,7 +392,11 @@ VstEvent_t* track_impl_t::reallocEvts(size_t size) {
 }
 
 samplecount_t audio_stage_t::getInternalLatency() const {
-    return latencyInternal;
+    samplecount_t latency = 0;
+    for (effectbase* effect : effects) {
+        latency += effect->getPluginLatency();
+    }
+    return latency;
 }
 
 samplecount_t audio_stage_t::getOutputLatency() const {
@@ -409,17 +413,7 @@ void audio_stage_t::pluginsChanged() {
     }
     DAW::validateEffectRoutings(this->host, this);
 
-    updateLatency();
     this->processingGraph.reset();
-}
-
-void audio_stage_t::updateLatency() {
-    //combined stage latency needs to be determined differently when using custom routing
-    samplecount_t latency = 0;
-    for (effectbase* effect : effects) {
-        latency += effect->getPluginLatency();
-    }
-    this->latencyInternal = latency;
 }
 
 void audio_stage_t::getStageTargets(std::vector<automatable_t*>& targets) {

@@ -2184,7 +2184,6 @@ int32_t vsthost::processGraph(project_controller_t* ctrl,
         dsp_util::fillBlock(audio->input, 0.0f);
         dsp_util::fillBlock(audio->output, 0.0f);
         dsp_util::fillBlock(audio->outputPost, 0.0f);
-        audio->updateLatency(); // determine max latency so getLatency() is correct
     }
 #endif
 
