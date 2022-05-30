@@ -18,6 +18,7 @@ void guimenu_ctxtentry::layout(ivec2 size, float _fontSize, determine_string_wid
     auto entryW = leftOffset()+strw.getStringWidth(title, _fontSize, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     if (icon) entryW += height-4;
     if (title.find('\t')) entryW += strw.getStringWidth("    ", _fontSize, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+    entryW *= 1.2f;
     this->width = math::max(size.x, math::roundfS32(entryW));
 
 }

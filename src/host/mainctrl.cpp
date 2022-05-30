@@ -913,7 +913,20 @@ void DawInstance::menuCommand(menucmd_t command) {
     try {
         auto mainCtrl = tls.mainCtrl;
         switch (command.command) {
-
+            case CMD_REACTIVATE_AUTOMATION: {
+                ThreadLock lock = playThread.lockThread();
+                std::vector<automatable_t*> targets;
+                for (auto& track : project.trackList.getAllTracksFlatVecRef()) {
+                    targets.clear();
+                    track->audio->getAutomatableTrackTargets(targets);
+                    for (auto& target : targets) {
+                        target->visitAutomatedParams([](automated_param_t& param) {
+                            param.src.active = true;
+                        });
+                    }
+                }
+                break;
+            }
             case CMD_OPEN_VIEW:
                 if (getMainControl()) {
                     dbgassert(command.argInt >= 0);
@@ -1353,6 +1366,8 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     menus.edit.addSeperator();
     menus.edit.addCommand(CMD_NOARG(CMD_DELETE), menuName("Delete", KC_DELETE));
     menus.edit.addCommand(CMD_NOARG(CMD_SELECT_ALL), menuName("Select All", KC_SELECTALL));
+    menus.edit.addSeperator();
+    menus.edit.addCommand(CMD_NOARG(CMD_REACTIVATE_AUTOMATION), "Reactivate automation");
     menus.tools.type  = ngui::menu_type::submenu;
     menus.tools.title = "Tools";
     menus.tools.addCommand(CMD_NOARG(CMD_PREFERENCES), "Preferences");
