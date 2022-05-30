@@ -515,8 +515,10 @@ public:
         bIsVisible = true;
         glfwShowWindow(glfw);
 #ifdef __linux__
+        glfwWaitEventsTimeout(0.2);
         if ((windowCreationFlags & WINDOW_BORDERLESS_POPUP) == 0)
             glfwFocusWindow(glfw);
+        glfwWaitEventsTimeout(0.2);
 #endif
     }
 
