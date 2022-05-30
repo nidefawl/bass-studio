@@ -24,10 +24,12 @@ public:
     }
     ~guidialog_base() override { dbgassert(guis.empty()); }
     void determineSize(ivec2& prefSize) override {
-        if (resizeable) {
-            prefSize = math::maxvec2(dialogSize, prefSize);
-        } else {
-            prefSize = dialogSize;
+        if (prefSize == ivec2(0)) {
+            if (resizeable) {
+                prefSize = math::maxvec2(dialogSize, prefSize);
+            } else {
+                prefSize = dialogSize;
+            }
         }
     }
     bool isDialog() override {

@@ -844,8 +844,8 @@ void DawInstance::loadFile(String path, int flags) {
             cb(flags & FLAG_DEFER_LOAD);
         } else {
             guidialog_cb_yes_no* dlg = new guidialog_cb_yes_no();
-            dlg->cb                  = cb;
-            dlg->message             = "Load plugins?";
+            dlg->cb = cb;
+            dlg->message = "Load plugins?";
             tls.mainCtrl->openDialog(dlg);
         }
     }

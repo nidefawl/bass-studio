@@ -48,6 +48,9 @@ public:
             setLabel(_str);
         str = _str;
     }
+    const String& getText() const {
+        return str;
+    }
     void setTooltipText(String _tooltipText) {
         tooltipText = _tooltipText;
     }
