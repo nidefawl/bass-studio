@@ -43,6 +43,7 @@ namespace daw_tls {
     }
     
     appsettings& getSettings() {
+        dbgassert(tls.tlsInitialized);
         dbgassert(tls.settings);
         return *tls.settings;
     }
