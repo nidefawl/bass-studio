@@ -286,7 +286,7 @@ private:
 #ifndef NDEBUG
         flags |= NVG_DEBUG;
 #endif
-        if (daw_tls::getSettings().shaderDebug) {
+        if (daw_tls::isTlsInitialized() && daw_tls::getSettings().shaderDebug) {
             flags |= NVG_SHADER_RENDER_RESPONSIVENESS;
         }
 #ifdef NANOVG_GL2
