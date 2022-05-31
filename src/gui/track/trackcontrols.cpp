@@ -709,6 +709,7 @@ public:
                 }
                 dbgassert(popup);
                 if (popup) {
+                    entry->isMenuOpen = true;
                     popup->size = size;
                     popup->setFontSize(entry->fontSize);
                     popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
@@ -716,7 +717,6 @@ public:
                     ivec2 screenPosParent = dawCtrl->toScreenSpace(ivec2(0, 0));
                     ivec2 screenPos       = screenPosThis - screenPosParent + ivec2(right() + 2, top() + entryHit->y);
                     this->dawCtrl->openAppMenu(1, popup, screenPos);
-                    entry->isMenuOpen = true;
                 }
             }
             for (guibase* gui : guis) {

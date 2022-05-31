@@ -195,6 +195,7 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             if (!entryHit->isMenuOpen) {
                 //close other submenu at same level
                 closeAllSubmenus();
+                entryHit->isMenuOpen = true;
                 //and open new one
                 auto* popup        = new guimenu(entryHit->menu, lvl + 1, entryHit);
                 popup->parentMenuBar  = this->parentMenuBar;
@@ -206,7 +207,6 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                         popup->lvl,
                         popup,
                         screenPos);
-                entryHit->isMenuOpen = true;
             }
         }
         evt.requestFocus(this);
