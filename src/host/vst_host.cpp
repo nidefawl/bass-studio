@@ -1596,11 +1596,9 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
      */
     const bool canProcess = queueSizeOutput < RING_BUF_SIZE / 2 && resamplerInput->numBlocksToPop() >= audioProp.numBlocksInternal;
 
-    if (enableProfiling) {
-        timerProfile.reset();
-        dbgassert(validateIds());
-        stats.timings["Block.ValidateIds"] = timerProfile.getTimeReset();
-    }
+    if (enableProfiling) timerProfile.reset();
+    dbgassert(validateIds());
+    stats.timings["Block.ValidateIds"] = timerProfile.getTimeReset();
 
     int32_t nBlocksProcessed = 0;
 
@@ -2646,6 +2644,11 @@ void vsthost::releaseProjectResources() {
     lastTrackGraph = nullptr;
     //lastProcessingGraphs.clear();
 #endif
+    dbgassert(pluginInstances.empty());
+    dbgassert(pluginInstancesVST2.empty());
+    dbgassert(pluginInstancesInternal.empty());
+    dbgassert(allAudioStages.empty());
+    dbgassert(trackAudioStages.empty());
 }
 
 void vsthost::unload() {
@@ -2806,6 +2809,7 @@ void vsthost::unloadPlugin(effectbase* plugin, int flags) {
     if (notifyUp) {
         if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
     }
+    dbgassert(validateIds());
 }
 
 bool vsthost::unloadAllPlugins() {
@@ -2978,6 +2982,7 @@ bool vsthost::postPluginLoaded(audio_stage_t* trp, effectbase* plugin) {
     trp->pluginsChanged();
     onTrackLayoutChange();
     if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
+    dbgassert(validateIds());
     return true;
 }
 int32_t vsthost::getNextGlobalModuleId(int32_t globalId)
