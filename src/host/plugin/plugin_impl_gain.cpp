@@ -30,9 +30,6 @@ public:
         removeGuis();
     }
 
-    void determineSize(ivec2& prefSize) override {
-    }
-
     void onSetParameter(int32_t index, float value) {
         guiknob_pluginparam* knob = getKnobFromParameter(index);
         if (knob) {
@@ -41,33 +38,6 @@ public:
     }
     guiknob_pluginparam* getKnobFromParameter(int32_t index);
 
-    void layout() override {
-        ivec2 layoutpos = ivec2(0);
-        ivec2 cs        = getSizeContent();
-
-        const int numElements = 1;
-        const int inset       = 4;
-        const int knobSize    = math::max(32, (cs.x - inset * (numElements + 1)) / numElements);
-        knobgain.size         = ivec2(knobSize, cs.y - inset * 2);
-        knobgain.pos          = layoutpos + ivec2(inset);
-        for (guibase* gui : guis) {
-            gui->layout();
-        }
-    }
-
-    void render(NVGcontext* vg) override {
-        if (isBackgroundRendered()) {
-            renderBackground(vg);
-        }
-        if (!setScissorTransform(vg)) {
-            return;
-        }
-        for (guibase* gui : guis) {
-            nvgSave(vg);
-            gui->render(vg);
-            nvgRestore(vg);
-        }
-    }
     void onGuiOpen() {
         knobgain.setEffectInstance(module);
     }
@@ -77,6 +47,7 @@ public:
 
 guimodule_gain::guimodule_gain(module_gain* _eff)
     : module(_eff), knobgain(PARAM_GAIN) {
+    setLayoutMode(LAYOUT_HORIZONTAL);
     setBackgroundRendered(true);
     padding = 4;
     margin  = 4;
