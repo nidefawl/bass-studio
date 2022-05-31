@@ -13,7 +13,7 @@
 class BaseCtrl;
 struct guitheme_t;
 
-enum container_type : int32_t {
+enum container_type : uint8_t {
     CTR_TYPE_LAYOUT = 0,
     CTR_TYPE_BASE,
     CTR_TYPE_PROPERTIES,
@@ -30,13 +30,18 @@ enum container_type : int32_t {
     CTR_TYPE_EXPORT,
     CTR_TYPE_CLIPEDITOR
 };
+enum autolayout_mode : uint8_t {
+    LAYOUT_NONE = 0,
+    LAYOUT_HORIZONTAL,
+    LAYOUT_VERTICAL
+};
 
 #define CTR_TYPE_COUNT (static_cast<int>(container_type::CTR_TYPE_CLIPEDITOR) + 1)
 
 class guictr_base : public guibase {
 protected:
     container_type ctrType{CTR_TYPE_BASE};
-
+    autolayout_mode layoutMode{LAYOUT_NONE};
 public:
     int padding = CONTENT_INSET;
     int margin  = CTR_SPACING;
@@ -100,6 +105,47 @@ public:
     }
     ivec2 getPadding() {
         return (paddingTL(padding) + paddingBR(padding));
+    }
+    void setLayoutMode(autolayout_mode mode) {
+        layoutMode = mode;
+    }
+    autolayout_mode getLayoutMode() const {
+        return layoutMode;
+    }
+    void layoutHorizontal() {
+        const auto cs = getSizeContent();
+        auto pos = ivec2{};
+        for (guibase* gui : guis) {
+            gui->pos = pos;
+            gui->size = {cs.x / guis.size(), cs.y};
+            pos.x = gui->right();
+        }
+    }
+    void layoutVertical() {
+        const auto cs = getSizeContent();
+        auto pos = ivec2{};
+        for (guibase* gui : guis) {
+            gui->pos = pos;
+            gui->size = {cs.x, cs.y / guis.size()};
+            pos.y = gui->bottom();
+        }
+    }
+    void layout() override {
+        switch (layoutMode) {
+            case LAYOUT_NONE:
+                return;
+            case LAYOUT_HORIZONTAL:
+                layoutHorizontal();
+                break;
+            case LAYOUT_VERTICAL:
+                layoutVertical();
+                break;
+            default:
+                dbgassert(false);
+        }
+        for (guibase* gui : guis) {
+            gui->layout();
+        }
     }
 
     GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const override {
