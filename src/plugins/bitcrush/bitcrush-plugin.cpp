@@ -6,22 +6,15 @@
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "dsp_util.h"
-#include "color_util.h"
 
 #include "gui/gui.h"
 #include "gui/container/container.h"
 #include "gui/plugin/pluginviewcontainers.h"
-#include "gui/controls/button.h"
-#include "gui/controls/knob.h"
-#include "gui/controls/inputfield.h"
 #include "gui/controls/knobpluginparam.h"
 #include "gui/container/container.h"
-#include "gui/contextmenu/contextmenu_daw.h"
 
 #include "basectrl.h"
-
 #include "platform.h"
-
 #include "../plugin.h"
 #include "bitcrush-plugin.h"
 #include "plugins/plugin.h"
@@ -31,18 +24,16 @@
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 #include "audioblock.h"
 
-#define PLUGIN_EFFECT_NAME "Samplecrush"
-#define PLUGIN_UID "SMPC"
-#define PLUGIN_PRODUCT_NAME "Samplecrush plugin"
-
 #if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
     return PluginBitcrush::createPlugin(audioMaster);
 }
 #endif
 
-
 namespace PluginBitcrush {
+    const char* const PLUGIN_EFFECT_NAME = "Samplecrush";
+    const char* const PLUGIN_UID = "SMPC";
+    const char* const PLUGIN_PRODUCT_NAME = "Samplecrush plugin";
 
     PluginVST2_Bitcrush::PluginVST2_Bitcrush(audioMasterCallback audioMaster)
         : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs) {
@@ -65,7 +56,7 @@ namespace PluginBitcrush {
 
     void PluginVST2_Bitcrush::getParameterLabel(VstInt32 index, char* label) {
         switch (index) {
-            case kBitcrush:
+            case kSamples:
                 vst_strncpy(label, "samples", kVstMaxParamStrLen);
                 return;
             default:
@@ -76,7 +67,7 @@ namespace PluginBitcrush {
     void PluginVST2_Bitcrush::getParameterDisplay(VstInt32 index, char* text) {
         text[0] = 0;
         switch (index) {
-            case kBitcrush: {
+            case kSamples: {
                 int nPow2 = (1 << current()->bitcrush);
                 snprintf(text, kVstMaxParamStrLen, "%d", nPow2);
                 break;
@@ -86,7 +77,7 @@ namespace PluginBitcrush {
 
     void PluginVST2_Bitcrush::getParameterName(VstInt32 index, char* label) {
         switch (index) {
-            case kBitcrush:
+            case kSamples:
                 vst_strncpy(label, "Bitcrush", kVstMaxParamStrLen);
                 return;
         }
@@ -95,7 +86,7 @@ namespace PluginBitcrush {
     void PluginVST2_Bitcrush::setParameter(VstInt32 index, float value) {
         Program* ap = current();
         switch (index) {
-            case kBitcrush:
+            case kSamples:
                 ap->bitcrush = math::max(BITCRUSH_BITS_MIN, math::min(BITCRUSH_BITS_MAX, (int32_t) std::round(value * (BITCRUSH_BITS_MAX - BITCRUSH_BITS_MIN) + BITCRUSH_BITS_MIN)));
                 setNewBitcrushLvl(ap->bitcrush);
                 break;
@@ -117,7 +108,7 @@ namespace PluginBitcrush {
         Program* ap = current();
         float value = 0;
         switch (index) {
-            case kBitcrush:
+            case kSamples:
                 value = std::max(0.0f, std::min(1.0f, (ap->bitcrush - BITCRUSH_BITS_MIN) / (float) (BITCRUSH_BITS_MAX - BITCRUSH_BITS_MIN)));
                 break;
         }
@@ -218,43 +209,29 @@ namespace PluginBitcrush {
 namespace PluginBitcrush {
 
 
-    class guicontainer_plugin_latency : public guictr_base {
+    class guicontainer_plugin_bitcrush : public guictr_base {
         PluginVST2_Bitcrush* const plugin;
-        guiknob_pluginparam knoblatency;
+        guiknob_pluginparam knobSamples;
 
     public:
-        explicit guicontainer_plugin_latency(PluginVST2_Bitcrush* plugin)
+        explicit guicontainer_plugin_bitcrush(PluginVST2_Bitcrush* plugin)
             : guictr_base(),
             plugin(plugin),
-            knoblatency(PARAM_OFFSET_EXTERNAL + kBitcrush, kBitcrush) {
+            knobSamples(PARAM_OFFSET_EXTERNAL + kSamples, kSamples) {
+            setLayoutMode(LAYOUT_HORIZONTAL);
             setBackgroundRendered(true);
             padding = 4;
             margin  = 4;
-            add(&knoblatency);
+            add(&knobSamples);
         }
-        ~guicontainer_plugin_latency() override {
-            remove(&knoblatency);
-        }
-        bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-            if (this->contains(mpos)) {
-                ivec2 localMouse = this->toContainerSpace(mpos);
-                for (guibase* gui : guis) {
-                    if (gui->mouseHitTest(localMouse, evt)) {
-                        return true;
-                    }
-                }
-                if (evt.type == MouseHitType::MOUSE_LEFT) {
-                    evt.requestFocus(this);
-                    return true;
-                }
-            }
-            return false;
+        ~guicontainer_plugin_bitcrush() override {
+            remove(&knobSamples);
         }
 
         guiknob_pluginparam* getKnobFromParameter(int32_t index) {
             switch (index) {
-                case kBitcrush:
-                    return &knoblatency;
+                case kSamples:
+                    return &knobSamples;
             }
             return nullptr;
         }
@@ -266,23 +243,23 @@ namespace PluginBitcrush {
             }
 #endif
         }
+
         void onGuiOpen() {
 #if BUILD_VSTHOST
-            knoblatency.setEffectInstance(plugin->getHostSideHandle());
+            knobSamples.setEffectInstance(plugin->getHostSideHandle());
+#endif
+#if BUILD_EXTERNAL_PLUGIN
+            knobSamples.setAudioEffect(plugin);
 #endif
         }
+
         void onGuiClose() {
-        }
-        void layout() override {
-            ivec2 cs           = getSizeContent();
-            const int inset    = 4;
-            const int knobSize = math::max(32, (cs.x - inset * 3) / 2);
-            knoblatency.size   = ivec2(knobSize, cs.y - inset * 2);
-            knoblatency.size   = ivec2(knobSize, cs.y - inset * 2);
-            knoblatency.pos    = ivec2(inset);
-            for (guibase* gui : guis) {
-                gui->layout();
-            }
+#if BUILD_VSTHOST
+            knobSamples.setEffectInstance(nullptr);
+#endif
+#if BUILD_EXTERNAL_PLUGIN
+            knobSamples.setAudioEffect(nullptr);
+#endif
         }
     };
 
@@ -293,7 +270,7 @@ namespace PluginBitcrush {
         return new PluginVST2_Bitcrush(audioMaster);
     }
     std::shared_ptr<PluginViewContainers> PluginVST2_Bitcrush::createView() {
-        auto view = std::make_shared<SinglePluginViewContainers<guicontainer_plugin_latency, PluginVST2_Bitcrush>>(this);
+        auto view = std::make_shared<SinglePluginViewContainers<guicontainer_plugin_bitcrush, PluginVST2_Bitcrush>>(this);
         this->views.push_back(view);
         return view;
     }

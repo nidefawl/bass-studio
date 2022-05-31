@@ -15,11 +15,6 @@
 #include "vstsdk-plugin-2.4/audioeffect.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 
-#define PLUGIN_EFFECT_NAME "NoneAdv"
-#define PLUGIN_VENDOR_NAME "MichaelH"
-#define PLUGIN_UID "AGTP"//advanced gui test plugin
-#define PLUGIN_PRODUCT_NAME "advanced gui test plugin VST2.x "
-
 #if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
     return PluginTestAdv::createPlugin(audioMaster);
@@ -27,6 +22,9 @@ AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
 #endif
 
 namespace PluginTestAdv {
+    const char* const PLUGIN_EFFECT_NAME = "NoneAdv";
+    const char* const PLUGIN_UID = "AGTP";//advanced gui test plugin
+    const char* const PLUGIN_PRODUCT_NAME = "advanced gui test plugin VST2.x";
 
     GuiAdvPluginVST2::GuiAdvPluginVST2(audioMasterCallback audioMaster)
         : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs) {

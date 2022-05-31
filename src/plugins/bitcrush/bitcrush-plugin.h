@@ -20,7 +20,7 @@ namespace PluginBitcrush {
     };
 
     enum {
-        kBitcrush = 0,
+        kSamples = 0,
         kNumParams
     };
 

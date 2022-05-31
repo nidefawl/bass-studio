@@ -14,20 +14,13 @@
 #include "gui/gui.h"
 #include "gui/container/container.h"
 #include "gui/plugin/pluginviewcontainers.h"
-#include "gui/controls/button.h"
-#include "gui/controls/knob.h"
-#include "gui/controls/inputfield.h"
 #include "gui/controls/knobpluginparam.h"
 #include "gui/container/container.h"
-#include "gui/contextmenu/contextmenu_daw.h"
 
 #include "basectrl.h"
-
 #include "platform.h"
-
 #include "../plugin.h"
 #include "info-plugin.h"
-#include "plugins/plugin.h"
 #include "plugins/plugin-base.h"
 #include "plugins/plugin-window.h"
 #include "vstsdk-plugin-2.4/audioeffect.h"
@@ -36,10 +29,6 @@
 #include "midi-defs.h"
 #include "../synth/IPlugMidi.h"
 
-#define PLUGIN_EFFECT_NAME "HostInfo"
-#define PLUGIN_UID "INFO"
-#define PLUGIN_PRODUCT_NAME "HostInfo VST2.4"
-
 #if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
     return PluginHostInfo::createPlugin(audioMaster);
@@ -47,10 +36,10 @@ AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
 #endif
 
 
-using StdThreadLock = std::lock_guard<std::recursive_mutex>;
-
 namespace PluginHostInfo {
-
+    const char* const PLUGIN_EFFECT_NAME = "HostInfo";
+    const char* const PLUGIN_UID = "INFO";
+    const char* const PLUGIN_PRODUCT_NAME = "HostInfo VST2.4";
     void timeInfoToStrings(VstTimeInfo* timeinfo, std::vector<String>& strings) {
         strings.push_back(StringFormat("samplePos %.4f", timeinfo->samplePos));
         strings.push_back(StringFormat("sampleRate %.3f", timeinfo->sampleRate));
@@ -68,6 +57,7 @@ namespace PluginHostInfo {
         strings.push_back(StringFormat("flags %08X", timeinfo->flags));
     }
 
+    using StdThreadLock = std::lock_guard<std::recursive_mutex>;
     struct PluginVST2_HostInfo_impl_t {
 
         std::vector<uint8_t> dataPlugin;

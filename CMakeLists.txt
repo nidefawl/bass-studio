@@ -86,7 +86,6 @@ endforeach ()
 
 foreach (f ${CPP_ALL_FILES})
   if (f MATCHES ".*host/plugin/.*"
-    OR f MATCHES ".*plugins/.*"
     OR f MATCHES ".*main/.*"
     OR f MATCHES ".*platform/linux/.*")
     set_source_files_properties(${f} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)

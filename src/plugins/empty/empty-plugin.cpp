@@ -17,16 +17,6 @@
 #ifdef _MSC_VER
 #include <windows.h>
 #endif
-#define PLUGIN_BUILD_CRASHVERSION
-#if defined(PLUGIN_BUILD_CRASHVERSION)
-#define PLUGIN_EFFECT_NAME "CrashVST2x"
-#else
-#define PLUGIN_EFFECT_NAME "Empty"
-#endif
-
-#define PLUGIN_VENDOR_NAME "MichaelH"
-#define PLUGIN_UID "EMPT"//advanced gui test plugin
-#define PLUGIN_PRODUCT_NAME "empty test plugin VST2.x "
 
 #if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
@@ -35,7 +25,15 @@ AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
 #endif
 
 namespace PluginEmptyVST2 {
+#define PLUGIN_BUILD_CRASHVERSION
 
+#if defined(PLUGIN_BUILD_CRASHVERSION)
+    const char* const PLUGIN_EFFECT_NAME = "CrashVST2x";
+#else
+    const char* const PLUGIN_EFFECT_NAME = "Empty";
+#endif
+    const char* const PLUGIN_UID = "EMPT";
+    const char* const PLUGIN_PRODUCT_NAME = "empty test plugin VST2.x";
     EmptyPluginVST2::EmptyPluginVST2(audioMasterCallback audioMaster)
         : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs) {
         curProgram = 0;

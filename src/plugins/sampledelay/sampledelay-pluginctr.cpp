@@ -11,8 +11,7 @@
 #include "plugins/plugin.h"
 #include "sampledelay-plugin.h"
 
-using namespace PluginSampleDelay;
-
+namespace PluginSampleDelay {
 
 class guicontainer_sampledelay : public guictr_base {
     PluginVST2_SampleDelay* const plugin;
@@ -70,13 +69,13 @@ public:
     }
 };
 
-namespace PluginSampleDelay {
-    AudioEffectX* createPlugin(audioMasterCallback audioMaster) {
-        return new PluginVST2_SampleDelay(audioMaster);
-    }
-    std::shared_ptr<PluginViewContainers> PluginVST2_SampleDelay::createView() {
-        auto view = std::make_shared<SinglePluginViewContainers<guicontainer_sampledelay, PluginVST2_SampleDelay>>(this);
-        this->views.push_back(view);
-        return view;
-    }
+AudioEffectX* createPlugin(audioMasterCallback audioMaster) {
+    return new PluginVST2_SampleDelay(audioMaster);
+}
+std::shared_ptr<PluginViewContainers> PluginVST2_SampleDelay::createView() {
+    auto view = std::make_shared<SinglePluginViewContainers<guicontainer_sampledelay, PluginVST2_SampleDelay>>(this);
+    this->views.push_back(view);
+    return view;
+}
+
 }// namespace PluginSampleDelay

@@ -19,10 +19,6 @@
 #include "vstsdk-plugin-2.4/audioeffect.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 
-#define PLUGIN_EFFECT_NAME "SampleDelay"
-#define PLUGIN_UID "STWD"
-#define PLUGIN_PRODUCT_NAME "sample delay VST2.x "
-
 
 #if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
@@ -30,8 +26,11 @@ AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
 }
 #endif
 
-
 namespace PluginSampleDelay {
+    const char* const PLUGIN_EFFECT_NAME = "SampleDelay";
+    const char* const PLUGIN_UID = "SMPD";
+    const char* const PLUGIN_PRODUCT_NAME = "sample delay VST2.x";
+
     samplecount_t convertToSamples(float value) {
         return math::clamp<samplecount_t>(math::floorfS32(MIN_DELAY + value * (MAX_DELAY - MIN_DELAY)), MIN_DELAY, MAX_DELAY);
     }

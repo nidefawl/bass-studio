@@ -17,19 +17,16 @@
 #include "vstsdk-plugin-2.4/audioeffect.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 
-#define PLUGIN_EFFECT_NAME "StereoWidth"
-#define PLUGIN_UID "STWD"
-#define PLUGIN_PRODUCT_NAME "stereo width VST2.x "
-
-
 #if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
     return PluginStereoWidth::createPlugin(audioMaster);
 }
 #endif
 
-
 namespace PluginStereoWidth {
+    const char* const PLUGIN_EFFECT_NAME = "StereoWidth";
+    const char* const PLUGIN_UID = "STWD";
+    const char* const PLUGIN_PRODUCT_NAME = "stereo width VST2.x";
 
     PluginVST2_StereoWidth::PluginVST2_StereoWidth(audioMasterCallback audioMaster)
         : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs) {

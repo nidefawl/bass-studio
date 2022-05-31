@@ -26,14 +26,11 @@
 #include "plugins/plugin.h"
 #include "plugins/plugin-base.h"
 #include "plugins/plugin-window.h"
+#include "types.h"
 #include "vstsdk-plugin-2.4/audioeffect.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 #include "audioblock.h"
 
-#define PLUGIN_EFFECT_NAME "Latency"
-#define PLUGIN_UID "LTCY"
-#define PLUGIN_PRODUCT_NAME "Latency introducing plugin"
-#define MAX_LATENCY (1024 * 16)
 
 #if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
@@ -41,8 +38,11 @@ AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
 }
 #endif
 
-
 namespace PluginLatency {
+    const char* const PLUGIN_EFFECT_NAME = "Latency";
+    const char* const PLUGIN_UID = "LTCY";
+    const char* const PLUGIN_PRODUCT_NAME = "Latency introducing plugin";
+    static constexpr int32_t MAX_LATENCY = 16384;
 
     PluginVST2_Latency::PluginVST2_Latency(audioMasterCallback audioMaster)
         : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs) {
@@ -95,7 +95,7 @@ namespace PluginLatency {
         Program* ap = current();
         switch (index) {
             case kLatency:
-                ap->latency = math::max(0, math::min(MAX_LATENCY, (int32_t) std::round(value * MAX_LATENCY)));
+                ap->latency = math::max(0, math::min(MAX_LATENCY, math::roundfS32(value * MAX_LATENCY)));
                 setNewLatency(ap->latency);
                 break;
         }
@@ -117,7 +117,7 @@ namespace PluginLatency {
         float value = 0;
         switch (index) {
             case kLatency:
-                value = std::max(0.0f, std::min(1.0f, ap->latency / (float) MAX_LATENCY));
+                value = std::max(0.0f, std::min(1.0f, ap->latency / static_cast<float>(MAX_LATENCY)));
                 break;
         }
         return value;
@@ -212,6 +212,24 @@ namespace PluginLatency {
             remove(&knoblatency);
         }
 
+        void onGuiOpen() {
+    #if BUILD_VSTHOST
+            knoblatency.setEffectInstance(plugin->getHostSideHandle());
+    #endif
+    #if BUILD_EXTERNAL_PLUGIN
+            knoblatency.setAudioEffect(plugin);
+    #endif
+        }
+
+        void onGuiClose() {
+    #if BUILD_VSTHOST
+            knoblatency.setEffectInstance(nullptr);
+    #endif
+    #if BUILD_EXTERNAL_PLUGIN
+            knoblatency.setAudioEffect(nullptr);
+    #endif
+        }
+
         guiknob_pluginparam* getKnobFromParameter(int32_t index) {
             switch (index) {
                 case kLatency:
@@ -219,20 +237,14 @@ namespace PluginLatency {
             }
             return nullptr;
         }
+
         void onSetParameter(int32_t index, float value) {
-#if BUILD_EXTERNAL_PLUGIN
+    #if BUILD_EXTERNAL_PLUGIN
             guiknob_pluginparam* knob = getKnobFromParameter(index);
             if (knob) {
                 knob->setValueInit(value);
             }
-#endif
-        }
-        void onGuiOpen() {
-#if BUILD_VSTHOST
-            knoblatency.setEffectInstance(plugin->getHostSideHandle());
-#endif
-        }
-        void onGuiClose() {
+    #endif
         }
     };
 

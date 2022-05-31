@@ -37,20 +37,16 @@
 #include "midi-defs.h"
 #include "IPlugMidi.h"
 
-#define PLUGIN_EFFECT_NAME "Synth"
-#define PLUGIN_UID "SYNT"
-#define PLUGIN_PRODUCT_NAME "Synth VST2.4"
-
 #if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
     return PluginSynth::createPlugin(audioMaster);
 }
-#else
-
 #endif
 
 namespace PluginSynth {
-
+    const char* const PLUGIN_EFFECT_NAME = "Synth";
+    const char* const PLUGIN_UID = "SYNT";
+    const char* const PLUGIN_PRODUCT_NAME = "Synth VST2.4";
     enum class Waveforms : int32_t {
         Sine = 0,
         Triangle,
