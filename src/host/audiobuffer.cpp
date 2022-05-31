@@ -94,6 +94,7 @@ void AudioBlock::addFromDelayLineOp(DelayLine* delayLine, const samplecount_t de
     if (delay > writeOffset) {
         readPos = writeOffset + delayLineSize - delay;
     }
+    dbgassert(readPos >= 0);
     if (readPos + readSamples > delayLineSize) {
         const auto read1Len = delayLineSize - readPos;
         const auto read2Len = readSamples - read1Len;
