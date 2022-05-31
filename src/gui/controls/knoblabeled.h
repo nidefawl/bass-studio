@@ -13,7 +13,6 @@
 
 class guiknob_labeled_base : public guiknob {
 public:
-    const int button_inset = 10;
     std::function<String(float)> fnGetDisplayValue;
     String valueDisplay = "  ";
 

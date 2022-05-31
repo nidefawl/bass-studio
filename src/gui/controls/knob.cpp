@@ -7,6 +7,8 @@
 #include "guiconstant.h"
 #include "gui/contextmenu/contextmenu.h"
 #include "gui/contextmenu/contextmenu_daw.h"
+#include "math/seq_math.h"
+#include "platform.h"
 #include "theme.h"
 #include "gui/tooltip/tooltip.h"
 #include "str_util.h"
@@ -229,15 +231,15 @@ void guiknob::setKnobInternalHandlers() {
 
 
 void guiknob_labeled_base::layout() {
-    int buttonSize    = size.x * 0.6f;
-    int left          = (size.y - buttonSize);
-    float scaleTop    = 0.35f;
-    float scaleBottom = 0.25f;
-    labelHeight       = math::max(14.0f, left * scaleTop);
-    valueHeight       = math::max(14.0f, left * scaleBottom);
+    // auto buttonSize   = math::roundfS32(size.x * 0.8f);
+    // auto left         = (size.y - buttonSize);
+    float scaleTop    = 0.12f;
+    float scaleBottom = 0.12f;
+    labelHeight       = math::roundfS32(math::max(14.0f, size.y * scaleTop));
+    valueHeight       = math::roundfS32(math::max(14.0f, size.y * scaleBottom));
     if (isSlider) {
         if (label.length() < 12) {
-            labelHeight = math::max(14.0f, left * 0.15f);
+            labelHeight = math::roundfS32(math::max(14.0f, size.y * 0.15f));
         } else {
             labelHeight = 0;
         }
@@ -252,16 +254,19 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
         indColor = GuiColor::COL_KNOB_IND;
         valColor = GuiColor::COL_KNOB;
     }
-    ivec2 insetP = pos + ivec2(button_inset, labelHeight);
-    ivec2 insetS = size - ivec2(button_inset * 2, labelHeight + valueHeight);
-    if (isSlider) {
-        insetP = pos + ivec2(1, labelHeight);
-        insetS = size - ivec2(2, labelHeight + valueHeight);
-    }
-    if (insetS.x < 0 || insetS.y < 0) {
-        return;
-    }
-    const int INS_BRD = 2;
+    const int INS_BRD = 6;
+    ivec2 pLabel = pos + ivec2(INS_BRD);
+    ivec2 pValue = pos + ivec2(INS_BRD, size.y-(INS_BRD+valueHeight));
+    ivec2 sLabel = ivec2(size.x - 2 * INS_BRD, labelHeight);
+    ivec2 sValue = ivec2(size.x - 2 * INS_BRD, valueHeight);
+    ivec2 pKnob = pos + ivec2(INS_BRD, INS_BRD+labelHeight);
+    ivec2 sKnob = size - ivec2(0, labelHeight+valueHeight + 2 * INS_BRD);
+
+    // ivec2 insetS = size - ivec2(INS_BRD * 2);
+    // if (isSlider) {
+    //     insetP = pos + ivec2(1, labelHeight);
+    //     insetS = size - ivec2(2, labelHeight + valueHeight);
+    // }
     auto renderBorder = [this](NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size, GuiColor::constant_t bgColor) {
         nvgBeginPath(vg);
         nvgRect(vg, pos.x, pos.y, size.x, size.y);
@@ -276,39 +281,23 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
     if (fnGetDisplayValue) {
         valueDisplay = fnGetDisplayValue(value);
     }
-
+    if (sKnob.x > 0 && sKnob.y > 0) {
+        renderButtonAt(vg, pKnob, sKnob, value);
+    }
+    if (sLabel.x > 0 && sLabel.y > 0) {
+        renderBorder(vg, getStateFlags(), pLabel, sLabel, GuiColor::COL_BG_BRT);
+    }
+    if (sValue.x > 0 && sValue.y > 0) {
+        renderBorder(vg, getStateFlags(), pValue, sValue, GuiColor::COL_BG_BRT);
+    }
     auto bgColor       = theme->getColor(getBackgroundColor());
     auto contrastColor = getContrastFontColor(nvgToRGB(bgColor));
-    renderButtonAt(vg, insetP, insetS, value);
-    if (labelHeight) {
-        renderBorder(vg, getStateFlags(), pos + glm::ivec2(0, +INS_BRD), glm::ivec2(size.x, labelHeight - INS_BRD * 2), GuiColor::COL_BG_BRT);
+    nvgFillColor(vg, contrastColor);
+    if (sLabel.x > 0 && sLabel.y > 0) {
+        renderTextLabel(vg, vec2(pLabel) + vec2(sLabel) * 0.5f, sLabel, label, theme, labelHeight, contrastColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     }
-    renderBorder(vg, getStateFlags(), pos + glm::ivec2(0, size.y - valueHeight + INS_BRD), glm::ivec2(size.x, valueHeight - INS_BRD * 2), GuiColor::COL_BG_BRT);
-    nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-//    setFont(vg, (int) ((knob->size.y / 2.0)), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-
-    UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
-    UIFont::bindFont(vg, instance);
-
-    if (isSlider) {
-        nvgFillColor(vg, contrastColor);
-        if (labelHeight) {
-            nvgFontSize(vg, (int32_t) G_FONT_SCALE(labelHeight * 0.5f));
-            nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(labelHeight), StringAsCStr(label), NULL);
-        }
-        nvgFontSize(vg, (int32_t) G_FONT_SCALE(valueHeight * 0.5f));
-        nvgText(vg, pos.x + size.x / 2.0f, pos.y + size.y - valueHeight + G_FONT_MIDDLE_OFFSET(valueHeight), StringAsCStr(valueDisplay),
-                NULL);
-
-    } else {
-        nvgFillColor(vg, contrastColor);
-        if (labelHeight) {
-            nvgFontSize(vg, (int32_t) G_FONT_SCALE(labelHeight - 2.0f));
-            nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(labelHeight), StringAsCStr(label), NULL);
-        }
-        nvgFontSize(vg, (int32_t) G_FONT_SCALE(valueHeight - 2.0f));
-        nvgText(vg, pos.x + size.x / 2.0f, pos.y + size.y - valueHeight + G_FONT_MIDDLE_OFFSET(valueHeight), StringAsCStr(valueDisplay),
-                NULL);
+    if (sValue.x > 0 && sValue.y > 0) {
+        renderTextLabel(vg, vec2(pValue) + vec2(sValue) * 0.5f, sValue, valueDisplay, theme, valueHeight, contrastColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     }
 }
 
