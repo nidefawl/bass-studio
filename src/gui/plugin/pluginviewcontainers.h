@@ -36,7 +36,7 @@ protected:
 
 public:
     PluginGUI ctr_main;
-    explicit SinglePluginViewContainers(Plugin* eff, uint32_t _width = 220, uint32_t _height = 150)
+    explicit SinglePluginViewContainers(Plugin* eff, uint32_t _width = 320, uint32_t _height = 320)
         : width(_width), height(_height), ctr_main(eff) {
     }
     ~SinglePluginViewContainers() override = default;
