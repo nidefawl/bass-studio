@@ -10,7 +10,6 @@
 #include "gui/contextmenu/contextmenu_daw.h"
 #include "plugins/plugin.h"
 #include "stereowidth-plugin.h"
-#include "stereowidth-pluginctr.h"
 
 using namespace PluginStereoWidth;
 
@@ -27,6 +26,7 @@ public:
         knobgain(PARAM_OFFSET_EXTERNAL + kGain, kGain),
         knobwidth(PARAM_OFFSET_EXTERNAL + kStereoWidth, kStereoWidth)
     {
+        setLayoutMode(LAYOUT_HORIZONTAL);
         setBackgroundRendered(true);
         padding = 4;
         margin  = 4;
@@ -77,19 +77,6 @@ public:
             knob->setValueInit(value);
         }
 #endif
-    }
-
-    void layout() override {
-        ivec2 cs           = getSizeContent();
-        const int inset    = 4;
-        const int knobSize = math::max(32, (cs.x - inset * 3) / 2);
-        knobwidth.size     = ivec2(knobSize, cs.y - inset * 2);
-        knobgain.size      = ivec2(knobSize, cs.y - inset * 2);
-        knobwidth.pos      = ivec2(inset);
-        knobgain.pos       = ivec2(knobwidth.right() + inset, inset);
-        for (guibase* gui : guis) {
-            gui->layout();
-        }
     }
 };
 

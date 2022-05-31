@@ -193,7 +193,6 @@ namespace PluginLatency {
 
 namespace PluginLatency {
 
-
     class guicontainer_plugin_latency : public guictr_base {
         PluginVST2_Latency* const plugin;
         guiknob_pluginparam knoblatency;
@@ -203,6 +202,7 @@ namespace PluginLatency {
             : guictr_base(),
             plugin(plugin),
             knoblatency(PARAM_OFFSET_EXTERNAL + kLatency, kLatency) {
+            setLayoutMode(LAYOUT_HORIZONTAL);
             setBackgroundRendered(true);
             padding = 4;
             margin  = 4;
@@ -233,39 +233,6 @@ namespace PluginLatency {
 #endif
         }
         void onGuiClose() {
-        }
-
-        void render(NVGcontext* vg) override {
-            if (isBackgroundRendered()) {
-                renderBackground(vg);
-            }
-            if (!setScissorTransform(vg)) {
-                return;
-            }
-
-            for (guibase* gui : guis) {
-                nvgSave(vg);
-                gui->render(vg);
-                nvgRestore(vg);
-            }
-        }
-        void layout() override {
-            ivec2 cs           = getSizeContent();
-            const int inset    = 4;
-            const int knobSize = math::max(32, (cs.x - inset * 3) / 2);
-            knoblatency.size   = ivec2(knobSize, cs.y - inset * 2);
-            knoblatency.size   = ivec2(knobSize, cs.y - inset * 2);
-            knoblatency.pos    = ivec2(inset);
-            for (guibase* gui : guis) {
-                gui->layout();
-            }
-        }
-        bool handleKeyInput(KeyEvent& event) override {
-            if (event.type != KeyEventType::K_RELEASE) {
-            }
-            return false;
-        }
-        void buttonClicked(guibase* button) override {
         }
     };
 
