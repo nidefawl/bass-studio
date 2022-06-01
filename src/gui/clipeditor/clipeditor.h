@@ -494,6 +494,7 @@ public:
     void prerender(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
     vec2 getScale();
+    void resetCache();
 
     void handleDraggedBegin(MouseEvent& evt) override {
         if (evt.guiDragged == this) {

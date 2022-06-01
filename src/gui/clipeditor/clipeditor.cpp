@@ -1482,6 +1482,10 @@ guictr_clipeditorview::~guictr_clipeditorview() {
     delete cache;
 }
 
+void guictr_clipeditorview::resetCache() {
+    cache->reset();
+}
+
 void guictr_clipeditorview::prerender(NVGcontext* vg) {
     clip_view& view  = dawCtrl->getClipView();
     clip_t* const cl = view.clip();

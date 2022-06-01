@@ -2570,7 +2570,8 @@ void DawInstance::preClipDelete(clip_t* clip) {
 void DawInstance::preTrackDelete(track_t* track) {
     for (auto* ctrl : this->dawCtrls) {
         if (ctrl->clipView.gui && ctrl->clipView.gui->m_track == track) {
-            ctrl->clipView.set(nullptr);
+            setEditClip(nullptr);
+            break;
         }
     }
     resetMouseContext();
@@ -2709,13 +2710,14 @@ void DawInstance::setEditClip(gui_clip* gclip) {
 }
 
 void DawCtrl::setEditClip(gui_clip* gclip) {
-    clipView.set(gclip);
+    dbgassert(0);
 }
 
 void MainCtrl::setEditClip(gui_clip* gclip) {
     view->ctr_clipeditor.storeLayout();
     clipView.set(gclip);
     view->ctr_clipeditor.showEditClip();
+    view->ctr_clipeditorview.resetCache();
 }
 
 void CompanionCtrl::setEditClip(gui_clip* gclip) {
