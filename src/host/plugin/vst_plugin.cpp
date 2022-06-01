@@ -394,7 +394,7 @@ void vstplugin::load(vsthost* host) {
             fallbackCat.nParams++;
         }
         //TODO: wrap getParameter call in exception handler
-        param->value = handle->aeffect->getParameter(handle->aeffect, param->internalIdx);
+        param->value = param->defaultValue = handle->aeffect->getParameter(handle->aeffect, param->internalIdx);
     }
     paramsCategories.push_back(fallbackCat);
 

@@ -1,4 +1,5 @@
 #pragma once
+#include "automation.h"
 #include "logging.h"
 #include "nanovg/nanovg_min.h"
 #include <vector>
@@ -34,6 +35,13 @@ public:
         paramIdx = _paramIdx;
     }
     ~guiknob_pluginparam() override = default;
+#if BUILD_VSTHOST
+    void setToDefaultValue() override {
+        if (hostSidePlugin) {
+            hostSidePlugin->resetParamValue(paramIdx, FLG_PAR_UPDATE_USER);
+        }
+    }
+#endif
     void setEffectInstance(effectbase* _hostSidePlugin) {
 #if BUILD_VSTHOST
         hostSidePlugin   = _hostSidePlugin;

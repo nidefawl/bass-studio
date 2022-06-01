@@ -7,10 +7,11 @@
 #include "gui/contextmenu/contextmenu_base.h"
 #include "gui/contextmenu/contextmenu.h"
 
-#define ID_DELETE 1
-#define ID_REENABLE 2
-#define ID_SHOW 3
-#define ID_SHOW_NEW 4
+static constexpr int32_t ID_DELETE = 1;
+static constexpr int32_t ID_REENABLE = 2;
+static constexpr int32_t ID_SHOW = 3;
+static constexpr int32_t ID_SHOW_NEW = 4;
+static constexpr int32_t ID_RESET_TO_DEFAULT = 5;
 void addContextEntriesAutomation(guictxtmenu* ctxt, automatable_t* atl, int paramIdx) {
     const automation_t* at = atl->getRegisteredAutomation(paramIdx);
     if (at && at->isAutomated()) {
@@ -21,6 +22,7 @@ void addContextEntriesAutomation(guictxtmenu* ctxt, automatable_t* atl, int para
     }
     ctxt->addEntry(new ctxtmenu_entry("Show Automation", ID_SHOW));
     ctxt->addEntry(new ctxtmenu_entry("Show in new Automation Lane", ID_SHOW_NEW));
+    ctxt->addEntry(new ctxtmenu_entry("Reset to default", ID_RESET_TO_DEFAULT));
 }
 bool handleAutomatableContextMenu(DawCtrl* dawCtrl, automatable_t* atl, int paramIdx, int _id) {
     auto* track = atl->getTrack();
@@ -57,6 +59,10 @@ bool handleAutomatableContextMenu(DawCtrl* dawCtrl, automatable_t* atl, int para
                 dawCtrl->updateVisibleTrackContents();
                 param->active = true;
             }
+            return true;
+        }
+        case ID_RESET_TO_DEFAULT: {
+            atl->resetParamValue(paramIdx, FLG_PAR_UPDATE_USER);
             return true;
         }
         default:

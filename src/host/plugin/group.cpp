@@ -190,6 +190,7 @@ module_group::module_group(int32_t _projectGlobalId)
     for (const effectgroup_param_entry_t& paramEntry : parameterTypes) {
         automatable_param_t* regparam = registerParam(paramEntry.id);
 
+        regparam->defaultValue = paramEntry.val;
         regparam->value = paramEntry.val;
         regparam->name  = paramEntry.name;
         regparam->unit  = paramEntry.unit;

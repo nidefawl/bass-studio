@@ -118,5 +118,5 @@ public:
     }
 
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
-    void setToDefaultValue();
+    virtual void setToDefaultValue();
 };

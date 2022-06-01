@@ -90,10 +90,11 @@ struct param_converted_t {
     bool success;
 };
 struct automatable_param_t {
-    int32_t idx   = -1;
-    float value   = 0.0f;
-    bool inUse    = false;
-    int32_t flags = 0;
+    int32_t idx        = -1;
+    float defaultValue = 0.0f;
+    float value        = 0.0f;
+    bool inUse         = false;
+    int32_t flags      = 0;
 
     param_step_fi_u min{ 0.0f };
     param_step_fi_u max{ 1.0f };
@@ -192,6 +193,11 @@ public:
     virtual void flipParamValue(int32_t idx) {
         setParamValue(idx, 1.0f - getParamValue(idx), FLG_PAR_UPDATE_USER);
     }
+    virtual void resetParamValue(int32_t paramIdx, int flags) {
+        auto it = mapParams.find(paramIdx);
+        dbgassert(it != mapParams.end());
+        setParamValue(paramIdx, it->second.defaultValue, flags);
+    };
     // TODO: don't create a new automation here. Quantization must be property of the parameter
     int32_t getQuantizationSteps(int32_t idx) {
         automation_t* at = getOrCreateAutomation(idx);

@@ -42,6 +42,7 @@ midiarp::midiarp(track_impl_t* _trImpl) : automatable_t(), trackImpl(_trImpl) {
     for (const arp_param_entry_t& paramEntry : parameterTypes) {
         automatable_param_t* regparam = registerParam(paramEntry.id);
 
+        regparam->defaultValue = paramEntry.val;
         regparam->value = paramEntry.val;
         regparam->name  = paramEntry.name;
         regparam->unit  = paramEntry.unit;

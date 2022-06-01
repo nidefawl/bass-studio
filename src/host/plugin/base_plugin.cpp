@@ -52,6 +52,7 @@ effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGloba
     for (const effectbase_param_entry_t& paramEntry : parameterTypes) {
         automatable_param_t* regparam = registerParam(paramEntry.id);
 
+        regparam->defaultValue = paramEntry.val;
         regparam->value = paramEntry.val;
         regparam->name  = paramEntry.name;
         regparam->unit  = paramEntry.unit;

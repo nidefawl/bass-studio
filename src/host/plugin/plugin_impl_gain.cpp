@@ -78,7 +78,7 @@ module_gain::module_gain(int32_t _projectGlobalId)
     } };
     for (const effectgain_param_entry& paramEntry : parameterTypes) {
         automatable_param_t* regparam = registerParam(paramEntry.id);
-
+        regparam->defaultValue = paramEntry.val;
         regparam->value = paramEntry.val;
         regparam->name  = paramEntry.name;
         regparam->unit  = paramEntry.unit;
@@ -144,6 +144,7 @@ void module_gain::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
 
 void module_gain::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts) {
     internalplugin::makeSnapshot(snapshot, opts);
+    snapshot.vendorVersion = 1;
 }
 
 std::shared_ptr<PluginViewContainers> module_gain::createInternalView() {

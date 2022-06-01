@@ -1309,6 +1309,7 @@ track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), au
     for (const track_param_entry_t& paramEntry : parameterTypes) {
         automatable_param_t* regparam = registerParam(paramEntry.id);
 
+        regparam->defaultValue = paramEntry.val;
         regparam->value = paramEntry.val;
         regparam->name  = paramEntry.name;
         regparam->unit  = paramEntry.unit;
@@ -1316,6 +1317,7 @@ track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), au
     for (int i = 0; i < MAX_SEND_CHANNELS; i++) {
         automatable_param_t* regparam = registerParam(PARAM_OFFSET_SEND + i);
 
+        regparam->defaultValue = 0.0f;
         regparam->value = 0.0f;
         regparam->name  = StringFormat("Send %d", (i + 1));
         regparam->unit  = "dB";
