@@ -11,6 +11,8 @@ struct audio_stage_t;
 
 class module_gain : public internalplugin {
 public:
+    const float DBFS_MUTE_POS = -101.0f;
+    const float MTR_CEIL      = 24.0f;
     explicit module_gain(int32_t _projectGlobalId);
     ~module_gain() override;
 
@@ -20,6 +22,8 @@ public:
     int getModuleType() override { return PLUGIN_TYPE_GAIN; };
     samplecount_t getPluginLatency() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
+    param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;
+    param_unit_t getParamValueDisplay(int32_t idx) override;
     String getInfo(std::vector<String>& list) override;
     void onTick(double since) override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;

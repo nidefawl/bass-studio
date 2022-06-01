@@ -204,6 +204,30 @@ namespace dsp_util {
         float f2 = (f1 * GAIN_SCALE_RANGE) + MTR_CEIL;
         return fromdBFS(f2);
     }
+    float gainToLinScaleWithRange(float f, float MTR_CEIL, float DBFS_MUTE_POS) {
+        const float GAIN_SCALE_RANGE = DBFS_MUTE_POS - MTR_CEIL;
+        float db = dBFS(f);
+        float f2 = ((math::max(DBFS_MUTE_POS, math::min(db, MTR_CEIL)) - MTR_CEIL) / GAIN_SCALE_RANGE);
+        return 1.0f - math::powf(f2, 1.0f / GAIN_SCALE_EXP);
+    }
+    float linScaleToGainWithRange(float f, float MTR_CEIL, float DBFS_MUTE_POS) {
+        const float GAIN_SCALE_RANGE = DBFS_MUTE_POS - MTR_CEIL;
+        float f1 = (1.0f - f);
+        f1       = math::powf(f1, GAIN_SCALE_EXP);
+        float f2 = (f1 * GAIN_SCALE_RANGE) + MTR_CEIL;
+        return fromdBFS(f2);
+    }
+    bool getGainLvlWithRange(float fLinGain, float MTR_CEIL, float DBFS_MUTE_POS, float& fGainOut) {
+        const float DBFS_FLOOR = DBFS_MUTE_POS + 1.0f;
+        const float GAIN_DBFLOOR = math::powf(10.0f, DBFS_FLOOR / 20.0f);
+        float fGainRaw = dsp_util::linScaleToGainWithRange(fLinGain, MTR_CEIL, DBFS_MUTE_POS);
+        if (fGainRaw < GAIN_DBFLOOR) {
+            fGainOut = 0.0f;
+            return false;
+        }
+        fGainOut = math::clamp(fGainRaw, GAIN_DBFLOOR, dsp_util::GAIN_DB30);
+        return true;
+    }
 }// namespace dsp_util
 
 namespace math {

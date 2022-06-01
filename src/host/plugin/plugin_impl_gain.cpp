@@ -1,4 +1,5 @@
 #include "plugin_impl_gain.h"
+#include "dsp_util.h"
 #include "event.h"
 #include "plugins/plugin-ui.h"
 #include "str_util.h"
@@ -16,6 +17,7 @@
 #include "audioblock.h"
 #include "meter.h"
 #include "snapshot.h"
+#include <algorithm>
 
 class guimodule_gain : public guictr_base {
     std::vector<guiknob_pluginparam*> knobs;
@@ -73,7 +75,7 @@ module_gain::module_gain(int32_t _projectGlobalId)
         float val;
     };
     const std::array<effectgain_param_entry, 2> parameterTypes{ {
-            { PARAM_GAIN, "Gain", "dB", dsp_util::gainToLinScale(1.0f) },
+            { PARAM_GAIN, "Gain", "dB", dsp_util::gainToLinScaleWithRange(1.0f, MTR_CEIL, DBFS_MUTE_POS) },
             { PARAM_PAN,  "Pan",  "", 0.5f }
     } };
     for (const effectgain_param_entry& paramEntry : parameterTypes) {
@@ -128,18 +130,56 @@ void module_gain::process(AudioBlock* in, AudioBlock* out, double tick, double s
     out->clear();
     /* Calculate group gain level */
     float fGain = 1.0f;
-    if (dsp_util::getGainLvl(getParamValue(PARAM_GAIN), fGain)) {
-        out->addFromOp(in, AudioBlock::mix_op::ADD, math::clamp(fGain, 0.0f, 2.0f));
+    if (dsp_util::getGainLvlWithRange(getParamValue(PARAM_GAIN), MTR_CEIL, DBFS_MUTE_POS, fGain)) {
+        out->addFromOp(in, AudioBlock::mix_op::ADD, fGain);
     }
 }
-
+param_converted_t module_gain::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
+    //TODO: use std::from_chars when floating point version arrives in libc++
+    auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+    if (idx == PARAM_GAIN) {
+        if (fTextFieldVal <= DBFS_MUTE_POS + 1.0f)
+            fTextFieldVal = 0.0f;
+        if (fTextFieldVal > MTR_CEIL)
+            fTextFieldVal = MTR_CEIL;
+        float f_gain = pow(10.0f, fTextFieldVal / 20.0f);
+        float f_linear = dsp_util::gainToLinScaleWithRange(f_gain, MTR_CEIL, DBFS_MUTE_POS);
+        return {f_linear, true};
+    }
+    return internalplugin::convertParamValueDisplay(idx, displayValue);
+}
+param_unit_t module_gain::getParamValueDisplay(int32_t idx) {
+    auto param = getParam(idx);
+    dbgassert(param);
+    if (param->unit == "dB") {
+        float fGain = 1.0f;
+        if (dsp_util::getGainLvlWithRange(getParamValue(PARAM_GAIN), MTR_CEIL, DBFS_MUTE_POS, fGain)) {
+            return {StringFormat("%.3f", dsp_util::dBFS(fGain)), param->unit};
+        }
+        return {"-INF", param->unit};
+    }
+    return internalplugin::getParamValueDisplay(idx);
+}
 void module_gain::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
     meterIn.update(this->blockInputs, 1.0f);
     meter.update(out, 1.0f);
 }
 
-void module_gain::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
-    internalplugin::loadSnapshot(pluginSnapshot);
+void module_gain::loadSnapshot(const plugin_snapshot_t& snapshot) {
+    internalplugin::loadSnapshot(snapshot);
+    if (snapshot.vendorVersion == 0) {
+        /*  Convert old snapshot format */
+        auto& params = snapshot.params;
+        auto it = std::find_if(params.begin(), params.end(), [](const auto& p) {
+            return p.idx == PARAM_GAIN;
+        });
+        if (it != params.end()) {
+            float val = it->val;
+            val = dsp_util::linScaleToGainWithRange(val, 6.0f, -81.0f);
+            val = dsp_util::gainToLinScaleWithRange(val, MTR_CEIL, DBFS_MUTE_POS);
+            setParamValue(PARAM_GAIN, val, FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE);
+        }
+    }
 }
 
 void module_gain::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts) {

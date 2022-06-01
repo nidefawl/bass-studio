@@ -32,6 +32,9 @@ namespace dsp_util {
     float gainToLinScale(float f);
     float linScaleToGain(float f);
 
+    float linScaleToGainWithRange(float f, float MTR_CEIL, float DBFS_MUTE_POS);
+    float gainToLinScaleWithRange(float f, float MTR_CEIL, float DBFS_MUTE_POS);
+
     /**
      * Calculate mixer gain level from parameter.
      * returns: false if gain == -inf db
@@ -45,4 +48,5 @@ namespace dsp_util {
         fGainOut = dsp_util::clampReadGain(fGainRaw);
         return true;
     }
+    bool getGainLvlWithRange(float fLinGain, float MTR_CEIL, float DBFS_MUTE_POS, float& fGainOut);
 }// namespace dsp_util

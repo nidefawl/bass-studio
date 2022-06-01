@@ -513,7 +513,7 @@ effectbase* loadEffectModule(vsthost* host, const plugin_snapshot_t& pluginSnaps
 }
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect) {
     const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
-    uint32_t missingParams                                    = 0;
+    uint32_t missingParams = 0;
     for (const param_snapshot_t& param : pluginSnapshotParams) {
         automatable_param_t* atParam = effect->getParam(param.idx);
         if (atParam) {
