@@ -2,6 +2,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include "keyboard.h"
 #include "math/vec.h"
 #include "str_util.h"
 #include "color_util.h"
@@ -13,19 +14,37 @@
 
 class guiknob_labeled_base : public guiknob {
 public:
+    struct knob_layout {
+        int labelHeight;
+        int valueHeight;
+        ivec2 pLabel;
+        ivec2 pValue;
+        ivec2 sLabel;
+        ivec2 sValue;
+        ivec2 pKnob;
+        ivec2 sKnob;
+    };
     std::function<String(float)> fnGetDisplayValue;
     String valueDisplay = "  ";
 
 protected:
-    int labelHeight     = 0;
-    int valueHeight     = 0;
-
+    knob_layout m_layout{};
 public:
     explicit guiknob_labeled_base(const bool _renderBackground = true, const bool _isSlider = false)
         : guiknob(_renderBackground, _isSlider)
     {
     }
     ~guiknob_labeled_base() override = default;
+    knob_layout getLayout() const { return m_layout; }
     void layout() override;
     void render(NVGcontext* vg) override;
+    void handleDraggedBegin(MouseEvent& evt) override {
+        bool isTopLabelClick = m_layout.labelHeight > 0 && evt.relMousepos.y < m_layout.labelHeight;
+        bool isValueClick = m_layout.valueHeight > 0 && evt.relMousepos.y > size.y - m_layout.valueHeight;
+        if ((isTopLabelClick || isValueClick) && (isCtrl(evt.kbmods) || (evt.type == MouseEventType::M_EVT_DOUBLECLICK))) {
+            parent->buttonClicked(this);
+            return;
+        }
+        guiknob::handleDraggedBegin(evt);
+    }
 };

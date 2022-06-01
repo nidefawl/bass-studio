@@ -6,6 +6,7 @@
 #include "config.h"
 #include "logging.h"
 #include "math/seq_math.h"
+#include "plugins/plugin-ui.h"
 #include "str_util.h"
 #include "dsp_util.h"
 
@@ -72,9 +73,23 @@ namespace PluginSampleDelay {
             case kSampleDelay: {
                 auto delaySamples = convertToSamples(current()->delay);
                 snprintf(text, kVstMaxParamStrLen, "%zd", delaySamples);
-                break;
+                return;
             }
         }
+        return BasePluginVST2::getParameterDisplay(index, text);
+    }
+
+    param_converted_t PluginVST2_SampleDelay::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
+        //TODO: use std::from_chars when floating point version arrives in libc++
+        auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+        switch (idx) {
+            case kSampleDelay: {
+                return {math::clamp(math::clamp(math::roundfS64(fTextFieldVal), MIN_DELAY, MAX_DELAY)/static_cast<float>(MAX_DELAY-MIN_DELAY) + 0.5f, 0.0f, 1.0f), true};
+            }
+            default:
+                break;
+        }
+        return BasePluginVST2::convertParamValueDisplay(idx, displayValue);
     }
 
     void PluginVST2_SampleDelay::getParameterName(VstInt32 index, char* label) {
@@ -214,5 +229,14 @@ namespace PluginSampleDelay {
 
     const char* getName() {
         return PLUGIN_EFFECT_NAME;
+    }
+
+    AudioEffectX* createPlugin(audioMasterCallback audioMaster) {
+        return new PluginVST2_SampleDelay(audioMaster);
+    }
+    std::shared_ptr<PluginViewContainers> PluginVST2_SampleDelay::createView() {
+        auto view = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, PluginVST2_SampleDelay>>(this);
+        this->views.push_back(view);
+        return view;
     }
 }// namespace PluginSampleDelay

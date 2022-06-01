@@ -112,13 +112,23 @@ public:
     autolayout_mode getLayoutMode() const {
         return layoutMode;
     }
-    void layoutHorizontal() {
+    void layoutEntries(ivec2 dir) {
         const auto cs = getSizeContent();
         auto pos = ivec2{};
+        int32_t numEntries = 0;
         for (guibase* gui : guis) {
+            if (gui->getFlags() & FLG_NO_LAYOUT)
+                continue;
+            numEntries++;
+        }
+
+        auto size = cs / ivec2(dir.x ? numEntries : 1, dir.y ? numEntries : 1);
+        for (guibase* gui : guis) {
+            if (gui->getFlags() & FLG_NO_LAYOUT)
+                continue;
             gui->pos = pos;
-            gui->size = {cs.x / guis.size(), cs.y};
-            pos.x = gui->right();
+            gui->size = size;
+            pos = ivec2{gui->right(), gui->bottom()} * dir;
         }
     }
     void layoutVertical() {
@@ -135,13 +145,13 @@ public:
             case LAYOUT_NONE:
                 return;
             case LAYOUT_HORIZONTAL:
-                layoutHorizontal();
+                layoutEntries({1, 0});
                 break;
             case LAYOUT_VERTICAL:
-                layoutVertical();
+                layoutEntries({0, 1});
                 break;
             default:
-                dbgassert(false);
+                dbgassert(0);
         }
         for (guibase* gui : guis) {
             gui->layout();
@@ -279,7 +289,9 @@ public:
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (this->contains(mpos)) {
             ivec2 localMouse = this->toContainerSpace(mpos);
-            for (guibase* gui : guis) {
+            // iterate over guis vector in reverse
+            for (auto it = guis.rbegin(); it != guis.rend(); ++it) {
+                auto gui = *it;
                 if (!gui->isVisible())
                     continue;
                 if (gui->mouseHitTest(localMouse, evt)) {

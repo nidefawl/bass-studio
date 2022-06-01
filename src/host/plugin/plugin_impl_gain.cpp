@@ -1,5 +1,6 @@
 #include "plugin_impl_gain.h"
 #include "event.h"
+#include "plugins/plugin-ui.h"
 #include "str_util.h"
 #include "gui/container/container.h"
 #include "gui/controls/knoblabeled.h"
@@ -145,40 +146,6 @@ void module_gain::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_
     internalplugin::makeSnapshot(snapshot, opts);
 }
 
-class ViewContainersModuleGain : public PluginViewContainers {
-protected:
-    uint32_t width;
-    uint32_t height;
-
-public:
-    guimodule_gain ctr_main;
-    ViewContainersModuleGain(module_gain* moduleGain, uint32_t _width, uint32_t _height)
-        : width(_width), height(_height), ctr_main(moduleGain) {
-    }
-    ~ViewContainersModuleGain() override = default;
-
-    void layout(int32_t winW, int32_t winH) override {
-        ctr_main.pos  = { 0, 0 };
-        ctr_main.size = { winW, winH };
-    }
-    void addTo(std::vector<guictr_base*>& v) override {
-        v.push_back(&ctr_main);
-    }
-    void onGuiOpen() override {
-        ctr_main.onGuiOpen();
-    }
-    void onGuiClose() override {
-        ctr_main.onGuiClose();
-    }
-    void onSetParameter(int32_t index, float value) override {
-        ctr_main.onSetParameter(index, value);
-    }
-    void getFixedSize(int32_t* w, int32_t* h) override {
-        *w = (int32_t) width;
-        *h = (int32_t) height;
-    }
-};
-
 std::shared_ptr<PluginViewContainers> module_gain::createInternalView() {
     if (!views.empty()) {
         for (auto& existingView : views) {
@@ -188,7 +155,7 @@ std::shared_ptr<PluginViewContainers> module_gain::createInternalView() {
             }
         }
     }
-    auto v = std::make_shared<ViewContainersModuleGain>(this, 320, 320);
+    auto v = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_gain>>(this, 320, 320);
     this->views.push_back(v);
     return v;
 }

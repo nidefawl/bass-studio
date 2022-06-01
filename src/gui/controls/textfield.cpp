@@ -3,6 +3,7 @@
 #include <iostream>
 #include <nanovg.h>
 
+#include "logging.h"
 #include "theme.h"
 #include "str_util.h"
 #include "gui/gui.h"
@@ -50,6 +51,7 @@ void gui_textfield::handleRightClick(MouseEvent& evt) {
 }
 void gui_textfield::handleDraggedBegin(MouseEvent& evt) {
     ivec2 local = evt.relMousepos;
+    log_lf(Log::L_TRACE, "local: %d, %d\n", local.x, local.y);
     if (mEditable) {
         mMouseDownPos      = local;
         mMouseDownModifier = evt.kbmods;

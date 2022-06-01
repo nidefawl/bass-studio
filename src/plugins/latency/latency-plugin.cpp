@@ -4,6 +4,7 @@
 #include <memory>
 #include "config.h"
 #include "math/seq_math.h"
+#include "plugins/plugin-ui.h"
 #include "str_util.h"
 #include "dsp_util.h"
 #include "color_util.h"
@@ -78,9 +79,23 @@ namespace PluginLatency {
         switch (index) {
             case kLatency: {
                 snprintf(text, kVstMaxParamStrLen, "%d", current()->latency);
-                break;
+                return;
             }
         }
+        return BasePluginVST2::getParameterDisplay(index, text);
+    }
+
+    param_converted_t PluginVST2_Latency::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
+        //TODO: use std::from_chars when floating point version arrives in libc++
+        auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+        switch (idx) {
+            case kLatency: {
+                return {math::clamp(math::roundfS64(fTextFieldVal)/static_cast<float>(MAX_LATENCY), 0.0f, 1.0f), true};
+            }
+            default:
+                break;
+        }
+        return BasePluginVST2::convertParamValueDisplay(idx, displayValue);
     }
 
     void PluginVST2_Latency::getParameterName(VstInt32 index, char* label) {
@@ -189,65 +204,6 @@ namespace PluginLatency {
         latency = 1024;
     }
 
-}
-
-namespace PluginLatency {
-
-    class guicontainer_plugin_latency : public guictr_base {
-        PluginVST2_Latency* const plugin;
-        guiknob_pluginparam knoblatency;
-
-    public:
-        explicit guicontainer_plugin_latency(PluginVST2_Latency* plugin)
-            : guictr_base(),
-            plugin(plugin),
-            knoblatency(PARAM_OFFSET_EXTERNAL + kLatency, kLatency) {
-            setLayoutMode(LAYOUT_HORIZONTAL);
-            setBackgroundRendered(true);
-            padding = 4;
-            margin  = 4;
-            add(&knoblatency);
-        }
-        ~guicontainer_plugin_latency() override {
-            remove(&knoblatency);
-        }
-
-        void onGuiOpen() {
-    #if BUILD_VSTHOST
-            knoblatency.setEffectInstance(plugin->getHostSideHandle());
-    #endif
-    #if BUILD_EXTERNAL_PLUGIN
-            knoblatency.setAudioEffect(plugin);
-    #endif
-        }
-
-        void onGuiClose() {
-    #if BUILD_VSTHOST
-            knoblatency.setEffectInstance(nullptr);
-    #endif
-    #if BUILD_EXTERNAL_PLUGIN
-            knoblatency.setAudioEffect(nullptr);
-    #endif
-        }
-
-        guiknob_pluginparam* getKnobFromParameter(int32_t index) {
-            switch (index) {
-                case kLatency:
-                    return &knoblatency;
-            }
-            return nullptr;
-        }
-
-        void onSetParameter(int32_t index, float value) {
-    #if BUILD_EXTERNAL_PLUGIN
-            guiknob_pluginparam* knob = getKnobFromParameter(index);
-            if (knob) {
-                knob->setValueInit(value);
-            }
-    #endif
-        }
-    };
-
     const char* getName() {
         return PLUGIN_EFFECT_NAME;
     }
@@ -255,7 +211,7 @@ namespace PluginLatency {
         return new PluginVST2_Latency(audioMaster);
     }
     std::shared_ptr<PluginViewContainers> PluginVST2_Latency::createView() {
-        auto view = std::make_shared<SinglePluginViewContainers<guicontainer_plugin_latency, PluginVST2_Latency>>(this);
+        auto view = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, PluginVST2_Latency>>(this);
         this->views.push_back(view);
         return view;
     }

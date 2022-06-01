@@ -1,6 +1,8 @@
 #include "automation.h"
+#include "math/seq_math.h"
 #include "plugin/vst_plugin.h"
 #include "gui/automation/automatable.h"
+#include "str_util.h"
 
 int32_t indexOfTick(const std::vector<automation_point_t>& dataPoints, tick_t tick) {
     int32_t idx;
@@ -260,4 +262,22 @@ param_unit_t automatable_t::getParamValueDisplay(int32_t idx) {
         return {"-INF", param->unit};
     }
     return { StringFormat("%f", getParamValue(idx)), param->unit};
+}
+param_converted_t automatable_t::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
+    auto param = getParam(idx);
+    dbgassert(param);
+    //TODO: use std::from_chars when floating point version arrives in libc++
+    auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+    if (param->unit == "dB" && displayValue.unit == "dB") {
+        float fGain = dsp_util::fromdBFSClampInf6(fTextFieldVal);
+        if (fGain < dsp_util::GAIN_DBFLOOR) {
+            fGain = dsp_util::GAIN_DBFLOOR;
+        }
+        float fNew = dsp_util::clampGain(fGain);
+        return {dsp_util::gainToLinScale(fNew), true};
+    }
+    if (param->unit == "%" && displayValue.unit == "%") {
+        return {math::clamp(fTextFieldVal/100.0f, 0.0f, 1.0f), true};
+    }
+    return {fTextFieldVal, false};
 }

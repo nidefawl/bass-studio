@@ -82,7 +82,8 @@ enum guiflag : int32_t {
     FLG_VERTICAL_LABEL           = 0x00001000,
     FLG_IMPL_SPEC1               = 0x00002000,
     FLG_IMPL_SPEC2               = 0x00004000,
-    FLG_RENDER_BUTTON_WITH_LED   = 0x00008000
+    FLG_NO_LAYOUT                = 0x00008000,
+    FLG_RENDER_BUTTON_WITH_LED   = 0x00010000
 };
 enum guiflag_titlebar : int32_t {
     TITLEBAR_FLG_NONE = 0,

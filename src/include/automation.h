@@ -85,6 +85,10 @@ struct param_unit_t {
     String value;
     String unit;
 };
+struct param_converted_t {
+    float floatVal;
+    bool success;
+};
 struct automatable_param_t {
     int32_t idx   = -1;
     float value   = 0.0f;
@@ -169,6 +173,7 @@ public:
     virtual String getAutomatableName()      = 0;
     virtual float getParamValue(int32_t idx) = 0;
     virtual param_unit_t getParamValueDisplay(int32_t idx);
+    virtual param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue);
     /**
      * setParamValue
      * @param idx

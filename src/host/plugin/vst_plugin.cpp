@@ -2,6 +2,7 @@
 #include <vstsdk-host-2.4/aeffect.h>
 #include <vstsdk-host-2.4/aeffectx.h>
 #include "automation.h"
+#include "config.h"
 #include "vst_plugin.h"
 #include "host/vst_midi_event.h"
 
@@ -625,6 +626,15 @@ param_unit_t vstplugin::getParamValueDisplay(int32_t idx) {
         }
     }
     return effectbase::getParamValueDisplay(idx);
+}
+param_converted_t vstplugin::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
+    if (idx >= PARAM_OFFSET_EXTERNAL) {
+        if (handle->axEffect) {
+            return handle->axEffect->convertParamValueDisplay(idx - PARAM_OFFSET_EXTERNAL, displayValue);
+        }
+        return {0.0f, false};
+    }
+    return effectbase::convertParamValueDisplay(idx, displayValue);
 }
 
 void vstplugin::setParamValue(int32_t idx, float val, int flags) {

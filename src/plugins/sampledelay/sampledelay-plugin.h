@@ -44,8 +44,12 @@ namespace PluginSampleDelay {
         explicit PluginVST2_SampleDelay(audioMasterCallback audioMaster);
         ~PluginVST2_SampleDelay() override = default;
 
-        void processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) override;
+        // internal API
         std::shared_ptr<PluginViewContainers> createView() override;
+        param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;
+
+        // VST2 API
+        void processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) override;
 
         void setProgram(VstInt32 program) override;
         void setProgramName(char* name) override;

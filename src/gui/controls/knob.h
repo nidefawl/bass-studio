@@ -47,6 +47,7 @@ public:
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
     }
+    int32_t getParamIdx() const { return paramIdx; }
     void setKnobInternalHandlers();
 
     bool isAutomated();

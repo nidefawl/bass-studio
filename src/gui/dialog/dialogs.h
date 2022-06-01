@@ -2,6 +2,8 @@
 #include "dialog.h"
 #include "gui/controls/button.h"
 #include "math/seq_math.h"
+#include "platform.h"
+#include "rand.h"
 
 #include <functional>
 #include <nanovg.h>
@@ -13,7 +15,15 @@ class guidialog_cb_yes_no : public guidialog_base {
 public:
     std::function<void(int)> cb;
     String message;
-
+    // int64_t tmCreatedMillis = 0;
+    // void onTick(AppCtrl* ctrl) override {
+    //     if (getTimeMillis() - tmCreatedMillis > 555) {
+    //         // seq_rand rnd;
+    //         // rnd.rng_seed(static_cast<uint64_t>(tmCreatedMillis));
+    //         // cb(rnd.rng_bits(1) != 0);
+    //         cb(1);
+    //     }
+    // }
 public:
     guidialog_cb_yes_no() : guidialog_base(ivec2(360, 140), true) {
         btnYes.setText("Yes");
@@ -21,6 +31,7 @@ public:
         add(&btnYes);
         add(&btnNo);
         setBackgroundRendered(true);
+        // tmCreatedMillis = getTimeMillis();
     }
     ~guidialog_cb_yes_no() override {
         remove(&btnNo);

@@ -703,7 +703,6 @@ void guipluginview::setControl(BaseCtrl* parentCtrl) {
 void guipluginview::prerender(NVGcontext* vg) {
     guiplugin::prerender(vg);
     for (auto* ctr : viewCtrs) {
-        assert(!ctr->parent);
         ctr->prerender(vg);
     }
 }
@@ -713,12 +712,18 @@ void guipluginview::onAdded() {
     if (viewCtr) {
         viewCtr->onGuiOpen();
     }
+    for (auto* ctr : viewCtrs) {
+        ctr->setParent(this);
+    }
 }
 
 void guipluginview::onRemove() {
     guictr_base::onRemove();
     if (viewCtr) {
         viewCtr->onGuiClose();
+    }
+    for (auto* ctr : viewCtrs) {
+        ctr->setParent(nullptr);
     }
 }
 

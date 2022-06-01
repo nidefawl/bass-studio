@@ -159,6 +159,12 @@ bool BasePluginVST2::getVendorString(char* text) {
     return true;
 }
 
+param_converted_t BasePluginVST2::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
+    //TODO: use std::from_chars when floating point version arrives in libc++
+    auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+    return {fTextFieldVal, false};
+}
+
 void BasePluginVST2::open() {
 #if BUILD_EXTERNAL_PLUGIN
 #ifdef _WIN32

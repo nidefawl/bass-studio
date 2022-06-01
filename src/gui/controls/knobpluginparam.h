@@ -21,7 +21,6 @@
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 
 class guiknob_pluginparam : public guiknob_labeled_base {
-    int32_t internalEffectIdx;
 #if BUILD_EXTERNAL_PLUGIN
     AudioEffectX* curEffect    = nullptr;
 #endif
@@ -30,9 +29,8 @@ class guiknob_pluginparam : public guiknob_labeled_base {
 #endif
 public:
     explicit guiknob_pluginparam(int _paramIdx, int _internalEffectIdx = -1) 
-        : guiknob_labeled_base(false), internalEffectIdx(_internalEffectIdx)
+        : guiknob_labeled_base(false)
     {
-        (void)internalEffectIdx;
         paramIdx = _paramIdx;
     }
     ~guiknob_pluginparam() override = default;
@@ -61,29 +59,29 @@ public:
         this->curEffect = eff;
         if (eff) {
             setKnobVST2Handlers();
-            setValueInit(eff->getParameter(internalEffectIdx));
-            setLabel(eff->getParameterName(internalEffectIdx));
+            setValueInit(eff->getParameter(paramIdx));
+            setLabel(eff->getParameterName(paramIdx));
         }
     }
     void setKnobVST2Handlers() {
         fnValueEditBegin = [this](float preVal, float val) {
             if (curEffect) {
-                curEffect->beginEdit(internalEffectIdx);
+                curEffect->beginEdit(paramIdx);
             }
         };
         fnValueEditChanged = [this](float preVal, float val) {
             if (curEffect) {
-                curEffect->setParameterAutomated(internalEffectIdx, val);
+                curEffect->setParameterAutomated(paramIdx, val);
             }
         };
         fnValueEditFinish = [this](float preVal, float val) {
             if (curEffect) {
-                curEffect->endEdit(internalEffectIdx);
+                curEffect->endEdit(paramIdx);
             }
         };
         fnGetDisplayValue = [this](float val) {
-            String displayValCached = curEffect->getParameterDisplay(internalEffectIdx);
-            displayValCached += curEffect->getParameterLabel(internalEffectIdx);
+            String displayValCached = curEffect->getParameterDisplay(paramIdx);
+            displayValCached += curEffect->getParameterLabel(paramIdx);
             return displayValCached;
         };
     }

@@ -32,13 +32,15 @@ public:
     void resume() override {} ///< Called when plug-in is switched to on
 
     void processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) override = 0;
-    virtual std::shared_ptr<PluginViewContainers> createView()                             = 0;
 
 
     bool getInputProperties(VstInt32 index, VstPinProperties* properties) override;
     bool getOutputProperties(VstInt32 index, VstPinProperties* properties) override;
     bool getVendorString(char* text) override;
 
+    // internal API
+    virtual std::shared_ptr<PluginViewContainers> createView() = 0;
+    virtual param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue);
     void setHostSideHandle(vstplugin* plugin) {
         this->hostSidePlugin = plugin;
     }

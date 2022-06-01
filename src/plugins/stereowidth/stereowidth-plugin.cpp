@@ -4,6 +4,7 @@
 #include <memory>
 #include "config.h"
 #include "math/seq_math.h"
+#include "plugins/plugin-ui.h"
 #include "str_util.h"
 #include "dsp_util.h"
 
@@ -50,8 +51,7 @@ namespace PluginStereoWidth {
     void PluginVST2_StereoWidth::getParameterLabel(VstInt32 index, char* label) {
         switch (index) {
             case kStereoWidth:
-                label[0] = '%';
-                label[1] = 0;
+                vst_strncpy(label, "%", kVstMaxParamStrLen);
                 return;
             case kGain:
                 vst_strncpy(label, "dB", kVstMaxParamStrLen);
@@ -66,13 +66,37 @@ namespace PluginStereoWidth {
         switch (index) {
             case kStereoWidth: {
                 snprintf(text, kVstMaxParamStrLen, "%.0f", current()->width * 200.0f);
-                break;
+                return;
             }
             case kGain: {
-                dB2string(current()->gain * 2.0f, text, kVstMaxParamStrLen);
-                break;
+                float fGain = 1.0f;
+                dsp_util::getGainLvl(current()->gain, fGain);
+	            snprintf(text, kVstMaxParamStrLen, "%.2f", dsp_util::dBFS(fGain));
+                return;
             }
         }
+        return BasePluginVST2::getParameterDisplay(index, text);
+    }
+
+    param_converted_t PluginVST2_StereoWidth::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
+        //TODO: use std::from_chars when floating point version arrives in libc++
+        auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+        switch (idx) {
+            case kStereoWidth: {
+                return {math::clamp(fTextFieldVal/200.0f, 0.0f, 1.0f), true};
+            }
+            case kGain: {
+                float fGain = dsp_util::fromdBFSClampInf6(fTextFieldVal);
+                if (fGain < dsp_util::GAIN_DBFLOOR) {
+                    fGain = dsp_util::GAIN_DBFLOOR;
+                }
+                float fNew = dsp_util::clampGain(fGain);
+                return {dsp_util::gainToLinScale(fNew), true};
+            }
+            default:
+                break;
+        }
+        return BasePluginVST2::convertParamValueDisplay(idx, displayValue);
     }
 
     void PluginVST2_StereoWidth::getParameterName(VstInt32 index, char* label) {
@@ -174,7 +198,8 @@ namespace PluginStereoWidth {
         for (int a = 0; a < sampleFrames; a++) {
             updateParam(params.gain, nextParams.gain, filterCoeff);
             updateParam(params.width, nextParams.width, filterCoeff);
-            float gain        = params.gain * 2.0f;
+            float fGain = 1.0f;
+            dsp_util::getGainLvl(params.gain, fGain);
             float width       = params.width;
             float scaleMono   = 1.0f - math::max(0.0f, (width - 0.5f) * 2.0f);
             float scaleStereo = math::min(1.0f, width * 2.0f);
@@ -186,8 +211,8 @@ namespace PluginStereoWidth {
             mono *= scaleMono;
             float outL = mono + stereo;
             float outR = mono - stereo;
-            (*out1++)  = outL * gain;
-            (*out2++)  = outR * gain;
+            (*out1++)  = outL * fGain;
+            (*out2++)  = outR * fGain;
         }
     }
 
@@ -209,11 +234,19 @@ namespace PluginStereoWidth {
 
     BaseVST2_ProgramStereoWidth::BaseVST2_ProgramStereoWidth() : ProgramParameters() {
         vst_strncpy(name, "Init", kVstMaxProgNameLen);
-        gain  = 1.0f;
+        gain  = dsp_util::gainToLinScale(1.0f);
         width = 0.5f;
     }
 
     const char* getName() {
         return PLUGIN_EFFECT_NAME;
+    }
+    AudioEffectX* createPlugin(audioMasterCallback audioMaster) {
+        return new PluginVST2_StereoWidth(audioMaster);
+    }
+    std::shared_ptr<PluginViewContainers> PluginVST2_StereoWidth::createView() {
+        auto view = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, PluginVST2_StereoWidth>>(this, 220, 150);
+        this->views.push_back(view);
+        return view;
     }
 }// namespace PluginStereoWidth
