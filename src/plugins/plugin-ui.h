@@ -76,7 +76,8 @@ public:
                 auto paramConverted = module->convertParamValueDisplay(param->getParamIdx(), param_unit_t{str, paramValue.unit});
                 if (paramConverted.success) {
                     module->setParamValue(paramIdx, paramConverted.floatVal, FLG_PAR_UPDATE_USER);
-                    param->fnValueEditChanged(param->getValue(), paramConverted.floatVal);
+                    if (param->fnValueEditChanged)
+                        param->fnValueEditChanged(param->getValue(), paramConverted.floatVal);
                 }
                 editfield.setVisible(false);
                 return true;

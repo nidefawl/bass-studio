@@ -30,7 +30,7 @@ class guiknob_pluginparam : public guiknob_labeled_base {
 #endif
 public:
     explicit guiknob_pluginparam(int _paramIdx, int _internalEffectIdx = -1) 
-        : guiknob_labeled_base(false)
+        : guiknob_labeled_base(guiknob::knobtype::KNOB_LABELED)
     {
         paramIdx = _paramIdx;
     }

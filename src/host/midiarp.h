@@ -26,6 +26,7 @@
 #define NUM_ARP_MAX_POLY_VOICES 32
 
 struct arp_snapshot;
+namespace DAW {
 
 struct arp_note_t : note_t {
     int32_t arpNoteUid = 0;
@@ -33,7 +34,7 @@ struct arp_note_t : note_t {
 };
 
 class midiarp : public automatable_t {
-    static const std::array<tick_t, 16 * 3> tickLength;
+public:
     enum ResetMode : int {
         NOTE,
         BEAT
@@ -44,6 +45,9 @@ class midiarp : public automatable_t {
         String unit;
         float val = 0.0f;
     };
+    static const std::array<tick_t, 16 * 3> tickLength;
+    static const std::array<arp_param_entry_t, 8> parameterTypes;
+private:
     std::vector<arp_note_t> heldInput;
     std::vector<arp_note_t> heldOutputNotes;
     std::vector<tick_t> curRandTimeOffset;
@@ -112,6 +116,11 @@ public:
     int getArpStepIdx(int _step, int nNotes);
 
 
+    float getStepSizeParamValueFromMapped(tick_t len);
+    float getDurationParamValueFromMapped(tick_t len);
+    float getRandTimeParamValueFromMapped(tick_t len);
+    float getRandVelocityParamValueFromMapped(int32_t vel);
+
     String getAutomatableName() override {
         return "Arp";
     }
@@ -163,4 +172,9 @@ public:
                  std::vector<noteevent_t>& noteEventsProcessed);
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     bool isProcessingEnabled();
+
+    param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;
+    param_unit_t getParamValueDisplay(int32_t idx) override;
+
 };
+}

@@ -331,6 +331,17 @@ namespace math {
         return static_cast<int32_t>(val_s64);
     }
 
+    template<typename T>
+    inline bool isInRange(T val, T min, T max) {
+        if constexpr (std::is_integral<T>::value) {
+            return val >= min && val <= max;
+        } else {
+            if (std::isnan(val))
+                return false;
+            return val >= min && val <= max;
+        }
+    }
+
     /**
      * Round float to neareast uint32 integer
      *

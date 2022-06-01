@@ -1,5 +1,8 @@
 #include "midiarp.h"
+#include "automation.h"
+#include "host/plugin/internal_plugin.h"
 #include "logging.h"
+#include "math/seq_math.h"
 #include "platform.h"
 #include "track.h"
 #include "snapshot.h"
@@ -9,12 +12,12 @@
 
 //#define PLACE_MARKERS
 //#define PLACE_MARKERS_OUTPUT
-
+namespace DAW {
 namespace {
-    constexpr bool logProcessedNotes = false;
-}
 
-static std::array<tick_t, 16 * 3> getStaticReadOnlyTickLengthArray() noexcept {
+constexpr bool logProcessedNotes = false;
+
+constexpr std::array<tick_t, 16 * 3> getStaticReadOnlyTickLengthArray() noexcept {
     std::array<tick_t, 16 * 3> tickLength{};
     for (int i = 0; i < NUM_ARP_STEPSIZE_OPTIONS; i += 2) {
         tickLength[i + 0] = (TICKS_16TH >> 3) << (i >> 1);
@@ -23,22 +26,27 @@ static std::array<tick_t, 16 * 3> getStaticReadOnlyTickLengthArray() noexcept {
     }
     return tickLength;
 }
+std::array<midiarp::arp_param_entry_t, 8> getMidiParameterTypes() noexcept {
+    using p_ = midiarp::arp_param_entry_t;
+    return std::array<p_, 8>{ {
+        p_{ PARAM_ENABLE, "Enabled", "", 0.0f },
+        p_{ PARAM_GAIN, "Gain", "dB", 1.0f },
+        p_{ ARP_PARAM_CLOCK, "Clock", "Ticks", 10.0f / (float) NUM_ARP_STEPSIZE_OPTIONS },
+        p_{ ARP_PARAM_GATE, "Gate", "Ticks", 1 / 4.0f },
+        p_{ ARP_PARAM_PATTERN, "Pattern", "", 0.0f },
+        p_{ ARP_PARAM_RAND_TIME, "Random Time", "Ticks", 0.0f },
+        p_{ ARP_PARAM_RAND_MODE, "Random Time Mode", "", 0.0f },
+        p_{ ARP_PARAM_RAND_VEL, "Random Velocity", "", 0.0f },
+    } };
+}
+}
 
 const std::array<tick_t, 16 * 3> midiarp::tickLength = getStaticReadOnlyTickLengthArray();
+const std::array<midiarp::arp_param_entry_t, 8> midiarp::parameterTypes = getMidiParameterTypes();
 
 midiarp::midiarp(track_impl_t* _trImpl) : automatable_t(), trackImpl(_trImpl) {
     curRandTimeOffset.resize(NUM_ARP_MAX_POLY_VOICES);
     memset(curRandTimeOffset.data(), 0, curRandTimeOffset.size() * sizeof(float));
-    const std::array<arp_param_entry_t, 8> parameterTypes{ {
-        arp_param_entry_t{ PARAM_ENABLE, "Enabled", "", 0.0f },
-        arp_param_entry_t{ PARAM_GAIN, "Gain", "dB", 1.0f },
-        arp_param_entry_t{ ARP_PARAM_CLOCK, "Clock", "Ticks", 10.0f / (float) NUM_ARP_STEPSIZE_OPTIONS },
-        arp_param_entry_t{ ARP_PARAM_GATE, "Gate", "Ticks", 1 / 4.0f },
-        arp_param_entry_t{ ARP_PARAM_PATTERN, "Pattern", "", 0.0f },
-        arp_param_entry_t{ ARP_PARAM_RAND_TIME, "Random Time", "Ticks", 0.0f },
-        arp_param_entry_t{ ARP_PARAM_RAND_MODE, "Random Time Mode", "", 0.0f },
-        arp_param_entry_t{ ARP_PARAM_RAND_VEL, "Random Velocity", "", 0.0f },
-    } };
     for (const arp_param_entry_t& paramEntry : parameterTypes) {
         automatable_param_t* regparam = registerParam(paramEntry.id);
 
@@ -55,6 +63,61 @@ midiarp::midiarp(track_impl_t* _trImpl) : automatable_t(), trackImpl(_trImpl) {
     getOrCreateAutomation(ARP_PARAM_RAND_MODE)->quantizationSteps = NUM_RANDOM_TIME_MODES - 1;
     getOrCreateAutomation(ARP_PARAM_PATTERN)->quantizationSteps   = NUM_PATTERNS - 1;
 }
+param_unit_t midiarp::getParamValueDisplay(int32_t idx) {
+    auto param = getParam(idx);
+    dbgassert(param);
+    switch (idx) {
+        case ARP_PARAM_CLOCK:
+            return {StringFormat("%d", getStepSize()), "ticks"};
+        case ARP_PARAM_GATE:
+        //     //return StringFormat("%.2f %%", math::clamp(arp->getGateF()*100.0f, 0.0f, 100.0f));
+            return {StringFormat("%d", getDuration()), "ticks"};
+        case ARP_PARAM_PATTERN: {
+            int32_t option = getPatternIdx();
+            if (option == 0) {
+                return {"Chord", ""};
+            }
+            return {StringFormat("%d", option), ""};
+        }
+        case ARP_PARAM_RAND_TIME:
+            return {StringFormat("%s%d", getRandTmMode() ? "+/-" : "+", getRandTime()), "ticks"};
+        case ARP_PARAM_RAND_MODE:
+            return {getRandTmMode() ? "+/-" : "+", ""};
+        case ARP_PARAM_RAND_VEL:
+            return {StringFormat("+/-%d", getRandVelocity()), ""};
+    }
+    return automatable_t::getParamValueDisplay(idx);
+}
+param_converted_t midiarp::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
+    auto param = getParam(idx);
+    dbgassert(param);
+    //TODO: use std::from_chars when floating point version arrives in libc++
+    auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+    switch (idx) {
+        case ARP_PARAM_CLOCK: {
+            auto value = getStepSizeParamValueFromMapped(math::roundfS32(fTextFieldVal));
+            return {value, math::isInRange(value, 0.0f, 1.0f)};
+        }
+        case ARP_PARAM_GATE: {
+            auto value = getDurationParamValueFromMapped(math::roundfS32(fTextFieldVal));
+            return {value, math::isInRange(value, 0.0f, 1.0f)};
+        }
+        case ARP_PARAM_PATTERN: {
+            return {math::clamp(math::roundfS32(fTextFieldVal)/static_cast<float>(NUM_PATTERNS - 1), 0.0f, 1.0f), true};
+        }
+        case ARP_PARAM_RAND_TIME: {
+            auto value = getRandTimeParamValueFromMapped(math::roundfS32(fTextFieldVal));
+            return {value, math::isInRange(value, 0.0f, 1.0f)};
+        }
+        case ARP_PARAM_RAND_MODE:
+            return {math::clamp(math::roundfS32(fTextFieldVal)/static_cast<float>(NUM_RANDOM_TIME_MODES - 1), 0.0f, 1.0f), true};
+        case ARP_PARAM_RAND_VEL:
+            auto value = getRandVelocityParamValueFromMapped(math::roundfS32(fTextFieldVal));
+            return {value, math::isInRange(value, 0.0f, 1.0f)};
+    }
+    return {0.0f, false};
+}
+
 
 tick_t midiarp::getStepSize() {
 
@@ -74,6 +137,23 @@ tick_t midiarp::getStepSize() {
     return math::floorfS32(valueMapped);
 }
 
+float midiarp::getStepSizeParamValueFromMapped(tick_t len) {
+    if (syncClock) {
+        int i = 0;
+        for (; i < NUM_ARP_STEPSIZE_OPTIONS; i++) {
+            if (tickLength[i] >= len) {
+                break;
+            }
+        }
+        return i >= NUM_ARP_STEPSIZE_OPTIONS ? 1.0f : i / static_cast<float>(NUM_ARP_STEPSIZE_OPTIONS - 1);
+    }
+    float scMin = 1.0f / 8.0f;
+    float scMax = 4.0f * 4.0f * 4.0f;
+    float expo  = math::calcExponentForScale(0.5f, 4.0f, scMin, scMax);
+    float valueMapped = (len/static_cast<float>(TICKS_16TH) - scMin) / (scMax - scMin);
+    return math::clamp(pow(valueMapped, 1.0f/expo), 0.0f, 1.0f);
+}
+
 int32_t midiarp::getRandTmMode() {
     auto option = (int32_t) std::round(getParamValue(ARP_PARAM_RAND_MODE) * (NUM_RANDOM_TIME_MODES - 1));
     dbgassert(option < NUM_RANDOM_TIME_MODES);
@@ -81,23 +161,39 @@ int32_t midiarp::getRandTmMode() {
 }
 
 tick_t midiarp::getDuration() {
-    //const int minDuration = getStepSize() >> 3;
-    //const int maxDuration = getStepSize() << 1;
-    //tick_t len = (tick_t) (std::floor(minDuration + getGateF() * (maxDuration - minDuration)));
-
-    // range is 1/8 to 2 times the StepSize
-    // I want f = 0.5 to map to 1.0
     float scMin = 1.0f / 8.0f;
     float scMax = 2.0f;
     float expo  = 1.1f;//math::calcExponentForScale(0.5f, 1.0f, scMin, scMax);
                        //TODO: hardcode or constexpr this exponent
-
-    float valueMapped = pow(getGateF(), expo) * (scMax - scMin) + scMin;
+    float valRaw = getGateF();
+    float valueMapped = pow(valRaw, expo) * (scMax - scMin) + scMin;
     tick_t len        = (tick_t) (std::floor(valueMapped * getStepSize()));
     dbgassert(len > 0);
     return len;
 }
 
+float midiarp::getDurationParamValueFromMapped(tick_t len) {
+    float scMin = 1.0f / 8.0f;
+    float scMax = 2.0f;
+    float expo  = 1.1f;//math::calcExponentForScale(0.5f, 1.0f, scMin, scMax);
+                       //TODO: hardcode or constexpr this exponent
+    float valueMapped = (len/static_cast<float>(getStepSize()) - scMin) / (scMax - scMin);
+    if (valueMapped <= 0.0f) {
+        return 0.0f;
+    }
+    return math::clamp(pow(valueMapped, 1.0f/expo), 0.0f, 1.0f);
+}
+
+float midiarp::getRandTimeParamValueFromMapped(tick_t len) {
+    const int minDuration = 0;//math::max(0, getStepSize() >> 4);
+    const int maxDuration = math::max(0, getStepSize() >> 1);
+    float fMapped = (len - minDuration) / static_cast<float>(maxDuration - minDuration);
+    return math::clamp(pow(fMapped, 1.0f/2.0f), 0.0f, 1.0f);
+}
+
+float midiarp::getRandVelocityParamValueFromMapped(int32_t vel) {
+    return math::clamp(sqrtf(vel / 127.0f), 0.0f, 1.0f);
+}
 int midiarp::isChordOutput() {
     return getPatternIdx() == 0;
 }
@@ -226,10 +322,11 @@ int32_t midiarp::getRandVelocity() {
 }
 
 tick_t midiarp::getRandTime() {
-    float fRandTm         = pow(getRandTimeF(), 2.0f);
+    float fRaw = getRandTimeF();
+    float fRandTm         = pow(fRaw, 2.0f);
     const int minDuration = 0;//math::max(0, getStepSize() >> 4);
     const int maxDuration = math::max(0, getStepSize() >> 1);
-    auto len            = (tick_t) (std::floor(minDuration + fRandTm * (maxDuration - minDuration)));
+    auto len = (tick_t) (std::floor(minDuration + fRandTm * (maxDuration - minDuration)));
     return len;
 }
 
@@ -726,4 +823,6 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
 
     if (nSend)
         sortNoteEvents(noteEventsProcessed);
+}
+
 }

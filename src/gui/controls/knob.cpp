@@ -63,6 +63,10 @@ void guiknob::render(NVGcontext* vg) {
     renderButtonAt(vg, insetP, insetS, getValue());
 }
 void guiknob::handleDraggedBegin(MouseEvent& evt) {
+    if (isCtrl(evt.kbmods)) {
+        parent->buttonClicked(this);
+        return;
+    }
     if (isShift(evt.kbmods) || (bDoubleClickSetsDefault && evt.type == MouseEventType::M_EVT_DOUBLECLICK)) {
         setToDefaultValue();
         return;
@@ -125,7 +129,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
     float r             = (minSize * 0.8f) / 2.0f;
     float lineThickness = math::max(1.0f, roundf((minSize / 8.0f) * 2.0f) / 2.0f);
     nvgLineCap(vg, NVGlineCap::NVG_ROUND);
-    if (isSlider) {
+    if (knobType == knobtype::SLIDER_LABELED) {
         lineThickness = math::max(1.0f, roundf((minSize / 32.0f) * 2.0f) / 2.0f);
         float cx      = insetP.x;
         float cy      = insetP.y;
@@ -231,26 +235,26 @@ void guiknob::setKnobInternalHandlers() {
 
 
 void guiknob_labeled_base::layout() {
-    // auto buttonSize   = math::roundfS32(size.x * 0.8f);
-    // auto left         = (size.y - buttonSize);
-    float scaleTop    = 0.12f;
-    float scaleBottom = 0.12f;
-    m_layout.labelHeight = math::roundfS32(math::max(14.0f, size.y * scaleTop));
-    m_layout.valueHeight = math::roundfS32(math::max(14.0f, size.y * scaleBottom));
-    if (isSlider) {
-        if (label.length() < 12) {
-            m_layout.labelHeight = math::roundfS32(math::max(14.0f, size.y * 0.15f));
-        } else {
-            m_layout.labelHeight = 0;
-        }
+    if (knobType != knobtype::KNOB_UNLABELED) {
+        m_layout.labelHeight = math::roundfS32(math::max(8.0f, size.y * m_layout.scaleLabel));
+        m_layout.valueHeight = math::roundfS32(math::max(8.0f, size.y * m_layout.scaleValue));
+        const int INS_BRD    = knobType != knobtype::SLIDER_LABELED ? 6 : 0;
+        m_layout.pLabel      = pos + ivec2(INS_BRD);
+        m_layout.pValue      = pos + ivec2(INS_BRD, size.y - (INS_BRD + m_layout.valueHeight));
+        m_layout.sLabel      = ivec2(size.x - 2 * INS_BRD, m_layout.labelHeight);
+        m_layout.sValue      = ivec2(size.x - 2 * INS_BRD, m_layout.valueHeight);
+        m_layout.pKnob       = pos + ivec2(INS_BRD, INS_BRD + m_layout.labelHeight);
+        m_layout.sKnob       = size - ivec2(0, m_layout.labelHeight + m_layout.valueHeight + 2 * INS_BRD);
+    } else {
+        m_layout.labelHeight = 0;
+        m_layout.valueHeight = 0;
+        m_layout.pLabel      = pos;
+        m_layout.pValue      = pos;
+        m_layout.sLabel      = {};
+        m_layout.sValue      = {};
+        m_layout.pKnob       = pos;
+        m_layout.sKnob       = size;
     }
-    const int INS_BRD = 6;
-    m_layout.pLabel = pos + ivec2(INS_BRD);
-    m_layout.pValue = pos + ivec2(INS_BRD, size.y-(INS_BRD+m_layout.valueHeight));
-    m_layout.sLabel = ivec2(size.x - 2 * INS_BRD, m_layout.labelHeight);
-    m_layout.sValue = ivec2(size.x - 2 * INS_BRD, m_layout.valueHeight);
-    m_layout.pKnob = pos + ivec2(INS_BRD, INS_BRD+m_layout.labelHeight);
-    m_layout.sKnob = size - ivec2(0, m_layout.labelHeight+m_layout.valueHeight + 2 * INS_BRD);
 }
 
 void guiknob_labeled_base::render(NVGcontext* vg) {
@@ -277,7 +281,6 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
         nvgFill(vg);
     };
     float value = getValue();
-
     if (fnGetDisplayValue) {
         valueDisplay = fnGetDisplayValue(value);
     }
@@ -290,14 +293,19 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
     if (m_layout.sValue.x > 0 && m_layout.sValue.y > 0) {
         renderBorder(vg, getStateFlags(), m_layout.pValue, m_layout.sValue, GuiColor::COL_BG_BRT);
     }
-    auto bgColor       = theme->getColor(getBackgroundColor());
-    auto contrastColor = getContrastFontColor(nvgToRGB(bgColor));
-    nvgFillColor(vg, contrastColor);
+    NVGcolor fontColor;
+    if (isBackgroundRendered()) {
+        auto bgColor       = theme->getColor(getBackgroundColor());
+        fontColor = getContrastFontColor(nvgToRGB(bgColor));
+    } else {
+        fontColor = theme->getColor(getLabelColor());
+    }
+    nvgFillColor(vg, fontColor);
     if (m_layout.sLabel.x > 0 && m_layout.sLabel.y > 0) {
-        renderTextLabel(vg, vec2(m_layout.pLabel) + vec2(m_layout.sLabel) * 0.5f, m_layout.sLabel, label, theme, m_layout.labelHeight, contrastColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        renderTextLabel(vg, vec2(m_layout.pLabel) + vec2(m_layout.sLabel) * 0.5f, m_layout.sLabel, label, theme, m_layout.labelHeight * m_layout.fontScaleLabel, fontColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     }
     if (m_layout.sValue.x > 0 && m_layout.sValue.y > 0) {
-        renderTextLabel(vg, vec2(m_layout.pValue) + vec2(m_layout.sValue) * 0.5f, m_layout.sValue, valueDisplay, theme, m_layout.valueHeight, contrastColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        renderTextLabel(vg, vec2(m_layout.pValue) + vec2(m_layout.sValue) * 0.5f, m_layout.sValue, valueDisplay, theme, m_layout.valueHeight * m_layout.fontScaleValue, fontColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     }
 }
 

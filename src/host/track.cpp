@@ -930,14 +930,14 @@ void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
 
 track_impl_t::track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels)
     : audio_stage_t(_host, _id, _sampleFormat, _numChannels, 0),
-      arp(new midiarp(this)), track(_track),
+      arp(new DAW::midiarp(this)), track(_track),
       inputChannel(DAW::ChannelDefaultNone()),
       outputChannel(DAW::ChannelDefaultNone()), 
       midiProcessed(new clip_notes_t())
 {
 }
 
-const std::vector<arp_note_t>& track_impl_t::getArpHeldNotes() {
+const std::vector<DAW::arp_note_t>& track_impl_t::getArpHeldNotes() {
     dbgassert(this->arp);
     return this->arp->getHeldNotes();
 }

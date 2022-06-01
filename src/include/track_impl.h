@@ -218,8 +218,6 @@ track_id_snapshot_t saveTrackIdSnapshot(const audio_stage_id_t& stageId);
 audio_stage_id_t loadTrackIdSnapshot(const track_id_snapshot_t& stageId);
 
 class clip_notes_t;
-class midiarp;
-struct arp_note_t;
 namespace MidiFlags {
 static constexpr int PROCESS_REALTIME = 1;
 static constexpr int PROCESS_CLIPS = 2;
@@ -230,6 +228,9 @@ struct midi_events_t {
     VstEvent_t* midiEventsBuf;
 };
 namespace DAW {
+class midiarp;
+struct arp_note_t;
+
 inline bool isChannelConnected(const DAW::channel_ref_t& ch) {
     return ch.type != stage_type::INPUT_EMPTY;
 }
@@ -306,7 +307,7 @@ inline void updateProfilingTime(int64_t& field, int64_t tm, uint8_t weighting = 
     field = (field * (weighting-1) + tm) / weighting;
 }
 struct track_impl_t : public audio_stage_t {
-    midiarp* arp = nullptr;
+    DAW::midiarp* arp = nullptr;
     track_t* track;
     std::vector<note_t> m_heldNotes;
     VstEvent_t* m_midiEventsBuf = nullptr;
@@ -330,7 +331,7 @@ struct track_impl_t : public audio_stage_t {
     void addAudio(const AudioBlock& src, float fGain);
     VstEvent_t* reallocEvts(size_t size);
     void removePlugin(effectbase* _vst, bool notifyUp) override;
-    const std::vector<arp_note_t>& getArpHeldNotes();
+    const std::vector<DAW::arp_note_t>& getArpHeldNotes();
     std::vector<marker_t>& getArpMarkers(int n);
     void updateAutomatableTargets(tick_t processingPos);
     void getAutomatableTrackTargets(std::vector<automatable_t*>& targets, bool includeEffects = true);

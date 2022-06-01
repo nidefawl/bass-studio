@@ -7,20 +7,21 @@
 #include "math/seq_math.h"
 
 gui_color_pick::gui_color_pick()
-    : guictr_base(), knH(false), knS(false), knL(false), knA(false), hexInput(&colorU32) {
+    : guictr_base(),
+    knH(guiknob::knobtype::SLIDER_LABELED),
+    knS(guiknob::knobtype::SLIDER_LABELED),
+    knL(guiknob::knobtype::SLIDER_LABELED),
+    knA(guiknob::knobtype::SLIDER_LABELED),
+    hexInput(&colorU32)
+{
     padding = 0;
     margin  = 0;
     setCanMouseHit(true);
-    add(&knH);
-    add(&knS);
-    add(&knL);
-    add(&knA);
-    add(&hexInput);
     init();
 }
 void gui_color_pick::init() {
     this->hexInput.setAlignCenter(true);
-    guiknob_labeled_base* knobs[4] = {
+    std::array<guiknob_labeled_base*, 4> knobs  = {
         &knH, &knS, &knL, &knA
     };
     const char* knoblabels[4] = {
@@ -40,20 +41,23 @@ void gui_color_pick::init() {
         int32_t v = CLAMP_I((int32_t) (100.0f * val), 0, 100);
         return StringFormat("%d%%", v);
     };
-    for (int i = 0; i < 4; i++) {
+    for (size_t i = 0; i < knobs.size(); i++) {
         auto* knob = knobs[i];
-        knob->setIsSlider(true);
         knob->setLabel(knoblabels[i]);
         knob->setBackgroundRendered(true);
+        // knob->setLabelsScale(0.05, 0.12f);
+        knob->setLabelsFontScale(0.5, 0.8f);
         knob->fnValueEditChanged = setEditColor;
         knob->fnValueEditFinish  = setEditColor;
         knob->fnGetDisplayValue  = getDisplayValue;
+        add(knob);
     }
     knA.fnGetDisplayValue = [](float val) {
         int32_t alpha = CLAMP_I((int32_t) (255.0f * val), 0, 255);
         return StringFormat("%d", alpha);
     };
     setU32(0xFF7f7f7f);
+    add(&hexInput);
 }
 void gui_color_pick::layout() {
     int sizeQuad  = size.y;

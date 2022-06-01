@@ -482,7 +482,7 @@ public:
         : gui_list_entry(),
           effect(_effect),
           entry(_entry),
-          knobTest(false) {
+          knobTest(guiknob::knobtype::KNOB_UNLABELED) {
         icon = 0;
         knobTest.setAutomationRef(effect, entry->idx);
         knobTest.setKnobInternalHandlers();

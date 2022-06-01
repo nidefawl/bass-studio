@@ -15,6 +15,10 @@
 class guiknob_labeled_base : public guiknob {
 public:
     struct knob_layout {
+        float scaleLabel;
+        float scaleValue;
+        float fontScaleLabel;
+        float fontScaleValue;
         int labelHeight;
         int valueHeight;
         ivec2 pLabel;
@@ -30,11 +34,23 @@ public:
 protected:
     knob_layout m_layout{};
 public:
-    explicit guiknob_labeled_base(const bool _renderBackground = true, const bool _isSlider = false)
-        : guiknob(_renderBackground, _isSlider)
+    explicit guiknob_labeled_base(knobtype knobType)
+        : guiknob(knobType)
     {
+        m_layout.fontScaleLabel = 1.0f;
+        m_layout.fontScaleValue = 1.0f;
+        m_layout.scaleLabel = 0.12f;
+        m_layout.scaleValue = 0.12f;
     }
     ~guiknob_labeled_base() override = default;
+    void setLabelsScale(float scaleLabel, float scaleValue) {
+        m_layout.scaleLabel = scaleLabel;
+        m_layout.scaleValue = scaleValue;
+    }
+    void setLabelsFontScale(float fontScaleLabel, float fontScaleValue) {
+        m_layout.fontScaleLabel = fontScaleLabel;
+        m_layout.fontScaleValue = fontScaleValue;
+    }
     knob_layout getLayout() const { return m_layout; }
     void layout() override;
     void render(NVGcontext* vg) override;

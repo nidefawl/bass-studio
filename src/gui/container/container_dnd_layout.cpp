@@ -1,5 +1,6 @@
 #include "container_dnd_layout.h"
 #include "basectrl.h"
+#include "gui/gui.h"
 #include "host/mainctrl.h"
 #include "gui/container/container_layout_types.h"
 #include "platform.h"
@@ -27,11 +28,13 @@ public:
 
             if (drawFn) {
                 ivec2 renderPos(0);
-                GuiColor::constant_t buttonColor = (stateFlags & FLG_HVRD) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
-                drawFn(vg, renderPos, size, theme->getColor(buttonColor), drawParm, isEnabled());
+                drawFn(vg, renderPos, size, theme->getColor(getLabelColor()), drawParm, isEnabled());
             }
             nvgRestore(vg);
         }
+    }
+    GuiColor::constant_t getLabelColor() const override {
+        return (getStateFlags() & FLG_HVRD) && (getStateFlags() & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
     }
 };
 class guictr_layout_entry_handle : public guictr_base {
@@ -403,9 +406,7 @@ void guictr_layout_entry_handle::render(NVGcontext* vg) {
         ivec2 renderPos(size.y / 2, size.y / 2);
         if (str.length() > 0) {
             int fontScale = 12;
-            GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
-            NVGcolor color         = theme->getColor(c);
-            UTIL_setFont(vg, theme, fontScale, color, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+            UTIL_setFont(vg, theme, fontScale, theme->getColor(getLabelColor()), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
             nvgText(vg, renderPos.x, renderPos.y, StringAsCStr(str), NULL);
         }
     }

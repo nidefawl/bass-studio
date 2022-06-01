@@ -12,14 +12,20 @@
 
 struct automatable_t;
 class guiknob : public guibase {
+public:
+    enum class knobtype {
+        KNOB_LABELED,
+        KNOB_UNLABELED,
+        SLIDER_LABELED,
+    };
 protected:
     const double angleOpen = 90.0;
     const float range      = static_cast<float>((360.0 - angleOpen) * M_PI / 180.0);
     const float start      = static_cast<float>(-M_PI * 1.5 + (angleOpen / 2.0) * M_PI / 180.0);
+    const knobtype knobType;
     bool* enabledPtr       = nullptr;
     float* valuePtr        = nullptr;
     float value            = 0.0f;
-    bool isSlider;
     bool changedValue            = false;
     float fModifyBeginValue      = 0.0f;
     float fDefaultValue          = 0.5f;
@@ -38,9 +44,9 @@ public:
     std::function<void(MouseHitEvt&, bool)> fnFocus;
     GuiColor::constant_t valColor = GuiColor::COL_KNOB;
     GuiColor::constant_t indColor = GuiColor::COL_KNOB_IND;
-    explicit guiknob(const bool _renderBackground = true, const bool _isSlider = false) : guibase(), isSlider(_isSlider) {
-        setBackgroundRendered(_renderBackground);
-        setCanMouseHit(true);
+    explicit guiknob(knobtype knobType) : guibase(), knobType(knobType) {
+        setBackgroundRendered(false);
+        setCanMouseHit(true);        
     }
 
     void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
@@ -51,9 +57,7 @@ public:
     void setKnobInternalHandlers();
 
     bool isAutomated();
-    void setIsSlider(bool b) {
-        this->isSlider = b;
-    }
+
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;

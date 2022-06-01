@@ -94,9 +94,8 @@ public:
                 ivec2 size       = this->size;
                 size.x           = size.x - btnSaveNow.size.x;
                 int fontScale    = math::roundfS32((this->fontSize > 0 ? this->fontSize : math::min(size.y, size.x)) * fFontScale);
-                auto fontColor   = (getStateFlags() & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
                 UTIL_setFont(vg, theme, fontScale, THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-                renderCenteredMultilineText(vg, theme, str + "\n" + str2, fontScale, fontColor, renderPos, size);
+                renderCenteredMultilineText(vg, theme, str + "\n" + str2, fontScale, getLabelColor(), renderPos, size);
             }
             nvgRestore(vg);
         }

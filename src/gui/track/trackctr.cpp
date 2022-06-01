@@ -462,7 +462,7 @@ void guictr_tracks::render(NVGcontext* vg) {
 
         int fontScale = titleHeight;
         String str    = StringFormat("%s[%d]", StringAsCStr(static_cast<gui_track_controls*>(target.dst)->m_track->name), target.slotIdx);
-        renderCenteredMultilineText(vg, theme, str, fontScale, GuiColor::COL_LABEL_ACTIVE, indicatorPos + ivec2(size.x, 0), ivec2(titleHeight * 30, titleHeight * 2));
+        renderCenteredMultilineText(vg, theme, str, fontScale, getLabelColor(), indicatorPos + ivec2(size.x, 0), ivec2(titleHeight * 30, titleHeight * 2));
 
         nvgRestore(vg);
     }

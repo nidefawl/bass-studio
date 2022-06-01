@@ -59,7 +59,6 @@ void guidropdownbase::select(dropdown_field_selectitem req, uint32_t idxOffset) 
 void guidropdownbase::render(NVGcontext* vg) {
     const auto stateFlags = getStateFlags();
     renderWidgetBorder(vg, stateFlags);
-    GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
     auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
 
     if (this->label.length()) {
@@ -70,7 +69,7 @@ void guidropdownbase::render(NVGcontext* vg) {
                         getString(),
                         theme,
                         fontSizeScaled,
-                        theme->getColor(c),
+                        theme->getColor(getLabelColor()),
                         NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
         renderTextLabel(vg,
                         vec2(pos) + vec2(3.0f, size.y * 0.5f),
@@ -87,7 +86,7 @@ void guidropdownbase::render(NVGcontext* vg) {
                         getString(),
                         theme,
                         fontSizeScaled,
-                        theme->getColor(c),
+                        theme->getColor(getLabelColor()),
                         NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     }
 }

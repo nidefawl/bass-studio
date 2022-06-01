@@ -1,5 +1,7 @@
 #pragma once
 #include "gui/container/container.h"
+#include "gui/controls/knoblabeled.h"
+#include "gui/controls/textfield.h"
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "event.h"
@@ -8,19 +10,23 @@
 #include "host/midiarp.h"
 
 class gui_arp : public guictr_base {
-public:
+    class guiknob_arp : public guiknob {
+        const DAW::midiarp::arp_param_entry_t& param;
+        public:
+        guiknob_arp(const DAW::midiarp::arp_param_entry_t& _param)
+            : guiknob(guiknob::knobtype::KNOB_UNLABELED), param(_param) {}
+        void setArp(DAW::midiarp* arp) {
+            setAutomationRef(arp, param.id);
+        }
+    };
+    gui_textfield editfield;
     String text;
     guibuttontoggle buttonBypass;
     clip_view& clipview;
-    guiknob clock;
-    guiknob gate;
-    guiknob pattern;
-    guiknob randTime;
-    guiknob randTmMode;
-    guiknob randVel;
-    guiknob* knobs[6] = { &pattern, &clock, &gate, &randTime, &randTmMode, &randVel };
-    midiarp* getArp() {
-
+    std::array<guiknob_arp*, 6> knobs;
+        
+public:
+    DAW::midiarp* getArp() {
         track_t* track = clipview.track();
         if (track) {
             auto audio = track->audio;
@@ -32,19 +38,25 @@ public:
     }
     gui_arp(clip_view& _clipview)
         : clipview(_clipview) {
-        add(&buttonBypass);
-        for (guiknob* knob : knobs) {
-            add(knob);
-        }
         padding = 2;
         margin  = 0;
         text    = "Arpeggiator";
-        clock.setLabel("Clock");
-        gate.setLabel("Gate");
-        pattern.setLabel("Pattern");
-        randTime.setLabel("Random Time");
-        randTmMode.setLabel("Random Time Mode");
-        randVel.setLabel("Random Velocity");
+        setCanMouseHit(true);
+        add(&buttonBypass);
+        auto outIt = std::begin(knobs);
+        for (auto& param : DAW::midiarp::parameterTypes) {
+            if (param.id >= PARAM_OFFSET_IMPL) {
+                auto knob = new guiknob_arp(param);
+                knob->setLabel(param.name);
+                *outIt++ = knob;
+                add(knob);
+            }
+        }
+        editfield.setFlag(FLG_NO_LAYOUT, true);
+        editfield.setVisible(false);
+        editfield.setAlignment(gui_textfield::Alignment::Center);
+        editfield.setReturnCommits(true);
+        add(&editfield);
         buttonBypass.setRadius(12);
         buttonBypass.icon = ICON_BYPASS;
         buttonBypass.setParent(this);
@@ -59,6 +71,18 @@ public:
         for (guiknob* knob : knobs) {
             knob->setKnobInternalHandlers();
         }
+    }
+
+    void handleDraggedBegin(MouseEvent& evt) override {
+        if ((isCtrl(evt.kbmods) || (evt.type == MouseEventType::M_EVT_DOUBLECLICK))) {
+            for (guiknob* knob : knobs) {
+                if (knob->contains(ivec2{knob->left()+knob->size.x/2, evt.relMousepos.y})) {
+                    buttonClicked(knob);
+                    return;
+                }
+            }
+        }
+        guictr_base::handleDraggedBegin(evt);
     }
     void buttonClicked(guibase* _button) override;
     void rightClicked(MouseEvent& evt, guibase* button) override;
@@ -75,7 +99,7 @@ public:
         renderTitleBar(vg, cs, this->text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, buttonBypass.right(), flags, true);
         renderFrameOutline(vg);
         buttonBypass.render(vg);
-        midiarp* arp = getArp();
+        auto* arp = getArp();
         if (arp) {
             for (guiknob* knob : knobs) {
                 knob->render(vg);
@@ -91,44 +115,21 @@ public:
                     auto textBounds = vec2(widthParam, knob->size.y * 0.5f);
                     renderText(vg, textPos, textBounds, knob->label, textBounds.y);
 
-                    auto text = formatParameterValue(knob);
-                    if (!text.empty()) {
+                    auto text = arp->getParamValueDisplay(knob->getParamIdx());
+                    String textUnit = text.value;
+                    if (!text.unit.empty()) {
+                        textUnit += " " + text.unit;
+                    }
+                    if (!textUnit.empty()) {
                         textPos.y += knob->size.y * 0.5f;
-                        renderText(vg, textPos, textBounds, text, textBounds.y * 0.8f);
+                        renderText(vg, textPos, textBounds, textUnit, textBounds.y * 0.8f);
                     }
                 }
             }
-        }
-    }
-
-    String formatParameterValue(guiknob* knob) {
-        midiarp* arp = getArp();
-        if (!arp) return "";
-        if (knob == &clock) {
-            return StringFormat("%d ticks", arp->getStepSize());
-        }
-        if (knob == &pattern) {
-            int32_t option = arp->getPatternIdx();
-            if (option == 0) {
-                return "Chord";
+            if (editfield.isVisible()) {
+                editfield.render(vg);
             }
-            return StringFormat("%d", option);
         }
-        if (knob == &gate) {
-            return StringFormat("%d ticks", arp->getDuration());
-            //return StringFormat("%.2f %%", math::clamp(arp->getGateF()*100.0f, 0.0f, 100.0f));
-        }
-        if (knob == &randVel) {
-            return StringFormat("+/-%d", arp->getRandVelocity());
-        }
-        String upDown = arp->getRandTmMode() ? "+/-" : "+";
-        if (knob == &randTime) {
-            return StringFormat("%s%d ticks", StringAsCStr(upDown), arp->getRandTime());
-        }
-        if (knob == &randTmMode) {
-            return StringAsCStr(upDown);
-        }
-        return "";
     }
 
     void layout() override {
@@ -152,12 +153,9 @@ public:
     void showEditClip() {
 #if BUILD_VSTHOST
         auto arp = getArp();
-        clock.setAutomationRef(arp, ARP_PARAM_CLOCK);
-        gate.setAutomationRef(arp, ARP_PARAM_GATE);
-        pattern.setAutomationRef(arp, ARP_PARAM_PATTERN);
-        randTime.setAutomationRef(arp, ARP_PARAM_RAND_TIME);
-        randTmMode.setAutomationRef(arp, ARP_PARAM_RAND_MODE);
-        randVel.setAutomationRef(arp, ARP_PARAM_RAND_VEL);
+        for (auto* knob : knobs) {
+            knob->setArp(arp);
+        }
 #endif
     }
 };

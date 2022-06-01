@@ -91,7 +91,7 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
     setCanMouseHit(true);
     std::vector<guibase*>& debugGuis = impl->debugGuis;
     if (dgbCtrType != gui_ctr_debug_type_i32::TYPE_2) {
-        auto knob        = new guiknob;
+        auto knob        = new guiknob(guiknob::knobtype::KNOB_UNLABELED);
         knob->id         = ID_OPTION_SCALE_GLOBAL;
         knob->fnSetValue = [this](float f, int flags) {
             float guiScale      = math::max(0.05f, f * 2.0f);
@@ -104,7 +104,7 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
         debugGuis.push_back(knob);
     }
     if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_2) {
-        auto knob        = new guiknob;
+        auto knob        = new guiknob(guiknob::knobtype::KNOB_UNLABELED);
         knob->id         = ID_KNOB_SET_THREAD_COUNT;
         knob->fnSetValue = [this, knob, host](float f, int flags) {
             uint32_t thrdCntMax = host->getMaxThreadCount();

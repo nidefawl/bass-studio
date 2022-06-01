@@ -437,6 +437,10 @@ public:
         return getBackgroundColorFromState(getStateFlags());
     }
 
+    virtual GuiColor::constant_t getLabelColor() const {
+        return (getStateFlags() & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
+    }
+
     virtual GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const {
         if (!(stateflags & FLG_ENBL)) {
             return GuiColor::COL_BASE_BG_DISABLED;

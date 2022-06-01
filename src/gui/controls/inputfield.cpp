@@ -9,7 +9,6 @@ void gui_numberinput_field_base::render(NVGcontext* vg) {
         this->field.render(vg);
         return;
     }
-    GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
     const auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
     const String str = getAsStringLiteral();
 
@@ -20,7 +19,7 @@ void gui_numberinput_field_base::render(NVGcontext* vg) {
                     str,
                     theme,
                     fontSizeScaled,
-                    theme->getColor(c),
+                    theme->getColor(getLabelColor()),
                     NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     if (this->label.length()) {
         renderTextLabel(vg,
