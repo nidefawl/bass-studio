@@ -394,10 +394,6 @@ void guictr_noteeditor::renderBackground(NVGcontext* vg) {
     drawInsetBackground(vg, theme, getPosContent(), getSizeContent());
 }
 
-int32_t guictr_noteeditor::getTotalWidth() {
-    return math::max(10000, getSizeContent().x);
-}
-
 void guictr_noteeditor::layout() {
     ivec2 cs = getSizeContent();
 

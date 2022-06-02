@@ -1,6 +1,7 @@
 #pragma once
 #include <list>
 #include <vector>
+#include "logging.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "str_util.h"
@@ -302,9 +303,11 @@ public:
 
     void gridChanged(scaled_grid& _grid) override;
 
-    int32_t getTotalWidth();
     void showEditClip();
     void storeLayout();
+    const scaled_grid& getGrid() const {
+        return grid;
+    }
 };
 
 class gui_audiocontent : public guictr_base {
@@ -486,29 +489,86 @@ public:
 
 
 class guictr_clipeditorview : public guictr_base {
+    clip_view& view;
     midi_clip_render_cache_t* const cache;
+    int dragDirection      = -1;
+    enum dragmode {
+        drag_none,
+        drag_view
+    };
+    dragmode dragMode = drag_none;
 public:
     guictr_noteeditor& noteeditor;
-    guictr_clipeditorview(guictr_noteeditor& _noteeditor);
+    scaled_grid& grid;
+
+    guictr_clipeditorview(clip_view& _view, guictr_noteeditor& _noteeditor);
     ~guictr_clipeditorview();
     void prerender(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
-    vec2 getScale();
+    float getScaleX();
+    float getScreenSpaceScaleX();
+    void getFrameBounds(vec2& posFrame, vec2& sizeFrame);
     void resetCache();
 
     void handleDraggedBegin(MouseEvent& evt) override {
-        if (evt.guiDragged == this) {
+        dragMode = drag_none;
+        auto mainCtrl = dawCtrl->getDaw()->getMainControl();
+        if (!mainCtrl->isClipEditorVisible()) {
             MainCtrl::get()->showClipEditor();
-            //lastscrolloffset = noteeditor.scrolloffset;
+            return;
         }
+        float scaleX = getScaleX();
+        float scaleXSS = getScreenSpaceScaleX();
+        vec2 posFrame, sizeFrame;
+        getFrameBounds(posFrame, sizeFrame);
+        // if click is outside frame then set offset to mousepos
+        if (evt.mousepos.x < posFrame.x || evt.mousepos.x > posFrame.x + sizeFrame.x) {
+            auto newOffset = (evt.relMousepos.x-sizeFrame.x*0.5f)*(scaleXSS/scaleX);
+            grid.setOffset(math::roundfS32(math::max(0.0f, newOffset)));
+            grid.notifyChange();
+            return;
+        }
+        parentCtrl->captureMouse(this);
+        dragMode = drag_view;
+        dragDirection         = -1;
     }
     void handleDraggedMove(MouseEvent& evt) override {
-        if (evt.guiDragged == this) {
-            //ivec2 move = evt.mousepos - evt.dragStart;
-            //vec2 scale = getScale();
-            //float minScale = min(scale.x, scale.y);
-            //noteeditor.setScrolloffset(lastscrolloffset + (int)(move.x*(1.0 / minScale)));
+        if (dragMode == drag_none) {
+            return;
         }
+
+        if (evt.guiDragged == this) {
+            float scaleX   = getScaleX();
+            float scaleXSS = getScreenSpaceScaleX();
+            bool bChanged = false;
+            if (math::abs(evt.dragDistance->x) > 3) {
+                auto newOffset = grid.offset + evt.dragDistance->x * 1.0 / scaleX;
+                evt.dragDistance->x   = 0;
+                grid.setOffset(math::rounddS32(math::max(0.0, newOffset)));
+                grid.notifyChange();
+                bChanged |= true;
+            }
+
+            if (math::abs(evt.dragDistance->y) > 3) {
+                auto disty = 1.0f + evt.dragDistance->y * -0.01f;
+                evt.dragDistance->y = 0;
+                float anchor_dragposx = math::max(0.0f, evt.relMousepos.x * (scaleXSS / scaleX) - grid.getOffset());
+                auto dragPosObjSpace = grid.toObjSpace(anchor_dragposx);
+                grid.setZoom(grid.zoom * disty);
+                auto newOffset = grid.calcOffset(anchor_dragposx, dragPosObjSpace);
+                grid.setOffset(math::rounddS32(newOffset));
+                bChanged |= true;
+            }
+            if (bChanged) {
+                grid.notifyChange();
+            }
+        }
+    }
+    void handleDraggedRelease(MouseEvent& evt) override {
+        if (dragMode == drag_none) {
+            return;
+        }
+        DawInstance::get()->updateVisibleTrackContents();
     }
     void layout() override {
     }

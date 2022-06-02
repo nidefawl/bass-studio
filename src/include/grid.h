@@ -26,7 +26,7 @@ struct grid_density {
     void serialize(Archive& ar) {
         ar(enabled, isfixed, fixedBars, dynamicDensity);
     }
-    int getSnap() {
+    int getSnap()  const {
         if (!enabled) {
             return GRID_OFF;
         }
@@ -78,26 +78,32 @@ public:
         lastZoom   = zoom;
         lastW      = contentsize.x;
     }
-    tick_t getTickLength();
+    tick_t getTickLength() const;
     void notifyChange();
-    int32_t getOffset() {
+    int32_t getOffset() const {
         return this->offset;
+    }
+    double getZoom() const {
+        return this->zoom;
     }
     void setZoom(double zoom);
     void setOffset(int newOffset);
-    double toObjSpace(double screenx) {
+    double toObjSpace(double screenx) const {
         return toObjSpace(screenx, this->zoom, this->offset);
     }
-    double toObjSpace(double screenx, double _zoom, double _offset) {
+    double toObjSpace(double screenx, double _zoom, double _offset) const {
         return _zoom * (screenx + _offset) / 8.0;
     }
-    double toScreenSpace(double objx) {
+    double toObjSpace0Offset(double screenx) const {
+        return toObjSpace(screenx, this->zoom, 0.0);
+    }
+    double toScreenSpace(double objx) const {
         return toScreenSpace(objx, this->zoom);
     }
-    double toScreenSpace(double objx, double _zoom) {
+    double toScreenSpace(double objx, double _zoom) const {
         return 8.0 * objx / _zoom;
     }
-    double calcOffset(double screenx, double objx) {
+    double calcOffset(double screenx, double objx) const {
         double screenpos = toScreenSpace(objx);
         return screenpos - screenx;
     }
@@ -116,41 +122,41 @@ public:
         double screenx        = objx * barSize;
         return screenx;
     }*/
-    tick_t screenToTickSnap(int32_t x, int snap);
+    tick_t screenToTickSnap(int32_t x, int snap) const;
 
-    tick_t screenToTick(double x) {
+    tick_t screenToTick(double x) const {
         double d     = toObjSpace(x);
         double dTick = TICKS_BAR * d;
         return (int32_t) math::rounddS32(dTick);
     }
-    double screenToTickD(double x) {
+    double screenToTickD(double x) const {
         double d     = toObjSpace(x);
         double dTick = TICKS_BAR * d;
         return dTick;
     }
 
-    double tickToScreenD(double x) {
+    double tickToScreenD(double x) const {
         double bar            = x / (double) TICKS_BAR;
         double objspaceOffset = toObjSpace(0, this->zoom, offset);
         return toScreenSpace(bar - objspaceOffset);
     }
-    double tickLenToScreen(double x) {
+    double tickLenToScreen(double x) const{
         double bar = x / (double) TICKS_BAR;
         return toScreenSpace(bar);
     }
-    int32_t pixelsToTicks(int32_t pixels) {
+    int32_t pixelsToTicks(int32_t pixels) const {
         double x = toObjSpace(pixels, this->zoom, 0) * TICKS_BAR;
         return math::max(1, math::ceildS32(x));
     }
-    int32_t pixelsToTicks2(int32_t pixels) {
+    int32_t pixelsToTicks2(int32_t pixels) const {
         double x = toObjSpace(pixels, this->zoom, 0) * TICKS_BAR;
         return math::rounddS32(x);
     }
     void showRange(tick_t start, tick_t end);
     void calcLen(int scrollOffsetX, double zoom, int contentWidth);
     void makeTickVisible(tick_t tickTime);
-    tick_t prev(tick_t tickTime);
-    tick_t next(tick_t tickTime);
-    tick_t distPrev(tick_t tickTime);
-    tick_t distNext(tick_t tickTime);
+    tick_t prev(tick_t tickTime) const;
+    tick_t next(tick_t tickTime) const;
+    tick_t distPrev(tick_t tickTime) const;
+    tick_t distNext(tick_t tickTime) const;
 };

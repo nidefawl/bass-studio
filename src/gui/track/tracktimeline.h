@@ -10,6 +10,7 @@ class guitrack_timeline : public guictr_base, grid_changed_cb {
 public:
     ivec2 startDrag{ 0, 0 };
     int dragDirection      = -1;
+    float dragPosSS = 0.0f;
     double dragPosObjSpace = 0;
     explicit guitrack_timeline(scaled_grid& _grid)
         : guictr_base(),

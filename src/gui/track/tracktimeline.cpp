@@ -1,6 +1,7 @@
 #include <nanovg.h>
 #include <vector>
 
+#include "logging.h"
 #include "tracktimeline.h"
 #include "math/seq_math.h"
 #include "grid.h"
@@ -12,8 +13,8 @@ void guitrack_timeline::handleDraggedBegin(MouseEvent& evt) {
         parentCtrl->captureMouse(this);
         startDrag             = evt.relMousepos;
         dragDirection         = -1;
-        float anchor_dragposx = (float) (startDrag.x < 50 ? 0 : evt.relMousepos.x);
-        dragPosObjSpace       = grid.toObjSpace(anchor_dragposx);
+        dragPosSS = static_cast<float>(startDrag.x < 50 ? 0 : evt.relMousepos.x);
+        dragPosObjSpace       = grid.toObjSpace(dragPosSS);
     }
 }
 void guitrack_timeline::handleDraggedMove(MouseEvent& evt) {
@@ -22,31 +23,35 @@ void guitrack_timeline::handleDraggedMove(MouseEvent& evt) {
         bool isMove      = true;
         if (lockGesture) {
             if (dragDirection < 0) {
-                float initialx = (float) math::abs(evt.mousepos.x - evt.dragStart.x);
-                float initialy = (float) math::abs(evt.mousepos.y - evt.dragStart.y);
-                if (initialx + initialy < 4)
-                    return;
-                if (initialx > initialy) dragDirection = 1;
-                else
-                    dragDirection = 0;
+                auto initialx = math::abs(evt.mousepos.x - evt.dragStart.x);
+                auto initialy = math::abs(evt.mousepos.y - evt.dragStart.y);
+                if (initialx + initialy >= 4) {
+                    if (initialx > initialy)
+                        dragDirection = 1;
+                    else
+                        dragDirection = 0;
+                }
             }
             isMove = dragDirection == 1;
         }
-        float distx = (float) (evt.dragDistance->x);
-        float disty = (float) (evt.dragDistance->y);
-
-        if (math::abs(distx) > 5.0 && (!lockGesture || (lockGesture && isMove && math::abs(distx) > 2.0))) {
-            adjustOffset(-evt.dragDistance->x);
+        bool bChanged = false;
+        if (math::abs(evt.dragDistance->x) > 5 && (!lockGesture || (lockGesture && isMove && math::abs(evt.dragDistance->x) > 2))) {
+            const auto distx = evt.dragDistance->x;
             evt.dragDistance->x = 0;
+            grid.setOffset(grid.offset + -distx);
+            bChanged = true;
         }
 
-        if ((!lockGesture && math::abs(disty) > 5.0) || (lockGesture && !isMove && math::abs(disty) > 2.0)) {
+        if ((!lockGesture && math::abs(evt.dragDistance->y) > 5) || (lockGesture && !isMove && math::abs(evt.dragDistance->y) > 2)) {
+            const auto disty = 1.0f + evt.dragDistance->y * -0.01f;
             evt.dragDistance->y   = 0;
-            disty                 = 1.0f + disty * -0.01f;
-            float anchor_dragposx = (float) (startDrag.x < 50 ? 0 : evt.relMousepos.x);
             grid.setZoom(grid.zoom * disty);
-            double newOffset = grid.calcOffset(anchor_dragposx, dragPosObjSpace);
+            double newOffset = grid.calcOffset(dragPosSS, dragPosObjSpace);
             grid.setOffset((int) newOffset);
+            bChanged = true;
+        }
+
+        if (bChanged) {
             grid.notifyChange();
         }
     }

@@ -33,7 +33,7 @@ void scaled_grid::notifyChange() {
     for (grid_changed_cb* cb : this->callbacks) { cb->gridChanged(*this); }
 }
 
-tick_t scaled_grid::getTickLength() {
+tick_t scaled_grid::getTickLength() const {
     if (this->gridList.size() < 2) { return TICKS_BAR; }
 
     //TODO: way too hacky
@@ -45,42 +45,42 @@ void scaled_grid::setOffset(int newOffset) {
     newOffset = newOffset < 0 ? 0 : newOffset;
     this->offset = (int) newOffset;
 }
-tick_t scaled_grid::next(tick_t tick) {
+tick_t scaled_grid::next(tick_t tick) const {
     tick_t len = getTickLength();
     tick_t pos = floor(tick / (double) len);
     pos++;
     return pos * len;
 }
-tick_t scaled_grid::prev(tick_t tick) {
+tick_t scaled_grid::prev(tick_t tick) const {
     tick_t len = getTickLength();
     tick_t pos = floor(tick / (double) len);
     if (pos * len == tick) { pos--; }
     return pos * len;
 }
-tick_t scaled_grid::distNext(tick_t tick) {
+tick_t scaled_grid::distNext(tick_t tick) const {
     tick_t len = getTickLength();
     tick_t pos = floor(tick / (double) len);
     pos++;
     return (pos * len) - tick;
 }
-tick_t scaled_grid::distPrev(tick_t tick) {
+tick_t scaled_grid::distPrev(tick_t tick) const {
     tick_t len = getTickLength();
     tick_t pos = floor(tick / (double) len);
     if (pos * len == tick) { pos--; }
     return (pos * len) - tick;
 }
-tick_t scaled_grid::screenToTickSnap(int32_t x, int snap) {
+tick_t scaled_grid::screenToTickSnap(int32_t x, int snap) const {
     tick_t tick = screenToTick(x);
     if (snap != SNAP_OFF && this->grid_dens.getSnap() != GRID_OFF) {
-        grid_div* min  = NULL;
+        const grid_div* min  = nullptr;
         tick_t minDist = 0;
-        for (grid_div& d : gridList) {
+        for (auto& d : gridList) {
             if (snap == SNAP_LEAST) {
-                if (d.time > tick) { return min == NULL ? 0 : min->time; }
+                if (d.time > tick) { return min == nullptr ? 0 : min->time; }
                 min = &d;
             } else {
                 tick_t dist = math::abs(d.time - tick);
-                if (min == NULL || dist < minDist) {
+                if (min == nullptr || dist < minDist) {
                     minDist = dist;
                     min     = &d;
                 }

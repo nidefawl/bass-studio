@@ -1472,10 +1472,12 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
     return false;
 }
 
-guictr_clipeditorview::guictr_clipeditorview(guictr_noteeditor& _noteeditor)
+guictr_clipeditorview::guictr_clipeditorview(clip_view& _view, guictr_noteeditor& _noteeditor)
     : guictr_base(),
+      view(_view),
       cache(new midi_clip_render_cache_t{}),
-      noteeditor(_noteeditor)
+      noteeditor(_noteeditor),
+      grid(_noteeditor.grid)
 {
 }
 guictr_clipeditorview::~guictr_clipeditorview() {
@@ -1656,12 +1658,36 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
     }
 }
 
-vec2 guictr_clipeditorview::getScale() {
-    ivec2 cs  = this->getSizeContent();
-    ivec2 csp = noteeditor.getSizeContent();
-    return vec2(cs.x / (double) noteeditor.getTotalWidth(), cs.y / (double) csp.y);
+float guictr_clipeditorview::getScaleX() {
+    float scaleX = 1.0f;
+    auto* clip = view.clip();
+    if (clip) {
+        auto barBeginEditor = grid.toObjSpace(0.0);
+        auto barEndEditor = grid.toObjSpace(noteeditor.content.size.x);
+        auto barLenClip = clip->getLen() / static_cast<double>(TICKS_BAR);
+        auto barLenEditor = barEndEditor - barBeginEditor;
+        scaleX  = math::max(static_cast<float>(barLenEditor/barLenClip), 0.0f);
+    }
+    return scaleX;
 }
 
+float guictr_clipeditorview::getScreenSpaceScaleX() {
+    auto cs = getSizeContent();
+    auto csEditor = noteeditor.timeline.size;
+    if (cs.x <= 0)
+        return 1.0f;
+    return csEditor.x / static_cast<float>(cs.x);
+}
+void guictr_clipeditorview::getFrameBounds(vec2& posFrame, vec2& sizeFrame) {
+    float scaleX = getScaleX();
+    float scaleXSS = getScreenSpaceScaleX();
+    ivec2 posContents = this->getPosContent();
+    ivec2 sizeContents = this->getSizeContent();
+    float offset = static_cast<float>(grid.getOffset()) * scaleX/scaleXSS;
+    auto rightBottom = vec2(posContents + sizeContents);
+    posFrame = vec2(math::min<float>(posContents.x + offset, rightBottom.x), posContents.y);
+    sizeFrame = vec2(math::min<float>(sizeContents.x * scaleX, rightBottom.x - posFrame.x), sizeContents.y);
+}
 
 void guictr_clipeditorview::render(NVGcontext* vg) {
     ivec2 posContents = this->getPosContent();
@@ -1675,7 +1701,6 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
     }
     drawInsetBackground(vg, theme, posContents, sizeContents);
 
-    clip_view& view  = dawCtrl->getClipView();
     clip_t* const cl = view.clip();
     if (cl && cache->valid) {
         NVGcolor color = rgbToNvg(cl->rgb);
@@ -1710,6 +1735,18 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
             daw_tls::getTls().runtime->renderStats.notesRendered += notesRendered;
         }
         daw_tls::getTls().runtime->renderStats.clipsRendered++;
+    }
+    auto* clip = view.clip();
+    if (clip) {
+        vec2 posFrame, sizeFrame;
+        getFrameBounds(posFrame, sizeFrame);
+        if (sizeFrame.x > 0 && sizeFrame.y > 0) {
+            nvgBeginPath(vg);
+            nvgRect(vg, posFrame.x, posFrame.y, sizeFrame.x, sizeFrame.y);
+            nvgStrokeWidth(vg, 3);
+            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLUGIN_VIEW_FRAME));
+            nvgStroke(vg);
+        }
     }
 }
 
