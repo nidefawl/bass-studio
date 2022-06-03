@@ -121,7 +121,8 @@ public:
                 continue;
             numEntries++;
         }
-
+        if (numEntries == 0)
+            return;
         auto size = cs / ivec2(dir.x ? numEntries : 1, dir.y ? numEntries : 1);
         for (guibase* gui : guis) {
             if (gui->getFlags() & FLG_NO_LAYOUT)

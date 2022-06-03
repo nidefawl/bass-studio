@@ -1,4 +1,5 @@
 #pragma once
+#include "logging.h"
 #include "math/seq_math.h"
 #include "seq_time.h"
 #include "str_util.h"
@@ -169,6 +170,27 @@ inline void offsetEndTime(std::vector<note_t>& notesPtrs, tick_t offset, tick_t 
         }
     }
 }
+template<typename T>
+inline void quantizeNoteStartTime(T& notesPtrs, tick_t quantize) {
+    bool bDbgPrint = false;
+    for (auto& note : notesPtrs) {
+        auto newTime = math::floorfS32(note.start() / static_cast<float>(quantize)) * quantize;
+        if (newTime != note.start()) {
+            bDbgPrint = true;
+            log_lf(Log::L_DEBUG, "quantizeNoteStartTime: %d -> %d\n", note.start(), newTime);
+        }
+        note.time = newTime;
+    }
+}
+template<typename T>
+inline void quantizeNoteEndTime(T& notesPtrs, tick_t quantize) {
+    for (auto& note : notesPtrs) {
+        auto newEnd = math::ceilfS32(note.end() / static_cast<float>(quantize)) * quantize;
+        if (assert_expr(newEnd - note.time > 0)) {
+            note.len   = newEnd - note.time;
+        }
+    }
+}
 int cutIntersecting(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes);
-
+bool cutSelfIntersecting(std::vector<note_t>& m_list);
 void sortNoteEvents(std::vector<noteevent_t>& noteEvents);

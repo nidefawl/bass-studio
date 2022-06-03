@@ -70,6 +70,9 @@ public:
         editfield.setReturnCommits(true);
         add(&editfield);
     }
+    ~gui_tempocontrol() override {
+        removeGuis();
+    }
     void layout() override {
         tempoInput.size = size;
     }

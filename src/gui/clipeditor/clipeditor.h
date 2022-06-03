@@ -138,6 +138,28 @@ public:
     vec2 getNoteFromPos(vec2 pos);
 };
 
+class gui_quantizationsettings : public guictr_base {
+    tick_t tickStart = 0;
+    tick_t tickEnd = 0;
+    guibase labelStart;
+    gui_timeinput inputStarts;
+    gui_timeinput inputEnds;
+public:
+    gui_quantizationsettings()
+        : guictr_base(),
+        labelStart(),
+        inputStarts(&tickStart, true),
+        inputEnds(&tickEnd, true)
+    {
+        labelStart.setLabel("Start");
+        setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
+    }
+    ~gui_quantizationsettings() override {
+        removeGuis();
+    }
+};
+
+
 class gui_clipsettings : public guictr_base {
 public:
     //scaled_grid& grid;

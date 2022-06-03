@@ -287,6 +287,7 @@ extern KeyCombo KC_REFRESH;
 extern KeyCombo KC_ZOOM_IN;
 extern KeyCombo KC_ZOOM_OUT;
 extern KeyCombo KC_CONSOLIDATE;
+extern KeyCombo KC_QUANTIZE;
 
 inline bool isKC(KeyCombo c, KeyEvent& kevt) {
     if (kevt.mods != c.keyMod) {

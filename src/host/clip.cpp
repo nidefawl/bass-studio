@@ -3,6 +3,7 @@
 #include "assert_dbg.h"
 #include <cstddef>
 #include <limits>
+#include "note.h"
 #include "str_util.h"
 #include "math/seq_math.h"
 #include "exceptions.h"
@@ -183,6 +184,55 @@ size_t removeDuplicatesImpl(std::vector<note_t>& m_list) {
     size_t removed = m_list.end() - itNewEnd;
     m_list.erase(itNewEnd, m_list.end());
     return removed;
+}
+
+bool cutSelfIntersecting(std::vector<note_t>& m_list) {
+    removeDuplicatesImpl(m_list);
+    bool hadAnyIntersections = false;
+    bool hasIntersections = true;
+    while (hasIntersections) {
+        hasIntersections = false;
+        for (note_t& n : m_list) {
+            auto it = m_list.begin();
+            while (it != m_list.end()) {
+                note_t& c = *it;
+                if (&n == &c) {
+                    it++;
+                    continue;
+                }
+                if (c.start() == n.start()) {
+                    log_lf(Log::L_DEBUG, "notes have same start %d\n", c.start());
+                }
+                if (c == n) {
+                    it = m_list.erase(it);
+                    hasIntersections = true;
+                    break;
+                } else if (c.pitch != n.pitch) {
+                    it++;
+                } else if (c.start() >= n.end() || c.end() <= n.start()) {
+                    it++;
+                } else if (c.start() < n.start()) {
+                    log_lf(Log::L_DEBUG, "cutting note right %d %d\n", c.start(), c.end());
+                    log_lf(Log::L_DEBUG, "because it intersects note %d %d\n", n.start(), n.end());
+                    c.cutRight(n.start());
+                    it++;
+                    hasIntersections = true;
+                    break;
+                } else {
+                    it = m_list.erase(it);
+                    // dbgassert(0);
+                    break;
+                }
+            }
+            if (hasIntersections) {
+                break;
+            }
+        }
+        if (hasIntersections) {
+            hadAnyIntersections = true;
+        }
+    }
+    return hadAnyIntersections;
 }
 
 void clip_notes_t::storeSelection(std::vector<note_t>& selNotes) {

@@ -1378,6 +1378,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                 auto pair = getMinMaxTime(notes.selection);
                 if (pair.second)
                     grid.makeTickVisible(pair.second->end());
+                setSelectionFrame(getMinMaxTime(notes.selection));
                 handled = true;
                 edit    = true;
                 desc    = "Duplicate notes";
@@ -1395,9 +1396,49 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                 auto pair = getMinMaxTime(notes.selection);
                 if (pair.second)
                     grid.makeTickVisible(pair.second->end());
+                setSelectionFrame(getMinMaxTime(notes.selection));
                 handled = true;
                 edit    = true;
                 desc    = "Paste notes";
+            } else if (isKC(KC_QUANTIZE, kevt) && !notes.selection.empty()) {
+                const bool quantizeEnds = true;
+                tick_t qLen     = grid.getTickLength();
+                if (qLen) {
+                    log_lf(Log::L_DEBUG, "quantize to %d\n", qLen);
+                    /* Quantize notes to grid 
+                     * 1. cut notes from clip
+                     * 2. quantize notes in isolation
+                     * 3. paste notes back to clip, cutting intersections
+                     */
+                    clip_notes_t tmpClipboard;
+                    tmpClipboard.setTo(notes.selection, 0);
+                    notes.deleteSelectedNotes(notes);
+                    notes.clearSelection();
+                    view.copySelectedNoteList();
+                    view.draggedSelection.clear();
+                    quantizeNoteStartTime(tmpClipboard.m_list, qLen);
+                    if (quantizeEnds) {
+                        quantizeNoteEndTime(tmpClipboard.m_list, qLen);
+                    }
+                    bool bRemovedNotes = cutSelfIntersecting(tmpClipboard.m_list);
+                    if (bRemovedNotes) {
+                        log_lf(Log::L_DEBUG, "removed some intersecting notes\n");
+                    }
+                    for (note_t note: tmpClipboard.m_list) {//not using reference here, copy while iterating
+                        view.draggedSelection.push_back(note);
+                    }
+                    mergeDraggedNotes(dragmode::drag_notes_copy);
+                    for (note_t* selPtr: notes.selection) {
+                        dbgassert(notes.has(selPtr));
+                    }
+                    auto pair = getMinMaxTime(notes.selection);
+                    if (pair.second)
+                        grid.makeTickVisible(pair.second->end());
+                    setSelectionFrame(getMinMaxTime(notes.selection));
+                    edit = true;
+                    handled = true;
+                    desc = "Quanitize notes";
+                }
             }
         } else {
         }
