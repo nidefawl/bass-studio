@@ -12,10 +12,10 @@
 struct grid_div {
     tick_t time;
     beatbar16th_t pos;
-    float screenpos;
+    double screenpos;
     int8_t color;
     float thickness;
-    float width;
+    double width;
 };
 struct grid_density {
     bool enabled          = true;

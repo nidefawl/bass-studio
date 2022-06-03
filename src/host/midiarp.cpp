@@ -434,8 +434,8 @@ void midiarp::initRandomDelays(tick_t tick, tick_t startFrame, tick_t endFrame, 
     }
     if constexpr (logProcessedNotes) {
         log_lf(Log::L_DEBUG, "@%s STEP %d STEPSIZE %d FIRST %s SEED %016zx VEL-SEED %016zx rndTime %d\n",
-                   StringAsCStr(tickAsBeatString(tick)),
-                   nextStep, stepSize, StringAsCStr(tickAsBeatString(processTimePoints[0])), stepSeed_u64, velocitySeed_u64, rndTime);
+                   StringAsCStr(tickAsBeatString(tick, false)),
+                   nextStep, stepSize, StringAsCStr(tickAsBeatString(processTimePoints[0], false)), stepSeed_u64, velocitySeed_u64, rndTime);
     }
 }
 
@@ -709,14 +709,14 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
                     markers.push_back(marker_t{ tick, col(3), StringFormat("Increment step %d tickMarkers %d", step, tickMarkers), (float) (tickMarkers++) });
 #endif
                     log_lf(Log::L_DEBUG, "@%s first tick in step %d\n",
-                               StringAsCStr(tickAsBeatString(tick)),
+                               StringAsCStr(tickAsBeatString(tick, false)),
                                stepRecalc);
                 }
             }
             if (stepSizeBefore != stepSize) {
                 const auto stepCurrent = (tick - resetTime) / stepSizeBefore;
                 log_lf(Log::L_DEBUG, "@%s STEPSIZE change from %d to %d. Step: %d recalculated: %d\n",
-                           StringAsCStr(tickAsBeatString(tick)),
+                           StringAsCStr(tickAsBeatString(tick, false)),
                            stepSizeBefore, stepSize, stepCurrent, stepRecalc);
             }
         }
@@ -748,7 +748,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
                     return t < tick;
                 });
                 if (stepSomeCompleted2) {
-                    log_lf(Log::L_WARN, "some steps (%zd) generated lay before current tick (at step %d range %s %s)\n", stepSomeCompleted2, stepToGenerate, StringAsCStr(tickAsBeatString(start)), StringAsCStr(tickAsBeatString(end)));
+                    log_lf(Log::L_WARN, "some steps (%zd) generated lay before current tick (at step %d range %s %s)\n", stepSomeCompleted2, stepToGenerate, StringAsCStr(tickAsBeatString(start, false)), StringAsCStr(tickAsBeatString(end, false)));
                 }
                 stepGenerated = stepToGenerate;
             }

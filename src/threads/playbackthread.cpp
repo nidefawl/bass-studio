@@ -213,7 +213,7 @@ private:
                                     tickPos                = startPos;
                                     ctrl->getPlaybackPos() = startPos;
                                     samplePos              = tickToSampleConvert<int32_t, roundmode::floor>(startPos, bpm100, host->m_sampleFormatInternal.sampleRate);
-                                    log_printf("START ON %s seconds: %.2f - sample %d\n", StringAsCStr(tickAsBeatString(startPos)), toSeconds(startPos, bpm100), samplePos);
+                                    log_printf("START ON %s seconds: %.2f - sample %d\n", StringAsCStr(tickAsBeatString(startPos, false)), toSeconds(startPos, bpm100), samplePos);
                                     host->onStartPlayback(this->m_prjCtrl);
                                     timer.reset();
                                     timer2.reset();
@@ -323,7 +323,7 @@ private:
                                 double nextTickPos    = projGlobals.loopStart;
                                 int32_t nextSamplePos = tickToSampleConvert<int32_t, roundmode::floor>(nextTickPos, bpm100, sampleRate);
                                 host->onPlaybackJumpFromTo(this->m_prjCtrl, samplePos, tickPos, nextSamplePos, nextTickPos);
-                                log_lf(Log::L_DEBUG, "JMP FROM %s to %s\n", StringAsCStr(tickAsBeatString(tickPos)), StringAsCStr(tickAsBeatString(nextTickPos)));
+                                log_lf(Log::L_DEBUG, "JMP FROM %s to %s\n", StringAsCStr(tickAsBeatString(tickPos, false)), StringAsCStr(tickAsBeatString(nextTickPos, false)));
                                 tickPos   = nextTickPos;
                                 samplePos = nextSamplePos;
                                 log_lf(Log::L_DEBUG, "JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);

@@ -66,18 +66,6 @@ void replaceString(String& s, String f, String r) {
         offset = index + r.length();
     }
 }
-String tickAsBeatString(int32_t tick) {
-    std::array<char, 32> FormatBuffer{};
-    const auto beatBarNth  = tickToBarBeat16th(tick, 4, 2);
-    constexpr const char format[]       = "%d.%d.%d.%d";
-#ifdef __APPLE__
-    int ret = snprintf(FormatBuffer.data(), FormatBuffer.size(), format, beatBarNth.bar + 1, beatBarNth.beat + 1, beatBarNth.th + 1);
-#else
-    int ret = _snprintf_s(FormatBuffer.data(), FormatBuffer.size(), _TRUNCATE, format, beatBarNth.bar + 1, beatBarNth.beat + 1, beatBarNth.th + 1, beatBarNth.subticks);
-#endif
-    if (ret < 0) return {};
-    return String{FormatBuffer.data(), static_cast<String::size_type>(ret)};
-}
 
 static const char* const noteNames[12]{
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"

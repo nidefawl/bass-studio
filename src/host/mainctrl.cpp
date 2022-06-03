@@ -381,7 +381,7 @@ public:
           ctr_tempo(_project, _projectGlobals),
           ctr_pluginview(&ctr_plugins),
           ctr_clipeditor(clipView),
-          ctr_clipeditorview(ctr_clipeditor.noteeditor),
+          ctr_clipeditorview(clipView, ctr_clipeditor.noteeditor),
           ctr_tracks(_mainCtrl, _cursor, _trackSelection, _project, _projectGlobals, grid, dragdropclip),
           ctr_nodes(_cursor, _project, dragdropclip),
           ctr_Right() {
@@ -978,7 +978,6 @@ void DawInstance::menuCommand(menucmd_t command) {
             case CMD_FILE_NEW: {
                 stopPlaying();
                 setAudioThreadState(playback_state::status_no_process);
-                //TODO: stop playback here
                 setEmptyProject();
                 layoutTrackEditors();
                 updateVisibleTrackContents();
@@ -2880,6 +2879,10 @@ tick_t project_controller_t::samplesToTicks(int32_t sample) {
     return sampleToTickConvert<tick_t, roundmode::round>(sample, projectGlobals->tempo100, host->m_sampleFormatInternal.sampleRate);
 }
 
-beatbar16th_t project_controller_t::toBeatBar16th(int32_t tick) {
-    return tickToBarBeat16th(tick, projectGlobals->signatureNum, projectGlobals->signatureDenom);
+beatbar16th_t project_controller_t::toBeatBar16th(tick_t tick, bool isRelative) {
+    return ::tickToBarBeat16th(tick, projectGlobals->signatureNum, projectGlobals->signatureDenom, isRelative);
+}
+
+tick_t project_controller_t::beatBarNthToTick(const beatbar16th_t& beatBarNth, bool isRelative) {
+    return ::beatBarNthToTick(beatBarNth, projectGlobals->signatureNum, projectGlobals->signatureDenom, isRelative);
 }

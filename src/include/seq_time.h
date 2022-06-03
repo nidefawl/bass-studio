@@ -1,9 +1,11 @@
 #pragma once
+#include "assert_dbg.h"
 #include "types.h"
 #include <cmath>
 #include <limits>
 #include "math/seq_math.h"
 #include "samplerate.h"
+#include "str_util.h"
 
 using tick_t = int32_t;
 extern const tick_t INVALID_TICK;
@@ -30,33 +32,36 @@ struct beatbar16th_t {
     int32_t th;
     int32_t subticks;
     int32_t operator[](const int nIndex) const {
+        if (nIndex == 3)
+            return subticks;
         if (nIndex == 2)
             return th;
         if (nIndex == 1)
             return beat;
+        if (nIndex == 0)
+            return bar;
+        dbgassert(0);
+        return 0;
+    }
+    int32_t& operator[](const int nIndex) {
+        if (nIndex == 3)
+            return subticks;
+        if (nIndex == 2)
+            return th;
+        if (nIndex == 1)
+            return beat;
+        if (nIndex == 0)
+            return bar;
+        dbgassert(0);
         return bar;
     }
 };
 
-inline beatbar16th_t tickToBarBeat16th(int32_t tick, int32_t signatureNum = 4, int32_t signatureDenomBits = 2) {
-    beatbar16th_t t{};
-    int32_t denom     = 4 - math::clamp<int32_t>(signatureDenomBits, 0, 4);
-    int32_t num       = signatureNum;
-    int32_t barOffset = 0;
-    if (tick < 0) {
-        barOffset = -((((-tick) + TICKS_BAR - 1) / TICKS_BAR));
-        tick      = tick & (TICKS_BAR - 1);
-    }
-    int32_t sixth    = tick / TICKS_16TH;
-    t.subticks       = tick % TICKS_16TH;
-    t.th             = sixth & ((1 << denom) - 1);
-    int32_t quarters = (sixth >> denom);
-    t.beat           = quarters % num;
-    t.bar            = quarters / num;
-    t.bar += barOffset;
-    return t;
-}
-
+beatbar16th_t tickToBarBeat16th(tick_t tick, uint32_t signatureNum, uint32_t signatureDenomBits, bool isRelative);
+tick_t beatBarNthToTick(const beatbar16th_t& beatBarNth, uint32_t signatureNum, uint32_t signatureDenomBits, bool isRelative);
+String tickAsBeatString(tick_t tick, bool isRelative);
+String beatBarNthToString(const beatbar16th_t& tick, bool isRelative);
+beatbar16th_t stringToBeatBarNth(const String& s, bool isRelative, uint32_t signatureNum, uint32_t signatureDenomBits);
 
 inline double toSecondsDD(double tick, double oneOverBPM100) {
     return tick * MINUTE_100_OVER_TPQ * oneOverBPM100;

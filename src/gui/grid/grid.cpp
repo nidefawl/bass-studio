@@ -15,8 +15,7 @@ void scaled_grid::showRange(tick_t start, tick_t end) {
     double rangeBars = (end - start) / (double) TICKS_BAR;
     if (lastW > 0) {
         this->zoom       = (float) (8.0f / (lastW / rangeBars));
-        double screenpos = toScreenSpace(start / (double) TICKS_BAR);
-        this->offset     = (float) (screenpos);
+        this->offset     = toScreenSpace(start / (double) TICKS_BAR);
         notifyChange();
     }
 }
@@ -86,7 +85,7 @@ tick_t scaled_grid::screenToTickSnap(int32_t x, int snap) const {
                 }
             }
         }
-        if (min != NULL) {
+        if (min) {
             tick = min->time;
         } else if (snap == SNAP_LEAST) {
             return 0;
@@ -176,7 +175,7 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 
             grid_div div  = {};
             div.time      = timeBar;
-            div.pos       = project->toBeatBar16th(timeBar);
+            div.pos       = project->toBeatBar16th(timeBar, false);
             div.screenpos = pos;
             div.width     = denum_step > 0 ? (denum_substep > 0 ? denom_sub_size : denom_size) : barSize * step;
             div.color     = 0;
@@ -189,7 +188,7 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
                 if (bar_denom > 0) {
                     grid_div div_quarter  = {};
                     div_quarter.time      = timeQuarter;
-                    div_quarter.pos       = project->toBeatBar16th(timeQuarter);
+                    div_quarter.pos       = project->toBeatBar16th(timeQuarter, false);
                     div_quarter.screenpos = pos_denom;
                     div_quarter.width     = denum_substep > 0 ? denom_sub_size : denom_size;
                     div_quarter.color     = 1;
@@ -201,7 +200,7 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 
                     grid_div div_smaller  = {};
                     div_smaller.time      = timeSmall;
-                    div_smaller.pos       = project->toBeatBar16th(timeSmall);
+                    div_smaller.pos       = project->toBeatBar16th(timeSmall, false);
                     div_smaller.screenpos = bar_offset + bar * barSize + bar_denom * denom_size + bar_denom_sub * denom_sub_size;
                     div_smaller.width     = denom_sub_size;
                     div_smaller.color     = 2;

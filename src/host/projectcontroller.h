@@ -50,7 +50,8 @@ public:
     }
     int32_t tickToSamples(tick_t ticks);
     tick_t samplesToTicks(int32_t sample);
-    beatbar16th_t toBeatBar16th(int32_t tick);
+    beatbar16th_t toBeatBar16th(tick_t tick, bool isRelative);
+    tick_t beatBarNthToTick(const beatbar16th_t& beatBarNth, bool isRelative);
 
     static project_controller_t* get();
     double getProjectWorkingArea() {

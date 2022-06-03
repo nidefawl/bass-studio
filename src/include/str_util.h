@@ -51,7 +51,6 @@ String FormatTempo(float tempo);
 String StringLimit(String s, int limit);
 void replaceString(String& s, String f, String r);
 const char* noteName(int note);//DONT KEEP REFERENCE
-String tickAsBeatString(int32_t tick);
 
 template<typename T>
 String FormatBinaryString(T i) {

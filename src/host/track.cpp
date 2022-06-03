@@ -1246,8 +1246,8 @@ void track_impl_t::processMidiOutput(playback_state state, int32_t flags, tick_t
         while (it != midiProcessed->m_list.end()) {
             note_t& note = *it;
             if (!note.isHeld() && note.end() < blockStart) {
-                String strTmStart = tickAsBeatString(note.start());
-                String strTmEnd   = tickAsBeatString(note.end());
+                String strTmStart = tickAsBeatString(note.start(), false);
+                String strTmEnd   = tickAsBeatString(note.end(), false);
                 if (logProcessedNotes) {
                     log_lf(Log::L_DEBUG, "Note %s recorded from %s to %s\n", noteName(note.pitch), StringAsCStr(strTmStart), StringAsCStr(strTmEnd));
                     log_lf(Log::L_DEBUG, "Note %s recorded from %d to %d\n", noteName(note.pitch), note.start(), note.end());

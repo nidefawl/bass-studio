@@ -301,6 +301,9 @@ inline bool isKC(KeyCombo c, KeyEvent& kevt) {
 inline bool isArrowKey(int key) {
     return key == KEY_UP || key == KEY_DOWN || key == KEY_LEFT || key == KEY_RIGHT;
 }
+inline bool isNumericInput(int key) {
+    return (key >= KEY_0 && key <= KEY_9) || (key >= KEY_KP_0 && key <= KEY_KP_9) || key == KEY_PERIOD || key == KEY_KP_DECIMAL;
+}
 inline bool isShift(int mods) {
     return (mods & KB_MOD_SHIFT);
 }

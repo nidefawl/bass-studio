@@ -1,5 +1,7 @@
 #include "controls.h"
 
+#include "keyboard.h"
+#include "seq_time.h"
 #include "types.h"
 
 #include "math/seq_math.h"
@@ -41,8 +43,8 @@ guictxtmenu_base* gui_timeinput::getTooltip(AppCtrl* appctrl) {
     auto tooltip = new guitooltip<gui_timeinput>(this);
     return tooltip;
 }
-gui_timeinput_field::gui_timeinput_field(int _idx, int32_t* _time, const bool _isRelative)
-    : guibutton(), idx(_idx), time(_time), isRelative(_isRelative) {
+gui_timeinput_field::gui_timeinput_field(gui_timeinput* parentInput, int _idx, int32_t* _time, const bool _isRelative)
+    : guibutton(), idx(_idx), isRelative(_isRelative), parentInput(parentInput), time(_time) {
 }
 
 void gui_timeinput_field::render(NVGcontext* vg) {
@@ -50,16 +52,24 @@ void gui_timeinput_field::render(NVGcontext* vg) {
     renderWidgetBorder(vg, flags);
     setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     int32_t _time      = time ? *time : 0;
-    beatbar16th_t step = dawCtrl->getDaw()->toBeatBar16th(_time);
+    beatbar16th_t step = dawCtrl->getDaw()->toBeatBar16th(_time, isRelative);
     int32_t val        = step[idx];
-    if (val >= 0 && !isRelative) {
+    if ((val < 0) == isRelative) {
         val++;
     }
     String str = StringFormat("%d", val);
-    nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
+    if (_time < 0 && isRelative && idx == 0 && val == 0) {
+        str = "-" + str;
+    }
+    nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), str.c_str(), &str.back() + 1);
 }
 
 void gui_timeinput_field::handleDraggedBegin(MouseEvent& evt) {
+
+    if (time && (isCtrl(evt.kbmods) || (evt.type == MouseEventType::M_EVT_DOUBLECLICK))) { 
+        if (parent) parent->buttonClicked(this);
+        return;
+    }
     if (evt.guiDragged == this) {
         parentCtrl->captureMouse(this);
     }
@@ -71,46 +81,83 @@ void gui_timeinput_field::handleDraggedMove(MouseEvent& evt) {
         if (math::abs(disty) < 1)
             return;
         evt.dragDistance->y = 0;
-        int32_t curVal      = *time;
-        switch (idx) {
-            case 0:
-                curVal -= disty * TICKS_BAR;
-                break;
-            case 1:
-                curVal -= disty * TICKS_QUARTER;
-                break;
-            case 2:
-                if (disty > 0) {
-                    if (curVal & TICK_MASK_16TH) {
-                        curVal &= ~TICK_MASK_16TH;
-                        break;
-                    }
-                }
-                if (disty < 0) {
-                    if (curVal & TICK_MASK_16TH) {
-                        curVal &= ~TICK_MASK_16TH;
-                    }
-                }
-                curVal -= disty * TICKS_16TH;
-                break;
-        }
-        if (!isRelative || curVal > 0) {
-            *time = curVal;
-        }
-        if (parent)
-            parent->buttonClicked(this);
+        onKeyInputChangeValue(ivec2(0, -disty));
     }
 }
 
 void gui_timeinput_field::handleDraggedRelease(MouseEvent& evt) {
 }
 
-gui_timeinput::gui_timeinput(int32_t* _time, const bool isRelative) : guictr_base(), time(_time), bar(0, _time, isRelative), beat(1, _time, isRelative), sixteenths(2, _time, isRelative) {
+bool gui_timeinput_field::handleKeyInput(KeyEvent& kevt) {
+    bool handled = false;
+    if (kevt.type != K_RELEASE) {
+        if (isArrowKey(kevt.keyCode)) {
+            ivec2 dir;
+            arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
+            if (dir.y) {
+                if ((kevt.mods & KB_MOD_SHIFT)) {
+                    dir *= 12;
+                }
+                onKeyInputChangeValue(dir);
+                handled = true;
+            }
+        }
+    }
+    if (!handled) {
+        if (kevt.type != K_RELEASE && isNumericInput(kevt.keyCode)) {
+            parentInput->buttonClicked(this);
+        }
+    }
+    return handled;
+}
+
+void gui_timeinput_field::onKeyInputChangeValue(ivec2 direction) {
+    auto disty = direction.y;
+    int32_t curVal      = *time;
+    switch (idx) {
+        case 0:
+            curVal += disty * TICKS_BAR;
+            break;
+        case 1:
+            curVal += disty * TICKS_QUARTER;
+            break;
+        case 2:
+            if (disty > 0) {
+                if (curVal & TICK_MASK_16TH) {
+                    curVal &= ~TICK_MASK_16TH;
+                    break;
+                }
+            }
+            if (disty < 0) {
+                if (curVal & TICK_MASK_16TH) {
+                    curVal &= ~TICK_MASK_16TH;
+                }
+            }
+            curVal += disty * TICKS_16TH;
+            break;
+    }
+    *time = curVal;
+    if (parentInput)
+        parentInput->onInputChanged(this);
+}
+
+gui_timeinput::gui_timeinput(int32_t* _time, const bool isRelative)
+    : guictr_base(),
+    time(_time),
+    bar(this, 0, _time, isRelative),
+    beat(this, 1, _time, isRelative),
+    sixteenths(this, 2, _time, isRelative)
+{
     padding = 0;
     add(&bar);
     add(&beat);
     add(&sixteenths);
     setCanMouseHit(true);
+    editfield.setFlag(FLG_NO_LAYOUT, true);
+    editfield.setVisible(false);
+    editfield.setAlignment(gui_textfield::Alignment::Center);
+    editfield.setReturnCommits(true);
+    add(&editfield);
 }
 
 int32_t gui_timeinput::getTime() {
@@ -183,7 +230,53 @@ void gui_timeinput::render(NVGcontext* vg) {
         nvgText(vg, this->sixteenths.pos.x, this->sixteenths.pos.y + G_FONT_MIDDLE_OFFSET(this->sixteenths.size.y), StringAsCStr(str),
                 NULL);
     }
+    if (editfield.isVisible()) {
+        editfield.render(vg);
+    }
 }
+
+void gui_timeinput::onInputChanged(const gui_timeinput_field* input) {
+    if (parent)
+        parent->buttonClicked(this);
+}
+void gui_timeinput::showEditField() {
+    const bool isRelative = bar.isRelative;
+    auto daw = dawCtrl->getDaw();
+    editfield.mCallbackEnd = [this, isRelative](const std::string& str) {
+        auto daw = dawCtrl->getDaw();
+        auto beatBarNth = stringToBeatBarNth(str, isRelative, daw->getGlobals().signatureNum, daw->getGlobals().signatureDenom);
+        auto tick = daw->beatBarNthToTick(beatBarNth, isRelative);
+        editfield.setVisible(false);
+        if (time) {
+            *time = tick;
+            onInputChanged(&bar);
+        }
+        return true;
+    };
+    editfield.pos  = {};
+    editfield.size = size;
+    editfield.setVisible(true);
+    editfield.layout();
+    auto beatBarNth = daw->toBeatBar16th(*time, isRelative);
+    log_lf(Log::L_DEBUG, "beatBarNthToString beg: %s\n", StringAsCStr(beatBarNthToString(beatBarNth, isRelative)));
+    editfield.setValue(beatBarNthToString(beatBarNth, bar.isRelative));
+    editfield.setSelectionRange(-1, -1);
+    editfield.setFontSize(editfield.size.y * theme->getFloat(GuiConstant::CONST_FONT_SCALE));
+    parentCtrl->focusGui(&editfield);
+}
+
+void gui_timeinput::buttonClicked(guibase* button) {
+    if (time) {
+        auto field = dynamic_cast<gui_timeinput_field*>(button);
+        if (field) {
+            showEditField();
+            return;
+        }
+    }
+    if (parent)
+        parent->buttonClicked(this);
+}
+
 
 void guictr_tempocontrols::buttonClicked(guibase* button) {
     if (button == &this->btnPlay) {

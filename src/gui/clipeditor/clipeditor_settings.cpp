@@ -23,7 +23,7 @@ gui_clipsettings::gui_clipsettings(scaled_grid&, clip_view& _view)
       clipLoopLen(nullptr, true),
       clipTimeStart(nullptr),
       clipTimeLen(nullptr, true),
-      clipTimeStartOffsetTicks(nullptr),
+      clipTimeStartOffsetTicks(nullptr, true),
       clipTimeStartOffsedSamples(nullptr),
       clipAudioId(nullptr) {
     padding          = 2;

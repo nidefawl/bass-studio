@@ -403,7 +403,7 @@ int runCommandLineHost(const std::vector<String>& args) {
             log_printf("projectController.loopLen: %d\n", projectController.getGlobals().loopLen);
 
             double tickPos    = projectGlobals.cursor.cursorPos;
-            log_printf("playback start at %s\n", StringAsCStr(tickAsBeatString(tickPos)));
+            log_printf("playback start at %s\n", StringAsCStr(tickAsBeatString(tickPos, false)));
 
             const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(host->m_sampleFormatInternal.blockSize,
                                                                                       host->prjGlobals.tempo100,

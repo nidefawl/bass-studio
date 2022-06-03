@@ -1,6 +1,8 @@
 #pragma once
 
+#include "gui/controls/textfield.h"
 #include "types.h"
+#include <memory>
 #include <vector>
 
 #include "math/seq_math.h"
@@ -135,13 +137,17 @@ public:
         nvgText(vg, size.x / 2.0f, G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(sigSep), NULL);
     }
 };
-class gui_timeinput_field : public guibutton {
-    const int idx;
-    int32_t* time;
-    const bool isRelative;
 
+class gui_timeinput;
+class gui_timeinput_field : public guibutton {
 public:
-    gui_timeinput_field(int _idx, int32_t* _time, const bool _isRelative);
+    const int idx;
+    const bool isRelative;
+private:
+    gui_timeinput* const parentInput;
+    int32_t* time;
+public:
+    gui_timeinput_field(gui_timeinput* parentInput, int _idx, int32_t* _time, const bool _isRelative);
     void setRef(int32_t* time) {
         this->time = time;
     }
@@ -152,13 +158,15 @@ public:
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override {
         return parent ? parent->getTooltip(appctrl) : nullptr;
     }
+    void onKeyInputChangeValue(ivec2 direction);
+    bool handleKeyInput(KeyEvent& kevt) override;
 };
 class gui_timeinput : public guictr_base {
     int32_t* time = nullptr;
     gui_timeinput_field bar;
     gui_timeinput_field beat;
     gui_timeinput_field sixteenths;
-
+    gui_textfield editfield;
 public:
     gui_timeinput(int32_t* _time, const bool isRelative = false);
     ~gui_timeinput() override {
@@ -167,13 +175,12 @@ public:
     void setRef(int32_t* time);
     void setConnectedBG();
     void layout() override;
-    void buttonClicked(guibase* button) override {
-        if (parent)
-            parent->buttonClicked(this);
-    }
+    void buttonClicked(guibase* button) override;
     void render(NVGcontext* vg) override;
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
     int32_t getTime();
+    void onInputChanged(const gui_timeinput_field* input);
+    void showEditField();
 };
 
 class guibutton_audioengine : public guibuttonstate {
