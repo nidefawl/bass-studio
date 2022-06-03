@@ -18,10 +18,12 @@
 #include "host/mainctrl.h"
 #include "platform.h"
 
-class gui_tempocontrol : public guibutton {
+class gui_tempocontrol;
+class gui_tempocontrol_input : public guibutton {
+    gui_tempocontrol* const parentInput;
 public:
-    gui_tempocontrol()
-        : guibutton() {
+    gui_tempocontrol_input(gui_tempocontrol* parent)
+        : guibutton(), parentInput(parent) {
     }
     void render(NVGcontext* vg) override {
         renderWidgetBorder(vg, getStateFlags());
@@ -30,6 +32,10 @@ public:
         nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(tempo), NULL);
     }
     void handleDraggedBegin(MouseEvent& evt) override {
+        if (isCtrl(evt.kbmods) || (evt.type == MouseEventType::M_EVT_DOUBLECLICK)) { 
+            if (parent) parent->buttonClicked(this);
+            return;
+        }
         if (evt.guiDragged == this) {
             parentCtrl->captureMouse(this);
         }
@@ -40,15 +46,38 @@ public:
             if (math::abs(disty) < 1)
                 return;
             evt.dragDistance->y = 0;
-            auto const daw = dawCtrl->getDaw();
-            int tempo = daw->getCurrentTempo();
-            daw->setTempo(tempo - disty * 100);
-            daw->updateVisibleTrackContents();
+            onKeyInputChangeValue(ivec2{0, -disty * 100});
         }
     }
+    bool handleKeyInput(KeyEvent& kevt) override;
     void handleDraggedRelease(MouseEvent& evt) override {
     }
+    void onKeyInputChangeValue(ivec2 direction);
 };
+class gui_tempocontrol : public guictr_base {
+    gui_tempocontrol_input tempoInput;
+    gui_textfield editfield;
+public:
+    gui_tempocontrol()
+        : tempoInput(this)
+    {
+        padding = 0;
+        add(&tempoInput);
+        setCanMouseHit(true);
+        editfield.setFlag(FLG_NO_LAYOUT, true);
+        editfield.setVisible(false);
+        editfield.setAlignment(gui_textfield::Alignment::Center);
+        editfield.setReturnCommits(true);
+        add(&editfield);
+    }
+    void layout() override {
+        tempoInput.size = size;
+    }
+    void buttonClicked(guibase* button) override;
+    void onInputChanged(const gui_tempocontrol_input* input);
+    void showEditField();
+};
+
 class gui_signaturecontrol_input : public guibutton {
     const int idx;
 

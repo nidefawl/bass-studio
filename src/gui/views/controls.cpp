@@ -65,7 +65,6 @@ void gui_timeinput_field::render(NVGcontext* vg) {
 }
 
 void gui_timeinput_field::handleDraggedBegin(MouseEvent& evt) {
-
     if (time && (isCtrl(evt.kbmods) || (evt.type == MouseEventType::M_EVT_DOUBLECLICK))) { 
         if (parent) parent->buttonClicked(this);
         return;
@@ -360,3 +359,61 @@ void guibutton_audioengine::renderWidgetBorderPosSize(NVGcontext* vg, int32_t fl
     }
 }
 
+void gui_tempocontrol::buttonClicked(guibase* button) {
+    auto field = dynamic_cast<gui_tempocontrol_input*>(button);
+    if (field) {
+        showEditField();
+        return;
+    }
+    if (parent)
+        parent->buttonClicked(this);
+}
+void gui_tempocontrol::onInputChanged(const gui_tempocontrol_input* input) {
+    auto const daw = dawCtrl->getDaw();
+    daw->updateVisibleTrackContents();
+}
+void gui_tempocontrol::showEditField() {
+    editfield.mCallbackEnd = [this](const String& str) {
+        auto daw = dawCtrl->getDaw();
+        auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(str)));
+        editfield.setVisible(false);
+        daw->setTempo(math::clamp(math::roundfS32(fTextFieldVal*100.0f), 100, 99900));
+        onInputChanged(&this->tempoInput);
+        return true;
+    };
+    editfield.pos  = {};
+    editfield.size = size;
+    editfield.setVisible(true);
+    editfield.layout();
+    editfield.setValue(FormatTempo(dawCtrl->getDaw()->getCurrentTempoBPM()));
+    editfield.setSelectionRange(-1, -1);
+    editfield.setFontSize(editfield.size.y * theme->getFloat(GuiConstant::CONST_FONT_SCALE));
+    parentCtrl->focusGui(&editfield);
+}
+void gui_tempocontrol_input::onKeyInputChangeValue(ivec2 direction) {
+    auto const daw = dawCtrl->getDaw();
+    int tempo = daw->getCurrentTempo();
+    daw->setTempo(tempo + direction.y);
+}
+bool gui_tempocontrol_input::handleKeyInput(KeyEvent& kevt) {
+    bool handled = false;
+    if (kevt.type != K_RELEASE) {
+        if (isArrowKey(kevt.keyCode)) {
+            ivec2 dir;
+            arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
+            if (dir.y) {
+                if ((kevt.mods & KB_MOD_SHIFT)) {
+                    dir *= 12;
+                }
+                onKeyInputChangeValue(dir);
+                handled = true;
+            }
+        }
+    }
+    if (!handled) {
+        if (kevt.type != K_RELEASE && isNumericInput(kevt.keyCode)) {
+            parentInput->buttonClicked(this);
+        }
+    }
+    return handled;
+}
