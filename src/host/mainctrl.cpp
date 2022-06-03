@@ -1625,6 +1625,9 @@ void DawInstance::onTick() {
         /*canOpenAutosave &= last click was n seconds ago*/
     }
     canOpenAutosave &= hasAnyInputFocus;
+    static int scriptState = -1;
+    static const int64_t tmDelayStateChange = 555;
+    static int64_t tmStateChange = 0;
     if (noPopups && projectToLoad) {
         std::shared_ptr<project_to_load_t> projectToLoadCpy = projectToLoad;
         projectToLoad = nullptr;
@@ -1645,6 +1648,57 @@ void DawInstance::onTick() {
             cbProjectLoadCompleteCallback = nullptr;
         }
         log_printf("Project load completed %s\n", projectLoadErrored ? "with errors" : "succesfully");
+        if (scriptState != -1) {
+            scriptState = 2;
+            tmStateChange = getTimeMillis();
+        }
+    } else {
+        static size_t fileIndexToLoad = 0;
+        static recentfilelist fileListStatic = tls.settings->recentfiles;
+        static seq_rand rnd;
+                
+        if (fileListStatic.sortedEntries.empty()) {
+            fileListStatic = tls.settings->recentfiles;
+        }
+        auto tmMillis = getTimeMillis();
+        if (scriptState == 0 && (tmMillis - tmStateChange) > tmDelayStateChange) {
+            tmStateChange = tmMillis;
+            rnd.rng_seed(static_cast<uint64_t>(tmStateChange));
+            fileIndexToLoad++;
+            if (fileIndexToLoad >= fileListStatic.sortedEntries.size()) {
+                fileIndexToLoad = 0;
+            }
+            if (fileIndexToLoad < fileListStatic.sortedEntries.size()) {
+                String filename = fileListStatic.sortedEntries[fileIndexToLoad];
+                loadFile(filename, FLAG_INVOKE_USER_CB_DEFERLOAD);
+                if (projectToLoad) {
+                    scriptState = 1;
+                }
+            }
+        }
+        if (scriptState == 2 && (tmMillis - tmStateChange) > tmDelayStateChange) {
+            tmStateChange = tmMillis;
+            startPlaying();
+            scriptState = 3;
+        }
+        if (scriptState >= 3 && (tmMillis - tmStateChange) > tmDelayStateChange) {
+            std::vector<effectbase*> pluginsDeferred;
+            tls.host->getDeferredEffects(pluginsDeferred);
+            if (!pluginsDeferred.empty()) {
+                auto idx = rnd.rng_bits(8)%pluginsDeferred.size();
+                auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[idx]);
+                effectbase* pluginLoaded;
+                ThreadLock lock = getPlayThread()->lockThread();
+                tls.host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
+            } else {
+                scriptState = 10;
+            }
+            tmStateChange = getTimeMillis();
+            scriptState++;
+            if (scriptState >= 10) {
+                scriptState = 0;
+            }
+        }
     }
     
     if (canOpenAutosave && tls.mainCtrl) {
