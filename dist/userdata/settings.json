@@ -1,20 +1,87 @@
 {
     "value0": {
+        "window.main": {
+            "grid": {
+                "value0": true,
+                "value1": false,
+                "value2": 2,
+                "value3": 3
+            },
+            "position": {
+                "value0": true,
+                "value1": 2,
+                "value2": 3,
+                "value3": -1,
+                "value4": -1,
+                "value5": -1,
+                "value6": -1,
+                "value7": 64,
+                "value8": 64,
+                "value9": 1362,
+                "value10": 831
+            }
+        },
+        "window.companion": {
+            "grid": {
+                "value0": true,
+                "value1": false,
+                "value2": 2,
+                "value3": 3
+            },
+            "position": {
+                "value0": false,
+                "value1": 0,
+                "value2": 0,
+                "value3": 0,
+                "value4": 0,
+                "value5": 0,
+                "value6": 0,
+                "value7": 0,
+                "value8": 0,
+                "value9": 0,
+                "value10": 0
+            }
+        },
         "grid": {
             "value0": true,
             "value1": false,
             "value2": 5,
             "value3": 3
         },
-        "iosettings": {
+        "io": {
             "samplerate": 44100,
             "blocksize": 512,
+            "device_api": "Windows DirectSound",
+            "io_midi": [],
+            "io_audio": [],
+            "io_asio": {
+                "deviceName": "",
+                "inputs": [],
+                "outputs": []
+            },
+            "io_channels": [],
             "internalSamplerate": 44100,
-            "internalBlocksize": 512,
-            "device_api": "ASIO"
+            "internalBlocksize": 512
         },
-        "startEngine": true,
-        "pluginPath": "C:/Program Files/Steinberg/VstPlugins",
-        "vmmode": false
+        "startengine": true,
+        "plugins": {
+            "vst2.path": "C:\\Program Files\\Steinberg\\VstPlugins",
+            "vst2.config": {
+                "uidRemapping": []
+            }
+        },
+        "vmmode": false,
+        "recentfiles": {
+            "sorted": [],
+            "files": []
+        },
+        "pathmapping": {
+            "pathRemapping": []
+        },
+        "shaderDebug": false,
+        "autosave": {
+            "saveDelay": 60,
+            "reminderDelay": 5
+        }
     }
 }
