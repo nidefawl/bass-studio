@@ -140,6 +140,12 @@ void gui_clipsettings::showEditClip() {
         clipTimeStartOffsetTicks.setRef(nullptr);
         clipAudioId.setRef(nullptr);
     }
+    auto project = project_controller_t::get();
+    if (project) {
+        auto& settings = project->getQuantizeSettings();
+        quantization.setQuantization(settings.quantizeStart, settings.quantizeEnd);
+
+    }
 }
 
 

@@ -206,6 +206,10 @@ public:
         nvgRestore(vg);
     }
     void buttonClicked(guibase* button) override;
+    void setQuantization(tick_t start, tick_t end) {
+        tickStart = start;
+        tickEnd   = end;
+    }
 };
 
 
