@@ -9,7 +9,10 @@
                     "value1": 0,
                     "value2": -1,
                     "value3": 0,
-                    "value4": []
+                    "value4": [],
+                    "splitterPositions": [
+                        0.5
+                    ]
                 }
             }
         },
@@ -22,7 +25,10 @@
                     "value1": 0,
                     "value2": -1,
                     "value3": 0,
-                    "value4": []
+                    "value4": [],
+                    "splitterPositions": [
+                        0.7858901023864746
+                    ]
                 }
             }
         },

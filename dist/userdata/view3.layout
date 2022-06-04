@@ -51,10 +51,14 @@
                                                 }
                                             }
                                         }
-                                    ]
+                                    ],
+                                    "splitterPositions": []
                                 }
                             }
                         }
+                    ],
+                    "splitterPositions": [
+                        0.5
                     ]
                 }
             }
@@ -109,7 +113,8 @@
                                 }
                             }
                         }
-                    ]
+                    ],
+                    "splitterPositions": []
                 }
             }
         },
