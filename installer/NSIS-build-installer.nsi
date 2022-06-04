@@ -10,10 +10,10 @@ Unicode True
 !define DIST_LOC "C:\Users\Michael\daw\dist\bin"
 !endif
 !ifndef APP_VERSION
-!define APP_VERSION "0.4.5.1"
+!define APP_VERSION "undefined"
 !endif
 !ifndef PRODUCT_VERSION
-!define PRODUCT_VERSION "0.4.5.1"
+!define PRODUCT_VERSION "undefined"
 !endif
 !define APP_SHORTNAME "daw"
 !define APP_NAME "DAW"
