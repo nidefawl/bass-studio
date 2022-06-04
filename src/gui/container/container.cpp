@@ -108,7 +108,7 @@ void guictr_base::renderBackground(NVGcontext* vg) {
 }
 
 void guictr_base::renderFrameBase(NVGcontext* vg) {
-    ivec2 sizeContent = getSizeContent();
+    ivec2 sizeContent = size;
     nvgBeginPath(vg);
     nvgRect(vg, 0, 0, sizeContent.x, sizeContent.y);
     nvgFillColor(vg, theme->getFrameColorBase());
@@ -116,7 +116,7 @@ void guictr_base::renderFrameBase(NVGcontext* vg) {
 }
 
 void guictr_base::renderFrameOutline(NVGcontext* vg) {
-    ivec2 sizeContent = getSizeContent();
+    ivec2 sizeContent = size;
     nvgBeginPath(vg);
     nvgRect(vg, 0, 0, sizeContent.x, sizeContent.y);
     nvgStrokeColor(vg, theme->getFrameColorOutline());
@@ -133,19 +133,21 @@ void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, Strin
     } else {
         c = theme->getColor(GuiColor::COL_PLUG_TITLE);
     }
-    const int32_t hpt = theme->get(constantHeight);
+    const auto hpt = theme->get(constantHeight);
     if (hpt <= 0) {
         return;
     }
     nvgBeginPath(vg);
     float textMaxWidth;
+    ivec2 posInset  = getPosContent();
     if (isHorizontalTitle) {
         nvgRect(vg, 0, 0, sizeContent.x, hpt);
         textMaxWidth = size.x - INSET_TITLE * 2;
         for (auto* gui : guis) {
-            if (gui->top() < hpt && gui->bottom() > 0) {
-                if (gui->left() > textOffsetX) {
-                    textMaxWidth = math::min<float>(textMaxWidth, gui->left() - INSET_TITLE * 2);
+            if (gui->isVisible() && gui->top()+posInset.y < hpt && gui->bottom()+posInset.y > 0) {
+                if (gui->left()+posInset.x <= textOffsetX) {
+                    float w = size.x - INSET_TITLE;
+                    textMaxWidth = math::min<float>(textMaxWidth, w - (gui->right()+posInset.x + INSET_TITLE));
                 }
             }
         }
@@ -154,9 +156,9 @@ void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, Strin
         nvgRect(vg, 0, 0, hpt, sizeContent.y);
         textMaxWidth = textOffsetX - (INSET_TITLE * 2.0f);
         for (auto* gui : guis) {
-            if (gui->left() < hpt && gui->right() > 0) {
-                if (gui->bottom() < textOffsetX) {
-                    textMaxWidth = math::min<float>(textMaxWidth, math::max(0.0f, textOffsetX - (gui->bottom() + INSET_TITLE * 2)));
+            if (gui->isVisible() && gui->left()+posInset.x < hpt && gui->right()+posInset.x > 0) {
+                if (gui->bottom()+posInset.y < textOffsetX) {
+                    textMaxWidth = math::min<float>(textMaxWidth, math::max(0.0f, textOffsetX - (gui->bottom()+posInset.y + INSET_TITLE * 2)));
                 }
             }
         }
@@ -167,7 +169,6 @@ void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, Strin
         return;
     }
     if (text[0]) {
-        // const auto contrastColor = getContrastFontColorNvg(c);
         const auto fontScaled = hpt * 0.8f;
         if (isHorizontalTitle) {
             nvgSave(vg);

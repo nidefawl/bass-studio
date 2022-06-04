@@ -80,6 +80,7 @@ public:
     bool isSelected() override;
     void addProperties(Table::tbl* table) override;
     void addPropertiesTooltip(Table::tbl& table);
+    bool setScissorTransformContainer(NVGcontext* vg) override;
 };
 
 class guidropdown_select_program : public guictxtmenu {

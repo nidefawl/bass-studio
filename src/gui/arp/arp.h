@@ -8,6 +8,7 @@
 #include "gui/controls/button.h"
 #include "gui/controls/knob.h"
 #include "host/midiarp.h"
+#include "math/seq_math.h"
 
 class gui_arp : public guictr_base {
     class guiknob_arp : public guiknob {
@@ -40,7 +41,7 @@ public:
         : clipview(_clipview) {
         padding = 2;
         margin  = 0;
-        text    = "Arpeggiator";
+        text    = "Synth";
         setCanMouseHit(true);
         add(&buttonBypass);
         auto outIt = std::begin(knobs);
@@ -89,18 +90,32 @@ public:
     ~gui_arp() override {
         removeGuis();
     }
+    bool setScissorTransformContainer(NVGcontext* vg) override {
+        ivec2 sizeInset = getSizeContent();
+        if (sizeInset.y <= 0 || sizeInset.x <= 0) {
+            return false;
+        }
+        nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
+        nvgTranslate(vg, pos.x, pos.y);
+        return true;
+    }
     void render(NVGcontext* vg) override {
         if (!setScissorTransformContainer(vg)) {
             return;
         }
-        ivec2 cs = getSizeContent();
         renderFrameBase(vg);
-        int flags = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : 0;
-        renderTitleBar(vg, cs, this->text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, buttonBypass.right(), flags, true);
+        int flags = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : TITLEBAR_FLG_NONE;
+        if (isSelected()) flags |= TITLEBAR_FLG_SELECTED;
+        renderTitleBar(vg, size, this->text, GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, buttonBypass.right(), flags, true);
         renderFrameOutline(vg);
-        buttonBypass.render(vg);
+        if (buttonBypass.isVisible())
+            buttonBypass.render(vg);
+        ivec2 posInset  = getPosContent();
+        nvgTranslate(vg, posInset.x-pos.x, posInset.y-pos.y);
+        nvgTranslateZ(vg, -4.0f);
         auto* arp = getArp();
         if (arp) {
+            ivec2 cs = getSizeContent();
             for (guiknob* knob : knobs) {
                 knob->render(vg);
             }
@@ -133,11 +148,11 @@ public:
     }
 
     void layout() override {
-        const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
-        int buttonSize    = hpt * 0.8;
-        int32_t inset1    = (hpt - buttonSize) / 2;
-        buttonBypass.size = { buttonSize, buttonSize };
-        buttonBypass.pos  = { inset1, inset1 };
+        const auto hpt = static_cast<float>(theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT));
+        auto buttonSize = hpt * 0.8f;
+        auto inset1 = (hpt - buttonSize) * 0.5f;
+        buttonBypass.size = ivec2(math::roundfS32(buttonSize));
+        buttonBypass.pos = ivec2(math::roundfS32(inset1));
         buttonBypass.setRadius(hpt / 3.f);
 
         guiknob* knobPrev = nullptr;

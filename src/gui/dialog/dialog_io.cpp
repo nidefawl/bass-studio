@@ -219,14 +219,28 @@ public:
         remove(&btnTrackType);
     }
 
+    bool setScissorTransformContainer(NVGcontext* vg) override {
+        ivec2 sizeInset = getSizeContent();
+        if (sizeInset.y <= 0 || sizeInset.x <= 0) {
+            return false;
+        }
+        nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
+        nvgTranslate(vg, pos.x, pos.y);
+        return true;
+    }
+
     void render(NVGcontext* vg) override {
         if (!setScissorTransformContainer(vg)) {
             return;
         }
         renderFrameBase(vg);
         int flags = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : 0;
-        renderTitleBar(vg, getSizeContent(), this->label, GuiConstant::CONST_SMALL_LABEL_HEIGHT, getSizeContent().y, flags, false);
+        if (isSelected()) flags |= TITLEBAR_FLG_SELECTED;
+        renderTitleBar(vg, size, this->label, GuiConstant::CONST_SMALL_LABEL_HEIGHT, size.y, flags, false);
         renderFrameOutline(vg);
+        ivec2 posInset  = getPosContent();
+        nvgTranslate(vg, posInset.x-pos.x, posInset.y-pos.y);
+        nvgTranslateZ(vg, -4.0f);
         for (auto c : guis) {
             if (c->isVisible()) {
                 nvgSave(vg);

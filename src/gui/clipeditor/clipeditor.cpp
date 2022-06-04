@@ -1401,10 +1401,9 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                 edit    = true;
                 desc    = "Paste notes";
             } else if (isKC(KC_QUANTIZE, kevt) && !notes.selection.empty()) {
-                const bool quantizeEnds = true;
-                tick_t qLen     = grid.getTickLength();
-                if (qLen) {
-                    log_lf(Log::L_DEBUG, "quantize to %d\n", qLen);
+                auto& settings = project_controller_t::get()->getQuantizeSettings();
+                if (settings.quantizeStart > 0 || settings.quantizeEnd > 0) {
+                    log_lf(Log::L_DEBUG, "quantize to %d %d\n", settings.quantizeStart, settings.quantizeEnd);
                     /* Quantize notes to grid 
                      * 1. cut notes from clip
                      * 2. quantize notes in isolation
@@ -1416,9 +1415,11 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                     notes.clearSelection();
                     view.copySelectedNoteList();
                     view.draggedSelection.clear();
-                    quantizeNoteStartTime(tmpClipboard.m_list, qLen);
-                    if (quantizeEnds) {
-                        quantizeNoteEndTime(tmpClipboard.m_list, qLen);
+                    if (settings.quantizeStart > 0) {
+                        quantizeNoteStartTime(tmpClipboard.m_list, settings.quantizeStart);
+                    }
+                    if (settings.quantizeEnd > 0) {
+                        quantizeNoteEndTime(tmpClipboard.m_list, settings.quantizeEnd);
                     }
                     bool bRemovedNotes = cutSelfIntersecting(tmpClipboard.m_list);
                     if (bRemovedNotes) {

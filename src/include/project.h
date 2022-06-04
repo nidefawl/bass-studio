@@ -10,6 +10,11 @@ struct export_settings_t {
     bool isLocked     = false;
 };
 
+struct quantize_settings {
+    tick_t quantizeStart = 0;
+    tick_t quantizeEnd = 0;
+};
+
 struct project_globals_t {
     /** (synced but not mutex locked) */
     tick_t loopStart = 0;

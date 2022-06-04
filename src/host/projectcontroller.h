@@ -7,6 +7,7 @@ class project_controller_t {
     project_t* project;
     project_globals_t* projectGlobals;
     export_settings_t exportSettings;
+    quantize_settings quantizeSettings;
 
 public:
     project_controller_t(project_t* const _project, project_globals_t* const _projectGlobals)
@@ -68,12 +69,13 @@ public:
         }
     }
     project_globals_t& getGlobals() {
-
         return *projectGlobals;
     }
     export_settings_t& getExportSettings() {
-
         return exportSettings;
+    }
+    quantize_settings& getQuantizeSettings() {
+        return quantizeSettings;
     }
     trackallcontainer_t& getTracks() {
         return project->trackList;

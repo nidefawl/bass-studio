@@ -1,6 +1,7 @@
 #include "plugin.h"
 #include <nanovg.h>
 #include <memory>
+#include "guiglobals.h"
 #include "snapshot.h"
 #include "str_util.h"
 #include "logging.h"
@@ -191,14 +192,15 @@ void guiplugin::rightClicked(MouseEvent& evt, guibase* button) {
     }
 }
 void guiplugin::layout() {
-    const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
-    int buttonSize    = hpt * 0.8;
-    int32_t inset1    = (hpt - buttonSize) / 2;
-    ivec2 btnPos      = { inset1, inset1 };
+    const auto hpt = static_cast<float>(theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT));
+    auto buttonSize = hpt * 0.8f;
+    auto inset1 = (hpt - buttonSize) * 0.5f;
+    auto btnPos = ivec2(math::roundfS32(inset1));
+    auto iButtonSize = math::roundfS32(buttonSize);
     buttonLayout.pos  = btnPos;
-    btnPos[isHorizontalTitle ? 0 : 1] += buttonSize;
+    btnPos[isHorizontalTitle ? 0 : 1] += iButtonSize;
     for (auto btn : guiButtonsTitlebar) {
-        btn->size = { buttonSize, buttonSize };
+        btn->size = { iButtonSize, iButtonSize };
         btn->setRadius(hpt / 3.f);
         if (btn == &buttonLayout) {
             continue;
@@ -207,7 +209,7 @@ void guiplugin::layout() {
             continue;
         }
         btn->pos = btnPos;
-        btnPos[isHorizontalTitle ? 0 : 1] += buttonSize;
+        btnPos[isHorizontalTitle ? 0 : 1] += iButtonSize;
     }
     if (isHorizontalTitle) {
         buttonDelete.pos = { size.x - buttonDelete.size.x - inset1, inset1 };
@@ -235,17 +237,32 @@ void guiplugin::layout() {
         btn->layout();
     }
 }
+bool guiplugin::setScissorTransformContainer(NVGcontext* vg) {
+    ivec2 sizeInset = getSizeContent();
+    if (sizeInset.y <= 0 || sizeInset.x <= 0) {
+        return false;
+    }
+    nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
+    nvgTranslate(vg, pos.x, pos.y);
+    return true;
+}
+
 void guiplugin::renderBase(NVGcontext* vg) {
     if (!setScissorTransformContainer(vg)) {
         return;
     }
     renderFrameBase(vg);
-    int flags = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : TITLEBAR_FLG_NONE;
-    if (isSelected()) {
-        flags |= TITLEBAR_FLG_SELECTED;
-    }
-    renderTitleBar(vg, getSizeContent(), this->text, GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, titlePosX, flags, isHorizontalTitle);
+    int flags = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : 0;
+    if (isSelected()) flags |= TITLEBAR_FLG_SELECTED;
+    renderTitleBar(vg, size, this->text, GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, titlePosX, flags, isHorizontalTitle);
     renderFrameOutline(vg);
+    for (auto* btn : guiButtonsTitlebar) {
+        if (btn->isVisible())
+            btn->render(vg);
+    }
+    ivec2 posInset  = getPosContent();
+    nvgTranslate(vg, posInset.x-pos.x, posInset.y-pos.y);
+    nvgTranslateZ(vg, -4.0f);
 }
 
 void guiplugin::handleDraggedMove(MouseEvent& evt) {
@@ -764,10 +781,6 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
 }
 void guipluginview::render(NVGcontext* vg) {
     renderBase(vg);
-    for (auto* btn : guiButtonsTitlebar) {
-        if (btn->isVisible())
-            btn->render(vg);
-    }
     if (layoutMode != 1) {
         for (auto* ctr : viewCtrs) {
             if (ctr->isVisible()) {
@@ -859,11 +872,6 @@ void guipluginview::buttonClicked(guibase* _button) {
 }
 void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
     const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
-//    buttonOpenEditor.size = buttonBypass.size;
-//    buttonOpenEditor.setRadius(buttonBypass.radius);
-//    buttonOpenEditor.pos.y = inset1;
-//    buttonOpenEditor.pos.x = buttonBypass.right();
-//    titlePosX              = buttonOpenEditor.right();
     contentS.x         = math::max(64, contentS.x);
     contentS.y         = math::max(64, contentS.y);
     int32_t insetCtrls = INSET_TITLE;

@@ -50,7 +50,7 @@ using floating_t = float;
 const float fLineWidth     = 4.0f;
 const float nodePortRadius = 6.0f;
 const auto colEdgeSignal   = NVGcolor{ 0.1f, 0.6f, 0.1f, 1.0f };
-const auto GRAPH_NODE_SIZE = vec2(200);
+const auto GRAPH_NODE_SIZE = vec2(260);
 const auto GRAPH_FONT_SIZE = 16;
 const auto GRAPH_NODE_METER_WIDTH = 8;
 
@@ -155,38 +155,38 @@ void gui_graph_entry::handleDraggedRelease(MouseEvent& evt) {
 }
 
 bool gui_graph_entry::setScissorTransformContainer(NVGcontext* vg) {
-    ivec2 posInset  = getPosContent();
     ivec2 sizeInset = getSizeContent();
     if (sizeInset.y <= 0 || sizeInset.x <= 0) {
         return false;
     }
-    nvgTranslate(vg, posInset.x, posInset.y);
+    nvgTranslate(vg, pos.x, pos.y);
     return true;
 }
 void gui_graph_entry::render(NVGcontext* vg) {
-
     if (!setScissorTransformContainer(vg)) {
         return;
     }
     renderFrameBase(vg);
     String text = getText();
     int flags   = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : 0;
-    renderTitleBar(vg, getSizeContent(), text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, 0, flags, true);
+    if (isSelected()) flags |= TITLEBAR_FLG_SELECTED;
+    renderTitleBar(vg, size, text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, nodePortRadius*0.6f, flags, true);
     renderFrameOutline(vg);
+    ivec2 posInset  = getPosContent();
+    nvgTranslate(vg, posInset.x-pos.x, posInset.y-pos.y);
+    nvgTranslateZ(vg, -4.0f);
     for (guibase* gui : guis) {
         nvgSave(vg);
         gui->render(vg);
         nvgRestore(vg);
     }
     nvgSave(vg);
-
-    int32_t inset                   = 4;
-    int32_t i2                      = inset * 2;
+    int32_t i2                      = padding * 2;
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     int32_t h                       = TRACK_HEIGHT_STEP - i2;
     setFont(vg, G_FONT_SCALE(h), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     for (guibase* gui : guis) {
-        nvgText(vg, i2, gui->top() + G_FONT_MIDDLE_OFFSET(gui->size.y), StringAsCStr(gui->label), nullptr);
+        renderText(vg, vec2(i2, gui->top() + gui->size.y * 0.5f), vec2(gui->pos.x-i2, size.y), gui->label, TRACK_HEIGHT_STEP);
     }
     nvgRestore(vg);
 }
@@ -417,7 +417,7 @@ public:
       graphImpl(_graphImpl),
       node(_node)
     {
-        padding = 0;
+        // padding = 0;
         setPorts();
         (void)graphImpl;
     }
@@ -447,8 +447,8 @@ public:
 
     void layout() override {
         const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
-        vec2 pos  = vec2(0);
-        vec2 size = getSizeContent();
+        vec2 pos  = -vec2(paddingTL(padding));
+        vec2 size = vec2(this->size);
         int inputIndex = 0;
         int outputIndex   = 0;
         for (auto port : guiPorts) {
@@ -1233,16 +1233,16 @@ void gui_graph::updateList(bool resetPositions) {
             }
             if (meterOut) {
                 meterOut->size = { meterWidth, entry->getSizeContent().y - hpt };
-                meterOut->pos  = { entry->getSizeContent().x - meterOut->size.x - nodePortRadius * 2.0f, hpt };
+                meterOut->pos  = { entry->getSizeContent().x - meterOut->size.x, hpt };
                 entry->add(meterOut);
-                guiText->size.x -= meterOut->size.x + nodePortRadius * 2.0f;
+                guiText->size.x -= meterOut->size.x;
             }
             if (meterIn) {
                 meterIn->size = { meterWidth, entry->getSizeContent().y - hpt };
-                meterIn->pos  = { nodePortRadius * 2, hpt };
+                meterIn->pos  = { 0, hpt };
                 entry->add(meterIn);
-                guiText->size.x -= meterIn->size.x + nodePortRadius * 2.0f;
-                guiText->pos.x += meterIn->size.x + nodePortRadius * 2.0f;
+                guiText->size.x -= meterIn->size.x;
+                guiText->pos.x += meterIn->size.x;
             }
             if (node->type == DAW::track_node_type_t::EFFECT && node->effectOptional) {
                 auto intEffect = dynamic_cast<internalplugin*>(node->effectOptional);

@@ -543,6 +543,7 @@ public:
 
     virtual void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) = 0;
     virtual guictr_tracks* getTrackContainer() = 0;
+    virtual guictr_clipeditor* getClipEditor() = 0;
     virtual guictr_nodes_splitview* getNodesContainer() = 0;
     virtual void onPluginSelected();
 };
@@ -606,6 +607,7 @@ public:
     void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) override;
     guictr_tracks* getTrackContainer() override;
     guictr_nodes_splitview* getNodesContainer() override;
+    guictr_clipeditor* getClipEditor() override;
 };
 
 class CompanionCtrl : public DawCtrl {
@@ -643,4 +645,5 @@ public:
     void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) override;
     guictr_tracks* getTrackContainer() override;
     guictr_nodes_splitview* getNodesContainer() override;
+    guictr_clipeditor* getClipEditor() override;
 };

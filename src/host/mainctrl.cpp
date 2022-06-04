@@ -1732,6 +1732,7 @@ std::shared_ptr<project_file> DawInstance::createProjectFile() {
     project.copyTo(file->project);
     file->project.globals        = projectGlobals;
     file->project.exportSettings = getExportSettings();
+    file->project.quantizeSettings = getQuantizeSettings();
     tls.audioCache->store(file->sampleFileIndex);
     if (tls.mainCtrl) {
         file->layout.layoutGrid    = tls.mainCtrl->grid;
@@ -1781,6 +1782,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
     project.copyFrom(file->project);
     projectGlobals      = file->project.globals;
     getExportSettings() = file->project.exportSettings;
+    getQuantizeSettings() = file->project.quantizeSettings;
 
 
     /** create all audio instances **/
@@ -1976,6 +1978,14 @@ guictr_tracks* MainCtrl::getTrackContainer() {
 
 guictr_nodes_splitview* MainCtrl::getNodesContainer() {
     return &view->ctr_nodes;
+}
+
+guictr_clipeditor* MainCtrl::getClipEditor() {
+    return &view->ctr_clipeditor;
+}
+
+guictr_clipeditor* CompanionCtrl::getClipEditor() {
+    return &view->ctr_clipeditor;
 }
 
 guictr_tracks* CompanionCtrl::getTrackContainer() {

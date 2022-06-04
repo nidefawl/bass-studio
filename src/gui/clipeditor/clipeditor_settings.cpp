@@ -1,6 +1,8 @@
 #include <algorithm>
 #include "clipeditor.h"
 
+#include "event.h"
+#include "guiconstant.h"
 #include "math/seq_math.h"
 #include "seq_time.h"
 #include "gui/gui.h"
@@ -25,9 +27,12 @@ gui_clipsettings::gui_clipsettings(scaled_grid&, clip_view& _view)
       clipTimeLen(nullptr, true),
       clipTimeStartOffsetTicks(nullptr, true),
       clipTimeStartOffsedSamples(nullptr),
-      clipAudioId(nullptr) {
+      clipAudioId(nullptr),
+      quantization()
+    {
     padding          = 2;
     margin           = 0;
+    setCanMouseHit(true);
     btnLoop.drawFn   = drawTextureSymbol;
     btnLoop.drawParm = ICON_LOOP;
     btnLoop.setFlag(FLG_RENDER_BUTTON_WITH_LED, true);
@@ -59,6 +64,7 @@ gui_clipsettings::gui_clipsettings(scaled_grid&, clip_view& _view)
     add(&clipAudioId);
     add(&btnDuplicateLoop);
     add(&btnSelectMuted);
+    add(&quantization);
 }
 
 gui_clipsettings::~gui_clipsettings() {
@@ -123,14 +129,6 @@ void gui_clipsettings::showEditClip() {
         clipTimeLen.setRef(&clip->getLenRef());
         clipTimeStartOffsetTicks.setRef(&clip->offsetStart);
         clipAudioId.setRef(&clip->audio.id);
-//        if (clip->noLayout) {
-//            grid.showRange(clip->offsetStart, clip->offsetStart + clip->len);
-//            zoomPianoRollToClipsNoteRange();
-//        } else {
-//            clip_editor_layout_t& layout = clip->editorLayout;
-//            grid.setLayout(layout.layoutGrid);
-//            setLayout(layout.layoutPianoRoll);
-//        }
     } else {
 
         btnLoop.setStateRef(nullptr);
@@ -146,9 +144,8 @@ void gui_clipsettings::showEditClip() {
 
 
 void gui_clipsettings::render(NVGcontext* vg) {
-    if (!setScissorTransformContainer(vg)) {
-        return;
-    }
+    nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
+    nvgTranslate(vg, pos.x, pos.y);
     renderFrameBase(vg);
 
     String text = "Clip properties";
@@ -158,8 +155,12 @@ void gui_clipsettings::render(NVGcontext* vg) {
         text = clip->name;
     }
     int flags = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : 0;
-    renderTitleBar(vg, getSizeContent(), text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, 0, flags, true);
+    if (isSelected()) flags |= TITLEBAR_FLG_SELECTED;
+    renderTitleBar(vg, size, text, GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, 0, flags, true);
     renderFrameOutline(vg);
+    ivec2 posInset  = getPosContent();
+    nvgTranslate(vg, posInset.x-pos.x, posInset.y-pos.y);
+    nvgTranslateZ(vg, -4.0f);
     for (guibase* gui: guis) {
         nvgSave(vg);
         gui->render(vg);
@@ -169,43 +170,59 @@ void gui_clipsettings::render(NVGcontext* vg) {
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     nvgSave(vg);
     nvgTranslate(vg, 0, 0);
-    int32_t inset = 4;
-    int32_t i2    = inset * 2;
     for (guibase* gui: guis) {
         if (gui == &clipTimeStartOffsedSamples) break;
-        renderText(vg, vec2(i2, gui->top() + gui->size.y * 0.5), vec2(gui->pos.x-i2, size.y), gui->label, TRACK_HEIGHT_STEP);
+        renderText(vg, vec2(0, gui->top() + gui->size.y * 0.5), vec2(gui->pos.x-padding*2, size.y), gui->label, TRACK_HEIGHT_STEP);
     }
     nvgRestore(vg);
 }
 
 void gui_clipsettings::layout() {
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-    int32_t inset                   = 4;
     int32_t w                       = getSizeContent().x;
-    int32_t btnW                    = (w-inset*3)/2;
+    int32_t btnW                    = (w-padding)/2;
     int32_t btnH = TRACK_HEIGHT_STEP;
-    int32_t btnX = inset + btnW + inset;
+    int32_t btnX = btnW + padding/2;
     btnLoop.size                    = ivec2(btnW, btnH);
-    btnLoop.pos                     = ivec2(btnX, inset + theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT));
+    btnLoop.pos                     = ivec2(btnX, padding + theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT));
     clipLoopStart.size              = ivec2(btnW, btnH);
-    clipLoopStart.pos               = ivec2(btnLoop.left(), btnLoop.bottom() + inset);
+    clipLoopStart.pos               = ivec2(btnLoop.left(), btnLoop.bottom() + padding);
     clipLoopLen.size                = ivec2(btnW, btnH);
-    clipLoopLen.pos                 = ivec2(clipLoopStart.left(), clipLoopStart.bottom() + inset);
+    clipLoopLen.pos                 = ivec2(clipLoopStart.left(), clipLoopStart.bottom() + padding);
     clipTimeStart.size              = ivec2(btnW, btnH);
-    clipTimeStart.pos               = ivec2(clipLoopLen.left(), clipLoopLen.bottom() + inset);
+    clipTimeStart.pos               = ivec2(clipLoopLen.left(), clipLoopLen.bottom() + padding);
     clipTimeLen.size                = ivec2(btnW, btnH);
-    clipTimeLen.pos                 = ivec2(clipTimeStart.left(), clipTimeStart.bottom() + inset);
+    clipTimeLen.pos                 = ivec2(clipTimeStart.left(), clipTimeStart.bottom() + padding);
     clipTimeStartOffsetTicks.size   = ivec2(btnW, btnH);
-    clipTimeStartOffsetTicks.pos    = ivec2(clipTimeStart.left(), clipTimeLen.bottom() + inset);
+    clipTimeStartOffsetTicks.pos    = ivec2(clipTimeStart.left(), clipTimeLen.bottom() + padding);
     clipTimeStartOffsedSamples.size = ivec2(btnW, btnH);
-    clipTimeStartOffsedSamples.pos  = ivec2(inset, clipTimeStartOffsetTicks.bottom() + inset);
+    clipTimeStartOffsedSamples.pos  = ivec2(0, clipTimeStartOffsetTicks.bottom() + padding);
     clipAudioId.size                = ivec2(btnW, btnH);
-    clipAudioId.pos                 = ivec2(clipTimeStartOffsedSamples.right() + inset, clipTimeStartOffsetTicks.bottom() + inset);
-    btnDuplicateLoop.pos            = ivec2(inset, clipAudioId.bottom() + inset);
-    btnDuplicateLoop.size           = ivec2(w - inset * 2, btnH);
-    btnSelectMuted.pos              = ivec2(inset, btnDuplicateLoop.bottom() + inset);
-    btnSelectMuted.size             = ivec2(w - inset * 2, btnH);
+    clipAudioId.pos                 = ivec2(clipTimeStartOffsedSamples.right() + padding, clipTimeStartOffsetTicks.bottom() + padding);
+    btnDuplicateLoop.pos            = ivec2(0, clipAudioId.bottom() + padding);
+    btnDuplicateLoop.size           = ivec2(w, btnH);
+    btnSelectMuted.pos              = ivec2(0, btnDuplicateLoop.bottom() + padding);
+    btnSelectMuted.size             = ivec2(w, btnH);
+    quantization.pos                = ivec2(quantization.margin, btnSelectMuted.bottom()+quantization.margin*2);
+    quantization.size               = ivec2(w - quantization.margin*2, (btnH*3+quantization.padding*5));
     for (guibase* gui: guis) {
         gui->layout();
+    }
+}
+
+void gui_quantizationsettings::buttonClicked(guibase* button) {
+    if (&inputEnds == button) {
+        tickEnd = math::max(0, tickEnd);
+        auto& settings = project_controller_t::get()->getQuantizeSettings();
+        settings.quantizeEnd = inputEnds.getTime();
+    } else if (&inputStarts == button) {
+        tickStart = math::max(0, tickStart);
+        auto& settings = project_controller_t::get()->getQuantizeSettings();
+        settings.quantizeStart = inputStarts.getTime();
+    }
+    if (&btnQuantize == button) {
+        auto keyComboQuantize = KC_QUANTIZE;
+        KeyEvent kevt{KeyEventType::K_PRESS, keyComboQuantize.keyCode, 0, keyComboQuantize.keyMod, keyComboQuantize.keyChar};
+        dawCtrl->getClipEditor()->handleKeyInput(kevt);
     }
 }

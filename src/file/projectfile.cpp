@@ -406,12 +406,19 @@ void serialize(Archive& archive, export_settings_t& m) {
 }
 
 template<class Archive>
+void serialize(Archive& archive, quantize_settings& m) {
+    archive(make_nvp("start", m.quantizeStart),
+            make_nvp("end", m.quantizeEnd));
+}
+
+template<class Archive>
 void serialize(Archive& archive, project_snapshot_t& m) {
     archive(make_nvp("masterTracks", m.trackMasterCtr),
             make_nvp("returnTracks", m.trackReturnCtr),
             make_nvp("tracks", m.trackCtr),
             make_nvp("globals", m.globals),
             make_nvp("exportSettings", m.exportSettings));
+    make_optional_nvp(archive, "quantizeSettings", m.quantizeSettings);
 };
 
 template<class Archive>

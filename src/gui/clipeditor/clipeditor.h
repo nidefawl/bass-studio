@@ -141,22 +141,71 @@ public:
 class gui_quantizationsettings : public guictr_base {
     tick_t tickStart = 0;
     tick_t tickEnd = 0;
-    guibase labelStart;
     gui_timeinput inputStarts;
     gui_timeinput inputEnds;
+    guibutton btnQuantize;
 public:
     gui_quantizationsettings()
         : guictr_base(),
-        labelStart(),
         inputStarts(&tickStart, true),
         inputEnds(&tickEnd, true)
     {
-        labelStart.setLabel("Start");
-        setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
+        padding = 4;
+        setLabel("Quantize");
+        setBackgroundRendered(true);
+        setBackgroundRenderedInset(true);
+        setFlag(FLG_RENDER_LABEL, true);
+        padding = 2;
+        inputStarts.setLabel("Start");
+        inputEnds.setLabel("End");
+        btnQuantize.setText("Quantize");
+        add(&inputStarts);
+        add(&inputEnds);
+        add(&btnQuantize);
     }
     ~gui_quantizationsettings() override {
         removeGuis();
     }
+    void layout() override {
+        const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+
+        int32_t w                       = getSizeContent().x;
+        int32_t btnW                    = (w-padding*3)/2;
+        int32_t btnH = TRACK_HEIGHT_STEP;
+        int32_t btnX = padding + btnW + padding;
+        inputStarts.size = ivec2(btnW, btnH);
+        inputEnds.size   = ivec2(btnW, btnH);
+        btnQuantize.size   = ivec2(w-padding*2, btnH);
+        inputStarts.pos  = ivec2(btnX, 0);
+        inputEnds.pos    = ivec2(btnX, btnH + padding);
+        btnQuantize.pos    = ivec2(padding, (btnH*2 + padding*2));
+        for (guibase* gui : guis) {
+            gui->layout();
+        }
+    }
+    void render(NVGcontext* vg) override {
+        if (isBackgroundRendered()) {
+            renderBackground(vg);
+        }
+        if (!setScissorTransform(vg)) {
+            return;
+        }
+        for (guibase* gui: guis) {
+            nvgSave(vg);
+            gui->render(vg);
+            nvgRestore(vg);
+        }
+
+        const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+        nvgSave(vg);
+        nvgTranslate(vg, 0, 0);
+        int32_t i2 = padding * 2;
+        for (guibase* gui: guis) {
+            renderText(vg, vec2(i2, gui->top() + gui->size.y * 0.5f), vec2(gui->pos.x-i2, size.y), gui->label, TRACK_HEIGHT_STEP);
+        }
+        nvgRestore(vg);
+    }
+    void buttonClicked(guibase* button) override;
 };
 
 
@@ -174,6 +223,7 @@ public:
     gui_numberinput_i32 clipAudioId;
     guibutton btnDuplicateLoop;
     guibutton btnSelectMuted;
+    gui_quantizationsettings quantization;
     gui_clipsettings(scaled_grid& _grid, clip_view& _view);
     ~gui_clipsettings() override;
     void render(NVGcontext* vg) override;

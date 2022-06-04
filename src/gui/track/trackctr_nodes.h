@@ -39,6 +39,7 @@ protected:
 public:
     gui_graph_entry() : guictr_base() {
         setCanMouseHit(true);
+        // padding *= 3;
     }
     ~gui_graph_entry() override = default;
     bool contains(ivec2 mpos) const override {
