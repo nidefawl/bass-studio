@@ -400,7 +400,7 @@ public:
         if (frameCountFPS > 0 && tmNow - tmLastFps >= 1000) {
             float fps = frameCountFPS*1000.0f / static_cast<float>(tmNow - tmLastFps);
             fpsStats = StringFormat("%.2f fps, %f", fps, static_cast<double>(tmLastDrawMicros)/1.0e6);
-            glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
+            // glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
             tmLastFps    = tmNow;
             frameCountFPS = 0;
         }
