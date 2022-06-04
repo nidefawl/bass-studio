@@ -54,7 +54,6 @@ String tickAsBeatString(tick_t tick, bool isRelative) {
     return beatBarNthToString(tickToBarBeat16th(tick, 4, 2, isRelative), isRelative);
 }
 String beatBarNthToString(const beatbar16th_t& beatBarNth, bool isRelative) {
-    log_lf(Log::L_DEBUG, "raw: %d.%d.%d.%d\n", beatBarNth.bar, beatBarNth.beat, beatBarNth.th, beatBarNth.subticks);
     std::array<char, 32> FormatBuffer{};
     constexpr const char format[]       = "%s%d.%d.%d.%d";
     beatbar16th_t cpy = beatBarNth;

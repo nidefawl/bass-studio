@@ -172,13 +172,8 @@ inline void offsetEndTime(std::vector<note_t>& notesPtrs, tick_t offset, tick_t 
 }
 template<typename T>
 inline void quantizeNoteStartTime(T& notesPtrs, tick_t quantize) {
-    bool bDbgPrint = false;
     for (auto& note : notesPtrs) {
         auto newTime = math::floorfS32(note.start() / static_cast<float>(quantize)) * quantize;
-        if (newTime != note.start()) {
-            bDbgPrint = true;
-            log_lf(Log::L_DEBUG, "quantizeNoteStartTime: %d -> %d\n", note.start(), newTime);
-        }
         note.time = newTime;
     }
 }
