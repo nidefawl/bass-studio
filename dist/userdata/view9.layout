@@ -52,15 +52,15 @@
                                             }
                                         }
                                     ],
-                                    "splitterPositions": [
+                                    "value5": [
                                         0.5444191098213196
                                     ]
                                 }
                             }
                         }
                     ],
-                    "splitterPositions": [
-                        0.5
+                    "value5": [
+                        0.7514355778694153
                     ]
                 }
             }
@@ -76,44 +76,19 @@
                     "value3": 2,
                     "value4": [
                         {
-                            "polymorphic_id": 1,
+                            "polymorphic_id": 1073741824,
                             "ptr_wrapper": {
                                 "id": 2147483655,
                                 "data": {
-                                    "value0": "class guictr_layout",
-                                    "value1": 0,
-                                    "value2": 1,
-                                    "value3": 3,
-                                    "value4": [
-                                        {
-                                            "polymorphic_id": 1073741824,
-                                            "ptr_wrapper": {
-                                                "id": 2147483656,
-                                                "data": {
-                                                    "value0": "Debug 1",
-                                                    "value1": 10
-                                                }
-                                            }
-                                        },
-                                        {
-                                            "polymorphic_id": 1073741824,
-                                            "ptr_wrapper": {
-                                                "id": 2147483657,
-                                                "data": {
-                                                    "value0": "Theme",
-                                                    "value1": 3
-                                                }
-                                            }
-                                        }
-                                    ],
-                                    "splitterPositions": []
+                                    "value0": "Debug 1",
+                                    "value1": 10
                                 }
                             }
                         },
                         {
                             "polymorphic_id": 1,
                             "ptr_wrapper": {
-                                "id": 2147483658,
+                                "id": 2147483656,
                                 "data": {
                                     "value0": "Layout",
                                     "value1": 0,
@@ -123,7 +98,7 @@
                                         {
                                             "polymorphic_id": 1073741824,
                                             "ptr_wrapper": {
-                                                "id": 2147483659,
+                                                "id": 2147483657,
                                                 "data": {
                                                     "value0": "Debug 0",
                                                     "value1": 9
@@ -133,7 +108,7 @@
                                         {
                                             "polymorphic_id": 1073741824,
                                             "ptr_wrapper": {
-                                                "id": 2147483660,
+                                                "id": 2147483658,
                                                 "data": {
                                                     "value0": "Performance",
                                                     "value1": 12
@@ -141,12 +116,12 @@
                                             }
                                         }
                                     ],
-                                    "splitterPositions": []
+                                    "value5": []
                                 }
                             }
                         }
                     ],
-                    "splitterPositions": [
+                    "value5": [
                         0.5
                     ]
                 }
