@@ -226,8 +226,8 @@ vec4 applyShading(vec2 pt, vec2 texcoord, vec4 color) {
 	result.rgb*=vec3(mix(f, 1, 0.9));
 	result.rgb+=vec3(antiBandingDither);
 #endif
-	return result;
-	// return clamp(result, vec4(0.0), vec4(1.0));
+	// return result;
+	return clamp(result, vec4(0.0), vec4(1.0));
 }
 void main(void) {
 	float scissor = scissorMask(fpos);
@@ -315,22 +315,11 @@ void main(void) {
 		result *= Border.y*Border.x*intens;
 	}
 #endif
-#if 1
-	// vec4 colorDbg = vec4(fragTexCoord.xy, 1.0, 1.0);
-	// {
-			
-	// 	float fTimeSeconds = renderInfo.x;
-		
-	// 	float fPerS = 1.0;
-	// 	float fTmProgr = mod(fTimeSeconds+fPerS/2.0, 4);
-	// 	/* /\________  1s anim 4s sleep (5s cycle)*/
-	// 	float fadeTri = clamp(1.0-abs(fTmProgr*2.0/fPerS-1.0), 0.0, 1.0);
-	// 	if (result.r < 0 || result.g < 0 || result.b < 0 || result.a < 0) {
-	// 		result = vec4(1, 0, 0, 1);
-	// 	} else {
-	// 	}
+#if 0
+	// if (result.r < 0 || result.g < 0 || result.b < 0 || result.a < 0) {
+	// 	result += vec4(1, 0, 0, 1);
 	// }
-	// result = result*0.5+0.5*vec4(fragTexCoord.xy, 1.0, 1.0);
+	result += 0.3*vec4(fragTexCoord.xy, 1.0, 1.0);
 #else
 #endif
 	if (result.a < 1.0/2048.0) 
