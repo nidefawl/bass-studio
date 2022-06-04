@@ -1526,9 +1526,9 @@ guictr_nodes_splitview::guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& 
     splitter.setMinMax(0.1f, 0.9f);
     splitter.setCallback(this);
     setCanMouseHit(true);
-    add(&splitter);
     add(&graphTop);
     add(&graphBottom);
+    add(&splitter);
     padding = 0;
     margin  = 0;
     setBackgroundRendered(false);
