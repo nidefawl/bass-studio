@@ -216,7 +216,7 @@ namespace PluginSampleDelay {
         BaseVST2_ProgramSampleDelay* ap = current();
         if (this->getAeffect()->numOutputs == 2) {
             float fBlockFreq  = (sampleRate / blockSize) * 0.0015f;
-            float filterCoeff = 1.0f - expf(-2.0f * M_PIf * (fBlockFreq / sampleRate));
+            float filterCoeff = 1.0f - expf(-2.0f * static_cast<float>(M_PI) * (fBlockFreq / sampleRate));
             AudioBlock outputBlock(outputs, 2, sampleFrames);
             processStereo(inputs, outputBlock, sampleFrames, filterCoeff, paramsState, *ap);
         }
