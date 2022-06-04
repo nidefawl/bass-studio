@@ -251,7 +251,7 @@ public:
         noRawInput |= glfwRawMouseMotionSupported() == GLFW_FALSE;
     }
 
-private:
+protected:
 
     void reloadCustomShaders() {
         String strShaderSrcVertex;
@@ -267,6 +267,7 @@ private:
         }
     }
 
+private:
     void initContext() {
         glCullFace(GL_BACK);
         glFrontFace(GL_CCW);
@@ -760,7 +761,9 @@ public:
 
         /* if (getTimeMillis() - tmLastShaderReloadMillis >= 1000) {
             tmLastShaderReloadMillis = getTimeMillis();
+            glfwMakeContextCurrent(glfw);
             reloadCustomShaders();
+            glfwMakeContextCurrent(nullptr);
         } */
 
         ctrl->onAppTick();
