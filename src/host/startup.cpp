@@ -226,8 +226,8 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
         return;
     }
     auto dawInstance = dawMainCtrl->getDaw();
-    String dawPath  = "/home/michael/";
-    String projName = "empty.project";
+    String dawPath  = "/home/michael/Documents/";
+    String projName = "samples.project";
      int flags = 0x1;// defer load
          flags = 0; // no defer load
     dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance* daw, std::shared_ptr<project_file> file, int errorState) {
@@ -247,7 +247,30 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
         if (dbgLoadPlugins) {
             loadPluginAndInsertOnTrack(dawMainCtrl, "C:/PluginManager/configs/default/hosts/Ableton/categories/melda/MPowerSynth.dll", 0);
         }
-        // daw->getMainControl()->setViewMode(view_mode_t::NODE_EDITOR);
+        // // daw->getMainControl()->setViewMode(view_mode_t::NODE_EDITOR);
+        // if (daw->getProject()->trackReturnCtr.size()) {
+        //     daw->setSelectedTrack(daw->getProject()->trackReturnCtr.front());
+        //     daw->getMainControl()->showPluginView();
+        // }
+        if (daw->getProject()->trackMidiAudioCtr.size()>1) {
+            auto tr = daw->getProject()->trackMidiAudioCtr[1];
+            
+            daw->setSelectedTrack(tr);
+            auto& clips = tr->getMidi().getClips();
+            if (clips.size()) {
+                auto clip = clips[0];
+                auto mainCtrl = daw->getMainControl();
+                track_gui_entry_t* trEntry{};
+                auto* trCtr = mainCtrl->getTrackContainer();
+                if (trCtr && trCtr->getTrackEntry(tr, &trEntry)) {
+                    auto* gui = createClipGui(trEntry->parent, trEntry, clip);
+                    mainCtrl->getTrackEditor().setSelectionRange(clips[0], trEntry);
+                    daw->setEditClip(gui);
+                    daw->getMainControl()->showClipEditor();
+                }
+            }
+        }
+
 #if 0
         const bool loadPlugins = 0;
         if (loadPlugins) {
@@ -297,5 +320,6 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
      if (dawMainCtrl->getLoadProjectFilePath().empty())
         dawInstance->loadFile(dawPath + projName, flags);
+    //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_PREFERENCES, 0));
     // generateDummyProject(dawMainCtrl);
 }
