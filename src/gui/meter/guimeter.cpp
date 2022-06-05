@@ -8,7 +8,7 @@
 #include "color_util.h"
 
 void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const ivec2& size, DAW::rmsmeter* meter) {
-    const int32_t CONST_LAYOUT_MARGIN = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
+    const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
     const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     const auto NCHANNELS = meter->getNumChannels();
     UIFont::font_instance instance    = theme->getFont(UIFont::FONT_DECIMAL);
@@ -16,7 +16,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
     //  int32_t spacing = CONST_LAYOUT_MARGIN;
     //  ivec2 inset(spacing);
     vec2 gainPos  = { pos.x, pos.y };
-    vec2 gainSize = { size.x, TRACK_HEIGHT_STEP - 2 * CONST_LAYOUT_MARGIN };
+    vec2 gainSize = { size.x, TRACK_HEIGHT_STEP - 2 * CONST_PADDING_TRACK_CONTROLS };
     ivec2 mtrPos  = { pos.x, pos.y + TRACK_HEIGHT_STEP };
     ivec2 mtrSize = { size.x, size.y - TRACK_HEIGHT_STEP };
 
@@ -39,7 +39,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
     const float yZero = mtrPos.y + mtrSize.y - hZero;
     auto lvls         = meter->getLevels();
     float x           = mtrPos.x;
-    float channelW    = (mtrSize.x - (NCHANNELS - 1) * CONST_LAYOUT_MARGIN) / (float) NCHANNELS;
+    float channelW    = (mtrSize.x - (NCHANNELS - 1) * CONST_PADDING_TRACK_CONTROLS) / (float) NCHANNELS;
 
     float mixedlevels[3]    = { 0, 0, 0 };
     /*if (mtrSize.y > 4) {
@@ -113,7 +113,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
 
 
         x += channelW;
-        x += CONST_LAYOUT_MARGIN;
+        x += CONST_PADDING_TRACK_CONTROLS;
     }
 
     if (hasLegend && size.y > TRACK_HEIGHT_STEP * 1.5) {

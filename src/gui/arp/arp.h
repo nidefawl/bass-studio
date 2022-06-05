@@ -39,8 +39,6 @@ public:
     }
     gui_arp(clip_view& _clipview)
         : clipview(_clipview) {
-        padding = 2;
-        margin  = 0;
         text    = "Synth";
         setCanMouseHit(true);
         add(&buttonBypass);
@@ -148,17 +146,17 @@ public:
     }
 
     void layout() override {
+        padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
         const auto hpt = static_cast<float>(theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT));
         auto buttonSize = hpt * 0.8f;
         auto inset1 = (hpt - buttonSize) * 0.5f;
         buttonBypass.size = ivec2(math::roundfS32(buttonSize));
         buttonBypass.pos = ivec2(math::roundfS32(inset1));
         buttonBypass.setRadius(hpt / 3.f);
-
         guiknob* knobPrev = nullptr;
         for (guiknob* knob : knobs) {
             knob->size = ivec2(48);
-            knob->pos  = ivec2(INSET_TITLE, (knobPrev ? knobPrev->bottom() : hpt) + INSET_TITLE);
+            knob->pos  = ivec2(padding, (knobPrev ? knobPrev->bottom() : hpt) + padding);
             knobPrev   = knob;
         }
         for (guibase* gui : guis) {

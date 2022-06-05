@@ -235,7 +235,6 @@ public:
     gui_list list;
 
     gui_list_plugins(std::vector<gui_pluginsloaded_list_entry*>& _entries) : guictr_base(), entries(_entries) {
-
         setBackgroundRendered(true);
         list.padding = 0;
         list.setBackgroundRendered(false);
@@ -258,15 +257,10 @@ public:
         });
     }
     void layout() override {
-        int32_t rowHeight = 14;
         auto cs           = getSizeContent();
-        int32_t w         = cs.x / 128;
-        rowHeight += w * 4;
-        list.setRowHeight(rowHeight);
-        //const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
-        const int32_t inset = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
-        list.pos            = { inset, inset };
-        list.size           = { cs.x - inset * 2, cs.y - inset * 2 };
+        list.setRowHeight(theme->get(GuiConstant::CONST_ROW_HEIGHT));
+        list.pos            = { 0, 0 };
+        list.size           = cs;
         for (auto* g : guis) {
             g->layout();
         }
@@ -430,7 +424,7 @@ public:
     }
     void layout() override {
         ivec2 cs                               = getSizeContent();
-        const int32_t inset                    = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
+        const int32_t inset                    = padding;
         const int32_t CONST_FIXED_TITLE_HEIGHT = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
 
         int posLists    = 0;

@@ -30,8 +30,6 @@ gui_clipsettings::gui_clipsettings(scaled_grid&, clip_view& _view)
       clipAudioId(nullptr),
       quantization()
     {
-    padding          = 2;
-    margin           = 0;
     setCanMouseHit(true);
     btnLoop.drawFn   = drawTextureSymbol;
     btnLoop.drawParm = ICON_LOOP;
@@ -178,12 +176,13 @@ void gui_clipsettings::render(NVGcontext* vg) {
     nvgTranslate(vg, 0, 0);
     for (guibase* gui: guis) {
         if (gui == &clipTimeStartOffsedSamples) break;
-        renderText(vg, vec2(0, gui->top() + gui->size.y * 0.5), vec2(gui->pos.x-padding*2, size.y), gui->label, TRACK_HEIGHT_STEP);
+        renderText(vg, vec2(padding, gui->top() + gui->size.y * 0.5f), vec2(gui->left()-padding, size.y), gui->label, TRACK_HEIGHT_STEP);
     }
     nvgRestore(vg);
 }
 
 void gui_clipsettings::layout() {
+    padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     int32_t w                       = getSizeContent().x;
     int32_t btnW                    = (w-padding)/2;

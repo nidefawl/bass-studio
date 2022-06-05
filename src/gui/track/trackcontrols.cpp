@@ -795,13 +795,14 @@ public:
     }
     void layout() override {
         const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-        const int32_t CONST_LAYOUT_MARGIN = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
-        int32_t inset                     = CONST_LAYOUT_MARGIN;
-        selectInput.pos                   = ivec2(inset, inset);
-        selectOutput.pos                  = ivec2(inset, TRACK_HEIGHT_STEP + inset);
-        selectInput.size                  = getSizeContent() - ivec2(inset * 2);
-        selectInput.size.y                = TRACK_HEIGHT_STEP - inset * 2;
-        selectOutput.size                 = selectInput.size;
+        const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
+
+        int32_t inset      = CONST_PADDING_TRACK_CONTROLS;
+        selectInput.pos    = ivec2(inset, inset);
+        selectOutput.pos   = ivec2(inset, TRACK_HEIGHT_STEP + inset);
+        selectInput.size   = getSizeContent() - ivec2(inset * 2);
+        selectInput.size.y = TRACK_HEIGHT_STEP - inset * 2;
+        selectOutput.size  = selectInput.size;
         for (auto gui : guis) {
             gui->layout();
         }
@@ -918,12 +919,13 @@ public:
     }
     void layout() override {
 
-        const int32_t CONST_LAYOUT_MARGIN = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
+        const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
         const int32_t mW = theme->get(GuiConstant::CONST_METER_WIDTH);
         const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-        int32_t inset                     = CONST_LAYOUT_MARGIN;
-        int32_t i2                        = inset * 2;
-        int32_t h                         = TRACK_HEIGHT_STEP - i2;
+
+        int32_t inset = CONST_PADDING_TRACK_CONTROLS;
+        int32_t i2    = inset * 2;
+        int32_t h     = TRACK_HEIGHT_STEP - i2;
 
         // int32_t mW      = TRACK_HEIGHT_STEP * 3;
         int32_t bW      = size.x - mW;
@@ -1153,7 +1155,7 @@ public:
         return false;
     }
     void layout() override {
-        const int32_t CONST_LAYOUT_MARGIN = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
+        const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
         const int titleHeight             = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         //TODO: this is not optimal!
@@ -1164,7 +1166,7 @@ public:
         hideTrack.setRadius(buttonRadius);
         hideAutomation.setRadius(buttonRadius - 2);
         addAutomationLane.setRadius(buttonRadius - 2);
-        int32_t inset    = CONST_LAYOUT_MARGIN;
+        int32_t inset    = CONST_PADDING_TRACK_CONTROLS;
         int32_t i2       = inset * 2;
         int32_t h        = TRACK_HEIGHT_STEP - i2;
         int32_t insetBtn = (TRACK_HEIGHT_STEP - hideAutomation.size.y) / 2;

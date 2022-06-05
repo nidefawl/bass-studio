@@ -30,7 +30,9 @@ namespace GuiConstant {
     extern constant_t CONST_NODES_SCALE;
     extern constant_t CONST_FONT_SIZE_CONTEXT_MENU;
     extern constant_t CONST_FONT_SIZE_TABLE;
-    extern constant_t CONST_LAYOUT_MARGIN;
+    extern constant_t CONST_PADDING_TRACK_CONTROLS;
+    extern constant_t CONST_PADDING_EDITOR_CONTROLS;
+
     extern constant_t CONST_FONT_SIZE_CTR_LABEL;
     extern constant_t CONST_ROW_HEIGHT;
 

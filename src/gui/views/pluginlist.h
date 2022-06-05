@@ -96,6 +96,7 @@ public:
         layout();
     }
     void layout() override {
+        pluginListCtr.setRowHeight(theme->get(GuiConstant::CONST_ROW_HEIGHT));
         textField2.setVisible(!textField2.value().empty());
         ivec2 cs          = getSizeContent();
         textField.pos     = ivec2(0, 0);
@@ -197,6 +198,7 @@ public:
         layout();
     }
     void layout() override {
+        pluginListCtr.setRowHeight(theme->get(GuiConstant::CONST_ROW_HEIGHT));
         ivec2 cs           = getSizeContent();
         textField.size     = ivec2(cs.x, heightTextField);
         textField.pos      = ivec2(0, 0);

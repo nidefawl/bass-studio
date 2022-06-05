@@ -1,6 +1,7 @@
 #pragma once
 #include <list>
 #include <vector>
+#include "guiconstant.h"
 #include "logging.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
@@ -150,12 +151,10 @@ public:
         inputStarts(&tickStart, true),
         inputEnds(&tickEnd, true)
     {
-        padding = 4;
         setLabel("Quantize");
         setBackgroundRendered(true);
         setBackgroundRenderedInset(true);
         setFlag(FLG_RENDER_LABEL, true);
-        padding = 2;
         inputStarts.setLabel("Start");
         inputEnds.setLabel("End");
         btnQuantize.setText("Quantize");
@@ -167,10 +166,11 @@ public:
         removeGuis();
     }
     void layout() override {
+        padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
         const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
-        int32_t w                       = getSizeContent().x;
-        int32_t btnW                    = (w-padding*3)/2;
+        int32_t w    = getSizeContent().x;
+        int32_t btnW = (w-padding*3)/2;
         int32_t btnH = TRACK_HEIGHT_STEP;
         int32_t btnX = padding + btnW + padding;
         inputStarts.size = ivec2(btnW, btnH);
@@ -199,9 +199,8 @@ public:
         const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         nvgSave(vg);
         nvgTranslate(vg, 0, 0);
-        int32_t i2 = padding * 2;
         for (guibase* gui: guis) {
-            renderText(vg, vec2(i2, gui->top() + gui->size.y * 0.5f), vec2(gui->pos.x-i2, size.y), gui->label, TRACK_HEIGHT_STEP);
+            renderText(vg, vec2(padding, gui->top() + gui->size.y * 0.5f), vec2(gui->left()-padding, size.y), gui->label, TRACK_HEIGHT_STEP);
         }
         nvgRestore(vg);
     }
@@ -452,6 +451,7 @@ public:
           audioeditor(view),
           settings(noteeditor.grid, _view),
           arp(_view) {
+        // padding = 2;
         setBackgroundRendered(true);
         setBackgroundRenderedInset(false);
         add(&noteeditor);
@@ -534,7 +534,8 @@ public:
         nvgResetTransform(vg);
     }
     void layout() override {
-        const int32_t CONST_LAYOUT_MARGIN = theme->get(GuiConstant::CONST_LAYOUT_MARGIN);
+                const int32_t padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
+
         ivec2 cs      = getSizeContent();
         settings.pos  = ivec2(0, 0);
         settings.size = ivec2(250, cs.y);
@@ -542,13 +543,13 @@ public:
         guibase* leftContainer = &settings;
         if (arp.isVisible()) {
             leftContainer = &arp;
-            arp.pos       = ivec2(settings.right() + CONST_LAYOUT_MARGIN, 0);
+            arp.pos       = ivec2(settings.right() + padding, 0);
             arp.size      = ivec2(250, cs.y);
         }
 
-        noteeditor.pos   = ivec2(leftContainer->right() + CONST_LAYOUT_MARGIN, 0);
+        noteeditor.pos   = ivec2(leftContainer->right() + padding, 0);
         noteeditor.size  = ivec2(cs.x - leftContainer->right(), cs.y);
-        audioeditor.pos  = ivec2(leftContainer->right() + CONST_LAYOUT_MARGIN, 0);
+        audioeditor.pos  = ivec2(leftContainer->right() + padding, 0);
         audioeditor.size = ivec2(cs.x - leftContainer->right(), cs.y);
 
         for (guibase* gui : guis) {
