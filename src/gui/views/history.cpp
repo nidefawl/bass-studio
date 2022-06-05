@@ -34,19 +34,13 @@ public:
     }
 };
 class guictr_history_view : public guictr_base {
-
     gui_list_history historyList;
-    guictr_scrollbar scrollContainer;
     int64_t histRevision = -1;
-
 public:
-    guictr_history_view() : guictr_base(), scrollContainer() {
+    guictr_history_view() : guictr_base() {
         ctrType = CTR_TYPE_HISTORY;
         padding = 0;
-        margin  = 0;
-        add(&scrollContainer);
-        scrollContainer.add(&historyList);
-        scrollContainer.maxHeight = -1;
+        add(&historyList);
     }
     ~guictr_history_view() override {
         removeGuis();
@@ -92,12 +86,9 @@ public:
     void buttonClicked(guibase* button) override {
     }
     void layout() override {
-        ivec2 size           = getSizeContent();
-        int32_t hTop         = HEIGHT_DEFAULT_INPUT;
-        scrollContainer.pos  = { 0, hTop };
-        scrollContainer.size = { size.x, size.y - hTop };
-        scrollContainer.determineSize(scrollContainer.size);
-
+        historyList.pos  = { };
+        historyList.size = getSizeContent();
+        historyList.determineSize(historyList.size);
         for (auto c : guis) {
             c->layout();
         }
