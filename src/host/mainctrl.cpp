@@ -2271,9 +2271,9 @@ namespace STLVectorDebugTracking {
 
 bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
     if (event.type == KeyEventType::K_PRESS) {
-        if ((event.mods & KB_MOD_CTRL) == event.mods && event.keyCode >= KEY_F1 && event.keyCode <= KEY_F10) {
+        if ((event.mods & KB_MOD_SHIFT) == event.mods && event.keyCode >= KEY_F1 && event.keyCode <= KEY_F10) {
             uint8_t index = (event.keyCode - KEY_F1) % layouts.size();
-            bool store    = (event.mods & KB_MOD_CTRL);
+            bool store    = (event.mods & KB_MOD_SHIFT);
             if (store) {
                 view->storeLayout(&layouts[index]);
                 saveDawViewLayoutSnapshot(layouts[index], StringFormat("data/view%d.layout", index));
