@@ -66,6 +66,9 @@ else()
   set(PROJECT_CFG_DEBUG_STD_LIB "OFF" CACHE STRING "std-lib asserts + std::string debugging (ON/OFF/DebugOnly)")
   set_property(CACHE PROJECT_CFG_DEBUG_STD_LIB PROPERTY STRINGS ON OFF DebugOnly)
 
+  set(PROJECT_CFG_OPTIMIZE "x86-64-v3" CACHE STRING "std-lib asserts + std::string debugging (OFF/x86-64-v3/native)")
+  set_property(CACHE PROJECT_CFG_OPTIMIZE PROPERTY STRINGS "OFF" "x86-64-v3" "native")
+
   # improve debugging
   if(PROJECT_CFG_USE_STACK_PROTECTOR STREQUAL "DebugOnly")
     add_compile_options($<$<CONFIG:Debug>:-fstack-protector>)
@@ -96,9 +99,13 @@ else()
   # Disable ADD_POST_BUILD_COMMANDS and set ASAN_SYMBOLIZER_PATH=path\to\bin\llvm-symbolizer
   # add_compile_options(-fsanitize=address)
   # add_link_options(-fsanitize=address)
-
-  # march=native optimization. Turn off for dist build
-  add_compile_options(-march=native -mtune=native)
+  if(PROJECT_CFG_OPTIMIZE STREQUAL "x86-64-v3")
+    # march=native optimization. Turn off for dist build
+    add_compile_options(-march=${PROJECT_CFG_OPTIMIZE} -mtune=corei7)
+  elseif (PROJECT_CFG_OPTIMIZE STREQUAL "native")
+    # march=native optimization. Turn off for dist build
+    add_compile_options(-march=native -mtune=native)
+  endif()
   add_link_options(-Wl,--gc-sections)
 endif()
 
