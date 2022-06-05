@@ -50,11 +50,11 @@ namespace PluginEmptyVST2 {
 
     void EmptyPluginVST2::getProgramName(char* name) {
         if (name && curProgram >= 0)
-            vst_strncpy(name, programs[curProgram].name, kVstMaxProgNameLen);
+            vst_strncpy(name, programs[curProgram].name, PLUGIN_PROGRAM_STR_MAX_LEN);
     }
 
     void EmptyPluginVST2::getParameterLabel(VstInt32 index, char* label) {
-        vst_strncpy(label, "", kVstMaxParamStrLen);
+        vst_strncpy(label, "", PLUGIN_PARAM_STR_MAX_LEN);
     }
 
     void EmptyPluginVST2::getParameterDisplay(VstInt32 index, char* text) {
@@ -73,7 +73,7 @@ namespace PluginEmptyVST2 {
 
     bool EmptyPluginVST2::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
         if (index >= 0 && index < kNumPrograms) {
-            vst_strncpy(text, programs[index].name, kVstMaxProgNameLen);
+            vst_strncpy(text, programs[index].name, PLUGIN_PROGRAM_STR_MAX_LEN);
             return true;
         }
         return false;
@@ -135,7 +135,7 @@ namespace PluginEmptyVST2 {
 
 
     BaseVST2_Program::BaseVST2_Program() : ProgramParameters() {
-        vst_strncpy(name, "Init", kVstMaxProgNameLen);
+        vst_strncpy(name, "Init", PLUGIN_PROGRAM_STR_MAX_LEN);
     }
 
 

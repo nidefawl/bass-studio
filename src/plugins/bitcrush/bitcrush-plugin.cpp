@@ -58,10 +58,10 @@ namespace PluginBitcrush {
     void PluginVST2_Bitcrush::getParameterLabel(VstInt32 index, char* label) {
         switch (index) {
             case kSamples:
-                vst_strncpy(label, "samples", kVstMaxParamStrLen);
+                vst_strncpy(label, "samples", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
             default:
-                vst_strncpy(label, "", kVstMaxParamStrLen);
+                vst_strncpy(label, "", PLUGIN_PARAM_STR_MAX_LEN);
         }
     }
 
@@ -70,7 +70,7 @@ namespace PluginBitcrush {
         switch (index) {
             case kSamples: {
                 int nPow2 = (1 << current()->bitcrush);
-                snprintf(text, kVstMaxParamStrLen, "%d", nPow2);
+                snprintf(text, PLUGIN_PARAM_STR_MAX_LEN, "%d", nPow2);
                 return;
             }
         }
@@ -96,7 +96,7 @@ namespace PluginBitcrush {
     void PluginVST2_Bitcrush::getParameterName(VstInt32 index, char* label) {
         switch (index) {
             case kSamples:
-                vst_strncpy(label, "Bitcrush", kVstMaxParamStrLen);
+                vst_strncpy(label, "Bitcrush", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
         }
     }
@@ -135,7 +135,7 @@ namespace PluginBitcrush {
 
     bool PluginVST2_Bitcrush::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
         if (index >= 0 && index < kNumPrograms) {
-            vst_strncpy(text, "Default", kVstMaxProgNameLen);
+            vst_strncpy(text, "Default", PLUGIN_PROGRAM_STR_MAX_LEN);
             return true;
         }
         return false;
@@ -217,7 +217,7 @@ namespace PluginBitcrush {
     }
 
     Program::Program() : ProgramParameters() {
-        vst_strncpy(name, "Init", kVstMaxProgNameLen);
+        vst_strncpy(name, "Init", PLUGIN_PROGRAM_STR_MAX_LEN);
         bitcrush = BITCRUSH_BITS_MAX;
     }
 

@@ -38,7 +38,7 @@ namespace PluginHostInfo {
         ~Program() = default;
 
     private:
-        char name[kVstMaxProgNameLen + 1]{ 0 };
+        char name[PLUGIN_PROGRAM_STR_MAX_LEN + 1]{ 0 };
     };
 
     struct PluginVST2_HostInfo_impl_t;

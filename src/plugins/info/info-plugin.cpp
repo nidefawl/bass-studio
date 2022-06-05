@@ -195,10 +195,10 @@ namespace PluginHostInfo {
         switch (index) {
             case kLogVerbosity:
             case kLogBlocksProcessed:
-                vst_strncpy(label, "", kVstMaxParamStrLen);
+                vst_strncpy(label, "", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
             default:
-                vst_strncpy(label, "", kVstMaxParamStrLen);
+                vst_strncpy(label, "", PLUGIN_PARAM_STR_MAX_LEN);
         }
     }
 
@@ -206,11 +206,11 @@ namespace PluginHostInfo {
         text[0] = 0;
         switch (index) {
             case kLogVerbosity: {
-                snprintf(text, kVstMaxParamStrLen, "%d", getLogVerbosity());
+                snprintf(text, PLUGIN_PARAM_STR_MAX_LEN, "%d", getLogVerbosity());
                 break;
             }
             case kLogBlocksProcessed: {
-                snprintf(text, kVstMaxParamStrLen, "%d", getLogBlocks());
+                snprintf(text, PLUGIN_PARAM_STR_MAX_LEN, "%d", getLogBlocks());
                 break;
             }
         }
@@ -219,10 +219,10 @@ namespace PluginHostInfo {
     void PluginVST2_HostInfo::getParameterName(VstInt32 index, char* label) {
         switch (index) {
             case kLogVerbosity:
-                vst_strncpy(label, "Log Verbosity", kVstMaxParamStrLen);
+                vst_strncpy(label, "Log Verbosity", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
             case kLogBlocksProcessed:
-                vst_strncpy(label, "Log Blocks", kVstMaxParamStrLen);
+                vst_strncpy(label, "Log Blocks", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
         }
     }
@@ -284,7 +284,7 @@ namespace PluginHostInfo {
 
     bool PluginVST2_HostInfo::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
         if (index >= 0 && index < kNumPrograms) {
-            vst_strncpy(text, "Default", kVstMaxProgNameLen);
+            vst_strncpy(text, "Default", PLUGIN_PROGRAM_STR_MAX_LEN);
             return true;
         }
         return false;
@@ -439,7 +439,7 @@ namespace PluginHostInfo {
     }
 
     Program::Program() : ProgramParameters() {
-        vst_strncpy(name, "Init", kVstMaxProgNameLen);
+        vst_strncpy(name, "Init", PLUGIN_PROGRAM_STR_MAX_LEN);
     }
 
 }// namespace PluginHostInfo

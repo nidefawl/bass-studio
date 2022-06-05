@@ -60,10 +60,10 @@ namespace PluginSampleDelay {
     void PluginVST2_SampleDelay::getParameterLabel(VstInt32 index, char* label) {
         switch (index) {
             case kSampleDelay:
-                vst_strncpy(label, "samples", kVstMaxParamStrLen);
+                vst_strncpy(label, "samples", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
             default:
-                vst_strncpy(label, "", kVstMaxParamStrLen);
+                vst_strncpy(label, "", PLUGIN_PARAM_STR_MAX_LEN);
         }
     }
 
@@ -72,7 +72,7 @@ namespace PluginSampleDelay {
         switch (index) {
             case kSampleDelay: {
                 auto delaySamples = convertToSamples(current()->delay);
-                snprintf(text, kVstMaxParamStrLen, "%zd", delaySamples);
+                snprintf(text, PLUGIN_PARAM_STR_MAX_LEN, "%zd", delaySamples);
                 return;
             }
         }
@@ -95,7 +95,7 @@ namespace PluginSampleDelay {
     void PluginVST2_SampleDelay::getParameterName(VstInt32 index, char* label) {
         switch (index) {
             case kSampleDelay:
-                vst_strncpy(label, "Delay", kVstMaxParamStrLen);
+                vst_strncpy(label, "Delay", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
         }
     }
@@ -133,7 +133,7 @@ namespace PluginSampleDelay {
 
     bool PluginVST2_SampleDelay::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
         if (index >= 0 && index < kNumPrograms) {
-            vst_strncpy(text, "Default", kVstMaxProgNameLen);
+            vst_strncpy(text, "Default", PLUGIN_PROGRAM_STR_MAX_LEN);
             return true;
         }
         return false;
@@ -223,7 +223,7 @@ namespace PluginSampleDelay {
     }
 
     BaseVST2_ProgramSampleDelay::BaseVST2_ProgramSampleDelay() : ProgramParameters() {
-        vst_strncpy(name, "Init", kVstMaxProgNameLen);
+        vst_strncpy(name, "Init", PLUGIN_PROGRAM_STR_MAX_LEN);
         delay  = 0.5f;
     }
 

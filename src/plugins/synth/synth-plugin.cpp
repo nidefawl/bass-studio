@@ -486,10 +486,10 @@ namespace PluginSynth {
             return 0.0f;
         }
         virtual void getValueDisplay(char* _out) {
-            vst_strncpy(_out, "", kVstMaxParamStrLen);
+            vst_strncpy(_out, "", PLUGIN_PARAM_STR_MAX_LEN);
         }
         virtual void getLabel(char* _out) {
-            vst_strncpy(_out, "", kVstMaxParamStrLen);
+            vst_strncpy(_out, "", PLUGIN_PARAM_STR_MAX_LEN);
         }
     };
     struct SynthParam_Float : public SynthParamBase {
@@ -523,7 +523,7 @@ namespace PluginSynth {
             return valDouble;
         }
         void getValueDisplay(char* _out) override {
-            snprintf(_out, kVstMaxParamStrLen, StringAsCStr(format), Value());
+            snprintf(_out, PLUGIN_PARAM_STR_MAX_LEN, StringAsCStr(format), Value());
         }
     };
     struct SynthParam_Int : public SynthParamBase {
@@ -556,7 +556,7 @@ namespace PluginSynth {
         }
         void getValueDisplay(char* _out) override {
 
-            snprintf(_out, kVstMaxParamStrLen, StringAsCStr(format), Value());
+            snprintf(_out, PLUGIN_PARAM_STR_MAX_LEN, StringAsCStr(format), Value());
         }
     };
     struct SynthParam_Enum : public SynthParam_Int {
@@ -574,7 +574,7 @@ namespace PluginSynth {
             if (val >= 0 && val < CtrSize(strings)) {
                 s = strings[val];
             }
-            snprintf(_out, kVstMaxParamStrLen, "%s", StringAsCStr(s));
+            snprintf(_out, PLUGIN_PARAM_STR_MAX_LEN, "%s", StringAsCStr(s));
         }
         template<typename T>
         T getEnumValue() {
@@ -1041,6 +1041,45 @@ namespace PluginSynth {
     void PluginVST2_Synth::initPrograms() {
         for (SynthProgram& program : staticPrograms) {
             program = {};
+            program.VoiceMode = 0.000000;
+            program.GlideLength = 0.000000;
+            program.FilterMode = 0.000000;
+            program.FilterCutoff = 0.000000;
+            program.FilterResonance = 0.000000;
+            program.FilterKeyTracking = 0.500000;
+            program.VolEnvCutoff = 0.500000;
+            program.ModEnvCutoff = 0.500000;
+            program.OscMix = 1.000000;
+            program.Osc1Wave = 0.000000;
+            program.Osc1Coarse = 0.395833;
+            program.Osc1Fine = 0.500000;
+            program.Osc1Split = 0.500000;
+            program.Osc2Wave = 0.000000;
+            program.Osc2Coarse = 0.395833;
+            program.Osc2Fine = 0.500000;
+            program.Osc2Split = 0.500000;
+            program.LfoAmount = 0.500000;
+            program.LfoFrequency = 0.393939;
+            program.LfoDelay = 0.000000;
+            program.LfoCutoff = 0.500000;
+            program.FmMode = 0.000000;
+            program.FmCoarse = 0.000000;
+            program.FmFine = 0.500000;
+            program.VolEnvFm = 0.500000;
+            program.ModEnvFm = 0.500000;
+            program.LfoFm = 0.500000;
+            program.VolEnvA = 0.000000;
+            program.VolEnvD = 0.500000;
+            program.VolEnvS = 1.000000;
+            program.VolEnvR = 0.250000;
+            program.VolEnvV = 0.000000;
+            program.ModEnvA = 0.000000;
+            program.ModEnvD = 0.500000;
+            program.ModEnvS = 0.500000;
+            program.ModEnvR = 0.500000;
+            program.ModEnvV = 0.000000;      
+            // if (index >= 0 && index < CtrSize(vecParams)) {
+        //     SynthParamBase* param = vecParams[index];
         }
         auto& prog        = staticPrograms[0];
         prog.FilterCutoff = 1.0f;
@@ -1095,9 +1134,9 @@ namespace PluginSynth {
         setParamName(getParam(Parameters::Osc1Split), "Oscillator 1 split", "OSC1 Split", "%f");
         addFloatParam(Parameters::Osc2Split)->setRange(-1.0, 1.0)->setRangedValue(0.0);
         setParamName(getParam(Parameters::Osc2Split), "Oscillator 2 split", "OSC2 Split", "%f");
-        addIntParam(Parameters::Osc1Coarse)->setRange(-24, 24)->setRangedValue(-5);
+        addIntParam(Parameters::Osc1Coarse)->setRange(-24, 24)->setRangedValue(0);
         setParamName(getParam(Parameters::Osc1Coarse), "Oscillator 1 coarse", "OSC1 Semi", "%d");
-        addIntParam(Parameters::Osc2Coarse)->setRange(-24, 24)->setRangedValue(-5);
+        addIntParam(Parameters::Osc2Coarse)->setRange(-24, 24)->setRangedValue(0);
         setParamName(getParam(Parameters::Osc2Coarse), "Oscillator 2 coarse", "OSC2 Semi", "%d");
 
         addFloatParam(Parameters::VolEnvA)->setRange(0.0, 1.0)->setRangedValue(0.0);
@@ -1210,6 +1249,7 @@ namespace PluginSynth {
         logParam("ModEnvV", getParam(ModEnvV)->getAsFloat());
     }
     void PluginVST2_Synth::setFromSynthProgram(SynthProgram* program) {
+        // return;
         //getParam(MasterVolume)->set(program->MasterVolume);
         getParam(VoiceMode)->set(program->VoiceMode);
         getParam(GlideLength)->set(program->GlideLength);
@@ -1248,6 +1288,9 @@ namespace PluginSynth {
         getParam(ModEnvS)->set(program->ModEnvS);
         getParam(ModEnvR)->set(program->ModEnvR);
         getParam(ModEnvV)->set(program->ModEnvV);
+        for (auto param : this->vecParams) {
+            this->impl->OnParamChange(param->enumParam);
+        }
     }
     SynthParamBase* PluginVST2_Synth::getParam(Parameters enumParam) {
         if (enumParam >= 0 && enumParam < vecParams.size()) {
@@ -1277,7 +1320,7 @@ namespace PluginSynth {
         if (name) {
             name[0] = 0;
             String progName = StringFormat("Program %d", this->curProgram);
-            vst_strncpy(name, progName.c_str(), kVstMaxProgNameLen);
+            vst_strncpy(name, progName.c_str(), PLUGIN_PROGRAM_STR_MAX_LEN);
         }
     }
 
@@ -1299,7 +1342,7 @@ namespace PluginSynth {
     void PluginVST2_Synth::getParameterName(VstInt32 index, char* label) {
         if (index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
-            vst_strncpy(label, StringAsCStr(param->shortName), kVstMaxParamStrLen);
+            vst_strncpy(label, StringAsCStr(param->shortName), PLUGIN_PARAM_STR_MAX_LEN);
         }
     }
 
@@ -1334,7 +1377,7 @@ namespace PluginSynth {
     bool PluginVST2_Synth::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
         if (index >= 0 && index < kNumPrograms) {
             String progName = StringFormat("Program %d", index);
-            vst_strncpy(text, progName.c_str(), kVstMaxProgNameLen);
+            vst_strncpy(text, progName.c_str(), PLUGIN_PROGRAM_STR_MAX_LEN);
             return true;
         }
         return false;
@@ -1430,7 +1473,7 @@ namespace PluginSynth {
 
 
     SynthProgram::SynthProgram() : SynthProgramParameters() {
-        vst_strncpy(name, "Init", kVstMaxProgNameLen);
+        vst_strncpy(name, "Init", PLUGIN_PROGRAM_STR_MAX_LEN);
     }
 
 }
@@ -1441,25 +1484,32 @@ namespace PluginSynth {
     class guicontainer_plugin_synth : public guictr_base {
         PluginVST2_Synth* const plugin;
         struct _synth_gui_param_knob {
-            guiknob* knob;
+            guiknob_pluginparam* knob;
             Parameters param;
         };
         std::vector<_synth_gui_param_knob> knobs;
-        guiknob_pluginparam knobParam0;
         std::map<Parameters, guiknob_pluginparam*> mapKnobs;
 
     public:
         explicit guicontainer_plugin_synth(PluginVST2_Synth* plugin)
             : guictr_base(),
-              plugin(plugin),
-              knobParam0(PARAM_OFFSET_EXTERNAL + (int) Parameters::FilterCutoff, (int) Parameters::FilterCutoff) {
+              plugin(plugin)
+        {
             setBackgroundRendered(true);
             padding = 4;
             margin  = 4;
-            add(&knobParam0);
+            knobs.reserve(Parameters::kNumParams);
+            for (int i = 0; i < (int) Parameters::kNumParams; i++) {
+                knobs.push_back(_synth_gui_param_knob{new guiknob_pluginparam(PARAM_OFFSET_EXTERNAL+i, i), static_cast<Parameters>(i)});
+                mapKnobs[knobs.back().param] = knobs.back().knob;
+                add(knobs.back().knob);
+            }
         }
         ~guicontainer_plugin_synth() override {
-            remove(&knobParam0);
+            removeGuis();
+            for (auto& synthKnob : knobs) {
+                delete synthKnob.knob;
+            }
         }
         bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
             if (this->contains(mpos)) {
@@ -1478,9 +1528,8 @@ namespace PluginSynth {
         }
 
         guiknob_pluginparam* getKnobFromParameter(int32_t index) {
-            switch (index) {
-                case Parameters::FilterCutoff:
-                    return &knobParam0;
+            if (index >= 0 && index < (int32_t) knobs.size()) {
+                return knobs[index].knob;
             }
             return nullptr;
         }
@@ -1493,30 +1542,23 @@ namespace PluginSynth {
 #endif
         }
         void onGuiOpen() {
+            for (auto& synthKnob : knobs) {
 #if BUILD_VSTHOST
-            knobParam0.setEffectInstance(plugin->getHostSideHandle());
+                synthKnob.knob->setEffectInstance(plugin->getHostSideHandle());
 #endif
 #if BUILD_EXTERNAL_PLUGIN
-            knobParam0.setAudioEffect(plugin);
+                synthKnob.knob->setAudioEffect(plugin);
 #endif
-        }
-        void onGuiClose() {
-#if BUILD_VSTHOST
-            knobParam0.setEffectInstance(nullptr);
-#endif
-#if BUILD_EXTERNAL_PLUGIN
-            knobParam0.setAudioEffect(nullptr);
-#endif
-        }
-
-        void onTick(AppCtrl* ctrl) override {
-            for (guibase* gui : guis) {
-                gui->onTick(ctrl);
             }
         }
-        void prerender(NVGcontext* vg) override {
-            for (guibase* gui : guis) {
-                gui->prerender(vg);
+        void onGuiClose() {
+            for (auto& synthKnob : knobs) {
+#if BUILD_VSTHOST
+                synthKnob.knob->setEffectInstance(nullptr);
+#endif
+#if BUILD_EXTERNAL_PLUGIN
+                synthKnob.knob->setAudioEffect(nullptr);
+#endif
             }
         }
 
@@ -1528,13 +1570,9 @@ namespace PluginSynth {
                 return;
             }
 
-            for (guibase* gui : guis) {
-                nvgSave(vg);
-                gui->render(vg);
-                nvgRestore(vg);
-            }
             PluginVST2_Synth* thisImpl = this->plugin;
             PluginVST2_Synth::ThreadLock lock(thisImpl->getMutex());
+#if 0
             std::vector<String> strings;
             String str;
             str = StringFormat("Blocksize %d", this->plugin->getBlockSize());
@@ -1566,7 +1604,7 @@ namespace PluginSynth {
             float lineh;
             nvgTextMetrics(vg, NULL, NULL, &lineh);
             int y = INSET_CTR_SPACING;
-            int x = this->knobParam0.right() + INSET_CTR_SPACING;
+            int x = INSET_CTR_SPACING;
             //int x = INSET_CTR_SPACING;
             for (String& s : strings) {
                 nvgText(vg, x, y, StringAsCStr(s), NULL);
@@ -1589,15 +1627,30 @@ namespace PluginSynth {
                 s = "";
                 y += lineh;
             }
+#endif
             ////stress test thread safety
             //for (int i = 0; i < 10000; i++) {
             //    std::vector<int> heldNotes = thisImpl->getSynth()->getHeldNotes();//TODO: not threadsafe
             //}
+            for (guibase* gui : guis) {
+                nvgSave(vg);
+                gui->render(vg);
+                nvgRestore(vg);
+            }
         }
         void layout() override {
             const int inset    = 4;
-            knobParam0.size    = ivec2(64, 90);
-            knobParam0.pos     = ivec2(inset);
+            auto knobSize    = ivec2(64, 90);
+            auto knobPos     = ivec2(inset);
+            for (auto& synthKnob : knobs) {
+                synthKnob.knob->pos = knobPos;
+                synthKnob.knob->size = knobSize;
+                knobPos.x += knobSize.x + INSET_CTR_SPACING;
+                if (knobPos.x + knobSize.x > size.x - inset) {
+                    knobPos.x = inset;
+                    knobPos.y += knobSize.y + INSET_CTR_SPACING;
+                }
+            }
             for (guibase* gui : guis) {
                 gui->layout();
             }

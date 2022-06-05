@@ -67,10 +67,10 @@ namespace PluginLatency {
     void PluginVST2_Latency::getParameterLabel(VstInt32 index, char* label) {
         switch (index) {
             case kLatency:
-                vst_strncpy(label, "samples", kVstMaxParamStrLen);
+                vst_strncpy(label, "samples", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
             default:
-                vst_strncpy(label, "", kVstMaxParamStrLen);
+                vst_strncpy(label, "", PLUGIN_PARAM_STR_MAX_LEN);
         }
     }
 
@@ -78,7 +78,7 @@ namespace PluginLatency {
         text[0] = 0;
         switch (index) {
             case kLatency: {
-                snprintf(text, kVstMaxParamStrLen, "%d", current()->latency);
+                snprintf(text, PLUGIN_PARAM_STR_MAX_LEN, "%d", current()->latency);
                 return;
             }
         }
@@ -101,7 +101,7 @@ namespace PluginLatency {
     void PluginVST2_Latency::getParameterName(VstInt32 index, char* label) {
         switch (index) {
             case kLatency:
-                vst_strncpy(label, "Latency", kVstMaxParamStrLen);
+                vst_strncpy(label, "Latency", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
         }
     }
@@ -140,7 +140,7 @@ namespace PluginLatency {
 
     bool PluginVST2_Latency::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
         if (index >= 0 && index < kNumPrograms) {
-            vst_strncpy(text, "Default", kVstMaxProgNameLen);
+            vst_strncpy(text, "Default", PLUGIN_PROGRAM_STR_MAX_LEN);
             return true;
         }
         return false;
@@ -200,7 +200,7 @@ namespace PluginLatency {
 
 
     Program::Program() : ProgramParameters() {
-        vst_strncpy(name, "Init", kVstMaxProgNameLen);
+        vst_strncpy(name, "Init", PLUGIN_PROGRAM_STR_MAX_LEN);
         latency = 1024;
     }
 

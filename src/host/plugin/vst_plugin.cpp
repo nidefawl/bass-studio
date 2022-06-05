@@ -700,7 +700,7 @@ void vstplugin::recvParamDisplayValueUpdate(int32_t internalIdx) {
     automatable_param_t* param = getEffectParam(internalIdx);
     dbgassert(param && param->internalIdx >= 0);
     param->paramDisplayValState &= ~PARAM_FLAG_DIRTY;
-    char buf[128]{};
+    char buf[PLUGIN_PARAM_STR_MAX_LEN+1]{};
     this->dispatch(effGetParamDisplay, param->internalIdx, 0, buf);
     if (buf[0]) {
         param->paramDisplayValStr = buf;
@@ -714,7 +714,7 @@ void vstplugin::recvProgramListUpdate() {
     }
     this->programNames.resize(0);
     this->programNames.reserve(handle->aeffect->numPrograms);
-    char buf[128];
+    char buf[PLUGIN_PROGRAM_STR_MAX_LEN+1];
     for (int i = 0; i < handle->aeffect->numPrograms; i++) {
         memset(buf, 0, sizeof(buf));
         if (this->dispatch(effGetProgramNameIndexed, i, 0, buf)) {
@@ -727,7 +727,7 @@ void vstplugin::recvProgramNameUpdate() {
     if (bIsLoadingProgram) {
         return;
     }
-    char buf[128];
+    char buf[PLUGIN_PROGRAM_STR_MAX_LEN+1];
     memset(buf, 0, sizeof(buf));
     auto curProgram = dispatch(effGetProgram);
     if (curProgram >= 0 && dispatch(effGetProgramNameIndexed, curProgram, 0, buf)) {

@@ -47,18 +47,18 @@ namespace PluginTestAdv {
 
     void GuiAdvPluginVST2::getProgramName(char* name) {
         if (name != NULL && curProgram >= 0)
-            vst_strncpy(name, programs[curProgram].name, kVstMaxProgNameLen);
+            vst_strncpy(name, programs[curProgram].name, PLUGIN_PROGRAM_STR_MAX_LEN);
     }
 
     void GuiAdvPluginVST2::getParameterLabel(VstInt32 index, char* label) {
-        vst_strncpy(label, "", kVstMaxParamStrLen);
+        vst_strncpy(label, "", PLUGIN_PARAM_STR_MAX_LEN);
     }
 
     void GuiAdvPluginVST2::getParameterDisplay(VstInt32 index, char* text) {
         text[0] = 0;
         switch (index) {
             case kNoiseVolume: {
-                snprintf(text, kVstMaxParamStrLen, "%.2f", current()->noiseVolume);
+                snprintf(text, PLUGIN_PARAM_STR_MAX_LEN, "%.2f", current()->noiseVolume);
             }
         }
     }
@@ -66,7 +66,7 @@ namespace PluginTestAdv {
     void GuiAdvPluginVST2::getParameterName(VstInt32 index, char* label) {
         switch (index) {
             case kNoiseVolume:
-                vst_strncpy(label, "Noise level", kVstMaxParamStrLen);
+                vst_strncpy(label, "Noise level", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
         }
     }
@@ -93,7 +93,7 @@ namespace PluginTestAdv {
 
     bool GuiAdvPluginVST2::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
         if (index >= 0 && index < kNumPrograms) {
-            vst_strncpy(text, programs[index].name, kVstMaxProgNameLen);
+            vst_strncpy(text, programs[index].name, PLUGIN_PROGRAM_STR_MAX_LEN);
             return true;
         }
         return false;
@@ -141,7 +141,7 @@ namespace PluginTestAdv {
 
 
     BaseVST2_Program::BaseVST2_Program() : ProgramParameters() {
-        vst_strncpy(name, "Init", kVstMaxProgNameLen);
+        vst_strncpy(name, "Init", PLUGIN_PROGRAM_STR_MAX_LEN);
         latency       = 0.3f;
         noiseVolume   = 0.1f;
         reportLatency = true;

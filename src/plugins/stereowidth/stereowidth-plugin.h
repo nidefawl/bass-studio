@@ -36,7 +36,7 @@ namespace PluginStereoWidth {
         ~BaseVST2_ProgramStereoWidth() = default;
 
     private:
-        char name[kVstMaxProgNameLen + 1]{ 0 };
+        char name[PLUGIN_PROGRAM_STR_MAX_LEN + 1]{ 0 };
     };
 
     class PluginVST2_StereoWidth : public BasePluginVST2 {

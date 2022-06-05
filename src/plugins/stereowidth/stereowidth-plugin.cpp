@@ -51,13 +51,13 @@ namespace PluginStereoWidth {
     void PluginVST2_StereoWidth::getParameterLabel(VstInt32 index, char* label) {
         switch (index) {
             case kStereoWidth:
-                vst_strncpy(label, "%", kVstMaxParamStrLen);
+                vst_strncpy(label, "%", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
             case kGain:
-                vst_strncpy(label, "dB", kVstMaxParamStrLen);
+                vst_strncpy(label, "dB", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
             default:
-                vst_strncpy(label, "", kVstMaxParamStrLen);
+                vst_strncpy(label, "", PLUGIN_PARAM_STR_MAX_LEN);
         }
     }
 
@@ -65,13 +65,13 @@ namespace PluginStereoWidth {
         text[0] = 0;
         switch (index) {
             case kStereoWidth: {
-                snprintf(text, kVstMaxParamStrLen, "%.0f", current()->width * 200.0f);
+                snprintf(text, PLUGIN_PARAM_STR_MAX_LEN, "%.0f", current()->width * 200.0f);
                 return;
             }
             case kGain: {
                 float fGain = 1.0f;
                 dsp_util::getGainLvl(current()->gain, fGain);
-	            snprintf(text, kVstMaxParamStrLen, "%.2f", dsp_util::dBFS(fGain));
+	            snprintf(text, PLUGIN_PARAM_STR_MAX_LEN, "%.2f", dsp_util::dBFS(fGain));
                 return;
             }
         }
@@ -102,10 +102,10 @@ namespace PluginStereoWidth {
     void PluginVST2_StereoWidth::getParameterName(VstInt32 index, char* label) {
         switch (index) {
             case kStereoWidth:
-                vst_strncpy(label, "Width", kVstMaxParamStrLen);
+                vst_strncpy(label, "Width", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
             case kGain:
-                vst_strncpy(label, "Gain", kVstMaxParamStrLen);
+                vst_strncpy(label, "Gain", PLUGIN_PARAM_STR_MAX_LEN);
                 return;
         }
     }
@@ -149,7 +149,7 @@ namespace PluginStereoWidth {
 
     bool PluginVST2_StereoWidth::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
         if (index >= 0 && index < kNumPrograms) {
-            vst_strncpy(text, "Default", kVstMaxProgNameLen);
+            vst_strncpy(text, "Default", PLUGIN_PROGRAM_STR_MAX_LEN);
             return true;
         }
         return false;
@@ -233,7 +233,7 @@ namespace PluginStereoWidth {
     }
 
     BaseVST2_ProgramStereoWidth::BaseVST2_ProgramStereoWidth() : ProgramParameters() {
-        vst_strncpy(name, "Init", kVstMaxProgNameLen);
+        vst_strncpy(name, "Init", PLUGIN_PROGRAM_STR_MAX_LEN);
         gain  = dsp_util::gainToLinScale(1.0f);
         width = 0.5f;
     }
