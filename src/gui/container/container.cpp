@@ -1,4 +1,5 @@
 #include <nanovg.h>
+#include "logging.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "guiglobals.h"
@@ -13,6 +14,7 @@
 #include "event.h"
 #include "renderresources.h"
 #include "gui/controls/button.h"
+#include "str_util.h"
 
 void guictr_base::setControl(BaseCtrl* parentCtrl) {
     guibase::setControl(parentCtrl);
@@ -142,23 +144,21 @@ void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, Strin
     ivec2 posInset  = getPosContent();
     if (isHorizontalTitle) {
         nvgRect(vg, 0, 0, sizeContent.x, hpt);
-        textMaxWidth = size.x - INSET_TITLE * 2;
+        textMaxWidth = size.x - textOffsetX;
         for (auto* gui : guis) {
             if (gui->isVisible() && gui->top()+posInset.y < hpt && gui->bottom()+posInset.y > 0) {
-                if (gui->left()+posInset.x <= textOffsetX) {
-                    float w = size.x - INSET_TITLE;
-                    textMaxWidth = math::min<float>(textMaxWidth, w - (gui->right()+posInset.x + INSET_TITLE));
+                if (gui->left() > textOffsetX && gui->left() <= textOffsetX+textMaxWidth) {
+                    textMaxWidth = math::min<float>(textMaxWidth, gui->left() - textOffsetX);
                 }
             }
         }
-        textMaxWidth -= textOffsetX;
     } else {
         nvgRect(vg, 0, 0, hpt, sizeContent.y);
         textMaxWidth = textOffsetX - (INSET_TITLE * 2.0f);
         for (auto* gui : guis) {
             if (gui->isVisible() && gui->left()+posInset.x < hpt && gui->right()+posInset.x > 0) {
-                if (gui->bottom()+posInset.y < textOffsetX) {
-                    textMaxWidth = math::min<float>(textMaxWidth, math::max(0.0f, textOffsetX - (gui->bottom()+posInset.y + INSET_TITLE * 2)));
+                if (gui->bottom() < textOffsetX) {
+                    textMaxWidth = math::min<float>(textMaxWidth, math::max(0.0f, textOffsetX - (gui->bottom() + INSET_TITLE)));
                 }
             }
         }
