@@ -251,6 +251,14 @@ public:
         noRawInput |= glfwRawMouseMotionSupported() == GLFW_FALSE;
     }
 
+    void setTitle(const String& title) {
+        if (title != name) {
+            safe_strcpy(name, title);
+            if (glfw) {
+                glfwSetWindowTitle(glfw, name);
+            }
+        }
+    }
 protected:
 
     void reloadCustomShaders() {
@@ -676,7 +684,12 @@ public:
           ctrl(_ctrl.get()),
           sharedCtrl(_ctrl) {
         String windowName = typeName(*_ctrl);
-        safe_strcpy(name, windowName);
+        auto windowNameCtrl = _ctrl->getWindowName();
+        if (!windowNameCtrl.empty()) {
+            safe_strcpy(name, windowNameCtrl);
+        } else {
+            safe_strcpy(name, windowName);
+        }
         if (_parent) {
             windowName = String(_parent->nameDbg) + ".child[" + windowName + "]";
         }
@@ -1064,6 +1077,7 @@ public:
     }
 
     void show() override {
+        setTitle(ctrl->getWindowName());
         appwindow::showWindow();
 
         //TODO: add this function to GLFW

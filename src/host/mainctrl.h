@@ -37,6 +37,7 @@
 #include "projectcontroller.h"
 #include "dragdrop.h"
 #include "../gui/container/container_dnd_layout.h"
+#include "buildinfo.h"
 
 struct automatable_t;
 struct KeyEvent;
@@ -453,6 +454,7 @@ public:
 #if BUILD_VSTHOST
         this->parentDawCtrl = this;
 #endif
+        setWindowName(BuildInfo::BUILD_BINARY_NAME);
     }
 
     ~DawCtrl() override = default;

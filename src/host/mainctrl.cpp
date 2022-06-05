@@ -1033,7 +1033,7 @@ void DawInstance::menuCommand(menucmd_t command) {
             case CMD_SHOW_DEBUG_WINDOW:
                 if (command.argInt == 3) {
 
-                    auto guidialog  = new guidialog_about;
+                    auto guidialog  = new guidialog_about();
                     auto popupCtrl = std::make_shared<PopupCtrl>();
 #if BUILD_VSTHOST
                     popupCtrl->parentDawCtrl = mainCtrl;
@@ -1042,7 +1042,7 @@ void DawInstance::menuCommand(menucmd_t command) {
                     popupCtrl->m_size = math::maxvec2(ivec2(20, 20), guidialog->size);
                     *popupCtrl->getTheme() = *mainCtrl->getTheme();
                     const ivec2 windowSize = ivec2(vec2(popupCtrl->m_size) * popupCtrl->m_scale);
-
+                    popupCtrl->setWindowName(guidialog->getLabel());
                     auto dialogWindow = mainCtrl->mainWindow->createOverlay(popupCtrl, windowSize, 0);
                     
                     dialogWindow->setSizeLimits(windowSize, windowSize);

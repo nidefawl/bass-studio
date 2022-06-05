@@ -148,6 +148,7 @@ public:
         ctrDragHandler.setFlag(FLG_RENDER_LABEL, true);
     }
     virtual ~BaseCtrl() = default;
+    String windowName;
     window_base* window = nullptr;
     NVGcontext* vg      = nullptr;
     std::vector<guictr_base*> containers;
@@ -311,6 +312,12 @@ public:
         return parentDawCtrl;
     }
 #endif
+    virtual String getWindowName() {
+        return windowName;
+    }
+    virtual void setWindowName(String name) {
+        windowName = std::move(name);
+    }
 };
 
 class AppCtrl : public BaseCtrl {
