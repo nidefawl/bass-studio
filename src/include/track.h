@@ -20,6 +20,7 @@
 #include "snapshot.h"
 #include "host/daw_channel.h"
 #include "track_types.h"
+#include "types.h"
 
 
 class track_t;
@@ -162,14 +163,14 @@ struct clip_layout_t {
     clip_t* clip;
     tick_t time;
     tick_t len;
-    tick_t lenSamples;
+    samplecount_t lenSamples;
     tick_t offsetStart;
     tick_t loopLen;
     clip_layout_t(
             clip_t* clip,
             tick_t time,
             tick_t len,
-            tick_t lenSamples,
+            samplecount_t lenSamples,
             tick_t offsetStart,
             tick_t loopLen)
         : clip(clip),
@@ -213,11 +214,11 @@ public:
         clips.clear();
         for (clip_t* clip : a.getConstClips()) {
             clips.emplace_back(clip,
-            clip->time,
-            clip->len,
-            clip->lenSamples,
-            clip->offsetStart,
-            clip->loopLen);
+                clip->time,
+                clip->len,
+                clip->lenSamples,
+                clip->offsetStart,
+                clip->loopLen);
         }
     }
 
@@ -363,7 +364,7 @@ public:
         }
         return lvl;
     }
-    void updateAudioClipLengths();
+    void updateAudioClipLengths(int32_t bpm100, samplerate_t oldSampleRate, samplerate_t newSampleRate);
 };
 struct trackcontainer_snapshot_t;
 

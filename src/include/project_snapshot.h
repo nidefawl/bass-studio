@@ -2,6 +2,7 @@
 #include "project.h"
 #include "track.h"
 #include "track_snapshot.h"
+#include "types.h"
 
 struct project_snapshot_t {
     trackcontainer_snapshot_t trackCtr;
@@ -10,4 +11,5 @@ struct project_snapshot_t {
     project_globals_t globals;
     export_settings_t exportSettings;
     quantize_settings quantizeSettings;
+    samplerate_t samplerate = 0;
 };

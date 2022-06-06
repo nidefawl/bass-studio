@@ -419,6 +419,7 @@ void serialize(Archive& archive, project_snapshot_t& m) {
             make_nvp("globals", m.globals),
             make_nvp("exportSettings", m.exportSettings));
     make_optional_nvp(archive, "quantizeSettings", m.quantizeSettings);
+    make_optional_nvp(archive, "samplerate", m.samplerate);
 };
 
 template<class Archive>
@@ -520,6 +521,10 @@ std::shared_ptr<project_file> loadProjectFile(String& path) {
         if (f->fileFmtVersion != FILE_FORMAT_VERSION) {
             log_lf(Log::L_WARN, "legacy project file version %u\n", f->fileFmtVersion);
             return nullptr;
+        }
+        if (f->project.samplerate == 0) {
+            f->project.samplerate = 44100;
+            log_lf(Log::L_WARN, "legacy project file without samplerate, setting samplerate to %u\n", 44100);
         }
         f->path = path;
         if (!validateProjectFile(f)) {

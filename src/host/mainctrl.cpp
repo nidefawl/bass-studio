@@ -1585,8 +1585,13 @@ void DawInstance::configureSampleRate() {
         ahost->stopAudio();
         host->setOutput(nullptr);
         if (settings.startEngine) {
+            auto oldSampleRate = host->m_sampleFormatInternal.sampleRate;
             host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.internalSamplerate),
                                                  settings.iosettings.internalBlocksize, sampleformat_bits_t::FLOAT_32});
+            auto newSampleRate = host->m_sampleFormatInternal.sampleRate;
+            for (track_t* t : project.trackList) {
+                t->updateAudioClipLengths(projectGlobals.tempo100, oldSampleRate, newSampleRate);
+            }
             if (ahost->startAudio(settings.iosettings)) {
                 host->setOutput(ahost->getStreamSharedPtr(0));
             } else {
@@ -1733,6 +1738,9 @@ std::shared_ptr<project_file> DawInstance::createProjectFile() {
     file->project.globals        = projectGlobals;
     file->project.exportSettings = getExportSettings();
     file->project.quantizeSettings = getQuantizeSettings();
+    if (tls.host) {
+        file->project.samplerate = tls.host->m_sampleFormatInternal.sampleRate;
+    }
     tls.audioCache->store(file->sampleFileIndex);
     if (tls.mainCtrl) {
         file->layout.layoutGrid    = tls.mainCtrl->grid;
@@ -1787,7 +1795,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
     /** create all audio instances **/
     for (track_t* t : project.trackList) {
-        t->updateAudioClipLengths();
+        t->updateAudioClipLengths(projectGlobals.tempo100, file->project.samplerate, tls.host->m_sampleFormatInternal.sampleRate);
         tls.host->createAudio(t);
     }
 
@@ -2643,8 +2651,9 @@ void DawInstance::preTrackDelete(track_t* track) {
 void DawInstance::setTempo(int32_t _tempo100) {
     playThread.call([this, _tempo100]() {
         projectGlobals.tempo100 = CLAMP_I(_tempo100, 100, 99900);
+        auto sr = daw_tls::getTls().host->m_sampleFormatInternal.sampleRate;
         for (track_t* t : project.trackList) {
-            t->updateAudioClipLengths();
+            t->updateAudioClipLengths(projectGlobals.tempo100, sr, sr);
         }
     }, true);
 }

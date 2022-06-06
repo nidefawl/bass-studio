@@ -119,14 +119,13 @@ track_t& track_t::operator=(const track_snapshot_t& obj) {
     }
     return *this;
 }
-void track_t::updateAudioClipLengths() {
-    auto ctrl = project_controller_t::get();
-    if (!ctrl)
-        return;
+void track_t::updateAudioClipLengths(int32_t bpm100, samplerate_t oldSampleRate, samplerate_t newSampleRate) {
+    double conversionFactor = newSampleRate / double(oldSampleRate);
     for (clip_t* clip : midi.getClips()) {
         if (clip->clipType == CLIP_AUDIO) {
-            dbgassert(clip->lenSamples > 0 && clip->len > 0);
-            clip->len = ctrl->samplesToTicks(clip->lenSamples);
+            dbgassert(clip->lenSamples > 0);
+            clip->lenSamples = math::ceildS64(clip->lenSamples * conversionFactor);
+            clip->len = sampleToTickConvert<tick_t, roundmode::round>(clip->lenSamples, bpm100, newSampleRate);
         }
 
     }

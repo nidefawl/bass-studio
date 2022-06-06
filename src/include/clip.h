@@ -9,6 +9,7 @@
 #include "note.h"
 #include "layout.h"
 #include "audiocache.h"
+#include "types.h"
 #include "wave/waveform_render.h"
 #include "logging.h"
 #include "assert_dbg.h"
@@ -200,7 +201,7 @@ public:
 
 public:
     tick_t offsetStart    = 0;
-    tick_t lenSamples     = 0;
+    samplecount_t lenSamples = 0;
     tick_t loopStart      = 0;
     tick_t loopLen        = 0;
     int clipType          = CLIP_MIDI;
@@ -294,8 +295,8 @@ public:
     tick_t& getLenRef();
     void setLen(tick_t _len = 0);
     void adjustLen(tick_t offset);
-    tick_t getLenSamples() const;
-    void setLenSamples(tick_t _lenSamples = 0);
+    samplecount_t getLenSamples() const;
+    void setLenSamples(samplecount_t _lenSamples = 0);
 
     bool isLoopEnabled() const {
         return loopEnabled && this->loopLen > 0;

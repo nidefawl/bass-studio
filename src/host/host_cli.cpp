@@ -277,7 +277,7 @@ int runCommandLineHost(const std::vector<String>& args) {
 
                 /** create all audio instances **/
                 for (track_t* t : projectController.getTracks()) {
-                    t->updateAudioClipLengths();
+                    t->updateAudioClipLengths(projectGlobals.tempo100, projectFile->project.samplerate, host->m_sampleFormatInternal.sampleRate);
                     host->createAudio(t);
                 }
 
