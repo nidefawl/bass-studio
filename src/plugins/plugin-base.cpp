@@ -164,6 +164,9 @@ param_converted_t BasePluginVST2::convertParamValueDisplay(int32_t idx, const pa
     auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
     return {fTextFieldVal, false};
 }
+void BasePluginVST2::addPropertiesParameterTooltip(Table::tbl& table, int idx) {
+    
+}
 
 void BasePluginVST2::open() {
 #if BUILD_EXTERNAL_PLUGIN

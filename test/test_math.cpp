@@ -1,6 +1,7 @@
 #include "TestBase.hpp"
 #include "math/seq_math.h"
 #include "logging.h"
+#include "rand.h"
 #include <limits>
 #include <vector>
 
@@ -599,6 +600,29 @@ namespace test_math {
         TEST_ASSERT_EQUAL(distancePointLine(vec2(-7.7f), vec2(-52, 10), vec2(55, 10000)), 47.705135f);
         TEST_END();
     }
+    void test_seq_rand() {
+        TEST_BEGIN("seq_rand");
+        seq_rand rand;
+        rand.rng_seed(static_cast<uint64_t>(0x12123*M_PI*13.+55.*37.));
+        for (size_t i = 0; i < 100000; i++) {
+            TEST_ASSERT_THROW(rand.rng_rand(32) < 32);
+            TEST_ASSERT_THROW(rand.rng_rand(32) >= 0);
+            TEST_ASSERT_THROW(rand.rng_bits(4) < 16);
+            TEST_ASSERT_THROW(rand.rng_bits(4) >= 0);
+            TEST_ASSERT_THROW(rand.rng_bits(12) < (1<<12));
+            TEST_ASSERT_THROW(rand.rng_bits(12) >= 0);
+            TEST_ASSERT_THROW(rand.rng_double() >= 0);
+            TEST_ASSERT_THROW(rand.rng_double() < 1.0);
+        }
+        for (size_t i = 0; i < 10; i++) {
+            log_lf(Log::L_INFO, "%d: rng_double %f %f %f %f\n", i, rand.rng_double(), rand.rng_double(), rand.rng_double(), rand.rng_double());
+        }
+        for (size_t i = 0; i < 10; i++) {
+            log_lf(Log::L_INFO, "%d: rng_rand %08X %08X\n", i, rand.rng_rand(), rand.rng_rand());
+        }
+
+        TEST_END();
+    }
 }// namespace test_math
 
 int main() {
@@ -641,7 +665,7 @@ int main() {
         TEST_END();
         test_math::testFunctions();
         test_math::testVecMath();
-
+        test_math::test_seq_rand();
     } catch (std::exception& e) {
         log_printf("Caught exception: %s\n", e.what());
         return -1;

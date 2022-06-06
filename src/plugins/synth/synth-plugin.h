@@ -56,6 +56,7 @@ namespace PluginSynth {
         ModEnvS,
         ModEnvR,
         ModEnvV,
+        LfoWave,
         kNumParams
     };
 
@@ -130,6 +131,7 @@ namespace PluginSynth {
         double LfoAmount         = 0.0;
         double LfoFrequency      = 0.0;
         double LfoDelay          = 0.0;
+        double LfoWave           = 0.0;
         double VolEnvFm          = 0.0;
         double VolEnvCutoff      = 0.0;
         double ModEnvFm          = 0.0;
@@ -139,6 +141,54 @@ namespace PluginSynth {
         double VoiceMode         = 0.0;
         double GlideLength       = 0.0;
         double MasterVolume      = 0.0;
+    public:
+        double* getProgramParameter(Parameters parameter) {
+            switch (parameter) {
+                case Parameters::VoiceMode: return &VoiceMode;
+                case Parameters::GlideLength: return &GlideLength;
+                case Parameters::FilterMode: return &FilterMode;
+                case Parameters::FilterCutoff: return &FilterCutoff;
+                case Parameters::FilterResonance: return &FilterResonance;
+                case Parameters::FilterKeyTracking: return &FilterKeyTracking;
+                case Parameters::VolEnvCutoff: return &VolEnvCutoff;
+                case Parameters::ModEnvCutoff: return &ModEnvCutoff;
+                case Parameters::OscMix: return &OscMix;
+                case Parameters::Osc1Wave: return &Osc1Wave;
+                case Parameters::Osc1Coarse: return &Osc1Coarse;
+                case Parameters::Osc1Fine: return &Osc1Fine;
+                case Parameters::Osc1Split: return &Osc1Split;
+                case Parameters::Osc2Wave: return &Osc2Wave;
+                case Parameters::Osc2Coarse: return &Osc2Coarse;
+                case Parameters::Osc2Fine: return &Osc2Fine;
+                case Parameters::Osc2Split: return &Osc2Split;
+                case Parameters::LfoAmount: return &LfoAmount;
+                case Parameters::LfoFrequency: return &LfoFrequency;
+                case Parameters::LfoDelay: return &LfoDelay;
+                case Parameters::LfoCutoff: return &LfoCutoff;
+                case Parameters::LfoWave: return &LfoWave;
+                case Parameters::FmMode: return &FmMode;
+                case Parameters::FmCoarse: return &FmCoarse;
+                case Parameters::FmFine: return &FmFine;
+                case Parameters::VolEnvFm: return &VolEnvFm;
+                case Parameters::ModEnvFm: return &ModEnvFm;
+                case Parameters::LfoFm: return &LfoFm;
+                case Parameters::VolEnvA: return &VolEnvA;
+                case Parameters::VolEnvD: return &VolEnvD;
+                case Parameters::VolEnvS: return &VolEnvS;
+                case Parameters::VolEnvR: return &VolEnvR;
+                case Parameters::VolEnvV: return &VolEnvV;
+                case Parameters::ModEnvA: return &ModEnvA;
+                case Parameters::ModEnvD: return &ModEnvD;
+                case Parameters::ModEnvS: return &ModEnvS;
+                case Parameters::ModEnvR: return &ModEnvR;
+                case Parameters::ModEnvV: return &ModEnvV;
+                case Parameters::MasterVolume:
+                case Parameters::kNumParams:
+                    return nullptr;
+            }
+            dbgassert(0);
+            return nullptr;
+        }
     };
     class SynthProgram : public SynthProgramParameters {
         friend class PluginVST2_Synth;
@@ -147,8 +197,14 @@ namespace PluginSynth {
         SynthProgram();
         ~SynthProgram() = default;
 
+        void setName(const String& name) {
+            this->name = name;
+        }
+        const String& getName() const {
+            return this->name;
+        }
     private:
-        char name[PLUGIN_PROGRAM_STR_MAX_LEN + 1]{0};
+        String name;
     };
 
     struct SynthParamBase;
@@ -158,15 +214,32 @@ namespace PluginSynth {
         using ThreadLock = std::lock_guard<std::recursive_mutex>;
         explicit PluginVST2_Synth(audioMasterCallback audioMaster);
         ~PluginVST2_Synth() override = default;
+    
+        // internal API
+        std::shared_ptr<PluginViewContainers> createView() override;
+        param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;
+        void addPropertiesParameterTooltip(Table::tbl& table, int idx) override;
+
         void initPrograms();
         void writeCurrentProgram();
         void setFromSynthProgram(SynthProgram* program);
+
+        SynthParamBase* getParam(Parameters enumParam);
+        SynthImpl* getSynth();
+
+#ifdef DISPATCHER_DEBUG_TRACE
+        VstIntPtr dispatcher(VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt);
+#endif// DEBUG
+        std::recursive_mutex& getMutex() {
+            return mutex;
+        }
+
+
+        // VST2 API
         void setSampleRate(float sampleRate) override;
         void setBlockSize(VstInt32 blockSize) override;
         VstInt32 processEvents(VstEvents* events) override;///< Called when new MIDI events come in
         void processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) override;
-        std::shared_ptr<PluginViewContainers> createView() override;
-
         void setProgram(VstInt32 program) override;
         void setProgramName(char* name) override;
         void getProgramName(char* name) override;
@@ -196,17 +269,6 @@ namespace PluginSynth {
         }
         VstInt32 getVendorVersion() override;
         VstInt32 canDo(char* text) override;
-
-        SynthParamBase* getParam(Parameters enumParam);
-        SynthImpl* getSynth();
-
-#ifdef DISPATCHER_DEBUG_TRACE
-        VstIntPtr dispatcher(VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt);
-#endif// DEBUG
-        std::recursive_mutex& getMutex() {
-            return mutex;
-        }
-
     private:
         std::vector<SynthParamBase*> vecParams;
         std::array<SynthProgram, kNumPrograms> staticPrograms;

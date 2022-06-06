@@ -29,8 +29,8 @@ class guiknob_pluginparam : public guiknob_labeled_base {
     effectbase* hostSidePlugin = nullptr;
 #endif
 public:
-    explicit guiknob_pluginparam(int _paramIdx, int _internalEffectIdx = -1) 
-        : guiknob_labeled_base(guiknob::knobtype::KNOB_LABELED)
+    explicit guiknob_pluginparam(int _paramIdx, int _internalEffectIdx = -1, guiknob::knobtype _knobtype = guiknob::knobtype::KNOB_LABELED)
+        : guiknob_labeled_base(_knobtype)
     {
         paramIdx = _paramIdx;
     }
@@ -105,5 +105,11 @@ public:
             return true;
         }
         return false;
+    }
+    guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
+    effectbase* getEffectInstance() {
+#if BUILD_VSTHOST
+        return hostSidePlugin;
+#endif
     }
 };

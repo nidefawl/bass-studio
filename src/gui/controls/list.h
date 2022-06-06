@@ -155,4 +155,8 @@ public:
     guibase* getFocusedContainer() override {
         return this;
     }
+
+    std::vector<gui_list_entry*>& getListRef() {
+        return listGuis;
+    }
 };

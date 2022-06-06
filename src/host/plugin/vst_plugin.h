@@ -145,4 +145,5 @@ public:
     VstTimeInfo* getLocalTimeInfoPtr();
     uint32_t getLocalCurrentUniqueId();
     void addPropertiesTooltip(Table::tbl& table) override;
+    void addPropertiesParameterTooltip(Table::tbl& table, int idx) override;
 };

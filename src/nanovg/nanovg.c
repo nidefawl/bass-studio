@@ -2337,7 +2337,7 @@ void nvgSetShapeExtents(NVGcontext* ctx, float x, float y, float w, float h)
 void nvgRect(NVGcontext* ctx, float x, float y, float w, float h)
 {
 	ctx->dbgCount++;
-	//dbgassert(w>=0&&h>=0);
+	dbgassert(w>=0&&h>=0);
 	float vals[] = {
 		NVG_MOVETO, x,y,
 		NVG_LINETO, x,y+h,

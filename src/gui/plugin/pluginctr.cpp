@@ -877,7 +877,7 @@ void guictr_pluginview::render(NVGcontext* vg) {
     drawInsetBackground(vg, theme, cp, cs);
     ivec2 csp = ctr_plugins->getSizeContent();
     int32_t w = ctr_plugins->getTotalWidth();
-    if (cs.x > 0 && cs.y > 0 && csp.x > 0 && csp.y > 0) {
+    if (cs.x > 0 && cs.y > 0 && csp.x > 0 && csp.y > 0 && w > 1) {
         float scY       = cs.y / (float) csp.y;
         float scContent = math::min(1.0f, csp.x / (float) w);
         float minScale  = math::min((cs.x / (float) math::max(csp.x, w)), scY);

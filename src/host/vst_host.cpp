@@ -815,10 +815,16 @@ void vsthost::updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPo
     timeinfo.samplesToNextClock = math::rounddS32(samplePosClosestPPQ24Tick);
 
     {
-        bool changed = setFlag(timeinfo.flags, kVstTransportPlaying, DAW::isPlaybackState(state));
-        changed |= setFlag(timeinfo.flags, kVstTransportCycleActive, loopEnabed);
-        changed |= setFlag(timeinfo.flags, kVstTransportRecording, false);
-        setFlag(timeinfo.flags, kVstTransportChanged, changed);
+        if (&timeinfo == &m_sharedTimeInfo) {
+            bool changed = setFlag(timeinfo.flags, kVstTransportPlaying, DAW::isPlaybackState(state));
+            changed |= setFlag(timeinfo.flags, kVstTransportCycleActive, loopEnabed);
+            changed |= setFlag(timeinfo.flags, kVstTransportRecording, false);
+            setFlag(timeinfo.flags, kVstTransportChanged, changed);
+        } else {
+            // copy flags from shared time info
+            auto flags = kVstTransportPlaying | kVstTransportCycleActive | kVstTransportRecording | kVstTransportChanged;
+            timeinfo.flags = (timeinfo.flags & (~flags)) | (m_sharedTimeInfo.flags & flags);
+        }
         setFlag(timeinfo.flags, kVstAutomationWriting, false);
         setFlag(timeinfo.flags, kVstAutomationReading, false);
         setFlag(timeinfo.flags, kVstNanosValid, true);

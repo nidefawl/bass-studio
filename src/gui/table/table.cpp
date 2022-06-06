@@ -188,7 +188,8 @@ namespace Table {
     }
     void DrawTableNVG(tbl& table, NVGcontext* vg, guitheme_t* theme, vec2 pos, vec2 size, float fontSize) {
         int nTitleCols    = table.titleCols.size();
-        table_ctxt_t ctxt = { vg, theme, pos, size, fontSize };
+        float fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
+        table_ctxt_t ctxt = { vg, theme, pos, size, fontSizeScaled };
 
         int nContentRows   = table.rows.size();
         bool renderColWise = nContentRows > 0;
@@ -202,14 +203,14 @@ namespace Table {
                 nvgIntersectScissor(vg, ctxt.pos.x, ctxt.pos.y, ctxt.pos.x + colSizeX, ctxt.pos.y + size.y);
                 if (nTitleCols) {
                     ctxt.size = ivec2(colSizeX, table.titleHeight);
-                    nvgFontSize(ctxt.vg, fontSize);
+                    nvgFontSize(ctxt.vg, fontSizeScaled);
                     tableDrawEntry(ctxt, table.titleCols[xCol]);
                     pos.y += table.titleHeight;
                 }
                 for (int yRow = 0; yRow < nContentRows; yRow++) {
                     tbl_row_t& row = table.rows[yRow];
                     ctxt.size      = ivec2(colSizeX, table.rowHeight);
-                    nvgFontSize(ctxt.vg, fontSize);
+                    nvgFontSize(ctxt.vg, fontSizeScaled);
                     tableDrawEntry(ctxt, row.cols[xCol]);
                     ctxt.pos.y += table.rowHeight;
                 }
@@ -221,7 +222,7 @@ namespace Table {
                 ctxt.pos = pos;
                 for (int xCol = 0; xCol < nTitleCols; xCol++) {
                     ctxt.size = ivec2(table.colSizes[xCol], table.titleHeight);
-                    nvgFontSize(ctxt.vg, fontSize);
+                    nvgFontSize(ctxt.vg, fontSizeScaled);
                     tableDrawEntry(ctxt, table.titleCols[xCol]);
                     ctxt.pos.x += table.colSizes[xCol];
                 }
@@ -235,7 +236,7 @@ namespace Table {
                 for (int xCol = 0; xCol < nCols; xCol++) {
                     float x   = table.colSizes[xCol];
                     ctxt.size = ivec2(table.colSizes[xCol], table.rowHeight);
-                    nvgFontSize(ctxt.vg, fontSize);
+                    nvgFontSize(ctxt.vg, fontSizeScaled);
                     tableDrawEntry(ctxt, row.cols[xCol]);
                     ctxt.pos.x += x;
                 }

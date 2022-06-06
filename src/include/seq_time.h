@@ -126,7 +126,7 @@ sampleToTickConvert(SampleType sample, int32_t bpm100, samplerate_t samplerate) 
 template<typename ReturnType, typename RoundMode, typename SampleType>
 typename std::enable_if<std::is_same<RoundMode, roundmode::round>::value, ReturnType>::type
 sampleToTickConvert(SampleType sample, int32_t bpm100, samplerate_t samplerate) {
-    return static_cast<ReturnType>(std::lround(sampleToTickDD(sample, bpm100 / (double) samplerate)));
+    return static_cast<ReturnType>(std::lround(sampleToTickDD( sample, bpm100 / (double) samplerate)));
 }
 
 template<typename ReturnType, typename RoundMode, typename SampleType>

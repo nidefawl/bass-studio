@@ -488,12 +488,16 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     const int32_t programIdx = pluginSnapshot.currentProgram >= 0 ? pluginSnapshot.currentProgram : 0;
     VstPatchChunkInfo info{};
     info.version = 1;
-    info.numElements = this->handle->aeffect->numPrograms;
+    info.numElements = 1;
     info.pluginVersion = pluginSnapshot.vendorVersion;
     info.pluginUniqueID = pluginSnapshot.uId;
-    this->dispatch(effBeginLoadBank, 0, 0, (void*)&info);
-    this->dispatch(effBeginSetProgram);
-    if ((this->getFlagsVST() & effFlagsProgramChunks) != 0) {
+    auto retBeginLoadBank = this->dispatch(effBeginLoadBank, 0, 0, (void*)&info);
+    auto retBeginSetProgram = this->dispatch(effBeginSetProgram);
+    this->dispatch(effSetProgram, 0, programIdx);
+    log_lf(Log::L_DEBUG, "Plugin %s: effBeginLoadBank %zd\n", StringAsCStr(this->sName), retBeginLoadBank);
+    log_lf(Log::L_DEBUG, "Plugin %s: retBeginSetProgram %zd\n", StringAsCStr(this->sName), retBeginSetProgram);
+    bool bLoadProgramDataChunk = (this->getFlagsVST() & effFlagsProgramChunks) != 0;
+    if (bLoadProgramDataChunk) {
         if (!pluginSnapshot.dataChunk.empty()) {
             auto& localMem = this->handle->dataChunkLocalMemory;
             localMem       = pluginSnapshot.dataChunk;
@@ -509,11 +513,13 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
         if (!pluginSnapshot.currentProgramName.empty()) {
             this->dispatch(effSetProgramName, 0, 0, (void*)StringAsCStr(pluginSnapshot.currentProgramName));
         }
+    }
+    if (!bLoadProgramDataChunk || (this->bugfixFlags & VST2_BUG_NEED_SHOW_WINDOW_TO_LOAD_PRESET)) {
         loadEffectParamsFromSnapshot(pluginSnapshot, this);
     }
-    this->dispatch(effSetProgram, 0, programIdx);
     this->dispatch(effEndSetProgram);
     this->dispatch(effSetProgram, 0, programIdx);
+    // this->dispatch(effSetProgram, 0, programIdx);
     this->bIsLoadingProgram = false;
 }
 
@@ -627,6 +633,7 @@ param_unit_t vstplugin::getParamValueDisplay(int32_t idx) {
     }
     return effectbase::getParamValueDisplay(idx);
 }
+
 param_converted_t vstplugin::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
     if (idx >= PARAM_OFFSET_EXTERNAL) {
         if (handle->axEffect) {
@@ -635,6 +642,16 @@ param_converted_t vstplugin::convertParamValueDisplay(int32_t idx, const param_u
         return {0.0f, false};
     }
     return effectbase::convertParamValueDisplay(idx, displayValue);
+}
+
+void vstplugin::addPropertiesParameterTooltip(Table::tbl& table, int idx) {
+    if (idx >= PARAM_OFFSET_EXTERNAL) {
+        if (handle->axEffect) {
+            handle->axEffect->addPropertiesParameterTooltip(table, idx - PARAM_OFFSET_EXTERNAL);
+            return;
+        }
+    }
+    effectbase::addPropertiesParameterTooltip(table, idx);
 }
 
 void vstplugin::setParamValue(int32_t idx, float val, int flags) {

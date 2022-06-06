@@ -1,12 +1,18 @@
 #include <cmath>
 #include <algorithm>
+#include <cstdint>
 #include <cstdio>
+#include <iterator>
 #include <vector>
 #include <map>
 #include <deque>
 #include <memory>
+#include <vstsdk-host-2.4/aeffectx.h>
 #include "config.h"
+#include "gui/controls/list.h"
+#include "logging.h"
 #include "math/seq_math.h"
+#include "rand.h"
 #include "seq_util.h"
 #include "str_util.h"
 #include "dsp_util.h"
@@ -21,6 +27,7 @@
 #include "gui/controls/knobpluginparam.h"
 #include "gui/container/container.h"
 #include "gui/contextmenu/contextmenu_daw.h"
+#include "gui/table/table.h"
 
 #include "basectrl.h"
 
@@ -59,17 +66,25 @@ namespace PluginSynth {
     std::vector<String> stringsWaveform = {
         "Sine", "Triangle", "Saw", "Square", "Pulse", "Noise"
     };
+    static constexpr int NUM_POLY_VOICES = 32;
+    static constexpr int NUM_UNISON_VOICES = 3;
+    
+    struct HostTempo {
+        double barPos;
+        double bpm;
+        double ppqPos;
+    };
 
     struct SmoothSwitch {
-        double current  = -1.0;
-        double previous = -1.0;
+        double current  = 0.0;
+        double previous = 0.0;
         double mix      = 1.0;
         bool switching  = false;
 
         void Update(double dt) {
             if (switching) {
                 mix += (1.0 - mix) * 100.0 * dt;
-                if (mix > .999) {
+                if (mix >= .99999) {
                     mix       = 1.0;
                     switching = false;
                 }
@@ -101,7 +116,7 @@ namespace PluginSynth {
         EnvelopeStages stage = EnvelopeStages::Idle;
         double value         = 0.0;
 
-        bool IsReleased() { return stage == EnvelopeStages::Release || stage == EnvelopeStages::Idle; }
+        bool IsReleased() const { return stage == EnvelopeStages::Release || stage == EnvelopeStages::Idle; }
 
         void Reset() { value = 0.0; }
         void Start() { stage = EnvelopeStages::Attack; }
@@ -158,20 +173,37 @@ namespace PluginSynth {
             v -= Blep(fmod(_phase + (1.0 - width), 1.0), _phaseIncrement);
             return v;
         }
-        double GetWaveform(Waveforms waveform) {
+        inline double GeneratePulseRaw(double _phase, double width) {
+            double v = _phase < width ? 1.0 : -1.0;
+            return v;
+        }
+        double GetWaveform(Waveforms waveform, bool bleb) {
             switch (waveform) {
                 case Waveforms::Sine:
                     return sin(phase * M_PI * 2.0);
                 case Waveforms::Triangle:
                     triLast    = triCurrent;
-                    triCurrent = phaseIncrement * GeneratePulse(phase, phaseIncrement, .5) + (1.0 - phaseIncrement) * triLast;
+                    if (!bleb) {
+                        triCurrent = phaseIncrement * GeneratePulseRaw(phase, .5) + (1.0 - phaseIncrement) * triLast;
+                    } else {
+                        triCurrent = phaseIncrement * GeneratePulse(phase, phaseIncrement, .5) + (1.0 - phaseIncrement) * triLast;
+                    }
                     return triCurrent * 5.0;
                 case Waveforms::Saw:
-                    return 1.0 - 2.0 * phase + Blep(phase, phaseIncrement);
-                    break;
+                    if (!bleb) {
+                        return 1.0 - 2.0 * phase;
+                    } else {
+                        return 1.0 - 2.0 * phase + Blep(phase, phaseIncrement);
+                    }
                 case Waveforms::Square:
+                    if (!bleb) {
+                        return GeneratePulseRaw(phase, .5);
+                    }
                     return GeneratePulse(phase, phaseIncrement, .5);
                 case Waveforms::Pulse:
+                    if (!bleb) {
+                        return GeneratePulseRaw(phase, .75);
+                    }
                     return GeneratePulse(phase, phaseIncrement, .75);
                 case Waveforms::Noise:
                     // Ove Karlsen's noise algorithm
@@ -186,25 +218,40 @@ namespace PluginSynth {
             return 0;
         }
 
-        double Get(double dt, double frequency) {
+        double GetWaveform(double dt, double frequency, Waveforms waveform, bool bleb) {
             phaseIncrement = frequency * dt;
             phase += phaseIncrement;
             while (phase > 1.0) phase -= 1.0;
-            return GetWaveform(Waveforms::Sine);
+            return GetWaveform(waveform, bleb);
         }
-
-        double Get(double dt, SmoothSwitch& waveform, double frequency) {
+        bool Update(double dt, double frequency) {
+            phaseIncrement = frequency * dt;
+            phase += phaseIncrement;
+            bool b = false;
+            while (phase > 1.0) {
+                phase -= 1.0;
+                b = true;
+            }
+            return b;
+        }
+        double Get(double dt, SmoothSwitch& waveform, double frequency, bool bleb) {
             phaseIncrement = frequency * dt;
             phase += phaseIncrement;
             while (phase > 1.0) phase -= 1.0;
 
             if (waveform.switching) {
                 auto out = 0.0;
-                out += (1.0 - waveform.mix) * GetWaveform((Waveforms) (int) waveform.previous);
-                out += waveform.mix * GetWaveform((Waveforms) (int) waveform.current);
+                out += (1.0 - waveform.mix) * GetWaveform((Waveforms) (int) waveform.previous, bleb);
+                out += waveform.mix * GetWaveform((Waveforms) (int) waveform.current, bleb);
                 return out;
             }
-            return GetWaveform((Waveforms) (int) waveform.current);
+            return GetWaveform((Waveforms) (int) waveform.current, bleb);
+        }
+        void initPhase(double phase) {
+            this->phase = phase;
+            if (0.0 == phase) {
+                triCurrent = triLast = 0.0;
+            }
         }
     };
 
@@ -407,17 +454,41 @@ namespace PluginSynth {
         Oscillator osc1b;
         Oscillator osc2a;
         Oscillator osc2b;
+        Oscillator lfo1;
+        Oscillator lfo2;
         Filter filter;
+        seq_rand rand;
+        double lfoValue      = 0.0;
+        double driftVelocity = 0.0;
+        double driftPhase    = 0.0;
+        double driftValue    = 0.0;
 
-        bool IsReleased() { return volEnv.IsReleased(); }
-        double GetVolume() { return volEnv.value; }
+        double getRandom() {
+            return rand.rng_double();
+        }
+        double getRandomPhase() {
+            return rand.rng_double()*0.5;
+        }
 
-        void Reset(bool osc1OutOfPhase, bool osc2OutOfPhase) {
-            oscFm.phase = 0.0;
-            osc1a.phase = 0.0;
-            osc1b.phase = osc1OutOfPhase ? .33 : 0.0;
-            osc2a.phase = 0.0;
-            osc2b.phase = osc2OutOfPhase ? .33 : 0.0;
+        bool IsReleased() const { return volEnv.IsReleased(); }
+        double GetVolume() const { return volEnv.value; }
+
+        bool bInitial = true;
+        void Reset(double phase, bool osc1OutOfPhase, bool osc2OutOfPhase) {
+            // if (bInitial) {
+                oscFm.phase = rand.rng_double();
+                osc1a.phase = rand.rng_double();
+                osc1b.phase = rand.rng_double();
+                // osc1b.phase = osc1a.phase + (osc1OutOfPhase ? (rand.rng_double()*2.0-1.0)*0.166+0.3333 : 0.0);
+                osc2a.phase = rand.rng_double();
+                osc2b.phase = rand.rng_double();
+                // osc2b.phase = osc2a.phase + (osc1OutOfPhase ? (rand.rng_double()*2.0-1.0)*0.166+0.3333 : 0.0);
+            // }
+            // oscFm.phase = phase;
+            // osc1a.phase = phase;
+            // osc1b.phase = phase + (osc1OutOfPhase ? .33 : 0.0);
+            // osc2a.phase = phase;
+            // osc2b.phase = phase + (osc2OutOfPhase ? .33 : 0.0);
             volEnv.Reset();
             modEnv.Reset();
             lfoEnv.Reset();
@@ -441,12 +512,99 @@ namespace PluginSynth {
 
         void SetVelocity(double v) { velocity = v; }
 
-        void Start(bool osc1OutOfPhase, bool osc2OutOfPhase) {
+        void Start(double phase, bool osc1OutOfPhase, bool osc2OutOfPhase) {
             if (volEnv.stage == EnvelopeStages::Idle)
-                Reset(osc1OutOfPhase, osc2OutOfPhase);
+                Reset(phase, osc1OutOfPhase, osc2OutOfPhase);
             volEnv.Start();
             modEnv.Start();
             lfoEnv.Start();
+        }
+
+        void UpdateVoice(const HostTempo& tempo, double dt) {
+            driftVelocity += getRandom() * 1.0 * dt;
+            driftVelocity -= driftVelocity * 2.0 * dt;
+            driftPhase += driftVelocity * dt;
+            driftValue = .00001 * sin(driftPhase);
+            if (lfo2.Update(dt, math::max(tempo.bpm/4.0, 1.0) / 60.0)) {
+                lfo1.initPhase(0.0);
+            }
+        }
+    };
+
+    struct VoiceUnison {
+        std::array<Voice, NUM_UNISON_VOICES> voices;
+        int32_t index = 0;
+        seq_rand rand;
+        double lfoValue      = 0.0;
+        double driftVelocity = 0.0;
+        double driftPhase    = 0.0;
+        double driftValue    = 0.0;
+
+        bool IsReleased() const { return std::all_of(std::cbegin(voices), std::cend(voices), [](auto& voice) { return voice.volEnv.IsReleased() && voice.modEnv.IsReleased(); }); };
+        double GetVolume() const { 
+            auto voice = std::max_element(
+                                        std::cbegin(voices),
+                                        std::cend(voices),
+                                        [](const Voice& a, const Voice& b) {
+                                            return a.IsReleased() == b.IsReleased() ? a.GetVolume() < b.GetVolume() : a.IsReleased();
+                                        });
+            return voice->GetVolume();
+        }
+
+        double getRandom() {
+            double dRandPhase = rand.rng_bits(14)/static_cast<float>(1<<14);
+            return dRandPhase;
+        }
+        double getRandomPhase() {
+            return getRandom()*0.5;
+        }
+
+        void Release() {
+            std::for_each(std::begin(voices), std::end(voices), [](Voice& voice) {
+                voice.Release();
+            });
+        }
+
+        void SetNote(int n) {
+            std::for_each(std::begin(voices), std::end(voices), [n](Voice& voice) {
+                voice.SetNote(n);
+            });
+        }
+
+        void SetPitchBendFactor(double f) { 
+            std::for_each(std::begin(voices), std::end(voices), [f](Voice& voice) {
+                voice.SetPitchBendFactor(f);
+            });
+        }
+
+        void ResetPitch() { 
+            std::for_each(std::begin(voices), std::end(voices), [](Voice& voice) {
+                voice.ResetPitch();
+            });
+        }
+
+        void SetVelocity(double v) { 
+            std::for_each(std::begin(voices), std::end(voices), [v](Voice& voice) {
+                voice.SetVelocity(v);
+            });
+        }
+
+        void Start(HostTempo& tempo, bool osc1OutOfPhase, bool osc2OutOfPhase) {
+            std::for_each(std::begin(voices), std::end(voices), [=](Voice& voice) {
+                bool reset = voice.volEnv.stage >= EnvelopeStages::Release && voice.modEnv.stage >= EnvelopeStages::Decay;
+                voice.Start(getRandomPhase(), osc1OutOfPhase, osc2OutOfPhase);
+                if (reset) {
+                    voice.lfo1.initPhase(fmod(this->driftValue * voice.rand.rng_double(), 1.0));
+                    voice.lfo2.initPhase(fmod(voice.driftValue, 1.0));
+
+                }
+            });
+        }
+        void UpdateVoice(const HostTempo& tempo, double dt) {
+            driftVelocity += getRandom() * 1.0 * dt;
+            driftVelocity -= driftVelocity * 2.0 * dt;
+            driftPhase += driftVelocity * dt;
+            driftValue = .0001 * sin(driftPhase);
         }
     };
 
@@ -485,12 +643,8 @@ namespace PluginSynth {
         virtual float getAsFloat() {
             return 0.0f;
         }
-        virtual void getValueDisplay(char* _out) {
-            vst_strncpy(_out, "", PLUGIN_PARAM_STR_MAX_LEN);
-        }
-        virtual void getLabel(char* _out) {
-            vst_strncpy(_out, "", PLUGIN_PARAM_STR_MAX_LEN);
-        }
+        virtual String getValueDisplay() = 0;
+        virtual param_converted_t convertValueDisplay(const param_unit_t& displayValue) const = 0;
     };
     struct SynthParam_Float : public SynthParamBase {
         SynthParam_Float(Parameters _enumParam) : SynthParamBase(ParamType::FLOAT, _enumParam) {
@@ -522,8 +676,13 @@ namespace PluginSynth {
         float getAsFloat() override {
             return valDouble;
         }
-        void getValueDisplay(char* _out) override {
-            snprintf(_out, PLUGIN_PARAM_STR_MAX_LEN, StringAsCStr(format), Value());
+        String getValueDisplay() override {
+            return StringFormat(StringAsCStr(format), Value());
+        }
+        param_converted_t convertValueDisplay(const param_unit_t& displayValue) const override {
+            auto f = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+            float fVal = math::max(0.0, math::min(1.0, (f - fmin) / (fmax - fmin)));
+            return {fVal, true};
         }
     };
     struct SynthParam_Int : public SynthParamBase {
@@ -554,9 +713,13 @@ namespace PluginSynth {
             iValue         = math::max(iMin, math::min(iMax, i));
             this->valFloat = math::max(0.0, math::min(1.0, (iValue - iMin) / (double) (iMax - iMin)));
         }
-        void getValueDisplay(char* _out) override {
-
-            snprintf(_out, PLUGIN_PARAM_STR_MAX_LEN, StringAsCStr(format), Value());
+        String getValueDisplay() override {
+            return StringFormat(StringAsCStr(format), Value());
+        }
+        param_converted_t convertValueDisplay(const param_unit_t& displayValue) const override {
+            auto f = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+            auto iVal = math::max(iMin, math::min(iMax, (int32_t) math::froundf(f * (iMax - iMin) + iMin)));
+            return {math::max(0.0f, math::min(1.0f, static_cast<float>((iVal - iMin) / (double) (iMax - iMin)))), true};
         }
     };
     struct SynthParam_Enum : public SynthParam_Int {
@@ -568,13 +731,12 @@ namespace PluginSynth {
             this->iMax    = _strings.size() - 1;
             return this;
         }
-        void getValueDisplay(char* _out) override {
-            String s;
+        String getValueDisplay() override {
             int val = this->Value();
             if (val >= 0 && val < CtrSize(strings)) {
-                s = strings[val];
+                return strings[val];
             }
-            snprintf(_out, PLUGIN_PARAM_STR_MAX_LEN, "%s", StringAsCStr(s));
+            return StringFormat("%d", val);
         }
         template<typename T>
         T getEnumValue() {
@@ -584,9 +746,12 @@ namespace PluginSynth {
     void setParamName(SynthParamBase* p, String name, String shortName, String format) {
         p->name      = name;
         p->shortName = shortName;
-        p->format    = format;
+        if (format == "%f") {
+            p->format = "%0.3f";
+        } else {
+            p->format = format;
+        }
     }
-    const int numVoices = 8;
     struct MidiMessage {
         int32_t mOffset;
         int32_t StatusMsg() {
@@ -600,22 +765,31 @@ namespace PluginSynth {
         }
     };
     class SynthImpl : public SynthState {
+        std::array<VoiceUnison, NUM_POLY_VOICES> voices;
         Oscillator lfo;
+        Oscillator lfo2;
         SmoothSwitch osc1Wave;
         SmoothSwitch osc2Wave;
+        SmoothSwitch lfoWave;
         SmoothSwitch filterMode;
-        std::array<Voice, numVoices> voices;
         std::vector<int> heldNotes;
         IMidiQueue midiQueue;
         double dt = 1.0 / 44100.0;
         seq_rand synthRand;
         PluginVST2_Synth* instanceVst2 = nullptr;
-        double lastCutoffModulated     = 0.0;
-
+        HostTempo tempo{};
     public:
         SynthImpl() : SynthState() {
             auto now = static_cast<uint64_t>(getTimeMillis());
             synthRand.rng_seed(now);
+            for (size_t i = 0; i < voices.size(); i++) {
+                auto& mv = voices[i];
+                mv.index = static_cast<int32_t>(i);
+                mv.rand.rng_seed(static_cast<uint64_t>(synthRand.rng_rand()));
+                for (auto& v : mv.voices) {
+                    v.rand.rng_seed(static_cast<uint64_t>(mv.rand.rng_rand()));
+                }
+            }
         }
         void setInstance(PluginVST2_Synth* instance) {
             this->instanceVst2 = instance;
@@ -630,27 +804,35 @@ namespace PluginSynth {
         std::vector<int> getHeldNotes() {
             return heldNotes;
         }
-
+        void setTempo(double d) {
+            tempo.bpm = d;
+        }
+        void setBarPos(double d) {
+            tempo.barPos = d;
+        }
+        void setPPQPos(double d) {
+            tempo.ppqPos = d;
+        }
     private:
         float synthRandom() {
             uint32_t rnd32Bits = synthRand.rng_rand();
             return (rnd32Bits & 0xFFFF) / (float) 0xFFFF;
         }
         SynthParamBase* GetParam(Parameters param) {
-            assert(instanceVst2);
+            dbgassert(instanceVst2);
             return instanceVst2->getParam(param);
         }
         SynthParam_Float* GetParamFloat(Parameters param) {
-            assert(instanceVst2);
-            return dynamic_cast<SynthParam_Float*>(instanceVst2->getParam(param));
+            dbgassert(instanceVst2);
+            return static_cast<SynthParam_Float*>(instanceVst2->getParam(param));
         }
         SynthParam_Int* GetParamInt(Parameters param) {
-            assert(instanceVst2);
-            return dynamic_cast<SynthParam_Int*>(instanceVst2->getParam(param));
+            dbgassert(instanceVst2);
+            return static_cast<SynthParam_Int*>(instanceVst2->getParam(param));
         }
         SynthParam_Enum* GetParamEnum(Parameters param) {
-            assert(instanceVst2);
-            return dynamic_cast<SynthParam_Enum*>(instanceVst2->getParam(param));
+            dbgassert(instanceVst2);
+            return static_cast<SynthParam_Enum*>(instanceVst2->getParam(param));
         }
         void FlushMidi(int sample) {
             while (!midiQueue.Empty()) {
@@ -679,7 +861,7 @@ namespace PluginSynth {
                         switch (voiceMode) {
                             case VoiceModes::Poly:
                                 for (auto& voice : voices)
-                                    if (voice.note == note) voice.Release();
+                                    if (voice.voices[0].note == note) voice.Release();
                                 break;
                             case VoiceModes::Mono:
                             case VoiceModes::Legato:
@@ -699,27 +881,28 @@ namespace PluginSynth {
                                 auto voice = std::min_element(
                                         std::begin(voices),
                                         std::end(voices),
-                                        [](Voice a, Voice b) {
+                                        [](auto& a, auto& b) {
                                             return a.IsReleased() == b.IsReleased() ? a.GetVolume() < b.GetVolume() : a.IsReleased();
                                         });
+                                log_printf("Starting voice[%d] %s vel %.2f\n", voice->index, noteName(note), velocity);
                                 voice->SetNote(note);
                                 voice->SetVelocity(velocity);
                                 voice->ResetPitch();
-                                voice->Start(osc1OutOfPhase, osc2OutOfPhase);
+                                voice->Start(tempo, osc1OutOfPhase, osc2OutOfPhase);
                                 break;
                             }
                             default:
                             case VoiceModes::Mono:
                                 voices[0].SetNote(note);
                                 voices[0].SetVelocity(velocity);
-                                voices[0].Start(osc1OutOfPhase, osc2OutOfPhase);
+                                voices[0].Start(tempo, osc1OutOfPhase, osc2OutOfPhase);
                                 break;
                             case VoiceModes::Legato:
                                 voices[0].SetNote(note);
                                 if (heldNotes.empty()) {
                                     voices[0].SetVelocity(velocity);
                                     voices[0].ResetPitch();
-                                    voices[0].Start(osc1OutOfPhase, osc2OutOfPhase);
+                                    voices[0].Start(tempo, osc1OutOfPhase, osc2OutOfPhase);
                                 }
                                 break;
                         }
@@ -756,6 +939,7 @@ namespace PluginSynth {
             osc1SplitMix += (targetOsc1SplitMix - osc1SplitMix) * 100.0 * dt;
             osc2Wave.Update(dt);
             osc2SplitMix += (targetOsc2SplitMix - osc2SplitMix) * 100.0 * dt;
+            lfoWave.Update(dt);
             oscMix += (targetOscMix - oscMix) * 100.0 * dt;
             filterMode.Update(dt);
             filterCutoff += (targetFilterCutoff - filterCutoff) * 100.0 * dt;
@@ -780,7 +964,18 @@ namespace PluginSynth {
             auto volEnvValue     = (1.0 - volEnvV) * voice.volEnv.value + volEnvV * voice.volEnv.value * voice.velocity;
             auto modEnvV         = GetParamFloat(Parameters::ModEnvV)->Value();
             auto modEnvValue     = (1.0 - modEnvV) * voice.modEnv.value + modEnvV * voice.modEnv.value * voice.velocity;
-            auto delayedLfoValue = lfoValue * voice.lfoEnv.value;
+            double bpmHz = math::max(tempo.bpm, 1.0) / 60.0;
+            double lfoFreqHz = GetParamFloat(Parameters::LfoFrequency)->Value() * bpmHz;
+            double dVoiceLfoBi = voice.lfo1.Get(dt, lfoWave, lfoFreqHz, false);
+            auto lfoAmount = GetParamFloat(Parameters::LfoAmount)->Value();
+            double dVoiceLfoUni = 0.5+0.5*dVoiceLfoBi;
+            if (lfoAmount < 0.0) {
+                dVoiceLfoUni = pow(dVoiceLfoUni, 1.0+dVoiceLfoUni*-lfoAmount*4.);
+            } else {
+                dVoiceLfoUni = pow(dVoiceLfoUni, 1.0/(1.0+dVoiceLfoUni*lfoAmount*4.));
+            }
+            voice.lfoValue = -1.0 + 2.0 * dVoiceLfoUni;
+            auto delayedLfoValue = dVoiceLfoUni * voice.lfoEnv.value;
 
             voice.frequency += (voice.targetFrequency - voice.frequency) * glideLength * dt;
 
@@ -797,7 +992,7 @@ namespace PluginSynth {
                     fmAmount += GetParamFloat(Parameters::ModEnvFm)->Value() * modEnvValue;
                     fmAmount += GetParamFloat(Parameters::LfoFm)->Value() * delayedLfoValue;
 
-                    auto fmMultiplier = pitchFactor(voice.oscFm.Get(dt, osc1Frequency) * fmAmount);
+                    auto fmMultiplier = pitchFactor(voice.oscFm.GetWaveform(dt, osc1Frequency, Waveforms::Sine, true) * fmAmount);
                     switch (fmMode) {
                         case FmModes::Osc1:
                             osc1Frequency *= fmMultiplier;
@@ -817,16 +1012,16 @@ namespace PluginSynth {
             auto out = 0.0;
             if (oscMix < .999) {
                 auto osc1Out = 0.0;
-                osc1Out += voice.osc1a.Get(dt, osc1Wave, osc1Frequency * osc1SplitFactorA);
+                osc1Out += voice.osc1a.Get(dt, osc1Wave, osc1Frequency * osc1SplitFactorA, true);
                 if (osc1SplitMix > .001)
-                    osc1Out += osc1SplitMix * voice.osc1b.Get(dt, osc1Wave, osc1Frequency * osc1SplitFactorB);
+                    osc1Out += osc1SplitMix * voice.osc1b.Get(dt, osc1Wave, osc1Frequency * osc1SplitFactorB, true);
                 out += osc1Out * sqrt(1.0 - oscMix);
             }
             if (oscMix > .001) {
                 auto osc2Out = 0.0;
-                osc2Out += voice.osc2a.Get(dt, osc2Wave, osc2Frequency * osc2SplitFactorA);
+                osc2Out += voice.osc2a.Get(dt, osc2Wave, osc2Frequency * osc2SplitFactorA, true);
                 if (osc2SplitMix > .001)
-                    osc2Out += osc2SplitMix * voice.osc2b.Get(dt, osc2Wave, osc2Frequency * osc2SplitFactorB);
+                    osc2Out += osc2SplitMix * voice.osc2b.Get(dt, osc2Wave, osc2Frequency * osc2SplitFactorB, true);
                 out += osc2Out * sqrt(oscMix);
             }
 
@@ -836,26 +1031,76 @@ namespace PluginSynth {
             cutoff += GetParamFloat(Parameters::VolEnvCutoff)->Value() * volEnvValue;
             cutoff += GetParamFloat(Parameters::ModEnvCutoff)->Value() * modEnvValue;
             cutoff += GetParamFloat(Parameters::LfoCutoff)->Value() * delayedLfoValue;
-            cutoff += GetParamFloat(Parameters::FilterKeyTracking)->Value() * baseFrequency;
+            cutoff += pitchFactor(GetParamFloat(Parameters::FilterKeyTracking)->Value()) * osc1Tune * baseFrequency;
             cutoff *= 1.0 - driftValue;
-            lastCutoffModulated = cutoff;
-            out                 = voice.filter.Process(dt, out, filterMode, cutoff, filterResonance);
+            cutoff = math::clamp(cutoff, -1.0/dt*0.7, 1.0/dt*0.7);
+            out = voice.filter.Process(dt, out, filterMode, cutoff, filterResonance);
 
             return out;
         }
 
     public:
+        void onTransportChanged(bool bIsPlaying) {
+            double lfo1Tempo = 1.0;
+            double lfo2Tempo = 1.0 / 4.0;
+            lfo.initPhase(fmod(tempo.ppqPos * lfo1Tempo, 1.0));
+            lfo2.initPhase(fmod(tempo.ppqPos * lfo2Tempo, 1.0));
+
+            log_lf(Log::L_DEBUG, "Reset LFO phases: at ppq/4 %f\n", fmod(tempo.ppqPos/4.0, 1.0));
+            // for (auto& voice : voices) voice.initLfoPhases(tempo);
+            for (auto& uv : voices) {
+                for (auto& voice : uv.voices) {
+                    voice.lfo1.initPhase(fmod(tempo.ppqPos * lfo1Tempo + driftValue * voice.rand.rng_double(), 1.0));
+                    voice.lfo2.initPhase(fmod(tempo.ppqPos * lfo2Tempo + uv.driftValue, 1.0));
+                }
+            };
+        }
         void ProcessReplacing(float** inputs, float** outputs, int nFrames) {
+            // double dPosPPQ = tempo.ppqPos - tempo.barPos;
+            double bpmHz = math::max(tempo.bpm, 1.0) / 60.0;
+            // double sampleToPPQ = ppqPeriod * dt;
+            //     lfo.initPhase(dPosPPQAtSample);
+            const auto mvInv = 1.0/voices[0].voices.size();
             for (int s = 0; s < nFrames; s++) {
                 FlushMidi(s);
                 UpdateParameters();
                 UpdateDrift();
-                lfoValue = lfo.Get(dt, GetParamFloat(Parameters::LfoFrequency)->Value());
-                auto out = 0.0;
-                for (auto& v : voices) out += GetVoice(v);
-                out *= masterVolume;
-                outputs[0][s] = out;
-                outputs[1][s] = out;
+                for (auto& uv : voices) {
+                    uv.UpdateVoice(tempo, dt);
+                    for (auto& v : uv.voices) {
+                        v.UpdateVoice(tempo, dt);
+                    }
+                }
+                if (lfo2.Update(dt, math::max(tempo.bpm/4.0, 1.0) / 60.0)) {
+                    lfo.initPhase(0.0);
+                    log_lf(Log::L_DEBUG, "Init phase: at sample %d ppq/4 %f\n", s, fmod(tempo.ppqPos/4.0, 1.0));
+                }
+                // lfoValue
+
+                // double dPosPPQAtSample = dPosPPQ + s * sampleToPPQ;
+                // double lfoFreqHz = GetParamFloat(Parameters::LfoFrequency)->Value();
+                // lfo.initPhase(dPosPPQAtSample);
+                // calculate lfo freqency in Hz based on tempo
+                double lfoFreqHz = GetParamFloat(Parameters::LfoFrequency)->Value() * bpmHz;
+                lfoValue = lfo.Get(dt, lfoWave, lfoFreqHz, false);
+                auto outL = 0.0;
+                auto outR = 0.0;
+                for (auto& mv : voices) {
+                    for (size_t vIdx = 0; vIdx < mv.voices.size(); ++vIdx) {
+                        auto voice = GetVoice(mv.voices[vIdx]) * mvInv;
+                        if constexpr(NUM_UNISON_VOICES % 2 == 0) {
+                            double leftRight = vIdx & 1;
+                            outL += voice * leftRight;
+                            outR += voice * (1.0 - leftRight);
+                        } else {
+                            double pan = vIdx / (NUM_UNISON_VOICES - 1.0);
+                            outL += voice * pan;
+                            outR += voice * (1.0 - pan);
+                        }
+                    }
+                }
+                outputs[0][s] = static_cast<float>(outL * masterVolume);
+                outputs[1][s] = static_cast<float>(outR * masterVolume);
             }
         }
 
@@ -928,8 +1173,8 @@ namespace PluginSynth {
                 }
                 case Parameters::Osc1Split:
                     targetOsc1SplitMix = value != 0.0 ? 1.0 : 0.0;
-                    osc1SplitFactorA   = pitchFactor(-value);
-                    osc1SplitFactorB   = pitchFactor(value);
+                    osc1SplitFactorA   = pitchFactor(value);
+                    osc1SplitFactorB   = 1.0;//pitchFactor(value);
                     break;
                 case Parameters::Osc2Wave:
                     osc2Wave.Switch(value);
@@ -943,8 +1188,10 @@ namespace PluginSynth {
                 }
                 case Parameters::Osc2Split:
                     targetOsc2SplitMix = value != 0.0 ? 1.0 : 0.0;
-                    osc2SplitFactorA   = pitchFactor(-value);
-                    osc2SplitFactorB   = pitchFactor(value);
+                    // osc2SplitFactorA   = pitchFactor(-value);
+                    // osc2SplitFactorB   = pitchFactor(value);
+                    osc2SplitFactorA   = pitchFactor(value);
+                    osc2SplitFactorB   = 1.0;//pitchFactor(value);
                     break;
                 case Parameters::OscMix:
                     targetOscMix = 1.0 - value;
@@ -970,44 +1217,70 @@ namespace PluginSynth {
                     break;
                 case Parameters::VolEnvA: {
                     auto volEnvA = 1000 - 999.9 * (.5 - .5 * cos(pow(value, .1) * M_PI));
-                    for (auto& v : voices) v.volEnv.a = volEnvA;
+                    for (auto& mv : voices)
+                        for (auto& v : mv.voices)
+                            v.volEnv.a = volEnvA;
                     break;
                 }
                 case Parameters::VolEnvD: {
                     auto volEnvD = 1000 - 999.9 * (.5 - .5 * cos(pow(value, .1) * M_PI));
-                    for (auto& v : voices) v.volEnv.d = volEnvD;
+                    
+                    for (auto& mv : voices)
+                        for (auto& v : mv.voices)
+                            v.volEnv.d = volEnvD;
                     break;
                 }
                 case Parameters::VolEnvS:
-                    for (auto& v : voices) v.volEnv.s = value;
+                    
+                    for (auto& mv : voices)
+                        for (auto& v : mv.voices)
+                            v.volEnv.s = value;
                     break;
                 case Parameters::VolEnvR: {
                     auto volEnvR = 1000 - 999.9 * (.5 - .5 * cos(pow(value, .1) * M_PI));
-                    for (auto& v : voices) v.volEnv.r = volEnvR;
+                    
+                    for (auto& mv : voices)
+                        for (auto& v : mv.voices)
+                            v.volEnv.r = volEnvR;
                     break;
                 }
                 case Parameters::ModEnvA: {
                     auto modEnvA = 1000 - 999.9 * (.5 - .5 * cos(pow(value, .1) * M_PI));
-                    for (auto& v : voices) v.modEnv.a = modEnvA;
+                    
+                    for (auto& mv : voices)
+                        for (auto& v : mv.voices)
+                            v.modEnv.a = modEnvA;
                     break;
                 }
                 case Parameters::ModEnvD: {
                     auto modEnvD = 1000 - 999.9 * (.5 - .5 * cos(pow(value, .1) * M_PI));
-                    for (auto& v : voices) v.modEnv.d = modEnvD;
+                    
+                    for (auto& mv : voices)
+                        for (auto& v : mv.voices)
+                            v.modEnv.d = modEnvD;
                     break;
                 }
                 case Parameters::ModEnvS:
-                    for (auto& v : voices) v.modEnv.s = value;
+                    
+                    for (auto& mv : voices)
+                        for (auto& v : mv.voices)
+                            v.modEnv.s = value;
                     break;
                 case Parameters::ModEnvR: {
                     auto modEnvR = 1000 - 999.9 * (.5 - .5 * cos(pow(value, .1) * M_PI));
-                    for (auto& v : voices) v.modEnv.r = modEnvR;
+                    
+                    for (auto& mv : voices)
+                        for (auto& v : mv.voices)
+                            v.modEnv.r = modEnvR;
                     break;
                 }
                 case Parameters::LfoDelay: {
                     auto p        = static_cast<SynthParam_Float*>(GetParam(parameter));
                     auto lfoDelay = p->GetMin() + p->GetMax() - p->Value();
-                    for (auto& v : voices) v.lfoEnv.a = lfoDelay;
+                    
+                    for (auto& mv : voices)
+                        for (auto& v : mv.voices)
+                            v.lfoEnv.a = lfoDelay;
                     break;
                 }
                 case Parameters::LfoCutoff:
@@ -1017,7 +1290,7 @@ namespace PluginSynth {
                     switch (GetParamEnum(parameter)->getEnumValue<VoiceModes>()) {
                         case VoiceModes::Mono:
                         case VoiceModes::Legato:
-                            for (int i = 1; i < numVoices; i++) {
+                            for (int i = 1; i < NUM_POLY_VOICES; i++) {
                                 voices[i].Release();
                             }
                             break;
@@ -1031,6 +1304,9 @@ namespace PluginSynth {
                 case Parameters::MasterVolume:
                     targetMasterVolume = value;
                     break;
+                case Parameters::LfoWave:
+                    lfoWave.Switch(value);
+                    break;
                 default:
                     break;
             }
@@ -1043,23 +1319,23 @@ namespace PluginSynth {
             program = {};
             program.VoiceMode = 0.000000;
             program.GlideLength = 0.000000;
-            program.FilterMode = 0.000000;
-            program.FilterCutoff = 0.000000;
-            program.FilterResonance = 0.000000;
+            program.FilterMode = 1.000000;
+            program.FilterCutoff = 0.100000;
+            program.FilterResonance = 0.020000;
             program.FilterKeyTracking = 0.500000;
-            program.VolEnvCutoff = 0.500000;
-            program.ModEnvCutoff = 0.500000;
-            program.OscMix = 1.000000;
-            program.Osc1Wave = 0.000000;
-            program.Osc1Coarse = 0.395833;
+            program.VolEnvCutoff = 0.750000;
+            program.ModEnvCutoff = 0.740000;
+            program.OscMix = 0.500000;
+            program.Osc1Wave = 0.400000;
+            program.Osc1Coarse = 0.5;
             program.Osc1Fine = 0.500000;
-            program.Osc1Split = 0.500000;
-            program.Osc2Wave = 0.000000;
-            program.Osc2Coarse = 0.395833;
-            program.Osc2Fine = 0.500000;
-            program.Osc2Split = 0.500000;
+            program.Osc1Split = 0.554000;
+            program.Osc2Wave = 0.400000;
+            program.Osc2Coarse = 0.745;
+            program.Osc2Fine = 0.505000;
+            program.Osc2Split = 0.560000;
             program.LfoAmount = 0.500000;
-            program.LfoFrequency = 0.393939;
+            program.LfoFrequency = 0.5;
             program.LfoDelay = 0.000000;
             program.LfoCutoff = 0.500000;
             program.FmMode = 0.000000;
@@ -1068,22 +1344,67 @@ namespace PluginSynth {
             program.VolEnvFm = 0.500000;
             program.ModEnvFm = 0.500000;
             program.LfoFm = 0.500000;
-            program.VolEnvA = 0.000000;
+            program.VolEnvA = 0.075000;
             program.VolEnvD = 0.500000;
             program.VolEnvS = 1.000000;
-            program.VolEnvR = 0.250000;
-            program.VolEnvV = 0.000000;
-            program.ModEnvA = 0.000000;
+            program.VolEnvR = 0.650000;
+            program.VolEnvV = 0.800000;
+            program.ModEnvA = 0.220000;
             program.ModEnvD = 0.500000;
             program.ModEnvS = 0.500000;
-            program.ModEnvR = 0.500000;
-            program.ModEnvV = 0.000000;      
+            program.ModEnvR = 0.700000;
+            program.ModEnvV = 0.600000;      
             // if (index >= 0 && index < CtrSize(vecParams)) {
         //     SynthParamBase* param = vecParams[index];
         }
+        {
         auto& prog        = staticPrograms[0];
         prog.FilterCutoff = 1.0f;
         prog.FilterMode   = 1.0;// TODO: add butto to write out presets in source code format so we can add them here
+
+        }
+        {
+            auto& prog = staticPrograms[1];
+            prog.VoiceMode=0.000000;
+            prog.GlideLength=0.000000;
+            prog.FilterMode=0.666667;
+            prog.FilterCutoff=0.135000;
+            prog.FilterResonance=0.050000;
+            prog.FilterKeyTracking=0.875000;
+            prog.VolEnvCutoff=0.590000;
+            prog.ModEnvCutoff=0.655000;
+            prog.OscMix=1.000000;
+            prog.Osc1Wave=0.400000;
+            prog.Osc1Coarse=0.500000;
+            prog.Osc1Fine=0.500000;
+            prog.Osc1Split=0.554000;
+            prog.Osc2Wave=0.000000;
+            prog.Osc2Coarse=0.500000;
+            prog.Osc2Fine=0.500000;
+            prog.Osc2Split=0.715000;
+            prog.LfoAmount=0.500000;
+            prog.LfoFrequency=0.393939;
+            prog.LfoDelay=0.000000;
+            prog.LfoCutoff=0.500000;
+            prog.FmMode=0.500000;
+            prog.FmCoarse=0.000000;
+            prog.FmFine=0.500000;
+            prog.VolEnvFm=0.500000;
+            prog.ModEnvFm=0.500000;
+            prog.LfoFm=0.495000;
+            prog.VolEnvA=0.075000;
+            prog.VolEnvD=0.400000;
+            prog.VolEnvS=0.545000;
+            prog.VolEnvR=0.700000;
+            prog.VolEnvV=0.770000;
+            prog.ModEnvA=0.025000;
+            prog.ModEnvD=0.375000;
+            prog.ModEnvS=0.165000;
+            prog.ModEnvR=0.735000;
+            prog.ModEnvV=0.865000;
+        }
+
+
     }
     PluginVST2_Synth::PluginVST2_Synth(audioMasterCallback audioMaster)
         : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, Parameters::kNumParams, kNumInputs, kNumOutputs) {
@@ -1112,11 +1433,11 @@ namespace PluginSynth {
             addParam(param, enumParam);
             return param;
         };
-        addFloatParam(Parameters::FilterCutoff)->setRange(20.0, 22000.0)->setRangedValue(20.0);
+        addFloatParam(Parameters::FilterCutoff)->setRange(-22000.0, 22000.0)->setRangedValue(20.0);
         setParamName(getParam(Parameters::FilterCutoff), "Filter Cutoff", "Flt Cut", "%f");
         addFloatParam(Parameters::FilterResonance)->setRange(0.0, 1.0)->setRangedValue(0.0);
         setParamName(getParam(Parameters::FilterResonance), "Filter Resonance", "Flt Res", "%f");
-        addFloatParam(Parameters::FilterKeyTracking)->setRange(-1.0, 1.0)->setRangedValue(0.0);
+        addFloatParam(Parameters::FilterKeyTracking)->setRange(-24.0, 24.0)->setRangedValue(0.0);
         setParamName(getParam(Parameters::FilterKeyTracking), "Filter Keytracking", "Flt Trk", "%f");
 
         addFloatParam(Parameters::FmFine)->setRange(-1.0, 1.0)->setRangedValue(0.0);
@@ -1130,9 +1451,9 @@ namespace PluginSynth {
         setParamName(getParam(Parameters::Osc1Fine), "Oscillator 1 fine", "OSC1 Fine", "%f");
         addFloatParam(Parameters::Osc2Fine)->setRange(-1.0, 1.0)->setRangedValue(0.0);
         setParamName(getParam(Parameters::Osc2Fine), "Oscillator 2 fine", "OSC2 Fine", "%f");
-        addFloatParam(Parameters::Osc1Split)->setRange(-1.0, 1.0)->setRangedValue(0.0);
+        addFloatParam(Parameters::Osc1Split)->setRange(-1.25, 1.25)->setRangedValue(0.0);
         setParamName(getParam(Parameters::Osc1Split), "Oscillator 1 split", "OSC1 Split", "%f");
-        addFloatParam(Parameters::Osc2Split)->setRange(-1.0, 1.0)->setRangedValue(0.0);
+        addFloatParam(Parameters::Osc2Split)->setRange(-1.25, 1.25)->setRangedValue(0.0);
         setParamName(getParam(Parameters::Osc2Split), "Oscillator 2 split", "OSC2 Split", "%f");
         addIntParam(Parameters::Osc1Coarse)->setRange(-24, 24)->setRangedValue(0);
         setParamName(getParam(Parameters::Osc1Coarse), "Oscillator 1 coarse", "OSC1 Semi", "%d");
@@ -1161,9 +1482,9 @@ namespace PluginSynth {
         setParamName(getParam(Parameters::ModEnvR), "Mod envelope release time", "EnvM Rel", "%f");
         setParamName(getParam(Parameters::ModEnvV), "Mod envelope velocity sensitivity", "EnvM Vel", "%f");
 
-        addFloatParam(Parameters::LfoAmount)->setRange(-0.1f, 0.1f)->setRangedValue(0.0);
-        addFloatParam(Parameters::LfoFrequency)->setRange(0.1f, 10.0)->setRangedValue(4.0);
-        addFloatParam(Parameters::LfoDelay)->setRange(0.1f, 1000.0)->setRangedValue(0.1);
+        addFloatParam(Parameters::LfoAmount)->setRange(-1.0f, 1.0f)->setRangedValue(0.0);
+        addFloatParam(Parameters::LfoFrequency)->setRange(1/64.0, 16.0)->setRangedValue(4.0);
+        addFloatParam(Parameters::LfoDelay)->setRange(0.001f, 1000.0)->setRangedValue(0.1);
         setParamName(getParam(Parameters::LfoAmount), "LFO amount", "LFO amt", "%f");
         setParamName(getParam(Parameters::LfoFrequency), "LFO frequency", "LFO freq", "%f");
         setParamName(getParam(Parameters::LfoDelay), "LFO ramp", "LFO ramp", "%f");
@@ -1171,9 +1492,9 @@ namespace PluginSynth {
         addFloatParam(Parameters::VolEnvFm)->setRange(-24.0, 24.0)->setRangedValue(0.0);
         addFloatParam(Parameters::ModEnvFm)->setRange(-24.0, 24.0)->setRangedValue(0.0);
         addFloatParam(Parameters::LfoFm)->setRange(-24.0, 24.0)->setRangedValue(0.0);
-        addFloatParam(Parameters::VolEnvCutoff)->setRange(-8000.0, 8000.0)->setRangedValue(0.0);
-        addFloatParam(Parameters::ModEnvCutoff)->setRange(-8000.0, 8000.0)->setRangedValue(0.0);
-        addFloatParam(Parameters::LfoCutoff)->setRange(-8000.0, 8000.0)->setRangedValue(0.0);
+        addFloatParam(Parameters::VolEnvCutoff)->setRange(-24000.0, 24000.0)->setRangedValue(0.0);
+        addFloatParam(Parameters::ModEnvCutoff)->setRange(-24000.0, 24000.0)->setRangedValue(0.0);
+        addFloatParam(Parameters::LfoCutoff)->setRange(-2*24000.0, 2*24000.0)->setRangedValue(0.0);
         addFloatParam(Parameters::GlideLength)->setRange(0.0, 1.0)->setRangedValue(0.0);
         addFloatParam(Parameters::MasterVolume)->setRange(0.0, 0.5)->setRangedValue(0.25);
 
@@ -1191,6 +1512,8 @@ namespace PluginSynth {
         setParamName(getParam(Parameters::Osc1Wave), "Osc1 Waveform", "Osc1 Waveform", "%d");
         addEnumParam(Parameters::Osc2Wave)->setStrings(stringsWaveform)->setRangedValue(0);
         setParamName(getParam(Parameters::Osc2Wave), "Osc2 Waveform", "Osc2 Waveform", "%d");
+        addEnumParam(Parameters::LfoWave)->setStrings(stringsWaveform)->setRangedValue(0);
+        setParamName(getParam(Parameters::LfoWave), "Lfo Waveform", "Lfo Waveform", "%d");
         addEnumParam(Parameters::VoiceMode)->setStrings(stringsVoiceMode)->setRangedValue(0);
         setParamName(getParam(Parameters::VoiceMode), "Voice Mode", "Voice Mode", "%d");
         addEnumParam(Parameters::FilterMode)->setStrings(stringsFilterMode)->setRangedValue(0);
@@ -1205,89 +1528,27 @@ namespace PluginSynth {
     }
 
     void logParam(const char* szParamName, const float val) {
-        log_printf("%s = %f\n", szParamName, val);
     }
 
     void PluginVST2_Synth::writeCurrentProgram() {
-        //logParam("MasterVolume", getParam(MasterVolume)->getAsFloat());
-        logParam("VoiceMode", getParam(VoiceMode)->getAsFloat());
-        logParam("GlideLength", getParam(GlideLength)->getAsFloat());
-        logParam("FilterMode", getParam(FilterMode)->getAsFloat());
-        logParam("FilterCutoff", getParam(FilterCutoff)->getAsFloat());
-        logParam("FilterResonance", getParam(FilterResonance)->getAsFloat());
-        logParam("FilterKeyTracking", getParam(FilterKeyTracking)->getAsFloat());
-        logParam("VolEnvCutoff", getParam(VolEnvCutoff)->getAsFloat());
-        logParam("ModEnvCutoff", getParam(ModEnvCutoff)->getAsFloat());
-        logParam("OscMix", getParam(OscMix)->getAsFloat());
-        logParam("Osc1Wave", getParam(Osc1Wave)->getAsFloat());
-        logParam("Osc1Coarse", getParam(Osc1Coarse)->getAsFloat());
-        logParam("Osc1Fine", getParam(Osc1Fine)->getAsFloat());
-        logParam("Osc1Split", getParam(Osc1Split)->getAsFloat());
-        logParam("Osc2Wave", getParam(Osc2Wave)->getAsFloat());
-        logParam("Osc2Coarse", getParam(Osc2Coarse)->getAsFloat());
-        logParam("Osc2Fine", getParam(Osc2Fine)->getAsFloat());
-        logParam("Osc2Split", getParam(Osc2Split)->getAsFloat());
-        logParam("LfoAmount", getParam(LfoAmount)->getAsFloat());
-        logParam("LfoFrequency", getParam(LfoFrequency)->getAsFloat());
-        logParam("LfoDelay", getParam(LfoDelay)->getAsFloat());
-        logParam("LfoCutoff", getParam(LfoCutoff)->getAsFloat());
-        logParam("FmMode", getParam(FmMode)->getAsFloat());
-        logParam("FmCoarse", getParam(FmCoarse)->getAsFloat());
-        logParam("FmFine", getParam(FmFine)->getAsFloat());
-        logParam("VolEnvFm", getParam(VolEnvFm)->getAsFloat());
-        logParam("ModEnvFm", getParam(ModEnvFm)->getAsFloat());
-        logParam("LfoFm", getParam(LfoFm)->getAsFloat());
-        logParam("VolEnvA", getParam(VolEnvA)->getAsFloat());
-        logParam("VolEnvD", getParam(VolEnvD)->getAsFloat());
-        logParam("VolEnvS", getParam(VolEnvS)->getAsFloat());
-        logParam("VolEnvR", getParam(VolEnvR)->getAsFloat());
-        logParam("VolEnvV", getParam(VolEnvV)->getAsFloat());
-        logParam("ModEnvA", getParam(ModEnvA)->getAsFloat());
-        logParam("ModEnvD", getParam(ModEnvD)->getAsFloat());
-        logParam("ModEnvS", getParam(ModEnvS)->getAsFloat());
-        logParam("ModEnvR", getParam(ModEnvR)->getAsFloat());
-        logParam("ModEnvV", getParam(ModEnvV)->getAsFloat());
+        for (auto param : this->vecParams) {
+            switch (param->enumParam) {
+                case Parameters::MasterVolume:
+                case Parameters::kNumParams:
+                    break;
+                default:
+                    log_printf("%s = %f\n", StringAsCStr(param->shortName), param->getAsFloat());
+                    break;
+            }
+        }
     }
     void PluginVST2_Synth::setFromSynthProgram(SynthProgram* program) {
-        // return;
-        //getParam(MasterVolume)->set(program->MasterVolume);
-        getParam(VoiceMode)->set(program->VoiceMode);
-        getParam(GlideLength)->set(program->GlideLength);
-        getParam(FilterMode)->set(program->FilterMode);
-        getParam(FilterCutoff)->set(program->FilterCutoff);
-        getParam(FilterResonance)->set(program->FilterResonance);
-        getParam(FilterKeyTracking)->set(program->FilterKeyTracking);
-        getParam(VolEnvCutoff)->set(program->VolEnvCutoff);
-        getParam(ModEnvCutoff)->set(program->ModEnvCutoff);
-        getParam(OscMix)->set(program->OscMix);
-        getParam(Osc1Wave)->set(program->Osc1Wave);
-        getParam(Osc1Coarse)->set(program->Osc1Coarse);
-        getParam(Osc1Fine)->set(program->Osc1Fine);
-        getParam(Osc1Split)->set(program->Osc1Split);
-        getParam(Osc2Wave)->set(program->Osc2Wave);
-        getParam(Osc2Coarse)->set(program->Osc2Coarse);
-        getParam(Osc2Fine)->set(program->Osc2Fine);
-        getParam(Osc2Split)->set(program->Osc2Split);
-        getParam(LfoAmount)->set(program->LfoAmount);
-        getParam(LfoFrequency)->set(program->LfoFrequency);
-        getParam(LfoDelay)->set(program->LfoDelay);
-        getParam(LfoCutoff)->set(program->LfoCutoff);
-        getParam(FmMode)->set(program->FmMode);
-        getParam(FmCoarse)->set(program->FmCoarse);
-        getParam(FmFine)->set(program->FmFine);
-        getParam(VolEnvFm)->set(program->VolEnvFm);
-        getParam(ModEnvFm)->set(program->ModEnvFm);
-        getParam(LfoFm)->set(program->LfoFm);
-        getParam(VolEnvA)->set(program->VolEnvA);
-        getParam(VolEnvD)->set(program->VolEnvD);
-        getParam(VolEnvS)->set(program->VolEnvS);
-        getParam(VolEnvR)->set(program->VolEnvR);
-        getParam(VolEnvV)->set(program->VolEnvV);
-        getParam(ModEnvA)->set(program->ModEnvA);
-        getParam(ModEnvD)->set(program->ModEnvD);
-        getParam(ModEnvS)->set(program->ModEnvS);
-        getParam(ModEnvR)->set(program->ModEnvR);
-        getParam(ModEnvV)->set(program->ModEnvV);
+        for (auto param : this->vecParams) {
+            auto* pParDouble = program->getProgramParameter(param->enumParam);
+            if (pParDouble) {
+                param->set(static_cast<float>(*pParDouble));
+            }
+        }
         for (auto param : this->vecParams) {
             this->impl->OnParamChange(param->enumParam);
         }
@@ -1307,35 +1568,36 @@ namespace PluginSynth {
             return;
 
         curProgram = programIdx;
-        log_printf("setprogram %d\n", programIdx);
-        auto& program = this->staticPrograms[programIdx];
-        setFromSynthProgram(&program);
+        if (curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
+            setFromSynthProgram(&staticPrograms[curProgram]);
+        }
     }
 
     void PluginVST2_Synth::setProgramName(char* name) {
-        log_printf("setprogramname %s\n", name);
+        if (name && curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
+            staticPrograms[curProgram].setName(name);
+        }
     }
 
     void PluginVST2_Synth::getProgramName(char* name) {
-        if (name) {
-            name[0] = 0;
-            String progName = StringFormat("Program %d", this->curProgram);
-            vst_strncpy(name, progName.c_str(), PLUGIN_PROGRAM_STR_MAX_LEN);
+        if (name) name[0] = 0;
+        if (name && curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
+            vst_strncpy(name, StringAsCStr(staticPrograms[curProgram].getName()), PLUGIN_PROGRAM_STR_MAX_LEN);
         }
     }
 
     void PluginVST2_Synth::getParameterLabel(VstInt32 index, char* label) {
-        if (index >= 0 && index < CtrSize(vecParams)) {
+        if (label && index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
-            param->getLabel(label);
+            vst_strncpy(label, StringAsCStr(param->label), PLUGIN_PARAM_STR_MAX_LEN);
         }
     }
 
     void PluginVST2_Synth::getParameterDisplay(VstInt32 index, char* text) {
-        text[0] = 0;
-        if (index >= 0 && index < CtrSize(vecParams)) {
+        if (text && index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
-            param->getValueDisplay(text);
+            String valDisplay = param->getValueDisplay();
+            vst_strncpy(text, StringAsCStr(valDisplay), PLUGIN_PARAM_STR_MAX_LEN);
         }
     }
 
@@ -1349,6 +1611,10 @@ namespace PluginSynth {
     void PluginVST2_Synth::setParameter(VstInt32 index, float value) {
         if (index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
+            if (issetprogram && curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
+                auto pParamDouble = staticPrograms[curProgram].getProgramParameter(param->enumParam);
+                if (pParamDouble) *pParamDouble = value;
+            }
             param->set(value);
             this->impl->OnParamChange(param->enumParam);
         }
@@ -1363,6 +1629,26 @@ namespace PluginSynth {
             static_cast<pluginwindow*>(this->editor)->onSetParameter(index, value);
         }
 #endif
+    }
+
+    param_converted_t PluginVST2_Synth::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
+        if (idx >= 0 && idx < CtrSize(vecParams)) {
+            SynthParamBase* param = vecParams[idx];
+            return param->convertValueDisplay(displayValue);
+        }
+        return BasePluginVST2::convertParamValueDisplay(idx, displayValue);
+    }
+    void PluginVST2_Synth::addPropertiesParameterTooltip(Table::tbl& table, int idx) {
+        if (idx >= 0 && idx < CtrSize(vecParams)) {
+            SynthParamBase* param = vecParams[idx];
+            const auto strName = param->name;
+            const auto strDisplay = param->getValueDisplay();
+            table.colSizes.resize(2);
+            table.colSizes[0] = table.strW->getStringWidth(strName);
+            table.colSizes[1] = table.strW->getStringWidth(strDisplay);
+            table.tableWidth = table.colSizes[0] + table.colSizes[1];
+            table.rows.push_back({ { strName, strDisplay } });
+        }
     }
 
     float PluginVST2_Synth::getParameter(VstInt32 index) {
@@ -1422,9 +1708,9 @@ namespace PluginSynth {
         AudioEffectX::setBlockSize(blockSize);
     }
     VstInt32 PluginVST2_Synth::processEvents(VstEvents* events) {
-        assert(events);
+        dbgassert(events);
         if (events) {
-            ThreadLock lock(this->getMutex());
+            // ThreadLock lock(this->getMutex());
             int32_t len = events->numEvents;
             //if (events->numEvents)
             //    log_printf("events->numEvents %d\n", events->numEvents);
@@ -1458,12 +1744,25 @@ namespace PluginSynth {
         if (sampleFrames != blockSize) {
             return;
         }
-        ThreadLock lock(this->getMutex());
+        // ThreadLock lock(this->getMutex());
         if (this->getAeffect()->numOutputs == 1) {
             if (inputs)
                 memset(inputs[0], 0, sizeof(float) * sampleFrames);
             memset(outputs[0], 0, sizeof(float) * sampleFrames);
         } else if (this->getAeffect()->numOutputs == 2) {
+            VstTimeInfo* timeinfo = getTimeInfo(kVstBarsValid|kVstPpqPosValid|kVstTempoValid|kVstTransportChanged|kVstTimeSigValid);
+            if (timeinfo && timeinfo->flags & kVstTempoValid) {
+                this->impl->setTempo(timeinfo->tempo);
+            }
+            if (timeinfo && timeinfo->flags & kVstPpqPosValid) {
+                this->impl->setPPQPos(timeinfo->ppqPos);
+            }
+            if (timeinfo && timeinfo->flags & kVstBarsValid) {
+                this->impl->setBarPos(timeinfo->barStartPos);
+            }
+            if (timeinfo && timeinfo->flags & kVstTransportChanged) {
+                this->impl->onTransportChanged(timeinfo->flags & kVstTransportPlaying);
+            }
             if (inputs)
                 dsp_util::fillChannels(inputs, this->getAeffect()->numInputs, sampleFrames, 0.0f);
             dsp_util::fillChannels(outputs, this->getAeffect()->numOutputs, sampleFrames, 0.0f);
@@ -1473,7 +1772,7 @@ namespace PluginSynth {
 
 
     SynthProgram::SynthProgram() : SynthProgramParameters() {
-        vst_strncpy(name, "Init", PLUGIN_PROGRAM_STR_MAX_LEN);
+        setName("Init");
     }
 
 }
@@ -1482,49 +1781,44 @@ namespace PluginSynth {
 
 
     class guicontainer_plugin_synth : public guictr_base {
-        PluginVST2_Synth* const plugin;
         struct _synth_gui_param_knob {
             guiknob_pluginparam* knob;
             Parameters param;
         };
+        PluginVST2_Synth* const plugin;
+        effectbase* const module;
+        gui_textfield editfield;
         std::vector<_synth_gui_param_knob> knobs;
         std::map<Parameters, guiknob_pluginparam*> mapKnobs;
+        gui_list list;
 
     public:
         explicit guicontainer_plugin_synth(PluginVST2_Synth* plugin)
             : guictr_base(),
-              plugin(plugin)
+            plugin(plugin),
+            module(plugin->getHostSideHandle())
         {
             setBackgroundRendered(true);
+            editfield.setFlag(FLG_NO_LAYOUT, true);
+            editfield.setVisible(false);
+            editfield.setAlignment(gui_textfield::Alignment::Center);
+            editfield.setReturnCommits(true);
             padding = 4;
-            margin  = 4;
+            // margin  = 4;
             knobs.reserve(Parameters::kNumParams);
             for (int i = 0; i < (int) Parameters::kNumParams; i++) {
-                knobs.push_back(_synth_gui_param_knob{new guiknob_pluginparam(PARAM_OFFSET_EXTERNAL+i, i), static_cast<Parameters>(i)});
+                knobs.push_back(_synth_gui_param_knob{new guiknob_pluginparam(PARAM_OFFSET_EXTERNAL+i, i, guiknob::knobtype::SLIDER_LABELED), static_cast<Parameters>(i)});
                 mapKnobs[knobs.back().param] = knobs.back().knob;
                 add(knobs.back().knob);
             }
+            add(&list);
+            add(&editfield);
         }
         ~guicontainer_plugin_synth() override {
             removeGuis();
             for (auto& synthKnob : knobs) {
                 delete synthKnob.knob;
             }
-        }
-        bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-            if (this->contains(mpos)) {
-                ivec2 localMouse = this->toContainerSpace(mpos);
-                for (guibase* gui : guis) {
-                    if (gui->mouseHitTest(localMouse, evt)) {
-                        return true;
-                    }
-                }
-                if (evt.type == MouseHitType::MOUSE_LEFT) {
-                    evt.requestFocus(this);
-                    return true;
-                }
-            }
-            return false;
         }
 
         guiknob_pluginparam* getKnobFromParameter(int32_t index) {
@@ -1562,6 +1856,62 @@ namespace PluginSynth {
             }
         }
 
+        void onTick(AppCtrl* ctrl) override {
+            PluginVST2_Synth* thisImpl = this->plugin;
+            std::vector<int> heldNotes = thisImpl->getSynth()->getHeldNotes();//TODO: not threadsafe
+            std::vector<String> strings;
+            String s                   = "Held notes: ";
+            for (int i : heldNotes) {
+                s += String(noteName(i)) + ",";
+            }
+            if (heldNotes.empty())
+                s += "<empty>";
+            strings.push_back(s);
+            String str;
+            str = StringFormat("SR %.2f BS %d", this->plugin->getSampleRate(), this->plugin->getBlockSize());
+            strings.push_back(str);
+            int flags = 0;
+            for (int i = 8; i < 16; i++) {
+                flags |= (1 << i);
+            }
+            VstTimeInfo* timeinfo = thisImpl->getTimeInfo(flags);
+            dbgassert(timeinfo);
+            strings.push_back(StringFormat("samplePos %.3f", timeinfo->samplePos));
+            strings.push_back(StringFormat("ppqPos %.3f", timeinfo->ppqPos));
+            strings.push_back(StringFormat("tempo %.3f", timeinfo->tempo));
+            strings.push_back(StringFormat("barStartPos %.3f", timeinfo->barStartPos));
+            auto& list = this->list.getListRef();
+
+            class gui_synth_stats_list_entry : public gui_list_entry {
+                public:
+                String string;
+                gui_synth_stats_list_entry() {
+                    setBackgroundRendered(true);
+                    icon = -1;
+                }
+                void dragMoveOn(guibase* target, ivec2 mousepos) override {
+                }
+                void dragReleaseOn(guibase* target, ivec2 mousepos) override {
+                }
+                String getText() override {
+                    return string;
+                }
+            };
+            while (list.size() < strings.size()) {
+                list.push_back(new gui_synth_stats_list_entry());
+                this->list.add(list.back());
+            }
+            while (list.size() > strings.size()) {
+                this->list.remove(list.back());
+                delete list.back();
+                list.pop_back();
+            }
+            for (int i = 0; i < (int) strings.size(); i++) {
+                static_cast<gui_synth_stats_list_entry*>(list[i])->string = strings[i];
+            }
+            this->list.layout();
+            guictr_base::onTick(ctrl);
+        }
         void render(NVGcontext* vg) override {
             if (isBackgroundRendered()) {
                 renderBackground(vg);
@@ -1570,87 +1920,38 @@ namespace PluginSynth {
                 return;
             }
 
-            PluginVST2_Synth* thisImpl = this->plugin;
-            PluginVST2_Synth::ThreadLock lock(thisImpl->getMutex());
-#if 0
-            std::vector<String> strings;
-            String str;
-            str = StringFormat("Blocksize %d", this->plugin->getBlockSize());
-            strings.push_back(str);
-            str = StringFormat("Samplerate %f", this->plugin->getSampleRate());
-            strings.push_back(str);
-            int flags = 0;
-            for (int i = 8; i < 16; i++) {
-                flags |= (1 << i);
-            }
-            VstTimeInfo* timeinfo = thisImpl->getTimeInfo(flags);
-            assert(timeinfo);
-            strings.push_back(StringFormat("samplePos %f", timeinfo->samplePos));
-            strings.push_back(StringFormat("sampleRate %f", timeinfo->sampleRate));
-            strings.push_back(StringFormat("nanoSeconds %f", timeinfo->nanoSeconds));
-            strings.push_back(StringFormat("ppqPos %f", timeinfo->ppqPos));
-            strings.push_back(StringFormat("tempo %f", timeinfo->tempo));
-            strings.push_back(StringFormat("barStartPos %f", timeinfo->barStartPos));
-            strings.push_back(StringFormat("cycleStartPos %f", timeinfo->cycleStartPos));
-            strings.push_back(StringFormat("cycleEndPos %f", timeinfo->cycleEndPos));
-            strings.push_back(StringFormat("timeSigNumerator %d", timeinfo->timeSigNumerator));
-            strings.push_back(StringFormat("timeSigDenominator %d", timeinfo->timeSigDenominator));
-            strings.push_back(StringFormat("smpteOffset %d", timeinfo->smpteOffset));
-            strings.push_back(StringFormat("smpteFrameRate %d", timeinfo->smpteFrameRate));
-            strings.push_back(StringFormat("samplesToNextClock %d", timeinfo->samplesToNextClock));
-            strings.push_back(String("flags ") + FormatBinaryString<int16_t>(timeinfo->flags & 0xFFFF));
-            //this->
-            setFont(vg, 16, THEMECOL_TEXT, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-            float lineh;
-            nvgTextMetrics(vg, NULL, NULL, &lineh);
-            int y = INSET_CTR_SPACING;
-            int x = INSET_CTR_SPACING;
-            //int x = INSET_CTR_SPACING;
-            for (String& s : strings) {
-                nvgText(vg, x, y, StringAsCStr(s), NULL);
-                y += lineh;
-            }
-            std::vector<int> heldNotes = thisImpl->getSynth()->getHeldNotes();//TODO: not threadsafe
-            String s                   = "Held notes: ";
-            for (int i : heldNotes) {
-                s += String(noteName(i)) + ",";
-                if (s.length() > 32) {
-                    nvgText(vg, x, y, StringAsCStr(s), NULL);
-                    s = "";
-                    y += lineh;
-                }
-            }
-            if (heldNotes.empty())
-                s += "<empty>";
-            if (s.length() > 0) {
-                nvgText(vg, x, y, StringAsCStr(s), NULL);
-                s = "";
-                y += lineh;
-            }
-#endif
+            // PluginVST2_Synth::ThreadLock lock(thisImpl->getMutex());
             ////stress test thread safety
             //for (int i = 0; i < 10000; i++) {
             //    std::vector<int> heldNotes = thisImpl->getSynth()->getHeldNotes();//TODO: not threadsafe
             //}
             for (guibase* gui : guis) {
-                nvgSave(vg);
-                gui->render(vg);
-                nvgRestore(vg);
+                if (gui->isVisible()) {
+                    nvgSave(vg);
+                    gui->render(vg);
+                    nvgRestore(vg);
+                }
             }
         }
         void layout() override {
-            const int inset    = 4;
-            auto knobSize    = ivec2(64, 90);
-            auto knobPos     = ivec2(inset);
+            auto knobSize    = ivec2(64, 128+64);
+            auto knobPos     = ivec2(padding);
             for (auto& synthKnob : knobs) {
                 synthKnob.knob->pos = knobPos;
                 synthKnob.knob->size = knobSize;
+                synthKnob.knob->setLabelsFontScale(0.7f, 0.8f);
                 knobPos.x += knobSize.x + INSET_CTR_SPACING;
-                if (knobPos.x + knobSize.x > size.x - inset) {
-                    knobPos.x = inset;
+                if (knobPos.x + knobSize.x > size.x - padding) {
+                    knobPos.x = padding;
                     knobPos.y += knobSize.y + INSET_CTR_SPACING;
                 }
             }
+            if (knobPos.x + knobSize.x > size.x - padding) {
+                knobPos.x = padding;
+                knobPos.y += knobSize.y + INSET_CTR_SPACING;
+            }
+            list.pos = knobPos;
+            list.size = size - list.pos - ivec2(padding, padding);
             for (guibase* gui : guis) {
                 gui->layout();
             }
@@ -1664,6 +1965,32 @@ namespace PluginSynth {
             return false;
         }
         void buttonClicked(guibase* button) override {
+            auto param = dynamic_cast<guiknob_pluginparam*>(button);
+            if (param && module) {
+                auto paramIdx = param->getParamIdx();
+                auto paramValue = module->getParamValueDisplay(paramIdx);
+                editfield.mCallbackEnd = [this, param, paramValue, paramIdx](const std::string& str) {
+                    auto paramConverted = module->convertParamValueDisplay(param->getParamIdx(), param_unit_t{str, paramValue.unit});
+                    if (paramConverted.success) {
+                        module->setParamValue(paramIdx, paramConverted.floatVal, FLG_PAR_UPDATE_USER);
+                        if (param->fnValueEditChanged)
+                            param->fnValueEditChanged(param->getValue(), paramConverted.floatVal);
+                    }
+                    editfield.setVisible(false);
+                    return true;
+                };
+                auto layout = param->getLayout();
+                editfield.pos = layout.pValue;
+                editfield.size = layout.sValue;
+                editfield.setVisible(true);
+                editfield.layout();
+                editfield.setValue(paramValue.value);
+                editfield.setSelectionRange(-1, -1);
+                editfield.setFontSize(layout.valueHeight * theme->getFloat(GuiConstant::CONST_FONT_SCALE));
+                parentCtrl->focusGui(&editfield);
+                return;
+            }
+            guictr_base::buttonClicked(button);
         }
     };
 
@@ -1675,7 +2002,7 @@ namespace PluginSynth {
         return new PluginVST2_Synth(audioMaster);
     }
     std::shared_ptr<PluginViewContainers> PluginVST2_Synth::createView() {
-        auto view = std::make_shared<SinglePluginViewContainers<guicontainer_plugin_synth, PluginVST2_Synth>>(this, 280, 360);
+        auto view = std::make_shared<SinglePluginViewContainers<guicontainer_plugin_synth, PluginVST2_Synth>>(this, 1280, 720);
         this->views.push_back(view);
         return view;
     }

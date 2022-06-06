@@ -106,6 +106,23 @@ float determine_string_width::getStringWidth(const String& text, float fontSize,
     return bounds[2] - bounds[0];// maxX - minX;
 }
 
+float determine_table_string_width::getStringWidth(const String& text) {
+    NVGcontext* vg = ctrl->vg;
+    float fontSizeScaled = fontSize;
+    if (theme) {
+        UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
+        UIFont::bindFont(vg, instance);
+        fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
+    }
+    nvgFontSize(vg, fontSizeScaled);
+    if (textAlignment) {
+        nvgTextAlign(vg, textAlignment);
+    }
+    float bounds[4]{ 0 };
+    nvgTextBounds(vg, 0, 0, StringAsCStr(text), nullptr, bounds);
+    return bounds[2] - bounds[0] + INSET_TABLE_CELL_PADDING*2;// maxX - minX;
+}
+
 float renderTextLabel(NVGcontext* vg,
                      const vec2& pos,
                      const vec2& bounds,

@@ -1,4 +1,5 @@
 #pragma once
+#include "basectrl.h"
 #include "math/vec.h"
 #include "gui/gui.h"
 #include "gui/contextmenu/contextmenu_base.h"
@@ -19,11 +20,7 @@ protected:
     bool hadMouseFocus = false;
     Table::tbl table;
     gui_textfield textField;
-
 public:
-    static constexpr int FONT_SIZE_TOOLTIP_TITLE = 18;
-    static constexpr int FONT_SIZE_TOOLTIP_BIG = 15;
-    static constexpr int FONT_SIZE_TOOLTIP = 16;
     
     guitooltip(T* _ptr) : ptr(_ptr) {
         add(&textField);
@@ -56,8 +53,11 @@ public:
     }
     void setContent();
     void layout() override {
+        fontSize = G_FONT_SCALE(theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE));
+        determine_table_string_width strw(parentCtrl, theme, fontSize, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+        table.strW = &strw;
         table.tableWidth = 50;
-        table.rowHeight = FONT_SIZE_TOOLTIP + INSET_TABLE_CELL_PADDING * 2;
+        table.rowHeight = fontSize + INSET_TABLE_CELL_PADDING * 2;
         table.rows.clear();
         table.colSizes.clear();
         table.titleCols.clear();
@@ -74,8 +74,8 @@ public:
             return;
         }
 
-        setFont(vg, FONT_SIZE_TOOLTIP_TITLE, THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
-        Table::DrawTableNVG(table, vg, theme, ivec2(INSET_TABLE), getSizeContent() - ivec2(INSET_TABLE << 1), FONT_SIZE_TOOLTIP);
+        setFont(vg, fontSize, THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+        Table::DrawTableNVG(table, vg, theme, ivec2(INSET_TABLE), getSizeContent() - ivec2(INSET_TABLE << 1), fontSize);
         if (textField.isVisible()) {
             textField.render(vg);
         }

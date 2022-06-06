@@ -88,8 +88,13 @@ class gui_shaderview_impl_t {
     std::vector<float> texData;
     bool hasTextureUpdate = false;
     int texWidth = 0;
-
+    seq_rand rnd;
+    
 public:
+    gui_shaderview_impl_t() {
+        auto now = getTimeMillis();
+        rnd.rng_seed(static_cast<uint64_t>(now));
+    }
     void prerender(NVGcontext* vg, ivec2 size) {
         if (!pipeTestShader) {
             pipeTestShader = std::make_shared<testshader>();
@@ -143,14 +148,11 @@ public:
         auto now = getTimeMillis();
         if (now - initTime > 1000) {
             initTime = now;
-            seq_rand rnd;
-            rnd.rng_seed(now);
             const auto texW = math::min(size.x, size.y);
             texData.resize(texW * texW);
             for (int x = 0; x < texW; x++) {
                 for (int y = 0; y < texW; y++) {
-                    int32_t r = rnd.rng_rand();
-                    texData[y * texW + x] = (r & 0xFFFF) / (float) 0xFFFF;
+                    texData[y * texW + x] = static_cast<float>(rnd.rng_double());
                 }
             }
             texWidth = texW;

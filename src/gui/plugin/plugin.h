@@ -132,6 +132,7 @@ public:
     void prerender(NVGcontext* vg) override;
     void onAdded() override;
     void onRemove() override;
+    void onTick(AppCtrl* ctrl) override;
 };
 class guivstplugin : public guipluginview {
 public:

@@ -52,6 +52,16 @@ public:
     }
     float getStringWidth(const String& text, float fontSize, int alignment = 0);
 };
+class determine_table_string_width {
+    BaseCtrl* ctrl;
+    guitheme_t* theme;
+    float fontSize = 0;
+    int textAlignment = 0;
+public:
+    determine_table_string_width(BaseCtrl* _ctrl, guitheme_t* _theme, float _fontSize, int _alignment) : ctrl(_ctrl), theme(_theme), fontSize(_fontSize), textAlignment(_alignment) {
+    }
+    float getStringWidth(const String& text);
+};
 
 enum class dock_pos : int32_t { NONE = 0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
 enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };

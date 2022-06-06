@@ -171,6 +171,7 @@ public:
     virtual void getDeferredEffects(std::vector<effectbase*>& effects){};
     virtual void addPropertiesParameterList(Table::tbl& table);
     virtual void addPropertiesTooltip(Table::tbl& table);
+    virtual void addPropertiesParameterTooltip(Table::tbl& table, int idx);
 };
 
 struct effect_deferred_impl;

@@ -1,6 +1,7 @@
 #include "plugin.h"
 #include <nanovg.h>
 #include <memory>
+#include "assert_dbg.h"
 #include "guiglobals.h"
 #include "snapshot.h"
 #include "str_util.h"
@@ -467,6 +468,8 @@ void effectbase::addPropertiesParameterList(Table::tbl& table) {
         rows.push_back(row);
     }
 }
+void effectbase::addPropertiesParameterTooltip(Table::tbl& table, int idx) {
+}
 void effectbase::addPropertiesTooltip(Table::tbl& table) {
     table.tableWidth = 350;
     table.colSizes.push_back(150);
@@ -734,6 +737,14 @@ void guipluginview::onAdded() {
     }
 }
 
+void guipluginview::onTick(AppCtrl* ctrl) {
+    guiplugin::onTick(ctrl);
+    for (auto* ctr : viewCtrs) {
+        dbgassert(ctr->parent == this);
+        ctr->onTick(ctrl);
+    }
+}
+
 void guipluginview::onRemove() {
     guictr_base::onRemove();
     if (viewCtr) {
@@ -751,11 +762,18 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
     }
     const int32_t hpt = parent->theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
     int32_t meterW    = math::max(16, (int32_t) (theme->get(GuiConstant::CONST_METER_WIDTH) * hpt / 32.0));
-    ivec2 contentS;
-    ivec2 contentP;
+    ivec2 contentS{};
+    ivec2 contentP{};
 
     if (isHorizontalTitle) {
         contentP = ivec2(0, hpt);
+        contentS.y = size.y - hpt;
+        int rowHeight      = 64;
+        while (contentS.y < rowHeight * 8 && rowHeight > 8) {
+            rowHeight -= 4;
+        }
+        int paramsW = math::min(rowHeight*8, contentS.y);
+        prefSize.x = math::min(prefSize.x, paramsW);
         contentS = ivec2(prefSize.x - meterW, size.y - hpt);
     } else {
         contentP = ivec2(hpt, 0);
@@ -778,6 +796,8 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
     }
     prefSize.y = math::max(sizeCtrs.y, prefSize.y);
     prefSize.x += sizeCtrs.x;
+    dbgassert(prefSize.x > 0);
+    dbgassert(prefSize.y > 0);
 }
 void guipluginview::render(NVGcontext* vg) {
     renderBase(vg);
@@ -879,6 +899,7 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
     while (contentS.y < rowHeight * 8 && rowHeight > 8) {
         rowHeight -= 4;
     }
+    int paramsW = math::min(rowHeight*8, contentS.x - sizeCtrs.x);
     int heightRow = hpt * 0.7;
     textFieldSearchBox.setVisible(layoutMode == 0 && heightRow >= 20);
     dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size() && heightRow >= 20);
@@ -890,10 +911,18 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
     if (textFieldSearchBox.isVisible()) {
         hDropDown += hpt * 0.7;
     }
-    int paramsW = contentS.x - sizeCtrs.x;
     params.setRowHeight(rowHeight);
     params.pos  = ivec2(insetCtrls, insetCtrls + hpt + hDropDown);
     params.size = ivec2(paramsW, contentS.y - hDropDown) - ivec2(insetCtrls * 2);
+    params.padding = INSET_TITLE*2;
+    if (params.isVisible() && !dropdownProgram.isVisible() && !textFieldSearchBox.isVisible()) {
+        // params.margin = 6;
+        // params.margin  = 4;
+    } else {
+        // params.padding = 14;
+        // params.margin  = 8;
+    }
+
     params.layout();
     int topOffset = 0;
     if (dropdownProgram.isVisible()) {
@@ -985,6 +1014,7 @@ void vstplugin::addPropertiesTooltip(Table::tbl& table) {
         table.rows.push_back({ { tblString{ StringFormat("output[%d,%d]", out.offset, out.count) }, tblstr{ StringAsCStr(out.name) } } });
     }
 }
+
 template<>
 void guitooltip<guivstplugin>::setContent() {
     ptr->effect->addPropertiesTooltip(table);

@@ -242,9 +242,8 @@ void C_failedAssert(const char* expr, const char* file, int line) noexcept {
     if (!failedAssert) {
         failedAssert = true;
         ::Log::log_fmt(getGlobalLogger(), ::Log::L_FATAL, file, line, "dbgassert", "Assertion failed: %s\n", expr);
+        logStackTrace();
     }
-    auto nop = []() {};
-    nop();
     abort();
 }
 }
@@ -256,8 +255,7 @@ void CPP_failedAssert(const char* expr, const char* file, int line) {
     if (!failedAssert) {
         failedAssert = true;
         ::Log::log_fmt(getGlobalLogger(), ::Log::L_FATAL, file, line, "dbgassert", "Assertion failed: %s\n", expr);
+        logStackTrace();
     }
-    auto nop = []() {};
-    nop();
     abort();
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "basectrl.h"
 #include "logging.h"
 #include "math/vec.h"
 #include <memory>
@@ -12,13 +13,13 @@
 struct guitheme_t;
 struct NVGcontext;
 class guibase;
+struct determine_table_string_width;
 namespace GuiColor {
     struct constant_t;
 }
 
 #define INSET_TABLE_CELL_PADDING 3
 #define INSET_TABLE 1
-
 namespace Table {
 
     struct table_ctxt_t {
@@ -71,6 +72,7 @@ namespace Table {
     struct tbl_row_t {
         std::vector<table_entry_t> cols;
     };
+
     struct tbl {
         float tableWidth  = 0;
         float titleHeight = 0;
@@ -78,6 +80,7 @@ namespace Table {
         std::vector<float> colSizes;
         std::vector<table_entry_t> titleCols;
         std::vector<tbl_row_t> rows;
+        determine_table_string_width* strW;
     };
 
     void DrawTableNVG(tbl& table, NVGcontext* vg, guitheme_t* theme, vec2 pos, vec2 size, float fontSize);
