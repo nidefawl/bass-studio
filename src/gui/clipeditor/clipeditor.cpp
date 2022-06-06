@@ -751,26 +751,29 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             }
         }
 
-        auto& heldNotesArp = track->audio->getArpHeldNotes();//TODO: NOT THREADSAFE
-        if (heldNotesArp.size()) {
-            nvgBeginPath(vg);
+        if (track->audio->arp->isProcessingEnabled()) {
+            auto& heldNotesArp = track->audio->getArpHeldNotes();//TODO: NOT THREADSAFE
+            if (heldNotesArp.size()) {
+                nvgBeginPath(vg);
 
-            for (auto& note: heldNotesArp) {
-                tick_t pos = note.start() - clip->start() + clip->offsetStart;
-                if (clip->isLoopEnabled()) {
-                    if (pos > clip->loopStart) {
-                        pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+                for (auto& note: heldNotesArp) {
+                    tick_t pos = note.start() - clip->start() + clip->offsetStart;
+                    if (clip->isLoopEnabled()) {
+                        if (pos > clip->loopStart) {
+                            pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+                        }
                     }
+                    //TODO: CULL
+                    renderNote(vg, this, &note, scale, -note.start() + pos);
                 }
-                //TODO: CULL
-                renderNote(vg, this, &note, scale, -note.start() + pos);
+                NVGpaint paint{};
+                paint.image      = -1;
+                paint.innerColor = theme->getColor(GuiColor::COL_NOTE_ARP);
+                paint.customPar  = 3;
+                nvgFillPaint(vg, paint);
+                nvgBatchedRender(vg);
             }
-            NVGpaint paint{};
-            paint.image      = -1;
-            paint.innerColor = theme->getColor(GuiColor::COL_NOTE_ARP);
-            paint.customPar  = 3;
-            nvgFillPaint(vg, paint);
-            nvgBatchedRender(vg);
+            
         }
 
         float yoff = 0;
