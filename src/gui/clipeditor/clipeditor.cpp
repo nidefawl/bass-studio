@@ -1,5 +1,6 @@
 
 
+#include "guiglobals.h"
 #include "logging.h"
 #include "note.h"
 #include "seq_time.h"
@@ -945,11 +946,15 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
             if (isVelocity) {
                 dragMode = drag_velocity;
             } else {
-                if (local.x - grid.tickToScreenD(contextNote->start()) < DRAG_RANGE) {//TODO: make consistent with mousehittest
+                auto distL = local.x - grid.tickToScreenD(contextNote->start());
+                auto distR = grid.tickToScreenD(contextNote->end()) - local.x;
+                if (distL < DRAG_RANGE) {
                     dragMode = drag_note_left;
-                } else if (grid.tickToScreenD(contextNote->end()) - local.x < DRAG_RANGE) {
+                }
+                if (distR < DRAG_RANGE && (distL >= DRAG_RANGE || distR < distL)) {
                     dragMode = drag_note_right;
-                } else {
+                }
+                if (dragMode == drag_none) {
                     if (isCtrl(evt.kbmods)) {
                         parentCtrl->cursorIcon = CURSOR_DUPLICATE;
                         dragMode               = drag_notes_copy;
@@ -1156,7 +1161,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
                 if (dragMode == drag_note_left) {
                     note_t* before = getFirstBefore(notes.m_list, note.pitch, note.time);
                     note.time      = math::min(note.end() - 1, note.start() + timeOffset);
-                    note.len       = math::max(1, note.len - timeOffset);
+                    note.len       = math::max(math::max(1, gridSize/4), note.len - timeOffset);
                     if (before) {
                         if (note.start() < before->end()) {
                             note.cutLeft(before->end());
@@ -1164,7 +1169,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
                     }
                 } else if (dragMode == drag_note_right) {
                     note_t* after = getFirstAfter(notes.m_list, note.pitch, note.time);
-                    note.len      = math::max(gridSize, note.len + timeOffset);
+                    note.len      = math::max(math::max(1, gridSize/4), note.len + timeOffset);
                     if (after) {
                         if (note.end() > after->start()) {
                             note.cutRight(after->start());
@@ -1213,14 +1218,18 @@ bool gui_clipcontent::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             }
         }
         if (!isVelocity && view.clip() && evt.type <= MouseHitType::MOUSE_RIGHT) {
-            int32_t pitch             = toNoteF(local.y);
-            tick_t tickExact          = grid.screenToTickSnap(local.x, SNAP_OFF);
-            const note_t* contextNote = view.clip()->notes.get(tickExact, pitch);
-            if (contextNote && local.x - grid.tickToScreenD(contextNote->start()) < DRAG_RANGE) {
-                evt.requestCursor(CURSOR_CLIP_SIZE_LEFT);
-            }
-            if (contextNote && grid.tickToScreenD(contextNote->end()) - local.x < DRAG_RANGE) {
-                evt.requestCursor(CURSOR_CLIP_SIZE_RIGHT);
+            auto pitch     = toNoteF(local.y);
+            auto tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
+            const auto* contextNote = view.clip()->notes.get(tickExact, math::floorfS32(pitch));
+            if (contextNote) {
+                auto distL = local.x - grid.tickToScreenD(contextNote->start());
+                auto distR = grid.tickToScreenD(contextNote->end()) - local.x;
+                if (distL < DRAG_RANGE) {
+                    evt.requestCursor(CURSOR_CLIP_SIZE_LEFT);
+                }
+                if (distR < DRAG_RANGE && (distL >= DRAG_RANGE || distR < distL)) {
+                    evt.requestCursor(CURSOR_CLIP_SIZE_RIGHT);
+                }
             }
         }
         evt.requestFocus(this);
@@ -1341,7 +1350,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                 muteNotesToggle(view.draggedSelection);
                 mergeDraggedNotes(dragmode::drag_notes_move);
                 notes.updateBounds();
-                setSelectionFrame(getMinMaxTime(notes.selection));
+                // setSelectionFrame(getMinMaxTime(notes.selection));
                 handled = true;
                 edit    = true;
                 desc    = "Mute notes";
@@ -1377,11 +1386,9 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                 for (note_t* selPtr: notes.selection) {
                     dbgassert(notes.has(selPtr));
                 }
-                //        setSelectionFrame(getMinMaxTime(notes.selection));
                 auto pair = getMinMaxTime(notes.selection);
                 if (pair.second)
                     grid.makeTickVisible(pair.second->end());
-                setSelectionFrame(getMinMaxTime(notes.selection));
                 handled = true;
                 edit    = true;
                 desc    = "Duplicate notes";
@@ -1395,11 +1402,9 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                 }
                 mergeDraggedNotes(dragmode::drag_notes_move);
                 view.cursor.end = cursor.start + view.clipboardCursorRange;
-                //        setSelectionFrame(getMinMaxTime(notes.selection));
                 auto pair = getMinMaxTime(notes.selection);
                 if (pair.second)
                     grid.makeTickVisible(pair.second->end());
-                setSelectionFrame(getMinMaxTime(notes.selection));
                 handled = true;
                 edit    = true;
                 desc    = "Paste notes";
@@ -1438,7 +1443,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                     auto pair = getMinMaxTime(notes.selection);
                     if (pair.second)
                         grid.makeTickVisible(pair.second->end());
-                    setSelectionFrame(getMinMaxTime(notes.selection));
+                    expandSelectionFrame(pair);
                     edit = true;
                     handled = true;
                     desc = "Quanitize notes";
