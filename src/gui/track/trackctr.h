@@ -664,20 +664,20 @@ public:
         setCanMouseHit(true);
         setBackgroundRendered(true);
         _grid.addCallback(this);
-        add(&scrollbar);
         add(&trackTimeline);
         add(&loophandles);
         add(&trackTopLeft);
         add(&trackControls);
         add(&trackView);
+        add(&scrollbar);
     }
     ~guictr_tracks() override {
+        remove(&scrollbar);
         remove(&trackView);
         remove(&trackControls);
         remove(&trackTopLeft);
         remove(&loophandles);
         remove(&trackTimeline);
-        remove(&scrollbar);
     }
 
     int32_t setTrackPosition(track_gui_entry_t* e, int32_t y, bool isBottom);
