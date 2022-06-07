@@ -54,6 +54,11 @@ namespace PluginSynth {
     const char* const PLUGIN_EFFECT_NAME = "Synth";
     const char* const PLUGIN_UID = "SYNT";
     const char* const PLUGIN_PRODUCT_NAME = "Synth VST2.4";
+    enum class ParamType {
+        FLOAT,
+        INT,
+        ENUM,
+    };
     enum class Waveforms : int32_t {
         Sine = 0,
         Triangle,
@@ -63,8 +68,36 @@ namespace PluginSynth {
         Noise,
         NumWaveforms
     };
-    std::vector<String> stringsWaveform = {
+    enum class FilterModes : int32_t {
+        Off = 0,
+        TwoPole,
+        Svf,
+        FourPole,
+        NumFilterModes
+    };
+    enum class VoiceModes : int32_t {
+        Poly = 0,
+        Mono,
+        Legato,
+        NumVoiceModes
+    };
+    enum class FmModes : int32_t {
+        Off = 0,
+        Osc1,
+        Osc2,
+        NumFmModes
+    };
+    const std::array<const char*, 6> stringsWaveform = {
         "Sine", "Triangle", "Saw", "Square", "Pulse", "Noise"
+    };
+    const std::array<const char*, 4> stringsFilterMode = {
+        "Off", "TwoPole", "Svf", "FourPole"
+    };
+    const std::array<const char*, 3> stringsVoiceMode = {
+        "Poly", "Mono", "Legato"
+    };
+    const std::array<const char*, 3> stringsFMMode = {
+        "Off", "Osc1", "Osc2"
     };
     static constexpr int NUM_POLY_VOICES = 32;
     static constexpr int NUM_UNISON_VOICES = 3;
@@ -255,17 +288,6 @@ namespace PluginSynth {
         }
     };
 
-    enum class FilterModes : int32_t {
-        Off = 0,
-        TwoPole,
-        Svf,
-        FourPole,
-        NumFilterModes
-    };
-    std::vector<String> stringsFilterMode = {
-        "Off", "TwoPole", "Svf", "FourPole"
-    };
-
     /* fast trigonometry */
     inline double fastAtan(double x) { return x / (1.0 + .28 * (x * x)); }
     struct TwoPoleFilter {
@@ -427,15 +449,6 @@ namespace PluginSynth {
             return ProcessIndividual(dt, input, (FilterModes) (int) mode.current, cutoff, resonance);
         }
     };
-    enum class VoiceModes : int32_t {
-        Poly = 0,
-        Mono,
-        Legato,
-        NumVoiceModes
-    };
-    std::vector<String> stringsVoiceMode = {
-        "Poly", "Mono", "Legato"
-    };
 
     // pitch calculation //
     inline double pitchFactor(double p) { return pow(1.0595, p); }
@@ -534,6 +547,7 @@ namespace PluginSynth {
     struct VoiceUnison {
         std::array<Voice, NUM_UNISON_VOICES> voices;
         int32_t index = 0;
+        int32_t seqNr = 0;
         seq_rand rand;
         double lfoValue      = 0.0;
         double driftVelocity = 0.0;
@@ -570,6 +584,9 @@ namespace PluginSynth {
                 voice.SetNote(n);
             });
         }
+        double GetFreqency() const {
+            return voices[0].frequency;
+        }
 
         void SetPitchBendFactor(double f) { 
             std::for_each(std::begin(voices), std::end(voices), [f](Voice& voice) {
@@ -599,6 +616,7 @@ namespace PluginSynth {
 
                 }
             });
+            seqNr++;
         }
         void UpdateVoice(const HostTempo& tempo, double dt) {
             driftVelocity += getRandom() * 1.0 * dt;
@@ -608,20 +626,6 @@ namespace PluginSynth {
         }
     };
 
-    enum class FmModes : int32_t {
-        Off = 0,
-        Osc1,
-        Osc2,
-        NumFmModes
-    };
-    std::vector<String> stringsFMMode{
-        "Off", "Osc1", "Osc2"
-    };
-    enum class ParamType {
-        FLOAT,
-        INT,
-        ENUM,
-    };
     struct SynthParam {
         virtual ~SynthParam() = default;
     };
@@ -638,16 +642,16 @@ namespace PluginSynth {
             return this->type;
         }
         ~SynthParamBase() override = default;
-        virtual void set(float f) {
+        virtual void set(double f) noexcept {
         }
-        virtual float getAsFloat() {
+        virtual double getAsDouble() const noexcept {
             return 0.0f;
         }
-        virtual String getValueDisplay() = 0;
+        virtual String getValueDisplay() const = 0;
         virtual param_converted_t convertValueDisplay(const param_unit_t& displayValue) const = 0;
     };
     struct SynthParam_Float : public SynthParamBase {
-        SynthParam_Float(Parameters _enumParam) : SynthParamBase(ParamType::FLOAT, _enumParam) {
+        explicit SynthParam_Float(Parameters _enumParam) : SynthParamBase(ParamType::FLOAT, _enumParam) {
         }
         double valDouble = 0.0;
         double fmin      = 0.0;
@@ -657,40 +661,40 @@ namespace PluginSynth {
             fmax = _fmax;
             return this;
         }
-        double Value() {
+        double Value() const noexcept {
             return math::max(fmin, math::min(fmax, (valDouble) * (fmax - fmin) + fmin));
         }
         void setRangedValue(double f) {
             double fVal = math::max(0.0, math::min(1.0, (f - fmin) / (fmax - fmin)));
             valDouble   = fVal;
         }
-        float GetMin() {
+        double GetMin() {
             return fmin;
         }
-        float GetMax() {
+        double GetMax() {
             return fmax;
         }
-        void set(float f) override {
+        void set(double f) noexcept override {
             valDouble = f;
         }
-        float getAsFloat() override {
+        double getAsDouble() const noexcept override {
             return valDouble;
         }
-        String getValueDisplay() override {
+        String getValueDisplay() const noexcept override {
             return StringFormat(StringAsCStr(format), Value());
         }
         param_converted_t convertValueDisplay(const param_unit_t& displayValue) const override {
-            auto f = static_cast<float>(atof(StringAsCStr(displayValue.value)));
-            float fVal = math::max(0.0, math::min(1.0, (f - fmin) / (fmax - fmin)));
-            return {fVal, true};
+            auto val = atof(StringAsCStr(displayValue.value));
+            auto fVal = math::max(0.0, math::min(1.0, (val - fmin) / (fmax - fmin)));
+            return {static_cast<float>(fVal), true};
         }
     };
     struct SynthParam_Int : public SynthParamBase {
-        SynthParam_Int(Parameters _enumParam) : SynthParamBase(ParamType::INT, _enumParam) {
+        explicit SynthParam_Int(Parameters _enumParam) : SynthParamBase(ParamType::INT, _enumParam) {
         }
         SynthParam_Int(ParamType _paramType, Parameters _enumParam) : SynthParamBase(_paramType, _enumParam) {
         }
-        float valFloat = 0.0f;
+        double valFloat = 0.0;
         int32_t iValue = 0;
         int32_t iMin   = 0;
         int32_t iMax   = 1;
@@ -699,39 +703,41 @@ namespace PluginSynth {
             iMax = _iMax;
             return this;
         }
-        int32_t Value() {
+        int32_t Value() const noexcept {
             return math::max(iMin, math::min(iMax, this->iValue));
         }
-        float getAsFloat() override {
+        double getAsDouble() const noexcept override {
             return valFloat;
         }
-        void set(float f) override {
-            iValue = math::max(iMin, math::min(iMax, (int32_t) math::froundf(f * (iMax - iMin) + iMin)));
-            setRangedValue(iValue);
+        void set(double f) noexcept override {
+            auto iVal = math::rounddS32(f * (iMax - iMin) + iMin);
+            setRangedValue(math::clamp(iVal, iMin, iMax));
         }
-        void setRangedValue(int32_t i) {
-            iValue         = math::max(iMin, math::min(iMax, i));
-            this->valFloat = math::max(0.0, math::min(1.0, (iValue - iMin) / (double) (iMax - iMin)));
+        void setRangedValue(int32_t i) noexcept {
+            iValue   = math::clamp(i, iMin, iMax),
+            valFloat = math::clamp((iValue - iMin) / static_cast<double>(iMax - iMin), 0.0, 1.0);
         }
-        String getValueDisplay() override {
+        String getValueDisplay() const noexcept override {
             return StringFormat(StringAsCStr(format), Value());
         }
         param_converted_t convertValueDisplay(const param_unit_t& displayValue) const override {
-            auto f = static_cast<float>(atof(StringAsCStr(displayValue.value)));
-            auto iVal = math::max(iMin, math::min(iMax, (int32_t) math::froundf(f * (iMax - iMin) + iMin)));
-            return {math::max(0.0f, math::min(1.0f, static_cast<float>((iVal - iMin) / (double) (iMax - iMin)))), true};
+            auto val = atof(StringAsCStr(displayValue.value));
+            auto iVal = math::clamp(math::rounddS32(val), iMin, iMax);
+            auto dVal = math::clamp((iVal - iMin) / static_cast<double>(iMax - iMin), 0.0, 1.0);
+            return {static_cast<float>(dVal), true};
         }
     };
     struct SynthParam_Enum : public SynthParam_Int {
-        SynthParam_Enum(Parameters _enumParam) : SynthParam_Int(ParamType::ENUM, _enumParam) {
+        explicit SynthParam_Enum(Parameters _enumParam) : SynthParam_Int(ParamType::ENUM, _enumParam) {
         }
         std::vector<String> strings;
-        SynthParam_Enum* setStrings(std::vector<String> _strings) {
-            this->strings = _strings;
-            this->iMax    = _strings.size() - 1;
+        template<typename StrCtrIt>
+        SynthParam_Enum* setStrings(const StrCtrIt& begin, const StrCtrIt& end) {
+            strings = std::vector<String>(begin, end);
+            this->iMax = CtrSize(strings) - 1;
             return this;
         }
-        String getValueDisplay() override {
+        String getValueDisplay() const noexcept override {
             int val = this->Value();
             if (val >= 0 && val < CtrSize(strings)) {
                 return strings[val];
@@ -740,16 +746,16 @@ namespace PluginSynth {
         }
         template<typename T>
         T getEnumValue() {
-            return (T) Value();
+            return static_cast<T>(Value());
         }
     };
     void setParamName(SynthParamBase* p, String name, String shortName, String format) {
-        p->name      = name;
-        p->shortName = shortName;
+        p->name      = std::move(name);
+        p->shortName = std::move(shortName);
         if (format == "%f") {
             p->format = "%0.3f";
         } else {
-            p->format = format;
+            p->format = std::move(format);
         }
     }
     struct MidiMessage {
@@ -882,9 +888,17 @@ namespace PluginSynth {
                                         std::begin(voices),
                                         std::end(voices),
                                         [](auto& a, auto& b) {
-                                            return a.IsReleased() == b.IsReleased() ? a.GetVolume() < b.GetVolume() : a.IsReleased();
+                                            if (a.IsReleased() == b.IsReleased()) {
+                                                auto volA = a.GetVolume();
+                                                auto volB = b.GetVolume();
+                                                if (volA <= 0.0 && volB <= 0.0) {
+                                                    return a.seqNr < b.seqNr;
+                                                }
+                                                return volA < volB;
+                                            }
+                                            return a.IsReleased();
                                         });
-                                log_printf("Starting voice[%d] %s vel %.2f\n", voice->index, noteName(note), velocity);
+
                                 voice->SetNote(note);
                                 voice->SetVelocity(velocity);
                                 voice->ResetPitch();
@@ -927,7 +941,7 @@ namespace PluginSynth {
                         }
                     } break;
                     default:
-                        log_printf("Unhandled midi msg %d\n", (int32_t) status);
+                        log_lf(Log::L_WARN, "Unhandled midi msg %d\n", (int32_t) status);
                         break;
                 }
                 midiQueue.Remove();
@@ -1046,8 +1060,7 @@ namespace PluginSynth {
             lfo.initPhase(fmod(tempo.ppqPos * lfo1Tempo, 1.0));
             lfo2.initPhase(fmod(tempo.ppqPos * lfo2Tempo, 1.0));
 
-            log_lf(Log::L_DEBUG, "Reset LFO phases: at ppq/4 %f\n", fmod(tempo.ppqPos/4.0, 1.0));
-            // for (auto& voice : voices) voice.initLfoPhases(tempo);
+            // log_lf(Log::L_DEBUG, "Reset LFO phases: at ppq/4 %f\n", fmod(tempo.ppqPos/4.0, 1.0));
             for (auto& uv : voices) {
                 for (auto& voice : uv.voices) {
                     voice.lfo1.initPhase(fmod(tempo.ppqPos * lfo1Tempo + driftValue * voice.rand.rng_double(), 1.0));
@@ -1056,10 +1069,7 @@ namespace PluginSynth {
             };
         }
         void ProcessReplacing(float** inputs, float** outputs, int nFrames) {
-            // double dPosPPQ = tempo.ppqPos - tempo.barPos;
             double bpmHz = math::max(tempo.bpm, 1.0) / 60.0;
-            // double sampleToPPQ = ppqPeriod * dt;
-            //     lfo.initPhase(dPosPPQAtSample);
             const auto mvInv = 1.0/voices[0].voices.size();
             for (int s = 0; s < nFrames; s++) {
                 FlushMidi(s);
@@ -1073,13 +1083,7 @@ namespace PluginSynth {
                 }
                 if (lfo2.Update(dt, math::max(tempo.bpm/4.0, 1.0) / 60.0)) {
                     lfo.initPhase(0.0);
-                    log_lf(Log::L_DEBUG, "Init phase: at sample %d ppq/4 %f\n", s, fmod(tempo.ppqPos/4.0, 1.0));
                 }
-                // lfoValue
-
-                // double dPosPPQAtSample = dPosPPQ + s * sampleToPPQ;
-                // double lfoFreqHz = GetParamFloat(Parameters::LfoFrequency)->Value();
-                // lfo.initPhase(dPosPPQAtSample);
                 // calculate lfo freqency in Hz based on tempo
                 double lfoFreqHz = GetParamFloat(Parameters::LfoFrequency)->Value() * bpmHz;
                 lfoValue = lfo.Get(dt, lfoWave, lfoFreqHz, false);
@@ -1102,11 +1106,6 @@ namespace PluginSynth {
                 outputs[0][s] = static_cast<float>(outL * masterVolume);
                 outputs[1][s] = static_cast<float>(outR * masterVolume);
             }
-        }
-
-        void Reset() {
-            //IMutexLock lock(this);
-            //dt = 1.0 / GetSampleRate();
         }
 
         void GrayOutControls() {
@@ -1150,7 +1149,7 @@ namespace PluginSynth {
         void OnParamChange(Parameters parameter) {
             //IMutexLock lock(this);
             //auto value = GetParam(parameter)->Value();
-            float value = 0.0f;
+            double value = 0.0;
             if (GetParam(parameter)->getType() == ParamType::FLOAT) {
                 value = GetParamFloat(parameter)->Value();
             }
@@ -1283,9 +1282,6 @@ namespace PluginSynth {
                             v.lfoEnv.a = lfoDelay;
                     break;
                 }
-                case Parameters::LfoCutoff:
-                    lfoToCutoff = copysign((value * .000125) * (value * .000125) * 8000.0, value);
-                    break;
                 case Parameters::VoiceMode:
                     switch (GetParamEnum(parameter)->getEnumValue<VoiceModes>()) {
                         case VoiceModes::Mono:
@@ -1508,26 +1504,23 @@ namespace PluginSynth {
         setParamName(getParam(Parameters::MasterVolume), "Volume", "Volume", "%f");
 
 
-        addEnumParam(Parameters::Osc1Wave)->setStrings(stringsWaveform)->setRangedValue(0);
+        addEnumParam(Parameters::Osc1Wave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(0);
         setParamName(getParam(Parameters::Osc1Wave), "Osc1 Waveform", "Osc1 Waveform", "%d");
-        addEnumParam(Parameters::Osc2Wave)->setStrings(stringsWaveform)->setRangedValue(0);
+        addEnumParam(Parameters::Osc2Wave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(0);
         setParamName(getParam(Parameters::Osc2Wave), "Osc2 Waveform", "Osc2 Waveform", "%d");
-        addEnumParam(Parameters::LfoWave)->setStrings(stringsWaveform)->setRangedValue(0);
+        addEnumParam(Parameters::LfoWave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(0);
         setParamName(getParam(Parameters::LfoWave), "Lfo Waveform", "Lfo Waveform", "%d");
-        addEnumParam(Parameters::VoiceMode)->setStrings(stringsVoiceMode)->setRangedValue(0);
+        addEnumParam(Parameters::VoiceMode)->setStrings(stringsVoiceMode.begin(), stringsVoiceMode.end())->setRangedValue(0);
         setParamName(getParam(Parameters::VoiceMode), "Voice Mode", "Voice Mode", "%d");
-        addEnumParam(Parameters::FilterMode)->setStrings(stringsFilterMode)->setRangedValue(0);
+        addEnumParam(Parameters::FilterMode)->setStrings(stringsFilterMode.begin(), stringsFilterMode.end())->setRangedValue(0);
         setParamName(getParam(Parameters::FilterMode), "Filter Mode", "Flt Mode", "%d");
-        addEnumParam(Parameters::FmMode)->setStrings(stringsFMMode)->setRangedValue(0);
+        addEnumParam(Parameters::FmMode)->setStrings(stringsFMMode.begin(), stringsFMMode.end())->setRangedValue(0);
         setParamName(getParam(Parameters::FmMode), "Fm Mode", "Fm Mode", "%d");
         initPrograms();
 
         for (auto param : this->vecParams) {
             this->impl->OnParamChange(param->enumParam);
         }
-    }
-
-    void logParam(const char* szParamName, const float val) {
     }
 
     void PluginVST2_Synth::writeCurrentProgram() {
@@ -1537,7 +1530,7 @@ namespace PluginSynth {
                 case Parameters::kNumParams:
                     break;
                 default:
-                    log_printf("%s = %f\n", StringAsCStr(param->shortName), param->getAsFloat());
+                    log_printf("%s = %f\n", StringAsCStr(param->shortName), param->getAsDouble());
                     break;
             }
         }
@@ -1652,12 +1645,11 @@ namespace PluginSynth {
     }
 
     float PluginVST2_Synth::getParameter(VstInt32 index) {
-        float value = 0;
         if (index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
-            value                 = param->getAsFloat();
+            return static_cast<double>(param->getAsDouble());
         }
-        return value;
+        return 0.0f;
     }
 
     bool PluginVST2_Synth::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
@@ -1710,28 +1702,13 @@ namespace PluginSynth {
     VstInt32 PluginVST2_Synth::processEvents(VstEvents* events) {
         dbgassert(events);
         if (events) {
-            // ThreadLock lock(this->getMutex());
             int32_t len = events->numEvents;
-            //if (events->numEvents)
-            //    log_printf("events->numEvents %d\n", events->numEvents);
             for (int i = 0; i < len; i++) {
                 auto pEvent = events->events[i];
                 if (pEvent->type == VstEventTypes::kVstMidiType) {
-                    VstMidiEvent* pME = (VstMidiEvent*) pEvent;
+                    VstMidiEvent* pME = reinterpret_cast<VstMidiEvent*>(pEvent);
                     IMidiMsg msg(pME->deltaFrames, pME->midiData[0], pME->midiData[1], pME->midiData[2]);
                     impl->ProcessMidiMsg(msg);
-                    //log_printf("event[%d].type %d\n", i, pME->type);
-                    //log_printf("event[%d].byteSize %d\n", i, pME->byteSize);
-                    //log_printf("event[%d].deltaFrames %d\n", i, pME->deltaFrames);
-                    //log_printf("event[%d].flags %d\n", i, pME->flags);
-                    //log_printf("event[%d].noteLength %d\n", i, pME->noteLength);
-                    //log_printf("event[%d].noteOffset %d\n", i, pME->noteOffset);
-                    //log_printf("event[%d].midiData %02X%02X%02X%02X\n", i,
-                    //           (unsigned) pME->midiData[0], (unsigned) pME->midiData[1], (unsigned) pME->midiData[2], (unsigned) pME->midiData[3]);
-                    //log_printf("event[%d].detune %d\n", i, (unsigned) pME->detune);
-                    //log_printf("event[%d].noteOffVelocity %d\n", i, (unsigned) pME->noteOffVelocity);
-                    //log_printf("event[%d].reserved1 %d\n", i, (unsigned) pME->reserved1);
-                    //log_printf("event[%d].reserved2 %d\n", i, (unsigned)pME->reserved2);
                 }
             }
         }
