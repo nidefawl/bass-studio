@@ -89,6 +89,12 @@ struct param_converted_t {
     float floatVal;
     bool success;
 };
+struct param_modulation_range_t {
+    int32_t sourceId;
+    int32_t paramIdx;
+    double range;
+    bool isBiPolar;
+};
 struct automatable_param_t {
     int32_t idx        = -1;
     float defaultValue = 0.0f;

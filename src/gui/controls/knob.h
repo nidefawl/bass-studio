@@ -1,6 +1,9 @@
 #pragma once
+#include "automation.h"
 #include "nanovg/nanovg.h"
 #include <functional>
+#include <vector>
+#include <optional>
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "color_util.h"
@@ -31,6 +34,7 @@ protected:
     float fDefaultValue          = 0.5f;
     float lastVal                = 0.0f;
     bool bDoubleClickSetsDefault = true;
+    bool bIsBipolar              = false;
 
     automatable_t* paramAutomatable = nullptr;
     int32_t paramIdx                = -1;
@@ -47,6 +51,19 @@ public:
     explicit guiknob(knobtype knobType) : guibase(), knobType(knobType) {
         setBackgroundRendered(false);
         setCanMouseHit(true);        
+    }
+
+    void setIsBipolar(bool bIsBipolar) {
+        this->bIsBipolar = bIsBipolar;
+        if (bIsBipolar) {
+            fDefaultValue = 0.0f;
+        }else {
+            fDefaultValue = 0.5f;
+        }
+    }
+
+    bool getIsBipolar() const {
+        return bIsBipolar;
     }
 
     void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
@@ -81,7 +98,7 @@ public:
     }
     void setValue(float newValue, int flags) {
         float curval = getValue();
-        newValue     = CLAMP_I(newValue, 0.0f, 1.0f);
+        newValue     = math::clamp(newValue, bIsBipolar ? -1.0f : 0.0f, 1.0f);
         value        = newValue;
         if (fnSetValue) {
             fnSetValue(newValue, flags);
@@ -94,7 +111,7 @@ public:
     }
 
     float getValueClamped() {
-        return CLAMP_F(getValue());
+        return math::clamp(getValue(), bIsBipolar ? -1.0f : 0.0f, 1.0f);
     }
 
     virtual float getValue() {
@@ -123,4 +140,7 @@ public:
 
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
     virtual void setToDefaultValue();
+    virtual std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges() {
+        return std::nullopt;
+    }
 };

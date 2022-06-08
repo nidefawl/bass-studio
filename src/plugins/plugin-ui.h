@@ -89,7 +89,7 @@ public:
             editfield.layout();
             editfield.setValue(paramValue.value);
             editfield.setSelectionRange(-1, -1);
-            editfield.setFontSize(layout.valueHeight * theme->getFloat(GuiConstant::CONST_FONT_SCALE));
+            editfield.setFontSize(layout.valueHeight*layout.fontScaleValue);
             parentCtrl->focusGui(&editfield);
             return;
         }

@@ -1,4 +1,5 @@
 #include "knob.h"
+#include "assert_dbg.h"
 #include "basectrl.h"
 #include "knoblabeled.h"
 #include "gui/gui.h"
@@ -8,6 +9,7 @@
 #include "gui/contextmenu/contextmenu.h"
 #include "gui/contextmenu/contextmenu_daw.h"
 #include "math/seq_math.h"
+#include "math/vec.h"
 #include "platform.h"
 #include "theme.h"
 #include "gui/tooltip/tooltip.h"
@@ -18,6 +20,8 @@
 #include "logging.h"
 #include "automation.h"
 #include "host/mainctrl.h"
+#include <nanovg.h>
+#include <nanovg_min.h>
 #if BUILD_VSTHOST
 #include "gui/track/trackcontent.h"
 #endif
@@ -124,7 +128,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
 //        nvgFillColor(vg, c2);
 //        nvgFill(vg);
     }
-    float val = CLAMP_F(value);
+    float val = math::clamp(value, bIsBipolar ? -1.0f : 0.0f, 1.0f);
     float minSize       = math::min(insetS.x, insetS.y);
     float r             = (minSize * 0.8f) / 2.0f;
     float lineThickness = math::max(1.0f, roundf((minSize / 8.0f) * 2.0f) / 2.0f);
@@ -133,6 +137,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
         lineThickness = math::max(1.0f, roundf((minSize / 32.0f) * 2.0f) / 2.0f);
         float cx      = insetP.x;
         float cy      = insetP.y;
+        float width  = insetS.x;
         float height  = insetS.y;
         nvgBeginPath(vg);
         nvgRect(vg, cx, cy, insetS.x, height);
@@ -143,6 +148,52 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
         nvgRect(vg, cx, cy + height - heightRange, insetS.x, heightRange);
         nvgFillColor(vg, theme->getColor(valColor));
         nvgFill(vg);
+        auto modRangesOptional = getKnobModulationRanges();
+        if (modRangesOptional) {
+            auto numParams = CtrSize(*modRangesOptional);
+            dbgassert(numParams);
+            for (auto& param : *modRangesOptional) {
+                auto color = dbgcolorsArray[1 + (param.sourceId % dbgcolorsArraySize)]; color.a = 0.9f;
+                auto posModulation = height - height * static_cast<float>(val);
+                auto heightModulation = height*static_cast<float>(param.range)*(param.isBiPolar?2.0f:1.0f);
+                if (param.isBiPolar) {
+                    posModulation -= heightModulation * 0.5f;
+                } else {
+                    posModulation -= heightModulation;
+                }
+                vec4 r = {
+                    0,
+                    posModulation,
+                    static_cast<float>(insetS.x),
+                    heightModulation
+                };
+                // clip rect to 0, 0, width, height
+                if (r.y < 0) {
+                    r.w += r.y;
+                    r.y = 0;
+                }
+                if (r.x < 0) {
+                    r.z += r.x;
+                    r.x = 0;
+                }
+                if (r.w < 0) {
+                    r.y += r.w;
+                    r.w = -r.w;
+                }
+                if (r.y + r.w > height) {
+                    r.w = height - r.y;
+                }
+                if (r.x + r.z > width) {
+                    r.z = width - r.x;
+                }
+                if (fabs(r.z) > 0.2f && fabs(r.w) > 0.2f) {
+                    nvgBeginPath(vg);
+                    nvgRect(vg, cx + r.x, cy + r.y, r.z, r.w);
+                    nvgFillColor(vg, color);
+                    nvgFill(vg);
+                }
+            }
+        }
         float heightHandle = math::max(3.0f, lineThickness + 3.0f);
         nvgBeginPath(vg);
         nvgRect(vg, cx, cy + height - heightRange - heightHandle * 0.5f, insetS.x, heightHandle);
@@ -159,10 +210,16 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
         nvgStrokeColor(vg, THEMECOL_TEXT);
         nvgStrokeWidth(vg, lineThickness);
         nvgStroke(vg);
-        float end = start + val * range;
-        if (val > 1E-8F) {
+        float rangeScaled = bIsBipolar ? range * 0.5f : range;
+        float startOffset = bIsBipolar ? start + rangeScaled : start;
+        float end = startOffset + val * rangeScaled;
+        if (fabs(val) > 1E-8F) {
+            float endArc = end;
+            if (endArc < startOffset) {
+                std::swap(startOffset, endArc);
+            }
             nvgBeginPath(vg);
-            nvgArc(vg, cx, cy, r, start, end, NVG_CW);
+            nvgArc(vg, cx, cy, r, startOffset, endArc, NVG_CW);
             nvgStrokeColor(vg, theme->getColor(valColor));
             nvgStrokeWidth(vg, lineThickness + 1.0f);
             nvgStroke(vg);
@@ -203,7 +260,7 @@ void guiknob::setKnobInternalHandlers() {
     };
     fnSetValue = [this](float f, int flags) {
         if (paramAutomatable) {
-            ThreadLock lock     = MainCtrl::getPlayThread()->lockThread();
+            ThreadLock lock     = dawCtrl->lockPlayThread();
             automation_t* param = paramAutomatable->getRegisteredAutomation(paramIdx);
             if (param) {
                 param->active = false;

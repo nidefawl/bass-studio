@@ -1,5 +1,6 @@
 #include <deque>
 #include <memory>
+#include "assert_dbg.h"
 #include "pluginctr.h"
 #include "math/seq_math.h"
 #include "str_util.h"
@@ -179,7 +180,9 @@ bool plugin_selection::hasSelection() const {
 }
 
 void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_stage_t* stage, int32_t pos) {
+    
     auto daw = DawInstance::get();
+    dbgassert(daw->getPlayThread()->isLocked());
     auto host = daw->getHost();
     for (plugin_snapshot_t& pluginSnapshot : clipboard->plugins) {
         assignFreeStageIds(host, pluginSnapshot);
@@ -206,6 +209,7 @@ void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_
     stage->pluginsChanged();
     host->onTrackLayoutChange();
     daw->onPluginsChanged();
+    host->validateIds();
 }
 std::shared_ptr<plugin_clipboard_t> copyPluginSelection(plugin_selection& sel) {
     std::vector<plugin_snapshot_t> pluginSnapshots;

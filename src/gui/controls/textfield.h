@@ -161,7 +161,8 @@ public:
 
     bool focusEvent(MouseHitEvt& evt, bool focused) override;
     virtual bool keyboardEvent(int key, int scancode, KeyEventType action, int modifiers);
-    bool handleCharInput(unsigned int codepoint) override;
+    bool handleCharInput(uint32_t codepoint) override;
+    bool canHandleCharInput(uint32_t codepoint);
 
     virtual ivec2 preferredSize(NVGcontext* ctx) const;
 

@@ -4,6 +4,7 @@
 #include "gui/container/container.h"
 #include "gui/contextmenu/contextmenu_daw.h"
 #include "gui/contextmenu/contextmenu_color.h"
+#include "gui/gui.h"
 #include "math/seq_math.h"
 
 gui_color_pick::gui_color_pick()
@@ -206,33 +207,27 @@ void gui_input_filtered::layout() {
     field.pos  = pos;
     field.size = size;
     field.layout();
-    field.setFontSize((int32_t) (math::max(4.0, field.size.y * 0.7)));
+    field.setFontSize(size.y);
 }
 
 void gui_input_filtered::render(NVGcontext* vg) {
     int32_t fl = getStateFlags();
     renderWidgetBorder(vg, fl);
-//    setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-//    String str2 = StringFormat("mValue '%s'", StringAsCStr(field.mValue));
-//    String str3 = StringFormat("mValueTemp '%s'", StringAsCStr(field.mValueTemp));
-//    String str4 = StringFormat("mCursorPos %d", field.mCursorPos);
-//
-//    String sel = "";
-//    field.copySelectionString(sel);
-//    String str5 = StringFormat("selection '%s'", StringAsCStr(sel));
-//    nvgText(vg, pos.x + 3, bottom() + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str2), NULL);
-//    nvgText(vg, pos.x + 3, bottom() + size.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str3), NULL);
-//    nvgText(vg, pos.x + 3, bottom() + size.y * 2 + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str4), NULL);
-//    nvgText(vg, pos.x + 3, bottom() + size.y * 3 + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str5), NULL);
     if (isEditing) {
         this->field.render(vg);
         return;
     }
-    int align = isAlignCenter ? NVG_ALIGN_CENTER : NVG_ALIGN_RIGHT;
-    setFont(vg, G_FONT_SCALE((int32_t) (size.y * 0.8)), THEMECOL_TEXT, align | NVG_ALIGN_MIDDLE);
-    int32_t _number = number ? *number : 0;
+    auto _number = number ? *number : 0;
     String str      = filter.formatNumber(_number);
-    nvgText(vg, pos.x + size.x - 3 + (isAlignCenter ? size.x * -0.5 : 0), pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
+    int align = isAlignCenter ? NVG_ALIGN_CENTER : NVG_ALIGN_RIGHT;
+    align |= NVG_ALIGN_MIDDLE;
+    auto posText = vec2(pos) + vec2(size.x - 3 + ((align&NVG_ALIGN_CENTER) ? size.x * -0.5 : 0), size.y*0.5f);
+    renderText(vg, 
+        posText,
+        size, 
+        str,
+        0,
+        align);
 }
 
 bool gui_input_filtered::focusEvent(MouseHitEvt& evt, bool focused) {
@@ -351,7 +346,7 @@ bool gui_input_filtered::handleKeyInput(KeyEvent& kevt) {
     return handled;
 }
 
-bool gui_input_filtered::handleCharInput(unsigned int codepoint) {
+bool gui_input_filtered::handleCharInput(uint32_t codepoint) {
     startEdit(false);
     bool b = this->field.handleCharInput(codepoint);
     if (b) {

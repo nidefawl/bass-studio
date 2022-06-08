@@ -19,6 +19,7 @@ public:
     ThreadLock(ThreadLock&& other) noexcept;
     bool isLocked() const noexcept;
     static ThreadLock MakeThreadLock(std::recursive_mutex& _mutex, std::atomic<int32_t>& _isLocked, const bool bTryLock);
+    static ThreadLock MakeVoidLock();
 };
 
 //TODO: make hidden implementation to avoid mutex and atomic includes

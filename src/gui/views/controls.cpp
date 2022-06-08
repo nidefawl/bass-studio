@@ -261,7 +261,7 @@ void gui_timeinput::showEditField() {
     log_lf(Log::L_DEBUG, "beatBarNthToString beg: %s\n", StringAsCStr(beatBarNthToString(beatBarNth, isRelative)));
     editfield.setValue(beatBarNthToString(beatBarNth, bar.isRelative));
     editfield.setSelectionRange(-1, -1);
-    editfield.setFontSize(editfield.size.y * theme->getFloat(GuiConstant::CONST_FONT_SCALE));
+    editfield.setFontSize(bar.size.y);
     parentCtrl->focusGui(&editfield);
 }
 
@@ -388,7 +388,7 @@ void gui_tempocontrol::showEditField() {
     editfield.layout();
     editfield.setValue(FormatTempo(dawCtrl->getDaw()->getCurrentTempoBPM()));
     editfield.setSelectionRange(-1, -1);
-    editfield.setFontSize(editfield.size.y * theme->getFloat(GuiConstant::CONST_FONT_SCALE));
+    editfield.setFontSize(tempoInput.size.y);
     parentCtrl->focusGui(&editfield);
 }
 void gui_tempocontrol_input::onKeyInputChangeValue(ivec2 direction) {

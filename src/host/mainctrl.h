@@ -548,6 +548,9 @@ public:
     virtual guictr_clipeditor* getClipEditor() = 0;
     virtual guictr_nodes_splitview* getNodesContainer() = 0;
     virtual void onPluginSelected();
+    bool isGlobalKeybindCodepoint(uint32_t codepoint) override {
+        return codepoint == 32;
+    }
 };
 
 class MainCtrl : public DawCtrl {

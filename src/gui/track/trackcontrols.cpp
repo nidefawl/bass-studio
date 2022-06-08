@@ -232,7 +232,7 @@ public:
         }
         return true;
     }
-    bool handleCharInput(unsigned int codepoint) override {
+    bool handleCharInput(uint32_t codepoint) override {
         if (isTextCommitted() && codepoint < 0xFF) {
             char keyChar = (char) codepoint;
             if ((keyChar >= '0' && keyChar <= '9') || (keyChar == '-')) {
@@ -1757,7 +1757,7 @@ public:
             field->size      = title->size;
             field->size.y    = titleHeight;
             field->pos       = { 0, 0 };
-            field->setFontSize((int) (titleHeight * 0.9));
+            field->setFontSize(titleHeight);
             field->setReturnCommits(true);
 
             auto const ctxtMenu = new guictxtmenu_base();

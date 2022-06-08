@@ -33,6 +33,7 @@ struct guitheme_t;
 struct dragdrop_midifile;
 
 extern NVGcolor dbgcolorsArray[8];
+static constexpr int32_t dbgcolorsArraySize = 8;
 
 void UTIL_setFont(NVGcontext* vg, const guitheme_t* const theme, float size, NVGcolor color, int alignment);
 float textWidth(NVGcontext* vg, const String& str);
@@ -302,7 +303,7 @@ public:
     virtual bool handleKeyInput(KeyEvent& kevt) {
         return false;
     }
-    virtual bool handleCharInput(unsigned int codepoint) {
+    virtual bool handleCharInput(uint32_t codepoint) {
         return false;
     }
     virtual bool trackViewDoubleClick(guitrack_editor* view, MouseEvent& evt) {

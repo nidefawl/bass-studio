@@ -525,14 +525,14 @@ public:
                         color->pos = {0, 0};
                         //color->setRefNvg(&value);
                         color->setU32(theme->getColorInt32(constant));
-                        color->layout();
                         color->fnSetValue = [theme, constant](int32_t rgba) {
                             theme->setColor(constant, rgba);
                         };
                         guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
                         ctxtMenu->size = color->size;
                         ctxtMenu->add(color);
-                        ctxtMenu->layout();
+                        // color->layout();
+                        // ctxtMenu->layout();
                         ctxtMenu->canTakeInputFocus = true;
                         ctxtMenu->maxHeight = color->size.y;
                         dbgassert(!ctxtMenu->isBackgroundRendered());
@@ -549,11 +549,11 @@ public:
                         color->pos = { 0, 0 };
                         color->setRefNvg(&value);
                         color->setU32(nvgToRGBA(value));
-                        color->layout();
                         guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
                         ctxtMenu->size = color->size;
                         ctxtMenu->add(color);
-                        ctxtMenu->layout();
+                        // color->layout();
+                        // ctxtMenu->layout();
                         ctxtMenu->canTakeInputFocus = true;
                         ctxtMenu->maxHeight = color->size.y;
                         dbgassert(!ctxtMenu->isBackgroundRendered());

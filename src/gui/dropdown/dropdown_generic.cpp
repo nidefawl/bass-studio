@@ -3,29 +3,6 @@
 #include "gui/contextmenu/contextmenu_base.h"
 #include "gui/contextmenu/contextmenu.h"
 
-
-class guidropdown_generic_ctxt : public guictxtmenu {
-    guidropdown_cb* const parent;
-    std::vector<String> options;
-
-public:
-    guidropdown_generic_ctxt(guidropdown_cb* _parent, std::vector<String>&& _options) : parent(_parent), options(_options) {
-        this->size.x   = 120;
-        this->fontSize = FONT_SIZE_CTXT_SMALL;
-        this->paddingV = 0;
-        int32_t idx    = 0;
-        for (auto str : options) {
-            addEntry(new ctxtmenu_entry(str, idx));
-            idx++;
-        }
-    }
-    void clicked(int _id) override {
-        closeContextMenu();
-        if (_id >= 0 && _id < CtrSize(options)) {
-            parent->onOptionSelected(_id);
-        }
-    }
-};
 /* TODO: find a way to have this generic, while having definition of guidropdown_generic_ctxt only in this cpp file */
 template<>
 guictxtmenu_base* guidropdown_generic<String>::createContextMenu(std::vector<String>&& strOptions) {

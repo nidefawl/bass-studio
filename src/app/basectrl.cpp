@@ -240,7 +240,7 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
     guiOver = evt.getGuiHit();
 }
 
-void BaseCtrl::onCharInput(unsigned int codepoint) {
+void BaseCtrl::onCharInput(uint32_t codepoint) {
     if (guiCaptured) {
         return;
     }
@@ -625,7 +625,7 @@ void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
 bool AppCtrl::hasContextMenu() {
     return this->contextWindow && this->contextWindow->isShown();
 }
-void AppCtrl::onCharInput(unsigned int codepoint) {
+void AppCtrl::onCharInput(uint32_t codepoint) {
     window_main* wnd = this->contextWindow;
     if (wnd && wnd->isShown()) {
         if (wnd->getCtrl()->hasInputFocus()) {

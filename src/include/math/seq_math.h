@@ -83,6 +83,20 @@ namespace math {
             return 0;
         return std::floor(val);
     }
+    inline bool isNanOrInf(double val) {
+        if (std::isinf(val))
+            return true;
+        if (std::isnan(val))
+            return true;
+        return false;
+    }
+    inline double silenceNanInf(double val) {
+        if (std::isnan(val))
+            return 0;
+        if (std::isinf(val))
+            return 0;
+        return val;
+    }
 
     /**
      * Round down to integer
@@ -416,6 +430,26 @@ namespace math {
         if (val_s64 <= std::numeric_limits<int32_t>::min())
             return std::numeric_limits<int32_t>::min();
         return static_cast<int32_t>(val_s64);
+    }
+
+    /**
+     * Round double to neareast uint32 integer
+     *
+     * Clamps out of uint32 range values to uint32 range.
+     * NAN returns 0
+     */
+    inline uint32_t rounddU32(double val) {
+        // otherwise implementation defined
+        if (std::isnan(val))
+            return 0;
+        if (std::isinf(val))
+            return 0;
+        int64_t val_s64 = std::lround(val);
+        if (val_s64 >= std::numeric_limits<uint32_t>::max())
+            return std::numeric_limits<uint32_t>::max();
+        if (val_s64 <= std::numeric_limits<uint32_t>::min())
+            return std::numeric_limits<uint32_t>::min();
+        return static_cast<uint32_t>(val_s64);
     }
 
     inline float powf(float a, float b) {

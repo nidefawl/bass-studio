@@ -28,7 +28,7 @@ public:
     void handleRightClick(MouseEvent& evt) override {
     }
     bool handleKeyInput(KeyEvent& kevt) override;
-    bool handleCharInput(unsigned int codepoint) override {
+    bool handleCharInput(uint32_t codepoint) override {
         return false;
     }
     virtual void select(dropdown_field_selectitem req, uint32_t idxOffset);

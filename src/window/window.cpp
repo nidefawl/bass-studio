@@ -210,6 +210,7 @@ protected:
 
     int32_t windowCreationFlags      = 0;
     bool isSharedContextSlave = false;
+    bool noMouseCapture       = false;
     bool noRawInput           = false;
     bool bCanResize           = false;
     bool bIsVisible           = false;
@@ -246,9 +247,9 @@ public:
     {
 #if BUILD_VSTHOST
         //TODO: settings might not be loaded at this point
-        noRawInput = daw_tls::getSettings().vmmode;
+        noMouseCapture = daw_tls::getSettings().vmmode;
 #endif
-        noRawInput |= glfwRawMouseMotionSupported() == GLFW_FALSE;
+        noRawInput = glfwRawMouseMotionSupported() == GLFW_FALSE;
     }
 
     void setTitle(const String& title) {
@@ -478,7 +479,7 @@ public:
     }
     virtual void onCursorEnter(int entered) {
     }
-    virtual void onCharInput(unsigned int codepoint) {
+    virtual void onCharInput(uint32_t codepoint) {
     }
     virtual void onWindowSizeChanged(int width, int height) {
     }
@@ -498,18 +499,22 @@ public:
     virtual void onTick()               = 0;
 
     virtual void captureMouse() {
-        glfwSetInputMode(glfw, GLFW_CURSOR, noRawInput ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_DISABLED);
-        if (!noRawInput) {
-            glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 1);
+        if (!noMouseCapture) {
+            glfwSetInputMode(glfw, GLFW_CURSOR, noRawInput ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_DISABLED);
+            if (!noRawInput) {
+                glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 1);
+            }
         }
     }
 
     virtual void releaseMouse() {
-        if (!noRawInput) {
-            glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 0);
+        if (!noMouseCapture) {
+            if (!noRawInput) {
+                glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 0);
+            }
+            glfwSetInputMode(glfw, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            initMousePos();
         }
-        glfwSetInputMode(glfw, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-        initMousePos();
     }
 
     virtual bool isMouseCaptured() {
@@ -957,7 +962,7 @@ public:
     }
 #endif
 
-    void onCharInput(unsigned int codepoint) override {
+    void onCharInput(uint32_t codepoint) override {
         ctrl->onCharInput(codepoint);
     }
     void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) override {
@@ -1469,7 +1474,7 @@ void glfw_main_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int
     }
 }
 
-static void glfw_cb_charinput(GLFWwindow* w, unsigned int codepoint, int mods) {
+static void glfw_cb_charinput(GLFWwindow* w, uint32_t codepoint, int mods) {
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
         if (wu && wu->isValid())

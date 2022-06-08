@@ -19,7 +19,7 @@ public:
         field.pos  = pos;
         field.size = size;
         field.layout();
-        field.setFontSize(math::max(4, field.size.y - 2));
+        field.setFontSize(size.y * FONT_AUTOSCALE);
     }
     void setControl(BaseCtrl* parentCtrl) override {
         guibase::setControl(parentCtrl);
@@ -38,7 +38,7 @@ public:
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
-    bool handleCharInput(unsigned int codepoint) override;
+    bool handleCharInput(uint32_t codepoint) override;
 
     virtual String getAsStringLiteral()                        = 0;
     virtual void endEditImpl()                                 = 0;
@@ -95,6 +95,8 @@ private:
 
 using gui_numberinput_i32 = gui_numberinput_field_generic<int32_t>;
 using gui_numberinput_u32 = gui_numberinput_field_generic<uint32_t>;
+using gui_numberinput_double = gui_numberinput_field_generic<double>;
+using gui_numberinput_float = gui_numberinput_field_generic<float>;
 
 class gui_input_filtered : public guibutton {
     uint32_t* number;
@@ -128,5 +130,5 @@ public:
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
-    bool handleCharInput(unsigned int codepoint) override;
+    bool handleCharInput(uint32_t codepoint) override;
 };

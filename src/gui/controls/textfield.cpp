@@ -4,6 +4,7 @@
 #include <nanovg.h>
 
 #include "logging.h"
+#include "math/seq_math.h"
 #include "theme.h"
 #include "str_util.h"
 #include "gui/gui.h"
@@ -23,7 +24,7 @@ void gui_textfield::setEditable(bool editable) {
 }
 
 ivec2 gui_textfield::preferredSize(NVGcontext* ctx) const {
-    int iH = (int32_t) ceil(fontSize() * 1.4f);
+    auto iH = math::ceilfS32(fontSize());
     ivec2 size(0, iH);
 
     float uw = 0;
@@ -85,7 +86,7 @@ void gui_textfield::onTextEndEdit() {
     }
 }
 void setTfFont(NVGcontext* ctx, const gui_textfield* tf) {
-    nvgFontSize(ctx, tf->fontSize());
+    nvgFontSize(ctx, tf->fontSize() * tf->theme->getFloat(GuiConstant::CONST_FONT_SCALE));
     UIFont::font_instance instance = tf->theme->getFont(UIFont::FONT_TEXTFIELD);
     UIFont::bindFont(ctx, instance);
     switch (tf->alignment()) {
@@ -101,8 +102,8 @@ void setTfFont(NVGcontext* ctx, const gui_textfield* tf) {
     }
 }
 void gui_textfield::layout() {
-    if (this->mFontSize < 0) {
-        this->mFontSize = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
+    if (this->mFontSize <= 0) {
+        this->mFontSize = math::clamp(size.y, 4, 48);
     }
 }
 void gui_textfield::render(NVGcontext* ctx) {
@@ -175,7 +176,7 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
     // clip visible text area
     if (clipSize.x < 1 || clipSize.y < 1)
         return;
-    nvgFontSize(ctx, fontSize());
+    nvgFontSize(ctx, fontSize() * theme->getFloat(GuiConstant::CONST_FONT_SCALE));
     NVGcolor mTextColorDisabled = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_DISABLED);
     UIFont::font_instance instance = theme->getFont(UIFont::FONT_TEXTFIELD);
     UIFont::bindFont(ctx, instance);
@@ -378,12 +379,22 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
 
     return false;
 }
+bool gui_textfield::canHandleCharInput(uint32_t codepoint) {
 
-bool gui_textfield::handleCharInput(unsigned int codepoint) {
+    if (mEditable && mFocused) {
+        if (filter && !filter->isAllowedChar(codepoint)) {
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+bool gui_textfield::handleCharInput(uint32_t codepoint) {
     if (mEditable && mFocused) {
         if (filter) {
             if (!filter->isAllowedChar(codepoint)) {
-                return true;
+                return false;
             }
         }
         std::ostringstream convert;

@@ -772,7 +772,13 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
         while (contentS.y < rowHeight * 8 && rowHeight > 8) {
             rowHeight -= 4;
         }
-        int paramsW = math::min(rowHeight*8, contentS.y);
+        int nVisibleCts = 0;
+        for (auto* ctr : viewCtrs) {
+            if (ctr->isVisible())
+                nVisibleCts++;
+        }
+        int paramMinW = nVisibleCts ? rowHeight*6 : rowHeight*8;
+        int paramsW = math::min(paramMinW, contentS.y);
         prefSize.x = math::min(prefSize.x, paramsW);
         contentS = ivec2(prefSize.x - meterW, size.y - hpt);
     } else {
@@ -899,7 +905,13 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
     while (contentS.y < rowHeight * 8 && rowHeight > 8) {
         rowHeight -= 4;
     }
-    int paramsW = math::min(rowHeight*8, contentS.x - sizeCtrs.x);
+    int nVisibleCts = 0;
+    for (auto* ctr : viewCtrs) {
+        if (ctr->isVisible())
+            nVisibleCts++;
+    }
+    int paramMinW = nVisibleCts ? rowHeight*6 : rowHeight*8;
+    int paramsW = math::min(paramMinW, contentS.x - sizeCtrs.x);
     int heightRow = hpt * 0.7;
     textFieldSearchBox.setVisible(layoutMode == 0 && heightRow >= 20);
     dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size() && heightRow >= 20);
@@ -915,14 +927,6 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
     params.pos  = ivec2(insetCtrls, insetCtrls + hpt + hDropDown);
     params.size = ivec2(paramsW, contentS.y - hDropDown) - ivec2(insetCtrls * 2);
     params.padding = INSET_TITLE*2;
-    if (params.isVisible() && !dropdownProgram.isVisible() && !textFieldSearchBox.isVisible()) {
-        // params.margin = 6;
-        // params.margin  = 4;
-    } else {
-        // params.padding = 14;
-        // params.margin  = 8;
-    }
-
     params.layout();
     int topOffset = 0;
     if (dropdownProgram.isVisible()) {
@@ -938,16 +942,14 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
         topOffset += hpt * 0.7;
     }
     int left = params.right() + INSET_TITLE;
-    if (viewCtrs.size()) {
-        for (auto* ctr : viewCtrs) {
-            if (ctr->isVisible()) {
-                ctr->pos          = ivec2(left, 0) + ivec2(insetCtrls, insetCtrls + hpt);
-                ivec2 prefSizeCtr = ivec2(ctr->size.x, contentS.y) - ivec2(insetCtrls * 2);
-                ctr->determineSize(prefSizeCtr);
-                ctr->size = prefSizeCtr;
-                ctr->layout();
-                left = ctr->right() + INSET_TITLE;
-            }
+    for (auto* ctr : viewCtrs) {
+        if (ctr->isVisible()) {
+            ctr->pos          = ivec2(left, 0) + ivec2(insetCtrls, insetCtrls + hpt);
+            ivec2 prefSizeCtr = ivec2(ctr->size.x, contentS.y) - ivec2(insetCtrls * 2);
+            ctr->determineSize(prefSizeCtr);
+            ctr->size = prefSizeCtr;
+            ctr->layout();
+            left = ctr->right() + INSET_TITLE;
         }
     }
 }

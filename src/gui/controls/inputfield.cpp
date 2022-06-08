@@ -60,8 +60,8 @@ void gui_numberinput_field_base::startEdit(bool keepcontent) {
         } else {
             this->field.setValue("");
         }
-        this->field.beginEdit();
         this->field.setSelectionRange(-1, -1);
+        this->field.beginEdit();
     }
     isEditing = true;
 }
@@ -112,9 +112,12 @@ void gui_numberinput_field_base::handleDraggedRelease(MouseEvent& evt) {
 
 bool gui_numberinput_field_base::handleKeyInput(KeyEvent& kevt) {
     if (kevt.type != K_RELEASE) {
-        if (kevt.keyCode == KEY_ENTER || kevt.keyCode == KEY_KP_ENTER || kevt.keyCode == KEY_ESCAPE) {
-            endEdit(kevt.keyCode == KEY_ENTER || kevt.keyCode == KEY_KP_ENTER);
-            return true;
+        if (kevt.keyCode == KEY_ENTER 
+            || kevt.keyCode == KEY_KP_ENTER 
+            || kevt.keyCode == KEY_ESCAPE
+            || kevt.keyCode == KEY_SPACE) {
+            endEdit(kevt.keyCode == KEY_SPACE || kevt.keyCode == KEY_ENTER || kevt.keyCode == KEY_KP_ENTER);
+            return kevt.keyCode != KEY_SPACE;
         }
     }
     if (isEditing) {
@@ -137,7 +140,13 @@ bool gui_numberinput_field_base::handleKeyInput(KeyEvent& kevt) {
     return handled;
 }
 
-bool gui_numberinput_field_base::handleCharInput(unsigned int codepoint) {
+bool gui_numberinput_field_base::handleCharInput(uint32_t codepoint) {
+    if (!isEditing && parentCtrl->isGlobalKeybindCodepoint(codepoint)) {
+        return false;
+    }
+    if (!this->field.canHandleCharInput(codepoint)) {
+        return false;
+    }
     startEdit(false);
     return this->field.handleCharInput(codepoint);
 }
@@ -189,7 +198,7 @@ float gui_numberinput_field_generic<float>::parseLiteral(const char* szNumber) {
 }
 template<>
 String gui_numberinput_field_generic<float>::valueToStringLiteral(float val) {
-    return StringFormat("%f", val);
+    return StringFormat("%.2f", val);
 }
 template<>
 void gui_numberinput_field_generic<float>::onMouseDragValue(int32_t disty, int32_t absy) {
@@ -201,5 +210,26 @@ template<>
 void gui_numberinput_field_generic<float>::onKeyInputChangeValue(ivec2 direction) {
     if (this->number) {
         setValue(getValue() + direction.y * 0.01f);
+    }
+}
+
+template<>
+String gui_numberinput_field_generic<double>::valueToStringLiteral(double val) {
+    return StringFormat("%.3f", val);
+}
+template<>
+double gui_numberinput_field_generic<double>::parseLiteral(const char* szNumber) {
+    return atof(szNumber);
+}
+template<>
+void gui_numberinput_field_generic<double>::onMouseDragValue(int32_t disty, int32_t absy) {
+    if (this->number) {
+        setValue(*number - ((disty < 0 ? -1 : 1) * absy) * 0.0001);
+    }
+}
+template<>
+void gui_numberinput_field_generic<double>::onKeyInputChangeValue(ivec2 direction) {
+    if (this->number) {
+        setValue(getValue() + direction.y * 0.01);
     }
 }

@@ -48,6 +48,9 @@ public:
     return ThreadLock(new Impl(_mutex, _isLocked, bTryLock));
     //return ThreadLock(nullptr);
 }
+/* static */ ThreadLock ThreadLock::MakeVoidLock() {
+    return ThreadLock(nullptr);
+}
 
 ThreadLock::ThreadLock(ThreadLock::Impl* impl) : _M_impl(impl) {
 }

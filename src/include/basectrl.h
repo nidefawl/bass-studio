@@ -276,7 +276,7 @@ public:
     void focusGui(guibase* g);
     void mouseDown(ivec2 mousePos, int button, bool doubleclick);
     void mouseUp(ivec2 mousePos, int button);
-    virtual void onCharInput(unsigned int codepoint);
+    virtual void onCharInput(uint32_t codepoint);
     virtual void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name);
     void mouseScrolled(double xoffset, double yoffset);
     virtual void mouseMoved(ivec2 mousePos, ivec2 deltaPos);
@@ -328,6 +328,9 @@ public:
     virtual void setWindowName(String name) {
         windowName = std::move(name);
     }
+    virtual bool isGlobalKeybindCodepoint(uint32_t codepoint) {
+        return false;
+    }
 };
 
 class AppCtrl : public BaseCtrl {
@@ -366,7 +369,7 @@ public:
     void closeAppMenusAtLvl(int startlvl) override;
     bool hasContextMenu() override;
     void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) override;
-    void onCharInput(unsigned int codepoint) override;
+    void onCharInput(uint32_t codepoint) override;
     void onMenuOpen(ngui::Menu* menu) override;
     virtual void updateMenubar();
     guictxtmenu_base* getContextMenu();
