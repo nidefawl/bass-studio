@@ -258,6 +258,11 @@ public:
         }
         gui->onRemove();
         guis.erase(it);
+        if (sortChildren) {
+            std::sort(guis.begin(), guis.end(), [](guibase* a, guibase* b) {
+                return a->zOrder > b->zOrder;
+            });
+        }
         gui->setParent(nullptr);
     }
 
