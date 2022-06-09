@@ -13,7 +13,7 @@
 struct guitheme_t;
 struct NVGcontext;
 class guibase;
-struct determine_table_string_width;
+class determine_table_string_width;
 namespace GuiColor {
     struct constant_t;
 }
