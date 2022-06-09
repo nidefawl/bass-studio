@@ -30,9 +30,9 @@ NVGcolor dbgcolorsArray[8] = {
         nvgRGBA(255, 0, 0, 55),
         nvgRGBA(0, 255, 0, 55),
         nvgRGBA(0, 0, 255, 55),
-        nvgRGBA(0, 127, 255, 55),
         nvgRGBA(255, 127, 0, 55),
-        nvgRGBA(255, 0, 255, 55),
+        nvgRGBA(0, 255, 127, 55),
+        nvgRGBA(127, 0, 255, 55),
         nvgRGBA(255, 127, 255, 55),
         nvgRGBA(255, 255, 0, 55)
 };

@@ -76,13 +76,16 @@ int GLPathRendererPolyline2d::init() {
 void GLPathRendererPolyline2d::destroy() {
     glDeleteProgram(program2dLines);
 }
-void GLPathRendererPolyline2d::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) {
+void GLPathRendererPolyline2d::bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) {
+    dbgassert(!paths.empty());
+    out.bakeOpts = paths.at(0).pathOpts;
 
     using namespace crushedpixel;
-    float thickness = pathOpt.linewidth;
+    float thickness = out.bakeOpts.linewidth;
     int idx         = 0;
     std::vector<vec2> bufFinal;
-    for (vec2list& list : paths) {
+    for (auto& path : paths) {
+        auto& list = path.pathVecs;
         if (list.size() > 1) {
             /*auto len = */Polyline2D::create(bufFinal, list, thickness,
                                           Polyline2D::JointStyle::ROUND,

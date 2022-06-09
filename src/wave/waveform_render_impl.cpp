@@ -7,6 +7,8 @@
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <utility>
+#include <vector>
 
 #include "math/seq_math.h"
 #include "math/mat.h"
@@ -520,7 +522,13 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
                 this->nextPathIdx = 0;
             }
             impl->timer2.reset();
-            renderer->bakePaths(tesselatedWaveForms, bakeOpt, bakedPath);
+            std::vector<path_t> paths;
+            paths.resize(tesselatedWaveForms.size());
+            auto it = paths.begin();
+            for (auto& twf : tesselatedWaveForms) {
+                *it++ = path_t{std::move(twf), bakeOpt};
+            }
+            renderer->bakePaths(paths, bakedPath);
             impl->renderTimings.tmBakePaths += impl->timer2.getTime();
             impl->timer2.reset();
             ivec2& pos      = waveformQueueEntry.pos;

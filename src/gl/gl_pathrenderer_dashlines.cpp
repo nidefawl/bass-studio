@@ -49,7 +49,7 @@ static inline float fast_atan2(float y, float x) {
     return angle;
 }
 
-float packVertexData2(vec2list& verticesIn, std::vector<vert>& outVdata, int index = 0, bool closed = false) {
+float packVertexData2(const vec2list& verticesIn, std::vector<vert>& outVdata, int index = 0, bool closed = false) {
 
     vec2list vertices = verticesIn;
     float dist        = glm::distance(vertices.front(), vertices.back());
@@ -205,7 +205,7 @@ int GLPathRendererDashLines::init() {
 void GLPathRendererDashLines::destroy() {
     glDeleteProgram(program2dLines);
 }
-void GLPathRendererDashLines::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) {
+void GLPathRendererDashLines::bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) {
     std::vector<vert> outVdata;
     vbuf bufFinal;
     std::vector<float> bufUniforms;
@@ -216,15 +216,16 @@ void GLPathRendererDashLines::bakePaths(std::vector<vec2list> paths, Uniforms pa
     size_t flBufUniformsPos  = 0;
     size_t flBufVertsPos     = 0;
     int idx    = 0;
-    for (vec2list& list : paths) {
-        if (list.size() > 1) {
-            float len = packVertexData2(list, outVdata, idx);
+    for (auto& path : paths) {
+        auto& pathVecs = path.pathVecs;
+        if (pathVecs.size() > 1) {
+            float len = packVertexData2(pathVecs, outVdata, idx);
             size_t flBufPos    = flBufVertsPos * sizeFloatsVert;
             size_t flBakedSize = outVdata.size() * sizeFloatsVert;
             bufFinal.v.resize(flBufPos + flBakedSize);
             memcpy(bufFinal.v.data() + flBufPos, outVdata.data(), flBakedSize * sizeof(float));
             buildIndices(outVdata.size() / 4, flBufVertsPos, bufFinal.i);
-            Uniforms uniforms = pathOpt;
+            Uniforms uniforms = path.pathOpts;
             uniforms.length   = len;
             memcpy(bufUniforms.data() + flBufUniformsPos, &uniforms, sizeof(Uniforms));
             flBufUniformsPos += sizeUniforms;

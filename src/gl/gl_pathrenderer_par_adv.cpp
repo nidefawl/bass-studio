@@ -87,13 +87,15 @@ int GLPathRendererParAdvanced::init() {
 void GLPathRendererParAdvanced::destroy() {
     glDeleteProgram(program2dLines);
 }
-void GLPathRendererParAdvanced::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) {
-    out.bakeOpts = pathOpt;
+void GLPathRendererParAdvanced::bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) {
+    dbgassert(!paths.empty());
+    out.bakeOpts = paths[0].pathOpts;
 
     int idx = 0;
     std::vector<uint16_t> spineLengths;
     std::vector<vec2> bufFinal;
-    for (vec2list& list : paths) {
+    for (size_t i = 0; i < paths.size(); ++i) {
+        auto& list = paths[i].pathVecs;
         if (list.size() > 1) {
             bufFinal.insert(bufFinal.end(), list.begin(), list.end());
             dbgassert(FitsTypeRange<uint16_t>(list.size()));
@@ -101,6 +103,7 @@ void GLPathRendererParAdvanced::bakePaths(std::vector<vec2list> paths, Uniforms 
             idx++;
         }
     }
+
     parsl_spine_list spinelist{};
     spinelist.num_vertices  = bufFinal.size();
     spinelist.vertices      = reinterpret_cast<parsl_position*>(bufFinal.data());
@@ -110,7 +113,7 @@ void GLPathRendererParAdvanced::bakePaths(std::vector<vec2list> paths, Uniforms 
     // float miterLimit = 2.0f;
     parsl_config config{};
     config.flags |= PARSL_FLAG_ANNOTATIONS;
-    config.thickness       = pathOpt.linewidth*2.0f;
+    config.thickness       = out.bakeOpts.linewidth*2.0f;
     config.miter_limit     = 0.0f;
     parsl_context* context = nullptr;
     context                = parsl_create_context(config);
@@ -149,7 +152,7 @@ void GLPathRendererParAdvanced::bakePaths(std::vector<vec2list> paths, Uniforms 
     glBindVertexArray(0);
 
     out.numPaths  = nPaths;
-    out.lineWidth = pathOpt.linewidth;
+    out.lineWidth = out.bakeOpts.linewidth;
 }
 
 void GLPathRendererParAdvanced::render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) {

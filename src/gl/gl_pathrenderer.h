@@ -87,6 +87,10 @@ enum class pathrenderer_type_e : int32_t {
     PAR_BASIC,
     PAR_ADVANCED
 };
+struct path_t {
+    vec2list pathVecs;
+    Uniforms pathOpts;
+};
 class IPathRenderer {
 public:
     uint32_t program2dLines;
@@ -94,7 +98,7 @@ public:
     virtual int init()     = 0;
     virtual void destroy() = 0;
 
-    virtual void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) = 0;
+    virtual void bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) = 0;
 
     virtual void render(BakeGLPath& out, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) = 0;
 };
@@ -120,7 +124,7 @@ public:
 public:
     int init() override;
     void destroy() override;
-    void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) override;
+    void bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) override;
     void render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };
 
@@ -136,7 +140,7 @@ public:
 public:
     int init() override;
     void destroy() override;
-    void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) override;
+    void bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) override;
     void render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };
 
@@ -152,7 +156,7 @@ class GLPathRendererParBasic : public IPathRenderer {
 public:
     int init() override;
     void destroy() override;
-    void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) override;
+    void bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) override;
     void render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };
 
@@ -170,6 +174,6 @@ class GLPathRendererParAdvanced : public IPathRenderer {
 public:
     int init() override;
     void destroy() override;
-    void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) override;
+    void bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) override;
     void render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };
