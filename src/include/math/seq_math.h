@@ -12,6 +12,20 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846 /* pi */
 #endif
+#ifndef MATH_HAS_FP_INF_CHECK
+#  if defined(__clang__) && defined(NDEBUG)
+#    define MATH_HAS_FP_INF_CHECK 0
+#  else
+#    define MATH_HAS_FP_INF_CHECK 1
+#  endif
+#endif
+#ifndef MATH_HAS_FP_NAN_CHECK
+#  if defined(__clang__) && defined(NDEBUG)
+#    define MATH_HAS_FP_NAN_CHECK 0
+#  else
+#    define MATH_HAS_FP_NAN_CHECK 1
+#  endif
+#endif
 
 #define FLOAT_PI 3.141592653f
 
@@ -77,24 +91,36 @@ namespace math {
      * INF return 0
      */
     inline double floord(double val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
+#if MATH_HAS_FP_INF_CHECK
         if (std::isinf(val))
             return 0;
+#endif
         return std::floor(val);
     }
     inline bool isNanOrInf(double val) {
-        if (std::isinf(val))
-            return true;
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return true;
+#endif
+#if MATH_HAS_FP_INF_CHECK
+        if (std::isinf(val))
+            return true;
+#endif
         return false;
     }
     inline double silenceNanInf(double val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
+#if MATH_HAS_FP_INF_CHECK
         if (std::isinf(val))
             return 0;
+#endif
         return val;
     }
 
@@ -106,10 +132,14 @@ namespace math {
      * INF return 0
      */
     inline int64_t floorfS64(float val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
+#if MATH_HAS_FP_INF_CHECK
         if (std::isinf(val))
             return 0;
+#endif
         float valueFloat = ::floorf(val);
         return static_cast<int64_t>(valueFloat);
     }
@@ -122,10 +152,14 @@ namespace math {
      * INF return 0
      */
     inline int64_t floordS64(double val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
+#if MATH_HAS_FP_INF_CHECK
         if (std::isinf(val))
             return 0;
+#endif
         double value = std::floor(val);
         return static_cast<int64_t>(value);
     }
@@ -137,8 +171,10 @@ namespace math {
      * NAN returns 0
      */
     inline int32_t floorfS32(float val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         float val_f = ::floorf(val);
         if (double(val_f) >= double{ std::numeric_limits<int32_t>::max() })
             return std::numeric_limits<int32_t>::max();
@@ -154,8 +190,10 @@ namespace math {
      * NAN returns 0
      */
     inline int32_t floordS32(double val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         double value = std::floor(val);
         if (value >= double{ std::numeric_limits<int32_t>::max() })
             return std::numeric_limits<int32_t>::max();
@@ -171,8 +209,10 @@ namespace math {
      * NAN returns 0
      */
     inline uint32_t floorfU32(float val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         float val_f = ::floorf(val);
         if (double(val_f) >= double{ std::numeric_limits<uint32_t>::max() })
             return std::numeric_limits<uint32_t>::max();
@@ -188,8 +228,10 @@ namespace math {
      * NAN returns 0
      */
     inline uint32_t floordU32(double val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         double value = std::floor(val);
         if (value >= double{ std::numeric_limits<uint32_t>::max() })
             return std::numeric_limits<uint32_t>::max();
@@ -206,10 +248,14 @@ namespace math {
      * INF return 0
      */
     inline double ceild(double val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
+#if MATH_HAS_FP_INF_CHECK
         if (std::isinf(val))
             return 0;
+#endif
         return std::ceil(val);
     }
 
@@ -221,10 +267,14 @@ namespace math {
      * INF return 0
      */
     inline int64_t ceilfS64(float val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
+#if MATH_HAS_FP_INF_CHECK
         if (std::isinf(val))
             return 0;
+#endif
         float valueFloat = ::ceilf(val);
         return static_cast<int64_t>(valueFloat);
     }
@@ -237,10 +287,14 @@ namespace math {
      * INF return 0
      */
     inline int64_t ceildS64(double val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
+#if MATH_HAS_FP_INF_CHECK
         if (std::isinf(val))
             return 0;
+#endif
         double value = std::ceil(val);
         return static_cast<int64_t>(value);
     }
@@ -252,8 +306,10 @@ namespace math {
      * NAN returns 0
      */
     inline int32_t ceilfS32(float val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         float val_f = ::ceilf(val);
         if (double(val_f) >= double{ std::numeric_limits<int32_t>::max() })
             return std::numeric_limits<int32_t>::max();
@@ -269,8 +325,10 @@ namespace math {
      * NAN returns 0
      */
     inline int32_t ceildS32(double val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         double value = std::ceil(val);
         if (value >= double{ std::numeric_limits<int32_t>::max() })
             return std::numeric_limits<int32_t>::max();
@@ -286,8 +344,10 @@ namespace math {
      * NAN returns 0
      */
     inline uint32_t ceilfU32(float val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         float val_f = ::ceilf(val);
         if (double(val_f) >= double{ std::numeric_limits<uint32_t>::max() })
             return std::numeric_limits<uint32_t>::max();
@@ -303,8 +363,10 @@ namespace math {
      * NAN returns 0
      */
     inline uint32_t ceildU32(double val) {
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         double value = std::ceil(val);
         if (value >= double{ std::numeric_limits<uint32_t>::max() })
             return std::numeric_limits<uint32_t>::max();
@@ -320,8 +382,10 @@ namespace math {
      */
     inline float froundf(float val) {
         // otherwise implementation defined
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         return std::roundf(val);
     }
 
@@ -333,8 +397,10 @@ namespace math {
      */
     inline int32_t roundfS32(float val) {
         // otherwise implementation defined
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         if (double(val) >= double{ std::numeric_limits<int32_t>::max() })
             return std::numeric_limits<int32_t>::max();
         if (double(val) <= double{ std::numeric_limits<int32_t>::min() })
@@ -364,8 +430,10 @@ namespace math {
      */
     inline uint32_t roundfU32(float val) {
         // otherwise implementation defined
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         if (double(val) >= double{ std::numeric_limits<uint32_t>::max() })
             return std::numeric_limits<uint32_t>::max();
         if (double(val) <= double{ std::numeric_limits<uint32_t>::min() })
@@ -383,8 +451,10 @@ namespace math {
      */
     inline int64_t roundfS64(float val) {
         // otherwise implementation defined
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         if (val >= static_cast<double>(std::numeric_limits<int64_t>::max()))
             return std::numeric_limits<int64_t>::max();
         if (val <= static_cast<double>(std::numeric_limits<int64_t>::min()))
@@ -402,8 +472,10 @@ namespace math {
      */
     inline int64_t rounddS64(double val) {
         // otherwise implementation defined
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         if (val >= static_cast<double>(std::numeric_limits<int64_t>::max()))
             return std::numeric_limits<int64_t>::max();
         if (val <= static_cast<double>(std::numeric_limits<int64_t>::min()))
@@ -422,8 +494,10 @@ namespace math {
      */
     inline int32_t rounddS32(double val) {
         // otherwise implementation defined
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
         int64_t val_s64 = std::lround(val);
         if (val_s64 >= std::numeric_limits<int32_t>::max())
             return std::numeric_limits<int32_t>::max();
@@ -440,10 +514,14 @@ namespace math {
      */
     inline uint32_t rounddU32(double val) {
         // otherwise implementation defined
+#if MATH_HAS_FP_NAN_CHECK
         if (std::isnan(val))
             return 0;
+#endif
+#if MATH_HAS_FP_INF_CHECK
         if (std::isinf(val))
             return 0;
+#endif
         int64_t val_s64 = std::lround(val);
         if (val_s64 >= std::numeric_limits<uint32_t>::max())
             return std::numeric_limits<uint32_t>::max();
