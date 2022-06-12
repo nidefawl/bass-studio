@@ -94,6 +94,7 @@ FUNCTION(CONFIGURE_TARGET_DEPS TARGETNAME)
     ${PROJECT_DEPS_PATH}/SplineLibrary/spline_library
     ${PROJECT_DEPS_PATH}/cereal/include
   )
+  target_include_directories(${TARGETNAME} SYSTEM PUBLIC ${PROJECT_DEPS_PATH}/muparser/include)
 
   if (PROJECT_CFG_USE_OPENGL3)
     # use OpenGL 3.2 core profile headers to avoid accidental use of legacy or forward

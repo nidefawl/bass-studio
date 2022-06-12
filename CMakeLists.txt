@@ -100,7 +100,18 @@ if (MINGW)
   set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 endif()
 
-set(PROJECT_DEPS_SRC_FILES "${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c")
+set(PROJECT_DEPS_SRC_FILES
+  glad/gl-3.2-core/src/glad.c
+  muparser/src/muParser.cpp
+  muparser/src/muParserBase.cpp
+  muparser/src/muParserBytecode.cpp
+  muparser/src/muParserCallback.cpp
+  muparser/src/muParserError.cpp
+  muparser/src/muParserInt.cpp
+  muparser/src/muParserTokenReader.cpp
+)
+
+list(TRANSFORM PROJECT_DEPS_SRC_FILES PREPEND "${PROJECT_DEPS_PATH}/")
 if (CMAKE_COMPILER_IS_GNUCC)
   set_source_files_properties("${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c" PROPERTIES COMPILE_OPTIONS "-Wno-pedantic")
 endif()
