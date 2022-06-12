@@ -151,7 +151,10 @@ float midiarp::getStepSizeParamValueFromMapped(tick_t len) {
     float scMax = 4.0f * 4.0f * 4.0f;
     float expo  = math::calcExponentForScale(0.5f, 4.0f, scMin, scMax);
     float valueMapped = (len/static_cast<float>(TICKS_16TH) - scMin) / (scMax - scMin);
-    return math::clamp(pow(valueMapped, 1.0f/expo), 0.0f, 1.0f);
+    if (valueMapped < 0.0f) {
+        valueMapped = 0.0f;
+    }
+    return math::clamp<float>(pow(valueMapped, 1.0f/expo), 0.0f, 1.0f);
 }
 
 int32_t midiarp::getRandTmMode() {
@@ -181,14 +184,17 @@ float midiarp::getDurationParamValueFromMapped(tick_t len) {
     if (valueMapped <= 0.0f) {
         return 0.0f;
     }
-    return math::clamp(pow(valueMapped, 1.0f/expo), 0.0f, 1.0f);
+    return math::clamp<float>(pow(valueMapped, 1.0f/expo), 0.0f, 1.0f);
 }
 
 float midiarp::getRandTimeParamValueFromMapped(tick_t len) {
     const int minDuration = 0;//math::max(0, getStepSize() >> 4);
     const int maxDuration = math::max(0, getStepSize() >> 1);
     float fMapped = (len - minDuration) / static_cast<float>(maxDuration - minDuration);
-    return math::clamp(pow(fMapped, 1.0f/2.0f), 0.0f, 1.0f);
+    if (fMapped < 0.0f) {
+        fMapped = 0.0f;
+    }
+    return math::clamp<float>(pow(fMapped, 1.0f/2.0f), 0.0f, 1.0f);
 }
 
 float midiarp::getRandVelocityParamValueFromMapped(int32_t vel) {
