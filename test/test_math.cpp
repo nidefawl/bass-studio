@@ -518,7 +518,15 @@ namespace test_math {
 
         TEST_ASSERT_EQUAL(abs( std::numeric_limits<int64_t>::max() ), std::numeric_limits<int64_t>::max() );
 
-#if !(defined(TEST_FASTMATH) && defined(__clang__))
+#if defined(TEST_FASTMATH) && defined(__clang__)
+        TEST_ASSERT_EQUAL(std::isinf(std::numeric_limits<float>::infinity()), false);
+        TEST_ASSERT_EQUAL(std::isinf(INFINITY), false);
+        TEST_ASSERT_EQUAL(std::isinf(abs(INFINITY)), false);
+#else
+
+        TEST_ASSERT_EQUAL(std::isinf(std::numeric_limits<float>::infinity()), true);
+        TEST_ASSERT_EQUAL(std::isinf(INFINITY), true);
+        TEST_ASSERT_EQUAL(std::isinf(abs(INFINITY)), true);
         /* int32_t overflow. Implementation defined. I expect -2147483648 */
         TEST_ASSERT_EQUAL(abs( std::numeric_limits<int32_t>::min() ), std::numeric_limits<int32_t>::min() );
         TEST_ASSERT_EQUAL(abs(INFINITY), INFINITY);
@@ -536,7 +544,6 @@ namespace test_math {
                                   std::numeric_limits<int32_t>::min()),
                           -4);
 #endif
-
         TEST_ASSERT_EQUAL(abs( std::numeric_limits<int64_t>::max() ), std::numeric_limits<int64_t>::max() );
         TEST_ASSERT_EQUAL(abs( std::numeric_limits<uint64_t>::max() ), std::numeric_limits<uint64_t>::max() );
         TEST_ASSERT_EQUAL(abs( std::numeric_limits<uint8_t>::max() ), std::numeric_limits<uint8_t>::max() );
