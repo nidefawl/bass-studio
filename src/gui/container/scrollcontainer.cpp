@@ -55,7 +55,8 @@ void guictr_scrollbar::determineSize(glm::ivec2& prefSize) /* const */ {
     if (maxHeight == -1) {
         hasScrollbar = maxSize.y > prefSize.y;
     } else if (maxHeight > 0 && maxSize.y > maxHeight) {
-        prefSize.y   = maxHeight - 5;
+        prefSize.y   = maxHeight;
+        // prefSize.y   = maxHeight - 5;
         hasScrollbar = true;
     } else {
         hasScrollbar = false;
