@@ -1,0 +1,173 @@
+#include "str_util.h"
+#include "logging.h"
+#include "synth-plugin.h"
+#include "synth-snapshot.h"
+#include <utility>
+
+namespace PluginSynth {
+
+template<typename T>
+struct stream_write {
+    T& stream;
+    size_t pos;
+    template<typename D>
+    void write(const D& input) {
+        if (stream.size() < pos + sizeof(D)) {
+            stream.resize(stream.size() + math::max<size_t>(sizeof(D), 128));
+        }
+        const auto* pInput = reinterpret_cast<const std::byte*>(&input);
+        std::memcpy(stream.data() + pos, pInput, sizeof(D));
+        pos += sizeof(D);
+    }
+    void writeString(const String& str) {
+        auto sizeStr = static_cast<int32_t>(str.length());
+        write<int32_t>(sizeStr);
+        if (stream.size() < pos + sizeStr) {
+            stream.resize(stream.size() + math::max<size_t>(sizeStr, 128));
+        }
+        const auto* pInput = reinterpret_cast<const std::byte*>(str.data());
+        std::memcpy(stream.data() + pos, pInput, sizeStr);
+        pos += sizeStr;
+    }
+    void setPos(size_t p) {
+        pos = p;
+    }
+};
+
+std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snapshot) {
+    auto shrdHeapVec = std::make_shared<std::vector<std::byte>>();
+    shrdHeapVec->resize(256);
+    stream_write<std::vector<std::byte>> out{*shrdHeapVec, 0};
+    out.write(size_t(0));
+    out.write(snapshot.version);
+    out.write(size_t{snapshot.params.size()});
+    out.write(size_t{snapshot.modulations.size()});
+    for (const auto& p : snapshot.params) {
+        out.write(p.paramIdx);
+        out.write(p.value);
+    }
+    for (const auto& modulation : snapshot.modulations) {
+        out.write(modulation.slotIdx);
+        out.write(size_t{modulation.inputs.size()});
+        out.write(size_t{modulation.destinations.size()});
+        for (const auto& input : modulation.inputs) {
+            out.write(input.sourceIdx);
+            out.write(input.opIdx);
+            out.write(input.value);
+            out.write(input.isBiPolar);
+            out.writeString(input.function);
+        }
+        for (const auto& dest : modulation.destinations) {
+            out.write(dest.paramIdx);
+            out.write(dest.range);
+        }
+    }
+    out.setPos(0);
+    out.write(size_t(shrdHeapVec->size()));
+    return shrdHeapVec;
+}
+struct stream_read {
+    const std::byte* const dataBegin;
+    const size_t size;
+    const std::byte* data;
+    size_t pos;
+    template<typename T>
+    explicit stream_read(const T& vec) 
+        : dataBegin(vec.data()),
+        size(vec.size()),
+        data(vec.data()),
+        pos(0)
+    { }
+    template<typename T>
+    bool read(T& out) {
+        if (pos + sizeof(T) > size) return false;
+        T tmp{};
+        std::memcpy(&tmp, &data[pos], sizeof(T));
+        pos += sizeof(T);
+        out = tmp;
+        return true;
+    }
+    bool readString(String& out) {
+        int32_t stringSize = 0;
+        if (!read(stringSize)) return false;
+        if (pos + stringSize > size) return false;
+        String str;
+        str.resize(stringSize);
+        std::memcpy(str.data(), &data[pos], stringSize);
+        out = std::move(str);
+        pos += stringSize;
+        return true;
+    }
+};
+bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, snapshot_t& snapshotOut) {
+    if (!data)
+        return false;
+    stream_read in(*data);
+    snapshot_t snapshot;
+    size_t dataSize = data->size();
+    size_t dataSizeHdr = 0;
+    if (!in.read(dataSizeHdr))
+        return false;
+    if (dataSizeHdr > dataSize)
+        return false;
+    in.read(snapshot.version);
+    if (snapshot.version < 2)
+        return false;
+    size_t numParams = 0;
+    size_t numModulations = 0;
+    if (numParams > 1000)
+        return false;
+    if (numModulations > 1000)
+        return false;
+    if (!in.read(numParams))
+        return false;
+    if (!in.read(numModulations))
+        return false;
+    snapshot.params.resize(numParams);
+    snapshot.modulations.resize(numModulations);
+
+    for (auto& p : snapshot.params) {
+        if (!in.read(p.paramIdx))
+            return false;
+        if (!in.read(p.value))
+            return false;
+    }
+    for (auto& modulation : snapshot.modulations) {
+        if (!in.read(modulation.slotIdx))
+            return false;
+        size_t numInputs = 0;
+        size_t numDestinations = 0;
+        if (!in.read(numInputs))
+            return false;
+        if (!in.read(numDestinations))
+            return false;
+        modulation.inputs.resize(numInputs);
+        modulation.destinations.resize(numDestinations);
+        for (auto& input : modulation.inputs) {
+            if (!in.read(input.sourceIdx))
+                return false;
+            if (!in.read(input.opIdx))
+                return false;
+            if (!in.read(input.value))
+                return false;
+            if (snapshot.version >= 3) {
+                if (!in.read(input.isBiPolar))
+                    return false;
+            }
+            if (snapshot.version >= 4) {
+                if (!in.readString(input.function))
+                    return false;
+            }
+        }
+        for (auto& dest : modulation.destinations) {
+            if (!in.read(dest.paramIdx))
+                return false;
+            if (!in.read(dest.range))
+                return false;
+        }
+    }
+    snapshotOut = std::move(snapshot);
+    return true;
+}
+
+} // namespace PluginSynth

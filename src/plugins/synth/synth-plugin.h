@@ -36,7 +36,7 @@ namespace PluginSynth {
         Osc2Coarse,
         Osc2Fine,
         Osc2Split,
-        LfoAmount,
+        LfoShape,
         LfoFrequency,
         LfoDelay,
         LfoCutoff,
@@ -57,8 +57,56 @@ namespace PluginSynth {
         ModEnvR,
         ModEnvV,
         LfoWave,
+        Panning,
+        Voices,
+        UnisonVoices,
         kNumParams
     };
+    const Parameters parametersOrdered[] = {
+        MasterVolume,
+        Voices,
+        UnisonVoices,
+        Panning,
+        VoiceMode,
+        GlideLength,
+        FilterMode,
+        FilterCutoff,
+        FilterResonance,
+        FilterKeyTracking,
+        VolEnvCutoff,
+        ModEnvCutoff,
+        OscMix,
+        Osc1Wave,
+        Osc1Coarse,
+        Osc1Fine,
+        Osc1Split,
+        Osc2Wave,
+        Osc2Coarse,
+        Osc2Fine,
+        Osc2Split,
+        LfoShape,
+        LfoFrequency,
+        LfoDelay,
+        LfoCutoff,
+        FmMode,
+        FmCoarse,
+        FmFine,
+        VolEnvFm,
+        ModEnvFm,
+        LfoFm,
+        VolEnvA,
+        VolEnvD,
+        VolEnvS,
+        VolEnvR,
+        VolEnvV,
+        ModEnvA,
+        ModEnvD,
+        ModEnvS,
+        ModEnvR,
+        ModEnvV,
+        LfoWave,
+    };
+    static_assert(kNumParams == sizeof(parametersOrdered) / sizeof(Parameters), "parametersOrdered is not the correct size");
 
     class SynthState {
     public:
@@ -140,6 +188,9 @@ namespace PluginSynth {
         double VoiceMode         = 0.0;
         double GlideLength       = 0.0;
         double MasterVolume      = 0.0;
+        double Pan               = 0.5;
+        double UnisonVoices      = 0.0;
+        double PolyVoicesMax     = 0.0;
     public:
         double* getProgramParameter(Parameters parameter) {
             switch (parameter) {
@@ -160,7 +211,7 @@ namespace PluginSynth {
                 case Parameters::Osc2Coarse: return &Osc2Coarse;
                 case Parameters::Osc2Fine: return &Osc2Fine;
                 case Parameters::Osc2Split: return &Osc2Split;
-                case Parameters::LfoAmount: return &LfoAmount;
+                case Parameters::LfoShape: return &LfoAmount;
                 case Parameters::LfoFrequency: return &LfoFrequency;
                 case Parameters::LfoDelay: return &LfoDelay;
                 case Parameters::LfoCutoff: return &LfoCutoff;
@@ -181,6 +232,9 @@ namespace PluginSynth {
                 case Parameters::ModEnvS: return &ModEnvS;
                 case Parameters::ModEnvR: return &ModEnvR;
                 case Parameters::ModEnvV: return &ModEnvV;
+                case Parameters::Panning: return &Pan;
+                case Parameters::Voices: return &PolyVoicesMax;
+                case Parameters::UnisonVoices: return &UnisonVoices;
                 case Parameters::MasterVolume:
                 case Parameters::kNumParams:
                     return nullptr;
@@ -239,6 +293,9 @@ namespace PluginSynth {
         void setBlockSize(VstInt32 blockSize) override;
         VstInt32 processEvents(VstEvents* events) override;///< Called when new MIDI events come in
         void processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) override;
+        VstInt32 getChunk (void** data, bool isPreset = false) override;
+	    VstInt32 setChunk (void* data, VstInt32 byteSize, bool isPreset = false) override;
+
         void setProgram(VstInt32 program) override;
         void setProgramName(char* name) override;
         void getProgramName(char* name) override;
@@ -269,10 +326,11 @@ namespace PluginSynth {
         VstInt32 getVendorVersion() override;
         VstInt32 canDo(char* text) override;
     private:
-        std::vector<SynthParamBase*> vecParams;
-        std::array<SynthProgram, kNumPrograms> staticPrograms;
-        SynthImpl* impl;
+        std::vector<std::shared_ptr<std::vector<std::byte>>> lastProgramChunks;
         std::recursive_mutex mutex;
+        std::array<SynthProgram, kNumPrograms> staticPrograms;
+        SynthImpl* const impl;
+        std::vector<SynthParamBase*>& vecParams;
     };
     AudioEffectX* createPlugin(audioMasterCallback audioMaster);
     const char* getName();

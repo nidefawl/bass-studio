@@ -3,13 +3,22 @@
 #include <cstdint>
 #include <cstdio>
 #include <iterator>
+#include <limits>
+#include <muParser.h>
+#include <optional>
 #include <vector>
 #include <map>
 #include <deque>
 #include <memory>
 #include <vstsdk-host-2.4/aeffectx.h>
+#include "assert_dbg.h"
+#include "automation.h"
+#include "compiler.h"
 #include "config.h"
 #include "gui/controls/list.h"
+#include "gui/controls/textfield.h"
+#include "gui/dropdown/dropdown_generic.h"
+#include "guicolors.h"
 #include "logging.h"
 #include "math/seq_math.h"
 #include "rand.h"
@@ -35,6 +44,7 @@
 
 #include "../plugin.h"
 #include "synth-plugin.h"
+#include "synth-snapshot.h"
 #include "plugins/plugin.h"
 #include "plugins/plugin-base.h"
 #include "plugins/plugin-window.h"
@@ -51,8 +61,8 @@ AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
 #endif
 
 namespace PluginSynth {
-    const char* const PLUGIN_EFFECT_NAME = "Synth";
-    const char* const PLUGIN_UID = "SYNT";
+    const char* const PLUGIN_EFFECT_NAME  = "Synth";
+    const char* const PLUGIN_UID          = "SYNT";
     const char* const PLUGIN_PRODUCT_NAME = "Synth VST2.4";
     enum class ParamType {
         FLOAT,
@@ -99,37 +109,63 @@ namespace PluginSynth {
     const std::array<const char*, 3> stringsFMMode = {
         "Off", "Osc1", "Osc2"
     };
-    static constexpr int NUM_POLY_VOICES = 32;
-    static constexpr int NUM_UNISON_VOICES = 3;
-    
+    static constexpr int NUM_POLY_VOICES   = 128;
+    static constexpr int NUM_UNISON_VOICES = 8;
+
     struct HostTempo {
         double barPos;
         double bpm;
         double ppqPos;
     };
 
-    struct SmoothSwitch {
-        double current  = 0.0;
-        double previous = 0.0;
-        double mix      = 1.0;
-        bool switching  = false;
+    class SmoothSwitch {
+        static constexpr double switchFreqHz = 100.0;
+        double current                       = 0.0;
+        double previous                      = 0.0;
+        double mix                           = 1.0;
+        bool switching                       = false;
 
+    public:
         void Update(double dt) {
             if (switching) {
-                mix += (1.0 - mix) * 100.0 * dt;
+                double dMix = fmod(mix, 1.0);
+                mix += (1.0 - dMix) * switchFreqHz * dt;
                 if (mix >= .99999) {
                     mix       = 1.0;
+                    previous = current;
                     switching = false;
                 }
             }
         }
-
+        double getPrevious() const {
+            return previous;
+        }
+        double getCurrent() const {
+            return current;
+        }
+        bool isSwitching() const {
+            return switching;
+        }
+        double getMixValue() const {
+            return mix;
+        }
         void Switch(double value) {
-            if (current == value) return;
-            previous  = current;
-            current   = value;
-            mix       = 0.0;
-            switching = true;
+            double dCurrent = getSwitchValue();
+            if (dCurrent == value) {
+                switching = false;
+                previous = current = dCurrent;
+            } else {
+                previous  = dCurrent;
+                current   = value;
+                switching = true;
+            }
+            mix = 0.0;
+        }
+        double getSwitchValue() const {
+            if (switching) {
+                return (1.0 - mix) * previous + mix * current;
+            }
+            return current;
         }
     };
     enum class EnvelopeStages : int32_t {
@@ -179,13 +215,15 @@ namespace PluginSynth {
             }
         }
     };
-    struct Oscillator {
-        double phase          = 0.0;
+    class Oscillator {
+    public:
+        double phase = 0.0;
+
+    private:
         double phaseIncrement = 0.0;
         double triCurrent     = 0.0;
         double triLast        = 0.0;
         double noiseValue     = 19.1919191919191919191919191919191919191919;
-
         /* waveform generation */
 
         // http://www.kvraudio.com/forum/viewtopic.php?t=375517
@@ -210,17 +248,22 @@ namespace PluginSynth {
             double v = _phase < width ? 1.0 : -1.0;
             return v;
         }
+
+    public:
         double GetWaveform(Waveforms waveform, bool bleb) {
+            dbgassert(!math::isNanOrInf(phase));
             switch (waveform) {
                 case Waveforms::Sine:
+                    dbgassert(!math::isNanOrInf(sin(phase * M_PI * 2.0)));
                     return sin(phase * M_PI * 2.0);
                 case Waveforms::Triangle:
-                    triLast    = triCurrent;
+                    triLast = triCurrent;
                     if (!bleb) {
                         triCurrent = phaseIncrement * GeneratePulseRaw(phase, .5) + (1.0 - phaseIncrement) * triLast;
                     } else {
                         triCurrent = phaseIncrement * GeneratePulse(phase, phaseIncrement, .5) + (1.0 - phaseIncrement) * triLast;
                     }
+                    dbgassert(!math::isNanOrInf(triCurrent));
                     return triCurrent * 5.0;
                 case Waveforms::Saw:
                     if (!bleb) {
@@ -246,6 +289,7 @@ namespace PluginSynth {
                     noiseValue -= (int) noiseValue;
                     return noiseValue - .5;
                 default:
+                    dbgassert(0);
                     break;
             }
             return 0;
@@ -253,32 +297,30 @@ namespace PluginSynth {
 
         double GetWaveform(double dt, double frequency, Waveforms waveform, bool bleb) {
             phaseIncrement = frequency * dt;
-            phase += phaseIncrement;
+            phase          = math::silenceNanInf(phase + phaseIncrement);
             while (phase > 1.0) phase -= 1.0;
             return GetWaveform(waveform, bleb);
         }
         bool Update(double dt, double frequency) {
             phaseIncrement = frequency * dt;
-            phase += phaseIncrement;
-            bool b = false;
+            phase          = math::silenceNanInf(phase + phaseIncrement);
+            bool b         = false;
             while (phase > 1.0) {
                 phase -= 1.0;
                 b = true;
             }
+            dbgassert(!math::isNanOrInf(phase));
             return b;
         }
         double Get(double dt, SmoothSwitch& waveform, double frequency, bool bleb) {
             phaseIncrement = frequency * dt;
-            phase += phaseIncrement;
+            phase          = math::silenceNanInf(phase + phaseIncrement);
             while (phase > 1.0) phase -= 1.0;
-
-            if (waveform.switching) {
-                auto out = 0.0;
-                out += (1.0 - waveform.mix) * GetWaveform((Waveforms) (int) waveform.previous, bleb);
-                out += waveform.mix * GetWaveform((Waveforms) (int) waveform.current, bleb);
-                return out;
-            }
-            return GetWaveform((Waveforms) (int) waveform.current, bleb);
+            double dSwitchVal = waveform.getSwitchValue();
+            dbgassert(!math::isNanOrInf(dSwitchVal));
+            auto roundedVal = math::rounddU32(dSwitchVal);
+            dbgassert(roundedVal < static_cast<uint32_t>(Waveforms::NumWaveforms));
+            return GetWaveform(static_cast<Waveforms>(roundedVal), bleb);
         }
         void initPhase(double phase) {
             this->phase = phase;
@@ -299,7 +341,7 @@ namespace PluginSynth {
             b = 0.0;
         }
 
-        bool IsSilent() { return b == 0.0; }
+        bool IsSilent() const { return b <= 1E-12; }
 
         double Process(double dt, double input, double cutoff, double resonance) {
             // f calculation
@@ -330,7 +372,7 @@ namespace PluginSynth {
             low  = 0.0;
         }
 
-        bool IsSilent() { return low == 0.0; }
+        bool IsSilent() const { return low <= 1E-12; }
 
         double Process(double dt, double input, double cutoff, double resonance) {
             // f calculation
@@ -365,7 +407,7 @@ namespace PluginSynth {
             d = 0.0;
         }
 
-        bool IsSilent() { return d == 0.0; }
+        bool IsSilent() const { return d <= 1E-12; }
 
         double Process(double dt, double input, double cutoff, double resonance) {
             // f calculation
@@ -402,7 +444,7 @@ namespace PluginSynth {
             fourPoleFilter.Reset();
         }
 
-        bool IsSilentIndividual(FilterModes mode) {
+        bool IsSilentIndividual(FilterModes mode) const {
             switch (mode) {
                 case FilterModes::Off:
                     return true;
@@ -417,11 +459,8 @@ namespace PluginSynth {
             }
         }
 
-        bool IsSilent(SmoothSwitch mode) {
-            if (mode.switching) {
-                return IsSilentIndividual((FilterModes) (int) mode.previous) && IsSilentIndividual((FilterModes) (int) mode.current);
-            }
-            return IsSilentIndividual((FilterModes) (int) mode.current);
+        bool IsSilent(const FilterModes mode) const {
+            return IsSilentIndividual(mode);
         }
 
         double ProcessIndividual(double dt, double input, FilterModes mode, double cutoff, double resonance) {
@@ -439,14 +478,39 @@ namespace PluginSynth {
             }
         }
 
-        double Process(double dt, double input, SmoothSwitch mode, double cutoff, double resonance) {
-            if (mode.switching) {
-                auto out = 0.0;
-                out += (1.0 - mode.mix) * ProcessIndividual(dt, input, (FilterModes) (int) mode.previous, cutoff, resonance);
-                out += mode.mix * ProcessIndividual(dt, input, (FilterModes) (int) mode.current, cutoff, resonance);
-                return out;
+        double Process(double dt, double input, FilterModes filterMode, double cutoff, double resonance) {
+            return ProcessIndividual(dt, input, filterMode, cutoff, resonance);
+        }
+    };
+    struct MathExprParsed {
+        std::array<double, 8> inputs{};
+        mu::Parser parser;
+    };
+    struct MathExpr {
+        String str;
+        std::shared_ptr<MathExprParsed> parsedExpr;
+        /**
+         * @brief parse the expression and store the parsed expression. 
+         *        Throws an exception if the expression is invalid.
+         * @param String strExpression the expression to parse
+         * @return MathExpr parsed expression
+         */
+        static MathExpr parse(String strExpression) {
+            auto shrdP                = std::make_shared<MathExprParsed>();
+            auto& p                   = shrdP->parser;
+            const char* inputNames[8] = {
+                "x", "y", "z", "w", "a", "b", "c", "d"
+            };
+            int32_t idx = 0;
+            for (auto& name : inputNames) {
+                p.DefineVar(name, &shrdP->inputs[idx++]);
             }
-            return ProcessIndividual(dt, input, (FilterModes) (int) mode.current, cutoff, resonance);
+            p.SetExpr(strExpression);
+            p.Eval();
+            MathExpr expr;
+            expr.str        = std::move(strExpression);
+            expr.parsedExpr = std::move(shrdP);
+            return expr;
         }
     };
 
@@ -454,9 +518,12 @@ namespace PluginSynth {
     inline double pitchFactor(double p) { return pow(1.0595, p); }
     inline double pitchToFrequency(double p) { return 440.0 * pitchFactor(p - 69); }
     struct Voice {
+        std::array<double, 64> modValues{};
+        int32_t indexUnison = 0;
         Envelope volEnv;
         Envelope modEnv;
         Envelope lfoEnv;
+        bool bIsActive         = false;
         int note               = 0;
         double targetFrequency = 0.0;
         double frequency       = 0.0;
@@ -480,22 +547,28 @@ namespace PluginSynth {
             return rand.rng_double();
         }
         double getRandomPhase() {
-            return rand.rng_double()*0.5;
+            return rand.rng_double() * 0.5;
         }
 
+        bool isVoiceActive(const FilterModes mode) const {
+            if (hint_likely(!bIsActive)) {
+                return false;
+            }
+            return !(this->volEnv.stage == EnvelopeStages::Idle && this->filter.IsSilent(mode));
+        }
         bool IsReleased() const { return volEnv.IsReleased(); }
         double GetVolume() const { return volEnv.value; }
 
         bool bInitial = true;
         void Reset(double phase, bool osc1OutOfPhase, bool osc2OutOfPhase) {
             // if (bInitial) {
-                oscFm.phase = rand.rng_double();
-                osc1a.phase = rand.rng_double();
-                osc1b.phase = rand.rng_double();
-                // osc1b.phase = osc1a.phase + (osc1OutOfPhase ? (rand.rng_double()*2.0-1.0)*0.166+0.3333 : 0.0);
-                osc2a.phase = rand.rng_double();
-                osc2b.phase = rand.rng_double();
-                // osc2b.phase = osc2a.phase + (osc1OutOfPhase ? (rand.rng_double()*2.0-1.0)*0.166+0.3333 : 0.0);
+            oscFm.phase = rand.rng_double();
+            osc1a.phase = rand.rng_double();
+            osc1b.phase = rand.rng_double();
+            // osc1b.phase = osc1a.phase + (osc1OutOfPhase ? (rand.rng_double()*2.0-1.0)*0.166+0.3333 : 0.0);
+            osc2a.phase = rand.rng_double();
+            osc2b.phase = rand.rng_double();
+            // osc2b.phase = osc2a.phase + (osc1OutOfPhase ? (rand.rng_double()*2.0-1.0)*0.166+0.3333 : 0.0);
             // }
             // oscFm.phase = phase;
             // osc1a.phase = phase;
@@ -526,6 +599,7 @@ namespace PluginSynth {
         void SetVelocity(double v) { velocity = v; }
 
         void Start(double phase, bool osc1OutOfPhase, bool osc2OutOfPhase) {
+            bIsActive = true;
             if (volEnv.stage == EnvelopeStages::Idle)
                 Reset(phase, osc1OutOfPhase, osc2OutOfPhase);
             volEnv.Start();
@@ -533,54 +607,85 @@ namespace PluginSynth {
             lfoEnv.Start();
         }
 
-        void UpdateVoice(const HostTempo& tempo, double dt) {
+        void UpdateVoiceLfo(const HostTempo& tempo, double dt) {
             driftVelocity += getRandom() * 1.0 * dt;
             driftVelocity -= driftVelocity * 2.0 * dt;
             driftPhase += driftVelocity * dt;
             driftValue = .00001 * sin(driftPhase);
-            if (lfo2.Update(dt, math::max(tempo.bpm/4.0, 1.0) / 60.0)) {
+            if (lfo2.Update(dt, math::max(tempo.bpm / 4.0, 1.0) / 60.0)) {
                 lfo1.initPhase(0.0);
             }
         }
     };
 
-    struct VoiceUnison {
+    class VoiceUnison {
         std::array<Voice, NUM_UNISON_VOICES> voices;
-        int32_t index = 0;
-        int32_t seqNr = 0;
+
+    public:
+        Voice* const first;
+        Voice* last;
+        int32_t indexPoly = 0;
+        int note          = 0;
+        int32_t seqNr     = 0;
         seq_rand rand;
         double lfoValue      = 0.0;
         double driftVelocity = 0.0;
         double driftPhase    = 0.0;
         double driftValue    = 0.0;
 
-        bool IsReleased() const { return std::all_of(std::cbegin(voices), std::cend(voices), [](auto& voice) { return voice.volEnv.IsReleased() && voice.modEnv.IsReleased(); }); };
-        double GetVolume() const { 
+    public:
+        VoiceUnison()
+            : voices(), first(&voices.front()) {
+            last = &voices.back();
+            last++;
+        }
+        void setUnisonVoiceCount(int32_t unisonVoiceCount) {
+            last = &voices[unisonVoiceCount >= CtrSize(voices) ? voices.size() - 1 : unisonVoiceCount];
+            last++;
+        }
+        Voice& getVoice(int32_t i) { return voices[i]; }
+        const Voice& getVoice(int32_t i) const { return voices[i]; }
+        template<typename Functor>
+        void visitVoices(Functor f) {
+            std::for_each(first, last, f);
+        }
+        void init(int32_t indexPoly, uint64_t seed) {
+            this->indexPoly = indexPoly;
+            rand.rng_seed(seed);
+            for (size_t j = 0; j < voices.size(); j++) {
+                auto& uv       = voices[j];
+                uv.indexUnison = j;
+                uv.rand.rng_seed(static_cast<uint64_t>(rand.rng_rand()));
+            }
+        }
+        bool IsReleased() const {
+            return std::all_of(first, last, [](auto& voice) { return voice.volEnv.IsReleased() && voice.modEnv.IsReleased(); });
+        };
+        double GetVolume() const {
             auto voice = std::max_element(
-                                        std::cbegin(voices),
-                                        std::cend(voices),
-                                        [](const Voice& a, const Voice& b) {
-                                            return a.IsReleased() == b.IsReleased() ? a.GetVolume() < b.GetVolume() : a.IsReleased();
-                                        });
+                    first, last,
+                    [](const Voice& a, const Voice& b) {
+                        return a.IsReleased() == b.IsReleased() ? a.GetVolume() < b.GetVolume() : a.IsReleased();
+                    });
             return voice->GetVolume();
         }
 
         double getRandom() {
-            double dRandPhase = rand.rng_bits(14)/static_cast<float>(1<<14);
+            double dRandPhase = rand.rng_bits(14) / static_cast<float>(1 << 14);
             return dRandPhase;
         }
         double getRandomPhase() {
-            return getRandom()*0.5;
+            return getRandom() * 0.5;
         }
-
         void Release() {
-            std::for_each(std::begin(voices), std::end(voices), [](Voice& voice) {
+            std::for_each(first, last, [](Voice& voice) {
                 voice.Release();
             });
         }
 
         void SetNote(int n) {
-            std::for_each(std::begin(voices), std::end(voices), [n](Voice& voice) {
+            note = n;
+            std::for_each(first, last, [n](Voice& voice) {
                 voice.SetNote(n);
             });
         }
@@ -588,37 +693,36 @@ namespace PluginSynth {
             return voices[0].frequency;
         }
 
-        void SetPitchBendFactor(double f) { 
-            std::for_each(std::begin(voices), std::end(voices), [f](Voice& voice) {
+        void SetPitchBendFactor(double f) {
+            std::for_each(first, last, [f](Voice& voice) {
                 voice.SetPitchBendFactor(f);
             });
         }
 
-        void ResetPitch() { 
-            std::for_each(std::begin(voices), std::end(voices), [](Voice& voice) {
+        void ResetPitch() {
+            std::for_each(first, last, [](Voice& voice) {
                 voice.ResetPitch();
             });
         }
 
-        void SetVelocity(double v) { 
-            std::for_each(std::begin(voices), std::end(voices), [v](Voice& voice) {
+        void SetVelocity(double v) {
+            std::for_each(first, last, [v](Voice& voice) {
                 voice.SetVelocity(v);
             });
         }
 
         void Start(HostTempo& tempo, bool osc1OutOfPhase, bool osc2OutOfPhase) {
-            std::for_each(std::begin(voices), std::end(voices), [=](Voice& voice) {
+            std::for_each(first, last, [=](Voice& voice) {
                 bool reset = voice.volEnv.stage >= EnvelopeStages::Release && voice.modEnv.stage >= EnvelopeStages::Decay;
                 voice.Start(getRandomPhase(), osc1OutOfPhase, osc2OutOfPhase);
                 if (reset) {
                     voice.lfo1.initPhase(fmod(this->driftValue * voice.rand.rng_double(), 1.0));
                     voice.lfo2.initPhase(fmod(voice.driftValue, 1.0));
-
                 }
             });
             seqNr++;
         }
-        void UpdateVoice(const HostTempo& tempo, double dt) {
+        void UpdateVoiceLfo(const HostTempo& tempo, double dt) {
             driftVelocity += getRandom() * 1.0 * dt;
             driftVelocity -= driftVelocity * 2.0 * dt;
             driftPhase += driftVelocity * dt;
@@ -629,6 +733,66 @@ namespace PluginSynth {
     struct SynthParam {
         virtual ~SynthParam() = default;
     };
+    enum ModulationSource {
+        Constant,
+        Function,
+        VolEnv,
+        ModEnv,
+        Lfo1,
+        Velocity,
+        VoiceIndex,
+        UnisonVoiceIndex,
+        Pitch,
+        Note,
+        NumModulationSources
+    };
+    const std::array<const char*, 10> stringsModSource = {
+        "Constant",
+        "Function",
+        "VolEnv",
+        "ModEnv",
+        "Lfo1",
+        "Velocity",
+        "VoiceIndex",
+        "UnisonVoiceIndex",
+        "Pitch",
+        "Note"
+    };
+    enum ModulationOperator {
+        Multiply,
+        Add,
+        Subtract,
+        Divide,
+        MultiplyNegative,
+        Absolute,
+        Clamp,
+        NumModulationOperators
+    };
+    const std::array<const char*, 7> stringsModOp = {
+        "*",
+        "+",
+        "-",
+        "/",
+        "* -1",
+        "Abs",
+        "Clamp"
+    };
+    struct ModulationInput {
+        ModulationSource source = ModulationSource::Constant;
+        ModulationOperator op   = ModulationOperator::Multiply;
+        double value            = 1.0;
+        MathExpr function;
+        bool isBipolar = false;
+    };
+    struct ModulationDestination {
+        Parameters parameter = Parameters::FilterCutoff;
+        double range         = 1.0;
+    };
+    struct Modulation {
+        std::vector<ModulationInput> inputs;
+        std::vector<ModulationDestination> destinations;
+    };
+
     struct SynthParamBase : public SynthParam {
         ParamType type;
         Parameters enumParam;
@@ -641,13 +805,10 @@ namespace PluginSynth {
         ParamType getType() {
             return this->type;
         }
-        ~SynthParamBase() override = default;
-        virtual void set(double f) noexcept {
-        }
-        virtual double getAsDouble() const noexcept {
-            return 0.0f;
-        }
-        virtual String getValueDisplay() const = 0;
+        ~SynthParamBase() override                                                            = default;
+        virtual void set(double f) noexcept                                                   = 0;
+        virtual double getAsDouble() const noexcept                                           = 0;
+        virtual String getValueDisplay() const                                                = 0;
         virtual param_converted_t convertValueDisplay(const param_unit_t& displayValue) const = 0;
     };
     struct SynthParam_Float : public SynthParamBase {
@@ -662,11 +823,17 @@ namespace PluginSynth {
             return this;
         }
         double Value() const noexcept {
-            return math::max(fmin, math::min(fmax, (valDouble) * (fmax - fmin) + fmin));
+            return math::clamp(valDouble * (fmax - fmin) + fmin, fmin, fmax);
+        }
+        double ValueModulated(double valModulated) const noexcept {
+            return math::clamp((valDouble + valModulated) * (fmax - fmin) + fmin, fmin, fmax);
         }
         void setRangedValue(double f) {
             double fVal = math::max(0.0, math::min(1.0, (f - fmin) / (fmax - fmin)));
             valDouble   = fVal;
+            if (enumParam == Parameters::GlideLength) {
+                log_printf("GlideLength = %f\n", fVal);
+            }
         }
         double GetMin() {
             return fmin;
@@ -684,9 +851,9 @@ namespace PluginSynth {
             return StringFormat(StringAsCStr(format), Value());
         }
         param_converted_t convertValueDisplay(const param_unit_t& displayValue) const override {
-            auto val = atof(StringAsCStr(displayValue.value));
+            auto val  = atof(StringAsCStr(displayValue.value));
             auto fVal = math::max(0.0, math::min(1.0, (val - fmin) / (fmax - fmin)));
-            return {static_cast<float>(fVal), true};
+            return { static_cast<float>(fVal), true };
         }
     };
     struct SynthParam_Int : public SynthParamBase {
@@ -694,10 +861,11 @@ namespace PluginSynth {
         }
         SynthParam_Int(ParamType _paramType, Parameters _enumParam) : SynthParamBase(_paramType, _enumParam) {
         }
-        double valFloat = 0.0;
-        int32_t iValue = 0;
-        int32_t iMin   = 0;
-        int32_t iMax   = 1;
+        double valFloat         = 0.0;
+        int32_t iValue          = 0;
+        int32_t iValueModulated = 0;
+        int32_t iMin            = 0;
+        int32_t iMax            = 1;
         SynthParam_Int* setRange(int32_t _iMin, int32_t _iMax) {
             iMin = _iMin;
             iMax = _iMax;
@@ -706,12 +874,22 @@ namespace PluginSynth {
         int32_t Value() const noexcept {
             return math::max(iMin, math::min(iMax, this->iValue));
         }
+        double ValueModulated(double valModulated) const noexcept {
+            const double dMin       = iMin;
+            const double dMax       = iMax;
+            const double dModulated = (dMax - dMin) * valModulated + double(iValue);
+            return math::clamp<double>(dModulated, dMin, dMax);
+        }
+        int32_t getUnclampped() const noexcept {
+            return this->iValue;
+        }
         double getAsDouble() const noexcept override {
             return valFloat;
         }
         void set(double f) noexcept override {
             auto iVal = math::rounddS32(f * (iMax - iMin) + iMin);
-            setRangedValue(math::clamp(iVal, iMin, iMax));
+            iValue    = math::clamp(iVal, iMin, iMax);
+            valFloat  = f;
         }
         void setRangedValue(int32_t i) noexcept {
             iValue   = math::clamp(i, iMin, iMax),
@@ -721,10 +899,10 @@ namespace PluginSynth {
             return StringFormat(StringAsCStr(format), Value());
         }
         param_converted_t convertValueDisplay(const param_unit_t& displayValue) const override {
-            auto val = atof(StringAsCStr(displayValue.value));
+            auto val  = atof(StringAsCStr(displayValue.value));
             auto iVal = math::clamp(math::rounddS32(val), iMin, iMax);
             auto dVal = math::clamp((iVal - iMin) / static_cast<double>(iMax - iMin), 0.0, 1.0);
-            return {static_cast<float>(dVal), true};
+            return { static_cast<float>(dVal), true };
         }
     };
     struct SynthParam_Enum : public SynthParam_Int {
@@ -733,7 +911,7 @@ namespace PluginSynth {
         std::vector<String> strings;
         template<typename StrCtrIt>
         SynthParam_Enum* setStrings(const StrCtrIt& begin, const StrCtrIt& end) {
-            strings = std::vector<String>(begin, end);
+            strings    = std::vector<String>(begin, end);
             this->iMax = CtrSize(strings) - 1;
             return this;
         }
@@ -745,19 +923,10 @@ namespace PluginSynth {
             return StringFormat("%d", val);
         }
         template<typename T>
-        T getEnumValue() {
+        T getEnumValue() const noexcept {
             return static_cast<T>(Value());
         }
     };
-    void setParamName(SynthParamBase* p, String name, String shortName, String format) {
-        p->name      = std::move(name);
-        p->shortName = std::move(shortName);
-        if (format == "%f") {
-            p->format = "%0.3f";
-        } else {
-            p->format = std::move(format);
-        }
-    }
     struct MidiMessage {
         int32_t mOffset;
         int32_t StatusMsg() {
@@ -771,35 +940,350 @@ namespace PluginSynth {
         }
     };
     class SynthImpl : public SynthState {
+        friend class PluginVST2_Synth;
+        std::vector<SynthParamBase*> vecParams;
+        std::vector<Modulation> modulations;
         std::array<VoiceUnison, NUM_POLY_VOICES> voices;
         Oscillator lfo;
         Oscillator lfo2;
         SmoothSwitch osc1Wave;
         SmoothSwitch osc2Wave;
         SmoothSwitch lfoWave;
-        SmoothSwitch filterMode;
+        // SmoothSwitch filterMode;
         std::vector<int> heldNotes;
         IMidiQueue midiQueue;
         double dt = 1.0 / 44100.0;
         seq_rand synthRand;
-        PluginVST2_Synth* instanceVst2 = nullptr;
         HostTempo tempo{};
-    public:
-        SynthImpl() : SynthState() {
+        int32_t activeVoiceCount = 0;
+        int32_t unisonVoiceCount = 0;
+        int32_t polyVoiceCount   = 0;
+        PluginVST2_Synth* const instanceVst2;
+        String exprError;
+        void initImpl() {
+
             auto now = static_cast<uint64_t>(getTimeMillis());
             synthRand.rng_seed(now);
             for (size_t i = 0; i < voices.size(); i++) {
-                auto& mv = voices[i];
-                mv.index = static_cast<int32_t>(i);
-                mv.rand.rng_seed(static_cast<uint64_t>(synthRand.rng_rand()));
-                for (auto& v : mv.voices) {
-                    v.rand.rng_seed(static_cast<uint64_t>(mv.rand.rng_rand()));
-                }
+                auto& pv = voices[i];
+                pv.init(static_cast<int32_t>(i), static_cast<uint64_t>(synthRand.rng_rand()));
             }
+
+            auto addParam = [this](SynthParamBase* param, Parameters enumParam) {
+                auto idx = static_cast<size_t>(enumParam);
+                while (this->vecParams.size() <= idx) {
+                    this->vecParams.push_back(nullptr);
+                }
+                this->vecParams[idx] = param;
+            };
+            auto addFloatParam = [&addParam](Parameters enumParam) -> SynthParam_Float* {
+                SynthParam_Float* param = new SynthParam_Float(enumParam);
+                addParam(param, enumParam);
+                return param;
+            };
+            auto addIntParam = [&addParam](Parameters enumParam) -> SynthParam_Int* {
+                SynthParam_Int* param = new SynthParam_Int(enumParam);
+                addParam(param, enumParam);
+                return param;
+            };
+            auto addEnumParam = [&addParam](Parameters enumParam) -> SynthParam_Enum* {
+                SynthParam_Enum* param = new SynthParam_Enum(enumParam);
+                addParam(param, enumParam);
+                return param;
+            };
+            auto setParamName = [](SynthParamBase* p, String name, String shortName, String format) {
+                p->name      = std::move(name);
+                p->shortName = std::move(shortName);
+                if (format == "%f") {
+                    p->format = "%0.3f";
+                } else {
+                    p->format = std::move(format);
+                }
+            };
+            addFloatParam(Parameters::FilterCutoff)->setRange(-22000.0, 22000.0)->setRangedValue(20.0);
+            setParamName(getParam(Parameters::FilterCutoff), "Filter Cutoff", "Flt Cut", "%f");
+            addFloatParam(Parameters::FilterResonance)->setRange(0.0, 1.0)->setRangedValue(0.0);
+            setParamName(getParam(Parameters::FilterResonance), "Filter Resonance", "Flt Res", "%f");
+            addFloatParam(Parameters::FilterKeyTracking)->setRange(-24.0, 24.0)->setRangedValue(0.0);
+            setParamName(getParam(Parameters::FilterKeyTracking), "Filter Keytracking", "Flt Trk", "%f");
+
+            addFloatParam(Parameters::FmFine)->setRange(-1.0, 1.0)->setRangedValue(0.0);
+            setParamName(getParam(Parameters::FmFine), "Fm fine", "Fm fine", "%f");
+            addIntParam(Parameters::FmCoarse)->setRange(0, 48)->setRangedValue(0);
+            setParamName(getParam(Parameters::FmCoarse), "Fm Coarse", "Fm Coarse", "%d");
+
+            addFloatParam(Parameters::OscMix)->setRange(0.0, 1.0)->setRangedValue(1.0);
+            setParamName(getParam(Parameters::OscMix), "Oscillator Mix", "OSC Mix", "%f");
+            addFloatParam(Parameters::Osc1Fine)->setRange(-1.0, 1.0)->setRangedValue(0.0);
+            setParamName(getParam(Parameters::Osc1Fine), "Oscillator 1 fine", "OSC1 Fine", "%f");
+            addFloatParam(Parameters::Osc2Fine)->setRange(-1.0, 1.0)->setRangedValue(0.0);
+            setParamName(getParam(Parameters::Osc2Fine), "Oscillator 2 fine", "OSC2 Fine", "%f");
+            addFloatParam(Parameters::Osc1Split)->setRange(-1.25, 1.25)->setRangedValue(0.0);
+            setParamName(getParam(Parameters::Osc1Split), "Oscillator 1 split", "OSC1 Split", "%f");
+            addFloatParam(Parameters::Osc2Split)->setRange(-1.25, 1.25)->setRangedValue(0.0);
+            setParamName(getParam(Parameters::Osc2Split), "Oscillator 2 split", "OSC2 Split", "%f");
+            addIntParam(Parameters::Osc1Coarse)->setRange(-24, 24)->setRangedValue(0);
+            setParamName(getParam(Parameters::Osc1Coarse), "Oscillator 1 coarse", "OSC1 Semi", "%d");
+            addIntParam(Parameters::Osc2Coarse)->setRange(-24, 24)->setRangedValue(0);
+            setParamName(getParam(Parameters::Osc2Coarse), "Oscillator 2 coarse", "OSC2 Semi", "%d");
+
+            addFloatParam(Parameters::VolEnvA)->setRange(0.0, 1.0)->setRangedValue(0.0);
+            addFloatParam(Parameters::VolEnvD)->setRange(0.0, 1.0)->setRangedValue(0.5);
+            addFloatParam(Parameters::VolEnvS)->setRange(0.0, 1.0)->setRangedValue(1.0);
+            addFloatParam(Parameters::VolEnvR)->setRange(0.0, 1.0)->setRangedValue(0.25);
+            addFloatParam(Parameters::VolEnvV)->setRange(0.0, 1.0)->setRangedValue(0.0);
+            setParamName(getParam(Parameters::VolEnvA), "Volume envelope attack time", "EnvA Att", "%f");
+            setParamName(getParam(Parameters::VolEnvD), "Volume envelope decay time", "EnvA Dec", "%f");
+            setParamName(getParam(Parameters::VolEnvS), "Volume envelope sustain", "EnvA Sus", "%f");
+            setParamName(getParam(Parameters::VolEnvR), "Volume envelope release time", "EnvA Rel", "%f");
+            setParamName(getParam(Parameters::VolEnvV), "Volume envelope velocity sensitivity", "EnvA Vel", "%f");
+
+            addFloatParam(Parameters::ModEnvA)->setRange(0.0, 1.0)->setRangedValue(0.0);
+            addFloatParam(Parameters::ModEnvD)->setRange(0.0, 1.0)->setRangedValue(0.5);
+            addFloatParam(Parameters::ModEnvS)->setRange(0.0, 1.0)->setRangedValue(0.5);
+            addFloatParam(Parameters::ModEnvR)->setRange(0.0, 1.0)->setRangedValue(0.5);
+            addFloatParam(Parameters::ModEnvV)->setRange(0.0, 1.0)->setRangedValue(0.0);
+            setParamName(getParam(Parameters::ModEnvA), "Mod envelope attack time", "EnvM Att", "%f");
+            setParamName(getParam(Parameters::ModEnvD), "Mod envelope decay time", "EnvM Dec", "%f");
+            setParamName(getParam(Parameters::ModEnvS), "Mod envelope sustain", "EnvM Sus", "%f");
+            setParamName(getParam(Parameters::ModEnvR), "Mod envelope release time", "EnvM Rel", "%f");
+            setParamName(getParam(Parameters::ModEnvV), "Mod envelope velocity sensitivity", "EnvM Vel", "%f");
+
+            addFloatParam(Parameters::LfoShape)->setRange(-1.0f, 1.0f)->setRangedValue(0.0);
+            addFloatParam(Parameters::LfoFrequency)->setRange(1 / 64.0, 16.0)->setRangedValue(4.0);
+            addFloatParam(Parameters::LfoDelay)->setRange(0.001f, 1000.0)->setRangedValue(0.1);
+            setParamName(getParam(Parameters::LfoShape), "LFO shape", "LFO shape", "%f");
+            setParamName(getParam(Parameters::LfoFrequency), "LFO frequency", "LFO freq", "%f");
+            setParamName(getParam(Parameters::LfoDelay), "LFO ramp", "LFO ramp", "%f");
+
+            addFloatParam(Parameters::VolEnvFm)->setRange(-24.0, 24.0)->setRangedValue(0.0);
+            addFloatParam(Parameters::ModEnvFm)->setRange(-24.0, 24.0)->setRangedValue(0.0);
+            addFloatParam(Parameters::LfoFm)->setRange(-24.0, 24.0)->setRangedValue(0.0);
+            addFloatParam(Parameters::VolEnvCutoff)->setRange(-24000.0, 24000.0)->setRangedValue(0.0);
+            addFloatParam(Parameters::ModEnvCutoff)->setRange(-24000.0, 24000.0)->setRangedValue(0.0);
+            addFloatParam(Parameters::LfoCutoff)->setRange(-2 * 24000.0, 2 * 24000.0)->setRangedValue(0.0);
+            addFloatParam(Parameters::GlideLength)->setRange(0.0, 1.0)->setRangedValue(0.0);
+            addFloatParam(Parameters::MasterVolume)->setRange(0.0, 0.5)->setRangedValue(0.25);
+
+            setParamName(getParam(Parameters::VolEnvFm), "Volume envelope to FM amount", "FM Amt EnvA", "%f");
+            setParamName(getParam(Parameters::ModEnvFm), "Modulation envelope to FM amount", "FM Amt EnvM", "%f");
+            setParamName(getParam(Parameters::LfoFm), "LFO to FM amount", "FM Amt LFO", "%f");
+            setParamName(getParam(Parameters::VolEnvCutoff), "Volume envelope to filter cutoff", "Flt EnvA", "%f");
+            setParamName(getParam(Parameters::ModEnvCutoff), "Modulation envelope to filter cutoff", "Flt EnvM", "%f");
+            setParamName(getParam(Parameters::LfoCutoff), "Modulation LFO to filter cutoff", "Flt LFO", "%f");
+            setParamName(getParam(Parameters::GlideLength), "Glide length", "Glide", "%f");
+            setParamName(getParam(Parameters::MasterVolume), "Volume", "Volume", "%f");
+
+
+            addEnumParam(Parameters::Osc1Wave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(0);
+            setParamName(getParam(Parameters::Osc1Wave), "Osc1 Waveform", "Osc1 Waveform", "%d");
+            addEnumParam(Parameters::Osc2Wave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(0);
+            setParamName(getParam(Parameters::Osc2Wave), "Osc2 Waveform", "Osc2 Waveform", "%d");
+            addEnumParam(Parameters::LfoWave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(0);
+            setParamName(getParam(Parameters::LfoWave), "Lfo Waveform", "Lfo Waveform", "%d");
+            addEnumParam(Parameters::VoiceMode)->setStrings(stringsVoiceMode.begin(), stringsVoiceMode.end())->setRangedValue(0);
+            setParamName(getParam(Parameters::VoiceMode), "Voice Mode", "Voice Mode", "%d");
+            addEnumParam(Parameters::FilterMode)->setStrings(stringsFilterMode.begin(), stringsFilterMode.end())->setRangedValue(0);
+            setParamName(getParam(Parameters::FilterMode), "Filter Mode", "Flt Mode", "%d");
+            addEnumParam(Parameters::FmMode)->setStrings(stringsFMMode.begin(), stringsFMMode.end())->setRangedValue(0);
+            setParamName(getParam(Parameters::FmMode), "Fm Mode", "Fm Mode", "%d");
+
+            addIntParam(Parameters::Voices)->setRange(1, NUM_POLY_VOICES)->setRangedValue(32);
+            addIntParam(Parameters::UnisonVoices)->setRange(1, NUM_UNISON_VOICES)->setRangedValue(3);
+            log_lf(Log::L_DEBUG, "Voices: %d = %f\n", GetParamInt(Parameters::Voices)->Value(), getParam(Parameters::Voices)->getAsDouble());
+            log_lf(Log::L_DEBUG, "UnisonVoices: %d = %f\n", GetParamInt(Parameters::UnisonVoices)->Value(), getParam(Parameters::UnisonVoices)->getAsDouble());
+
+            setParamName(getParam(Parameters::Voices), "Polyphonic Voice Maximum", "Voices", "%d");
+            setParamName(getParam(Parameters::UnisonVoices), "Unison Voices", "Unison", "%d");
+
+            addFloatParam(Parameters::Panning)->setRange(-1.0, 1.0)->setRangedValue(0.0);
+            setParamName(getParam(Parameters::Panning), "Stereo Panning", "Pan", "%f");
+            modulations.push_back(Modulation());
         }
-        void setInstance(PluginVST2_Synth* instance) {
-            this->instanceVst2 = instance;
+
+    public:
+        SynthImpl(PluginVST2_Synth* vst2Plugin)
+            : SynthState(),
+              instanceVst2(vst2Plugin) {
+            initImpl();
         }
+        void init() {
+            for (auto param : this->vecParams) {
+                OnParamChange(param->enumParam);
+            }
+            setModulationSource(0, 0, ModulationSource::Lfo1);
+            setModulationDestination(0, 0, Parameters::FilterCutoff, 0.5);
+        }
+        bool IsBipolarModulation(const Modulation& modulation) const {
+            for (auto source : modulation.inputs) {
+                if (source.isBipolar) return true;
+            }
+            return false;
+        }
+        double resolveAverageModulation(const Modulation& modulation, Parameters _param) const {
+            double modAbsMax = 0.0;
+            const SynthParam_Enum* const param = GetParamEnum(Parameters::FilterMode);
+            auto filterMode = param->getEnumValue<FilterModes>();
+            // FilterModes mode = GetParamEnum(Parameters::FilterMode)->
+            // int32_t totalVoiceCount = 0.0;
+            for (auto polyvoice : voices) {
+                polyvoice.visitVoices([&](const auto& unisonVoice) {
+                    if (unisonVoice.isVoiceActive(filterMode)) {
+                        modAbsMax = math::absMax(modAbsMax, GetModulatedParamVoiceRaw(unisonVoice, _param));
+                        // modAbsMax = math::absMax(modAbsMax, 1.0);
+                        // totalVoiceCount++;
+                    }
+                });
+            }
+            // return totalVoiceCount == 0 ? 0.0 : (avg / totalVoiceCount);
+            return modAbsMax;
+        }
+        std::optional<std::vector<param_modulation_range_t>> getParamModulationRanges(Parameters _param) {
+            std::optional<std::vector<param_modulation_range_t>> result;
+            int32_t idxMod = 0;
+            for (auto& mod : modulations) {
+                bool bIsBipolar = IsBipolarModulation(mod);
+                for (auto& modDest : mod.destinations) {
+                    if (modDest.parameter == _param) {
+                        if (!result) {
+                            result = std::vector<param_modulation_range_t>();
+                        }
+                        auto modIdx = &mod - &modulations.front();
+                        result->push_back(
+                                param_modulation_range_t{
+                                        static_cast<int32_t>(modIdx),
+                                        static_cast<int32_t>(modDest.parameter),
+                                        static_cast<float>(modDest.range),
+                                        bIsBipolar,
+                                        resolveAverageModulation(mod, _param) });
+                        dbgassert(result->back().sourceId == idxMod);
+                    }
+                }
+                idxMod++;
+            }
+            return result;
+        }
+        Modulation* getModulationIfExists(int32_t index) {
+            if (index < 0 || index >= CtrSize(modulations)) {
+                return nullptr;
+            }
+            return &modulations[index];
+        }
+        Modulation& getOrCreateModulation(int32_t index) {
+            while (CtrSize(modulations) <= index) {
+                modulations.emplace_back();
+            }
+            return modulations[index];
+        }
+        int32_t getModulationCount() const {
+            return CtrSize(modulations);
+        }
+        bool setModulationSource(int32_t index, int32_t idx, int32_t modSourceIndex) {
+            auto& modulation = getOrCreateModulation(index);
+            auto numInputs   = CtrSize(modulation.inputs);
+            if (modSourceIndex < 0 && idx < numInputs) {
+                // erase entry
+                modulation.inputs.erase(modulation.inputs.begin() + idx);
+                return true;
+            } else if (modSourceIndex >= 0 && modSourceIndex < ModulationSource::NumModulationSources && idx == numInputs) {
+                modulation.inputs.push_back({ static_cast<ModulationSource>(modSourceIndex), ModulationOperator::Multiply, 0.0, {}, false });
+                return true;
+            } else if (modSourceIndex >= 0 && modSourceIndex < ModulationSource::NumModulationSources && idx < numInputs) {
+                auto& mod  = modulation.inputs[idx];
+                mod.source = static_cast<ModulationSource>(modSourceIndex);
+                return true;
+            }
+            return false;
+        }
+        bool setModulationOperator(int32_t index, int32_t idx, int32_t modOperatorIndex) {
+            auto& modulation = getOrCreateModulation(index);
+            auto numInputs   = CtrSize(modulation.inputs);
+            if (modOperatorIndex >= 0 && modOperatorIndex < ModulationOperator::NumModulationOperators && idx < numInputs) {
+                auto& mod = modulation.inputs[idx];
+                mod.op    = static_cast<ModulationOperator>(modOperatorIndex);
+                return true;
+            }
+            return false;
+        }
+        bool setModulationConstant(int32_t index, int32_t idx, double constant) {
+            auto& modulation = getOrCreateModulation(index);
+            auto numInputs   = CtrSize(modulation.inputs);
+            if (idx < numInputs) {
+                auto& mod = modulation.inputs[idx];
+                mod.value = constant;
+                return true;
+            }
+            return false;
+        }
+        bool setModulationFunction(int32_t index, int32_t idx, MathExpr&& function) {
+            auto& modulation = getOrCreateModulation(index);
+            auto numInputs   = CtrSize(modulation.inputs);
+            if (idx < numInputs) {
+                auto& mod    = modulation.inputs[idx];
+                mod.function = std::move(function);
+                return true;
+            }
+            return false;
+        }
+        bool resetModulationFunction(int32_t index, int32_t idx) {
+            auto& modulation = getOrCreateModulation(index);
+            auto numInputs   = CtrSize(modulation.inputs);
+            if (idx < numInputs) {
+                auto& mod = modulation.inputs[idx];
+                mod.function.parsedExpr.reset();
+                return true;
+            }
+            return false;
+        }
+        bool setModulationBiPolar(int32_t index, int32_t idx, bool biPolar) {
+            auto& modulation = getOrCreateModulation(index);
+            auto numInputs   = CtrSize(modulation.inputs);
+            if (idx < numInputs) {
+                auto& mod     = modulation.inputs[idx];
+                mod.isBipolar = biPolar;
+                return true;
+            }
+            return false;
+        }
+
+        bool setModulationDestination(int32_t index, int32_t destIdx, int32_t paramIdx, double range) {
+            auto& modulation     = getOrCreateModulation(index);
+            auto numDestinations = CtrSize(modulation.destinations);
+            if (paramIdx < 0 && destIdx < numDestinations) {
+                // erase entry
+                modulation.destinations.erase(modulation.destinations.begin() + destIdx);
+                return true;
+            } else if (paramIdx >= 0 && paramIdx < Parameters::kNumParams && destIdx == numDestinations) {
+                modulation.destinations.push_back({ static_cast<Parameters>(paramIdx), range });
+                return true;
+            } else if (paramIdx >= 0 && paramIdx < Parameters::kNumParams && destIdx < numDestinations) {
+                modulation.destinations[destIdx] = { static_cast<Parameters>(paramIdx), range };
+                return true;
+            }
+            return false;
+        }
+        bool setModulationDestRange(int32_t index, int32_t destIdx, double range) {
+            auto& modulation     = getOrCreateModulation(index);
+            auto numDestinations = CtrSize(modulation.destinations);
+            if (destIdx < numDestinations) {
+                modulation.destinations[destIdx].range = range;
+                return true;
+            }
+            return false;
+        }
+        SynthParamBase* getParam(Parameters enumParam) {
+            if (enumParam >= 0 && enumParam < vecParams.size()) {
+                return vecParams[enumParam];
+            }
+            return nullptr;
+        }
+        const SynthParamBase* getParam(Parameters enumParam) const {
+            if (enumParam >= 0 && enumParam < vecParams.size()) {
+                return vecParams[enumParam];
+            }
+            return nullptr;
+        }
+
         void setSamplerate(float sr) {
             if (sr < 1) sr = 1;
             dt = 1.0 / sr;
@@ -810,6 +1294,9 @@ namespace PluginSynth {
         std::vector<int> getHeldNotes() {
             return heldNotes;
         }
+        int32_t getActiveVoiceCount() {
+            return activeVoiceCount;
+        }
         void setTempo(double d) {
             tempo.bpm = d;
         }
@@ -819,26 +1306,107 @@ namespace PluginSynth {
         void setPPQPos(double d) {
             tempo.ppqPos = d;
         }
+        bool getSnapshot(snapshot_t& snapshot) {
+            snapshot.version     = 4;
+            const auto numParams = CtrSize(vecParams);
+            for (int32_t i = 0; i < numParams; ++i) {
+                snapshot.params.push_back({ i, vecParams[i]->getAsDouble() });
+            }
+            const auto numModulations = CtrSize(modulations);
+            for (int32_t i = 0; i < numModulations; ++i) {
+                const auto& modulation = modulations[i];
+                modulation_snapshot_t modSnapshot;
+                modSnapshot.slotIdx  = i;
+                const auto numInputs = CtrSize(modulation.inputs);
+                for (int32_t j = 0; j < numInputs; ++j) {
+                    const auto& input = modulation.inputs[j];
+                    modSnapshot.inputs.push_back({ static_cast<int32_t>(input.source),
+                                                   static_cast<int32_t>(input.op),
+                                                   input.value,
+                                                   input.function.str,
+                                                   input.isBipolar });
+                }
+                const auto numDestinations = CtrSize(modulation.destinations);
+                for (int32_t j = 0; j < numDestinations; ++j) {
+                    const auto& dest = modulation.destinations[j];
+                    modSnapshot.destinations.push_back({ static_cast<int32_t>(dest.parameter), dest.range });
+                }
+                snapshot.modulations.push_back(modSnapshot);
+            }
+            return true;
+        }
+        bool setSnapshot(const snapshot_t& snapshot) {
+            if (snapshot.version < 2) {
+                dbgassert(0);
+                return false;
+            }
+            const auto numParams = CtrSize(vecParams);
+            for (auto& ps : snapshot.params) {
+                if (ps.paramIdx >= 0 && ps.paramIdx < numParams) {
+                    vecParams[ps.paramIdx]->set(ps.value);
+                } else {
+                    dbgassert(0);
+                }
+            }
+            modulations.clear();
+            modulations.reserve(snapshot.modulations.size());
+            for (auto& ms : snapshot.modulations) {
+                auto msSlotIndex = ms.slotIdx;
+                Modulation newModulation;
+                const auto numInputs = CtrSize(ms.inputs);
+                for (int32_t j = 0; j < numInputs; ++j) {
+                    const auto& input = ms.inputs[j];
+                    newModulation.inputs.push_back({ static_cast<ModulationSource>(input.sourceIdx),
+                                                     static_cast<ModulationOperator>(input.opIdx),
+                                                     input.value,
+                                                     MathExpr{ input.function, nullptr },
+                                                     input.isBiPolar });
+                }
+                const auto numDestinations = CtrSize(ms.destinations);
+                for (int32_t j = 0; j < numDestinations; ++j) {
+                    const auto& dest = ms.destinations[j];
+                    newModulation.destinations.push_back({ static_cast<Parameters>(dest.paramIdx), dest.range });
+                }
+                while (CtrSize(modulations) <= msSlotIndex) {
+                    modulations.push_back({});
+                }
+                modulations[msSlotIndex] = std::move(newModulation);
+            }
+            for (auto& mod : modulations) {
+                for (auto& input : mod.inputs) {
+                    try {
+                        input.function = MathExpr::parse(input.function.str);
+                    } catch (mu::Parser::exception_type& e) {
+                        log_lf(Log::L_ERROR, "Error in expression: %s\n", e.GetMsg().c_str());
+                    }
+                }
+            }
+            for (auto& param : vecParams) {
+                OnParamChange(param->enumParam);
+            }
+            return true;
+        }
+
     private:
         float synthRandom() {
             uint32_t rnd32Bits = synthRand.rng_rand();
             return (rnd32Bits & 0xFFFF) / (float) 0xFFFF;
         }
-        SynthParamBase* GetParam(Parameters param) {
-            dbgassert(instanceVst2);
-            return instanceVst2->getParam(param);
+        SynthParam_Float* GetParamFloat(Parameters param) noexcept {
+            dbgassert(getParam(param) && getParam(param)->type == ParamType::FLOAT);
+            return static_cast<SynthParam_Float*>(this->vecParams[param]);
         }
-        SynthParam_Float* GetParamFloat(Parameters param) {
-            dbgassert(instanceVst2);
-            return static_cast<SynthParam_Float*>(instanceVst2->getParam(param));
+        SynthParam_Int* GetParamInt(Parameters param) noexcept {
+            dbgassert(getParam(param) && getParam(param)->type == ParamType::INT);
+            return static_cast<SynthParam_Int*>(this->vecParams[param]);
         }
-        SynthParam_Int* GetParamInt(Parameters param) {
-            dbgassert(instanceVst2);
-            return static_cast<SynthParam_Int*>(instanceVst2->getParam(param));
+        SynthParam_Enum* GetParamEnum(Parameters param) noexcept {
+            dbgassert(getParam(param) && getParam(param)->type == ParamType::ENUM);
+            return static_cast<SynthParam_Enum*>(this->vecParams[param]);
         }
-        SynthParam_Enum* GetParamEnum(Parameters param) {
-            dbgassert(instanceVst2);
-            return static_cast<SynthParam_Enum*>(instanceVst2->getParam(param));
+        const SynthParam_Enum* GetParamEnum(Parameters param) const noexcept {
+            dbgassert(getParam(param) && getParam(param)->type == ParamType::ENUM);
+            return static_cast<SynthParam_Enum*>(this->vecParams[param]);
         }
         void FlushMidi(int sample) {
             while (!midiQueue.Empty()) {
@@ -867,7 +1435,7 @@ namespace PluginSynth {
                         switch (voiceMode) {
                             case VoiceModes::Poly:
                                 for (auto& voice : voices)
-                                    if (voice.voices[0].note == note) voice.Release();
+                                    if (voice.note == note) voice.Release();
                                 break;
                             case VoiceModes::Mono:
                             case VoiceModes::Legato:
@@ -884,9 +1452,10 @@ namespace PluginSynth {
                         switch (voiceMode) {
                             case VoiceModes::Poly: {
                                 // get the quietest voice, prioritizing voices that are released
-                                auto voice = std::min_element(
+                                auto voiceEnd = polyVoiceCount >= CtrSize(voices) ? std::end(voices) : std::begin(voices) + polyVoiceCount;
+                                auto voice    = std::min_element(
                                         std::begin(voices),
-                                        std::end(voices),
+                                        voiceEnd,
                                         [](auto& a, auto& b) {
                                             if (a.IsReleased() == b.IsReleased()) {
                                                 auto volA = a.GetVolume();
@@ -955,11 +1524,179 @@ namespace PluginSynth {
             osc2SplitMix += (targetOsc2SplitMix - osc2SplitMix) * 100.0 * dt;
             lfoWave.Update(dt);
             oscMix += (targetOscMix - oscMix) * 100.0 * dt;
-            filterMode.Update(dt);
+            // filterMode.Update(dt);
             filterCutoff += (targetFilterCutoff - filterCutoff) * 100.0 * dt;
             filterResonance += (targetFilterResonance - filterResonance) * 100.0 * dt;
             filterKeyTracking += (targetFilterKeyTracking - filterKeyTracking) * 100.0 * dt;
             masterVolume += (targetMasterVolume - masterVolume) * 100.0 * dt;
+        }
+        void UpdateVoiceEnvelopes(VoiceUnison& vu, Voice& voice, bool isActive) {
+            if (isActive) {
+#define OPTIMIZED_VERSION
+#ifdef OPTIMIZED_VERSION
+                static constexpr auto LEN             = 8;
+                static const Parameters envParms[LEN] = {
+                    Parameters::VolEnvA,
+                    Parameters::VolEnvD,
+                    Parameters::VolEnvR,
+                    Parameters::ModEnvA,
+                    Parameters::ModEnvD,
+                    Parameters::ModEnvR,
+                    Parameters::ModEnvR,
+                    Parameters::ModEnvR
+                };
+                double* const envParamValsPtr[LEN] = {
+                    &voice.volEnv.a,
+                    &voice.volEnv.d,
+                    &voice.volEnv.r,
+                    &voice.modEnv.a,
+                    &voice.modEnv.d,
+                    &voice.modEnv.r,
+                    &voice.modEnv.r,
+                    &voice.modEnv.r
+                };
+                double envParamVals[LEN]{};
+                double envParamValsScaled[LEN]{};
+                for (int i = 0; i < LEN; i++) {
+                    envParamVals[i] = GetModulatedParamVoice(voice, envParms[i]);
+                }
+                for (int i = 0; i < LEN; i++) {
+                    const auto valClamped = math::clamp(envParamVals[i], 1.0E-12, 1.0);
+                    const auto valPowed   = exp(log(valClamped) * 0.1);
+                    const auto valCosd    = cos(valPowed * M_PI);
+                    envParamValsScaled[i] = 1000.0 - 999.9 * (.5 - .5 * valCosd);
+                }
+                for (int i = 0; i < LEN; i++) {
+                    *envParamValsPtr[i] = envParamValsScaled[i];
+                }
+                voice.volEnv.s = GetModulatedParamVoice(voice, Parameters::VolEnvS);
+                voice.modEnv.s = GetModulatedParamVoice(voice, Parameters::ModEnvS);
+                auto p         = GetParamFloat(Parameters::LfoDelay);
+                voice.lfoEnv.a = p->GetMin() + p->GetMax() - (p->ValueModulated(voice.modValues[p->enumParam]));
+#endif
+            }
+
+            voice.volEnv.Update(dt);
+            voice.modEnv.Update(dt);
+            voice.lfoEnv.Update(dt);
+        }
+        double noteToLinearScale(double note, double minNote = 69.0) {
+            return pow(2.0, (note - minNote) / 12.0);
+        }
+        double EvaluateVoiceModulationMathExpr(VoiceUnison& vu, Voice& voice, const MathExpr& expr, double inputX) {
+            if (expr.parsedExpr) {
+                auto& parsedExpr = *expr.parsedExpr;
+                auto& inputs     = parsedExpr.inputs;
+                inputs[0]        = inputX;
+                for (size_t i = 1; i < inputs.size(); i++) {
+                    inputs[i] = 0.0;
+                }
+                return expr.parsedExpr->parser.Eval();
+            }
+            return inputX;
+        }
+        void UpdateVoiceModulations(VoiceUnison& vu, Voice& voice) {
+            const auto bpmHz    = math::max(tempo.bpm, 1.0) / 60.0;
+            double lfoFreqHz    = GetModulatedParamVoice(voice, Parameters::LfoFrequency) * bpmHz;
+            double dVoiceLfoBi  = voice.lfo1.Get(dt, lfoWave, lfoFreqHz, false);
+            auto lfoAmount      = GetModulatedParamVoice(voice, Parameters::LfoShape);
+            double dVoiceLfoUni = 0.5 + 0.5 * dVoiceLfoBi;
+            double dLfoShapeExp = 1.0 / (1.0 + dVoiceLfoUni * lfoAmount * 16.);
+            if (lfoAmount < 0.0) {
+                dLfoShapeExp = 1.0 + dVoiceLfoUni * -lfoAmount * 16.;
+            }
+            dbgassert(!math::isNanOrInf(dVoiceLfoUni));
+            dbgassert(!math::isNanOrInf(dLfoShapeExp));
+            double dVoiceLfoUniShaped = exp(log(abs(dVoiceLfoUni)) * dLfoShapeExp);
+            dbgassert(!math::isNanOrInf(dVoiceLfoUniShaped));
+            voice.lfoValue = dVoiceLfoUniShaped;
+
+            auto& voiceModulations = voice.modValues;
+            std::memset(voiceModulations.data(), 0, voiceModulations.size() * sizeof(double));
+            for (auto& modulation : modulations) {
+                double modVal = 0.0;
+                for (size_t j = 0; j < modulation.inputs.size(); j++) {
+                    if (modulation.destinations.empty())
+                        continue;
+                    auto& input   = modulation.inputs[j];
+                    double srcVal = 0.0;
+                    switch (input.source) {
+                        case ModulationSource::Constant:
+                            srcVal = input.value;
+                            break;
+                        case ModulationSource::Function:
+                            srcVal = EvaluateVoiceModulationMathExpr(vu, voice, input.function, modVal);
+                            break;
+                        case ModulationSource::VolEnv:
+                            srcVal = voice.volEnv.value;
+                            break;
+                        case ModulationSource::ModEnv:
+                            srcVal = voice.modEnv.value;
+                            break;
+                        case ModulationSource::Lfo1:
+                            srcVal = voice.lfoValue;
+                            break;
+                        case ModulationSource::Velocity:
+                            srcVal = voice.velocity;
+                            break;
+                        case ModulationSource::VoiceIndex:
+                            srcVal = this->polyVoiceCount < 2 ? 0.5 : vu.indexPoly / static_cast<double>(this->polyVoiceCount - 1);
+                            break;
+                        case ModulationSource::UnisonVoiceIndex:
+                            srcVal = this->unisonVoiceCount < 2 ? 0.5 : voice.indexUnison / static_cast<double>(this->unisonVoiceCount - 1);
+                            break;
+                        case ModulationSource::Pitch:
+                            srcVal = noteToLinearScale(voice.note);
+                            break;
+                        case ModulationSource::Note:
+                            srcVal = voice.note / 127.0;
+                            break;
+                        default:
+                            break;
+                    }
+                    if (input.isBipolar) {
+                        srcVal = (srcVal - 0.5) * 2.0;
+                        // srcVal = (srcVal - 0.5);
+                    }
+                    if (j > 0 && input.source != ModulationSource::Function) {
+                        switch (input.op) {
+                            case ModulationOperator::Multiply:
+                                srcVal = modVal * srcVal;
+                                break;
+                            case ModulationOperator::Add:
+                                srcVal = modVal + srcVal;
+                                break;
+                            case ModulationOperator::Divide:
+                                if (math::abs(srcVal) < 1e-6) {
+                                    srcVal = 1e-6;
+                                } else {
+                                    srcVal = modVal / srcVal;
+                                }
+                                break;
+                            case ModulationOperator::Subtract:
+                                srcVal = modVal - srcVal;
+                                break;
+                            case ModulationOperator::MultiplyNegative:
+                                srcVal = modVal * -srcVal;
+                                break;
+                            case ModulationOperator::Absolute:
+                                srcVal = abs(modVal * srcVal);
+                                break;
+                            case ModulationOperator::Clamp:
+                                srcVal = math::clamp(srcVal, double(input.isBipolar) * -1.0, 1.0);
+                                break;
+                            default:
+                                srcVal = modVal;
+                                break;
+                        }
+                    }
+                    modVal = srcVal;
+                }
+                for (auto& dest : modulation.destinations) {
+                    size_t destIdx = dest.parameter;
+                    voiceModulations[destIdx] += modVal * dest.range;
+                }
+            }
         }
 
         void UpdateDrift() {
@@ -968,32 +1705,43 @@ namespace PluginSynth {
             driftPhase += driftVelocity * dt;
             driftValue = .001 * sin(driftPhase);
         }
+        double GetModulatedParamVoice(Voice& voice, Parameters param) const {
+            dbgassert(param < vecParams.size());
+            dbgassert(vecParams[param]->type == ParamType::FLOAT);
+            return static_cast<SynthParam_Float*>(vecParams[param])->ValueModulated(voice.modValues[param]);
+        }
+        double GetModulatedIntParamVoice(Voice& voice, Parameters param) const {
+            dbgassert(param < vecParams.size());
+            dbgassert(vecParams[param]->type == ParamType::INT);
+            return static_cast<SynthParam_Int*>(vecParams[param])->ValueModulated(voice.modValues[param]);
+        }
+        double GetModulatedParamVoiceRaw(const Voice& voice, Parameters param) const {
+            return voice.modValues[param];
+        }
 
-        double GetVoice(Voice& voice) {
-            voice.volEnv.Update(dt);
-            if (voice.volEnv.stage == EnvelopeStages::Idle && voice.filter.IsSilent(filterMode)) return 0.0;
-            voice.modEnv.Update(dt);
-            voice.lfoEnv.Update(dt);
-            auto volEnvV         = GetParamFloat(Parameters::VolEnvV)->Value();
-            auto volEnvValue     = (1.0 - volEnvV) * voice.volEnv.value + volEnvV * voice.volEnv.value * voice.velocity;
-            auto modEnvV         = GetParamFloat(Parameters::ModEnvV)->Value();
+        double GetVoiceImpl(VoiceUnison& uv, Voice& voice, FilterModes filtermode, int& dbgFlagsState) {
+            dbgFlagsState |= 1;
+
+            auto delayedLfoValue = voice.lfoValue * voice.lfoEnv.value;
+            auto volEnvV         = GetModulatedParamVoice(voice, Parameters::VolEnvV);
+            auto volEnvValueRaw  = voice.volEnv.value;
+            auto volEnvValue     = (1.0 - volEnvV) * volEnvValueRaw + volEnvV * volEnvValueRaw * voice.velocity;
+            auto modEnvV         = GetModulatedParamVoice(voice, Parameters::ModEnvV);
             auto modEnvValue     = (1.0 - modEnvV) * voice.modEnv.value + modEnvV * voice.modEnv.value * voice.velocity;
-            double bpmHz = math::max(tempo.bpm, 1.0) / 60.0;
-            double lfoFreqHz = GetParamFloat(Parameters::LfoFrequency)->Value() * bpmHz;
-            double dVoiceLfoBi = voice.lfo1.Get(dt, lfoWave, lfoFreqHz, false);
-            auto lfoAmount = GetParamFloat(Parameters::LfoAmount)->Value();
-            double dVoiceLfoUni = 0.5+0.5*dVoiceLfoBi;
-            if (lfoAmount < 0.0) {
-                dVoiceLfoUni = pow(dVoiceLfoUni, 1.0+dVoiceLfoUni*-lfoAmount*4.);
-            } else {
-                dVoiceLfoUni = pow(dVoiceLfoUni, 1.0/(1.0+dVoiceLfoUni*lfoAmount*4.));
-            }
-            voice.lfoValue = -1.0 + 2.0 * dVoiceLfoUni;
-            auto delayedLfoValue = dVoiceLfoUni * voice.lfoEnv.value;
 
-            voice.frequency += (voice.targetFrequency - voice.frequency) * glideLength * dt;
 
             auto baseFrequency = voice.frequency * voice.pitchBend * (1.0 + driftValue);
+            {
+                auto coarse = GetModulatedIntParamVoice(voice, Parameters::Osc1Coarse);
+                auto fine   = GetModulatedParamVoice(voice, Parameters::Osc1Fine);
+                osc1Tune    = pitchFactor(coarse + fine);
+            }
+            {
+                auto coarse = GetModulatedIntParamVoice(voice, Parameters::Osc2Coarse);
+                auto fine   = GetModulatedParamVoice(voice, Parameters::Osc2Fine);
+                osc2Tune    = pitchFactor(coarse + fine);
+            }
+
             auto osc1Frequency = osc1Tune * baseFrequency;
             auto osc2Frequency = osc2Tune * baseFrequency;
 
@@ -1002,17 +1750,25 @@ namespace PluginSynth {
                 case FmModes::Osc1:
                 case FmModes::Osc2: {
                     auto fmAmount = baseFmAmount;
-                    fmAmount += GetParamFloat(Parameters::VolEnvFm)->Value() * volEnvValue;
-                    fmAmount += GetParamFloat(Parameters::ModEnvFm)->Value() * modEnvValue;
-                    fmAmount += GetParamFloat(Parameters::LfoFm)->Value() * delayedLfoValue;
-
-                    auto fmMultiplier = pitchFactor(voice.oscFm.GetWaveform(dt, osc1Frequency, Waveforms::Sine, true) * fmAmount);
+                    fmAmount += GetModulatedParamVoice(voice, Parameters::VolEnvFm) * volEnvValue;
+                    fmAmount += GetModulatedParamVoice(voice, Parameters::ModEnvFm) * modEnvValue;
+                    fmAmount += GetModulatedParamVoice(voice, Parameters::LfoFm) * delayedLfoValue;
+                    dbgassert(!math::isNanOrInf(fmAmount));
+                    dbgassert(!math::isNanOrInf(osc1Frequency));
+                    auto fmWaveform = voice.oscFm.GetWaveform(dt, osc1Frequency, Waveforms::Sine, true);
+                    dbgassert(!math::isNanOrInf(fmWaveform));
+                    double fm = fmWaveform * fmAmount;
+                    dbgassert(!math::isNanOrInf(fm));
+                    auto fmMultiplier = pitchFactor(fm);
+                    dbgassert(!math::isNanOrInf(fmMultiplier));
                     switch (fmMode) {
                         case FmModes::Osc1:
                             osc1Frequency *= fmMultiplier;
+                            dbgassert(!math::isNanOrInf(osc1Frequency));
                             break;
                         case FmModes::Osc2:
                             osc2Frequency *= fmMultiplier;
+                            dbgassert(!math::isNanOrInf(osc2Frequency));
                             break;
                         default:
                             break;
@@ -1026,29 +1782,37 @@ namespace PluginSynth {
             auto out = 0.0;
             if (oscMix < .999) {
                 auto osc1Out = 0.0;
+                // osc1Frequency = std::numeric_limits<double>::quiet_NaN();
                 osc1Out += voice.osc1a.Get(dt, osc1Wave, osc1Frequency * osc1SplitFactorA, true);
+                dbgassert(!math::isNanOrInf(osc1Out));
                 if (osc1SplitMix > .001)
                     osc1Out += osc1SplitMix * voice.osc1b.Get(dt, osc1Wave, osc1Frequency * osc1SplitFactorB, true);
+                dbgassert(!math::isNanOrInf(osc1Out));
                 out += osc1Out * sqrt(1.0 - oscMix);
+                dbgassert(!math::isNanOrInf(out));
             }
             if (oscMix > .001) {
                 auto osc2Out = 0.0;
                 osc2Out += voice.osc2a.Get(dt, osc2Wave, osc2Frequency * osc2SplitFactorA, true);
+                dbgassert(!math::isNanOrInf(osc2Out));
                 if (osc2SplitMix > .001)
                     osc2Out += osc2SplitMix * voice.osc2b.Get(dt, osc2Wave, osc2Frequency * osc2SplitFactorB, true);
+                dbgassert(!math::isNanOrInf(osc2Out));
                 out += osc2Out * sqrt(oscMix);
+                dbgassert(!math::isNanOrInf(out));
             }
 
             out *= volEnvValue;
 
-            auto cutoff = filterCutoff;
-            cutoff += GetParamFloat(Parameters::VolEnvCutoff)->Value() * volEnvValue;
-            cutoff += GetParamFloat(Parameters::ModEnvCutoff)->Value() * modEnvValue;
-            cutoff += GetParamFloat(Parameters::LfoCutoff)->Value() * delayedLfoValue;
-            cutoff += pitchFactor(GetParamFloat(Parameters::FilterKeyTracking)->Value()) * osc1Tune * baseFrequency;
+            // auto cutoff = filterCutoff;
+            auto cutoff = GetModulatedParamVoice(voice, Parameters::FilterCutoff);
+            cutoff += GetModulatedParamVoice(voice, Parameters::VolEnvCutoff) * volEnvValue;
+            cutoff += GetModulatedParamVoice(voice, Parameters::ModEnvCutoff) * modEnvValue;
+            cutoff += GetModulatedParamVoice(voice, Parameters::LfoCutoff) * delayedLfoValue;
+            cutoff += pitchFactor(GetModulatedParamVoice(voice, Parameters::FilterKeyTracking)) * osc1Tune * baseFrequency;
             cutoff *= 1.0 - driftValue;
-            cutoff = math::clamp(cutoff, -1.0/dt*0.7, 1.0/dt*0.7);
-            out = voice.filter.Process(dt, out, filterMode, cutoff, filterResonance);
+            cutoff = math::clamp(cutoff, -1.0 / dt * 0.7, 1.0 / dt * 0.7);
+            out    = voice.filter.Process(dt, out, filtermode, cutoff, filterResonance);
 
             return out;
         }
@@ -1062,50 +1826,242 @@ namespace PluginSynth {
 
             // log_lf(Log::L_DEBUG, "Reset LFO phases: at ppq/4 %f\n", fmod(tempo.ppqPos/4.0, 1.0));
             for (auto& uv : voices) {
-                for (auto& voice : uv.voices) {
+                uv.visitVoices([&](auto& voice) {
                     voice.lfo1.initPhase(fmod(tempo.ppqPos * lfo1Tempo + driftValue * voice.rand.rng_double(), 1.0));
                     voice.lfo2.initPhase(fmod(tempo.ppqPos * lfo2Tempo + uv.driftValue, 1.0));
-                }
+                });
             };
         }
-        void ProcessReplacing(float** inputs, float** outputs, int nFrames) {
-            double bpmHz = math::max(tempo.bpm, 1.0) / 60.0;
-            const auto mvInv = 1.0/voices[0].voices.size();
+
+        void ProcessSynth(float** inputs, float** outputs, int nFrames) {
+            double bpmHz         = math::max(tempo.bpm, 1.0) / 60.0;
+            const auto bpmDiv4Hz = math::max(tempo.bpm / 4.0, 1.0) / 60.0;
+            const auto mvInv           = sqrt(1.0 / math::max<double>(1.0, this->unisonVoiceCount));
+            const auto voiceMode       = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
+            const FilterModes filterMode = GetParamEnum(Parameters::FilterMode)->getEnumValue<FilterModes>();
+            const bool bIsGlideEnabled = voiceMode != VoiceModes::Poly;
+            int32_t numActiveVoices    = 0;
             for (int s = 0; s < nFrames; s++) {
                 FlushMidi(s);
                 UpdateParameters();
                 UpdateDrift();
-                for (auto& uv : voices) {
-                    uv.UpdateVoice(tempo, dt);
-                    for (auto& v : uv.voices) {
-                        v.UpdateVoice(tempo, dt);
-                    }
-                }
-                if (lfo2.Update(dt, math::max(tempo.bpm/4.0, 1.0) / 60.0)) {
+                if (lfo2.Update(dt, bpmDiv4Hz)) {
                     lfo.initPhase(0.0);
                 }
                 // calculate lfo freqency in Hz based on tempo
                 double lfoFreqHz = GetParamFloat(Parameters::LfoFrequency)->Value() * bpmHz;
-                lfoValue = lfo.Get(dt, lfoWave, lfoFreqHz, false);
-                auto outL = 0.0;
-                auto outR = 0.0;
-                for (auto& mv : voices) {
-                    for (size_t vIdx = 0; vIdx < mv.voices.size(); ++vIdx) {
-                        auto voice = GetVoice(mv.voices[vIdx]) * mvInv;
-                        if constexpr(NUM_UNISON_VOICES % 2 == 0) {
-                            double leftRight = vIdx & 1;
-                            outL += voice * leftRight;
-                            outR += voice * (1.0 - leftRight);
-                        } else {
-                            double pan = vIdx / (NUM_UNISON_VOICES - 1.0);
-                            outL += voice * pan;
-                            outR += voice * (1.0 - pan);
+                lfoValue         = lfo.Get(dt, lfoWave, lfoFreqHz, false);
+                auto outL        = 0.0;
+                auto outR        = 0.0;
+
+                int32_t numActiveVoicesFrame = 0;
+                for (int32_t polyIndex = 0; polyIndex < polyVoiceCount; ++polyIndex) {
+                    auto& uv = voices[polyIndex];
+                    bool updateUniVoice = false;
+                    for (int32_t unisonIndex = 0; unisonIndex < unisonVoiceCount; ++unisonIndex) {
+                        auto& v = uv.getVoice(unisonIndex);
+
+                        auto& voiceModulations = v.modValues;
+                        bool bWentInactive = v.bIsActive;
+                        v.bIsActive = v.isVoiceActive(filterMode);
+                        bWentInactive &= !v.bIsActive;
+                        if (bIsGlideEnabled) {
+                            v.frequency += (v.targetFrequency - v.frequency) * glideLength * dt;
                         }
+                        if (hint_unlikely(bWentInactive)) {
+                            std::memset(voiceModulations.data(), 0, voiceModulations.size() * sizeof(double));
+                        }
+                        if (hint_likely(!v.bIsActive)) {
+                            UpdateVoiceEnvelopes(uv, v, false);
+                            continue;
+                        }
+                        if (hint_unlikely(!updateUniVoice)) {
+                            updateUniVoice = true;
+                            uv.UpdateVoiceLfo(tempo, dt);
+                        }
+                        v.UpdateVoiceLfo(tempo, dt);
+                        int32_t dbgFlagsState = 0;
+                        UpdateVoiceModulations(uv, v);
+                        UpdateVoiceEnvelopes(uv, v, true);
+                        auto voice                = GetVoiceImpl(uv, v, filterMode, dbgFlagsState) * mvInv;
+                        auto panningMinusOneToOne = GetModulatedParamVoice(v, Parameters::Panning);
+                        auto panningUnipolar      = panningMinusOneToOne * 0.5 + 0.5;
+                        // dbgassert(!math::isNanOrInf(voice));
+                        if (dbgFlagsState & 1) {
+                            numActiveVoicesFrame++;
+                        }
+                        constexpr bool autopan = false;
+                        double pan             = panningUnipolar;
+                        if (autopan) {
+                            pan += (unisonVoiceCount == 2) ? (unisonIndex & 1) : (unisonIndex / (unisonVoiceCount - 1.0));
+                            pan *= 0.5;
+                        }
+                        outL += voice * sqrt(1.0 - pan);
+                        outR += voice * sqrt(pan);
                     }
                 }
-                outputs[0][s] = static_cast<float>(outL * masterVolume);
-                outputs[1][s] = static_cast<float>(outR * masterVolume);
+                auto valL = static_cast<float>(outL * masterVolume);
+                auto valR = static_cast<float>(outR * masterVolume);
+                // if (math::isNanOrInf(valL) || math::isNanOrInf(valR)) {
+                //     log_lf(Log::L_ERROR, "NaN detected!\n");
+                //     valL = 0;
+                //     valR = 0;
+                // }
+                outputs[0][s]   = valL;
+                outputs[1][s]   = valR;
+                numActiveVoices = math::max(numActiveVoicesFrame, numActiveVoices);
             }
+            this->activeVoiceCount = numActiveVoices;
+        }
+        double getEnvDuration(double value) const {
+            value = math::max(0.0, value);
+            return 1000 - 999.9 * (.5 - .5 * cos(pow(value, .1) * M_PI));
+            // return 0.1+1000.0*(1.0-pow(value, 0.08+value*-0.12));
+        }
+        double getEnvDuration2(double value) const {
+            value            = math::max(0.0, value);
+            double shapedVal = value;
+            if (shapedVal > 1.0E-12) {
+                auto a = log(shapedVal);
+                dbgassert(!math::isNanOrInf(a));
+                auto b = exp(a * 0.1);
+                dbgassert(!math::isNanOrInf(b));
+                auto c = cos(b * M_PI);
+                dbgassert(!math::isNanOrInf(c));
+                shapedVal = (.5 - .5 * cos(exp(log(shapedVal) * 0.1) * M_PI));
+                dbgassert(!math::isNanOrInf(shapedVal));
+            }
+            return 1000 - 999.9 * shapedVal;
+        }
+        void OnParamChange(Parameters parameter) {
+            //IMutexLock lock(this);
+            //auto value = GetParam(parameter)->Value();
+            double value                         = 0.0;
+            auto paramInstance                   = getParam(parameter);
+            SynthParam_Float* paramFloatOptional = nullptr;
+            SynthParam_Int* paramIntOptional     = nullptr;
+            SynthParam_Enum* paramEnumOptional   = nullptr;
+            switch (paramInstance->getType()) {
+                case ParamType::FLOAT:
+                    paramFloatOptional = static_cast<SynthParam_Float*>(paramInstance);
+                    value              = paramFloatOptional->Value();
+                    break;
+                case ParamType::INT:
+                    paramIntOptional = static_cast<SynthParam_Int*>(paramInstance);
+                    value            = paramIntOptional->Value();
+                    break;
+                case ParamType::ENUM:
+                    paramEnumOptional = static_cast<SynthParam_Enum*>(paramInstance);
+                    value             = paramEnumOptional->Value();
+                    break;
+            }
+
+            switch (parameter) {
+                case Parameters::UnisonVoices: {
+                    auto unisonVoicesCurrent = this->unisonVoiceCount;
+                    auto unisonVoicesTarget  = paramIntOptional->Value();
+                    if (unisonVoicesCurrent != unisonVoicesTarget) {
+                        this->unisonVoiceCount = unisonVoicesTarget;
+                        for (int i = 0; i < this->polyVoiceCount; ++i) {
+                            voices[i].setUnisonVoiceCount(this->unisonVoiceCount);
+                        }
+                    }
+                    break;
+                }
+                case Parameters::Voices: {
+                    auto polyVoicesCurrent = this->polyVoiceCount;
+                    auto polyVoicesTarget  = paramIntOptional->Value();
+                    if (polyVoicesCurrent != polyVoicesTarget) {
+                        this->polyVoiceCount = polyVoicesTarget;
+                        for (int i = polyVoicesTarget; i < polyVoicesCurrent; ++i) {
+                            voices[i].Release();
+                        }
+                        for (int i = polyVoicesCurrent; i < polyVoicesTarget; ++i) {
+                            voices[i].setUnisonVoiceCount(this->unisonVoiceCount);
+                        }
+                    }
+                    break;
+                }
+                case Parameters::Osc1Wave:
+                    osc1Wave.Switch(value);
+                    break;
+                // case Parameters::Osc1Coarse:
+                // case Parameters::Osc1Fine: {
+                //     auto coarse = GetParamInt(Parameters::Osc1Coarse)->Value();
+                //     auto fine   = GetParamFloat(Parameters::Osc1Fine)->Value();
+                //     osc1Tune    = pitchFactor(coarse + fine);
+                //     break;
+                // }
+                case Parameters::Osc1Split:
+                    targetOsc1SplitMix = value != 0.0 ? 1.0 : 0.0;
+                    osc1SplitFactorA   = pitchFactor(value);
+                    osc1SplitFactorB   = 1.0;//pitchFactor(value);
+                    break;
+                case Parameters::Osc2Wave:
+                    osc2Wave.Switch(value);
+                    break;
+                // case Parameters::Osc2Coarse:
+                // case Parameters::Osc2Fine: {
+                //     auto coarse = GetParamInt(Parameters::Osc2Coarse)->Value();
+                //     auto fine   = GetParamFloat(Parameters::Osc2Fine)->Value();
+                //     osc2Tune    = pitchFactor(coarse + fine);
+                //     break;
+                // }
+                case Parameters::Osc2Split:
+                    targetOsc2SplitMix = value != 0.0 ? 1.0 : 0.0;
+                    // osc2SplitFactorA   = pitchFactor(-value);
+                    // osc2SplitFactorB   = pitchFactor(value);
+                    osc2SplitFactorA = pitchFactor(value);
+                    osc2SplitFactorB = 1.0;//pitchFactor(value);
+                    break;
+                case Parameters::OscMix:
+                    targetOscMix = 1.0 - value;
+                    break;
+                case Parameters::FmCoarse:
+                case Parameters::FmFine: {
+                    auto fmCoarse = GetParamInt(Parameters::FmCoarse)->Value();
+                    auto fmFine   = GetParamFloat(Parameters::FmFine)->Value();
+                    baseFmAmount  = fmCoarse + fmFine;
+                    break;
+                }
+                // case Parameters::FilterMode:
+                //     filterMode.Switch(value);
+                //     break;
+                case Parameters::FilterCutoff:
+                    targetFilterCutoff = value;
+                    break;
+                case Parameters::FilterResonance:
+                    targetFilterResonance = value;
+                    break;
+                case Parameters::FilterKeyTracking:
+                    targetFilterKeyTracking = value;
+                    break;
+                case Parameters::VoiceMode:
+                    switch (GetParamEnum(parameter)->getEnumValue<VoiceModes>()) {
+                        case VoiceModes::Mono:
+                        case VoiceModes::Legato:
+                            for (int i = 1; i < NUM_POLY_VOICES; i++) {
+                                voices[i].Release();
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                    break;
+                case Parameters::GlideLength:
+                    glideLength = 1000 - 999.0 * (.5 - .5 * cos(pow(value, .1) * M_PI));
+                    break;
+                case Parameters::MasterVolume:
+                    targetMasterVolume = value;
+                    break;
+                case Parameters::LfoWave:
+                    lfoWave.Switch(value);
+                    break;
+                default:
+                    break;
+            }
+
+            GrayOutControls();
         }
 
         void GrayOutControls() {
@@ -1145,382 +2101,105 @@ namespace PluginSynth {
             //// glide
             //pGraphics->GetControl(48)->GrayOut(!GetParam(Parameters::VoiceMode)->Value());
         }
-
-        void OnParamChange(Parameters parameter) {
-            //IMutexLock lock(this);
-            //auto value = GetParam(parameter)->Value();
-            double value = 0.0;
-            if (GetParam(parameter)->getType() == ParamType::FLOAT) {
-                value = GetParamFloat(parameter)->Value();
-            }
-            if (GetParam(parameter)->getType() == ParamType::INT) {
-                value = GetParamInt(parameter)->Value();
-            }
-            if (GetParam(parameter)->getType() == ParamType::ENUM) {
-                value = GetParamEnum(parameter)->Value();
-            }
-            switch (parameter) {
-                case Parameters::Osc1Wave:
-                    osc1Wave.Switch(value);
-                    break;
-                case Parameters::Osc1Coarse:
-                case Parameters::Osc1Fine: {
-                    auto coarse = GetParamInt(Parameters::Osc1Coarse)->Value();
-                    auto fine   = GetParamFloat(Parameters::Osc1Fine)->Value();
-                    osc1Tune    = pitchFactor(coarse + fine);
-                    break;
-                }
-                case Parameters::Osc1Split:
-                    targetOsc1SplitMix = value != 0.0 ? 1.0 : 0.0;
-                    osc1SplitFactorA   = pitchFactor(value);
-                    osc1SplitFactorB   = 1.0;//pitchFactor(value);
-                    break;
-                case Parameters::Osc2Wave:
-                    osc2Wave.Switch(value);
-                    break;
-                case Parameters::Osc2Coarse:
-                case Parameters::Osc2Fine: {
-                    auto coarse = GetParamInt(Parameters::Osc2Coarse)->Value();
-                    auto fine   = GetParamFloat(Parameters::Osc2Fine)->Value();
-                    osc2Tune    = pitchFactor(coarse + fine);
-                    break;
-                }
-                case Parameters::Osc2Split:
-                    targetOsc2SplitMix = value != 0.0 ? 1.0 : 0.0;
-                    // osc2SplitFactorA   = pitchFactor(-value);
-                    // osc2SplitFactorB   = pitchFactor(value);
-                    osc2SplitFactorA   = pitchFactor(value);
-                    osc2SplitFactorB   = 1.0;//pitchFactor(value);
-                    break;
-                case Parameters::OscMix:
-                    targetOscMix = 1.0 - value;
-                    break;
-                case Parameters::FmCoarse:
-                case Parameters::FmFine: {
-                    auto fmCoarse = GetParamInt(Parameters::FmCoarse)->Value();
-                    auto fmFine   = GetParamFloat(Parameters::FmFine)->Value();
-                    baseFmAmount  = fmCoarse + fmFine;
-                    break;
-                }
-                case Parameters::FilterMode:
-                    filterMode.Switch(value);
-                    break;
-                case Parameters::FilterCutoff:
-                    targetFilterCutoff = value;
-                    break;
-                case Parameters::FilterResonance:
-                    targetFilterResonance = value;
-                    break;
-                case Parameters::FilterKeyTracking:
-                    targetFilterKeyTracking = value;
-                    break;
-                case Parameters::VolEnvA: {
-                    auto volEnvA = 1000 - 999.9 * (.5 - .5 * cos(pow(value, .1) * M_PI));
-                    for (auto& mv : voices)
-                        for (auto& v : mv.voices)
-                            v.volEnv.a = volEnvA;
-                    break;
-                }
-                case Parameters::VolEnvD: {
-                    auto volEnvD = 1000 - 999.9 * (.5 - .5 * cos(pow(value, .1) * M_PI));
-                    
-                    for (auto& mv : voices)
-                        for (auto& v : mv.voices)
-                            v.volEnv.d = volEnvD;
-                    break;
-                }
-                case Parameters::VolEnvS:
-                    
-                    for (auto& mv : voices)
-                        for (auto& v : mv.voices)
-                            v.volEnv.s = value;
-                    break;
-                case Parameters::VolEnvR: {
-                    auto volEnvR = 1000 - 999.9 * (.5 - .5 * cos(pow(value, .1) * M_PI));
-                    
-                    for (auto& mv : voices)
-                        for (auto& v : mv.voices)
-                            v.volEnv.r = volEnvR;
-                    break;
-                }
-                case Parameters::ModEnvA: {
-                    auto modEnvA = 1000 - 999.9 * (.5 - .5 * cos(pow(value, .1) * M_PI));
-                    
-                    for (auto& mv : voices)
-                        for (auto& v : mv.voices)
-                            v.modEnv.a = modEnvA;
-                    break;
-                }
-                case Parameters::ModEnvD: {
-                    auto modEnvD = 1000 - 999.9 * (.5 - .5 * cos(pow(value, .1) * M_PI));
-                    
-                    for (auto& mv : voices)
-                        for (auto& v : mv.voices)
-                            v.modEnv.d = modEnvD;
-                    break;
-                }
-                case Parameters::ModEnvS:
-                    
-                    for (auto& mv : voices)
-                        for (auto& v : mv.voices)
-                            v.modEnv.s = value;
-                    break;
-                case Parameters::ModEnvR: {
-                    auto modEnvR = 1000 - 999.9 * (.5 - .5 * cos(pow(value, .1) * M_PI));
-                    
-                    for (auto& mv : voices)
-                        for (auto& v : mv.voices)
-                            v.modEnv.r = modEnvR;
-                    break;
-                }
-                case Parameters::LfoDelay: {
-                    auto p        = static_cast<SynthParam_Float*>(GetParam(parameter));
-                    auto lfoDelay = p->GetMin() + p->GetMax() - p->Value();
-                    
-                    for (auto& mv : voices)
-                        for (auto& v : mv.voices)
-                            v.lfoEnv.a = lfoDelay;
-                    break;
-                }
-                case Parameters::VoiceMode:
-                    switch (GetParamEnum(parameter)->getEnumValue<VoiceModes>()) {
-                        case VoiceModes::Mono:
-                        case VoiceModes::Legato:
-                            for (int i = 1; i < NUM_POLY_VOICES; i++) {
-                                voices[i].Release();
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                    break;
-                case Parameters::GlideLength:
-                    glideLength = 1000 - 999.0 * (.5 - .5 * cos(pow(value, .1) * M_PI));
-                    break;
-                case Parameters::MasterVolume:
-                    targetMasterVolume = value;
-                    break;
-                case Parameters::LfoWave:
-                    lfoWave.Switch(value);
-                    break;
-                default:
-                    break;
-            }
-
-            GrayOutControls();
-        }
     };
+
     void PluginVST2_Synth::initPrograms() {
         for (SynthProgram& program : staticPrograms) {
-            program = {};
-            program.VoiceMode = 0.000000;
-            program.GlideLength = 0.000000;
-            program.FilterMode = 1.000000;
-            program.FilterCutoff = 0.100000;
-            program.FilterResonance = 0.020000;
+            program                   = {};
+            program.VoiceMode         = 0.000000;
+            program.GlideLength       = 0.000000;
+            program.FilterMode        = 1.000000;
+            program.FilterCutoff      = 0.100000;
+            program.FilterResonance   = 0.020000;
             program.FilterKeyTracking = 0.500000;
-            program.VolEnvCutoff = 0.750000;
-            program.ModEnvCutoff = 0.740000;
-            program.OscMix = 0.500000;
-            program.Osc1Wave = 0.400000;
-            program.Osc1Coarse = 0.5;
-            program.Osc1Fine = 0.500000;
-            program.Osc1Split = 0.554000;
-            program.Osc2Wave = 0.400000;
-            program.Osc2Coarse = 0.745;
-            program.Osc2Fine = 0.505000;
-            program.Osc2Split = 0.560000;
-            program.LfoAmount = 0.500000;
-            program.LfoFrequency = 0.5;
-            program.LfoDelay = 0.000000;
-            program.LfoCutoff = 0.500000;
-            program.FmMode = 0.000000;
-            program.FmCoarse = 0.000000;
-            program.FmFine = 0.500000;
-            program.VolEnvFm = 0.500000;
-            program.ModEnvFm = 0.500000;
-            program.LfoFm = 0.500000;
-            program.VolEnvA = 0.075000;
-            program.VolEnvD = 0.500000;
-            program.VolEnvS = 1.000000;
-            program.VolEnvR = 0.650000;
-            program.VolEnvV = 0.800000;
-            program.ModEnvA = 0.220000;
-            program.ModEnvD = 0.500000;
-            program.ModEnvS = 0.500000;
-            program.ModEnvR = 0.700000;
-            program.ModEnvV = 0.600000;      
-            // if (index >= 0 && index < CtrSize(vecParams)) {
-        //     SynthParamBase* param = vecParams[index];
+            program.VolEnvCutoff      = 0.750000;
+            program.ModEnvCutoff      = 0.740000;
+            program.OscMix            = 0.500000;
+            program.Osc1Wave          = 0.400000;
+            program.Osc1Coarse        = 0.5;
+            program.Osc1Fine          = 0.500000;
+            program.Osc1Split         = 0.554000;
+            program.Osc2Wave          = 0.400000;
+            program.Osc2Coarse        = 0.745;
+            program.Osc2Fine          = 0.505000;
+            program.Osc2Split         = 0.560000;
+            program.LfoAmount         = 0.500000;
+            program.LfoFrequency      = 0.5;
+            program.LfoDelay          = 0.000000;
+            program.LfoCutoff         = 0.500000;
+            program.FmMode            = 0.000000;
+            program.FmCoarse          = 0.000000;
+            program.FmFine            = 0.500000;
+            program.VolEnvFm          = 0.500000;
+            program.ModEnvFm          = 0.500000;
+            program.LfoFm             = 0.500000;
+            program.VolEnvA           = 0.075000;
+            program.VolEnvD           = 0.500000;
+            program.VolEnvS           = 1.000000;
+            program.VolEnvR           = 0.650000;
+            program.VolEnvV           = 0.800000;
+            program.ModEnvA           = 0.220000;
+            program.ModEnvD           = 0.500000;
+            program.ModEnvS           = 0.500000;
+            program.ModEnvR           = 0.700000;
+            program.ModEnvV           = 0.600000;
+            program.UnisonVoices      = impl->getParam(Parameters::UnisonVoices)->getAsDouble();
+            program.PolyVoicesMax     = impl->getParam(Parameters::Voices)->getAsDouble();
         }
         {
-        auto& prog        = staticPrograms[0];
-        prog.FilterCutoff = 1.0f;
-        prog.FilterMode   = 1.0;// TODO: add butto to write out presets in source code format so we can add them here
-
+            auto& prog        = staticPrograms[0];
+            prog.FilterCutoff = 1.0f;
+            prog.FilterMode   = 1.0;// TODO: add butto to write out presets in source code format so we can add them here
         }
         {
-            auto& prog = staticPrograms[1];
-            prog.VoiceMode=0.000000;
-            prog.GlideLength=0.000000;
-            prog.FilterMode=0.666667;
-            prog.FilterCutoff=0.135000;
-            prog.FilterResonance=0.050000;
-            prog.FilterKeyTracking=0.875000;
-            prog.VolEnvCutoff=0.590000;
-            prog.ModEnvCutoff=0.655000;
-            prog.OscMix=1.000000;
-            prog.Osc1Wave=0.400000;
-            prog.Osc1Coarse=0.500000;
-            prog.Osc1Fine=0.500000;
-            prog.Osc1Split=0.554000;
-            prog.Osc2Wave=0.000000;
-            prog.Osc2Coarse=0.500000;
-            prog.Osc2Fine=0.500000;
-            prog.Osc2Split=0.715000;
-            prog.LfoAmount=0.500000;
-            prog.LfoFrequency=0.393939;
-            prog.LfoDelay=0.000000;
-            prog.LfoCutoff=0.500000;
-            prog.FmMode=0.500000;
-            prog.FmCoarse=0.000000;
-            prog.FmFine=0.500000;
-            prog.VolEnvFm=0.500000;
-            prog.ModEnvFm=0.500000;
-            prog.LfoFm=0.495000;
-            prog.VolEnvA=0.075000;
-            prog.VolEnvD=0.400000;
-            prog.VolEnvS=0.545000;
-            prog.VolEnvR=0.700000;
-            prog.VolEnvV=0.770000;
-            prog.ModEnvA=0.025000;
-            prog.ModEnvD=0.375000;
-            prog.ModEnvS=0.165000;
-            prog.ModEnvR=0.735000;
-            prog.ModEnvV=0.865000;
+            auto& prog             = staticPrograms[1];
+            prog.VoiceMode         = 0.000000;
+            prog.GlideLength       = 0.000000;
+            prog.FilterMode        = 0.666667;
+            prog.FilterCutoff      = 0.135000;
+            prog.FilterResonance   = 0.050000;
+            prog.FilterKeyTracking = 0.875000;
+            prog.VolEnvCutoff      = 0.590000;
+            prog.ModEnvCutoff      = 0.655000;
+            prog.OscMix            = 1.000000;
+            prog.Osc1Wave          = 0.400000;
+            prog.Osc1Coarse        = 0.500000;
+            prog.Osc1Fine          = 0.500000;
+            prog.Osc1Split         = 0.554000;
+            prog.Osc2Wave          = 0.000000;
+            prog.Osc2Coarse        = 0.500000;
+            prog.Osc2Fine          = 0.500000;
+            prog.Osc2Split         = 0.715000;
+            prog.LfoAmount         = 0.500000;
+            prog.LfoFrequency      = 0.393939;
+            prog.LfoDelay          = 0.000000;
+            prog.LfoCutoff         = 0.500000;
+            prog.FmMode            = 0.500000;
+            prog.FmCoarse          = 0.000000;
+            prog.FmFine            = 0.500000;
+            prog.VolEnvFm          = 0.500000;
+            prog.ModEnvFm          = 0.500000;
+            prog.LfoFm             = 0.495000;
+            prog.VolEnvA           = 0.075000;
+            prog.VolEnvD           = 0.400000;
+            prog.VolEnvS           = 0.545000;
+            prog.VolEnvR           = 0.700000;
+            prog.VolEnvV           = 0.770000;
+            prog.ModEnvA           = 0.025000;
+            prog.ModEnvD           = 0.375000;
+            prog.ModEnvS           = 0.165000;
+            prog.ModEnvR           = 0.735000;
+            prog.ModEnvV           = 0.865000;
         }
-
-
     }
     PluginVST2_Synth::PluginVST2_Synth(audioMasterCallback audioMaster)
-        : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, Parameters::kNumParams, kNumInputs, kNumOutputs) {
+        : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, Parameters::kNumParams, kNumInputs, kNumOutputs),
+          impl(new SynthImpl(this)),
+          vecParams(impl->vecParams) {
         isSynth(true);
-        impl = new SynthImpl();
-        impl->setInstance(this);
-        auto addParam = [this](SynthParamBase* param, Parameters enumParam) {
-            auto idx = static_cast<size_t>(enumParam);
-            while (this->vecParams.size() <= idx) {
-                this->vecParams.push_back(nullptr);
-            }
-            this->vecParams[idx] = param;
-        };
-        auto addFloatParam = [&addParam](Parameters enumParam) -> SynthParam_Float* {
-            SynthParam_Float* param = new SynthParam_Float(enumParam);
-            addParam(param, enumParam);
-            return param;
-        };
-        auto addIntParam = [&addParam](Parameters enumParam) -> SynthParam_Int* {
-            SynthParam_Int* param = new SynthParam_Int(enumParam);
-            addParam(param, enumParam);
-            return param;
-        };
-        auto addEnumParam = [&addParam](Parameters enumParam) -> SynthParam_Enum* {
-            SynthParam_Enum* param = new SynthParam_Enum(enumParam);
-            addParam(param, enumParam);
-            return param;
-        };
-        addFloatParam(Parameters::FilterCutoff)->setRange(-22000.0, 22000.0)->setRangedValue(20.0);
-        setParamName(getParam(Parameters::FilterCutoff), "Filter Cutoff", "Flt Cut", "%f");
-        addFloatParam(Parameters::FilterResonance)->setRange(0.0, 1.0)->setRangedValue(0.0);
-        setParamName(getParam(Parameters::FilterResonance), "Filter Resonance", "Flt Res", "%f");
-        addFloatParam(Parameters::FilterKeyTracking)->setRange(-24.0, 24.0)->setRangedValue(0.0);
-        setParamName(getParam(Parameters::FilterKeyTracking), "Filter Keytracking", "Flt Trk", "%f");
-
-        addFloatParam(Parameters::FmFine)->setRange(-1.0, 1.0)->setRangedValue(0.0);
-        setParamName(getParam(Parameters::FmFine), "Fm fine", "Fm fine", "%f");
-        addIntParam(Parameters::FmCoarse)->setRange(0, 48)->setRangedValue(0);
-        setParamName(getParam(Parameters::FmCoarse), "Fm Coarse", "Fm Coarse", "%d");
-
-        addFloatParam(Parameters::OscMix)->setRange(0.0, 1.0)->setRangedValue(1.0);
-        setParamName(getParam(Parameters::OscMix), "Oscillator Mix", "OSC Mix", "%f");
-        addFloatParam(Parameters::Osc1Fine)->setRange(-1.0, 1.0)->setRangedValue(0.0);
-        setParamName(getParam(Parameters::Osc1Fine), "Oscillator 1 fine", "OSC1 Fine", "%f");
-        addFloatParam(Parameters::Osc2Fine)->setRange(-1.0, 1.0)->setRangedValue(0.0);
-        setParamName(getParam(Parameters::Osc2Fine), "Oscillator 2 fine", "OSC2 Fine", "%f");
-        addFloatParam(Parameters::Osc1Split)->setRange(-1.25, 1.25)->setRangedValue(0.0);
-        setParamName(getParam(Parameters::Osc1Split), "Oscillator 1 split", "OSC1 Split", "%f");
-        addFloatParam(Parameters::Osc2Split)->setRange(-1.25, 1.25)->setRangedValue(0.0);
-        setParamName(getParam(Parameters::Osc2Split), "Oscillator 2 split", "OSC2 Split", "%f");
-        addIntParam(Parameters::Osc1Coarse)->setRange(-24, 24)->setRangedValue(0);
-        setParamName(getParam(Parameters::Osc1Coarse), "Oscillator 1 coarse", "OSC1 Semi", "%d");
-        addIntParam(Parameters::Osc2Coarse)->setRange(-24, 24)->setRangedValue(0);
-        setParamName(getParam(Parameters::Osc2Coarse), "Oscillator 2 coarse", "OSC2 Semi", "%d");
-
-        addFloatParam(Parameters::VolEnvA)->setRange(0.0, 1.0)->setRangedValue(0.0);
-        addFloatParam(Parameters::VolEnvD)->setRange(0.0, 1.0)->setRangedValue(0.5);
-        addFloatParam(Parameters::VolEnvS)->setRange(0.0, 1.0)->setRangedValue(1.0);
-        addFloatParam(Parameters::VolEnvR)->setRange(0.0, 1.0)->setRangedValue(0.25);
-        addFloatParam(Parameters::VolEnvV)->setRange(0.0, 1.0)->setRangedValue(0.0);
-        setParamName(getParam(Parameters::VolEnvA), "Volume envelope attack time", "EnvA Att", "%f");
-        setParamName(getParam(Parameters::VolEnvD), "Volume envelope decay time", "EnvA Dec", "%f");
-        setParamName(getParam(Parameters::VolEnvS), "Volume envelope sustain", "EnvA Sus", "%f");
-        setParamName(getParam(Parameters::VolEnvR), "Volume envelope release time", "EnvA Rel", "%f");
-        setParamName(getParam(Parameters::VolEnvV), "Volume envelope velocity sensitivity", "EnvA Vel", "%f");
-
-        addFloatParam(Parameters::ModEnvA)->setRange(0.0, 1.0)->setRangedValue(0.0);
-        addFloatParam(Parameters::ModEnvD)->setRange(0.0, 1.0)->setRangedValue(0.5);
-        addFloatParam(Parameters::ModEnvS)->setRange(0.0, 1.0)->setRangedValue(0.5);
-        addFloatParam(Parameters::ModEnvR)->setRange(0.0, 1.0)->setRangedValue(0.5);
-        addFloatParam(Parameters::ModEnvV)->setRange(0.0, 1.0)->setRangedValue(0.0);
-        setParamName(getParam(Parameters::ModEnvA), "Mod envelope attack time", "EnvM Att", "%f");
-        setParamName(getParam(Parameters::ModEnvD), "Mod envelope decay time", "EnvM Dec", "%f");
-        setParamName(getParam(Parameters::ModEnvS), "Mod envelope sustain", "EnvM Sus", "%f");
-        setParamName(getParam(Parameters::ModEnvR), "Mod envelope release time", "EnvM Rel", "%f");
-        setParamName(getParam(Parameters::ModEnvV), "Mod envelope velocity sensitivity", "EnvM Vel", "%f");
-
-        addFloatParam(Parameters::LfoAmount)->setRange(-1.0f, 1.0f)->setRangedValue(0.0);
-        addFloatParam(Parameters::LfoFrequency)->setRange(1/64.0, 16.0)->setRangedValue(4.0);
-        addFloatParam(Parameters::LfoDelay)->setRange(0.001f, 1000.0)->setRangedValue(0.1);
-        setParamName(getParam(Parameters::LfoAmount), "LFO amount", "LFO amt", "%f");
-        setParamName(getParam(Parameters::LfoFrequency), "LFO frequency", "LFO freq", "%f");
-        setParamName(getParam(Parameters::LfoDelay), "LFO ramp", "LFO ramp", "%f");
-
-        addFloatParam(Parameters::VolEnvFm)->setRange(-24.0, 24.0)->setRangedValue(0.0);
-        addFloatParam(Parameters::ModEnvFm)->setRange(-24.0, 24.0)->setRangedValue(0.0);
-        addFloatParam(Parameters::LfoFm)->setRange(-24.0, 24.0)->setRangedValue(0.0);
-        addFloatParam(Parameters::VolEnvCutoff)->setRange(-24000.0, 24000.0)->setRangedValue(0.0);
-        addFloatParam(Parameters::ModEnvCutoff)->setRange(-24000.0, 24000.0)->setRangedValue(0.0);
-        addFloatParam(Parameters::LfoCutoff)->setRange(-2*24000.0, 2*24000.0)->setRangedValue(0.0);
-        addFloatParam(Parameters::GlideLength)->setRange(0.0, 1.0)->setRangedValue(0.0);
-        addFloatParam(Parameters::MasterVolume)->setRange(0.0, 0.5)->setRangedValue(0.25);
-
-        setParamName(getParam(Parameters::VolEnvFm), "Volume envelope to FM amount", "FM Amt EnvA", "%f");
-        setParamName(getParam(Parameters::ModEnvFm), "Modulation envelope to FM amount", "FM Amt EnvM", "%f");
-        setParamName(getParam(Parameters::LfoFm), "LFO to FM amount", "FM Amt LFO", "%f");
-        setParamName(getParam(Parameters::VolEnvCutoff), "Volume envelope to filter cutoff", "Flt EnvA", "%f");
-        setParamName(getParam(Parameters::ModEnvCutoff), "Modulation envelope to filter cutoff", "Flt EnvM", "%f");
-        setParamName(getParam(Parameters::LfoCutoff), "Modulation LFO to filter cutoff", "Flt LFO", "%f");
-        setParamName(getParam(Parameters::GlideLength), "Glide length", "Glide", "%f");
-        setParamName(getParam(Parameters::MasterVolume), "Volume", "Volume", "%f");
-
-
-        addEnumParam(Parameters::Osc1Wave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(0);
-        setParamName(getParam(Parameters::Osc1Wave), "Osc1 Waveform", "Osc1 Waveform", "%d");
-        addEnumParam(Parameters::Osc2Wave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(0);
-        setParamName(getParam(Parameters::Osc2Wave), "Osc2 Waveform", "Osc2 Waveform", "%d");
-        addEnumParam(Parameters::LfoWave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(0);
-        setParamName(getParam(Parameters::LfoWave), "Lfo Waveform", "Lfo Waveform", "%d");
-        addEnumParam(Parameters::VoiceMode)->setStrings(stringsVoiceMode.begin(), stringsVoiceMode.end())->setRangedValue(0);
-        setParamName(getParam(Parameters::VoiceMode), "Voice Mode", "Voice Mode", "%d");
-        addEnumParam(Parameters::FilterMode)->setStrings(stringsFilterMode.begin(), stringsFilterMode.end())->setRangedValue(0);
-        setParamName(getParam(Parameters::FilterMode), "Filter Mode", "Flt Mode", "%d");
-        addEnumParam(Parameters::FmMode)->setStrings(stringsFMMode.begin(), stringsFMMode.end())->setRangedValue(0);
-        setParamName(getParam(Parameters::FmMode), "Fm Mode", "Fm Mode", "%d");
+        programsAreChunks(true);
+        impl->init();
         initPrograms();
-
-        for (auto param : this->vecParams) {
-            this->impl->OnParamChange(param->enumParam);
-        }
     }
 
     void PluginVST2_Synth::writeCurrentProgram() {
@@ -1547,10 +2226,7 @@ namespace PluginSynth {
         }
     }
     SynthParamBase* PluginVST2_Synth::getParam(Parameters enumParam) {
-        if (enumParam >= 0 && enumParam < vecParams.size()) {
-            return vecParams[enumParam];
-        }
-        return nullptr;
+        return impl->getParam(enumParam);
     }
     SynthImpl* PluginVST2_Synth::getSynth() {
         return this->impl;
@@ -1589,7 +2265,7 @@ namespace PluginSynth {
     void PluginVST2_Synth::getParameterDisplay(VstInt32 index, char* text) {
         if (text && index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
-            String valDisplay = param->getValueDisplay();
+            String valDisplay     = param->getValueDisplay();
             vst_strncpy(text, StringAsCStr(valDisplay), PLUGIN_PARAM_STR_MAX_LEN);
         }
     }
@@ -1603,6 +2279,9 @@ namespace PluginSynth {
 
     void PluginVST2_Synth::setParameter(VstInt32 index, float value) {
         if (index >= 0 && index < CtrSize(vecParams)) {
+            if (index == Parameters::GlideLength) {
+                log_printf("GlideLength = %f\n", value);
+            }
             SynthParamBase* param = vecParams[index];
             if (issetprogram && curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
                 auto pParamDouble = staticPrograms[curProgram].getProgramParameter(param->enumParam);
@@ -1634,13 +2313,26 @@ namespace PluginSynth {
     void PluginVST2_Synth::addPropertiesParameterTooltip(Table::tbl& table, int idx) {
         if (idx >= 0 && idx < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[idx];
-            const auto strName = param->name;
+            const auto strName    = param->name;
             const auto strDisplay = param->getValueDisplay();
             table.colSizes.resize(2);
             table.colSizes[0] = table.strW->getStringWidth(strName);
             table.colSizes[1] = table.strW->getStringWidth(strDisplay);
-            table.tableWidth = table.colSizes[0] + table.colSizes[1];
+            table.tableWidth  = table.colSizes[0] + table.colSizes[1];
             table.rows.push_back({ { strName, strDisplay } });
+            switch (param->enumParam) {
+                case Parameters::VolEnvA:
+                case Parameters::VolEnvD:
+                case Parameters::VolEnvR:
+                case Parameters::ModEnvA:
+                case Parameters::ModEnvD:
+                case Parameters::ModEnvR:
+                    table.rows.push_back({ { Table::tblstr{ "Env 1" }, StringFormat("%f", impl->getEnvDuration(param->getAsDouble())) } });
+                    table.rows.push_back({ { Table::tblstr{ "Env 2" }, StringFormat("%f", impl->getEnvDuration2(param->getAsDouble())) } });
+                    break;
+                default:
+                    break;
+            }
         }
     }
 
@@ -1691,6 +2383,43 @@ namespace PluginSynth {
             return 1;
         return -1;// explicitly can't do; 0 => don't know
     }
+    VstInt32 PluginVST2_Synth::getChunk(void** data, bool isPreset) {
+        if (isPreset) {
+            *data = nullptr;
+            return 0;
+        }
+
+        snapshot_t snapshot;
+        if (impl->getSnapshot(snapshot)) {
+            auto pShrdHeapVec = serializeSnapshot(snapshot);
+            lastProgramChunks.push_back(pShrdHeapVec);
+            *data = pShrdHeapVec->data();
+            return static_cast<VstInt32>(pShrdHeapVec->size());
+        }
+        *data = nullptr;
+        return 0;
+    }
+    VstInt32 PluginVST2_Synth::setChunk(void* data, VstInt32 byteSize, bool isPreset) {
+        std::shared_ptr<std::vector<std::byte>> buf;
+        auto sizeData = static_cast<size_t>(byteSize);
+        if (!isPreset && sizeData > 0) {
+            buf = std::make_shared<std::vector<std::byte>>(sizeData);
+            std::memcpy(buf->data(), data, sizeData);
+            snapshot_t snapshotLoaded;
+            if (deserializeSnapshot(buf, snapshotLoaded)) {
+                impl->setSnapshot(snapshotLoaded);
+                if (issetprogram && curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
+                    for (auto& param : vecParams) {
+                        auto pParamDouble = staticPrograms[curProgram].getProgramParameter(param->enumParam);
+                        if (pParamDouble) *pParamDouble = param->getAsDouble();
+                    }
+                }
+                return 1;
+            }
+            return 0;
+        }
+        return 0;
+    }
 
     void PluginVST2_Synth::setSampleRate(float sampleRate) {
         AudioEffectX::setSampleRate(sampleRate);
@@ -1727,7 +2456,7 @@ namespace PluginSynth {
                 memset(inputs[0], 0, sizeof(float) * sampleFrames);
             memset(outputs[0], 0, sizeof(float) * sampleFrames);
         } else if (this->getAeffect()->numOutputs == 2) {
-            VstTimeInfo* timeinfo = getTimeInfo(kVstBarsValid|kVstPpqPosValid|kVstTempoValid|kVstTransportChanged|kVstTimeSigValid);
+            VstTimeInfo* timeinfo = getTimeInfo(kVstBarsValid | kVstPpqPosValid | kVstTempoValid | kVstTransportChanged | kVstTimeSigValid);
             if (timeinfo && timeinfo->flags & kVstTempoValid) {
                 this->impl->setTempo(timeinfo->tempo);
             }
@@ -1743,7 +2472,7 @@ namespace PluginSynth {
             if (inputs)
                 dsp_util::fillChannels(inputs, this->getAeffect()->numInputs, sampleFrames, 0.0f);
             dsp_util::fillChannels(outputs, this->getAeffect()->numOutputs, sampleFrames, 0.0f);
-            this->impl->ProcessReplacing(inputs, outputs, sampleFrames);
+            this->impl->ProcessSynth(inputs, outputs, sampleFrames);
         }
     }
 
@@ -1752,11 +2481,576 @@ namespace PluginSynth {
         setName("Init");
     }
 
-}
+}// namespace PluginSynth
 
 namespace PluginSynth {
+    float getLayoutHeight(guibase* gui) {
+        return gui->theme->get(GuiConstant::CONST_ROW_HEIGHT) * 1.33f;
+    }
+    class guicontainer_modulation_slot_destination : public guictr_base {
+        SynthImpl* const synth;
+        const int32_t slotIndex;
+        const int32_t destSlotIndex;
+        guidropdown_generic<String> dropdown;
+        guiknob knob;
 
+    public:
+        guicontainer_modulation_slot_destination(SynthImpl* _synth, int32_t _slotIndex, int32_t _destSlotIndex)
+            : guictr_base(),
+              synth(_synth),
+              slotIndex(_slotIndex),
+              destSlotIndex(_destSlotIndex),
+              knob(guiknob::knobtype::KNOB_UNLABELED) {
+            padding      = 1;
+            sortChildren = true;
+            setCanMouseHit(true);
+            setLabel(StringFormat("Mod %d Dst %d", _slotIndex, _destSlotIndex));
+            knob.setIsBipolar(true);
+            auto vecOpts = std::vector<String>();
+            vecOpts.emplace_back("None");
+            for (auto param : parametersOrdered) {
+                auto synthParam = synth->getParam(param);
+                if (synthParam && !synthParam->shortName.empty()) {
+                    vecOpts.push_back(synthParam->shortName);
+                } else {
+                    vecOpts.push_back(StringFormat("Param %u", param));
+                }
+            }
+            dropdown.setZOrder(-1);
+            dropdown.setOptions(vecOpts);
+            dropdown.setLabel(StringFormat("Mod %d Dst %d", _slotIndex, _destSlotIndex));
+            dropdown.setCallback([this](int idx, String& value) -> String {
+                if (idx >= 0) {
+                    {
+                        ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                        auto idxOffset  = idx == 0 ? -1 : static_cast<int32_t>(parametersOrdered[idx - 1]);
+                        synth->setModulationDestination(slotIndex, destSlotIndex, idxOffset, knob.getValue());
+                    }
+                    if (parent) {
+                        parent->buttonClicked(this);
+                    }
+                    return value;
+                }
+                return StringFormat("%d", idx);
+            });
+            dropdown.setCurrentString("<unused>");
+            knob.fnValueEditChanged = [this](float prev, float value) {
+                {
+                    ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                    synth->setModulationDestRange(slotIndex, destSlotIndex, knob.getValue());
+                }
+                if (parent) {
+                    parent->buttonClicked(this);
+                }
+            };
+            add(&dropdown);
+            add(&knob);
+        }
+        void setFromSynth() {
+            auto modulation = synth->getModulationIfExists(slotIndex);
+            if (modulation && CtrSize(modulation->destinations) > destSlotIndex) {
+                auto& dest = modulation->destinations[destSlotIndex];
+                if (dest.parameter < 0) {
+                    dropdown.setSelectedIndex(0);
+                } else {
+                    auto idx = std::find(std::begin(parametersOrdered), std::end(parametersOrdered), dest.parameter);
+                    dbgassert(std::end(parametersOrdered) != idx);
+                    dropdown.setSelectedIndex(1 + (idx - std::begin(parametersOrdered)));
+                }
+                knob.setValueInit(static_cast<float>(dest.range));
+            } else {
+                dropdown.setSelectedIndex(0);
+            }
+        }
+        ~guicontainer_modulation_slot_destination() override {
+            removeGuis();
+        }
+        void layout() override {
+            auto cs       = getSizeContent();
+            knob.size     = { cs.y, cs.y };
+            knob.pos      = cs - knob.size;
+            dropdown.pos  = { 0, 0 };
+            dropdown.size = { knob.pos.x - padding, cs.y };
+            for (guibase* gui : guis) {
+                gui->layout();
+            }
+        }
+        void determineSize(ivec2& prefSize) override {
+            prefSize.y = math::roundfS32(getLayoutHeight(this));
+        }
+    };
+    class gui_notify_error : public guictxtmenu_base {
+    protected:
+        bool hadMouseFocus = false;
+        guibutton btnHide;
+        int64_t tmDelay  = 0L;
+        int64_t tmCreate = 0L;
+        String strErrSrc;
+        String strErrMsg;
 
+    public:
+        gui_notify_error(String errSource, String errMessage) : guictxtmenu_base() {
+            setCanMouseHit(true);
+            setBackgroundRendered(true);
+            setBackgroundRenderedInset(false);
+            add(&btnHide);
+            padding           = 6;
+            margin            = 0;
+            canTakeInputFocus = true;
+            strErrSrc         = std::move(errSource);
+            strErrMsg         = std::move(errMessage);
+            btnHide.setText("Hide");
+        }
+        ~gui_notify_error() override {
+            removeGuis();
+        }
+        void setDelay(int64_t _tmDelay) {
+            this->tmDelay  = _tmDelay;
+            this->tmCreate = getTimeMillis();
+        }
+        void onTick(AppCtrl* appctrl) override {
+            auto tmLeft = math::max<int64_t>(0, this->tmDelay - (getTimeMillis() - this->tmCreate));
+            if (tmLeft <= 0) {
+                closeContextMenu();
+            }
+        }
+        void buttonClicked(guibase* button) override {
+            closeContextMenu();
+        }
+        void determineSize(ivec2& prefSize) override {
+        }
+        bool isTransient() const override {
+            return true;
+        }
+        void layout() override {
+            auto cs      = getSizeContent();
+            btnHide.size = ivec2(cs.x / 7, cs.y - padding * 2) - ivec2(padding);
+            btnHide.pos  = ivec2(cs.x - btnHide.size.x - padding, cs.y - btnHide.size.y);
+            btnHide.pos.y /= 2;
+            for (auto* g : guis) {
+                g->layout();
+            }
+            this->fontSize = cs.y * 0.45f;
+        }
+        void render(NVGcontext* vg) override {
+            nvgSave(vg);
+            guictxtmenu_base::render(vg);
+            nvgRestore(vg);
+            if (strErrSrc.length() > 0) {
+                auto cs = getSizeContent();
+                nvgSave(vg);
+                setScissorTransform(vg);
+                ivec2 renderSize(btnHide.pos.x - padding, cs.y);
+                ivec2 renderPos(0);
+                int fontScale = math::roundfS32((this->fontSize > 0 ? this->fontSize : math::min(renderSize.y, renderSize.x)));
+                renderCenteredMultilineText(vg, theme, strErrSrc + "\n" + strErrMsg, fontScale, getLabelColor(), renderPos, renderSize);
+                nvgRestore(vg);
+            }
+        }
+        GuiColor::constant_t getLabelColor() const override {
+            return GuiColor::COL_INVALID_INPUT;
+        }
+    };
+    class guicontainer_modulation_slot_source : public guictr_base {
+        SynthImpl* const synth;
+        const int32_t slotIndex;
+        const int32_t srcSlotIndex;
+        double constant = 0.0;
+        guidropdown_generic<String> dropdownOperator;
+        guidropdown_generic<String> dropdownSource;
+        gui_numberinput_double inputConstant;
+        gui_textfield textfieldFunction;
+        guibutton buttonBipolar;
+        std::function<bool(String)> fnValidateFunction;
+    public:
+        guicontainer_modulation_slot_source(SynthImpl* _synth, int32_t _slotIndex, int32_t _srcSlotIndex)
+            : guictr_base(),
+              synth(_synth),
+              slotIndex(_slotIndex),
+              srcSlotIndex(_srcSlotIndex),
+              inputConstant(&constant) {
+            padding      = 1;
+            sortChildren = true;
+            setCanMouseHit(true);
+            setLabel(StringFormat("Mod %d Input %d", _slotIndex, _srcSlotIndex));
+            {
+                auto vecOpts = std::vector<String>();
+                for (size_t i = 0; i < ModulationOperator::NumModulationOperators; ++i) {
+                    vecOpts.emplace_back(stringsModOp[i]);
+                }
+                // place it right after the source dropdown
+                dropdownOperator.setOptions(vecOpts);
+                // dropdownOperator.setLabel(StringFormat("Mod %d Op %d", slotIndex, srcSlotIndex));
+                dropdownOperator.setCallback([this](int idx, String& value) -> String {
+                    {
+                        ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                        synth->setModulationOperator(slotIndex, srcSlotIndex, idx);
+                    }
+                    if (parent) {
+                        parent->buttonClicked(this);
+                    }
+                    return dropdownOperator.optionToString(value);
+                });
+            }
+            {
+                auto vecOpts = std::vector<String>();
+                vecOpts.emplace_back("None");
+                for (size_t i = 0; i < ModulationSource::NumModulationSources; ++i) {
+                    vecOpts.emplace_back(stringsModSource[i]);
+                }
+                dropdownSource.setZOrder(1);
+                dropdownSource.setOptions(vecOpts);
+                dropdownSource.setLabel(StringFormat("Mod %d Src %d", slotIndex, srcSlotIndex));
+                dropdownSource.setCallback([this](int idx, String& value) -> String {
+                    if (idx >= 0) {
+                        {
+                            ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                            synth->setModulationSource(slotIndex, srcSlotIndex, idx - 1);
+                        }
+                        if (parent) {
+                            parent->buttonClicked(this);
+                        }
+                        return dropdownSource.optionToString(value);
+                    }
+                    return "";
+                });
+            }
+            {
+                inputConstant.setLabel(StringFormat("Mod %d Constant %d", slotIndex, srcSlotIndex));
+                inputConstant.fnValueEditChanged = [this](gui_numberinput_field_base*, double value) {
+                    {
+                        ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                        synth->setModulationConstant(slotIndex, srcSlotIndex, value);
+                    }
+                    if (parent) {
+                        parent->buttonClicked(this);
+                    }
+                };
+                inputConstant.fnClamp = [](double value) -> double {
+                    return math::clamp(value, -10.0, 10.0);
+                };
+            }
+            {
+                buttonBipolar.setLabel("Bipolar");
+            }
+            {
+                textfieldFunction.setLabel(StringFormat("Mod %d Function %d", slotIndex, srcSlotIndex));
+                // textfieldFunction.setTextfieldColor(GuiColor::COL_TEXTBOX_TEXT);
+                textfieldFunction.setInputActivates(true);
+                textfieldFunction.setReturnCommits(true);
+                fnValidateFunction = ([this](const String& value) {
+                    {
+                        try {
+                            MathExpr expr = MathExpr::parse(value);
+                            {
+                                ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                                synth->setModulationFunction(slotIndex, srcSlotIndex, std::move(expr));
+                            }
+                            textfieldFunction.setLabel(StringFormat("Mod %d Function %d", slotIndex, srcSlotIndex));
+                            textfieldFunction.setTextfieldColor(GuiColor::COL_TEXTBOX_TEXT);
+                        } catch (mu::Parser::exception_type& e) {
+                            log_lf(Log::L_ERROR, "Error in expression: %s\n", e.GetMsg().c_str());
+                            textfieldFunction.setLabel(StringFormat("Error in expression: %s", e.GetMsg().c_str()));
+                            textfieldFunction.setTextfieldColor(GuiColor::COL_INVALID_INPUT);
+                            // auto tooltip       = new gui_notify_error("Failed parsing expression", e.GetMsg());
+                            // auto ctrlSize      = dawCtrl->m_size;
+                            // tooltip->size      = ivec2(620, 80);
+                            // tooltip->maxHeight = tooltip->size.y;
+                            // tooltip->layout();
+                            // tooltip->setDelay(10000);
+                            // dawCtrl->openOverlayGui(
+                            //     tooltip,
+                            //     ivec2(ctrlSize.x / 2, ctrlSize.y - 100) - tooltip->size / 2,
+                            //     BASECTRL_WND_POS_RELATIVE | BASECTRL_WND_IS_TOOLTIP);
+                            {
+                                ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                                MathExpr expr;
+                                expr.str        = value;
+                                expr.parsedExpr = nullptr;
+                                {
+                                    ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                                    synth->setModulationFunction(slotIndex, srcSlotIndex, std::move(expr));
+                                }
+                            }
+                        }
+                    }
+                    if (parent) {
+                        parent->buttonClicked(this);
+                    }
+                    return true;
+                });
+                textfieldFunction.setChangeCallback(fnValidateFunction);
+                textfieldFunction.setEndEditCallback(fnValidateFunction);
+            }
+            add(&dropdownOperator);
+            add(&dropdownSource);
+            add(&inputConstant);
+            add(&textfieldFunction);
+            add(&buttonBipolar);
+        }
+        ~guicontainer_modulation_slot_source() override {
+            removeGuis();
+        }
+        void setFromSynth() {
+            auto modulation = synth->getModulationIfExists(slotIndex);
+            dropdownOperator.setVisible(srcSlotIndex > 0 && (modulation && CtrSize(modulation->inputs) > srcSlotIndex));
+            if (modulation && CtrSize(modulation->inputs) > srcSlotIndex) {
+                auto& src = modulation->inputs[srcSlotIndex];
+                dropdownSource.setSelectedIndex(static_cast<int32_t>(src.source + 1));
+                dropdownOperator.setSelectedIndex(static_cast<int32_t>(src.op));
+                textfieldFunction.setVisible(textfieldFunction.isEditing() || src.source == ModulationSource::Function);
+                if (!textfieldFunction.isEditing()) {
+                    textfieldFunction.setValue(src.function.str);
+                    if (!src.function.str.empty() && !src.function.parsedExpr) {
+                        textfieldFunction.setLabel("Error in expression");
+                        textfieldFunction.setTextfieldColor(GuiColor::COL_INVALID_INPUT);
+                    }
+                }
+                dropdownOperator.setVisible(dropdownOperator.isVisible() && (src.source != ModulationSource::Function));
+                inputConstant.setVisible(src.source == ModulationSource::Constant);
+                buttonBipolar.setVisible(src.source != ModulationSource::Constant && src.source != ModulationSource::Function);
+                buttonBipolar.setText(src.isBipolar ? "+/-" : "+");
+                buttonBipolar.setLabel(src.isBipolar ? "Bipolar" : "Unipolar");
+                constant = src.value;
+            } else {
+                dropdownSource.setSelectedIndex(0);
+                dropdownOperator.setSelectedIndex(0);
+                textfieldFunction.setVisible(false);
+                inputConstant.setVisible(false);
+                buttonBipolar.setVisible(false);
+                buttonBipolar.setText("+");
+                buttonBipolar.setLabel("Unipolar");
+                constant = 1.0;
+            }
+        }
+        void layout() override {
+            auto cs = getSizeContent();
+            dbgassert(cs.x > 0);
+            auto sizeRightOperator = cs.x;
+            dropdownSource.pos     = { 0, 0 };
+            if (dropdownOperator.isVisible()) {
+                auto partialSize      = cs.x * 1 / 4;
+                dropdownOperator.pos  = {};
+                dropdownOperator.size = { partialSize - padding, cs.y };
+                sizeRightOperator     = cs.x - partialSize;
+                dropdownSource.pos.x  = dropdownOperator.right() + padding;
+            }
+            auto widthButtonBipolar = math::roundfS32(size.y);
+            if (buttonBipolar.isVisible()) {
+                sizeRightOperator -= widthButtonBipolar;
+                buttonBipolar.size = { widthButtonBipolar, cs.y };
+                buttonBipolar.pos  = { cs.x - widthButtonBipolar, 0 };
+            }
+            dropdownSource.size = { sizeRightOperator - padding, cs.y };
+            if (inputConstant.isVisible()) {
+                auto partialSize2     = (sizeRightOperator) *3 / 10;
+                dropdownSource.size.x = dropdownSource.size.x - partialSize2 - padding;
+                inputConstant.size    = { partialSize2, cs.y };
+                inputConstant.pos     = { dropdownSource.right() + padding, 0 };
+            }
+            if (textfieldFunction.isVisible()) {
+                auto partialSize2      = (sizeRightOperator) *7 / 10;
+                dropdownSource.size.x  = dropdownSource.size.x - partialSize2 - padding;
+                textfieldFunction.size = { partialSize2, cs.y };
+                textfieldFunction.pos  = { dropdownSource.right() + padding, 0 };
+                // textfieldFunction.setFontSize(textfieldFunction.getSize.y);
+            }
+            for (guibase* gui : guis) {
+                gui->layout();
+                dbgassert(!gui->isVisible() || (gui->size.x > 0 && gui->size.y > 0));
+            }
+        }
+        void buttonClicked(guibase* button) override {
+            if (button == &buttonBipolar) {
+                {
+
+                    ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                    auto modulation = synth->getModulationIfExists(slotIndex);
+                    if (modulation && CtrSize(modulation->inputs) > srcSlotIndex) {
+                        auto& input = modulation->inputs[srcSlotIndex];
+                        synth->setModulationBiPolar(slotIndex, srcSlotIndex, !input.isBipolar);
+                    }
+                }
+                if (parent) {
+                    parent->buttonClicked(this);
+                }
+            }
+            parent->buttonClicked(button);
+            guictr_base::buttonClicked(button);
+        }
+        void determineSize(ivec2& prefSize) override {
+            prefSize.y = math::roundfS32(getLayoutHeight(this));
+        }
+    };
+    class guicontainer_modulation_slot : public guictr_base {
+        SynthImpl* const synth;
+        const int32_t slotIndex;
+        std::vector<guicontainer_modulation_slot_source*> sources;
+        std::vector<guicontainer_modulation_slot_destination*> destinations;
+
+    public:
+        explicit guicontainer_modulation_slot(SynthImpl* synth, int32_t slotIndex)
+            : guictr_base(),
+              synth(synth),
+              slotIndex(slotIndex) {
+            padding      = 2;
+            sortChildren = true;
+            setCanMouseHit(true);
+            setLabel(StringFormat("Modulation %d", slotIndex + 1));
+        }
+        ~guicontainer_modulation_slot() override {
+            removeGuis();
+            for (auto& d : sources) {
+                delete d;
+            }
+            for (auto& d : destinations) {
+                delete d;
+            }
+        }
+        void setFromSynth() {
+            auto modulation     = synth->getModulationIfExists(slotIndex);
+            auto modSourceCount = modulation ? modulation->inputs.size() : 0;
+            auto modDestCount   = modulation ? modulation->destinations.size() : 0;
+            while (sources.size() > modSourceCount + 1) {
+                remove(sources.back());
+                delete sources.back();
+                sources.pop_back();
+            }
+            while (sources.size() < modSourceCount + 1) {
+                const auto srcIdx = CtrSize(sources);
+                auto dropdown     = new guicontainer_modulation_slot_source(synth, slotIndex, srcIdx);
+                dropdown->setZOrder(-srcIdx * 10);
+                sources.push_back(dropdown);
+                add(sources.back());
+            }
+            while (destinations.size() > 1 && destinations.size() > modDestCount + 1) {
+                remove(destinations.back());
+                delete destinations.back();
+                destinations.pop_back();
+            }
+            while (destinations.size() < modDestCount + 1) {
+                const auto dstIdx = CtrSize(destinations);
+                auto dstSlot      = new guicontainer_modulation_slot_destination(synth, slotIndex, dstIdx);
+                // place it after source and operator dropdowns
+                dstSlot->setZOrder(-(1000 + dstIdx * 10 + 2));
+                destinations.push_back(dstSlot);
+                add(destinations.back());
+            }
+            for (auto& src : sources) {
+                src->setFromSynth();
+            }
+            for (auto& dst : destinations) {
+                dst->setFromSynth();
+            }
+        }
+        void render(NVGcontext* vg) override {
+            this->renderDebug(vg, dbgcolorsArray[1 + (slotIndex % (dbgcolorsArraySize - 1))]);
+            guictr_base::render(vg);
+        }
+        void buttonClicked(guibase* button) override {
+            parent->buttonClicked(button);
+            guictr_base::buttonClicked(button);
+        }
+        void determineSize(ivec2& prefSize) override {
+            ivec2 sizeTotal = {};
+            for (auto& src : guis) {
+                src->size = prefSize;
+                src->determineSize(src->size);
+                sizeTotal.y += src->size.y;
+            }
+            prefSize.y = sizeTotal.y;
+        }
+        void layout() override {
+            auto cs   = getSizeContent();
+            ivec2 pos = {};
+            for (auto& slot : guis) {
+                slot->pos    = pos;
+                slot->size.x = cs.x;
+                slot->size.y = cs.y / CtrSize(guis);
+                slot->layout();
+                pos.y = slot->bottom();
+            }
+        }
+    };
+    class guicontainer_modulation : public guictr_base {
+        SynthImpl* const synth;
+        std::vector<guicontainer_modulation_slot*> slots;
+        bool guiNeedsRefresh = true;
+
+    public:
+        explicit guicontainer_modulation(SynthImpl* synth)
+            : guictr_base(),
+              synth(synth) {
+            padding = 2;
+            setLabel("Modulation");
+            setCanMouseHit(true);
+        }
+        ~guicontainer_modulation() override {
+            removeGuis();
+            for (auto& slot : slots) {
+                delete slot;
+            }
+        }
+        void layout() override {
+            auto cs   = getSizeContent();
+            ivec2 pos = {};
+            for (auto& slot : slots) {
+                slot->size = cs;
+                slot->determineSize(slot->size);
+                slot->pos = pos;
+                slot->layout();
+                pos.y = slot->bottom();
+            }
+            for (guibase* gui : guis) {
+                if (!stl_contains(slots, gui)) {
+                    gui->layout();
+                }
+            }
+        }
+        void setFromSynth() {
+            auto modulations = synth->getModulationCount();
+            while (CtrSize(slots) <= modulations) {
+                slots.push_back(new guicontainer_modulation_slot(synth, CtrSize(slots)));
+                add(slots.back());
+            }
+            for (auto& slot : slots) {
+                slot->setFromSynth();
+            }
+            if (parent && size.x > 0 && size.y > 0) {
+                layout();
+            }
+        }
+        void buttonClicked(guibase* button) override {
+            guiNeedsRefresh = true;
+            guictr_base::buttonClicked(button);
+        }
+        void onTick(AppCtrl* ctrl) override {
+            // if (guiNeedsRefresh) {
+            // guiNeedsRefresh = false;
+            setFromSynth();
+            // }
+            guictr_base::onTick(ctrl);
+        }
+    };
+
+    class guiknob_synthparam : public guiknob_pluginparam {
+        SynthImpl* const synth;
+        const Parameters param;
+
+    public:
+        explicit guiknob_synthparam(SynthImpl* _impl, Parameters _param, guiknob::knobtype _knobtype = guiknob::knobtype::KNOB_LABELED)
+            : guiknob_pluginparam(PARAM_OFFSET_EXTERNAL + static_cast<int32_t>(_param), static_cast<int32_t>(_param), _knobtype),
+              synth(_impl),
+              param(_param) {
+        }
+        std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges() override {
+            auto synthParam = synth->getParam(param);
+            if (synthParam) {
+                return synth->getParamModulationRanges(param);
+            }
+            return std::nullopt;
+        }
+    };
     class guicontainer_plugin_synth : public guictr_base {
         struct _synth_gui_param_knob {
             guiknob_pluginparam* knob;
@@ -1767,14 +3061,16 @@ namespace PluginSynth {
         gui_textfield editfield;
         std::vector<_synth_gui_param_knob> knobs;
         std::map<Parameters, guiknob_pluginparam*> mapKnobs;
+        guicontainer_modulation modulation;
         gui_list list;
 
     public:
         explicit guicontainer_plugin_synth(PluginVST2_Synth* plugin)
             : guictr_base(),
-            plugin(plugin),
-            module(plugin->getHostSideHandle())
-        {
+              plugin(plugin),
+              module(plugin->getHostSideHandle()),
+              modulation(plugin->getSynth()) {
+
             setBackgroundRendered(true);
             editfield.setFlag(FLG_NO_LAYOUT, true);
             editfield.setVisible(false);
@@ -1783,12 +3079,17 @@ namespace PluginSynth {
             padding = 4;
             // margin  = 4;
             knobs.reserve(Parameters::kNumParams);
-            for (int i = 0; i < (int) Parameters::kNumParams; i++) {
-                knobs.push_back(_synth_gui_param_knob{new guiknob_pluginparam(PARAM_OFFSET_EXTERNAL+i, i, guiknob::knobtype::SLIDER_LABELED), static_cast<Parameters>(i)});
+            for (auto param : parametersOrdered) {
+                knobs.push_back(_synth_gui_param_knob{ new guiknob_synthparam(
+                                                               plugin->getSynth(),
+                                                               param,
+                                                               guiknob::knobtype::SLIDER_LABELED),
+                                                       param });
                 mapKnobs[knobs.back().param] = knobs.back().knob;
                 add(knobs.back().knob);
             }
             add(&list);
+            add(&modulation);
             add(&editfield);
         }
         ~guicontainer_plugin_synth() override {
@@ -1821,6 +3122,7 @@ namespace PluginSynth {
                 synthKnob.knob->setAudioEffect(plugin);
 #endif
             }
+            modulation.setFromSynth();
         }
         void onGuiClose() {
             for (auto& synthKnob : knobs) {
@@ -1835,9 +3137,12 @@ namespace PluginSynth {
 
         void onTick(AppCtrl* ctrl) override {
             PluginVST2_Synth* thisImpl = this->plugin;
-            std::vector<int> heldNotes = thisImpl->getSynth()->getHeldNotes();//TODO: not threadsafe
+            auto synthImpl             = plugin->getSynth();
+            std::vector<int> heldNotes = synthImpl->getHeldNotes();//TODO: not threadsafe
             std::vector<String> strings;
-            String s                   = "Held notes: ";
+            strings.reserve(8);
+            strings.push_back(StringFormat("Voices %d", synthImpl->getActiveVoiceCount()));
+            String s = "Held notes: ";
             for (int i : heldNotes) {
                 s += String(noteName(i)) + ",";
             }
@@ -1860,7 +3165,7 @@ namespace PluginSynth {
             auto& list = this->list.getListRef();
 
             class gui_synth_stats_list_entry : public gui_list_entry {
-                public:
+            public:
                 String string;
                 gui_synth_stats_list_entry() {
                     setBackgroundRendered(true);
@@ -1911,24 +3216,29 @@ namespace PluginSynth {
             }
         }
         void layout() override {
-            auto knobSize    = ivec2(64, 128+64);
-            auto knobPos     = ivec2(padding);
+            auto cs                = getSizeContent();
+            const auto modCtrWidth = 300;
+            modulation.size        = ivec2(modCtrWidth, cs.y) - ivec2(INSET_CTR_SPACING * 2);
+            modulation.pos         = ivec2(cs.x - modCtrWidth, 0) + ivec2(INSET_CTR_SPACING);
+            cs                     = cs - ivec2(modCtrWidth, 0);
+            auto knobSize          = ivec2(64, 128 + 64);
+            auto knobPos           = ivec2(padding);
             for (auto& synthKnob : knobs) {
-                synthKnob.knob->pos = knobPos;
+                synthKnob.knob->pos  = knobPos;
                 synthKnob.knob->size = knobSize;
                 synthKnob.knob->setLabelsFontScale(0.7f, 0.8f);
                 knobPos.x += knobSize.x + INSET_CTR_SPACING;
-                if (knobPos.x + knobSize.x > size.x - padding) {
+                if (knobPos.x + knobSize.x > cs.x - padding) {
                     knobPos.x = padding;
                     knobPos.y += knobSize.y + INSET_CTR_SPACING;
                 }
             }
-            if (knobPos.x + knobSize.x > size.x - padding) {
+            if (knobPos.x + knobSize.x > cs.x - padding) {
                 knobPos.x = padding;
                 knobPos.y += knobSize.y + INSET_CTR_SPACING;
             }
-            list.pos = knobPos;
-            list.size = size - list.pos - ivec2(padding, padding);
+            list.pos  = knobPos;
+            list.size = cs - list.pos - ivec2(padding, padding);
             for (guibase* gui : guis) {
                 gui->layout();
             }
@@ -1944,10 +3254,10 @@ namespace PluginSynth {
         void buttonClicked(guibase* button) override {
             auto param = dynamic_cast<guiknob_pluginparam*>(button);
             if (param && module) {
-                auto paramIdx = param->getParamIdx();
-                auto paramValue = module->getParamValueDisplay(paramIdx);
+                auto paramIdx          = param->getParamIdx();
+                auto paramValue        = module->getParamValueDisplay(paramIdx);
                 editfield.mCallbackEnd = [this, param, paramValue, paramIdx](const std::string& str) {
-                    auto paramConverted = module->convertParamValueDisplay(param->getParamIdx(), param_unit_t{str, paramValue.unit});
+                    auto paramConverted = module->convertParamValueDisplay(param->getParamIdx(), param_unit_t{ str, paramValue.unit });
                     if (paramConverted.success) {
                         module->setParamValue(paramIdx, paramConverted.floatVal, FLG_PAR_UPDATE_USER);
                         if (param->fnValueEditChanged)
@@ -1956,14 +3266,14 @@ namespace PluginSynth {
                     editfield.setVisible(false);
                     return true;
                 };
-                auto layout = param->getLayout();
-                editfield.pos = layout.pValue;
+                auto layout    = param->getLayout();
+                editfield.pos  = layout.pValue;
                 editfield.size = layout.sValue;
                 editfield.setVisible(true);
                 editfield.layout();
                 editfield.setValue(paramValue.value);
                 editfield.setSelectionRange(-1, -1);
-                editfield.setFontSize(layout.valueHeight * theme->getFloat(GuiConstant::CONST_FONT_SCALE));
+                editfield.setFontSize(layout.valueHeight * layout.fontScaleValue);
                 parentCtrl->focusGui(&editfield);
                 return;
             }
@@ -1983,4 +3293,4 @@ namespace PluginSynth {
         this->views.push_back(view);
         return view;
     }
-}
+}// namespace PluginSynth

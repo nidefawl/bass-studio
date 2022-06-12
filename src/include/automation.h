@@ -94,6 +94,7 @@ struct param_modulation_range_t {
     int32_t paramIdx;
     double range;
     bool isBiPolar;
+    double currentVal;
 };
 struct automatable_param_t {
     int32_t idx        = -1;
