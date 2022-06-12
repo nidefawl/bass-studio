@@ -52,7 +52,7 @@ public:
 //        }
 //        return false;
 //    }
-    bool isTransient() override {
+    bool isTransient() const override {
 //        return !hadMouseFocus;
         return false;
     }

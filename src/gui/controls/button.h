@@ -16,7 +16,6 @@ class guibutton : public guibase {
 protected:
     GuiColor::constant_t buttonColor;
     String str         = "";
-    String tooltipText = "";
 
 public:
     void (*drawFn)(NVGcontext*, ivec2&, ivec2&, const NVGcolor&, int drawParm, int drawParm2) = NULL;
@@ -51,19 +50,12 @@ public:
     const String& getText() const {
         return str;
     }
-    void setTooltipText(String _tooltipText) {
-        tooltipText = _tooltipText;
-    }
-    String getTooltipText() {
-        return tooltipText.empty() ? label : tooltipText;
-    }
     void render(NVGcontext* vg) override {
         int32_t fl = getStateFlags();
         renderWidgetBorder(vg, fl);
         renderButtonLabel(vg, fl);
     }
     void renderButtonLabel(NVGcontext* vg, int32_t stateFlags);
-    guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
     virtual bool getState() const {
         return true;
     }

@@ -127,7 +127,7 @@ namespace {
             }
             return false;
         }
-        bool isTransient() override {
+        bool isTransient() const override {
             return !hadMouseFocus;
         }
 

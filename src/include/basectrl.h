@@ -421,7 +421,6 @@ public:
         this->mainWindow->getPos(&windowPos);
         return windowPos + ivec2(vec2(p) * (1.0f / m_scale));
     }
-protected:
     /**
      * openOverlayGui
      * @param b
@@ -429,6 +428,7 @@ protected:
      * @param flags @see BASECTRL_WND_* defines
      */
     void openOverlayGui(guictxtmenu_base* b, ivec2 pos, int flags);
+protected:
     void dragContainerRelayout(drag_ctr_event evt) override {}
 };
 class guictr_scrollbar;

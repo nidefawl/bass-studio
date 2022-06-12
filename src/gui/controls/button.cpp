@@ -1,25 +1,7 @@
 #include "button.h"
 #include "gui/gui.h"
 #include "gui/container/container.h"
-#include "gui/tooltip/tooltip.h"
 #include "renderresources.h"
-
-
-using Table::table_entry_t;
-using Table::tbl;
-using Table::tbl_row_t;
-using Table::tblfloat;
-using Table::tblint;
-using Table::tblstr;
-using Table::tblString;
-
-template<>
-void guitooltip<guibutton>::setContent() {
-    table.tableWidth = 140;
-    tbl_row_t row{};
-    row.cols.push_back(tblString{ptr->getTooltipText()});
-    table.rows.push_back(row);
-}
 
 GuiColor::constant_t guibutton::getBackgroundColorFromState(int32_t stateflags) const {
     if ((stateflags & FLG_HAS_COLOR_BG) && getState()) {
@@ -44,12 +26,4 @@ void guibutton::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
         }
         nvgRestore(vg);
     }
-}
-guictxtmenu_base* guibutton::getTooltip(AppCtrl* appctrl) {
-    if (!label.empty()) {
-
-        auto tooltip = new guitooltip<guibutton>(this);
-        return tooltip;
-    }
-    return nullptr;
 }

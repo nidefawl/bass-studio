@@ -2,7 +2,9 @@
 #include <nanovg.h>
 #include <nanovg_min.h>
 #include <typeinfo>
+#include <utility>
 #include "assert_dbg.h"
+#include "gui/tooltip/tooltip.h"
 #include "guiglobals.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
@@ -576,6 +578,25 @@ void guibase::setParent(guibase* parent) {
 }
 String guibase::getClassName() const {
     return typeName(*this);
+}
+
+template<>
+void guitooltip<guibase>::setContent() {
+    table.tableWidth = 140;
+    auto cell = Table::tblString{ptr->getTooltipText()};
+    if (table.strW) {
+        table.tableWidth = table.strW->getStringWidth(cell.str);
+    }
+    Table::tbl_row_t row{{std::move(cell)}};
+    table.rows.push_back(std::move(row));
+}
+
+guictxtmenu_base* guibase::getTooltip(AppCtrl* appctrl) {
+    if (!label.empty()) {
+        auto tooltip = new guitooltip<guibase>(this);
+        return tooltip;
+    }
+    return nullptr;
 }
 
 namespace DebugAlloc {

@@ -20,6 +20,7 @@
 #include "meter.h"
 #include "platform.h"
 #include "renderresources.h"
+#include "seq_util.h"
 #include "str_util.h"
 #include "gui/views/controls.h"
 #include "tls.h"
@@ -55,12 +56,12 @@ public:
     std::vector<String> options;
     std::function<void(int)> cbOnOptionSelected;
     std::function<String()> fnGetCurrentVal;
-    std::function<uint32_t()> fnGetCurrentIdx;
+    std::function<int32_t()> fnGetCurrentIdx;
 
 public:
-    uint32_t getSelectIndex() override { return fnGetCurrentIdx ? fnGetCurrentIdx() : 0xFFFFFFFF; }
-    uint32_t getLastIndex()  override { return options.size(); }
-    void setSelectedIndex(uint32_t idx)  override { clicked(idx); }
+    int32_t getSelectIndex() override { return fnGetCurrentIdx ? fnGetCurrentIdx() : -1; }
+    int32_t getLastIndex()  override { return CtrSize(options); }
+    void setSelectedIndex(int32_t idx)  override { clicked(idx); }
     String getString() override { return fnGetCurrentVal ? fnGetCurrentVal() : "<null>"; }
     void handleDraggedRelease(MouseEvent& evt) override {
         if (options.empty()) return;

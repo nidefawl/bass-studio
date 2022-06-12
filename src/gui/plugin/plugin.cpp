@@ -1055,19 +1055,19 @@ void guiplugin::addProperties(Table::tbl* table) {
     effect->addPropertiesParameterList(*table);
 }
 
-void guidropdownprogram::setSelectedIndex(uint32_t idx) {
+void guidropdownprogram::setSelectedIndex(int32_t idx) {
     if (idx < getLastIndex()) {
         plugin->setCurrentProgram(idx);
     }
 }
 
-uint32_t guidropdownprogram::getLastIndex() {
+int32_t guidropdownprogram::getLastIndex() {
     uint32_t maxProgram = 0;
     plugin->getNumberOfPrograms(maxProgram);
-    return maxProgram;
+    return static_cast<int32_t>(maxProgram);
 }
 
-uint32_t guidropdownprogram::getSelectIndex() {
+int32_t guidropdownprogram::getSelectIndex() {
     uint32_t index = 0;
     plugin->getCurrentProgram(index);
     return index;

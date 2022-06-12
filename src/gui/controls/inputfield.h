@@ -49,7 +49,7 @@ template<typename T>
 class gui_numberinput_field_generic : public gui_numberinput_field_base {
 protected:
     T* number;
-
+    const char* strFormat = nullptr;
 public:
     std::function<void(gui_numberinput_field_base*, T)> fnValueEditChanged;
     std::function<T(T)> fnClamp;
@@ -61,6 +61,9 @@ public:
     }
     virtual T getValue() {
         return *number;
+    }
+    void setStringFormat(const char* strFormat) {
+        this->strFormat = strFormat;
     }
     virtual T parseLiteral(const char* szNumber);
     virtual String valueToStringLiteral(T val);

@@ -1,6 +1,7 @@
 #include "inputfield.h"
 
 #include "keyboard.h"
+#include "str_util.h"
 
 void gui_numberinput_field_base::render(NVGcontext* vg) {
     const auto stateFlags = getStateFlags();
@@ -156,7 +157,7 @@ int32_t gui_numberinput_field_generic<int32_t>::parseLiteral(const char* szNumbe
 }
 template<>
 String gui_numberinput_field_generic<int32_t>::valueToStringLiteral(int32_t val) {
-    return StringFormat("%d", val);
+    return StringFormat(strFormat ? strFormat : "%d", val);
 }
 
 template<>
@@ -177,7 +178,7 @@ uint32_t gui_numberinput_field_generic<uint32_t>::parseLiteral(const char* szNum
 }
 template<>
 String gui_numberinput_field_generic<uint32_t>::valueToStringLiteral(uint32_t val) {
-    return StringFormat("%d", val);
+    return StringFormat(strFormat ? strFormat : "%d", val);
 }
 
 template<>
@@ -198,7 +199,7 @@ float gui_numberinput_field_generic<float>::parseLiteral(const char* szNumber) {
 }
 template<>
 String gui_numberinput_field_generic<float>::valueToStringLiteral(float val) {
-    return StringFormat("%.2f", val);
+    return StringFormat(strFormat ? strFormat : "%.3f", val);
 }
 template<>
 void gui_numberinput_field_generic<float>::onMouseDragValue(int32_t disty, int32_t absy) {
@@ -215,7 +216,7 @@ void gui_numberinput_field_generic<float>::onKeyInputChangeValue(ivec2 direction
 
 template<>
 String gui_numberinput_field_generic<double>::valueToStringLiteral(double val) {
-    return StringFormat("%.3f", val);
+    return StringFormat(strFormat ? strFormat : "%.3f", val);
 }
 template<>
 double gui_numberinput_field_generic<double>::parseLiteral(const char* szNumber) {

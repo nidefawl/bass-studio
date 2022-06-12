@@ -20,6 +20,7 @@
 #include "logging.h"
 #include "automation.h"
 #include "host/mainctrl.h"
+#include <cstdint>
 #include <nanovg.h>
 #include <nanovg_min.h>
 #if BUILD_VSTHOST
@@ -87,9 +88,10 @@ void guiknob::handleDraggedMove(MouseEvent& evt) {
         if (math::abs(disty) < 1)
             return;
         float value = lastVal;
-        float scale = isCtrl(evt.kbmods) ? 2000.0f : 200.0f;
-        float delta = disty / scale;
-        if (math::abs(delta) > 1e-2f) {
+        float scaleCtrlFine = isCtrl(evt.kbmods) ? 20.0f : 1.0f;
+        float scaleGlobal = 400.0f;
+        float delta = disty / (scaleCtrlFine * scaleGlobal);
+        if (math::abs(delta) > 1e-12f) {
             value -= delta;
             if (!changedValue && fnValueEditBegin) {
                 fnValueEditBegin(lastVal, value);
@@ -153,44 +155,55 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
             auto numParams = CtrSize(*modRangesOptional);
             dbgassert(numParams);
             for (auto& param : *modRangesOptional) {
-                auto color = dbgcolorsArray[1 + (param.sourceId % dbgcolorsArraySize)]; color.a = 0.9f;
-                auto posModulation = height - height * static_cast<float>(val);
-                auto heightModulation = height*static_cast<float>(param.range)*(param.isBiPolar?2.0f:1.0f);
-                if (param.isBiPolar) {
-                    posModulation -= heightModulation * 0.5f;
-                } else {
-                    posModulation -= heightModulation;
-                }
-                vec4 r = {
-                    0,
-                    posModulation,
-                    static_cast<float>(insetS.x),
-                    heightModulation
-                };
-                // clip rect to 0, 0, width, height
-                if (r.y < 0) {
-                    r.w += r.y;
-                    r.y = 0;
-                }
-                if (r.x < 0) {
-                    r.z += r.x;
-                    r.x = 0;
-                }
-                if (r.w < 0) {
-                    r.y += r.w;
-                    r.w = -r.w;
-                }
-                if (r.y + r.w > height) {
-                    r.w = height - r.y;
-                }
-                if (r.x + r.z > width) {
-                    r.z = width - r.x;
-                }
-                if (fabs(r.z) > 0.2f && fabs(r.w) > 0.2f) {
-                    nvgBeginPath(vg);
-                    nvgRect(vg, cx + r.x, cy + r.y, r.z, r.w);
-                    nvgFillColor(vg, color);
-                    nvgFill(vg);
+                for (int32_t modIdx = 0; modIdx < 2; modIdx++) {
+                    auto posModulation = height - height * static_cast<float>(val);
+                    NVGcolor color;
+                    if (modIdx == 0) {
+                        color = dbgcolorsArray[1 + (param.sourceId % (dbgcolorsArraySize-1))];
+                        color.a = 0.9f;
+                    } else {
+                        color = dbgcolorsArray[0];
+                        color.a = 0.4f;
+                    }
+                    auto p = modIdx == 0 ? param.range : param.currentVal;
+                    auto heightModulation = height*static_cast<float>(p)*(param.isBiPolar?2.0f:1.0f);
+                    if (param.isBiPolar) {
+                        posModulation -= heightModulation * 0.5f;
+                    } else {
+                        posModulation -= heightModulation;
+                    }
+                    vec4 r = {
+                        0,
+                        posModulation,
+                        static_cast<float>(insetS.x),
+                        heightModulation
+                    };
+                    // clip rect to 0, 0, width, height
+                    if (r.w < 0) {
+                        r.y += r.w;
+                        r.w = -r.w;
+                    }
+                    if (r.y < 0) {
+                        r.w += r.y;
+                        r.y = 0;
+                    }
+                    if (r.x < 0) {
+                        r.z += r.x;
+                        r.x = 0;
+                    }
+                    if (r.y + r.w > height) {
+                        r.w = height - r.y;
+                    }
+                    if (r.x + r.z > width) {
+                        r.z = width - r.x;
+                    }
+                    if (fabs(r.z) > 0.2f && fabs(r.w) > 0.2f) {
+                        nvgBeginPath(vg);
+                        nvgRect(vg, cx + r.x, cy + r.y, r.z, r.w);
+                        dbgassert(r.x >= 0 && r.y >= 0 && r.z <= insetS.x && r.w <= insetS.y);
+                        nvgFillColor(vg, color);
+                        nvgFill(vg);
+                    }
                 }
             }
         }

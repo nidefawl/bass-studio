@@ -55,9 +55,9 @@ public:
             }
         }
     }
-    void setSelectedIdx(int _id) {
-        if (_id >= 0) {
-            auto& option = options.at(_id);
+    void setSelectedIndex(int32_t idx) override {
+        if (idx >= 0) {
+            auto& option = options.at(idx);
             current = optionToString(option);
         }
     }

@@ -31,14 +31,14 @@ public:
     bool handleCharInput(uint32_t codepoint) override {
         return false;
     }
-    virtual void select(dropdown_field_selectitem req, uint32_t idxOffset);
-    virtual uint32_t getSelectIndex() {
-        return 0xFFFFFFFF;
+    virtual void select(dropdown_field_selectitem req, int32_t idxOffset);
+    virtual int32_t getSelectIndex() {
+        return -1;
     }
-    virtual uint32_t getLastIndex() {
+    virtual int32_t getLastIndex() {
         return 0;
     }
-    virtual void setSelectedIndex(uint32_t) {
+    virtual void setSelectedIndex(int32_t idx) {
     }
     virtual String getString() = 0;
 };

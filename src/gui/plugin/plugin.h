@@ -98,9 +98,9 @@ public:
     }
     String getString() override;
     void handleDraggedRelease(MouseEvent& evt) override;
-    uint32_t getSelectIndex() override;
-    uint32_t getLastIndex() override;
-    void setSelectedIndex(uint32_t idx) override;
+    int32_t getSelectIndex() override;
+    int32_t getLastIndex() override;
+    void setSelectedIndex(int32_t idx) override;
 };
 class guipluginview : public guiplugin {
 public:

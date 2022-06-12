@@ -110,6 +110,7 @@ public:
     guitheme_t* theme    = nullptr;
     SafeRef<guibase> safeRef;
     String label;
+    String tooltipText;
 
 public:
 #ifdef TRACK_ALLOCATIONS_GUIBASE
@@ -261,8 +262,12 @@ public:
     }
     virtual void onTick(AppCtrl* appctrl) {
     }
-    virtual guictxtmenu_base* getTooltip(AppCtrl* appctrl) {
-        return nullptr;
+    virtual guictxtmenu_base* getTooltip(AppCtrl* appctrl);
+    void setTooltipText(String _tooltipText) {
+        tooltipText = std::move(_tooltipText);
+    }
+    const String& getTooltipText() const {
+        return tooltipText.empty() ? label : tooltipText;
     }
     virtual void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset);
     virtual void layout() {

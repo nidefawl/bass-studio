@@ -42,7 +42,7 @@ public:
         }
         return false;
     }
-    bool isTransient() override {
+    bool isTransient() const override {
         return !hadMouseFocus;
     }
     void clicked(int _id) override {

@@ -132,7 +132,7 @@ public:
     ~guictxtmenu_base() override {
         destroyGuis();
     }
-    virtual bool isTransient() {
+    virtual bool isTransient() const {
         return false;
     }
     virtual bool isDialog() {

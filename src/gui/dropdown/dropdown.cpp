@@ -3,7 +3,7 @@
 #include "str_util.h"
 
 bool guidropdownbase::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
-    if (0xFFFFFFFF != getSelectIndex()) {
+    if (-1 != getSelectIndex()) {
         bool isUp = yoffset > 0;
         if (isUp) {
             select(dropdown_field_selectitem::SELECT_PREVIOUS, 1);
@@ -32,9 +32,9 @@ bool guidropdownbase::handleKeyInput(KeyEvent& kevt) {
     return false;
 }
 
-void guidropdownbase::select(dropdown_field_selectitem req, uint32_t idxOffset) {
-    uint32_t index = getSelectIndex();
-    if (index == 0xFFFFFFFF)
+void guidropdownbase::select(dropdown_field_selectitem req, int32_t idxOffset) {
+    auto index = getSelectIndex();
+    if (index == -1)
         return;
 
     switch (req) {

@@ -1,5 +1,6 @@
 #pragma once
 #include "gui/gui.h"
+#include "guicolors.h"
 #include "theme.h"
 #include <functional>
 #include "assert_dbg.h"
@@ -79,10 +80,12 @@ private:
     bool mEditable = true;
     bool mValidFormat = true;
     bool mReturnCommits = false;
+    bool mInputActivates = false;
 
     text_metrics_t metrics;
     Alignment mAlignment = Alignment::Left;
     float mFontSize = -1.0f;
+    GuiColor::constant_t mColor = GuiColor::COL_TEXTBOX_TEXT;
 
     int mCursorPos    = -1;
     int mSelectionPos = -1;
@@ -107,6 +110,14 @@ public:
     }
     void setFontSize(float f) {
         mFontSize = f;
+    }
+
+    void setTextfieldColor(GuiColor::constant_t color) {
+        mColor = color;
+    }
+
+    void setInputActivates(bool b) {
+        mInputActivates = b;
     }
 
     bool editable() const { return mEditable; }
@@ -135,6 +146,7 @@ public:
         }
     }
     void clearSelection() { this->mSelectionPos = -1; }
+    bool isEditing() const { return !mCommitted; }
 
     const std::string& defaultValue() const { return mDefaultValue; }
     void setDefaultValue(const std::string& defaultValue) { mDefaultValue = defaultValue; }

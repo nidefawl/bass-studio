@@ -53,6 +53,9 @@ void gui_textfield::handleRightClick(MouseEvent& evt) {
 void gui_textfield::handleDraggedBegin(MouseEvent& evt) {
     ivec2 local = evt.relMousepos;
     if (mEditable) {
+        if (mCommitted && mInputActivates) {
+            beginEdit();
+        }
         mMouseDownPos      = local;
         mMouseDownModifier = evt.kbmods;
 
@@ -86,7 +89,13 @@ void gui_textfield::onTextEndEdit() {
     }
 }
 void setTfFont(NVGcontext* ctx, const gui_textfield* tf) {
-    nvgFontSize(ctx, tf->fontSize() * tf->theme->getFloat(GuiConstant::CONST_FONT_SCALE));
+    auto fs = tf->fontSize();
+    auto fs2 = fs;
+    if (fs2 <= 0.0f) {
+        fs2 = math::clamp(math::min(tf->size.y, tf->size.x), 4, 48) * FONT_AUTOSCALE;
+    }
+    auto fontScale = fs2 * tf->theme->getFloat(GuiConstant::CONST_FONT_SCALE);
+    nvgFontSize(ctx, fontScale);
     UIFont::font_instance instance = tf->theme->getFont(UIFont::FONT_TEXTFIELD);
     UIFont::bindFont(ctx, instance);
     switch (tf->alignment()) {
@@ -102,12 +111,8 @@ void setTfFont(NVGcontext* ctx, const gui_textfield* tf) {
     }
 }
 void gui_textfield::layout() {
-    if (this->mFontSize <= 0) {
-        this->mFontSize = math::clamp(size.y, 4, 48);
-    }
 }
 void gui_textfield::render(NVGcontext* ctx) {
-
     //TODO: find a better place to do this: font metrics require nano-vg context but should be calculated in drag/move on the fly
     setTfFont(ctx, this);
     updateTextLayout(ctx);
@@ -163,31 +168,36 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
     int32_t fl = getStateFlags();
     renderWidgetBorder(ctx, fl);
 
-    // nvgBeginPath(ctx);
-    // nvgRect(ctx, pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2);
-    // if (mEditable && mFocused)
-    //     nvgFillColor(ctx, theme->getColor(mValidFormat ? GuiColor::COL_BG_DRK_FOCUSED : GuiColor::COL_INVALID_INPUT));
-    // else
-    //     nvgFillColor(ctx, theme->getColor(GuiColor::COL_BG_DRK));
-
-    // nvgFill(ctx);
+    /* nvgBeginPath(ctx);
+    nvgRect(ctx, pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2);
+    if (mEditable && mFocused)
+        nvgFillColor(ctx, theme->getColor(mValidFormat ? GuiColor::COL_BG_DRK_FOCUSED : GuiColor::COL_INVALID_INPUT));
+    else
+        nvgFillColor(ctx, theme->getColor(GuiColor::COL_BG_DRK));
+    nvgFill(ctx); */
 
 
     // clip visible text area
     if (clipSize.x < 1 || clipSize.y < 1)
         return;
-    nvgFontSize(ctx, fontSize() * theme->getFloat(GuiConstant::CONST_FONT_SCALE));
     NVGcolor mTextColorDisabled = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_DISABLED);
-    UIFont::font_instance instance = theme->getFont(UIFont::FONT_TEXTFIELD);
-    UIFont::bindFont(ctx, instance);
     if (!mUnits.empty()) {
         nvgFillColor(ctx, mTextColorDisabled);
-        setTfFont(ctx, this);
         nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
         nvgText(ctx, pos.x + size.x - X_SPACING, drawPos.y, mUnits.c_str(), nullptr);
     }
-
-    NVGcolor mTextColor         = theme->getColor(GuiColor::COL_TEXTBOX_TEXT);
+    switch (alignment()) {
+        case gui_textfield::Alignment::Left:
+            nvgTextAlign(ctx, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+            break;
+        case gui_textfield::Alignment::Right:
+            nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+            break;
+        case gui_textfield::Alignment::Center:
+            nvgTextAlign(ctx, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+            break;
+    }
+    NVGcolor mTextColor         = theme->getColor(mColor);
     NVGcolor mTextColorMarked   = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_MARKED);
 
     NVGcolor mColor = isEnabled() && (!mCommitted || !mValue.empty()) ? mTextColor : mTextColorDisabled;
@@ -198,12 +208,10 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
 
     if (mCommitted) {
         nvgFillColor(ctx, mColor);
-        setTfFont(ctx, this);
         nvgText(ctx, drawPos.x, drawPos.y, mValue.empty() ? mPlaceholder.c_str() : mValue.c_str(), nullptr);
     } else {
 
         nvgTranslate(ctx, drawPos.x + mTextOffset, drawPos.y);
-        //
         if (mCursorPos > -1) {
             float lineh  = metrics.lineH;
             float caretx = cursorIndex2Position(mCursorPos, metrics.textBounds[2]);
@@ -232,7 +240,6 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
         }
 
         nvgFillColor(ctx, mColor);
-        setTfFont(ctx, this);
         // draw text with offset
         nvgText(ctx, 0, 0, mValueTemp.c_str(), nullptr);
     }
@@ -274,7 +281,6 @@ void gui_textfield::endEdit(bool success) {
     mTextOffset   = 0;
 }
 bool gui_textfield::focusEvent(MouseHitEvt& evt, bool focused) {
-    //    Widget::focusEvent(focused);
     std::string backup = mValue;
     mFocused           = focused;
     if (fnFocus) {
@@ -293,7 +299,7 @@ bool gui_textfield::focusEvent(MouseHitEvt& evt, bool focused) {
 
 bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType action, int modifiers) {
     if (mEditable && mFocused) {
-        if (action == KeyEventType::K_PRESS || action == KeyEventType::K_REPEAT) {
+        if (action != KeyEventType::K_RELEASE) {
             if (key == KEY_LEFT) {
                 if (modifiers == KB_MOD_SHIFT) {
                     if (mSelectionPos == -1)
@@ -380,22 +386,34 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
     return false;
 }
 bool gui_textfield::canHandleCharInput(uint32_t codepoint) {
+    if (mEditable) {
+        const bool bIsGlobalKey = parentCtrl->isGlobalKeybindCodepoint(codepoint);
+        const bool bIsFiltered = filter && filter->isAllowedChar(codepoint);
 
-    if (mEditable && mFocused) {
-        if (filter && !filter->isAllowedChar(codepoint)) {
-            return false;
+        if (mFocused) {
+            return !bIsFiltered;
         }
-        return true;
+        if (mInputActivates) {
+            return !bIsGlobalKey && !bIsFiltered;
+        }
     }
     return false;
 }
 
 bool gui_textfield::handleCharInput(uint32_t codepoint) {
-    if (mEditable && mFocused) {
-        if (filter) {
-            if (!filter->isAllowedChar(codepoint)) {
-                return false;
-            }
+    if (mEditable) {
+        if (!mFocused) {
+            return false;
+        }
+        const bool bIsGlobalKey = parentCtrl->isGlobalKeybindCodepoint(codepoint);
+        const bool bIsFiltered = filter && filter->isAllowedChar(codepoint);
+        if (bIsFiltered) {
+            return false;
+        }
+        if (mCommitted) {
+            if (bIsGlobalKey) return false;
+            if (!mInputActivates) return false;
+            beginEdit();
         }
         std::ostringstream convert;
         convert << (char) codepoint;
@@ -551,18 +569,18 @@ void gui_textfield::updateShiftCursorVisible() {
         mTextOffset -= nextCX - clipSize.x + 1;
     if (prevCX < 0)
         mTextOffset += 0 - prevCX + 1;
-    //    if (this->mTextOffset != mTextOffset) {
-    //        if (nextCX > clipSize.x)
-    //            log_printf("nextCX > clipSize.x %f > %f\n", nextCX, clipSize.x);
-    //        if (prevCX < 0)
-    //            log_printf("prevCX < 0 %f\n", prevCX);
-    //        log_printf("prevCPos %d\n", prevCPos);
-    //        log_printf("metrics.textBounds[2] %f\n", metrics.textBounds[2]);
-    //        log_printf("pos.x %f\n", (float) pos.x);
-    //        log_printf("drawPos.x %f\n", (float) drawPos.x);
-    //        log_printf("drawPos.x-pos.x %f\n", (float) (drawPos.x - pos.x));
-    //        log_printf("clipPos.x %f\n", (float) clipPos.x);
-    //    }
+    /* if (this->mTextOffset != mTextOffset) {
+        if (nextCX > clipSize.x)
+            log_printf("nextCX > clipSize.x %f > %f\n", nextCX, clipSize.x);
+        if (prevCX < 0)
+            log_printf("prevCX < 0 %f\n", prevCX);
+        log_printf("prevCPos %d\n", prevCPos);
+        log_printf("metrics.textBounds[2] %f\n", metrics.textBounds[2]);
+        log_printf("pos.x %f\n", (float) pos.x);
+        log_printf("drawPos.x %f\n", (float) drawPos.x);
+        log_printf("drawPos.x-pos.x %f\n", (float) (drawPos.x - pos.x));
+        log_printf("clipPos.x %f\n", (float) clipPos.x);
+    } */
     this->mTextOffset = mTextOffset;
 }
 void gui_textfield::updateCursor(NVGcontext*, float lastx) {
