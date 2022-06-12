@@ -170,6 +170,44 @@ void openPluginWindows(DawCtrl* dawCtrl, String pluginName) {
     for (auto eff : effects) {
         if (eff->getName().find(pluginName) != String::npos) {
             eff->show();
+            track_t* tr = eff->getTrack();
+            if (tr) {
+                dawCtrl->getDaw()->setSelectedTrack(tr);
+                MainCtrl::get()->showPluginView();
+            }
+        }
+    }
+}
+void showPluginView(DawCtrl* dawCtrl, String pluginName) {
+    DawInstance* dawInstance = dawCtrl->getDaw();
+    auto* host = dawInstance->getHost();
+    MainCtrl::get()->showPluginView();
+    {
+        std::vector<effectbase*> effects;
+        host->getAllInstances(effects);
+        for (auto eff : effects) {
+            if (eff->getName().find(pluginName) != String::npos) {
+                track_t* tr = eff->getTrack();
+                if (tr) {
+                    dawCtrl->getDaw()->setSelectedTrack(tr);
+                    return;
+                }
+            }
+        }
+    }
+    {
+        std::vector<effectbase*> effects;
+        host->getDeferredEffects(effects);
+        for (auto eff : effects) {
+            if (eff->getName().find(pluginName) != String::npos) {
+                track_t* tr = eff->getTrack();
+                if (tr) {
+                    dawCtrl->getDaw()->setSelectedTrack(tr);
+                    auto lock = dawInstance->lockPlayThread();
+                    host->activateDeferred(eff, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                    return;
+                }
+            }
         }
     }
 }
@@ -229,7 +267,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     String dawPath  = "/home/michael/Documents/";
     String projName = "samples.project";
      int flags = 0x1;// defer load
-         flags = 0; // no defer load
+        // flags = 0; // no defer load
     dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance* daw, std::shared_ptr<project_file> file, int errorState) {
         /**
          * Code for setting cursor and loop position
@@ -253,23 +291,26 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
         //     daw->getMainControl()->showPluginView();
         // }
         if (daw->getProject()->trackMidiAudioCtr.size()>1) {
-            auto tr = daw->getProject()->trackMidiAudioCtr[1];
-            
-            daw->setSelectedTrack(tr);
-            auto& clips = tr->getMidi().getClips();
-            if (clips.size()) {
-                auto clip = clips[0];
-                auto mainCtrl = daw->getMainControl();
-                track_gui_entry_t* trEntry{};
-                auto* trCtr = mainCtrl->getTrackContainer();
-                if (trCtr && trCtr->getTrackEntry(tr, &trEntry)) {
-                    auto* gui = createClipGui(trEntry->parent, trEntry, clip);
-                    mainCtrl->getTrackEditor().setSelectionRange(clips[0], trEntry);
-                    daw->setEditClip(gui);
-                    daw->getMainControl()->showClipEditor();
-                }
-            }
+            daw->setSelectedTrack(daw->getProject()->trackMidiAudioCtr[1]);
         }
+        showPluginView(dawMainCtrl, "Synth");
+        //     auto tr = daw->getProject()->trackMidiAudioCtr[1];
+            
+        //     daw->setSelectedTrack(tr);
+        //     auto& clips = tr->getMidi().getClips();
+        //     if (clips.size()) {
+        //         auto clip = clips[0];
+        //         auto mainCtrl = daw->getMainControl();
+        //         track_gui_entry_t* trEntry{};
+        //         auto* trCtr = mainCtrl->getTrackContainer();
+        //         if (trCtr && trCtr->getTrackEntry(tr, &trEntry)) {
+        //             auto* gui = createClipGui(trEntry->parent, trEntry, clip);
+        //             mainCtrl->getTrackEditor().setSelectionRange(clips[0], trEntry);
+        //             daw->setEditClip(gui);
+        //             daw->getMainControl()->showClipEditor();
+        //         }
+        //     }
+        // }
 
 #if 0
         const bool loadPlugins = 0;
