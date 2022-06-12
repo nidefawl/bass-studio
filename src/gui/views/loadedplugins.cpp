@@ -321,17 +321,20 @@ public:
     }
     void onTick(AppCtrl* ctrl) override {
         guictr_base::onTick(ctrl);
-        auto tmNow = getTimeMillis();
-        if (tmNow - tmLastUpdate > 1000) {
-            tmLastUpdate = tmNow;
-            update();
-        }
+        update();
     }
     void update() {
         ThreadLock lock = MainCtrl::getPlayThread()->tryLockThread();
+        auto tmNow = getTimeMillis();
         if (!lock.isLocked()) {
-            return;
+            // force lock and update if 5 seconds have elapsed
+            if (tmNow - tmLastUpdate > 5000) {
+                lock = MainCtrl::getPlayThread()->lockThread();
+            } else {
+                return;
+            }
         }
+        tmLastUpdate = tmNow;
 
         std::vector<effectbase*> effects;
         std::vector<effectbase*> deferredEffects;
