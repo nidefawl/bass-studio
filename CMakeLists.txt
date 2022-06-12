@@ -100,6 +100,14 @@ if (MINGW)
   set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 endif()
 
+if (CLANG)
+  set_source_files_properties(src/util/fp_math.cpp PROPERTIES
+    SKIP_UNITY_BUILD_INCLUSION ON
+    SKIP_PRECOMPILE_HEADERS ON
+    COMPILE_OPTIONS "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections;-fno-fast-math;-O2"
+  )
+endif()
+
 set(PROJECT_DEPS_SRC_FILES
   glad/gl-3.2-core/src/glad.c
   muparser/src/muParser.cpp

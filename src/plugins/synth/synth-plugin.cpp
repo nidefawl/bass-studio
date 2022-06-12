@@ -251,10 +251,10 @@ namespace PluginSynth {
 
     public:
         double GetWaveform(Waveforms waveform, bool bleb) {
-            dbgassert(!math::isNanOrInf(phase));
+            dbgassert(!fp_math::isNanOrInfd(phase));
             switch (waveform) {
                 case Waveforms::Sine:
-                    dbgassert(!math::isNanOrInf(sin(phase * M_PI * 2.0)));
+                    dbgassert(!fp_math::isNanOrInfd(sin(phase * M_PI * 2.0)));
                     return sin(phase * M_PI * 2.0);
                 case Waveforms::Triangle:
                     triLast = triCurrent;
@@ -263,7 +263,7 @@ namespace PluginSynth {
                     } else {
                         triCurrent = phaseIncrement * GeneratePulse(phase, phaseIncrement, .5) + (1.0 - phaseIncrement) * triLast;
                     }
-                    dbgassert(!math::isNanOrInf(triCurrent));
+                    dbgassert(!fp_math::isNanOrInfd(triCurrent));
                     return triCurrent * 5.0;
                 case Waveforms::Saw:
                     if (!bleb) {
@@ -297,27 +297,27 @@ namespace PluginSynth {
 
         double GetWaveform(double dt, double frequency, Waveforms waveform, bool bleb) {
             phaseIncrement = frequency * dt;
-            phase          = math::silenceNanInf(phase + phaseIncrement);
+            phase          = fp_math::silenceNanInfd(phase + phaseIncrement);
             while (phase > 1.0) phase -= 1.0;
             return GetWaveform(waveform, bleb);
         }
         bool Update(double dt, double frequency) {
             phaseIncrement = frequency * dt;
-            phase          = math::silenceNanInf(phase + phaseIncrement);
+            phase          = fp_math::silenceNanInfd(phase + phaseIncrement);
             bool b         = false;
             while (phase > 1.0) {
                 phase -= 1.0;
                 b = true;
             }
-            dbgassert(!math::isNanOrInf(phase));
+            dbgassert(!fp_math::isNanOrInfd(phase));
             return b;
         }
         double Get(double dt, SmoothSwitch& waveform, double frequency, bool bleb) {
             phaseIncrement = frequency * dt;
-            phase          = math::silenceNanInf(phase + phaseIncrement);
+            phase          = fp_math::silenceNanInfd(phase + phaseIncrement);
             while (phase > 1.0) phase -= 1.0;
             double dSwitchVal = waveform.getSwitchValue();
-            dbgassert(!math::isNanOrInf(dSwitchVal));
+            dbgassert(!fp_math::isNanOrInfd(dSwitchVal));
             auto roundedVal = math::rounddU32(dSwitchVal);
             dbgassert(roundedVal < static_cast<uint32_t>(Waveforms::NumWaveforms));
             return GetWaveform(static_cast<Waveforms>(roundedVal), bleb);
@@ -485,6 +485,7 @@ namespace PluginSynth {
     struct MathExprParsed {
         std::array<double, 8> inputs{};
         mu::Parser parser;
+        int32_t nanInfCounter = 0;
     };
     struct MathExpr {
         String str;
@@ -1591,7 +1592,12 @@ namespace PluginSynth {
                 for (size_t i = 1; i < inputs.size(); i++) {
                     inputs[i] = 0.0;
                 }
-                return expr.parsedExpr->parser.Eval();
+                double dResult = parsedExpr.parser.Eval();
+                if (fp_math::isNanOrInfd(dResult)) {
+                    dResult = 0.0;
+                    parsedExpr.nanInfCounter++;
+                }
+                return dResult;
             }
             return inputX;
         }
@@ -1605,10 +1611,10 @@ namespace PluginSynth {
             if (lfoAmount < 0.0) {
                 dLfoShapeExp = 1.0 + dVoiceLfoUni * -lfoAmount * 16.;
             }
-            dbgassert(!math::isNanOrInf(dVoiceLfoUni));
-            dbgassert(!math::isNanOrInf(dLfoShapeExp));
+            dbgassert(!fp_math::isNanOrInfd(dVoiceLfoUni));
+            dbgassert(!fp_math::isNanOrInfd(dLfoShapeExp));
             double dVoiceLfoUniShaped = exp(log(abs(dVoiceLfoUni)) * dLfoShapeExp);
-            dbgassert(!math::isNanOrInf(dVoiceLfoUniShaped));
+            dbgassert(!fp_math::isNanOrInfd(dVoiceLfoUniShaped));
             voice.lfoValue = dVoiceLfoUniShaped;
 
             auto& voiceModulations = voice.modValues;
@@ -1753,22 +1759,22 @@ namespace PluginSynth {
                     fmAmount += GetModulatedParamVoice(voice, Parameters::VolEnvFm) * volEnvValue;
                     fmAmount += GetModulatedParamVoice(voice, Parameters::ModEnvFm) * modEnvValue;
                     fmAmount += GetModulatedParamVoice(voice, Parameters::LfoFm) * delayedLfoValue;
-                    dbgassert(!math::isNanOrInf(fmAmount));
-                    dbgassert(!math::isNanOrInf(osc1Frequency));
+                    dbgassert(!fp_math::isNanOrInfd(fmAmount));
+                    dbgassert(!fp_math::isNanOrInfd(osc1Frequency));
                     auto fmWaveform = voice.oscFm.GetWaveform(dt, osc1Frequency, Waveforms::Sine, true);
-                    dbgassert(!math::isNanOrInf(fmWaveform));
+                    dbgassert(!fp_math::isNanOrInfd(fmWaveform));
                     double fm = fmWaveform * fmAmount;
-                    dbgassert(!math::isNanOrInf(fm));
+                    dbgassert(!fp_math::isNanOrInfd(fm));
                     auto fmMultiplier = pitchFactor(fm);
-                    dbgassert(!math::isNanOrInf(fmMultiplier));
+                    dbgassert(!fp_math::isNanOrInfd(fmMultiplier));
                     switch (fmMode) {
                         case FmModes::Osc1:
                             osc1Frequency *= fmMultiplier;
-                            dbgassert(!math::isNanOrInf(osc1Frequency));
+                            dbgassert(!fp_math::isNanOrInfd(osc1Frequency));
                             break;
                         case FmModes::Osc2:
                             osc2Frequency *= fmMultiplier;
-                            dbgassert(!math::isNanOrInf(osc2Frequency));
+                            dbgassert(!fp_math::isNanOrInfd(osc2Frequency));
                             break;
                         default:
                             break;
@@ -1784,22 +1790,22 @@ namespace PluginSynth {
                 auto osc1Out = 0.0;
                 // osc1Frequency = std::numeric_limits<double>::quiet_NaN();
                 osc1Out += voice.osc1a.Get(dt, osc1Wave, osc1Frequency * osc1SplitFactorA, true);
-                dbgassert(!math::isNanOrInf(osc1Out));
+                dbgassert(!fp_math::isNanOrInfd(osc1Out));
                 if (osc1SplitMix > .001)
                     osc1Out += osc1SplitMix * voice.osc1b.Get(dt, osc1Wave, osc1Frequency * osc1SplitFactorB, true);
-                dbgassert(!math::isNanOrInf(osc1Out));
+                dbgassert(!fp_math::isNanOrInfd(osc1Out));
                 out += osc1Out * sqrt(1.0 - oscMix);
-                dbgassert(!math::isNanOrInf(out));
+                dbgassert(!fp_math::isNanOrInfd(out));
             }
             if (oscMix > .001) {
                 auto osc2Out = 0.0;
                 osc2Out += voice.osc2a.Get(dt, osc2Wave, osc2Frequency * osc2SplitFactorA, true);
-                dbgassert(!math::isNanOrInf(osc2Out));
+                dbgassert(!fp_math::isNanOrInfd(osc2Out));
                 if (osc2SplitMix > .001)
                     osc2Out += osc2SplitMix * voice.osc2b.Get(dt, osc2Wave, osc2Frequency * osc2SplitFactorB, true);
-                dbgassert(!math::isNanOrInf(osc2Out));
+                dbgassert(!fp_math::isNanOrInfd(osc2Out));
                 out += osc2Out * sqrt(oscMix);
-                dbgassert(!math::isNanOrInf(out));
+                dbgassert(!fp_math::isNanOrInfd(out));
             }
 
             out *= volEnvValue;
@@ -1886,7 +1892,7 @@ namespace PluginSynth {
                         auto voice                = GetVoiceImpl(uv, v, filterMode, dbgFlagsState) * mvInv;
                         auto panningMinusOneToOne = GetModulatedParamVoice(v, Parameters::Panning);
                         auto panningUnipolar      = panningMinusOneToOne * 0.5 + 0.5;
-                        // dbgassert(!math::isNanOrInf(voice));
+                        // dbgassert(!fp_math::isNanOrInfd(voice));
                         if (dbgFlagsState & 1) {
                             numActiveVoicesFrame++;
                         }
@@ -1902,7 +1908,7 @@ namespace PluginSynth {
                 }
                 auto valL = static_cast<float>(outL * masterVolume);
                 auto valR = static_cast<float>(outR * masterVolume);
-                // if (math::isNanOrInf(valL) || math::isNanOrInf(valR)) {
+                // if (fp_math::isNanOrInfd(valL) || fp_math::isNanOrInfd(valR)) {
                 //     log_lf(Log::L_ERROR, "NaN detected!\n");
                 //     valL = 0;
                 //     valR = 0;
@@ -1923,13 +1929,13 @@ namespace PluginSynth {
             double shapedVal = value;
             if (shapedVal > 1.0E-12) {
                 auto a = log(shapedVal);
-                dbgassert(!math::isNanOrInf(a));
+                dbgassert(!fp_math::isNanOrInfd(a));
                 auto b = exp(a * 0.1);
-                dbgassert(!math::isNanOrInf(b));
+                dbgassert(!fp_math::isNanOrInfd(b));
                 auto c = cos(b * M_PI);
-                dbgassert(!math::isNanOrInf(c));
+                dbgassert(!fp_math::isNanOrInfd(c));
                 shapedVal = (.5 - .5 * cos(exp(log(shapedVal) * 0.1) * M_PI));
-                dbgassert(!math::isNanOrInf(shapedVal));
+                dbgassert(!fp_math::isNanOrInfd(shapedVal));
             }
             return 1000 - 999.9 * shapedVal;
         }
@@ -2801,10 +2807,13 @@ namespace PluginSynth {
                 textfieldFunction.setVisible(textfieldFunction.isEditing() || src.source == ModulationSource::Function);
                 if (!textfieldFunction.isEditing()) {
                     textfieldFunction.setValue(src.function.str);
-                    if (!src.function.str.empty() && !src.function.parsedExpr) {
-                        textfieldFunction.setLabel("Error in expression");
-                        textfieldFunction.setTextfieldColor(GuiColor::COL_INVALID_INPUT);
-                    }
+                }
+                if (!src.function.str.empty() && !src.function.parsedExpr) {
+                    textfieldFunction.setLabel("Error in expression");
+                    textfieldFunction.setTextfieldColor(GuiColor::COL_INVALID_INPUT);
+                } else if (src.function.parsedExpr && src.function.parsedExpr->nanInfCounter) {
+                    textfieldFunction.setLabel(StringFormat("%d NaN/Inf detected", src.function.parsedExpr->nanInfCounter));
+                    textfieldFunction.setTextfieldColor(GuiColor::COL_INVALID_INPUT);
                 }
                 dropdownOperator.setVisible(dropdownOperator.isVisible() && (src.source != ModulationSource::Function));
                 inputConstant.setVisible(src.source == ModulationSource::Constant);

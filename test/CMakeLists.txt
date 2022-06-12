@@ -62,7 +62,13 @@ DEFINE_TEST(
   ../src/util/testing_environment.cpp
   ../src/util/str_util.cpp
   ../src/util/dsp_util.cpp
+  ../src/util/fp_math.cpp
   ../src/threads/thread.cpp
+)
+set_source_files_properties(../src/util/fp_math.cpp PROPERTIES
+  SKIP_UNITY_BUILD_INCLUSION ON
+  SKIP_PRECOMPILE_HEADERS ON
+  COMPILE_OPTIONS "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections;-fno-fast-math;-O2"
 )
 
 DEFINE_TEST(

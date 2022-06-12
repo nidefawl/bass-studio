@@ -28,7 +28,16 @@
 #endif
 
 #define FLOAT_PI 3.141592653f
-
+namespace fp_math {
+    bool isinff(float f);
+    bool isinfd(double d);
+    bool isnanf(float f);
+    bool isnand(double d);
+    bool isNanOrInff(float f);
+    bool isNanOrInfd(double d);
+    float silenceNanInff(float f);
+    double silenceNanInfd(double d);
+}
 namespace math {
     static float const F_MIN = 1E-12F;
 
@@ -100,28 +109,6 @@ namespace math {
             return 0;
 #endif
         return std::floor(val);
-    }
-    inline bool isNanOrInf(double val) {
-#if MATH_HAS_FP_NAN_CHECK
-        if (std::isnan(val))
-            return true;
-#endif
-#if MATH_HAS_FP_INF_CHECK
-        if (std::isinf(val))
-            return true;
-#endif
-        return false;
-    }
-    inline double silenceNanInf(double val) {
-#if MATH_HAS_FP_NAN_CHECK
-        if (std::isnan(val))
-            return 0;
-#endif
-#if MATH_HAS_FP_INF_CHECK
-        if (std::isinf(val))
-            return 0;
-#endif
-        return val;
     }
 
     /**
