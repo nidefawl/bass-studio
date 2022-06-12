@@ -1,5 +1,6 @@
 #include <nanovg.h>
 #include <vector>
+#include "logging.h"
 #include "math/seq_math.h"
 #include "math/vec.h"
 #include "window.h"

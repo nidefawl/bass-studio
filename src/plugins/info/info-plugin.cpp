@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <vector>
 #include <memory>
+#include <mutex>
 #include <vstsdk-host-2.4/aeffect.h>
 #include <vstsdk-host-2.4/aeffectx.h>
 #include "config.h"
