@@ -217,7 +217,9 @@ static int toErrorCode(DWORD excCode) {
             return ERR_UNKNOWN;
     }
 }
+#ifndef PROJECT_UNITTEST
 void logStackTrace();
+#endif
 extern volatile bool fatalError;
 #define WINAPI __stdcall
 static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
@@ -226,7 +228,9 @@ static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) 
         return EXCEPTION_CONTINUE_EXECUTION;
     }
     log_out("Fatal exception: %s (0x%08X)\n", exc_as_str(excCode), (int) excCode);
+#ifndef PROJECT_UNITTEST
     logStackTrace();
+#endif
     fatalError = true;
     return EXCEPTION_CONTINUE_SEARCH;
 }

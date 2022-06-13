@@ -107,9 +107,7 @@ if (CLANG)
     COMPILE_OPTIONS "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections;-fno-fast-math;-O2"
   )
 endif()
-
-set(PROJECT_DEPS_SRC_FILES
-  glad/gl-3.2-core/src/glad.c
+set(PROJECT_DEP_MUPARSERS_SRC_FILES
   muparser/src/muParser.cpp
   muparser/src/muParserBase.cpp
   muparser/src/muParserBytecode.cpp
@@ -118,11 +116,20 @@ set(PROJECT_DEPS_SRC_FILES
   muparser/src/muParserInt.cpp
   muparser/src/muParserTokenReader.cpp
 )
+set(PROJECT_DEPS_SRC_FILES
+  glad/gl-3.2-core/src/glad.c
+  ${PROJECT_DEP_MUPARSERS_SRC_FILES}
+)
 
 list(TRANSFORM PROJECT_DEPS_SRC_FILES PREPEND "${PROJECT_DEPS_PATH}/")
 if (CMAKE_COMPILER_IS_GNUCC)
   set_source_files_properties("${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c" PROPERTIES COMPILE_OPTIONS "-Wno-pedantic")
 endif()
+
+foreach (f ${PROJECT_DEP_MUPARSERS_SRC_FILES})
+  set_source_files_properties("${PROJECT_DEPS_PATH}/${f}" PROPERTIES COMPILE_DEFINITIONS "MUPARSER_STATIC=1")
+endforeach ()
+
 
 list(APPEND RESOURCE_FILES "")
 if (WIN32 AND NOT PROJECT_NO_WINDRES)

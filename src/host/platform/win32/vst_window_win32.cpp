@@ -297,7 +297,7 @@ void vst_window::destroy() {
     delete this;
 }
 
-void vst_window::show(bool bResetPosition) {
+void vst_window::show() {
     SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
     plugin->onShow(this);
 }

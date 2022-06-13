@@ -78,7 +78,7 @@ public:
         this->fontSize = FONT_SIZE_CTXT_SMALL;
         this->paddingV = 0;
         int32_t idx    = 0;
-        for (auto str : options) {
+        for (auto& str : options) {
             addEntry(new ctxtmenu_entry(str, idx));
             idx++;
         }

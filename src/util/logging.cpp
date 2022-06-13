@@ -65,7 +65,7 @@ public:
         fflush(stdout);
     }
 };
-
+#ifndef PROJECT_UNITTEST
 class ThreadSafeFileLogger : public Logger {
     std::recursive_mutex mutex;
     IOFile* handle = nullptr;
@@ -125,6 +125,7 @@ static ThreadSafeFileLogger& getFileLogger() noexcept {
     static ThreadSafeFileLogger gGlobalLogger;
     return gGlobalLogger;
 }
+#endif
 MultiLogger& getMultiLogger() noexcept {
     static StdOutLogger gMultiLoggerStdOutInstance;
     static MultiLogger gMultiLogger(&gMultiLoggerStdOutInstance);
@@ -148,14 +149,18 @@ void setGlobalLogger(Logger* logger) noexcept {
     *getGlobalLoggerRef() = logger;
 }
 void closeGlobalLog() {
+#ifndef PROJECT_UNITTEST
     getFileLogger().logStr(Log::L_DEBUG, "End of logfile\n");
     getFileLogger().closeLog();
     getMultiLogger().removeLogger(&getFileLogger());
+#endif
 }
 void openGlobalLog(const String& logFileName) {
+#ifndef PROJECT_UNITTEST
     getFileLogger().openFile(logFileName);
     getFileLogger().logStr(Log::L_DEBUG, "Begin of logfile\n");
     getMultiLogger().addLogger(&getFileLogger());
+#endif
 }
 #define LOG_BUF_SIZE 4096
 #define MAX_LEN_FILENAME 512

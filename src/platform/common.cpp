@@ -196,6 +196,7 @@ void getStackTrace(std::vector<String>& vec) {
         bufPtr = lineEnd + 1;
     }
 }
+
 void logStackTrace() {
     char buf[4096]{};
     get_thread_stacktrace(buf, sizeof(buf), nullptr);

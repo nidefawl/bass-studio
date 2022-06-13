@@ -54,7 +54,7 @@ namespace {
         } else {
             bool hasUI = res.plugin->getFlagsVST() & effFlagsHasEditor;
             if (hasUI && currentTimerTick == 10) {
-                res.plugin->show();
+                res.plugin->show(false);
             } else if (hasUI && currentTimerTick == 30) {
                 res.plugin->close();
             } else if ((hasUI && currentTimerTick == 40) || (!hasUI && currentTimerTick == 10)) {

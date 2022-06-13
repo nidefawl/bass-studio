@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <iterator>
 #include <limits>
+#include <math.h>
 #include <muParser.h>
 #include <optional>
 #include <vector>
@@ -1174,7 +1175,7 @@ namespace PluginSynth {
             setModulationDestination(0, 0, Parameters::FilterCutoff, 0.5);
         }
         bool IsBipolarModulation(const Modulation& modulation) const {
-            for (auto source : modulation.inputs) {
+            for (auto& source : modulation.inputs) {
                 if (source.isBipolar) return true;
             }
             return false;
@@ -1740,7 +1741,7 @@ namespace PluginSynth {
                     if (modulation.destinations.empty())
                         continue;
                     auto& input   = modulation.inputs[j];
-                    double srcVal;
+                    double srcVal = 0.0;
                     switch (input.type) {
                         case ModulationType::ModulationSource:
                             srcVal = sources[input.src];
@@ -1752,7 +1753,6 @@ namespace PluginSynth {
                             srcVal = EvaluateVoiceModulationMathExpr(vu, voice, input.function, sources);
                             break;
                         default:
-                            srcVal = 0.0;
                             break;
                     }
                     if (input.isBipolar) {
@@ -2664,7 +2664,7 @@ namespace PluginSynth {
                 } else {
                     auto idx = std::find(std::begin(parametersOrdered), std::end(parametersOrdered), dest.parameter);
                     dbgassert(std::end(parametersOrdered) != idx);
-                    dropdown.setSelectedIndex(1 + (idx - std::begin(parametersOrdered)));
+                    dropdown.setSelectedIndex(1 + static_cast<int32_t>(idx - std::begin(parametersOrdered)));
                 }
                 knob.setValueInit(static_cast<float>(dest.range));
             } else {
@@ -3399,9 +3399,6 @@ namespace PluginSynth {
             const auto modulationWidth = splitter.rightOrBottom(cs.x);
             splitter.pos  = ivec2(controlsWidth - Splitter::SPLITTER_LAYOUT_THICKNESS/2, 0);
             splitter.size = ivec2(Splitter::SPLITTER_LAYOUT_THICKNESS, cs.y);
-            // scrollContainer.pos = {0, hTop};
-            // scrollContainer.size = {size.x, size.y-hTop};
-            // scrollContainer.determineSize(scrollContainer.size);
             scrollContainerModulation.size        = ivec2(modulationWidth, cs.y) - ivec2(INSET_CTR_SPACING * 2);
             scrollContainerModulation.pos         = ivec2(cs.x - modulationWidth, 0) + ivec2(INSET_CTR_SPACING);
             scrollContainerModulation.maxHeight = cs.y;
