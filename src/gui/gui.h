@@ -205,7 +205,7 @@ public:
     virtual bool pressed() const;
     virtual bool focused() const;
     void setLabel(String _str) {
-        label = _str;
+        label = std::move(_str);
     }
     String getLabel() const {
         if (label.empty()) {

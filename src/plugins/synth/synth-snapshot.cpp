@@ -42,6 +42,7 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
     out.write(snapshot.version);
     out.write(size_t{snapshot.params.size()});
     out.write(size_t{snapshot.modulations.size()});
+    out.write(size_t{snapshot.uiLayout.size()});
     for (const auto& p : snapshot.params) {
         out.write(p.paramIdx);
         out.write(p.value);
@@ -51,7 +52,8 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
         out.write(size_t{modulation.inputs.size()});
         out.write(size_t{modulation.destinations.size()});
         for (const auto& input : modulation.inputs) {
-            out.write(input.sourceIdx);
+            out.write(input.typeIdx);
+            out.write(input.srcIdx);
             out.write(input.opIdx);
             out.write(input.value);
             out.write(input.isBiPolar);
@@ -61,6 +63,9 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
             out.write(dest.paramIdx);
             out.write(dest.range);
         }
+    }
+    for (const auto& modulation : snapshot.uiLayout) {
+        out.write(modulation.splitPos);
     }
     out.setPos(0);
     out.write(size_t(shrdHeapVec->size()));
@@ -115,16 +120,18 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
         return false;
     size_t numParams = 0;
     size_t numModulations = 0;
-    if (numParams > 1000)
+    size_t numUiLayouts = 0;
+    if (!in.read(numParams) || numParams > 1000)
         return false;
-    if (numModulations > 1000)
+    if (!in.read(numModulations) || numModulations > 1000)
         return false;
-    if (!in.read(numParams))
-        return false;
-    if (!in.read(numModulations))
-        return false;
+    if (snapshot.version >= 7) {
+        if (!in.read(numUiLayouts) || numUiLayouts > 1000)
+            return false;
+    }
     snapshot.params.resize(numParams);
     snapshot.modulations.resize(numModulations);
+    snapshot.uiLayout.resize(numUiLayouts);
 
     for (auto& p : snapshot.params) {
         if (!in.read(p.paramIdx))
@@ -144,8 +151,22 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
         modulation.inputs.resize(numInputs);
         modulation.destinations.resize(numDestinations);
         for (auto& input : modulation.inputs) {
-            if (!in.read(input.sourceIdx))
-                return false;
+            if (snapshot.version < 5) {
+                int32_t singleIdx = 0;
+                if (!in.read(singleIdx))
+                    return false;
+                input.typeIdx = math::clamp(singleIdx, 0, 2);
+                if (input.typeIdx == 0) input.typeIdx = 1;
+                else if (input.typeIdx == 1) input.typeIdx = 0;
+                input.srcIdx = 0;
+                if (singleIdx >= 3)
+                    input.srcIdx = math::clamp(singleIdx - 2, 0, 7);
+            } else {
+                if (!in.read(input.typeIdx))
+                    return false;
+                if (!in.read(input.srcIdx))
+                    return false;
+            }
             if (!in.read(input.opIdx))
                 return false;
             if (!in.read(input.value))
@@ -163,6 +184,12 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
             if (!in.read(dest.paramIdx))
                 return false;
             if (!in.read(dest.range))
+                return false;
+        }
+    }
+    if (snapshot.version >= 7) {
+        for (auto& modulation : snapshot.uiLayout) {
+            if (!in.read(modulation.splitPos))
                 return false;
         }
     }

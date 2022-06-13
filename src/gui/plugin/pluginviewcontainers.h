@@ -40,7 +40,12 @@ public:
         : width(_width), height(_height), ctr_main(eff) {
     }
     ~SinglePluginViewContainers() override = default;
-
+    PluginGUI& getPluginUI() {
+        return ctr_main;
+    }
+    const PluginGUI& getPluginUI() const {
+        return ctr_main;
+    }
     void layout(int32_t winW, int32_t winH) override {
         ctr_main.pos  = { 0, 0 };
         ctr_main.size = { winW, winH };

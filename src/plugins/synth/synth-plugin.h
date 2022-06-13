@@ -84,6 +84,7 @@ namespace PluginSynth {
         Osc2Coarse,
         Osc2Fine,
         Osc2Split,
+        LfoWave,
         LfoShape,
         LfoFrequency,
         LfoDelay,
@@ -104,7 +105,6 @@ namespace PluginSynth {
         ModEnvS,
         ModEnvR,
         ModEnvV,
-        LfoWave,
     };
     static_assert(kNumParams == sizeof(parametersOrdered) / sizeof(Parameters), "parametersOrdered is not the correct size");
 
@@ -326,6 +326,8 @@ namespace PluginSynth {
         VstInt32 getVendorVersion() override;
         VstInt32 canDo(char* text) override;
     private:
+
+        /* TODO: release lastProgramChunks after several seconds */
         std::vector<std::shared_ptr<std::vector<std::byte>>> lastProgramChunks;
         std::recursive_mutex mutex;
         std::array<SynthProgram, kNumPrograms> staticPrograms;
