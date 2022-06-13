@@ -3404,8 +3404,8 @@ namespace PluginSynth {
             // scrollContainer.determineSize(scrollContainer.size);
             scrollContainerModulation.size        = ivec2(modulationWidth, cs.y) - ivec2(INSET_CTR_SPACING * 2);
             scrollContainerModulation.pos         = ivec2(cs.x - modulationWidth, 0) + ivec2(INSET_CTR_SPACING);
-            scrollContainerModulation.determineSize(scrollContainerModulation.size);
             scrollContainerModulation.maxHeight = cs.y;
+            scrollContainerModulation.determineSize(scrollContainerModulation.size);
             cs                     = ivec2(controlsWidth, cs.y);
             const auto numRows = 3;
             const auto numKnobs = CtrSize(knobs);

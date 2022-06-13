@@ -49,6 +49,7 @@ public:
     void close();
     void destroy();
     void resize(ivec2 newSize) const;
+    void onResize(ivec2 newSize);
     ivec2 getContentSize() const;
 
     void updateWindow() const;

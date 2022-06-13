@@ -68,6 +68,12 @@ static void glfw_cb_windowclose(GLFWwindow* w) {
 		userpointer->close();
 	}
 }
+static void glfw_cb_windowsize(GLFWwindow* w, int width, int height) {
+	auto* userpointer = static_cast<vst_window*>(glfwGetWindowUserPointer(w));
+	if (userpointer) {
+		userpointer->onResize(ivec2(width, height));
+	}
+}
 GLFWwindow* getTopLevelGlfwWindow();
 void glfw_main_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int mods);
 static void glfw_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int mods) {
@@ -82,6 +88,7 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
 	this->plugin = plugin;
 
 	glfwDefaultWindowHints();
+	glfwWindowHint(GLFW_RESIZABLE, resizeable ? GLFW_TRUE : GLFW_FALSE);
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 #ifdef __linux__
         glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "DAW");
@@ -93,6 +100,7 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
 	glfw = glfwCreateWindow(size.x, size.y, StringAsCStr(name), NULL, NULL);
     glfwSetWindowCloseCallback(glfw, glfw_cb_windowclose);
     glfwSetKeyCallback(glfw, glfw_cb_keyinput);
+    glfwSetWindowSizeCallback(glfw, glfw_cb_windowsize);
 	glfwSetWindowUserPointer(glfw, this);
 	#ifdef __linux__
 	WINDOW_HANDLE x11Window = glfwGetX11Window(glfw);
@@ -144,6 +152,11 @@ void vst_window::resize (ivec2 newSize) const
 	if (getContentSize () == newSize)
 		return;
 	glfwSetWindowSize(glfw, newSize.x, newSize.y);
+}
+
+void vst_window::onResize (ivec2 newSize)
+{
+	plugin->onWindowResize(newSize);
 }
 
 WINDOW_HANDLE vst_window::getHWND () const

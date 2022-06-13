@@ -2021,7 +2021,13 @@ public:
     void onSetParameter(int32_t index, float value) override {
         this->ctrlShared->onSetParameter(index, value);
     }
-
+    void onHostWindowResize(int32_t w, int32_t h) override {
+        if (isInitialized) {
+            this->setRect(0, 0, w, h);
+            glfwSetWindowSize(glfw, w, h);
+            this->onWindowSizeChanged(w, h);
+        }
+    }
     void destroyContextAndWindow() override {
         isInitialized = false;
         if (!glfw)

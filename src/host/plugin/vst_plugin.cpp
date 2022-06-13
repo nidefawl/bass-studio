@@ -74,6 +74,12 @@ void vstplugin::onWindowDestroy() {
     this->window = nullptr;
 }
 
+void vstplugin::onWindowResize(ivec2 size) {
+    if (handle->axEffect) {
+        return handle->axEffect->onWindowResize(size);
+    }
+}
+
 void vstplugin::onEnable() {
     if (!bIsPostInit) {
         bIsPostInit = true;
@@ -789,7 +795,7 @@ bool vstplugin::show() {
         }
         if (size.x <= 0) size.x = 160;
         if (size.y <= 0) size.y = 120;
-        this->window = vst_window::make(this, this->sName, size, false);
+        this->window = vst_window::make(this, this->sName, size, bSupportsWindowResize);
     }
     if (this->window != nullptr) {
         this->window->show();
@@ -894,4 +900,13 @@ void vst_onException(vstplugin* plugin)
         plugin->setParamValue(PARAM_ENABLE, 0, FLG_PAR_UPDATE_NOSTORE);
         log_lf(Log::L_ERROR, "segfault/fatal exception on %s\n", StringAsCStr(plugin->getName()));
     }
+}
+vstplugin::vstplugin(handles_t* _handle, int32_t globalId, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags)
+    : effectbase(std::move(sName), PLUGIN_TYPE_VST, globalId),
+      handle(_handle),
+      internalModuleId(_moduleId),
+      sDir(std::move(_sDir)),
+      bSupportsWindowResize(_handle->axEffect != nullptr),
+      bugfixFlags(_bugfixFlags)
+{
 }

@@ -1,4 +1,5 @@
 
+#include "tls.h"
 #include "types.h"
 #include "plugin-base.h"
 #include <vstsdk-plugin-2.4/audioeffectx.h>
@@ -24,6 +25,10 @@
 #include "exceptions.h"
 #include "msgbox.h"
 #include "platform.h"
+
+#if BUILD_VSTHOST
+#include "host/mainctrl.h"
+#endif
 
 #include "assert_dbg.h"
 
@@ -81,6 +86,9 @@ void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> vi
     try {
         std::shared_ptr<PluginControl> ctrl = std::make_shared<PluginControl>(view);
         ctrl->initApp(std::vector<String>());
+#if BUILD_VSTHOST
+        ctrl->setDawCtrl(daw_tls::getTls().mainCtrl);
+#endif
         int32_t ctrlWidth = 0, ctrlHeight = 0;
         view->getFixedSize(&ctrlWidth, &ctrlHeight);
         pluginwindow* pluginWindow = createPluginWindow(this, ctrl, ctrlWidth, ctrlHeight);
@@ -166,6 +174,12 @@ param_converted_t BasePluginVST2::convertParamValueDisplay(int32_t idx, const pa
 }
 void BasePluginVST2::addPropertiesParameterTooltip(Table::tbl& table, int idx) {
     
+}
+void BasePluginVST2::onWindowResize(ivec2 size) {
+    if (editor) {
+        pluginwindow* pluginWindow = static_cast<pluginwindow*>(editor);
+        pluginWindow->onHostWindowResize(size.x, size.y);
+    }
 }
 
 void BasePluginVST2::open() {

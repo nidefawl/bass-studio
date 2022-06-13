@@ -58,6 +58,7 @@ public:
     bool bWantsEffIdle     = false;
     bool bIsLoadingProgram = false;
     bool bIsPostInit       = false;
+    bool bSupportsWindowResize = false;
     int32_t pluginCategory = 0;
     int32_t vstVersion     = 0;
     int32_t localDbId      = -1;
@@ -77,14 +78,7 @@ public:
         return map[opCode];
     }
 public:
-    vstplugin(handles_t* _handle, int32_t globalId, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags)
-        : effectbase(std::move(sName), PLUGIN_TYPE_VST, globalId),
-          handle(_handle),
-          internalModuleId(_moduleId),
-          sDir(std::move(_sDir)),
-          bugfixFlags(_bugfixFlags)
-    {
-    }
+    vstplugin(handles_t* _handle, int32_t globalId, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags);
     ~vstplugin() override;
     void onEnable() override;
     void onDisable() override;
@@ -105,6 +99,7 @@ public:
     void printNames();
     bool onClose();
     void onWindowDestroy();
+    void onWindowResize(ivec2 size);
     bool onShow(vst_window* window);
     bool updateWindowSize();
     bool onResize(vst_window* window, ivec2 size);

@@ -50,6 +50,7 @@ public:
     virtual std::shared_ptr<PluginViewContainers> createView() = 0;
     virtual param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue);
     virtual void addPropertiesParameterTooltip(Table::tbl& table, int idx);
+    virtual void onWindowResize(ivec2 size);
     void setHostSideHandle(vstplugin* plugin) {
         this->hostSidePlugin = plugin;
     }

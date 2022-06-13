@@ -148,16 +148,21 @@ public:
     void handleDraggedRelease(MouseEvent& evt) override;
 };
 class BaseCtrl : public SafeRefHandler<guibase> {
+public:
+    enum drag_ctr_event_type { DRAG_BEGIN, DRAG_MOVE, DRAG_END };
+    struct drag_ctr_event {
+        drag_ctr_event_type evtType;
+    };
+    struct stored_ref {
+        guibase* ptr;
+        int32_t refId;
+    };
 protected:
     guitheme_mgr themes;
-
+#if BUILD_VSTHOST
+    DawCtrl* parentDawCtrl = nullptr;
+#endif
 public:
-    BaseCtrl() {
-        themes.parent = this;
-        ctrDragHandler.setControl(this);
-        ctrDragHandler.setFlag(FLG_RENDER_LABEL, true);
-    }
-    virtual ~BaseCtrl() = default;
     String windowName;
     window_base* window = nullptr;
     NVGcontext* vg      = nullptr;
@@ -166,12 +171,36 @@ public:
     std::vector<std::weak_ptr<i_ctr_drop_area>> dragDropTargets_ContainerMove;
     guictr_dragged_container_instance ctrDragHandler;
     std::shared_ptr<guictr_layout_entry> ctrContent;
-    std::vector<i_ctr_layout*> getContainers();
-    std::vector<std::weak_ptr<i_ctr_drop_area>> getTargets(MouseEvent& mevt, std::vector<i_ctr_layout*> ifMatches);
-    enum drag_ctr_event_type { DRAG_BEGIN, DRAG_MOVE, DRAG_END };
-    struct drag_ctr_event {
-        drag_ctr_event_type evtType;
-    };
+    int32_t refIdNext = 1;
+    std::vector<stored_ref> refs;
+    int cursorIcon         = CURSOR_DEFAULT;
+    ivec2 m_size           = {-1, -1};
+    ivec2 m_mousePos       = {-1, -1};
+    float m_scale          = 1.0f;
+    ivec2 dragStart{0};
+    ivec2 dragOffset{0};
+    ivec2 dragDistance{0};
+
+    guictxtmenu_base* ctxtmenu = nullptr;
+    guibase* guiOver       = nullptr; // updates on mouse move "current mouseover"
+    guibase* guiDragged    = nullptr; // updates on mouse click "currently dragged", set from guiOver
+    guibase* guiCaptured   = nullptr; // updates when cursor is hidden, set from guiDragged
+    guibase* guiFocused    = nullptr; // updates on mouse click, set from guiOver
+    guibase* guiCtrFocused = nullptr; // updates on mouse click, handles keyboard input
+
+    bool bShowDebugFrames      = false;
+    bool canTakeInputFocus = true; // TODO: use flags
+    bool bIsVisible        = true;
+    bool bHasFocus         = false;
+    bool mouseInside = false;
+    bool isOK        = false;
+public:
+    BaseCtrl() {
+        themes.parent = this;
+        ctrDragHandler.setControl(this);
+        ctrDragHandler.setFlag(FLG_RENDER_LABEL, true);
+    }
+    virtual ~BaseCtrl() = default;
     i_ctr_drop_area* determineDropCtrArea(MouseEvent& mevt) {
         MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
         evtDragObj.setDraggedThing(nullptr);
@@ -201,6 +230,9 @@ public:
         }
         return gui;
     }
+    guibase* getGuiFocused() const { return guiFocused; }
+    std::vector<i_ctr_layout*> getContainers();
+    std::vector<std::weak_ptr<i_ctr_drop_area>> getTargets(MouseEvent& mevt, std::vector<i_ctr_layout*> ifMatches);
     /**
      * Begin a container drag-drop action.
      * This function replaces the current dragged gui object with member BaseCtrl::ctrDragHandler.
@@ -214,27 +246,6 @@ public:
     void dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i_ctr_drop_area* area);
     virtual void dragContainerRelayout(drag_ctr_event evt) = 0;
     bool isDraggingContainer() const { return ctrContent != nullptr || bShowDebugFrames; }
-    bool bShowDebugFrames      = false;
-    guictxtmenu_base* ctxtmenu = nullptr;
-    int cursorIcon         = CURSOR_DEFAULT;
-    ivec2 m_size           = {-1, -1};
-    ivec2 m_mousePos       = {-1, -1};
-    float m_scale          = 1.0f;
-    guibase* guiOver       = nullptr; // updates on mouse move "current mouseover"
-    guibase* guiDragged    = nullptr; // updates on mouse click "currently dragged", set from guiOver
-    guibase* guiCaptured   = nullptr; // updates when cursor is hidden, set from guiDragged
-    guibase* guiFocused    = nullptr; // updates on mouse click, set from guiOver
-    guibase* guiCtrFocused = nullptr; // updates on mouse click, handles keyboard input
-    guibase* getGuiFocused() const { return guiFocused; }
-    struct stored_ref {
-        guibase* ptr;
-        int32_t refId;
-    };
-    int32_t refIdNext = 1;
-    std::vector<stored_ref> refs;
-    bool canTakeInputFocus = true; // TODO: use flags
-    bool bIsVisible        = true;
-    bool bHasFocus         = false;
     int safeRefCreate(guibase* gui) override {
         stored_ref ref{gui, (int32_t)refIdNext++};
         refs.push_back(ref);
@@ -257,12 +268,6 @@ public:
         }
         dbgassert(0);
     }
-
-    ivec2 dragStart{0};
-    ivec2 dragOffset{0};
-    ivec2 dragDistance{0};
-    bool mouseInside = false;
-    bool isOK        = false;
     bool isOk() const { return isOK; }
     virtual guitheme_t* getTheme() { return &themes.getRef(); }
     guitheme_mgr* getThemeMgr() { return &themes; }
@@ -317,9 +322,11 @@ public:
     void setVisible(bool b) { this->bIsVisible = b; }
     virtual bool hasDialogWindows() { return false; }
 #if BUILD_VSTHOST
-    DawCtrl* parentDawCtrl = nullptr;
     virtual DawCtrl* getDawCtrl() {
         return parentDawCtrl;
+    }
+    virtual void setDawCtrl(DawCtrl* dawCtrl) {
+        parentDawCtrl = dawCtrl;
     }
 #endif
     virtual String getWindowName() {
