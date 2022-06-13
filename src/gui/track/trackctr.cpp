@@ -1,4 +1,5 @@
 #include <nanovg.h>
+#include "assert_dbg.h"
 #include "str_util.h"
 #include "trackctr.h"
 #include "math/seq_math.h"
@@ -181,6 +182,7 @@ void guictr_tracks::resetView() {
 }
 
 void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot);
+void loadTrackLayoutSettings(guictr_tracks* guiTracks, track_gui_entry_t* entry, const tracklayout_settings_t& settings);
 
 void loadTrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot) {
     entry->subtracks.clear();
@@ -190,6 +192,7 @@ void loadTrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const t
         entry->state.wasInHide   = true;
     } else {
         entry->state.wasInHide = false;
+        loadTrackLayoutSettings(guiTracks, entry, snapshot.layout);
         loadSubtrackLayout(guiTracks, entry, snapshot);
         entry->state.layoutSaved = track_layout_snapshot_t();
     }
@@ -198,13 +201,13 @@ void loadTrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const t
 void guictr_tracks::loadTrackLayouts(trackcontainer_snapshot_t& in) {
     for (track_snapshot_t& trackStatic : in.tracks) {
         dbgassert(trackStatic.trackLoaded);
-        if (!trackStatic.layouts.count(globalIndex)) {
-            continue;
+        auto it = trackStatic.layouts.find(globalIndex);
+        if (it != trackStatic.layouts.end()) {
+            track_layout_snapshot_t& layout = it->second;
+            track_gui_entry_t* entry{};
+            always_assert(guiMgr.getTrackEntry(trackStatic.trackLoaded, &entry));
+            loadTrackLayout(this, entry, layout);
         }
-        auto layout = trackStatic.layouts.at(globalIndex);
-        track_gui_entry_t* entry;
-        dbgassert(guiMgr.getTrackEntry(trackStatic.trackLoaded, &entry));
-        loadTrackLayout(this, entry, layout);
         trackStatic.trackLoaded = nullptr;
     }
 }

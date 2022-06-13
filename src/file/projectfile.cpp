@@ -216,9 +216,8 @@ void serialize(Archive& archive, tracklayout_settings_t& m) {
 
 template<class Archive>
 void serialize(Archive& archive, track_layout_snapshot_t& m) {
-    // TODO: Store/Load track layout
-    //archive(make_nvp("layout", m.layout),
-    //make_nvp("subtracks", m.automationLanes));
+    archive(make_nvp("layout", m.layout),
+        make_nvp("subtracks", m.automationLanes));
 }
 
 template<class Archive>
@@ -276,6 +275,9 @@ void load(Archive& archive, track_snapshot_t& m, const std::uint32_t version) {
         } else {
             m.storeOpts = tracksnapshot_store_opts_t::All();
         }
+        if (version >= 4) {
+            archive(make_nvp("layouts", m.layouts));
+        }
     }
 }
 
@@ -287,7 +289,8 @@ void save(Archive& archive, const track_snapshot_t& m, const std::uint32_t versi
         make_nvp("clips", m.clips),
         make_nvp("data", m.data),
         make_nvp("stageIds", m.stageIds),
-        make_nvp("storeOpts", m.storeOpts)
+        make_nvp("storeOpts", m.storeOpts),
+        make_nvp("layouts", m.layouts)
     );
 }
 
@@ -473,7 +476,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 
 CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
 CEREAL_CLASS_VERSION(plugin_snapshot_t, 10);
-CEREAL_CLASS_VERSION(track_snapshot_t, 3);
+CEREAL_CLASS_VERSION(track_snapshot_t, 4);
 
 /**
  * @param projectfile

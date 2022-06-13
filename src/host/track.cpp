@@ -159,6 +159,7 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, const tracksnapsho
 }
 
 void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, track_layout_snapshot_t& snapshot);
+void saveTrackLayoutSettings(guictr_tracks* guiTracks, track_gui_entry_t* entry, tracklayout_settings_t& settings);
 
 track_id_snapshot_t saveTrackIdSnapshot(const audio_stage_id_t& stageId) {
     return {
@@ -199,6 +200,7 @@ track_snapshot_t::track_snapshot_t(const track_t* track, const tracksnapshot_sto
                 track_gui_entry_t* out;
                 if (ctr->guiMgr.getTrackEntry(track, &out)) {
                     track_layout_snapshot_t snapshot;
+                    saveTrackLayoutSettings(ctr, out, snapshot.layout);
                     saveSubtrackLayout(ctr, out, snapshot);
                     layouts[trackCtrIdx] = snapshot;
                 }
@@ -776,6 +778,12 @@ void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, cons
     }
 }
 
+void saveTrackLayoutSettings(guictr_tracks* guiTracks, track_gui_entry_t* entry, tracklayout_settings_t& settings) {
+    settings = entry->layout;
+}
+void loadTrackLayoutSettings(guictr_tracks* guiTracks, track_gui_entry_t* entry, const tracklayout_settings_t& settings) {
+    entry->layout = settings;
+}
 void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, track_layout_snapshot_t& snapshot) {
     snapshot.automationLanes.reserve(entry->subtracks.size());
     for (gui_track_subtrack* atl : entry->subtracks) {
