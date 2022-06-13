@@ -873,7 +873,8 @@ void guipluginview::buttonClicked(guibase* _button) {
         if (effect->bEditOpen) {
             effect->close();
         } else {
-            effect->show();
+            bool bResetPosition = isShift(parentCtrl->lastMouseEvent.kbmods);
+            effect->show(bResetPosition);
         }
     }
     if (_button == &buttonShowInlineGUI) {
@@ -884,7 +885,7 @@ void guipluginview::buttonClicked(guibase* _button) {
                 effect->close();
             }
             effect->requestCaptureGUI = 1;
-            effect->show();
+            effect->show(false);
         }
     }
     if (ctrPreview) {
@@ -1071,4 +1072,27 @@ int32_t guidropdownprogram::getSelectIndex() {
     uint32_t index = 0;
     plugin->getCurrentProgram(index);
     return index;
+}
+
+void guiplugin::makeSnapshot(plugin_ui_snapshot_t& puis, const tracksnapshot_store_opts_t& opts){
+    if (opts.storeLayouts) {
+        puis.isFolded = layoutMode == 1;
+        puis.windowPosSizeValid = effect->getLastWindowPosSize(puis.windowPosSize);
+    }
+}
+void guiplugin::loadSnapshot(const plugin_ui_snapshot_t& puis) {
+    layoutMode = puis.isFolded ? 1 : 0;
+    effect->bWindowPosSizeValid = puis.windowPosSizeValid;
+    effect->lastWindowPosSize = puis.windowPosSize;
+}
+
+
+void guipluginview::makeSnapshot(plugin_ui_snapshot_t& puis, const tracksnapshot_store_opts_t& opts) {
+    guiplugin::makeSnapshot(puis, opts);
+    if (opts.storeLayouts) {
+        puis.isWindowOpen = effect->bEditOpen;
+    }
+}
+void guipluginview::loadSnapshot(const plugin_ui_snapshot_t& puis) {
+    guiplugin::loadSnapshot(puis);
 }

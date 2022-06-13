@@ -1,5 +1,6 @@
 #pragma once
 #include "types.h"
+#include "math/vec.h"
 #include <vector>
 #include "host/daw_channel.h"
 #include "str_util.h"
@@ -32,6 +33,12 @@ struct plugin_iodesc_snapshot_t {
 };
 struct automation_view_t;
 struct track_effect_routing_snapshot_t;
+struct plugin_ui_snapshot_t {
+    ivec4 windowPosSize{};
+    bool windowPosSizeValid = false;
+    bool isWindowOpen = false;
+    bool isFolded = false;
+};
 struct plugin_snapshot_t {
     uint32_t version = 0;
     int32_t projectGlobalId = 0;
@@ -47,6 +54,7 @@ struct plugin_snapshot_t {
     plugin_iodesc_snapshot_t ioChannels;
     track_effect_routing_snapshot_t effectRouting;
     track_id_snapshot_t stageIds;
+    plugin_ui_snapshot_t uiSnapshot;
     std::vector<uint8_t> dataChunk;
     std::vector<uint8_t> dataChunk2;
     std::vector<param_snapshot_t> params;

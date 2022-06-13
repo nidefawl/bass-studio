@@ -3,6 +3,7 @@
 #include "math/vec.h"
 #include "gui/gui.h"
 #include "event.h"
+#include "snapshot.h"
 #include "str_util.h"
 #include "color_util.h"
 #include "gui/controls/button.h"
@@ -81,6 +82,8 @@ public:
     void addProperties(Table::tbl* table) override;
     void addPropertiesTooltip(Table::tbl& table);
     bool setScissorTransformContainer(NVGcontext* vg) override;
+    virtual void makeSnapshot(plugin_ui_snapshot_t& puis, const tracksnapshot_store_opts_t& opts);
+    virtual void loadSnapshot(const plugin_ui_snapshot_t& puis);
 };
 
 class guidropdown_select_program : public guictxtmenu {
@@ -133,6 +136,8 @@ public:
     void onAdded() override;
     void onRemove() override;
     void onTick(AppCtrl* ctrl) override;
+    void makeSnapshot(plugin_ui_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
+    void loadSnapshot(const plugin_ui_snapshot_t& puis) override;
 };
 class guivstplugin : public guipluginview {
 public:

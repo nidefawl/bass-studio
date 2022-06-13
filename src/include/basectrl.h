@@ -187,6 +187,7 @@ public:
     guibase* guiCaptured   = nullptr; // updates when cursor is hidden, set from guiDragged
     guibase* guiFocused    = nullptr; // updates on mouse click, set from guiOver
     guibase* guiCtrFocused = nullptr; // updates on mouse click, handles keyboard input
+    MouseEvent lastMouseEvent;
 
     bool bShowDebugFrames      = false;
     bool canTakeInputFocus = true; // TODO: use flags

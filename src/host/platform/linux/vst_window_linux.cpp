@@ -118,6 +118,10 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
 
 void vst_window::close()
 {
+	ivec4 posSize = {};
+	glfwGetWindowPos(glfw, &posSize.x, &posSize.y);
+	glfwGetWindowSize(glfw, &posSize.z, &posSize.w);
+	plugin->storeWindowPosSize(posSize);
 	plugin->onClose();
 	glfwHideWindow(glfw);
 }
@@ -158,6 +162,10 @@ void vst_window::onResize (ivec2 newSize)
 {
 	plugin->onWindowResize(newSize);
 }
+void vst_window::setPosition(ivec2 newPos) {
+	glfwSetWindowPos(glfw, newPos.x, newPos.y);
+}
+
 
 WINDOW_HANDLE vst_window::getHWND () const
 {

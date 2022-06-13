@@ -104,7 +104,7 @@ public:
     bool updateWindowSize();
     bool onResize(vst_window* window, ivec2 size);
     ivec2 constrainSize(vst_window* window, ivec2& size);
-    bool show() override;
+    bool show(bool bResetPosition) override;
     bool close() override;
     void unload(vsthost* host, int flags) override;
     void load(vsthost* host) override;

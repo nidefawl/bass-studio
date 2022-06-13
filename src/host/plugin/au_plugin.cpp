@@ -22,7 +22,7 @@ bool auplugin::onShow(vst_window* window) { return false; }
 bool auplugin::updateWindowSize() { return false; }
 bool auplugin::onResize(vst_window* window, ivec2 size) { return false; }
 ivec2 auplugin::constrainSize(vst_window* window, ivec2& size) { return size; }
-bool auplugin::show() { return false; }
+bool auplugin::show(bool bResetPosition) { return false; }
 bool auplugin::close() { return false; }
 void auplugin::unload(vsthost* host, int flags) {}
 void auplugin::load(vsthost* host) {}

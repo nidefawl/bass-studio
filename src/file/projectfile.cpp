@@ -11,6 +11,7 @@
 #include "exceptions.h"
 #include "seq_time.h"
 #include "seq_util.h"
+#include "math/vec.h"
 #include "snapshot.h"
 #include "str_util.h"
 #include "clip.h"
@@ -71,12 +72,28 @@ void serialize(Archive& archive, automation_view_t& m) {
         make_nvp("active", m.active));
 }
 
+namespace glm
+{
+template<class Archive>
+void serialize(Archive& archive, glm::ivec4& m) {
+    archive(make_nvp("x", m.x), make_nvp("y", m.y), make_nvp("w", m.z), make_nvp("h", m.w));
+}
+} // namespace glm
+
+template<class Archive>
+void serialize(Archive& archive, plugin_ui_snapshot_t& m) {
+    archive(
+        make_nvp("windowPosSize", m.windowPosSize),
+        make_nvp("windowPosValid", m.windowPosSizeValid),
+        make_nvp("windowOpen", m.isWindowOpen),
+        make_nvp("folded", m.isFolded));
+}
+
 template<class Archive>
 void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
     m.version = version;
     archive(
         make_nvp("pluginType", m.pluginType),
-        make_nvp("plugins", m.pluginSnapshots),
         make_nvp("name", m.name),
         make_nvp("uId", m.uId),
         make_nvp("slot", m.slot),
@@ -106,6 +123,10 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
     if (version >= 10) {
         archive(make_nvp("stageIds", m.stageIds), make_nvp("routing", m.effectRouting));
     }
+    if (version >= 11) {
+        archive(make_nvp("ui", m.uiSnapshot));
+    }
+    archive(make_nvp("plugins", m.pluginSnapshots));
 }
 
 template<class Archive>
@@ -137,6 +158,7 @@ void save(Archive& archive, plugin_snapshot_t const& m, const std::uint32_t vers
         make_nvp("version", m.version),
         make_nvp("stageIds", m.stageIds),
         make_nvp("routing", m.effectRouting),
+        make_nvp("ui", m.uiSnapshot),
         make_nvp("plugins", m.pluginSnapshots)
     );
 }
@@ -475,7 +497,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 }
 
 CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
-CEREAL_CLASS_VERSION(plugin_snapshot_t, 10);
+CEREAL_CLASS_VERSION(plugin_snapshot_t, 11);
 CEREAL_CLASS_VERSION(track_snapshot_t, 4);
 
 /**

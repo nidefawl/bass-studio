@@ -247,7 +247,7 @@ void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_st
 void effect_deferred::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
     dbgassert(vstHost->m_sampleFormatInternal == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 }
-bool effect_deferred::show() {
+bool effect_deferred::show(bool bResetPosition) {
     return false;
 }
 bool effect_deferred::close() {

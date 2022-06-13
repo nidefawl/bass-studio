@@ -3,6 +3,7 @@
 #include <vstsdk-host-2.4/aeffectx.h>
 #include "automation.h"
 #include "config.h"
+#include "host/plugin/base_plugin.h"
 #include "vst_plugin.h"
 #include "host/vst_midi_event.h"
 
@@ -84,8 +85,10 @@ void vstplugin::onEnable() {
     if (!bIsPostInit) {
         bIsPostInit = true;
         postLoad();
-        if (this->bugfixFlags & VST2_BUG_NEED_SHOW_WINDOW_TO_LOAD_PRESET) {
-            show();
+        bool bShowWindow = this->bugfixFlags & VST2_BUG_NEED_SHOW_WINDOW_TO_LOAD_PRESET;
+        bShowWindow |= uiSnapshot.isWindowOpen;
+        if (bShowWindow) {
+            show(false);
         }
     }
     if (!isInSuspend) {
@@ -422,7 +425,7 @@ void vstplugin::postLoad() {
 namespace {
 
     void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, const tracksnapshot_store_opts_t& opts) {
-        ps.version           = 10;
+        ps.version           = 11;
         ps.slot              = 0;
         ps.projectGlobalId   = plugin->projectGlobalId;
         ps.enabled           = plugin->bIsEnabled;
@@ -490,6 +493,7 @@ namespace {
 }// namespace
 
 void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
+    this->uiSnapshot = pluginSnapshot.uiSnapshot;
     this->bIsLoadingProgram = true;
     const int32_t programIdx = pluginSnapshot.currentProgram >= 0 ? pluginSnapshot.currentProgram : 0;
     VstPatchChunkInfo info{};
@@ -527,10 +531,16 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     this->dispatch(effSetProgram, 0, programIdx);
     // this->dispatch(effSetProgram, 0, programIdx);
     this->bIsLoadingProgram = false;
+    if (handle->gui) {
+        handle->gui->loadSnapshot(this->uiSnapshot);
+    }
 }
-
+// virtual void loadSnapshot(const plugin_ui_snapshot_t& ps);
 void vstplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
     createSnapshot(ps, this, opts);
+    if (handle->gui) {
+        handle->gui->makeSnapshot(ps.uiSnapshot, opts);
+    }
     ps.slot = this->slot;
 }
 
@@ -559,6 +569,7 @@ guiplugin* vstplugin::makeGui() {
         //view = vstPluginView;
         //handle->gui = vstPluginView;
         handle->gui = std::make_shared<guivstplugin>(this);
+        handle->gui->loadSnapshot(this->uiSnapshot);
         handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
         if (handle->axEffect) {//only provided by internal vst2 instance (not a DLL)
             guiplugin* pGuiPlugin = handle->gui.get();
@@ -785,20 +796,31 @@ bool vstplugin::close() {
     return true;
 }
 
-bool vstplugin::show() {
+bool vstplugin::show(bool bResetPosition) {
     if (this->window == nullptr && (handle->aeffect->flags & effFlagsHasEditor)) {
         ERect* prc = nullptr;
         this->dispatch(effEditGetRect, 0, 0, (void*) &prc);
         ivec2 size = { 160, 120 };
+        if (bSupportsWindowResize && bWindowPosSizeValid && !bResetPosition) {
+            size.x = this->lastWindowPosSize.z;
+            size.y = this->lastWindowPosSize.w;
+        }
         if (prc) {
             size = { prc->right - prc->left, prc->bottom - prc->top };
         }
         if (size.x <= 0) size.x = 160;
         if (size.y <= 0) size.y = 120;
         this->window = vst_window::make(this, this->sName, size, bSupportsWindowResize);
+        if (bWindowPosSizeValid && !bResetPosition) {
+            this->window->setPosition(ivec2(this->lastWindowPosSize.x, this->lastWindowPosSize.y));
+        }
+
     }
     if (this->window != nullptr) {
         this->window->show();
+        if (bWindowPosSizeValid && !bResetPosition) {
+            this->window->setPosition(ivec2(this->lastWindowPosSize.x, this->lastWindowPosSize.y));
+        }
     }
     return false;
 }

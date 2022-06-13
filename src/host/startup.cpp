@@ -169,7 +169,7 @@ void openPluginWindows(DawCtrl* dawCtrl, String pluginName) {
     host->getAllInstances(effects);
     for (auto eff : effects) {
         if (eff->getName().find(pluginName) != String::npos) {
-            eff->show();
+            eff->show(false);
             track_t* tr = eff->getTrack();
             if (tr) {
                 dawCtrl->getDaw()->setSelectedTrack(tr);

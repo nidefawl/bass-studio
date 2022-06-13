@@ -50,7 +50,7 @@ public:
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
-    bool show() override;
+    bool show(bool bResetPosition) override;
     bool close() override;
 
     // automatable_t interface

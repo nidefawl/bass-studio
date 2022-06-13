@@ -112,8 +112,8 @@ void BaseCtrl::mouseUp(ivec2 mousePos, int button) {
     }
     if (guiDragged) {
         cursorIcon     = CURSOR_DEFAULT;
-        MouseEvent evt = mouseEvent(this, guiDragged, mousePos, button, M_EVT_BTN_UP);
-        guiDragged->handleDraggedRelease(evt);
+        lastMouseEvent = mouseEvent(this, guiDragged, mousePos, button, M_EVT_BTN_UP);
+        guiDragged->handleDraggedRelease(lastMouseEvent);
         guiDragged = nullptr;
     }
 }
@@ -180,8 +180,8 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
         dragStart      = mousePos;
         dragOffset     = gui->toScreenSpace(ivec2(0)) - mousePos;
 
-        MouseEvent mouseEvt = mouseEvent(this, gui, mousePos, button, doubleclick ? M_EVT_DOUBLECLICK : M_EVT_BTN_DOWN);
-        gui->handleMouseDownBegin(mouseEvt);
+        lastMouseEvent = mouseEvent(this, gui, mousePos, button, doubleclick ? M_EVT_DOUBLECLICK : M_EVT_BTN_DOWN);
+        gui->handleMouseDownBegin(lastMouseEvent);
     }
 }
 
@@ -217,14 +217,14 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
     if (ctxtmenu == nullptr) {
         if (guiCaptured != nullptr) {
             dragDistance += deltaPos;
-            MouseEvent evt = mouseEvent(this, guiCaptured, mousePos, -1, M_EVT_CAPTURED_MOVE);
-            guiCaptured->handleDraggedMove(evt);
+            lastMouseEvent = mouseEvent(this, guiCaptured, mousePos, -1, M_EVT_CAPTURED_MOVE);
+            guiCaptured->handleDraggedMove(lastMouseEvent);
             return;
         }
         if (guiDragged != nullptr) {
             dragDistance += deltaPos;
-            MouseEvent evt = mouseEvent(this, guiDragged, mousePos, -1, M_EVT_MOVE);
-            guiDragged->handleDraggedMove(evt);
+            lastMouseEvent = mouseEvent(this, guiDragged, mousePos, -1, M_EVT_MOVE);
+            guiDragged->handleDraggedMove(lastMouseEvent);
             return;
         }
     }

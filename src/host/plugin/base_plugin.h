@@ -67,7 +67,9 @@ public:
     stats_processing_timings_t procStats;
     int midiEventsDispatched = 0;
     std::vector<DAW::channel_ref_t> inputChannels;
-
+    bool bWindowPosSizeValid = false;
+    ivec4 lastWindowPosSize{};
+    plugin_ui_snapshot_t uiSnapshot{};
 protected:
     int nLoadCalls   = 0;
     vsthost* vstHost = nullptr;
@@ -110,7 +112,7 @@ public:
     virtual void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) = 0;
     virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed);
     virtual void processMidi(midi_events_t& midiEvents);
-    virtual bool show()   = 0;
+    virtual bool show(bool bResetPosition)   = 0;
     virtual bool close()  = 0;
     virtual void unload(vsthost* host, int flags);
     virtual void load(vsthost* host);
@@ -165,6 +167,19 @@ public:
         return trackImpl != nullptr;
     }
 
+    void storeWindowPos(ivec2 posSize) {
+        this->lastWindowPosSize.x = posSize.x;
+        this->lastWindowPosSize.y = posSize.y;
+    }
+    void storeWindowPosSize(ivec4 posSize) {
+        this->lastWindowPosSize = posSize;
+        this->bWindowPosSizeValid = true;
+    }
+    bool getLastWindowPosSize(ivec4& posSize) {
+        posSize = this->lastWindowPosSize;
+        return this->bWindowPosSizeValid;
+    }
+
 public:
     virtual effect_deferred* toDeferred();
     void updateOnEnableParam(automatable_param_t* param, bool wasEnable, bool isEnable, int flags);
@@ -189,7 +204,7 @@ public:
     guiplugin* makeGui() override;
     guiplugin* getGui() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
-    bool show() override;
+    bool show(bool bResetPosition) override;
     bool close() override;
 
     // automatable_t interface
