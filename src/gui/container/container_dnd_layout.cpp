@@ -3,8 +3,10 @@
 #include "gui/gui.h"
 #include "host/mainctrl.h"
 #include "gui/container/container_layout_types.h"
+#include "logging.h"
 #include "platform.h"
 #include "fileio.h"
+#include "str_util.h"
 
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
@@ -178,6 +180,16 @@ i_ctr_drop_area* guictr_layout::makeDropArea(int32_t idx) {
 void guictr_layout::getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<i_ctr_drop_area>>& vecHandles) {
     if (this->entries.empty()) {
         setOverlayPos(makeDropArea(0), dock_pos::CENTER, ivec2(0), size, -1, -1);
+        if (parent == nullptr) {
+            dragdropContainerAreaHelpers[0]->size.x = 32;
+        }
+        if (parent == nullptr && (dragdropContainerAreaHelpers[0]->pos.x+dragdropContainerAreaHelpers[0]->size.x) > parentCtrl->m_size.x) {
+            dragdropContainerAreaHelpers[0]->pos.x = parentCtrl->m_size.x - dragdropContainerAreaHelpers[0]->size.x;
+        }
+        if (parent == nullptr && (dragdropContainerAreaHelpers[0]->pos.x) < 0) {
+            dragdropContainerAreaHelpers[0]->pos.x = 0;
+        }
+        dragdropContainerAreaHelpers[0]->setAlwaysShow(true);
         vecHandles.push_back(dragdropContainerAreaHelpers[0]);
     } else {
         int32_t areaOffset = 0;
@@ -442,7 +454,7 @@ void i_ctr_drop_area::render(NVGcontext* vg) {
     nvgFill(vg);
     renderTextLabel(vg,
                     vec2(pos) + vec2(0, size.y/2.0),
-                    size,
+                    vec2(1000, 1000),
                     this->label,
                     nullptr,
                     20,

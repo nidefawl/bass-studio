@@ -45,7 +45,8 @@ private:
     std::vector<std::shared_ptr<Splitter>> splitters;
     String getLayoutCtrName() {
         if (this->label.empty()) {
-            return StringFormat("%12zX", reinterpret_cast<uint64_t>(this));
+            auto ctrName = getClassName();
+            return ctrName;//StringFormat("%12zX", reinterpret_cast<uint64_t>(this));
         }
         return this->label;
     }

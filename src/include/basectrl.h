@@ -78,11 +78,14 @@ public:
     int32_t dockPosOffset       = -1;
     int32_t childContainerIndex = -1;
     String label;
+    bool bAlwaysShow = false;
     explicit i_ctr_drop_area(i_ctr_layout* _parent) : parent(_parent) {}
     void render(NVGcontext* vg);
     bool contains(ivec2 mpos) const { return mpos.x >= pos.x && mpos.y >= pos.y && mpos.x < pos.x + size.x && mpos.y < pos.y + size.y; }
     i_ctr_layout* getLayoutCtr() { return parent; }
     dock_pos getDockPos() const { return dockPos; }
+    void setAlwaysShow(bool b) { bAlwaysShow = b; }
+    bool isAlwaysShow() const { return bAlwaysShow; }
 };
 enum layout_ctr_type { GUICTR_LAYOUT, GUICTR_BASE };
 struct guictr_layout_entry {

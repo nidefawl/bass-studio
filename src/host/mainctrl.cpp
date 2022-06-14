@@ -396,7 +396,7 @@ public:
         subctr_tabbed->setLabel("Bottom");
         std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(subctr_tabbed2);
         std::shared_ptr<guictr_layout_entry> entry2 = createGuiCtrLayoutEntry(subctr_tabbed);
-        ctr_Left                                    = std::make_shared<guictr_layout>();
+        ctr_Left  = std::make_shared<guictr_layout>();
         ctr_Left->setLabel("Left Docker");
         ctr_Right = std::make_shared<guictr_layout>();
         ctr_Right->setLabel("Right Docker");
