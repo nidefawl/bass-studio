@@ -153,6 +153,7 @@ public:
     gui_performance_stats textStats;
     guictr_scrollbar scrollTop;
     gui_performance() : guictr_base() {
+        setCanMouseHit(true);
         ctrType = CTR_TYPE_PERFORMANCE;
         setBackgroundRendered(false);
         padding = 0;
@@ -171,11 +172,13 @@ public:
     }
     void onTick(AppCtrl* ctrl) override {
         guictr_base::onTick(ctrl);
+        layout();
     }
     void layout() override {
         ivec2 cs       = getSizeContent();
         scrollTop.pos  = ivec2(0, 0);
         scrollTop.size = ivec2(cs.x, cs.y);
+        scrollTop.maxHeight = cs.y;
         scrollTop.determineSize(scrollTop.size);
         for (guibase* gui : guis) {
             gui->layout();

@@ -314,6 +314,10 @@ public:
                     return true;
                 }
             }
+            if (evt.type == MouseHitType::MOUSE_SCROLL) {
+                evt.requestFocus(this);
+                return true;
+            }
             if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
                 evt.requestFocus(this);
                 return true;
