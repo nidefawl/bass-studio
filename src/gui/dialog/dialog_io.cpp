@@ -1221,6 +1221,7 @@ public:
         : setting_dialog(),
           daw(_daw)
     {
+        (void)daw;
         setCanMouseHit(true);
         listOptions.setCanMouseHit(true);
         listOptions.setBackgroundRendered(true);

@@ -1123,6 +1123,7 @@ public:
     : appwindow(_parent),
     impl(windowImpl)
     {
+        (void) disablesParent;
     }
 
     void createDialogWindow(const char* title, int w, int h, GLFWwindow* share = nullptr) {
@@ -1941,6 +1942,8 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                     PostMessage(mainWindow->getHWND(), WM_APP + 42, 0, 0);
                 }
             }
+#else
+            (void)tmLRNow;
 #endif
         }
         mainWindow->destroy();

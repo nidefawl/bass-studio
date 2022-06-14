@@ -25,6 +25,7 @@ namespace PluginTestAdv {
 
 gui_ctr_main::gui_ctr_main(GuiAdvPluginVST2* plugin)
     : guictr_base(), plugin(plugin), field(nullptr) {
+    (void)this->plugin;
     setBackgroundRendered(true);
     add(&colorPicker);
     add(&textField);

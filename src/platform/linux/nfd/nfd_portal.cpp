@@ -100,7 +100,6 @@ T* transform(const T* begin, const T* end, T* out, Callback callback) {
     return out;
 }
 
-constexpr const char* STR_EMPTY = "";
 constexpr const char* STR_OPEN_FILE = "Open File";
 constexpr const char* STR_OPEN_FILES = "Open Files";
 constexpr const char* STR_SAVE_FILE = "Save File";

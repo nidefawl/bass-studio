@@ -1165,6 +1165,7 @@ namespace PluginSynth {
         SynthImpl(PluginVST2_Synth* vst2Plugin)
             : SynthState(),
               instanceVst2(vst2Plugin) {
+            (void) instanceVst2;
             initImpl();
         }
         void init() {
