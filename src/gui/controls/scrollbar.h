@@ -78,17 +78,7 @@ public:
             setScrollOffset(startOffset + dragPixels / (float) scrollRange);
         }
     }
-    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override {
-        if (yoffset) {
-            ivec2 vcS         = ctr.getScrollTotalSize();
-            int32_t cS        = vcS[dir];
-            float scrollRange = cS;
-            if (scrollRange > 0) {
-                setScrollOffset(scrollOffset - (yoffset * 100) / (float) scrollRange);
-            }
-        }
-        return true;
-    }
+    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
     void handleDraggedRelease(MouseEvent& evt) override {
     }
 };
