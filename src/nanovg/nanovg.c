@@ -830,6 +830,14 @@ void nvgFillColor(NVGcontext* ctx, NVGcolor color)
 	nvg__setPaintColor(&state->fill, color);
 	nvgTransformMultiply(state->fill.xform, state->xform);
 }
+NVGcolor nvgGetCurrentAndSetFillColor(NVGcontext* ctx, NVGcolor color)
+{
+	NVGstate* state = nvg__getState(ctx);
+	NVGcolor prev = state->fill.innerColor;
+	nvg__setPaintColor(&state->fill, color);
+	nvgTransformMultiply(state->fill.xform, state->xform);
+	return prev;
+}
 
 void nvgFillPaint(NVGcontext* ctx, NVGpaint paint)
 {

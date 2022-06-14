@@ -77,7 +77,7 @@ public:
         return GuiColor::COL_BG_BRT;
     }
 
-    virtual GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const {
+    GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
         if (focused()) {
             return GuiColor::COL_BG_BRT;
         }

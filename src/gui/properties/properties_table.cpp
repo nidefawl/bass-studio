@@ -804,14 +804,13 @@ void drawColor(NVGcontext* vg, ivec2 pos, ivec2 size, uint32_t rgba) {
     int sizeQuad = size.y - INSET_TABLE_CELL_PADDING * 2;
 
     nvgText(vg, pos.x + size.x - INSET_TABLE_CELL_PADDING * 2 - sizeQuad, pos.y + size.y - INSET_TABLE_CELL_PADDING, StringAsCStr(strColorHex), nullptr);
-
+    
     nvgBeginPath(vg);
     nvgRect(vg, pos.x + size.x - INSET_TABLE_CELL_PADDING - sizeQuad, pos.y + INSET_TABLE_CELL_PADDING,
         sizeQuad, sizeQuad);
-    nvgFillColor(vg, rgbaToNvg(rgba));
+    auto previous = nvgGetCurrentAndSetFillColor(vg, rgbaToNvg(rgba));
     nvgFill(vg);
-    nvgFillColor(vg, rgbaToNvg(0xFFFFFFFF));
-
+    nvgFillColor(vg, previous);
 }
 
 template <>
