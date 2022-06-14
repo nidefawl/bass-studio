@@ -3,10 +3,10 @@
 #define MAX_ZOOM 100.0
 #define DEFAULT_ZOOM (1.0 / (double) (1 << 2))
 #define GRID_WIDEST 0
-#define GRID_WIDE 1
-#define GRID_MED 2
-#define GRID_NARROW 3
-#define GRID_NARROWEST 4
+#define GRID_WIDE 2
+#define GRID_MED 4
+#define GRID_NARROW 6
+#define GRID_NARROWEST 8
 #define GRID_8BAR 5
 #define GRID_4BAR 6
 #define GRID_2BAR 7
