@@ -154,7 +154,7 @@ bool guiplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     return false;
 }
 guiplugin::guiplugin(effectbase* _effect)
-    : guictr_base(),
+    : guictr_base(gui_type::CTR_TYPE_PLUGIN),
       effect(_effect),
       guiMeter(&_effect->meter) {
     padding = 0;

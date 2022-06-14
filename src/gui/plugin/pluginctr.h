@@ -86,7 +86,7 @@ public:
     std::vector<effectbase*> effects;
     audio_stage_t* trackImpl = nullptr;
     Table::tbl table;
-    guictr_dragged_plugins() : guictr_base() {
+    guictr_dragged_plugins() : guictr_base(gui_type::CTR_TYPE_PLUGINS_DRAGGED) {
         pos = { 0, 0 };
     }
     ~guictr_dragged_plugins() override = default;

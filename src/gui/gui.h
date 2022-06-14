@@ -91,7 +91,7 @@ enum guiflag_titlebar : int32_t {
     TITLEBAR_FLG_FOCUSED = 1,
     TITLEBAR_FLG_SELECTED = 2
 };
-enum gui_type : uint8_t {
+enum gui_type : uint16_t {
     GUI_TYPE_UNKNOWN = 0,
     GUI_TYPE_BUTTON,
     GUI_TYPE_KNOB,
@@ -111,7 +111,9 @@ enum gui_type : uint8_t {
     CTR_TYPE_DEBUG_2,
     CTR_TYPE_PERFORMANCE,
     CTR_TYPE_EXPORT,
-    CTR_TYPE_CLIPEDITOR
+    CTR_TYPE_CLIPEDITOR,
+    CTR_TYPE_PLUGIN,
+    CTR_TYPE_PLUGINS_DRAGGED,
 };
 namespace DebugAlloc {
     template<typename T>

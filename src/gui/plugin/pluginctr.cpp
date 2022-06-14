@@ -904,6 +904,14 @@ void guictr_pluginview::render(NVGcontext* vg) {
 void guictr_plugins::onTick(AppCtrl* ctrl) {
 #define SCROLL_START_X 30
     if (isDefaultPluginCtr && ctrl->guiDragged) {
+        auto ctrType = ctrl->guiDragged->getGuiType();
+        switch(ctrType) {
+            case gui_type::CTR_TYPE_PLUGIN:
+            case gui_type::CTR_TYPE_PLUGINS_DRAGGED:
+                break;
+            default:
+                return;
+        }
         guictr_plugins* ctr   = MainCtrl::getPluginCtr();
         ivec2 cs              = ctr->getSizeContent();
         ivec2 screenPosMouse  = ctrl->m_mousePos;
