@@ -1079,9 +1079,9 @@ guictr_base* makeCtrTheme() {
     return ctr;
 }
 
-std::vector<guiproperties_table<guiproperties_t>*> propTableInstances;
-void setDebugPropertyHandle(void* ptr) {
-    for (auto* instance : propTableInstances) {
+std::vector<guiproperties_table<guiproperties_t>*> g_propTableInstances;
+void setGlobalDebugPropertyHandle(void* ptr) {
+    for (auto* instance : g_propTableInstances) {
         if (instance->parentCtrl) {
             instance->setDebugPropertyHandle(ptr);
         }
@@ -1095,7 +1095,7 @@ guictr_properties_table* makeUniquePropertiesCtr() {
 
 guictr_base* makeCtrProperties() {
     auto* ptr = new guiproperties_table<guiproperties_t>(new guiproperties_t(), true, true);
-    propTableInstances.push_back(ptr);
+    g_propTableInstances.push_back(ptr);
     return ptr;
 }
 
@@ -1103,7 +1103,7 @@ template <>
 guiproperties_table<guiproperties_t>::~guiproperties_table() {
     removeGuis();
     if (m_bGlobalInstance) {
-        bool b = removeEntry(propTableInstances, this);
+        bool b = removeEntry(g_propTableInstances, this);
         dbgassert(b);
     }
     if (m_bOwnsObjPtr)

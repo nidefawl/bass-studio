@@ -331,6 +331,7 @@ public:
             if (gui) {
                 guictr_properties_table* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
                 guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
+                ctxtMenu->setBackgroundRendered(true);
                 ctxtMenu->size = { 640, 480 };
                 ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
                 ivec2 wndPos{ 0 };

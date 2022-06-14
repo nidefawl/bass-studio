@@ -463,16 +463,17 @@ void guibase::handleMouseDownBegin(MouseEvent& evt) {
 #if BUILD_VSTHOST
         guictr_properties_table* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
         guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
+        ctxtMenu->setBackgroundRendered(true);
         ctxtMenu->size = { 640, 480 };
         ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
         dbgPropertiesCtrPopup->setDebugPropertyHandle(this);
-        dbgPropertiesCtrPopup->setTheme(theme);
-        dbgPropertiesCtrPopup->layout();
-        dbgPropertiesCtrPopup->theme = nullptr;
+        // dbgPropertiesCtrPopup->setTheme(theme);
+        // dbgPropertiesCtrPopup->layout();
+        // dbgPropertiesCtrPopup->theme = nullptr;
         this->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
         dbgPropertiesCtrPopup->setDebugPropertyHandle(this);
         dbgPropertiesCtrPopup->layout();
-        setDebugPropertyHandle(this);
+        setGlobalDebugPropertyHandle(this);
 #endif
     }
 }

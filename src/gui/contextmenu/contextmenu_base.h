@@ -175,4 +175,18 @@ public:
         if (parentCtrl)
             parentCtrl->closePopup();
     }
+
+    GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const override {
+        if (focused()) {
+            return GuiColor::COL_BG_BRT;
+        }
+        return GuiColor::COL_BG_BRT;
+    }
+
+    GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
+        if (focused()) {
+            return GuiColor::COL_BG_BRT;
+        }
+        return GuiColor::COL_BG_BRT;
+    }
 };
