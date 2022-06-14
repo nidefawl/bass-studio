@@ -81,7 +81,8 @@ void guitrack_timeline::render(NVGcontext* vg) {
     int printoffset = 1;
     int gap         = 16;
 
-    String textTmp = StringFormat("%d.%d.%d", 333, 4, 4);
+    grid_div& last = gridList.back();
+    String textTmp = StringFormat("%d.%d.%d", last.pos.bar, last.pos.beat, last.pos.th);
 
     UIFont::font_instance instance = theme->getFont(UIFont::FONT_DECIMAL);
     UIFont::bindFont(vg, instance);
