@@ -1030,7 +1030,7 @@ namespace PluginSynth {
                 addParam(param, enumParam);
                 return param;
             };
-            auto setParamName = [](SynthParamBase* p, String name, String shortName = "", String hierarchicalName = "", String unit = "", String format = "%.3f") {
+            auto setParamName = [](SynthParamBase* p, String name, String shortName = "", String hierarchicalName = "", String unit = "", String format = "") {
                 if (shortName.empty()) {
                     p->shortName = name;
                 } else {
