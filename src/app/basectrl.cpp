@@ -1,4 +1,5 @@
 #include "glheaders.h"
+#include <__algorithm/remove.h>
 #include <cstddef>
 #include <nanovg.h>
 #include <ctime>
@@ -199,7 +200,7 @@ void BaseCtrl::mouseScrolled(double xoffset, double yoffset) {
     }
 }
 
-bool BaseCtrl::isCtrOrChildFocused(guibase* gui) {
+bool BaseCtrl::isCtrOrChildFocused(const guibase* gui) const {
     if (gui == this->guiCtrFocused) return true;
     guibase* p = this->guiFocused;
     while (p != nullptr) {
@@ -413,7 +414,36 @@ void BaseCtrl::setClipboardText(String s) {
 void AppCtrl::onAppTick() {
     getTheme()->updateAnimation();
     onTick();
-
+    if (!guiDragged && !guiCaptured && guiOver && (!this->ctxtmenu || ctxtmenu->isTransient())) {
+        auto hoverTime = tmLastHoveredTooltip;
+        if (ctxtmenu && ctxtmenu->isTransient() && (lastTooltipSrc && guiOver && guiOver != lastTooltipSrc)) {
+            closeContextMenu();
+        }
+        if (ctxtmenu && !ctxtmenu->isTransient()) {
+            hoverTime = 0;
+        }
+        if (!ctxtmenu) {
+            auto timeNow = getTimeMillis();
+            if (guiOver == lastHoveredTooltip && timeNow - tmLastHoveredTooltip >= 360) {
+                auto newContextMenu = guiOver->getTooltip(this);
+                if (newContextMenu) {
+                    newContextMenu->theme = getTheme();
+                    lastTooltipSrc        = guiOver;
+                    nextTooltipId++;
+                    openOverlayGui(newContextMenu, m_mousePos + ivec2(-16, 26), BASECTRL_WND_POS_RELATIVE| BASECTRL_WND_IS_TOOLTIP);
+                }
+                hoverTime = 0;
+            } else if (guiOver != lastHoveredTooltip) {
+                hoverTime = timeNow;
+            }
+        }
+        tmLastHoveredTooltip = hoverTime;
+        lastHoveredTooltip   = guiOver;
+    } else {
+        if (ctxtmenu && ctxtmenu->isTransient()) {
+            closeContextMenu();
+        }
+    }
     /* run deferred delete of contextmenus */
     releaseGarbageGuis();
 }
@@ -530,9 +560,14 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
     this->contextWindow = ctxtWindow;
     if (ctxtWindow) {
         auto popupCtrl = ctxtWindow->getCtrl();
+        dbgassert(popupCtrl->isOk()); 
         popupCtrl->m_scale = m_scale;
         // copy theme (again) from this control to contextWindows control
-        *popupCtrl->getTheme() = *getTheme();
+        auto themePopup = popupCtrl->getTheme();
+        auto themeThis = getTheme();
+        dbgassert(themePopup);
+        dbgassert(themeThis);
+        *themePopup = *themeThis;
         auto label = guicontextmenu->getLabel();
         if (!label.empty()) {
             popupCtrl->setWindowName(label);
@@ -586,6 +621,16 @@ void AppCtrl::closeContextMenu() {
 void AppCtrl::closeDialogs() {
     if (this->dialog) {
         this->dialog->closeContextMenu();
+    }
+}
+void AppCtrl::onChildOverlayWindowDestroy(window_main* ptr) {
+    // This will only be called after onChildOverlayWindowClose
+    if (ptr == contextWindow) {
+        contextWindow = nullptr;
+    }
+    auto it = std::remove_if(menuWindows.begin(), menuWindows.end(), [ptr](const auto& entry) { return entry.wnd == ptr; });
+    if (it != menuWindows.end()) {
+        menuWindows.erase(it);
     }
 }
 void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {

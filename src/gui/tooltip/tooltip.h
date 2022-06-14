@@ -1,5 +1,6 @@
 #pragma once
 #include "basectrl.h"
+#include "guicolors.h"
 #include "math/vec.h"
 #include "gui/gui.h"
 #include "gui/contextmenu/contextmenu_base.h"
@@ -24,8 +25,10 @@ public:
     
     guitooltip(T* _ptr) : ptr(_ptr) {
         add(&textField);
-        setBackgroundRendered(false);
+        setBackgroundRendered(true);
         setBackgroundRenderedInset(false);
+        padding = 1;
+        margin = padding;
         textField.setVisible(false);
         scrollbarOutside = true;
         maxHeight        = 220;
@@ -66,6 +69,21 @@ public:
         size = ivec2(table.tableWidth, table.rows.size() * table.rowHeight) + ivec2(INSET_TABLE << 1);
         Table::AdjustColSizes(table);
     }
+
+    GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const override {
+        if (focused()) {
+            return GuiColor::COL_BG_BRT;
+        }
+        return GuiColor::COL_BG_BRT;
+    }
+
+    virtual GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const {
+        if (focused()) {
+            return GuiColor::COL_BG_BRT;
+        }
+        return GuiColor::COL_BG_BRT;
+    }
+
     void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);

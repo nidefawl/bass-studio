@@ -34,12 +34,16 @@
 #include "gui/controls/statusbar.h"
 #include "gui/menu/menu.h"
 #include "plugin.h"
+#if BUILD_VSTHOST
+#include "host/mainctrl.h"
+#endif
 
 
 void PluginControl::destroy() {
     if (!isOK) {
         return;
     }
+    log_lf(Log::L_ERROR, "Destroy PluginControl %s\n", StringAsCStr(windowName));
     isOK = false;
     if (view) {
         //delete view;
@@ -84,6 +88,14 @@ bool PluginControl::initAppWindow(window_main* window, NVGcontext* nanovg) {
             ctr->setControl(this);
         }
     }
+#if BUILD_VSTHOST
+    AppCtrl* parentCtrl = getDawCtrl();
+    if(parentCtrl) {
+        m_scale     = parentCtrl->m_scale;
+        *getTheme() = *parentCtrl->getTheme();
+    }
+#endif
+
 
     isOK = true;
     return isOK;

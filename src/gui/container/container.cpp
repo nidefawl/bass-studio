@@ -97,8 +97,8 @@ void guictr_base::renderContainerLabel(NVGcontext* vg) {
 
 void guictr_base::renderBackground(NVGcontext* vg) {
     // dbgassert(isBackgroundRendered());
-    bool focused = parentCtrl->isCtrOrChildFocused(this);
-    drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, isBackgroundRenderedInset());
+    // bool focused = parentCtrl->isCtrOrChildFocused(this);
+    drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, isBackgroundRenderedInset());
     renderContainerLabel(vg);
     /* render debug background if gui flag 1<<16 is set */
     if ((this->id & (1 << 16)) && size.x > 0 && size.y > 0) {
@@ -186,7 +186,6 @@ void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, Strin
     }
 }
 
-/*static*/
 void guictr_base::drawInsetBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset) {
     if (sizeInset.y > 0 && sizeInset.x > 0) {
         nvgBeginPath(vg);
@@ -196,20 +195,17 @@ void guictr_base::drawInsetBackground(NVGcontext* vg, const guitheme_t* theme, i
     }
 }
 
-/*static*/
-void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool focused, bool drawInset) {
+void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset) {
     static const ivec2 borderThickness(CTR_SPACING - 2);
     posInset -= ivec2(margin);
     sizeInset += ivec2(margin) * 2;
     if (sizeInset.y > 0 && sizeInset.x > 0) {
+        auto stateflags = getStateFlags();
         nvgTranslateZ(vg, -2.0f);
         nvgShapeAntiAlias(vg, 0);
         nvgBeginPath(vg);
         nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-        NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
-        if (focused) {
-            bg = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);
-        }
+        NVGcolor bg = theme->getColor(getOuterBackgroundColorFromState(stateflags));
         nvgFillColor(vg, bg);
         nvgFill(vg);
         nvgShapeAntiAlias(vg, USE_NANOVG_AA);
@@ -219,7 +215,7 @@ void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 
         if (sizeInset.y > 0 && sizeInset.x > 0 && drawInset) {
             nvgBeginPath(vg);
             nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-            nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
+            nvgFillColor(vg, theme->getColor(getInnerBackgroundColorFromState(stateflags)));
             nvgFill(vg);
         }
         nvgTranslateZ(vg, 3.0f);

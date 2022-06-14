@@ -282,7 +282,6 @@ public:
     tick_t tickJmpFrom = 0;
     tick_t tickJmpTo   = 0;
     plugin_selection pluginSel;
-    int nextTooltipId = 0;
 
 private:
     hires_timer_t timer;
@@ -430,9 +429,6 @@ protected:
 
     track_gui_entry_t* lastHoveredTrack = nullptr;
     int32_t lastHoveredTrackTicks       = 0;
-    void* lastHoveredTooltip            = nullptr;
-    void* lastTooltipSrc                = nullptr;
-    int64_t tmLastHoveredTooltip        = 0;
     int64_t tmLastRenderUpdatesMs       = 0;
 
 public:

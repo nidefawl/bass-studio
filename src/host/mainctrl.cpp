@@ -1426,37 +1426,6 @@ void DawCtrl::onTick() {
     //}
     //log_lf(Log::L_DEBUG, "onTick %d\n", std::this_thread::get_id());
     mainWindow->requestRedraw();
-
-    if (!guiDragged && !guiCaptured && guiOver && (!this->ctxtmenu || ctxtmenu->isTransient())) {
-        auto hoverTime = tmLastHoveredTooltip;
-        if (ctxtmenu && ctxtmenu->isTransient() && (lastTooltipSrc && guiOver && guiOver != lastTooltipSrc)) {
-            closeContextMenu();
-        }
-        if (ctxtmenu && !ctxtmenu->isTransient()) {
-            hoverTime = 0;
-        }
-        if (!ctxtmenu) {
-            auto timeNow = getTimeMillis();
-            if (guiOver == lastHoveredTooltip && timeNow - tmLastHoveredTooltip >= 360) {
-                auto newContextMenu = guiOver->getTooltip(this);
-                if (newContextMenu) {
-                    newContextMenu->theme = getTheme();
-                    lastTooltipSrc        = guiOver;
-                    daw.nextTooltipId++;
-                    openOverlayGui(newContextMenu, m_mousePos + ivec2(-16, 26), BASECTRL_WND_POS_RELATIVE| BASECTRL_WND_IS_TOOLTIP);
-                }
-                hoverTime = 0;
-            } else if (guiOver != lastHoveredTooltip) {
-                hoverTime = timeNow;
-            }
-        }
-        tmLastHoveredTooltip = hoverTime;
-        lastHoveredTooltip   = guiOver;
-    } else {
-        if (ctxtmenu && ctxtmenu->isTransient()) {
-            closeContextMenu();
-        }
-    }
 }
 
 void MainCtrl::onTick() {

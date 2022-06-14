@@ -590,7 +590,7 @@ void guictr_dragged_plugins::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2
     mousepos -= pos;
     mousepos.x -= size.x / 2;
     nvgTranslate(vg, mousepos.x, mousepos.y);
-    drawBackground(vg, theme, pos, size, 0, true, false);
+    drawBackground(vg, theme, pos, size, 0, false);
     ivec2 inset = { 2, 2 };
     UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
     UIFont::bindFont(vg, instance);
@@ -873,10 +873,9 @@ void guictr_pluginview::render(NVGcontext* vg) {
     ivec2 cp = this->getPosContent();
     ivec2 cs = this->getSizeContent();
     bool visible = dawCtrl->isPluginViewVisible();
-    bool focused = visible && ctr_plugins->focused();
     if (visible) {
         int topOffset = CTR_SPACING / 2 + 1;
-        drawBackground(vg, theme, cp + ivec2(0, -topOffset), cs+ivec2(0, topOffset), margin, focused, false);
+        drawBackground(vg, theme, cp + ivec2(0, -topOffset), cs+ivec2(0, topOffset), margin, false);
     }
     drawInsetBackground(vg, theme, cp, cs);
     ivec2 csp = ctr_plugins->getSizeContent();

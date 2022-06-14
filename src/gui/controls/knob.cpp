@@ -370,18 +370,20 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
     } else {
         fontColor = theme->getColor(getLabelColor());
     }
-    nvgFillColor(vg, fontColor);
-    nvgSave(vg);
     auto minPos = math::minvec2f(m_layout.pLabel, m_layout.pValue);
     auto sMax = math::maxvec2f(m_layout.pLabel + m_layout.sLabel, m_layout.pValue + m_layout.sValue) - minPos;
-    nvgIntersectScissor(vg, minPos.x, minPos.y, sMax.x, sMax.y);
-    if (m_layout.sLabel.x > 0 && m_layout.sLabel.y > 0) {
-        renderTextLabel(vg, vec2(m_layout.pLabel) + vec2(m_layout.sLabel) * 0.5f, m_layout.sLabel, label, theme, m_layout.labelHeight * m_layout.fontScaleLabel, fontColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+    if (sMax.x > 0 && sMax.y > 0) {
+        nvgSave(vg);
+        nvgIntersectScissor(vg, minPos.x, minPos.y, sMax.x, sMax.y);
+        nvgFillColor(vg, fontColor);
+        if (m_layout.sLabel.x > 0 && m_layout.sLabel.y > 0) {
+            renderTextLabel(vg, vec2(m_layout.pLabel) + vec2(m_layout.sLabel) * 0.5f, m_layout.sLabel, label, theme, m_layout.labelHeight * m_layout.fontScaleLabel, fontColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        }
+        if (m_layout.sValue.x > 0 && m_layout.sValue.y > 0) {
+            renderTextLabel(vg, vec2(m_layout.pValue) + vec2(m_layout.sValue) * 0.5f, m_layout.sValue, valueDisplay, theme, m_layout.valueHeight * m_layout.fontScaleValue, fontColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        }
+        nvgRestore(vg);
     }
-    if (m_layout.sValue.x > 0 && m_layout.sValue.y > 0) {
-        renderTextLabel(vg, vec2(m_layout.pValue) + vec2(m_layout.sValue) * 0.5f, m_layout.sValue, valueDisplay, theme, m_layout.valueHeight * m_layout.fontScaleValue, fontColor, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-    }
-    nvgRestore(vg);
 }
 
 void guiknob::handleRightClick(MouseEvent& evt) {

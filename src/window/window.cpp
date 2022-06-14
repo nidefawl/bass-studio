@@ -1,7 +1,9 @@
+#include "assert_dbg.h"
 #include "glheaders.h"
 #include "tls.h"
 #include "util/profiling.h"
 #include <GLFW/glfw3.h>
+#include <utility>
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
@@ -707,6 +709,7 @@ public:
     }
 
     AppCtrl* getCtrl() override {
+        dbgassert(ctrl->isOk());
         return ctrl;
     }
 
@@ -1291,9 +1294,15 @@ window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> overlayCtrl,
 
 void appwindow_main::destroyOverlayWindows() {
     releaseOverlayWindows();
-    for (std::shared_ptr<appwindow>& ow : this->overlayWindows) {
-        ow->destroy();
-        ow.reset();
+    for (std::shared_ptr<appwindow>& spChild : this->overlayWindows) {
+        appwindow_main* wndOverlay = dynamic_cast<appwindow_main*>(spChild.get());
+        dbgassert(wndOverlay);
+        if (wndOverlay) {
+            wndOverlay->hide();
+            this->ctrl->onChildOverlayWindowDestroy(wndOverlay);
+        }
+        spChild->destroy();
+        spChild.reset();
     }
     this->overlayWindows.clear();
     std::vector<appwindow*> childWindowsCopy = this->children;
@@ -2009,7 +2018,7 @@ public:
     ERect _rect{};
     appwindow_plugin(AudioEffectX* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h)
         : appwindow_main(nullptr, _ctrl),
-          pluginwindow(_ctrl) {
+          pluginwindow(std::move(_ctrl)) {
         this->effect = _effect;
         setRect(0, 0, w, h);
     }

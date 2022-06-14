@@ -284,7 +284,7 @@ public:
     void mouseScrolled(double xoffset, double yoffset);
     virtual void mouseMoved(ivec2 mousePos, ivec2 deltaPos);
 
-    bool isCtrOrChildFocused(guibase* gui);
+    bool isCtrOrChildFocused(const guibase* gui) const;
     bool isMouseInside() const { return mouseInside; }
     virtual void focusReceived() { bHasFocus = true; };
     virtual void focusLost() { bHasFocus = false; };
@@ -349,6 +349,11 @@ protected:
     guidialog_base* dialog = nullptr;
     bool closed            = false;
 
+    int nextTooltipId = 0;
+    int64_t tmLastHoveredTooltip        = 0;
+    void* lastHoveredTooltip            = nullptr;
+    void* lastTooltipSrc                = nullptr;
+
 public:
     bool hasMenuWindow() {
         for (auto& w : menuWindows) {
@@ -364,6 +369,7 @@ public:
     AppCtrl() = default;
     ~AppCtrl() override = default;
     void relayout(int32_t w, int32_t h) override = 0;
+    virtual void onChildOverlayWindowDestroy(window_main*);
     virtual void onChildOverlayWindowClose(window_main*);
     void openContextMenu(guictxtmenu_base* b, ivec2 pos) override;
     void openDialog(guidialog_base* b);

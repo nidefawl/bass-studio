@@ -536,7 +536,8 @@ bool guibase::pressed() const {
     return parentCtrl && this == parentCtrl->guiDragged;
 }
 bool guibase::focused() const {
-    return parentCtrl && this == parentCtrl->guiFocused;
+    return parentCtrl 
+        && (this == parentCtrl->guiFocused || parentCtrl->isCtrOrChildFocused(this));
 }
 int32_t guibase::getStateFlags() const {
     int dynFlags = FLG_DRG | FLG_HVRD | FLG_FOC | FLG_VISIBLE | FLG_RENDER_BACKGROUND;

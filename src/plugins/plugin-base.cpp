@@ -87,7 +87,13 @@ void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> vi
         std::shared_ptr<PluginControl> ctrl = std::make_shared<PluginControl>(view);
         ctrl->initApp(std::vector<String>());
 #if BUILD_VSTHOST
-        ctrl->setDawCtrl(daw_tls::getTls().mainCtrl);
+        auto tls = daw_tls::getTls();
+        auto mainCtrl = tls.mainCtrl;
+        if(mainCtrl) {
+            ctrl->setDawCtrl(mainCtrl);
+            ctrl->m_scale     = mainCtrl->m_scale;
+            *ctrl->getTheme() = *mainCtrl->getTheme();
+        }
 #endif
         int32_t ctrlWidth = 0, ctrlHeight = 0;
         view->getFixedSize(&ctrlWidth, &ctrlHeight);

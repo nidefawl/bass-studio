@@ -1744,10 +1744,9 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
     ivec2 sizeContents = this->getSizeContent();
 
     bool visible = dawCtrl->isClipEditorVisible();
-    bool focused = visible && noteeditor.focused();
     if (visible) {
         int topOffset = CTR_SPACING / 2 + 1;
-        drawBackground(vg, theme, posContents + ivec2(0, -topOffset), sizeContents+ivec2(0, topOffset), margin, focused, false);
+        drawBackground(vg, theme, posContents + ivec2(0, -topOffset), sizeContents+ivec2(0, topOffset), margin, false);
     }
     drawInsetBackground(vg, theme, posContents, sizeContents);
 

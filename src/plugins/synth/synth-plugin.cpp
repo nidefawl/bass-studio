@@ -2948,7 +2948,7 @@ namespace PluginSynth {
         }
         void layout() override {
             auto cs = getSizeContent();
-            dbgassert(cs.x > 0);
+            // dbgassert(cs.x > 0);
             auto sizeRightOperator = cs.x;
             dropdownSource.pos     = { 0, 0 };
             if (dropdownOperator.isVisible()) {

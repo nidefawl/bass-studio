@@ -84,8 +84,8 @@ public:
     void setParent(guibase* parent) override;
 
 public:
-    static void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool focused = false, bool drawInset = true);
-    static void drawInsetBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset);
+    void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset = true);
+    void drawInsetBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset);
 
     void onRemove() override;
     void onAdded() override;
@@ -162,13 +162,21 @@ public:
     }
 
     GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const override {
-        if (!isBackgroundRenderedInset()){
-            if (focused()) {
-                return GuiColor::COL_BG_DRK_FOCUSED;
-            }
-            return GuiColor::COL_BG_DRK;
+        return getInnerBackgroundColorFromState(stateflags);
+    }
+
+    virtual GuiColor::constant_t getInnerBackgroundColorFromState(int32_t stateflags) const {
+        if (isBackgroundRenderedInset()) {
+            return GuiColor::COL_BG_BRT;
         }
-        return GuiColor::COL_BG_BRT;
+        return getOuterBackgroundColorFromState(stateflags);
+    }
+
+    virtual GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const {
+        if (focused()) {
+            return GuiColor::COL_BG_DRK_FOCUSED;
+        }
+        return GuiColor::COL_BG_DRK;
     }
 
     void renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle);

@@ -3,6 +3,7 @@
 #include "logging.h"
 #include "math/seq_math.h"
 #include "math/vec.h"
+#include "str_util.h"
 #include "window.h"
 
 #include "keyboard.h"
@@ -111,6 +112,11 @@ void PopupCtrl::open(guictxtmenu_base* _ctxtmenu, ivec2 pos, bool bResizeable, b
 }
 
 void PopupCtrl::destroy() {
+    dbgassert(isOK);
+    if (!isOK) {
+        return;
+    }
+    log_lf(Log::L_ERROR, "Destroy popup %s\n", StringAsCStr(windowName));
     isOK = false;
     this->containers.clear();
     this->containers.shrink_to_fit();
