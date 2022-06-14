@@ -629,7 +629,9 @@ void guibase::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
         render(vg);
     }
 }
-guibase::guibase() {
+guibase::guibase(gui_type guiType)
+    : guiType(guiType)
+{
 #ifdef TRACK_ALLOCATIONS_GUIBASE
     allocId = DebugAlloc::getTracker<guibase>()->objConstructor(this);
 #endif

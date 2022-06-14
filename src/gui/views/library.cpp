@@ -4,7 +4,7 @@
 class gui_library : public guictr_base {
 public:
     gui_library() : guictr_base() {
-        ctrType = CTR_TYPE_EXPORT;
+        guiType = CTR_TYPE_EXPORT;
         setBackgroundRendered(false);
         padding = 0;
         margin  = 0;

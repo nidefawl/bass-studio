@@ -154,7 +154,7 @@ public:
     guictr_scrollbar scrollTop;
     gui_performance() : guictr_base() {
         setCanMouseHit(true);
-        ctrType = CTR_TYPE_PERFORMANCE;
+        guiType = CTR_TYPE_PERFORMANCE;
         setBackgroundRendered(false);
         padding = 0;
         margin  = 0;

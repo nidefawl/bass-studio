@@ -205,7 +205,7 @@ public:
           m_numberInputI32(nullptr),
           m_numberInputFloat(nullptr)
     {
-        ctrType = CTR_TYPE_PROPERTIES;
+        guiType = CTR_TYPE_PROPERTIES;
 
         //setBackgroundRendered(true);
         //setBackgroundRenderedInset(false);
@@ -996,7 +996,7 @@ public:
           scrollContainer(),
           selectTheme()
     {
-        ctrType = CTR_TYPE_THEME;
+        guiType = CTR_TYPE_THEME;
         padding = 0;
         margin = 0;
         buttonAdd.setText("+");

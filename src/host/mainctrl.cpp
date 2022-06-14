@@ -139,7 +139,7 @@ public:
     bool initialized = false;
     int revision     = -1;
     guictr_effectlibrary() : guictr_base() {
-        ctrType = CTR_TYPE_EFFECTLIBRARY;
+        guiType = CTR_TYPE_EFFECTLIBRARY;
         setBackgroundRendered(false);
         padding = 0;
         margin  = 0;
@@ -933,7 +933,7 @@ void DawInstance::menuCommand(menucmd_t command) {
                     dbgassert(command.argInt >= 0);
                     std::shared_ptr<guictr_base> ctr;
                     auto context = ContainerInstanceContext{this};
-                    if (makeContainer(context, static_cast<container_type>(command.argInt), ctr)) {
+                    if (makeContainer(context, static_cast<gui_type>(command.argInt), ctr)) {
                         auto ctrLayoutLeft = getMainControl()->view->ctr_Left;
                         addLayoutEntryRelayout(getMainControl(), ctrLayoutLeft, ctr, ctr->label);
                     }
@@ -1379,9 +1379,9 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     menus.views.addCommand(CMD_NOARG(CMD_OPEN_SECOND_WINDOW), "Show Second Window");
     menus.views.addSeperator();
     menus.views.title = "View";
-    for (int i = static_cast<int>(container_type::CTR_TYPE_PROPERTIES); i < CTR_TYPE_COUNT; i++) {
+    for (int i = static_cast<int>(gui_type::CTR_TYPE_PROPERTIES); i < CTR_TYPE_COUNT; i++) {
         String name;
-        getContainerLabel(static_cast<container_type>(i), name);
+        getContainerLabel(static_cast<gui_type>(i), name);
         menus.views.addCommand(menucmd_t{
                                        CMD_OPEN_VIEW,
                                        name,

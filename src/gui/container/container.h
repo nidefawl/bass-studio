@@ -13,23 +13,6 @@
 class BaseCtrl;
 struct guitheme_t;
 
-enum container_type : uint8_t {
-    CTR_TYPE_LAYOUT = 0,
-    CTR_TYPE_BASE,
-    CTR_TYPE_PROPERTIES,
-    CTR_TYPE_THEME,
-    CTR_TYPE_HISTORY,
-    CTR_TYPE_SHADERVIEW,
-    CTR_TYPE_SETTINGS,
-    CTR_TYPE_EFFECTLIBRARY,
-    CTR_TYPE_PLUGINSLOADED,
-    CTR_TYPE_DEBUG_0,
-    CTR_TYPE_DEBUG_1,
-    CTR_TYPE_DEBUG_2,
-    CTR_TYPE_PERFORMANCE,
-    CTR_TYPE_EXPORT,
-    CTR_TYPE_CLIPEDITOR
-};
 enum autolayout_mode : uint8_t {
     LAYOUT_NONE = 0,
     LAYOUT_HORIZONTAL,
@@ -38,11 +21,10 @@ enum autolayout_mode : uint8_t {
 enum class dock_pos : int32_t { NONE = 0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
 enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };
 
-#define CTR_TYPE_COUNT (static_cast<int>(container_type::CTR_TYPE_CLIPEDITOR) + 1)
+#define CTR_TYPE_COUNT (static_cast<int>(gui_type::CTR_TYPE_CLIPEDITOR) + 1)
 
 class guictr_base : public guibase {
 protected:
-    container_type ctrType{CTR_TYPE_BASE};
     autolayout_mode layoutMode{LAYOUT_NONE};
 public:
     int padding = CONTENT_INSET;
@@ -52,7 +34,9 @@ public:
     bool sortChildren = false;
 
 public:
-    guictr_base() {
+    explicit guictr_base(gui_type guiType = gui_type::CTR_TYPE_UNKNOWN)
+        : guibase(guiType)
+    {
         setBackgroundRendered(false);
         setBackgroundRenderedInset(true);
     }
@@ -370,9 +354,5 @@ public:
         nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
         nvgFillColor(vg, color);
         nvgFill(vg);
-    }
-
-    container_type getContainerType() const {
-        return ctrType;
     }
 };

@@ -38,7 +38,7 @@ class guictr_history_view : public guictr_base {
     int64_t histRevision = -1;
 public:
     guictr_history_view() : guictr_base() {
-        ctrType = CTR_TYPE_HISTORY;
+        guiType = CTR_TYPE_HISTORY;
         padding = 0;
         add(&historyList);
     }

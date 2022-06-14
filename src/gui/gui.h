@@ -91,6 +91,28 @@ enum guiflag_titlebar : int32_t {
     TITLEBAR_FLG_FOCUSED = 1,
     TITLEBAR_FLG_SELECTED = 2
 };
+enum gui_type : uint8_t {
+    GUI_TYPE_UNKNOWN = 0,
+    GUI_TYPE_BUTTON,
+    GUI_TYPE_KNOB,
+    GUI_TYPE_SCROLLBAR,
+    GUI_TYPE_TEXTFIELD,
+    CTR_TYPE_UNKNOWN = 100,
+    CTR_TYPE_LAYOUT,
+    CTR_TYPE_PROPERTIES,
+    CTR_TYPE_THEME,
+    CTR_TYPE_HISTORY,
+    CTR_TYPE_SHADERVIEW,
+    CTR_TYPE_SETTINGS,
+    CTR_TYPE_EFFECTLIBRARY,
+    CTR_TYPE_PLUGINSLOADED,
+    CTR_TYPE_DEBUG_0,
+    CTR_TYPE_DEBUG_1,
+    CTR_TYPE_DEBUG_2,
+    CTR_TYPE_PERFORMANCE,
+    CTR_TYPE_EXPORT,
+    CTR_TYPE_CLIPEDITOR
+};
 namespace DebugAlloc {
     template<typename T>
     class Tracker;
@@ -98,7 +120,8 @@ namespace DebugAlloc {
 class guibase {
 private:
     int32_t flags = FLG_ENBL | FLG_VISIBLE | FLG_RENDER_BACKGROUND;
-
+protected:
+    gui_type guiType;
 public:
     ivec2 pos{ 0 };
     ivec2 size{ 0 };
@@ -116,7 +139,7 @@ public:
 #ifdef TRACK_ALLOCATIONS_GUIBASE
     int64_t allocId = 0;
 #endif
-    guibase();
+    explicit guibase(gui_type guiType = gui_type::GUI_TYPE_UNKNOWN);
     virtual ~guibase();
     guibase(const guibase& graph) = delete;
     guibase& operator=(const guibase& graph) = delete;
@@ -132,6 +155,9 @@ protected:
 
 public:
     SafeRef<guibase> makeSafeRef();
+    gui_type getGuiType() const {
+        return guiType;
+    }
     virtual bool isVisible() const {
         //if (size.x < 0 || size.y < 0)
         //  return false;

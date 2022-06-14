@@ -4,6 +4,7 @@
 #include "dialog.h"
 #include "gui/controls/inputfield.h"
 #include "gui/dropdown/dropdown.h"
+#include "gui/gui.h"
 #include "gui/meter/guimeter.h"
 #include "gui/controls/textfield.h"
 #include "gui/container/container.h"
@@ -1417,8 +1418,8 @@ struct guidialog_settings::dialog_entry {
         tabButton.setStateRef(&active);
     }
 };
-void guidialog_settings::init(DawInstance* daw) {
-    ctrType = CTR_TYPE_SETTINGS;
+void guidialog_settings::init(DawInstance* daw)
+{
     addEntry(new guidialog_audio_io(daw), "Audio I/O");
     addEntry(new guidialog_midi_io(daw), "Midi I/O");
     addEntry(new guidialog_settings_plugins(daw), "Plugins");
@@ -1435,6 +1436,7 @@ void guidialog_settings::init(DawInstance* daw) {
 guidialog_settings::guidialog_settings(DawInstance* daw)
     : guidialog_base(ivec2{640, 760}, true)
 {
+    guiType = CTR_TYPE_SETTINGS;
     init(daw);
 }
 void guidialog_settings::addEntry(setting_dialog* ctr, String title) {

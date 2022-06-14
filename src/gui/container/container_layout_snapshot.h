@@ -9,7 +9,7 @@ struct guictrlayout_snapshot_t;
 // instead add field to guictrlayout_entry_snapshot_t
 struct guictrlayout_entry_snapshot_t {
     virtual ~guictrlayout_entry_snapshot_t() = default;
-    container_type type;
+    gui_type type;
     String label;
 };
 

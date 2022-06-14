@@ -89,7 +89,7 @@ public:
 };
 enum layout_ctr_type { GUICTR_LAYOUT, GUICTR_BASE };
 struct guictr_layout_entry {
-    const container_type type;
+    const gui_type type;
     const layout_ctr_type frameType;
     ivec2 pos{0};
     ivec2 size{0};
@@ -103,7 +103,7 @@ struct guictr_layout_entry {
     guictr_base* getGui();
     std::shared_ptr<guictr_base> getSharedGui() const { return ctr; }
     guibase* getHandle();
-    container_type getType() const { return type; }
+    gui_type getType() const { return type; }
     layout_ctr_type getFrameType() const { return frameType; }
     String getLabel() const { return label; }
     bool getContainerRef(std::shared_ptr<guictr_layout_entry>& out, bool remove);

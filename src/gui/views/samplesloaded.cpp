@@ -4,7 +4,7 @@
 class gui_samplesloaded : public guictr_base {
 public:
     gui_samplesloaded() : guictr_base() {
-        ctrType = CTR_TYPE_EXPORT;
+        guiType = CTR_TYPE_EXPORT;
         setBackgroundRendered(false);
         padding = 0;
         margin  = 0;

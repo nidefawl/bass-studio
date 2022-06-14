@@ -256,7 +256,7 @@ void guictr_layout::getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<i_ctr
 
 
 guictr_layout::guictr_layout() : guictr_base() {
-    ctrType = CTR_TYPE_LAYOUT;
+    guiType = CTR_TYPE_LAYOUT;
     //setBackgroundRendered(true);
     //setBackgroundRenderedInset(true);
     this->setCanMouseHit(true);
@@ -813,10 +813,11 @@ std::shared_ptr<guictr_layout_entry> guictr_layout::replaceContainerWith(guictr_
 }
 
 guictr_layout_entry::guictr_layout_entry(String _label, std::shared_ptr<guictr_base> _ctr)
-    : type(_ctr->getContainerType()),
-      frameType(_ctr->getContainerType() == CTR_TYPE_LAYOUT ? layout_ctr_type::GUICTR_LAYOUT : layout_ctr_type::GUICTR_BASE),
+    : type(_ctr->getGuiType()),
+      frameType(_ctr->getGuiType() == CTR_TYPE_LAYOUT ? layout_ctr_type::GUICTR_LAYOUT : layout_ctr_type::GUICTR_BASE),
       ctr(_ctr),
-      label(_label) {
+      label(std::move(_label))
+{
     ctrHandle = new guictr_layout_entry_handle(this, _ctr.get());
 }
 guictr_layout_entry::~guictr_layout_entry() {
@@ -836,7 +837,7 @@ guictr_base* guictr_layout_entry::getGui() {
 }
 
 void storeContainerEntrySnapshot(guictr_layout_entry* ctrlayoutEntry, std::shared_ptr<guictrlayout_entry_snapshot_t>& snapshot) {
-    dbgassert(ctrlayoutEntry->getType() != container_type::CTR_TYPE_BASE);
+    dbgassert(ctrlayoutEntry->getType() != gui_type::CTR_TYPE_UNKNOWN);
     if (ctrlayoutEntry->getFrameType() == layout_ctr_type::GUICTR_LAYOUT) {
         auto sharedSnapshot      = std::make_shared<guictrlayout_snapshot_t>();
         guictr_layout* ctrLayout = dynamic_cast<guictr_layout*>(ctrlayoutEntry->getGui());
@@ -856,15 +857,16 @@ void loadContainerEntrySnapshot(ContainerFactory& fac,
                                 std::shared_ptr<guictrlayout_entry_snapshot_t>& snapshot,
                                 std::shared_ptr<guictr_layout_entry>& out) {
     out  = nullptr;
-    if (fac.count(snapshot->type)) {
-        ContainerBuilder& builder  = fac[snapshot->type];
+    const auto typeLoad = snapshot->type;
+    if (fac.count(typeLoad)) {
+        ContainerBuilder& builder  = fac[typeLoad];
         std::shared_ptr<guictr_base> sharedContainer = builder(ctxt);
         if (!sharedContainer) {
-            log_printf("Failed building container of type %d\n", snapshot->type);
+            log_printf("Failed building container of type %d\n", typeLoad);
             return;
         }
         //sharedContainer->label = snapshot->label;
-        getContainerLabel(snapshot->type, sharedContainer->label);
+        getContainerLabel(typeLoad, sharedContainer->label);
         out = createGuiCtrLayoutEntry(sharedContainer);
         if (out->getFrameType() == layout_ctr_type::GUICTR_LAYOUT) {
             auto* ctrLayoutSnapshot = dynamic_cast<guictrlayout_snapshot_t*>(snapshot.get());
@@ -874,7 +876,7 @@ void loadContainerEntrySnapshot(ContainerFactory& fac,
             loadContainerSnapshot(fac, ctxt, ctrLayout, ctrLayoutSnapshot);
         }
     } else {
-        log_printf("Failed loading container of type %d\n", snapshot->type);
+        log_printf("Failed loading container of type %d\n", typeLoad);
     }
 }
 

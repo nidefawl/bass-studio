@@ -74,13 +74,13 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
       dgbCtrType(debugCtrType) {
     switch (dgbCtrType) {
         case gui_ctr_debug_type_i32::TYPE_0:
-            ctrType = CTR_TYPE_DEBUG_0;
+            guiType = CTR_TYPE_DEBUG_0;
             break;
         case gui_ctr_debug_type_i32::TYPE_1:
-            ctrType = CTR_TYPE_DEBUG_1;
+            guiType = CTR_TYPE_DEBUG_1;
             break;
         case gui_ctr_debug_type_i32::TYPE_2:
-            ctrType = CTR_TYPE_DEBUG_2;
+            guiType = CTR_TYPE_DEBUG_2;
             break;
     }
     auto const host = vsthost::getInstance();
