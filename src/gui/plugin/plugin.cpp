@@ -106,9 +106,7 @@ void guiplugin::determineSize(ivec2& prefSize) {
 
 void guiplugin::buttonClicked(guibase* _button) {
     if (_button == &buttonLayout) {
-        layoutMode        = (layoutMode + 1) % 2;
-        isHorizontalTitle = layoutMode == 0;
-        buttonLayout.icon = layoutMode == 0 ? ICON_ARR_RIGHT : ICON_ARR_DOWN;
+        setLayoutMode((layoutMode + 1) % 2);
         parent->onChildLayoutChanged(this);
         return;
     }
@@ -891,10 +889,7 @@ void guipluginview::buttonClicked(guibase* _button) {
     if (ctrPreview) {
         ctrPreview->setVisible(effect->bCaptureGUI);
     }
-
-    dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size());
-    params.setVisible(layoutMode == 0);
-    guiMeter.setVisible(layoutMode == 0);
+    setLayoutMode(layoutMode);
     this->onChildLayoutChanged(this);
 }
 void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
@@ -1074,18 +1069,31 @@ int32_t guidropdownprogram::getSelectIndex() {
     return index;
 }
 
+void guipluginview::setLayoutMode(int32_t layoutMode) {
+    guiplugin::setLayoutMode(layoutMode);
+    dropdownProgram.setVisible(this->layoutMode == 0 && effect->programNames.size());
+    params.setVisible(this->layoutMode == 0);
+}
+
+void guiplugin::setLayoutMode(int32_t layoutMode) {
+    this->layoutMode = layoutMode;
+    guiMeter.setVisible(layoutMode == 0);
+    isHorizontalTitle = layoutMode == 0;
+    buttonLayout.icon = layoutMode == 0 ? ICON_ARR_RIGHT : ICON_ARR_DOWN;
+}
+
 void guiplugin::makeSnapshot(plugin_ui_snapshot_t& puis, const tracksnapshot_store_opts_t& opts){
     if (opts.storeLayouts) {
-        puis.isFolded = layoutMode == 1;
+        puis.layoutMode = layoutMode;
         puis.windowPosSizeValid = effect->getLastWindowPosSize(puis.windowPosSize);
     }
 }
+
 void guiplugin::loadSnapshot(const plugin_ui_snapshot_t& puis) {
-    layoutMode = puis.isFolded ? 1 : 0;
+    setLayoutMode(puis.layoutMode);
     effect->bWindowPosSizeValid = puis.windowPosSizeValid;
     effect->lastWindowPosSize = puis.windowPosSize;
 }
-
 
 void guipluginview::makeSnapshot(plugin_ui_snapshot_t& puis, const tracksnapshot_store_opts_t& opts) {
     guiplugin::makeSnapshot(puis, opts);
@@ -1093,6 +1101,7 @@ void guipluginview::makeSnapshot(plugin_ui_snapshot_t& puis, const tracksnapshot
         puis.isWindowOpen = effect->bEditOpen;
     }
 }
+
 void guipluginview::loadSnapshot(const plugin_ui_snapshot_t& puis) {
     guiplugin::loadSnapshot(puis);
 }

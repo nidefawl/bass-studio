@@ -131,6 +131,13 @@ public:
         btnLoad.layout();
         btnLoad.setText(String("Load\n") + module->getName());
     }
+    void setLayoutMode(int32_t layoutMode) override {
+        this->layoutMode = layoutMode;
+        guiMeter.setVisible(layoutMode == 0);
+        isHorizontalTitle = false;
+        buttonLayout.icon = layoutMode == 0 ? ICON_ARR_RIGHT : ICON_ARR_DOWN;
+        btnLoad.setVisible(this->layoutMode == 0);
+    }
 };
 struct effect_deferred_impl {
     plugin_snapshot_t snapshot;
@@ -271,7 +278,7 @@ automationlane_snapshot_t effect_deferred::toRef() const {
     return ref;
 }
 void guideferred::render(NVGcontext* vg) {
-    btnLoad.setVisible(layoutMode == 0);
+    // btnLoad.setVisible(layoutMode == 0);
     guiplugin::render(vg);
 }
 

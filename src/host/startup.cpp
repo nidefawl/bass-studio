@@ -204,7 +204,7 @@ void showPluginView(DawCtrl* dawCtrl, String pluginName) {
                 if (tr) {
                     dawCtrl->getDaw()->setSelectedTrack(tr);
                     auto lock = dawInstance->lockPlayThread();
-                    host->activateDeferred(eff, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                    host->activateDeferred(eff, 0);
                     return;
                 }
             }

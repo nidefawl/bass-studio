@@ -65,6 +65,7 @@ public:
     void handleDraggedRelease(MouseEvent& evt) override;
     void dragMoveOn(guibase* target, ivec2 mousepos) override;
     void dragReleaseOn(guibase* target, ivec2 mousepos) override;
+    virtual void setLayoutMode(int32_t layoutMode);
     void setTitle(String _text) {
         text = _text;
     }
@@ -133,6 +134,7 @@ public:
     void setControl(BaseCtrl* parentCtrl) override;
     void determineSize(ivec2& prefSize) override;
     void prerender(NVGcontext* vg) override;
+    void setLayoutMode(int32_t layoutMode) override;
     void onAdded() override;
     void onRemove() override;
     void onTick(AppCtrl* ctrl) override;

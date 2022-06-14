@@ -1,6 +1,7 @@
 #pragma once
 #include "types.h"
 #include "math/vec.h"
+#include <cstdint>
 #include <vector>
 #include "host/daw_channel.h"
 #include "str_util.h"
@@ -37,7 +38,7 @@ struct plugin_ui_snapshot_t {
     ivec4 windowPosSize{};
     bool windowPosSizeValid = false;
     bool isWindowOpen = false;
-    bool isFolded = false;
+    int32_t layoutMode;
 };
 struct plugin_snapshot_t {
     uint32_t version = 0;

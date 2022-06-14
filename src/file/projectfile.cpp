@@ -84,11 +84,15 @@ void serialize(Archive& archive, glm::ivec4& m) {
 
 template<class Archive>
 void serialize(Archive& archive, plugin_ui_snapshot_t& m) {
-    archive(
-        make_nvp("windowPosSize", m.windowPosSize),
-        make_nvp("windowPosValid", m.windowPosSizeValid),
-        make_nvp("windowOpen", m.isWindowOpen),
-        make_nvp("folded", m.isFolded));
+    try {
+        archive(
+            make_nvp("windowPosSize", m.windowPosSize),
+            make_nvp("windowPosValid", m.windowPosSizeValid),
+            make_nvp("windowOpen", m.isWindowOpen),
+            make_nvp("layoutMode", m.layoutMode));
+    } catch (const std::exception& e) {
+        m = {};
+    }
 }
 
 template<class Archive>
