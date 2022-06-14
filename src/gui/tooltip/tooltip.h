@@ -25,8 +25,6 @@ public:
     
     guitooltip(T* _ptr) : ptr(_ptr) {
         add(&textField);
-        setBackgroundRendered(true);
-        setBackgroundRenderedInset(false);
         padding = 1;
         margin = padding;
         textField.setVisible(false);
@@ -68,20 +66,6 @@ public:
         size.y = table.rows.size() * table.rowHeight;
         size = ivec2(table.tableWidth, table.rows.size() * table.rowHeight) + ivec2(INSET_TABLE << 1);
         Table::AdjustColSizes(table);
-    }
-
-    GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const override {
-        if (focused()) {
-            return GuiColor::COL_BG_BRT;
-        }
-        return GuiColor::COL_BG_BRT;
-    }
-
-    GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
-        if (focused()) {
-            return GuiColor::COL_BG_BRT;
-        }
-        return GuiColor::COL_BG_BRT;
     }
 
     void render(NVGcontext* vg) override {

@@ -502,9 +502,9 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) 
 #if BUILD_VSTHOST
         popupCtrl->parentDawCtrl = this->parentDawCtrl;
 #endif
+        *popupCtrl->getTheme() = *getTheme();
         popupCtrl->m_scale = m_scale;
         popupCtrl->m_size = math::maxvec2(ivec2(20, 20), guicontextmenu->size);
-        *popupCtrl->getTheme() = *getTheme();
         const ivec2 windowSize = ivec2(vec2(popupCtrl->m_size) * popupCtrl->m_scale);
         menuWindows[lvl].wnd = this->mainWindow->createOverlay(popupCtrl, windowSize, createflags);
     }
@@ -522,6 +522,10 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) 
         popupCtrl->setWindowName(label);
     } else {
         popupCtrl->setWindowName("Menu");
+    }
+    {
+        *popupCtrl->getTheme() = *getTheme();
+        popupCtrl->m_scale = m_scale;
     }
     static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (entry.wnd->getCreationFlags() & GLFW_RESIZABLE), false);
 }
@@ -574,6 +578,10 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
         } else {
             popupCtrl->setWindowName("Tooltip");
         }
+        {
+            *popupCtrl->getTheme() = *getTheme();
+            popupCtrl->m_scale = m_scale;
+        }
         static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (ctxtWindow->getCreationFlags() & GLFW_RESIZABLE), (flags & BASECTRL_WND_IS_TOOLTIP) == 0);
     } else {
         dbgassert(0);
@@ -605,6 +613,10 @@ void AppCtrl::openDialog(guidialog_base* _guidialog) {
         popupCtrl->setWindowName(label);
     } else {
         popupCtrl->setWindowName("Dialog");
+    }
+    {
+        *popupCtrl->getTheme() = *getTheme();
+        popupCtrl->m_scale = m_scale;
     }
     popupCtrl->open(_guidialog, wndPos, (dialogWindow->getCreationFlags() & WINDOW_IS_RESIZABLE), true);
 }

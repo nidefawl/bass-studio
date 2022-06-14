@@ -16,7 +16,7 @@ protected:
 public:
     guictxtmenu() : guictxtmenu_base() {
         setCanMouseHit(true);
-        setBackgroundRendered(false);
+        setBackgroundRendered(true);
         setBackgroundRenderedInset(false);
         setSnapSides(ivec4(1));
     }
@@ -93,5 +93,19 @@ public:
         for (auto* g : entries) {
             g->theme = parentCtrl ? parentCtrl->getTheme() : nullptr;
         }
+    }
+
+    GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const override {
+        if (focused()) {
+            return GuiColor::COL_BG_BRT;
+        }
+        return GuiColor::COL_BG_BRT;
+    }
+
+    GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
+        if (focused()) {
+            return GuiColor::COL_BG_BRT;
+        }
+        return GuiColor::COL_BG_BRT;
     }
 };
