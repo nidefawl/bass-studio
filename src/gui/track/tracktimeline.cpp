@@ -1,6 +1,7 @@
 #include <nanovg.h>
 #include <vector>
 
+#include "guicolors.h"
 #include "logging.h"
 #include "tracktimeline.h"
 #include "math/seq_math.h"
@@ -137,11 +138,11 @@ void guitrack_timeline::render(NVGcontext* vg) {
                         nvgStrokeColor(vg, THEMECOL_WHITE);
                         nvgStroke(vg);
                     } else {
-                        int color = -1;
+                        auto color = GuiColor::COL_LABEL_ACTIVE;
                         if (notePos.beat != 0 || notePos.th != 0) {
                             fontSize = 14;
                             if (notePos.th != 0) {
-                                color = 0xababab;
+                                color = GuiColor::COL_LABEL_INACTIVE;
                                 text  = StringFormat(".%d.%d", notePos.beat + printoffset, notePos.th + printoffset);
                             } else {
                                 text = StringFormat("%d.%d", notePos.bar + printoffset, notePos.beat + printoffset);
@@ -152,8 +153,8 @@ void guitrack_timeline::render(NVGcontext* vg) {
                             text     = StringFormat("%d", notePos.bar + printoffset);
                         }
                         nvgFontSize(vg, fontSize * scale);
-                        nvgFillColor(vg, rgbToNvg(color));
-                        float posXTimeCode = n.screenpos + gap / 2;
+                        nvgFillColor(vg, theme->getColor(color));
+                        float posXTimeCode = float(n.screenpos) + gap / 2.0f;
                         /*float posX = */nvgText(vg, posXTimeCode, this->size.y, StringAsCStr(text), nullptr);
 
                         //if (this->size.y > 28) {
