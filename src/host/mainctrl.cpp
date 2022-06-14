@@ -1,3 +1,4 @@
+#include "fileio.h"
 #include "glheaders.h"
 #include <cstddef>
 #include <nanovg.h>
@@ -863,6 +864,7 @@ void DawInstance::setEmptyProject() {
     insertNewTrack(-1, TRACK_TYPE_MIDI, FLG_TRK_CHANGE_LOAD);
     insertNewTrack(-1, TRACK_TYPE_MASTER, 0);
     resetShaderTimeOffset();
+    tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::BUILD_BINARY_NAME, "New Project"));
 }
 
 void DawInstance::onDawCompanionWindowClose(DawWindowCompanion& entry) {
@@ -1940,9 +1942,13 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
     /** set as current project **/
     this->projectPath = file->path;
+
     this->tmLastSave  = getTimeMillis();
     if (tls.mainCtrl) {
         tls.mainCtrl->setStatusText(StringFormat("Loaded project %s", StringAsCStr(this->projectPath)));
+        String projectFileName;
+        SplitPath(this->projectPath, nullptr, &projectFileName, nullptr);
+        tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::BUILD_BINARY_NAME, StringAsCStr(projectFileName)));
     }
 
     setAudioThreadState(playback_state::status_stop);

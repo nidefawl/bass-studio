@@ -32,6 +32,7 @@ public:
     virtual bool isMouseCaptured()          = 0;
     virtual void updateWindowFromDlg()      = 0;
     virtual void fireMouseMoved()           = 0;
+    virtual void setWindowTitle(const String& windowTitle) = 0;
 };
 class window_dialog : public window_base {
 public:

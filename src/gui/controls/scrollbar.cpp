@@ -159,7 +159,7 @@ bool gui_scrollbar::handleMouseScroll(MouseEvent& evt, double xoffset, double yo
         int32_t cS = vcS[dir];
         if (cS > 0) {
             auto curOffset = scrollOffset;
-            auto newOffset = curOffset - float(yoffset * 1.0f / 4.0f);
+            auto newOffset = curOffset - float(yoffset * 1.0f / 16.0f);
             setScrollOffset(newOffset);
         }
     }

@@ -1104,6 +1104,9 @@ public:
     void hide() override {
         appwindow::hideWindow();
     }
+    void setWindowTitle(const String& windowTitle) override {
+        setTitle(windowTitle);
+    }
 };
 
 
@@ -1273,6 +1276,9 @@ public:
 
     void fireMouseMoved() override {
         onMouseMoved(ivec2(0));
+    }
+    void setWindowTitle(const String& windowTitle) override {
+        setTitle(windowTitle);
     }
 };
 

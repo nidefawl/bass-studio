@@ -335,6 +335,9 @@ public:
     }
     virtual void setWindowName(String name) {
         windowName = std::move(name);
+        if (this->window) {
+            window->setWindowTitle(windowName);
+        }
     }
     virtual bool isGlobalKeybindCodepoint(uint32_t codepoint) {
         return false;
