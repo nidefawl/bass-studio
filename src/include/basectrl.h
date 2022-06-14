@@ -63,10 +63,7 @@ public:
     float getStringWidth(const String& text);
 };
 
-enum class dock_pos : int32_t { NONE = 0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
-enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };
 class i_ctr_layout;
-
 class guictr_layout_entry_handle;
 class guictr_dragged_container_instance;
 class i_ctr_layout;

@@ -5,7 +5,7 @@
 #endif
 #define USE_NANOVG_AA 1
 
-#define FILE_FORMAT_VERSION 2
+#define FILE_FORMAT_VERSION 3
 #define PROJECT_FILE_EXT "project"
 #ifndef USE_GUI_MENU
 #define USE_GUI_MENU 1

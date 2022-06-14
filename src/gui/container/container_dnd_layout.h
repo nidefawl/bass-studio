@@ -24,6 +24,7 @@
 #include "container.h"
 #include "gui/controls/splitter.h"
 #include "gui/container/container_layout_types.h"
+#include "gui/container/container_layout_snapshot.h"
 
 
 class guictr_layout;
@@ -200,22 +201,6 @@ public:
     ivec2 getContainerSize() override;
 };
 
-struct guictrlayout_snapshot_t;
-//TODO: guictrlayout_snapshot_t should not derive from guictrlayout_entry_snapshot_t
-// instead add field to guictrlayout_entry_snapshot_t
-struct guictrlayout_entry_snapshot_t {
-    virtual ~guictrlayout_entry_snapshot_t() = default;
-    container_type type;
-    String label;
-};
-
-struct guictrlayout_snapshot_t : public guictrlayout_entry_snapshot_t {
-    ~guictrlayout_snapshot_t() override = default;
-    container_layout ctrLayout = container_layout::SOLE;
-    int32_t activePosition     = -1;
-    std::vector<std::shared_ptr<guictrlayout_entry_snapshot_t>> entries;
-    std::vector<float> splitterPositions;
-};
 
 
 void loadContainerSnapshot(ContainerFactory& fac,
@@ -225,5 +210,3 @@ void loadContainerSnapshot(ContainerFactory& fac,
 void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* snapshot);
 
 
-bool saveDawViewLayoutSnapshot(dawview_layout_t& snapshot, const String& path);
-std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path);

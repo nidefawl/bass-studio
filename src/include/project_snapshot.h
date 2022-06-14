@@ -1,7 +1,10 @@
 #pragma once
+#include "basectrl.h"
 #include "project.h"
+#include "project_snapshot.h"
 #include "track.h"
 #include "track_snapshot.h"
+#include "gui/container/container_layout_snapshot.h"
 #include "types.h"
 
 struct project_snapshot_t {
@@ -12,4 +15,6 @@ struct project_snapshot_t {
     export_settings_t exportSettings;
     quantize_settings quantizeSettings;
     samplerate_t samplerate = 0;
+    dawview_layout_t layoutPrimary;
+    dawview_layout_t layoutSecondary;
 };

@@ -1,4 +1,5 @@
 #include "projectfile.h"
+#include "gui/container/container_layout_types.h"
 #include "projectfile-snapshot.h"
 #include <vector>
 #include <fstream>
@@ -29,6 +30,7 @@
 #include <cereal/types/map.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/types/vector.hpp>
+#include <cereal/types/polymorphic.hpp>
 #include <cereal_optional_nvp/cereal_optional_nvp.hpp>
 
 
@@ -476,15 +478,31 @@ void serialize(Archive& archive, samplefile_entry_t& m) {
 };
 
 template<class Archive>
+void serialize(Archive& archive, guictrlayout_snapshot_t& m) {
+    archive(m.label, m.type, m.activePosition, m.ctrLayout, m.entries, m.splitterPositions);
+}
+template<class Archive>
+void serialize(Archive& archive, guictrlayout_entry_snapshot_t& m) {
+    archive(m.label, m.type);
+}
+template<class Archive>
+void serialize(Archive& archive, dawview_layout_t& m) {
+    archive(m.left, m.right, m.splitterPositions);
+}
+
+template<class Archive>
 void load(Archive& archive, project_file& file, const std::uint32_t version) {
     file.fileFmtVersion = version;
-    if (version != FILE_FORMAT_VERSION)
+    if (version < 2)
         return;
     archive(
         make_nvp("projectdata", file.project),
         make_nvp("layout", file.layout),
         make_nvp("samples", file.sampleFileIndex)
     );
+    if (version >= 3) {
+        archive(make_nvp("layouts", file.layouts));
+    }
 }
 
 template<class Archive>
@@ -492,13 +510,57 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
     archive(
         make_nvp("projectdata", file.project),
         make_nvp("layout", file.layout),
-        make_nvp("samples", file.sampleFileIndex)
+        make_nvp("samples", file.sampleFileIndex),
+        make_nvp("layouts", file.layouts)
     );
 }
 
-CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
+CEREAL_REGISTER_TYPE(guictrlayout_snapshot_t);
+CEREAL_REGISTER_POLYMORPHIC_RELATION(guictrlayout_entry_snapshot_t, guictrlayout_snapshot_t)
 CEREAL_CLASS_VERSION(plugin_snapshot_t, 11);
 CEREAL_CLASS_VERSION(track_snapshot_t, 4);
+CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
+
+
+bool saveDawViewLayoutSnapshot(dawview_layout_t& snapshot, const String& path) {
+    using namespace cereal;
+    try {
+        Stringstream sstream;
+        {
+            JSONOutputArchive ar(sstream);
+            ar(make_nvp("layout", snapshot));
+        }
+        sstream.flush();
+        writeStringStream(App::Platform::toUserdataPath(path), sstream);
+        return true;
+    } catch (const FileIOException& e) {
+        log_printf("savePluginSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+    } catch (const std::exception& e) {
+        log_printf("savePluginSnapshot exception: %s\n", e.what());
+    }
+    return false;
+}
+
+std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path) {
+    using namespace cereal;
+    try {
+        std::vector<uint8_t> vec;
+        ReadFileVector(App::Platform::toUserdataPath(path), vec);
+        Stringstream sstream(std::string(vec.cbegin(), vec.cend()));
+        std::shared_ptr<dawview_layout_t> snapshot = std::make_shared<dawview_layout_t>();
+        dawview_layout_t& ref = *snapshot.get();
+        {
+            JSONInputArchive ar(sstream);
+            ar(make_nvp("layout", ref));
+        }
+        return snapshot;
+    } catch (const FileIOException& e) {
+        log_printf("loadDawViewLayoutSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+    } catch (const std::exception& e) {
+        log_printf("loadDawViewLayoutSnapshot exception: %s\n", e.what());
+    }
+    return nullptr;
+}
 
 /**
  * @param projectfile
@@ -543,7 +605,7 @@ std::shared_ptr<project_file> loadProjectFile(String& path) {
             JSONInputArchive ar(sstream);
             ar(make_nvp("project", f));
         }
-        if (f->fileFmtVersion != FILE_FORMAT_VERSION) {
+        if (f->fileFmtVersion < 2) {
             log_lf(Log::L_WARN, "legacy project file version %u\n", f->fileFmtVersion);
             return nullptr;
         }

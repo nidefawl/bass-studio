@@ -35,6 +35,8 @@ enum autolayout_mode : uint8_t {
     LAYOUT_HORIZONTAL,
     LAYOUT_VERTICAL
 };
+enum class dock_pos : int32_t { NONE = 0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
+enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };
 
 #define CTR_TYPE_COUNT (static_cast<int>(container_type::CTR_TYPE_CLIPEDITOR) + 1)
 

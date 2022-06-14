@@ -866,46 +866,6 @@ void loadContainerEntrySnapshot(ContainerFactory& fac,
     }
 }
 
-bool saveDawViewLayoutSnapshot(dawview_layout_t& snapshot, const String& path) {
-    using namespace cereal;
-    try {
-        Stringstream sstream;
-        {
-            JSONOutputArchive ar(sstream);
-            ar(make_nvp("layout", snapshot));
-        }
-        sstream.flush();
-        writeStringStream(App::Platform::toUserdataPath(path), sstream);
-        return true;
-    } catch (const FileIOException& e) {
-        log_printf("savePluginSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
-    } catch (const std::exception& e) {
-        log_printf("savePluginSnapshot exception: %s\n", e.what());
-    }
-    return false;
-}
-
-std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path) {
-    using namespace cereal;
-    try {
-        std::vector<uint8_t> vec;
-        ReadFileVector(App::Platform::toUserdataPath(path), vec);
-        Stringstream sstream(std::string(vec.cbegin(), vec.cend()));
-        std::shared_ptr<dawview_layout_t> snapshot = std::make_shared<dawview_layout_t>();
-        dawview_layout_t& ref = *snapshot.get();
-        {
-            JSONInputArchive ar(sstream);
-            ar(make_nvp("layout", ref));
-        }
-        return snapshot;
-    } catch (const FileIOException& e) {
-        log_printf("loadDawViewLayoutSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
-    } catch (const std::exception& e) {
-        log_printf("loadDawViewLayoutSnapshot exception: %s\n", e.what());
-    }
-    return nullptr;
-}
-
 void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* snapshot) {
     auto& entries               = ctrlayout->getEntries();
     snapshot->splitterPositions = ctrlayout->getSplitterPositions();
@@ -934,18 +894,3 @@ void loadContainerSnapshot(ContainerFactory& fac,
     ctrlayout->setActiveEntry(snapshot->activePosition);
     //ctrlayout->postContentChanged();
 }
-template<class Archive>
-void serialize(Archive& archive, guictrlayout_snapshot_t& m) {
-    archive(m.label, m.type, m.activePosition, m.ctrLayout, m.entries, m.splitterPositions);
-}
-template<class Archive>
-void serialize(Archive& archive, guictrlayout_entry_snapshot_t& m) {
-    archive(m.label, m.type);
-}
-template<class Archive>
-void serialize(Archive& archive, dawview_layout_t& m) {
-    archive(m.left, m.right, m.splitterPositions);
-}
-
-CEREAL_REGISTER_TYPE(guictrlayout_snapshot_t);
-CEREAL_REGISTER_POLYMORPHIC_RELATION(guictrlayout_entry_snapshot_t, guictrlayout_snapshot_t)

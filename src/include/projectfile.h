@@ -5,14 +5,15 @@
 #include "samplefileidx.h"
 #include "project_snapshot.h"
 
-class MainCtrl;
 struct project_file {
     uint32_t fileFmtVersion = 0;
     String path;
     project_snapshot_t project;
     project_layout_t layout;
     samplefile_index_t sampleFileIndex;
+    std::vector<dawview_layout_t> layouts;
 };
+
 bool saveProject(std::shared_ptr<project_file> f, const String& path);
 std::shared_ptr<project_file> loadProjectFile(String& path);
 

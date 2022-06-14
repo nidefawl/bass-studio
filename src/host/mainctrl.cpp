@@ -1,4 +1,5 @@
 #include "glheaders.h"
+#include <cstddef>
 #include <nanovg.h>
 #include <GLFW/glfw3.h>
 #include <ctime>
@@ -551,33 +552,33 @@ public:
         }
     }
 
-    void loadLayout(const dawview_layout_t* viewLayout) {
+    void loadLayout(const dawview_layout_t& viewLayout) {
         ctr_Right->removeAllEntries();
         ctr_Left->removeAllEntries();
         dbgassert(ctr_Left->dawCtrl);
         DawInstance* const daw = ctr_Left->dawCtrl->getDaw();
         dbgassert(daw);
-        if (viewLayout->left && viewLayout->right) {
+        if (viewLayout.left && viewLayout.right) {
             auto& fac = getContainerFactory();
             auto context = ContainerInstanceContext{daw};
-            loadContainerSnapshot(fac, context, ctr_Right.get(), viewLayout->right.get());
-            loadContainerSnapshot(fac, context, ctr_Left.get(), viewLayout->left.get());
+            loadContainerSnapshot(fac, context, ctr_Right.get(), viewLayout.right.get());
+            loadContainerSnapshot(fac, context, ctr_Left.get(), viewLayout.left.get());
         }
-        if (viewLayout->splitterPositions.size() == splitters.size()) {
+        if (viewLayout.splitterPositions.size() == splitters.size()) {
             for (size_t i = 0; i < splitters.size(); i++) {
-                splitters[i]->setScale(viewLayout->splitterPositions[i]);
+                splitters[i]->setScale(viewLayout.splitterPositions[i]);
             }
         }
     }
 
-    void storeLayout(dawview_layout_t* layout) {
-        layout->left  = std::make_shared<guictrlayout_snapshot_t>();
-        layout->right = std::make_shared<guictrlayout_snapshot_t>();
-        storeContainerSnapshot(ctr_Right.get(), layout->right.get());
-        storeContainerSnapshot(ctr_Left.get(), layout->left.get());
-        layout->splitterPositions.resize(splitters.size());
+    void storeLayout(dawview_layout_t& layout) {
+        layout.left  = std::make_shared<guictrlayout_snapshot_t>();
+        layout.right = std::make_shared<guictrlayout_snapshot_t>();
+        storeContainerSnapshot(ctr_Right.get(), layout.right.get());
+        storeContainerSnapshot(ctr_Left.get(), layout.left.get());
+        layout.splitterPositions.resize(splitters.size());
         for (size_t i = 0; i < splitters.size(); i++) {
-            layout->splitterPositions[i] = splitters[i]->getScale();
+            layout.splitterPositions[i] = splitters[i]->getScale();
         }
     }
 
@@ -944,10 +945,14 @@ void DawInstance::menuCommand(menucmd_t command) {
                     ivec2 windowSize;
                     mainCtrl->mainWindow->getSize(&windowSize);
                     auto compWindowNew = mainCtrl->mainWindow->createOverlay(companionCtrlStdPtr, windowSize, WINDOW_IS_MAINWINDOW_SLAVE | WINDOW_IS_RESIZABLE);
+                    auto idxOfWindow = companionWindows.size();
                     companionWindows.push_back(DawWindowCompanion{ compWindowNew, companionCtrlStdPtr });
                     compWindowNew->initControl();
                     if (companionCtrlStdPtr->isOk()) {
                         companionWindows[0].wnd->show();
+                        if (this->layoutsFromProjectFile.size() > idxOfWindow) {
+                            companionCtrlStdPtr->loadLayout(this->layoutsFromProjectFile[idxOfWindow]);
+                        }
                         for (track_t* tr : project.trackList) {
                             companionCtrlStdPtr->view->ctr_tracks2.addTrack(tr, FLG_TRK_CHANGE_LOAD);
                         }
@@ -1122,14 +1127,14 @@ void MainCtrl::startApp() {
         daw.setEmptyProject();
     }
     
-    view->storeLayout(&layouts[0]);
+    view->storeLayout(layouts[0]);
     for (size_t i = 1; i < layouts.size(); i++) {
         std::shared_ptr<dawview_layout_t> viewLayout = loadDawViewLayoutSnapshot(StringFormat("data/view%zu.layout", i));
         if (viewLayout) {
             layouts[i] = *viewLayout.get();
         }
     }
-    view->loadLayout(&layouts[1]);
+    view->loadLayout(layouts[1]);
     dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
     DawCtrl::startApp();
 }
@@ -1735,6 +1740,11 @@ std::shared_ptr<project_file> DawInstance::createProjectFile() {
     std::shared_ptr<project_file> file = std::make_shared<project_file>();
     file->path                         = projectPath;
     project.copyTo(file->project);
+    file->layouts.resize(dawCtrls.size());
+    auto itOut = file->layouts.begin();
+    for (auto& ctrl : dawCtrls) {
+        ctrl->storeLayout(*itOut++);
+    }
     file->project.globals        = projectGlobals;
     file->project.exportSettings = getExportSettings();
     file->project.quantizeSettings = getQuantizeSettings();
@@ -1940,15 +1950,20 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
     }
     tls.host->onTrackLayoutChange();
 
+    this->layoutsFromProjectFile = file->layouts;
     /** validate cursor state **/
     auto ctrl = tls.mainCtrl;
     if (ctrl) {
+        if (this->layoutsFromProjectFile.size() > 0) {
+            ctrl->loadLayout(this->layoutsFromProjectFile[0]);
+        }
         ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackCtr);
         ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackReturnCtr);
         ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackMasterCtr);
         ctrl->grid.setLayout(file->layout.layoutGrid);
         ctrl->view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
     }
+
     updateVisibleTrackContents();
     for (DawCtrl* pDawCtrl : dawCtrls) {
         pDawCtrl->fixCursor();
@@ -2283,10 +2298,10 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
             uint8_t index = (event.keyCode - KEY_F1) % layouts.size();
             bool store    = (event.mods & KB_MOD_SHIFT);
             if (store) {
-                view->storeLayout(&layouts[index]);
+                view->storeLayout(layouts[index]);
                 saveDawViewLayoutSnapshot(layouts[index], StringFormat("data/view%d.layout", index));
             } else {
-                view->loadLayout(&layouts[index]);
+                view->loadLayout(layouts[index]);
                 BaseCtrl::relayout();
                 dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
             }
@@ -2904,4 +2919,15 @@ beatbar16th_t project_controller_t::toBeatBar16th(tick_t tick, bool isRelative) 
 
 tick_t project_controller_t::beatBarNthToTick(const beatbar16th_t& beatBarNth, bool isRelative) {
     return ::beatBarNthToTick(beatBarNth, projectGlobals->signatureNum, projectGlobals->signatureDenom, isRelative);
+}
+void MainCtrl::storeLayout(dawview_layout_t& layout) {
+    view->storeLayout(layout);
+}
+void MainCtrl::loadLayout(const dawview_layout_t& viewLayout) {
+    view->loadLayout(viewLayout);
+    dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
+}
+void CompanionCtrl::storeLayout(dawview_layout_t& layout) {
+}
+void CompanionCtrl::loadLayout(const dawview_layout_t& viewLayout) {
 }

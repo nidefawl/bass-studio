@@ -224,12 +224,6 @@ class guictr_menubar;
 struct track_gui_entry_t;
 struct guictrlayout_snapshot_t;
 
-struct dawview_layout_t {
-    std::shared_ptr<guictrlayout_snapshot_t> left;
-    std::shared_ptr<guictrlayout_snapshot_t> right;
-    std::vector<float> splitterPositions;
-};
-
 class DawViewContainers {
 public:
     int indexContent    = 0;
@@ -263,6 +257,7 @@ class DawInstance : public project_controller_t, public delete_cb {
 
     std::vector<DawWindowCompanion> companionWindows;
     std::vector<DawCtrl*> dawCtrls;
+    std::vector<dawview_layout_t> layoutsFromProjectFile;
     edithistory hist;
     WorkerThread workerThread;
     PlaybackThread playThread;
@@ -542,6 +537,8 @@ public:
 
     virtual void setViewMode(view_mode_t mode) = 0;
     view_mode_t getViewMode() const;
+    virtual void storeLayout(dawview_layout_t& layout) = 0;
+    virtual void loadLayout(const dawview_layout_t& viewLayout) = 0;
 
     virtual void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) = 0;
     virtual guictr_tracks* getTrackContainer() = 0;
@@ -606,6 +603,8 @@ public:
     void fixCursor() override;
     bool isZooming() override;
     void setViewMode(view_mode_t mode) override;
+    void storeLayout(dawview_layout_t& layout) override;
+    void loadLayout(const dawview_layout_t& viewLayout) override;
     std::shared_ptr<guictr_layout> replaceContainerWith(guictr_base* ctr,
                                                         std::shared_ptr<guictr_layout> newContainer) override;
     void dragContainerRelayout(drag_ctr_event evt) override;
@@ -646,6 +645,8 @@ public:
     bool isClipEditorVisible() override;
     bool isPluginViewVisible() override;
     void setViewMode(view_mode_t mode) override;
+    void storeLayout(dawview_layout_t& layout) override;
+    void loadLayout(const dawview_layout_t& viewLayout) override;
     void setEditClip(gui_clip* gclip) override;
     void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) override;
     guictr_tracks* getTrackContainer() override;
