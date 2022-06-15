@@ -4,7 +4,6 @@
 #include <cstdio>
 #include <iterator>
 #include <limits>
-#include <math.h>
 #include <muParser.h>
 #include <optional>
 #include <vector>
@@ -785,12 +784,11 @@ namespace PluginSynth {
          * @return MathExpr parsed expression
          */
         static MathExpr parse(String strExpression) {
-            auto shrdP                = std::make_shared<MathExprParsed>();
-            auto& p                   = shrdP->parser;
-            p.DefineVar("x", &shrdP->inputs[0]);
-            int32_t idx = 1;
+            auto shrdP    = std::make_shared<MathExprParsed>();
+            auto& p       = shrdP->parser;
+            auto itInputs = shrdP->inputs.begin();
             for (auto& name : stringsShortSrcNames) {
-                p.DefineVar(name, &shrdP->inputs[idx++]);
+                p.DefineVar(name, itInputs++);
             }
             p.SetExpr(strExpression);
             p.Eval();
@@ -1946,6 +1944,7 @@ namespace PluginSynth {
             const FilterModes filterMode = GetParamEnum(Parameters::FilterMode)->getEnumValue<FilterModes>();
             const bool bIsGlideEnabled = voiceMode != VoiceModes::Poly;
             int32_t numActiveVoices    = 0;
+            // log_lf(Log::L_DEBUG, "this->unisonVoiceCount %d\n", this->unisonVoiceCount);
             for (int s = 0; s < nFrames; s++) {
                 FlushMidi(s);
                 UpdateParameters();
