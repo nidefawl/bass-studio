@@ -735,6 +735,9 @@ namespace PluginSynth {
         "Pitch",
         "Note"
     };
+    static_assert(stringsModSource.size() == 
+                static_cast<size_t>(ModulationSourceType::NumModulationSources) +
+                static_cast<size_t>(ModulationType::NumModulationTypes) + 1 - 1, "stringsModSource size mismatch");
     static constexpr auto MathExprInputLen = 1 + ModulationSourceType::NumModulationSources;
     const std::array<const char*, MathExprInputLen> stringsShortSrcNames = {
         "x",
@@ -1239,20 +1242,20 @@ namespace PluginSynth {
         int32_t getModulationCount() const {
             return CtrSize(modulations);
         }
-        bool setModulationType(int32_t index, int32_t idx, int32_t typeIdx) {
-            auto& modulation = getOrCreateModulation(index);
+        bool setModulationType(int32_t slotIndex, int32_t srcSlotIndex, int32_t typeIdx) {
+            auto& modulation = getOrCreateModulation(slotIndex);
             auto numInputs   = CtrSize(modulation.inputs);
             if (typeIdx < 0) {
-                if (idx < numInputs) {
+                if (srcSlotIndex >= 0 && srcSlotIndex < numInputs) {
                     // erase entry
-                    modulation.inputs.erase(modulation.inputs.begin() + idx);
+                    modulation.inputs.erase(modulation.inputs.begin() + srcSlotIndex);
                     return true;
                 }
                 return false;
             }
-            const auto modSrcType = typeIdx >= ModulationType::ModulationSource ? static_cast<ModulationSourceType>(typeIdx-ModulationType::ModulationSource) : ModulationSourceType::Lfo1;
             const auto modType = typeIdx >= ModulationType::ModulationSource ? ModulationType::ModulationSource : static_cast<ModulationType>(typeIdx);
-            if (idx == numInputs) {
+            const auto modSrcType = modType == ModulationType::ModulationSource ? static_cast<ModulationSourceType>(typeIdx-ModulationType::ModulationSource) : ModulationSourceType::Lfo1;
+            if (srcSlotIndex == numInputs) {
                 ModulationInput input = {
                     modType,
                     modSrcType,
@@ -1263,8 +1266,8 @@ namespace PluginSynth {
                 };
                 modulation.inputs.emplace_back(std::move(input));
                 return true;
-            } else if (typeIdx >= 0 && typeIdx < ModulationType::NumModulationTypes && idx < numInputs) {
-                auto& mod  = modulation.inputs[idx];
+            } else if (srcSlotIndex < numInputs) {
+                auto& mod  = modulation.inputs[srcSlotIndex];
                 mod.type = modType;
                 mod.src = modSrcType;
                 return true;
