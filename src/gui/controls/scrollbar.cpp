@@ -1,4 +1,5 @@
 #include <nanovg.h>
+#include "math/seq_math.h"
 #include "math/vec.h"
 #include "scrollbar.h"
 
@@ -154,12 +155,15 @@ void Splitter::addProperties(Table::tbl* table) {
     rows.push_back({{tblstr{"scaleMax"}, tbltypesaferef<float>{ref, this->scaleMax, nullptr}}});
 }
 bool gui_scrollbar::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
-    if (yoffset) {
+    if (abs(yoffset) > 0.02f) {
         ivec2 vcS  = ctr.getScrollTotalSize();
         int32_t cS = vcS[dir];
         if (cS > 0) {
             auto curOffset = scrollOffset;
-            auto newOffset = curOffset - float(yoffset * 1.0f / 16.0f);
+            float offset = float(yoffset * 1.0f / 32.0f);
+            // if (abs(offset) < 1.0f)
+            //     offset = offset > 0 ? 1.0f : -1.0f;
+            auto newOffset = curOffset - offset;
             setScrollOffset(newOffset);
         }
     }
