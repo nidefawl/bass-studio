@@ -12,15 +12,16 @@
 #ifndef M_PI
 #define M_PI 3.14159265358979323846 /* pi */
 #endif
+
 #ifndef MATH_HAS_FP_INF_CHECK
-#  if defined(__clang__) && defined(NDEBUG)
+#  if defined(__clang__) && defined(__FAST_MATH__)
 #    define MATH_HAS_FP_INF_CHECK 0
 #  else
 #    define MATH_HAS_FP_INF_CHECK 1
 #  endif
 #endif
 #ifndef MATH_HAS_FP_NAN_CHECK
-#  if defined(__clang__) && defined(NDEBUG)
+#  if defined(__clang__) && defined(__FAST_MATH__)
 #    define MATH_HAS_FP_NAN_CHECK 0
 #  else
 #    define MATH_HAS_FP_NAN_CHECK 1
