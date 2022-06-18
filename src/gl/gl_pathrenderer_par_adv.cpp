@@ -89,7 +89,7 @@ void GLPathRendererParAdvanced::destroy() {
 }
 void GLPathRendererParAdvanced::bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) {
     dbgassert(!paths.empty());
-    out.bakeOpts = paths[0].pathOpts;
+    out.bakeOpts = paths.back().pathOpts;
 
     int idx = 0;
     std::vector<uint16_t> spineLengths;
