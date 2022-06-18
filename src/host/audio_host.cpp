@@ -464,14 +464,14 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
                         samplerate = static_cast<samplerate_t>(info->defaultSampleRate);
                     }
                     deviceIdxSelectedOutput = i;
-                    log_printf("deviceIdxSelectedOutput DEVICE[%d] = %s %d IN/%d OUT channels\n", i, info->name, info->maxInputChannels, info->maxOutputChannels);
+                    log_printf("deviceIdxSelectedOutput DEVICE[%d] = %s %d IN/%d OUT channels at samplerate %d\n", i, info->name, info->maxInputChannels, info->maxOutputChannels, samplerate);
                 }
                 if (bInputMatches && info->maxInputChannels > 0) {
                     if (samplerate == 0 && info->defaultSampleRate > 0) {
                         samplerate = static_cast<samplerate_t>(info->defaultSampleRate);
                     }
                     deviceIdxSelectedInput = i;
-                    log_printf("deviceIdxSelectedInput DEVICE[%d] = %s %d IN/%d OUT channels\n", i, info->name, info->maxInputChannels, info->maxOutputChannels);
+                    log_printf("deviceIdxSelectedInput DEVICE[%d] = %s %d IN/%d OUT channels at samplerate %d\n", i, info->name, info->maxInputChannels, info->maxOutputChannels, samplerate);
                 }
             }
         }
