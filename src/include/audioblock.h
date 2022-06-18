@@ -210,7 +210,7 @@ struct alignas(16) AudioBlock {
 
     void copyFromPosToPos(const float * const * const srcBuf, samplecount_t offsetIn, samplecount_t offsetOut, samplecount_t len, channelnum_t srcChannels) {
         dbgassert(srcChannels > 0);
-        const channelnum_t nChannels = math::max(srcChannels, channels);
+        const channelnum_t nChannels = channels;
         const samplecount_t nSamples  = math::min(len, samples);
         dbgassert(offsetOut + nSamples <= samples);
         for (channelnum_t i = 0; i < nChannels; i++) {
