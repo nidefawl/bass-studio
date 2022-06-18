@@ -264,6 +264,7 @@ public:
         blocksProcessed++;
     }
     void processBuffer(AudioBlock* block, float fGain = 1.0f) {
+        dbgassert(block->channels >= NUM_CHANNELS && "block->channels >= NUM_CHANNELS");
         dbgassert(INPUTLEN % block->samples == 0 && "blocksize must be multiple of INPUTLEN");
         dbgassert(block->samples == this->blocksize && "blocksize must not change during runtime");
         meter.update(block, 1.0f);
