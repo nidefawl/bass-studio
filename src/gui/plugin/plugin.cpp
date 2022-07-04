@@ -1091,7 +1091,9 @@ void guiplugin::makeSnapshot(plugin_ui_snapshot_t& puis, const tracksnapshot_sto
 }
 
 void guiplugin::loadSnapshot(const plugin_ui_snapshot_t& puis) {
-    setLayoutMode(puis.layoutMode);
+    if (puis.layoutMode > -1) {
+        setLayoutMode(puis.layoutMode);
+    }
     effect->bWindowPosSizeValid = puis.windowPosSizeValid;
     effect->lastWindowPosSize = puis.windowPosSize;
 }

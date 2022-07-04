@@ -38,7 +38,7 @@ struct plugin_ui_snapshot_t {
     ivec4 windowPosSize{};
     bool windowPosSizeValid = false;
     bool isWindowOpen = false;
-    int32_t layoutMode;
+    int32_t layoutMode = -1;
 };
 struct plugin_snapshot_t {
     uint32_t version = 0;
