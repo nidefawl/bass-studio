@@ -1,5 +1,4 @@
 #include "glheaders.h"
-#include <__algorithm/remove.h>
 #include <cstddef>
 #include <nanovg.h>
 #include <ctime>
