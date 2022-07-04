@@ -233,6 +233,10 @@ int main(int argc, char** argv) {
                 clip->notes.add(note);
                 note.pitch = 32 + 12;
                 clip->notes.add(note);
+                note.pitch = 32 + 24;
+                clip->notes.add(note);
+                note.pitch = 32 - 12;
+                clip->notes.add(note);
             }
             clip->notes.updateBounds();
             clip->loopEnabled = true;
@@ -436,7 +440,53 @@ int main(int argc, char** argv) {
             host->cacheAudioGraph = true;
         };
 
-        std::array<TestContext, 10> allBenchmarks = {
+        auto testSynth = [&trDataMidi](TestContext* context) {
+            DawInstance* dawInstance = context->dawInstance;
+            auto host = dawInstance->getHost();
+            // BUS_TOP_n
+            //   SUB_BUS_1
+            //     TRACK_1
+            for (int topGrps = 0; topGrps < 1; ++topGrps) {
+                auto trTop = dawInstance->createNewTrack(TRACK_TYPE_AUDIO);
+                trTop->name = StringFormat("Top Bus %d", topGrps);
+                dawInstance->addTrackImpl(-1, trTop, 0);
+                for (int subGrps = 0; subGrps < 1; ++subGrps) {
+                    auto trSubGrp = dawInstance->createNewTrack(TRACK_TYPE_AUDIO);
+                    trSubGrp->name = StringFormat("Sub Bus %d.%d", topGrps, subGrps);
+                    trTop->addChild(trSubGrp);
+                    dawInstance->addTrackImpl(-1, trSubGrp, 0);
+                    for (int i = 0; i < 1; ++i) {
+                        auto track1 = new track_t(TRACK_TYPE_MIDI, StringFormat("Track #%d.%d.%d", topGrps, subGrps, i), true);
+                        trSubGrp->addChild(track1);
+                        // deep copy (of clip_t instances)
+                        track1->getMidi() = trDataMidi;
+                        dawInstance->addTrackImpl(-1, track1, 0);
+                        track1->getStage()->arp->setParamValue(PARAM_ENABLE, 1.0f, FLG_PAR_UPDATE_INIT);
+                        track1->getStage()->arp->setParamValue(ARP_PARAM_CLOCK, 0.4f, FLG_PAR_UPDATE_INIT);
+                        track1->getStage()->arp->setParamValue(ARP_PARAM_PATTERN, 0.0f, FLG_PAR_UPDATE_INIT);
+                        track1->getStage()->arp->setParamValue(ARP_PARAM_RAND_VEL, 0.7f, FLG_PAR_UPDATE_INIT);
+                        track1->getStage()->arp->setParamValue(ARP_PARAM_GATE, 0.55f, FLG_PAR_UPDATE_INIT);
+
+                        auto pluginInstance = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_SYNTH, -1);
+                        pluginInstance->setParamValue(PARAM_OFFSET_EXTERNAL+29, 0.8f, FLG_PAR_UPDATE_INIT);
+                        pluginInstance->setParamValue(PARAM_OFFSET_EXTERNAL+31, 0.8f, FLG_PAR_UPDATE_INIT);
+                        pluginInstance->setParamValue(PARAM_OFFSET_EXTERNAL+40, 1.0f, FLG_PAR_UPDATE_INIT);
+                        pluginInstance->setParamValue(PARAM_OFFSET_EXTERNAL+41, 1.0f, FLG_PAR_UPDATE_INIT);
+                        dbgassert(pluginInstance);
+                        host->insertNewPlugin(track1->getStage(), pluginInstance, 0);
+                        pluginInstance->onEnable();
+                        track1->getStage()->pluginsChanged();
+
+                    }
+                }
+            }
+
+            auto trackMaster = new track_t(TRACK_TYPE_MASTER, "master", true);
+            dawInstance->addTrackImpl(0, trackMaster, 0);
+        };
+
+        std::array<TestContext, 11> allBenchmarks = {
+            TestContext{"1 Track (1 Synth)", false, dawInstance.get(), testSynth },
             TestContext{"0 Tracks (Empty)", false, dawInstance.get(), testCase0Tracks },
             TestContext{"2 Tracks (Empty)", false, dawInstance.get(), testCase2Tracks },
             TestContext{"32 Tracks (Empty)", false, dawInstance.get(), test32TracksEmpty },
@@ -451,6 +501,7 @@ int main(int argc, char** argv) {
 
         for (TestContext& benchmarkCtxt : allBenchmarks) {
             benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
+            break; // only run first
         }
 
         benchmark::Initialize(&argc, argv);
