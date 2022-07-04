@@ -485,8 +485,10 @@ namespace PluginSynth {
         }
     };
 
-    // pitch calculation //
-    inline double pitchFactor(double p) { return pow(1.0595, p); }
+    inline double pitchFactor(double p) { 
+        static constexpr auto base = 1.0594630943592953; // = pow(2.0, 1.0 / 12.0);
+        return pow(base, p); 
+    }
     inline double pitchToFrequency(double p) { return 440.0 * pitchFactor(p - 69); }
     struct Voice {
         std::array<double, 64> modValues{};
