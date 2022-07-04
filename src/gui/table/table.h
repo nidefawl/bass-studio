@@ -133,7 +133,11 @@ namespace Table {
 
     template<typename T>
     inline void drawTbl(const table_ctxt_t& ctxt, const tbltyperef<T>& obj) {
-        drawTbl(ctxt, const_cast<const T&>(obj.t));
+       const vec2& pos  = ctxt.pos;
+       const vec2& size = ctxt.size;
+       nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
+       auto fmtString = StringFormat((obj.format ? obj.format : "%zd"), obj.t);
+       nvgText(ctxt.vg, pos.x + size.x - INSET_TABLE_CELL_PADDING, pos.y + size.y - INSET_TABLE_CELL_PADDING, StringAsCStr(fmtString), nullptr);
     }
 
     template <typename T>
