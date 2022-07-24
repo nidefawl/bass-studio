@@ -208,11 +208,6 @@ int runCommandLineHost(const std::vector<String>& args) {
 
         auto host = std::make_unique<vsthost>();
         vsthost::assignMasterCallback(host.get());
-        host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.samplerate),
-                                             settings.iosettings.blocksize, sampleformat_bits_t::FLOAT_32});
-
-        dbgassert(host->m_sampleFormatInternal.sampleRate != 0);
-        dbgassert(host->m_sampleFormatInternal.blockSize != 0);
 
         project_t project;
         project_globals_t projectGlobals;
@@ -233,6 +228,11 @@ int runCommandLineHost(const std::vector<String>& args) {
         tls.audioCache     = &cache;
         tls.pluginDatabase = &plugindb;
         host->setTls(tls);
+        host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.samplerate),
+                                             settings.iosettings.blocksize, sampleformat_bits_t::FLOAT_32});
+
+        dbgassert(host->m_sampleFormatInternal.sampleRate != 0);
+        dbgassert(host->m_sampleFormatInternal.blockSize != 0);
 
         if (!bRenderOnly) {
             audioHost->initPa();
