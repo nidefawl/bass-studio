@@ -131,11 +131,6 @@ if (CMAKE_COMPILER_IS_GNUCC)
   set_source_files_properties("${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c" PROPERTIES COMPILE_OPTIONS "-Wno-pedantic")
 endif()
 
-foreach (f ${PROJECT_DEP_MUPARSERS_SRC_FILES})
-  set_source_files_properties("${PROJECT_DEPS_PATH}/${f}" PROPERTIES COMPILE_DEFINITIONS "MUPARSER_STATIC=1")
-endforeach ()
-
-
 list(APPEND RESOURCE_FILES "")
 if (WIN32 AND NOT PROJECT_NO_WINDRES)
   list(APPEND RESOURCE_FILES "src/icon_resource.h" "src/icon.rc")
@@ -190,7 +185,7 @@ endif()
 
 target_compile_definitions(${LINK_TARGET} PUBLIC GLFW_INCLUDE_NONE=1 USE_WIN32_EXC_HOOKS BUILD_VSTHOST=1 BUILD_EXTERNAL_PLUGIN=0)
 #target_compile_definitions(${LINK_TARGET} PUBLIC PA_ENABLE_DEBUG_OUTPUT=1)
-target_compile_definitions(${LINK_TARGET} PUBLIC GLM_FORCE_SSE42=1 VST_FORCE_DEPRECATED=0)
+target_compile_definitions(${LINK_TARGET} PUBLIC GLM_FORCE_SSE42=1 VST_FORCE_DEPRECATED=0 MUPARSER_STATIC=1)
 
 if (PROJECT_CFG_USE_OPENGL3)
   target_compile_definitions(${LINK_TARGET} PUBLIC NANOVG_GL3=1)
