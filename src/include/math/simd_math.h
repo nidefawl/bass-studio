@@ -1,6 +1,7 @@
 #pragma once
 #include <immintrin.h>
 #include "types.h"
+#include "compiler.h"
 
 namespace math::simd {
 
@@ -9,11 +10,11 @@ namespace math::simd {
  * See: https://stackoverflow.com/a/72098606 
  */
 template<typename Type, int Simd>
+FUNC_NOINLINE
 void 
-__attribute__ ((noinline))
 cos(
-    const Type * const __restrict__ data,
-    Type * const __restrict__ result) noexcept
+    const Type * const PARAM_RESTRICT data,
+    Type * const PARAM_RESTRICT result) noexcept
 {
     alignas(64)
     Type xSqr[Simd];
@@ -211,8 +212,8 @@ float sine2(float x) {
 template<typename Type, int Simd>
 inline
 void sin_test2(
-    const Type * const __restrict__ data,
-    Type * const __restrict__ result) noexcept
+    const Type * const PARAM_RESTRICT data,
+    Type * const PARAM_RESTRICT result) noexcept
 {
     #pragma omp simd
     for(int i=0;i<Simd;i++)
@@ -223,8 +224,8 @@ void sin_test2(
 template<typename Type, int Simd>
 inline
 void sin_test(
-    const Type * const __restrict__ data,
-    Type * const __restrict__ result) noexcept
+    const Type * const PARAM_RESTRICT data,
+    Type * const PARAM_RESTRICT result) noexcept
 {
     #pragma omp simd
     for(int i=0;i<Simd;i++)
@@ -238,8 +239,8 @@ void sin_test(
 template<typename Type, int Simd>
 inline
 void cos_test(
-    const Type * const __restrict__ data,
-    Type * const __restrict__ result) noexcept
+    const Type * const PARAM_RESTRICT data,
+    Type * const PARAM_RESTRICT result) noexcept
 {
     #pragma omp simd
     for(int i=0;i<Simd;i++)

@@ -9,6 +9,7 @@
 #include "assert_dbg.h"
 #include "fileio.h"
 #include "thread.h"
+#include <slowstacktrace.h>
 
 #ifdef __GNUC__
 #include <cxxabi.h>
@@ -263,4 +264,27 @@ void CPP_failedAssert(const char* expr, const char* file, int line) {
         logStackTrace();
     }
     abort();
+}
+
+
+
+
+void getStackTrace(std::vector<String>& vec) {
+    char buf[4096]{};
+    get_thread_stacktrace(buf, sizeof(buf), nullptr);
+    auto bufPtr = &buf[0];
+    while (bufPtr < buf + sizeof(buf)) {
+        auto lineEnd = std::strstr(bufPtr, "\n");
+        if (!lineEnd)
+            return;
+        vec.emplace_back(bufPtr, lineEnd);
+        bufPtr = lineEnd + 1;
+    }
+}
+
+void logStackTrace() {
+    char buf[4096]{};
+    get_thread_stacktrace(buf, sizeof(buf), nullptr);
+    ::getGlobalLogger()->log(Log::L_INFO, buf, strnlen(buf, sizeof(buf)));
+    // print_thread_stacktrace();
 }

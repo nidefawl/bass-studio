@@ -217,9 +217,7 @@ static int toErrorCode(DWORD excCode) {
             return ERR_UNKNOWN;
     }
 }
-#ifndef PROJECT_UNITTEST
-void logStackTrace();
-#endif
+
 extern volatile bool fatalError;
 #define WINAPI __stdcall
 static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {

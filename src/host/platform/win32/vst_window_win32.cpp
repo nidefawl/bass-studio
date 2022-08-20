@@ -333,6 +333,10 @@ void vst_window::resize(ivec2 newSize) const {
                     clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
 }
 
+void vst_window::setPosition(ivec2 newPos) {
+    SetWindowPos(hwnd, HWND_TOP, newPos.x, newPos.y, 0, 0, SWP_NOSIZE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
+}
+
 WINDOW_HANDLE vst_window::getHWND() const {
     return hwnd;
 }
