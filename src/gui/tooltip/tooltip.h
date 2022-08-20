@@ -64,6 +64,11 @@ public:
         table.titleCols.clear();
         setContent();
         size.y = table.rows.size() * table.rowHeight;
+        float rowWidth = 0.0f;
+        for (auto& col : table.colSizes) {
+            rowWidth += col;
+        }
+        table.tableWidth = math::max(table.tableWidth, rowWidth);
         size = ivec2(table.tableWidth, table.rows.size() * table.rowHeight) + ivec2(INSET_TABLE << 1);
         Table::AdjustColSizes(table);
     }
