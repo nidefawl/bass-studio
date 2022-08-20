@@ -774,7 +774,7 @@ void guitrack_editor::renderAction(NVGcontext* vg, clip_dragaction& renderAction
         trackIdx    = project.trackList.clampTrackIdx(trackIdx);
         track_t* tr = project.trackList[trackIdx];
         track_gui_entry_t* entry;
-        dbgassert(iGuiMgr.getPointerEntry(tr, &entry));
+        always_assert(iGuiMgr.getPointerEntry(tr, &entry));
         dbgassert(entry->content != nullptr);
         for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
             clip_t* cl = (*it).get();
@@ -926,7 +926,7 @@ void guitrack_editor::render(NVGcontext* vg) {
         nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
         for (track_t* t : project.trackMidiAudioCtr.tracksFlat) {
             track_gui_entry_t* entry;
-            dbgassert(iGuiMgr.getPointerEntry(t, &entry));
+            always_assert(iGuiMgr.getPointerEntry(t, &entry));
             dbgassert(entry->content != nullptr);
             auto totalHeight = entry->content->size.y;
             if (!entry->subtracks.empty()) {

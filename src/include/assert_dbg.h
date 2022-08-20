@@ -2,7 +2,10 @@
 #ifdef NDEBUG
 
 #define assert_expr(_Expression) (!!(_Expression))
-#define dbgassert (void)
+
+
+//#define dbgassert (void)
+#define dbgassert(_Expression)
 #define always_assert(_Expression) ((void)(_Expression))
 
 #else/* !defined (NDEBUG) */
