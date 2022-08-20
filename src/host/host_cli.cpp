@@ -222,6 +222,8 @@ int runCommandLineHost(const std::vector<String>& args) {
         if (!bRenderOnly) {
             audioHost = std::make_unique<audiohost>();
             midiHost  = std::make_unique<midihost>();
+        } else {
+            host->multithreadedProcessing = 0;
         }
         tls.audioHost      = audioHost.get();
         tls.midiHost       = midiHost.get();

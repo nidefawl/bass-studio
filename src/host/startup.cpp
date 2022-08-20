@@ -265,7 +265,8 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     }
     auto dawInstance = dawMainCtrl->getDaw();
     String dawPath  = "/home/michael/Documents/";
-    String projName = "samples.project";
+    // String projName = "samples.project";
+    String projName = "test-123";
      int flags = 0x1;// defer load
         // flags = 0; // no defer load
     dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance* daw, std::shared_ptr<project_file> file, int errorState) {
