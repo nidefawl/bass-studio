@@ -109,7 +109,7 @@ if (CLANG)
   set_source_files_properties(src/plugins/synth/synth-plugin.cpp PROPERTIES
     SKIP_UNITY_BUILD_INCLUSION ON
     SKIP_PRECOMPILE_HEADERS ON
-    COMPILE_OPTIONS "-Rpass-analysis=loop-vectorize;-Rpass=loop-vectorize;-Rpass-missed=loop-vectorize"
+    COMPILE_OPTIONS "-fno-lto;-Rpass-analysis=loop-vectorize;-Rpass=loop-vectorize;-Rpass-missed=loop-vectorize"
   )
 endif()
 set(PROJECT_DEP_MUPARSERS_SRC_FILES
