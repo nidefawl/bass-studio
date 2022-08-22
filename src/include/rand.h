@@ -26,3 +26,23 @@ public:
         rng_state = ((seed + 632191u) * 6343u) | 1u;
     }
 };
+class seq_rand_eq_0 {
+    uint64_t rng_state = 0;
+
+public:
+    uint32_t rng_bits(uint8_t) {
+        return static_cast<uint32_t>(rng_state);
+    }
+    uint32_t rng_rand(uint32_t) {
+        return static_cast<uint32_t>(rng_state);
+    }
+    uint32_t rng_rand() {
+        return static_cast<uint32_t>(rng_state);
+    }
+    double rng_double() {
+        return static_cast<double>(rng_state)*0.01;
+    }
+    void rng_seed(uint64_t seed) {
+        rng_state = seed;
+    }
+};
