@@ -30,6 +30,11 @@ namespace DebugAlloc {
     void beginTrace();
     void endTrace();
 }
+
+namespace PluginSynth {
+    extern int32_t gDebugOverrides;
+}
+
 extern bool traceAllocs;
 extern volatile bool fatalError;
 namespace {
@@ -202,7 +207,7 @@ int main(int argc, char** argv) {
                 // nIt++;
                 while (stream->getOutputQueueSize() > 0) {
                     AudioBuffer* dequeuedBuf = nullptr;
-                    dbgassert(stream->try_dequeue(dequeuedBuf));
+                    always_assert(stream->try_dequeue(dequeuedBuf));
                     if (dequeuedBuf) dequeuedBuf->inUse = false;
                 }
                 if (processedBlock < 1) {
@@ -484,9 +489,32 @@ int main(int argc, char** argv) {
             auto trackMaster = new track_t(TRACK_TYPE_MASTER, "master", true);
             dawInstance->addTrackImpl(0, trackMaster, 0);
         };
+        auto testSynthDisabledFilter = [&testSynth](TestContext* context) {
+            PluginSynth::gDebugOverrides = 0|2|4|8|16;
+            testSynth(context);
+        };
+        auto testSynthDisabledModulation = [&testSynth](TestContext* context) {
+            PluginSynth::gDebugOverrides = 1|0|4|8|16;
+            testSynth(context);
+        };
+        auto testSynthDisabledLfo = [&testSynth](TestContext* context) {
+            PluginSynth::gDebugOverrides = 1|2|0|8|16;
+            testSynth(context);
+        };
+        auto testSynthAllDisabled = [&testSynth](TestContext* context) {
+            PluginSynth::gDebugOverrides = 0|0|0|8|16;
+            testSynth(context);
+        };
 
-        std::array<TestContext, 11> allBenchmarks = {
-            TestContext{"1 Track (1 Synth)", false, dawInstance.get(), testSynth },
+        std::array<TestContext, 5> synthBenchmarks = {
+            TestContext{"1 Synth", false, dawInstance.get(), testSynth },
+            TestContext{"1 Synth Filter Disabled", false, dawInstance.get(), testSynthDisabledFilter },
+            TestContext{"1 Synth Modulation Disabled", false, dawInstance.get(), testSynthDisabledModulation },
+            TestContext{"1 Synth LFO Disabled", false, dawInstance.get(), testSynthDisabledLfo },
+            TestContext{"1 Synth All Disabled", false, dawInstance.get(), testSynthAllDisabled },
+        };
+
+        std::array<TestContext, 11> processingBenchmarks = {
             TestContext{"0 Tracks (Empty)", false, dawInstance.get(), testCase0Tracks },
             TestContext{"2 Tracks (Empty)", false, dawInstance.get(), testCase2Tracks },
             TestContext{"32 Tracks (Empty)", false, dawInstance.get(), test32TracksEmpty },
@@ -499,10 +527,13 @@ int main(int argc, char** argv) {
             TestContext{"32 Tracks (2x2x4 Groups, Arp, Graph Cache)", false, dawInstance.get(), testGroupsCached },
         };
 
-        for (TestContext& benchmarkCtxt : allBenchmarks) {
+        for (TestContext& benchmarkCtxt : synthBenchmarks) {
             benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
-            break; // only run first
         }
+
+        // for (TestContext& benchmarkCtxt : processingBenchmarks) {
+        //     benchmark::RegisterBenchmark(benchmarkCtxt.benchmarkName, BenchMarkRun, &benchmarkCtxt);
+        // }
 
         benchmark::Initialize(&argc, argv);
         if (::benchmark::ReportUnrecognizedArguments(argc, argv))

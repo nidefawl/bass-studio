@@ -107,6 +107,15 @@ namespace PluginSynth {
         ModEnvV,
     };
     static_assert(kNumParams == sizeof(parametersOrdered) / sizeof(Parameters), "parametersOrdered is not the correct size");
+    
+    enum Settings {
+        FilterEnabled,
+        ModulationEnabled,
+        LfoEnabled,
+        ClearModulationEnabled,
+        ExprEvaluationEnabled,
+        NumSettings,
+    };
 
     class SynthState {
     public:
