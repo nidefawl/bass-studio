@@ -754,7 +754,7 @@ void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const 
             }
 #ifdef TODO_IMPLEMENT_DRAGGED_WAVE_FORM_RENDERING
 //track_gui_entry_t entry;
-//dbgassert(iGuiMgr.getTrackEntry(tr, entry));
+//always_assert(iGuiMgr.getTrackEntry(tr, entry));
 //dbgassert(entry.clipsGuis.count(cl));
 //const gui_waveform_texture_ref * ptr = dynamic_cast<gui_audio_clip*>(entry.clipsGuis[cl])->waveformRef;
 //renderAudioClip(vg, theme, tr, cl, ptr, clipPos, clipSize, clipPos, clipSize);

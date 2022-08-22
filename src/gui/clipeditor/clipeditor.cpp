@@ -56,7 +56,7 @@ public:
                     break;
                 }
             }
-            if (!found) dbgassert(0);
+            dbgassert(found);
         }
         cursorBefore = oldCursor;
         before.removeDuplicates();

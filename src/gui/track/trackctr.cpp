@@ -158,7 +158,7 @@ gui_track_automationlane* guictr_tracks::addAutomationLane(track_gui_entry_t* en
 }
 void guictr_tracks::removeAutomationLane(gui_track_automationlane* al) {
     track_gui_entry_t* entry;
-    dbgassert(guiMgr.getTrackEntry(al->m_track, &entry));
+    always_assert(guiMgr.getTrackEntry(al->m_track, &entry));
     entry->mixer->removeSubtrackMixer(al);
     trackView.removeSubtrack(entry, al);
 }
