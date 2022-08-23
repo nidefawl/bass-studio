@@ -60,6 +60,7 @@ namespace PluginSynth {
         Panning,
         Voices,
         UnisonVoices,
+        FilterDrive,
         kNumParams
     };
     const Parameters parametersOrdered[] = {
@@ -72,6 +73,7 @@ namespace PluginSynth {
         FilterMode,
         FilterCutoff,
         FilterResonance,
+        FilterDrive,
         FilterKeyTracking,
         VolEnvCutoff,
         ModEnvCutoff,
