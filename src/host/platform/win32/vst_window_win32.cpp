@@ -292,6 +292,10 @@ bool vst_window::init(vstplugin* _plugin, const String& name, ivec2 size, bool r
 
 void vst_window::close() {
     SetActiveWindow(getMainHWND());
+    RECT rcDlg;
+    if (GetWindowRect(hwnd, &rcDlg)) {
+        plugin->storeWindowPosSize({rcDlg.left, rcDlg.top, rcDlg.right - rcDlg.left, rcDlg.bottom - rcDlg.top});
+    }
     plugin->onClose();
     destroy();
 }
