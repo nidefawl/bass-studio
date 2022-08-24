@@ -126,6 +126,7 @@ struct appsettings {
     recentfilelist recentfiles;
     app_plugin_configuration pluginsettings;
     app_path_remapping pathmapping;
+    bool saveOnExit = true;
 };
 
 void saveSettings(appsettings& _settings);

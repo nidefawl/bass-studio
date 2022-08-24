@@ -1226,7 +1226,9 @@ void DawInstance::destroy() {
     tls.host->destroy();
 
     try {
-        saveSettings(*tls.settings);
+        if (tls.settings->saveOnExit) {
+            saveSettings(*tls.settings);
+        }
     } catch (std::exception& e) {
         log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
         ngui::showNotification(ngui::Style::Warning, "Couldn't write config file", "Some settings may have been reset");

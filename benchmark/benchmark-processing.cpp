@@ -135,6 +135,7 @@ int main(int argc, char** argv) {
         auto& tls = daw_tls::initNewTls();
         auto& settings = *tls.settings;
         loadSettings(settings);
+        settings.saveOnExit = false;
         settings.iosettings.midiconfigs.clear();
         settings.iosettings.configs.clear();
         settings.iosettings.asioConfig = {};
