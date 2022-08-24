@@ -724,18 +724,20 @@ namespace PluginSynth {
     };
 
     const Settings settingsOrdered[] = {
+        LfoOneShotEnabled,
         FilterEnabled,
         ModulationEnabled,
         LfoEnabled,
         ClearModulationEnabled,
         ExprEvaluationEnabled,
     };
-    const std::array<const char*, 5> stringsSettings = {
+    const std::array<const char*, 6> stringsSettings = {
         "FilterEnabled",
         "ModulationEnabled",
         "LfoEnabled",
         "ClearModulationEnabled",
         "ExprEvaluationEnabled",
+        "LfoOneShotEnabled",
     };
     
     enum ModulationSourceType {
@@ -747,6 +749,15 @@ namespace PluginSynth {
         UnisonVoiceIndex,
         Pitch,
         Note,
+        Lfo2,
+        SrcMacro01,
+        SrcMacro02,
+        SrcMacro03,
+        SrcMacro04,
+        SrcMacro05,
+        SrcMacro06,
+        SrcMacro07,
+        SrcMacro08,
         NumModulationSources
     };
     enum ModulationType {
@@ -755,7 +766,7 @@ namespace PluginSynth {
         ModulationSource,
         NumModulationTypes
     };
-    const std::array<const char*, 11> stringsModSource = {
+    const std::array<const char*, 20> stringsModSource = {
         "None",
         "Function",
         "Constant",
@@ -766,7 +777,16 @@ namespace PluginSynth {
         "VoiceIndex",
         "UnisonVoiceIndex",
         "Pitch",
-        "Note"
+        "Note",
+        "Lfo2",
+        "Macro 1",
+        "Macro 2",
+        "Macro 3",
+        "Macro 4",
+        "Macro 5",
+        "Macro 6",
+        "Macro 7",
+        "Macro 8"
     };
     static_assert(stringsModSource.size() == 
                 static_cast<size_t>(ModulationSourceType::NumModulationSources) +
@@ -781,7 +801,16 @@ namespace PluginSynth {
         "i",
         "u",
         "p",
-        "n"
+        "n",
+        "lfo2",
+        "m1",
+        "m2",
+        "m3",
+        "m4",
+        "m5",
+        "m6",
+        "m7",
+        "m8"
     };
     
     enum ModulationOperator {
@@ -904,9 +933,6 @@ namespace PluginSynth {
         void setRangedValue(double f) {
             double fVal = math::max(0.0, math::min(1.0, (f - fmin) / (fmax - fmin)));
             valDouble   = fVal;
-            if (enumParam == Parameters::GlideLength) {
-                log_printf("GlideLength = %f\n", fVal);
-            }
         }
         double GetMin() {
             return fmin;
@@ -1041,6 +1067,7 @@ namespace PluginSynth {
         String exprError;
         void initImpl() {
             std::memset(settings.data(), 1, sizeof(settings));
+            settings[Settings::LfoOneShotEnabled] = false;
             if (gDebugOverrides != -1) {
                 for (int i = 0; i < Settings::NumSettings; i++) {
                     settings[i] = static_cast<bool>((gDebugOverrides>>i)&1);
@@ -1116,6 +1143,13 @@ namespace PluginSynth {
             setParamName(getParam(Parameters::FilterDrive), "Filter Drive", "Flt Drv", "Drive", "dB", "%0.2f");
             addFloatParam(Parameters::FilterKeyTracking)->setRange(-24.0, 24.0)->setRangedValue(0.0);
             setParamName(getParam(Parameters::FilterKeyTracking), "Filter Keytracking", "Flt Trk", "Keytrack");
+            for (Parameters p = Parameters::Macro01;
+                p <= Parameters::Macro08;
+                p = static_cast<Parameters>(static_cast<int>(p) + 1))
+            {
+                addFloatParam(p)->setRange(0.0, 1.0)->setRangedValue(0.0);
+                setParamName(getParam(p), "Macro " + std::to_string(static_cast<int>(p) - static_cast<int>(Parameters::Macro01) + 1));
+            }
 
             addFloatParam(Parameters::FmFine)->setRange(-1.0, 1.0)->setRangedValue(0.0);
             setParamName(getParam(Parameters::FmFine), "Fm fine", "Fm fine", "Fine");
@@ -1232,8 +1266,9 @@ namespace PluginSynth {
         void initSampleRate() {
             const auto dt = oneOverSR;
             for (auto& uv : voices) {
-                uv.visitVoices([this, dt, &uv](auto& v) {
-                    UpdateVoiceModulations(dt, uv, v);
+                ModulationSourceData data;
+                uv.visitVoices([this, dt, &uv, &data](auto& v) {
+                    UpdateVoiceModulations(dt, uv, v, data);
                     UpdateVoiceEnvelopeModulations(uv, v);
                     UpdateVoiceEnvelopes(dt, uv, v);
                 });
@@ -1532,6 +1567,7 @@ namespace PluginSynth {
                     try {
                         input.function = MathExpr::parse(input.function.str);
                     } catch (mu::Parser::exception_type& e) {
+                        input.function = MathExpr{};
                         log_lf(Log::L_ERROR, "Error in expression: %s\n", e.GetMsg().c_str());
                     }
                 }
@@ -1836,7 +1872,7 @@ namespace PluginSynth {
         void UpdateAllVoiceLfos(double dt, const VoiceList& list) {
             auto floatParamFreq = static_cast<SynthParam_Float*>(vecParams[Parameters::LfoFrequency]);
             auto floatParamShape = static_cast<SynthParam_Float*>(vecParams[Parameters::LfoShape]);
-
+            const auto lfoOneShot = settings[Settings::LfoOneShotEnabled];
             const auto bpmHz    = math::max(tempo.bpm, 1.0) / 60.0;
             for (int32_t p = 0; p < list.numPolyVoices; ++p) {
                 auto& uv = voices[list.polyVoices[p]];
@@ -1847,67 +1883,45 @@ namespace PluginSynth {
                     
                     if (v.bIsActive) {
                         double lfoFreqHz    = floatParamFreq->ValueModulated(v.modValues[Parameters::LfoFrequency]) * bpmHz;
-                        double lfoAmount    = floatParamShape->ValueModulated(v.modValues[Parameters::LfoShape]);
-                        // v.lfo1.Update(dt, lfoFreqHz);
-                        // double dVoiceLfoUni = 1.0 - v.lfo1.phase;
-                        double dVoiceLfoBi  = v.lfo1.Get(dt, lfoWave, lfoFreqHz, true);
-                        double dVoiceLfoUni = 0.5 + 0.5 * dVoiceLfoBi;
-                        dbgassert(dVoiceLfoUni >= 0.0 && dVoiceLfoUni <= 1.0);
-                        double dLfoShapeExp = 1.0 / (1.0 + dVoiceLfoUni * lfoAmount * 16.);
-                        if (lfoAmount < 0.0) {
-                            dLfoShapeExp = 1.0 + dVoiceLfoUni * -lfoAmount * 16.;
+                        if (!lfoOneShot || v.lfo1.phase + dt*lfoFreqHz < 1.0) {
+                            double dVoiceLfoBi  =  v.lfo1.Get(dt, lfoWave, lfoFreqHz, true);
+                            double dVoiceLfoUni = 0.5 + 0.5 * dVoiceLfoBi;
+                            dbgassert(dVoiceLfoUni >= 0.0 && dVoiceLfoUni <= 1.0);
+                            double lfoAmount    = floatParamShape->ValueModulated(v.modValues[Parameters::LfoShape]);
+                            double dLfoShapeExp = 1.0 / (1.0 + dVoiceLfoUni * lfoAmount * 16.);
+                            if (lfoAmount < 0.0) {
+                                dLfoShapeExp = 1.0 + dVoiceLfoUni * -lfoAmount * 16.;
+                            }
+                            dbgassert(!fp_math::isNanOrInfd(dVoiceLfoUni));
+                            dbgassert(!fp_math::isNanOrInfd(dLfoShapeExp));
+                            double dVoiceLfoUniShaped = exp(log(abs(dVoiceLfoUni)) * dLfoShapeExp);
+                            dbgassert(!fp_math::isNanOrInfd(dVoiceLfoUniShaped));
+                            v.lfoValue = dVoiceLfoUniShaped;
                         }
-                        dbgassert(!fp_math::isNanOrInfd(dVoiceLfoUni));
-                        dbgassert(!fp_math::isNanOrInfd(dLfoShapeExp));
-                        double dVoiceLfoUniShaped = exp(log(abs(dVoiceLfoUni)) * dLfoShapeExp);
-                        dbgassert(!fp_math::isNanOrInfd(dVoiceLfoUniShaped));
-                        v.lfoValue = dVoiceLfoUniShaped;
                     }
                 }
             }
         }
-        void UpdateVoiceModulations(double dt, VoiceUnison& vu, Voice& voice) {
+        using ModulationSourceData = std::array<double, MathExprInputLen>;
+
+        void UpdateVoiceModulations(double dt, VoiceUnison& vu, Voice& voice, ModulationSourceData& modSrcData) {
 
             auto& voiceModulations = voice.modValues;
             if (settings[Settings::ClearModulationEnabled]) {
                 std::memset(voiceModulations.data(), 0, voiceModulations.size() * sizeof(double));
             }
-            
-            std::array<double, MathExprInputLen> sourcesV{};
-            for (auto itOut = sourcesV.begin() + 1; itOut < sourcesV.end(); itOut++) {
-                auto source = static_cast<ModulationSourceType>(itOut - sourcesV.begin() - 1);
-                auto& srcVal = *itOut;
-                switch (source) {
-                    case ModulationSourceType::VolEnv:
-                        srcVal = voice.volEnv.value;
-                        break;
-                    case ModulationSourceType::ModEnv:
-                        srcVal = voice.modEnv.value;
-                        break;
-                    case ModulationSourceType::Lfo1:
-                        srcVal = voice.lfoValue;
-                        break;
-                    case ModulationSourceType::Velocity:
-                        srcVal = voice.velocity;
-                        break;
-                    case ModulationSourceType::VoiceIndex:
-                        srcVal = this->polyVoiceCount < 2 ? 0.5 : vu.indexPoly / static_cast<double>(this->polyVoiceCount - 1);
-                        break;
-                    case ModulationSourceType::UnisonVoiceIndex:
-                        srcVal = this->unisonVoiceCount < 2 ? 0.5 : voice.indexUnison / static_cast<double>(this->unisonVoiceCount - 1);
-                        break;
-                    case ModulationSourceType::Pitch:
-                        srcVal = noteToLinearScale(voice.note);
-                        break;
-                    case ModulationSourceType::Note:
-                        srcVal = voice.note / 127.0;
-                        break;
-                    default:
-                        break;
-                }
-            }
+
+            // std::array<double, MathExprInputLen> sourcesV{};
+            modSrcData[1+ModulationSourceType::VolEnv] = voice.volEnv.value;
+            modSrcData[1+ModulationSourceType::ModEnv] = voice.modEnv.value;
+            modSrcData[1+ModulationSourceType::Lfo1] = voice.lfoValue;
+            modSrcData[1+ModulationSourceType::Velocity] = voice.velocity;
+            modSrcData[1+ModulationSourceType::VoiceIndex] = this->polyVoiceCount < 2 ? 0.5 : vu.indexPoly / static_cast<double>(this->polyVoiceCount - 1);
+            modSrcData[1+ModulationSourceType::UnisonVoiceIndex] = this->unisonVoiceCount < 2 ? 0.5 : voice.indexUnison / static_cast<double>(this->unisonVoiceCount - 1);
+            modSrcData[1+ModulationSourceType::Pitch] = noteToLinearScale(voice.note);
+            modSrcData[1+ModulationSourceType::Note] = voice.note / 127.0;
             for (auto& modulation : modulations) {
-                std::array<double, MathExprInputLen> sources = sourcesV;
+                ModulationSourceData& sources = modSrcData;
                 double modVal = 0.0;
                 for (size_t j = 0; j < modulation.inputs.size(); j++) {
                     // sources.front() = modVal;
@@ -2077,6 +2091,8 @@ namespace PluginSynth {
             // }
 
             out *= volEnvValue;
+            // out += (synthRand.rng_double()*2-1)*0.002;
+
             auto filterDrive = GetModulatedParamVoice(voice, Parameters::FilterDrive);
             if (filterDrive < 0.0) {
                 out *= 1.0+filterDrive;
@@ -2131,6 +2147,7 @@ namespace PluginSynth {
             int32_t numActiveVoices    = 0;
             const auto dt = oneOverSR;
             auto tempo = this->tempo;
+            ModulationSourceData modSrcData;
             for (int s = 0; s < nFrames; s++) {
                 FlushMidi(s);
                 UpdateParameters(dt);
@@ -2138,6 +2155,7 @@ namespace PluginSynth {
                 if (lfo2.Update(dt, bpmDiv4Hz)) {
                     lfo.initPhase(0.0);
                 }
+                lfo2Value = 0.5 + 0.5 * lfo2.GetWaveform(Waveforms::Saw, true);
                 // calculate lfo freqency in Hz based on tempo
                 double lfoFreqHz = GetParamFloat(Parameters::LfoFrequency)->Value() * bpmHz;
                 lfoValue         = lfo.Get(dt, lfoWave, lfoFreqHz, false);
@@ -2148,6 +2166,15 @@ namespace PluginSynth {
                     UpdateAllVoiceLfos(dt, list);
                 }
                 if (settings[Settings::ModulationEnabled]) {
+                    modSrcData[1+ModulationSourceType::Lfo2] = lfo2Value;
+                    modSrcData[1+ModulationSourceType::SrcMacro01] = GetParamFloat(Parameters::Macro01)->Value();
+                    modSrcData[1+ModulationSourceType::SrcMacro02] = GetParamFloat(Parameters::Macro02)->Value();
+                    modSrcData[1+ModulationSourceType::SrcMacro03] = GetParamFloat(Parameters::Macro03)->Value();
+                    modSrcData[1+ModulationSourceType::SrcMacro04] = GetParamFloat(Parameters::Macro04)->Value();
+                    modSrcData[1+ModulationSourceType::SrcMacro05] = GetParamFloat(Parameters::Macro05)->Value();
+                    modSrcData[1+ModulationSourceType::SrcMacro06] = GetParamFloat(Parameters::Macro06)->Value();
+                    modSrcData[1+ModulationSourceType::SrcMacro07] = GetParamFloat(Parameters::Macro07)->Value();
+                    modSrcData[1+ModulationSourceType::SrcMacro08] = GetParamFloat(Parameters::Macro08)->Value();
                     int32_t numActiveVoices = list.numUnisonVoices;
                     for (int32_t i = 0; i < numActiveVoices; ++i) {
                         auto& uv = voices[list.unisonVoices[i]/NUM_UNISON_VOICES];
@@ -2155,7 +2182,7 @@ namespace PluginSynth {
                         if (bIsGlideEnabled) {
                             v.frequency += (v.targetFrequency - v.frequency) * glideLength * dt;
                         } 
-                        UpdateVoiceModulations(dt, uv, v);
+                        UpdateVoiceModulations(dt, uv, v, modSrcData);
                         UpdateVoiceEnvelopeModulations(uv, v);
                     }
                 }
@@ -2171,7 +2198,7 @@ namespace PluginSynth {
                             continue;
                         }
                         auto voiceVolume = GetModulatedParamVoice(v, Parameters::MasterVolume);
-                        // auto voice = (synthRand.rng_double()*2-1)*0.002;
+                        // auto noise = (synthRand.rng_double()*2-1)*0.002;
                         auto voice = GetVoiceImpl(dt, uv, v, filterMode) * mvInv * voiceVolume;
                         auto panningMinusOneToOne = GetModulatedParamVoice(v, Parameters::Panning);
                         auto panningUnipolar      = panningMinusOneToOne * 0.5 + 0.5;

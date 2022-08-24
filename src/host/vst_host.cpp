@@ -454,7 +454,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
             logPluginCb(plugin, "audioMasterProcessEvents %d %d %zd\n", opcode, index, value, 0);
         return 0;
     case audioMasterIOChanged:
-        if (!throttleLog)
+        // if (!throttleLog)
             logPluginCb(plugin, "audioMasterIOChanged %d %d %zd\n", opcode, index, value, 0);
         return 0;
     case audioMasterNeedIdle:

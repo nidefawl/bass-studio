@@ -61,6 +61,14 @@ namespace PluginSynth {
         Voices,
         UnisonVoices,
         FilterDrive,
+        Macro01,
+        Macro02,
+        Macro03,
+        Macro04,
+        Macro05,
+        Macro06,
+        Macro07,
+        Macro08,
         kNumParams
     };
     const Parameters parametersOrdered[] = {
@@ -107,6 +115,14 @@ namespace PluginSynth {
         ModEnvS,
         ModEnvR,
         ModEnvV,
+        Macro01,
+        Macro02,
+        Macro03,
+        Macro04,
+        Macro05,
+        Macro06,
+        Macro07,
+        Macro08,
     };
     static_assert(kNumParams == sizeof(parametersOrdered) / sizeof(Parameters), "parametersOrdered is not the correct size");
     
@@ -116,6 +132,7 @@ namespace PluginSynth {
         LfoEnabled,
         ClearModulationEnabled,
         ExprEvaluationEnabled,
+        LfoOneShotEnabled,
         NumSettings,
     };
 
@@ -128,6 +145,7 @@ namespace PluginSynth {
         int fmMode     = 0;
 
         double lfoValue      = 0.0;
+        double lfo2Value     = 0.0;
         double driftVelocity = 0.0;
         double driftPhase    = 0.0;
         double driftValue    = 0.0;
@@ -202,6 +220,8 @@ namespace PluginSynth {
         double Pan               = 0.5;
         double UnisonVoices      = 0.0;
         double PolyVoicesMax     = 0.0;
+        double FilterDrive       = 0.5;
+        double MacroValues[8] = {};
     public:
         double* getProgramParameter(Parameters parameter) {
             switch (parameter) {
@@ -246,6 +266,15 @@ namespace PluginSynth {
                 case Parameters::Panning: return &Pan;
                 case Parameters::Voices: return &PolyVoicesMax;
                 case Parameters::UnisonVoices: return &UnisonVoices;
+                case Parameters::FilterDrive: return &FilterDrive;
+                case Parameters::Macro01: return &MacroValues[0];
+                case Parameters::Macro02: return &MacroValues[1];
+                case Parameters::Macro03: return &MacroValues[2];
+                case Parameters::Macro04: return &MacroValues[3];
+                case Parameters::Macro05: return &MacroValues[4];
+                case Parameters::Macro06: return &MacroValues[5];
+                case Parameters::Macro07: return &MacroValues[6];
+                case Parameters::Macro08: return &MacroValues[7];
                 case Parameters::MasterVolume:
                 case Parameters::kNumParams:
                     return nullptr;
