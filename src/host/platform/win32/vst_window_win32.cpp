@@ -263,6 +263,13 @@ bool vst_window::init(vstplugin* _plugin, const String& name, ivec2 size, bool r
         SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(mainHWND));
         SetProp(hwnd, "_DAW_VST2WIN", reinterpret_cast<HANDLE>(int64_t{7}));
 
+        ERect* prc = nullptr;
+        plugin->dispatch(effEditGetRect, 0, 0, (void*) &prc);
+        int w = prc->right - prc->left;
+        int h = prc->bottom - prc->top;
+        if (w > 0 && h > 0) {
+            resize(ivec2(w, h));
+        }
         RECT rcOwner;
         RECT rcDlg;
         RECT rc;
@@ -300,6 +307,13 @@ void vst_window::destroy() {
 void vst_window::show() {
     SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
     plugin->onShow(this);
+    ERect* prc = nullptr;
+    plugin->dispatch(effEditGetRect, 0, 0, (void*) &prc);
+    int w = prc->right - prc->left;
+    int h = prc->bottom - prc->top;
+    if (w > 0 && h > 0) {
+        resize(ivec2(w, h));
+    }
 }
 
 ivec2 vst_window::getContentSize() const {
