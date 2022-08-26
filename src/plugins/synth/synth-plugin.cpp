@@ -345,7 +345,7 @@ namespace PluginSynth {
             b = 0.0;
         }
 
-        bool IsSilent() const { return math::abs(b) <= 1E-12; }
+        bool IsSilent() const { return std::fabs(b) <= 1E-12; }
 
         double Process(double dt, double input, double cutoff, double resonance) {
             // f calculation
@@ -376,7 +376,7 @@ namespace PluginSynth {
             low  = 0.0;
         }
 
-        bool IsSilent() const { return math::abs(low) <= 1E-12; }
+        bool IsSilent() const { return std::fabs(low) <= 1E-12; }
 
         double Process(double dt, double input, double cutoff, double resonance) {
             // f calculation
@@ -411,7 +411,7 @@ namespace PluginSynth {
             d = 0.0;
         }
 
-        bool IsSilent() const { return math::abs(d) <= 1E-12; }
+        bool IsSilent() const { return std::fabs(d) <= 1E-12; }
 
         double Process(double dt, double input, double cutoff, double resonance) {
             // f calculation
