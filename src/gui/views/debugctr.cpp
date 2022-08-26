@@ -54,7 +54,8 @@ enum ID_BTN : int32_t {
     ID_BTN_TOGGLE_CLIP_RENDER_CACHE,
     ID_BTN_UPDATE_VISIBLE_TRACK_CONTENTS,
     ID_BTN_TOGGLE_WAVEFORM_UPDATES,
-    ID_BTN_TOGGLE_CLIPRENDERER_DEBUGLAYER
+    ID_BTN_TOGGLE_CLIPRENDERER_DEBUGLAYER,
+    ID_BTN_RESET_AUDIOCACHE,
 };
 struct gui_ctr_debug::ctr_debug_impl_t {
     std::vector<guibase*> debugGuis;
@@ -203,6 +204,12 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_UPDATE_VISIBLE_TRACK_CONTENTS;
             btn3->setText("Update trackcontents");
+            debugGuis.push_back(btn3);
+        }
+        {
+            auto btn3 = new guibutton;
+            btn3->id  = ID_BTN_RESET_AUDIOCACHE;
+            btn3->setText("Reset audiocache");
             debugGuis.push_back(btn3);
         }
     }
@@ -519,6 +526,13 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
         case ID_BTN_UPDATE_VISIBLE_TRACK_CONTENTS:
             daw->updateVisibleTrackContents();
             break;
+        case ID_BTN_RESET_AUDIOCACHE: {
+            auto cache = daw_tls::getTls().audioCache;
+            if (cache) {
+                cache->unloadAll();
+            }
+            break;
+        }
         case ID_BTN_RESET_HIST:
             resetHistAndCheck(daw);
             break;
