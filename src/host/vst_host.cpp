@@ -1262,7 +1262,23 @@ void vsthost::postExportEnd(project_controller_t* ctrl, export_settings_t& expor
 
     for (auto* trackMaster : ctrl->getTracks().getMasterTracksFlatVecRef()) {
         if ((trackMaster->getStage()->flags & audiostageflags_t::WRITE_OUTPUT) != audiostageflags_t::NONE) {
-            writeTrackSamplesToDisk(exportSettings.exportPath, trackMaster->getStage(), sampleBegin, numSamples);
+            String exportPath = exportSettings.exportPath;
+            int idx = 1;
+            while (FileExists(exportPath)&&idx<1000) {
+                String name;
+                String ext;
+                String path;
+                SplitPath(exportSettings.exportPath, &path, &name, &ext);
+                App::Platform::sanitizePathToDirectory(path);
+                path += name;
+                path += "-";
+                path += std::to_string(idx);
+                path += ".";
+                path += ext;
+                idx++;
+                exportPath = path;
+            }
+            writeTrackSamplesToDisk(exportPath, trackMaster->getStage(), sampleBegin, numSamples);
         }
         trackMaster->getStage()->flags &= ~audiostageflags_t::WRITE_OUTPUT;
     }
