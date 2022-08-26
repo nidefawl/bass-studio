@@ -125,7 +125,7 @@ namespace PluginSynth {
         Macro08,
     };
     static_assert(kNumParams == sizeof(parametersOrdered) / sizeof(Parameters), "parametersOrdered is not the correct size");
-    
+
     enum Settings {
         FilterEnabled,
         ModulationEnabled,
@@ -133,6 +133,8 @@ namespace PluginSynth {
         ClearModulationEnabled,
         ExprEvaluationEnabled,
         LfoOneShotEnabled,
+        DiagnosticOutputEnabled,
+        LFOShapeType,
         NumSettings,
     };
 
