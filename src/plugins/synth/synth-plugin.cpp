@@ -892,7 +892,7 @@ namespace PluginSynth {
         "m7",
         "m8"
     };
-    
+
     enum ModulationOperator {
         Multiply,
         Add,
@@ -901,16 +901,24 @@ namespace PluginSynth {
         MultiplyNegative,
         Absolute,
         Clamp,
+        Power,
         NumModulationOperators
     };
-    const std::array<const char*, 7> stringsModOp = {
+    enum ModulationRange {
+        Unipolar,
+        Bipolar,
+        Triangle,
+        NumModulationRanges
+    };
+    const std::array<const char*, 8> stringsModOp = {
         "*",
         "+",
         "-",
         "/",
-        "* -1",
+        "*(1-x)",
         "Abs",
-        "Clamp"
+        "Clamp",
+        "Power"
     };
     struct MathExprParsed {
         std::array<double, MathExprInputLen> inputs{};
@@ -947,7 +955,7 @@ namespace PluginSynth {
         ModulationOperator op = ModulationOperator::Multiply;
         double value          = 1.0;
         MathExpr function;
-        bool isBipolar = false;
+        ModulationRange range = ModulationRange::Unipolar;
     };
     struct ModulationDestination {
         Parameters parameter = Parameters::FilterCutoff;
@@ -1358,7 +1366,7 @@ namespace PluginSynth {
         }
         bool IsBipolarModulation(const Modulation& modulation) const {
             for (auto& source : modulation.inputs) {
-                if (source.isBipolar) return true;
+                if (source.range == ModulationRange::Bipolar) return true;
             }
             return false;
         }
@@ -1440,7 +1448,7 @@ namespace PluginSynth {
                     ModulationOperator::Multiply, 
                     0.0, 
                     MathExpr{},
-                    false
+                    ModulationRange::Unipolar,
                 };
                 modulation.inputs.emplace_back(std::move(input));
                 return true;
@@ -1492,12 +1500,12 @@ namespace PluginSynth {
             }
             return false;
         }
-        bool setModulationBiPolar(int32_t index, int32_t idx, bool biPolar) {
+        bool setModulationInputRange(int32_t index, int32_t idx, ModulationRange range) {
             auto& modulation = getOrCreateModulation(index);
             auto numInputs   = CtrSize(modulation.inputs);
             if (idx < numInputs) {
                 auto& mod     = modulation.inputs[idx];
-                mod.isBipolar = biPolar;
+                mod.range = range;
                 return true;
             }
             return false;
@@ -1595,7 +1603,7 @@ namespace PluginSynth {
                                                    inputOpType,
                                                    input.value,
                                                    input.function.str,
-                                                   input.isBipolar });
+                                                   static_cast<uint8_t>(input.range) });
                 }
                 const auto numDestinations = CtrSize(modulation.destinations);
                 for (int32_t j = 0; j < numDestinations; ++j) {
@@ -1632,7 +1640,7 @@ namespace PluginSynth {
                                                      static_cast<ModulationOperator>(input.opIdx),
                                                      input.value,
                                                      MathExpr{ input.function, nullptr },
-                                                     input.isBiPolar });
+                                                     static_cast<ModulationRange>(input.range) });
                 }
                 const auto numDestinations = CtrSize(ms.destinations);
                 for (int32_t j = 0; j < numDestinations; ++j) {
@@ -1994,11 +2002,14 @@ namespace PluginSynth {
 
         void UpdateVoiceModulations(double dt, VoiceUnison& vu, Voice& voice, ModulationSourceData& modSrcData) {
 
+            if (!settings[Settings::ModulationEnabled]) {
+                return;
+            }
+            
             auto& voiceModulations = voice.modValues;
             if (settings[Settings::ClearModulationEnabled]) {
                 std::memset(voiceModulations.data(), 0, voiceModulations.size() * sizeof(double));
             }
-
             // std::array<double, MathExprInputLen> sourcesV{};
             modSrcData[1+ModulationSourceType::VolEnv] = voice.volEnv.value;
             modSrcData[1+ModulationSourceType::ModEnv] = voice.modEnv.value;
@@ -2032,9 +2043,11 @@ namespace PluginSynth {
                         default:
                             break;
                     }
-                    if (input.isBipolar && input.type != ModulationType::Function) {
+                    if (input.range == ModulationRange::Bipolar && input.type != ModulationType::Function) {
                         srcVal = (srcVal * 2.0) - 1.0;
-                        // srcVal = (srcVal - 0.5);
+                    }
+                    if (input.range == ModulationRange::Triangle && input.type != ModulationType::Function) {
+                        srcVal = std::fabs((srcVal * 2.0) - 1.0);
                     }
                     if (j > 0 && input.type != ModulationType::Function) {
                         switch (input.op) {
@@ -2055,13 +2068,16 @@ namespace PluginSynth {
                                 srcVal = modVal - srcVal;
                                 break;
                             case ModulationOperator::MultiplyNegative:
-                                srcVal = modVal * -srcVal;
+                                srcVal = modVal * (1-srcVal);
                                 break;
                             case ModulationOperator::Absolute:
                                 srcVal = abs(modVal * srcVal);
                                 break;
+                            case ModulationOperator::Power:
+                                srcVal = exp(log(srcVal) * modVal);
+                                break;
                             case ModulationOperator::Clamp:
-                                srcVal = math::clamp(srcVal, double(input.isBipolar) * -1.0, 1.0);
+                                srcVal = math::clamp(srcVal, double(input.range == ModulationRange::Bipolar) * -1.0, 1.0);
                                 break;
                             default:
                                 srcVal = modVal;
@@ -2255,27 +2271,25 @@ namespace PluginSynth {
                 if (settings[Settings::LfoEnabled]) {
                     UpdateAllVoiceLfos(dt, list);
                 }
-                if (settings[Settings::ModulationEnabled]) {
-                    modSrcData[1+ModulationSourceType::Lfo2] = lfo2Value;
-                    modSrcData[1+ModulationSourceType::SrcMacro01] = GetParamFloat(Parameters::Macro01)->Value();
-                    modSrcData[1+ModulationSourceType::SrcMacro02] = GetParamFloat(Parameters::Macro02)->Value();
-                    modSrcData[1+ModulationSourceType::SrcMacro03] = GetParamFloat(Parameters::Macro03)->Value();
-                    modSrcData[1+ModulationSourceType::SrcMacro04] = GetParamFloat(Parameters::Macro04)->Value();
-                    modSrcData[1+ModulationSourceType::SrcMacro05] = GetParamFloat(Parameters::Macro05)->Value();
-                    modSrcData[1+ModulationSourceType::SrcMacro06] = GetParamFloat(Parameters::Macro06)->Value();
-                    modSrcData[1+ModulationSourceType::SrcMacro07] = GetParamFloat(Parameters::Macro07)->Value();
-                    modSrcData[1+ModulationSourceType::SrcMacro08] = GetParamFloat(Parameters::Macro08)->Value();
-                    int32_t numActiveVoices = list.numUnisonVoices;
-                    for (int32_t i = 0; i < numActiveVoices; ++i) {
-                        auto& uv = voices[list.unisonVoices[i]/NUM_UNISON_VOICES];
-                        auto& v = uv.voices[list.unisonVoices[i]%NUM_UNISON_VOICES];
-                        if (bIsGlideEnabled) {
-                            v.frequency += (v.targetFrequency - v.frequency) * glideLength * dt;
-                        } 
-                        UpdateVoiceModulations(dt, uv, v, modSrcData);
-                        UpdateVoiceEnvelopeModulations(uv, v);
-                        UpdateVoiceEnvelopes(dt, uv, v);
-                    }
+                modSrcData[1+ModulationSourceType::Lfo2] = lfo2Value;
+                modSrcData[1+ModulationSourceType::SrcMacro01] = GetParamFloat(Parameters::Macro01)->Value();
+                modSrcData[1+ModulationSourceType::SrcMacro02] = GetParamFloat(Parameters::Macro02)->Value();
+                modSrcData[1+ModulationSourceType::SrcMacro03] = GetParamFloat(Parameters::Macro03)->Value();
+                modSrcData[1+ModulationSourceType::SrcMacro04] = GetParamFloat(Parameters::Macro04)->Value();
+                modSrcData[1+ModulationSourceType::SrcMacro05] = GetParamFloat(Parameters::Macro05)->Value();
+                modSrcData[1+ModulationSourceType::SrcMacro06] = GetParamFloat(Parameters::Macro06)->Value();
+                modSrcData[1+ModulationSourceType::SrcMacro07] = GetParamFloat(Parameters::Macro07)->Value();
+                modSrcData[1+ModulationSourceType::SrcMacro08] = GetParamFloat(Parameters::Macro08)->Value();
+                int32_t numActiveVoices = list.numUnisonVoices;
+                for (int32_t i = 0; i < numActiveVoices; ++i) {
+                    auto& uv = voices[list.unisonVoices[i]/NUM_UNISON_VOICES];
+                    auto& v = uv.voices[list.unisonVoices[i]%NUM_UNISON_VOICES];
+                    if (bIsGlideEnabled) {
+                        v.frequency += (v.targetFrequency - v.frequency) * glideLength * dt;
+                    } 
+                    UpdateVoiceModulations(dt, uv, v, modSrcData);
+                    UpdateVoiceEnvelopeModulations(uv, v);
+                    UpdateVoiceEnvelopes(dt, uv, v);
                 }
                 // for (int32_t polyIndex = 0; polyIndex < polyVoiceCount; ++polyIndex) {
                 //     auto& uv = voices[polyIndex];
@@ -3068,7 +3082,7 @@ namespace PluginSynth {
         guidropdown_generic<String> dropdownSource;
         gui_numberinput_double inputConstant;
         gui_textfield textfieldFunction;
-        guibutton buttonBipolar;
+        guibutton buttonInputRange;
         std::function<bool(String)> fnValidateFunction;
     public:
         guicontainer_modulation_slot_source(SynthImpl* _synth, int32_t _slotIndex, int32_t _srcSlotIndex)
@@ -3138,7 +3152,7 @@ namespace PluginSynth {
                 };
             }
             {
-                buttonBipolar.setLabel("Bipolar");
+                buttonInputRange.setLabel("Bipolar");
             }
             {
                 textfieldFunction.setLabel(StringFormat("Mod %d Function %d", slotIndex, srcSlotIndex));
@@ -3193,7 +3207,7 @@ namespace PluginSynth {
             add(&dropdownSource);
             add(&inputConstant);
             add(&textfieldFunction);
-            add(&buttonBipolar);
+            add(&buttonInputRange);
         }
         ~guicontainer_modulation_slot_source() override {
             removeGuis();
@@ -3229,18 +3243,30 @@ namespace PluginSynth {
                 }
                 dropdownOperator.setVisible(dropdownOperator.isVisible() && (src.type != ModulationType::Function));
                 inputConstant.setVisible(src.type == ModulationType::Constant);
-                buttonBipolar.setVisible(src.type != ModulationType::Constant && src.type != ModulationType::Function);
-                buttonBipolar.setText(src.isBipolar ? "+/-" : "+");
-                buttonBipolar.setLabel(src.isBipolar ? "Bipolar" : "Unipolar");
+                buttonInputRange.setVisible(src.type != ModulationType::Constant && src.type != ModulationType::Function);
+                switch (src.range) {
+                    case ModulationRange::Bipolar:
+                        buttonInputRange.setText("+/-");
+                        buttonInputRange.setLabel("Bipolar [-1.0 - 1.0]");
+                        break;
+                    case ModulationRange::Unipolar:
+                        buttonInputRange.setText("+");
+                        buttonInputRange.setLabel("Unipolar [0.0 - 1.0]");
+                        break;
+                    case ModulationRange::Triangle:
+                        buttonInputRange.setText("Triangle");
+                        buttonInputRange.setLabel("Triangle [0.0 - 1.0]");
+                        break;
+                }
                 constant = src.value;
             } else {
                 dropdownSource.setSelectedIndex(0);
                 dropdownOperator.setSelectedIndex(0);
                 textfieldFunction.setVisible(false);
                 inputConstant.setVisible(false);
-                buttonBipolar.setVisible(false);
-                buttonBipolar.setText("+");
-                buttonBipolar.setLabel("Unipolar");
+                buttonInputRange.setVisible(false);
+                buttonInputRange.setText("+");
+                buttonInputRange.setLabel("Unipolar");
                 constant = 1.0;
             }
         }
@@ -3257,10 +3283,10 @@ namespace PluginSynth {
                 dropdownSource.pos.x  = dropdownOperator.right() + padding;
             }
             auto widthButtonBipolar = math::roundfS32(size.y);
-            if (buttonBipolar.isVisible()) {
+            if (buttonInputRange.isVisible()) {
                 sizeRightOperator -= widthButtonBipolar;
-                buttonBipolar.size = { widthButtonBipolar, cs.y };
-                buttonBipolar.pos  = { cs.x - widthButtonBipolar, 0 };
+                buttonInputRange.size = { widthButtonBipolar, cs.y };
+                buttonInputRange.pos  = { cs.x - widthButtonBipolar, 0 };
             }
             dropdownSource.size = { sizeRightOperator - padding, cs.y };
             if (inputConstant.isVisible()) {
@@ -3282,14 +3308,14 @@ namespace PluginSynth {
             }
         }
         void buttonClicked(guibase* button) override {
-            if (button == &buttonBipolar) {
+            if (button == &buttonInputRange) {
                 {
 
                     ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
                     auto modulation = synth->getModulationIfExists(slotIndex);
                     if (modulation && CtrSize(modulation->inputs) > srcSlotIndex) {
                         auto& input = modulation->inputs[srcSlotIndex];
-                        synth->setModulationBiPolar(slotIndex, srcSlotIndex, !input.isBipolar);
+                        synth->setModulationInputRange(slotIndex, srcSlotIndex, static_cast<ModulationRange>((static_cast<int32_t>(input.range) + 1) % ModulationRange::NumModulationRanges));
                     }
                 }
                 if (parent) {

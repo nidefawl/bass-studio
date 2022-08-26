@@ -20,7 +20,7 @@ struct modulation_src_snapshot_t {
     int32_t opIdx;
     double value;
     String function;
-    bool isBiPolar;
+    uint8_t range;
 };
 struct modulation_dest_snapshot {
     int32_t paramIdx;

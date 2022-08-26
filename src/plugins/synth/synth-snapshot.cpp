@@ -56,7 +56,7 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
             out.write(input.srcIdx);
             out.write(input.opIdx);
             out.write(input.value);
-            out.write(input.isBiPolar);
+            out.write(input.range);
             out.writeString(input.function);
         }
         for (const auto& dest : modulation.destinations) {
@@ -172,7 +172,7 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
             if (!in.read(input.value))
                 return false;
             if (snapshot.version >= 3) {
-                if (!in.read(input.isBiPolar))
+                if (!in.read(input.range))
                     return false;
             }
             if (snapshot.version >= 4) {
