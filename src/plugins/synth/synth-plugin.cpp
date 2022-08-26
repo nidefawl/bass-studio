@@ -345,7 +345,7 @@ namespace PluginSynth {
             b = 0.0;
         }
 
-        bool IsSilent() const { return b <= 1E-12; }
+        bool IsSilent() const { return math::abs(b) <= 1E-12; }
 
         double Process(double dt, double input, double cutoff, double resonance) {
             // f calculation
@@ -376,7 +376,7 @@ namespace PluginSynth {
             low  = 0.0;
         }
 
-        bool IsSilent() const { return low <= 1E-12; }
+        bool IsSilent() const { return math::abs(low) <= 1E-12; }
 
         double Process(double dt, double input, double cutoff, double resonance) {
             // f calculation
@@ -411,11 +411,11 @@ namespace PluginSynth {
             d = 0.0;
         }
 
-        bool IsSilent() const { return d <= 1E-12; }
+        bool IsSilent() const { return math::abs(d) <= 1E-12; }
 
         double Process(double dt, double input, double cutoff, double resonance) {
             // f calculation
-            auto f = 2 * sin(M_PI * cutoff * dt);
+            auto f = 2 * sin(M_PI * math::clamp(cutoff * dt, 0.0, 1.0));
             f      = f > .99 ? .99 : f < .01 ? .01
                                              : f;
 
@@ -540,21 +540,20 @@ namespace PluginSynth {
         double GetVolume() const { return volEnv.value; }
 
         bool bInitial = true;
-        void Reset(double phase, bool osc1OutOfPhase, bool osc2OutOfPhase) {
-            // if (bInitial) {
-            oscFm.phase = rand.rng_double();
-            osc1a.phase = rand.rng_double();
-            osc1b.phase = rand.rng_double();
-            // osc1b.phase = osc1a.phase + (osc1OutOfPhase ? (rand.rng_double()*2.0-1.0)*0.166+0.3333 : 0.0);
-            osc2a.phase = rand.rng_double();
-            osc2b.phase = rand.rng_double();
-            // osc2b.phase = osc2a.phase + (osc1OutOfPhase ? (rand.rng_double()*2.0-1.0)*0.166+0.3333 : 0.0);
-            // }
-            // oscFm.phase = phase;
-            // osc1a.phase = phase;
-            // osc1b.phase = phase + (osc1OutOfPhase ? .33 : 0.0);
-            // osc2a.phase = phase;
-            // osc2b.phase = phase + (osc2OutOfPhase ? .33 : 0.0);
+        void Reset(bool randomPhase) {
+            if (randomPhase) {
+                oscFm.phase = rand.rng_double();
+                osc1a.phase = rand.rng_double();
+                osc1b.phase = rand.rng_double();
+                osc2a.phase = rand.rng_double();
+                osc2b.phase = rand.rng_double();
+            } else {
+                oscFm.phase = 0.0;
+                osc1a.phase = 0.0;
+                osc1b.phase = 0.0;
+                osc2a.phase = 0.0;
+                osc2b.phase = 0.0;
+            }
             volEnv.Reset();
             modEnv.Reset();
             lfoEnv.Reset();
@@ -578,10 +577,11 @@ namespace PluginSynth {
 
         void SetVelocity(double v) { velocity = v; }
 
-        void Start(double phase, bool osc1OutOfPhase, bool osc2OutOfPhase) {
+        void Start(bool reset) {
             bIsActive = true;
-            if (volEnv.stage == EnvelopeStages::Idle)
-                Reset(phase, osc1OutOfPhase, osc2OutOfPhase);
+            if (reset) {
+                Reset(true);
+            }
             volEnv.Start();
             modEnv.Start();
             lfoEnv.Start();
@@ -643,17 +643,14 @@ namespace PluginSynth {
                 std::fill(uv.envelopeValuesCached.begin(), uv.envelopeValuesCached.end(), -1.0);
             }
         }
-        // bool IsReleased() const {
-        //     return std::all_of(first, last, [](auto& voice) { return !voice.bIsActive; });
-        // };
         bool IsReleased() const {
-            return std::all_of(first, last, [](auto& voice) { return !voice.bIsActive || (voice.volEnv.IsReleased() && voice.modEnv.IsReleased()); });
+            return std::all_of(first, last, [](auto& voice) { return !voice.bIsActive; });
         };
         double GetVolume() const {
             auto voice = std::max_element(
                     first, last,
                     [](const Voice& a, const Voice& b) {
-                        return a.IsReleased() == b.IsReleased() ? a.GetVolume() < b.GetVolume() : a.IsReleased();
+                        return a.GetVolume() < b.GetVolume();
                     });
             return voice->GetVolume();
         }
@@ -700,13 +697,18 @@ namespace PluginSynth {
         }
 
         void Start(HostTempo& tempo, bool osc1OutOfPhase, bool osc2OutOfPhase) {
-            std::for_each(first, last, [=](Voice& voice) {
-                bool reset = voice.volEnv.stage >= EnvelopeStages::Release && voice.modEnv.stage >= EnvelopeStages::Decay;
-                voice.Start(getRandomPhase(), osc1OutOfPhase, osc2OutOfPhase);
+            std::for_each(first, last, [&](Voice& voice) {
+                // auto vEnvStagePre = voice.volEnv.stage;
+                bool reset = voice.volEnv.stage >= EnvelopeStages::Release;
+                voice.Start(reset);
                 if (reset) {
                     voice.lfo1.initPhase(fmod(this->driftValue * voice.rand.rng_double(), 1.0));
                     voice.lfo2.initPhase(fmod(voice.driftValue, 1.0));
                 }
+                // log_printf("v%d:%d volEnv %d->%d %.4f phases %.4f %.4f %.4f %.4f reset %d\n", 
+                //     indexPoly, voice.indexUnison, vEnvStagePre, voice.volEnv.stage, voice.volEnv.value,
+                //     voice.osc1a.phase, voice.osc1b.phase, 
+                //     voice.osc2a.phase, voice.osc2a.phase, reset);
             });
             seqNr++;
             numUnisonActive = static_cast<int32_t>(last - first);
@@ -1067,7 +1069,7 @@ namespace PluginSynth {
         String exprError;
         void initImpl() {
             std::memset(settings.data(), 1, sizeof(settings));
-            settings[Settings::LfoOneShotEnabled] = false;
+            settings[Settings::LfoOneShotEnabled] = true;
             if (gDebugOverrides != -1) {
                 for (int i = 0; i < Settings::NumSettings; i++) {
                     settings[i] = static_cast<bool>((gDebugOverrides>>i)&1);
@@ -1648,7 +1650,8 @@ namespace PluginSynth {
                                         std::begin(voices),
                                         voiceEnd,
                                         [](auto& a, auto& b) {
-                                            if (a.IsReleased() == b.IsReleased()) {
+                                            bool aReleased = a.IsReleased();
+                                            if (aReleased == b.IsReleased()) {
                                                 auto volA = a.GetVolume();
                                                 auto volB = b.GetVolume();
                                                 if (volA <= 0.0 && volB <= 0.0) {
@@ -1656,9 +1659,8 @@ namespace PluginSynth {
                                                 }
                                                 return volA < volB;
                                             }
-                                            return a.IsReleased();
+                                            return aReleased;
                                         });
-
                                 dbgassert(voice->getNumUnisonVoices() == unisonVoiceCount);
                                 voice->SetNote(note);
                                 voice->SetVelocity(velocity);
@@ -1669,7 +1671,6 @@ namespace PluginSynth {
                                     UpdateVoiceEnvelopeModulations(*voice, v);
                                 });
                                 maxUnisonVoice = math::max(maxUnisonVoice, unisonVoiceCount);
-                                // dbgassert(voice->numUnisonActive == unisonVoiceCount);
                                 break;
                             }
                             default:
@@ -2091,7 +2092,6 @@ namespace PluginSynth {
             // }
 
             out *= volEnvValue;
-            // out += (synthRand.rng_double()*2-1)*0.002;
 
             auto filterDrive = GetModulatedParamVoice(voice, Parameters::FilterDrive);
             if (filterDrive < 0.0) {
@@ -2117,6 +2117,7 @@ namespace PluginSynth {
                 auto res = static_cast<SynthParam_Float*>(vecParams[Parameters::FilterResonance])->ValueModulated(voice.modValues[Parameters::FilterResonance]);
                 out    = voice.filter.Process(dt, out, filtermode, cutoff, res);
             }
+            // out *= volEnvValue;
 
             return out;
         }
@@ -2186,6 +2187,13 @@ namespace PluginSynth {
                         UpdateVoiceEnvelopeModulations(uv, v);
                     }
                 }
+                for (int32_t polyIndex = 0; polyIndex < polyVoiceCount; ++polyIndex) {
+                    auto& uv = voices[polyIndex];
+                    for (int32_t unisonIndex = 0; unisonIndex < maxUnisonVoice; ++unisonIndex) {
+                        auto& v = uv.getVoice(unisonIndex);
+                        UpdateVoiceEnvelopes(dt, uv, v);
+                    }
+                }
                 auto outL        = 0.0;
                 auto outR        = 0.0;
 
@@ -2199,7 +2207,9 @@ namespace PluginSynth {
                         }
                         auto voiceVolume = GetModulatedParamVoice(v, Parameters::MasterVolume);
                         // auto noise = (synthRand.rng_double()*2-1)*0.002;
-                        auto voice = GetVoiceImpl(dt, uv, v, filterMode) * mvInv * voiceVolume;
+                        double vEnv = 0.0;
+                        double vVal = GetVoiceImpl(dt, uv, v, filterMode, vEnv);
+                        auto voice = vVal * mvInv * voiceVolume;
                         auto panningMinusOneToOne = GetModulatedParamVoice(v, Parameters::Panning);
                         auto panningUnipolar      = panningMinusOneToOne * 0.5 + 0.5;
                         numActiveVoicesFrame++;
@@ -2211,13 +2221,6 @@ namespace PluginSynth {
                         }
                         outL += voice * sqrt(1.0 - pan);
                         outR += voice * sqrt(pan);
-                    }
-                }
-                for (int32_t polyIndex = 0; polyIndex < polyVoiceCount; ++polyIndex) {
-                    auto& uv = voices[polyIndex];
-                    for (int32_t unisonIndex = 0; unisonIndex < maxUnisonVoice; ++unisonIndex) {
-                        auto& v = uv.getVoice(unisonIndex);
-                        UpdateVoiceEnvelopes(dt, uv, v);
                     }
                 }
                 // auto valL = static_cast<float>(outL * masterVolume);
