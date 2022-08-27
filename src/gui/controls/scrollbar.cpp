@@ -155,14 +155,12 @@ void Splitter::addProperties(Table::tbl* table) {
     rows.push_back({{tblstr{"scaleMax"}, tbltypesaferef<float>{ref, this->scaleMax, nullptr}}});
 }
 bool gui_scrollbar::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
-    if (abs(yoffset) > 0.02f) {
+    if (abs(yoffset) > 0.01f) {
         ivec2 vcS  = ctr.getScrollTotalSize();
         int32_t cS = vcS[dir];
         if (cS > 0) {
             auto curOffset = scrollOffset;
-            float offset = float(yoffset * 1.0f / 32.0f);
-            // if (abs(offset) < 1.0f)
-            //     offset = offset > 0 ? 1.0f : -1.0f;
+            float offset = float(yoffset * 48.0/cS);
             auto newOffset = curOffset - offset;
             setScrollOffset(newOffset);
         }
