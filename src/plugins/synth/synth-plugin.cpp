@@ -940,18 +940,20 @@ namespace PluginSynth {
          * @param String strExpression the expression to parse
          * @return MathExpr parsed expression
          */
-        static MathExpr parse(String strExpression) {
-            auto shrdP    = std::make_shared<MathExprParsed>();
-            auto& p       = shrdP->parser;
-            auto itInputs = shrdP->inputs.data();
-            for (auto& name : stringsShortSrcNames) {
-                p.DefineVar(name, itInputs++);
-            }
-            p.SetExpr(strExpression);
-            p.Eval();
+        static MathExpr parse(const String& strExpression) {
             MathExpr expr;
-            expr.str        = std::move(strExpression);
-            expr.parsedExpr = std::move(shrdP);
+            if (strExpression.length()) {
+                auto shrdP    = std::make_shared<MathExprParsed>();
+                auto& p       = shrdP->parser;
+                auto itInputs = shrdP->inputs.data();
+                for (auto& name : stringsShortSrcNames) {
+                    p.DefineVar(name, itInputs++);
+                }
+                p.SetExpr(strExpression);
+                p.Eval();
+                expr.str        = strExpression;
+                expr.parsedExpr = std::move(shrdP);
+            }
             return expr;
         }
     };
