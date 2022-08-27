@@ -134,7 +134,10 @@ namespace PluginSynth {
         ExprEvaluationEnabled,
         LfoOneShotEnabled,
         DiagnosticOutputEnabled,
-        LFOShapeType,
+        LfoShapeType,
+        TuningDriftEnabled,
+        FilterDriftEnabled,
+        LfoPhaseDriftEnabled,
         NumSettings,
     };
 
@@ -151,6 +154,9 @@ namespace PluginSynth {
         double driftVelocity = 0.0;
         double driftPhase    = 0.0;
         double driftValue    = 0.0;
+        double tuningDrift   = 0.5;
+        double filterDrift   = 0.7;
+        double lfoPhaseDrift = 0.8;
 
         double osc1Tune                = 1.0;
         double targetOsc1SplitMix      = 0.0;

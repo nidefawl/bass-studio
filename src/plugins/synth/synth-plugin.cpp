@@ -287,7 +287,7 @@ namespace PluginSynth {
                         triCurrent = phaseIncrement * GeneratePulse(phase, phaseIncrement, .5) + (1.0 - phaseIncrement) * triLast;
                     }
                     dbgassert(!fp_math::isNanOrInfd(triCurrent));
-                    return triCurrent * 5.0;
+                    return triCurrent;
                 case Waveforms::Saw:
                     if (!bleb) {
                         return 1.0 - 2.0 * phase;
@@ -332,7 +332,7 @@ namespace PluginSynth {
                         triCurrent = phaseIncrement * GeneratePulse(phase, phaseIncrement, .5) + (1.0 - phaseIncrement) * triLast;
                     }
                     dbgassert(!fp_math::isNanOrInfd(triCurrent));
-                    return triCurrent * 5.0;
+                    return triCurrent;
                 case Waveforms::Saw:
                     if (halfBleb) {
                         return 1.0 - 2.0 * phase + HalfBlep(phase, phaseIncrement);
@@ -398,7 +398,7 @@ namespace PluginSynth {
             dbgassert(!fp_math::isNanOrInfd(dSwitchVal));
             auto roundedVal = math::rounddU32(dSwitchVal);
             dbgassert(roundedVal < static_cast<uint32_t>(Waveforms::NumWaveforms));
-            return GetWaveform(static_cast<Waveforms>(roundedVal), false);
+            return GetLfoWaveform(static_cast<Waveforms>(roundedVal), oneShot);
         }
         void initPhase(double phase) {
             this->phase = phase;
@@ -770,14 +770,14 @@ namespace PluginSynth {
             });
         }
 
-        void Start(HostTempo& tempo, bool osc1OutOfPhase, bool osc2OutOfPhase) {
+        void Start(HostTempo& tempo, double lfoPhaseDrift) {
             std::for_each(first, last, [&](Voice& voice) {
                 // auto vEnvStagePre = voice.volEnv.stage;
                 bool reset = voice.volEnv.stage >= EnvelopeStages::Release;
                 voice.Start(reset);
                 if (reset) {
-                    voice.lfo1.initPhase(fmod(this->driftValue * voice.rand.rng_double(), 1.0));
-                    voice.lfo2.initPhase(fmod(voice.driftValue, 1.0));
+                    voice.lfo1.initPhase(fmod(lfoPhaseDrift*this->driftValue * voice.rand.rng_double(), 1.0));
+                    voice.lfo2.initPhase(fmod(lfoPhaseDrift*voice.driftValue, 1.0));
                 }
                 // log_printf("v%d:%d volEnv %d->%d %.4f phases %.4f %.4f %.4f %.4f reset %d\n", 
                 //     indexPoly, voice.indexUnison, vEnvStagePre, voice.volEnv.stage, voice.volEnv.value,
@@ -800,16 +800,19 @@ namespace PluginSynth {
     };
 
     const Settings settingsOrdered[] = {
-        LfoOneShotEnabled,
         FilterEnabled,
-        ModulationEnabled,
+        FilterDriftEnabled,
+        TuningDriftEnabled,
         LfoEnabled,
+        LfoOneShotEnabled,
+        LfoPhaseDriftEnabled,
+        LfoShapeType,
+        ModulationEnabled,
         ClearModulationEnabled,
         ExprEvaluationEnabled,
         DiagnosticOutputEnabled,
-        LFOShapeType,
     };
-    const std::array<const char*, 8> stringsSettings = {
+    const std::array<const char*, 11> stringsSettings = {
         "FilterEnabled",
         "ModulationEnabled",
         "LfoEnabled",
@@ -817,7 +820,10 @@ namespace PluginSynth {
         "ExprEvaluationEnabled",
         "LfoOneShotEnabled",
         "DiagnosticOutputEnabled",
-        "LFOShapeType",
+        "LfoShapeType",
+        "TuningDriftEnabled",
+        "FilterDriftEnabled",
+        "LfoPhaseDriftEnabled",
     };
     
     enum ModulationSourceType {
@@ -1157,7 +1163,7 @@ namespace PluginSynth {
             std::memset(settings.data(), 1, sizeof(settings));
             settings[Settings::LfoOneShotEnabled] = true;
             settings[Settings::DiagnosticOutputEnabled] = false;
-            settings[Settings::LFOShapeType] = false;
+            settings[Settings::LfoShapeType] = false;
             if (gDebugOverrides != -1) {
                 for (int i = 0; i < Settings::NumSettings; i++) {
                     settings[i] = static_cast<bool>((gDebugOverrides>>i)&1);
@@ -1557,6 +1563,10 @@ namespace PluginSynth {
                 initSampleRate();
             }
         }
+        double getSamplerate() const {
+            return 1.0 / oneOverSR;
+        }
+
         void ProcessMidiMsg(IMidiMsg& msg) {
             midiQueue.Add(msg);
         }
@@ -1753,7 +1763,7 @@ namespace PluginSynth {
                                 voice->SetNote(note);
                                 voice->SetVelocity(velocity);
                                 voice->ResetPitch();
-                                voice->Start(tempo, osc1OutOfPhase, osc2OutOfPhase);
+                                voice->Start(tempo, lfoPhaseDrift);
                                 dbgassert(voice->numUnisonActive == unisonVoiceCount);
                                 voice->visitVoices([this, voice](auto& v) {
                                     UpdateVoiceEnvelopeModulations(*voice, v);
@@ -1765,7 +1775,7 @@ namespace PluginSynth {
                             case VoiceModes::Mono:
                                 voices[0].SetNote(note);
                                 voices[0].SetVelocity(velocity);
-                                voices[0].Start(tempo, osc1OutOfPhase, osc2OutOfPhase);
+                                voices[0].Start(tempo, lfoPhaseDrift);
                                 maxUnisonVoice = math::max(maxUnisonVoice, unisonVoiceCount);
                                 break;
                             case VoiceModes::Legato:
@@ -1773,7 +1783,7 @@ namespace PluginSynth {
                                 if (heldNotes.empty()) {
                                     voices[0].SetVelocity(velocity);
                                     voices[0].ResetPitch();
-                                    voices[0].Start(tempo, osc1OutOfPhase, osc2OutOfPhase);
+                                    voices[0].Start(tempo, lfoPhaseDrift);
                                     maxUnisonVoice = math::max(maxUnisonVoice, unisonVoiceCount);
                                 }
                                 break;
@@ -1963,7 +1973,7 @@ namespace PluginSynth {
             auto floatParamShape = static_cast<SynthParam_Float*>(vecParams[Parameters::LfoShape]);
             const auto lfoOneShot = settings[Settings::LfoOneShotEnabled];
             const auto bpmHz    = math::max(tempo.bpm, 1.0) / 60.0;
-            const auto lfoShapeMode = settings[Settings::LFOShapeType];
+            const auto lfoShapeMode = settings[Settings::LfoShapeType];
             for (int32_t p = 0; p < list.numPolyVoices; ++p) {
                 auto& uv = voices[list.polyVoices[p]];
                 uv.UpdateVoiceLfo(dt, tempo);
@@ -2094,10 +2104,10 @@ namespace PluginSynth {
         }
 
         void UpdateDrift(double dt) {
-            driftVelocity += synthRandom() * 10000.0 * dt;
+            driftVelocity += synthRandom() * 4.0 * dt;
             driftVelocity -= driftVelocity * 2.0 * dt;
             driftPhase += driftVelocity * dt;
-            driftValue = .001 * sin(driftPhase);
+            driftValue = .001 * sin(driftPhase * 2.0 * M_PI);
         }
         double GetModulatedParamVoice(Voice& voice, Parameters param) const {
             dbgassert(param < vecParams.size());
@@ -2122,7 +2132,10 @@ namespace PluginSynth {
             auto modEnvValue     = (1.0 - modEnvV) * voice.modEnv.value + modEnvV * voice.modEnv.value * voice.velocity;
 
 
-            auto baseFrequency = voice.frequency * voice.pitchBend * (1.0 + driftValue);
+            auto baseFrequency = voice.frequency * voice.pitchBend;
+            if (settings[Settings::TuningDriftEnabled]) {
+                baseFrequency *= (1.0 + (voice.driftValue+driftValue) * tuningDrift);
+            }
 
             {
                 auto coarse = GetModulatedIntParamVoice(voice, Parameters::Osc1Coarse);
@@ -2173,26 +2186,33 @@ namespace PluginSynth {
             }
 
             auto out = 0.0;
-            // if (oscMix < .999) {
+            double oscMix = GetModulatedParamVoice(voice, Parameters::OscMix);
+            // if (oscMix < .999)
+             {
                 auto osc1Out = 0.0;
+                double osc1SplitFactorA = pitchFactor(GetModulatedParamVoice(voice, Parameters::Osc1Split));
+                double targetOscSplitMix = osc1SplitFactorA != 0.0 ? 1.0 : 0.0;
                 osc1Out += voice.osc1a.Get(dt, osc1Wave, osc1Frequency * osc1SplitFactorA, true);
                 dbgassert(!fp_math::isNanOrInfd(osc1Out));
                 // if (osc1SplitMix > .001)
-                    osc1Out += osc1SplitMix * voice.osc1b.Get(dt, osc1Wave, osc1Frequency * osc1SplitFactorB, true);
+                    osc1Out += targetOscSplitMix * voice.osc1b.Get(dt, osc1Wave, osc1Frequency * osc1SplitFactorB, true);
                 dbgassert(!fp_math::isNanOrInfd(osc1Out));
                 out += osc1Out * sqrt(1.0 - oscMix);
                 dbgassert(!fp_math::isNanOrInfd(out));
-            // }
-            // if (oscMix > .001) {
+            }
+            // if (oscMix > .001) 
+            {
+                double osc2SplitFactorA = pitchFactor(GetModulatedParamVoice(voice, Parameters::Osc2Split));
+                double targetOscSplitMix = osc2SplitFactorA != 0.0 ? 1.0 : 0.0;
                 auto osc2Out = 0.0;
                 osc2Out += voice.osc2a.Get(dt, osc2Wave, osc2Frequency * osc2SplitFactorA, true);
                 dbgassert(!fp_math::isNanOrInfd(osc2Out));
                 // if (osc2SplitMix > .001)
-                    osc2Out += osc2SplitMix * voice.osc2b.Get(dt, osc2Wave, osc2Frequency * osc2SplitFactorB, true);
+                    osc2Out += targetOscSplitMix * voice.osc2b.Get(dt, osc2Wave, osc2Frequency * osc2SplitFactorB, true);
                 dbgassert(!fp_math::isNanOrInfd(osc2Out));
                 out += osc2Out * sqrt(oscMix);
                 dbgassert(!fp_math::isNanOrInfd(out));
-            // }
+            }
 
             out *= volEnvValue;
 
@@ -2214,13 +2234,16 @@ namespace PluginSynth {
                 cutoff += GetModulatedParamVoice(voice, Parameters::ModEnvCutoff) * modEnvValue;
                 cutoff += GetModulatedParamVoice(voice, Parameters::LfoCutoff) * delayedLfoValue;;
                 cutoff += pitchFactor(GetModulatedParamVoice(voice, Parameters::FilterKeyTracking)) * osc1Tune * baseFrequency;
-                cutoff *= 1.0 - driftValue;
-                cutoff = math::clamp(cutoff, -1.0 / dt * 0.7, 1.0 / dt * 0.7);
+                cutoff = math::clamp(cutoff, 20.0, 1.0 / dt * 0.7);
+                if (settings[Settings::FilterDriftEnabled]) {
+                    cutoff *= 1.0 - filterDrift * (voice.driftValue+driftValue);
+                }
                 // data = cutoff*dt;
                 // auto res = filterResonance;
                 auto res = static_cast<SynthParam_Float*>(vecParams[Parameters::FilterResonance])->ValueModulated(voice.modValues[Parameters::FilterResonance]);
                 out    = voice.filter.Process(dt, out, filtermode, cutoff, res);
             }
+            data = 800.0 * driftValue;
             // out *= volEnvValue;
 
             return out;
@@ -2234,12 +2257,17 @@ namespace PluginSynth {
             lfo2.initPhase(fmod(tempo.ppqPos * lfo2Tempo, 1.0));
 
             // log_lf(Log::L_DEBUG, "Reset LFO phases: at ppq/4 %f\n", fmod(tempo.ppqPos/4.0, 1.0));
-            for (auto& uv : voices) {
-                uv.visitVoices([&](auto& voice) {
-                    voice.lfo1.initPhase(fmod(tempo.ppqPos * lfo1Tempo + driftValue * voice.rand.rng_double(), 1.0));
-                    voice.lfo2.initPhase(fmod(tempo.ppqPos * lfo2Tempo + uv.driftValue, 1.0));
-                });
-            };
+            if (settings[Settings::LfoPhaseDriftEnabled]) {
+                lfoPhaseDrift = 0.8;
+            } else {
+                lfoPhaseDrift = 0.0;
+            }
+            // for (auto& uv : voices) {
+            //     uv.visitVoices([&](auto& voice) {
+            //         voice.lfo1.initPhase(fmod(tempo.ppqPos * lfo1Tempo + lfoPhaseDrift*driftValue * voice.rand.rng_double(), 1.0));
+            //         voice.lfo2.initPhase(fmod(tempo.ppqPos * lfo2Tempo + lfoPhaseDrift*uv.driftValue, 1.0));
+            //     });
+            // };
         }
 
         void ProcessSynth(float** inputs, float** outputs, int nFrames) {
@@ -3254,8 +3282,10 @@ namespace PluginSynth {
                         buttonInputRange.setLabel("Unipolar [0.0 - 1.0]");
                         break;
                     case ModulationRange::Triangle:
-                        buttonInputRange.setText("Triangle");
+                        buttonInputRange.setText("\\/");
                         buttonInputRange.setLabel("Triangle [0.0 - 1.0]");
+                        break;
+                    default:
                         break;
                 }
                 constant = src.value;
@@ -3768,6 +3798,8 @@ namespace PluginSynth {
             std::vector<int> heldNotes = synthImpl->getHeldNotes();//TODO: not threadsafe
             std::vector<String> strings;
             strings.reserve(8);
+            strings.push_back(StringFormat("Drift Val %f", synthImpl->driftValue));
+            strings.push_back(StringFormat("Drift Freq %f", (synthImpl->driftVelocity*synthImpl->getSamplerate())));
             strings.push_back(StringFormat("Voices %d", synthImpl->getActiveVoiceCount()));
             strings.push_back(StringFormat("maxUnisonVoice %d", synthImpl->maxUnisonVoice));
             strings.push_back(StringFormat("unisonVoiceCount %d", synthImpl->unisonVoiceCount));
