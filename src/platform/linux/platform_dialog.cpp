@@ -17,6 +17,7 @@ int browseForFolder(const String& title, const String& pathStart, String& _out) 
     result = NFD_PickFolder(&savePath, pathStart.c_str());
     if (result == NFD_OKAY) {
         _out = savePath;
+        replaceString(_out, "%20", " ");
         // remember to free the memory (since NFD_OKAY is returned)
         NFD_FreePath(savePath);
         return 0;
@@ -29,7 +30,8 @@ int browseForFolder(const String& title, const String& pathStart, String& _out) 
 int promptUserFilePath(window_base* w,
                        int mode,
                        std::vector<SupportedFileType> fileTypes,
-                       String& _out) {
+                       String& _out,
+                       String _defaultPath) {
     std::vector<nfdfilteritem_t> filterItems;
     filterItems.reserve(fileTypes.size());
     for (auto& fileType : fileTypes) {
@@ -38,12 +40,14 @@ int promptUserFilePath(window_base* w,
     nfdchar_t* savePath{};
     nfdresult_t result{};
     if (mode == 0) {
-        result = NFD_OpenDialog(&savePath, filterItems.data(), filterItems.size(), nullptr);
+        result = NFD_OpenDialog(&savePath, filterItems.data(), filterItems.size(), _defaultPath.empty() ? nullptr : _defaultPath.c_str());
     } else {
-        result = NFD_SaveDialog(&savePath, filterItems.data(), filterItems.size(), nullptr, nullptr);
+        result = NFD_SaveDialog(&savePath, filterItems.data(), filterItems.size(), _defaultPath.empty() ? nullptr : _defaultPath.c_str(), nullptr);
     }
     if (result == NFD_OKAY) {
         _out = savePath;
+        //TODO: proper url decoding
+        replaceString(_out, "%20", " ");
         // remember to free the memory (since NFD_OKAY is returned)
         NFD_FreePath(savePath);
         return 1;

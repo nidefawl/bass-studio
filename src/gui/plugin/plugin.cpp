@@ -3,6 +3,7 @@
 #include <memory>
 #include "assert_dbg.h"
 #include "guiglobals.h"
+#include "platform.h"
 #include "snapshot.h"
 #include "str_util.h"
 #include "logging.h"
@@ -119,9 +120,11 @@ void guiplugin::buttonClicked(guibase* _button) {
 
         plugin_snapshot_t ps;
         effect->makeSnapshot(ps, tracksnapshot_store_opts_t::All());
+        String defaultPresetPath = App::Platform::toUserdataPath("presets/" + effect->getName());
+        log_lf(Log::L_DEBUG, "Default preset path %s\n", StringAsCStr(defaultPresetPath));
         String path;
         auto window = dawCtrl->window;
-        if (promptUserFilePath(window, 1, vFILE_TYPE_PLUGINSNAPSHOT, path)) {
+        if (promptUserFilePath(window, 1, vFILE_TYPE_PLUGINSNAPSHOT, path, defaultPresetPath)) {
             savePluginSnapshot(ps, path);
         }
         return;
