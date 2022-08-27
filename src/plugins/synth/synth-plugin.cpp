@@ -16,6 +16,7 @@
 #include "automation.h"
 #include "compiler.h"
 #include "config.h"
+#include "gui/contextmenu/contextmenu_base.h"
 #include "gui/controls/list.h"
 #include "gui/controls/textfield.h"
 #include "gui/dropdown/dropdown_generic.h"
@@ -25,6 +26,7 @@
 #include "math/seq_math.h"
 #include "math/simd_math.h"
 #include "plugins/synth/synth-plugin.h"
+#include "projectfile-snapshot.h"
 #include "rand.h"
 #include "seq_util.h"
 #include "str_util.h"
@@ -1134,6 +1136,43 @@ namespace PluginSynth {
             return 0;
         }
     };
+
+    class PresetManager {
+        public:
+        struct Preset {
+            String name;
+            String path;
+            bool isFavorite;
+        };
+        private:
+        String presetPath;
+        std::vector<Preset> presets;
+        std::vector<Preset> favorites;
+        public:
+        const String& getPresetPath() const {
+            return presetPath;
+        }
+        void reload(const String& path) {
+            presetPath = path;
+            presets.clear();
+            favorites.clear();
+
+            std::vector<FileFound> files;
+            findFilesWithExt(path, "preset", true, files);
+            for (const auto& file : files) {
+                Preset preset;
+                preset.name = file.name;
+                preset.path = file.path;
+                presets.push_back(preset);
+            }
+        }
+        const std::vector<Preset>& getPresets() const {
+            return presets;
+        }
+        const std::vector<Preset>& getFavorites() const {
+            return favorites;
+        }
+    };
     class SynthImpl : public SynthState {
         friend class PluginVST2_Synth;
         std::vector<SynthParamBase*> vecParams;
@@ -1161,6 +1200,7 @@ namespace PluginSynth {
         PluginVST2_Synth* const instanceVst2;
         bool bIsInitSamplerate = false;
         String exprError;
+        PresetManager presetManager;
         void initImpl() {
             std::memset(settings.data(), 1, sizeof(settings));
             settings[Settings::LfoOneShotEnabled] = true;
@@ -1339,6 +1379,9 @@ namespace PluginSynth {
             addFloatParam(Parameters::Panning)->setRange(-1.0, 1.0)->setRangedValue(0.0);
             setParamName(getParam(Parameters::Panning), "Stereo Panning", "Pan");
             modulations.push_back(Modulation());
+            String defaultPresetPath = App::Platform::toUserdataPath(String("presets/") + PLUGIN_EFFECT_NAME);
+            CreateDirectoryIfNotExists(defaultPresetPath);
+            presetManager.reload(defaultPresetPath);
         }
 
     public:
@@ -1347,6 +1390,9 @@ namespace PluginSynth {
               instanceVst2(vst2Plugin) {
             (void) instanceVst2;
             initImpl();
+        }
+        PresetManager& getPresetManager() {
+            return presetManager;
         }
         bool getSetting(Settings setting) const {
             return settings[setting];
@@ -2872,6 +2918,37 @@ namespace PluginSynth {
         }
         return 0;
     }
+    int32_t PluginVST2_Synth::loadPreset(const String& path) {
+        std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(path);
+        dbgassert(pluginSnapshot);
+        if (pluginSnapshot) {
+            std::shared_ptr<std::vector<std::byte>> buf;
+            auto sizeData = static_cast<size_t>(pluginSnapshot->dataChunk.size());
+            if (sizeData > 0) {
+                buf = std::make_shared<std::vector<std::byte>>(sizeData);
+                std::memcpy(buf->data(), pluginSnapshot->dataChunk.data(), sizeData);
+                snapshot_t snapshotLoaded;
+                if (deserializeSnapshot(buf, snapshotLoaded)) {
+                    impl->setSnapshot(snapshotLoaded);
+                    if (curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
+                        for (auto& param : vecParams) {
+                            auto pParamDouble = staticPrograms[curProgram].getProgramParameter(param->enumParam);
+                            if (pParamDouble) *pParamDouble = param->getAsDouble();
+                        }
+                    }
+                    while (snapshotLoaded.uiLayout.size() > views.size()) {
+                        createView();
+                    }
+                    impl->setUiSnapshot(snapshotLoaded);
+                    updateDisplay();
+                    return 0;
+                }
+                return -3;
+            }
+            return -2;
+        }
+        return -1;
+    }
 
     void PluginVST2_Synth::setSampleRate(float sampleRate) {
         AudioEffectX::setSampleRate(sampleRate);
@@ -3633,7 +3710,7 @@ namespace PluginSynth {
 
         }
     };
-    class guicontainer_plugin_synth : public guictr_base, public splitter_cb {
+    class guicontainer_plugin_synth_editor : public guictr_base, public splitter_cb {
         struct _synth_gui_param_knob {
             guiknob_pluginparam* knob;
             Parameters param;
@@ -3665,7 +3742,7 @@ namespace PluginSynth {
             }
         };
     public:
-        explicit guicontainer_plugin_synth(PluginVST2_Synth* plugin)
+        explicit guicontainer_plugin_synth_editor(PluginVST2_Synth* plugin)
             : guictr_base(),
               plugin(plugin),
               module(plugin->getHostSideHandle()),
@@ -3677,7 +3754,7 @@ namespace PluginSynth {
             list2.padding = 2;
             splitter.setMinMax(0.3f, 0.85f);
             splitter.setCallback(this);
-            setBackgroundRendered(true);
+            setBackgroundRendered(false);
             editfield.setFlag(FLG_NO_LAYOUT, true);
             editfield.setVisible(false);
             editfield.setAlignment(gui_textfield::Alignment::Center);
@@ -3714,7 +3791,7 @@ namespace PluginSynth {
                 // list2.layout();
             }
         }
-        ~guicontainer_plugin_synth() override {
+        ~guicontainer_plugin_synth_editor() override {
             removeGuis();
             for (auto& synthKnob : knobs) {
                 delete synthKnob.knob;
@@ -3907,6 +3984,8 @@ namespace PluginSynth {
             list.size.x /= 2;
             list2.pos  = vec2(list.right() + padding*2, list.pos.y);
             list2.size = list.size;
+            list.setRowHeight(math::roundfS32(getLayoutHeight(this)));
+            list2.setRowHeight(math::roundfS32(getLayoutHeight(this)));
             for (guibase* gui : guis) {
                 gui->layout();
             }
@@ -3961,6 +4040,283 @@ namespace PluginSynth {
             if (this->parent) {
                 this->parent->onChildLayoutChanged(this);
             }
+        }
+    };
+    class guicontainer_plugin_synth_preset_browser : public guictr_base, public splitter_cb {
+
+        PluginVST2_Synth* const plugin;
+    public:
+        explicit guicontainer_plugin_synth_preset_browser(PluginVST2_Synth* plugin)
+            : guictr_base(),
+              plugin(plugin)
+        {
+        }
+
+        void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override {
+            onChildLayoutChanged(this);
+        }
+
+        ivec2 getContainerSize() override {
+            return size;
+        }
+
+        void onChildLayoutChanged(guibase* g) override {
+            // bGuiNeedsRefresh = true;
+            if (this->parent) {
+                this->parent->onChildLayoutChanged(this);
+            }
+        }
+    };
+
+/* top select menu */
+class guidropdown_select_preset_ctxt : public guictxtmenu {
+    PluginVST2_Synth* plugin;
+    PresetManager presetManager;
+
+
+class ctxtmenu_entry_preset : public ctxtmenu_entry {
+    const PresetManager::Preset& preset;
+    bool bIsMenuOpen = false;
+public:
+    bool isFolder() const { return false; }
+    String getPath() const { return preset.path; }
+    String getName() const { return preset.name; }
+    bool isMenuOpen() const { return bIsMenuOpen; }
+    void setIsMenuOpen(bool isMenuOpen) { this->bIsMenuOpen = isMenuOpen; }
+    ctxtmenu_entry_preset(const PresetManager::Preset& _preset, int id)
+        : ctxtmenu_entry(_preset.name, id),
+        preset(_preset)
+    {
+    }
+    void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
+        if (contains(ctxtSize, mouse)) {
+            nvgBeginPath(vg);
+            nvgRect(vg, 0, y, ctxtSize.x, height);
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+            nvgFill(vg);
+        }
+
+        renderTextLabel(vg,
+                        vec2(leftOffset(), y + height * 0.5f),
+                        vec2(width-leftOffset(), height),
+                        title,
+                        theme,
+                        fontSize,
+                        THEMECOL_TEXT,
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    }
+};
+public:
+    explicit guidropdown_select_preset_ctxt(PluginVST2_Synth* _plugin, PresetManager _presetManager) 
+        : plugin(_plugin), presetManager(std::move(_presetManager))
+    {
+        int32_t idx      = 0;
+        for(auto& preset : presetManager.getPresets()) {
+            addEntry(new ctxtmenu_entry_preset(preset, idx++));
+        }
+    }
+
+    void clickedElement(ctxtmenu_entry* e, int _id) override {
+        auto const ctxtEndpointEntry = static_cast<ctxtmenu_entry_preset*>(e);
+        if (!ctxtEndpointEntry->isFolder()) {
+            ::ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+            plugin->loadPreset(ctxtEndpointEntry->getPath());
+        }
+        dawCtrl->closeAllContextMenus();
+    }
+
+    void closeAllSubmenus() {
+        BaseCtrl* appCtrlParent = this->dawCtrl;
+        bool anyOpen            = false;
+        for (ctxtmenu_entry* ctxtEntry : entries) {
+            auto entry = dynamic_cast<ctxtmenu_entry_preset*>(ctxtEntry);
+            if (entry) {
+                anyOpen |= entry->isMenuOpen();
+                entry->setIsMenuOpen(false);
+            }
+        }
+        if (anyOpen) {
+            //close all menus deeper than this menu
+            appCtrlParent->closeAppMenusAtLvl(1);
+        }
+    }
+
+    // bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+    //     if (this->contains(mpos)) {
+    //         ivec2 localMouse         = this->toContainerSpace(mpos);
+    //         ctxtmenu_entry* entryHit = nullptr;
+    //         for (ctxtmenu_entry* e : entries) {
+    //             int n = e->getClicked(size, localMouse);
+    //             if (n >= 0) {
+    //                 entryHit = e;
+    //                 break;
+    //             }
+    //         }
+    //         if (!entryHit) {
+    //             //TODO: maybe defer closing for usability
+    //             closeAllSubmenus();
+    //         }
+
+    //         auto entry = dynamic_cast<ctxtmenu_entry_bus*>(entryHit);
+    //         if (entry && !entry->isMenuOpen) {
+    //             //close other submenu at same level
+    //             closeAllSubmenus();
+
+    //             //and open new one
+    //             guictxtmenu_base* popup = nullptr;
+    //             if (entry->busType == bus_type::internal) {
+    //                 auto stageEntry = dynamic_cast<ctxtmenu_entry_bus_internal*>(entry);
+    //                 dbgassert(stageEntry);
+    //                 if (stageEntry) {
+    //                     popup = new guidropdown_select_preset_ctxt(dawCtrl, stageEntry->getStageRef(), stageEndpoint);
+    //                 }
+    //             }
+    //             if (entry->busType == bus_type::external) {
+    //                 auto& settings = daw_tls::getSettings();
+    //                 auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
+    //                 popup     = new guidropdown_select_bus_ctxt(dawCtrl, cfg, stageEndpoint);
+    //             }
+    //             dbgassert(popup);
+    //             if (popup) {
+    //                 entry->isMenuOpen = true;
+    //                 popup->size = size;
+    //                 popup->setFontSize(entry->fontSize);
+    //                 popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
+    //                 ivec2 screenPosThis = this->parentCtrl->toScreenSpace(ivec2(0, 0));
+    //                 ivec2 screenPosParent = dawCtrl->toScreenSpace(ivec2(0, 0));
+    //                 ivec2 screenPos       = screenPosThis - screenPosParent + ivec2(right() + 2, top() + entryHit->y);
+    //                 this->dawCtrl->openAppMenu(1, popup, screenPos);
+    //             }
+    //         }
+    //         for (guibase* gui : guis) {
+    //             if (!gui->isVisible())
+    //                 continue;
+    //             if (gui->mouseHitTest(localMouse, evt)) {
+    //                 return true;
+    //             }
+    //         }
+    //         if (canMouseHit()) {
+    //             evt.requestFocus(this);
+    //             return true;
+    //         }
+    //     }
+    //     return false;
+    // }
+};
+
+    class guidropdown_select_preset : public guidropdownbase {
+        PluginVST2_Synth* const plugin;
+        String current;
+        PresetManager presetManager;
+    public:
+        explicit guidropdown_select_preset(PluginVST2_Synth* plugin) :
+            guidropdownbase(),
+              plugin(plugin),
+              presetManager(plugin->getSynth()->getPresetManager())
+        {
+        }
+        String getString() override {
+            return current;
+        }
+        void setString(const String& str) {
+            current = str;
+        }
+        void handleDraggedRelease(MouseEvent& evt) override {
+            auto* popup = new guidropdown_select_preset_ctxt(plugin, presetManager);
+            popup->size = size;
+            auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
+            popup->setFontSize(fontSizeScaled);
+            popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
+            this->dawCtrl->openAppMenu(0, popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
+        }
+    };
+    class guicontainer_plugin_synth_top_switcher : public guictr_base {
+        PluginVST2_Synth* const plugin;
+        
+        guidropdown_select_preset selectPreset;
+        guibutton prev;
+        guibutton next;
+    public:
+        explicit guicontainer_plugin_synth_top_switcher(PluginVST2_Synth* plugin)
+            : guictr_base(),
+              plugin(plugin),
+              selectPreset(plugin)
+        {
+            padding = 0;
+            margin = 0;
+            prev.setText("<");
+            next.setText(">");
+            selectPreset.setString("preset");
+            add(&selectPreset);
+            add(&prev);
+            // prev.setButtonColor(GuiColor::COL_BASE_BG_FOCUSED);
+            add(&next);
+        }
+        ~guicontainer_plugin_synth_top_switcher() override {
+            remove(&next);
+            remove(&prev);
+            remove(&selectPreset);
+        }
+        void layout() override {
+            auto cs = getSizeContent();
+            prev.size = next.size = {cs.y/2, cs.y};
+            selectPreset.size = {cs.x/2, cs.y};
+            selectPreset.size.y = cs.y;
+            selectPreset.pos = {(cs.x)/2-(prev.size.x+next.size.x+selectPreset.size.x)/2, 0};
+            prev.pos = selectPreset.getRightTop();
+            next.pos = prev.getRightTop();
+            guictr_base::layout();
+        }
+    };
+    class guicontainer_plugin_synth : public guictr_base {
+        guicontainer_plugin_synth_editor editor;
+        guicontainer_plugin_synth_preset_browser browser;
+        guicontainer_plugin_synth_top_switcher switcher;
+        public:
+        explicit guicontainer_plugin_synth(PluginVST2_Synth* plugin) 
+        : editor(plugin), browser(plugin), switcher(plugin)
+        {
+            padding = 0;
+            margin = 0;
+            setBackgroundRendered(false);
+            add(&switcher);
+            add(&editor);
+            add(&browser);
+        }
+        ~guicontainer_plugin_synth() override {
+            remove(&browser);
+            remove(&editor);
+            add(&switcher);
+        }
+        void layout() override {
+            switcher.size.y = math::roundfS32(getLayoutHeight(this));
+            editor.pos.y=switcher.size.y;
+            browser.pos.y=switcher.size.y;
+            auto cs = size;
+            switcher.size.x = cs.x;
+            cs.y-=switcher.size.y;
+            editor.size = cs;
+            browser.size = cs;
+            guictr_base::layout();
+        }
+        void setUiLayout(const ui_layout_t& layout) {
+            editor.setUiLayout(layout);
+        }
+
+        bool getUiLayout(ui_layout_t& layout) const {
+            return editor.getUiLayout(layout);
+        }
+
+        void onSetParameter(int32_t index, float value) {
+            editor.onSetParameter(index, value);
+        }
+
+        void onGuiOpen() {
+            editor.onGuiOpen();
+        }
+
+        void onGuiClose() {
+            editor.onGuiClose();
         }
     };
 

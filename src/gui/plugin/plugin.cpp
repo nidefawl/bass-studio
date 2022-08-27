@@ -2,6 +2,7 @@
 #include <nanovg.h>
 #include <memory>
 #include "assert_dbg.h"
+#include "fileio.h"
 #include "guiglobals.h"
 #include "platform.h"
 #include "snapshot.h"
@@ -120,11 +121,17 @@ void guiplugin::buttonClicked(guibase* _button) {
 
         plugin_snapshot_t ps;
         effect->makeSnapshot(ps, tracksnapshot_store_opts_t::All());
+        CreateDirectoryIfNotExists(App::Platform::toUserdataPath("presets"));
         String defaultPresetPath = App::Platform::toUserdataPath("presets/" + effect->getName());
-        log_lf(Log::L_DEBUG, "Default preset path %s\n", StringAsCStr(defaultPresetPath));
+        CreateDirectoryIfNotExists(defaultPresetPath);
         String path;
         auto window = dawCtrl->window;
         if (promptUserFilePath(window, 1, vFILE_TYPE_PLUGINSNAPSHOT, path, defaultPresetPath)) {
+            String ext;
+            SplitPath(path, nullptr, nullptr, &ext);
+            if (ext.empty()) {
+                path += ".preset";
+            }
             savePluginSnapshot(ps, path);
         }
         return;

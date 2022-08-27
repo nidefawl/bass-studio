@@ -722,7 +722,7 @@ std::shared_ptr<plugin_snapshot_t> loadPluginSnapshot(const String& path) {
         }
         return snapshot;
     } catch (const FileIOException& e) {
-        log_printf("loadPluginSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+        log_printf("loadPluginSnapshot File IO exception: %s: %s (%d)\n", e.what(), StringAsCStr(path), e.GetErrorCode());
     } catch (const std::exception& e) {
         log_printf("loadPluginSnapshot exception: %s\n", e.what());
     }

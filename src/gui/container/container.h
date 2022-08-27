@@ -130,7 +130,7 @@ public:
     void layout() override {
         switch (layoutMode) {
             case LAYOUT_NONE:
-                return;
+                break;
             case LAYOUT_HORIZONTAL:
                 layoutEntries({1, 0});
                 break;
