@@ -196,7 +196,7 @@ void guictr_base::drawInsetBackground(NVGcontext* vg, const guitheme_t* theme, i
 }
 
 void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset) {
-    static const ivec2 borderThickness(CTR_SPACING - 2);
+    static const ivec2 borderThickness(4);
     posInset -= ivec2(margin);
     sizeInset += ivec2(margin) * 2;
     if (sizeInset.y > 0 && sizeInset.x > 0) {
