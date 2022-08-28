@@ -16,6 +16,7 @@
 #include "automation.h"
 #include "compiler.h"
 #include "config.h"
+#include "fileio.h"
 #include "gui/contextmenu/contextmenu_base.h"
 #include "gui/controls/list.h"
 #include "gui/controls/textfield.h"
@@ -320,7 +321,7 @@ namespace PluginSynth {
             return 0;
         }
 
-        double GetLfoWaveform(Waveforms waveform, bool halfBleb) {
+        double GetLfoWaveform(Waveforms waveform, bool halfBleb, double phase) {
             dbgassert(!fp_math::isNanOrInfd(phase));
             switch (waveform) {
                 case Waveforms::Sine:
@@ -391,22 +392,32 @@ namespace PluginSynth {
         double GetLfo(double dt, SmoothSwitch& waveform, double frequency, bool oneShot) {
             phaseIncrement = frequency * dt;
             phase          = fp_math::silenceNanInfd(phase + phaseIncrement);
+            dbgassert(phase >= -1.0);
             if (oneShot && phase > 1.0) {
                 phase = 1.0;
             } else {
-                while (phase > 1.0) phase -= 1.0;
+                while (phase > 1.0)
+                    phase -= 1.0;
             }
+            double p = phase;
+            while (p < 0.0) p += 1.0;
+            dbgassert(p >= 0.0 && p <= 1.0);
             double dSwitchVal = waveform.getSwitchValue();
             dbgassert(!fp_math::isNanOrInfd(dSwitchVal));
             auto roundedVal = math::rounddU32(dSwitchVal);
             dbgassert(roundedVal < static_cast<uint32_t>(Waveforms::NumWaveforms));
-            return GetLfoWaveform(static_cast<Waveforms>(roundedVal), oneShot);
+            double v = GetLfoWaveform(static_cast<Waveforms>(roundedVal), phase > 0.5 && oneShot, p);
+            dbgassert(v >= -1.0 && v <= 1.0);
+            return v;
         }
-        void initPhase(double phase) {
-            this->phase = phase;
-            if (0.0 == phase) {
+        void initPhase(double _phase) {
+            while (_phase < -1.0) _phase += 1.0;
+            phase = _phase;
+            dbgassert(phase >= -1.0 && phase <= 1.0);
+            if (0.0 == _phase) {
                 triCurrent = triLast = 0.0;
             }
+            dbgassert(phase >= -1.0 && phase <= 1.0);
         }
     };
 
@@ -615,9 +626,8 @@ namespace PluginSynth {
         bool IsReleased() const { return volEnv.IsReleased(); }
         double GetVolume() const { return volEnv.value; }
 
-        bool bInitial = true;
-        void Reset(bool randomPhase) {
-            if (randomPhase) {
+        void ResetPhases(bool bRandomPhase) {
+            if (bRandomPhase) {
                 oscFm.phase = rand.rng_double();
                 osc1a.phase = rand.rng_double();
                 osc1b.phase = rand.rng_double();
@@ -630,6 +640,9 @@ namespace PluginSynth {
                 osc2a.phase = 0.0;
                 osc2b.phase = 0.0;
             }
+        }
+
+        void ResetEnvelopes() {
             volEnv.Reset();
             modEnv.Reset();
             lfoEnv.Reset();
@@ -653,24 +666,24 @@ namespace PluginSynth {
 
         void SetVelocity(double v) { velocity = v; }
 
-        void Start(bool reset) {
+        void Start(bool resetOscs, bool resetEnvelopes) {
             bIsActive = true;
-            if (reset) {
-                Reset(true);
+            if (resetOscs) {
+                ResetPhases(true);
+            }
+            if (resetEnvelopes) {
+                ResetEnvelopes();
             }
             volEnv.Start();
             modEnv.Start();
             lfoEnv.Start();
         }
 
-        void UpdateVoiceLfo(double dt, const HostTempo& tempo, const bool retrigLfo1) {
+        void UpdateVoiceDrift(double dt, const HostTempo& tempo) {
             driftVelocity += getRandom() * 1.0 * dt;
             driftVelocity -= driftVelocity * 2.0 * dt;
             driftPhase += driftVelocity * dt;
             driftValue = .00001 * sin(driftPhase);
-            if (lfo2.Update(dt, math::max(tempo.bpm / 4.0, 1.0) / 60.0) && retrigLfo1) {
-                lfo1.initPhase(0.0);
-            }
         }
     };
 
@@ -719,7 +732,7 @@ namespace PluginSynth {
                 std::fill(uv.envelopeValuesCached.begin(), uv.envelopeValuesCached.end(), -1.0);
             }
         }
-        bool IsReleased() const {
+        bool IsInactive() const {
             return std::all_of(first, last, [](auto& voice) { return !voice.bIsActive; });
         };
         double GetVolume() const {
@@ -773,23 +786,10 @@ namespace PluginSynth {
         }
 
         void Start(HostTempo& tempo, double lfoPhaseDrift) {
-            std::for_each(first, last, [&](Voice& voice) {
-                // auto vEnvStagePre = voice.volEnv.stage;
-                bool reset = voice.volEnv.stage >= EnvelopeStages::Release;
-                voice.Start(reset);
-                if (reset) {
-                    voice.lfo1.initPhase(fmod(lfoPhaseDrift*this->driftValue * voice.rand.rng_double(), 1.0));
-                    voice.lfo2.initPhase(fmod(lfoPhaseDrift*voice.driftValue, 1.0));
-                }
-                // log_printf("v%d:%d volEnv %d->%d %.4f phases %.4f %.4f %.4f %.4f reset %d\n", 
-                //     indexPoly, voice.indexUnison, vEnvStagePre, voice.volEnv.stage, voice.volEnv.value,
-                //     voice.osc1a.phase, voice.osc1b.phase, 
-                //     voice.osc2a.phase, voice.osc2a.phase, reset);
-            });
-            seqNr++;
+            // seqNr++;
             numUnisonActive = static_cast<int32_t>(last - first);
         }
-        void UpdateVoiceLfo(double dt, const HostTempo& tempo) {
+        void UpdateVoiceDrift(double dt, const HostTempo& tempo) {
             driftVelocity += getRandom() * 1.0 * dt;
             driftVelocity -= driftVelocity * 2.0 * dt;
             driftPhase += driftVelocity * dt;
@@ -806,7 +806,8 @@ namespace PluginSynth {
         FilterDriftEnabled,
         TuningDriftEnabled,
         LfoEnabled,
-        LfoOneShotEnabled,
+        Lfo1OneShotEnabled,
+        Lfo1ResetByLfo2Enabled,
         LfoPhaseDriftEnabled,
         LfoShapeType,
         ModulationEnabled,
@@ -814,18 +815,19 @@ namespace PluginSynth {
         ExprEvaluationEnabled,
         DiagnosticOutputEnabled,
     };
-    const std::array<const char*, 11> stringsSettings = {
+    const std::array<const char*, 12> stringsSettings = {
         "FilterEnabled",
         "ModulationEnabled",
         "LfoEnabled",
         "ClearModulationEnabled",
         "ExprEvaluationEnabled",
-        "LfoOneShotEnabled",
+        "Lfo1OneShotEnabled",
         "DiagnosticOutputEnabled",
         "LfoShapeType",
         "TuningDriftEnabled",
         "FilterDriftEnabled",
         "LfoPhaseDriftEnabled",
+        "Lfo1ResetByLfo2Enabled",
     };
     
     enum ModulationSourceType {
@@ -1152,7 +1154,7 @@ namespace PluginSynth {
         const String& getPresetPath() const {
             return presetPath;
         }
-        void reload(const String& path) {
+        void load(const String& path) {
             presetPath = path;
             presets.clear();
             favorites.clear();
@@ -1166,6 +1168,9 @@ namespace PluginSynth {
                 presets.push_back(preset);
             }
         }
+        void reload() {
+            load(presetPath);
+        }
         const std::vector<Preset>& getPresets() const {
             return presets;
         }
@@ -1173,12 +1178,14 @@ namespace PluginSynth {
             return favorites;
         }
     };
+    using ModulationSourceData = std::array<double, MathExprInputLen>;
+
     class SynthImpl : public SynthState {
         friend class PluginVST2_Synth;
         std::vector<SynthParamBase*> vecParams;
         std::vector<Modulation> modulations;
         std::array<VoiceUnison, NUM_POLY_VOICES> voices;
-        std::array<bool, Settings::NumSettings> settings{};
+        std::array<float, Settings::NumSettings> settings{};
         std::vector<std::shared_ptr<PluginViewContainers>> views;
         Oscillator lfo;
         Oscillator lfo2;
@@ -1190,7 +1197,10 @@ namespace PluginSynth {
         IMidiQueue midiQueue;
         double oneOverSR = 1.0 / 44100.0;
         seq_rand synthRand;
+        int32_t seq = 0;
         HostTempo tempo{};
+        ModulationSourceData modSrcData;
+
         public:
         int32_t activeVoiceCount = 0;
         int32_t unisonVoiceCount = 0;
@@ -1199,16 +1209,19 @@ namespace PluginSynth {
         private:
         PluginVST2_Synth* const instanceVst2;
         bool bIsInitSamplerate = false;
+        PresetManager::Preset currentPreset;
         String exprError;
         PresetManager presetManager;
         void initImpl() {
-            std::memset(settings.data(), 1, sizeof(settings));
-            settings[Settings::LfoOneShotEnabled] = true;
+            for (auto& setting : settings) {
+                setting = 1.0;
+            }
+            settings[Settings::Lfo1OneShotEnabled] = true;
             settings[Settings::DiagnosticOutputEnabled] = false;
             settings[Settings::LfoShapeType] = false;
             if (gDebugOverrides != -1) {
                 for (int i = 0; i < Settings::NumSettings; i++) {
-                    settings[i] = static_cast<bool>((gDebugOverrides>>i)&1);
+                    settings[i] = static_cast<float>((gDebugOverrides>>i)&1);
                 }
             }
             
@@ -1334,9 +1347,11 @@ namespace PluginSynth {
             addFloatParam(Parameters::LfoShape)->setRange(-1.0f, 1.0f)->setRangedValue(0.0);
             addFloatParam(Parameters::LfoFrequency)->setRange(1 / 64.0, 16.0)->setRangedValue(4.0);
             addFloatParam(Parameters::LfoDelay)->setRange(0.001f, 1000.0)->setRangedValue(0.1);
+            addFloatParam(Parameters::LfoPhase)->setRange(-1.0, 1.0)->setRangedValue(0.0);
             setParamName(getParam(Parameters::LfoShape), "LFO shape", "LFO shape", "Shape");
             setParamName(getParam(Parameters::LfoFrequency), "LFO frequency", "LFO freq", "Frequency");
             setParamName(getParam(Parameters::LfoDelay), "LFO ramp", "LFO ramp", "Ramp");
+            setParamName(getParam(Parameters::LfoPhase), "LFO phase", "LFO phase", "Phase");
 
             addFloatParam(Parameters::VolEnvFm)->setRange(-24.0, 24.0)->setRangedValue(0.0);
             addFloatParam(Parameters::ModEnvFm)->setRange(-24.0, 24.0)->setRangedValue(0.0);
@@ -1381,7 +1396,8 @@ namespace PluginSynth {
             modulations.push_back(Modulation());
             String defaultPresetPath = App::Platform::toUserdataPath(String("presets/") + PLUGIN_EFFECT_NAME);
             CreateDirectoryIfNotExists(defaultPresetPath);
-            presetManager.reload(defaultPresetPath);
+            presetManager.load(defaultPresetPath);
+            setPreset(defaultPresetPath, "Untitled");
         }
 
     public:
@@ -1395,10 +1411,13 @@ namespace PluginSynth {
             return presetManager;
         }
         bool getSetting(Settings setting) const {
-            return settings[setting];
+            return settings[setting] > 0.5;
+        }
+        bool getSettingBool(Settings setting) const {
+            return settings[setting] >= 0.5;
         }
         void setSetting(Settings setting, bool value) {
-            settings[setting] = value;
+            settings[setting] = static_cast<float>(value);
         }
         void init() {
             for (auto param : this->vecParams) {
@@ -1410,9 +1429,8 @@ namespace PluginSynth {
         void initSampleRate() {
             const auto dt = oneOverSR;
             for (auto& uv : voices) {
-                ModulationSourceData data;
-                uv.visitVoices([this, dt, &uv, &data](auto& v) {
-                    UpdateVoiceModulations(dt, uv, v, data);
+                uv.visitVoices([this, dt, &uv](auto& v) {
+                    UpdateVoiceModulations(uv, v, modSrcData);
                     UpdateVoiceEnvelopeModulations(uv, v);
                     UpdateVoiceEnvelopes(dt, uv, v);
                 });
@@ -1634,12 +1652,14 @@ namespace PluginSynth {
             tempo.ppqPos = d;
         }
         bool getSnapshot(snapshot_t& snapshot) {
-            snapshot.version     = 7;
+            snapshot.version = 8;
             const auto numParams = CtrSize(vecParams);
+            snapshot.params.reserve(numParams);
             for (int32_t i = 0; i < numParams; ++i) {
                 snapshot.params.push_back({ i, vecParams[i]->getAsDouble() });
             }
             const auto numModulations = CtrSize(modulations);
+            snapshot.modulations.reserve(numModulations);
             for (int32_t i = 0; i < numModulations; ++i) {
                 const auto& modulation = modulations[i];
                 modulation_snapshot_t modSnapshot;
@@ -1669,6 +1689,11 @@ namespace PluginSynth {
                     modSnapshot.destinations.push_back({ static_cast<int32_t>(dest.parameter), dest.range });
                 }
                 snapshot.modulations.push_back(modSnapshot);
+            }
+            const auto numSettings = CtrSize(settings);
+            snapshot.settings.reserve(numSettings);
+            for (int32_t i = 0; i < numSettings; ++i) {
+                snapshot.settings.push_back({ i, settings[i] });
             }
             return true;
         }
@@ -1710,6 +1735,15 @@ namespace PluginSynth {
                 }
                 modulations[msSlotIndex] = std::move(newModulation);
             }
+            
+            for (auto& setting : snapshot.settings) {
+                if (setting.paramIdx >= 0 && setting.paramIdx < CtrSize(settings)) {
+                    settings[setting.paramIdx] = setting.range;
+                } else {
+                    dbgassert(0);
+                }
+            }
+
             for (auto& mod : modulations) {
                 for (auto& input : mod.inputs) {
                     try {
@@ -1746,6 +1780,25 @@ namespace PluginSynth {
         const SynthParam_Enum* GetParamEnum(Parameters param) const noexcept {
             dbgassert(getParam(param) && getParam(param)->type == ParamType::ENUM);
             return static_cast<SynthParam_Enum*>(this->vecParams[param]);
+        }
+        void StartVoice(VoiceUnison& voice) {
+            voice.Start(tempo, lfoPhaseDrift);
+            dbgassert(voice.numUnisonActive == unisonVoiceCount);
+            voice.visitVoices([this, &voice](Voice& v) {
+                UpdateVoiceEnvelopeModulations(voice, v);
+                UpdateVoiceModulations(voice, v, modSrcData);
+                bool resetOscs = v.volEnv.stage >= EnvelopeStages::Idle;
+                bool resetEnvelopes = v.volEnv.stage >= EnvelopeStages::Idle;
+                bool resetLfos = v.volEnv.stage >= EnvelopeStages::Release;
+                v.Start(resetOscs, resetEnvelopes);
+                if (resetLfos) {
+                    double phase = GetModulatedParamVoice(v, Parameters::LfoPhase);
+                    v.lfo1.initPhase(phase +lfoPhaseDrift*this->driftValue * v.rand.rng_double());
+                    // log_lf(Log::L_DEBUG, "voice %d:%d lfo phase %f\n", voice.indexPoly, v.indexUnison, v.lfo1.phase);
+                    v.lfo2.initPhase(lfoPhaseDrift*v.driftValue);
+                }
+            });
+            maxUnisonVoice = math::max(maxUnisonVoice, unisonVoiceCount);
         }
         void FlushMidi(int sample) {
             while (!midiQueue.Empty()) {
@@ -1796,8 +1849,8 @@ namespace PluginSynth {
                                         std::begin(voices),
                                         voiceEnd,
                                         [](auto& a, auto& b) {
-                                            bool aReleased = a.IsReleased();
-                                            if (aReleased == b.IsReleased()) {
+                                            bool aReleased = a.IsInactive();
+                                            if (aReleased == b.IsInactive()) {
                                                 auto volA = a.GetVolume();
                                                 auto volB = b.GetVolume();
                                                 if (volA <= 0.0 && volB <= 0.0) {
@@ -1811,28 +1864,24 @@ namespace PluginSynth {
                                 voice->SetNote(note);
                                 voice->SetVelocity(velocity);
                                 voice->ResetPitch();
-                                voice->Start(tempo, lfoPhaseDrift);
-                                dbgassert(voice->numUnisonActive == unisonVoiceCount);
-                                voice->visitVoices([this, voice](auto& v) {
-                                    UpdateVoiceEnvelopeModulations(*voice, v);
-                                });
-                                maxUnisonVoice = math::max(maxUnisonVoice, unisonVoiceCount);
+                                StartVoice(*voice);
+                                voice->seqNr = seq++;
                                 break;
                             }
                             default:
                             case VoiceModes::Mono:
                                 voices[0].SetNote(note);
                                 voices[0].SetVelocity(velocity);
-                                voices[0].Start(tempo, lfoPhaseDrift);
-                                maxUnisonVoice = math::max(maxUnisonVoice, unisonVoiceCount);
+                                StartVoice(voices[0]);
+                                voices[0].seqNr = 1;
                                 break;
                             case VoiceModes::Legato:
                                 voices[0].SetNote(note);
                                 if (heldNotes.empty()) {
                                     voices[0].SetVelocity(velocity);
                                     voices[0].ResetPitch();
-                                    voices[0].Start(tempo, lfoPhaseDrift);
-                                    maxUnisonVoice = math::max(maxUnisonVoice, unisonVoiceCount);
+                                    StartVoice(voices[0]);
+                                    voices[0].seqNr = 1;
                                 }
                                 break;
                         }
@@ -2019,20 +2068,26 @@ namespace PluginSynth {
         void UpdateAllVoiceLfos(double dt, const VoiceList& list) {
             auto floatParamFreq = static_cast<SynthParam_Float*>(vecParams[Parameters::LfoFrequency]);
             auto floatParamShape = static_cast<SynthParam_Float*>(vecParams[Parameters::LfoShape]);
-            const auto lfoOneShot = settings[Settings::LfoOneShotEnabled];
+            const auto lfo1OneShot = getSettingBool(Settings::Lfo1OneShotEnabled);
+            const auto lfo1ResetByLfo2 = getSettingBool(Settings::Lfo1ResetByLfo2Enabled);
             const auto bpmHz    = math::max(tempo.bpm, 1.0) / 60.0;
             const auto lfoShapeMode = settings[Settings::LfoShapeType];
             for (int32_t p = 0; p < list.numPolyVoices; ++p) {
                 auto& uv = voices[list.polyVoices[p]];
-                uv.UpdateVoiceLfo(dt, tempo);
+                uv.UpdateVoiceDrift(dt, tempo);
                 for (int32_t unisonIndex = 0; unisonIndex < list.maxUnisonVoices; ++unisonIndex) {
                     auto& v = uv.getVoice(unisonIndex);
-                    v.UpdateVoiceLfo(dt, tempo, !lfoOneShot);
+                    v.UpdateVoiceDrift(dt, tempo);
                     
                     if (v.bIsActive) {
+                        double phaseBegin = v.lfo1.phase;
+                        if (v.lfo2.Update(dt, math::max(tempo.bpm / 4.0, 1.0) / 60.0) && lfo1ResetByLfo2) {
+                            double phase = GetModulatedParamVoice(v, Parameters::LfoPhase);
+                            v.lfo1.initPhase(phase +lfoPhaseDrift*this->driftValue * v.rand.rng_double());
+                        }
+                        dbgassert(v.lfo1.phase >= -1.0 && v.lfo1.phase <= 1.0);
                         double lfoFreqHz    = floatParamFreq->ValueModulated(v.modValues[Parameters::LfoFrequency]) * bpmHz;
-
-                        double dVoiceLfoBi  =  v.lfo1.GetLfo(dt, lfoWave, lfoFreqHz, lfoOneShot);
+                        double dVoiceLfoBi  =  v.lfo1.GetLfo(dt, lfoWave, lfoFreqHz, lfo1OneShot);
                         double dVoiceLfoUni = 0.5 + 0.5 * dVoiceLfoBi;
                         dbgassert(dVoiceLfoUni >= 0.0 && dVoiceLfoUni <= 1.0);
                         double lfoAmount    = floatParamShape->ValueModulated(v.modValues[Parameters::LfoShape]);
@@ -2051,21 +2106,25 @@ namespace PluginSynth {
                             dVoiceLfoUniShaped = exp(log(abs(dVoiceLfoUni)) * dLfoShapeExp);
                         }
                         dbgassert(!fp_math::isNanOrInfd(dVoiceLfoUniShaped));
+                        // v.lfoValue = v.lfoValue * 0.99 + dVoiceLfoUniShaped * 0.01;
                         v.lfoValue = dVoiceLfoUniShaped;
+                        // if (!v.IsReleased() && v.volEnv.value == 0.0) {
+                            // log_lf(Log::L_DEBUG, "voice %d:%d lfo prev phase %f phase %f dVoiceLfoBi %f\n", uv.indexPoly, v.indexUnison, phaseBegin, v.lfo1.phase, dVoiceLfoBi);
+
+                        // }
                     }
                 }
             }
         }
-        using ModulationSourceData = std::array<double, MathExprInputLen>;
 
-        void UpdateVoiceModulations(double dt, VoiceUnison& vu, Voice& voice, ModulationSourceData& modSrcData) {
+        void UpdateVoiceModulations(VoiceUnison& vu, Voice& voice, ModulationSourceData& modSrcData) {
 
-            if (!settings[Settings::ModulationEnabled]) {
+            if (!getSetting(Settings::ModulationEnabled)) {
                 return;
             }
             
             auto& voiceModulations = voice.modValues;
-            if (settings[Settings::ClearModulationEnabled]) {
+            if (getSetting(Settings::ClearModulationEnabled)) {
                 std::memset(voiceModulations.data(), 0, voiceModulations.size() * sizeof(double));
             }
             // std::array<double, MathExprInputLen> sourcesV{};
@@ -2094,7 +2153,7 @@ namespace PluginSynth {
                             srcVal = input.value;
                             break;
                         case ModulationType::Function:
-                            if (settings[Settings::ExprEvaluationEnabled]) {
+                            if (getSetting(Settings::ExprEvaluationEnabled)) {
                                 srcVal = EvaluateVoiceModulationMathExpr(vu, voice, input.function, sources);
                             }
                             break;
@@ -2181,7 +2240,7 @@ namespace PluginSynth {
 
 
             auto baseFrequency = voice.frequency * voice.pitchBend;
-            if (settings[Settings::TuningDriftEnabled]) {
+            if (getSetting(Settings::TuningDriftEnabled)) {
                 baseFrequency *= (1.0 + (voice.driftValue+driftValue) * tuningDrift);
             }
 
@@ -2275,7 +2334,7 @@ namespace PluginSynth {
                 else if (out < -filterDrive)
                     out = -(filterDrive + (1 - filterDrive) * tanh ((-out - filterDrive) / (1 - filterDrive))); 
             }
-            if (settings[Settings::FilterEnabled]) {
+            if (getSetting(Settings::FilterEnabled)) {
                 // auto cutoff = filterCutoff;
                 auto cutoff = GetModulatedParamVoice(voice, Parameters::FilterCutoff);
                 cutoff += GetModulatedParamVoice(voice, Parameters::VolEnvCutoff) * volEnvValue;
@@ -2283,7 +2342,7 @@ namespace PluginSynth {
                 cutoff += GetModulatedParamVoice(voice, Parameters::LfoCutoff) * delayedLfoValue;;
                 cutoff += pitchFactor(GetModulatedParamVoice(voice, Parameters::FilterKeyTracking)) * osc1Tune * baseFrequency;
                 cutoff = math::clamp(cutoff, 20.0, 1.0 / dt * 0.7);
-                if (settings[Settings::FilterDriftEnabled]) {
+                if (getSetting(Settings::FilterDriftEnabled)) {
                     cutoff *= 1.0 - filterDrift * (voice.driftValue+driftValue);
                 }
                 // data = cutoff*dt;
@@ -2291,7 +2350,7 @@ namespace PluginSynth {
                 auto res = static_cast<SynthParam_Float*>(vecParams[Parameters::FilterResonance])->ValueModulated(voice.modValues[Parameters::FilterResonance]);
                 out    = voice.filter.Process(dt, out, filtermode, cutoff, res);
             }
-            data = 800.0 * driftValue;
+            data = voice.lfoValue;
             // out *= volEnvValue;
 
             return out;
@@ -2299,23 +2358,25 @@ namespace PluginSynth {
 
     public:
         void onTransportChanged(bool bIsPlaying) {
+            seq = 1;
             double lfo1Tempo = 1.0;
             double lfo2Tempo = 1.0 / 4.0;
             lfo.initPhase(fmod(tempo.ppqPos * lfo1Tempo, 1.0));
             lfo2.initPhase(fmod(tempo.ppqPos * lfo2Tempo, 1.0));
 
             // log_lf(Log::L_DEBUG, "Reset LFO phases: at ppq/4 %f\n", fmod(tempo.ppqPos/4.0, 1.0));
-            if (settings[Settings::LfoPhaseDriftEnabled]) {
+            if (getSetting(Settings::LfoPhaseDriftEnabled)) {
                 lfoPhaseDrift = 0.8;
             } else {
                 lfoPhaseDrift = 0.0;
             }
-            // for (auto& uv : voices) {
-            //     uv.visitVoices([&](auto& voice) {
+            for (auto& uv : voices) {
+                uv.seqNr = 0;
+                // uv.visitVoices([&](auto& voice) {
             //         voice.lfo1.initPhase(fmod(tempo.ppqPos * lfo1Tempo + lfoPhaseDrift*driftValue * voice.rand.rng_double(), 1.0));
             //         voice.lfo2.initPhase(fmod(tempo.ppqPos * lfo2Tempo + lfoPhaseDrift*uv.driftValue, 1.0));
-            //     });
-            // };
+                // });
+            };
         }
 
         void ProcessSynth(float** inputs, float** outputs, int nFrames) {
@@ -2328,8 +2389,15 @@ namespace PluginSynth {
             int32_t numActiveVoices    = 0;
             const auto dt = oneOverSR;
             auto tempo = this->tempo;
-            ModulationSourceData modSrcData;
-            const bool bDiagnostic = settings[Settings::DiagnosticOutputEnabled];
+            modSrcData[1+ModulationSourceType::SrcMacro01] = GetParamFloat(Parameters::Macro01)->Value();
+            modSrcData[1+ModulationSourceType::SrcMacro02] = GetParamFloat(Parameters::Macro02)->Value();
+            modSrcData[1+ModulationSourceType::SrcMacro03] = GetParamFloat(Parameters::Macro03)->Value();
+            modSrcData[1+ModulationSourceType::SrcMacro04] = GetParamFloat(Parameters::Macro04)->Value();
+            modSrcData[1+ModulationSourceType::SrcMacro05] = GetParamFloat(Parameters::Macro05)->Value();
+            modSrcData[1+ModulationSourceType::SrcMacro06] = GetParamFloat(Parameters::Macro06)->Value();
+            modSrcData[1+ModulationSourceType::SrcMacro07] = GetParamFloat(Parameters::Macro07)->Value();
+            modSrcData[1+ModulationSourceType::SrcMacro08] = GetParamFloat(Parameters::Macro08)->Value();
+            const bool bDiagnostic = getSetting(Settings::DiagnosticOutputEnabled);
             for (int s = 0; s < nFrames; s++) {
                 FlushMidi(s);
                 UpdateParameters(dt);
@@ -2344,18 +2412,10 @@ namespace PluginSynth {
                 
                 VoiceList list{};
                 UpdateAllVoiceStates(dt, filterMode, list);
-                if (settings[Settings::LfoEnabled]) {
+                if (getSetting(Settings::LfoEnabled)) {
                     UpdateAllVoiceLfos(dt, list);
                 }
                 modSrcData[1+ModulationSourceType::Lfo2] = lfo2Value;
-                modSrcData[1+ModulationSourceType::SrcMacro01] = GetParamFloat(Parameters::Macro01)->Value();
-                modSrcData[1+ModulationSourceType::SrcMacro02] = GetParamFloat(Parameters::Macro02)->Value();
-                modSrcData[1+ModulationSourceType::SrcMacro03] = GetParamFloat(Parameters::Macro03)->Value();
-                modSrcData[1+ModulationSourceType::SrcMacro04] = GetParamFloat(Parameters::Macro04)->Value();
-                modSrcData[1+ModulationSourceType::SrcMacro05] = GetParamFloat(Parameters::Macro05)->Value();
-                modSrcData[1+ModulationSourceType::SrcMacro06] = GetParamFloat(Parameters::Macro06)->Value();
-                modSrcData[1+ModulationSourceType::SrcMacro07] = GetParamFloat(Parameters::Macro07)->Value();
-                modSrcData[1+ModulationSourceType::SrcMacro08] = GetParamFloat(Parameters::Macro08)->Value();
                 int32_t numActiveVoices = list.numUnisonVoices;
                 for (int32_t i = 0; i < numActiveVoices; ++i) {
                     auto& uv = voices[list.unisonVoices[i]/NUM_UNISON_VOICES];
@@ -2363,7 +2423,7 @@ namespace PluginSynth {
                     if (bIsGlideEnabled) {
                         v.frequency += (v.targetFrequency - v.frequency) * glideLength * dt;
                     } 
-                    UpdateVoiceModulations(dt, uv, v, modSrcData);
+                    UpdateVoiceModulations(uv, v, modSrcData);
                     UpdateVoiceEnvelopeModulations(uv, v);
                     UpdateVoiceEnvelopes(dt, uv, v);
                 }
@@ -2404,7 +2464,7 @@ namespace PluginSynth {
                         }
                         outR += voice * sqrt(pan);
                         if (bDiagnostic) {
-                            if (unisonIndex == 0) {
+                            if (unisonIndex == 0 && uv.seqNr == 1) {
                                 outL = vData;
                             }
                         } else {
@@ -2575,6 +2635,14 @@ namespace PluginSynth {
 
         void getUiSnapshot(snapshot_t& snapshot);
         void setUiSnapshot(snapshot_t& snapshot);
+        void setPreset(const String& path, const String& name) {
+            currentPreset.path = path;
+            currentPreset.name = name;
+        }
+
+        const PresetManager::Preset& getPreset() const {
+            return currentPreset;
+        }
     };
 
     void PluginVST2_Synth::initPrograms() {
@@ -2798,7 +2866,7 @@ namespace PluginSynth {
                 for (auto& dest : mod.destinations) {
                     if (dest.parameter == param->enumParam) {
                         for (int j = 0; j < impl->polyVoiceCount; j++) {
-                            if (!impl->voices[j].IsReleased()) {
+                            if (!impl->voices[j].IsInactive()) {
                                 for (int i = 0; i < impl->unisonVoiceCount; i++) {
                                     bool bIsBipolar = impl->IsBipolarModulation(mod);
                                     const auto strName = StringFormat("Mod %zd Voice %d, unison %d %s, bipolar: %d", modIndex, j, i, StringAsCStr(param->name), bIsBipolar);
@@ -2918,8 +2986,8 @@ namespace PluginSynth {
         }
         return 0;
     }
-    int32_t PluginVST2_Synth::loadPreset(const String& path) {
-        std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(path);
+    int32_t PluginVST2_Synth::loadPreset(const String& presetPath) {
+        std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(presetPath);
         dbgassert(pluginSnapshot);
         if (pluginSnapshot) {
             std::shared_ptr<std::vector<std::byte>> buf;
@@ -2940,6 +3008,15 @@ namespace PluginSynth {
                         createView();
                     }
                     impl->setUiSnapshot(snapshotLoaded);
+                    String path; String name; String ext;
+                    SplitPath(presetPath, &path, &name, &ext);
+                    impl->setPreset(presetPath, name);
+                                
+                    for (auto& pviewctr : this->views) {
+                        if (pviewctr->isInUse()) {
+                            pviewctr->onSetParameter(-1, 0.0f);
+                        }
+                    }
                     updateDisplay();
                     return 0;
                 }
@@ -3752,6 +3829,8 @@ namespace PluginSynth {
         {
             list.padding = 2;
             list2.padding = 2;
+            list2.margin /=2;
+            list.margin = 2;
             splitter.setMinMax(0.3f, 0.85f);
             splitter.setCallback(this);
             setBackgroundRendered(false);
@@ -3759,7 +3838,7 @@ namespace PluginSynth {
             editfield.setVisible(false);
             editfield.setAlignment(gui_textfield::Alignment::Center);
             editfield.setReturnCommits(true);
-            padding = 4;
+            padding = 2;
             // margin  = 4;
             knobs.reserve(Parameters::kNumParams);
             for (auto param : parametersOrdered) {
@@ -3833,6 +3912,10 @@ namespace PluginSynth {
             return nullptr;
         }
         void onSetParameter(int32_t index, float value) {
+            if (index == -1) {
+                bGuiNeedsRefresh = true;
+                return;
+            }
 #if BUILD_EXTERNAL_PLUGIN
             guiknob_pluginparam* knob = getKnobFromParameter(index);
             if (knob) {
@@ -3984,8 +4067,8 @@ namespace PluginSynth {
             list.size.x /= 2;
             list2.pos  = vec2(list.right() + padding*2, list.pos.y);
             list2.size = list.size;
-            list.setRowHeight(math::roundfS32(getLayoutHeight(this)));
-            list2.setRowHeight(math::roundfS32(getLayoutHeight(this)));
+            list.setRowHeight(math::roundfS32(getLayoutHeight(this))/2);
+            list2.setRowHeight(math::roundfS32(getLayoutHeight(this))/2);
             for (guibase* gui : guis) {
                 gui->layout();
             }
@@ -4072,8 +4155,49 @@ namespace PluginSynth {
 class guidropdown_select_preset_ctxt : public guictxtmenu {
     PluginVST2_Synth* plugin;
     PresetManager presetManager;
+    int lvl = 0;
 
+class ctxtmenu_entry_folder : public ctxtmenu_entry {
+    String path;
+    bool bIsMenuOpen = false;
+public:
+    bool isFolder() const { return true; }
+    void setIsMenuOpen(bool isMenuOpen) { this->bIsMenuOpen = isMenuOpen; }
+    bool isMenuOpen() const { return bIsMenuOpen; }
+    String getPath() const { return path; }
+    ctxtmenu_entry_folder(const String& _title, const String& _path, int id)
+        : ctxtmenu_entry(_title, id), path(_path) {
+    }
+    void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
+        if (contains(ctxtSize, mouse)) {
+            nvgBeginPath(vg);
+            nvgRect(vg, 0, y, ctxtSize.x, height);
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+            nvgFill(vg);
+        }
 
+        renderTextLabel(vg,
+                        vec2(leftOffset(), y + height * 0.5f),
+                        vec2(width-leftOffset(), height),
+                        title,
+                        theme,
+                        fontSize,
+                        THEMECOL_TEXT,
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        String rightSide = ">";
+        if (rightSide.length()) {
+            auto defoffset = this->fontSize / 2.4f;
+            renderTextLabel(vg,
+                            vec2(width - defoffset, y + height*0.5f),
+                            vec2(width, height),
+                            rightSide,
+                            theme,
+                            fontSize,
+                            THEMECOL_TEXT,
+                            NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+        }
+    }
+};
 class ctxtmenu_entry_preset : public ctxtmenu_entry {
     const PresetManager::Preset& preset;
     bool bIsMenuOpen = false;
@@ -4107,106 +4231,118 @@ public:
     }
 };
 public:
-    explicit guidropdown_select_preset_ctxt(PluginVST2_Synth* _plugin, PresetManager _presetManager) 
-        : plugin(_plugin), presetManager(std::move(_presetManager))
+    explicit guidropdown_select_preset_ctxt(PluginVST2_Synth* _plugin, PresetManager _presetManager, const String& presetPath, int lvl = 0) 
+        : plugin(_plugin), presetManager(std::move(_presetManager)), lvl(lvl)
     {
         int32_t idx      = 0;
+        std::vector<String> paths;
+        std::vector<ctxtmenu_entry_preset*> presetsCurrent;
         for(auto& preset : presetManager.getPresets()) {
-            addEntry(new ctxtmenu_entry_preset(preset, idx++));
+            if (StrStartsWith(preset.path, presetPath)) {
+                String partPath = presetPath.length()+1 < preset.path.length() ? preset.path.substr(presetPath.length()+1) : preset.path;
+                String presetSubPath;
+                SplitPath(partPath, &presetSubPath, nullptr, nullptr);
+                String folderName;
+                SplitPath(presetSubPath, nullptr, &folderName, nullptr);
+
+                if (folderName.length() && folderName == presetSubPath && !stl_contains(paths, presetSubPath)) {
+                    paths.push_back(presetSubPath);
+                    addEntry(new ctxtmenu_entry_folder(folderName, presetPath + FILE_PATHSEP_STR + presetSubPath, (idx++)<<1 | 1));
+                }
+                if (presetSubPath.empty())
+                    presetsCurrent.push_back(new ctxtmenu_entry_preset(preset, (idx++)<<1));
+            }
+        }
+        for (auto preset : presetsCurrent) {
+            addEntry(preset);
         }
     }
 
     void clickedElement(ctxtmenu_entry* e, int _id) override {
-        auto const ctxtEndpointEntry = static_cast<ctxtmenu_entry_preset*>(e);
-        if (!ctxtEndpointEntry->isFolder()) {
-            ::ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-            plugin->loadPreset(ctxtEndpointEntry->getPath());
+        auto appCtrlParent = parentCtrl->getParentCtrl();
+        if (appCtrlParent) appCtrlParent->closeAllContextMenus();
+        if ((_id&1) == 0) {
+            auto const ctxtEndpointEntry = static_cast<ctxtmenu_entry_preset*>(e);
+            if (!ctxtEndpointEntry->isFolder()) {
+                ::ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+                plugin->loadPreset(ctxtEndpointEntry->getPath());
+            }
         }
-        dawCtrl->closeAllContextMenus();
     }
 
     void closeAllSubmenus() {
-        BaseCtrl* appCtrlParent = this->dawCtrl;
+        auto appCtrlParent = parentCtrl->getParentCtrl();
         bool anyOpen            = false;
         for (ctxtmenu_entry* ctxtEntry : entries) {
-            auto entry = dynamic_cast<ctxtmenu_entry_preset*>(ctxtEntry);
-            if (entry) {
+            if (ctxtEntry && (ctxtEntry->id&1)) {
+                auto entry = dynamic_cast<ctxtmenu_entry_folder*>(ctxtEntry);
                 anyOpen |= entry->isMenuOpen();
                 entry->setIsMenuOpen(false);
             }
         }
         if (anyOpen) {
             //close all menus deeper than this menu
-            appCtrlParent->closeAppMenusAtLvl(1);
+            appCtrlParent->closeAppMenusAtLvl(lvl + 1);
         }
     }
 
-    // bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-    //     if (this->contains(mpos)) {
-    //         ivec2 localMouse         = this->toContainerSpace(mpos);
-    //         ctxtmenu_entry* entryHit = nullptr;
-    //         for (ctxtmenu_entry* e : entries) {
-    //             int n = e->getClicked(size, localMouse);
-    //             if (n >= 0) {
-    //                 entryHit = e;
-    //                 break;
-    //             }
-    //         }
-    //         if (!entryHit) {
-    //             //TODO: maybe defer closing for usability
-    //             closeAllSubmenus();
-    //         }
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        if (this->contains(mpos)) {
+            ivec2 localMouse         = this->toContainerSpace(mpos);
+            ctxtmenu_entry* entryHit = nullptr;
+            for (ctxtmenu_entry* e : entries) {
+                int n = e->getClicked(size, localMouse);
+                if (n >= 0) {
+                    entryHit = e;
+                    break;
+                }
+            }
+            if (!entryHit) {
+                //TODO: maybe defer closing for usability
+                closeAllSubmenus();
+            }
 
-    //         auto entry = dynamic_cast<ctxtmenu_entry_bus*>(entryHit);
-    //         if (entry && !entry->isMenuOpen) {
-    //             //close other submenu at same level
-    //             closeAllSubmenus();
+            auto ctxtEntry = dynamic_cast<ctxtmenu_entry*>(entryHit);
+            if (ctxtEntry && (ctxtEntry->id&1)) {
+                auto entry = dynamic_cast<ctxtmenu_entry_folder*>(entryHit);
+                if (!entry->isMenuOpen()) {
+                    //close other submenu at same level
+                    closeAllSubmenus();
 
-    //             //and open new one
-    //             guictxtmenu_base* popup = nullptr;
-    //             if (entry->busType == bus_type::internal) {
-    //                 auto stageEntry = dynamic_cast<ctxtmenu_entry_bus_internal*>(entry);
-    //                 dbgassert(stageEntry);
-    //                 if (stageEntry) {
-    //                     popup = new guidropdown_select_preset_ctxt(dawCtrl, stageEntry->getStageRef(), stageEndpoint);
-    //                 }
-    //             }
-    //             if (entry->busType == bus_type::external) {
-    //                 auto& settings = daw_tls::getSettings();
-    //                 auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
-    //                 popup     = new guidropdown_select_bus_ctxt(dawCtrl, cfg, stageEndpoint);
-    //             }
-    //             dbgassert(popup);
-    //             if (popup) {
-    //                 entry->isMenuOpen = true;
-    //                 popup->size = size;
-    //                 popup->setFontSize(entry->fontSize);
-    //                 popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-    //                 ivec2 screenPosThis = this->parentCtrl->toScreenSpace(ivec2(0, 0));
-    //                 ivec2 screenPosParent = dawCtrl->toScreenSpace(ivec2(0, 0));
-    //                 ivec2 screenPos       = screenPosThis - screenPosParent + ivec2(right() + 2, top() + entryHit->y);
-    //                 this->dawCtrl->openAppMenu(1, popup, screenPos);
-    //             }
-    //         }
-    //         for (guibase* gui : guis) {
-    //             if (!gui->isVisible())
-    //                 continue;
-    //             if (gui->mouseHitTest(localMouse, evt)) {
-    //                 return true;
-    //             }
-    //         }
-    //         if (canMouseHit()) {
-    //             evt.requestFocus(this);
-    //             return true;
-    //         }
-    //     }
-    //     return false;
-    // }
+                    //and open new one
+                    guictxtmenu_base* popup = nullptr;
+                    popup = new guidropdown_select_preset_ctxt(plugin, presetManager, entry->getPath(), lvl + 1);
+                    dbgassert(popup);
+                    if (popup) {
+                        entry->setIsMenuOpen(true);
+                        popup->size = size;
+                        popup->setFontSize(entry->fontSize);
+                        popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
+                        auto appCtrlParent = parentCtrl->getParentCtrl();
+                        ivec2 screenPosParentParent = appCtrlParent->toScreenSpace(ivec2(0, 0));
+                        ivec2 screenPosParent = parentCtrl->toScreenSpace(toScreenSpace(ivec2(right() + 2, top() + entryHit->y)));
+                        appCtrlParent->openAppMenu(lvl + 1, popup, screenPosParent - screenPosParentParent - popup->pos + ivec2(1));
+                    }
+                }
+            }
+            for (guibase* gui : guis) {
+                if (!gui->isVisible())
+                    continue;
+                if (gui->mouseHitTest(localMouse, evt)) {
+                    return true;
+                }
+            }
+            if (canMouseHit()) {
+                evt.requestFocus(this);
+                return true;
+            }
+        }
+        return false;
+    }
 };
 
     class guidropdown_select_preset : public guidropdownbase {
         PluginVST2_Synth* const plugin;
-        String current;
         PresetManager presetManager;
     public:
         explicit guidropdown_select_preset(PluginVST2_Synth* plugin) :
@@ -4216,18 +4352,17 @@ public:
         {
         }
         String getString() override {
-            return current;
-        }
-        void setString(const String& str) {
-            current = str;
+            return plugin->getSynth()->getPreset().name;
         }
         void handleDraggedRelease(MouseEvent& evt) override {
-            auto* popup = new guidropdown_select_preset_ctxt(plugin, presetManager);
+            presetManager.reload();
+            auto* popup = new guidropdown_select_preset_ctxt(plugin, presetManager, presetManager.getPresetPath());
             popup->size = size;
             auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
             popup->setFontSize(fontSizeScaled);
             popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-            this->dawCtrl->openAppMenu(0, popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
+            auto appCtrlParent = parentCtrl;
+            appCtrlParent->openAppMenu(0, popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
         }
     };
     class guicontainer_plugin_synth_top_switcher : public guictr_base {
@@ -4246,11 +4381,34 @@ public:
             margin = 0;
             prev.setText("<");
             next.setText(">");
-            selectPreset.setString("preset");
             add(&selectPreset);
             add(&prev);
-            // prev.setButtonColor(GuiColor::COL_BASE_BG_FOCUSED);
             add(&next);
+        }
+        void buttonClicked(guibase* button) override {
+            int dir = 0;
+            if (button == &prev) {
+                dir = -1;
+            }
+            if (button == &next) {
+                dir = 1;
+            }
+            if (dir) {
+                auto& prMgr = plugin->getSynth()->getPresetManager();
+                auto& presets = prMgr.getPresets();
+                auto& curPreset = plugin->getSynth()->getPreset();
+                size_t i = 0;
+                for (; i < presets.size(); ++i) {
+                    if (presets[i].path == curPreset.path) {
+                        break;
+                    }
+                }
+                size_t nextIdx = (i + dir + presets.size()) % presets.size();
+                if (nextIdx < presets.size()) {
+                    ::ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+                    plugin->loadPreset(presets[nextIdx].path);
+                }
+            }
         }
         ~guicontainer_plugin_synth_top_switcher() override {
             remove(&next);
@@ -4260,7 +4418,7 @@ public:
         void layout() override {
             auto cs = getSizeContent();
             prev.size = next.size = {cs.y/2, cs.y};
-            selectPreset.size = {cs.x/2, cs.y};
+            selectPreset.size = {cs.x*0.33f, cs.y};
             selectPreset.size.y = cs.y;
             selectPreset.pos = {(cs.x)/2-(prev.size.x+next.size.x+selectPreset.size.x)/2, 0};
             prev.pos = selectPreset.getRightTop();
@@ -4282,6 +4440,7 @@ public:
             add(&switcher);
             add(&editor);
             add(&browser);
+            browser.setVisible(false);
         }
         ~guicontainer_plugin_synth() override {
             remove(&browser);

@@ -69,6 +69,7 @@ namespace PluginSynth {
         Macro06,
         Macro07,
         Macro08,
+        LfoPhase,
         kNumParams
     };
     const Parameters parametersOrdered[] = {
@@ -96,6 +97,7 @@ namespace PluginSynth {
         Osc2Split,
         LfoWave,
         LfoShape,
+        LfoPhase,
         LfoFrequency,
         LfoDelay,
         LfoCutoff,
@@ -132,14 +134,16 @@ namespace PluginSynth {
         LfoEnabled,
         ClearModulationEnabled,
         ExprEvaluationEnabled,
-        LfoOneShotEnabled,
+        Lfo1OneShotEnabled,
         DiagnosticOutputEnabled,
         LfoShapeType,
         TuningDriftEnabled,
         FilterDriftEnabled,
         LfoPhaseDriftEnabled,
+        Lfo1ResetByLfo2Enabled,
         NumSettings,
     };
+    extern const std::array<const char*, 12> stringsSettings;
 
     class SynthState {
     public:
@@ -229,6 +233,7 @@ namespace PluginSynth {
         double UnisonVoices      = 0.0;
         double PolyVoicesMax     = 0.0;
         double FilterDrive       = 0.5;
+        double LfoPhase          = 0.0;
         double MacroValues[8] = {};
     public:
         double* getProgramParameter(Parameters parameter) {
@@ -283,6 +288,7 @@ namespace PluginSynth {
                 case Parameters::Macro06: return &MacroValues[5];
                 case Parameters::Macro07: return &MacroValues[6];
                 case Parameters::Macro08: return &MacroValues[7];
+                case Parameters::LfoPhase: return &LfoPhase;
                 case Parameters::MasterVolume:
                 case Parameters::kNumParams:
                     return nullptr;

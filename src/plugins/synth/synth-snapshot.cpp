@@ -2,6 +2,7 @@
 #include "logging.h"
 #include "synth-plugin.h"
 #include "synth-snapshot.h"
+#include <array>
 #include <utility>
 
 namespace PluginSynth {
@@ -43,6 +44,7 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
     out.write(size_t{snapshot.params.size()});
     out.write(size_t{snapshot.modulations.size()});
     out.write(size_t{snapshot.uiLayout.size()});
+    out.write(size_t{snapshot.settings.size()});
     for (const auto& p : snapshot.params) {
         out.write(p.paramIdx);
         out.write(p.value);
@@ -66,6 +68,10 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
     }
     for (const auto& modulation : snapshot.uiLayout) {
         out.write(modulation.splitPos);
+    }
+    for (const auto& setting : snapshot.settings) {
+        out.writeString(stringsSettings[setting.paramIdx]);
+        out.write(setting.range);
     }
     out.setPos(0);
     out.write(size_t(shrdHeapVec->size()));
@@ -121,12 +127,17 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
     size_t numParams = 0;
     size_t numModulations = 0;
     size_t numUiLayouts = 0;
+    size_t numSettings = 0;
     if (!in.read(numParams) || numParams > 1000)
         return false;
     if (!in.read(numModulations) || numModulations > 1000)
         return false;
     if (snapshot.version >= 7) {
         if (!in.read(numUiLayouts) || numUiLayouts > 1000)
+            return false;
+    }
+    if (snapshot.version >= 8) {
+        if (!in.read(numSettings) || numSettings > 1000)
             return false;
     }
     snapshot.params.resize(numParams);
@@ -191,6 +202,23 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
         for (auto& modulation : snapshot.uiLayout) {
             if (!in.read(modulation.splitPos))
                 return false;
+        }
+    }
+    if (snapshot.version >= 8) {
+        snapshot.settings.reserve(numSettings);
+        for (size_t i = 0; i < numSettings; ++i) {
+            String settingType;
+            if (!in. readString(settingType))
+                return false;
+            float value = 0.0;
+            if (!in.read(value))
+                return false;
+            for (size_t j = 0; j < stringsSettings.size(); ++j) {
+                if (settingType == stringsSettings[j]) {
+                    snapshot.settings.push_back(setting_snapshot_t{ static_cast<int32_t>(j), value });
+                    break;
+                }
+            }
         }
     }
     snapshotOut = std::move(snapshot);

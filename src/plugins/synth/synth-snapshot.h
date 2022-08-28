@@ -26,6 +26,10 @@ struct modulation_dest_snapshot {
     int32_t paramIdx;
     double range;
 };
+struct setting_snapshot_t {
+    int32_t paramIdx;
+    float range;
+};
 struct modulation_snapshot_t {
     int32_t slotIdx = -1;
     std::vector<modulation_src_snapshot_t> inputs;
@@ -38,6 +42,7 @@ struct snapshot_t {
     int32_t version = 0;
     std::vector<param_float_snapshot_t> params;
     std::vector<modulation_snapshot_t> modulations;
+    std::vector<setting_snapshot_t> settings;
     std::vector<ui_layout_t> uiLayout;
 };
 
