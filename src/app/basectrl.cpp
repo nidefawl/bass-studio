@@ -118,7 +118,7 @@ void BaseCtrl::mouseUp(ivec2 mousePos, int button) {
     }
 }
 MouseHitEvt BaseCtrl::mouseHitEvt(MouseHitType _type) {
-    return {_type, window->getKeyMods()};
+    return { _type, window->getKeyMods() };
 }
 void BaseCtrl::focusGui(guibase* gui) {
     if (guiCaptured != nullptr) {
@@ -176,9 +176,9 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
         guiDragged = !!(gui) ? gui->getDraggedControl() : nullptr;
     }
     if (gui != nullptr) {
-        dragDistance   = ivec2(0);
-        dragStart      = mousePos;
-        dragOffset     = gui->toScreenSpace(ivec2(0)) - mousePos;
+        dragDistance = ivec2(0);
+        dragStart    = mousePos;
+        dragOffset   = gui->toScreenSpace(ivec2(0)) - mousePos;
 
         lastMouseEvent = mouseEvent(this, gui, mousePos, button, doubleclick ? M_EVT_DOUBLECLICK : M_EVT_BTN_DOWN);
         gui->handleMouseDownBegin(lastMouseEvent);
@@ -293,7 +293,7 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
 
 
     for (guictr_base* ctr : containers) {
-        if (ctr->size == ivec2{0, 0}) {
+        if (ctr->size == ivec2{ 0, 0 }) {
             log_lf(Log::L_WARN, "warning, rendering container with size 0 0\n");
             continue;
         }
@@ -310,7 +310,7 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
                 //  thread.
                 auto shrdPtrTarget = weakPtrTarget.lock();
                 if (shrdPtrTarget.get()) {
-                    if (shrdPtrTarget->size == ivec2{0, 0}) {
+                    if (shrdPtrTarget->size == ivec2{ 0, 0 }) {
                         log_lf(Log::L_WARN, "warning, rendering container with size 0 0\n");
                         continue;
                     }
@@ -328,7 +328,7 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
         }
     }
     if (guiDragged) {
-        if (guiDragged->size == ivec2{0, 0}) {
+        if (guiDragged->size == ivec2{ 0, 0 }) {
             log_lf(Log::L_WARN, "warning, rendering container with size 0 0\n");
         } else {
             nvgSave(vg);
@@ -399,7 +399,7 @@ String BaseCtrl::getClipboardText() {
     return this->window->getClipboardText();
 }
 void BaseCtrl::openContextMenu(guictxtmenu_base* b, ivec2 pos) {
-    delete b; // TODO: defer delete
+    delete b;// TODO: defer delete
 }
 void BaseCtrl::closeDialogs() {
 }
@@ -432,7 +432,7 @@ void AppCtrl::onAppTick() {
                     newContextMenu->theme = getTheme();
                     lastTooltipSrc        = guiOver;
                     nextTooltipId++;
-                    openOverlayGui(newContextMenu, m_mousePos + ivec2(-16, 26), BASECTRL_WND_POS_RELATIVE| BASECTRL_WND_IS_TOOLTIP);
+                    openOverlayGui(newContextMenu, m_mousePos + ivec2(-16, 26), BASECTRL_WND_POS_RELATIVE | BASECTRL_WND_IS_TOOLTIP);
                 }
                 hoverTime = 0;
             } else if (guiOver != lastHoveredTooltip) {
@@ -489,7 +489,7 @@ void determineWindowPos(guibase* guicontextmenu, window_main* mainWindow, float 
 
 void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) {
     while (CtrSize(menuWindows) <= lvl) {
-        menuWindows.push_back({nullptr, nullptr});
+        menuWindows.push_back({ nullptr, nullptr });
     }
 
     // TODO: allow caller/guicontextmenu to decide what font size to apply here
@@ -497,29 +497,30 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) 
 
     ivec2 wndPos(0);
     determineWindowPos(guicontextmenu, mainWindow, m_scale, BASECTRL_WND_POS_RELATIVE, pos, wndPos);
-    
+
     if (!menuWindows[lvl].wnd) {
         const int createflags = WINDOW_BORDERLESS_POPUP;
-        auto popupCtrl = std::make_shared<PopupCtrl>();
+        auto popupCtrl        = std::make_shared<PopupCtrl>();
+        popupCtrl->parentCtrl = this;
 #if BUILD_VSTHOST
         popupCtrl->parentDawCtrl = this->parentDawCtrl;
 #endif
         *popupCtrl->getTheme() = *getTheme();
-        popupCtrl->m_scale = m_scale;
-        popupCtrl->m_size = math::maxvec2(ivec2(20, 20), guicontextmenu->size);
+        popupCtrl->m_scale     = m_scale;
+        popupCtrl->m_size      = math::maxvec2(ivec2(20, 20), guicontextmenu->size);
         const ivec2 windowSize = ivec2(vec2(popupCtrl->m_size) * popupCtrl->m_scale);
-        menuWindows[lvl].wnd = this->mainWindow->createOverlay(popupCtrl, windowSize, createflags);
+        menuWindows[lvl].wnd   = this->mainWindow->createOverlay(popupCtrl, windowSize, createflags);
     }
     // TODO: menu change on same level will let this assertion fail
     auto& entry = menuWindows[lvl];
     dbgassert(entry.wnd && !entry.ctxt);
     entry.ctxt = guicontextmenu;
 
-    auto popupCtrl = entry.wnd->getCtrl();
+    auto popupCtrl     = entry.wnd->getCtrl();
     popupCtrl->m_scale = m_scale;
     // copy theme (again) from this control to contextWindows control
     *popupCtrl->getTheme() = *getTheme();
-    auto label = guicontextmenu->getLabel();
+    auto label             = guicontextmenu->getLabel();
     if (!label.empty()) {
         popupCtrl->setWindowName(label);
     } else {
@@ -527,7 +528,7 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) 
     }
     {
         *popupCtrl->getTheme() = *getTheme();
-        popupCtrl->m_scale = m_scale;
+        popupCtrl->m_scale     = m_scale;
     }
     static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (entry.wnd->getCreationFlags() & GLFW_RESIZABLE), false);
 }
@@ -545,7 +546,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
     ivec2 wndPos(0);
     determineWindowPos(guicontextmenu, mainWindow, m_scale, flags, pos, wndPos);
 
-    const int createflags = WINDOW_BORDERLESS_POPUP;
+    const int createflags   = WINDOW_BORDERLESS_POPUP;
     window_main* ctxtWindow = this->contextWindow;
     if (!ctxtWindow || ctxtWindow->getCreationFlags() != createflags) {
         if (ctxtWindow) {
@@ -554,27 +555,28 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
         dbgassert(!this->contextWindow);
 
         auto popupCtrl = std::make_shared<PopupCtrl>();
+        popupCtrl->parentCtrl = this;
 #if BUILD_VSTHOST
         popupCtrl->parentDawCtrl = this->parentDawCtrl;
 #endif
-        popupCtrl->m_scale = m_scale;
-        popupCtrl->m_size = math::maxvec2(ivec2(20, 20), guicontextmenu->size);
+        popupCtrl->m_scale     = m_scale;
+        popupCtrl->m_size      = math::maxvec2(ivec2(20, 20), guicontextmenu->size);
         *popupCtrl->getTheme() = *getTheme();
         const ivec2 windowSize = ivec2(vec2(popupCtrl->m_size) * popupCtrl->m_scale);
-        ctxtWindow = this->mainWindow->createOverlay(popupCtrl, windowSize, createflags);
+        ctxtWindow             = this->mainWindow->createOverlay(popupCtrl, windowSize, createflags);
     }
     this->contextWindow = ctxtWindow;
     if (ctxtWindow) {
         auto popupCtrl = ctxtWindow->getCtrl();
-        dbgassert(popupCtrl->isOk()); 
+        dbgassert(popupCtrl->isOk());
         popupCtrl->m_scale = m_scale;
         // copy theme (again) from this control to contextWindows control
         auto themePopup = popupCtrl->getTheme();
-        auto themeThis = getTheme();
+        auto themeThis  = getTheme();
         dbgassert(themePopup);
         dbgassert(themeThis);
         *themePopup = *themeThis;
-        auto label = guicontextmenu->getLabel();
+        auto label  = guicontextmenu->getLabel();
         if (!label.empty()) {
             popupCtrl->setWindowName(label);
         } else {
@@ -582,7 +584,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
         }
         {
             *popupCtrl->getTheme() = *getTheme();
-            popupCtrl->m_scale = m_scale;
+            popupCtrl->m_scale     = m_scale;
         }
         static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (ctxtWindow->getCreationFlags() & GLFW_RESIZABLE), (flags & BASECTRL_WND_IS_TOOLTIP) == 0);
     } else {
@@ -598,17 +600,18 @@ void AppCtrl::openDialog(guidialog_base* _guidialog) {
     determineWindowPos(_guidialog, mainWindow, m_scale, 0, ivec2(0), wndPos);
 
     auto popupCtrl = std::make_shared<PopupCtrl>();
+    popupCtrl->parentCtrl = this;
 #if BUILD_VSTHOST
-        popupCtrl->parentDawCtrl = this->parentDawCtrl;
+    popupCtrl->parentDawCtrl = this->parentDawCtrl;
 #endif
-    popupCtrl->m_scale = m_scale;
-    popupCtrl->m_size = math::maxvec2(ivec2(20, 20), _guidialog->size);
+    popupCtrl->m_scale     = m_scale;
+    popupCtrl->m_size      = math::maxvec2(ivec2(20, 20), _guidialog->size);
     *popupCtrl->getTheme() = *getTheme();
     const ivec2 windowSize = ivec2(vec2(popupCtrl->m_size) * popupCtrl->m_scale);
-    
+
     window_main* dialogWindow = this->mainWindow->createOverlay(popupCtrl, windowSize, WINDOW_IS_DIALOG | WINDOW_IS_RESIZABLE);
 
-    dialogWindow->setSizeLimits(windowSize, windowSize*2);
+    dialogWindow->setSizeLimits(windowSize, windowSize * 2);
 
     auto label = _guidialog->getLabel();
     if (!label.empty()) {
@@ -618,7 +621,7 @@ void AppCtrl::openDialog(guidialog_base* _guidialog) {
     }
     {
         *popupCtrl->getTheme() = *getTheme();
-        popupCtrl->m_scale = m_scale;
+        popupCtrl->m_scale     = m_scale;
     }
     popupCtrl->open(_guidialog, wndPos, (dialogWindow->getCreationFlags() & WINDOW_IS_RESIZABLE), true);
 }
@@ -775,11 +778,11 @@ void BaseCtrl::dragContainerBegin(MouseEvent& evt, guictr_layout_entry* ctrDragS
         ctrDragHandler.setLabel("Move " + ctrDragSrc->getGui()->label);
         setDragged(&ctrDragHandler);
         dragContainerMove(evt);
-        dragContainerRelayout(drag_ctr_event{drag_ctr_event_type::DRAG_BEGIN});
+        dragContainerRelayout(drag_ctr_event{ drag_ctr_event_type::DRAG_BEGIN });
     }
 }
 void BaseCtrl::dragContainerMove(MouseEvent& evt) {
-    dragContainerRelayout(drag_ctr_event{drag_ctr_event_type::DRAG_MOVE});
+    dragContainerRelayout(drag_ctr_event{ drag_ctr_event_type::DRAG_MOVE });
     std::vector<i_ctr_layout*> list                     = getContainers();
     std::vector<std::weak_ptr<i_ctr_drop_area>> targets = getTargets(evt, list);
     dragDropTargets_ContainerMove                       = targets;
@@ -788,9 +791,9 @@ void BaseCtrl::dragContainerMove(MouseEvent& evt) {
 void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i_ctr_drop_area* area) {
     bool hasRemovedContainer = false;
     bool hasPlacedContainer  = false;
-    auto* szLabel1 = StringAsCStr(ctrContent->getGui()->label);
-    auto layoutCtr = dynamic_cast<guictr_layout*>(area->getLayoutCtr());
-    auto* szLabel2 = StringAsCStr(layoutCtr->label);
+    auto* szLabel1           = StringAsCStr(ctrContent->getGui()->label);
+    auto layoutCtr           = dynamic_cast<guictr_layout*>(area->getLayoutCtr());
+    auto* szLabel2           = StringAsCStr(layoutCtr->label);
 
     dock_pos dockPos                  = area->getDockPos();
     container_layout ctrLayout        = layoutCtr->getLayout();
@@ -807,7 +810,7 @@ void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i
             newContainer->placeContainer(ctrContent, area);
             newContainer->placeContainer(oldEntryThatIsNowTabEntry, area);
 
-        } else { // SPLIT_V or SPLIT_H
+        } else {// SPLIT_V or SPLIT_H
             auto newDockPos = dock_pos::NONE;
 
             switch (area->dockPos) {
@@ -858,7 +861,7 @@ void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i
     }
 }
 void BaseCtrl::dragContainerRelease(MouseEvent& evt) {
-    i_ctr_drop_area* area    = determineDropCtrArea(evt);
+    i_ctr_drop_area* area = determineDropCtrArea(evt);
 
     if (area && ctrContent) {
         this->dropContainer(ctrContent, area);
@@ -867,7 +870,7 @@ void BaseCtrl::dragContainerRelease(MouseEvent& evt) {
     ctrContent                  = nullptr;
     ctrDragHandler.validPreview = false;
     dragDropTargets_ContainerMove.clear();
-    dragContainerRelayout(drag_ctr_event{drag_ctr_event_type::DRAG_END});
+    dragContainerRelayout(drag_ctr_event{ drag_ctr_event_type::DRAG_END });
 }
 std::vector<std::weak_ptr<i_ctr_drop_area>> BaseCtrl::getTargets(MouseEvent& mevt, std::vector<i_ctr_layout*> ifMatches) {
     std::vector<std::weak_ptr<i_ctr_drop_area>> targets;

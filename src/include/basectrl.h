@@ -159,6 +159,7 @@ public:
     };
 protected:
     guitheme_mgr themes;
+    AppCtrl* parentCtrl = nullptr;
 #if BUILD_VSTHOST
     DawCtrl* parentDawCtrl = nullptr;
 #endif
@@ -322,6 +323,12 @@ public:
     bool isVisible() const { return bIsVisible; }
     void setVisible(bool b) { this->bIsVisible = b; }
     virtual bool hasDialogWindows() { return false; }
+    virtual AppCtrl* getParentCtrl() {
+        return parentCtrl;
+    }
+    virtual void setParentCtrl(AppCtrl* ctrl) {
+        parentCtrl = ctrl;
+    }
 #if BUILD_VSTHOST
     virtual DawCtrl* getDawCtrl() {
         return parentDawCtrl;
