@@ -680,10 +680,6 @@ void clip_t::setLenSamples(samplecount_t _lenSamples) {
         vsthost* host = vsthost::getInstance();
         if (pc && host) {
             auto lenConverted  = sampleToTickConvert<tick_t, roundmode::round>(_lenSamples, pc->getCurrentTempo(), host->m_sampleFormatInternal.sampleRate);
-            if (lenConverted != len) {
-                log_printf("tick vs sample len missmatch. Did the samplerate change?\n");
-                dbgassert(0);
-            }
             this->len = lenConverted;
         }
     }
