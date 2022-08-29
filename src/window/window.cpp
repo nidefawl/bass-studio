@@ -75,7 +75,7 @@ void registerWindowTimer(appwindow* wnd) {
 }
 
 void unregisterWindowTimer(appwindow* wnd) {
-    dbgassert(removeEntry(windowTimerHandleList, wnd));
+    always_assert(removeEntry(windowTimerHandleList, wnd));
 }
 
 void windowTickTimerRun();
