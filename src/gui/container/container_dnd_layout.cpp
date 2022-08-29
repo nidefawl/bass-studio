@@ -58,11 +58,17 @@ public:
         setBackgroundRenderedInset(false);
         setCanMouseHit(true);
         setLabel(_ctr->getLabel());
-        padding = 0;
+        padding = 5;
         margin  = 0;
     }
     ~guictr_layout_entry_handle() override {
         remove(&btnClose);
+    }
+    ivec2 paddingTL(int _padding) const override {
+        return ivec2(_padding - margin * snapSides.x, 0 - margin * snapSides.y);
+    }
+    ivec2 paddingBR(int _padding) const override {
+        return ivec2(_padding - margin * snapSides.z, 0 - margin * snapSides.w);
     }
     void buttonClicked(guibase* button) override {
         if (button == &btnClose) {
