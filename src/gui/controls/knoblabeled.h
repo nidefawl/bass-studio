@@ -27,6 +27,8 @@ public:
         ivec2 sValue;
         ivec2 pKnob;
         ivec2 sKnob;
+        int inset;
+        bool renderLabelBorder = true;
     };
     std::function<String(float)> fnGetDisplayValue;
     String valueDisplay = "  ";

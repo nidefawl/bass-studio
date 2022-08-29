@@ -111,6 +111,7 @@ namespace GuiColor {
     constant_t COL_GUI_STROKE("COL_GUI_STROKE", 0xff6b6b6b);
     constant_t COL_KNOB("COL_KNOB", 0xff466cb8);
     constant_t COL_KNOB_IND("COL_KNOB_IND", 0xffffffff);
+    constant_t COL_KNOB_BG("COL_KNOB_BG", 0x33ffffff);
     constant_t COL_LABEL_ACTIVE("COL_LABEL_ACTIVE", 0xffffffff);
     constant_t COL_LABEL_CONTAINER("COL_LABEL_CONTAINER", 0xffd0d0d0);
     constant_t COL_LABEL_INACTIVE("COL_LABEL_INACTIVE", 0xff808080);

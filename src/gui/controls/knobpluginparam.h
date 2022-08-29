@@ -33,6 +33,9 @@ public:
         : guiknob_labeled_base(_knobtype)
     {
         paramIdx = _paramIdx;
+        m_layout.inset = 6;
+        m_layout.renderLabelBorder = false;
+        setBackgroundRendered(true);
     }
     ~guiknob_pluginparam() override = default;
 #if BUILD_VSTHOST

@@ -67,31 +67,33 @@ void guictr_base::render(NVGcontext* vg) {
 
 void guictr_base::renderContainerLabel(NVGcontext* vg) {
     if (isFlag(FLG_RENDER_LABEL) && label.length()) {
-        bool focused  = parentCtrl->isCtrOrChildFocused(this);
-        auto sizeF    = theme->get(GuiConstant::CONST_FONT_SIZE_CTR_LABEL);
-        auto posInset = getPosContent() + ivec2(INSET_CTR_SPACING, 0);
-        auto sizeInset = ivec2(math::min(getSizeContent().x, static_cast<int32_t>(textWidth(vg, label) + sizeF / 2)), sizeF);
-
+        auto titleHeight    = theme->get(GuiConstant::CONST_FONT_SIZE_CTR_LABEL);
+        auto posInset = vec2(INSET_CTR_SPACING, 0) + vec2(getPosContent());
         if (isFlag(FLG_VERTICAL_LABEL)) {
-            std::swap(sizeInset.x, sizeInset.y);
-            posInset = getPosContent() + getSizeContent() - ivec2(0, INSET_CTR_SPACING + sizeInset.y);
-            posInset.x -= sizeF;
         } else {
-            posInset.y -= sizeF;
-        }
-        auto bgColor = GuiColor::COL_BG_DRK;
-        if (sizeInset.y > 0 && sizeInset.x > 0) {
+            auto bounds = getTextLabelBounds(vg,
+                            posInset+vec2(titleHeight*0.5f),
+                            label,
+                            theme,
+                            titleHeight*1.2f,
+                            NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+            auto sizeInset = ivec2(math::min(getSizeContent().x, static_cast<int32_t>(bounds.x + titleHeight)), titleHeight);
+            
+            const auto bgColor = getOuterBackgroundColorFromState(getStateFlags());
+            posInset.y -= titleHeight;
             nvgBeginPath(vg);
             nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-            if (focused) {
-                bgColor = GuiColor::COL_BG_DRK_FOCUSED;
-            }
             nvgFillColor(vg, theme->getColor(bgColor));
             nvgFill(vg);
+            renderTextLabel(vg,
+                            posInset+vec2(titleHeight*0.5f),
+                            bounds,
+                            label,
+                            theme,
+                            titleHeight*1.2f,
+                            theme->getContrastColor(bgColor),
+                            NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);         
         }
-        setFont(vg, sizeF, theme->getContrastColor(bgColor), NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-        UIFont::bindFont(vg, theme->getFont(UIFont::FONT_LABEL));
-        nvgText(vg, posInset.x + INSET_CTR_SPACING, posInset.y, StringAsCStr(label), nullptr);
     }
 }
 
@@ -196,7 +198,7 @@ void guictr_base::drawInsetBackground(NVGcontext* vg, const guitheme_t* theme, i
 }
 
 void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset) {
-    static const ivec2 borderThickness(4);
+    const ivec2 borderThickness(theme?theme->get(GuiConstant::CONST_BORDER_WIDTH):32);
     posInset -= ivec2(margin);
     sizeInset += ivec2(margin) * 2;
     if (sizeInset.y > 0 && sizeInset.x > 0) {

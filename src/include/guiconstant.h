@@ -45,6 +45,7 @@ namespace GuiConstant {
 
     extern constant_t CONST_GUI_FRAME_STROKE_WIDTH;
     extern constant_t CONST_GUI_INSET_WIDGET_BG;
+    extern constant_t CONST_BORDER_WIDTH;
 
     extern constant_t CONST_MIXER_WIDTH;
     extern constant_t CONST_TRACK_IO_WIDTH;

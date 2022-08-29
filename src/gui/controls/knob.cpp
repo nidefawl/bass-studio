@@ -135,16 +135,18 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
     float r             = (minSize * 0.8f) / 2.0f;
     float lineThickness = math::max(1.0f, roundf((minSize / 8.0f) * 2.0f) / 2.0f);
     nvgLineCap(vg, NVGlineCap::NVG_ROUND);
-    if (knobType == knobtype::SLIDER_LABELED) {
-        lineThickness = math::max(1.0f, roundf((minSize / 32.0f) * 2.0f) / 2.0f);
-        float cx      = insetP.x;
-        float cy      = insetP.y;
-        float width  = insetS.x;
-        float height  = insetS.y;
+    float cx      = insetP.x;
+    float cy      = insetP.y;
+    float width  = insetS.x;
+    float height  = insetS.y;
+    if (isBackgroundRendered()) {
         nvgBeginPath(vg);
         nvgRect(vg, cx, cy, insetS.x, height);
-        nvgFillColor(vg, THEMECOL_TEXT);
+        nvgFillColor(vg, theme->getColor(GuiColor::COL_KNOB_BG));
         nvgFill(vg);
+    }
+    if (knobType == knobtype::SLIDER_LABELED) {
+        lineThickness = math::max(1.0f, roundf((minSize / 32.0f) * 2.0f) / 2.0f);
         float heightRange = insetS.y * val;
         nvgBeginPath(vg);
         nvgRect(vg, cx, cy + height - heightRange, insetS.x, heightRange);
@@ -214,9 +216,8 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
         nvgFillColor(vg, c2);
         nvgFill(vg);
     } else {
-
-        float cx = insetP.x + insetS.x / 2.0f;
-        float cy = insetP.y + insetS.y / 1.8f;
+        cx = insetP.x + insetS.x / 2.0f;
+        cy = insetP.y + insetS.y / 1.8f;
         vec2 center(cx, cy);
         nvgBeginPath(vg);
         nvgArc(vg, cx, cy, r, start, start + range, NVG_CW);
@@ -308,13 +309,13 @@ void guiknob_labeled_base::layout() {
     if (knobType != knobtype::KNOB_UNLABELED) {
         m_layout.labelHeight = math::roundfS32(math::max(8.0f, size.y * m_layout.scaleLabel));
         m_layout.valueHeight = math::roundfS32(math::max(8.0f, size.y * m_layout.scaleValue));
-        const int INS_BRD    = knobType != knobtype::SLIDER_LABELED ? 6 : 0;
+        const int INS_BRD    = m_layout.inset;
         m_layout.pLabel      = pos + ivec2(INS_BRD);
         m_layout.pValue      = pos + ivec2(INS_BRD, size.y - (INS_BRD + m_layout.valueHeight));
         m_layout.sLabel      = ivec2(size.x - 2 * INS_BRD, m_layout.labelHeight);
         m_layout.sValue      = ivec2(size.x - 2 * INS_BRD, m_layout.valueHeight);
         m_layout.pKnob       = pos + ivec2(INS_BRD, INS_BRD + m_layout.labelHeight);
-        m_layout.sKnob       = size - ivec2(0, m_layout.labelHeight + m_layout.valueHeight + 2 * INS_BRD);
+        m_layout.sKnob       = size - ivec2(INS_BRD*2, m_layout.labelHeight + m_layout.valueHeight + 2 * INS_BRD);
     } else {
         m_layout.labelHeight = 0;
         m_layout.valueHeight = 0;
@@ -357,11 +358,13 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
     if (m_layout.sKnob.x > 0 && m_layout.sKnob.y > 0) {
         renderButtonAt(vg, m_layout.pKnob, m_layout.sKnob, value);
     }
-    if (m_layout.sLabel.x > 0 && m_layout.sLabel.y > 0) {
-        renderBorder(vg, getStateFlags(), m_layout.pLabel, m_layout.sLabel, GuiColor::COL_BG_BRT);
-    }
-    if (m_layout.sValue.x > 0 && m_layout.sValue.y > 0) {
-        renderBorder(vg, getStateFlags(), m_layout.pValue, m_layout.sValue, GuiColor::COL_BG_BRT);
+    if (m_layout.renderLabelBorder) {
+        if (m_layout.sLabel.x > 0 && m_layout.sLabel.y > 0) {
+            renderBorder(vg, getStateFlags(), m_layout.pLabel, m_layout.sLabel, GuiColor::COL_BG_BRT);
+        }
+        if (m_layout.sValue.x > 0 && m_layout.sValue.y > 0) {
+            renderBorder(vg, getStateFlags(), m_layout.pValue, m_layout.sValue, GuiColor::COL_BG_BRT);
+        }
     }
     NVGcolor fontColor;
     if (isBackgroundRendered()) {
@@ -390,9 +393,9 @@ void guiknob::handleRightClick(MouseEvent& evt) {
 #if BUILD_VSTHOST
     if (paramAutomatable && paramIdx > -1) {
         dbgassert(dawCtrl);
-        if (dawCtrl) {
+        if (dawCtrl && parentCtrl) {
             dbgassert(paramAutomatable->getParam(paramIdx));
-            dawCtrl->openContextMenu(new guictxtmenu_at_param(dawCtrl, paramAutomatable, paramIdx), evt.mousepos);
+            parentCtrl->openContextMenu(new guictxtmenu_at_param(dawCtrl, paramAutomatable, paramIdx), evt.mousepos);
         }
         return;
     }

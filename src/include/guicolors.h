@@ -67,6 +67,7 @@ namespace GuiColor {
     extern constant_t COL_LABEL_INACTIVE;
     extern constant_t COL_KNOB;
     extern constant_t COL_KNOB_IND;
+    extern constant_t COL_KNOB_BG;
     extern constant_t COL_BTN_SOLO_BG_ENABLED;
     extern constant_t COL_BTN_SOLO_BG_PARENT;
     extern constant_t COL_BTN_SOLO_BG_DISABLED;
