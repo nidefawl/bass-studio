@@ -45,6 +45,12 @@ float renderTextLabel(NVGcontext* vg,
                      const float fontSize,
                      const NVGcolor color,
                      const int32_t alignment);
+vec2 getTextLabelBounds(NVGcontext* vg,
+                     const vec2& pos,
+                     const String& text,
+                     const guitheme_t* theme,
+                     const float fontSize,
+                     const int32_t alignment);
 void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* theme, const String& str, float fontScale, GuiColor::constant_t c, ivec2 renderPos, ivec2 size);
 void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, float thickness);
 

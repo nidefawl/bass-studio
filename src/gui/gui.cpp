@@ -124,7 +124,25 @@ float determine_table_string_width::getStringWidth(const String& text) {
     nvgTextBounds(vg, 0, 0, StringAsCStr(text), nullptr, bounds);
     return bounds[2] - bounds[0] + INSET_TABLE_CELL_PADDING*2;// maxX - minX;
 }
+vec2 getTextLabelBounds(NVGcontext* vg,
+                     const vec2& pos,
+                     const String& text,
+                     const guitheme_t* theme,
+                     const float fontSize,
+                     const int32_t alignment) {
 
+    float fontSizeScaled = fontSize;
+    if (theme) {
+        UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
+        UIFont::bindFont(vg, instance);
+        fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
+    }
+    nvgFontSize(vg, fontSizeScaled);
+    nvgTextAlign(vg, alignment);
+    float bounds[4]{ 0 };
+    nvgTextBounds(vg, pos.x, pos.y, text.c_str(), &text.back() + 1, bounds);
+    return {bounds[2] - bounds[0], bounds[3] - bounds[1]};
+}
 float renderTextLabel(NVGcontext* vg,
                      const vec2& pos,
                      const vec2& bounds,
