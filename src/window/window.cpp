@@ -793,12 +793,8 @@ public:
     void releaseOverlayWindows() {
         if (!overlayWindowsToClose.empty()) {
             for (auto& window : overlayWindowsToClose) {
-                auto handlerListSize = windowTimerHandleList.size();
-                dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), window.get()) != windowTimerHandleList.end());
                 window->destroy();
-                dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), window.get()) == windowTimerHandleList.end());
                 window.reset();
-                dbgassert(handlerListSize != windowTimerHandleList.size());
             }
             overlayWindowsToClose.clear();
         }

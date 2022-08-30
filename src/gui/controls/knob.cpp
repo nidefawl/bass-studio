@@ -154,8 +154,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
         nvgFill(vg);
         auto modRangesOptional = getKnobModulationRanges();
         if (modRangesOptional) {
-            auto numParams = CtrSize(*modRangesOptional);
-            dbgassert(numParams);
+            dbgassert(CtrSize(*modRangesOptional));
             for (auto& param : *modRangesOptional) {
                 for (int32_t modIdx = 0; modIdx < 2; modIdx++) {
                     auto posModulation = height - height * static_cast<float>(val);

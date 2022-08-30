@@ -556,7 +556,6 @@ void gui_audiocontent::render(NVGcontext* vg) {
     renderAudioClip(vg);
 }
 void gui_audiocontent::releaseRendered() {
-    dbgassert(dawCtrl->getWaveformRenderer()->isValid(waveformRef));
     dawCtrl->getWaveformRenderer()->release(waveformRef);
     waveformRef->rendered = false;
 }
@@ -693,7 +692,6 @@ void gui_audiocontent::prerender(NVGcontext* vg) {
             dbgassert(waveformRef->waveform.size.x > 0 && waveformRef->waveform.size.y > 0);
             if (dawCtrl->getWaveformRenderer()->queueUpdate(audio, waveformRef)) {
                 dbgassert(waveformRef->queued);
-                dbgassert(dawCtrl->getWaveformRenderer()->isValid(waveformRef));
             }
         }
     }

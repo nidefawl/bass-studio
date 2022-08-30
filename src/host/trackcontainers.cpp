@@ -29,12 +29,16 @@ trackallcontainer_t::~trackallcontainer_t() {
 }
 
 void assertUniqueEntries(const track_vector& vector) {
+#ifndef NDEBUG
     track_vector tracksCopy = vector;
 
     bool wasUnique = (std::unique(tracksCopy.begin(), tracksCopy.end()) == tracksCopy.end());
     dbgassert(wasUnique);
+#endif
 }
 void trackallcontainer_t::checkConsistency() {
+#ifndef NDEBUG
+#error "error"
     assertUniqueEntries(trackAllCtr.tracksFlat);
     assertUniqueEntries(trackAllCtr.tracksTree);
     assertUniqueEntries(trackMidiAudioCtr.tracksFlat);
@@ -126,6 +130,7 @@ void trackallcontainer_t::checkConsistency() {
         dbgassert(t->projectIdx == treeIdx);
         treeIdx++;
     }
+#endif
 }
 void trackallcontainer_t::addTrack(int trackInsertPos, track_t* newTrack) {
     auto it = std::find(trackAllCtr.tracksFlat.begin(), trackAllCtr.tracksFlat.end(), newTrack);

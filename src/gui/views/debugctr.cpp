@@ -507,17 +507,17 @@ void resetHistAndCheck(DawInstance* daw) {
     }
     daw->getHist().clear(daw);
 
+#ifndef NDEBUG
+    int n = 0;
     auto& tracks = daw->getTracks();
-    int n        = 0;
     for (auto track : tracks) {
         int nTrackClips = track->getMidi().getConstClips().size();
         log_printf("track %s %d %s has %d clips\n", TrackTypeToName(track->type), track->projectIdx, StringAsCStr(track->name), nTrackClips);
         n += nTrackClips;
     }
 
-    int nAlloc = getNumClipAllocations();
-
-    dbgassert(n == nAlloc);
+    dbgassert(n == getNumClipAllocations());
+#endif
 }
 void gui_ctr_debug::buttonClicked(guibase* button) {
     auto const daw = dawCtrl->getDaw();

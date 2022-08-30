@@ -249,7 +249,7 @@ bool anyCollision(TextureAtlas& _atlas, const ivec2 pos1, const ivec2 size1, ive
     }
     return false;
 }
-bool waveformrender::findFreeSpot(const ivec2 size, int& atlasIdx, ivec2& pos) {
+void waveformrender::findFreeSpot(const ivec2 size, int& atlasIdx, ivec2& pos) {
     for (TextureAtlas& _atlas : atlases) {
         ivec2 tmpPos = { 0, 0 };
         while (true) {
@@ -258,7 +258,7 @@ bool waveformrender::findFreeSpot(const ivec2 size, int& atlasIdx, ivec2& pos) {
                 //found a free spot
                 pos      = tmpPos;
                 atlasIdx = _atlas.idx;
-                return true;
+                return;
             } else {
                 tmpPos.x = colliderBottomRight.x + 4;
             }
@@ -283,10 +283,11 @@ bool waveformrender::findFreeSpot(const ivec2 size, int& atlasIdx, ivec2& pos) {
     // put the texture in the top left corner
     pos      = { 0, 0 };
     atlasIdx = e.idx;
-    return true;
+    return;
 }
 
 void waveformrender::assertWaveformRefIsUnbound(gui_waveform_texture_ref* waveformRef) {
+#ifndef NDEBUG
     for (TextureAtlas& _atlas : atlases) {
         for (auto& entry : _atlas.entries) {
             dbgassert(!isIn(entry.ptrs, waveformRef));
@@ -298,6 +299,7 @@ void waveformrender::assertWaveformRefIsUnbound(gui_waveform_texture_ref* wavefo
         //}
         dbgassert(!isIn(updateTask.queuedptrs, waveformRef));
     }
+#endif
 }
 
 inline bool isAlmostEqualWaveform(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs) {
@@ -334,7 +336,6 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
                 entry.refCount++;
                 dbgassert(!isIn(entry.ptrs, waveformRef));
                 entry.ptrs.push_back(waveformRef);
-                isValid(waveformRef);
                 return true;
             }
         }
@@ -349,7 +350,6 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
                 entry.queuedRefCount++;
                 dbgassert(!isIn(entry.queuedptrs, waveformRef));
                 entry.queuedptrs.push_back(waveformRef);
-                isValid(waveformRef);
                 return true;
             }
         }
@@ -387,7 +387,9 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 
         for (waveform_update_task_t& waveformQueueEntry : this->queuedTasks) {
             gui_waveform_texture_ref* ref = waveformQueueEntry.queuedptrs.front();
+#ifndef NDEBUG
             assertWaveformRefIsUnbound(ref);
+#endif
             queuedTasksRefs.push_back(ref);
         }
         std::sort(queuedTasksRefs.begin(), queuedTasksRefs.end());
@@ -423,9 +425,8 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
         //dbgassert(waveformRef->waveform.size.x <= 512);
         //assign texture to free spot in framebuffertextures
         impl->timer3.reset();
-        bool foundSpot = findFreeSpot(sizeInternal, atlasIdx, pos);
+        findFreeSpot(sizeInternal, atlasIdx, pos);
         impl->renderTimings.tmFindSpot += impl->timer3.getTime();
-        dbgassert(foundSpot);
 
         TextureAtlas& _atlas   = this->atlases[atlasIdx];
         waveformQueueEntry.pos = pos;
@@ -563,9 +564,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             impl->renderTimings.tmPassed = impl->timer.getTime();
         }
         totalRendered += numRendered;
-        auto sizeBefore = _atlas.queuedTasks.size();
         _atlas.queuedTasks.erase(_atlas.queuedTasks.begin(), it);
-        dbgassert((sizeBefore - numRendered) == _atlas.queuedTasks.size());
         if (impl->renderTimings.tmPassed >= timeoutMikros) {
             break;
         }
@@ -581,44 +580,6 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
     return totalRendered;
 }
 
-bool waveformrender::isValid(const gui_waveform_texture_ref* waveformRef) const {
-    if (waveformRef->atlasId >= 0) {
-        const int id = waveformRef->atlasEntryId;
-        // check if waveformRef looks plausible
-        dbgassert(id >= 10);
-        dbgassert(waveformRef->atlasId >= 0 && waveformRef->atlasId < (int) atlases.size());
-
-        //if (waveformRef->queued) {
-        //    auto& vecQTasks = this->queuedTasks;
-        //
-        //    auto it2 = std::find_if(vecQTasks.begin(), vecQTasks.end(), [ptr = waveformRef](const waveform_update_task_t& taskEntry) {
-        //                        return isIn(taskEntry.queuedptrs, ptr);
-        //                      });
-        //    bool b2 = (it2 != vecQTasks.end());
-        //    dbgassert(b2);
-        //
-        //    auto& taskEntry = *it2;
-        //    dbgassert(isIn(taskEntry.queuedptrs, waveformRef));
-        //    dbgassert(taskEntry.queuedRefCount > 0);
-        //}
-        if (waveformRef->rendered) {
-            auto& atlas = this->atlases[waveformRef->atlasId];
-            // check if atlas waveform is mapped to was initialized
-            dbgassert(atlas.idx > -1);
-            auto& vec = atlas.entries;
-            auto it   = std::find_if(vec.begin(), vec.end(), [id](const TextureAtlasEntry& entry) {
-                return entry.id == id;
-              });
-            dbgassert(it != vec.end());
-            auto& entry = *it;
-            dbgassert(isIn(entry.ptrs, waveformRef));
-            auto it2 = std::find(entry.ptrs.begin(), entry.ptrs.end(), waveformRef);
-            dbgassert(it2 != entry.ptrs.end());
-            dbgassert(entry.refCount > 0);
-        }
-    }
-    return true;
-}
 void waveformrender::draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 sizeClipped) {
     dbgassert(waveformRef->atlasId >= 0 && waveformRef->atlasId < (int) atlases.size());
     auto& atlas = this->atlases[waveformRef->atlasId];

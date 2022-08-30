@@ -44,8 +44,7 @@ public:
 
     ~File() {
         if (handle > -1) {
-            int ret = close(handle);
-            dbgassert(ret == 0);
+            always_assert(close(handle));
         }
     }
 

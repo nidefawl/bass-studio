@@ -73,13 +73,12 @@ public:
     int renderUpdates(NVGcontext* ctxt, float pxRatio);
     int queueUpdate(samplesource_t* audio, gui_waveform_texture_ref* waveformRef);
     void draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 size);
-    bool isValid(const gui_waveform_texture_ref* waveformRef) const;
 
     void release(gui_waveform_texture_ref* waveformRef);
     void releaseQueued(gui_waveform_texture_ref* waveformRef);
     void releaseRendered(gui_waveform_texture_ref* waveformRef);
 
-    bool findFreeSpot(ivec2 size, int& atlasIdx, ivec2& pos);
+    void findFreeSpot(ivec2 size, int& atlasIdx, ivec2& pos);
     bool canQueueUpdate();
     render_timings getTimings();
 };
