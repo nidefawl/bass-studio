@@ -103,10 +103,12 @@ struct alignas(16) AudioBlock {
         instanceCount++;
         instanceCstrd++;
         memcpy(buf, vecChannels.data(), vecChannels.size() * sizeof(decltype(vecChannels[0])));
+#ifndef NDEBUG
         float** pBuf = buf;
         for (float* channel : vecChannels) {
             dbgassert(*pBuf++ == channel);
         }
+#endif
     }
 
     explicit AudioBlock(const AudioBlock& src, const channelnum_t channelOffset, const channelnum_t numChannels, const samplecount_t sampleOffset, const samplecount_t numSamples)

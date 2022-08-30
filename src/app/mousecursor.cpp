@@ -135,14 +135,12 @@ namespace MouseCursors {
     void initCursors() {
         {
             ImageBuf imgCursors[NUM_CURSORS];
+#ifndef NDEBUG
             for (int i = 0; i < NUM_CURSORS; i++) {
                 ImageBuf& buf = imgCursors[i];
                 dbgassert((int)buf.bytes.size() == buf.w * buf.h * 4);
             }
-            for (int i = 0; i < NUM_CURSORS; i++) {
-                ImageBuf& buf = imgCursors[i];
-                dbgassert((int)buf.bytes.size() == buf.w * buf.h * 4);
-            }
+#endif
             for (int i = 0; i < 6; i++) {
                 load(StringFormat("cursors/cursor%02d.png", i), imgCursors[i]);
             }

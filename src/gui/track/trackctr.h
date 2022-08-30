@@ -462,6 +462,7 @@ public:
         entries.erase(it, entries.end());
     }
     void addTrack(track_gui_entry_t* entry) {
+#ifndef NDEBUG
         auto it = std::find_if(begin(entries), end(entries), [entry](track_gui_entry_t* e) {
             if (e->track == entry->track) {
                 return true;
@@ -469,6 +470,7 @@ public:
             return false;
         });
         dbgassert(it == entries.end() && "Attempt to add track_gui_entry_t twice");
+#endif
         entries.push_back(entry);
     }
     /**

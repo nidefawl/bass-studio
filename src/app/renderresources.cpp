@@ -64,10 +64,12 @@ namespace RenderResources {
     void initResources(NVGcontext* vg) {
         {
             ImageBuf imgIconsBuf[NUM_IMGS];
+#ifndef NDEBUG
             for (int i = 0; i < NUM_IMGS; i++) {
                 ImageBuf& buf = imgIconsBuf[i];
                 dbgassert((int)buf.bytes.size() == buf.w * buf.h * 4);
             }
+#endif
             load(vg, "icons/synth.png", imgIconsBuf[ICON_SYNTH]);
             load(vg, "icons/effect.png", imgIconsBuf[ICON_EFFECT]);
             load(vg, "icons/folder.png", imgIconsBuf[ICON_FOLDER]);
