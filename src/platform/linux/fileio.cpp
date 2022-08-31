@@ -44,7 +44,7 @@ public:
 
     ~File() {
         if (handle > -1) {
-            always_assert(close(handle));
+            always_assert(0 == close(handle));
         }
     }
 
