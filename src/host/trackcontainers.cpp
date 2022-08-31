@@ -38,7 +38,6 @@ void assertUniqueEntries(const track_vector& vector) {
 }
 void trackallcontainer_t::checkConsistency() {
 #ifndef NDEBUG
-#error "error"
     assertUniqueEntries(trackAllCtr.tracksFlat);
     assertUniqueEntries(trackAllCtr.tracksTree);
     assertUniqueEntries(trackMidiAudioCtr.tracksFlat);
