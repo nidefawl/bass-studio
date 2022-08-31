@@ -751,7 +751,9 @@ void guipluginview::onTick(AppCtrl* ctrl) {
     guiplugin::onTick(ctrl);
     for (auto* ctr : viewCtrs) {
         dbgassert(ctr->parent == this);
-        ctr->onTick(ctrl);
+        if (ctr->isVisible()) {
+            ctr->onTick(ctrl);
+        }
     }
 }
 
@@ -1086,6 +1088,9 @@ void guipluginview::setLayoutMode(int32_t layoutMode) {
     dropdownProgram.setVisible(this->layoutMode == 0 && effect->programNames.size());
     params.setVisible(this->layoutMode == 0);
     bParamListVisible = params.isVisible();
+    for (auto* ctr : viewCtrs) {
+        ctr->setVisible(layoutMode == 0);
+    }
 }
 
 void guiplugin::setLayoutMode(int32_t layoutMode) {

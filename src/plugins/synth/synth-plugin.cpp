@@ -4733,6 +4733,9 @@ namespace PluginSynth {
             browser.size = cs;
             guictr_base::layout();
         }
+        void onTick(AppCtrl* ctrl) override {
+            guictr_base::onTick(ctrl);
+        }
         void setUiLayout(const ui_layout_t& layout) {
             editor.setUiLayout(layout);
         }
