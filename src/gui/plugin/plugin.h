@@ -114,7 +114,7 @@ public:
     guidropdownprogram dropdownProgram;
     gui_list params;                    //TODO: use add() on control
     guibuttontoggle buttonOpenEditor;   //TODO: use add() on controls
-    guibuttontoggle buttonShowInlineGUI;// TODO: use add() on controls;
+    guibuttontoggle buttonShowParameterList;// TODO: use add() on controls;
     gui_textfield textFieldSearchBox;
 
     /* holds view controller for internal vstplugins with custom gui (non-steinberg api) */
@@ -123,7 +123,7 @@ public:
     std::vector<guictr_base*> viewCtrs;
     /* holds size for internal vstplugins with custom gui (non-steinberg api) */
     ivec2 sizeCtrs{};
-
+    bool bParamListVisible;
     guictr_base* ctrPreview = nullptr;
     void updateParamList(const String& strParamNameFilter);
 

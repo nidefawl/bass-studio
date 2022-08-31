@@ -38,6 +38,7 @@ struct plugin_ui_snapshot_t {
     ivec4 windowPosSize{};
     bool windowPosSizeValid = false;
     bool isWindowOpen = false;
+    bool parameterListVisible = true;
     int32_t layoutMode = -1;
 };
 struct plugin_snapshot_t {

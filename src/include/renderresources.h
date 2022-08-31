@@ -32,7 +32,8 @@
 #define ICON_OPT_UNLOCKED 27
 #define ICON_MIDIPLUG 28
 #define ICON_DUPLICATE 29
-#define NUM_IMGS 30
+#define ICON_SYNTH_SMALL 30
+#define NUM_IMGS 31
 #define MAX_FONTS 256
 
 struct NVGcontext;

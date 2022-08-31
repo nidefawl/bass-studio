@@ -89,7 +89,8 @@ void serialize(Archive& archive, plugin_ui_snapshot_t& m) {
             make_nvp("windowPosSize", m.windowPosSize),
             make_nvp("windowPosValid", m.windowPosSizeValid),
             make_nvp("windowOpen", m.isWindowOpen),
-            make_nvp("layoutMode", m.layoutMode));
+            make_nvp("layoutMode", m.layoutMode),
+            make_nvp("parameterListVisible", m.parameterListVisible));
     } catch (const std::exception& e) {
         m = {};
     }

@@ -100,6 +100,7 @@ namespace RenderResources {
             load(vg, "icons/opt_locked.png", imgIconsBuf[ICON_OPT_LOCKED]);
             load(vg, "icons/midiplug.png", imgIconsBuf[ICON_MIDIPLUG]);
             load(vg, "icons/duplicate.png", imgIconsBuf[ICON_DUPLICATE]);
+            load(vg, "icons/synth_small.png", imgIconsBuf[ICON_SYNTH_SMALL]);
 
             for (int i = 0; i < NUM_IMGS; i++) {
                 ImageBuf& buf = imgIconsBuf[i];

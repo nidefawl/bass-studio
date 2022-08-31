@@ -688,16 +688,16 @@ guipluginview::guipluginview(effectbase* _effect)
         return true;
     });
     textFieldSearchBox.setPlaceholder("Search");
-    buttonOpenEditor.icon = ICON_ADJUST;
+    buttonOpenEditor.icon = ICON_SYNTH_SMALL;
     buttonOpenEditor.setStateRef(&_effect->bEditOpen);
     buttonOpenEditor.setParent(this);
     buttonOpenEditor.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
-    addGuiBtnTitlebar(&buttonOpenEditor);
     params.setParent(this);
-    buttonShowInlineGUI.icon = ICON_ADJUST;
-    buttonShowInlineGUI.setStateRef(&_effect->bCaptureGUI);
-    buttonShowInlineGUI.setParent(this);
-    buttonShowInlineGUI.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
+    bParamListVisible = params.isVisible();
+    buttonShowParameterList.icon = ICON_ADJUST;
+    buttonShowParameterList.setStateRef(&bParamListVisible);
+    buttonShowParameterList.setParent(this);
+    buttonShowParameterList.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
     dropdownProgram.setParent(this);
     updateParamList("");
     if (_effect->pluginType == PLUGIN_TYPE_VST) {
@@ -705,15 +705,16 @@ guipluginview::guipluginview(effectbase* _effect)
         ctrPreview = new guipluginview_preview(dynamic_cast<vstplugin*>(_effect), this);
         ctrPreview->setVisible(false);
         viewCtrs.push_back(ctrPreview);
-        addGuiBtnTitlebar(&buttonShowInlineGUI);
+        addGuiBtnTitlebar(&buttonShowParameterList);
     }
+    addGuiBtnTitlebar(&buttonOpenEditor);
 }
 
 guipluginview::~guipluginview() {
     remove(&buttonOpenEditor);
     //will propably fall on the nose with accessing _effect in the destructor here
     if (effect->pluginType == PLUGIN_TYPE_VST) {
-        remove(&buttonShowInlineGUI);
+        remove(&buttonShowParameterList);
     }
     if (ctrPreview) {
         delete ctrPreview;
@@ -786,9 +787,8 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
             if (ctr->isVisible())
                 nVisibleCts++;
         }
-        int paramMinW = nVisibleCts ? rowHeight*6 : rowHeight*8;
-        int paramsW = math::min(paramMinW, contentS.y);
-        prefSize.x = math::min(prefSize.x, paramsW);
+        int paramMinW = params.isVisible() ? (nVisibleCts ? rowHeight*6 : rowHeight*8) : 0;
+        prefSize.x = math::min(prefSize.x, math::min(meterW+paramMinW, contentS.y));
         contentS = ivec2(prefSize.x - meterW, size.y - hpt);
     } else {
         contentP = ivec2(hpt, 0);
@@ -811,6 +811,7 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
     }
     prefSize.y = math::max(sizeCtrs.y, prefSize.y);
     prefSize.x += sizeCtrs.x;
+    prefSize.x = math::max(buttonOpenEditor.right()+buttonDelete.size.x+16, prefSize.x);
     dbgassert(prefSize.x > 0);
     dbgassert(prefSize.y > 0);
 }
@@ -886,22 +887,16 @@ void guipluginview::buttonClicked(guibase* _button) {
             effect->show(bResetPosition);
         }
     }
-    if (_button == &buttonShowInlineGUI) {
-        effect->bCaptureGUI = !effect->bCaptureGUI;
-        if (effect->bCaptureGUI) {
-            ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-            if (effect->bEditOpen) {
-                effect->close();
-            }
-            effect->requestCaptureGUI = 1;
-            effect->show(false);
-        }
+    if (_button == &buttonShowParameterList) {
+        params.setVisible(!params.isVisible());
+        bParamListVisible = params.isVisible();
+        this->onChildLayoutChanged(this);
     }
     if (ctrPreview) {
         ctrPreview->setVisible(effect->bCaptureGUI);
+        if (effect->bCaptureGUI)
+        this->onChildLayoutChanged(this);
     }
-    setLayoutMode(layoutMode);
-    this->onChildLayoutChanged(this);
 }
 void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
     const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
@@ -917,38 +912,44 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
         if (ctr->isVisible())
             nVisibleCts++;
     }
-    int paramMinW = nVisibleCts ? rowHeight*6 : rowHeight*8;
+    int paramMinW = params.isVisible() ? (nVisibleCts ? rowHeight*6 : rowHeight*8) : 0;
     int paramsW = math::min(paramMinW, contentS.x - sizeCtrs.x);
     int heightRow = hpt * 0.7;
-    textFieldSearchBox.setVisible(layoutMode == 0 && heightRow >= 20);
-    dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size() && heightRow >= 20);
-    int hDropDown = 0;
+    int left = INSET_TITLE;
+    if (params.isVisible()) {
+        textFieldSearchBox.setVisible(layoutMode == 0 && heightRow >= 20);
+        dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size() && heightRow >= 20);
+        int hDropDown = 0;
 
-    if (dropdownProgram.isVisible()) {
-        hDropDown += hpt * 0.7;
+        if (dropdownProgram.isVisible()) {
+            hDropDown += hpt * 0.7;
+        }
+        if (textFieldSearchBox.isVisible()) {
+            hDropDown += hpt * 0.7;
+        }
+        params.setRowHeight(rowHeight);
+        params.pos  = ivec2(insetCtrls, insetCtrls + hpt + hDropDown);
+        params.size = ivec2(paramsW, contentS.y - hDropDown) - ivec2(insetCtrls * 2);
+        params.padding = INSET_TITLE*2;
+        params.layout();
+        int topOffset = 0;
+        if (dropdownProgram.isVisible()) {
+            dropdownProgram.pos  = ivec2(insetCtrls * 2, insetCtrls + hpt + topOffset);
+            dropdownProgram.size = ivec2(paramsW, hpt * 0.7) - ivec2(insetCtrls * 4, 0);
+            dropdownProgram.layout();
+            topOffset += hpt * 0.7;
+        }
+        if (textFieldSearchBox.isVisible()) {
+            textFieldSearchBox.pos  = ivec2(insetCtrls * 2, insetCtrls + hpt + topOffset);
+            textFieldSearchBox.size = ivec2(paramsW, hpt * 0.7) - ivec2(insetCtrls * 4, 0);
+            textFieldSearchBox.layout();
+            topOffset += hpt * 0.7;
+        }
+        left += params.right();
+    } else {
+        dropdownProgram.setVisible(false);
+        textFieldSearchBox.setVisible(false);
     }
-    if (textFieldSearchBox.isVisible()) {
-        hDropDown += hpt * 0.7;
-    }
-    params.setRowHeight(rowHeight);
-    params.pos  = ivec2(insetCtrls, insetCtrls + hpt + hDropDown);
-    params.size = ivec2(paramsW, contentS.y - hDropDown) - ivec2(insetCtrls * 2);
-    params.padding = INSET_TITLE*2;
-    params.layout();
-    int topOffset = 0;
-    if (dropdownProgram.isVisible()) {
-        dropdownProgram.pos  = ivec2(insetCtrls * 2, insetCtrls + hpt + topOffset);
-        dropdownProgram.size = ivec2(paramsW, hpt * 0.7) - ivec2(insetCtrls * 4, 0);
-        dropdownProgram.layout();
-        topOffset += hpt * 0.7;
-    }
-    if (textFieldSearchBox.isVisible()) {
-        textFieldSearchBox.pos  = ivec2(insetCtrls * 2, insetCtrls + hpt + topOffset);
-        textFieldSearchBox.size = ivec2(paramsW, hpt * 0.7) - ivec2(insetCtrls * 4, 0);
-        textFieldSearchBox.layout();
-        topOffset += hpt * 0.7;
-    }
-    int left = params.right() + INSET_TITLE;
     for (auto* ctr : viewCtrs) {
         if (ctr->isVisible()) {
             ctr->pos          = ivec2(left, 0) + ivec2(insetCtrls, insetCtrls + hpt);
@@ -1084,6 +1085,7 @@ void guipluginview::setLayoutMode(int32_t layoutMode) {
     guiplugin::setLayoutMode(layoutMode);
     dropdownProgram.setVisible(this->layoutMode == 0 && effect->programNames.size());
     params.setVisible(this->layoutMode == 0);
+    bParamListVisible = params.isVisible();
 }
 
 void guiplugin::setLayoutMode(int32_t layoutMode) {
@@ -1112,9 +1114,12 @@ void guipluginview::makeSnapshot(plugin_ui_snapshot_t& puis, const tracksnapshot
     guiplugin::makeSnapshot(puis, opts);
     if (opts.storeLayouts) {
         puis.isWindowOpen = effect->bEditOpen;
+        puis.parameterListVisible = params.isVisible();
     }
 }
 
 void guipluginview::loadSnapshot(const plugin_ui_snapshot_t& puis) {
     guiplugin::loadSnapshot(puis);
+    params.setVisible(puis.parameterListVisible);
+    bParamListVisible = params.isVisible();
 }
