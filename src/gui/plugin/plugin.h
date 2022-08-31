@@ -124,7 +124,6 @@ public:
     /* holds size for internal vstplugins with custom gui (non-steinberg api) */
     ivec2 sizeCtrs{};
     bool bParamListVisible;
-    guictr_base* ctrPreview = nullptr;
     void updateParamList(const String& strParamNameFilter);
 
     void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override;

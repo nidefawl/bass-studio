@@ -700,13 +700,7 @@ guipluginview::guipluginview(effectbase* _effect)
     buttonShowParameterList.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
     dropdownProgram.setParent(this);
     updateParamList("");
-    if (_effect->pluginType == PLUGIN_TYPE_VST) {
-        dbgassert(dynamic_cast<vstplugin*>(_effect));
-        ctrPreview = new guipluginview_preview(dynamic_cast<vstplugin*>(_effect), this);
-        ctrPreview->setVisible(false);
-        viewCtrs.push_back(ctrPreview);
-        addGuiBtnTitlebar(&buttonShowParameterList);
-    }
+    addGuiBtnTitlebar(&buttonShowParameterList);
     addGuiBtnTitlebar(&buttonOpenEditor);
 }
 
@@ -715,9 +709,6 @@ guipluginview::~guipluginview() {
     //will propably fall on the nose with accessing _effect in the destructor here
     if (effect->pluginType == PLUGIN_TYPE_VST) {
         remove(&buttonShowParameterList);
-    }
-    if (ctrPreview) {
-        delete ctrPreview;
     }
 }
 void guipluginview::setControl(BaseCtrl* parentCtrl) {
@@ -774,41 +765,27 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
     }
     const int32_t hpt = parent->theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
     int32_t meterW    = math::max(16, (int32_t) (theme->get(GuiConstant::CONST_METER_WIDTH) * hpt / 32.0));
-    ivec2 contentS{};
-    ivec2 contentP{};
 
-    if (isHorizontalTitle) {
-        contentP = ivec2(0, hpt);
-        contentS.y = size.y - hpt;
-        int rowHeight      = 64;
-        while (contentS.y < rowHeight * 8 && rowHeight > 8) {
-            rowHeight -= 4;
-        }
-        int nVisibleCts = 0;
-        for (auto* ctr : viewCtrs) {
-            if (ctr->isVisible())
-                nVisibleCts++;
-        }
-        int paramMinW = params.isVisible() ? (nVisibleCts ? rowHeight*6 : rowHeight*8) : 0;
-        prefSize.x = math::min(prefSize.x, math::min(meterW+paramMinW, contentS.y));
-        contentS = ivec2(prefSize.x - meterW, size.y - hpt);
-    } else {
-        contentP = ivec2(hpt, 0);
-        contentS = ivec2(size.x - hpt - meterW, size.y);
+    auto contentSizeY = size.y - (isHorizontalTitle ? hpt : 0);
+    int rowHeight     = 64;
+    while (contentSizeY < rowHeight * 8 && rowHeight > 8) {
+        rowHeight -= 4;
     }
-    sizeCtrs = { 0, contentS.y };
+    int nVisibleCts = 0;
+    for (auto* ctr : viewCtrs) {
+        if (ctr->isVisible())
+            nVisibleCts++;
+    }
+    int paramsW = params.isVisible() ? nVisibleCts ? rowHeight * 6 : rowHeight * 8 : 0;
+    prefSize.x  = paramsW + meterW;
+    sizeCtrs = { 0, contentSizeY };
 
     if (viewCtr) {
         ivec2 sizeCtr;
         viewCtr->getFixedSize(&sizeCtr.x, &sizeCtr.y);
-        sizeCtr.x = (int) ((sizeCtr.x / (float) sizeCtr.y) * contentS.y);
+        sizeCtr.x = (int) ((sizeCtr.x / (float) sizeCtr.y) * size.y);
         sizeCtr.y = sizeCtrs.y;
         viewCtr->layout(sizeCtr.x, sizeCtr.y);
-        sizeCtrs.x += sizeCtr.x;
-    }
-    if (ctrPreview && ctrPreview->isVisible()) {
-        ivec2 sizeCtr{ sizeCtrs.y, sizeCtrs.y };
-        ctrPreview->determineSize(sizeCtr);
         sizeCtrs.x += sizeCtr.x;
     }
     prefSize.y = math::max(sizeCtrs.y, prefSize.y);
@@ -894,11 +871,6 @@ void guipluginview::buttonClicked(guibase* _button) {
         bParamListVisible = params.isVisible();
         this->onChildLayoutChanged(this);
     }
-    if (ctrPreview) {
-        ctrPreview->setVisible(effect->bCaptureGUI);
-        if (effect->bCaptureGUI)
-        this->onChildLayoutChanged(this);
-    }
 }
 void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
     const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
@@ -914,8 +886,7 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
         if (ctr->isVisible())
             nVisibleCts++;
     }
-    int paramMinW = params.isVisible() ? (nVisibleCts ? rowHeight*6 : rowHeight*8) : 0;
-    int paramsW = math::min(paramMinW, contentS.x - sizeCtrs.x);
+    int paramsW = params.isVisible() ? (nVisibleCts ? rowHeight*6 : rowHeight*8) : 0;
     int heightRow = hpt * 0.7;
     int left = INSET_TITLE;
     if (params.isVisible()) {
@@ -955,7 +926,7 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
     for (auto* ctr : viewCtrs) {
         if (ctr->isVisible()) {
             ctr->pos          = ivec2(left, 0) + ivec2(insetCtrls, insetCtrls + hpt);
-            ivec2 prefSizeCtr = ivec2(ctr->size.x, contentS.y) - ivec2(insetCtrls * 2);
+            ivec2 prefSizeCtr = ctr->size - ivec2(insetCtrls * 2);
             ctr->determineSize(prefSizeCtr);
             ctr->size = prefSizeCtr;
             ctr->layout();
