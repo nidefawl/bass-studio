@@ -3504,7 +3504,32 @@ namespace PluginSynth {
             prefSize.y = math::roundfS32(getLayoutHeight(this));
         }
     };
-    class guicontainer_modulation_slot : public guictr_base {
+    class guictr_synth_title : public guictr_base {
+        float titleHeight = 10.0f;
+    public:
+        guictr_synth_title() = default;
+        void renderContainerLabel(NVGcontext* vg) override {
+            if (isFlag(FLG_RENDER_LABEL) && label.length()) {
+                auto cs                = getSizeContent();
+                const auto bgColor     = getInnerBackgroundColorFromState(getStateFlags());
+                renderTextLabel(vg,
+                                vec2(getPosContent()) + vec2(padding, titleHeight / 2.0),
+                                vec2(getSizeContent()) - vec2(INSET_TITLE + 2, 0),
+                                label,
+                                theme,
+                                titleHeight,
+                                theme->getContrastColor(bgColor),
+                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+            }
+        }
+        void setTitleHeight(float height) {
+            titleHeight = height;
+        }
+        float getTitleHeight() const {
+            return titleHeight;
+        }
+    };
+    class guicontainer_modulation_slot : public guictr_synth_title {
         SynthImpl* const synth;
         const int32_t slotIndex;
         std::vector<guicontainer_modulation_slot_source*> sources;
@@ -3512,13 +3537,16 @@ namespace PluginSynth {
 
     public:
         explicit guicontainer_modulation_slot(SynthImpl* synth, int32_t slotIndex)
-            : guictr_base(),
-              synth(synth),
+            : synth(synth),
               slotIndex(slotIndex) {
             padding      = 2;
+            margin       = 0;
             sortChildren = true;
-            setCanMouseHit(true);
             setLabel(StringFormat("Modulation %d", slotIndex + 1));
+            setBackgroundRendered(true);
+            setBackgroundRenderedInset(true);
+            setFlag(FLG_RENDER_LABEL, true);
+            setCanMouseHit(true);
         }
         ~guicontainer_modulation_slot() override {
             removeGuis();
@@ -3566,47 +3594,61 @@ namespace PluginSynth {
             }
         }
         void render(NVGcontext* vg) override {
-            this->renderDebug(vg, dbgcolorsArray[1 + (slotIndex % (dbgcolorsArraySize - 1))]);
             guictr_base::render(vg);
+        }
+        void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset) {
+            if (sizeInset.y > 0 && sizeInset.x > 0) {
+                nvgTranslateZ(vg, -2.0f);
+                nvgShapeAntiAlias(vg, 0);
+                nvgBeginPath(vg);
+                nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
+                nvgFillColor(vg, dbgcolorsArray[1 + (slotIndex % (dbgcolorsArraySize - 1))]);
+                nvgFill(vg);
+                nvgShapeAntiAlias(vg, USE_NANOVG_AA);
+                nvgTranslateZ(vg, 1.0f);
+            }
         }
         void buttonClicked(guibase* button) override {
             parent->buttonClicked(button);
             guictr_base::buttonClicked(button);
         }
         void determineSize(ivec2& prefSize) override {
-            ivec2 sizeTotal = {};
+            vec2 sizeTotal = {0, 0};
             for (auto& src : guis) {
                 src->size = prefSize;
                 src->determineSize(src->size);
                 sizeTotal.y += src->size.y;
             }
-            prefSize.y = sizeTotal.y + padding * 2;
+            prefSize.y = math::ceilfS32(getTitleHeight() + sizeTotal.y + padding * 2);
         }
         void layout() override {
             auto cs        = getSizeContent();
-            ivec2 pos      = {};
-            auto rowHeight = cs.y / CtrSize(guis);
+            vec2 pos      = {0, getTitleHeight()};
+            auto rowHeight = (cs.y-pos.y) / CtrSize(guis);
             for (auto& slot : guis) {
                 slot->pos    = pos;
                 slot->size.x = cs.x;
-                slot->size.y = rowHeight;
+                // slot->size.y = math::roundfS32(rowHeight);
                 slot->layout();
                 pos.y = slot->bottom();
             }
         }
     };
-    class guicontainer_modulation : public guictr_base {
+    class guicontainer_modulation : public guictr_synth_title {
         SynthImpl* const synth;
         std::vector<guicontainer_modulation_slot*> slots;
         bool bGuiNeedsRefresh = true;
 
     public:
         explicit guicontainer_modulation(SynthImpl* synth)
-            : guictr_base(),
-              synth(synth) {
-            padding = 2;
+            : synth(synth) {
+            margin  = 0;
+            padding = 0;
             setLabel("Modulation");
-            setCanMouseHit(true);
+            setBackgroundRendered(false);
+            setBackgroundRenderedInset(false);
+            setFlag(FLG_RENDER_LABEL, false);
+            setCanMouseHit(false);
         }
         ~guicontainer_modulation() override {
             removeGuis();
@@ -3616,7 +3658,7 @@ namespace PluginSynth {
         }
         void layout() override {
             auto cs   = getSizeContent();
-            ivec2 pos = {};
+            ivec2 pos = {0, 0};
             for (auto& slot : slots) {
                 slot->size = cs;
                 slot->determineSize(slot->size);
@@ -3628,6 +3670,12 @@ namespace PluginSynth {
                 if (!stl_contains(slots, gui)) {
                     gui->layout();
                 }
+            }
+        }
+        void setTitleHeight(float height) {
+            guictr_synth_title::setTitleHeight(height);
+            for (auto& slot : slots) {
+                slot->setTitleHeight(height);
             }
         }
         void setFromSynth() {
@@ -3662,7 +3710,7 @@ namespace PluginSynth {
                 src->determineSize(src->size);
                 sizeTotal.y += src->size.y;
             }
-            prefSize.y = sizeTotal.y + padding * 2;
+            prefSize.y = math::ceilfS32(getTitleHeight() + sizeTotal.y + padding * 2);
         }
     };
 
@@ -3776,13 +3824,12 @@ namespace PluginSynth {
             nvgTranslate(vg, -pos.x, -pos.y);
         }
     };
-    class guictr_synth_param_container : public guictr_base {
+    class guictr_synth_param_container : public guictr_synth_title {
         vec2 sliderSize;
 
     public:
         guictr_synth_param_container()
-            : guictr_base(),
-              sliderSize(0.0f) {
+            : sliderSize(0.0f) {
             margin  = 4;
             padding = 4;
             setBackgroundRendered(true);
@@ -3798,10 +3845,10 @@ namespace PluginSynth {
         //     return GuiColor::COL_BG_DRKER2;
         // }
 
-        void layoutParameterGroup(ivec2& prefSize, vec2 knobSize) {
+        void layoutParameterGroup(ivec2& prefSize, vec2 knobSize, float titleHeight) {
+            this->setTitleHeight(titleHeight);
             auto cs                = getSizeContent();
             const auto knobsPerCol = 3;
-            const auto titleHeight = math::roundfS32(cs.y * 0.1f);
             const auto innerSize   = vec2(cs.x, cs.y - titleHeight);
             auto knobPos           = ivec2(0, titleHeight);
             ;
@@ -3836,21 +3883,6 @@ namespace PluginSynth {
         void layout() override {
             for (guibase* gui : guis) {
                 gui->layout();
-            }
-        }
-        void renderContainerLabel(NVGcontext* vg) override {
-            if (isFlag(FLG_RENDER_LABEL) && label.length()) {
-                auto cs                = getSizeContent();
-                const auto titleHeight = math::roundfS32(cs.y * 0.1f);
-                const auto bgColor     = getInnerBackgroundColorFromState(getStateFlags());
-                renderTextLabel(vg,
-                                vec2(getPosContent()) + vec2(padding, titleHeight / 2.0),
-                                vec2(getSizeContent()) - vec2(INSET_TITLE + 2, 0),
-                                label,
-                                theme,
-                                titleHeight,
-                                theme->getContrastColor(bgColor),
-                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
             }
         }
         void buttonClicked(guibase* button) override {
@@ -4242,6 +4274,8 @@ namespace PluginSynth {
         }
         void layout() override {
             auto cs                             = getSizeContent();
+            modulation.setTitleHeight(math::roundfS32(cs.y * 0.1f * 0.27f));
+            const auto titleHeight = math::roundfS32(cs.y * 0.1f * 0.27f);
             const auto controlsWidth            = splitter.leftOrTop(cs.x) - padding / 2;
             const auto modulationWidth          = splitter.rightOrBottom(cs.x) - padding / 2;
             splitter.pos                        = ivec2(controlsWidth - Splitter::SPLITTER_LAYOUT_THICKNESS / 2, 0);
@@ -4268,7 +4302,7 @@ namespace PluginSynth {
             for (auto& ctr : containers) {
                 ctr->pos  = modulePos + ivec2(0, 0);
                 ctr->size = moduleSize - ivec2(0, 0);
-                ctr->layoutParameterGroup(ctr->size, knobSize);
+                ctr->layoutParameterGroup(ctr->size, knobSize, titleHeight);
 
                 modulePos.x = ctr->right() + padding;
                 if (++colIdx >= numCols) {
@@ -4282,8 +4316,9 @@ namespace PluginSynth {
             list.size  = ivec2(controlsWidth - list.pos.x - padding, (ctrFm.size.y - padding) / 2);
             list2.pos  = vec2(list.left(), list.bottom() + padding);
             list2.size = ivec2(controlsWidth - list2.pos.x - padding, (ctrFm.size.y - padding) / 2);
-            list.setRowHeight(math::roundfS32(getLayoutHeight(this)) / 2);
-            list2.setRowHeight(math::roundfS32(getLayoutHeight(this)) / 2);
+            auto listHeight = math::roundfS32(math::clamp<float>(cs.y*0.1f*0.33f, getLayoutHeight(this) / 2, getLayoutHeight(this)));
+            list.setRowHeight(listHeight);
+            list2.setRowHeight(listHeight);
 
             for (guibase* gui : guis) {
                 gui->layout();
