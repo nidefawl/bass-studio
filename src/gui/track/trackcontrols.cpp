@@ -198,6 +198,7 @@ public:
                 nvgBeginPath(vg);
                 nvgRect(vg, x, y, wVal, insetS.y);
                 nvgFillColor(vg, theme->getColor(valColor));
+                nvgFillCustomPar(vg, -3);
                 nvgFill(vg);
             }
 

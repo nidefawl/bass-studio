@@ -103,7 +103,10 @@ public:
     std::function<bool(const std::string& str)> mCallback    = nullptr;
     std::function<bool(const std::string& str)> mCallbackEnd = nullptr;
     std::function<void(MouseHitEvt&, bool)> fnFocus          = nullptr;
-    gui_textfield() = default;
+    gui_textfield() {
+        setFlag(FLG_RENDER_BACKGROUND_INSET, true);
+        setFlag(FLG_IMPL_SPEC1, true);
+    };
 
     float fontSize() const {
         return mFontSize;

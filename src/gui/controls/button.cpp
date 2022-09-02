@@ -27,3 +27,8 @@ void guibutton::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
         nvgRestore(vg);
     }
 }
+guibutton::guibutton() {
+    setCanMouseHit(true);
+    setFlag(FLG_RENDER_BACKGROUND_INSET, true);
+    setFlag(FLG_IMPL_SPEC1, false);
+}

@@ -86,6 +86,7 @@ public:
     bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
     void handleRightClick(MouseEvent& evt) override;
     void renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float value);
+    void renderRangeIndicator(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float rangeValueMin, float rangeValueMax, NVGcolor color, int idx, int numRanges);
     void render(NVGcontext* vg) override;
     float getValueInternal() {
         return value;

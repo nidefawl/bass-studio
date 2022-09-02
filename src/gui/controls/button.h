@@ -22,9 +22,7 @@ public:
     int drawParm                                                                              = 0;
 
 public:
-    guibutton() : guibase() {
-        setCanMouseHit(true);
-    }
+    guibutton();
     void setButtonColor(GuiColor::constant_t color) {
         buttonColor = color;
         setFlagInternal(FLG_HAS_COLOR_BG);

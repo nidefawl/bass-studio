@@ -158,6 +158,9 @@ gui_timeinput::gui_timeinput(int32_t* _time, const bool isRelative)
     editfield.setAlignment(gui_textfield::Alignment::Center);
     editfield.setReturnCommits(true);
     add(&editfield);
+    bar.setFlag(FLG_RENDER_BACKGROUND_INSET, true);
+    beat.setFlag(FLG_RENDER_BACKGROUND_INSET, true);
+    sixteenths.setFlag(FLG_RENDER_BACKGROUND_INSET, true);
 }
 
 int32_t gui_timeinput::getTime() {

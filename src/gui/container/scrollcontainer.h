@@ -19,6 +19,7 @@ class guictr_scrollbar : public guictr_base, public gui_scrollcontainer {
     int scrollOffset  = 0;
     int contentHeight = 0;
     bool hasScrollbar = false;
+    bool renderClipped = false;
 
 public:
     bool scrollbarOutside = false;
@@ -58,5 +59,9 @@ public:
     void setControl(BaseCtrl* parentCtrl) override {
         guictr_base::setControl(parentCtrl);
         scrollbar.setControl(parentCtrl);
+    }
+    void buttonClicked(guibase* button) override {
+        parent->buttonClicked(button);
+        guictr_base::buttonClicked(button);
     }
 };

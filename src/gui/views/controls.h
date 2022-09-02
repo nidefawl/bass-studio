@@ -24,6 +24,8 @@ class gui_tempocontrol_input : public guibutton {
 public:
     gui_tempocontrol_input(gui_tempocontrol* parent)
         : guibutton(), parentInput(parent) {
+        setFlag(FLG_RENDER_BACKGROUND_INSET, true);
+        setFlag(FLG_IMPL_SPEC1, false);
     }
     void render(NVGcontext* vg) override {
         renderWidgetBorder(vg, getStateFlags());
@@ -88,6 +90,8 @@ public:
     gui_signaturecontrol_input(int _idx)
         : guibutton(),
           idx(_idx) {
+        setFlag(FLG_RENDER_BACKGROUND_INSET, true);
+        setFlag(FLG_IMPL_SPEC1, false);
     }
 
     void render(NVGcontext* vg) override {

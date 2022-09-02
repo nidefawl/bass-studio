@@ -126,6 +126,43 @@ namespace PluginSynth {
         Macro07,
         Macro08,
     };
+    const Parameters parametersModulate[] = {
+        MasterVolume,
+        Panning,
+        FilterCutoff,
+        FilterResonance,
+        FilterDrive,
+        FilterKeyTracking,
+        VolEnvCutoff,
+        ModEnvCutoff,
+        OscMix,
+        Osc1Coarse,
+        Osc1Fine,
+        Osc1Split,
+        Osc2Coarse,
+        Osc2Fine,
+        Osc2Split,
+        LfoShape,
+        LfoPhase,
+        LfoFrequency,
+        LfoDelay,
+        LfoCutoff,
+        FmCoarse,
+        FmFine,
+        VolEnvFm,
+        ModEnvFm,
+        LfoFm,
+        VolEnvA,
+        VolEnvD,
+        VolEnvS,
+        VolEnvR,
+        VolEnvV,
+        ModEnvA,
+        ModEnvD,
+        ModEnvS,
+        ModEnvR,
+        ModEnvV
+    };
     static_assert(kNumParams == sizeof(parametersOrdered) / sizeof(Parameters), "parametersOrdered is not the correct size");
 
     enum Settings {
@@ -141,9 +178,10 @@ namespace PluginSynth {
         FilterDriftEnabled,
         LfoPhaseDriftEnabled,
         Lfo1ResetByLfo2Enabled,
+        ShowModulationRanges,
         NumSettings,
     };
-    extern const std::array<const char*, 12> stringsSettings;
+    extern const std::array<const char*, 13> stringsSettings;
 
     class SynthState {
     public:

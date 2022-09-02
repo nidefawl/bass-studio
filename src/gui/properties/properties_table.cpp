@@ -6,6 +6,7 @@
 #include <numeric>
 
 #include "math/seq_math.h"
+#include "saferef.h"
 #include "str_util.h"
 #include "seq_util.h"
 #include "color_util.h"
@@ -53,6 +54,7 @@ namespace Table {
         virtual void onClick(const click_ctxt_t& ctxt, glm::ivec2& value) = 0;
         virtual void onClick(const click_ctxt_t& ctxt, glm::ivec4& value) = 0;
         virtual void onClick(const click_ctxt_t& ctxt, NVGcolor& value) = 0;
+        virtual void onClick(const click_ctxt_t& ctxt, guibase* value) = 0;
         virtual void onClick(const click_ctxt_t& ctxt, const tbltype_gui_flags& obj) {};
         virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiColor::constant_t constant) = 0;
         virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiConstant::constant_t constant) = 0;
@@ -64,6 +66,14 @@ namespace Table {
     void cellClicked(const click_ctxt_t& ctxt, const tbltype_gui_flags& obj) {
         if (ctxt.callback) {
             ctxt.callback->onClick(ctxt, obj);
+        }
+    }
+
+    template <>
+    void cellClicked(const click_ctxt_t& ctxt, const SafeRef<guibase>& obj) {
+        auto* c = safeRefGet(obj);
+        if (c && ctxt.callback) {
+            ctxt.callback->onClick(ctxt, c);
         }
     }
 
@@ -374,6 +384,8 @@ public:
                 void onClick(const click_ctxt_t& ctxt, NVGcolor& value) override {
                     hover();
                 }
+                void onClick(const click_ctxt_t& ctxt, guibase* value) override {
+                };
             };
             mouseover_handler_t handler(this, cell, evt);
             const click_ctxt_t ctxt = {this, &handler};
@@ -562,6 +574,12 @@ public:
                         table->setActiveControl(nullptr);
                         dbgassert(!ctxtMenu->isBackgroundRendered());
                     }
+                    void onClick(const click_ctxt_t& ctxt, guibase* value) override {
+                        table->setDebugPropertyHandle(value);
+                        table->determineSize(table->size);
+                        table->layout();
+                        setGlobalDebugPropertyHandle(this);
+                    };
                 };
                 click_handler_t handler( this, cell, evt );
                 const click_ctxt_t ctxt = {this, &handler};
@@ -614,6 +632,7 @@ void addPropertiesFromGui(guibase& gui, Table::tbl* table) {
     SafeRef<guibase> ref = gui.makeSafeRef();
     std::vector<tbl_row_t>& rows = table->rows;
     rows.push_back({{tblstr{"this"}, ref}});
+    rows.push_back({{tblstr{"id"}, tbltypesaferef<int32_t>{ref, gui.id, nullptr}}});
     rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, gui.pos, nullptr}}});
     rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, gui.size, nullptr}}});
 
@@ -643,6 +662,7 @@ void addPropertiesFromGui(guictr_base& gui, Table::tbl* table) {
     SafeRef<guibase> ref = gui.makeSafeRef();
     std::vector<tbl_row_t>& rows = table->rows;
     rows.push_back({{tblstr{"this"}, ref}});
+    rows.push_back({{tblstr{"id"}, tbltypesaferef<int32_t>{ref, gui.id, nullptr}}});
     rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, gui.pos, nullptr}}});
     rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, gui.size, nullptr}}});
     guictr_layout* ctrlayout = nullptr;

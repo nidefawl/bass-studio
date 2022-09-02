@@ -100,10 +100,12 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
                     nvgBeginPath(vg);
                     nvgRect(vg, x, math::max(y, yZero), channelW, math::min(hVal, hZero));
                     nvgFillColor(vg, colGainLvl[j * 2 + 0]);
+                    nvgFillCustomPar(vg, -3);
                     nvgFill(vg);
                     if (hOvershoot > 0) {
                         nvgBeginPath(vg);
                         nvgRect(vg, x, y, channelW, hOvershoot);
+                        nvgFillCustomPar(vg, -3);
                         nvgFillColor(vg, colGainLvl[j * 2 + 1]);
                         nvgFill(vg);
                     }

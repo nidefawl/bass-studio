@@ -116,6 +116,57 @@ bool guiknob::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset)
     setValue(value, FLG_PAR_UPDATE_USER);
     return true;
 }
+void guiknob::renderRangeIndicator(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float rangeValueMin, float rangeValueMax, NVGcolor color, int idx, int numRanges) {
+    float knobValue = math::clamp(getValue(), bIsBipolar ? -1.0f : 0.0f, 1.0f);
+    float cx      = insetP.x;
+    float cy      = insetP.y;
+    float width   = insetS.x;
+    float height  = insetS.y;
+    if (knobType == knobtype::SLIDER_LABELED) {
+        auto posModulation = height - height * knobValue;
+        auto heightModulation = height * (rangeValueMax - rangeValueMin);
+        posModulation -= height * rangeValueMax;
+        vec4 r = {
+            0,
+            posModulation,
+            static_cast<float>(insetS.x),
+            heightModulation
+        };
+        // clip rect to 0, 0, width, height
+        if (r.w < 0) {
+            r.y += r.w;
+            r.w = -r.w;
+        }
+        if (r.y < 0) {
+            r.w += r.y;
+            r.y = 0;
+        }
+        if (r.x < 0) {
+            r.z += r.x;
+            r.x = 0;
+        }
+        if (r.y + r.w > height) {
+            r.w = height - r.y;
+        }
+        if (r.x + r.z > width) {
+            r.z = width - r.x;
+        }
+        if (r.z > 0.5f && r.w > 0.5f) {
+            float wIndicator = math::max(2.0f, r.z/numRanges);
+            float xSlot = r.x + r.z - wIndicator;
+            float wSlot = wIndicator;
+            nvgBeginPath(vg);
+            nvgRect(vg, cx + xSlot, cy + r.y, wSlot, r.w);
+            dbgassert(r.x >= 0 && r.y >= 0 && r.z <= insetS.x && r.w <= insetS.y);
+            nvgFillColor(vg, color);
+            nvgFill(vg);
+        }
+    } else {
+        // float radius             = (minSize * 0.8f) / 2.0f;
+        // float lineThickness = math::max(1.0f, roundf((minSize / 8.0f) * 2.0f) / 2.0f);
+    }
+
+}
 void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float value) {
     renderWidgetBorder(vg, getStateFlags());
 
@@ -124,87 +175,84 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
         c2 = theme->getColor(GuiColor::COL_BG_DRKER);
     if (focused())
         c2 = theme->getColor(GuiColor::COL_BG_DRKER2);
-    if ((hovered() || focused())) {
-//        nvgBeginPath(vg);
-//        nvgCircle(vg, cx, cy, r * 1.5f);
-//        nvgFillColor(vg, c2);
-//        nvgFill(vg);
-    }
-    float val = math::clamp(value, bIsBipolar ? -1.0f : 0.0f, 1.0f);
-    float minSize       = math::min(insetS.x, insetS.y);
-    float r             = (minSize * 0.8f) / 2.0f;
-    float lineThickness = math::max(1.0f, roundf((minSize / 8.0f) * 2.0f) / 2.0f);
-    nvgLineCap(vg, NVGlineCap::NVG_ROUND);
-    float cx      = insetP.x;
-    float cy      = insetP.y;
+
+    float val     = math::clamp(value, bIsBipolar ? -1.0f : 0.0f, 1.0f);
+    float minSize = math::min(insetS.x, insetS.y);
+    float cx     = insetP.x;
+    float cy     = insetP.y;
     float width  = insetS.x;
-    float height  = insetS.y;
+    float height = insetS.y;
+    
     if (isBackgroundRendered()) {
         nvgBeginPath(vg);
         nvgRect(vg, cx, cy, insetS.x, height);
         nvgFillColor(vg, theme->getColor(GuiColor::COL_KNOB_BG));
+        nvgFillCustomPar(vg, -2);
         nvgFill(vg);
     }
     if (knobType == knobtype::SLIDER_LABELED) {
-        lineThickness = math::max(1.0f, roundf((minSize / 32.0f) * 2.0f) / 2.0f);
+        float lineThickness = math::max(1.0f, roundf((minSize / 32.0f) * 2.0f) / 2.0f);
         float heightRange = insetS.y * val;
         nvgBeginPath(vg);
         nvgRect(vg, cx, cy + height - heightRange, insetS.x, heightRange);
         nvgFillColor(vg, theme->getColor(valColor));
+        nvgFillCustomPar(vg, -3);
         nvgFill(vg);
         auto modRangesOptional = getKnobModulationRanges();
         if (modRangesOptional) {
             dbgassert(CtrSize(*modRangesOptional));
-            for (auto& param : *modRangesOptional) {
-                for (int32_t modIdx = 0; modIdx < 2; modIdx++) {
-                    auto posModulation = height - height * static_cast<float>(val);
-                    NVGcolor color;
-                    if (modIdx == 0) {
-                        color = dbgcolorsArray[1 + (param.sourceId % (dbgcolorsArraySize-1))];
-                        color.a = 0.9f;
-                    } else {
-                        color = dbgcolorsArray[0];
-                        color.a = 0.4f;
+            const auto numMods = CtrSize(*modRangesOptional);
+            for (int i = 0; i < numMods; i++) {
+                auto& param = (*modRangesOptional)[i];
+                auto posModulation = height - height * static_cast<float>(val);
+                NVGcolor color = dbgcolorsArray[1 + (param.sourceId % (dbgcolorsArraySize-1))];
+                color.a = 0.5f;
+                auto& p = param.range;
+                auto heightModulation = height*static_cast<float>(p)*(param.isBiPolar?2.0f:1.0f);
+                if (param.isBiPolar) {
+                    posModulation -= heightModulation * 0.5f;
+                } else {
+                    posModulation -= heightModulation;
+                }
+                vec4 r = {
+                    0,
+                    posModulation,
+                    static_cast<float>(insetS.x),
+                    heightModulation
+                };
+                // clip rect to 0, 0, width, height
+                if (r.w < 0) {
+                    r.y += r.w;
+                    r.w = -r.w;
+                }
+                if (r.y < 0) {
+                    r.w += r.y;
+                    r.y = 0;
+                }
+                if (r.x < 0) {
+                    r.z += r.x;
+                    r.x = 0;
+                }
+                if (r.y + r.w > height) {
+                    r.w = height - r.y;
+                }
+                if (r.x + r.z > width) {
+                    r.z = width - r.x;
+                }
+                if (fabs(r.z) > 0.2f && fabs(r.w) > 0.2f) {
+                    float wSlot = math::clamp((r.z*9/10) / numMods, 2.0f, r.z*0.33f);
+                    float xSlot = r.x + wSlot * i;
+                    while (wSlot > 4) {
+                        float step = wSlot / 4.0f;
+                        xSlot += step;
+                        wSlot -= step * 2;
+                        break;
                     }
-                    auto p = modIdx == 0 ? param.range : param.currentVal;
-                    auto heightModulation = height*static_cast<float>(p)*(param.isBiPolar?2.0f:1.0f);
-                    if (param.isBiPolar) {
-                        posModulation -= heightModulation * 0.5f;
-                    } else {
-                        posModulation -= heightModulation;
-                    }
-                    vec4 r = {
-                        0,
-                        posModulation,
-                        static_cast<float>(insetS.x),
-                        heightModulation
-                    };
-                    // clip rect to 0, 0, width, height
-                    if (r.w < 0) {
-                        r.y += r.w;
-                        r.w = -r.w;
-                    }
-                    if (r.y < 0) {
-                        r.w += r.y;
-                        r.y = 0;
-                    }
-                    if (r.x < 0) {
-                        r.z += r.x;
-                        r.x = 0;
-                    }
-                    if (r.y + r.w > height) {
-                        r.w = height - r.y;
-                    }
-                    if (r.x + r.z > width) {
-                        r.z = width - r.x;
-                    }
-                    if (fabs(r.z) > 0.2f && fabs(r.w) > 0.2f) {
-                        nvgBeginPath(vg);
-                        nvgRect(vg, cx + r.x, cy + r.y, r.z, r.w);
-                        dbgassert(r.x >= 0 && r.y >= 0 && r.z <= insetS.x && r.w <= insetS.y);
-                        nvgFillColor(vg, color);
-                        nvgFill(vg);
-                    }
+                    nvgBeginPath(vg);
+                    nvgRect(vg, cx + xSlot, cy + r.y, wSlot, r.w);
+                    dbgassert(r.x >= 0 && r.y >= 0 && r.z <= insetS.x && r.w <= insetS.y);
+                    nvgFillColor(vg, color);
+                    nvgFill(vg);
                 }
             }
         }
@@ -215,13 +263,18 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
         nvgFillColor(vg, c2);
         nvgFill(vg);
     } else {
+        nvgLineCap(vg, NVGlineCap::NVG_ROUND);
+        float lineThickness = math::max(1.0f, roundf((minSize / 8.0f) * 2.0f) / 2.0f);
+        float radius        = (minSize * 0.8f) / 2.0f;
         cx = insetP.x + insetS.x / 2.0f;
         cy = insetP.y + insetS.y / 1.8f;
         vec2 center(cx, cy);
         nvgBeginPath(vg);
-        nvgArc(vg, cx, cy, r, start, start + range, NVG_CW);
+        nvgArc(vg, cx, cy, radius, start, start + range, NVG_CW);
         nvgStrokeColor(vg, THEMECOL_TEXT);
         nvgStrokeWidth(vg, lineThickness);
+        nvgFillCustomPar(vg, -3);
+        nvgStrokeCustomPar(vg, -3);
         nvgStroke(vg);
         float rangeScaled = bIsBipolar ? range * 0.5f : range;
         float startOffset = bIsBipolar ? start + rangeScaled : start;
@@ -232,28 +285,30 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
                 std::swap(startOffset, endArc);
             }
             nvgBeginPath(vg);
-            nvgArc(vg, cx, cy, r, startOffset, endArc, NVG_CW);
+            nvgArc(vg, cx, cy, radius, startOffset, endArc, NVG_CW);
             nvgStrokeColor(vg, theme->getColor(valColor));
             nvgStrokeWidth(vg, lineThickness + 1.0f);
+            nvgFillCustomPar(vg, -3);
+            nvgStrokeCustomPar(vg, -3);
             nvgStroke(vg);
         }
 
         nvgBeginPath(vg);
-        nvgCircleFast(vg, cx, cy, r * 0.7f);
+        nvgCircleFast(vg, cx, cy, radius * 0.7f);
         nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
         nvgFill(vg);
         nvgBeginPath(vg);
-        nvgCircleFast(vg, cx, cy, r * 0.7f - 1.5f);
+        nvgCircleFast(vg, cx, cy, radius * 0.7f - 1.5f);
         nvgFillColor(vg, c2);
         nvgFill(vg);
         vec2 pos(cosf(end), sinf(end));
         vec2 posStart = pos * 1.5f + center;
-        vec2 posEnd   = pos * r * 0.7f + center;
+        vec2 posEnd   = pos * radius * 0.7f + center;
         nvgBeginPath(vg);
         nvgMoveTo(vg, posStart.x, posStart.y);
         nvgLineTo(vg, posEnd.x, posEnd.y);
         nvgStrokeColor(vg, theme->getColor(indColor));
-        nvgStrokeWidth(vg, math::max(1.0f, roundf((r / 8.0f) * 2.0f) / 2.0f));
+        nvgStrokeWidth(vg, math::max(1.0f, roundf((radius / 8.0f) * 2.0f) / 2.0f));
         nvgStroke(vg);
         nvgLineCap(vg, NVGlineCap::NVG_BUTT);
     }
@@ -354,6 +409,7 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
     if (fnGetDisplayValue) {
         valueDisplay = fnGetDisplayValue(value);
     }
+    if (!parent || !parent->parent || ((parent->parent->id&1) != 1))
     if (m_layout.sKnob.x > 0 && m_layout.sKnob.y > 0) {
         renderButtonAt(vg, m_layout.pKnob, m_layout.sKnob, value);
     }
@@ -365,6 +421,8 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
             renderBorder(vg, getStateFlags(), m_layout.pValue, m_layout.sValue, GuiColor::COL_BG_BRT);
         }
     }
+    if (parent && parent->parent && ((parent->parent->id&2) == 2))
+        return;
     NVGcolor fontColor;
     if (isBackgroundRendered()) {
         auto bgColor       = theme->getColor(getBackgroundColor());

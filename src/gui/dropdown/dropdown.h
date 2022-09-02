@@ -19,6 +19,10 @@ public:
         SELECT_FIRST,
         SELECT_LAST,
     };
+    guidropdownbase() : guibutton() {
+        setFlag(FLG_RENDER_BACKGROUND_INSET, true);
+        setFlag(FLG_IMPL_SPEC1, true);
+    }
     void render(NVGcontext* vg) override;
     void handleDraggedRelease(MouseEvent& evt) override {
         if (parent)

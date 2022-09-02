@@ -29,6 +29,12 @@ public:
     void handleDraggedBegin(MouseEvent&  /*evt*/) override {
         startOffset = scrollOffset;
     }
+    bool isVertical() const {
+        return dir == 1;
+    }
+    int getAxis() const {
+        return dir;
+    }
     void setScrollOffset(float f);
     float getScrollRange() {
         ivec2 vcS = ctr.getScrollTotalSize();

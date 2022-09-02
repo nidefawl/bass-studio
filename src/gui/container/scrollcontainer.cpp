@@ -1,4 +1,5 @@
 #include "scrollcontainer.h"
+#include <nanovg.h>
 #include <vector>
 #include "event.h"
 #include "gui/gui.h"
@@ -17,10 +18,18 @@ void guictr_scrollbar::render(NVGcontext* vg) {
     for (guibase* gui : guis) {
         if (gui == &scrollbar)
             continue;
+        if (!renderClipped) {
+            if (scrollbar.isVertical() && (gui->bottom() < -2 || gui->top() > size.y + 2))
+                continue;
+            if (!scrollbar.isVertical() && (gui->right() < - 2 || gui->left() > size.x + 2))
+                continue;
+        }
         if (gui->size == ivec2{ 0, 0 }) {
             log_lf(Log::L_WARN, "warning, rendering container with size 0 0\n");
         } else {
+            nvgSave(vg);
             gui->render(vg);
+            nvgRestore(vg);
         }
     }
     if (scrollbar.isVisible()) {
@@ -32,14 +41,25 @@ void guictr_scrollbar::render(NVGcontext* vg) {
 }
 
 void guictr_scrollbar::determineSize(glm::ivec2& prefSize) /* const */ {
+    ivec2 pos = { 0, 0 };
     for (guibase* gui : guis) {
         if (gui == &scrollbar)
             continue;
 
-        gui->pos  = { 0, 0 };
+        gui->pos  = pos;
         gui->size = prefSize;
         gui->determineSize(gui->size);
         gui->layout();
+        switch(getLayoutMode()) {
+            case autolayout_mode::LAYOUT_VERTICAL:
+                pos.y += gui->size.y;
+                break;
+            case autolayout_mode::LAYOUT_HORIZONTAL:
+                pos.x += gui->size.x;
+                break;
+            case LAYOUT_NONE:
+                break;
+        }
     }
     ivec2 maxSize = ivec2(0);
     for (guibase* gui : guis) {
@@ -86,10 +106,22 @@ void guictr_scrollbar::scrollOffsetChanged(int dir, float offset) {
     this->scrollOffset = 0;
     if (hasScrollbar) {
         this->scrollOffset = -offset * (contentHeight - size.y);
+        ivec2 pos = { 0, this->scrollOffset };
         for (guibase* gui : guis) {
             if (gui == &scrollbar)
                 continue;
-            gui->pos = { 0, this->scrollOffset };
+
+            gui->pos  = pos;
+            switch(getLayoutMode()) {
+                case autolayout_mode::LAYOUT_VERTICAL:
+                    pos.y += gui->size.y;
+                    break;
+                case autolayout_mode::LAYOUT_HORIZONTAL:
+                    pos.x += gui->size.x;
+                    break;
+                case LAYOUT_NONE:
+                    break;
+            }
         }
     }
 }
@@ -119,15 +151,15 @@ void guictr_scrollbar::layout() {
         if (gui == &scrollbar)
             continue;
 
-        gui->size = ivec2(cs.x, contentHeight);
+        // gui->size = ivec2(cs.x, contentHeight);
         if (hasScrollbar) {
             int newRight  = cs.x - scrollW;
             int32_t right = gui->right();
             if (right > newRight) {
                 gui->size.x = math::max(10, newRight - gui->pos.x);
+                gui->layout();
             }
         }
-        gui->layout();
     }
 }
 

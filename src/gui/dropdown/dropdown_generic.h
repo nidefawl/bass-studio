@@ -59,6 +59,8 @@ public:
         if (idx >= 0) {
             auto& option = options.at(idx);
             current = optionToString(option);
+        } else {
+            current = StringFormat("<Invalid %d>", idx);
         }
     }
     guictxtmenu_base* createContextMenu(std::vector<String>&& strOptions);

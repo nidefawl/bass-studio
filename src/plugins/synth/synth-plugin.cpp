@@ -23,6 +23,7 @@
 #include "gui/controls/textfield.h"
 #include "gui/dropdown/dropdown_generic.h"
 #include "guicolors.h"
+#include "guiconstant.h"
 #include "guiglobals.h"
 #include "logging.h"
 #include "math/seq_math.h"
@@ -806,6 +807,7 @@ namespace PluginSynth {
     };
 
     const Settings settingsOrdered[] = {
+        ShowModulationRanges,
         FilterEnabled,
         FilterDriftEnabled,
         TuningDriftEnabled,
@@ -819,7 +821,7 @@ namespace PluginSynth {
         ExprEvaluationEnabled,
         DiagnosticOutputEnabled,
     };
-    const std::array<const char*, 12> stringsSettings = {
+    const std::array<const char*, 13> stringsSettings = {
         "FilterEnabled",
         "ModulationEnabled",
         "LfoEnabled",
@@ -832,6 +834,7 @@ namespace PluginSynth {
         "FilterDriftEnabled",
         "LfoPhaseDriftEnabled",
         "Lfo1ResetByLfo2Enabled",
+        "ShowModulationRanges",
     };
 
     enum ModulationSourceType {
@@ -1204,6 +1207,8 @@ namespace PluginSynth {
         friend class PluginVST2_Synth;
         std::vector<SynthParamBase*> vecParams;
         std::vector<Modulation> modulations;
+        std::array<double, Parameters::kNumParams> modulationValuesMin;
+        std::array<double, Parameters::kNumParams> modulationValuesMax;
         std::array<VoiceUnison, NUM_POLY_VOICES> voices;
         std::array<float, Settings::NumSettings> settings{};
         std::vector<std::shared_ptr<PluginViewContainers>> views;
@@ -1243,6 +1248,7 @@ namespace PluginSynth {
             settings[Settings::Lfo1OneShotEnabled]      = true;
             settings[Settings::DiagnosticOutputEnabled] = false;
             settings[Settings::LfoShapeType]            = false;
+            // settings[Settings::ShowModulationRanges]    = false;
             if (gDebugOverrides != -1) {
                 for (int i = 0; i < Settings::NumSettings; i++) {
                     settings[i] = static_cast<float>((gDebugOverrides >> i) & 1);
@@ -1326,9 +1332,9 @@ namespace PluginSynth {
             }
 
             addFloatParam(Parameters::FmFine)->setRange(-1.0, 1.0)->setRangedValue(0.0);
-            setParamName(getParam(Parameters::FmFine), "Fm fine", "Fm fine", "Fine");
+            setParamName(getParam(Parameters::FmFine), "FM fine", "FM fine", "Fine");
             addIntParam(Parameters::FmCoarse)->setRange(0, 48)->setRangedValue(0);
-            setParamName(getParam(Parameters::FmCoarse), "Fm Coarse", "Fm Coarse", "Coarse");
+            setParamName(getParam(Parameters::FmCoarse), "FM Coarse", "FM Coarse", "Coarse");
 
             addFloatParam(Parameters::OscMix)->setRange(0.0, 1.0)->setRangedValue(1.0);
             setParamName(getParam(Parameters::OscMix), "Oscillator Mix", "OSC Mix", "Mix");
@@ -1406,7 +1412,7 @@ namespace PluginSynth {
             addEnumParam(Parameters::FilterMode)->setStrings(stringsFilterMode.begin(), stringsFilterMode.end())->setRangedValue(0);
             setParamName(getParam(Parameters::FilterMode), "Filter Mode", "Flt Mode");
             addEnumParam(Parameters::FmMode)->setStrings(stringsFMMode.begin(), stringsFMMode.end())->setRangedValue(0);
-            setParamName(getParam(Parameters::FmMode), "Fm Mode");
+            setParamName(getParam(Parameters::FmMode), "FM Mode");
 
             addIntParam(Parameters::Voices)->setRange(1, NUM_POLY_VOICES)->setRangedValue(32);
             addIntParam(Parameters::UnisonVoices)->setRange(1, NUM_UNISON_VOICES)->setRangedValue(3);
@@ -1468,25 +1474,14 @@ namespace PluginSynth {
             }
             return false;
         }
-        double resolveAverageModulation(const Modulation& modulation, Parameters _param) const {
-            double modAbsMax                   = 0.0;
-            const SynthParam_Enum* const param = GetParamEnum(Parameters::FilterMode);
-            auto filterMode                    = param->getEnumValue<FilterModes>();
-            // FilterModes mode = GetParamEnum(Parameters::FilterMode)->
-            // int32_t totalVoiceCount = 0.0;
-            for (auto polyvoice : voices) {
-                polyvoice.visitVoices([&](const auto& unisonVoice) {
-                    if (unisonVoice.isVoiceActive(filterMode)) {
-                        modAbsMax = math::absMax(modAbsMax, GetModulatedParamVoiceRaw(unisonVoice, _param));
-                        // modAbsMax = math::absMax(modAbsMax, 1.0);
-                        // totalVoiceCount++;
-                    }
-                });
-            }
-            // return totalVoiceCount == 0 ? 0.0 : (avg / totalVoiceCount);
-            return modAbsMax;
+        double getModulationAmountMin(Parameters param) const {
+            return modulationValuesMin[param];
+        }
+        double getModulationAmountMax(Parameters param) const {
+            return modulationValuesMax[param];
         }
         std::optional<std::vector<param_modulation_range_t>> getParamModulationRanges(Parameters _param) {
+            //TODO: result can be cached
             std::optional<std::vector<param_modulation_range_t>> result;
             for (auto& mod : modulations) {
                 bool bIsBipolar = IsBipolarModulation(mod);
@@ -1501,8 +1496,7 @@ namespace PluginSynth {
                                         static_cast<int32_t>(modIdx),
                                         static_cast<int32_t>(modDest.parameter),
                                         static_cast<float>(modDest.range),
-                                        bIsBipolar,
-                                        resolveAverageModulation(mod, _param) });
+                                        bIsBipolar });
                     }
                 }
             }
@@ -2419,6 +2413,10 @@ namespace PluginSynth {
             modSrcData[1 + ModulationSourceType::SrcMacro07] = GetParamFloat(Parameters::Macro07)->Value();
             modSrcData[1 + ModulationSourceType::SrcMacro08] = GetParamFloat(Parameters::Macro08)->Value();
             const bool bDiagnostic                           = getSetting(Settings::DiagnosticOutputEnabled);
+            if (getSetting(Settings::ShowModulationRanges)) {
+                std::memset(modulationValuesMax.data(), 0, modulationValuesMax.size()*sizeof(double));
+                std::memset(modulationValuesMin.data(), 0, modulationValuesMin.size()*sizeof(double));
+            }
             for (int s = 0; s < nFrames; s++) {
                 FlushMidi(s);
                 UpdateParameters(dt);
@@ -2447,6 +2445,12 @@ namespace PluginSynth {
                     UpdateVoiceModulations(uv, v, modSrcData);
                     UpdateVoiceEnvelopeModulations(uv, v);
                     UpdateVoiceEnvelopes(dt, uv, v);
+                    if (getSetting(Settings::ShowModulationRanges)) {
+                        for (int j = 0; j < Parameters::kNumParams; ++j) {
+                            modulationValuesMax[j] = math::max(modulationValuesMax[j], v.modValues[j]);
+                            modulationValuesMin[j] = math::min(modulationValuesMin[j], v.modValues[j]);
+                        }
+                    }
                 }
                 // for (int32_t polyIndex = 0; polyIndex < polyVoiceCount; ++polyIndex) {
                 //     auto& uv = voices[polyIndex];
@@ -3087,6 +3091,7 @@ namespace PluginSynth {
         const int32_t destSlotIndex;
         guidropdown_generic<String> dropdown;
         guiknob knob;
+        float rowHeight;
 
     public:
         guicontainer_modulation_slot_destination(SynthImpl* _synth, int32_t _slotIndex, int32_t _destSlotIndex)
@@ -3102,10 +3107,10 @@ namespace PluginSynth {
             knob.setIsBipolar(true);
             auto vecOpts = std::vector<String>();
             vecOpts.emplace_back("None");
-            for (auto param : parametersOrdered) {
+            for (auto param : parametersModulate) {
                 auto synthParam = synth->getParam(param);
-                if (synthParam && !synthParam->shortName.empty()) {
-                    vecOpts.push_back(synthParam->shortName);
+                if (synthParam && !synthParam->name.empty()) {
+                    vecOpts.push_back(synthParam->name);
                 } else {
                     vecOpts.push_back(StringFormat("Param %u", param));
                 }
@@ -3117,8 +3122,11 @@ namespace PluginSynth {
                 if (idx >= 0) {
                     {
                         ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
-                        auto idxOffset  = idx == 0 ? -1 : static_cast<int32_t>(parametersOrdered[idx - 1]);
-                        synth->setModulationDestination(slotIndex, destSlotIndex, idxOffset, knob.getValue());
+                        if (idx > 0 && idx-1 < sizeof(parametersModulate) / sizeof(parametersModulate[0])) {
+                            synth->setModulationDestination(slotIndex, destSlotIndex, parametersModulate[idx-1], knob.getValue());
+                        } else {
+                            synth->setModulationDestination(slotIndex, destSlotIndex, -1, knob.getValue());
+                        }
                     }
                     if (parent) {
                         parent->buttonClicked(this);
@@ -3147,9 +3155,16 @@ namespace PluginSynth {
                 if (dest.parameter < 0) {
                     dropdown.setSelectedIndex(0);
                 } else {
-                    auto idx = std::find(std::begin(parametersOrdered), std::end(parametersOrdered), dest.parameter);
-                    dbgassert(std::end(parametersOrdered) != idx);
-                    dropdown.setSelectedIndex(1 + static_cast<int32_t>(idx - std::begin(parametersOrdered)));
+                    auto idx = std::find(std::begin(parametersModulate), std::end(parametersModulate), dest.parameter);
+                    if (std::end(parametersModulate) != idx) {
+                        dropdown.setSelectedIndex(1 + static_cast<int32_t>(idx - std::begin(parametersModulate)));
+                        auto* param = synth->getParam(dest.parameter);
+                        if (param) {
+                            dropdown.setCurrentString(param->getShortName());
+                        }
+                    } else {
+                        dropdown.setSelectedIndex(-1);
+                    }
                 }
                 knob.setValueInit(static_cast<float>(dest.range));
             } else {
@@ -3170,7 +3185,10 @@ namespace PluginSynth {
             }
         }
         void determineSize(ivec2& prefSize) override {
-            prefSize.y = math::roundfS32(getLayoutHeight(this));
+            prefSize.y = math::roundfS32(rowHeight);
+        }
+        void setRowHeight(float rowHeight) {
+            this->rowHeight = rowHeight;
         }
     };
     class gui_notify_error : public guictxtmenu_base {
@@ -3256,6 +3274,7 @@ namespace PluginSynth {
         gui_textfield textfieldFunction;
         guibutton buttonInputRange;
         std::function<bool(String)> fnValidateFunction;
+        float rowHeight;
 
     public:
         guicontainer_modulation_slot_source(SynthImpl* _synth, int32_t _slotIndex, int32_t _srcSlotIndex)
@@ -3501,7 +3520,10 @@ namespace PluginSynth {
             guictr_base::buttonClicked(button);
         }
         void determineSize(ivec2& prefSize) override {
-            prefSize.y = math::roundfS32(getLayoutHeight(this));
+            prefSize.y = math::roundfS32(rowHeight);
+        }
+        void setRowHeight(float rowHeight) {
+            this->rowHeight = rowHeight;
         }
     };
     class guictr_synth_title : public guictr_base {
@@ -3539,7 +3561,7 @@ namespace PluginSynth {
         explicit guicontainer_modulation_slot(SynthImpl* synth, int32_t slotIndex)
             : synth(synth),
               slotIndex(slotIndex) {
-            padding      = 2;
+            padding      = 1;
             margin       = 0;
             sortChildren = true;
             setLabel(StringFormat("Modulation %d", slotIndex + 1));
@@ -3594,17 +3616,31 @@ namespace PluginSynth {
             }
         }
         void render(NVGcontext* vg) override {
+            // auto halfSize = vec2(size) * 0.5f;
+            // vec2 posScrolled = vec2(pos) + halfSize;
+            // nvgTransformByState(vg, 2, &posScrolled.x, &posScrolled.y);
+            // if (posScrolled.y < -halfSize.y) {
+            //     log_printf("Skip: right, bottom %d %d, in parent space: %f %f\n", right(), bottom(), posScrolled.x, posScrolled.y);
+            //     return;
+            // }
             guictr_base::render(vg);
         }
         void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset) {
             if (sizeInset.y > 0 && sizeInset.x > 0) {
                 nvgTranslateZ(vg, -2.0f);
-                nvgShapeAntiAlias(vg, 0);
+                // nvgShapeAntiAlias(vg, 0);
                 nvgBeginPath(vg);
-                nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-                nvgFillColor(vg, dbgcolorsArray[1 + (slotIndex % (dbgcolorsArraySize - 1))]);
+                nvgRect(vg, pos.x, posInset.y, size.x, getTitleHeight());
+                auto color = dbgcolorsArray[1 + (slotIndex % (dbgcolorsArraySize - 1))];
+                color.a = 0.5f;
+                nvgFillColor(vg, color);
                 nvgFill(vg);
-                nvgShapeAntiAlias(vg, USE_NANOVG_AA);
+                nvgBeginPath(vg);
+                nvgRect(vg, pos.x, posInset.y, size.x, sizeInset.y);
+                nvgStrokeWidth(vg, theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG));
+                nvgStrokeColor(vg, color);
+                nvgStroke(vg);
+                // nvgShapeAntiAlias(vg, USE_NANOVG_AA);
                 nvgTranslateZ(vg, 1.0f);
             }
         }
@@ -3621,6 +3657,15 @@ namespace PluginSynth {
             }
             prefSize.y = math::ceilfS32(getTitleHeight() + sizeTotal.y + padding * 2);
         }
+        void setRowHeight(float height) {
+            setTitleHeight(height);
+            for (auto& src : sources) {
+                src->setRowHeight(height*1.5f);
+            }
+            for (auto& dst : destinations) {
+                dst->setRowHeight(height*1.5f);
+            }
+        }
         void layout() override {
             auto cs        = getSizeContent();
             vec2 pos      = {0, getTitleHeight()};
@@ -3635,6 +3680,7 @@ namespace PluginSynth {
         }
     };
     class guicontainer_modulation : public guictr_synth_title {
+        guictr_scrollbar scrollContainerModulation;
         SynthImpl* const synth;
         std::vector<guicontainer_modulation_slot*> slots;
         bool bGuiNeedsRefresh = true;
@@ -3648,41 +3694,49 @@ namespace PluginSynth {
             setBackgroundRendered(false);
             setBackgroundRenderedInset(false);
             setFlag(FLG_RENDER_LABEL, false);
-            setCanMouseHit(false);
+            setCanMouseHit(true);
+            scrollContainerModulation.maxHeight = -1;
+            add(&scrollContainerModulation);
+            scrollContainerModulation.setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
         }
         ~guicontainer_modulation() override {
+            scrollContainerModulation.removeGuis();
             removeGuis();
             for (auto& slot : slots) {
                 delete slot;
             }
         }
         void layout() override {
+            scrollContainerModulation.pos = {0, getTitleHeight()};
+            scrollContainerModulation.size = size;
             auto cs   = getSizeContent();
-            ivec2 pos = {0, 0};
-            for (auto& slot : slots) {
-                slot->size = cs;
-                slot->determineSize(slot->size);
-                slot->pos = pos;
-                slot->layout();
-                pos.y = slot->bottom();
-            }
+            scrollContainerModulation.maxHeight = size.y;
+            scrollContainerModulation.determineSize(scrollContainerModulation.size);
+            // ivec2 pos = {0, 0};
+            // for (auto& slot : slots) {
+            //     slot->size = cs;
+            //     slot->determineSize(slot->size);
+            //     slot->pos = pos;
+            //     slot->layout();
+            //     pos.y = slot->bottom();
+            // }
             for (guibase* gui : guis) {
-                if (!stl_contains(slots, gui)) {
+                // if (!stl_contains(slots, gui)) {
                     gui->layout();
-                }
+                // }
             }
         }
         void setTitleHeight(float height) {
-            guictr_synth_title::setTitleHeight(height);
+            guictr_synth_title::setTitleHeight(isFlag(FLG_RENDER_LABEL) ? height*1.5f : 0);
             for (auto& slot : slots) {
-                slot->setTitleHeight(height);
+                slot->setRowHeight(height);
             }
         }
         void setFromSynth() {
             auto modulations = synth->getModulationCount();
             while (CtrSize(slots) <= modulations) {
                 slots.push_back(new guicontainer_modulation_slot(synth, CtrSize(slots)));
-                add(slots.back());
+                scrollContainerModulation.add(slots.back());
             }
             for (auto& slot : slots) {
                 slot->setFromSynth();
@@ -3726,11 +3780,17 @@ namespace PluginSynth {
             m_layout.inset = 2;
         }
         std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges() override {
+            if (!synth->getSetting(Settings::ShowModulationRanges)) {
+                return std::nullopt;
+            }
             auto synthParam = synth->getParam(param);
             if (synthParam) {
                 return synth->getParamModulationRanges(param);
             }
             return std::nullopt;
+        }
+        Parameters getParam() const {
+            return param;
         }
     };
     class gui_listsynthsettings : public gui_list_entry {
@@ -3762,7 +3822,9 @@ namespace PluginSynth {
         }
 
         void render(NVGcontext* vg) override {
-
+            if (size.y < 5) {
+                return;
+            }
             BaseCtrl* ctrl  = parentCtrl;
             float spacing   = INSET_TITLE;
             float x         = spacing;
@@ -3825,17 +3887,22 @@ namespace PluginSynth {
         }
     };
     class guictr_synth_param_container : public guictr_synth_title {
+        SynthImpl* const synth;
         vec2 sliderSize;
-
+        std::vector<guiknob_synthparam*> knobs;
     public:
-        guictr_synth_param_container()
-            : sliderSize(0.0f) {
+        explicit guictr_synth_param_container(SynthImpl* synth)
+            : synth(synth), sliderSize(0.0f) {
             margin  = 4;
             padding = 4;
             setBackgroundRendered(true);
             setBackgroundRenderedInset(true);
             setFlag(FLG_RENDER_LABEL, true);
             setCanMouseHit(true);
+        }
+        void addParamKnob(guiknob_synthparam* knob) {
+            knobs.push_back(knob);
+            add(knob);
         }
 
         // GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
@@ -3845,6 +3912,44 @@ namespace PluginSynth {
         //     return GuiColor::COL_BG_DRKER2;
         // }
 
+
+        void render(NVGcontext* vg) override {
+            if (!isVisible()) {
+                log_printf("warning, skip rendering container with state !isVisible()\n");
+                return;
+            }
+            if (isBackgroundRendered()) {
+                renderBackground(vg);
+            }
+            if (!setScissorTransform(vg)) {
+                return;
+            }
+            for (auto c : guis) {
+                if (!c->isVisible()) {
+                    //log_printf("warning, skip rendering child container with state !isVisible()\n");
+                    continue;
+                }
+                if (c->size.x <= 0 || c->size.y <= 0) {
+                    log_printf("warning, skip rendering child container %s with size <= 0 0\n", StringAsCStr(c->getClassName()));
+                    continue;
+                }
+                {
+                    nvgSave(vg);
+                    c->render(vg);
+                    nvgRestore(vg);
+                }
+            }
+            if (synth->getSetting(Settings::ShowModulationRanges)) {
+                for (auto k : knobs) {
+                    auto valueMin = static_cast<float>(this->synth->getModulationAmountMin(k->getParam()));
+                    auto valueMax = static_cast<float>(this->synth->getModulationAmountMax(k->getParam()));
+                    auto layout = k->getLayout();
+                    auto col = dbgcolorsArray[0];
+                    col.a = 0.5;
+                    k->renderRangeIndicator(vg, layout.pKnob, layout.sKnob, valueMin, valueMax, col, 9, 10);
+                }
+            }
+        }
         void layoutParameterGroup(ivec2& prefSize, vec2 knobSize, float titleHeight) {
             this->setTitleHeight(titleHeight);
             auto cs                = getSizeContent();
@@ -3904,7 +4009,6 @@ namespace PluginSynth {
         std::vector<_synth_gui_param_knob> vecParamUI;
         std::vector<guictr_synth_param_container*> containers;
         std::vector<_synth_gui_param_knob> vecListParam;
-        guictr_scrollbar scrollContainerModulation;
         guicontainer_modulation modulation;
         gui_list list;
         gui_list list2;
@@ -3942,8 +4046,16 @@ namespace PluginSynth {
             : guictr_base(),
               plugin(plugin),
               module(plugin->getHostSideHandle()),
-              scrollContainerModulation(),
               modulation(plugin->getSynth()),
+              ctrOsc1(plugin->getSynth()),
+              ctrOsc2(plugin->getSynth()),
+              ctrFm(plugin->getSynth()),
+              ctrFilter(plugin->getSynth()),
+              ctrAmp(plugin->getSynth()),
+              ctrEnvV(plugin->getSynth()),
+              ctrEnvM(plugin->getSynth()),
+              ctrLfo(plugin->getSynth()),
+              ctrMacro(plugin->getSynth()),
               splitter(1, 0.8f) {
             list.padding  = 4;
             list2.padding = 4;
@@ -3984,6 +4096,7 @@ namespace PluginSynth {
                     case Parameters::Osc1Wave:
                     case Parameters::Osc2Wave:
                     case Parameters::FilterMode:
+                    case Parameters::LfoWave:
                     case Parameters::VoiceMode:
                     case Parameters::FmMode:
                         type = guiknob::knobtype::KNOB_LABELED;
@@ -3992,7 +4105,7 @@ namespace PluginSynth {
                         type = guiknob::knobtype::SLIDER_LABELED;
                         break;
                 }
-                guictr_base* ctr = nullptr;
+                guictr_synth_param_container* ctr = nullptr;
                 switch (param) {
                     case Parameters::Osc1Wave:
                     case Parameters::Osc1Coarse:
@@ -4072,7 +4185,7 @@ namespace PluginSynth {
                                                    param,
                                                    type);
                 if (ctr) {
-                    ctr->add(knob);
+                    ctr->addParamKnob(knob);
                     knob->id = type == guiknob::knobtype::KNOB_LABELED ? 1 : 0;
                 }
                 vecParamUI.push_back({ param, knob, type, ctr, ivec2(0), ivec2(32, 32) });
@@ -4092,9 +4205,7 @@ namespace PluginSynth {
             }
             add(&list);
             add(&list2);
-            add(&scrollContainerModulation);
-            scrollContainerModulation.add(&modulation);
-            scrollContainerModulation.maxHeight = -1;
+            add(&modulation);
             // add(&modulation);
             add(&editfield);
             add(&splitter);
@@ -4274,16 +4385,14 @@ namespace PluginSynth {
         }
         void layout() override {
             auto cs                             = getSizeContent();
-            modulation.setTitleHeight(math::roundfS32(cs.y * 0.1f * 0.27f));
             const auto titleHeight = math::roundfS32(cs.y * 0.1f * 0.27f);
+            modulation.setTitleHeight(titleHeight);
             const auto controlsWidth            = splitter.leftOrTop(cs.x) - padding / 2;
             const auto modulationWidth          = splitter.rightOrBottom(cs.x) - padding / 2;
             splitter.pos                        = ivec2(controlsWidth - Splitter::SPLITTER_LAYOUT_THICKNESS / 2, 0);
             splitter.size                       = ivec2(Splitter::SPLITTER_LAYOUT_THICKNESS, cs.y);
-            scrollContainerModulation.size      = ivec2(modulationWidth, cs.y);
-            scrollContainerModulation.pos       = ivec2(cs.x - modulationWidth, 0);
-            scrollContainerModulation.maxHeight = cs.y;
-            scrollContainerModulation.determineSize(scrollContainerModulation.size);
+            modulation.size      = ivec2(modulationWidth, cs.y);
+            modulation.pos       = ivec2(cs.x - modulationWidth, 0);
             int scale            = 4;//!list.isVisible() && !list2.isVisible()?4:3;
             cs                   = ivec2(controlsWidth, cs.y);
             const auto numRows   = 3;
@@ -4316,9 +4425,9 @@ namespace PluginSynth {
             list.size  = ivec2(controlsWidth - list.pos.x - padding, (ctrFm.size.y - padding) / 2);
             list2.pos  = vec2(list.left(), list.bottom() + padding);
             list2.size = ivec2(controlsWidth - list2.pos.x - padding, (ctrFm.size.y - padding) / 2);
-            auto listHeight = math::roundfS32(math::clamp<float>(cs.y*0.1f*0.33f, getLayoutHeight(this) / 2, getLayoutHeight(this)));
-            list.setRowHeight(listHeight);
-            list2.setRowHeight(listHeight);
+            // auto listHeight = math::roundfS32(math::clamp<float>(cs.y*0.1f*0.33f, getLayoutHeight(this) / 2, getLayoutHeight(this)));
+            list.setRowHeight(titleHeight);
+            list2.setRowHeight(titleHeight);
 
             for (guibase* gui : guis) {
                 gui->layout();
@@ -4598,9 +4707,10 @@ namespace PluginSynth {
         PresetManager presetManager;
 
     public:
-        explicit guidropdown_select_preset(PluginVST2_Synth* plugin) : guidropdownbase(),
-                                                                       plugin(plugin),
-                                                                       presetManager(plugin->getSynth()->getPresetManager()) {
+        explicit guidropdown_select_preset(PluginVST2_Synth* plugin)
+            : guidropdownbase(),
+              plugin(plugin),
+              presetManager(plugin->getSynth()->getPresetManager()) {
         }
         String getString() override {
             return plugin->getSynth()->getPreset().name;

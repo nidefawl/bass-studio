@@ -454,11 +454,13 @@ void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) const {
 }
 
 void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const {
-    nvgBeginPath(vg);
-    nvgRect(vg, pos.x, pos.y, size.x, size.y);
-    nvgFillColor(vg, theme->getBgStrokeColor(flags));
-    nvgFill(vg);
     int n       = theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
+    if (n != 0) {
+        nvgBeginPath(vg);
+        nvgRect(vg, pos.x, pos.y, size.x, size.y);
+        nvgFillColor(vg, theme->getBgStrokeColor(flags));
+        nvgFill(vg);
+    }
     auto bgPos  = pos + ivec2(n);
     auto bgSize = size - ivec2(n * 2);
     if (bgSize.x > 0 && bgSize.y > 0) {
@@ -467,6 +469,16 @@ void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos
         nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
         nvgFillColor(vg, bgColor);
         nvgFill(vg);
+        if (flags & FLG_RENDER_BACKGROUND_INSET) {
+            NVGcolor bgLight = theme->getColor(GuiColor::COL_BG_WIDGET);
+            nvgSave(vg);
+            nvgBeginPath(vg);
+            nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
+            nvgFillColor(vg, bgLight);
+            nvgFillCustomPar(vg, (flags&FLG_IMPL_SPEC1)?-2:-1);
+            nvgFill(vg);
+            nvgRestore(vg);
+        }
     }
 }
 

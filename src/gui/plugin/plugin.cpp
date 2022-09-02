@@ -561,7 +561,7 @@ public:
             nvgFill(vg);
         }
         nvgTranslate(vg, pos.x, pos.y);
-        if (rowHeight > 32) {
+        if (rowHeight > 24) {
             setFont(vg, (int) (rowHeight * 0.4), THEMECOL_TEXT, G_TITLE_ALIGN);
             nvgText(vg, x, rowHeight * 0.25, StringAsCStr(getText()), nullptr);
             auto paramValue = effect->getParamValueDisplay(entry->idx);
@@ -768,7 +768,7 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
 
     auto contentSizeY = size.y - (isHorizontalTitle ? hpt : 0);
     int rowHeight     = 64;
-    while (contentSizeY < rowHeight * 8 && rowHeight > 8) {
+    while (contentSizeY < rowHeight * 16 && rowHeight > 8) {
         rowHeight -= 4;
     }
     int nVisibleCts = 0;
@@ -776,7 +776,7 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
         if (ctr->isVisible())
             nVisibleCts++;
     }
-    int paramsW = params.isVisible() ? nVisibleCts ? rowHeight * 6 : rowHeight * 8 : 0;
+    int paramsW = params.isVisible() ? nVisibleCts ? rowHeight * 8 : rowHeight * 10 : 0;
     prefSize.x  = paramsW + meterW;
     sizeCtrs = { 0, contentSizeY };
 
@@ -790,7 +790,11 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
     }
     prefSize.y = math::max(sizeCtrs.y, prefSize.y);
     prefSize.x += sizeCtrs.x;
-    prefSize.x = math::max(buttonOpenEditor.right()+buttonDelete.size.x+16, prefSize.x);
+    auto minWidth = buttonOpenEditor.right()+buttonDelete.size.x+16;
+    if (prefSize.x < minWidth && viewCtrs.empty()) {
+        params.size.x = (minWidth-meterW);
+    }
+    prefSize.x = math::max(minWidth, prefSize.x);
     dbgassert(prefSize.x > 0);
     dbgassert(prefSize.y > 0);
 }
@@ -878,7 +882,7 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
     contentS.y         = math::max(64, contentS.y);
     int32_t insetCtrls = INSET_TITLE;
     int rowHeight      = 64;
-    while (contentS.y < rowHeight * 8 && rowHeight > 8) {
+    while (contentS.y < rowHeight * 16 && rowHeight > 8) {
         rowHeight -= 4;
     }
     int nVisibleCts = 0;
@@ -886,7 +890,7 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
         if (ctr->isVisible())
             nVisibleCts++;
     }
-    int paramsW = params.isVisible() ? (nVisibleCts ? rowHeight*6 : rowHeight*8) : 0;
+    int paramsW = params.isVisible() ? nVisibleCts ? rowHeight * 8 : rowHeight * 10 : 0;
     int heightRow = hpt * 0.7;
     int left = INSET_TITLE;
     if (params.isVisible()) {
@@ -1057,7 +1061,7 @@ int32_t guidropdownprogram::getSelectIndex() {
 void guipluginview::setLayoutMode(int32_t layoutMode) {
     guiplugin::setLayoutMode(layoutMode);
     dropdownProgram.setVisible(this->layoutMode == 0 && effect->programNames.size());
-    params.setVisible(this->layoutMode == 0);
+    params.setVisible(this->bParamListVisible && this->layoutMode == 0);
     bParamListVisible = params.isVisible();
     for (auto* ctr : viewCtrs) {
         ctr->setVisible(layoutMode == 0);
