@@ -17,8 +17,6 @@ uniform vec4 renderInfo;
 		vec2 scissorExt;
 		vec2 scissorScale;
 		vec2 extent;
-		float radius;
-		float feather;
 		float strokeMult;
 		float strokeThr;
 		int texType;
@@ -45,12 +43,10 @@ uniform vec4 renderInfo;
 	#define scissorExt frag[8].xy
 	#define scissorScale frag[8].zw
 	#define extent frag[9].xy
-	#define radius frag[9].z
-	#define feather frag[9].w
-	#define strokeMult frag[10].x
-	#define strokeThr frag[10].y
-	#define texType int(frag[10].z)
-	#define type int(frag[10].w)
+	#define strokeMult frag[9].z
+	#define strokeThr frag[9].w
+	#define texType int(frag[10].x)
+	#define type int(frag[10].y)
 #endif
 
 
@@ -175,60 +171,39 @@ return smoothstep(0.0, 1.0, (1.0-abs(ftcoord.x*2.0-1.0))*strokeMult) * smoothste
 }
 #endif
 
-// #define SIMPLE_SHADING
-// #define ANIMATE_RESPONSIVENESS
-#define COLOR_SHADING
-
-vec4 applyShading(vec2 pt, vec2 texcoord, vec4 color) {
-	vec4 result = color;
-	float fTimeSeconds = renderInfo.x;
-	
-#ifdef ANIMATE_RESPONSIVENESS
-	float fPerS = 2.0;
-	float fTmProgr = mod(fTimeSeconds+fPerS/2.0, 4);
-	/* /\________  1s anim 4s sleep (5s cycle)*/
-	float fadeTri = clamp(1.0-abs(fTmProgr*2.0/fPerS-1.0), 0.0, 1.0);
-	fadeTri = pow(fadeTri, 2);
-	float highlightShade = 0.0 + fadeTri;
-#endif
+vec2 getBoxGradient(vec2 texcoord, float e) {
+	vec2 BorderInv = clamp(1.0-pow(abs((texcoord*2.0)-1.0), vec2(e)), 0.0, 1.0);
+	return BorderInv;
+}
+vec2 getBoxGradientSmooth(vec2 texcoord) {
+	vec2 BorderInv = 0.5 + 0.5*sqrt(4.0*texcoord*(1.0-texcoord));
+	return BorderInv;
+}
+vec2 getBoxGradientNonInverse(vec2 texcoord) {
+	vec2 Border = clamp(pow(abs((texcoord*2.0)-1.0), vec2(2.0)), 0.0, 1.0);
+	// Border.x = 1;// *= clamp(texcoord.y*1.5-0.4, 0.0, 1.0);
+	return Border;
+}
+float getAntiBandingDither(vec2 pt) {
 	float normalizedNoise = n3rand( pt.xy );
 	float antiBandingDither = (-0.5+2.0*normalizedNoise)/256.0; // for 8 bit output
-#ifdef COLOR_SHADING
-	//noninverse
-	// vec2 txF = clamp(pow(abs((texcoord*2.0)-1.0), vec2(2.0)), 0.0, 1.0);
-	//inverse is also nice
-
-	// vec2 txF = clamp(1.0-pow(abs((texcoord*2.0)-1.0), vec2(8.0)), 0.0, 1.0);
-
-	vec2 Border = 0.5 + 0.5*sqrt(4.0*texcoord*(1.0-texcoord));
-	float fPal = Border.y*Border.y;
-	float fFade = Border.x*Border.y*Border.x*Border.y*Border.x*Border.y;
-	vec3 paletteColor = palette( Border.y*Border.y, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.10,0.20) );
-	// result.rgb=mix(result.rgb, result.rgb*paletteColor.x, 0*fFade);
-	result.rgb=mix(result.rgb, paletteColor.rgb, 0.04*fFade)*1.2;
-#ifdef ANIMATE_RESPONSIVENESS
-	{
-		
-		vec2 txF = clamp(1.0-pow(abs((texcoord*2.0)-1.0), vec2(8.0)), 0.0, 1.0);
-		float f = txF.x*txF.y;//clamp(dot(Border, Border), 0.0, 1.0);
-		float pal2Idx = 1-f;
-		vec3 paletteColor2 = palette( pal2Idx+fTmProgr, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.3,0.20,0.20) );
-		result.rgb=mix(result.rgb, paletteColor2, 0.13*highlightShade);
-	}
-#endif
-	result.rgb+=vec3(antiBandingDither);
-#endif
-	// result.rgb = mix(result.rgb, paletteColor, intens*1);
-#ifdef SIMPLE_SHADING
-	vec2 Border = 0.5 + 0.5*sqrt(4.0*texcoord*(1.0-texcoord));
-	Border = pow(Border, vec2(2.0));
-	float f = dot(Border, Border);
-	result.rgb*=vec3(mix(f, 1, 0.9));
-	result.rgb+=vec3(antiBandingDither);
-#endif
-	// return result;
+	return antiBandingDither;
+}
+#define COLOR_SHADING 1
+vec4 getShadedBox(vec2 pt, vec2 Border, vec4 color, float intens) {
+	float fFade = Border.y * Border.y;
+	fFade *= Border.x;
+	vec3 paletteColor = palette( (1.0)-(Border.y*Border.y*(0.01)+0.18), vec3(0.5),vec3(0.5+intens*1.0),vec3(0.99, 0.95, 0.9),vec3(0.0,0.10,0.20) );
+	vec4 result = vec4(mix(color.rgb, paletteColor.rgb*intens, 0.2*fFade), color.a);
+	result.rgb+=vec3(getAntiBandingDither(pt));
 	return clamp(result, vec4(0.0), vec4(1.0));
 }
+#define NSVG_SHADER_FILLGRAD 0
+#define NSVG_SHADER_FILLIMG 1
+#define NSVG_SHADER_SIMPLE 2
+#define NSVG_SHADER_IMG 3
+#define NSVG_SHADER_BATCHED_TRI_COLORED 4
+#define NSVG_SHADER_BATCHED_CIRCLE_COLORED 5
 void main(void) {
 	float scissor = scissorMask(fpos);
 	vec4 result = vec4(0,0,0,1);
@@ -241,24 +216,35 @@ void main(void) {
 #endif
 #define SHADE_NANOVG
 #ifdef SHADE_NANOVG
-	//yaaa lousy branch in shader
-	if (type == 0) {                        // Gradient
-		// Calculate gradient color using box gradient
+	if (type == NSVG_SHADER_FILLGRAD) { // Gradient
 		vec2 pt = (paintMat * vec3(fpos,1.0)).xy;
 		vec2 texcoord = pt / extent;
 		fragTexCoord = texcoord;
-		float d = clamp((sdroundrect(pt, extent, radius) + feather*0.5) / feather, 0.0, 1.0);
-		vec4 color = mix(innerCol,outerCol,d);
+		vec4 color = innerCol;
 		// Combine alpha
-		float mask = strokeAlpha * scissor;
-		vec4 shadedColor;
-		if (abs(extent.x)+abs(extent.y) > 0) {
-			shadedColor = applyShading(pt, texcoord, color);
-		} else {
-			shadedColor = color;
+#ifdef COLOR_SHADING
+		if (abs(extent.x)+abs(extent.y) > 0) 
+		{
+			if (texType == 1) {
+				float dFeather = 4.0;
+				float dRadius = 3.0;
+				float dist = 1.0-clamp((sdroundrect(pt-extent*0.5, extent*0.5, dRadius)+dFeather*0.5)/dFeather, 0.0, 1.0);
+				color = getShadedBox(pt, vec2(dist), color, 0.3);
+			} else if (texType == 2) {
+				vec2 g = getBoxGradient(texcoord, 6.0);
+				float dFeather = 4.0;
+				float dRadius = 2.0;
+				float dist = 1.0-clamp((sdroundrect(pt-extent*0.5, extent*0.5, dRadius)+dFeather*0.5)/dFeather, 0.0, 1.0);
+				color = getShadedBox(pt, vec2(dist)*g, color, 0.3);
+			} else if (texType == 3) {
+				color = getShadedBox(pt, getBoxGradient(texcoord, 2.0), color, 1.0);
+			} else {
+				color = getShadedBox(pt, getBoxGradientSmooth(texcoord), color, 0.4);
+			}
 		}
-		result = shadedColor * strokeAlpha * scissor;
-	} else if (type == 1) {         // Image
+#endif
+		result = color * strokeAlpha * scissor;
+	} else if (type == NSVG_SHADER_FILLIMG) {         // Image
 		// Calculate color fron texture
 		vec2 pt = (paintMat * vec3(fpos,1.0)).xy / extent;
 		fragTexCoord = pt;
@@ -276,9 +262,9 @@ void main(void) {
 		result = vec4(0,0,0,1);
 		result.y = texture(tex, pt).y;
 #endif
-	} else if (type == 2) {         // Stencil fill
+	} else if (type == NSVG_SHADER_SIMPLE) {         // Stencil fill
 		result = vec4(1,1,1,1);
-	} else if (type == 3) {         // Textured tris
+	} else if (type == NSVG_SHADER_IMG) {         // Textured tris
 		fragTexCoord = ftcoord;
 #ifdef NANOVG_GL3
 		vec4 color = texture(tex, ftcoord);
@@ -290,23 +276,23 @@ void main(void) {
 		if (texType == 2) 
 			color = vec4(color.x);       
 		result = color * innerCol * scissor;
-	} else if (type == 4) {         // colored tri
+	} else if (type == NSVG_SHADER_BATCHED_TRI_COLORED) {         // colored tri
 		fragTexCoord = ftcoord;
 		// 0 flat
 		// 1 shaded
 		// 2 aa vertical lines
 		vec4 color = vec4(0.0);
 		if (texType == 1) {
-			color = applyShading(fpos.xy, ftcoord.xy, innerCol);
+			color = getShadedBox(fpos.xy, getBoxGradientSmooth(ftcoord.xy), innerCol, 0.3);
 		} else if (texType == 2) {
-			float distCenterX = (abs(0.5 - ftcoord.x) * 4.) * feather;
+			float distCenterX = (abs(0.5 - ftcoord.x) * 4.) * 1.0;
 			float intens = clamp(1.0 - distCenterX, 0., 1.);
 			color = innerCol * intens;
 		} else {
 			color = innerCol;
 		}
 		result = color * scissor;
-	} else if (type == 5) {         // opengl renders rect that fragment shader turns into circle
+	} else if (type == NSVG_SHADER_BATCHED_CIRCLE_COLORED) {         // circle from rectangle
 		fragTexCoord = ftcoord;
 		vec2 distCenter = abs((ftcoord-vec2(0.5))*2.0);
 		float intens = 1.0f-aastep(0.9, length(distCenter));
@@ -322,8 +308,8 @@ void main(void) {
 	result += 0.3*vec4(fragTexCoord.xy, 1.0, 1.0);
 #else
 #endif
-	if (result.a < 1.0/2048.0) 
-		discard;
+	// if (result.a < 1.0/2048.0) 
+	// 	discard;
 #ifdef NANOVG_GL3
 	outColor = result;
 #else

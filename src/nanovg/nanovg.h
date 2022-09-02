@@ -249,8 +249,8 @@ void nvgReset(NVGcontext* ctx);
 // Render styles
 //
 // Fill and stroke render style can be either a solid color or a paint which is a gradient or a pattern.
-// Solid color is simply defined as a color value, different kinds of paints can be created
-// using nvgLinearGradient(), nvgBoxGradient(), nvgRadialGradient() and nvgImagePattern().
+// Solid color is simply defined as a color value, paints can be created
+// using nvgImagePattern().
 //
 // Current render style can be saved and restored using nvgSave() and nvgRestore().
 
@@ -269,7 +269,8 @@ NVGcolor nvgGetCurrentAndSetFillColor(NVGcontext* ctx, NVGcolor color);
 
 // Sets current fill style to a paint, which can be a one of the gradients or a pattern.
 void nvgFillPaint(NVGcontext* ctx, NVGpaint paint);
-
+void nvgFillCustomPar(NVGcontext* ctx, int customPar);
+void nvgStrokeCustomPar(NVGcontext* ctx, int customPar);
 
 void nvgCachePath(NVGcontext* ctx, int enabled);
 void nvgReleaseCacheResult(nvg_shape_cache* ppCache);
@@ -422,26 +423,6 @@ int nvgGetGLImageHandle(NVGcontext* ctx, int image);
 // NanoVG supports four types of paints: linear gradient, box gradient, radial gradient and image pattern.
 // These can be used as paints for strokes and fills.
 
-// Creates and returns a linear gradient. Parameters (sx,sy)-(ex,ey) specify the start and end coordinates
-// of the linear gradient, icol specifies the start color and ocol the end color.
-// The gradient is transformed by the current transform when it is passed to nvgFillPaint() or nvgStrokePaint().
-NVGpaint nvgLinearGradient(NVGcontext* ctx, float sx, float sy, float ex, float ey,
-						   NVGcolor icol, NVGcolor ocol);
-
-// Creates and returns a box gradient. Box gradient is a feathered rounded rectangle, it is useful for rendering
-// drop shadows or highlights for boxes. Parameters (x,y) define the top-left corner of the rectangle,
-// (w,h) define the size of the rectangle, r defines the corner radius, and f feather. Feather defines how blurry
-// the border of the rectangle is. Parameter icol specifies the inner color and ocol the outer color of the gradient.
-// The gradient is transformed by the current transform when it is passed to nvgFillPaint() or nvgStrokePaint().
-NVGpaint nvgBoxGradient(NVGcontext* ctx, float x, float y, float w, float h,
-						float r, float f, NVGcolor icol, NVGcolor ocol);
-
-// Creates and returns a radial gradient. Parameters (cx,cy) specify the center, inr and outr specify
-// the inner and outer radius of the gradient, icol specifies the start color and ocol the end color.
-// The gradient is transformed by the current transform when it is passed to nvgFillPaint() or nvgStrokePaint().
-NVGpaint nvgRadialGradient(NVGcontext* ctx, float cx, float cy, float inr, float outr,
-						   NVGcolor icol, NVGcolor ocol);
-
 // Creates and returns an image pattern. Parameters (ox,oy) specify the left-top location of the image pattern,
 // (ex,ey) the size of one image, angle rotation around the top-left corner, image is handle to the image to render.
 // The gradient is transformed by the current transform when it is passed to nvgFillPaint() or nvgStrokePaint().
@@ -465,7 +446,7 @@ void nvgScissor(NVGcontext* ctx, float x, float y, float w, float h);
 // rectangle and the previous scissor rectangle transformed in the current
 // transform space. The resulting shape is always rectangle.
 void nvgIntersectScissor(NVGcontext* ctx, float x, float y, float w, float h);
-
+void nvgTransformByState(NVGcontext* ctx, int offsetState, float* x, float* y);
 // Reset and disables scissoring.
 void nvgResetScissor(NVGcontext* ctx);
 

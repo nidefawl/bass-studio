@@ -17,6 +17,7 @@
 //
 
 #include "assert_dbg.h"
+#include <nanovg_min.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
@@ -901,99 +902,6 @@ int nvgGetGLImageHandle(NVGcontext* ctx, int image)
 	return ctx->params.renderGetGLImageHandle(ctx->params.userPtr, image);
 }
 
-
-NVGpaint nvgLinearGradient(NVGcontext* ctx,
-								  float sx, float sy, float ex, float ey,
-								  NVGcolor icol, NVGcolor ocol)
-{
-	NVGpaint p;
-	float dx, dy, d;
-	const float large = 1e5;
-	NVG_NOTUSED(ctx);
-	memset(&p, 0, sizeof(p));
-
-	// Calculate transform aligned to the line
-	dx = ex - sx;
-	dy = ey - sy;
-	d = sqrtf(dx*dx + dy*dy);
-	if (d > 0.0001f) {
-		dx /= d;
-		dy /= d;
-	} else {
-		dx = 0;
-		dy = 1;
-	}
-
-	p.xform[0] = dy; p.xform[1] = -dx;
-	p.xform[2] = dx; p.xform[3] = dy;
-	p.xform[4] = sx - dx*large; p.xform[5] = sy - dy*large;
-
-	p.extent[0] = large;
-	p.extent[1] = large + d*0.5f;
-
-	p.radius = 0.0f;
-
-	p.feather = nvg__maxf(1.0f, d);
-
-	p.innerColor = icol;
-	p.outerColor = ocol;
-
-	return p;
-}
-
-NVGpaint nvgRadialGradient(NVGcontext* ctx,
-								  float cx, float cy, float inr, float outr,
-								  NVGcolor icol, NVGcolor ocol)
-{
-	NVGpaint p;
-	float r = (inr+outr)*0.5f;
-	float f = (outr-inr);
-	NVG_NOTUSED(ctx);
-	memset(&p, 0, sizeof(p));
-
-	nvgTransformIdentity(p.xform);
-	p.xform[4] = cx;
-	p.xform[5] = cy;
-
-	p.extent[0] = r;
-	p.extent[1] = r;
-
-	p.radius = r;
-
-	p.feather = nvg__maxf(1.0f, f);
-
-	p.innerColor = icol;
-	p.outerColor = ocol;
-
-	return p;
-}
-
-NVGpaint nvgBoxGradient(NVGcontext* ctx,
-							   float x, float y, float w, float h, float r, float f,
-							   NVGcolor icol, NVGcolor ocol)
-{
-	NVGpaint p;
-	NVG_NOTUSED(ctx);
-	memset(&p, 0, sizeof(p));
-
-	nvgTransformIdentity(p.xform);
-	p.xform[4] = x+w*0.5f;
-	p.xform[5] = y+h*0.5f;
-
-	p.extent[0] = w*0.5f;
-	p.extent[1] = h*0.5f;
-
-	p.radius = r;
-
-	p.feather = nvg__maxf(1.0f, f);
-
-	p.innerColor = icol;
-	p.outerColor = ocol;
-
-	return p;
-}
-
-
 NVGpaint nvgImagePattern(NVGcontext* ctx,
 								float cx, float cy, float w, float h, float angle,
 								int image, float alpha)
@@ -1047,7 +955,12 @@ static void nvg__isectRects(float* dst,
 	dst[2] = nvg__maxf(0.0f, maxx - minx);
 	dst[3] = nvg__maxf(0.0f, maxy - miny);
 }
-
+void nvgTransformByState(NVGcontext* ctx, int offsetState, float* x, float* y) {
+	if (ctx->nstates > offsetState) {
+		NVGstate* state = &ctx->states[ctx->nstates-offsetState-1];
+		nvgTransformPoint(x, y, state->xform, *x, *y);
+	}
+}
 void nvgIntersectScissor(NVGcontext* ctx, float x, float y, float w, float h)
 {
 	dbgassert(w>0&&h>0);
@@ -2356,6 +2269,16 @@ void nvgRect(NVGcontext* ctx, float x, float y, float w, float h)
 	nvg__setPaintTransformTranslate(ctx, x, y);
 	nvg__setPaintExtent(ctx, w, h);
 	nvg__appendCommands(ctx, vals, NVG_COUNTOF(vals));
+}
+void nvgFillCustomPar(NVGcontext* ctx, int customPar)
+{
+	NVGstate* state = nvg__getState(ctx);
+	state->fill.customPar = customPar;
+}
+void nvgStrokeCustomPar(NVGcontext* ctx, int customPar)
+{
+	NVGstate* state = nvg__getState(ctx);
+	state->stroke.customPar = customPar;
 }
 
 void nvgRoundedRect(NVGcontext* ctx, float x, float y, float w, float h, float r)

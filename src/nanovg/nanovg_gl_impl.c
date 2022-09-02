@@ -124,8 +124,6 @@ struct GLNVGfragUniforms {
 		float scissorExt[2];
 		float scissorScale[2];
 		float extent[2];
-		float radius;
-		float feather;
 		float strokeMult;
 		float strokeThr;
 		int texType;
@@ -143,8 +141,6 @@ struct GLNVGfragUniforms {
 				float scissorExt[2];
 				float scissorScale[2];
 				float extent[2];
-				float radius;
-				float feather;
 				float strokeMult;
 				float strokeThr;
 				float texType;
@@ -1007,7 +1003,7 @@ static int glnvg__convertPaint(GLNVGcontext* gl, GLNVGfragUniforms* frag, NVGpai
 	frag->strokeMult = (width*0.5f + fringe*0.5f) / fringe;
 	frag->strokeThr = strokeThr;
 
-	if (paint->image != 0 || paint->customPar) {
+	if (paint->image != 0 || paint->customPar > 0) {
 		tex = glnvg__findTexture(gl, paint->image);
 		if (tex != NULL) {
 			frag->type = NSVG_SHADER_FILLIMG;
@@ -1037,15 +1033,16 @@ else
 		} else {
 			frag->type = NSVG_SHADER_BATCHED_TRI_COLORED;
 			frag->texType = paint->customPar;
-			frag->feather = paint->feather;
+			// frag->feather = paint->feather;
 		}
 
 
 //		printf("frag->texType = %d\n", frag->texType);
 	} else {
 		frag->type = NSVG_SHADER_FILLGRAD;
-		frag->radius = paint->radius;
-		frag->feather = paint->feather;
+		// frag->radius = paint->radius;
+		// frag->feather = paint->feather;
+		frag->texType = -paint->customPar;
 		nvgTransformInverse(invxform, paint->xform);
 	}
 

@@ -308,19 +308,23 @@ public:
         paint.innerColor = rgbToNvg(0xFF00FF);
         paint.outerColor = rgbToNvg(0xFF00FF);
         paint.customPar  = 1234;
-        //NVGpaint paintQuad = nvgBoxGradient(vg, 0, 0, 100, 10, 5.0f, 0.5f, rgbToNvg(0xFFFF00FF), rgbToNvg(0xFF121212));
-        //nvgSetPaintColor(vg, &paintQuad, rgbToNvg(0xFFFF00FF));
 
-        {
+/*         {
             ivec2 qSize(100, 10);
             seq_rand rand;
             for (int i = 0; i < 6; i++) {
+                nvgBeginPath(vg);
                 //ivec2 qSize(10 + rand.rng_rand(7) * 20, 10 + rand.rng_rand(7) * 20);
-                nvgBatchedRect(vg, rand.rng_rand(1000), rand.rng_rand(1000), qSize.x, qSize.y);
+                // nvgBatchedRect(vg, rand.rng_rand(1000), rand.rng_rand(1000), qSize.x, qSize.y);
+                ivec2 qPos = {rand.rng_rand(1000), rand.rng_rand(1000)};
+                qSize.y = rand.rng_rand(60)+10;
+                NVGpaint paintGradient = nvgBoxGradient(vg, qPos.x, qPos.y, qSize.x, qSize.y, 5.0f, 10.f, nvgRGBA(0, 244, 0, 255), nvgRGBA(244, 0, 0, 255));
+                nvgRect(vg, qPos.x, qPos.y , qSize.x, qSize.y);
+                nvgFillPaint(vg, paintGradient);
+                nvgFill(vg);
             }
-            nvgFillPaint(vg, paint);
-            nvgBatchedRender(vg);
-        }
+            // nvgBatchedRender(vg);
+        } */
         {
             ivec2 qSize(20);
             seq_rand rand;
