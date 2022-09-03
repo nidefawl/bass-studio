@@ -237,7 +237,9 @@ void main(void) {
 				float dist = 1.0-clamp((sdroundrect(pt-extent*0.5, extent*0.5, dRadius)+dFeather*0.5)/dFeather, 0.0, 1.0);
 				color = getShadedBox(pt, vec2(dist)*g, color, 0.3);
 			} else if (texType == 3) {
-				color = getShadedBox(pt, getBoxGradient(texcoord, 2.0), color, 1.0);
+				color = getShadedBox(pt, getBoxGradient(texcoord, 2.0), color, 0.8);
+			} else if (texType == 4) {
+				color = getShadedBox(pt, getBoxGradient(texcoord, 2.0), color, -0.8);
 			} else {
 				color = getShadedBox(pt, getBoxGradientSmooth(texcoord), color, 0.4);
 			}
