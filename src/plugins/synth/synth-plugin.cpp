@@ -836,7 +836,12 @@ namespace PluginSynth {
         "Lfo1ResetByLfo2Enabled",
         "ShowModulationRanges",
     };
-
+    enum ModulationType {
+        Function,
+        Constant,
+        ModulationSource,
+        NumModulationTypes,
+    };
     enum ModulationSourceType {
         VolEnv,
         ModEnv,
@@ -855,40 +860,57 @@ namespace PluginSynth {
         SrcMacro06,
         SrcMacro07,
         SrcMacro08,
-        NumModulationSources
+        Lfo1Ramp,
+        NumModulationSources,
     };
-    enum ModulationType {
+    const std::array<int32_t, 1 + ModulationSourceType::NumModulationSources + (ModulationType::NumModulationTypes-1)> modSrcTypesOrdered = {
+        -1, // None
         Function,
         Constant,
-        ModulationSource,
-        NumModulationTypes
+        2 + VolEnv,
+        2 + ModEnv,
+        2 + Lfo1,
+        2 + Lfo1Ramp,
+        2 + Lfo2,
+        2 + Velocity,
+        2 + VoiceIndex,
+        2 + UnisonVoiceIndex,
+        2 + Pitch,
+        2 + Note,
+        2 + SrcMacro01,
+        2 + SrcMacro02,
+        2 + SrcMacro02,
+        2 + SrcMacro04,
+        2 + SrcMacro05,
+        2 + SrcMacro06,
+        2 + SrcMacro07,
+        2 + SrcMacro08,
     };
-    const std::array<const char*, 20> stringsModSource = {
+    const std::array<const char*, 1 + ModulationSourceType::NumModulationSources + (ModulationType::NumModulationTypes-1)> stringsModSource = {
         "None",
         "Function",
         "Constant",
         "VolEnv",
         "ModEnv",
         "Lfo1",
+        "Lfo1Ramp",
+        "Lfo2",
         "Velocity",
         "VoiceIndex",
         "UnisonVoiceIndex",
         "Pitch",
         "Note",
-        "Lfo2",
-        "Macro 1",
-        "Macro 2",
-        "Macro 3",
-        "Macro 4",
-        "Macro 5",
-        "Macro 6",
-        "Macro 7",
-        "Macro 8"
+        "SrcMacro01",
+        "SrcMacro02",
+        "SrcMacro03",
+        "SrcMacro04",
+        "SrcMacro05",
+        "SrcMacro06",
+        "SrcMacro07",
+        "SrcMacro08",
     };
-    static_assert(stringsModSource.size() ==
-                          static_cast<size_t>(ModulationSourceType::NumModulationSources) +
-                                  static_cast<size_t>(ModulationType::NumModulationTypes) + 1 - 1,
-                  "stringsModSource size mismatch");
+    static_assert(stringsModSource.size() == modSrcTypesOrdered.size(), "stringsModSource.size() does not match modSrcTypesOrdered.size()");
+
     static constexpr auto MathExprInputLen                               = 1 + ModulationSourceType::NumModulationSources;
     const std::array<const char*, MathExprInputLen> stringsShortSrcNames = {
         "x",
@@ -908,7 +930,8 @@ namespace PluginSynth {
         "m5",
         "m6",
         "m7",
-        "m8"
+        "m8",
+        "r1"
     };
 
     enum ModulationOperator {
@@ -1027,7 +1050,7 @@ namespace PluginSynth {
         double valDouble = 0.0;
         double fmin      = 0.0;
         double fmax      = 1.0;
-        SynthParam_Float* setRange(float _fmin, float _fmax) {
+        SynthParam_Float* setRange(double _fmin, double _fmax) {
             fmin = _fmin;
             fmax = _fmax;
             return this;
@@ -1373,9 +1396,9 @@ namespace PluginSynth {
             setParamName(getParam(Parameters::ModEnvR), "Mod envelope release time", "EnvM Rel", "Release");
             setParamName(getParam(Parameters::ModEnvV), "Mod envelope velocity sensitivity", "EnvM Vel", "Velocity");
 
-            addFloatParam(Parameters::LfoShape)->setRange(-1.0f, 1.0f)->setRangedValue(0.0);
+            addFloatParam(Parameters::LfoShape)->setRange(-1.0, 1.0)->setRangedValue(0.0);
             addFloatParam(Parameters::LfoFrequency)->setRange(1 / 64.0, 16.0)->setRangedValue(4.0);
-            addFloatParam(Parameters::LfoDelay)->setRange(0.001f, 1000.0)->setRangedValue(0.1);
+            addFloatParam(Parameters::LfoDelay)->setRange(0.0, 1.0)->setRangedValue(0.05);
             addFloatParam(Parameters::LfoPhase)->setRange(-1.0, 1.0)->setRangedValue(0.0);
             setParamName(getParam(Parameters::LfoShape), "LFO shape", "LFO shape", "Shape");
             setParamName(getParam(Parameters::LfoFrequency), "LFO frequency", "LFO freq", "Frequency");
@@ -1804,9 +1827,9 @@ namespace PluginSynth {
             voice.visitVoices([this, &voice, bTriggerMono](Voice& v) {
                 UpdateVoiceEnvelopeModulations(voice, v);
                 UpdateVoiceModulations(voice, v, modSrcData);
-                bool resetOscs      = v.volEnv.stage >= EnvelopeStages::Idle;
-                bool resetEnvelopes = v.volEnv.stage >= EnvelopeStages::Idle;
-                bool resetLfos      = v.volEnv.stage >= EnvelopeStages::Release;
+                bool resetOscs      = true;//v.volEnv.stage >= EnvelopeStages::Idle;
+                bool resetEnvelopes = true;//v.volEnv.stage >= EnvelopeStages::Idle;
+                bool resetLfos      = true;//v.volEnv.stage >= EnvelopeStages::Release;
                 
                 v.Start(resetOscs, resetEnvelopes);
                 if (resetLfos) {
@@ -1998,11 +2021,19 @@ namespace PluginSynth {
                 for (int i = 0; i < LEN_USED; i++) {
                     *envParamValsPtr[i] = double(envParamValsScaled[i]);
                 }
-                voice.volEnv.s = GetModulatedParamVoice(voice, Parameters::VolEnvS);
-                voice.modEnv.s = GetModulatedParamVoice(voice, Parameters::ModEnvS);
-                auto p         = GetParamFloat(Parameters::LfoDelay);
-                voice.lfoEnv.a = p->GetMin() + p->GetMax() - (p->ValueModulated(voice.modValues[p->enumParam]));
             }
+            voice.volEnv.s = GetModulatedParamVoice(voice, Parameters::VolEnvS);
+            voice.modEnv.s = GetModulatedParamVoice(voice, Parameters::ModEnvS);
+            auto p         = GetParamFloat(Parameters::LfoDelay);
+            double rampVal = 1.0 - p->ValueModulated(voice.modValues[p->enumParam]);
+            rampVal = (rampVal*rampVal);
+            rampVal = (rampVal*rampVal);
+            double rmpMin = 0.1;
+            double rmpMax = 4000;
+            double rampAtt = math::clamp(rmpMin+(rampVal)*(rmpMax-rmpMin), rmpMin, rmpMax);
+            voice.lfoEnv.a = rampAtt;
+            // log_printf("rampAtt %f\n", rampAtt);
+            // voice.lfoEnv.a = p->GetMin() + p->GetMax() - (p->ValueModulated(voice.modValues[p->enumParam]));
 #else
             double envParamVals[LEN_SIMD]{};
             double envParamValsScaled[LEN_SIMD]{};
@@ -2143,6 +2174,7 @@ namespace PluginSynth {
             modSrcData[1 + ModulationSourceType::VolEnv]           = voice.volEnv.value;
             modSrcData[1 + ModulationSourceType::ModEnv]           = voice.modEnv.value;
             modSrcData[1 + ModulationSourceType::Lfo1]             = voice.lfoValue;
+            modSrcData[1 + ModulationSourceType::Lfo1Ramp]         = voice.lfoEnv.value;
             modSrcData[1 + ModulationSourceType::Velocity]         = voice.velocity;
             modSrcData[1 + ModulationSourceType::VoiceIndex]       = this->polyVoiceCount < 2 ? 0.5 : vu.indexPoly / static_cast<double>(this->polyVoiceCount - 1);
             modSrcData[1 + ModulationSourceType::UnisonVoiceIndex] = this->unisonVoiceCount < 2 ? 0.5 : voice.indexUnison / static_cast<double>(this->unisonVoiceCount - 1);
@@ -2366,7 +2398,7 @@ namespace PluginSynth {
                 auto res = static_cast<SynthParam_Float*>(vecParams[Parameters::FilterResonance])->ValueModulated(voice.modValues[Parameters::FilterResonance]);
                 out      = voice.filter.Process(dt, out, filtermode, cutoff, res);
             }
-            data = voice.lfoValue;
+            data = voice.lfoEnv.value;
             // out *= volEnvValue;
 
             return out;
@@ -2487,7 +2519,7 @@ namespace PluginSynth {
                         }
                         outR += voice * sqrt(pan);
                         if (bDiagnostic) {
-                            if (unisonIndex == 0 && uv.seqNr == 1) {
+                            if (unisonIndex == 0/*  && uv.seqNr == 1 */) {
                                 outL = vData;
                             }
                         } else {
@@ -3308,8 +3340,8 @@ namespace PluginSynth {
             }
             {
                 auto vecOpts = std::vector<String>();
-                for (const auto& opt : stringsModSource) {
-                    vecOpts.emplace_back(opt);
+                for (auto& str : stringsModSource) {
+                    vecOpts.emplace_back(str);
                 }
                 dropdownSource.setZOrder(1);
                 dropdownSource.setOptions(vecOpts);
@@ -3318,7 +3350,11 @@ namespace PluginSynth {
                     if (idx >= 0) {
                         {
                             ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
-                            synth->setModulationType(slotIndex, srcSlotIndex, idx - 1);
+                            if (idx < modSrcTypesOrdered.size()) {
+                                synth->setModulationType(slotIndex, srcSlotIndex, modSrcTypesOrdered[idx]);
+                            } else {
+                                synth->setModulationType(slotIndex, srcSlotIndex, -1);
+                            }
                         }
                         if (parent) {
                             parent->buttonClicked(this);
@@ -3414,9 +3450,15 @@ namespace PluginSynth {
                     case ModulationType::Constant:
                         dropdownSource.setSelectedIndex(static_cast<int32_t>(src.type) + 1);
                         break;
-                    case ModulationType::ModulationSource:
-                        dropdownSource.setSelectedIndex(static_cast<int32_t>(src.src) + 3);
+                    case ModulationType::ModulationSource: {
+                        auto idx = std::find(std::begin(modSrcTypesOrdered), std::end(modSrcTypesOrdered), 2+static_cast<int32_t>(src.src));
+                        if (std::end(modSrcTypesOrdered) != idx) {
+                            dropdownSource.setSelectedIndex(static_cast<int32_t>(idx - std::begin(modSrcTypesOrdered)));
+                        } else {
+                            dropdownSource.setSelectedIndex(0);
+                        }
                         break;
+                    }
                     default:
                         dropdownSource.setSelectedIndex(0);
                         break;
