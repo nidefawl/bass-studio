@@ -141,6 +141,7 @@ public:
     int revision     = -1;
     guictr_effectlibrary() : guictr_base() {
         guiType = CTR_TYPE_EFFECTLIBRARY;
+        setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
         setBackgroundRendered(false);
         padding = 0;
         margin  = 0;
@@ -168,18 +169,6 @@ public:
         ctr_effectlist.update();
         if (dawCtrl) {
             this->revision = dawCtrl->getDaw()->getPluginDatabase().getRevision();
-        }
-    }
-
-    void layout() override {
-        ctr_pluginlist.size.x = size.x;
-        ctr_pluginlist.size.y = size.y / 2;
-        ctr_effectlist.size.x = size.x;
-        ctr_effectlist.size.y = size.y / 2;
-        ctr_pluginlist.pos    = { 0, 0 };
-        ctr_effectlist.pos    = { 0, ctr_pluginlist.bottom() };
-        for (guibase* gui : guis) {
-            gui->layout();
         }
     }
 };
