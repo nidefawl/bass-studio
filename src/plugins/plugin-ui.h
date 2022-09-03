@@ -26,7 +26,7 @@ class guictr_vst2_simple : public guictr_base {
         setBackgroundRendered(true);
         setCanMouseHit(true);
         padding = 4;
-        margin  = 4;
+        margin  = 2;
         editfield.setVisible(false);
         editfield.setAlignment(gui_textfield::Alignment::Center);
         editfield.setReturnCommits(true);
@@ -39,7 +39,7 @@ public:
         const int32_t numParams = module->getNumParameters();
         knobs.reserve(numParams);
         for (int32_t i = 1; i < numParams; ++i) {
-            knobs.push_back(new guiknob_pluginparam(i));
+            knobs.push_back(new guiknob_pluginparam(i, -1, guiknob::knobtype::SLIDER_LABELED));
             add(knobs.back());
         }
         add(&editfield);
@@ -59,13 +59,16 @@ public:
 #else
             int32_t paramIdx = PARAM_OFFSET_EXTERNAL+i;
 #endif
-            knobs.push_back(new guiknob_pluginparam(paramIdx));
+            knobs.push_back(new guiknob_pluginparam(paramIdx, -1, guiknob::knobtype::SLIDER_LABELED));
             add(knobs.back());
         }
         add(&editfield);
     }
     ~guictr_vst2_simple() override {
         removeGuis();
+    }
+    void layoutEntries(ivec2 dir) override {
+        guictr_base::layoutEntries(dir);
     }
     void buttonClicked(guibase* button) override {
         auto param = dynamic_cast<guiknob_pluginparam*>(button);
@@ -132,5 +135,9 @@ public:
             knob->setValueInit(value);
         }
 #endif
+    }
+    void getSizeScale(int& w, int& h) const {
+        w = 100*knobs.size();
+        h = 300;
     }
 };

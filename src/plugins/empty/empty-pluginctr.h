@@ -35,6 +35,7 @@ namespace PluginEmptyVST2 {
         void onGuiOpen();
         void onGuiClose();
         void onSetParameter(int32_t index, float value);
+        void getSizeScale(int& w, int& h) const;
     };
 
 }// namespace PluginEmptyVST2

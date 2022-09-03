@@ -63,7 +63,6 @@ public:
         ctr_main.onSetParameter(index, value);
     }
     void getFixedSize(int32_t* w, int32_t* h) override {
-        *w = (int32_t) width;
-        *h = (int32_t) height;
+        ctr_main.getSizeScale(*w, *h);
     }
 };

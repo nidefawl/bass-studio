@@ -211,7 +211,7 @@ namespace PluginLatency {
         return new PluginVST2_Latency(audioMaster);
     }
     std::shared_ptr<PluginViewContainers> PluginVST2_Latency::createView() {
-        auto view = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, PluginVST2_Latency>>(this);
+        auto view = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, PluginVST2_Latency>>(this, 50, 150);
         this->views.push_back(view);
         return view;
     }

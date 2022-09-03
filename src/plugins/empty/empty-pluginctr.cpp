@@ -74,7 +74,11 @@ namespace PluginEmptyVST2 {
     void guictr_emptyvst::onGuiClose() {
     }
 
-    inline void guictr_emptyvst::onSetParameter(int32_t index, float value) {
+    void guictr_emptyvst::onSetParameter(int32_t index, float value) {
+    }
+    void guictr_emptyvst::getSizeScale(int& w, int& h) const {
+        w = 100;
+        h = 100;
     }
 
 

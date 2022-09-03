@@ -150,7 +150,7 @@ std::shared_ptr<PluginViewContainers> module_gain::createInternalView() {
             }
         }
     }
-    auto v = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_gain>>(this, 320, 320);
+    auto v = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_gain>>(this, 100, 150);
     this->views.push_back(v);
     return v;
 }

@@ -167,6 +167,7 @@ guiplugin::guiplugin(effectbase* _effect)
     : guictr_base(gui_type::CTR_TYPE_PLUGIN),
       effect(_effect),
       guiMeter(&_effect->meter) {
+    isHorizontalTitle = false;
     padding = 0;
     margin  = 0;
     text[0] = 0;
@@ -201,16 +202,19 @@ void guiplugin::rightClicked(MouseEvent& evt, guibase* button) {
     }
 }
 void guiplugin::layout() {
-    const auto hpt = static_cast<float>(theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT));
-    auto buttonSize = hpt * 0.8f;
-    auto inset1 = (hpt - buttonSize) * 0.5f;
+
+    const auto heightTitle = static_cast<float>(theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT));
+    const auto hpt = isHorizontalTitle ? heightTitle : 0;
+    const auto wpt = isHorizontalTitle ? 0 : heightTitle;
+    auto buttonSize = heightTitle * 0.8f;
+    auto inset1 = (heightTitle - buttonSize) * 0.5f;
     auto btnPos = ivec2(math::roundfS32(inset1));
     auto iButtonSize = math::roundfS32(buttonSize);
     buttonLayout.pos  = btnPos;
     btnPos[isHorizontalTitle ? 0 : 1] += iButtonSize;
     for (auto btn : guiButtonsTitlebar) {
         btn->size = { iButtonSize, iButtonSize };
-        btn->setRadius(hpt / 3.f);
+        btn->setRadius(heightTitle / 3.f);
         if (btn == &buttonLayout) {
             continue;
         }
@@ -227,16 +231,12 @@ void guiplugin::layout() {
     }
 
 
-    int32_t meterW = math::max(16, (int32_t) (theme->get(GuiConstant::CONST_METER_WIDTH) * hpt / 32.0));
-    ivec2 contentS;
-    ivec2 contentP;
+    int32_t meterW = math::max(16, (int32_t) (theme->get(GuiConstant::CONST_METER_WIDTH) * heightTitle / 32.0));
+    auto contentP  = ivec2(wpt, hpt);
+    auto contentS  = ivec2(size.x - wpt - meterW, size.y - hpt);
     if (isHorizontalTitle) {
-        contentP  = ivec2(0, hpt);
-        contentS  = ivec2(size.x - meterW, size.y - hpt);
         titlePosX = btnPos.x;
     } else {
-        contentP  = ivec2(hpt, 0);
-        contentS  = ivec2(size.x - hpt - meterW, size.y);
         titlePosX = buttonDelete.top();
     }
     guiMeter.pos  = ivec2(size.x - meterW, hpt);
@@ -562,17 +562,23 @@ public:
         }
         nvgTranslate(vg, pos.x, pos.y);
         if (rowHeight > 24) {
-            setFont(vg, (int) (rowHeight * 0.4), THEMECOL_TEXT, G_TITLE_ALIGN);
-            nvgText(vg, x, rowHeight * 0.25, StringAsCStr(getText()), nullptr);
             auto paramValue = effect->getParamValueDisplay(entry->idx);
             String paramValueStr = paramValue.value;
             if (!paramValue.unit.empty()) {
                 paramValueStr += " " + paramValue.unit;
             }
-            nvgText(vg, x, rowHeight * 0.5 + rowHeight * 0.25, StringAsCStr(paramValueStr), nullptr);
+
+            renderTextLabel(vg, vec2(x, rowHeight*0.25f),
+                                vec2(size.x-x, rowHeight*0.5f), 
+                                getText(), theme, rowHeight * 0.5f, theme->getColor(GuiColor::COL_TEXT), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+            renderTextLabel(vg, vec2(x, rowHeight * 0.5f + rowHeight*0.25f),
+                                vec2(size.x-x, rowHeight*0.5f), 
+                                paramValueStr, theme, rowHeight * 0.5f, theme->getColor(GuiColor::COL_TEXT), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         } else {
-            setFont(vg, (int) (rowHeight * 0.8), THEMECOL_TEXT, G_TITLE_ALIGN);
-            nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), nullptr);
+            renderTextLabel(vg, vec2(x, rowHeight*0.5f),
+                        vec2(size.x-x, rowHeight), 
+                        getText(), theme, rowHeight, theme->getColor(GuiColor::COL_TEXT), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+
         }
         nvgTranslate(vg, -pos.x, -pos.y);
 
@@ -681,7 +687,11 @@ void guipluginview::updateParamList(const String& strParamNameFilter) {
 }
 guipluginview::guipluginview(effectbase* _effect)
     : guiplugin(_effect), effect(_effect), dropdownProgram(_effect) {
+    params.setVisible(_effect->getModuleType() == PLUGIN_TYPE_VST);
+    // this->isHorizontalTitle = !params.isVisible();
     params.setRowHeight(48);
+    params.margin = 2;
+    params.padding = 4;
     textFieldSearchBox.setParent(this);
     textFieldSearchBox.setChangeCallback([this](const String& str) {
         updateParamList(str);
@@ -706,10 +716,7 @@ guipluginview::guipluginview(effectbase* _effect)
 
 guipluginview::~guipluginview() {
     remove(&buttonOpenEditor);
-    //will propably fall on the nose with accessing _effect in the destructor here
-    if (effect->pluginType == PLUGIN_TYPE_VST) {
-        remove(&buttonShowParameterList);
-    }
+    remove(&buttonShowParameterList);
 }
 void guipluginview::setControl(BaseCtrl* parentCtrl) {
     guiplugin::setControl(parentCtrl);
@@ -767,17 +774,13 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
     int32_t meterW    = math::max(16, (int32_t) (theme->get(GuiConstant::CONST_METER_WIDTH) * hpt / 32.0));
 
     auto contentSizeY = size.y - (isHorizontalTitle ? hpt : 0);
-    int rowHeight     = 64;
-    while (contentSizeY < rowHeight * 16 && rowHeight > 8) {
+    int rowHeight     = 48;
+    while (contentSizeY < rowHeight * 8 && rowHeight > 8) {
         rowHeight -= 4;
     }
-    int nVisibleCts = 0;
-    for (auto* ctr : viewCtrs) {
-        if (ctr->isVisible())
-            nVisibleCts++;
-    }
-    int paramsW = params.isVisible() ? nVisibleCts ? rowHeight * 8 : rowHeight * 10 : 0;
-    prefSize.x  = paramsW + meterW;
+    params.setRowHeight(rowHeight);
+    layoutWidthParams = rowHeight*6;
+    prefSize.x  = (params.isVisible()?layoutWidthParams:0) + meterW + (!isHorizontalTitle?hpt:0);
     sizeCtrs = { 0, contentSizeY };
 
     if (viewCtr) {
@@ -791,9 +794,9 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
     prefSize.y = math::max(sizeCtrs.y, prefSize.y);
     prefSize.x += sizeCtrs.x;
     auto minWidth = buttonOpenEditor.right()+buttonDelete.size.x+16;
-    if (prefSize.x < minWidth && viewCtrs.empty()) {
-        params.size.x = (minWidth-meterW);
-    }
+    // if (prefSize.x < minWidth && viewCtrs.empty()) {
+    //     params.size.x = (minWidth-meterW);
+    // }
     prefSize.x = math::max(minWidth, prefSize.x);
     dbgassert(prefSize.x > 0);
     dbgassert(prefSize.y > 0);
@@ -877,52 +880,41 @@ void guipluginview::buttonClicked(guibase* _button) {
     }
 }
 void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
-    const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
-    contentS.x         = math::max(64, contentS.x);
-    contentS.y         = math::max(64, contentS.y);
+    contentS.x = math::max(64, contentS.x);
+    contentS.y = math::max(64, contentS.y);
+    const int32_t heightTitle = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
+    const auto hpt = isHorizontalTitle ? heightTitle : 0;
+    const auto wpt = isHorizontalTitle ? 0 : heightTitle;
     int32_t insetCtrls = INSET_TITLE;
-    int rowHeight      = 64;
-    while (contentS.y < rowHeight * 16 && rowHeight > 8) {
-        rowHeight -= 4;
-    }
-    int nVisibleCts = 0;
-    for (auto* ctr : viewCtrs) {
-        if (ctr->isVisible())
-            nVisibleCts++;
-    }
-    int paramsW = params.isVisible() ? nVisibleCts ? rowHeight * 8 : rowHeight * 10 : 0;
-    int heightRow = hpt * 0.7;
-    int left = INSET_TITLE;
+    auto left = wpt;
     if (params.isVisible()) {
-        textFieldSearchBox.setVisible(layoutMode == 0 && heightRow >= 20);
-        dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size() && heightRow >= 20);
-        int hDropDown = 0;
+        textFieldSearchBox.setVisible(layoutMode == 0 && heightTitle >= 16);
+        dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size() && heightTitle >= 16);
+        double hDropDown = 0;
 
         if (dropdownProgram.isVisible()) {
-            hDropDown += hpt * 0.7;
+            hDropDown += heightTitle * 0.7;
         }
         if (textFieldSearchBox.isVisible()) {
-            hDropDown += hpt * 0.7;
+            hDropDown += heightTitle * 0.7;
         }
-        params.setRowHeight(rowHeight);
-        params.pos  = ivec2(insetCtrls, insetCtrls + hpt + hDropDown);
-        params.size = ivec2(paramsW, contentS.y - hDropDown) - ivec2(insetCtrls * 2);
-        params.padding = INSET_TITLE*2;
+        params.pos  = ivec2(insetCtrls + wpt, insetCtrls + hpt + hDropDown);
+        params.size = ivec2(layoutWidthParams, contentS.y - hDropDown) - ivec2(insetCtrls * 2);
         params.layout();
-        int topOffset = 0;
+        double topOffset = 0;
         if (dropdownProgram.isVisible()) {
-            dropdownProgram.pos  = ivec2(insetCtrls * 2, insetCtrls + hpt + topOffset);
-            dropdownProgram.size = ivec2(paramsW, hpt * 0.7) - ivec2(insetCtrls * 4, 0);
+            dropdownProgram.pos  = ivec2(insetCtrls + wpt, insetCtrls + hpt + topOffset);
+            dropdownProgram.size = ivec2(layoutWidthParams, heightTitle * 0.7) - ivec2(insetCtrls * 2, 0);
             dropdownProgram.layout();
-            topOffset += hpt * 0.7;
+            topOffset += heightTitle * 0.7;
         }
         if (textFieldSearchBox.isVisible()) {
-            textFieldSearchBox.pos  = ivec2(insetCtrls * 2, insetCtrls + hpt + topOffset);
-            textFieldSearchBox.size = ivec2(paramsW, hpt * 0.7) - ivec2(insetCtrls * 4, 0);
+            textFieldSearchBox.pos  = ivec2(insetCtrls + wpt, insetCtrls + hpt + topOffset);
+            textFieldSearchBox.size = ivec2(layoutWidthParams, heightTitle * 0.7) - ivec2(insetCtrls * 2, 0);
             textFieldSearchBox.layout();
-            topOffset += hpt * 0.7;
+            topOffset += heightTitle * 0.7;
         }
-        left += params.right();
+        left = params.right();
     } else {
         dropdownProgram.setVisible(false);
         textFieldSearchBox.setVisible(false);
@@ -934,7 +926,7 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
             ctr->determineSize(prefSizeCtr);
             ctr->size = prefSizeCtr;
             ctr->layout();
-            left = ctr->right() + INSET_TITLE;
+            left = ctr->right();
         }
     }
 }
@@ -1062,7 +1054,7 @@ void guipluginview::setLayoutMode(int32_t layoutMode) {
     guiplugin::setLayoutMode(layoutMode);
     dropdownProgram.setVisible(this->layoutMode == 0 && effect->programNames.size());
     params.setVisible(this->bParamListVisible && this->layoutMode == 0);
-    bParamListVisible = params.isVisible();
+    // bParamListVisible = params.isVisible();
     for (auto* ctr : viewCtrs) {
         ctr->setVisible(layoutMode == 0);
     }
@@ -1071,7 +1063,7 @@ void guipluginview::setLayoutMode(int32_t layoutMode) {
 void guiplugin::setLayoutMode(int32_t layoutMode) {
     this->layoutMode = layoutMode;
     guiMeter.setVisible(layoutMode == 0);
-    isHorizontalTitle = layoutMode == 0;
+    // isHorizontalTitle = layoutMode == 0;
     buttonLayout.icon = layoutMode == 0 ? ICON_ARR_RIGHT : ICON_ARR_DOWN;
 }
 

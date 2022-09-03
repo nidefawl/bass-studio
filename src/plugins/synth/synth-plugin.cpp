@@ -4193,16 +4193,6 @@ namespace PluginSynth {
                     vecListParam.push_back(vecParamUI.back());
                 }
             }
-            for (auto& knob : vecParamUI) {
-                if (knob.type == guiknob::knobtype::KNOB_LABELED) {
-                    knob.knob->setLabelsFontScale(0.9f, 0.9f);
-                    knob.knob->setLabelsScale(0.2f, 0.2f);
-                }
-                if (knob.type == guiknob::knobtype::SLIDER_LABELED) {
-                    knob.knob->setLabelsFontScale(0.7f, 0.8f);
-                    knob.knob->setLabelsScale(0.1f, 0.1f);
-                }
-            }
             add(&list);
             add(&list2);
             add(&modulation);
@@ -4267,6 +4257,7 @@ namespace PluginSynth {
             }
             return nullptr;
         }
+
         void onSetParameter(int32_t index, float value) {
             if (index == -1) {
                 bGuiNeedsRefresh = true;
@@ -4384,6 +4375,16 @@ namespace PluginSynth {
             return size;
         }
         void layout() override {
+            for (auto& knob : vecParamUI) {
+                if (knob.type == guiknob::knobtype::KNOB_LABELED) {
+                    knob.knob->setLabelsFontScale(0.9f, 0.9f);
+                    knob.knob->setLabelsScale(0.2f, 0.2f);
+                }
+                if (knob.type == guiknob::knobtype::SLIDER_LABELED) {
+                    knob.knob->setLabelsFontScale(0.7f, 0.8f);
+                    knob.knob->setLabelsScale(0.1f, 0.1f);
+                }
+            }
             auto cs                             = getSizeContent();
             const auto titleHeight = math::roundfS32(cs.y * 0.1f * 0.27f);
             modulation.setTitleHeight(titleHeight);
@@ -4891,6 +4892,10 @@ namespace PluginSynth {
 
         void onSetParameter(int32_t index, float value) {
             editor.onSetParameter(index, value);
+        }
+        void getSizeScale(int& w, int& h) const {
+            w = 1280;
+            h = 720;
         }
 
         void onGuiOpen() {

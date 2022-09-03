@@ -499,6 +499,10 @@ namespace PluginHostInfo {
             }
 #endif
         }
+        void getSizeScale(int& w, int& h) const {
+            w = 300;
+            h = 300;
+        }
         void onGuiOpen() {
 #if BUILD_VSTHOST
             knobParam0.setEffectInstance(plugin->getHostSideHandle());
