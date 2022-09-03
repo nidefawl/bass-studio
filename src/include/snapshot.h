@@ -35,6 +35,7 @@ struct plugin_iodesc_snapshot_t {
 struct automation_view_t;
 struct track_effect_routing_snapshot_t;
 struct plugin_ui_snapshot_t {
+    bool isValidSnapshot = false;
     ivec4 windowPosSize{};
     bool windowPosSizeValid = false;
     bool isWindowOpen = false;

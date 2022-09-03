@@ -494,6 +494,7 @@ namespace {
 
 void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     this->uiSnapshot = pluginSnapshot.uiSnapshot;
+    this->uiSnapshot.isValidSnapshot = true;
     this->bIsLoadingProgram = true;
     const int32_t programIdx = pluginSnapshot.currentProgram >= 0 ? pluginSnapshot.currentProgram : 0;
     VstPatchChunkInfo info{};
@@ -531,8 +532,9 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     this->dispatch(effSetProgram, 0, programIdx);
     // this->dispatch(effSetProgram, 0, programIdx);
     this->bIsLoadingProgram = false;
-    if (handle->gui) {
+    if (handle->gui && this->uiSnapshot.isValidSnapshot) {
         handle->gui->loadSnapshot(this->uiSnapshot);
+        this->uiSnapshot.isValidSnapshot = false;
     }
 }
 // virtual void loadSnapshot(const plugin_ui_snapshot_t& ps);
@@ -569,7 +571,10 @@ guiplugin* vstplugin::makeGui() {
         //view = vstPluginView;
         //handle->gui = vstPluginView;
         handle->gui = std::make_shared<guivstplugin>(this);
-        handle->gui->loadSnapshot(this->uiSnapshot);
+        if (handle->gui && this->uiSnapshot.isValidSnapshot) {
+            handle->gui->loadSnapshot(this->uiSnapshot);
+            this->uiSnapshot.isValidSnapshot = false;
+        }
         handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
         if (handle->axEffect) {//only provided by internal vst2 instance (not a DLL)
             guiplugin* pGuiPlugin = handle->gui.get();
