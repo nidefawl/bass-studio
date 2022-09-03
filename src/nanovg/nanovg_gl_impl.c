@@ -1763,6 +1763,10 @@ int nvgReloadShaders(NVGcontext* ctx, const char* shaderSrcVertex, const char* s
 	const char** opts = glnvg_getShaderDefs(gl->flags, &numOpts);
 	if (glnvg__recompileShader(&gl->shader, "shader", NVG_GLSL_DEF_HEADER, opts, numOpts, shaderSrcVertex, shaderSrcFragment) == 0)
 		return 1;
+
+	glnvg__checkError(gl, "uniform locations");
+	glnvg__getUniforms(&gl->shader);
+	glUniformBlockBinding(gl->shader.prog, gl->shader.loc[GLNVG_LOC_FRAG], GLNVG_FRAG_BINDING);
 	return 0;
 }
 
