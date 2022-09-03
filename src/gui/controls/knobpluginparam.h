@@ -35,6 +35,14 @@ public:
         paramIdx = _paramIdx;
         m_layout.inset = 6;
         m_layout.renderLabelBorder = false;
+        if (_knobtype == guiknob::knobtype::KNOB_LABELED) {
+            setLabelsFontScale(0.9f, 0.9f);
+            setLabelsScale(0.2f, 0.2f);
+        }
+        if (_knobtype == guiknob::knobtype::SLIDER_LABELED) {
+            setLabelsFontScale(0.7f, 0.8f);
+            setLabelsScale(0.1f, 0.1f);
+        }
         setBackgroundRendered(true);
     }
     ~guiknob_pluginparam() override = default;
