@@ -98,7 +98,7 @@ public:
     autolayout_mode getLayoutMode() const {
         return layoutMode;
     }
-    void layoutEntries(ivec2 dir) {
+    virtual void layoutEntries(ivec2 dir) {
         const auto cs = getSizeContent();
         auto pos = ivec2{};
         int32_t numEntries = 0;
@@ -109,13 +109,15 @@ public:
         }
         if (numEntries == 0)
             return;
-        auto size = cs / ivec2(dir.x ? numEntries : 1, dir.y ? numEntries : 1);
+        auto sizePadded = (cs - dir*(numEntries-1)*padding);
+        auto size = sizePadded / ivec2(dir.x ? numEntries : 1, dir.y ? numEntries : 1);
         for (guibase* gui : guis) {
             if (gui->getFlags() & FLG_NO_LAYOUT)
                 continue;
             gui->pos = pos;
             gui->size = size;
             pos = ivec2{gui->right(), gui->bottom()} * dir;
+            pos += padding * dir;
         }
     }
     void layoutVertical() {
