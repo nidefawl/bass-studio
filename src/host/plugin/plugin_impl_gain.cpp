@@ -19,52 +19,6 @@
 #include "snapshot.h"
 #include <algorithm>
 
-class guimodule_gain : public guictr_base {
-    std::vector<guiknob_pluginparam*> knobs;
-    internalplugin* const module;
-    guiknob_pluginparam knobgain;
-    void addKnob(guiknob_pluginparam* knob) {
-        knobs.push_back(knob);
-        add(knob);
-    }
-public:
-    explicit guimodule_gain(module_gain* _eff);
-    ~guimodule_gain() override {
-        removeGuis();
-    }
-
-    void onSetParameter(int32_t index, float value) {
-        guiknob_pluginparam* knob = getKnobFromParameter(index);
-        if (knob) {
-            knob->setValueInit(value);
-        }
-    }
-    guiknob_pluginparam* getKnobFromParameter(int32_t index);
-
-    void onGuiOpen() {
-        knobgain.setEffectInstance(module);
-    }
-    void onGuiClose() {
-    }
-};
-
-guimodule_gain::guimodule_gain(module_gain* _eff)
-    : module(_eff), knobgain(PARAM_GAIN) {
-    setLayoutMode(LAYOUT_HORIZONTAL);
-    setBackgroundRendered(true);
-    padding = 4;
-    margin  = 4;
-    addKnob(&knobgain);
-}
-
-guiknob_pluginparam* guimodule_gain::getKnobFromParameter(int32_t index) {
-    switch (index) {
-        case PARAM_GAIN:
-            return &knobgain;
-    }
-    return nullptr;
-}
-
 module_gain::module_gain(int32_t _projectGlobalId)
     : internalplugin("Gain", PLUGIN_TYPE_GAIN, _projectGlobalId)
 {
