@@ -162,6 +162,8 @@ class guictr_modulelibrary : public guictr_base {
 public:
     guictr_modulelibrary() : guictr_base() {
         setBackgroundRendered(true);
+        padding = 4;
+        margin = 2;
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_EMPTY, 0, "Empty", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GROUP, 0, "Group", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GAIN, 0, "Gain", false });
@@ -202,8 +204,8 @@ public:
         ivec2 cs           = getSizeContent();
         textField.size     = ivec2(cs.x, heightTextField);
         textField.pos      = ivec2(0, 0);
-        pluginListCtr.pos  = ivec2(0, heightTextField);
-        pluginListCtr.size = ivec2(cs.x, cs.y - heightTextField);
+        pluginListCtr.pos  = ivec2(0, textField.bottom()+padding);
+        pluginListCtr.size = ivec2(cs.x, cs.y - pluginListCtr.top());
         for (guibase* gui : guis) {
             gui->layout();
         }

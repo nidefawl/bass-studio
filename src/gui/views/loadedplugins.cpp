@@ -309,6 +309,7 @@ class gui_pluginsloaded_list : public guictr_base {
 public:
     gui_pluginsloaded_list() : guictr_base(), listCtr(listEntriesLoadedPlugins), listDeferredCtr(listEntriesDef) {
         guiType = CTR_TYPE_PLUGINSLOADED;
+        getContainerLabel(guiType, this->label);
         setBackgroundRendered(false);
         padding = 0;
         margin  = 0;
@@ -426,19 +427,18 @@ public:
         }
     }
     void layout() override {
-        ivec2 cs                               = getSizeContent();
-        const int32_t inset                    = padding;
+        ivec2 cs = getSizeContent();
         const int32_t CONST_FIXED_TITLE_HEIGHT = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
-
         int posLists    = 0;
         int heightLists = cs.y - CONST_FIXED_TITLE_HEIGHT;
 
+        const int32_t inset = 2;
         listCtr.pos          = ivec2(0, posLists + 0);
         listDeferredCtr.pos  = ivec2(0, posLists + heightLists / 2 + inset / 2);
         listCtr.size         = ivec2(cs.x, posLists + heightLists / 2 - inset / 2);
         listDeferredCtr.size = ivec2(cs.x, heightLists / 2 - inset / 2);
         btnLoadAll.pos       = { inset, posLists + heightLists + inset / 2 };
-        btnLoadAll.size      = { cs.x - inset * 2, CONST_FIXED_TITLE_HEIGHT - inset };
+        btnLoadAll.size      = { cs.x - inset * 2, CONST_FIXED_TITLE_HEIGHT - inset*2 };
         for (guibase* gui : guis) {
             gui->layout();
         }

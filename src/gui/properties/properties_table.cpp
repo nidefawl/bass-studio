@@ -216,6 +216,10 @@ public:
           m_numberInputFloat(nullptr)
     {
         guiType = CTR_TYPE_PROPERTIES;
+        getContainerLabel(guiType, this->label);
+        setBackgroundRendered(true);
+        padding = 4;
+        margin = 2;
 
         //setBackgroundRendered(true);
         //setBackgroundRenderedInset(false);
@@ -1017,8 +1021,9 @@ public:
           selectTheme()
     {
         guiType = CTR_TYPE_THEME;
-        padding = 0;
-        margin = 0;
+        getContainerLabel(guiType, this->label);
+        padding = 4;
+        margin = 2;
         buttonAdd.setText("+");
         buttonRemove.setText("-");
         buttonSave.setText("save");

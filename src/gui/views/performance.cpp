@@ -155,14 +155,14 @@ public:
     gui_performance() : guictr_base() {
         setCanMouseHit(true);
         guiType = CTR_TYPE_PERFORMANCE;
-        setBackgroundRendered(false);
-        padding = 0;
-        margin  = 0;
+        getContainerLabel(guiType, this->label);
+        padding = 4;
+        margin = 2;
 
         textStats.padding = 0;
         textStats.setBackgroundRendered(false);
         scrollTop.padding = 0;
-        scrollTop.setBackgroundRendered(false);
+        scrollTop.setBackgroundRendered(true);
         scrollTop.add(&textStats);
         scrollTop.maxHeight = -1;
         add(&scrollTop);
