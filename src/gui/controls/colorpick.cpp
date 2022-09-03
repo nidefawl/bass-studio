@@ -192,6 +192,8 @@ gui_input_filtered::gui_input_filtered(uint32_t* _number) : guibutton(), number(
     field.setParent(this);
     field.setFilter(&filter);
     setAlignCenter(false);
+    setFlag(FLG_RENDER_BACKGROUND_INSET, true);
+    setFlag(FLG_IMPL_SPEC1, true);
 }
 
 void gui_input_filtered::setAlignCenter(bool b) {

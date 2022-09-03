@@ -12,6 +12,7 @@
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/polymorphic.hpp>
+#include <nanovg.h>
 
 static const int32_t dropIndicatorWidth = 8;
 class guictr_layout_entry_handle_button : public guibutton {
@@ -417,6 +418,7 @@ void guictr_layout_entry_handle::render(NVGcontext* vg) {
         bg = theme->getColor(GuiColor::COL_BASE_BG_FOCUSED);
     }
     nvgFillColor(vg, bg);
+    nvgFillCustomPar(vg, -1);
     nvgFill(vg);
     String str = parentCtr->getGui()->label;
     if (str.length()) {

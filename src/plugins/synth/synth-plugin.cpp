@@ -4759,27 +4759,25 @@ namespace PluginSynth {
             paint.image      = -1;
             paint.customPar  = 1;
             paint.outerColor = paint.innerColor = theme->getColor(GuiColor::COL_NOTE_MUTE);
-            paint.outerColor.r = 0.12f;
+            paint.outerColor.a = 0.12f;
             paint.innerColor.a = 0.12f;
-            int numBatched = NUM_POLY_VOICES;
             for (int polyIndex = 0; polyIndex < NUM_POLY_VOICES; ++polyIndex) {
                 nvgBatchedRect(vg, voicePos.x, voicePos.y, voiceSize.x-2, voiceSize.y);
                 voicePos.x += voiceSize.x;    
             }
-            if (numBatched > 0) {
+            nvgFillPaint(vg, paint);
+            nvgBatchedRender(vg);
+            if (list.numPolyVoices > 0) {
+                nvgBeginPath(vg);
+                for (int i = 0; i < list.numPolyVoices; ++i) {
+                    int polyIndex = list.polyVoices[i];
+                    voicePos.x = inset + polyIndex * voiceSize.x;
+                    nvgRect(vg, voicePos.x, voicePos.y, voiceSize.x-2, voiceSize.y);
+                }
+                paint.outerColor = paint.innerColor = theme->getColor(GuiColor::COL_NOTE_PLAYING);
+                paint.customPar  = -4;
                 nvgFillPaint(vg, paint);
-                nvgBatchedRender(vg);
-            }
-            numBatched = list.numPolyVoices;
-            for (int i = 0; i < list.numPolyVoices; ++i) {
-                int polyIndex = list.polyVoices[i];
-                voicePos.x = inset + polyIndex * voiceSize.x;
-                nvgBatchedRect(vg, voicePos.x, voicePos.y, voiceSize.x-2, voiceSize.y);
-            }
-            paint.outerColor = paint.innerColor = theme->getColor(GuiColor::COL_NOTE_PLAYING);
-            if (numBatched > 0) {
-                nvgFillPaint(vg, paint);
-                nvgBatchedRender(vg);
+                nvgFill(vg);
             }
         }
     };

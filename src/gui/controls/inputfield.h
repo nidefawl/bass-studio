@@ -14,7 +14,7 @@ public:
     gui_numberinput_field_base() : guibutton() {
         field.setParent(this);
         setFlag(FLG_RENDER_BACKGROUND_INSET, true);
-        setFlag(FLG_IMPL_SPEC1, false);
+        setFlag(FLG_IMPL_SPEC1, true);
     }
 
     void layout() override {

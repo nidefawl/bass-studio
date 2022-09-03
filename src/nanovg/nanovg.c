@@ -843,7 +843,13 @@ NVGcolor nvgGetCurrentAndSetFillColor(NVGcontext* ctx, NVGcolor color)
 void nvgFillPaint(NVGcontext* ctx, NVGpaint paint)
 {
 	NVGstate* state = nvg__getState(ctx);
-	state->fill = paint;
+	state->fill.innerColor = paint.innerColor;
+	state->fill.outerColor = paint.outerColor;
+	state->fill.image = paint.image;
+	state->fill.objectId = paint.objectId;
+	state->fill.objectType = paint.objectType;
+	state->fill.renderType = paint.renderType;
+	state->fill.customPar = paint.customPar;
 	nvgTransformMultiply(state->fill.xform, state->xform);
 }
 

@@ -194,7 +194,8 @@ vec4 getShadedBox(vec2 pt, vec2 Border, vec4 color, float intens) {
 	float fFade = Border.y * Border.y;
 	fFade *= Border.x;
 	vec3 paletteColor = palette( (1.0)-(Border.y*Border.y*(0.01)+0.18), vec3(0.5),vec3(0.5+intens*1.0),vec3(0.99, 0.95, 0.9),vec3(0.0,0.10,0.20) );
-	vec4 result = vec4(mix(color.rgb, paletteColor.rgb*intens, 0.2*fFade), color.a);
+	float globalShadingIntens = 0.2;
+	vec4 result = vec4(mix(color.rgb, paletteColor.rgb*intens, globalShadingIntens*fFade), color.a);
 	result.rgb+=vec3(getAntiBandingDither(pt));
 	return clamp(result, vec4(0.0), vec4(1.0));
 }
@@ -226,12 +227,18 @@ void main(void) {
 		if (abs(extent.x)+abs(extent.y) > 0) 
 		{
 			if (texType == 1) {
-				float dFeather = 4.0;
+				float dFeather = 12.0;
 				float dRadius = 3.0;
-				float dist = 1.0-clamp((sdroundrect(pt-extent*0.5, extent*0.5, dRadius)+dFeather*0.5)/dFeather, 0.0, 1.0);
-				color = getShadedBox(pt, vec2(dist), color, 0.3);
+				// float dist = 1.0-clamp((sdroundrect(pt-extent*0.5, extent*0.5, dRadius)+dFeather*0.5)/dFeather, 0.0, 1.0);
+				vec2 pixelFromCenter = (pt-extent*0.5);
+				vec2 pixelFromBorder = abs(pixelFromCenter) - extent*0.5 + dFeather;
+				vec2 borderFade = clamp(pixelFromBorder/dFeather, 0.0, 1.0);
+				vec2 invF = vec2(1.0)-borderFade;
+				// float dist = length(invF);
+				color = getShadedBox(pt, invF, color, -0.2)*1.5;
+				// color.r*=1.8;
 			} else if (texType == 2) {
-				vec2 g = getBoxGradient(texcoord, 6.0);
+				vec2 g = getBoxGradient(texcoord, 2.0);
 				float dFeather = 4.0;
 				float dRadius = 2.0;
 				float dist = 1.0-clamp((sdroundrect(pt-extent*0.5, extent*0.5, dRadius)+dFeather*0.5)/dFeather, 0.0, 1.0);
@@ -239,11 +246,12 @@ void main(void) {
 			} else if (texType == 3) {
 				color = getShadedBox(pt, getBoxGradient(texcoord, 2.0), color, 0.8);
 			} else if (texType == 4) {
-				color = getShadedBox(pt, getBoxGradient(texcoord, 2.0), color, -0.8);
+				color = getShadedBox(pt, getBoxGradientSmooth(texcoord), color, 1.0);
 			} else {
 				color = getShadedBox(pt, getBoxGradientSmooth(texcoord), color, 0.4);
 			}
 		}
+		// else { color.rgb = vec3(1,0,1); }
 #endif
 		result = color * strokeAlpha * scissor;
 	} else if (type == NSVG_SHADER_FILLIMG) {         // Image
@@ -310,8 +318,8 @@ void main(void) {
 	result += 0.3*vec4(fragTexCoord.xy, 1.0, 1.0);
 #else
 #endif
-	// if (result.a < 1.0/2048.0) 
-	// 	discard;
+	if (result.a < 1.0/2048.0) 
+		discard;
 #ifdef NANOVG_GL3
 	outColor = result;
 #else

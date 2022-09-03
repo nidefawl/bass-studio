@@ -1003,7 +1003,7 @@ static int glnvg__convertPaint(GLNVGcontext* gl, GLNVGfragUniforms* frag, NVGpai
 	frag->strokeMult = (width*0.5f + fringe*0.5f) / fringe;
 	frag->strokeThr = strokeThr;
 
-	if (paint->image != 0 || paint->customPar > 0) {
+	if (paint->image > 0 || paint->customPar > 0) {
 		tex = glnvg__findTexture(gl, paint->image);
 		if (tex != NULL) {
 			frag->type = NSVG_SHADER_FILLIMG;
