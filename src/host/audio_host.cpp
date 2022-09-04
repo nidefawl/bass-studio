@@ -205,6 +205,10 @@ class audiohost_callback {
                 }
                 numOutChannelsWritten = channels;
             }
+            // if (stream->firstInputTimeSeconds < 0.0) {
+            //     stream->firstInputTimeSeconds = timeInfo->outputBufferDacTime;
+            // }
+            stream->outputTimeSeconds = block->time.inputTimeSeconds;
             block->inUse = false;
         } else {
             host->bufferUnderuns++;
@@ -238,8 +242,8 @@ class audiohost_callback {
             }
             bufferWrite->submitted      = true;
             bufferWrite->inUse          = true;
-            bufferWrite->blockPosSample = timeInfo->inputBufferAdcTime;
-            bufferWrite->blockPosTick   = 0;
+            bufferWrite->time = {};
+            bufferWrite->time.inputTimeSeconds = timeInfo->inputBufferAdcTime;
             writePos++;
             writePos &= RING_BUF_MASK;
             if (stream) {
@@ -362,6 +366,11 @@ void audiohost::HostIOStream::enqueueInput(AudioBuffer* buf) {
     if (streamFinished) {
         return;
     }
+    if (firstInputTimeSeconds < 0) {
+        firstInputTimeSeconds = buf->time.inputTimeSeconds;
+    }
+    buf->time.inputTimeSeconds = buf->time.inputTimeSeconds - firstInputTimeSeconds;
+    inputTimeSeconds = buf->time.inputTimeSeconds;
     AudioBlock* blockIn = buf->output;
     metersInput.update(blockIn, 1.0f);
     metersInput.onTick(blockIn->samples / (double) this->host->lSampleRate);
@@ -375,7 +384,9 @@ void audiohost::HostIOStream::enqueueInput(AudioBuffer* buf) {
             return offset + dstIdx;
         });
     }
+    buf->time.samplePosInput = inputSamplePos;
     this->audioQueueInput.enqueue(buf);
+    inputSamplePos += blockIn->samples;
 }
 
 bool audiohost::HostIOStream::try_dequeueInput(AudioBuffer*& buf) {
@@ -407,7 +418,16 @@ bool audiohost::HostIOStream::try_dequeue(AudioBuffer*& buf) {
     if (streamFinished) {
         return false;
     }
-    return this->audioQueue.try_dequeue(buf);
+    auto success = this->audioQueue.try_dequeue(buf);
+    if (success) {
+        buf->time.samplePosOutput = outputSamplePos;
+        outputSamplePos += buf->output->samples;
+    //     if (firstOutputSampleTime < 0) {
+    //         firstOutputSampleTime = buf->blockPosSample;
+    //     }
+    //     this->samplePosOutput = buf->blockPosSample - firstOutputSampleTime;
+    }
+    return success;
 }
 
 bool audiohost::startAudio(app_iosettings& iosettings) {

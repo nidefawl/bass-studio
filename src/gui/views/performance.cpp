@@ -121,6 +121,15 @@ public:
         printL(0, "audioCallback tDelta", StringFormat("%d µs", audioHost ? audioHost->audioCallbackInvocationDelay_usec : 0));
         printL(0, "outputBufferUnderuns", StringFormat("%u", audioHost ? audioHost->bufferUnderuns : 0));
         printL(0, "inputBufferUnderuns", StringFormat("%u", audioHost ? audioHost->inputBufferUnderuns : 0));
+        auto stream = audioHost ? audioHost->getStream(0) : nullptr;
+        if (stream) {
+            printL(0, "stream input time", StringFormat("%f", stream->inputTimeSeconds));
+            printL(0, "stream output time", StringFormat("%f", stream->outputTimeSeconds));
+            printL(0, "d time", StringFormat("%f", stream->inputTimeSeconds-stream->outputTimeSeconds));
+            printL(0, "stream input pos", StringFormat("%zd", stream->inputSamplePos));
+            printL(0, "stream output pos", StringFormat("%zd", stream->outputSamplePos));
+            printL(0, "d pos", StringFormat("%zd", stream->inputSamplePos-stream->outputSamplePos));
+        }
         printL(0, "input q len", StringFormat("%d", stats.inputQueueLen));
         printL(0, "output q len", StringFormat("%d", stats.outputQueueLen));
         printL(0, "INPUT  resampler", StringFormat("%d samples|%d blocks", stats.resamplerInNumSamples, stats.resamplerInNumBlocks));

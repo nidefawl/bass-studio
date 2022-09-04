@@ -1604,7 +1604,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
         AudioBuffer* ptrExternalInputs = nullptr;
         if (stream && stream->try_dequeueInput(ptrExternalInputs)) {
             if (enableProfiling) timerProfile.reset();
-            resamplerInput->push(*ptrExternalInputs->output);
+            resamplerInput->push(*ptrExternalInputs->output, ptrExternalInputs->time);
             if (enableProfiling) stats.timings["Block.ResampleInput"] = timerProfile.getTime();
             ptrExternalInputs->inUse = false;
         }
@@ -1662,8 +1662,9 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
         for (uint32_t i = 0; i < audioProp.numBlocksInternal; i++) {
             int32_t samplePosProcess = sample + sampleFormat.blockSize*i;
             double tickPosProcess = posDouble + audioProp.ticksPerBlock*i;
+            AudioBufferTimeInfo bufferTimeInfo{ };
             int32_t pre = resamplerInput->numBlocksToPop();
-            AudioBlock block = resamplerInput->pop();
+            AudioBlock block = resamplerInput->pop(bufferTimeInfo);
             int32_t post = resamplerInput->numBlocksToPop();
             dbgassert(post == pre-1);
 
@@ -1707,7 +1708,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
             if (enableProfiling) {
                 timeRouting += timerProfile.getTimeReset();
             }
-            resamplerOutput->push(blockExtOut);
+            resamplerOutput->push(blockExtOut, bufferTimeInfo);
             if (enableProfiling) {
                 timeResampleOutput += timerProfile.getTimeReset();
             }
@@ -1748,7 +1749,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
         int64_t time2 = 0;
         while (nResampledOutputBlocks > 0 && stream->getOutputQueueSize() < RING_BUF_SIZE*2/3) {
             if (enableProfiling) timerBlock.reset();
-            AudioBlock block = resamplerOutput->pop();
+            AudioBufferTimeInfo bufferTimeInfo{ };
+            AudioBlock block = resamplerOutput->pop(bufferTimeInfo);
             if (enableProfiling) time0 += timerBlock.getTimeReset();
             AudioBuffer** buffers = ringbuffer.buffers;
             AudioBuffer* const ptrExternalOutputs = buffers[writePos%RING_BUF_SIZE];
@@ -1759,8 +1761,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
             if (enableProfiling) time1 += timerBlock.getTimeReset();
             ptrExternalOutputs->inUse = true;
             ptrExternalOutputs->submitted = true;
-            ptrExternalOutputs->blockPosSample = blockPosSample;
-            ptrExternalOutputs->blockPosTick = blockPosTick;
+            ptrExternalOutputs->time = bufferTimeInfo;
             writePos = (writePos+1) & RING_BUF_MASK;
             stream->enqueue(ptrExternalOutputs);
             nResampledOutputBlocks--;

@@ -102,6 +102,7 @@ struct resampler_t {
     const channelnum_t numChannels;
     struct buf_t {
         AudioBlock* block{ nullptr };
+        AudioBufferTimeInfo timeInfo;
         samplecount_t samplesAvail{ 0 };
         samplecount_t readOffset{ 0 };
         bool inUse{ false };
@@ -136,7 +137,7 @@ struct resampler_t {
         return outputBuffers.back();
     }
 
-    bool push(AudioBlock& block) {
+    bool push(AudioBlock& block, AudioBufferTimeInfo& timeinfo) {
         if (numSamplesQueued > out.blockSize * 32) {
             log_lf(Log::L_WARN, "Output queue is not processed, flushing %zd samples. %zu output buffers\n", numSamplesQueued, outputBuffers.size());
             releaseBuffers();
@@ -162,6 +163,7 @@ struct resampler_t {
         dbgassert(nOutputProcessed);
         buf->inUse        = true;
         buf->samplesAvail = nOutputProcessed;
+        buf->timeInfo = timeinfo;
         numSamplesQueued += nOutputProcessed;
         outputQueue.push_back(buf);
 #ifdef RESAMPLER_H_ENABLE_BUFFER_CHECKS
@@ -171,7 +173,7 @@ struct resampler_t {
 #endif
         return true;
     }
-    AudioBlock pop() {
+    AudioBlock pop(AudioBufferTimeInfo& timeinfo) {
 
 #ifdef RESAMPLER_H_ENABLE_BUFFER_CHECKS
         dbgassert(outputQueue.size() > 0);
@@ -193,6 +195,7 @@ struct resampler_t {
 
             auto srcBlock = ptrBlockResampled->SubChannelsSamplesBlock(0, ptrBlockResampled->channels, b->readOffset, maxCopy);
             blockOut.SubChannelsSamplesBlock(0, numChannels, writeOffset, maxCopy).addFromOp(&srcBlock, AudioBlock::mix_op::MIX, 1.0f);
+            timeinfo = b->timeInfo;
 
             b->readOffset += maxCopy;
             writeOffset += maxCopy;

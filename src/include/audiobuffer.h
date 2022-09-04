@@ -4,14 +4,18 @@
 #include "assert_dbg.h"
 
 struct AudioBlock;
+struct AudioBufferTimeInfo {
+    samplecount_t samplePosInput{};
+    samplecount_t samplePosOutput{};
+    double inputTimeSeconds{};
+};
 struct alignas(64) AudioBuffer {
     AudioBlock* output{};
     int32_t writeOffset{};
     std::atomic<bool> inUse{};
     bool submitted{};
     int32_t nonce{};
-    double blockPosSample{};
-    double blockPosTick{};
+    AudioBufferTimeInfo time{};
 };
 //static_assert(std::is_pod<AudioBuffer>::value, "AudioBuffer is not POD type.");
 

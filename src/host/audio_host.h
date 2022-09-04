@@ -67,6 +67,13 @@ public:
         std::atomic<bool> streamShouldEnd{ false };
         std::atomic<bool> streamFinished{ false };
 
+        double firstInputTimeSeconds = -1.0;
+        double firstOutputTimeSeconds = -1.0;
+        double inputTimeSeconds = 0.0;
+        double outputTimeSeconds = 0.0;
+        samplecount_t inputSamplePos = 0;
+        samplecount_t outputSamplePos = 0;
+
         int64_t lastAudioCallbackInvocationTime_i64 = 0;
 
         HostIOStream(audiohost* const _host, int32_t _streamId, int32_t _streamIdx, DAW::AudioIO::io_cfg_tracks& cfg, channelnum_t nOutputChannels, channelnum_t nInputChannels);
