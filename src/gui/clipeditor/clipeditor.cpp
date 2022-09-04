@@ -746,7 +746,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                 NVGpaint paint{};
                 paint.image      = -1;
                 paint.innerColor = theme->getColor(GuiColor::COL_NOTE_PLAYING);
-                paint.customPar  = 2;
+                paint.customPar  = 1;
                 nvgFillPaint(vg, paint);
                 nvgBatchedRender(vg);
             }
