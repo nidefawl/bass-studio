@@ -105,7 +105,7 @@ public:
     std::function<void(MouseHitEvt&, bool)> fnFocus          = nullptr;
     gui_textfield() {
         setFlag(FLG_RENDER_BACKGROUND_INSET, true);
-        setFlag(FLG_IMPL_SPEC1, true);
+        setFlag(FLG_BG_SHADING, true);
     };
 
     float fontSize() const {

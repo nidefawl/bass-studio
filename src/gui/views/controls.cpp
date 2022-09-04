@@ -47,7 +47,7 @@ guictxtmenu_base* gui_timeinput::getTooltip(AppCtrl* appctrl) {
 gui_timeinput_field::gui_timeinput_field(gui_timeinput* parentInput, int _idx, int32_t* _time, const bool _isRelative)
     : guibutton(), idx(_idx), isRelative(_isRelative), parentInput(parentInput), time(_time) {
     setFlag(FLG_RENDER_BACKGROUND_INSET, true);
-    setFlag(FLG_IMPL_SPEC1, true);
+    setFlag(FLG_BG_SHADING, true);
 }
 
 void gui_timeinput_field::render(NVGcontext* vg) {
@@ -157,7 +157,7 @@ gui_timeinput::gui_timeinput(int32_t* _time, const bool isRelative)
     setCanMouseHit(true);
     setBackgroundRendered(false);
     setFlag(FLG_RENDER_BACKGROUND_INSET, true);
-    setFlag(FLG_IMPL_SPEC1, true);
+    setFlag(FLG_BG_SHADING, true);
     editfield.setFlag(FLG_NO_LAYOUT, true);
     editfield.setVisible(false);
     editfield.setAlignment(gui_textfield::Alignment::Center);

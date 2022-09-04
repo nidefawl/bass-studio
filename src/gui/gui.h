@@ -87,7 +87,7 @@ enum guiflag : int32_t {
     FLG_RENDER_DRAGGED           = 0x00000400,
     FLG_RENDER_LABEL             = 0x00000800,
     FLG_VERTICAL_LABEL           = 0x00001000,
-    FLG_IMPL_SPEC1               = 0x00002000,
+    FLG_BG_SHADING               = 0x00002000,
     FLG_IMPL_SPEC2               = 0x00004000,
     FLG_NO_LAYOUT                = 0x00008000,
     FLG_RENDER_BUTTON_WITH_LED   = 0x00010000
@@ -490,6 +490,9 @@ public:
         }
         if (stateflags & FLG_DRG) {
             return GuiColor::COL_BASE_BG_PRESSED;
+        }
+        if (stateflags & FLG_RENDER_BACKGROUND_INSET) {
+            return GuiColor::COL_BG_WIDGET;
         }
         return GuiColor::COL_BASE_BG;
     }

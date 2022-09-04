@@ -468,17 +468,10 @@ void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos
         nvgBeginPath(vg);
         nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
         nvgFillColor(vg, bgColor);
-        nvgFill(vg);
         if (flags & FLG_RENDER_BACKGROUND_INSET) {
-            NVGcolor bgLight = theme->getColor(GuiColor::COL_BG_WIDGET);
-            nvgSave(vg);
-            nvgBeginPath(vg);
-            nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
-            nvgFillColor(vg, bgLight);
-            nvgFillCustomPar(vg, (flags&FLG_IMPL_SPEC1)?-2:-1);
-            nvgFill(vg);
-            nvgRestore(vg);
+            nvgFillCustomPar(vg, (flags&FLG_BG_SHADING)?-2:-1);
         }
+        nvgFill(vg);
     }
 }
 

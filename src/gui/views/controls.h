@@ -25,7 +25,7 @@ public:
     gui_tempocontrol_input(gui_tempocontrol* parent)
         : guibutton(), parentInput(parent) {
         setFlag(FLG_RENDER_BACKGROUND_INSET, true);
-        setFlag(FLG_IMPL_SPEC1, true);
+        setFlag(FLG_BG_SHADING, true);
     }
     void render(NVGcontext* vg) override {
         renderWidgetBorder(vg, getStateFlags());
@@ -91,7 +91,7 @@ public:
         : guibutton(),
           idx(_idx) {
         setFlag(FLG_RENDER_BACKGROUND_INSET, true);
-        setFlag(FLG_IMPL_SPEC1, true);
+        setFlag(FLG_BG_SHADING, true);
     }
 
     void render(NVGcontext* vg) override {
