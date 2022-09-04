@@ -435,7 +435,7 @@ namespace PluginSynth {
             b = 0.0;
         }
 
-        bool IsSilent() const { return std::fabs(b) <= 1E-12; }
+        bool IsSilent() const { return std::fabs(b) < 1E-12; }
 
         double Process(double dt, double input, double cutoff, double resonance) {
             // f calculation
@@ -466,7 +466,7 @@ namespace PluginSynth {
             low  = 0.0;
         }
 
-        bool IsSilent() const { return std::fabs(low) <= 1E-12; }
+        bool IsSilent() const { return std::fabs(low) < 1E-12; }
 
         double Process(double dt, double input, double cutoff, double resonance) {
             // f calculation
@@ -501,7 +501,7 @@ namespace PluginSynth {
             d = 0.0;
         }
 
-        bool IsSilent() const { return std::fabs(d) <= 1E-12; }
+        bool IsSilent() const { return std::fabs(d) < 1E-12; }
 
         double Process(double dt, double input, double cutoff, double resonance) {
             // f calculation
@@ -613,6 +613,9 @@ namespace PluginSynth {
         double targetFrequency = 0.0;
         double pitchBend       = 1.0;
         bool bIsActive         = false;
+        bool bTriggerSmoothing = false;
+        double prevVolEnv = 0.0;
+        double prevCutoff = 0.0;
 
         double getRandom() {
             return rand.rng_double();
@@ -1825,12 +1828,13 @@ namespace PluginSynth {
             voice.Start(tempo, lfoPhaseDrift);
             dbgassert(voice.numUnisonActive == unisonVoiceCount);
             voice.visitVoices([this, &voice, bTriggerMono](Voice& v) {
+                bool isSilent = v.volEnv.stage >= EnvelopeStages::Idle || !v.bIsActive;
+                bool resetEnvelopes = isSilent || false;
+                bool resetLfos = isSilent;
+                bool resetOscs = isSilent || bTriggerMono;
                 UpdateVoiceEnvelopeModulations(voice, v);
                 UpdateVoiceModulations(voice, v, modSrcData);
-                bool resetOscs      = true;//v.volEnv.stage >= EnvelopeStages::Idle;
-                bool resetEnvelopes = true;//v.volEnv.stage >= EnvelopeStages::Idle;
-                bool resetLfos      = true;//v.volEnv.stage >= EnvelopeStages::Release;
-                
+                v.bTriggerSmoothing = !isSilent;
                 v.Start(resetOscs, resetEnvelopes);
                 if (resetLfos) {
                     bool bFadeLfo = v.volEnv.stage < EnvelopeStages::Idle;
@@ -2367,8 +2371,13 @@ namespace PluginSynth {
                 out += osc2Out * sqrt(oscMix);
                 dbgassert(!fp_math::isNanOrInfd(out));
             }
-
-            out *= volEnvValue;
+            double volEnvSmoothed = volEnvValue;
+            if (voice.bTriggerSmoothing) {
+                volEnvSmoothed = voice.prevVolEnv + dt * 8000.0 * (volEnvValue - voice.prevVolEnv);
+            }
+            voice.prevVolEnv = volEnvSmoothed;
+            
+            out *= volEnvSmoothed;
 
             auto filterDrive = GetModulatedParamVoice(voice, Parameters::FilterDrive);
             if (filterDrive < 0.0) {
@@ -2393,12 +2402,17 @@ namespace PluginSynth {
                 if (getSetting(Settings::FilterDriftEnabled)) {
                     cutoff *= 1.0 - filterDrift * (voice.driftValue + driftValue);
                 }
+                double cutoffSmooth = cutoff;
+                if (voice.bTriggerSmoothing) {
+                    cutoffSmooth = voice.prevCutoff + dt * 8000.0 * (cutoff - voice.prevCutoff);
+                }
+                voice.prevCutoff = cutoffSmooth;
                 // data = cutoff*dt;
                 // auto res = filterResonance;
                 auto res = static_cast<SynthParam_Float*>(vecParams[Parameters::FilterResonance])->ValueModulated(voice.modValues[Parameters::FilterResonance]);
-                out      = voice.filter.Process(dt, out, filtermode, cutoff, res);
+                out      = voice.filter.Process(dt, out, filtermode, cutoffSmooth, res);
             }
-            data = voice.lfoEnv.value;
+            data = volEnvSmoothed;
             // out *= volEnvValue;
 
             return out;
