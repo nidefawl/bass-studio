@@ -112,6 +112,9 @@ namespace PluginSynth {
     const std::array<const char*, 6> stringsWaveform = {
         "Sine", "Triangle", "Saw", "Square", "Pulse", "Noise"
     };
+    const std::array<const char*, 2> stringsReset = {
+        "Always", "Hold"
+    };
     const std::array<const char*, 4> stringsFilterMode = {
         "Off", "TwoPole", "Svf", "FourPole"
     };
@@ -635,19 +638,6 @@ namespace PluginSynth {
         double GetVolume() const { return volEnv.value; }
 
         void ResetPhases(bool bRandomPhase) {
-            if (bRandomPhase) {
-                oscFm.phase = rand.rng_double();
-                osc1a.phase = rand.rng_double();
-                osc1b.phase = rand.rng_double();
-                osc2a.phase = rand.rng_double();
-                osc2b.phase = rand.rng_double();
-            } else {
-                oscFm.phase = 0.0;
-                osc1a.phase = 0.0;
-                osc1b.phase = 0.0;
-                osc2a.phase = 0.0;
-                osc2b.phase = 0.0;
-            }
         }
 
         void ResetEnvelopes() {
@@ -673,15 +663,25 @@ namespace PluginSynth {
         void ResetPitch() { frequency = targetFrequency; }
 
         void SetVelocity(double v) { velocity = v; }
-
-        void Start(bool resetOscs, bool resetEnvelopes) {
+        void Start(bool holdOsc1Phase, bool holdOsc2Phase) {
             bIsActive = true;
-            if (resetOscs) {
-                ResetPhases(true);
-            }
-            if (resetEnvelopes) {
-                ResetEnvelopes();
-            }
+            // if (bRandomPhase) {
+                if (!holdOsc1Phase) {
+                    oscFm.phase = rand.rng_double();
+                    osc1a.phase = rand.rng_double();
+                    osc1b.phase = rand.rng_double();
+                }
+                if (!holdOsc2Phase) {
+                    osc2a.phase = rand.rng_double();
+                    osc2b.phase = rand.rng_double();
+                }
+            // } else {
+            //     oscFm.phase = 0.0;
+            //     osc1a.phase = 0.0;
+            //     osc1b.phase = 0.0;
+            //     osc2a.phase = 0.0;
+            //     osc2b.phase = 0.0;
+            // }
             volEnv.Start();
             modEnv.Start();
             lfoEnv.Start();
@@ -1439,6 +1439,18 @@ namespace PluginSynth {
             setParamName(getParam(Parameters::FilterMode), "Filter Mode", "Flt Mode");
             addEnumParam(Parameters::FmMode)->setStrings(stringsFMMode.begin(), stringsFMMode.end())->setRangedValue(0);
             setParamName(getParam(Parameters::FmMode), "FM Mode");
+            addEnumParam(Parameters::VolEnvTriggerMode)->setStrings(stringsReset.begin(), stringsReset.end())->setRangedValue(0);
+            setParamName(getParam(Parameters::VolEnvTriggerMode), "Volume envelope reset mode", "Vol env reset", "Reset");
+            addEnumParam(Parameters::ModEnvTriggerMode)->setStrings(stringsReset.begin(), stringsReset.end())->setRangedValue(0);
+            setParamName(getParam(Parameters::ModEnvTriggerMode), "Modulation envelope reset mode", "Mod env reset", "Reset");
+            addEnumParam(Parameters::Lfo1TriggerMode)->setStrings(stringsReset.begin(), stringsReset.end())->setRangedValue(0);
+            setParamName(getParam(Parameters::Lfo1TriggerMode), "LFO1 phase reset mode", "LFO1 phase reset", "Phase Reset");
+            addEnumParam(Parameters::Lfo1RampTriggerMode)->setStrings(stringsReset.begin(), stringsReset.end())->setRangedValue(0);
+            setParamName(getParam(Parameters::Lfo1RampTriggerMode), "LFO1 ramp reset mode", "LFO1 ramp reset", "Ramp Reset");
+            addEnumParam(Parameters::Osc1PhaseResetMode)->setStrings(stringsReset.begin(), stringsReset.end())->setRangedValue(0);
+            setParamName(getParam(Parameters::Osc1PhaseResetMode), "OSC1 phase reset mode", "OSC1 phase reset", "OSC1 phase reset");
+            addEnumParam(Parameters::Osc2PhaseResetMode)->setStrings(stringsReset.begin(), stringsReset.end())->setRangedValue(0);
+            setParamName(getParam(Parameters::Osc2PhaseResetMode), "OSC2 phase reset mode", "OSC2 phase reset", "OSC2 phase reset");
 
             addIntParam(Parameters::Voices)->setRange(1, NUM_POLY_VOICES)->setRangedValue(32);
             addIntParam(Parameters::UnisonVoices)->setRange(1, NUM_UNISON_VOICES)->setRangedValue(3);
@@ -1825,19 +1837,33 @@ namespace PluginSynth {
             return static_cast<SynthParam_Enum*>(this->vecParams[param]);
         }
         void StartVoice(VoiceUnison& voice, bool bTriggerMono) {
+            auto holdVolEnv = GetParamEnum(Parameters::VolEnvTriggerMode)->Value() == 1;
+            auto holdModEnv = GetParamEnum(Parameters::ModEnvTriggerMode)->Value() == 1;
+            auto holdLfo1 = GetParamEnum(Parameters::Lfo1TriggerMode)->Value() == 1;
+            auto holdLfo1Ramp = GetParamEnum(Parameters::Lfo1RampTriggerMode)->Value() == 1;
+            auto holdOsc1Phase = GetParamEnum(Parameters::Osc1PhaseResetMode)->Value() == 1;
+            auto holdOsc2Phase = GetParamEnum(Parameters::Osc2PhaseResetMode)->Value() == 1;
+            
             voice.Start(tempo, lfoPhaseDrift);
             dbgassert(voice.numUnisonActive == unisonVoiceCount);
-            voice.visitVoices([this, &voice, bTriggerMono](Voice& v) {
+            voice.visitVoices([&](Voice& v) {
                 bool isSilent = v.volEnv.stage >= EnvelopeStages::Idle || !v.bIsActive;
-                bool resetEnvelopes = isSilent || false;
-                bool resetLfos = isSilent;
-                bool resetOscs = isSilent || bTriggerMono;
                 UpdateVoiceEnvelopeModulations(voice, v);
                 UpdateVoiceModulations(voice, v, modSrcData);
                 v.bTriggerSmoothing = !isSilent;
-                v.Start(resetOscs, resetEnvelopes);
-                if (resetLfos) {
-                    bool bFadeLfo = v.volEnv.stage < EnvelopeStages::Idle;
+                v.Start(holdOsc1Phase, holdOsc2Phase);
+                if (!holdVolEnv || isSilent) {
+                    v.volEnv.Reset();
+                    v.filter.Reset();
+                }
+                if (!holdModEnv || isSilent) {
+                    v.modEnv.Reset();
+                }
+                if (!holdLfo1Ramp || isSilent) {
+                    v.lfoEnv.Reset();
+                }
+                if (!holdLfo1 || isSilent) {
+                    bool bFadeLfo = !isSilent;//v.volEnv.stage < EnvelopeStages::Idle;
                     v.prevLfoValue = v.lfoValue;
                     double phase = GetModulatedParamVoice(v, Parameters::LfoPhase);
                     v.lfo1.initPhase(phase + lfoPhaseDrift * this->driftValue * v.rand.rng_double(), bFadeLfo);
@@ -4145,16 +4171,12 @@ namespace PluginSynth {
             vecParamUI.reserve(Parameters::kNumParams);
             for (auto param : parametersOrdered) {
                 auto type = guiknob::knobtype::SLIDER_LABELED;
-                switch (param) {
-                    // case Parameters::MasterVolume:
-                    case Parameters::Voices:
-                    case Parameters::UnisonVoices:
-                    case Parameters::Osc1Wave:
-                    case Parameters::Osc2Wave:
-                    case Parameters::FilterMode:
-                    case Parameters::LfoWave:
-                    case Parameters::VoiceMode:
-                    case Parameters::FmMode:
+                if (!stl_contains(parametersModulate, param)) {
+                    type = guiknob::knobtype::KNOB_LABELED;
+                }
+                switch (plugin->getSynth()->getParam(param)->getType()) {
+                    case ParamType::ENUM:
+                    case ParamType::INT:
                         type = guiknob::knobtype::KNOB_LABELED;
                         break;
                     default:
@@ -4167,12 +4189,14 @@ namespace PluginSynth {
                     case Parameters::Osc1Coarse:
                     case Parameters::Osc1Fine:
                     case Parameters::Osc1Split:
+                    case Parameters::Osc1PhaseResetMode:
                         ctr = &ctrOsc1;
                         break;
                     case Parameters::Osc2Wave:
                     case Parameters::Osc2Coarse:
                     case Parameters::Osc2Fine:
                     case Parameters::Osc2Split:
+                    case Parameters::Osc2PhaseResetMode:
                         ctr = &ctrOsc2;
                         break;
                     case Parameters::LfoDelay:
@@ -4180,6 +4204,8 @@ namespace PluginSynth {
                     case Parameters::LfoPhase:
                     case Parameters::LfoShape:
                     case Parameters::LfoWave:
+                    case Parameters::Lfo1TriggerMode:
+                    case Parameters::Lfo1RampTriggerMode:
                         ctr = &ctrLfo;
                         break;
                     case Parameters::FmCoarse:
@@ -4214,6 +4240,7 @@ namespace PluginSynth {
                     case Parameters::ModEnvS:
                     case Parameters::ModEnvR:
                     case Parameters::ModEnvV:
+                    case Parameters::ModEnvTriggerMode:
                         ctr = &ctrEnvM;
                         break;
                     case Parameters::VolEnvA:
@@ -4221,6 +4248,7 @@ namespace PluginSynth {
                     case Parameters::VolEnvS:
                     case Parameters::VolEnvR:
                     case Parameters::VolEnvV:
+                    case Parameters::VolEnvTriggerMode:
                         ctr = &ctrEnvV;
                         break;
                     case Parameters::Macro01:
@@ -4234,6 +4262,7 @@ namespace PluginSynth {
                         ctr = &ctrMacro;
                         break;
                     default:
+                        dbgassert(0);
                         unreachable();
                         break;
                 }
@@ -4463,7 +4492,7 @@ namespace PluginSynth {
             auto moduleSize      = ivec2(math::roundfS32(knobSizeF.x), math::roundfS32(knobSizeF.y));
             int32_t colIdx       = 0;
 
-            auto knobSize = vec2((innerSize.x - 27 * padding) / 19, 0);
+            auto knobSize = vec2((innerSize.x - 33 * padding) / 21, 0);
 
             for (auto& ctr : containers) {
                 ctr->pos  = modulePos + ivec2(0, 0);

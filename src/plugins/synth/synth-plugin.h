@@ -70,6 +70,12 @@ namespace PluginSynth {
         Macro07,
         Macro08,
         LfoPhase,
+        VolEnvTriggerMode,
+        ModEnvTriggerMode,
+        Lfo1RampTriggerMode,
+        Lfo1TriggerMode,
+        Osc1PhaseResetMode,
+        Osc2PhaseResetMode,
         kNumParams
     };
     const Parameters parametersOrdered[] = {
@@ -87,14 +93,18 @@ namespace PluginSynth {
         VolEnvCutoff,
         ModEnvCutoff,
         OscMix,
+        Osc1PhaseResetMode,
         Osc1Wave,
         Osc1Coarse,
         Osc1Fine,
         Osc1Split,
+        Osc2PhaseResetMode,
         Osc2Wave,
         Osc2Coarse,
         Osc2Fine,
         Osc2Split,
+        Lfo1RampTriggerMode,
+        Lfo1TriggerMode,
         LfoWave,
         LfoShape,
         LfoPhase,
@@ -107,11 +117,13 @@ namespace PluginSynth {
         VolEnvFm,
         ModEnvFm,
         LfoFm,
+        VolEnvTriggerMode,
         VolEnvA,
         VolEnvD,
         VolEnvS,
         VolEnvR,
         VolEnvV,
+        ModEnvTriggerMode,
         ModEnvA,
         ModEnvD,
         ModEnvS,
@@ -272,6 +284,12 @@ namespace PluginSynth {
         double PolyVoicesMax     = 0.0;
         double FilterDrive       = 0.5;
         double LfoPhase          = 0.0;
+        double VolEnvTriggerMode   = 0.0;
+        double ModEnvTriggerMode   = 0.0;
+        double Lfo1RampTriggerMode = 0.0;
+        double Lfo1TriggerMode     = 0.0;
+        double Osc1PhaseResetMode  = 0.0;
+        double Osc2PhaseResetMode  = 0.0;
         double MacroValues[8] = {};
     public:
         double* getProgramParameter(Parameters parameter) {
@@ -327,6 +345,12 @@ namespace PluginSynth {
                 case Parameters::Macro07: return &MacroValues[6];
                 case Parameters::Macro08: return &MacroValues[7];
                 case Parameters::LfoPhase: return &LfoPhase;
+                case Parameters::VolEnvTriggerMode: return &VolEnvTriggerMode;
+                case Parameters::ModEnvTriggerMode: return &ModEnvTriggerMode;
+                case Parameters::Lfo1RampTriggerMode: return &Lfo1RampTriggerMode;
+                case Parameters::Lfo1TriggerMode: return &Lfo1TriggerMode;
+                case Parameters::Osc1PhaseResetMode: return &Osc1PhaseResetMode;
+                case Parameters::Osc2PhaseResetMode: return &Osc2PhaseResetMode;
                 case Parameters::MasterVolume:
                 case Parameters::kNumParams:
                     return nullptr;
