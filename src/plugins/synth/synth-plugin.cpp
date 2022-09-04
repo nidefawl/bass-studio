@@ -3376,7 +3376,7 @@ namespace PluginSynth {
                     }
                 };
                 inputConstant.fnClamp = [](double value) -> double {
-                    return math::clamp(value, -10.0, 10.0);
+                    return value;
                 };
             }
             {
