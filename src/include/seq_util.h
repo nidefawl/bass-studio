@@ -47,7 +47,7 @@ bool any_duplicates(const C1& c) {
 template<typename C1, typename V1>
 inline bool
 stl_contains(const C1& c, const V1& v) {
-    return std::find(begin(c), end(c), v) != end(c);
+    return std::find(std::cbegin(c), std::cend(c), v) != std::cend(c);
 }
 
 template<typename C1>
