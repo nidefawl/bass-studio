@@ -5,6 +5,7 @@
 #include <array>
 #include <memory>
 #include <type_traits>
+#include "logging.h"
 #include "seq_util.h"
 #include "types.h"
 #include "config.h"
@@ -87,6 +88,7 @@ public:
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
 };
 class noteevent_buffer {
+    tick_t currentTick = 0;
     std::vector<noteevent_t> events;
     public:
     void update(tick_t blockStart, const std::vector<noteevent_t>& noteEvents) {
@@ -101,11 +103,16 @@ class noteevent_buffer {
                 it++;
             }
         }
+        this->currentTick = blockStart;
     }
     void reset() {
         events.clear();
     }
     void getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<noteevent_t>& evtsOut) {
+        if (tickLatencyCompensated > currentTick) {
+            log_lf(Log::L_WARN, "tickLatencyCompensated=%d, ticksPerBlock=%f, currentTick=%d\n", tickLatencyCompensated, ticksPerBlock, currentTick);
+            return;
+        }
         if (!events.empty()) {
             for (auto& evt : events) {
                 if (evt.globalTick >= tickLatencyCompensated && evt.globalTick < tickLatencyCompensated + ticksPerBlock) {
@@ -279,6 +286,29 @@ inline bool isChannelConnected(const DAW::channel_ref_t& ch) {
 inline bool isTrackSrcSolod(const DAW::track_source_t& src) {
     return (src.flags & (audiostageflags_t::SOLO|audiostageflags_t::SOLO_PARENT)) != audiostageflags_t::NONE;
 }
+inline bool isMidiChannelConnected(const DAW::midichannel_ref_t& ch) {
+    return ch.stage.stageRef.stageId != TRACKID_INVALID_I32;
+}
+inline midichannel_ref_t MidiChannelNone() {
+    return midichannel_ref_t{};
+}
+inline midichannel_ref_t MidiChannelStage(const audio_stage_t* stage, stage_bufferpoint isInput) {
+    dbgassert(stage);
+    String str;
+    auto track = stage->getTrack();
+    if (track) {
+        str = track->name;
+    }
+    if (isInput == stage_bufferpoint::INPUT) {
+        str += " Pre";
+    } else {
+        str += " Post";
+    }
+    return midichannel_ref_t {
+        { stage->toRef(), isInput },
+        str
+    };
+}
 inline channel_ref_t ChannelNone() {
     return channel_ref_t{stage_type::INPUT_EMPTY};
 }
@@ -305,9 +335,9 @@ inline channel_ref_t ChannelStage(const audio_stage_t* stage, stage_bufferpoint 
         str = track->name;
     }
     if (isInput == stage_bufferpoint::INPUT) {
-        str += " IN";
+        str += " In";
     } else {
-        str += " OUT";
+        str += " Out";
     }
     return channel_ref_t {
         stage_type::INPUT_AUDIOSTAGE,
@@ -354,6 +384,7 @@ struct track_impl_t : public audio_stage_t {
     std::vector<note_t> m_heldNotes;
     DAW::channel_ref_t inputChannel;
     DAW::channel_ref_t outputChannel;
+    DAW::midichannel_ref_t midiChannel;
     std::vector<track_gui_entry_t*> guiInstances;
     std::vector<noteevent_t> noteEventsProcessed;
     clip_notes_t* midiProcessed = nullptr;

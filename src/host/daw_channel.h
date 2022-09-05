@@ -44,7 +44,10 @@ inline bool audioStageIdMatches(const audio_stage_id_t& stageIds, const audiosta
 }
 
 namespace DAW {
-
+    struct midichannel_ref_t {
+        audio_channel_ref_t stage{ { TRACKID_INVALID_I32 }, stage_bufferpoint::OUTPUT_POST };
+        String name              = "None";
+    };
     struct channel_ref_t {
         stage_type type              = stage_type::INPUT_EMPTY;
         channel_pairing externalInputType = channel_pairing::STEREO;

@@ -2,6 +2,7 @@
 
 #include "assert_dbg.h"
 #include "guiglobals.h"
+#include "host/daw_channel.h"
 #include "math/seq_math.h"
 #include "host/mainctrl.h"
 #include "host/plugin/vst_plugin.h"
@@ -759,20 +760,227 @@ public:
         this->dawCtrl->openAppMenu(0, popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
     }
 };
+
+class guidropdown_select_midi_ctxt : public guictxtmenu {
+    const audio_stage_ref_t busStage;
+    const audio_channel_ref_t stageEndpoint;
+
+public:
+    guidropdown_select_midi_ctxt(DawCtrl * _dawCtrl, audio_stage_ref_t _busStage, audio_channel_ref_t _dstStage)
+        : busStage(_busStage),
+          stageEndpoint(_dstStage)
+    {
+        this->dawCtrl = _dawCtrl;
+        int32_t idx = 0;
+        addEntry(new ctxtmenu_entry_stage_channel(idx++, "Pre", audio_channel_ref_t{ _busStage, stage_bufferpoint::INPUT }));
+        addEntry(new ctxtmenu_entry_stage_channel(idx++, "Post", audio_channel_ref_t{ _busStage, stage_bufferpoint::OUTPUT_POST }));
+        audio_stage_t* stage = vsthost::getInstance()->getAudioStage(stageEndpoint.stageRef);
+        if (stage) {
+            track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
+            dbgassert(trImpl);
+            if (trImpl) {
+                dbgassert(trImpl->getTrack());
+                auto& childTracks = trImpl->getTrack()->children;
+                for (track_t* childTrack : childTracks) {
+                    dbgassert(childTrack->audio);
+                    addEntry(new ctxtmenu_entry_bus_internal(idx, childTrack->name, childTrack->audio->toRef(), stageEndpoint));
+                    idx++;
+                }
+            }
+        }
+    }
+    // guidropdown_select_midi_ctxt(DawCtrl * _dawCtrl, const io_cfg_tracks& cfg, audio_channel_ref_t _dstStage)
+    //     : busStage(AudioStageRefNULL()),
+    //       stageEndpoint(_dstStage) 
+    // {
+    //     this->dawCtrl = _dawCtrl;
+    //     int32_t idx = 0;
+    //     auto& list  = stageEndpoint.buffer == stage_bufferpoint::INPUT ? cfg.input : cfg.output;
+    //     for (auto& channel : list) {
+    //         addEntry(new ctxtmenu_entry_external_channel(idx, channel, _dstStage.buffer));
+    //         idx++;
+    //     }
+    // }
+
+    explicit guidropdown_select_midi_ctxt(DawCtrl * _dawCtrl, audio_channel_ref_t _stageEndpoint, int lvl = 0)
+        : busStage(AudioStageRefNULL()),
+          stageEndpoint(_stageEndpoint)
+    {
+        this->dawCtrl = _dawCtrl;
+        int32_t idx      = 0;
+        String inputName = stageEndpoint.buffer == stage_bufferpoint::INPUT ? "External input" : "External output";
+        addEntry(new ctxtmenu_entry_stage_channel(idx++, "None", AudioChannelRefNULL()));
+        // addEntry(new ctxtmenu_entry_default_channel(idx++, "Default"));
+        // addEntry(new ctxtmenu_entry_bus_external(idx++, inputName, stageEndpoint));
+
+        project_t* project = dawCtrl->getDaw()->getProject();
+        dbgassert(project);
+        if (project) {
+            auto& tracks = project->trackList;
+            for (track_t* track : tracks) {
+                dbgassert(track->audio);
+                addEntry(new ctxtmenu_entry_bus_internal(idx, track->name, track->audio->toRef(), stageEndpoint));
+                idx++;
+            }
+        }
+    }
+
+    void addEntry(ctxtmenu_entry* entry) = delete;
+    void addEntry(ctxtmenu_entry_track_io* entry) {
+        guictxtmenu::addEntry(entry);
+    }
+
+    void clickedElement(ctxtmenu_entry* e, int _id) override {
+        auto const ctxtEndpointEntry = static_cast<ctxtmenu_entry_track_io*>(e);
+        if (ctxtEndpointEntry->isBus()) {
+            return;
+        }
+        dbgassert(dynamic_cast<ctxtmenu_entry_endpoint*>(e));
+        auto const entry = static_cast<ctxtmenu_entry_endpoint*>(e);
+        auto const stage = dawCtrl->getDaw()->getHost()->getAudioStage(stageEndpoint.stageRef);
+        if (!stage)
+            return;
+        auto const trImpl = dynamic_cast<track_impl_t*>(stage);
+        dbgassert(trImpl);
+        if (!assert_expr(trImpl))
+            return;
+        if (stageEndpoint.buffer == stage_bufferpoint::INPUT) {
+            auto ep = entry->getEndpoint();
+            auto channelRef = ep.stage;
+            DAW::midichannel_ref_t midiChannel = DAW::MidiChannelNone();
+            auto const stage = dawCtrl->getDaw()->getHost()->getAudioStage(channelRef.stageRef);
+            if (stage) {
+                trImpl->midiChannel = DAW::MidiChannelStage(stage, channelRef.buffer);
+            } else {
+                trImpl->midiChannel = DAW::MidiChannelNone();
+            }
+        } else {
+            // trImpl->outputChannel = entry->getEndpoint();
+        }
+        dawCtrl->closeAllContextMenus();
+    }
+
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        if (this->contains(mpos)) {
+            ivec2 localMouse         = this->toContainerSpace(mpos);
+            ctxtmenu_entry* entryHit = nullptr;
+            for (ctxtmenu_entry* e : entries) {
+                int n = e->getClicked(size, localMouse);
+                if (n >= 0) {
+                    entryHit = e;
+                    break;
+                }
+            }
+            if (!entryHit || !entryHit->isMenuOpen()) {
+                //close other submenu at same level
+                closeAllSubmenus();
+            } 
+            if (entryHit && !entryHit->isMenuOpen()) {
+                entryHit->setIsMenuOpen(true);
+                auto entry = dynamic_cast<ctxtmenu_entry_bus*>(entryHit);
+                if (entry) {
+                    guictxtmenu* popup = nullptr;
+                    if (entry->busType == bus_type::internal) {
+                        auto stageEntry = dynamic_cast<ctxtmenu_entry_bus_internal*>(entry);
+                        dbgassert(stageEntry);
+                        if (stageEntry) {
+                            popup = new guidropdown_select_midi_ctxt(dawCtrl, stageEntry->getStageRef(), stageEndpoint);
+                        }
+                    }
+                    // if (entry->busType == bus_type::external) {
+                        // auto& settings = daw_tls::getSettings();
+                        // auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
+                        // popup     = new guidropdown_select_midi_ctxt(dawCtrl, cfg, stageEndpoint);
+                    // }
+                    // dbgassert(popup);
+                    if (popup) {
+                        popup->setLevel(this->getLevel() + 1);
+                        entry->bIsMenuOpen = true;
+                        popup->size = size;
+                        popup->setFontSize(entry->fontSize);
+                        popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
+                        ivec2 screenPosThis = this->parentCtrl->toScreenSpace(ivec2(0, 0));
+                        ivec2 screenPosParent = dawCtrl->toScreenSpace(ivec2(0, 0));
+                        ivec2 screenPos       = screenPosThis - screenPosParent + ivec2(right() + 2, top() + entryHit->y);
+                        this->dawCtrl->openAppMenu(popup->getLevel(), popup, screenPos);
+                    }
+                }
+            }
+            for (guibase* gui : guis) {
+                if (!gui->isVisible())
+                    continue;
+                if (gui->mouseHitTest(localMouse, evt)) {
+                    return true;
+                }
+            }
+            if (canMouseHit()) {
+                evt.requestFocus(this);
+                return true;
+            }
+        }
+        return false;
+    }
+};
+
+class guidropdown_select_midi_input : public guidropdownbase {
+    track_t* const track;
+    const bool isInput;
+
+public:
+    guidropdown_select_midi_input(track_gui_entry_t* _entry, const bool _isInput) : guidropdownbase(), track(_entry->track), isInput(_isInput) {
+    }
+    String getString() override {
+        track_impl_t* trImpl = track->audio;
+        dbgassert(trImpl);
+        if (trImpl) {
+            auto& channel      = isInput ? trImpl->midiChannel : trImpl->midiChannel;
+            // project_t* project = dawCtrl->getDaw()->getProject();
+            // dbgassert(project);
+            // if (project) {
+            //     vsthost* const host = vsthost::getInstance();
+            //     if (channel.type == DAW::stage_type::INPUT_DEFAULT) {
+            //         DAW::channel_ref_t out;
+            //         if (DAW::resolveDefaultConnection(host, project, trImpl, isInput, out)) {
+            //             return out.name;
+            //         }
+            //         return "Default";
+            //     }
+            // }
+            return channel.name;
+        }
+        return "<Invalid Track>";
+    }
+    void handleDraggedRelease(MouseEvent& evt) override {
+        track_impl_t* trImpl = track->audio;
+        dbgassert(trImpl);
+        if (!trImpl)
+            return;
+        auto stageBufferPoint = isInput ? stage_bufferpoint::INPUT : stage_bufferpoint::OUTPUT_POST;
+        auto* popup = new guidropdown_select_midi_ctxt(dawCtrl, audio_channel_ref_t{ trImpl->toRef(),  stageBufferPoint});
+        popup->size             = size;
+        popup->setFontSize(size.y);
+        popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
+        this->dawCtrl->openAppMenu(0, popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
+    }
+};
 class gui_trackcontrols_io : public guictr_base {
     guidropdown_select_bus selectInput;
     guidropdown_select_bus selectOutput;
+    guidropdown_select_midi_input selectMidiInput;
 
 public:
     explicit gui_trackcontrols_io(track_gui_entry_t* _entry)
         : guictr_base(),
           selectInput(_entry, true),
-          selectOutput(_entry, false) {
+          selectOutput(_entry, false),
+          selectMidiInput(_entry, true) {
         add(&selectInput);
         add(&selectOutput);
+        add(&selectMidiInput);
         padding = 0;
     }
     ~gui_trackcontrols_io() override {
+        remove(&selectMidiInput);
         remove(&selectOutput);
         remove(&selectInput);
     }
@@ -783,9 +991,11 @@ public:
         int32_t inset      = CONST_PADDING_TRACK_CONTROLS;
         selectInput.pos    = ivec2(inset, inset);
         selectOutput.pos   = ivec2(inset, TRACK_HEIGHT_STEP + inset);
+        selectMidiInput.pos   = ivec2(inset, (TRACK_HEIGHT_STEP + inset)*2);
         selectInput.size   = getSizeContent() - ivec2(inset * 2);
         selectInput.size.y = TRACK_HEIGHT_STEP - inset * 2;
         selectOutput.size  = selectInput.size;
+        selectMidiInput.size  = selectInput.size;
         for (auto gui : guis) {
             gui->layout();
         }

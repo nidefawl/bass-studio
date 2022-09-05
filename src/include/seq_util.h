@@ -19,6 +19,12 @@ Container&& sort_unique_erase(Container&& c) {
     c.erase(std::unique(begin(c), end(c)), end(c));
     return std::forward<Container>(c);
 }
+template<typename Container>
+void stl_remove_duplicates(Container& c) {
+    using std::begin;
+    using std::end;
+    c.erase(std::unique(begin(c), end(c)), end(c));
+}
 
 template<typename C1, typename C2>
 C1&& append(C1&& c1, C2&& c2) {

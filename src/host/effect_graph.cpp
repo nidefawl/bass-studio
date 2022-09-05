@@ -3,7 +3,7 @@
 #include "seq_util.h"
 #include "seq_time.h"
 #include "dsp_util.h"
-
+#include "seq_util.h"
 #include "project.h"
 #include "vst_host.h"
 #include "track.h"
@@ -390,23 +390,18 @@ namespace DAW {
 
         auto trackGraph = std::make_shared<effect_graph_t>();
         trackGraph->nodes.reserve(map.size() + audioStageOutputs.size() + audioStageInputs.size());
-        for (const auto& mappedNode : map) {
-            if (mappedNode.second->parents.empty()) {
-                trackGraph->roots.push_back(mappedNode.second);
+        auto maps = {&map, &audioStageOutputs, &audioStageInputs};
+        for (const auto* nodeMap : maps) {
+            for (const auto& mappedNode : *nodeMap) {
+                auto node = mappedNode.second;
+                if (node->parents.empty()) {
+                    trackGraph->roots.push_back(node);
+                }
+                stl_remove_duplicates(node->children);
+                stl_remove_duplicates(node->parents);
+                stl_remove_duplicates(node->dependencies);
+                trackGraph->nodes.push_back(node);
             }
-            trackGraph->nodes.push_back(mappedNode.second);
-        }
-        for (const auto& mappedNode : audioStageOutputs) {
-            if (mappedNode.second->parents.empty()) {
-                trackGraph->roots.push_back(mappedNode.second);
-            }
-            trackGraph->nodes.push_back(mappedNode.second);
-        }
-        for (const auto& mappedNode : audioStageInputs) {
-            if (mappedNode.second->parents.empty()) {
-                trackGraph->roots.push_back(mappedNode.second);
-            }
-            trackGraph->nodes.push_back(mappedNode.second);
         }
         //if (gEnableLog) {
         //    for (effect_node_ptr& ptr : trackGraph->nodes) {

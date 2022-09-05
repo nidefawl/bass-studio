@@ -313,6 +313,7 @@ namespace DAW {
 
             auto inputChannel  = trackImpl->inputChannel;
             auto outputChannel = trackImpl->outputChannel;
+            auto midiInputChannel  = trackImpl->midiChannel;
 
             if (inputChannel.type == stage_type::INPUT_DEFAULT) {
                 channel_ref_t tmp;
@@ -329,6 +330,19 @@ namespace DAW {
                 } else {
                     //log_printf("Default output of stage #%d cannot be mapped\n", stageId);
                 }
+            }
+            if (isMidiChannelConnected(midiInputChannel)) {
+                audio_stage_t* src = host->getAudioStage(midiInputChannel.stage.stageRef);
+                dbgassert(src);
+                auto srcStageId = src->stageId.stageId;
+                if (!map.count(srcStageId)) {
+                    map[srcStageId] = makeTrackNode(srcStageId, src->getInternalLatency());
+                }
+                track_node_t& trackSrcCfg = getNode(map, srcStageId);
+                trackCfg.dependencies.push_back(srcStageId);
+                // trackCfg.pulls.push_back(track_source_t{ trackEdgeId++, midiInputChannel, AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, src->flags });
+                trackCfg.children.push_back(&trackSrcCfg);
+                trackSrcCfg.parents.push_back(&trackCfg);
             }
             if (isChannelConnected(inputChannel)) {
                 if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
@@ -409,7 +423,10 @@ namespace DAW {
             if (node->parents.empty()) {
                 trackGraph->roots.push_back(node);
             }
-            trackGraph->nodes.push_back(std::move(mapIt->second));
+            stl_remove_duplicates(node->children);
+            stl_remove_duplicates(node->parents);
+            stl_remove_duplicates(node->dependencies);
+            trackGraph->nodes.push_back(mapIt->second);
         }
         if (gEnableLog) {
             for (track_node_ptr& ptr : trackGraph->nodes) {

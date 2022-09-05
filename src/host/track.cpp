@@ -1105,6 +1105,17 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
             sortNoteEvents(noteEvents);
             notesPre.update(blockStart, noteEvents);
             updateProfilingTime(procMidiStats.tm4SortEvents, tmr.getTimeReset());
+            
+            auto* stageMidiInput = host->getAudioStage(midiChannel.stage.stageRef);
+            if (stageMidiInput) {
+                noteEvents.clear();
+                if(stageMidiInput->getInputLatency() > getInputLatency()) {
+                    dbgassert("Midi input channel not yet processed. Loop midi routing?!");
+                } else {
+                    stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, midiChannel.stage.buffer != DAW::stage_bufferpoint::INPUT);
+
+                }
+            }
 
             tmr.reset();
             this->noteEventsProcessed.clear();
