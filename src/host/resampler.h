@@ -131,7 +131,7 @@ struct resampler_t {
                 return b;
             }
         }
-        outputBuffers.push_back(new buf_t{ new AudioBlock(numChannels, resampler.numSamplesResampled), 0, 0, false });
+        outputBuffers.push_back(new buf_t{ new AudioBlock(numChannels, resampler.numSamplesResampled), {}, 0, 0, false });
         if (outputBuffers.size() % 128 == 0)
             log_printf("Allocate new output buffer, total %zu buffers\n", outputBuffers.size());
         return outputBuffers.back();

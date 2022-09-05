@@ -410,7 +410,6 @@ void guictr_layout_entry_handle::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
-    int32_t stateFlags = getStateFlags();
     nvgBeginPath(vg);
     nvgRect(vg, 0, 0, size.x, size.y);
     NVGcolor bg = theme->getColor(GuiColor::COL_BASE_BG);
