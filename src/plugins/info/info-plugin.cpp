@@ -146,7 +146,7 @@ namespace PluginHostInfo {
 
     VstIntPtr PluginVST2_HostInfo::dispatcher (VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt)
     {
-        if (opcode != effEditIdle)
+        if (opcode != effEditIdle && getLogVerbosity()>0)
             log_printf("dispatch %d %d %012zX %012zX %f\n", opcode, index, static_cast<uint64_t>(value), reinterpret_cast<uint64_t>(ptr), opt);
         return AudioEffectX::dispatcher(opcode, index, value, ptr, opt);
     }
