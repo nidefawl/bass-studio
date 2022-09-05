@@ -410,6 +410,37 @@ public:
     }
 };
 
+class guibutton_track_record_arm : public guibuttonstate {
+    track_t* const m_track;
+    track_gui_entry_t* const m_trackentry;
+
+public:
+    explicit guibutton_track_record_arm(track_gui_entry_t* _entry)
+        : guibuttonstate(),
+          m_track(_entry->track),
+          m_trackentry(_entry) {
+        (void) m_trackentry;
+        drawFn = drawRecordSymbol;
+        setLabel("Record");
+    }
+    
+
+    GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const override {
+        if ((m_track->audio->flags & audiostageflags_t::RECORD_PROCESSED_MIDI) != audiostageflags_t::NONE) {
+            return GuiColor::COL_BTN_RECORD_ARM_BG;
+        }
+        return guibuttonstate::getBackgroundColorFromState(stateflags);
+    }
+    bool getState() const override {
+        if (m_track->audio) {
+            return (m_track->audio->flags & (audiostageflags_t::RECORD_PROCESSED_MIDI)) != audiostageflags_t::NONE;
+        }
+        return false;
+    }
+    void handleRightClick(MouseEvent& evt) override {
+    }
+};
+
 class gui_subtrack_waveview;
 
 /* track io menus */
@@ -1027,6 +1058,7 @@ public:
     gui_trackgain gain;
     guibutton_trackbypass btnBypass;
     guibutton_track_solo btnSolo;
+    guibutton_track_record_arm btnRecord;
     guibutton btnActivate;
     std::vector<gui_trackgain*> sendGains;
     explicit gui_trackcontrols_mixer(track_gui_entry_t* _entry)
@@ -1035,7 +1067,8 @@ public:
           m_trackentry(_entry),
           m_guiMeter(&_entry->track->audio->meter),
           btnBypass(_entry),
-          btnSolo(_entry) {
+          btnSolo(_entry) ,
+          btnRecord(_entry) {
         (void) m_trackentry;
         gain.setAutomationRef(&m_track->audio->mixer, PARAM_TRACK_GAIN);
         padding            = 0;
@@ -1047,6 +1080,7 @@ public:
         btnActivate.setLabel("Load plugins");
         add(&btnBypass);
         add(&btnSolo);
+        add(&btnRecord);
         add(&btnActivate);
         add(&gain);
         add(&m_guiMeter);
@@ -1069,6 +1103,7 @@ public:
         remove(&m_guiMeter);
         remove(&gain);
         remove(&btnActivate);
+        remove(&btnRecord);
         remove(&btnSolo);
         remove(&btnBypass);
     }
@@ -1078,6 +1113,10 @@ public:
         if (&btnSolo == button) {
             bool isSolo = (m_track->audio->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE;
             daw->setSoloState(m_track->audio->toRef(), !isSolo);
+        }
+        if (&btnRecord == button) {
+            bool isArmed = (m_track->audio->flags & audiostageflags_t::RECORD_PROCESSED_MIDI) != audiostageflags_t::NONE;
+            daw->setTrackArmed(m_track->audio->toRef(), !isArmed);
         }
         if (&btnBypass == button) {
             track_params_t& trackParams = m_track->audio->mixer;
@@ -1126,11 +1165,13 @@ public:
         // int32_t mW      = TRACK_HEIGHT_STEP * 3;
         int32_t bW      = size.x - mW;
         int32_t gW      = size.x - mW;
-        btnBypass.size  = ivec2(bW - inset * 3 - h, h);
+        btnBypass.size  = ivec2(bW - inset * 4 - h*2, h);
         gain.size       = ivec2(gW - i2, h);
         btnBypass.pos   = ivec2(inset, inset);
         btnSolo.pos     = ivec2(bW - inset - h, inset);
         btnSolo.size    = ivec2(h, h);
+        btnRecord.pos     = ivec2(bW - inset*2 - h * 2, inset);
+        btnRecord.size    = ivec2(h, h);
         gain.pos        = ivec2(inset, TRACK_HEIGHT_STEP + inset);
         btnActivate.pos = { inset, gain.bottom() + i2 };
         btnActivate.size = { h, h };

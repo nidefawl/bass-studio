@@ -873,6 +873,12 @@ void DawInstance::setSoloState(audio_stage_ref_t ref, bool enableSolo) {
     track->audio->flags ^= audiostageflags_t::SOLO;
     DAW::updateSoloFlag(tls.host, &project, getTracks().getAllTracksFlatVecRef());
 }
+void DawInstance::setTrackArmed(audio_stage_ref_t ref, bool enabledArmed) {
+    track_t* track = getTracks().resolveTrack(ref);
+    dbgassert(track);
+    dbgassert(track->audio);
+    track->audio->flags ^= audiostageflags_t::RECORD_PROCESSED_MIDI;
+}
 
 bool DawInstance::onChildOverlayWindowClose(window_main* window) {
     auto it = std::find_if(companionWindows.begin(), companionWindows.end(), [this, window](auto& wndEntry) {

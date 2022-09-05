@@ -21,6 +21,7 @@ class gui_clip;
 inline float velocityToFloat(int32_t velocity) {
     return velocity / 127.0F;
 }
+#define lenTicksInfinite TICKS_BAR*16;
 namespace NoteFlags {
     static constexpr int32_t ENABLED  = 1;
     static constexpr int32_t REALTIME = 2;

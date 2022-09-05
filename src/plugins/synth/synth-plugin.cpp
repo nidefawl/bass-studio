@@ -4573,13 +4573,9 @@ namespace PluginSynth {
         }
     };
     class guicontainer_plugin_synth_preset_browser : public guictr_base, public splitter_cb {
-
-        PluginVST2_Synth* const plugin;
-
     public:
         explicit guicontainer_plugin_synth_preset_browser(PluginVST2_Synth* plugin)
-            : guictr_base(),
-              plugin(plugin) {
+        {
         }
 
         void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override {

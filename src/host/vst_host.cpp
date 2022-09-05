@@ -991,7 +991,6 @@ bool resolveAudioChannel(const vsthost* const host, channelnum_t numChannelsTrac
 }
 
 //TODO: get rid of this constant
-const int32_t lenTicksInfinite = TICKS_BAR*16;
 
 void vsthost::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state) {
     //TODO: This needs to be done per input and per track
@@ -1743,8 +1742,6 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
     if (nResampledOutputBlocks > 0 && stream && stream->getOutputQueueSize() < RING_BUF_SIZE*2/3) {
         auto& writePos = ringbuffer.writePos;
         //TODO: this is incorrect, the resampler should keep track of sample/tick position, but right now these fields are not read on output side
-        double blockPosSample = sample;
-        double blockPosTick = posDouble;
         int64_t time0 = 0;
         int64_t time1 = 0;
         int64_t time2 = 0;
@@ -1938,11 +1935,11 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
     }
 
     tmp.timer.reset();
-    trackImpl->processMidiInput(playbackState, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, trackNode.inputLatency, *midiRealtimeInput);
+    trackImpl->processMidiInput(playbackState, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, trackNode.inputLatency, *midiRealtimeInput);
 //    if ((trackImpl->flags & audiostageflags_t::RECORD_PROCESSED_MIDI) != audiostageflags_t::NONE) {
-    if (isSet(trackImpl->flags, audiostageflags_t::RECORD_PROCESSED_MIDI)) {
-        processMidiProcessedOutput(playbackState, processingPos, tickBlockEnd, trackImpl->noteEventsProcessed);
-    }
+    // if (isSet(trackImpl->flags, audiostageflags_t::RECORD_PROCESSED_MIDI)) {
+    //     processMidiProcessedOutput(playbackState, processingPos, tickBlockEnd, trackImpl->noteEventsProcessed);
+    // }
 
     track->getStage()->procStats.timeTrackProcessMidi = tmp.timer.getTime();
 
@@ -3063,6 +3060,7 @@ void vsthost::updateMaximumStageId() {
 
 bool vsthost::writeRecordedData(project_t* project) {
     dbgassert(MainCtrl::get());
+    bool bHasNewData = false;
     if (this->hasNewRecordedData) {
         ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
         this->hasNewRecordedData = false;
@@ -3080,11 +3078,14 @@ bool vsthost::writeRecordedData(project_t* project) {
                 pClip->notes.updateBounds();
                 tr->getMidi().addClip(pClip);
                 tr->getMidi().sortClips();
-                return true;
+                bHasNewData = true;
             }
         }
     }
-    return false;
+    for (auto& track : trackAudioStages) {
+        bHasNewData |= track->recorder.writeRecordedData(track);
+    }
+    return bHasNewData;
 }
 
 int32_t vsthost::getNextSampleId(int32_t id) {

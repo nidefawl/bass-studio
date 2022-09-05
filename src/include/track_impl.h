@@ -127,6 +127,17 @@ class noteevent_buffer {
     }
 
 };
+struct clip_recorder {
+    clip_t* recordingClip = nullptr;
+    std::atomic<bool> hasNewRecordedData{};
+    clip_t* recordDataProcessed = nullptr;
+    clip_notes_t midiProcessedInput;
+    void updateRecordingClip(tick_t tickPosBlockStart, tick_t tickBlockEnd, const std::vector<note_t>& m_list);
+    void finishRecordingClip(tick_t tickPosBlockStart, tick_t tickBlockEnd, const std::vector<note_t>& m_list);
+    public:
+    void processMidiProcessedOutput(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, const std::vector<noteevent_t>& noteEventsProcessed, bool recordArmed);
+    bool writeRecordedData(track_impl_t* trImpl);
+};
 struct audio_stage_t {
     /**
      * Internal pre-process per-block input buffer
@@ -176,6 +187,7 @@ struct audio_stage_t {
     stats_processing_timings_t procStats;
     noteevent_buffer notesPre;
     noteevent_buffer notesPost;
+    clip_recorder recorder;
     std::shared_ptr<DAW::effect_processing_graph_t> processingGraph;
 
     audio_stage_t(vsthost* const _host, const audio_stage_id_t _id, const sampleformat_t _sampleFormat, const channelnum_t _numChannels, int _type = 1)
@@ -397,8 +409,8 @@ struct track_impl_t : public audio_stage_t {
     void onStartPlayback() override;
     void onStopPlayback() override;
     void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) override;
-    void processMidiInput(playback_state state, int32_t flags, tick_t cursorPos, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, samplecount_t inputLatency, const clip_notes_t& midiRealtimeInput);
-    void postProcessMidiInput(playback_state state, int32_t flags, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, samplecount_t inputLatency);
+    void processMidiInput(playback_state state, int32_t flags, tick_t cursorPos, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency, const clip_notes_t& midiRealtimeInput);
+    void postProcessMidiInput(playback_state state, int32_t flags, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency);
     void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
     void addAudio(const AudioBlock& src, float fGain);
     void removePlugin(effectbase* _vst, bool notifyUp) override;

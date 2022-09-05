@@ -323,9 +323,9 @@ void module_group::process(AudioBlock* in, AudioBlock* out, double tick, double 
 }
 
 void module_group::processMidi(midi_events_t& midiEvents) {
-    for (effectbase* effect : audio->effects) {
-        effect->processMidi(midiEvents);
-    }
+    audio->notesPre.update(midiEvents.tickLatencyCompensated, *midiEvents.noteEventsProcessed);
+    //TODO: let plugins process midi and update this after process(AudioBlock)
+    audio->notesPost.update(midiEvents.tickLatencyCompensated, *midiEvents.noteEventsProcessed);
 }
 
 void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
