@@ -135,6 +135,7 @@ public:
     guiplugin* getGui() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     void processMidi(midi_events_t& midiEvents) override;
+    void sendNotesOff(int32_t bpm100) override;
     samplecount_t getPluginLatency() override;
     int32_t getFlagsVST();
     VstTimeInfo* getLocalTimeInfoPtr();

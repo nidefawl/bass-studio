@@ -7,6 +7,14 @@
 #include <vstsdk-host-2.4/aeffectx.h>
 
 struct VstEvent_t {
+    static inline void ReallocVstEvents(VstEvent_t** handle, size_t size) {
+        size = math::max((size_t) 128, size);
+        if (*handle == nullptr || (*handle)->maxEvents < (int32_t) size) {
+            if (*handle) delete *handle;
+            *handle = new VstEvent_t(size);
+        }
+        (*handle)->reset();
+    }
     int32_t maxEvents;
     VstEvents* vstEvents;
     VstMidiEvent* evtArr;
@@ -60,7 +68,7 @@ struct VstEvent_t {
         buf[3] = 0;
     }
 
-    void writeVstMidiEvt(noteevent_t& nevt, double tickToSamples, int32_t blockSize) {
+    void writeVstMidiEvt(const noteevent_t& nevt, double tickToSamples, int32_t blockSize) {
         int32_t idx = vstEvents->numEvents;
         dbgassert(idx < maxEvents);
         VstMidiEvent& evt = evtArr[idx];

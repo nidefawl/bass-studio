@@ -377,19 +377,8 @@ void audio_stage_t::insertEffect(int32_t idx, effectbase* _effect) {
 }
 
 track_impl_t::~track_impl_t() {
-    delete m_midiEventsBuf;
     delete arp;
     delete midiProcessed;
-}
-
-VstEvent_t* track_impl_t::reallocEvts(size_t size) {
-    size = math::max((size_t) 128, size);
-    if (m_midiEventsBuf == nullptr || m_midiEventsBuf->maxEvents < (int32_t) size) {
-        if (m_midiEventsBuf) delete m_midiEventsBuf;
-        m_midiEventsBuf = new VstEvent_t(size);
-    }
-    m_midiEventsBuf->reset();
-    return m_midiEventsBuf;
 }
 
 samplecount_t audio_stage_t::getInternalLatency() const {
@@ -445,6 +434,11 @@ void audio_stage_t::onStopPlayback() {
 }
 
 void audio_stage_t::sendNotesOff(int32_t bpm100) {
+    for (effectbase* effect : effects) {
+        effect->sendNotesOff(bpm100);
+    }
+    notesPre.reset();
+    notesPost.reset();
 }
 
 void audio_stage_t::notifyPluginContainers() {
@@ -461,7 +455,7 @@ void audio_stage_t::notifyPluginContainers() {
         }
         audioStage = audioStage->parent;
     }
-    this->processingGraph.reset();
+    processingGraph.reset();
 }
 
 void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targets, bool includeEffects) {
@@ -819,7 +813,6 @@ void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry
 }
 
 audio_stage_t::~audio_stage_t() {
-    log_lf(Log::L_DEBUG, "delete audio_stage_t %08zX\n", reinterpret_cast<uint64_t>(this));
 }
 
 void audio_stage_t::onTick(double since) {
@@ -925,13 +918,13 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
     std::sort(noteEvents.begin(), noteEvents.end(), [](const noteevent_t& a, const noteevent_t& b) {
         // sort by tick, pitch, note off, note on
-        if (a.tickOffsetInBlock == b.tickOffsetInBlock) {
+        if (a.globalTick == b.globalTick) {
             if (a.pitch == b.pitch) {
                 return !a.isNoteOn && b.isNoteOn;
             }
             return a.pitch < b.pitch;
         }
-        return a.tickOffsetInBlock < b.tickOffsetInBlock;
+        return a.globalTick < b.globalTick;
     });
 }
 
@@ -956,51 +949,41 @@ std::vector<marker_t>& track_impl_t::getArpMarkers(int n) {
     return this->arp->markers;
 }
 
+void audio_stage_t::onStartPlayback() {
+    notesPre.reset();
+    notesPost.reset();
+}
 void track_impl_t::onStartPlayback() {
     ThreadLock lock = midiMutex.lockThread();
+    audio_stage_t::onStartPlayback();
     if (arp)
         arp->onStartPlayback();
+    notesPre.reset();
+    notesPost.reset();
 }
 
 void track_impl_t::onStopPlayback() {
     midiProcessed->clear();
 }
 
+void audio_stage_t::onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) {
+    notesPre.reset();
+    notesPost.reset();
+}
+
 void track_impl_t::onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) {
+    audio_stage_t::onPlaybackJumpFromTo(fromSamplePos, fromTickPos, toSamplePos, toTickPos);
     midiProcessed->clear();
 }
 
 void track_impl_t::sendNotesOff(int32_t bpm100) {
+    audio_stage_t::sendNotesOff(bpm100);
     std::vector<noteevent_t> noteEvents;
     {
         ThreadLock lock = midiMutex.lockThread();
         if (arp) {
             arp->allNotesOff(noteEvents);
         }
-        if (!arp || !arp->isProcessingEnabled()) {
-            const std::vector<note_t>& heldNotes = track->audio->m_heldNotes;
-            noteEvents.reserve(heldNotes.size());
-            for (const note_t& noteHeld : heldNotes) {
-                noteEvents.emplace_back(noteHeld.pitch, noteHeld.velocity, 0, noteHeld.start(), false, false);
-            }
-        }
-        track->audio->m_heldNotes.clear();
-    }
-    sortNoteEvents(noteEvents);
-
-    const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(sampleFormat.blockSize, bpm100, sampleFormat.sampleRate);
-    const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, bpm100, sampleFormat.sampleRate);
-
-    VstEvent_t* midiEventsBuf  = reallocEvts(noteEvents.size() + 1);
-    for (noteevent_t& evt : noteEvents) {
-        dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
-        midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, sampleFormat.blockSize);
-    }
-    dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) noteEvents.size());
-    midiEventsBuf->writeInstantOff();
-    midi_events_t events{ &noteEvents, midiEventsBuf };
-    for (effectbase* effect : effects) {
-        effect->processMidi(events);
     }
 }
 
@@ -1010,19 +993,18 @@ void track_impl_t::sendNotesOff(int32_t bpm100) {
  * TODO: First apply latency compensation per-track. Then implement per-plugin latency compensation
  * TODO: OPTIMIZE this function. I saw up to 400x speed up in release mode
  */
-void track_impl_t::sendNotes(playback_state state, int32_t flags,
+void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                              tick_t cursorPos,
                              tick_t blockStart, tick_t blockEnd,
                              tick_t loopStart, tick_t loopEnd,
                              int32_t bpm100,
-                             int32_t blockSamplePos,
+                             samplecount_t inputLatency,
                              const clip_notes_t& midiRealtimeInput) {
     constexpr bool logProcessedNotes = false;
     if (arp || std::any_of(effects.begin(), effects.end(), [](const effectbase* ref) {
             return ref->bCanReceiveMidi;
         })) {
         const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(sampleFormat.blockSize, bpm100, sampleFormat.sampleRate);
-        const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, bpm100, sampleFormat.sampleRate);
 
         tmr.reset();
 
@@ -1075,6 +1057,8 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags,
                         if (logProcessedNotes)
                             log_lf(Log::L_DEBUG, "Block %d-%d: %s OFF at %d/%f\n", blockStart, blockEnd, noteName(note.pitch), note.end() - blockStart - 1, ticksPerBlock);
                         noteEvents.emplace_back(note.pitch, note.velocity, note.end() - blockStart - 1, note.end() - 1, false, false);
+                    } else {
+                        log_lf(Log::L_WARN, "Block %d-%d: %s OFF at %d/%f but note not found\n", blockStart, blockEnd, noteName(note.pitch), note.end() - blockStart - 1, ticksPerBlock);
                     }
                 }
             }
@@ -1119,7 +1103,7 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags,
             updateProfilingTime(procMidiStats.tm3RevalidateEnds, tmr.getTimeReset());
 
             sortNoteEvents(noteEvents);
-
+            notesPre.update(blockStart, noteEvents);
             updateProfilingTime(procMidiStats.tm4SortEvents, tmr.getTimeReset());
 
             tmr.reset();
@@ -1129,34 +1113,33 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags,
             } else {
                 noteEventsProcessed = std::move(noteEvents);
             }
-
+            notesPost.update(blockStart, noteEventsProcessed);
             updateProfilingTime(procMidiStats.tm5ProcArp, tmr.getTimeReset());
-
-            size_t numEvents = noteEventsProcessed.size();
-            if (numEvents > 0) {
-                VstEvent_t* midiEventsBuf = reallocEvts(numEvents);
-                for (noteevent_t& evt : noteEventsProcessed) {
-                    dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
-                    midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, sampleFormat.blockSize);
-                }
-                dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) numEvents);
-                midi_events_t events{ &noteEventsProcessed, midiEventsBuf };
-                for (effectbase* effect : effects) {
-                    effect->processMidi(events);
-                }
-            }
 
             updateProfilingTime(procMidiStats.tm6WriteVstEvents, tmr.getTimeReset());
         }
 
-        processMidiOutput(state, flags, blockStart, blockEnd, loopStart, loopEnd, bpm100, blockSamplePos);
+        postProcessMidiInput(state, flags, blockStart, blockEnd, loopStart, loopEnd, bpm100, inputLatency);
 
         this->noteEventsProcessed.clear();
 
         updateProfilingTime(procMidiStats.tm7ProcessOutput, tmr.getTimeReset());
     }
 }
-void track_impl_t::processMidiOutput(playback_state state, int32_t flags, tick_t blockStart, tick_t blockEnd, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos) {
+
+void audio_stage_t::getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<noteevent_t>& evtsOut, bool isPost) {
+    auto& notesStage = isPost ? notesPost : notesPre;
+    notesStage.getNotesDelayed(tickLatencyCompensated, ticksPerBlock, evtsOut);
+}
+void audio_stage_t::sendNotesToEffect(const std::vector<noteevent_t>& evtsOut, tick_t tickLatencyCompensated, int32_t bpm100, effectbase* effect) {
+    size_t numEvents = evtsOut.size();
+    if (numEvents) {
+        midi_events_t events{ &evtsOut, tickLatencyCompensated, bpm100 };
+        effect->processMidi(events);
+    }
+}
+
+void track_impl_t::postProcessMidiInput(playback_state state, int32_t flags, tick_t blockStart, tick_t blockEnd, tick_t loopStart, tick_t loopEnd, int32_t bpm100, samplecount_t inputLatency) {
     constexpr bool logProcessedNotes = false;
     bool notesProcessed              = false;
     const int32_t lenTicksInfinite   = TICKS_BAR * 16;
@@ -1253,9 +1236,9 @@ void track_impl_t::processMidiOutput(playback_state state, int32_t flags, tick_t
         while (it != midiProcessed->m_list.end()) {
             note_t& note = *it;
             if (!note.isHeld() && note.end() < blockStart) {
-                String strTmStart = tickAsBeatString(note.start(), false);
-                String strTmEnd   = tickAsBeatString(note.end(), false);
                 if (logProcessedNotes) {
+                    String strTmStart = tickAsBeatString(note.start(), false);
+                    String strTmEnd   = tickAsBeatString(note.end(), false);
                     log_lf(Log::L_DEBUG, "Note %s recorded from %s to %s\n", noteName(note.pitch), StringAsCStr(strTmStart), StringAsCStr(strTmEnd));
                     log_lf(Log::L_DEBUG, "Note %s recorded from %d to %d\n", noteName(note.pitch), note.start(), note.end());
                 }

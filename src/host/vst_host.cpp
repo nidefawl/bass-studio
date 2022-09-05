@@ -6,6 +6,7 @@
 #include <memory.h>
 #include "host/daw_channel.h"
 #include "math/seq_math.h"
+#include "note.h"
 #include "str_util.h"
 #include "seq_util.h"
 #include "seq_time.h"
@@ -1937,7 +1938,7 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
     }
 
     tmp.timer.reset();
-    trackImpl->sendNotes(playbackState, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, math::floordS32(sampleLatencyCompensated), *midiRealtimeInput);
+    trackImpl->processMidiInput(playbackState, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, trackNode.inputLatency, *midiRealtimeInput);
 //    if ((trackImpl->flags & audiostageflags_t::RECORD_PROCESSED_MIDI) != audiostageflags_t::NONE) {
     if (isSet(trackImpl->flags, audiostageflags_t::RECORD_PROCESSED_MIDI)) {
         processMidiProcessedOutput(playbackState, processingPos, tickBlockEnd, trackImpl->noteEventsProcessed);
@@ -2391,9 +2392,8 @@ void vsthost::initThreads() {
 }
 
 void vsthost::onPlaybackJumpFromTo(project_controller_t* ctrl, int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) {
-    project_t* project = ctrl->getProject();
-    for (track_t* track : project->trackList) {
-        track->audio->onPlaybackJumpFromTo(fromSamplePos, fromTickPos, toSamplePos, toTickPos);
+    for (auto* stage : allAudioStages) {
+        stage->onPlaybackJumpFromTo(fromSamplePos, fromTickPos, toSamplePos, toTickPos);
     }
 }
 
@@ -2472,9 +2472,11 @@ void vsthost::processAudio(audio_stage_t* stage,
                            const DAW::effect_processing_graph_t* const processingGraph) const
 {
     // tick_t processingPos = floor(tickStageLatencyCompensated);
+    const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(stage->sampleFormat.blockSize, prjGlobals.tempo100, stage->sampleFormat.sampleRate);
     hires_timer_t timer;
     int64_t timeTotal = 0;
     if (processingGraph != nullptr) {
+        std::vector<noteevent_t> eventsTemp;
         for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
             const DAW::processing_effect_node_t* ptrProcessingNode = *itAudioStage;
             const DAW::processing_effect_node_t& effNode = *ptrProcessingNode;
@@ -2606,6 +2608,9 @@ void vsthost::processAudio(audio_stage_t* stage,
                         }
                     }
                     effect->updateAutomatedParameters(processingPosLatencyCompensate);
+                    eventsTemp.clear();
+                    effect->getTrackLink()->getNotesDelayed(processingPosLatencyCompensate, ticksPerBlock, eventsTemp, true);
+                    effect->getTrackLink()->sendNotesToEffect(eventsTemp, processingPosLatencyCompensate, prjGlobals.tempo100, effect);
                     effect->process(effect->blockInputs, effect->blockOutputs, tickLatencyCompensated, sampleLatencyCompensated, numSamples, playbackState);
                     blockPostProcess = effect->blockOutputs;
                 }

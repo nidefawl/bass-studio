@@ -75,6 +75,16 @@ inline bool removeEntry(C1& a, const V1& b) {
             }), a.end());
     return curSize != a.size();
 }
+template< typename T >
+typename std::vector<T>::iterator 
+   insertSorted( std::vector<T> & vec, T const& item )
+{
+    return vec.insert
+        ( 
+            std::upper_bound( vec.begin(), vec.end(), item ),
+            item 
+        );
+}
 template<typename C1, typename V1>
 inline bool replaceEntry(C1& a, const V1& b, const V1& c) {
     auto it = std::find(a.begin(), a.end(), b);

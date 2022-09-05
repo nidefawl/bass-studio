@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <vstsdk-host-2.4/aeffect.h>
 #include <vstsdk-host-2.4/aeffectx.h>
+#include "assert_dbg.h"
 #include "automation.h"
 #include "config.h"
 #include "host/plugin/base_plugin.h"
@@ -910,12 +911,49 @@ void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, double sam
     vst_process(this, this->handle->aeffect, in->buf, out->buf, numSamples);
 }
 
-void vstplugin::processMidi(midi_events_t& midiEvents) {
+void vstplugin::sendNotesOff(int32_t bpm100) {
     if (bCanReceiveMidi) {
+        const auto& heldNotes = handle->heldNotes;
+        const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, bpm100, format.sampleRate);
+        VstEvent_t::ReallocVstEvents(&handle->midiEventsBuf, heldNotes.size() + 1);
+        VstEvent_t* midiEventsBuf = handle->midiEventsBuf;
+        midiEventsBuf->reset();
+        for (const auto& notePitch : heldNotes) {
+            noteevent_t evt = {notePitch, 0, 0, 0, false, false};
+            midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, format.blockSize);
+        }
+        dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) heldNotes.size());
+        midiEventsBuf->writeInstantOff();
         //TODO: decide if we should make a copy, plugin may manipulate data
         //VstEvent_t midiEventsBufTemp = *midiEventsBuf;
-        this->midiEventsDispatched += midiEvents.midiEventsBuf->vstEvents->numEvents;
-        this->dispatch(effProcessEvents, 0, 0, midiEvents.midiEventsBuf->vstEvents);
+        this->midiEventsDispatched += handle->midiEventsBuf->vstEvents->numEvents;
+        this->dispatch(effProcessEvents, 0, 0, handle->midiEventsBuf->vstEvents);
+        handle->heldNotes.clear();
+    }
+}
+void vstplugin::processMidi(midi_events_t& midiEvents) {
+    if (bCanReceiveMidi) {
+        size_t numEvents = midiEvents.noteEventsProcessed->size();
+        if (numEvents) {
+            const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, midiEvents.bpm100, format.sampleRate);
+            VstEvent_t::ReallocVstEvents(&handle->midiEventsBuf, numEvents);
+            auto& heldNotes = handle->heldNotes;
+            VstEvent_t* midiEventsBuf = handle->midiEventsBuf;
+            for (auto& evt : *midiEvents.noteEventsProcessed) {
+                midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, format.blockSize);
+                bool bContained = std::binary_search(std::begin(heldNotes), std::end(heldNotes), evt.pitch);
+                if (evt.isNoteOn && !bContained) {
+                    insertSorted(heldNotes, evt.pitch);
+                } else if (!evt.isNoteOn && bContained) {
+                    removeEntry(heldNotes, evt.pitch);
+                }
+            }
+            dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) numEvents);
+            //TODO: decide if we should make a copy, plugin may manipulate data
+            //VstEvent_t midiEventsBufTemp = *midiEventsBuf;
+            this->midiEventsDispatched += handle->midiEventsBuf->vstEvents->numEvents;
+            this->dispatch(effProcessEvents, 0, 0, handle->midiEventsBuf->vstEvents);
+        }
     }
 }
 

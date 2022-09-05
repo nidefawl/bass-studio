@@ -5,6 +5,7 @@
 #include <array>
 #include <memory>
 #include <type_traits>
+#include "seq_util.h"
 #include "types.h"
 #include "config.h"
 #include "samplerate.h"
@@ -85,6 +86,40 @@ public:
     void loadSnapshot(const track_params_snapshot_t& snapshot);
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
 };
+class noteevent_buffer {
+    std::vector<noteevent_t> events;
+    public:
+    void update(tick_t blockStart, const std::vector<noteevent_t>& noteEvents) {
+        addAll(events, noteEvents);
+        sortNoteEvents(events);
+        auto it = events.begin();
+        while (it != events.end()) {
+            auto& evt = *it;
+            if (evt.globalTick < blockStart-(100000)) {
+                it = events.erase(it);
+            } else {
+                it++;
+            }
+        }
+    }
+    void reset() {
+        events.clear();
+    }
+    void getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<noteevent_t>& evtsOut) {
+        if (!events.empty()) {
+            for (auto& evt : events) {
+                if (evt.globalTick >= tickLatencyCompensated && evt.globalTick < tickLatencyCompensated + ticksPerBlock) {
+                    evtsOut.emplace_back(evt);
+                    auto& evtCompensated = evtsOut.back();
+                    evtCompensated.tickOffsetInBlock = (evtCompensated.globalTick - tickLatencyCompensated);
+                    dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
+                }
+            }
+            sortNoteEvents(evtsOut);
+        }
+    }
+
+};
 struct audio_stage_t {
     /**
      * Internal pre-process per-block input buffer
@@ -132,6 +167,8 @@ struct audio_stage_t {
     guictr_plugins* m_pluginCtr = nullptr;
 
     stats_processing_timings_t procStats;
+    noteevent_buffer notesPre;
+    noteevent_buffer notesPost;
     std::shared_ptr<DAW::effect_processing_graph_t> processingGraph;
 
     audio_stage_t(vsthost* const _host, const audio_stage_id_t _id, const sampleformat_t _sampleFormat, const channelnum_t _numChannels, int _type = 1)
@@ -147,6 +184,7 @@ struct audio_stage_t {
         setSampleFormat(_sampleFormat);
         configureDefaultRoutings();
     }
+    virtual ~audio_stage_t();
     void setSampleFormat(const sampleformat_t _sampleFormat) {
         sampleFormat = _sampleFormat;
         input.realloc(_sampleFormat.blockSize);
@@ -159,7 +197,6 @@ struct audio_stage_t {
         meter = DAW::rmsmeter(meterDataOutput.get(), output.channels);
         meterInput = DAW::rmsmeter(meterDataInput.get(), input.channels);
     }
-    virtual ~audio_stage_t();
     void getDeferredEffects(std::vector<effectbase*>& out_effects) {
         for (auto effect : effects) {
             effect->getDeferredEffects(out_effects);
@@ -196,6 +233,10 @@ struct audio_stage_t {
     void loadRoutingSnapshot(const track_effect_routing_snapshot_t& snapshot);
     void configureDefaultRoutings();
     virtual void sendNotesOff(int32_t bpm100);
+    virtual void onStartPlayback();
+    virtual void sendNotesToEffect(const std::vector<noteevent_t>& evtsOut, tick_t tickLatencyCompensated, int32_t bpm100, effectbase* effect);
+    virtual void getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<noteevent_t>& evtsOut, bool isPost);
+    virtual void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos);
     void notifyPluginContainers();
     virtual void onStopPlayback();
 };
@@ -224,8 +265,9 @@ static constexpr int PROCESS_CLIPS = 2;
 static constexpr int PROCESS_ARP = 4;
 }
 struct midi_events_t {
-    std::vector<noteevent_t>* noteEventsProcessed;
-    VstEvent_t* midiEventsBuf;
+    const std::vector<noteevent_t>* noteEventsProcessed{};
+    tick_t tickLatencyCompensated = 0;
+    int32_t bpm100 = 0;
 };
 namespace DAW {
 class midiarp;
@@ -310,7 +352,6 @@ struct track_impl_t : public audio_stage_t {
     DAW::midiarp* arp = nullptr;
     track_t* track;
     std::vector<note_t> m_heldNotes;
-    VstEvent_t* m_midiEventsBuf = nullptr;
     DAW::channel_ref_t inputChannel;
     DAW::channel_ref_t outputChannel;
     std::vector<track_gui_entry_t*> guiInstances;
@@ -322,14 +363,13 @@ struct track_impl_t : public audio_stage_t {
     track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels);
     ~track_impl_t() override;
     void sendNotesOff(int32_t bpm100) override;
-    void onStartPlayback();
+    void onStartPlayback() override;
     void onStopPlayback() override;
-    void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos);
-    void sendNotes(playback_state state, int32_t flags, tick_t cursorPos, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, const clip_notes_t& midiRealtimeInput);
-    void processMidiOutput(playback_state state, int32_t flags, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos);
+    void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) override;
+    void processMidiInput(playback_state state, int32_t flags, tick_t cursorPos, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, samplecount_t inputLatency, const clip_notes_t& midiRealtimeInput);
+    void postProcessMidiInput(playback_state state, int32_t flags, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, samplecount_t inputLatency);
     void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
     void addAudio(const AudioBlock& src, float fGain);
-    VstEvent_t* reallocEvts(size_t size);
     void removePlugin(effectbase* _vst, bool notifyUp) override;
     const std::vector<DAW::arp_note_t>& getArpHeldNotes();
     std::vector<marker_t>& getArpMarkers(int n);

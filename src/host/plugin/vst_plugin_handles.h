@@ -5,12 +5,15 @@
 #include <cstdio>
 
 struct audio_stage_t;
+struct VstEvent_t;
 class guiplugin;
 class BasePluginVST2;
 class PluginViewContainers;
 struct handles_t {
     uint32_t localCurrentUniqueId = 0;
     VstTimeInfo localTimeInfo{};
+    VstEvent_t* midiEventsBuf = nullptr;
+    std::vector<int32_t> heldNotes;
     BasePluginVST2* axEffect = nullptr;// Optional/Internal plugin only: handle to plugin implementation instance
     AEffect* aeffect       = nullptr;// hmodule owns if axEffect == null
     void* hmodule          = nullptr;// we dont own

@@ -101,6 +101,10 @@ void effectbase::processMidi(midi_events_t& midiEvents) {
 
 }
 
+void effectbase::sendNotesOff(int32_t bpm100) {
+
+}
+
 void effectbase::breakTrackLink() {
     trackImpl = nullptr;
 }

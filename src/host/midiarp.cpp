@@ -484,7 +484,7 @@ int midiarp::endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopSt
             markers.push_back(marker_t{ tick, col(5), StringFormat("%d end %s start %d len %d end %d tickoffset %d", tick, noteName(heldNoteOut.pitch), heldNoteOut.start(), heldNoteOut.len, heldNoteOut.end(), tickOffsetInBlockEnd), (float) (tickMarkers++) });
 #endif
             if (heldNoteOut.isHeld()) {
-                noteEventsProcessed.emplace_back(heldNoteOut.pitch, heldNoteOut.velocity, tickOffsetInBlockEnd, heldNoteOut.start(), false, forceLoopEndNotesOff);
+                noteEventsProcessed.emplace_back(heldNoteOut.pitch, heldNoteOut.velocity, tickOffsetInBlockEnd, heldNoteOut.end() - 1, false, forceLoopEndNotesOff);
                 nSend++;
             }
             heldNoteOut.setIsHeld(false);
@@ -639,7 +639,10 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
                 });
                 if (it == heldInput.end()) {
                     // arp received a note off with the corresponding note_on missing
-                    log_lf(Log::L_ERROR, "Arp received note off with the corresponding note_on missing %s\n", noteName(evt.pitch));
+                    // ignore all notes off situation
+                    if (!heldInput.empty()) {
+                        log_lf(Log::L_ERROR, "Arp received note off with the corresponding note_on missing %s\n", noteName(evt.pitch));
+                    }
                 } else {
                     arp_note_t& arpInputNote = *it;
                     if constexpr (logProcessedNotes) {

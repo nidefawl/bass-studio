@@ -112,6 +112,7 @@ public:
     virtual void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) = 0;
     virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed);
     virtual void processMidi(midi_events_t& midiEvents);
+    virtual void sendNotesOff(int32_t bpm100);
     virtual bool show(bool bResetPosition)   = 0;
     virtual bool close()  = 0;
     virtual void unload(vsthost* host, int flags);
