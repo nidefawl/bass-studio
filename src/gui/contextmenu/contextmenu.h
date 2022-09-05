@@ -12,6 +12,7 @@ class ctxtmenu_entry;
 class guictxtmenu : public guictxtmenu_base {
 protected:
     std::vector<ctxtmenu_entry*> entries;
+    int lvl = 0;
 
 public:
     guictxtmenu() : guictxtmenu_base() {
@@ -93,5 +94,26 @@ public:
         for (auto* g : entries) {
             g->theme = parentCtrl ? parentCtrl->getTheme() : nullptr;
         }
+    }
+
+    void closeAllSubmenus() {
+        auto appCtrlParent = parentCtrl->getParentCtrl();
+        bool anyOpen       = false;
+        for (ctxtmenu_entry* ctxtEntry : entries) {
+            if (ctxtEntry) {
+                anyOpen |= ctxtEntry->isMenuOpen();
+                ctxtEntry->setIsMenuOpen(false);
+            }
+        }
+        if (anyOpen) {
+            //close all menus deeper than this menu
+            appCtrlParent->closeAppMenusAtLvl(lvl + 1);
+        }
+    }
+    void setLevel(int _lvl) {
+        lvl = _lvl;
+    }
+    int getLevel() const {
+        return lvl;
     }
 };

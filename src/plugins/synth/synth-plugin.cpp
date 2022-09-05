@@ -18,6 +18,7 @@
 #include "compiler.h"
 #include "config.h"
 #include "fileio.h"
+#include "gui/contextmenu/contextmenu.h"
 #include "gui/contextmenu/contextmenu_base.h"
 #include "gui/controls/list.h"
 #include "gui/controls/textfield.h"
@@ -4601,16 +4602,12 @@ namespace PluginSynth {
     class guidropdown_select_preset_ctxt : public guictxtmenu {
         PluginVST2_Synth* plugin;
         PresetManager presetManager;
-        int lvl = 0;
 
         class ctxtmenu_entry_folder : public ctxtmenu_entry {
             String path;
-            bool bIsMenuOpen = false;
 
         public:
             bool isFolder() const { return true; }
-            void setIsMenuOpen(bool isMenuOpen) { this->bIsMenuOpen = isMenuOpen; }
-            bool isMenuOpen() const { return bIsMenuOpen; }
             String getPath() const { return path; }
             ctxtmenu_entry_folder(const String& _title, const String& _path, int id)
                 : ctxtmenu_entry(_title, id), path(_path) {
@@ -4647,14 +4644,11 @@ namespace PluginSynth {
         };
         class ctxtmenu_entry_preset : public ctxtmenu_entry {
             const PresetManager::Preset& preset;
-            bool bIsMenuOpen = false;
 
         public:
             bool isFolder() const { return false; }
             String getPath() const { return preset.path; }
             String getName() const { return preset.name; }
-            bool isMenuOpen() const { return bIsMenuOpen; }
-            void setIsMenuOpen(bool isMenuOpen) { this->bIsMenuOpen = isMenuOpen; }
             ctxtmenu_entry_preset(const PresetManager::Preset& _preset, int id)
                 : ctxtmenu_entry(_preset.name, id),
                   preset(_preset) {
@@ -4680,7 +4674,8 @@ namespace PluginSynth {
 
     public:
         explicit guidropdown_select_preset_ctxt(PluginVST2_Synth* _plugin, PresetManager _presetManager, const String& presetPath, int lvl = 0)
-            : plugin(_plugin), presetManager(std::move(_presetManager)), lvl(lvl) {
+            : plugin(_plugin), presetManager(std::move(_presetManager)) {
+                
             int32_t idx = 0;
             std::vector<String> paths;
             std::vector<ctxtmenu_entry_preset*> presetsCurrent;
@@ -4717,22 +4712,6 @@ namespace PluginSynth {
             }
         }
 
-        void closeAllSubmenus() {
-            auto appCtrlParent = parentCtrl->getParentCtrl();
-            bool anyOpen       = false;
-            for (ctxtmenu_entry* ctxtEntry : entries) {
-                if (ctxtEntry && (ctxtEntry->id & 1)) {
-                    auto entry = dynamic_cast<ctxtmenu_entry_folder*>(ctxtEntry);
-                    anyOpen |= entry->isMenuOpen();
-                    entry->setIsMenuOpen(false);
-                }
-            }
-            if (anyOpen) {
-                //close all menus deeper than this menu
-                appCtrlParent->closeAppMenusAtLvl(lvl + 1);
-            }
-        }
-
         bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
             if (this->contains(mpos)) {
                 ivec2 localMouse         = this->toContainerSpace(mpos);
@@ -4744,31 +4723,27 @@ namespace PluginSynth {
                         break;
                     }
                 }
-                if (!entryHit) {
-                    //TODO: maybe defer closing for usability
+                if (!entryHit || !entryHit->isMenuOpen()) {
+                    //close other submenu at same level
                     closeAllSubmenus();
-                }
-
-                auto ctxtEntry = dynamic_cast<ctxtmenu_entry*>(entryHit);
-                if (ctxtEntry && (ctxtEntry->id & 1)) {
-                    auto entry = dynamic_cast<ctxtmenu_entry_folder*>(entryHit);
-                    if (!entry->isMenuOpen()) {
-                        //close other submenu at same level
-                        closeAllSubmenus();
-
-                        //and open new one
-                        guictxtmenu_base* popup = nullptr;
-                        popup                   = new guidropdown_select_preset_ctxt(plugin, presetManager, entry->getPath(), lvl + 1);
+                } 
+                if (entryHit && !entryHit->isMenuOpen()) {
+                    entryHit->setIsMenuOpen(true);
+                    auto folderEntry = dynamic_cast<ctxtmenu_entry_folder*>(entryHit);
+                    if (folderEntry) {
+                        guictxtmenu* popup = nullptr;
+                        popup                   = new guidropdown_select_preset_ctxt(plugin, presetManager, folderEntry->getPath(), lvl + 1);
                         dbgassert(popup);
                         if (popup) {
-                            entry->setIsMenuOpen(true);
+                            popup->setLevel(this->getLevel() + 1);
+                            folderEntry->setIsMenuOpen(true);
                             popup->size = size;
-                            popup->setFontSize(entry->fontSize);
+                            popup->setFontSize(folderEntry->fontSize);
                             popup->size.x               = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
                             auto appCtrlParent          = parentCtrl->getParentCtrl();
                             ivec2 screenPosParentParent = appCtrlParent->toScreenSpace(ivec2(0, 0));
                             ivec2 screenPosParent       = parentCtrl->toScreenSpace(toScreenSpace(ivec2(right() + 2, top() + entryHit->y)));
-                            appCtrlParent->openAppMenu(lvl + 1, popup, screenPosParent - screenPosParentParent - popup->pos + ivec2(1));
+                            appCtrlParent->openAppMenu(popup->getLevel(), popup, screenPosParent - screenPosParentParent - popup->pos + ivec2(1));
                         }
                     }
                 }

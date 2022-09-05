@@ -16,7 +16,6 @@
 class guimenu_ctxtentry : public ctxtmenu_entry {
 public:
     ngui::Menu* menu;
-    bool isMenuOpen = false;
     explicit guimenu_ctxtentry(ngui::Menu* _menu);
     void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override;
     void layout(ivec2 size, float _fontSize, determine_string_width& strw) override;
@@ -24,7 +23,6 @@ public:
 class guictr_menubar;
 class guimenu : public guictxtmenu {
     //ngui::Menu* menu;
-    int lvl = 0;
     std::vector<guimenu_ctxtentry*> guimenuEntries;
     guimenu_ctxtentry* const parentSubmenuEntry;
 

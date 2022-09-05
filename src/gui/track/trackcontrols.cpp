@@ -442,7 +442,6 @@ public:
     const bus_type busType;
     const String busName;
     const audio_channel_ref_t stageEndpoint;
-    bool isMenuOpen = false;
 
     ctxtmenu_entry_bus(int32_t _id, const String& name, bus_type bustype, audio_channel_ref_t _stageEndpoint)
         : ctxtmenu_entry_track_io(_id, name),
@@ -657,22 +656,6 @@ public:
         dawCtrl->closeAllContextMenus();
     }
 
-    void closeAllSubmenus() {
-        BaseCtrl* appCtrlParent = this->dawCtrl;
-        bool anyOpen            = false;
-        for (ctxtmenu_entry* ctxtEntry : entries) {
-            auto entry = dynamic_cast<ctxtmenu_entry_bus*>(ctxtEntry);
-            if (entry) {
-                anyOpen |= entry->isMenuOpen;
-                entry->isMenuOpen = false;
-            }
-        }
-        if (anyOpen) {
-            //close all menus deeper than this menu
-            appCtrlParent->closeAppMenusAtLvl(1);
-        }
-    }
-
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (this->contains(mpos)) {
             ivec2 localMouse         = this->toContainerSpace(mpos);
@@ -684,42 +667,41 @@ public:
                     break;
                 }
             }
-            if (!entryHit) {
-                //TODO: maybe defer closing for usability
-                closeAllSubmenus();
-            }
-
-            auto entry = dynamic_cast<ctxtmenu_entry_bus*>(entryHit);
-            if (entry && !entry->isMenuOpen) {
+            if (!entryHit || !entryHit->isMenuOpen()) {
                 //close other submenu at same level
                 closeAllSubmenus();
-
-                //and open new one
-                guictxtmenu_base* popup = nullptr;
-                if (entry->busType == bus_type::internal) {
-                    auto stageEntry = dynamic_cast<ctxtmenu_entry_bus_internal*>(entry);
-                    dbgassert(stageEntry);
-                    if (stageEntry) {
-                        popup = new guidropdown_select_bus_ctxt(dawCtrl, stageEntry->getStageRef(), stageEndpoint);
+            } 
+            if (entryHit && !entryHit->isMenuOpen()) {
+                entryHit->setIsMenuOpen(true);
+                auto entry = dynamic_cast<ctxtmenu_entry_bus*>(entryHit);
+                if (entry) {
+                    guictxtmenu* popup = nullptr;
+                    if (entry->busType == bus_type::internal) {
+                        auto stageEntry = dynamic_cast<ctxtmenu_entry_bus_internal*>(entry);
+                        dbgassert(stageEntry);
+                        if (stageEntry) {
+                            popup = new guidropdown_select_bus_ctxt(dawCtrl, stageEntry->getStageRef(), stageEndpoint);
+                        }
+                    }
+                    if (entry->busType == bus_type::external) {
+                        auto& settings = daw_tls::getSettings();
+                        auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
+                        popup     = new guidropdown_select_bus_ctxt(dawCtrl, cfg, stageEndpoint);
+                    }
+                    dbgassert(popup);
+                    if (popup) {
+                        popup->setLevel(this->getLevel() + 1);
+                        popup->size = size;
+                        popup->setFontSize(entry->fontSize);
+                        popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
+                        ivec2 screenPosThis = this->parentCtrl->toScreenSpace(ivec2(0, 0));
+                        ivec2 screenPosParent = dawCtrl->toScreenSpace(ivec2(0, 0));
+                        ivec2 screenPos       = screenPosThis - screenPosParent + ivec2(right() + 2, top() + entryHit->y);
+                        this->dawCtrl->openAppMenu(popup->getLevel(), popup, screenPos);
                     }
                 }
-                if (entry->busType == bus_type::external) {
-                    auto& settings = daw_tls::getSettings();
-                    auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
-                    popup     = new guidropdown_select_bus_ctxt(dawCtrl, cfg, stageEndpoint);
-                }
-                dbgassert(popup);
-                if (popup) {
-                    entry->isMenuOpen = true;
-                    popup->size = size;
-                    popup->setFontSize(entry->fontSize);
-                    popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-                    ivec2 screenPosThis = this->parentCtrl->toScreenSpace(ivec2(0, 0));
-                    ivec2 screenPosParent = dawCtrl->toScreenSpace(ivec2(0, 0));
-                    ivec2 screenPos       = screenPosThis - screenPosParent + ivec2(right() + 2, top() + entryHit->y);
-                    this->dawCtrl->openAppMenu(1, popup, screenPos);
-                }
             }
+
             for (guibase* gui : guis) {
                 if (!gui->isVisible())
                     continue;

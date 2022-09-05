@@ -116,7 +116,8 @@ void guictr_menubar_entry::render(NVGcontext* vg) {
 }
 
 
-guimenu::guimenu(ngui::Menu* _menu, int _lvl, guimenu_ctxtentry* parent) : guictxtmenu() /*, menu(_menu)*/, lvl(_lvl), parentSubmenuEntry(parent) {
+guimenu::guimenu(ngui::Menu* _menu, int _lvl, guimenu_ctxtentry* parent) : guictxtmenu() /*, menu(_menu)*/, parentSubmenuEntry(parent) {
+    setLevel(_lvl);
     //this->size.x    = 190;
     this->maxHeight = 0;
     for (auto e : _menu->children) {
@@ -152,20 +153,20 @@ void guimenu::onRemove() {
     for (ctxtmenu_entry* e : entries) {
         auto* e2 = dynamic_cast<guimenu_ctxtentry*>(e);
         if (e2)
-            e2->isMenuOpen = false;
+            e2->bIsMenuOpen = false;
     }
 }
 
 void guimenu::onParentWindowClose() {
     if (parentSubmenuEntry) {
-        parentSubmenuEntry->isMenuOpen = false;
+        parentSubmenuEntry->bIsMenuOpen = false;
     }
 }
 
 bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (this->contains(mpos)) {
         ivec2 local                 = toContainerSpace(mpos);
-        guimenu_ctxtentry* entryHit = NULL;
+        guimenu_ctxtentry* entryHit = nullptr;
         for (guimenu_ctxtentry* e : guimenuEntries) {
             int n = e->getClicked(size, local);
             if (n >= 0) {
@@ -175,39 +176,23 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         }
         BaseCtrl* appCtrlParent = parentMenuBar->getControl();
 
-        auto closeAllSubmenus = [this, appCtrlParent]() {
-            bool anyOpen = false;
-            for (guimenu_ctxtentry* e : guimenuEntries) {
-                anyOpen |= e->isMenuOpen;
-                e->isMenuOpen = false;
-            }
-            if (anyOpen) {
-                //close all menus deeper than this menu
-                appCtrlParent->closeAppMenusAtLvl(lvl + 1);
-            }
-        };
-        //close lvl+1 windows if we didn't hit any menu
-        if (!entryHit || entryHit->menu->type != ngui::menu_type::submenu) {
-            //TODO: maybe defer closing for usability
+        if (!entryHit || !entryHit->isMenuOpen() || entryHit->menu->type != ngui::menu_type::submenu) {
+            //close other submenu at same level
             closeAllSubmenus();
-        }
-        if (entryHit && entryHit->menu->type == ngui::menu_type::submenu) {
-            if (!entryHit->isMenuOpen) {
-                //close other submenu at same level
-                closeAllSubmenus();
-                entryHit->isMenuOpen = true;
-                //and open new one
-                auto* popup        = new guimenu(entryHit->menu, lvl + 1, entryHit);
-                popup->parentMenuBar  = this->parentMenuBar;
-                popup->size = math::maxvec2(vec2(APP_MENU_MIN_WIDTH, 0), popup->size);
-                ivec2 screenPosThis   = this->parentCtrl->toScreenSpace(ivec2(0, 0));
-                ivec2 screenPosParent = appCtrlParent->toScreenSpace(ivec2(0, 0));
-                ivec2 screenPos       = screenPosThis - screenPosParent + ivec2(size.x + 2, entryHit->y);
-                appCtrlParent->openAppMenu(
-                        popup->lvl,
-                        popup,
-                        screenPos);
-            }
+        } 
+        if (entryHit && !entryHit->isMenuOpen() && entryHit->menu->type == ngui::menu_type::submenu) {
+            entryHit->setIsMenuOpen(true);
+            //and open new one
+            auto* popup        = new guimenu(entryHit->menu, getLevel() + 1, entryHit);
+            popup->parentMenuBar  = this->parentMenuBar;
+            popup->size = math::maxvec2(vec2(APP_MENU_MIN_WIDTH, 0), popup->size);
+            ivec2 screenPosThis   = this->parentCtrl->toScreenSpace(ivec2(0, 0));
+            ivec2 screenPosParent = appCtrlParent->toScreenSpace(ivec2(0, 0));
+            ivec2 screenPos       = screenPosThis - screenPosParent + ivec2(size.x + 2, entryHit->y);
+            appCtrlParent->openAppMenu(
+                    popup->getLevel(),
+                    popup,
+                    screenPos);
         }
         evt.requestFocus(this);
         return true;

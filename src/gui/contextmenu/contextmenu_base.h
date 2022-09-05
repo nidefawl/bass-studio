@@ -22,6 +22,7 @@ public:
     float fontSize        = 0;
     float fixedLeftOffset = -1;
     guitheme_t* theme     = nullptr;
+    bool bIsMenuOpen = false;
 
     RenderResources::NvgImageTexture* icon = nullptr;
     GuiColor::constant_t iconColor;
@@ -86,6 +87,8 @@ public:
         }
         return -1;
     }
+    void setIsMenuOpen(bool isMenuOpen) { this->bIsMenuOpen = isMenuOpen; }
+    bool isMenuOpen() const { return bIsMenuOpen; }
 };
 
 class ctxtmenu_splitter : public ctxtmenu_entry {
