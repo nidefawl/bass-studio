@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include "host/daw_channel.h"
 #include "math/seq_math.h"
 #include "exceptions.h"
 #include "logging.h"
@@ -537,7 +538,7 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
     //}
 }
 namespace DAW {
-    void createDawChannelRefSnapshot(const DAW::channel_ref_t& channel, io_configuration_snapshot_t& cfg) {
+    void createDawChannelRefSnapshot(const channel_ref_t& channel, io_configuration_snapshot_t& cfg) {
         cfg.type              = static_cast<int32_t>(channel.type);
         cfg.stageId           = static_cast<int32_t>(channel.stage.stageRef.stageId);
         cfg.stageEndPointType = static_cast<int32_t>(channel.stage.buffer);
@@ -556,6 +557,14 @@ namespace DAW {
         channel.externalInputIdx       = cfg.externalInputIdx;
         channel.srcChannelOffset       = cfg.srcChannelOffset;
         channel.dstChannelOffset       = cfg.dstChannelOffset;
+    }
+    void createMidiChannelRefSnapshot(const midichannel_ref_t& channel, io_midi_snapshot_t& cfg) {
+        cfg.stageId           = static_cast<int32_t>(channel.stage.stageRef.stageId);
+        cfg.stageEndPointType = static_cast<int32_t>(channel.stage.buffer);
+    }
+    void loadMidiChannelRefSnapshot(const io_midi_snapshot_t& cfg, midichannel_ref_t& channel) {
+        channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
+        channel.stage.buffer           = static_cast<stage_bufferpoint>(cfg.stageEndPointType);
     }
 }
 
@@ -645,6 +654,7 @@ void track_impl_t::createIOSnapshot(track_io_configuration_snapshot_t& snapshot)
         io_configuration_snapshot_t& cfg = i == 0 ? snapshot.input : snapshot.output;
         createDawChannelRefSnapshot(channel, cfg);
     }
+    createMidiChannelRefSnapshot(midiChannel, snapshot.midiInput);
 }
 
 void track_impl_t::loadIOConfiguration(const track_io_configuration_snapshot_t& snapshot) {
@@ -653,6 +663,7 @@ void track_impl_t::loadIOConfiguration(const track_io_configuration_snapshot_t& 
         io_configuration_snapshot_t cfg = i == 0 ? snapshot.input : snapshot.output;
         loadDawChannelRefSnapshot(cfg, channel);
     }
+    loadMidiChannelRefSnapshot(snapshot.midiInput, midiChannel);
 }
 
 void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList) {
@@ -1109,12 +1120,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
             auto* stageMidiInput = host->getAudioStage(midiChannel.stage.stageRef);
             if (stageMidiInput) {
                 noteEvents.clear();
-                if(stageMidiInput->getInputLatency() > getInputLatency()) {
-                    dbgassert("Midi input channel not yet processed. Loop midi routing?!");
-                } else {
-                    stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, midiChannel.stage.buffer != DAW::stage_bufferpoint::INPUT);
-
-                }
+                stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, midiChannel.stage.buffer != DAW::stage_bufferpoint::INPUT);
             }
 
             tmr.reset();

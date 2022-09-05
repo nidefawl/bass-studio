@@ -17,6 +17,7 @@
 #include "str_util.h"
 #include "clip.h"
 #include "track.h"
+#include "track_routing_snapshot.h"
 #include "track_snapshot.h"
 #include "host/daw_channel.h"
 #include "fileio.h"
@@ -198,10 +199,18 @@ void serialize(Archive& archive, io_configuration_snapshot_t& m) {
         log_lf(Log::L_WARN, "Failed loading io_configuration_snapshot_t: %s\n", e.what());
     }
 }
+template<class Archive>
+void serialize(Archive& archive, io_midi_snapshot_t& m) {
+    archive(
+        make_nvp("stageId", m.stageId),
+        make_nvp("stageEndPointType", m.stageEndPointType)
+    );
+}
 
 template<class Archive>
 void serialize(Archive& archive, track_io_configuration_snapshot_t& m) {
     archive(make_nvp("input", m.input), make_nvp("output", m.output));
+    make_optional_nvp(archive, "midiInput", m.midiInput);
 }
 
 template<class Archive>

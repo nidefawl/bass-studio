@@ -22,6 +22,18 @@ namespace DAW {
         size_t numRemoved = 0;
         for (track_t* track : tracksFlat) {
             track_impl_t* trackImpl  = track->getStage();
+            const auto midiInputChannel  = trackImpl->midiChannel;
+            trackImpl->midiChannel = MidiChannelNone();
+            if (isMidiChannelConnected(midiInputChannel)) {
+                auto* stage = host->getAudioStage(midiInputChannel.stage.stageRef);
+                if (!stage) {
+                    log_lf(Log::L_WARN, "Input midistage with id %d not found\n", static_cast<int32_t>(midiInputChannel.stage.stageRef.stageId));
+                    trackImpl->midiChannel = MidiChannelNone();
+                    numRemoved++;
+                } else {
+                    trackImpl->midiChannel = MidiChannelStage(stage, midiInputChannel.stage.buffer);
+                }
+            }
             const auto inputChannel  = trackImpl->inputChannel;
             const auto outputChannel = trackImpl->outputChannel;
             if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {

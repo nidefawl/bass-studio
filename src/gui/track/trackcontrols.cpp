@@ -977,6 +977,9 @@ public:
         add(&selectInput);
         add(&selectOutput);
         add(&selectMidiInput);
+        selectInput.setLabel("Audio In");
+        selectOutput.setLabel("Audio Out");
+        selectMidiInput.setLabel("Midi In");
         padding = 0;
     }
     ~gui_trackcontrols_io() override {
