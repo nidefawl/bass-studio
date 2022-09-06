@@ -1042,7 +1042,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
         if (flags & MidiFlags::PROCESS_REALTIME) {
             bool processRealtimeInput = midiChannel.getType() == DAW::midistage_type::INPUT_EXTERNAL_MIDI
                                         || (this->midiChannel.getType() == DAW::midistage_type::INPUT_DEFAULT 
-                                            && isSet(this->flags, audiostageflags_t::RECORD_PROCESSED_MIDI));
+                                            && isSet(this->flags, audiostageflags_t::RECORD_ARMED));
             if (processRealtimeInput) {
                 tick_t heldBegin = blockStart;
                 tick_t heldEnd   = blockEnd;
@@ -1133,7 +1133,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                 noteEvents.clear();
                 stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, midiChannel.stage.buffer != DAW::stage_bufferpoint::INPUT);
             }
-            if (isSet(this->flags, audiostageflags_t::RECORD_PROCESSED_MIDI)) {
+            if (isSet(this->flags, audiostageflags_t::RECORD_ARMED)) {
                 recorder.processMidiProcessedOutput(state, blockStart, blockEnd, noteEvents, prjGlobals.recordArmed);
             }
 

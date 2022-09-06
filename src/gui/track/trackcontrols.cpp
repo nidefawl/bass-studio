@@ -427,14 +427,14 @@ public:
     
 
     GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const override {
-        if ((m_track->audio->flags & audiostageflags_t::RECORD_PROCESSED_MIDI) != audiostageflags_t::NONE) {
+        if ((m_track->audio->flags & audiostageflags_t::RECORD_ARMED) != audiostageflags_t::NONE) {
             return GuiColor::COL_BTN_RECORD_ARM_BG;
         }
         return guibuttonstate::getBackgroundColorFromState(stateflags);
     }
     bool getState() const override {
         if (m_track->audio) {
-            return (m_track->audio->flags & (audiostageflags_t::RECORD_PROCESSED_MIDI)) != audiostageflags_t::NONE;
+            return (m_track->audio->flags & (audiostageflags_t::RECORD_ARMED)) != audiostageflags_t::NONE;
         }
         return false;
     }
@@ -1170,7 +1170,7 @@ public:
             daw->setSoloState(m_track->audio->toRef(), !isSolo);
         }
         if (&btnRecord == button) {
-            bool isArmed = (m_track->audio->flags & audiostageflags_t::RECORD_PROCESSED_MIDI) != audiostageflags_t::NONE;
+            bool isArmed = (m_track->audio->flags & audiostageflags_t::RECORD_ARMED) != audiostageflags_t::NONE;
             daw->setTrackArmed(m_track->audio->toRef(), !isArmed);
         }
         if (&btnBypass == button) {

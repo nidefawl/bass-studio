@@ -877,7 +877,7 @@ void DawInstance::setTrackArmed(audio_stage_ref_t ref, bool enabledArmed) {
     track_t* track = getTracks().resolveTrack(ref);
     dbgassert(track);
     dbgassert(track->audio);
-    track->audio->flags ^= audiostageflags_t::RECORD_PROCESSED_MIDI;
+    track->audio->flags ^= audiostageflags_t::RECORD_ARMED;
 }
 
 bool DawInstance::onChildOverlayWindowClose(window_main* window) {
