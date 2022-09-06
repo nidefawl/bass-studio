@@ -1029,6 +1029,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
             tick_t heldBegin = blockStart;
             tick_t heldEnd   = blockEnd;
             track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
+            //TODO: make feeding parent tracks notes into this one an option
             //auto getParent = track->parent;
             //while (getParent) {
             //    getParent->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
@@ -1039,9 +1040,14 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
         updateProfilingTime(procMidiStats.tm0InputClips, tmr.getTimeReset());
 
         if (flags & MidiFlags::PROCESS_REALTIME) {
-            tick_t heldBegin = blockStart;
-            tick_t heldEnd   = blockEnd;
-            getClipNotesInTimeRange(heldBegin, heldEnd, -1, loopEnd, midiRealtimeInput, notes);
+            bool processRealtimeInput = midiChannel.getType() == DAW::midistage_type::INPUT_EXTERNAL_MIDI
+                                        || (this->midiChannel.getType() == DAW::midistage_type::INPUT_DEFAULT 
+                                            && isSet(this->flags, audiostageflags_t::RECORD_PROCESSED_MIDI));
+            if (processRealtimeInput) {
+                tick_t heldBegin = blockStart;
+                tick_t heldEnd   = blockEnd;
+                getClipNotesInTimeRange(heldBegin, heldEnd, -1, loopEnd, midiRealtimeInput, notes);
+            }
         }
 
         updateProfilingTime(procMidiStats.tm1InputRT, tmr.getTimeReset());
@@ -1583,8 +1589,8 @@ bool clip_recorder::writeRecordedData(track_impl_t* trImpl) {
             std::swap(recordDataProcessed, pClip);
             auto tr = trImpl->getTrack();
             if (tr) {
-                log_lf(Log::L_DEBUG, "Processing recorded clip. Recorded %zu notes\n", pClip->notes.m_list.size());
-                log_lf(Log::L_DEBUG, "Processing recorded clip. Last note time %d\n", pClip->notes.lastNote.time);
+                // log_lf(Log::L_DEBUG, "Processing recorded clip. Recorded %zu notes\n", pClip->notes.m_list.size());
+                // log_lf(Log::L_DEBUG, "Processing recorded clip. Last note time %d\n", pClip->notes.lastNote.time);
                 tick_t tickBegin = pClip->time;
                 tick_t tickEnd   = pClip->end();
                 DawInstance::get()->cutIntersecting(tr, tickBegin, tickEnd);

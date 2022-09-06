@@ -1773,10 +1773,6 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
 
     tmp.timer.reset();
     trackImpl->processMidiInput(playbackState, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, trackNode.inputLatency, *midiRealtimeInput);
-//    if ((trackImpl->flags & audiostageflags_t::RECORD_PROCESSED_MIDI) != audiostageflags_t::NONE) {
-    // if (isSet(trackImpl->flags, audiostageflags_t::RECORD_PROCESSED_MIDI)) {
-    //     processMidiProcessedOutput(playbackState, processingPos, tickBlockEnd, trackImpl->noteEventsProcessed);
-    // }
 
     track->getStage()->procStats.timeTrackProcessMidi = tmp.timer.getTime();
 

@@ -1,9 +1,11 @@
 #include "midiarp.h"
+#include "assert_dbg.h"
 #include "automation.h"
 #include "host/plugin/internal_plugin.h"
 #include "logging.h"
 #include "math/seq_math.h"
 #include "platform.h"
+#include "str_util.h"
 #include "track.h"
 #include "snapshot.h"
 #include "history.h"
@@ -484,7 +486,10 @@ int midiarp::endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopSt
             markers.push_back(marker_t{ tick, col(5), StringFormat("%d end %s start %d len %d end %d tickoffset %d", tick, noteName(heldNoteOut.pitch), heldNoteOut.start(), heldNoteOut.len, heldNoteOut.end(), tickOffsetInBlockEnd), (float) (tickMarkers++) });
 #endif
             if (heldNoteOut.isHeld()) {
-                noteEventsProcessed.emplace_back(heldNoteOut.pitch, heldNoteOut.velocity, tickOffsetInBlockEnd, heldNoteOut.end() - 1, false, forceLoopEndNotesOff);
+                if (forceLoopEndNotesOff) {
+                    log_lf(Log::L_ERROR, "forceLoopEndNotesOff\n");
+                }
+                noteEventsProcessed.emplace_back(heldNoteOut.pitch, heldNoteOut.velocity, tickOffsetInBlockEnd, start+tickOffsetInBlockEnd, false, forceLoopEndNotesOff);
                 nSend++;
             }
             heldNoteOut.setIsHeld(false);
@@ -628,6 +633,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
             }
             ++eventIdx;
             if (evtTick < tick) {
+                log_lf(Log::L_ERROR, "Skipping event at idx %zu with tick %d\n", eventIdx, evtTick);
                 continue;
             }
             ++evtsProcessed;
@@ -820,8 +826,9 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
 
     // sanity check, remove later on
     if (evtsProcessed != noteEventsIn.size()) {
-        log_lf(Log::L_ERROR, "Block %d-%d: ARP did not process all events. Processed %zu of %zu\n", start, end, evtsProcessed, noteEventsIn.size());
-        log_lf(Log::L_ERROR, "Block %d-%d: loopStart %d, loopEnd %d\n", start, end, loopStart, loopEnd);
+        auto szTrackName = StringAsCStr(getTrack()->name);
+        log_lf(Log::L_ERROR, "%s Block %d-%d: ARP did not process all events. Processed %zu of %zu\n", szTrackName, start, end, evtsProcessed, noteEventsIn.size());
+        log_lf(Log::L_ERROR, "%s Block %d-%d: loopStart %d, loopEnd %d\n", szTrackName, start, end, loopStart, loopEnd);
         for (noteevent_t& evt : noteEvents) {
             log_lf(Log::L_ERROR, "Block %d-%d: Event %s %d %d %s\n", start, end, evt.isNoteOn ? "ON" : "OFF", evt.globalTick, evt.tickOffsetInBlock, noteName(evt.pitch));
         }
