@@ -1,3 +1,5 @@
+#include "host/audio_config.h"
+#include "host/midi_host.h"
 #include "logging.h"
 #include "math/seq_math.h"
 #include "str_util.h"
@@ -5,6 +7,7 @@
 #include "dsp_util.h"
 
 #include "project.h"
+#include "tls.h"
 #include "vst_host.h"
 #include "track.h"
 #include "audio_host.h"
@@ -23,16 +26,41 @@ namespace DAW {
         for (track_t* track : tracksFlat) {
             track_impl_t* trackImpl  = track->getStage();
             const auto midiInputChannel  = trackImpl->midiChannel;
-            trackImpl->midiChannel = MidiChannelNone();
             if (isMidiChannelConnected(midiInputChannel)) {
-                auto* stage = host->getAudioStage(midiInputChannel.stage.stageRef);
-                if (!stage) {
-                    log_lf(Log::L_WARN, "Input midistage with id %d not found\n", static_cast<int32_t>(midiInputChannel.stage.stageRef.stageId));
+                if (midiInputChannel.getType() == midistage_type::INPUT_AUDIOSTAGE) {
+                    auto* stage = host->getAudioStage(midiInputChannel.stage.stageRef);
+                    if (!stage) {
+                        log_lf(Log::L_WARN, "Input midistage with id %d not found\n", static_cast<int32_t>(midiInputChannel.stage.stageRef.stageId));
+                        trackImpl->midiChannel = MidiChannelNone();
+                        numRemoved++;
+                    } else {
+                        trackImpl->midiChannel = MidiChannelStage(stage, midiInputChannel.stage.buffer);
+                    }
+                } else if (midiInputChannel.getType() == midistage_type::INPUT_EXTERNAL_MIDI) {
+                    auto& settings = daw_tls::getSettings();
+                    auto& midiSettings = settings.iosettings.getIOConfigMidi("stdmidi");
+                    String labelAll = "All Inputs";
+                    String name = labelAll;
+                    if (midiInputChannel.externalInputIdx != 255) {
+                        if (CtrSize(midiSettings.inputs) > midiInputChannel.externalInputIdx) {
+                            auto& device = midiSettings.inputs[midiInputChannel.externalInputIdx];
+                            name = device.deviceName;
+                        } else {
+                            name = StringFormat("Missing Device %d", midiInputChannel.externalInputIdx+1);
+                        }
+                    }
+                    trackImpl->midiChannel = MidiChannelExternal(midiInputChannel.externalInputIdx, name);
+                } else if (midiInputChannel.getType() == midistage_type::INPUT_DEFAULT) {
+                    trackImpl->midiChannel = MidiChannelDefault();
+                } else if (midiInputChannel.getType() == midistage_type::INPUT_EMPTY) {
+                    trackImpl->midiChannel = MidiChannelNone();
+                } else {
+                    log_lf(Log::L_WARN, "Unknown midi input channel type %d\n", static_cast<int32_t>(midiInputChannel.getType()));
                     trackImpl->midiChannel = MidiChannelNone();
                     numRemoved++;
-                } else {
-                    trackImpl->midiChannel = MidiChannelStage(stage, midiInputChannel.stage.buffer);
                 }
+            } else {
+                trackImpl->midiChannel = MidiChannelNone();
             }
             const auto inputChannel  = trackImpl->inputChannel;
             const auto outputChannel = trackImpl->outputChannel;
@@ -344,17 +372,18 @@ namespace DAW {
                 }
             }
             if (isMidiChannelConnected(midiInputChannel)) {
-                audio_stage_t* src = host->getAudioStage(midiInputChannel.stage.stageRef);
-                dbgassert(src);
-                auto srcStageId = src->stageId.stageId;
-                if (!map.count(srcStageId)) {
-                    map[srcStageId] = makeTrackNode(srcStageId, src->getInternalLatency());
+                if (midiInputChannel.getType() == midistage_type::INPUT_AUDIOSTAGE) {
+                    audio_stage_t* src = host->getAudioStage(midiInputChannel.stage.stageRef);
+                    dbgassert(src);
+                    auto srcStageId = src->stageId.stageId;
+                    if (!map.count(srcStageId)) {
+                        map[srcStageId] = makeTrackNode(srcStageId, src->getInternalLatency());
+                    }
+                    track_node_t& trackSrcCfg = getNode(map, srcStageId);
+                    trackCfg.dependencies.push_back(srcStageId);
+                    trackCfg.children.push_back(&trackSrcCfg);
+                    trackSrcCfg.parents.push_back(&trackCfg);
                 }
-                track_node_t& trackSrcCfg = getNode(map, srcStageId);
-                trackCfg.dependencies.push_back(srcStageId);
-                // trackCfg.pulls.push_back(track_source_t{ trackEdgeId++, midiInputChannel, AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, src->flags });
-                trackCfg.children.push_back(&trackSrcCfg);
-                trackSrcCfg.parents.push_back(&trackCfg);
             }
             if (isChannelConnected(inputChannel)) {
                 if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {

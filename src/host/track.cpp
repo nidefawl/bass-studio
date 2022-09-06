@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include "host/audio_config.h"
 #include "host/daw_channel.h"
 #include "math/seq_math.h"
 #include "exceptions.h"
@@ -559,12 +560,16 @@ namespace DAW {
         channel.dstChannelOffset       = cfg.dstChannelOffset;
     }
     void createMidiChannelRefSnapshot(const midichannel_ref_t& channel, io_midi_snapshot_t& cfg) {
+        cfg.type              = static_cast<int32_t>(channel.type);
         cfg.stageId           = static_cast<int32_t>(channel.stage.stageRef.stageId);
         cfg.stageEndPointType = static_cast<int32_t>(channel.stage.buffer);
+        cfg.externalInputIdx  = channel.externalInputIdx;
     }
     void loadMidiChannelRefSnapshot(const io_midi_snapshot_t& cfg, midichannel_ref_t& channel) {
+        channel.type                   = static_cast<DAW::midistage_type>(cfg.type);
         channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
         channel.stage.buffer           = static_cast<stage_bufferpoint>(cfg.stageEndPointType);
+        channel.externalInputIdx       = cfg.externalInputIdx;
     }
 }
 

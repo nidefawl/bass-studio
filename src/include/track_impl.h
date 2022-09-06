@@ -299,10 +299,13 @@ inline bool isTrackSrcSolod(const DAW::track_source_t& src) {
     return (src.flags & (audiostageflags_t::SOLO|audiostageflags_t::SOLO_PARENT)) != audiostageflags_t::NONE;
 }
 inline bool isMidiChannelConnected(const DAW::midichannel_ref_t& ch) {
-    return ch.stage.stageRef.stageId != TRACKID_INVALID_I32;
+    return ch.type != midistage_type::INPUT_EMPTY;
 }
 inline midichannel_ref_t MidiChannelNone() {
-    return midichannel_ref_t{};
+    return midichannel_ref_t{midistage_type::INPUT_EMPTY};
+}
+inline midichannel_ref_t MidiChannelDefault() {
+    return midichannel_ref_t{midistage_type::INPUT_DEFAULT, {}, 0, "Default"};
 }
 inline midichannel_ref_t MidiChannelStage(const audio_stage_t* stage, stage_bufferpoint isInput) {
     dbgassert(stage);
@@ -317,8 +320,18 @@ inline midichannel_ref_t MidiChannelStage(const audio_stage_t* stage, stage_buff
         str += " Post";
     }
     return midichannel_ref_t {
+        midistage_type::INPUT_AUDIOSTAGE,
         { stage->toRef(), isInput },
+        0,
         str
+    };
+}
+inline midichannel_ref_t MidiChannelExternal(channelnum_t idx, String name) {
+    return midichannel_ref_t {
+        midistage_type::INPUT_EXTERNAL_MIDI, 
+        {},
+        idx,
+        std::move(name)
     };
 }
 inline channel_ref_t ChannelNone() {

@@ -43,6 +43,7 @@ using namespace DAW::AudioIO;
 using DAW::bus_type;
 using DAW::stage_bufferpoint;
 using DAW::channel_ref_t;
+using DAW::midichannel_ref_t;
 
 const int resizeHitY  = 8;
 const int DRAG_RESIZE = 1;
@@ -792,6 +793,65 @@ public:
     }
 };
 
+class ctxtmenu_entry_midi_endpoint : public ctxtmenu_entry_track_io {
+public:
+    ctxtmenu_entry_midi_endpoint(int32_t _id, const String& name) : ctxtmenu_entry_track_io(_id, name) {
+    }
+    virtual midichannel_ref_t getEndpoint() = 0;
+};
+class ctxtmenu_entry_external_midi_channel : public ctxtmenu_entry_midi_endpoint {
+public:
+    const midi_channel channel;
+    const stage_bufferpoint isInput;
+
+    explicit ctxtmenu_entry_external_midi_channel(int32_t _id, const midi_channel& _channel, stage_bufferpoint _isInput)
+        : ctxtmenu_entry_midi_endpoint(_id, _channel.deviceName),
+          channel(_channel),
+          isInput(_isInput) {
+    }
+    bool isBus() override {
+        return false;
+    }
+    midichannel_ref_t getEndpoint() override {
+        return DAW::MidiChannelExternal(channel.idx,
+                                      channel.deviceName);
+    }
+};
+class ctxtmenu_entry_stage_midi_channel : public ctxtmenu_entry_midi_endpoint {
+public:
+    const audio_channel_ref_t endpoint;
+
+    ctxtmenu_entry_stage_midi_channel(int32_t _id, const String& name, audio_channel_ref_t _endpoint)
+        : ctxtmenu_entry_midi_endpoint(_id, name), endpoint(_endpoint) {
+    }
+
+    bool isBus() override {
+        return false;
+    }
+
+    midichannel_ref_t getEndpoint() override {
+        audio_stage_t* stage = vsthost::getInstance()->getAudioStage(endpoint.stageRef);
+        if (stage) {
+            return DAW::MidiChannelStage(stage, endpoint.buffer);
+        }
+        return DAW::MidiChannelNone();
+    }
+};
+class ctxtmenu_entry_default_midi_channel : public ctxtmenu_entry_midi_endpoint {
+public:
+    ctxtmenu_entry_default_midi_channel(int32_t _id, const String& name)
+        : ctxtmenu_entry_midi_endpoint(_id, name) {
+    }
+
+    bool isBus() override {
+        return false;
+    }
+
+    midichannel_ref_t getEndpoint() override {
+        return DAW::MidiChannelDefault();
+    }
+};
+
 class guidropdown_select_midi_ctxt : public guictxtmenu {
     const audio_stage_ref_t busStage;
     const audio_channel_ref_t stageEndpoint;
@@ -803,35 +863,37 @@ public:
     {
         this->dawCtrl = _dawCtrl;
         int32_t idx = 0;
-        addEntry(new ctxtmenu_entry_stage_channel(idx++, "Pre", audio_channel_ref_t{ _busStage, stage_bufferpoint::INPUT }));
-        addEntry(new ctxtmenu_entry_stage_channel(idx++, "Post", audio_channel_ref_t{ _busStage, stage_bufferpoint::OUTPUT_POST }));
-        audio_stage_t* stage = vsthost::getInstance()->getAudioStage(stageEndpoint.stageRef);
-        if (stage) {
-            track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
-            dbgassert(trImpl);
-            if (trImpl) {
-                dbgassert(trImpl->getTrack());
-                auto& childTracks = trImpl->getTrack()->children;
-                for (track_t* childTrack : childTracks) {
-                    dbgassert(childTrack->audio);
-                    addEntry(new ctxtmenu_entry_bus_internal(idx, childTrack->name, childTrack->audio->toRef(), stageEndpoint));
-                    idx++;
-                }
-            }
+        addEntry(new ctxtmenu_entry_stage_midi_channel(idx++, "Pre", audio_channel_ref_t{ _busStage, stage_bufferpoint::INPUT }));
+        addEntry(new ctxtmenu_entry_stage_midi_channel(idx++, "Post", audio_channel_ref_t{ _busStage, stage_bufferpoint::OUTPUT_POST }));
+        // audio_stage_t* stage = vsthost::getInstance()->getAudioStage(stageEndpoint.stageRef);
+        // if (stage) {
+        //     track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
+        //     dbgassert(trImpl);
+        //     if (trImpl) {
+        //         dbgassert(trImpl->getTrack());
+        //         auto& childTracks = trImpl->getTrack()->children;
+        //         for (track_t* childTrack : childTracks) {
+        //             dbgassert(childTrack->audio);
+        //             addEntry(new ctxtmenu_entry_bus_internal(idx, childTrack->name, childTrack->audio->toRef(), stageEndpoint));
+        //             idx++;
+        //         }
+        //     }
+        // }
+    }
+    guidropdown_select_midi_ctxt(DawCtrl * _dawCtrl, const app_iomidiconfig& midiCfg, audio_channel_ref_t _dstStage)
+        : busStage(AudioStageRefNULL()),
+          stageEndpoint(_dstStage) 
+    {
+        this->dawCtrl = _dawCtrl;
+        auto& list  = stageEndpoint.buffer == stage_bufferpoint::INPUT ? midiCfg.inputs : midiCfg.outputs;
+        String labelAll = stageEndpoint.buffer == stage_bufferpoint::INPUT ? "All Inputs" : "All Outputs";
+        addEntry(new ctxtmenu_entry_external_midi_channel(0, {255, labelAll, {}}, _dstStage.buffer));
+        int32_t idx = 0;
+        for (auto& channel : list) {
+            addEntry(new ctxtmenu_entry_external_midi_channel(idx + 1, {idx, channel.deviceName, {}}, _dstStage.buffer));
+            idx++;
         }
     }
-    // guidropdown_select_midi_ctxt(DawCtrl * _dawCtrl, const io_cfg_tracks& cfg, audio_channel_ref_t _dstStage)
-    //     : busStage(AudioStageRefNULL()),
-    //       stageEndpoint(_dstStage) 
-    // {
-    //     this->dawCtrl = _dawCtrl;
-    //     int32_t idx = 0;
-    //     auto& list  = stageEndpoint.buffer == stage_bufferpoint::INPUT ? cfg.input : cfg.output;
-    //     for (auto& channel : list) {
-    //         addEntry(new ctxtmenu_entry_external_channel(idx, channel, _dstStage.buffer));
-    //         idx++;
-    //     }
-    // }
 
     explicit guidropdown_select_midi_ctxt(DawCtrl * _dawCtrl, audio_channel_ref_t _stageEndpoint, int lvl = 0)
         : busStage(AudioStageRefNULL()),
@@ -840,9 +902,9 @@ public:
         this->dawCtrl = _dawCtrl;
         int32_t idx      = 0;
         String inputName = stageEndpoint.buffer == stage_bufferpoint::INPUT ? "External input" : "External output";
-        addEntry(new ctxtmenu_entry_stage_channel(idx++, "None", AudioChannelRefNULL()));
-        // addEntry(new ctxtmenu_entry_default_channel(idx++, "Default"));
-        // addEntry(new ctxtmenu_entry_bus_external(idx++, inputName, stageEndpoint));
+        addEntry(new ctxtmenu_entry_stage_midi_channel(idx++, "None", AudioChannelRefNULL()));
+        addEntry(new ctxtmenu_entry_default_midi_channel(idx++, "Default"));
+        addEntry(new ctxtmenu_entry_bus_external(idx++, inputName, stageEndpoint));
 
         project_t* project = dawCtrl->getDaw()->getProject();
         dbgassert(project);
@@ -866,8 +928,8 @@ public:
         if (ctxtEndpointEntry->isBus()) {
             return;
         }
-        dbgassert(dynamic_cast<ctxtmenu_entry_endpoint*>(e));
-        auto const entry = static_cast<ctxtmenu_entry_endpoint*>(e);
+        dbgassert(dynamic_cast<ctxtmenu_entry_midi_endpoint*>(e));
+        auto const entry = static_cast<ctxtmenu_entry_midi_endpoint*>(e);
         auto const stage = dawCtrl->getDaw()->getHost()->getAudioStage(stageEndpoint.stageRef);
         if (!stage)
             return;
@@ -877,14 +939,7 @@ public:
             return;
         if (stageEndpoint.buffer == stage_bufferpoint::INPUT) {
             auto ep = entry->getEndpoint();
-            auto channelRef = ep.stage;
-            DAW::midichannel_ref_t midiChannel = DAW::MidiChannelNone();
-            auto const stage = dawCtrl->getDaw()->getHost()->getAudioStage(channelRef.stageRef);
-            if (stage) {
-                trImpl->midiChannel = DAW::MidiChannelStage(stage, channelRef.buffer);
-            } else {
-                trImpl->midiChannel = DAW::MidiChannelNone();
-            }
+            trImpl->midiChannel = ep;
         } else {
             // trImpl->outputChannel = entry->getEndpoint();
         }
@@ -918,11 +973,11 @@ public:
                             popup = new guidropdown_select_midi_ctxt(dawCtrl, stageEntry->getStageRef(), stageEndpoint);
                         }
                     }
-                    // if (entry->busType == bus_type::external) {
-                        // auto& settings = daw_tls::getSettings();
-                        // auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
-                        // popup     = new guidropdown_select_midi_ctxt(dawCtrl, cfg, stageEndpoint);
-                    // }
+                    if (entry->busType == bus_type::external) {
+                        auto& settings = daw_tls::getSettings();
+                        auto& midiSettings = settings.iosettings.getIOConfigMidi("stdmidi");
+                        popup     = new guidropdown_select_midi_ctxt(dawCtrl, midiSettings, stageEndpoint);
+                    }
                     // dbgassert(popup);
                     if (popup) {
                         popup->setLevel(this->getLevel() + 1);

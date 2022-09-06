@@ -11,8 +11,10 @@ struct track_id_snapshot_t {
 };
 
 struct io_midi_snapshot_t {
+    int32_t type                = 0;
     int32_t stageId             = -1;
     int32_t stageEndPointType   = 0;
+    int32_t externalInputIdx    = 0;
 };
 struct io_configuration_snapshot_t {
     int32_t type                = 0;

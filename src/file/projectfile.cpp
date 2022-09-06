@@ -205,6 +205,8 @@ void serialize(Archive& archive, io_midi_snapshot_t& m) {
         make_nvp("stageId", m.stageId),
         make_nvp("stageEndPointType", m.stageEndPointType)
     );
+    make_optional_nvp(archive, "type", m.type);
+    make_optional_nvp(archive, "externalInputIdx", m.externalInputIdx);
 }
 
 template<class Archive>

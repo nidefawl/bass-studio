@@ -29,6 +29,12 @@ enum class stage_type {
     INPUT_AUDIOSTAGE,
     INPUT_AUDIOSTAGE_EFFECT
 };
+enum class midistage_type {
+    INPUT_DEFAULT,
+    INPUT_EMPTY,
+    INPUT_EXTERNAL_MIDI,
+    INPUT_AUDIOSTAGE
+};
 
 inline bool isStageBufferPointInput(const stage_bufferpoint stBufPt) {
     return stBufPt == stage_bufferpoint::INPUT;
@@ -79,4 +85,4 @@ namespace AudioIO {
     };
 } // namespace AudioIO
 
-} // namespace DAW
+} // namespace DAWmidistage_type
