@@ -145,19 +145,13 @@ public:
     SYNCHRONIZED_RW hires_timer_t timerProfile;  // timer for cpu-time profiling
 
 private:
-    SYNCHRONIZED_RW clip_t* recordingClip = nullptr;
-    SYNCHRONIZED_RW std::atomic<bool> hasNewRecordedData{};
-    SYNCHRONIZED_RW clip_t* recordDataProcessed = nullptr;
     SYNCHRONIZED_RW VstTimeInfo m_sharedTimeInfo = {}; //TODO: remove
     SYNCHRONIZED_RW double lastTickEndPos       = 0;
     SYNCHRONIZED_RW host_stats_t stats{};
     SYNCHRONIZED_RW host_processing_stats_t processing{ 0 };
 
     SYNCHRONIZED_RW audiothread_ringbuffer_t ringbuffer;
-    SYNCHRONIZED_RW clip_notes_t* midiRealtimeInput; //TODO: per device and channel
-    SYNCHRONIZED_RW clip_notes_t* midiProcessedInput;//TODO: per device and channel
-
-    //  std::vector<std::shared_ptr<DelayLine>> delayLines;
+    SYNCHRONIZED_RW clip_notes_t* midiRealtimeInput;
 
 
     class ModuleManager;
@@ -181,9 +175,6 @@ private:
     int32_t processGraph(project_controller_t* ctrl, const audiostream_properties_t& audioProp, DAW::processing_graph_t* processingGraph, AudioBlock* ptrExternalInputs, AudioBlock* ptrExternalOutputs, int32_t samplePosProcess, double tickPosProcess, playback_state state, bool inLoop, bool isLoopAround);
     int64_t writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplecount_t samplePos, samplecount_t numSamples);
     uint32_t finishTreadTasks(uint32_t tasksRunning, bool wait);
-    void updateRecordingClip(tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<note_t>& m_list);
-    void finishRecordingClip(tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<note_t>& m_list);
-    void processMidiProcessedOutput(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<noteevent_t>& noteEventsProcessed);
     /* These are currently not called */
     void onPluginsChanged(audio_stage_t* stage);
     void updatePluginWindows();

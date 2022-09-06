@@ -706,7 +706,6 @@ vsthost::vsthost()
     allocRingBuffer(ringbuffer, 2);
     updateTime(m_sharedTimeInfo, 0.0, 0.0, playback_state::status_stop);
     midiRealtimeInput = new clip_notes_t;
-    midiProcessedInput = new clip_notes_t;
     registerPlugins();
 }
 
@@ -714,7 +713,6 @@ vsthost::~vsthost() {
     delete moduleMgr;
     delete impl;
     delete midiRealtimeInput;
-    delete midiProcessedInput;
 }
 
 vsthost::audiostream_properties_t getAudioStreamPropertiesForFormat(sampleformat_t sampleFormat, sampleformat_t sampleFormatExternal, uint32_t tempo100) {
@@ -1080,167 +1078,6 @@ void vsthost::processMidiRealtimeInput(project_controller_t* ctrl, double posDou
     if (notesProcessed) {
         midiRealtimeInput->updateBounds();
     }
-    //if (!midiRealtimeInput->m_list.empty()) {
-    //    log_printf("Realtime midi notes %d\n", midiRealtimeInput->m_list.size());
-    //}
-}
-void vsthost::processMidiProcessedOutput(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<noteevent_t>& noteEventsProcessed) {
-
-    bool notesProcessed = false;
-    if (!noteEventsProcessed.empty()) {
-        std::vector<note_t> newNotes;
-        for (noteevent_t& msg : noteEventsProcessed) {
-            if (msg.isNoteOn) {
-                note_t note;
-                note.setRealtime(true);
-                note.setIsHeld(true);
-                note.time = tickBlockStart + msg.tickOffsetInBlock;
-                note.len = lenTicksInfinite;
-                note.pitch = msg.pitch;
-                note.velocity = msg.velocity;
-                newNotes.push_back(note);
-            }
-        }
-        if (!newNotes.empty()) {
-            //for (auto& note : newNotes) {
-            //    log_printf("Block %d, note open %d (%s)\n", procPos, note.start(), noteName(note.pitch));
-            //}
-            midiProcessedInput->addAll(newNotes);
-        }
-        for (noteevent_t& msg : noteEventsProcessed) {
-            if (!msg.isNoteOn) {
-                int32_t pitch = msg.pitch;
-                int32_t tickEnd = tickBlockStart + msg.tickOffsetInBlock;
-                //log_printf("%s@%d Looking for NOTE_ON evt\n", noteName(pitch), tickEnd);
-                bool fnd = false;
-                for (note_t& noteHeld : midiProcessedInput->m_list) {
-                    if(noteHeld.pitch == pitch) {
-                        if (!noteHeld.isHeld()) {
-                            //log_printf("%s@%d note was released before (@%d), looking for next one\n",
-                            //              noteName(noteHeld.pitch), noteHeld.start(), noteHeld.end());
-                            continue;
-                        }
-                        if (noteHeld.start() > tickEnd) {
-                            //log_printf("%s@%d note starts after this release\n",
-                            //        noteName(noteHeld.pitch), noteHeld.start());
-                            continue;
-                        }
-                        if (noteHeld.start() == tickEnd) {
-                            //log_printf("%s noteHeld.start() == tickEnd %d, adding TICKS_16TH/4\n", noteName(noteHeld.pitch), tickEnd);
-                            tickEnd += TICKS_16TH/4;
-                        }
-                        noteHeld.len = tickEnd - noteHeld.start();
-                        noteHeld.setIsHeld(false);
-                        assert(noteHeld.len >= 0);
-                        fnd = true;
-                        notesProcessed = true;
-                        //log_printf("Block %d, note complete %d END %d (%s)\n", procPos, noteHeld.start(), noteHeld.end(), noteName(noteHeld.pitch));
-                        break;
-                    }
-                }
-                if (!fnd) {
-                    log_printf("MIDI_OFF_NOTE note not found %s tickEnd %d\n", noteName(pitch), tickEnd);
-                }
-            }
-        }
-
-        if (!newNotes.empty() || notesProcessed) {
-            midiProcessedInput->removeDuplicates();
-            notesProcessed = true;
-        }
-    }
-
-    if (notesProcessed) {
-        midiProcessedInput->updateBounds();
-        if (state == playback_state::status_playback && prjGlobals.recordArmed) {
-            updateRecordingClip(tickBlockStart, tickBlockEnd, midiProcessedInput->m_list);
-        }
-    }
-
-    if (recordingClip && !(state == playback_state::status_playback && prjGlobals.recordArmed)) {
-        finishRecordingClip(tickBlockStart, tickBlockEnd, midiProcessedInput->m_list);
-    }
-
-    if (!midiProcessedInput->m_list.empty()) {
-        auto it = midiProcessedInput->m_list.begin();
-        while (it != midiProcessedInput->m_list.end()) {
-            note_t& note = *it;
-            if (!note.isHeld() && note.end() < tickBlockEnd) {
-                notesProcessed = true;
-                it = midiProcessedInput->m_list.erase(it);
-            } else {
-                it++;
-            }
-        }
-    }
-}
-
-void vsthost::updateRecordingClip(tick_t tickPosBlockStart, tick_t tickBlockEnd, std::vector<note_t>& m_list) {
-    if (recordingClip == nullptr) {
-        recordingClip = new clip_t;
-        recordingClip->name = "Midi Input - Recorded";
-        recordingClip->time = tickPosBlockStart;
-        recordingClip->setLen(TICKS_QUARTER);
-        recordingClip->loopStart = 0;
-        recordingClip->loopLen = TICKS_BAR*4;
-    }
-
-    if (recordingClip) {
-        if (recordingClip->start() > tickPosBlockStart) {
-            recordingClip->time = tickPosBlockStart;
-        }
-        if (recordingClip->end() < tickBlockEnd) {
-            recordingClip->setLen((tickBlockEnd)-recordingClip->start());
-        }
-        for (auto& note : m_list) {
-            if (!note.isHeld()) {
-                auto noteCopy = note;
-                noteCopy.time -= recordingClip->start();
-                noteCopy.setEnabled(true);
-                noteCopy.setRealtime(false);
-                recordingClip->notes.addSingle(noteCopy);
-            }
-        }
-        clip_t* cloned = recordingClip->clone();
-        cloned->setLen(tickPosBlockStart - recordingClip->time);
-        cloned->loopEnabled = false;
-        cloned->loopLen = ( ( math::max ( 1, cloned->getLen() / (TICKS_BAR*4) ) )   * (TICKS_BAR*4) );
-        cloned->notes.updateBounds();
-        cloned->setDirty();
-        std::swap(recordDataProcessed, cloned);
-        delete cloned;
-        hasNewRecordedData = true;
-    }
-}
-
-void vsthost::finishRecordingClip(tick_t tickPosBlockStart, tick_t tickBlockEnd, std::vector<note_t>& m_list) {
-    for (auto& note : m_list) {
-        note_t noteCopy = note;
-        if (noteCopy.time < tickPosBlockStart && noteCopy.isHeld()) {
-            noteCopy.len = tickPosBlockStart - noteCopy.time;
-            noteCopy.setIsHeld(false);
-        }
-        if (noteCopy.len > 0 && !noteCopy.isHeld()) {
-            noteCopy.time -= recordingClip->start();
-            noteCopy.setEnabled(true);
-            noteCopy.setRealtime(false);
-            recordingClip->notes.addSingle(noteCopy);
-        }
-    }
-    clip_t* cloned = recordingClip->clone();
-    tick_t clipLen = tickBlockEnd - recordingClip->time;
-    tick_t loopLen = ( ( math::max ( 1, clipLen / (TICKS_BAR*4) ) )   * (TICKS_BAR*4) );
-
-    cloned->loopEnabled = false;
-    cloned->setLen(clipLen);
-    cloned->loopLen = loopLen;
-    cloned->notes.updateBounds();
-    cloned->setDirty();
-    std::swap(recordDataProcessed, cloned);
-    delete cloned;
-    hasNewRecordedData = true;
-    delete recordingClip;
-    recordingClip = nullptr;
 }
 
 void vsthost::preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings) {
@@ -2414,7 +2251,6 @@ void vsthost::onPluginsChanged(audio_stage_t* stage) {
 void vsthost::onStopPlayback(project_controller_t* ctrl) {
     impl->isOfflineRendering = false;
     midiRealtimeInput->m_list.clear();
-    midiProcessedInput->m_list.clear();
 
     for (auto stageImpl : allAudioStages) {
         //if (!trackImpl->heldNotes.empty())
@@ -3059,29 +2895,7 @@ void vsthost::updateMaximumStageId() {
 }
 
 bool vsthost::writeRecordedData(project_t* project) {
-    dbgassert(MainCtrl::get());
     bool bHasNewData = false;
-    if (this->hasNewRecordedData) {
-        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-        this->hasNewRecordedData = false;
-        if (recordDataProcessed && recordDataProcessed->notes.m_list.size() && recordDataProcessed->getLen() > 0) {
-            clip_t* pClip = nullptr;
-            std::swap(recordDataProcessed, pClip);
-            track_t* tr = project->trackMidiAudioCtr.front();
-            if (tr) {
-                log_lf(Log::L_DEBUG, "Processing recorded clip. Recorded %zu notes\n", pClip->notes.m_list.size());
-                log_lf(Log::L_DEBUG, "Processing recorded clip. Last note time %d\n", pClip->notes.lastNote.time);
-                tick_t tickBegin = pClip->time;
-                tick_t tickEnd = pClip->end();
-                DawInstance::get()->cutIntersecting(tr, tickBegin, tickEnd);
-                pClip->setDirty();
-                pClip->notes.updateBounds();
-                tr->getMidi().addClip(pClip);
-                tr->getMidi().sortClips();
-                bHasNewData = true;
-            }
-        }
-    }
     for (auto& track : trackAudioStages) {
         bHasNewData |= track->recorder.writeRecordedData(track);
     }
