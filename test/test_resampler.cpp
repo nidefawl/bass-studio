@@ -48,17 +48,18 @@ namespace {
             int32_t maxIterations = 10000;
             seq_rand rnd;
             rnd.rng_seed(123123123);
+            AudioBufferTimeInfo timeInfo;
             while (true) {
                 if (maxIterations > 0) {
                     maxIterations--;
                     if (ptr->numBlocksToPop() < 4) {
                         block.fillNoise(rnd, 0.4f);
-                        ptr->push(block);
+                        ptr->push(block, timeInfo);
                         pushed++;
                     }
                 }
                 while (ptr->numBlocksToPop() > 0) {
-                    AudioBlock blockOut = ptr->pop();
+                    AudioBlock blockOut = ptr->pop(timeInfo);
                     TEST_ASSERT_THROW(blockOut.samples == sfOut.blockSize);
                     TEST_ASSERT_THROW(blockOut.channels == numChannels);
                     popped++;
