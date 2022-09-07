@@ -262,6 +262,7 @@ class DawInstance : public project_controller_t, public delete_cb {
     WorkerThread workerThread;
     PlaybackThread playThread;
     plugindatabase_t plugindb;
+    String lastProjectDirectory;
     String projectPath;
     int64_t tmLastSave = 0L;
     String projectPathAutosave;

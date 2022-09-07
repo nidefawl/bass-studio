@@ -2026,6 +2026,11 @@ public:
             closeContextMenu();
             String path;
             if (promptUserFilePath(window, 1, vFILE_TYPES_TRACKSNAPSHOT, path)) {
+                String ext;
+                SplitPath(path, nullptr, nullptr, &ext);
+                if (ext.empty()) {
+                    path += "." + vFILE_TYPES_TRACKSNAPSHOT[0].ext;
+                }
                 saveTrackContainer(trackContainerSnapshot, path);
             }
             return;

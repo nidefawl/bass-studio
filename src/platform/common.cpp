@@ -52,6 +52,28 @@ void initPlatformEnvironment(const String& appname, const String& optionalCwd) {
         CreateDirectoryIfNotExists(App::Platform::pathUserdata);
     }
 }
+
+int32_t createUniqueFilename(String& pathString, const String& baseName) {
+    String name;
+    String ext;
+    String path;
+    int32_t idx = 0;
+    pathString = baseName;
+    SplitPath(baseName, &path, &name, &ext);
+    App::Platform::sanitizePathToDirectory(path);
+    while (FileExists(pathString)&&++idx<10000) {
+        String nextPath = path;
+        nextPath += name;
+        nextPath += "-";
+        nextPath += std::to_string(idx);
+        nextPath += ".";
+        nextPath += ext;
+        idx++;
+        pathString = nextPath;
+    }
+    return idx;
+}
+
 } // namespace App::Platform
 
 #define  READALL_OK           0   /* Success */

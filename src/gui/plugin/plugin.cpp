@@ -130,7 +130,7 @@ void guiplugin::buttonClicked(guibase* _button) {
             String ext;
             SplitPath(path, nullptr, nullptr, &ext);
             if (ext.empty()) {
-                path += ".preset";
+                path += "." + vFILE_TYPE_PLUGINSNAPSHOT[0].ext;
             }
             savePluginSnapshot(ps, path);
         }

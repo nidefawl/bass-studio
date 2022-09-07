@@ -53,4 +53,5 @@ void shellExpandPath(String& pathString);
  * @param pathString path to a file
  */
 void sanitizePathToFile(String& pathString);
+int32_t createUniqueFilename(String& pathString, const String& baseName);
 }

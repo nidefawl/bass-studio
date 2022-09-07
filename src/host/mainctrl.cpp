@@ -818,6 +818,7 @@ void DawInstance::loadFile(String path, int flags) {
             tls.mainCtrl->setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
         }
     } else {
+        SplitPath(path, &lastProjectDirectory, nullptr, nullptr, nullptr);
         tls.settings->recentfiles.add(path);
         const bool wasUserCallback = (flags & FLAG_INVOKE_USER_CB_DEFERLOAD) != 0;
         auto cb                    = [this, path, projFile = f, wasUserCallback](int n) {
@@ -988,7 +989,7 @@ void DawInstance::menuCommand(menucmd_t command) {
             case CMD_FILE_OPEN: {
                 if (command.arg1.empty()) {
                     String path;
-                    if (promptUserFilePath(mainCtrl->window, 0, vFILE_TYPE_PROJECT, path)) {
+                    if (promptUserFilePath(mainCtrl->window, 0, vFILE_TYPE_PROJECT, path, lastProjectDirectory)) {
                         loadFile(path, FLAG_INVOKE_USER_CB_DEFERLOAD);
                     }
                 } else {
@@ -999,11 +1000,17 @@ void DawInstance::menuCommand(menucmd_t command) {
             case CMD_FILE_SAVE: {
                 String path = projectPath;
                 if (command.command == CMD_FILE_SAVEAS || path.empty()) {
-                    if (!promptUserFilePath(mainCtrl->window, 1, vFILE_TYPE_PROJECT, path)) {
+                    if (!promptUserFilePath(mainCtrl->window, 1, vFILE_TYPE_PROJECT, path, lastProjectDirectory)) {
                         break;
+                    }
+                    String ext;
+                    SplitPath(path, nullptr, nullptr, &ext);
+                    if (ext.empty()) {
+                        path += "." PROJECT_FILE_EXT;
                     }
                 }
                 saveFile(path);
+                SplitPath(path, &lastProjectDirectory, nullptr, nullptr, nullptr);
                 tls.settings->recentfiles.add(path);
                 break;
             }
@@ -1512,13 +1519,7 @@ guictxtmenu_base* makeGuiAutosave(int64_t delay);
 String getProjectAutosaveFilename(String projectPath) {
     String bakPathName;
     if (projectPath.empty()) {
-        String tmpPath = App::Platform::toUserdataPath("unsaved.project");
-        int count      = 1;
-        while (FileExists(tmpPath)) {
-            tmpPath = App::Platform::toUserdataPath(StringFormat("unsaved-%d.project", count));
-            count++;
-        }
-        bakPathName = tmpPath;
+        App::Platform::createUniqueFilename(bakPathName, App::Platform::toUserdataPath("unsaved.project"));
     } else {
         String path, name, ext, nameExt;//path, name, ext, nameExt
         SplitPath(projectPath, &path, &name, &ext, &nameExt);
