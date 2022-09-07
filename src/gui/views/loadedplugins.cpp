@@ -173,46 +173,43 @@ public:
     }
 
     void render(NVGcontext* vg) override {
-        BaseCtrl* ctrl = parentCtrl;
-
+        BaseCtrl* ctrl  = parentCtrl;
         float spacing   = INSET_TITLE;
         float x         = spacing;
         float rowHeight = size.y;
-        if (icon > -1) {
-            x += rowHeight + spacing;
-        }
-        if (ctrl->isCtrOrChildFocused(this)) {
+        bool focused = ctrl->isCtrOrChildFocused(this);
+        if (focused || selected) {
+            auto color = theme->getColor(focused ? GuiColor::COL_BG_DRKER : GuiColor::COL_BG_DRK);
             nvgBeginPath(vg);
             nvgRect(vg, pos.x, pos.y, size.x, size.y);
-            nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER));
+            nvgFillColor(vg, color);
             nvgFill(vg);
         }
         nvgTranslate(vg, pos.x, pos.y);
         if (icon > -1) {
             RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
             drawIcon(vg, size, &image);
+            x += rowHeight + spacing;
         }
-        const auto fontSize = rowHeight * 0.8;
-        setFont(vg, (int) (rowHeight * 0.8), THEMECOL_TEXT, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
+
         const float percWidth = size.x / 4;
         float xText = size.x - spacing;
         auto* _entry = safeRefGet(ref);
         if (_entry) {
-            host_stats_reducted_t stats;
-            auto host = vsthost::getInstance();
+            host_stats_reducted_t stats{};
+            auto host = dawCtrl->getDaw()->getHost();
             host->getShortStats(stats);
             float fPercentLoad = stats.timePerBlock_usec <= 0 ? 0 : _entry->procStats.timeTrackProcessPlugins * 100.0f / stats.timePerBlock_usec;
             String str = StringFormat("%.2f%%", fPercentLoad);
             float x2 = size.x - spacing;
-            xText = x2 - nvgText(vg, x2, rowHeight / 2, StringAsCStr(str), nullptr);
-            if (size.x > fontSize*10) {
+            xText = x2 - renderText(vg, vec2(x2, rowHeight / 2), vec2(size.x*0.8, size.y), str, 0, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
+            if (size.x > rowHeight*10) {
                 str = StringFormat("%zdµs", _entry->procStats.timeTrackProcessPlugins);
                 x2 = size.x - percWidth - spacing;
-                xText = x2 - nvgText(vg, x2, rowHeight / 2, StringAsCStr(str), nullptr);
+                 xText = x2 - renderText(vg, vec2(x2, rowHeight / 2), vec2(size.x*0.3, size.y), str, 0, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
             }
         }
-        nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
-        nvgTextW(vg, x, rowHeight / 2, xText - x, StringAsCStr(getText()), nullptr);
+        renderText(vg, vec2(x, rowHeight*0.5f), vec2(xText-x, size.y), getText());
         nvgTranslate(vg, -pos.x, -pos.y);
     }
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override {
