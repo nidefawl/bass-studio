@@ -49,6 +49,7 @@ namespace ProfilingImpl {
         static const profiling_channel_descs channels = { {
             { "ctrl->prerender", "us", offsetof(prof_stats_window_t, timePrerender) },
             { "ctrl->render", "us", offsetof(prof_stats_window_t, timeRender) },
+            { "ctrl->appTick", "us", offsetof(prof_stats_window_t, timeAppTick) },
             { "glSwapBuffer", "us", offsetof(prof_stats_window_t, timeSwapBuffers) }
         } };
         out->instanceList = &windowStats.regWindowProfStats;

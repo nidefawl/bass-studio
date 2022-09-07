@@ -35,16 +35,11 @@ const char* TrackTypeToName(int type);
 
 enum class audiostageflags_t : int32_t {
     NONE                  = 0,
-    BYPASS                = 1 << 0,
-    BYPASS_EFFECT_CHAIN   = 1 << 1,
-    MUTE_INPUT            = 1 << 2,
-    MUTE_OUTPUT           = 1 << 3,
-    SOLO                  = 1 << 4,
-    SOLO_PARENT           = 1 << 5,
-    ARMED_OUTPUT          = 1 << 6,
-    WRITE_OUTPUT          = 1 << 7,
-    CONVERT_OUTPUT        = 1 << 8,
-    RECORD_ARMED          = 1 << 9,
+    SOLO                  = 1 << 1,
+    SOLO_PARENT           = 1 << 2,
+    RECORD_ARMED          = 1 << 3,
+    RECORD_OUTPUT         = 1 << 4,
+    CONVERT_OUTPUT        = 1 << 5,
 };
 
 enum class audiostagerouting_state_t : int32_t {

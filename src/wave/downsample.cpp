@@ -3,8 +3,9 @@
 #include <vector>
 #include "assert_dbg.h"
 #include "samplerate.h"
+#include "types.h"
 
-int downsample(samplerate_t sampleRate, float* samplesIn, int64_t numSamples, std::vector<float>& samplesOut, uint8_t downsampleBits) {
+int downsample(samplerate_t sampleRate, float* samplesIn, samplecount_t offset, samplecount_t numSamples, std::vector<float>& samplesOut, uint8_t downsampleBits) {
 
     //Straight forward downsampling using internal LPF.I can't remember any details about this
     //
@@ -39,11 +40,14 @@ int downsample(samplerate_t sampleRate, float* samplesIn, int64_t numSamples, st
     double orate = static_cast<double>(sampleRate) / (1 << downsampleBits);
 
     auto ilen = static_cast<size_t>(numSamples);
-    auto olen = static_cast<size_t>(numSamples * orate / static_cast<double>(sampleRate) + .5); /* Assay output len. */
-    samplesOut.resize(olen);
+    auto olen = static_cast<size_t>((numSamples) * orate / static_cast<double>(sampleRate) + .5); /* Assay output len. */
+    auto offsetDown = static_cast<size_t>(offset * orate / static_cast<double>(sampleRate) + .5); /* Assay output len. */
+    if (samplesOut.size() < olen) {
+        samplesOut.resize(olen);
+    }
     soxr_error_t error = soxr_oneshot(sampleRate, orate, 1,            /* Rates and # of chans. */
-                                      samplesIn, ilen, NULL,            /* Input. */
-                                      samplesOut.data(), olen, &odone, /* Output. */
+                                      samplesIn + offset, ilen, NULL,            /* Input. */
+                                      samplesOut.data() + offsetDown, olen, &odone, /* Output. */
                                       &iospec, NULL, NULL);            /* Default configuration.*/
 
     dbgassert(!error);

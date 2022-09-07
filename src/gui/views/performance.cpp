@@ -1,4 +1,7 @@
 #include <algorithm>
+#include <vector>
+#include "seq_util.h"
+#include "str_util.h"
 #include "util/profiling.h"
 #include "util/profiling_impl.h"
 #include "guicolors.h"
@@ -68,6 +71,7 @@ public:
         
         prof_stats_window_t profDataWindow;
         if (ProfilingImpl::profilingGetRecentFrame(dawCtrl->window, &profDataWindow)) {
+            printL(0, "App Tick", StringFormat("%zd µs", profDataWindow.timeAppTick));
             printL(0, "Render", StringFormat("%zd µs", profDataWindow.timeRender));
         }
         printL(1, "Prerender", StringFormat("%zd µs", renderStats.timePrerender));
@@ -82,8 +86,19 @@ public:
         printL(0, "Samples Processed", StringFormat("%d", stats.samplesProcessed));
         printL(0, "All Plugins", StringFormat("%zd µs (%zd µs)", stats.timeProcessPlugins, stats.timeProcessPluginsRaw));
         printL(0, "Block", StringFormat("%zd µs (%zd µs)", stats.timeBlock, stats.timeBlockRaw));
+        std::vector<String> keyset;
+        keyset.reserve(stats.timings.size());
         for (auto& entry : stats.timings) {
-            const String& entryKey = entry.first;
+            insertSorted(keyset, String(entry.first));
+        }
+        for (const String& entryKey : keyset) {
+            const auto entryVal = [&entryKey, &timingMap = stats.timings]() -> int64_t { 
+                for (auto& mapEntry : timingMap) {
+                    if (entryKey == mapEntry.first)
+                        return mapEntry.second;
+                }
+                return 0;
+            }();
 
             int ident    = 0;
             int iLeftCut = 0;
@@ -104,7 +119,7 @@ public:
 
 
             const String label = entryKey.substr(iLeftCut);
-            printL(ident, StringAsCStr(label), StringFormat(StringAsCStr(format), entry.second));
+            printL(ident, StringAsCStr(label), StringFormat(StringAsCStr(format), entryVal));
             if (ident && label == "ProcessMidi") {
                 ident++;
                 printL(ident, "InputClips", StringFormat("%zd µs", stats.blockMidiStats.tm0InputClips));

@@ -1720,6 +1720,7 @@ std::shared_ptr<project_file> DawInstance::createProjectFile() {
     if (tls.host) {
         file->project.samplerate = tls.host->m_sampleFormatInternal.sampleRate;
     }
+    tls.audioCache->saveSamples();
     tls.audioCache->store(file->sampleFileIndex);
     if (tls.mainCtrl) {
         file->layout.layoutGrid    = tls.mainCtrl->grid;

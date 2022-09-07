@@ -529,7 +529,9 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             for (auto& twf : tesselatedWaveForms) {
                 *it++ = path_t{std::move(twf), bakeOpt};
             }
-            renderer->bakePaths(paths, bakedPath);
+            if (!paths.empty()) {
+                renderer->bakePaths(paths, bakedPath);
+            }
             impl->renderTimings.tmBakePaths += impl->timer2.getTime();
             impl->timer2.reset();
             ivec2& pos      = waveformQueueEntry.pos;
@@ -543,7 +545,9 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             impl->timer2.reset();
             glScissor(pos.x, FBO_HEIGHT - pos.y - size.y, size.x, size.y);
             glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            renderer->render(bakedPath, matProj, matView, matModel);
+            if (!paths.empty()) {
+                renderer->render(bakedPath, matProj, matView, matModel);
+            }
             impl->renderTimings.tmDrawGL += impl->timer2.getTime();
             TextureAtlasEntry e;
             e.inuse    = true;

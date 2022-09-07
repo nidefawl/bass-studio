@@ -67,7 +67,7 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
             const float py             = y + channelHeight * iChannel + channelHeight / 2.0f;
             const auto& samplesCh      = smpCh[iChannel];
             const float* samplesChPtr  = samplesCh.data();
-            const int32_t lenSamplesCh = (int32_t) samplesCh.size();
+            const int32_t lenSamplesCh = (int32_t) math::min<size_t>(sample->nSamples, samplesCh.size());
 
             {
                 double samplePos = samplePosRender;
@@ -173,7 +173,7 @@ void tesselateWaveformEnergy(audiosample_t* sample, float x, float y, audioclip_
         for (channelnum_t iChannel = 0; iChannel < sample->nChannels; iChannel++) {
             const auto& samplesCh     = smpCh[iChannel];
             const float* samplesChPtr = samplesCh.data();
-            const int64_t lenSamplesCh   = samplesCh.size();
+            const int32_t lenSamplesCh = (int32_t) math::min<size_t>(sample->nSamples, samplesCh.size());
             std::vector<float> lows, highs, energies;
             for (int64_t pixelPos = 0; pixelPos < widthPxRounded; pixelPos++) {
                 int64_t startIndex = math::roundfS32(pixelPos / (float) widthPxRounded * nSamples);

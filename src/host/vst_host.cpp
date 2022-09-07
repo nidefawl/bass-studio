@@ -138,6 +138,7 @@ struct vsthost::track_block_processing_task_t {
 struct process_scratch_buf_t {
     VstTimeInfo timeinfo{};
     SYNCHRONIZED_RW hires_timer_t timer;// timer for cpu-time profiling
+    AudioBlock block;
 };
 
 class TrackBlockProcessTask : public WorkerThread::ThreadTask {
@@ -1083,7 +1084,7 @@ void vsthost::processMidiRealtimeInput(project_controller_t* ctrl, double posDou
 void vsthost::preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings) {
     impl->isOfflineRendering = true;
     for (auto* trackMaster : ctrl->getTracks().getMasterTracksFlatVecRef()) {
-        trackMaster->getStage()->flags |= audiostageflags_t::WRITE_OUTPUT;
+        trackMaster->getStage()->flags |= audiostageflags_t::RECORD_OUTPUT;
     }
 }
 
@@ -1098,26 +1099,12 @@ void vsthost::postExportEnd(project_controller_t* ctrl, export_settings_t& expor
     const samplerate_t numSamples = sampleEnd - sampleBegin;
 
     for (auto* trackMaster : ctrl->getTracks().getMasterTracksFlatVecRef()) {
-        if ((trackMaster->getStage()->flags & audiostageflags_t::WRITE_OUTPUT) != audiostageflags_t::NONE) {
-            String exportPath = exportSettings.exportPath;
-            int idx = 1;
-            while (FileExists(exportPath)&&idx<1000) {
-                String name;
-                String ext;
-                String path;
-                SplitPath(exportSettings.exportPath, &path, &name, &ext);
-                App::Platform::sanitizePathToDirectory(path);
-                path += name;
-                path += "-";
-                path += std::to_string(idx);
-                path += ".";
-                path += ext;
-                idx++;
-                exportPath = path;
-            }
+        if ((trackMaster->getStage()->flags & audiostageflags_t::RECORD_OUTPUT) != audiostageflags_t::NONE) {
+            String exportPath;
+            App::Platform::createUniqueFilename(exportPath, exportSettings.exportPath);
             writeTrackSamplesToDisk(exportPath, trackMaster->getStage(), sampleBegin, numSamples);
         }
-        trackMaster->getStage()->flags &= ~audiostageflags_t::WRITE_OUTPUT;
+        trackMaster->getStage()->flags &= ~audiostageflags_t::RECORD_OUTPUT;
     }
 }
 
@@ -1126,7 +1113,7 @@ int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, 
         dbgassert(0);
         return 0;
     }
-    if ((trImpl->flags & audiostageflags_t::WRITE_OUTPUT) == audiostageflags_t::NONE) {
+    if ((trImpl->flags & audiostageflags_t::RECORD_OUTPUT) == audiostageflags_t::NONE) {
         dbgassert(0);
         return 0;
     }
@@ -1360,17 +1347,17 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
     //AudioBlock::EndTrace();
 
     if (!bypassSampleConversion) {
-        int32_t bytesCopied = 0;
+        samplecount_t samplesCopied = 0;
         hires_timer_t timerConvert;
         for (track_t* tr : project->trackList) {
             track_impl_t* trAudio = tr->audio;
             if (static_cast<bool>(trAudio->flags & audiostageflags_t::CONVERT_OUTPUT)) {
-                bytesCopied += trAudio->audioOutput.convertToSamples(this);
+                samplesCopied += trAudio->audioOutput.convertToSamples(this);
             }
         }
         if (enableProfiling) {
-            stats.timings["Block.BufferedAudioConversion"] = timerProfile.getTimeReset();
-            stats.timings["Block.BufferedAudioBytesCopied"] = bytesCopied;
+            stats.timings["Block.RecordedSampleConversionPost"] = timerProfile.getTimeReset();
+            stats.timings["Block.RecordedSamples"] = samplesCopied;
         }
     }
     dbgStep++;
@@ -1643,16 +1630,16 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
             stats.timings["Block.Tracks.Tick"] = timerProfile.getTimeReset();
         }
         if (!bypassSampleConversion) {
-            int64_t bytesCopied = 0;
+            samplecount_t samplesCopied = 0;
             for (track_t* tr : project->trackList) {
                 track_impl_t* trAudio = tr->audio;
                 if (static_cast<bool>(trAudio->flags & audiostageflags_t::CONVERT_OUTPUT)) {
-                    bytesCopied += trAudio->audioOutput.convertToSamples(this);
+                    samplesCopied += trAudio->audioOutput.convertToSamples(this);
                 }
             }
             if (enableProfiling) {
                 stats.timings["Block.BufferedAudioConversion"] = timerProfile.getTimeReset();
-                stats.timings["Block.BufferedAudioBytesCopied"] = bytesCopied;
+                stats.timings["Block.BufferedAudioSamplesCopied"] = samplesCopied;
             }
         }
 
@@ -1699,8 +1686,8 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
     const double ticksLatency = sampleToTickConvert<double, roundmode::none>(trackNode.inputLatency, prjGlobals.tempo100, sampleFormat.sampleRate);
     const double sampleLatencyCompensated = samplePosProcess - trackNode.inputLatency;
     const double tickLatencyCompensated = req.tickPosProcess - ticksLatency;
-    tick_t processingPos = floor(tickLatencyCompensated);
-    int32_t tickBlockEnd = floor(tickLatencyCompensated + ticksPerBlock);
+    tick_t processingPos = math::floordS32(tickLatencyCompensated);
+    tick_t tickBlockEnd = math::floordS32(tickLatencyCompensated + ticksPerBlock);
 
     tick_t loopCutStart = -1;
     tick_t loopCutEnd = -1;
@@ -1776,16 +1763,11 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
 
     track->getStage()->procStats.timeTrackProcessMidi = tmp.timer.getTime();
 
-    if (DAW::isPlaybackState(playbackState)) {
-        trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, math::floordS32(sampleLatencyCompensated), trackImpl->input.buf, (int32_t)sampleFormat.blockSize);
-    }
-
     const auto numChannelsTrack = trackImpl->input.channels;
 
     std::vector<DAW::track_source_t> allSources = trackNode.pulls; // copy
     allSources.insert(allSources.end(), trackNode.pushs.cbegin(), trackNode.pushs.cend()); // copy
 
-#if 1
     bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), DAW::isTrackSrcSolod);
 
     tmp.timer.reset();
@@ -1844,7 +1826,38 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
         }
     }
     track->getStage()->procStats.timeTrackMixInputs = tmp.timer.getTime();
-#endif
+
+    /* Store block in audioInput memory */
+    if (DAW::isPlaybackState(playbackState)) {
+        if (isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED) && track->type == TRACK_TYPE_AUDIO) {
+            auto samplePosFloored = math::floordS64(sampleLatencyCompensated);
+            if (samplePosFloored >= 0) {
+                trackImpl->audioInput.store(&trackImpl->input, samplePosFloored);
+                trackImpl->audioInput.convertToSamples(this);
+                // trackImpl->recorder.samplesRecorded += trackImpl->audioInput.convertToSamples(this);
+            } else {
+                log_printf("cannot write to negative offset %zd (samplepos %d - stage.latencyOutput %zd)\n", samplePosFloored, samplePosProcess, trackImpl->getInputLatency());
+            }
+        }
+    }
+
+    /* Update currently recording clip */
+    trackImpl->recorder.update(playbackState, math::floordS64(sampleLatencyCompensated), math::floordS64(sampleLatencyCompensated) + sampleFormat.blockSize, processingPos, tickBlockEnd, track->type, prjGlobals.recordArmed && isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED));
+
+    track->getStage()->procStats.timeTrackRecordPre = tmp.timer.getTime();
+
+    /* Read audio clips and add them */
+    if (DAW::isPlaybackState(playbackState)) {
+        if (tmp.block.channels < trackImpl->input.channels) {
+            tmp.block = AudioBlock(trackImpl->input.channels, sampleFormat.blockSize);
+        } else {
+            tmp.block.realloc(sampleFormat.blockSize);
+        }
+        dsp_util::fillBlock(tmp.block, 0.0f);
+        trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, math::floordS32(sampleLatencyCompensated), static_cast<int32_t>(tmp.block.samples), tmp.block.buf);
+        trackImpl->input.addFromOp(&tmp.block, AudioBlock::mix_op::ADD, 1.0f);
+    }
+    track->getStage()->procStats.timeTrackFillAudioClips = tmp.timer.getTime();
 
     dbgassert(
             this->m_sampleFormatInternal == trackImpl->sampleFormat
@@ -1873,6 +1886,7 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
             trackImpl->procStats.numBlocksProcessed++;
         }
     }
+    track->getStage()->procStats.timeTrackProcessAudio = tmp.timer.getTime();
 
 
     trackImpl->outputPost.clear();
@@ -1892,7 +1906,7 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
 
     // evaluate automationRef
     float fValAutomated = 0.0f;
-    /*bool bSuccess = */DAW::resolveAutomationAtTime(this, automationRef, tickLatencyCompensated, &fValAutomated);
+    /*bool bSuccess = */DAW::resolveAutomationAtTime(this, automationRef, processingPos, &fValAutomated);
     //if (bSuccess) {
     //    fGainTrack = dsp_util::linScaleToGain(fValAutomated);
     //}
@@ -1905,13 +1919,15 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
 
     /* Store block in audioOutput memory */
     if (DAW::isPlaybackState(playbackState)) {
-        if (static_cast<bool>(trackImpl->flags & audiostageflags_t::WRITE_OUTPUT)) {
-            int32_t offset = samplePosProcess - (int32_t)(trackImpl->getOutputLatency());
+        if (static_cast<bool>(trackImpl->flags & audiostageflags_t::RECORD_OUTPUT)) {
+            tmp.timer.reset();
+            int32_t offset = samplePosProcess - static_cast<int32_t>(trackImpl->getInputLatency());
             if (offset >= 0) {
                 trackImpl->audioOutput.store(&trackImpl->outputPost, offset);
             } else {
                 log_printf("cannot write to negative offset %d (samplepos %d - stage.latencyOutput %zd)\n", offset, samplePosProcess, trackImpl->getOutputLatency());
             }
+            track->getStage()->procStats.timeTrackRecordPost = tmp.timer.getTime();
         }
 
     }
@@ -2180,15 +2196,20 @@ int32_t vsthost::processGraph(project_controller_t* ctrl,
     }
 
     /* Profiling/Timings: Accumulate timings */
-    int64_t timeProcessingArr[5] = {0};
+    int64_t timeProcessingArr[8] = {0};
     track_midiprocess_profiling_t blockMidiStats;
     for (track_t* track : project->trackList) {
         auto& procStats = track->getStage()->procStats;
         auto& procMidiStats = track->getStage()->procMidiStats;
-        timeProcessingArr[0] += procStats.timeTrackProcessPluginsRaw;
-        timeProcessingArr[1] += procStats.timeTrackMixInputs;
-        timeProcessingArr[2] += procStats.timeTrackApplyAutomation;
-        timeProcessingArr[3] += procStats.timeTrackProcessMidi;
+        int k = 0;
+        timeProcessingArr[k++] += procStats.timeTrackProcessPluginsRaw;
+        timeProcessingArr[k++] += procStats.timeTrackApplyAutomation;
+        timeProcessingArr[k++] += procStats.timeTrackProcessMidi;
+        timeProcessingArr[k++] += procStats.timeTrackMixInputs;
+        timeProcessingArr[k++] += procStats.timeTrackRecordPre;
+        timeProcessingArr[k++] += procStats.timeTrackFillAudioClips;
+        timeProcessingArr[k++] += procStats.timeTrackProcessAudio;
+        timeProcessingArr[k++] += procStats.timeTrackRecordPost;
         blockMidiStats.tm0InputClips += procMidiStats.tm0InputClips;
         blockMidiStats.tm1InputRT += procMidiStats.tm1InputRT;
         blockMidiStats.tm2ProcNotes += procMidiStats.tm2ProcNotes;
@@ -2198,11 +2219,15 @@ int32_t vsthost::processGraph(project_controller_t* ctrl,
         blockMidiStats.tm6WriteVstEvents += procMidiStats.tm6WriteVstEvents;
         blockMidiStats.tm7ProcessOutput += procMidiStats.tm7ProcessOutput;
     }
-
-    int64_t timeTotalProcessPluginsRaw = timeProcessingArr[0];
-    stats.timings["Block.Tracks.MixInputs"] = timeProcessingArr[1];
-    stats.timings["Block.Tracks.ApplyAutomation"] = timeProcessingArr[2];
-    stats.timings["Block.Tracks.ProcessMidi"] = timeProcessingArr[3];
+    int k = 0;
+    int64_t timeTotalProcessPluginsRaw = timeProcessingArr[k++];
+    stats.timings["Block.Tracks.0_ApplyAutomation"] = timeProcessingArr[k++];
+    stats.timings["Block.Tracks.1_ProcessMidi"] = timeProcessingArr[k++];
+    stats.timings["Block.Tracks.2_MixInputs"] = timeProcessingArr[k++];
+    stats.timings["Block.Tracks.3_RecordAudioPre"] = timeProcessingArr[k++];
+    stats.timings["Block.Tracks.4_FillAudioClips"] = timeProcessingArr[k++];
+    stats.timings["Block.Tracks.5_ProcessAudio"] = timeProcessingArr[k++];
+    stats.timings["Block.Tracks.6_RecordAudioPost"] = timeProcessingArr[k++];
     stats.blockMidiStats = blockMidiStats;
     stats.timeProcessPluginsRaw = timeTotalProcessPluginsRaw;
     auto curTimePluginProcess = stats.timeProcessPlugins;
@@ -2300,7 +2325,7 @@ void vsthost::processAudio(audio_stage_t* stage,
                            playback_state playbackState,
                            const DAW::effect_processing_graph_t* const processingGraph) const
 {
-    // tick_t processingPos = floor(tickStageLatencyCompensated);
+    // tick_t processingPos = math::floordS32(tickStageLatencyCompensated);
     const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(stage->sampleFormat.blockSize, prjGlobals.tempo100, stage->sampleFormat.sampleRate);
     hires_timer_t timer;
     int64_t timeTotal = 0;
@@ -2313,7 +2338,7 @@ void vsthost::processAudio(audio_stage_t* stage,
             const double ticksLatency = sampleToTickConvert<double, roundmode::none>(effNode.inputLatency, prjGlobals.tempo100, stage->sampleFormat.sampleRate);
             const double sampleLatencyCompensated = sampleStageLatencyCompensated - effNode.inputLatency;
             const double tickLatencyCompensated = tickStageLatencyCompensated - ticksLatency;
-            tick_t processingPosLatencyCompensate = floor(tickLatencyCompensated);
+            tick_t processingPosLatencyCompensate = math::floordS32(tickLatencyCompensated);
 
 
             AudioBlock* blockIn = nullptr;

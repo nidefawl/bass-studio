@@ -636,18 +636,18 @@ int32_t clip_audio_t::lenSamples() const {
 
 tick_t clip_t::getLen() const {
 
-    if (this->lenSamples > 0 && this->clipType == CLIP_AUDIO) {
-        auto pc = project_controller_t::get();
-        vsthost* host = vsthost::getInstance();
-        if (pc && host) {
-            auto lenConverted  = sampleToTickConvert<tick_t, roundmode::round>(this->lenSamples, pc->getCurrentTempo(), host->m_sampleFormatInternal.sampleRate);
-            if (lenConverted != len) {
-                log_printf("tick vs sample len missmatch. Did the samplerate change?\n");
-                dbgassert(0);
-            }
-            dbgassert(len > 0 && lenConverted > 0);
-        }
-    }
+    // if (this->lenSamples > 0 && this->clipType == CLIP_AUDIO) {
+    //     auto pc = project_controller_t::get();
+    //     vsthost* host = vsthost::getInstance();
+    //     if (pc && host) {
+    //         auto lenConverted  = sampleToTickConvert<tick_t, roundmode::round>(this->lenSamples, pc->getCurrentTempo(), host->m_sampleFormatInternal.sampleRate);
+    //         if (lenConverted != len) {
+    //             log_printf("tick vs sample len missmatch. Did the samplerate change?\n");
+    //             dbgassert(0);
+    //         }
+    //         dbgassert(len > 0 && lenConverted > 0);
+    //     }
+    // }
     return len;
 }
 

@@ -371,7 +371,7 @@ int runCommandLineHost(const std::vector<String>& args) {
             }
             if (!fOutWave.empty()) {
                 for (auto* trackMaster : project.trackMasterCtr) {
-                    trackMaster->getStage()->flags |= audiostageflags_t::WRITE_OUTPUT;
+                    trackMaster->getStage()->flags |= audiostageflags_t::RECORD_OUTPUT;
                     trackMaster->getStage()->flags |= audiostageflags_t::CONVERT_OUTPUT;
                 }
             }
@@ -499,7 +499,7 @@ int runCommandLineHost(const std::vector<String>& args) {
             int trackIndex      = 0;
             for (auto* trackMaster : project.trackMasterCtr) {
                 auto* trImpl = trackMaster->getStage();
-                if (isSet(trImpl->flags, audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::WRITE_OUTPUT)) {
+                if (isSet(trImpl->flags, audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::RECORD_OUTPUT)) {
                     trImpl->audioOutput.convertToSamples(tls.host);
                     std::vector<audiotrack_split_t*> samples;
                     trImpl->audioOutput.visitSamples_NoLock([&samples](std::shared_ptr<audiotrack_split_t>& split) {

@@ -22,6 +22,7 @@ struct audiotrack_block_t {
     }
 };
 struct audiotrack_t {
+    int64_t samplesStored = 0;
     std::vector<std::shared_ptr<audiotrack_block_t>> data;
     std::vector<std::shared_ptr<audiotrack_split_t>> samples;
     std::shared_ptr<audiotrack_split_t> getSample(samplecount_t samplePos);
@@ -40,7 +41,8 @@ struct audiotrack_t {
      * @param host
      * @return number of bytes copied
      */
-    size_t convertToSamples(vsthost* host);
+    samplecount_t convertToSamples(vsthost* host);
+    samplecount_t readSamples(samplecount_t samplePos, samplecount_t numSamples, channelnum_t numChannels, std::vector<samplechannel_t>& outChannels);
     void store(AudioBlock* input, const samplecount_t samplePos);
     static samplecount_t GetSplitSampleLength();
 };

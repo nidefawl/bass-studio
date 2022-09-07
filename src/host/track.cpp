@@ -884,13 +884,14 @@ void track_impl_t::addAudio(const AudioBlock& src, float fGain) {
     }
 }
 
-void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t blockSize) {
+void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, int32_t readPos, int32_t readLen, float** dstBuffer) {
 
-    int32_t blockEnd  = blockSamplePos + blockSize;
+    int32_t blockEnd  = readPos + readLen;
     tick_t audioBegin = math::max(start, loopStart);
     tick_t audioEnd   = loopEnd < 0 ? end : math::min(end, loopEnd);
     std::vector<clip_t*> clips;
     track->getMidi().getClipsInRange(audioBegin, audioEnd, clips);
+    auto bpm100 = prjGlobals.tempo100;
     for (clip_t* clip : clips) {
         tick_t clipStartTick    = clip->getOffsetStart();
         tick_t clipEndTick      = clip->end();
@@ -898,31 +899,31 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
         int32_t clipEndSample   = tickToSampleConvert<int32_t, roundmode::floor>(clipEndTick, bpm100, sampleFormat.sampleRate);
         if (clipStartSample > blockEnd)
             continue;
-        if (clipEndSample <= blockSamplePos)
+        if (clipEndSample <= readPos)
             continue;
-        int32_t clipEndSampleLen   = math::min((int32_t) blockSize, clipEndSample - blockSamplePos);
-        int32_t clipStartSampleLen = blockSize - math::max((int32_t) 0, clipStartSample - blockSamplePos);
-        int32_t srcStartOffset     = blockSamplePos - clipStartSample /* + clip->offsetSamples */;
-        int32_t dstStartOffset     = math::max(0, clipStartSample - blockSamplePos);
-        if (srcStartOffset + blockSize <= 0)
+        int32_t clipEndSampleLen   = math::min((int32_t) readLen, clipEndSample - readPos);
+        int32_t clipStartSampleLen = readLen - math::max((int32_t) 0, clipStartSample - readPos);
+        int32_t srcStartOffset     = readPos - clipStartSample /* + clip->offsetSamples */;
+        int32_t dstStartOffset     = math::max(0, clipStartSample - readPos);
+        if (srcStartOffset + readLen <= 0)
             continue;
 
         audiofile_t* audio = audiocache::getInstance()->get(clip->audio.id);
         if (audio) {
             audiosample_t* sample = audio->sample.get();
-            if (srcStartOffset >= (int32_t) sample->nSamples)
+            if (sample->samples.empty() || srcStartOffset >= (int32_t) sample->nSamples)
                 continue;
             dbgassert(!sample->samples.empty());
             for (uint32_t i = 0; i < this->input.channels; i++) {
-                float* dst      = buffer[i];
+                float* dst      = dstBuffer[i];
                 auto& srcVector = i >= sample->samples.size() ? sample->samples[sample->samples.size() - 1] : sample->samples[i];
-                int32_t len     = math::min((int32_t) blockSize - math::max(0, -srcStartOffset),
-                                            math::min(clipEndSampleLen, math::min(clipStartSampleLen, (int32_t) srcVector.size() - srcStartOffset)));
+                int32_t len     = math::min((int32_t) readLen - math::max(0, -srcStartOffset),
+                                            math::min(clipEndSampleLen, math::min(clipStartSampleLen, (int32_t) math::min<size_t>(sample->nSamples, srcVector.size()) - srcStartOffset)));
                 dbgassert(len >= 0);
                 if (len <= 0) {//TODO: could figure this out outside the loop
                     continue;
                 }
-                dbgassert(dstStartOffset + len <= (int32_t) blockSize);
+                dbgassert(dstStartOffset + len <= (int32_t) readLen);
                 dbgassert(srcStartOffset + len <= (int32_t) srcVector.size());
                 dbgassert(dstStartOffset >= 0);
                 memcpy(dst + dstStartOffset, srcVector.data() + math::max(0, srcStartOffset), len * sizeof(float));
@@ -1134,7 +1135,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                 stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, midiChannel.stage.buffer != DAW::stage_bufferpoint::INPUT);
             }
             if (isSet(this->flags, audiostageflags_t::RECORD_ARMED)) {
-                recorder.processMidiProcessedOutput(state, blockStart, blockEnd, noteEvents, prjGlobals.recordArmed);
+                recorder.recordNoteEvents(state, blockStart, blockEnd, noteEvents);
             }
 
             tmr.reset();
@@ -1584,11 +1585,60 @@ bool clip_recorder::writeRecordedData(track_impl_t* trImpl) {
     if (this->hasNewRecordedData) {
         ThreadLock lock          = MainCtrl::getPlayThread()->lockThread();
         this->hasNewRecordedData = false;
-        if (recordDataProcessed && recordDataProcessed->notes.m_list.size() && recordDataProcessed->getLen() > 0) {
+        if (recordDataProcessed && recordDataProcessed->getLen() > 0) {
             clip_t* pClip = nullptr;
             std::swap(recordDataProcessed, pClip);
             auto tr = trImpl->getTrack();
             if (tr) {
+                bool update = true;
+                if (pClip->clipType == CLIP_AUDIO) {
+                    update = false;
+                    if (audioSampleId < 0) {
+                        create_sample_req_t ssr;
+                        ssr.format      = trImpl->sampleFormat;
+                        ssr.id          = -1;
+                        ssr.numChannels = trImpl->input.channels;
+                        String sampleFilePath = "Recorded";
+                        if (trImpl->track) {
+                            sampleFilePath = App::Platform::toUserdataPath(trImpl->track->name + " - Recorded.wav");
+                        }
+                        App::Platform::sanitizePathToFile(sampleFilePath);
+                        App::Platform::createUniqueFilename(sampleFilePath, sampleFilePath);
+                        ssr.path = sampleFilePath;
+                        auto* cache = audiocache::getInstance();
+                        
+                        // createSample is not thread safe, we might be doing a lookup from waveformrenderer
+                        auto file = cache->createSample(ssr);
+                        audioSampleId = file->id;
+                    }
+                    pClip->audio.id = audioSampleId;
+                    if (samplesRecorded >= trImpl->sampleFormat.sampleRate>>2 && pClip->audio.id >= 0) {
+                        update = true;
+                        auto* cache = audiocache::getInstance();
+                        ssr.format = trImpl->sampleFormat;
+                        ssr.id = pClip->audio.id;
+                        ssr.length = samplesRecorded;
+                        ssr.offset = samplesWritten;
+                        auto nSamplesRead = trImpl->audioInput.readSamples(firstRecordedSample+ssr.offset,
+                                                        ssr.length,
+                                                        trImpl->input.channels,
+                                                        ssr.channels);
+                        dbgassert(nSamplesRead == ssr.length);
+                        ssr.length = nSamplesRead;
+                        cache->updateSample(ssr);
+                        samplesWritten += samplesRecorded;
+                        samplesRecorded = 0;
+                    }
+                }
+                if (!this->isRecording) {
+                    samplesWritten = 0;
+                    samplesRecorded = 0;
+                    audioSampleId = -1;
+                }
+                if (!update) {
+                    delete pClip;
+                    return false;
+                }
                 // log_lf(Log::L_DEBUG, "Processing recorded clip. Recorded %zu notes\n", pClip->notes.m_list.size());
                 // log_lf(Log::L_DEBUG, "Processing recorded clip. Last note time %d\n", pClip->notes.lastNote.time);
                 tick_t tickBegin = pClip->time;
@@ -1599,12 +1649,14 @@ bool clip_recorder::writeRecordedData(track_impl_t* trImpl) {
                 tr->getMidi().addClip(pClip);
                 tr->getMidi().sortClips();
                 return true;
+            } else {
+                delete pClip;
             }
         }
     }
     return false;
 }
-void clip_recorder::finishRecordingClip(tick_t tickPosBlockStart, tick_t tickBlockEnd, const std::vector<note_t>& m_list) {
+void clip_recorder::finishRecordingClip(samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickPosBlockStart, tick_t tickBlockEnd, const std::vector<note_t>& m_list) {
     for (auto& note : m_list) {
         note_t noteCopy = note;
         if (noteCopy.time < tickPosBlockStart && noteCopy.isHeld()) {
@@ -1619,28 +1671,29 @@ void clip_recorder::finishRecordingClip(tick_t tickPosBlockStart, tick_t tickBlo
         }
     }
     clip_t* cloned = recordingClip->clone();
-    tick_t clipLen = tickBlockEnd - recordingClip->time;
-    tick_t loopLen = ((math::max(1, clipLen / (TICKS_BAR * 4))) * (TICKS_BAR * 4));
-
     cloned->loopEnabled = false;
-    cloned->setLen(clipLen);
-    cloned->loopLen = loopLen;
+    cloned->loopLen = ((math::max(1, cloned->getLen() / (TICKS_BAR * 4))) * (TICKS_BAR * 4));
     cloned->notes.updateBounds();
     cloned->setDirty();
     std::swap(recordDataProcessed, cloned);
     delete cloned;
+    isRecording = false;
     hasNewRecordedData = true;
     delete recordingClip;
     recordingClip = nullptr;
 }
-void clip_recorder::updateRecordingClip(tick_t tickPosBlockStart, tick_t tickBlockEnd, const std::vector<note_t>& m_list) {
+void clip_recorder::updateRecordingClip(samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickPosBlockStart, tick_t tickBlockEnd, int trackType, const std::vector<note_t>& m_list) {
     if (recordingClip == nullptr) {
+        isRecording = true;
+        firstRecordedSample = samplePosBlockStart;
+        samplesRecorded = 0;
         recordingClip       = new clip_t;
-        recordingClip->name = "Midi Input - Recorded";
+        recordingClip->name = "Recorded";
         recordingClip->time = tickPosBlockStart;
-        recordingClip->setLen(TICKS_QUARTER);
+        recordingClip->setLen(5);
         recordingClip->loopStart = 0;
         recordingClip->loopLen   = TICKS_BAR * 4;
+        recordingClip->clipType = trackType == TRACK_TYPE_AUDIO ? CLIP_AUDIO : CLIP_MIDI;
     }
 
     if (recordingClip) {
@@ -1650,6 +1703,11 @@ void clip_recorder::updateRecordingClip(tick_t tickPosBlockStart, tick_t tickBlo
         if (recordingClip->end() < tickBlockEnd) {
             recordingClip->setLen((tickBlockEnd) -recordingClip->start());
         }
+        if (recordingClip->lenSamples < samplePosBlockEnd - firstRecordedSample) {
+            recordingClip->lenSamples = samplePosBlockEnd - firstRecordedSample;
+        }
+    }
+    if (recordingClip && tickBlockEnd - recordingClip->time > TICKS_QUARTER) {
         for (auto& note : m_list) {
             if (!note.isHeld()) {
                 auto noteCopy = note;
@@ -1660,18 +1718,47 @@ void clip_recorder::updateRecordingClip(tick_t tickPosBlockStart, tick_t tickBlo
             }
         }
         clip_t* cloned = recordingClip->clone();
-        cloned->setLen(tickPosBlockStart - recordingClip->time);
+        cloned->lenSamples = samplePosBlockEnd - firstRecordedSample;
+        cloned->setLen(tickBlockEnd - recordingClip->time);
         cloned->loopEnabled = false;
         cloned->loopLen     = ((math::max(1, cloned->getLen() / (TICKS_BAR * 4))) * (TICKS_BAR * 4));
         cloned->notes.updateBounds();
         cloned->setDirty();
+        samplesRecorded += samplePosBlockEnd - samplePosBlockStart;
         std::swap(recordDataProcessed, cloned);
         delete cloned;
         hasNewRecordedData = true;
     }
 }
-void clip_recorder::processMidiProcessedOutput(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, const std::vector<noteevent_t>& noteEventsProcessed, bool recordArmed) {
+void clip_recorder::update(playback_state state, samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickBlockStart, tick_t tickBlockEnd, int trackType, bool bRecordArmed) {
+
+    bool bIsPlayingAndRecording = state == playback_state::status_playback && bRecordArmed;
+    if (notesProcessed || bIsPlayingAndRecording) {
+        midiProcessedInput.updateBounds();
+        if (bIsPlayingAndRecording) {
+            updateRecordingClip(samplePosBlockStart, samplePosBlockEnd, tickBlockStart, tickBlockEnd, trackType, midiProcessedInput.m_list);
+        }
+    }
+
+    if (recordingClip && !bIsPlayingAndRecording) {
+        finishRecordingClip(samplePosBlockStart, samplePosBlockEnd, tickBlockStart, tickBlockEnd, midiProcessedInput.m_list);
+    }
+    notesProcessed = false;
+}
+void clip_recorder::recordNoteEvents(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, const std::vector<noteevent_t>& noteEventsProcessed) {
     bool notesProcessed = false;
+    if (!midiProcessedInput.m_list.empty()) {
+        auto it = midiProcessedInput.m_list.begin();
+        while (it != midiProcessedInput.m_list.end()) {
+            note_t& note = *it;
+            if (!note.isHeld() && note.end() < tickBlockEnd) {
+                notesProcessed = true;
+                it             = midiProcessedInput.m_list.erase(it);
+            } else {
+                it++;
+            }
+        }
+    }
     if (!noteEventsProcessed.empty()) {
         std::vector<note_t> newNotes;
         for (auto& msg : noteEventsProcessed) {
@@ -1734,28 +1821,6 @@ void clip_recorder::processMidiProcessedOutput(playback_state state, tick_t tick
             notesProcessed = true;
         }
     }
+    this->notesProcessed |= notesProcessed;
 
-    if (notesProcessed) {
-        midiProcessedInput.updateBounds();
-        if (state == playback_state::status_playback && recordArmed) {
-            updateRecordingClip(tickBlockStart, tickBlockEnd, midiProcessedInput.m_list);
-        }
-    }
-
-    if (recordingClip && !(state == playback_state::status_playback && recordArmed)) {
-        finishRecordingClip(tickBlockStart, tickBlockEnd, midiProcessedInput.m_list);
-    }
-
-    if (!midiProcessedInput.m_list.empty()) {
-        auto it = midiProcessedInput.m_list.begin();
-        while (it != midiProcessedInput.m_list.end()) {
-            note_t& note = *it;
-            if (!note.isHeld() && note.end() < tickBlockEnd) {
-                notesProcessed = true;
-                it             = midiProcessedInput.m_list.erase(it);
-            } else {
-                it++;
-            }
-        }
-    }
 }

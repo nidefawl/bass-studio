@@ -1,13 +1,17 @@
 #include "audiocache.h"
+#include <cstring>
 #include <unordered_map>
 #include <atomic>
 #include "appsettings.h"
 #include "assert_dbg.h"
+#include "audioblock.h"
 #include "math/seq_math.h"
+#include "samplerate.h"
 #include "str_util.h"
 #include "audiosample.h"
 #include <dr_libs/dr_wav.h>
 #include "tls.h"
+#include "types.h"
 #include "wave/downsample.h"
 #include "wave/waveform_render_impl.h"
 #include "platform.h"
@@ -53,7 +57,107 @@ void audiocache::setSamplerate(samplerate_t _samplerate) {
         loadFile(f.path, f.id);
     }
 }
+void audiocache::updateSample(const store_sample_req_t& ssr) {
+    dbgassert(ssr.id >= 0);
+    auto it = mapId.find(ssr.id);
+    dbgassert(it != mapId.end());
+    auto file = it->second;
+    auto sample = file->sample.get();
+    auto& loadedSampleChannels = ssr.channels;
+    channelnum_t numChannels = math::clamp<size_t>(loadedSampleChannels.size(), 0, 255);
+    dbgassert(ssr.format.sampleRate == sample->sampleRate);
+    dbgassert(loadedSampleChannels.size() == sample->nChannels);
+    if ((samplerate_t) ssr.format.sampleRate != this->samplerate) {
+        dbgassert(0);
+        //TODO: convert in temp buffer then append to this sample
+    }
+    sample->nSamples   = math::max(sample->nSamples, ssr.offset+ssr.length);
+    sample->sampleRate = this->samplerate;
+    if (ssr.offset == 0 && ssr.length == 0) {
+        sample->samples = loadedSampleChannels;
+    } else {
+        if (sample->samples.size() != numChannels) {
+            sample->samples.resize(numChannels);
+        }
+        for (channelnum_t ch = 0; ch < numChannels; ch++) {
+            if (static_cast<samplecount_t>(sample->samples[ch].size()) < sample->nSamples) {
+                sample->samples[ch].resize(131072*(((sample->nSamples)+131072-1)/(131072)));
+            }
+        }
+        for (channelnum_t ch = 0; ch < numChannels; ch++) {
+            auto& srcChannel = loadedSampleChannels[ch];
+            auto& dstChannel = sample->samples[ch];
+            memcpy(dstChannel.data() + ssr.offset, srcChannel.data(), ssr.length * sizeof(float));
+        }
+    }
+    int64_t timeBeginDownsample = getTimeMicros();
 
+    uint8_t maxDownS = 4;
+    int numDownS = 0;
+    for (uint8_t downsampleStep = 1; downsampleStep < maxDownS; downsampleStep++) {
+        samplecount_t lenSamplesDownsampled = sample->nSamples >> downsampleStep;
+
+        if (lenSamplesDownsampled < 10)
+            break;
+        if (CtrSize(sample->downsampled) <= numDownS) {
+            sample->downsampled.emplace_back();
+        }
+        auto& downsamplesChannels = sample->downsampled[numDownS];
+        if (downsamplesChannels.size() != numChannels) {
+            downsamplesChannels.resize(numChannels);
+        }
+        for (channelnum_t ch = 0; ch < numChannels; ch++) {
+            samplechannel_t& chDownSmpld = downsamplesChannels[ch];
+            if (static_cast<samplecount_t>(chDownSmpld.size()) < lenSamplesDownsampled) {
+                chDownSmpld.resize(lenSamplesDownsampled);
+            }
+            downsample(sample->sampleRate,
+                        sample->samples.at(ch).data(),
+                        ssr.offset,
+                        ssr.length,
+                        chDownSmpld, downsampleStep);
+        }
+        numDownS++;
+    }
+    while (CtrSize(sample->downsampled) > numDownS) {
+        sample->downsampled.resize(numDownS);
+    }
+    auto timeDiffDownsample = (getTimeMicros() - timeBeginDownsample) / 1000000.0;
+    if (timeDiffDownsample > 0.001) {
+        log_lf(Log::L_DEBUG, "Downsampling %s took %fsec\n", StringAsCStr(file->path), timeDiffDownsample);
+    }
+}
+audiofile_t* audiocache::createSample(create_sample_req_t& ssr) {
+    std::unique_ptr<audiosample_t> sample = std::make_unique<audiosample_t>();
+
+    sample->bitsPerSample = ssr.format.sampleformat == sampleformat_bits_t::FLOAT_32 ? 32 : 64;
+    sample->nChannels     = math::clamp<size_t>(ssr.numChannels, 0, 255);
+    sample->sampleRate    = ssr.format.sampleRate;
+    sample->nSamples      = 0;
+    log_printf("createSample %s...\n", StringAsCStr(ssr.path));
+    log_lf(Log::L_DEBUG, "channels: %u\n", sample->nChannels);
+    log_lf(Log::L_DEBUG, "sampleRate: %u\n", sample->sampleRate);
+
+    int32_t _id = ssr.id;
+    if (_id < 0) {
+        _id = this->nextIdx++;
+    }
+    this->nextIdx       = math::max(this->nextIdx.load(), _id + 1);
+    auto spFile    = std::make_unique<audiofile_t>();
+    spFile->sample = std::move(sample);
+    spFile->state = audiofile_t::filestate::LOADED_MODIFIED;
+    spFile->id     = _id;
+    spFile->path   = ssr.path;
+    String a, b, c, d;
+    SplitPath(ssr.path, &a, &b, &c, &d);
+    spFile->name = b;
+    spFile->ext  = c;
+    this->mapId[_id]  = spFile.get();
+    audiofile_t* pFile = spFile.get();
+    list.push_back(std::move(spFile));
+    dbgassert(mapId[_id] == pFile);
+    return pFile;
+}
 audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
     String path = pathIn;
     auto mappings = daw_tls::getSettings().pathmapping;
@@ -101,7 +205,7 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
         std::unique_ptr<audiosample_t> sample = std::make_unique<audiosample_t>();
 
         sample->bitsPerSample = wav.bitsPerSample;
-        sample->nChannels     = math::clamp<channelnum_t>(wav.channels, 0, 255);
+        sample->nChannels     = math::clamp<size_t>(wav.channels, 0, 255);
         sample->sampleRate    = wav.sampleRate;
         sample->nSamples      = 0;
 
@@ -185,6 +289,7 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
                 samplechannel_t chDownSmpld(static_cast<size_t>(lenSamplesDownsampled));
                 downsample(sample->sampleRate,
                            sample->samples.at(ch).data(),
+                           0,
                            sample->nSamples,
                            chDownSmpld, downsampleStep);
                 downsampledChannels[ch] = std::move(chDownSmpld);
@@ -198,17 +303,18 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
             _id = this->nextIdx++;
         }
         this->nextIdx       = math::max(this->nextIdx.load(), _id + 1);
-        auto cachedaudio    = std::make_unique<audiofile_t>();
-        cachedaudio->sample = std::move(sample);
-        cachedaudio->id     = _id;
-        cachedaudio->path   = path;
+        auto file    = std::make_unique<audiofile_t>();
+        file->state = audiofile_t::filestate::LOADED;
+        file->sample = std::move(sample);
+        file->id     = _id;
+        file->path   = path;
         String a, b, c, d;
         SplitPath(path, &a, &b, &c, &d);
-        cachedaudio->name = b;
-        cachedaudio->ext  = c;
-        this->mapId[_id]  = cachedaudio.get();
-        audiofile_t* audio = cachedaudio.get();
-        list.push_back(std::move(cachedaudio));
+        file->name = b;
+        file->ext  = c;
+        this->mapId[_id]  = file.get();
+        audiofile_t* audio = file.get();
+        list.push_back(std::move(file));
         dbgassert(mapId[_id] == audio);
         return audio;
     } 
@@ -216,6 +322,55 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
     return nullptr;
 }
 
+int64_t saveSample(audiofile_t& file, const String& fOutWave) {
+    if (fOutWave.empty()) {
+        dbgassert(0);
+        return 0;
+    }
+    auto sample = file.getSample();
+    dbgassert(sample->nChannels == sample->samples.size());
+    log_printf("saveSample %d %s len %zd\n", file.id, StringAsCStr(fOutWave), sample->nSamples);
+
+    drwav_data_format format;
+    format.container = drwav_container_riff;    // drwav_container_riff = normal WAV files, drwav_container_w64 = Sony Wave64.
+    format.format = DR_WAVE_FORMAT_IEEE_FLOAT;  // Any of the DR_WAVE_FORMAT_* codes.
+    format.channels = sample->nChannels;
+    format.sampleRate = sample->sampleRate;
+    format.bitsPerSample = 32;
+
+    drwav* pWav = drwav_open_file_write(StringAsCStr(fOutWave), &format);
+
+    AudioBlock blockFull(1, sample->nSamples*format.channels);
+
+    /* Interleave data */
+    for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
+        float* in = sample->samples[ch].data();
+        float* out0 = blockFull.buf[0] + ch;
+        for (samplecount_t i = 0; i < sample->nSamples; i++) {
+            *out0 = *in++;
+            out0 += format.channels;
+        }
+    }
+
+    auto samplesWritten = drwav_write(pWav, drwav_uint64(sample->nSamples*format.channels), blockFull.buf[0]);
+
+    drwav_close(pWav);
+
+    return static_cast<samplecount_t>(samplesWritten);
+}
+void audiocache::saveSamples() {
+    for (auto& w : list) {
+        samplefile_index_t index;
+        auto* ptr = w.get();
+        if (ptr->state == audiofile_t::filestate::LOADED_MODIFIED) {
+            if (FileExists(ptr->path)) {
+                log_lf(Log::L_WARN, "Overwriting sample %s\n", ptr->path.c_str());
+            }
+            saveSample(*ptr, ptr->path);
+            ptr->state = audiofile_t::filestate::LOADED;
+        }
+    }
+}
 void audiocache::store(samplefile_index_t& v) {
     v.list.reserve(list.size());
     for (auto& w : list) {

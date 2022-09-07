@@ -1,11 +1,16 @@
+#include "appsettings.h"
+#include "assert_dbg.h"
 #include "types.h"
 #include "audiotrack.h"
+#include "track_impl.h"
 #include "audiosample.h"
 #include "audioblock.h"
 #include "logging.h"
 #include "host/vst_host.h"
 #include "mainctrl.h"
+#include <cstring>
 #include <memory>
+#include <vector>
 
 static constexpr size_t PER_BLOCK_BYTES          = (1024ULL * 512ULL);
 static constexpr samplecount_t PER_BLOCK_SAMPLES = (PER_BLOCK_BYTES / (sizeof(float)));
@@ -31,7 +36,59 @@ std::shared_ptr<audiotrack_split_t> audiotrack_t::getSample(samplecount_t sample
     }
     return nullptr;
 }
-size_t audiotrack_t::convertToSamples(vsthost* host) {
+int64_t audiotrack_t::readSamples(samplecount_t samplePos, samplecount_t numSamples, channelnum_t numChannels, std::vector<samplechannel_t>& outChannels) {
+    dbgassert(numChannels == 2);
+    const samplecount_t SPLIT_SAMPLECOUNT = audiotrack_t::GetSplitSampleLength();
+    const samplecount_t samplePosEnd = samplePos + numSamples;
+
+    std::vector<audiotrack_split_t*> samples;
+    visitSamples_NoLock([&samples, SPLIT_SAMPLECOUNT, samplePos, samplePosEnd](std::shared_ptr<audiotrack_split_t>& split) {
+        auto* ptrSplit = split.get();
+        if (ptrSplit && ptrSplit->samplePos + SPLIT_SAMPLECOUNT >= samplePos && ptrSplit->samplePos < samplePosEnd) {
+            samples.push_back(ptrSplit);
+        }
+    });
+
+    if (samples.empty()) {
+        //unexpected
+        dbgassert(0);
+        return 0;
+    }
+
+    std::sort(samples.begin(), samples.end(), [](audiotrack_split_t* lhs, audiotrack_split_t* rhs) {
+        return lhs->samplePos < rhs->samplePos;
+    });
+
+
+    outChannels.resize(numChannels);
+    for (auto& channel : outChannels) {
+        channel.resize(numSamples);
+        memset(channel.data(), 0, numSamples * sizeof(float));
+    }
+    samplecount_t samplesWritten = 0;
+    for (audiotrack_split_t* split : samples) {
+        auto* sample = split->getSample();
+        dbgassert(split->samplePos + SPLIT_SAMPLECOUNT >= samplePos && split->samplePos < samplePosEnd);
+
+        const size_t readBeginOffset = math::clamp<samplecount_t>(samplePos - split->samplePos, 0, SPLIT_SAMPLECOUNT);
+        const size_t readEndOffset = math::clamp<samplecount_t>(samplePosEnd - split->samplePos, 0, SPLIT_SAMPLECOUNT);
+        const size_t readLen = math::clamp<samplecount_t>(readEndOffset - readBeginOffset, 0, SPLIT_SAMPLECOUNT);
+
+        dbgassert(sample->nChannels == numChannels);
+        dbgassert(sample->nChannels == sample->samples.size());
+        dbgassert(sample->nSamples == SPLIT_SAMPLECOUNT);
+        dbgassert(sample->nSamples == static_cast<samplecount_t>(sample->samples[0].size()));
+        dbgassert(sample->nSamples == static_cast<samplecount_t>(sample->samples[1].size()));
+
+        if (sample->samples.size() >= 2) {
+            memcpy(outChannels[0].data() + samplesWritten, sample->samples[0].data() + readBeginOffset, readLen * sizeof(float));
+            memcpy(outChannels[1].data() + samplesWritten, sample->samples[1].data() + readBeginOffset, readLen * sizeof(float));
+            samplesWritten += readLen;
+        }
+    }
+    return samplesWritten;
+}
+samplecount_t audiotrack_t::convertToSamples(vsthost* host) {
     auto isInSync = [this]() -> bool {
         if (data.size() != this->samples.size()) {
             return false;
@@ -48,28 +105,23 @@ size_t audiotrack_t::convertToSamples(vsthost* host) {
     if (isInSync())
         return 0;
 
-    std::vector<std::shared_ptr<audiotrack_split_t>> newSplits;
-    newSplits.reserve(data.size());
-    const auto nSamples = samples.size();
-    size_t bytesCopied = 0;
+    samplecount_t samplesCopied = 0;
     for (size_t i = 0; i < data.size(); i++) {
         samplecount_t samplePos = i * PER_BLOCK_SAMPLES;
         if (data[i]) {
+            while (samples.size() <= i) {
+                samples.push_back(nullptr);
+            }
             auto& block = data[i]->data;
-            audiotrack_split_t* split = nullptr;
-            if (i >= nSamples || !this->samples[i]) {
-                auto sharedSplit = std::make_shared<audiotrack_split_t>();
-                split            = sharedSplit.get();
-                newSplits.push_back(std::move(sharedSplit));
+            if (!this->samples[i]) {
+                auto split = std::make_shared<audiotrack_split_t>();
                 split->samplePos            = samplePos;
                 split->sample.sampleRate    = host->m_sampleFormatInternal.sampleRate;
                 split->sampleId             = host->getNextSampleId(0);
                 split->sample.bitsPerSample = 32;
-            } else {
-                split   = this->samples[i].get();
-                newSplits.push_back(this->samples[i]);
-                dbgassert(split->samplePos == samplePos);
+                this->samples[i] = split;
             }
+            audiotrack_split_t* split = this->samples[i].get();
             split->sample.nChannels = block.channels;
             split->sample.nSamples  = block.samples;
             if (split->version == data[i]->version) {
@@ -95,15 +147,12 @@ size_t audiotrack_t::convertToSamples(vsthost* host) {
 #else
                 memcpy_s(dstPtr, dstSize * sizeof(float), srcPtr, srcSize * sizeof(float));
 #endif
-                bytesCopied += sizeof(float) * srcSize;
+                samplesCopied += srcSize;
             }
             //log_lf(Log::L_DEBUG, "block #%d copy %d bytes, present %d, resized %d, version %d/%d\n", i, bytesCopied, present, resized, preVersion, data[i]->version);
-        } else {
-            newSplits.push_back(nullptr);
         }
     }
-    this->samples = std::move(newSplits);
-    return bytesCopied;
+    return samplesCopied;
 }
 
 void copyFromToSample(audiosample_t* dstSample, float** srcBuf, samplecount_t offsetIn, samplecount_t offsetOut, samplecount_t srcSamples, channelnum_t srcChannels) {
@@ -137,10 +186,12 @@ void audiotrack_t::store(AudioBlock* input, const samplecount_t samplePos) {
     if (!data[startBlock]) {
         //log_lf(Log::L_DEBUG, "alloc new block #%d\n", startBlock);
         data[startBlock] = std::make_shared<audiotrack_block_t>(input->channels, PER_BLOCK_SAMPLES);
+        samplesStored+=PER_BLOCK_SAMPLES;
     }
     if (!data[endBlock]) {
         //log_lf(Log::L_DEBUG, "alloc new block #%d\n", endBlock);
         data[endBlock] = std::make_shared<audiotrack_block_t>(input->channels, PER_BLOCK_SAMPLES);
+        samplesStored+=PER_BLOCK_SAMPLES;
     }
     samplecount_t readLen    = input->samples;
     samplecount_t readOffset = 0;
@@ -153,7 +204,7 @@ void audiotrack_t::store(AudioBlock* input, const samplecount_t samplePos) {
         readOffset = -readbegin;
         readbegin  = 0;
     }
-    samplecount_t startOffsetBlock0 = readbegin - (startBlock * PER_BLOCK_SAMPLES);
+    samplecount_t startOffsetBlock0 = readbegin - (static_cast<samplecount_t>(startBlock) * PER_BLOCK_SAMPLES);
     samplecount_t lenBlock0         = math::min(PER_BLOCK_SAMPLES - startOffsetBlock0, readLen);
     samplecount_t lenOver           = readLen - lenBlock0;
     auto* blockStart          = data[startBlock].get();

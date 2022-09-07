@@ -129,13 +129,25 @@ class noteevent_buffer {
 };
 struct clip_recorder {
     clip_t* recordingClip = nullptr;
+    std::atomic<bool> isRecording{};
     std::atomic<bool> hasNewRecordedData{};
     clip_t* recordDataProcessed = nullptr;
     clip_notes_t midiProcessedInput;
-    void updateRecordingClip(tick_t tickPosBlockStart, tick_t tickBlockEnd, const std::vector<note_t>& m_list);
-    void finishRecordingClip(tick_t tickPosBlockStart, tick_t tickBlockEnd, const std::vector<note_t>& m_list);
+    bool notesProcessed = false;
+    samplecount_t firstRecordedSample = 0;
+    samplecount_t samplesWritten = 0;
+    samplecount_t samplesRecorded = 0;
+    int32_t audioSampleId = -1;
+    store_sample_req_t ssr;
+    void updateRecordingClip(samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickPosBlockStart, tick_t tickBlockEnd, int 
+    trackType, const std::vector<note_t>& m_list);
+    void finishRecordingClip(samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickPosBlockStart, tick_t tickBlockEnd, const std::vector<note_t>& m_list);
     public:
-    void processMidiProcessedOutput(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, const std::vector<noteevent_t>& noteEventsProcessed, bool recordArmed);
+    clip_t* getRecordingClip() {
+        return recordingClip;
+    }
+    void update(playback_state state, samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickBlockStart, tick_t tickBlockEnd, int trackType, bool bRecordArmed);
+    void recordNoteEvents(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, const std::vector<noteevent_t>& noteEventsProcessed);
     bool writeRecordedData(track_impl_t* trImpl);
 };
 struct audio_stage_t {
@@ -150,6 +162,7 @@ struct audio_stage_t {
      */
     AudioBlock output;
     AudioBlock outputPost;
+    AudioBlock clipBuffer;
 
     track_params_t mixer;
 
@@ -163,6 +176,7 @@ struct audio_stage_t {
     samplerate_t latencyOuput = 0;
 
 
+    audiotrack_t audioInput;
     audiotrack_t audioOutput;
     std::shared_ptr<DAW::meter_runningsum[]> meterDataInput;
     std::shared_ptr<DAW::meter_runningsum[]> meterDataOutput;
@@ -424,7 +438,7 @@ struct track_impl_t : public audio_stage_t {
     void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) override;
     void processMidiInput(playback_state state, int32_t flags, tick_t cursorPos, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency, const clip_notes_t& midiRealtimeInput);
     void postProcessMidiInput(playback_state state, int32_t flags, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency);
-    void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
+    void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, int32_t readPos, int32_t readLen, float** dstBuffer);
     void addAudio(const AudioBlock& src, float fGain);
     void removePlugin(effectbase* _vst, bool notifyUp) override;
     const std::vector<DAW::arp_note_t>& getArpHeldNotes();

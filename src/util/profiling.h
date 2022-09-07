@@ -21,8 +21,12 @@ struct stats_processing_timings_t {
     int64_t timeTrackProcessPluginsRaw = 0;
     int64_t timeTrackProcessPlugins    = 0;
     int64_t timeTrackApplyAutomation   = 0;
-    int64_t timeTrackMixInputs         = 0;
     int64_t timeTrackProcessMidi       = 0;
+    int64_t timeTrackMixInputs         = 0;
+    int64_t timeTrackRecordPre         = 0;
+    int64_t timeTrackFillAudioClips    = 0;
+    int64_t timeTrackProcessAudio      = 0;
+    int64_t timeTrackRecordPost        = 0;
     int32_t statsProcStep              = 0;
     int64_t statsWriteOffset           = 0;
     int64_t numBlocksProcessed         = 0;
@@ -84,6 +88,7 @@ struct alignas(64) prof_stats_window_t {
     int64_t timeRender              = 0;
     int64_t timeSwapBuffers         = 0;
     int64_t timePrerender           = 0;
+    int64_t timeAppTick             = 0;
 };
 struct vst_opcode_stats_t {
     int32_t tmMillis      = 0;

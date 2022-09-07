@@ -11,4 +11,4 @@
 * @param downSampleFactor
 * @return 0 = no error
 */
-int downsample(samplerate_t sampleRate, float* samplesIn, int64_t len, std::vector<float>& samplesOut, uint8_t downSampleFactor);
+int downsample(samplerate_t sampleRate, float* samplesIn, samplecount_t offset, samplecount_t numSamples, std::vector<float>& samplesOut, uint8_t downSampleFactor);

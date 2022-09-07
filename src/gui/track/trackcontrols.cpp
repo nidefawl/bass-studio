@@ -2084,7 +2084,7 @@ public:
 
             bool isShown = (tr->audio->flags & audiostageflags_t::CONVERT_OUTPUT) != audiostageflags_t::NONE;
             if (isShown) {
-                tr->audio->flags &= ~(audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::WRITE_OUTPUT);
+                tr->audio->flags &= ~(audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::RECORD_OUTPUT);
                 std::vector<gui_track_subtrack*> subtracksVecCopy = m_trackentry->subtracks;
                 for (auto subtrack : subtracksVecCopy) {
                     if (subtrack->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
@@ -2092,7 +2092,7 @@ public:
                     }
                 }
             } else {
-                tr->audio->flags |= audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::WRITE_OUTPUT;
+                tr->audio->flags |= audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::RECORD_OUTPUT;
                 auto gui = makeGuiSubtrack(m_trackentry, dawCtrl, gui_track_subtrack::SUBTRACK_TYPE_WAVE);
                 trackCtr->addSubTrack(m_trackentry, gui, true);
             }
