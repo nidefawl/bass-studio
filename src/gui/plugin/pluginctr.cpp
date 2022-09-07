@@ -453,8 +453,9 @@ void guictr_plugins::showTrack(audio_stage_t* audio) {
                 break;
         }
     }
-
-    layout();
+    if (size.x > 0 && size.y > 0) {
+        layout();
+    }
     if (track && isDefaultPluginCtr) {
         setScrolloffset(this->track->scrolloffset);
     }
