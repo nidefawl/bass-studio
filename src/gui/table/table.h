@@ -177,4 +177,7 @@ namespace Table {
 
     template <typename T>
     void cellClicked(const click_ctxt_t& ctxt, const tbltypesaferef<T>& obj);
+
+    template<typename T>
+    void cellClicked(const click_ctxt_t& ctxt, const SafeRef<T>& obj);
 }// namespace Table

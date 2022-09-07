@@ -62,15 +62,15 @@ namespace Table {
         virtual ~click_type_handler() = default;
     };
 
-    template <>
+    template<>
     void cellClicked(const click_ctxt_t& ctxt, const tbltype_gui_flags& obj) {
         if (ctxt.callback) {
             ctxt.callback->onClick(ctxt, obj);
         }
     }
 
-    template <>
-    void cellClicked(const click_ctxt_t& ctxt, const SafeRef<guibase>& obj) {
+    template<typename T>
+    void cellClicked(const click_ctxt_t& ctxt, const SafeRef<T>& obj) {
         auto* c = safeRefGet(obj);
         if (c && ctxt.callback) {
             ctxt.callback->onClick(ctxt, c);
