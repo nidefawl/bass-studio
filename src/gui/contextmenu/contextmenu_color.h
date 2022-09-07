@@ -29,8 +29,14 @@ public:
     }
 
     void render(ivec2, NVGcontext* vg, int idx, ivec2 mouse) override {
-        UTIL_setFont(vg, theme, this->fontSize, THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        nvgText(vg, leftOffset(), y + this->fontSize / 2, StringAsCStr(title), NULL);
+        renderTextLabel(vg,
+                        vec2(leftOffset(), y + height * 0.5f),
+                        vec2(width, height),
+                        title,
+                        theme,
+                        fontSize,
+                        theme->getColor(GuiColor::COL_TEXT),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         nvgFontSize(vg, this->fontSize - 4);
         int focusIdx = -1;
         int y        = this->y + this->fontSize + pad - 4;

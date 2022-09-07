@@ -1962,6 +1962,12 @@ public:
             _id -= cmdPickColor->id;
             if (tr) {
                 tr->rgb = colorPalette[_id];
+                bool bUpdateClips = isShift(parentCtrl->lastMouseEvent.kbmods);
+                if (bUpdateClips) {
+                    for (auto& clip : tr->getMidi().getClips()) {
+                        clip->rgb = tr->rgb;
+                    }
+                }
             }
         } else if (_id == cmdReactivateAutomation->id) {
             if (tr) {

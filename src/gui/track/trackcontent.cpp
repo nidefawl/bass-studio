@@ -458,6 +458,7 @@ public:
                     cl->clipType = CLIP_AUDIO;
                 }
                 if (cl) {
+                    cl->rgb = tr->rgb;
                     cl->name = StringFormat("%s Clip", StringAsCStr(tr->name));
                     cl->time = cursor.cursorPos;
                     cl->setLen(cursor.selRange);

@@ -1639,6 +1639,7 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                         audioSampleId = file->id;
                         pClip->name = file->name;
                         pClip->audio.id = audioSampleId;
+                        pClip->rgb = tr->rgb;
                     }
                     if (samplesRecorded >= trImpl->sampleFormat.sampleRate>>2 && audioSampleId >= 0) {
                         auto* file = cache->get(audioSampleId);
@@ -1659,6 +1660,7 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                             samplesRecorded = 0;
                             pClip->name = file->name;
                             pClip->audio.id = audioSampleId;
+                            pClip->rgb = tr->rgb;
                         } else {
                             // sample wen't offline
                             audioSampleId = -1;
