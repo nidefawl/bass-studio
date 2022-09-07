@@ -55,6 +55,7 @@ class guictr_tempocontrols;
 class guictr_tracks;
 class guictr_nodes_splitview;
 class gui_statusbar;
+class gui_notify;
 class guictr_clipeditor;
 class guictr_clipeditorview;
 class guictxtmenu_base;
@@ -550,6 +551,17 @@ public:
     }
 };
 
+class ProjectGraphMonitor {
+    gui_notify* popupNotifyError = nullptr;
+    std::shared_ptr<DAW::processing_graph_t> processingGraph;
+    std::shared_ptr<DAW::processing_graph_t> lastWorkingProcGraph;
+    bool bWorkingProcessingGraph = false;
+    public:
+    void onTick(MainCtrl* ctrl);
+    gui_notify* getNotifyError() const {
+        return popupNotifyError;
+    }
+};
 class MainCtrl : public DawCtrl {
     friend class DawInstance;
     friend class DawCtrl;
@@ -558,6 +570,7 @@ class MainCtrl : public DawCtrl {
     String loadProject;
     int loadFlags = 0;
     Logger* statusbarLogger = nullptr;
+    ProjectGraphMonitor graphMonitor;
 public:
     static MainCtrl* get();
     explicit MainCtrl(DawInstance& _daw);

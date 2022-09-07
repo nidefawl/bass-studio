@@ -159,10 +159,6 @@ public:
     }
 
     virtual GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const {
-        // if (focused()) {
-        //     return GuiColor::COL_BG_DRKER;
-        // }
-        // return GuiColor::COL_BG_DRKER2;
         if (focused()) {
             return GuiColor::COL_BG_DRK_FOCUSED;
         }

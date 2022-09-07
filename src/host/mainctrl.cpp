@@ -11,6 +11,8 @@
 #include <memory>
 
 #include "gui/container/container_layout_types.h"
+#include "gui/tooltip/tooltip.h"
+#include "guicolors.h"
 #include "mainctrl.h"
 #include "math/seq_math.h"
 #include "error.h"
@@ -58,6 +60,7 @@
 #include "gui/views/pluginlist.h"
 #include "gui/menu/menu.h"
 #include "gui/views/debugctr.h"
+#include "gui/views/notify.h"
 #include "wave/waveform_render_impl.h"
 #include "gui/views/shaderview.h"
 #include "gui/dialog/about.h"
@@ -1438,9 +1441,50 @@ void DawCtrl::onTick() {
     mainWindow->requestRedraw();
 }
 
+void ProjectGraphMonitor::onTick(MainCtrl* ctrl) {
+    if (processingGraph) {
+        lastWorkingProcGraph = processingGraph;
+    }
+    processingGraph = nullptr;
+    auto daw = ctrl->getDaw();
+    auto project = daw->getProject();
+    bool bSuccess = DAW::buildProcessingGraph(daw->getHost(), project, project->trackList.getAllTracksFlatVecRef(), processingGraph);
+    if (bWorkingProcessingGraph && !bSuccess) {
+        if (!popupNotifyError) {
+            auto guiNotify = new gui_notify();
+            guiNotify->guis[0]->setVisible(false);
+            guiNotify->setMessage("Found loop in routing graph", "Remove feedback loop in routing graph");
+            guiNotify->setColors(GuiColor::COL_INVALID_INPUT, GuiColor::COL_TEXT);
+            guiNotify->size      = ivec2(420, 90);
+            guiNotify->layout();
+            popupNotifyError = guiNotify;
+        }
+    }
+    if (popupNotifyError)
+        popupNotifyError->setVisible(!bSuccess);
+    bWorkingProcessingGraph = bSuccess;
+}
+
 void MainCtrl::onTick() {
     daw.onTick();
     DawCtrl::onTick();
+    graphMonitor.onTick(this);
+    auto notify = graphMonitor.getNotifyError();
+    bool bIsInContainers = stl_contains(this->containers, notify);
+    if (notify && (notify->isVisible() != bIsInContainers)) {
+        if (!bIsInContainers) {
+            containers.push_back(notify);
+            notify->setControl(this);
+        } else {
+            removeEntry(containers, notify);
+            notify->setControl(nullptr);
+        }
+    }
+    if (notify && notify->isVisible()) {
+        notify->size = ivec2(m_size.x/3, 90);
+        notify->pos = (m_size - notify->size) / 2;
+        notify->layout();
+    }
 
     if (guiDragged && !guiCaptured && guiDragged->isDragMoveable()) {
         track_gui_entry_t* tr  = nullptr;

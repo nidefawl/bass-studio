@@ -48,6 +48,7 @@
 #include "gui/container/container.h"
 #include "gui/contextmenu/contextmenu_daw.h"
 #include "gui/table/table.h"
+#include "gui/views/notify.h"
 
 #include "basectrl.h"
 
@@ -1266,7 +1267,6 @@ namespace PluginSynth {
         PluginVST2_Synth* const instanceVst2;
         bool bIsInitSamplerate = false;
         PresetManager::Preset currentPreset;
-        String exprError;
         PresetManager presetManager;
         void initImpl() {
             for (auto& setting : settings) {
@@ -3264,78 +3264,6 @@ namespace PluginSynth {
             this->rowHeight = rowHeight;
         }
     };
-    class gui_notify_error : public guictxtmenu_base {
-    protected:
-        bool hadMouseFocus = false;
-        guibutton btnHide;
-        int64_t tmDelay  = 0L;
-        int64_t tmCreate = 0L;
-        String strErrSrc;
-        String strErrMsg;
-
-    public:
-        gui_notify_error(String errSource, String errMessage) : guictxtmenu_base() {
-            setCanMouseHit(true);
-            setBackgroundRendered(true);
-            setBackgroundRenderedInset(false);
-            add(&btnHide);
-            padding           = 6;
-            margin            = 0;
-            canTakeInputFocus = true;
-            strErrSrc         = std::move(errSource);
-            strErrMsg         = std::move(errMessage);
-            btnHide.setText("Hide");
-        }
-        ~gui_notify_error() override {
-            removeGuis();
-        }
-        void setDelay(int64_t _tmDelay) {
-            this->tmDelay  = _tmDelay;
-            this->tmCreate = getTimeMillis();
-        }
-        void onTick(AppCtrl* appctrl) override {
-            auto tmLeft = math::max<int64_t>(0, this->tmDelay - (getTimeMillis() - this->tmCreate));
-            if (tmLeft <= 0) {
-                closeContextMenu();
-            }
-        }
-        void buttonClicked(guibase* button) override {
-            closeContextMenu();
-        }
-        void determineSize(ivec2& prefSize) override {
-        }
-        bool isTransient() const override {
-            return true;
-        }
-        void layout() override {
-            auto cs      = getSizeContent();
-            btnHide.size = ivec2(cs.x / 7, cs.y - padding * 2) - ivec2(padding);
-            btnHide.pos  = ivec2(cs.x - btnHide.size.x - padding, cs.y - btnHide.size.y);
-            btnHide.pos.y /= 2;
-            for (auto* g : guis) {
-                g->layout();
-            }
-            this->fontSize = cs.y * 0.45f;
-        }
-        void render(NVGcontext* vg) override {
-            nvgSave(vg);
-            guictxtmenu_base::render(vg);
-            nvgRestore(vg);
-            if (strErrSrc.length() > 0) {
-                auto cs = getSizeContent();
-                nvgSave(vg);
-                setScissorTransform(vg);
-                ivec2 renderSize(btnHide.pos.x - padding, cs.y);
-                ivec2 renderPos(0);
-                int fontScale = math::roundfS32((this->fontSize > 0 ? this->fontSize : math::min(renderSize.y, renderSize.x)));
-                renderCenteredMultilineText(vg, theme, strErrSrc + "\n" + strErrMsg, fontScale, getLabelColor(), renderPos, renderSize);
-                nvgRestore(vg);
-            }
-        }
-        GuiColor::constant_t getLabelColor() const override {
-            return GuiColor::COL_INVALID_INPUT;
-        }
-    };
     class guicontainer_modulation_slot_source : public guictr_base {
         SynthImpl* const synth;
         const int32_t slotIndex;
@@ -3442,7 +3370,8 @@ namespace PluginSynth {
                             log_lf(Log::L_ERROR, "Error in expression: %s\n", e.GetMsg().c_str());
                             textfieldFunction.setLabel(StringFormat("Error in expression: %s", e.GetMsg().c_str()));
                             textfieldFunction.setTextfieldColor(GuiColor::COL_INVALID_INPUT);
-                            // auto tooltip       = new gui_notify_error("Failed parsing expression", e.GetMsg());
+                            // auto tooltip       = new gui_notify();
+                            // tooltip->setMessage("Failed parsing expression", e.GetMsg());
                             // auto ctrlSize      = dawCtrl->m_size;
                             // tooltip->size      = ivec2(620, 80);
                             // tooltip->maxHeight = tooltip->size.y;
@@ -3999,8 +3928,7 @@ namespace PluginSynth {
                     //log_printf("warning, skip rendering child container with state !isVisible()\n");
                     continue;
                 }
-                if (c->size.x <= 0 || c->size.y <= 0) {
-                    log_printf("warning, skip rendering child container %s with size <= 0 0\n", StringAsCStr(c->getClassName()));
+                if (c->size.x <= 5 || c->size.y <= 5) {
                     continue;
                 }
                 {
@@ -4021,12 +3949,16 @@ namespace PluginSynth {
             }
         }
         void layoutParameterGroup(ivec2& prefSize, vec2 knobSize, float titleHeight) {
+            int newPadding = 0;
+            while (newPadding < 4 && newPadding * 48 < prefSize.y) {
+                newPadding++;
+            }
+            padding = newPadding;
             this->setTitleHeight(titleHeight);
             auto cs                = getSizeContent();
             const auto knobsPerCol = 3;
             const auto innerSize   = vec2(cs.x, cs.y - titleHeight);
             auto knobPos           = ivec2(0, titleHeight);
-            ;
             auto sliderSize      = vec2(knobSize.x, innerSize.y);
             this->sliderSize     = sliderSize;
             knobSize.y           = (innerSize.y - padding * (knobsPerCol - 1)) / float(knobsPerCol);
@@ -4433,7 +4365,7 @@ namespace PluginSynth {
                 return;
             }
             for (guibase* gui : guis) {
-                if (gui->isVisible()) {
+                if (gui->isVisible() && gui->size.x > 10 && gui->size.y > 10) {
                     nvgSave(vg);
                     gui->render(vg);
                     nvgRestore(vg);

@@ -1227,8 +1227,11 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 
     /** Build the audio graph **/
     if (!cacheAudioGraph || !impl->processingGraph) {
+        bool bWasValid = impl->processingGraph != nullptr;
         if (!DAW::buildProcessingGraph(this, project, project->trackList.getAllTracksFlatVecRef(), impl->processingGraph)) {
-            log_lf(Log::L_ERROR, "Failed building track graph\n");
+            impl->processingGraph = nullptr;
+            if (bWasValid)
+                log_lf(Log::L_ERROR, "Failed building track graph\n");
             return 0;
         }
     }
@@ -1463,8 +1466,11 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
         /** Build the audio graph **/
         if (!cacheAudioGraph || !impl->processingGraph) 
         {
+            bool bWasValid = impl->processingGraph != nullptr;
             if (!DAW::buildProcessingGraph(this, project, project->trackList.getAllTracksFlatVecRef(), impl->processingGraph)) {
-                log_lf(Log::L_ERROR, "Failed building track graph\n");
+                impl->processingGraph = nullptr;
+                if (bWasValid)
+                    log_lf(Log::L_ERROR, "Failed building track graph\n");
             }
         }
 
@@ -1869,9 +1875,11 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
         auto& effProcessingGraph = trackImpl->processingGraph;
         if (!cacheAudioGraph || !effProcessingGraph)
         {
+            bool bWasValid = effProcessingGraph != nullptr;
             if (!DAW::buildEffectProcessingGraph(this, nullptr, trackImpl, effProcessingGraph)) {
                 effProcessingGraph = nullptr;
-                log_lf(Log::L_ERROR, "Failed building effect graph\n");
+                if (bWasValid)
+                    log_lf(Log::L_ERROR, "Failed building effect graph\n");
             }
 #if DAW_DEBUG_AUDIOGRAPH
             req.effectProcessingGraph = effProcessingGraph;

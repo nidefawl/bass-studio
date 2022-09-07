@@ -162,14 +162,14 @@ namespace DAW {
     bool buildProcessingGraph(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph) {
         std::shared_ptr<track_graph_t> dependencyGraph;
         if (!buildTrackRoutingGraph(host, project, tracksFlat, dependencyGraph)) {
-            log_lf(Log::L_ERROR, "Failed building track graph\n");
+            // log_lf(Log::L_ERROR, "Failed building track graph\n");
             return false;
         }
         track_node_t root;
         root.children.insert(root.children.begin(), dependencyGraph->roots.begin(), dependencyGraph->roots.end());
         dependency_graph_flattened_t graphFlattened;
         if (!dep_resolve(graphFlattened, &root)) {
-            log_lf(Log::L_ERROR, "Failed flattening track graph\n");
+            // log_lf(Log::L_ERROR, "Failed flattening track graph\n");
             return false;
         }
 

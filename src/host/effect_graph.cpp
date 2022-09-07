@@ -133,14 +133,14 @@ namespace DAW {
     bool buildEffectProcessingGraph(const vsthost* const host, const project_t* const project, const audio_stage_t* stage, std::shared_ptr<effect_processing_graph_t>& out_procgraph) {
         std::shared_ptr<effect_graph_t> dependencyGraph;
         if (!buildEffectRoutingGraph(host, project, stage, dependencyGraph)) {
-            log_lf(Log::L_ERROR, "Failed building track graph\n");
+            // log_lf(Log::L_ERROR, "Failed building track graph\n");
             return false;
         }
         effect_node_t root;
         root.children.insert(root.children.begin(), dependencyGraph->roots.begin(), dependencyGraph->roots.end());
         dependency_graph_flattened_t graphFlattened;
         if (!dep_resolve_graph(graphFlattened, &root)) {
-            log_lf(Log::L_ERROR, "Failed flattening track graph\n");
+            // log_lf(Log::L_ERROR, "Failed flattening track graph\n");
             return false;
         }
 
