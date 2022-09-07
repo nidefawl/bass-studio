@@ -12,7 +12,23 @@
 #include <shlobj.h>
 
 bool CreateDirectoryIfNotExists(const String& DirPath) {
-    return 0 != CreateDirectoryA(StringAsCStr(DirPath), nullptr);
+    String partPath = "";
+    do {
+        auto pos = DirPath.find_first_of('\\', partPath.size());
+        if (pos == String::npos) {
+            pos = DirPath.size();
+        }
+        partPath = DirPath.substr(0, pos + 1);
+        if (partPath.empty()) {
+            break;
+        }
+        if (!FileExists(partPath)) {
+            if (0 == CreateDirectoryA(StringAsCStr(partPath), nullptr)) {
+                return false;
+            }
+        }
+    } while (partPath.size() < DirPath.size());
+    return true;
 }
 
 void ThrowLastErrorIf(bool expression, const String& msg) {

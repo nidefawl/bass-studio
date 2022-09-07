@@ -1,3 +1,4 @@
+#include "str_util.h"
 #ifdef _WIN32
 #include "fileio.h"
 #include "exceptions.h"
@@ -38,8 +39,7 @@ int browseForFolder(const String& title, const String& pathStart, String& _out) 
     }
     return 1;
 }
-
-int promptUserFilePath(window_base*, int mode, std::vector<SupportedFileType> fileTypes, String& _out) {
+int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out, String _defaultPath) {
     char supportedFiles[MAX_PATH] = "";
 
     int offset  = 0;
@@ -75,6 +75,8 @@ int promptUserFilePath(window_base*, int mode, std::vector<SupportedFileType> fi
         ofn.nMaxFile    = MAX_PATH;
         ofn.Flags       = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_NOCHANGEDIR;
         ofn.lpstrDefExt = StringAsCStr(fileTypes[0].ext);
+        if (_defaultPath.length())
+            ofn.lpstrInitialDir = StringAsCStr(_defaultPath);
 
         if (GetOpenFileName(&ofn)) {
             _out = szFileName;
@@ -95,6 +97,8 @@ int promptUserFilePath(window_base*, int mode, std::vector<SupportedFileType> fi
         ofn.nMaxFile    = MAX_PATH;
         ofn.Flags       = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
         ofn.lpstrDefExt = StringAsCStr(fileTypes[0].ext);
+        if (_defaultPath.length())
+            ofn.lpstrInitialDir = StringAsCStr(_defaultPath);
 
         if (GetSaveFileName(&ofn)) {
             _out = szFileName;
