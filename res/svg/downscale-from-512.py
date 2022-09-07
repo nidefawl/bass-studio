@@ -13,7 +13,6 @@ if os.name != 'posix':
 if __name__ == '__main__':
     icons512Path = pathlib.Path(__pathScript.parent.joinpath('icons-512')).resolve()
     icons64Path = pathlib.Path(__pathScript.parent.joinpath('icons')).resolve()
-    fileList = icons512Path.glob('*.png')
 
     print('Converting icons from 512x512 to 64x64')
     print(f'source: {icons512Path}{os.path.sep}*.png')

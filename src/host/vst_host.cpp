@@ -1154,6 +1154,10 @@ int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, 
     //String nameWaveFileTrack = fOutWave+"_"+std::to_string(trackIndex)+"_"+trackMaster->name+"_f32.wav";
     String nameWaveFileTrack = fOutWave;
     drwav* pWav = drwav_open_file_write(StringAsCStr(nameWaveFileTrack), &format);
+    struct close_wave_file_write {
+        drwav* wav;
+        ~close_wave_file_write() { drwav_close(wav); }
+    } closeWaveFile{pWav};
 
 
     AudioBlock blockFull(1, SPLIT_SAMPLECOUNT*numChannels);
@@ -1191,7 +1195,6 @@ int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, 
 
     log_printf("Wrote %zd chunks/%zd samples into %s\n", sampleIdx, samplesWritten, StringAsCStr(nameWaveFileTrack));
     log_printf("processed %zu splits and %zd samples\n", samples.size(), samplesWritten2);
-    drwav_close(pWav);
 
     return samplesWritten;
 }

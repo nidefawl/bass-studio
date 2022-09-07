@@ -118,7 +118,8 @@ void gui_audio_clip::renderDebugPass(NVGcontext* vg) {
         if (prevIsValid && wfref.queued) {
             wfref.waveform = prevWaveform;
         }
-        renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, waveformRef, pos, size, posClipped, sizeClipped);
+        auto file = dawCtrl->getDaw()->getAudioCache()->get(m_clip->audio.id);
+        renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, file, waveformRef, pos, size, posClipped, sizeClipped);
         nvgBeginPath(vg);
         nvgRect(vg, posClipped.x, posClipped.y, sizeClipped.x, sizeClipped.y);
         nvgFillColor(vg, rgbaToNvg(0x7Fff00ff));
@@ -139,7 +140,8 @@ void gui_audio_clip::render(NVGcontext* vg) {
         if (prevIsValid && wfref.queued) {
             wfref.waveform = prevWaveform;
         }
-        renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, waveformRef, pos, size, posClipped, sizeClipped);
+        auto file = dawCtrl->getDaw()->getAudioCache()->get(m_clip->audio.id);
+        renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, file, waveformRef, pos, size, posClipped, sizeClipped);
     }
 }
 

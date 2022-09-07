@@ -396,7 +396,7 @@ void drawIconColored(NVGcontext* vg, const ivec2& size, RenderResources::NvgImag
 }
 
 void drawIcon(NVGcontext* vg, const ivec2& size, RenderResources::NvgImageTexture* image, int32_t extImg) {
-    drawIconColored(vg, size, image, nvgRGBAf(1,1,1,1), extImg);
+    drawIconColored(vg, size, image, nvgRGBAf(1, 1, 1, 1), extImg);
 }
 
 void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {

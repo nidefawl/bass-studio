@@ -166,51 +166,22 @@ audiofile_t* audiocache::createSample(create_sample_req_t& ssr) {
     dbgassert(mapId[_id] == pFile);
     return pFile;
 }
-audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
-    String path = pathIn;
-    auto mappings = daw_tls::getSettings().pathmapping;
-    bool replacedPath = false;
-    drwav wav;
-    // split path using platform specific path separator
-    // then check if any of the path parents are mapped in the hashmap and if so,
-    // replace the path with the mapped path
-    for (auto& mapping : mappings.pathRemapping) {
-        if (path.find(mapping.first) == 0) {
-            String newPath = path;
-            newPath.replace(0, mapping.first.size(), mapping.second);
-            App::Platform::sanitizePathToFile(newPath);
-            if (FileExists(newPath)) {
-                path = newPath;
-                replacedPath = true;
-                break;
-            }
-        }
-    }
-    if (!replacedPath) {
-        App::Platform::sanitizePathToFile(path);
-    }
-
-    //TODO: sanitize path so comparison matches, or ask os if path equals a file we already loaded before
-    for (auto& w : list) {
-        if (w->path == path) {
-            log_printf("skipping file %s (requested id %d), already loaded (id %d)\n", StringAsCStr(path), id, w.get()->id);
-            return w.get();
-        }
-    }
-
-    log_printf("Loading %s...\n", path.c_str());
+bool LoadAudioSample(const String& path, audiosample_t* sample) {
+    drwav wav{};
     if (drwav_init_file(&wav, StringAsCStr(path))) {
+        struct close_wave_file {
+            drwav* wav;
+            ~close_wave_file() { drwav_uninit(wav); }
+        } closeWaveFile{&wav};
         std::vector<float> pSamples(wav.totalSampleCount);
         memset(pSamples.data(), 0, sizeof(float) * pSamples.size());
         size_t nSamples = drwav_read_f32(&wav, wav.totalSampleCount, pSamples.data());
-
         log_lf(Log::L_DEBUG, "totalSampleCount: %zu\n", wav.totalSampleCount);
         log_lf(Log::L_DEBUG, "channels: %d\n", wav.fmt.channels);
         log_lf(Log::L_DEBUG, "sampleRate: %d\n", wav.fmt.sampleRate);
         log_lf(Log::L_DEBUG, "bitsPerSample: %d\n", wav.fmt.bitsPerSample);
         log_lf(Log::L_DEBUG, "samples: %zu\n", nSamples);
 
-        std::unique_ptr<audiosample_t> sample = std::make_unique<audiosample_t>();
 
         sample->bitsPerSample = wav.bitsPerSample;
         sample->nChannels     = math::clamp<size_t>(wav.channels, 0, 255);
@@ -233,12 +204,12 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
             numSamplesInput = i == 0 ? samplesInChannel : math::min<samplecount_t>(numSamplesInput, samplesInChannel);
             loadedSampleChannels.push_back(std::move(channel));
         }
-        if ((samplerate_t) sample->sampleRate != this->samplerate) {
+        if ((samplerate_t) sample->sampleRate != wav.sampleRate) {
 
             std::vector<samplechannel_t> resampledChannels;
             std::vector<float*> channelPtrsOut(sample->nChannels);
             std::vector<float*> channelPtrsIn(sample->nChannels);
-            auto numSamplesResampled = static_cast<samplecount_t>(numSamplesInput * this->samplerate / (double) wav.sampleRate + .5); /* Assay output len. */
+            auto numSamplesResampled = static_cast<samplecount_t>(numSamplesInput * sample->sampleRate / (double) wav.sampleRate + .5); /* Assay output len. */
 
             for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
                 channelPtrsIn[ch] = loadedSampleChannels[ch].data();
@@ -259,7 +230,7 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
             soxr_error_t error = 0;
             size_t offset = 0;
 
-            soxr_t soxr = soxr_create(sample->sampleRate, this->samplerate, sample->nChannels, &error, &io_spec, &q_spec, &runtime_spec);
+            soxr_t soxr = soxr_create(wav.sampleRate, sample->sampleRate, sample->nChannels, &error, &io_spec, &q_spec, &runtime_spec);
             if (!!error) {
                 log_printf("soxr_create failed: %s\n", soxr_strerror(error));
             } else {
@@ -268,7 +239,6 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
                     log_printf("soxr_process failed: %s\n", soxr_strerror(error));
                 } else {
                     sample->nSamples   = static_cast<int64_t>(offset);
-                    sample->sampleRate = this->samplerate;
                     sample->samples.resize(sample->nChannels);
                     for (channelnum_t i = 0; i < sample->nChannels; i++) {
                         sample->samples[i] = std::move(resampledChannels[i]);
@@ -277,8 +247,7 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
             }
             soxr_delete(soxr);
         } else {
-            sample->nSamples   = numSamplesInput;
-            sample->sampleRate = this->samplerate;
+            sample->nSamples = numSamplesInput;
             sample->samples.resize(sample->nChannels);
             sample->samples = std::move(loadedSampleChannels);
         }
@@ -306,28 +275,69 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
         }
         int64_t timeDiffDownsample = getTimeMicros() - timeBeginDownsample;
         log_lf(Log::L_DEBUG, "Downsampling %s took %fsec\n", path.c_str(), timeDiffDownsample / 1000000.0);
-        int32_t _id = id;
-        if (_id < 0) {
-            _id = this->nextIdx++;
+        return true;
+    }
+    return false;
+}
+audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
+    String path = pathIn;
+    auto mappings = daw_tls::getSettings().pathmapping;
+    bool replacedPath = false;
+    // split path using platform specific path separator
+    // then check if any of the path parents are mapped in the hashmap and if so,
+    // replace the path with the mapped path
+    for (auto& mapping : mappings.pathRemapping) {
+        if (path.find(mapping.first) == 0) {
+            String newPath = path;
+            newPath.replace(0, mapping.first.size(), mapping.second);
+            App::Platform::sanitizePathToFile(newPath);
+            if (FileExists(newPath)) {
+                path = newPath;
+                replacedPath = true;
+                break;
+            }
         }
-        this->nextIdx       = math::max(this->nextIdx.load(), _id + 1);
-        auto file    = std::make_unique<audiofile_t>();
-        file->state = audiofile_t::filestate::LOADED;
-        file->sample = std::move(sample);
-        file->id     = _id;
-        file->path   = path;
-        String a, b, c, d;
-        SplitPath(path, &a, &b, &c, &d);
-        file->name = b;
-        file->ext  = c;
-        this->mapId[_id]  = file.get();
-        audiofile_t* audio = file.get();
-        list.push_back(std::move(file));
-        dbgassert(mapId[_id] == audio);
-        return audio;
-    } 
-    log_printf("Could not load audio file %s\n", path.c_str());
-    return nullptr;
+    }
+    if (!replacedPath) {
+        App::Platform::sanitizePathToFile(path);
+    }
+
+    //TODO: sanitize path so comparison matches, or ask os if path equals a file we already loaded before
+    for (auto& w : list) {
+        if (w->path == path) {
+            auto pFile = w.get();
+            mapId[w->id] = pFile;
+            log_printf("skipping file %s (requested id %d), already loaded (id %d)\n", StringAsCStr(path), id, pFile->id);
+            return pFile;
+        }
+    }
+
+    std::unique_ptr<audiosample_t> sample = std::make_unique<audiosample_t>();
+    int32_t _id = id;
+    if (_id < 0) {
+        _id = this->nextIdx++;
+    }
+    this->nextIdx = math::max(this->nextIdx.load(), _id + 1);
+    auto file = std::make_unique<audiofile_t>();
+    file->state  = audiofile_t::filestate::UNLOADED;
+    file->sample = std::move(sample);
+    file->id     = _id;
+    file->path   = path;
+    String a, b, c, d;
+    SplitPath(path, &a, &b, &c, &d);
+    file->name = b;
+    file->ext  = c;
+    auto pFile  = file.get();
+    this->mapId[_id] = pFile;
+    list.push_back(std::move(file));
+    if (LoadAudioSample(path, pFile->sample.get())) {
+        pFile->state = audiofile_t::filestate::LOADED;
+        log_printf("Loaded %s\n", path.c_str());
+    } else {
+        pFile->state = audiofile_t::filestate::UNLOADED_MISSING;
+        log_printf("Failed to load %s\n", path.c_str());
+    }
+    return pFile;
 }
 
 int64_t saveSample(audiofile_t& file, const String& fOutWave) {
@@ -352,6 +362,10 @@ int64_t saveSample(audiofile_t& file, const String& fOutWave) {
     format.bitsPerSample = 32;
 
     drwav* pWav = drwav_open_file_write(StringAsCStr(fOutWave), &format);
+    struct close_wave_file_write {
+        drwav* wav;
+        ~close_wave_file_write() { drwav_close(wav); }
+    } closeWaveFile{pWav};
 
     AudioBlock blockFull(1, sample->nSamples*format.channels);
 
@@ -366,8 +380,6 @@ int64_t saveSample(audiofile_t& file, const String& fOutWave) {
     }
 
     auto samplesWritten = drwav_write(pWav, drwav_uint64(sample->nSamples*format.channels), blockFull.buf[0]);
-
-    drwav_close(pWav);
 
     return static_cast<samplecount_t>(samplesWritten);
 }

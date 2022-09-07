@@ -7,6 +7,7 @@
 #include "gui/contextmenu/contextmenu_base.h"
 #include "gui/contextmenu/contextmenu.h"
 #include "platform.h"
+#include "renderresources.h"
 
 
 class gui_notify : public guictr_base {
@@ -68,7 +69,13 @@ public:
             auto cs = getSizeContent();
             ivec2 renderSize = btnHide.isVisible() ? ivec2(btnHide.pos.x - padding, cs.y) : cs;
             ivec2 renderPos(0);
+            renderPos.x += size.y;
+            renderSize.x -= size.y;
+            
+            auto iconId = ICON_WARNING;
+            drawIcon(vg, vec2(cs.y), &RenderResources::imgIcons[iconId], -2);
             auto fontScale = cs.y * 0.4f;
+
             renderCenteredMultilineText(vg, theme, strErrSrc + "\n" + strErrMsg, fontScale, getLabelColor(), renderPos, renderSize);
         }
     }

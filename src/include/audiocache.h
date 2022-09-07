@@ -16,6 +16,7 @@ struct audiofile_path_t {
 struct audiofile_t : public samplesource_t {
     enum class filestate {
         UNLOADED,
+        UNLOADED_MISSING,
         LOADED_MODIFIED,
         LOADED
     };

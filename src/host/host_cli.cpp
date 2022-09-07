@@ -528,6 +528,10 @@ int runCommandLineHost(const std::vector<String>& args) {
                             String nameWaveFileTrack =
                                     fOutWave + "_" + std::to_string(trackIndex) + "_" + trackMaster->name + "_f32.wav";
                             pWav = drwav_open_file_write(StringAsCStr(nameWaveFileTrack), &format);
+                            struct close_wave_file_write {
+                                drwav* wav;
+                                ~close_wave_file_write() { drwav_close(wav); }
+                            } closeWaveFile{pWav};
                             for (audiotrack_split_t* split : samples) {
                                 auto* sample = split->getSample();
                                 dbgassert(sample->nChannels == trImpl->output.channels);
@@ -547,7 +551,6 @@ int runCommandLineHost(const std::vector<String>& args) {
                                 samplesWritten += drwav_write(pWav, blockTrack.samples, blockTrack.buf[0]);
                             }
                             log_printf("wrote %zd samples to %s\n", samplesWritten, StringAsCStr(nameWaveFileTrack));
-                            drwav_close(pWav);
                         }
                     }
                 }

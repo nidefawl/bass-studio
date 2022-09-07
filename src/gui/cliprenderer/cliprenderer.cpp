@@ -1,7 +1,10 @@
 #include "cliprenderer.h"
+#include "audiocache.h"
 #include "cliprenderer_cache.h"
+#include "guiglobals.h"
 #include "math/seq_math.h"
 #include "host/vst_host.h"
+#include "renderresources.h"
 #include "theme.h"
 #include "gui/gui.h"
 #include "seq_time.h"
@@ -73,7 +76,7 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
     return w;
 }
 
-void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_t* theme, const track_t* tr, const clip_t* cl, const gui_waveform_texture_ref* waveformRef, ivec2 pos, ivec2 size, ivec2 posClipped, ivec2 sizeClipped) {
+void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_t* theme, const track_t* tr, const clip_t* cl, const audiofile_t* file, const gui_waveform_texture_ref* waveformRef, ivec2 pos, ivec2 size, ivec2 posClipped, ivec2 sizeClipped) {
     if (cl->getLen() <= 0) {
         return;
     }
@@ -86,11 +89,29 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
     nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
     nvgStrokeWidth(vg, 1.f);
     nvgStroke(vg);
+    if (file && file->state == audiofile_t::filestate::UNLOADED_MISSING) {
+        auto colInvalid = theme->getColor(GuiColor::COL_INVALID_INPUT);
+        colInvalid.a = 0.5;
+        nvgBeginPath(vg);
+        nvgRect(vg, pos.x, pos.y+HEIGHT_CLIP_TITLE, size.x, size.y-HEIGHT_CLIP_TITLE);
+        nvgFillColor(vg, colInvalid);
+        nvgFill(vg);
+    }
 
+    auto textPos = vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0) + vec2(pos);
+    auto textBounds = vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE + 2, 0);
+    if (file && file->state == audiofile_t::filestate::UNLOADED_MISSING) {
+        textPos.x += HEIGHT_CLIP_TITLE;
+        textBounds.x -= HEIGHT_CLIP_TITLE;
+        auto iconId = ICON_WARNING;
+        nvgTranslate(vg, pos.x, pos.y);
+        drawIcon(vg, vec2(HEIGHT_CLIP_TITLE), &RenderResources::imgIcons[iconId], -2);
+        nvgTranslate(vg, -pos.x, -pos.y);
+    }
     if (cl->name.length()) {
         renderTextLabel(vg,
-                        vec2(pos)+vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0),
-                        vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE + 2, 0),
+                        textPos,
+                        textBounds,
                         cl->name,
                         theme,
                         HEIGHT_CLIP_TITLE,
