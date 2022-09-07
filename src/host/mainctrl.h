@@ -110,6 +110,7 @@ namespace DAW {
     void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, DAW::Cursor& cursor);
     void cutSelection(track_gui_manager_i& trackList, const DAW::Cursor& cursor);
     void muteIntersecting(track_gui_manager_i& trackList, const DAW::Cursor& _cursor);
+    void GetProjectReferencedSampleIds(const project_t& project, std::vector<int32_t>& uniqueSampleIds);
 }// namespace DAW
 
 struct clip_cursor_t {
@@ -373,6 +374,7 @@ public:
      */
     bool setLoadedProject(std::shared_ptr<project_file> file, int flags);
     bool setProjectToLoad(std::shared_ptr<project_file> file, int flags);
+    void unloadUnreferencedSamples();
     void startPlaying();
     void stopPlaying();
     void startExport();

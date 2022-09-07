@@ -68,9 +68,10 @@ public:
     void unloadSampleId(int32_t id);
     audiofile_t* get(int32_t i);
     audiofile_t* getByFilename(const String& pathFile);
-    void store(samplefile_index_t& v);
+    void store(const std::vector<int32_t>& refSampleIds, samplefile_index_t& v);
     void load(samplefile_index_t& v);
-    void saveSamples();
+    void saveSamples(const std::vector<int32_t>& refSampleIds);
     void unloadAll();
+    void unloadUnreferenced(const std::vector<int32_t>& refSampleIds);
     bool isEmpty() const;
 };

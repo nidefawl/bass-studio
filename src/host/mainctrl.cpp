@@ -804,6 +804,7 @@ void DawInstance::loadFileCStr(const char* str) {
 
 void DawInstance::saveFile(const String& path) {
     if (!path.empty()) {
+        if (tls.mainCtrl) tls.mainCtrl->setStatusText(StringFormat("Saved project %s", StringAsCStr(path)));
         std::shared_ptr<project_file> f = createProjectFile();
         saveProject(f, path);
         projectPath = path;
@@ -1010,7 +1011,9 @@ void DawInstance::menuCommand(menucmd_t command) {
                     }
                 }
                 saveFile(path);
-                SplitPath(path, &lastProjectDirectory, nullptr, nullptr, nullptr);
+                String projectFileName;
+                SplitPath(path, &lastProjectDirectory, &projectFileName, nullptr, nullptr);
+                tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::BUILD_BINARY_NAME, StringAsCStr(projectFileName)));
                 tls.settings->recentfiles.add(path);
                 break;
             }
@@ -1721,13 +1724,33 @@ std::shared_ptr<project_file> DawInstance::createProjectFile() {
     if (tls.host) {
         file->project.samplerate = tls.host->m_sampleFormatInternal.sampleRate;
     }
-    tls.audioCache->saveSamples();
-    tls.audioCache->store(file->sampleFileIndex);
+    std::vector<int32_t> uniqueSampleIds;
+    DAW::GetProjectReferencedSampleIds(project, uniqueSampleIds);
+    tls.audioCache->saveSamples(uniqueSampleIds);
+    tls.audioCache->store(uniqueSampleIds, file->sampleFileIndex);
     if (tls.mainCtrl) {
         file->layout.layoutGrid    = tls.mainCtrl->grid;
         file->layout.scrollOffsetX = tls.mainCtrl->view->ctr_tracks.getScrollOffset();
     }
     return file;
+}
+namespace DAW {
+void GetProjectReferencedSampleIds(const project_t& project, std::vector<int32_t>& uniqueSampleIds) {
+    for (track_t* t : project.trackList) {
+        auto& clipContainer = t->getConstMidi();
+        for (auto& clip : clipContainer.getConstClips()) {
+            if (clip->audio.id >= 0 && !std::binary_search(uniqueSampleIds.cbegin(), uniqueSampleIds.cend(), clip->audio.id)) {
+                insertSorted(uniqueSampleIds, clip->audio.id);
+            }
+        }
+    }
+}
+}
+void DawInstance::unloadUnreferencedSamples() {
+    std::vector<int32_t> uniqueSampleIds;
+    DAW::GetProjectReferencedSampleIds(project, uniqueSampleIds);
+    log_lf(Log::L_DEBUG, "Found %zu sample ids\n", uniqueSampleIds.size());
+    tls.audioCache->unloadUnreferenced(uniqueSampleIds);
 }
 
 bool DawInstance::setProjectToLoad(std::shared_ptr<project_file> file, int flags) {

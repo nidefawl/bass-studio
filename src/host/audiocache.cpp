@@ -371,11 +371,11 @@ int64_t saveSample(audiofile_t& file, const String& fOutWave) {
 
     return static_cast<samplecount_t>(samplesWritten);
 }
-void audiocache::saveSamples() {
+void audiocache::saveSamples(const std::vector<int32_t>& refSampleIds) {
     for (auto& w : list) {
-        samplefile_index_t index;
         auto* ptr = w.get();
-        if (ptr->state == audiofile_t::filestate::LOADED_MODIFIED) {
+        if (std::binary_search(refSampleIds.cbegin(), refSampleIds.cend(), ptr->id)
+            && ptr->state == audiofile_t::filestate::LOADED_MODIFIED) {
             if (FileExists(ptr->path)) {
                 log_lf(Log::L_WARN, "Overwriting sample %s\n", ptr->path.c_str());
             }
@@ -384,12 +384,30 @@ void audiocache::saveSamples() {
         }
     }
 }
-void audiocache::store(samplefile_index_t& v) {
+void audiocache::store(const std::vector<int32_t>& refSampleIds, samplefile_index_t& v) {
     v.list.reserve(list.size());
     for (auto& w : list) {
-        samplefile_index_t index;
         auto* ptr = w.get();
-        v.list.push_back({ ptr->id, ptr->path });
+        if (std::binary_search(refSampleIds.cbegin(), refSampleIds.cend(), ptr->id)) {
+            v.list.push_back({ ptr->id, ptr->path });
+        }
+    }
+}
+void audiocache::unloadUnreferenced(const std::vector<int32_t>& refSampleIds) {
+    auto it = list.begin();
+    while (it != list.end()) {
+        auto* ptr = it->get();
+        if (!std::binary_search(refSampleIds.cbegin(), refSampleIds.cend(), ptr->id)) {
+            log_lf(Log::L_DEBUG, "Unloading unreferenced sample %s (ID %d)\n", StringAsCStr(ptr->path), ptr->id);
+            auto itMap = mapId.find(ptr->id);
+            if (itMap != mapId.end()) {
+                mapId.erase(itMap);
+            }
+            it = list.erase(it);
+        } else {
+            log_lf(Log::L_DEBUG, "Keeping referenced sample %s (ID %d)\n", StringAsCStr(ptr->path), ptr->id);
+            ++it;
+        }
     }
 }
 
