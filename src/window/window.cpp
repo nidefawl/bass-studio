@@ -788,7 +788,9 @@ public:
             glfwMakeContextCurrent(nullptr);
         } */
 
+        timerProfileWindow.reset();
         ctrl->onAppTick();
+        renderStatsWindow.timeAppTick = timerProfileWindow.getTimeReset();
     }
     void releaseOverlayWindows() {
         if (!overlayWindowsToClose.empty()) {
