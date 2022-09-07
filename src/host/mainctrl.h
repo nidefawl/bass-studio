@@ -111,6 +111,7 @@ namespace DAW {
     void cutSelection(track_gui_manager_i& trackList, const DAW::Cursor& cursor);
     void muteIntersecting(track_gui_manager_i& trackList, const DAW::Cursor& _cursor);
     void GetProjectReferencedSampleIds(const project_t& project, std::vector<int32_t>& uniqueSampleIds);
+    String MakeUniqueTrackName(project_t* project, const String& strNewName);
 }// namespace DAW
 
 struct clip_cursor_t {

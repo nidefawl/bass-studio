@@ -1,6 +1,7 @@
 #include "trackcontrols.h"
 
 #include "assert_dbg.h"
+#include "clip.h"
 #include "guiglobals.h"
 #include "host/daw_channel.h"
 #include "math/seq_math.h"
@@ -47,7 +48,40 @@ using DAW::midichannel_ref_t;
 
 const int resizeHitY  = 8;
 const int DRAG_RESIZE = 1;
+namespace DAW {
+    void OpenRenamePopup(DawCtrl* ctrl, track_gui_entry_t* trackentry) {
+        const int titleHeight = ctrl->getTheme()->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
+        auto title       = trackentry->mixer->getTitle();
+        auto popupPos    = title->toScreenSpace(ivec2(0));//+ivec2(title->hideTrack.right() + INSET_TITLE*2, 0);
+        auto const field = new gui_textfield();
+        field->size      = title->size;
+        field->size.y    = titleHeight;
+        field->pos       = { 0, 0 };
+        field->setFontSize(titleHeight);
+        field->setReturnCommits(true);
+
+        auto const ctxtMenu = new guictxtmenu_base();
+        ctxtMenu->size      = field->size;
+        ctxtMenu->add(field);
+        ctxtMenu->layout();
+        ctxtMenu->canTakeInputFocus = true;
+        ctxtMenu->maxHeight         = field->size.y;
+        dbgassert(!ctxtMenu->isBackgroundRendered());
+        ctxtMenu->setBackgroundRendered(false);
+        auto cb = [trackEntry = trackentry, ctxtMenu](const std::string& str) {
+            trackEntry->track->name = str;
+            ctxtMenu->closeContextMenu();
+            return true;
+        };
+        field->setEndEditCallback(cb);
+        trackentry->parentCtrl->openContextMenu(ctxtMenu, popupPos);
+        // m_trackentry is not valid here
+        field->setValue(trackentry->track->name);
+        field->setSelectionRange(-1, -1);
+        field->parentCtrl->focusGui(field);
+    }
+}
 int trackHeight(track_gui_entry_t* const m_trackentry) {
     int trackheight = m_trackentry->layout.height;
     for (auto t2 : m_trackentry->subtracks) {
@@ -1504,6 +1538,12 @@ public:
         return mpos.x >= left() && mpos.x < right() && mpos.y >= resizeTopOrBottom - resizeHitY && mpos.y < resizeTopOrBottom + resizeHitY;
     }
     void handleDraggedBegin(MouseEvent& evt) override {
+        if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
+            const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+            if (evt.relMousepos.y < titleHeight)
+                DAW::OpenRenamePopup(dawCtrl, m_trackentry);
+            return;
+        }
         dawCtrl->getDaw()->setSelectedTrack(m_track);
         if (isResize(evt.relMousepos + this->pos)) {
             dragMode = DRAG_RESIZE;
@@ -1905,23 +1945,6 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
         dawCtrl->updateVisibleTrackContents();
     }
 }
-String makeUniqueTrackName(DawInstance* daw, const String& strNewName) {
-    auto& trackCtr   = daw->getTracks();
-    int offset       = 0;
-    while (offset < 100) {
-        String test = strNewName;
-        if (offset > 0) {
-            test += StringFormat(" %d", offset);
-        }
-        auto it = std::find_if(trackCtr.begin(), trackCtr.end(), [&test](const track_t* tr) {
-            return tr->name == test;
-        });
-        if (it == trackCtr.end())
-            return test;
-        offset++;
-    }
-    return strNewName;
-}
 class guictxtmenu_track : public guictxtmenu {
     track_gui_entry_t* const m_trackentry;
     ctxtmenu_entry* cmdPickColor;
@@ -2011,7 +2034,7 @@ public:
                 *newTrack                    = trSnap;
                 daw->addTrackImpl(tr->localIdxFlat + 1, newTrack, FLG_TRK_CHANGE_USER);
                 newTrack->loadSnapshot(trSnap);
-                newTrack->name = makeUniqueTrackName(dawCtrl->getDaw(), strNewName);
+                newTrack->name = DAW::MakeUniqueTrackName(dawCtrl->getDaw()->getProject(), strNewName);
                 //ensure unique IDs
                 dbgassert(daw->getHost()->validateIds());
                 m_trackentry->parent->layout();
@@ -2045,44 +2068,14 @@ public:
             track_t* newTrack = daw->createNewTrack(tr->type);
             tr->addChild(newTrack);
             daw->addTrackImpl(0, newTrack, FLG_TRK_CHANGE_USER);
-            newTrack->name = makeUniqueTrackName(dawCtrl->getDaw(), tr->name);
+            newTrack->name = DAW::MakeUniqueTrackName(dawCtrl->getDaw()->getProject(), tr->name);
             daw->updateVisibleTrackContents();
             track_gui_entry_t* entry{};
             if (trackCtr->getTrackEntry(newTrack, &entry)) {
                 trackCtr->scrollTo(entry->content);
             }
         } else if (_id == cmdRenameTrack->id) {
-            const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-
-            auto title       = m_trackentry->mixer->getTitle();
-            auto popupPos    = title->toScreenSpace(ivec2(0));//+ivec2(title->hideTrack.right() + INSET_TITLE*2, 0);
-            auto const field = new gui_textfield();
-            field->size      = title->size;
-            field->size.y    = titleHeight;
-            field->pos       = { 0, 0 };
-            field->setFontSize(titleHeight);
-            field->setReturnCommits(true);
-
-            auto const ctxtMenu = new guictxtmenu_base();
-            ctxtMenu->size      = field->size;
-            ctxtMenu->add(field);
-            ctxtMenu->layout();
-            ctxtMenu->canTakeInputFocus = true;
-            ctxtMenu->maxHeight         = field->size.y;
-            dbgassert(!ctxtMenu->isBackgroundRendered());
-            ctxtMenu->setBackgroundRendered(false);
-            auto cb = [trackEntry = m_trackentry, ctxtMenu](const std::string& str) {
-                trackEntry->track->name = str;
-                ctxtMenu->closeContextMenu();
-                return true;
-            };
-            field->setEndEditCallback(cb);
-            closeContextMenu();
-            m_trackentry->parentCtrl->openContextMenu(ctxtMenu, popupPos);
-            // m_trackentry is not valid here
-            field->setValue(m_trackentry->track->name);
-            field->setSelectionRange(-1, -1);
-            field->parentCtrl->focusGui(field);
+            DAW::OpenRenamePopup(dawCtrl, m_trackentry);
             return;
         } else if (_id == cmdShowWaveform->id) {
 
