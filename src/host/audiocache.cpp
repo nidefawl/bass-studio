@@ -29,6 +29,14 @@ audiofile_t* audiocache::get(int32_t i) {
     size_t count = this->mapId.count(i);
     return count ? this->mapId.at(i) : nullptr;
 }
+audiofile_t* audiocache::getByFilename(const String& pathFile) {
+    for (auto& w : list) {
+        if (w->path == pathFile) {
+            return w.get();
+        }
+    }
+    return nullptr;
+}
 void audiocache::unloadSampleId(int32_t id) {
     mapId.erase(id);
     auto it = std::remove_if(list.begin(), list.end(), [id](std::unique_ptr<audiofile_t>& r) {
@@ -327,8 +335,13 @@ int64_t saveSample(audiofile_t& file, const String& fOutWave) {
         dbgassert(0);
         return 0;
     }
+    String path;
+    SplitPath(fOutWave, &path, nullptr, nullptr, nullptr);
+    if (!path.empty()) {
+        CreateDirectoryIfNotExists(path);
+    }
     auto sample = file.getSample();
-    dbgassert(sample->nChannels == sample->samples.size());
+    dbgassert(sample->nSamples == 0 || sample->nChannels == sample->samples.size());
     log_printf("saveSample %d %s len %zd\n", file.id, StringAsCStr(fOutWave), sample->nSamples);
 
     drwav_data_format format;
@@ -343,7 +356,7 @@ int64_t saveSample(audiofile_t& file, const String& fOutWave) {
     AudioBlock blockFull(1, sample->nSamples*format.channels);
 
     /* Interleave data */
-    for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
+    for (channelnum_t ch = 0; sample->nSamples && ch < sample->nChannels; ch++) {
         float* in = sample->samples[ch].data();
         float* out0 = blockFull.buf[0] + ch;
         for (samplecount_t i = 0; i < sample->nSamples; i++) {

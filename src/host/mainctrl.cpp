@@ -1582,7 +1582,7 @@ void DawInstance::configureSampleRate() {
     }
 }
 void DawInstance::onTick() {
-    const bool bWroteMidiData = tls.host->writeRecordedData(&project);
+    const bool bWroteMidiData = tls.host->writeRecordedData(this);
 
     if (bWroteMidiData) {
         updateVisibleTrackContents();

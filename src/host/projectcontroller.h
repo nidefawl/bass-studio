@@ -1,4 +1,5 @@
 #pragma once
+#include "fileio.h"
 #include "track.h"
 #include "vst_host.h"
 
@@ -8,7 +9,8 @@ class project_controller_t {
     project_globals_t* projectGlobals;
     export_settings_t exportSettings;
     quantize_settings quantizeSettings;
-
+protected:
+    String projectPath;
 public:
     project_controller_t(project_t* const _project, project_globals_t* const _projectGlobals)
         : project(_project), projectGlobals(_projectGlobals) {
@@ -83,4 +85,18 @@ public:
     project_t* getProject() {
         return project;
     }
+    String getProjectName() {
+        String name;
+        SplitPath(projectPath, nullptr, &name, nullptr);
+        return name;
+    }
+    String getProjectDirectory() {
+        String dir;
+        SplitPath(projectPath, &dir, nullptr, nullptr);
+        return dir;
+    }
+    String getProjectPath() {
+        return projectPath;
+    }
+
 };

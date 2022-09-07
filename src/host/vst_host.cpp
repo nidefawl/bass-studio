@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory.h>
+#include "audiocache.h"
 #include "host/daw_channel.h"
 #include "math/seq_math.h"
 #include "note.h"
@@ -2915,10 +2916,12 @@ void vsthost::updateMaximumStageId() {
     this->audioStageId = maximumStageId;
 }
 
-bool vsthost::writeRecordedData(project_t* project) {
+bool vsthost::writeRecordedData(project_controller_t* ctrl) {
     bool bHasNewData = false;
+    auto cache = audiocache::getInstance();
+    auto daw = DawInstance::get();
     for (auto& track : trackAudioStages) {
-        bHasNewData |= track->recorder.writeRecordedData(track);
+        bHasNewData |= track->recorder.writeRecordedData(ctrl, track, cache, daw);
     }
     return bHasNewData;
 }

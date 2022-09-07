@@ -239,9 +239,22 @@ IOFile* IOFile::openFile(const String& filename, OpenFileMode mode) {
 }
 
 bool CreateDirectoryIfNotExists(const String& DirPath) {
-    int mkdRet = mkdir(StringAsCStr(DirPath), 0755);
-    ThrowLastErrorIf((mkdRet != 0) && (errno != EEXIST),
-                     "mkdir call failed on file named " + DirPath);
+    String partPath = "";
+    do {
+        auto pos = DirPath.find_first_of('/', partPath.size());
+        if (pos == String::npos) {
+            pos = DirPath.size();
+        }
+        partPath = DirPath.substr(0, pos + 1);
+        if (partPath.empty()) {
+            break;
+        }
+        if (access(partPath.c_str(), F_OK) != 0) {
+            if (mkdir(partPath.c_str(), 0777) != 0) {
+                return false;
+            }
+        }
+    } while (partPath.size() < DirPath.size());
     return true;
 }
 

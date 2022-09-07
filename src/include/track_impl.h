@@ -5,6 +5,7 @@
 #include <array>
 #include <memory>
 #include <type_traits>
+#include "host/mainctrl.h"
 #include "logging.h"
 #include "seq_util.h"
 #include "types.h"
@@ -148,7 +149,7 @@ struct clip_recorder {
     }
     void update(playback_state state, samplecount_t samplePosBlockStart, samplecount_t samplePosBlockEnd, tick_t tickBlockStart, tick_t tickBlockEnd, int trackType, bool bRecordArmed);
     void recordNoteEvents(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, const std::vector<noteevent_t>& noteEventsProcessed);
-    bool writeRecordedData(track_impl_t* trImpl);
+    bool writeRecordedData(project_controller_t* project, track_impl_t* trImpl, audiocache* cache, DawInstance* daw);
 };
 struct audio_stage_t {
     /**

@@ -220,7 +220,7 @@ public:
 
     int32_t getNextSampleId(int32_t id);
     std::vector<note_t> getRealtimeNotes();
-    bool writeRecordedData(project_t* project);
+    bool writeRecordedData(project_controller_t* ctrl);
     void sendNotesOff(effectbase* plugin);
 
     std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {

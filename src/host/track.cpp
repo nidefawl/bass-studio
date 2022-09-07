@@ -5,6 +5,7 @@
 #include "math/seq_math.h"
 #include "exceptions.h"
 #include "logging.h"
+#include "platform.h"
 #include "samplerate.h"
 #include "seq_util.h"
 #include "seq_time.h"
@@ -1581,9 +1582,9 @@ std::vector<SupportedFileType> vFILE_TYPE_PLUGINSNAPSHOT = { FILE_TYPE_PLUGINSNA
 
 bool storePluginPresetWithSnapshot = true;
 bool loadPluginPresetWithSnapshot  = false;
-bool clip_recorder::writeRecordedData(track_impl_t* trImpl) {
+bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl_t* trImpl, audiocache* cache, DawInstance* daw) {
     if (this->hasNewRecordedData) {
-        ThreadLock lock          = MainCtrl::getPlayThread()->lockThread();
+        ThreadLock lock = daw && daw->getMainControl() ? daw->getMainControl()->lockPlayThread() : ThreadLock::MakeVoidLock();
         this->hasNewRecordedData = false;
         if (recordDataProcessed && recordDataProcessed->getLen() > 0) {
             clip_t* pClip = nullptr;
@@ -1598,36 +1599,71 @@ bool clip_recorder::writeRecordedData(track_impl_t* trImpl) {
                         ssr.format      = trImpl->sampleFormat;
                         ssr.id          = -1;
                         ssr.numChannels = trImpl->input.channels;
-                        String sampleFilePath = "Recorded";
-                        if (trImpl->track) {
-                            sampleFilePath = App::Platform::toUserdataPath(trImpl->track->name + " - Recorded.wav");
+                        String tempPath = "recorded";
+                        tempPath += FILE_PATHSEP_CHAR;
+                        String projName = projCtrl->getProjectName();
+                        if (projName.empty()) {
+                            projName = "Untitled";
                         }
+                        tempPath += projName;
+                        tempPath += FILE_PATHSEP_CHAR;
+                        if (trImpl->track) {
+                            tempPath += trImpl->track->name;
+                            tempPath += " - Recorded.wav";
+                        } else {
+                            tempPath += "Recorded.wav";
+                        }
+                        String sampleFilePath = App::Platform::toUserdataPath(tempPath);
                         App::Platform::sanitizePathToFile(sampleFilePath);
-                        App::Platform::createUniqueFilename(sampleFilePath, sampleFilePath);
-                        ssr.path = sampleFilePath;
-                        auto* cache = audiocache::getInstance();
+                        String name;
+                        String ext;
+                        String path;
+                        int32_t idx = 0;
+                        String uniqueName = sampleFilePath;
+                        SplitPath(sampleFilePath, &path, &name, &ext);
+                        App::Platform::sanitizePathToDirectory(path);
+                        while ((FileExists(uniqueName) || cache->getByFilename(uniqueName) != nullptr) && ++idx < 10000) {
+                            String nextPath = path;
+                            nextPath += name;
+                            nextPath += "-";
+                            nextPath += std::to_string(idx);
+                            nextPath += ".";
+                            nextPath += ext;
+                            idx++;
+                            uniqueName = nextPath;
+                        }
+                        ssr.path = uniqueName;
                         
                         // createSample is not thread safe, we might be doing a lookup from waveformrenderer
                         auto file = cache->createSample(ssr);
                         audioSampleId = file->id;
+                        pClip->name = file->name;
+                        pClip->audio.id = audioSampleId;
                     }
-                    pClip->audio.id = audioSampleId;
-                    if (samplesRecorded >= trImpl->sampleFormat.sampleRate>>2 && pClip->audio.id >= 0) {
-                        update = true;
-                        auto* cache = audiocache::getInstance();
-                        ssr.format = trImpl->sampleFormat;
-                        ssr.id = pClip->audio.id;
-                        ssr.length = samplesRecorded;
-                        ssr.offset = samplesWritten;
-                        auto nSamplesRead = trImpl->audioInput.readSamples(firstRecordedSample+ssr.offset,
-                                                        ssr.length,
-                                                        trImpl->input.channels,
-                                                        ssr.channels);
-                        dbgassert(nSamplesRead == ssr.length);
-                        ssr.length = nSamplesRead;
-                        cache->updateSample(ssr);
-                        samplesWritten += samplesRecorded;
-                        samplesRecorded = 0;
+                    if (samplesRecorded >= trImpl->sampleFormat.sampleRate>>2 && audioSampleId >= 0) {
+                        auto* file = cache->get(audioSampleId);
+                        if (file) {
+                            update = true;
+                            ssr.format = trImpl->sampleFormat;
+                            ssr.id = audioSampleId;
+                            ssr.length = samplesRecorded;
+                            ssr.offset = samplesWritten;
+                            auto nSamplesRead = trImpl->audioInput.readSamples(firstRecordedSample+ssr.offset,
+                                                            ssr.length,
+                                                            trImpl->input.channels,
+                                                            ssr.channels);
+                            dbgassert(nSamplesRead == ssr.length);
+                            ssr.length = nSamplesRead;
+                            cache->updateSample(ssr);
+                            samplesWritten += samplesRecorded;
+                            samplesRecorded = 0;
+                            pClip->name = file->name;
+                            pClip->audio.id = audioSampleId;
+                        } else {
+                            // sample wen't offline
+                            audioSampleId = -1;
+                            isRecording = false;
+                        }
                     }
                 }
                 if (!this->isRecording) {
@@ -1643,7 +1679,7 @@ bool clip_recorder::writeRecordedData(track_impl_t* trImpl) {
                 // log_lf(Log::L_DEBUG, "Processing recorded clip. Last note time %d\n", pClip->notes.lastNote.time);
                 tick_t tickBegin = pClip->time;
                 tick_t tickEnd   = pClip->end();
-                DawInstance::get()->cutIntersecting(tr, tickBegin, tickEnd);
+                daw->cutIntersecting(tr, tickBegin, tickEnd);
                 pClip->setDirty();
                 pClip->notes.updateBounds();
                 tr->getMidi().addClip(pClip);

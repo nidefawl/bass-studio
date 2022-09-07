@@ -67,6 +67,7 @@ public:
     void setSamplerate(samplerate_t samplerate);
     void unloadSampleId(int32_t id);
     audiofile_t* get(int32_t i);
+    audiofile_t* getByFilename(const String& pathFile);
     void store(samplefile_index_t& v);
     void load(samplefile_index_t& v);
     void saveSamples();
