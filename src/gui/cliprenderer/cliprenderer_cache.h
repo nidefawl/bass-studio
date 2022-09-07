@@ -24,8 +24,7 @@ struct noteview_cache_impl_t {
         nvgGetLastCacheResult(vg, &arr[n]);
         NVGCacheEntryInfo cacheEntryInfo;
         nvgCacheEntryInfo(nullptr, arr[n], &cacheEntryInfo);
-        nvg_shape_cache* entry = arr[n];
-        dbgassert(entry);
+        dbgassert(arr[n]);
         daw_tls::tlsinstance& tls = daw_tls::getTls();
         tls.runtime->renderClipCacheStats.sizeCacheAllocatedMemBytes += cacheEntryInfo.allocationSizeBytes;
     }

@@ -1488,10 +1488,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
             int32_t samplePosProcess = sample + sampleFormat.blockSize*i;
             double tickPosProcess = posDouble + audioProp.ticksPerBlock*i;
             AudioBufferTimeInfo bufferTimeInfo{ };
-            int32_t pre = resamplerInput->numBlocksToPop();
             AudioBlock block = resamplerInput->pop(bufferTimeInfo);
-            int32_t post = resamplerInput->numBlocksToPop();
-            dbgassert(post == pre-1);
 
             //TODO: avoid allocation
             AudioBlock blockExtOut(resamplerOutput->numChannels, sampleFormat.blockSize);
@@ -2804,15 +2801,15 @@ bool vsthost::movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src,
 
 bool vsthost::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
     ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+#ifndef NDEBUG
     dbgassert(src >= 0 && dst >= 0);
     dbgassert(src != dst);
-    //src--;
-    //dst--;
     dbgassert((int32_t)trp->effects.size() > src);
     dbgassert((int32_t)trp->effects.size() > dst);
     for (effectbase* effect : trp->effects) {
         dbgassert(effect->getSlot()>=0);
     }
+#endif // NDEBUG
 
     //shift element
     std::vector<effectbase*> curEffects = trp->effects;
@@ -2941,6 +2938,7 @@ int32_t vsthost::getPlayThreadId()
 
 int32_t vsthost::validateIds()
 {
+#ifndef NDEBUG
     /** check for double usage of stageIds across all audiostages */
     for (auto stage : allAudioStages) {
         audiostageid_i32* stageIds[4] = {&stage->stageId.stageId, &stage->stageId.inputStageId, &stage->stageId.outputStageId,
@@ -2973,13 +2971,13 @@ int32_t vsthost::validateIds()
             if (plugin == plugin2)
                 continue;
             auto id2 = plugin2->projectGlobalId;
-            dbgassert(id2 != id);
+            always_assert(id2 != id);
         }
         for (auto plugin2 : pluginInstances) {
             if (plugin == plugin2)
                 continue;
             auto id2 = plugin2->projectGlobalId;
-            dbgassert(id2 != id);
+            always_assert(id2 != id);
         }
     }
 
@@ -2989,7 +2987,7 @@ int32_t vsthost::validateIds()
             auto stageIds = {&stage->stageId.stageId, &stage->stageId.inputStageId, &stage->stageId.outputStageId,
                                              &stage->stageId.outputPostStageId};
             for (auto* pStageId : stageIds) {
-                dbgassert(static_cast<int32_t>(*pStageId) != id);
+                always_assert(static_cast<int32_t>(*pStageId) != id);
             }
 
         }
@@ -3001,10 +2999,11 @@ int32_t vsthost::validateIds()
             std::array<audiostageid_i32*,4> stageIds = {&stage->stageId.stageId, &stage->stageId.inputStageId, &stage->stageId.outputStageId,
                                              &stage->stageId.outputPostStageId};
             for (auto* pStageId : stageIds) {
-                dbgassert(static_cast<int32_t>(*pStageId) != id);
+                always_assert(static_cast<int32_t>(*pStageId) != id);
             }
         }
     }
+#endif // NDEBUG
     return 1;
 }
 

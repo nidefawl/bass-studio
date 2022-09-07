@@ -616,10 +616,12 @@ void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousep
     dawCtrl->getDragDropTarget().reset();
     if (!this->stage) return;
     audio_stage_t* srcStage = g->getTrackLink();
+#ifndef NDEBUG
     for (auto* ptr : g->effects) {
         dbgassert(ptr->getTrackLink() == srcStage);
     }
     dbgassert(srcStage->m_pluginCtr);
+#endif // NDEBUG
 
     int highlightSlot = slotFromCoord(mousepos);
     if (this->stage == srcStage) {

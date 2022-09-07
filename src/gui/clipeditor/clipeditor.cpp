@@ -48,6 +48,7 @@ public:
         for (note_t* sel : before.selection) {
             selcopy.insert(selcopy.end(), sel);
         }
+#ifndef NDEBUG
         for (note_t* sel : selcopy) {
             bool found = false;
             for (note_t& ent : before.m_list) {
@@ -58,6 +59,7 @@ public:
             }
             dbgassert(found);
         }
+#endif
         cursorBefore = oldCursor;
         before.removeDuplicates();
         after.removeDuplicates();
@@ -1368,9 +1370,11 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                 desc    = "Copy notes";// never appears in list
             } else if (isKC(KC_DUPLICATE, kevt) && !notes.selection.empty()) {
                 clip_notes_t tmpClipboard;
+#ifndef NDEBUG
                 for (note_t* selPtr: notes.selection) {
                     dbgassert(notes.has(selPtr));
                 }
+#endif
                 tmpClipboard.setTo(notes.selection, -cursor.start);
                 tick_t cursorRange = cursor.end - cursor.start;
                 cursor.start += cursorRange;
@@ -1383,9 +1387,11 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                     view.draggedSelection.push_back(note);
                 }
                 mergeDraggedNotes(dragmode::drag_notes_copy);
+#ifndef NDEBUG
                 for (note_t* selPtr: notes.selection) {
                     dbgassert(notes.has(selPtr));
                 }
+#endif
                 auto pair = getMinMaxTime(notes.selection);
                 if (pair.second)
                     grid.makeTickVisible(pair.second->end());
@@ -1437,9 +1443,11 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                         view.draggedSelection.push_back(note);
                     }
                     mergeDraggedNotes(dragmode::drag_notes_copy);
+#ifndef NDEBUG
                     for (note_t* selPtr: notes.selection) {
                         dbgassert(notes.has(selPtr));
                     }
+#endif
                     auto pair = getMinMaxTime(notes.selection);
                     if (pair.second)
                         grid.makeTickVisible(pair.second->end());

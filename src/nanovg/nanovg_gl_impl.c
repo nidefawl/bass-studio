@@ -527,6 +527,7 @@ static void glnvg__dumpProgramError(GLuint prog, const char* name)
 	str[len] = '\0';
 	printf("Program %s error:\n%s\n", name, str);
 }
+#ifndef NDEBUG
 static void glnvg__debugCheckError(GLNVGcontext* gl, const char* str)
 {
 	GLenum err;
@@ -537,7 +538,6 @@ static void glnvg__debugCheckError(GLNVGcontext* gl, const char* str)
 		return;
 	}
 }
-#ifndef NDEBUG
 #define glnvg__checkError(gl, str) glnvg__debugCheckError(gl, str)
 #else
 #define glnvg__checkError(gl, str)

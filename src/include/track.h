@@ -535,7 +535,6 @@ public:
      */
     void addTrack(int trackInsertPos, track_t* newTrack);
     void removeTrack(track_t* track);
-    void moveTrack(track_t* track, int32_t newIdx);
     bool moveTracks(const std::vector<track_t*>& tracks, /*const*/ track_tree_pos_t& treePos);
     void copyTo(project_snapshot_t& out);
     void copyFrom(project_snapshot_t& in);

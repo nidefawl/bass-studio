@@ -39,6 +39,7 @@ void enableGlDebugCallback() {
                               &unusedIds,
                               true);
 }
+#ifndef NDEBUG
 static const char* getGlErrorString(int error_code) {
     switch (error_code) {
         case GL_NO_ERROR:
@@ -61,6 +62,8 @@ static const char* getGlErrorString(int error_code) {
             return "Unknown error enum";
     }
 }
+#else
+#endif // NDEBUG
 bool checkGLError(const char* s) {
 #ifndef NDEBUG
     int i = glGetError();

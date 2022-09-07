@@ -37,8 +37,7 @@ void guitrack_mixers::render(NVGcontext* vg) {
             dbgassert(0);
             continue;
         }
-        bool trackVisible = iGuiMgr.isVisible(entry);
-        dbgassert(entry->mixer->isVisible() == trackVisible);
+        dbgassert(entry->mixer->isVisible() == iGuiMgr.isVisible(entry));
         if (entry->mixer->isVisible()) {
             nvgSave(vg);
             entry->mixer->renderGroupHandle(vg);
@@ -50,8 +49,7 @@ void guitrack_mixers::render(NVGcontext* vg) {
     if (ySplit > 0) {
         nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
         for (track_gui_entry_t* entry : iGuiMgr.getTracksVisibleFlat()) {
-            bool trackVisible = iGuiMgr.isVisible(entry);
-            dbgassert(entry->mixer->isVisible() == trackVisible);
+            dbgassert(entry->mixer->isVisible() == iGuiMgr.isVisible(entry));
             auto& mixer = entry->mixer;
             if (mixer->isVisible() && mixer->pos.y < ySplit && mixer->bottom() > 0) {
                 nvgSave(vg);

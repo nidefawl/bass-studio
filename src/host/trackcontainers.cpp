@@ -223,9 +223,11 @@ bool trackallcontainer_t::moveTracks(const std::vector<track_t*>& tracks, track_
 
     // all tracks must be of same type
     const int32_t trackTypeCtrIdx = TRACKTYPE_TO_CTR(tracks.front()->type);
+#ifndef NDEBUG
     for (track_t* track : tracks) {
         dbgassert(trackTypeCtrIdx == TRACKTYPE_TO_CTR(track->type));
     }
+#endif // NDEBUG
     if (treePos.trackTypeCtr != trackTypeCtrIdx) {
         log_printf("cannot move here\n");
         return false;
@@ -276,20 +278,6 @@ bool trackallcontainer_t::moveTracks(const std::vector<track_t*>& tracks, track_
     }
 
     return true;
-}
-void trackallcontainer_t::moveTrack(track_t* track, int32_t dst) {
-    dbgassert(0);//UNSAFE
-    int32_t src = indexOfCtr(trackAllCtr.tracksFlat, track);
-    if ((int32_t) trackAllCtr.tracksFlat.size() == dst) dst--;
-    dbgassert(src >= 0 && dst >= 0);
-    dbgassert(src != dst);
-
-    track_vector curOrder = trackAllCtr.tracksFlat;
-    track_vector newOrder;
-    newOrder.resize(curOrder.size());
-
-    rebuildTrackList();
-    checkConsistency();
 }
 void trackallcontainer_t::copyTo(project_snapshot_t& project) {
     checkConsistency();
@@ -376,10 +364,12 @@ void serializeTracks(const track_vector& tracksTree, trackcontainer_snapshot_t& 
 void deserializeTrackTree(trackcontainer_snapshot_t& in, track_vector& out) {
     dbgassert(in.hierachy.size() == in.tracks.size());
     auto& hierachyIndices = in.hierachy;
+#ifndef NDEBUG
     for (size_t idx = 0; idx < in.hierachy.size(); ++idx) {
         auto parentIdx = hierachyIndices[idx];
         dbgassert(parentIdx == -1 || parentIdx < static_cast<int32_t>(in.tracks.size()));
     }
+#endif // NDEBUG
     track_vector allTracks;
     for (track_snapshot_t& snapshot : in.tracks) {
         auto* trackCopy = new track_t(snapshot);

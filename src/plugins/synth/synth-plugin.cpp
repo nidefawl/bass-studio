@@ -3195,7 +3195,7 @@ namespace PluginSynth {
                 if (idx >= 0) {
                     {
                         ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
-                        if (idx > 0 && idx-1 < sizeof(parametersModulate) / sizeof(parametersModulate[0])) {
+                        if (idx > 0 && idx-1 < static_cast<int32_t>(sizeof(parametersModulate) / sizeof(parametersModulate[0]))) {
                             synth->setModulationDestination(slotIndex, destSlotIndex, parametersModulate[idx-1], knob.getValue());
                         } else {
                             synth->setModulationDestination(slotIndex, destSlotIndex, -1, knob.getValue());
@@ -3391,7 +3391,7 @@ namespace PluginSynth {
                     if (idx >= 0) {
                         {
                             ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
-                            if (idx < modSrcTypesOrdered.size()) {
+                            if (idx < CtrSize(modSrcTypesOrdered)) {
                                 synth->setModulationType(slotIndex, srcSlotIndex, modSrcTypesOrdered[idx]);
                             } else {
                                 synth->setModulationType(slotIndex, srcSlotIndex, -1);
@@ -3615,8 +3615,7 @@ namespace PluginSynth {
         guictr_synth_title() = default;
         void renderContainerLabel(NVGcontext* vg) override {
             if (isFlag(FLG_RENDER_LABEL) && label.length()) {
-                auto cs                = getSizeContent();
-                const auto bgColor     = getInnerBackgroundColorFromState(getStateFlags());
+                const auto bgColor = getInnerBackgroundColorFromState(getStateFlags());
                 renderTextLabel(vg,
                                 vec2(getPosContent()) + vec2(padding, titleHeight / 2.0),
                                 vec2(getSizeContent()) - vec2(INSET_TITLE + 2, 0),
@@ -3708,7 +3707,7 @@ namespace PluginSynth {
             // }
             guictr_base::render(vg);
         }
-        void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset) {
+        void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset) override {
             if (sizeInset.y > 0 && sizeInset.x > 0) {
                 nvgTranslateZ(vg, -2.0f);
                 // nvgShapeAntiAlias(vg, 0);
@@ -3752,7 +3751,6 @@ namespace PluginSynth {
         void layout() override {
             auto cs        = getSizeContent();
             vec2 pos      = {0, getTitleHeight()};
-            auto rowHeight = (cs.y-pos.y) / CtrSize(guis);
             for (auto& slot : guis) {
                 slot->pos    = pos;
                 slot->size.x = cs.x;
@@ -3792,21 +3790,10 @@ namespace PluginSynth {
         void layout() override {
             scrollContainerModulation.pos = {0, getTitleHeight()};
             scrollContainerModulation.size = size;
-            auto cs   = getSizeContent();
             scrollContainerModulation.maxHeight = size.y;
             scrollContainerModulation.determineSize(scrollContainerModulation.size);
-            // ivec2 pos = {0, 0};
-            // for (auto& slot : slots) {
-            //     slot->size = cs;
-            //     slot->determineSize(slot->size);
-            //     slot->pos = pos;
-            //     slot->layout();
-            //     pos.y = slot->bottom();
-            // }
-            for (guibase* gui : guis) {
-                // if (!stl_contains(slots, gui)) {
-                    gui->layout();
-                // }
+            for (auto* gui : guis) {
+                gui->layout();
             }
         }
         void setTitleHeight(float height) {

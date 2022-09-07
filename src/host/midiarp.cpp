@@ -66,8 +66,7 @@ midiarp::midiarp(track_impl_t* _trImpl) : automatable_t(), trackImpl(_trImpl) {
     getOrCreateAutomation(ARP_PARAM_PATTERN)->quantizationSteps   = NUM_PATTERNS - 1;
 }
 param_unit_t midiarp::getParamValueDisplay(int32_t idx) {
-    auto param = getParam(idx);
-    dbgassert(param);
+    dbgassert(getParam(idx));
     switch (idx) {
         case ARP_PARAM_CLOCK:
             return {StringFormat("%d", getStepSize()), "ticks"};
@@ -91,8 +90,7 @@ param_unit_t midiarp::getParamValueDisplay(int32_t idx) {
     return automatable_t::getParamValueDisplay(idx);
 }
 param_converted_t midiarp::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
-    auto param = getParam(idx);
-    dbgassert(param);
+    dbgassert(getParam(idx));
     //TODO: use std::from_chars when floating point version arrives in libc++
     auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
     switch (idx) {

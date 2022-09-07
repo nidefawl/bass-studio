@@ -263,15 +263,16 @@ size_t clip_notes_t::removeDuplicates() {
         storeSelection(selNotes);
         selection.clear();
         nRemoved         = removeDuplicatesImpl(m_list);
-        bool allRestored = restoreSelection(selNotes);
-        dbgassert(allRestored);
+#ifndef NDEBUG
+        always_assert(restoreSelection(selNotes));
         for (note_t* n : selection) {
             auto it = std::find_if(m_list.begin(), m_list.end(),
                                    [n](const note_t& note) { return &note == n; });
-            if (it == m_list.end()) {
-                dbgassert(0);
-            }
+            dbgassert(it != m_list.end());
         }
+#else
+        restoreSelection(selNotes);
+#endif // NDEBUG
     } else {
         nRemoved = removeDuplicatesImpl(m_list);
     }
@@ -666,9 +667,13 @@ void clip_t::setLen(tick_t _len) {
 }
 
 void clip_t::adjustLen(tick_t offset) {
+#ifndef NDEBUG
     auto preLen = len;
     setLen(len + offset);
     dbgassert(getLen() == preLen + offset);
+#else
+    setLen(len + offset);
+#endif // NDEBUG
 }
 samplecount_t clip_t::getLenSamples() const {
     return lenSamples;

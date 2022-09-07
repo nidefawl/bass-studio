@@ -1215,10 +1215,11 @@ void DawInstance::destroy() {
         this->workerThread.joinThread();
         this->playThread.stopThread();
         this->playThread.joinThread();
-
+#ifndef NDEBUG
         for (auto& companion : companionWindows) {
             dbgassert(!companion.ctrl->isOk());
         }
+#endif // NDEBUG
         companionWindows.clear();
         tls.audioHost->deinitPa();
         tls.midiHost->deinitPm();

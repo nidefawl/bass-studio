@@ -683,7 +683,7 @@ parsl_mesh* parsl_mesh_from_curves_cubic(parsl_context* context,
         uint32_t spine_length = source_spines.spine_lengths[spine];
         uint32_t num_piecewise = 1 + (spine_length - 4) / 2;
 
-        parsl_position* target_spine_start = ptarget;
+        // parsl_position* target_spine_start = ptarget;
 
         // First piecewise curve.
         ptarget[0].x = psource[0].x;
@@ -712,8 +712,7 @@ parsl_mesh* parsl_mesh_from_curves_cubic(parsl_context* context,
             ptarget += num_written_points;
         }
 
-        uint32_t num_written = ptarget - target_spine_start;
-        dbgassert(num_written == (uint32_t) target_spines->spine_lengths[spine]);
+        // dbgassert((ptarget - target_spine_start) == (uint32_t) target_spines->spine_lengths[spine]);
     }
 
     // Source vertices look like: P1 C1 C2 P2 [C2 P2]*
@@ -827,7 +826,7 @@ parsl_mesh* parsl_mesh_from_curves_quadratic(parsl_context* context,
         uint32_t spine_length = source_spines.spine_lengths[spine];
         uint32_t num_piecewise = 1 + (spine_length - 3) / 2;
 
-        parsl_position* target_spine_start = ptarget;
+        // parsl_position* target_spine_start = ptarget;
 
         // First piecewise curve.
         ptarget[0].x = psource[0].x;
@@ -852,8 +851,7 @@ parsl_mesh* parsl_mesh_from_curves_quadratic(parsl_context* context,
             ptarget += num_written_points;
         }
 
-        uint32_t num_written = ptarget - target_spine_start;
-        dbgassert(num_written == (uint32_t) target_spines->spine_lengths[spine]);
+        // dbgassert((ptarget - target_spine_start) == (uint32_t) target_spines->spine_lengths[spine]);
     }
 
     // Source vertices look like: PT C PT [C PT]*

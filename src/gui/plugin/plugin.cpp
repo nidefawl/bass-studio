@@ -60,9 +60,6 @@ guiplugin::~guiplugin() {
     remove(&buttonBypass);
     remove(&buttonSave);
     remove(&guiMeter);
-    for (auto g : guiButtonsTitlebar) {
-        dbgassert(!stl_contains(guis, g));
-    }
 }
 void guiplugin::addGuiBtnTitlebar(guibuttontoggle* btn) {
     guiButtonsTitlebar.push_back(btn);

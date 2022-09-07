@@ -1128,8 +1128,7 @@ template <>
 guiproperties_table<guiproperties_t>::~guiproperties_table() {
     removeGuis();
     if (m_bGlobalInstance) {
-        bool b = removeEntry(g_propTableInstances, this);
-        dbgassert(b);
+        always_assert(removeEntry(g_propTableInstances, this));
     }
     if (m_bOwnsObjPtr)
         delete m_currentObjPtr;

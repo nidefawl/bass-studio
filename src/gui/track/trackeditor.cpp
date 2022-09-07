@@ -478,8 +478,6 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
             int32_t tick = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
             if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT) {
                 if (clip->start() != tick) {
-                    int32_t preLen = clip->getLen();
-                    log_printf("pre clip->getLen() %d len %d samples %zd\n", clip->getLen(), clip->len, clip->lenSamples);
                     tick_t offset = tick - clip->time;
                     if (clip->getLen() - offset < MIN_CLIPSIZE) {
                         offset = clip->getLen() - MIN_CLIPSIZE;
@@ -490,9 +488,6 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
                     clip->time += offset;
                     clip->adjustLen(-offset);
                     clip->adjustStartOffset(offset);
-                    log_printf("post clip->getLen() %d len %d samples %zd\n", clip->getLen(), clip->len, clip->lenSamples);
-                    int32_t postLen = clip->getLen();
-                    dbgassert(postLen == preLen - offset);
                 }
             } else {
                 if (clip->end() != tick) {
