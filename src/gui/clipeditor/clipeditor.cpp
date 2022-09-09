@@ -641,7 +641,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             }
         }
     }
-    nvgBeginPath(vg);
+    // nvgBeginPath(vg);
     int n2 = 0;
     if (dragMode >= drag_notes_move) {
         for (note_t& note: view.draggedSelection) {
@@ -658,7 +658,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         NVGpaint paint{};
         paint.image      = -1;
         paint.innerColor = theme->getColor(GuiColor::COL_NOTE_SELECTED);
-        paint.customPar  = 3;
+        paint.customPar  = 1234;
         nvgFillPaint(vg, paint);
         nvgBatchedRender(vg);
     }
@@ -727,7 +727,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         if (track->audio->arp->isProcessingEnabled()) {
             auto& heldNotesArp = track->audio->getArpHeldNotes();//TODO: NOT THREADSAFE
             if (heldNotesArp.size()) {
-                nvgBeginPath(vg);
+                // nvgBeginPath(vg);
 
                 for (auto& note: heldNotesArp) {
                     tick_t pos = note.start() - clip->start() + clip->offsetStart;
@@ -742,7 +742,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                 NVGpaint paint{};
                 paint.image      = -1;
                 paint.innerColor = theme->getColor(GuiColor::COL_NOTE_ARP);
-                paint.customPar  = 3;
+                paint.customPar  = 1234;
                 nvgFillPaint(vg, paint);
                 nvgBatchedRender(vg);
             }
