@@ -582,7 +582,6 @@ public:
                         table->setDebugPropertyHandle(value);
                         table->determineSize(table->size);
                         table->layout();
-                        setGlobalDebugPropertyHandle(this);
                     };
                 };
                 click_handler_t handler( this, cell, evt );
