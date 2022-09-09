@@ -1,4 +1,5 @@
 #ifdef _WIN32
+#include "logging.h"
 #include "str_util.h"
 #include "host/vst_window.h"
 #include "host/vst_host.h"
@@ -128,13 +129,16 @@ namespace {
                     return 1;// don't draw background
                 }
                 case WM_SIZE: {
-                    plugin->onResize(window, window->getContentSize());
+                    UINT width = LOWORD(lParam);
+                    UINT height = HIWORD(lParam);
+                    window->onResize(ivec2(width, height));
                     return 0;
                 }
                 case WM_KEYDOWN:
                 case WM_SYSKEYDOWN:
                 case WM_KEYUP:
                 case WM_SYSKEYUP:
+                    if (window->isRedirectingKeysToDawMainWindow())
                     {
                         HWND hwndMain = getMainHWND();
                         if (hwndMain) {
@@ -147,7 +151,6 @@ namespace {
                     GetWindowRect(hwnd, &oldSize);
                     RECT clientSize;
                     GetClientRect(hwnd, &clientSize);
-
                     auto diffX = (newSize->right - newSize->left) - (oldSize.right - oldSize.left);
                     auto diffY = (newSize->bottom - newSize->top) - (oldSize.bottom - oldSize.top);
 
@@ -242,6 +245,7 @@ std::vector<vst_window*>& vst_window::getWindows() {
 bool vst_window::init(vstplugin* _plugin, const String& name, ivec2 size, bool resizeable) {
     HWND mainHWND = getMainHWND();
     assert(mainHWND);
+    setRedirectKeysToDawMainWindow(!resizeable);
     this->plugin       = _plugin;
     HINSTANCE instance = GetModuleHandle(nullptr);
     registerWindowClass(instance);
@@ -335,6 +339,11 @@ void vst_window::captureWindowFrame() {
 
 void vst_window::updateWindow() const {
     UpdateWindow(hwnd);
+}
+
+void vst_window::onResize (ivec2 newSize)
+{
+	plugin->onWindowResize(newSize);
 }
 
 void vst_window::resize(ivec2 newSize) const {

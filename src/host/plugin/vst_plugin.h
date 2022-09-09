@@ -102,7 +102,6 @@ public:
     void onWindowResize(ivec2 size);
     bool onShow(vst_window* window);
     bool updateWindowSize();
-    bool onResize(vst_window* window, ivec2 size);
     ivec2 constrainSize(vst_window* window, ivec2& size);
     bool show(bool bResetPosition) override;
     bool close() override;

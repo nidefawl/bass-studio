@@ -38,10 +38,6 @@ FUNC_NOINLINE int64_t vst_dispatch(vstplugin* plugin,
                   void* ptr,
                   float opt);
 
-bool vstplugin::onResize(vst_window*, ivec2) {
-    return true;
-}
-
 bool vstplugin::updateWindow() {
     if (this->window != nullptr) {
         this->window->updateWindow();

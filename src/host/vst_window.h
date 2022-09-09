@@ -39,6 +39,7 @@ namespace vst_window_mgr {
     bool isVstWindow(WINDOW_HANDLE);
 }// namespace vst_window_mgr
 class vst_window {
+    bool bRedirectKeysToDawMainWindow = false;
 public:
     static vst_window* make(vstplugin* plugin, const String& name, ivec2 size, bool resizeable);
     static vst_window* getVSTWindow(WINDOW_HANDLE handle);
@@ -55,6 +56,12 @@ public:
 
     void updateWindow() const;
     void captureWindowFrame();
+    bool isRedirectingKeysToDawMainWindow() const {
+        return bRedirectKeysToDawMainWindow;
+    }
+    void setRedirectKeysToDawMainWindow(bool b) {
+        bRedirectKeysToDawMainWindow = b;
+    }
 
     static std::vector<vst_window*>& getWindows();
     vstplugin* getPlugin() {
