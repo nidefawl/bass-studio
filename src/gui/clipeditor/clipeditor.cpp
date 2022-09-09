@@ -13,6 +13,7 @@
 #include "guiconstant.h"
 #include "gui/contextmenu/contextmenu.h"
 #include "gui/contextmenu/contextmenu_daw.h"
+#include "gui/contextmenu/contextmenu_grid.h"
 #include "gui/track/trackcontent.h"
 #include "clipeditor.h"
 #include "gui/cliprenderer/cliprenderer_cache.h"
@@ -198,37 +199,6 @@ void renderNoteName(NVGcontext* vg, const gui_clipcontent* c, note_t* note, int 
         vec2(nw - insetx + 2, nh),
         strNoteName,
         c->theme, 18, c->theme->getColor(GuiColor::COL_NOTE_TEXT), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-}
-void renderFrame(NVGcontext* vg, ivec2 posA, ivec2 posB) {
-    float x = math::min(posA.x, posB.x);
-    float y = math::min(posA.y, posB.y);
-    float w = math::max(posA.x - posB.x, posB.x - posA.x);
-    float h = math::max(posA.y - posB.y, posB.y - posA.y);
-    renderDashedLineFrame(vg, x, y, w, h, 2.0f);
-}
-void renderGridLines(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid, const ivec2& size) {
-
-    for (grid_div g: grid.gridList) {
-        nvgBeginPath(vg);
-        nvgMoveTo(vg, g.screenpos, 0);
-        nvgLineTo(vg, g.screenpos, size.y);
-        NVGcolor col;
-        switch (g.color) {
-            case 0:
-                col = theme->getColor(GuiColor::COL_LINE_BAR);
-                break;
-            case 1:
-                col = theme->getColor(GuiColor::COL_LINE_QRT);
-                break;
-            case 2:
-            default:
-                col = theme->getColor(GuiColor::COL_LINE_XTH);
-                break;
-        }
-        nvgStrokeColor(vg, col);
-        nvgStrokeWidth(vg, g.thickness);
-        nvgStroke(vg);
-    }
 }
 
 inline int32_t screenToVel(int y, int h) {
@@ -556,7 +526,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             nvgFill(vg);
         }
 
-        renderGridLines(vg, theme, grid, size);
+        renderGridLines(vg, theme, grid.gridList, size);
 
         //    nvgBeginPath(vg);
         //    nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_PIANOROLL_STROKE_WIDTH));
@@ -608,7 +578,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             nvgFill(vg);
 
 
-            renderGridLines(vg, theme, grid, size);
+            renderGridLines(vg, theme, grid.gridList, size);
 
             y = yoct;
             nvgBeginPath(vg);

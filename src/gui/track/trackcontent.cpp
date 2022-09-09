@@ -10,6 +10,7 @@
 #include "gui/table/table.h"
 #include "gui/tooltip/tooltip.h"
 #include "gui/contextmenu/contextmenu_daw.h"
+#include "gui/contextmenu/contextmenu_grid.h"
 
 #include "basectrl.h"
 #include "host/mainctrl.h"

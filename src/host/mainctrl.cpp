@@ -1395,6 +1395,8 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     for (int i = static_cast<int>(gui_type::CTR_TYPE_PROPERTIES); i < CTR_TYPE_COUNT; i++) {
         String name;
         getContainerLabel(static_cast<gui_type>(i), name);
+        if (name.empty())
+            continue;
         menus.views.addCommand(menucmd_t{
                                        CMD_OPEN_VIEW,
                                        name,

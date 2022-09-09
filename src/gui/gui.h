@@ -2,6 +2,7 @@
 #include <nanovg.h>
 #include <vector>
 #include <algorithm>
+#include "grid.h"
 #include "types.h"
 #include "math/seq_math.h"
 #include "math/vec.h"
@@ -29,6 +30,7 @@ class guictr_dragged_plugins;
 class guictr_base;
 class gui_pluginlist_entry;
 class gui_track;
+class scaled_grid;
 struct guitheme_t;
 struct dragdrop_midifile;
 
@@ -51,9 +53,10 @@ vec2 getTextLabelBounds(NVGcontext* vg,
                      const guitheme_t* theme,
                      const float fontSize,
                      const int32_t alignment);
-void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* theme, const String& str, float fontScale, GuiColor::constant_t c, ivec2 renderPos, ivec2 size);
+float renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* theme, const String& str, float fontScale, GuiColor::constant_t c, ivec2 renderPos, ivec2 size);
 void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, float thickness);
-
+void renderFrame(NVGcontext* vg, ivec2 posA, ivec2 posB);
+void renderGridLines(NVGcontext* vg, const guitheme_t* theme, const std::vector<grid_div>& gridList, const ivec2& size);
 void drawIcon(NVGcontext* vg, const ivec2& size, RenderResources::NvgImageTexture* image, int32_t extImg = 2);
 void drawIconColored(NVGcontext* vg, const ivec2& size, RenderResources::NvgImageTexture* image, NVGcolor color, int32_t extImg = 2);
 void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
@@ -120,6 +123,7 @@ enum gui_type : uint16_t {
     CTR_TYPE_CLIPEDITOR,
     CTR_TYPE_PLUGIN,
     CTR_TYPE_PLUGINS_DRAGGED,
+    CTR_TYPE_SHAPE_EDITOR,
 };
 namespace DebugAlloc {
     template<typename T>

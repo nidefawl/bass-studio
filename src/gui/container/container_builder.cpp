@@ -15,6 +15,7 @@ guictr_base* makeGuiEffectLibrary();
 guictr_base* makeGuiPerformance();
 guictr_base* makeGuiExport();
 guictr_base* makeGuiClipEditor();
+guictr_base* makeCurveEditor();
 
 bool getContainerLabel(gui_type type, String& out) {
     switch (type) {
@@ -78,6 +79,9 @@ bool getContainerLabel(gui_type type, String& out) {
         case GUI_TYPE_TEXTFIELD:
             out = "Textfield";
             return true;
+        case CTR_TYPE_SHAPE_EDITOR:
+            out = "Shape Editor";
+            return true;
         default:
             break;
     }
@@ -130,6 +134,9 @@ ContainerFactory& getContainerFactory() {
         };
         containerFactory[gui_type::CTR_TYPE_LAYOUT] = [](auto& ctxt) {
             return std::make_shared<guictr_layout>();
+        };
+        containerFactory[gui_type::CTR_TYPE_SHAPE_EDITOR] = [](auto& ctxt) {
+            return std::shared_ptr<guictr_base>(makeCurveEditor());
         };
     }
     return containerFactory;

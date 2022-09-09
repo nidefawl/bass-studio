@@ -115,6 +115,25 @@ namespace math {
     /**
      * Round down to integer
      *
+     * No range check is applied
+     * NAN returns 0
+     * INF return 0
+     */
+    inline float floorf(float val) {
+#if MATH_HAS_FP_NAN_CHECK
+        if (std::isnan(val))
+            return 0;
+#endif
+#if MATH_HAS_FP_INF_CHECK
+        if (std::isinf(val))
+            return 0;
+#endif
+        return std::floorf(val);
+    }
+
+    /**
+     * Round down to integer
+     *
      * No range check is applied before casting to int64
      * NAN returns 0
      * INF return 0

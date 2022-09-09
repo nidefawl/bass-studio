@@ -298,6 +298,10 @@ void main(void) {
 			float distCenterX = (abs(0.5 - ftcoord.x) * 4.) * 1.0;
 			float intens = clamp(1.0 - distCenterX, 0., 1.);
 			color = innerCol * intens;
+		} else if (texType == 3) {
+			float distCenterY = (abs(0.5 - ftcoord.y) * 4.) * 1.0;
+			float intens = clamp(1.0 - distCenterY, 0., 1.);
+			color = innerCol * intens;
 		} else {
 			color = innerCol;
 		}

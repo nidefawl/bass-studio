@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <functional>
 #include <iterator>
 #include <limits>
 #include <muParser.h>
@@ -22,7 +23,9 @@
 #include "gui/contextmenu/contextmenu_base.h"
 #include "gui/controls/list.h"
 #include "gui/controls/textfield.h"
+#include "gui/dropdown/dropdown.h"
 #include "gui/dropdown/dropdown_generic.h"
+#include "gui/dropdown/dropdown_preset_tree.h"
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "guiglobals.h"
@@ -36,7 +39,7 @@
 #include "str_util.h"
 #include "dsp_util.h"
 #include "color_util.h"
-
+#include "util/presetmanager.h"
 #include "gui/gui.h"
 #include "gui/container/scrollcontainer.h"
 #include "gui/container/container.h"
@@ -1175,47 +1178,6 @@ namespace PluginSynth {
         }
     };
 
-    class PresetManager {
-    public:
-        struct Preset {
-            String name;
-            String path;
-            bool isFavorite = false;
-        };
-
-    private:
-        String presetPath;
-        std::vector<Preset> presets;
-        std::vector<Preset> favorites;
-
-    public:
-        const String& getPresetPath() const {
-            return presetPath;
-        }
-        void load(const String& path) {
-            presetPath = path;
-            presets.clear();
-            favorites.clear();
-
-            std::vector<FileFound> files;
-            findFilesWithExt(path, "preset", true, files);
-            for (const auto& file : files) {
-                Preset preset;
-                preset.name = file.name;
-                preset.path = file.path;
-                presets.push_back(preset);
-            }
-        }
-        void reload() {
-            load(presetPath);
-        }
-        const std::vector<Preset>& getPresets() const {
-            return presets;
-        }
-        const std::vector<Preset>& getFavorites() const {
-            return favorites;
-        }
-    };
     using ModulationSourceData = std::array<double, MathExprInputLen>;
 
     class SynthImpl : public SynthState {
@@ -4491,217 +4453,7 @@ namespace PluginSynth {
             }
         }
     };
-    class guicontainer_plugin_synth_preset_browser : public guictr_base, public splitter_cb {
-    public:
-        explicit guicontainer_plugin_synth_preset_browser(PluginVST2_Synth* plugin)
-        {
-        }
 
-        void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override {
-            onChildLayoutChanged(this);
-        }
-
-        ivec2 getContainerSize() override {
-            return size;
-        }
-
-        void onChildLayoutChanged(guibase* g) override {
-            // bGuiNeedsRefresh = true;
-            if (this->parent) {
-                this->parent->onChildLayoutChanged(this);
-            }
-        }
-    };
-
-    /* top select menu */
-    class guidropdown_select_preset_ctxt : public guictxtmenu {
-        PluginVST2_Synth* plugin;
-        PresetManager presetManager;
-
-        class ctxtmenu_entry_folder : public ctxtmenu_entry {
-            String path;
-
-        public:
-            bool isFolder() const { return true; }
-            String getPath() const { return path; }
-            ctxtmenu_entry_folder(const String& _title, const String& _path, int id)
-                : ctxtmenu_entry(_title, id), path(_path) {
-            }
-            void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
-                if (contains(ctxtSize, mouse)) {
-                    nvgBeginPath(vg);
-                    nvgRect(vg, 0, y, ctxtSize.x, height);
-                    nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
-                    nvgFill(vg);
-                }
-
-                renderTextLabel(vg,
-                                vec2(leftOffset(), y + height * 0.5f),
-                                vec2(width - leftOffset(), height),
-                                title,
-                                theme,
-                                fontSize,
-                                THEMECOL_TEXT,
-                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-                String rightSide = ">";
-                if (rightSide.length()) {
-                    auto defoffset = this->fontSize / 2.4f;
-                    renderTextLabel(vg,
-                                    vec2(width - defoffset, y + height * 0.5f),
-                                    vec2(width, height),
-                                    rightSide,
-                                    theme,
-                                    fontSize,
-                                    THEMECOL_TEXT,
-                                    NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-                }
-            }
-        };
-        class ctxtmenu_entry_preset : public ctxtmenu_entry {
-            const PresetManager::Preset& preset;
-
-        public:
-            bool isFolder() const { return false; }
-            String getPath() const { return preset.path; }
-            String getName() const { return preset.name; }
-            ctxtmenu_entry_preset(const PresetManager::Preset& _preset, int id)
-                : ctxtmenu_entry(_preset.name, id),
-                  preset(_preset) {
-            }
-            void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
-                if (contains(ctxtSize, mouse)) {
-                    nvgBeginPath(vg);
-                    nvgRect(vg, 0, y, ctxtSize.x, height);
-                    nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
-                    nvgFill(vg);
-                }
-
-                renderTextLabel(vg,
-                                vec2(leftOffset(), y + height * 0.5f),
-                                vec2(width - leftOffset(), height),
-                                title,
-                                theme,
-                                fontSize,
-                                THEMECOL_TEXT,
-                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-            }
-        };
-
-    public:
-        explicit guidropdown_select_preset_ctxt(PluginVST2_Synth* _plugin, PresetManager _presetManager, const String& presetPath, int lvl = 0)
-            : plugin(_plugin), presetManager(std::move(_presetManager)) {
-                
-            int32_t idx = 0;
-            std::vector<String> paths;
-            std::vector<ctxtmenu_entry_preset*> presetsCurrent;
-            for (auto& preset : presetManager.getPresets()) {
-                if (StrStartsWith(preset.path, presetPath)) {
-                    String partPath = presetPath.length() + 1 < preset.path.length() ? preset.path.substr(presetPath.length() + 1) : preset.path;
-                    String presetSubPath;
-                    SplitPath(partPath, &presetSubPath, nullptr, nullptr);
-                    String folderName;
-                    SplitPath(presetSubPath, nullptr, &folderName, nullptr);
-
-                    if (folderName.length() && folderName == presetSubPath && !stl_contains(paths, presetSubPath)) {
-                        paths.push_back(presetSubPath);
-                        addEntry(new ctxtmenu_entry_folder(folderName, presetPath + FILE_PATHSEP_STR + presetSubPath, (idx++) << 1 | 1));
-                    }
-                    if (presetSubPath.empty())
-                        presetsCurrent.push_back(new ctxtmenu_entry_preset(preset, (idx++) << 1));
-                }
-            }
-            for (auto preset : presetsCurrent) {
-                addEntry(preset);
-            }
-        }
-
-        void clickedElement(ctxtmenu_entry* e, int _id) override {
-            auto appCtrlParent = parentCtrl->getParentCtrl();
-            if (appCtrlParent) appCtrlParent->closeAllContextMenus();
-            if ((_id & 1) == 0) {
-                auto const ctxtEndpointEntry = static_cast<ctxtmenu_entry_preset*>(e);
-                if (!ctxtEndpointEntry->isFolder()) {
-                    ::ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-                    plugin->loadPreset(ctxtEndpointEntry->getPath());
-                }
-            }
-        }
-
-        bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-            if (this->contains(mpos)) {
-                ivec2 localMouse         = this->toContainerSpace(mpos);
-                ctxtmenu_entry* entryHit = nullptr;
-                for (ctxtmenu_entry* e : entries) {
-                    int n = e->getClicked(size, localMouse);
-                    if (n >= 0) {
-                        entryHit = e;
-                        break;
-                    }
-                }
-                if (!entryHit || !entryHit->isMenuOpen()) {
-                    //close other submenu at same level
-                    closeAllSubmenus();
-                } 
-                if (entryHit && !entryHit->isMenuOpen()) {
-                    entryHit->setIsMenuOpen(true);
-                    auto folderEntry = dynamic_cast<ctxtmenu_entry_folder*>(entryHit);
-                    if (folderEntry) {
-                        guictxtmenu* popup = nullptr;
-                        popup                   = new guidropdown_select_preset_ctxt(plugin, presetManager, folderEntry->getPath(), lvl + 1);
-                        dbgassert(popup);
-                        if (popup) {
-                            popup->setLevel(this->getLevel() + 1);
-                            folderEntry->setIsMenuOpen(true);
-                            popup->size = size;
-                            popup->setFontSize(folderEntry->fontSize);
-                            popup->size.x               = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-                            auto appCtrlParent          = parentCtrl->getParentCtrl();
-                            ivec2 screenPosParentParent = appCtrlParent->toScreenSpace(ivec2(0, 0));
-                            ivec2 screenPosParent       = parentCtrl->toScreenSpace(toScreenSpace(ivec2(right() + 2, top() + entryHit->y)));
-                            appCtrlParent->openAppMenu(popup->getLevel(), popup, screenPosParent - screenPosParentParent - popup->pos + ivec2(1));
-                        }
-                    }
-                }
-                for (guibase* gui : guis) {
-                    if (!gui->isVisible())
-                        continue;
-                    if (gui->mouseHitTest(localMouse, evt)) {
-                        return true;
-                    }
-                }
-                if (canMouseHit()) {
-                    evt.requestFocus(this);
-                    return true;
-                }
-            }
-            return false;
-        }
-    };
-
-    class guidropdown_select_preset : public guidropdownbase {
-        PluginVST2_Synth* const plugin;
-        PresetManager presetManager;
-
-    public:
-        explicit guidropdown_select_preset(PluginVST2_Synth* plugin)
-            : guidropdownbase(),
-              plugin(plugin),
-              presetManager(plugin->getSynth()->getPresetManager()) {
-        }
-        String getString() override {
-            return plugin->getSynth()->getPreset().name;
-        }
-        void handleDraggedRelease(MouseEvent& evt) override {
-            presetManager.reload();
-            auto* popup         = new guidropdown_select_preset_ctxt(plugin, presetManager, presetManager.getPresetPath());
-            popup->size         = size;
-            auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
-            popup->setFontSize(fontSizeScaled);
-            popup->size.x      = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-            auto appCtrlParent = parentCtrl;
-            appCtrlParent->openAppMenu(0, popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
-        }
-    };
     class guicontainer_plugin_synth_voicestates : public guictr_base {
         SynthImpl* const synth;
         SynthImpl::VoiceList list{};
@@ -4791,7 +4543,7 @@ namespace PluginSynth {
             : guictr_base(),
               plugin(plugin),
               voiceStates(plugin->getSynth()),
-              selectPreset(plugin)
+              selectPreset()
         {
             padding = 0;
             margin  = 0;
@@ -4801,8 +4553,15 @@ namespace PluginSynth {
             add(&selectPreset);
             add(&prev);
             add(&next);
+            selectPreset.setPresetManager(plugin->getSynth()->getPresetManager());
+            selectPreset.setCallback([this](const String& path) {
+                ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                this->plugin->loadPreset(path);
+                this->selectPreset.setString(this->plugin->getSynth()->getPreset().name);
+            });
         }
         void buttonClicked(guibase* button) override {
+            this->selectPreset.setString(this->plugin->getSynth()->getPreset().name);
             int dir = 0;
             if (button == &prev) {
                 dir = -1;
@@ -4831,6 +4590,7 @@ namespace PluginSynth {
             removeGuis();
         }
         void layout() override {
+            this->selectPreset.setString(this->plugin->getSynth()->getPreset().name);
             auto cs   = getSizeContent();
             prev.size = next.size = { cs.y / 2, cs.y };
             selectPreset.size     = { cs.x * 0.33f, cs.y };
@@ -4845,34 +4605,28 @@ namespace PluginSynth {
     };
     class guicontainer_plugin_synth : public guictr_base {
         guicontainer_plugin_synth_editor editor;
-        guicontainer_plugin_synth_preset_browser browser;
         guicontainer_plugin_synth_header header;
 
     public:
         explicit guicontainer_plugin_synth(PluginVST2_Synth* plugin)
-            : editor(plugin), browser(plugin), header(plugin) {
+            : editor(plugin), header(plugin) {
             padding = 0;
             margin  = 0;
             setBackgroundRendered(false);
             add(&header);
             add(&editor);
-            add(&browser);
-            browser.setVisible(false);
         }
         ~guicontainer_plugin_synth() override {
-            remove(&browser);
             remove(&editor);
             add(&header);
         }
         void layout() override {
             header.size.y = math::roundfS32(getLayoutHeight(this));
             editor.pos.y    = header.size.y;
-            browser.pos.y   = header.size.y;
             auto cs         = size;
             header.size.x = cs.x;
             cs.y -= header.size.y;
             editor.size  = cs;
-            browser.size = cs;
             guictr_base::layout();
         }
         void onTick(AppCtrl* ctrl) override {

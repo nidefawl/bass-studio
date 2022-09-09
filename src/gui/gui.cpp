@@ -199,7 +199,7 @@ float guibase::renderText(NVGcontext* vg,
     return renderTextLabel(vg, pos, bounds, text, theme, fontSizeScaled, theme->getColor(c), align);
 }
 
-void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, const String& str, float fontSize, GuiColor::constant_t c, ivec2 pos, ivec2 bounds) {
+float renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, const String& str, float fontSize, GuiColor::constant_t c, ivec2 pos, ivec2 bounds) {
 
     float fontSizeScaled = fontSize;
     if (theme) {
@@ -255,6 +255,39 @@ void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, 
     vPos.y += lineh / 2.0f;
 
     nvgTextBox(vg, vPos.x, vPos.y, bounds.x, StringAsCStr(str), nullptr);
+    return textBounds[0];
+}
+
+void renderFrame(NVGcontext* vg, ivec2 posA, ivec2 posB) {
+    float x = math::min(posA.x, posB.x);
+    float y = math::min(posA.y, posB.y);
+    float w = math::max(posA.x - posB.x, posB.x - posA.x);
+    float h = math::max(posA.y - posB.y, posB.y - posA.y);
+    renderDashedLineFrame(vg, x, y, w, h, 2.0f);
+}
+
+void renderGridLines(NVGcontext* vg, const guitheme_t* theme, const std::vector<grid_div>& gridList, const ivec2& size) {
+    for (auto& g : gridList) {
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, g.screenpos, 0);
+        nvgLineTo(vg, g.screenpos, size.y);
+        NVGcolor col;
+        switch (g.color) {
+            case 0:
+                col = theme->getColor(GuiColor::COL_LINE_BAR);
+                break;
+            case 1:
+                col = theme->getColor(GuiColor::COL_LINE_QRT);
+                break;
+            case 2:
+            default:
+                col = theme->getColor(GuiColor::COL_LINE_XTH);
+                break;
+        }
+        nvgStrokeColor(vg, col);
+        nvgStrokeWidth(vg, g.thickness);
+        nvgStroke(vg);
+    }
 }
 
 void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, float thickness) {

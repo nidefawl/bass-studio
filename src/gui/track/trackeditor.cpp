@@ -807,6 +807,8 @@ void guitrack_editor::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
+
+    //TODO: move grid background rendering into standalone function
     float w         = (float) size.x;
     double bgRepeat = grid.incr_bg * 2.0;
     float bgOffset  = (float) fmod((double) grid.offset, bgRepeat);
