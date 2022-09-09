@@ -3,6 +3,7 @@
 #include "synth-plugin.h"
 #include "synth-snapshot.h"
 #include <array>
+#include <cstdint>
 #include <utility>
 
 namespace PluginSynth {
@@ -45,6 +46,7 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
     out.write(size_t{snapshot.modulations.size()});
     out.write(size_t{snapshot.uiLayout.size()});
     out.write(size_t{snapshot.settings.size()});
+    out.write(size_t{snapshot.shapes.size()});
     for (const auto& p : snapshot.params) {
         out.write(p.paramIdx);
         out.write(p.value);
@@ -72,6 +74,17 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
     for (const auto& setting : snapshot.settings) {
         out.writeString(stringsSettings[setting.paramIdx]);
         out.write(setting.range);
+    }
+    for (const auto& shape : snapshot.shapes) {
+        out.write(shape.type);
+        out.write(shape.shape.version);
+        out.writeString(shape.shape.name);
+        out.write(size_t{shape.shape.curve.pts.size()});
+        for (const auto& point : shape.shape.curve.pts) {
+            out.write(point.pos.x);
+            out.write(point.pos.y);
+            out.write(point.shape);
+        }
     }
     out.setPos(0);
     out.write(size_t(shrdHeapVec->size()));
@@ -128,6 +141,7 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
     size_t numModulations = 0;
     size_t numUiLayouts = 0;
     size_t numSettings = 0;
+    size_t numShapes = 0;
     if (!in.read(numParams) || numParams > 1000)
         return false;
     if (!in.read(numModulations) || numModulations > 1000)
@@ -138,6 +152,10 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
     }
     if (snapshot.version >= 8) {
         if (!in.read(numSettings) || numSettings > 1000)
+            return false;
+    }
+    if (snapshot.version >= 9) {
+        if (!in.read(numShapes) || numShapes > 1000)
             return false;
     }
     snapshot.params.resize(numParams);
@@ -219,6 +237,37 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
                     break;
                 }
             }
+        }
+    }
+    if (snapshot.version >= 9) {
+        snapshot.shapes.reserve(numShapes);
+        for (size_t i = 0; i < numShapes; ++i) {
+            int32_t shapeType = 0;
+            if (!in.read(shapeType))
+                return false;
+            DAW::Shape::shape_preset_t shape;
+            if (!in.read(shape.version))
+                return false;
+            if (!in. readString(shape.name))
+                return false;
+            size_t numPoints = 0;
+            if (!in.read(numPoints))
+                return false;
+            if (numPoints > 4096)
+                return false;
+            for (size_t j = 0; j < numPoints; ++j) {
+                float x = 0.0;
+                if (!in. read(x))
+                    return false;
+                float y = 0.0;
+                if (!in. read(y))
+                    return false;
+                float s = 0.0;
+                if (!in. read(s))
+                    return false;
+                shape.curve.pts.push_back({{ x, y }, s});
+            }
+            snapshot.shapes.push_back(shape_snapshot_t{ shapeType, std::move(shape) });
         }
     }
     snapshotOut = std::move(snapshot);

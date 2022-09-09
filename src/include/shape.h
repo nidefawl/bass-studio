@@ -33,6 +33,9 @@ struct shape_t : public shape_base_t {
         return t;
     }
     float sampleCurve(float posX, bool sampleLeftRight) const {
+        dbgassert(!pts.empty());
+        if (pts.empty())
+            return 0.0f;
         if (pts.size() == 1) {
             return pts[0].pos.y;
         }

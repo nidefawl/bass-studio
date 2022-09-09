@@ -16,6 +16,7 @@
 #include "gui/controls/button.h"
 #include "gui/dialog/dialogs.h"
 #include "gui/dropdown/dropdown_preset_tree.h"
+#include "gui/shape/shapeeditor.h"
 #include "guicolors.h"
 #include "guiglobals.h"
 #include "keyboard.h"
@@ -63,7 +64,6 @@ void DrawShape(const shape_t& curve, NVGcontext*vg, guitheme_t* theme, vec2 pos,
     auto hoverColor = theme->getColor(GuiColor::COL_AUTOMATED);
     fillColor.a = 0.3;
     for (int32_t pass = 0; pass < 2; ++pass) {
-        int32_t nVecs = 0;
         if (pass == 0) {
             nvgBeginPath(vg);
             nvgMoveTo(vg, pos.x + pts.front().pos.x*size.x-5, pos.y + size.y);
@@ -79,7 +79,6 @@ void DrawShape(const shape_t& curve, NVGcontext*vg, guitheme_t* theme, vec2 pos,
                 nvgLineTo(vg, pos.x + pt0.pos.x*size.x, pos.y + (1.0f - pt0.pos.y) * size.y);
             }
             if (pass == 1) { // lines
-                nVecs = 0;
                 nvgBeginPath(vg);
                 nvgMoveTo(vg, pos.x + pt0.pos.x*size.x, pos.y + (1.0f - pt0.pos.y) * size.y);
             }
@@ -95,7 +94,6 @@ void DrawShape(const shape_t& curve, NVGcontext*vg, guitheme_t* theme, vec2 pos,
                 ps.y = 1.0f - ps.y;
                 auto pt = ps * size + pos;
                 nvgLineTo(vg, pt.x, pt.y);
-                nVecs++;
             }
             nvgLineTo(vg, pos.x + pt1.pos.x*size.x, pos.y + (1.0f - pt1.pos.y) * size.y);
             if (pass == 1) {
@@ -178,7 +176,8 @@ void DrawShape(const shape_t& curve, NVGcontext*vg, guitheme_t* theme, vec2 pos,
 }
 class guictr_curve_shape : public guictr_base {
     friend class guictr_curve_editor;
-    shape_t curve;
+    shape_t curveInternal;
+    shape_t* curve;
     shape_t curveBegin;
     shape_t curveTmp;
     shape_t::hit_result dragged;
@@ -192,13 +191,15 @@ class guictr_curve_shape : public guictr_base {
     int32_t gridStepsV = 8;
     bool wasAltBegin = false;
     bool wasShiftBegin = false;
+    std::function<void(const DAW::Shape::shape_base_t&)> callback;
 public:
-    guictr_curve_shape() {
+    guictr_curve_shape() : curve(&curveInternal)
+    {
         padding = 4;
         margin = 4;
         setBackgroundRendered(true);
         setCanMouseHit(true);
-        curve.pts.push_back({ { 0, 0 }, 0.5f });
+        curve->pts.push_back({ { 0, 0 }, 0.5f });
     }
     GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
         return GuiColor::COL_BG_DRKER2;
@@ -308,11 +309,11 @@ public:
         const auto posIn = ivec2(parentCtrl->m_mousePos);
         const auto relMousepos = toControlsObjectSpace(posIn, this);
         const auto mouseLocal = screenToCtrl(relMousepos);
-        auto higlightHit = curve.getMouseHit(mouseLocal);
+        auto higlightHit = curve->getMouseHit(mouseLocal);
         if (dragged.type != shape_t::hittype::HIT_NONE) {
             higlightHit = dragged;
         }
-        DrawShape(curve, vg, theme, vec2(0), cs, mouseLocal, higlightHit);
+        DrawShape(*curve, vg, theme, vec2(0), cs, mouseLocal, higlightHit);
     }
 
     void handleRightClick(MouseEvent& evt) override;
@@ -321,7 +322,7 @@ public:
         return guictr_base::mouseHitTest(mpos, evt);
     }
     bool hasControlHandles() {
-        return !curve.pts.empty();
+        return !curve->pts.empty();
     }
 
     void handleDraggedBegin(MouseEvent& evt) override {
@@ -329,12 +330,12 @@ public:
             vec2 local   = screenToCtrl(evt.relMousepos);
             dragged = {};
             if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
-                curve.pts.push_back({ { local.x, local.y }, 0.5f });
-                curve.sort();
+                curve->pts.push_back({ { local.x, local.y }, 0.5f });
+                curve->sort();
             } else {
-                curveTmp = curve;
-                curveBegin = curve;
-                dragged = curve.getMouseHit(local);
+                curveTmp = *curve;
+                curveBegin = *curve;
+                dragged = curve->getMouseHit(local);
                 dragBeginPos = local;
             }
             wasAltBegin = isAlt(evt.kbmods);
@@ -376,7 +377,9 @@ public:
                     curveTmp.pts.insert(curveTmp.pts.begin() + idxInsert++,{ { endRange, rightVal }, 0.5f });
                     curveTmp.sort();
                 }
-                curve = curveTmp;
+                *curve = curveTmp;
+                if (callback)
+                    callback(*curve);
                 return;
             }
             if (dragged.type == shape_t::hittype::HIT_NODE && dragged.idx < CtrSize(curveTmp.pts)) {
@@ -395,12 +398,15 @@ public:
                 auto& pt   = curveTmp.pts[dragged.idx];
                 pt.pos = local;
                 curveTmp.sort();
-                curve = curveTmp;
+                *curve = curveTmp;
+                if (callback)
+                    callback(*curve);
+                return;
             }
             if (dragged.type == shape_t::hittype::HIT_EDGE && dragged.idx < CtrSize(curveTmp.pts)) {
-                curve = curveTmp;
-                auto& pt   = curve.pts[dragged.idx];
-                auto& ptNext = curve.getPointAfterIdx(dragged.idx);
+                *curve = curveTmp;
+                auto& pt   = curve->pts[dragged.idx];
+                auto& ptNext = curve->getPointAfterIdx(dragged.idx);
                 float fDist = (local - dragBeginPos).y;
                 *evt.dragDistance = ivec2(0);
                 if (wasAltBegin) {
@@ -416,13 +422,18 @@ public:
                         ptNext.pos.y = math::clamp(ptNext.pos.y + fDist, 0.0f, 1.0f);
                     }
                 }
+                if (callback)
+                    callback(*curve);
+                return;
             }
         }
     }
     void handleDraggedRelease(MouseEvent& evt) override {
         if (hasControlHandles()) {
             dragged = {};
-            curve.eraseDuplicates();
+            curve->eraseDuplicates();
+            if (callback)
+                callback(*curve);
         }
     }
 private:
@@ -517,19 +528,23 @@ public:
     }
     void layout() override {
         guictr_base::layout();
-        buttonSave.size = {selectPreset.size.y*4, selectPreset.size.y};
+        buttonSave.size = ivec2{selectPreset.size.y*3, selectPreset.size.y};
         selectPreset.size.x = selectPreset.size.x - buttonSave.size.x - padding;
-        buttonSave.pos.x = selectPreset.right()+padding;
+        buttonSave.pos = ivec2(selectPreset.right(), 0);
+        buttonSave.size -= ivec2(4);
+        buttonSave.pos += ivec2(2);
+        selectPreset.size -= ivec2(4);
+        selectPreset.pos += ivec2(2);
         selectPreset.layout();
         buttonSave.layout();
     }
 };
-class guictr_curve_editor : public guictr_base {
+class guictr_curve_editor : public guictr_base, public i_ctr_shape_editor {
     seq_rand rand;
     guictr_curve_shape shape;
     guictr_curve_controls controls;
     PresetManager presetManager;
-
+    int32_t inputHeight = HEIGHT_DEFAULT_INPUT;
 public:
     guictr_curve_editor() : guictr_base(){
         guiType = CTR_TYPE_PROPERTIES;
@@ -549,8 +564,10 @@ public:
                 if (shapeLoaded.version) {
                     shape_t tmp{shapeLoaded.curve.pts};
                     tmp.sort();
-                    this->shape.curve = tmp;
+                    *shape.curve = tmp;
                     controls.selectPreset.setString(shapeLoaded.name);
+                    if (shape.callback)
+                        shape.callback(*shape.curve);
                 }
             }
         });
@@ -558,19 +575,30 @@ public:
         setBackgroundRendered(true);
         rand.rng_seed(static_cast<uint64_t>(getTimeMicros()));
         setCanMouseHit(true);
-        padding = 2;
+        padding = 0;
         margin = 4;
     }
-
-    ~guictr_curve_editor() {
+    ~guictr_curve_editor() override {
         removeGuis();
+    }
+    void setShapeEditorCallback(std::function<void(const DAW::Shape::shape_base_t&)> callback) override {
+        shape.callback = std::move(callback);
+    }
+    void setShapeEditorShapeRef(DAW::Shape::shape_t* shape) override {
+        this->shape.curve = shape ? shape : &this->shape.curveInternal;
+    }
+    guictr_base* getGuiContainer() override {
+        return this;
+    }
+    void setInputHeight(int32_t height) {
+        inputHeight = height;
     }
 
     void layout() override {
         auto cs = getSizeContent();
         shape.pos = controls.pos = {0,0};
         shape.size = controls.size = cs;
-        controls.size.y = HEIGHT_DEFAULT_INPUT;
+        controls.size.y = math::min<int32_t>(inputHeight, size.y/8);
         shape.pos.y = controls.bottom() + padding;
         shape.size.y = cs.y - controls.size.y;
         guictr_base::layout();
@@ -584,7 +612,7 @@ public:
             shape.bIsGridEnabledV = !shape.bIsGridEnabledV;
         }
         if (&controls.buttonSave == button) {
-            shape_preset_t shapePreset { 1, "test", shape_base_t{shape.curve.pts} };
+            shape_preset_t shapePreset { 1, "test", shape_base_t{shape.curve->pts} };
             String defaultPresetPath = presetManager.getPresetPath();
             CreateDirectoryIfNotExists(defaultPresetPath);
             String path;
@@ -599,7 +627,6 @@ public:
                 shapePreset.name = name;
                 controls.selectPreset.setString(shapePreset.name);
                 saveShapePresetFile(shapePreset, path);
-
             }
         }
     }
@@ -609,10 +636,10 @@ void guictr_curve_shape::handleRightClick(MouseEvent& evt) {
     if (hasControlHandles()) {
         vec2 local = screenToCtrl(evt.relMousepos);
         float minDist = 0.0f;
-        int32_t minPt  = curve.getMinPt(local, &minDist);
+        int32_t minPt  = curve->getMinPt(local, &minDist);
         if (minPt > -1) {
-            curve.pts.erase(curve.pts.begin() + minPt);
-            curve.sort();
+            curve->pts.erase(curve->pts.begin() + minPt);
+            curve->sort();
             return;
         }
     }
@@ -621,6 +648,20 @@ void guictr_curve_shape::handleRightClick(MouseEvent& evt) {
 } // namespace DAW::Shape
 
 
-guictr_base* makeCurveEditor() {
+i_ctr_shape_editor* makeShapeEditor() {
     return new DAW::Shape::guictr_curve_editor();
 }
+
+// void setShapeEditorCallback(guictr_base* curveEditor, std::function<void(const DAW::Shape::shape_base_t&)> callback) {
+//     auto editor = dynamic_cast<DAW::Shape::guictr_curve_editor*>(curveEditor);
+//     if (editor) {
+//         editor->setShapeEditorCallback(std::move(callback));
+//     }
+// }
+
+// void setShapeEditorShape(guictr_base* curveEditor, const DAW::Shape::shape_base_t& shape) {
+//     auto editor = dynamic_cast<DAW::Shape::guictr_curve_editor*>(curveEditor);
+//     if (editor) {
+//         editor->setShapeEditorShape(shape);
+//     }
+// }

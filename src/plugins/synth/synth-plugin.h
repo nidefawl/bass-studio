@@ -389,6 +389,7 @@ namespace PluginSynth {
         param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;
         void addPropertiesParameterTooltip(Table::tbl& table, int idx) override;
 
+        void notifyUiChanges();
         void initPrograms();
         void writeCurrentProgram();
         void setFromSynthProgram(SynthProgram* program);

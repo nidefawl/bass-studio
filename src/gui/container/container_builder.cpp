@@ -6,6 +6,7 @@
 #include "gui/views/shaderview.h"
 #include "gui/dialog/dialog_io.h"
 #include "gui/views/debugctr.h"
+#include "gui/shape/shapeeditor.h"
 
 guictr_base* makeCtrProperties();
 guictr_base* makeCtrTheme();
@@ -15,7 +16,6 @@ guictr_base* makeGuiEffectLibrary();
 guictr_base* makeGuiPerformance();
 guictr_base* makeGuiExport();
 guictr_base* makeGuiClipEditor();
-guictr_base* makeCurveEditor();
 
 bool getContainerLabel(gui_type type, String& out) {
     switch (type) {
@@ -136,7 +136,8 @@ ContainerFactory& getContainerFactory() {
             return std::make_shared<guictr_layout>();
         };
         containerFactory[gui_type::CTR_TYPE_SHAPE_EDITOR] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(makeCurveEditor());
+            auto shapeEditor = makeShapeEditor();
+            return std::shared_ptr<guictr_base>(shapeEditor->getGuiContainer());
         };
     }
     return containerFactory;
