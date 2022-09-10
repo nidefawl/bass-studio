@@ -102,3 +102,40 @@ void gui_list::render(NVGcontext* vg) {
     nvgRestore(vg);
     scrollbar.render(vg);
 }
+void gui_list::updateVisible() {
+    ivec2 cs            = getSizeContent();
+    float offset        = scrollbar.scrollOffset;
+    int32_t nEntriesFit = floor(cs.y / (double) rowHeight);
+    int32_t nEntries    = math::max(0, (int32_t) listGuis.size() - nEntriesFit);
+    first               = math::max(0, (int32_t) floor(offset * nEntries));
+    if (listGuis.size() == 0) {
+        first = last = 0;
+    } else {
+        last  = first + (int32_t) nEntriesFit + 1;
+        first = math::min((int32_t) (listGuis.size() - 1), first);
+        last  = math::min((int32_t) listGuis.size(), last);
+    }
+}
+void gui_list::scrollOffsetChanged(int dir, float offset) {
+    updateVisible();
+}
+bool gui_list::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+    if (abs(yoffset) > 0.01f) {
+        int dir = scrollbar.getAxis();
+        ivec2 vcS  = getScrollTotalSize();
+        int32_t cS = vcS[dir];
+        if (cS > 0) {
+            float newOffset = scrollbar.scrollOffset;
+            int32_t nEntriesFit = floor(getSizeContent().y / (double) rowHeight);
+            int32_t nEntries    = math::max(0, (int32_t) listGuis.size() - nEntriesFit);
+            if (nEntries) {
+                auto nEntriesToScroll = math::max<float>(1.0f, nEntriesFit *0.25f);
+                auto curOffset = scrollbar.scrollOffset;
+                float offset = float(yoffset * nEntriesToScroll / nEntries);
+                newOffset = curOffset - offset;
+            }
+            scrollbar.setScrollOffset(newOffset);
+        }
+    }
+    return true;
+}

@@ -81,24 +81,9 @@ public:
     ivec2 getScrollViewSize() const override {
         return getSizeContent();
     }
-    void updateVisible() {
-        ivec2 cs            = getSizeContent();
-        float offset        = scrollbar.scrollOffset;
-        int32_t nEntriesFit = floor(cs.y / (double) rowHeight);
-        int32_t nEntries    = math::max(0, (int32_t) listGuis.size() - nEntriesFit);
-        first               = math::max(0, (int32_t) floor(offset * nEntries));
-        if (listGuis.size() == 0) {
-            first = last = 0;
-        } else {
-            last  = first + (int32_t) nEntriesFit + 1;
-            first = math::min((int32_t) (listGuis.size() - 1), first);
-            last  = math::min((int32_t) listGuis.size(), last);
-        }
-    }
+    void updateVisible();
 
-    void scrollOffsetChanged(int dir, float offset) override {
-        updateVisible();
-    }
+    void scrollOffsetChanged(int dir, float offset) override;
 
     void render(NVGcontext* vg) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
@@ -150,9 +135,7 @@ public:
         }
         updateVisible();
     }
-    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override {
-        return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
-    }
+    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
     void buttonClicked(guibase* button) override;
 
     guibase* getFocusedContainer() override {
