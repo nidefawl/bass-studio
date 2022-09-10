@@ -1421,11 +1421,11 @@ namespace PluginSynth {
             setParamName(getParam(Parameters::MasterVolume), "Volume", "Volume", "Volume", "%");
 
 
-            addEnumParam(Parameters::Osc1Wave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(0);
+            addEnumParam(Parameters::Osc1Wave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(static_cast<int32_t>(Waveforms::Saw));
             setParamName(getParam(Parameters::Osc1Wave), "Osc1 Waveform", "Osc1 Waveform", "Waveform");
-            addEnumParam(Parameters::Osc2Wave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(0);
+            addEnumParam(Parameters::Osc2Wave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(static_cast<int32_t>(Waveforms::Saw));
             setParamName(getParam(Parameters::Osc2Wave), "Osc2 Waveform", "Osc2 Waveform", "Waveform");
-            addEnumParam(Parameters::LfoWave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(0);
+            addEnumParam(Parameters::LfoWave)->setStrings(stringsWaveform.begin(), stringsWaveform.end())->setRangedValue(static_cast<int32_t>(Waveforms::Shaper));
             setParamName(getParam(Parameters::LfoWave), "LFO1 Waveform", "LFO1 Waveform", "Waveform");
             addEnumParam(Parameters::VoiceMode)->setStrings(stringsVoiceMode.begin(), stringsVoiceMode.end())->setRangedValue(0);
             setParamName(getParam(Parameters::VoiceMode), "Voice Mode");
@@ -4005,10 +4005,10 @@ namespace PluginSynth {
                     knobPos.x += knobSizeRounded.x + padding;
                 }
             }
-            vec2 sizeFull = vec2(cs.y*1.5, cs.y);
+            vec2 sizeFull = innerSize;
             for (auto knob : guis) {
                 if (knob->id == 2) {
-                    knob->pos  = vec2(knobPos.x, 0);;
+                    knob->pos  = vec2(knobPos.x, titleHeight);
                     knob->size = sizeFull;
                     knobPos.x += sizeFull.x + padding;
                 }
@@ -4064,6 +4064,7 @@ namespace PluginSynth {
         std::vector<_synth_gui_param_knob> vecParamUI;
         std::vector<guictr_synth_title*> containers;
         std::vector<_synth_gui_param_knob> vecListParam;
+        std::vector<std::vector<guictr_synth_title*>> moduleLayout;
         i_ctr_shape_editor* const shapeEditor;
         guicontainer_modulation modulation;
         gui_list list;
@@ -4077,7 +4078,7 @@ namespace PluginSynth {
         guictr_synth_param_container ctrEnvM;
         guictr_synth_param_container ctrLfo;
         guictr_synth_param_container ctrMacro;
-        // guictr_synth_param_container ctrShapeLfo;
+        guictr_synth_param_container ctrShapeLfo;
 
         Splitter splitter;
         bool bGuiNeedsRefresh = true;
@@ -4115,7 +4116,7 @@ namespace PluginSynth {
               ctrEnvM(synth),
               ctrLfo(synth),
               ctrMacro(synth),
-            //   ctrShapeLfo(synth),
+              ctrShapeLfo(synth),
               splitter(1, 0.8f) {
             list.padding  = 4;
             list2.padding = 4;
@@ -4129,15 +4130,18 @@ namespace PluginSynth {
             editfield.setAlignment(gui_textfield::Alignment::Center);
             editfield.setReturnCommits(true);
             padding        = 2;
-            std::vector<guictr_synth_title*> ctrsSorted{ 
-                &ctrAmp, &ctrFilter, &ctrFm /* , &ctrShapeLfo */,
-                &ctrLfo, &ctrOsc1, &ctrOsc2, 
-                &ctrEnvV, &ctrEnvM, &ctrMacro };
             int32_t ctrIdx = 1;
-            for (auto* ctr : ctrsSorted) {
-                ctr->id = ctrIdx;
-                add(ctr);
-                containers.push_back(ctr);
+            moduleLayout = {
+                {&ctrAmp, &ctrFilter, &ctrFm},
+                {&ctrLfo, &ctrShapeLfo, &ctrOsc1, &ctrOsc2},
+                {&ctrEnvV, &ctrEnvM, &ctrMacro},
+            };
+            for (auto& row :moduleLayout) {
+                for (auto ctr : row) {
+                    ctr->id = ctrIdx++;
+                    add(ctr);
+                    containers.push_back(ctr);
+                }
             }
             ctrAmp.setLabel("Main");
             ctrFilter.setLabel("Filter");
@@ -4148,7 +4152,7 @@ namespace PluginSynth {
             ctrEnvV.setLabel("Envelpe Volume");
             ctrEnvM.setLabel("Envelope Modulation");
             ctrMacro.setLabel("Macros");
-            // ctrShapeLfo.setLabel("LFO Shape");
+            ctrShapeLfo.setLabel("Shape");
 
             vecParamUI.reserve(Parameters::kNumParams);
             for (auto param : parametersOrdered) {
@@ -4262,11 +4266,13 @@ namespace PluginSynth {
             }
             shapeEditor->setShapeEditorShapeRef(&synth->getShape(0));
             auto shapeCtr = shapeEditor->getGuiContainer();
+            shapeCtr->setBackgroundRendered(false);
+            shapeCtr->setBackgroundRenderedInset(false);
+            shapeCtr->setCanMouseHit(false);
             shapeCtr->id = 2;
             shapeCtr->margin = 0;
             shapeCtr->padding = 2;
-
-            ctrLfo.add(shapeCtr);
+            ctrShapeLfo.add(shapeCtr);
             add(&list);
             add(&list2);
             add(&modulation);
@@ -4468,43 +4474,38 @@ namespace PluginSynth {
             const auto modulationWidth          = splitter.rightOrBottom(cs.x) - padding / 2;
             splitter.pos                        = ivec2(controlsWidth - Splitter::SPLITTER_LAYOUT_THICKNESS / 2, 0);
             splitter.size                       = ivec2(Splitter::SPLITTER_LAYOUT_THICKNESS, cs.y);
-            modulation.size      = ivec2(modulationWidth, cs.y);
+            modulation.size      = ivec2(modulationWidth, cs.y*0.75f);
             modulation.pos       = ivec2(cs.x - modulationWidth, 0);
             int scale            = 4;//!list.isVisible() && !list2.isVisible()?4:3;
             cs                   = ivec2(controlsWidth, cs.y);
-            const auto numRows   = 3;
-            const auto numKnobs  = CtrSize(containers);
+            const auto numRows   = moduleLayout.size();
             const auto innerSize = vec2(cs.x, cs.y * scale / 4) - vec2(padding * 2);
-            const auto numCols   = 3;
-            auto innerRowHeight  = float(innerSize.y - (numRows - 1) * (padding)) / numRows;
-            auto innerColWidth   = float(innerSize.x - (numCols - 1) * (padding)) / numCols;
-            auto knobSizeF       = vec2(innerColWidth, innerRowHeight);
-            auto modulePos       = ivec2(0);
-            auto moduleSize      = ivec2(math::roundfS32(knobSizeF.x), math::roundfS32(knobSizeF.y));
-            int32_t colIdx       = 0;
+            auto modulePos      = ivec2(0);
+            auto knobSize = vec2(math::max(1.0, controlsWidth/20.0),0);
+            for (auto& row : moduleLayout) {
 
-            auto knobSize = vec2((innerSize.x - 33 * padding) / 21, 0);
-
-            for (auto ctr : containers) {
-                ctr->pos  = modulePos + ivec2(0, 0);
-                ctr->size = moduleSize - ivec2(0, 0);
-                auto knobSizeModule = knobSize;
-                if (ctr == &ctrLfo || ctr == &ctrMacro || ctr == &ctrEnvV || ctr == &ctrEnvM)
-                    knobSizeModule.x *= 0.75f;
-                ctr->layoutParameterGroup(ctr->size, knobSizeModule, titleHeight);
-
-                modulePos.x = ctr->right() + padding;
-                if (++colIdx == 3) {
-                    colIdx      = 0;
-                    modulePos.x = 0;
-                    modulePos.y += moduleSize.y + padding;
+                const auto numCols  = row.size();
+                auto innerRowHeight = float(innerSize.y - (numRows - 1) * (padding)) / numRows;
+                auto innerColWidth  = float(innerSize.x - (numCols - 1) * (padding)) / numCols;
+                auto knobSizeF      = vec2(innerColWidth, innerRowHeight);
+                auto moduleSize     = ivec2(math::roundfS32(knobSizeF.x), math::roundfS32(knobSizeF.y));
+                for (auto* ctr : row) {
+                    ctr->pos  = modulePos;
+                    ctr->size = moduleSize;
+                    auto knobSizeModule = knobSize;
+                    if (ctr == &ctrLfo || ctr == &ctrMacro || ctr == &ctrEnvV || ctr == &ctrEnvM)
+                        knobSizeModule.x *= 0.75f;
+                    ctr->layoutParameterGroup(ctr->size, knobSizeModule, titleHeight);
+                    modulePos.x = ctr->right() + padding;
                 }
+                modulePos.x = 0;
+                modulePos.y += moduleSize.y + padding;
             }
 
-            list.pos   = ctrMacro.getRightTop() + ivec2(padding, 0);
-            list.size  = ivec2(controlsWidth - list.pos.x - padding, (ctrMacro.size.y - padding) / 2);
-            list2.pos  = vec2(list.left(), list.bottom() + padding);
-            list2.size = ivec2(controlsWidth - list2.pos.x - padding, (ctrMacro.size.y - padding) / 2);
+            list2.pos   = moduleLayout[1].back()->getRightTop() + ivec2(padding, 0);
+            list2.size  = ivec2(moduleLayout[0].back()->right() - list2.pos.x - padding, (moduleLayout[1].back()->size.y));
+            list.pos  = vec2(modulation.left(), modulation.bottom() + padding);
+            list.size = ivec2(modulation.size.x, size.y - (modulation.bottom()+padding));
             // auto listHeight = math::roundfS32(math::clamp<float>(cs.y*0.1f*0.33f, getLayoutHeight(this) / 2, getLayoutHeight(this)));
             list.setRowHeight(titleHeight);
             list2.setRowHeight(titleHeight);
