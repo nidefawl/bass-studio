@@ -18,7 +18,7 @@
 #include "track.h"
 #include "track_impl.h"
 #include "host/vst_host.h"
-#include "host/vst_window.h"
+#include "host/host_plugin_window.h"
 #include "gui/plugin/plugin.h"
 #include "gui/plugin/pluginctr.h"
 #include "gui/plugin/pluginviewcontainers.h"
@@ -47,7 +47,7 @@ bool vstplugin::updateWindow() {
 }
 
 
-bool vstplugin::onShow(vst_window* _window) {
+bool vstplugin::onShow(host_plugin_window* _window) {
     if (this->window == _window) {
         bEditOpen = true;
         this->dispatch(effEditOpen, 0, 0, (void*) _window->getHWND());
@@ -64,7 +64,7 @@ bool vstplugin::onClose() {
     return true;
 }
 
-ivec2 vstplugin::constrainWindowSize(vst_window*, ivec2& size) {
+ivec2 vstplugin::constrainWindowSize(host_plugin_window*, ivec2& size) {
     ERect* prc = nullptr;
     this->dispatch(effEditGetRect, 0, 0, (void*) &prc);
     if (prc) {

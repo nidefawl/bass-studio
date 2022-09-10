@@ -1,6 +1,6 @@
 #pragma once
 
-#include "host/vst_window.h"
+#include "host/host_plugin_window.h"
 #include "types.h"
 #include <memory>
 #include <vector>
@@ -71,7 +71,7 @@ public:
     std::vector<DAW::channel_ref_t> inputChannels;
     bool bWindowPosSizeValid = false;
     ivec4 lastWindowPosSize{};
-    vst_window* window = nullptr;
+    host_plugin_window* window = nullptr;
     plugin_ui_snapshot_t uiSnapshot{};
 protected:
     int nLoadCalls   = 0;
@@ -126,9 +126,9 @@ public:
     virtual bool closeWindow();
     virtual void onWindowDestroy();
     virtual void onWindowResize(ivec2 size);
-    virtual bool onShow(vst_window* window);
+    virtual bool onShow(host_plugin_window* window);
     virtual bool onClose();
-    virtual ivec2 constrainWindowSize(vst_window* window, ivec2& size) {
+    virtual ivec2 constrainWindowSize(host_plugin_window* window, ivec2& size) {
         return size;
     };
     virtual void unload(vsthost* host, int flags);

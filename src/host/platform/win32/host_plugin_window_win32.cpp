@@ -2,7 +2,7 @@
 #ifdef _WIN32
 #include "logging.h"
 #include "str_util.h"
-#include "host/vst_window.h"
+#include "host/host_plugin_window.h"
 #include "host/vst_host.h"
 #include "host/plugin/vst_plugin.h"
 #include "host/mainctrl.h"
@@ -20,21 +20,21 @@
 LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);// window.cpp
 
 namespace {
-    const TCHAR* gWindowClassName = _T("VSTHOSTWINDOW");
-    std::vector<vst_window*> vst_window_list;
-    void addWindow(vst_window* window) {
-        vst_window_list.push_back(window);
+    const TCHAR* gWindowClassName = _T("_DAW_PLUG_WIN");
+    std::vector<host_plugin_window*> host_plugin_window_list;
+    void addWindow(host_plugin_window* window) {
+        host_plugin_window_list.push_back(window);
     }
-    void removeWindow(vst_window* window) {
-        auto it = std::find(vst_window_list.begin(), vst_window_list.end(), window);
-        if (it != vst_window_list.end())
-            vst_window_list.erase(it);
+    void removeWindow(host_plugin_window* window) {
+        auto it = std::find(host_plugin_window_list.begin(), host_plugin_window_list.end(), window);
+        if (it != host_plugin_window_list.end())
+            host_plugin_window_list.erase(it);
     }
-    vst_window* getWindowByHWND(WINDOW_HANDLE hwnd) {
-        auto it = std::find_if(vst_window_list.begin(), vst_window_list.end(), [hwnd](vst_window* window) {
+    host_plugin_window* getWindowByHWND(WINDOW_HANDLE hwnd) {
+        auto it = std::find_if(host_plugin_window_list.begin(), host_plugin_window_list.end(), [hwnd](host_plugin_window* window) {
             return window->getHWND() == hwnd;
         });
-        if (it != vst_window_list.end())
+        if (it != host_plugin_window_list.end())
             return *it;
         return nullptr;
     }
@@ -122,7 +122,7 @@ namespace {
         }
     }
     LRESULT CALLBACK PluginWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
-        vst_window* window = reinterpret_cast<vst_window*>((LONG_PTR) GetWindowLongPtr(hwnd, GWLP_USERDATA));
+        host_plugin_window* window = reinterpret_cast<host_plugin_window*>((LONG_PTR) GetWindowLongPtr(hwnd, GWLP_USERDATA));
         if (window) {
             auto* plugin = window->getPlugin();
             switch (message) {
@@ -208,34 +208,34 @@ namespace {
     }
 }// namespace
 
-vst_window* vst_window::make(effectbase* plugin, const String& name, ivec2 size, bool resizeable) {
-    auto* window = new vst_window();
+host_plugin_window* host_plugin_window::make(effectbase* plugin, const String& name, ivec2 size, bool resizeable) {
+    auto* window = new host_plugin_window();
     if (window->init(plugin, name, size, resizeable))
         return window;
     return nullptr;
 }
 
-namespace vst_window_mgr {
-    void destroyAllVSTWindows() {
-        for (vst_window* w : vst_window_list) {
+namespace getWindowInstance {
+    void destroyAllPluginWindows() {
+        for (host_plugin_window* w : host_plugin_window_list) {
             HWND hwnd = w->getHWND();
             if (hwnd) {
                 ShowWindow(hwnd, false);
                 DestroyWindow(hwnd);
             }
         }
-        vst_window_list.clear();
+        host_plugin_window_list.clear();
         UnregisterClass(gWindowClassName, GetModuleHandle(nullptr));
     }
-    bool isVstWindow(HWND hwnd) {
-        return nullptr != vst_window::getVSTWindow(hwnd);
+    bool isPluginWindow(HWND hwnd) {
+        return nullptr != host_plugin_window::getWindowInstance(hwnd);
     }
-}// namespace vst_window_mgr
+}// namespace getWindowInstance
 
-vst_window* vst_window::getVSTWindow(HWND handle) {
+host_plugin_window* host_plugin_window::getWindowInstance(HWND handle) {
     dbgassert(handle);
     while (handle) {
-        if (reinterpret_cast<int64_t>(GetProp(handle, "_DAW_VST2WIN")) == int64_t{7}) {
+        if (reinterpret_cast<int64_t>(GetProp(handle, "_DAW_PLWIN")) == int64_t{7}) {
             return getWindowByHWND(handle);
         }
         WINDOWINFO info{};
@@ -249,11 +249,11 @@ vst_window* vst_window::getVSTWindow(HWND handle) {
     return nullptr;
 }
 
-std::vector<vst_window*>& vst_window::getWindows() {
-    return vst_window_list;
+std::vector<host_plugin_window*>& host_plugin_window::getWindows() {
+    return host_plugin_window_list;
 }
 
-bool vst_window::init(effectbase* _plugin, const String& name, ivec2 size, bool resizeable) {
+bool host_plugin_window::init(effectbase* _plugin, const String& name, ivec2 size, bool resizeable) {
     HWND mainHWND = getMainHWND();
     assert(mainHWND);
     setRedirectKeysToDawMainWindow(!resizeable);
@@ -270,13 +270,13 @@ bool vst_window::init(effectbase* _plugin, const String& name, ivec2 size, bool 
     hwnd = CreateWindowEx(exStyle, gWindowClassName, StringAsCStr(name), dwStyle,
                           0, 0, size.x, size.y, mainHWND, nullptr, instance, nullptr);
     if (!hwnd) {
-        log_lf(Log::L_ERROR, "%s\n", StringAsCStr(FormatErrorMessage(GetLastError(), "Failed creating vst_window: CreateWindowEx returned null")));
+        log_lf(Log::L_ERROR, "%s\n", StringAsCStr(FormatErrorMessage(GetLastError(), "Failed creating host_plugin_window: CreateWindowEx returned null")));
     }
 
     if (hwnd) {
         SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(this));
         SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(mainHWND));
-        SetProp(hwnd, "_DAW_VST2WIN", reinterpret_cast<HANDLE>(int64_t{7}));
+        SetProp(hwnd, "_DAW_PLWIN", reinterpret_cast<HANDLE>(int64_t{7}));
 
         auto plugWindowSize = plugin->getWindowSize();
         if (plugWindowSize.x > 0 && plugWindowSize.y > 0) {
@@ -302,7 +302,7 @@ bool vst_window::init(effectbase* _plugin, const String& name, ivec2 size, bool 
     return hwnd != nullptr;
 }
 
-void vst_window::close() {
+void host_plugin_window::close() {
     SetActiveWindow(getMainHWND());
     RECT rcDlg;
     if (GetWindowRect(hwnd, &rcDlg)) {
@@ -312,7 +312,7 @@ void vst_window::close() {
     destroy();
 }
 
-void vst_window::destroy() {
+void host_plugin_window::destroy() {
     plugin->onWindowDestroy();
     SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
     DestroyWindow(hwnd);
@@ -320,7 +320,7 @@ void vst_window::destroy() {
     delete this;
 }
 
-void vst_window::show() {
+void host_plugin_window::show() {
     SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
     plugin->onShow(this);
     auto plugWindowSize = plugin->getWindowSize();
@@ -329,29 +329,29 @@ void vst_window::show() {
     }
 }
 
-ivec2 vst_window::getContentSize() const {
+ivec2 host_plugin_window::getContentSize() const {
     RECT r;
     GetClientRect(hwnd, &r);
     return { r.right - r.left, r.bottom - r.top };
 }
 
-void vst_window::captureWindowFrame() {
+void host_plugin_window::captureWindowFrame() {
     capturedFrame.w = 0;
     capturedFrame.h = 0;
     capturedFrame.bytes.clear();
     captureWindow(hwnd, capturedFrame);
 }
 
-void vst_window::updateWindow() const {
+void host_plugin_window::updateWindow() const {
     UpdateWindow(hwnd);
 }
 
-void vst_window::onResize (ivec2 newSize)
+void host_plugin_window::onResize (ivec2 newSize)
 {
 	plugin->onWindowResize(newSize);
 }
 
-void vst_window::resize(ivec2 newSize) const {
+void host_plugin_window::resize(ivec2 newSize) const {
     if (getContentSize() == newSize)
         return;
     WINDOWINFO windowInfo{};
@@ -365,11 +365,11 @@ void vst_window::resize(ivec2 newSize) const {
                     clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
 }
 
-void vst_window::setPosition(ivec2 newPos) {
+void host_plugin_window::setPosition(ivec2 newPos) {
     SetWindowPos(hwnd, HWND_TOP, newPos.x, newPos.y, 0, 0, SWP_NOSIZE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
 }
 
-WINDOW_HANDLE vst_window::getHWND() const {
+WINDOW_HANDLE host_plugin_window::getHWND() const {
     return hwnd;
 }
 #endif

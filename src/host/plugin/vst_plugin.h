@@ -19,7 +19,7 @@ struct handles_t;
 class track_t;
 class guibase;
 struct track_impl_t;
-class vst_window;
+class host_plugin_window;
 struct VstTimeInfo;
 
 /** Flags used in VstParameterProperties. */
@@ -96,9 +96,9 @@ public:
     bool getNameString(char* szBuf);
     void printNames();
     void onWindowResize(ivec2 size) override;
-    bool onShow(vst_window* window) override;
+    bool onShow(host_plugin_window* window) override;
     bool onClose() override;
-    ivec2 constrainWindowSize(vst_window* window, ivec2& size) override;
+    ivec2 constrainWindowSize(host_plugin_window* window, ivec2& size) override;
     bool hasWindowEditor() override;
     ivec2 getWindowSize() override;
     bool updateWindowSize();

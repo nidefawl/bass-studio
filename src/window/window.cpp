@@ -1704,9 +1704,9 @@ win32_hwnd_msg_counter_t msgCounter;
 bool msgCounterEnabled = false;
 
 #if defined(_WIN32) && BUILD_VSTHOST
-namespace vst_window_mgr {
-    void destroyAllVSTWindows();
-    bool isVstWindow(HWND hwnd);
+namespace getWindowInstance {
+    void destroyAllPluginWindows();
+    bool isPluginWindow(HWND hwnd);
 }
 #endif
 
@@ -1963,7 +1963,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         mainWindow->destroy();
 
 #if defined(_WIN32) && BUILD_VSTHOST
-        vst_window_mgr::destroyAllVSTWindows();
+        getWindowInstance::destroyAllPluginWindows();
 #endif
 
         mainWindow.reset();

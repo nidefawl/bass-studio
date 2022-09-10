@@ -27,7 +27,7 @@
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
 #include "plugin/vst_plugin_handles.h"
-#include "vst_window.h"
+#include "host_plugin_window.h"
 
 #include <memory>
 #include <vstsdk-host-2.4/aeffectx.h>

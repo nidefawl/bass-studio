@@ -35,15 +35,15 @@ class effectbase;
 
 //------------------------------------------------------------------------
 struct GLFWwindow;
-namespace vst_window_mgr {
-    void destroyAllVSTWindows();
-    bool isVstWindow(WINDOW_HANDLE);
+namespace host_plugin_window_mgr {
+    void destroyAllPluginWindows();
+    bool isPluginWindow(WINDOW_HANDLE);
 }// namespace vst_window_mgr
-class vst_window {
+class host_plugin_window {
     bool bRedirectKeysToDawMainWindow = false;
 public:
-    static vst_window* make(effectbase* plugin, const String& name, ivec2 size, bool resizeable);
-    static vst_window* getVSTWindow(WINDOW_HANDLE handle);
+    static host_plugin_window* make(effectbase* plugin, const String& name, ivec2 size, bool resizeable);
+    static host_plugin_window* getWindowInstance(WINDOW_HANDLE handle);
     bool init(effectbase* plugin, const String& name, ivec2 size, bool resizeable);
     WINDOW_HANDLE getHWND() const;
 
@@ -64,7 +64,7 @@ public:
         bRedirectKeysToDawMainWindow = b;
     }
 
-    static std::vector<vst_window*>& getWindows();
+    static std::vector<host_plugin_window*>& getWindows();
     effectbase* getPlugin() {
         return plugin;
     }

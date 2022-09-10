@@ -19,7 +19,7 @@ struct handles_t;
 class track_t;
 class guibase;
 struct track_impl_t;
-class vst_window;
+class host_plugin_window;
 
 class auplugin : public effectbase {
 public:
@@ -29,7 +29,7 @@ public:
     int pluginCategory = 0;
     int vstVersion     = 0;
     int uId            = 0;
-    vst_window* window = NULL;
+    host_plugin_window* window = NULL;
     std::vector<String> programNames;
     std::vector<String> inputNames;
     std::vector<String> outputNames;

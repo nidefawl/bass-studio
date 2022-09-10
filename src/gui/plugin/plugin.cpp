@@ -39,7 +39,7 @@
 #include "host/plugin/internal_plugin.h"
 #include "host/plugin/vst_plugin.h"
 #include "host/plugin/vst_plugin_handles.h"
-#include "host/vst_window.h"
+#include "host/host_plugin_window.h"
 #include "gui/automation/automatable.h"
 #include "gui/properties/properties_table.h"
 #include "projectfile-snapshot.h"

@@ -1,8 +1,8 @@
 #include "logging.h"
 #if defined(__linux__) || defined(__APPLE__)
-#include "../../vst_window.h"
+#include "../../host_plugin_window.h"
 #include "../../vst_host.h"
-#include "../../plugin/vst_plugin.h"
+#include "../../plugin/base_plugin.h"
 #include <vector>
 #include <GLFW/glfw3.h>
 #ifdef __linux__
@@ -20,56 +20,55 @@ void sendExposeEvent(GLFWwindow* glfw);
 #endif
 
 namespace {
-	std::vector<vst_window*> vst_window_list;
-	void addWindow (vst_window* window)
+	std::vector<host_plugin_window*> host_plugin_window_list;
+	void addWindow (host_plugin_window* window)
 	{
-		vst_window_list.push_back (window);
+		host_plugin_window_list.push_back (window);
 	}
-	void removeWindow (vst_window* window)
+	void removeWindow (host_plugin_window* window)
 	{
-		auto it = std::find (vst_window_list.begin (), vst_window_list.end (), window);
-		if (it != vst_window_list.end ())
-			vst_window_list.erase(it);
+		auto it = std::find (host_plugin_window_list.begin (), host_plugin_window_list.end (), window);
+		if (it != host_plugin_window_list.end ())
+			host_plugin_window_list.erase(it);
 	}
-	/* vst_window* getWindowByHWND (WINDOW_HANDLE hwnd)
+	/* host_plugin_window* getWindowByHWND (WINDOW_HANDLE hwnd)
 	{
-		auto it = std::find_if(vst_window_list.begin (), vst_window_list.end (), [hwnd](vst_window* window) {
+		auto it = std::find_if(host_plugin_window_list.begin (), host_plugin_window_list.end (), [hwnd](host_plugin_window* window) {
 			return window->getHWND() == hwnd;
 		});
-		if (it != vst_window_list.end ())
+		if (it != host_plugin_window_list.end ())
 			return *it;
 		return nullptr;
 	} */
 }
 
 
-vst_window* vst_window::make (vstplugin* plugin, const String& name, ivec2 size, bool resizeable)
+host_plugin_window* host_plugin_window::make (effectbase* plugin, const String& name, ivec2 size, bool resizeable)
 {
-	auto vstWindow = new vst_window();
-	vstWindow->init(plugin, name, size, resizeable);
-	return vstWindow;
+	auto plugWindow = new host_plugin_window();
+	plugWindow->init(plugin, name, size, resizeable);
+	return plugWindow;
 }
-vst_window* vst_window::getVSTWindow(WINDOW_HANDLE handle)
+host_plugin_window* host_plugin_window::getWindowInstance(WINDOW_HANDLE handle)
 {
 	dbgassert(handle);
-	vst_window* vstwinhandle = nullptr;
-	return vstwinhandle;
+	return nullptr;
 }
 
-std::vector<vst_window*>& vst_window::getWindows ()
+std::vector<host_plugin_window*>& host_plugin_window::getWindows ()
 {
-	return vst_window_list;
+	return host_plugin_window_list;
 }
 
 
 static void glfw_cb_windowclose(GLFWwindow* w) {
-	auto* userpointer = static_cast<vst_window*>(glfwGetWindowUserPointer(w));
+	auto* userpointer = static_cast<host_plugin_window*>(glfwGetWindowUserPointer(w));
 	if (userpointer) {
 		userpointer->close();
 	}
 }
 static void glfw_cb_windowsize(GLFWwindow* w, int width, int height) {
-	auto* userpointer = static_cast<vst_window*>(glfwGetWindowUserPointer(w));
+	auto* userpointer = static_cast<host_plugin_window*>(glfwGetWindowUserPointer(w));
 	if (userpointer) {
 		userpointer->onResize(ivec2(width, height));
 	}
@@ -83,7 +82,7 @@ static void glfw_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, i
 	}
 }
 
-bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool resizeable)
+bool host_plugin_window::init(effectbase* plugin, const String& name, ivec2 size, bool resizeable)
 {
 	this->plugin = plugin;
 
@@ -116,7 +115,7 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
 	return hwnd != 0;
 }
 
-void vst_window::close()
+void host_plugin_window::close()
 {
 	ivec4 posSize = {};
 	glfwGetWindowPos(glfw, &posSize.x, &posSize.y);
@@ -126,53 +125,53 @@ void vst_window::close()
 	glfwHideWindow(glfw);
 }
 
-void vst_window::destroy()
+void host_plugin_window::destroy()
 {
 	plugin->onWindowDestroy();
 	glfwDestroyWindow(glfw);
 	removeWindow (this);
 }
-void vst_window::show()
+void host_plugin_window::show()
 {
 	glfwShowWindow(glfw);
 	plugin->onShow(this);
 }
 
-ivec2 vst_window::getContentSize() const
+ivec2 host_plugin_window::getContentSize() const
 {
 	ivec2 s{};
 	glfwGetWindowSize(glfw, &s.x, &s.y);
 	return s;;
 }
 
-void vst_window::updateWindow() const {
+void host_plugin_window::updateWindow() const {
 #ifdef __linux__
 	// sendExposeEvent(glfw);
 #endif
 }
 
-void vst_window::resize (ivec2 newSize) const
+void host_plugin_window::resize (ivec2 newSize) const
 {
 	if (getContentSize () == newSize)
 		return;
 	glfwSetWindowSize(glfw, newSize.x, newSize.y);
 }
 
-void vst_window::onResize (ivec2 newSize)
+void host_plugin_window::onResize (ivec2 newSize)
 {
 	plugin->onWindowResize(newSize);
 }
-void vst_window::setPosition(ivec2 newPos) {
+void host_plugin_window::setPosition(ivec2 newPos) {
 	glfwSetWindowPos(glfw, newPos.x, newPos.y);
 }
 
 
-WINDOW_HANDLE vst_window::getHWND () const
+WINDOW_HANDLE host_plugin_window::getHWND () const
 {
 	return hwnd;
 }
 
-void vst_window::captureWindowFrame() {
+void host_plugin_window::captureWindowFrame() {
 	log_printf("Capture window frame not implemented\n");
 }
 #endif

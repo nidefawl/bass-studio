@@ -125,7 +125,7 @@ bool effectbase::showWindow(bool bResetPosition) {
         }
         if (size.x <= 0) size.x = 160;
         if (size.y <= 0) size.y = 120;
-        this->window = vst_window::make(this, this->sName, size, bSupportsWindowResize);
+        this->window = host_plugin_window::make(this, this->sName, size, bSupportsWindowResize);
         if (bWindowPosSizeValid && !bResetPosition) {
             this->window->setPosition(ivec2(this->lastWindowPosSize.x, this->lastWindowPosSize.y));
         }
@@ -148,7 +148,7 @@ bool effectbase::closeWindow() {
 }
 
 
-bool effectbase::onShow(vst_window* _window) {
+bool effectbase::onShow(host_plugin_window* _window) {
     if (this->window == _window) {
         bEditOpen = true;
         // this->dispatch(effEditOpen, 0, 0, (void*) _window->getHWND());
