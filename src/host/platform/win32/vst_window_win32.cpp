@@ -125,6 +125,15 @@ namespace {
         if (window) {
             vstplugin* plugin = window->getPlugin();
             switch (message) {
+                case WM_MOUSEACTIVATE:
+                case WM_SETFOCUS: {
+                    HWND top_child = GetWindow(hwnd, GW_CHILD);
+                    if (top_child) {
+                        SetFocus(top_child);
+                        return 0;
+                    }
+                    break;
+                }
                 case WM_ERASEBKGND: {
                     return 1;// don't draw background
                 }
