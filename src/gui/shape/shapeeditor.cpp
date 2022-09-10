@@ -174,46 +174,10 @@ void DrawShape(const shape_t& curve, NVGcontext*vg, guitheme_t* theme, vec2 pos,
         nvgFill(vg);
     }
 }
-class guictr_curve_shape : public guictr_base {
-    friend class guictr_curve_editor;
-    shape_t curveInternal;
-    shape_t* curve;
-    shape_t curveBegin;
-    shape_t curveTmp;
-    shape_t::hit_result dragged;
-    vec2 dragBeginPos{ 0, 0 };
-    int32_t INSET_OUTER = 0;
-    int32_t INSET_INNER = 0;
-    vec2 aspectView{ 1, 1 };
-    bool bIsGridEnabledH = true;
-    bool bIsGridEnabledV = true;
-    int32_t gridStepsH = 8;
-    int32_t gridStepsV = 8;
-    bool wasAltBegin = false;
-    bool wasShiftBegin = false;
-    std::function<void(const DAW::Shape::shape_base_t&)> callback;
-public:
-    guictr_curve_shape() : curve(&curveInternal)
-    {
-        padding = 4;
-        margin = 4;
-        setBackgroundRendered(true);
-        setCanMouseHit(true);
-        curve->pts.push_back({ { 0, 0 }, 0.5f });
-    }
-    GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
-        return GuiColor::COL_BG_DRKER2;
-    }
-    void render(NVGcontext* vg) override {
-        drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, isBackgroundRenderedInset());
-
-        if (!setScissorTransform(vg)) {
-            return;
-        }
-        int32_t gridStepsH = math::clamp<int32_t>(this->gridStepsH, 1, 128);
-        int32_t gridStepsV = math::clamp<int32_t>(this->gridStepsV, 1, 128);
-        auto cs = getSizeContent();
-        auto gridStep = vec2(cs) / vec2(gridStepsH, gridStepsV);
+void DrawGrid(NVGcontext* vg, guitheme_t* theme, vec2 pos, vec2 size, int gridStepsH, int gridStepsV) {
+    dbgassert(gridStepsH && gridStepsV);
+        // auto cs = getSizeContent();
+        auto gridStep = vec2(size) / vec2(gridStepsH, gridStepsV);
 
         double bgRepeat = gridStep.x * 2.0;
         int32_t steps_bg    = math::ceildS32((size.x + bgRepeat) / gridStep.x);
@@ -306,6 +270,47 @@ public:
                 nvgBatchedRender(vg);
             }
         }
+}
+class guictr_curve_shape : public guictr_base {
+    friend class guictr_curve_editor;
+    shape_t curveInternal;
+    shape_t* curve;
+    shape_t curveBegin;
+    shape_t curveTmp;
+    shape_t::hit_result dragged;
+    vec2 dragBeginPos{ 0, 0 };
+    int32_t INSET_OUTER = 0;
+    int32_t INSET_INNER = 0;
+    vec2 aspectView{ 1, 1 };
+    bool bIsGridEnabledH = true;
+    bool bIsGridEnabledV = true;
+    int32_t gridStepsH = 8;
+    int32_t gridStepsV = 8;
+    bool wasAltBegin = false;
+    bool wasShiftBegin = false;
+    std::function<void(const DAW::Shape::shape_base_t&)> callback;
+public:
+    guictr_curve_shape() : curve(&curveInternal)
+    {
+        padding = 4;
+        margin = 4;
+        setBackgroundRendered(true);
+        setCanMouseHit(true);
+        curve->pts.push_back({ { 0, 0 }, 0.5f });
+    }
+    GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
+        return GuiColor::COL_BG_DRKER2;
+    }
+    void render(NVGcontext* vg) override {
+        auto cs = getSizeContent();
+        drawBackground(vg, theme, getPosContent(), cs, margin, isBackgroundRenderedInset());
+
+        if (!setScissorTransform(vg)) {
+            return;
+        }
+        int32_t gridStepsH = math::clamp<int32_t>(this->gridStepsH, 1, 128);
+        int32_t gridStepsV = math::clamp<int32_t>(this->gridStepsV, 1, 128);
+        DrawGrid(vg, theme, vec2(0), cs, gridStepsH, gridStepsV);
         const auto posIn = ivec2(parentCtrl->m_mousePos);
         const auto relMousepos = toControlsObjectSpace(posIn, this);
         const auto mouseLocal = screenToCtrl(relMousepos);
