@@ -278,10 +278,10 @@ bool host_plugin_window::init(effectbase* _plugin, const String& name, ivec2 siz
         SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(mainHWND));
         SetProp(hwnd, "_DAW_PLWIN", reinterpret_cast<HANDLE>(int64_t{7}));
 
-        auto plugWindowSize = plugin->getWindowSize();
-        if (plugWindowSize.x > 0 && plugWindowSize.y > 0) {
-            resize(plugWindowSize);
-        }
+        // auto plugWindowSize = plugin->getWindowSize();
+        // if (plugWindowSize.x > 0 && plugWindowSize.y > 0) {
+            // resize(size);
+        // }
         RECT rcOwner;
         RECT rcDlg;
         RECT rc;
@@ -320,12 +320,21 @@ void host_plugin_window::destroy() {
     delete this;
 }
 
-void host_plugin_window::show() {
-    SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
+void host_plugin_window::show(ivec4 posSize, bool bSetPos, bool bSetSize) {
+    auto flags = SWP_NOCOPYBITS | SWP_SHOWWINDOW;
+    if (!bSetPos) {
+        flags |= SWP_NOMOVE;
+        posSize.x = posSize.y = 0;
+    }
+    if (!bSetSize) {
+        flags |= SWP_NOSIZE;
+        posSize.z = posSize.w = 0;
+    }
+    SetWindowPos(hwnd, HWND_TOP, posSize.x, posSize.y, posSize.z, posSize.w, flags);
     plugin->onShow(this);
-    auto plugWindowSize = plugin->getWindowSize();
-    if (plugWindowSize.x > 0 && plugWindowSize.y > 0) {
-        resize(plugWindowSize);
+    // auto plugWindowSize = plugin->getWindowSize();
+    if (bSetSize) {
+        resize(ivec2(posSize.z, posSize.w));
     }
 }
 

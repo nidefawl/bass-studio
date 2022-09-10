@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <utility>
+#include "assert_dbg.h"
+#include "modules.h"
 #include "seq_util.h"
 
 #include "snapshot.h"
@@ -102,6 +104,7 @@ struct internalplugin::internalplugin_handles_t {
 internalplugin::internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId)
     : effectbase(std::move(_sName), _pluginType, _projectGlobalId),
       handlesIntPlugin(new internalplugin_handles_t{}) {
+    bSupportsWindowResize = true;
 }
 
 internalplugin::~internalplugin() {
@@ -118,4 +121,72 @@ guiplugin* internalplugin::makeGui() {
 
 guiplugin* internalplugin::getGui() {
     return handlesIntPlugin->gui.get();
+}
+
+window_plugin* createBuildinPluginWindow(effectbase* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h, void* hostWindowId);
+void destroyPluginWindow(window_plugin* pluginWindow);
+
+bool internalplugin::onShow(host_plugin_window* _window) {
+    auto newView = createInternalView();
+    if (!newView) {
+        return false;
+    }
+    internal_plugin_window_client clientWindow;
+    clientWindow.view = newView;
+    clientWindow.ctrl = std::make_shared<PluginControl>(clientWindow.view);
+    clientWindow.ctrl->initApp(std::vector<String>());
+#if BUILD_VSTHOST
+    auto tls = daw_tls::getTls();
+    auto mainCtrl = tls.mainCtrl;
+    if(mainCtrl) {
+        clientWindow.ctrl->setDawCtrl(mainCtrl);
+        clientWindow.ctrl->m_scale     = mainCtrl->m_scale;
+        *clientWindow.ctrl->getTheme() = *mainCtrl->getTheme();
+    }
+#endif
+    int32_t ctrlWidth = 0, ctrlHeight = 0;
+    clientWindow.view->getFixedSize(&ctrlWidth, &ctrlHeight);
+    clientWindow.clientWindowInterface = createBuildinPluginWindow(this, clientWindow.ctrl, ctrlWidth, ctrlHeight, _window->getHWND());
+    // setEditor(pluginWindow);
+    clientWindow.clientWindow = dynamic_cast<window_main*>(clientWindow.clientWindowInterface);
+    dbgassert(clientWindow.clientWindow);
+    // pluginWindow->setHostWindow(_window->getHWND());
+    clientWindow.clientWindow->show();
+    windowClient = clientWindow;
+    effectbase::onShow(windowHost);
+    return true;
+}
+ivec2 internalplugin::getWindowSize() {
+    ivec2 size{ 0, 0 };
+    if (windowClient.view)
+        windowClient.view->getFixedSize(&size.x, &size.y);
+    return size;
+}
+
+void internalplugin::updateWindow() {
+    if (this->windowHost && windowClient.clientWindowInterface) {
+        windowClient.clientWindowInterface->onIdle();
+    }
+    effectbase::updateWindow();
+}
+void internalplugin::onWindowResize(ivec2 size) {
+    if (windowClient.clientWindowInterface) {
+        windowClient.clientWindowInterface->onResize(size);
+    }
+}
+
+bool internalplugin::onClose() {
+    if (windowClient.clientWindow) {
+        // windowClient.clientWindow->requestClose();
+        dbgassert(windowClient.ctrl->isOk());
+        windowClient.clientWindow->hide();
+        destroyPluginWindow(windowClient.clientWindowInterface);
+        dbgassert(!windowClient.ctrl->isOk());
+        windowClient.clientWindow = nullptr;
+        if (windowClient.view){
+            windowClient.view->setFree();
+        }
+    }
+    windowClient = {};
+    return effectbase::onClose();
 }

@@ -2197,17 +2197,17 @@ void DawCtrl::onUncaptureMouse() {
     guiCaptured = nullptr;
 }
 
-void DawCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
+void DawCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) {
     daw.dragdropTarget.reset();
 #if USE_GUI_MENU
     if (ctxtmenu && !ctxtmenu->isTransient() && viewContainers->getMenu()) {
-        MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_OVER);
+        MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_OVER, kbmods);
         if (viewContainers->getMenu()->mouseHitTest(mousePos, evt)) {
         }
         return;
     }
 #endif
-    BaseCtrl::mouseMoved(mousePos, deltaPos);
+    BaseCtrl::mouseMoved(mousePos, deltaPos, kbmods);
 }
 
 bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbmods) {
@@ -2265,7 +2265,7 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbm
             }
         }
         if (daw.dragdropclip.isLoaded) {
-            MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP);
+            MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP, kbmods);
             evt.setDraggedThing(&daw.dragdropclip);
             for (guictr_base* ctr : containers) {
                 if (ctr->mouseHitTest(mousepos, evt)) {
@@ -2293,7 +2293,7 @@ bool DawCtrl::filesDropMove(ivec2 mousepos, int kbmods) {
     if (daw.dragdropclip.isLoaded) {
         daw.dragdropclip.isValidTarget = false;
 
-        MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP);
+        MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP, kbmods);
         evt.setDraggedThing(&daw.dragdropclip);
         for (guictr_base* ctr : containers) {
             if (ctr->mouseHitTest(mousepos, evt)) {
@@ -2333,7 +2333,7 @@ bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, int kbm
     }
     if (daw.dragdropclip.isLoaded && daw.dragdropclip.isValidTarget) {
         log_lf(Log::L_DEBUG, "filesDropFinal %d %d isdragging=%d\n", mousepos.x, mousepos.y, daw.dragdropclip.isLoaded);
-        MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP);
+        MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP, kbmods);
         evt.setDraggedThing(&daw.dragdropclip);
         for (guictr_base* ctr : containers) {
             if (ctr->mouseHitTest(mousepos, evt)) {

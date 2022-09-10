@@ -104,8 +104,8 @@ void PluginControl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t
     AppCtrl::render(nanovgCtxt, x, y, w, h, ratio);
 }
 
-void PluginControl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
-    BaseCtrl::mouseMoved(mousePos, deltaPos);
+void PluginControl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) {
+    BaseCtrl::mouseMoved(mousePos, deltaPos, kbmods);
 }
 
 void PluginControl::relayout(int32_t w, int32_t h) {

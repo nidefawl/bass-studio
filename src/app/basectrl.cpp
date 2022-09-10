@@ -54,7 +54,7 @@ String menuName(String s, KeyCombo combo) {
     }
     return StringFormat("%s\t%s", StringAsCStr(s), StringAsCStr(keyName));
 }
-MouseEvent mouseEvent(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, MouseEventType evtType) {
+MouseEvent mouseEvent(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, int kbmods, MouseEventType evtType) {
     MouseEvent mevt;
     mevt.type         = evtType;
     mevt.guiDragged   = gui;
@@ -64,7 +64,8 @@ MouseEvent mouseEvent(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, 
     mevt.dragStart    = ctrl->dragStart;
     mevt.dragOffset   = ctrl->dragOffset;
     mevt.dragDistance = &ctrl->dragDistance;
-    mevt.kbmods       = ctrl->window->getKeyMods();
+    dbgassert(kbmods > 0);
+    mevt.kbmods       = kbmods;
     return mevt;
 }
 
@@ -97,28 +98,30 @@ ivec2 toControlsObjectSpace(ivec2 pos, guibase* gui) {
     }
     return gui->toContainerSpace(pos);
 }
-void processScrollEvt(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffset, double yoffset) {
-    MouseEvent evt = mouseEvent(ctrl, gui, mousePos, -1, M_EVT_SCROLL);
+namespace {
+void processScrollEvt(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffset, double yoffset, int kbmods) {
+    MouseEvent evt = mouseEvent(ctrl, gui, mousePos, -1, kbmods, M_EVT_SCROLL);
     if (!gui->handleMouseScroll(evt, xoffset, yoffset)) {
         if (gui->parent) {
-            processScrollEvt(ctrl, gui->parent, mousePos, xoffset, yoffset);
+            processScrollEvt(ctrl, gui->parent, mousePos, xoffset, yoffset, kbmods);
         }
     }
 }
-void BaseCtrl::mouseUp(ivec2 mousePos, int button) {
+}
+void BaseCtrl::mouseUp(ivec2 mousePos, int button, int kbmods) {
     if (guiCaptured != nullptr) {
         this->window->releaseMouse();
         guiCaptured = nullptr;
     }
     if (guiDragged) {
         cursorIcon     = CURSOR_DEFAULT;
-        lastMouseEvent = mouseEvent(this, guiDragged, mousePos, button, M_EVT_BTN_UP);
+        lastMouseEvent = mouseEvent(this, guiDragged, mousePos, button, kbmods, M_EVT_BTN_UP);
         guiDragged->handleDraggedRelease(lastMouseEvent);
         guiDragged = nullptr;
     }
 }
-MouseHitEvt BaseCtrl::mouseHitEvt(MouseHitType _type) {
-    return { _type, window->getKeyMods() };
+MouseHitEvt BaseCtrl::mouseHitEvt(MouseHitType _type, int kbmods) {
+    return { _type, kbmods };
 }
 void BaseCtrl::focusGui(guibase* gui) {
     if (guiCaptured != nullptr) {
@@ -139,14 +142,14 @@ void BaseCtrl::focusGui(guibase* gui) {
         }
     }
 }
-void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
+void BaseCtrl::mouseDown(ivec2 mousePos, int button, int kbmods, bool doubleclick) {
     if (!mouseDownPre()) {
         return;
     }
     if (guiCaptured != nullptr) {
         return;
     }
-    MouseHitEvt evt = mouseHitEvt(fromButton(button));
+    MouseHitEvt evt = mouseHitEvt(fromButton(button), kbmods);
     for (guictr_base* ctr : containers) {
         if (ctr->mouseHitTest(mousePos, evt)) {
             break;
@@ -180,14 +183,14 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
         dragStart    = mousePos;
         dragOffset   = gui->toScreenSpace(ivec2(0)) - mousePos;
 
-        lastMouseEvent = mouseEvent(this, gui, mousePos, button, doubleclick ? M_EVT_DOUBLECLICK : M_EVT_BTN_DOWN);
+        lastMouseEvent = mouseEvent(this, gui, mousePos, button, evt.kbmods, doubleclick ? M_EVT_DOUBLECLICK : M_EVT_BTN_DOWN);
         gui->handleMouseDownBegin(lastMouseEvent);
     }
 }
 
-void BaseCtrl::mouseScrolled(double xoffset, double yoffset) {
+void BaseCtrl::mouseScrolled(double xoffset, double yoffset, int kbmods) {
     ivec2 mousePos  = this->m_mousePos;
-    MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_SCROLL);
+    MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_SCROLL, kbmods);
     for (guictr_base* ctr : containers) {
         if (ctr->mouseHitTest(mousePos, evt)) {
             break;
@@ -195,7 +198,7 @@ void BaseCtrl::mouseScrolled(double xoffset, double yoffset) {
     }
     guibase* gui = evt.getGuiHit();
     if (gui) {
-        processScrollEvt(this, gui, mousePos, xoffset, yoffset);
+        processScrollEvt(this, gui, mousePos, xoffset, yoffset, evt.kbmods);
     }
 }
 
@@ -209,7 +212,7 @@ bool BaseCtrl::isCtrOrChildFocused(const guibase* gui) const {
     return false;
 }
 
-void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
+void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) {
     if (ctxtmenu && !ctxtmenu->isTransient()) {
         return;
     }
@@ -217,18 +220,18 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
     if (ctxtmenu == nullptr) {
         if (guiCaptured != nullptr) {
             dragDistance += deltaPos;
-            lastMouseEvent = mouseEvent(this, guiCaptured, mousePos, -1, M_EVT_CAPTURED_MOVE);
+            lastMouseEvent = mouseEvent(this, guiCaptured, mousePos, -1, kbmods, M_EVT_CAPTURED_MOVE);
             guiCaptured->handleDraggedMove(lastMouseEvent);
             return;
         }
         if (guiDragged != nullptr) {
             dragDistance += deltaPos;
-            lastMouseEvent = mouseEvent(this, guiDragged, mousePos, -1, M_EVT_MOVE);
+            lastMouseEvent = mouseEvent(this, guiDragged, mousePos, -1, kbmods, M_EVT_MOVE);
             guiDragged->handleDraggedMove(lastMouseEvent);
             return;
         }
     }
-    MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_OVER);
+    MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_OVER, kbmods);
     for (guictr_base* ctr : containers) {
         if (ctr->mouseHitTest(mousePos, evt)) {
             break;
@@ -740,7 +743,7 @@ void BaseCtrl::windowSizeChanged(int32_t w, int32_t h) {
 }
 
 void BaseCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
-    MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
+    MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, mevt.kbmods);
     evt.setDraggedThing(g);
     for (guictr_base* ctr : containers) {
         if (ctr->mouseHitTest(mevt.mousepos, evt)) {
@@ -754,7 +757,7 @@ void BaseCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
     }
 }
 void BaseCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
-    MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
+    MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, mevt.kbmods);
     evt.setDraggedThing(g);
     for (guictr_base* ctr : containers) {
         if (ctr->mouseHitTest(mevt.mousepos, evt)) {
@@ -882,7 +885,7 @@ std::vector<std::weak_ptr<i_ctr_drop_area>> BaseCtrl::getTargets(MouseEvent& mev
     return targets;
 }
 std::vector<i_ctr_layout*> BaseCtrl::getContainers() {
-    MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
+    MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, 0);
     evtDragObj.setDraggedThing(nullptr);
     evtDragObj.requestFocus(nullptr);
     std::vector<i_ctr_layout*> ifMatches;

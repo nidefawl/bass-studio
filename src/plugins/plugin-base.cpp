@@ -80,7 +80,7 @@ String getModuleName(HMODULE module);//platform_win.cpp
 #endif
 #endif //BUILD_EXTERNAL_PLUGIN
 
-pluginwindow* createPluginWindow(AudioEffectX* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h);
+pluginwindow* createPluginClientVst2Window(AudioEffectX* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h);
 
 void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> view) {
     try {
@@ -97,7 +97,7 @@ void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> vi
 #endif
         int32_t ctrlWidth = 0, ctrlHeight = 0;
         view->getFixedSize(&ctrlWidth, &ctrlHeight);
-        pluginwindow* pluginWindow = createPluginWindow(this, ctrl, ctrlWidth, ctrlHeight);
+        pluginwindow* pluginWindow = createPluginClientVst2Window(this, ctrl, ctrlWidth, ctrlHeight);
         setEditor(pluginWindow);
     } catch (std::exception& e) {
         ngui::showNotification(ngui::Style::Error, "Fatal error", e.what());

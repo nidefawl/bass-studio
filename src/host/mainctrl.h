@@ -489,7 +489,7 @@ public:
     bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override;
     void filesDropCancel() override;
     bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override;
-    void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
+    void mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) override;
     void menuCommand(menucmd_t command) override;
     void updateMenubar() override;
     void onTick() override;

@@ -1,7 +1,9 @@
 #include "plugin_impl_gain.h"
 #include "dsp_util.h"
 #include "event.h"
+#include "host/plugin/internal_plugin.h"
 #include "plugins/plugin-ui.h"
+#include "plugins/plugincontrol.h"
 #include "str_util.h"
 #include "gui/container/container.h"
 #include "gui/controls/knoblabeled.h"
@@ -17,6 +19,7 @@
 #include "audioblock.h"
 #include "meter.h"
 #include "snapshot.h"
+#include "window.h"
 #include <algorithm>
 
 module_gain::module_gain(int32_t _projectGlobalId)

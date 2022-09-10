@@ -35,52 +35,53 @@ class effectbase : public automatable_t {
     friend class vsthost;
     friend class guiplugin;
     friend class effect_deferred;
-    SafeRef<effectbase> safeRef;
+
+    std::shared_ptr<DAW::meter_runningsum[]> meterDataInput;
+    std::shared_ptr<DAW::meter_runningsum[]> meterDataOutput;
+public:
+    std::vector<DAW::channel_ref_t> inputChannels;
+    std::unique_ptr<DelayLine> delayLine;
+    DAW::rmsmeter meter;
+    DAW::rmsmeter meterIn;
+    sampleformat_t format;
+    AudioBlock* blockInputs        = nullptr;// guaranteed to have at least 2 channels
+    AudioBlock* blockOutputs       = nullptr;// guaranteed to have at least 2 channels
+    int32_t pluginType             = 0;
+    int32_t projectGlobalId        = 0;
+    bool bIsEnabled                = false;
+    bool bEditOpen                 = false;
+    bool bCaptureGUI               = false;
+    bool bCanReceiveMidi           = false;
+    bool bCanSendMidi              = false;
+    bool bMPESupport               = false;
+    bool bSupportsWindowResize     = false;
+    bool isSynth                   = false;
+    bool bWindowPosSizeValid       = false;
+    bool bInEditIdle               = false;
+    int32_t slot                   = -1;
+    int midiEventsDispatched       = 0;
+    audio_stage_t* trackImpl       = nullptr;
+    host_plugin_window* windowHost = nullptr;
 #ifndef NDEBUG
     //helper indicator in gdb.
     //gdb cannot display std::string when built without clib-debug flag (SLOW)
     const char* szName = nullptr;
 #endif
-
-    std::shared_ptr<DAW::meter_runningsum[]> meterDataInput;
-    std::shared_ptr<DAW::meter_runningsum[]> meterDataOutput;
-public:
-    DAW::rmsmeter meter;
-    DAW::rmsmeter meterIn;
-    sampleformat_t format;
-    AudioBlock* blockInputs  = nullptr;// guaranteed to have at least 2 channels
-    AudioBlock* blockOutputs = nullptr;// guaranteed to have at least 2 channels
-    int32_t pluginType       = 0;
-    int32_t projectGlobalId  = 0;
-    bool bIsEnabled           = false;
-    bool bEditOpen            = false;
-    bool bCaptureGUI          = false;
-    bool bCanReceiveMidi      = false;
-    bool bCanSendMidi         = false;
-    bool bMPESupport          = false;
-    bool bSupportsWindowResize = false;
-    int32_t requestCaptureGUI = 0;
-    bool isSynth              = false;
+    ivec4 lastWindowPosSize{};
     String sName;
     String sProductName;
-    audio_stage_t* trackImpl = nullptr;
-    int32_t slot             = -1;
-    std::unique_ptr<DelayLine> delayLine;
     stats_processing_timings_t procStats;
-    int midiEventsDispatched = 0;
-    std::vector<DAW::channel_ref_t> inputChannels;
-    bool bWindowPosSizeValid = false;
-    ivec4 lastWindowPosSize{};
-    host_plugin_window* window = nullptr;
     plugin_ui_snapshot_t uiSnapshot{};
+    SafeRef<effectbase> safeRef;
+    int32_t requestCaptureGUI    = 0;
 protected:
-    int nLoadCalls   = 0;
-    vsthost* vstHost = nullptr;
+    int nLoadCalls               = 0;
+    vsthost* vstHost             = nullptr;
     String currentProgramNameStr = "<no program>";
-    bool currentProgramNameSet = false;
+    bool currentProgramNameSet   = false;
+
 public:
     std::vector<String> programNames;
-    
     std::vector<DAW::channel_desc> inputChannelsDesc;
     std::vector<DAW::channel_desc> outputChannelsDesc;
 
@@ -119,16 +120,15 @@ public:
     virtual bool hasWindowEditor() {
         return false;
     }
-    virtual ivec2 getWindowSize() {
-        return ivec2(0);
-    }
+    virtual ivec2 getWindowSize();
     virtual bool showWindow(bool bResetPosition);
     virtual bool closeWindow();
     virtual void onWindowDestroy();
     virtual void onWindowResize(ivec2 size);
     virtual bool onShow(host_plugin_window* window);
     virtual bool onClose();
-    virtual ivec2 constrainWindowSize(host_plugin_window* window, ivec2& size) {
+    virtual void updateWindow();
+    virtual ivec2 constrainWindowSize(host_plugin_window* window, ivec2 size) {
         return size;
     };
     virtual void unload(vsthost* host, int flags);

@@ -54,7 +54,6 @@ public:
     /** -1 for external, >= 0 for internal plugins */
     const int32_t internalModuleId;
     String sDir;
-    bool bInEditIdle       = false;
     bool bWantsEffIdle     = false;
     bool bIsLoadingProgram = false;
     bool bIsPostInit       = false;
@@ -85,7 +84,6 @@ public:
     const char* getDir() const {
         return sDir.c_str();
     }
-    bool updateWindow();
     String getInfo(std::vector<String>& list) override;
     int64_t dispatch(
             int32_t opcode,
@@ -98,9 +96,10 @@ public:
     void onWindowResize(ivec2 size) override;
     bool onShow(host_plugin_window* window) override;
     bool onClose() override;
-    ivec2 constrainWindowSize(host_plugin_window* window, ivec2& size) override;
+    ivec2 constrainWindowSize(host_plugin_window* window, ivec2 size) override;
     bool hasWindowEditor() override;
     ivec2 getWindowSize() override;
+    void updateWindow() override;
     bool updateWindowSize();
     void unload(vsthost* host, int flags) override;
     void load(vsthost* host) override;

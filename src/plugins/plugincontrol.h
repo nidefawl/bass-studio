@@ -32,7 +32,7 @@ public:
     ~PluginControl() override;
     static PluginControl* get();
 
-    void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
+    void mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) override;
     void menuCommand(menucmd_t command) override;
     void onTick() override;
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;

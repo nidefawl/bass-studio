@@ -131,7 +131,7 @@ void host_plugin_window::destroy()
 	glfwDestroyWindow(glfw);
 	removeWindow (this);
 }
-void host_plugin_window::show()
+void host_plugin_window::show(ivec4 posSize, bool bSetPos, bool bSetSize)
 {
 	glfwShowWindow(glfw);
 	plugin->onShow(this);

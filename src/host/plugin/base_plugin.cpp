@@ -111,50 +111,76 @@ void effectbase::breakTrackLink() {
 void effectbase::setTrackLink(audio_stage_t* audioStage) {
     trackImpl = audioStage;
 }
-
+ivec2 effectbase::getWindowSize() {
+    return ivec2(0);
+}
 bool effectbase::showWindow(bool bResetPosition) {
-    if (this->window == nullptr && (hasWindowEditor())) {
-        auto plugWindowSize = getWindowSize();
-        ivec2 size = { 160, 120 };
-        if (bSupportsWindowResize && bWindowPosSizeValid && !bResetPosition) {
-            size.x = this->lastWindowPosSize.z;
-            size.y = this->lastWindowPosSize.w;
-        }
-        if (plugWindowSize.x > 0 && plugWindowSize.y > 0) {
-            size = plugWindowSize;
-        }
-        if (size.x <= 0) size.x = 160;
-        if (size.y <= 0) size.y = 120;
-        this->window = host_plugin_window::make(this, this->sName, size, bSupportsWindowResize);
-        if (bWindowPosSizeValid && !bResetPosition) {
-            this->window->setPosition(ivec2(this->lastWindowPosSize.x, this->lastWindowPosSize.y));
-        }
-
+    ivec4 posSize{0, 0, 0, 0};
+    auto plugWindowSize = getWindowSize();
+    ivec2 size = { 160, 120 };
+    if (plugWindowSize.x > 0 && plugWindowSize.y > 0) {
+        size = plugWindowSize;
     }
-    if (this->window != nullptr) {
-        this->window->show();
-        if (bWindowPosSizeValid && !bResetPosition) {
-            this->window->setPosition(ivec2(this->lastWindowPosSize.x, this->lastWindowPosSize.y));
-        }
+    if (bSupportsWindowResize && bWindowPosSizeValid && !bResetPosition) {
+        size.x = this->lastWindowPosSize.z;
+        size.y = this->lastWindowPosSize.w;
+    }
+    bool bSetPos = false;
+    bool bSetSize = true;
+    posSize = { 0, 0, size.x, size.y };
+    if (bWindowPosSizeValid && !bResetPosition) {
+        bSetPos = true;
+        posSize.x = this->lastWindowPosSize.x;
+        posSize.y = this->lastWindowPosSize.y;
+        // this->windowHost->setPosition(ivec2(this->lastWindowPosSize.x, this->lastWindowPosSize.y));
+    }
+    if (this->windowHost == nullptr && (hasWindowEditor())) {
+        this->windowHost = host_plugin_window::make(this, this->sName, size, bSupportsWindowResize);
+    }
+    if (this->windowHost != nullptr) {
+        // if (bWindowPosSizeValid && !bResetPosition) {
+        //     bSetPos = true;
+        //     posSize.x = this->lastWindowPosSize.x;
+        //     posSize.y = this->lastWindowPosSize.y;
+        //     this->windowHost->setPosition(ivec2(this->lastWindowPosSize.x, this->lastWindowPosSize.y));
+        // }
+        this->windowHost->show(posSize, bSetPos, bSetSize);
     }
     return false;
 }
 
 bool effectbase::closeWindow() {
-    if (this->window != nullptr) {
-        this->window->close();
+    if (this->windowHost != nullptr) {
+        this->windowHost->close();
     }
     return true;
 }
 
 
 bool effectbase::onShow(host_plugin_window* _window) {
-    if (this->window == _window) {
+    if (this->windowHost == _window) {
         bEditOpen = true;
+        // auto plugWindowSize = getWindowSize();
+        // ivec2 size = { 160, 120 };
+        // if (plugWindowSize.x > 0 && plugWindowSize.y > 0) {
+        //     size = plugWindowSize;
+        // }
+        // if (bSupportsWindowResize && bWindowPosSizeValid && !bResetPosition) {
+        //     size.x = this->lastWindowPosSize.z;
+        //     size.y = this->lastWindowPosSize.w;
+        // }
+        // if (size.x <= 0) size.x = 160;
+        // if (size.y <= 0) size.y = 120;
         // this->dispatch(effEditOpen, 0, 0, (void*) _window->getHWND());
         // this->updateWindow();
     }
     return true;
+}
+
+void effectbase::updateWindow() {
+    if (this->windowHost != nullptr) {
+        this->windowHost->updateWindow();
+    }
 }
 
 bool effectbase::onClose() {
@@ -166,7 +192,7 @@ bool effectbase::onClose() {
 }
 
 void effectbase::onWindowDestroy() {
-    this->window = nullptr;
+    this->windowHost = nullptr;
 }
 
 void effectbase::onWindowResize(ivec2 size) {

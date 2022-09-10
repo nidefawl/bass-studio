@@ -72,3 +72,10 @@ public:
     virtual void positionOnScreen(ivec2 pos, ivec2 size)     = 0;
     virtual void setSizeLimits(ivec2 minSize, ivec2 maxSize) = 0;
 };
+class window_plugin {
+public:
+    window_plugin() = default;
+    virtual ~window_plugin() = default;
+    virtual void onIdle() = 0;
+    virtual void onResize(ivec2 size) = 0;
+};

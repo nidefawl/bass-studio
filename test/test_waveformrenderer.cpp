@@ -330,8 +330,8 @@ namespace MiniApp {
                 ctr->layout();
             }
         }
-        void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override {
-            BaseCtrl::mouseMoved(mousePos, deltaPos);
+        void mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) override {
+            BaseCtrl::mouseMoved(mousePos, deltaPos, kbmods);
         }
 
         bool processGlobalKeyevent(KeyEvent& event) override {

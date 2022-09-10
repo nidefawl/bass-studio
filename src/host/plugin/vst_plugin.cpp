@@ -38,17 +38,8 @@ FUNC_NOINLINE int64_t vst_dispatch(vstplugin* plugin,
                   void* ptr,
                   float opt);
 
-bool vstplugin::updateWindow() {
-    if (this->window != nullptr) {
-        this->window->updateWindow();
-        return true;
-    }
-    return false;
-}
-
-
 bool vstplugin::onShow(host_plugin_window* _window) {
-    if (this->window == _window) {
+    if (this->windowHost == _window) {
         bEditOpen = true;
         this->dispatch(effEditOpen, 0, 0, (void*) _window->getHWND());
         this->updateWindow();
@@ -57,22 +48,24 @@ bool vstplugin::onShow(host_plugin_window* _window) {
 }
 
 bool vstplugin::onClose() {
-    if (this->window != nullptr && bEditOpen) {
+    if (this->windowHost != nullptr && bEditOpen) {
         this->dispatch(effEditClose);
     }
     bEditOpen = false;
     return true;
 }
 
-ivec2 vstplugin::constrainWindowSize(host_plugin_window*, ivec2& size) {
-    ERect* prc = nullptr;
-    this->dispatch(effEditGetRect, 0, 0, (void*) &prc);
-    if (prc) {
-        if (size.x > (prc->right - prc->left)) {
-            size.x = prc->right - prc->left;
-        }
-        if (size.y > (prc->bottom - prc->top)) {
-            size.y = prc->bottom - prc->top;
+ivec2 vstplugin::constrainWindowSize(host_plugin_window*, ivec2 size) {
+    if (!bSupportsWindowResize) {
+        ERect* prc = nullptr;
+        this->dispatch(effEditGetRect, 0, 0, (void*) &prc);
+        if (prc) {
+            if (size.x > (prc->right - prc->left)) {
+                size.x = prc->right - prc->left;
+            }
+            if (size.y > (prc->bottom - prc->top)) {
+                size.y = prc->bottom - prc->top;
+            }
         }
     }
     return size;
@@ -139,11 +132,11 @@ bool vstplugin::getNameString(char* szBuf) {
 }
 
 bool vstplugin::updateWindowSize() {
-    if (this->window != nullptr) {
+    if (this->windowHost != nullptr) {
         ERect* prc = nullptr;
         this->dispatch(effEditGetRect, 0, 0, (void*) &prc);
         if (prc) {
-            this->window->resize({ prc->right - prc->left, prc->bottom - prc->top });
+            this->windowHost->resize({ prc->right - prc->left, prc->bottom - prc->top });
             return true;
         }
     }
@@ -158,11 +151,11 @@ void vstplugin::unload(vsthost* host, int flags) {
     vstHost = nullptr;
     dbgassert(nLoadCalls == 1);
     nLoadCalls--;
-    if (this->window) {
-        this->window->close();
+    if (this->windowHost) {
+        this->windowHost->close();
     }
-    if (this->window) {
-        this->window->destroy();
+    if (this->windowHost) {
+        this->windowHost->destroy();
     }
     AppWndProc_enableBlockReentrant();
     this->dispatch(effClose);
@@ -790,6 +783,12 @@ automationlane_snapshot_t vstplugin::toRef() const {
 
 bool vstplugin::hasWindowEditor() {
     return handle->aeffect->flags & effFlagsHasEditor;
+}
+void vstplugin::updateWindow() {
+    if (this->windowHost) {
+        this->dispatch(effEditIdle);
+    }
+    effectbase::updateWindow();
 }
 
 ivec2 vstplugin::getWindowSize() {

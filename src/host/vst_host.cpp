@@ -6,6 +6,7 @@
 #include <memory.h>
 #include "audiocache.h"
 #include "host/daw_channel.h"
+#include "host/plugin/vst_plugin.h"
 #include "math/seq_math.h"
 #include "note.h"
 #include "str_util.h"
@@ -2505,7 +2506,7 @@ void vsthost::processAudio(audio_stage_t* stage,
 }
 
 void vsthost::updatePluginWindows() {
-    for (auto* plugin : pluginInstancesVST2) {
+    for (auto* plugin : pluginInstances) {
         //plugin->dispatch(effEditIdle);
         plugin->updateWindow();
     }
@@ -2513,13 +2514,12 @@ void vsthost::updatePluginWindows() {
 bool vsthost::onTick() {
     // Currently no lock
     //ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-    for (auto* current : pluginInstancesVST2) {
+    for (auto* current : pluginInstances) {
         //TODO: should we skip dispatching if current->bWantsEffIdle == false ?!
         if (current->bEditOpen && !current->bInEditIdle) {
             current->bInEditIdle = true;
-            current->dispatch(effEditIdle);
             current->bInEditIdle = false;
-            if (current->window) {
+            if (current->windowHost) {
                 //current->window->captureWindowFrame();
                 current->updateWindow();
             }

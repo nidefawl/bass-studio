@@ -1,5 +1,6 @@
 #include "assert_dbg.h"
 #include "glheaders.h"
+#include "modules.h"
 #include "tls.h"
 #include "util/profiling.h"
 #include <GLFW/glfw3.h>
@@ -525,7 +526,7 @@ public:
 
     void createBaseWindow(int flags, const char* title, int w, int h, GLFWwindow* share = nullptr, void* parentWindowHandle = nullptr);
 
-    void showWindow() {
+    virtual void showWindow() {
         if (bIsVisible)
             return;
         bIsVisible = true;
@@ -856,11 +857,11 @@ public:
     void onMouseMoved(ivec2 deltapos) override {
         if (math::abs(deltapos.x) + math::abs(deltapos.y) > 2)
             this->tmDblClick = 0;
-        ctrl->mouseMoved(getMousePos(1.0f / ctrl->m_scale), deltapos);
+        ctrl->mouseMoved(getMousePos(1.0f / ctrl->m_scale), deltapos, getKeyMods());
     }
 
     void onMouseScrolled(double xoffset, double yoffset) override {
-        ctrl->mouseScrolled(xoffset, yoffset);
+        ctrl->mouseScrolled(xoffset, yoffset, getKeyMods());
     }
 
     void onMouseButton(int button, int action, int mods) override {
@@ -869,9 +870,9 @@ public:
             bool dblClick = this->tmDblClick != 0 && tmNow - this->tmDblClick < 500;
             dblClick &= glm::distance(lastclickpos, mousepos) < 4;
             this->tmDblClick = dblClick ? 0 : tmNow;
-            ctrl->mouseDown(getMousePos(1.0f / ctrl->m_scale), button, dblClick);
+            ctrl->mouseDown(getMousePos(1.0f / ctrl->m_scale), button, getKeyMods(), dblClick);
         } else if (action == GLFW_RELEASE) {
-            ctrl->mouseUp(getMousePos(1.0f / ctrl->m_scale), button);
+            ctrl->mouseUp(getMousePos(1.0f / ctrl->m_scale), button, getKeyMods());
         }
         lastclickpos = mousepos;
     }
@@ -1085,7 +1086,7 @@ public:
 
     void show() override {
         setTitle(ctrl->getWindowName());
-        appwindow::showWindow();
+        showWindow();
 
         //TODO: add this function to GLFW
         //glfwBringWindowToTop(glfw);
@@ -2016,19 +2017,19 @@ void windowTickTimerRun() {
 #include <vstsdk-plugin-2.4/aeffeditor.h>
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 
-class appwindow_plugin : public appwindow_main, public pluginwindow {
+class appwindow_plugin_client_vst2 : public appwindow_main, public pluginwindow {
     bool isInitialized = false;
 
 public:
     ERect _rect{};
-    appwindow_plugin(AudioEffectX* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h)
+    appwindow_plugin_client_vst2(AudioEffectX* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h)
         : appwindow_main(nullptr, _ctrl),
           pluginwindow(std::move(_ctrl)) {
         this->effect = _effect;
         setRect(0, 0, w, h);
     }
 
-    ~appwindow_plugin() override {
+    ~appwindow_plugin_client_vst2() override {
         if (isInitialized) {
             log_printf("Plugin window was not correctly de-initialized\n");
         }
@@ -2040,7 +2041,7 @@ public:
     }
     void onHostWindowResize(int32_t w, int32_t h) override {
         if (isInitialized) {
-            this->setRect(0, 0, w, h);
+            // this->setRect(0, 0, w, h);
             glfwSetWindowSize(glfw, w, h);
             this->onWindowSizeChanged(w, h);
         }
@@ -2172,8 +2173,112 @@ public:
     }
 };
 
-pluginwindow* createPluginWindow(AudioEffectX* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h) {
-    return new appwindow_plugin(_effect, std::move(_ctrl), w, h);
+class appwindow_plugin_internal : public appwindow_main, public window_plugin {
+    effectbase* const effect;
+    bool isInitialized = false;
+    std::shared_ptr<PluginControl> const ctrlShared;
+    ivec2 windowSize = {0, 0};
+public:
+    appwindow_plugin_internal(effectbase* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h, void* hostWindowNativeHandle)
+        : appwindow_main(nullptr, _ctrl),
+          effect(_effect),
+          ctrlShared(std::move(_ctrl)),
+        windowSize(w, h)
+    {
+        if (hostWindowNativeHandle) {
+            isInitialized = true;
+            setAppWindowHints();
+            createPluginWindow("plugin-window", windowSize.x, windowSize.y, hostWindowNativeHandle);
+            this->valid = true;
+        }
+    }
+
+    ~appwindow_plugin_internal() override {
+        if (isInitialized) {
+            log_printf("Plugin window was not correctly de-initialized\n");
+        }
+    }
+    void showWindow() override {
+        appwindow_main::showWindow();
+        glfwGetWindowSize(glfw, &windowSize.x, &windowSize.y);
+        this->onWindowSizeChanged(windowSize.x, windowSize.y);
+        ctrlShared->onGuiOpen();
+        glfwSetWindowRefreshCallback(glfw, glfw_cb_refresh);
+    }
+//     void onWindowClose() override {
+//         appwindow_main::onWindowClose();
+//         isInitialized = false;
+//         if (!glfw)
+//             throw appexception("glfw null");
+//         destroyOverlayWindows();
+//         appwindow::killTimer();
+//         glfwMakeContextCurrent(glfw);
+//         // appwindow::destroyGL();
+// #ifdef _WIN32
+//         if (hwnd) {
+//             RemovePropW(hwnd, L"GLFW");
+//             hwnd = nullptr;
+//         }
+// #endif
+//         glfwDestroyWindow(glfw);
+//         glfw = nullptr;
+
+//     }
+    
+    void onResize(ivec2 size) override {
+        if (isInitialized) {
+            glfwSetWindowSize(glfw, size.x, size.y);
+            this->onWindowSizeChanged(size.x, size.y);
+        }
+    }
+
+
+    void createPluginWindow(const char* title, int w, int h, void* parentWindowHandle) {
+        setAppWindowHints();
+#ifdef __linux__
+        glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "DAW");
+        glfwWindowHintString(GLFW_X11_CLASS_NAME, "DAW");
+#endif
+#ifdef __APPLE__
+        glfwWindowHintString(GLFW_COCOA_FRAME_NAME, "DAW");
+#endif
+        glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
+        glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+        glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
+        glfwWindowHint(GLFW_DECORATED, GL_FALSE);
+        // glfwWindowHint(GLFW_HIDE_FROM_TASKBAR, GL_TRUE);
+        appwindow::createBaseWindow(0, title, w, h, nullptr, parentWindowHandle);
+        RenderResources::initResources(nanovgCtxt);
+
+        if (!ctrlShared->initAppWindow(this, this->nanovgCtxt)) {
+            throw appexception("Couldn't start application");
+        }
+    }
+
+    void onIdle() override {
+        if (isInitialized) {
+            flagNeedsRedraw();
+#ifndef _WIN32
+            const double timeoutEvent = 0.001;
+            glfwWaitEventsTimeout(timeoutEvent);
+#else
+            glfwUpdateWin32Internals();
+#endif
+        }
+    }
+};
+
+pluginwindow* createPluginClientVst2Window(AudioEffectX* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h) {
+    return new appwindow_plugin_client_vst2(_effect, std::move(_ctrl), w, h);
+}
+
+window_plugin* createBuildinPluginWindow(effectbase* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h, void* hostWindowNativeHandle) {
+    return new appwindow_plugin_internal(_effect, std::move(_ctrl), w, h, hostWindowNativeHandle);
+}
+void destroyPluginWindow(window_plugin* windowPlugin) {
+    auto* windowPluginInternal = static_cast<appwindow_plugin_internal*>(windowPlugin);
+    windowPluginInternal->destroy();
+    delete windowPluginInternal;
 }
 
 #endif

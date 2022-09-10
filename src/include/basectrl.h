@@ -197,6 +197,7 @@ public:
     bool mouseInside = false;
     bool isOK        = false;
 public:
+    static MouseHitEvt mouseHitEvt(MouseHitType _type, int kbmods);
     BaseCtrl() {
         themes.parent = this;
         ctrDragHandler.setControl(this);
@@ -204,7 +205,7 @@ public:
     }
     virtual ~BaseCtrl() = default;
     i_ctr_drop_area* determineDropCtrArea(MouseEvent& mevt) {
-        MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
+        MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, mevt.kbmods);
         evtDragObj.setDraggedThing(nullptr);
         evtDragObj.requestFocus(nullptr);
         i_ctr_drop_area* gui = nullptr;
@@ -279,14 +280,13 @@ public:
     virtual bool processGlobalKeyevent(KeyEvent& event) { return false; }
     virtual bool mouseDownPre() { return true; }
     bool hasInputFocus() const { return bHasFocus && canTakeInputFocus; }
-    MouseHitEvt mouseHitEvt(MouseHitType _type);
     void focusGui(guibase* g);
-    void mouseDown(ivec2 mousePos, int button, bool doubleclick);
-    void mouseUp(ivec2 mousePos, int button);
+    void mouseDown(ivec2 mousePos, int button, int kbmods, bool doubleclick);
+    void mouseUp(ivec2 mousePos, int button, int kbmods);
     virtual void onCharInput(uint32_t codepoint);
     virtual void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name);
-    void mouseScrolled(double xoffset, double yoffset);
-    virtual void mouseMoved(ivec2 mousePos, ivec2 deltaPos);
+    void mouseScrolled(double xoffset, double yoffset, int kbmods);
+    virtual void mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods);
 
     bool isCtrOrChildFocused(const guibase* gui) const;
     bool isMouseInside() const { return mouseInside; }

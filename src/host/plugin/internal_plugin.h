@@ -1,5 +1,6 @@
 #pragma once
 
+#include "plugins/plugincontrol.h"
 #include "types.h"
 #include <vector>
 #include <memory>
@@ -10,6 +11,7 @@
 #include "platform.h"
 #include "meter.h"
 #include "snapshot.h"
+#include "window.h"
 #include "base_plugin.h"
 
 struct AudioBlock;
@@ -21,16 +23,23 @@ struct track_impl_t;
 
 class internalplugin : public effectbase {
 protected:
+    struct internal_plugin_window_client {
+        std::shared_ptr<PluginViewContainers> view;
+        std::shared_ptr<PluginControl> ctrl;
+        host_plugin_window* hostWindow;
+        window_main* clientWindow;
+        window_plugin* clientWindowInterface;
+    };
     struct internalplugin_handles_t;
     internalplugin_handles_t* handlesIntPlugin;
 
 public:
     std::vector<std::shared_ptr<PluginViewContainers>> views;
     String sDir;
-    bool bInEditIdle   = false;
     int32_t pluginCategory = 0;
     int32_t vstVersion     = 0;
     uint32_t uId            = 0;
+    internal_plugin_window_client windowClient;
 
     internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
     ~internalplugin() override;
@@ -55,4 +64,13 @@ public:
     float getParamValue(int32_t idx) override;
     void setParamValue(int32_t idx, float val, int flags) override;
     automationlane_snapshot_t toRef() const override;
+
+    bool onShow(host_plugin_window* _window) override;
+    bool onClose() override;
+    void updateWindow() override;
+    bool hasWindowEditor() override {
+        return true;
+    }
+    void onWindowResize(ivec2 size) override;
+    ivec2 getWindowSize() override;
 };

@@ -609,7 +609,7 @@ public:
         //if (nFrame++<20)
         //return;
         //nFrame = 0;
-        auto window = plugin->window;
+        auto window = plugin->windowHost;
         if (window && guivst) {
             if (plugin->requestCaptureGUI >= 1) {
                 plugin->requestCaptureGUI++;

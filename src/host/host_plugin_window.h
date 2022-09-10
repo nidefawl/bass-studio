@@ -47,7 +47,7 @@ public:
     bool init(effectbase* plugin, const String& name, ivec2 size, bool resizeable);
     WINDOW_HANDLE getHWND() const;
 
-    void show();
+    void show(ivec4 posSize, bool bSetPos, bool bSetSize);
     void close();
     void destroy();
     void resize(ivec2 newSize) const;
