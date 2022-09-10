@@ -146,7 +146,7 @@ bool internalplugin::onShow(host_plugin_window* _window) {
 #endif
     int32_t ctrlWidth = 0, ctrlHeight = 0;
     clientWindow.view->getFixedSize(&ctrlWidth, &ctrlHeight);
-    clientWindow.clientWindowInterface = createBuildinPluginWindow(this, clientWindow.ctrl, ctrlWidth, ctrlHeight, _window->getHWND());
+    clientWindow.clientWindowInterface = createBuildinPluginWindow(this, clientWindow.ctrl, ctrlWidth, ctrlHeight, reinterpret_cast<void*>(_window->getHWND()));
     // setEditor(pluginWindow);
     clientWindow.clientWindow = dynamic_cast<window_main*>(clientWindow.clientWindowInterface);
     dbgassert(clientWindow.clientWindow);

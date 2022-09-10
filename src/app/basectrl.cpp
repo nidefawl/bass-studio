@@ -64,7 +64,7 @@ MouseEvent mouseEvent(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, 
     mevt.dragStart    = ctrl->dragStart;
     mevt.dragOffset   = ctrl->dragOffset;
     mevt.dragDistance = &ctrl->dragDistance;
-    dbgassert(kbmods > 0);
+    dbgassert(kbmods >= 0);
     mevt.kbmods       = kbmods;
     return mevt;
 }
