@@ -145,6 +145,7 @@ namespace {
                             return appWndProc(hwndMain, message, wParam, lParam);
                         }
                     }
+                    break;
                 case WM_SIZING: {
                     RECT* newSize = reinterpret_cast<RECT*>(lParam);
                     RECT oldSize;
