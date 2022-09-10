@@ -1000,8 +1000,14 @@ void DawInstance::menuCommand(menucmd_t command) {
                     loadFile(command.arg1, FLAG_INVOKE_USER_CB_DEFERLOAD);
                 }
             } break;
+            case CMD_SET_STARTUP_PROJECT:
             case CMD_FILE_SAVEAS:
             case CMD_FILE_SAVE: {
+                if (command.command == CMD_SET_STARTUP_PROJECT && !projectPath.empty()) {
+                    tls.settings->dawsettings.startupProjectPath = projectPath;
+                    saveSettings(*tls.settings);
+                    break;
+                }
                 String path = projectPath;
                 if (command.command == CMD_FILE_SAVEAS || path.empty()) {
                     if (!promptUserFilePath(mainCtrl->window, 1, vFILE_TYPE_PROJECT, path, lastProjectDirectory)) {
@@ -1018,6 +1024,10 @@ void DawInstance::menuCommand(menucmd_t command) {
                 SplitPath(path, &lastProjectDirectory, &projectFileName, nullptr, nullptr);
                 tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::BUILD_BINARY_NAME, StringAsCStr(projectFileName)));
                 tls.settings->recentfiles.add(path);
+                if (command.command == CMD_SET_STARTUP_PROJECT && !projectPath.empty()) {
+                    tls.settings->dawsettings.startupProjectPath = projectPath;
+                    saveSettings(*tls.settings);
+                }
                 break;
             }
             case CMD_FILE_CLOSE:
@@ -1160,7 +1170,7 @@ void DawInstance::initRealtimeResources() {
     initState++;
     tls.audioHost->initPa();
     tls.midiHost->initPm();
-    if (tls.settings->startEngine) {
+    if (tls.settings->dawsettings.audioEnabled) {
         if (tls.audioHost->startAudio(tls.settings->iosettings)) {
             auto stream = tls.audioHost->getStreamSharedPtr(0);
             tls.host->setOutput(stream);
@@ -1326,6 +1336,15 @@ MainCtrl::MainCtrl(DawInstance& _daw) : DawCtrl(_daw) {
 }
 
 void MainCtrl::initApp(const std::vector<String>& args) {
+    auto& settings = daw_tls::getSettings();
+    auto pathProjStartup = settings.dawsettings.startupProjectPath;
+    if (!pathProjStartup.empty() && FileExists(pathProjStartup)) {
+        loadProject = pathProjStartup;
+        if (settings.dawsettings.startupLoadDeffered) {
+            loadFlags |= FLAG_DEFER_LOAD;
+        }
+    }
+    
     for (size_t i = 1; i < args.size(); i++) {
         if (args[i] == "--load" && i + 1 < args.size()) {
             loadProject = args[i + 1];
@@ -1369,6 +1388,7 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     menus.file.add(&menus.recent);
     menus.file.addCommand(CMD_NOARG(CMD_FILE_SAVE), menuName("Save", KC_SAVE), ICON_SAVE);
     menus.file.addCommand(CMD_NOARG(CMD_FILE_SAVEAS), "Save As", ICON_SAVE);
+    menus.file.addCommand(CMD_NOARG(CMD_SET_STARTUP_PROJECT), "Set as startup project");
     menus.file.addSeperator();
     menus.file.addCommand(CMD_NOARG(CMD_EXIT), "Quit", ICON_CLOSE);
     menus.edit.type  = ngui::menu_type::submenu;
@@ -1608,7 +1628,7 @@ void DawInstance::configureSampleRate() {
         audiohost* ahost = getAudioHost();
         ahost->stopAudio();
         host->setOutput(nullptr);
-        if (settings.startEngine) {
+        if (settings.dawsettings.audioEnabled) {
             auto oldSampleRate = host->m_sampleFormatInternal.sampleRate;
             host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.internalSamplerate),
                                                  settings.iosettings.internalBlocksize, sampleformat_bits_t::FLOAT_32});
@@ -1619,11 +1639,11 @@ void DawInstance::configureSampleRate() {
             if (ahost->startAudio(settings.iosettings)) {
                 host->setOutput(ahost->getStreamSharedPtr(0));
             } else {
-                //settings.startEngine = false;
+                //settings.dawsettings.audioEnabled = false;
             }
         }
     }
-    if (settings.startEngine) {
+    if (settings.dawsettings.audioEnabled) {
         if (wasPlaying) {
             startPlaying();
         } else {
@@ -2482,7 +2502,7 @@ void DawInstance::startExport() {
     playThread.addRequestWithCallback(REQ_STATE, (int) playback_state::status_render, []() {
         auto& tls = daw_tls::getTls();
         auto& settings = daw_tls::getSettings();
-        if (settings.startEngine) {
+        if (settings.dawsettings.audioEnabled) {
             if (tls.audioHost->startAudio(settings.iosettings)) {
                 auto stream = tls.audioHost->getStreamSharedPtr(0);
                 tls.host->setOutput(stream);

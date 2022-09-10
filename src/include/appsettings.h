@@ -114,18 +114,25 @@ struct app_autosave_settings {
     int64_t tmSaveDelayMinutes     = 60L;
     int64_t tmReminderDelayMinutes = 5L;
 };
+struct app_daw_settings {
+    String startupProjectPath;
+    bool startupLoadDeffered = true;
+    bool audioEnabled = false;
+    bool vmmode = false;
+    bool debugMode = false;
+    bool shaderDebug = true;
+};
 struct appsettings {
     appsettings() noexcept = default; // need noexcept for static storage
+    uint32_t fileFmtVersion = 0;
+    app_daw_settings dawsettings;
+    app_autosave_settings autosave;
+    app_plugin_configuration pluginsettings;
+    app_iosettings iosettings;
+    app_path_remapping pathmapping;
+    recentfilelist recentfiles;
     appwindowsettings wndMain;
     appwindowsettings wndCompanion;
-    bool startEngine = false;
-    bool vmmode = false;
-    bool shaderDebug = true;
-    app_autosave_settings autosave;
-    app_iosettings iosettings;
-    recentfilelist recentfiles;
-    app_plugin_configuration pluginsettings;
-    app_path_remapping pathmapping;
     bool saveOnExit = true;
 };
 

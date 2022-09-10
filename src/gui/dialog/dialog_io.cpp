@@ -879,7 +879,7 @@ public:
 
     void buttonClicked(guibase* button) override {
         if (button == this->audioEngineOn) {
-            settings.startEngine = !settings.startEngine;
+            settings.dawsettings.audioEnabled = !settings.dawsettings.audioEnabled;
             daw->configureSampleRate();
             return;
         }
@@ -1129,25 +1129,25 @@ public:
         void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
         void handleDraggedBegin(MouseEvent& evt) override { toggle(); parent->buttonClicked(this); }
         bool enabled() {
-            auto& settings = daw_tls::getSettings();
+            auto& dawsettings = daw_tls::getSettings().dawsettings;
             switch (type) {
                 case VM_MODE:
-                    return settings.vmmode;
+                    return dawsettings.vmmode;
                 case SHADER_RENDER_RESPONSIVENESS:
-                    return settings.shaderDebug;
+                    return dawsettings.shaderDebug;
                 default:
                     break;
             }
             return false;
         }
         void toggle() {
-            auto& settings = daw_tls::getSettings();
+            auto& dawsettings = daw_tls::getSettings().dawsettings;
             switch (type) {
                 case VM_MODE:
-                    settings.vmmode = !settings.vmmode;
+                    dawsettings.vmmode = !dawsettings.vmmode;
                     break;
                 case SHADER_RENDER_RESPONSIVENESS:
-                    settings.shaderDebug = !settings.shaderDebug;
+                    dawsettings.shaderDebug = !dawsettings.shaderDebug;
                     break;
                 default:
                     break;

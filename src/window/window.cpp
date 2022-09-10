@@ -248,8 +248,8 @@ public:
         tmLastFps(getTimeMillis()) 
     {
 #if BUILD_VSTHOST
-        //TODO: settings might not be loaded at this point
-        noMouseCapture = daw_tls::getSettings().vmmode;
+        //TODO: settings can be unloaded at this point
+        noMouseCapture = daw_tls::getSettings().dawsettings.vmmode;
 #endif
         noRawInput = glfwRawMouseMotionSupported() == GLFW_FALSE;
     }
@@ -298,7 +298,7 @@ private:
 #ifndef NDEBUG
         flags |= NVG_DEBUG;
 #endif
-        if (daw_tls::isTlsInitialized() && daw_tls::getSettings().shaderDebug) {
+        if (daw_tls::isTlsInitialized() && daw_tls::getSettings().dawsettings.shaderDebug) {
             flags |= NVG_SHADER_RENDER_RESPONSIVENESS;
         }
 #ifdef NANOVG_GL2

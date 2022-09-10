@@ -301,7 +301,7 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
     }
     if (button == &this->btnAudioOnOff) {
         auto& settings = daw_tls::getSettings();
-        settings.startEngine = !settings.startEngine;
+        settings.dawsettings.audioEnabled = !settings.dawsettings.audioEnabled;
         dawCtrl->getDaw()->configureSampleRate();
     }
 }

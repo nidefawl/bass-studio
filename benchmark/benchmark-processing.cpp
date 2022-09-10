@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
         settings.iosettings.internalSamplerate = sampleformat.sampleRate;
         settings.iosettings.internalBlocksize = sampleformat.blockSize;
         settings.iosettings.blocksize = sampleformat.blockSize;
-        settings.startEngine           = false;
+        settings.dawsettings.audioEnabled           = false;
 
         dawInstance->initDaw();
         dbgassert(dawInstance->getHost()->m_sampleFormatInternal == sampleformat);

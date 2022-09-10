@@ -140,20 +140,66 @@ void serialize(Archive& ar, app_autosave_settings& settings) {
     ar(make_nvp("reminderDelay", settings.tmReminderDelayMinutes));
 }
 template <class Archive>
-void serialize(Archive& ar, appsettings& settings) {
+void serialize(Archive& ar, app_daw_settings& settings) {
     ar(
-        make_nvp("window.main", settings.wndMain), 
-        make_nvp("window.companion", settings.wndCompanion),
-        make_nvp("io", settings.iosettings),
-        make_nvp("startengine", settings.startEngine),
-        make_nvp("plugins", settings.pluginsettings),
+        make_nvp("startupProjectPath", settings.startupProjectPath),
+        make_nvp("startupLoadDeffered", settings.startupLoadDeffered),
+        make_nvp("startupAudioEnabled", settings.audioEnabled),
         make_nvp("vmmode", settings.vmmode),
-        make_nvp("recentfiles", settings.recentfiles)
+        make_nvp("debugMode", settings.debugMode),
+        make_nvp("shaderDebug", settings.shaderDebug)
     );
-    make_optional_nvp(ar, "pathmapping", settings.pathmapping);
-    make_optional_nvp(ar, "shaderDebug", settings.shaderDebug);
-    make_optional_nvp(ar, "autosave", settings.autosave);
 }
+template<class Archive>
+void load(Archive& ar, appsettings& settings, const std::uint32_t version) {
+    settings.fileFmtVersion = version;
+    if (version < 2) {
+        bool bAudioEnabled = false;
+        bool bVMMode = false;
+        ar(
+            make_nvp("window.main", settings.wndMain), 
+            make_nvp("window.companion", settings.wndCompanion),
+            make_nvp("io", settings.iosettings),
+            make_nvp("startengine", bAudioEnabled),
+            make_nvp("plugins", settings.pluginsettings),
+            make_nvp("vmmode", bVMMode),
+            make_nvp("recentfiles", settings.recentfiles)
+        );
+        bool bShaderDebug = false;
+        make_optional_nvp(ar, "pathmapping", settings.pathmapping);
+        make_optional_nvp(ar, "shaderDebug", bShaderDebug);
+        make_optional_nvp(ar, "autosave", settings.autosave);
+        settings.dawsettings.shaderDebug = bShaderDebug;
+        settings.dawsettings.audioEnabled = bAudioEnabled;
+    } else {
+        ar(
+            make_nvp("dawsettings", settings.dawsettings),
+            make_nvp("autosave", settings.autosave),
+            make_nvp("pluginsettings", settings.pluginsettings),
+            make_nvp("iosettings", settings.iosettings),
+            make_nvp("pathmapping", settings.pathmapping),
+            make_nvp("recentfiles", settings.recentfiles),
+            make_nvp("wndMain", settings.wndMain),
+            make_nvp("wndCompanion", settings.wndCompanion)
+        );
+    }
+}
+
+template<class Archive>
+void save(Archive& ar, appsettings const& settings, const std::uint32_t version) {
+    ar(
+        make_nvp("dawsettings", settings.dawsettings),
+        make_nvp("autosave", settings.autosave),
+        make_nvp("pluginsettings", settings.pluginsettings),
+        make_nvp("iosettings", settings.iosettings),
+        make_nvp("pathmapping", settings.pathmapping),
+        make_nvp("recentfiles", settings.recentfiles),
+        make_nvp("wndMain", settings.wndMain),
+        make_nvp("wndCompanion", settings.wndCompanion)
+    );
+}
+CEREAL_CLASS_VERSION(appsettings, 2);
+
 
 void loadSettings(appsettings& settings) {
     Stringstream ss;
