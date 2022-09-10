@@ -2670,7 +2670,7 @@ void vsthost::unloadPlugin(effectbase* plugin, int flags) {
     }
 
     if (notifyUp) {
-        plugin->close();
+        plugin->closeWindow();
     }
     plugin->unload(this, flags);
 

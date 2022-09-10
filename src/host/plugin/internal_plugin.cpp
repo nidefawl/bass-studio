@@ -95,14 +95,6 @@ automationlane_snapshot_t internalplugin::toRef() const {
     return ref;
 }
 
-bool internalplugin::close() {
-    return true;
-}
-
-bool internalplugin::show(bool bResetPosition) {
-    return false;
-}
-
 struct internalplugin::internalplugin_handles_t {
     std::unique_ptr<guiinternalpluginview> gui;
 };

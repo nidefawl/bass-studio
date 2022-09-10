@@ -58,13 +58,11 @@ public:
     bool bWantsEffIdle     = false;
     bool bIsLoadingProgram = false;
     bool bIsPostInit       = false;
-    bool bSupportsWindowResize = false;
     int32_t pluginCategory = 0;
     int32_t vstVersion     = 0;
     int32_t localDbId      = -1;
     int32_t vendorVersion  = 0;
     uint32_t uId           = 0;
-    vst_window* window = nullptr;
     bool isInSuspend   = true;
     uint64_t bugfixFlags = 0;
 
@@ -97,14 +95,13 @@ public:
             float opt     = 0);
     bool getNameString(char* szBuf);
     void printNames();
-    bool onClose();
-    void onWindowDestroy();
-    void onWindowResize(ivec2 size);
-    bool onShow(vst_window* window);
+    void onWindowResize(ivec2 size) override;
+    bool onShow(vst_window* window) override;
+    bool onClose() override;
+    ivec2 constrainWindowSize(vst_window* window, ivec2& size) override;
+    bool hasWindowEditor() override;
+    ivec2 getWindowSize() override;
     bool updateWindowSize();
-    ivec2 constrainSize(vst_window* window, ivec2& size);
-    bool show(bool bResetPosition) override;
-    bool close() override;
     void unload(vsthost* host, int flags) override;
     void load(vsthost* host) override;
     void configureIOChannels();

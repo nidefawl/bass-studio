@@ -864,10 +864,10 @@ void guipluginview::buttonClicked(guibase* _button) {
     if (_button == &buttonOpenEditor) {
         ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
         if (effect->bEditOpen) {
-            effect->close();
+            effect->closeWindow();
         } else {
             bool bResetPosition = isShift(parentCtrl->lastMouseEvent.kbmods);
-            effect->show(bResetPosition);
+            effect->showWindow(bResetPosition);
         }
     }
     if (_button == &buttonShowParameterList) {

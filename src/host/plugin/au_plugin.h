@@ -52,14 +52,9 @@ public:
     String getInfo(std::vector<String>& list) override;
     bool getNameString(char* szBuf);
     void printNames();
-    bool onClose();
-    void onWindowDestroy();
-    bool onShow(vst_window* window);
-    bool updateWindowSize();
-    bool onResize(vst_window* window, ivec2 size);
-    ivec2 constrainSize(vst_window* window, ivec2& size);
-    bool show(bool bResetPosition) override;
-    bool close() override;
+    bool hasWindowEditor() override {
+        return false;
+    }
     void unload(vsthost* host, int flags) override;
     void load(vsthost* host) override;
 

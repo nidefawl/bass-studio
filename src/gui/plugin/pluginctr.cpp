@@ -250,7 +250,7 @@ bool handlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
                 audio_stage_t* audioStage = selection[0]->getTrackLink();
                 dbgassert(audioStage);
                 for (effectbase* eff : selection) {
-                    eff->close();
+                    eff->closeWindow();
                 }
                 int32_t slot = selection[0]->getSlot();
                 std::vector<effectbase*> effects;
@@ -272,7 +272,7 @@ bool handlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
                 audio_stage_t* audioStage = selection[0]->getTrackLink();
                 dbgassert(audioStage);
                 for (effectbase* eff : selection) {
-                    eff->close();
+                    eff->closeWindow();
                 }
                 for (effectbase* eff : selection) {
                     audioStage->removePlugin(eff, false);
@@ -526,7 +526,7 @@ public:
             setError("missing trackimpl");
             return;
         }
-        effect->close();
+        effect->closeWindow();
         vsthost::getInstance()->removePlugin(effect);
         MainCtrl::getPluginCtr()->relayout();
         weOwn = true;
@@ -761,7 +761,7 @@ void removePlugin(DawInstance* daw, effectbase* module) {
     ThreadLock lock           = daw->getPlayThread()->lockThread();
     audio_stage_t* audioStage = module->getTrackLink();
     dbgassert(audioStage);
-    module->close();
+    module->closeWindow();
     audioStage->removePlugin(module, true);
     std::vector<effectbase*> effects;
     effects.push_back(module);
@@ -1008,7 +1008,7 @@ void action_remove_modules::redo(DawInstance* daw) {
     }
     dbgassert(effects[0]->getSlot() == dstSlot);
     for (effectbase* eff : effects) {
-        eff->close();
+        eff->closeWindow();
         daw->getHost()->removePlugin(eff);
     }
     MainCtrl::getPluginCtr()->relayout();

@@ -54,9 +54,9 @@ namespace {
         } else {
             bool hasUI = res.plugin->getFlagsVST() & effFlagsHasEditor;
             if (hasUI && currentTimerTick == 10) {
-                res.plugin->show(false);
+                res.plugin->showWindow(false);
             } else if (hasUI && currentTimerTick == 30) {
-                res.plugin->close();
+                res.plugin->closeWindow();
             } else if ((hasUI && currentTimerTick == 40) || (!hasUI && currentTimerTick == 10)) {
                 host->unloadPlugin(res.plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                 res = vstpluginloadres(0, nullptr);

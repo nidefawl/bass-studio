@@ -46,7 +46,25 @@ bool vstplugin::updateWindow() {
     return false;
 }
 
-ivec2 vstplugin::constrainSize(vst_window*, ivec2& size) {
+
+bool vstplugin::onShow(vst_window* _window) {
+    if (this->window == _window) {
+        bEditOpen = true;
+        this->dispatch(effEditOpen, 0, 0, (void*) _window->getHWND());
+        this->updateWindow();
+    }
+    return true;
+}
+
+bool vstplugin::onClose() {
+    if (this->window != nullptr && bEditOpen) {
+        this->dispatch(effEditClose);
+    }
+    bEditOpen = false;
+    return true;
+}
+
+ivec2 vstplugin::constrainWindowSize(vst_window*, ivec2& size) {
     ERect* prc = nullptr;
     this->dispatch(effEditGetRect, 0, 0, (void*) &prc);
     if (prc) {
@@ -58,18 +76,6 @@ ivec2 vstplugin::constrainSize(vst_window*, ivec2& size) {
         }
     }
     return size;
-}
-
-bool vstplugin::onClose() {
-    if (this->window != nullptr && bEditOpen) {
-        this->dispatch(effEditClose);
-    }
-    bEditOpen = false;
-    return true;
-}
-
-void vstplugin::onWindowDestroy() {
-    this->window = nullptr;
 }
 
 void vstplugin::onWindowResize(ivec2 size) {
@@ -85,7 +91,7 @@ void vstplugin::onEnable() {
         bool bShowWindow = this->bugfixFlags & VST2_BUG_NEED_SHOW_WINDOW_TO_LOAD_PRESET;
         bShowWindow |= uiSnapshot.isWindowOpen;
         if (bShowWindow) {
-            show(false);
+            showWindow(false);
         }
     }
     if (!isInSuspend) {
@@ -142,15 +148,6 @@ bool vstplugin::updateWindowSize() {
         }
     }
     return false;
-}
-
-bool vstplugin::onShow(vst_window* _window) {
-    if (this->window == _window) {
-        bEditOpen = true;
-        this->dispatch(effEditOpen, 0, 0, (void*) _window->getHWND());
-        this->updateWindow();
-    }
-    return true;
 }
 
 void AppWndProc_disableBlockReentrant();
@@ -791,40 +788,17 @@ automationlane_snapshot_t vstplugin::toRef() const {
     return ref;
 }
 
-bool vstplugin::close() {
-    if (this->window != nullptr) {
-        this->window->close();
-    }
-    return true;
+bool vstplugin::hasWindowEditor() {
+    return handle->aeffect->flags & effFlagsHasEditor;
 }
 
-bool vstplugin::show(bool bResetPosition) {
-    if (this->window == nullptr && (handle->aeffect->flags & effFlagsHasEditor)) {
-        ERect* prc = nullptr;
-        this->dispatch(effEditGetRect, 0, 0, (void*) &prc);
-        ivec2 size = { 160, 120 };
-        if (bSupportsWindowResize && bWindowPosSizeValid && !bResetPosition) {
-            size.x = this->lastWindowPosSize.z;
-            size.y = this->lastWindowPosSize.w;
-        }
-        if (prc) {
-            size = { prc->right - prc->left, prc->bottom - prc->top };
-        }
-        if (size.x <= 0) size.x = 160;
-        if (size.y <= 0) size.y = 120;
-        this->window = vst_window::make(this, this->sName, size, bSupportsWindowResize);
-        if (bWindowPosSizeValid && !bResetPosition) {
-            this->window->setPosition(ivec2(this->lastWindowPosSize.x, this->lastWindowPosSize.y));
-        }
-
+ivec2 vstplugin::getWindowSize() {
+    ERect* prc = nullptr;
+    this->dispatch(effEditGetRect, 0, 0, (void*) &prc);
+    if (prc) {
+        return {prc->right - prc->left, prc->bottom - prc->top};
     }
-    if (this->window != nullptr) {
-        this->window->show();
-        if (bWindowPosSizeValid && !bResetPosition) {
-            this->window->setPosition(ivec2(this->lastWindowPosSize.x, this->lastWindowPosSize.y));
-        }
-    }
-    return false;
+    return {0, 0};
 }
 
 String vstplugin::getInfo(std::vector<String>& list) {
@@ -967,7 +941,7 @@ vstplugin::vstplugin(handles_t* _handle, int32_t globalId, String _sDir, String 
       handle(_handle),
       internalModuleId(_moduleId),
       sDir(std::move(_sDir)),
-      bSupportsWindowResize(_handle->axEffect != nullptr),
       bugfixFlags(_bugfixFlags)
 {
+    bSupportsWindowResize = _handle->axEffect != nullptr;
 }

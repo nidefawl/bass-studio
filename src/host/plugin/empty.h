@@ -27,4 +27,7 @@ public:
     bool isBypass() override {
         return true;
     }
+    bool hasWindowEditor() override {
+        return false;
+    }
 };

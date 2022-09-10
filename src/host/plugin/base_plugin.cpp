@@ -112,6 +112,66 @@ void effectbase::setTrackLink(audio_stage_t* audioStage) {
     trackImpl = audioStage;
 }
 
+bool effectbase::showWindow(bool bResetPosition) {
+    if (this->window == nullptr && (hasWindowEditor())) {
+        auto plugWindowSize = getWindowSize();
+        ivec2 size = { 160, 120 };
+        if (bSupportsWindowResize && bWindowPosSizeValid && !bResetPosition) {
+            size.x = this->lastWindowPosSize.z;
+            size.y = this->lastWindowPosSize.w;
+        }
+        if (plugWindowSize.x > 0 && plugWindowSize.y > 0) {
+            size = plugWindowSize;
+        }
+        if (size.x <= 0) size.x = 160;
+        if (size.y <= 0) size.y = 120;
+        this->window = vst_window::make(this, this->sName, size, bSupportsWindowResize);
+        if (bWindowPosSizeValid && !bResetPosition) {
+            this->window->setPosition(ivec2(this->lastWindowPosSize.x, this->lastWindowPosSize.y));
+        }
+
+    }
+    if (this->window != nullptr) {
+        this->window->show();
+        if (bWindowPosSizeValid && !bResetPosition) {
+            this->window->setPosition(ivec2(this->lastWindowPosSize.x, this->lastWindowPosSize.y));
+        }
+    }
+    return false;
+}
+
+bool effectbase::closeWindow() {
+    if (this->window != nullptr) {
+        this->window->close();
+    }
+    return true;
+}
+
+
+bool effectbase::onShow(vst_window* _window) {
+    if (this->window == _window) {
+        bEditOpen = true;
+        // this->dispatch(effEditOpen, 0, 0, (void*) _window->getHWND());
+        // this->updateWindow();
+    }
+    return true;
+}
+
+bool effectbase::onClose() {
+    // if (this->window != nullptr && bEditOpen) {
+    //     this->dispatch(effEditClose);
+    // }
+    bEditOpen = false;
+    return true;
+}
+
+void effectbase::onWindowDestroy() {
+    this->window = nullptr;
+}
+
+void effectbase::onWindowResize(ivec2 size) {
+}
+
 class guideferred : public guiplugin {
     effect_deferred* const module;
     guibutton btnLoad;
@@ -257,12 +317,6 @@ void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_st
 }
 void effect_deferred::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
     dbgassert(vstHost->m_sampleFormatInternal == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
-}
-bool effect_deferred::show(bool bResetPosition) {
-    return false;
-}
-bool effect_deferred::close() {
-    return false;
 }
 int effect_deferred::getModuleStoredType() const {
     return this->mImpl->moduleType;

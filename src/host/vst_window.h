@@ -1,5 +1,6 @@
 #pragma once
 
+#include "modules.h"
 #ifdef _WIN32
 #include <windows.h>
 #define WINDOW_HANDLE HWND
@@ -30,7 +31,7 @@
 #include "str_util.h"
 #include "fileio.h"
 
-class vstplugin;
+class effectbase;
 
 //------------------------------------------------------------------------
 struct GLFWwindow;
@@ -41,9 +42,9 @@ namespace vst_window_mgr {
 class vst_window {
     bool bRedirectKeysToDawMainWindow = false;
 public:
-    static vst_window* make(vstplugin* plugin, const String& name, ivec2 size, bool resizeable);
+    static vst_window* make(effectbase* plugin, const String& name, ivec2 size, bool resizeable);
     static vst_window* getVSTWindow(WINDOW_HANDLE handle);
-    bool init(vstplugin* plugin, const String& name, ivec2 size, bool resizeable);
+    bool init(effectbase* plugin, const String& name, ivec2 size, bool resizeable);
     WINDOW_HANDLE getHWND() const;
 
     void show();
@@ -64,12 +65,12 @@ public:
     }
 
     static std::vector<vst_window*>& getWindows();
-    vstplugin* getPlugin() {
+    effectbase* getPlugin() {
         return plugin;
     }
 
 private:
-    vstplugin* plugin  = nullptr;
+    effectbase* plugin  = nullptr;
 
 public:
     ImageBuf capturedFrame;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "host/vst_window.h"
 #include "types.h"
 #include <memory>
 #include <vector>
@@ -57,6 +58,7 @@ public:
     bool bCanReceiveMidi      = false;
     bool bCanSendMidi         = false;
     bool bMPESupport          = false;
+    bool bSupportsWindowResize = false;
     int32_t requestCaptureGUI = 0;
     bool isSynth              = false;
     String sName;
@@ -69,6 +71,7 @@ public:
     std::vector<DAW::channel_ref_t> inputChannels;
     bool bWindowPosSizeValid = false;
     ivec4 lastWindowPosSize{};
+    vst_window* window = nullptr;
     plugin_ui_snapshot_t uiSnapshot{};
 protected:
     int nLoadCalls   = 0;
@@ -113,8 +116,21 @@ public:
     virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed);
     virtual void processMidi(midi_events_t& midiEvents);
     virtual void sendNotesOff(int32_t bpm100);
-    virtual bool show(bool bResetPosition)   = 0;
-    virtual bool close()  = 0;
+    virtual bool hasWindowEditor() {
+        return false;
+    }
+    virtual ivec2 getWindowSize() {
+        return ivec2(0);
+    }
+    virtual bool showWindow(bool bResetPosition);
+    virtual bool closeWindow();
+    virtual void onWindowDestroy();
+    virtual void onWindowResize(ivec2 size);
+    virtual bool onShow(vst_window* window);
+    virtual bool onClose();
+    virtual ivec2 constrainWindowSize(vst_window* window, ivec2& size) {
+        return size;
+    };
     virtual void unload(vsthost* host, int flags);
     virtual void load(vsthost* host);
     virtual samplecount_t getPluginLatency()                = 0;
@@ -205,9 +221,9 @@ public:
     guiplugin* makeGui() override;
     guiplugin* getGui() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
-    bool show(bool bResetPosition) override;
-    bool close() override;
-
+    bool hasWindowEditor() override {
+        return false;
+    }
     // automatable_t interface
     String getAutomatableName() override;
     float getParamValue(int32_t idx) override;

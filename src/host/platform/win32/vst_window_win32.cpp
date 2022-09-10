@@ -1,3 +1,4 @@
+#include "modules.h"
 #ifdef _WIN32
 #include "logging.h"
 #include "str_util.h"
@@ -123,7 +124,7 @@ namespace {
     LRESULT CALLBACK PluginWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
         vst_window* window = reinterpret_cast<vst_window*>((LONG_PTR) GetWindowLongPtr(hwnd, GWLP_USERDATA));
         if (window) {
-            vstplugin* plugin = window->getPlugin();
+            auto* plugin = window->getPlugin();
             switch (message) {
                 case WM_MOUSEACTIVATE:
                 case WM_SETFOCUS: {
@@ -169,7 +170,7 @@ namespace {
                     newClientSize.x += diffX;
                     newClientSize.y += diffY;
 
-                    ivec2 constraintSize = plugin->constrainSize(window, newClientSize);
+                    ivec2 constraintSize = plugin->constrainWindowSize(window, newClientSize);
                     if (constraintSize != newClientSize) {
                         diffX = (oldSize.right - oldSize.left) - (clientSize.right - clientSize.left);
                         diffY = (oldSize.bottom - oldSize.top) - (clientSize.bottom - clientSize.top);
@@ -207,7 +208,7 @@ namespace {
     }
 }// namespace
 
-vst_window* vst_window::make(vstplugin* plugin, const String& name, ivec2 size, bool resizeable) {
+vst_window* vst_window::make(effectbase* plugin, const String& name, ivec2 size, bool resizeable) {
     auto* window = new vst_window();
     if (window->init(plugin, name, size, resizeable))
         return window;
@@ -252,7 +253,7 @@ std::vector<vst_window*>& vst_window::getWindows() {
     return vst_window_list;
 }
 
-bool vst_window::init(vstplugin* _plugin, const String& name, ivec2 size, bool resizeable) {
+bool vst_window::init(effectbase* _plugin, const String& name, ivec2 size, bool resizeable) {
     HWND mainHWND = getMainHWND();
     assert(mainHWND);
     setRedirectKeysToDawMainWindow(!resizeable);
@@ -277,12 +278,9 @@ bool vst_window::init(vstplugin* _plugin, const String& name, ivec2 size, bool r
         SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, reinterpret_cast<LONG_PTR>(mainHWND));
         SetProp(hwnd, "_DAW_VST2WIN", reinterpret_cast<HANDLE>(int64_t{7}));
 
-        ERect* prc = nullptr;
-        plugin->dispatch(effEditGetRect, 0, 0, (void*) &prc);
-        int w = prc->right - prc->left;
-        int h = prc->bottom - prc->top;
-        if (w > 0 && h > 0) {
-            resize(ivec2(w, h));
+        auto plugWindowSize = plugin->getWindowSize();
+        if (plugWindowSize.x > 0 && plugWindowSize.y > 0) {
+            resize(plugWindowSize);
         }
         RECT rcOwner;
         RECT rcDlg;
@@ -325,12 +323,9 @@ void vst_window::destroy() {
 void vst_window::show() {
     SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
     plugin->onShow(this);
-    ERect* prc = nullptr;
-    plugin->dispatch(effEditGetRect, 0, 0, (void*) &prc);
-    int w = prc->right - prc->left;
-    int h = prc->bottom - prc->top;
-    if (w > 0 && h > 0) {
-        resize(ivec2(w, h));
+    auto plugWindowSize = plugin->getWindowSize();
+    if (plugWindowSize.x > 0 && plugWindowSize.y > 0) {
+        resize(plugWindowSize);
     }
 }
 
