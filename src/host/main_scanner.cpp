@@ -10,6 +10,7 @@
  *
  */
 
+#include "assert_dbg.h"
 #include "host/plugin/vst_plugin.h"
 #include "host/plugin/vst_plugin_handles.h"
 #include "host/vst_host.h"
@@ -269,7 +270,7 @@ static int waitTimeout(ipc_server& server, ProcessThread* thread, const char* pl
                 notificationStep     = timeSince_ms / 1000;
                 log_message("Waiting for Plugin %s to respond... %zds left", plugName, secondsLeft);
             }
-            if (!thread->isRunning()) {
+            if (thread && !thread->isRunning()) {
                 log_message("Client died");
                 return 2;
             }
@@ -573,18 +574,16 @@ static int runScannerServer(vstscanner_server_options options) {
                     log_message("error writeToIPC request_type_vst24_t");
                     resetConnection = true;
                 }
-                if (!options.dryRun) {
-                    if (id > 0) {
-                        queryDelete.reset();
-                        queryDelete.bind(1, id);
-                        queryDelete.bind(2, req.szPath);
-                        queryDelete.exec();
-                    }
-                    int ret = readClientResponses(options, server, thread.get(), req, queryInsertPlugin, file, timeDisk, forcedisable);
+                if (id > 0) {
+                    queryDelete.reset();
+                    queryDelete.bind(1, id);
+                    queryDelete.bind(2, req.szPath);
+                    queryDelete.exec();
+                }
+                int ret = readClientResponses(options, server, thread.get(), req, queryInsertPlugin, file, timeDisk, forcedisable);
 
-                    if (ret < 0) {
-                        resetConnection = true;
-                    }
+                if (ret < 0) {
+                    resetConnection = true;
                 }
             } else {
                 resetConnection = true;
