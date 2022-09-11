@@ -207,6 +207,7 @@ public:
 		static_assert(kVstMaxProgNameLen*4 < STR_GET_STACK_BUF_SIZE);
 #endif
 		char* ptr = static_cast<char*>(alloca(STR_GET_STACK_BUF_SIZE));
+		*ptr = 0;
 		getProgramName((char*) ptr);
 		String ret = ptr;
 		return ret;
@@ -215,6 +216,7 @@ public:
 	virtual String getParameterLabel(VstInt32 index)
     {
 		char* ptr = static_cast<char*>(alloca(STR_GET_STACK_BUF_SIZE));
+		*ptr = 0;
 		getParameterLabel(index, (char*) ptr);
 		String ret = ptr;
 		return ret;
@@ -222,12 +224,14 @@ public:
     virtual String getParameterDisplay(VstInt32 index)
     {
 		char* ptr = static_cast<char*>(alloca(STR_GET_STACK_BUF_SIZE));
+		*ptr = 0;
 		getParameterDisplay(index, (char*) ptr);
 		String ret = ptr;
 		return ret;
 	}
 	virtual String getParameterName (VstInt32 index) {
 		char* ptr = static_cast<char*>(alloca(STR_GET_STACK_BUF_SIZE));
+		*ptr = 0;
 		getParameterName(index, (char*) ptr);
 		String ret = ptr;
 		return ret;
