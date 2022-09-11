@@ -39,7 +39,7 @@ public:
         const int32_t numParams = module->getNumParameters();
         knobs.reserve(numParams);
         for (int32_t i = 1; i < numParams; ++i) {
-            knobs.push_back(new guiknob_pluginparam(i, -1, guiknob::knobtype::SLIDER_LABELED));
+            knobs.push_back(new guiknob_pluginparam(i, i, guiknob::knobtype::SLIDER_LABELED));
             add(knobs.back());
         }
         add(&editfield);
@@ -54,12 +54,9 @@ public:
         const int32_t numParams = plugin->getAeffect()->numParams;
         knobs.reserve(numParams);
         for (int32_t i = 0; i < numParams; ++i) {
-#if BUILD_EXTERNAL_PLUGIN
-            int32_t paramIdx = i;
-#else
+            int32_t clientParamIdx = i;
             int32_t paramIdx = PARAM_OFFSET_EXTERNAL+i;
-#endif
-            knobs.push_back(new guiknob_pluginparam(paramIdx, -1, guiknob::knobtype::SLIDER_LABELED));
+            knobs.push_back(new guiknob_pluginparam(paramIdx, clientParamIdx, guiknob::knobtype::SLIDER_LABELED));
             add(knobs.back());
         }
         add(&editfield);
