@@ -22,8 +22,7 @@
 
 #include "empty-plugin.h"
 #include "empty-pluginctr.h"
-#include "vstsdk-plugin-2.4/audioeffect.h"
-#include "vstsdk-plugin-2.4/audioeffectx.h"
+#include <vstsdk-plugin-2.4/audioeffectx.h>
 
 
 namespace PluginEmptyVST2 {

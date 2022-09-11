@@ -10,7 +10,6 @@
 #include "host/plugin/internal_plugin.h"
 #include "host/plugin/vst_plugin.h"
 #include "plugin.h"
-#include <vstsdk-plugin-2.4/audioeffect.h>
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 
 class guictr_vst2_simple : public guictr_base {

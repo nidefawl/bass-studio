@@ -21,9 +21,8 @@
 #include "plugins/plugin.h"
 #include "plugins/plugin-base.h"
 #include "plugins/plugin-window.h"
-#include "vstsdk-plugin-2.4/audioeffect.h"
-#include "vstsdk-plugin-2.4/audioeffectx.h"
 #include "audioblock.h"
+#include <vstsdk-plugin-2.4/audioeffectx.h>
 
 #if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {

@@ -5,15 +5,12 @@
 #include "config.h"
 #include "str_util.h"
 #include "dsp_util.h"
-
+#include "logging.h"
 #include "platform.h"
-
 #include "../plugin.h"
 #include "empty-plugin.h"
 #include "gui/plugin/pluginviewcontainers.h"
-#include "vstsdk-plugin-2.4/audioeffect.h"
-#include "vstsdk-plugin-2.4/audioeffectx.h"
-#include "logging.h"
+#include <vstsdk-plugin-2.4/audioeffectx.h>
 #ifdef _MSC_VER
 #include <windows.h>
 #endif

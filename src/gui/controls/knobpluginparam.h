@@ -18,8 +18,7 @@
 #include "host/plugin/base_plugin.h"
 #include "host/plugin/vst_plugin.h"
 
-#include "vstsdk-plugin-2.4/audioeffect.h"
-#include "vstsdk-plugin-2.4/audioeffectx.h"
+#include <vstsdk-plugin-2.4/audioeffectx.h>
 
 class guiknob_pluginparam : public guiknob_labeled_base {
 #if BUILD_EXTERNAL_PLUGIN

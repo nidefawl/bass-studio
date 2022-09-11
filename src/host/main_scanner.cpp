@@ -16,7 +16,6 @@
 #include "host/vst_host.h"
 #include "logging.h"
 #include "threads/childprocessthread.h"
-#include "vstsdk-host-2.4/aeffectx.h"
 #include "appsettings.h"
 #include "buildinfo.h"
 #include "exceptions.h"
@@ -32,10 +31,13 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <vstsdk-host-2.4/aeffectx.h>
+
 #ifdef _WIN32
 #include "platform/win/platform_win.h"
 #include <windows.h>
 #endif
+
 #if defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>
 #include <climits>

@@ -6,14 +6,11 @@
 #include "config.h"
 #include "str_util.h"
 #include "dsp_util.h"
-
 #include "platform.h"
-
 #include "../plugin.h"
 #include "adv-plugin.h"
 #include "gui/plugin/pluginviewcontainers.h"
-#include "vstsdk-plugin-2.4/audioeffect.h"
-#include "vstsdk-plugin-2.4/audioeffectx.h"
+#include <vstsdk-plugin-2.4/audioeffectx.h>
 
 #if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {

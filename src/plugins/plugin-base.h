@@ -4,7 +4,6 @@
 #include <cmath>
 #include "host/plugin/vst_plugin.h"
 #include "plugin.h"
-#include <vstsdk-plugin-2.4/audioeffect.h>
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 #include "gui/table/table_fwd.h"
 
