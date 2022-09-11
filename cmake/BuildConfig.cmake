@@ -48,13 +48,13 @@ FUNCTION(GENERATE_TARGET_BUILD_INFO buildtarget)
 #define __TIMESTAMP__ \"Undefined\"
 #endif
 namespace BuildInfo {
-  const char* GIT_SHA1             = \"${GIT_SHA1_DIRTY}\";
-  const char* COMPILE_OPTIONS      = \"$<JOIN:${CMAKE_CXX_FLAGS};$<IF:$<CONFIG:Debug>,${CMAKE_CXX_FLAGS_DEBUG},${CMAKE_CXX_FLAGS_RELEASE}>;$<TARGET_PROPERTY:${buildtarget},COMPILE_OPTIONS>, >\";
-  const char* COMPILE_DEFS         = \"$<JOIN:$<TARGET_PROPERTY:${buildtarget},COMPILE_DEFINITIONS>, >\";
-  const char* COMPILER_ID          = \"${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}\";
-  const char* COMPILER_PATH        = \"${CMAKE_CXX_COMPILER}\";
-  const char* BUILD_BINARY_VERSION = \"${CMAKE_PROJECT_VERSION}\";
-  const char* BUILD_BINARY_NAME    = \"Daw-${BUILD_BINARY_SUFFIX}\";
+  const char* GIT_SHA1             = R\"(${GIT_SHA1_DIRTY})\";
+  const char* COMPILE_OPTIONS      = R\"($<JOIN:${CMAKE_CXX_FLAGS};$<IF:$<CONFIG:Debug>,${CMAKE_CXX_FLAGS_DEBUG},${CMAKE_CXX_FLAGS_RELEASE}>;$<TARGET_PROPERTY:${buildtarget},COMPILE_OPTIONS>, >)\";
+  const char* COMPILE_DEFS         = R\"($<JOIN:$<TARGET_PROPERTY:${buildtarget},COMPILE_DEFINITIONS>, >)\";
+  const char* COMPILER_ID          = R\"(${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})\";
+  const char* COMPILER_PATH        = R\"(${CMAKE_CXX_COMPILER})\";
+  const char* BUILD_BINARY_VERSION = R\"(${CMAKE_PROJECT_VERSION})\";
+  const char* BUILD_BINARY_NAME    = R\"(Daw-${BUILD_BINARY_SUFFIX})\";
   const char* BUILD_TIMESTAMP      = __TIMESTAMP__;
 } // namespace BuildInfo"
     NEWLINE_STYLE LF
