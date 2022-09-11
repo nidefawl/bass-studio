@@ -265,7 +265,7 @@ void onModuleLoad() {
         if (!glfwInit()) {
 #ifdef _WIN32
             DWORD error    = GetLastError();
-            String message = FormatErrorMessage(error, StringFormat("Couldn't initialize glfw (%d)", error));
+            String message = FormatErrorMessage(error, StringFormat("Couldn't initialize glfw (%lu)", error));
             showerror(StringAsCStr(message));
 #else
             showerror("Initialization failed. Couldn't initialize glfw");
