@@ -26,9 +26,9 @@ protected:
     struct internal_plugin_window_client {
         std::shared_ptr<PluginViewContainers> view;
         std::shared_ptr<PluginControl> ctrl;
-        host_plugin_window* hostWindow;
-        window_main* clientWindow;
-        window_plugin* clientWindowInterface;
+        host_plugin_window* hostWindow = nullptr;
+        window_main* clientWindow = nullptr;
+        window_plugin* clientWindowInterface = nullptr;
     };
     struct internalplugin_handles_t;
     internalplugin_handles_t* handlesIntPlugin;
@@ -72,5 +72,5 @@ public:
         return true;
     }
     void onWindowResize(ivec2 size) override;
-    ivec2 getWindowSize() override;
+    bool showWindow(bool bResetPosition) override;
 };

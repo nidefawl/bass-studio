@@ -126,8 +126,15 @@ guiplugin* internalplugin::getGui() {
 window_plugin* createBuildinPluginWindow(effectbase* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h, void* hostWindowId);
 void destroyPluginWindow(window_plugin* pluginWindow);
 
-bool internalplugin::onShow(host_plugin_window* _window) {
+bool internalplugin::showWindow(bool bResetPosition) {
+    dbgassert(!windowHost);
+    dbgassert(!windowClient.clientWindow);
+    dbgassert(!windowClient.clientWindowInterface);
+    dbgassert(!windowClient.hostWindow);
+    dbgassert(!windowClient.ctrl);
+    dbgassert(!windowClient.view);
     auto newView = createInternalView();
+    dbgassert(newView);
     if (!newView) {
         return false;
     }
@@ -144,23 +151,34 @@ bool internalplugin::onShow(host_plugin_window* _window) {
         *clientWindow.ctrl->getTheme() = *mainCtrl->getTheme();
     }
 #endif
-    int32_t ctrlWidth = 0, ctrlHeight = 0;
-    clientWindow.view->getFixedSize(&ctrlWidth, &ctrlHeight);
-    clientWindow.clientWindowInterface = createBuildinPluginWindow(this, clientWindow.ctrl, ctrlWidth, ctrlHeight, reinterpret_cast<void*>(_window->getHWND()));
-    // setEditor(pluginWindow);
-    clientWindow.clientWindow = dynamic_cast<window_main*>(clientWindow.clientWindowInterface);
-    dbgassert(clientWindow.clientWindow);
-    // pluginWindow->setHostWindow(_window->getHWND());
-    clientWindow.clientWindow->show();
+    ivec2 defSize{ 0, 0 };
+    clientWindow.view->getFixedSize(&defSize.x, &defSize.y);
     windowClient = clientWindow;
-    effectbase::onShow(windowHost);
-    return true;
+    if (openWindow(bResetPosition, defSize)) {
+        return true;
+    }
+    return false;
 }
-ivec2 internalplugin::getWindowSize() {
-    ivec2 size{ 0, 0 };
-    if (windowClient.view)
-        windowClient.view->getFixedSize(&size.x, &size.y);
-    return size;
+bool internalplugin::onShow(host_plugin_window* _window) {
+    dbgassert(windowClient.ctrl && windowClient.view);
+    dbgassert(!windowClient.clientWindowInterface);
+    dbgassert(!windowClient.clientWindow);
+    dbgassert(!windowClient.hostWindow);
+    dbgassert(_window == windowHost);
+    if (windowClient.ctrl && windowClient.view && _window) {
+        dbgassert(_window);
+        windowClient.hostWindow = _window;
+        ivec2 defSize{ 0, 0 };
+        windowClient.view->getFixedSize(&defSize.x, &defSize.y);
+        windowClient.clientWindowInterface = createBuildinPluginWindow(this, windowClient.ctrl, defSize.x, defSize.y, reinterpret_cast<void*>(_window->getHWND()));
+        dbgassert(windowClient.clientWindowInterface);
+        windowClient.clientWindow = dynamic_cast<window_main*>(windowClient.clientWindowInterface);
+        dbgassert(windowClient.clientWindow);
+        windowClient.clientWindow->show();
+        effectbase::onShow(_window);
+        return true;
+    }
+    return false;
 }
 
 void internalplugin::updateWindow() {

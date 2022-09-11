@@ -98,7 +98,7 @@ public:
     bool onClose() override;
     ivec2 constrainWindowSize(host_plugin_window* window, ivec2 size) override;
     bool hasWindowEditor() override;
-    ivec2 getWindowSize() override;
+    bool showWindow(bool bResetPosition) override;
     void updateWindow() override;
     bool updateWindowSize();
     void unload(vsthost* host, int flags) override;

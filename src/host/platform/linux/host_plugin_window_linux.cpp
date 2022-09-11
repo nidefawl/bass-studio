@@ -133,8 +133,20 @@ void host_plugin_window::destroy()
 }
 void host_plugin_window::show(ivec4 posSize, bool bSetPos, bool bSetSize)
 {
+    if (bSetPos) {
+		glfwSetWindowPos(glfw, posSize.x, posSize.y);
+    }
+    if (bSetSize) {
+        resize(ivec2(posSize.z, posSize.w));
+    }
 	glfwShowWindow(glfw);
 	plugin->onShow(this);
+    if (bSetPos) {
+		glfwSetWindowPos(glfw, posSize.x, posSize.y);
+    }
+    if (bSetSize) {
+        resize(ivec2(posSize.z, posSize.w));
+    }
 }
 
 ivec2 host_plugin_window::getContentSize() const
@@ -152,9 +164,8 @@ void host_plugin_window::updateWindow() const {
 
 void host_plugin_window::resize (ivec2 newSize) const
 {
-	if (getContentSize () == newSize)
-		return;
 	glfwSetWindowSize(glfw, newSize.x, newSize.y);
+	plugin->onWindowResize(newSize);
 }
 
 void host_plugin_window::onResize (ivec2 newSize)

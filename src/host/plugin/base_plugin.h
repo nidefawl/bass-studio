@@ -120,8 +120,10 @@ public:
     virtual bool hasWindowEditor() {
         return false;
     }
-    virtual ivec2 getWindowSize();
     virtual bool showWindow(bool bResetPosition);
+protected:
+    bool openWindow(bool bResetPosition, ivec2 defaultSize);
+public:
     virtual bool closeWindow();
     virtual void onWindowDestroy();
     virtual void onWindowResize(ivec2 size);

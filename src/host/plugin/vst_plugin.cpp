@@ -791,13 +791,15 @@ void vstplugin::updateWindow() {
     effectbase::updateWindow();
 }
 
-ivec2 vstplugin::getWindowSize() {
+bool vstplugin::showWindow(bool bResetPosition) {
     ERect* prc = nullptr;
     this->dispatch(effEditGetRect, 0, 0, (void*) &prc);
+    ivec2 defSize = { 0, 0 };
     if (prc) {
-        return {prc->right - prc->left, prc->bottom - prc->top};
+        defSize = {prc->right - prc->left, prc->bottom - prc->top};
     }
-    return {0, 0};
+    this->openWindow(bResetPosition, defSize);
+    return true;
 }
 
 String vstplugin::getInfo(std::vector<String>& list) {
