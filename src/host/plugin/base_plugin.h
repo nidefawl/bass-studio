@@ -1,6 +1,4 @@
 #pragma once
-
-#include "host/host_plugin_window.h"
 #include "types.h"
 #include <memory>
 #include <vector>
@@ -27,6 +25,7 @@ struct plugin_snapshot_t;
 struct plugin_snapshot_t;
 class effect_deferred;
 class DawInstance;
+class host_plugin_window;
 
 extern bool storePluginPresetWithSnapshot;// = true;
 extern bool loadPluginPresetWithSnapshot; // = false;

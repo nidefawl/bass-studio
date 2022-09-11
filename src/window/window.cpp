@@ -2192,14 +2192,12 @@ public:
 };
 
 class appwindow_plugin_internal : public appwindow_main, public window_plugin {
-    effectbase* const effect;
     bool isInitialized = false;
     std::shared_ptr<PluginControl> const ctrlShared;
     ivec2 windowSize = {0, 0};
 public:
-    appwindow_plugin_internal(effectbase* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h, void* hostWindowNativeHandle)
+    appwindow_plugin_internal(std::shared_ptr<PluginControl> _ctrl, int w, int h, void* hostWindowNativeHandle)
         : appwindow_main(nullptr, _ctrl),
-          effect(_effect),
           ctrlShared(std::move(_ctrl)),
         windowSize(w, h)
     {
@@ -2211,11 +2209,6 @@ public:
         }
     }
 
-    ~appwindow_plugin_internal() override {
-        if (isInitialized) {
-            log_printf("Plugin window was not correctly de-initialized\n");
-        }
-    }
     void showWindow() override {
         appwindow_main::showWindow();
         glfwGetWindowSize(glfw, &windowSize.x, &windowSize.y);
@@ -2223,25 +2216,6 @@ public:
         ctrlShared->onGuiOpen();
         glfwSetWindowRefreshCallback(glfw, glfw_cb_refresh);
     }
-//     void onWindowClose() override {
-//         appwindow_main::onWindowClose();
-//         isInitialized = false;
-//         if (!glfw)
-//             throw appexception("glfw null");
-//         destroyOverlayWindows();
-//         appwindow::killTimer();
-//         glfwMakeContextCurrent(glfw);
-//         // appwindow::destroyGL();
-// #ifdef _WIN32
-//         if (hwnd) {
-//             RemovePropW(hwnd, L"GLFW");
-//             hwnd = nullptr;
-//         }
-// #endif
-//         glfwDestroyWindow(glfw);
-//         glfw = nullptr;
-
-//     }
     
     void onResize(ivec2 size) override {
         if (isInitialized) {
@@ -2296,8 +2270,8 @@ pluginwindow* createPluginClientVst2Window(AudioEffectX* _effect, std::shared_pt
     return new appwindow_plugin_client_vst2(_effect, std::move(_ctrl), w, h);
 }
 
-window_plugin* createBuildinPluginWindow(effectbase* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h, void* hostWindowNativeHandle) {
-    return new appwindow_plugin_internal(_effect, std::move(_ctrl), w, h, hostWindowNativeHandle);
+window_plugin* createBuildinPluginWindow(std::shared_ptr<PluginControl> _ctrl, int w, int h, void* hostWindowNativeHandle) {
+    return new appwindow_plugin_internal(std::move(_ctrl), w, h, hostWindowNativeHandle);
 }
 void destroyPluginWindow(window_plugin* windowPlugin) {
     auto* windowPluginInternal = static_cast<appwindow_plugin_internal*>(windowPlugin);

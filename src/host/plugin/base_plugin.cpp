@@ -17,6 +17,7 @@
 #include "gui/plugin/pluginctr.h"
 #include "host/mainctrl.h"
 #include "host/vst_host.h"
+#include "host/host_plugin_window.h"
 
 track_t* effectbase::getTrack() {
     audio_stage_t* stage = getTrackLink();
@@ -164,10 +165,6 @@ void effectbase::updateWindow() {
 }
 
 bool effectbase::onClose() {
-    if (this->windowHost != nullptr && bEditOpen) {
-        delete windowHost;
-        windowHost = nullptr;
-    }
     bEditOpen = false;
     return true;
 }

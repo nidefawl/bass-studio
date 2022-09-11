@@ -11,7 +11,7 @@
 #include "gui/plugin/pluginctr.h"
 #include "host/mainctrl.h"
 #include "host/history.h"
-
+#include "host/host_plugin_window.h"
 
 namespace {
     void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, const tracksnapshot_store_opts_t& opts) {
@@ -123,7 +123,7 @@ guiplugin* internalplugin::getGui() {
     return handlesIntPlugin->gui.get();
 }
 
-window_plugin* createBuildinPluginWindow(effectbase* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h, void* hostWindowId);
+window_plugin* createBuildinPluginWindow(std::shared_ptr<PluginControl> _ctrl, int w, int h, void* hostWindowId);
 void destroyPluginWindow(window_plugin* pluginWindow);
 
 bool internalplugin::showWindow(bool bResetPosition) {
@@ -170,7 +170,7 @@ bool internalplugin::onShow(host_plugin_window* _window) {
         windowClient.hostWindow = _window;
         ivec2 defSize{ 0, 0 };
         windowClient.view->getFixedSize(&defSize.x, &defSize.y);
-        windowClient.clientWindowInterface = createBuildinPluginWindow(this, windowClient.ctrl, defSize.x, defSize.y, reinterpret_cast<void*>(_window->getHWND()));
+        windowClient.clientWindowInterface = createBuildinPluginWindow(windowClient.ctrl, defSize.x, defSize.y, reinterpret_cast<void*>(_window->getHWND()));
         dbgassert(windowClient.clientWindowInterface);
         windowClient.clientWindow = dynamic_cast<window_main*>(windowClient.clientWindowInterface);
         dbgassert(windowClient.clientWindow);
