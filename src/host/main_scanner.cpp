@@ -809,10 +809,11 @@ int main(int argc, char* argv[]) {
         log_message("-test <path>\t\ttest single plugin");
         log_message("-client \t\trun client");
         log_message("-server \t\trun server");
-        log_message("-wait   \t\t(server only)\tDo not start client process. allows manual start of clients.");
+        log_message("-wait   \t\t(server only)\tDo not start client process (Allows manual start)");
         log_message("-dry    \t\t(server only)\tCheck for new plugins but does not scan them");
         log_message("-update <plugin-name>\t(server only)\tRescan a specific plugin. Does partial name matching, case-insensitive");
         log_message("-rescan \t\t(server only)\tRescan all registered VST2 plugins, even if their disk timestamp has not changed");
+        log_message("-path <directory>\t(server only)\tManually specify directory to scan for plugins");
         log_message("-timeout <seconds>\t(server only)\tSet the timeout for unresponsive plugins. Default is %d seconds", VSTScannerImpl::timeoutdefault);
         log_message("\nThe default command to scan plugins is:");
         log_message("%s -server\n", argv[0]);
@@ -824,16 +825,6 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 #endif
-    auto& tls = daw_tls::initNewTls();
-    loadSettings(*tls.settings);
-    String vstPlugPath = tls.settings->pluginsettings.pathVst2;
-    App::Platform::shellExpandPath(vstPlugPath);
-    App::Platform::sanitizePathToDirectory(vstPlugPath);
-    log_message("settings.pluginsettings.pathVst2 '%s'", StringAsCStr(vstPlugPath));
-    if (vstPlugPath.empty()) {
-        log_lf(Log::L_ERROR, "Error: settings.pluginsettings.pathVst2 not configured\n");
-        return EXIT_FAILURE;
-    }
 
     if (argc > 1 && !strcmp("-server", argv[1])) {
         VSTScannerImpl::logPrefixIdx = PROC_SIDE_SERVER;
@@ -843,8 +834,8 @@ int main(int argc, char* argv[]) {
         options.updatePattern              = "";
         options.fullRescan                 = false;
         options.checkDiskTimestamp         = true;
-        options.vstPlugPath                = vstPlugPath;
         options.unresponsiveTimeoutSeconds = VSTScannerImpl::timeoutdefault;
+        String vstPlugPath;
         for (int i = 2; i < argc; i++) {
             if (argv[i] && strlen(argv[i]) > 2 && argv[i][0] == '-') {
                 if (!strcmp(argv[i], "-wait")) {
@@ -856,15 +847,35 @@ int main(int argc, char* argv[]) {
                 if (!strcmp(argv[i], "-update") && i + 1 < argc) {
                     options.updatePattern      = argv[i + 1];
                     options.checkDiskTimestamp = false;
+                    i++;
                 }
                 if (!strcmp(argv[i], "-rescan")) {
                     options.fullRescan = true;
                 }
                 if (!strcmp(argv[i], "-timeout") && i + 1 < argc) {
                     options.unresponsiveTimeoutSeconds = atoi(argv[i + 1]);
+                    i++;
+                }
+                if (!strcmp(argv[i], "-path") && i + 1 < argc) {
+                    vstPlugPath = argv[i + 1];
+                    i++;
                 }
             }
         }
+        if (vstPlugPath.empty()) {
+            auto& tls = daw_tls::initNewTls();
+            loadSettings(*tls.settings);
+            vstPlugPath = tls.settings->pluginsettings.pathVst2;
+            log_message("settings.pluginsettings.pathVst2 '%s'", StringAsCStr(vstPlugPath));
+        }
+        App::Platform::shellExpandPath(vstPlugPath);
+        App::Platform::sanitizePathToDirectory(vstPlugPath);
+        if (vstPlugPath.empty()) {
+            log_lf(Log::L_ERROR, "Error: settings.pluginsettings.pathVst2 not configured\n");
+            return EXIT_FAILURE;
+        }
+        log_message("vstPlugPath '%s'", StringAsCStr(vstPlugPath));
+        options.vstPlugPath                = vstPlugPath;
         runScannerServer(options);
 
         seqthreads::threadSleep(500);
