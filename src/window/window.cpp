@@ -1,5 +1,6 @@
 #include "assert_dbg.h"
 #include "glheaders.h"
+#include "hires_timer.h"
 #include "modules.h"
 #include "tls.h"
 #include "util/profiling.h"
@@ -2157,11 +2158,28 @@ public:
     bool setKnobMode(VstInt32 val) override {
         return false;
     }
-
     //end aeffect overrides
 
+    hires_timer_t t2;
+    int nCalls2 = 0;
+    void renderWindowAndChildren() override {
+        if (nCalls2++ > 100) {
+            double d = t2.getTimeDoubleReset();
+            log_printf("renderWindowAndChildren FPS: %f\n", 100.0 / d);
+            nCalls2 = 0;
+        }
+        appwindow_main::renderWindowAndChildren();
+    }
+    hires_timer_t t;
+    int nCalls = 0;
     void idle() override {
+        if (nCalls++ > 100) {
+            double d = t.getTimeDoubleReset();
+            log_printf("idle FPS: %f\n", 100.0 / d);
+            nCalls = 0;
+        }
         if (isInitialized) {
+            ctrlShared->onAppTick();
             flagNeedsRedraw();
 #ifndef _WIN32
             const double timeoutEvent = 0.001;
@@ -2254,8 +2272,14 @@ public:
             throw appexception("Couldn't start application");
         }
     }
-
+    hires_timer_t t;
+    int nCalls = 0;
     void onIdle() override {
+        if (nCalls++ > 100) {
+            double d = t.getTimeDoubleReset();
+            log_printf("FPS: %f\n", 100.0 / d);
+            nCalls = 0;
+        }
         if (isInitialized) {
             flagNeedsRedraw();
 #ifndef _WIN32
