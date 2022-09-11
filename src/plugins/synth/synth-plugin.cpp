@@ -44,6 +44,7 @@
 #include "dsp_util.h"
 #include "color_util.h"
 #include "threads/playbackthread.h"
+#include "threads/threadlock.h"
 #include "tls.h"
 #include "util/presetmanager.h"
 #include "gui/gui.h"
@@ -1227,12 +1228,14 @@ namespace PluginSynth {
             return daw->getPlayThread()->tryLockThread();
         }
 #else
+    std::recursive_mutex m_mutex;
+    std::atomic<int32_t> m_lockCount{ 0 };
     public:
         ThreadLock lock() {
-            return ThreadLock::MakeVoidLock();
+            return ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, false);
         }
         ThreadLock tryLock() {
-            return ThreadLock::MakeVoidLock();
+            return ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, true);
         }
 #endif
         virtual ~PluginLockable() = default;
@@ -2559,6 +2562,9 @@ namespace PluginSynth {
         }
 
         void ProcessSynth(float** inputs, float** outputs, int nFrames) {
+#if BUILD_EXTERNAL_PLUGIN
+            auto lock = this->lock();
+#endif
             double bpmHz                                     = math::max(tempo.bpm, 1.0) / 60.0;
             const auto bpmDiv4Hz                             = math::max(tempo.bpm / 4.0, 1.0) / 60.0;
             const auto mvInv                                 = sqrt(1.0 / math::max<double>(1.0, this->unisonVoiceCount));
@@ -4128,7 +4134,6 @@ namespace PluginSynth {
         gui_textfield editfield;
         std::vector<_synth_gui_param_knob> vecParamUI;
         std::vector<guictr_synth_title*> containers;
-        std::vector<_synth_gui_param_knob> vecListParam;
         std::vector<std::vector<guictr_synth_title*>> moduleLayout;
         i_ctr_shape_editor* const shapeEditor;
         guicontainer_modulation modulation;
@@ -4219,7 +4224,7 @@ namespace PluginSynth {
             ctrMacro.setLabel("Macros");
             ctrShapeLfo.setLabel("Shape");
 
-            vecParamUI.reserve(Parameters::kNumParams);
+            vecParamUI.resize(Parameters::kNumParams);
             for (auto param : parametersOrdered) {
                 auto type = guiknob::knobtype::SLIDER_LABELED;
                 if (!stl_contains(parametersModulate, param)) {
@@ -4324,12 +4329,16 @@ namespace PluginSynth {
                     ctr->addParamKnob(knob);
                     knob->id = type == guiknob::knobtype::KNOB_LABELED ? 1 : 0;
                 }
-                vecParamUI.push_back({ param, knob, type, ctr, ivec2(0), ivec2(32, 32) });
-                if (!vecParamUI.back().parentContainer) {
-                    vecListParam.push_back(vecParamUI.back());
-                }
+                dbgassert(static_cast<size_t>(param) < vecParamUI.size());
+                vecParamUI[param] = { param, knob, type, ctr, ivec2(0), ivec2(32, 32) };
             }
             shapeEditor->setShapeEditorShapeRef(&synth->getShape(0));
+            shapeEditor->setShapeEditorCallback([synth=this->synth](const DAW::Shape::shape_base_t& shape) -> void {
+                auto lock = synth->lock();
+                auto& synthShape = synth->getShape(0);
+                synthShape.pts = shape.pts;
+                synthShape.eraseDuplicates();
+            });
             auto shapeCtr = shapeEditor->getGuiContainer();
             shapeCtr->setBackgroundRendered(false);
             shapeCtr->setBackgroundRenderedInset(false);

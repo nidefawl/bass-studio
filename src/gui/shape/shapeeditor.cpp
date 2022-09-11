@@ -315,10 +315,12 @@ public:
         const auto relMousepos = toControlsObjectSpace(posIn, this);
         const auto mouseLocal = screenToCtrl(relMousepos);
         auto higlightHit = curve->getMouseHit(mouseLocal);
+        auto* curveRender = curve;
         if (dragged.type != shape_t::hittype::HIT_NONE) {
             higlightHit = dragged;
+            curveRender = &curveTmp;
         }
-        DrawShape(*curve, vg, theme, vec2(0), cs, mouseLocal, higlightHit);
+        DrawShape(*curveRender, vg, theme, vec2(0), cs, mouseLocal, higlightHit);
     }
 
     void handleRightClick(MouseEvent& evt) override;
@@ -331,15 +333,17 @@ public:
     }
 
     void handleDraggedBegin(MouseEvent& evt) override {
+        dragged = {};
         if (hasControlHandles()) {
+            curveBegin = *curve;
+            curveTmp = *curve;
             vec2 local   = screenToCtrl(evt.relMousepos);
-            dragged = {};
             if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
-                curve->pts.push_back({ { local.x, local.y }, 0.5f });
-                curve->sort();
+                curveTmp.pts.push_back({ { local.x, local.y }, 0.5f });
+                curveTmp.sort();
+                if (callback)
+                    callback(curveTmp);
             } else {
-                curveTmp = *curve;
-                curveBegin = *curve;
                 dragged = curve->getMouseHit(local);
                 dragBeginPos = local;
             }
@@ -352,6 +356,7 @@ public:
         if (hasControlHandles()) {
             vec2 local = screenToCtrl(evt.relMousepos);
             if (wasShiftBegin) {
+                curveTmp = curveBegin;
                 if (bIsGridEnabledH) {
                     local.x = math::floorfS32(local.x * this->gridStepsH) / float(this->gridStepsH);
                 }
@@ -362,7 +367,6 @@ public:
                 local.y = math::clamp(local.y, 0.0f, 1.0f);
                 float beginRange = local.x;
                 float endRange = beginRange + 1.0f / math::max<float>(1.0f, gridStepsH);
-                curveTmp = curveBegin;
                 float leftVal = curveTmp.sampleCurve(beginRange, false);
                 float rightVal = curveTmp.sampleCurve(endRange, true);
                 erase_if(curveTmp.pts, [beginRange, endRange](const auto& pt) {
@@ -382,12 +386,12 @@ public:
                     curveTmp.pts.insert(curveTmp.pts.begin() + idxInsert++,{ { endRange, rightVal }, 0.5f });
                     curveTmp.sort();
                 }
-                *curve = curveTmp;
                 if (callback)
-                    callback(*curve);
+                    callback(curveTmp);
                 return;
             }
-            if (dragged.type == shape_t::hittype::HIT_NODE && dragged.idx < CtrSize(curveTmp.pts)) {
+            if (dragged.type == shape_t::hittype::HIT_NODE && dragged.idx < CtrSize(curveBegin.pts)) {
+                curveTmp = curveBegin;
                 if (bIsGridEnabledH && !isAlt(evt.kbmods)) {
                     local.x = snapH(local.x);
                 }
@@ -397,21 +401,19 @@ public:
                 while (local.x < 0.0f) {
                     local.x += 1.0f;
                 }
-                local.x = math::clamp(modf(local.x, nullptr), 0.0f, 1.0f);
+                local.x = math::clamp(modf(local.x, &local.x), 0.0f, 1.0f);
                 local.y = math::clamp(local.y, 0.0f, 1.0f);
-                curveTmp = curveBegin;
                 auto& pt   = curveTmp.pts[dragged.idx];
                 pt.pos = local;
                 curveTmp.sort();
-                *curve = curveTmp;
                 if (callback)
-                    callback(*curve);
+                    callback(curveTmp);
                 return;
             }
-            if (dragged.type == shape_t::hittype::HIT_EDGE && dragged.idx < CtrSize(curveTmp.pts)) {
-                *curve = curveTmp;
-                auto& pt   = curve->pts[dragged.idx];
-                auto& ptNext = curve->getPointAfterIdx(dragged.idx);
+            if (dragged.type == shape_t::hittype::HIT_EDGE && dragged.idx < CtrSize(curveBegin.pts)) {
+                curveTmp = curveBegin;
+                auto& pt   = curveTmp.pts[dragged.idx];
+                auto& ptNext = curveTmp.getPointAfterIdx(dragged.idx);
                 float fDist = (local - dragBeginPos).y;
                 *evt.dragDistance = ivec2(0);
                 if (wasAltBegin) {
@@ -428,17 +430,17 @@ public:
                     }
                 }
                 if (callback)
-                    callback(*curve);
+                    callback(curveTmp);
                 return;
             }
         }
     }
     void handleDraggedRelease(MouseEvent& evt) override {
+        dragged = {};
         if (hasControlHandles()) {
-            dragged = {};
-            curve->eraseDuplicates();
+            curveTmp.eraseDuplicates();
             if (callback)
-                callback(*curve);
+                callback(curveTmp);
         }
     }
 private:
@@ -656,17 +658,3 @@ void guictr_curve_shape::handleRightClick(MouseEvent& evt) {
 i_ctr_shape_editor* makeShapeEditor() {
     return new DAW::Shape::guictr_curve_editor();
 }
-
-// void setShapeEditorCallback(guictr_base* curveEditor, std::function<void(const DAW::Shape::shape_base_t&)> callback) {
-//     auto editor = dynamic_cast<DAW::Shape::guictr_curve_editor*>(curveEditor);
-//     if (editor) {
-//         editor->setShapeEditorCallback(std::move(callback));
-//     }
-// }
-
-// void setShapeEditorShape(guictr_base* curveEditor, const DAW::Shape::shape_base_t& shape) {
-//     auto editor = dynamic_cast<DAW::Shape::guictr_curve_editor*>(curveEditor);
-//     if (editor) {
-//         editor->setShapeEditorShape(shape);
-//     }
-// }
