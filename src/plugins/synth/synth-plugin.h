@@ -393,6 +393,7 @@ namespace PluginSynth {
         void initPrograms();
         void writeCurrentProgram();
         void setFromSynthProgram(SynthProgram* program);
+        void onPresetLoaded();
 
         int32_t loadPreset(const String& path);
         SynthParamBase* getParam(Parameters enumParam);

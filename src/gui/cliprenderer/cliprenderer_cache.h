@@ -1,6 +1,7 @@
 #pragma once
 #include "math/vec.h"
 #include "assert_dbg.h"
+#include "seq_util.h"
 #include "tls.h"
 #include "appconfig.h"
 #include <array>

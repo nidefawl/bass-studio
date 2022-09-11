@@ -1257,6 +1257,7 @@ void DawInstance::destroy() {
     delete tls.audioCache;
     delete tls.midiHost;
     delete tls.audioHost;
+    tls.dawInstance    = nullptr;
     tls.host           = nullptr;
     tls.runtime        = nullptr;
     tls.settings       = nullptr;
@@ -1308,7 +1309,7 @@ void DawInstance::initDaw() {
             ngui::showNotification(ngui::Style::Warning, "Couldn't read config file", "Some settings may have been reset");
         }
     }
-
+    initTls.dawInstance = this;
     initTls.host = new vsthost();
     if (!vsthost::assignMasterCallback(initTls.host)) {
         delete initTls.host;

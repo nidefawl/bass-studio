@@ -1,6 +1,6 @@
 #include "shape.h"
 #include "exceptions.h"
-#include "shape_file.h"
+#include "shapefile.h"
 
 #include <iostream>
 #include <sstream>

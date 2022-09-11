@@ -8,12 +8,14 @@ class MainCtrl;
 class audiocache;
 class plugindatabase_t;
 class project_controller_t;
+class DawInstance;
 struct appruntime;
 struct appsettings;
 namespace daw_tls {
     struct tlsinstance {
         appruntime* runtime              = nullptr;
         appsettings* settings            = nullptr;
+        DawInstance* dawInstance         = nullptr;
         vsthost* host                    = nullptr;
         audiohost* audioHost             = nullptr;
         midihost* midiHost               = nullptr;

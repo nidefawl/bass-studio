@@ -179,7 +179,7 @@ else()
                 ${MM_SRC_FILES} 
                 ${PROJECT_DEPS_SRC_FILES} 
                 ${HDR_FILES})
-  CONFIGURE_TARGET_OUTPUT(${PROJECT_NAME})
+  CONFIGURE_TARGET_OUTPUT(${PROJECT_NAME} ${PROJECT_NAME})
 endif()
 
 
@@ -205,7 +205,7 @@ if (PROJECT_REQUIRE_LIB)
     add_executable(${target_name} ${target_sources})
     target_link_libraries(${target_name} PRIVATE "dawlib")
     target_compile_options(${target_name} PRIVATE ${BUILD_WARNING_FLAGS})
-    CONFIGURE_TARGET_OUTPUT(${target_name})
+    CONFIGURE_TARGET_OUTPUT(${target_name} ${target_name})
   ENDMACRO()
 
   # define main executable

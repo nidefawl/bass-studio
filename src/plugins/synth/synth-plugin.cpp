@@ -9,6 +9,7 @@
 #include <muParser.h>
 #include <nanovg.h>
 #include <optional>
+#include <utility>
 #include <vector>
 #include <map>
 #include <deque>
@@ -42,6 +43,8 @@
 #include "str_util.h"
 #include "dsp_util.h"
 #include "color_util.h"
+#include "threads/playbackthread.h"
+#include "tls.h"
 #include "util/presetmanager.h"
 #include "gui/gui.h"
 #include "gui/container/scrollcontainer.h"
@@ -81,10 +84,12 @@ AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
 
 
 namespace PluginSynth {
+
     int32_t gDebugOverrides               = -1;
     const char* const PLUGIN_EFFECT_NAME  = "Synth";
     const char* const PLUGIN_UID          = "SYNT";
-    const char* const PLUGIN_PRODUCT_NAME = "Synth VST2.4";
+    const char* const PLUGIN_PRODUCT_NAME = "Synth";
+
     enum class ParamType {
         FLOAT,
         INT,
@@ -119,6 +124,7 @@ namespace PluginSynth {
         Osc2,
         NumFmModes
     };
+
     const std::array<const char*, 7> stringsWaveform = {
         "Sine", "Triangle", "Saw", "Square", "Pulse", "Shaper", "Noise"
     };
@@ -134,6 +140,7 @@ namespace PluginSynth {
     const std::array<const char*, 3> stringsFMMode = {
         "Off", "Osc1", "Osc2"
     };
+
     static constexpr uint16_t NUM_POLY_VOICES   = 64;
     static constexpr uint16_t NUM_UNISON_VOICES = 16;
 
@@ -193,6 +200,7 @@ namespace PluginSynth {
             return current;
         }
     };
+
     enum class EnvelopeStages : int32_t {
         Attack = 0,
         Decay,
@@ -253,6 +261,7 @@ namespace PluginSynth {
         }
         return 0.0;
     }
+
     static inline double HalfBlep(double _phase, double _phaseIncrement) {
         if (_phase < _phaseIncrement) {
             _phase /= _phaseIncrement;
@@ -260,6 +269,7 @@ namespace PluginSynth {
         }
         return 0.0;
     }
+
     class Oscillator {
     public:
         double phase          = 0.0;
@@ -270,7 +280,7 @@ namespace PluginSynth {
         double triLast    = 0.0;
         double noiseValue = 19.1919191919191919191919191919191919191919;
         /* waveform generation */
-        DAW::Shape::shape_t* shape;
+        DAW::Shape::shape_t* shape{};
 
         inline double GeneratePulse(double _phase, double _phaseIncrement, double width) {
             double v = _phase < width ? 1.0 : -1.0;
@@ -291,11 +301,32 @@ namespace PluginSynth {
             return v;
         }
 
-
     public:
+
         void setShape(DAW::Shape::shape_t* _shape) {
             shape = _shape;
         }
+
+        void initPhase(double _phase, double _phaseFade) {
+            while (_phase < -1.0) _phase += 1.0;
+            phase = _phase;
+            dbgassert(phase >= -1.0 && phase <= 1.0);
+            if (0.0 == _phase) {
+                triCurrent = triLast = 0.0;
+            }
+            dbgassert(phase >= -1.0 && phase <= 1.0);
+            phaseFade = _phaseFade;
+        }
+
+        bool Update(double dt, double frequency) {
+            phaseIncrement = frequency * dt;
+            phase          = fp_math::silenceNanInfd(phase + phaseIncrement);
+            bool b         = phase > 1.0;
+            while (phase > 1.0) phase -= 1.0;
+            dbgassert(!fp_math::isNanOrInfd(phase));
+            return b;
+        }
+
         double GetWaveform(Waveforms waveform, bool bleb) {
             dbgassert(!fp_math::isNanOrInfd(phase));
             switch (waveform) {
@@ -336,7 +367,7 @@ namespace PluginSynth {
                     return noiseValue - .5;
                 case Waveforms::Shaper:
                     dbgassert(shape);
-                    return -1.0 + 2.0 *this->shape->sampleCurve(phase, false);
+                    return -1.0 + 2.0 *this->shape->sampleCurve(static_cast<float>(phase), false);
                 default:
                     dbgassert(0);
                     break;
@@ -384,7 +415,7 @@ namespace PluginSynth {
                     return noiseValue - .5;
                 case Waveforms::Shaper:
                     dbgassert(shape);
-                    return -1.0 + 2.0 *this->shape->sampleCurve(phase, false);
+                    return -1.0 + 2.0 *this->shape->sampleCurve(static_cast<float>(phase), false);
                 default:
                     dbgassert(0);
                     break;
@@ -397,14 +428,7 @@ namespace PluginSynth {
             while (phase > 1.0) phase -= 1.0;
             return GetWaveform(waveform, bleb);
         }
-        bool Update(double dt, double frequency) {
-            phaseIncrement = frequency * dt;
-            phase          = fp_math::silenceNanInfd(phase + phaseIncrement);
-            bool b         = phase > 1.0;
-            while (phase > 1.0) phase -= 1.0;
-            dbgassert(!fp_math::isNanOrInfd(phase));
-            return b;
-        }
+
         double Get(double dt, SmoothSwitch& waveform, double frequency, bool bleb) {
             phaseIncrement = frequency * dt;
             phase          = fp_math::silenceNanInfd(phase + phaseIncrement);
@@ -415,6 +439,7 @@ namespace PluginSynth {
             dbgassert(roundedVal < static_cast<uint32_t>(Waveforms::NumWaveforms));
             return GetWaveform(static_cast<Waveforms>(roundedVal), bleb);
         }
+
         double GetLfo(double dt, SmoothSwitch& waveform, double frequency, bool oneShot) {
             phaseIncrement = frequency * dt;
             phase          = fp_math::silenceNanInfd(phase + phaseIncrement);
@@ -435,16 +460,6 @@ namespace PluginSynth {
             double v = GetLfoWaveform(static_cast<Waveforms>(roundedVal), phase > 0.5 && oneShot, p);
             dbgassert(v >= -1.0 && v <= 1.0);
             return v;
-        }
-        void initPhase(double _phase, double _phaseFade) {
-            while (_phase < -1.0) _phase += 1.0;
-            phase = _phase;
-            dbgassert(phase >= -1.0 && phase <= 1.0);
-            if (0.0 == _phase) {
-                triCurrent = triLast = 0.0;
-            }
-            dbgassert(phase >= -1.0 && phase <= 1.0);
-            phaseFade = _phaseFade;
         }
     };
 
@@ -607,7 +622,9 @@ namespace PluginSynth {
         static constexpr auto logBase = 0.057762265046662153;//log(base);
         return exp(logBase * p);
     }
+
     inline double pitchToFrequency(double p) { return 440.0 * pitchFactor(p - 69); }
+
     struct Voice {
         std::array<double, Parameters::kNumParams> modValues{};
         std::array<float, 8> envelopeValuesCached{};
@@ -644,6 +661,7 @@ namespace PluginSynth {
         double getRandom() {
             return rand.rng_double();
         }
+
         double getRandomPhase() {
             return rand.rng_double() * 0.5;
         }
@@ -655,6 +673,7 @@ namespace PluginSynth {
             return this->volEnv.stage < EnvelopeStages::Idle || !this->filter.IsSilent(mode);
             // return true;
         }
+
         bool IsReleased() const { return volEnv.IsReleased(); }
         double GetVolume() const { return volEnv.value; }
 
@@ -680,10 +699,9 @@ namespace PluginSynth {
         }
 
         void SetPitchBendFactor(double f) { pitchBend = f; }
-
         void ResetPitch() { frequency = targetFrequency; }
-
         void SetVelocity(double v) { velocity = v; }
+
         void Start(bool holdOsc1Phase, bool holdOsc2Phase) {
             bIsActive = true;
             // if (bRandomPhase) {
@@ -1195,8 +1213,32 @@ namespace PluginSynth {
     };
 
     using ModulationSourceData = std::array<double, MathExprInputLen>;
+    class PluginLockable {
+#if BUILD_VSTHOST
+        DawInstance* const daw;
+    public:
+        explicit PluginLockable(DawInstance* daw) 
+            : daw(daw) {
+        }
+        ThreadLock lock() {
+            return daw->lockPlayThread();
+        }
+        ThreadLock tryLock() {
+            return daw->getPlayThread()->tryLockThread();
+        }
+#else
+    public:
+        ThreadLock lock() {
+            return ThreadLock::MakeVoidLock();
+        }
+        ThreadLock tryLock() {
+            return ThreadLock::MakeVoidLock();
+        }
+#endif
+        virtual ~PluginLockable() = default;
+    };
 
-    class SynthImpl : public SynthState {
+    class SynthImpl : public PluginLockable, public SynthState {
     public:
         using UnisonVoiceList = std::array<int32_t, NUM_POLY_VOICES * NUM_UNISON_VOICES>;
         using PolyVoiceList   = std::array<int32_t, NUM_POLY_VOICES>;
@@ -1213,8 +1255,8 @@ namespace PluginSynth {
         friend class PluginVST2_Synth;
         std::vector<SynthParamBase*> vecParams;
         std::vector<Modulation> modulations;
-        std::array<double, Parameters::kNumParams> modulationValuesMin;
-        std::array<double, Parameters::kNumParams> modulationValuesMax;
+        std::array<double, Parameters::kNumParams> modulationValuesMin{};
+        std::array<double, Parameters::kNumParams> modulationValuesMax{};
         std::array<VoiceUnison, NUM_POLY_VOICES> voices;
         std::array<float, Settings::NumSettings> settings{};
         std::vector<std::shared_ptr<PluginViewContainers>> views;
@@ -1233,7 +1275,6 @@ namespace PluginSynth {
         ModulationSourceData modSrcData{};
         VoiceList prevVoiceList{};
         DAW::Shape::shape_t lfoShape;
-
     public:
         int32_t activeVoiceCount  = 0;
         int32_t unisonVoiceCount  = 0;
@@ -1463,8 +1504,15 @@ namespace PluginSynth {
 
     public:
         explicit SynthImpl(PluginVST2_Synth* vst2Plugin)
-            : SynthState(),
-              instanceVst2(vst2Plugin) {
+            : 
+#if BUILD_VSTHOST
+            PluginLockable(daw_tls::getTls().dawInstance),
+#else
+            PluginLockable(),
+#endif
+            SynthState(),
+            instanceVst2(vst2Plugin)
+        {
             (void) instanceVst2;
             initImpl();
         }
@@ -1822,6 +1870,42 @@ namespace PluginSynth {
             return true;
         }
 
+        int32_t loadPreset(const String& presetPath) {
+    #if BUILD_VSTHOST
+            std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(presetPath);
+            dbgassert(pluginSnapshot);
+            if (pluginSnapshot) {
+                std::shared_ptr<std::vector<std::byte>> buf;
+                auto sizeData = static_cast<size_t>(pluginSnapshot->dataChunk.size());
+                if (sizeData > 0) {
+                    buf = std::make_shared<std::vector<std::byte>>(sizeData);
+                    std::memcpy(buf->data(), pluginSnapshot->dataChunk.data(), sizeData);
+                    snapshot_t snapshotLoaded;
+                    if (deserializeSnapshot(buf, snapshotLoaded)) {
+                        setSnapshot(snapshotLoaded);
+                        while (snapshotLoaded.uiLayout.size() > views.size()) {
+                            createView();
+                        }
+                        setUiSnapshot(snapshotLoaded);
+                        String path;
+                        String name;
+                        String ext;
+                        SplitPath(presetPath, &path, &name, &ext);
+                        setPreset(presetPath, name);
+                        notifyUiChanges();
+                        if (instanceVst2) {
+                            instanceVst2->onPresetLoaded();
+                        }
+                        return 0;
+                    }
+                    return -3;
+                }
+                return -2;
+            }
+    #endif
+            return -1;
+        }
+        std::shared_ptr<PluginViewContainers> createView();
     private:
         float synthRandom() {
             uint32_t rnd32Bits = synthRand.rng_rand();
@@ -2848,6 +2932,7 @@ namespace PluginSynth {
             }
         }
     }
+
     void PluginVST2_Synth::setFromSynthProgram(SynthProgram* program) {
         for (auto param : this->vecParams) {
             auto* pParDouble = program->getProgramParameter(param->enumParam);
@@ -2859,9 +2944,21 @@ namespace PluginSynth {
             this->impl->OnParamChange(param->enumParam);
         }
     }
+
+    void PluginVST2_Synth::onPresetLoaded() {
+        if (curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
+            for (auto& param : vecParams) {
+                auto pParamDouble = staticPrograms[curProgram].getProgramParameter(param->enumParam);
+                if (pParamDouble) *pParamDouble = param->getAsDouble();
+            }
+        }
+        updateDisplay();
+    }
+
     SynthParamBase* PluginVST2_Synth::getParam(Parameters enumParam) {
         return impl->getParam(enumParam);
     }
+
     SynthImpl* PluginVST2_Synth::getSynth() {
         return this->impl;
     }
@@ -3065,43 +3162,6 @@ namespace PluginSynth {
         }
         return 0;
     }
-    int32_t PluginVST2_Synth::loadPreset(const String& presetPath) {
-        std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(presetPath);
-        dbgassert(pluginSnapshot);
-        if (pluginSnapshot) {
-            std::shared_ptr<std::vector<std::byte>> buf;
-            auto sizeData = static_cast<size_t>(pluginSnapshot->dataChunk.size());
-            if (sizeData > 0) {
-                buf = std::make_shared<std::vector<std::byte>>(sizeData);
-                std::memcpy(buf->data(), pluginSnapshot->dataChunk.data(), sizeData);
-                snapshot_t snapshotLoaded;
-                if (deserializeSnapshot(buf, snapshotLoaded)) {
-                    impl->setSnapshot(snapshotLoaded);
-                    if (curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
-                        for (auto& param : vecParams) {
-                            auto pParamDouble = staticPrograms[curProgram].getProgramParameter(param->enumParam);
-                            if (pParamDouble) *pParamDouble = param->getAsDouble();
-                        }
-                    }
-                    while (snapshotLoaded.uiLayout.size() > views.size()) {
-                        createView();
-                    }
-                    impl->setUiSnapshot(snapshotLoaded);
-                    String path;
-                    String name;
-                    String ext;
-                    SplitPath(presetPath, &path, &name, &ext);
-                    impl->setPreset(presetPath, name);
-                    impl->notifyUiChanges();
-                    updateDisplay();
-                    return 0;
-                }
-                return -3;
-            }
-            return -2;
-        }
-        return -1;
-    }
     void PluginVST2_Synth::notifyUiChanges() {
         for (auto& pviewctr : this->views) {
             if (pviewctr->isInUse()) {
@@ -3173,16 +3233,18 @@ namespace PluginSynth {
 }// namespace PluginSynth
 
 namespace PluginSynth {
+
     float getLayoutHeight(guibase* gui) {
         return gui->theme->get(GuiConstant::CONST_ROW_HEIGHT) * 1.33f;
     }
+
     class guicontainer_modulation_slot_destination : public guictr_base {
         SynthImpl* const synth;
         const int32_t slotIndex;
         const int32_t destSlotIndex;
         guidropdown_generic<String> dropdown;
         guiknob knob;
-        float rowHeight;
+        float rowHeight = HEIGHT_DEFAULT_INPUT;
 
     public:
         guicontainer_modulation_slot_destination(SynthImpl* _synth, int32_t _slotIndex, int32_t _destSlotIndex)
@@ -3212,7 +3274,7 @@ namespace PluginSynth {
             dropdown.setCallback([this](int idx, String& value) -> String {
                 if (idx >= 0) {
                     {
-                        ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                        ThreadLock lock = synth->lock();
                         if (idx > 0 && idx-1 < static_cast<int32_t>(sizeof(parametersModulate) / sizeof(parametersModulate[0]))) {
                             synth->setModulationDestination(slotIndex, destSlotIndex, parametersModulate[idx-1], knob.getValue());
                         } else {
@@ -3229,7 +3291,7 @@ namespace PluginSynth {
             dropdown.setCurrentString("<unused>");
             knob.fnValueEditChanged = [this](float prev, float value) {
                 {
-                    ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                    ThreadLock lock = synth->lock();
                     synth->setModulationDestRange(slotIndex, destSlotIndex, knob.getValue());
                 }
                 if (parent) {
@@ -3282,6 +3344,7 @@ namespace PluginSynth {
             this->rowHeight = rowHeight;
         }
     };
+
     class guicontainer_modulation_slot_source : public guictr_base {
         SynthImpl* const synth;
         const int32_t slotIndex;
@@ -3293,7 +3356,7 @@ namespace PluginSynth {
         gui_textfield textfieldFunction;
         guibutton buttonInputRange;
         std::function<bool(String)> fnValidateFunction;
-        float rowHeight;
+        float rowHeight = HEIGHT_DEFAULT_INPUT;
 
     public:
         guicontainer_modulation_slot_source(SynthImpl* _synth, int32_t _slotIndex, int32_t _srcSlotIndex)
@@ -3316,7 +3379,7 @@ namespace PluginSynth {
                 // dropdownOperator.setLabel(StringFormat("Mod %d Op %d", slotIndex, srcSlotIndex));
                 dropdownOperator.setCallback([this](int idx, String& value) -> String {
                     {
-                        ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                        ThreadLock lock = synth->lock();
                         synth->setModulationOperator(slotIndex, srcSlotIndex, idx);
                     }
                     if (parent) {
@@ -3336,7 +3399,7 @@ namespace PluginSynth {
                 dropdownSource.setCallback([this](int idx, String& value) -> String {
                     if (idx >= 0) {
                         {
-                            ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                            ThreadLock lock = synth->lock();
                             if (idx < CtrSize(modSrcTypesOrdered)) {
                                 synth->setModulationType(slotIndex, srcSlotIndex, modSrcTypesOrdered[idx]);
                             } else {
@@ -3355,7 +3418,7 @@ namespace PluginSynth {
                 inputConstant.setLabel(StringFormat("Mod %d Constant %d", slotIndex, srcSlotIndex));
                 inputConstant.fnValueEditChanged = [this](gui_numberinput_field_base*, double value) {
                     {
-                        ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                        ThreadLock lock = synth->lock();
                         synth->setModulationConstant(slotIndex, srcSlotIndex, value);
                     }
                     if (parent) {
@@ -3379,7 +3442,7 @@ namespace PluginSynth {
                         try {
                             MathExpr expr = MathExpr::parse(value);
                             {
-                                ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                                ThreadLock lock = synth->lock();
                                 synth->setModulationFunction(slotIndex, srcSlotIndex, std::move(expr));
                             }
                             textfieldFunction.setLabel(StringFormat("Mod %d Function %d", slotIndex, srcSlotIndex));
@@ -3400,12 +3463,12 @@ namespace PluginSynth {
                             //     ivec2(ctrlSize.x / 2, ctrlSize.y - 100) - tooltip->size / 2,
                             //     BASECTRL_WND_POS_RELATIVE | BASECTRL_WND_IS_TOOLTIP);
                             {
-                                ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                                ThreadLock lock = synth->lock();
                                 MathExpr expr;
                                 expr.str        = value;
                                 expr.parsedExpr = nullptr;
                                 {
-                                    ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                                    ThreadLock lock = synth->lock();
                                     synth->setModulationFunction(slotIndex, srcSlotIndex, std::move(expr));
                                 }
                             }
@@ -3425,9 +3488,11 @@ namespace PluginSynth {
             add(&textfieldFunction);
             add(&buttonInputRange);
         }
+
         ~guicontainer_modulation_slot_source() override {
             removeGuis();
         }
+
         void setFromSynth() {
             auto modulation = synth->getModulationIfExists(slotIndex);
             dropdownOperator.setVisible(srcSlotIndex > 0 && (modulation && CtrSize(modulation->inputs) > srcSlotIndex));
@@ -3494,6 +3559,7 @@ namespace PluginSynth {
                 constant = 1.0;
             }
         }
+
         void layout() override {
             auto cs = getSizeContent();
             // dbgassert(cs.x > 0);
@@ -3531,11 +3597,12 @@ namespace PluginSynth {
                 // dbgassert(!gui->isVisible() || (gui->size.x > 0 && gui->size.y > 0));
             }
         }
+
         void buttonClicked(guibase* button) override {
             if (button == &buttonInputRange) {
                 {
 
-                    ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
+                    ThreadLock lock = synth->lock();
                     auto modulation = synth->getModulationIfExists(slotIndex);
                     if (modulation && CtrSize(modulation->inputs) > srcSlotIndex) {
                         auto& input = modulation->inputs[srcSlotIndex];
@@ -3549,17 +3616,21 @@ namespace PluginSynth {
             parent->buttonClicked(button);
             guictr_base::buttonClicked(button);
         }
+
         void determineSize(ivec2& prefSize) override {
             prefSize.y = math::roundfS32(rowHeight);
         }
+
         void setRowHeight(float rowHeight) {
             this->rowHeight = rowHeight;
         }
     };
+
     class guictr_synth_title : public guictr_base {
         float titleHeight = 10.0f;
     public:
         guictr_synth_title() = default;
+
         void renderContainerLabel(NVGcontext* vg) override {
             if (isFlag(FLG_RENDER_LABEL) && label.length()) {
                 const auto bgColor = getInnerBackgroundColorFromState(getStateFlags());
@@ -3573,15 +3644,19 @@ namespace PluginSynth {
                                 NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
             }
         }
+
         void setTitleHeight(float height) {
             titleHeight = height;
         }
+
         float getTitleHeight() const {
             return titleHeight;
         }
+
         virtual void layoutParameterGroup(ivec2& prefSize, vec2 knobSize, float titleHeight) {
         }
     };
+
     class guicontainer_modulation_slot : public guictr_synth_title {
         SynthImpl* const synth;
         const int32_t slotIndex;
@@ -3601,6 +3676,7 @@ namespace PluginSynth {
             setFlag(FLG_RENDER_LABEL, true);
             setCanMouseHit(true);
         }
+
         ~guicontainer_modulation_slot() override {
             removeGuis();
             for (auto& d : sources) {
@@ -3610,6 +3686,7 @@ namespace PluginSynth {
                 delete d;
             }
         }
+
         void setFromSynth() {
             auto modulation     = synth->getModulationIfExists(slotIndex);
             auto modSourceCount = modulation ? modulation->inputs.size() : 0;
@@ -3646,6 +3723,7 @@ namespace PluginSynth {
                 dst->setFromSynth();
             }
         }
+
         void render(NVGcontext* vg) override {
             // auto halfSize = vec2(size) * 0.5f;
             // vec2 posScrolled = vec2(pos) + halfSize;
@@ -3656,6 +3734,7 @@ namespace PluginSynth {
             // }
             guictr_base::render(vg);
         }
+
         void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset) override {
             if (sizeInset.y > 0 && sizeInset.x > 0) {
                 nvgTranslateZ(vg, -2.0f);
@@ -3675,10 +3754,12 @@ namespace PluginSynth {
                 nvgTranslateZ(vg, 1.0f);
             }
         }
+
         void buttonClicked(guibase* button) override {
             parent->buttonClicked(button);
             guictr_base::buttonClicked(button);
         }
+
         void determineSize(ivec2& prefSize) override {
             vec2 sizeTotal = {0, 0};
             for (auto& src : guis) {
@@ -3688,6 +3769,7 @@ namespace PluginSynth {
             }
             prefSize.y = math::ceilfS32(getTitleHeight() + sizeTotal.y + padding * 2);
         }
+
         void setRowHeight(float height) {
             setTitleHeight(height);
             for (auto& src : sources) {
@@ -3697,6 +3779,7 @@ namespace PluginSynth {
                 dst->setRowHeight(height*1.5f);
             }
         }
+
         void layout() override {
             auto cs        = getSizeContent();
             vec2 pos      = {0, getTitleHeight()};
@@ -3709,6 +3792,7 @@ namespace PluginSynth {
             }
         }
     };
+
     class guicontainer_modulation : public guictr_synth_title {
         guictr_scrollbar scrollContainerModulation;
         SynthImpl* const synth;
@@ -3729,6 +3813,7 @@ namespace PluginSynth {
             add(&scrollContainerModulation);
             scrollContainerModulation.setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
         }
+
         ~guicontainer_modulation() override {
             scrollContainerModulation.removeGuis();
             removeGuis();
@@ -3736,6 +3821,7 @@ namespace PluginSynth {
                 delete slot;
             }
         }
+
         void layout() override {
             scrollContainerModulation.pos = {0, getTitleHeight()};
             scrollContainerModulation.size = size;
@@ -3745,12 +3831,14 @@ namespace PluginSynth {
                 gui->layout();
             }
         }
+
         void setTitleHeight(float height) {
             guictr_synth_title::setTitleHeight(isFlag(FLG_RENDER_LABEL) ? height*1.5f : 0);
             for (auto& slot : slots) {
                 slot->setRowHeight(height);
             }
         }
+
         void setFromSynth() {
             auto modulations = synth->getModulationCount();
             while (CtrSize(slots) <= modulations) {
@@ -3764,11 +3852,13 @@ namespace PluginSynth {
                 layout();
             }
         }
+
         void buttonClicked(guibase* button) override {
             onChildLayoutChanged(this);
             bGuiNeedsRefresh = true;
             guictr_base::buttonClicked(button);
         }
+
         void onTick(AppCtrl* ctrl) override {
             if (bGuiNeedsRefresh) {
                 bGuiNeedsRefresh = false;
@@ -3776,6 +3866,7 @@ namespace PluginSynth {
             }
             guictr_base::onTick(ctrl);
         }
+
         void determineSize(ivec2& prefSize) override {
             ivec2 sizeTotal = {};
             for (auto& src : guis) {
@@ -3812,6 +3903,7 @@ namespace PluginSynth {
             return param;
         }
     };
+
     class gui_listsynthsettings : public gui_list_entry {
         SynthImpl* const synth;
         const Settings setting;
@@ -3819,7 +3911,7 @@ namespace PluginSynth {
 
     public:
         explicit gui_listsynthsettings(SynthImpl* _synth, Settings _setting, String _settingName)
-            : gui_list_entry(), synth(_synth), setting(_setting), name(_settingName) {
+            : gui_list_entry(), synth(_synth), setting(_setting), name(std::move(_settingName)) {
             icon = -1;
         }
 
@@ -3827,9 +3919,8 @@ namespace PluginSynth {
         void dragMoveOn(guibase* target, ivec2 mousepos) override {}
         void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
         void handleDraggedBegin(MouseEvent& evt) override { toggle(); }
-        bool enabled() {
-            return synth->getSetting(setting);
-        }
+        bool enabled() { return synth->getSetting(setting); }
+
         bool toggle() {
             bool bEnbl = enabled();
             bEnbl      = !bEnbl;
@@ -3905,6 +3996,7 @@ namespace PluginSynth {
             nvgTranslate(vg, -pos.x, -pos.y);
         }
     };
+
     class guictr_synth_param_container : public guictr_synth_title {
         SynthImpl* const synth;
         std::vector<guiknob_synthparam*> knobs;
@@ -3919,6 +4011,7 @@ namespace PluginSynth {
             setFlag(FLG_RENDER_LABEL, true);
             setCanMouseHit(true);
         }
+
         void addParamKnob(guiknob_synthparam* knob) {
             knobs.push_back(knob);
             add(knob);
@@ -3960,14 +4053,17 @@ namespace PluginSynth {
                 }
             }
         }
+
         void layout() override {
             for (guibase* gui : guis) {
                 gui->layout();
             }
         }
+
         void buttonClicked(guibase* button) override {
             parent->buttonClicked(button);
         }
+
         void layoutParameterGroup(ivec2& prefSize, vec2 knobSize, float titleHeight) override {
             int newPadding = 0;
             while (newPadding < 4 && newPadding * 48 < prefSize.y) {
@@ -4010,44 +4106,13 @@ namespace PluginSynth {
                 if (knob->id == 2) {
                     knob->pos  = vec2(knobPos.x, titleHeight);
                     knob->size = sizeFull;
-                    knobPos.x += sizeFull.x + padding;
+                    knobPos.x += math::floorfS32(sizeFull.x + padding);
                 }
             }
             prefSize.x = math::roundfS32(knobPos.x - padding) + padding * 2;
         }
     };
     
-    // class guictr_synth_shape_lfo : public guictr_synth_title {
-    //     SynthImpl* const synth;
-    //     i_ctr_shape_editor* const shapeEditor;
-    //     guictr_base* const shapeEditorCtr;
-    // public:
-    //     explicit guictr_synth_shape_lfo(SynthImpl* synth)
-    //         : synth(synth), shapeEditor(makeShapeEditor()), shapeEditorCtr(shapeEditor->getGuiContainer()) {
-    //         shapeEditor->setShapeEditorCallback([synth](const DAW::Shape::shape_base_t& shape) {
-    //             // synth->setLfoShape(shape);
-    //         });
-    //         shapeEditor->setShapeEditorShapeRef(&synth->getShape(0));
-    //         margin  = 4;
-    //         padding = 4;
-    //         add(shapeEditorCtr);
-    //         setBackgroundRendered(true);
-    //         setBackgroundRenderedInset(true);
-    //         setFlag(FLG_RENDER_LABEL, true);
-    //         setCanMouseHit(true);
-    //         setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
-    //     }
-    //     ~guictr_synth_shape_lfo() {
-    //         removeGuis();
-    //         delete shapeEditorCtr;
-    //     }
-    //     void buttonClicked(guibase* button) override {
-    //         parent->buttonClicked(button);
-    //     }
-    //     void layoutParameterGroup(ivec2& prefSize, vec2 knobSize, float titleHeight) override {
-    //         prefSize.x = math::roundfS32(knobSize.x*8) + padding * 2;
-    //     }
-    // };
     class guicontainer_plugin_synth_editor : public guictr_base, public splitter_cb {
         struct _synth_gui_param_knob {
             Parameters param;
@@ -4293,6 +4358,7 @@ namespace PluginSynth {
                 // list2.layout();
             }
         }
+
         ~guicontainer_plugin_synth_editor() override {
             removeGuis();
             for (auto& synthKnob : vecParamUI) {
@@ -4304,11 +4370,13 @@ namespace PluginSynth {
             if (shapeEditor)
                 delete shapeEditor->getGuiContainer();
         }
+
         float getSplitterPos(int32_t idx) {
             if (idx == 0)
                 return splitter.getScale();
             return 0.0f;
         }
+
         bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
             if (this->contains(mpos)) {
                 ivec2 localMouse = this->toContainerSpace(mpos);
@@ -4352,6 +4420,7 @@ namespace PluginSynth {
             }
 #endif
         }
+
         void onGuiOpen() {
             for (auto& synthKnob : vecParamUI) {
 #if BUILD_VSTHOST
@@ -4367,6 +4436,7 @@ namespace PluginSynth {
             }
             bGuiNeedsRefresh = true;
         }
+
         void onGuiClose() {
             for (auto& synthKnob : vecParamUI) {
 #if BUILD_VSTHOST
@@ -4434,6 +4504,7 @@ namespace PluginSynth {
             this->list.layout();
             guictr_base::onTick(ctrl);
         }
+
         void render(NVGcontext* vg) override {
             if (isBackgroundRendered()) {
                 renderBackground(vg);
@@ -4449,6 +4520,7 @@ namespace PluginSynth {
                 }
             }
         }
+
         void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override {
             onChildLayoutChanged(this);
         }
@@ -4456,6 +4528,7 @@ namespace PluginSynth {
         ivec2 getContainerSize() override {
             return size;
         }
+
         void layout() override {
             for (auto& knob : vecParamUI) {
                 if (knob.type == guiknob::knobtype::KNOB_LABELED) {
@@ -4514,6 +4587,7 @@ namespace PluginSynth {
                 gui->layout();
             }
         }
+
         bool handleKeyInput(KeyEvent& event) override {
             if (event.type != KeyEventType::K_RELEASE) {
                 if (event.keyCode == KEY_ENTER) {
@@ -4522,6 +4596,7 @@ namespace PluginSynth {
             }
             return false;
         }
+
         void buttonClicked(guibase* button) override {
             auto param = dynamic_cast<guiknob_pluginparam*>(button);
             if (param && module) {
@@ -4559,6 +4634,7 @@ namespace PluginSynth {
             layout = ui_layout_t{ splitter.getScale() };
             return true;
         }
+
         void onChildLayoutChanged(guibase* g) override {
             bGuiNeedsRefresh = true;
             if (this->parent) {
@@ -4583,12 +4659,13 @@ namespace PluginSynth {
 
         void onTick(AppCtrl* ctrl) override {
             if (dawCtrl) {
-                auto lock = dawCtrl->getDaw()->getPlayThread()->tryLockThread();
+                auto lock = synth->tryLock();
                 if (lock.isLocked()) {
                     list = synth->getVoiceListPrev();
                 }
             }
         }
+
         void render(NVGcontext* vg) override {
             guictr_base::render(vg);
             auto cs = getSizeContent();
@@ -4644,18 +4721,19 @@ namespace PluginSynth {
             } */
         }
     };
+
     class guicontainer_plugin_synth_header : public guictr_base {
-        PluginVST2_Synth* const plugin;
+        SynthImpl* const synth;
         guicontainer_plugin_synth_voicestates voiceStates;
         guidropdown_select_preset selectPreset;
         guibutton prev;
         guibutton next;
 
     public:
-        explicit guicontainer_plugin_synth_header(PluginVST2_Synth* plugin)
+        explicit guicontainer_plugin_synth_header(SynthImpl* _synth)
             : guictr_base(),
-              plugin(plugin),
-              voiceStates(plugin->getSynth()),
+              synth(_synth),
+              voiceStates(_synth),
               selectPreset()
         {
             padding = 0;
@@ -4666,15 +4744,16 @@ namespace PluginSynth {
             add(&selectPreset);
             add(&prev);
             add(&next);
-            selectPreset.setPresetManager(plugin->getSynth()->getPresetManager());
+            selectPreset.setPresetManager(synth->getPresetManager());
             selectPreset.setCallback([this](const String& path) {
-                ThreadLock lock = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
-                this->plugin->loadPreset(path);
-                this->selectPreset.setString(this->plugin->getSynth()->getPreset().name);
+                ThreadLock lock = synth->lock();
+                this->synth->loadPreset(path);
+                this->selectPreset.setString(synth->getPreset().name);
             });
         }
+
         void buttonClicked(guibase* button) override {
-            this->selectPreset.setString(this->plugin->getSynth()->getPreset().name);
+            this->selectPreset.setString(synth->getPreset().name);
             int dir = 0;
             if (button == &prev) {
                 dir = -1;
@@ -4683,9 +4762,9 @@ namespace PluginSynth {
                 dir = 1;
             }
             if (dir) {
-                auto& prMgr     = plugin->getSynth()->getPresetManager();
+                auto& prMgr     = synth->getPresetManager();
                 auto& presets   = prMgr.getPresets();
-                auto& curPreset = plugin->getSynth()->getPreset();
+                auto& curPreset = synth->getPreset();
                 size_t i        = 0;
                 for (; i < presets.size(); ++i) {
                     if (presets[i].path == curPreset.path) {
@@ -4694,16 +4773,18 @@ namespace PluginSynth {
                 }
                 size_t nextIdx = (i + dir + presets.size()) % presets.size();
                 if (nextIdx < presets.size()) {
-                    ::ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-                    plugin->loadPreset(presets[nextIdx].path);
+                    auto lock = synth->lock();
+                    synth->loadPreset(presets[nextIdx].path);
                 }
             }
         }
+
         ~guicontainer_plugin_synth_header() override {
             removeGuis();
         }
+
         void layout() override {
-            this->selectPreset.setString(this->plugin->getSynth()->getPreset().name);
+            this->selectPreset.setString(synth->getPreset().name);
             auto cs   = getSizeContent();
             prev.size = next.size = { cs.y / 2, cs.y };
             selectPreset.size     = { cs.x * 0.33f, cs.y };
@@ -4716,23 +4797,26 @@ namespace PluginSynth {
             guictr_base::layout();
         }
     };
+
     class guicontainer_plugin_synth : public guictr_base {
         guicontainer_plugin_synth_editor editor;
         guicontainer_plugin_synth_header header;
 
     public:
         explicit guicontainer_plugin_synth(PluginVST2_Synth* plugin)
-            : editor(plugin), header(plugin) {
+            : editor(plugin), header(plugin->getSynth()) {
             padding = 0;
             margin  = 0;
             setBackgroundRendered(false);
             add(&header);
             add(&editor);
         }
+
         ~guicontainer_plugin_synth() override {
             remove(&editor);
             add(&header);
         }
+
         void layout() override {
             header.size.y = math::roundfS32(getLayoutHeight(this));
             editor.pos.y    = header.size.y;
@@ -4742,9 +4826,11 @@ namespace PluginSynth {
             editor.size  = cs;
             guictr_base::layout();
         }
+
         void onTick(AppCtrl* ctrl) override {
             guictr_base::onTick(ctrl);
         }
+
         void setUiLayout(const ui_layout_t& layout) {
             editor.setUiLayout(layout);
         }
@@ -4756,6 +4842,7 @@ namespace PluginSynth {
         void onSetParameter(int32_t index, float value) {
             editor.onSetParameter(index, value);
         }
+
         void getSizeScale(int& w, int& h) const {
             w = 1280*1.25;
             h = 720;
@@ -4773,15 +4860,25 @@ namespace PluginSynth {
     const char* getName() {
         return PLUGIN_EFFECT_NAME;
     }
+
     AudioEffectX* createPlugin(audioMasterCallback audioMaster) {
         return new PluginVST2_Synth(audioMaster);
     }
-    using ViewCtrType = SinglePluginViewContainers<guicontainer_plugin_synth, PluginVST2_Synth>;
+
     std::shared_ptr<PluginViewContainers> PluginVST2_Synth::createView() {
-        auto view = std::make_shared<ViewCtrType>(this, 1280, 720);
+        auto view = this->impl->createView();
         this->views.push_back(view);
-        this->impl->views.push_back(view);
         return view;
+    }
+
+    using ViewCtrType = SinglePluginViewContainers<guicontainer_plugin_synth, PluginVST2_Synth>;
+    std::shared_ptr<PluginViewContainers> SynthImpl::createView() {
+        if (this->instanceVst2) {
+            auto view = std::make_shared<ViewCtrType>(this->instanceVst2, 1280, 720);
+            this->views.push_back(view);
+            return view;
+        }
+        return nullptr;
     }
 
     void SynthImpl::getUiSnapshot(snapshot_t& snapshot) {
@@ -4794,6 +4891,7 @@ namespace PluginSynth {
             }
         }
     }
+
     void SynthImpl::setUiSnapshot(snapshot_t& snapshot) {
         auto numViews = CtrSize(snapshot.uiLayout);
         for (int32_t i = 0; i < numViews; ++i) {
@@ -4807,4 +4905,5 @@ namespace PluginSynth {
             implCtrType->getPluginUI().setUiLayout(snapshot.uiLayout[i]);
         }
     }
+
 }// namespace PluginSynth

@@ -1,10 +1,11 @@
 
 # macro to set common properties on an executable
-FUNCTION(CONFIGURE_TARGET_OUTPUT buildtarget)
+FUNCTION(CONFIGURE_TARGET_OUTPUT buildtarget outputname)
   # As per CMake docs: Add empty generator expr to avoid a configuration subdirectory on multi configs
   set_target_properties(${buildtarget} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ABS_WORKING_DIR}$<0:...>)
+  set_target_properties(${buildtarget} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${ABS_WORKING_DIR}$<0:...>)
   set_target_properties(${buildtarget} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${ABS_WORKING_DIR})
-  set_target_properties(${buildtarget} PROPERTIES OUTPUT_NAME "${buildtarget}-${BUILD_BINARY_SUFFIX}")
+  set_target_properties(${buildtarget} PROPERTIES OUTPUT_NAME "${outputname}-${BUILD_BINARY_SUFFIX}")
   if (NOT WIN32)
     set_target_properties(${buildtarget} PROPERTIES LINK_FLAGS "-Wl,--build-id=0x${GIT_SHA1}")
   endif()

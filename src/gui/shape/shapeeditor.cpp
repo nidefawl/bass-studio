@@ -38,7 +38,7 @@
 #include "theme.h"
 #include "util/presetmanager.h"
 #include "shape.h"
-#include "file/shape_file.h"
+#include "file/shapefile.h"
 
 namespace DAW::Shape {
 
@@ -603,7 +603,7 @@ public:
         auto cs = getSizeContent();
         shape.pos = controls.pos = {0,0};
         shape.size = controls.size = cs;
-        controls.size.y = math::min<int32_t>(inputHeight, size.y/8);
+        controls.size.y = math::clamp<int32_t>(size.y/8, 12, inputHeight);
         shape.pos.y = controls.bottom() + padding;
         shape.size.y = cs.y - controls.size.y;
         guictr_base::layout();

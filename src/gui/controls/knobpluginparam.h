@@ -121,6 +121,8 @@ public:
     effectbase* getEffectInstance() {
 #if BUILD_VSTHOST
         return hostSidePlugin;
+#else
+        return nullptr;
 #endif
     }
 };

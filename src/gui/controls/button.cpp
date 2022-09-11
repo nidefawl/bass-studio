@@ -11,7 +11,7 @@ GuiColor::constant_t guibutton::getBackgroundColorFromState(int32_t stateflags) 
 }
 
 void guibutton::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
-    if (drawFn || str.length()) {
+    if ((drawFn || str.length()) && size.y > 10 && size.x > 10) {
         nvgSave(vg);
         setScissorTransform(vg);
 

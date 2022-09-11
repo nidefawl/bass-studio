@@ -628,7 +628,9 @@ std::pair<note_t*, note_t*> getMinMaxTime(std::vector<note_t>& notes) {
 }
 
 int32_t clip_audio_t::lenSamples() const {
-    audiofile_t* audio = audiocache::getInstance()->get(this->id);
+    auto cache = audiocache::getInstance();
+    dbgassert(cache);
+    audiofile_t* audio = cache->get(this->id);
     auto* sample       = audio ? audio->sample.get() : nullptr;
     if (sample)
         return sample->nSamples;
