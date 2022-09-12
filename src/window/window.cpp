@@ -2018,6 +2018,11 @@ void windowTickTimerRun() {
 #include <vstsdk-plugin-2.4/aeffeditor.h>
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 
+#define OVERRIDE_HOST_WINDOW_PROC 0
+#if OVERRIDE_HOST_WINDOW_PROC && defined(_WIN32)
+static LRESULT pluginHostWindowOverrideProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+#endif
+
 class appwindow_plugin_client_vst2 : public appwindow_main, public pluginwindow {
     bool isInitialized = false;
 
@@ -2100,11 +2105,24 @@ public:
             throw appexception("Couldn't start application");
         }
     }
-
+#ifdef _WIN32
+    WNDPROC defHostWindowProc = nullptr;
+    WNDPROC getDefaultHostWindowProc() const {
+        return defHostWindowProc;
+    }
+#endif
     bool open(void* ptr) override {
         try {
             AEffEditor::open(ptr);
             if (ptr) {
+#if OVERRIDE_HOST_WINDOW_PROC && defined(_WIN32)
+                auto hostWindowHandle = reinterpret_cast<HWND>(ptr);
+                log_lf(Log::L_DEBUG, "OVERRIDE GWLP_WNDPROC\n");
+                defHostWindowProc = reinterpret_cast<WNDPROC>(GetWindowLongPtr(hostWindowHandle, GWLP_WNDPROC));
+                SetWindowLongPtr(hostWindowHandle, GWLP_WNDPROC, (LONG_PTR) pluginHostWindowOverrideProc);
+                SetPropW(hostWindowHandle, L"VST_CLIENT", this);
+#endif
+
                 isInitialized = true;
                 setAppWindowHints();
                 int windowWidth  = _rect.right - _rect.left;
@@ -2141,14 +2159,195 @@ public:
         }
         AEffEditor::close();
     }
+    struct glfw_key_press {
+        int key;
+        int scancode;
+        int keyState;
+        int mods;
+    };
+    int vstToGlfwKey(unsigned char key) const {
+        switch (key) {
+            case VKEY_BACK:
+                return KEY_BACKSPACE;
+            case VKEY_TAB:
+                return KEY_TAB;
+            case VKEY_CLEAR:
+                return KEY_DELETE;
+            case VKEY_RETURN:
+                return KEY_ENTER;
+            case VKEY_PAUSE:
+                return KEY_PAUSE;
+            case VKEY_ESCAPE:
+                return KEY_ESCAPE;
+            case VKEY_SPACE:
+                return KEY_SPACE;
+            case VKEY_NEXT:
+                return KEY_PAGE_DOWN;
+            case VKEY_END:
+                return KEY_END;
+            case VKEY_HOME:
+                return KEY_HOME;
+            case VKEY_LEFT:
+                return KEY_LEFT;
+            case VKEY_UP:
+                return KEY_UP;
+            case VKEY_RIGHT:
+                return KEY_RIGHT;
+            case VKEY_DOWN:
+                return KEY_DOWN;
+            case VKEY_PAGEUP:
+                return KEY_PAGE_UP;
+            case VKEY_PAGEDOWN:
+                return KEY_PAGE_DOWN;
+            case VKEY_SELECT:
+                return -1;
+            case VKEY_PRINT:
+                return KEY_PRINT_SCREEN;
+            case VKEY_ENTER:
+                return KEY_ENTER;
+            case VKEY_SNAPSHOT:
+                return -1;
+            case VKEY_INSERT:
+                return KEY_INSERT;
+            case VKEY_DELETE:
+                return KEY_DELETE;
+            case VKEY_HELP:
+                return -1;
+            case VKEY_NUMPAD0:
+                return KEY_KP_0;
+            case VKEY_NUMPAD1:
+                return KEY_KP_1;
+            case VKEY_NUMPAD2:
+                return KEY_KP_2;
+            case VKEY_NUMPAD3:
+                return KEY_KP_3;
+            case VKEY_NUMPAD4:
+                return KEY_KP_4;
+            case VKEY_NUMPAD5:
+                return KEY_KP_5;
+            case VKEY_NUMPAD6:
+                return KEY_KP_6;
+            case VKEY_NUMPAD7:
+                return KEY_KP_7;
+            case VKEY_NUMPAD8:
+                return KEY_KP_8;
+            case VKEY_NUMPAD9:
+                return KEY_KP_9;
+            case VKEY_MULTIPLY:
+                return KEY_KP_MULTIPLY;
+            case VKEY_ADD:
+                return KEY_KP_ADD;
+            case VKEY_SEPARATOR:
+                return -1;
+            case VKEY_SUBTRACT:
+                return KEY_KP_SUBTRACT;
+            case VKEY_DECIMAL:
+                return -1;
+            case VKEY_DIVIDE:
+                return KEY_KP_DIVIDE;
+            case VKEY_F1:
+                return KEY_F1;
+            case VKEY_F2:
+                return KEY_F2;
+            case VKEY_F3:
+                return KEY_F3;
+            case VKEY_F4:
+                return KEY_F4;
+            case VKEY_F5:
+                return KEY_F5;
+            case VKEY_F6:
+                return KEY_F6;
+            case VKEY_F7:
+                return KEY_F7;
+            case VKEY_F8:
+                return KEY_F8;
+            case VKEY_F9:
+                return KEY_F9;
+            case VKEY_F10:
+                return KEY_F10;
+            case VKEY_F11:
+                return KEY_F11;
+            case VKEY_F12:
+                return KEY_F12;
+            case VKEY_NUMLOCK:
+                return KEY_NUM_LOCK;
+            case VKEY_SCROLL:
+                return KEY_SCROLL_LOCK;
+            case VKEY_SHIFT:
+                return KEY_LEFT_SHIFT;
+            case VKEY_CONTROL:
+                return KEY_LEFT_CONTROL;
+            case VKEY_ALT:
+                return KEY_LEFT_ALT;
+            case VKEY_EQUALS:
+                return KEY_EQUAL;
+        }
+        return 0;
+    }
+    glfw_key_press toGlfwKeyCodes(VstKeyCode& keyCode) const {
+        glfw_key_press keyPress{};
+        if (keyCode.modifier & MODIFIER_SHIFT) {
+            keyPress.mods |= KB_MOD_SHIFT;
+        }
+        if (keyCode.modifier & MODIFIER_ALTERNATE) {
+            keyPress.mods |= KB_MOD_ALT;
+        }
+        if (keyCode.modifier & MODIFIER_CONTROL) {
+            keyPress.mods |= KB_MOD_CTRL;
+        }
+        if (keyCode.modifier & MODIFIER_COMMAND) {
+            keyPress.mods |= KB_MOD_SUPER;
+        }
+        if (keyCode.virt) {
+            auto mappedVirtKey = vstToGlfwKey(keyCode.virt);
+            if (mappedVirtKey < 0) {
+                log_lf(Log::L_DEBUG, "Failed mapping virtual key %d\n", keyCode.virt);
+            }
+            keyPress.key = mappedVirtKey;
+        }
+        if (keyCode.character) {
+            if ((keyPress.mods & (KB_MOD_CTRL | KB_MOD_ALT | KB_MOD_SUPER)) != 0) {
+                if (!keyPress.key) {
+                    if (keyCode.character >= 0x61 && keyCode.character <= 0x7A) {
+                        keyPress.key = keyCode.character - 0x20;
+                    } else if (keyCode.character >= 0x20 && keyCode.character <= 0x7A) {
+                        keyPress.key = keyCode.character;
+                    }
+                }
+            } else if (keyCode.character >= 0x20 && keyCode.character <= 0x7E) {
+                keyPress.scancode = keyCode.character;
+            }
+        } 
+        return keyPress;
+    }
 
     ///< Receive key down event. Return true only if key was really used!
     bool onKeyDown(VstKeyCode & keyCode) override {
-        return false;
+#ifndef NDEBUG
+        log_lf(Log::L_DEBUG, "Key down: char %d virt %u mods %u\n", keyCode.character, keyCode.virt, keyCode.modifier);
+        auto key = toGlfwKeyCodes(keyCode);
+        log_lf(Log::L_DEBUG, "Converted: key %d scancode %d mods %d\n", key.key, key.scancode, key.mods);
+#else
+        auto key = toGlfwKeyCodes(keyCode);
+#endif
+        if (key.key) {
+            ctrlShared->onKeyInput(key.key, key.scancode, GLFW_PRESS, key.mods, nullptr);
+        }
+        if (key.scancode != 0) {
+            ctrlShared->onCharInput(key.scancode);
+        }
+        return true;
     }
     ///< Receive key up event. Return true only if key was really used!
     bool onKeyUp(VstKeyCode & keyCode) override {
-        return false;
+        auto key = toGlfwKeyCodes(keyCode);
+        if (key.key) {
+            ctrlShared->onKeyInput(key.key, key.scancode, GLFW_RELEASE, key.mods, nullptr);
+        }
+        if (key.scancode != 0) {
+            ctrlShared->onCharInput(key.scancode);
+        }
+        return true;
     }
     ///< Handle mouse wheel event, distance is positive or negative to indicate wheel direction.
     bool onWheel(float distance) override {
@@ -2159,25 +2358,28 @@ public:
         return false;
     }
     //end aeffect overrides
-
-    hires_timer_t t2;
-    int nCalls2 = 0;
+#ifndef NDEBUG
+    hires_timer_t timerIdle;
+    hires_timer_t timerRender;
+    int nCallsIdle = 0;
+    int nCallsRender = 0;
     void renderWindowAndChildren() override {
-        if (nCalls2++ > 100) {
-            double d = t2.getTimeDoubleReset();
+        if (nCallsRender++ > 100) {
+            double d = timerRender.getTimeDoubleReset();
             log_printf("renderWindowAndChildren FPS: %f\n", 100.0 / d);
-            nCalls2 = 0;
+            nCallsRender = 0;
         }
         appwindow_main::renderWindowAndChildren();
     }
-    hires_timer_t t;
-    int nCalls = 0;
+#endif
     void idle() override {
-        if (nCalls++ > 100) {
-            double d = t.getTimeDoubleReset();
+#ifndef NDEBUG
+        if (nCallsIdle++ > 100) {
+            double d = timerIdle.getTimeDoubleReset();
             log_printf("idle FPS: %f\n", 100.0 / d);
-            nCalls = 0;
+            nCallsIdle = 0;
         }
+#endif
         if (isInitialized) {
             ctrlShared->onAppTick();
             flagNeedsRedraw();
@@ -2190,6 +2392,28 @@ public:
         }
     }
 };
+
+#if OVERRIDE_HOST_WINDOW_PROC && defined(_WIN32)
+static LRESULT pluginHostWindowOverrideProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
+    auto* plugin = reinterpret_cast<appwindow_plugin_client_vst2*>(GetPropW(_hwnd, L"VST_CLIENT"));
+    if (plugin) {
+        switch (Msg) {
+            case WM_SETFOCUS: {
+                HWND top_child = GetWindow(_hwnd, GW_CHILD);
+                if (top_child) {
+                    SetFocus(top_child);
+                    return 0;
+                }
+                break;
+            }
+            default:
+                break;
+        }
+        return CallWindowProc(plugin->getDefaultHostWindowProc(), _hwnd, Msg, wParam, lParam);
+    }
+    return DefWindowProc(_hwnd, Msg, wParam, lParam);
+}
+#endif
 
 class appwindow_plugin_internal : public appwindow_main, public window_plugin {
     bool isInitialized = false;
