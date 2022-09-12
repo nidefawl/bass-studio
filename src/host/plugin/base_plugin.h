@@ -134,8 +134,8 @@ public:
     };
     virtual void unload(vsthost* host, int flags);
     virtual void load(vsthost* host);
-    virtual samplecount_t getPluginLatency()                = 0;
-    virtual String getInfo(std::vector<String>& list) = 0;
+    virtual samplecount_t getPluginLatency() = 0;
+    virtual String getInfo(std::vector<String>& list) {};
     track_t* getTrack() override;
     virtual void onTick(double since);
     virtual void setSampleFormat(sampleformat_t sampleFormat) {

@@ -18,14 +18,11 @@ public:
 
     float dispatchGetParameter(int32_t idx) override;
     void dispatchSetParameter(int32_t idx, float val) override;
-    void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     int getModuleType() override { return PLUGIN_TYPE_GAIN; };
     samplecount_t getPluginLatency() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;
     param_unit_t getParamValueDisplay(int32_t idx) override;
-    String getInfo(std::vector<String>& list) override;
-    void onTick(double since) override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;

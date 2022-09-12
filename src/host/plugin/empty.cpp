@@ -79,10 +79,6 @@ void module_empty::process(AudioBlock* in, AudioBlock* out, double tick, double 
     out->copyFrom(in);
 }
 
-String module_empty::getInfo(std::vector<String>& list) {
-    return "";
-}
-
 template<>
 effectbase* makeInstance<module_empty>(int32_t _projectGlobalId) {
     return new module_empty(_projectGlobalId);

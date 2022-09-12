@@ -280,10 +280,6 @@ void module_group::setTrackLink(audio_stage_t* trImpl) {
     internalplugin::setTrackLink(trImpl);
 }
 
-String module_group::getInfo(std::vector<String>& list) {
-    return "";
-}
-
 void module_group::onTick(double since) {
     meter.onTick(since);
     meterIn.onTick(since);

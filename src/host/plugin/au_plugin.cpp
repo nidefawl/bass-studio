@@ -9,13 +9,6 @@
 #include "track_impl.h"
 #include "au_plugin.h"
 
-String auplugin::getInfo(std::vector<String>& list) { return "NOT IMPLEMENTED"; }
-
-bool auplugin::getNameString(char* szBuf) {
-    szBuf[0] = 0;
-    return false;
-}
-void auplugin::printNames() {}
 void auplugin::unload(vsthost* host, int flags) {}
 void auplugin::load(vsthost* host) {}
 
@@ -61,11 +54,6 @@ void auplugin::setParamValue(int32_t idx, float val, int flags) {
         if (param->internalIdx >= 0) {
             //dispatch update to plugin
         }
-    }
-}
-void auplugin::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-    if (flags != 2) {
-        return;
     }
 }
 

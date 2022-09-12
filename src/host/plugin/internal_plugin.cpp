@@ -88,6 +88,12 @@ void internalplugin::postSetParameter(int32_t idx, float preVal, float val, int 
     automationlane_snapshot_t ref = toRef();
     parameter_ref_t p             = { track->projectIdx, ref.type, this->projectGlobalId, idx };
     DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+    
+    for (auto& pviewctr : this->views) {
+        if (pviewctr->isInUse()) {
+            pviewctr->onSetParameter(idx, val);
+        }
+    }
 }
 
 automationlane_snapshot_t internalplugin::toRef() const {

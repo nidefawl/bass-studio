@@ -46,12 +46,6 @@ protected:
 public:
     int getModuleType() override { return PLUGIN_TYPE_AU; };
 
-    const char* getDir() {
-        return sDir.c_str();
-    }
-    String getInfo(std::vector<String>& list) override;
-    bool getNameString(char* szBuf);
-    void printNames();
     bool hasWindowEditor() override {
         return false;
     }
@@ -64,7 +58,6 @@ public:
     param_unit_t getParamValueDisplay(int32_t idx) override;
     void setParamValue(int32_t idx, float val, int flags) override;
     automationlane_snapshot_t toRef() const override;
-    void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
 
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override;

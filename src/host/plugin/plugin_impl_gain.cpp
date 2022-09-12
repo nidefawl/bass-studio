@@ -55,26 +55,8 @@ float module_gain::dispatchGetParameter(int32_t idx) {
 void module_gain::dispatchSetParameter(int32_t idx, float val) {
 }
 
-void module_gain::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-    internalplugin::postSetParameter(idx, preVal, val, flags);
-    for (auto& pviewctr : this->views) {
-        if (pviewctr->isInUse()) {
-            pviewctr->onSetParameter(idx, val);
-        }
-    }
-}
-
 samplecount_t module_gain::getPluginLatency() {
     return 0;
-}
-
-String module_gain::getInfo(std::vector<String>& list) {
-    return "";
-}
-
-void module_gain::onTick(double since) {
-    meter.onTick(since);
-    meterIn.onTick(since);
 }
 
 void module_gain::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
