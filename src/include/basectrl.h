@@ -283,8 +283,8 @@ public:
     void focusGui(guibase* g);
     void mouseDown(ivec2 mousePos, int button, int kbmods, bool doubleclick);
     void mouseUp(ivec2 mousePos, int button, int kbmods);
-    virtual void onCharInput(uint32_t codepoint);
-    virtual void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name);
+    virtual bool onCharInput(uint32_t codepoint);
+    virtual bool onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name);
     void mouseScrolled(double xoffset, double yoffset, int kbmods);
     virtual void mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods);
 
@@ -392,8 +392,8 @@ public:
     void openAppMenu(int lvl, guictxtmenu_base* b, ivec2 pos) override;
     void closeAppMenusAtLvl(int startlvl) override;
     bool hasContextMenu() override;
-    void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) override;
-    void onCharInput(uint32_t codepoint) override;
+    bool onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) override;
+    bool onCharInput(uint32_t codepoint) override;
     void onMenuOpen(ngui::Menu* menu) override;
     virtual void updateMenubar();
     guictxtmenu_base* getContextMenu();

@@ -243,43 +243,48 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) {
     guiOver = evt.getGuiHit();
 }
 
-void BaseCtrl::onCharInput(uint32_t codepoint) {
+bool BaseCtrl::onCharInput(uint32_t codepoint) {
     if (guiCaptured) {
-        return;
+        return false;
     }
     if (guiFocused && guiFocused->handleCharInput(codepoint)) {
-        return;
+        return true;
     }
     if (guiCtrFocused && guiCtrFocused != guiFocused && guiCtrFocused->handleCharInput(codepoint)) {
-        return;
+        return true;
     }
     if (guiCtrFocused != nullptr && guiCtrFocused != guiFocused) {
         if (guiCtrFocused->handleCharInput(codepoint)) {
-            return;
+            return true;
         }
     }
+    if (parentCtrl && parentCtrl->onCharInput(codepoint)) {
+        return true;
+    }
+    return false;
 }
 
-void BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) {
+bool BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) {
     if (guiCaptured) {
-        return;
+        return false;
     }
     KeyEvent event = keyEvent(key, scancode, keyState, mods, key_name);
-    if (guiDragged) {
-        if (guiDragged->handleKeyInput(event)) {
-            return;
-        }
-        return;
+    if (guiDragged && guiDragged->handleKeyInput(event)) {
+        return true;
     }
     if (guiFocused && guiFocused->handleKeyInput(event)) {
-        return;
+        return true;
     }
     if (guiCtrFocused && guiCtrFocused != guiFocused && guiCtrFocused->handleKeyInput(event)) {
-        return;
+        return true;
     }
     if (processGlobalKeyevent(event)) {
-        return;
+        return true;
     }
+    if (parentCtrl && parentCtrl->onKeyInput(key, scancode, keyState, mods, key_name)) {
+        return true;
+    }
+    return false;
 }
 void BaseCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
     for (guictr_base* ctr : containers) {
@@ -690,27 +695,31 @@ void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
 bool AppCtrl::hasContextMenu() {
     return this->contextWindow && this->contextWindow->isShown();
 }
-void AppCtrl::onCharInput(uint32_t codepoint) {
+bool AppCtrl::onCharInput(uint32_t codepoint) {
     window_main* wnd = this->contextWindow;
     if (wnd && wnd->isShown()) {
         if (wnd->getCtrl()->hasInputFocus()) {
-            wnd->getCtrl()->onCharInput(codepoint);
-            wnd->requestRedraw();
-            return;
+            bool b = wnd->getCtrl()->onCharInput(codepoint);
+            if (b) {
+                wnd->requestRedraw();
+                return true;
+            }
         }
     }
-    BaseCtrl::onCharInput(codepoint);
+    return BaseCtrl::onCharInput(codepoint);
 }
-void AppCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) {
+bool AppCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) {
     window_main* wnd = this->contextWindow;
     if (wnd && wnd->isShown()) {
         if (wnd->getCtrl()->hasInputFocus()) {
-            wnd->getCtrl()->onKeyInput(key, scancode, keyState, mods, key_name);
-            wnd->requestRedraw();
-            return;
+            bool b = wnd->getCtrl()->onKeyInput(key, scancode, keyState, mods, key_name);
+            if (b) {
+                wnd->requestRedraw();
+                return true;
+            }
         }
     }
-    BaseCtrl::onKeyInput(key, scancode, keyState, mods, key_name);
+    return BaseCtrl::onKeyInput(key, scancode, keyState, mods, key_name);
 }
 
 void AppCtrl::updateMenubar() {

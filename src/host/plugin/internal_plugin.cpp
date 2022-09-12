@@ -138,21 +138,24 @@ bool internalplugin::showWindow(bool bResetPosition) {
     if (!newView) {
         return false;
     }
-    internal_plugin_window_client clientWindow;
-    clientWindow.view = newView;
-    clientWindow.ctrl = std::make_shared<PluginControl>(clientWindow.view);
-    clientWindow.ctrl->initApp(std::vector<String>());
+    auto ctrl = std::make_shared<PluginControl>(newView);
+    ctrl->setWindowName(getName());
+    ctrl->initApp(std::vector<String>());
 #if BUILD_VSTHOST
     auto tls = daw_tls::getTls();
     auto mainCtrl = tls.mainCtrl;
     if(mainCtrl) {
-        clientWindow.ctrl->setDawCtrl(mainCtrl);
-        clientWindow.ctrl->m_scale     = mainCtrl->m_scale;
-        *clientWindow.ctrl->getTheme() = *mainCtrl->getTheme();
+        ctrl->setParentCtrl(mainCtrl);
+        ctrl->setDawCtrl(mainCtrl);
+        ctrl->m_scale     = mainCtrl->m_scale;
+        *ctrl->getTheme() = *mainCtrl->getTheme();
     }
 #endif
     ivec2 defSize{ 0, 0 };
-    clientWindow.view->getFixedSize(&defSize.x, &defSize.y);
+    newView->getFixedSize(&defSize.x, &defSize.y);
+    internal_plugin_window_client clientWindow;
+    clientWindow.view = std::move(newView);
+    clientWindow.ctrl = std::move(ctrl);
     windowClient = clientWindow;
     if (openWindow(bResetPosition, defSize)) {
         return true;

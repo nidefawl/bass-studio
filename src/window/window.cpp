@@ -474,7 +474,10 @@ public:
         }
         bFameRendered = false;
     }
-    virtual void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) = 0;
+    virtual bool onKeyInput(int key, int scancode, int action, int mods, const char* key_name) = 0;
+    virtual bool onCharInput(uint32_t codepoint) {
+        return false;
+    }
     virtual void onMouseMoved(ivec2 deltapos) {
     }
     virtual void onMouseButton(int button, int action, int mods) {
@@ -482,8 +485,6 @@ public:
     virtual void onMouseScrolled(double xoffset, double yoffset) {
     }
     virtual void onCursorEnter(int entered) {
-    }
-    virtual void onCharInput(uint32_t codepoint) {
     }
     virtual void onWindowSizeChanged(int width, int height) {
     }
@@ -966,11 +967,23 @@ public:
     }
 #endif
 
-    void onCharInput(uint32_t codepoint) override {
-        ctrl->onCharInput(codepoint);
+    bool onCharInput(uint32_t codepoint) override {
+        if (ctrl->onCharInput(codepoint)) {
+           return true;
+        }
+        if (parent) {
+            return parent->onCharInput(codepoint);
+        }
+        return false;
     }
-    void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) override {
-        ctrl->onKeyInput(key, scancode, action, mods, key_name);
+    bool onKeyInput(int key, int scancode, int action, int mods, const char* key_name) override {
+        if (ctrl->onKeyInput(key, scancode, action, mods, key_name)) {
+            return true;
+        }
+        if (parent) {
+            return parent->onKeyInput(key, scancode, action, mods, key_name);
+        }
+        return false;
     }
 
     void onChildDialogClose(appwindow* child) override {
@@ -1197,13 +1210,14 @@ public:
     void onTick() override {
     }
 
-    void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) override {
-        if (action == GLFW_PRESS) {
-            if (key == GLFW_KEY_ESCAPE) {
+    bool onKeyInput(int key, int scancode, int action, int mods, const char* key_name) override {
+        if (key == GLFW_KEY_ESCAPE) {
+            if (action == GLFW_PRESS) {
                 onWindowCloseRequest();
-                return;
             }
+            return true;
         }
+        return false;
     }
 
     void show() override {
@@ -1480,15 +1494,19 @@ static void glfw_cb_mousescroll(GLFWwindow* w, double xoffset, double yoffset) {
 }
 
 void glfw_main_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int mods) {
+    log_lf(Log::L_DEBUG, "glfw_main_cb_keyinput\n");
     try {
-        appwindow* wu        = getUserPointerFromGlfw(w);
+        appwindow* wu = getUserPointerFromGlfw(w);
         if (wu && wu->isValid()) {
             const char* key_name = glfwGetKeyName(key, scancode);
             wu->onKeyInput(key, scancode, action, mods, key_name);
+        } else {
+            log_lf(Log::L_DEBUG, "glfw_main_cb_keyinput: invalid window\n");
         }
     } catch (std::exception& e) {
         handleStdException(e);
     }
+    log_lf(Log::L_DEBUG, "glfw_main_cb_keyinput\n");
 }
 
 static void glfw_cb_charinput(GLFWwindow* w, uint32_t codepoint, int mods) {

@@ -128,6 +128,10 @@ namespace {
             switch (message) {
                 case WM_MOUSEACTIVATE:
                 case WM_SETFOCUS: {
+                    /**
+                     * Alwasy focus first child window:
+                     * Assuming only one child window exists inside this host window
+                     */
                     HWND top_child = GetWindow(hwnd, GW_CHILD);
                     if (top_child) {
                         SetFocus(top_child);
@@ -148,6 +152,11 @@ namespace {
                 case WM_SYSKEYDOWN:
                 case WM_KEYUP:
                 case WM_SYSKEYUP:
+                    /**
+                     * Note that this host window will not have focus and
+                     * keyboard input is directly processed by the child window.
+                     * This means this is most likely dead code, but we keep it as fallback
+                     */
                     if (window->isRedirectingKeysToDawMainWindow())
                     {
                         HWND hwndMain = getMainHWND();

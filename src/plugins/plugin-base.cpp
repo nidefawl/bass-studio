@@ -90,6 +90,7 @@ void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> vi
         auto tls = daw_tls::getTls();
         auto mainCtrl = tls.mainCtrl;
         if(mainCtrl) {
+            ctrl->setParentCtrl(mainCtrl);
             ctrl->setDawCtrl(mainCtrl);
             ctrl->m_scale     = mainCtrl->m_scale;
             *ctrl->getTheme() = *mainCtrl->getTheme();
@@ -97,7 +98,12 @@ void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> vi
 #endif
         int32_t ctrlWidth = 0, ctrlHeight = 0;
         view->getFixedSize(&ctrlWidth, &ctrlHeight);
-        pluginwindow* pluginWindow = createPluginClientVst2Window(this, ctrl, ctrlWidth, ctrlHeight);
+
+		char* ptr = static_cast<char*>(alloca(STR_GET_STACK_BUF_SIZE));
+		*ptr = 0;
+		this->getEffectName(ptr);
+        ctrl->setWindowName(ptr);
+        pluginwindow* pluginWindow = createPluginClientVst2Window(this, std::move(ctrl), ctrlWidth, ctrlHeight);
         setEditor(pluginWindow);
     } catch (std::exception& e) {
         ngui::showNotification(ngui::Style::Error, "Fatal error", e.what());
