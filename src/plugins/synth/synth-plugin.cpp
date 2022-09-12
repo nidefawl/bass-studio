@@ -4127,7 +4127,7 @@ namespace PluginSynth {
             ivec2 pos;
             ivec2 size;
         };
-        PluginVST2_Synth* const plugin;
+        PluginVST2_Synth* const vst2Instance;
         SynthImpl* const synth;
         effectbase* const module;
         gui_textfield editfield;
@@ -4171,7 +4171,7 @@ namespace PluginSynth {
     public:
         explicit guicontainer_plugin_synth_editor(PluginVST2_Synth* plugin)
             : guictr_base(),
-              plugin(plugin),
+              vst2Instance(plugin),
               synth(plugin->getSynth()),
               module(plugin->getHostSideHandle()),
               shapeEditor(makeShapeEditor()),
@@ -4432,14 +4432,14 @@ namespace PluginSynth {
         void onGuiOpen() {
             for (auto& synthKnob : vecParamUI) {
 #if BUILD_VSTHOST
-                synthKnob.knob->setEffectInstance(plugin->getHostSideHandle());
-                auto* param = plugin->getSynth()->getParam(synthKnob.param);
+                synthKnob.knob->setEffectInstance(vst2Instance->getHostSideHandle());
+                auto* param = vst2Instance->getSynth()->getParam(synthKnob.param);
                 if (param) {
                     synthKnob.knob->setLabel(param->getHierarchicalName());
                 }
 #endif
 #if BUILD_EXTERNAL_PLUGIN
-                synthKnob.knob->setAudioEffect(plugin);
+                synthKnob.knob->setAudioEffect(vst2Instance);
 #endif
             }
             bGuiNeedsRefresh = true;
@@ -4462,8 +4462,8 @@ namespace PluginSynth {
                 layout();
                 bGuiNeedsRefresh = false;
             }
-            PluginVST2_Synth* thisImpl = this->plugin;
-            auto synthImpl             = plugin->getSynth();
+            PluginVST2_Synth* thisImpl = this->vst2Instance;
+            auto synthImpl             = vst2Instance->getSynth();
             std::vector<int> heldNotes = synthImpl->getHeldNotes();//TODO: not threadsafe
             std::vector<String> strings;
             strings.reserve(8);
@@ -4483,7 +4483,7 @@ namespace PluginSynth {
                 s += "<empty>";
             strings.push_back(s);
             String str;
-            str = StringFormat("SR %.2f BS %d", this->plugin->getSampleRate(), this->plugin->getBlockSize());
+            str = StringFormat("SR %.2f BS %d", this->vst2Instance->getSampleRate(), this->vst2Instance->getBlockSize());
             strings.push_back(str);
             int flags = 0;
             for (int i = 8; i < 16; i++) {
@@ -4599,7 +4599,7 @@ namespace PluginSynth {
         bool handleKeyInput(KeyEvent& event) override {
             if (event.type != KeyEventType::K_RELEASE) {
                 if (event.keyCode == KEY_ENTER) {
-                    this->plugin->writeCurrentProgram();
+                    this->vst2Instance->writeCurrentProgram();
                 }
             }
             return false;
@@ -4607,6 +4607,8 @@ namespace PluginSynth {
 
         void buttonClicked(guibase* button) override {
             auto param = dynamic_cast<guiknob_pluginparam*>(button);
+#if BUILD_VSTHOST
+            dbgassert(module);
             if (param && module) {
                 auto paramIdx          = param->getParamIdx();
                 auto paramValue        = module->getParamValueDisplay(paramIdx);
@@ -4631,6 +4633,36 @@ namespace PluginSynth {
                 parentCtrl->focusGui(&editfield);
                 return;
             }
+#endif
+#if BUILD_EXTERNAL_PLUGIN
+            dbgassert(vst2Instance);
+            if (param && vst2Instance) {
+                auto paramIdxInternal = param->getParamIdxInternal();
+                char buf[PLUGIN_PARAM_STR_MAX_LEN+1]{};
+                vst2Instance->getParameterDisplay(paramIdxInternal, buf);
+                String paramValue = buf;
+                editfield.mCallbackEnd = [this, param, paramValue, paramIdxInternal](const std::string& str) {
+                    auto paramConverted = vst2Instance->convertParamValueDisplay(paramIdxInternal, param_unit_t{ str, "" });
+                    if (paramConverted.success) {
+                        vst2Instance->setParameter(paramIdxInternal, paramConverted.floatVal);
+                        if (param->fnValueEditChanged)
+                            param->fnValueEditChanged(param->getValue(), paramConverted.floatVal);
+                    }
+                    editfield.setVisible(false);
+                    return true;
+                };
+                auto layout    = param->getLayout();
+                editfield.pos  = button->parent->toParentSpace(layout.pValue);
+                editfield.size = layout.sValue;
+                editfield.setVisible(true);
+                editfield.layout();
+                editfield.setValue(paramValue);
+                editfield.setSelectionRange(-1, -1);
+                editfield.setFontSize(layout.valueHeight * layout.fontScaleValue);
+                parentCtrl->focusGui(&editfield);
+                return;
+            }
+#endif
             guictr_base::buttonClicked(button);
         }
 
@@ -4666,11 +4698,9 @@ namespace PluginSynth {
         }
 
         void onTick(AppCtrl* ctrl) override {
-            if (dawCtrl) {
-                auto lock = synth->tryLock();
-                if (lock.isLocked()) {
-                    list = synth->getVoiceListPrev();
-                }
+            auto lock = synth->tryLock();
+            if (lock.isLocked()) {
+                list = synth->getVoiceListPrev();
             }
         }
 

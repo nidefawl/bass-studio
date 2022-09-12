@@ -77,6 +77,7 @@ public:
 #endif
     }
 #if BUILD_EXTERNAL_PLUGIN
+    int32_t getParamIdxInternal() const { return clientParamIdx; }
     void setAudioEffect(AudioEffectX* eff) {
         this->curEffect = eff;
         if (eff) {
@@ -102,9 +103,9 @@ public:
             }
         };
         fnGetDisplayValue = [this](float val) {
-            String displayValCached = curEffect->getParameterDisplay(clientParamIdx);
-            displayValCached += curEffect->getParameterLabel(clientParamIdx);
-            return displayValCached;
+            String displayVal = curEffect->getParameterDisplay(clientParamIdx);
+            displayVal += curEffect->getParameterLabel(clientParamIdx);
+            return displayVal;
         };
     }
 #endif
