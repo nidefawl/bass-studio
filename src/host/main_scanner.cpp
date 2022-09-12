@@ -825,6 +825,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 #endif
+    auto& tls = daw_tls::initNewTls();
 
     if (argc > 1 && !strcmp("-server", argv[1])) {
         VSTScannerImpl::logPrefixIdx = PROC_SIDE_SERVER;
@@ -863,7 +864,6 @@ int main(int argc, char* argv[]) {
             }
         }
         if (vstPlugPath.empty()) {
-            auto& tls = daw_tls::initNewTls();
             loadSettings(*tls.settings);
             vstPlugPath = tls.settings->pluginsettings.pathVst2;
             log_message("settings.pluginsettings.pathVst2 '%s'", StringAsCStr(vstPlugPath));
