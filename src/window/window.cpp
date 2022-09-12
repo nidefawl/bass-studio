@@ -1571,6 +1571,7 @@ static void glfw_cb_framebuffersize(GLFWwindow* w, int width, int height) {
     }
 }
 
+#ifdef __linux__
 static void glfw_cb_dragdrop(GLFWwindow* w, int path_count, const char* paths[], int event) {
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
@@ -1594,6 +1595,7 @@ static void glfw_cb_dragdrop(GLFWwindow* w, int path_count, const char* paths[],
         handleStdException(e);
     }
 }
+#endif
 
 void appwindow_main::initControl() {
     if (!ctrl->initAppWindow(this, this->nanovgCtxt)) {
