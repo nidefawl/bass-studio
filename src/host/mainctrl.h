@@ -547,7 +547,7 @@ public:
     virtual guictr_nodes_splitview* getNodesContainer() = 0;
     virtual void onPluginSelected();
     bool isGlobalKeybindCodepoint(uint32_t codepoint) override {
-        return codepoint == 32;
+        return codepoint == 32 || codepoint == 45 || codepoint == 43;
     }
 };
 

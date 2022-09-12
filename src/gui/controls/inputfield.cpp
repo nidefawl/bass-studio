@@ -115,17 +115,13 @@ bool gui_numberinput_field_base::handleKeyInput(KeyEvent& kevt) {
     if (kevt.type != K_RELEASE) {
         if (kevt.keyCode == KEY_ENTER 
             || kevt.keyCode == KEY_KP_ENTER 
-            || kevt.keyCode == KEY_ESCAPE
-            || kevt.keyCode == KEY_SPACE) {
-            endEdit(kevt.keyCode == KEY_SPACE || kevt.keyCode == KEY_ENTER || kevt.keyCode == KEY_KP_ENTER);
-            return kevt.keyCode != KEY_SPACE;
+            || kevt.keyCode == KEY_ESCAPE) {
+            endEdit(kevt.keyCode == KEY_ENTER || kevt.keyCode == KEY_KP_ENTER);
+            return true;
         }
-    }
-    if (isEditing) {
-        return this->field.handleKeyInput(kevt);
-    }
-    bool handled = false;
-    if (kevt.type != K_RELEASE) {
+        if (isEditing) {
+            return this->field.handleKeyInput(kevt);
+        }
         if (isArrowKey(kevt.keyCode)) {
             ivec2 dir;
             arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
@@ -134,11 +130,11 @@ bool gui_numberinput_field_base::handleKeyInput(KeyEvent& kevt) {
                     dir *= 12;
                 }
                 onKeyInputChangeValue(dir);
-                handled = true;
+                return true;
             }
         }
     }
-    return handled;
+    return false;
 }
 
 bool gui_numberinput_field_base::handleCharInput(uint32_t codepoint) {
