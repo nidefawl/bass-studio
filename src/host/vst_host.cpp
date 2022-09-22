@@ -738,9 +738,11 @@ vsthost::audiostream_properties_t vsthost::getAudioStreamProperties() const {
 void vsthost::setSampleFormat(const sampleformat_t& _sampleFormat) {
     if (this->m_sampleFormatInternal != _sampleFormat) {
         this->m_sampleFormatInternal = _sampleFormat;
-        auto cache = daw_tls::getTls().audioCache;
-        if (cache) {
-            cache->setSamplerate(m_sampleFormatInternal.sampleRate);
+        if (daw_tls::isTlsInitialized()) {
+            auto cache = daw_tls::getTls().audioCache;
+            if (cache) {
+                cache->setSamplerate(m_sampleFormatInternal.sampleRate);
+            }
         }
         for (auto* audio : this->allAudioStages) {
             audio->sampleFormat = _sampleFormat;

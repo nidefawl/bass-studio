@@ -203,7 +203,7 @@ public:
         ctrDragHandler.setControl(this);
         ctrDragHandler.setFlag(FLG_RENDER_LABEL, true);
     }
-    virtual ~BaseCtrl() = default;
+    virtual ~BaseCtrl();
     i_ctr_drop_area* determineDropCtrArea(MouseEvent& mevt) {
         MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, mevt.kbmods);
         evtDragObj.setDraggedThing(nullptr);
