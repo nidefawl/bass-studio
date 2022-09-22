@@ -258,14 +258,14 @@ GLFWwindow* getTopLevelGlfwWindow() {
 void initColor();// gui/gui.cpp
 #ifdef _WIN32
 void onModuleLoad(HINSTANCE hInst) {
-    if (!daw_tls::isTlsInitialized()) {
-        daw_tls::initNewTls();
-    }
     String moduleName = getModuleName(hInst);
 #else
 void onModuleLoad() {
     String moduleName = getModuleNameLinux();
 #endif
+    if (!daw_tls::isTlsInitialized()) {
+        daw_tls::initNewTls();
+    }
     log_lf(Log::L_DEBUG, "moduleName %s\n", StringAsCStr(moduleName));
     String path = "";
     SplitPath(moduleName, &path, nullptr, nullptr, nullptr);
