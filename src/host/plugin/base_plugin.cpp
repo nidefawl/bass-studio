@@ -253,11 +253,13 @@ void effectbase::initBuffers() {
     for (auto& desc : inputChannelsDesc) {
         maxInputChannels = math::max<channelnum_t>(maxInputChannels, desc.offset + desc.count);
     }
+    delete this->blockInputs;
     this->blockInputs         = new AudioBlock(maxInputChannels, format.blockSize);
     channelnum_t maxOutputChannels = 1;
     for (auto& desc : outputChannelsDesc) {
         maxOutputChannels = math::max<channelnum_t>(maxOutputChannels, desc.offset + desc.count);
     }
+    delete this->blockOutputs;
     this->blockOutputs = new AudioBlock(maxOutputChannels, format.blockSize);
 }
 
