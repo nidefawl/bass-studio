@@ -86,6 +86,7 @@ void effectbase::load(vsthost* host) {
     nLoadCalls++;
     bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
 }
+
 void effectbase::unload(vsthost* host, int flags) {
     dbgassert(host == vstHost);
     vstHost = nullptr;

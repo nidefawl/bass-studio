@@ -29,6 +29,8 @@ public:
                    VstInt32 numParams,
                    VstInt32 numInputs,
                    VstInt32 numOutputs);
+    BasePluginVST2(audioMasterCallback audioMaster,
+                   const char* pluginUIDStr);
     ~BasePluginVST2() override = default;
 
     void createEditorWindow(std::shared_ptr<PluginViewContainers> view);

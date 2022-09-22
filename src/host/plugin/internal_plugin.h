@@ -1,24 +1,27 @@
 #pragma once
-
-#include "plugins/plugincontrol.h"
-#include "types.h"
 #include <vector>
 #include <memory>
-#include "str_util.h"
-#include "seq_time.h"
-#include "automation.h"
-#include "logging.h"
-#include "platform.h"
-#include "meter.h"
-#include "snapshot.h"
-#include "window.h"
-#include "base_plugin.h"
 
-struct AudioBlock;
-struct handles_t;
-class track_t;
+#include "automation.h"
+#include "base_plugin.h"
+#include "gui/plugin/pluginviewcontainers.h"
+#include "logging.h"
+#include "math/vec.h"
+#include "meter.h"
+#include "platform.h"
+#include "plugins/plugincontrol.h"
+#include "plugins/plugincontrol.h"
+#include "seq_time.h"
+#include "snapshot.h"
+#include "str_util.h"
+#include "types.h"
+#include "window.h"
+
 class guiplugin;
 class PluginViewContainers;
+class track_t;
+struct AudioBlock;
+struct handles_t;
 struct track_impl_t;
 
 class internalplugin : public effectbase {

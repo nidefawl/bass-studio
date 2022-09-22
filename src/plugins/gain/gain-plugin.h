@@ -1,9 +1,7 @@
 #pragma once
 #include "str_util.h"
 #include "modules.h"
-#include "internal_plugin.h"
-#include "host/vst_host.h"
-#include "track_impl.h"
+#include "host/plugin/internal_plugin.h"
 
 class guiplugin;
 class vsthost;

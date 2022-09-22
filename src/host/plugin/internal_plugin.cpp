@@ -76,6 +76,11 @@ void internalplugin::setParamValue(int32_t idx, float val, int flags) {
         if (param->internalIdx >= 0) {
             dispatchSetParameter(param->internalIdx, val);
         }
+        for (auto& pviewctr : this->views) {
+            if (pviewctr->isInUse()) {
+                pviewctr->onSetParameter(idx, val);
+            }
+        }
     }
 }
 
@@ -83,12 +88,12 @@ void internalplugin::postSetParameter(int32_t idx, float preVal, float val, int 
     if (flags != 2) {
         return;
     }
-    dbgassert(this->trackImpl->getTrack());
-    track_t* track                = this->trackImpl->getTrack();
-    automationlane_snapshot_t ref = toRef();
-    parameter_ref_t p             = { track->projectIdx, ref.type, this->projectGlobalId, idx };
-    DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
-    
+    track_t* track = this->trackImpl ?  this->trackImpl->getTrack() : nullptr;
+    if (track) {
+        automationlane_snapshot_t ref = toRef();
+        parameter_ref_t p             = { track->projectIdx, ref.type, this->projectGlobalId, idx };
+        DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+    }
     for (auto& pviewctr : this->views) {
         if (pviewctr->isInUse()) {
             pviewctr->onSetParameter(idx, val);

@@ -214,4 +214,4 @@ namespace PluginLatency {
         this->views.push_back(view);
         return view;
     }
-}
+} // namespace PluginLatency

@@ -32,7 +32,6 @@
 
 #include "assert_dbg.h"
 
-#if BUILD_EXTERNAL_PLUGIN
 #include <GLFW/glfw3.h>
 namespace MouseCursors {
     void initCursors();// mousecursor.cpp
@@ -68,17 +67,16 @@ String getModuleNameLinux() {
     return s;
 }
 #endif
-#endif//BUILD_EXTERNAL_PLUGIN
 
 
 
 #if BUILD_EXTERNAL_PLUGIN
+#endif //BUILD_EXTERNAL_PLUGIN
 bool isFirstPluginLoad = false;
 #ifdef _WIN32
 extern HMODULE hInstance;
 String getModuleName(HMODULE module);//platform_win.cpp
 #endif
-#endif //BUILD_EXTERNAL_PLUGIN
 
 pluginwindow* createPluginClientVst2Window(AudioEffectX* _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h);
 
@@ -139,6 +137,21 @@ BasePluginVST2::BasePluginVST2(audioMasterCallback audioMaster,
     dbgassert(cEffect.numInputs == numInputs);
     dbgassert(cEffect.numOutputs == numOutputs);
 }
+BasePluginVST2::BasePluginVST2(audioMasterCallback audioMaster,
+                               const char* pluginUIDStr)
+    : AudioEffectX(audioMaster, numPrograms, numParams)
+{
+    setInitialDelay(0);
+    this->cEffect.version = 2;
+    canProcessReplacing(true);
+    noTail(false);
+    isSynth(false);
+    int id = 0;
+    memcpy(&id, pluginUIDStr, sizeof(VstInt32));
+    setUniqueID(id);
+    setProgram(0);
+    suspend();
+}
 
 bool BasePluginVST2::getInputProperties(VstInt32 index, VstPinProperties* properties) {
     if (index == 0 || index == 1) {
@@ -195,29 +208,28 @@ void BasePluginVST2::onWindowResize(ivec2 size) {
 }
 
 void BasePluginVST2::open() {
-#if BUILD_EXTERNAL_PLUGIN
+    if (this->bIsExternalInstance) {
 #ifdef _WIN32
-    AllocConsole();
-    AttachConsole(GetCurrentProcessId());
-    FILE* f;
-    freopen_s(&f, "CON", "w", stdout);
+        AllocConsole();
+        AttachConsole(GetCurrentProcessId());
+        FILE* f;
+        freopen_s(&f, "CON", "w", stdout);
 #endif
-    log_printf("open!\n");
-    if (editor) {
-        log_printf("Editor already exists!\n");
+        log_printf("open!\n");
+        if (editor) {
+            log_printf("Editor already exists!\n");
     }
-#endif//BUILD_EXTERNAL_PLUGIN
+    }
     createEditorWindow(createView());
-#if BUILD_EXTERNAL_PLUGIN
+    if (this->bIsExternalInstance) {
 #ifdef _WIN32
-    if (!isFirstPluginLoad) {
-        return;
-    }
+        if (!isFirstPluginLoad) {
+            return;
+        }
 #endif
-    isFirstPluginLoad = false;
-    MouseCursors::initCursors();//TODO: call MouseCursors::destroy() on exit of last instance
-
-#endif//BUILD_EXTERNAL_PLUGIN
+        isFirstPluginLoad = false;
+        MouseCursors::initCursors();//TODO: call MouseCursors::destroy() on exit of last instance
+    }
 }
 
 void BasePluginVST2::close() {
@@ -226,8 +238,6 @@ void BasePluginVST2::close() {
         editor = nullptr;
     }
 }
-
-#if BUILD_EXTERNAL_PLUGIN
 
 static void glfw_plugin_error_callback(int error, const char* description) {
     log_printf("glfw-error %d: %s\n", error, description);
@@ -238,13 +248,18 @@ static void showerror(const char* description) {
     ngui::showNotification(ngui::Style::Error, "Error", description);
 }
 
+#if BUILD_EXTERNAL_PLUGIN
 GLFWwindow* getTopLevelGlfwWindow() {
     return nullptr;
 }
+#endif
 
 void initColor();// gui/gui.cpp
 #ifdef _WIN32
 void onModuleLoad(HINSTANCE hInst) {
+    if (!daw_tls::isTlsInitialized()) {
+        daw_tls::initNewTls();
+    }
     String moduleName = getModuleName(hInst);
 #else
 void onModuleLoad() {
@@ -289,4 +304,3 @@ void onModuleUnload() {
         ngui::showNotification(ngui::Style::Error, "Fatal error", e.what());
     }
 }
-#endif//BUILD_EXTERNAL_PLUGIN

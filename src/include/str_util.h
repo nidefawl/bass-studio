@@ -115,6 +115,7 @@ void safe_strcpy(T (&dest)[N], S src, size_t len) {
     memcpy(dest, src, len > N - 1 ? N - 1 : len);
     dest[len > N - 1 ? N - 1 : len] = 0;
 }
+
 template<class T, size_t N>
 void safe_strcpy(T (&dest)[N], const String& str) {
     static_assert(N > 0, "safe_strcpy: buffer cannot be size 0");
@@ -129,4 +130,10 @@ void safe_strcpy(T (&dest)[N], const char* src) {
     const auto len = strnlen(src, N-1);
     memcpy(dest, src, len > N - 1 ? N - 1 : len);
     dest[len > N - 1 ? N - 1 : len] = 0;
+}
+
+inline void safe_str_to_buf(char* dest, size_t destLen, const String& str) {
+    auto len = str.length();
+    memcpy(dest, StringAsCStr(str), len > destLen - 1 ? destLen - 1 : len);
+    dest[len > destLen - 1 ? destLen - 1 : len] = 0;
 }

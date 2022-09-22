@@ -14,6 +14,7 @@ option(PROJECT_BUILD_SCANNER "Build plugin scanner" ON)
 option(PROJECT_BUILD_CLI_HOST "Build command line host" ON)
 option(PROJECT_BUILD_TESTS "Build tests" ON)
 option(PROJECT_BUILD_BENCHMARKS "Build benchmarks" ON)
+option(PROJECT_BUILD_PLUGINS "Build standalone plugins" ON)
 option(PROJECT_CFG_USE_OPENGL3 "Use OpenGL 3.x instead of OpenGL 2" ON)
 option(PROJECT_FORCE_LIB "Force building a lib" ON)
 option(PROJECT_GENERATE_LINKER_MAP "Generate <build-dir>/<exe>_linker.map" OFF)
@@ -21,7 +22,8 @@ option(PROJECT_GENERATE_LINKER_MAP "Generate <build-dir>/<exe>_linker.map" OFF)
 
 if (PROJECT_BUILD_BENCHMARKS
   OR PROJECT_BUILD_TESTS 
-  OR PROJECT_BUILD_SCANNER 
+  OR PROJECT_BUILD_SCANNER
+  OR PROJECT_BUILD_PLUGINS 
   OR PROJECT_BUILD_CLI_HOST)
   set(PROJECT_REQUIRE_LIB ON)
 else()
@@ -155,6 +157,7 @@ message(STATUS "PROJECT_BUILD_TESTS ${PROJECT_BUILD_TESTS} ")
 message(STATUS "PROJECT_BUILD_BENCHMARKS ${PROJECT_BUILD_BENCHMARKS} ")
 message(STATUS "PROJECT_BUILD_SCANNER ${PROJECT_BUILD_SCANNER} ")
 message(STATUS "PROJECT_BUILD_CLI_HOST ${PROJECT_BUILD_CLI_HOST}")
+message(STATUS "PROJECT_BUILD_PLUGINS ${PROJECT_BUILD_PLUGINS}")
 message(STATUS "BUILD WARNINGS ${BUILD_WARNING_FLAGS}")
 
 # build a fat library only if PROJECT_REQUIRE_LIB is ON
@@ -219,6 +222,52 @@ if (PROJECT_REQUIRE_LIB)
 
   if (PROJECT_BUILD_CLI_HOST)
     DEFINE_EXECUTABLE("host" "src/host/main_cmdline.cpp")
+  endif()
+
+  FUNCTION(FN_DL_PLUGIN_BUILD plugBuildName plugBuildOutputName srcfilelist plugindefs)
+    add_library(
+        ${plugBuildName}
+        SHARED 
+        ${srcfilelist} 
+        "${MAIN_SRC_PATH}/plugins/vst2_dll_exports.def"
+      )
+    set_source_files_properties(${srcfilelist} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+    set_target_properties(${plugBuildName} PROPERTIES PREFIX "")
+    source_group(${plugBuildName} FILES ${srcfilelist})
+    target_link_libraries(${plugBuildName} PRIVATE "dawlib")
+    CONFIGURE_TARGET_OUTPUT(${plugBuildName} ${plugBuildOutputName})
+
+    # target_link_libraries(${plugBuildName} PRIVATE winmm)
+    if (CMAKE_COMPILER_IS_GNUCXX)
+      set(PLUGIN_LINK_FLAGS "-static-libgcc -static-libstdc++")
+      set_target_properties(${plugBuildName} PROPERTIES LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
+    endif()
+    if (CLANG)
+      #set(PLUGIN_LINK_FLAGS "-static")
+      set_target_properties(${plugBuildName} PROPERTIES LINK_FLAGS "${PLUGIN_LINK_FLAGS}")
+    endif()
+
+    # target_compile_options(${plugBuildName} PRIVATE ${plugindefs})
+    target_compile_options(${plugBuildName} PRIVATE ${BUILD_WARNING_FLAGS})
+    target_compile_definitions(${plugBuildName} PRIVATE ${plugindefs})
+    target_include_directories(${plugBuildName} PRIVATE src)
+    
+    if (NOT WIN32)
+      target_link_options(${plugBuildName} PUBLIC -Wl,--no-undefined)
+    endif()
+
+  ENDFUNCTION(FN_DL_PLUGIN_BUILD)
+
+  if (PROJECT_BUILD_PLUGINS)
+    set(SRC_FILES_VST2_PLUGIN
+      ${MAIN_SRC_PATH}/plugins/plugin-base.cpp
+      ${MAIN_SRC_PATH}/plugins/vst2wrapper/vst2wrapper.cpp
+      ${MAIN_SRC_PATH}/thirdparty/vstsdk-plugin-2.4/vstplugmain.cpp
+      ${MAIN_SRC_PATH}/plugins/plugin-window.cpp 
+      ${MAIN_SRC_PATH}/plugins/plugincontrol.cpp)
+    FN_DL_PLUGIN_BUILD(PLUGIN_GAIN "gain-vst" "${SRC_FILES_VST2_PLUGIN}" "BUILD_EXTERNAL_VST2_PLUGIN=PLUGIN_TYPE_GAIN")
+    FN_DL_PLUGIN_BUILD(PLUGIN_EMPTY "empty-vst" "${SRC_FILES_VST2_PLUGIN}" "BUILD_EXTERNAL_VST2_PLUGIN=PLUGIN_TYPE_EMPTY")
+
   endif()
 endif()
 

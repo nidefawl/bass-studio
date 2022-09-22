@@ -1,7 +1,7 @@
 #include "base_plugin.h"
 #include "empty.h"
 #include "group.h"
-#include "plugin_impl_gain.h"
+#include "plugins/gain/gain-plugin.h"
 
 #include "host/vst_host.h"
 #include "host/plugin/vst_plugin.h"

@@ -15,22 +15,26 @@
 #include "host/daw_channel.h"
 #include "gui/table/table_fwd.h"
 
-struct AudioBlock;
-struct handles_t;
-class track_t;
+class DawInstance;
+class effect_deferred;
 class guiplugin;
+class host_plugin_window;
+class track_t;
 class vsthost;
 struct audio_stage_t;
+struct AudioBlock;
+struct handles_t;
 struct plugin_snapshot_t;
 struct plugin_snapshot_t;
-class effect_deferred;
-class DawInstance;
-class host_plugin_window;
 
 extern bool storePluginPresetWithSnapshot;// = true;
 extern bool loadPluginPresetWithSnapshot; // = false;
 struct midi_events_t;
+namespace PluginWrapper {
+    class PluginInternalVST2;
+}
 class effectbase : public automatable_t {
+    friend class PluginWrapper::PluginInternalVST2;
     friend class vsthost;
     friend class guiplugin;
     friend class effect_deferred;
@@ -135,7 +139,7 @@ public:
     virtual void unload(vsthost* host, int flags);
     virtual void load(vsthost* host);
     virtual samplecount_t getPluginLatency() = 0;
-    virtual String getInfo(std::vector<String>& list) {};
+    virtual String getInfo(std::vector<String>& list) { return ""; };
     track_t* getTrack() override;
     virtual void onTick(double since);
     virtual void setSampleFormat(sampleformat_t sampleFormat) {

@@ -20,6 +20,7 @@
 #include "logging.h"
 #include "automation.h"
 #include "host/mainctrl.h"
+#include "threads/threadlock.h"
 #include <cstdint>
 #include <nanovg.h>
 #include <nanovg_min.h>
@@ -328,7 +329,8 @@ void guiknob::setKnobInternalHandlers() {
     };
     fnSetValue = [this](float f, int flags) {
         if (paramAutomatable) {
-            ThreadLock lock     = dawCtrl->lockPlayThread();
+            //TODO: lock external VST2 instances
+            ThreadLock lock     = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
             automation_t* param = paramAutomatable->getRegisteredAutomation(paramIdx);
             if (param) {
                 param->active = false;
@@ -341,6 +343,7 @@ void guiknob::setKnobInternalHandlers() {
             paramAutomatable->postSetParameter(paramIdx, preVal, val, FLG_PAR_UPDATE_USER);
         }
     };
+    if (dawCtrl)
     fnFocus = [this](MouseHitEvt& evt, bool focused) {
         if (paramAutomatable && dawCtrl) {
             auto* track = paramAutomatable->getTrack();
@@ -460,9 +463,8 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
 
 void guiknob::handleRightClick(MouseEvent& evt) {
 #if BUILD_VSTHOST
-    if (paramAutomatable && paramIdx > -1) {
-        dbgassert(dawCtrl);
-        if (dawCtrl && parentCtrl) {
+    if (dawCtrl && paramAutomatable && paramIdx > -1) {
+        if (parentCtrl) {
             dbgassert(paramAutomatable->getParam(paramIdx));
             parentCtrl->openContextMenu(new guictxtmenu_at_param(dawCtrl, paramAutomatable, paramIdx), evt.mousepos);
         }

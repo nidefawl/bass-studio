@@ -44,6 +44,8 @@ class AEffEditor;
 //-------------------------------------------------------------------------------------------------------
 class AudioEffect
 {
+protected:
+    bool bIsExternalInstance = false;
 public:
 //-------------------------------------------------------------------------------------------------------
 	AudioEffect (audioMasterCallback audioMaster, VstInt32 numPrograms, VstInt32 numParams); ///< Create an \e AudioEffect object
@@ -51,6 +53,7 @@ public:
 
 	virtual VstIntPtr dispatcher (VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt);	///< Opcodes dispatcher
 
+    void setExternalInstance(bool bIsExternalInstance) { this->bIsExternalInstance = bIsExternalInstance; }
 //-------------------------------------------------------------------------------------------------------
 /// \name State Transitions
 //-------------------------------------------------------------------------------------------------------
