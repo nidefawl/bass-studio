@@ -1,6 +1,5 @@
 
 #include <GLFW/glfw3.h>
-#include <__algorithm/remove_if.h>
 #include <cmath>
 #include <cstddef>
 #include <nanovg.h>

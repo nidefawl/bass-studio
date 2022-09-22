@@ -50,7 +50,7 @@ DEFINE_TEST(
   test_seh_exception_handling FALSE 
   test_seh_exception_handling.cpp
 )
-if (MINGW)
+if (NOT MSVC)
   target_compile_options(test_seh_exception_handling PRIVATE "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections")
 endif()
 
@@ -68,8 +68,12 @@ DEFINE_TEST(
 set_source_files_properties(../src/util/fp_math.cpp PROPERTIES
   SKIP_UNITY_BUILD_INCLUSION ON
   SKIP_PRECOMPILE_HEADERS ON
-  COMPILE_OPTIONS "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections;-fno-fast-math;-O2"
 )
+if (NOT MSVC)
+  set_source_files_properties(../src/util/fp_math.cpp PROPERTIES
+    COMPILE_OPTIONS "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections;-fno-fast-math;-O2"
+  )
+endif()
 
 DEFINE_TEST(
   test_strings FALSE

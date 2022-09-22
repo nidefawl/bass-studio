@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <atomic>
+#include <vector>
 #include <limits>
 #include "assert_dbg.h"
 
