@@ -18,6 +18,7 @@ option(PROJECT_BUILD_PLUGINS "Build standalone plugins" ON)
 option(PROJECT_CFG_USE_OPENGL3 "Use OpenGL 3.x instead of OpenGL 2" ON)
 option(PROJECT_FORCE_LIB "Force building a lib" ON)
 option(PROJECT_GENERATE_LINKER_MAP "Generate <build-dir>/<exe>_linker.map" OFF)
+set(PROJECT_VST2_OUTPUT_PATH "${ABS_WORKING_DIR}" CACHE STRING "VST2 output path")
 
 
 if (PROJECT_BUILD_BENCHMARKS
@@ -255,12 +256,16 @@ if (PROJECT_REQUIRE_LIB)
     if (NOT WIN32)
       target_link_options(${plugBuildName} PUBLIC -Wl,--no-undefined)
     endif()
-    set(PROJECT_VST2_OUTPUT_PATH "C:/VST/ableton/64/dev-daw")
     set_target_properties(${plugBuildName} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_VST2_OUTPUT_PATH}$<0:...>)
     set_target_properties(${plugBuildName} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${PROJECT_VST2_OUTPUT_PATH}$<0:...>)
   ENDFUNCTION(FN_DL_PLUGIN_BUILD)
 
   if (PROJECT_BUILD_PLUGINS)
+    if (NOT WIN32)
+      set_target_properties(${LINK_TARGET} PROPERTIES POSITION_INDEPENDENT_CODE ON)
+      set_target_properties(slowstacktrace PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    endif()
+
     set(SRC_FILES_VST2_PLUGIN
       ${MAIN_SRC_PATH}/plugins/plugin-base.cpp
       ${MAIN_SRC_PATH}/plugins/vst2wrapper/vst2wrapper.cpp
