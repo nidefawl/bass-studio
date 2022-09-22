@@ -71,29 +71,29 @@ float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx) {
 
 FUNC_NOINLINE
 void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float value) {
-    seh_try("ehvstsetp") {
+    // seh_try("ehvstsetp") {
         aeffect->setParameter(aeffect, idx, value);
-    }
-    seh_catch("ehvstsetp") {
-        vst_onException(plugin);
-    }
-    seh_finally("ehvstsetp")
+    // }
+    // seh_catch("ehvstsetp") {
+        // vst_onException(plugin);
+    // }
+    // seh_finally("ehvstsetp")
 }
 
 FUNC_NOINLINE
 void vst_process(vstplugin* plugin, AEffect* aeffect, float** bufIn, float** bufOut, int32_t numSamples) {
-    seh_try("ehvstproc") {
+    // seh_try("ehvstproc") {
 
         if (aeffect->flags & effFlagsCanReplacing) {
             aeffect->processReplacing(aeffect, bufIn, bufOut, numSamples);
         } else {
             aeffect->process(aeffect, bufIn, bufOut, numSamples);
         }
-    }
-    seh_catch("ehvstproc") {
-        vst_onException(plugin);
-    }
-    seh_finally("ehvstproc")
+    // }
+    // seh_catch("ehvstproc") {
+        // vst_onException(plugin);
+    // }
+    // seh_finally("ehvstproc")
 }
 
 #ifdef _WIN32

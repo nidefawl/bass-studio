@@ -1,5 +1,6 @@
 #pragma once
 #include "automation.h"
+#include "gui/controls/knob.h"
 #include "logging.h"
 #include "nanovg/nanovg_min.h"
 #include <vector>
@@ -49,13 +50,7 @@ public:
         setBackgroundRendered(true);
     }
     ~guiknob_pluginparam() override = default;
-#if BUILD_VSTHOST
-    void setToDefaultValue() override {
-        if (hostSidePlugin) {
-            hostSidePlugin->resetParamValue(paramIdx, FLG_PAR_UPDATE_USER);
-        }
-    }
-#endif
+
     void setEffectInstance(effectbase* _hostSidePlugin) {
 #if BUILD_VSTHOST
         hostSidePlugin   = _hostSidePlugin;
@@ -70,6 +65,17 @@ public:
                 if (paramDisplay.unit.empty())
                     return paramDisplay.value;
                 return paramDisplay.value + " " + paramDisplay.unit;
+            };
+            fnValueEditBegin = [this](float preVal, float val) {
+                hostSidePlugin->getHostCallback()->onParametersChanged(hostSidePlugin, paramIdx, val, 0, 0);
+            };
+            fnValueEditChanged = [this](float preVal, float val) {
+                setValueInit(val);
+                hostSidePlugin->getHostCallback()->onParametersChanged(hostSidePlugin, paramIdx, val, 0, 1);
+            };
+            fnValueEditFinish = [this](float preVal, float val) {
+                hostSidePlugin->getHostCallback()->onParametersChanged(hostSidePlugin, paramIdx, val, 0, 2);
+                paramAutomatable->postSetParameter(paramIdx, preVal, val, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
             };
             setValueInit(hostSidePlugin->getParamValue(paramIdx));
             setLabel(hostSidePlugin->getParamName(paramIdx));

@@ -1,5 +1,6 @@
 #pragma once
 #include "config.h"
+#include "modules.h"
 #include "str_util.h"
 #include "seq_time.h"
 #include "dsp_util.h"
@@ -50,6 +51,7 @@ class DawInstance;
 
 typedef AEffect*(VSTPluginMain_t) (audioMasterCallback audioMasterCB);
 typedef AudioEffectX* (*FnCreateModule)(audioMasterCallback);
+
 struct builtin_module_reg_t {
     int id = -1;
     bool isSynth;
@@ -178,7 +180,7 @@ private:
     /* These are currently not called */
     void onPluginsChanged(audio_stage_t* stage);
     void updatePluginWindows();
-
+    i_host_callback* getHostCallback();
 public:
     vsthost();
     vsthost(vsthost const&) = delete;

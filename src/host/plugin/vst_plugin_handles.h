@@ -10,6 +10,11 @@ class guiplugin;
 class BasePluginVST2;
 class PluginViewContainers;
 struct handles_t {
+    struct param_editing_t {
+        int32_t paramIdx = -1;
+        float   valBefore = 0;
+    };
+    param_editing_t paramEditing;
     uint32_t localCurrentUniqueId = 0;
     VstTimeInfo localTimeInfo{};
     VstEvent_t* midiEventsBuf = nullptr;

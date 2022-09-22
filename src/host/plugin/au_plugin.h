@@ -33,8 +33,8 @@ public:
     std::vector<String> programNames;
     std::vector<String> inputNames;
     std::vector<String> outputNames;
-    auplugin(handles_t* _handle, int32_t globalId, String sDir, String sName)
-        : effectbase(sName, PLUGIN_TYPE_AU, globalId), handle(_handle) {
+    auplugin(handles_t* _handle, int32_t globalId, i_host_callback* hostcallback, String sDir, String sName)
+        : effectbase(sName, PLUGIN_TYPE_AU, globalId, hostcallback), handle(_handle) {
         this->sDir = sDir;
     }
     ~auplugin() override = default;

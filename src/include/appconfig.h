@@ -17,4 +17,5 @@ struct appruntime {
     bool enableCache                  = true;
     bool disableWaveformUpdates       = false;
     bool enableClipRendererDebugLayer = false;
+    bool printWindowFps = false;
 };

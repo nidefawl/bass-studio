@@ -2,6 +2,7 @@
 #include <memory>
 #include <vector>
 #include <unordered_map>
+#include "automation.h"
 #include "str_util.h"
 #include "seq_time.h"
 #include "assert_dbg.h"
@@ -12,6 +13,7 @@
 #define FLG_PAR_UPDATE_UNDO 4
 #define FLG_PAR_UPDATE_AUTOMATED 8
 #define FLG_PAR_UPDATE_NOSTORE 16
+#define FLG_PAR_UPDATE_FINISH 32
 #define PARAM_ENABLE 0
 #define PARAM_GAIN 1
 #define PARAM_PAN 2
@@ -197,7 +199,7 @@ public:
     virtual track_t* getTrack()                                   = 0;
 
     virtual void flipParamValue(int32_t idx) {
-        setParamValue(idx, 1.0f - getParamValue(idx), FLG_PAR_UPDATE_USER);
+        setParamValue(idx, 1.0f - getParamValue(idx), FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
     }
     virtual void resetParamValue(int32_t paramIdx, int flags) {
         auto it = mapParams.find(paramIdx);

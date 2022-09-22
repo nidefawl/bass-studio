@@ -169,8 +169,8 @@ struct module_group::internal_handles_t {
     std::unique_ptr<guimodule_group> gui;
 };
 
-module_group::module_group(int32_t _projectGlobalId)
-    : internalplugin("Group", PLUGIN_TYPE_GROUP, _projectGlobalId),
+module_group::module_group(int32_t _projectGlobalId, i_host_callback* _hostCallback)
+    : internalplugin("Group", PLUGIN_TYPE_GROUP, _projectGlobalId, _hostCallback),
       handle(new module_group::internal_handles_t{ nullptr }),
       audio(nullptr)
 {
@@ -201,13 +201,6 @@ module_group::~module_group() {
     delete handle;
     delete blockInputs;
     delete blockOutputs;
-}
-
-float module_group::dispatchGetParameter(int32_t idx) {
-    return 0;
-}
-
-void module_group::dispatchSetParameter(int32_t idx, float val) {
 }
 
 guiplugin* module_group::makeGui() {
@@ -295,7 +288,7 @@ std::shared_ptr<DAW::effect_processing_graph_t> module_group::getLastProcessingG
 }
 
 void module_group::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
-    dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
+    dbgassert(in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
     audio->input.copyFrom(in);
 
     std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
@@ -372,6 +365,6 @@ void module_group::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot
 }
 
 template<>
-effectbase* makeInstance<module_group>(int32_t _projectGlobalId) {
-    return new module_group(_projectGlobalId);
+effectbase* makeInstance<module_group>(int32_t _projectGlobalId, i_host_callback* _hostCallback) {
+    return new module_group(_projectGlobalId, _hostCallback);
 }

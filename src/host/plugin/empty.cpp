@@ -38,20 +38,13 @@ struct module_empty::internal_handles_t {
     std::unique_ptr<guimodule_empty> gui;
 };
 
-module_empty::module_empty(int32_t _projectGlobalId)
-    : internalplugin("Empty", PLUGIN_TYPE_EMPTY, _projectGlobalId),
+module_empty::module_empty(int32_t _projectGlobalId, i_host_callback* _hostCallback)
+    : internalplugin("Empty", PLUGIN_TYPE_EMPTY, _projectGlobalId, _hostCallback),
       handle(new module_empty::internal_handles_t{ nullptr }) {
 }
 
 module_empty::~module_empty() {
     delete handle;
-}
-
-float module_empty::dispatchGetParameter(int32_t idx) {
-    return 0;
-}
-
-void module_empty::dispatchSetParameter(int32_t idx, float val) {
 }
 
 guiplugin* module_empty::makeGui() {
@@ -66,13 +59,8 @@ guiplugin* module_empty::getGui() {
     return handle->gui.get();
 }
 
-samplecount_t module_empty::getPluginLatency() {
-    return 0;
-}
-
 void module_empty::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
-    dbgassert(getTrackLink()->sampleFormat == this->format
-              && in->samples == format.blockSize
+    dbgassert(in->samples == format.blockSize
               && out->samples == format.blockSize
               && format.blockSize > 0
               && format.sampleRate > 0);
@@ -80,6 +68,6 @@ void module_empty::process(AudioBlock* in, AudioBlock* out, double tick, double 
 }
 
 template<>
-effectbase* makeInstance<module_empty>(int32_t _projectGlobalId) {
-    return new module_empty(_projectGlobalId);
+effectbase* makeInstance<module_empty>(int32_t _projectGlobalId, i_host_callback* _hostCallback) {
+    return new module_empty(_projectGlobalId, _hostCallback);
 }

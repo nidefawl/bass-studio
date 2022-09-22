@@ -260,14 +260,13 @@ void midiarp::loadSnapshot(const arp_snapshot& snapshot) {
     loadAutomation(snapshot.automatedParams, this);
 }
 void midiarp::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-    if (flags != FLG_PAR_UPDATE_USER) {
-        return;
+    if (flags & FLG_PAR_UPDATE_FINISH) {
+        dbgassert(this->trackImpl->getTrack());
+        track_t* track                = this->trackImpl->getTrack();
+        automationlane_snapshot_t ref = toRef();
+        parameter_ref_t p             = { track->projectIdx, ref.type, 0, idx };
+        DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
     }
-    dbgassert(this->trackImpl->getTrack());
-    track_t* track                = this->trackImpl->getTrack();
-    automationlane_snapshot_t ref = toRef();
-    parameter_ref_t p             = { track->projectIdx, ref.type, 0, idx };
-    DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
 void midiarp::createSnapshot(arp_snapshot& snapshot, const tracksnapshot_store_opts_t& opts) {
     if (opts.storePluginPreset) {

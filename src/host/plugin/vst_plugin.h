@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "math/vec.h"
+#include "modules.h"
 #include "str_util.h"
 #include "seq_time.h"
 
@@ -75,7 +76,7 @@ public:
         return map[opCode];
     }
 public:
-    vstplugin(handles_t* _handle, int32_t globalId, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags);
+    vstplugin(handles_t* _handle, int32_t globalId, i_host_callback* hostcallback, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags);
     ~vstplugin() override;
     void onEnable() override;
     void onDisable() override;

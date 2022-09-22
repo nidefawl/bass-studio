@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include "automation.h"
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
 #include "math/seq_math.h"
@@ -1309,15 +1310,14 @@ void track_params_t::loadSnapshot(const track_params_snapshot_t& snapshot) {
 }
 
 void track_params_t::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-    if (flags != FLG_PAR_UPDATE_USER) {
-        return;
-    }
-    dbgassert(this->audiostage->getTrack());
-    automationlane_snapshot_t ref = toRef();
+    if (flags & FLG_PAR_UPDATE_FINISH) {
+        dbgassert(this->audiostage->getTrack());
+        automationlane_snapshot_t ref = toRef();
 
-    track_t* track    = this->audiostage->getTrack();
-    parameter_ref_t p = { track->projectIdx, ref.type, 0, idx };
-    DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+        track_t* track    = this->audiostage->getTrack();
+        parameter_ref_t p = { track->projectIdx, ref.type, 0, idx };
+        DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+    }
 }
 
 track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), audiostage(_audiostage) {

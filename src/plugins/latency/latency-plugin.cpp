@@ -1,217 +1,146 @@
-#include <cmath>
-#include <algorithm>
-#include <cstdio>
-#include <memory>
-#include "config.h"
-#include "math/seq_math.h"
-#include "plugins/plugin-ui.h"
-#include "str_util.h"
-#include "dsp_util.h"
-#include "color_util.h"
-
-#include "gui/gui.h"
-#include "gui/container/container.h"
-#include "gui/plugin/pluginviewcontainers.h"
-#include "gui/controls/button.h"
-#include "gui/controls/knob.h"
-#include "gui/controls/inputfield.h"
-#include "gui/controls/knobpluginparam.h"
-#include "gui/container/container.h"
-#include "gui/contextmenu/contextmenu_daw.h"
-
-#include "basectrl.h"
-
-#include "platform.h"
-
 #include "latency-plugin.h"
-#include "plugins/plugin.h"
-#include "plugins/plugin-base.h"
-#include "plugins/plugin-window.h"
-#include "types.h"
+#include "dsp_util.h"
+#include "event.h"
+#include "plugins/plugin-ui.h"
+#include "plugins/plugincontrol.h"
+#include "str_util.h"
+#include "gui/container/container.h"
+#include "gui/controls/knoblabeled.h"
+#include "gui/controls/knobpluginparam.h"
+#include "gui/plugin/plugin.h"
+#include "gui/plugin/pluginctr.h"
+#include "gui/plugin/pluginviewcontainers.h"
+#include "modules.h"
+#include "host/mainctrl.h"
+#include "host/plugin/internal_plugin.h"
+#include "track.h"
+#include "track_impl.h"
 #include "audioblock.h"
-#include <vstsdk-plugin-2.4/audioeffectx.h>
-
-
-#if BUILD_EXTERNAL_PLUGIN
-AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
-    return PluginLatency::createPlugin(audioMaster);
-}
-#endif
+#include "meter.h"
+#include "snapshot.h"
+#include "window.h"
 
 namespace PluginLatency {
-    const char* const PLUGIN_EFFECT_NAME = "Latency";
-    const char* const PLUGIN_UID = "LTCY";
-    const char* const PLUGIN_PRODUCT_NAME = "Latency introducing plugin";
+
+    static constexpr int32_t PARAM_LATENCY = 1;
     static constexpr int32_t MAX_LATENCY = 16384;
 
-    PluginVST2_Latency::PluginVST2_Latency(audioMasterCallback audioMaster)
-        : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs) {
-        setNewLatency(current()->latency);
-    }
-
-    void PluginVST2_Latency::setProgram(VstInt32 program) {
-        if (program < 0 || program >= kNumPrograms)
-            return;
-        curProgram = program;
-    }
-
-    void PluginVST2_Latency::setProgramName(char* name) {
-    }
-
-    void PluginVST2_Latency::getProgramName(char* name) {
-        if (name)
-            name[0] = 0;
-    }
-
-    void PluginVST2_Latency::getParameterLabel(VstInt32 index, char* label) {
-        switch (index) {
-            case kLatency:
-                vst_strncpy(label, "samples", PLUGIN_PARAM_STR_MAX_LEN);
-                return;
-            default:
-                vst_strncpy(label, "", PLUGIN_PARAM_STR_MAX_LEN);
+    module_latency::module_latency(int32_t _projectGlobalId, i_host_callback* _hostCallback)
+        : internalplugin("Latency", PLUGIN_TYPE_LATENCY, _projectGlobalId, _hostCallback)
+    {
+        struct effectgain_param_entry {
+            int32_t id;
+            String name;
+            String unit;
+            float val;
+        };
+        const std::array<effectgain_param_entry, 1> parameterTypes{ {
+            { PARAM_LATENCY, "Latency", "s",  0.5f }
+        } };
+        for (const effectgain_param_entry& paramEntry : parameterTypes) {
+            automatable_param_t* regparam = registerParam(paramEntry.id);
+            regparam->defaultValue = paramEntry.val;
+            regparam->value = paramEntry.val;
+            regparam->name  = paramEntry.name;
+            regparam->unit  = paramEntry.unit;
         }
     }
 
-    void PluginVST2_Latency::getParameterDisplay(VstInt32 index, char* text) {
-        text[0] = 0;
-        switch (index) {
-            case kLatency: {
-                snprintf(text, PLUGIN_PARAM_STR_MAX_LEN, "%d", current()->latency);
-                return;
-            }
-        }
-        return BasePluginVST2::getParameterDisplay(index, text);
+    module_latency::~module_latency() {
+        delete blockInputs;
+        delete blockOutputs;
     }
 
-    param_converted_t PluginVST2_Latency::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
+    void module_latency::postSetParameter(int32_t idx, float preVal, float val, int flags) {
+        switch (idx) {
+            case PARAM_LATENCY:
+                setNewLatency(math::clamp(math::roundfS32(val * MAX_LATENCY), 0, MAX_LATENCY));
+                break;
+        }
+        internalplugin::postSetParameter(idx, preVal, val, flags);
+    }
+
+    void module_latency::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
+        dbgassert( in->samples == format.blockSize
+                && out->samples == format.blockSize
+                && format.blockSize > 0
+                && format.sampleRate > 0);
+        if (this->latencyChanged) {
+            this->latencyChanged  = false;
+            this->curLatency      = this->newLatency;
+            hostCallback->onLatencyChanged(this);
+        }
+        out->clear();
+        delayAudio(this->delayLine.get(), in, out, this->curLatency);
+    }
+
+    param_converted_t module_latency::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
         //TODO: use std::from_chars when floating point version arrives in libc++
         auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
         switch (idx) {
-            case kLatency: {
+            case PARAM_LATENCY: {
                 return {math::clamp(math::roundfS64(fTextFieldVal)/static_cast<float>(MAX_LATENCY), 0.0f, 1.0f), true};
             }
             default:
                 break;
         }
-        return BasePluginVST2::convertParamValueDisplay(idx, displayValue);
+        return internalplugin::convertParamValueDisplay(idx, displayValue);
     }
 
-    void PluginVST2_Latency::getParameterName(VstInt32 index, char* label) {
-        switch (index) {
-            case kLatency:
-                vst_strncpy(label, "Latency", PLUGIN_PARAM_STR_MAX_LEN);
-                return;
+    param_unit_t module_latency::getParamValueDisplay(int32_t idx) {
+        auto param = getParam(idx);
+        dbgassert(param);
+        if (param->idx == PARAM_LATENCY) {
+            return {StringFormat("%d", math::max(0, math::min(MAX_LATENCY, math::roundfS32(param->value * MAX_LATENCY)))), param->unit};
         }
+        return internalplugin::getParamValueDisplay(idx);
     }
 
-    void PluginVST2_Latency::setParameter(VstInt32 index, float value) {
-        Program* ap = current();
-        switch (index) {
-            case kLatency:
-                ap->latency = math::max(0, math::min(MAX_LATENCY, math::roundfS32(value * MAX_LATENCY)));
-                setNewLatency(ap->latency);
-                break;
-        }
-#if BUILD_VSTHOST
-        for (auto& pviewctr : this->views) {
-            if (pviewctr->isInUse()) {
-                pviewctr->onSetParameter(index, value);
+    void module_latency::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
+        meterIn.update(this->blockInputs, 1.0f);
+        meter.update(out, 1.0f);
+    }
+
+    void module_latency::loadSnapshot(const plugin_snapshot_t& snapshot) {
+        internalplugin::loadSnapshot(snapshot);
+    }
+
+    void module_latency::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts) {
+        internalplugin::makeSnapshot(snapshot, opts);
+        snapshot.vendorVersion = 1;
+    }
+
+    std::shared_ptr<PluginViewContainers> module_latency::createInternalView() {
+        if (!views.empty()) {
+            for (auto& existingView : views) {
+                if (!existingView->isInUse()) {
+                    existingView->setUsed();
+                    return existingView;
+                }
             }
         }
-#else
-        if (this->editor) {
-            static_cast<pluginwindow*>(this->editor)->onSetParameter(index, value);
-        }
-#endif
+        auto v = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_latency>>(this, 100, 150);
+        this->views.push_back(v);
+        return v;
     }
 
-    float PluginVST2_Latency::getParameter(VstInt32 index) {
-        Program* ap = current();
-        float value = 0;
-        switch (index) {
-            case kLatency:
-                value = std::max(0.0f, std::min(1.0f, ap->latency / static_cast<float>(MAX_LATENCY)));
-                break;
-        }
-        return value;
-    }
-
-    bool PluginVST2_Latency::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
-        if (index >= 0 && index < kNumPrograms) {
-            vst_strncpy(text, "Default", PLUGIN_PROGRAM_STR_MAX_LEN);
-            return true;
-        }
-        return false;
-    }
-
-    bool PluginVST2_Latency::getEffectName(char* name) {
-        vst_strncpy(name, PLUGIN_EFFECT_NAME, kVstMaxEffectNameLen);
-        return true;
-    }
-
-    bool PluginVST2_Latency::getVendorString(char* text) {
-        vst_strncpy(text, PLUGIN_VENDOR_NAME, kVstMaxVendorStrLen);
-        return true;
-    }
-
-    bool PluginVST2_Latency::getProductString(char* text) {
-        vst_strncpy(text, PLUGIN_PRODUCT_NAME, kVstMaxProductStrLen);
-        return true;
-    }
-
-    void PluginVST2_Latency::setNewLatency(int32_t nSamplesLatency) {
+    void module_latency::setNewLatency(int32_t nSamplesLatency) {
         this->newLatency     = nSamplesLatency;
         this->latencyChanged = true;
     }
 
-    VstInt32 PluginVST2_Latency::getVendorVersion() {
-        return 1;
+    samplecount_t module_latency::getPluginLatency() {
+        return this->curLatency;
     }
 
-    VstInt32 PluginVST2_Latency::canDo(char* text) {
-        if (!strcmp(text, "receiveVstTimeInfo"))
-            return 1;
-        return -1;// explicitly can't do; 0 => don't know
-    }
-
-    void PluginVST2_Latency::processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) {
-        if (issetprogram)
-            return;
-
-        if (sampleFrames != blockSize) {
-            return;
-        }
-        if (this->latencyChanged) {
-            this->latencyChanged             = false;
-            this->curLatency                 = this->newLatency;
-            this->getAeffect()->initialDelay = this->curLatency;
-        }
-        dbgassert(this->curLatency >= 0 && this->curLatency <= (1 << 20));
-        int32_t nChannels = this->getAeffect()->numOutputs;
-        if (!this->delayLine) {
-            this->delayLine = std::make_unique<DelayLine>();
-        }
-        AudioBlock inputBlock(inputs, nChannels, sampleFrames);
-        AudioBlock outputBlock(outputs, nChannels, sampleFrames);
-        delayAudio(this->delayLine.get(), &inputBlock, &outputBlock, this->curLatency);
-    }
-
-
-    Program::Program() : ProgramParameters() {
-        vst_strncpy(name, "Init", PLUGIN_PROGRAM_STR_MAX_LEN);
-        latency = 1024;
-    }
-
-    const char* getName() {
-        return PLUGIN_EFFECT_NAME;
-    }
-    AudioEffectX* createPlugin(audioMasterCallback audioMaster) {
-        return new PluginVST2_Latency(audioMaster);
-    }
-    std::shared_ptr<PluginViewContainers> PluginVST2_Latency::createView() {
-        auto view = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, PluginVST2_Latency>>(this, 50, 150);
-        this->views.push_back(view);
-        return view;
+    void module_latency::onEnable() {
+        this->delayLine = std::make_unique<DelayLine>();
+        setNewLatency(math::clamp(math::roundfS32(getParamValue(PARAM_LATENCY) * MAX_LATENCY), 0, MAX_LATENCY));
     }
 } // namespace PluginLatency
+
+template<>
+effectbase* makeInstance<PluginLatency::module_latency>(int32_t _projectGlobalId, i_host_callback* _hostCallback) {
+    return new PluginLatency::module_latency(_projectGlobalId, _hostCallback);
+}
+

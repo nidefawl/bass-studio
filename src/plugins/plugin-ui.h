@@ -2,6 +2,7 @@
 #include <memory>
 #include <vector>
 #include <cmath>
+#include "automation.h"
 #include "config.h"
 #include "gui/container/container.h"
 #include "gui/controls/textfield.h"
@@ -35,12 +36,16 @@ public:
         module(module)
     {
         init();
-        const int32_t numParams = module->getNumParameters();
-        knobs.reserve(numParams);
-        for (int32_t i = 1; i < numParams; ++i) {
-            knobs.push_back(new guiknob_pluginparam(i, i, guiknob::knobtype::SLIDER_LABELED));
+        std::vector<automatable_param_t*> paramsSorted;
+        module->getSortedParams(paramsSorted);
+        erase_if(paramsSorted, [](const automatable_param_t* p) {
+            return p->idx == PARAM_ENABLE;
+        });
+        knobs.reserve(paramsSorted.size());
+        for (automatable_param_t* param : paramsSorted) {
+            knobs.push_back(new guiknob_pluginparam(param->idx, param->idx, guiknob::knobtype::SLIDER_LABELED));
             add(knobs.back());
-        }
+        };
         add(&editfield);
     }
     explicit guictr_vst2_simple(BasePluginVST2* plugin) : guictr_base(),
@@ -74,7 +79,7 @@ public:
             editfield.mCallbackEnd = [this, param, paramValue, paramIdx](const std::string& str) {
                 auto paramConverted = module->convertParamValueDisplay(param->getParamIdx(), param_unit_t{str, paramValue.unit});
                 if (paramConverted.success) {
-                    module->setParamValue(paramIdx, paramConverted.floatVal, FLG_PAR_UPDATE_USER);
+                    module->setParamValue(paramIdx, paramConverted.floatVal, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
                     if (param->fnValueEditChanged)
                         param->fnValueEditChanged(param->getValue(), paramConverted.floatVal);
                 }

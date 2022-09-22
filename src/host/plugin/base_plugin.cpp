@@ -39,8 +39,8 @@ effectbase::~effectbase() {
         safeRef.handler->safeRefDestroy(safeRef.refId);
     }
 }
-effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId)
-    : pluginType(_pluginType), projectGlobalId(_projectGlobalId), sName(std::move(_sName)) {
+effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId, i_host_callback* _hostCallback)
+    : pluginType(_pluginType), projectGlobalId(_projectGlobalId), hostCallback(_hostCallback), sName(std::move(_sName)) {
     struct effectbase_param_entry_t {
         int32_t id;
         String name;
@@ -242,7 +242,7 @@ void effectbase::updateOnEnableParam(automatable_param_t* param, bool wasEnable,
         } else {
             onDisable();
         }
-        if (!(flags & FLG_PAR_UPDATE_NOSTORE) && !(flags & FLG_PAR_UPDATE_AUTOMATED)) {
+        if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
             param->inUse = true;
         }
     }

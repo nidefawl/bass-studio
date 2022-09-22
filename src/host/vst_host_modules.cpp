@@ -1,6 +1,7 @@
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "vst_host.h"
+#include "modules.h"
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
 #include "plugin/vst_plugin_handles.h"
@@ -17,16 +18,14 @@
 typedef AudioEffectX* (*FnCreateModule)(audioMasterCallback);
 
 void vsthost::registerPlugins() {
-    int moduleId = 1000;
     builtinModules.clear();
-    builtinModules.push_back({ moduleId++, false, PluginStereoWidth::getName(), PluginStereoWidth::createPlugin });
-    builtinModules.push_back({ moduleId++, false, PluginTestAdv::getName(), PluginTestAdv::createPlugin });
-    builtinModules.push_back({ moduleId++, false, PluginEmptyVST2::getName(), PluginEmptyVST2::createPlugin });
-    builtinModules.push_back({ moduleId++, false, PluginLatency::getName(), PluginLatency::createPlugin });
-    builtinModules.push_back({ moduleId++, false, PluginHostInfo::getName(), PluginHostInfo::createPlugin });
-    builtinModules.push_back({ moduleId++, true, PluginSynth::getName(), PluginSynth::createPlugin });
-    builtinModules.push_back({ moduleId++, false, PluginBitcrush::getName(), PluginBitcrush::createPlugin });
-    builtinModules.push_back({ moduleId++, false, PluginSampleDelay::getName(), PluginSampleDelay::createPlugin });
+    builtinModules.push_back({ PLUG_INT_STEREOWIDTH, false, PluginStereoWidth::getName(), PluginStereoWidth::createPlugin });
+    builtinModules.push_back({ PLUG_INT_TEST, false, PluginTestAdv::getName(), PluginTestAdv::createPlugin });
+    builtinModules.push_back({ PLUG_INT_CRASHVST, false, PluginEmptyVST2::getName(), PluginEmptyVST2::createPlugin });
+    builtinModules.push_back({ PLUG_INT_HOSTINFO, false, PluginHostInfo::getName(), PluginHostInfo::createPlugin });
+    builtinModules.push_back({ PLUG_INT_SYNTH, true, PluginSynth::getName(), PluginSynth::createPlugin });
+    builtinModules.push_back({ PLUG_INT_BITCRUSH, false, PluginBitcrush::getName(), PluginBitcrush::createPlugin });
+    builtinModules.push_back({ PLUG_INT_SAMPLE_DELAY, false, PluginSampleDelay::getName(), PluginSampleDelay::createPlugin });
 }
 
 vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId) {
@@ -47,7 +46,7 @@ vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId)
     globalId = getNextGlobalModuleId(globalId);
     AEffect* aeffect  = axeffect->getAeffectHandle();
     auto* baseVst2 = dynamic_cast<BasePluginVST2*>(axeffect);
-    auto* plugin = new vstplugin(new handles_t(baseVst2, aeffect, nullptr), globalId, "", reg.name, moduleId, 0);
+    auto* plugin = new vstplugin(new handles_t(baseVst2, aeffect, nullptr), globalId, getHostCallback(), "", reg.name, moduleId, 0);
     if (baseVst2) {
         baseVst2->setHostSideHandle(plugin);
     }

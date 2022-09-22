@@ -21,8 +21,8 @@
 #include "window.h"
 #include <algorithm>
 
-module_gain::module_gain(int32_t _projectGlobalId)
-    : internalplugin("Gain", PLUGIN_TYPE_GAIN, _projectGlobalId)
+module_gain::module_gain(int32_t _projectGlobalId, i_host_callback* _hostCallback)
+    : internalplugin("Gain", PLUGIN_TYPE_GAIN, _projectGlobalId, _hostCallback)
 {
     struct effectgain_param_entry {
         int32_t id;
@@ -42,25 +42,14 @@ module_gain::module_gain(int32_t _projectGlobalId)
         regparam->unit  = paramEntry.unit;
     }
 }
+
 module_gain::~module_gain() {
     delete blockInputs;
     delete blockOutputs;
 }
 
-float module_gain::dispatchGetParameter(int32_t idx) {
-    return 0;
-}
-
-void module_gain::dispatchSetParameter(int32_t idx, float val) {
-}
-
-samplecount_t module_gain::getPluginLatency() {
-    return 0;
-}
-
 void module_gain::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
-    dbgassert(getTrackLink()->sampleFormat == this->format
-              && in->samples == format.blockSize
+    dbgassert(in->samples == format.blockSize
               && out->samples == format.blockSize
               && format.blockSize > 0
               && format.sampleRate > 0);
@@ -140,6 +129,6 @@ std::shared_ptr<PluginViewContainers> module_gain::createInternalView() {
 }
 
 template<>
-effectbase* makeInstance<module_gain>(int32_t _projectGlobalId) {
-    return new module_gain(_projectGlobalId);
+effectbase* makeInstance<module_gain>(int32_t _projectGlobalId, i_host_callback* _hostCallback) {
+    return new module_gain(_projectGlobalId, _hostCallback);
 }

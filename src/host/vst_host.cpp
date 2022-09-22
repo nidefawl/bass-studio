@@ -6,8 +6,10 @@
 #include <memory.h>
 #include "audiocache.h"
 #include "host/daw_channel.h"
+#include "host/history.h"
 #include "host/plugin/vst_plugin.h"
 #include "math/seq_math.h"
+#include "modules.h"
 #include "note.h"
 #include "str_util.h"
 #include "seq_util.h"
@@ -196,7 +198,26 @@ public:
 #endif
 };
 
+namespace DAW {
 
+class plugin_host_callback : public i_host_callback {
+    vsthost* const host;
+    public:
+    explicit plugin_host_callback(vsthost* _host)
+    : host(_host) {
+    }
+    void onLatencyChanged(effectbase* effect) override {
+
+    }
+    void onParametersChanged(effectbase* effect, int32_t idx, float val, int flags, int stage) override {
+
+    }
+    void onIOConfigChanged(effectbase* effect) override {
+
+    }
+};
+
+}
 /**
  * VST Host implementation internals
  */
@@ -214,6 +235,7 @@ public:
 
     std::shared_ptr<DAW::AudioIO::AudioStream> audioStream;
     std::shared_ptr<DAW::processing_graph_t> processingGraph;
+    std::shared_ptr<DAW::plugin_host_callback> pluginHostCallback;
 
     channelnum_t inputChannels = 0;
     channelnum_t outputChannels = 0;
@@ -376,7 +398,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         int32_t tmMillisS32 = static_cast<int32_t>(static_cast<uint64_t>(getTimeMillis()) & (0x7FFF'FFFFLL));
         int32_t tmSince = tmMillisS32 - opcodeStats.tmMillis;
         if (tmSince < 2000) {
-            throttleLog = opcodeStats.numDispatches > 20;
+            throttleLog = tmSince > 50 && opcodeStats.numDispatches > 20;
         } else {
             opcodeStats.tmMillis = tmMillisS32;
         }
@@ -409,9 +431,10 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
     case audioMasterAutomate:
         if (plugin) {
             auto* effParam = plugin->getEffectParam(index);
+            // log_printf("%s audioMasterAutomate param index %d %zd %f\n", StringAsCStr(plugin->getName()), index, value, opt);
             if (!effParam) {
-            if (!throttleLog)
-                log_printf("%s audioMasterAutomate unknown param index %d %zd %f\n", StringAsCStr(plugin->getName()), index, value, opt);
+                if (!throttleLog)
+                    log_printf("%s audioMasterAutomate unknown param index %d %zd %f\n", StringAsCStr(plugin->getName()), index, value, opt);
             } else {
                 // call to deactivateAutomation is not thread safe,
                 plugin->deactivateAutomation(effParam->idx);
@@ -458,7 +481,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
             logPluginCb(plugin, "audioMasterProcessEvents %d %d %zd\n", opcode, index, value, 0);
         return 0;
     case audioMasterIOChanged:
-        // if (!throttleLog)
+        if (!throttleLog)
             logPluginCb(plugin, "audioMasterIOChanged %d %d %zd\n", opcode, index, value, 0);
         return 0;
     case audioMasterNeedIdle:
@@ -591,12 +614,42 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         return 0;
 #ifdef VST_2_1_EXTENSIONS
     case audioMasterBeginEdit:
-        if (!throttleLog)
-            logPluginCb(plugin, "audioMasterBeginEdit %d %d %zd %f\n", opcode, index, value, opt);
+        if (plugin && validProcessingState && !plugin->bIsLoadingProgram) {
+            if (!throttleLog)
+                logPluginCb(plugin, "audioMasterBeginEdit %d %d %zd %f\n", opcode, index, value, opt);
+            auto* effParam = plugin->getEffectParam(index);
+            if (!effParam) {
+                if (!throttleLog)
+                    log_printf("%s audioMasterBeginEdit unknown param index %d %zd %f\n", StringAsCStr(plugin->getName()), index, value, opt);
+            } else {
+              plugin->handle->paramEditing = {effParam->internalIdx, effParam->value};
+            }
+        }
         return 1;
     case audioMasterEndEdit:
-        if (!throttleLog)
-            logPluginCb(plugin, "audioMasterEndEdit %d %d %zd %f\n", opcode, index, value, opt);
+        // if (!throttleLog)
+        //     logPluginCb(plugin, "audioMasterEndEdit %d %d %zd %f\n", opcode, index, value, opt);
+        if (plugin && validProcessingState && !plugin->bIsLoadingProgram && plugin->handle->paramEditing.paramIdx > -1) {
+            if (!throttleLog)
+                logPluginCb(plugin, "audioMasterEndEdit %d %d %zd %f\n", opcode, index, value, opt);
+            auto* effParam = plugin->getEffectParam(index);
+            if (!effParam) {
+                if (!throttleLog)
+                    log_printf("%s audioMasterEndEdit unknown param index %d %zd %f\n", StringAsCStr(plugin->getName()), index, value, opt);
+            } else {
+                dbgassert(plugin->trackImpl->getTrack());
+                auto newVal = effParam->value;
+                auto oldVal = plugin->handle->paramEditing.valBefore;
+                track_t* track                = plugin->trackImpl->getTrack();
+                automationlane_snapshot_t ref = plugin->toRef();
+                parameter_ref_t p             = { track->projectIdx, ref.type, plugin->projectGlobalId, effParam->idx };
+                DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, oldVal, newVal));
+
+            }
+        }
+        if (plugin) {
+            plugin->handle->paramEditing = {-1, 0.0f};
+        }
         return 1;
     case audioMasterOpenFileSelector:
         if (!throttleLog)
@@ -2516,6 +2569,11 @@ void vsthost::updatePluginWindows() {
         plugin->updateWindow();
     }
 }
+
+i_host_callback* vsthost::getHostCallback() {
+    return impl->pluginHostCallback.get();
+}
+
 bool vsthost::onTick() {
     // Currently no lock
     //ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
@@ -2563,6 +2621,7 @@ void vsthost::destroy() {
 
 bool vsthost::assignMasterCallback(vsthost* host)
 {
+    host->impl->pluginHostCallback = std::make_shared<DAW::plugin_host_callback>(host);
     for (int i = 0; i < NUM_HOST_CB_SLOTS; i++) {
         if (g_hostslots[i].g_instance == nullptr) {
             g_hostslots[i].g_instance = host;
@@ -3170,7 +3229,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, uint32_t uId, int32_t glob
 
     globalId = getNextGlobalModuleId(globalId);
 
-    auto* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, path, nameWithoutExt, -1, bugfixFlags);
+    auto* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, getHostCallback(), path, nameWithoutExt, -1, bugfixFlags);
 
     aeffect->user = plugin;
     plugin->handle->localCurrentUniqueId = uId;

@@ -114,7 +114,7 @@ bool guiknob::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset)
     float value = getValue();
     float scale = isCtrl(evt.kbmods) ? 200.0f : 20.0f;
     value += yoffset / scale;
-    setValue(value, FLG_PAR_UPDATE_USER);
+    setValue(value, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
     return true;
 }
 void guiknob::renderRangeIndicator(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float rangeValueMin, float rangeValueMax, NVGcolor color, int idx, int numRanges) {
@@ -316,7 +316,26 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
 }
 
 void guiknob::setToDefaultValue() {
-    setValue(fDefaultValue, FLG_PAR_UPDATE_USER);
+#if BUILD_VSTHOST
+    fModifyBeginValue = lastVal = getValue();
+    if (fnValueEditBegin) {
+        fnValueEditBegin(fModifyBeginValue, fModifyBeginValue);
+    }
+    float newVal = fDefaultValue;
+    if (paramAutomatable) {
+        paramAutomatable->resetParamValue(paramIdx, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+        newVal = getValue();
+        setValue(newVal, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+        paramAutomatable->postSetParameter(paramIdx, fModifyBeginValue, newVal, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+    } else {
+        setValue(fDefaultValue, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+    }
+    if (fnValueEditFinish) {
+        fnValueEditFinish(fModifyBeginValue, newVal);
+    }
+#else
+    setValue(fDefaultValue, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+#endif
 }
 
 void guiknob::setKnobInternalHandlers() {
@@ -340,7 +359,7 @@ void guiknob::setKnobInternalHandlers() {
     };
     fnValueEditFinish = [this](float preVal, float val) {
         if (paramAutomatable) {
-            paramAutomatable->postSetParameter(paramIdx, preVal, val, FLG_PAR_UPDATE_USER);
+            paramAutomatable->postSetParameter(paramIdx, preVal, val, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
         }
     };
     if (dawCtrl)

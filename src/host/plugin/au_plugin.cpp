@@ -48,7 +48,7 @@ void auplugin::setParamValue(int32_t idx, float val, int flags) {
     if (param->idx == PARAM_ENABLE) {
         updateOnEnableParam(param, this->bIsEnabled, val > 0, flags);
     } else {
-        if (!(flags & FLG_PAR_UPDATE_NOSTORE) && !(flags & FLG_PAR_UPDATE_AUTOMATED)) {
+        if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
             param->inUse = true;
         }
         if (param->internalIdx >= 0) {

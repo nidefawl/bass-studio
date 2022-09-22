@@ -2,26 +2,32 @@
 #include "empty.h"
 #include "group.h"
 #include "plugins/gain/gain-plugin.h"
+#include "plugins/latency/latency-plugin.h"
 
 #include "host/vst_host.h"
 #include "host/plugin/vst_plugin.h"
 #include "modules.h"
 
-extern template effectbase* makeInstance<module_empty>(int32_t _projectGlobalId);
-extern template effectbase* makeInstance<module_group>(int32_t _projectGlobalId);
-extern template effectbase* makeInstance<module_gain>(int32_t _projectGlobalId);
+extern template effectbase* makeInstance<module_empty>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+extern template effectbase* makeInstance<module_group>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+extern template effectbase* makeInstance<module_gain>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+extern template effectbase* makeInstance<PluginLatency::module_latency>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
 
 effectbase* vsthost::makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid) {
     effectbase* effect = nullptr;
+    i_host_callback* hostcallback = getHostCallback();
     switch (moduleType) {
         case PLUGIN_TYPE_EMPTY:
-            effect = makeInstance<module_empty>(getNextGlobalModuleId(globalid));
+            effect = makeInstance<module_empty>(getNextGlobalModuleId(globalid), hostcallback);
             break;
         case PLUGIN_TYPE_GROUP:
-            effect = makeInstance<module_group>(getNextGlobalModuleId(globalid));
+            effect = makeInstance<module_group>(getNextGlobalModuleId(globalid), hostcallback);
             break;
         case PLUGIN_TYPE_GAIN:
-            effect = makeInstance<module_gain>(getNextGlobalModuleId(globalid));
+            effect = makeInstance<module_gain>(getNextGlobalModuleId(globalid), hostcallback);
+            break;
+        case PLUGIN_TYPE_LATENCY:
+            effect = makeInstance<PluginLatency::module_latency>(getNextGlobalModuleId(globalid), hostcallback);
             break;
         case PLUGIN_TYPE_INTERNAL_EFFECT: {
             vstpluginloadres res = loadInternalPlugin(moduleId, globalid);
@@ -37,6 +43,7 @@ effectbase* vsthost::makeModuleInstance(int32_t moduleType, int32_t moduleId, in
         case PLUGIN_TYPE_EMPTY:
         case PLUGIN_TYPE_GROUP:
         case PLUGIN_TYPE_GAIN:
+        case PLUGIN_TYPE_LATENCY:
             if (effect) {
                 effect->load(this);
                 pluginInstancesInternal.push_back(effect);

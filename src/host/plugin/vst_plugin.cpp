@@ -670,7 +670,7 @@ void vstplugin::setParamValue(int32_t idx, float val, int flags) {
     if (param->idx == PARAM_ENABLE) {
         updateOnEnableParam(param, this->bIsEnabled, val > 0, flags);
     } else {
-        if (!(flags & FLG_PAR_UPDATE_NOSTORE) && !(flags & FLG_PAR_UPDATE_AUTOMATED)) {
+        if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
             param->inUse = true;
         }
         if (param->internalIdx >= 0) {
@@ -682,14 +682,13 @@ void vstplugin::setParamValue(int32_t idx, float val, int flags) {
 }
 
 void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-    if (!(flags & FLG_PAR_UPDATE_USER)) {
-        return;
+    if (flags & FLG_PAR_UPDATE_FINISH) {
+        dbgassert(this->trackImpl->getTrack());
+        track_t* track                = this->trackImpl->getTrack();
+        automationlane_snapshot_t ref = toRef();
+        parameter_ref_t p             = { track->projectIdx, ref.type, this->projectGlobalId, idx };
+        DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
     }
-    dbgassert(this->trackImpl->getTrack());
-    track_t* track                = this->trackImpl->getTrack();
-    automationlane_snapshot_t ref = toRef();
-    parameter_ref_t p             = { track->projectIdx, ref.type, this->projectGlobalId, idx };
-    DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
 
 bool vstplugin::setCurrentProgram(uint32_t idx) {
@@ -878,7 +877,7 @@ int64_t vstplugin::dispatch(
 void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
     dbgassert(!isInSuspend);
     dbgassert(this->handle->aeffect);
-    dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
+    dbgassert(in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
     vst_process(this, this->handle->aeffect, in->buf, out->buf, numSamples);
 }
 
@@ -937,8 +936,8 @@ void vst_onException(vstplugin* plugin)
         log_lf(Log::L_ERROR, "segfault/fatal exception on %s\n", StringAsCStr(plugin->getName()));
     }
 }
-vstplugin::vstplugin(handles_t* _handle, int32_t globalId, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags)
-    : effectbase(std::move(sName), PLUGIN_TYPE_VST, globalId),
+vstplugin::vstplugin(handles_t* _handle, int32_t globalId, i_host_callback* hostcallback, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags)
+    : effectbase(std::move(sName), PLUGIN_TYPE_VST, globalId, hostcallback),
       handle(_handle),
       internalModuleId(_moduleId),
       sDir(std::move(_sDir)),

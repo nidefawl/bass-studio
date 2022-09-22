@@ -2,6 +2,7 @@
 #include <nanovg.h>
 #include <memory>
 #include "assert_dbg.h"
+#include "automation.h"
 #include "fileio.h"
 #include "guiglobals.h"
 #include "platform.h"
@@ -111,7 +112,7 @@ void guiplugin::buttonClicked(guibase* _button) {
     }
     if (_button == &buttonBypass) {
         ThreadLock lock = dawCtrl->lockPlayThread();
-        toggleDeviceEnableState(effect, FLG_PAR_UPDATE_USER);
+        toggleDeviceEnableState(effect, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
     }
     if (_button == &buttonSave) {
         ThreadLock lock = dawCtrl->lockPlayThread();

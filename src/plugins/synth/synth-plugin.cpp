@@ -4615,7 +4615,7 @@ namespace PluginSynth {
                 editfield.mCallbackEnd = [this, param, paramValue, paramIdx](const std::string& str) {
                     auto paramConverted = module->convertParamValueDisplay(param->getParamIdx(), param_unit_t{ str, paramValue.unit });
                     if (paramConverted.success) {
-                        module->setParamValue(paramIdx, paramConverted.floatVal, FLG_PAR_UPDATE_USER);
+                        module->setParamValue(paramIdx, paramConverted.floatVal, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
                         if (param->fnValueEditChanged)
                             param->fnValueEditChanged(param->getValue(), paramConverted.floatVal);
                     }

@@ -5,6 +5,8 @@
 #include "assert_dbg.h"
 #include "config.h"
 #include "host/plugin/empty.h"
+#include "modules.h"
+#include "plugins/latency/latency-plugin.h"
 #include "seq_util.h"
 #include "types.h"
 #include "automation.h"
@@ -64,6 +66,7 @@ namespace PluginWrapper {
             this->numParams = this->cEffect.numParams = static_cast<VstInt32>(numParams);
             this->setNumInputs(effect->blockInputs->channels);
             this->setNumOutputs(effect->blockOutputs->channels);
+            setInitialDelay(static_cast<VstInt32>(effect->getPluginLatency()));
         }
 
         ~PluginInternalVST2() override = default;
@@ -166,22 +169,78 @@ namespace PluginWrapper {
         }
 
         VstInt32 canDo(char* text) override {
-            if (!strcmp(text, "receiveVstTimeInfo"))
+            //if (!strcmp(text, PlugCanDos::canDoReceiveVstEvents))
+            //    return 1;
+            if (!strcmp(text, PlugCanDos::canDoReceiveVstMidiEvent))
+                return 1;
+            if (!strcmp(text, PlugCanDos::canDoReceiveVstTimeInfo))
+                return 1;
+            if (!strcmp(text, PlugCanDos::canDoReceiveVstEvents))
                 return 1;
             return -1;// explicitly can't do; 0 => don't know
         }
 
-        void processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) override {
+        void suspend() override {
+            effect->onDisable();
+        }
+
+        void resume() override {
+            setInitialDelay(static_cast<VstInt32>(effect->getPluginLatency()));
+            effect->onEnable();
+        }
+
+        void setSampleRate(float sampleRate) override {
+            BasePluginVST2::setSampleRate(sampleRate);
+            auto sr = static_cast<samplerate_t>(sampleRate);
+            auto format = effect->getSampleFormat();
+            if (sr != format.sampleRate) {
+                format.sampleRate = sr;
+                effect->setSampleFormat(format);
+                effect->initBuffers();
+                effect->initMeters();
+            }
+        }
+
+        void setBlockSize(VstInt32 blockSize) override {
+            BasePluginVST2::setBlockSize(blockSize);
+            auto bs = static_cast<blocksize_t>(blockSize);
+            auto format = effect->getSampleFormat();
+            if (bs != format.blockSize) {
+                format.blockSize = bs;
+                effect->setSampleFormat(format);
+                effect->initBuffers();
+                effect->initMeters();
+            }
+        }
+
+        void processReplacing(float** inputs, float** outputs, VstInt32 numSamples) override {
             if (issetprogram)
                 return;
-
-            if (sampleFrames != blockSize) {
+            if (!assert_expr(numSamples <= blockSize)) {
                 return;
+            }
+            double samplePos = 0;
+            double tick = 0;
+            playback_state state = playback_state::status_stop;
+            VstTimeInfo* timeinfo = getTimeInfo(VstTimeInfoFlags::kVstTransportChanged | VstTimeInfoFlags::kVstPpqPosValid);
+            if (timeinfo) {
+                samplePos = timeinfo->samplePos;
+            }
+            if (timeinfo && (timeinfo->flags & VstTimeInfoFlags::kVstPpqPosValid)) {
+                tick = timeinfo->ppqPos * TICKS_QUARTER;
+            }
+            if (timeinfo && (timeinfo->flags & VstTimeInfoFlags::kVstTransportPlaying)) {
+                state = playback_state::status_playback;
             }
             dbgassert(this->getAeffect()->numInputs == effect->blockInputs->channels);
             dbgassert(this->getAeffect()->numOutputs == effect->blockOutputs->channels);
+            AudioBlock inputBlock(inputs, this->getAeffect()->numInputs, numSamples);
+            AudioBlock outputBlock(outputs, this->getAeffect()->numOutputs, numSamples);
+            effect->blockInputs->copyFrom(&inputBlock);
+            effect->process(effect->blockInputs, effect->blockOutputs, tick, samplePos, numSamples, state);
+            outputBlock.copyFrom(effect->blockOutputs);
+            effect->postProcess(&outputBlock, numSamples, true);
         }
-
         // internal API
         param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override {
             // I don't think this will be called
@@ -192,10 +251,11 @@ namespace PluginWrapper {
 
         std::shared_ptr<PluginViewContainers> createView() override;
 
-        void sendParameterUpdateToHost(int32_t index, float value) {
+        void sendParameterUpdateToHost(int32_t index, float value, int32_t flags) {
             if (index >= PARAM_OFFSET) {
-                if (audioMaster)
+                if (assert_expr(audioMaster)) {
                     audioMaster (&cEffect, audioMasterAutomate, index - PARAM_OFFSET, 0, nullptr, value);	// value is in opt
+                }
             }
         }
     };
@@ -220,12 +280,16 @@ namespace PluginWrapper {
         : guictr_base(), vstInstance(_vstInstance), module(module)
         {
             init();
-            const int32_t numParams = module->getNumParameters();
-            knobs.reserve(numParams);
-            for (int32_t i = PARAM_OFFSET; i < numParams; ++i) {
-                knobs.push_back(new guiknob_pluginparam(i, i, guiknob::knobtype::SLIDER_LABELED));
+            std::vector<automatable_param_t*> paramsSorted;
+            module->getSortedParams(paramsSorted);
+            erase_if(paramsSorted, [](const automatable_param_t* p) {
+                return p->idx == PARAM_ENABLE;
+            });
+            knobs.reserve(paramsSorted.size());
+            for (automatable_param_t* param : paramsSorted) {
+                knobs.push_back(new guiknob_pluginparam(param->idx, param->idx, guiknob::knobtype::SLIDER_LABELED));
                 add(knobs.back());
-            }
+            };
             add(&editfield);
         }
         ~guictr_effectbase_vst2() override {
@@ -242,7 +306,7 @@ namespace PluginWrapper {
                 editfield.mCallbackEnd = [this, param, paramValue, paramIdx](const std::string& str) {
                     auto paramConverted = module->convertParamValueDisplay(param->getParamIdx(), param_unit_t{str, paramValue.unit});
                     if (paramConverted.success) {
-                        module->setParamValue(paramIdx, paramConverted.floatVal, FLG_PAR_UPDATE_USER);
+                        module->setParamValue(paramIdx, paramConverted.floatVal, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
                         if (param->fnValueEditChanged)
                             param->fnValueEditChanged(param->getValue(), paramConverted.floatVal);
                     }
@@ -266,7 +330,7 @@ namespace PluginWrapper {
         void onGuiOpen() {
             for (auto knob : knobs) {
                 knob->setEffectInstance(module);
-                knob->fnSetValue = [module=this->module, vstInstance=this->vstInstance, paramIdx=knob->getParamIdx()](float value, int flags) {
+                knob->fnSetValue = [module=this->module, paramIdx=knob->getParamIdx()](float value, int flags) {
                     if (module) {
                         //TODO: lock external VST2 instances
                         // ThreadLock lock     = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
@@ -275,7 +339,22 @@ namespace PluginWrapper {
                             param->active = false;
                         }
                         module->setParamValue(paramIdx, value, flags);
-                        vstInstance->sendParameterUpdateToHost(paramIdx, value);
+                    }
+                };
+                knob->fnValueEditBegin = [vstInstance=this->vstInstance, paramIdx=knob->getParamIdx()](float preVal, float val) {
+                    if (paramIdx >= PARAM_OFFSET) {
+                        vstInstance->beginEdit(paramIdx - PARAM_OFFSET);
+                    }
+                };
+                knob->fnValueEditChanged = [knob, vstInstance=this->vstInstance, paramIdx=knob->getParamIdx()](float preVal, float val) {
+                    knob->setValueInit(val);
+                    if (paramIdx >= PARAM_OFFSET) {
+                        vstInstance->setParameterAutomated(paramIdx - PARAM_OFFSET, val);
+                    }
+                };
+                knob->fnValueEditFinish = [vstInstance=this->vstInstance, paramIdx=knob->getParamIdx()](float preVal, float val) {
+                    if (paramIdx >= PARAM_OFFSET) {
+                        vstInstance->endEdit(paramIdx - PARAM_OFFSET);
                     }
                 };
             }
@@ -353,20 +432,50 @@ namespace PluginWrapper {
 
 
 #ifdef BUILD_EXTERNAL_VST2_PLUGIN
+class vst2_wrapper_host_callback : public i_host_callback {
+    audioMasterCallback const host;
+    PluginWrapper::PluginInternalVST2* vstInstance = nullptr;
+    public:
+    explicit vst2_wrapper_host_callback(audioMasterCallback _host)
+    : host(_host) {
+    }
+    void setVstInstance(PluginWrapper::PluginInternalVST2* _vstInstance) {
+        vstInstance = _vstInstance;
+    }
+    void onLatencyChanged(effectbase* effect) override {
+        vstInstance->setInitialDelay(static_cast<VstInt32>(effect->getPluginLatency()));
+        vstInstance->ioChanged();
+    }
+    void onParametersChanged(effectbase* effect, int32_t idx, float val, int flags, int stage) override {
+        (void) effect;
+        (void) host;
+    }
+    void onIOConfigChanged(effectbase* effect) override {
+        (void) effect;
+        (void) host;
+    }
+};
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
+    auto* hostcallback = new vst2_wrapper_host_callback(audioMaster); // TODO: handler leaks
     internalplugin* eff = nullptr;
     switch (BUILD_EXTERNAL_VST2_PLUGIN) {
         case PLUGIN_TYPE_GAIN:
-            eff = new module_gain(0);
+            eff = new module_gain(0, hostcallback);
             break;
         case PLUGIN_TYPE_EMPTY:
-            eff = new module_empty(0);
+            eff = new module_empty(0, hostcallback);
+            break;
+        case PLUGIN_TYPE_LATENCY:
+            eff = new PluginLatency::module_latency(0, hostcallback);
+            break;
         default:
             break;
     }
     dbgassert(eff);
     if (!eff)
         return nullptr;
-    return new PluginWrapper::PluginInternalVST2(audioMaster, eff);
+    auto vstInstance = new PluginWrapper::PluginInternalVST2(audioMaster, eff);
+    hostcallback->setVstInstance(vstInstance);
+    return vstInstance;
 }
 #endif

@@ -1,4 +1,5 @@
 
+#include "appconfig.h"
 #include "tls.h"
 #include "types.h"
 #include "plugin-base.h"
@@ -284,6 +285,9 @@ void onModuleLoad() {
 #endif
 
         if (!glfwInit()) {
+#ifndef NDEBUG
+            daw_tls::getTls().runtime->printWindowFps = true;
+#endif
 #ifdef _WIN32
             DWORD error    = GetLastError();
             String message = FormatErrorMessage(error, StringFormat("Couldn't initialize glfw (%lu)", error));

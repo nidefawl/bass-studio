@@ -62,7 +62,7 @@ bool handleAutomatableContextMenu(DawCtrl* dawCtrl, automatable_t* atl, int para
             return true;
         }
         case ID_RESET_TO_DEFAULT: {
-            atl->resetParamValue(paramIdx, FLG_PAR_UPDATE_USER);
+            atl->resetParamValue(paramIdx, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
             return true;
         }
         default:

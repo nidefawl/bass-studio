@@ -51,6 +51,7 @@ public:
     AudioBlock* blockOutputs       = nullptr;// guaranteed to have at least 2 channels
     int32_t pluginType             = 0;
     int32_t projectGlobalId        = 0;
+    i_host_callback* hostCallback  = nullptr;
     bool bIsEnabled                = false;
     bool bEditOpen                 = false;
     bool bCaptureGUI               = false;
@@ -95,7 +96,7 @@ protected:
 
 public:
     effectbase();
-    effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
+    effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId, i_host_callback* _hostCallback);
     ~effectbase() override;
     
     SafeRef<effectbase> makeSafeRef();
@@ -108,6 +109,8 @@ public:
         this->szName = this->sName.c_str();
 #endif
     }
+
+    i_host_callback* getHostCallback() const { return hostCallback; }
 
     virtual void onEnable(){};
     virtual void onDisable(){};

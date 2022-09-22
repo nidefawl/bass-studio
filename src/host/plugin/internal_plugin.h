@@ -44,30 +44,13 @@ public:
     uint32_t uId            = 0;
     internal_plugin_window_client windowClient;
 
-    internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
+    internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId, i_host_callback* _hostCallback);
     ~internalplugin() override;
 
-    virtual float dispatchGetParameter(int32_t idx)           = 0;
-    virtual void dispatchSetParameter(int32_t idx, float val) = 0;
-
-    samplecount_t getPluginLatency() override = 0;
-    void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override = 0;
+    samplecount_t getPluginLatency() override { return 0; };
 
     guiplugin* makeGui() override;
     guiplugin* getGui() override;
-    virtual std::shared_ptr<PluginViewContainers> createInternalView() {
-        return nullptr;
-    };
-
-    void loadSnapshot(const plugin_snapshot_t& snapshot) override;
-    void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
-    void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
-    // automatable_t interface
-    String getAutomatableName() override;
-    float getParamValue(int32_t idx) override;
-    void setParamValue(int32_t idx, float val, int flags) override;
-    automationlane_snapshot_t toRef() const override;
-
     bool onShow(host_plugin_window* _window) override;
     bool onClose() override;
     void updateWindow() override;
@@ -76,4 +59,16 @@ public:
     }
     void onWindowResize(ivec2 size) override;
     bool showWindow(bool bResetPosition) override;
+
+    void loadSnapshot(const plugin_snapshot_t& snapshot) override;
+    void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
+    
+    // automatable_t interface
+    String getAutomatableName() override;
+    float getParamValue(int32_t idx) override;
+    void setParamValue(int32_t idx, float val, int flags) override;
+    automationlane_snapshot_t toRef() const override;
+    void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
+    void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override { };
+    virtual std::shared_ptr<PluginViewContainers> createInternalView() { return nullptr; };
 };

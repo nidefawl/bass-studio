@@ -1,3 +1,4 @@
+#include "appconfig.h"
 #include "assert_dbg.h"
 #include "glheaders.h"
 #include "hires_timer.h"
@@ -1494,19 +1495,15 @@ static void glfw_cb_mousescroll(GLFWwindow* w, double xoffset, double yoffset) {
 }
 
 void glfw_main_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int mods) {
-    log_lf(Log::L_DEBUG, "glfw_main_cb_keyinput\n");
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
         if (wu && wu->isValid()) {
             const char* key_name = glfwGetKeyName(key, scancode);
             wu->onKeyInput(key, scancode, action, mods, key_name);
-        } else {
-            log_lf(Log::L_DEBUG, "glfw_main_cb_keyinput: invalid window\n");
         }
     } catch (std::exception& e) {
         handleStdException(e);
     }
-    log_lf(Log::L_DEBUG, "glfw_main_cb_keyinput\n");
 }
 
 static void glfw_cb_charinput(GLFWwindow* w, uint32_t codepoint, int mods) {
@@ -2384,20 +2381,24 @@ public:
     int nCallsIdle = 0;
     int nCallsRender = 0;
     void renderWindowAndChildren() override {
-        if (nCallsRender++ > 100) {
-            double d = timerRender.getTimeDoubleReset();
-            log_printf("renderWindowAndChildren FPS: %f\n", 100.0 / d);
-            nCallsRender = 0;
+        if (daw_tls::getTls().runtime->printWindowFps) {
+            if (nCallsRender++ > 100) {
+                double d = timerRender.getTimeDoubleReset();
+                log_printf("renderWindowAndChildren FPS: %f\n", 100.0 / d);
+                nCallsRender = 0;
+            }
         }
         appwindow_main::renderWindowAndChildren();
     }
 #endif
     void idle() override {
 #ifndef NDEBUG
-        if (nCallsIdle++ > 100) {
-            double d = timerIdle.getTimeDoubleReset();
-            log_printf("idle FPS: %f\n", 100.0 / d);
-            nCallsIdle = 0;
+        if (daw_tls::getTls().runtime->printWindowFps) {
+            if (nCallsIdle++ > 100) {
+                double d = timerIdle.getTimeDoubleReset();
+                log_printf("idle FPS: %f\n", 100.0 / d);
+                nCallsIdle = 0;
+            }
         }
 #endif
         if (isInitialized) {

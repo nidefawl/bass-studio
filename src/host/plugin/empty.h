@@ -12,16 +12,13 @@ class module_empty : public internalplugin {
     internal_handles_t* handle;
 
 public:
-    explicit module_empty(int32_t _projectGlobalId);
+    explicit module_empty(int32_t _projectGlobalId, i_host_callback* _hostCallback);
     ~module_empty() override;
-    float dispatchGetParameter(int32_t idx) override;
-    void dispatchSetParameter(int32_t idx, float val) override;
 
 public:
     int getModuleType() override { return PLUGIN_TYPE_EMPTY; };
     guiplugin* makeGui() override;
     guiplugin* getGui() override;
-    samplecount_t getPluginLatency() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     bool isBypass() override {
         return true;

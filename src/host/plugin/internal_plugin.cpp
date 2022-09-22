@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <utility>
 #include "assert_dbg.h"
+#include "automation.h"
 #include "modules.h"
 #include "seq_util.h"
 
@@ -55,27 +56,23 @@ String internalplugin::getAutomatableName() {
 float internalplugin::getParamValue(int32_t idx) {
     automatable_param_t* param = getParamUnchecked(idx);
     dbgassert(param);
-    if (param->internalIdx >= 0) {
-        param->value = dispatchGetParameter(param->internalIdx);
-    }
     return param->value;
 }
 
 void internalplugin::setParamValue(int32_t idx, float val, int flags) {
     automatable_param_t* param = getParamUnchecked(idx);
     dbgassert(param);
+    float valPre = param->value;
     param->value = val;
     if (param->idx == PARAM_ENABLE) {
         bool wasEnable = this->bIsEnabled;
         bool isEnabled = val > 0;
         updateOnEnableParam(param, wasEnable, isEnabled, flags);
     } else {
-        if (!(flags & FLG_PAR_UPDATE_NOSTORE) && !(flags & FLG_PAR_UPDATE_AUTOMATED)) {
+        if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
             param->inUse = true;
         }
-        if (param->internalIdx >= 0) {
-            dispatchSetParameter(param->internalIdx, val);
-        }
+        postSetParameter(param->idx, valPre, val, flags);
         for (auto& pviewctr : this->views) {
             if (pviewctr->isInUse()) {
                 pviewctr->onSetParameter(idx, val);
@@ -85,15 +82,16 @@ void internalplugin::setParamValue(int32_t idx, float val, int flags) {
 }
 
 void internalplugin::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-    if (flags != 2) {
+    if (flags & FLG_PAR_UPDATE_FINISH) {
+        track_t* track = this->trackImpl ?  this->trackImpl->getTrack() : nullptr;
+        if (track) {
+            automationlane_snapshot_t ref = toRef();
+            parameter_ref_t p             = { track->projectIdx, ref.type, this->projectGlobalId, idx };
+            DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+        }
         return;
     }
-    track_t* track = this->trackImpl ?  this->trackImpl->getTrack() : nullptr;
-    if (track) {
-        automationlane_snapshot_t ref = toRef();
-        parameter_ref_t p             = { track->projectIdx, ref.type, this->projectGlobalId, idx };
-        DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
-    }
+    
     for (auto& pviewctr : this->views) {
         if (pviewctr->isInUse()) {
             pviewctr->onSetParameter(idx, val);
@@ -112,8 +110,8 @@ struct internalplugin::internalplugin_handles_t {
     std::unique_ptr<guiinternalpluginview> gui;
 };
 
-internalplugin::internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId)
-    : effectbase(std::move(_sName), _pluginType, _projectGlobalId),
+internalplugin::internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId, i_host_callback* _hostCallback)
+    : effectbase(std::move(_sName), _pluginType, _projectGlobalId, _hostCallback),
       handlesIntPlugin(new internalplugin_handles_t{}) {
     bSupportsWindowResize = true;
 }
