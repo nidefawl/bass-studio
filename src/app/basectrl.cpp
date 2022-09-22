@@ -108,6 +108,13 @@ void processScrollEvt(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffs
     }
 }
 }
+
+BaseCtrl::~BaseCtrl() {
+    for (auto& ref : refs) {
+        ref.ptr->safeRef.handler = nullptr;
+    }
+}
+
 void BaseCtrl::mouseUp(ivec2 mousePos, int button, int kbmods) {
     if (guiCaptured != nullptr) {
         this->window->releaseMouse();
