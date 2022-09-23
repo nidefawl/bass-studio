@@ -1216,15 +1216,21 @@ namespace PluginSynth {
     class PluginLockable {
 #if BUILD_VSTHOST
         DawInstance* const daw;
+        std::recursive_mutex m_mutex;
+        std::atomic<int32_t> m_lockCount{ 0 };
     public:
         explicit PluginLockable(DawInstance* daw) 
             : daw(daw) {
         }
         ThreadLock lock() {
-            return daw->lockPlayThread();
+            if (daw)
+                return daw->lockPlayThread();
+            return ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, false);
         }
         ThreadLock tryLock() {
-            return daw->getPlayThread()->tryLockThread();
+            if (daw)
+                return daw->getPlayThread()->tryLockThread();
+            return ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, true);
         }
 #else
     std::recursive_mutex m_mutex;

@@ -11,6 +11,8 @@
 #include "plugins/samplecrush/samplecrush-plugin.h"
 #include "plugins/sampledelay/sampledelay-plugin.h"
 #include "plugins/stereowidth/stereowidth-plugin.h"
+#include "plugins/info/info-plugin.h"
+#include "plugins/synth/synth-plugin.h"
 #include "seq_util.h"
 #include "types.h"
 #include "automation.h"
@@ -482,6 +484,16 @@ AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
         case PLUGIN_TYPE_STEREO_WIDTH:
             eff = new PluginStereoWidth::module_stereowidth(0, hostcallback);
             break;
+        case PLUG_INT_SYNTH:
+        {
+            delete hostcallback;
+            return PluginSynth::createPlugin(audioMaster);
+        }
+        case PLUG_INT_HOSTINFO:
+        {
+            delete hostcallback;
+            return PluginHostInfo::createPlugin(audioMaster);
+        }
         default:
             break;
     }
