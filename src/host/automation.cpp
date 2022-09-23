@@ -261,6 +261,9 @@ param_unit_t automatable_t::getParamValueDisplay(int32_t idx) {
         }
         return {"-INF", param->unit};
     }
+    if (param->unit == "%") {
+        return {StringFormat("%.3f", param->value * 100.0f), param->unit};
+    }
     return { StringFormat("%f", getParamValue(idx)), param->unit};
 }
 param_converted_t automatable_t::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {

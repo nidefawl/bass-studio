@@ -70,5 +70,7 @@ public:
     automationlane_snapshot_t toRef() const override;
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override { };
+    void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
+
     virtual std::shared_ptr<PluginViewContainers> createInternalView() { return nullptr; };
 };

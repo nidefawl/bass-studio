@@ -100,11 +100,6 @@ namespace PluginSampleDelay {
         }
     }
 
-    module_sampledelay::~module_sampledelay() {
-        delete blockInputs;
-        delete blockOutputs;
-    }
-
     void module_sampledelay::postSetParameter(int32_t idx, float preVal, float val, int flags) {
         internalplugin::postSetParameter(idx, preVal, val, flags);
     }
@@ -117,7 +112,7 @@ namespace PluginSampleDelay {
         out->clear();
         this->paramsTarget.delay = getParamValue(PARAM_DELAY);
         dbgassert(in->channels >= 2 && out->channels >= 2);
-        float fBlockFreq  = (format.sampleRate / format.blockSize) * 0.15f;
+        float fBlockFreq  = (format.sampleRate / float(format.blockSize)) * 0.15f;
         float filterCoeff = 1.0f - expf(-2.0f * static_cast<float>(M_PI) * (fBlockFreq / format.sampleRate));
         processStereo(in, out, delayLine.get(), numSamples, filterCoeff, paramsSmoothed, paramsTarget);
     }
@@ -143,20 +138,6 @@ namespace PluginSampleDelay {
             return {StringFormat("%zd", delaySamples), param->unit};
         }
         return internalplugin::getParamValueDisplay(idx);
-    }
-
-    void module_sampledelay::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
-        meterIn.update(this->blockInputs, 1.0f);
-        meter.update(out, 1.0f);
-    }
-
-    void module_sampledelay::loadSnapshot(const plugin_snapshot_t& snapshot) {
-        internalplugin::loadSnapshot(snapshot);
-    }
-
-    void module_sampledelay::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts) {
-        internalplugin::makeSnapshot(snapshot, opts);
-        snapshot.vendorVersion = 1;
     }
 
     std::shared_ptr<PluginViewContainers> module_sampledelay::createInternalView() {

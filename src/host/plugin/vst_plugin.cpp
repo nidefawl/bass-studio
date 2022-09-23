@@ -581,8 +581,6 @@ guiplugin* vstplugin::makeGui() {
 }
 
 vstplugin::~vstplugin() {
-    delete blockInputs;
-    delete blockOutputs;
     delete handle;
 }
 

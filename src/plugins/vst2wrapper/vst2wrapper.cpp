@@ -10,6 +10,7 @@
 #include "plugins/latency/latency-plugin.h"
 #include "plugins/samplecrush/samplecrush-plugin.h"
 #include "plugins/sampledelay/sampledelay-plugin.h"
+#include "plugins/stereowidth/stereowidth-plugin.h"
 #include "seq_util.h"
 #include "types.h"
 #include "automation.h"
@@ -477,6 +478,9 @@ AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
             break;
         case PLUGIN_TYPE_SAMPLE_CRUSH:
             eff = new PluginSampleCrush::module_samplecrush(0, hostcallback);
+            break;
+        case PLUGIN_TYPE_STEREO_WIDTH:
+            eff = new PluginStereoWidth::module_stereowidth(0, hostcallback);
             break;
         default:
             break;

@@ -99,6 +99,10 @@ void internalplugin::postSetParameter(int32_t idx, float preVal, float val, int 
     }
 }
 
+void internalplugin::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
+    meterIn.update(this->blockInputs, 1.0f);
+    meter.update(out, 1.0f);
+}
 automationlane_snapshot_t internalplugin::toRef() const {
     automationlane_snapshot_t ref;
     ref.type  = AUTOMATABLE_EFFECT;

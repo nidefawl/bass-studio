@@ -6,17 +6,13 @@
 #include "plugin/vst_plugin.h"
 #include "plugin/vst_plugin_handles.h"
 
-#include "plugins/stereowidth/stereowidth-plugin.h"
-#include "plugins/latency/latency-plugin.h"
 #include "plugins/info/info-plugin.h"
 #include "plugins/synth/synth-plugin.h"
-#include "plugins/sampledelay/sampledelay-plugin.h"
 
 typedef AudioEffectX* (*FnCreateModule)(audioMasterCallback);
 
 void vsthost::registerPlugins() {
     builtinModules.clear();
-    builtinModules.push_back({ PLUG_INT_STEREOWIDTH, false, PluginStereoWidth::getName(), PluginStereoWidth::createPlugin });
     builtinModules.push_back({ PLUG_INT_HOSTINFO, false, PluginHostInfo::getName(), PluginHostInfo::createPlugin });
     builtinModules.push_back({ PLUG_INT_SYNTH, true, PluginSynth::getName(), PluginSynth::createPlugin });
 }

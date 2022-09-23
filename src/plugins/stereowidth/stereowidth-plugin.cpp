@@ -1,184 +1,29 @@
-#include <cmath>
-#include <algorithm>
-#include <cstdio>
-#include <memory>
-#include "config.h"
-#include "math/seq_math.h"
-#include "plugins/plugin-ui.h"
-#include "str_util.h"
-#include "dsp_util.h"
-
-#include "platform.h"
-
-#include "../plugin.h"
 #include "stereowidth-plugin.h"
-#include "plugins/plugin.h"
-#include "plugins/plugin-base.h"
-#include "plugins/plugin-window.h"
-#include <vstsdk-plugin-2.4/audioeffectx.h>
-
-
-#if BUILD_EXTERNAL_PLUGIN
-AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
-    return PluginStereoWidth::createPlugin(audioMaster);
-}
-#endif
+#include "automation.h"
+#include "dsp_util.h"
+#include "event.h"
+#include "plugins/plugin-ui.h"
+#include "plugins/plugincontrol.h"
+#include "str_util.h"
+#include "gui/container/container.h"
+#include "gui/controls/knoblabeled.h"
+#include "gui/controls/knobpluginparam.h"
+#include "gui/plugin/plugin.h"
+#include "gui/plugin/pluginctr.h"
+#include "gui/plugin/pluginviewcontainers.h"
+#include "modules.h"
+#include "host/mainctrl.h"
+#include "host/plugin/internal_plugin.h"
+#include "track.h"
+#include "track_impl.h"
+#include "audioblock.h"
+#include "meter.h"
+#include "snapshot.h"
+#include "window.h"
+#include <algorithm>
 
 namespace PluginStereoWidth {
-    const char* const PLUGIN_EFFECT_NAME = "StereoWidth";
-    const char* const PLUGIN_UID = "STWD";
-    const char* const PLUGIN_PRODUCT_NAME = "stereo width VST2.x";
-
-    PluginVST2_StereoWidth::PluginVST2_StereoWidth(audioMasterCallback audioMaster)
-        : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs) {
-        curProgram = 0;
-    }
-
-    void PluginVST2_StereoWidth::setProgram(VstInt32 program) {
-        if (program < 0 || program >= kNumPrograms)
-            return;
-        curProgram = program;
-    }
-
-    void PluginVST2_StereoWidth::setProgramName(char* name) {
-    }
-
-    void PluginVST2_StereoWidth::getProgramName(char* name) {
-        if (name)
-            name[0] = 0;
-    }
-
-    void PluginVST2_StereoWidth::getParameterLabel(VstInt32 index, char* label) {
-        switch (index) {
-            case kStereoWidth:
-                vst_strncpy(label, "%", PLUGIN_PARAM_STR_MAX_LEN);
-                return;
-            case kGain:
-                vst_strncpy(label, "dB", PLUGIN_PARAM_STR_MAX_LEN);
-                return;
-            default:
-                vst_strncpy(label, "", PLUGIN_PARAM_STR_MAX_LEN);
-        }
-    }
-
-    void PluginVST2_StereoWidth::getParameterDisplay(VstInt32 index, char* text) {
-        text[0] = 0;
-        switch (index) {
-            case kStereoWidth: {
-                snprintf(text, PLUGIN_PARAM_STR_MAX_LEN, "%.0f", current()->width * 200.0f);
-                return;
-            }
-            case kGain: {
-                float fGain = 1.0f;
-                dsp_util::getGainLvl(current()->gain, fGain);
-	            snprintf(text, PLUGIN_PARAM_STR_MAX_LEN, "%.2f", dsp_util::dBFS(fGain));
-                return;
-            }
-        }
-        return BasePluginVST2::getParameterDisplay(index, text);
-    }
-
-    param_converted_t PluginVST2_StereoWidth::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
-        //TODO: use std::from_chars when floating point version arrives in libc++
-        auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
-        switch (idx) {
-            case kStereoWidth: {
-                return {math::clamp(fTextFieldVal/200.0f, 0.0f, 1.0f), true};
-            }
-            case kGain: {
-                float fGain = dsp_util::fromdBFSClampInf6(fTextFieldVal);
-                if (fGain < dsp_util::GAIN_DBFLOOR) {
-                    fGain = dsp_util::GAIN_DBFLOOR;
-                }
-                float fNew = dsp_util::clampGain(fGain);
-                return {dsp_util::gainToLinScale(fNew), true};
-            }
-            default:
-                break;
-        }
-        return BasePluginVST2::convertParamValueDisplay(idx, displayValue);
-    }
-
-    void PluginVST2_StereoWidth::getParameterName(VstInt32 index, char* label) {
-        switch (index) {
-            case kStereoWidth:
-                vst_strncpy(label, "Width", PLUGIN_PARAM_STR_MAX_LEN);
-                return;
-            case kGain:
-                vst_strncpy(label, "Gain", PLUGIN_PARAM_STR_MAX_LEN);
-                return;
-        }
-    }
-
-    void PluginVST2_StereoWidth::setParameter(VstInt32 index, float value) {
-        BaseVST2_ProgramStereoWidth* ap = current();
-        switch (index) {
-            case kStereoWidth:
-                ap->width = value;
-                break;
-            case kGain:
-                ap->gain = value;
-                break;
-        }
-#if BUILD_VSTHOST
-        for (auto& pviewctr : this->views) {
-            if (pviewctr->isInUse()) {
-                pviewctr->onSetParameter(index, value);
-            }
-        }
-#else
-        if (this->editor) {
-            static_cast<pluginwindow*>(this->editor)->onSetParameter(index, value);
-        }
-#endif
-    }
-
-    float PluginVST2_StereoWidth::getParameter(VstInt32 index) {
-        BaseVST2_ProgramStereoWidth* ap = current();
-        float value                     = 0;
-        switch (index) {
-            case kStereoWidth:
-                value = ap->width;
-                break;
-            case kGain:
-                value = ap->gain;
-                break;
-        }
-        return value;
-    }
-
-    bool PluginVST2_StereoWidth::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
-        if (index >= 0 && index < kNumPrograms) {
-            vst_strncpy(text, "Default", PLUGIN_PROGRAM_STR_MAX_LEN);
-            return true;
-        }
-        return false;
-    }
-
-    bool PluginVST2_StereoWidth::getEffectName(char* name) {
-        vst_strncpy(name, PLUGIN_EFFECT_NAME, kVstMaxEffectNameLen);
-        return true;
-    }
-
-    bool PluginVST2_StereoWidth::getVendorString(char* text) {
-        vst_strncpy(text, PLUGIN_VENDOR_NAME, kVstMaxVendorStrLen);
-        return true;
-    }
-
-    bool PluginVST2_StereoWidth::getProductString(char* text) {
-        vst_strncpy(text, PLUGIN_PRODUCT_NAME, kVstMaxProductStrLen);
-        return true;
-    }
-
-    VstInt32 PluginVST2_StereoWidth::getVendorVersion() {
-        return 1;
-    }
-
-    VstInt32 PluginVST2_StereoWidth::canDo(char* text) {
-        if (!strcmp(text, "receiveVstTimeInfo"))
-            return 1;
-        return -1;// explicitly can't do; 0 => don't know
-    }
+    static constexpr int32_t PARAM_WIDTH = 2;
 
     template<typename T>
     inline void updateParam(T& cur, const T& next, const T filterCoeff) {
@@ -190,7 +35,7 @@ namespace PluginStereoWidth {
         }
     }
 
-    static void processStereo(float** inputs, float** outputs, VstInt32 sampleFrames, const float filterCoeff, BaseVST2_ProgramStereoWidth& params, const BaseVST2_ProgramStereoWidth nextParams) {
+    static void processStereo(float** inputs, float** outputs, VstInt32 sampleFrames, const float filterCoeff, ProgramParameters& params, const ProgramParameters nextParams) {
         float* out1 = outputs[0];
         float* out2 = outputs[1];
         float* in1  = inputs[0];
@@ -216,37 +61,103 @@ namespace PluginStereoWidth {
         }
     }
 
-    void PluginVST2_StereoWidth::processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) {
-        if (issetprogram)
-            return;
-
-        if (sampleFrames != blockSize) {
-            return;
+    module_stereowidth::module_stereowidth(int32_t _projectGlobalId, i_host_callback* _hostCallback)
+        : internalplugin("Stereo Width", getModuleType(), _projectGlobalId, _hostCallback)
+    {
+        struct effectgain_param_entry {
+            int32_t id;
+            String name;
+            String unit;
+            float val;
+        };
+        const std::array<effectgain_param_entry, 2> parameterTypes{ {
+                { PARAM_GAIN, "Gain", "dB", dsp_util::gainToLinScaleWithRange(1.0f, MTR_CEIL, DBFS_MUTE_POS) },
+                { PARAM_WIDTH,  "Width",  "%", 0.5f }
+        } };
+        for (const effectgain_param_entry& paramEntry : parameterTypes) {
+            automatable_param_t* regparam = registerParam(paramEntry.id);
+            regparam->defaultValue = paramEntry.val;
+            regparam->value = paramEntry.val;
+            regparam->name  = paramEntry.name;
+            regparam->unit  = paramEntry.unit;
         }
-        BaseVST2_ProgramStereoWidth* ap = current();
-        if (this->getAeffect()->numOutputs == 2) {
-            float fBlockFreq  = (sampleRate / blockSize) * 0.45f;
-            float filterCoeff = 1.0f - expf(-2.0f * M_PI * (fBlockFreq / sampleRate));
-            //filterCoeff = 1.0f;
-            processStereo(inputs, outputs, sampleFrames, filterCoeff, paramsState, *ap);
+    }
+
+    void module_stereowidth::onEnable() {
+        paramsTarget.gain = getParamValue(PARAM_GAIN);
+        paramsTarget.width = getParamValue(PARAM_WIDTH);
+        paramsSmoothed = paramsTarget;
+    }
+
+    void module_stereowidth::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
+        dbgassert( in->samples == format.blockSize
+                && out->samples == format.blockSize
+                && format.blockSize > 0
+                && format.sampleRate > 0);
+        out->clear();
+        paramsTarget.gain = getParamValue(PARAM_GAIN);
+        paramsTarget.width = getParamValue(PARAM_WIDTH);
+        dbgassert(in->channels >= 2 && out->channels >= 2);
+        float fBlockFreq  = (format.sampleRate / float(format.blockSize)) * 0.45f;
+        float filterCoeff = 1.0f - expf(-2.0f * M_PI * (fBlockFreq / format.sampleRate));
+        processStereo(in->buf, out->buf, numSamples, filterCoeff, paramsSmoothed, paramsTarget);
+    }
+
+    param_converted_t module_stereowidth::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
+        //TODO: use std::from_chars when floating point version arrives in libc++
+        auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+        switch (idx) {
+            case PARAM_GAIN: {
+
+                if (fTextFieldVal <= DBFS_MUTE_POS + 1.0f)
+                    fTextFieldVal = 0.0f;
+                if (fTextFieldVal > MTR_CEIL)
+                    fTextFieldVal = MTR_CEIL;
+                float f_gain = pow(10.0f, fTextFieldVal / 20.0f);
+                float f_linear = dsp_util::gainToLinScaleWithRange(f_gain, MTR_CEIL, DBFS_MUTE_POS);
+                return {f_linear, true};
+            }
+            case PARAM_WIDTH:
+            {
+                return {math::clamp(fTextFieldVal/200.0f, 0.0f, 1.0f), true};
+            }
+            default:
+                break;
         }
+        return internalplugin::convertParamValueDisplay(idx, displayValue);
+    }
+    param_unit_t module_stereowidth::getParamValueDisplay(int32_t idx) {
+        auto param = getParam(idx);
+        dbgassert(param);
+        if (param->unit == "dB") {
+            float fGain = 1.0f;
+            if (dsp_util::getGainLvlWithRange(param->value, MTR_CEIL, DBFS_MUTE_POS, fGain)) {
+                return {StringFormat("%.3f", dsp_util::dBFS(fGain)), param->unit};
+            }
+            return {"-INF", param->unit};
+        }
+        if (param->unit == "%") {
+            return {StringFormat("%.3f", param->value * 200.0f), param->unit};
+        }
+        return internalplugin::getParamValueDisplay(idx);
     }
 
-    BaseVST2_ProgramStereoWidth::BaseVST2_ProgramStereoWidth() : ProgramParameters() {
-        vst_strncpy(name, "Init", PLUGIN_PROGRAM_STR_MAX_LEN);
-        gain  = dsp_util::gainToLinScale(1.0f);
-        width = 0.5f;
-    }
-
-    const char* getName() {
-        return PLUGIN_EFFECT_NAME;
-    }
-    AudioEffectX* createPlugin(audioMasterCallback audioMaster) {
-        return new PluginVST2_StereoWidth(audioMaster);
-    }
-    std::shared_ptr<PluginViewContainers> PluginVST2_StereoWidth::createView() {
-        auto view = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, PluginVST2_StereoWidth>>(this, 100, 150);
-        this->views.push_back(view);
-        return view;
+    std::shared_ptr<PluginViewContainers> module_stereowidth::createInternalView() {
+        if (!views.empty()) {
+            for (auto& existingView : views) {
+                if (!existingView->isInUse()) {
+                    existingView->setUsed();
+                    return existingView;
+                }
+            }
+        }
+        auto v = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_stereowidth>>(this, 100, 150);
+        this->views.push_back(v);
+        return v;
     }
 }// namespace PluginStereoWidth
+
+template<>
+effectbase* makeInstance<PluginStereoWidth::module_stereowidth>(int32_t _projectGlobalId, i_host_callback* _hostCallback) {
+    return new PluginStereoWidth::module_stereowidth(_projectGlobalId, _hostCallback);
+}

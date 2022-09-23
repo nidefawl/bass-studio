@@ -41,18 +41,6 @@ namespace PluginSampleCrush {
         return math::clamp<int32_t>(math::floorfS32(value * (BITCRUSH_BITS_MAX - BITCRUSH_BITS_MIN) + BITCRUSH_BITS_MIN), BITCRUSH_BITS_MIN, BITCRUSH_BITS_MAX);
     }
 
-    template<typename T>
-    inline void updateParam(T& cur, const T& next, const T filterCoeff) {
-        T delta = next - cur;
-        if (math::abs(delta) < math::F_MIN) {
-            cur = next;
-        } else {
-            cur += filterCoeff * delta;
-        }
-    }
-
-
-
     static void processSampleCrush(float** inputs, float** outputs, VstInt32 sampleFrames, const int32_t sampleCrushLevel) {
         float* out1 = outputs[0];
         float* out2 = outputs[1];
@@ -104,20 +92,6 @@ namespace PluginSampleCrush {
         }
     }
 
-    module_samplecrush::~module_samplecrush() {
-        delete blockInputs;
-        delete blockOutputs;
-    }
-
-    void module_samplecrush::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-        switch (idx) {
-            case PARAM_NUM_SAMPLES:
-                // setNewLatency(math::clamp(math::roundfS32(val * MAX_LATENCY), 0, MAX_LATENCY));
-                break;
-        }
-        internalplugin::postSetParameter(idx, preVal, val, flags);
-    }
-
     void module_samplecrush::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
         dbgassert( in->samples == format.blockSize
                 && out->samples == format.blockSize
@@ -154,20 +128,6 @@ namespace PluginSampleCrush {
         return internalplugin::getParamValueDisplay(idx);
     }
 
-    void module_samplecrush::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
-        meterIn.update(this->blockInputs, 1.0f);
-        meter.update(out, 1.0f);
-    }
-
-    void module_samplecrush::loadSnapshot(const plugin_snapshot_t& snapshot) {
-        internalplugin::loadSnapshot(snapshot);
-    }
-
-    void module_samplecrush::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts) {
-        internalplugin::makeSnapshot(snapshot, opts);
-        snapshot.vendorVersion = 1;
-    }
-
     std::shared_ptr<PluginViewContainers> module_samplecrush::createInternalView() {
         if (!views.empty()) {
             for (auto& existingView : views) {
@@ -181,199 +141,9 @@ namespace PluginSampleCrush {
         this->views.push_back(v);
         return v;
     }
-
-    samplecount_t module_samplecrush::getPluginLatency() {
-        return 0;
-    }
-
-    void module_samplecrush::onEnable() {
-    }
-
 } // namespace PluginSampleCrush
 
 template<>
 effectbase* makeInstance<PluginSampleCrush::module_samplecrush>(int32_t _projectGlobalId, i_host_callback* _hostCallback) {
     return new PluginSampleCrush::module_samplecrush(_projectGlobalId, _hostCallback);
 }
-
-#if 0
-#include <cmath>
-#include <algorithm>
-#include <cstdio>
-#include <memory>
-#include "config.h"
-#include "math/seq_math.h"
-#include "plugins/plugin-ui.h"
-#include "str_util.h"
-#include "dsp_util.h"
-
-#include "gui/gui.h"
-#include "gui/container/container.h"
-#include "gui/plugin/pluginviewcontainers.h"
-#include "gui/controls/knobpluginparam.h"
-#include "gui/container/container.h"
-
-#include "basectrl.h"
-#include "platform.h"
-#include "../plugin.h"
-#include "bitcrush-plugin.h"
-#include "plugins/plugin.h"
-#include "plugins/plugin-base.h"
-#include "plugins/plugin-window.h"
-#include "audioblock.h"
-#include <vstsdk-plugin-2.4/audioeffectx.h>
-
-#if BUILD_EXTERNAL_PLUGIN
-AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
-    return PluginSampleCrush::createPlugin(audioMaster);
-}
-#endif
-
-namespace PluginSampleCrush {
-    const char* const PLUGIN_EFFECT_NAME = "Samplecrush";
-    const char* const PLUGIN_UID = "SMPC";
-    const char* const PLUGIN_PRODUCT_NAME = "Samplecrush plugin";
-
-    PluginVST2_Bitcrush::PluginVST2_Bitcrush(audioMasterCallback audioMaster)
-        : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs) {
-        setNewBitcrushLvl(current()->bitcrush);
-    }
-
-    void PluginVST2_Bitcrush::setProgram(VstInt32 program) {
-        if (program < 0 || program >= kNumPrograms)
-            return;
-        curProgram = program;
-    }
-
-    void PluginVST2_Bitcrush::setProgramName(char* name) {
-    }
-
-    void PluginVST2_Bitcrush::getProgramName(char* name) {
-        if (name)
-            name[0] = 0;
-    }
-
-    void PluginVST2_Bitcrush::getParameterLabel(VstInt32 index, char* label) {
-        switch (index) {
-            case kSamples:
-                vst_strncpy(label, "samples", PLUGIN_PARAM_STR_MAX_LEN);
-                return;
-            default:
-                vst_strncpy(label, "", PLUGIN_PARAM_STR_MAX_LEN);
-        }
-    }
-
-
-    void PluginVST2_Bitcrush::getParameterName(VstInt32 index, char* label) {
-        switch (index) {
-            case kSamples:
-                vst_strncpy(label, "Bitcrush", PLUGIN_PARAM_STR_MAX_LEN);
-                return;
-        }
-    }
-
-    void PluginVST2_Bitcrush::setParameter(VstInt32 index, float value) {
-        Program* ap = current();
-        switch (index) {
-            case kSamples:
-                ap->bitcrush = math::max(BITCRUSH_BITS_MIN, math::min(BITCRUSH_BITS_MAX, (int32_t) std::round(value * (BITCRUSH_BITS_MAX - BITCRUSH_BITS_MIN) + BITCRUSH_BITS_MIN)));
-                setNewBitcrushLvl(ap->bitcrush);
-                break;
-        }
-#if BUILD_VSTHOST
-        for (auto& pviewctr : this->views) {
-            if (pviewctr->isInUse()) {
-                pviewctr->onSetParameter(index, value);
-            }
-        }
-#else
-        if (this->editor) {
-            static_cast<pluginwindow*>(this->editor)->onSetParameter(index, value);
-        }
-#endif
-    }
-
-    float PluginVST2_Bitcrush::getParameter(VstInt32 index) {
-        Program* ap = current();
-        float value = 0;
-        switch (index) {
-            case kSamples:
-                value = std::max(0.0f, std::min(1.0f, (ap->bitcrush - BITCRUSH_BITS_MIN) / (float) (BITCRUSH_BITS_MAX - BITCRUSH_BITS_MIN)));
-                break;
-        }
-        return value;
-    }
-
-    bool PluginVST2_Bitcrush::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
-        if (index >= 0 && index < kNumPrograms) {
-            vst_strncpy(text, "Default", PLUGIN_PROGRAM_STR_MAX_LEN);
-            return true;
-        }
-        return false;
-    }
-
-    bool PluginVST2_Bitcrush::getEffectName(char* name) {
-        vst_strncpy(name, PLUGIN_EFFECT_NAME, kVstMaxEffectNameLen);
-        return true;
-    }
-
-    bool PluginVST2_Bitcrush::getVendorString(char* text) {
-        vst_strncpy(text, PLUGIN_VENDOR_NAME, kVstMaxVendorStrLen);
-        return true;
-    }
-
-    bool PluginVST2_Bitcrush::getProductString(char* text) {
-        vst_strncpy(text, PLUGIN_PRODUCT_NAME, kVstMaxProductStrLen);
-        return true;
-    }
-    void PluginVST2_Bitcrush::setNewBitcrushLvl(int32_t nSamplesBitcrush) {
-        this->newBitcrush        = nSamplesBitcrush;
-        this->bitcrushLvlChanged = true;
-    }
-
-    VstInt32 PluginVST2_Bitcrush::getVendorVersion() {
-        return 1;
-    }
-
-    VstInt32 PluginVST2_Bitcrush::canDo(char* text) {
-        if (!strcmp(text, "receiveVstTimeInfo"))
-            return 1;
-        return -1;// explicitly can't do; 0 => don't know
-    }
-    void PluginVST2_Bitcrush::processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) {
-        if (issetprogram)
-            return;
-
-        if (sampleFrames != blockSize) {
-            return;
-        }
-        if (this->bitcrushLvlChanged) {
-            this->bitcrushLvlChanged         = false;
-            this->curBitcrush                = this->newBitcrush;
-        }
-        dbgassert(this->curBitcrush >= BITCRUSH_BITS_MIN && this->curBitcrush <= (BITCRUSH_BITS_MAX));
-
-        if (this->getAeffect()->numOutputs == 2) {
-            Program* ap = current();
-            processSampleCrush(inputs, outputs, sampleFrames, ap->bitcrush);
-        }
-    }
-
-    Program::Program() : ProgramParameters() {
-        vst_strncpy(name, "Init", PLUGIN_PROGRAM_STR_MAX_LEN);
-        bitcrush = BITCRUSH_BITS_MAX;
-    }
-
-    const char* getName() {
-        return PLUGIN_EFFECT_NAME;
-    }
-    AudioEffectX* createPlugin(audioMasterCallback audioMaster) {
-        return new PluginVST2_Bitcrush(audioMaster);
-    }
-    std::shared_ptr<PluginViewContainers> PluginVST2_Bitcrush::createView() {
-        auto view = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, PluginVST2_Bitcrush>>(this);
-        this->views.push_back(view);
-        return view;
-    }
-}// namespace PluginSampleCrush
-#endif

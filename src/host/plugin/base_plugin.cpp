@@ -35,6 +35,8 @@ SafeRef<effectbase> effectbase::makeSafeRef() {
     return safeRef;
 }
 effectbase::~effectbase() {
+    delete blockInputs;
+    delete blockOutputs;
     assert(nLoadCalls == 0);
     if (safeRef.handler) {
         safeRef.handler->safeRefDestroy(safeRef.refId);

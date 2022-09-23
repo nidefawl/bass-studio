@@ -12,7 +12,6 @@ public:
     const float DBFS_MUTE_POS = -101.0f;
     const float MTR_CEIL      = 24.0f;
     explicit module_gain(int32_t _projectGlobalId, i_host_callback* _hostCallback);
-    ~module_gain() override;
 
     int getModuleType() override { return PLUGIN_TYPE_GAIN; };
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
@@ -20,6 +19,5 @@ public:
     param_unit_t getParamValueDisplay(int32_t idx) override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
-    void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
     std::shared_ptr<PluginViewContainers> createInternalView() override;
 };

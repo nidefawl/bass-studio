@@ -207,7 +207,7 @@ class plugin_host_callback : public i_host_callback {
     : host(_host) {
     }
     void onLatencyChanged(effectbase* effect) override {
-
+        (void) host;
     }
     void onParametersChanged(effectbase* effect, int32_t idx, float val, int flags, int stage) override {
 

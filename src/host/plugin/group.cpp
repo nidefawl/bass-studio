@@ -199,8 +199,6 @@ module_group::module_group(int32_t _projectGlobalId, i_host_callback* _hostCallb
 
 module_group::~module_group() {
     delete handle;
-    delete blockInputs;
-    delete blockOutputs;
 }
 
 guiplugin* module_group::makeGui() {

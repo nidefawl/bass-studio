@@ -43,11 +43,6 @@ module_gain::module_gain(int32_t _projectGlobalId, i_host_callback* _hostCallbac
     }
 }
 
-module_gain::~module_gain() {
-    delete blockInputs;
-    delete blockOutputs;
-}
-
 void module_gain::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
     dbgassert(in->samples == format.blockSize
               && out->samples == format.blockSize
@@ -86,10 +81,6 @@ param_unit_t module_gain::getParamValueDisplay(int32_t idx) {
         return {"-INF", param->unit};
     }
     return internalplugin::getParamValueDisplay(idx);
-}
-void module_gain::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
-    meterIn.update(this->blockInputs, 1.0f);
-    meter.update(out, 1.0f);
 }
 
 void module_gain::loadSnapshot(const plugin_snapshot_t& snapshot) {

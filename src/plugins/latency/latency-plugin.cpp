@@ -46,11 +46,6 @@ namespace PluginLatency {
         }
     }
 
-    module_latency::~module_latency() {
-        delete blockInputs;
-        delete blockOutputs;
-    }
-
     void module_latency::postSetParameter(int32_t idx, float preVal, float val, int flags) {
         switch (idx) {
             case PARAM_LATENCY:
@@ -94,20 +89,6 @@ namespace PluginLatency {
             return {StringFormat("%d", math::max(0, math::min(MAX_LATENCY, math::roundfS32(param->value * MAX_LATENCY)))), param->unit};
         }
         return internalplugin::getParamValueDisplay(idx);
-    }
-
-    void module_latency::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
-        meterIn.update(this->blockInputs, 1.0f);
-        meter.update(out, 1.0f);
-    }
-
-    void module_latency::loadSnapshot(const plugin_snapshot_t& snapshot) {
-        internalplugin::loadSnapshot(snapshot);
-    }
-
-    void module_latency::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts) {
-        internalplugin::makeSnapshot(snapshot, opts);
-        snapshot.vendorVersion = 1;
     }
 
     std::shared_ptr<PluginViewContainers> module_latency::createInternalView() {
