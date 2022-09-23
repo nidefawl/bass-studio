@@ -6,13 +6,10 @@
 #include "plugin/vst_plugin.h"
 #include "plugin/vst_plugin_handles.h"
 
-#include "plugins/advanced/adv-plugin.h"
 #include "plugins/stereowidth/stereowidth-plugin.h"
-#include "plugins/empty/empty-plugin.h"
 #include "plugins/latency/latency-plugin.h"
 #include "plugins/info/info-plugin.h"
 #include "plugins/synth/synth-plugin.h"
-#include "plugins/bitcrush/bitcrush-plugin.h"
 #include "plugins/sampledelay/sampledelay-plugin.h"
 
 typedef AudioEffectX* (*FnCreateModule)(audioMasterCallback);
@@ -20,11 +17,8 @@ typedef AudioEffectX* (*FnCreateModule)(audioMasterCallback);
 void vsthost::registerPlugins() {
     builtinModules.clear();
     builtinModules.push_back({ PLUG_INT_STEREOWIDTH, false, PluginStereoWidth::getName(), PluginStereoWidth::createPlugin });
-    builtinModules.push_back({ PLUG_INT_TEST, false, PluginTestAdv::getName(), PluginTestAdv::createPlugin });
-    builtinModules.push_back({ PLUG_INT_CRASHVST, false, PluginEmptyVST2::getName(), PluginEmptyVST2::createPlugin });
     builtinModules.push_back({ PLUG_INT_HOSTINFO, false, PluginHostInfo::getName(), PluginHostInfo::createPlugin });
     builtinModules.push_back({ PLUG_INT_SYNTH, true, PluginSynth::getName(), PluginSynth::createPlugin });
-    builtinModules.push_back({ PLUG_INT_BITCRUSH, false, PluginBitcrush::getName(), PluginBitcrush::createPlugin });
 }
 
 vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId) {

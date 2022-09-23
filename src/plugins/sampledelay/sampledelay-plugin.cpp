@@ -80,7 +80,7 @@ namespace PluginSampleDelay {
     static constexpr int32_t PARAM_DELAY = 1;
 
     module_sampledelay::module_sampledelay(int32_t _projectGlobalId, i_host_callback* _hostCallback)
-        : internalplugin("SampleDelay", getModuleType(), _projectGlobalId, _hostCallback)
+        : internalplugin("Sample Delay", getModuleType(), _projectGlobalId, _hostCallback)
     {
         struct effectgain_param_entry {
             int32_t id;
@@ -106,11 +106,6 @@ namespace PluginSampleDelay {
     }
 
     void module_sampledelay::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-        switch (idx) {
-            case PARAM_DELAY:
-                // setNewLatency(math::clamp(math::roundfS32(val * MAX_LATENCY), 0, MAX_LATENCY));
-                break;
-        }
         internalplugin::postSetParameter(idx, preVal, val, flags);
     }
 
