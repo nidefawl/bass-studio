@@ -140,7 +140,7 @@ public:
                 if (pluginSnapshot) {
                     vsthost* host = vsthost::getInstance();
                     assignFreeStageIds(host, *pluginSnapshot);
-                    auto effect = loadPluginDeferred(*pluginSnapshot);
+                    auto effect = host->loadPluginDeferred(*pluginSnapshot);
                     if (effect) {
                         effect->projectGlobalId = 0;// generate new id
                         if (!host->addDeferredEffect(effect)) {
@@ -186,7 +186,7 @@ void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_
     auto host = daw->getHost();
     for (plugin_snapshot_t& pluginSnapshot : clipboard->plugins) {
         assignFreeStageIds(host, pluginSnapshot);
-        auto effect = loadPluginDeferred(pluginSnapshot);
+        auto effect = host->loadPluginDeferred(pluginSnapshot);
         if (effect) {
             effect->projectGlobalId = 0;// generate new id
             stage->deferredEffects.push_back(effect);

@@ -40,6 +40,7 @@
 
 class clip_notes_t;
 class effectbase;
+class effect_deferred;
 class vstplugin;
 struct track_impl_t;
 struct audio_stage_t;
@@ -287,6 +288,7 @@ public:
     void unloadTrack(track_t* track);
     effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1);
     vstpluginloadres loadPlugin(String filepath, uint32_t uId, int32_t globalId = 0, uint64_t bugfixFlags = 0);
+    effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
     void activateDeferred(effectbase* eff, int flags, effectbase** out_effectLoaded = nullptr);
 
     void createAudio(track_t* track);
@@ -305,7 +307,6 @@ public:
     bool insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst);
     bool postPluginLoaded(audio_stage_t* trp, effectbase* plugin);
     bool replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin);
-
 
     void checkScanner();
     void scanPlugins();

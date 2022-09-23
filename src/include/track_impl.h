@@ -286,7 +286,6 @@ inline bool isAudioStageChildOf(audio_stage_t* parent, audio_stage_t* child) {
     }
     return false;
 }
-effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
 void assignFreeStageIds(vsthost* host, plugin_snapshot_t& snapshot);
 void assignFreeStageIdsTrackSnapshot(vsthost* host, track_snapshot_t& snapshot);
 track_id_snapshot_t saveTrackIdSnapshot(const audio_stage_id_t& stageId);

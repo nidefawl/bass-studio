@@ -2,6 +2,7 @@
 #include <vector>
 #include "base_plugin.h"
 #include "host/daw_channel.h"
+#include "modules.h"
 #include "track.h"
 #include "track_impl.h"
 #include "str_util.h"
@@ -61,10 +62,10 @@ effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGloba
     getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
     initDefaultIODesc();
 }
-effectbase::effectbase() 
-{
-    initDefaultIODesc();
-}
+// effectbase::effectbase() 
+// {
+//     initDefaultIODesc();
+// }
 void effectbase::initDefaultIODesc() {
     inputChannelsDesc.emplace_back(DAW::channel_desc{0, 2, String("Stereo Input")});
     outputChannelsDesc.emplace_back(DAW::channel_desc{0, 2, String("Stereo Output")});
@@ -273,7 +274,7 @@ void effectbase::initMeters() {
 effect_deferred* effectbase::toDeferred() {
     plugin_snapshot_t snapshot;
     this->makeSnapshot(snapshot, tracksnapshot_store_opts_t::All());
-    auto* def               = new effect_deferred();
+    auto* def               = new effect_deferred(snapshot.projectGlobalId, this->getHostCallback());
     def->mImpl              = new effect_deferred_impl();
     def->sName              = snapshot.name;
     def->projectGlobalId    = snapshot.projectGlobalId;
@@ -285,8 +286,8 @@ effect_deferred* effectbase::toDeferred() {
     return def;
 }
 
-effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot) {
-    auto def                = new effect_deferred();
+effect_deferred* vsthost::loadPluginDeferred(const plugin_snapshot_t& snapshot) {
+    auto def                = new effect_deferred(snapshot.projectGlobalId, nullptr);
     def->mImpl              = new effect_deferred_impl();
     def->sName              = snapshot.name;
     def->projectGlobalId    = snapshot.projectGlobalId;
@@ -299,6 +300,12 @@ effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot) {
     }
     def->setProductName(snapshot.name);
     return def;
+}
+
+effect_deferred::effect_deferred(int32_t _projectGlobalId, i_host_callback* _hostCallback) 
+: effectbase("Deferred", PLUGIN_TYPE_DEFERRED, _projectGlobalId, _hostCallback)
+{
+    initDefaultIODesc();
 }
 
 void effect_deferred::loadSnapshot(const plugin_snapshot_t& snapshot) {

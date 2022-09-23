@@ -26,7 +26,7 @@ namespace PluginLatency {
     static constexpr int32_t MAX_LATENCY = 16384;
 
     module_latency::module_latency(int32_t _projectGlobalId, i_host_callback* _hostCallback)
-        : internalplugin("Latency", PLUGIN_TYPE_LATENCY, _projectGlobalId, _hostCallback)
+        : internalplugin("Latency", getModuleType(), _projectGlobalId, _hostCallback)
     {
         struct effectgain_param_entry {
             int32_t id;
@@ -35,7 +35,7 @@ namespace PluginLatency {
             float val;
         };
         const std::array<effectgain_param_entry, 1> parameterTypes{ {
-            { PARAM_LATENCY, "Latency", "s",  0.5f }
+            { PARAM_LATENCY, "Latency", "samples",  0.5f }
         } };
         for (const effectgain_param_entry& paramEntry : parameterTypes) {
             automatable_param_t* regparam = registerParam(paramEntry.id);

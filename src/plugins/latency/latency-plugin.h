@@ -16,7 +16,7 @@ public:
     ~module_latency() override;
 
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
-    int getModuleType() override { return PLUGIN_TYPE_GAIN; };
+    int getModuleType() override { return PLUGIN_TYPE_LATENCY; };
     samplecount_t getPluginLatency() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;

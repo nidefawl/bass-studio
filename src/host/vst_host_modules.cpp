@@ -25,7 +25,6 @@ void vsthost::registerPlugins() {
     builtinModules.push_back({ PLUG_INT_HOSTINFO, false, PluginHostInfo::getName(), PluginHostInfo::createPlugin });
     builtinModules.push_back({ PLUG_INT_SYNTH, true, PluginSynth::getName(), PluginSynth::createPlugin });
     builtinModules.push_back({ PLUG_INT_BITCRUSH, false, PluginBitcrush::getName(), PluginBitcrush::createPlugin });
-    builtinModules.push_back({ PLUG_INT_SAMPLE_DELAY, false, PluginSampleDelay::getName(), PluginSampleDelay::createPlugin });
 }
 
 vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId) {

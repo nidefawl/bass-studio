@@ -168,6 +168,7 @@ public:
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GROUP, 0, "Group", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GAIN, 0, "Gain", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_LATENCY, 0, "Latency", false });
+        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SAMPLE_DELAY, 0, "SampleDelay", false });
         auto host = vsthost::getInstance();
         if (host) {
             std::vector<builtin_module_reg_t>& vecReg = host->getBuiltinModuleRegistry();

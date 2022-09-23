@@ -675,7 +675,7 @@ void track_impl_t::loadIOConfiguration(const track_io_configuration_snapshot_t& 
 
 void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList) {
     for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
-        auto effect = loadPluginDeferred(pluginSnapshot);
+        auto effect = host->loadPluginDeferred(pluginSnapshot);
         if (effect) {
             //this->deferredEffects.push_back(effect);
             if (!host->addDeferredEffect(effect)) {

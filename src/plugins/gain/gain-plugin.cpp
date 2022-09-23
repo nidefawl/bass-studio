@@ -22,7 +22,7 @@
 #include <algorithm>
 
 module_gain::module_gain(int32_t _projectGlobalId, i_host_callback* _hostCallback)
-    : internalplugin("Gain", PLUGIN_TYPE_GAIN, _projectGlobalId, _hostCallback)
+    : internalplugin("Gain", getModuleType(), _projectGlobalId, _hostCallback)
 {
     struct effectgain_param_entry {
         int32_t id;

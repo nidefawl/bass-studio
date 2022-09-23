@@ -95,7 +95,7 @@ protected:
     void initMeters();
 
 public:
-    effectbase();
+    // effectbase();
     effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId, i_host_callback* _hostCallback);
     ~effectbase() override;
     
@@ -220,6 +220,7 @@ public:
     effect_deferred_impl* mImpl = nullptr;
 
 public:
+    effect_deferred(int32_t _projectGlobalId, i_host_callback* _hostCallback);
     ~effect_deferred() override;
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
     samplecount_t getPluginLatency() override;
@@ -251,7 +252,6 @@ public:
     int getModuleStoredType() const;
 };
 
-effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
 effectbase* loadEffectModule(vsthost* host, const plugin_snapshot_t& pluginSnapshot, bool isForceRequest);
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
 void removePlugin(DawInstance* daw, effectbase* module);
