@@ -6,7 +6,10 @@
 #include "config.h"
 #include "host/plugin/empty.h"
 #include "modules.h"
+#include "plugins/gain/gain-plugin.h"
 #include "plugins/latency/latency-plugin.h"
+#include "plugins/samplecrush/samplecrush-plugin.h"
+#include "plugins/sampledelay/sampledelay-plugin.h"
 #include "seq_util.h"
 #include "types.h"
 #include "automation.h"
@@ -455,6 +458,7 @@ class vst2_wrapper_host_callback : public i_host_callback {
         (void) host;
     }
 };
+
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
     auto* hostcallback = new vst2_wrapper_host_callback(audioMaster); // TODO: handler leaks
     internalplugin* eff = nullptr;
@@ -467,6 +471,12 @@ AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
             break;
         case PLUGIN_TYPE_LATENCY:
             eff = new PluginLatency::module_latency(0, hostcallback);
+            break;
+        case PLUGIN_TYPE_SAMPLE_DELAY:
+            eff = new PluginSampleDelay::module_sampledelay(0, hostcallback);
+            break;
+        case PLUGIN_TYPE_SAMPLE_CRUSH:
+            eff = new PluginSampleCrush::module_samplecrush(0, hostcallback);
             break;
         default:
             break;
