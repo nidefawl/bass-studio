@@ -431,7 +431,6 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
     if (fnGetDisplayValue) {
         valueDisplay = fnGetDisplayValue(value);
     }
-    if (!parent || !parent->parent || ((parent->parent->id&1) != 1))
     if (m_layout.sKnob.x > 0 && m_layout.sKnob.y > 0) {
         renderButtonAt(vg, m_layout.pKnob, m_layout.sKnob, value);
     }
@@ -443,8 +442,6 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
             renderBorder(vg, getStateFlags(), m_layout.pValue, m_layout.sValue, GuiColor::COL_BG_BRT);
         }
     }
-    if (parent && parent->parent && ((parent->parent->id&2) == 2))
-        return;
     NVGcolor fontColor;
     if (isBackgroundRendered()) {
         auto bgColor       = theme->getColor(getBackgroundColor());
