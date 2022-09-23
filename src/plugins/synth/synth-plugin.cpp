@@ -4427,38 +4427,37 @@ namespace PluginSynth {
                 bGuiNeedsRefresh = true;
                 return;
             }
-#if BUILD_EXTERNAL_PLUGIN
-            guiknob_pluginparam* knob = getKnobFromParameter(index);
-            if (knob) {
-                knob->setValueInit(value);
+            if (vst2Instance->isExternalInstance()) {
+                guiknob_pluginparam* knob = getKnobFromParameter(index);
+                if (knob) {
+                    knob->setValueInit(value);
+                }
             }
-#endif
         }
 
         void onGuiOpen() {
             for (auto& synthKnob : vecParamUI) {
-#if BUILD_VSTHOST
-                synthKnob.knob->setEffectInstance(vst2Instance->getHostSideHandle());
-                auto* param = vst2Instance->getSynth()->getParam(synthKnob.param);
-                if (param) {
-                    synthKnob.knob->setLabel(param->getHierarchicalName());
+                if (vst2Instance->isExternalInstance()) {
+                    synthKnob.knob->setAudioEffect(vst2Instance);
+                } else {
+                    synthKnob.knob->setEffectInstance(vst2Instance->getHostSideHandle());
+                    auto* param = vst2Instance->getSynth()->getParam(synthKnob.param);
+                    if (param) {
+                        synthKnob.knob->setLabel(param->getHierarchicalName());
+                    }
                 }
-#endif
-#if BUILD_EXTERNAL_PLUGIN
-                synthKnob.knob->setAudioEffect(vst2Instance);
-#endif
             }
             bGuiNeedsRefresh = true;
         }
 
         void onGuiClose() {
             for (auto& synthKnob : vecParamUI) {
-#if BUILD_VSTHOST
-                synthKnob.knob->setEffectInstance(nullptr);
-#endif
-#if BUILD_EXTERNAL_PLUGIN
-                synthKnob.knob->setAudioEffect(nullptr);
-#endif
+                if (vst2Instance->isExternalInstance()) {
+                    synthKnob.knob->setAudioEffect(nullptr);
+                } else {
+
+                    synthKnob.knob->setEffectInstance(nullptr);
+                }
             }
         }
 
@@ -4640,9 +4639,9 @@ namespace PluginSynth {
                 return;
             }
 #endif
-#if BUILD_EXTERNAL_PLUGIN
+
             dbgassert(vst2Instance);
-            if (param && vst2Instance) {
+            if (param && vst2Instance && vst2Instance->isExternalInstance()) {
                 auto paramIdxInternal = param->getParamIdxInternal();
                 char buf[PLUGIN_PARAM_STR_MAX_LEN+1]{};
                 vst2Instance->getParameterDisplay(paramIdxInternal, buf);
@@ -4668,7 +4667,6 @@ namespace PluginSynth {
                 parentCtrl->focusGui(&editfield);
                 return;
             }
-#endif
             guictr_base::buttonClicked(button);
         }
 

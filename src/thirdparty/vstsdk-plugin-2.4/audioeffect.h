@@ -54,6 +54,7 @@ public:
 	virtual VstIntPtr dispatcher (VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt);	///< Opcodes dispatcher
 
     void setExternalInstance(bool bIsExternalInstance) { this->bIsExternalInstance = bIsExternalInstance; }
+	bool isExternalInstance() const { return bIsExternalInstance; }
 //-------------------------------------------------------------------------------------------------------
 /// \name State Transitions
 //-------------------------------------------------------------------------------------------------------

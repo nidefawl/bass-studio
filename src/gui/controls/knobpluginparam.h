@@ -22,21 +22,15 @@
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 
 class guiknob_pluginparam : public guiknob_labeled_base {
-#if BUILD_EXTERNAL_PLUGIN
     AudioEffectX* curEffect    = nullptr;
     int clientParamIdx = -1;
-#endif
-#if BUILD_VSTHOST
     effectbase* hostSidePlugin = nullptr;
-#endif
 public:
     explicit guiknob_pluginparam(int _paramIdx, int _clientParamIdx = -1, guiknob::knobtype _knobtype = guiknob::knobtype::KNOB_LABELED)
         : guiknob_labeled_base(_knobtype)
     {
         paramIdx = _paramIdx;
-#if BUILD_EXTERNAL_PLUGIN
         clientParamIdx = _clientParamIdx;
-#endif
         m_layout.inset = 6;
         m_layout.renderLabelBorder = false;
         if (_knobtype == guiknob::knobtype::KNOB_LABELED) {
@@ -52,7 +46,6 @@ public:
     ~guiknob_pluginparam() override = default;
 
     void setEffectInstance(effectbase* _hostSidePlugin) {
-#if BUILD_VSTHOST
         hostSidePlugin   = _hostSidePlugin;
         paramAutomatable = _hostSidePlugin;
         if (hostSidePlugin) {
@@ -80,9 +73,7 @@ public:
             setValueInit(hostSidePlugin->getParamValue(paramIdx));
             setLabel(hostSidePlugin->getParamName(paramIdx));
         }
-#endif
     }
-#if BUILD_EXTERNAL_PLUGIN
     int32_t getParamIdxInternal() const { return clientParamIdx; }
     void setAudioEffect(AudioEffectX* eff) {
         this->curEffect = eff;
@@ -114,7 +105,6 @@ public:
             return displayVal;
         };
     }
-#endif
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (this->contains(mpos)) {
             if (evt.type != MouseHitType::MOUSE_RIGHT) {
@@ -129,10 +119,6 @@ public:
     }
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
     effectbase* getEffectInstance() {
-#if BUILD_VSTHOST
         return hostSidePlugin;
-#else
-        return nullptr;
-#endif
     }
 };
