@@ -277,6 +277,7 @@ public:
      * returns: reference
      */
     automatable_param_t* getParamUnchecked(int32_t paramIdx) {
+        dbgassert(mapParams.count(paramIdx));
         return &mapParams[paramIdx];
     }
     const automation_t* getRegisteredConstAutomation(int32_t paramIdx) const {

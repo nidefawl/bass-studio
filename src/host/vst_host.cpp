@@ -215,6 +215,16 @@ class plugin_host_callback : public i_host_callback {
     void onIOConfigChanged(effectbase* effect) override {
 
     }
+    void onUiChanged(effectbase* effect) override {
+        if (effect) {
+            // NOTE: this loop might kill performance
+            effect->visitParams([](auto& mapEntry) {
+                automatable_param_t& param = mapEntry.second;
+                param.paramValueState |= PARAM_FLAG_DIRTY;
+                param.paramDisplayValState |= PARAM_FLAG_DIRTY;
+            });
+        }
+    }
 };
 
 }

@@ -68,7 +68,7 @@ public:
             };
             fnValueEditFinish = [this](float preVal, float val) {
                 hostSidePlugin->getHostCallback()->onParametersChanged(hostSidePlugin, paramIdx, val, 0, 2);
-                paramAutomatable->postSetParameter(paramIdx, preVal, val, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+                paramAutomatable->postSetParameter(paramIdx, preVal, getValue(), FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
             };
             setValueInit(hostSidePlugin->getParamValue(paramIdx));
             setLabel(hostSidePlugin->getParamName(paramIdx));

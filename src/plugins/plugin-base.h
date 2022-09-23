@@ -21,6 +21,7 @@ class BasePluginVST2 : public AudioEffectX {
 protected:
     vstplugin* hostSidePlugin = nullptr;
     std::vector<std::shared_ptr<PluginViewContainers>> views;
+    virtual std::shared_ptr<PluginViewContainers> createViewCtrVst2() = 0;
 
 public:
     BasePluginVST2(audioMasterCallback audioMaster,
@@ -48,7 +49,7 @@ public:
     bool getVendorString(char* text) override;
 
     // internal API
-    virtual std::shared_ptr<PluginViewContainers> createView() = 0;
+    virtual std::shared_ptr<PluginViewContainers> getViewCtrVst2(int32_t uiId);
     virtual param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue);
     virtual void addPropertiesParameterTooltip(Table::tbl& table, int idx);
     virtual void onWindowResize(ivec2 size);

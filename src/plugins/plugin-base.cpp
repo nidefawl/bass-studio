@@ -193,6 +193,23 @@ bool BasePluginVST2::getVendorString(char* text) {
     return true;
 }
 
+// internal API
+std::shared_ptr<PluginViewContainers> BasePluginVST2::getViewCtrVst2(int32_t uiId) {
+    for (auto& existingView : views) {
+        if (!existingView->isInUse() && existingView->getUiId() == uiId) {
+            existingView->setUsed();
+            return existingView;
+        }
+    }
+    auto newView = createViewCtrVst2();
+    if (newView && newView->isViewSupported(uiId)) {
+        newView->setUiId(uiId);
+        newView->setUsed();
+        views.push_back(newView);
+    }
+    return newView;
+}
+
 param_converted_t BasePluginVST2::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
     //TODO: use std::from_chars when floating point version arrives in libc++
     auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
@@ -221,7 +238,7 @@ void BasePluginVST2::open() {
             log_printf("Editor already exists!\n");
     }
     }
-    createEditorWindow(createView());
+    createEditorWindow(getViewCtrVst2(UID_VIEW_CTR_WINDOW));
     if (this->bIsExternalInstance) {
 #ifdef _WIN32
         if (!isFirstPluginLoad) {

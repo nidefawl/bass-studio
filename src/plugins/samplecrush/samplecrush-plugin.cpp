@@ -128,18 +128,8 @@ namespace PluginSampleCrush {
         return internalplugin::getParamValueDisplay(idx);
     }
 
-    std::shared_ptr<PluginViewContainers> module_samplecrush::createInternalView() {
-        if (!views.empty()) {
-            for (auto& existingView : views) {
-                if (!existingView->isInUse()) {
-                    existingView->setUsed();
-                    return existingView;
-                }
-            }
-        }
-        auto v = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_samplecrush>>(this, 100, 150);
-        this->views.push_back(v);
-        return v;
+    std::shared_ptr<PluginViewContainers> module_samplecrush::createViewCtrInternal() {
+        return std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_samplecrush>>(this, 100, 150);
     }
 } // namespace PluginSampleCrush
 

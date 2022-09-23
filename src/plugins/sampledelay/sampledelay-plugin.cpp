@@ -140,18 +140,8 @@ namespace PluginSampleDelay {
         return internalplugin::getParamValueDisplay(idx);
     }
 
-    std::shared_ptr<PluginViewContainers> module_sampledelay::createInternalView() {
-        if (!views.empty()) {
-            for (auto& existingView : views) {
-                if (!existingView->isInUse()) {
-                    existingView->setUsed();
-                    return existingView;
-                }
-            }
-        }
-        auto v = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_sampledelay>>(this, 100, 150);
-        this->views.push_back(v);
-        return v;
+    std::shared_ptr<PluginViewContainers> module_sampledelay::createViewCtrInternal() {
+        return std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_sampledelay>>(this, 100, 150);
     }
 
     samplecount_t module_sampledelay::getPluginLatency() {

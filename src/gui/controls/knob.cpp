@@ -326,7 +326,7 @@ void guiknob::setToDefaultValue() {
         paramAutomatable->resetParamValue(paramIdx, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
         newVal = getValue();
         setValue(newVal, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
-        paramAutomatable->postSetParameter(paramIdx, fModifyBeginValue, newVal, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+        paramAutomatable->postSetParameter(paramIdx, fModifyBeginValue, getValue(), FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
     } else {
         setValue(fDefaultValue, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
     }
@@ -359,7 +359,7 @@ void guiknob::setKnobInternalHandlers() {
     };
     fnValueEditFinish = [this](float preVal, float val) {
         if (paramAutomatable) {
-            paramAutomatable->postSetParameter(paramIdx, preVal, val, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+            paramAutomatable->postSetParameter(paramIdx, preVal, getValue(), FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
         }
     };
     if (dawCtrl)

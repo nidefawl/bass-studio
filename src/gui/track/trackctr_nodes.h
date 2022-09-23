@@ -124,11 +124,7 @@ public:
         prefSize.x = math::max(prefSize.x, x);
         prefSize.y = math::max(prefSize.y, y);
     }
-    void layout() override {
-        for (guibase* gui : guis) {
-            gui->layout();
-        }
-    }
+    void layout() override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void reset();
     void refresh();

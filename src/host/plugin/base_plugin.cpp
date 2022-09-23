@@ -34,6 +34,7 @@ SafeRef<effectbase> effectbase::makeSafeRef() {
     }
     return safeRef;
 }
+
 effectbase::~effectbase() {
     delete blockInputs;
     delete blockOutputs;
@@ -42,6 +43,7 @@ effectbase::~effectbase() {
         safeRef.handler->safeRefDestroy(safeRef.refId);
     }
 }
+
 effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId, i_host_callback* _hostCallback)
     : pluginType(_pluginType), projectGlobalId(_projectGlobalId), hostCallback(_hostCallback), sName(std::move(_sName)) {
     struct effectbase_param_entry_t {
@@ -64,18 +66,17 @@ effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGloba
     getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
     initDefaultIODesc();
 }
-// effectbase::effectbase() 
-// {
-//     initDefaultIODesc();
-// }
+
 void effectbase::initDefaultIODesc() {
     inputChannelsDesc.emplace_back(DAW::channel_desc{0, 2, String("Stereo Input")});
     outputChannelsDesc.emplace_back(DAW::channel_desc{0, 2, String("Stereo Output")});
 }
+
 void effectbase::onTick(double since) {
     meter.onTick(since);
     meterIn.onTick(since);
 }
+
 sampleformat_t effectbase::getSampleFormat() {
     return format;
 }

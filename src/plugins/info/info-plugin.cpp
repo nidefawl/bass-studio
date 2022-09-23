@@ -606,9 +606,7 @@ namespace PluginHostInfo {
     AudioEffectX* createPlugin(audioMasterCallback audioMaster) {
         return new PluginVST2_HostInfo(audioMaster);
     }
-    std::shared_ptr<PluginViewContainers> PluginVST2_HostInfo::createView() {
-        auto view = std::make_shared<SinglePluginViewContainers<guicontainer_plugin_HostInfo, PluginVST2_HostInfo>>(this, 280, 360);
-        this->views.push_back(view);
-        return view;
+    std::shared_ptr<PluginViewContainers> PluginVST2_HostInfo::createViewCtrVst2() {
+        return std::make_shared<SinglePluginViewContainers<guicontainer_plugin_HostInfo, PluginVST2_HostInfo>>(this, 280, 360);
     }
 }// namespace PluginHostInfo

@@ -91,18 +91,8 @@ namespace PluginLatency {
         return internalplugin::getParamValueDisplay(idx);
     }
 
-    std::shared_ptr<PluginViewContainers> module_latency::createInternalView() {
-        if (!views.empty()) {
-            for (auto& existingView : views) {
-                if (!existingView->isInUse()) {
-                    existingView->setUsed();
-                    return existingView;
-                }
-            }
-        }
-        auto v = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_latency>>(this, 100, 150);
-        this->views.push_back(v);
-        return v;
+    std::shared_ptr<PluginViewContainers> module_latency::createViewCtrInternal() {
+        return std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_latency>>(this, 100, 150);
     }
 
     void module_latency::setNewLatency(int32_t nSamplesLatency) {

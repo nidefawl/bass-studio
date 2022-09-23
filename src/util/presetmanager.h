@@ -1,6 +1,7 @@
 #pragma once
 #include "fileio.h"
 #include "str_util.h"
+#include <algorithm>
 #include <vector>
 
 class PresetManager {
@@ -41,6 +42,9 @@ public:
             preset.path = file.path;
             presets.push_back(preset);
         }
+        std::stable_sort(presets.begin(), presets.end(), [](const Preset& a, const Preset& b) {
+            return a.path < b.path;
+        });
     }
     void reload() {
         load(presetPath);

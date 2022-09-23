@@ -17,6 +17,10 @@ extern template effectbase* makeInstance<PluginLatency::module_latency>(int32_t 
 extern template effectbase* makeInstance<PluginSampleDelay::module_sampledelay>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
 extern template effectbase* makeInstance<PluginSampleCrush::module_samplecrush>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
 extern template effectbase* makeInstance<PluginStereoWidth::module_stereowidth>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+namespace PluginSynth {
+    class module_synth;
+}
+extern template effectbase* makeInstance<PluginSynth::module_synth>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
 
 effectbase* vsthost::makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid) {
     effectbase* effect = nullptr;
@@ -43,6 +47,9 @@ effectbase* vsthost::makeModuleInstance(int32_t moduleType, int32_t moduleId, in
         case PLUGIN_TYPE_STEREO_WIDTH:
             effect = makeInstance<PluginStereoWidth::module_stereowidth>(getNextGlobalModuleId(globalid), hostcallback);
             break;
+        case PLUGIN_TYPE_SYNTH:
+            effect = makeInstance<PluginSynth::module_synth>(getNextGlobalModuleId(globalid), hostcallback);
+            break;
         case PLUGIN_TYPE_INTERNAL_EFFECT: {
             vstpluginloadres res = loadInternalPlugin(moduleId, globalid);
             if (res.result == 0 && res.plugin) {
@@ -61,6 +68,7 @@ effectbase* vsthost::makeModuleInstance(int32_t moduleType, int32_t moduleId, in
         case PLUGIN_TYPE_SAMPLE_DELAY:
         case PLUGIN_TYPE_SAMPLE_CRUSH:
         case PLUGIN_TYPE_STEREO_WIDTH:
+        case PLUGIN_TYPE_SYNTH:
             if (effect) {
                 effect->load(this);
                 pluginInstancesInternal.push_back(effect);

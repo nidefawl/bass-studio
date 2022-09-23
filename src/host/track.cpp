@@ -516,12 +516,13 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
     for (const param_snapshot_t& param : pluginSnapshotParams) {
         automatable_param_t* atParam = effect->getParam(param.idx);
         if (atParam) {
-            dbgassert(param.val >= 0.0f && param.val <= 1.0f);
+            auto paramVal = math::clamp(param.val, 0.0f, 1.0f);
+            dbgassert(paramVal >= 0.0f && paramVal <= 1.0f);
             int flags = FLG_PAR_UPDATE_INIT;
             if (!param.flags) {
                 flags |= FLG_PAR_UPDATE_NOSTORE;
             }
-            effect->setParamValue(atParam->idx, param.val, flags);
+            effect->setParamValue(atParam->idx, paramVal, flags);
         } else {
             missingParams++;
         }

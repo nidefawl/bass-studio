@@ -4,12 +4,12 @@
 
 #include "automation.h"
 #include "base_plugin.h"
+#include "gui/plugin/plugin.h"
 #include "gui/plugin/pluginviewcontainers.h"
 #include "logging.h"
 #include "math/vec.h"
 #include "meter.h"
 #include "platform.h"
-#include "plugins/plugincontrol.h"
 #include "plugins/plugincontrol.h"
 #include "seq_time.h"
 #include "snapshot.h"
@@ -24,7 +24,12 @@ struct AudioBlock;
 struct handles_t;
 struct track_impl_t;
 
+
 class internalplugin : public effectbase {
+public:
+    struct internalplugin_handles_t {
+        std::unique_ptr<guiinternalpluginview> gui;
+    };
 protected:
     struct internal_plugin_window_client {
         std::shared_ptr<PluginViewContainers> view;
@@ -33,10 +38,10 @@ protected:
         window_main* clientWindow = nullptr;
         window_plugin* clientWindowInterface = nullptr;
     };
-    struct internalplugin_handles_t;
     internalplugin_handles_t* handlesIntPlugin;
-
+    virtual std::shared_ptr<PluginViewContainers> createViewCtrInternal() { return nullptr; };
 public:
+
     std::vector<std::shared_ptr<PluginViewContainers>> views;
     String sDir;
     int32_t pluginCategory = 0;
@@ -72,5 +77,5 @@ public:
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override { };
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
 
-    virtual std::shared_ptr<PluginViewContainers> createInternalView() { return nullptr; };
+    std::shared_ptr<PluginViewContainers> getViewCtr(int32_t uiId);
 };

@@ -140,7 +140,7 @@ namespace PluginWrapper {
             auto preVal = param->value;
             auto flags = FLG_PAR_UPDATE_USER;
             effect->setParamValue(index, value, flags);
-            effect->postSetParameter(index, preVal, value, flags);
+            effect->postSetParameter(index, preVal, effect->getParamValue(index), flags);
         }
 
         float getParameter(VstInt32 index) override {
@@ -255,7 +255,7 @@ namespace PluginWrapper {
             return BasePluginVST2::convertParamValueDisplay(idx, displayValue);
         }
 
-        std::shared_ptr<PluginViewContainers> createView() override;
+        std::shared_ptr<PluginViewContainers> createViewCtrVst2() override;
 
         void sendParameterUpdateToHost(int32_t index, float value, int32_t flags) {
             if (index >= PARAM_OFFSET) {
@@ -428,7 +428,7 @@ namespace PluginWrapper {
         }
     };
 
-    std::shared_ptr<PluginViewContainers> PluginInternalVST2::createView() {
+    std::shared_ptr<PluginViewContainers> PluginInternalVST2::createViewCtrVst2() {
         auto view = std::make_shared<VST2PluginViewContainer<guictr_effectbase_vst2, effectbase>>(this, effect, 50, 150);
         this->effect->views.push_back(view);
         this->views.push_back(view);

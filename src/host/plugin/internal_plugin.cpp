@@ -110,10 +110,6 @@ automationlane_snapshot_t internalplugin::toRef() const {
     return ref;
 }
 
-struct internalplugin::internalplugin_handles_t {
-    std::unique_ptr<guiinternalpluginview> gui;
-};
-
 internalplugin::internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId, i_host_callback* _hostCallback)
     : effectbase(std::move(_sName), _pluginType, _projectGlobalId, _hostCallback),
       handlesIntPlugin(new internalplugin_handles_t{}) {
@@ -140,13 +136,13 @@ window_plugin* createBuildinPluginWindow(std::shared_ptr<PluginControl> _ctrl, i
 void destroyPluginWindow(window_plugin* pluginWindow);
 
 bool internalplugin::showWindow(bool bResetPosition) {
-    dbgassert(!windowHost);
+    // dbgassert(!windowHost);
     dbgassert(!windowClient.clientWindow);
     dbgassert(!windowClient.clientWindowInterface);
     dbgassert(!windowClient.hostWindow);
     dbgassert(!windowClient.ctrl);
     dbgassert(!windowClient.view);
-    auto newView = createInternalView();
+    auto newView = getViewCtr(UID_VIEW_CTR_WINDOW);
     dbgassert(newView);
     if (!newView) {
         return false;
@@ -221,6 +217,24 @@ bool internalplugin::onClose() {
             windowClient.view->setFree();
         }
     }
+    // windowHost = nullptr;
     windowClient = {};
     return effectbase::onClose();
 }
+std::shared_ptr<PluginViewContainers> internalplugin::getViewCtr(int32_t uiId) {
+    for (auto& existingView : views) {
+        if (!existingView->isInUse() && existingView->getUiId() == uiId) {
+            existingView->setUsed();
+            return existingView;
+        }
+    }
+    auto newView = createViewCtrInternal();
+    if (newView && newView->isViewSupported(uiId)) {
+        newView->setUiId(uiId);
+        newView->setUsed();
+        views.push_back(newView);
+    } else {
+        newView = nullptr;
+    }
+    return newView;
+};

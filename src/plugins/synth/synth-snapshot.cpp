@@ -37,6 +37,7 @@ struct stream_write {
 };
 
 std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snapshot) {
+    dbgassert(snapshot.version == SYNTH_SNAPSHOT_VERSION);
     auto shrdHeapVec = std::make_shared<std::vector<std::byte>>();
     shrdHeapVec->resize(256);
     stream_write<std::vector<std::byte>> out{*shrdHeapVec, 0};
@@ -69,6 +70,7 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
         }
     }
     for (const auto& modulation : snapshot.uiLayout) {
+        out.write(modulation.uiId);
         out.write(modulation.splitPos);
     }
     for (const auto& setting : snapshot.settings) {
@@ -136,6 +138,8 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
         return false;
     in.read(snapshot.version);
     if (snapshot.version < 2)
+        return false;
+    if (snapshot.version > SYNTH_SNAPSHOT_VERSION)
         return false;
     size_t numParams = 0;
     size_t numModulations = 0;
@@ -218,6 +222,10 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
     }
     if (snapshot.version >= 7) {
         for (auto& modulation : snapshot.uiLayout) {
+            if (snapshot.version >= 10) {
+                if (!in.read(modulation.uiId))
+                    return false;
+            }
             if (!in.read(modulation.splitPos))
                 return false;
         }

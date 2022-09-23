@@ -95,7 +95,6 @@ protected:
     void initMeters();
 
 public:
-    // effectbase();
     effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId, i_host_callback* _hostCallback);
     ~effectbase() override;
     

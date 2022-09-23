@@ -105,18 +105,8 @@ void module_gain::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot_
     snapshot.vendorVersion = 1;
 }
 
-std::shared_ptr<PluginViewContainers> module_gain::createInternalView() {
-    if (!views.empty()) {
-        for (auto& existingView : views) {
-            if (!existingView->isInUse()) {
-                existingView->setUsed();
-                return existingView;
-            }
-        }
-    }
-    auto v = std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_gain>>(this, 100, 150);
-    this->views.push_back(v);
-    return v;
+std::shared_ptr<PluginViewContainers> module_gain::createViewCtrInternal() {
+    return std::make_shared<SinglePluginViewContainers<guictr_vst2_simple, module_gain>>(this, 100, 150);
 }
 
 template<>

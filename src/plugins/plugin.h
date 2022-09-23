@@ -30,6 +30,3 @@ public:
     ~PluginViewContainersImpl() override = default;
 };
 
-extern "C" {
-//DAW_PLUGINAPI std::shared_ptr<PluginViewContainers> createView();
-}

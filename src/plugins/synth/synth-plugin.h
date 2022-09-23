@@ -376,6 +376,7 @@ namespace PluginSynth {
         String name;
     };
 
+    struct snapshot_t;
     struct SynthParamBase;
     class SynthImpl;
     class PluginVST2_Synth : public BasePluginVST2 {
@@ -385,18 +386,16 @@ namespace PluginSynth {
         ~PluginVST2_Synth() override = default;
     
         // internal API
-        std::shared_ptr<PluginViewContainers> createView() override;
+        std::shared_ptr<PluginViewContainers> createViewCtrVst2() override;
         param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;
         void addPropertiesParameterTooltip(Table::tbl& table, int idx) override;
 
         void notifyUiChanges();
         void initPrograms();
-        void writeCurrentProgram();
         void setFromSynthProgram(SynthProgram* program);
         void onPresetLoaded();
 
         int32_t loadPreset(const String& path);
-        SynthParamBase* getParam(Parameters enumParam);
         SynthImpl* getSynth();
 
 #ifdef DISPATCHER_DEBUG_TRACE
@@ -444,6 +443,8 @@ namespace PluginSynth {
         }
         VstInt32 getVendorVersion() override;
         VstInt32 canDo(char* text) override;
+        void getUiSnapshot(snapshot_t& snapshot);
+        void setUiSnapshot(snapshot_t& snapshot);
     private:
 
         /* TODO: release lastProgramChunks after several seconds */

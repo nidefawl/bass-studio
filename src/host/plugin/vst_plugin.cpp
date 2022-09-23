@@ -524,7 +524,7 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
         this->uiSnapshot.isValidSnapshot = false;
     }
 }
-// virtual void loadSnapshot(const plugin_ui_snapshot_t& ps);
+
 void vstplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
     createSnapshot(ps, this, opts);
     if (handle->gui) {
@@ -569,7 +569,7 @@ guiplugin* vstplugin::makeGui() {
             dbgassert(pGuiVstPlugin);
             auto* baseVst2 = dynamic_cast<BasePluginVST2*>(handle->axEffect);
             dbgassert(baseVst2);
-            auto viewCtr = baseVst2->createView();
+            auto viewCtr = baseVst2->getViewCtrVst2(UID_VIEW_CTR_PLUGIN_CTR);
             if (viewCtr && baseVst2 && pGuiVstPlugin) {
                 pGuiVstPlugin->viewCtr = viewCtr;
                 viewCtr->addTo(pGuiVstPlugin->viewCtrs);

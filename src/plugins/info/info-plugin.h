@@ -55,8 +55,7 @@ namespace PluginHostInfo {
         bool getParameterProperties(VstInt32 index, VstParameterProperties* p) override;
         void processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) override;
         VstInt32 processEvents(VstEvents* events) override;
-        std::shared_ptr<PluginViewContainers> createView() override;
-
+        std::shared_ptr<PluginViewContainers> createViewCtrVst2() override;
         void setProgram(VstInt32 program) override;
         void setProgramName(char* name) override;
         void getProgramName(char* name) override;

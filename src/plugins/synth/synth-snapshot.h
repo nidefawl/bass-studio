@@ -6,7 +6,7 @@
 #include <memory>
 
 namespace PluginSynth {
-
+#define SYNTH_SNAPSHOT_VERSION 10
 struct param_float_snapshot_t {
     int32_t paramIdx;
     double value;
@@ -41,6 +41,7 @@ struct modulation_snapshot_t {
     std::vector<modulation_dest_snapshot> destinations;
 };
 struct ui_layout_t {
+    int32_t uiId = 0;
     float splitPos = 0.8;
 };
 struct snapshot_t {

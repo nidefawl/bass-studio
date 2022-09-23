@@ -13,6 +13,7 @@
 #define PLUGIN_TYPE_SAMPLE_DELAY 9
 #define PLUGIN_TYPE_SAMPLE_CRUSH 10
 #define PLUGIN_TYPE_STEREO_WIDTH 11
+#define PLUGIN_TYPE_SYNTH 12
 
 #define PLUG_INT_HOSTINFO 1004
 #define PLUG_INT_SYNTH 1005
@@ -25,6 +26,7 @@ class i_host_callback {
     virtual void onLatencyChanged(effectbase* effect) = 0;
     virtual void onParametersChanged(effectbase* effect, int32_t idx, float val, int flags, int stage) = 0;
     virtual void onIOConfigChanged(effectbase* effect) = 0;
+    virtual void onUiChanged(effectbase* effect) = 0;
 };
 
 template<typename T>

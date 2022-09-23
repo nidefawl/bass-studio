@@ -5,9 +5,13 @@
 #include "gui/container/container.h"
 #include "logging.h"
 
+#define UID_VIEW_CTR_WINDOW 1
+#define UID_VIEW_CTR_PLUGIN_CTR 2
+#define UID_VIEW_CTR_NODES 3
+
 class PluginViewContainers {
     bool inUse = true;
-
+    int32_t uiId = 0;
 public:
     virtual ~PluginViewContainers() = default;
     virtual void addTo(std::vector<guictr_base*>& v)        = 0;
@@ -26,6 +30,15 @@ public:
     }
     bool isInUse() const {
         return inUse;
+    }
+    void setUiId(int32_t id) {
+        uiId = id;
+    }
+    int32_t getUiId() const {
+        return uiId;
+    }
+    virtual bool isViewSupported(int32_t id) const {
+        return true;
     }
 };
 template<typename PluginGUI, typename Plugin>
