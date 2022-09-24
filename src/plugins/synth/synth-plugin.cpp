@@ -80,8 +80,8 @@
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 
 #if BUILD_EXTERNAL_PLUGIN
+    return PluginSynth::c// TODO: only lock VST2 versions (using same synth-plugin.o)reatePlugin(audioMaster);
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
-    return PluginSynth::createPlugin(audioMaster);
 }
 #endif
 
@@ -90,7 +90,7 @@ namespace PluginSynth {
 
     int32_t gDebugOverrides               = -1;
     const char* const PLUGIN_EFFECT_NAME  = "Synth";
-    const char* const PLUGIN_UID          = "SYNT";
+    const uint32_t PLUGIN_UID = 1314080845; //"SYNT";
     const char* const PLUGIN_PRODUCT_NAME = "Synth";
 
     enum class ParamType {
@@ -1238,6 +1238,11 @@ namespace PluginSynth {
                 return daw->lockPlayThread();
             return ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, false);
         }
+        ThreadLock lockProcessing() {
+            if (daw)
+                return ThreadLock::MakeVoidLock();
+            return ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, false);
+        }
         ThreadLock tryLock() {
             if (daw)
                 return daw->getPlayThread()->tryLockThread();
@@ -1755,21 +1760,31 @@ namespace PluginSynth {
         void ProcessMidiMsg(IMidiMsg& msg) {
             midiQueue.Add(msg);
         }
+
+        void processMidiMessages(const std::vector<IMidiMsg>& midiEvents) {
+            midiQueue.AddAll(midiEvents);
+        }
+
         std::vector<int> getHeldNotes() {
             return heldNotes;
         }
+
         int32_t getActiveVoiceCount() {
             return activeVoiceCount;
         }
+
         void setTempo(double d) {
             tempo.bpm = d;
         }
+
         void setBarPos(double d) {
             tempo.barPos = d;
         }
+
         void setPPQPos(double d) {
             tempo.ppqPos = d;
         }
+
         bool getSnapshot(snapshot_t& snapshot) {
             snapshot.version     = SYNTH_SNAPSHOT_VERSION;
             const auto numParams = CtrSize(vecParams);
@@ -1818,6 +1833,7 @@ namespace PluginSynth {
             snapshot.shapes.push_back(shape_snapshot_t{ 0, DAW::Shape::shape_preset_t{1, "LFO", lfoShape} });
             return true;
         }
+
         bool setSnapshot(const snapshot_t& snapshot) {
             if (snapshot.version < 2) {
                 dbgassert(0);
@@ -2566,9 +2582,9 @@ namespace PluginSynth {
         }
 
         void ProcessSynth(float** inputs, float** outputs, int nFrames) {
-#if BUILD_EXTERNAL_PLUGIN
-            auto lock = this->lock();
-#endif
+            // lockProcessing only locks VST2 versions of the plugin
+            auto lock = this->lockProcessing();
+
             double bpmHz                                     = math::max(tempo.bpm, 1.0) / 60.0;
             const auto bpmDiv4Hz                             = math::max(tempo.bpm / 4.0, 1.0) / 60.0;
             const auto mvInv                                 = sqrt(1.0 / math::max<double>(1.0, this->unisonVoiceCount));
@@ -2834,7 +2850,6 @@ namespace PluginSynth {
     class module_synth : public internalplugin {
         SynthImpl* const impl;
         std::vector<SynthParamBase*>& vecParams;
-        std::vector<int32_t> heldNotes;
     public:
         using ThreadLock = std::lock_guard<std::recursive_mutex>;
         explicit module_synth(int32_t _projectGlobalId, i_host_callback* _hostCallback)
@@ -2882,7 +2897,6 @@ namespace PluginSynth {
         }
 
         void postSetParameter(int32_t idx, float preVal, float val, int flags) override {
-            float paramValue = getParamValue(idx);
             if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
                 SynthParamBase* param = vecParams[idx-1];
                 param->set(getParamValue(idx));
@@ -2891,39 +2905,8 @@ namespace PluginSynth {
             internalplugin::postSetParameter(idx, preVal, val, flags);
         }
 
-        void sendNotesOff(int32_t bpm100) override {
-            for (const auto& notePitch : this->heldNotes) {
-                auto deltaFrames = 0;
-                IMidiMsg msg;
-                msg.MakeNoteOffMsg(notePitch, deltaFrames);
-                impl->ProcessMidiMsg(msg);
-            }
-            IMidiMsg msgInstantOff(0, 0xB0, 123, 0);
-            impl->ProcessMidiMsg(msgInstantOff);
-            this->midiEventsDispatched += CtrSize(heldNotes) + 1;
-            heldNotes.clear();
-        }
-
-        void processMidi(midi_events_t& midiEvents) override {
-            const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, midiEvents.bpm100, format.sampleRate);
-            for (auto& evt : *midiEvents.noteEventsProcessed) {
-                auto deltaFrames = math::floordS32(evt.tickOffsetInBlock * tickToSamples);
-                dbgassert(deltaFrames >= 0 && deltaFrames < format.blockSize);
-                bool bContained = std::binary_search(std::begin(heldNotes), std::end(heldNotes), evt.pitch);
-                if (evt.isNoteOn && !bContained) {
-                    insertSorted(heldNotes, evt.pitch);
-                } else if (!evt.isNoteOn && bContained) {
-                    removeEntry(heldNotes, evt.pitch);
-                }
-                IMidiMsg msg;
-                if (evt.isNoteOn) {
-                    msg.MakeNoteOnMsg(evt.pitch, evt.velocity, deltaFrames);
-                } else {
-                    msg.MakeNoteOffMsg(evt.pitch, deltaFrames);
-                }
-                impl->ProcessMidiMsg(msg);
-            }
-            this->midiEventsDispatched += CtrSize(*midiEvents.noteEventsProcessed);
+        void processMidiMessages(std::vector<IMidiMsg>& midiEvents) override { 
+            this->impl->processMidiMessages(midiEvents);
         }
 
         void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override {
@@ -2943,62 +2926,7 @@ namespace PluginSynth {
             this->impl->ProcessSynth(in->buf, out->buf, numSamples);
         }
 
-        void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, const tracksnapshot_store_opts_t& opts) {
-            ps.version           = 11;
-            ps.slot              = 0;
-            ps.projectGlobalId   = plugin->projectGlobalId;
-            ps.enabled           = plugin->bIsEnabled;
-            ps.ioChannels.input  = plugin->inputChannelsDesc;
-            ps.ioChannels.output = plugin->outputChannelsDesc;
-            ps.uId               = plugin->uId;
-            ps.pluginType        = plugin->pluginType;
-            ps.name              = plugin->sName;
-            if (opts.storePluginPreset) {
-                ps.params.reserve(plugin->getNumParameters());
-                plugin->visitParams([&ps](auto& mapEntry) {
-                    automatable_param_t& param = mapEntry.second;
-                    dbgassert(param.value >= 0.0f && param.value <= 1.0f);
-                    if (param.inUse) {
-                        ps.params.push_back(param_snapshot_t{ param.idx, param.value, param.inUse ? 1 : 0 });
-                    }
-                });
-            }
-            if (opts.storeAutomation) {
-                storeAutomation(ps.automatedParams, plugin);
-            }
-        }
-
-        void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override {
-            createSnapshot(ps, this, opts);
-            if (handlesIntPlugin->gui) {
-                handlesIntPlugin->gui->makeSnapshot(ps.uiSnapshot, opts);
-            }
-            ps.slot = this->slot;
-            auto dataBuf = storePresetData();
-            if (dataBuf) {
-                // can't use std::vector value type copy here
-                ps.dataChunk.resize(dataBuf->size());
-                memcpy(ps.dataChunk.data(), dataBuf->data(), dataBuf->size());
-            }
-        }
-
-        void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override {
-            this->uiSnapshot = pluginSnapshot.uiSnapshot;
-            this->uiSnapshot.isValidSnapshot = true;
-            loadEffectParamsFromSnapshot(pluginSnapshot, this);
-            if (handlesIntPlugin->gui && this->uiSnapshot.isValidSnapshot) {
-                handlesIntPlugin->gui->loadSnapshot(this->uiSnapshot);
-                this->uiSnapshot.isValidSnapshot = false;
-            }
-            if (pluginSnapshot.dataChunk.size() > 0) {
-                auto dataBuf = std::make_shared<std::vector<std::byte>>();
-                dataBuf->resize(pluginSnapshot.dataChunk.size());
-                memcpy(dataBuf->data(), pluginSnapshot.dataChunk.data(), dataBuf->size());
-                loadPresetData(dataBuf);
-            }
-        }
-
-        std::shared_ptr<std::vector<std::byte>> storePresetData() {
+        std::shared_ptr<std::vector<std::byte>> storePresetData() override {
             snapshot_t snapshot;
             if (impl->getSnapshot(snapshot)) {
                 getUiSnapshot(snapshot);
@@ -3007,7 +2935,7 @@ namespace PluginSynth {
             return nullptr;
         }
 
-        bool loadPresetData(const std::shared_ptr<std::vector<std::byte>>& buf) {
+        bool loadPresetData(const std::shared_ptr<std::vector<std::byte>>& buf) override {
             if (buf->size() > 0) {
                 snapshot_t snapshotLoaded;
                 if (deserializeSnapshot(buf, snapshotLoaded)) {
@@ -3077,153 +3005,21 @@ namespace PluginSynth {
         }
     };
 
-    void PluginVST2_Synth::initPrograms() {
-        for (SynthProgram& program : staticPrograms) {
-            program                   = {};
-            program.VoiceMode         = 0.000000;
-            program.GlideLength       = 0.000000;
-            program.FilterMode        = 1.000000;
-            program.FilterCutoff      = 0.100000;
-            program.FilterResonance   = 0.020000;
-            program.FilterKeyTracking = 0.500000;
-            program.VolEnvCutoff      = 0.750000;
-            program.ModEnvCutoff      = 0.740000;
-            program.OscMix            = 0.500000;
-            program.Osc1Wave          = 0.400000;
-            program.Osc1Coarse        = 0.5;
-            program.Osc1Fine          = 0.500000;
-            program.Osc1Split         = 0.554000;
-            program.Osc2Wave          = 0.400000;
-            program.Osc2Coarse        = 0.745;
-            program.Osc2Fine          = 0.505000;
-            program.Osc2Split         = 0.560000;
-            program.LfoAmount         = 0.500000;
-            program.LfoFrequency      = 0.5;
-            program.LfoDelay          = 0.000000;
-            program.LfoCutoff         = 0.500000;
-            program.FmMode            = 0.000000;
-            program.FmCoarse          = 0.000000;
-            program.FmFine            = 0.500000;
-            program.VolEnvFm          = 0.500000;
-            program.ModEnvFm          = 0.500000;
-            program.LfoFm             = 0.500000;
-            program.VolEnvA           = 0.075000;
-            program.VolEnvD           = 0.500000;
-            program.VolEnvS           = 1.000000;
-            program.VolEnvR           = 0.650000;
-            program.VolEnvV           = 0.800000;
-            program.ModEnvA           = 0.220000;
-            program.ModEnvD           = 0.500000;
-            program.ModEnvS           = 0.500000;
-            program.ModEnvR           = 0.700000;
-            program.ModEnvV           = 0.600000;
-            program.UnisonVoices      = impl->getParam(Parameters::UnisonVoices)->getAsDouble();
-            program.PolyVoicesMax     = impl->getParam(Parameters::Voices)->getAsDouble();
-        }
-        {
-            auto& prog        = staticPrograms[0];
-            prog.FilterCutoff = 1.0f;
-            prog.FilterMode   = 1.0;// TODO: add butto to write out presets in source code format so we can add them here
-        }
-        {
-            auto& prog             = staticPrograms[1];
-            prog.VoiceMode         = 0.000000;
-            prog.GlideLength       = 0.000000;
-            prog.FilterMode        = 0.666667;
-            prog.FilterCutoff      = 0.135000;
-            prog.FilterResonance   = 0.050000;
-            prog.FilterKeyTracking = 0.875000;
-            prog.VolEnvCutoff      = 0.590000;
-            prog.ModEnvCutoff      = 0.655000;
-            prog.OscMix            = 1.000000;
-            prog.Osc1Wave          = 0.400000;
-            prog.Osc1Coarse        = 0.500000;
-            prog.Osc1Fine          = 0.500000;
-            prog.Osc1Split         = 0.554000;
-            prog.Osc2Wave          = 0.000000;
-            prog.Osc2Coarse        = 0.500000;
-            prog.Osc2Fine          = 0.500000;
-            prog.Osc2Split         = 0.715000;
-            prog.LfoAmount         = 0.500000;
-            prog.LfoFrequency      = 0.393939;
-            prog.LfoDelay          = 0.000000;
-            prog.LfoCutoff         = 0.500000;
-            prog.FmMode            = 0.500000;
-            prog.FmCoarse          = 0.000000;
-            prog.FmFine            = 0.500000;
-            prog.VolEnvFm          = 0.500000;
-            prog.ModEnvFm          = 0.500000;
-            prog.LfoFm             = 0.495000;
-            prog.VolEnvA           = 0.075000;
-            prog.VolEnvD           = 0.400000;
-            prog.VolEnvS           = 0.545000;
-            prog.VolEnvR           = 0.700000;
-            prog.VolEnvV           = 0.770000;
-            prog.ModEnvA           = 0.025000;
-            prog.ModEnvD           = 0.375000;
-            prog.ModEnvS           = 0.165000;
-            prog.ModEnvR           = 0.735000;
-            prog.ModEnvV           = 0.865000;
-        }
-    }
-
     PluginVST2_Synth::PluginVST2_Synth(audioMasterCallback audioMaster)
-        : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, Parameters::kNumParams, kNumInputs, kNumOutputs),
+        : BasePluginVST2(audioMaster, PLUGIN_UID, 0, Parameters::kNumParams, kNumInputs, kNumOutputs),
           impl(new SynthImpl(this)),
           vecParams(impl->vecParams) {
         isSynth(true);
         programsAreChunks(true);
         impl->init();
-        initPrograms();
-    }
-
-    void PluginVST2_Synth::setFromSynthProgram(SynthProgram* program) {
-        for (auto param : this->vecParams) {
-            auto* pParDouble = program->getProgramParameter(param->enumParam);
-            if (pParDouble) {
-                param->set(static_cast<float>(*pParDouble));
-            }
-        }
-        for (auto param : this->vecParams) {
-            this->impl->OnParamChange(param->enumParam);
-        }
     }
 
     void PluginVST2_Synth::onPresetLoaded() {
-        if (curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
-            for (auto& param : vecParams) {
-                auto pParamDouble = staticPrograms[curProgram].getProgramParameter(param->enumParam);
-                if (pParamDouble) *pParamDouble = param->getAsDouble();
-            }
-        }
         updateDisplay();
     }
 
     SynthImpl* PluginVST2_Synth::getSynth() {
         return this->impl;
-    }
-
-    void PluginVST2_Synth::setProgram(VstInt32 programIdx) {
-        if (programIdx < 0 || programIdx >= kNumPrograms)
-            return;
-
-        curProgram = programIdx;
-        if (curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
-            setFromSynthProgram(&staticPrograms[curProgram]);
-        }
-    }
-
-    void PluginVST2_Synth::setProgramName(char* name) {
-        if (name && curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
-            staticPrograms[curProgram].setName(name);
-        }
-    }
-
-    void PluginVST2_Synth::getProgramName(char* name) {
-        if (name) name[0] = 0;
-        if (name && curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
-            vst_strncpy(name, StringAsCStr(staticPrograms[curProgram].getName()), PLUGIN_PROGRAM_STR_MAX_LEN);
-        }
     }
 
     void PluginVST2_Synth::getParameterLabel(VstInt32 index, char* label) {
@@ -3251,10 +3047,6 @@ namespace PluginSynth {
     void PluginVST2_Synth::setParameter(VstInt32 index, float value) {
         if (index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
-            if (issetprogram && curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
-                auto pParamDouble = staticPrograms[curProgram].getProgramParameter(param->enumParam);
-                if (pParamDouble) *pParamDouble = value;
-            }
             param->set(value);
             this->impl->OnParamChange(param->enumParam);
         }
@@ -3315,15 +3107,6 @@ namespace PluginSynth {
         return 0.0f;
     }
 
-    bool PluginVST2_Synth::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
-        if (index >= 0 && index < kNumPrograms) {
-            String progName = StringFormat("Program %d", index);
-            vst_strncpy(text, progName.c_str(), PLUGIN_PROGRAM_STR_MAX_LEN);
-            return true;
-        }
-        return false;
-    }
-
     bool PluginVST2_Synth::getEffectName(char* name) {
         vst_strncpy(name, PLUGIN_EFFECT_NAME, kVstMaxEffectNameLen);
         return true;
@@ -3381,12 +3164,6 @@ namespace PluginSynth {
             snapshot_t snapshotLoaded;
             if (deserializeSnapshot(buf, snapshotLoaded)) {
                 impl->setSnapshot(snapshotLoaded);
-                if (issetprogram && curProgram >= 0 && curProgram < CtrSize(staticPrograms)) {
-                    for (auto& param : vecParams) {
-                        auto pParamDouble = staticPrograms[curProgram].getProgramParameter(param->enumParam);
-                        if (pParamDouble) *pParamDouble = param->getAsDouble();
-                    }
-                }
                 setUiSnapshot(snapshotLoaded);
                 return 1;
             }
@@ -3407,10 +3184,6 @@ namespace PluginSynth {
     void PluginVST2_Synth::setSampleRate(float sampleRate) {
         AudioEffectX::setSampleRate(sampleRate);
         this->impl->setSamplerate(sampleRate);
-    }
-
-    void PluginVST2_Synth::setBlockSize(VstInt32 blockSize) {
-        AudioEffectX::setBlockSize(blockSize);
     }
 
     VstInt32 PluginVST2_Synth::processEvents(VstEvents* events) {
@@ -3461,11 +3234,6 @@ namespace PluginSynth {
             this->impl->ProcessSynth(inputs, outputs, sampleFrames);
         }
     }
-
-    SynthProgram::SynthProgram() : SynthProgramParameters() {
-        setName("Init");
-    }
-
 }// namespace PluginSynth
 
 template<>

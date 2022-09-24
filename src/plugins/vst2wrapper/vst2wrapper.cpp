@@ -13,6 +13,7 @@
 #include "plugins/stereowidth/stereowidth-plugin.h"
 #include "plugins/info/info-plugin.h"
 #include "plugins/synth/synth-plugin.h"
+#include "projectfile.h"
 #include "seq_util.h"
 #include "types.h"
 #include "automation.h"
@@ -42,20 +43,14 @@
 
 
 namespace PluginWrapper {
-    const char* const PLUGIN_EFFECT_NAME = "Gain";
-    const char* const PLUGIN_UID = "NMHG";
-    const char* const PLUGIN_PRODUCT_NAME = "Gain plugin";
     static constexpr int32_t PARAM_OFFSET = 1;
-    const char* getName() {
-        return PLUGIN_EFFECT_NAME;
-    }
 
     class guictr_effectbase_vst2;
     class PluginInternalVST2 : public BasePluginVST2 {
         internalplugin* const effect;
     public:
         explicit PluginInternalVST2(audioMasterCallback audioMaster, internalplugin* effect)
-            : BasePluginVST2(audioMaster, PLUGIN_UID), effect(effect) {
+            : BasePluginVST2(audioMaster, effect->getUUID_U32()), effect(effect) {
             effect->setSampleFormat(sampleformat_t{ 44100, 512, sampleformat_bits_t::FLOAT_32 });
             effect->initBuffers();
             effect->initMeters();
@@ -156,22 +151,22 @@ namespace PluginWrapper {
         }
 
         bool getEffectName(char* name) override {
-            vst_strncpy(name, PLUGIN_EFFECT_NAME, kVstMaxEffectNameLen);
+            safe_str_to_buf(name, kVstMaxEffectNameLen, effect->getName());
             return true;
         }
 
         bool getVendorString(char* text) override {
-            vst_strncpy(text, PLUGIN_VENDOR_NAME, kVstMaxVendorStrLen);
+            safe_str_to_buf(text, kVstMaxVendorStrLen, effect->getVendorName());
             return true;
         }
 
         bool getProductString(char* text) override {
-            vst_strncpy(text, PLUGIN_PRODUCT_NAME, kVstMaxProductStrLen);
+            safe_str_to_buf(text, kVstMaxProductStrLen, effect->getProductName());
             return true;
         }
 
         VstInt32 getVendorVersion() override {
-            return 1;
+            return effect->getEffectVersion();
         }
 
         VstInt32 canDo(char* text) override {
@@ -219,6 +214,24 @@ namespace PluginWrapper {
             }
         }
 
+        VstInt32 processEvents(VstEvents* events) override {
+            dbgassert(events);
+            if (events && events->numEvents > 0) {
+                int32_t len = events->numEvents;
+                std::vector<IMidiMsg> messages;
+                messages.reserve(len);
+                for (int i = 0; i < len; i++) {
+                    auto pEvent = events->events[i];
+                    if (pEvent->type == VstEventTypes::kVstMidiType) {
+                        VstMidiEvent* pME = reinterpret_cast<VstMidiEvent*>(pEvent);
+                        messages.emplace_back(pME->deltaFrames, pME->midiData[0], pME->midiData[1], pME->midiData[2]);
+                    }
+                }
+                effect->processMidiMessages(messages);
+            }
+            return 1;
+        }
+
         void processReplacing(float** inputs, float** outputs, VstInt32 numSamples) override {
             if (issetprogram)
                 return;
@@ -247,6 +260,32 @@ namespace PluginWrapper {
             outputBlock.copyFrom(effect->blockOutputs);
             effect->postProcess(&outputBlock, numSamples, true);
         }
+
+        VstInt32 getChunk(void** data, bool isPreset) override {
+            if (isPreset) {
+                *data = nullptr;
+                return 0;
+            }
+            plugin_snapshot_t ps;
+            effect->makeSnapshot(ps, tracksnapshot_store_opts_t::All());
+            std::vector<uint8_t> buf;
+            serializePluginSnapshot(ps, buf);
+            return 0;
+        }
+
+        VstInt32 setChunk(void* data, VstInt32 byteSize, bool isPreset) override {
+            if (isPreset) {
+                return 0;
+            }
+            std::vector<uint8_t> buf;
+            buf.assign(reinterpret_cast<uint8_t*>(data), reinterpret_cast<uint8_t*>(data) + byteSize);
+            auto ps = deserializePluginSnapshot(buf);
+            if (ps) {
+                effect->loadSnapshot(*ps);
+            }
+            return 0;
+        }
+
         // internal API
         param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override {
             // I don't think this will be called
@@ -256,6 +295,10 @@ namespace PluginWrapper {
         }
 
         std::shared_ptr<PluginViewContainers> createViewCtrVst2() override;
+        
+        void addPropertiesParameterTooltip(Table::tbl& table, int idx) override {
+            effect->addPropertiesParameterTooltip(table, idx);
+        }
 
         void sendParameterUpdateToHost(int32_t index, float value, int32_t flags) {
             if (index >= PARAM_OFFSET) {
@@ -459,6 +502,8 @@ class vst2_wrapper_host_callback : public i_host_callback {
     void onIOConfigChanged(effectbase* effect) override {
         (void) effect;
         (void) host;
+    }
+    void onUiChanged(effectbase* effect) override {
     }
 };
 

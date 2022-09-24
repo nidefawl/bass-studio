@@ -11,6 +11,7 @@
 #include "meter.h"
 #include "platform.h"
 #include "plugins/plugincontrol.h"
+#include "plugins/synth/IPlugMidi.h"
 #include "seq_time.h"
 #include "snapshot.h"
 #include "str_util.h"
@@ -29,6 +30,7 @@ class internalplugin : public effectbase {
 public:
     struct internalplugin_handles_t {
         std::unique_ptr<guiinternalpluginview> gui;
+        std::vector<int32_t> heldNotes;
     };
 protected:
     struct internal_plugin_window_client {
@@ -68,6 +70,9 @@ public:
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     
+    virtual std::shared_ptr<std::vector<std::byte>> storePresetData() { return nullptr; };
+    virtual bool loadPresetData(const std::shared_ptr<std::vector<std::byte>>& buf) { return false; };
+
     // automatable_t interface
     String getAutomatableName() override;
     float getParamValue(int32_t idx) override;
@@ -76,6 +81,8 @@ public:
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override { };
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
-
+    virtual void processMidiMessages(std::vector<IMidiMsg>& midiEvents) { };
+    void processMidi(midi_events_t& midiEvents) override;
+    void sendNotesOff(int32_t bpm100) override;
     std::shared_ptr<PluginViewContainers> getViewCtr(int32_t uiId);
 };

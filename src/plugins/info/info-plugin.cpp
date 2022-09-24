@@ -38,7 +38,7 @@ AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
 
 namespace PluginHostInfo {
     const char* const PLUGIN_EFFECT_NAME = "HostInfo";
-    const char* const PLUGIN_UID = "INFO";
+    const uint32_t PLUGIN_UID = 1330007625; //"INFO";
     const char* const PLUGIN_PRODUCT_NAME = "HostInfo VST2.4";
     void timeInfoToStrings(VstTimeInfo* timeinfo, std::vector<String>& strings) {
         strings.push_back(StringFormat("samplePos %.4f", timeinfo->samplePos));

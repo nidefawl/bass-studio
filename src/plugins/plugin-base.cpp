@@ -110,7 +110,7 @@ void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> vi
     }
 }
 BasePluginVST2::BasePluginVST2(audioMasterCallback audioMaster,
-                               const char* pluginUIDStr,
+                               uint32_t pluginUniqueID,
                                VstInt32 numPrograms,
                                VstInt32 numParams,
                                VstInt32 numInputs,
@@ -125,9 +125,7 @@ BasePluginVST2::BasePluginVST2(audioMasterCallback audioMaster,
         canProcessReplacing(true);
         noTail(false);
         isSynth(false);
-        int id = 0;
-        memcpy(&id, pluginUIDStr, sizeof(VstInt32));
-        setUniqueID(id);
+        setUniqueID(static_cast<VstInt32>(pluginUniqueID));
     }
     setProgram(0);
 
@@ -139,7 +137,7 @@ BasePluginVST2::BasePluginVST2(audioMasterCallback audioMaster,
     dbgassert(cEffect.numOutputs == numOutputs);
 }
 BasePluginVST2::BasePluginVST2(audioMasterCallback audioMaster,
-                               const char* pluginUIDStr)
+                               uint32_t pluginUniqueID)
     : AudioEffectX(audioMaster, numPrograms, numParams)
 {
     setInitialDelay(0);
@@ -147,9 +145,7 @@ BasePluginVST2::BasePluginVST2(audioMasterCallback audioMaster,
     canProcessReplacing(true);
     noTail(false);
     isSynth(false);
-    int id = 0;
-    memcpy(&id, pluginUIDStr, sizeof(VstInt32));
-    setUniqueID(id);
+    setUniqueID(static_cast<VstInt32>(pluginUniqueID));
     setProgram(0);
     suspend();
 }

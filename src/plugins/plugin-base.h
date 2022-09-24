@@ -25,13 +25,13 @@ protected:
 
 public:
     BasePluginVST2(audioMasterCallback audioMaster,
-                   const char* pluginUIDStr,
+                   uint32_t pluginUniqueID,
                    VstInt32 numPrograms,
                    VstInt32 numParams,
                    VstInt32 numInputs,
                    VstInt32 numOutputs);
     BasePluginVST2(audioMasterCallback audioMaster,
-                   const char* pluginUIDStr);
+                   uint32_t pluginUniqueID);
     ~BasePluginVST2() override = default;
 
     void createEditorWindow(std::shared_ptr<PluginViewContainers> view);

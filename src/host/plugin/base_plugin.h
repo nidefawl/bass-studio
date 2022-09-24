@@ -1,6 +1,7 @@
 #pragma once
 #include "types.h"
 #include <memory>
+#include <utility>
 #include <vector>
 #include "str_util.h"
 #include "seq_time.h"
@@ -14,6 +15,7 @@
 #include "saferef.h"
 #include "host/daw_channel.h"
 #include "gui/table/table_fwd.h"
+#include "plugins/synth/IPlugMidi.h"
 
 class DawInstance;
 class effect_deferred;
@@ -74,6 +76,7 @@ public:
     ivec4 lastWindowPosSize{};
     String sName;
     String sProductName;
+    String sVendorName;
     stats_processing_timings_t procStats;
     plugin_ui_snapshot_t uiSnapshot{};
     SafeRef<effectbase> safeRef;
@@ -103,12 +106,17 @@ public:
     String getProductName() const { return sProductName; };
     void setProductName(String _name) {
         replaceString(_name, "[jBridge]", "");
-        this->sProductName = _name;
+        this->sProductName = std::move(_name);
 #ifndef NDEBUG
         this->szName = this->sName.c_str();
 #endif
     }
-
+    String getVendorName() const { return sVendorName; };
+    void setVendorName(String _name) {
+        this->sVendorName = std::move(_name);
+    }
+    virtual int32_t getEffectVersion() const { return 1; }
+    virtual int32_t getUUID_U32() const { return 1; }
     i_host_callback* getHostCallback() const { return hostCallback; }
 
     virtual void onEnable(){};

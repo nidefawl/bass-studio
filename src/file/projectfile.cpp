@@ -703,8 +703,7 @@ bool saveTrackContainer(const trackcontainer_snapshot_t& container, const String
     return false;
 }
 
-bool savePluginSnapshot(const plugin_snapshot_t& snapshot, const String& path) {
-
+bool serializePluginSnapshot(const plugin_snapshot_t& snapshot, std::vector<uint8_t>& buf) {
     try {
         Stringstream sstream;
         {
@@ -712,7 +711,21 @@ bool savePluginSnapshot(const plugin_snapshot_t& snapshot, const String& path) {
             ar(make_nvp("plugin", snapshot));
         }
         sstream.flush();
-        writeStringStream(path, sstream);
+        buf.resize(sstream.tellp());
+        buf.assign(std::istreambuf_iterator<char>(sstream), std::istreambuf_iterator<char>());
+        return true;
+    } catch (const std::exception& e) {
+        log_printf("savePluginSnapshot exception: %s\n", e.what());
+    }
+    return false;
+}
+
+bool savePluginSnapshot(const plugin_snapshot_t& snapshot, const String& path) {
+
+    try {
+        std::vector<uint8_t> buf;
+        serializePluginSnapshot(snapshot, buf);
+        WriteFileVector(path, buf);
         return true;
     } catch (const FileIOException& e) {
         log_printf("savePluginSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
@@ -722,10 +735,8 @@ bool savePluginSnapshot(const plugin_snapshot_t& snapshot, const String& path) {
     return false;
 }
 
-std::shared_ptr<plugin_snapshot_t> loadPluginSnapshot(const String& path) {
+std::shared_ptr<plugin_snapshot_t> deserializePluginSnapshot(std::vector<uint8_t>& vec) {
     try {
-        std::vector<uint8_t> vec;
-        ReadFileVector(path, vec);
         Stringstream sstream(std::string(vec.begin(), vec.end()));
         std::shared_ptr<plugin_snapshot_t> snapshot = std::make_shared<plugin_snapshot_t>();
         {
@@ -733,6 +744,17 @@ std::shared_ptr<plugin_snapshot_t> loadPluginSnapshot(const String& path) {
             ar(make_nvp("plugin", *snapshot.get()));
         }
         return snapshot;
+    } catch (const std::exception& e) {
+        log_printf("loadPluginSnapshot exception: %s\n", e.what());
+    }
+    return nullptr;
+}
+
+std::shared_ptr<plugin_snapshot_t> loadPluginSnapshot(const String& path) {
+    try {
+        std::vector<uint8_t> vec;
+        ReadFileVector(path, vec);
+        return deserializePluginSnapshot(vec);
     } catch (const FileIOException& e) {
         log_printf("loadPluginSnapshot File IO exception: %s: %s (%d)\n", e.what(), StringAsCStr(path), e.GetErrorCode());
     } catch (const std::exception& e) {

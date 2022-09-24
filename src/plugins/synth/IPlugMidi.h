@@ -522,6 +522,31 @@ public:
         ++mBack;
     }
 
+    // Adds a MIDI message at the back of the queue. If the queue is full,
+    // it will automatically expand itself.
+    void AddAll(const std::vector<IMidiMsg>& midiEvents) {
+        for (auto& msg : midiEvents) {
+            if (mBack >= mSize) {
+                if (mFront > 0)
+                    Compact();
+                else if (!Expand())
+                    return;
+            }
+#ifndef DONT_SORT_IMIDIQUEUE
+            // Insert the MIDI message at the right offset.
+            if (mBack > mFront && msg.mOffset < mBuf[mBack - 1].mOffset) {
+                int i = mBack - 2;
+                while (i >= mFront && msg.mOffset < mBuf[i].mOffset) --i;
+                i++;
+                memmove(&mBuf[i + 1], &mBuf[i], (mBack - i) * sizeof(IMidiMsg));
+                mBuf[i] = msg;
+            } else
+#endif
+            mBuf[mBack] = msg;
+            ++mBack;
+        }
+    }
+
     // Removes a MIDI message from the front of the queue (but does *not*
     // free up its space until Compact() is called).
     inline void Remove() { ++mFront; }

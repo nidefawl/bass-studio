@@ -30,6 +30,7 @@ namespace {
             plugin->visitParams([&ps](auto& mapEntry) {
                 automatable_param_t& param = mapEntry.second;
                 if (param.inUse) {
+                    dbgassert(param.value >= 0.0f && param.value <= 1.0f);
                     ps.params.push_back(param_snapshot_t{ param.idx, param.value, param.inUse ? 1 : 0 });
                 }
             });
@@ -42,11 +43,32 @@ namespace {
 
 void internalplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
     createSnapshot(ps, this, opts);
+    if (handlesIntPlugin->gui) {
+        handlesIntPlugin->gui->makeSnapshot(ps.uiSnapshot, opts);
+    }
     ps.slot = this->slot;
+    auto dataBuf = storePresetData();
+    if (dataBuf) {
+        // can't use std::vector value type copy here
+        ps.dataChunk.resize(dataBuf->size());
+        memcpy(ps.dataChunk.data(), dataBuf->data(), dataBuf->size());
+    }
 }
 
-void internalplugin::loadSnapshot(const plugin_snapshot_t& ps) {
-    loadEffectParamsFromSnapshot(ps, this);
+void internalplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
+    this->uiSnapshot = pluginSnapshot.uiSnapshot;
+    this->uiSnapshot.isValidSnapshot = true;
+    loadEffectParamsFromSnapshot(pluginSnapshot, this);
+    if (handlesIntPlugin->gui && this->uiSnapshot.isValidSnapshot) {
+        handlesIntPlugin->gui->loadSnapshot(this->uiSnapshot);
+        this->uiSnapshot.isValidSnapshot = false;
+    }
+    if (pluginSnapshot.dataChunk.size() > 0) {
+        auto dataBuf = std::make_shared<std::vector<std::byte>>();
+        dataBuf->resize(pluginSnapshot.dataChunk.size());
+        memcpy(dataBuf->data(), pluginSnapshot.dataChunk.data(), dataBuf->size());
+        loadPresetData(dataBuf);
+    }
 }
 
 String internalplugin::getAutomatableName() {
@@ -238,3 +260,43 @@ std::shared_ptr<PluginViewContainers> internalplugin::getViewCtr(int32_t uiId) {
     }
     return newView;
 };
+void internalplugin::sendNotesOff(int32_t bpm100) {
+    std::vector<IMidiMsg> messages;
+    messages.reserve(handlesIntPlugin->heldNotes.size() + 1);
+    for (const auto& notePitch : handlesIntPlugin->heldNotes) {
+        auto deltaFrames = 0;
+        messages.emplace_back();
+        IMidiMsg& msg = messages.back();
+        msg.MakeNoteOffMsg(notePitch, deltaFrames);
+    }
+    messages.emplace_back(0, 0xB0, 123, 0);// InstantOff
+    handlesIntPlugin->heldNotes.clear();
+    processMidiMessages(messages);
+    this->midiEventsDispatched += CtrSize(messages);
+}
+void internalplugin::processMidi(midi_events_t& midiEvents) {
+    const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, midiEvents.bpm100, format.sampleRate);
+    auto& heldNotes            = handlesIntPlugin->heldNotes;
+    std::vector<IMidiMsg> messages;
+    messages.reserve(midiEvents.noteEventsProcessed->size());
+    for (auto& evt : *midiEvents.noteEventsProcessed) {
+        auto deltaFrames = math::floordS32(evt.tickOffsetInBlock * tickToSamples);
+        dbgassert(deltaFrames >= 0 && deltaFrames < format.blockSize);
+        bool bContained = std::binary_search(std::begin(heldNotes), std::end(heldNotes), evt.pitch);
+        if (evt.isNoteOn && !bContained) {
+            insertSorted(heldNotes, evt.pitch);
+        } else if (!evt.isNoteOn && bContained) {
+            removeEntry(heldNotes, evt.pitch);
+        }
+
+        messages.emplace_back();
+        IMidiMsg& msg = messages.back();
+        if (evt.isNoteOn) {
+            msg.MakeNoteOnMsg(evt.pitch, evt.velocity, deltaFrames);
+        } else {
+            msg.MakeNoteOffMsg(evt.pitch, deltaFrames);
+        }
+    }
+    processMidiMessages(messages);
+    this->midiEventsDispatched += CtrSize(messages);
+}

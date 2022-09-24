@@ -13,7 +13,6 @@ namespace PluginSynth {
 
     enum {
         // Global
-        kNumPrograms = 4,// wonder if that works
         kNumOutputs  = 2,
         kNumInputs   = 2,
     };
@@ -359,22 +358,6 @@ namespace PluginSynth {
             return nullptr;
         }
     };
-    class SynthProgram : public SynthProgramParameters {
-        friend class PluginVST2_Synth;
-
-    public:
-        SynthProgram();
-        ~SynthProgram() = default;
-
-        void setName(const String& name) {
-            this->name = name;
-        }
-        const String& getName() const {
-            return this->name;
-        }
-    private:
-        String name;
-    };
 
     struct snapshot_t;
     struct SynthParamBase;
@@ -391,8 +374,6 @@ namespace PluginSynth {
         void addPropertiesParameterTooltip(Table::tbl& table, int idx) override;
 
         void notifyUiChanges();
-        void initPrograms();
-        void setFromSynthProgram(SynthProgram* program);
         void onPresetLoaded();
 
         int32_t loadPreset(const String& path);
@@ -408,15 +389,11 @@ namespace PluginSynth {
 
         // VST2 API
         void setSampleRate(float sampleRate) override;
-        void setBlockSize(VstInt32 blockSize) override;
         VstInt32 processEvents(VstEvents* events) override;///< Called when new MIDI events come in
         void processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) override;
         VstInt32 getChunk (void** data, bool isPreset = false) override;
 	    VstInt32 setChunk (void* data, VstInt32 byteSize, bool isPreset = false) override;
 
-        void setProgram(VstInt32 program) override;
-        void setProgramName(char* name) override;
-        void getProgramName(char* name) override;
         bool beginSetProgram() override {
             this->issetprogram = true;
             return false;
@@ -427,7 +404,6 @@ namespace PluginSynth {
             return false;
         }///< Called after a program was loaded
 
-        bool getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) override;
 
         void setParameter(VstInt32 index, float value) override;
         float getParameter(VstInt32 index) override;
@@ -450,7 +426,6 @@ namespace PluginSynth {
         /* TODO: release lastProgramChunks after several seconds */
         std::vector<std::shared_ptr<std::vector<std::byte>>> lastProgramChunks;
         std::recursive_mutex mutex;
-        std::array<SynthProgram, kNumPrograms> staticPrograms;
         SynthImpl* const impl;
         std::vector<SynthParamBase*>& vecParams;
     };
