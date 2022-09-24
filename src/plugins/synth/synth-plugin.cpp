@@ -4643,7 +4643,6 @@ namespace PluginSynth {
                 return;
             }
 
-            dbgassert(vst2Instance);
             if (param && vst2Instance && vst2Instance->isExternalInstance()) {
                 auto paramIdxInternal = param->getParamIdxInternal();
                 char buf[PLUGIN_PARAM_STR_MAX_LEN+1]{};
