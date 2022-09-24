@@ -391,19 +391,41 @@ public:
             }
             if (dragged.type == shape_t::hittype::HIT_NODE && dragged.idx < CtrSize(curveBegin.pts)) {
                 curveTmp = curveBegin;
+                const bool canJumpOverPoints = false;
+                auto snapped = local;
                 if (bIsGridEnabledH && !isAlt(evt.kbmods)) {
-                    local.x = snapH(local.x);
+                    snapped.x = snapH(local.x);
                 }
                 if (bIsGridEnabledV && !isAlt(evt.kbmods)) {
-                    local.y = snapV(local.y);
+                    snapped.y = snapV(local.y);
                 }
-                while (local.x < 0.0f) {
-                    local.x += 1.0f;
+                if (!canJumpOverPoints) {
+                    if (snapped.x > 1.0f) {
+                        snapped.x = 1.0f;
+                    }
+                    if (snapped.x < 0.0f) {
+                        snapped.x = 0.0f;
+                    }
+                    if (dragged.idx > 0) {
+                        snapped.x = math::max(snapped.x, curveTmp.pts[dragged.idx - 1].pos.x);
+                    }
+                    if (dragged.idx + 1 < CtrSize(curveTmp.pts)) {
+                        snapped.x = math::min(snapped.x, curveTmp.pts[dragged.idx + 1].pos.x);
+                    }
                 }
-                local.x = math::clamp(modf(local.x, &local.x), 0.0f, 1.0f);
-                local.y = math::clamp(local.y, 0.0f, 1.0f);
+                while (snapped.x < 0.0f) {
+                    snapped.x += 1.0f;
+                }
+                auto unclamped = snapped;
+                snapped.x = math::clamp(modf(snapped.x, &snapped.x), 0.0f, 1.0f);
+                snapped.y = math::clamp(snapped.y, 0.0f, 1.0f);
                 auto& pt   = curveTmp.pts[dragged.idx];
-                pt.pos = local;
+                if (unclamped.x > snapped.x + 0.9) {
+                    snapped.x += 1.0;
+                    dbgassert(snapped.x==1.0);
+                }
+                pt.pos = snapped;
+
                 curveTmp.sort();
                 if (callback)
                     callback(curveTmp);
