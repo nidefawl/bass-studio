@@ -512,7 +512,7 @@ AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
     internalplugin* eff = nullptr;
     switch (BUILD_EXTERNAL_VST2_PLUGIN) {
         case PLUGIN_TYPE_GAIN:
-            eff = new module_gain(0, hostcallback);
+            eff = new PluginGain::module_gain(0, hostcallback);
             break;
         case PLUGIN_TYPE_EMPTY:
             eff = new module_empty(0, hostcallback);

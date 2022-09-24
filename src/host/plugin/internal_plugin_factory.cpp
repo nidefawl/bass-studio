@@ -12,7 +12,7 @@
 
 extern template effectbase* makeInstance<module_empty>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
 extern template effectbase* makeInstance<module_group>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
-extern template effectbase* makeInstance<module_gain>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+extern template effectbase* makeInstance<PluginGain::module_gain>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
 extern template effectbase* makeInstance<PluginLatency::module_latency>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
 extern template effectbase* makeInstance<PluginSampleDelay::module_sampledelay>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
 extern template effectbase* makeInstance<PluginSampleCrush::module_samplecrush>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
@@ -33,7 +33,7 @@ effectbase* vsthost::makeModuleInstance(int32_t moduleType, int32_t moduleId, in
             effect = makeInstance<module_group>(getNextGlobalModuleId(globalid), hostcallback);
             break;
         case PLUGIN_TYPE_GAIN:
-            effect = makeInstance<module_gain>(getNextGlobalModuleId(globalid), hostcallback);
+            effect = makeInstance<PluginGain::module_gain>(getNextGlobalModuleId(globalid), hostcallback);
             break;
         case PLUGIN_TYPE_LATENCY:
             effect = makeInstance<PluginLatency::module_latency>(getNextGlobalModuleId(globalid), hostcallback);

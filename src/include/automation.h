@@ -57,7 +57,9 @@ struct automation_t {
     virtual bool isAutomated() const {
         return !points.empty();
     }
-    virtual float getValueAt(tick_t tick) const;
+    float getValueAt(tick_t tick) const;
+    float getValueAtExact(double dTick) const;
+    void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, float* out) const;
     void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const;
     void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
     std::pair<float, float> getMinMax();
@@ -288,6 +290,18 @@ public:
         if (it != automatedParams.end()) {
             const automated_param_t* ap = &(*it);
             if (ap->src.isAutomated())
+                return &(*it).src;
+        }
+        return nullptr;
+    }
+    const automation_t* getActiveAutomation(int32_t paramIdx) const {
+        dbgassert(mapParams.count(paramIdx));
+        auto it = std::find_if(automatedParams.cbegin(), automatedParams.cend(), [paramIdx](const automated_param_t& ap) {
+            return ap.paramIdx == paramIdx;
+        });
+        if (it != automatedParams.end()) {
+            const automated_param_t* ap = &(*it);
+            if (ap->src.isAutomated() && ap->src.isActive())
                 return &(*it).src;
         }
         return nullptr;

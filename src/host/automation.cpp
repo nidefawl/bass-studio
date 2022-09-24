@@ -1,8 +1,10 @@
+#include <vector>
 #include "automation.h"
 #include "math/seq_math.h"
 #include "plugin/vst_plugin.h"
 #include "gui/automation/automatable.h"
 #include "str_util.h"
+#include "types.h"
 
 int32_t indexOfTick(const std::vector<automation_point_t>& dataPoints, tick_t tick) {
     int32_t idx;
@@ -132,6 +134,42 @@ float automation_t::getValueAt(tick_t tick) const {
         return points.front().val;
     }
     return 0.5f;
+}
+float automation_t::getValueAtExact(double dTick) const {
+    if (!points.empty()) {
+        tick_t tick = math::floordS32(dTick);
+        int32_t idx = indexOfTick(points, tick);
+        dbgassert(idx <= (int) points.size());
+        if (idx == (int) points.size())
+            return points.back().val;
+        if (idx > 0) {
+            const automation_point_t& pt1 = points[idx - 1];
+            if (quantizationSteps) {
+                return pt1.val;
+            }
+            const automation_point_t& pt2 = points[idx];
+            dbgassert(tick >= pt1.time && tick <= pt2.time);
+            tick_t tickDist = pt2.time - pt1.time;
+            if (!tickDist) {
+                return pt2.val;
+            }
+            /**
+             * NOTE - precission - converting 2 relative tick_t values to float for LERPing
+             * Precision depends on the distance in ticks between consecutive automation points
+             **/
+            auto pr = (dTick - pt1.time) / double(tickDist);
+            return static_cast<float>(pt1.val + pr * (pt2.val - pt1.val));
+        }
+        return points.front().val;
+    }
+    return 0.5f;
+}
+void automation_t::sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, float* out) const {
+    //TODO: write optimal version!
+    for (samplecount_t i = 0; i < numSamples; i++) {
+        double dTick = dTickBegin + (dTickEnd - dTickBegin) * i / (numSamples - 1);
+        *out++ = getValueAtExact(dTick);
+    }
 }
 
 void automation_t::copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const {

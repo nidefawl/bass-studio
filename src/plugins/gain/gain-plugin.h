@@ -7,11 +7,15 @@ class guiplugin;
 class vsthost;
 struct audio_stage_t;
 
+namespace PluginGain {
+struct impl_data_t;
 class module_gain : public internalplugin {
+    impl_data_t* impl;
 public:
     const float DBFS_MUTE_POS = -101.0f;
     const float MTR_CEIL      = 24.0f;
     explicit module_gain(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+    ~module_gain() override;
 
     int getModuleType() override { return PLUGIN_TYPE_GAIN; };
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
@@ -21,3 +25,5 @@ public:
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
     std::shared_ptr<PluginViewContainers> createViewCtrInternal() override;
 };
+
+} // namespace PluginGain

@@ -1,6 +1,5 @@
 #pragma once
 #include "types.h"
-#include <cwchar>
 #include <memory.h>
 #include <atomic>
 #include <vector>

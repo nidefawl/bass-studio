@@ -781,7 +781,7 @@ vsthost::~vsthost() {
     delete midiRealtimeInput;
 }
 
-vsthost::audiostream_properties_t getAudioStreamPropertiesForFormat(sampleformat_t sampleFormat, sampleformat_t sampleFormatExternal, uint32_t tempo100) {
+vsthost::audiostream_properties_t getAudioStreamPropertiesForFormat(sampleformat_t sampleFormat, sampleformat_t sampleFormatExternal, int32_t tempo100) {
     vsthost::audiostream_properties_t prop;
     prop.microSecsPerBlock = (int64_t)sampleFormat.blockSize * 1000000L / (int64_t)sampleFormat.sampleRate;
     prop.ticksPerBlock     = sampleToTickConvert<double, roundmode::none>(sampleFormat.blockSize,
@@ -857,7 +857,7 @@ void vsthost::updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPo
     timeinfo.barStartPos = floor(dTickPos / (double) TICKS_BAR) * 4;
     timeinfo.cycleStartPos = (prjGlobals.loopStart/(double)TICKS_QUARTER);
     timeinfo.cycleEndPos = ((prjGlobals.loopStart+prjGlobals.loopLen)/(double)TICKS_QUARTER);
-    timeinfo.timeSigNumerator = prjGlobals.signatureNum;
+    timeinfo.timeSigNumerator = static_cast<VstInt32>(prjGlobals.signatureNum);
     timeinfo.timeSigDenominator = 1 << prjGlobals.signatureDenom;
 
     bool loopEnabed = state != playback_state::status_render && prjGlobals.loopEnabled;
@@ -2478,6 +2478,8 @@ void vsthost::processAudio(audio_stage_t* stage,
                         }
 
                         //TODO: apply filtered sample accurate volume automation
+
+                        // keep fast path?!
                         float fGainRaw = 0.0f;
                         //TODO: validate that processingPosLatencyCompensate is correct here. (post delay line/pre delay line timepos)
                         bool bSuccess = DAW::resolveAutomationAtTime(this, tracksrc.gainAutomation, processingPosLatencyCompensate, &fGainRaw);
