@@ -245,7 +245,7 @@ public:
     void setLabel(String _str) {
         label = std::move(_str);
     }
-    String getLabel() const {
+    virtual String getLabel() const {
         if (label.empty()) {
             return getClassName();
         }

@@ -12,6 +12,7 @@
 #include "gui/automation/automatable.h"
 #include "trackautomation.h"
 #include "gui/cliprenderer/cliprenderer.h"
+#include "gui/track/trackcontrols.h"
 
 bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset);
 bool getClippedPosSize(const ivec2& parentSize, ivec2& posClipped, ivec2& sizeClipped);
@@ -276,10 +277,8 @@ public:
     void handleRightClick(MouseEvent& evt) override;
 };
 
-class gui_track : public guictr_base {
+class gui_track : public gui_track_content_base {
 protected:
-    track_t* const m_track;
-    track_gui_entry_t* const m_trackentry;
     gui_track_automation automation;
     int subtrackIdx = -1;
 

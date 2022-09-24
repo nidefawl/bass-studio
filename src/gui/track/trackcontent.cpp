@@ -11,6 +11,7 @@
 #include "gui/tooltip/tooltip.h"
 #include "gui/contextmenu/contextmenu_daw.h"
 #include "gui/contextmenu/contextmenu_grid.h"
+#include "gui/plugin/pluginctr.h"
 
 #include "basectrl.h"
 #include "host/mainctrl.h"
@@ -335,7 +336,7 @@ void gui_clip::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
 }
 
 gui_track::gui_track(track_gui_entry_t* _entry, scaled_grid& _grid)
-    : guictr_base(), m_track(_entry->track), m_trackentry(_entry), automation(_entry, _grid, _entry->state.selectedAutomationCtr, _entry->state.selectedAutomationParam, subtrackIdx) {
+    : gui_track_content_base(_entry), automation(_entry, _grid, _entry->state.selectedAutomationCtr, _entry->state.selectedAutomationParam, subtrackIdx) {
     padding = 0;
 }
 
@@ -376,6 +377,12 @@ void gui_track::updateVisibleTrackContents(project_globals_t& project, scaled_gr
 }
 
 bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    if (this->contains(mpos)) {
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+            evt.requestFocus(this);
+            return true;
+        }
+    }
     if (automation.mouseHitTest(mpos, evt)) {
         return true;
     }

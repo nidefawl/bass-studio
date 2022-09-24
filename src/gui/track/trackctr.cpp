@@ -439,10 +439,9 @@ void guictr_tracks::render(NVGcontext* vg) {
         nvgTranslate(vg, 0, trackView.top());
         auto& dragDropTarget = dawCtrl->getDragDropTarget();
         if (dragDropTarget.src) {
-            auto* trackMixers = static_cast<guitrack_mixers*>(dragDropTarget.src);
-            int n       = trackMixers->theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
+            int n       = this->theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
             auto bgPos  = ivec2(n);
-            auto bgSize = trackMixers->getSizeContent() - ivec2(n * 2);
+            auto bgSize = this->getSizeContent() - ivec2(n * 2);
             if (bgSize.x > 0 && bgSize.y > 0) {
                 nvgGlobalAlpha(vg, 0.5f);
                 nvgBeginPath(vg);
@@ -462,8 +461,8 @@ void guictr_tracks::render(NVGcontext* vg) {
         horizontalLineAt(this, vg, indicatorPos);
 
         int fontScale = titleHeight;
-        String str    = StringFormat("%s[%d]", StringAsCStr(static_cast<gui_track_controls*>(target.dst)->m_track->name), target.slotIdx);
-        renderCenteredMultilineText(vg, theme, str, fontScale, getLabelColor(), indicatorPos + ivec2(size.x, 0), ivec2(titleHeight * 30, titleHeight * 2));
+        auto str = target.dst->getLabel() + StringFormat("[%d]", target.slotIdx);
+        renderCenteredMultilineText(vg, theme, str, fontScale, getLabelColor(), indicatorPos, ivec2(titleHeight * 30, titleHeight * 2));
 
         nvgRestore(vg);
     }
@@ -571,197 +570,13 @@ void guitrack_editor::removeSubtrack(track_gui_entry_t* entry, gui_track_subtrac
         subTr->idx = idx++;
     }
 }
-class gui_track_drop_position_t {
-public:
-    enum drop_type {
-        none,
-        track_on,
-        track_before,
-        track_after
-    };
-    int slot = 0;
-    track_gui_entry_t* droppedTrack;
-    drop_type droptype = none;
-    ivec2 pos{};
-};
-gui_track_drop_position_t slotFromCoord(guictr_tracks* parent, track_gui_entry_t* trackEntryDragged, const ivec2 _pos) {
-    const int dropMaxDistance = 32;
 
-    using drop_type = gui_track_drop_position_t::drop_type;
-
-    auto& trackList      = parent->guiMgr.getTracksVisibleFlat();
-    int minDistDragPoint = std::numeric_limits<int32_t>::max();
-    gui_track_drop_position_t minSlot{ 0, nullptr, drop_type::none, { 0, 0 } };
-    auto checkDropPoint = [](int32_t minY, int32_t maxY, int mouseY) -> int32_t {
-        if (mouseY >= minY && mouseY < maxY) {
-            return math::abs(minY + (maxY - minY) / 2 - mouseY);
-        }
-        return -1;
-    };
-    const auto itcBegin = trackList.crbegin();
-    const auto itcEnd   = trackList.crend();
-
-    for (auto it = itcBegin; it != itcEnd; it++) {
-        int32_t slotIdx = itcEnd - it - 1;
-        //track_t* track = *it;
-        //track_gui_entry_t trackEntryNeighbour;
-        //if (!trackEntryDragged.parent->getTrackEntry(track, trackEntryNeighbour)) {
-        //continue;
-        //}
-        //if (!trackEntryDragged.parent->isTrackEntryVisible(trackEntryNeighbour))
-        //continue;
-        track_gui_entry_t* pTrackEntryNeighbour = *it;
-
-        auto* gui = pTrackEntryNeighbour->content;
-        dbgassert(gui->isVisible());
-        int32_t distDragPoint = checkDropPoint(gui->pos.y - dropMaxDistance, gui->pos.y + dropMaxDistance, _pos.y);
-        if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
-            minDistDragPoint = distDragPoint;
-            minSlot = { slotIdx, pTrackEntryNeighbour, drop_type::track_before, { gui->pos.x, gui->pos.y } };
-        }
-        distDragPoint = checkDropPoint(gui->pos.y + dropMaxDistance, gui->pos.y + gui->size.y - dropMaxDistance, _pos.y);
-        if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
-            minDistDragPoint = distDragPoint;
-            minSlot = { slotIdx, pTrackEntryNeighbour, drop_type::track_on, { gui->pos.x, gui->pos.y + gui->size.y / 2 } };
-        }
-        if (pTrackEntryNeighbour->track->children.empty()) {
-            distDragPoint = checkDropPoint(gui->pos.y + gui->size.y - dropMaxDistance, gui->pos.y + gui->size.y + dropMaxDistance, _pos.y);
-            if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
-                minDistDragPoint = distDragPoint;
-                minSlot = { slotIdx, pTrackEntryNeighbour, drop_type::track_after, { gui->pos.x, gui->pos.y + gui->size.y } };
-            }
-        }
-    }
-    return minSlot;
-}
-namespace {
-    using drop_type = gui_track_drop_position_t::drop_type;
-    void handleTrackEntryDragMove(guictr_tracks* parent, track_gui_entry_t* entry, ivec2 mousepos) {
-        parent->dawCtrl->getDragDropTarget().reset();
-        gui_track_drop_position_t slot = slotFromCoord(parent, entry, mousepos);
-
-        dbgassert(slot.droptype == drop_type::none || slot.droppedTrack);
-        int32_t treeIdx = 0;
-        track_gui_entry_t* targetTrack = nullptr;
-        switch (slot.droptype) {
-            case drop_type::none:
-                return;
-            case drop_type::track_on:
-                //insert into slot.droppedTrack at end
-                targetTrack = slot.droppedTrack;
-                treeIdx     = !slot.droppedTrack->track->children.empty() ? slot.droppedTrack->track->children.back()->childIdxTree : 0;
-                break;
-            case drop_type::track_before:
-                //insert into slot.droppedTrack->parent before slot.droppedTrack
-                targetTrack = getParentOf(slot.droppedTrack);
-                treeIdx     = slot.droppedTrack->track->childIdxTree;
-                break;
-            case drop_type::track_after:
-                //insert into slot.droppedTrack->parent after slot.droppedTrack
-                targetTrack = getParentOf(slot.droppedTrack);
-                {
-                    int idx = slot.droppedTrack->track->childIdxTree + 1;
-                    auto* p = getParentOf(slot.droppedTrack);
-                    while (p && idx == CtrSize(p->track->children)) {
-                        idx = p->track->childIdxTree + 1;
-                        p   = getParentOf(p);
-                    }
-                    targetTrack = p;
-                    treeIdx     = idx;
-                }
-                break;
-            default:
-                dbgassert(0);
-                return;
-        }
-
-        dragdrop_target_indicator_t target;
-        guibase* parentGui = targetTrack ? (guibase*) targetTrack->mixer : (guibase*) parent;
-        switch (slot.droptype) {
-            case drop_type::track_on:
-                target = { dragdrop_target_indicator_t::target_area, treeIdx, parent, parentGui, slot.droppedTrack->mixer->pos + ivec2(0, slot.droppedTrack->mixer->size.y / 2) };
-                break;
-            case drop_type::track_before:
-                target = { dragdrop_target_indicator_t::target_line, treeIdx, parent, parentGui, slot.droppedTrack->mixer->pos + ivec2(0, 2) };
-                break;
-            case drop_type::track_after:
-                target = { dragdrop_target_indicator_t::target_line, treeIdx, parent, parentGui, slot.droppedTrack->mixer->pos + ivec2(0, slot.droppedTrack->mixer->size.y - 2) };
-                break;
-            case drop_type::none:
-                return;
-            default:
-                dbgassert(0);
-                return;
-        }
-        parent->dawCtrl->getDragDropTarget() = target;
-    }
-    void handleTrackEntryDragRelease(guictr_tracks* parent, track_gui_entry_t* entry, ivec2 mousepos) {
-        gui_track_drop_position_t slot = slotFromCoord(parent, entry, mousepos);
-        int32_t treeIdx = 0;
-        track_gui_entry_t* targetTrack = nullptr;
-        dbgassert(slot.droptype == drop_type::none || slot.droppedTrack);
-        switch (slot.droptype) {
-            case drop_type::none:
-                return;
-            case drop_type::track_on:
-                //insert into slot.droppedTrack at end
-                targetTrack = slot.droppedTrack;
-                treeIdx     = !slot.droppedTrack->track->children.empty() ? slot.droppedTrack->track->children.back()->childIdxTree : 0;
-                break;
-            case drop_type::track_before:
-                //insert into slot.droppedTrack->parent before slot.droppedTrack
-                targetTrack = getParentOf(slot.droppedTrack);
-                treeIdx     = slot.droppedTrack->track->childIdxTree;
-                break;
-            case drop_type::track_after:
-                //insert into slot.droppedTrack->parent after slot.droppedTrack
-                targetTrack = getParentOf(slot.droppedTrack);
-                {
-                    int idx = slot.droppedTrack->track->childIdxTree + 1;
-                    auto* p = getParentOf(slot.droppedTrack);
-                    while (p && idx == CtrSize(p->track->children)) {
-                        idx = p->track->childIdxTree + 1;
-                        p   = getParentOf(p);
-                    }
-                    targetTrack = p;
-                    treeIdx     = idx;
-                }
-                break;
-            default:
-                dbgassert(0);
-                return;
-        }
-        track_t* track = entry->track;
-        if (TRACKTYPE_TO_CTR(slot.droppedTrack->track->type) != TRACKTYPE_TO_CTR(track->type)) {
-            log_printf("Cannot move there\n");
-            return;
-        }
-        track_tree_pos_t treePos{};
-        treePos.treeIdx      = treeIdx;
-        treePos.parent       = targetTrack ? targetTrack->track : nullptr;
-        treePos.trackTypeCtr = TRACKTYPE_TO_CTR(track->type);
-        std::vector<track_t*> selectedTracks;
-        selectedTracks.push_back(track);
-        auto daw = parent->dawCtrl->getDaw();
-        ThreadLock lock  = daw->lockPlayThread();
-        bool failed      = !daw->getTracks().moveTracks(selectedTracks, treePos);
-        String strTarget = "<root>";
-        if (treePos.parent) {
-            strTarget = treePos.parent->name;
-        }
-        log_printf("Moving %zu tracks to %s[%d] %s\n", selectedTracks.size(), StringAsCStr(strTarget), treePos.treeIdx, failed ? "Failed" : "Success");
-
-        daw->getHost()->onTrackLayoutChange();
-        daw->updateVisibleTrackContents();
-        //TODO: edithistory entry
-    }
-}// namespace
 bool guitrack_editor::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
     if (this->contains(v)) {
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-            evt.requestFocus(this);
-            return true;
-        }
+        // if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+        //     evt.requestFocus(this);
+        //     return true;
+        // }
         if (evt.type == MOUSE_DRAGDROP_CLIP) {
             evt.requestFocus(this);
             return true;
@@ -779,18 +594,7 @@ bool guitrack_editor::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
     }
     return false;
 }
-void guitrack_editor::trackEntryDragMove(gui_track* g, ivec2 mousepos) {
-    handleTrackEntryDragMove(static_cast<guictr_tracks*>(parent), g->getTrackEntry(), mousepos);
-}
-void guitrack_mixers::trackEntryDragMove(gui_track* g, ivec2 mousepos) {
-    handleTrackEntryDragMove(static_cast<guictr_tracks*>(parent), g->getTrackEntry(), mousepos);
-}
-void guitrack_editor::trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
-    handleTrackEntryDragRelease(static_cast<guictr_tracks*>(parent), g->getTrackEntry(), mousepos);
-}
-void guitrack_mixers::trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
-    handleTrackEntryDragRelease(static_cast<guictr_tracks*>(parent), g->getTrackEntry(), mousepos);
-}
+
 void guitrack_editor::addTrackEntry(track_gui_entry_t& e) {
 
     add(e.content);

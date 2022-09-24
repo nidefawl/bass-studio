@@ -134,7 +134,6 @@ public:
         evt.guiDragged->trackViewDragRelease(this, evt);
     }
 
-
     void setSelectionRange(clip_t* clicked, track_gui_entry_t* trackClicked) {
         cursor.selRange      = clicked->getLen();
         cursor.selTrackRange = 0;
@@ -143,14 +142,12 @@ public:
         cursor.cursorSubTrack   = -1;
         cursor.selSubTrackRange = 0;
     }
-    void addSubtrack(track_gui_entry_t* entry, gui_track_subtrack* al, bool insertFront);
 
+    void addSubtrack(track_gui_entry_t* entry, gui_track_subtrack* al, bool insertFront);
     void removeSubtrack(track_gui_entry_t* entry, gui_track_subtrack* al);
     void removeAllAutomationLanes(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx);
     void removeAllAutomationLanes(track_gui_entry_t* entry, automatable_t* at);
     void removeAllSubtracks(track_gui_entry_t* entry);
-    void trackEntryDragMove(gui_track* g, ivec2 mousepos) override;
-    void trackEntryDragRelease(gui_track* g, ivec2 mousepos) override;
     void addTrackEntry(track_gui_entry_t& e);
     void removeTrackEntry(track_gui_entry_t& e);
     void layout() override;
@@ -171,10 +168,10 @@ public:
     }
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override {
         if (this->contains(v)) {
-            if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-                evt.requestFocus(this);
-                return true;
-            }
+            // if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+            //     evt.requestFocus(this);
+            //     return true;
+            // }
             ivec2 localMouse = this->toContainerSpace(v);
             for (guibase* gui : guis) {
                 if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
@@ -196,8 +193,6 @@ public:
     }
     void handleRightClick(MouseEvent& evt) override;
     void render(NVGcontext* vg) override;
-    void trackEntryDragMove(gui_track* g, ivec2 mousepos) override;
-    void trackEntryDragRelease(gui_track* g, ivec2 mousepos) override;
     void addTrackEntry(track_gui_entry_t& e);
     void removeTrackEntry(track_gui_entry_t& e);
     void layout() override {

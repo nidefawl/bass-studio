@@ -1513,10 +1513,19 @@ void MainCtrl::onTick() {
         track_gui_entry_t* tr  = nullptr;
         int32_t hoverTicks     = 0;
         guictr_base& ctrMixers = view->ctr_tracks.trackControls;
+        guictr_base& ctrTrackView = view->ctr_tracks.trackView;
         if (view->ctr_tracks.isVisible()) {
             ivec2 trackViewLocalPos = toControlsObjectSpace(m_mousePos, &view->ctr_tracks);
+            ivec2 posRelative(0, 0);
+            bool bHit = false;
             if (ctrMixers.contains(trackViewLocalPos)) {
-                ivec2 posRelative = m_mousePos - ctrMixers.toScreenSpace(ivec2(0));
+                posRelative = m_mousePos - ctrMixers.toScreenSpace(ivec2(0));
+                bHit = true;
+            } else if (ctrTrackView.contains(trackViewLocalPos)) {
+                posRelative = m_mousePos - ctrTrackView.toScreenSpace(ivec2(0));
+                bHit = true;
+            }
+            if (bHit) {
                 tr = getTrackFromMouse(this->view->ctr_tracks.guiMgr, posRelative);
                 if (tr && tr == lastHoveredTrack && daw.getSelectedTrack() != tr->track) {
                     hoverTicks = lastHoveredTrackTicks + 1;

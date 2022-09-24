@@ -88,6 +88,7 @@ public:
     Table::tbl table;
     guictr_dragged_plugins() : guictr_base(gui_type::CTR_TYPE_PLUGINS_DRAGGED) {
         pos = { 0, 0 };
+        setDragRendered(true);
     }
     ~guictr_dragged_plugins() override = default;
     void layout() override {
@@ -128,6 +129,18 @@ public:
         guibase::setControl(parentCtrl);
         placeholder.setControl(parentCtrl);
         dragged.setControl(parentCtrl);
+    }
+    void makeVisisble(guibase* g) {
+        int w          = getSizeContent().x;
+        int totalWidth = getTotalWidth();
+        if (w < totalWidth) {
+            int x = g->pos.x;
+            if (x < scrolloffset) {
+                scrolloffset = x;
+            } else if (x + g->size.x > scrolloffset + w) {
+                scrolloffset = x + g->size.x - w;
+            }
+        }
     }
     void setScrolloffset(int offset) {
         if (offset < 0) {
@@ -273,4 +286,37 @@ public:
     void undo(DawInstance* daw) override;
     void redo(DawInstance* daw) override;
     void releaseResources(DawInstance* daw) override;
+};
+class action_move_modules : public action_base {
+    audio_stage_ref_t refdst;
+    audio_stage_ref_t refsrc;
+    int32_t dst;
+    int32_t src;
+    int32_t len;
+
+protected:
+public:
+    action_move_modules(String s, audio_stage_ref_t _refdst, audio_stage_ref_t _refsrc, int32_t _dst, int32_t _src, int32_t _len)
+        : action_base(), refdst(_refdst), refsrc(_refsrc), dst(_dst), src(_src), len(_len) {
+        desc = std::move(s);
+    }
+    void undo(DawInstance* daw) override;
+    void redo(DawInstance* daw) override;
+};
+
+class action_insert_effect : public action_base {
+    effectbase* effect;
+    audio_stage_ref_t ref;
+    int32_t dstSlot;
+    bool weOwn = false;
+
+protected:
+public:
+    action_insert_effect(String s, effectbase* _effect, audio_stage_ref_t _ref, int32_t _dst)
+        : action_base(), effect(_effect), ref(_ref), dstSlot(_dst) {
+        desc = std::move(s);
+    }
+    void releaseResources(DawInstance* daw) override;
+    void undo(DawInstance* daw) override;
+    void redo(DawInstance* daw) override;
 };

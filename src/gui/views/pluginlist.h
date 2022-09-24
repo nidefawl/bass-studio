@@ -16,16 +16,20 @@
 class effectbase;
 class gui_pluginlist_entry : public gui_list_entry {
 public:
-    gui_pluginlist_entry() = default;
+    gui_pluginlist_entry() { setDragRendered(true); };
     ~gui_pluginlist_entry() override = default;
     virtual effectbase* makeInstance() = 0;
     virtual bool isSynth()             = 0;
+    void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override;
+
+    void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset);
 };
 class gui_vstpluginlist_entry : public gui_pluginlist_entry {
     const pluginentry_t entry;
 public:
     gui_vstpluginlist_entry(const pluginentry_t _entry) : gui_pluginlist_entry(), entry(_entry) {
         icon = _entry.isSynth ? ICON_SYNTH : ICON_EFFECT;
+        label = _entry.name;
     }
     void dragMoveOn(guibase* target, ivec2 mousepos) override {
         target->pluginEntryDragMove(this, toControlsObjectSpace(mousepos, target));
@@ -137,6 +141,7 @@ public:
     const module_desc_t entry;
     gui_modulelist_entry(const module_desc_t _entry) : gui_pluginlist_entry(), entry(_entry) {
         icon = _entry.isSynth ? ICON_SYNTH : ICON_EFFECT;
+        label = _entry.name;
     }
     void dragMoveOn(guibase* target, ivec2 mousepos) override {
         target->pluginEntryDragMove(this, toControlsObjectSpace(mousepos, target));
