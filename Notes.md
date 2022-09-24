@@ -73,6 +73,7 @@ ALT key to disable grid is not allowing note-resize below grid size
 notes border rendering not respecting z-order when note rectangles overlap  
 
 # TODO high priority
+add unit tests for vstscanner
 custom block length processing  
 per track samplerate / blocksize   
 test doing multiblock processing in tight loop to increase automation samplerate/resolution   
