@@ -604,7 +604,14 @@ public:
         auto cs = getSizeContent();
         shape.pos = controls.pos = {0,0};
         shape.size = controls.size = cs;
-        controls.size.y = math::clamp<int32_t>(size.y/8, 12, inputHeight);
+        auto controlsHeight = math::clamp<int32_t>(size.y/8, 12, inputHeight);
+        if (controlsHeight < inputHeight*2/3) {
+            controls.size.y = 0;
+            controls.setVisible(false);
+        } else {
+            controls.size.y = controlsHeight;
+            controls.setVisible(true);
+        }
         shape.pos.y = controls.bottom() + padding;
         shape.size.y = cs.y - controls.size.y;
         guictr_base::layout();
