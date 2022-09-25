@@ -703,29 +703,29 @@ bool AppCtrl::hasContextMenu() {
     return this->contextWindow && this->contextWindow->isShown();
 }
 bool AppCtrl::onCharInput(uint32_t codepoint) {
-    window_main* wnd = this->contextWindow;
-    if (wnd && wnd->isShown()) {
-        if (wnd->getCtrl()->hasInputFocus()) {
-            bool b = wnd->getCtrl()->onCharInput(codepoint);
-            if (b) {
-                wnd->requestRedraw();
-                return true;
-            }
-        }
-    }
+    // window_main* wnd = this->contextWindow;
+    // if (wnd && wnd->isShown()) {
+    //     if (wnd->getCtrl()->hasInputFocus()) {
+    //         bool b = wnd->getCtrl()->onCharInput(codepoint);
+    //         if (b) {
+    //             wnd->requestRedraw();
+    //             return true;
+    //         }
+    //     }
+    // }
     return BaseCtrl::onCharInput(codepoint);
 }
 bool AppCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) {
-    window_main* wnd = this->contextWindow;
-    if (wnd && wnd->isShown()) {
-        if (wnd->getCtrl()->hasInputFocus()) {
-            bool b = wnd->getCtrl()->onKeyInput(key, scancode, keyState, mods, key_name);
-            if (b) {
-                wnd->requestRedraw();
-                return true;
-            }
-        }
-    }
+    // window_main* wnd = this->contextWindow;
+    // if (wnd && wnd->isShown()) {
+    //     if (wnd->getCtrl()->hasInputFocus()) {
+    //         bool b = wnd->getCtrl()->onKeyInput(key, scancode, keyState, mods, key_name);
+    //         if (b) {
+    //             wnd->requestRedraw();
+    //             return true;
+    //         }
+    //     }
+    // }
     return BaseCtrl::onKeyInput(key, scancode, keyState, mods, key_name);
 }
 
