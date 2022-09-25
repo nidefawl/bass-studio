@@ -2879,6 +2879,11 @@ namespace PluginSynth {
             return this->impl->createViewCtrImpl();
         }
 
+        void setSampleFormat(sampleformat_t sampleFormat) override {
+            internalplugin::setSampleFormat(sampleFormat);
+            this->impl->setSamplerate(sampleFormat.sampleRate);
+        }
+
         param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override {
             if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
                 SynthParamBase* param = vecParams[idx-1];
