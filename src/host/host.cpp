@@ -277,27 +277,6 @@ public:
     }
 };
 
-
-static const double fSmpteDiv[] =
-{
-    24.f,
-    25.f,
-    24.f,
-    30.f,
-    29.97f,
-    30.f
-};
-
-static bool setFlag(int& _out, int flag, bool state) {
-    bool curState = _out&flag;
-    if (state) {
-        _out |= flag;
-    } else {
-        _out &= ~flag;
-    }
-    return curState != state;
-}
-
 void Host::getBlockThreadStats(std::vector<thread_stats_process_timings_t>& stats) {
     stats = impl->lastBlockThreadStats;
 }
@@ -357,79 +336,6 @@ void Host::setSampleFormat(const sampleformat_t& _sampleFormat) {
             }
         }
         PluginManager::updateSampleFormat(this->m_sampleFormatInternal);
-    }
-}
-
-static double PPQ24TickToSample(double midiTickPPQ24, uint32_t bpm100, samplerate_t samplerate, uint32_t blocksize) {
-    double seconds = (midiTickPPQ24/(double)(bpm100*24.0)) * 100.0 * 60.0;
-    double samplePos = seconds * samplerate;
-    return samplePos;
-}
-
-
-//\note VstTimeInfo::samplesToNextClock :
-//MIDI Clock Resolution (24 per Quarter Note), can be negative the distance to the next midi clock
-//        (24 ppq, pulses per quarter) in samples. unless samplePos falls precicely on a midi clock,
-//        this will either be negative such that the previous MIDI clock is addressed,
-//        or positive when referencing the following (future) MIDI clock.
-
-void Host::updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPos, playback_state state) const {
-    timeinfo.samplePos = samplePos;
-    timeinfo.sampleRate = (double) m_sampleFormatInternal.sampleRate;
-    timeinfo.nanoSeconds = getTimeMicros() * 1000.0;
-    timeinfo.ppqPos = (dTickPos/(double)TICKS_QUARTER);
-    timeinfo.tempo = prjGlobals.tempo100/100.0;
-    timeinfo.barStartPos = floor(dTickPos / (double) TICKS_BAR) * 4;
-    timeinfo.cycleStartPos = (prjGlobals.loopStart/(double)TICKS_QUARTER);
-    timeinfo.cycleEndPos = ((prjGlobals.loopStart+prjGlobals.loopLen)/(double)TICKS_QUARTER);
-    timeinfo.timeSigNumerator = static_cast<VstInt32>(prjGlobals.signatureNum);
-    timeinfo.timeSigDenominator = 1 << prjGlobals.signatureDenom;
-
-    bool loopEnabed = state != playback_state::status_render && prjGlobals.loopEnabled;
-    if (!loopEnabed) {
-        timeinfo.cycleStartPos = 0;
-        timeinfo.cycleEndPos = 0;
-    }
-
-    {
-        double dPosSeconds = samplePos / timeinfo.sampleRate;
-        /* offset in fractions of a second   */
-        double dOffsetInSecond = dPosSeconds - floor(dPosSeconds);
-        timeinfo.smpteFrameRate = VstSmpteFrameRate::kVstSmpte24fps;
-        timeinfo.smpteOffset = math::floordS32(dOffsetInSecond * fSmpteDiv[timeinfo.smpteFrameRate] * 80.);
-    }
-
-
-    double midiTickPPQ24 = timeinfo.ppqPos*24.0;
-    double samplePosMidiTick = PPQ24TickToSample(midiTickPPQ24, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate, m_sampleFormatInternal.blockSize);
-    double samplePosPrevMidiTick = PPQ24TickToSample(math::floord(midiTickPPQ24), prjGlobals.tempo100, m_sampleFormatInternal.sampleRate, m_sampleFormatInternal.blockSize);
-    double samplePosNextMidiTick = PPQ24TickToSample(math::ceild(midiTickPPQ24), prjGlobals.tempo100, m_sampleFormatInternal.sampleRate, m_sampleFormatInternal.blockSize);
-
-    double samplePosClosestPPQ24Tick = math::absMin(samplePosPrevMidiTick - samplePosMidiTick, samplePosNextMidiTick - samplePosMidiTick);
-    //TODO: assingn nearest clock (can be negative), not next aka soonest
-    timeinfo.samplesToNextClock = math::rounddS32(samplePosClosestPPQ24Tick);
-
-    {
-        if (&timeinfo == &pluginHostCallback->m_vstTimeInfo) {
-            bool changed = setFlag(timeinfo.flags, kVstTransportPlaying, DAW::isPlaybackState(state));
-            changed |= setFlag(timeinfo.flags, kVstTransportCycleActive, loopEnabed);
-            changed |= setFlag(timeinfo.flags, kVstTransportRecording, false);
-            setFlag(timeinfo.flags, kVstTransportChanged, changed);
-        } else {
-            // copy flags from shared time info
-            auto flags = kVstTransportPlaying | kVstTransportCycleActive | kVstTransportRecording | kVstTransportChanged;
-            timeinfo.flags = (timeinfo.flags & (~flags)) | (pluginHostCallback->m_vstTimeInfo.flags & flags);
-        }
-        setFlag(timeinfo.flags, kVstAutomationWriting, false);
-        setFlag(timeinfo.flags, kVstAutomationReading, false);
-        setFlag(timeinfo.flags, kVstNanosValid, true);
-        setFlag(timeinfo.flags, kVstPpqPosValid, true);
-        setFlag(timeinfo.flags, kVstTempoValid, true);
-        setFlag(timeinfo.flags, kVstBarsValid, true);
-        setFlag(timeinfo.flags, kVstCyclePosValid, true); //project.loopEnabled
-        setFlag(timeinfo.flags, kVstTimeSigValid, true);
-        setFlag(timeinfo.flags, kVstSmpteValid, true);
-        setFlag(timeinfo.flags, kVstClockValid, true);
     }
 }
 
@@ -540,14 +446,14 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble
 }
 
 void Host::preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings) {
-    pluginHostCallback->isOfflineRendering = true;
+    getHostCallback()->isOfflineRendering = true;
     for (auto* trackMaster : ctrl->getTracks().getMasterTracksFlatVecRef()) {
         trackMaster->getStage()->flags |= audiostageflags_t::RECORD_OUTPUT;
     }
 }
 
 void Host::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings) {
-    pluginHostCallback->isOfflineRendering = false;
+    getHostCallback()->isOfflineRendering = false;
     const tick_t tickBegin = exportSettings.exportPos;
     const tick_t tickEnd = tickBegin + exportSettings.exportLen;
     const samplerate_t sr = m_sampleFormatInternal.sampleRate;
@@ -710,7 +616,7 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
     const playback_state state = playback_state::status_render;
 
     PluginManager::onBeforeBlock(ctrl->getGlobals(), sample, posDouble, state);
-    PluginManager::UpdateVstTime(pluginHostCallback->m_vstTimeInfo, m_sampleFormatInternal, ctrl->getGlobals(), sample, posDouble, state);
+    PluginManager::UpdateVstTime(getHostCallback()->m_vstTimeInfo, m_sampleFormatInternal, ctrl->getGlobals(), sample, posDouble, state);
 
     int32_t samplePosProcess = sample;
     double tickPosProcess = posDouble;
@@ -910,7 +816,7 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
 
     if (canProcess) {
         PluginManager::onBeforeBlock(ctrl->getGlobals(), sample, posDouble, state);
-        PluginManager::UpdateVstTime(pluginHostCallback->m_vstTimeInfo, m_sampleFormatInternal, ctrl->getGlobals(), sample, posDouble, state);
+        PluginManager::UpdateVstTime(getHostCallback()->m_vstTimeInfo, m_sampleFormatInternal, ctrl->getGlobals(), sample, posDouble, state);
         processMidiRealtimeInput(ctrl, posDouble, state);
         if (enableProfiling) {
             stats.timings["Block.MidiRealtimeInput"] = timerProfile.getTime();
@@ -1706,9 +1612,9 @@ void Host::initThreads() {
 }
 
 void Host::onPlaybackJumpFromTo(project_controller_t* ctrl, int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) {
-    for (auto* stage : allAudioStages) {
+    visitAudioStageInstances([&](auto* stage) {
         stage->onPlaybackJumpFromTo(fromSamplePos, fromTickPos, toSamplePos, toTickPos);
-    }
+    });
 }
 
 void Host::onStartPlayback(project_controller_t* ctrl) {
@@ -1724,16 +1630,15 @@ void Host::onStartPlayback(project_controller_t* ctrl) {
 }
 
 void Host::onStopPlayback(project_controller_t* ctrl) {
-    pluginHostCallback->isOfflineRendering = false;
+    getHostCallback()->isOfflineRendering = false;
     midiRealtimeInput->m_list.clear();
-
-    for (auto stageImpl : allAudioStages) {
+    visitAudioStageInstances([](auto stageImpl) {
         //if (!trackImpl->heldNotes.empty())
         {
             stageImpl->sendNotesOff();
             stageImpl->onStopPlayback();
         }
-    }
+    });
 }
 
 void Host::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
@@ -1910,7 +1815,6 @@ void Host::processAudio(audio_stage_t* stage,
                     if (effect->pluginType == PLUGIN_TYPE_VST) {
                         VstTimeInfo timeinfo{};
                         PluginManager::UpdateVstTime(timeinfo, m_sampleFormatInternal, globals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
-                        updateTime(timeinfo, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
                         auto* ptr = dynamic_cast<vstplugin*>(effect)->getLocalTimeInfoPtr();
                         if (ptr) {
                             *ptr = timeinfo;
@@ -1950,27 +1854,12 @@ void Host::processAudio(audio_stage_t* stage,
 
 }
 
-bool Host::onTick() {
-    // Currently no lock
-    //ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-    for (auto* current : pluginInstances) {
-        //TODO: should we skip dispatching if current->bWantsEffIdle == false ?!
-        if (current->bEditOpen && !current->bInEditIdle) {
-            current->bInEditIdle = true;
-            current->bInEditIdle = false;
-            if (current->windowHost) {
-                //current->window->captureWindowFrame();
-                current->updateWindow();
-            }
-        }
-    }
-    checkScanner();
-    return false;
+void Host::onTick() {
+    PluginManager::onTick();
 }
 
 void Host::unload() {
-    dbgassert(!isStreaming()&&"STOP STREAM BEFORE unload()!");
-    unloadAllPlugins();
+    dbgassert(!isStreaming() && "Stream is not stopped");
 }
 
 void Host::destroy() {
@@ -1988,9 +1877,9 @@ bool Host::writeRecordedData(project_controller_t* ctrl) {
     bool bHasNewData = false;
     auto cache = audiocache::getInstance();
     auto daw = DawInstance::get();
-    for (auto& track : trackAudioStages) {
+    visitTrackAudioStageInstances([&](auto* track) {
         bHasNewData |= track->recorder.writeRecordedData(ctrl, track, cache, daw);
-    }
+    });
     return bHasNewData;
 }
 

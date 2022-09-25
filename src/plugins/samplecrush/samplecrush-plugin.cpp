@@ -71,7 +71,7 @@ namespace PluginSampleCrush {
 
     static constexpr int32_t PARAM_NUM_SAMPLES = 1;
 
-    module_samplecrush::module_samplecrush(int32_t _projectGlobalId, i_host_callback* _hostCallback)
+    module_samplecrush::module_samplecrush(int32_t _projectGlobalId, IHostCallback* _hostCallback)
         : internalplugin("Sample Crush", getModuleType(), _projectGlobalId, _hostCallback)
     {
         struct effectgain_param_entry {
@@ -134,6 +134,6 @@ namespace PluginSampleCrush {
 } // namespace PluginSampleCrush
 
 template<>
-effectbase* makeInstance<PluginSampleCrush::module_samplecrush>(int32_t _projectGlobalId, i_host_callback* _hostCallback) {
+effectbase* makeInstance<PluginSampleCrush::module_samplecrush>(int32_t _projectGlobalId, IHostCallback* _hostCallback) {
     return new PluginSampleCrush::module_samplecrush(_projectGlobalId, _hostCallback);
 }

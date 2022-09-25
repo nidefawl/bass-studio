@@ -66,7 +66,7 @@ void PluginManager::updateSampleFormat(const sampleformat_t& _sampleFormat) {
     }
 }
 
-void plugin_host_callback::onUiChanged(effectbase* effect) {
+void PluginHostCallback::onUiChanged(effectbase* effect) {
     if (effect) {
         // NOTE: this loop might kill performance
         effect->visitParams([](auto& mapEntry) {
@@ -140,7 +140,7 @@ void PluginManager::updatePluginWindows() {
     }
 }
 
-i_host_callback* PluginManager::getHostCallback() {
+IHostCallback* PluginManager::getHostCallback() {
     return pluginHostCallback.get();
 }
 
@@ -222,36 +222,7 @@ void PluginManager::removePlugin(effectbase* plugin) {
     onTrackLayoutChange();
 }
 
-
-bool PluginManager::unloadAllPlugins() {
-    dbgassert(pluginInstances.empty());
-    dbgassert(pluginInstancesVST2.empty());
-    dbgassert(pluginInstancesInternal.empty());
-    dbgassert(allAudioStages.empty());
-    dbgassert(trackAudioStages.empty());
-    //int count = list.size();
-    //for (int i = 0; i < count; ++i) {
-    //    vstplugin* current = list[i];
-    //    if (current->trackImpl) {
-    //        current->trackImpl->removePlugin(current, false);
-    //    }
-    //}
-    //for (int i = 0; i < count; ++i) {
-    //    vstplugin* current = list[i];
-    //    current->close();
-    //    list[i] = NULL;
-    //    current->unload(this);
-    //    moduleMgr->releaseModule(current->handle->hmodule);
-    //    delete current;
-    //}
-    //list.clear();
-    return true;
-}
-
 void PluginManager::getAllInstances(std::vector<effectbase*>& effects) {
-    //for (auto* as : allAudioStages) {
-    //    effects.insert(effects.end(), as->effects.begin(), as->effects.end());
-    //}
     effects = pluginInstances;
 }
 
@@ -392,6 +363,22 @@ bool PluginManager::insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int3
 void PluginManager::onPluginsChanged(audio_stage_t* stage) {
     log_printf("Plugins changed on audio stage %d\n", static_cast<int32_t>(stage->stageId.stageId));
     dbgassert(validateIds());
+}
+void PluginManager::onTick() {
+    // Currently no lock
+    //ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+    for (auto* current : pluginInstances) {
+        //TODO: should we skip dispatching if current->bWantsEffIdle == false ?!
+        if (current->bEditOpen && !current->bInEditIdle) {
+            current->bInEditIdle = true;
+            current->bInEditIdle = false;
+            if (current->windowHost) {
+                //current->window->captureWindowFrame();
+                current->updateWindow();
+            }
+        }
+    }
+    checkScanner();
 }
 
 bool PluginManager::postPluginLoaded(audio_stage_t* trp, effectbase* plugin) {
@@ -604,7 +591,7 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
 int loadPlugin_jbridge(audioMasterCallback audiomasterCallback, const String& filepath, HMODULE* hmodule, AEffect** aeffect, uint64_t bugfixFlags);
 #endif //_WIN32
 
-vstpluginloadres PluginManager::loadPlugin(String filepath, uint32_t uId, int32_t globalId, uint64_t bugfixFlags) {
+LoadResultVST2Plugin PluginManager::loadPlugin(String filepath, uint32_t uId, int32_t globalId, uint64_t bugfixFlags) {
     dbgassert(masterCallBackSlot);
 
     String path, name, nameWithoutExt;

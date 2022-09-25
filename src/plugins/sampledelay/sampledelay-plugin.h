@@ -16,7 +16,7 @@ namespace PluginSampleDelay {
     class module_sampledelay : public internalplugin {
 
     public:
-        explicit module_sampledelay(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+        explicit module_sampledelay(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 
         void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
         int getModuleType() override { return PLUGIN_TYPE_SAMPLE_DELAY; };

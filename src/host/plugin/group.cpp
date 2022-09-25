@@ -169,7 +169,7 @@ struct module_group::internal_handles_t {
     std::unique_ptr<guimodule_group> gui;
 };
 
-module_group::module_group(int32_t _projectGlobalId, i_host_callback* _hostCallback)
+module_group::module_group(int32_t _projectGlobalId, IHostCallback* _hostCallback)
     : internalplugin("Group", PLUGIN_TYPE_GROUP, _projectGlobalId, _hostCallback),
       handle(new module_group::internal_handles_t{ nullptr }),
       audio(nullptr)
@@ -364,6 +364,6 @@ void module_group::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot
 }
 
 template<>
-effectbase* makeInstance<module_group>(int32_t _projectGlobalId, i_host_callback* _hostCallback) {
+effectbase* makeInstance<module_group>(int32_t _projectGlobalId, IHostCallback* _hostCallback) {
     return new module_group(_projectGlobalId, _hostCallback);
 }

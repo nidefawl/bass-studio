@@ -38,7 +38,7 @@ struct module_empty::internal_handles_t {
     std::unique_ptr<guimodule_empty> gui;
 };
 
-module_empty::module_empty(int32_t _projectGlobalId, i_host_callback* _hostCallback)
+module_empty::module_empty(int32_t _projectGlobalId, IHostCallback* _hostCallback)
     : internalplugin("Empty", PLUGIN_TYPE_EMPTY, _projectGlobalId, _hostCallback),
       handle(new module_empty::internal_handles_t{ nullptr }) {
 }
@@ -68,6 +68,6 @@ void module_empty::process(AudioBlock* in, AudioBlock* out, double tick, double 
 }
 
 template<>
-effectbase* makeInstance<module_empty>(int32_t _projectGlobalId, i_host_callback* _hostCallback) {
+effectbase* makeInstance<module_empty>(int32_t _projectGlobalId, IHostCallback* _hostCallback) {
     return new module_empty(_projectGlobalId, _hostCallback);
 }

@@ -13,7 +13,7 @@ namespace PluginSampleCrush {
     class module_samplecrush : public internalplugin {
 
     public:
-        explicit module_samplecrush(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+        explicit module_samplecrush(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 
         int getModuleType() override { return PLUGIN_TYPE_SAMPLE_CRUSH; };
         void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;

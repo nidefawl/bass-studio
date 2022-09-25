@@ -61,7 +61,7 @@ namespace PluginStereoWidth {
         }
     }
 
-    module_stereowidth::module_stereowidth(int32_t _projectGlobalId, i_host_callback* _hostCallback)
+    module_stereowidth::module_stereowidth(int32_t _projectGlobalId, IHostCallback* _hostCallback)
         : internalplugin("Stereo Width", getModuleType(), _projectGlobalId, _hostCallback)
     {
         struct effectgain_param_entry {
@@ -148,6 +148,6 @@ namespace PluginStereoWidth {
 }// namespace PluginStereoWidth
 
 template<>
-effectbase* makeInstance<PluginStereoWidth::module_stereowidth>(int32_t _projectGlobalId, i_host_callback* _hostCallback) {
+effectbase* makeInstance<PluginStereoWidth::module_stereowidth>(int32_t _projectGlobalId, IHostCallback* _hostCallback) {
     return new PluginStereoWidth::module_stereowidth(_projectGlobalId, _hostCallback);
 }

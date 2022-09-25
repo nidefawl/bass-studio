@@ -57,7 +57,7 @@ public:
     AudioBlock* blockOutputs       = nullptr;// guaranteed to have at least 2 channels
     int32_t pluginType             = 0;
     int32_t projectGlobalId        = 0;
-    i_host_callback* hostCallback  = nullptr;
+    IHostCallback* hostCallback  = nullptr;
     bool bIsEnabled                = false;
     bool bEditOpen                 = false;
     bool bCaptureGUI               = false;
@@ -102,7 +102,7 @@ protected:
     void initMeters();
 
 public:
-    effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId, i_host_callback* _hostCallback);
+    effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback);
     ~effectbase() override;
     
     SafeRef<effectbase> makeSafeRef();
@@ -121,7 +121,7 @@ public:
     }
     virtual int32_t getEffectVersion() const { return 1; }
     virtual int32_t getUUID_U32() const { return 1; }
-    i_host_callback* getHostCallback() const { return hostCallback; }
+    IHostCallback* getHostCallback() const { return hostCallback; }
 
     virtual void onEnable(){};
     virtual void onDisable(){};
@@ -231,7 +231,7 @@ public:
     effect_deferred_impl* mImpl = nullptr;
 
 public:
-    effect_deferred(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+    effect_deferred(int32_t _projectGlobalId, IHostCallback* _hostCallback);
     ~effect_deferred() override;
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
     samplecount_t getPluginLatency() override;

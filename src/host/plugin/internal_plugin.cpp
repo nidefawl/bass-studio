@@ -132,7 +132,7 @@ automationlane_snapshot_t internalplugin::toRef() const {
     return ref;
 }
 
-internalplugin::internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId, i_host_callback* _hostCallback)
+internalplugin::internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback)
     : effectbase(std::move(_sName), _pluginType, _projectGlobalId, _hostCallback),
       handlesIntPlugin(new internalplugin_handles_t{}) {
     bSupportsWindowResize = true;

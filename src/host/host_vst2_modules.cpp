@@ -17,7 +17,7 @@ void PluginManager::registerModules() {
     builtinModules.push_back({ PLUG_INT_HOSTINFO, false, PluginHostInfo::getName(), PluginHostInfo::createPlugin });
     builtinModules.push_back({ PLUG_INT_SYNTH, true, PluginSynth::getName(), PluginSynth::createPlugin });
 }
-vstpluginloadres PluginManager::loadInternalPlugin(int32_t moduleId, int32_t globalId) {
+LoadResultVST2Plugin PluginManager::loadInternalPlugin(int32_t moduleId, int32_t globalId) {
     auto it = std::find_if(builtinModules.begin(), builtinModules.end(), [moduleId](auto& reg) {
         return reg.id == moduleId;
     });

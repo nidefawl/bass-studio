@@ -66,10 +66,10 @@ struct builtin_module_reg_t {
     FnCreateModule fnNewInstance;
 };
 
-class vstpluginloadres {
+struct LoadResultVST2Plugin {
 public:
-    vstpluginloadres(int32_t _result, vstplugin* _plugin) : result(_result), plugin(_plugin), shellPluginHandle(nullptr){};
-    vstpluginloadres(int32_t _result, vstplugin* _plugin, handles_t* _shellHandle, String _path, String _name)
+    LoadResultVST2Plugin(int32_t _result, vstplugin* _plugin) : result(_result), plugin(_plugin), shellPluginHandle(nullptr){};
+    LoadResultVST2Plugin(int32_t _result, vstplugin* _plugin, handles_t* _shellHandle, String _path, String _name)
         : result(_result), plugin(_plugin), shellPluginHandle(_shellHandle), path(std::move(_path)), name(std::move(_name)){};
     int32_t result;
     vstplugin* plugin;
@@ -79,11 +79,11 @@ public:
 };
 
 
-class plugin_host_callback : public i_host_callback {
+class PluginHostCallback : public IHostCallback {
     PluginManager* const host;
     public:
-    explicit plugin_host_callback(PluginManager* _host)
-    : i_host_callback(), host(_host) {
+    explicit PluginHostCallback(PluginManager* _host)
+    : IHostCallback(), host(_host) {
     }
     void onLatencyChanged(effectbase* effect) override {
         (void) host;
@@ -106,7 +106,7 @@ static constexpr channelnum_t DEFAULT_CHANNEL_COUNT = 2;
  * TODO: refactor this class: audiostages should be managed by separate class
  */
 class PluginManager {
-public:
+private:
     /**
     * pluginmanager internals
     */
@@ -118,9 +118,7 @@ public:
         int32_t vst2TransportStateFlags = 0;
     };
     pluginmanager_impl* const mgrImpl;
-private:
     void registerModules();
-protected:
     std::vector<audio_stage_t*> allAudioStages;
     std::vector<track_impl_t*> trackAudioStages;
     std::atomic<int32_t> pluginId{ 1 << 16 };
@@ -136,13 +134,11 @@ protected:
     std::vector<effectbase*> pluginsDeferred;
     std::vector<builtin_module_reg_t> builtinModules;
     SafeRefStorage<effectbase> safeRefs;
-    std::shared_ptr<plugin_host_callback> pluginHostCallback;
-    vstpluginloadres loadInternalPlugin(int32_t type, int32_t globalId = 0);
-    bool unloadAllPlugins();
+    std::shared_ptr<PluginHostCallback> pluginHostCallback;
+    LoadResultVST2Plugin loadInternalPlugin(int32_t type, int32_t globalId = 0);
     /* These are currently not called */
     void onPluginsChanged(audio_stage_t* stage);
     void updatePluginWindows();
-    i_host_callback* getHostCallback();
 public:
     std::function<void()> onTrackLayoutChange;
     static const int FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY    = 1;
@@ -151,10 +147,14 @@ public:
     PluginManager() noexcept;
     ~PluginManager();
     void setTls(daw_tls::tlsinstance& tls);
+    daw_tls::tlsinstance& getTls() const {
+        return mgrImpl->tls;
+    }
     void destroy();
     std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {
         return builtinModules;
     }
+    IHostCallback* getHostCallback();
     int32_t getNextSampleId(int32_t id);
     int32_t getNextGlobalModuleId(int32_t globalId);
 
@@ -162,7 +162,7 @@ public:
     void removePlugin(effectbase* plugin);
     void unloadTrack(track_t* track);
     effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1);
-    vstpluginloadres loadPlugin(String filepath, uint32_t uId, int32_t globalId = 0, uint64_t bugfixFlags = 0);
+    LoadResultVST2Plugin loadPlugin(String filepath, uint32_t uId, int32_t globalId = 0, uint64_t bugfixFlags = 0);
     effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
     void activateDeferred(effectbase* eff, int flags, effectbase** out_effectLoaded = nullptr);
     void updateSampleFormat(const sampleformat_t& _sampleFormat);
@@ -204,6 +204,19 @@ public:
     bool isScanning();
     void stopScanner();
     void releaseProjectResources();
+    void onTick();
+    template<typename Functor>
+    void visitAudioStageInstances(Functor f) {
+        std::for_each(allAudioStages.begin(), allAudioStages.end(), f);
+    }
+    template<typename Functor>
+    void visitTrackAudioStageInstances(Functor f) {
+        std::for_each(trackAudioStages.begin(), trackAudioStages.end(), f);
+    }
+    template<typename Functor>
+    void visitEffectbaseInstances(Functor f) {
+        std::for_each(pluginInstances.begin(), pluginInstances.end(), f);
+    }
 };
 
 } // namespace DAW::Host

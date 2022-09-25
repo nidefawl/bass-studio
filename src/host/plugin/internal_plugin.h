@@ -51,7 +51,7 @@ public:
     uint32_t uId            = 0;
     internal_plugin_window_client windowClient;
 
-    internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId, i_host_callback* _hostCallback);
+    internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback);
     ~internalplugin() override;
 
     samplecount_t getPluginLatency() override { return 0; };

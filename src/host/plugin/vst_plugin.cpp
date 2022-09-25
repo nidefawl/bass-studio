@@ -937,7 +937,7 @@ void vst_onException(vstplugin* plugin)
         log_lf(Log::L_ERROR, "segfault/fatal exception on %s\n", StringAsCStr(plugin->getName()));
     }
 }
-vstplugin::vstplugin(handles_t* _handle, int32_t globalId, i_host_callback* hostcallback, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags)
+vstplugin::vstplugin(handles_t* _handle, int32_t globalId, IHostCallback* hostcallback, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags)
     : effectbase(std::move(sName), PLUGIN_TYPE_VST, globalId, hostcallback),
       handle(_handle),
       internalModuleId(_moduleId),

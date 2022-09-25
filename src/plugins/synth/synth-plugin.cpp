@@ -2852,7 +2852,7 @@ namespace PluginSynth {
         std::vector<SynthParamBase*>& vecParams;
     public:
         using ThreadLock = std::lock_guard<std::recursive_mutex>;
-        explicit module_synth(int32_t _projectGlobalId, i_host_callback* _hostCallback)
+        explicit module_synth(int32_t _projectGlobalId, IHostCallback* _hostCallback)
             : internalplugin("Synth", getModuleType(), _projectGlobalId, _hostCallback),
           impl(new SynthImpl(this)),
           vecParams(impl->vecParams)
@@ -3237,7 +3237,7 @@ namespace PluginSynth {
 }// namespace PluginSynth
 
 template<>
-effectbase* makeInstance<PluginSynth::module_synth>(int32_t _projectGlobalId, i_host_callback* _hostCallback) {
+effectbase* makeInstance<PluginSynth::module_synth>(int32_t _projectGlobalId, IHostCallback* _hostCallback) {
     return new PluginSynth::module_synth(_projectGlobalId, _hostCallback);
 }
 

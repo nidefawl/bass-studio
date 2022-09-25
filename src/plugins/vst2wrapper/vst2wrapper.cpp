@@ -481,11 +481,11 @@ namespace PluginWrapper {
 
 
 #ifdef BUILD_EXTERNAL_VST2_PLUGIN
-class vst2_wrapper_host_callback : public i_host_callback {
+class HostCallbackVST2Wrapper : public IHostCallback {
     audioMasterCallback const host;
     PluginWrapper::PluginInternalVST2* vstInstance = nullptr;
     public:
-    explicit vst2_wrapper_host_callback(audioMasterCallback _host)
+    explicit HostCallbackVST2Wrapper(audioMasterCallback _host)
     : host(_host) {
     }
     void setVstInstance(PluginWrapper::PluginInternalVST2* _vstInstance) {
@@ -508,7 +508,7 @@ class vst2_wrapper_host_callback : public i_host_callback {
 };
 
 AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
-    auto* hostcallback = new vst2_wrapper_host_callback(audioMaster); // TODO: handler leaks
+    auto* hostcallback = new HostCallbackVST2Wrapper(audioMaster); // TODO: handler leaks
     internalplugin* eff = nullptr;
     switch (BUILD_EXTERNAL_VST2_PLUGIN) {
         case PLUGIN_TYPE_GAIN:

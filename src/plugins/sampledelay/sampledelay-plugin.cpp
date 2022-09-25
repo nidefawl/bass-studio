@@ -79,7 +79,7 @@ namespace PluginSampleDelay {
 
     static constexpr int32_t PARAM_DELAY = 1;
 
-    module_sampledelay::module_sampledelay(int32_t _projectGlobalId, i_host_callback* _hostCallback)
+    module_sampledelay::module_sampledelay(int32_t _projectGlobalId, IHostCallback* _hostCallback)
         : internalplugin("Sample Delay", getModuleType(), _projectGlobalId, _hostCallback)
     {
         struct effectgain_param_entry {
@@ -156,6 +156,6 @@ namespace PluginSampleDelay {
 } // namespace PluginSampleDelay
 
 template<>
-effectbase* makeInstance<PluginSampleDelay::module_sampledelay>(int32_t _projectGlobalId, i_host_callback* _hostCallback) {
+effectbase* makeInstance<PluginSampleDelay::module_sampledelay>(int32_t _projectGlobalId, IHostCallback* _hostCallback) {
     return new PluginSampleDelay::module_sampledelay(_projectGlobalId, _hostCallback);
 }

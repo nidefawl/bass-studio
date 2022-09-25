@@ -60,7 +60,7 @@ namespace
 
 struct vst_internal_hostslot {
     ::DAW::Host::PluginManager* g_instance = nullptr;
-    ::DAW::Host::plugin_host_callback* g_hostCallback = nullptr;
+    ::DAW::Host::PluginHostCallback* g_hostCallback = nullptr;
 };
 
 static vst_internal_hostslot g_hostslots[NUM_HOST_CB_SLOTS];
@@ -171,7 +171,7 @@ int32_t HostCanDo(const char* ptr) {
 /**
  * VST Host AudioMasterCallback
  */
-VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::plugin_host_callback* hostCallback, AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginHostCallback* hostCallback, AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
     dbgassert(host);
     // In case a plugin instance outlives the host
     if (!host)
@@ -188,7 +188,7 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::plugin_
     seqthreads::getThreadInfo(bIsKnownThread, bIsInternalThread);
     if (!bIsKnownThread) {
         seqthreads::registerThread("External", false);
-        daw_tls::setTls(host->mgrImpl->tls);
+        daw_tls::setTls(host->getTls());
         log_lf(Log::L_WARN, "(First) Request from external thread: Plugin '%s' opcode %d %d %zd %f\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), opcode, index, value, opt);
         bIsInternalThread = false;
     }
@@ -538,7 +538,7 @@ void PluginManager::destroy() {
 
 bool PluginManager::assignMasterCallback(PluginManager* host)
 {
-    host->pluginHostCallback = std::make_shared<::DAW::Host::plugin_host_callback>(host);
+    host->pluginHostCallback = std::make_shared<::DAW::Host::PluginHostCallback>(host);
     for (int i = 0; i < NUM_HOST_CB_SLOTS; i++) {
         if (DAW::VST2::g_hostslots[i].g_instance == nullptr) {
             DAW::VST2::g_hostslots[i].g_instance = host;

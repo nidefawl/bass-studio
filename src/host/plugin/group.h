@@ -19,7 +19,7 @@ class module_group : public internalplugin {
     audio_stage_t* audio;
     std::shared_ptr<DAW::effect_processing_graph_t> lastEffProcessingGraph;
 public:
-    explicit module_group(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+    explicit module_group(int32_t _projectGlobalId, IHostCallback* _hostCallback);
     ~module_group() override;
 
 public:

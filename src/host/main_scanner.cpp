@@ -238,7 +238,7 @@ struct vstscanner_server_options {
     int32_t unresponsiveTimeoutSeconds = timeoutdefault;
 };
 
-static void getPluginData(DAW::Host::vstpluginloadres& res, response_type_vst24_t* _out) {
+static void getPluginData(DAW::Host::LoadResultVST2Plugin& res, response_type_vst24_t* _out) {
     auto plugin = res.plugin;
     AEffect* aeffect     = plugin->handle->aeffect;
     _out->uniqueID       = aeffect->uniqueID;

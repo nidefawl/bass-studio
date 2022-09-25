@@ -109,7 +109,6 @@ private:
     SYNCHRONIZED_RW clip_notes_t* midiRealtimeInput;
 
 private:
-    void updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPos, playback_state state) const;
     void processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state);
     int32_t processGraph(project_controller_t* ctrl, const audiostream_properties_t& audioProp, processing_graph_t* processingGraph, AudioBlock* ptrExternalInputs, AudioBlock* ptrExternalOutputs, int32_t samplePosProcess, double tickPosProcess, playback_state state, bool inLoop, bool isLoopAround);
     int64_t writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplecount_t samplePos, samplecount_t numSamples);
@@ -142,7 +141,7 @@ public:
 
     void unload();
 
-    bool onTick();
+    void onTick();
     void onStartPlayback(project_controller_t* ctrl);
     void onStopPlayback(project_controller_t* ctrl);
     void onPlaybackJumpFromTo(project_controller_t* ctrl, int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos);

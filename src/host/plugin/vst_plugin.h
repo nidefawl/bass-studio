@@ -72,7 +72,7 @@ public:
         return map[opCode];
     }
 public:
-    vstplugin(handles_t* _handle, int32_t globalId, i_host_callback* hostcallback, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags);
+    vstplugin(handles_t* _handle, int32_t globalId, IHostCallback* hostcallback, String _sDir, String sName, int32_t _moduleId, int32_t _bugfixFlags);
     ~vstplugin() override;
     void onEnable() override;
     void onDisable() override;

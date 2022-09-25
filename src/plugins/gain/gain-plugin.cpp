@@ -104,7 +104,7 @@ namespace PluginGain {
         std::vector<float> vecPanR;
     };
 
-    module_gain::module_gain(int32_t _projectGlobalId, i_host_callback* _hostCallback)
+    module_gain::module_gain(int32_t _projectGlobalId, IHostCallback* _hostCallback)
         : internalplugin("Gain", getModuleType(), _projectGlobalId, _hostCallback),
         impl(new impl_data_t)
     {
@@ -238,6 +238,6 @@ namespace PluginGain {
 } // namespace PluginGain
 
 template<>
-effectbase* makeInstance<PluginGain::module_gain>(int32_t _projectGlobalId, i_host_callback* _hostCallback) {
+effectbase* makeInstance<PluginGain::module_gain>(int32_t _projectGlobalId, IHostCallback* _hostCallback) {
     return new PluginGain::module_gain(_projectGlobalId, _hostCallback);
 }

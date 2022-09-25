@@ -9,7 +9,7 @@ class module_empty : public internalplugin {
     internal_handles_t* handle;
 
 public:
-    explicit module_empty(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+    explicit module_empty(int32_t _projectGlobalId, IHostCallback* _hostCallback);
     ~module_empty() override;
 
 public:

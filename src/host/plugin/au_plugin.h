@@ -29,7 +29,7 @@ public:
     std::vector<String> programNames;
     std::vector<String> inputNames;
     std::vector<String> outputNames;
-    auplugin(handles_t* _handle, int32_t globalId, i_host_callback* hostcallback, String sDir, String sName)
+    auplugin(handles_t* _handle, int32_t globalId, IHostCallback* hostcallback, String sDir, String sName)
         : effectbase(sName, PLUGIN_TYPE_AU, globalId, hostcallback), handle(_handle) {
         this->sDir = sDir;
     }

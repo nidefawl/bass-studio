@@ -8,7 +8,7 @@ class module_latency : public internalplugin {
 public:
     const float DBFS_MUTE_POS = -101.0f;
     const float MTR_CEIL      = 24.0f;
-    explicit module_latency(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+    explicit module_latency(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     int getModuleType() override { return PLUGIN_TYPE_LATENCY; };

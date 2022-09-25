@@ -45,7 +45,7 @@ effectbase::~effectbase() {
     }
 }
 
-effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId, i_host_callback* _hostCallback)
+effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback)
     : pluginType(_pluginType), projectGlobalId(_projectGlobalId), hostCallback(_hostCallback), sName(std::move(_sName)) {
     struct effectbase_param_entry_t {
         int32_t id;
@@ -311,7 +311,7 @@ effect_deferred* PluginManager::loadPluginDeferred(const plugin_snapshot_t& snap
 
 } // namespace DAW::Host
 
-effect_deferred::effect_deferred(int32_t _projectGlobalId, i_host_callback* _hostCallback) 
+effect_deferred::effect_deferred(int32_t _projectGlobalId, IHostCallback* _hostCallback) 
 : effectbase("Deferred", PLUGIN_TYPE_DEFERRED, _projectGlobalId, _hostCallback)
 {
     initDefaultIODesc();

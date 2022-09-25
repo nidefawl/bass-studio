@@ -10,7 +10,7 @@ class module_gain : public internalplugin {
 public:
     const float DBFS_MUTE_POS = -101.0f;
     const float MTR_CEIL      = 24.0f;
-    explicit module_gain(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+    explicit module_gain(int32_t _projectGlobalId, IHostCallback* _hostCallback);
     ~module_gain() override;
 
     int getModuleType() override { return PLUGIN_TYPE_GAIN; };

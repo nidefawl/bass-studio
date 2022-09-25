@@ -22,13 +22,13 @@
 
 class effectbase;
 
-class i_host_callback {
+class IHostCallback {
     public:
     sampleformat_t m_sampleFormatInternal{};
     int32_t vstShellCurrentUniqueId = 0;
     VstTimeInfo m_vstTimeInfo{};
     bool isOfflineRendering = false;
-    virtual ~i_host_callback() = default;
+    virtual ~IHostCallback() = default;
     virtual void onLatencyChanged(effectbase* effect) = 0;
     virtual void onParametersChanged(effectbase* effect, int32_t idx, float val, int flags, int stage) = 0;
     virtual void onIOConfigChanged(effectbase* effect) = 0;
@@ -36,4 +36,4 @@ class i_host_callback {
 };
 
 template<typename T>
-effectbase* makeInstance(int32_t _projectGlobalId, i_host_callback* _hostCallback);
+effectbase* makeInstance(int32_t _projectGlobalId, IHostCallback* _hostCallback);
