@@ -27,7 +27,7 @@
 #include "effect_graph.h"
 #include "daw_channel.h"
 #include "util/profiling.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 
 
 #include <memory>
@@ -57,7 +57,7 @@ struct handles_t;
 typedef AEffect*(VSTPluginMain_t) (audioMasterCallback audioMasterCB);
 typedef AudioEffectX* (*FnCreateModule)(audioMasterCallback);
 
-namespace DAW {
+namespace DAW::Host {
 
 struct builtin_module_reg_t {
     int id = -1;
@@ -80,9 +80,9 @@ public:
 
 
 class plugin_host_callback : public i_host_callback {
-    pluginmanager* const host;
+    PluginManager* const host;
     public:
-    explicit plugin_host_callback(pluginmanager* _host)
+    explicit plugin_host_callback(PluginManager* _host)
     : i_host_callback(), host(_host) {
     }
     void onLatencyChanged(effectbase* effect) override {
@@ -101,7 +101,11 @@ class plugin_host_callback : public i_host_callback {
 // create tracks with 2 channels
 static constexpr channelnum_t DEFAULT_CHANNEL_COUNT = 2;
 
-class pluginmanager {
+/**
+ * @brief Manages lifetime of plugins and audio stages
+ * TODO: refactor this class: audiostages should be managed by separate class
+ */
+class PluginManager {
 public:
     /**
     * pluginmanager internals
@@ -132,7 +136,7 @@ protected:
     std::vector<effectbase*> pluginsDeferred;
     std::vector<builtin_module_reg_t> builtinModules;
     SafeRefStorage<effectbase> safeRefs;
-    std::shared_ptr<DAW::plugin_host_callback> pluginHostCallback;
+    std::shared_ptr<plugin_host_callback> pluginHostCallback;
     vstpluginloadres loadInternalPlugin(int32_t type, int32_t globalId = 0);
     bool unloadAllPlugins();
     /* These are currently not called */
@@ -143,9 +147,9 @@ public:
     std::function<void()> onTrackLayoutChange;
     static const int FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY    = 1;
     static const int FLAG_HOST_FORCELOAD_DISABLED_PLUGINS = 2;
-    static bool assignMasterCallback(pluginmanager* host);
-    pluginmanager() noexcept;
-    ~pluginmanager();
+    static bool assignMasterCallback(PluginManager* host);
+    PluginManager() noexcept;
+    ~PluginManager();
     void setTls(daw_tls::tlsinstance& tls);
     void destroy();
     std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {
@@ -202,4 +206,4 @@ public:
     void releaseProjectResources();
 };
 
-} // namespace DAW
+} // namespace DAW::Host

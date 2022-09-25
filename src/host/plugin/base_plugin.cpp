@@ -18,7 +18,7 @@
 #include "gui/controls/button.h"
 #include "gui/plugin/pluginctr.h"
 #include "host/mainctrl.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "host/host_plugin_window.h"
 
 track_t* effectbase::getTrack() {
@@ -82,7 +82,7 @@ sampleformat_t effectbase::getSampleFormat() {
     return format;
 }
 
-void effectbase::load(DAW::pluginmanager* host) {
+void effectbase::load(DAW::Host::PluginManager* host) {
     pluginMgr = host;
     if (assert_expr(hostCallback))
         setSampleFormat(hostCallback->m_sampleFormatInternal);
@@ -93,7 +93,7 @@ void effectbase::load(DAW::pluginmanager* host) {
     bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
 }
 
-void effectbase::unload(DAW::pluginmanager* host, int flags) {
+void effectbase::unload(DAW::Host::PluginManager* host, int flags) {
     dbgassert(host == pluginMgr);
     pluginMgr = nullptr;
     dbgassert(nLoadCalls == 1);
@@ -291,9 +291,9 @@ effect_deferred* effectbase::toDeferred() {
     return def;
 }
 
-namespace DAW {
+namespace DAW::Host {
 
-effect_deferred* pluginmanager::loadPluginDeferred(const plugin_snapshot_t& snapshot) {
+effect_deferred* PluginManager::loadPluginDeferred(const plugin_snapshot_t& snapshot) {
     auto def                = new effect_deferred(snapshot.projectGlobalId, getHostCallback());
     def->mImpl              = new effect_deferred_impl();
     def->sName              = snapshot.name;
@@ -309,7 +309,7 @@ effect_deferred* pluginmanager::loadPluginDeferred(const plugin_snapshot_t& snap
     return def;
 }
 
-} // namespace DAW
+} // namespace DAW::Host
 
 effect_deferred::effect_deferred(int32_t _projectGlobalId, i_host_callback* _hostCallback) 
 : effectbase("Deferred", PLUGIN_TYPE_DEFERRED, _projectGlobalId, _hostCallback)
@@ -369,7 +369,7 @@ void guideferred::buttonClicked(guibase* _button) {
         auto dawCtrlCopy = dawCtrl;
         auto lock = dawCtrlCopy->lockPlayThread();
         auto pluginMgr = dawCtrlCopy->getDaw()->getPluginManager();
-        pluginMgr->activateDeferred(module, DAW::pluginmanager::FLAG_HOST_FORCELOAD_DISABLED_PLUGINS);
+        pluginMgr->activateDeferred(module, DAW::Host::PluginManager::FLAG_HOST_FORCELOAD_DISABLED_PLUGINS);
         // do not access this from here to function exit
         dawCtrlCopy->onPluginsChanged();
     }

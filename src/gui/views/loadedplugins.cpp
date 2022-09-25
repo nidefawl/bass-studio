@@ -411,7 +411,7 @@ public:
             for (auto plugin : pluginsDeferred) {
                 log_printf("activate %s\n", StringAsCStr(plugin->sName));
                 effectbase* effectLoaded = nullptr;
-                host->activateDeferred(plugin, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &effectLoaded);
+                host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &effectLoaded);
 
                 if (effectLoaded) {
                     //effectLoaded->show();

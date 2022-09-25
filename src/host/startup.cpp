@@ -5,7 +5,7 @@
 
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
-#include "pluginmanager.h"
+#include "host_pluginmanager.h"
 #include "midiarp.h"
 #include "track_impl.h"
 #include "logging.h"
@@ -15,7 +15,7 @@
 #include "commands.h"
 #include "gui/track/subtrack.h"
 #include "appconfig.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 
 void setLoopPosition(DawCtrl* dawCtrl, float fStart, float fLength) {
     DawInstance* dawInstance = dawCtrl->getDaw();

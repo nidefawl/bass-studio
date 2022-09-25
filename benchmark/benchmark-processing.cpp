@@ -19,10 +19,10 @@
 #include "host/midiarp.h"
 #include "host/mainctrl.h"
 #include "host/projectcontroller.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "types.h"
 #include "util/testing_environment.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 
 #include <memory>
 #include <functional>

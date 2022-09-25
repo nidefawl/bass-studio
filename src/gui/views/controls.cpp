@@ -429,7 +429,7 @@ bool gui_tempocontrol_input::handleKeyInput(KeyEvent& kevt) {
 }
 bool guibutton_audioengine::getState() const {
     // TODO: get rid of getInstance call (required in settings dialog window)
-    return DAW::pluginhost::getInstance()->isStreaming();
+    return DAW::Host::getInstance()->isStreaming();
 }
 void gui_signaturecontrol_input::render(NVGcontext* vg) {
     int32_t fl = getStateFlags();

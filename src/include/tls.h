@@ -1,8 +1,8 @@
 #pragma once
 
-namespace DAW {
-    class pluginhost;
-    class pluginmanager;
+namespace DAW::Host {
+    class Host;
+    class PluginManager;
 }
 class audiohost;
 class midihost;
@@ -16,18 +16,18 @@ struct appruntime;
 struct appsettings;
 namespace daw_tls {
     struct tlsinstance {
-        appruntime* runtime              = nullptr;
-        appsettings* settings            = nullptr;
-        DawInstance* dawInstance         = nullptr;
-        DAW::pluginhost* host             = nullptr;
-        DAW::pluginmanager* pluginManager = nullptr;
-        audiohost* audioHost             = nullptr;
-        midihost* midiHost               = nullptr;
-        MainCtrl* mainCtrl               = nullptr;
-        audiocache* audioCache           = nullptr;
-        plugindatabase_t* pluginDatabase = nullptr;
-        project_controller_t* project    = nullptr;
-        bool tlsInitialized              = false;
+        appruntime* runtime               = nullptr;
+        appsettings* settings             = nullptr;
+        DawInstance* dawInstance          = nullptr;
+        DAW::Host::Host* host       = nullptr;
+        DAW::Host::PluginManager* pluginManager = nullptr;
+        audiohost* audioHost              = nullptr;
+        midihost* midiHost                = nullptr;
+        MainCtrl* mainCtrl                = nullptr;
+        audiocache* audioCache            = nullptr;
+        plugindatabase_t* pluginDatabase  = nullptr;
+        project_controller_t* project     = nullptr;
+        bool tlsInitialized               = false;
     };
     bool isTlsInitialized();
     tlsinstance& initNewTls();

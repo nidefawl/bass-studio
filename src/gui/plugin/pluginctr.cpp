@@ -22,7 +22,7 @@
 #include "guifonts.h"
 
 #include "host/mainctrl.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "host/plugin/base_plugin.h"
 #include "host/plugin/internal_plugin.h"
 #include "host/plugin/vst_plugin.h"
@@ -43,7 +43,7 @@
 #include "gui/plugin/plugin.h"
 #include "dragdrop.h"
 #include "projectfile-snapshot.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 
 using Table::table_entry_t;
 using Table::tbl;
@@ -140,7 +140,7 @@ public:
                 dbgassert(pluginSnapshot);
                 if (pluginSnapshot) {
                     auto* pluginMgr = dawCtrl->getDaw()->getPluginManager();
-                    assignFreeStageIds(pluginMgr, *pluginSnapshot);
+                    DAW::assignFreeStageIds(pluginMgr, *pluginSnapshot);
                     auto effect = pluginMgr->loadPluginDeferred(*pluginSnapshot);
                     if (effect) {
                         effect->projectGlobalId = 0;// generate new id
@@ -186,7 +186,7 @@ void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_
     dbgassert(daw->getPlayThread()->isLocked());
     auto pluginMgr = daw->getPluginManager();
     for (plugin_snapshot_t& pluginSnapshot : clipboard->plugins) {
-        assignFreeStageIds(pluginMgr, pluginSnapshot);
+        DAW::assignFreeStageIds(pluginMgr, pluginSnapshot);
         auto effect = pluginMgr->loadPluginDeferred(pluginSnapshot);
         if (effect) {
             effect->projectGlobalId = 0;// generate new id
@@ -202,7 +202,7 @@ void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_
             //keep negative values
             if (pos >= 0)
                 pos++;
-            pluginMgr->activateDeferred(effect, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+            pluginMgr->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
         } else {
             //TODO: handle
         }
@@ -883,7 +883,7 @@ action_remove_modules::action_remove_modules(String s, std::vector<effectbase*>&
 void action_remove_modules::releaseResources(DawInstance* daw) {
     if (weOwn) {
         for (effectbase* eff : effects) {
-            daw->getPluginManager()->unloadPlugin(eff, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+            daw->getPluginManager()->unloadPlugin(eff, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
         }
         effects.clear();
         weOwn = false;
@@ -945,7 +945,7 @@ void action_move_modules::redo(DawInstance* daw) {
 }
 void action_insert_effect::releaseResources(DawInstance* daw) {
     if (weOwn) {
-        daw->getPluginManager()->unloadPlugin(this->effect, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+        daw->getPluginManager()->unloadPlugin(this->effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
         effect = nullptr;
         weOwn  = false;
     }

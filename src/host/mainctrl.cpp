@@ -81,7 +81,7 @@
 #include "plugindatabase.h"
 #include "window_impl.h"
 
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "host/host.h"
 #include "host/audio_host.h"
 #include "host/midi_host.h"
@@ -1312,9 +1312,9 @@ void DawInstance::initDaw() {
         }
     }
     initTls.dawInstance = this;
-    initTls.host = new DAW::pluginhost();
+    initTls.host = new DAW::Host::Host();
     initTls.pluginManager = initTls.host;
-    if (!DAW::pluginmanager::assignMasterCallback(initTls.pluginManager)) {
+    if (!DAW::Host::PluginManager::assignMasterCallback(initTls.pluginManager)) {
         delete initTls.host;
         dbgassert(0);
         throw applogicexception("no empty vst callback slot");
@@ -1751,7 +1751,7 @@ void DawInstance::onTick() {
                 auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[idx]);
                 effectbase* pluginLoaded;
                 ThreadLock lock = getPlayThread()->lockThread();
-                tls.host->activateDeferred(plugin, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
+                tls.host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
             } else {
                 scriptState = 10;
             }
@@ -1927,7 +1927,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
                 dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
                 auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
                 effectbase* pluginLoaded;
-                tls.host->activateDeferred(plugin, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
+                tls.host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
             }
         }
         tls.audioCache->load(file->sampleFileIndex);
@@ -1992,7 +1992,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
                 /** TODO: vsync **/
                 seqthreads::threadSleep(16);
                 effectbase* pluginLoaded;
-                tls.host->activateDeferred(plugin, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
+                tls.host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
             }
             log_printf("end plugin list loading\n");
         const int32_t numSamplesToLoad = file->sampleFileIndex.list.size();

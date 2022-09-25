@@ -14,7 +14,7 @@
 #include "host/audio_host.h"
 #include "host/mainctrl.h"
 #include "host/midi_host.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "gui/controls/list.h"
 #include "math/seq_math.h"
 #include "math/vec.h"

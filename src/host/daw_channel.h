@@ -1,10 +1,11 @@
 #pragma once
 #include "types.h"
 #include "audio_config.h"
-
+namespace DAW::Host {
+    class Host;
+}
 namespace DAW {
-    class pluginhost;
-    class pluginmanager;
+    class PluginManager;
 }
 class project_t;
 struct track_impl_t;
@@ -80,7 +81,7 @@ namespace DAW {
         internal
     };
 
-    bool resolveDefaultConnection(const pluginmanager* host, const project_t* project, track_impl_t* trImpl, bool isInput, channel_ref_t& out);
-    bool resolveAudioChannel(const pluginhost* host, channelnum_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* ptrExternalInputs, track_audio_src& out);
+    bool resolveDefaultConnection(const Host::PluginManager* host, const project_t* project, track_impl_t* trImpl, bool isInput, channel_ref_t& out);
+    bool resolveAudioChannel(const Host::Host* host, channelnum_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* ptrExternalInputs, track_audio_src& out);
 
 }// namespace DAW

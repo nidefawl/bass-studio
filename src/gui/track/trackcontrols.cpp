@@ -41,7 +41,7 @@
 #include "gui/meter/guimeter.h"
 #include "trackctr_types.h"
 #include "gui/plugin/pluginctr.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 
 using namespace DAW::AudioIO;
 using DAW::bus_type;
@@ -1219,7 +1219,7 @@ public:
             std::vector<effectbase*> effects;
             m_track->audio->getDeferredEffects(effects);
             for (auto effect : effects) {
-                pluginMgr->activateDeferred(effect, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                pluginMgr->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
             }
             pluginMgr->postPluginLoaded(m_track->audio, nullptr);
             daw->onPluginsChanged();

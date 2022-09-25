@@ -27,7 +27,7 @@
 #include "plugin/vst_plugin.h"
 #include "plugin/vst_plugin_handles.h"
 #include "types.h"
-#include "pluginmanager.h"
+#include "host_pluginmanager.h"
 #include "track_impl.h"
 
 #include "modules.h"
@@ -487,7 +487,7 @@ void project_t::copyFrom(project_snapshot_t& project) {
     trackList.copyFrom(project);
 }
 namespace DAW {
-    effectbase* loadEffectModule(pluginmanager* host, const plugin_snapshot_t& pluginSnapshot, bool forceLoad) {
+    effectbase* loadEffectModule(Host::PluginManager* host, const plugin_snapshot_t& pluginSnapshot, bool forceLoad) {
         effectbase* effect      = nullptr;
         if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
             log_printf("Next loading plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
@@ -703,15 +703,15 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
             dbgassert(effect->trackImpl == this);
             dbgassert(!effects.empty());
             if (effect->getModuleStoredType() == PLUGIN_TYPE_GROUP) {
-                host->activateDeferred(effect, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                host->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
             }
         }
     }
 }
 
-namespace DAW {
+namespace DAW::Host {
 
-void pluginmanager::activateDeferred(effectbase* const eff, int flags, effectbase** out_effectLoaded) {
+void PluginManager::activateDeferred(effectbase* const eff, int flags, effectbase** out_effectLoaded) {
     dbgassert(eff->trackImpl);
     dbgassert(eff->trackImpl->effects.size());
     dbgassert(eff->getSlot() >= 0);
@@ -769,7 +769,7 @@ void pluginmanager::activateDeferred(effectbase* const eff, int flags, effectbas
     //    if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
 }
 
-} // namespace DAW
+} // namespace DAW::Host
 
 void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot) {
     const std::vector<automationlane_snapshot_t>& atls = snapshot.automationLanes;
@@ -964,7 +964,7 @@ void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
     });
 }
 
-track_impl_t::track_impl_t(DAW::pluginmanager* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels)
+track_impl_t::track_impl_t(DAW::Host::PluginManager* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels)
     : audio_stage_t(_host, _id, _sampleFormat, _numChannels, 0),
       arp(new DAW::midiarp(this)), track(_track),
       inputChannel(DAW::ChannelDefaultNone()),
@@ -1386,7 +1386,7 @@ automationlane_snapshot_t track_params_t::toRef() const {
 }
 
 namespace DAW {
-    void assignFreeStageIds(pluginmanager* host, plugin_snapshot_t& snapshot) {
+    void assignFreeStageIds(Host::PluginManager* host, plugin_snapshot_t& snapshot) {
         std::map<int32_t,int32_t> idMap;
         std::map<int32_t,int32_t> pluginIdMap;
         std::vector<plugin_snapshot_t*> all;
@@ -1449,7 +1449,7 @@ namespace DAW {
         }
     }
 
-    void assignFreeStageIdsTrackSnapshot(pluginmanager* host, track_snapshot_t& snapshot) {
+    void assignFreeStageIdsTrackSnapshot(Host::PluginManager* host, track_snapshot_t& snapshot) {
         std::map<int32_t,int32_t> idMap;
         std::map<int32_t,int32_t> pluginIdMap;
         std::vector<track_effect_routing_snapshot_t*> all;
@@ -1528,7 +1528,7 @@ namespace DAW {
         }
     }
 
-    bool resolveAutomatableRef(const pluginmanager* const host, const automationlane_snapshot_t& ref, automatable_t** out) {
+    bool resolveAutomatableRef(const Host::PluginManager* const host, const automationlane_snapshot_t& ref, automatable_t** out) {
         if (ref.type == AUTOMATABLE_EFFECT) {
             effectbase* plugin = host->getPluginById(ref.refId);
             if (plugin) {
@@ -1559,7 +1559,7 @@ namespace DAW {
 
         return false;
     }
-    bool resolveAutomationAtTime(const pluginmanager* const host, const automation_ref_t& ref, tick_t atTime, float* fOut) {
+    bool resolveAutomationAtTime(const Host::PluginManager* const host, const automation_ref_t& ref, tick_t atTime, float* fOut) {
         dbgassert(fOut);
         switch (ref.type) {
             case 0:

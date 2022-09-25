@@ -25,17 +25,21 @@
 #include "effect_graph.h"
 #include "daw_channel.h"
 #include "util/profiling.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include <memory>
 
 
 #define SYNCHRONIZED_RW
 struct AudioBlock;
-namespace DAW {
+namespace DAW::Host {
+class Host;
+
 struct host_processing_stats_t {
     int32_t pluginId;
 };
+
 struct process_scratch_buf_t;
+
 struct thread_stats_process_timings_t {
     uint32_t threadIdx;
     audiostageid_i32 stageId;
@@ -52,11 +56,14 @@ struct thread_stats_process_timings_t {
           timeEnd(_timeEnd) {
     }
 };
+
 #define MAX_AUDIOPROCESSING_THREADS 32
 #define NUM_AUDIOPROCESSING_THREADS_INITIAL 6
 #define DAW_DEBUG_AUDIOGRAPH 0
-    
-class pluginhost : public pluginmanager {
+
+Host* getInstance();
+
+class Host : public PluginManager {
 public:
     class host_impl;
     struct track_block_processing_task_t;
@@ -108,15 +115,12 @@ private:
     int64_t writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplecount_t samplePos, samplecount_t numSamples);
     uint32_t finishTreadTasks(uint32_t tasksRunning, bool wait);
 public:
-    pluginhost();
-    pluginhost(pluginhost const&) = delete;
-    ~pluginhost();
-    void operator=(pluginhost const&) = delete;
-
-    static pluginhost* getInstance();
+    Host();
+    Host(Host const&) = delete;
+    ~Host();
+    void operator=(Host const&) = delete;
 
     void setTls(daw_tls::tlsinstance& tls);
-
     void destroy();
 
     void initThreads();

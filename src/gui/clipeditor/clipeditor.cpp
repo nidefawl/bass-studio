@@ -19,7 +19,7 @@
 #include "gui/cliprenderer/cliprenderer_cache.h"
 #include "track.h"
 #include "track_impl.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "appconfig.h"
 #include <nanovg.h>
 

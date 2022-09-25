@@ -8,7 +8,7 @@
 
 #include "project.h"
 #include "tls.h"
-#include "pluginmanager.h"
+#include "host_pluginmanager.h"
 #include "track.h"
 #include "audio_host.h"
 #include "assert_dbg.h"
@@ -22,7 +22,7 @@
 
 namespace DAW {
     bool gEnableLog = 0;
-    bool validateTrackRoutings(const pluginhost* const host, const track_vector& tracksFlat) {
+    bool validateTrackRoutings(const Host::Host* const host, const track_vector& tracksFlat) {
         size_t numRemoved = 0;
         for (track_t* track : tracksFlat) {
             track_impl_t* trackImpl  = track->getStage();
@@ -160,7 +160,7 @@ namespace DAW {
         return true;
     }
     
-    bool buildProcessingGraph(const pluginhost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph) {
+    bool buildProcessingGraph(const Host::Host* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph) {
         std::shared_ptr<track_graph_t> dependencyGraph;
         if (!buildTrackRoutingGraph(host, project, tracksFlat, dependencyGraph)) {
             // log_lf(Log::L_ERROR, "Failed building track graph\n");
@@ -314,7 +314,7 @@ namespace DAW {
     inline track_node_t& getNode(M map, I idx) {
         return *map[idx];
     }
-    void updateSoloFlag(const pluginhost* const host, const project_t* const project, const track_vector& tracksFlat) {
+    void updateSoloFlag(const Host::Host* const host, const project_t* const project, const track_vector& tracksFlat) {
         std::shared_ptr<track_graph_t> dependencyGraph;
         if (!buildTrackRoutingGraph(host, project, tracksFlat, dependencyGraph)) {
             log_lf(Log::L_ERROR, "Failed building track graph\n");
@@ -341,7 +341,7 @@ namespace DAW {
             }
         }
     }
-    bool buildTrackRoutingGraph(const pluginhost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<track_graph_t>& out_graph) {
+    bool buildTrackRoutingGraph(const Host::Host* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<track_graph_t>& out_graph) {
         uint32_t trackEdgeId = 0;
         std::map<audiostageid_i32, track_node_ptr> map;
         for (track_t* track : tracksFlat) {

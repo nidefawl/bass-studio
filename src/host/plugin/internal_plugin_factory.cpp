@@ -6,7 +6,7 @@
 #include "plugins/samplecrush/samplecrush-plugin.h"
 #include "plugins/sampledelay/sampledelay-plugin.h"
 #include "plugins/stereowidth/stereowidth-plugin.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "host/plugin/vst_plugin.h"
 #include "modules.h"
 
@@ -21,9 +21,9 @@ namespace PluginSynth {
     class module_synth;
 }
 extern template effectbase* makeInstance<PluginSynth::module_synth>(int32_t _projectGlobalId, i_host_callback* _hostCallback);
-namespace DAW {
+namespace DAW::Host {
 
-effectbase* pluginmanager::makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid) {
+effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid) {
     effectbase* effect = nullptr;
     i_host_callback* hostcallback = getHostCallback();
     switch (moduleType) {
@@ -82,4 +82,4 @@ effectbase* pluginmanager::makeModuleInstance(int32_t moduleType, int32_t module
     return effect;
 }
 
-}
+} // namespace DAW::Host

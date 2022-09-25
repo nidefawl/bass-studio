@@ -2,7 +2,7 @@
 #include "fileio.h"
 #include "tls.h"
 #include "track.h"
-#include "pluginmanager.h"
+#include "host_pluginmanager.h"
 
 class project_controller_t {
 

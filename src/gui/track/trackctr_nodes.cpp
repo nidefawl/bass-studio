@@ -25,7 +25,7 @@
 #include "host/plugin/base_plugin.h"
 #include "host/plugin/group.h"
 #include "host/plugin/internal_plugin.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "host/host.h"
 #include "logging.h"
 #include "math/seq_math.h"

@@ -28,7 +28,7 @@
 #include "snapshot.h"
 #include "host/effect_graph.h"
 #include "seq_util.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "host/host.h"
 
 class guimodule_group : public guiplugin {
@@ -241,12 +241,12 @@ void module_group::onPreUnload(int flags) {
     }
 }
 
-void module_group::load(DAW::pluginmanager* host) {
+void module_group::load(DAW::Host::PluginManager* host) {
     effectbase::load(host);
     this->audio = host->createAudioStage();
 }
 
-void module_group::unload(DAW::pluginmanager* host, int flags) {
+void module_group::unload(DAW::Host::PluginManager* host, int flags) {
     effectbase::unload(host, flags);
     //onPreunload(flags);
     host->releaseAudioStage(audio);

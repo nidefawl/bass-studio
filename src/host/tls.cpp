@@ -2,7 +2,7 @@
 #include "appconfig.h"
 #include "appsettings.h"
 #include "host/mainctrl.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "host/host.h"
 #include "host/audio_host.h"
 #include "host/midi_host.h"
@@ -55,7 +55,7 @@ plugindatabase_t* plugindatabase_t::getInstance() {
     dbgassert(daw_tls::tls.pluginDatabase);
     return daw_tls::tls.pluginDatabase;
 }
-DAW::pluginhost* DAW::pluginhost::getInstance() {
+DAW::Host::Host* DAW::Host::getInstance() {
     dbgassert(daw_tls::tls.tlsInitialized);
     dbgassert(daw_tls::tls.host);
     return daw_tls::tls.host;

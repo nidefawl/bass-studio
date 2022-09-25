@@ -12,7 +12,7 @@
 #include "internal_plugin.h"
 
 #include "host/mainctrl.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "host/plugindatabase.h"
 #include "threads/playbackthread.h"
 

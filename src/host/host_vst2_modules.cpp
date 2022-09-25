@@ -1,6 +1,6 @@
 #include "math/seq_math.h"
 #include "str_util.h"
-#include "pluginmanager.h"
+#include "host_pluginmanager.h"
 #include "modules.h"
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
@@ -11,13 +11,13 @@
 
 typedef AudioEffectX* (*FnCreateModule)(audioMasterCallback);
 
-namespace DAW {
-void pluginmanager::registerModules() {
+namespace DAW::Host {
+void PluginManager::registerModules() {
     builtinModules.clear();
     builtinModules.push_back({ PLUG_INT_HOSTINFO, false, PluginHostInfo::getName(), PluginHostInfo::createPlugin });
     builtinModules.push_back({ PLUG_INT_SYNTH, true, PluginSynth::getName(), PluginSynth::createPlugin });
 }
-vstpluginloadres pluginmanager::loadInternalPlugin(int32_t moduleId, int32_t globalId) {
+vstpluginloadres PluginManager::loadInternalPlugin(int32_t moduleId, int32_t globalId) {
     auto it = std::find_if(builtinModules.begin(), builtinModules.end(), [moduleId](auto& reg) {
         return reg.id == moduleId;
     });
@@ -46,4 +46,4 @@ vstpluginloadres pluginmanager::loadInternalPlugin(int32_t moduleId, int32_t glo
     return {0, plugin};
 }
 
-} // namespace DAW
+} // namespace DAW::Host

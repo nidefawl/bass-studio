@@ -5,7 +5,6 @@
 #include "dsp_util.h"
 #include "seq_util.h"
 #include "project.h"
-#include "pluginmanager.h"
 #include "track.h"
 #include "audio_host.h"
 #include "assert_dbg.h"
@@ -15,12 +14,12 @@
 #include "daw_channel.h"
 #include "plugin/base_plugin.h"
 #include "daw_channel.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include <vector>
 
 
 namespace DAW {
-    size_t validateEffectRouting(const pluginmanager* const host, const DAW::channel_desc& dstDesc, channel_ref_t& inputChannel) {
+    size_t validateEffectRouting(const Host::PluginManager* const host, const DAW::channel_desc& dstDesc, channel_ref_t& inputChannel) {
         size_t numRemoved = 0;
         if (inputChannel.getType() == stage_type::INPUT_DEFAULT) {
             inputChannel = ChannelDefaultNone();
@@ -63,7 +62,7 @@ namespace DAW {
         }
         return numRemoved;
     }
-    bool validateEffectRoutings(const pluginmanager* const host, audio_stage_t* stage) {
+    bool validateEffectRoutings(const Host::PluginManager* const host, audio_stage_t* stage) {
         size_t numRemoved = 0;
         for (effectbase* effect : stage->effects) {
             for (auto& inputChannel : effect->inputChannels) {
@@ -131,7 +130,7 @@ namespace DAW {
         removeEntry(ctxt.unresolved, node);
         return true;
     }
-    bool buildEffectProcessingGraph(const pluginmanager* const host, const project_t* const project, const audio_stage_t* stage, std::shared_ptr<effect_processing_graph_t>& out_procgraph) {
+    bool buildEffectProcessingGraph(const Host::PluginManager* const host, const project_t* const project, const audio_stage_t* stage, std::shared_ptr<effect_processing_graph_t>& out_procgraph) {
         std::shared_ptr<effect_graph_t> dependencyGraph;
         if (!buildEffectRoutingGraph(host, project, stage, dependencyGraph)) {
             // log_lf(Log::L_ERROR, "Failed building track graph\n");
@@ -279,7 +278,7 @@ namespace DAW {
     inline effect_node_t& getEffNode(M map, I idx) {
         return *map[idx];
     }
-    bool buildEffectRoutingGraph(const pluginmanager* const host, const project_t* const project, const audio_stage_t* stage, std::shared_ptr<effect_graph_t>& out_graph) {
+    bool buildEffectRoutingGraph(const Host::PluginManager* const host, const project_t* const project, const audio_stage_t* stage, std::shared_ptr<effect_graph_t>& out_graph) {
         uint32_t trackEdgeId = 0;
         std::map<audiostageid_i32, effect_node_ptr> map;
         std::map<audiostageid_i32, effect_node_ptr> audioStageInputs;

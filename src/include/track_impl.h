@@ -24,7 +24,7 @@
 #include "snapshot.h"
 #include "track.h"
 #include "fileio.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "host/plugin/base_plugin.h"
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
@@ -190,7 +190,7 @@ struct audio_stage_t {
     std::vector<DAW::channel_ref_t> postEffectRouting;
     std::vector<audio_stage_t*> children;
 
-    DAW::pluginmanager* const host = nullptr;
+    DAW::Host::PluginManager* const host = nullptr;
     audio_stage_t* parent = nullptr;
     effectbase* owner = nullptr;
     /**
@@ -205,7 +205,7 @@ struct audio_stage_t {
     clip_recorder recorder;
     std::shared_ptr<DAW::effect_processing_graph_t> processingGraph;
 
-    audio_stage_t(DAW::pluginmanager* const _host, const audio_stage_id_t _id, const sampleformat_t _sampleFormat, const channelnum_t _numChannels, int _type = 1)
+    audio_stage_t(DAW::Host::PluginManager* const _host, const audio_stage_id_t _id, const sampleformat_t _sampleFormat, const channelnum_t _numChannels, int _type = 1)
     : input(_numChannels, _sampleFormat.blockSize),
       output(_numChannels, _sampleFormat.blockSize),
       outputPost(_numChannels, _sampleFormat.blockSize),
@@ -303,8 +303,8 @@ struct midi_events_t {
 namespace DAW {
 class midiarp;
 struct arp_note_t;
-void assignFreeStageIds(pluginmanager* host, plugin_snapshot_t& snapshot);
-void assignFreeStageIdsTrackSnapshot(pluginmanager* host, track_snapshot_t& snapshot);
+void assignFreeStageIds(Host::PluginManager* host, plugin_snapshot_t& snapshot);
+void assignFreeStageIdsTrackSnapshot(Host::PluginManager* host, track_snapshot_t& snapshot);
 inline bool isChannelConnected(const channel_ref_t& ch) {
     return ch.type != stage_type::INPUT_EMPTY;
 }
@@ -429,7 +429,7 @@ struct track_impl_t : public audio_stage_t {
     ThreadMutex midiMutex;
     track_midiprocess_profiling_t procMidiStats;
     hires_timer_t tmr;
-    track_impl_t(DAW::pluginmanager* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels);
+    track_impl_t(DAW::Host::PluginManager* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels);
     ~track_impl_t() override;
     void sendNotesOff() override;
     void onStartPlayback() override;

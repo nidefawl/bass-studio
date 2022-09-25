@@ -1,9 +1,9 @@
 #include "str_util.h"
 #include "common/test_common.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "host/plugin/vst_plugin.h"
 #include "host/host.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "tls.h"
 #include "project.h"
 #include "appconfig.h"
@@ -148,9 +148,9 @@ int main(int, char*[]) {
 #endif
 
     int retVal     = 0;
-    auto host = std::make_unique<DAW::pluginhost>();
+    auto host = std::make_unique<DAW::Host::Host>();
     auto pluginMgr = host.get();
-    DAW::pluginmanager::assignMasterCallback(pluginMgr);
+    DAW::Host::PluginManager::assignMasterCallback(pluginMgr);
     auto& tls = daw_tls::initNewTls();
     tls.host = host.get();
     tls.pluginManager = pluginMgr;

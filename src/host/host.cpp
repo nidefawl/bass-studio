@@ -8,8 +8,7 @@
 #include "audiocache.h"
 #include "host/daw_channel.h"
 #include "host/history.h"
-#include "host/plugin/vst_plugin.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "math/seq_math.h"
 #include "modules.h"
 #include "note.h"
@@ -27,16 +26,9 @@
 #include "track.h"
 #include "basectrl.h"
 #include "host/mainctrl.h"
-
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
-#include "plugin/vst_plugin_handles.h"
-#include "host_plugin_window.h"
-
-#include <memory>
-#include <vstsdk-host-2.4/aeffectx.h>
 #include "appsettings.h"
-
 #include "logging.h"
 #include "audio_config.h"
 #include "audioblock.h"
@@ -45,7 +37,6 @@
 #include "midi_host.h"
 #include "midi-defs.h"
 #include "midi-msg.h"
-
 #include "assert_dbg.h"
 #include "track_impl.h"
 #include "projectcontroller.h"
@@ -55,17 +46,13 @@
 #include "effect_graph.h"
 #include "resampler.h"
 #include "threads/workerthread.h"
-#include "threads/childprocessthread.h"
 #include "sse.h"
-
-#include <deque>
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
 #if defined(__linux__) || defined(__APPLE__)
 #include <emmintrin.h>
-#include <dlfcn.h>
 #endif
 
 #include <dr_libs/dr_wav.h>
@@ -85,9 +72,9 @@ namespace DebugAlloc {
     void endTrace();
 }
 
-namespace DAW {
+namespace DAW::Host {
 
-struct pluginhost::track_block_processing_task_t {
+struct Host::track_block_processing_task_t {
     audiostream_properties_t audioProp;
     project_globals_t projectGlobals;
     /* const */ processing_track_node_t* trackNode = nullptr;
@@ -116,17 +103,17 @@ struct process_scratch_buf_t {
 
 class TrackBlockProcessTask : public WorkerThread::ThreadTask {
     process_scratch_buf_t buf;
-    pluginhost::track_block_processing_task_t blockProcTask;
+    Host::track_block_processing_task_t blockProcTask;
     bool inUse = false;
-    pluginhost* host = nullptr;
+    Host* m_host = nullptr;
 public:
     struct process_task_stats_t {
         int64_t timeStart = 0;
         int64_t timeEnd = 0;
     };
 
-    void init(pluginhost* _host) {
-        this->host = _host;
+    void init(Host* _host) {
+        this->m_host = _host;
     }
 
     process_task_stats_t stats;
@@ -137,11 +124,11 @@ public:
 
     void run() override {
         stats.timeStart = getTimeMicros();
-        host->processGraphNode(buf, blockProcTask);
+        m_host->processGraphNode(buf, blockProcTask);
         stats.timeEnd = getTimeMicros();
     }
 
-    void setTask(pluginhost::track_block_processing_task_t task) {
+    void setTask(Host::track_block_processing_task_t task) {
         reset();
         this->blockProcTask = task;
         inUse = true;
@@ -151,7 +138,7 @@ public:
         inUse = false;
     }
 
-    pluginhost::track_block_processing_task_t& getTask() {
+    Host::track_block_processing_task_t& getTask() {
         return blockProcTask;
     }
 #if THREADSYNC == THREADSYNC_SEMAPHORE
@@ -170,7 +157,7 @@ public:
 /**
  * VST Host implementation internals
  */
-class pluginhost::host_impl {
+class Host::host_impl {
 public:
     daw_tls::tlsinstance tls;
     std::array<WorkerThread, MAX_AUDIOPROCESSING_THREADS> threads;
@@ -195,7 +182,7 @@ public:
 #elif THREADSYNC == THREADSYNC_ATOMIC
     std::atomic_int_fast8_t atomicWorkerCount{0};
 #endif
-    explicit host_impl(pluginhost* host) {
+    explicit host_impl(Host* host) {
         for (TrackBlockProcessTask& task : tasks) {
             task.init(host);
         }
@@ -311,24 +298,24 @@ static bool setFlag(int& _out, int flag, bool state) {
     return curState != state;
 }
 
-void pluginhost::getBlockThreadStats(std::vector<thread_stats_process_timings_t>& stats) {
+void Host::getBlockThreadStats(std::vector<thread_stats_process_timings_t>& stats) {
     stats = impl->lastBlockThreadStats;
 }
 
-void pluginhost::setThreadCount(uint32_t threadCount) {
+void Host::setThreadCount(uint32_t threadCount) {
     impl->threadCount = math::clamp<uint32_t>(threadCount, 1U, MAX_AUDIOPROCESSING_THREADS);
 }
 
-uint32_t pluginhost::getThreadCount() {
+uint32_t Host::getThreadCount() {
     return impl->threadCount;
 }
 
-uint32_t pluginhost::getMaxThreadCount() {
+uint32_t Host::getMaxThreadCount() {
     return MAX_AUDIOPROCESSING_THREADS;
 }
 
-pluginhost::pluginhost()
-    : pluginmanager(), impl(new host_impl{this})
+Host::Host()
+    : PluginManager(), impl(new host_impl{this})
 {
     allocRingBuffer(ringbuffer, 2);
     midiRealtimeInput = new clip_notes_t;
@@ -337,13 +324,13 @@ pluginhost::pluginhost()
     };
 }
 
-pluginhost::~pluginhost() {
+Host::~Host() {
     delete impl;
     delete midiRealtimeInput;
 }
 
-pluginhost::audiostream_properties_t getAudioStreamPropertiesForFormat(sampleformat_t sampleFormat, sampleformat_t sampleFormatExternal, int32_t tempo100) {
-    pluginhost::audiostream_properties_t prop;
+Host::audiostream_properties_t getAudioStreamPropertiesForFormat(sampleformat_t sampleFormat, sampleformat_t sampleFormatExternal, int32_t tempo100) {
+    Host::audiostream_properties_t prop;
     prop.microSecsPerBlock = (int64_t)sampleFormat.blockSize * 1000000L / (int64_t)sampleFormat.sampleRate;
     prop.ticksPerBlock     = sampleToTickConvert<double, roundmode::none>(sampleFormat.blockSize,
                                                                       tempo100,
@@ -355,11 +342,11 @@ pluginhost::audiostream_properties_t getAudioStreamPropertiesForFormat(samplefor
     return prop;
 }
 
-pluginhost::audiostream_properties_t pluginhost::getAudioStreamProperties() const {
+Host::audiostream_properties_t Host::getAudioStreamProperties() const {
     return getAudioStreamPropertiesForFormat(m_sampleFormatInternal, m_sampleFormatExternal, prjGlobals.tempo100);
 }
 
-void pluginhost::setSampleFormat(const sampleformat_t& _sampleFormat) {
+void Host::setSampleFormat(const sampleformat_t& _sampleFormat) {
     if (this->m_sampleFormatInternal != _sampleFormat) {
         this->m_sampleFormatInternal = _sampleFormat;
         getHostCallback()->m_sampleFormatInternal = _sampleFormat;
@@ -369,7 +356,7 @@ void pluginhost::setSampleFormat(const sampleformat_t& _sampleFormat) {
                 cache->setSamplerate(m_sampleFormatInternal.sampleRate);
             }
         }
-        pluginmanager::updateSampleFormat(this->m_sampleFormatInternal);
+        PluginManager::updateSampleFormat(this->m_sampleFormatInternal);
     }
 }
 
@@ -386,7 +373,7 @@ static double PPQ24TickToSample(double midiTickPPQ24, uint32_t bpm100, samplerat
 //        this will either be negative such that the previous MIDI clock is addressed,
 //        or positive when referencing the following (future) MIDI clock.
 
-void pluginhost::updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPos, playback_state state) const {
+void Host::updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPos, playback_state state) const {
     timeinfo.samplePos = samplePos;
     timeinfo.sampleRate = (double) m_sampleFormatInternal.sampleRate;
     timeinfo.nanoSeconds = getTimeMicros() * 1000.0;
@@ -446,7 +433,7 @@ void pluginhost::updateTime(VstTimeInfo& timeinfo, double samplePos, double dTic
     }
 }
 
-void pluginhost::sendNotesOff(effectbase* plugin) {
+void Host::sendNotesOff(effectbase* plugin) {
     //TODO: check current thread, check if playthread is locked
     if (plugin && plugin->trackImpl) {
         track_t* tr = plugin->trackImpl->getTrack();
@@ -458,145 +445,11 @@ void pluginhost::sendNotesOff(effectbase* plugin) {
     }
 }
 
-std::vector<note_t> pluginhost::getRealtimeNotes() {
+std::vector<note_t> Host::getRealtimeNotes() {
     return this->midiRealtimeInput->m_list;
 }
 
-bool resolveEffectDefaultConnection(const pluginmanager* const host, const project_t* const project, const audio_stage_t* const stage, effectbase* const effect, channel_ref_t& out) {
-    if (effect && effect->inputChannelsDesc.empty()) {
-        out = DAW::ChannelNone();
-        return true;
-    }
-    int32_t effIdx = 0;
-    if (effect) {
-        effIdx = indexOfCtr(stage->effects, effect);
-    } else {
-        effIdx = static_cast<int32_t>(stage->effects.size());
-    }
-    while (effIdx > 0) {
-        auto effectBefore = stage->effects[effIdx - 1];
-        if (!effectBefore->outputChannelsDesc.empty()) {
-            auto dstChDesc = effect ? effect->inputChannelsDesc.front() : DAW::channel_desc{};
-            out = DAW::ChannelAudioEffect(effectBefore, stage_bufferpoint::OUTPUT_POST, effectBefore->outputChannelsDesc.front(), dstChDesc);
-            return true;
-        }
-        effIdx -= 1;
-    }
-    out = DAW::ChannelStage(stage, stage_bufferpoint::INPUT);
-    return true;
-}
-
-bool resolveDefaultConnection(const pluginmanager* const host, const project_t* const project, track_impl_t* const trImpl, const bool isInput, channel_ref_t& out) {
-    if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MASTER) {
-        int32_t idx = 0;
-        auto type = AudioIO::getTrackTypeFromNumChannels(trImpl->outputPost.channels);
-        String name = "External "+AudioIO::getTrackNameShort(type, idx, stage_bufferpoint::OUTPUT_POST);
-        out = ChannelAudioInput(idx, 0, name, type);
-        return true;
-    }
-    const track_t* const firstMaster = !project->trackMasterCtr.empty() ? project->trackMasterCtr.front() : nullptr;
-    if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_RETURN) {
-        if (firstMaster) {
-            out = ChannelStage(firstMaster->audio, stage_bufferpoint::INPUT);
-            return true;
-        }
-    }
-    if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MIDIAUDIO) {
-        const track_t* const dstTrack = trImpl->track->parent ? trImpl->track->parent : firstMaster;
-        if (dstTrack) {
-            out = ChannelStage(dstTrack->audio, stage_bufferpoint::INPUT);
-            return true;
-        }
-    }
-    return false;
-}
-
-bool resolveAudioChannel(const pluginhost* const host, channelnum_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs, track_audio_src& out) {
-    if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
-        if (ptrExternalInputs != nullptr) {
-            const auto idx = inputChannel.srcChannelOffset;
-            const auto size = math::min<channelnum_t>(AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType), numChannelsTrack);
-            if (idx+size <= ptrExternalInputs->channels) {
-                track_audio_src src;
-                for (channelnum_t ch = 0; ch < size; ++ch) {
-                    src.channels.push_back(ptrExternalInputs->buf[idx+ch]);
-                }
-                src.sampleFormat = host->m_sampleFormatExternal;
-                src.samples = ptrExternalInputs->samples;
-                out = std::move(src);
-                return true;
-            }
-        }
-    }
-    if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
-        audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
-        if (stage) {
-            /* Calculate audio/midi tracks gain level */
-            float fGainTrack = 0.0f;
-            if (!dsp_util::getGainLvl(stage->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
-                fGainTrack = 0.0f;
-            }
-            track_audio_src src;
-            auto* buff = &stage->input;
-            switch (inputChannel.stage.buffer) {
-            case stage_bufferpoint::INPUT:
-                buff = &stage->input;
-                break;
-            case stage_bufferpoint::OUTPUT:
-                buff = &stage->output;
-                break;
-            case stage_bufferpoint::OUTPUT_POST:
-                buff = &stage->outputPost;
-                break;
-            }
-            for (uint32_t i = 0; i < buff->channels; ++i) {
-                src.channels.push_back(buff->buf[i]);
-            }
-            src.sampleFormat = stage->sampleFormat;
-            src.samples = buff->samples;
-            out = std::move(src);
-            return true;
-        }
-    }
-
-    if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE_EFFECT) {
-        audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
-        if (stage) {
-            effectbase* eff = stage->getPluginById(inputChannel.projectGlobalId);
-            if (!eff) {
-                log_lf(Log::L_WARN, "Effect with id %d is not found on stage\n", inputChannel.projectGlobalId);
-                return false;
-            }
-            if (!eff->blockOutputs) {
-                log_lf(Log::L_WARN, "%s Output buffer is null\n", StringAsCStr(eff->getName()));
-                return false;
-            }
-            for (auto& desc : eff->outputChannelsDesc) {
-                if (desc.offset == inputChannel.srcChannelOffset) {
-                    track_audio_src src;
-                    for (auto chIdx = desc.offset; chIdx < desc.offset+desc.count; ++chIdx) {
-                        if (chIdx >= eff->blockOutputs->channels) {
-                            log_lf(Log::L_WARN, "%s Output buffer has invalid size. Expected %u channels, found %u\n", StringAsCStr(eff->getName()), desc.offset+desc.count, eff->blockOutputs->channels);
-                            return false;
-                        }
-                        src.channels.push_back(eff->blockOutputs->buf[chIdx]);
-                    }
-                    src.sampleFormat = stage->sampleFormat;
-                    src.samples = eff->blockOutputs->samples;
-                    out = std::move(src);
-                    return true;
-                }
-            }
-            log_lf(Log::L_WARN, "%s Does not have output with offset %u\n", StringAsCStr(eff->getName()), inputChannel.srcChannelOffset);
-        }
-    }
-    return false;
-};
-
-
-//TODO: get rid of this constant
-
-void pluginhost::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state) {
+void Host::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state) {
     //TODO: This needs to be done per input and per track
     tick_t tickPosBlockStart = math::ceildS32(posDouble);
 
@@ -686,14 +539,14 @@ void pluginhost::processMidiRealtimeInput(project_controller_t* ctrl, double pos
     }
 }
 
-void pluginhost::preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings) {
+void Host::preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings) {
     pluginHostCallback->isOfflineRendering = true;
     for (auto* trackMaster : ctrl->getTracks().getMasterTracksFlatVecRef()) {
         trackMaster->getStage()->flags |= audiostageflags_t::RECORD_OUTPUT;
     }
 }
 
-void pluginhost::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings) {
+void Host::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings) {
     pluginHostCallback->isOfflineRendering = false;
     const tick_t tickBegin = exportSettings.exportPos;
     const tick_t tickEnd = tickBegin + exportSettings.exportLen;
@@ -713,7 +566,7 @@ void pluginhost::postExportEnd(project_controller_t* ctrl, export_settings_t& ex
     }
 }
 
-int64_t pluginhost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplecount_t samplePos, samplecount_t numSamples) {
+int64_t Host::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplecount_t samplePos, samplecount_t numSamples) {
     if (fOutWave.empty()) {
         dbgassert(0);
         return 0;
@@ -804,7 +657,7 @@ int64_t pluginhost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImp
 }
 
 
-int32_t pluginhost::processRender(project_controller_t* ctrl, int32_t sample, double posDouble) {
+int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double posDouble) {
     dbgassert(ctrl);
     dbgassert(m_sampleFormatInternal.blockSize > 0);
     dbgassert(m_sampleFormatInternal.sampleRate > 0);
@@ -856,8 +709,8 @@ int32_t pluginhost::processRender(project_controller_t* ctrl, int32_t sample, do
 
     const playback_state state = playback_state::status_render;
 
-    pluginmanager::onBeforeBlock(ctrl->getGlobals(), sample, posDouble, state);
-    pluginmanager::UpdateVstTime(pluginHostCallback->m_vstTimeInfo, m_sampleFormatInternal, ctrl->getGlobals(), sample, posDouble, state);
+    PluginManager::onBeforeBlock(ctrl->getGlobals(), sample, posDouble, state);
+    PluginManager::UpdateVstTime(pluginHostCallback->m_vstTimeInfo, m_sampleFormatInternal, ctrl->getGlobals(), sample, posDouble, state);
 
     int32_t samplePosProcess = sample;
     double tickPosProcess = posDouble;
@@ -992,7 +845,7 @@ int32_t pluginhost::processRender(project_controller_t* ctrl, int32_t sample, do
     return nBlocksProcessed;
 }
 
-int32_t pluginhost::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
+int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
     dbgassert(ctrl);
     dbgassert(m_sampleFormatInternal.blockSize > 0);
     dbgassert(m_sampleFormatInternal.sampleRate > 0);
@@ -1056,8 +909,8 @@ int32_t pluginhost::processPlayback(project_controller_t* ctrl, int32_t sample, 
     int32_t nBlocksProcessed = 0;
 
     if (canProcess) {
-        pluginmanager::onBeforeBlock(ctrl->getGlobals(), sample, posDouble, state);
-        pluginmanager::UpdateVstTime(pluginHostCallback->m_vstTimeInfo, m_sampleFormatInternal, ctrl->getGlobals(), sample, posDouble, state);
+        PluginManager::onBeforeBlock(ctrl->getGlobals(), sample, posDouble, state);
+        PluginManager::UpdateVstTime(pluginHostCallback->m_vstTimeInfo, m_sampleFormatInternal, ctrl->getGlobals(), sample, posDouble, state);
         processMidiRealtimeInput(ctrl, posDouble, state);
         if (enableProfiling) {
             stats.timings["Block.MidiRealtimeInput"] = timerProfile.getTime();
@@ -1282,7 +1135,7 @@ int32_t pluginhost::processPlayback(project_controller_t* ctrl, int32_t sample, 
     return nBlocksProcessed;
 }
 
-int32_t pluginhost::processGraphNode(process_scratch_buf_t& tmp, track_block_processing_task_t& req) /*const*/ {
+int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processing_task_t& req) /*const*/ {
     const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
     const double ticksPerBlock = req.audioProp.ticksPerBlock;
 
@@ -1315,7 +1168,7 @@ int32_t pluginhost::processGraphNode(process_scratch_buf_t& tmp, track_block_pro
      * This is here as a backup measure, in case vstplugin::process is not called.
      */
     
-    pluginmanager::UpdateVstTime(tmp.timeinfo, m_sampleFormatInternal, req.projectGlobals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
+    PluginManager::UpdateVstTime(tmp.timeinfo, m_sampleFormatInternal, req.projectGlobals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
     for (effectbase* plugin : trackImpl->effects) {
         if (plugin->pluginType == PLUGIN_TYPE_VST) {
             auto* ptr = dynamic_cast<vstplugin*>(plugin)->getLocalTimeInfoPtr();
@@ -1545,7 +1398,7 @@ int32_t pluginhost::processGraphNode(process_scratch_buf_t& tmp, track_block_pro
  * @param reqFinishWaitStageIds
  * @param isFinalInvocation
  */
-uint32_t pluginhost::finishTreadTasks(uint32_t tasksRunning, bool wait) {
+uint32_t Host::finishTreadTasks(uint32_t tasksRunning, bool wait) {
     uint32_t finishedTasks = 0;
     // int64_t numspin = 0;
     while (true) {
@@ -1561,7 +1414,7 @@ uint32_t pluginhost::finishTreadTasks(uint32_t tasksRunning, bool wait) {
                 }
                 finishedTasks++;
                 dbgassert(task.isCompleted());
-                pluginhost::track_block_processing_task_t& procTask = task.getTask();
+                Host::track_block_processing_task_t& procTask = task.getTask();
                 //log_printf("Thread[%d] completed stageId %d\n", i, procTask.trackNode->stageId);
                 if (task.isError()) {
                     std::exception_ptr eptr = task.getException();
@@ -1628,7 +1481,7 @@ uint32_t pluginhost::finishTreadTasks(uint32_t tasksRunning, bool wait) {
     return finishedTasks;
 }
 
-int32_t pluginhost::processGraph(project_controller_t* ctrl,
+int32_t Host::processGraph(project_controller_t* ctrl,
                               const audiostream_properties_t& audioProp,
                               DAW::processing_graph_t* const processingGraph,
                               AudioBlock* const ptrExternalInputs,
@@ -1693,7 +1546,7 @@ int32_t pluginhost::processGraph(project_controller_t* ctrl,
     if (!useThreading) {
         for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
             auto const ptrProcessingNode = *itAudioStage;
-            pluginhost::track_block_processing_task_t blockProcTask;
+            Host::track_block_processing_task_t blockProcTask;
             blockProcTask.audioProp = audioProp;
             blockProcTask.projectGlobals = ctrl->getGlobals();
             blockProcTask.trackNode = ptrProcessingNode;
@@ -1750,7 +1603,7 @@ int32_t pluginhost::processGraph(project_controller_t* ctrl,
                         TrackBlockProcessTask& task = impl->tasks[i];
                         if (!task.isInUse()) {
                             trackNode.state = DAW::processing_track_node_state_t::PROCESSING;
-                            pluginhost::track_block_processing_task_t blockProcTask;
+                            Host::track_block_processing_task_t blockProcTask;
                             blockProcTask.audioProp = audioProp;
                             blockProcTask.projectGlobals = ctrl->getGlobals();
                             blockProcTask.trackNode = &trackNode;
@@ -1844,7 +1697,7 @@ int32_t pluginhost::processGraph(project_controller_t* ctrl,
     return 1;
 }
 
-void pluginhost::initThreads() {
+void Host::initThreads() {
     for (auto & thread : impl->threads) {
         thread.setRealtimePriority(true);
         thread.setTls(daw_tls::getTls());
@@ -1852,13 +1705,13 @@ void pluginhost::initThreads() {
     impl->startThreads();
 }
 
-void pluginhost::onPlaybackJumpFromTo(project_controller_t* ctrl, int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) {
+void Host::onPlaybackJumpFromTo(project_controller_t* ctrl, int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) {
     for (auto* stage : allAudioStages) {
         stage->onPlaybackJumpFromTo(fromSamplePos, fromTickPos, toSamplePos, toTickPos);
     }
 }
 
-void pluginhost::onStartPlayback(project_controller_t* ctrl) {
+void Host::onStartPlayback(project_controller_t* ctrl) {
     lastTickEndPos = 0;
     project_t* project = ctrl->getProject();
     for (track_t* track : project->trackList) {
@@ -1870,12 +1723,7 @@ void pluginhost::onStartPlayback(project_controller_t* ctrl) {
     }
 }
 
-void pluginmanager::onPluginsChanged(audio_stage_t* stage) {
-    log_printf("Plugins changed on audio stage %d\n", static_cast<int32_t>(stage->stageId.stageId));
-    dbgassert(validateIds());
-}
-
-void pluginhost::onStopPlayback(project_controller_t* ctrl) {
+void Host::onStopPlayback(project_controller_t* ctrl) {
     pluginHostCallback->isOfflineRendering = false;
     midiRealtimeInput->m_list.clear();
 
@@ -1888,7 +1736,7 @@ void pluginhost::onStopPlayback(project_controller_t* ctrl) {
     }
 }
 
-void pluginhost::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
+void Host::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
     impl->audioStream = stream;
     if (stream) {
         const auto numInputChannels = math::max<channelnum_t>(stream->getNumInputChannels(), impl->inputChannels);
@@ -1912,13 +1760,13 @@ void pluginhost::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
     this->m_sampleFormatExternal        = sampleFormatExternal;
 }
 
-bool pluginhost::isStreaming() {
+bool Host::isStreaming() {
     //watch out for race condition here
     return impl->audioStream && impl->audioStream->isActive();
 }
 
 /* Function needs to be re-entrant (thread safe) */
-void pluginhost::processAudio(audio_stage_t* stage,
+void Host::processAudio(audio_stage_t* stage,
                            AudioBlock* input,
                            AudioBlock* output,
                            project_globals_t& globals,
@@ -2061,7 +1909,7 @@ void pluginhost::processAudio(audio_stage_t* stage,
                     //TODO: this should be done in the vstplugin::process function
                     if (effect->pluginType == PLUGIN_TYPE_VST) {
                         VstTimeInfo timeinfo{};
-                        pluginmanager::UpdateVstTime(timeinfo, m_sampleFormatInternal, globals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
+                        PluginManager::UpdateVstTime(timeinfo, m_sampleFormatInternal, globals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
                         updateTime(timeinfo, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
                         auto* ptr = dynamic_cast<vstplugin*>(effect)->getLocalTimeInfoPtr();
                         if (ptr) {
@@ -2102,7 +1950,7 @@ void pluginhost::processAudio(audio_stage_t* stage,
 
 }
 
-bool pluginhost::onTick() {
+bool Host::onTick() {
     // Currently no lock
     //ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
     for (auto* current : pluginInstances) {
@@ -2120,23 +1968,23 @@ bool pluginhost::onTick() {
     return false;
 }
 
-void pluginhost::unload() {
+void Host::unload() {
     dbgassert(!isStreaming()&&"STOP STREAM BEFORE unload()!");
     unloadAllPlugins();
 }
 
-void pluginhost::destroy() {
-    pluginmanager::destroy();
+void Host::destroy() {
+    PluginManager::destroy();
     freeRingBuffer(ringbuffer);
     impl->stopThreads();
 }
 
-void pluginhost::setTls(daw_tls::tlsinstance& tls) {
-    pluginmanager::setTls(tls);
+void Host::setTls(daw_tls::tlsinstance& tls) {
+    PluginManager::setTls(tls);
     this->impl->tls = tls;
 }
 
-bool pluginhost::writeRecordedData(project_controller_t* ctrl) {
+bool Host::writeRecordedData(project_controller_t* ctrl) {
     bool bHasNewData = false;
     auto cache = audiocache::getInstance();
     auto daw = DawInstance::get();
@@ -2146,9 +1994,143 @@ bool pluginhost::writeRecordedData(project_controller_t* ctrl) {
     return bHasNewData;
 }
 
-int32_t pluginhost::getPlayThreadId()
+int32_t Host::getPlayThreadId()
 {
     return impl->playThreadId;
 }
+
+} // namespace DAW::Host
+
+namespace DAW {
+bool resolveEffectDefaultConnection(const Host::PluginManager* const host, const project_t* const project, const audio_stage_t* const stage, effectbase* const effect, channel_ref_t& out) {
+    if (effect && effect->inputChannelsDesc.empty()) {
+        out = DAW::ChannelNone();
+        return true;
+    }
+    int32_t effIdx = 0;
+    if (effect) {
+        effIdx = indexOfCtr(stage->effects, effect);
+    } else {
+        effIdx = static_cast<int32_t>(stage->effects.size());
+    }
+    while (effIdx > 0) {
+        auto effectBefore = stage->effects[effIdx - 1];
+        if (!effectBefore->outputChannelsDesc.empty()) {
+            auto dstChDesc = effect ? effect->inputChannelsDesc.front() : DAW::channel_desc{};
+            out = DAW::ChannelAudioEffect(effectBefore, stage_bufferpoint::OUTPUT_POST, effectBefore->outputChannelsDesc.front(), dstChDesc);
+            return true;
+        }
+        effIdx -= 1;
+    }
+    out = DAW::ChannelStage(stage, stage_bufferpoint::INPUT);
+    return true;
+}
+
+bool resolveDefaultConnection(const Host::PluginManager* const host, const project_t* const project, track_impl_t* const trImpl, const bool isInput, channel_ref_t& out) {
+    if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MASTER) {
+        int32_t idx = 0;
+        auto type = AudioIO::getTrackTypeFromNumChannels(trImpl->outputPost.channels);
+        String name = "External "+AudioIO::getTrackNameShort(type, idx, stage_bufferpoint::OUTPUT_POST);
+        out = ChannelAudioInput(idx, 0, name, type);
+        return true;
+    }
+    const track_t* const firstMaster = !project->trackMasterCtr.empty() ? project->trackMasterCtr.front() : nullptr;
+    if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_RETURN) {
+        if (firstMaster) {
+            out = ChannelStage(firstMaster->audio, stage_bufferpoint::INPUT);
+            return true;
+        }
+    }
+    if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MIDIAUDIO) {
+        const track_t* const dstTrack = trImpl->track->parent ? trImpl->track->parent : firstMaster;
+        if (dstTrack) {
+            out = ChannelStage(dstTrack->audio, stage_bufferpoint::INPUT);
+            return true;
+        }
+    }
+    return false;
+}
+
+bool resolveAudioChannel(const Host::Host* const host, channelnum_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs, track_audio_src& out) {
+    if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
+        if (ptrExternalInputs != nullptr) {
+            const auto idx = inputChannel.srcChannelOffset;
+            const auto size = math::min<channelnum_t>(AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType), numChannelsTrack);
+            if (idx+size <= ptrExternalInputs->channels) {
+                track_audio_src src;
+                for (channelnum_t ch = 0; ch < size; ++ch) {
+                    src.channels.push_back(ptrExternalInputs->buf[idx+ch]);
+                }
+                src.sampleFormat = host->m_sampleFormatExternal;
+                src.samples = ptrExternalInputs->samples;
+                out = std::move(src);
+                return true;
+            }
+        }
+    }
+    if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
+        audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
+        if (stage) {
+            /* Calculate audio/midi tracks gain level */
+            float fGainTrack = 0.0f;
+            if (!dsp_util::getGainLvl(stage->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
+                fGainTrack = 0.0f;
+            }
+            track_audio_src src;
+            auto* buff = &stage->input;
+            switch (inputChannel.stage.buffer) {
+            case stage_bufferpoint::INPUT:
+                buff = &stage->input;
+                break;
+            case stage_bufferpoint::OUTPUT:
+                buff = &stage->output;
+                break;
+            case stage_bufferpoint::OUTPUT_POST:
+                buff = &stage->outputPost;
+                break;
+            }
+            for (uint32_t i = 0; i < buff->channels; ++i) {
+                src.channels.push_back(buff->buf[i]);
+            }
+            src.sampleFormat = stage->sampleFormat;
+            src.samples = buff->samples;
+            out = std::move(src);
+            return true;
+        }
+    }
+
+    if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE_EFFECT) {
+        audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
+        if (stage) {
+            effectbase* eff = stage->getPluginById(inputChannel.projectGlobalId);
+            if (!eff) {
+                log_lf(Log::L_WARN, "Effect with id %d is not found on stage\n", inputChannel.projectGlobalId);
+                return false;
+            }
+            if (!eff->blockOutputs) {
+                log_lf(Log::L_WARN, "%s Output buffer is null\n", StringAsCStr(eff->getName()));
+                return false;
+            }
+            for (auto& desc : eff->outputChannelsDesc) {
+                if (desc.offset == inputChannel.srcChannelOffset) {
+                    track_audio_src src;
+                    for (auto chIdx = desc.offset; chIdx < desc.offset+desc.count; ++chIdx) {
+                        if (chIdx >= eff->blockOutputs->channels) {
+                            log_lf(Log::L_WARN, "%s Output buffer has invalid size. Expected %u channels, found %u\n", StringAsCStr(eff->getName()), desc.offset+desc.count, eff->blockOutputs->channels);
+                            return false;
+                        }
+                        src.channels.push_back(eff->blockOutputs->buf[chIdx]);
+                    }
+                    src.sampleFormat = stage->sampleFormat;
+                    src.samples = eff->blockOutputs->samples;
+                    out = std::move(src);
+                    return true;
+                }
+            }
+            log_lf(Log::L_WARN, "%s Does not have output with offset %u\n", StringAsCStr(eff->getName()), inputChannel.srcChannelOffset);
+        }
+    }
+    return false;
+};
 
 } // namespace DAW

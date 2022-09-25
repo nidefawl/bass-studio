@@ -35,7 +35,7 @@
 #include "basectrl.h"
 
 #include "host/mainctrl.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "host/plugin/base_plugin.h"
 #include "host/plugin/internal_plugin.h"
 #include "host/plugin/vst_plugin.h"

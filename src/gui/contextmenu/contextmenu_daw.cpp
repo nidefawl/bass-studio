@@ -5,7 +5,7 @@
 #include "contextmenu_daw.h"
 #include "track_snapshot.h"
 #include "logging.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 
 guictxtmenu_at_param::guictxtmenu_at_param(DawCtrl* _dawCtrl, automatable_t* _atl, int32_t _paramIdx)
     : atl(_atl), paramIdx(_paramIdx) {
@@ -45,7 +45,7 @@ void guictxtmenu_notrack::clicked(int _id) {
                     ts.trackLoaded->loadSnapshot(ts);
                     std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
                     for (auto effect: effects) {
-                        pluginMgr->activateDeferred(effect, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                        pluginMgr->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                     }
                 }
                 for (track_snapshot_t& ts: ctr->tracks) {

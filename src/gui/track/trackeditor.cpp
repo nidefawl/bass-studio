@@ -30,7 +30,7 @@
 #include "track_impl.h"
 #include "host/midiarp.h"
 #include "logging.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 
 
 /*static*/ void action_modify_track::loadTrackSnapshot(DawInstance* daw, track_t* track, const track_snapshot_t* trackStored) {

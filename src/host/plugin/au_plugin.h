@@ -45,8 +45,8 @@ public:
     bool hasWindowEditor() override {
         return false;
     }
-    void unload(DAW::pluginmanager* host, int flags) override;
-    void load(DAW::pluginmanager* host) override;
+    void unload(DAW::Host::PluginManager* host, int flags) override;
+    void load(DAW::Host::PluginManager* host) override;
 
     // automatable_t interface
     String getAutomatableName() override;

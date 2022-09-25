@@ -17,9 +17,9 @@
 #include "gui/table/table_fwd.h"
 #include "plugins/synth/IPlugMidi.h"
 
-namespace DAW {
-    class pluginhost;
-    class pluginmanager;
+namespace DAW::Host {
+    class Host;
+    class PluginManager;
 }
 class DawInstance;
 class effect_deferred;
@@ -40,8 +40,8 @@ namespace PluginWrapper {
 }
 class effectbase : public automatable_t {
     friend class PluginWrapper::PluginInternalVST2;
-    friend class DAW::pluginmanager;
-    friend class DAW::pluginhost;
+    friend class DAW::Host::PluginManager;
+    friend class DAW::Host::Host;
     friend class guiplugin;
     friend class effect_deferred;
 
@@ -87,7 +87,7 @@ public:
     int32_t requestCaptureGUI    = 0;
 protected:
     int nLoadCalls               = 0;
-    DAW::pluginmanager* pluginMgr = nullptr;
+    DAW::Host::PluginManager* pluginMgr = nullptr;
     String currentProgramNameStr = "<no program>";
     bool currentProgramNameSet   = false;
 
@@ -150,8 +150,8 @@ public:
     virtual ivec2 constrainWindowSize(host_plugin_window* window, ivec2 size) {
         return size;
     };
-    virtual void unload(DAW::pluginmanager* host, int flags);
-    virtual void load(DAW::pluginmanager* host);
+    virtual void unload(DAW::Host::PluginManager* host, int flags);
+    virtual void load(DAW::Host::PluginManager* host);
     virtual samplecount_t getPluginLatency() = 0;
     virtual String getInfo(std::vector<String>& list) { return ""; };
     track_t* getTrack() override;
@@ -263,7 +263,7 @@ public:
     int getModuleStoredType() const;
 };
 namespace DAW {
-    effectbase* loadEffectModule(pluginmanager* host, const plugin_snapshot_t& pluginSnapshot, bool isForceRequest);
+    effectbase* loadEffectModule(PluginManager* host, const plugin_snapshot_t& pluginSnapshot, bool isForceRequest);
     void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
     void removePlugin(DawInstance* daw, effectbase* module);
 }

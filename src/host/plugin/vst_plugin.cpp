@@ -16,7 +16,7 @@
 #include "vst_plugin_handles.h"
 #include "track.h"
 #include "track_impl.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "host/host_plugin_window.h"
 #include "gui/plugin/plugin.h"
 #include "gui/plugin/pluginctr.h"
@@ -24,7 +24,7 @@
 #include "plugins/plugin-base.h"
 #include "host/mainctrl.h"
 #include "host/history.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 
 
 FUNC_NOINLINE float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx);
@@ -149,7 +149,7 @@ bool vstplugin::updateWindowSize() {
 void AppWndProc_disableBlockReentrant();
 void AppWndProc_enableBlockReentrant();
 
-void vstplugin::unload(DAW::pluginmanager* host, int flags) {
+void vstplugin::unload(DAW::Host::PluginManager* host, int flags) {
     dbgassert(host == pluginMgr);
     pluginMgr = nullptr;
     dbgassert(nLoadCalls == 1);
@@ -282,7 +282,7 @@ void vstplugin::configureIOChannels() {
     }
 }
 
-void vstplugin::load(DAW::pluginmanager* mgr) {
+void vstplugin::load(DAW::Host::PluginManager* mgr) {
     dbgassert(nLoadCalls == 0);
     nLoadCalls++;
     pluginMgr = mgr;

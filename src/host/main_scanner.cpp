@@ -13,7 +13,7 @@
 #include "assert_dbg.h"
 #include "host/plugin/vst_plugin.h"
 #include "host/plugin/vst_plugin_handles.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "host/host.h"
 #include "logging.h"
 #include "threads/childprocessthread.h"
@@ -238,7 +238,7 @@ struct vstscanner_server_options {
     int32_t unresponsiveTimeoutSeconds = timeoutdefault;
 };
 
-static void getPluginData(DAW::vstpluginloadres& res, response_type_vst24_t* _out) {
+static void getPluginData(DAW::Host::vstpluginloadres& res, response_type_vst24_t* _out) {
     auto plugin = res.plugin;
     AEffect* aeffect     = plugin->handle->aeffect;
     _out->uniqueID       = aeffect->uniqueID;
@@ -633,9 +633,9 @@ static int runScannerServer(vstscanner_server_options options) {
 static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t& respPlugin) {
     log_message("runPluginTest");
 
-    auto host = std::make_unique<DAW::pluginhost>();
+    auto host = std::make_unique<DAW::Host::Host>();
     auto pluginMgr = host.get();
-    DAW::pluginmanager::assignMasterCallback(pluginMgr);
+    DAW::Host::PluginManager::assignMasterCallback(pluginMgr);
     host->setSampleFormat(sampleformat_t{ static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32 });
     auto& tls = daw_tls::getTls();
     tls.host = host.get();
@@ -655,7 +655,7 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
             dbgassert(res.plugin);
             response = CMD_PLUGIN_LOAD_SUCCESS_PLUGIN;
             getPluginData(res, &respPlugin);
-            pluginMgr->unloadPlugin(res.plugin, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+            pluginMgr->unloadPlugin(res.plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
         }
     } catch (...) {
         log_message("exception while loading %s", req.szPath);
@@ -680,9 +680,9 @@ static int runScannerClient() {
     }
 
 
-    auto host = std::make_unique<DAW::pluginhost>();
+    auto host = std::make_unique<DAW::Host::Host>();
     auto pluginMgr = host.get();
-    DAW::pluginmanager::assignMasterCallback(pluginMgr);
+    DAW::Host::PluginManager::assignMasterCallback(pluginMgr);
     host->setSampleFormat(sampleformat_t{ static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32 });
     auto& tls = daw_tls::getTls();
     tls.host = host.get();
@@ -768,7 +768,7 @@ static int runScannerClient() {
                             safe_strcpy(respShellPluginEntry.szName, entry.name);
                             writeToIPC(client, respShellPluginEntry);
                             log_message("unload shell entry: %08X", entry.pluginUID);
-                            pluginMgr->unloadPlugin(resShellPluginEntry.plugin, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                            pluginMgr->unloadPlugin(resShellPluginEntry.plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                         }
                     }
                     log_message("-- end of shell plugin list --");
@@ -784,7 +784,7 @@ static int runScannerClient() {
                     response_type_vst24_plugin_t respPlugin;
                     getPluginData(res, &respPlugin);
                     writeToIPC(client, respPlugin);
-                    pluginMgr->unloadPlugin(res.plugin, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                    pluginMgr->unloadPlugin(res.plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                     response = CMD_PLUGIN_END_SUCCESS;
                     writeToIPC(client, response);
                 }

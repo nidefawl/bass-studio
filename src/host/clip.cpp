@@ -642,7 +642,7 @@ tick_t clip_t::getLen() const {
 
     // if (this->lenSamples > 0 && this->clipType == CLIP_AUDIO) {
     //     auto pc = project_controller_t::get();
-    //     DAW::pluginhost* host = pluginhost::getInstance();
+    //     auto* host = pluginhost::getInstance();
     //     if (pc && host) {
     //         auto lenConverted  = sampleToTickConvert<tick_t, roundmode::round>(this->lenSamples, pc->getCurrentTempo(), host->m_sampleFormatInternal.sampleRate);
     //         if (lenConverted != len) {
@@ -664,7 +664,7 @@ void clip_t::setLen(tick_t _len) {
     if (this->clipType == CLIP_AUDIO && project_controller_t::get()) {
         //TODO: this should be done explicitly
         auto pc = project_controller_t::get();
-        auto host = DAW::pluginhost::getInstance();
+        auto host = DAW::Host::getInstance();
         if (host && pc)
             this->lenSamples = tickToSampleConvert<samplecount_t, roundmode::round>(_len, pc->getCurrentTempo(), host->m_sampleFormatInternal.sampleRate);
     }
@@ -688,7 +688,7 @@ void clip_t::setLenSamples(samplecount_t _lenSamples) {
     //TODO: this should be done explicitly
     if (this->clipType == CLIP_AUDIO && project_controller_t::get()) {
         auto pc = project_controller_t::get();
-        auto host = DAW::pluginhost::getInstance();
+        auto host = DAW::Host::getInstance();
         if (pc && host) {
             auto lenConverted  = sampleToTickConvert<tick_t, roundmode::round>(_lenSamples, pc->getCurrentTempo(), host->m_sampleFormatInternal.sampleRate);
             this->len = lenConverted;

@@ -98,8 +98,8 @@ public:
     bool showWindow(bool bResetPosition) override;
     void updateWindow() override;
     bool updateWindowSize();
-    void unload(DAW::pluginmanager* host, int flags) override;
-    void load(DAW::pluginmanager* host) override;
+    void unload(DAW::Host::PluginManager* host, int flags) override;
+    void load(DAW::Host::PluginManager* host) override;
     void configureIOChannels();
     void postLoad();
     vst_param_category* getCategory(int idx);

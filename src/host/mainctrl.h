@@ -305,10 +305,10 @@ public:
     ThreadLock lockPlayThread() {
         return playThread.lockThread();
     }
-    DAW::pluginhost* getHost() {
+    DAW::Host::Host* getHost() {
         return tls.host;
     }
-    DAW::pluginmanager* getPluginManager() {
+    DAW::Host::PluginManager* getPluginManager() {
         return tls.pluginManager;
     }
     audiocache* getAudioCache() {

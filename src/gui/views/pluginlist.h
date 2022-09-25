@@ -9,10 +9,10 @@
 #include "gui/controls/textfield.h"
 #include "gui/controls/list.h"
 #include "host/plugindatabase.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 #include "modules.h"
 #include "gui/tooltip/tooltip.h"
-#include "host/pluginmanager.h"
+#include "host/host_pluginmanager.h"
 
 class effectbase;
 class gui_pluginlist_entry : public gui_list_entry {
@@ -180,7 +180,7 @@ public:
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SYNTH, 0, "Synth (module)", true });
         auto daw = DawInstance::get();
         auto pluginMgr = daw->getPluginManager();
-        std::vector<DAW::builtin_module_reg_t>& vecReg = pluginMgr->getBuiltinModuleRegistry();
+        std::vector<DAW::Host::builtin_module_reg_t>& vecReg = pluginMgr->getBuiltinModuleRegistry();
         for (auto& reg : vecReg) {
             effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_INTERNAL_EFFECT, reg.id, reg.name, reg.isSynth });
         }

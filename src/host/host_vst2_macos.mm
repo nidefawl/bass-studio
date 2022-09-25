@@ -1,5 +1,5 @@
 #include "str_util.h"
-#include "pluginmanager.h"
+#include "host_pluginmanager.h"
 #import <Foundation/Foundation.h>
 #import <CoreFoundation/CoreFoundation.h>
 

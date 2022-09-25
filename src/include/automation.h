@@ -369,8 +369,10 @@ int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int
 void simplifyData(std::vector<automation_point_t>& data);
 void toggleDeviceEnableState(automatable_t* effect, int flags);
 
+namespace DAW::Host {
+    class PluginManager;
+}
 namespace DAW {
-    class pluginmanager;
     struct automation_ref_t {
         int type  = -1;
         float val = 0.0f;
@@ -385,6 +387,6 @@ namespace DAW {
     inline automation_ref_t AutomationConstant(float val) {
         return automation_ref_t{ 0, val, {} };
     }
-    bool resolveAutomationAtTime(const pluginmanager* host, const automation_ref_t& ref, tick_t atTime, float* fOut);
-    bool resolveAutomatableRef(const pluginmanager* host, automationlane_snapshot_t& ref, automatable_t** out);
+    bool resolveAutomationAtTime(const DAW::Host::PluginManager* host, const automation_ref_t& ref, tick_t atTime, float* fOut);
+    bool resolveAutomatableRef(const DAW::Host::PluginManager* host, automationlane_snapshot_t& ref, automatable_t** out);
 }// namespace DAW

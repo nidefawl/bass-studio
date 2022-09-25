@@ -88,7 +88,7 @@ int64_t audiotrack_t::readSamples(samplecount_t samplePos, samplecount_t numSamp
     }
     return samplesWritten;
 }
-samplecount_t audiotrack_t::convertToSamples(DAW::pluginhost* host) {
+samplecount_t audiotrack_t::convertToSamples(DAW::Host::Host* host) {
     auto isInSync = [this]() -> bool {
         if (data.size() != this->samples.size()) {
             return false;
