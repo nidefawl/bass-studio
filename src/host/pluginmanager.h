@@ -111,6 +111,7 @@ public:
         daw_tls::tlsinstance tls;
         std::unique_ptr<ProcessThread> vstscannerProcessThread;
         int scanningState = 0;
+        int32_t vst2TransportStateFlags = 0;
     };
     pluginmanager_impl* const mgrImpl;
 private:
@@ -145,6 +146,8 @@ public:
     static bool assignMasterCallback(pluginmanager* host);
     pluginmanager() noexcept;
     ~pluginmanager();
+    void setTls(daw_tls::tlsinstance& tls);
+    void destroy();
     std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {
         return builtinModules;
     }
@@ -158,7 +161,9 @@ public:
     vstpluginloadres loadPlugin(String filepath, uint32_t uId, int32_t globalId = 0, uint64_t bugfixFlags = 0);
     effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
     void activateDeferred(effectbase* eff, int flags, effectbase** out_effectLoaded = nullptr);
-
+    void updateSampleFormat(const sampleformat_t& _sampleFormat);
+    void UpdateVstTime(VstTimeInfo& timeInfo, const sampleformat_t& sampleFormat, const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state) const;
+    void onBeforeBlock(const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state);
 
     vstplugin* getPlugin(AEffect* aeffect);
     effectbase* getPluginById(int32_t projectGlobalId, bool activeOnly = true) const;
@@ -195,8 +200,6 @@ public:
     bool isScanning();
     void stopScanner();
     void releaseProjectResources();
-
-    void setTls(daw_tls::tlsinstance& tls);
 };
 
 } // namespace DAW

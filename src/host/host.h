@@ -133,7 +133,7 @@ public:
     int32_t processRender(project_controller_t* ctrl, int32_t sample, double posDouble);
     int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
     int32_t processGraphNode(process_scratch_buf_t& tmp, track_block_processing_task_t& task) /*const*/;
-    void processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* output, const double tickLatencyCompensated, const double sampleLatencyCompensated, int32_t numSamples, playback_state state, const effect_processing_graph_t* const processingGraph) const;
+    void processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* output, project_globals_t& globals, const double tickLatencyCompensated, const double sampleLatencyCompensated, int32_t numSamples, playback_state state, const effect_processing_graph_t* const processingGraph) const;
 
 
     void unload();
@@ -162,25 +162,6 @@ public:
     }
     void getProcessingStats(host_processing_stats_t& stats) {
         stats = this->processing;
-    }
-
-    static int32_t canDo(const char* ptr) {
-        if ((!strcmp(ptr, HostCanDos::canDoSendVstEvents)) ||
-            (!strcmp(ptr, HostCanDos::canDoSendVstMidiEvent)) ||
-            (!strcmp(ptr, HostCanDos::canDoSendVstTimeInfo)) ||
-            (!strcmp(ptr, HostCanDos::canDoReceiveVstEvents)) ||
-            (!strcmp(ptr, HostCanDos::canDoReceiveVstMidiEvent)) ||
-            (!strcmp(ptr, HostCanDos::canDoReportConnectionChanges)) ||
-            (!strcmp(ptr, HostCanDos::canDoAcceptIOChanges)) ||
-            (!strcmp(ptr, HostCanDos::canDoSizeWindow)) ||
-            (!strcmp(ptr, HostCanDos::canDoSendVstMidiEventFlagIsRealtime)) ||
-            (!strcmp(ptr, HostCanDos::canDoStartStopProcess)) ||
-            (!strcmp(ptr, HostCanDos::canDoShellCategory)))
-            return 1;
-        if (!strcmp(ptr, "NIMKPIVendorSpecificCallbacks")) {
-            return -1;
-        }
-        return 0;
     }
 
     void preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings);

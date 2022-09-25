@@ -1,6 +1,7 @@
 #include <vector>
 #include <memory>
 
+#include "assert_dbg.h"
 #include "group.h"
 #include "math/seq_math.h"
 #include "event.h"
@@ -285,6 +286,7 @@ std::shared_ptr<DAW::effect_processing_graph_t> module_group::getLastProcessingG
 }
 
 void module_group::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
+    dbgassert(daw_tls::getTls().host);
     dbgassert(in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
     audio->input.copyFrom(in);
 
@@ -292,7 +294,8 @@ void module_group::process(AudioBlock* in, AudioBlock* out, double tick, double 
     if (!DAW::buildEffectProcessingGraph(pluginMgr, nullptr, audio, effProcessingGraph)) {
         log_lf(Log::L_ERROR, "Failed building effect graph\n");
     }
-    daw_tls::getTls().host->processAudio(audio, &audio->input, &audio->output, tick, samplePos, numSamples, state, effProcessingGraph.get());
+    auto host = daw_tls::getTls().host;
+    host->processAudio(audio, &audio->input, &audio->output, host->prjGlobals, tick, samplePos, numSamples, state, effProcessingGraph.get());
     lastEffProcessingGraph = effProcessingGraph;;
 #ifdef DAW_DEBUG_TRACK_GRAPHS
     //TODO: this code path runs on a workerthread. Store processing-graph add to pluginhost::lastProcessingGraphs from playback-thread
