@@ -9,7 +9,7 @@ namespace DAW::Shape {
 struct shape_preset_t {
     int32_t version = 0;
     String name;
-    DAW::Shape::shape_base_t curve;
+    shape_base_t curve;
 };
 bool saveShapePresetFile(const shape_preset_t& _preset, const String& path);
 bool loadShapePresetFile(const String& path, shape_preset_t& preset);

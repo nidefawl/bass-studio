@@ -308,11 +308,12 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
 
 void guibutton_audioengine::prerender(NVGcontext* vg) {
     if (dawCtrl) {
-        ThreadLock lock = dawCtrl->getDaw()->getPlayThread()->tryLockThread();
+        auto daw = dawCtrl->getDaw();
+        ThreadLock lock = daw->getPlayThread()->tryLockThread();
         if (lock.isLocked()) {
-            vsthost::getInstance()->getStats(stats);
+            daw->getHost()->getStats(stats);
         } else {
-            this->cpuUsage = vsthost::getInstance()->getCpuUsage();
+            this->cpuUsage = daw->getHost()->getCpuUsage();
         }
     }
 }
@@ -425,4 +426,200 @@ bool gui_tempocontrol_input::handleKeyInput(KeyEvent& kevt) {
         }
     }
     return handled;
+}
+bool guibutton_audioengine::getState() const {
+    // TODO: get rid of getInstance call (required in settings dialog window)
+    return DAW::pluginhost::getInstance()->isStreaming();
+}
+void gui_signaturecontrol_input::render(NVGcontext* vg) {
+    int32_t fl = getStateFlags();
+    renderWidgetBorder(vg, fl);
+    setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+    int n;
+    if (idx == 0) {
+        n = dawCtrl->getDaw()->sigNum();
+    } else {
+        n = dawCtrl->getDaw()->sigDen();
+    }
+    String str = StringFormat("%d", n);
+    nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
+}
+void gui_signaturecontrol_input::handleDraggedMove(MouseEvent& evt) {
+    if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
+        auto daw  = dawCtrl->getDaw();
+        int disty = (int) evt.dragDistance->y / 20;
+        if (math::abs(disty) < 1)
+            return;
+        evt.dragDistance->y = 0;
+        if (idx == 0) {
+            int n = daw->sigNum();
+            n     = CLAMP_I(n - disty, 0, 32);
+            daw->setNum(n);
+        } else {
+            int prev = daw->sigDen();
+            int now  = 1 << CLAMP_I((int) log2(prev) - disty, 0, 4);
+            printf("old %d new %d\n", prev, now);
+            daw->setDen(now);
+        }
+        daw->updateVisibleTrackContents();
+    }
+}
+void gui_signaturecontrol_input::handleDraggedBegin(MouseEvent& evt) {
+    if (evt.guiDragged == this) {
+        parentCtrl->captureMouse(this);
+    }
+}
+gui_tempocontrol::gui_tempocontrol()
+    : tempoInput(this) {
+    padding = 0;
+    add(&tempoInput);
+    setCanMouseHit(true);
+    editfield.setFlag(FLG_NO_LAYOUT, true);
+    editfield.setVisible(false);
+    editfield.setAlignment(gui_textfield::Alignment::Center);
+    editfield.setReturnCommits(true);
+    add(&editfield);
+}
+void gui_tempocontrol_input::render(NVGcontext* vg) {
+    renderWidgetBorder(vg, getStateFlags());
+    String tempo = FormatTempo(dawCtrl->getDaw()->getCurrentTempoBPM());
+    setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+    nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(tempo), NULL);
+}
+void gui_tempocontrol_input::handleDraggedBegin(MouseEvent& evt) {
+    if (isCtrl(evt.kbmods) || (evt.type == MouseEventType::M_EVT_DOUBLECLICK)) {
+        if (parent) parent->buttonClicked(this);
+        return;
+    }
+    if (evt.guiDragged == this) {
+        parentCtrl->captureMouse(this);
+    }
+}
+void gui_tempocontrol_input::handleDraggedMove(MouseEvent& evt) {
+    if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
+        int disty = (int) evt.dragDistance->y / 10;
+        if (math::abs(disty) < 1)
+            return;
+        evt.dragDistance->y = 0;
+        onKeyInputChangeValue(ivec2{ 0, -disty * 100 });
+    }
+}
+void gui_signaturecontrol::layout() {
+    inputNum.size  = ivec2(30, size.y);
+    inputDen.size  = ivec2(30, size.y);
+    inputNum.pos.x = (size.x / 4) - inputNum.size.x / 2;
+    inputDen.pos.x = (size.x / 4) * 3 - inputNum.size.x / 2;
+}
+void gui_signaturecontrol::render(NVGcontext* vg) {
+    renderWidgetBorder(vg, getStateFlags());
+    if (!setScissorTransform(vg)) {
+        return;
+    }
+    String sigSep = "/";
+    this->inputNum.render(vg);
+    this->inputDen.render(vg);
+    setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+    nvgText(vg, size.x / 2.0f, G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(sigSep), NULL);
+}
+guictr_tempocontrols::guictr_tempocontrols(project_t& _project, project_globals_t& _projectGlobals)
+    : guictr_base(),
+      projectGlobals(_projectGlobals),
+      cursorPos(&projectGlobals.cursor.cursorPos),
+      songPos(&projectGlobals.playbackPos),
+      loopPos(&projectGlobals.loopStart),
+      loopLen(&projectGlobals.loopLen, true) {
+    //btnAudioOnOff.setTint(0x00ddff);
+    songPos.setConnectedBG();
+    loopPos.setConnectedBG();
+    loopLen.setConnectedBG();
+    btnRecord.drawFn = drawRecordSymbol;
+    btnPlay.drawFn   = drawPlaySymbol;
+    btnStop.drawFn   = drawStopSymbol;
+    btnLoop.drawFn   = drawTextureSymbol;
+    btnLoop.drawParm = ICON_LOOP;
+    btnLoop.setFlag(FLG_RENDER_BUTTON_WITH_LED, true);
+    btnLoop.setStateRef(&projectGlobals.loopEnabled);
+    btnRecord.setStateRef(&projectGlobals.recordArmed);
+    btnRecord.setButtonColor(GuiColor::COL_BTN_RECORD_ARM_BG);
+    add(&loopLen);
+    add(&loopPos);
+    add(&tempo);
+    add(&signature);
+    add(&cursorPos);
+    add(&btnLoop);
+    add(&btnStop);
+    add(&btnPlay);
+    add(&btnRecord);
+    add(&songPos);
+    add(&btnAudioOnOff);
+    padding = 8;
+}
+guictr_tempocontrols::~guictr_tempocontrols() {
+    remove(&btnAudioOnOff);
+    remove(&songPos);
+    remove(&btnRecord);
+    remove(&btnPlay);
+    remove(&btnStop);
+    remove(&btnLoop);
+    remove(&cursorPos);
+    remove(&signature);
+    remove(&tempo);
+    remove(&loopPos);
+    remove(&loopLen);
+}
+void guictr_tempocontrols::layout() {
+    ivec2 cs        = getSizeContent();
+    int32_t spacing = 10;
+    tempo.pos       = ivec2(5, 5);
+    tempo.size      = ivec2(80, 28);
+    signature.pos   = ivec2(tempo.right() + spacing, 5);
+    signature.size  = ivec2(80, 28);
+    cursorPos.pos   = ivec2(signature.right() + spacing, 5);
+    cursorPos.size  = ivec2(120, 28);
+
+    int32_t spacingCtrls = 5;
+    btnRecord.size = btnLoop.size = btnStop.size = btnPlay.size = ivec2(32, 32);
+
+    btnLoop.size.x = 48;
+    loopPos.size   = ivec2(100, 32);
+    loopLen.size   = ivec2(100, 32);
+    songPos.size   = ivec2(140, 32);
+
+    int32_t transportWidth = btnPlay.size.x + spacingCtrls + btnStop.size.x + spacingCtrls + songPos.size.x;
+    int32_t transportCtrls = math::max(cs.x / 2 - transportWidth / 2, cursorPos.right() + spacing);
+
+    std::vector<guibase*> v{ &btnRecord, &btnPlay, &btnStop, &songPos };
+    std::vector<guibase*> v2{ &btnLoop, &loopPos, &loopLen };
+    int posX = transportCtrls;
+    for (auto el : v) {
+        el->pos = ivec2(posX, 5);
+        posX    = el->right() + spacingCtrls;
+    }
+    posX += spacingCtrls * 3;
+    for (auto el : v2) {
+        el->pos = ivec2(posX, 5);
+        posX    = el->right() + spacingCtrls;
+    }
+
+    btnAudioOnOff.size = ivec2(100, 28);
+    btnAudioOnOff.pos  = ivec2(math::max(songPos.right() + spacing, cs.x - 5 - btnAudioOnOff.size.x), 5);
+    //        tempo.layout();
+    //        signature.layout();
+    //        cursorPos.layout();
+    //        songPos.layout();
+    //        btnPlay.layout();
+    //        btnAudioOnOff.layout();
+    for (guibase* gui : guis) {
+        gui->layout();
+    }
+}
+void guictr_tempocontrols::render(NVGcontext* vg) {
+    //guictr_base::setScissorTransform(vg);
+    ivec2 posInset = getPosContent();
+    nvgTranslate(vg, posInset.x, posInset.y);
+    for (guibase* gui : guis) {
+        nvgSave(vg);
+        gui->render(vg);
+        nvgRestore(vg);
+    }
 }

@@ -5,7 +5,10 @@
 #include "host/mainctrl.h"
 #include <memory>
 
-class vsthost;
+
+namespace DAW {
+    class pluginhost;
+}
 struct audiotrack_split_t : public samplesource_t {
     int64_t sampleId = 0;
     int64_t version  = 0;
@@ -41,7 +44,7 @@ struct audiotrack_t {
      * @param host
      * @return number of bytes copied
      */
-    samplecount_t convertToSamples(vsthost* host);
+    samplecount_t convertToSamples(DAW::pluginhost* host);
     samplecount_t readSamples(samplecount_t samplePos, samplecount_t numSamples, channelnum_t numChannels, std::vector<samplechannel_t>& outChannels);
     void store(AudioBlock* input, const samplecount_t samplePos);
     static samplecount_t GetSplitSampleLength();

@@ -17,7 +17,7 @@
 #include "vst_plugin_handles.h"
 #include "track.h"
 #include "track_impl.h"
-#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 #include "host/host_plugin_window.h"
 #include "gui/plugin/plugin.h"
 #include "gui/plugin/pluginctr.h"
@@ -25,6 +25,7 @@
 #include "plugins/plugin-base.h"
 #include "host/mainctrl.h"
 #include "host/history.h"
+#include "host/pluginmanager.h"
 
 
 FUNC_NOINLINE float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx);
@@ -104,7 +105,10 @@ void vstplugin::onDisable() {
     isInSuspend = true;
     this->dispatch(effStopProcess);
     this->dispatch(effMainsChanged, 0, false);
-    vsthost::getInstance()->sendNotesOff(this);
+    auto stage = getTrackLink();
+    if (assert_expr(stage)) {
+        stage->sendNotesOff();
+    }
 }
 
 void vstplugin::printNames() {
@@ -146,9 +150,9 @@ bool vstplugin::updateWindowSize() {
 void AppWndProc_disableBlockReentrant();
 void AppWndProc_enableBlockReentrant();
 
-void vstplugin::unload(vsthost* host, int flags) {
-    dbgassert(host == vstHost);
-    vstHost = nullptr;
+void vstplugin::unload(DAW::pluginmanager* host, int flags) {
+    dbgassert(host == pluginMgr);
+    pluginMgr = nullptr;
     dbgassert(nLoadCalls == 1);
     nLoadCalls--;
     if (this->windowHost) {
@@ -279,11 +283,12 @@ void vstplugin::configureIOChannels() {
     }
 }
 
-void vstplugin::load(vsthost* host) {
+void vstplugin::load(DAW::pluginmanager* mgr) {
     dbgassert(nLoadCalls == 0);
     nLoadCalls++;
-    vstHost = host;
-    setSampleFormat(host->m_sampleFormatInternal);
+    pluginMgr = mgr;
+    if (assert_expr(hostCallback))
+        setSampleFormat(hostCallback->m_sampleFormatInternal);
     auto aeffect = handle->aeffect;
 
     aeffect->resvd2     = 0;
@@ -513,7 +518,7 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
         }
     }
     if (!bLoadProgramDataChunk || (this->bugfixFlags & VST2_BUG_NEED_SHOW_WINDOW_TO_LOAD_PRESET)) {
-        loadEffectParamsFromSnapshot(pluginSnapshot, this);
+        DAW::loadEffectParamsFromSnapshot(pluginSnapshot, this);
     }
     this->dispatch(effEndSetProgram);
     this->dispatch(effSetProgram, 0, programIdx);
@@ -879,16 +884,15 @@ void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, double sam
     vst_process(this, this->handle->aeffect, in->buf, out->buf, numSamples);
 }
 
-void vstplugin::sendNotesOff(int32_t bpm100) {
+void vstplugin::sendNotesOff() {
     if (bCanReceiveMidi) {
         const auto& heldNotes = handle->heldNotes;
-        const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, bpm100, format.sampleRate);
         VstEvent_t::ReallocVstEvents(&handle->midiEventsBuf, heldNotes.size() + 1);
         VstEvent_t* midiEventsBuf = handle->midiEventsBuf;
         midiEventsBuf->reset();
         for (const auto& notePitch : heldNotes) {
             noteevent_t evt = {notePitch, 0, 0, 0, false, false};
-            midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, format.blockSize);
+            midiEventsBuf->writeVstMidiEvt(evt, 0, format.blockSize);
         }
         dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) heldNotes.size());
         midiEventsBuf->writeInstantOff();

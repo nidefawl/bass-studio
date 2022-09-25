@@ -81,6 +81,7 @@
 #include "plugindatabase.h"
 #include "window_impl.h"
 
+#include "pluginmanager.h"
 #include "vst_host.h"
 #include "audio_host.h"
 #include "midi_host.h"
@@ -91,6 +92,7 @@
 #endif
 #ifdef __linux__
 #include "platform/linux/windowsize.h"
+#include "host/pluginmanager.h"
 #endif
 
 const int FLAG_DEFER_LOAD               = 0x1;
@@ -1259,6 +1261,7 @@ void DawInstance::destroy() {
     delete tls.audioHost;
     tls.dawInstance    = nullptr;
     tls.host           = nullptr;
+    tls.pluginManager  = nullptr;
     tls.runtime        = nullptr;
     tls.settings       = nullptr;
     tls.midiHost       = nullptr;
@@ -1310,8 +1313,9 @@ void DawInstance::initDaw() {
         }
     }
     initTls.dawInstance = this;
-    initTls.host = new vsthost();
-    if (!vsthost::assignMasterCallback(initTls.host)) {
+    initTls.host = new DAW::pluginhost();
+    initTls.pluginManager = initTls.host;
+    if (!DAW::pluginmanager::assignMasterCallback(initTls.pluginManager)) {
         delete initTls.host;
         dbgassert(0);
         throw applogicexception("no empty vst callback slot");
@@ -1560,6 +1564,7 @@ void DawInstance::onPluginsChanged() {
         dbgassert(pDawCtrl->isOk());
         pDawCtrl->onPluginsChanged();
     }
+    tls.pluginManager->onTrackLayoutChange();
 }
 
 void DawInstance::updateVisibleTrackContents() {
@@ -1634,8 +1639,8 @@ void DawInstance::configureSampleRate() {
     {
 
         ThreadLock lock  = getPlayThread()->lockThread();
-        vsthost* host    = getHost();
-        audiohost* ahost = getAudioHost();
+        auto host  = getHost();
+        auto ahost = getAudioHost();
         ahost->stopAudio();
         host->setOutput(nullptr);
         if (settings.dawsettings.audioEnabled) {
@@ -1747,7 +1752,7 @@ void DawInstance::onTick() {
                 auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[idx]);
                 effectbase* pluginLoaded;
                 ThreadLock lock = getPlayThread()->lockThread();
-                tls.host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
+                tls.host->activateDeferred(plugin, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
             } else {
                 scriptState = 10;
             }
@@ -1923,7 +1928,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
                 dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
                 auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
                 effectbase* pluginLoaded;
-                tls.host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
+                tls.host->activateDeferred(plugin, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
             }
         }
         tls.audioCache->load(file->sampleFileIndex);
@@ -1988,7 +1993,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
                 /** TODO: vsync **/
                 seqthreads::threadSleep(16);
                 effectbase* pluginLoaded;
-                tls.host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
+                tls.host->activateDeferred(plugin, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
             }
             log_printf("end plugin list loading\n");
         const int32_t numSamplesToLoad = file->sampleFileIndex.list.size();
@@ -2692,7 +2697,7 @@ void DawInstance::removeTrackId(uint32_t trackId) {
 void DawInstance::removeTrackImpl(track_t* track, int flags) {
     if (tls.mainCtrl) {
         tls.mainCtrl->getPluginCtr()->hideTrack(track->audio);
-        // TODO: handle plugins correctly, right now they remain loaded in vsthost
+        // TODO: handle plugins correctly, right now they remain loaded in pluginhost
         if (tls.mainCtrl->clipView.gui && tls.mainCtrl->clipView.gui->m_track == track) {
             tls.mainCtrl->clipView.set(nullptr);
         }
@@ -2960,29 +2965,30 @@ GLFWwindow* getTopLevelGlfwWindow() {
 }
 
 int handleFatalError(int type, int implSpecType) {
-    /*seqthreads::thread_base* thread = MainCtrl::getPlayThread();
+    /* auto daw = DawInstance::get();
+    seqthreads::thread_base* thread = daw->getPlayThread();
     if (thread && seqthreads::getCurrentThreadId() == thread->getThreadId()) {
         host_processing_stats_t processing;
-        auto host = vsthost::getInstance();
+        auto host = daw->getHost();
         host->getProcessingStats(processing);
         if (processing.pluginId) {
-            effectbase* eff = host->getPluginById(processing.pluginId);
+            effectbase* eff = daw->getPluginManager()->getPluginById(processing.pluginId);
             if (eff) {
                 log_printf("Crash was most likely caused by %s\n", StringAsCStr(eff->getName()));
             }
         }
-    }*/
+    } */
     return 0;
 }
 
 int32_t project_controller_t::tickToSamples(tick_t ticks) {
-    vsthost* host = vsthost::getInstance();
+    auto host = DawInstance::get()->getHost();
     dbgassert(host);
     return tickToSampleConvert<int32_t, roundmode::round>(ticks, projectGlobals->tempo100, host->m_sampleFormatInternal.sampleRate);
 }
 
 tick_t project_controller_t::samplesToTicks(int32_t sample) {
-    vsthost* host = vsthost::getInstance();
+    auto host = DawInstance::get()->getHost();
     dbgassert(host);
     return sampleToTickConvert<tick_t, roundmode::round>(sample, projectGlobals->tempo100, host->m_sampleFormatInternal.sampleRate);
 }

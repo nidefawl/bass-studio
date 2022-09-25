@@ -19,7 +19,7 @@
 #include "gui/cliprenderer/cliprenderer_cache.h"
 #include "track.h"
 #include "track_impl.h"
-#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 #include "appconfig.h"
 #include <nanovg.h>
 
@@ -669,8 +669,10 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
     if (track && track->audio) {
         clip_t* clip = guiClip->m_clip;
 
-/*        ThreadLock lock                       = MainCtrl::getPlayThread()->lockThread();
-        std::vector<note_t> heldRealtimeNotes = vsthost::getInstance()->getRealtimeNotes();//TODO: NOT THREADSAFE
+
+        /* auto daw = dawCtrl->getDaw();
+        ThreadLock lock = daw->lockPlayThread();
+        std::vector<note_t> heldRealtimeNotes = daw->getHost()->getRealtimeNotes();//TODO: NOT THREADSAFE
         if (heldRealtimeNotes.size()) {
             int nRendered = 0;
             for (note_t& note: heldRealtimeNotes) {
@@ -695,7 +697,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                 nvgFillPaint(vg, paint);
                 nvgBatchedRender(vg);
             }
-        }*/
+        } */
         ThreadLock lock                = track->audio->midiMutex.lockThread();
         std::vector<note_t>& heldNotes = track->audio->m_heldNotes;
         if (heldNotes.size()) {

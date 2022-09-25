@@ -24,7 +24,7 @@
 #include "snapshot.h"
 #include "track.h"
 #include "fileio.h"
-#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 #include "host/plugin/base_plugin.h"
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
@@ -190,7 +190,7 @@ struct audio_stage_t {
     std::vector<DAW::channel_ref_t> postEffectRouting;
     std::vector<audio_stage_t*> children;
 
-    vsthost* const host = nullptr;
+    DAW::pluginmanager* const host = nullptr;
     audio_stage_t* parent = nullptr;
     effectbase* owner = nullptr;
     /**
@@ -205,7 +205,7 @@ struct audio_stage_t {
     clip_recorder recorder;
     std::shared_ptr<DAW::effect_processing_graph_t> processingGraph;
 
-    audio_stage_t(vsthost* const _host, const audio_stage_id_t _id, const sampleformat_t _sampleFormat, const channelnum_t _numChannels, int _type = 1)
+    audio_stage_t(DAW::pluginmanager* const _host, const audio_stage_id_t _id, const sampleformat_t _sampleFormat, const channelnum_t _numChannels, int _type = 1)
     : input(_numChannels, _sampleFormat.blockSize),
       output(_numChannels, _sampleFormat.blockSize),
       outputPost(_numChannels, _sampleFormat.blockSize),
@@ -266,7 +266,7 @@ struct audio_stage_t {
     void createRoutingSnapshot(track_effect_routing_snapshot_t& snapshot);
     void loadRoutingSnapshot(const track_effect_routing_snapshot_t& snapshot);
     void configureDefaultRoutings();
-    virtual void sendNotesOff(int32_t bpm100);
+    virtual void sendNotesOff();
     virtual void onStartPlayback();
     virtual void sendNotesToEffect(const std::vector<noteevent_t>& evtsOut, tick_t tickLatencyCompensated, int32_t bpm100, effectbase* effect);
     virtual void getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<noteevent_t>& evtsOut, bool isPost);
@@ -286,8 +286,6 @@ inline bool isAudioStageChildOf(audio_stage_t* parent, audio_stage_t* child) {
     }
     return false;
 }
-void assignFreeStageIds(vsthost* host, plugin_snapshot_t& snapshot);
-void assignFreeStageIdsTrackSnapshot(vsthost* host, track_snapshot_t& snapshot);
 track_id_snapshot_t saveTrackIdSnapshot(const audio_stage_id_t& stageId);
 audio_stage_id_t loadTrackIdSnapshot(const track_id_snapshot_t& stageId);
 
@@ -305,14 +303,15 @@ struct midi_events_t {
 namespace DAW {
 class midiarp;
 struct arp_note_t;
-
-inline bool isChannelConnected(const DAW::channel_ref_t& ch) {
+void assignFreeStageIds(pluginmanager* host, plugin_snapshot_t& snapshot);
+void assignFreeStageIdsTrackSnapshot(pluginmanager* host, track_snapshot_t& snapshot);
+inline bool isChannelConnected(const channel_ref_t& ch) {
     return ch.type != stage_type::INPUT_EMPTY;
 }
-inline bool isTrackSrcSolod(const DAW::track_source_t& src) {
+inline bool isTrackSrcSolod(const track_source_t& src) {
     return (src.flags & (audiostageflags_t::SOLO|audiostageflags_t::SOLO_PARENT)) != audiostageflags_t::NONE;
 }
-inline bool isMidiChannelConnected(const DAW::midichannel_ref_t& ch) {
+inline bool isMidiChannelConnected(const midichannel_ref_t& ch) {
     return ch.type != midistage_type::INPUT_EMPTY;
 }
 inline midichannel_ref_t MidiChannelNone() {
@@ -430,9 +429,9 @@ struct track_impl_t : public audio_stage_t {
     ThreadMutex midiMutex;
     track_midiprocess_profiling_t procMidiStats;
     hires_timer_t tmr;
-    track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels);
+    track_impl_t(DAW::pluginmanager* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels);
     ~track_impl_t() override;
-    void sendNotesOff(int32_t bpm100) override;
+    void sendNotesOff() override;
     void onStartPlayback() override;
     void onStopPlayback() override;
     void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) override;

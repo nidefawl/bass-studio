@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory.h>
+#include "host/vst_host.h"
 #include "audiocache.h"
 #include "host/daw_channel.h"
 #include "host/history.h"
@@ -21,7 +22,6 @@
 #include "tls.h"
 #include "types.h"
 #include "util/profiling.h"
-#include "vst_host.h"
 #include "fileio.h"
 #include "track.h"
 #include "basectrl.h"
@@ -82,6 +82,15 @@
 #ifdef DBG_PRINT_CALLBACKS
 #define MAX_LEN_MY_DBF 512
 
+static int32_t dbgStep = 1;
+namespace DebugAlloc {
+    void beginTrace();
+    void endTrace();
+}
+
+namespace DAW {
+
+
 bool filterOpCode(int opcode) {
 //    return opcode == audioMasterUpdateDisplay;
 //    if ( opcode == audioMasterSizeWindow)
@@ -119,11 +128,11 @@ void emptyPrinft(vstplugin* plugin, const char *fmt, ...) {
 #endif
 
 
-struct vsthost::track_block_processing_task_t {
+struct pluginhost::track_block_processing_task_t {
 #if DAW_DEBUG_AUDIOGRAPH
-    std::shared_ptr<DAW::effect_processing_graph_t> effectProcessingGraph;
+    std::shared_ptr<effect_processing_graph_t> effectProcessingGraph;
 #endif
-    /* const */ DAW::processing_track_node_t* trackNode = nullptr;
+    /* const */ processing_track_node_t* trackNode = nullptr;
     AudioBlock* ptrExternalInputs = nullptr;
     AudioBlock* ptrExternalOutputs = nullptr;
     audiostream_properties_t audioProp;
@@ -147,16 +156,16 @@ struct process_scratch_buf_t {
 
 class TrackBlockProcessTask : public WorkerThread::ThreadTask {
     process_scratch_buf_t buf;
-    vsthost::track_block_processing_task_t blockProcTask;
+    pluginhost::track_block_processing_task_t blockProcTask;
     bool inUse = false;
-    vsthost* host = nullptr;
+    pluginhost* host = nullptr;
 public:
     struct process_task_stats_t {
         int64_t timeStart = 0;
         int64_t timeEnd = 0;
     };
 
-    void init(vsthost* _host) {
+    void init(pluginhost* _host) {
         this->host = _host;
     }
 
@@ -172,7 +181,7 @@ public:
         stats.timeEnd = getTimeMicros();
     }
 
-    void setTask(vsthost::track_block_processing_task_t task) {
+    void setTask(pluginhost::track_block_processing_task_t task) {
         reset();
         this->blockProcTask = task;
         inUse = true;
@@ -182,7 +191,7 @@ public:
         inUse = false;
     }
 
-    vsthost::track_block_processing_task_t& getTask() {
+    pluginhost::track_block_processing_task_t& getTask() {
         return blockProcTask;
     }
 #if THREADSYNC == THREADSYNC_SEMAPHORE
@@ -198,40 +207,10 @@ public:
 #endif
 };
 
-namespace DAW {
-
-class plugin_host_callback : public i_host_callback {
-    vsthost* const host;
-    public:
-    explicit plugin_host_callback(vsthost* _host)
-    : host(_host) {
-    }
-    void onLatencyChanged(effectbase* effect) override {
-        (void) host;
-    }
-    void onParametersChanged(effectbase* effect, int32_t idx, float val, int flags, int stage) override {
-
-    }
-    void onIOConfigChanged(effectbase* effect) override {
-
-    }
-    void onUiChanged(effectbase* effect) override {
-        if (effect) {
-            // NOTE: this loop might kill performance
-            effect->visitParams([](auto& mapEntry) {
-                automatable_param_t& param = mapEntry.second;
-                param.paramValueState |= PARAM_FLAG_DIRTY;
-                param.paramDisplayValState |= PARAM_FLAG_DIRTY;
-            });
-        }
-    }
-};
-
-}
 /**
  * VST Host implementation internals
  */
-class vsthost::vsthost_impl {
+class pluginhost::host_impl {
 public:
     daw_tls::tlsinstance tls;
     std::array<WorkerThread, MAX_AUDIOPROCESSING_THREADS> threads;
@@ -243,31 +222,25 @@ public:
     std::mutex mtx;
     process_scratch_buf_t singleThreadedBuf;
 
-    std::shared_ptr<DAW::AudioIO::AudioStream> audioStream;
-    std::shared_ptr<DAW::processing_graph_t> processingGraph;
-    std::shared_ptr<DAW::plugin_host_callback> pluginHostCallback;
+    std::shared_ptr<AudioIO::AudioStream> audioStream;
+    std::shared_ptr<processing_graph_t> processingGraph;
 
     channelnum_t inputChannels = 0;
     channelnum_t outputChannels = 0;
     uint32_t threadsRunningCount = 0;
     uint32_t threadCount = NUM_AUDIOPROCESSING_THREADS_INITIAL;
     uint32_t playThreadId = 0;
-    VstInt32 vstShellCurrentUniqueId = 0;
 #if THREADSYNC == THREADSYNC_SEMAPHORE
     std::binary_semaphore conditionSingleTaskFinished{0};
 #elif THREADSYNC == THREADSYNC_ATOMIC
     std::atomic_int_fast8_t atomicWorkerCount{0};
 #endif
-
-    std::unique_ptr<ProcessThread> vstscannerProcessThread;
-    int scanningState = 0;
-    bool isOfflineRendering = false;
-    explicit vsthost_impl(vsthost* host) {
+    explicit host_impl(pluginhost* host) {
         for (TrackBlockProcessTask& task : tasks) {
             task.init(host);
         }
     }
-    ~vsthost_impl() {
+    ~host_impl() {
         stopThreads();
     };
 
@@ -361,8 +334,8 @@ public:
 namespace
 {
 struct vst_internal_hostslot {
-    vsthost* g_instance = nullptr;
-    vsthost::vsthost_impl* g_instanceImpl = nullptr;
+    pluginmanager* g_instance = nullptr;
+    DAW::plugin_host_callback* g_hostCallback = nullptr;
 };
 
 vst_internal_hostslot g_hostslots[NUM_HOST_CB_SLOTS];
@@ -371,7 +344,7 @@ vst_internal_hostslot g_hostslots[NUM_HOST_CB_SLOTS];
 /**
  * VST Host AudioMasterCallback
  */
-VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+VstIntPtr audioMasterHost(pluginmanager* host, DAW::plugin_host_callback* hostCallback, AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
     dbgassert(host);
     // In case a plugin instance outlives the host
     if (!host)
@@ -388,7 +361,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
     seqthreads::getThreadInfo(bIsKnownThread, bIsInternalThread);
     if (!bIsKnownThread) {
         seqthreads::registerThread("External", false);
-        daw_tls::setTls(impl->tls);
+        daw_tls::setTls(host->mgrImpl->tls);
         log_lf(Log::L_WARN, "(First) Request from external thread: Plugin '%s' opcode %d %d %zd %f\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), opcode, index, value, opt);
         bIsInternalThread = false;
     }
@@ -466,7 +439,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         if (plugin) {
             return (VstIntPtr)plugin->getLocalCurrentUniqueId();
         }
-        return impl->vstShellCurrentUniqueId;
+        return hostCallback->vstShellCurrentUniqueId;
     case audioMasterIdle:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterIdle %d %d %zd\n", opcode, index, value, 0);
@@ -484,7 +457,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         if (plugin) {
             return (VstIntPtr)plugin->getLocalTimeInfoPtr();
         }
-        return (VstIntPtr)host->getTimeInfo();
+        return (VstIntPtr)&hostCallback->m_vstTimeInfo;
 
     case audioMasterProcessEvents:
         if (!throttleLog)
@@ -515,7 +488,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
             return plugin->format.sampleRate;
         }
         if (host) {
-            return host->m_sampleFormatInternal.sampleRate;
+            return hostCallback->m_sampleFormatInternal.sampleRate;
         }
         return 0;
     case audioMasterGetBlockSize:
@@ -525,7 +498,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
             return plugin->format.blockSize;
         }
         if (host) {
-            return host->m_sampleFormatInternal.blockSize;
+            return hostCallback->m_sampleFormatInternal.blockSize;
         }
         return 0;
     case audioMasterGetInputLatency:
@@ -540,7 +513,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         return 0;
     case audioMasterGetCurrentProcessLevel:
         //if (!throttleLog) logPluginCb(plugin, "audioMasterGetCurrentProcessLevel %d %d %zd\n", opcode, index, value);
-        if (impl->isOfflineRendering){
+        if (hostCallback->isOfflineRendering){
             return VstProcessLevels::kVstProcessLevelOffline;
         }
         return VstProcessLevels::kVstProcessLevelRealtime;
@@ -596,7 +569,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         if (!throttleLog) {
             log_lf(Log::L_DEBUG, "%s audioMasterCanDo %s\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), (const char*)ptr);
         }
-        return vsthost::canDo((const char*)ptr);
+        return pluginhost::canDo((const char*)ptr);
     case audioMasterGetLanguage:
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterGetLanguage %d %d %zd\n", opcode, index, value, 0);
@@ -686,26 +659,26 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 
 VstIntPtr VSTCALLBACK audioMaster1(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
     dbgassert(g_hostslots[0].g_instance);
-    dbgassert(g_hostslots[0].g_instanceImpl);
-    return audioMasterHost(g_hostslots[0].g_instance, g_hostslots[0].g_instanceImpl, effect, opcode, index, value, ptr, opt);
+    dbgassert(g_hostslots[0].g_hostCallback);
+    return audioMasterHost(g_hostslots[0].g_instance, g_hostslots[0].g_hostCallback, effect, opcode, index, value, ptr, opt);
 }
 
 VstIntPtr VSTCALLBACK audioMaster2(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
     dbgassert(g_hostslots[1].g_instance);
-    dbgassert(g_hostslots[1].g_instanceImpl);
-    return audioMasterHost(g_hostslots[1].g_instance, g_hostslots[1].g_instanceImpl, effect, opcode, index, value, ptr, opt);
+    dbgassert(g_hostslots[1].g_hostCallback);
+    return audioMasterHost(g_hostslots[1].g_instance, g_hostslots[1].g_hostCallback, effect, opcode, index, value, ptr, opt);
 }
 
 VstIntPtr VSTCALLBACK audioMaster3(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
     dbgassert(g_hostslots[2].g_instance);
-    dbgassert(g_hostslots[2].g_instanceImpl);
-    return audioMasterHost(g_hostslots[2].g_instance, g_hostslots[2].g_instanceImpl, effect, opcode, index, value, ptr, opt);
+    dbgassert(g_hostslots[2].g_hostCallback);
+    return audioMasterHost(g_hostslots[2].g_instance, g_hostslots[2].g_hostCallback, effect, opcode, index, value, ptr, opt);
 }
 
 VstIntPtr VSTCALLBACK audioMaster4(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
     dbgassert(g_hostslots[3].g_instance);
-    dbgassert(g_hostslots[3].g_instanceImpl);
-    return audioMasterHost(g_hostslots[3].g_instance, g_hostslots[3].g_instanceImpl, effect, opcode, index, value, ptr, opt);
+    dbgassert(g_hostslots[3].g_hostCallback);
+    return audioMasterHost(g_hostslots[3].g_instance, g_hostslots[3].g_hostCallback, effect, opcode, index, value, ptr, opt);
 }
 
 static const double fSmpteDiv[] =
@@ -732,75 +705,58 @@ bool setFlag(int& _out, int flag, bool state) {
 String getModuleName(HMODULE);
 #endif
 
-class vsthost::ModuleManager {
-public:
-    ModuleManager() = default;
-
-    void releaseModule(void* module) {
-#ifdef _WIN32
-        String moduleName = getModuleName((HMODULE)module);
-        log_printf("Unload %s\n", StringAsCStr(moduleName));
-        FreeLibrary((HMODULE)module);
-#endif
-#if defined(__linux__) || defined(__APPLE__)
-        dlclose(module);
-#endif
-    }
-};
-
-void vsthost::getBlockThreadStats(std::vector<thread_stats_process_timings_t>& stats) {
+void pluginhost::getBlockThreadStats(std::vector<thread_stats_process_timings_t>& stats) {
     stats = impl->lastBlockThreadStats;
 }
 
-void vsthost::setThreadCount(uint32_t threadCount) {
+void pluginhost::setThreadCount(uint32_t threadCount) {
     impl->threadCount = math::clamp<uint32_t>(threadCount, 1U, MAX_AUDIOPROCESSING_THREADS);
 }
 
-uint32_t vsthost::getThreadCount() {
+uint32_t pluginhost::getThreadCount() {
     return impl->threadCount;
 }
 
-uint32_t vsthost::getMaxThreadCount() {
+uint32_t pluginhost::getMaxThreadCount() {
     return MAX_AUDIOPROCESSING_THREADS;
 }
 
-vsthost::vsthost()
-    : impl(new vsthost_impl{this}),
-      moduleMgr{new vsthost::ModuleManager{}}
+pluginhost::pluginhost()
+    : pluginmanager(), impl(new host_impl{this})
 {
-    memset(&m_sharedTimeInfo, 0, sizeof(m_sharedTimeInfo));
     allocRingBuffer(ringbuffer, 2);
-    updateTime(m_sharedTimeInfo, 0.0, 0.0, playback_state::status_stop);
     midiRealtimeInput = new clip_notes_t;
-    registerPlugins();
+    onTrackLayoutChange = [this]() {
+        impl->resetProjectCache();
+    };
 }
 
-vsthost::~vsthost() {
-    delete moduleMgr;
+pluginhost::~pluginhost() {
     delete impl;
     delete midiRealtimeInput;
 }
 
-vsthost::audiostream_properties_t getAudioStreamPropertiesForFormat(sampleformat_t sampleFormat, sampleformat_t sampleFormatExternal, int32_t tempo100) {
-    vsthost::audiostream_properties_t prop;
+pluginhost::audiostream_properties_t getAudioStreamPropertiesForFormat(sampleformat_t sampleFormat, sampleformat_t sampleFormatExternal, int32_t tempo100) {
+    pluginhost::audiostream_properties_t prop;
     prop.microSecsPerBlock = (int64_t)sampleFormat.blockSize * 1000000L / (int64_t)sampleFormat.sampleRate;
     prop.ticksPerBlock     = sampleToTickConvert<double, roundmode::none>(sampleFormat.blockSize,
                                                                       tempo100,
                                                                       sampleFormat.sampleRate);
 
-    prop.blockSizeResampled = DAW::NumSamplesResampled(sampleFormat.blockSize, sampleFormat.sampleRate, sampleFormatExternal.sampleRate);
+    prop.blockSizeResampled = NumSamplesResampled(sampleFormat.blockSize, sampleFormat.sampleRate, sampleFormatExternal.sampleRate);
     prop.numBlocksInternal  = math::max<uint32_t>(1U, sampleFormatExternal.blockSize/prop.blockSizeResampled);
     prop.numBlocksExternal  = (prop.blockSizeResampled + sampleFormatExternal.blockSize - 1)/sampleFormatExternal.blockSize;
     return prop;
 }
 
-vsthost::audiostream_properties_t vsthost::getAudioStreamProperties() const {
+pluginhost::audiostream_properties_t pluginhost::getAudioStreamProperties() const {
     return getAudioStreamPropertiesForFormat(m_sampleFormatInternal, m_sampleFormatExternal, prjGlobals.tempo100);
 }
 
-void vsthost::setSampleFormat(const sampleformat_t& _sampleFormat) {
+void pluginhost::setSampleFormat(const sampleformat_t& _sampleFormat) {
     if (this->m_sampleFormatInternal != _sampleFormat) {
         this->m_sampleFormatInternal = _sampleFormat;
+        getHostCallback()->m_sampleFormatInternal = _sampleFormat;
         if (daw_tls::isTlsInitialized()) {
             auto cache = daw_tls::getTls().audioCache;
             if (cache) {
@@ -848,7 +804,7 @@ inline double PPQ24TickToSample(double midiTickPPQ24, uint32_t bpm100, samplerat
 //        this will either be negative such that the previous MIDI clock is addressed,
 //        or positive when referencing the following (future) MIDI clock.
 
-void vsthost::updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPos, playback_state state) const {
+void pluginhost::updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPos, playback_state state) const {
     timeinfo.samplePos = samplePos;
     timeinfo.sampleRate = (double) m_sampleFormatInternal.sampleRate;
     timeinfo.nanoSeconds = getTimeMicros() * 1000.0;
@@ -885,7 +841,7 @@ void vsthost::updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPo
     timeinfo.samplesToNextClock = math::rounddS32(samplePosClosestPPQ24Tick);
 
     {
-        if (&timeinfo == &m_sharedTimeInfo) {
+        if (&timeinfo == &pluginHostCallback->m_vstTimeInfo) {
             bool changed = setFlag(timeinfo.flags, kVstTransportPlaying, DAW::isPlaybackState(state));
             changed |= setFlag(timeinfo.flags, kVstTransportCycleActive, loopEnabed);
             changed |= setFlag(timeinfo.flags, kVstTransportRecording, false);
@@ -893,7 +849,7 @@ void vsthost::updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPo
         } else {
             // copy flags from shared time info
             auto flags = kVstTransportPlaying | kVstTransportCycleActive | kVstTransportRecording | kVstTransportChanged;
-            timeinfo.flags = (timeinfo.flags & (~flags)) | (m_sharedTimeInfo.flags & flags);
+            timeinfo.flags = (timeinfo.flags & (~flags)) | (pluginHostCallback->m_vstTimeInfo.flags & flags);
         }
         setFlag(timeinfo.flags, kVstAutomationWriting, false);
         setFlag(timeinfo.flags, kVstAutomationReading, false);
@@ -909,24 +865,23 @@ void vsthost::updateTime(VstTimeInfo& timeinfo, double samplePos, double dTickPo
 
 }
 
-void vsthost::sendNotesOff(effectbase* plugin) {
+void pluginhost::sendNotesOff(effectbase* plugin) {
     //TODO: check current thread, check if playthread is locked
     if (plugin && plugin->trackImpl) {
         track_t* tr = plugin->trackImpl->getTrack();
         dbgassert(tr);
         track_impl_t* audio = tr->audio;
         if (audio) {
-            audio->sendNotesOff(prjGlobals.tempo100);
+            audio->sendNotesOff();
         }
     }
 }
 
-std::vector<note_t> vsthost::getRealtimeNotes() {
+std::vector<note_t> pluginhost::getRealtimeNotes() {
     return this->midiRealtimeInput->m_list;
 }
 
-namespace DAW {
-bool resolveEffectDefaultConnection(const vsthost* const host, const project_t* const project, const audio_stage_t* const stage, effectbase* const effect, channel_ref_t& out) {
+bool resolveEffectDefaultConnection(const pluginmanager* const host, const project_t* const project, const audio_stage_t* const stage, effectbase* const effect, channel_ref_t& out) {
     if (effect && effect->inputChannelsDesc.empty()) {
         out = DAW::ChannelNone();
         return true;
@@ -950,7 +905,7 @@ bool resolveEffectDefaultConnection(const vsthost* const host, const project_t* 
     return true;
 }
 
-bool resolveDefaultConnection(const vsthost* const host, const project_t* const project, track_impl_t* const trImpl, const bool isInput, channel_ref_t& out) {
+bool resolveDefaultConnection(const pluginmanager* const host, const project_t* const project, track_impl_t* const trImpl, const bool isInput, channel_ref_t& out) {
     if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MASTER) {
         int32_t idx = 0;
         auto type = AudioIO::getTrackTypeFromNumChannels(trImpl->outputPost.channels);
@@ -975,7 +930,7 @@ bool resolveDefaultConnection(const vsthost* const host, const project_t* const 
     return false;
 }
 
-bool resolveAudioChannel(const vsthost* const host, channelnum_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs, track_audio_src& out) {
+bool resolveAudioChannel(const pluginhost* const host, channelnum_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs, track_audio_src& out) {
     if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
         if (ptrExternalInputs != nullptr) {
             const auto idx = inputChannel.srcChannelOffset;
@@ -1057,11 +1012,10 @@ bool resolveAudioChannel(const vsthost* const host, channelnum_t numChannelsTrac
     return false;
 };
 
-}
 
 //TODO: get rid of this constant
 
-void vsthost::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state) {
+void pluginhost::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state) {
     //TODO: This needs to be done per input and per track
     tick_t tickPosBlockStart = math::ceildS32(posDouble);
 
@@ -1151,15 +1105,15 @@ void vsthost::processMidiRealtimeInput(project_controller_t* ctrl, double posDou
     }
 }
 
-void vsthost::preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings) {
-    impl->isOfflineRendering = true;
+void pluginhost::preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings) {
+    pluginHostCallback->isOfflineRendering = true;
     for (auto* trackMaster : ctrl->getTracks().getMasterTracksFlatVecRef()) {
         trackMaster->getStage()->flags |= audiostageflags_t::RECORD_OUTPUT;
     }
 }
 
-void vsthost::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings) {
-    impl->isOfflineRendering = false;
+void pluginhost::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings) {
+    pluginHostCallback->isOfflineRendering = false;
     const tick_t tickBegin = exportSettings.exportPos;
     const tick_t tickEnd = tickBegin + exportSettings.exportLen;
     const samplerate_t sr = m_sampleFormatInternal.sampleRate;
@@ -1178,7 +1132,7 @@ void vsthost::postExportEnd(project_controller_t* ctrl, export_settings_t& expor
     }
 }
 
-int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplecount_t samplePos, samplecount_t numSamples) {
+int64_t pluginhost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplecount_t samplePos, samplecount_t numSamples) {
     if (fOutWave.empty()) {
         dbgassert(0);
         return 0;
@@ -1268,13 +1222,8 @@ int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, 
     return samplesWritten;
 }
 
-static int32_t dbgStep = 1;
-namespace DebugAlloc {
-    void beginTrace();
-    void endTrace();
-}
 
-int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, double posDouble) {
+int32_t pluginhost::processRender(project_controller_t* ctrl, int32_t sample, double posDouble) {
     dbgassert(ctrl);
     dbgassert(m_sampleFormatInternal.blockSize > 0);
     dbgassert(m_sampleFormatInternal.sampleRate > 0);
@@ -1326,7 +1275,7 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 
     const playback_state state = playback_state::status_render;
 
-    updateTime(m_sharedTimeInfo, sample, posDouble, state);
+    updateTime(pluginHostCallback->m_vstTimeInfo, sample, posDouble, state);
 
     int32_t samplePosProcess = sample;
     double tickPosProcess = posDouble;
@@ -1461,7 +1410,7 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
     return nBlocksProcessed;
 }
 
-int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
+int32_t pluginhost::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
     dbgassert(ctrl);
     dbgassert(m_sampleFormatInternal.blockSize > 0);
     dbgassert(m_sampleFormatInternal.sampleRate > 0);
@@ -1525,7 +1474,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
     int32_t nBlocksProcessed = 0;
 
     if (canProcess) {
-        updateTime(m_sharedTimeInfo, sample, posDouble, state);
+        updateTime(pluginHostCallback->m_vstTimeInfo, sample, posDouble, state);
         processMidiRealtimeInput(ctrl, posDouble, state);
         if (enableProfiling) {
             stats.timings["Block.MidiRealtimeInput"] = timerProfile.getTime();
@@ -1750,7 +1699,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
     return nBlocksProcessed;
 }
 
-int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_processing_task_t& req) /*const*/ {
+int32_t pluginhost::processGraphNode(process_scratch_buf_t& tmp, track_block_processing_task_t& req) /*const*/ {
     const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
     const double ticksPerBlock = req.audioProp.ticksPerBlock;
 
@@ -2019,7 +1968,7 @@ int32_t vsthost::processGraphNode(process_scratch_buf_t& tmp, track_block_proces
  * @param reqFinishWaitStageIds
  * @param isFinalInvocation
  */
-uint32_t vsthost::finishTreadTasks(uint32_t tasksRunning, bool wait) {
+uint32_t pluginhost::finishTreadTasks(uint32_t tasksRunning, bool wait) {
     uint32_t finishedTasks = 0;
     // int64_t numspin = 0;
     while (true) {
@@ -2035,7 +1984,7 @@ uint32_t vsthost::finishTreadTasks(uint32_t tasksRunning, bool wait) {
                 }
                 finishedTasks++;
                 dbgassert(task.isCompleted());
-                vsthost::track_block_processing_task_t& procTask = task.getTask();
+                pluginhost::track_block_processing_task_t& procTask = task.getTask();
                 //log_printf("Thread[%d] completed stageId %d\n", i, procTask.trackNode->stageId);
                 if (task.isError()) {
                     std::exception_ptr eptr = task.getException();
@@ -2102,7 +2051,7 @@ uint32_t vsthost::finishTreadTasks(uint32_t tasksRunning, bool wait) {
     return finishedTasks;
 }
 
-int32_t vsthost::processGraph(project_controller_t* ctrl,
+int32_t pluginhost::processGraph(project_controller_t* ctrl,
                               const audiostream_properties_t& audioProp,
                               DAW::processing_graph_t* const processingGraph,
                               AudioBlock* const ptrExternalInputs,
@@ -2167,7 +2116,7 @@ int32_t vsthost::processGraph(project_controller_t* ctrl,
     if (!useThreading) {
         for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
             auto const ptrProcessingNode = *itAudioStage;
-            vsthost::track_block_processing_task_t blockProcTask;
+            pluginhost::track_block_processing_task_t blockProcTask;
             blockProcTask.trackNode = ptrProcessingNode;
             blockProcTask.ptrExternalInputs = ptrExternalInputs;
             blockProcTask.ptrExternalOutputs = ptrExternalOutputs;
@@ -2223,7 +2172,7 @@ int32_t vsthost::processGraph(project_controller_t* ctrl,
                         TrackBlockProcessTask& task = impl->tasks[i];
                         if (!task.isInUse()) {
                             trackNode.state = DAW::processing_track_node_state_t::PROCESSING;
-                            vsthost::track_block_processing_task_t blockProcTask;
+                            pluginhost::track_block_processing_task_t blockProcTask;
                             blockProcTask.trackNode = &trackNode;
                             blockProcTask.ptrExternalInputs = ptrExternalInputs;
                             blockProcTask.ptrExternalOutputs = ptrExternalOutputs;
@@ -2316,7 +2265,7 @@ int32_t vsthost::processGraph(project_controller_t* ctrl,
     return 1;
 }
 
-void vsthost::initThreads() {
+void pluginhost::initThreads() {
     for (auto & thread : impl->threads) {
         thread.setRealtimePriority(true);
         thread.setTls(daw_tls::getTls());
@@ -2324,13 +2273,13 @@ void vsthost::initThreads() {
     impl->startThreads();
 }
 
-void vsthost::onPlaybackJumpFromTo(project_controller_t* ctrl, int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) {
+void pluginhost::onPlaybackJumpFromTo(project_controller_t* ctrl, int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) {
     for (auto* stage : allAudioStages) {
         stage->onPlaybackJumpFromTo(fromSamplePos, fromTickPos, toSamplePos, toTickPos);
     }
 }
 
-void vsthost::onStartPlayback(project_controller_t* ctrl) {
+void pluginhost::onStartPlayback(project_controller_t* ctrl) {
     lastTickEndPos = 0;
     project_t* project = ctrl->getProject();
     for (track_t* track : project->trackList) {
@@ -2342,29 +2291,25 @@ void vsthost::onStartPlayback(project_controller_t* ctrl) {
     }
 }
 
-void vsthost::onPluginsChanged(audio_stage_t* stage) {
+void pluginmanager::onPluginsChanged(audio_stage_t* stage) {
     log_printf("Plugins changed on audio stage %d\n", static_cast<int32_t>(stage->stageId.stageId));
     dbgassert(validateIds());
 }
 
-void vsthost::onStopPlayback(project_controller_t* ctrl) {
-    impl->isOfflineRendering = false;
+void pluginhost::onStopPlayback(project_controller_t* ctrl) {
+    pluginHostCallback->isOfflineRendering = false;
     midiRealtimeInput->m_list.clear();
 
     for (auto stageImpl : allAudioStages) {
         //if (!trackImpl->heldNotes.empty())
         {
-            stageImpl->sendNotesOff(prjGlobals.tempo100);
+            stageImpl->sendNotesOff();
             stageImpl->onStopPlayback();
         }
     }
 }
 
-void vsthost::onTrackLayoutChange() {
-    impl->resetProjectCache();
-}
-
-void vsthost::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
+void pluginhost::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
     impl->audioStream = stream;
     if (stream) {
         const auto numInputChannels = math::max<channelnum_t>(stream->getNumInputChannels(), impl->inputChannels);
@@ -2388,13 +2333,13 @@ void vsthost::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
     this->m_sampleFormatExternal        = sampleFormatExternal;
 }
 
-bool vsthost::isStreaming() {
+bool pluginhost::isStreaming() {
     //watch out for race condition here
     return impl->audioStream && impl->audioStream->isActive();
 }
 
 /* Function needs to be re-entrant (thread safe) */
-void vsthost::processAudio(audio_stage_t* stage,
+void pluginhost::processAudio(audio_stage_t* stage,
                            AudioBlock* input,
                            AudioBlock* output,
                            const double tickStageLatencyCompensated,
@@ -2533,6 +2478,7 @@ void vsthost::processAudio(audio_stage_t* stage,
                     }
                     blockPostProcess = effect->blockOutputs;
                 } else {
+                    //TODO: this should be done in the vstplugin::process function
                     if (effect->pluginType == PLUGIN_TYPE_VST) {
                         VstTimeInfo timeinfo{};
                         updateTime(timeinfo, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
@@ -2575,18 +2521,18 @@ void vsthost::processAudio(audio_stage_t* stage,
 
 }
 
-void vsthost::updatePluginWindows() {
+void pluginmanager::updatePluginWindows() {
     for (auto* plugin : pluginInstances) {
         //plugin->dispatch(effEditIdle);
         plugin->updateWindow();
     }
 }
 
-i_host_callback* vsthost::getHostCallback() {
-    return impl->pluginHostCallback.get();
+i_host_callback* pluginmanager::getHostCallback() {
+    return pluginHostCallback.get();
 }
 
-bool vsthost::onTick() {
+bool pluginhost::onTick() {
     // Currently no lock
     //ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
     for (auto* current : pluginInstances) {
@@ -2604,7 +2550,7 @@ bool vsthost::onTick() {
     return false;
 }
 
-void vsthost::releaseProjectResources() {
+void pluginmanager::releaseProjectResources() {
 #if DAW_DEBUG_AUDIOGRAPH
     lastProcessingList = nullptr;
     lastTrackGraph = nullptr;
@@ -2617,12 +2563,12 @@ void vsthost::releaseProjectResources() {
     dbgassert(trackAudioStages.empty());
 }
 
-void vsthost::unload() {
+void pluginhost::unload() {
     dbgassert(!isStreaming()&&"STOP STREAM BEFORE unload()!");
     unloadAllPlugins();
 }
 
-void vsthost::destroy() {
+void pluginhost::destroy() {
     stopScanner();
     freeRingBuffer(ringbuffer);
     dbgassert(hostSlot > -1);
@@ -2631,13 +2577,13 @@ void vsthost::destroy() {
     impl->stopThreads();
 }
 
-bool vsthost::assignMasterCallback(vsthost* host)
+bool pluginmanager::assignMasterCallback(pluginmanager* host)
 {
-    host->impl->pluginHostCallback = std::make_shared<DAW::plugin_host_callback>(host);
+    host->pluginHostCallback = std::make_shared<DAW::plugin_host_callback>(host);
     for (int i = 0; i < NUM_HOST_CB_SLOTS; i++) {
         if (g_hostslots[i].g_instance == nullptr) {
             g_hostslots[i].g_instance = host;
-            g_hostslots[i].g_instanceImpl = host->impl;
+            g_hostslots[i].g_hostCallback = host->pluginHostCallback.get();
             host->hostSlot = i;
             if (i == 0) {
                 host->masterCallBackSlot = audioMaster1;
@@ -2658,11 +2604,12 @@ bool vsthost::assignMasterCallback(vsthost* host)
     return false;
 }
 
-void vsthost::setTls(daw_tls::tlsinstance& tls) {
+void pluginhost::setTls(daw_tls::tlsinstance& tls) {
+    pluginmanager::setTls(tls);
     this->impl->tls = tls;
 }
 
-vstplugin* vsthost::getPlugin(AEffect* aeffect) {
+vstplugin* pluginmanager::getPlugin(AEffect* aeffect) {
     if (aeffect && aeffect->user) {
         return static_cast<vstplugin*>(aeffect->user);
     }
@@ -2673,7 +2620,7 @@ vstplugin* vsthost::getPlugin(AEffect* aeffect) {
     return nullptr;
 }
 
-effectbase* vsthost::getPluginById(int32_t projectGlobalId, bool activeOnly) const {
+effectbase* pluginmanager::getPluginById(int32_t projectGlobalId, bool activeOnly) const {
     auto it = std::find_if(pluginInstances.begin(), pluginInstances.end(),
         [projectGlobalId, activeOnly] (const effectbase* ptr) {
             return ptr->projectGlobalId == projectGlobalId && (!activeOnly || ptr->hasTrackLink());
@@ -2696,7 +2643,7 @@ effectbase* vsthost::getPluginById(int32_t projectGlobalId, bool activeOnly) con
     return nullptr;
 }
 
-bool vsthost::addDeferredEffect(effectbase* plugin) {
+bool pluginmanager::addDeferredEffect(effectbase* plugin) {
     plugin->projectGlobalId = getNextGlobalModuleId(plugin->projectGlobalId);
     while (getPluginById(plugin->projectGlobalId, false) != nullptr) {
         plugin->projectGlobalId = getNextGlobalModuleId(0);
@@ -2709,7 +2656,7 @@ bool vsthost::addDeferredEffect(effectbase* plugin) {
     return true;
 }
 
-void vsthost::unloadTrack(track_t* track) {
+void pluginmanager::unloadTrack(track_t* track) {
     dbgassert(track->audio);
     auto audio = track->audio;
     std::vector<effectbase*> effects = audio->effects; // make a copy before unloading plugins
@@ -2719,7 +2666,7 @@ void vsthost::unloadTrack(track_t* track) {
     dbgassert(audio->deferredEffects.empty());
 }
 
-void vsthost::removePlugin(effectbase* plugin) {
+void pluginmanager::removePlugin(effectbase* plugin) {
     audio_stage_t* audioStage = plugin->getTrackLink();
     audioStage->removePlugin(plugin, true);
     audioStage->pluginsChanged();
@@ -2727,59 +2674,8 @@ void vsthost::removePlugin(effectbase* plugin) {
     onTrackLayoutChange();
 }
 
-void vsthost::unloadPlugin(effectbase* plugin, int flags) {
-    bool notifyUp = !(flags & FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
-    if (notifyUp) {
-        //TODO: this shouldn't be here!
-        if (MainCtrl::get())
-            MainCtrl::get()->closeContextMenu();
-    }
 
-    plugin->onPreUnload(flags);
-    audio_stage_t* audioStage = plugin->getTrackLink();
-    if (audioStage) {
-        audioStage->removePlugin(plugin, false);
-        if (notifyUp) {
-            audioStage->pluginsChanged();
-
-        }
-    }
-
-    if (notifyUp) {
-        plugin->closeWindow();
-    }
-    plugin->unload(this, flags);
-
-    switch (plugin->getModuleType()) {
-    case PLUGIN_TYPE_DEFERRED:
-        always_assert(removeEntry(pluginsDeferred, plugin));
-        break;
-    case PLUGIN_TYPE_INTERNAL_EFFECT:
-    case PLUGIN_TYPE_VST:
-        always_assert(removeEntry(pluginInstancesVST2, plugin));
-        always_assert(removeEntry(pluginInstances, plugin));
-        break;
-    default:
-        always_assert(removeEntry(pluginInstancesInternal, plugin));
-        always_assert(removeEntry(pluginInstances, plugin));
-        break;
-    }
-
-    //PopupCtrl::get()->close(); // Make sure context controls do not reference vst
-    if (plugin->getModuleType() == PLUGIN_TYPE_VST || plugin->getModuleType() == PLUGIN_TYPE_INTERNAL_EFFECT) {
-        vstplugin* vst = dynamic_cast<vstplugin*>(plugin);
-        if (vst->internalModuleId <= 0) {
-            moduleMgr->releaseModule(vst->handle->hmodule);
-        }
-    }
-    delete plugin;
-    if (notifyUp) {
-        if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
-    }
-    dbgassert(validateIds());
-}
-
-bool vsthost::unloadAllPlugins() {
+bool pluginmanager::unloadAllPlugins() {
     dbgassert(pluginInstances.empty());
     dbgassert(pluginInstancesVST2.empty());
     dbgassert(pluginInstancesInternal.empty());
@@ -2804,25 +2700,25 @@ bool vsthost::unloadAllPlugins() {
     return true;
 }
 
-void vsthost::getAllInstances(std::vector<effectbase*>& effects) {
+void pluginmanager::getAllInstances(std::vector<effectbase*>& effects) {
     //for (auto* as : allAudioStages) {
     //    effects.insert(effects.end(), as->effects.begin(), as->effects.end());
     //}
     effects = pluginInstances;
 }
 
-void vsthost::createAudio(track_t* track) {
+void pluginmanager::createAudio(track_t* track) {
     auto audio = new track_impl_t(this,
                                   getNextGlobalAudioStageId(0),
                                   track,
-                                  m_sampleFormatInternal,
-                                  DEFAULT_CHANNEL_COUNT);
+                                  pluginHostCallback->m_sampleFormatInternal,
+                                  DAW::DEFAULT_CHANNEL_COUNT);
     allAudioStages.push_back(audio);
     trackAudioStages.push_back(audio);
     track->audio = audio;
 }
 
-void vsthost::releaseAudio(track_t* track) {
+void pluginmanager::releaseAudio(track_t* track) {
     auto audioStage = track->audio;
     dbgassert(audioStage);
     dbgassert(audioStage->effects.empty());
@@ -2836,22 +2732,22 @@ void vsthost::releaseAudio(track_t* track) {
     delete audioStage;
 }
 
-audio_stage_t* vsthost::createAudioStage() {
+audio_stage_t* pluginmanager::createAudioStage() {
     auto audio = new audio_stage_t(this,
                                    getNextGlobalAudioStageId(0),
-                                   m_sampleFormatInternal,
-                                   DEFAULT_CHANNEL_COUNT);
+                                   pluginHostCallback->m_sampleFormatInternal,
+                                   DAW::DEFAULT_CHANNEL_COUNT);
     allAudioStages.push_back(audio);
     return audio;
 }
 
-void vsthost::releaseAudioStage(audio_stage_t* audioStage) {
+void pluginmanager::releaseAudioStage(audio_stage_t* audioStage) {
     auto it = std::find(allAudioStages.begin(), allAudioStages.end(), audioStage);
     dbgassert(it != allAudioStages.end());
     allAudioStages.erase(it);
 }
 
-audio_stage_t* vsthost::getAudioStage(const audio_stage_ref_t& ref) const {
+audio_stage_t* pluginmanager::getAudioStage(const audio_stage_ref_t& ref) const {
     if (ref.stageId == TRACKID_INVALID_I32)
         return nullptr;
     dbgassert((int32_t)ref.stageId > -1);
@@ -2866,7 +2762,7 @@ audio_stage_t* vsthost::getAudioStage(const audio_stage_ref_t& ref) const {
     return nullptr;
 }
 
-bool vsthost::movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
+bool pluginmanager::movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
     ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
     dbgassert(dstTr);
     dbgassert(trp);
@@ -2886,7 +2782,7 @@ bool vsthost::movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src,
     return true;
 }
 
-bool vsthost::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
+bool pluginmanager::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
     ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 #ifndef NDEBUG
     dbgassert(src >= 0 && dst >= 0);
@@ -2927,13 +2823,13 @@ bool vsthost::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t 
     return true;
 }
 
-bool vsthost::replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin) {
+bool pluginmanager::replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin) {
     bool retVal = trp->replaceEffect(dst, plugin, prevPlugin);
     onTrackLayoutChange();
     return retVal;
 }
 
-bool vsthost::insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst) {
+bool pluginmanager::insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst) {
     //if (plugin->isSynth) {
     //    vstplugin* old = trp->setInstrument(plugin);
     //    if (old) {
@@ -2945,14 +2841,14 @@ bool vsthost::insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t ds
     return true;
 }
 
-bool vsthost::postPluginLoaded(audio_stage_t* trp, effectbase* plugin) {
+bool pluginmanager::postPluginLoaded(audio_stage_t* trp, effectbase* plugin) {
     trp->pluginsChanged();
     onTrackLayoutChange();
     if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
     dbgassert(validateIds());
     return true;
 }
-int32_t vsthost::getNextGlobalModuleId(int32_t globalId)
+int32_t pluginmanager::getNextGlobalModuleId(int32_t globalId)
 {
     if (globalId <= 0) {
         globalId = ++pluginId;
@@ -2964,7 +2860,7 @@ int32_t vsthost::getNextGlobalModuleId(int32_t globalId)
     return globalId;
 }
 
-audio_stage_id_t vsthost::getNextGlobalAudioStageId(int32_t globalId) {
+audio_stage_id_t pluginmanager::getNextGlobalAudioStageId(int32_t globalId) {
     audio_stage_id_t stageId{};
     audiostageid_i32* stageIds[4] = {&stageId.stageId, &stageId.inputStageId, &stageId.outputStageId, &stageId.outputPostStageId };
     auto startId = globalId;
@@ -2978,7 +2874,7 @@ audio_stage_id_t vsthost::getNextGlobalAudioStageId(int32_t globalId) {
     return stageId;
 }
 
-bool vsthost::isStageIdInUse(track_id_snapshot_t stageId) {
+bool pluginmanager::isStageIdInUse(track_id_snapshot_t stageId) {
     if (stageId.stageId == -1) {
         return false;
     }
@@ -2989,7 +2885,7 @@ bool vsthost::isStageIdInUse(track_id_snapshot_t stageId) {
     return false;
 }
 
-void vsthost::updateMaximumStageId() {
+void pluginmanager::updateMaximumStageId() {
     int32_t maximumStageId = 0;
     for (auto* stage : allAudioStages) {
         maximumStageId = math::max<int32_t>(maximumStageId, static_cast<int32_t>(stage->stageId.stageId));
@@ -3000,7 +2896,7 @@ void vsthost::updateMaximumStageId() {
     this->audioStageId = maximumStageId;
 }
 
-bool vsthost::writeRecordedData(project_controller_t* ctrl) {
+bool pluginhost::writeRecordedData(project_controller_t* ctrl) {
     bool bHasNewData = false;
     auto cache = audiocache::getInstance();
     auto daw = DawInstance::get();
@@ -3010,7 +2906,7 @@ bool vsthost::writeRecordedData(project_controller_t* ctrl) {
     return bHasNewData;
 }
 
-int32_t vsthost::getNextSampleId(int32_t id) {
+int32_t pluginmanager::getNextSampleId(int32_t id) {
     if (id <= 0) {
         return ++sampleId;
     }
@@ -3018,12 +2914,12 @@ int32_t vsthost::getNextSampleId(int32_t id) {
     return id;
 }
 
-int32_t vsthost::getPlayThreadId()
+int32_t pluginhost::getPlayThreadId()
 {
     return impl->playThreadId;
 }
 
-int32_t vsthost::validateIds()
+int32_t pluginmanager::validateIds()
 {
 #ifndef NDEBUG
     /** check for double usage of stageIds across all audiostages */
@@ -3169,7 +3065,7 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
 int loadPlugin_jbridge(audioMasterCallback audiomasterCallback, const String& filepath, HMODULE* hmodule, AEffect** aeffect, uint64_t bugfixFlags);
 #endif //_WIN32
 
-vstpluginloadres vsthost::loadPlugin(String filepath, uint32_t uId, int32_t globalId, uint64_t bugfixFlags) {
+vstpluginloadres pluginmanager::loadPlugin(String filepath, uint32_t uId, int32_t globalId, uint64_t bugfixFlags) {
     dbgassert(masterCallBackSlot);
 
     String path, name, nameWithoutExt;
@@ -3189,9 +3085,9 @@ vstpluginloadres vsthost::loadPlugin(String filepath, uint32_t uId, int32_t glob
     moduleHandle = hmodule;
 
     if (uId != 0) {
-        this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(uId);
+        pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(uId);
     } else {
-        this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
+        pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
     }
 
     if (ret == 0) {
@@ -3203,7 +3099,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, uint32_t uId, int32_t glob
 #endif //_WIN32
     }
 
-    this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
+    pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
     
     if (ret != 0) {
         return {ret, nullptr};
@@ -3255,10 +3151,10 @@ vstpluginloadres vsthost::loadPlugin(String filepath, uint32_t uId, int32_t glob
     return {0, plugin, plugin->handle, filepath, nameWithoutExt};
 };
 
-void vsthost::scanPlugins() {
-    if (this->impl->scanningState == 0) {
+void pluginmanager::scanPlugins() {
+    if (mgrImpl->scanningState == 0) {
         try {
-            impl->vstscannerProcessThread = std::make_unique<ProcessThread>();
+            mgrImpl->vstscannerProcessThread = std::make_unique<ProcessThread>();
             String nameScannerExe = "daw-vstscanner.exe";
             if (!FileExists(nameScannerExe)) {
                 nameScannerExe = "vstscanner-Clang-debug.exe";
@@ -3266,13 +3162,13 @@ void vsthost::scanPlugins() {
             if (!FileExists(nameScannerExe)) {
                 nameScannerExe = "vstscanner-MSVC-debug.exe";
             }
-            impl->vstscannerProcessThread->startProcess(nameScannerExe, "-server -auto", "");
+            mgrImpl->vstscannerProcessThread->startProcess(nameScannerExe, "-server -auto", "");
             seqthreads::threadSleep(200);
-            if (!impl->vstscannerProcessThread->isRunning()) {
-                impl->vstscannerProcessThread->checkException();
+            if (!mgrImpl->vstscannerProcessThread->isRunning()) {
+                mgrImpl->vstscannerProcessThread->checkException();
                 log_lf(Log::L_ERROR, "Failed starting vstscanner\n");
             } else {
-                this->impl->scanningState = 1;
+                mgrImpl->scanningState = 1;
                 log_lf(Log::L_DEBUG, "vstscanner is running\n");
             }
         } catch (std::exception& e) {
@@ -3281,15 +3177,15 @@ void vsthost::scanPlugins() {
     }
 }
 
-void vsthost::checkScanner() {
+void pluginmanager::checkScanner() {
     try {
         static int nCalls = 0;
-        if (this->impl->scanningState && impl->vstscannerProcessThread) {
-            if (!impl->vstscannerProcessThread->isRunning()) {
-                impl->vstscannerProcessThread->joinProcess();
-                impl->vstscannerProcessThread.reset();
+        if (mgrImpl->scanningState && mgrImpl->vstscannerProcessThread) {
+            if (!mgrImpl->vstscannerProcessThread->isRunning()) {
+                mgrImpl->vstscannerProcessThread->joinProcess();
+                mgrImpl->vstscannerProcessThread.reset();
                 DawInstance::get()->getPluginDatabase().reopen();
-                this->impl->scanningState = 0;
+                this->mgrImpl->scanningState = 0;
             } else {
                 if (++nCalls >= 10) {
                     nCalls = 0;
@@ -3303,12 +3199,12 @@ void vsthost::checkScanner() {
     }
 }
 
-void vsthost::stopScanner() {
+void pluginmanager::stopScanner() {
     try {
-        if (this->impl->scanningState && impl->vstscannerProcessThread) {
-            if (impl->vstscannerProcessThread->isRunning()) {
-                impl->vstscannerProcessThread->killProcess();
-                this->impl->scanningState = 0;
+        if (mgrImpl->scanningState && mgrImpl->vstscannerProcessThread) {
+            if (mgrImpl->vstscannerProcessThread->isRunning()) {
+                mgrImpl->vstscannerProcessThread->killProcess();
+                this->mgrImpl->scanningState = 0;
                 if (DawInstance::get()) {
                     DawInstance::get()->getPluginDatabase().reopen();
                 }
@@ -3321,6 +3217,8 @@ void vsthost::stopScanner() {
     }
 }
 
-bool vsthost::isScanning() {
-    return impl->scanningState > 0;
+bool pluginmanager::isScanning() {
+    return mgrImpl->scanningState > 0;
 }
+
+} // namespace DAW

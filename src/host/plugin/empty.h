@@ -4,9 +4,6 @@
 #include "modules.h"
 #include "str_util.h"
 
-class guiplugin;
-class vsthost;
-struct audio_stage_t;
 class module_empty : public internalplugin {
     struct internal_handles_t;
     internal_handles_t* handle;

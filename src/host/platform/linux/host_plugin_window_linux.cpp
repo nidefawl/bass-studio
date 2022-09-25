@@ -1,7 +1,7 @@
 #include "logging.h"
 #if defined(__linux__) || defined(__APPLE__)
 #include "../../host_plugin_window.h"
-#include "../../vst_host.h"
+#include "../../pluginmanager.h"
 #include "../../plugin/base_plugin.h"
 #include <vector>
 #include <GLFW/glfw3.h>

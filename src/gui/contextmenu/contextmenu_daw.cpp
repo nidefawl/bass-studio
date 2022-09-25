@@ -5,6 +5,7 @@
 #include "contextmenu_daw.h"
 #include "track_snapshot.h"
 #include "logging.h"
+#include "host/pluginmanager.h"
 
 guictxtmenu_at_param::guictxtmenu_at_param(DawCtrl* _dawCtrl, automatable_t* _atl, int32_t _paramIdx)
     : atl(_atl), paramIdx(_paramIdx) {
@@ -30,7 +31,7 @@ void guictxtmenu_notrack::clicked(int _id) {
             std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(path);
             dbgassert(ctr);
             if (ctr) {
-                vsthost* host = daw->getHost();
+                auto* pluginMgr = daw->getPluginManager();
                 ThreadLock lock = daw->getPlayThread()->lockThread();
                 for (track_snapshot_t& ts : ctr->tracks) {
                     ts.trackLoaded = new track_t(ts);
@@ -40,17 +41,16 @@ void guictxtmenu_notrack::clicked(int _id) {
                 //load plugins
                 for (track_snapshot_t& ts : ctr->tracks) {
                     log_printf("track '%s' loading %zu plugins\n", StringAsCStr(ts.trackLoaded->name), ts.data.pluginSnapshots.size());
-                    assignFreeStageIdsTrackSnapshot(host, ts);
+                    DAW::assignFreeStageIdsTrackSnapshot(pluginMgr, ts);
                     ts.trackLoaded->loadSnapshot(ts);
                     std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
                     for (auto effect: effects) {
-                        host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                        pluginMgr->activateDeferred(effect, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                     }
                 }
                 for (track_snapshot_t& ts: ctr->tracks) {
                     ts.trackLoaded->getStage()->pluginsChanged();
                 }
-                host->onTrackLayoutChange();
                 daw->onPluginsChanged();
                 daw->updateVisibleTrackContents();
             }

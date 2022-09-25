@@ -322,7 +322,8 @@ public:
         update();
     }
     void update() {
-        ThreadLock lock = MainCtrl::getPlayThread()->tryLockThread();
+        auto daw = dawCtrl->getDaw();
+        ThreadLock lock = daw->getPlayThread()->tryLockThread();
         auto tmNow = getTimeMillis();
         if (!lock.isLocked()) {
             // force lock and update if 5 seconds have elapsed
@@ -337,9 +338,9 @@ public:
         std::vector<effectbase*> effects;
         std::vector<effectbase*> deferredEffects;
 
-        auto host = vsthost::getInstance();
-        host->getAllInstances(effects);
-        host->getDeferredEffects(deferredEffects);
+        auto pluginMgr = daw->getPluginManager();
+        pluginMgr->getAllInstances(effects);
+        pluginMgr->getDeferredEffects(deferredEffects);
 
         std::vector<gui_list_entry*> _newList;
         std::vector<gui_list_entry*> _newListDef;
@@ -410,7 +411,7 @@ public:
             for (auto plugin : pluginsDeferred) {
                 log_printf("activate %s\n", StringAsCStr(plugin->sName));
                 effectbase* effectLoaded = nullptr;
-                host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &effectLoaded);
+                host->activateDeferred(plugin, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &effectLoaded);
 
                 if (effectLoaded) {
                     //effectLoaded->show();

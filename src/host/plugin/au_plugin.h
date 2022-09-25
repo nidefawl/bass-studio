@@ -13,12 +13,8 @@
 #include "snapshot.h"
 #include "base_plugin.h"
 
-class vsthost;
 struct AudioBlock;
 struct handles_t;
-class track_t;
-class guibase;
-struct track_impl_t;
 class host_plugin_window;
 
 class auplugin : public effectbase {
@@ -49,8 +45,8 @@ public:
     bool hasWindowEditor() override {
         return false;
     }
-    void unload(vsthost* host, int flags) override;
-    void load(vsthost* host) override;
+    void unload(DAW::pluginmanager* host, int flags) override;
+    void load(DAW::pluginmanager* host) override;
 
     // automatable_t interface
     String getAutomatableName() override;

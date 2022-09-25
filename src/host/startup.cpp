@@ -5,7 +5,7 @@
 
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
-#include "vst_host.h"
+#include "pluginmanager.h"
 #include "midiarp.h"
 #include "track_impl.h"
 #include "logging.h"
@@ -15,6 +15,7 @@
 #include "commands.h"
 #include "gui/track/subtrack.h"
 #include "appconfig.h"
+#include "host/pluginmanager.h"
 
 void setLoopPosition(DawCtrl* dawCtrl, float fStart, float fLength) {
     DawInstance* dawInstance = dawCtrl->getDaw();
@@ -42,7 +43,7 @@ void setSelection(DawCtrl* dawCtrl, int32_t trackBegin, int32_t trackEnd, float 
 }
 void generateDummyProject(DawCtrl* dawCtrl) {
     DawInstance* dawInstance = dawCtrl->getDaw();
-    auto host = dawInstance->getHost();
+    // auto host = dawInstance->getHost();
     dawInstance->unloadProject();
     trackdata_midi_t trDataMidi;
     {
@@ -104,10 +105,10 @@ void generateDummyProject(DawCtrl* dawCtrl) {
                 track1->getStage()->arp->setParamValue(ARP_PARAM_RAND_VEL, 0.7f, FLG_PAR_UPDATE_INIT);
                 track1->getStage()->arp->setParamValue(ARP_PARAM_GATE, 0.55f, FLG_PAR_UPDATE_INIT);
 
-                auto pluginHostInfo = dawInstance->getHost()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_HOSTINFO, -1);
+                auto pluginHostInfo = dawInstance->getPluginManager()->makeModuleInstance(PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_HOSTINFO, -1);
                 dbgassert(pluginHostInfo);
 
-                host->insertNewPlugin(track1->getStage(), pluginHostInfo, 0);
+                dawInstance->getPluginManager()->insertNewPlugin(track1->getStage(), pluginHostInfo, 0);
                 pluginHostInfo->onEnable();
                 track1->getStage()->pluginsChanged();
                 pluginHostInfo->setParamValue(PARAM_OFFSET_EXTERNAL+0, 0.0f, FLG_PAR_UPDATE_INIT);
@@ -166,9 +167,8 @@ void generateDummyProject2(DawCtrl* dawCtrl) {
 }
 void openPluginWindows(DawCtrl* dawCtrl, String pluginName) {
     DawInstance* dawInstance = dawCtrl->getDaw();
-    auto* host = dawInstance->getHost();
     std::vector<effectbase*> effects;
-    host->getAllInstances(effects);
+    dawInstance->getPluginManager()->getAllInstances(effects);
     for (auto eff : effects) {
         if (eff->getName().find(pluginName) != String::npos) {
             eff->showWindow(false);
@@ -182,11 +182,10 @@ void openPluginWindows(DawCtrl* dawCtrl, String pluginName) {
 }
 void showPluginView(DawCtrl* dawCtrl, String pluginName) {
     DawInstance* dawInstance = dawCtrl->getDaw();
-    auto* host = dawInstance->getHost();
     MainCtrl::get()->showPluginView();
     {
         std::vector<effectbase*> effects;
-        host->getAllInstances(effects);
+        dawInstance->getPluginManager()->getAllInstances(effects);
         for (auto eff : effects) {
             if (eff->getName().find(pluginName) != String::npos) {
                 track_t* tr = eff->getTrack();
@@ -199,14 +198,14 @@ void showPluginView(DawCtrl* dawCtrl, String pluginName) {
     }
     {
         std::vector<effectbase*> effects;
-        host->getDeferredEffects(effects);
+        dawInstance->getPluginManager()->getDeferredEffects(effects);
         for (auto eff : effects) {
             if (eff->getName().find(pluginName) != String::npos) {
                 track_t* tr = eff->getTrack();
                 if (tr) {
                     dawCtrl->getDaw()->setSelectedTrack(tr);
                     auto lock = dawInstance->lockPlayThread();
-                    host->activateDeferred(eff, 0);
+                    dawInstance->getPluginManager()->activateDeferred(eff, 0);
                     return;
                 }
             }
@@ -216,7 +215,7 @@ void showPluginView(DawCtrl* dawCtrl, String pluginName) {
 void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t trackIdx) {
     DawInstance* dawInstance = dawCtrl->getDaw();
     auto* project = dawInstance->getProject();
-    auto* host = dawInstance->getHost();
+    auto* pluginMgr = dawInstance->getPluginManager();
     auto trackList = project->getTracksFlatVec();
 
     if (CtrSize(trackList) < trackIdx) {
@@ -224,7 +223,7 @@ void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t tra
         return;
     }
 
-    vstpluginloadres loadRes = host->loadPlugin(modulePath, 0);
+    auto loadRes = pluginMgr->loadPlugin(modulePath, 0);
 
     if (loadRes.result != 0) {
         dbgassert(0);
@@ -232,9 +231,9 @@ void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t tra
     }
 
     audio_stage_t* trImpl1 = trackList[trackIdx]->getStage();
-    host->insertNewPlugin(trImpl1, loadRes.plugin, 0);
+    pluginMgr->insertNewPlugin(trImpl1, loadRes.plugin, 0);
     loadRes.plugin->onEnable();
-    host->postPluginLoaded(trImpl1, loadRes.plugin);
+    pluginMgr->postPluginLoaded(trImpl1, loadRes.plugin);
 
 
 #if 0
@@ -314,20 +313,20 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     #if 0
             const bool loadPlugins = 0;
             if (loadPlugins) {
-                ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-                auto* host      = vsthost::getInstance();
+                ThreadLock lock = daw->lockPlayThread();
+                auto* pluginMgr      = daw->getPluginManager();
                 std::vector<effectbase*> pluginsDeferred;
-                host->getDeferredEffects(pluginsDeferred);
+                pluginMgr->getDeferredEffects(pluginsDeferred);
                 log_printf("loading %d plugins\n", pluginsDeferred.size());
                 for (auto effect : pluginsDeferred) {
                     log_printf("activate %s\n", StringAsCStr(effect->sName));
-                    host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                    pluginMgr->activateDeferred(effect, pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                 }
                 auto& trackList = dawInstance->getProject()->trackList;
                 for (track_t* tr : trackList) {
                     tr->getStage()->pluginsChanged();
                 }
-                host->onTrackLayoutChange();
+                pluginMgr->onTrackLayoutChange();
                 dawInstance->onPluginsChanged();
 
                 //        dawMainCtrl->menuCommand(CMD_NOARG(CMD_PREFERENCES));

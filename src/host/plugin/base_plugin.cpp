@@ -1,5 +1,6 @@
 #include <utility>
 #include <vector>
+#include "assert_dbg.h"
 #include "base_plugin.h"
 #include "host/daw_channel.h"
 #include "modules.h"
@@ -17,7 +18,7 @@
 #include "gui/controls/button.h"
 #include "gui/plugin/pluginctr.h"
 #include "host/mainctrl.h"
-#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 #include "host/host_plugin_window.h"
 
 track_t* effectbase::getTrack() {
@@ -29,7 +30,7 @@ track_t* effectbase::getTrack() {
 
 SafeRef<effectbase> effectbase::makeSafeRef() {
     if (!safeRef.handler) {
-        safeRef.handler = vsthost::getInstance()->getSafeRefStore();
+        safeRef.handler = pluginMgr->getSafeRefStore();
         safeRef.refId   = safeRef.handler->safeRefCreate(this);
     }
     return safeRef;
@@ -81,9 +82,10 @@ sampleformat_t effectbase::getSampleFormat() {
     return format;
 }
 
-void effectbase::load(vsthost* host) {
-    vstHost = host;
-    setSampleFormat(host->m_sampleFormatInternal);
+void effectbase::load(DAW::pluginmanager* host) {
+    pluginMgr = host;
+    if (assert_expr(hostCallback))
+        setSampleFormat(hostCallback->m_sampleFormatInternal);
     initBuffers();
     initMeters();
     dbgassert(nLoadCalls == 0);
@@ -91,9 +93,9 @@ void effectbase::load(vsthost* host) {
     bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
 }
 
-void effectbase::unload(vsthost* host, int flags) {
-    dbgassert(host == vstHost);
-    vstHost = nullptr;
+void effectbase::unload(DAW::pluginmanager* host, int flags) {
+    dbgassert(host == pluginMgr);
+    pluginMgr = nullptr;
     dbgassert(nLoadCalls == 1);
     nLoadCalls--;
 }
@@ -107,7 +109,7 @@ void effectbase::processMidi(midi_events_t& midiEvents) {
 
 }
 
-void effectbase::sendNotesOff(int32_t bpm100) {
+void effectbase::sendNotesOff() {
 
 }
 
@@ -289,8 +291,10 @@ effect_deferred* effectbase::toDeferred() {
     return def;
 }
 
-effect_deferred* vsthost::loadPluginDeferred(const plugin_snapshot_t& snapshot) {
-    auto def                = new effect_deferred(snapshot.projectGlobalId, nullptr);
+namespace DAW {
+
+effect_deferred* pluginmanager::loadPluginDeferred(const plugin_snapshot_t& snapshot) {
+    auto def                = new effect_deferred(snapshot.projectGlobalId, getHostCallback());
     def->mImpl              = new effect_deferred_impl();
     def->sName              = snapshot.name;
     def->projectGlobalId    = snapshot.projectGlobalId;
@@ -304,6 +308,8 @@ effect_deferred* vsthost::loadPluginDeferred(const plugin_snapshot_t& snapshot) 
     def->setProductName(snapshot.name);
     return def;
 }
+
+} // namespace DAW
 
 effect_deferred::effect_deferred(int32_t _projectGlobalId, i_host_callback* _hostCallback) 
 : effectbase("Deferred", PLUGIN_TYPE_DEFERRED, _projectGlobalId, _hostCallback)
@@ -333,7 +339,6 @@ void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_st
     ps = this->mImpl->snapshot;
 }
 void effect_deferred::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
-    dbgassert(vstHost->m_sampleFormatInternal == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 }
 int effect_deferred::getModuleStoredType() const {
     return this->mImpl->moduleType;
@@ -361,10 +366,10 @@ void guideferred::render(NVGcontext* vg) {
 void guideferred::buttonClicked(guibase* _button) {
     guiplugin::buttonClicked(_button);
     if (_button == &btnLoad) {
-        ThreadLock lock  = MainCtrl::getPlayThread()->lockThread();
-        vsthost* host    = vsthost::getInstance();
         auto dawCtrlCopy = dawCtrl;
-        host->activateDeferred(module, vsthost::FLAG_HOST_FORCELOAD_DISABLED_PLUGINS);
+        auto lock = dawCtrlCopy->lockPlayThread();
+        auto pluginMgr = dawCtrlCopy->getDaw()->getPluginManager();
+        pluginMgr->activateDeferred(module, DAW::pluginmanager::FLAG_HOST_FORCELOAD_DISABLED_PLUGINS);
         // do not access this from here to function exit
         dawCtrlCopy->onPluginsChanged();
     }

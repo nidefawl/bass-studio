@@ -1,6 +1,8 @@
 #pragma once
+#include "samplerate.h"
 #include "types.h"
 #include "assert_dbg.h"
+#include <vstsdk-host-2.4/aeffectx.h>
 
 #define PLUGIN_TYPE_VST 1
 #define PLUGIN_TYPE_EMPTY 2
@@ -22,6 +24,10 @@ class effectbase;
 
 class i_host_callback {
     public:
+    sampleformat_t m_sampleFormatInternal{};
+    int32_t vstShellCurrentUniqueId = 0;
+    VstTimeInfo m_vstTimeInfo{};
+    bool isOfflineRendering = false;
     virtual ~i_host_callback() = default;
     virtual void onLatencyChanged(effectbase* effect) = 0;
     virtual void onParametersChanged(effectbase* effect, int32_t idx, float val, int flags, int stage) = 0;

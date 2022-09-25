@@ -22,7 +22,7 @@
 #include "guifonts.h"
 
 #include "host/mainctrl.h"
-#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 #include "host/plugin/base_plugin.h"
 #include "host/plugin/internal_plugin.h"
 #include "host/plugin/vst_plugin.h"
@@ -43,6 +43,7 @@
 #include "gui/plugin/plugin.h"
 #include "dragdrop.h"
 #include "projectfile-snapshot.h"
+#include "host/pluginmanager.h"
 
 using Table::table_entry_t;
 using Table::tbl;
@@ -134,23 +135,23 @@ public:
 
             String path;
             if (promptUserFilePath(window, 0, vFILE_TYPE_PLUGINSNAPSHOT, path)) {
-                ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+                ThreadLock lock = dawCtrl->lockPlayThread();
                 std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(path);
                 dbgassert(pluginSnapshot);
                 if (pluginSnapshot) {
-                    vsthost* host = vsthost::getInstance();
-                    assignFreeStageIds(host, *pluginSnapshot);
-                    auto effect = host->loadPluginDeferred(*pluginSnapshot);
+                    auto* pluginMgr = dawCtrl->getDaw()->getPluginManager();
+                    assignFreeStageIds(pluginMgr, *pluginSnapshot);
+                    auto effect = pluginMgr->loadPluginDeferred(*pluginSnapshot);
                     if (effect) {
                         effect->projectGlobalId = 0;// generate new id
-                        if (!host->addDeferredEffect(effect)) {
+                        if (!pluginMgr->addDeferredEffect(effect)) {
                             log_printf("Failed loading effect\n");
                             delete effect;
                             return;
                         }
                         effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
-                        effect->load(host);
-                        host->insertNewPlugin(stage, effect, -2);// insert at end
+                        effect->load(pluginMgr);
+                        pluginMgr->insertNewPlugin(stage, effect, -2);// insert at end
                         // host->activateDeferred(effect, 0);
                     }
                 }
@@ -183,33 +184,33 @@ void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_
     
     auto daw = DawInstance::get();
     dbgassert(daw->getPlayThread()->isLocked());
-    auto host = daw->getHost();
+    auto pluginMgr = daw->getPluginManager();
     for (plugin_snapshot_t& pluginSnapshot : clipboard->plugins) {
-        assignFreeStageIds(host, pluginSnapshot);
-        auto effect = host->loadPluginDeferred(pluginSnapshot);
+        assignFreeStageIds(pluginMgr, pluginSnapshot);
+        auto effect = pluginMgr->loadPluginDeferred(pluginSnapshot);
         if (effect) {
             effect->projectGlobalId = 0;// generate new id
             stage->deferredEffects.push_back(effect);
-            if (!host->addDeferredEffect(effect)) {
+            if (!pluginMgr->addDeferredEffect(effect)) {
                 log_printf("Failed loading effect\n");
                 delete effect;
                 continue;
             }
             effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
-            effect->load(host);
-            host->insertNewPlugin(stage, effect, pos);
+            effect->load(pluginMgr);
+            pluginMgr->insertNewPlugin(stage, effect, pos);
             //keep negative values
             if (pos >= 0)
                 pos++;
-            host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+            pluginMgr->activateDeferred(effect, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
         } else {
             //TODO: handle
         }
     }
     stage->pluginsChanged();
-    host->onTrackLayoutChange();
+    pluginMgr->onTrackLayoutChange();
     daw->onPluginsChanged();
-    host->validateIds();
+    pluginMgr->validateIds();
 }
 std::shared_ptr<plugin_clipboard_t> copyPluginSelection(plugin_selection& sel) {
     std::vector<plugin_snapshot_t> pluginSnapshots;
@@ -489,7 +490,7 @@ int guictr_plugins::slotFromCoord(ivec2 _pos) {
     return slot;
 }
 effectbase* gui_vstpluginlist_entry::makeInstance() {
-    vstpluginloadres res = vsthost::getInstance()->loadPlugin(entry.path, entry.uid, 0, entry.bugfixFlags);
+    auto res = dawCtrl->getDaw()->getPluginManager()->loadPlugin(entry.path, entry.uid, 0, entry.bugfixFlags);
     if (res.result == 0) {
         res.plugin->localDbId = entry.localDbId;
         return res.plugin;
@@ -497,13 +498,13 @@ effectbase* gui_vstpluginlist_entry::makeInstance() {
     return nullptr;
 }
 effectbase* gui_modulelist_entry::makeInstance() {
-    effectbase* instance = vsthost::getInstance()->makeModuleInstance(entry.moduleType, entry.moduleId, -1);
+    effectbase* instance = dawCtrl->getDaw()->getPluginManager()->makeModuleInstance(entry.moduleType, entry.moduleId, -1);
     return instance;
 }
 
 void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
     auto const daw = dawCtrl->getDaw();
-    auto const host = daw->getHost();
+    auto const pluginMgr = daw->getPluginManager();
     auto& dragDropTarget = dawCtrl->getDragDropTarget();
     int32_t dstSlot = dragDropTarget.slotIdx;
     dragDropTarget.reset();
@@ -512,12 +513,12 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
     effectbase* effect = g->makeInstance();
     if (effect) {
         log_printf("Insert effect on %s, parent %s\n", StringAsCStr(getClassName()), parent ? StringAsCStr(parent->getClassName()) : "<null>");
-        host->insertNewPlugin(stage, effect, dstSlot);
+        pluginMgr->insertNewPlugin(stage, effect, dstSlot);
         effect->onEnable();
         audio_stage_ref_t refdst = stage->toRef();
         auto* track_action = new action_insert_effect("Insert plugin", effect, refdst, dstSlot);
         daw->pushHist(track_action);
-        host->postPluginLoaded(stage, effect);
+        pluginMgr->postPluginLoaded(stage, effect);
         //    if (res.result == 0 && res.plugin) {
         //        res.plugin->onEnable();
         //    }
@@ -658,39 +659,25 @@ public:
         desc = s;
     }
     void undo(DawInstance* daw) override {
-        audio_stage_t* stage = daw->getHost()->getAudioStage(ref);
+        audio_stage_t* stage = daw->getPluginManager()->getAudioStage(ref);
         if (!stage) {
             setError("missing trackimpl");
             return;
         }
-        daw->getHost()->moveEffects(stage, dst, src, len);
-        MainCtrl::getPluginCtr()->relayout();
+        daw->getPluginManager()->moveEffects(stage, dst, src, len);
+        daw->onPluginsChanged();
     }
     void redo(DawInstance* daw) override {
-        audio_stage_t* stage = daw->getHost()->getAudioStage(ref);
+        audio_stage_t* stage = daw->getPluginManager()->getAudioStage(ref);
         if (!stage) {
             setError("missing trackimpl");
             return;
         }
-        daw->getHost()->moveEffects(stage, src, dst, len);
-        MainCtrl::getPluginCtr()->relayout();
+        daw->getPluginManager()->moveEffects(stage, src, dst, len);
+        daw->onPluginsChanged();
     }
 };
 
-
-void removePlugin(DawInstance* daw, effectbase* module) {
-    ThreadLock lock           = daw->getPlayThread()->lockThread();
-    audio_stage_t* audioStage = module->getTrackLink();
-    dbgassert(audioStage);
-    module->closeWindow();
-    audioStage->removePlugin(module, true);
-    std::vector<effectbase*> effects;
-    effects.push_back(module);
-    auto* actionRemove = new action_remove_modules("Remove plugin", std::move(effects), audioStage->toRef(), module->getSlot());
-    daw->pushHist(actionRemove);
-    audioStage->pluginsChanged();
-    daw->onPluginsChanged();
-}
 void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
     // gui_ctr_plugins receiving list of effectbase
     int32_t dstSlot = dawCtrl->getDragDropTarget().slotIdx;
@@ -731,7 +718,7 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
 
     if (targetslot >= 0) {
         if (srcStage != this->stage) {
-            vsthost::getInstance()->movePlugins(this->stage, srcStage, first, targetslot, last - first + 1);
+            dawCtrl->getDaw()->getPluginManager()->movePlugins(this->stage, srcStage, first, targetslot, last - first + 1);
 
             audio_stage_ref_t refsrc = srcStage->toRef();
             audio_stage_ref_t refdst = stage->toRef();
@@ -742,7 +729,7 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
             //if (targetslot > curSlot) targetslot--;
             if (first == targetslot)
                 return;
-            vsthost::getInstance()->moveEffects(this->stage, first, targetslot, last - first + 1);
+            dawCtrl->getDaw()->getPluginManager()->moveEffects(this->stage, first, targetslot, last - first + 1);
             // audio_stage_ref_t ref = this->stage->toRef();
             //auto* track_action    = new action_shift_modules("Move plugin", ref, targetslot, first, last - first + 1);
             //TODO: make this work
@@ -771,7 +758,7 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 
     if (targetslot >= 0) {
         if (trp != this->stage) {
-            vsthost::getInstance()->movePlugins(this->stage, trp, curSlot, targetslot, 1);
+            dawCtrl->getDaw()->getPluginManager()->movePlugins(this->stage, trp, curSlot, targetslot, 1);
 
             audio_stage_ref_t refsrc = trp->toRef();
             audio_stage_ref_t refdst = stage->toRef();
@@ -780,7 +767,7 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 
         } else {
             if (targetslot > curSlot) targetslot--;
-            vsthost::getInstance()->moveEffects(trp, curSlot, targetslot, 1);
+            dawCtrl->getDaw()->getPluginManager()->moveEffects(trp, curSlot, targetslot, 1);
             audio_stage_ref_t ref = trp->toRef();
             auto* track_action    = new action_shift_modules("Move plugin", ref, targetslot, curSlot, 1);
             DawInstance::get()->pushHist(track_action);
@@ -896,7 +883,7 @@ action_remove_modules::action_remove_modules(String s, std::vector<effectbase*>&
 void action_remove_modules::releaseResources(DawInstance* daw) {
     if (weOwn) {
         for (effectbase* eff : effects) {
-            daw->getHost()->unloadPlugin(eff, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+            daw->getPluginManager()->unloadPlugin(eff, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
         }
         effects.clear();
         weOwn = false;
@@ -905,25 +892,25 @@ void action_remove_modules::releaseResources(DawInstance* daw) {
 
 void action_remove_modules::undo(DawInstance* daw) {
     ThreadLock lock      = MainCtrl::getPlayThread()->lockThread();
-    audio_stage_t* stage = daw->getHost()->getAudioStage(ref);
+    audio_stage_t* stage = daw->getPluginManager()->getAudioStage(ref);
     if (!stage) {
         setError("missing trackimpl");
         return;
     }
     int32_t slot = 0;
     for (effectbase* eff : effects) {
-        daw->getHost()->insertNewPlugin(stage, eff, dstSlot + slot);
-        daw->getHost()->postPluginLoaded(stage, eff);
+        daw->getPluginManager()->insertNewPlugin(stage, eff, dstSlot + slot);
+        daw->getPluginManager()->postPluginLoaded(stage, eff);
         dbgassert(eff->getSlot() == dstSlot + slot);
         slot++;
     }
-    MainCtrl::getPluginCtr()->relayout();
+    daw->onPluginsChanged();
     weOwn = false;
 }
 
 void action_remove_modules::redo(DawInstance* daw) {
     ThreadLock lock      = MainCtrl::getPlayThread()->lockThread();
-    audio_stage_t* stage = daw->getHost()->getAudioStage(ref);
+    audio_stage_t* stage = daw->getPluginManager()->getAudioStage(ref);
     if (!stage) {
         setError("missing trackimpl");
         return;
@@ -931,61 +918,59 @@ void action_remove_modules::redo(DawInstance* daw) {
     dbgassert(effects[0]->getSlot() == dstSlot);
     for (effectbase* eff : effects) {
         eff->closeWindow();
-        daw->getHost()->removePlugin(eff);
+        daw->getPluginManager()->removePlugin(eff);
     }
-    MainCtrl::getPluginCtr()->relayout();
+    daw->onPluginsChanged();
     weOwn = true;
 }
 void action_move_modules::undo(DawInstance* daw) {
-    audio_stage_t* dstStage = daw->getHost()->getAudioStage(refdst);
-    audio_stage_t* srcStage = daw->getHost()->getAudioStage(refsrc);
+    audio_stage_t* dstStage = daw->getPluginManager()->getAudioStage(refdst);
+    audio_stage_t* srcStage = daw->getPluginManager()->getAudioStage(refsrc);
     if (!dstStage || !srcStage) {
         setError("missing trackimpl");
         return;
     }
-    daw->getHost()->movePlugins(srcStage, dstStage, dst, src, len);
-    MainCtrl::getPluginCtr()->relayout();
-    daw->getHost()->onTrackLayoutChange();
+    daw->getPluginManager()->movePlugins(srcStage, dstStage, dst, src, len);
+    daw->onPluginsChanged();
 }
 void action_move_modules::redo(DawInstance* daw) {
-    audio_stage_t* dstStage = daw->getHost()->getAudioStage(refdst);
-    audio_stage_t* srcStage = daw->getHost()->getAudioStage(refsrc);
+    audio_stage_t* dstStage = daw->getPluginManager()->getAudioStage(refdst);
+    audio_stage_t* srcStage = daw->getPluginManager()->getAudioStage(refsrc);
     if (!dstStage || !srcStage) {
         setError("missing trackimpl");
         return;
     }
-    daw->getHost()->movePlugins(dstStage, srcStage, src, dst, len);
-    MainCtrl::getPluginCtr()->relayout();
-    daw->getHost()->onTrackLayoutChange();
+    daw->getPluginManager()->movePlugins(dstStage, srcStage, src, dst, len);
+    daw->onPluginsChanged();
 }
 void action_insert_effect::releaseResources(DawInstance* daw) {
     if (weOwn) {
-        daw->getHost()->unloadPlugin(this->effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+        daw->getPluginManager()->unloadPlugin(this->effect, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
         effect = nullptr;
         weOwn  = false;
     }
 }
 void action_insert_effect::undo(DawInstance* daw) {
-    ThreadLock lock      = MainCtrl::getPlayThread()->lockThread();
-    audio_stage_t* stage = daw->getHost()->getAudioStage(ref);
+    ThreadLock lock      = daw->lockPlayThread();
+    audio_stage_t* stage = daw->getPluginManager()->getAudioStage(ref);
     if (!stage) {
         setError("missing trackimpl");
         return;
     }
     effect->closeWindow();
-    vsthost::getInstance()->removePlugin(effect);
-    MainCtrl::getPluginCtr()->relayout();
+    daw->getPluginManager()->removePlugin(effect);
+    daw->onPluginsChanged();
     weOwn = true;
 }
 void action_insert_effect::redo(DawInstance* daw) {
-    ThreadLock lock      = MainCtrl::getPlayThread()->lockThread();
-    audio_stage_t* stage = daw->getHost()->getAudioStage(ref);
+    ThreadLock lock      = daw->lockPlayThread();
+    audio_stage_t* stage = daw->getPluginManager()->getAudioStage(ref);
     if (!stage) {
         setError("missing trackimpl");
         return;
     }
-    vsthost::getInstance()->insertNewPlugin(stage, effect, dstSlot);
-    vsthost::getInstance()->postPluginLoaded(stage, effect);
-    MainCtrl::getPluginCtr()->relayout();
+    daw->getPluginManager()->insertNewPlugin(stage, effect, dstSlot);
+    daw->getPluginManager()->postPluginLoaded(stage, effect);
+    daw->onPluginsChanged();
     weOwn = false;
 }

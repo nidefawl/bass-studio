@@ -4,7 +4,7 @@
 #include "gui/controls/button.h"
 #include "controls.h"
 #include "host/mainctrl.h"
-#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 #include "host/audio_host.h"
 
 namespace {

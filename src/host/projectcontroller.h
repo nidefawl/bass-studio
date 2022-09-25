@@ -1,7 +1,8 @@
 #pragma once
 #include "fileio.h"
+#include "tls.h"
 #include "track.h"
-#include "vst_host.h"
+#include "pluginmanager.h"
 
 class project_controller_t {
 
@@ -60,14 +61,13 @@ public:
     double getProjectWorkingArea() {
         return 6000.0;
     }
-    virtual inline void addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags) {
+    virtual void addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags) {
         project->trackList.addTrack(trackInsertPos, newTrack);
         if ((flags & FLG_TRK_CHANGE_HISTORY_UNDO) != 0) {
             dbgassert(newTrack->audio);
         } else {
             dbgassert(!newTrack->audio);
-            vsthost* host = vsthost::getInstance();
-            host->createAudio(newTrack);
+            daw_tls::getTls().pluginManager->createAudio(newTrack);
         }
     }
     project_globals_t& getGlobals() {

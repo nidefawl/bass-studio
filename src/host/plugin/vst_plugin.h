@@ -14,7 +14,6 @@
 #include "snapshot.h"
 #include "base_plugin.h"
 
-class vsthost;
 struct AudioBlock;
 struct handles_t;
 class track_t;
@@ -40,10 +39,7 @@ struct vst_param_category {
     int16_t nParams;
     String label;//24
 };
-enum vst_param_state : uint8_t {
-    PARAM_FLAG_DIRTY = 1,
-    PARAM_FLAG_SET = 2
-};
+
 enum vst_workarounds : uint64_t {
     VST2_R4_BUG_STEREO_PLUGIN_REPORTS_MONO = 1,
     VST2_BUG_NEED_SHOW_WINDOW_TO_LOAD_PRESET = 2
@@ -102,8 +98,8 @@ public:
     bool showWindow(bool bResetPosition) override;
     void updateWindow() override;
     bool updateWindowSize();
-    void unload(vsthost* host, int flags) override;
-    void load(vsthost* host) override;
+    void unload(DAW::pluginmanager* host, int flags) override;
+    void load(DAW::pluginmanager* host) override;
     void configureIOChannels();
     void postLoad();
     vst_param_category* getCategory(int idx);
@@ -131,7 +127,7 @@ public:
     guiplugin* getGui() override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     void processMidi(midi_events_t& midiEvents) override;
-    void sendNotesOff(int32_t bpm100) override;
+    void sendNotesOff() override;
     samplecount_t getPluginLatency() override;
     int32_t getFlagsVST();
     VstTimeInfo* getLocalTimeInfoPtr();

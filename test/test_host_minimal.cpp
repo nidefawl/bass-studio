@@ -1,17 +1,25 @@
 #include "TestBase.hpp"
+#include "host/effect_graph.h"
 #include "str_util.h"
 #include "common/test_common.h"
-#include "../host/vst_host.h"
+#include "host/pluginmanager.h"
+#include "host/vst_host.h"
 #include "tls.h"
 #include "appconfig.h"
+#include <memory>
 
 
 int main(int argc, char* argv[]) {
-    auto host = std::make_unique<vsthost>();
-    vsthost::assignMasterCallback(host.get());
-    daw_tls::initNewTls().host = host.get();
-    host->setTls(daw_tls::getTls());
-    TEST_ASSERT_EQUAL(vsthost::getInstance(), host.get());
+    auto host = std::make_unique<DAW::pluginhost>();
+    auto pluginMgr = host.get();
+    DAW::pluginmanager::assignMasterCallback(pluginMgr);
+    host->setSampleFormat(sampleformat_t{ static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32 });
+    auto& tls = daw_tls::initNewTls();
+    tls.host = host.get();
+    tls.pluginManager = pluginMgr;
+    host->setTls(tls);
+    
+    TEST_ASSERT_EQUAL(DAW::pluginhost::getInstance(), host.get());
     host->onTick();
     host->unload();
     host->destroy();

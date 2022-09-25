@@ -26,7 +26,7 @@
 #include "audiocache.h"
 #include "wave/waveform_render.h"
 #include "wave/waveform_render_impl.h"
-#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 
 struct track_gui_entry_t;
 

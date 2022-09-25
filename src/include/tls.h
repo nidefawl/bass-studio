@@ -1,8 +1,11 @@
 #pragma once
 
+namespace DAW {
+    class pluginhost;
+    class pluginmanager;
+}
 class audiohost;
 class midihost;
-class vsthost;
 class waveformrender;
 class MainCtrl;
 class audiocache;
@@ -16,7 +19,8 @@ namespace daw_tls {
         appruntime* runtime              = nullptr;
         appsettings* settings            = nullptr;
         DawInstance* dawInstance         = nullptr;
-        vsthost* host                    = nullptr;
+        DAW::pluginhost* host             = nullptr;
+        DAW::pluginmanager* pluginManager = nullptr;
         audiohost* audioHost             = nullptr;
         midihost* midiHost               = nullptr;
         MainCtrl* mainCtrl               = nullptr;

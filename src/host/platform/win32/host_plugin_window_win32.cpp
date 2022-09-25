@@ -3,7 +3,7 @@
 #include "logging.h"
 #include "str_util.h"
 #include "host/host_plugin_window.h"
-#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 #include "host/plugin/vst_plugin.h"
 #include "host/mainctrl.h"
 #include <windows.h>

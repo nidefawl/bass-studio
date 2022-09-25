@@ -83,6 +83,6 @@ public:
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
     virtual void processMidiMessages(std::vector<IMidiMsg>& midiEvents) { };
     void processMidi(midi_events_t& midiEvents) override;
-    void sendNotesOff(int32_t bpm100) override;
+    void sendNotesOff() override;
     std::shared_ptr<PluginViewContainers> getViewCtr(int32_t uiId);
 };

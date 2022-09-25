@@ -25,6 +25,7 @@
 #include "host/plugin/base_plugin.h"
 #include "host/plugin/group.h"
 #include "host/plugin/internal_plugin.h"
+#include "host/pluginmanager.h"
 #include "host/vst_host.h"
 #include "logging.h"
 #include "math/seq_math.h"
@@ -723,7 +724,6 @@ public:
             track->audio->createIOSnapshot(snapshotAfter);
             track->audio->loadIOConfiguration(snapshotBefore);
             daw->onPluginsChanged();
-            daw->getHost()->onTrackLayoutChange();
         }
     }
     void redo(DawInstance* daw) override {
@@ -734,7 +734,6 @@ public:
             track->audio->createIOSnapshot(snapshotBefore);
             track->audio->loadIOConfiguration(snapshotAfter);
             daw->onPluginsChanged();
-            daw->getHost()->onTrackLayoutChange();
         }
     }
 };
@@ -748,7 +747,7 @@ public:
         desc = "Modify effect routing";
     }
     void undo(DawInstance* daw) override {
-        auto stage = daw->getHost()->getAudioStage(ref);
+        auto stage = daw->getPluginManager()->getAudioStage(ref);
         if (!stage) {
             setError("Failed undoing routing change");
         } else {
@@ -756,11 +755,10 @@ public:
             stage->createRoutingSnapshot(snapshotAfter);
             stage->loadRoutingSnapshot(snapshotBefore);
             daw->onPluginsChanged();
-            daw->getHost()->onTrackLayoutChange();
         }
     }
     void redo(DawInstance* daw) override {
-        auto stage = daw->getHost()->getAudioStage(ref);
+        auto stage = daw->getPluginManager()->getAudioStage(ref);
         if (!stage) {
             setError("Failed undoing routing change");
         } else {
@@ -768,7 +766,6 @@ public:
             stage->createRoutingSnapshot(snapshotBefore);
             stage->loadRoutingSnapshot(snapshotAfter);
             daw->onPluginsChanged();
-            daw->getHost()->onTrackLayoutChange();
         }
     }
 };
@@ -950,7 +947,6 @@ void gui_graph_port::dragReleaseOn(guibase* target, ivec2 mousepos) {
         ThreadLock lock = daw->lockPlayThread();
         NodeGraph::connectPorts(daw, this, ptr);
         daw->onPluginsChanged();
-        daw->getHost()->onTrackLayoutChange();
     }
 }
 
@@ -1481,7 +1477,6 @@ void gui_graph::handleDraggedBegin(MouseEvent& evt) {
             ThreadLock lock = daw->lockPlayThread();
             NodeGraph::disconnectEdge(daw, hitResult.edge);
             daw->onPluginsChanged();
-            daw->getHost()->onTrackLayoutChange();
             return;
         }
     }

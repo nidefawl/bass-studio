@@ -9,7 +9,6 @@
 struct audio_stage_t;
 class guiplugin;
 class guibase;
-class vsthost;
 namespace DAW {
     struct processing_graph_t;
     using effect_processing_graph_t  = processing_graph_t;
@@ -32,9 +31,9 @@ public:
     void processMidi(midi_events_t& midiEvents) override;
     void onEnable() override;
     void onDisable() override;
-    void unload(vsthost* host, int flags) override;
+    void unload(DAW::pluginmanager* host, int flags) override;
     void onPreUnload(int flags) override;
-    void load(vsthost* host) override;
+    void load(DAW::pluginmanager* host) override;
     void breakTrackLink() override;
     void setTrackLink(audio_stage_t* trImpl) override;
     audio_stage_t* getAudioStage() { return audio; };

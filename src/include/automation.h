@@ -99,6 +99,10 @@ struct param_modulation_range_t {
     double range;
     bool isBiPolar;
 };
+enum plugin_param_sync_state : uint8_t {
+    PARAM_FLAG_DIRTY = 1,
+    PARAM_FLAG_SET = 2
+};
 struct automatable_param_t {
     int32_t idx        = -1;
     float defaultValue = 0.0f;
@@ -365,8 +369,8 @@ int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int
 void simplifyData(std::vector<automation_point_t>& data);
 void toggleDeviceEnableState(automatable_t* effect, int flags);
 
-class vsthost;
 namespace DAW {
+    class pluginmanager;
     struct automation_ref_t {
         int type  = -1;
         float val = 0.0f;
@@ -381,6 +385,6 @@ namespace DAW {
     inline automation_ref_t AutomationConstant(float val) {
         return automation_ref_t{ 0, val, {} };
     }
-    bool resolveAutomationAtTime(const vsthost* host, const automation_ref_t& ref, tick_t atTime, float* fOut);
-    bool resolveAutomatableRef(const vsthost* host, automationlane_snapshot_t& ref, automatable_t** out);
+    bool resolveAutomationAtTime(const pluginmanager* host, const automation_ref_t& ref, tick_t atTime, float* fOut);
+    bool resolveAutomatableRef(const pluginmanager* host, automationlane_snapshot_t& ref, automatable_t** out);
 }// namespace DAW

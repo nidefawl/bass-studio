@@ -3,10 +3,6 @@
 #include "modules.h"
 #include "host/plugin/internal_plugin.h"
 
-class guiplugin;
-class vsthost;
-struct audio_stage_t;
-
 namespace PluginGain {
 struct impl_data_t;
 class module_gain : public internalplugin {

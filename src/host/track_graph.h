@@ -118,7 +118,7 @@ namespace DAW {
      * @return true graph successfully build
      * @return false Failed building graph: Cycles detected or something else went wrong
      */
-    bool buildTrackRoutingGraph(const vsthost* host, const project_t* project, const track_vector& tracksFlat, std::shared_ptr<track_graph_t>& out_graph);
+    bool buildTrackRoutingGraph(const pluginhost* host, const project_t* project, const track_vector& tracksFlat, std::shared_ptr<track_graph_t>& out_graph);
     
     /**
      * @brief Builds the Directed acyclic graph using track list and track routings
@@ -130,8 +130,8 @@ namespace DAW {
      * @return true graph successfully build
      * @return false Failed building graph: Cycles detected or something else went wrong
      */
-    bool buildProcessingGraph(const vsthost* host, const project_t* project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph);
-    bool validateTrackRoutings(const vsthost* host, const track_vector& tracksFlat);
+    bool buildProcessingGraph(const pluginhost* host, const project_t* project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph);
+    bool validateTrackRoutings(const pluginhost* host, const track_vector& tracksFlat);
 
-    void updateSoloFlag(const vsthost* host, const project_t* project, const track_vector& tracksFlat);
+    void updateSoloFlag(const pluginhost* host, const project_t* project, const track_vector& tracksFlat);
 }// namespace DAW

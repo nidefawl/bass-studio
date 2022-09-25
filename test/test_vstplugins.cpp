@@ -1,7 +1,9 @@
 #include "str_util.h"
 #include "common/test_common.h"
-#include "../host/vst_host.h"
-#include "../host/plugin/vst_plugin.h"
+#include "host/pluginmanager.h"
+#include "host/plugin/vst_plugin.h"
+#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 #include "tls.h"
 #include "project.h"
 #include "appconfig.h"
@@ -32,7 +34,7 @@ namespace {
         static vstpluginloadres res(0, nullptr);
         static int currentTimerTick = 0;
         static int numPluginsTested = 0;
-        auto* host                  = vsthost::getInstance();
+        auto* host                  = pluginhost::getInstance();
         if (res.plugin == nullptr) {
             if (currentFileIdx >= dllFilesToTest.size()) {
                 PostQuitMessage(exitStatusCode);
@@ -58,7 +60,7 @@ namespace {
             } else if (hasUI && currentTimerTick == 30) {
                 res.plugin->closeWindow();
             } else if ((hasUI && currentTimerTick == 40) || (!hasUI && currentTimerTick == 10)) {
-                host->unloadPlugin(res.plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                host->unloadPlugin(res.plugin, pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                 res = vstpluginloadres(0, nullptr);
                 currentTimerTick = -1;
                 numPluginsTested++;
@@ -146,10 +148,12 @@ int main(int, char*[]) {
 #endif
 
     int retVal     = 0;
-    auto host = std::make_unique<vsthost>();
-    vsthost::assignMasterCallback(host.get());
+    auto host = std::make_unique<DAW::pluginhost>();
+    auto pluginMgr = host.get();
+    DAW::pluginmanager::assignMasterCallback(pluginMgr);
     auto& tls = daw_tls::initNewTls();
     tls.host = host.get();
+    tls.pluginManager = pluginMgr;
     host->setTls(tls);
     try {
 

@@ -58,7 +58,7 @@ void internalplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_sto
 void internalplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     this->uiSnapshot = pluginSnapshot.uiSnapshot;
     this->uiSnapshot.isValidSnapshot = true;
-    loadEffectParamsFromSnapshot(pluginSnapshot, this);
+    DAW::loadEffectParamsFromSnapshot(pluginSnapshot, this);
     if (handlesIntPlugin->gui && this->uiSnapshot.isValidSnapshot) {
         handlesIntPlugin->gui->loadSnapshot(this->uiSnapshot);
         this->uiSnapshot.isValidSnapshot = false;
@@ -260,7 +260,7 @@ std::shared_ptr<PluginViewContainers> internalplugin::getViewCtr(int32_t uiId) {
     }
     return newView;
 };
-void internalplugin::sendNotesOff(int32_t bpm100) {
+void internalplugin::sendNotesOff() {
     std::vector<IMidiMsg> messages;
     messages.reserve(handlesIntPlugin->heldNotes.size() + 1);
     for (const auto& notePitch : handlesIntPlugin->heldNotes) {

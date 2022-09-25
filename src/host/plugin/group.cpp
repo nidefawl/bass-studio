@@ -15,21 +15,20 @@
 #include "gui/plugin/plugin.h"
 #include "gui/plugin/pluginctr.h"
 #include "gui/views/pluginlist.h"
-
 #include "base_plugin.h"
 #include "internal_plugin.h"
-
 #include "basectrl.h"
 #include "audioblock.h"
 #include "meter.h"
 #include "host/mainctrl.h"
-#include "host/vst_host.h"
-
+#include "tls.h"
 #include "track.h"
 #include "track_impl.h"
 #include "snapshot.h"
 #include "host/effect_graph.h"
 #include "seq_util.h"
+#include "host/pluginmanager.h"
+#include "host/vst_host.h"
 
 class guimodule_group : public guiplugin {
 public:
@@ -237,16 +236,16 @@ void module_group::onPreUnload(int flags) {
     }
     std::vector<effectbase*> effects = this->audio->effects;// make a copy before unloading plugins
     for (effectbase* effect : effects) {
-        vstHost->unloadPlugin(effect, flags);
+        pluginMgr->unloadPlugin(effect, flags);
     }
 }
 
-void module_group::load(vsthost* host) {
+void module_group::load(DAW::pluginmanager* host) {
     effectbase::load(host);
     this->audio = host->createAudioStage();
 }
 
-void module_group::unload(vsthost* host, int flags) {
+void module_group::unload(DAW::pluginmanager* host, int flags) {
     effectbase::unload(host, flags);
     //onPreunload(flags);
     host->releaseAudioStage(audio);
@@ -290,14 +289,13 @@ void module_group::process(AudioBlock* in, AudioBlock* out, double tick, double 
     audio->input.copyFrom(in);
 
     std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
-    if (!DAW::buildEffectProcessingGraph(vstHost, nullptr, audio, effProcessingGraph)) {
+    if (!DAW::buildEffectProcessingGraph(pluginMgr, nullptr, audio, effProcessingGraph)) {
         log_lf(Log::L_ERROR, "Failed building effect graph\n");
     }
-
-    vstHost->processAudio(audio, &audio->input, &audio->output, tick, samplePos, numSamples, state, effProcessingGraph.get());
+    daw_tls::getTls().host->processAudio(audio, &audio->input, &audio->output, tick, samplePos, numSamples, state, effProcessingGraph.get());
     lastEffProcessingGraph = effProcessingGraph;;
 #ifdef DAW_DEBUG_TRACK_GRAPHS
-    //TODO: this code path runs on a workerthread. Store processing-graph add to vsthost::lastProcessingGraphs from playback-thread
+    //TODO: this code path runs on a workerthread. Store processing-graph add to pluginhost::lastProcessingGraphs from playback-thread
 #endif
 
     audio->outputPost.clear();

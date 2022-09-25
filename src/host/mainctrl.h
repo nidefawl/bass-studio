@@ -105,12 +105,12 @@ public:
 };
 
 namespace DAW {
-    std::shared_ptr<clip_clipboard> copySelection(const track_gui_manager_i& trackList, const DAW::Cursor& _cursor);
-    std::shared_ptr<clip_clipboard> consolidateClipboard(std::shared_ptr<clip_clipboard>& clipboardIn, const DAW::Cursor& _cursor);
+    std::shared_ptr<clip_clipboard> copySelection(const track_gui_manager_i& trackList, const Cursor& _cursor);
+    std::shared_ptr<clip_clipboard> consolidateClipboard(std::shared_ptr<clip_clipboard>& clipboardIn, const Cursor& _cursor);
     void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick);
-    void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, DAW::Cursor& cursor);
-    void cutSelection(track_gui_manager_i& trackList, const DAW::Cursor& cursor);
-    void muteIntersecting(track_gui_manager_i& trackList, const DAW::Cursor& _cursor);
+    void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, Cursor& cursor);
+    void cutSelection(track_gui_manager_i& trackList, const Cursor& cursor);
+    void muteIntersecting(track_gui_manager_i& trackList, const Cursor& _cursor);
     void GetProjectReferencedSampleIds(const project_t& project, std::vector<int32_t>& uniqueSampleIds);
     String MakeUniqueTrackName(project_t* project, const String& strNewName);
 }// namespace DAW
@@ -305,8 +305,11 @@ public:
     ThreadLock lockPlayThread() {
         return playThread.lockThread();
     }
-    vsthost* getHost() {
+    DAW::pluginhost* getHost() {
         return tls.host;
+    }
+    DAW::pluginmanager* getPluginManager() {
+        return tls.pluginManager;
     }
     audiocache* getAudioCache() {
         return tls.audioCache;

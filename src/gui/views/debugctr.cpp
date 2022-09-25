@@ -21,6 +21,7 @@
 #include "track_impl.h"
 #include "clip.h"
 #include "host/mainctrl.h"
+#include "host/pluginmanager.h"
 #include "host/vst_host.h"
 #include "host/audio_host.h"
 #include "host/plugin/vst_plugin.h"
@@ -60,7 +61,7 @@ enum ID_BTN : int32_t {
 };
 struct gui_ctr_debug::ctr_debug_impl_t {
     std::vector<guibase*> debugGuis;
-    std::vector<thread_stats_process_timings_t> lastProcessingList;
+    std::vector<DAW::thread_stats_process_timings_t> lastProcessingList;
     sampleformat_t sampleformat;
 };
 gui_ctr_debug::~gui_ctr_debug() {
@@ -85,7 +86,7 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             guiType = CTR_TYPE_DEBUG_2;
             break;
     }
-    auto const host = vsthost::getInstance();
+    auto const host = DawInstance::get()->getHost();
 #ifdef _WIN32
     msgCounterEnabled = true;
 #endif

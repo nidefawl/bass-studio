@@ -3,6 +3,7 @@
 #include "automation.h"
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
+#include "host/effect_graph.h"
 #include "math/seq_math.h"
 #include "exceptions.h"
 #include "logging.h"
@@ -26,7 +27,7 @@
 #include "plugin/vst_plugin.h"
 #include "plugin/vst_plugin_handles.h"
 #include "types.h"
-#include "vst_host.h"
+#include "pluginmanager.h"
 #include "track_impl.h"
 
 #include "modules.h"
@@ -71,11 +72,11 @@ void releaseTrackResources(track_t* tr, delete_cb* cb) {
     dbgassert(tr && tr->audio);
     if (cb)
         cb->preTrackDelete(tr);
-    vsthost* host = vsthost::getInstance();
-    host->unloadTrack(tr);
+    auto* mgr = daw_tls::getTls().pluginManager;
+    mgr->unloadTrack(tr);
     tr->getMidi().deleteClips(cb);
     dbgassert(tr->audio->guiInstances.empty());
-    host->releaseAudio(tr);
+    mgr->releaseAudio(tr);
     dbgassert(tr && !tr->audio);
 }
 
@@ -437,9 +438,9 @@ void audio_stage_t::getStageTargets(std::vector<automatable_t*>& targets) {
 void audio_stage_t::onStopPlayback() {
 }
 
-void audio_stage_t::sendNotesOff(int32_t bpm100) {
+void audio_stage_t::sendNotesOff() {
     for (effectbase* effect : effects) {
-        effect->sendNotesOff(bpm100);
+        effect->sendNotesOff();
     }
     notesPre.reset();
     notesPost.reset();
@@ -486,62 +487,74 @@ void project_t::copyTo(project_snapshot_t& project) {
 void project_t::copyFrom(project_snapshot_t& project) {
     trackList.copyFrom(project);
 }
-
-effectbase* loadEffectModule(vsthost* host, const plugin_snapshot_t& pluginSnapshot, bool forceLoad) {
-    effectbase* effect      = nullptr;
-    if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
-        log_printf("Next loading plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
-        plugindatabase_t* db = plugindatabase_t::getInstance();
-        pluginentry_t resolvedPlugin;
-        if (db->resolve(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
-            log_lf(Log::L_DEBUG, "Plugin is registered... loading %s, uId %d, forceLoad %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, forceLoad);
-            vstpluginloadres res = host->loadPlugin(resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags);
-            if (res.result == 0 && res.plugin) {
-                res.plugin->localDbId = resolvedPlugin.localDbId;
-                effect = res.plugin;
-            } else {
-                log_printf("Failed loading: Error loading plugin %s, uId %d. Res: %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, res.result);
-            }
-        } else {
-            log_printf("Failed loading: Unknown plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
-        }
-    } else {
-        effect = host->makeModuleInstance(pluginSnapshot.pluginType, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
-    }
-    return effect;
-}
-void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect) {
-    const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
-    uint32_t missingParams = 0;
-    for (const param_snapshot_t& param : pluginSnapshotParams) {
-        automatable_param_t* atParam = effect->getParam(param.idx);
-        if (atParam) {
-            auto paramVal = math::clamp(param.val, 0.0f, 1.0f);
-            dbgassert(paramVal >= 0.0f && paramVal <= 1.0f);
-            int flags = FLG_PAR_UPDATE_INIT;
-            if (!param.flags) {
-                flags |= FLG_PAR_UPDATE_NOSTORE;
-            }
-            effect->setParamValue(atParam->idx, paramVal, flags);
-        } else {
-            missingParams++;
-        }
-    }
-    if (missingParams) {
-        //TODO: notify users thru UI
-        log_printf("Some parameters could not be mapped: %s has %d missing parameters\n", StringAsCStr(effect->getName()), missingParams);
-    } else {
-        log_printf("%s: Loaded %zu params\n", StringAsCStr(effect->getName()), pluginSnapshotParams.size());
-    }
-    //const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
-    //for (const param_snapshot_t& param : pluginHostSideParams) {
-    //    automatable_param_t* atParam = effect->getParam(param.idx);
-    //    if (atParam) {
-    //        effect->setParamValue(atParam->idx, param.val, FLG_PAR_UPDATE_INIT);
-    //    }
-    //}
-}
 namespace DAW {
+    effectbase* loadEffectModule(pluginmanager* host, const plugin_snapshot_t& pluginSnapshot, bool forceLoad) {
+        effectbase* effect      = nullptr;
+        if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
+            log_printf("Next loading plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
+            plugindatabase_t* db = plugindatabase_t::getInstance();
+            pluginentry_t resolvedPlugin;
+            if (db->resolve(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
+                log_lf(Log::L_DEBUG, "Plugin is registered... loading %s, uId %d, forceLoad %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, forceLoad);
+                auto res = host->loadPlugin(resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags);
+                if (res.result == 0 && res.plugin) {
+                    res.plugin->localDbId = resolvedPlugin.localDbId;
+                    effect = res.plugin;
+                } else {
+                    log_printf("Failed loading: Error loading plugin %s, uId %d. Res: %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, res.result);
+                }
+            } else {
+                log_printf("Failed loading: Unknown plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
+            }
+        } else {
+            effect = host->makeModuleInstance(pluginSnapshot.pluginType, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
+        }
+        return effect;
+    }
+    void removePlugin(DawInstance* daw, effectbase* module) {
+        ThreadLock lock           = daw->getPlayThread()->lockThread();
+        audio_stage_t* audioStage = module->getTrackLink();
+        dbgassert(audioStage);
+        module->closeWindow();
+        audioStage->removePlugin(module, true);
+        std::vector<effectbase*> effects;
+        effects.push_back(module);
+        auto* actionRemove = new action_remove_modules("Remove plugin", std::move(effects), audioStage->toRef(), module->getSlot());
+        daw->pushHist(actionRemove);
+        audioStage->pluginsChanged();
+        daw->onPluginsChanged();
+    }
+    void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect) {
+        const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
+        uint32_t missingParams = 0;
+        for (const param_snapshot_t& param : pluginSnapshotParams) {
+            automatable_param_t* atParam = effect->getParam(param.idx);
+            if (atParam) {
+                auto paramVal = math::clamp(param.val, 0.0f, 1.0f);
+                dbgassert(paramVal >= 0.0f && paramVal <= 1.0f);
+                int flags = FLG_PAR_UPDATE_INIT;
+                if (!param.flags) {
+                    flags |= FLG_PAR_UPDATE_NOSTORE;
+                }
+                effect->setParamValue(atParam->idx, paramVal, flags);
+            } else {
+                missingParams++;
+            }
+        }
+        if (missingParams) {
+            //TODO: notify users thru UI
+            log_printf("Some parameters could not be mapped: %s has %d missing parameters\n", StringAsCStr(effect->getName()), missingParams);
+        } else {
+            log_printf("%s: Loaded %zu params\n", StringAsCStr(effect->getName()), pluginSnapshotParams.size());
+        }
+        //const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
+        //for (const param_snapshot_t& param : pluginHostSideParams) {
+        //    automatable_param_t* atParam = effect->getParam(param.idx);
+        //    if (atParam) {
+        //        effect->setParamValue(atParam->idx, param.val, FLG_PAR_UPDATE_INIT);
+        //    }
+        //}
+    }
     void createDawChannelRefSnapshot(const channel_ref_t& channel, io_configuration_snapshot_t& cfg) {
         cfg.type              = static_cast<int32_t>(channel.type);
         cfg.stageId           = static_cast<int32_t>(channel.stage.stageRef.stageId);
@@ -553,10 +566,10 @@ namespace DAW {
         cfg.dstChannelOffset  = channel.dstChannelOffset;
     }
     void loadDawChannelRefSnapshot(const io_configuration_snapshot_t& cfg, channel_ref_t& channel) {
-        channel.type                   = static_cast<DAW::stage_type>(cfg.type);
+        channel.type                   = static_cast<stage_type>(cfg.type);
         channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
         channel.stage.buffer           = static_cast<stage_bufferpoint>(cfg.stageEndPointType);
-        channel.externalInputType      = static_cast<DAW::channel_pairing>(cfg.externalInputType);
+        channel.externalInputType      = static_cast<channel_pairing>(cfg.externalInputType);
         channel.projectGlobalId        = cfg.projectGlobalId;
         channel.externalInputIdx       = cfg.externalInputIdx;
         channel.srcChannelOffset       = cfg.srcChannelOffset;
@@ -569,7 +582,7 @@ namespace DAW {
         cfg.externalInputIdx  = channel.externalInputIdx;
     }
     void loadMidiChannelRefSnapshot(const io_midi_snapshot_t& cfg, midichannel_ref_t& channel) {
-        channel.type                   = static_cast<DAW::midistage_type>(cfg.type);
+        channel.type                   = static_cast<midistage_type>(cfg.type);
         channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
         channel.stage.buffer           = static_cast<stage_bufferpoint>(cfg.stageEndPointType);
         channel.externalInputIdx       = cfg.externalInputIdx;
@@ -691,13 +704,15 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
             dbgassert(effect->trackImpl == this);
             dbgassert(!effects.empty());
             if (effect->getModuleStoredType() == PLUGIN_TYPE_GROUP) {
-                host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                host->activateDeferred(effect, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
             }
         }
     }
 }
 
-void vsthost::activateDeferred(effectbase* const eff, int flags, effectbase** out_effectLoaded) {
+namespace DAW {
+
+void pluginmanager::activateDeferred(effectbase* const eff, int flags, effectbase** out_effectLoaded) {
     dbgassert(eff->trackImpl);
     dbgassert(eff->trackImpl->effects.size());
     dbgassert(eff->getSlot() >= 0);
@@ -754,6 +769,8 @@ void vsthost::activateDeferred(effectbase* const eff, int flags, effectbase** ou
     }
     //    if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
 }
+
+} // namespace DAW
 
 void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot) {
     const std::vector<automationlane_snapshot_t>& atls = snapshot.automationLanes;
@@ -948,7 +965,7 @@ void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
     });
 }
 
-track_impl_t::track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels)
+track_impl_t::track_impl_t(DAW::pluginmanager* const _host, audio_stage_id_t _id, track_t* _track, const sampleformat_t _sampleFormat, const channelnum_t _numChannels)
     : audio_stage_t(_host, _id, _sampleFormat, _numChannels, 0),
       arp(new DAW::midiarp(this)), track(_track),
       inputChannel(DAW::ChannelDefaultNone()),
@@ -996,8 +1013,8 @@ void track_impl_t::onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPo
     midiProcessed->clear();
 }
 
-void track_impl_t::sendNotesOff(int32_t bpm100) {
-    audio_stage_t::sendNotesOff(bpm100);
+void track_impl_t::sendNotesOff() {
+    audio_stage_t::sendNotesOff();
     std::vector<noteevent_t> noteEvents;
     {
         ThreadLock lock = midiMutex.lockThread();
@@ -1369,151 +1386,150 @@ automationlane_snapshot_t track_params_t::toRef() const {
     return ref;
 }
 
-
-void assignFreeStageIds(vsthost* host, plugin_snapshot_t& snapshot) {
-    std::map<int32_t,int32_t> idMap;
-    std::map<int32_t,int32_t> pluginIdMap;
-    std::vector<plugin_snapshot_t*> all;
-    std::vector<plugin_snapshot_t*> q;
-    q.push_back(&snapshot);
-    while (!q.empty()) {
-        plugin_snapshot_t* s = q.back();
-        q.pop_back();
-        all.push_back(s);
-        if (s->projectGlobalId) {
-            auto pluginId = host->getNextGlobalModuleId(0);
-            log_lf(Log::L_DEBUG, "projectGlobalId %d is in use, assigning new id %d\n", s->projectGlobalId, pluginId);
-            pluginIdMap[s->projectGlobalId] = pluginId;
-            s->projectGlobalId = pluginId;
-        }
-        if (host->isStageIdInUse(s->stageIds)) {
-            auto stageId = host->getNextGlobalAudioStageId(0);
-            log_lf(Log::L_DEBUG, "stageId %d is in use, assigning new id %d\n", s->stageIds.stageId, static_cast<int32_t>(stageId.stageId));
-            idMap[s->stageIds.stageId] = static_cast<int32_t>(stageId.stageId);
-            idMap[s->stageIds.inputStageId] = static_cast<int32_t>(stageId.inputStageId);
-            idMap[s->stageIds.outputStageId] = static_cast<int32_t>(stageId.outputStageId);
-            idMap[s->stageIds.outputPostStageId] = static_cast<int32_t>(stageId.outputPostStageId);
-            s->stageIds = saveTrackIdSnapshot(stageId);
-        }
-        for (auto& child : s->pluginSnapshots) {
-            q.push_back(&child);
-        }
-    }
-
-    const auto getNewStageId = [&idMap](int32_t stageId) -> int32_t {
-        if (idMap.find(stageId) != idMap.end()) {
-            log_lf(Log::L_DEBUG, "updating referenced to stage %d: now points at %d\n", stageId, idMap[stageId]);
-            return idMap[stageId];
-        }
-        return stageId;
-    };
-    const auto getNewPluginId = [&pluginIdMap](int32_t pluginId) -> int32_t {
-        if (pluginIdMap.find(pluginId) != pluginIdMap.end()) {
-            log_lf(Log::L_DEBUG, "updating referenced to plugin %d: now points at %d\n", pluginId, pluginIdMap[pluginId]);
-            return pluginIdMap[pluginId];
-        }
-        return pluginId;
-    };
-    for (auto* s : all) {
-        for (auto& r : s->effectRouting.inputRoutingOutputStage) {
-            r.stageId = getNewStageId(r.stageId);
-            r.projectGlobalId = getNewPluginId(r.projectGlobalId);
-        }
-        std::map<int32_t, std::vector<io_configuration_snapshot_t>> inputRoutingEffects;
-        for (auto& reff : s->effectRouting.inputRoutingEffects) {
-            auto key = getNewPluginId(reff.first);
-            auto copyVals = reff.second;
-            for (auto& r : copyVals) {
-                r.stageId = getNewStageId(r.stageId);
-                r.projectGlobalId = getNewPluginId(r.projectGlobalId);
-            }
-            inputRoutingEffects[key] = copyVals;
-        }
-        s->effectRouting.inputRoutingEffects = inputRoutingEffects;
-    }
-}
-
-void assignFreeStageIdsTrackSnapshot(vsthost* host, track_snapshot_t& snapshot) {
-    std::map<int32_t,int32_t> idMap;
-    std::map<int32_t,int32_t> pluginIdMap;
-    std::vector<track_effect_routing_snapshot_t*> all;
-    std::vector<plugin_snapshot_t*> q;
-
-    // if (host->isStageIdInUse(snapshot.stageIds)) {
-        auto stageId = host->getNextGlobalAudioStageId(0);
-        log_lf(Log::L_DEBUG, "stageId %d is in use, assigning new id %d\n", snapshot.stageIds.stageId, static_cast<int32_t>(stageId.stageId));
-        idMap[snapshot.stageIds.stageId] = static_cast<int32_t>(stageId.stageId);
-        idMap[snapshot.stageIds.inputStageId] = static_cast<int32_t>(stageId.inputStageId);
-        idMap[snapshot.stageIds.outputStageId] = static_cast<int32_t>(stageId.outputStageId);
-        idMap[snapshot.stageIds.outputPostStageId] = static_cast<int32_t>(stageId.outputPostStageId);
-        snapshot.stageIds = saveTrackIdSnapshot(stageId);
-        all.push_back(&snapshot.data.effectRouting);
-    // }
-
-    q.reserve(snapshot.data.pluginSnapshots.size());
-    for (auto& plugin : snapshot.data.pluginSnapshots) {
-        q.push_back(&plugin);
-    }
-
-    while (!q.empty()) {
-        plugin_snapshot_t* s = q.back();
-        q.pop_back();
-        all.push_back(&s->effectRouting);
-        if (s->projectGlobalId) {
-            auto pluginId = host->getNextGlobalModuleId(0);
-            log_lf(Log::L_DEBUG, "projectGlobalId %d is in use, assigning new id %d\n", s->projectGlobalId, pluginId);
-            pluginIdMap[s->projectGlobalId] = pluginId;
-            s->projectGlobalId = pluginId;
-        }
-        if (host->isStageIdInUse(s->stageIds)) {
-            auto stageId = host->getNextGlobalAudioStageId(0);
-            log_lf(Log::L_DEBUG, "stageId %d is in use, assigning new id %d\n", s->stageIds.stageId, static_cast<int32_t>(stageId.stageId));
-            idMap[s->stageIds.stageId] = static_cast<int32_t>(stageId.stageId);
-            idMap[s->stageIds.inputStageId] = static_cast<int32_t>(stageId.inputStageId);
-            idMap[s->stageIds.outputStageId] = static_cast<int32_t>(stageId.outputStageId);
-            idMap[s->stageIds.outputPostStageId] = static_cast<int32_t>(stageId.outputPostStageId);
-            s->stageIds = saveTrackIdSnapshot(stageId);
-        }
-        for (auto& child : s->pluginSnapshots) {
-            q.push_back(&child);
-        }
-    }
-
-    const auto getNewStageId = [&idMap](int32_t stageId) -> int32_t {
-        if (idMap.find(stageId) != idMap.end()) {
-            log_lf(Log::L_DEBUG, "updating referenced to stage %d: now points at %d\n", stageId, idMap[stageId]);
-            return idMap[stageId];
-        }
-        return stageId;
-    };
-    const auto getNewPluginId = [&pluginIdMap](int32_t pluginId) -> int32_t {
-        if (pluginIdMap.find(pluginId) != pluginIdMap.end()) {
-            log_lf(Log::L_DEBUG, "updating referenced to plugin %d: now points at %d\n", pluginId, pluginIdMap[pluginId]);
-            return pluginIdMap[pluginId];
-        }
-        return pluginId;
-    };
-    for (auto* effectRouting : all) {
-        for (auto& r : effectRouting->inputRoutingOutputStage) {
-            r.stageId = getNewStageId(r.stageId);
-            r.projectGlobalId = getNewPluginId(r.projectGlobalId);
-        }
-        std::map<int32_t, std::vector<io_configuration_snapshot_t>> inputRoutingEffects;
-        for (auto& reff : effectRouting->inputRoutingEffects) {
-            auto key = getNewPluginId(reff.first);
-            auto copyVals = reff.second;
-            for (auto& r : copyVals) {
-                r.stageId = getNewStageId(r.stageId);
-                r.projectGlobalId = getNewPluginId(r.projectGlobalId);
-            }
-            inputRoutingEffects[key] = copyVals;
-        }
-        effectRouting->inputRoutingEffects = inputRoutingEffects;
-    }
-}
-
 namespace DAW {
-    bool resolveAutomatableRef(const vsthost* const host, const automationlane_snapshot_t& ref, automatable_t** out) {
+    void assignFreeStageIds(pluginmanager* host, plugin_snapshot_t& snapshot) {
+        std::map<int32_t,int32_t> idMap;
+        std::map<int32_t,int32_t> pluginIdMap;
+        std::vector<plugin_snapshot_t*> all;
+        std::vector<plugin_snapshot_t*> q;
+        q.push_back(&snapshot);
+        while (!q.empty()) {
+            plugin_snapshot_t* s = q.back();
+            q.pop_back();
+            all.push_back(s);
+            if (s->projectGlobalId) {
+                auto pluginId = host->getNextGlobalModuleId(0);
+                log_lf(Log::L_DEBUG, "projectGlobalId %d is in use, assigning new id %d\n", s->projectGlobalId, pluginId);
+                pluginIdMap[s->projectGlobalId] = pluginId;
+                s->projectGlobalId = pluginId;
+            }
+            if (host->isStageIdInUse(s->stageIds)) {
+                auto stageId = host->getNextGlobalAudioStageId(0);
+                log_lf(Log::L_DEBUG, "stageId %d is in use, assigning new id %d\n", s->stageIds.stageId, static_cast<int32_t>(stageId.stageId));
+                idMap[s->stageIds.stageId] = static_cast<int32_t>(stageId.stageId);
+                idMap[s->stageIds.inputStageId] = static_cast<int32_t>(stageId.inputStageId);
+                idMap[s->stageIds.outputStageId] = static_cast<int32_t>(stageId.outputStageId);
+                idMap[s->stageIds.outputPostStageId] = static_cast<int32_t>(stageId.outputPostStageId);
+                s->stageIds = saveTrackIdSnapshot(stageId);
+            }
+            for (auto& child : s->pluginSnapshots) {
+                q.push_back(&child);
+            }
+        }
+
+        const auto getNewStageId = [&idMap](int32_t stageId) -> int32_t {
+            if (idMap.find(stageId) != idMap.end()) {
+                log_lf(Log::L_DEBUG, "updating referenced to stage %d: now points at %d\n", stageId, idMap[stageId]);
+                return idMap[stageId];
+            }
+            return stageId;
+        };
+        const auto getNewPluginId = [&pluginIdMap](int32_t pluginId) -> int32_t {
+            if (pluginIdMap.find(pluginId) != pluginIdMap.end()) {
+                log_lf(Log::L_DEBUG, "updating referenced to plugin %d: now points at %d\n", pluginId, pluginIdMap[pluginId]);
+                return pluginIdMap[pluginId];
+            }
+            return pluginId;
+        };
+        for (auto* s : all) {
+            for (auto& r : s->effectRouting.inputRoutingOutputStage) {
+                r.stageId = getNewStageId(r.stageId);
+                r.projectGlobalId = getNewPluginId(r.projectGlobalId);
+            }
+            std::map<int32_t, std::vector<io_configuration_snapshot_t>> inputRoutingEffects;
+            for (auto& reff : s->effectRouting.inputRoutingEffects) {
+                auto key = getNewPluginId(reff.first);
+                auto copyVals = reff.second;
+                for (auto& r : copyVals) {
+                    r.stageId = getNewStageId(r.stageId);
+                    r.projectGlobalId = getNewPluginId(r.projectGlobalId);
+                }
+                inputRoutingEffects[key] = copyVals;
+            }
+            s->effectRouting.inputRoutingEffects = inputRoutingEffects;
+        }
+    }
+
+    void assignFreeStageIdsTrackSnapshot(pluginmanager* host, track_snapshot_t& snapshot) {
+        std::map<int32_t,int32_t> idMap;
+        std::map<int32_t,int32_t> pluginIdMap;
+        std::vector<track_effect_routing_snapshot_t*> all;
+        std::vector<plugin_snapshot_t*> q;
+
+        // if (host->isStageIdInUse(snapshot.stageIds)) {
+            auto stageId = host->getNextGlobalAudioStageId(0);
+            log_lf(Log::L_DEBUG, "stageId %d is in use, assigning new id %d\n", snapshot.stageIds.stageId, static_cast<int32_t>(stageId.stageId));
+            idMap[snapshot.stageIds.stageId] = static_cast<int32_t>(stageId.stageId);
+            idMap[snapshot.stageIds.inputStageId] = static_cast<int32_t>(stageId.inputStageId);
+            idMap[snapshot.stageIds.outputStageId] = static_cast<int32_t>(stageId.outputStageId);
+            idMap[snapshot.stageIds.outputPostStageId] = static_cast<int32_t>(stageId.outputPostStageId);
+            snapshot.stageIds = saveTrackIdSnapshot(stageId);
+            all.push_back(&snapshot.data.effectRouting);
+        // }
+
+        q.reserve(snapshot.data.pluginSnapshots.size());
+        for (auto& plugin : snapshot.data.pluginSnapshots) {
+            q.push_back(&plugin);
+        }
+
+        while (!q.empty()) {
+            plugin_snapshot_t* s = q.back();
+            q.pop_back();
+            all.push_back(&s->effectRouting);
+            if (s->projectGlobalId) {
+                auto pluginId = host->getNextGlobalModuleId(0);
+                log_lf(Log::L_DEBUG, "projectGlobalId %d is in use, assigning new id %d\n", s->projectGlobalId, pluginId);
+                pluginIdMap[s->projectGlobalId] = pluginId;
+                s->projectGlobalId = pluginId;
+            }
+            if (host->isStageIdInUse(s->stageIds)) {
+                auto stageId = host->getNextGlobalAudioStageId(0);
+                log_lf(Log::L_DEBUG, "stageId %d is in use, assigning new id %d\n", s->stageIds.stageId, static_cast<int32_t>(stageId.stageId));
+                idMap[s->stageIds.stageId] = static_cast<int32_t>(stageId.stageId);
+                idMap[s->stageIds.inputStageId] = static_cast<int32_t>(stageId.inputStageId);
+                idMap[s->stageIds.outputStageId] = static_cast<int32_t>(stageId.outputStageId);
+                idMap[s->stageIds.outputPostStageId] = static_cast<int32_t>(stageId.outputPostStageId);
+                s->stageIds = saveTrackIdSnapshot(stageId);
+            }
+            for (auto& child : s->pluginSnapshots) {
+                q.push_back(&child);
+            }
+        }
+
+        const auto getNewStageId = [&idMap](int32_t stageId) -> int32_t {
+            if (idMap.find(stageId) != idMap.end()) {
+                log_lf(Log::L_DEBUG, "updating referenced to stage %d: now points at %d\n", stageId, idMap[stageId]);
+                return idMap[stageId];
+            }
+            return stageId;
+        };
+        const auto getNewPluginId = [&pluginIdMap](int32_t pluginId) -> int32_t {
+            if (pluginIdMap.find(pluginId) != pluginIdMap.end()) {
+                log_lf(Log::L_DEBUG, "updating referenced to plugin %d: now points at %d\n", pluginId, pluginIdMap[pluginId]);
+                return pluginIdMap[pluginId];
+            }
+            return pluginId;
+        };
+        for (auto* effectRouting : all) {
+            for (auto& r : effectRouting->inputRoutingOutputStage) {
+                r.stageId = getNewStageId(r.stageId);
+                r.projectGlobalId = getNewPluginId(r.projectGlobalId);
+            }
+            std::map<int32_t, std::vector<io_configuration_snapshot_t>> inputRoutingEffects;
+            for (auto& reff : effectRouting->inputRoutingEffects) {
+                auto key = getNewPluginId(reff.first);
+                auto copyVals = reff.second;
+                for (auto& r : copyVals) {
+                    r.stageId = getNewStageId(r.stageId);
+                    r.projectGlobalId = getNewPluginId(r.projectGlobalId);
+                }
+                inputRoutingEffects[key] = copyVals;
+            }
+            effectRouting->inputRoutingEffects = inputRoutingEffects;
+        }
+    }
+
+    bool resolveAutomatableRef(const pluginmanager* const host, const automationlane_snapshot_t& ref, automatable_t** out) {
         if (ref.type == AUTOMATABLE_EFFECT) {
             effectbase* plugin = host->getPluginById(ref.refId);
             if (plugin) {
@@ -1544,7 +1560,7 @@ namespace DAW {
 
         return false;
     }
-    bool resolveAutomationAtTime(const vsthost* const host, const automation_ref_t& ref, tick_t atTime, float* fOut) {
+    bool resolveAutomationAtTime(const pluginmanager* const host, const automation_ref_t& ref, tick_t atTime, float* fOut) {
         dbgassert(fOut);
         switch (ref.type) {
             case 0:

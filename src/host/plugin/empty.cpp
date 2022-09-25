@@ -12,7 +12,7 @@
 #include "internal_plugin.h"
 
 #include "host/mainctrl.h"
-#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 #include "host/plugindatabase.h"
 #include "threads/playbackthread.h"
 

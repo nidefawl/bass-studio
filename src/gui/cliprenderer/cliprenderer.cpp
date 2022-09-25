@@ -3,7 +3,7 @@
 #include "cliprenderer_cache.h"
 #include "guiglobals.h"
 #include "math/seq_math.h"
-#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 #include "renderresources.h"
 #include "theme.h"
 #include "gui/gui.h"

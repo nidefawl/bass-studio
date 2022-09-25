@@ -12,6 +12,7 @@
 #include "gui/container/scrollcontainer.h"
 #include "gui/controls/textfield.h"
 #include "host/mainctrl.h"
+#include "host/pluginmanager.h"
 #include "host/vst_host.h"
 #include "host/audio_host.h"
 #include "appconfig.h"

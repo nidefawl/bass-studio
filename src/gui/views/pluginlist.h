@@ -9,9 +9,10 @@
 #include "gui/controls/textfield.h"
 #include "gui/controls/list.h"
 #include "host/plugindatabase.h"
-#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 #include "modules.h"
 #include "gui/tooltip/tooltip.h"
+#include "host/pluginmanager.h"
 
 class effectbase;
 class gui_pluginlist_entry : public gui_list_entry {
@@ -177,12 +178,11 @@ public:
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SAMPLE_DELAY, 0, "Sample Delay", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_STEREO_WIDTH, 0, "Stereo Width", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SYNTH, 0, "Synth (module)", true });
-        auto host = vsthost::getInstance();
-        if (host) {
-            std::vector<builtin_module_reg_t>& vecReg = host->getBuiltinModuleRegistry();
-            for (auto& reg : vecReg) {
-                effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_INTERNAL_EFFECT, reg.id, reg.name, reg.isSynth });
-            }
+        auto daw = DawInstance::get();
+        auto pluginMgr = daw->getPluginManager();
+        std::vector<DAW::builtin_module_reg_t>& vecReg = pluginMgr->getBuiltinModuleRegistry();
+        for (auto& reg : vecReg) {
+            effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_INTERNAL_EFFECT, reg.id, reg.name, reg.isSynth });
         }
         pluginListCtr.padding = 0;
         pluginListCtr.setBackgroundRendered(false);

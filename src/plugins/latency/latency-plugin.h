@@ -3,10 +3,6 @@
 #include "modules.h"
 #include "host/plugin/internal_plugin.h"
 
-class guiplugin;
-class vsthost;
-struct audio_stage_t;
-
 namespace PluginLatency {
 class module_latency : public internalplugin {
 public:

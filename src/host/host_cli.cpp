@@ -17,7 +17,6 @@
 #include "track_impl.h"
 #include "audio_host.h"
 #include "midi_host.h"
-#include "host/vst_host.h"
 #include "host/plugin/vst_plugin.h"
 #include "host/plugin/vst_plugin_handles.h"
 #include "plugindatabase.h"
@@ -25,6 +24,8 @@
 #include <dr_libs/dr_wav.h>
 #include "util/testing_environment.h"
 #include "appconfig.h"
+#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 
 #ifdef _WIN32
 #include "platform/win/platform_win.h"
@@ -206,8 +207,9 @@ int runCommandLineHost(const std::vector<String>& args) {
             }
         }
 
-        auto host = std::make_unique<vsthost>();
-        vsthost::assignMasterCallback(host.get());
+        auto host = std::make_unique<DAW::pluginhost>();
+        auto pluginMgr = host.get();
+        DAW::pluginmanager::assignMasterCallback(pluginMgr);
 
         project_t project;
         project_globals_t projectGlobals;
@@ -217,6 +219,7 @@ int runCommandLineHost(const std::vector<String>& args) {
         tls.mainCtrl              = nullptr;
         tls.project               = &projectController;
         tls.host                  = host.get();
+        tls.pluginManager         = pluginMgr;
         std::unique_ptr<audiohost> audioHost;
         std::unique_ptr<midihost> midiHost;
         if (!bRenderOnly) {
@@ -304,7 +307,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                     for (auto plugin : pluginsDeferred) {
                         log_printf("activate %s\n", StringAsCStr(plugin->sName));
 
-                        host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                        host->activateDeferred(plugin, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                         //                        if (effectLoaded) {
                         //                            effectLoaded->show();
                         //                        }
@@ -351,7 +354,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                             std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
                             for (auto eff : effects) {
                                 log_printf("activate plugin %s\n", StringAsCStr(eff->getName()));
-                                host->activateDeferred(eff, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                                host->activateDeferred(eff, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                             }
                         }
                     }

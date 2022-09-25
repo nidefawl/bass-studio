@@ -41,6 +41,7 @@
 #include "gui/meter/guimeter.h"
 #include "trackctr_types.h"
 #include "gui/plugin/pluginctr.h"
+#include "host/pluginmanager.h"
 
 using namespace DAW::AudioIO;
 using DAW::bus_type;
@@ -592,8 +593,8 @@ public:
     }
     void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
         ctxtmenu_entry_track_io::render(ctxtSize, vg, idx, mouse);
-
-        audio_stage_t* stage = vsthost::getInstance()->getAudioStage(endpoint.stageRef);
+        auto daw = DawInstance::get();
+        audio_stage_t* stage = daw->getPluginManager()->getAudioStage(endpoint.stageRef);
         if (stage) {
  
         }
@@ -604,7 +605,8 @@ public:
     }
 
     channel_ref_t getEndpoint() override {
-        audio_stage_t* stage = vsthost::getInstance()->getAudioStage(endpoint.stageRef);
+        auto daw = DawInstance::get();
+        audio_stage_t* stage = daw->getPluginManager()->getAudioStage(endpoint.stageRef);
         if (stage) {
             track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
             dbgassert(trImpl);
@@ -647,7 +649,7 @@ public:
         } else {
             addEntry(new ctxtmenu_entry_stage_channel(idx++, "Output", audio_channel_ref_t{ _busStage, stage_bufferpoint::OUTPUT_POST }));
         }
-        audio_stage_t* stage = vsthost::getInstance()->getAudioStage(stageEndpoint.stageRef);
+        audio_stage_t* stage = _dawCtrl->getDaw()->getPluginManager()->getAudioStage(stageEndpoint.stageRef);
         if (stage) {
             track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
             dbgassert(trImpl);
@@ -710,7 +712,7 @@ public:
         }
         dbgassert(dynamic_cast<ctxtmenu_entry_endpoint*>(e));
         auto const entry = static_cast<ctxtmenu_entry_endpoint*>(e);
-        auto const stage = dawCtrl->getDaw()->getHost()->getAudioStage(stageEndpoint.stageRef);
+        auto const stage = dawCtrl->getDaw()->getPluginManager()->getAudioStage(stageEndpoint.stageRef);
         if (!stage)
             return;
         auto const trImpl = dynamic_cast<track_impl_t*>(stage);
@@ -802,10 +804,9 @@ public:
             project_t* project = dawCtrl->getDaw()->getProject();
             dbgassert(project);
             if (project) {
-                vsthost* const host = vsthost::getInstance();
                 if (channel.type == DAW::stage_type::INPUT_DEFAULT) {
                     DAW::channel_ref_t out;
-                    if (DAW::resolveDefaultConnection(host, project, trImpl, isInput, out)) {
+                    if (DAW::resolveDefaultConnection(dawCtrl->getDaw()->getPluginManager(), project, trImpl, isInput, out)) {
                         return out.name;
                     }
                     return "Default";
@@ -866,7 +867,7 @@ public:
     }
 
     midichannel_ref_t getEndpoint() override {
-        audio_stage_t* stage = vsthost::getInstance()->getAudioStage(endpoint.stageRef);
+        audio_stage_t* stage = DawInstance::get()->getPluginManager()->getAudioStage(endpoint.stageRef);
         if (stage) {
             return DAW::MidiChannelStage(stage, endpoint.buffer);
         }
@@ -901,7 +902,7 @@ public:
         int32_t idx = 0;
         addEntry(new ctxtmenu_entry_stage_midi_channel(idx++, "Pre", audio_channel_ref_t{ _busStage, stage_bufferpoint::INPUT }));
         addEntry(new ctxtmenu_entry_stage_midi_channel(idx++, "Post", audio_channel_ref_t{ _busStage, stage_bufferpoint::OUTPUT_POST }));
-        // audio_stage_t* stage = vsthost::getInstance()->getAudioStage(stageEndpoint.stageRef);
+        // audio_stage_t* stage = dawCtrl->getDaw()->getPluginManager()->getAudioStage(stageEndpoint.stageRef);
         // if (stage) {
         //     track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
         //     dbgassert(trImpl);
@@ -966,7 +967,7 @@ public:
         }
         dbgassert(dynamic_cast<ctxtmenu_entry_midi_endpoint*>(e));
         auto const entry = static_cast<ctxtmenu_entry_midi_endpoint*>(e);
-        auto const stage = dawCtrl->getDaw()->getHost()->getAudioStage(stageEndpoint.stageRef);
+        auto const stage = dawCtrl->getDaw()->getPluginManager()->getAudioStage(stageEndpoint.stageRef);
         if (!stage)
             return;
         auto const trImpl = dynamic_cast<track_impl_t*>(stage);
@@ -1059,10 +1060,9 @@ public:
             // project_t* project = dawCtrl->getDaw()->getProject();
             // dbgassert(project);
             // if (project) {
-            //     vsthost* const host = vsthost::getInstance();
             //     if (channel.type == DAW::stage_type::INPUT_DEFAULT) {
             //         DAW::channel_ref_t out;
-            //         if (DAW::resolveDefaultConnection(host, project, trImpl, isInput, out)) {
+            //         if (DAW::resolveDefaultConnection(dawCtrl->getDaw()->getPluginManager(), project, trImpl, isInput, out)) {
             //             return out.name;
             //         }
             //         return "Default";
@@ -1215,13 +1215,13 @@ public:
             trackParams.setParamValue(PARAM_ENABLE, trackParams.isEnabled() ? 0.0f : 1.0f, (FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH));
         }
         if (&btnActivate == button) {
-            vsthost* host = daw->getHost();
+            auto pluginMgr = daw->getPluginManager();
             std::vector<effectbase*> effects;
             m_track->audio->getDeferredEffects(effects);
             for (auto effect : effects) {
-                host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                pluginMgr->activateDeferred(effect, DAW::pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
             }
-            host->postPluginLoaded(m_track->audio, nullptr);
+            pluginMgr->postPluginLoaded(m_track->audio, nullptr);
             daw->onPluginsChanged();
 
 #ifndef NDEBUG
@@ -2018,21 +2018,21 @@ void gui_track_content_base::pluginMultiDragRelease(guictr_dragged_plugins* g, i
               StringAsCStr(dstStage->getTrack()->name), targetslot);
     if (targetslot >= 0) {
         if (srcStage != dstStage) {
-            vsthost::getInstance()->movePlugins(dstStage, srcStage, first, targetslot, last - first + 1);
+            daw->getPluginManager()->movePlugins(dstStage, srcStage, first, targetslot, last - first + 1);
 
             audio_stage_ref_t refsrc = srcStage->toRef();
             audio_stage_ref_t refdst = dstStage->toRef();
             auto* track_action       = new action_move_modules("Move plugin", refdst, refsrc, targetslot, first, last - first + 1);
-            DawInstance::get()->pushHist(track_action);
+            daw->pushHist(track_action);
         } else {
             if (targetslot > first) targetslot -= CtrSize(g->effects);
             if (first == targetslot)
                 return;
-            vsthost::getInstance()->moveEffects(dstStage, first, targetslot, last - first + 1);
+            daw->getPluginManager()->moveEffects(dstStage, first, targetslot, last - first + 1);
             // audio_stage_ref_t ref = dstStage->toRef();
             //auto* track_action    = new action_shift_modules("Move plugin", ref, targetslot, first, last - first + 1);
             //TODO: make this work
-            //DawInstance::get()->pushHist(track_action);
+            //daw->pushHist(track_action);
         }
         mainCtrl->onPluginsChanged();
         dstStage->m_pluginCtr->makeVisisble(g->effects.back()->getGui());
@@ -2073,7 +2073,7 @@ void gui_track_content_base::pluginEntryDragRelease(gui_pluginlist_entry* g, ive
     auto mainCtrl = daw->getMainControl();
     mainCtrl->showPluginView();
     daw->setSelectedTrackEntry(m_trackentry);  
-    auto const host = daw->getHost();
+    auto const pluginMgr = daw->getPluginManager();
     auto& dragDropTarget = dawCtrl->getDragDropTarget();
     int32_t dstSlot = dragDropTarget.slotIdx;
     dragDropTarget.reset();
@@ -2082,12 +2082,12 @@ void gui_track_content_base::pluginEntryDragRelease(gui_pluginlist_entry* g, ive
     effectbase* effect = g->makeInstance();
     if (effect) {
         log_printf("Insert effect on %s, parent %s\n", StringAsCStr(getClassName()), parent ? StringAsCStr(parent->getClassName()) : "<null>");
-        host->insertNewPlugin(dstStage, effect, dstSlot);
+        pluginMgr->insertNewPlugin(dstStage, effect, dstSlot);
         effect->onEnable();
         audio_stage_ref_t refdst = dstStage->toRef();
         auto* track_action = new action_insert_effect("Insert plugin", effect, refdst, dstSlot);
         daw->pushHist(track_action);
-        host->postPluginLoaded(dstStage, effect);
+        pluginMgr->postPluginLoaded(dstStage, effect);
         mainCtrl->onPluginsChanged();
         dstStage->m_pluginCtr->makeVisisble(effect->getGui());
         //    if (res.result == 0 && res.plugin) {
@@ -2277,7 +2277,7 @@ namespace {
         }
         log_printf("Moving %zu tracks to %s[%d] %s\n", selectedTracks.size(), StringAsCStr(strTarget), treePos.treeIdx, failed ? "Failed" : "Success");
 
-        daw->getHost()->onTrackLayoutChange();
+        daw->onPluginsChanged();
         daw->updateVisibleTrackContents();
         //TODO: edithistory entry
     }
@@ -2403,14 +2403,14 @@ public:
                 track_t* newTrack = daw->createNewTrack(tr->type);
                 String strNewName = StringFormat("%s copy", StringAsCStr(tr->name));
                 track_snapshot_t trSnap(tr, tracksnapshot_store_opts_t::All());
-                assignFreeStageIdsTrackSnapshot(daw->getHost(), trSnap);
+                DAW::assignFreeStageIdsTrackSnapshot(daw->getPluginManager(), trSnap);
                 // trSnap.stageIds.inputStageId = -1;
                 *newTrack                    = trSnap;
                 daw->addTrackImpl(tr->localIdxFlat + 1, newTrack, FLG_TRK_CHANGE_USER);
                 newTrack->loadSnapshot(trSnap);
                 newTrack->name = DAW::MakeUniqueTrackName(dawCtrl->getDaw()->getProject(), strNewName);
                 //ensure unique IDs
-                dbgassert(daw->getHost()->validateIds());
+                dbgassert(daw->getPluginManager()->validateIds());
                 m_trackentry->parent->layout();
                 daw->updateVisibleTrackContents();
                 track_gui_entry_t* entry{};

@@ -35,7 +35,7 @@
 #include "basectrl.h"
 
 #include "host/mainctrl.h"
-#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 #include "host/plugin/base_plugin.h"
 #include "host/plugin/internal_plugin.h"
 #include "host/plugin/vst_plugin.h"
@@ -135,7 +135,7 @@ void guiplugin::buttonClicked(guibase* _button) {
         return;
     }
     if (_button == &buttonDelete) {
-        removePlugin(dawCtrl->getDaw(), effect);
+        DAW::removePlugin(dawCtrl->getDaw(), effect);
     }
 }
 bool guiplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {

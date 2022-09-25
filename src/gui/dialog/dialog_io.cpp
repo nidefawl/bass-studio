@@ -14,7 +14,7 @@
 #include "host/audio_host.h"
 #include "host/mainctrl.h"
 #include "host/midi_host.h"
-#include "host/vst_host.h"
+#include "host/pluginmanager.h"
 #include "gui/controls/list.h"
 #include "math/seq_math.h"
 #include "math/vec.h"
@@ -204,7 +204,7 @@ public:
     guictr_input_channel(std::shared_ptr<audiohost::HostIOStream::IOChannel>& _ioChannel, bool _isInput)
         : ioChannel(_ioChannel), isInput(_isInput) {
         add(&btnTrackType);
-        btnTrackType.setText(DAW::AudioIO::getTrackTypeStr(_ioChannel->type));
+        btnTrackType.setText(AudioIO::getTrackTypeStr(_ioChannel->type));
         guimeter = std::make_shared<gui_trackmeter>(&_ioChannel->meter);
         add(guimeter.get());
         setBackgroundRendered(false);
@@ -267,7 +267,7 @@ public:
     }
 
     void buttonClicked(guibase* gui) override {
-        using namespace DAW::AudioIO;
+        using namespace ::DAW::AudioIO;
         if (gui == &btnTrackType) {
             log_printf("Switch track type\n");
             auto& settings = daw_tls::getSettings();
@@ -632,7 +632,7 @@ public:
           metersInput(true),
           metersOutput(false)
     {
-        using namespace DAW::AudioIO;
+        using namespace ::DAW::AudioIO;
 
         dawCtrl = daw->getMainControl();
         dbgassert(dawCtrl);
@@ -1333,13 +1333,13 @@ public:
     }
     void buttonClicked(guibase* button) override {
         if (button->id == 0x11) {
-            auto plughost = daw->getHost();
-            if (!plughost->isScanning()) {
-                plughost->scanPlugins();
+            auto pluginMgr = daw->getPluginManager();
+            if (!pluginMgr->isScanning()) {
+                pluginMgr->scanPlugins();
                 scanNow.setText("Cancel Scanning");
             } else {
-                plughost->checkScanner();
-                plughost->stopScanner();
+                pluginMgr->checkScanner();
+                pluginMgr->stopScanner();
                 scanNow.setText("Scan VST2 Plugins");
             }
 
@@ -1368,8 +1368,8 @@ public:
 
 
     void updateOptions() {
-        auto plughost = daw->getHost();
-        if (!plughost->isScanning()) {
+        auto pluginMgr = daw->getPluginManager();
+        if (!pluginMgr->isScanning()) {
             scanNow.setText("Scan VST2 Plugins");
         } else {
             scanNow.setText("Cancel Scanning");

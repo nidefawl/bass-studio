@@ -156,8 +156,8 @@ public:
 private:
     void run() {
         project_controller_t* const ctrl = this->m_prjCtrl;
-        vsthost* host        = m_threadTls.host;
-        midihost* midiHost   = m_threadTls.midiHost;
+        auto* host = m_threadTls.host;
+        midihost* midiHost = m_threadTls.midiHost;
         std::function<void()> renderCompleteFn = nullptr;
         export_settings_t exportSettingsLocal{};
         double playbackDuration = 0;

@@ -2,7 +2,10 @@
 #include "types.h"
 #include "audio_config.h"
 
-class vsthost;
+namespace DAW {
+    class pluginhost;
+    class pluginmanager;
+}
 class project_t;
 struct track_impl_t;
 struct AudioBlock;
@@ -77,7 +80,7 @@ namespace DAW {
         internal
     };
 
-    bool resolveDefaultConnection(const vsthost* host, const project_t* project, track_impl_t* trImpl, bool isInput, channel_ref_t& out);
-    bool resolveAudioChannel(const vsthost* host, channelnum_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* ptrExternalInputs, track_audio_src& out);
+    bool resolveDefaultConnection(const pluginmanager* host, const project_t* project, track_impl_t* trImpl, bool isInput, channel_ref_t& out);
+    bool resolveAudioChannel(const pluginhost* host, channelnum_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* ptrExternalInputs, track_audio_src& out);
 
 }// namespace DAW

@@ -30,6 +30,7 @@
 #include "track_impl.h"
 #include "host/midiarp.h"
 #include "logging.h"
+#include "host/pluginmanager.h"
 
 
 /*static*/ void action_modify_track::loadTrackSnapshot(DawInstance* daw, track_t* track, const track_snapshot_t* trackStored) {
@@ -39,7 +40,7 @@
     }
     *track = *trackStored;
     if (trackStored->storeOpts.storeAutomation) {
-        auto host = daw->getHost();
+        auto pluginMgr = daw->getPluginManager();
         track_impl_t* trImpl = track->getStage();
         if (trImpl->arp) {
             loadAutomation(trackStored->data.trackArp.automatedParams, trImpl->arp);
@@ -51,7 +52,7 @@
             auto pVecSnaps = pluginSnapshots.front();
             pluginSnapshots.pop_front();
             for (auto& snap : *pVecSnaps) {
-                auto stage2 = host->getPluginById(snap.projectGlobalId);
+                auto stage2 = pluginMgr->getPluginById(snap.projectGlobalId);
                 dbgassert(stage2);
                 loadAutomation(snap.automatedParams, stage2);
                 pluginSnapshots.push_front(&snap.pluginSnapshots);

@@ -14,6 +14,7 @@
 #include "project.h"
 #include "projectcontroller.h"
 #include "types.h"
+#include "host/vst_host.h"
 #include "util/debug_alloc.h"
 
 #ifdef TRACK_ALLOCATIONS_CLIP_T
@@ -641,7 +642,7 @@ tick_t clip_t::getLen() const {
 
     // if (this->lenSamples > 0 && this->clipType == CLIP_AUDIO) {
     //     auto pc = project_controller_t::get();
-    //     vsthost* host = vsthost::getInstance();
+    //     DAW::pluginhost* host = pluginhost::getInstance();
     //     if (pc && host) {
     //         auto lenConverted  = sampleToTickConvert<tick_t, roundmode::round>(this->lenSamples, pc->getCurrentTempo(), host->m_sampleFormatInternal.sampleRate);
     //         if (lenConverted != len) {
@@ -659,9 +660,11 @@ tick_t& clip_t::getLenRef() {
 }
 
 void clip_t::setLen(tick_t _len) {
+    
     if (this->clipType == CLIP_AUDIO && project_controller_t::get()) {
+        //TODO: this should be done explicitly
         auto pc = project_controller_t::get();
-        vsthost* host = vsthost::getInstance();
+        auto host = DAW::pluginhost::getInstance();
         if (host && pc)
             this->lenSamples = tickToSampleConvert<samplecount_t, roundmode::round>(_len, pc->getCurrentTempo(), host->m_sampleFormatInternal.sampleRate);
     }
@@ -682,9 +685,10 @@ samplecount_t clip_t::getLenSamples() const {
 }
 
 void clip_t::setLenSamples(samplecount_t _lenSamples) {
+    //TODO: this should be done explicitly
     if (this->clipType == CLIP_AUDIO && project_controller_t::get()) {
         auto pc = project_controller_t::get();
-        vsthost* host = vsthost::getInstance();
+        auto host = DAW::pluginhost::getInstance();
         if (pc && host) {
             auto lenConverted  = sampleToTickConvert<tick_t, roundmode::round>(_lenSamples, pc->getCurrentTempo(), host->m_sampleFormatInternal.sampleRate);
             this->len = lenConverted;
