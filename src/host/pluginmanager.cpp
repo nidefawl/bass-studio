@@ -29,7 +29,7 @@
 #include "host/mainctrl.h"
 #include "host/plugin/vst_plugin.h"
 #include "host/pluginmanager.h"
-#include "host/vst_midi_event.h"
+#include "host/vst_event.h"
 #include "host_plugin_window.h"
 #include "logging.h"
 #include "mainctrl.h"
@@ -114,9 +114,7 @@ public:
 pluginmanager::pluginmanager() noexcept
     : mgrImpl(new pluginmanager::pluginmanager_impl()), moduleMgr{new pluginmanager::ModuleManager{}} 
 {
-    builtinModules.clear();
-    builtinModules.push_back({ PLUG_INT_HOSTINFO, false, PluginHostInfo::getName(), PluginHostInfo::createPlugin });
-    builtinModules.push_back({ PLUG_INT_SYNTH, true, PluginSynth::getName(), PluginSynth::createPlugin });
+    registerModules();
 }
 
 pluginmanager::~pluginmanager() {

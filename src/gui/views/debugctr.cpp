@@ -22,7 +22,7 @@
 #include "clip.h"
 #include "host/mainctrl.h"
 #include "host/pluginmanager.h"
-#include "host/vst_host.h"
+#include "host/host.h"
 #include "host/audio_host.h"
 #include "host/plugin/vst_plugin.h"
 #include "host/plugin/vst_plugin_handles.h"

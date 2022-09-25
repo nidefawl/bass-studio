@@ -42,7 +42,6 @@
 #include "midi-msg.h"
 #include "fileio.h"
 #include "clip.h"
-#include "host/vst_midi_event.h"
 #include "assert_dbg.h"
 
 

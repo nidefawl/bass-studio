@@ -14,7 +14,7 @@
 #include "platform.h"
 #include "host/plugin/base_plugin.h"
 #include "host/mainctrl.h"
-#include "host/vst_host.h"
+#include "host/host.h"
 #include "host/audio_host.h"
 
 namespace {

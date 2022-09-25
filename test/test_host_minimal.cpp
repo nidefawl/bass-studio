@@ -3,7 +3,7 @@
 #include "str_util.h"
 #include "common/test_common.h"
 #include "host/pluginmanager.h"
-#include "host/vst_host.h"
+#include "host/host.h"
 #include "tls.h"
 #include "appconfig.h"
 #include <memory>

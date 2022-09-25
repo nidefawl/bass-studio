@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <memory.h>
-#include "host/vst_host.h"
+#include "host/host.h"
 #include "audiocache.h"
 #include "host/daw_channel.h"
 #include "host/history.h"

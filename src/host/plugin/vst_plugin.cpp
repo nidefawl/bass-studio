@@ -6,8 +6,7 @@
 #include "config.h"
 #include "host/plugin/base_plugin.h"
 #include "vst_plugin.h"
-#include "host/vst_midi_event.h"
-
+#include "host/vst_event.h"
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "seq_util.h"

@@ -17,7 +17,7 @@
 #include "gui/controls/button.h"
 #include "renderresources.h"
 #include "gui/controls/knob.h"
-#include "host/vst_host.h"
+#include "host/host.h"
 #include "host/audio_host.h"
 #include "basectrl.h"
 #include "host/mainctrl.h"

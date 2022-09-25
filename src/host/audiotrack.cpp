@@ -6,7 +6,7 @@
 #include "audiosample.h"
 #include "audioblock.h"
 #include "logging.h"
-#include "host/vst_host.h"
+#include "host/host.h"
 #include "mainctrl.h"
 #include <cstring>
 #include <memory>

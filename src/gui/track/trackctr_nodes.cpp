@@ -26,7 +26,7 @@
 #include "host/plugin/group.h"
 #include "host/plugin/internal_plugin.h"
 #include "host/pluginmanager.h"
-#include "host/vst_host.h"
+#include "host/host.h"
 #include "logging.h"
 #include "math/seq_math.h"
 #include "renderresources.h"

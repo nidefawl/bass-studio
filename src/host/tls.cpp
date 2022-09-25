@@ -3,7 +3,7 @@
 #include "appsettings.h"
 #include "host/mainctrl.h"
 #include "host/pluginmanager.h"
-#include "host/vst_host.h"
+#include "host/host.h"
 #include "host/audio_host.h"
 #include "host/midi_host.h"
 #include "host/plugindatabase.h"

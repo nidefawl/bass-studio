@@ -15,7 +15,7 @@
 #include "track_impl.h"
 #include "track_graph.h"
 #include "daw_channel.h"
-#include "host/vst_host.h"
+#include "host/host.h"
 #include <vector>
 #include <deque>
 

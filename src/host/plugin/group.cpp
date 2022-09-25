@@ -28,7 +28,7 @@
 #include "host/effect_graph.h"
 #include "seq_util.h"
 #include "host/pluginmanager.h"
-#include "host/vst_host.h"
+#include "host/host.h"
 
 class guimodule_group : public guiplugin {
 public:

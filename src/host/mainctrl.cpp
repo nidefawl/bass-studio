@@ -81,10 +81,10 @@
 #include "plugindatabase.h"
 #include "window_impl.h"
 
-#include "pluginmanager.h"
-#include "vst_host.h"
-#include "audio_host.h"
-#include "midi_host.h"
+#include "host/pluginmanager.h"
+#include "host/host.h"
+#include "host/audio_host.h"
+#include "host/midi_host.h"
 #include "appconfig.h"
 #include "sse.h"
 #ifdef _WIN32
@@ -92,7 +92,6 @@
 #endif
 #ifdef __linux__
 #include "platform/linux/windowsize.h"
-#include "host/pluginmanager.h"
 #endif
 
 const int FLAG_DEFER_LOAD               = 0x1;

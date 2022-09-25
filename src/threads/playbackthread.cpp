@@ -16,7 +16,7 @@
 #include "hires_timer.h"
 #include <readerwriterqueue/readerwriterqueue.hpp>
 #include "host/mainctrl.h"
-#include "host/vst_host.h"
+#include "host/host.h"
 #include "host/midi_host.h"
 #include "logging.h"
 #include "sse.h"

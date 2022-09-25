@@ -113,6 +113,8 @@ public:
         int scanningState = 0;
     };
     pluginmanager_impl* const mgrImpl;
+private:
+    void registerModules();
 protected:
     std::vector<audio_stage_t*> allAudioStages;
     std::vector<track_impl_t*> trackAudioStages;

@@ -2,7 +2,7 @@
 #include "common/test_common.h"
 #include "host/pluginmanager.h"
 #include "host/plugin/vst_plugin.h"
-#include "host/vst_host.h"
+#include "host/host.h"
 #include "host/pluginmanager.h"
 #include "tls.h"
 #include "project.h"

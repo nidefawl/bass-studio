@@ -14,7 +14,7 @@
 #include "host/plugin/vst_plugin.h"
 #include "host/plugin/vst_plugin_handles.h"
 #include "host/pluginmanager.h"
-#include "host/vst_host.h"
+#include "host/host.h"
 #include "logging.h"
 #include "threads/childprocessthread.h"
 #include "appsettings.h"

@@ -14,7 +14,7 @@
 #include "project.h"
 #include "projectcontroller.h"
 #include "types.h"
-#include "host/vst_host.h"
+#include "host/host.h"
 #include "util/debug_alloc.h"
 
 #ifdef TRACK_ALLOCATIONS_CLIP_T
