@@ -11,6 +11,7 @@
 #include "gui/gui.h"
 #include "guicolors.h"
 #include "guiconstant.h"
+#include "seq_util.h"
 #include "theme.h"
 #include "tls.h"
 #include "track.h"
@@ -2001,7 +2002,7 @@ void gui_track_content_base::pluginMultiDragRelease(guictr_dragged_plugins* g, i
         dstStageOrParent = dstStageOrParent->parent;
     }
 
-    auto targetslot = CtrSize(dstStage->effects);
+    auto targetslot = g->effects.front()->isSynth ? 0 : CtrSize(dstStage->effects);
 
 
     ThreadLock lock = daw->lockPlayThread();
@@ -2056,9 +2057,9 @@ void gui_track_content_base::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 
         return;
     }
 
-    auto slot = CtrSize(dstStage->effects);
+    int32_t dstSlot = g->isSynth() ? 0 : CtrSize(dstStage->effects);
 
-    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, slot, this, this, this->pos };
+    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, dstSlot, this, this, this->pos };
     dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
         dragdrop_target_indicator_t::target_area,
         0,
@@ -2075,12 +2076,12 @@ void gui_track_content_base::pluginEntryDragRelease(gui_pluginlist_entry* g, ive
     daw->setSelectedTrackEntry(m_trackentry);  
     auto const pluginMgr = daw->getPluginManager();
     auto& dragDropTarget = dawCtrl->getDragDropTarget();
-    int32_t dstSlot = dragDropTarget.slotIdx;
     dragDropTarget.reset();
     audio_stage_t* dstStage = this->m_track->getStage();
     ThreadLock lock    = daw->lockPlayThread();
     effectbase* effect = g->makeInstance();
     if (effect) {
+        int32_t dstSlot = effect->isSynth ? 0 : CtrSize(dstStage->effects);
         log_printf("Insert effect on %s, parent %s\n", StringAsCStr(getClassName()), parent ? StringAsCStr(parent->getClassName()) : "<null>");
         pluginMgr->insertNewPlugin(dstStage, effect, dstSlot);
         effect->onEnable();
