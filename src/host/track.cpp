@@ -800,6 +800,8 @@ void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, cons
             }
         } else if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
             al = makeGuiSubtrack(entry, guiTracks->dawCtrl, ref.subtrackType);
+            if (entry->track && entry->track->audio)
+                entry->track->audio->flags |= audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::RECORD_OUTPUT;
         }
         if (al) {
             al->height = ref.height;

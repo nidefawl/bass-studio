@@ -3,6 +3,7 @@
 #include "daw_channel.h"
 #include "assert_dbg.h"
 #include "track_types.h"
+#include "types.h"
 #include <vector>
 
 class track_t;
@@ -66,7 +67,8 @@ namespace DAW {
     struct track_graph_t {
         std::vector<track_node_t*> roots;// output nodes (Master, )
         std::vector<track_node_ptr> nodes;
-        uint64_t maxLatency = 0U;
+        std::vector<track_source_t> externalOutputRouting;
+        samplecount_t maxLatencySamples = 0U;
 
         track_graph_t() = default;
         track_graph_t(const track_graph_t& graph) = delete;
@@ -83,7 +85,6 @@ namespace DAW {
         std::vector<processing_track_node_t*> roots; // audio_stage output buffer
         std::vector<processing_track_node_ptr> nodes;// audio_stage input buffer, effects, audio_stage output buffer
         std::shared_ptr<track_graph_t> trackGraph;
-        //int32_t nInvocation = 0;
         ~processing_graph_t();
         processing_graph_t()                                = default;
         processing_graph_t(const processing_graph_t& graph) = delete;

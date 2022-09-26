@@ -256,6 +256,7 @@ namespace DAW {
          * Where child_output_latency = pChild->inputLatency + pChild->internalLatency
          * This has to be done in bottom up/child first order
          */
+        samplerate_t maxLatency = 0;
         for (auto const ptrNode : graph.nodesFlatOrdered) {
             ptrNode->inputLatency = 0;
 #ifndef NDEBUG
@@ -276,6 +277,7 @@ namespace DAW {
             dbgassert(stage);
             stage->latencyInput = ptrNode->inputLatency;
             stage->latencyOuput = stage->latencyInput + stage->getInternalLatency();
+            maxLatency = std::max(maxLatency, stage->latencyOuput);
 #ifndef NDEBUG
             for (auto const trNodeChild : ptrNode->children) {
                 dbgassert(STL_CONTAINS(ptrNode->dependencies, trNodeChild->stageId));
@@ -283,6 +285,7 @@ namespace DAW {
             }
 #endif
         }
+        graph.trackGraph->maxLatencySamples = maxLatency;
         /* Assign the resolved latencies to the previously populated push/pull inputs of each node */
         for (auto const ptrNode : graph.nodesFlatOrdered) {
             for (auto& push : ptrNode->pushs) {
@@ -344,6 +347,7 @@ namespace DAW {
     }
     bool buildTrackRoutingGraph(const Host::Host* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<track_graph_t>& out_graph) {
         uint32_t trackEdgeId = 0;
+        auto trackGraph = std::make_shared<track_graph_t>();
         std::map<audiostageid_i32, track_node_ptr> map;
         for (track_t* track : tracksFlat) {
             track_impl_t* trackImpl = track->getStage();
@@ -422,6 +426,8 @@ namespace DAW {
                         trackDstCfg.children.push_back(&trackCfg);
                         trackCfg.parents.push_back(&trackDstCfg);
                     }
+                } else if (outputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO && trackImpl->mixer.isEnabled()) {
+                    trackGraph->externalOutputRouting.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT_POST), AutomationNone(dsp_util::gainToLinScale(1.0f)), AutomationNone(0.5f), 0, trackImpl->flags });
                 }
             }
             if (TRACKTYPE_TO_CTR(track->type) == TRACK_CTR_MIDIAUDIO && trackImpl->mixer.isEnabled()) {
@@ -467,7 +473,6 @@ namespace DAW {
                 }
             }
         }
-        auto trackGraph = std::make_shared<track_graph_t>();
         //std::shared_ptr<track_graph_t> trackGraph(new track_graph_t(), [](track_graph_t *gr) {
         //  log_lf(Log::L_DEBUG, "free track_graph %08X\n", reinterpret_cast<uint64_t>(gr));
         //});

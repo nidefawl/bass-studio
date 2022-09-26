@@ -557,6 +557,139 @@ int64_t Host::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, sam
     return samplesWritten;
 }
 
+std::vector<float>& AllocateScratchBuffer(process_scratch_buf_t& tmp, int32_t idx, size_t size) {
+    if (tmp.scratchBuffers.empty()) {
+        tmp.scratchBuffers.resize(4);
+    }
+    dbgassert(idx < 4);
+    tmp.scratchBuffers[idx].resize(size);
+    return tmp.scratchBuffers[idx];
+}
+AudioBlock& AllocateScratchAudioBuffer(process_scratch_buf_t& tmp, channelnum_t numChannels, samplecount_t numSamples) {
+    if (tmp.block.channels < numChannels) {
+        tmp.block = AudioBlock(numChannels, numSamples);
+    } else {
+        tmp.block.realloc(numSamples);
+    }
+    return tmp.block;
+}
+void MixWithGainAndPanAutomation(process_scratch_buf_t& tmp, AudioBlock* in, AudioBlock* out, float fGainScaled, float fPan, automation_t* autParGain, automation_t* autParPan, tick_t tickBegin, tick_t tickEnd) {
+    auto& bufGain = AllocateScratchBuffer(tmp, 0, out->samples);
+    auto& bufPanL = AllocateScratchBuffer(tmp, 1, out->samples);
+    auto& bufPanR = AllocateScratchBuffer(tmp, 2, out->samples);
+    float* panLR[2] = { bufPanL.data(), bufPanR.data() };
+    if (autParGain && autParGain->isActive()) {
+        autParGain->sampleAutomation(tickBegin, tickEnd, out->samples, bufGain.data());
+    } else {
+        std::fill(bufGain.begin(), bufGain.end(), fGainScaled);
+    }
+    if (autParPan && autParPan->isActive()) {
+        autParPan->sampleAutomation(tickBegin, tickEnd, out->samples, bufPanL.data());
+    } else {
+        std::fill(bufPanL.begin(), bufPanL.end(), fPan);
+    }
+    for (int32_t i = 0; i < out->samples; ++i) {
+        dsp_util::getGainLvlWithRange(bufGain[i], dsp_util::MTR_CEIL, dsp_util::DBFS_MUTE_POS, bufGain[i]);
+        DAW::Panning::CalculatePanning<DAW::Panning::PanLaw::SIN_4_5DB>(bufPanL[i], &bufPanL[i], &bufPanR[i]);
+    }
+    DAW::Panning::MultiplyAutomation(in, out, bufGain.data(), panLR); 
+}
+
+void MixInputs(const Host* host, const processing_track_node_t& node, process_scratch_buf_t& tmp, IDelayLineStorage* delayLines, AudioBlock* ptrBlockMixDst, const std::vector<DAW::track_source_t>& allSources, channelnum_t numChannelsTrack, samplerate_t trackNodeInputLatency, tick_t processingPos, tick_t tickBlockEnd, AudioBlock* ptrExternalInputs) {
+    bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), DAW::isTrackSrcSolod);
+
+    AudioBlock& tmpBlock = AllocateScratchAudioBuffer(tmp, ptrBlockMixDst->channels, ptrBlockMixDst->samples);
+    for (const DAW::track_source_t& tracksrc : allSources)
+    {
+        if (hasSolo && !DAW::isTrackSrcSolod(tracksrc))
+            continue;
+        if (DAW::isChannelConnected(tracksrc.channel)) {
+            track_audio_src src;
+            if (DAW::resolveAudioChannel(host, numChannelsTrack, tracksrc.channel, ptrExternalInputs, src)) {
+                /**
+                 * Mix routed tracks
+                 *
+                 * Mix level is fGainInput * src.gain * tracksrc.gain
+                 * src.gain:            block-wise automated track gain
+                 * tracksrc.gain:        block-wise automated send level, 1.0f for non-sends
+                 *
+                 * sends are with track gain applied (post-mixer)
+                 *
+                 */
+                /* compensate at input stage */
+                /* figure out max latency of all inputs */
+                /* delay signal by max_child_input_latency - src_output_latency */
+                /* Compensate audio midi track to pre-return latency */
+                dbgassert(trackNodeInputLatency >= tracksrc.latency);
+                samplecount_t delayToMaxInputLatency = trackNodeInputLatency - tracksrc.latency;
+
+                AudioBlock srcBlock = src.toAudioBlock();
+                DelayLine* delayLine = nullptr;
+                if (delayToMaxInputLatency > 0) {
+                    delayLine = delayLines->getProcessingDelayLine(tracksrc.trackEdgeId);
+                    delayLine->write(&srcBlock, delayToMaxInputLatency);
+                }
+                automation_t* autParGain = nullptr;
+                automation_t* autParPan = nullptr;
+                float fGainTrackLin = tracksrc.gainAutomation.val;
+                float fPanTrack = tracksrc.panAutomation.val;
+                if (tracksrc.gainAutomation.type == automation_routing_type::ROUTING_PARAM) {
+                    automatable_t* at = resolveAutomatableRefDevice(host, tracksrc.gainAutomation.refLane);
+                    if (at) {
+                        fGainTrackLin = at->getParamValue(tracksrc.gainAutomation.refLane.paramIdx);
+                        autParGain = at->getRegisteredAutomation(tracksrc.gainAutomation.refLane.paramIdx);
+                    }
+                }
+                if (tracksrc.panAutomation.type == automation_routing_type::ROUTING_PARAM) {
+                    automatable_t* at = resolveAutomatableRefDevice(host, tracksrc.panAutomation.refLane);
+                    if (at) {
+                        fPanTrack = at->getParamValue(tracksrc.panAutomation.refLane.paramIdx);
+                        autParGain = at->getRegisteredAutomation(tracksrc.panAutomation.refLane.paramIdx);
+                    }
+                }
+                float fGainTrack = 0.0f;
+                bool bIsNotMuted = dsp_util::getGainLvl(fGainTrackLin, fGainTrack);
+
+                bool bFixedGainAndPan = true;
+                if (autParGain || autParPan) {
+                    bFixedGainAndPan = false;
+                }
+                if (!autParPan && tracksrc.panAutomation.val != 0.5f) {
+                    bFixedGainAndPan = false;
+                }
+                channelnum_t dstChannelCount = ptrBlockMixDst->channels;
+                if (node.type == DAW::track_node_type_t::EFFECT) {
+                    for (auto& desc : node.effectOptional->inputChannelsDesc) {
+                        if (desc.offset == tracksrc.channel.dstChannelOffset) {
+                            dstChannelCount = desc.count;
+                            break;
+                        }
+                    }
+                }
+                auto blockMixToOffset = ptrBlockMixDst->SubChannelsBlock(tracksrc.channel.dstChannelOffset, dstChannelCount);
+                if (bFixedGainAndPan) {
+                    /* Fast path */
+                    if (bIsNotMuted) {
+                        if (delayToMaxInputLatency > 0) {
+                            dbgassert(delayLine);
+                            blockMixToOffset.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, fGainTrack);
+                        } else {
+                            blockMixToOffset.addFromOp(&srcBlock, AudioBlock::mix_op::ADD, fGainTrack);
+                        }
+                    }
+                } else {
+                    AudioBlock* inputBlock = &srcBlock;
+                    if (delayToMaxInputLatency > 0) {
+                        tmpBlock.clear();
+                        tmpBlock.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, 1.0f);
+                        inputBlock = &tmpBlock;
+                    }
+                    MixWithGainAndPanAutomation(tmp, inputBlock, &blockMixToOffset, fGainTrack, fPanTrack, autParGain, autParPan, processingPos, tickBlockEnd);
+                }
+            }
+        }
+    }
+}
 
 int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double posDouble) {
     dbgassert(ctrl);
@@ -865,6 +998,18 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
             if (enableProfiling) {
                 timeProcessing += timerProfile.getTimeReset();
             }
+            auto& allSources = processingGraph->trackGraph->externalOutputRouting;
+            const auto ticksTotalLatency = sampleToTickConvert<double, roundmode::none>(processingGraph->trackGraph->maxLatencySamples, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate);
+            auto tickPosOutput = math::rounddS32(tickPosProcess - ticksTotalLatency);
+            auto tickPosOutputEnd = math::rounddS32(tickPosProcess - ticksTotalLatency + audioProp.ticksPerBlock);
+
+            processing_track_node_t trackNode{};
+            trackNode.type = track_node_type_t::TRACK;
+            trackNode.type = track_node_type_t::TRACK;
+            trackNode.inputLatency = processingGraph->trackGraph->maxLatencySamples;
+            MixInputs(this, trackNode, impl->singleThreadedBuf, this->impl, &blockExtOut, allSources, blockExtOut.channels, trackNode.inputLatency, tickPosOutput, tickPosOutputEnd, &block);
+
+#if 0
             for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
                 const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
                 const DAW::processing_track_node_t& trackNode = *ptrProcessingNode;
@@ -891,6 +1036,7 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
                     }
                 }
             }
+#endif
             if (enableProfiling) {
                 timeRouting += timerProfile.getTimeReset();
             }
@@ -1035,138 +1181,7 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
     }
     return nBlocksProcessed;
 }
-std::vector<float>& AllocateScratchBuffer(process_scratch_buf_t& tmp, int32_t idx, size_t size) {
-    if (tmp.scratchBuffers.empty()) {
-        tmp.scratchBuffers.resize(4);
-    }
-    dbgassert(idx < 4);
-    tmp.scratchBuffers[idx].resize(size);
-    return tmp.scratchBuffers[idx];
-}
-AudioBlock& AllocateScratchAudioBuffer(process_scratch_buf_t& tmp, channelnum_t numChannels, samplecount_t numSamples) {
-    if (tmp.block.channels < numChannels) {
-        tmp.block = AudioBlock(numChannels, numSamples);
-    } else {
-        tmp.block.realloc(numSamples);
-    }
-    return tmp.block;
-}
-void MixWithGainAndPanAutomation(process_scratch_buf_t& tmp, AudioBlock* in, AudioBlock* out, float fGainScaled, float fPan, automation_t* autParGain, automation_t* autParPan, tick_t tickBegin, tick_t tickEnd) {
-    auto& bufGain = AllocateScratchBuffer(tmp, 0, out->samples);
-    auto& bufPanL = AllocateScratchBuffer(tmp, 1, out->samples);
-    auto& bufPanR = AllocateScratchBuffer(tmp, 2, out->samples);
-    float* panLR[2] = { bufPanL.data(), bufPanR.data() };
-    if (autParGain) {
-        autParGain->sampleAutomation(tickBegin, tickEnd, out->samples, bufGain.data());
-    } else {
-        std::fill(bufGain.begin(), bufGain.end(), fGainScaled);
-    }
-    if (autParPan) {
-        autParPan->sampleAutomation(tickBegin, tickEnd, out->samples, bufPanL.data());
-    } else {
-        std::fill(bufPanL.begin(), bufPanL.end(), fPan);
-    }
-    for (int32_t i = 0; i < out->samples; ++i) {
-        dsp_util::getGainLvlWithRange(bufGain[i], dsp_util::MTR_CEIL, dsp_util::DBFS_MUTE_POS, bufGain[i]);
-        DAW::Panning::CalculatePanning<DAW::Panning::PanLaw::SIN_4_5DB>(bufPanL[i], &bufPanL[i], &bufPanR[i]);
-    }
-    DAW::Panning::MultiplyAutomation(in, out, bufGain.data(), panLR); 
-}
-void MixInputs(const Host* host, const processing_track_node_t& node, process_scratch_buf_t& tmp, IDelayLineStorage* delayLines, AudioBlock* ptrBlockMixDst, const std::vector<DAW::track_source_t>& allSources, channelnum_t numChannelsTrack, samplerate_t trackNodeInputLatency, tick_t processingPos, tick_t tickBlockEnd, AudioBlock* ptrExternalInputs) {
-    bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), DAW::isTrackSrcSolod);
 
-    AudioBlock& tmpBlock = AllocateScratchAudioBuffer(tmp, ptrBlockMixDst->channels, ptrBlockMixDst->samples);
-    for (const DAW::track_source_t& tracksrc : allSources)
-    {
-        if (hasSolo && !DAW::isTrackSrcSolod(tracksrc))
-            continue;
-        if (DAW::isChannelConnected(tracksrc.channel)) {
-            track_audio_src src;
-            if (DAW::resolveAudioChannel(host, numChannelsTrack, tracksrc.channel, ptrExternalInputs, src)) {
-                /**
-                 * Mix routed tracks
-                 *
-                 * Mix level is fGainInput * src.gain * tracksrc.gain
-                 * src.gain:            block-wise automated track gain
-                 * tracksrc.gain:        block-wise automated send level, 1.0f for non-sends
-                 *
-                 * sends are with track gain applied (post-mixer)
-                 *
-                 */
-                /* compensate at input stage */
-                /* figure out max latency of all inputs */
-                /* delay signal by max_child_input_latency - src_output_latency */
-                /* Compensate audio midi track to pre-return latency */
-                dbgassert(trackNodeInputLatency >= tracksrc.latency);
-                samplecount_t delayToMaxInputLatency = trackNodeInputLatency - tracksrc.latency;
-
-                AudioBlock srcBlock = src.toAudioBlock();
-                DelayLine* delayLine = nullptr;
-                if (delayToMaxInputLatency > 0) {
-                    delayLine = delayLines->getProcessingDelayLine(tracksrc.trackEdgeId);
-                    delayLine->write(&srcBlock, delayToMaxInputLatency);
-                }
-                automation_t* autParGain = nullptr;
-                automation_t* autParPan = nullptr;
-                float fGainTrackLin = tracksrc.gainAutomation.val;
-                float fPanTrack = tracksrc.panAutomation.val;
-                if (tracksrc.gainAutomation.type == automation_routing_type::ROUTING_PARAM) {
-                    automatable_t* at = resolveAutomatableRefDevice(host, tracksrc.gainAutomation.refLane);
-                    if (at) {
-                        fGainTrackLin = at->getParamValue(tracksrc.gainAutomation.refLane.paramIdx);
-                        autParGain = at->getRegisteredAutomation(tracksrc.gainAutomation.refLane.paramIdx);
-                    }
-                }
-                if (tracksrc.panAutomation.type == automation_routing_type::ROUTING_PARAM) {
-                    automatable_t* at = resolveAutomatableRefDevice(host, tracksrc.panAutomation.refLane);
-                    if (at) {
-                        fPanTrack = at->getParamValue(tracksrc.panAutomation.refLane.paramIdx);
-                        autParGain = at->getRegisteredAutomation(tracksrc.panAutomation.refLane.paramIdx);
-                    }
-                }
-                float fGainTrack = 0.0f;
-                bool bIsNotMuted = dsp_util::getGainLvl(fGainTrackLin, fGainTrack);
-
-                bool bFixedGainAndPan = true;
-                if (autParGain || autParPan) {
-                    bFixedGainAndPan = false;
-                }
-                if (!autParPan && tracksrc.panAutomation.val != 0.5f) {
-                    bFixedGainAndPan = false;
-                }
-                channelnum_t dstChannelCount = ptrBlockMixDst->channels;
-                if (node.type == DAW::track_node_type_t::EFFECT) {
-                    for (auto& desc : node.effectOptional->inputChannelsDesc) {
-                        if (desc.offset == tracksrc.channel.dstChannelOffset) {
-                            dstChannelCount = desc.count;
-                            break;
-                        }
-                    }
-                }
-                auto blockMixToOffset = ptrBlockMixDst->SubChannelsBlock(tracksrc.channel.dstChannelOffset, dstChannelCount);
-                if (bFixedGainAndPan) {
-                    /* Fast path */
-                    if (bIsNotMuted) {
-                        if (delayToMaxInputLatency > 0) {
-                            dbgassert(delayLine);
-                            blockMixToOffset.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, fGainTrack);
-                        } else {
-                            blockMixToOffset.addFromOp(&srcBlock, AudioBlock::mix_op::ADD, fGainTrack);
-                        }
-                    }
-                } else {
-                    AudioBlock* inputBlock = &srcBlock;
-                    if (delayToMaxInputLatency > 0) {
-                        tmpBlock.clear();
-                        tmpBlock.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, 1.0f);
-                        inputBlock = &tmpBlock;
-                    }
-                    MixWithGainAndPanAutomation(tmp, inputBlock, &blockMixToOffset, fGainTrack, fPanTrack, autParGain, autParPan, processingPos, tickBlockEnd);
-                }
-            }
-        }
-    }
-}
 int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processing_task_t& req) /*const*/ {
     const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
     const double ticksPerBlock = req.audioProp.ticksPerBlock;
@@ -1177,7 +1192,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     track_impl_t* const trackImpl = track->audio;
     const auto playbackState = req.playbackState;
     const double ticksLatency = sampleToTickConvert<double, roundmode::none>(trackNode.inputLatency, prjGlobals.tempo100, sampleFormat.sampleRate);
-    const double sampleLatencyCompensated = samplePosProcess - trackNode.inputLatency;
+    const samplecount_t sampleLatencyCompensated = samplePosProcess - trackNode.inputLatency;
     const double tickLatencyCompensated = req.tickPosProcess - ticksLatency;
     tick_t processingPos = math::floordS32(tickLatencyCompensated);
     tick_t tickBlockEnd = math::floordS32(tickLatencyCompensated + ticksPerBlock);
@@ -1261,19 +1276,18 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     /* Store block in audioInput memory */
     if (DAW::isPlaybackState(playbackState)) {
         if (isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED) && track->type == TRACK_TYPE_AUDIO) {
-            auto samplePosFloored = math::floordS64(sampleLatencyCompensated);
-            if (samplePosFloored >= 0) {
-                trackImpl->audioInput.store(&trackImpl->input, samplePosFloored);
+            if (sampleLatencyCompensated >= 0) {
+                trackImpl->audioInput.store(&trackImpl->input, sampleLatencyCompensated);
                 trackImpl->audioInput.convertToSamples(this);
                 // trackImpl->recorder.samplesRecorded += trackImpl->audioInput.convertToSamples(this);
             } else {
-                log_printf("cannot write to negative offset %zd (samplepos %d - stage.latencyOutput %zd)\n", samplePosFloored, samplePosProcess, trackImpl->getInputLatency());
+                log_printf("cannot write to negative offset %zd (samplepos %d - stage.latencyOutput %zd)\n", sampleLatencyCompensated, samplePosProcess, trackImpl->getInputLatency());
             }
         }
     }
 
     /* Update currently recording clip */
-    trackImpl->recorder.update(playbackState, math::floordS64(sampleLatencyCompensated), math::floordS64(sampleLatencyCompensated) + sampleFormat.blockSize, processingPos, tickBlockEnd, track->type, prjGlobals.recordArmed && isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED));
+    trackImpl->recorder.update(playbackState, sampleLatencyCompensated, sampleLatencyCompensated + sampleFormat.blockSize, processingPos, tickBlockEnd, track->type, prjGlobals.recordArmed && isSet(trackImpl->flags, audiostageflags_t::RECORD_ARMED));
 
     track->getStage()->procStats.timeTrackRecordPre = tmp.timer.getTime();
 
@@ -1281,7 +1295,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     if (DAW::isPlaybackState(playbackState)) {
         AudioBlock& tmpBlock = AllocateScratchAudioBuffer(tmp, trackImpl->input.channels, trackImpl->input.samples);
         tmpBlock.clear();
-        trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, math::floordS32(sampleLatencyCompensated), static_cast<int32_t>(tmpBlock.samples), tmpBlock.buf);
+        trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, static_cast<int32_t>(sampleLatencyCompensated), static_cast<int32_t>(tmpBlock.samples), tmpBlock.buf);
         trackImpl->input.addFromOp(&tmpBlock, AudioBlock::mix_op::ADD, 1.0f);
     }
     track->getStage()->procStats.timeTrackFillAudioClips = tmp.timer.getTime();
@@ -1323,6 +1337,12 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
 
     /* Mix outputPos, applies track gain and panning */
     {
+        // auto postStageSamplePos = samplePosProcess - (trackNode.inputLatency + trackNode.internalLatency);
+        // auto postStageSamplePosFloored = math::floordS64(postStageSamplePos);
+        const double postStageTicksLatency = sampleToTickConvert<double, roundmode::none>(trackNode.inputLatency + trackNode.internalLatency, prjGlobals.tempo100, sampleFormat.sampleRate);
+        tick_t postStageTickLatencyCompensated = math::floordS32(req.tickPosProcess - postStageTicksLatency);
+        tick_t postStageTickEnd = math::floordS32(postStageTickLatencyCompensated + ticksPerBlock);
+
         float fGainTrackLin = trackImpl->mixer.getParamValue(PARAM_GAIN);
         float fPanTrack = trackImpl->mixer.getParamValue(PARAM_PAN);
         float fGainTrack = 0.0f;
@@ -1342,19 +1362,19 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
                 trackImpl->outputPost.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, fGainTrack);
             }
         } else {
-            MixWithGainAndPanAutomation(tmp, &trackImpl->output, &trackImpl->outputPost, fGainTrack, fPanTrack, autParGain, autParPan, processingPos, tickBlockEnd);
+            MixWithGainAndPanAutomation(tmp, &trackImpl->output, &trackImpl->outputPost, fGainTrack, fPanTrack, autParGain, autParPan, postStageTickLatencyCompensated, postStageTickEnd);
         }
     }
 
     /* Store block in audioOutput memory */
     if (DAW::isPlaybackState(playbackState)) {
+        auto postStageSamplePos = samplePosProcess - (trackNode.inputLatency + trackNode.internalLatency);
         if (static_cast<bool>(trackImpl->flags & audiostageflags_t::RECORD_OUTPUT)) {
             tmp.timer.reset();
-            int32_t offset = samplePosProcess - static_cast<int32_t>(trackImpl->getInputLatency());
-            if (offset >= 0) {
-                trackImpl->audioOutput.store(&trackImpl->outputPost, offset);
+            if (postStageSamplePos >= 0) {
+                trackImpl->audioOutput.store(&trackImpl->outputPost, postStageSamplePos);
             } else {
-                log_printf("cannot write to negative offset %d (samplepos %d - stage.latencyOutput %zd)\n", offset, samplePosProcess, trackImpl->getOutputLatency());
+                log_printf("cannot write to negative offset %zd (samplepos %zd - stage.latencyOutput %zd)\n", postStageSamplePos, postStageSamplePos, trackImpl->getOutputLatency());
             }
             track->getStage()->procStats.timeTrackRecordPost = tmp.timer.getTime();
         }
@@ -1743,7 +1763,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                            AudioBlock* output,
                            project_globals_t& globals,
                            const double tickStageLatencyCompensated,
-                           const double sampleStageLatencyCompensated,
+                           const samplecount_t sampleStageLatencyCompensated,
                            int32_t numSamples,
                            playback_state playbackState,
                            const DAW::effect_processing_graph_t* const processingGraph) const
@@ -1759,7 +1779,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
             const DAW::processing_effect_node_t& effNode = *ptrProcessingNode;
 
             const double ticksLatency = sampleToTickConvert<double, roundmode::none>(effNode.inputLatency, globals.tempo100, stage->sampleFormat.sampleRate);
-            const double sampleLatencyCompensated = sampleStageLatencyCompensated - effNode.inputLatency;
+            const samplecount_t sampleLatencyCompensated = sampleStageLatencyCompensated - effNode.inputLatency;
             const double tickLatencyCompensated = tickStageLatencyCompensated - ticksLatency;
             tick_t processingPosLatencyCompensate = math::floordS32(tickLatencyCompensated);
             tick_t tickBlockEnd = math::floordS32(tickLatencyCompensated + ticksPerBlock);

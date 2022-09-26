@@ -91,12 +91,12 @@ namespace PluginGain {
         const auto tickBegin = tick;
         const auto tickEnd = tickBegin + sampleToTickConvert<double, roundmode::none>(numSamples, bpm100, format.sampleRate);
 
-        if (autParGain) {
+        if (autParGain && autParGain->isActive()) {
             autParGain->sampleAutomation(tickBegin, tickEnd, numSamples, impl->vecGain.data());
         } else {
             std::fill(impl->vecGain.begin(), impl->vecGain.end(), getParamValue(PARAM_GAIN));
         }
-        if (autParPan) {
+        if (autParPan && autParPan->isActive()) {
             autParPan->sampleAutomation(tickBegin, tickEnd, numSamples, impl->vecPanL.data());
         } else {
             std::fill(impl->vecPanL.begin(), impl->vecPanL.end(), getParamValue(PARAM_PAN));
