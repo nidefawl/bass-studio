@@ -684,8 +684,7 @@ public:
     void updateVisibleTracks();
     void layoutVisibleTracks();
 
-    void onChildLayoutChanged(guibase* g) override {
-    }
+    void onChildLayoutChanged(guibase* g) override;
     void gridChanged(scaled_grid& _grid) override {
         dawCtrl->updateVisibleTrackContents();
     }

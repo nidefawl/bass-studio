@@ -751,3 +751,6 @@ void guitrack_topleft::buttonClicked(guibase* _button) {
         dawCtrl->updateVisibleTrackContents();
     }
 }
+void guictr_tracks::onChildLayoutChanged(guibase* g) {
+    layout();
+}

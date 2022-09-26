@@ -29,6 +29,7 @@
 #endif
 
 #define FLOAT_PI 3.141592653f
+#define FLOAT_HALF_PI (FLOAT_PI * 0.5f)
 namespace fp_math {
     bool isinff(float f);
     bool isinfd(double d);

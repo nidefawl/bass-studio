@@ -121,7 +121,7 @@ struct automatable_param_t {
     String shortLabel;
 
     //if kVstParameterSupportsDisplayIndex
-    int16_t displayIndex = 0;///< index where this parameter should be displayed (starting with 0)
+    int32_t displayIndex = 0;///< index where this parameter should be displayed (starting with 0)
 
     //if kVstParameterSupportsDisplayCategory
     int16_t category    = 0;///< 0: no category, else group index + 1
@@ -133,6 +133,7 @@ struct automatable_param_t {
 
 struct automatable_t {
 private:
+    int32_t nextRegisterId = 0;
     std::unordered_map<int32_t, automatable_param_t> mapParams;
     std::vector<automated_param_t> automatedParams;//TODO: make this a map
 public:
@@ -142,6 +143,7 @@ public:
             throw applogicexception("Param with identical identifier already registered");
         }
         automatable_param_t newParam;
+        newParam.displayIndex = nextRegisterId++;
         newParam.idx = identifier;
         mapParams[identifier] = std::move(newParam);
         return &mapParams[identifier];

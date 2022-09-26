@@ -426,7 +426,7 @@ namespace DAW {
             if (TRACKTYPE_TO_CTR(track->type) == TRACK_CTR_MIDIAUDIO && trackImpl->mixer.isEnabled()) {
                 /* Feed audio/midi tracks output into returns input */
                 for (track_t* trackReturn : project->trackReturnCtr) {
-                    int32_t paramIdx         = PARAM_OFFSET_SEND + trackReturn->localIdxFlat;
+                    int32_t paramIdx         = PARAM_OFFSET_SEND_GAIN + trackReturn->localIdxFlat;
                     auto sendLevelGainVal    = trackImpl->mixer.getParamValue(paramIdx);
                     auto automationRef       = AutomationConstant(sendLevelGainVal);
                     auto sendLevelAutomation = trackImpl->mixer.getRegisteredConstAutomation(paramIdx);

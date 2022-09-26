@@ -25,6 +25,29 @@
 #include <vector>
 
 namespace PluginGain {
+    enum class PanLaw {
+        SQRT,
+        SIN_3_0DB,
+        SIN_4_5DB,
+        SIN_6_0DB,
+    };
+    template<PanLaw P>
+    constexpr void calculatePan(float pan, float* pPanL, float* pPanR) {
+        if constexpr (P == PanLaw::SQRT) {
+            const float sqrt2 = sqrt(2.0f);
+            *pPanL = sqrt(1.0f - pan) * sqrt2;
+            *pPanR = sqrt(pan) * sqrt2;
+        } else if constexpr (P == PanLaw::SIN_3_0DB) {
+            *pPanL = sin((1.0f - pan) * FLOAT_HALF_PI);
+            *pPanR = sin(pan *FLOAT_HALF_PI);
+        } else if constexpr (P == PanLaw::SIN_4_5DB) {
+            *pPanL = powf(sin((1.0f - pan) * FLOAT_HALF_PI), 1.5f);
+            *pPanR = powf(sin(pan *FLOAT_HALF_PI), 1.5f);
+        } else if constexpr (P == PanLaw::SIN_6_0DB) {
+            *pPanL = powf(sin((1.0f - pan) * FLOAT_HALF_PI), 2.f);
+            *pPanR = powf(sin(pan *FLOAT_HALF_PI), 2.f);
+        }
+    }
 
     void multiplyAutomation(AudioBlock* src, AudioBlock* dst, float* pGain, float** pPan) {
         auto srcSamples = src->samples;
@@ -45,11 +68,6 @@ namespace PluginGain {
         if (srcChannels == 1 && channels == 2) {
             nChannels = 2;
         }
-        // float sqrt2 = sqrt(2.0f);
-        // float panLR[2] = {
-        //     float(sqrt(1.0 - double(pan)))*sqrt2,
-        //     float(sqrt(double(pan)))*sqrt2,
-        // };
         for (channelnum_t i = 0; i < nChannels; i++) {
             channelnum_t srcChannelIdx = srcChannels < 1 ? 0 : i % srcChannels;
             channelnum_t dstChannelIdx = channels < 1 ? 0 : i % channels;
@@ -82,11 +100,13 @@ namespace PluginGain {
         if (srcChannels == 1 && channels == 2) {
             nChannels = 2;
         }
-        float sqrt2    = sqrt(2.0f);
-        float panLR[2] = {
-            float(sqrt(1.0 - double(pan))) * sqrt2,
-            float(sqrt(double(pan))) * sqrt2,
-        };
+        // float sqrt2    = sqrt(2.0f);
+        // float panLR[2] = {
+        //     float(sqrt(1.0 - double(pan))) * sqrt2,
+        //     float(sqrt(double(pan))) * sqrt2,
+        // };
+        float panLR[2];
+        calculatePan<PanLaw::SIN_4_5DB>(pan, &panLR[0], &panLR[1]);
         for (channelnum_t i = 0; i < nChannels; i++) {
             channelnum_t srcChannelIdx = srcChannels < 1 ? 0 : i % srcChannels;
             channelnum_t dstChannelIdx = channels < 1 ? 0 : i % channels;
@@ -173,11 +193,9 @@ namespace PluginGain {
         } else {
             std::fill(impl->vecPanL.begin(), impl->vecPanL.end(), getParamValue(PARAM_PAN));
         }
-        float sqrt2 = sqrt(2.0f);
         for (int32_t i = 0; i < numSamples; i++) {
             dsp_util::getGainLvlWithRange(impl->vecGain[i], MTR_CEIL, DBFS_MUTE_POS, impl->vecGain[i]);
-            impl->vecPanR[i] = sqrtf((impl->vecPanL[i])) * sqrt2;
-            impl->vecPanL[i] = sqrtf(1.0f - (impl->vecPanL[i])) * sqrt2;
+            calculatePan<PanLaw::SIN_4_5DB>(impl->vecPanL[i], &impl->vecPanL[i], &impl->vecPanR[i]);
         }
         float* panningData[2] = { impl->vecPanL.data(), impl->vecPanR.data() };
         multiplyAutomation(in, out, impl->vecGain.data(), panningData);

@@ -1,5 +1,6 @@
 #include <vector>
 #include "automation.h"
+#include "config.h"
 #include "math/seq_math.h"
 #include "plugin/vst_plugin.h"
 #include "gui/automation/automatable.h"
@@ -292,6 +293,13 @@ void storeAutomation(std::vector<automation_view_t>& automatedParams, automatabl
 param_unit_t automatable_t::getParamValueDisplay(int32_t idx) {
     auto param = getParam(idx);
     dbgassert(param);
+    if ((param->idx == PARAM_PAN) || (param->idx >= PARAM_OFFSET_SEND_PAN && param->idx < PARAM_OFFSET_SEND_PAN + MAX_SEND_CHANNELS)) {
+        if (param->value < 0.5)
+            return { StringFormat("%.0f", math::clamp((0.5f-param->value)*2.0f*100.0f, 0.0f, 100.0f)), "L" };
+        if (param->value > 0.5)
+            return { StringFormat("%.0f", math::clamp((param->value-0.5f)*2.0f*100.0f, 0.0f, 100.0f)), "R" };
+        return { "", "C" };
+    }
     if (param->unit == "dB") {
         float fGain = 1.0f;
         if (dsp_util::getGainLvl(param->value, fGain)) {
@@ -308,6 +316,35 @@ param_converted_t automatable_t::convertParamValueDisplay(int32_t idx, const par
     auto param = getParam(idx);
     dbgassert(param);
     //TODO: use std::from_chars when floating point version arrives in libc++
+    if ((param->idx == PARAM_PAN) || (param->idx >= PARAM_OFFSET_SEND_PAN && param->idx < PARAM_OFFSET_SEND_PAN + MAX_SEND_CHANNELS)) {
+
+        String str = displayValue.value;
+        auto side = 0;
+        if (StrUtil::StringReplace(str, "L", "")) {
+            side = -1;
+        }
+        if (StrUtil::StringReplace(str, "R", "")) {
+            side = 1;
+        }
+        if (StrUtil::StringReplace(str, "C", "")) {
+            side = 0;
+        }
+        auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
+        auto panPercent = math::clamp((fTextFieldVal/100.0f), 0.0f, 1.0f);
+        if (math::roundfS32(panPercent * 100.0f) == 0) {
+            side = 0;
+        }
+        if (side < 0) {
+            return { 0.5f - math::clamp(panPercent*0.5f, 0.0f, 0.5f), true };
+        }
+        if (side > 0) {
+            return { 0.5f + math::clamp(panPercent*0.5f, 0.0f, 0.5f), true };
+        }
+        if (side == 0) {
+            return { 0.5f, true };
+        }
+        return { 0.5f, false };
+    }
     auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
     if (param->unit == "dB" && displayValue.unit == "dB") {
         float fGain = dsp_util::fromdBFSClampInf6(fTextFieldVal);

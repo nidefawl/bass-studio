@@ -66,6 +66,19 @@ void replaceString(String& s, String f, String r) {
         offset = index + r.length();
     }
 }
+namespace StrUtil {
+int32_t StringReplace(String& s, const String& f, const String& r) {
+    int32_t nOccurences = 0;
+    size_t index;
+    size_t offset = 0;
+    while ((index = s.find(f, offset)) != String::npos) {
+        s.replace(index, f.length(), r);
+        offset = index + r.length();
+        nOccurences++;
+    }
+    return nOccurences;
+}
+}
 
 static const char* const noteNames[12]{
     "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"

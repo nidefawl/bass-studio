@@ -32,6 +32,7 @@
 #include "threads/threadlock.h"
 
 #define PARAM_TRACK_GAIN 1
+#define PARAM_TRACK_PAN 2
 
 struct VstEvent_t;
 

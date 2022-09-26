@@ -2,6 +2,7 @@
 
 #include "assert_dbg.h"
 #include "clip.h"
+#include "config.h"
 #include "gui/views/pluginlist.h"
 #include "guiglobals.h"
 #include "host/daw_channel.h"
@@ -187,15 +188,40 @@ guitooltip<audio_info_t>::~guitooltip() {
     delete ptr;
 }
 
-class gui_trackgain : public gui_textfield {
+class gui_slider_textfield : public gui_textfield {
+protected:
     automatable_t* paramAutomatable = nullptr;
     int32_t paramIdx                = -1;
-
 public:
-    gui_trackgain() : gui_textfield() {
+    gui_slider_textfield() : gui_textfield() {
         setCanMouseHit(true);
         setAlignment(gui_textfield::Alignment::Center);
         setReturnCommits(true);
+    }
+
+    virtual bool renderAsBipolar() = 0;
+    virtual String getValueAsString(float param) {
+        auto paramValDisplay = paramAutomatable->getParamValueDisplay(paramIdx);
+        return paramValDisplay.value + paramValDisplay.unit;
+    }
+    virtual float getRenderScaledValue(float param) {
+        return param;
+    }
+    virtual float modifyParam(float param, float amt, bool applyUserInputScaling) {
+        if (applyUserInputScaling) {
+            amt *= 0.01f;
+        }
+        return math::clamp(param - amt, 0.0f, 1.0f);
+    }
+    virtual float parseTextValue(const String& str) {
+        auto param = paramAutomatable->getParam(paramIdx);
+        param_unit_t paramUnit = { str, param->unit };
+        auto parsed = paramAutomatable->convertParamValueDisplay(paramIdx, paramUnit);
+        return parsed.floatVal;
+    }
+
+    int32_t getParamIdx() const {
+        return paramIdx;
     }
     void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
         this->paramAutomatable = _paramAutomatable;
@@ -224,28 +250,34 @@ public:
         if (paramAutomatable && paramIdx > -1) {
             vec2 insetP = vec2(pos + 1);
             vec2 insetS = vec2(size - 2);
-            float gainDb = dsp_util::linScaleToGain(paramAutomatable->getParamValue(paramIdx));
-            float f2     = (gainDb - dsp_util::GAIN_DBFLOOR) / (dsp_util::GAIN_DB6 - dsp_util::GAIN_DBFLOOR);
-            if (f2 <= 0) {
-                f2 = 0;
-            } else {
-                f2 = pow(f2, 1 / 3.0f);
-            }
+            float fParamScaled = getRenderScaledValue(paramAutomatable->getParamValue(paramIdx));
             float x = insetP.x;
             float y = insetP.y;
-            if (f2 > 0.01f) {
-                float wVal = (f2) *insetS.x;
+            float rectWidth;
+            if (renderAsBipolar()) {
+                // render bipolar: fParamScaled is 0..1
+                // make sure rectWidth is not negative
+                if (fParamScaled < 0.5f) {
+                    x = insetP.x + insetS.x * fParamScaled;
+                    rectWidth = insetS.x * (0.5f - fParamScaled);
+                } else {
+                    x = insetP.x + insetS.x * 0.5f;
+                    rectWidth = insetS.x * (fParamScaled - 0.5f);
+                }
+            } else {
+                rectWidth = (fParamScaled) * insetS.x;
+            }
+            if (rectWidth > 0.45f) {
                 nvgBeginPath(vg);
-                nvgRect(vg, x, y, wVal, insetS.y);
+                nvgRect(vg, x, y, rectWidth, insetS.y);
                 nvgFillColor(vg, theme->getColor(valColor));
                 nvgFillCustomPar(vg, -3);
                 nvgFill(vg);
             }
-
+            float textWidth = 0;
             if (isTextCommitted()) {
-                const String strLvl = getValueAsString();
-
-                renderTextLabel(vg,
+                const String strLvl = getValueAsString(paramAutomatable->getParamValue(paramIdx));
+                textWidth = renderTextLabel(vg,
                                 insetP + insetS * 0.5f,
                                 insetS,
                                 strLvl,
@@ -254,6 +286,17 @@ public:
                                 theme->getContrastColor(valColor),
                                 NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             }
+            if (isFlag(FLG_RENDER_LABEL) && this->label.length()) {
+                renderTextLabel(vg,
+                                insetP + vec2(3.0f, insetS.y * 0.5f),
+                                vec2(insetS.x - textWidth - 6.0f, insetS.y),
+                                label,
+                                theme,
+                                fontSize() * FONT_AUTOSCALE,
+                                theme->getColor(GuiColor::COL_LABEL_INACTIVE),
+                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+            }
+
         }
         if (!isTextCommitted()) {
             gui_textfield::render(vg);
@@ -262,10 +305,6 @@ public:
     void layout() override {
         gui_textfield::layout();
         setFontSize(size.y);
-    }
-    String getValueAsString() {
-        float gainDb = dsp_util::linScaleToGain(paramAutomatable->getParamValue(paramIdx));
-        return StringFormat("%.2f", dsp_util::dBFSClampInf6(gainDb));
     }
     bool focusEvent(MouseHitEvt& evt, bool focused) override {
         if (!focused) {
@@ -278,7 +317,7 @@ public:
             char keyChar = (char) codepoint;
             if ((keyChar >= '0' && keyChar <= '9') || (keyChar == '-')) {
                 MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
-                gui_textfield::setValue(getValueAsString());
+                gui_textfield::setValue(getValueAsString(paramAutomatable->getParamValue(paramIdx)));
                 gui_textfield::focusEvent(evt, true);
                 gui_textfield::setSelectionRange(-1, -1);
             }
@@ -293,7 +332,7 @@ public:
         if (action == KeyEventType::K_PRESS && isTextCommitted()) {
             if ((key == KEY_ENTER || key == KEY_KP_ENTER)) {
                 MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
-                gui_textfield::setValue(getValueAsString());
+                gui_textfield::setValue(getValueAsString(paramAutomatable->getParamValue(paramIdx)));
                 gui_textfield::focusEvent(evt, true);
                 gui_textfield::setSelectionRange(-1, -1);
             }
@@ -308,29 +347,23 @@ public:
                 if (modifiers == KB_MOD_SHIFT) {
                     amt *= 0.1f;
                 }
-                modifyGainLevel(amt, false);
+                updateAutomatableParam(amt, false);
                 return true;
             } else if (key == KEY_DOWN) {
                 float amt = 1.0f;
                 if (modifiers == KB_MOD_SHIFT) {
                     amt *= 0.1f;
                 }
-                modifyGainLevel(amt, false);
+                updateAutomatableParam(amt, false);
                 return true;
             }
         }
         return false;
     }
     void onTextEndEdit() override {
-        String textFieldVal = value();
-        float fTextFieldVal = atof(StringAsCStr(textFieldVal));
-        float fGain         = dsp_util::fromdBFSClampInf6(fTextFieldVal);
-        if (fGain < dsp_util::GAIN_DBFLOOR) {
-            fGain = dsp_util::GAIN_DBFLOOR;
-        }
-        float fNew = dsp_util::clampGain(fGain);
+        float fNew = parseTextValue(gui_textfield::value());
         paramAutomatable->deactivateAutomation(paramIdx);
-        paramAutomatable->getParam(paramIdx)->value = dsp_util::gainToLinScale(fNew);
+        paramAutomatable->getParam(paramIdx)->value = fNew;
     }
     void handleDraggedBegin(MouseEvent& evt) override {
         if (!isTextCommitted()) {
@@ -339,7 +372,7 @@ public:
         }
         if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
             MouseHitEvt mouseHitEvt(MouseHitType::MOUSE_LEFT, 0);
-            gui_textfield::setValue(getValueAsString());
+            gui_textfield::setValue(getValueAsString(paramAutomatable->getParamValue(paramIdx)));
             gui_textfield::focusEvent(mouseHitEvt, true);
             gui_textfield::setSelectionRange(-1, -1);
             return;
@@ -348,8 +381,55 @@ public:
             parentCtrl->captureMouse(this);
         }
     }
-    void modifyGainLevel(float amt, bool applyUserInputScaling) {
-        float fGain = dsp_util::linScaleToGain(paramAutomatable->getParamValue(paramIdx));
+    void updateAutomatableParam(float amt, bool applyUserInputScaling) {
+        float fNew = modifyParam(paramAutomatable->getParamValue(paramIdx), amt, applyUserInputScaling);
+        paramAutomatable->deactivateAutomation(paramIdx);
+        paramAutomatable->getParam(paramIdx)->value = fNew;
+    }
+    void handleDraggedMove(MouseEvent& evt) override {
+        if (!isTextCommitted()) {
+            gui_textfield::handleDraggedMove(evt);
+            return;
+        }
+        if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
+            int scale = isCtrl(evt.kbmods) ? 15 : 2;
+            int disty = (int) evt.dragDistance->y / scale;
+            if (!disty)
+                return;
+
+            evt.dragDistance->y = 0;
+            if (paramAutomatable && paramIdx > -1) {
+                updateAutomatableParam(disty * 0.1f, true);
+            }
+        }
+    }
+    void handleDraggedRelease(MouseEvent& evt) override {
+        if (!isTextCommitted()) {
+            gui_textfield::handleDraggedRelease(evt);
+            return;
+        }
+    }
+};
+
+class gui_slider_gain : public gui_slider_textfield {
+public:
+    gui_slider_gain() : gui_slider_textfield() {
+    }
+    float getRenderScaledValue(float param) override {
+        float gainDb = dsp_util::linScaleToGain(paramAutomatable->getParamValue(paramIdx));
+        float fParamScaled = (gainDb - dsp_util::GAIN_DBFLOOR) / (dsp_util::GAIN_DB6 - dsp_util::GAIN_DBFLOOR);
+        if (fParamScaled <= 0) {
+            fParamScaled = 0;
+        } else {
+            fParamScaled = pow(fParamScaled, 1 / 3.0f);
+        }
+        return fParamScaled;
+    }
+    bool renderAsBipolar() override {
+        return false;
+    }
+    float modifyParam(float param, float amt, bool applyUserInputScaling) override {
+        float fGain = dsp_util::linScaleToGain(param);
         if (fGain < dsp_util::GAIN_DBFLOOR) {
             fGain = dsp_util::GAIN_DBFLOOR;
         }
@@ -365,34 +445,31 @@ public:
         dbfs -= delta * amt;
         float f    = dsp_util::fromdBFS(dbfs);
         float fNew = dsp_util::clampGain(f);
-        paramAutomatable->deactivateAutomation(paramIdx);
-        paramAutomatable->getParam(paramIdx)->value = dsp_util::gainToLinScale(fNew);
+        return dsp_util::gainToLinScale(fNew);
     }
-    void handleDraggedMove(MouseEvent& evt) override {
-        if (!isTextCommitted()) {
-            gui_textfield::handleDraggedMove(evt);
-            return;
+    float parseTextValue(const String& str) override {
+        float fTextFieldVal = atof(StringAsCStr(str));
+        float fGain         = dsp_util::fromdBFSClampInf6(fTextFieldVal);
+        if (fGain < dsp_util::GAIN_DBFLOOR) {
+            fGain = dsp_util::GAIN_DBFLOOR;
         }
-        if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
-            int scale = isCtrl(evt.kbmods) ? 15 : 2;
-            int disty = (int) evt.dragDistance->y / scale;
-            if (!disty)
-                return;
+        float fNew = dsp_util::clampGain(fGain);
+        return dsp_util::gainToLinScale(fNew);
+    }
 
-            evt.dragDistance->y = 0;
-            if (paramAutomatable && paramIdx > -1) {
-                modifyGainLevel(disty * 0.1f, true);
-            }
-        }
-    }
-    void handleDraggedRelease(MouseEvent& evt) override {
-        if (!isTextCommitted()) {
-            gui_textfield::handleDraggedRelease(evt);
-            return;
-        }
+    String getValueAsString(float param) override {
+        float gainDb = dsp_util::linScaleToGain(param);
+        return StringFormat("%.2f", dsp_util::dBFSClampInf6(gainDb));
     }
 };
-
+class gui_slider_pan : public gui_slider_textfield {
+public:
+    gui_slider_pan() : gui_slider_textfield() {
+    }
+    bool renderAsBipolar() override {
+        return true;
+    }
+};
 
 class guibutton_trackbypass : public guibuttonstate {
     track_t* const m_track;
@@ -1147,12 +1224,14 @@ class gui_trackcontrols_mixer : public guictr_base {
     gui_trackmeter m_guiMeter;
 
 public:
-    gui_trackgain gain;
+    gui_slider_gain trackGain;
+    gui_slider_pan trackPanning;
     guibutton_trackbypass btnBypass;
     guibutton_track_solo btnSolo;
     guibutton_track_record_arm btnRecord;
     guibutton btnActivate;
-    std::vector<gui_trackgain*> sendGains;
+    std::vector<gui_slider_gain*> sendGains;
+    std::vector<gui_slider_pan*> sendPans;
     explicit gui_trackcontrols_mixer(track_gui_entry_t* _entry)
         : guictr_base(),
           m_track(_entry->track),
@@ -1162,28 +1241,38 @@ public:
           btnSolo(_entry) ,
           btnRecord(_entry) {
         (void) m_trackentry;
-        gain.setAutomationRef(&m_track->audio->mixer, PARAM_TRACK_GAIN);
+        trackGain.setAutomationRef(&m_track->audio->mixer, PARAM_TRACK_GAIN);
+        trackPanning.setAutomationRef(&m_track->audio->mixer, PARAM_TRACK_PAN);
         padding            = 0;
         btnBypass.drawFn   = drawTextureSymbol;
         btnBypass.drawParm = ICON_BYPASS;
         btnBypass.setFlag(FLG_RENDER_BUTTON_WITH_LED, true);
         btnActivate.setButtonColor(GuiColor::COL_PLUG_TITLE);
-        gain.setLabel("Gain Level");
+        trackGain.setLabel("Gain Level");
+        trackPanning.setLabel("Pan");
         btnActivate.setLabel("Load plugins");
         add(&btnBypass);
         add(&btnSolo);
         add(&btnRecord);
         add(&btnActivate);
-        add(&gain);
+        add(&trackGain);
+        add(&trackPanning);
         add(&m_guiMeter);
         if (m_track->type != TRACK_TYPE_MASTER && m_track->type != TRACK_TYPE_RETURN) {
             sendGains.resize(MAX_SEND_CHANNELS);
+            sendPans.resize(MAX_SEND_CHANNELS);
             for (int i = 0; i < MAX_SEND_CHANNELS; i++) {
-                sendGains[i] = new gui_trackgain();
+                sendGains[i] = new gui_slider_gain();
                 sendGains[i]->setVisible(false);
-                sendGains[i]->setAutomationRef(&m_track->audio->mixer, PARAM_OFFSET_SEND + i);
-                sendGains[i]->setLabel(m_track->audio->mixer.getParamName(PARAM_OFFSET_SEND + i));
+                sendGains[i]->setAutomationRef(&m_track->audio->mixer, PARAM_OFFSET_SEND_GAIN + i);
+                sendGains[i]->setLabel(StringFormat("Send %d", i + 1));
+                sendGains[i]->setFlag(FLG_RENDER_LABEL, true);
+                sendPans[i] = new gui_slider_pan();
+                sendPans[i]->setVisible(false);
+                sendPans[i]->setAutomationRef(&m_track->audio->mixer, PARAM_OFFSET_SEND_PAN + i);
+                sendPans[i]->setLabel("Pan");
                 add(sendGains[i]);
+                add(sendPans[i]);
             }
         }
     }
@@ -1192,8 +1281,13 @@ public:
             remove(sendGainCtrl);
             delete sendGainCtrl;
         }
+        for (auto* sendPanCtrl : sendPans) {
+            remove(sendPanCtrl);
+            delete sendPanCtrl;
+        }
         remove(&m_guiMeter);
-        remove(&gain);
+        remove(&trackPanning);
+        remove(&trackGain);
         remove(&btnActivate);
         remove(&btnRecord);
         remove(&btnSolo);
@@ -1224,6 +1318,7 @@ public:
             }
             pluginMgr->postPluginLoaded(m_track->audio, nullptr);
             daw->onPluginsChanged();
+            onChildLayoutChanged(button);
 
 #ifndef NDEBUG
             log_printf("deferredEffects post activateDeferred on track %s: %zu\n", m_track->szName, m_track->audio->deferredEffects.size());
@@ -1236,15 +1331,16 @@ public:
                 gui->onTick(ctrl);
             }
         }
+    }
+    void layout() override {
 
         std::vector<effectbase*> effects;
         dbgassert(m_track->audio);
         m_track->audio->getDeferredEffects(effects);
-        int nDefEffects = effects.size();
+        int nDefEffects = CtrSize(effects);
         btnActivate.setEnabled(nDefEffects > 0);
         btnActivate.setText(nDefEffects > 9 ? "9+" : (StringFormat("%d", nDefEffects)));
-    }
-    void layout() override {
+        btnActivate.setVisible(nDefEffects > 0);
 
         const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
         const int32_t mW = theme->get(GuiConstant::CONST_METER_WIDTH);
@@ -1252,43 +1348,63 @@ public:
 
         int32_t inset = CONST_PADDING_TRACK_CONTROLS;
         int32_t i2    = inset * 2;
-        int32_t h     = TRACK_HEIGHT_STEP - i2;
-
-        // int32_t mW      = TRACK_HEIGHT_STEP * 3;
-        int32_t bW      = size.x - mW;
-        int32_t gW      = size.x - mW;
-        btnBypass.size  = ivec2(bW - inset * 4 - h*2, h);
-        gain.size       = ivec2(gW - i2, h);
-        btnBypass.pos   = ivec2(inset, inset);
-        btnSolo.pos     = ivec2(bW - inset - h, inset);
-        btnSolo.size    = ivec2(h, h);
-        btnRecord.pos     = ivec2(bW - inset*2 - h * 2, inset);
-        btnRecord.size    = ivec2(h, h);
-        gain.pos        = ivec2(inset, TRACK_HEIGHT_STEP + inset);
-        btnActivate.pos = { inset, gain.bottom() + i2 };
-        btnActivate.size = { h, h };
-
         m_guiMeter.size = ivec2(mW - i2, size.y - i2);
         m_guiMeter.pos  = ivec2(size.x - mW + inset, inset);
+
+
+        int32_t heightInner = TRACK_HEIGHT_STEP - i2;
+        int32_t csX      = size.x - mW;
+        int32_t rowY = 0;
+        int32_t nButtons = btnActivate.isVisible() ? 3 : 2;
+        btnBypass.size   = ivec2(csX - inset * 4 - heightInner * nButtons, heightInner);
+        btnBypass.pos    = ivec2(inset, inset + rowY);
+        btnSolo.pos      = ivec2(csX - inset - heightInner, inset + rowY);
+        btnSolo.size     = ivec2(heightInner, heightInner);
+        btnRecord.pos    = ivec2(csX - inset * 2 - heightInner * 2, inset + rowY);
+        btnRecord.size   = ivec2(heightInner, heightInner);
+        btnActivate.pos    = ivec2(csX - inset * 2 - heightInner * 3, inset + rowY);
+        btnActivate.size   = ivec2(heightInner, heightInner);
+        rowY += TRACK_HEIGHT_STEP;
+        
+        int32_t sendGainWidth = csX*4/5 - inset;
+        trackGain.size       = ivec2(sendGainWidth, heightInner);
+        trackGain.pos        = ivec2(inset, rowY + inset);
+        trackPanning.size        = ivec2(csX - sendGainWidth - i2 - inset, heightInner);
+        trackPanning.pos         = ivec2(i2 + sendGainWidth, rowY + inset);
+
+        rowY += TRACK_HEIGHT_STEP;
         if (!sendGains.empty()) {
-            const int32_t HEIGHT_SEND_GAIN = h;
+            const int32_t HEIGHT_SEND_GAIN = TRACK_HEIGHT_STEP;
             const int32_t SEND_PER_ROW     = 1;
 
-            ivec2 sendPos      = { inset, btnActivate.bottom() + i2 };
             project_t* project = dawCtrl->getDaw()->getProject();
             dbgassert(project);
             int32_t numReturnChannels = project->trackReturnCtr.size();
             int pos                   = 0;
-            for (auto sendGainCtrl : sendGains) {
-                sendGainCtrl->setVisible(pos < numReturnChannels);
-                sendGainCtrl->pos  = sendPos;
-                sendGainCtrl->size = { gW / SEND_PER_ROW - i2, HEIGHT_SEND_GAIN };
-                if (++pos % SEND_PER_ROW == 0) {
+            ivec2 sendPos = { inset, inset + rowY };
+            for (int32_t i = 0; i < numReturnChannels; ++i) {
+                if (pos >= SEND_PER_ROW) {
+                    pos = 0;
                     sendPos.x = inset;
-                    sendPos.y += HEIGHT_SEND_GAIN + i2;
-                } else {
-                    sendPos.x = sendGainCtrl->right() + i2;
+                    sendPos.y += HEIGHT_SEND_GAIN;
                 }
+                sendGains[i]->size = ivec2(sendGainWidth, heightInner);
+                sendGains[i]->pos  = sendPos;
+                sendPos.x += sendGainWidth + inset;
+                sendPans[i]->size = ivec2(csX - sendGainWidth - i2 - inset, heightInner);
+                sendPans[i]->pos  = sendPos;
+                sendPos.x += csX - sendGainWidth - i2 + inset;
+                ++pos;
+                // dbgassert(sendGains[i]->size.x > 0 && sendGains[i]->size.y > 0);
+                // dbgassert(sendPans[i]->size.x > 0 && sendPans[i]->size.y > 0);
+            }
+            for (auto sendGainCtrl : sendGains) {
+                auto idx = sendGainCtrl->getParamIdx() - PARAM_OFFSET_SEND_GAIN;
+                sendGainCtrl->setVisible(idx < numReturnChannels);
+            }
+            for (auto sendPanCtrl : sendPans) {
+                auto idx = sendPanCtrl->getParamIdx() - PARAM_OFFSET_SEND_PAN;
+                sendPanCtrl->setVisible(idx < numReturnChannels);
             }
         }
         for (auto gui : guis) {
