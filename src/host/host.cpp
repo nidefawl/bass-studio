@@ -157,7 +157,7 @@ public:
 /**
  * VST Host implementation internals
  */
-class Host::host_impl {
+class Host::host_impl : public IDelayLineStorage {
 public:
     daw_tls::tlsinstance tls;
     std::array<WorkerThread, MAX_AUDIOPROCESSING_THREADS> threads;
@@ -197,7 +197,7 @@ public:
     }
 
     //TODO: Try avoid this lock
-    DelayLine* getDelayLine(uint32_t id) {
+    DelayLine* getProcessingDelayLine(uint32_t id) override {
         std::lock_guard<std::mutex> hold(mtx);
         if (!delayLines.count(id)) {
             delayLines[id] = std::make_shared<DelayLine>();
@@ -1040,7 +1040,69 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
     }
     return nBlocksProcessed;
 }
+void MixInputs(const Host* host, const processing_track_node_t& node, IDelayLineStorage* delayLines, AudioBlock* ptrBlockMixDst, const std::vector<DAW::track_source_t>& allSources, channelnum_t numChannelsTrack, samplerate_t trackNodeInputLatency, tick_t processingPos, AudioBlock* ptrExternalInputs) {
+    bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), DAW::isTrackSrcSolod);
 
+    for (const DAW::track_source_t& tracksrc : allSources)
+    {
+        if (hasSolo && !DAW::isTrackSrcSolod(tracksrc))
+            continue;
+        if (DAW::isChannelConnected(tracksrc.channel)) {
+            track_audio_src src;
+            if (DAW::resolveAudioChannel(host, numChannelsTrack, tracksrc.channel, ptrExternalInputs, src)) {
+                /**
+                 * Mix routed tracks
+                 *
+                 * Mix level is fGainInput * src.gain * tracksrc.gain
+                 * src.gain:            block-wise automated track gain
+                 * tracksrc.gain:        block-wise automated send level, 1.0f for non-sends
+                 *
+                 * sends are with track gain applied (post-mixer)
+                 *
+                 */
+                /* compensate at input stage */
+                /* figure out max latency of all inputs */
+                /* delay signal by max_child_input_latency - src_output_latency */
+                /* Compensate audio midi track to pre-return latency */
+                dbgassert(trackNodeInputLatency >= tracksrc.latency);
+                samplecount_t delayToMaxInputLatency = trackNodeInputLatency - tracksrc.latency;
+
+                AudioBlock srcBlock = src.toAudioBlock();
+                DelayLine* delayLine = nullptr;
+                if (delayToMaxInputLatency > 0) {
+                    delayLine = delayLines->getProcessingDelayLine(tracksrc.trackEdgeId);
+                    delayLine->write(&srcBlock, delayToMaxInputLatency);
+                }
+                float fGainRaw = 0.0f;
+                //TODO: apply per-track latency compensation
+                //TODO: apply filtered sample accurate volume automation
+                bool bSuccess = DAW::resolveAutomationAtTime(host, tracksrc.gainAutomation, processingPos, &fGainRaw);
+                if (bSuccess) {
+                    /* Calculate audio/midi tracks gain level */
+                    float fGainTrack;
+                    if (dsp_util::getGainLvl(fGainRaw, fGainTrack)) {
+                        channelnum_t dstChannelCount = ptrBlockMixDst->channels;
+                        if (node.type == DAW::track_node_type_t::EFFECT) {
+                            for (auto& desc : node.effectOptional->inputChannelsDesc) {
+                                if (desc.offset == tracksrc.channel.dstChannelOffset) {
+                                    dstChannelCount = desc.count;
+                                    break;
+                                }
+                            }
+                        }
+                        auto blockInOffset = ptrBlockMixDst->SubChannelsBlock(tracksrc.channel.dstChannelOffset, dstChannelCount);
+                        if (delayToMaxInputLatency > 0) {
+                            dbgassert(delayLine);
+                            blockInOffset.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, fGainTrack);
+                        } else {
+                            blockInOffset.addFromOp(&srcBlock, AudioBlock::mix_op::ADD, fGainTrack);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processing_task_t& req) /*const*/ {
     const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
     const double ticksPerBlock = req.audioProp.ticksPerBlock;
@@ -1128,64 +1190,8 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
 
     std::vector<DAW::track_source_t> allSources = trackNode.pulls; // copy
     allSources.insert(allSources.end(), trackNode.pushs.cbegin(), trackNode.pushs.cend()); // copy
-
-    bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), DAW::isTrackSrcSolod);
-
     tmp.timer.reset();
-    for (const DAW::track_source_t& tracksrc : allSources)
-    {
-        if (hasSolo && !DAW::isTrackSrcSolod(tracksrc))
-            continue;
-        if (DAW::isChannelConnected(tracksrc.channel)) {
-            track_audio_src src;
-            if (DAW::resolveAudioChannel(this, numChannelsTrack, tracksrc.channel, req.ptrExternalInputs, src)) {
-                /**
-                 * Mix routed tracks
-                 *
-                 * Mix level is fGainInput * src.gain * tracksrc.gain
-                 * src.gain:            block-wise automated track gain
-                 * tracksrc.gain:        block-wise automated send level, 1.0f for non-sends
-                 *
-                 * sends are with track gain applied (post-mixer)
-                 *
-                 */
-                /* compensate at input stage */
-                /* figure out max latency of all inputs */
-                /* delay signal by max_child_input_latency - src_output_latency */
-                /* Compensate audio midi track to pre-return latency */
-                dbgassert(trackNode.inputLatency >= tracksrc.latency);
-                samplecount_t delayToMaxInputLatency = trackNode.inputLatency - tracksrc.latency;
-
-                AudioBlock srcBlock = src.toAudioBlock();
-                DelayLine* delayLine = nullptr;
-                if (delayToMaxInputLatency > 0) {
-                    delayLine = impl->getDelayLine(tracksrc.trackEdgeId);
-                    delayLine->write(&srcBlock, delayToMaxInputLatency);
-                }
-                float fGainRaw = 0.0f;
-                //TODO: apply per-track latency compensation
-                //TODO: apply filtered sample accurate volume automation
-                bool bSuccess = DAW::resolveAutomationAtTime(this, tracksrc.gainAutomation, processingPos, &fGainRaw);
-                if (bSuccess) {
-                    /* Calculate audio/midi tracks gain level */
-                    float fGainTrack;
-                    if (dsp_util::getGainLvl(fGainRaw, fGainTrack)) {
-                        if (delayToMaxInputLatency > 0) {
-                            dbgassert(delayLine);
-                            trackImpl->input.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, fGainTrack);
-                        } else {
-                            trackImpl->input.addFromOp(&srcBlock, AudioBlock::mix_op::ADD, fGainTrack);
-                        }
-                    }
-                }
-            }
-        } else {
-
-            if (req.debugLogProcessing) {
-                log_lf(Log::L_WARN, "track %s has no connected input\n", StringAsCStr(trackImpl->inputChannel.name));
-            }
-        }
-    }
+    MixInputs(this, trackNode, this->impl, &trackImpl->input, allSources, numChannelsTrack, trackNode.inputLatency, processingPos, req.ptrExternalInputs);
     track->getStage()->procStats.timeTrackMixInputs = tmp.timer.getTime();
 
     /* Store block in audioInput memory */
@@ -1722,74 +1728,8 @@ void Host::processAudio(audio_stage_t* stage,
 
             std::vector<DAW::effect_source_t> allSources = effNode.pulls; // copy
 
-            bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), DAW::isTrackSrcSolod);
-
-            for (const DAW::effect_source_t& tracksrc : allSources) {
-                if (hasSolo && !DAW::isTrackSrcSolod(tracksrc))
-                    continue;
-                if (DAW::isChannelConnected(tracksrc.channel)) {
-                    track_audio_src src;
-
-                    if (DAW::resolveAudioChannel(this, numChannelsTrack, tracksrc.channel, /*ptrExternalInputs*/ nullptr, src)) {
-                        /**
-                         * Mix routed tracks
-                         *
-                         * Mix level is fGainInput * src.gain * tracksrc.gain
-                         * src.gain:            block-wise automated track gain
-                         * tracksrc.gain:        block-wise automated send level, 1.0f for non-sends
-                         *
-                         * sends are with track gain applied (post-mixer)
-                         *
-                         */
-                        /* compensate at input stage */
-                        /* figure out max latency of all inputs */
-                        /* delay signal by maxLatency - trackImpl->getLatency() */
-                        /* Compensate audio midi track to pre-return latency */
-                        dbgassert(effNode.inputLatency >= tracksrc.latency);
-                        samplecount_t delayToMaxInputLatency = effNode.inputLatency - tracksrc.latency;
-
-                        AudioBlock srcBlock = src.toAudioBlock();
-                        DelayLine* delayLine = nullptr;
-                        if (delayToMaxInputLatency > 0) {
-                            delayLine = stage->getEffectDelayLine(tracksrc.trackEdgeId);
-                            delayLine->write(&srcBlock, delayToMaxInputLatency);
-                        }
-
-                        //TODO: apply filtered sample accurate volume automation
-
-                        // keep fast path?!
-                        float fGainRaw = 0.0f;
-                        //TODO: validate that processingPosLatencyCompensate is correct here. (post delay line/pre delay line timepos)
-                        bool bSuccess = DAW::resolveAutomationAtTime(this, tracksrc.gainAutomation, processingPosLatencyCompensate, &fGainRaw);
-                        if (bSuccess) {
-                            /* Calculate audio/midi tracks gain level */
-                            float fGainTrack;
-                            if (dsp_util::getGainLvl(fGainRaw, fGainTrack)) {
-                                channelnum_t dstChannelCount = blockIn->channels;
-                                if (effNode.type == DAW::track_node_type_t::EFFECT) {
-                                    for (auto& desc : effNode.effectOptional->inputChannelsDesc) {
-                                        if (desc.offset == tracksrc.channel.dstChannelOffset) {
-                                            dstChannelCount = desc.count;
-                                            break;
-                                        }
-                                    }
-                                }
-                                auto blockInOffset = blockIn->SubChannelsBlock(tracksrc.channel.dstChannelOffset, dstChannelCount);
-                                if (delayToMaxInputLatency > 0) {
-                                    dbgassert(delayLine);
-                                    blockInOffset.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, fGainTrack);
-                                } else {
-                                    blockInOffset.addFromOp(&srcBlock, AudioBlock::mix_op::ADD, fGainTrack);
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    log_printf("effect %s has no connected input\n", StringAsCStr(effect->getName()));
-                }
-            }
-
             timer.reset();
+            MixInputs(this, effNode, this->impl, blockIn, allSources, numChannelsTrack, effNode.inputLatency, processingPosLatencyCompensate, nullptr);
             AudioBlock* blockPostProcess = nullptr;
             int64_t timePassed = 0;
             if (effect) {

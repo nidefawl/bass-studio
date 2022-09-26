@@ -152,7 +152,7 @@ struct clip_recorder {
     void recordNoteEvents(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, const std::vector<noteevent_t>& noteEventsProcessed);
     bool writeRecordedData(project_controller_t* project, track_impl_t* trImpl, audiocache* cache, DawInstance* daw);
 };
-struct audio_stage_t {
+struct audio_stage_t : public IDelayLineStorage {
     /**
      * Internal pre-process per-block input buffer
      * guaranteed to have at least 2 channels
@@ -241,7 +241,7 @@ struct audio_stage_t {
             addAll(out_effects, deferredEffects);
         }
     }
-    DelayLine* getEffectDelayLine(uint32_t id) {
+    DelayLine* getProcessingDelayLine(uint32_t id) override {
         // no lock required here
         // std::lock_guard<mutex> hold(mtx);
         if (!effDelayLines.count(id)) {

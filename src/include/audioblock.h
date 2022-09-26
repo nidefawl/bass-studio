@@ -307,4 +307,9 @@ public:
     }
 };
 
+struct IDelayLineStorage {
+    public:
+    virtual ~IDelayLineStorage() = default;
+    virtual DelayLine* getProcessingDelayLine(uint32_t id) = 0;
+};
 void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplecount_t delay);

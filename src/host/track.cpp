@@ -1577,7 +1577,11 @@ namespace DAW {
                 if (resolveAutomatableRef(host, ref.snapshot, &at)) {
                     auto* atData = at->getRegisteredAutomation(ref.snapshot.paramIdx);
                     if (atData) {
-                        *fOut = atData->getValueAt(atTime);
+                        if (atData->isActive()) {
+                            *fOut = atData->getValueAt(atTime);
+                        } else {
+                            *fOut = at->getParamValue(ref.snapshot.paramIdx);
+                        }
                         return true;
                     }
                 }
