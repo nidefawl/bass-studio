@@ -773,10 +773,10 @@ void PluginManager::activateDeferred(effectbase* const eff, int flags, effectbas
 } // namespace DAW::Host
 
 void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot) {
-    const std::vector<automationlane_snapshot_t>& atls = snapshot.automationLanes;
+    const std::vector<automatable_param_ref_t>& atls = snapshot.automationLanes;
 
     track_t* const track = entry->track;
-    for (const automationlane_snapshot_t& ref : atls) {
+    for (const automatable_param_ref_t& ref : atls) {
         gui_track_subtrack* al = NULL;
         if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
             if (ref.type == AUTOMATABLE_EFFECT) {
@@ -817,7 +817,7 @@ void loadTrackLayoutSettings(guictr_tracks* guiTracks, track_gui_entry_t* entry,
 void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, track_layout_snapshot_t& snapshot) {
     snapshot.automationLanes.reserve(entry->subtracks.size());
     for (gui_track_subtrack* atl : entry->subtracks) {
-        automationlane_snapshot_t subtrackSnapshot;
+        automatable_param_ref_t subtrackSnapshot;
         if (atl->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
             dbgassert(atl->at);
             subtrackSnapshot = atl->at->toRef();
@@ -1330,7 +1330,7 @@ void track_params_t::loadSnapshot(const track_params_snapshot_t& snapshot) {
 void track_params_t::postSetParameter(int32_t idx, float preVal, float val, int flags) {
     if (flags & FLG_PAR_UPDATE_FINISH) {
         dbgassert(this->audiostage->getTrack());
-        automationlane_snapshot_t ref = toRef();
+        automatable_param_ref_t ref = toRef();
 
         track_t* track    = this->audiostage->getTrack();
         parameter_ref_t p = { track->projectIdx, ref.type, 0, idx };
@@ -1385,8 +1385,8 @@ track_t* track_params_t::getTrack() {
     return audiostage->getTrack();
 }
 
-automationlane_snapshot_t track_params_t::toRef() const {
-    automationlane_snapshot_t ref;
+automatable_param_ref_t track_params_t::toRef() const {
+    automatable_param_ref_t ref;
     ref.type  = AUTOMATABLE_MIXER;
     ref.refId = static_cast<int32_t>(audiostage->stageId.stageId);
     return ref;
@@ -1535,52 +1535,51 @@ namespace DAW {
         }
     }
 
-    bool resolveAutomatableRef(const Host::PluginManager* const host, const automationlane_snapshot_t& ref, automatable_t** out) {
+    automatable_t* resolveAutomatableRefDevice(const Host::PluginManager* const host, const automatable_param_ref_t& ref) {
         if (ref.type == AUTOMATABLE_EFFECT) {
-            effectbase* plugin = host->getPluginById(ref.refId);
-            if (plugin) {
-                *out = plugin;
-                return true;
-            }
-            return false;
+            return host->getPluginById(ref.refId);
         }
         if (ref.type == AUTOMATABLE_MIXER) {
             auto stage = host->getAudioStage(AudioStageRefFromId(ref.refId));
             if (stage) {
-                *out = &stage->mixer;
-                return true;
+                return &stage->mixer;
             }
-            return false;
         }
         if (ref.type == AUTOMATABLE_ARP) {
             auto stage = host->getAudioStage(AudioStageRefFromId(ref.refId));
             if (stage->getTrack() && stage->getTrack()->getStage()) {
                 auto trImpl = stage->getTrack()->getStage();
                 if (trImpl && trImpl->arp) {
-                    *out = trImpl->arp;
-                    return true;
+                    return trImpl->arp;
                 }
             }
-            return false;
         }
-
-        return false;
+        return nullptr;
     }
-    bool resolveAutomationAtTime(const Host::PluginManager* const host, const automation_ref_t& ref, tick_t atTime, float* fOut) {
+    automation_t* resolveAutomationRef(const Host::PluginManager* const host, const automation_routing_t& ref) {
+        if (ref.type == automation_routing_type::ROUTING_PARAM) {
+            automatable_t* at = resolveAutomatableRefDevice(host, ref.refLane);
+            if (at) {
+                return at->getRegisteredAutomation(ref.refLane.paramIdx);
+            }
+        }
+        return nullptr;
+    }
+    bool resolveAutomationAtTime(const Host::PluginManager* const host, const automation_routing_t& ref, tick_t atTime, float* fOut) {
         dbgassert(fOut);
         switch (ref.type) {
-            case 0:
+            case automation_routing_type::ROUTING_NONE:
                 *fOut = ref.val;
                 return true;
-            case 1:
-                automatable_t* at = nullptr;
-                if (resolveAutomatableRef(host, ref.snapshot, &at)) {
-                    auto* atData = at->getRegisteredAutomation(ref.snapshot.paramIdx);
+            case automation_routing_type::ROUTING_PARAM:
+                automatable_t* at = resolveAutomatableRefDevice(host, ref.refLane);
+                if (at) {
+                    auto* atData = at->getRegisteredAutomation(ref.refLane.paramIdx);
                     if (atData) {
                         if (atData->isActive()) {
                             *fOut = atData->getValueAt(atTime);
                         } else {
-                            *fOut = at->getParamValue(ref.snapshot.paramIdx);
+                            *fOut = at->getParamValue(ref.refLane.paramIdx);
                         }
                         return true;
                     }

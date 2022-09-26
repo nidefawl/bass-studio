@@ -80,7 +80,7 @@ public:
      *
      */
     void setParamValue(int32_t idx, float val, int flags) override;
-    automationlane_snapshot_t toRef() const override;
+    automatable_param_ref_t toRef() const override;
     track_t* getTrack() override;
     bool isEnabled() {
         return getParamUnchecked(PARAM_ENABLE)->value >= 0.5f;

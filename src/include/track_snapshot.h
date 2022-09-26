@@ -36,7 +36,7 @@ struct track_impl_snapshot_t {
 };
 struct track_layout_snapshot_t {
     tracklayout_settings_t layout;
-    std::vector<automationlane_snapshot_t> automationLanes;
+    std::vector<automatable_param_ref_t> automationLanes;
 };
 struct track_snapshot_t {
     tracksnapshot_store_opts_t storeOpts;

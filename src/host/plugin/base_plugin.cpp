@@ -351,8 +351,8 @@ float effect_deferred::getParamValue(int32_t idx) {
 }
 void effect_deferred::setParamValue(int32_t idx, float val, int flags) {
 }
-automationlane_snapshot_t effect_deferred::toRef() const {
-    automationlane_snapshot_t ref;
+automatable_param_ref_t effect_deferred::toRef() const {
+    automatable_param_ref_t ref;
     ref.type  = AUTOMATABLE_EFFECT;
     ref.refId = this->projectGlobalId;
     return ref;

@@ -60,7 +60,7 @@ void serialize(Archive& archive, param_snapshot_t& m) {
 }
 
 template<class Archive>
-void serialize(Archive& archive, automationlane_snapshot_t& m) {
+void serialize(Archive& archive, automatable_param_ref_t& m) {
     archive(make_nvp("type", m.type),
         make_nvp("paramIdx", m.paramIdx),
         make_nvp("height", m.height),

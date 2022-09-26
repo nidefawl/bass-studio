@@ -687,7 +687,7 @@ void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags
     if (flags & FLG_PAR_UPDATE_FINISH) {
         dbgassert(this->trackImpl->getTrack());
         track_t* track                = this->trackImpl->getTrack();
-        automationlane_snapshot_t ref = toRef();
+        automatable_param_ref_t ref = toRef();
         parameter_ref_t p             = { track->projectIdx, ref.type, this->projectGlobalId, idx };
         DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
     }
@@ -775,8 +775,8 @@ void vstplugin::recvProgramNameUpdate() {
     }
 }
 
-automationlane_snapshot_t vstplugin::toRef() const {
-    automationlane_snapshot_t ref;
+automatable_param_ref_t vstplugin::toRef() const {
+    automatable_param_ref_t ref;
     ref.type  = AUTOMATABLE_EFFECT;
     ref.refId = this->projectGlobalId;
     return ref;

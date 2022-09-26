@@ -29,10 +29,16 @@
 #include <memory>
 
 
-#define SYNCHRONIZED_RW
 struct AudioBlock;
 namespace DAW::Host {
 class Host;
+
+struct process_scratch_buf_t {
+    VstTimeInfo timeinfo{};
+    hires_timer_t timer;// timer for cpu-time profiling
+    AudioBlock block;
+    std::vector<std::vector<float>> scratchBuffers;
+};
 
 struct host_processing_stats_t {
     int32_t pluginId;
@@ -86,27 +92,27 @@ public:
     project_globals_t prjGlobals;
 
 
-    SYNCHRONIZED_RW std::atomic<int32_t> bypassEffectProcessing{ false };
-    SYNCHRONIZED_RW std::atomic<int32_t> multithreadedProcessing{ 1 };
-    SYNCHRONIZED_RW std::atomic<int32_t> bypassPlaybackProcessing{ false };
-    SYNCHRONIZED_RW std::atomic<int32_t> bypassSampleConversion{ false };
-    SYNCHRONIZED_RW std::atomic<int32_t> cacheAudioGraph{ false };
+    std::atomic<int32_t> bypassEffectProcessing{ false };
+    std::atomic<int32_t> multithreadedProcessing{ 1 };
+    std::atomic<int32_t> bypassPlaybackProcessing{ false };
+    std::atomic<int32_t> bypassSampleConversion{ false };
+    std::atomic<int32_t> cacheAudioGraph{ false };
 #if DAW_DEBUG_AUDIOGRAPH
-    SYNCHRONIZED_RW std::shared_ptr<DAW::track_graph_t> lastTrackGraph;
-    SYNCHRONIZED_RW std::shared_ptr<DAW::processing_graph_t> lastProcessingList;
-    SYNCHRONIZED_RW std::map<audiostageid_i32, std::shared_ptr<DAW::processing_graph_t>> lastProcessingGraphs;
+    std::shared_ptr<DAW::track_graph_t> lastTrackGraph;
+    std::shared_ptr<DAW::processing_graph_t> lastProcessingList;
+    std::map<audiostageid_i32, std::shared_ptr<DAW::processing_graph_t>> lastProcessingGraphs;
 #endif
-    SYNCHRONIZED_RW hires_timer_t timerAudioTick;// timer for cpu-time profiling
-    SYNCHRONIZED_RW hires_timer_t timerBlock;    // timer for cpu-time profiling
-    SYNCHRONIZED_RW hires_timer_t timerProfile;  // timer for cpu-time profiling
+    hires_timer_t timerAudioTick;// timer for cpu-time profiling
+    hires_timer_t timerBlock;    // timer for cpu-time profiling
+    hires_timer_t timerProfile;  // timer for cpu-time profiling
 
 private:
-    SYNCHRONIZED_RW double lastTickEndPos       = 0;
-    SYNCHRONIZED_RW host_stats_t stats{};
-    SYNCHRONIZED_RW host_processing_stats_t processing{ 0 };
+    double lastTickEndPos       = 0;
+    host_stats_t stats{};
+    host_processing_stats_t processing{ 0 };
 
-    SYNCHRONIZED_RW audiothread_ringbuffer_t ringbuffer;
-    SYNCHRONIZED_RW clip_notes_t* midiRealtimeInput;
+    audiothread_ringbuffer_t ringbuffer;
+    clip_notes_t* midiRealtimeInput;
 
 private:
     void processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state);
@@ -136,7 +142,7 @@ public:
     int32_t processRender(project_controller_t* ctrl, int32_t sample, double posDouble);
     int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
     int32_t processGraphNode(process_scratch_buf_t& tmp, track_block_processing_task_t& task) /*const*/;
-    void processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* output, project_globals_t& globals, const double tickLatencyCompensated, const double sampleLatencyCompensated, int32_t numSamples, playback_state state, const effect_processing_graph_t* const processingGraph) const;
+    void processAudio(process_scratch_buf_t& tmp, audio_stage_t* stage, AudioBlock* input, AudioBlock* output, project_globals_t& globals, const double tickLatencyCompensated, const double sampleLatencyCompensated, int32_t numSamples, playback_state state, const effect_processing_graph_t* const processingGraph) const;
 
 
     void unload();

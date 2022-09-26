@@ -21,7 +21,7 @@
 #define AUTOMATABLE_ARP 1
 #define AUTOMATABLE_EFFECT 2
 
-struct automationlane_snapshot_t {
+struct automatable_param_ref_t {
     int32_t type         = -1;
     int32_t refId        = -1;
     int32_t paramIdx     = -1;
@@ -29,7 +29,7 @@ struct automationlane_snapshot_t {
     int32_t subtrackType = 0;
 };
 //TODO: toRef should return this class:
-struct automatble_ref_t {
+struct automatable_ref_t {
     // audio_stage_ref_t trackRef
     // int32_t projectGlobalIdEffectRef
 };
@@ -203,7 +203,7 @@ public:
      *
      */
     virtual void setParamValue(int32_t idx, float val, int flags) = 0;
-    virtual automationlane_snapshot_t toRef() const               = 0;
+    virtual automatable_param_ref_t toRef() const               = 0;
     virtual track_t* getTrack()                                   = 0;
 
     virtual void flipParamValue(int32_t idx) {
@@ -375,20 +375,25 @@ namespace DAW::Host {
     class PluginManager;
 }
 namespace DAW {
-    struct automation_ref_t {
-        int type  = -1;
-        float val = 0.0f;
-        automationlane_snapshot_t snapshot{};
+    enum class automation_routing_type {
+        ROUTING_NONE,
+        ROUTING_PARAM,
     };
-    inline automation_ref_t AutomationRef(const automatable_t* automatable, int32_t paramIdx) {
-        automationlane_snapshot_t subtrackSnapshot;
+    struct automation_routing_t {
+        automation_routing_type type  = automation_routing_type::ROUTING_NONE;
+        float val = 0.0f;
+        automatable_param_ref_t refLane{};
+    };
+    inline automation_routing_t AutomationRef(const automatable_t* automatable, int32_t paramIdx) {
+        automatable_param_ref_t subtrackSnapshot;
         subtrackSnapshot          = automatable->toRef();
         subtrackSnapshot.paramIdx = paramIdx;
-        return automation_ref_t{ 1, 0.0f, subtrackSnapshot };
+        return automation_routing_t{ automation_routing_type::ROUTING_PARAM, 0.0f, subtrackSnapshot };
     }
-    inline automation_ref_t AutomationConstant(float val) {
-        return automation_ref_t{ 0, val, {} };
+    inline automation_routing_t AutomationNone(float val) {
+        return automation_routing_t{ automation_routing_type::ROUTING_NONE, val, {} };
     }
-    bool resolveAutomationAtTime(const DAW::Host::PluginManager* host, const automation_ref_t& ref, tick_t atTime, float* fOut);
-    bool resolveAutomatableRef(const DAW::Host::PluginManager* host, automationlane_snapshot_t& ref, automatable_t** out);
+    bool resolveAutomationAtTime(const DAW::Host::PluginManager* host, const automation_routing_t& ref, tick_t atTime, float* fOut);
+    automatable_t* resolveAutomatableRefDevice(const Host::PluginManager* const host, const automatable_param_ref_t& ref);
+    automation_t* resolveAutomationRef(const Host::PluginManager* const host, const automation_routing_t& ref);
 }// namespace DAW

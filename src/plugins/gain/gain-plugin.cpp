@@ -21,102 +21,11 @@
 #include "meter.h"
 #include "snapshot.h"
 #include "window.h"
+#include "dsp_util.h"
 #include <algorithm>
 #include <vector>
 
 namespace PluginGain {
-    enum class PanLaw {
-        SQRT,
-        SIN_3_0DB,
-        SIN_4_5DB,
-        SIN_6_0DB,
-    };
-    template<PanLaw P>
-    constexpr void calculatePan(float pan, float* pPanL, float* pPanR) {
-        if constexpr (P == PanLaw::SQRT) {
-            const float sqrt2 = sqrt(2.0f);
-            *pPanL = sqrt(1.0f - pan) * sqrt2;
-            *pPanR = sqrt(pan) * sqrt2;
-        } else if constexpr (P == PanLaw::SIN_3_0DB) {
-            *pPanL = sin((1.0f - pan) * FLOAT_HALF_PI);
-            *pPanR = sin(pan *FLOAT_HALF_PI);
-        } else if constexpr (P == PanLaw::SIN_4_5DB) {
-            *pPanL = powf(sin((1.0f - pan) * FLOAT_HALF_PI), 1.5f);
-            *pPanR = powf(sin(pan *FLOAT_HALF_PI), 1.5f);
-        } else if constexpr (P == PanLaw::SIN_6_0DB) {
-            *pPanL = powf(sin((1.0f - pan) * FLOAT_HALF_PI), 2.f);
-            *pPanR = powf(sin(pan *FLOAT_HALF_PI), 2.f);
-        }
-    }
-
-    void multiplyAutomation(AudioBlock* src, AudioBlock* dst, float* pGain, float** pPan) {
-        auto srcSamples = src->samples;
-        auto srcChannels = src->channels;
-        auto channels = dst->channels;
-        auto samples = dst->samples;
-        auto srcBuf = src->buf;
-        auto buf = dst->buf;
-
-        dbgassert(srcSamples <= samples);
-        const auto nSamples  = math::min<samplecount_t>(srcSamples, samples);
-        auto nChannels = math::min<channelnum_t>(srcChannels, channels);
-        float srcGain      = 1.0f;
-        if (srcChannels == 2 && channels == 1) {
-            srcGain   = 0.5f;
-            nChannels = 2;
-        }
-        if (srcChannels == 1 && channels == 2) {
-            nChannels = 2;
-        }
-        for (channelnum_t i = 0; i < nChannels; i++) {
-            channelnum_t srcChannelIdx = srcChannels < 1 ? 0 : i % srcChannels;
-            channelnum_t dstChannelIdx = channels < 1 ? 0 : i % channels;
-            auto   srcBufChannel   = srcBuf[srcChannelIdx];
-            float* dstBufChannel   = buf[dstChannelIdx];
-            float* gain = pGain;
-            float* panChannel = pPan[i % 2];
-            for (samplecount_t j = 0; j < nSamples; j++) {
-                dstBufChannel[j] = srcBufChannel[j] * srcGain * (*gain++) * (*panChannel++);
-            }
-        }
-    }
-
-    void multiplyConstant(AudioBlock* src, AudioBlock* dst, float gain, float pan) {
-        auto srcSamples = src->samples;
-        auto srcChannels = src->channels;
-        auto channels = dst->channels;
-        auto samples = dst->samples;
-        auto srcBuf = src->buf;
-        auto buf = dst->buf;
-
-        dbgassert(srcSamples <= samples);
-        const auto nSamples  = math::min<samplecount_t>(srcSamples, samples);
-        auto nChannels = math::min<channelnum_t>(srcChannels, channels);
-        float srcGain      = 1.0f;
-        if (srcChannels == 2 && channels == 1) {
-            srcGain   = 0.5f;
-            nChannels = 2;
-        }
-        if (srcChannels == 1 && channels == 2) {
-            nChannels = 2;
-        }
-        // float sqrt2    = sqrt(2.0f);
-        // float panLR[2] = {
-        //     float(sqrt(1.0 - double(pan))) * sqrt2,
-        //     float(sqrt(double(pan))) * sqrt2,
-        // };
-        float panLR[2];
-        calculatePan<PanLaw::SIN_4_5DB>(pan, &panLR[0], &panLR[1]);
-        for (channelnum_t i = 0; i < nChannels; i++) {
-            channelnum_t srcChannelIdx = srcChannels < 1 ? 0 : i % srcChannels;
-            channelnum_t dstChannelIdx = channels < 1 ? 0 : i % channels;
-            auto   srcBufChannel   = srcBuf[srcChannelIdx];
-            float* dstBufChannel   = buf[dstChannelIdx];
-            for (samplecount_t j = 0; j < nSamples; j++) {
-                dstBufChannel[j] = srcBufChannel[j] * srcGain * gain * panLR[i % 2];
-            }
-        }
-    }
 
     struct impl_data_t {
         std::vector<float> vecGain;
@@ -158,6 +67,7 @@ namespace PluginGain {
 
         auto autParGain = getActiveAutomation(PARAM_GAIN);
         auto autParPan = getActiveAutomation(PARAM_PAN);
+        out->clear();
         // fast path: no sample accurate automation
         if (!autParGain && !autParPan) {
             /* Calculate group gain level */
@@ -165,14 +75,12 @@ namespace PluginGain {
             if (dsp_util::getGainLvlWithRange(getParamValue(PARAM_GAIN), MTR_CEIL, DBFS_MUTE_POS, fGain)) {
                 // fast path: center pan
                 if (math::abs(getParamValue(PARAM_PAN) - 0.5f) < 0.005f) {
-                    out->clear();
                     out->addFromOp(in, AudioBlock::mix_op::ADD, fGain);
                 } else {
-                    multiplyConstant(in, out, fGain, getParamValue(PARAM_PAN));
+                    DAW::Panning::MultiplyConstant(in, out, fGain, getParamValue(PARAM_PAN));
                 }
             } else {
                 // fast path: fully muted
-                out->clear();
             }
             return;
         }
@@ -195,10 +103,10 @@ namespace PluginGain {
         }
         for (int32_t i = 0; i < numSamples; i++) {
             dsp_util::getGainLvlWithRange(impl->vecGain[i], MTR_CEIL, DBFS_MUTE_POS, impl->vecGain[i]);
-            calculatePan<PanLaw::SIN_4_5DB>(impl->vecPanL[i], &impl->vecPanL[i], &impl->vecPanR[i]);
+            DAW::Panning::CalculatePanning<DAW::Panning::PanLaw::SIN_4_5DB>(impl->vecPanL[i], &impl->vecPanL[i], &impl->vecPanR[i]);
         }
         float* panningData[2] = { impl->vecPanL.data(), impl->vecPanR.data() };
-        multiplyAutomation(in, out, impl->vecGain.data(), panningData);
+        DAW::Panning::MultiplyAutomation(in, out, impl->vecGain.data(), panningData);
 
     }
     param_converted_t module_gain::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {

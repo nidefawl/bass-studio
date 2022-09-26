@@ -248,7 +248,7 @@ public:
     String getAutomatableName() override;
     float getParamValue(int32_t idx) override;
     void setParamValue(int32_t idx, float val, int flags) override;
-    automationlane_snapshot_t toRef() const override;
+    automatable_param_ref_t toRef() const override;
 
     static std::shared_ptr<effect_deferred> fromEffect(effectbase* eff);
     String getDfrdPluginName() const;

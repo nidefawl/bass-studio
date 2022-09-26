@@ -77,7 +77,7 @@ public:
     String getAutomatableName() override;
     float getParamValue(int32_t idx) override;
     void setParamValue(int32_t idx, float val, int flags) override;
-    automationlane_snapshot_t toRef() const override;
+    automatable_param_ref_t toRef() const override;
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override { };
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;

@@ -451,7 +451,7 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginH
                 auto newVal = effParam->value;
                 auto oldVal = plugin->handle->paramEditing.valBefore;
                 track_t* track                = plugin->trackImpl->getTrack();
-                automationlane_snapshot_t ref = plugin->toRef();
+                automatable_param_ref_t ref = plugin->toRef();
                 parameter_ref_t p             = { track->projectIdx, ref.type, plugin->projectGlobalId, effParam->idx };
                 DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, oldVal, newVal));
 

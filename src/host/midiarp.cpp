@@ -263,7 +263,7 @@ void midiarp::postSetParameter(int32_t idx, float preVal, float val, int flags) 
     if (flags & FLG_PAR_UPDATE_FINISH) {
         dbgassert(this->trackImpl->getTrack());
         track_t* track                = this->trackImpl->getTrack();
-        automationlane_snapshot_t ref = toRef();
+        automatable_param_ref_t ref = toRef();
         parameter_ref_t p             = { track->projectIdx, ref.type, 0, idx };
         DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
     }

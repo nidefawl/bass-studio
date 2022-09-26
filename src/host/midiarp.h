@@ -158,8 +158,8 @@ public:
         }
     }
 
-    automationlane_snapshot_t toRef() const override {
-        automationlane_snapshot_t ref;
+    automatable_param_ref_t toRef() const override {
+        automatable_param_ref_t ref;
         ref.type  = AUTOMATABLE_ARP;
         ref.refId = static_cast<int32_t>(trackImpl->stageId.stageId);
         return ref;

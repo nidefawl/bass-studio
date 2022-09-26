@@ -53,7 +53,7 @@ public:
     float getParamValue(int32_t idx) override;
     param_unit_t getParamValueDisplay(int32_t idx) override;
     void setParamValue(int32_t idx, float val, int flags) override;
-    automationlane_snapshot_t toRef() const override;
+    automatable_param_ref_t toRef() const override;
 
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override;

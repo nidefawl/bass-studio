@@ -57,8 +57,8 @@ void auplugin::setParamValue(int32_t idx, float val, int flags) {
     }
 }
 
-automationlane_snapshot_t auplugin::toRef() const {
-    automationlane_snapshot_t ref;
+automatable_param_ref_t auplugin::toRef() const {
+    automatable_param_ref_t ref;
     ref.type  = AUTOMATABLE_EFFECT;
     ref.refId = this->projectGlobalId;
     return ref;

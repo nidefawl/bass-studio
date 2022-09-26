@@ -167,11 +167,12 @@ void guimodule_group::buttonClicked(guibase* _button) {
 
 struct module_group::internal_handles_t {
     std::unique_ptr<guimodule_group> gui;
+    DAW::Host::process_scratch_buf_t scratch;
 };
 
 module_group::module_group(int32_t _projectGlobalId, IHostCallback* _hostCallback)
     : internalplugin("Group", PLUGIN_TYPE_GROUP, _projectGlobalId, _hostCallback),
-      handle(new module_group::internal_handles_t{ nullptr }),
+      handle(new module_group::internal_handles_t{ nullptr, {} }),
       audio(nullptr)
 {
     bCanReceiveMidi = true;
@@ -295,8 +296,8 @@ void module_group::process(AudioBlock* in, AudioBlock* out, double tick, double 
         log_lf(Log::L_ERROR, "Failed building effect graph\n");
     }
     auto host = daw_tls::getTls().host;
-    host->processAudio(audio, &audio->input, &audio->output, host->prjGlobals, tick, samplePos, numSamples, state, effProcessingGraph.get());
-    lastEffProcessingGraph = effProcessingGraph;;
+    host->processAudio(handle->scratch, audio, &audio->input, &audio->output, host->prjGlobals, tick, samplePos, numSamples, state, effProcessingGraph.get());
+    lastEffProcessingGraph = effProcessingGraph;
 #ifdef DAW_DEBUG_TRACK_GRAPHS
     //TODO: this code path runs on a workerthread. Store processing-graph add to pluginhost::lastProcessingGraphs from playback-thread
 #endif

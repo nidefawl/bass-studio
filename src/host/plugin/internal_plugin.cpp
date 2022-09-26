@@ -107,7 +107,7 @@ void internalplugin::postSetParameter(int32_t idx, float preVal, float val, int 
     if (flags & FLG_PAR_UPDATE_FINISH) {
         track_t* track = this->trackImpl ?  this->trackImpl->getTrack() : nullptr;
         if (track) {
-            automationlane_snapshot_t ref = toRef();
+            automatable_param_ref_t ref = toRef();
             parameter_ref_t p             = { track->projectIdx, ref.type, this->projectGlobalId, idx };
             DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
         }
@@ -125,8 +125,8 @@ void internalplugin::postProcess(AudioBlock* out, int32_t samples, bool hasProce
     meterIn.update(this->blockInputs, 1.0f);
     meter.update(out, 1.0f);
 }
-automationlane_snapshot_t internalplugin::toRef() const {
-    automationlane_snapshot_t ref;
+automatable_param_ref_t internalplugin::toRef() const {
+    automatable_param_ref_t ref;
     ref.type  = AUTOMATABLE_EFFECT;
     ref.refId = this->projectGlobalId;
     return ref;

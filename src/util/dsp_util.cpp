@@ -248,4 +248,75 @@ float distancePointLine(const vec2 pt, const vec2 a, const vec2 b) {
     return glm::distance(vec2(pt), p);
 }
 
-} // namespace math
+}// namespace math
+
+namespace DAW::Panning {
+    void MultiplyConstant(AudioBlock* src, AudioBlock* dst, float gain, float pan) {
+        auto srcSamples  = src->samples;
+        auto srcChannels = src->channels;
+        auto channels    = dst->channels;
+        auto samples     = dst->samples;
+        auto srcBuf      = src->buf;
+        auto buf         = dst->buf;
+
+        dbgassert(srcSamples <= samples);
+        const auto nSamples = math::min<samplecount_t>(srcSamples, samples);
+        auto nChannels      = math::min<channelnum_t>(srcChannels, channels);
+        float srcGain       = 1.0f;
+        if (srcChannels == 2 && channels == 1) {
+            srcGain   = 0.5f;
+            nChannels = 2;
+        }
+        if (srcChannels == 1 && channels == 2) {
+            nChannels = 2;
+        }
+        // float sqrt2    = sqrt(2.0f);
+        // float panLR[2] = {
+        //     float(sqrt(1.0 - double(pan))) * sqrt2,
+        //     float(sqrt(double(pan))) * sqrt2,
+        // };
+        float panLR[2];
+        CalculatePanning<PanLaw::SIN_4_5DB>(pan, &panLR[0], &panLR[1]);
+        for (channelnum_t i = 0; i < nChannels; i++) {
+            channelnum_t srcChannelIdx = srcChannels < 1 ? 0 : i % srcChannels;
+            channelnum_t dstChannelIdx = channels < 1 ? 0 : i % channels;
+            auto srcBufChannel         = srcBuf[srcChannelIdx];
+            float* dstBufChannel       = buf[dstChannelIdx];
+            for (samplecount_t j = 0; j < nSamples; j++) {
+                dstBufChannel[j] += srcBufChannel[j] * srcGain * gain * panLR[i % 2];
+            }
+        }
+    }
+    void MultiplyAutomation(AudioBlock* src, AudioBlock* dst, float* pGain, float** pPan) {
+        auto srcSamples  = src->samples;
+        auto srcChannels = src->channels;
+        auto channels    = dst->channels;
+        auto samples     = dst->samples;
+        auto srcBuf      = src->buf;
+        auto buf         = dst->buf;
+
+        dbgassert(srcSamples <= samples);
+        const auto nSamples = math::min<samplecount_t>(srcSamples, samples);
+        auto nChannels      = math::min<channelnum_t>(srcChannels, channels);
+        float srcGain       = 1.0f;
+        if (srcChannels == 2 && channels == 1) {
+            srcGain   = 0.5f;
+            nChannels = 2;
+        }
+        if (srcChannels == 1 && channels == 2) {
+            nChannels = 2;
+        }
+        for (channelnum_t i = 0; i < nChannels; i++) {
+            channelnum_t srcChannelIdx = srcChannels < 1 ? 0 : i % srcChannels;
+            channelnum_t dstChannelIdx = channels < 1 ? 0 : i % channels;
+            auto srcBufChannel         = srcBuf[srcChannelIdx];
+            float* dstBufChannel       = buf[dstChannelIdx];
+            float* gain                = pGain;
+            float* panChannel          = pPan[i % 2];
+            for (samplecount_t j = 0; j < nSamples; j++) {
+                dstBufChannel[j] += srcBufChannel[j] * srcGain * (*gain++) * (*panChannel++);
+            }
+        }
+    }
+
+} // namespace DAW::Panning
