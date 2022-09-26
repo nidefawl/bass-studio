@@ -1321,6 +1321,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     trackImpl->outputPost.clear();
 
 
+    /* Mix outputPos, applies track gain and panning */
     {
         float fGainTrackLin = trackImpl->mixer.getParamValue(PARAM_GAIN);
         float fPanTrack = trackImpl->mixer.getParamValue(PARAM_PAN);
@@ -1335,16 +1336,14 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
         if (!autParPan && fPanTrack != 0.5f) {
             bFixedGainAndPan = false;
         }
-        auto& blockMixToOffset = trackImpl->outputPost;//->SubChannelsBlock(tracksrc.channel.dstChannelOffset, dstChannelCount);
         if (bFixedGainAndPan) {
             /* Fast path */
             if (bIsNotMuted) {
-                blockMixToOffset.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, fGainTrack);
+                trackImpl->outputPost.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, fGainTrack);
             }
         } else {
-            MixWithGainAndPanAutomation(tmp, &trackImpl->output, &blockMixToOffset, fGainTrack, fPanTrack, autParGain, autParPan, processingPos, tickBlockEnd);
+            MixWithGainAndPanAutomation(tmp, &trackImpl->output, &trackImpl->outputPost, fGainTrack, fPanTrack, autParGain, autParPan, processingPos, tickBlockEnd);
         }
-        // trackImpl->outputPost.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainTrack));
     }
 
     /* Store block in audioOutput memory */
