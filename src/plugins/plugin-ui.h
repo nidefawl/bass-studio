@@ -121,7 +121,7 @@ public:
 
     void onSetParameter(int32_t index, float value) {
     }
-    void getSizeScale(int& w, int& h) const {
+    virtual void getSizeScale(int& w, int& h) const {
         w = 100*knobs.size();
         h = 300;
     }

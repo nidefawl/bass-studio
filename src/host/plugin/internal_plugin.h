@@ -74,7 +74,7 @@ public:
     // automatable_t interface
     String getAutomatableName() override;
     float getParamValue(int32_t idx) override;
-    void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override { };
+    void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override { out->copyFrom(in); };
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
     virtual void processMidiMessages(std::vector<IMidiMsg>& midiEvents) { };
     void processMidi(midi_events_t& midiEvents) override;
