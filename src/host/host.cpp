@@ -670,6 +670,7 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
                 if (bFixedGainAndPan) {
                     /* Fast path */
                     if (bIsNotMuted) {
+                        fGainTrack *= DAW::Panning::GetCenterGain();
                         if (delayToMaxInputLatency > 0) {
                             dbgassert(delayLine);
                             blockMixToOffset.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, fGainTrack);
@@ -1359,6 +1360,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
         if (bFixedGainAndPan) {
             /* Fast path */
             if (bIsNotMuted) {
+                fGainTrack *= DAW::Panning::GetCenterGain();
                 trackImpl->outputPost.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, fGainTrack);
             }
         } else {

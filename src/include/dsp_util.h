@@ -71,11 +71,26 @@ namespace DAW::Panning {
             *pPanR = sin(pan *FLOAT_HALF_PI);
         } else if constexpr (P == PanLaw::SIN_4_5DB) {
             *pPanL = powf(sin((1.0f - pan) * FLOAT_HALF_PI), 1.5f);
-            *pPanR = powf(sin(pan *FLOAT_HALF_PI), 1.5f);
+            *pPanR = powf(sin(pan * FLOAT_HALF_PI), 1.5f);
         } else if constexpr (P == PanLaw::SIN_6_0DB) {
             *pPanL = powf(sin((1.0f - pan) * FLOAT_HALF_PI), 2.f);
-            *pPanR = powf(sin(pan *FLOAT_HALF_PI), 2.f);
+            *pPanR = powf(sin(pan * FLOAT_HALF_PI), 2.f);
         }
+    }
+    template<PanLaw P>
+    constexpr float CenterGain() {
+        if constexpr (P == PanLaw::SQRT) {
+            return 1.0f;
+        } else if constexpr (P == PanLaw::SIN_3_0DB) {
+            return 0.70710678118654752440084436210485f;
+        } else if constexpr (P == PanLaw::SIN_4_5DB) {
+            return 0.59460355750136053336;
+        } else if constexpr (P == PanLaw::SIN_6_0DB) {
+            return 0.5f;
+        }
+    }
+    constexpr float GetCenterGain() {
+        return CenterGain<PanLaw::SIN_4_5DB>();
     }
 
     void MultiplyAutomation(AudioBlock* src, AudioBlock* dst, float* pGain, float** pPan);

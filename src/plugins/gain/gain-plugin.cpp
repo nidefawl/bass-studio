@@ -75,6 +75,7 @@ namespace PluginGain {
             if (dsp_util::getGainLvlWithRange(getParamValue(PARAM_GAIN), MTR_CEIL, DBFS_MUTE_POS, fGain)) {
                 // fast path: center pan
                 if (math::abs(getParamValue(PARAM_PAN) - 0.5f) < 0.005f) {
+                    fGain *= DAW::Panning::GetCenterGain();
                     out->addFromOp(in, AudioBlock::mix_op::ADD, fGain);
                 } else {
                     DAW::Panning::MultiplyConstant(in, out, fGain, getParamValue(PARAM_PAN));
