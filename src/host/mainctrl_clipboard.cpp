@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 
+#include "assert_dbg.h"
 #include "mainctrl.h"
 #include "math/seq_math.h"
 #include "project.h"
@@ -17,6 +18,7 @@
 #include "gui/gui.h"
 #include "gui/track/trackctr.h"
 #include "gui/track/trackcontent.h"
+#include "track_impl.h"
 
 
 
@@ -42,7 +44,7 @@ void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_
 
 namespace DAW {
 
-    void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick) {
+    void pasteFullClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick, bool pasteAutomation) {
         tick_t tickOffset  = tick - clipboard->srcPos;
         tick_t trackOffset = track;
         for (int i = 0; i <= clipboard->selTrackRange; i++) {
@@ -63,15 +65,24 @@ namespace DAW {
                 midi.addClip(cloned);
             }
             midi.sortClips();
-            //}
+            auto& automations = trClipboard->automations;
+            for (automation_clipboard_t& automClipboard : automations) {
+                auto device = tr->track->getStage()->resolveAutomatableRefDevice(automClipboard.paramRef);
+                if (device) {
+                    auto automation = device->getOrCreateAutomation(automClipboard.paramRef.paramIdx);
+                    if (automation) {
+                        automation->setRange(tick, tick + clipboard->selRange, automClipboard.dataPoints);
+                    }
+                }
+            }
         }
     }
 
-    void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, DAW::Cursor& cursor) {
+    void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, DAW::Cursor& cursor, bool pasteAutomation) {
         if (clipboard->type == clip_clipboard::ClipboardFull) {
             if (cursor.isSubtrackSelection())
                 return;
-            pasteClipboard(trackList, clipboard, cursor.getTrackBegin(), cursor.getTickBegin());
+            pasteFullClipboard(trackList, clipboard, cursor.getTrackBegin(), cursor.getTickBegin(), pasteAutomation);
         } else if (clipboard->type == clip_clipboard::ClipboardAutomation) {
             if (!cursor.isSubtrackSelection())
                 return;
@@ -85,11 +96,11 @@ namespace DAW {
                     int32_t subTrackIdx = subTrackOffset + i;
                     if (tr->validSubtrack(subTrackIdx)) {
                         gui_track_subtrack* subtrack          = tr->subtracks[subTrackIdx];
-                        std::vector<automation_point_t>& data = clipboard->automationLanes[i];
-                        if (!data.empty() && subtrack->at) {
+                        auto& automClipboard = clipboard->automationLanes[i];
+                        if (!automClipboard.dataPoints.empty() && subtrack->at) {
                             automation_t* automation = subtrack->at->getOrCreateAutomation(subtrack->param);
                             if (automation) {
-                                automation->setRange(tickBegin, tickBegin + tickLen, data);
+                                automation->setRange(tickBegin, tickBegin + tickLen, automClipboard.dataPoints);
                             }
                         }
                     }
@@ -162,7 +173,7 @@ namespace DAW {
         return clipboard;
     }
 
-    std::shared_ptr<clip_clipboard> copySelection(const track_gui_manager_i& trackList, const DAW::Cursor& _cursor) {
+    std::shared_ptr<clip_clipboard> copySelection(const track_gui_manager_i& trackList, const DAW::Cursor& _cursor, bool copyAutomation) {
         auto clipboard = std::make_shared<clip_clipboard>();
 
         int32_t tickBegin     = _cursor.getTickBegin();
@@ -188,33 +199,61 @@ namespace DAW {
                             automation = automatable->getRegisteredConstAutomation(subtrack->param);
                         }
 
-                        std::vector<automation_point_t> data;
                         if (automation) {
+                            automation_clipboard_t automationClipboard;
+                            automationClipboard.start     = tickBegin;
+                            automationClipboard.len       = tickEnd - tickBegin;
+                            automationClipboard.paramRef = automatable->toRef();
+                            automationClipboard.paramRef.paramIdx = subtrack->param;
+                            std::vector<automation_point_t> data;
                             automation->copyRange(tickBegin, tickEnd, data);
+                            automationClipboard.dataPoints = std::move(data);
+                            dbgassert(automationClipboard.paramRef.paramIdx > -1);
+                            clipboard->automationLanes.push_back(std::move(automationClipboard));
                         }
-                        clipboard->automationLanes.push_back(std::move(data));
                     }
                 }
             }
-        } else {
+        }
+        if (!_cursor.isSubtrackSelection()) {
             clipboard->selTrackRange = trackEnd - trackBegin;
             clipboard->selRange      = tickEnd - tickBegin;
             clipboard->type          = clip_clipboard::ClipboardFull;
             for (int i = 0; i <= clipboard->selTrackRange; i++) {
                 track_clipboard_t trackClipboard;
+                std::vector<automation_clipboard_t> automationLanes;
                 if (trackList.validTrackIdx(trackBegin + i)) {
                     const track_gui_entry_t* tr = trackList.at(trackBegin + i);
-                    //                if (tr->type == TRACK_TYPE_MIDI) {
                     copyClipsInRange(tr->track->getConstMidi(), trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
-                    //                }
+                    auto trackImpl = tr->track->getStage();
+                    std::vector<automatable_t*> targets;
+                    trackImpl->getAutomatableTrackTargets(targets);
+                    std::vector<automated_param_t> allParams;
+                    for (auto& automatable : targets) {
+                        allParams.clear();
+                        automatable->getAllAutomatedParams(allParams);
+                        for (const auto& automation : allParams) {
+                            std::vector<automation_point_t> data;
+                            automation.src.copyRange(tickBegin, tickEnd, data);
+                            automation_clipboard_t automationClipboard;
+                            automationClipboard.dataPoints = std::move(data);
+                            automationClipboard.start     = tickBegin;
+                            automationClipboard.len       = tickEnd - tickBegin;
+                            automationClipboard.paramRef = automatable->toRef();
+                            automationClipboard.paramRef.paramIdx = automation.paramIdx;
+                            dbgassert(automationClipboard.paramRef.paramIdx > -1);
+                            automationLanes.push_back(std::move(automationClipboard));
+                        }
+                    }
                 }
+                trackClipboard.automations = std::move(automationLanes);
                 clipboard->tracks.push_back(std::make_shared<track_clipboard_t>(std::move(trackClipboard)));
             }
         }
         return clipboard;
     }
 
-    void cutSelection(track_gui_manager_i& trackList, const DAW::Cursor& _cursor) {
+    void cutSelection(track_gui_manager_i& trackList, const DAW::Cursor& _cursor, bool cutAutomation) {
         int32_t tickBegin  = _cursor.getTickBegin();
         int32_t tickEnd    = _cursor.getTickEnd();
         int32_t trackBegin = _cursor.getTrackBegin();
@@ -225,6 +264,7 @@ namespace DAW {
                     track_gui_entry_t* tr = trackList.atNC(i);
                     //if (tr->track->type == TRACK_TYPE_MIDI) {
                     cutIntersectingClips(tr->track->getMidi(), tickBegin, tickEnd, DawInstance::get());
+                    // we don't cut automation for now
                     //}
                 }
             }

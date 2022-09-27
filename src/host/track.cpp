@@ -1890,3 +1890,15 @@ void clip_recorder::recordNoteEvents(playback_state state, tick_t tickBlockStart
     this->notesProcessed |= notesProcessed;
 
 }
+automatable_t* track_impl_t::resolveAutomatableRefDevice(const automatable_param_ref_t& ref) {
+    if (ref.type == AUTOMATABLE_EFFECT) {
+        return getPluginById(ref.refId);
+    }
+    if (ref.type == AUTOMATABLE_MIXER) {
+        return &mixer;
+    }
+    if (ref.type == AUTOMATABLE_ARP) {
+        return arp;
+    }
+    return nullptr;
+}

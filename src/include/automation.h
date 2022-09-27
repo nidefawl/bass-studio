@@ -73,6 +73,7 @@ struct automation_clipboard_t {
     tick_t start;
     tick_t len;
     std::vector<automation_point_t> dataPoints;
+    automatable_param_ref_t paramRef; 
 };
 
 struct automated_param_t {

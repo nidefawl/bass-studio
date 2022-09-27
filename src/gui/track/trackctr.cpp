@@ -1,6 +1,7 @@
 #include <nanovg.h>
 #include "assert_dbg.h"
 #include "str_util.h"
+#include "tls.h"
 #include "trackctr.h"
 #include "math/seq_math.h"
 #include "gui/gui.h"
@@ -739,6 +740,9 @@ track_gui_entry_t* getParentOf(track_gui_entry_t* t) {
 
 
 void guitrack_topleft::buttonClicked(guibase* _button) {
+    if (_button == &btnCopyAutomation) {
+        daw_tls::getTls().runtime->copyAutomation = !daw_tls::getTls().runtime->copyAutomation;
+    }
     if (_button == &btnFoldAll) {
         isFolded = !isFolded;
 
@@ -753,4 +757,28 @@ void guitrack_topleft::buttonClicked(guibase* _button) {
 }
 void guictr_tracks::onChildLayoutChanged(guibase* g) {
     layout();
+}
+guitrack_topleft::guitrack_topleft(guictr_tracks& _ctrTracks, DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, project_t& _project)
+    : guictr_base(),
+      ctrTracks(_ctrTracks),
+      iGuiMgr(_iGuiMgr),
+      project(_project) {
+    (void) ctrTracks;
+    (void) project;
+    this->dawCtrl = _dawCtrl;
+    padding       = 0;
+    //btnFoldAll.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);
+    btnFoldAll.setLabel("Fold All Tracks");
+    btnFoldAll.icon = ICON_ARR_RIGHT;
+    btnFoldAll.setStateRef(&isFolded);
+    btnFoldAll.getIcon = [gtl = this] { return gtl->isFolded ? ICON_ARR_RIGHT : ICON_ARR_DOWN; };
+    btnCopyAutomation.setLabel("Copy+Paste Automation");
+    btnCopyAutomation.icon = ICON_AUTOMATION;
+    btnCopyAutomation.setStateRef(&daw_tls::getTls().runtime->copyAutomation);
+    // btnCopyAutomation.getIcon = [gtl = this] { return gtl->isFolded ? ICON_AUTOMATION : ICON_AUTOMATION; };
+    guiButtons.push_back(&btnFoldAll);
+    guiButtons.push_back(&btnCopyAutomation);
+    for (auto guiBtn : guiButtons) {
+        add(guiBtn);
+    }
 }

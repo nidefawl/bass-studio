@@ -105,11 +105,11 @@ public:
 };
 
 namespace DAW {
-    std::shared_ptr<clip_clipboard> copySelection(const track_gui_manager_i& trackList, const Cursor& _cursor);
+    std::shared_ptr<clip_clipboard> copySelection(const track_gui_manager_i& trackList, const Cursor& _cursor, bool copyAutomation);
     std::shared_ptr<clip_clipboard> consolidateClipboard(std::shared_ptr<clip_clipboard>& clipboardIn, const Cursor& _cursor);
-    void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick);
-    void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, Cursor& cursor);
-    void cutSelection(track_gui_manager_i& trackList, const Cursor& cursor);
+    void pasteFullClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick, bool pasteAutomation);
+    void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, Cursor& cursor, bool pasteAutomation);
+    void cutSelection(track_gui_manager_i& trackList, const Cursor& cursor, bool cutAutomation);
     void muteIntersecting(track_gui_manager_i& trackList, const Cursor& _cursor);
     void GetProjectReferencedSampleIds(const project_t& project, std::vector<int32_t>& uniqueSampleIds);
     String MakeUniqueTrackName(project_t* project, const String& strNewName);

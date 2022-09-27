@@ -1,3 +1,5 @@
+#include "appconfig.h"
+#include "tls.h"
 #include "trackctr.h"
 #include <utility>
 #include <vector>
@@ -157,6 +159,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
         bool modified        = false;
         bool handledKeyinput = false;
         String desc          = "???";
+        bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
         if (kevt.type == K_PRESS) {
             if (isKC(KC_SELECTALL, kevt)) {
                 tick_t evtMin            = INVALID_TICK;
@@ -191,22 +194,22 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
                 int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
                 project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
                 preModifyState.cursor = cursor;
-                DAW::cutSelection(iGuiMgr, cursor);
+                DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
                 handledKeyinput = true;
                 modified        = true;
                 desc            = "Delete clips";
             } else if (isKC(KC_CUT, kevt) && cursor.getRange()) {
-                m_clipboard      = DAW::copySelection(iGuiMgr, cursor);
+                m_clipboard      = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
                 int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
                 int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
                 project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
                 preModifyState.cursor = cursor;
-                DAW::cutSelection(iGuiMgr, cursor);
+                DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
                 handledKeyinput = true;
                 modified        = true;
                 desc            = "Cut clips";
             } else if (isKC(KC_MUTE, kevt) && cursor.getRange()) {
-                m_clipboard      = DAW::copySelection(iGuiMgr, cursor);
+                m_clipboard      = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
                 int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
                 int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
                 project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
@@ -217,7 +220,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
                 modified        = true;
                 desc            = "Mute clips";
             } else if (isKC(KC_COPY, kevt) && cursor.getRange()) {
-                m_clipboard     = DAW::copySelection(iGuiMgr, cursor);
+                m_clipboard     = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
                 handledKeyinput = true;
             } else if (isKC(KC_CONSOLIDATE, kevt) && cursor.getRange() && !cursor.isSubtrackSelection()) {
                 int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
@@ -225,12 +228,12 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
                 project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
                 preModifyState.cursor = cursor;
                 /* maybe do    this->clipboard = copy */
-                std::shared_ptr<clip_clipboard> clipboardCopy         = DAW::copySelection(iGuiMgr, cursor);
+                std::shared_ptr<clip_clipboard> clipboardCopy         = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
                 std::shared_ptr<clip_clipboard> clipboardConsolidated = DAW::consolidateClipboard(clipboardCopy, cursor);
                 cursor.setLeftAligned();
                 //cursor.cursorPos += cursor.getRange();
-                DAW::cutSelection(iGuiMgr, cursor);
-                DAW::pasteClipboard(iGuiMgr, clipboardConsolidated.get(), cursor);
+                DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
+                DAW::pasteClipboard(iGuiMgr, clipboardConsolidated.get(), cursor, bCopyAutomation);
                 grid.makeTickVisible(cursor.cursorPos + clipboardConsolidated->selRange);
                 handledKeyinput = true;
                 modified        = true;
@@ -241,10 +244,10 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
                 project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
                 preModifyState.cursor = cursor;
                 /* maybe do    this->clipboard = copy */
-                std::shared_ptr<clip_clipboard> newClipboard = DAW::copySelection(iGuiMgr, cursor);
+                std::shared_ptr<clip_clipboard> newClipboard = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
                 cursor.setLeftAligned();
                 cursor.cursorPos += cursor.getRange();
-                DAW::pasteClipboard(iGuiMgr, newClipboard.get(), cursor);
+                DAW::pasteClipboard(iGuiMgr, newClipboard.get(), cursor, bCopyAutomation);
                 grid.makeTickVisible(cursor.cursorPos + newClipboard->selRange);
                 handledKeyinput = true;
                 modified        = true;
@@ -258,8 +261,8 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
                 preModifyState.cursor = cursor;
                 cursor.setLeftAligned();
                 if (m_clipboard->type == clip_clipboard::ClipboardFull)
-                    DAW::cutSelection(iGuiMgr, cursor);
-                DAW::pasteClipboard(iGuiMgr, m_clipboard.get(), cursor);
+                    DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
+                DAW::pasteClipboard(iGuiMgr, m_clipboard.get(), cursor, bCopyAutomation);
                 cursor.selTrackRange = m_clipboard->selTrackRange;
                 cursor.selRange      = m_clipboard->selRange;
                 grid.makeTickVisible(cursor.getTickEnd());
@@ -465,7 +468,8 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
             action.dragtype = DRAG_CLIPS_MOVE;
         }
         action.cursorBegin = cursor;
-        action.clipboard   = DAW::copySelection(iGuiMgr, action.cursorBegin);
+        bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
+        action.clipboard   = DAW::copySelection(iGuiMgr, action.cursorBegin, bCopyAutomation);
     }
 }
 void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
@@ -561,6 +565,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
             if (trNxtSelected) {
                 DawInstance::get()->setSelectedTrackEntry(trNxtSelected);
             }
+            bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
             if (selectionMoved && trNxtSelected) {
                 ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 
@@ -578,12 +583,12 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
                 project.trackList.copyTracks(selection.trackIdxMin, selection.trackIdxMax, resizePreModifyState);
 
                 resizePreModifyState.cursor               = cursorBegin;
-                std::shared_ptr<clip_clipboard> clipboard = DAW::copySelection(iGuiMgr, cursorBegin);
+                std::shared_ptr<clip_clipboard> clipboard = DAW::copySelection(iGuiMgr, cursorBegin, bCopyAutomation);
                 if (!isCtrl(evt.kbmods)) {
-                    DAW::cutSelection(iGuiMgr, cursorBegin);
+                    DAW::cutSelection(iGuiMgr, cursorBegin, bCopyAutomation);
                 }
                 int32_t trackGuiIdx = dstTrack - trackOffset;
-                DAW::pasteClipboard(iGuiMgr, clipboard.get(), trackGuiIdx, dstPos);
+                DAW::pasteFullClipboard(iGuiMgr, clipboard.get(), trackGuiIdx, dstPos, bCopyAutomation);
                 DawInstance::get()->updateVisibleTrackContents();
                 showclip                          = false;
                 auto* track_action = new action_modify_track("Move clips", std::move(resizePreModifyState));
@@ -666,7 +671,8 @@ bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, int
         int32_t tick                     = grid.screenToTickSnap(mousepos.x, SNAP_ON);
         tick_t dstPos                    = tick;
         int32_t dstTrack                 = trNxtSelected->idx;
-        DAW::pasteClipboard(iGuiMgr, action.clipboard.get(), dstTrack, dstPos);
+        bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
+        DAW::pasteFullClipboard(iGuiMgr, action.clipboard.get(), dstTrack, dstPos, bCopyAutomation);
         DawInstance::get()->updateVisibleTrackContents();
         action.clipboard   = nullptr;
         action.dragtype    = DRAG_NONE;

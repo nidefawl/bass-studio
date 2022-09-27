@@ -447,6 +447,8 @@ struct track_impl_t : public audio_stage_t {
     void getAutomatableTrackTargets(std::vector<automatable_t*>& targets, bool includeEffects = true);
     void createIOSnapshot(track_io_configuration_snapshot_t& snapshot);
     void loadIOConfiguration(const track_io_configuration_snapshot_t& trPluginList);
+
+    automatable_t* resolveAutomatableRefDevice(const automatable_param_ref_t& ref);
 };
 
 class action_modify_track : public action_base {

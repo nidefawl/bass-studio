@@ -9,13 +9,16 @@ struct appsysteminfo {
     String glVendor;
     String glVersion;
 };
-struct appruntime {
+struct dawruntime {
+    bool enableCache                  = true;
+    bool disableWaveformUpdates       = false;
+    bool enableClipRendererDebugLayer = false;
+    bool copyAutomation = false;
+};
+struct appruntime : public dawruntime{
     render_clip_cache_stats_t renderClipCacheStats{};
     prof_stats_render_t renderStats{};
     prof_stats_render_t prevRenderStats{};
     appsysteminfo systeminfo{};
-    bool enableCache                  = true;
-    bool disableWaveformUpdates       = false;
-    bool enableClipRendererDebugLayer = false;
     bool printWindowFps = false;
 };

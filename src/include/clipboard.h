@@ -7,14 +7,16 @@
 
 struct track_clipboard_t {
     std::vector<std::shared_ptr<clip_t>> clips;
+    std::vector<automation_clipboard_t> automations;
 };
+
 struct clip_clipboard {
     enum clipboard_type_e {
         ClipboardFull,
         ClipboardAutomation
     };
     std::vector<std::shared_ptr<track_clipboard_t>> tracks;
-    std::vector<std::vector<automation_point_t>> automationLanes;
+    std::vector<automation_clipboard_t> automationLanes;
     tick_t srcPos         = 0;
     tick_t srcTrack       = 0;
     int32_t selRange      = 0;

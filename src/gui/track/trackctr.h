@@ -577,30 +577,14 @@ class guitrack_topleft : public guictr_base {
     track_gui_manager_i& iGuiMgr;
     project_t& project;
     guibuttontoggle btnFoldAll;
+    guibuttontoggle btnCopyAutomation;
     bool isFolded = false;
     std::vector<guibuttontoggle*> guiButtons;
 
 public:
-    guitrack_topleft(guictr_tracks& _ctrTracks, DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, project_t& _project)
-        : guictr_base(),
-          ctrTracks(_ctrTracks),
-          iGuiMgr(_iGuiMgr),
-          project(_project) {
-        (void) ctrTracks;
-        (void) project;
-        this->dawCtrl = _dawCtrl;
-        padding = 0;
-        //btnFoldAll.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);
-        btnFoldAll.setLabel("Fold All Tracks");
-        btnFoldAll.icon = ICON_ARR_RIGHT;
-        btnFoldAll.setStateRef(&isFolded);
-        btnFoldAll.getIcon = [gtl = this] { return gtl->isFolded ? ICON_ARR_RIGHT : ICON_ARR_DOWN; };
-        guiButtons.push_back(&btnFoldAll);
-        for (auto guiBtn : guiButtons) {
-            add(guiBtn);
-        }
-    }
+    guitrack_topleft(guictr_tracks& _ctrTracks, DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, project_t& _project);
     ~guitrack_topleft() override {
+        remove(&btnCopyAutomation);
         remove(&btnFoldAll);
     }
     void buttonClicked(guibase* _button) override;
