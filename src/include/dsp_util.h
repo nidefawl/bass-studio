@@ -84,7 +84,7 @@ namespace DAW::Panning {
         } else if constexpr (P == PanLaw::SIN_3_0DB) {
             return 0.70710678118654752440084436210485f;
         } else if constexpr (P == PanLaw::SIN_4_5DB) {
-            return 0.59460355750136053336;
+            return 0.594603539f;
         } else if constexpr (P == PanLaw::SIN_6_0DB) {
             return 0.5f;
         }

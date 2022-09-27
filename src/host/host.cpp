@@ -589,7 +589,7 @@ void MixWithGainAndPanAutomation(process_scratch_buf_t& tmp, AudioBlock* in, Aud
         std::fill(bufPanL.begin(), bufPanL.end(), fPan);
     }
     for (int32_t i = 0; i < out->samples; ++i) {
-        dsp_util::getGainLvlWithRange(bufGain[i], dsp_util::MTR_CEIL, dsp_util::DBFS_MUTE_POS, bufGain[i]);
+        dsp_util::getGainLvl(bufGain[i], bufGain[i]);
         DAW::Panning::CalculatePanning<DAW::Panning::PanLaw::SIN_4_5DB>(bufPanL[i], &bufPanL[i], &bufPanR[i]);
     }
     DAW::Panning::MultiplyAutomation(in, out, bufGain.data(), panLR); 
@@ -647,8 +647,6 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
                         autParGain = at->getRegisteredAutomation(tracksrc.panAutomation.refLane.paramIdx);
                     }
                 }
-                float fGainTrack = 0.0f;
-                bool bIsNotMuted = dsp_util::getGainLvl(fGainTrackLin, fGainTrack);
 
                 bool bFixedGainAndPan = true;
                 if (autParGain || autParPan) {
@@ -668,6 +666,8 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
                 }
                 auto blockMixToOffset = ptrBlockMixDst->SubChannelsBlock(tracksrc.channel.dstChannelOffset, dstChannelCount);
                 if (bFixedGainAndPan) {
+                    float fGainTrack = 0.0f;
+                    bool bIsNotMuted = dsp_util::getGainLvl(fGainTrackLin, fGainTrack);
                     /* Fast path */
                     if (bIsNotMuted) {
                         fGainTrack *= DAW::Panning::GetCenterGain();
@@ -685,7 +685,7 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
                         tmpBlock.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, 1.0f);
                         inputBlock = &tmpBlock;
                     }
-                    MixWithGainAndPanAutomation(tmp, inputBlock, &blockMixToOffset, fGainTrack, fPanTrack, autParGain, autParPan, processingPos, tickBlockEnd);
+                    MixWithGainAndPanAutomation(tmp, inputBlock, &blockMixToOffset, fGainTrackLin, fPanTrack, autParGain, autParPan, processingPos, tickBlockEnd);
                 }
             }
         }
@@ -1346,8 +1346,6 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
 
         float fGainTrackLin = trackImpl->mixer.getParamValue(PARAM_GAIN);
         float fPanTrack = trackImpl->mixer.getParamValue(PARAM_PAN);
-        float fGainTrack = 0.0f;
-        bool bIsNotMuted = dsp_util::getGainLvl(fGainTrackLin, fGainTrack);
         automation_t* autParGain = trackImpl->mixer.getRegisteredAutomation(PARAM_GAIN);
         automation_t* autParPan = trackImpl->mixer.getRegisteredAutomation(PARAM_PAN);
         bool bFixedGainAndPan = true;
@@ -1358,13 +1356,15 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
             bFixedGainAndPan = false;
         }
         if (bFixedGainAndPan) {
+            float fGainTrack = 0.0f;
+            bool bIsNotMuted = dsp_util::getGainLvl(fGainTrackLin, fGainTrack);
             /* Fast path */
             if (bIsNotMuted) {
                 fGainTrack *= DAW::Panning::GetCenterGain();
                 trackImpl->outputPost.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, fGainTrack);
             }
         } else {
-            MixWithGainAndPanAutomation(tmp, &trackImpl->output, &trackImpl->outputPost, fGainTrack, fPanTrack, autParGain, autParPan, postStageTickLatencyCompensated, postStageTickEnd);
+            MixWithGainAndPanAutomation(tmp, &trackImpl->output, &trackImpl->outputPost, fGainTrackLin, fPanTrack, autParGain, autParPan, postStageTickLatencyCompensated, postStageTickEnd);
         }
     }
 
