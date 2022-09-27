@@ -30,8 +30,8 @@ float auplugin::getParamValue(int32_t idx) {
     }
     return param->value;
 }
-param_unit_t auplugin::getParamValueDisplay(int32_t idx) {
-    automatable_param_t* param = getParamUnchecked(idx);
+param_unit_t auplugin::convertParamValueToDisplay(int32_t idx, float value) {
+    auto* param = getParamUnchecked(idx);
     dbgassert(param);
     if (param->internalIdx >= 0) {
         char buf[1024];
@@ -39,7 +39,7 @@ param_unit_t auplugin::getParamValueDisplay(int32_t idx) {
         //this->dispatch(effGetParamDisplay, param->internalIdx, 0, buf);
         return {StringFormat("%s", buf), ""};
     }
-    return effectbase::getParamValueDisplay(idx);
+    return effectbase::convertParamValueToDisplay(idx, value);
 }
 void auplugin::setParamValue(int32_t idx, float val, int flags) {
     automatable_param_t* param = getParamUnchecked(idx);

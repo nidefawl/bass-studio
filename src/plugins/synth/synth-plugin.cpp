@@ -2903,13 +2903,13 @@ namespace PluginSynth {
             return internalplugin::convertParamValueDisplay(idx, displayValue);
         }
 
-        param_unit_t getParamValueDisplay(int32_t idx) override {
+        param_unit_t convertParamValueToDisplay(int32_t idx, float value) override {
             if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
                 SynthParamBase* param = vecParams[idx-1];
                 String valDisplay     = param->getValueDisplay();
                 return {valDisplay, param->unit};
             }
-            return internalplugin::getParamValueDisplay(idx);
+            return internalplugin::convertParamValueToDisplay(idx, value);
         }
 
         void postSetParameter(int32_t idx, float preVal, float val, int flags) override {

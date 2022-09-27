@@ -124,7 +124,7 @@ namespace PluginGain {
         }
         return internalplugin::convertParamValueDisplay(idx, displayValue);
     }
-    param_unit_t module_gain::getParamValueDisplay(int32_t idx) {
+    param_unit_t module_gain::convertParamValueToDisplay(int32_t idx, float value) {
         auto param = getParam(idx);
         dbgassert(param);
         if (param->unit == "dB") {
@@ -134,7 +134,7 @@ namespace PluginGain {
             }
             return {"-INF", param->unit};
         }
-        return internalplugin::getParamValueDisplay(idx);
+        return internalplugin::convertParamValueToDisplay(idx, value);
     }
 
     void module_gain::loadSnapshot(const plugin_snapshot_t& snapshot) {

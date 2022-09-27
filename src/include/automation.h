@@ -183,6 +183,7 @@ public:
     virtual String getAutomatableName()      = 0;
     virtual float getParamValue(int32_t idx) = 0;
     virtual param_unit_t getParamValueDisplay(int32_t idx);
+    virtual param_unit_t convertParamValueToDisplay(int32_t idx, float value);
     virtual param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue);
     /**
      * setParamValue
@@ -274,12 +275,24 @@ public:
         }
         return nullptr;
     }
+    const automatable_param_t* getParam(int32_t paramIdx) const {
+        auto it = mapParams.find(paramIdx);
+        // dbgassert(it != mapParams.end());
+        if (it != mapParams.end()) {
+            return &it->second;
+        }
+        return nullptr;
+    }
     /**
      * returns: reference
      */
     automatable_param_t* getParamUnchecked(int32_t paramIdx) {
         dbgassert(mapParams.count(paramIdx));
         return &mapParams[paramIdx];
+    }
+    const automatable_param_t* getParamUnchecked(int32_t paramIdx) const {
+        dbgassert(mapParams.count(paramIdx));
+        return &mapParams.find(paramIdx)->second;
     }
     const automation_t* getRegisteredConstAutomation(int32_t paramIdx) const {
         dbgassert(mapParams.count(paramIdx));

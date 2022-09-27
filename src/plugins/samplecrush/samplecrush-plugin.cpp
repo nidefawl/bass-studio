@@ -118,14 +118,14 @@ namespace PluginSampleCrush {
         return internalplugin::convertParamValueDisplay(idx, displayValue);
     }
 
-    param_unit_t module_samplecrush::getParamValueDisplay(int32_t idx) {
+    param_unit_t module_samplecrush::convertParamValueToDisplay(int32_t idx, float value) {
         auto param = getParam(idx);
         dbgassert(param);
         if (param->idx == PARAM_NUM_SAMPLES) {
             auto nPow2 = (1 << convertToBits(param->value));
             return {StringFormat("%d", nPow2), param->unit};
         }
-        return internalplugin::getParamValueDisplay(idx);
+        return internalplugin::convertParamValueToDisplay(idx, value);
     }
 
     std::shared_ptr<PluginViewContainers> module_samplecrush::createViewCtrInternal() {

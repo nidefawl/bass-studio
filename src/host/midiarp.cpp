@@ -60,7 +60,7 @@ midiarp::midiarp(track_impl_t* _trImpl) : automatable_t(), trackImpl(_trImpl) {
     }
     getParam(ARP_PARAM_CLOCK)->quantizationSteps = syncClock ? (NUM_ARP_STEPSIZE_OPTIONS - 1) : 0;
 }
-param_unit_t midiarp::getParamValueDisplay(int32_t idx) {
+param_unit_t midiarp::convertParamValueToDisplay(int32_t idx, float value) {
     dbgassert(getParam(idx));
     switch (idx) {
         case ARP_PARAM_CLOCK:
@@ -82,7 +82,7 @@ param_unit_t midiarp::getParamValueDisplay(int32_t idx) {
         case ARP_PARAM_RAND_VEL:
             return {StringFormat("+/-%d", getRandVelocity()), ""};
     }
-    return automatable_t::getParamValueDisplay(idx);
+    return automatable_t::convertParamValueToDisplay(idx, value);
 }
 param_converted_t midiarp::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
     dbgassert(getParam(idx));

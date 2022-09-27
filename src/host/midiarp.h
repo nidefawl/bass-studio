@@ -175,7 +175,7 @@ public:
     bool isProcessingEnabled();
 
     param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;
-    param_unit_t getParamValueDisplay(int32_t idx) override;
+    param_unit_t convertParamValueToDisplay(int32_t idx, float value) override;
 
 };
 }

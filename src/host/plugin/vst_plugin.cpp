@@ -632,9 +632,8 @@ float vstplugin::getParamValue(int32_t idx) {
     }
     return param->value;
 }
-
 param_unit_t vstplugin::getParamValueDisplay(int32_t idx) {
-    automatable_param_t* param = getParamUnchecked(idx);
+    auto param = getParam(idx);
     dbgassert(param);
     if (param->internalIdx >= 0) {
         if (param->paramDisplayValState & PARAM_FLAG_DIRTY) {
@@ -644,7 +643,11 @@ param_unit_t vstplugin::getParamValueDisplay(int32_t idx) {
             return {param->paramDisplayValStr, param->unit};
         }
     }
-    return effectbase::getParamValueDisplay(idx);
+    return effectbase::getParamValueDisplay(param->idx);
+}
+
+param_unit_t vstplugin::convertParamValueToDisplay(int32_t idx, float value) {
+    return effectbase::convertParamValueToDisplay(idx, value);
 }
 
 param_converted_t vstplugin::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {

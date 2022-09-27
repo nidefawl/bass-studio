@@ -111,8 +111,8 @@ void simplifyData(std::vector<automation_point_t>& data) {
 float automation_t::getValueAt(tick_t tick) const {
     if (!points.empty()) {
         int32_t idx = indexOfTick(points, tick);
-        dbgassert(idx <= (int) points.size());
-        if (idx == (int) points.size())
+        dbgassert(idx <= CtrSize(points));
+        if (idx == CtrSize(points))
             return points.back().val;
         if (idx > 0) {
             const automation_point_t& pt1 = points[idx - 1];
@@ -140,8 +140,8 @@ float automation_t::getValueAtExact(double dTick) const {
     if (!points.empty()) {
         tick_t tick = math::floordS32(dTick);
         int32_t idx = indexOfTick(points, tick);
-        dbgassert(idx <= (int) points.size());
-        if (idx == (int) points.size())
+        dbgassert(idx <= CtrSize(points));
+        if (idx == CtrSize(points))
             return points.back().val;
         if (idx > 0) {
             const automation_point_t& pt1 = points[idx - 1];
@@ -203,7 +203,7 @@ std::pair<float, float> automation_t::getMinMax() {
     float defaultVal            = getValueAt(0);
     std::pair<float, float> res = { defaultVal, defaultVal };
     int32_t idx1                = 0;
-    for (; idx1 < (int) points.size(); idx1++) {
+    for (; idx1 < CtrSize(points); idx1++) {
         auto& pt   = points[idx1];
         res.first  = math::min(res.first, pt.val);
         res.second = math::max(res.second, pt.val);
@@ -215,7 +215,7 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
     std::vector<automation_point_t> pointsTmp;
     pointsTmp.reserve(data.size() + points.size());
     int32_t idx1 = 0;
-    for (; idx1 < (int) points.size(); idx1++) {
+    for (; idx1 < CtrSize(points); idx1++) {
         auto& pt = points[idx1];
         if (pt.time <= tickBegin) {
             pointsTmp.push_back(pt);
@@ -237,7 +237,7 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
         automation_point_t ptEnd{ tickEnd, getValueAt(tickEnd) };
         pointsTmp.push_back(std::move(ptEnd));
     }
-    for (; idx1 < (int) points.size(); idx1++) {
+    for (; idx1 < CtrSize(points); idx1++) {
         auto& pt = points[idx1];
         if (pt.time >= tickEnd) {
             pointsTmp.push_back(pt);
@@ -293,24 +293,29 @@ void storeAutomation(std::vector<automation_view_t>& automatedParams, automatabl
 param_unit_t automatable_t::getParamValueDisplay(int32_t idx) {
     auto param = getParam(idx);
     dbgassert(param);
+    return convertParamValueToDisplay(param->idx, param->value);
+}
+param_unit_t automatable_t::convertParamValueToDisplay(int32_t idx, float value) {
+    auto param = getParam(idx);
+    dbgassert(param);
     if ((param->idx == PARAM_PAN) || (param->idx >= PARAM_OFFSET_SEND_PAN && param->idx < PARAM_OFFSET_SEND_PAN + MAX_SEND_CHANNELS)) {
-        if (param->value < 0.5)
-            return { StringFormat("%.0f", math::clamp((0.5f-param->value)*2.0f*100.0f, 0.0f, 100.0f)), "L" };
-        if (param->value > 0.5)
-            return { StringFormat("%.0f", math::clamp((param->value-0.5f)*2.0f*100.0f, 0.0f, 100.0f)), "R" };
+        if (value < 0.5)
+            return { StringFormat("%.0f", math::clamp((0.5f-value)*2.0f*100.0f, 0.0f, 100.0f)), "L" };
+        if (value > 0.5)
+            return { StringFormat("%.0f", math::clamp((value-0.5f)*2.0f*100.0f, 0.0f, 100.0f)), "R" };
         return { "", "C" };
     }
     if (param->unit == "dB") {
         float fGain = 1.0f;
-        if (dsp_util::getGainLvl(param->value, fGain)) {
+        if (dsp_util::getGainLvl(value, fGain)) {
             return {StringFormat("%.3f", dsp_util::dBFS(fGain)), param->unit};
         }
         return {"-INF", param->unit};
     }
     if (param->unit == "%") {
-        return {StringFormat("%.3f", param->value * 100.0f), param->unit};
+        return {StringFormat("%.3f", value * 100.0f), param->unit};
     }
-    return { StringFormat("%f", getParamValue(idx)), param->unit};
+    return { StringFormat("%f", value), param->unit};
 }
 param_converted_t automatable_t::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
     auto param = getParam(idx);

@@ -130,14 +130,14 @@ namespace PluginSampleDelay {
         return internalplugin::convertParamValueDisplay(idx, displayValue);
     }
 
-    param_unit_t module_sampledelay::getParamValueDisplay(int32_t idx) {
+    param_unit_t module_sampledelay::convertParamValueToDisplay(int32_t idx, float value) {
         auto param = getParam(idx);
         dbgassert(param);
         if (param->idx == PARAM_DELAY) {
             auto delaySamples = convertToSamples(paramsSmoothed.delay);
             return {StringFormat("%zd", delaySamples), param->unit};
         }
-        return internalplugin::getParamValueDisplay(idx);
+        return internalplugin::convertParamValueToDisplay(idx, value);
     }
 
     std::shared_ptr<PluginViewContainers> module_sampledelay::createViewCtrInternal() {

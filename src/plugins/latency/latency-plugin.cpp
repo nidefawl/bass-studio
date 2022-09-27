@@ -82,13 +82,13 @@ namespace PluginLatency {
         return internalplugin::convertParamValueDisplay(idx, displayValue);
     }
 
-    param_unit_t module_latency::getParamValueDisplay(int32_t idx) {
+    param_unit_t module_latency::convertParamValueToDisplay(int32_t idx, float value) {
         auto param = getParam(idx);
         dbgassert(param);
         if (param->idx == PARAM_LATENCY) {
             return {StringFormat("%d", math::max(0, math::min(MAX_LATENCY, math::roundfS32(param->value * MAX_LATENCY)))), param->unit};
         }
-        return internalplugin::getParamValueDisplay(idx);
+        return internalplugin::convertParamValueToDisplay(idx, value);
     }
 
     std::shared_ptr<PluginViewContainers> module_latency::createViewCtrInternal() {

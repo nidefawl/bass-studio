@@ -1,5 +1,6 @@
 #include "trackautomation.h"
 
+#include "assert_dbg.h"
 #include "grid_constants.h"
 #include "guicolors.h"
 #include "guiconstant.h"
@@ -9,6 +10,7 @@
 #include "cursor.h"
 #include "event.h"
 #include "color_util.h"
+#include "seq_util.h"
 #include "track.h"
 #include "clip.h"
 #include "grid.h"
@@ -21,6 +23,7 @@
 #include "track.h"
 #include "track_impl.h"
 #include "renderresources.h"
+#include <cstdint>
 #include <nanovg.h>
 
 float dataToCtr(float x, float ctrHeight) {
@@ -57,7 +60,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
         return { drag_none, -1, -1, 0 };
     }
     std::vector<hit_result> hit;
-    for (int i = 0; i < (int) segments.size(); i++) {
+    for (int32_t i = 0; i < CtrSize(segments); i++) {
         path_segment_t& segment = segments[i];
         auto segBegin           = segment.points.begin();
         auto segEnd             = segment.points.end();
@@ -487,16 +490,27 @@ void gui_track_automation::render(NVGcontext* vg) {
     }
 
     bool mouseIn              = dawCtrl->guiOver == this && contains(imouse + getPosContent());
-    tick_t mouseTick          = !mouseIn ? INVALID_TICK : dawCtrl->getGrid().screenToTickSnap(imouse.x, SNAP_OFF);
+    tick_t mouseTick    = !mouseIn ? INVALID_TICK : grid.screenToTickSnap(imouse.x, SNAP_OFF);
     vec2 fmouse               = vec2(imouse);
-    hit_result currentDragged = dragged.mode || !mouseIn ? dragged : hitTest(fmouse);
+    bool bIsDragging = dragged.mode;
+    auto mouseHit = hitTest(fmouse);
+    const hit_result& currentDragged = dragged.mode || !mouseIn ? dragged : mouseHit;
+    float valAtMouse = 0.0f;
+    auto& cursor = dawCtrl->getCursor();
     if (currentDragged.mode == dragmode::drag_node) {
         int32_t ptIdx = currentDragged.dataPt;
         dbgassert(ptIdx >= 0 && ptIdx < (int) data.points.size());
         automation_point_t& pt = data.points[ptIdx];
-        vec2* point            = getPathPointSafe(currentDragged.segidx);
-        mouseTick              = pt.time;
-        fmouse.x               = point->x;
+        vec2* point = getPathPointSafe(currentDragged.segidx);
+        mouseTick   = pt.time;
+        if (point)
+            fmouse.x = point->x;
+        valAtMouse = pt.val;
+    } else {
+        valAtMouse = data.getValueAt(mouseTick);
+        if (mouseHit.mode != dragmode::drag_none && cursor.containsSubtrack(this->m_trackentry->idx, this->subtrackIdx, mouseTick)) {
+            mouseHit.mode = dragmode::drag_selection;
+        }
     }
 
     if (!segments.empty()) {
@@ -505,7 +519,7 @@ void gui_track_automation::render(NVGcontext* vg) {
         for (; i < len; i++) {
             path_segment_t& segment = segments[i];
             vec2* pt2               = getPathPointSafe(segment.points.back());
-            if (pt2->x > -4) {
+            if (pt2 && pt2->x > -4) {
                 break;
             }
         }
@@ -515,17 +529,25 @@ void gui_track_automation::render(NVGcontext* vg) {
             //                nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
             nvgBeginPath(vg);
             bool first = true;
+            vec2* ptLast = nullptr;
             for (; i < len; i++) {
                 path_segment_t& segment = segments[i];
-                for (auto it = segment.points.begin(); it != segment.points.end(); ++it) {
-                    vec2* pt2 = getPathPointSafe(*it);
+                for (int& point : segment.points) {
+                    vec2* pt2 = getPathPointSafe(point);
                     if (first) {
-                        nvgMoveTo(vg, pt2->x, pt2->y);
                         first = false;
+                        nvgMoveTo(vg, pt2->x, pt2->y);
                     } else {
+                        // nvgBeginPath(vg);
+                        // nvgMoveTo(vg, ptLast->x, ptLast->y);
+                        // nvgLineTo(vg, pt2->x, pt2->y);
+                        // nvgStrokeColor(vg, dbgcolorsArray[i % 8]);
+                        // nvgStrokeWidth(vg, lineWidth);
+                        // nvgStroke(vg);
                         nvgLineTo(vg, pt2->x, pt2->y);
                         if (pt2->x > sizeInset.x + 4) break;
                     }
+                    ptLast = pt2;
                 }
             }
             int end = i;
@@ -535,9 +557,12 @@ void gui_track_automation::render(NVGcontext* vg) {
             nvgLineJoin(vg, NVGlineCap::NVG_MITER);
 
             //Lots of room for optimization here (draw texture for dot, or use custom shader)
-            nvgShapeAntiAlias(vg, 0);
+            auto ptIdxEnd = math::min(len - 1, end);
+            auto nPoints = ptIdxEnd - start;
+            if (nPoints > 128)
+                nvgShapeAntiAlias(vg, 0);
             nvgBeginPath(vg);
-            for (int j = start; j < math::min(len - 1, end); j++) {
+            for (int j = start; j < ptIdxEnd; j++) {
                 path_segment_t& segment = segments[j];
                 if (currentDragged.mode == dragmode::drag_segment && currentDragged.segidx == j) {
                     continue;
@@ -559,23 +584,77 @@ void gui_track_automation::render(NVGcontext* vg) {
             nvgStrokeColor(vg, theme->getColor(color2));
             nvgStrokeWidth(vg, 1.5f);
             nvgStroke(vg);
-            nvgShapeAntiAlias(vg, USE_NANOVG_AA);
+            if (nPoints > 128)
+                nvgShapeAntiAlias(vg, USE_NANOVG_AA);
         }
 
-        path_segment_t* segment = getSegmentSafe(currentDragged.segidx);
-        if (currentDragged.mode == dragmode::drag_segment && segment) {
-            nvgBeginPath(vg);
-            vec2* ptStart = getPathPointSafe(segment->points.front());
-            nvgMoveTo(vg, ptStart->x, ptStart->y);
-            for (auto it = segment->points.begin() + 1; it != segment->points.end(); ++it) {
-                vec2* pt2 = getPathPointSafe(*it);
-                nvgLineTo(vg, pt2->x, pt2->y);
-            }
-            vec2* ptEnd = getPathPointSafe(segment->points.back());
-            nvgStrokeColor(vg, theme->getColor(colorHL));
-            nvgStrokeWidth(vg, lineWidth + 0.5f);
-            nvgStroke(vg);
+        if ((currentDragged.mode == dragmode::drag_segment || currentDragged.mode == dragmode::drag_selection)) {
 
+            int32_t firstPtIdx = -1;
+            int32_t lastPtIdx  = 0;
+            bool bIntersect = false;
+            if (currentDragged.mode == dragmode::drag_segment) {
+                auto segment = getSegmentSafe(currentDragged.segidx);
+                firstPtIdx = segment->dataOffset;
+                lastPtIdx  = segment->dataOffset+1;
+            }
+            if (currentDragged.mode == dragmode::drag_selection) {
+                firstPtIdx = indexOfTick(data.points, cursor.getTickBegin()) - 1;
+                lastPtIdx = indexOfTick(data.points, cursor.getTickEnd());
+                bIntersect = true;
+                float pxSelectionBegin = grid.tickToScreenD(cursor.getTickBegin());
+                float pxSelectionEnd = grid.tickToScreenD(cursor.getTickEnd());
+                nvgSave(vg);
+                nvgIntersectScissor(vg, pxSelectionBegin, 0, pxSelectionEnd - pxSelectionBegin, sizeInset.y);
+                // dbgassert(firstPtIdx >= 0 && firstPtIdx < CtrSize(data.points));
+                // dbgassert(lastPtIdx >= 0 && lastPtIdx < CtrSize(data.points));
+                automation_point_t apFirst = data.points.front();
+                apFirst.time = 0;
+                auto dataFirst = firstPtIdx < 0 ? apFirst : data.points[firstPtIdx];
+                auto dataLast = lastPtIdx < 0 ? apFirst : data.points[lastPtIdx];
+                if (firstPtIdx == 0 && apFirst.time >= cursor.getTickBegin()) {
+                    dataFirst.time = cursor.getTickBegin();
+                }
+                nvgBeginPath(vg);
+                nvgCircle(vg, grid.tickToScreenD(dataFirst.time), sizeInset.y * (1.0f - dataFirst.val), 5);
+                nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_PLAYING));
+                nvgFill(vg);
+                nvgBeginPath(vg);
+                nvgCircle(vg, grid.tickToScreenD(dataLast.time), sizeInset.y * (1.0f - dataLast.val), 5);
+                nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_PLAYING));
+                nvgFill(vg);
+            }
+            bool first = true;
+            auto ptStart = &cachedShape.front();
+            auto ptEnd = &cachedShape.back();
+            for (auto& s : segments) {
+                if (s.dataOffset >= firstPtIdx && s.dataOffset < lastPtIdx) {
+                    for (auto ptIdx : s.points) {
+                        auto pt = getPathPointSafe(ptIdx);
+                        if (pt) {
+                            if (first) {
+                                nvgBeginPath(vg);
+                                nvgMoveTo(vg, pt->x, pt->y);
+                                first = false;
+                                ptStart = pt;
+                            } else {
+                                nvgLineTo(vg, pt->x, pt->y);
+                                ptEnd = pt;
+                            }
+                        }
+                    }
+                }
+            }
+            // for (auto it = segment->points.begin() + 1; it != segment->points.end(); ++it) {
+            // for (int32_t idx = firstPtIdx+2; idx <= lastPtIdx; ++idx) {
+            //     auto pt2 = getPathPointSafe(idx);
+            //     nvgLineTo(vg, pt2->x, pt2->y);
+            // }
+            if (!first) {
+                nvgStrokeColor(vg, theme->getColor(colorHL));
+                nvgStrokeWidth(vg, 4.0f);
+                nvgStroke(vg);
+            }
             nvgBeginPath(vg);
             if (ptStart->x > -4 && ptStart->x < sizeInset.x + 4.0f) {
                 nvgCircle(vg, ptStart->x, ptStart->y, radiusHandleHL);
@@ -588,6 +667,9 @@ void gui_track_automation::render(NVGcontext* vg) {
             nvgStrokeColor(vg, theme->getColor(colorHL2));
             nvgStrokeWidth(vg, 1.5f);
             nvgStroke(vg);
+            if (bIntersect) {
+                nvgRestore(vg);
+            }
         }
         vec2* pt = getPathPointSafe(currentDragged.segidx);
         if (currentDragged.mode == dragmode::drag_node && pt) {
@@ -621,8 +703,47 @@ void gui_track_automation::render(NVGcontext* vg) {
         nvgStroke(vg);
     }
     if (mouseTick != INVALID_TICK) {
-        float valAtMouse = data.getValueAt(mouseTick);
-        setFont(vg, 18, THEMECOL_TEXT, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-        nvgText(vg, fmouse.x, INSET_TITLE, StringAsCStr(StringFormat("%.2f %d", valAtMouse, mouseTick)), NULL);
+        if (currentDragged.mode == dragmode::drag_segment && bIsDragging) {
+            mouseTick = data.points[currentDragged.dataPt].time;
+            valAtMouse = data.points[currentDragged.dataPt].val;
+        }
+        if (1) {
+            float xTick = grid.tickToScreenD(mouseTick);
+            nvgBeginPath(vg);
+            nvgCircle(vg, xTick, sizeInset.y * (1.0f - valAtMouse), radiusHandleHL);
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_GUI_HANDLE_FOCUSED));
+            nvgFill(vg);
+            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GUI_HANDLE));
+            nvgStrokeWidth(vg, 1.5f);
+            nvgStroke(vg);
+        }
+        String strRender;
+        auto rowHeight = theme->get(GuiConstant::CONST_ROW_HEIGHT);
+        auto fontSizeScaled = rowHeight * FONT_AUTOSCALE;
+        auto posText = vec2(fmouse.x + 20, INSET_TITLE);
+        if (at) {
+            auto display = at->convertParamValueToDisplay(paramIdx, valAtMouse);
+            strRender = display.value+ " " + display.unit;
+            renderTextLabel(vg,
+                            posText,
+                            vec2(size),
+                            strRender,
+                            theme,
+                            fontSizeScaled,
+                            theme->getColor(getLabelColor()),
+                            NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
+            posText.y += rowHeight;
+        } 
+        {
+            strRender = StringFormat("%.2f %d", valAtMouse, mouseTick);
+            renderTextLabel(vg,
+                            posText,
+                            vec2(size),
+                            strRender,
+                            theme,
+                            fontSizeScaled,
+                            theme->getColor(getLabelColor()),
+                            NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
+        }
     }
 }

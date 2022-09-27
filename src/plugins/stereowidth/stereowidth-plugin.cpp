@@ -126,7 +126,7 @@ namespace PluginStereoWidth {
         }
         return internalplugin::convertParamValueDisplay(idx, displayValue);
     }
-    param_unit_t module_stereowidth::getParamValueDisplay(int32_t idx) {
+    param_unit_t module_stereowidth::convertParamValueToDisplay(int32_t idx, float value) {
         auto param = getParam(idx);
         dbgassert(param);
         if (param->unit == "dB") {
@@ -139,7 +139,7 @@ namespace PluginStereoWidth {
         if (param->unit == "%") {
             return {StringFormat("%.3f", param->value * 200.0f), param->unit};
         }
-        return internalplugin::getParamValueDisplay(idx);
+        return internalplugin::convertParamValueToDisplay(idx, value);
     }
 
     std::shared_ptr<PluginViewContainers> module_stereowidth::createViewCtrInternal() {
