@@ -1,12 +1,12 @@
 #pragma once
 #include "types.h"
 #include "audio_config.h"
+
 namespace DAW::Host {
     class Host;
-}
-namespace DAW {
     class PluginManager;
 }
+
 class project_t;
 struct track_impl_t;
 struct AudioBlock;

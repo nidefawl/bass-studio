@@ -2,39 +2,42 @@
 #include <unordered_map>
 #include "fileio.h"
 
-#define ICON_SYNTH 0
-#define ICON_EFFECT 1
-#define ICON_FOLDER 2
-#define ICON_FOLDER_OPEN 3
-#define ICON_FILE 4
-#define ICON_COPY 5
-#define ICON_PASTE 6
-#define ICON_CUT 7
-#define ICON_ADJUST 8
-#define ICON_CLOSE 9
-#define ICON_BYPASS 10
-#define ICON_LOOP 11
-#define IMG_LED 12
-#define IMG_LED_OFF 13
-#define IMG_LED_GLOW 14
-#define ICON_ARR_DOWN 15
-#define ICON_ARR_LEFT 16
-#define ICON_ARR_RIGHT 17
-#define ICON_PLUS 18
-#define ICON_MINUS 19
-#define ICON_AUTOMATION 20
-#define ICON_SAVE 21
-#define ICON_ARR_UP 22
-#define ICON_SPEAKER 23
-#define ICON_X 24
-#define ICON_DAW_EXE 25
-#define ICON_OPT_LOCKED 26
-#define ICON_OPT_UNLOCKED 27
-#define ICON_MIDIPLUG 28
-#define ICON_DUPLICATE 29
-#define ICON_SYNTH_SMALL 30
-#define ICON_WARNING 31
-#define NUM_IMGS 32
+enum ICON : int32_t {
+    ICON_SYNTH = 0,
+    ICON_EFFECT,
+    ICON_FOLDER,
+    ICON_FOLDER_OPEN,
+    ICON_FILE,
+    ICON_COPY,
+    ICON_PASTE,
+    ICON_CUT,
+    ICON_ADJUST,
+    ICON_CLOSE,
+    ICON_BYPASS,
+    ICON_LOOP,
+    IMG_LED,
+    IMG_LED_OFF,
+    IMG_LED_GLOW,
+    ICON_ARR_DOWN,
+    ICON_ARR_LEFT,
+    ICON_ARR_RIGHT,
+    ICON_PLUS,
+    ICON_MINUS,
+    ICON_AUTOMATION,
+    ICON_SAVE,
+    ICON_ARR_UP,
+    ICON_SPEAKER,
+    ICON_X,
+    ICON_DAW_EXE,
+    ICON_OPT_LOCKED,
+    ICON_OPT_UNLOCKED,
+    ICON_MIDIPLUG,
+    ICON_DUPLICATE,
+    ICON_SYNTH_SMALL,
+    ICON_WARNING,
+    ICON_MODULATION,
+    NUM_IMGS,
+};
 #define MAX_FONTS 256
 
 struct NVGcontext;

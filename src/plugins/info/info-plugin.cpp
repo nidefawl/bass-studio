@@ -29,13 +29,6 @@
 #include "../synth/IPlugMidi.h"
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 
-#if BUILD_EXTERNAL_PLUGIN
-AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
-    return PluginHostInfo::createPlugin(audioMaster);
-}
-#endif
-
-
 namespace PluginHostInfo {
     const char* const PLUGIN_EFFECT_NAME = "HostInfo";
     const uint32_t PLUGIN_UID = 1330007625; //"INFO";
@@ -237,17 +230,11 @@ namespace PluginHostInfo {
                 ap->logBlocks = value;
                 break;
         }
-#if BUILD_VSTHOST
         for (auto& pviewctr : this->views) {
             if (pviewctr->isInUse()) {
                 pviewctr->onSetParameter(index, value);
             }
         }
-#else
-        if (this->editor) {
-            static_cast<pluginwindow*>(this->editor)->onSetParameter(index, value);
-        }
-#endif
     }
 
     float PluginVST2_HostInfo::getParameter(VstInt32 index) {
@@ -491,32 +478,16 @@ namespace PluginHostInfo {
         }
 
         void onSetParameter(int32_t index, float value) {
-#if BUILD_EXTERNAL_PLUGIN
-            guiknob_pluginparam* knob = getKnobFromParameter(index);
-            if (knob) {
-                knob->setValueInit(value);
-            }
-#endif
         }
         void getSizeScale(int& w, int& h) const {
             w = 300;
             h = 300;
         }
         void onGuiOpen() {
-#if BUILD_VSTHOST
             knobParam0.setEffectInstance(plugin->getHostSideHandle());
-#endif
-#if BUILD_EXTERNAL_PLUGIN
-            knobParam0.setAudioEffect(plugin);
-#endif
         }
         void onGuiClose() {
-#if BUILD_VSTHOST
             knobParam0.setEffectInstance(nullptr);
-#endif
-#if BUILD_EXTERNAL_PLUGIN
-            knobParam0.setAudioEffect(nullptr);
-#endif
         }
 
         void render(NVGcontext* vg) override {

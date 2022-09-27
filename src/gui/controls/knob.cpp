@@ -24,7 +24,7 @@
 #include <cstdint>
 #include <nanovg.h>
 #include <nanovg_min.h>
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
 #include "gui/track/trackcontent.h"
 #endif
 
@@ -48,12 +48,9 @@ guictxtmenu_base* guiknob::getTooltip(AppCtrl* appctrl) {
 }
 
 bool guiknob::isAutomated() {
-    //#if BUILD_VSTHOST
     if (paramAutomatable) {
-        auto at = paramAutomatable->getRegisteredAutomation(paramIdx);
-        return at && at->isAutomated();
+        return paramAutomatable->getActiveAutomation(paramIdx);
     }
-    //#endif
     return false;
 }
 void guiknob::render(NVGcontext* vg) {
@@ -321,7 +318,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
 }
 
 void guiknob::setToDefaultValue() {
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
     fModifyBeginValue = lastVal = getValue();
     if (fnValueEditBegin) {
         fnValueEditBegin(fModifyBeginValue, fModifyBeginValue);
@@ -344,7 +341,7 @@ void guiknob::setToDefaultValue() {
 }
 
 void guiknob::setKnobInternalHandlers() {
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
     fnGetValue = [this]() {
         if (paramAutomatable) {
             return paramAutomatable->getParamValue(paramIdx);
@@ -355,11 +352,7 @@ void guiknob::setKnobInternalHandlers() {
         if (paramAutomatable) {
             //TODO: lock external VST2 instances
             ThreadLock lock     = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
-            automation_t* param = paramAutomatable->getRegisteredAutomation(paramIdx);
-            if (param) {
-                param->active = false;
-            }
-            paramAutomatable->setParamValue(paramIdx, f, flags);
+            paramAutomatable->setParamEdit(paramIdx, f, flags);
         }
     };
     fnValueEditFinish = [this](float preVal, float val) {
@@ -483,7 +476,7 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
 }
 
 void guiknob::handleRightClick(MouseEvent& evt) {
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
     if (dawCtrl && paramAutomatable && paramIdx > -1) {
         if (parentCtrl) {
             dbgassert(paramAutomatable->getParam(paramIdx));

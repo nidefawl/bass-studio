@@ -493,8 +493,8 @@ int midiarp::endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopSt
 
 bool midiarp::isProcessingEnabled() {
     if (!this->enable) {
-        const automation_t* automatEnable = getRegisteredConstAutomation(PARAM_ENABLE);
-        if (!automatEnable || !automatEnable->active) {
+        const auto* automatEnable = getRegisteredConstAutomation(PARAM_ENABLE);
+        if (!automatEnable || !automatEnable->isActive()) {
             return false;
         }
     }
@@ -570,8 +570,8 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
             automationPos = cursorPos;
         }
         for (automated_param_t& param : arpAutomatedParams) {
-            if (param.src.isActive()) {
-                float val = param.src.getValueAt(automationPos);
+            if (param.isActive()) {
+                float val = param.getValueAt(automationPos);
                 setParamValue(param.paramIdx, val, FLG_PAR_UPDATE_AUTOMATED);
             }
         }

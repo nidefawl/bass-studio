@@ -91,7 +91,7 @@ ContainerFactory& getContainerFactory() {
     static bool init = false;
     static std::map<gui_type, ContainerBuilder> containerFactory;
     if (!init) {
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
         containerFactory[gui_type::CTR_TYPE_DEBUG_0] = [](auto& ctxt) {
             return std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
         };

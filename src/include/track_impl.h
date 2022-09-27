@@ -5,6 +5,7 @@
 #include <array>
 #include <memory>
 #include <type_traits>
+#include "assert_dbg.h"
 #include "host/mainctrl.h"
 #include "logging.h"
 #include "seq_util.h"
@@ -274,6 +275,7 @@ struct audio_stage_t : public IDelayLineStorage {
     virtual void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos);
     void notifyPluginContainers();
     virtual void onStopPlayback();
+    const automated_param_t* getParameterAutomationModulation(const automatable_t* dev, int32_t paramIdx) const;
 };
 inline bool isAudioStageChildOf(audio_stage_t* parent, audio_stage_t* child) {
     std::vector<audio_stage_t*>& children = parent->children;
@@ -448,7 +450,7 @@ struct track_impl_t : public audio_stage_t {
     void createIOSnapshot(track_io_configuration_snapshot_t& snapshot);
     void loadIOConfiguration(const track_io_configuration_snapshot_t& trPluginList);
 
-    automatable_t* resolveAutomatableRefDevice(const automatable_param_ref_t& ref);
+    automatable_t* getAutomatableByType(const automatable_param_ref_t& ref);
 };
 
 class action_modify_track : public action_base {

@@ -114,8 +114,8 @@ public:
     param_unit_t convertParamValueToDisplay(int32_t idx, float value) override;
     param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;
     void setParamValue(int32_t idx, float val, int flags) override;
-    automatable_param_ref_t toRef() const override;
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
+    automatable_param_ref_t toRef() const override;
 
     bool setCurrentProgram(uint32_t idx) override;
     bool getCurrentProgram(uint32_t& idx) override;

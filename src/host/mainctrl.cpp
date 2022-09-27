@@ -1061,9 +1061,7 @@ void DawInstance::menuCommand(menucmd_t command) {
 
                     auto guidialog  = new guidialog_about();
                     auto popupCtrl = std::make_shared<PopupCtrl>();
-#if BUILD_VSTHOST
                     popupCtrl->setDawCtrl(mainCtrl);
-#endif
                     popupCtrl->m_scale = mainCtrl->m_scale;
                     popupCtrl->m_size = math::maxvec2(ivec2(20, 20), guidialog->size);
                     *popupCtrl->getTheme() = *mainCtrl->getTheme();

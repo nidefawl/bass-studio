@@ -670,6 +670,16 @@ void vstplugin::addPropertiesParameterTooltip(Table::tbl& table, int idx) {
     effectbase::addPropertiesParameterTooltip(table, idx);
 }
 
+void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags) {
+    effectbase::postSetParameter(idx, preVal, val, flags);
+    automatable_param_t* param = getParamUnchecked(idx);
+    if (param->internalIdx >= 0) {
+        vst_setParameter(this, handle->aeffect, param->internalIdx, val);
+        param->paramDisplayValState |= PARAM_FLAG_DIRTY;
+        param->paramValueState = PARAM_FLAG_SET;
+    }
+}
+
 void vstplugin::setParamValue(int32_t idx, float val, int flags) {
     automatable_param_t* param = getParamUnchecked(idx);
     dbgassert(param);
@@ -677,7 +687,7 @@ void vstplugin::setParamValue(int32_t idx, float val, int flags) {
     if (param->idx == PARAM_ENABLE) {
         updateOnEnableParam(param, this->bIsEnabled, val > 0, flags);
     } else {
-        if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
+        if ((flags & (FLG_PAR_UPDATE_FINISH | FLG_PAR_UPDATE_FROM_CLIENT |FLG_PAR_UPDATE_USER)) != 0) {
             param->inUse = true;
         }
         if (param->internalIdx >= 0) {
@@ -685,16 +695,6 @@ void vstplugin::setParamValue(int32_t idx, float val, int flags) {
             param->paramDisplayValState |= PARAM_FLAG_DIRTY;
             param->paramValueState = PARAM_FLAG_SET;
         }
-    }
-}
-
-void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-    if (flags & FLG_PAR_UPDATE_FINISH) {
-        dbgassert(this->trackImpl->getTrack());
-        track_t* track                = this->trackImpl->getTrack();
-        automatable_param_ref_t ref = toRef();
-        parameter_ref_t p             = { track->projectIdx, ref.type, this->projectGlobalId, idx };
-        DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
     }
 }
 

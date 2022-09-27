@@ -516,7 +516,7 @@ void guibase::handleMouseDownBegin(MouseEvent& evt) {
     } else if (evt.button == 1) {
         handleRightClick(evt);
     } else if (evt.button > 1) {
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
         guictr_properties_table* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
         guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
         ctxtMenu->setBackgroundRendered(true);
@@ -618,7 +618,7 @@ int32_t guibase::getStateFlags() const {
 }
 void guibase::setControl(BaseCtrl* parentCtrl) {
     this->parentCtrl = parentCtrl;
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
     if (parentCtrl) {
         dawCtrl = parentCtrl->getDawCtrl();
     }
@@ -713,7 +713,7 @@ SafeRef<guibase> guibase::makeSafeRef() {
     }
     return safeRef;
 }
-#if !BUILD_VSTHOST
+#if !BUILD_DAW_HOST
 void guibase::addProperties(Table::tbl* table) {
 }
 #else

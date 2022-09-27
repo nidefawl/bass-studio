@@ -5,6 +5,7 @@
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
 #include "host/effect_graph.h"
+#include "host/plugin/internal_plugin.h"
 #include "math/seq_math.h"
 #include "exceptions.h"
 #include "logging.h"
@@ -1558,38 +1559,29 @@ namespace DAW {
         }
         return nullptr;
     }
-    automation_t* resolveAutomationRef(const Host::PluginManager* const host, const automation_routing_t& ref) {
-        if (ref.type == automation_routing_type::ROUTING_PARAM) {
-            automatable_t* at = resolveAutomatableRefDevice(host, ref.refLane);
-            if (at) {
-                return at->getRegisteredAutomation(ref.refLane.paramIdx);
-            }
-        }
-        return nullptr;
-    }
-    bool resolveAutomationAtTime(const Host::PluginManager* const host, const automation_routing_t& ref, tick_t atTime, float* fOut) {
+    /* bool resolveAutomationAtTime(const Host::PluginManager* const host, const automation_routing_t& ref, tick_t atTime, float* fOut) {
         dbgassert(fOut);
         switch (ref.type) {
             case automation_routing_type::ROUTING_NONE:
                 *fOut = ref.val;
                 return true;
             case automation_routing_type::ROUTING_PARAM:
+            case automation_routing_type::ROUTING_MODULATION:
                 automatable_t* at = resolveAutomatableRefDevice(host, ref.refLane);
                 if (at) {
-                    auto* atData = at->getRegisteredAutomation(ref.refLane.paramIdx);
+                    auto* atData = at->getActiveAutomation(ref.refLane.paramIdx);
                     if (atData) {
-                        if (atData->isActive()) {
-                            *fOut = atData->getValueAt(atTime);
-                        } else {
-                            *fOut = at->getParamValue(ref.refLane.paramIdx);
-                        }
-                        return true;
+                        *fOut = atData->getValueAt(atTime);
+                    } else {
+                        *fOut = at->getParamValue(ref.refLane.paramIdx);
+
                     }
+                    return true;
                 }
                 break;
         }
         return false;
-    }
+    } */
 }
 
 
@@ -1890,7 +1882,7 @@ void clip_recorder::recordNoteEvents(playback_state state, tick_t tickBlockStart
     this->notesProcessed |= notesProcessed;
 
 }
-automatable_t* track_impl_t::resolveAutomatableRefDevice(const automatable_param_ref_t& ref) {
+automatable_t* track_impl_t::getAutomatableByType(const automatable_param_ref_t& ref) {
     if (ref.type == AUTOMATABLE_EFFECT) {
         return getPluginById(ref.refId);
     }
@@ -1901,4 +1893,37 @@ automatable_t* track_impl_t::resolveAutomatableRefDevice(const automatable_param
         return arp;
     }
     return nullptr;
+}
+namespace DAW {
+    const automated_param_t* GetAutomationSrc(const Host::PluginManager* const host, const automation_routing_t routing) {
+        automated_param_t* src = nullptr;
+        if (routing.type == automation_routing_type::ROUTING_NONE)
+            return nullptr;
+        auto modulationSrcDevice = resolveAutomatableRefDevice(host, routing.refLane);
+        if (modulationSrcDevice && routing.type == automation_routing_type::ROUTING_PARAM)
+            return modulationSrcDevice->getActiveAutomation(routing.refLane.paramIdx);
+        if (modulationSrcDevice && dynamic_cast<internal_automator*>(modulationSrcDevice) && routing.type == automation_routing_type::ROUTING_MODULATION) {
+            auto modSrc = dynamic_cast<internal_automator*>(modulationSrcDevice);
+            return modSrc->getModulationOutputData(routing.refLane.paramIdx);
+        }
+        return src;
+    }
+    automation_routing_t GetAutomationRouting(const automatable_t* dev, int32_t paramIdx) {
+        for (auto& channel : dev->inputChannelsAutomation) {
+            if (channel.idx == paramIdx) {
+                automatable_param_ref_t ref = channel.ref;
+                ref.paramIdx = paramIdx;
+                return automation_routing_t{ automation_routing_type::ROUTING_MODULATION, 0.0f, ref };
+            }
+        }
+        auto at = dev->getRegisteredConstAutomation(paramIdx);
+        if (at && at->isAutomated()) {
+            return AutomationRef(dev, paramIdx);
+        }
+        auto param = dev->getParam(paramIdx);
+        if (assert_expr(param)) {
+            return AutomationNone(param->value);
+        }
+        return AutomationNone(0.0);
+    }
 }

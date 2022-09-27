@@ -81,55 +81,9 @@ float internalplugin::getParamValue(int32_t idx) {
     return param->value;
 }
 
-void internalplugin::setParamValue(int32_t idx, float val, int flags) {
-    automatable_param_t* param = getParamUnchecked(idx);
-    dbgassert(param);
-    float valPre = param->value;
-    param->value = val;
-    if (param->idx == PARAM_ENABLE) {
-        bool wasEnable = this->bIsEnabled;
-        bool isEnabled = val > 0;
-        updateOnEnableParam(param, wasEnable, isEnabled, flags);
-    } else {
-        if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
-            param->inUse = true;
-        }
-        postSetParameter(param->idx, valPre, val, flags);
-        for (auto& pviewctr : this->views) {
-            if (pviewctr->isInUse()) {
-                pviewctr->onSetParameter(idx, val);
-            }
-        }
-    }
-}
-
-void internalplugin::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-    if (flags & FLG_PAR_UPDATE_FINISH) {
-        track_t* track = this->trackImpl ?  this->trackImpl->getTrack() : nullptr;
-        if (track) {
-            automatable_param_ref_t ref = toRef();
-            parameter_ref_t p             = { track->projectIdx, ref.type, this->projectGlobalId, idx };
-            DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
-        }
-        return;
-    }
-    
-    for (auto& pviewctr : this->views) {
-        if (pviewctr->isInUse()) {
-            pviewctr->onSetParameter(idx, val);
-        }
-    }
-}
-
 void internalplugin::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
     meterIn.update(this->blockInputs, 1.0f);
     meter.update(out, 1.0f);
-}
-automatable_param_ref_t internalplugin::toRef() const {
-    automatable_param_ref_t ref;
-    ref.type  = AUTOMATABLE_EFFECT;
-    ref.refId = this->projectGlobalId;
-    return ref;
 }
 
 internalplugin::internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback)
@@ -172,7 +126,6 @@ bool internalplugin::showWindow(bool bResetPosition) {
     auto ctrl = std::make_shared<PluginControl>(newView);
     ctrl->setWindowName(getName());
     ctrl->initApp(std::vector<String>());
-#if BUILD_VSTHOST
     auto tls = daw_tls::getTls();
     auto mainCtrl = tls.mainCtrl;
     if(mainCtrl) {
@@ -181,7 +134,6 @@ bool internalplugin::showWindow(bool bResetPosition) {
         ctrl->m_scale     = mainCtrl->m_scale;
         *ctrl->getTheme() = *mainCtrl->getTheme();
     }
-#endif
     ivec2 defSize{ 0, 0 };
     newView->getFixedSize(&defSize.x, &defSize.y);
     internal_plugin_window_client clientWindow;

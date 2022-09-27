@@ -8,13 +8,8 @@
 #include "gui/table/table_fwd.h"
 
 #define PLUGIN_VENDOR_NAME "MichaelH"
-#if BUILD_EXTERNAL_PLUGIN
-#define PLUGIN_PARAM_STR_MAX_LEN kVstMaxParamStrLen
-#define PLUGIN_PROGRAM_STR_MAX_LEN kVstMaxProgNameLen
-#else
 #define PLUGIN_PARAM_STR_MAX_LEN 128
 #define PLUGIN_PROGRAM_STR_MAX_LEN 128
-#endif
 
 class PluginViewContainers;
 class BasePluginVST2 : public AudioEffectX {

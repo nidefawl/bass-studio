@@ -15,6 +15,7 @@
 #include "saferef.h"
 #include "host/daw_channel.h"
 #include "gui/table/table_fwd.h"
+#include "gui/plugin/pluginviewcontainers.h"
 #include "plugins/synth/IPlugMidi.h"
 
 namespace DAW::Host {
@@ -90,7 +91,7 @@ protected:
     DAW::Host::PluginManager* pluginMgr = nullptr;
     String currentProgramNameStr = "<no program>";
     bool currentProgramNameSet   = false;
-
+    std::vector<std::shared_ptr<PluginViewContainers>> views;
 public:
     std::vector<String> programNames;
     std::vector<DAW::channel_desc> inputChannelsDesc;
@@ -126,6 +127,9 @@ public:
     virtual void onEnable(){};
     virtual void onDisable(){};
     virtual int getModuleType()  = 0;
+    virtual bool hasAutomationModulationOutput() const {
+        return false;
+    }
     virtual guiplugin* makeGui() = 0;
     virtual guiplugin* getGui()  = 0;
 
@@ -223,6 +227,9 @@ public:
     virtual void addPropertiesParameterList(Table::tbl& table);
     virtual void addPropertiesTooltip(Table::tbl& table);
     virtual void addPropertiesParameterTooltip(Table::tbl& table, int idx);
+    void setParamValue(int32_t idx, float val, int flags) override;
+    void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
+    automatable_param_ref_t toRef() const override;
 };
 
 struct effect_deferred_impl;
@@ -263,7 +270,7 @@ public:
     int getModuleStoredType() const;
 };
 namespace DAW {
-    effectbase* loadEffectModule(PluginManager* host, const plugin_snapshot_t& pluginSnapshot, bool isForceRequest);
+    effectbase* loadEffectModule(Host::PluginManager* host, const plugin_snapshot_t& pluginSnapshot, bool isForceRequest);
     void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
     void removePlugin(DawInstance* daw, effectbase* module);
 }

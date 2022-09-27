@@ -30,17 +30,7 @@
 
 #define MAX_AUDIO_IO_CHANNELS channelnum_t(255)
 
-#ifndef BUILD_VSTHOST
-#define BUILD_VSTHOST 1
-#endif
-#ifndef BUILD_EXTERNAL_PLUGIN
-#define BUILD_EXTERNAL_PLUGIN 0
+#ifndef BUILD_DAW_HOST
+#define BUILD_DAW_HOST 1
 #endif
 
-#if BUILD_EXTERNAL_PLUGIN && BUILD_VSTHOST
-#error "BUILD_EXTERNAL_PLUGIN && BUILD_VSTHOST can't be defined at the same time"
-#endif
-
-#ifndef HAS_MAIN_LOOP
-#define HAS_MAIN_LOOP (BUILD_EXTERNAL_PLUGIN == 0)
-#endif

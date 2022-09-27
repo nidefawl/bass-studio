@@ -14,9 +14,6 @@
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 
 class guictr_vst2_simple : public guictr_base {
-#if BUILD_EXTERNAL_PLUGIN
-    BasePluginVST2* vst2Handle;
-#endif
     effectbase* const module;
     std::vector<guiknob_pluginparam*> knobs;
     gui_textfield editfield;
@@ -49,9 +46,6 @@ public:
         add(&editfield);
     }
     explicit guictr_vst2_simple(BasePluginVST2* plugin) : guictr_base(),
-#if BUILD_EXTERNAL_PLUGIN
-        vst2Handle(plugin),
-#endif
         module(plugin->getHostSideHandle())
     {
         init();
@@ -65,8 +59,14 @@ public:
         }
         add(&editfield);
     }
+    std::vector<guiknob_pluginparam*>& getKnobs() {
+        return knobs;
+    }
     ~guictr_vst2_simple() override {
         removeGuis();
+        for (guiknob_pluginparam* knob : knobs) {
+            delete knob;
+        }
     }
     void layoutEntries(ivec2 dir) override {
         guictr_base::layoutEntries(dir);
@@ -102,23 +102,13 @@ public:
 
     void onGuiOpen() {
         for (auto knob : knobs) {
-#if BUILD_VSTHOST
             knob->setEffectInstance(module);
-#endif
-#if BUILD_EXTERNAL_PLUGIN
-            knob->setAudioEffect(vst2Handle);
-#endif
         }
     }
 
     void onGuiClose() {
         for (auto knob : knobs) {
-#if BUILD_VSTHOST
             knob->setEffectInstance(nullptr);
-#endif
-#if BUILD_EXTERNAL_PLUGIN
-            knob->setAudioEffect(nullptr);
-#endif
         }
     }
 
@@ -130,12 +120,6 @@ public:
     }
 
     void onSetParameter(int32_t index, float value) {
-#if BUILD_EXTERNAL_PLUGIN
-        guiknob_pluginparam* knob = getKnobFromParameter(index);
-        if (knob) {
-            knob->setValueInit(value);
-        }
-#endif
     }
     void getSizeScale(int& w, int& h) const {
         w = 100*knobs.size();

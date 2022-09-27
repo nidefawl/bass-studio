@@ -573,7 +573,7 @@ AudioBlock& AllocateScratchAudioBuffer(process_scratch_buf_t& tmp, channelnum_t 
     }
     return tmp.block;
 }
-void MixWithGainAndPanAutomation(process_scratch_buf_t& tmp, AudioBlock* in, AudioBlock* out, float fGainScaled, float fPan, automation_t* autParGain, automation_t* autParPan, tick_t tickBegin, tick_t tickEnd) {
+void MixWithGainAndPanAutomation(process_scratch_buf_t& tmp, AudioBlock* in, AudioBlock* out, float fGainScaled, float fPan, const automated_param_t* autParGain, const automated_param_t* autParPan, tick_t tickBegin, tick_t tickEnd) {
     auto& bufGain = AllocateScratchBuffer(tmp, 0, out->samples);
     auto& bufPanL = AllocateScratchBuffer(tmp, 1, out->samples);
     auto& bufPanR = AllocateScratchBuffer(tmp, 2, out->samples);
@@ -630,24 +630,25 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
                     delayLine = delayLines->getProcessingDelayLine(tracksrc.trackEdgeId);
                     delayLine->write(&srcBlock, delayToMaxInputLatency);
                 }
-                automation_t* autParGain = nullptr;
-                automation_t* autParPan = nullptr;
+                auto* autParGain = GetAutomationSrc(host, tracksrc.gainAutomation);
+                auto* autParPan = GetAutomationSrc(host, tracksrc.panAutomation);
                 float fGainTrackLin = tracksrc.gainAutomation.val;
                 float fPanTrack = tracksrc.panAutomation.val;
-                if (tracksrc.gainAutomation.type == automation_routing_type::ROUTING_PARAM) {
-                    automatable_t* at = resolveAutomatableRefDevice(host, tracksrc.gainAutomation.refLane);
-                    if (at) {
-                        fGainTrackLin = at->getParamValue(tracksrc.gainAutomation.refLane.paramIdx);
-                        autParGain = at->getRegisteredAutomation(tracksrc.gainAutomation.refLane.paramIdx);
-                    }
-                }
-                if (tracksrc.panAutomation.type == automation_routing_type::ROUTING_PARAM) {
-                    automatable_t* at = resolveAutomatableRefDevice(host, tracksrc.panAutomation.refLane);
-                    if (at) {
-                        fPanTrack = at->getParamValue(tracksrc.panAutomation.refLane.paramIdx);
-                        autParGain = at->getRegisteredAutomation(tracksrc.panAutomation.refLane.paramIdx);
-                    }
-                }
+                // if (tracksrc.gainAutomation.type == automation_routing_type::ROUTING_PARAM) {
+                //     ;
+                //     automatable_t* at = resolveAutomatableRefDevice(host, tracksrc.gainAutomation.refLane);
+                //     if (at) {
+                //         fGainTrackLin = at->getParamValue(tracksrc.gainAutomation.refLane.paramIdx);
+                //         autParGain = at->getRegisteredAutomation(tracksrc.gainAutomation.refLane.paramIdx);
+                //     }
+                // }
+                // if (tracksrc.panAutomation.type == automation_routing_type::ROUTING_PARAM) {
+                //     automatable_t* at = resolveAutomatableRefDevice(host, tracksrc.panAutomation.refLane);
+                //     if (at) {
+                //         fPanTrack = at->getParamValue(tracksrc.panAutomation.refLane.paramIdx);
+                //         autParGain = at->getRegisteredAutomation(tracksrc.panAutomation.refLane.paramIdx);
+                //     }
+                // }
 
                 bool bFixedGainAndPan = true;
                 if (autParGain || autParPan) {
@@ -1346,8 +1347,8 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
 
         float fGainTrackLin = trackImpl->mixer.getParamValue(PARAM_GAIN);
         float fPanTrack = trackImpl->mixer.getParamValue(PARAM_PAN);
-        automation_t* autParGain = trackImpl->mixer.getRegisteredAutomation(PARAM_GAIN);
-        automation_t* autParPan = trackImpl->mixer.getRegisteredAutomation(PARAM_PAN);
+        auto autParGain = trackImpl->mixer.getRegisteredAutomation(PARAM_GAIN);
+        auto autParPan = trackImpl->mixer.getRegisteredAutomation(PARAM_PAN);
         bool bFixedGainAndPan = true;
         if (autParGain || autParPan) {
             bFixedGainAndPan = false;

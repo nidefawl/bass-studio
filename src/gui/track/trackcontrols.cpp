@@ -362,8 +362,8 @@ public:
     }
     void onTextEndEdit() override {
         float fNew = parseTextValue(gui_textfield::value());
-        paramAutomatable->deactivateAutomation(paramIdx);
-        paramAutomatable->getParam(paramIdx)->value = fNew;
+        auto flags = param_update_flags::FLG_PAR_UPDATE_FINISH | param_update_flags::FLG_PAR_UPDATE_USER;
+        paramAutomatable->setParamEdit(paramIdx, fNew, flags);
     }
     void handleDraggedBegin(MouseEvent& evt) override {
         if (!isTextCommitted()) {
@@ -383,8 +383,8 @@ public:
     }
     void updateAutomatableParam(float amt, bool applyUserInputScaling) {
         float fNew = modifyParam(paramAutomatable->getParamValue(paramIdx), amt, applyUserInputScaling);
-        paramAutomatable->deactivateAutomation(paramIdx);
-        paramAutomatable->getParam(paramIdx)->value = fNew;
+        auto flags = param_update_flags::FLG_PAR_UPDATE_USER;
+        paramAutomatable->setParamEdit(paramIdx, fNew, flags);
     }
     void handleDraggedMove(MouseEvent& evt) override {
         if (!isTextCommitted()) {
@@ -1308,7 +1308,9 @@ public:
         if (&btnBypass == button) {
             track_params_t& trackParams = m_track->audio->mixer;
             trackParams.deactivateAutomation(PARAM_ENABLE);
-            trackParams.setParamValue(PARAM_ENABLE, trackParams.isEnabled() ? 0.0f : 1.0f, (FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH));
+            auto fNew = float(trackParams.isEnabled());
+            auto flags = FLG_PAR_UPDATE_FINISH | FLG_PAR_UPDATE_USER;
+            trackParams.setParamEdit(PARAM_ENABLE, fNew, flags);
         }
         if (&btnActivate == button) {
             auto pluginMgr = daw->getPluginManager();

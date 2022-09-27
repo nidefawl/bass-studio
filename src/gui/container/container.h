@@ -103,7 +103,8 @@ public:
         auto pos = ivec2{};
         int32_t numEntries = 0;
         for (guibase* gui : guis) {
-            if (gui->getFlags() & FLG_NO_LAYOUT)
+            auto f = gui->getFlags();
+            if (f & FLG_NO_LAYOUT || !(f & FLG_VISIBLE))
                 continue;
             numEntries++;
         }
@@ -112,7 +113,8 @@ public:
         auto sizePadded = (cs - dir*(numEntries-1)*padding);
         auto size = sizePadded / ivec2(dir.x ? numEntries : 1, dir.y ? numEntries : 1);
         for (guibase* gui : guis) {
-            if (gui->getFlags() & FLG_NO_LAYOUT)
+            auto f = gui->getFlags();
+            if (f & FLG_NO_LAYOUT || !(f & FLG_VISIBLE))
                 continue;
             gui->pos = pos;
             gui->size = size;

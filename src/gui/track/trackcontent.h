@@ -176,7 +176,7 @@ public:
     gui_track_subtrack(track_gui_entry_t* _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param);
     //TODO: prefix with get
     virtual int subtrackType() { return SUBTRACK_TYPE_EMPTY; }
-    automation_t* getAutomation() const {
+    automated_param_t* getAutomation() const {
         if (at) {
             return at->getRegisteredAutomation(param);
         }

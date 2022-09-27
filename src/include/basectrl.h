@@ -160,7 +160,7 @@ public:
 protected:
     guitheme_mgr themes;
     AppCtrl* parentCtrl = nullptr;
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
     DawCtrl* parentDawCtrl = nullptr;
 #endif
 public:
@@ -329,7 +329,7 @@ public:
     virtual void setParentCtrl(AppCtrl* ctrl) {
         parentCtrl = ctrl;
     }
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
     virtual DawCtrl* getDawCtrl() {
         return parentDawCtrl;
     }

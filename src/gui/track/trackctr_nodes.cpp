@@ -391,7 +391,7 @@ public:
         margin = 0;
         setBackgroundRendered(true);
         setBackgroundRenderedInset(false);
-        setCanMouseHit(true);
+        // setCanMouseHit(true);
     }
     void text(NVGcontext* vg, const String& text) {
         nvgText(vg, INSET_TITLE, posY, StringAsCStr(text), nullptr);

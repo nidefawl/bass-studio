@@ -20,6 +20,14 @@
 #include "host/mainctrl.h"
 #include "host/host_pluginmanager.h"
 #include "host/host_plugin_window.h"
+#include "snapshot.h"
+#include "base_plugin.h"
+#include "internal_plugin.h"
+#include "track.h"
+#include "gui/plugin/pluginctr.h"
+#include "host/mainctrl.h"
+#include "host/history.h"
+#include "host/host_plugin_window.h"
 
 track_t* effectbase::getTrack() {
     audio_stage_t* stage = getTrackLink();
@@ -386,4 +394,52 @@ guiplugin* effect_deferred::getGui() {
     dbgassert(this->mImpl);
     dbgassert(this->mImpl->gui.get());
     return this->mImpl->gui.get();
+}
+
+
+
+void effectbase::setParamValue(int32_t idx, float val, int flags) {
+    automatable_param_t* param = getParamUnchecked(idx);
+    dbgassert(param);
+    float valPre = param->value;
+    param->value = val;
+    if (param->idx == PARAM_ENABLE) {
+        bool wasEnable = this->bIsEnabled;
+        bool isEnabled = val > 0;
+        updateOnEnableParam(param, wasEnable, isEnabled, flags);
+    } else {
+        if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
+            param->inUse = true;
+        }
+        postSetParameter(param->idx, valPre, val, flags);
+        for (auto& pviewctr : this->views) {
+            if (pviewctr->isInUse()) {
+                pviewctr->onSetParameter(idx, val);
+            }
+        }
+    }
+}
+
+void effectbase::postSetParameter(int32_t idx, float preVal, float val, int flags) {
+    if (flags & FLG_PAR_UPDATE_FINISH) {
+        track_t* track = this->trackImpl ?  this->trackImpl->getTrack() : nullptr;
+        if (track) {
+            automatable_param_ref_t ref = toRef();
+            parameter_ref_t p             = { track->projectIdx, ref.type, this->projectGlobalId, idx };
+            DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+        }
+    }
+    
+    for (auto& pviewctr : this->views) {
+        if (pviewctr->isInUse()) {
+            pviewctr->onSetParameter(idx, val);
+        }
+    }
+}
+
+automatable_param_ref_t effectbase::toRef() const {
+    automatable_param_ref_t ref;
+    ref.type  = AUTOMATABLE_EFFECT;
+    ref.refId = this->projectGlobalId;
+    return ref;
 }

@@ -246,9 +246,10 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginH
                 if (!throttleLog)
                     log_printf("%s audioMasterAutomate unknown param index %d %zd %f\n", StringAsCStr(plugin->getName()), index, value, opt);
             } else {
-                // call to deactivateAutomation is not thread safe,
-                plugin->deactivateAutomation(effParam->idx);
-                effParam->value = opt;
+                auto flags = FLG_PAR_UPDATE_FROM_CLIENT;
+                plugin->setParamEdit(effParam->idx, opt, flags);
+                dbgassert(effParam->value == opt);
+                // effParam->value = opt;
                 effParam->paramValueState = PARAM_FLAG_SET;
                 effParam->paramDisplayValState |= PARAM_FLAG_DIRTY;
                 effParam->inUse = true;

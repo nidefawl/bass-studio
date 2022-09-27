@@ -164,11 +164,9 @@ public:
         }
     }
     void showEditClip() {
-#if BUILD_VSTHOST
         auto arp = getArp();
         for (auto* knob : knobs) {
             knob->setArp(arp);
         }
-#endif
     }
 };

@@ -79,13 +79,6 @@
 #include <glm/gtx/fast_exponential.hpp>
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 
-#if BUILD_EXTERNAL_PLUGIN
-    return PluginSynth::c// TODO: only lock VST2 versions (using same synth-plugin.o)reatePlugin(audioMaster);
-AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
-}
-#endif
-
-
 namespace PluginSynth {
 
     int32_t gDebugOverrides               = -1;

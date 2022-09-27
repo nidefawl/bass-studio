@@ -633,7 +633,7 @@ void guictr_tempocontrols::layout() {
 
     btnAudioOnOff.size = ivec2(100, 28);
     btnAudioOnOff.pos  = ivec2(math::max(songPos.right() + spacing, cs.x - 5 - btnAudioOnOff.size.x), 5);
-    zoom.size          = ivec2(100, 28);
+    zoom.size          = ivec2(90, 28);
     zoom.pos = btnAudioOnOff.pos - ivec2(zoom.size.x+spacingCtrls, 0);
     for (guibase* gui : guis) {
         gui->layout();

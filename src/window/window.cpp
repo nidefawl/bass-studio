@@ -250,7 +250,7 @@ public:
         : parent(_parent),
         tmLastFps(getTimeMillis()) 
     {
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
         //TODO: settings can be unloaded at this point
         noMouseCapture = daw_tls::getSettings().dawsettings.vmmode;
 #endif
@@ -845,7 +845,7 @@ public:
                 bFameRendered = true;
             }
             renderStatsWindow.timeRender = timerProfileWindow.getTimeReset();
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
             if (bEnableWindowProfiling) {
                 // NVGGLRenderStats nvglRenderStats;
                 // nvglGetRenderStats(this->nanovgCtxt, &nvglRenderStats);
@@ -1345,7 +1345,7 @@ void appwindow_main::destroy() {
     }
     destroyOverlayWindows();
     appwindow::killTimer();
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
 #ifdef _WIN32
     if (this->dropTarget) {
         UnregisterDropWindow(hwnd, this->dropTarget);
@@ -1598,7 +1598,7 @@ void appwindow_main::initControl() {
     if (!ctrl->initAppWindow(this, this->nanovgCtxt)) {
         throw appexception("Couldn't start application");
     }
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
 #ifdef _WIN32
     this->dropTarget = RegisterDropWindow(hwnd, this);
 #endif
@@ -1717,12 +1717,11 @@ void makeWindowContextCurrent(window_base* w) {
 }
 
 
-#if HAS_MAIN_LOOP
 #include "platform/win/debug_msg_count.h"
 win32_hwnd_msg_counter_t msgCounter;
 bool msgCounterEnabled = false;
 
-#if defined(_WIN32) && BUILD_VSTHOST
+#if defined(_WIN32) && BUILD_DAW_HOST
 namespace getWindowInstance {
     void destroyAllPluginWindows();
     bool isPluginWindow(HWND hwnd);
@@ -1863,7 +1862,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 
         appInstance.startApp(ctrl);
 
-#if BUILD_VSTHOST
+#if BUILD_DAW_HOST
         daw_tls::tlsinstance& tls = daw_tls::getTls();
         dawinstance_startup_commands(args, tls);
 #endif
@@ -1981,7 +1980,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         }
         mainWindow->destroy();
 
-#if defined(_WIN32) && BUILD_VSTHOST
+#if defined(_WIN32) && BUILD_DAW_HOST
         getWindowInstance::destroyAllPluginWindows();
 #endif
 
@@ -2014,7 +2013,6 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
     return fatalError ? 1 : 0;
 }
 
-#endif// HAS_MAIN_LOOP
 
 void windowTickTimerRun() {
     std::vector<appwindow*> localWindowTimerHandleList = windowTimerHandleList;
@@ -2027,7 +2025,7 @@ void windowTickTimerRun() {
     }
 }
 
-#if (BUILD_VSTHOST || BUILD_EXTERNAL_PLUGIN)
+#if BUILD_DAW_HOST
 #include "plugins/plugin-window.h"
 #include "plugins/plugincontrol.h"
 #include <vstsdk-host-2.4/aeffect.h>

@@ -284,7 +284,7 @@ void gui_track_automation::postEdit() {
     automatable_t* automatable = this->at;
     automation_t* automation   = NULL;
     if (automatable) {
-        automation = automatable->getOrCreateAutomation(paramIdx);
+        automation = &automatable->getOrCreateAutomation(paramIdx)->src;
     }
     if (automation) {
         bool activate      = automation->points.empty() && !data.points.empty();
@@ -320,7 +320,7 @@ bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEven
         tick_t tick       = grid.screenToTickSnap(trackEditorLocal.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
         float val         = ctrToData(local.y, cs.y);
         if (at) {
-            const automation_t* automation = at && paramIdx > -1 ? at->getRegisteredConstAutomation(paramIdx) : nullptr;
+            const auto* automation = at && paramIdx > -1 ? at->getRegisteredConstAutomation(paramIdx) : nullptr;
             if (automation) {
                 val = automation->getValueAt(tick);
             } else {
@@ -529,7 +529,7 @@ void gui_track_automation::render(NVGcontext* vg) {
             //                nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
             nvgBeginPath(vg);
             bool first = true;
-            vec2* ptLast = nullptr;
+            // vec2* ptLast = nullptr;
             for (; i < len; i++) {
                 path_segment_t& segment = segments[i];
                 for (int& point : segment.points) {
@@ -547,7 +547,7 @@ void gui_track_automation::render(NVGcontext* vg) {
                         nvgLineTo(vg, pt2->x, pt2->y);
                         if (pt2->x > sizeInset.x + 4) break;
                     }
-                    ptLast = pt2;
+                    // ptLast = pt2;
                 }
             }
             int end = i;

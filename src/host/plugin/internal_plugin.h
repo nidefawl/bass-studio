@@ -43,8 +43,6 @@ protected:
     internalplugin_handles_t* handlesIntPlugin;
     virtual std::shared_ptr<PluginViewContainers> createViewCtrInternal() { return nullptr; };
 public:
-
-    std::vector<std::shared_ptr<PluginViewContainers>> views;
     String sDir;
     int32_t pluginCategory = 0;
     int32_t vstVersion     = 0;
@@ -76,13 +74,45 @@ public:
     // automatable_t interface
     String getAutomatableName() override;
     float getParamValue(int32_t idx) override;
-    void setParamValue(int32_t idx, float val, int flags) override;
-    automatable_param_ref_t toRef() const override;
-    void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override { };
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
     virtual void processMidiMessages(std::vector<IMidiMsg>& midiEvents) { };
     void processMidi(midi_events_t& midiEvents) override;
     void sendNotesOff() override;
     std::shared_ptr<PluginViewContainers> getViewCtr(int32_t uiId);
+};
+
+class internal_automator : public internalplugin {
+public:
+    struct automation_override_test_t : public automated_param_t {
+        bool isActive() const override { //??
+            return true;
+        }
+        bool isAutomated() const override { //??
+            return true; 
+        }
+        float getValueAt(tick_t tick) const override {
+            return 0.5f;
+        }
+        float getValueAtExact(double dTick) const override {
+            return 0.5f;
+        }
+        void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, float* out) const override {
+            //TODO: write optimal version!
+            for (samplecount_t i = 0; i < numSamples; i++) {
+                double dTick = dTickBegin + (dTickEnd - dTickBegin) * i / (numSamples - 1);
+                *out++ = getValueAtExact(dTick);
+            }
+            // src.sampleAutomation(dTickBegin, dTickEnd, numSamples, out);
+        }
+    };
+    automation_override_test_t constantModulation;
+    internal_automator(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback)
+    : internalplugin(_sName, _pluginType, _projectGlobalId, _hostCallback) {
+    }
+    ~internal_automator() override {
+    }
+    const automated_param_t* getModulationOutputData(int32_t paramIdx) const {
+        return &constantModulation;
+    }
 };

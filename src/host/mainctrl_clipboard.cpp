@@ -68,11 +68,11 @@ namespace DAW {
             if (pasteAutomation) {
                 auto& automations = trClipboard->automations;
                 for (automation_clipboard_t& automClipboard : automations) {
-                    auto device = tr->track->getStage()->resolveAutomatableRefDevice(automClipboard.paramRef);
+                    auto device = tr->track->getStage()->getAutomatableByType(automClipboard.paramRef);
                     if (device) {
                         auto automation = device->getOrCreateAutomation(automClipboard.paramRef.paramIdx);
                         if (automation) {
-                            automation->setRange(tick, tick + clipboard->selRange, automClipboard.dataPoints);
+                            automation->src.setRange(tick, tick + clipboard->selRange, automClipboard.dataPoints);
                         }
                     }
                 }
@@ -100,9 +100,9 @@ namespace DAW {
                         gui_track_subtrack* subtrack          = tr->subtracks[subTrackIdx];
                         auto& automClipboard = clipboard->automationLanes[i];
                         if (!automClipboard.dataPoints.empty() && subtrack->at) {
-                            automation_t* automation = subtrack->at->getOrCreateAutomation(subtrack->param);
+                            auto automation = subtrack->at->getOrCreateAutomation(subtrack->param);
                             if (automation) {
-                                automation->setRange(tickBegin, tickBegin + tickLen, automClipboard.dataPoints);
+                                automation->src.setRange(tickBegin, tickBegin + tickLen, automClipboard.dataPoints);
                             }
                         }
                     }
@@ -196,7 +196,7 @@ namespace DAW {
                     if (tr->validSubtrack(i)) {
                         const gui_track_subtrack* subtrack = tr->subtracks[i];
                         const automatable_t* automatable   = subtrack->at;
-                        const automation_t* automation     = nullptr;
+                        const automated_param_t* automation     = nullptr;
                         if (automatable) {
                             automation = automatable->getRegisteredConstAutomation(subtrack->param);
                         }
@@ -208,7 +208,7 @@ namespace DAW {
                             automationClipboard.paramRef = automatable->toRef();
                             automationClipboard.paramRef.paramIdx = subtrack->param;
                             std::vector<automation_point_t> data;
-                            automation->copyRange(tickBegin, tickEnd, data);
+                            automation->src.copyRange(tickBegin, tickEnd, data);
                             automationClipboard.dataPoints = std::move(data);
                             dbgassert(automationClipboard.paramRef.paramIdx > -1);
                             clipboard->automationLanes.push_back(std::move(automationClipboard));
@@ -280,9 +280,9 @@ namespace DAW {
                     int32_t subTrackIdx = trackSBegin + i;
                     if (tr->validSubtrack(subTrackIdx)) {
                         gui_track_subtrack* subtrack = tr->subtracks[subTrackIdx];
-                        automation_t* automation     = subtrack->getAutomation();
+                        automated_param_t* automation     = subtrack->getAutomation();
                         if (automation) {
-                            automation->setRange(tickBegin, tickEnd, empty);
+                            automation->src.setRange(tickBegin, tickEnd, empty);
                         }
                     }
                 }

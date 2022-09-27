@@ -48,6 +48,7 @@ namespace PluginWrapper {
     class guictr_effectbase_vst2;
     class PluginInternalVST2 : public BasePluginVST2 {
         internalplugin* const effect;
+        std::vector<std::shared_ptr<std::vector<uint8_t>>> dataChunks;
     public:
         explicit PluginInternalVST2(audioMasterCallback audioMaster, internalplugin* effect)
             : BasePluginVST2(audioMaster, effect->getUUID_U32()), effect(effect) {
@@ -260,7 +261,6 @@ namespace PluginWrapper {
             outputBlock.copyFrom(effect->blockOutputs);
             effect->postProcess(&outputBlock, numSamples, true);
         }
-
         VstInt32 getChunk(void** data, bool isPreset) override {
             if (isPreset) {
                 *data = nullptr;
@@ -268,9 +268,11 @@ namespace PluginWrapper {
             }
             plugin_snapshot_t ps;
             effect->makeSnapshot(ps, tracksnapshot_store_opts_t::All());
-            std::vector<uint8_t> buf;
-            serializePluginSnapshot(ps, buf);
-            return 0;
+            auto spVec = std::make_shared<std::vector<uint8_t>>();
+            serializePluginSnapshot(ps, *spVec);
+            *data = spVec->data();
+            addDataChunkKeepAlive(spVec);
+            return static_cast<VstInt32>(spVec->size());
         }
 
         VstInt32 setChunk(void* data, VstInt32 byteSize, bool isPreset) override {
@@ -284,6 +286,13 @@ namespace PluginWrapper {
                 effect->loadSnapshot(*ps);
             }
             return 0;
+        }
+        void addDataChunkKeepAlive(std::shared_ptr<std::vector<uint8_t>>& data) {
+            dataChunks.push_back(data);
+            // remove first one if size > 10
+            if (dataChunks.size() > 10) {
+                dataChunks.erase(dataChunks.begin());
+            }
         }
 
         // internal API
@@ -383,11 +392,7 @@ namespace PluginWrapper {
                     if (module) {
                         //TODO: lock external VST2 instances
                         // ThreadLock lock     = dawCtrl ? dawCtrl->lockPlayThread() : ThreadLock::MakeVoidLock();
-                        automation_t* param = module->getRegisteredAutomation(paramIdx);
-                        if (param) {
-                            param->active = false;
-                        }
-                        module->setParamValue(paramIdx, value, flags);
+                        module->setParamEdit(paramIdx, value, flags);
                     }
                 };
                 knob->fnValueEditBegin = [vstInstance=this->vstInstance, paramIdx=knob->getParamIdx()](float preVal, float val) {

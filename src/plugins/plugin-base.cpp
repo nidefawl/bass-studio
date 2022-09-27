@@ -26,10 +26,7 @@
 #include "exceptions.h"
 #include "msgbox.h"
 #include "platform.h"
-
-#if BUILD_VSTHOST
 #include "host/mainctrl.h"
-#endif
 
 #include "assert_dbg.h"
 
@@ -71,8 +68,6 @@ String getModuleNameLinux() {
 
 
 
-#if BUILD_EXTERNAL_PLUGIN
-#endif //BUILD_EXTERNAL_PLUGIN
 bool isFirstPluginLoad = false;
 #ifdef _WIN32
 extern HMODULE hInstance;
@@ -85,7 +80,6 @@ void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> vi
     try {
         std::shared_ptr<PluginControl> ctrl = std::make_shared<PluginControl>(view);
         ctrl->initApp(std::vector<String>());
-#if BUILD_VSTHOST
         auto tls = daw_tls::getTls();
         auto mainCtrl = tls.mainCtrl;
         if(mainCtrl) {
@@ -94,7 +88,6 @@ void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> vi
             ctrl->m_scale     = mainCtrl->m_scale;
             *ctrl->getTheme() = *mainCtrl->getTheme();
         }
-#endif
         int32_t ctrlWidth = 0, ctrlHeight = 0;
         view->getFixedSize(&ctrlWidth, &ctrlHeight);
 
@@ -261,12 +254,6 @@ static void glfw_plugin_error_callback(int error, const char* description) {
 static void showerror(const char* description) {
     ngui::showNotification(ngui::Style::Error, "Error", description);
 }
-
-#if BUILD_EXTERNAL_PLUGIN
-GLFWwindow* getTopLevelGlfwWindow() {
-    return nullptr;
-}
-#endif
 
 void initColor();// gui/gui.cpp
 #ifdef _WIN32

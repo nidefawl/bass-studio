@@ -70,6 +70,7 @@ namespace RenderResources {
                 dbgassert((int)buf.bytes.size() == buf.w * buf.h * 4);
             }
 #endif
+            //TODO: organize this betters
             load(vg, "icons/synth.png", imgIconsBuf[ICON_SYNTH]);
             load(vg, "icons/effect.png", imgIconsBuf[ICON_EFFECT]);
             load(vg, "icons/folder.png", imgIconsBuf[ICON_FOLDER]);
@@ -102,6 +103,7 @@ namespace RenderResources {
             load(vg, "icons/duplicate.png", imgIconsBuf[ICON_DUPLICATE]);
             load(vg, "icons/synth_small.png", imgIconsBuf[ICON_SYNTH_SMALL]);
             load(vg, "icons/warning.png", imgIconsBuf[ICON_WARNING]);
+            load(vg, "icons/modulation.png", imgIconsBuf[ICON_MODULATION]);
 
             for (int i = 0; i < NUM_IMGS; i++) {
                 ImageBuf& buf = imgIconsBuf[i];

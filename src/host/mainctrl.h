@@ -450,9 +450,7 @@ public:
     explicit DawCtrl(DawInstance& _daw)
     : daw(_daw)
     {
-#if BUILD_VSTHOST
         this->parentDawCtrl = this;
-#endif
         setWindowName(BuildInfo::BUILD_BINARY_NAME);
     }
 

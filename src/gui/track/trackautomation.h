@@ -76,19 +76,19 @@ public:
             return;
         data.targetParam               = paramIdx;
         automatable_t* automatable     = this->at;
-        const automation_t* automation = nullptr;
+        const automated_param_t* automation = nullptr;
         if (automatable && paramIdx > -1) {
             automation = automatable->getRegisteredConstAutomation(paramIdx);
         }
         if (automation) {
-            data.points = automation->points;
+            data.points = automation->src.points;
         } else {
             data.points.clear();
         }
     }
     bool isActive() {
         if (this->at) {
-            const automation_t* automation = this->at->getRegisteredConstAutomation(paramIdx);
+            const automated_param_t* automation = this->at->getRegisteredConstAutomation(paramIdx);
             return automation && automation->isActive();
         }
         return false;

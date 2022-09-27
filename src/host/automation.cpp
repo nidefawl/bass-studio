@@ -267,9 +267,9 @@ void loadAutomation(const std::vector<automation_view_t>& automatedParams, autom
             paramInstance = at->getParam(targetParam + PARAM_OFFSET_EXTERNAL);
         }
         if (paramInstance) {
-            automation_t* autom = at->getOrCreateAutomation(paramInstance->idx);
-            autom->points       = automatedParam.points;
-            autom->active       = automatedParam.active;
+            auto* autom = at->getOrCreateAutomation(paramInstance->idx);
+            autom->src.points       = automatedParam.points;
+            autom->src.active       = automatedParam.active;
         } else {
             log_lf(Log::L_WARN, "Param %d missing for device %s\n", automatedParam.targetParam, StringAsCStr(at->getAutomatableName()));
         }
@@ -289,6 +289,13 @@ void storeAutomation(std::vector<automation_view_t>& automatedParams, automatabl
         total++;
     }
     log_printf("Storing %d automation lanes for device %s\n", total, StringAsCStr(at->getAutomatableName()));
+}
+void automatable_t::setParamEdit(int32_t idx, float val, int flags) {
+    auto* automation = getRegisteredAutomation(idx);
+    if (automation) {
+        automation->src.active = false;
+    }
+    setParamValue(idx, val, flags);
 }
 param_unit_t automatable_t::getParamValueDisplay(int32_t idx) {
     auto param = getParam(idx);

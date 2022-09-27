@@ -435,11 +435,8 @@ namespace DAW {
                 for (track_t* trackReturn : project->trackReturnCtr) {
                     int32_t paramGainIdx = PARAM_OFFSET_SEND_GAIN + trackReturn->localIdxFlat;
                     auto sendGainVal     = trackImpl->mixer.getParamValue(paramGainIdx);
-                    auto automationRef   = AutomationNone(sendGainVal);
-                    auto sendGainAutom   = trackImpl->mixer.getRegisteredConstAutomation(paramGainIdx);
-                    if (sendGainAutom) {
-                        automationRef = AutomationRef(&trackImpl->mixer, paramGainIdx);
-                    } else {
+                    auto automationRef   = GetAutomationRouting(&trackImpl->mixer, paramGainIdx);
+                    if (automationRef.type == automation_routing_type::ROUTING_NONE) {
                         /* Calculate send gain level */
                         float fGainRaw = dsp_util::linScaleToGain(sendGainVal);
                         if (fGainRaw < dsp_util::GAIN_DBFLOOR) {
@@ -448,15 +445,7 @@ namespace DAW {
                     }
 
                     int32_t paramPanIdx   = PARAM_OFFSET_SEND_PAN + trackReturn->localIdxFlat;
-                    auto sendPanVal       = trackImpl->mixer.getParamValue(paramPanIdx);
-                    auto sendPanAutom     = trackImpl->mixer.getRegisteredConstAutomation(paramPanIdx);
-                    auto automationRefPan = AutomationNone(sendPanVal);
-                    if (sendPanAutom) {
-                        automationRefPan = AutomationRef(&trackImpl->mixer, paramPanIdx);
-                    }
-                    if (sendPanVal != 0.5f) {
-                        automationRefPan = AutomationNone(sendPanVal);
-                    }
+                    auto automationRefPan   = GetAutomationRouting(&trackImpl->mixer, paramPanIdx);
 
                     track_impl_t* audioReturn = trackReturn->audio;
                     dbgassert(audioReturn);

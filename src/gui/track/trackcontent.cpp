@@ -517,7 +517,7 @@ void gui_track_subtrack::renderMixerInfo(NVGcontext* vg, ivec2 pos, ivec2 size) 
         target      = StringFormat("%s %12zX", StringAsCStr(ctr->getAutomatableName()), reinterpret_cast<uint64_t>(ctr));
         int32_t paramIdx = param;
         if (paramIdx >= 0) {
-            automation_t* automation = ctr->getRegisteredAutomation(paramIdx);
+            auto automation = ctr->getRegisteredAutomation(paramIdx);
             if (automation) {
                 curvalue = StringFormat("%s (%d) %f", StringAsCStr(ctr->getParamName(paramIdx)), paramIdx, automation->getValueAt(cursor.cursorPos));
             } else {
