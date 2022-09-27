@@ -591,6 +591,7 @@ void MixWithGainAndPanAutomation(process_scratch_buf_t& tmp, AudioBlock* in, Aud
     for (int32_t i = 0; i < out->samples; ++i) {
         dsp_util::getGainLvl(bufGain[i], bufGain[i]);
         DAW::Panning::CalculatePanning<DAW::Panning::PanLaw::SIN_4_5DB>(bufPanL[i], &bufPanL[i], &bufPanR[i]);
+        bufGain[i] *= 1.0f/DAW::Panning::GetCenterGain();;
     }
     DAW::Panning::MultiplyAutomation(in, out, bufGain.data(), panLR); 
 }
@@ -670,7 +671,6 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
                     bool bIsNotMuted = dsp_util::getGainLvl(fGainTrackLin, fGainTrack);
                     /* Fast path */
                     if (bIsNotMuted) {
-                        fGainTrack *= DAW::Panning::GetCenterGain();
                         if (delayToMaxInputLatency > 0) {
                             dbgassert(delayLine);
                             blockMixToOffset.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, fGainTrack);
@@ -1360,7 +1360,6 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
             bool bIsNotMuted = dsp_util::getGainLvl(fGainTrackLin, fGainTrack);
             /* Fast path */
             if (bIsNotMuted) {
-                fGainTrack *= DAW::Panning::GetCenterGain();
                 trackImpl->outputPost.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, fGainTrack);
             }
         } else {

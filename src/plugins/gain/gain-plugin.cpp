@@ -75,10 +75,9 @@ namespace PluginGain {
             if (dsp_util::getGainLvlWithRange(getParamValue(PARAM_GAIN), MTR_CEIL, DBFS_MUTE_POS, fGain)) {
                 // fast path: center pan
                 if (math::abs(getParamValue(PARAM_PAN) - 0.5f) < 0.005f) {
-                    fGain *= DAW::Panning::GetCenterGain();
                     out->addFromOp(in, AudioBlock::mix_op::ADD, fGain);
                 } else {
-                    DAW::Panning::MultiplyConstant(in, out, fGain, getParamValue(PARAM_PAN));
+                    DAW::Panning::MultiplyConstant(in, out, fGain * (1.0f/DAW::Panning::GetCenterGain()), getParamValue(PARAM_PAN));
                 }
             } else {
                 // fast path: fully muted
@@ -105,6 +104,7 @@ namespace PluginGain {
         for (int32_t i = 0; i < numSamples; i++) {
             dsp_util::getGainLvlWithRange(impl->vecGain[i], MTR_CEIL, DBFS_MUTE_POS, impl->vecGain[i]);
             DAW::Panning::CalculatePanning<DAW::Panning::PanLaw::SIN_4_5DB>(impl->vecPanL[i], &impl->vecPanL[i], &impl->vecPanR[i]);
+            impl->vecGain[i] *= 1.0f/DAW::Panning::GetCenterGain();
         }
         float* panningData[2] = { impl->vecPanL.data(), impl->vecPanR.data() };
         DAW::Panning::MultiplyAutomation(in, out, impl->vecGain.data(), panningData);
