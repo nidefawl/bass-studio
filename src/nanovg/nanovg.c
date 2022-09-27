@@ -2868,14 +2868,14 @@ float nvgTextImpl(NVGcontext* ctx, float x, float y, const float maxWidth, const
 	if (verts == NULL) return x;
 
 	fonsTextIterInit(ctx->fs, &iter, x*scale, y*scale, string, end, FONS_GLYPH_BITMAP_REQUIRED);
-	float minX = x;
-	float maxX = x;
+	float minX = x*scale;
+	float maxX = x*scale;
 	while (fonsTextIterNext(ctx->fs, &iter, &q)) {
 		float c[4*2];
 		if (iter.prevGlyphIndex == -1) {
 			break;
 		}
-		if (maxWidth >= 0 && iter.nextx > (x+maxWidth) * scale) {
+		if (maxWidth >= 0 && q.x1 > (x+maxWidth) * scale) {
 			break;
 		}
 
@@ -2913,7 +2913,7 @@ float nvgTextImpl(NVGcontext* ctx, float x, float y, const float maxWidth, const
 
 	nvg__renderText(ctx, verts, nverts);
 
-	return maxX - minX;
+	return (maxX - minX) * invscale;
 }
 
 float nvgTextW(NVGcontext* ctx, float x, float y, const float maxWidth, const char* string, const char* end) {
