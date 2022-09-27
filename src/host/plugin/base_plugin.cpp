@@ -64,7 +64,7 @@ effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGloba
         regparam->name  = paramEntry.name;
         regparam->unit  = paramEntry.unit;
     }
-    getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
+    getParam(PARAM_ENABLE)->quantizationSteps = 1;
     initDefaultIODesc();
 }
 

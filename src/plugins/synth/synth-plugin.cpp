@@ -2867,6 +2867,17 @@ namespace PluginSynth {
                 regparam->value = paramEntry->getAsDouble();
                 regparam->name  = paramEntry->shortName;
                 regparam->unit  = paramEntry->unit;
+                switch (paramEntry->type) {
+                    case ParamType::FLOAT:
+                        break;
+                    case ParamType::INT:
+                    case ParamType::ENUM:
+                        auto paramInt = dynamic_cast<SynthParam_Int*>(paramEntry);
+                        dbgassert(paramInt);
+                        auto params = paramInt->iMax - paramInt->iMin;
+                        regparam->quantizationSteps = params;
+                        break;
+                }
             }
             impl->init();
         }

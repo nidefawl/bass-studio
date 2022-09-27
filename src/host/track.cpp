@@ -1367,7 +1367,7 @@ track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), au
         regparamPan->shortLabel  = "Pan";
         regparamPan->unit  = "dB";
     }
-    getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
+    getParam(PARAM_ENABLE)->quantizationSteps = 1;
 }
 
 float track_params_t::getParamValue(int32_t idx) {

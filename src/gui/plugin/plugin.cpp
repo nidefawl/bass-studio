@@ -455,7 +455,7 @@ void effectbase::addPropertiesParameterList(Table::tbl& table) {
     std::vector<tbl_row_t>& rows = table.rows;
     std::vector<automatable_param_t*> sortedParams;
     this->getSortedParams(sortedParams);
-    rows.push_back({{tblString{"Name"}, tblString{"Unit"}, tblString{"Value"}, tblString{"idx"}, tblString{"internalIdx"}, tblString{"flags"}, tblString{"category"}, tblString{"Step"}}});
+    rows.push_back({{tblString{"Name"}, tblString{"Unit"}, tblString{"Value"}, tblString{"idx"}, tblString{"internalIdx"}, tblString{"flags"},  tblString{"Step"}}});
     for (automatable_param_t* param : sortedParams) {
         tbl_row_t row;
         row.cols.push_back(tblString{param->name});
@@ -464,14 +464,7 @@ void effectbase::addPropertiesParameterList(Table::tbl& table) {
         row.cols.push_back(tblint{param->idx});
         row.cols.push_back(tblint{param->internalIdx});
         row.cols.push_back(tblint{param->flags});
-        row.cols.push_back(tblint{param->category});
-        if (param->flags & ParamUsesFloatStep) {
-            row.cols.push_back(tblString{StringFormat("Float %f %f %f", param->stepSmall.valFloat, param->step.valFloat, param->stepLarge.valFloat)});
-        } else if (param->flags & ParamUsesIntStep) {
-            row.cols.push_back(tblString{StringFormat("Int %d %d %d", param->stepSmall.valInt, param->step.valInt, param->stepLarge.valInt)});
-        } else {
-            row.cols.push_back(tblString{"None"});
-        }
+        row.cols.push_back(tblint{param->quantizationSteps});
         rows.push_back(row);
     }
 }

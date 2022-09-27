@@ -92,7 +92,7 @@ void guiknob::handleDraggedMove(MouseEvent& evt) {
         float scaleCtrlFine = isCtrl(evt.kbmods) ? 20.0f : 1.0f;
         float scaleGlobal = 400.0f;
         float delta = disty / (scaleCtrlFine * scaleGlobal);
-        if (math::abs(delta) > 1e-12f) {
+        if (math::abs(delta) > 1e-12f && math::abs(delta) > getQuantizationStep()) {
             value -= delta;
             if (!changedValue && fnValueEditBegin) {
                 fnValueEditBegin(lastVal, value);
@@ -113,7 +113,12 @@ void guiknob::handleDraggedRelease(MouseEvent& evt) {
 bool guiknob::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
     float value = getValue();
     float scale = isCtrl(evt.kbmods) ? 200.0f : 20.0f;
-    value += yoffset / scale;
+    float q = getQuantizationStep();
+    if (q > 0.0f) {
+        value += q * (yoffset > 0 ? 1 : -1);
+    } else {
+        value += yoffset / scale;
+    }
     setValue(value, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
     return true;
 }

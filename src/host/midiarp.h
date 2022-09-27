@@ -44,6 +44,7 @@ public:
         String name;
         String unit;
         float val = 0.0f;
+        int32_t quantizationSteps = 0;
     };
     static const std::array<tick_t, 16 * 3> tickLength;
     static const std::array<arp_param_entry_t, 8> parameterTypes;

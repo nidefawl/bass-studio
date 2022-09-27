@@ -31,12 +31,12 @@ constexpr std::array<tick_t, 16 * 3> getStaticReadOnlyTickLengthArray() noexcept
 std::array<midiarp::arp_param_entry_t, 8> getMidiParameterTypes() noexcept {
     using p_ = midiarp::arp_param_entry_t;
     return std::array<p_, 8>{ {
-        p_{ PARAM_ENABLE, "Enabled", "", 0.0f },
+        p_{ PARAM_ENABLE, "Enabled", "", 0.0f, 1 },
         p_{ PARAM_GAIN, "Gain", "dB", 1.0f },
-        p_{ ARP_PARAM_CLOCK, "Clock", "Ticks", 10.0f / (float) NUM_ARP_STEPSIZE_OPTIONS },
+        p_{ ARP_PARAM_CLOCK, "Clock", "Ticks", 10.0f / (float) NUM_ARP_STEPSIZE_OPTIONS, NUM_ARP_STEPSIZE_OPTIONS - 1 },
         p_{ ARP_PARAM_GATE, "Gate", "Ticks", 1 / 4.0f },
-        p_{ ARP_PARAM_PATTERN, "Pattern", "", 0.0f },
-        p_{ ARP_PARAM_RAND_TIME, "Random Time", "Ticks", 0.0f },
+        p_{ ARP_PARAM_PATTERN, "Pattern", "", 0.0f, NUM_PATTERNS - 1 },
+        p_{ ARP_PARAM_RAND_TIME, "Random Time", "Ticks", 0.0f, NUM_RANDOM_TIME_MODES - 1 },
         p_{ ARP_PARAM_RAND_MODE, "Random Time Mode", "", 0.0f },
         p_{ ARP_PARAM_RAND_VEL, "Random Velocity", "", 0.0f },
     } };
@@ -56,14 +56,9 @@ midiarp::midiarp(track_impl_t* _trImpl) : automatable_t(), trackImpl(_trImpl) {
         regparam->value = paramEntry.val;
         regparam->name  = paramEntry.name;
         regparam->unit  = paramEntry.unit;
+        regparam->quantizationSteps  = paramEntry.quantizationSteps;
     }
-
-    getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
-    if (syncClock) {
-        getOrCreateAutomation(ARP_PARAM_CLOCK)->quantizationSteps = NUM_ARP_STEPSIZE_OPTIONS - 1;
-    }
-    getOrCreateAutomation(ARP_PARAM_RAND_MODE)->quantizationSteps = NUM_RANDOM_TIME_MODES - 1;
-    getOrCreateAutomation(ARP_PARAM_PATTERN)->quantizationSteps   = NUM_PATTERNS - 1;
+    getParam(ARP_PARAM_CLOCK)->quantizationSteps = syncClock ? (NUM_ARP_STEPSIZE_OPTIONS - 1) : 0;
 }
 param_unit_t midiarp::getParamValueDisplay(int32_t idx) {
     dbgassert(getParam(idx));

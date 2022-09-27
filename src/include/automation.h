@@ -46,9 +46,9 @@ inline float quantizeFloat(float f, int32_t steps) {
     return (float) val / (float) steps;
 }
 struct automation_t {
-    int32_t quantizationSteps = 0;
     bool active               = true;
     std::vector<automation_point_t> points;
+    int32_t quantizationSteps = 0;
     automation_t()          = default;
     virtual ~automation_t() = default;
     virtual bool isActive() const {
@@ -78,7 +78,9 @@ struct automation_clipboard_t {
 struct automated_param_t {
     int32_t paramIdx = -1;
     automation_t src;
-    explicit automated_param_t(int32_t _paramIdx) : paramIdx(_paramIdx) {}
+    explicit automated_param_t(int32_t _paramIdx, int32_t quantizationSteps) : paramIdx(_paramIdx) {
+        src.quantizationSteps = quantizationSteps;
+    }
 };
 
 union param_step_fi_u {
@@ -103,32 +105,23 @@ enum plugin_param_sync_state : uint8_t {
     PARAM_FLAG_DIRTY = 1,
     PARAM_FLAG_SET = 2
 };
-struct automatable_param_t {
-    int32_t idx        = -1;
-    float defaultValue = 0.0f;
-    float value        = 0.0f;
-    bool inUse         = false;
+struct automatable_param_properties_t {
+    int32_t quantizationSteps = 0;
+    int32_t displayIndex = 0;///< index where this parameter should be displayed (starting with 0)
     int32_t flags      = 0;
-
-    param_step_fi_u min{ 0.0f };
-    param_step_fi_u max{ 1.0f };
-    param_step_fi_u stepSmall{ 0.0f };
-    param_step_fi_u step{ 0.0f };
-    param_step_fi_u stepLarge{ 0.0f };
-
     String name;
     String unit;
     String shortLabel;
-
-    //if kVstParameterSupportsDisplayIndex
-    int32_t displayIndex = 0;///< index where this parameter should be displayed (starting with 0)
-
-    //if kVstParameterSupportsDisplayCategory
-    int16_t category    = 0;///< 0: no category, else group index + 1
-    int32_t internalIdx = -1;
     String paramDisplayValStr;
     uint8_t paramDisplayValState = 0; 
     uint8_t paramValueState = 0; 
+    bool inUse         = false;
+};
+struct automatable_param_t : public automatable_param_properties_t {
+    int32_t idx        = -1;
+    int32_t internalIdx = -1;
+    float defaultValue = 0.0f;
+    float value        = 0.0f;
 };
 
 struct automatable_t {
@@ -215,16 +208,16 @@ public:
         setParamValue(paramIdx, it->second.defaultValue, flags);
     };
     // TODO: don't create a new automation here. Quantization must be property of the parameter
-    int32_t getQuantizationSteps(int32_t idx) {
-        automation_t* at = getOrCreateAutomation(idx);
-        dbgassert(at);
-        return at->quantizationSteps;
+    int32_t getQuantizationSteps(int32_t paramIdx) {
+        auto it = mapParams.find(paramIdx);
+        dbgassert(it != mapParams.end());
+        return it->second.quantizationSteps;
     }
     // TODO: don't create a new automation here. Quantization must be property of the parameter
-    float quantizeVal(int32_t idx, float f) {
-        automation_t* at = getOrCreateAutomation(idx);
-        dbgassert(at);
-        f = quantizeFloat(f, at->quantizationSteps);
+    float quantizeVal(int32_t paramIdx, float f) {
+        auto it = mapParams.find(paramIdx);
+        dbgassert(it != mapParams.end());
+        f = quantizeFloat(f, it->second.quantizationSteps);
         return f;
     }
 
@@ -332,7 +325,7 @@ public:
         if (it != automatedParams.end()) {
             return &(*it).src;
         }
-        automatedParams.emplace_back(paramIdx);
+        automatedParams.emplace_back(paramIdx, mapParams[paramIdx].quantizationSteps);
         return &automatedParams.back().src;
     }
     void getAllAutomatedParams(std::vector<automated_param_t>& out) {

@@ -361,6 +361,7 @@ void vstplugin::load(DAW::Host::PluginManager* mgr) {
             if (properties.shortLabel[0]) {
                 // param->shortLabel = properties.shortLabel;
             }
+#if 0 
             if (param->flags & ParamUsesFloatStep) {
                 //param.min.valFloat = 0.0f;
                 //param.max.valFloat = 1.0f;
@@ -386,6 +387,7 @@ void vstplugin::load(DAW::Host::PluginManager* mgr) {
                     paramsCategories.push_back(paramCat);
                 }
             }
+#endif
             if (param->flags & ParamSupportsDisplayIndex) {
                 param->displayIndex = properties.displayIndex;
             }

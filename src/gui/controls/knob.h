@@ -52,7 +52,9 @@ public:
         setBackgroundRendered(false);
         setCanMouseHit(true);        
     }
-
+    virtual float getQuantizationStep() const {
+        return 1e-12f;
+    }
     void setIsBipolar(bool bIsBipolar) {
         this->bIsBipolar = bIsBipolar;
         if (bIsBipolar) {
