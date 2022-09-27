@@ -198,8 +198,8 @@ void gui_track_automation::trackViewDragMove(guitrack_editor* view, MouseEvent& 
         automation_point_t zero   = { 0, 0 };
         automation_point_t* minPt = NULL;
         automation_point_t* maxPt = NULL;
-        automation_point_t* ptBegin = data.points.empty() ? nullptr : &data.points[dataPtIdx1];
-        automation_point_t* ptEnd = data.points.empty() ? nullptr : &data.points[dataPtIdx2];
+        automation_point_t* ptBegin = data.points.empty() || dataPtIdx1 >= CtrSize(data.points) ? nullptr : &data.points[dataPtIdx1];
+        automation_point_t* ptEnd = data.points.empty() || dataPtIdx2 >= CtrSize(data.points) ? nullptr : &data.points[dataPtIdx2];
         if (!firstSegment && dataPtIdx1 > 0 && dataPtIdx1 < (int) pointsClamped.size()) {
             minPt = &pointsClamped[dataPtIdx1 - 1];
         } else if (dataPtIdx1 >= 0) {
@@ -593,10 +593,15 @@ void gui_track_automation::render(NVGcontext* vg) {
             int32_t firstPtIdx = -1;
             int32_t lastPtIdx  = 0;
             bool bIntersect = false;
+            bool bRender = true;
             if (currentDragged.mode == dragmode::drag_segment) {
                 auto segment = getSegmentSafe(currentDragged.segidx);
-                firstPtIdx = segment->dataOffset;
-                lastPtIdx  = segment->dataOffset+1;
+                if (segment) {
+                    firstPtIdx = segment->dataOffset;
+                    lastPtIdx  = segment->dataOffset+1;
+                } else {
+                    bRender = false;
+                }   
             }
             if (currentDragged.mode == dragmode::drag_selection) {
                 firstPtIdx = indexOfTick(data.points, cursor.getTickBegin()) - 1;
@@ -624,51 +629,53 @@ void gui_track_automation::render(NVGcontext* vg) {
                 nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_PLAYING));
                 nvgFill(vg);
             }
-            bool first = true;
-            auto ptStart = &cachedShape.front();
-            auto ptEnd = &cachedShape.back();
-            for (auto& s : segments) {
-                if (s.dataOffset >= firstPtIdx && s.dataOffset < lastPtIdx) {
-                    for (auto ptIdx : s.points) {
-                        auto pt = getPathPointSafe(ptIdx);
-                        if (pt) {
-                            if (first) {
-                                nvgBeginPath(vg);
-                                nvgMoveTo(vg, pt->x, pt->y);
-                                first = false;
-                                ptStart = pt;
-                            } else {
-                                nvgLineTo(vg, pt->x, pt->y);
-                                ptEnd = pt;
+            if (bRender) {
+                bool first = true;
+                auto ptStart = &cachedShape.front();
+                auto ptEnd = &cachedShape.back();
+                for (auto& s : segments) {
+                    if (s.dataOffset >= firstPtIdx && s.dataOffset < lastPtIdx) {
+                        for (auto ptIdx : s.points) {
+                            auto pt = getPathPointSafe(ptIdx);
+                            if (pt) {
+                                if (first) {
+                                    nvgBeginPath(vg);
+                                    nvgMoveTo(vg, pt->x, pt->y);
+                                    first = false;
+                                    ptStart = pt;
+                                } else {
+                                    nvgLineTo(vg, pt->x, pt->y);
+                                    ptEnd = pt;
+                                }
                             }
                         }
                     }
                 }
-            }
-            // for (auto it = segment->points.begin() + 1; it != segment->points.end(); ++it) {
-            // for (int32_t idx = firstPtIdx+2; idx <= lastPtIdx; ++idx) {
-            //     auto pt2 = getPathPointSafe(idx);
-            //     nvgLineTo(vg, pt2->x, pt2->y);
-            // }
-            if (!first) {
-                nvgStrokeColor(vg, theme->getColor(colorHL));
-                nvgStrokeWidth(vg, 4.0f);
+                // for (auto it = segment->points.begin() + 1; it != segment->points.end(); ++it) {
+                // for (int32_t idx = firstPtIdx+2; idx <= lastPtIdx; ++idx) {
+                //     auto pt2 = getPathPointSafe(idx);
+                //     nvgLineTo(vg, pt2->x, pt2->y);
+                // }
+                if (!first) {
+                    nvgStrokeColor(vg, theme->getColor(colorHL));
+                    nvgStrokeWidth(vg, 4.0f);
+                    nvgStroke(vg);
+                }
+                nvgBeginPath(vg);
+                if (ptStart->x > -4 && ptStart->x < sizeInset.x + 4.0f) {
+                    nvgCircle(vg, ptStart->x, ptStart->y, radiusHandleHL);
+                }
+                if (ptEnd->x > -4 && ptEnd->x < sizeInset.x + 4.0f) {
+                    nvgCircle(vg, ptEnd->x, ptEnd->y, radiusHandleHL);
+                }
+                nvgFillColor(vg, theme->getColor(colorHL));
+                nvgFill(vg);
+                nvgStrokeColor(vg, theme->getColor(colorHL2));
+                nvgStrokeWidth(vg, 1.5f);
                 nvgStroke(vg);
-            }
-            nvgBeginPath(vg);
-            if (ptStart->x > -4 && ptStart->x < sizeInset.x + 4.0f) {
-                nvgCircle(vg, ptStart->x, ptStart->y, radiusHandleHL);
-            }
-            if (ptEnd->x > -4 && ptEnd->x < sizeInset.x + 4.0f) {
-                nvgCircle(vg, ptEnd->x, ptEnd->y, radiusHandleHL);
-            }
-            nvgFillColor(vg, theme->getColor(colorHL));
-            nvgFill(vg);
-            nvgStrokeColor(vg, theme->getColor(colorHL2));
-            nvgStrokeWidth(vg, 1.5f);
-            nvgStroke(vg);
-            if (bIntersect) {
-                nvgRestore(vg);
+                if (bIntersect) {
+                    nvgRestore(vg);
+                }
             }
         }
         vec2* pt = getPathPointSafe(currentDragged.segidx);

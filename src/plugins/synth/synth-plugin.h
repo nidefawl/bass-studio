@@ -371,6 +371,7 @@ namespace PluginSynth {
         // internal API
         std::shared_ptr<PluginViewContainers> createViewCtrVst2() override;
         param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;
+
         void addPropertiesParameterTooltip(Table::tbl& table, int idx) override;
 
         void notifyUiChanges();

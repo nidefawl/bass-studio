@@ -1071,7 +1071,7 @@ namespace PluginSynth {
         ~SynthParamBase() override                  = default;
         virtual void set(double f) noexcept         = 0;
         virtual double getAsDouble() const noexcept = 0;
-        virtual String getValueDisplay() const      = 0;
+        virtual String getValueDisplay(double value) const      = 0;
         virtual void resetToInitial() noexcept      = 0;
         virtual param_converted_t convertValueDisplay(const param_unit_t& displayValue) const = 0;
         const String& getName() const {
@@ -1127,8 +1127,8 @@ namespace PluginSynth {
         double getAsDouble() const noexcept override {
             return valDouble;
         }
-        String getValueDisplay() const noexcept override {
-            return StringFormat(StringAsCStr(format), Value());
+        String getValueDisplay(double value) const noexcept override {
+            return StringFormat(StringAsCStr(format), math::clamp((value) * (fmax - fmin) + fmin, fmin, fmax));
         }
         param_converted_t convertValueDisplay(const param_unit_t& displayValue) const override {
             auto val  = atof(StringAsCStr(displayValue.value));
@@ -1179,8 +1179,8 @@ namespace PluginSynth {
             iValue   = math::clamp(static_cast<int32_t>(valInitial * (iMax - iMin) + iMin), iMin, iMax);
             valFloat = valInitial;
         }
-        String getValueDisplay() const noexcept override {
-            return StringFormat(StringAsCStr(format), Value());
+        String getValueDisplay(double value) const noexcept override {
+            return StringFormat(StringAsCStr(format), math::clamp(math::rounddS32(value * (iMax - iMin) + iMin), iMin, iMax));
         }
         param_converted_t convertValueDisplay(const param_unit_t& displayValue) const override {
             auto val  = atof(StringAsCStr(displayValue.value));
@@ -1199,8 +1199,8 @@ namespace PluginSynth {
             this->iMax = CtrSize(strings) - 1;
             return this;
         }
-        String getValueDisplay() const noexcept override {
-            int val = this->Value();
+        String getValueDisplay(double value) const noexcept override {
+            int val = math::clamp(math::rounddS32(value * (iMax - iMin) + iMin), iMin, iMax);
             if (val >= 0 && val < CtrSize(strings)) {
                 return strings[val];
             }
@@ -2906,7 +2906,7 @@ namespace PluginSynth {
         param_unit_t convertParamValueToDisplay(int32_t idx, float value) override {
             if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
                 SynthParamBase* param = vecParams[idx-1];
-                String valDisplay     = param->getValueDisplay();
+                String valDisplay     = param->getValueDisplay(value);
                 return {valDisplay, param->unit};
             }
             return internalplugin::convertParamValueToDisplay(idx, value);
@@ -2973,7 +2973,7 @@ namespace PluginSynth {
             if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
                 SynthParamBase* param = vecParams[idx-1];
                 const auto strName    = param->name;
-                const auto strDisplay = param->getValueDisplay();
+                const auto strDisplay = param->getValueDisplay(param->getAsDouble());
                 table.colSizes.resize(2);
                 table.colSizes[0] = table.strW->getStringWidth(strName);
                 table.colSizes[1] = table.strW->getStringWidth(strDisplay);
@@ -3048,7 +3048,7 @@ namespace PluginSynth {
     void PluginVST2_Synth::getParameterDisplay(VstInt32 index, char* text) {
         if (text && index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
-            String valDisplay     = param->getValueDisplay();
+            String valDisplay     = param->getValueDisplay(param->getAsDouble());
             vst_strncpy(text, StringAsCStr(valDisplay), PLUGIN_PARAM_STR_MAX_LEN);
         }
     }
@@ -3085,7 +3085,7 @@ namespace PluginSynth {
         if (idx >= 0 && idx < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[idx];
             const auto strName    = param->name;
-            const auto strDisplay = param->getValueDisplay();
+            const auto strDisplay = param->getValueDisplay(param->getAsDouble());
             table.colSizes.resize(2);
             table.colSizes[0] = table.strW->getStringWidth(strName);
             table.colSizes[1] = table.strW->getStringWidth(strDisplay);
