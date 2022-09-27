@@ -1,5 +1,6 @@
 #include "trackautomation.h"
 
+#include "grid_constants.h"
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "guiglobals.h"
@@ -186,7 +187,7 @@ void gui_track_automation::trackViewDragMove(guitrack_editor* view, MouseEvent& 
         int32_t dataPtIdx2    = dataPtIdx1 + numPoints - 1;
         bool anyNonSaturatedY = false;
         for (int i = dataPtIdx1; i <= dataPtIdx2; i++) {
-            if (i >= 0 && i < (int) dataPoints.size()) {
+            if (i >= 0 && i < CtrSize(dataPoints)) {
                 automation_point_t& pt = dataPoints[i];
                 anyNonSaturatedY |= (disty < 0 ? pt.val > 0.0f : pt.val < 1.0f);
             }
@@ -194,6 +195,8 @@ void gui_track_automation::trackViewDragMove(guitrack_editor* view, MouseEvent& 
         automation_point_t zero   = { 0, 0 };
         automation_point_t* minPt = NULL;
         automation_point_t* maxPt = NULL;
+        automation_point_t* ptBegin = data.points.empty() ? nullptr : &data.points[dataPtIdx1];
+        automation_point_t* ptEnd = data.points.empty() ? nullptr : &data.points[dataPtIdx2];
         if (!firstSegment && dataPtIdx1 > 0 && dataPtIdx1 < (int) pointsClamped.size()) {
             minPt = &pointsClamped[dataPtIdx1 - 1];
         } else if (dataPtIdx1 >= 0) {
@@ -202,20 +205,40 @@ void gui_track_automation::trackViewDragMove(guitrack_editor* view, MouseEvent& 
         if (dataPtIdx2 >= 0 && dataPtIdx2 + 1 < (int) pointsClamped.size()) {
             maxPt = &pointsClamped[dataPtIdx2 + 1];
         }
-        if (distx < 0 && minPt) {
-            if (dataPtIdx1 >= 0 && dataPtIdx1 < (int) dataPoints.size()) {
+        bool bSnapToTickGrid = true;
+        auto tickSnapped = math::max(0, grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON));
+        if (tickOffset < 0) {
+            if (bSnapToTickGrid && ptBegin) {
+                tickOffset = tickSnapped - ptBegin->time;
+                if (tickOffset > 0) {
+                    tickOffset = 0;
+                }
+            }
+            if (dataPtIdx1 >= 0 && dataPtIdx1 < CtrSize(dataPoints)) {
                 automation_point_t& ptEd = dataPoints[dataPtIdx1];
-                tickOffset               = math::max(minPt->time - ptEd.time, tickOffset);
+                if (minPt) {
+                    auto distToPrev = ptEd.time - minPt->time;
+                    tickOffset = math::max(-distToPrev, tickOffset);
+                }
             }
         }
-        if (distx > 0 && maxPt) {
-            if (dataPtIdx2 >= 0 && dataPtIdx2 < (int) dataPoints.size()) {
+        else if (tickOffset > 0) {
+            if (bSnapToTickGrid && ptEnd) {
+                tickOffset = tickSnapped - ptEnd->time;
+                if (tickOffset < 0) {
+                    tickOffset = 0;
+                }
+            }
+            if (dataPtIdx2 >= 0 && dataPtIdx2 < CtrSize(dataPoints)) {
                 automation_point_t& ptEd = dataPoints[dataPtIdx2];
-                tickOffset               = math::min(maxPt->time - ptEd.time, tickOffset);
+                if (maxPt) {
+                    auto distToNext = maxPt->time - ptEd.time;
+                    tickOffset = math::min(distToNext, tickOffset);
+                }
             }
         }
         for (int i = dataPtIdx1; i <= dataPtIdx2; i++) {
-            if (i >= 0 && i < (int) dataPoints.size()) {
+            if (i >= 0 && i < CtrSize(dataPoints)) {
                 automation_point_t& pt = dataPoints[i];
                 if (tickOffset) {
                     pt.time = pt.time + tickOffset;
@@ -226,7 +249,7 @@ void gui_track_automation::trackViewDragMove(guitrack_editor* view, MouseEvent& 
             }
         }
         for (int i = dataPtIdx1; i <= dataPtIdx2; i++) {
-            if (i >= 0 && i < (int) dataPoints.size()) {
+            if (i >= 0 && i < CtrSize(dataPoints)) {
                 automation_point_t& src = dataPoints[i];
                 automation_point_t& dst = pointsClamped[i];
                 tick_t newTick          = src.time;
@@ -282,7 +305,7 @@ bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEven
     std::vector<automation_point_t>& dataPoints = data.points;
     if (clicked.mode == dragmode::drag_node) {
         int32_t i = clicked.dataPt;
-        dbgassert(i >= 0 && i < (int) dataPoints.size());
+        dbgassert(i >= 0 && i < CtrSize(dataPoints));
         dataPoints.erase(dataPoints.begin() + i);
         postEdit();
         return true;
@@ -291,14 +314,20 @@ bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEven
         dbgassert(trackEditorLocal.x == local.x);
 
         ivec2 cs          = getSizeContent();
-        tick_t tick       = grid.screenToTickSnap(trackEditorLocal.x, SNAP_OFF);
+        tick_t tick       = grid.screenToTickSnap(trackEditorLocal.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
         float val         = ctrToData(local.y, cs.y);
         if (at) {
-            val = at->quantizeVal(paramIdx, val);
+            const automation_t* automation = at && paramIdx > -1 ? at->getRegisteredConstAutomation(paramIdx) : nullptr;
+            if (automation) {
+                val = automation->getValueAt(tick);
+            } else {
+                val = at->getParamValue(paramIdx);
+                // val = at->quantizeVal(paramIdx, val);
+            }
         }
         val         = math::min(1.0f, math::max(0.0f, val));
         int32_t idx = indexOfTick(dataPoints, tick);
-        dbgassert(idx >= 0 && idx <= (int) dataPoints.size());
+        dbgassert(idx >= 0 && idx <= CtrSize(dataPoints));
         automation_point_t pt{ tick, val };
         dataPoints.insert(dataPoints.begin() + idx, pt);
         postEdit();
@@ -389,7 +418,7 @@ void gui_track_automation::updateVisibleTrackContents(scaled_grid& editorGrid) {
         }
         float lastVal = dataPoints[0].val;
         cachedShape.push_back({ firstX, firstY });
-        for (int i = 1; i < (int) dataPoints.size(); i++) {
+        for (int i = 1; i < CtrSize(dataPoints); i++) {
             path_segment_t seg;
             seg.dataOffset = i + segmentDataPtOffset;
             seg.points.push_back(cachedShape.size() - 1);
