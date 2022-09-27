@@ -1247,7 +1247,8 @@ public:
         btnBypass.drawFn   = drawTextureSymbol;
         btnBypass.drawParm = ICON_BYPASS;
         btnBypass.setFlag(FLG_RENDER_BUTTON_WITH_LED, true);
-        btnActivate.setButtonColor(GuiColor::COL_PLUG_TITLE);
+        btnActivate.drawFn   = drawTextureSymbol;
+        btnActivate.drawParm = ICON_EFFECT;
         trackGain.setLabel("Gain Level");
         trackPanning.setLabel("Pan");
         btnActivate.setLabel("Load plugins");
@@ -1339,7 +1340,9 @@ public:
         m_track->audio->getDeferredEffects(effects);
         int nDefEffects = CtrSize(effects);
         btnActivate.setEnabled(nDefEffects > 0);
-        btnActivate.setText(nDefEffects > 9 ? "9+" : (StringFormat("%d", nDefEffects)));
+        auto str = nDefEffects > 9 ? "9+" : (StringFormat("%d", nDefEffects));
+        // btnActivate.setText(str);
+        btnActivate.setLabel("Load "+str+" deferred plugins");
         btnActivate.setVisible(nDefEffects > 0);
 
         const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);

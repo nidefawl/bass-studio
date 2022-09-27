@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <vector>
+#include "gui/controls/inputfield.h"
 #include "project.h"
 #include "track.h"
 #include "types.h"
@@ -147,6 +148,9 @@ public:
     void renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const override;
 
 };
+struct GlobalZoom {
+    float zoom = 1.0f;
+};
 class guictr_tempocontrols : public guictr_base {
     project_globals_t& projectGlobals;
     gui_tempocontrol tempo;
@@ -160,7 +164,8 @@ class guictr_tempocontrols : public guictr_base {
     guibuttonstate btnLoop;
     gui_timeinput loopPos;
     gui_timeinput loopLen;
-
+    gui_numberinput_field_generic<GlobalZoom> zoom;
+    GlobalZoom globalZoom;
 public:
     guictr_tempocontrols(project_t& _project, project_globals_t& _projectGlobals);
     ~guictr_tempocontrols() override;

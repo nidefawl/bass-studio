@@ -252,7 +252,10 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
                 handledKeyinput = true;
                 modified        = true;
                 desc            = "Duplicate clips";
-            } else if (isKC(KC_PASTE, kevt) && m_clipboard) {
+            } else if ((isKC(KC_PASTE_NO_AUTOMATION, kevt) || isKC(KC_PASTE, kevt)) && m_clipboard) {
+                if (isKC(KC_PASTE_NO_AUTOMATION, kevt)) {
+                    bCopyAutomation = false;
+                }
                 DAW::Cursor pasteRange = cursor;
                 track_selection_t pasteSelection;
                 pasteRange.selTrackRange = m_clipboard->selTrackRange;

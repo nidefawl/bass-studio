@@ -65,13 +65,15 @@ namespace DAW {
                 midi.addClip(cloned);
             }
             midi.sortClips();
-            auto& automations = trClipboard->automations;
-            for (automation_clipboard_t& automClipboard : automations) {
-                auto device = tr->track->getStage()->resolveAutomatableRefDevice(automClipboard.paramRef);
-                if (device) {
-                    auto automation = device->getOrCreateAutomation(automClipboard.paramRef.paramIdx);
-                    if (automation) {
-                        automation->setRange(tick, tick + clipboard->selRange, automClipboard.dataPoints);
+            if (pasteAutomation) {
+                auto& automations = trClipboard->automations;
+                for (automation_clipboard_t& automClipboard : automations) {
+                    auto device = tr->track->getStage()->resolveAutomatableRefDevice(automClipboard.paramRef);
+                    if (device) {
+                        auto automation = device->getOrCreateAutomation(automClipboard.paramRef.paramIdx);
+                        if (automation) {
+                            automation->setRange(tick, tick + clipboard->selRange, automClipboard.dataPoints);
+                        }
                     }
                 }
             }

@@ -6,6 +6,7 @@ KeyCombo KC_COPY        = {KB_MOD_CTRL, 0, "c"};
 KeyCombo KC_CONSOLIDATE = {KB_MOD_CTRL, 0, "j"};
 KeyCombo KC_QUANTIZE    = {KB_MOD_CTRL, 0, "q"};
 KeyCombo KC_PASTE       = {KB_MOD_CTRL, 0, "v"};
+KeyCombo KC_PASTE_NO_AUTOMATION  = {KB_MOD_CTRL|KB_MOD_ALT, 0, "v"};
 KeyCombo KC_CUT         = {KB_MOD_CTRL, 0, "x"};
 KeyCombo KC_DUPLICATE   = {KB_MOD_CTRL, 0, "d"};
 KeyCombo KC_DELETE      = {0, KEY_DELETE, nullptr};

@@ -278,6 +278,7 @@ extern KeyCombo KC_UNDO;
 extern KeyCombo KC_REDO;
 extern KeyCombo KC_COPY;
 extern KeyCombo KC_PASTE;
+extern KeyCombo KC_PASTE_NO_AUTOMATION;
 extern KeyCombo KC_CUT;
 extern KeyCombo KC_DELETE;
 extern KeyCombo KC_DUPLICATE;

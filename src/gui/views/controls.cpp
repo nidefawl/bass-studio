@@ -527,8 +527,16 @@ guictr_tempocontrols::guictr_tempocontrols(project_t& _project, project_globals_
       cursorPos(&projectGlobals.cursor.cursorPos),
       songPos(&projectGlobals.playbackPos),
       loopPos(&projectGlobals.loopStart),
-      loopLen(&projectGlobals.loopLen, true) {
-    //btnAudioOnOff.setTint(0x00ddff);
+      loopLen(&projectGlobals.loopLen, true),
+      zoom(&globalZoom) {
+    zoom.fnValueEditChanged = [this](gui_numberinput_field_base*, GlobalZoom globalZoom) {
+        globalZoom.zoom = math::clamp(globalZoom.zoom, 0.25f, 4.0f);
+        if (parentCtrl) {
+            parentCtrl->m_scale = globalZoom.zoom;
+            parentCtrl->relayout();
+        }
+    };
+    zoom.setLabel("Zoom");
     songPos.setConnectedBG();
     loopPos.setConnectedBG();
     loopLen.setConnectedBG();
@@ -551,11 +559,13 @@ guictr_tempocontrols::guictr_tempocontrols(project_t& _project, project_globals_
     add(&btnPlay);
     add(&btnRecord);
     add(&songPos);
+    add(&zoom);
     add(&btnAudioOnOff);
     padding = 8;
 }
 guictr_tempocontrols::~guictr_tempocontrols() {
     remove(&btnAudioOnOff);
+    remove(&zoom);
     remove(&songPos);
     remove(&btnRecord);
     remove(&btnPlay);
@@ -566,6 +576,26 @@ guictr_tempocontrols::~guictr_tempocontrols() {
     remove(&tempo);
     remove(&loopPos);
     remove(&loopLen);
+}
+template<>
+String gui_numberinput_field_generic<GlobalZoom>::valueToStringLiteral(GlobalZoom val) {
+    return StringFormat(strFormat ? strFormat : "%.3f", val.zoom);
+}
+template<>
+GlobalZoom gui_numberinput_field_generic<GlobalZoom>::parseLiteral(const char* szNumber) {
+    return GlobalZoom{float(atof(szNumber))};
+}
+template<>
+void gui_numberinput_field_generic<GlobalZoom>::onMouseDragValue(int32_t disty, int32_t absy) {
+    if (this->number) {
+        setValue(GlobalZoom{number->zoom - (disty) * 0.125f});
+    }
+}
+template<>
+void gui_numberinput_field_generic<GlobalZoom>::onKeyInputChangeValue(ivec2 direction) {
+    if (this->number) {
+        setValue(GlobalZoom{number->zoom - (-direction.y) * 0.125f});
+    }
 }
 void guictr_tempocontrols::layout() {
     ivec2 cs        = getSizeContent();
@@ -603,12 +633,8 @@ void guictr_tempocontrols::layout() {
 
     btnAudioOnOff.size = ivec2(100, 28);
     btnAudioOnOff.pos  = ivec2(math::max(songPos.right() + spacing, cs.x - 5 - btnAudioOnOff.size.x), 5);
-    //        tempo.layout();
-    //        signature.layout();
-    //        cursorPos.layout();
-    //        songPos.layout();
-    //        btnPlay.layout();
-    //        btnAudioOnOff.layout();
+    zoom.size          = ivec2(100, 28);
+    zoom.pos = btnAudioOnOff.pos - ivec2(zoom.size.x+spacingCtrls, 0);
     for (guibase* gui : guis) {
         gui->layout();
     }

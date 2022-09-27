@@ -13,9 +13,9 @@ struct dawruntime {
     bool enableCache                  = true;
     bool disableWaveformUpdates       = false;
     bool enableClipRendererDebugLayer = false;
-    bool copyAutomation = false;
+    bool copyAutomation = true;
 };
-struct appruntime : public dawruntime{
+struct appruntime : public dawruntime {
     render_clip_cache_stats_t renderClipCacheStats{};
     prof_stats_render_t renderStats{};
     prof_stats_render_t prevRenderStats{};

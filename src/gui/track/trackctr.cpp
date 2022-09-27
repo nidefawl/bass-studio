@@ -1,5 +1,6 @@
 #include <nanovg.h>
 #include "assert_dbg.h"
+#include "guicolors.h"
 #include "str_util.h"
 #include "tls.h"
 #include "trackctr.h"
@@ -767,7 +768,6 @@ guitrack_topleft::guitrack_topleft(guictr_tracks& _ctrTracks, DawCtrl* const _da
     (void) project;
     this->dawCtrl = _dawCtrl;
     padding       = 0;
-    //btnFoldAll.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);
     btnFoldAll.setLabel("Fold All Tracks");
     btnFoldAll.icon = ICON_ARR_RIGHT;
     btnFoldAll.setStateRef(&isFolded);
@@ -775,7 +775,7 @@ guitrack_topleft::guitrack_topleft(guictr_tracks& _ctrTracks, DawCtrl* const _da
     btnCopyAutomation.setLabel("Copy+Paste Automation");
     btnCopyAutomation.icon = ICON_AUTOMATION;
     btnCopyAutomation.setStateRef(&daw_tls::getTls().runtime->copyAutomation);
-    // btnCopyAutomation.getIcon = [gtl = this] { return gtl->isFolded ? ICON_AUTOMATION : ICON_AUTOMATION; };
+    btnCopyAutomation.colorActive = GuiColor::COL_AUTOMATED;
     guiButtons.push_back(&btnFoldAll);
     guiButtons.push_back(&btnCopyAutomation);
     for (auto guiBtn : guiButtons) {
