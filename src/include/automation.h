@@ -24,8 +24,8 @@ enum param_update_flags : int32_t {
 #define PARAM_PAN 2
 
 enum automatable_type_t {
-    AUTOMATABLE_NONE = 0,
-    AUTOMATABLE_MIXER,
+    AUTOMATABLE_NONE = -1,
+    AUTOMATABLE_MIXER = 0,
     AUTOMATABLE_ARP,
     AUTOMATABLE_EFFECT,
     AUTOMATABLE_MODULATION_SRC,
@@ -447,4 +447,14 @@ namespace DAW {
     automatable_t* resolveAutomatableRefDevice(const Host::PluginManager* const host, const automatable_param_ref_t& ref);
     const   automated_param_t* GetAutomationSrc(const Host::PluginManager* const host, const automation_routing_t routing);
     automation_routing_t GetAutomationRouting(const automatable_t* dev, int32_t paramIdx);
+
+    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, DAW::automation_channel_ref ref);
+    void DisonnectModulationInputChannel(automatable_t* dev, int32_t paramIdx);
+    inline bool IsParamModulated(automatable_t* dev, int32_t paramIdx) {
+        for (auto& mod : dev->inputChannelsAutomation) {
+            if (mod.idx == paramIdx)
+                return true;
+        }
+        return false;
+    }
 }// namespace DAW
