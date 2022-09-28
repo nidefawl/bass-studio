@@ -233,7 +233,9 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) {
     // if (evt.hasCursorChanged()) {
     cursorIcon = evt.getCursor();
     // }
-    guiOver = evt.getGuiHit();
+    if (!window->isMouseCaptured()) {
+        guiOver = evt.getGuiHit();
+    }
     if (ctxtmenu == nullptr) {
         if (guiCaptured != nullptr) {
             dragDistance += deltaPos;
