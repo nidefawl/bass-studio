@@ -53,15 +53,6 @@ bool guiknob::isAutomated() {
     }
     return false;
 }
-namespace DAW {
-    bool IsParamModulated(automatable_t* dev, int32_t paramIdx) {
-        for (auto& mod : dev->inputChannelsAutomation) {
-            if (mod.idx == paramIdx)
-                return true;
-        }
-        return false;
-    }
-}
 bool guiknob::isModulated() {
     if (paramAutomatable) {
         return DAW::IsParamModulated(paramAutomatable, paramIdx);

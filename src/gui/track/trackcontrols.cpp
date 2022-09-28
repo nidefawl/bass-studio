@@ -805,65 +805,25 @@ public:
         dawCtrl->closeAllContextMenus();
     }
 
-    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-        if (this->contains(mpos)) {
-            ivec2 localMouse         = this->toContainerSpace(mpos);
-            ctxtmenu_entry* entryHit = nullptr;
-            for (ctxtmenu_entry* e : entries) {
-                int n = e->getClicked(size, localMouse);
-                if (n >= 0) {
-                    entryHit = e;
-                    break;
-                }
-            }
-            if (!entryHit || !entryHit->isMenuOpen()) {
-                //close other submenu at same level
-                closeAllSubmenus();
-            } 
-            if (entryHit && !entryHit->isMenuOpen()) {
-                entryHit->setIsMenuOpen(true);
-                auto entry = dynamic_cast<ctxtmenu_entry_bus*>(entryHit);
-                if (entry) {
-                    guictxtmenu* popup = nullptr;
-                    if (entry->busType == bus_type::internal) {
-                        auto stageEntry = dynamic_cast<ctxtmenu_entry_bus_internal*>(entry);
-                        dbgassert(stageEntry);
-                        if (stageEntry) {
-                            popup = new guidropdown_select_bus_ctxt(dawCtrl, stageEntry->getStageRef(), stageEndpoint);
-                        }
-                    }
-                    if (entry->busType == bus_type::external) {
-                        auto& settings = daw_tls::getSettings();
-                        auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
-                        popup     = new guidropdown_select_bus_ctxt(dawCtrl, cfg, stageEndpoint);
-                    }
-                    dbgassert(popup);
-                    if (popup) {
-                        popup->setLevel(this->getLevel() + 1);
-                        popup->size = size;
-                        popup->setFontSize(entry->fontSize);
-                        popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-                        ivec2 screenPosThis = this->parentCtrl->toScreenSpace(ivec2(0, 0));
-                        ivec2 screenPosParent = dawCtrl->toScreenSpace(ivec2(0, 0));
-                        ivec2 screenPos       = screenPosThis - screenPosParent + ivec2(right() + 2, top() + entryHit->y);
-                        this->dawCtrl->openAppMenu(popup->getLevel(), popup, screenPos);
-                    }
-                }
-            }
 
-            for (guibase* gui : guis) {
-                if (!gui->isVisible())
-                    continue;
-                if (gui->mouseHitTest(localMouse, evt)) {
-                    return true;
+    guictxtmenu* createPopupForEntry(ctxtmenu_entry* e, int lvl) override {
+        guictxtmenu* popup = nullptr;
+        auto entry = dynamic_cast<ctxtmenu_entry_bus*>(e);
+        if (entry) {
+            if (entry->busType == bus_type::internal) {
+                auto stageEntry = dynamic_cast<ctxtmenu_entry_bus_internal*>(entry);
+                dbgassert(stageEntry);
+                if (stageEntry) {
+                    popup = new guidropdown_select_bus_ctxt(dawCtrl, stageEntry->getStageRef(), stageEndpoint);
                 }
             }
-            if (canMouseHit()) {
-                evt.requestFocus(this);
-                return true;
+            if (entry->busType == bus_type::external) {
+                auto& settings = daw_tls::getSettings();
+                auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
+                popup     = new guidropdown_select_bus_ctxt(dawCtrl, cfg, stageEndpoint);
             }
         }
-        return false;
+        return popup;
     }
 };
 
@@ -1061,65 +1021,24 @@ public:
         dawCtrl->closeAllContextMenus();
     }
 
-    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-        if (this->contains(mpos)) {
-            ivec2 localMouse         = this->toContainerSpace(mpos);
-            ctxtmenu_entry* entryHit = nullptr;
-            for (ctxtmenu_entry* e : entries) {
-                int n = e->getClicked(size, localMouse);
-                if (n >= 0) {
-                    entryHit = e;
-                    break;
+    guictxtmenu* createPopupForEntry(ctxtmenu_entry* e, int lvl) override {
+        guictxtmenu* popup = nullptr;
+        auto entry         = dynamic_cast<ctxtmenu_entry_bus*>(e);
+        if (entry) {
+            if (entry->busType == bus_type::internal) {
+                auto stageEntry = dynamic_cast<ctxtmenu_entry_bus_internal*>(entry);
+                dbgassert(stageEntry);
+                if (stageEntry) {
+                    popup = new guidropdown_select_midi_ctxt(dawCtrl, stageEntry->getStageRef(), stageEndpoint);
                 }
             }
-            if (!entryHit || !entryHit->isMenuOpen()) {
-                //close other submenu at same level
-                closeAllSubmenus();
-            } 
-            if (entryHit && !entryHit->isMenuOpen()) {
-                entryHit->setIsMenuOpen(true);
-                auto entry = dynamic_cast<ctxtmenu_entry_bus*>(entryHit);
-                if (entry) {
-                    guictxtmenu* popup = nullptr;
-                    if (entry->busType == bus_type::internal) {
-                        auto stageEntry = dynamic_cast<ctxtmenu_entry_bus_internal*>(entry);
-                        dbgassert(stageEntry);
-                        if (stageEntry) {
-                            popup = new guidropdown_select_midi_ctxt(dawCtrl, stageEntry->getStageRef(), stageEndpoint);
-                        }
-                    }
-                    if (entry->busType == bus_type::external) {
-                        auto& settings = daw_tls::getSettings();
-                        auto& midiSettings = settings.iosettings.getIOConfigMidi("stdmidi");
-                        popup     = new guidropdown_select_midi_ctxt(dawCtrl, midiSettings, stageEndpoint);
-                    }
-                    // dbgassert(popup);
-                    if (popup) {
-                        popup->setLevel(this->getLevel() + 1);
-                        entry->bIsMenuOpen = true;
-                        popup->size = size;
-                        popup->setFontSize(entry->fontSize);
-                        popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-                        ivec2 screenPosThis = this->parentCtrl->toScreenSpace(ivec2(0, 0));
-                        ivec2 screenPosParent = dawCtrl->toScreenSpace(ivec2(0, 0));
-                        ivec2 screenPos       = screenPosThis - screenPosParent + ivec2(right() + 2, top() + entryHit->y);
-                        this->dawCtrl->openAppMenu(popup->getLevel(), popup, screenPos);
-                    }
-                }
-            }
-            for (guibase* gui : guis) {
-                if (!gui->isVisible())
-                    continue;
-                if (gui->mouseHitTest(localMouse, evt)) {
-                    return true;
-                }
-            }
-            if (canMouseHit()) {
-                evt.requestFocus(this);
-                return true;
+            if (entry->busType == bus_type::external) {
+                auto& settings     = daw_tls::getSettings();
+                auto& midiSettings = settings.iosettings.getIOConfigMidi("stdmidi");
+                popup              = new guidropdown_select_midi_ctxt(dawCtrl, midiSettings, stageEndpoint);
             }
         }
-        return false;
+        return popup;
     }
 };
 

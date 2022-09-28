@@ -116,4 +116,50 @@ public:
     int getLevel() const {
         return lvl;
     }
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        if (this->contains(mpos)) {
+            ivec2 localMouse         = this->toContainerSpace(mpos);
+            ctxtmenu_entry* entryHit = nullptr;
+            for (ctxtmenu_entry* e : entries) {
+                int n = e->getClicked(size, localMouse);
+                if (n >= 0) {
+                    entryHit = e;
+                    break;
+                }
+            }
+            if (!entryHit || !entryHit->isMenuOpen()) {
+                //close other submenu at same level
+                closeAllSubmenus();
+            } 
+            if (entryHit && !entryHit->isMenuOpen()) {
+                guictxtmenu* popup = createPopupForEntry(entryHit, lvl + 1);
+                if (popup) {
+                    entryHit->setIsMenuOpen(true);
+                    popup->setLevel(this->getLevel() + 1);
+                    popup->size = size;
+                    popup->setFontSize(entryHit->fontSize);
+                    popup->size.x               = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
+                    auto appCtrlParent          = parentCtrl->getParentCtrl();
+                    ivec2 screenPosParentParent = appCtrlParent->toScreenSpace(ivec2(0, 0));
+                    ivec2 screenPosParent       = parentCtrl->toScreenSpace(toScreenSpace(ivec2(right() + 2, top() + entryHit->y)));
+                    appCtrlParent->openAppMenu(popup->getLevel(), popup, screenPosParent - screenPosParentParent - popup->pos + ivec2(1));
+                }
+            }
+            for (guibase* gui : guis) {
+                if (!gui->isVisible())
+                    continue;
+                if (gui->mouseHitTest(localMouse, evt)) {
+                    return true;
+                }
+            }
+            if (canMouseHit()) {
+                evt.requestFocus(this);
+                return true;
+            }
+        }
+        return false;
+    }
+    virtual guictxtmenu* createPopupForEntry(ctxtmenu_entry* entry, int lvl) {
+        return nullptr;
+    }
 };

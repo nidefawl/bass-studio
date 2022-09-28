@@ -12,6 +12,7 @@ guictxtmenu_at_param::guictxtmenu_at_param(DawCtrl* _dawCtrl, automatable_t* _at
     this->dawCtrl = _dawCtrl;
     this->size.x = 240;
     addContextEntriesAutomation(this, _atl, paramIdx);
+    addContextEntriesModulation(this, _atl, paramIdx);
 }
 void guictxtmenu_at_param::clicked(int _id) {
     handleAutomatableContextMenu(dawCtrl, atl, paramIdx, _id);

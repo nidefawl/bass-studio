@@ -61,4 +61,6 @@ class guictxtmenu_at_param : public guictxtmenu {
 public:
     guictxtmenu_at_param(DawCtrl* _dawCtrl, automatable_t* _atl, int32_t _paramIdx);
     void clicked(int _id) override;
+
+    guictxtmenu* createPopupForEntry(ctxtmenu_entry* e, int lvl) override;
 };

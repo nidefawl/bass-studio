@@ -787,18 +787,26 @@ void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, cons
             if (ref.type == AUTOMATABLE_EFFECT) {
                 effectbase* plugin = track->getStage()->getPluginById(ref.refId);
                 if (!plugin || plugin->getModuleType() == PLUGIN_TYPE_DEFERRED) {
-                    log_printf("skipping layout for automation on deferred plugin ref.type %d, ref.refId %d, ref.paramIdx %d\n", ref.type, ref.refId, ref.paramIdx);
+                    continue;
+                }
+                if (!assert_expr(plugin->getParam(ref.paramIdx))) {
                     continue;
                 }
                 al = new gui_track_automationlane(entry, guiTracks->grid, plugin, ref.paramIdx);
             }
             if (ref.type == AUTOMATABLE_MIXER) {
+                auto& mixer = track->getStage()->mixer;
+                if (!assert_expr(mixer.getParam(ref.paramIdx))) {
+                    continue;
+                }
                 al = new gui_track_automationlane(entry, guiTracks->grid, &track->getStage()->mixer, ref.paramIdx);
             }
             if (ref.type == AUTOMATABLE_ARP) {
                 auto arp = track->getStage()->arp;
                 if (!arp) {
-                    log_printf("skipping layout for automation on missing arp ref.type %d, ref.refId %d, ref.paramIdx %d\n", ref.type, ref.refId, ref.paramIdx);
+                    continue;
+                }
+                if (!assert_expr(arp->getParam(ref.paramIdx))) {
                     continue;
                 }
                 al = new gui_track_automationlane(entry, guiTracks->grid, arp, ref.paramIdx);

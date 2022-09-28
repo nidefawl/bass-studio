@@ -155,6 +155,14 @@ namespace DAW {
             inputs.push_back(inputRef);
         }
     }
+    void DisonnectModulationInputChannel(automatable_t* dev, int32_t paramIdx) {
+        std::vector<DAW::automation_channel_ref>& inputs = dev->inputChannelsAutomation;
+        for (int i = 0; i < CtrSize(inputs); i++) {
+            if (inputs[i].idx == paramIdx) {
+                inputs.erase(inputs.begin() + i);
+            }
+        }
+    }
 }
 template<>
 void guitooltip<DAW::UI::guictr_dragged_modulation_src>::setContent() {
