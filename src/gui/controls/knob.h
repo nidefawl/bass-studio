@@ -67,21 +67,7 @@ public:
     bool getIsBipolar() const {
         return bIsBipolar;
     }
-    void setColors() {
-        if (isHighlighted()) {
-            valColor = GuiColor::COL_KNOB_HIGHLIGHT;
-            indColor = GuiColor::COL_KNOB_HIGHLIGHT;
-        } else if (isModulated()) {
-            valColor = GuiColor::COL_KNOB_MODULATED;
-            indColor = GuiColor::COL_KNOB_MODULATED;
-        } else if (isAutomated()) {
-            valColor = GuiColor::COL_AUTOMATED;
-            indColor = GuiColor::COL_AUTOMATED;
-        } else {
-            indColor = GuiColor::COL_KNOB_IND;
-            valColor = GuiColor::COL_KNOB;
-        }
-    }
+    void setColors();
     void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
@@ -162,4 +148,6 @@ public:
     virtual std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges() {
         return std::nullopt;
     }
+    void modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
+    void modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
 };

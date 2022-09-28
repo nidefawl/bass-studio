@@ -127,6 +127,7 @@ enum gui_type : uint16_t {
     CTR_TYPE_PLUGIN,
     CTR_TYPE_PLUGINS_DRAGGED,
     CTR_TYPE_MODULATION_DRAGGED,
+    CTR_TYPE_MODULATION_BUTTON,
     CTR_TYPE_SHAPE_EDITOR,
 };
 namespace DebugAlloc {

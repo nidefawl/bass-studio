@@ -53,12 +53,38 @@ bool guiknob::isAutomated() {
     }
     return false;
 }
+namespace DAW {
+    bool IsParamModulated(automatable_t* dev, int32_t paramIdx) {
+        for (auto& mod : dev->inputChannelsAutomation) {
+            if (mod.idx == paramIdx)
+                return true;
+        }
+        return false;
+    }
+}
 bool guiknob::isModulated() {
+    if (paramAutomatable) {
+        return DAW::IsParamModulated(paramAutomatable, paramIdx);
+    }
     return false;
 }
-bool guiknob::isHighlighted() {
-    return false;
+
+void guiknob::setColors() {
+    if (isHighlighted()) {
+        valColor = GuiColor::COL_KNOB_HIGHLIGHT;
+        indColor = GuiColor::COL_KNOB_HIGHLIGHT;
+    } else if (isModulated()) {
+        valColor = GuiColor::COL_KNOB_MODULATED;
+        indColor = GuiColor::COL_KNOB_MODULATED;
+    } else if (isAutomated()) {
+        valColor = GuiColor::COL_AUTOMATED;
+        indColor = GuiColor::COL_AUTOMATED;
+    } else {
+        indColor = GuiColor::COL_KNOB_IND;
+        valColor = GuiColor::COL_KNOB;
+    }
 }
+
 void guiknob::render(NVGcontext* vg) {
     ivec2 insetP = pos + ivec2(0);
     ivec2 insetS = size - ivec2(0);
@@ -170,6 +196,7 @@ void guiknob::renderRangeIndicator(NVGcontext* vg, ivec2 insetP, ivec2 insetS, f
 
 }
 void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float value) {
+    setColors();
     renderWidgetBorder(vg, getStateFlags());
 
     NVGcolor c2 = theme->getColor(GuiColor::COL_BG_BRT);
@@ -402,7 +429,6 @@ void guiknob_labeled_base::layout() {
 }
 
 void guiknob_labeled_base::render(NVGcontext* vg) {
-    setColors();
 
     // ivec2 insetS = size - ivec2(INS_BRD * 2);
     // if (isSlider) {

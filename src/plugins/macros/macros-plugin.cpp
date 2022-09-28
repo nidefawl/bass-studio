@@ -2,6 +2,9 @@
 #include "automation.h"
 #include "gui/container/container.h"
 #include "gui/controls/knobpluginparam.h"
+#include "gui/gui.h"
+#include "gui/tooltip/tooltip.h"
+#include "guicolors.h"
 #include "guiconstant.h"
 #include "host/mainctrl.h"
 #include "logging.h"
@@ -10,12 +13,12 @@
 #include "seq_util.h"
 
 namespace DAW::UI {
-    class guictr_dragged_modulation_src : public guictr_base {
+    class guictr_dragged_modulation_src : public guitooltip<guictr_dragged_modulation_src> {
         const int HEIGHT_ENTRY = 20;
         DAW::automation_channel_ref ref;
     public:
-        Table::tbl table;
-        guictr_dragged_modulation_src() : guictr_base(gui_type::CTR_TYPE_PLUGINS_DRAGGED) {
+        guictr_dragged_modulation_src() : guitooltip<guictr_dragged_modulation_src>(this) {
+            this->guiType = gui_type::CTR_TYPE_MODULATION_DRAGGED;
             pos = { 0, 0 };
             setDragRendered(true);
         }
@@ -26,17 +29,17 @@ namespace DAW::UI {
             return ref;
         }
         ~guictr_dragged_modulation_src() override = default;
-        void layout() override {
-        }
         bool isDragMoveable() override {
             return true;
         }
         void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override;
-        void setStrings(std::vector<String>& list);
         void handleDraggedRelease(MouseEvent& evt) override;
         void handleDraggedMove(MouseEvent& evt) override;
         void dragMoveOn(guibase* target, ivec2 mousepos) override;
         void dragReleaseOn(guibase* target, ivec2 mousepos) override;
+        // GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
+        //     return GuiColor::COL_KNOB_MODULATED;
+        // }
     };
 
     void guictr_dragged_modulation_src::handleDraggedRelease(MouseEvent& evt) {
@@ -59,16 +62,23 @@ namespace DAW::UI {
     void guictr_dragged_modulation_src::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
         //        mousepos += dragOffset;
         mousepos -= pos;
-        mousepos.x -= size.x / 2;
+        mousepos += ivec2(20, 20);
+        // mousepos.x -= size.x / 2;
         nvgTranslate(vg, mousepos.x, mousepos.y);
-        drawBackground(vg, theme, pos, size, 0, false);
-        ivec2 inset = { 2, 2 };
-        UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
-        UIFont::bindFont(vg, instance);
-        nvgFillColor(vg, THEMECOL_TEXT);
-        Table::DrawTableNVG(this->table, vg, theme, pos + inset, size - inset * 2, HEIGHT_ENTRY - 4);
+        auto iconS = ivec2(fontSize);
+        NVGcolor color = theme->getColor(GuiColor::COL_KNOB_MODULATED);
+        NVGcolor color2 = theme->getColor(GuiColor::COL_LABEL_ACTIVE);
+        ivec2 bgCenter = pos + ivec2(0, size.y/2) - ivec2(iconS.x+INSET_TABLE, iconS.y/2);
+
+        drawBackground(vg, theme, pos-ivec2(iconS.x+INSET_TABLE*2, 0), math::maxvec2(size, iconS)+ivec2(iconS.x+INSET_TABLE*2, 0), 0, false);
+        drawTextureSymbol(vg, bgCenter, iconS, color, ICON_MODULATION, -1); 
+        setFont(vg, fontSize, color2, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+        Table::DrawTableNVG(table, vg, theme, ivec2(INSET_TABLE), getSizeContent() - ivec2(INSET_TABLE << 1), fontSize);
+        if (textField.isVisible()) {
+            textField.render(vg);
+        }
     }
-    void guictr_dragged_modulation_src::setStrings(std::vector<String>& list) {
+    /* void guictr_dragged_modulation_src::setStrings(std::vector<String>& list) {
         table.tableWidth  = 200 - (INSET_TABLE<<1);
         table.titleHeight = HEIGHT_ENTRY;
         table.rowHeight   = HEIGHT_ENTRY;
@@ -80,7 +90,7 @@ namespace DAW::UI {
         }
         Table::AdjustColSizes(table);
         size = ivec2(table.tableWidth, table.rows.size() * table.rowHeight) + ivec2(INSET_TABLE << 1);
-    }
+    } */
 
     class guibutton_modulate : public guibutton {
         DAW::automation_channel_ref const ref;
@@ -88,9 +98,13 @@ namespace DAW::UI {
         bool hasDragged        = false;
         public:
         guibutton_modulate(DAW::automation_channel_ref ref) : guibutton(), ref(ref) {
+            this->guiType = gui_type::CTR_TYPE_MODULATION_BUTTON;
             drawFn   = drawTextureSymbol;
             drawParm = ICON_MODULATION;
             dragged.setParent(this);
+        }
+        DAW::automation_channel_ref getChannelRef() const {
+            return ref;
         }
         void setControl(BaseCtrl* parentCtrl) override {
             guibase::setControl(parentCtrl);
@@ -100,16 +114,18 @@ namespace DAW::UI {
             hasDragged = false;
             if (!hasDragged) {
                 dragged.setChannelRef(ref);
-                std::vector<String> list;
-                list.emplace_back("Modulation");
-                dragged.setStrings(list);
+                dragged.setLabel(StringFormat("Modulation Macro %d", ref.idx));
+                // dragged.setStrings(list);
                 dragged.pos = {};
+                dragged.layout();
+                dbgassert(dragged.isDragRendered());
                 parentCtrl->setDragged(&dragged);
                 hasDragged = true;
             }
             dawCtrl->objectDragMove(&dragged, evt);
         }
         void handleDraggedRelease(MouseEvent& evt) override {
+                dbgassert(dragged.isDragRendered());
             if (hasDragged) {
                 dawCtrl->objectDragRelease(&dragged, evt);
                 return;
@@ -123,7 +139,7 @@ namespace DAW::UI {
     };
 }
 namespace DAW {
-    void ConnectModulationInputChannel(const Host::PluginManager* const host, automatable_t* dev, int32_t paramIdx, DAW::automation_channel_ref ref) {
+    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, DAW::automation_channel_ref ref) {
         std::vector<DAW::automation_channel_ref>& inputs = dev->inputChannelsAutomation;
         bool bFound = false;
         for (DAW::automation_channel_ref& input : inputs) {
@@ -140,27 +156,57 @@ namespace DAW {
         }
     }
 }
-void guiknob_pluginparam::modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+template<>
+void guitooltip<DAW::UI::guictr_dragged_modulation_src>::setContent() {
+    table.tableWidth = 140;
+    auto cell = Table::tblString{ptr->getTooltipText()};
+    if (table.strW) {
+        table.tableWidth = table.strW->getStringWidth(cell.str);
+    }
+    Table::tbl_row_t row{{std::move(cell)}};
+    table.rows.push_back(std::move(row));
+}
+
+bool guiknob::isHighlighted() {
+    using DAW::UI::guictr_dragged_modulation_src;
+    if (parentCtrl->guiOver == this && paramAutomatable && parentCtrl->guiDragged && parentCtrl->guiDragged->getGuiType() == gui_type::CTR_TYPE_MODULATION_DRAGGED) {
+        return true;
+    }
+    if (paramAutomatable && parentCtrl->guiOver && parentCtrl->guiOver->getGuiType() == gui_type::CTR_TYPE_MODULATION_BUTTON) {
+        auto ref = static_cast<DAW::UI::guibutton_modulate*>(parentCtrl->guiOver)->getChannelRef();
+        for (auto& input : paramAutomatable->inputChannelsAutomation) {
+            if (input.idx == paramIdx) {
+                if (input.ref.refId == ref.ref.refId && input.ref.paramIdx == ref.ref.paramIdx) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+void guiknob::modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
     
 }
-void guiknob_pluginparam::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
-    if (hostSidePlugin) {
-        DAW::ConnectModulationInputChannel(nullptr, hostSidePlugin, paramIdx, g->getChannelRef());
+void guiknob::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+    if (this->paramAutomatable) {
+        DAW::ConnectModulationInputChannel(this->paramAutomatable, paramIdx, g->getChannelRef());
     }
 }
 
 namespace PluginMacros {
-    static constexpr int32_t PARAM_NUM_MACROS = 32;
+    static constexpr int32_t PARAM_NUM_MACROS = 2;
     static constexpr int32_t PARAM_MACROS_FIRST = 16;
     class guictr_macro : public guictr_base {
         module_macros* const module;
+        const int32_t idx;
         guiknob_pluginparam knob;
         DAW::UI::guibutton_modulate btnModulate;
     public:
-        explicit guictr_macro(module_macros* module, automatable_param_t* param) : guictr_base(),
+        explicit guictr_macro(module_macros* module, int32_t idx, automatable_param_t* param) : guictr_base(),
             module(module),
+            idx(idx),
             knob(param->idx, param->idx, guiknob::knobtype::SLIDER_LABELED),
-            btnModulate(module->getModulationChannel(param->idx))
+            btnModulate(module->getModulationChannel(idx))
         {
             padding = margin = 0;
             setBackgroundRendered(false);
@@ -173,7 +219,7 @@ namespace PluginMacros {
         };
         void layout() override {
             auto cs = getSizeContent();
-            float buttonHeight = 0.25f * cs.y;
+            float buttonHeight = 0.125f * cs.y;
             float knobHeight = cs.y - buttonHeight;
             knob.size = ivec2(cs.x, knobHeight);
             btnModulate.size = ivec2(cs.x, buttonHeight);
@@ -210,11 +256,11 @@ namespace PluginMacros {
             std::vector<automatable_param_t*> paramsSorted;
             module->getSortedParams(paramsSorted);
             erase_if(paramsSorted, [](const automatable_param_t* p) {
-                return p->idx == PARAM_ENABLE;
+                return p->idx < PARAM_MACROS_FIRST || p->idx >= PARAM_MACROS_FIRST + PARAM_NUM_MACROS;
             });
             macroCtrs.reserve(paramsSorted.size());
             for (automatable_param_t* param : paramsSorted) {
-                macroCtrs.push_back(new guictr_macro(module, param));
+                macroCtrs.push_back(new guictr_macro(module, param->idx - PARAM_MACROS_FIRST, param));
                 macroCtrs.back()->setVisible(CtrSize(macroCtrs) - 1 < numKnobs);
                 add(macroCtrs.back());
             };
@@ -307,10 +353,10 @@ namespace PluginMacros {
                 return true; 
             }
             float getValueAt(tick_t tick) const override {
-                return module->getParamValue(paramIdx);
+                return module->getParamValue(PARAM_MACROS_FIRST + paramIdx);
             }
             float getValueAtExact(double dTick) const override {
-                return module->getParamValue(math::floorfS32(paramIdx));
+                return module->getParamValue(PARAM_MACROS_FIRST + paramIdx);
             }
         };
         std::array<macro_automation_src_param_t, PARAM_NUM_MACROS> macroAutomationSrcParams;

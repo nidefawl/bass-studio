@@ -55,9 +55,6 @@ public:
         }
         return 0.0f;
     }
-    bool isHighlighted() override {
-        return parentCtrl->guiOver == this && parentCtrl->guiDragged && parentCtrl->guiDragged->getGuiType() == gui_type::CTR_TYPE_PLUGINS_DRAGGED;
-    }
     void setEffectInstance(effectbase* _hostSidePlugin) {
         hostSidePlugin   = _hostSidePlugin;
         paramAutomatable = _hostSidePlugin;
@@ -125,6 +122,4 @@ public:
     effectbase* getEffectInstance() {
         return hostSidePlugin;
     }
-    void modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
-    void modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
 };
