@@ -1118,9 +1118,7 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
             if (!trAudio)
                 continue;
             //TODO: do meter updates on the worker threads. (be aware of unconnected tracks not getting processed)
-            float fGainTrack;
-            dsp_util::getGainLvl(trAudio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack);
-            trAudio->meter.update(&trAudio->output, fGainTrack);
+            trAudio->meter.update(&trAudio->outputPost, 1.0f);
             trAudio->meterInput.update(&trAudio->input, 1.0f);
         }
         if (enableProfiling) {
