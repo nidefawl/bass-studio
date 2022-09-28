@@ -105,9 +105,6 @@ public:
         std::stable_sort(clips.begin(), clips.end(), [](const clip_t* a, const clip_t* b) {
             return a->time < b->time;
         });
-        if (clips.size() > 1) {
-            dbgassert(clips[0]->start() < clips[1]->start());
-        }
     }
 
     void addClipSort(clip_t* clip) {

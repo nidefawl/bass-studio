@@ -12,9 +12,8 @@
 #include "renderresources.h"
 #include "seq_util.h"
 
-    #include "str_util.h"
+#include "str_util.h"
 #include "logging.h"
-// #include "synth-snapshot.h"
 #include "byte-buffer.h"
 #include <array>
 #include <cstdint>
@@ -45,9 +44,6 @@ namespace DAW::UI {
         void handleDraggedMove(MouseEvent& evt) override;
         void dragMoveOn(guibase* target, ivec2 mousepos) override;
         void dragReleaseOn(guibase* target, ivec2 mousepos) override;
-        // GuiColor::constant_t getOuterBackgroundColorFromState(int32_t stateflags) const override {
-        //     return GuiColor::COL_KNOB_MODULATED;
-        // }
     };
 
     void guictr_dragged_modulation_src::handleDraggedRelease(MouseEvent& evt) {
@@ -68,10 +64,8 @@ namespace DAW::UI {
     }
 
     void guictr_dragged_modulation_src::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
-        //        mousepos += dragOffset;
         mousepos -= pos;
         mousepos += ivec2(20, 20);
-        // mousepos.x -= size.x / 2;
         nvgTranslate(vg, mousepos.x, mousepos.y);
         auto iconS = ivec2(fontSize);
         NVGcolor color = theme->getColor(GuiColor::COL_KNOB_MODULATED);
@@ -86,19 +80,6 @@ namespace DAW::UI {
             textField.render(vg);
         }
     }
-    /* void guictr_dragged_modulation_src::setStrings(std::vector<String>& list) {
-        table.tableWidth  = 200 - (INSET_TABLE<<1);
-        table.titleHeight = HEIGHT_ENTRY;
-        table.rowHeight   = HEIGHT_ENTRY;
-        table.rows.clear();
-        for (String& s : list) {
-            Table::tbl_row_t row;
-            row.cols.push_back(s);
-            table.rows.push_back(row);
-        }
-        Table::AdjustColSizes(table);
-        size = ivec2(table.tableWidth, table.rows.size() * table.rowHeight) + ivec2(INSET_TABLE << 1);
-    } */
 
     class guibutton_modulate : public guibutton {
         DAW::automation_channel_ref const ref;
@@ -123,7 +104,6 @@ namespace DAW::UI {
             if (!hasDragged) {
                 dragged.setChannelRef(ref);
                 dragged.setLabel(StringFormat("Modulation Macro %d", ref.idx));
-                // dragged.setStrings(list);
                 dragged.pos = {};
                 dragged.layout();
                 dbgassert(dragged.isDragRendered());
@@ -140,9 +120,6 @@ namespace DAW::UI {
             }
             if (parent)
                 parent->buttonClicked(this);
-            // if (isSelected()) {
-            //     static_cast<guictr_plugins*>(this->parent)->onSelected(evt, this);
-            // }
         }
     };
 }

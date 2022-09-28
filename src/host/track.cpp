@@ -663,7 +663,6 @@ void audio_stage_t::loadRoutingSnapshot(const track_effect_routing_snapshot_t& s
                 log_lf(Log::L_DEBUG, "Plugin with id %d not found\n", static_cast<int32_t>(mapEntry.first));
                 snapshotRoutingState = audiostagerouting_state_t::INVALID;
             } else {
-                auto type = plugin->getPluginType();
                 plugin->inputChannels.clear();
                 for (const io_configuration_snapshot_t& effInputSnapshot : mapEntry.second) {
                     DAW::channel_ref_t channel;
@@ -688,7 +687,6 @@ void audio_stage_t::loadModulationRoutingSnapshot(const track_modulation_routing
     }
     for (const auto& mapEntry : snapshot.effectMods) {
         auto* plugin = getPluginById(mapEntry.first);
-        auto type = plugin->getPluginType();
         if (!plugin) {
             log_lf(Log::L_DEBUG, "Plugin with id %d not found\n", static_cast<int32_t>(mapEntry.first));
         } else {
@@ -1505,6 +1503,7 @@ namespace DAW {
         std::map<int32_t,int32_t> idMap;
         std::map<int32_t,int32_t> pluginIdMap;
         std::vector<track_effect_routing_snapshot_t*> all;
+        std::vector<track_modulation_routing_snapshot_t*> allModulation;
         std::vector<plugin_snapshot_t*> q;
 
         // if (host->isStageIdInUse(snapshot.stageIds)) {
@@ -1516,6 +1515,7 @@ namespace DAW {
             idMap[snapshot.stageIds.outputPostStageId] = static_cast<int32_t>(stageId.outputPostStageId);
             snapshot.stageIds = saveTrackIdSnapshot(stageId);
             all.push_back(&snapshot.data.effectRouting);
+            allModulation.push_back(&snapshot.data.modulationRouting);
         // }
 
         q.reserve(snapshot.data.pluginSnapshots.size());
@@ -1527,6 +1527,7 @@ namespace DAW {
             plugin_snapshot_t* s = q.back();
             q.pop_back();
             all.push_back(&s->effectRouting);
+            allModulation.push_back(&s->modulationRouting);
             if (s->projectGlobalId) {
                 auto pluginId = host->getNextGlobalModuleId(0);
                 log_lf(Log::L_DEBUG, "projectGlobalId %d is in use, assigning new id %d\n", s->projectGlobalId, pluginId);
@@ -1576,7 +1577,25 @@ namespace DAW {
                 }
                 inputRoutingEffects[key] = copyVals;
             }
-            effectRouting->inputRoutingEffects = inputRoutingEffects;
+            effectRouting->inputRoutingEffects = std::move(inputRoutingEffects);
+        }
+        for (auto* modulationRouting : allModulation) {
+            for (automation_channel_ref& r : modulationRouting->arp) {
+                r.ref.refId = getNewPluginId(r.ref.refId);
+            }
+            for (automation_channel_ref& r : modulationRouting->mixer) {
+                r.ref.refId = getNewPluginId(r.ref.refId);
+            }
+            std::map<int32_t, std::vector<DAW::automation_channel_ref>> effectMods;
+            for (auto& reff : modulationRouting->effectMods) {
+                auto key = getNewPluginId(reff.first);
+                auto copyVals = reff.second;
+                for (auto& r : copyVals) {
+                    r.ref.refId = getNewPluginId(r.ref.refId);
+                }
+                effectMods[key] = copyVals;
+            }
+            modulationRouting->effectMods = std::move(effectMods);
         }
     }
 
