@@ -1,13 +1,14 @@
-#include "str_util.h"
 
 #include "plugindatabase.h"
+#include "tls.h"
+#include "types.h"
+#include "str_util.h"
 #include "assert_dbg.h"
 #include "fileio.h"
 #include "platform.h"
 #include "appsettings.h"
-#include "snapshot.h"
-#include "tls.h"
-#include <stdint.h>
+#include "snapshot/snapshot.h"
+#include "snapshot/plugin-snapshot.h"
 #include <vector>
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>

@@ -8,7 +8,7 @@
 #include "math/vec.h"
 #include "seq_util.h"
 #include "track.h"
-#include "track_snapshot.h"
+#include "snapshot/track-snapshot.h"
 #include "grid.h"
 
 class gui_track;

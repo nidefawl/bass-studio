@@ -7,7 +7,7 @@
 #include "platform.h"
 #include "str_util.h"
 #include "track.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "history.h"
 #include "mainctrl.h"
 

@@ -39,9 +39,17 @@ struct automatable_param_ref_t {
     int32_t subtrackType    = 0;
 };
 namespace DAW {
+    struct automation_scaling_t {
+        float min = 0.0f;
+        float max = 1.0f;
+        float applyScale(float val) const {
+            return min + (max - min) * val;
+        }
+    };
     struct automation_channel_ref {
         int32_t idx = -1;
         automatable_param_ref_t ref{};
+        automation_scaling_t scale{};
     };
 }
 //TODO: toRef should return this class:
@@ -121,6 +129,7 @@ struct automated_param_t {
         // src.sampleAutomation(dTickBegin, dTickEnd, numSamples, out);
     }
 };
+
 struct automated_param_connection_t {
     int32_t paramIdx = -1;
     const automated_param_t* param = nullptr;
@@ -444,7 +453,7 @@ namespace DAW {
     }
     // bool resolveAutomationAtTime(const DAW::Host::PluginManager* host, const automation_routing_t& ref, tick_t atTime, float* fOut);
     const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const DAW::automation_channel_ref& ref);
-    void ResolveModulationInputRoutings(const Host::PluginManager* const host, const std::vector<DAW::automation_channel_ref>& inputs, std::vector<automated_param_connection_t>& modulations);
+    void ResolveModulationInputRoutings(const Host::PluginManager* const host, automatable_t* dev, std::vector<automated_param_connection_t>& modulations);
     automatable_t* resolveAutomatableRefDevice(const Host::PluginManager* const host, const automatable_param_ref_t& ref);
     const   automated_param_t* GetAutomationSrc(const Host::PluginManager* const host, const automation_routing_t routing);
     automation_routing_t GetAutomationRouting(const automatable_t* dev, int32_t paramIdx);

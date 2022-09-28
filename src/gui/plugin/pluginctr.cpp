@@ -34,7 +34,7 @@
 #include "track_impl.h"
 #include "gui/tooltip/tooltip.h"
 #include "str_util.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "clipboard.h"
 #include "gui/table/table.h"
 
@@ -42,7 +42,6 @@
 #include "gui/contextmenu/contextmenu_daw.h"
 #include "gui/plugin/plugin.h"
 #include "dragdrop.h"
-#include "projectfile-snapshot.h"
 #include "host/host_pluginmanager.h"
 
 using Table::table_entry_t;

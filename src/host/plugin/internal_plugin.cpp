@@ -5,7 +5,7 @@
 #include "modules.h"
 #include "seq_util.h"
 
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "base_plugin.h"
 #include "internal_plugin.h"
 #include "track.h"
@@ -118,7 +118,7 @@ bool internalplugin::showWindow(bool bResetPosition) {
     dbgassert(!windowClient.hostWindow);
     dbgassert(!windowClient.ctrl);
     dbgassert(!windowClient.view);
-    auto newView = getViewCtr(UID_VIEW_CTR_WINDOW);
+    auto newView = getOrCreateViewCtr(UID_VIEW_CTR_WINDOW);
     dbgassert(newView);
     if (!newView) {
         return false;
@@ -195,7 +195,7 @@ bool internalplugin::onClose() {
     windowClient = {};
     return effectbase::onClose();
 }
-std::shared_ptr<PluginViewContainers> internalplugin::getViewCtr(int32_t uiId) {
+std::shared_ptr<PluginViewContainers> internalplugin::getOrCreateViewCtr(int32_t uiId) {
     for (auto& existingView : views) {
         if (!existingView->isInUse() && existingView->getUiId() == uiId) {
             existingView->setUsed();
@@ -211,7 +211,16 @@ std::shared_ptr<PluginViewContainers> internalplugin::getViewCtr(int32_t uiId) {
         newView = nullptr;
     }
     return newView;
-};
+}
+std::shared_ptr<PluginViewContainers> internalplugin::getViewCtr(int32_t uiId) {
+    for (auto& existingView : views) {
+        if (existingView->getUiId() == uiId) {
+            existingView->setUsed();
+            return existingView;
+        }
+    }
+    return nullptr;
+}
 void internalplugin::sendNotesOff() {
     std::vector<IMidiMsg> messages;
     messages.reserve(handlesIntPlugin->heldNotes.size() + 1);

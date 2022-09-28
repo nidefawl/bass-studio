@@ -35,7 +35,7 @@
 #include "modules.h"
 #include "project.h"
 #include "projectcontroller.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "mainctrl.h"
 #include "history.h"
 #include "plugindatabase.h"
@@ -154,6 +154,7 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, const tracksnapsho
         p->mixer.createSnapshot(trackParams, opts);
         p->createIOSnapshot(trackIO);
         p->createRoutingSnapshot(effectRouting);
+        p->createModulationRoutingSnapshot(modulationRouting);
         std::vector<effectbase*> effects = p->effects;
         pluginSnapshots.reserve(p->effects.size());
         for (effectbase* effect : p->effects) {
@@ -238,6 +239,7 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
     audio->loadPlugins(trPluginList);
     audio->loadIOConfiguration(implSnapshot.trackIO);
     audio->loadRoutingSnapshot(implSnapshot.effectRouting);
+    audio->loadModulationRoutingSnapshot(implSnapshot.modulationRouting);
     if (audio->routingState == audiostagerouting_state_t::INVALID) {
         audio->configureDefaultRoutings();
     }
@@ -476,11 +478,11 @@ void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targe
 
 void track_impl_t::updateAutomatableTargets(DAW::Host::Host* const host, tick_t processingPos) {
     std::vector<automated_param_connection_t> mods;
-    DAW::ResolveModulationInputRoutings(host, mixer.inputChannelsAutomation, mods);
+    DAW::ResolveModulationInputRoutings(host, &mixer, mods);
     mixer.updateAutomatedParameters(processingPos, mods);
     if (arp) {
         mods.clear();
-        DAW::ResolveModulationInputRoutings(host, arp->inputChannelsAutomation, mods);
+        DAW::ResolveModulationInputRoutings(host, arp, mods);
         arp->updateAutomatedParameters(processingPos, mods);
     }
 }
@@ -602,7 +604,7 @@ void audio_stage_t::createRoutingSnapshot(track_effect_routing_snapshot_t& snaps
     }
     for (effectbase* effect : effects) {
         auto& vec = snapshot.inputRoutingEffects[static_cast<int32_t>(effect->projectGlobalId)];
-        for (DAW::channel_ref_t& channel : effect->inputChannels) {
+        for (auto& channel : effect->inputChannels) {
             io_configuration_snapshot_t cfg;
             createDawChannelRefSnapshot(channel, cfg);
             vec.push_back(cfg);
@@ -661,6 +663,7 @@ void audio_stage_t::loadRoutingSnapshot(const track_effect_routing_snapshot_t& s
                 log_lf(Log::L_DEBUG, "Plugin with id %d not found\n", static_cast<int32_t>(mapEntry.first));
                 snapshotRoutingState = audiostagerouting_state_t::INVALID;
             } else {
+                auto type = plugin->getPluginType();
                 plugin->inputChannels.clear();
                 for (const io_configuration_snapshot_t& effInputSnapshot : mapEntry.second) {
                     DAW::channel_ref_t channel;
@@ -672,6 +675,26 @@ void audio_stage_t::loadRoutingSnapshot(const track_effect_routing_snapshot_t& s
     }
     //dbgassert(snapshot.routingState == 0);
     this->routingState = snapshotRoutingState;
+}
+
+void audio_stage_t::createModulationRoutingSnapshot(track_modulation_routing_snapshot_t& snapshot) {
+    for (effectbase* effect : effects) {
+        snapshot.effectMods[static_cast<int32_t>(effect->projectGlobalId)] = effect->inputChannelsAutomation;
+    }
+}
+void audio_stage_t::loadModulationRoutingSnapshot(const track_modulation_routing_snapshot_t& snapshot) {
+    for (effectbase* effect : effects) {
+        effect->inputChannelsAutomation.clear();
+    }
+    for (const auto& mapEntry : snapshot.effectMods) {
+        auto* plugin = getPluginById(mapEntry.first);
+        auto type = plugin->getPluginType();
+        if (!plugin) {
+            log_lf(Log::L_DEBUG, "Plugin with id %d not found\n", static_cast<int32_t>(mapEntry.first));
+        } else {
+            plugin->inputChannelsAutomation = mapEntry.second;
+        }
+    }
 }
 
 void track_impl_t::createIOSnapshot(track_io_configuration_snapshot_t& snapshot) {
@@ -749,6 +772,7 @@ void PluginManager::activateDeferred(effectbase* const eff, int flags, effectbas
     /* Load plugins snapshot */
     effect->loadSnapshot(pluginSnapshot);
 
+    effect->inputChannelsAutomation = prevPlugin->inputChannelsAutomation;
     effect->inputChannels = prevPlugin->inputChannels;
     effect->sName         = pluginSnapshot.name;
     effect->setProductName(pluginSnapshot.name);
@@ -1582,12 +1606,19 @@ namespace DAW {
     const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const DAW::automation_channel_ref& ref) {
         dbgassert(ref.ref.type == AUTOMATABLE_MODULATION_SRC);
         auto effBase = host->getPluginById(ref.ref.refId);
-        if (!assert_expr(effBase)) return nullptr;
+        if (!effBase || !effBase->hasAutomationModulationOutput()) {
+            return nullptr;
+        }
+#ifndef NDEBUG
         auto effMod = dynamic_cast<internal_automator*>(effBase);
         if (!assert_expr(effMod)) return nullptr;
+#else
+        auto effMod = static_cast<internal_automator*>(effBase);
+#endif
         return effMod->getModulationOutputData(ref.ref.paramIdx);
     }
-    void ResolveModulationInputRoutings(const Host::PluginManager* const host, const std::vector<DAW::automation_channel_ref>& inputs, std::vector<automated_param_connection_t>& modulations) {
+    void ResolveModulationInputRoutings(const Host::PluginManager* const host, automatable_t* dev, std::vector<automated_param_connection_t>& modulations) {
+        const auto& inputs = dev->inputChannelsAutomation;
         for (auto& channel : inputs) {
             auto mod = DAW::ResolveModulationChannel(host, channel);
             if (mod) {
@@ -1965,4 +1996,14 @@ namespace DAW {
         }
         return AutomationNone(0.0);
     }
+}// namespace DAW
+void track_impl_t::createModulationRoutingSnapshot(track_modulation_routing_snapshot_t& snapshot) {
+    audio_stage_t::createModulationRoutingSnapshot(snapshot);
+    if (arp) snapshot.arp = arp->inputChannelsAutomation;
+    snapshot.mixer = mixer.inputChannelsAutomation;
+}
+void track_impl_t::loadModulationRoutingSnapshot(const track_modulation_routing_snapshot_t& snapshot) {
+    audio_stage_t::loadModulationRoutingSnapshot(snapshot);
+    if (arp) arp->inputChannelsAutomation = snapshot.arp;
+    mixer.inputChannelsAutomation         = snapshot.mixer;
 }

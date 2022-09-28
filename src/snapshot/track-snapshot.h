@@ -1,43 +1,52 @@
 #pragma once
+#include "snapshot/snapshot.h"
+#include "automation.h"
+#include "clip.h"
+#include "track_types.h"
+#include "host/daw_channel.h"
+#include "snapshot/trackrouting-snapshot.h"
 #include <vector>
 #include <map>
-#include "assert_dbg.h"
-#include "cursor.h"
-#include "clip.h"
-#include "str_util.h"
-#include "logging.h"
-#include "automation.h"
-#include "snapshot.h"
-#include "track.h"
-#include "track_routing_snapshot.h"
 
 class track_t;
 struct track_impl_t;
-
+struct automation_view_t;
+struct audio_stage_t;
+struct plugin_snapshot_t;
+struct track_effect_routing_snapshot_t;
 
 struct track_params_snapshot_t {
     std::vector<param_snapshot_t> params;
     std::vector<automation_view_t> automatedParams;
 };
+
 struct arp_snapshot {
     std::vector<param_snapshot_t> params;
     std::vector<automation_view_t> automatedParams;
 };
-struct audio_stage_t;
-struct plugin_snapshot_t;
+
+struct track_modulation_routing_snapshot_t {
+    std::vector<DAW::automation_channel_ref> mixer;
+    std::vector<DAW::automation_channel_ref> arp;
+    std::map<int32_t, std::vector<DAW::automation_channel_ref>> effectMods;
+};
+
 struct track_impl_snapshot_t {
     arp_snapshot trackArp;
     track_io_configuration_snapshot_t trackIO;
     track_params_snapshot_t trackParams;
     std::vector<plugin_snapshot_t> pluginSnapshots;
     track_effect_routing_snapshot_t effectRouting;
+    track_modulation_routing_snapshot_t modulationRouting;
     track_impl_snapshot_t() = default;
     track_impl_snapshot_t(track_impl_t* p, const tracksnapshot_store_opts_t& opts);
 };
+
 struct track_layout_snapshot_t {
     tracklayout_settings_t layout;
     std::vector<automatable_param_ref_t> automationLanes;
 };
+
 struct track_snapshot_t {
     tracksnapshot_store_opts_t storeOpts;
     tracksettings_t trackSettings;

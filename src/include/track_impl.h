@@ -10,6 +10,7 @@
 #include "host/mainctrl.h"
 #include "logging.h"
 #include "seq_util.h"
+#include "snapshot/track-snapshot.h"
 #include "types.h"
 #include "config.h"
 #include "samplerate.h"
@@ -23,7 +24,7 @@
 #include "seq_time.h"
 #include "audiosample.h"
 #include "audiotrack.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "track.h"
 #include "fileio.h"
 #include "host/host_pluginmanager.h"
@@ -268,6 +269,8 @@ struct audio_stage_t : public IDelayLineStorage {
     void getStageTargets(std::vector<automatable_t*>& targets);
     void createRoutingSnapshot(track_effect_routing_snapshot_t& snapshot);
     void loadRoutingSnapshot(const track_effect_routing_snapshot_t& snapshot);
+    virtual void createModulationRoutingSnapshot(track_modulation_routing_snapshot_t& snapshot);
+    virtual void loadModulationRoutingSnapshot(const track_modulation_routing_snapshot_t& snapshot);
     void configureDefaultRoutings();
     virtual void sendNotesOff();
     virtual void onStartPlayback();
@@ -449,6 +452,9 @@ struct track_impl_t : public audio_stage_t {
     void updateAutomatableTargets(DAW::Host::Host* const host, tick_t processingPos);
     void getAutomatableTrackTargets(std::vector<automatable_t*>& targets, bool includeEffects = true);
     void createIOSnapshot(track_io_configuration_snapshot_t& snapshot);
+
+    void createModulationRoutingSnapshot(track_modulation_routing_snapshot_t& snapshot) override;
+    void loadModulationRoutingSnapshot(const track_modulation_routing_snapshot_t& snapshot) override;
     void loadIOConfiguration(const track_io_configuration_snapshot_t& trPluginList);
 
     automatable_t* getAutomatableByType(const automatable_param_ref_t& ref);

@@ -3,7 +3,7 @@
 #include "track.h"
 #include <memory>
 #include "samplefileidx.h"
-#include "project_snapshot.h"
+#include "snapshot/project-snapshot.h"
 
 struct project_file {
     uint32_t fileFmtVersion = 0;

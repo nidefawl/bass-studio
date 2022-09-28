@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "types.h"
+#include "str_util.h"
 #include "assert_dbg.h"
 
 #define TRACK_TYPE_MASTER 0
@@ -65,3 +66,15 @@ inline T& operator^=(T& a, T b) { return (T&) ((int32_t&) a ^= (int32_t) b); }
 
 template<class T, typename = audiostageflags_t>
 inline bool isSet(T a, T b) { return static_cast<bool>((a & b) == b); }
+
+struct tracksettings_t {
+    String name = "INVALID";
+    int type    = -1;//CONST!
+    int rgb     = -1;
+};
+
+struct tracklayout_settings_t {
+    int height         = 4;
+    bool hideTrack     = false;
+    bool hideSubtracks = false;
+};

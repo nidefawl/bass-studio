@@ -13,7 +13,7 @@
 #include "plugins/plugincontrol.h"
 #include "plugins/synth/IPlugMidi.h"
 #include "seq_time.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "str_util.h"
 #include "types.h"
 #include "window.h"
@@ -79,6 +79,7 @@ public:
     virtual void processMidiMessages(std::vector<IMidiMsg>& midiEvents) { };
     void processMidi(midi_events_t& midiEvents) override;
     void sendNotesOff() override;
+    std::shared_ptr<PluginViewContainers> getOrCreateViewCtr(int32_t uiId);
     std::shared_ptr<PluginViewContainers> getViewCtr(int32_t uiId);
 };
 
@@ -94,6 +95,6 @@ public:
         auto thisRef = toRef();
         thisRef.paramIdx = channel;
         thisRef.type = AUTOMATABLE_MODULATION_SRC;
-        return DAW::automation_channel_ref{ 0, thisRef };
+        return DAW::automation_channel_ref{ 0, thisRef, {} };
     }
 };

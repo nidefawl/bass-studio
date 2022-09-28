@@ -8,7 +8,7 @@
 #include "track_impl.h"
 #include "str_util.h"
 #include "logging.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "saferef.h"
 
 #include "gui/gui.h"
@@ -20,7 +20,7 @@
 #include "host/mainctrl.h"
 #include "host/host_pluginmanager.h"
 #include "host/host_plugin_window.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "base_plugin.h"
 #include "internal_plugin.h"
 #include "track.h"

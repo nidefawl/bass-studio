@@ -25,7 +25,7 @@
 #include "tls.h"
 #include "track.h"
 #include "track_impl.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "host/effect_graph.h"
 #include "seq_util.h"
 #include "host/host_pluginmanager.h"
@@ -340,6 +340,7 @@ void module_group::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     }
     audio->loadPlugins(pluginSnapshot.pluginSnapshots);
     audio->loadRoutingSnapshot(pluginSnapshot.effectRouting);
+    audio->loadModulationRoutingSnapshot(pluginSnapshot.modulationRouting);
     if (audio->routingState == audiostagerouting_state_t::INVALID) {
         audio->configureDefaultRoutings();
     }
@@ -362,6 +363,7 @@ void module_group::makeSnapshot(plugin_snapshot_t& snapshot, const tracksnapshot
         snapshot.pluginSnapshots.push_back(std::move(ps));
     }
     audio->createRoutingSnapshot(snapshot.effectRouting);
+    audio->createModulationRoutingSnapshot(snapshot.modulationRouting);
 }
 
 template<>

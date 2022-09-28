@@ -25,6 +25,7 @@ struct clip_clipboard {
 };
 
 
+struct plugin_snapshot_t;
 struct plugin_clipboard_t {
     std::vector<plugin_snapshot_t> plugins;
     int32_t range = 0;

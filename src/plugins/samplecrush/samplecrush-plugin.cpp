@@ -29,7 +29,7 @@
 #include "plugins/plugin.h"
 #include "plugins/plugincontrol.h"
 #include "samplecrush-plugin.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "str_util.h"
 #include "str_util.h"
 #include "track_impl.h"

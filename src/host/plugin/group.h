@@ -4,7 +4,7 @@
 #include "dsp_util.h"
 #include "internal_plugin.h"
 #include "str_util.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 
 struct audio_stage_t;
 class guiplugin;

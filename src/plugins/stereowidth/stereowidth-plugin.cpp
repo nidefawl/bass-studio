@@ -18,7 +18,7 @@
 #include "track_impl.h"
 #include "audioblock.h"
 #include "meter.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "window.h"
 #include <algorithm>
 

@@ -49,6 +49,8 @@ struct track_impl_t;
 struct audio_stage_t;
 struct track_audio_src;
 struct audio_stage_ref_t;
+struct plugin_snapshot_t;
+struct track_id_snapshot_t;
 class project_controller_t;
 class AudioEffectX;
 class DawInstance;

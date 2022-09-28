@@ -3,7 +3,7 @@
 #include "gui/automation/automatable.h"
 #include "host/plugin/base_plugin.h"
 #include "contextmenu_daw.h"
-#include "track_snapshot.h"
+#include "snapshot/track-snapshot.h"
 #include "logging.h"
 #include "host/host_pluginmanager.h"
 

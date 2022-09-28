@@ -1,9 +1,9 @@
 #pragma once
 #include "basectrl.h"
 #include "project.h"
-#include "project_snapshot.h"
+#include "snapshot/project-snapshot.h"
 #include "track.h"
-#include "track_snapshot.h"
+#include "snapshot/track-snapshot.h"
 #include "gui/container/container_layout_snapshot.h"
 #include "types.h"
 

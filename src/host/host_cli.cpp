@@ -6,7 +6,7 @@
 #include "appsettings.h"
 #include "projectfile.h"
 #include "tls.h"
-#include "track_snapshot.h"
+#include "snapshot/track-snapshot.h"
 #include "project.h"
 #include "projectcontroller.h"
 #include "samplerate.h"

@@ -1,6 +1,12 @@
 #include "projectfile.h"
+
+#include "snapshot/snapshot.h"
+#include "snapshot/trackrouting-snapshot.h"
+#include "snapshot/track-snapshot.h"
+#include "snapshot/plugin-snapshot.h"
+#include "snapshot/project-snapshot.h"
 #include "gui/container/container_layout_types.h"
-#include "projectfile-snapshot.h"
+
 #include <vector>
 #include <fstream>
 #include <sstream>
@@ -13,18 +19,16 @@
 #include "seq_time.h"
 #include "seq_util.h"
 #include "math/vec.h"
-#include "snapshot.h"
 #include "str_util.h"
-#include "clip.h"
-#include "track.h"
-#include "track_routing_snapshot.h"
-#include "track_snapshot.h"
-#include "host/daw_channel.h"
 #include "fileio.h"
+#include "logging.h"
+
+#include "clip.h"
+#include "host/daw_channel.h"
+#include "automation.h"
+#include "track.h"
 #include "layout.h"
 #include "project.h"
-#include "automation.h"
-#include "logging.h"
 
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
@@ -41,6 +45,17 @@ namespace DAW {
 template<class Archive>
 void serialize(Archive& archive, channel_desc& m) {
     archive(make_nvp("input", m.name), make_nvp("count", m.count), make_nvp("offset", m.offset));
+}
+template<class Archive>
+void serialize(Archive& archive, automation_scaling_t& m) {
+    archive(make_nvp("min", m.min),
+        make_nvp("max", m.max));
+}
+template<class Archive>
+void serialize(Archive& archive, automation_channel_ref& m) {
+    archive(make_nvp("idx", m.idx),
+        make_nvp("ref", m.ref),
+        make_nvp("scale", m.scale));
 }
 }
 
@@ -225,12 +240,18 @@ void serialize(Archive& archive, track_effect_routing_snapshot_t& m) {
 }
 
 template<class Archive>
+void serialize(Archive& archive, track_modulation_routing_snapshot_t& m) {
+    archive(make_nvp("modulations", m.effectMods));
+}
+
+template<class Archive>
 void serialize(Archive& archive, track_impl_snapshot_t& m) {
     archive(make_nvp("plugins", m.pluginSnapshots),
         make_nvp("track", m.trackParams),
         make_nvp("arp", m.trackArp),
         make_nvp("io", m.trackIO),
         make_nvp("routing", m.effectRouting));
+    make_optional_nvp(archive, "modulation", m.modulationRouting);
 }
 
 template<class Archive>
@@ -277,7 +298,6 @@ void serialize(Archive& archive, tracksnapshot_store_opts_t& m) {
         make_nvp("storeLayouts", m.storeLayouts)
     );
 }
-
 
 template<class Archive>
 void load(Archive& archive, track_snapshot_t& m, const std::uint32_t version) {

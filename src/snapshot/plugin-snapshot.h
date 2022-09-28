@@ -1,33 +1,18 @@
 #pragma once
-#include "types.h"
-#include "math/vec.h"
-#include <cstdint>
-#include <vector>
+#include "fileio.h"
+#include "snapshot/snapshot.h"
+#include "snapshot/trackrouting-snapshot.h"
+#include "snapshot/track-snapshot.h"
 #include "host/daw_channel.h"
+#include "automation.h"
 #include "str_util.h"
-#include "track_routing_snapshot.h"
+#include "logging.h"
+#include <vector>
+#include <map>
 
-struct tracksnapshot_store_opts_t {
-    bool storePluginPreset = true;
-    bool storeAutomation = true;
-    bool storeClips = true;
-    bool storeLayouts = true;
-    static inline tracksnapshot_store_opts_t All() {
-        return tracksnapshot_store_opts_t{true, true, true, true};
-    }
-    static inline tracksnapshot_store_opts_t NoPluginPresets() {
-        return tracksnapshot_store_opts_t{false, true, true, true};
-    }
-    static inline tracksnapshot_store_opts_t AutomationOnly() {
-        return tracksnapshot_store_opts_t{false, true, false, false};
-    }
-};
+class track_t;
+struct track_impl_t;
 
-struct param_snapshot_t {
-    int32_t idx = 0;
-    float val   = 0;
-    int flags   = 0;
-};
 struct plugin_iodesc_snapshot_t {
     std::vector<DAW::channel_desc> input;
     std::vector<DAW::channel_desc> output;
@@ -56,6 +41,7 @@ struct plugin_snapshot_t {
     String currentProgramName;
     plugin_iodesc_snapshot_t ioChannels;
     track_effect_routing_snapshot_t effectRouting;
+    track_modulation_routing_snapshot_t modulationRouting;
     track_id_snapshot_t stageIds;
     plugin_ui_snapshot_t uiSnapshot;
     std::vector<uint8_t> dataChunk;
@@ -64,3 +50,8 @@ struct plugin_snapshot_t {
     std::vector<automation_view_t> automatedParams;
     std::vector<plugin_snapshot_t> pluginSnapshots;
 };
+
+
+extern std::vector<SupportedFileType> vFILE_TYPE_PLUGINSNAPSHOT;
+bool savePluginSnapshot(const plugin_snapshot_t& snapshot, const String& path);
+std::shared_ptr<plugin_snapshot_t> loadPluginSnapshot(const String& path);

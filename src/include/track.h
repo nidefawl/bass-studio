@@ -17,7 +17,7 @@
 #include "logging.h"
 #include "project.h"
 #include "automation.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "host/daw_channel.h"
 #include "track_types.h"
 #include "types.h"
@@ -248,17 +248,6 @@ public:
         }
         return false;
     }
-};
-struct tracksettings_t {
-    String name = "INVALID";
-    int type    = -1;//CONST!
-    int rgb     = -1;
-};
-
-struct tracklayout_settings_t {
-    int height         = 4;
-    bool hideTrack     = false;
-    bool hideSubtracks = false;
 };
 
 class track_t : public tracksettings_t {

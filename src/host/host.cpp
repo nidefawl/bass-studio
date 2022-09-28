@@ -1846,7 +1846,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                     }
                     // resolve all inputs
                     std::vector<automated_param_connection_t> modulations;
-                    DAW::ResolveModulationInputRoutings(this, effect->inputChannelsAutomation, modulations);
+                    DAW::ResolveModulationInputRoutings(this, effect, modulations);
                     effect->updateAutomatedParameters(processingPosLatencyCompensate, modulations);
                     eventsTemp.clear();
                     effect->getTrackLink()->getNotesDelayed(processingPosLatencyCompensate, ticksPerBlock, eventsTemp, true);

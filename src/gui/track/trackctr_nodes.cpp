@@ -33,7 +33,7 @@
 #include "seq_util.h"
 #include "theme.h"
 #include "track_impl.h"
-#include "track_snapshot.h"
+#include "snapshot/track-snapshot.h"
 #include "track.h"
 #include "track.h"
 #include "trackcontent.h"
@@ -1277,7 +1277,7 @@ void gui_graph::updateList(bool resetPositions) {
             if (node->type == DAW::track_node_type_t::EFFECT && node->effectOptional) {
                 auto intEffect = dynamic_cast<internalplugin*>(node->effectOptional);
                 if (intEffect) {
-                    entry->viewCtr = intEffect->getViewCtr(UID_VIEW_CTR_NODES);
+                    entry->viewCtr = intEffect->getOrCreateViewCtr(UID_VIEW_CTR_NODES);
                     if (entry->viewCtr) {
                         entry->viewCtr->addTo(entry->viewCtrs);
                     }

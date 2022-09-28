@@ -3,7 +3,7 @@
 #include "math/vec.h"
 #include "gui/gui.h"
 #include "event.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "str_util.h"
 #include "color_util.h"
 #include "gui/controls/button.h"
@@ -20,6 +20,8 @@ class BaseCtrl;
 class AppCtrl;
 class PluginViewContainers;
 class guictxtmenu_base;
+struct plugin_ui_snapshot_t;
+
 class guiplugin : public guictr_base {
 public:
     effectbase* const effect;

@@ -11,7 +11,7 @@
 #include "logging.h"
 #include "platform.h"
 #include "meter.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "base_plugin.h"
 
 struct AudioBlock;

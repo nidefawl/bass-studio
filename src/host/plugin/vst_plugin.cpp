@@ -12,7 +12,7 @@
 #include "seq_util.h"
 #include "logging.h"
 #include "audioblock.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "vst_plugin_handles.h"
 #include "track.h"
 #include "track_impl.h"
@@ -575,7 +575,7 @@ guiplugin* vstplugin::makeGui() {
             dbgassert(pGuiVstPlugin);
             auto* baseVst2 = dynamic_cast<BasePluginVST2*>(handle->axEffect);
             dbgassert(baseVst2);
-            auto viewCtr = baseVst2->getViewCtrVst2(UID_VIEW_CTR_PLUGIN_CTR);
+            auto viewCtr = baseVst2->getOrCreateViewCtrVst2(UID_VIEW_CTR_PLUGIN_CTR);
             if (viewCtr && baseVst2 && pGuiVstPlugin) {
                 pGuiVstPlugin->viewCtr = viewCtr;
                 viewCtr->addTo(pGuiVstPlugin->viewCtrs);

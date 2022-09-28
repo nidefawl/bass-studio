@@ -15,7 +15,7 @@
 #include "gui/container/container.h"
 #include "gui/controls/scrollbar.h"
 #include "tracktimeline.h"
-#include "track_snapshot.h"
+#include "snapshot/track-snapshot.h"
 #include "mouse.h"
 #include "keyboard.h"
 #include "cursor.h"

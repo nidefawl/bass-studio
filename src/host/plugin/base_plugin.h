@@ -9,7 +9,8 @@
 #include "logging.h"
 #include "platform.h"
 #include "meter.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
+#include "snapshot/plugin-snapshot.h"
 #include "modules.h"
 #include "util/profiling.h"
 #include "saferef.h"
@@ -30,8 +31,6 @@ class track_t;
 struct audio_stage_t;
 struct AudioBlock;
 struct handles_t;
-struct plugin_snapshot_t;
-struct plugin_snapshot_t;
 
 extern bool storePluginPresetWithSnapshot;// = true;
 extern bool loadPluginPresetWithSnapshot; // = false;
@@ -107,6 +106,7 @@ public:
     ~effectbase() override;
     
     SafeRef<effectbase> makeSafeRef();
+    PluginType getPluginType() const { return static_cast<PluginType>(pluginType); }
     String getName() const { return sName; };
     String getProductName() const { return sProductName; };
     void setProductName(String _name) {

@@ -12,6 +12,14 @@
 #include "renderresources.h"
 #include "seq_util.h"
 
+    #include "str_util.h"
+#include "logging.h"
+// #include "synth-snapshot.h"
+#include "byte-buffer.h"
+#include <array>
+#include <cstdint>
+#include <utility>
+
 namespace DAW::UI {
     class guictr_dragged_modulation_src : public guitooltip<guictr_dragged_modulation_src> {
         const int HEIGHT_ENTRY = 20;
@@ -140,23 +148,23 @@ namespace DAW::UI {
 }
 namespace DAW {
     void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, DAW::automation_channel_ref ref) {
-        std::vector<DAW::automation_channel_ref>& inputs = dev->inputChannelsAutomation;
+        auto& inputs = dev->inputChannelsAutomation;
         bool bFound = false;
-        for (DAW::automation_channel_ref& input : inputs) {
+        for (auto& input : inputs) {
             if (input.idx == paramIdx) {
                 input.ref = ref.ref;
                 bFound    = true;
             }
         }
         if (!bFound) {
-            DAW::automation_channel_ref inputRef = ref;
+            auto inputRef = ref;
             inputRef.idx = paramIdx;
             inputRef.ref = ref.ref;
             inputs.push_back(inputRef);
         }
     }
     void DisonnectModulationInputChannel(automatable_t* dev, int32_t paramIdx) {
-        std::vector<DAW::automation_channel_ref>& inputs = dev->inputChannelsAutomation;
+        auto& inputs = dev->inputChannelsAutomation;
         for (int i = 0; i < CtrSize(inputs); i++) {
             if (inputs[i].idx == paramIdx) {
                 inputs.erase(inputs.begin() + i);
@@ -202,8 +210,10 @@ void guiknob::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, i
 }
 
 namespace PluginMacros {
-    static constexpr int32_t PARAM_NUM_MACROS = 2;
-    static constexpr int32_t PARAM_MACROS_FIRST = 16;
+    constexpr int32_t PARAM_NUM_MACROS = 12;
+    constexpr int32_t PARAM_MACROS_FIRST = 16;
+    constexpr int32_t BINARY_SNAPSHOT_VERSION = 1;
+
     class guictr_macro : public guictr_base {
         module_macros* const module;
         const int32_t idx;
@@ -244,7 +254,7 @@ namespace PluginMacros {
         effectbase* const module;
         std::vector<guictr_macro*> macroCtrs;
         gui_textfield editfield;
-        int32_t numKnobs = 4;
+        int32_t numKnobs = 2;
         void init() {
             setLayoutMode(LAYOUT_HORIZONTAL);
             editfield.setFlag(FLG_NO_LAYOUT, true);
@@ -284,7 +294,7 @@ namespace PluginMacros {
             }
         }
         void setNumKnobs(int32_t num) {
-            numKnobs = num;
+            numKnobs = math::clamp(num, 0, CtrSize(macroCtrs));
             int32_t idx = 0;
             for (auto& knob : macroCtrs) {
                 knob->setVisible(idx++ < num);
@@ -349,6 +359,15 @@ namespace PluginMacros {
 
         void onSetParameter(int32_t index, float value) {
         }
+
+        void setUiLayout(const ui_layout_t& layout) {
+            setNumKnobs(layout.numActive);
+        }
+
+        bool getUiLayout(ui_layout_t& layout) const {
+            layout.numActive = numKnobs;
+            return true;
+        }
     };
 
     struct module_macros::macro_impl_t {
@@ -396,8 +415,104 @@ namespace PluginMacros {
     const automated_param_t* module_macros::getModulationOutputData(int32_t channel) const {
         return impl->getModulationOutputData(channel);
     }
+    using ViewCtrType = SinglePluginViewContainers<guictr_module_macros, module_macros>;
     std::shared_ptr<PluginViewContainers> module_macros::createViewCtrInternal() {
-        return std::make_shared<SinglePluginViewContainers<guictr_module_macros, module_macros>>(this, 100, 150);
+        return std::make_shared<ViewCtrType>(this, 100, 150);
+    }
+
+    std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snapshot) {
+        dbgassert(snapshot.version == BINARY_SNAPSHOT_VERSION);
+        auto shrdHeapVec = std::make_shared<std::vector<std::byte>>();
+        shrdHeapVec->resize(256);
+        DAW::ByteBuffer::stream_write<std::vector<std::byte>> out{*shrdHeapVec, 0};
+        out.write(size_t(0));
+        out.write(snapshot.version);
+        out.write(size_t{snapshot.uiLayout.size()});
+        for (const auto& modulation : snapshot.uiLayout) {
+            out.write(modulation.uiId);
+            out.write(modulation.numActive);
+        }
+        out.setPos(0);
+        out.write(size_t(shrdHeapVec->size()));
+        return shrdHeapVec;
+    }
+    bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, snapshot_t& snapshotOut) {
+        if (!data)
+            return false;
+        DAW::ByteBuffer::stream_read in(*data);
+        snapshot_t snapshot;
+        size_t dataSize = data->size();
+        size_t dataSizeHdr = 0;
+        if (!in.read(dataSizeHdr))
+            return false;
+        if (dataSizeHdr > dataSize)
+            return false;
+        in.read(snapshot.version);
+        // if (snapshot.version < MINIMUM_VERSION)
+        //     return false;
+        if (snapshot.version > BINARY_SNAPSHOT_VERSION)
+            return false;
+        size_t numUiLayouts = 0;
+        if (!in.read(numUiLayouts) || numUiLayouts > 1000)
+            return false;
+        snapshot.uiLayout.resize(numUiLayouts);
+
+        for (auto& modulation : snapshot.uiLayout) {
+            if (!in.read(modulation.uiId))
+                return false;
+            if (!in.read(modulation.numActive))
+                return false;
+        }
+        snapshotOut = std::move(snapshot);
+        return true;
+    }
+
+    std::shared_ptr<std::vector<std::byte>> module_macros::storePresetData() {
+        snapshot_t snapshot;
+        snapshot.version = BINARY_SNAPSHOT_VERSION;
+        getUiSnapshot(snapshot);
+        return serializeSnapshot(snapshot);
+    }
+    bool module_macros::loadPresetData(const std::shared_ptr<std::vector<std::byte>>& buf) {
+        if (buf->size() > 0) {
+            snapshot_t snapshotLoaded;
+            if (deserializeSnapshot(buf, snapshotLoaded)) {
+                setUiSnapshot(snapshotLoaded);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void module_macros::getUiSnapshot(snapshot_t& snapshot) {
+        for (auto& view : views) {
+            auto implCtrType = dynamic_cast<ViewCtrType*>(view.get());
+            ui_layout_t layout{};
+            if (implCtrType && implCtrType->getPluginUI().getUiLayout(layout)) {
+                layout.uiId = view->getUiId();
+                // see if snapshot is already there
+                auto it = std::find_if(snapshot.uiLayout.begin(), snapshot.uiLayout.end(), [&](const ui_layout_t& layout) {
+                    return layout.uiId == view->getUiId();
+                });
+                if (it != snapshot.uiLayout.end()) {
+                    *it = layout;
+                } else {
+                    snapshot.uiLayout.push_back(layout);
+                }
+            }
+        }
+    }
+
+    void module_macros::setUiSnapshot(snapshot_t& snapshot) {
+        for (auto& uis : snapshot.uiLayout) {
+            auto view = getViewCtr(uis.uiId);
+            if (!view)
+                continue;
+            auto implCtrType = dynamic_cast<ViewCtrType*>(view.get());
+            if (!implCtrType)
+                continue;
+            implCtrType->getPluginUI().setUiLayout(uis);
+        }
     }
 }// namespace PluginMacros
 

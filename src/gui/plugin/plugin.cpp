@@ -6,7 +6,7 @@
 #include "fileio.h"
 #include "guiglobals.h"
 #include "platform.h"
-#include "snapshot.h"
+#include "snapshot/snapshot.h"
 #include "str_util.h"
 #include "logging.h"
 #include "event.h"
@@ -43,7 +43,6 @@
 #include "host/host_plugin_window.h"
 #include "gui/automation/automatable.h"
 #include "gui/properties/properties_table.h"
-#include "projectfile-snapshot.h"
 
 using Table::table_entry_t;
 using Table::tbl;
@@ -1008,7 +1007,7 @@ guictxtmenu_base* guiinternalpluginview::getTooltip(AppCtrl* appctrl) {
 }
 guiinternalpluginview::guiinternalpluginview(internalplugin* _effect) : guipluginview(_effect), plugin(_effect) {
     (void) plugin;
-    viewCtr = _effect->getViewCtr(UID_VIEW_CTR_PLUGIN_CTR);
+    viewCtr = _effect->getOrCreateViewCtr(UID_VIEW_CTR_PLUGIN_CTR);
     if (viewCtr) {
         viewCtr->addTo(viewCtrs);
     }
