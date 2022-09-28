@@ -402,6 +402,9 @@ void effectbase::setParamValue(int32_t idx, float val, int flags) {
     automatable_param_t* param = getParamUnchecked(idx);
     dbgassert(param);
     float valPre = param->value;
+    if (!(flags & FLG_PAR_UPDATE_AUTOMATED)) {
+        param->nonAutomated = val;
+    }
     param->value = val;
     if (param->idx == PARAM_ENABLE) {
         bool wasEnable = this->bIsEnabled;

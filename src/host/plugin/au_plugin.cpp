@@ -41,21 +41,6 @@ param_unit_t auplugin::convertParamValueToDisplay(int32_t idx, float value) {
     }
     return effectbase::convertParamValueToDisplay(idx, value);
 }
-void auplugin::setParamValue(int32_t idx, float val, int flags) {
-    automatable_param_t* param = getParamUnchecked(idx);
-    dbgassert(param);
-    param->value = val;
-    if (param->idx == PARAM_ENABLE) {
-        updateOnEnableParam(param, this->bIsEnabled, val > 0, flags);
-    } else {
-        if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
-            param->inUse = true;
-        }
-        if (param->internalIdx >= 0) {
-            //dispatch update to plugin
-        }
-    }
-}
 
 automatable_param_ref_t auplugin::toRef() const {
     automatable_param_ref_t ref;

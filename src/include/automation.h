@@ -165,6 +165,7 @@ struct automatable_param_t : public automatable_param_properties_t {
     int32_t internalIdx = -1;
     float defaultValue = 0.0f;
     float value        = 0.0f;
+    float nonAutomated = 0.0f;
 };
 
 struct automatable_t {

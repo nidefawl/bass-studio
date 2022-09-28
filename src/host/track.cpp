@@ -1393,7 +1393,13 @@ float track_params_t::getParamValue(int32_t idx) {
 void track_params_t::setParamValue(int32_t idx, float val, int flags) {
     automatable_param_t* param = getParamUnchecked(idx);
     dbgassert(param);
-    param->value = val;//convertValTo(idx, val);
+    if (!(flags & FLG_PAR_UPDATE_AUTOMATED)) {
+        param->nonAutomated = val;
+    }
+    if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
+        param->inUse = true;
+    }
+    param->value = val;
 }
 
 track_t* track_params_t::getTrack() {

@@ -145,6 +145,9 @@ public:
     void setParamValue(int32_t idx, float val, int flags) override {
         automatable_param_t* param = getParamUnchecked(idx);
         dbgassert(param);
+        if (!(flags & FLG_PAR_UPDATE_AUTOMATED)) {
+            param->nonAutomated = val;
+        }
         param->value = val;
         if (param->idx == PARAM_ENABLE) {
             if ((flags & FLG_PAR_UPDATE_USER)) {

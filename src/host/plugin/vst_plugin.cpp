@@ -680,24 +680,6 @@ void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags
     }
 }
 
-void vstplugin::setParamValue(int32_t idx, float val, int flags) {
-    automatable_param_t* param = getParamUnchecked(idx);
-    dbgassert(param);
-    param->value = val;
-    if (param->idx == PARAM_ENABLE) {
-        updateOnEnableParam(param, this->bIsEnabled, val > 0, flags);
-    } else {
-        if ((flags & (FLG_PAR_UPDATE_FINISH | FLG_PAR_UPDATE_FROM_CLIENT |FLG_PAR_UPDATE_USER)) != 0) {
-            param->inUse = true;
-        }
-        if (param->internalIdx >= 0) {
-            vst_setParameter(this, handle->aeffect, param->internalIdx, val);
-            param->paramDisplayValState |= PARAM_FLAG_DIRTY;
-            param->paramValueState = PARAM_FLAG_SET;
-        }
-    }
-}
-
 bool vstplugin::setCurrentProgram(uint32_t idx) {
     if (idx < this->programNames.size()) {
         dispatch(effSetProgram, 0, idx, nullptr, 0);

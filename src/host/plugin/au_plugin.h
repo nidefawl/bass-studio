@@ -52,7 +52,6 @@ public:
     String getAutomatableName() override;
     float getParamValue(int32_t idx) override;
     param_unit_t convertParamValueToDisplay(int32_t idx, float value) override;
-    void setParamValue(int32_t idx, float val, int flags) override;
     automatable_param_ref_t toRef() const override;
 
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
