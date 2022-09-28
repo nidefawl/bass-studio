@@ -575,7 +575,7 @@ guiplugin* vstplugin::makeGui() {
             dbgassert(pGuiVstPlugin);
             auto* baseVst2 = dynamic_cast<BasePluginVST2*>(handle->axEffect);
             dbgassert(baseVst2);
-            auto viewCtr = baseVst2->getOrCreateViewCtrVst2(UID_VIEW_CTR_PLUGIN_CTR);
+            auto viewCtr = baseVst2->openViewCtrVst2(UID_VIEW_CTR_PLUGIN_CTR);
             if (viewCtr && baseVst2 && pGuiVstPlugin) {
                 pGuiVstPlugin->viewCtr = viewCtr;
                 viewCtr->addTo(pGuiVstPlugin->viewCtrs);

@@ -183,7 +183,7 @@ bool BasePluginVST2::getVendorString(char* text) {
 }
 
 // internal API
-std::shared_ptr<PluginViewContainers> BasePluginVST2::getOrCreateViewCtrVst2(int32_t uiId) {
+std::shared_ptr<PluginViewContainers> BasePluginVST2::openViewCtrVst2(int32_t uiId) {
     for (auto& existingView : views) {
         if (!existingView->isInUse() && existingView->getUiId() == uiId) {
             existingView->setUsed();
@@ -235,7 +235,7 @@ void BasePluginVST2::open() {
             log_printf("Editor already exists!\n");
     }
     }
-    createEditorWindow(getOrCreateViewCtrVst2(UID_VIEW_CTR_WINDOW));
+    createEditorWindow(openViewCtrVst2(UID_VIEW_CTR_WINDOW));
     if (this->bIsExternalInstance) {
 #ifdef _WIN32
         if (!isFirstPluginLoad) {

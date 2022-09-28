@@ -79,8 +79,9 @@ public:
     virtual void processMidiMessages(std::vector<IMidiMsg>& midiEvents) { };
     void processMidi(midi_events_t& midiEvents) override;
     void sendNotesOff() override;
-    std::shared_ptr<PluginViewContainers> getOrCreateViewCtr(int32_t uiId);
-    std::shared_ptr<PluginViewContainers> getViewCtr(int32_t uiId);
+    
+    void getAllViewCtrs(int32_t uiId, std::vector<std::shared_ptr<PluginViewContainers>>& vec);
+    std::shared_ptr<PluginViewContainers> openViewCtr(int32_t uiId);
 };
 
 class internal_automator : public internalplugin {

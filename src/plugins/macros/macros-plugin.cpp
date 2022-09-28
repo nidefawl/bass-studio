@@ -505,13 +505,14 @@ namespace PluginMacros {
 
     void module_macros::setUiSnapshot(snapshot_t& snapshot) {
         for (auto& uis : snapshot.uiLayout) {
-            auto view = getViewCtr(uis.uiId);
-            if (!view)
-                continue;
-            auto implCtrType = dynamic_cast<ViewCtrType*>(view.get());
-            if (!implCtrType)
-                continue;
-            implCtrType->getPluginUI().setUiLayout(uis);
+            std::vector<std::shared_ptr<PluginViewContainers>> views;
+            getAllViewCtrs(uis.uiId, views);
+            for (auto& view : views) {
+                auto implCtrType = dynamic_cast<ViewCtrType*>(view.get());
+                if (implCtrType) {
+                    implCtrType->getPluginUI().setUiLayout(uis);
+                }
+            }
         }
     }
 }// namespace PluginMacros

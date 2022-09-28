@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <utility>
+#include <vector>
 #include "assert_dbg.h"
 #include "automation.h"
 #include "modules.h"
@@ -118,7 +119,7 @@ bool internalplugin::showWindow(bool bResetPosition) {
     dbgassert(!windowClient.hostWindow);
     dbgassert(!windowClient.ctrl);
     dbgassert(!windowClient.view);
-    auto newView = getOrCreateViewCtr(UID_VIEW_CTR_WINDOW);
+    auto newView = openViewCtr(UID_VIEW_CTR_WINDOW);
     dbgassert(newView);
     if (!newView) {
         return false;
@@ -195,31 +196,43 @@ bool internalplugin::onClose() {
     windowClient = {};
     return effectbase::onClose();
 }
-std::shared_ptr<PluginViewContainers> internalplugin::getOrCreateViewCtr(int32_t uiId) {
-    for (auto& existingView : views) {
-        if (!existingView->isInUse() && existingView->getUiId() == uiId) {
-            existingView->setUsed();
-            return existingView;
-        }
-    }
-    auto newView = createViewCtrInternal();
-    if (newView && newView->isViewSupported(uiId)) {
-        newView->setUiId(uiId);
-        newView->setUsed();
-        views.push_back(newView);
-    } else {
-        newView = nullptr;
-    }
-    return newView;
-}
-std::shared_ptr<PluginViewContainers> internalplugin::getViewCtr(int32_t uiId) {
+void internalplugin::getAllViewCtrs(int32_t uiId, std::vector<std::shared_ptr<PluginViewContainers>>& out) {
     for (auto& existingView : views) {
         if (existingView->getUiId() == uiId) {
-            existingView->setUsed();
-            return existingView;
+            out.push_back(existingView);
         }
     }
-    return nullptr;
+    if (out.empty()) {
+        auto newView = createViewCtrInternal();
+        if (newView && newView->isViewSupported(uiId)) {
+            newView->setFree();
+            newView->setUiId(uiId);
+            views.push_back(newView);
+            out.push_back(newView);
+        }
+    }
+}
+std::shared_ptr<PluginViewContainers> internalplugin::openViewCtr(int32_t uiId) {
+    std::shared_ptr<PluginViewContainers> ptr;
+    for (auto& existingView : views) {
+        if (!existingView->isInUse() && existingView->getUiId() == uiId) {
+            ptr = existingView;
+            break;
+        }
+    }
+    if (!ptr) {
+        ptr = createViewCtrInternal();
+        if (ptr && ptr->isViewSupported(uiId)) {
+            ptr->setUiId(uiId);
+            views.push_back(ptr);
+        } else {
+            ptr = nullptr;
+        }
+    }
+    if (ptr) {
+        ptr->setUsed();
+    }
+    return ptr;
 }
 void internalplugin::sendNotesOff() {
     std::vector<IMidiMsg> messages;

@@ -45,7 +45,7 @@ public:
 
     // internal API
     virtual std::shared_ptr<PluginViewContainers> getViewCtrVst2(int32_t uiId);
-    virtual std::shared_ptr<PluginViewContainers> getOrCreateViewCtrVst2(int32_t uiId);
+    virtual std::shared_ptr<PluginViewContainers> openViewCtrVst2(int32_t uiId);
     virtual param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue);
     virtual void addPropertiesParameterTooltip(Table::tbl& table, int idx);
     virtual void onWindowResize(ivec2 size);
