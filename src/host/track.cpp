@@ -474,10 +474,14 @@ void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targe
     }
 }
 
-void track_impl_t::updateAutomatableTargets(tick_t processingPos) {
-    mixer.updateAutomatedParameters(processingPos);
+void track_impl_t::updateAutomatableTargets(DAW::Host::Host* const host, tick_t processingPos) {
+    std::vector<automated_param_connection_t> mods;
+    DAW::ResolveModulationInputRoutings(host, mixer.inputChannelsAutomation, mods);
+    mixer.updateAutomatedParameters(processingPos, mods);
     if (arp) {
-        arp->updateAutomatedParameters(processingPos);
+        mods.clear();
+        DAW::ResolveModulationInputRoutings(host, arp->inputChannelsAutomation, mods);
+        arp->updateAutomatedParameters(processingPos, mods);
     }
 }
 
@@ -1539,6 +1543,7 @@ namespace DAW {
     }
 
     automatable_t* resolveAutomatableRefDevice(const Host::PluginManager* const host, const automatable_param_ref_t& ref) {
+        dbgassert(ref.type != AUTOMATABLE_MODULATION_SRC);
         if (ref.type == AUTOMATABLE_EFFECT) {
             return host->getPluginById(ref.refId);
         }
@@ -1558,6 +1563,23 @@ namespace DAW {
             }
         }
         return nullptr;
+    }
+
+    const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const DAW::automation_channel_ref& ref) {
+        dbgassert(ref.ref.type == AUTOMATABLE_MODULATION_SRC);
+        auto effBase = host->getPluginById(ref.ref.refId);
+        if (!assert_expr(effBase)) return nullptr;
+        auto effMod = dynamic_cast<internal_automator*>(effBase);
+        if (!assert_expr(effMod)) return nullptr;
+        return effMod->getModulationOutputData(ref.ref.paramIdx);
+    }
+    void ResolveModulationInputRoutings(const Host::PluginManager* const host, const std::vector<DAW::automation_channel_ref>& inputs, std::vector<automated_param_connection_t>& modulations) {
+        for (auto& channel : inputs) {
+            auto mod = DAW::ResolveModulationChannel(host, channel);
+            if (mod) {
+                modulations.push_back(automated_param_connection_t{channel.idx, mod});
+            }
+        }
     }
     /* bool resolveAutomationAtTime(const Host::PluginManager* const host, const automation_routing_t& ref, tick_t atTime, float* fOut) {
         dbgassert(fOut);
@@ -1883,6 +1905,9 @@ void clip_recorder::recordNoteEvents(playback_state state, tick_t tickBlockStart
 
 }
 automatable_t* track_impl_t::getAutomatableByType(const automatable_param_ref_t& ref) {
+    if (ref.type == AUTOMATABLE_MODULATION_SRC) {
+        return nullptr;
+    }
     if (ref.type == AUTOMATABLE_EFFECT) {
         return getPluginById(ref.refId);
     }

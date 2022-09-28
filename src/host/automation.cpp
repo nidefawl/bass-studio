@@ -371,3 +371,20 @@ param_converted_t automatable_t::convertParamValueDisplay(int32_t idx, const par
     }
     return {fTextFieldVal, false};
 }
+
+void automatable_t::updateAutomatedParameters(tick_t processingPos, const std::vector<automated_param_connection_t>& modulations) {
+    for (auto mod : modulations) {
+        setParamValue(mod.paramIdx, mod.param->getValueAt(processingPos), FLG_PAR_UPDATE_AUTOMATED);
+    }
+    for (automated_param_t& param : automatedParams) {
+        if (std::find_if(modulations.cbegin(), modulations.cend(), [&param](const automated_param_connection_t& p) {
+                return p.paramIdx == param.paramIdx;
+            }) != modulations.cend()) {
+            continue;
+        }
+        if (param.isActive()) {
+            float val = param.getValueAt(processingPos);
+            setParamValue(param.paramIdx, val, FLG_PAR_UPDATE_AUTOMATED);
+        }
+    }
+}

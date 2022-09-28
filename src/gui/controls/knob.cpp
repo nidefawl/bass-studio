@@ -53,14 +53,13 @@ bool guiknob::isAutomated() {
     }
     return false;
 }
+bool guiknob::isModulated() {
+    return false;
+}
+bool guiknob::isHighlighted() {
+    return false;
+}
 void guiknob::render(NVGcontext* vg) {
-    if (isAutomated()) {
-        valColor = GuiColor::COL_AUTOMATED;
-        indColor = GuiColor::COL_AUTOMATED;
-    } else {
-        indColor = GuiColor::COL_KNOB_IND;
-        valColor = GuiColor::COL_KNOB;
-    }
     ivec2 insetP = pos + ivec2(0);
     ivec2 insetS = size - ivec2(0);
     renderButtonAt(vg, insetP, insetS, getValue());
@@ -403,13 +402,7 @@ void guiknob_labeled_base::layout() {
 }
 
 void guiknob_labeled_base::render(NVGcontext* vg) {
-    if (isAutomated()) {
-        valColor = GuiColor::COL_AUTOMATED;
-        indColor = GuiColor::COL_AUTOMATED;
-    } else {
-        indColor = GuiColor::COL_KNOB_IND;
-        valColor = GuiColor::COL_KNOB;
-    }
+    setColors();
 
     // ivec2 insetS = size - ivec2(INS_BRD * 2);
     // if (isSlider) {

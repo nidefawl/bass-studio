@@ -224,6 +224,16 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) {
         return;
     }
     this->m_mousePos = mousePos;
+    MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_OVER, kbmods);
+    for (guictr_base* ctr : containers) {
+        if (ctr->mouseHitTest(mousePos, evt)) {
+            break;
+        }
+    }
+    // if (evt.hasCursorChanged()) {
+    cursorIcon = evt.getCursor();
+    // }
+    guiOver = evt.getGuiHit();
     if (ctxtmenu == nullptr) {
         if (guiCaptured != nullptr) {
             dragDistance += deltaPos;
@@ -238,16 +248,6 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) {
             return;
         }
     }
-    MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_OVER, kbmods);
-    for (guictr_base* ctr : containers) {
-        if (ctr->mouseHitTest(mousePos, evt)) {
-            break;
-        }
-    }
-    // if (evt.hasCursorChanged()) {
-    cursorIcon = evt.getCursor();
-    // }
-    guiOver = evt.getGuiHit();
 }
 
 bool BaseCtrl::onCharInput(uint32_t codepoint) {

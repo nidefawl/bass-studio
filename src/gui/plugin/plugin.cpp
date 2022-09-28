@@ -140,9 +140,6 @@ void guiplugin::buttonClicked(guibase* _button) {
 }
 bool guiplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (contains(mpos)) {
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-            return false;
-        }
         ivec2 localMouse = this->toContainerSpace(mpos);
         for (guibase* gui : guis) {
             if (!gui->isVisible())
@@ -150,6 +147,9 @@ bool guiplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             if (gui->mouseHitTest(localMouse, evt)) {
                 return true;
             }
+        }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+            return false;
         }
         if (isShift(evt.kbmods)) {
             if (dawCtrl->getPluginSel().pluginCtr != this->parent) {
@@ -819,9 +819,6 @@ void guipluginview::render(NVGcontext* vg) {
     }
 }
 bool guipluginview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-    if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-        return false;
-    }
     if (contains(mpos)) {
         ivec2 localMouse = this->toContainerSpace(mpos);
         for (auto* btn : guiButtonsTitlebar) {
@@ -847,6 +844,9 @@ bool guipluginview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             if (MainCtrl::get()->getPluginSel().pluginCtr != this->parent) {
                 return true;
             }
+        }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+            return false;
         }
         evt.requestFocus(this);
         return true;

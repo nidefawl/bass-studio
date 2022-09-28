@@ -84,35 +84,16 @@ public:
 
 class internal_automator : public internalplugin {
 public:
-    struct automation_override_test_t : public automated_param_t {
-        bool isActive() const override { //??
-            return true;
-        }
-        bool isAutomated() const override { //??
-            return true; 
-        }
-        float getValueAt(tick_t tick) const override {
-            return 0.5f;
-        }
-        float getValueAtExact(double dTick) const override {
-            return 0.5f;
-        }
-        void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, float* out) const override {
-            //TODO: write optimal version!
-            for (samplecount_t i = 0; i < numSamples; i++) {
-                double dTick = dTickBegin + (dTickEnd - dTickBegin) * i / (numSamples - 1);
-                *out++ = getValueAtExact(dTick);
-            }
-            // src.sampleAutomation(dTickBegin, dTickEnd, numSamples, out);
-        }
-    };
-    automation_override_test_t constantModulation;
     internal_automator(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback)
     : internalplugin(_sName, _pluginType, _projectGlobalId, _hostCallback) {
     }
     ~internal_automator() override {
     }
-    const automated_param_t* getModulationOutputData(int32_t paramIdx) const {
-        return &constantModulation;
+    virtual const automated_param_t* getModulationOutputData(int32_t channel) const = 0;
+    DAW::automation_channel_ref getModulationChannel(int32_t channel) const {
+        auto thisRef = toRef();
+        thisRef.paramIdx = channel;
+        thisRef.type = AUTOMATABLE_MODULATION_SRC;
+        return DAW::automation_channel_ref{ 0, thisRef };
     }
 };

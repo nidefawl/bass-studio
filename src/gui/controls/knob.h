@@ -67,7 +67,21 @@ public:
     bool getIsBipolar() const {
         return bIsBipolar;
     }
-
+    void setColors() {
+        if (isHighlighted()) {
+            valColor = GuiColor::COL_KNOB_HIGHLIGHT;
+            indColor = GuiColor::COL_KNOB_HIGHLIGHT;
+        } else if (isModulated()) {
+            valColor = GuiColor::COL_KNOB_MODULATED;
+            indColor = GuiColor::COL_KNOB_MODULATED;
+        } else if (isAutomated()) {
+            valColor = GuiColor::COL_AUTOMATED;
+            indColor = GuiColor::COL_AUTOMATED;
+        } else {
+            indColor = GuiColor::COL_KNOB_IND;
+            valColor = GuiColor::COL_KNOB;
+        }
+    }
     void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
@@ -75,7 +89,9 @@ public:
     int32_t getParamIdx() const { return paramIdx; }
     void setKnobInternalHandlers();
 
-    bool isAutomated();
+    virtual bool isAutomated();
+    virtual bool isModulated();
+    virtual bool isHighlighted();
 
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;

@@ -17,9 +17,6 @@
 #endif
 
 struct NVGcontext;
-namespace RenderResources {
-    struct NvgImageTexture;
-}
 class BaseCtrl;
 class AppCtrl;
 class DawCtrl;
@@ -33,6 +30,12 @@ class gui_track;
 class scaled_grid;
 struct guitheme_t;
 struct dragdrop_midifile;
+namespace RenderResources {
+    struct NvgImageTexture;
+}
+namespace DAW::UI {
+    class guictr_dragged_modulation_src;
+}
 
 extern NVGcolor dbgcolorsArray[8];
 static constexpr int32_t dbgcolorsArraySize = 8;
@@ -123,6 +126,7 @@ enum gui_type : uint16_t {
     CTR_TYPE_CLIPEDITOR,
     CTR_TYPE_PLUGIN,
     CTR_TYPE_PLUGINS_DRAGGED,
+    CTR_TYPE_MODULATION_DRAGGED,
     CTR_TYPE_SHAPE_EDITOR,
 };
 namespace DebugAlloc {
@@ -387,6 +391,10 @@ public:
     virtual void trackEntryDragMove(gui_track* g, ivec2 mousepos) {
     }
     virtual void trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
+    }
+    virtual void modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+    }
+    virtual void modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
     }
     virtual void dragBeginOn(guibase* target, ivec2 mousepos) {
     }

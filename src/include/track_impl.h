@@ -6,6 +6,7 @@
 #include <memory>
 #include <type_traits>
 #include "assert_dbg.h"
+#include "host/host.h"
 #include "host/mainctrl.h"
 #include "logging.h"
 #include "seq_util.h"
@@ -445,7 +446,7 @@ struct track_impl_t : public audio_stage_t {
     void removePlugin(effectbase* _vst, bool notifyUp) override;
     const std::vector<DAW::arp_note_t>& getArpHeldNotes();
     std::vector<marker_t>& getArpMarkers(int n);
-    void updateAutomatableTargets(tick_t processingPos);
+    void updateAutomatableTargets(DAW::Host::Host* const host, tick_t processingPos);
     void getAutomatableTrackTargets(std::vector<automatable_t*>& targets, bool includeEffects = true);
     void createIOSnapshot(track_io_configuration_snapshot_t& snapshot);
     void loadIOConfiguration(const track_io_configuration_snapshot_t& trPluginList);

@@ -22,16 +22,21 @@ enum param_update_flags : int32_t {
 #define PARAM_ENABLE 0
 #define PARAM_GAIN 1
 #define PARAM_PAN 2
-#define AUTOMATABLE_MIXER 0
-#define AUTOMATABLE_ARP 1
-#define AUTOMATABLE_EFFECT 2
+
+enum automatable_type_t {
+    AUTOMATABLE_NONE = 0,
+    AUTOMATABLE_MIXER,
+    AUTOMATABLE_ARP,
+    AUTOMATABLE_EFFECT,
+    AUTOMATABLE_MODULATION_SRC,
+};
 
 struct automatable_param_ref_t {
-    int32_t type         = -1;
-    int32_t refId        = -1;
-    int32_t paramIdx     = -1;
-    int32_t height       = 4;
-    int32_t subtrackType = 0;
+    automatable_type_t type = AUTOMATABLE_NONE;
+    int32_t refId           = -1;
+    int32_t paramIdx        = -1;
+    int32_t height          = 4;
+    int32_t subtrackType    = 0;
 };
 namespace DAW {
     struct automation_channel_ref {
@@ -115,6 +120,10 @@ struct automated_param_t {
         }
         // src.sampleAutomation(dTickBegin, dTickEnd, numSamples, out);
     }
+};
+struct automated_param_connection_t {
+    int32_t paramIdx = -1;
+    const automated_param_t* param = nullptr;
 };
 
 union param_step_fi_u {
@@ -274,14 +283,7 @@ public:
                 targets.push_back(t.paramIdx);
         }
     }
-    virtual void updateAutomatedParameters(tick_t pos) {
-        for (automated_param_t& param : automatedParams) {
-            if (param.isActive()) {
-                float val = param.getValueAt(pos);
-                setParamValue(param.paramIdx, val, FLG_PAR_UPDATE_AUTOMATED);
-            }
-        }
-    }
+    virtual void updateAutomatedParameters(tick_t processingPos, const std::vector<automated_param_connection_t>& modulations);
     void deactivateAutomation(int32_t paramIdx) {
         for (automated_param_t& param : automatedParams) {
             if (paramIdx == param.paramIdx) {
@@ -440,6 +442,8 @@ namespace DAW {
         return automation_routing_t{ automation_routing_type::ROUTING_NONE, val, {} };
     }
     // bool resolveAutomationAtTime(const DAW::Host::PluginManager* host, const automation_routing_t& ref, tick_t atTime, float* fOut);
+    const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const DAW::automation_channel_ref& ref);
+    void ResolveModulationInputRoutings(const Host::PluginManager* const host, const std::vector<DAW::automation_channel_ref>& inputs, std::vector<automated_param_connection_t>& modulations);
     automatable_t* resolveAutomatableRefDevice(const Host::PluginManager* const host, const automatable_param_ref_t& ref);
     const   automated_param_t* GetAutomationSrc(const Host::PluginManager* const host, const automation_routing_t routing);
     automation_routing_t GetAutomationRouting(const automatable_t* dev, int32_t paramIdx);

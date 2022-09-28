@@ -55,6 +55,9 @@ public:
         }
         return 0.0f;
     }
+    bool isHighlighted() override {
+        return parentCtrl->guiOver == this && parentCtrl->guiDragged && parentCtrl->guiDragged->getGuiType() == gui_type::CTR_TYPE_PLUGINS_DRAGGED;
+    }
     void setEffectInstance(effectbase* _hostSidePlugin) {
         hostSidePlugin   = _hostSidePlugin;
         paramAutomatable = _hostSidePlugin;
@@ -116,19 +119,12 @@ public:
         };
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-        if (this->contains(mpos)) {
-            if (evt.type != MouseHitType::MOUSE_RIGHT) {
-                if (guiknob::mouseHitTest(mpos, evt)) {
-                    return true;
-                }
-            }
-            evt.requestFocus(this);
-            return true;
-        }
-        return false;
+        return guiknob_labeled_base::mouseHitTest(mpos, evt);
     }
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
     effectbase* getEffectInstance() {
         return hostSidePlugin;
     }
+    void modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
+    void modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
 };
