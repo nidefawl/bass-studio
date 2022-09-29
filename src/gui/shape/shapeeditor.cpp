@@ -322,15 +322,6 @@ public:
         DrawShape(*curveRender, vg, theme, vec2(0), cs, mouseLocal, higlightHit);
 
         if (curveRender->renderPhase > -1.0f) {
-            // float lineThickness = 4.0f;
-            // nvgBatchedRect(vg, curveRender->renderPhase*cs.x, 0, lineThickness, size.y);
-            // NVGpaint paint{};
-            // paint.image = -1;
-            // paint.feather = 4.0f;
-            // paint.innerColor = theme->getColor(GuiColor::COL_PLAYHEAD);
-            // paint.customPar = 2;
-            // nvgFillPaint(vg, paint);
-            // nvgBatchedRender(vg);
             float playBackX = curveRender->renderPhase * cs.x;
             nvgBeginPath(vg);
             nvgMoveTo(vg, playBackX, 0);

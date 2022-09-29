@@ -95,34 +95,24 @@ namespace PluginLFO {
             DAW::Shape::shape_t shape;
             bool bIsSync = false;
             std::vector<SyncRatio> syncRatios;
-            bool isActive() const override { //??
-                return true;
-            }
-            bool isAutomated() const override { //??
-                return true; 
-            }
-            float getValueAt(tick_t tick) const override {
-                return getValueAtExact(tick);
-            }
             float getPhase(double dTick) const {
                 auto rate = module->getParamValue(PARAM_LFO_RATE);
                  // TODO: not super accurate
                 float invRate = 1.0f / GetSyncRate(bIsSync, rate);
-                auto phase = dTick * invRate;
+                auto phase = dTick * invRate + module->getParamValue(PARAM_LFO_PHASE);
                 float moduloPhase = modf(phase, &phase);
                 return moduloPhase;
             }
-            float getValueAtExact(double dTick) const override {
+            float sampleCurve(double dTick) const {
                 float moduloPhase = getPhase(dTick);
+                auto valMin = module->getParamValue(PARAM_LFO_MINIMUM) * 2.0f - 1.0f;
+                auto valMax = module->getParamValue(PARAM_LFO_MAXIMUM) * 2.0f - 1.0f;
                 auto value = shape.sampleCurve(moduloPhase, false);
-                return value;
-            }
-            String getName() const override {
-                return StringFormat("LFO %d", paramIdx+1);
+                return value * (valMax - valMin) + valMin;
             }
             float modulateValue(tick_t tick, float fIn, const DAW::automation_scaling_t& scale) const override {
                 auto fVal = fIn;
-                auto fLfo = getValueAt(tick);
+                auto fLfo = sampleCurve(tick);
                 auto fScaled = scale.min + fLfo * (scale.max - scale.min);
                 switch (scale.mode) {
                     case DAW::ModulationMode::ADD:
@@ -140,7 +130,7 @@ namespace PluginLFO {
             void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* inOut) const override {
                 for (samplecount_t i = 0; i < numSamples; ++i) {
                     auto dTickOffset = dTickBegin + i*(dTickEnd - dTickBegin)/numSamples;
-                    auto f = getValueAtExact(dTickOffset);
+                    auto f = sampleCurve(dTickOffset);
                     auto fScaled = scale.min + f * (scale.max - scale.min);
                     // *inOut++
                     switch (scale.mode) {
@@ -159,6 +149,21 @@ namespace PluginLFO {
             void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) override {
             }
             void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const override {
+            }
+            bool isActive() const override { //??
+                return true;
+            }
+            bool isAutomated() const override { //??
+                return true; 
+            }
+            float getValueAt(tick_t tick) const override {
+                return sampleCurve(tick);
+            }
+            float getValueAtExact(double dTick) const override {
+                return sampleCurve(dTick);
+            }
+            String getName() const override {
+                return StringFormat("LFO %d", paramIdx+1);
             }
         };
         module_lfo* module;
@@ -222,7 +227,7 @@ namespace PluginLFO {
         void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
             for (int32_t i = 0; i < NUM_CHANNELS; ++i) {
                 auto& channel = macroAutomationSrcParams[i];
-                channel.shape.renderPhase = channel.getPhase(tick);
+                channel.shape.renderPhase = channel.getPhase(tick) + module->getParamValue(PARAM_LFO_PHASE);
             }
         }
     };
@@ -249,8 +254,8 @@ namespace PluginLFO {
         reg->shortLabel  = "Phase";
         reg->unit  = "°";
         reg = registerParam(PARAM_LFO_MINIMUM);
-        reg->defaultValue = 0.0f;
-        reg->value = 0.0f;
+        reg->defaultValue = 0.5f;
+        reg->value = 0.5f;
         reg->name  = "Minimum";
         reg->shortLabel  = "Min";
         reg->unit  = "";

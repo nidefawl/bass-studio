@@ -67,7 +67,7 @@ struct shape_t : public shape_base_t {
         }
         auto pt0 = idx == 0 ? pts.back() : pts[idx - 1];
         auto pt1 = pts[idx];
-        if (pt0.pos.x > pt1.pos.x) {
+        if (pt0.pos.x >= pt1.pos.x) {
             pt1.pos.x += 1;
         }
         if (pt0.pos.x > pX) {
