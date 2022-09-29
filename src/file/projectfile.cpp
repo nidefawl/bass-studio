@@ -242,6 +242,8 @@ void serialize(Archive& archive, track_effect_routing_snapshot_t& m) {
 template<class Archive>
 void serialize(Archive& archive, track_modulation_routing_snapshot_t& m) {
     archive(make_nvp("modulations", m.effectMods));
+    make_optional_nvp(archive, "mixer", m.mixer);
+    make_optional_nvp(archive, "arp", m.arp);
 }
 
 template<class Archive>
