@@ -27,6 +27,7 @@
 #include "note.h"
 #include "logging.h"
 #include "automation.h"
+#include "gui/automation/modulation.h"
 #include "../threads/workerthread.h"
 #include "../threads/playbackthread.h"
 #include "edithistory.h"
@@ -114,13 +115,6 @@ namespace DAW {
     void GetProjectReferencedSampleIds(const project_t& project, std::vector<int32_t>& uniqueSampleIds);
     String MakeUniqueTrackName(project_t* project, const String& strNewName);
 }// namespace DAW
-namespace DAW::UI {
-    class IDraggedModulationSource {
-    public:
-        virtual ~IDraggedModulationSource() = default;
-        virtual const automation_channel_ref& getChannelRef() const = 0;
-    };
-}
 
 struct clip_cursor_t {
     tick_t start = 0;

@@ -1636,6 +1636,38 @@ namespace DAW {
             return nullptr;
         return p;
     }
+    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, DAW::automation_channel_ref ref) {
+        if (dev->isParamModulated(paramIdx)) {
+            auto& inputs = dev->getModulations(paramIdx);
+            for (auto input : inputs) {
+                if (input->ref.refId == ref.ref.refId && input->ref.paramIdx == ref.ref.paramIdx) {
+                    return;
+                }
+            }
+        }
+        auto inputRef = ref;
+        inputRef.idx = paramIdx;
+        inputRef.ref = ref.ref;
+        dev->getModulations().push_back(inputRef);
+        dev->updateModulationMap();
+    }
+    void DisonnectModulationForParam(automatable_t* dev, int32_t paramIdx) {
+        auto& inputs = dev->getModulations();
+        for (int i = 0; i < CtrSize(inputs); i++) {
+            if (inputs[i].idx == paramIdx) {
+                inputs.erase(inputs.begin() + i);
+            }
+        }
+        dev->updateModulationMap();
+    }
+    void DisonnectModulationInputChannel(automatable_t* dev, DAW::automation_channel_ref ref) {
+        auto& inputs = dev->getModulations();
+        for (int i = 0; i < CtrSize(inputs); i++) {
+            if (inputs[i].ref.refId == ref.ref.refId && inputs[i].ref.paramIdx == ref.ref.paramIdx) {
+                inputs.erase(inputs.begin() + i);
+            }
+        }
+    }
 }
 
 
