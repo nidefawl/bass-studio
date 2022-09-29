@@ -166,31 +166,7 @@ public:
         padding      = 0;
         sortChildren = true;
     }
-    bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override {
-        if (this->contains(v)) {
-            // if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-            //     evt.requestFocus(this);
-            //     return true;
-            // }
-            ivec2 localMouse = this->toContainerSpace(v);
-            for (guibase* gui : guis) {
-                if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
-                    if (!evt.getGuiHit()) 
-                        break;
-                    return true;
-                }
-            }
-            evt.requestFocus(this);
-            return true;
-        }
-        return false;
-    }
-    void handleDraggedBegin(MouseEvent& evt) override {
-    }
-    void handleDraggedMove(MouseEvent& evt) override {
-    }
-    void handleDraggedRelease(MouseEvent& evt) override {
-    }
+    bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
     void handleRightClick(MouseEvent& evt) override;
     void render(NVGcontext* vg) override;
     void addTrackEntry(track_gui_entry_t& e);

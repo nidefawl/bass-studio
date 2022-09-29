@@ -1,10 +1,15 @@
+#include <algorithm>
 #include <vector>
+#include "assert_dbg.h"
 #include "automation.h"
 #include "config.h"
 #include "math/seq_math.h"
 #include "plugin/vst_plugin.h"
 #include "gui/automation/automatable.h"
+#include "seq_time.h"
+#include "seq_util.h"
 #include "str_util.h"
+#include "dsp_util.h"
 #include "types.h"
 
 int32_t indexOfTick(const std::vector<automation_point_t>& dataPoints, tick_t tick) {
@@ -165,7 +170,7 @@ float automation_t::getValueAtExact(double dTick) const {
     }
     return 0.5f;
 }
-void automation_t::sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, float* out) const {
+void automation_t::sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* out) const {
     //TODO: write optimal version!
     for (samplecount_t i = 0; i < numSamples; i++) {
         double dTick = dTickBegin + (dTickEnd - dTickBegin) * i / (numSamples - 1);
@@ -276,10 +281,10 @@ void loadAutomation(const std::vector<automation_view_t>& automatedParams, autom
     }
 }
 void storeAutomation(std::vector<automation_view_t>& automatedParams, automatable_t* at) {
-    std::vector<automated_param_t> out;
+    std::vector<automation_lane_t> out;
     at->getAllAutomatedParams(out);
     int total = 0;
-    for (const automated_param_t& automatedParam : out) {
+    for (const auto& automatedParam : out) {
         dbgassert(!automatedParam.src.points.empty());
         automation_view_t atv;
         atv.targetParam = automatedParam.paramIdx;
@@ -371,20 +376,90 @@ param_converted_t automatable_t::convertParamValueDisplay(int32_t idx, const par
     }
     return {fTextFieldVal, false};
 }
-
-void automatable_t::updateAutomatedParameters(tick_t processingPos, const std::vector<automated_param_connection_t>& modulations) {
-    for (auto mod : modulations) {
-        setParamValue(mod.paramIdx, mod.param->getValueAt(processingPos), FLG_PAR_UPDATE_AUTOMATED);
-    }
-    for (automated_param_t& param : automatedParams) {
-        if (std::find_if(modulations.cbegin(), modulations.cend(), [&param](const automated_param_connection_t& p) {
-                return p.paramIdx == param.paramIdx;
-            }) != modulations.cend()) {
-            continue;
+namespace DAW {
+    float CalculateModulatedParameter(const Host::PluginManager *const host, tick_t tick, automatable_t* device, int32_t paramIdx, float value) {
+        float val = value;
+        auto* automation = device->getRegisteredAutomation(paramIdx);
+        if (automation && automation->isActive()) {
+            val = automation->getValueAt(tick);
         }
-        if (param.isActive()) {
-            float val = param.getValueAt(processingPos);
-            setParamValue(param.paramIdx, val, FLG_PAR_UPDATE_AUTOMATED);
+        if (device->isParamModulated(paramIdx)) {
+            auto mods = device->getModulations(paramIdx);
+            for (const auto& mod : mods) {
+                auto ch = DAW::ResolveModulationChannel(host, *mod);
+                if (ch->isActive()) {
+                    val = ch->modulateValue(tick, val, mod->scale);
+                }
+            }
+        }
+        return val;
+    }
+}
+bool automatable_t::isParamConnectedTo(int32_t paramIdx, const DAW::automation_channel_ref& ref) const {
+    for (auto& input : inputChannelsAutomation) {
+        if (input.idx == paramIdx && input.ref.refId == ref.ref.refId && input.ref.paramIdx == ref.ref.paramIdx) {
+            return true;
+        }
+    }
+    return false;
+}
+void automatable_t::sampleAutomation(const DAW::Host::PluginManager *const host, int32_t paramIdx, double dTickBegin, double dTickEnd, samplecount_t numSamples, float* buffer) {
+    std::vector<int32_t> modulatedParams;
+    std::vector<int32_t> processedParamsSorted;
+    auto param = getParam(paramIdx);
+    if (!assert_expr(param)) {
+        return;
+    }
+
+    auto* automation = getRegisteredAutomation(paramIdx);
+    if (automation && automation->isActive()) {
+        automation->sampleAutomation(dTickBegin, dTickEnd, numSamples, {}, buffer);
+    }
+    if (isParamModulated(paramIdx)) {
+        auto mods = getModulations(paramIdx);
+        for (const auto& mod : mods) {
+            auto ch = DAW::ResolveModulationChannel(host, *mod);
+            if (ch && ch->isActive()) {
+                ch->sampleAutomation(dTickBegin, dTickEnd, numSamples, mod->scale, buffer);
+            }
+        }
+    }
+}
+void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *const host, tick_t tick, playback_state state) {
+    if (automationLanes.empty() && inputChannelsAutomation.empty()) {
+        return;
+    }
+    std::vector<int32_t> modulatedParams;
+    for (auto& entry : mapInputChannels) {
+        int32_t paramIdx = entry.first;
+        auto param = getParam(paramIdx);
+        auto& modulations = entry.second;
+        
+        float val = param->nonAutomated;
+        auto* automation = getRegisteredAutomation(paramIdx);
+        if (automation && automation->isActive() && DAW::isPlaybackState(state)) {
+            val = automation->src.getValueAt(tick);
+        }
+        for (const auto& mod : modulations) {
+            auto ch = DAW::ResolveModulationChannel(host, *mod);
+            if (ch && ch->isActive()) {
+                val = ch->modulateValue(tick, val, mod->scale);
+            }
+        }
+        if (DAW::isPlaybackState(state)) {
+            insertSorted(modulatedParams, paramIdx);
+        }
+        setParamValue(paramIdx, val, FLG_PAR_UPDATE_AUTOMATED);
+    }
+    if (DAW::isPlaybackState(state)) {
+        for (auto& automLane : automationLanes) {
+            if (automLane.isActive()) {
+                if (std::binary_search(modulatedParams.cbegin(), modulatedParams.cend(), automLane.paramIdx)) {
+                    continue;
+                }
+                auto val = automLane.getValueAt(tick);
+                setParamValue(automLane.paramIdx, val, FLG_PAR_UPDATE_AUTOMATED);
+            }
         }
     }
 }

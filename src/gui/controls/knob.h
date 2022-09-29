@@ -1,5 +1,6 @@
 #pragma once
 #include "automation.h"
+#include "gui/controls/textfield.h"
 #include "nanovg/nanovg.h"
 #include <functional>
 #include <vector>
@@ -150,4 +151,63 @@ public:
     }
     void modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
     void modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
+};
+
+class gui_slider_textfield : public gui_textfield {
+protected:
+    automatable_t* paramAutomatable = nullptr;
+    int32_t paramIdx                = -1;
+    GuiColor::constant_t valColor;
+    GuiColor::constant_t indColor;
+public:
+    gui_slider_textfield() : gui_textfield() {
+        setCanMouseHit(true);
+        setAlignment(gui_textfield::Alignment::Center);
+        setReturnCommits(true);
+    }
+    GuiColor::constant_t getBackgroundColor() const override;
+    virtual bool renderAsBipolar() = 0;
+    virtual String getValueAsString(float param) {
+        auto paramValDisplay = paramAutomatable->getParamValueDisplay(paramIdx);
+        return paramValDisplay.value + paramValDisplay.unit;
+    }
+    virtual float getRenderScaledValue(float param) {
+        return param;
+    }
+    virtual float modifyParam(float param, float amt, bool applyUserInputScaling);
+    virtual float parseTextValue(const String& str);
+
+    int32_t getParamIdx() const {
+        return paramIdx;
+    }
+    void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
+        this->paramAutomatable = _paramAutomatable;
+        this->paramIdx         = _paramIdx;
+    }
+    void handleRightClick(MouseEvent& evt) override;
+    virtual bool isAutomated();
+    virtual bool isHighlighted();
+    virtual bool isModulated();
+    void setColors();
+
+    void modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
+    void modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
+    void render(NVGcontext* vg) override;
+    void layout() override {
+        gui_textfield::layout();
+        setFontSize(size.y);
+    }
+    bool focusEvent(MouseHitEvt& evt, bool focused) override {
+        if (!focused) {
+            gui_textfield::focusEvent(evt, focused);
+        }
+        return true;
+    }
+    bool handleCharInput(uint32_t codepoint) override;
+    bool keyboardEvent(int key, int scancode, KeyEventType action, int modifiers) override;
+    void onTextEndEdit() override;
+    void handleDraggedBegin(MouseEvent& evt) override;
+    void handleDraggedMove(MouseEvent& evt) override;
+    void handleDraggedRelease(MouseEvent& evt) override;
+    void updateAutomatableParam(float amt, bool applyUserInputScaling);
 };

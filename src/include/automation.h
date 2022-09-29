@@ -42,15 +42,18 @@ namespace DAW {
     struct automation_scaling_t {
         float min = 0.0f;
         float max = 1.0f;
-        float applyScale(float val) const {
-            return min + (max - min) * val;
-        }
+        // float applyScale(float val) const {
+        //     return min + (max - min) * val;
+        // }
     };
     struct automation_channel_ref {
         int32_t idx = -1;
         automatable_param_ref_t ref{};
         automation_scaling_t scale{};
     };
+}
+namespace DAW::Host {
+    class PluginManager;
 }
 //TODO: toRef should return this class:
 struct automatable_ref_t {
@@ -83,7 +86,7 @@ struct automation_t {
     }
     float getValueAt(tick_t tick) const;
     float getValueAtExact(double dTick) const;
-    void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, float* out) const;
+    void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* out) const;
     void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const;
     void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
     std::pair<float, float> getMinMax();
@@ -102,37 +105,58 @@ struct automation_clipboard_t {
 
 struct automated_param_t {
     int32_t paramIdx = -1;
-    automation_t src{};
     automated_param_t() = default;
-    automated_param_t(int32_t _paramIdx, int32_t quantizationSteps) : paramIdx(_paramIdx) {
+    virtual ~automated_param_t() = default;
+    virtual bool isActive() const = 0;
+    virtual bool isAutomated() const = 0;
+    virtual float modulateValue(tick_t tick, float f, const DAW::automation_scaling_t& scale) const = 0;
+    virtual float getValueAt(tick_t tick) const = 0;
+    virtual float getValueAtExact(double dTick) const = 0;
+    virtual void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* inOut) const = 0;
+    virtual String getName() const = 0;
+    virtual void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const = 0;
+    virtual void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) = 0;
+};
+struct automation_lane_t : public automated_param_t {
+    automation_t src{};
+    automation_lane_t() = default;
+    automation_lane_t(int32_t _paramIdx, int32_t quantizationSteps) {
+        paramIdx = _paramIdx;
         src.quantizationSteps = quantizationSteps;
     }
-    virtual ~automated_param_t() = default;
-    virtual bool isActive() const {
+    ~automation_lane_t() override = default;
+    bool isActive() const override {
         return src.active && !src.points.empty();
     }
-    virtual bool isAutomated() const {
+    bool isAutomated() const override {
         return !src.points.empty();
     }
-    virtual float getValueAt(tick_t tick) const {
+    float modulateValue(tick_t tick, float f, const DAW::automation_scaling_t& scale) const override {
         return src.getValueAt(tick);
     }
-    virtual float getValueAtExact(double dTick) const {
+    float getValueAt(tick_t tick) const override {
+        return src.getValueAt(tick);
+    }
+    float getValueAtExact(double dTick) const override {
         return src.getValueAtExact(dTick);
     }
-    virtual void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, float* out) const {
-        //TODO: write optimal version!
-        for (samplecount_t i = 0; i < numSamples; i++) {
-            double dTick = dTickBegin + (dTickEnd - dTickBegin) * i / (numSamples - 1);
-            *out++ = getValueAtExact(dTick);
-        }
-        // src.sampleAutomation(dTickBegin, dTickEnd, numSamples, out);
+    void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* out) const override {
+        src.sampleAutomation(dTickBegin, dTickEnd, numSamples, scale, out);
+    }
+    void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const override {
+        src.copyRange(tickBegin, tickEnd, data);
+    }
+    void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) override {
+        src.setRange(tickBegin, tickEnd, data);
+    }
+    String getName() const override {
+        return "Automation";
     }
 };
-
+struct automatable_t;
 struct automated_param_connection_t {
+    automatable_t* atl = nullptr;
     int32_t paramIdx = -1;
-    const automated_param_t* param = nullptr;
 };
 
 union param_step_fi_u {
@@ -181,10 +205,10 @@ struct automatable_t {
 private:
     int32_t nextRegisterId = 0;
     std::unordered_map<int32_t, automatable_param_t> mapParams;
-    std::vector<automated_param_t> automatedParams;//TODO: make this a map
-
-public:
+    std::vector<automation_lane_t> automationLanes;//TODO: make this a map
     std::vector<DAW::automation_channel_ref> inputChannelsAutomation;
+    std::unordered_map<int32_t, std::vector<DAW::automation_channel_ref*>> mapInputChannels;
+public:
     virtual ~automatable_t() = default;
     automatable_param_t* registerParam(int32_t identifier) {
         if (mapParams.find(identifier) != mapParams.end()) {
@@ -196,13 +220,45 @@ public:
         mapParams[identifier] = std::move(newParam);
         return &mapParams[identifier];
     }
+
+    void setModulations(const std::vector<DAW::automation_channel_ref>& inputChannelsAutomation) {
+        this->inputChannelsAutomation = inputChannelsAutomation;
+        updateModulationMap();
+    }
+    void removeModulation(int32_t modulationIndex) {
+        if (modulationIndex >= 0 && modulationIndex < CtrSize(inputChannelsAutomation)) {
+            inputChannelsAutomation.erase(inputChannelsAutomation.begin() + modulationIndex);
+            updateModulationMap();
+        }
+    }
+    void updateModulationMap() {
+        std::unordered_map<int32_t, std::vector<DAW::automation_channel_ref*>> mapInputChannels;
+        for (auto& ref : inputChannelsAutomation) {
+            mapInputChannels[ref.idx].push_back(&ref);
+        }
+        this->mapInputChannels = std::move(mapInputChannels);
+    }
+    std::vector<DAW::automation_channel_ref>& getModulations() {
+        return inputChannelsAutomation;
+    }
+    const std::vector<DAW::automation_channel_ref>& getModulations() const {
+        return inputChannelsAutomation;
+    }
+    const std::vector<DAW::automation_channel_ref*>& getModulations(int32_t paramIdx) const {
+        return mapInputChannels.at(paramIdx);
+    }
+    bool isParamModulated(int32_t paramIdx) const {
+        return mapInputChannels.find(paramIdx) != mapInputChannels.end();
+    }
+    bool isParamConnectedTo(int32_t paramIdx, const DAW::automation_channel_ref& ref) const;
+
     template<typename Functor>
     void visitParams(Functor f) {
         std::for_each(mapParams.begin(), mapParams.end(), f);
     }
     template<typename Functor>
     void visitAutomatedParams(Functor f) {
-        std::for_each(automatedParams.begin(), automatedParams.end(), f);
+        std::for_each(automationLanes.begin(), automationLanes.end(), f);
     }
     void getSortedParams(std::vector<automatable_param_t*>& _out) {
         _out.reserve(mapParams.size());
@@ -214,14 +270,14 @@ public:
         });
     }
     void getSortedParamsSeperate(std::vector<automatable_param_t*>& _outAutomated, std::vector<automatable_param_t*>& _outRest) {
-        _outAutomated.reserve(automatedParams.size());
+        _outAutomated.reserve(automationLanes.size());
         _outRest.reserve(mapParams.size());
         std::for_each(mapParams.begin(), mapParams.end(), [&](auto& mapEntry) {
             const auto paramIdx = mapEntry.first;
-            auto it = std::find_if(automatedParams.cbegin(), automatedParams.cend(), [paramIdx](const auto& ap) {
+            auto it = std::find_if(automationLanes.cbegin(), automationLanes.cend(), [paramIdx](const auto& ap) {
                 return ap.paramIdx == paramIdx && ap.src.isAutomated();
             });
-            if (it == automatedParams.cend()) {
+            if (it == automationLanes.cend()) {
                 _outRest.push_back(&mapEntry.second);
             } else {
                 _outAutomated.push_back(&mapEntry.second);
@@ -288,14 +344,15 @@ public:
         return it->second.name;
     }
     void getAutomated(std::vector<int32_t>& targets) {
-        for (const automated_param_t& t : automatedParams) {
-            if (t.src.isAutomated())
+        for (const auto& t : automationLanes) {
+            if (t.isAutomated())
                 targets.push_back(t.paramIdx);
         }
     }
-    virtual void updateAutomatedParameters(tick_t processingPos, const std::vector<automated_param_connection_t>& modulations);
+    void sampleAutomation(const DAW::Host::PluginManager *const host, int32_t paramIdx, double dTickBegin, double dTickEnd, samplecount_t numSamples, float* out);
+    virtual void updateAutomatedParameters(const DAW::Host::PluginManager *const host, tick_t processingPos, playback_state state);
     void deactivateAutomation(int32_t paramIdx) {
-        for (automated_param_t& param : automatedParams) {
+        for (automation_lane_t& param : automationLanes) {
             if (paramIdx == param.paramIdx) {
                 param.src.active = false;
                 return;
@@ -344,55 +401,55 @@ public:
         dbgassert(mapParams.count(paramIdx));
         return &mapParams.find(paramIdx)->second;
     }
-    const automated_param_t* getRegisteredConstAutomation(int32_t paramIdx) const {
+    const automation_lane_t* getRegisteredConstAutomation(int32_t paramIdx) const {
         dbgassert(mapParams.count(paramIdx));
-        auto it = std::find_if(automatedParams.cbegin(), automatedParams.cend(), [paramIdx](const automated_param_t& ap) {
+        auto it = std::find_if(automationLanes.cbegin(), automationLanes.cend(), [paramIdx](const automation_lane_t& ap) {
             return ap.paramIdx == paramIdx;
         });
-        if (it != automatedParams.end()) {
-            const automated_param_t* ap = &(*it);
+        if (it != automationLanes.end()) {
+            const automation_lane_t* ap = &(*it);
             if (ap->isAutomated())
                 return &(*it);
         }
         return nullptr;
     }
-    const automated_param_t* getActiveAutomation(int32_t paramIdx) const {
+    const automation_lane_t* getActiveAutomation(int32_t paramIdx) const {
         dbgassert(mapParams.count(paramIdx));
-        auto it = std::find_if(automatedParams.cbegin(), automatedParams.cend(), [paramIdx](const automated_param_t& ap) {
+        auto it = std::find_if(automationLanes.cbegin(), automationLanes.cend(), [paramIdx](const automation_lane_t& ap) {
             return ap.paramIdx == paramIdx;
         });
-        if (it != automatedParams.end()) {
-            const automated_param_t* ap = &(*it);
+        if (it != automationLanes.end()) {
+            const automation_lane_t* ap = &(*it);
             if (ap->isAutomated() && ap->isActive())
                 return &(*it);
         }
         return nullptr;
     }
-    automated_param_t* getRegisteredAutomation(int32_t paramIdx) {
+    automation_lane_t* getRegisteredAutomation(int32_t paramIdx) {
         dbgassert(mapParams.count(paramIdx));
-        auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
+        auto it = std::find_if(automationLanes.begin(), automationLanes.end(), [paramIdx](automation_lane_t& ap) {
             return ap.paramIdx == paramIdx;
         });
-        if (it != automatedParams.end()) {
-            automated_param_t* ap = &(*it);
+        if (it != automationLanes.end()) {
+            automation_lane_t* ap = &(*it);
             if (ap->isAutomated())
                 return ap;
         }
         return nullptr;
     }
-    automated_param_t* getOrCreateAutomation(int32_t paramIdx) {
+    automation_lane_t* getOrCreateAutomation(int32_t paramIdx) {
         dbgassert(mapParams.count(paramIdx));
-        auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
+        auto it = std::find_if(automationLanes.begin(), automationLanes.end(), [paramIdx](automation_lane_t& ap) {
             return ap.paramIdx == paramIdx;
         });
-        if (it != automatedParams.end()) {
+        if (it != automationLanes.end()) {
             return &(*it);
         }
-        automatedParams.emplace_back(paramIdx, mapParams[paramIdx].quantizationSteps);
-        return &automatedParams.back();
+        automationLanes.emplace_back(paramIdx, mapParams[paramIdx].quantizationSteps);
+        return &automationLanes.back();
     }
-    void getAllAutomatedParams(std::vector<automated_param_t>& out) {
-        for (automated_param_t& t : automatedParams) {
+    void getAllAutomatedParams(std::vector<automation_lane_t>& out) {
+        for (automation_lane_t& t : automationLanes) {
             if (t.src.isAutomated()) {
                 out.push_back(t);
             }
@@ -401,10 +458,10 @@ public:
     virtual void postSetParameter(int32_t idx, float preVal, float val, int flags) {
     }
     std::pair<float, float> getParamMinMaxAutomated(int32_t paramIdx) {
-        auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
+        auto it = std::find_if(automationLanes.begin(), automationLanes.end(), [paramIdx](automation_lane_t& ap) {
             return ap.paramIdx == paramIdx;
         });
-        if (it != automatedParams.end()) {
+        if (it != automationLanes.end()) {
             auto& param = *it;
             if (param.src.isActive()) {
                 return param.src.getMinMax();
@@ -415,7 +472,7 @@ public:
         return { param->value, param->value };
     }
     void clearAutomations() {
-        this->automatedParams.clear();
+        this->automationLanes.clear();
     }
 };
 
@@ -433,38 +490,33 @@ namespace DAW::Host {
 namespace DAW {
     enum class automation_routing_type {
         ROUTING_NONE,
-        ROUTING_PARAM,
+        ROUTING_LANE,
         ROUTING_MODULATION,
     };
 
     struct automation_routing_t {
         automation_routing_type type  = automation_routing_type::ROUTING_NONE;
-        float val = 0.0f;
-        automatable_param_ref_t refLane{};
+        automatable_param_ref_t destinationRef{};
     };
     inline automation_routing_t AutomationRef(const automatable_t* automatable, int32_t paramIdx) {
-        automatable_param_ref_t subtrackSnapshot;
-        subtrackSnapshot          = automatable->toRef();
-        subtrackSnapshot.paramIdx = paramIdx;
-        return automation_routing_t{ automation_routing_type::ROUTING_PARAM, 0.0f, subtrackSnapshot };
+        auto atlRef = automatable->toRef();
+        atlRef.paramIdx = paramIdx;
+        return automation_routing_t{ automation_routing_type::ROUTING_LANE, atlRef };
     }
-    inline automation_routing_t AutomationNone(float val) {
-        return automation_routing_t{ automation_routing_type::ROUTING_NONE, val, {} };
+    inline automation_routing_t AutomationNone() {
+        return automation_routing_t{ automation_routing_type::ROUTING_NONE, {} };
     }
-    // bool resolveAutomationAtTime(const DAW::Host::PluginManager* host, const automation_routing_t& ref, tick_t atTime, float* fOut);
-    const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const DAW::automation_channel_ref& ref);
-    void ResolveModulationInputRoutings(const Host::PluginManager* const host, automatable_t* dev, std::vector<automated_param_connection_t>& modulations);
-    automatable_t* resolveAutomatableRefDevice(const Host::PluginManager* const host, const automatable_param_ref_t& ref);
-    const   automated_param_t* GetAutomationSrc(const Host::PluginManager* const host, const automation_routing_t routing);
-    automation_routing_t GetAutomationRouting(const automatable_t* dev, int32_t paramIdx);
 
-    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, DAW::automation_channel_ref ref);
-    void DisonnectModulationInputChannel(automatable_t* dev, int32_t paramIdx);
+    automated_param_connection_t GetParameterModulationFromRouting(const Host::PluginManager* const host, const automation_routing_t routing);
+    automation_routing_t GetRoutingFromDestinationParam(const automatable_t* dev, int32_t paramIdx);
+
+    automatable_t* resolveAutomatableRefDevice(const Host::PluginManager* const host, const automatable_param_ref_t& ref);
+    const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const automation_channel_ref& ref);
+    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, automation_channel_ref ref);
+    void DisonnectModulationInputChannel(automatable_t* dev, automation_channel_ref ref);
+    void DisonnectModulationForParam(automatable_t* dev, int32_t paramIdx);
+
     inline bool IsParamModulated(automatable_t* dev, int32_t paramIdx) {
-        for (auto& mod : dev->inputChannelsAutomation) {
-            if (mod.idx == paramIdx)
-                return true;
-        }
-        return false;
+        return dev->isParamModulated(paramIdx);
     }
 }// namespace DAW

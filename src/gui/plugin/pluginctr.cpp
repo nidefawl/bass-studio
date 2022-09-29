@@ -819,6 +819,7 @@ void guictr_plugins::onTick(AppCtrl* ctrl) {
         switch(ctrType) {
             case gui_type::CTR_TYPE_PLUGIN:
             case gui_type::CTR_TYPE_PLUGINS_DRAGGED:
+            case gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY:
                 break;
             default:
                 return;

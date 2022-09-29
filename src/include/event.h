@@ -52,7 +52,7 @@ struct MouseEvent {
 };
 class MouseHitEvt {
     guibase* guiHit    = nullptr;
-    void* draggedThing = nullptr;
+    guibase* draggedThing = nullptr;
     int cursorIcon     = CURSOR_DEFAULT;
     bool cursorChanged = false;
 
@@ -77,10 +77,10 @@ public:
         cursorChanged = true;
         cursorIcon    = _cursorIcon;
     }
-    void* getDraggedThing() {
+    guibase* getDraggedThing() {
         return draggedThing;
     }
-    void setDraggedThing(void* _draggedThing) {
+    void setDraggedThing(guibase* _draggedThing) {
         draggedThing = _draggedThing;
     }
 };

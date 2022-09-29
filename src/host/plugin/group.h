@@ -27,7 +27,7 @@ public:
     guiplugin* makeGui() override;
     guiplugin* getGui() override;
     samplecount_t getPluginLatency() override;
-    void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
+    void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     void processMidi(midi_events_t& midiEvents) override;
     void onEnable() override;
     void onDisable() override;

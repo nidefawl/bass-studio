@@ -346,7 +346,7 @@ int effect_deferred::getModuleType() {
 void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
     ps = this->mImpl->snapshot;
 }
-void effect_deferred::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
+void effect_deferred::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
 }
 int effect_deferred::getModuleStoredType() const {
     return this->mImpl->moduleType;

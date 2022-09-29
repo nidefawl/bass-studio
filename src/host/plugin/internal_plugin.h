@@ -74,7 +74,7 @@ public:
     // automatable_t interface
     String getAutomatableName() override;
     float getParamValue(int32_t idx) override;
-    void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override { out->copyFrom(in); };
+    void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override { out->copyFrom(in); };
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
     virtual void processMidiMessages(std::vector<IMidiMsg>& midiEvents) { };
     void processMidi(midi_events_t& midiEvents) override;
@@ -91,7 +91,7 @@ public:
     }
     ~internal_automator() override {
     }
-    virtual const automated_param_t* getModulationOutputData(int32_t channel) const = 0;
+    virtual const automated_param_t* getModulationOutputData(const DAW::automation_channel_ref& channel) = 0;
     DAW::automation_channel_ref getModulationChannel(int32_t channel) const {
         auto thisRef = toRef();
         thisRef.paramIdx = channel;

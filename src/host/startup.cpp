@@ -180,6 +180,27 @@ void openPluginWindows(DawCtrl* dawCtrl, String pluginName) {
         }
     }
 }
+void loadAllInstances(DawCtrl* dawCtrl, String pluginName) {
+    DawInstance* dawInstance = dawCtrl->getDaw();
+    auto lock = dawInstance->lockPlayThread();
+    {
+        bool bOnce = false;
+        std::vector<effectbase*> effects;
+        dawInstance->getPluginManager()->getDeferredEffects(effects);
+        for (auto eff : effects) {
+            if (eff->getName().find(pluginName) != String::npos) {
+                track_t* tr = eff->getTrack();
+                if (tr) {
+                    if (!bOnce) {
+                        dawCtrl->getDaw()->setSelectedTrack(tr);
+                        dawCtrl->getDaw()->getMainControl()->showPluginView();
+                    }
+                    dawInstance->getPluginManager()->activateDeferred(eff, 0);
+                }
+            }
+        }
+    }
+}
 void showPluginView(DawCtrl* dawCtrl, String pluginName) {
     DawInstance* dawInstance = dawCtrl->getDaw();
     MainCtrl::get()->showPluginView();
@@ -291,7 +312,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
             if (daw->getProject()->trackMidiAudioCtr.size()>1) {
                 daw->setSelectedTrack(daw->getProject()->trackMidiAudioCtr[1]);
             }
-            showPluginView(dawMainCtrl, "erum");
+            loadAllInstances(dawMainCtrl, "Macro");
             //     auto tr = daw->getProject()->trackMidiAudioCtr[1];
                 
             //     daw->setSelectedTrack(tr);

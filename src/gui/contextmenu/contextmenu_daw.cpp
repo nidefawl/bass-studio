@@ -1,22 +1,33 @@
-#include "str_util.h"
 #include "automation.h"
-#include "gui/automation/automatable.h"
-#include "host/plugin/base_plugin.h"
 #include "contextmenu_daw.h"
-#include "snapshot/track-snapshot.h"
-#include "logging.h"
+#include "gui/automation/automatable.h"
+#include "gui/contextmenu/contextmenu_base.h"
+#include "gui/contextmenu/contextmenu_daw.h"
+#include "gui/contextmenu/contextmenu.h"
+#include "gui/track/trackcontent.h"
+#include "gui/track/trackctr.h"
 #include "host/host_pluginmanager.h"
+#include "host/mainctrl.h"
+#include "host/plugin/base_plugin.h"
+#include "logging.h"
+#include "math/vec.h"
+#include "snapshot/track-snapshot.h"
+#include "str_util.h"
+#include "str_util.h"
+#include "track_impl.h"
+#include "track.h"
+#include <cstdint>
+
 
 guictxtmenu_at_param::guictxtmenu_at_param(DawCtrl* _dawCtrl, automatable_t* _atl, int32_t _paramIdx)
     : atl(_atl), paramIdx(_paramIdx) {
     this->dawCtrl = _dawCtrl;
     this->size.x = 240;
-    addContextEntriesAutomation(this, _atl, paramIdx);
-    addContextEntriesModulation(this, _atl, paramIdx);
+    DAW::AddContextEntriesAutomation(this, _atl, paramIdx);
+    DAW::AddContextEntriesModulation(this, _atl, paramIdx);
 }
 void guictxtmenu_at_param::clicked(int _id) {
-    handleAutomatableContextMenu(dawCtrl, atl, paramIdx, _id);
-    closeContextMenu();
+    DAW::HandleAutomatableContextMenu(dawCtrl, atl, paramIdx, _id);
 }
 
 void guictxtmenu_notrack::clicked(int _id) {
@@ -59,4 +70,145 @@ void guictxtmenu_notrack::clicked(int _id) {
     } else {
         daw->insertNewTrack(-1, _id);
     }
+}
+namespace DAW {
+static constexpr int32_t ID_DELETE = 1;
+static constexpr int32_t ID_REENABLE = 2;
+static constexpr int32_t ID_SHOW = 3;
+static constexpr int32_t ID_SHOW_NEW = 4;
+static constexpr int32_t ID_RESET_TO_DEFAULT = 5;
+static constexpr int32_t ID_REMOVE_MODULATION = 6;
+static constexpr int32_t ID_MENU_MODULATION = 7;
+void AddContextEntriesAutomation(guictxtmenu* ctxt, automatable_t* atl, int paramIdx) {
+    const auto* at = atl->getRegisteredAutomation(paramIdx);
+    if (at && at->isAutomated()) {
+        if (!at->isActive()) {
+            ctxt->addEntry(new ctxtmenu_entry("Reenable Automation", ID_REENABLE));
+        }
+        ctxt->addEntry(new ctxtmenu_entry("Delete Automation", ID_DELETE));
+    }
+    ctxt->addEntry(new ctxtmenu_entry("Show Automation", ID_SHOW));
+    ctxt->addEntry(new ctxtmenu_entry("Show in new Automation Lane", ID_SHOW_NEW));
+    ctxt->addEntry(new ctxtmenu_entry("Reset to default", ID_RESET_TO_DEFAULT));
+    
+}
+void AddContextEntriesModulation(guictxtmenu* ctxt, automatable_t* atl, int paramIdx) {
+    if (DAW::IsParamModulated(atl, paramIdx)) {
+        ctxt->addEntry(new ctxtmenu_entry("Remove Modulation", ID_REMOVE_MODULATION));
+    }
+    ctxt->addEntry(new ctxtmenu_entry("Edit Modulation", ID_MENU_MODULATION));
+}
+}
+class guictxtmenu_select_modulation : public guictxtmenu {
+    automatable_t* const atl;
+    int32_t const paramIdx;
+
+    class ctxtmenu_modulation_entry : public ctxtmenu_entry {
+        const DAW::automation_channel_ref ref;
+    public:
+        ctxtmenu_modulation_entry(String _title, int _id, DAW::automation_channel_ref ref)
+            : ctxtmenu_entry(std::move(_title), _id), ref(ref)
+        {
+        }
+        DAW::automation_channel_ref getRef() const {
+            return ref;
+        }
+    };
+public:
+    guictxtmenu_select_modulation(DawCtrl* _dawCtrl, automatable_t* _atl, int32_t _paramIdx)
+        : atl(_atl), paramIdx(_paramIdx)
+    {
+        this->dawCtrl = _dawCtrl;
+        this->size.x = 240;
+        int32_t inputIdx = 0;
+        for (auto& input : _atl->getModulations()) {
+            auto modChannel = DAW::ResolveModulationChannel(_dawCtrl->getDaw()->getPluginManager(), input);
+            auto name = StringFormat("%d", inputIdx);
+            if (modChannel) {
+                name = modChannel->getName();
+            }
+            addEntry(new ctxtmenu_modulation_entry(name, inputIdx, input));
+            inputIdx++;
+        }
+    }
+    void clicked(int _id) override {
+        if (_id >= 0) {
+            auto ref = static_cast<ctxtmenu_modulation_entry*>(entries[_id])->getRef();
+            DAW::OpenModulationEditor(dawCtrl, dawCtrl->lastMouseEvent.mousepos, atl, paramIdx, ref);
+        }
+        closeContextMenu();
+    }
+};
+
+guictxtmenu* guictxtmenu_at_param::createPopupForEntry(ctxtmenu_entry* e, int lvl) {
+    guictxtmenu* popup = nullptr;
+    if (e->id == DAW::ID_MENU_MODULATION) {
+        popup = new guictxtmenu_select_modulation(dawCtrl, atl, paramIdx);
+    }
+    return popup;
+}
+namespace DAW {
+    bool HandleAutomatableContextMenu(DawCtrl* dawCtrl, automatable_t* atl, int paramIdx, int _id) {
+        switch (_id) {
+            case ID_MENU_MODULATION: {
+                dawCtrl->closeContextMenu();
+                const auto& inputs = atl->getModulations();
+                if (!inputs.empty())
+                    DAW::OpenModulationEditor(dawCtrl, dawCtrl->lastMouseEvent.mousepos, atl, paramIdx, inputs.front());
+                return true;
+        
+            }
+            case ID_REMOVE_MODULATION: {
+                DAW::DisonnectModulationForParam(atl, paramIdx);
+                dawCtrl->closeContextMenu();
+                return true;
+            }
+        }
+
+        auto* track = atl->getTrack();
+        dbgassert(track);
+        auto* guiTrackCtr   = dawCtrl->getTrackContainer();
+        track_gui_entry_t* entry{};
+        if(!guiTrackCtr->getPointerEntry(track, &entry))
+            return false;
+        switch (_id) {
+            case ID_SHOW_NEW: {
+                auto const lane = guiTrackCtr->addAutomationLane(entry, atl, paramIdx, true);
+                dawCtrl->updateVisibleTrackContents();
+                guiTrackCtr->scrollTo(lane);
+                return true;
+            }
+            case ID_SHOW: {
+                guiTrackCtr->showAutomationLane(entry, atl, paramIdx);
+                dawCtrl->updateVisibleTrackContents();
+                guiTrackCtr->scrollTo(entry->content);
+                return true;
+            }
+            case ID_DELETE: {
+                auto* param = atl->getRegisteredAutomation(paramIdx);
+                if (param) {
+                    param->src.points.clear();
+                    dawCtrl->updateVisibleTrackContents();
+                }
+                return true;
+            }
+            case ID_REENABLE: {
+                auto* param = atl->getRegisteredAutomation(paramIdx);
+                if (param && !param->isActive()) {
+                    guiTrackCtr->showAutomationLane(entry, atl, paramIdx);
+                    dawCtrl->updateVisibleTrackContents();
+                    param->src.active = true;
+                }
+                return true;
+            }
+            case ID_RESET_TO_DEFAULT: {
+                atl->resetParamValue(paramIdx, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+                return true;
+            }
+            default:
+                break;
+        }
+        return false;
+    }
+
 }

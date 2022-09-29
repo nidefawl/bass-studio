@@ -188,228 +188,6 @@ guitooltip<audio_info_t>::~guitooltip() {
     delete ptr;
 }
 
-class gui_slider_textfield : public gui_textfield {
-protected:
-    automatable_t* paramAutomatable = nullptr;
-    int32_t paramIdx                = -1;
-public:
-    gui_slider_textfield() : gui_textfield() {
-        setCanMouseHit(true);
-        setAlignment(gui_textfield::Alignment::Center);
-        setReturnCommits(true);
-    }
-
-    virtual bool renderAsBipolar() = 0;
-    virtual String getValueAsString(float param) {
-        auto paramValDisplay = paramAutomatable->getParamValueDisplay(paramIdx);
-        return paramValDisplay.value + paramValDisplay.unit;
-    }
-    virtual float getRenderScaledValue(float param) {
-        return param;
-    }
-    virtual float modifyParam(float param, float amt, bool applyUserInputScaling) {
-        if (applyUserInputScaling) {
-            amt *= 0.01f;
-        }
-        return math::clamp(param - amt, 0.0f, 1.0f);
-    }
-    virtual float parseTextValue(const String& str) {
-        auto param = paramAutomatable->getParam(paramIdx);
-        param_unit_t paramUnit = { str, param->unit };
-        auto parsed = paramAutomatable->convertParamValueDisplay(paramIdx, paramUnit);
-        return parsed.floatVal;
-    }
-
-    int32_t getParamIdx() const {
-        return paramIdx;
-    }
-    void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
-        this->paramAutomatable = _paramAutomatable;
-        this->paramIdx         = _paramIdx;
-    }
-    void handleRightClick(MouseEvent& evt) override {
-        dbgassert(paramAutomatable && paramIdx > -1 && paramAutomatable->getParam(paramIdx));
-        parentCtrl->openContextMenu(new guictxtmenu_at_param(dawCtrl, paramAutomatable, paramIdx), evt.mousepos);
-    }
-    bool isAutomated() {
-        dbgassert(paramAutomatable && paramIdx > -1 && paramAutomatable->getParam(paramIdx));
-        auto at = paramAutomatable->getRegisteredAutomation(paramIdx);
-        return at && at->isAutomated();
-    }
-    void render(NVGcontext* vg) override {
-        renderWidgetBorder(vg, getStateFlags());
-        GuiColor::constant_t valColor;
-        GuiColor::constant_t indColor;
-        if (isAutomated()) {
-            valColor = GuiColor::COL_AUTOMATED;
-            indColor = GuiColor::COL_AUTOMATED;
-        } else {
-            indColor = GuiColor::COL_KNOB_IND;
-            valColor = GuiColor::COL_KNOB;
-        }
-        if (paramAutomatable && paramIdx > -1) {
-            vec2 insetP = vec2(pos + 1);
-            vec2 insetS = vec2(size - 2);
-            float fParamScaled = getRenderScaledValue(paramAutomatable->getParamValue(paramIdx));
-            float x = insetP.x;
-            float y = insetP.y;
-            float rectWidth;
-            if (renderAsBipolar()) {
-                // render bipolar: fParamScaled is 0..1
-                // make sure rectWidth is not negative
-                if (fParamScaled < 0.5f) {
-                    x = insetP.x + insetS.x * fParamScaled;
-                    rectWidth = insetS.x * (0.5f - fParamScaled);
-                } else {
-                    x = insetP.x + insetS.x * 0.5f;
-                    rectWidth = insetS.x * (fParamScaled - 0.5f);
-                }
-            } else {
-                rectWidth = (fParamScaled) * insetS.x;
-            }
-            if (rectWidth > 0.45f) {
-                nvgBeginPath(vg);
-                nvgRect(vg, x, y, rectWidth, insetS.y);
-                nvgFillColor(vg, theme->getColor(valColor));
-                nvgFillCustomPar(vg, -3);
-                nvgFill(vg);
-            }
-            float textWidth = 0;
-            if (isTextCommitted()) {
-                const String strLvl = getValueAsString(paramAutomatable->getParamValue(paramIdx));
-                textWidth = renderTextLabel(vg,
-                                insetP + insetS * 0.5f,
-                                insetS,
-                                strLvl,
-                                theme,
-                                fontSize(),
-                                theme->getContrastColor(valColor),
-                                NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-            }
-            if (isFlag(FLG_RENDER_LABEL) && this->label.length()) {
-                renderTextLabel(vg,
-                                insetP + vec2(3.0f, insetS.y * 0.5f),
-                                vec2(insetS.x - textWidth - 6.0f, insetS.y),
-                                label,
-                                theme,
-                                fontSize() * FONT_AUTOSCALE,
-                                theme->getColor(GuiColor::COL_LABEL_INACTIVE),
-                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-            }
-
-        }
-        if (!isTextCommitted()) {
-            gui_textfield::render(vg);
-        }
-    }
-    void layout() override {
-        gui_textfield::layout();
-        setFontSize(size.y);
-    }
-    bool focusEvent(MouseHitEvt& evt, bool focused) override {
-        if (!focused) {
-            gui_textfield::focusEvent(evt, focused);
-        }
-        return true;
-    }
-    bool handleCharInput(uint32_t codepoint) override {
-        if (isTextCommitted() && codepoint < 0xFF) {
-            char keyChar = (char) codepoint;
-            if ((keyChar >= '0' && keyChar <= '9') || (keyChar == '-')) {
-                MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
-                gui_textfield::setValue(getValueAsString(paramAutomatable->getParamValue(paramIdx)));
-                gui_textfield::focusEvent(evt, true);
-                gui_textfield::setSelectionRange(-1, -1);
-            }
-        }
-        if (!isTextCommitted()) {
-            return gui_textfield::handleCharInput(codepoint);
-        }
-        return false;
-    }
-    bool keyboardEvent(int key, int scancode, KeyEventType action, int modifiers) override {
-
-        if (action == KeyEventType::K_PRESS && isTextCommitted()) {
-            if ((key == KEY_ENTER || key == KEY_KP_ENTER)) {
-                MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
-                gui_textfield::setValue(getValueAsString(paramAutomatable->getParamValue(paramIdx)));
-                gui_textfield::focusEvent(evt, true);
-                gui_textfield::setSelectionRange(-1, -1);
-            }
-        }
-
-        if (!isTextCommitted()) {
-            return gui_textfield::keyboardEvent(key, scancode, action, modifiers);
-        }
-        if (action == KeyEventType::K_PRESS || action == KeyEventType::K_REPEAT) {
-            if (key == KEY_UP) {
-                float amt = -1.0f;
-                if (modifiers == KB_MOD_SHIFT) {
-                    amt *= 0.1f;
-                }
-                updateAutomatableParam(amt, false);
-                return true;
-            } else if (key == KEY_DOWN) {
-                float amt = 1.0f;
-                if (modifiers == KB_MOD_SHIFT) {
-                    amt *= 0.1f;
-                }
-                updateAutomatableParam(amt, false);
-                return true;
-            }
-        }
-        return false;
-    }
-    void onTextEndEdit() override {
-        float fNew = parseTextValue(gui_textfield::value());
-        auto flags = param_update_flags::FLG_PAR_UPDATE_FINISH | param_update_flags::FLG_PAR_UPDATE_USER;
-        paramAutomatable->setParamEdit(paramIdx, fNew, flags);
-    }
-    void handleDraggedBegin(MouseEvent& evt) override {
-        if (!isTextCommitted()) {
-            gui_textfield::handleDraggedBegin(evt);
-            return;
-        }
-        if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
-            MouseHitEvt mouseHitEvt(MouseHitType::MOUSE_LEFT, 0);
-            gui_textfield::setValue(getValueAsString(paramAutomatable->getParamValue(paramIdx)));
-            gui_textfield::focusEvent(mouseHitEvt, true);
-            gui_textfield::setSelectionRange(-1, -1);
-            return;
-        }
-        if (evt.guiDragged == this) {
-            parentCtrl->captureMouse(this);
-        }
-    }
-    void updateAutomatableParam(float amt, bool applyUserInputScaling) {
-        float fNew = modifyParam(paramAutomatable->getParamValue(paramIdx), amt, applyUserInputScaling);
-        auto flags = param_update_flags::FLG_PAR_UPDATE_USER;
-        paramAutomatable->setParamEdit(paramIdx, fNew, flags);
-    }
-    void handleDraggedMove(MouseEvent& evt) override {
-        if (!isTextCommitted()) {
-            gui_textfield::handleDraggedMove(evt);
-            return;
-        }
-        if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
-            int scale = isCtrl(evt.kbmods) ? 15 : 2;
-            int disty = (int) evt.dragDistance->y / scale;
-            if (!disty)
-                return;
-
-            evt.dragDistance->y = 0;
-            if (paramAutomatable && paramIdx > -1) {
-                updateAutomatableParam(disty * 0.1f, true);
-            }
-        }
-    }
-    void handleDraggedRelease(MouseEvent& evt) override {
-        if (!isTextCommitted()) {
-            gui_textfield::handleDraggedRelease(evt);
-            return;
-        }
-    }
-};
 
 class gui_slider_gain : public gui_slider_textfield {
 public:
@@ -1500,6 +1278,7 @@ public:
           m_trackentry(_entry),
           automationSelectDevice(_entry),
           automationSelectParam(_entry) {
+        this->guiType = gui_type::CTR_TYPE_TRACK_TITLE;
         setCanMouseHit(true);
         hideTrack.setRadius(12);
         hideAutomation.setRadius(10);
@@ -1919,9 +1698,16 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     ivec2 local    = this->toContainerSpace(mpos);
     bool contained = contains(mpos);
     if (contained) {
-        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-            evt.requestFocus(this);
-            return true;
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT
+            && evt.getDraggedThing()) {
+            auto type = evt.getDraggedThing()->getGuiType();
+            if (type == gui_type::CTR_TYPE_PLUGINS_DRAGGED
+                || type == gui_type::CTR_TYPE_PLUGIN
+                || type == gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY
+                || type == gui_type::CTR_TYPE_TRACK_TITLE) {
+                evt.requestFocus(this);
+                return true;
+            }
         }
         for (guibase* gui : guis) {
             if (gui->mouseHitTest(local, evt)) {
@@ -2412,7 +2198,7 @@ public:
                 std::vector<automatable_t*> targets;
                 tr->audio->getAutomatableTrackTargets(targets);
                 for (automatable_t* atl : targets) {
-                    atl->visitAutomatedParams([](automated_param_t& param) {
+                    atl->visitAutomatedParams([](auto& param) {
                         param.src.active = true;
                     });
                 }

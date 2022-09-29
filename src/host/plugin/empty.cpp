@@ -59,7 +59,7 @@ guiplugin* module_empty::getGui() {
     return handle->gui.get();
 }
 
-void module_empty::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
+void module_empty::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
     dbgassert(in->samples == format.blockSize
               && out->samples == format.blockSize
               && format.blockSize > 0

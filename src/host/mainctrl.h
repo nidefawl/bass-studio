@@ -114,6 +114,13 @@ namespace DAW {
     void GetProjectReferencedSampleIds(const project_t& project, std::vector<int32_t>& uniqueSampleIds);
     String MakeUniqueTrackName(project_t* project, const String& strNewName);
 }// namespace DAW
+namespace DAW::UI {
+    class IDraggedModulationSource {
+    public:
+        virtual ~IDraggedModulationSource() = default;
+        virtual const automation_channel_ref& getChannelRef() const = 0;
+    };
+}
 
 struct clip_cursor_t {
     tick_t start = 0;
@@ -549,6 +556,25 @@ public:
     virtual void onPluginSelected();
     bool isGlobalKeybindCodepoint(uint32_t codepoint) override {
         return codepoint == 32 || codepoint == 45 || codepoint == 43;
+    }
+    DAW::UI::IDraggedModulationSource* getDraggedModulation() const {
+        if (guiDragged && guiDragged->getGuiType() == gui_type::CTR_TYPE_MODULATION_BUTTON) {
+            return dynamic_cast<DAW::UI::IDraggedModulationSource*>(guiDragged);
+        }
+        return nullptr;
+    }
+    DAW::UI::IDraggedModulationSource* getFocusedModulation() const {
+        if (guiOver && guiOver->getGuiType() == gui_type::CTR_TYPE_MODULATION_BUTTON) {
+            return dynamic_cast<DAW::UI::IDraggedModulationSource*>(guiOver);
+        }
+        return nullptr;
+    }
+    std::optional<DAW::automation_channel_ref> getDraggedModulationRef() const {
+        auto dragged = getDraggedModulation();
+        if (dragged) {
+            return dragged->getChannelRef();
+        }
+        return {};
     }
 };
 

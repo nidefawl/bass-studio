@@ -863,7 +863,7 @@ int64_t vstplugin::dispatch(
         float opt) {
     return vst_dispatch(this, this->handle->aeffect, opcode, index, value, ptr, opt);
 }
-void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
+void vstplugin::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
     dbgassert(!isInSuspend);
     dbgassert(this->handle->aeffect);
     dbgassert(in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);

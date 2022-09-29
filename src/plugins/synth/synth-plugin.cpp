@@ -2904,7 +2904,7 @@ namespace PluginSynth {
             this->impl->processMidiMessages(midiEvents);
         }
 
-        void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override {
+        void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override {
             dbgassert(format.sampleRate > 0 && this->impl->oneOverSR == 1.0/format.sampleRate);
             dbgassert(out->channels >= 2);
             dbgassert(out->samples >= numSamples);

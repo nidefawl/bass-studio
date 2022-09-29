@@ -401,11 +401,11 @@ namespace DAW {
                     }
                     track_node_t& trackSrcCfg = getNode(map, srcStageId);
                     trackCfg.dependencies.push_back(srcStageId);
-                    trackCfg.pulls.push_back(track_source_t{ trackEdgeId++, inputChannel, AutomationNone(dsp_util::gainToLinScale(1.0f)), AutomationNone(0.5f), 0, src->flags });
+                    trackCfg.pulls.push_back(track_source_t{ trackEdgeId++, inputChannel, AutomationNone(), AutomationNone(), 0, src->flags });
                     trackCfg.children.push_back(&trackSrcCfg);
                     trackSrcCfg.parents.push_back(&trackCfg);
                 } else if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
-                    trackCfg.pulls.push_back(track_source_t{ trackEdgeId++, inputChannel, AutomationNone(dsp_util::gainToLinScale(1.0f)), AutomationNone(0.5f), 0, audiostageflags_t::NONE });
+                    trackCfg.pulls.push_back(track_source_t{ trackEdgeId++, inputChannel, AutomationNone(), AutomationNone(), 0, audiostageflags_t::NONE });
                 } else if (inputChannel.type != stage_type::INPUT_DEFAULT) {
                     log_lf(Log::L_ERROR, "missing track input routing on track %s\n", StringAsCStr(track->name));
                 }
@@ -422,12 +422,12 @@ namespace DAW {
                         }
                         track_node_t& trackDstCfg = getNode(map, dstStageId);
                         trackDstCfg.dependencies.push_back(stageId);
-                        trackDstCfg.pushs.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT_POST), AutomationNone(dsp_util::gainToLinScale(1.0f)), AutomationNone(0.5f), 0, trackImpl->flags });
+                        trackDstCfg.pushs.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT_POST), AutomationNone(), AutomationNone(), 0, trackImpl->flags });
                         trackDstCfg.children.push_back(&trackCfg);
                         trackCfg.parents.push_back(&trackDstCfg);
                     }
                 } else if (outputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO && trackImpl->mixer.isEnabled()) {
-                    trackGraph->externalOutputRouting.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT_POST), AutomationNone(dsp_util::gainToLinScale(1.0f)), AutomationNone(0.5f), 0, trackImpl->flags });
+                    trackGraph->externalOutputRouting.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT_POST), AutomationNone(), AutomationNone(), 0, trackImpl->flags });
                 }
             }
             if (TRACKTYPE_TO_CTR(track->type) == TRACK_CTR_MIDIAUDIO && trackImpl->mixer.isEnabled()) {
@@ -435,7 +435,7 @@ namespace DAW {
                 for (track_t* trackReturn : project->trackReturnCtr) {
                     int32_t paramGainIdx = PARAM_OFFSET_SEND_GAIN + trackReturn->localIdxFlat;
                     auto sendGainVal     = trackImpl->mixer.getParamValue(paramGainIdx);
-                    auto automationRef   = GetAutomationRouting(&trackImpl->mixer, paramGainIdx);
+                    auto automationRef   = GetRoutingFromDestinationParam(&trackImpl->mixer, paramGainIdx);
                     if (automationRef.type == automation_routing_type::ROUTING_NONE) {
                         /* Calculate send gain level */
                         float fGainRaw = dsp_util::linScaleToGain(sendGainVal);
@@ -445,7 +445,7 @@ namespace DAW {
                     }
 
                     int32_t paramPanIdx   = PARAM_OFFSET_SEND_PAN + trackReturn->localIdxFlat;
-                    auto automationRefPan   = GetAutomationRouting(&trackImpl->mixer, paramPanIdx);
+                    auto automationRefPan   = GetRoutingFromDestinationParam(&trackImpl->mixer, paramPanIdx);
 
                     track_impl_t* audioReturn = trackReturn->audio;
                     dbgassert(audioReturn);

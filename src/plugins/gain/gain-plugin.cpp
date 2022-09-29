@@ -28,9 +28,7 @@
 namespace PluginGain {
 
     struct impl_data_t {
-        std::vector<float> vecGain;
-        std::vector<float> vecPanL;
-        std::vector<float> vecPanR;
+        DAW::Host::process_scratch_buf_t buf;
     };
 
     module_gain::module_gain(int32_t _projectGlobalId, IHostCallback* _hostCallback)
@@ -59,57 +57,42 @@ namespace PluginGain {
         delete impl;
     }
 
-    void module_gain::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
+    void module_gain::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
         dbgassert(in->samples == format.blockSize
                 && out->samples == format.blockSize
                 && format.blockSize > 0
                 && format.sampleRate > 0);
 
-        auto autParGain = getActiveAutomation(PARAM_GAIN);
-        auto autParPan = getActiveAutomation(PARAM_PAN);
+
+        auto fGainTrackLin = this->getParamValue(PARAM_GAIN);
+        auto fPanTrack = this->getParamValue(PARAM_PAN);
+        auto autParGain = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_GAIN));
+        auto autParPan = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_PAN));
+
+
         out->clear();
         // fast path: no sample accurate automation
-        if (!autParGain && !autParPan) {
+        if (!autParGain.atl && !autParPan.atl) {
             /* Calculate group gain level */
             float fGain = 1.0f;
-            if (dsp_util::getGainLvlWithRange(getParamValue(PARAM_GAIN), MTR_CEIL, DBFS_MUTE_POS, fGain)) {
+            if (dsp_util::getGainLvlWithRange(fGainTrackLin, MTR_CEIL, DBFS_MUTE_POS, fGain)) {
                 // fast path: center pan
-                if (math::abs(getParamValue(PARAM_PAN) - 0.5f) < 0.005f) {
+                if (math::abs(fPanTrack - 0.5f) < 0.005f) {
                     out->addFromOp(in, AudioBlock::mix_op::ADD, fGain);
                 } else {
-                    DAW::Panning::MultiplyConstant(in, out, fGain * (1.0f/DAW::Panning::GetCenterGain()), getParamValue(PARAM_PAN));
+                    DAW::Panning::MultiplyConstant(in, out, fGain * (1.0f/DAW::Panning::GetCenterGain()), fPanTrack);
                 }
             } else {
                 // fast path: fully muted
             }
             return;
         }
-        impl->vecGain.resize(numSamples);
-        impl->vecPanL.resize(numSamples);
-        impl->vecPanR.resize(numSamples);
         const auto bpm100 = project_controller_t::get()->getCurrentTempo(); //TODO: use hostCallback or provide time info struct in process() parameter list
         const auto tickBegin = tick;
         const auto tickEnd = tickBegin + sampleToTickConvert<double, roundmode::none>(numSamples, bpm100, format.sampleRate);
-
-        if (autParGain && autParGain->isActive()) {
-            autParGain->sampleAutomation(tickBegin, tickEnd, numSamples, impl->vecGain.data());
-        } else {
-            std::fill(impl->vecGain.begin(), impl->vecGain.end(), getParamValue(PARAM_GAIN));
-        }
-        if (autParPan && autParPan->isActive()) {
-            autParPan->sampleAutomation(tickBegin, tickEnd, numSamples, impl->vecPanL.data());
-        } else {
-            std::fill(impl->vecPanL.begin(), impl->vecPanL.end(), getParamValue(PARAM_PAN));
-        }
-        for (int32_t i = 0; i < numSamples; i++) {
-            dsp_util::getGainLvlWithRange(impl->vecGain[i], MTR_CEIL, DBFS_MUTE_POS, impl->vecGain[i]);
-            DAW::Panning::CalculatePanning<DAW::Panning::PanLaw::SIN_4_5DB>(impl->vecPanL[i], &impl->vecPanL[i], &impl->vecPanR[i]);
-            impl->vecGain[i] *= 1.0f/DAW::Panning::GetCenterGain();
-        }
-        float* panningData[2] = { impl->vecPanL.data(), impl->vecPanR.data() };
-        DAW::Panning::MultiplyAutomation(in, out, impl->vecGain.data(), panningData);
-
+        DAW::Host::MixWithGainAndPanAutomation(host, impl->buf, &trackImpl->output, &trackImpl->outputPost, fGainTrackLin, fPanTrack, autParGain, autParPan, tickBegin, tickEnd);
     }
+
     param_converted_t module_gain::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
         //TODO: use std::from_chars when floating point version arrives in libc++
         auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));

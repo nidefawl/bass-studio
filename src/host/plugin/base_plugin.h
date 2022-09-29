@@ -136,7 +136,7 @@ public:
     virtual guiplugin* getGui()  = 0;
 
     virtual void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) = 0;
-    virtual void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) = 0;
+    virtual void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) = 0;
     virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed);
     virtual void processMidi(midi_events_t& midiEvents);
     virtual void sendNotesOff();
@@ -249,7 +249,7 @@ public:
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     guiplugin* makeGui() override;
     guiplugin* getGui() override;
-    void process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
+    void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     bool hasWindowEditor() override {
         return false;
     }

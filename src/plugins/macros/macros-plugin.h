@@ -24,7 +24,7 @@ public:
         return true;
     }
     std::shared_ptr<PluginViewContainers> createViewCtrInternal() override;
-    const automated_param_t* getModulationOutputData(int32_t channel) const override;
+    const automated_param_t* getModulationOutputData(const DAW::automation_channel_ref& channel) override;
     std::shared_ptr<std::vector<std::byte>> storePresetData() override;
     bool loadPresetData(const std::shared_ptr<std::vector<std::byte>>& buf) override;
     void getUiSnapshot(snapshot_t& snapshot);

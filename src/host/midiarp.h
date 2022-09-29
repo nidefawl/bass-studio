@@ -138,7 +138,7 @@ public:
     void allNotesOff(std::vector<noteevent_t>& noteEvents);
     void onStartPlayback();
 
-    void updateAutomatedParameters(tick_t processingPos, const std::vector<automated_param_connection_t>& modulations) override {
+    void updateAutomatedParameters(const Host::PluginManager *const host, tick_t tick, playback_state state) override {
         // parameter automation updates are done internally
     }
 

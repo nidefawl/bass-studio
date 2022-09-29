@@ -128,7 +128,7 @@ void guictr_base::renderFrameOutline(NVGcontext* vg) {
     nvgStroke(vg);
 }
 
-void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle) {
+void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, const GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle) {
     NVGcolor c;
     if (flags & TITLEBAR_FLG_SELECTED) {
         c = theme->getColor(GuiColor::COL_PLUG_TITLE_SELECTED);

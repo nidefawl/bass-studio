@@ -543,7 +543,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
 #ifdef PLACE_MARKERS
     markers.push_back(marker_t{ end, col(7), "block end", (float) (tickMarkers++) });
 #endif
-    std::vector<automated_param_t> arpAutomatedParams;
+    std::vector<automation_lane_t> arpAutomatedParams;
     getAllAutomatedParams(arpAutomatedParams);
 
     std::vector<noteevent_t> noteEvents = noteEventsIn;

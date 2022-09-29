@@ -1,11 +1,16 @@
 #include "macros-plugin.h"
+#include "assert_dbg.h"
 #include "automation.h"
 #include "gui/container/container.h"
+#include "gui/controls/button.h"
+#include "gui/controls/inputfield.h"
 #include "gui/controls/knobpluginparam.h"
 #include "gui/gui.h"
 #include "gui/tooltip/tooltip.h"
+#include "gui/views/controls.h"
 #include "guicolors.h"
 #include "guiconstant.h"
+#include "host/host_pluginmanager.h"
 #include "host/mainctrl.h"
 #include "logging.h"
 #include "math/seq_math.h"
@@ -16,12 +21,235 @@
 #include "logging.h"
 #include "byte-buffer.h"
 #include <array>
+#include <cassert>
 #include <cstdint>
 #include <utility>
 
 namespace DAW::UI {
+    class guictr_edit_modulation_slot : public guictr_base {
+        automatable_t* paramAutomatable = nullptr;
+        int32_t paramIdx = 0;
+        int32_t modulationIndex = 0;
+        guibutton btnSourceName;
+        gui_numberinput_float fieldMinVal;
+        gui_numberinput_float fieldMaxVal;
+        guibutton btnRemove;
+        public:
+        guictr_edit_modulation_slot()
+            : guictr_base(),
+            fieldMinVal(nullptr),
+            fieldMaxVal(nullptr)
+        {
+            margin  = 0;
+            padding = 2;
+            this->guiType = gui_type::CTR_TYPE_EDIT_MODULATION;
+            add(&btnSourceName);
+            add(&fieldMaxVal);
+            add(&fieldMinVal);
+            add(&btnRemove);
+            fieldMaxVal.setLabel("Max");
+            fieldMinVal.setLabel("Min");
+            btnRemove.setLabel("Remove");
+            btnRemove.setText("Remove");
+            btnSourceName.setText("Source");
+            btnSourceName.setLabel("Source");
+        }
+        ~guictr_edit_modulation_slot() override {
+            removeGuis();
+        }
+        void setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::automation_channel_ref _ref, int32_t modulationIndex) {
+            dbgassert(host);
+            dbgassert(_paramAutomatable);
+            btnRemove.id = 16 + modulationIndex;
+            this->modulationIndex  = modulationIndex;
+            this->paramAutomatable = _paramAutomatable;
+            this->paramIdx         = _paramIdx;
+            auto& modChannels = _paramAutomatable->getModulations();
+            auto& modChannelRef       = modChannels[modulationIndex];
+            fieldMinVal.setRef(&modChannelRef.scale.min);
+            fieldMaxVal.setRef(&modChannelRef.scale.max);
+            auto channel = DAW::ResolveModulationChannel(host, modChannelRef);
+            String channelName;
+            if (channel) {
+                channelName = channel->getName();
+            }
+            String srcName = paramAutomatable->getAutomatableName();
+            srcName += " ";
+            srcName += paramAutomatable->getParamName(_paramIdx);
+            if (!channelName.empty()) {
+                btnRemove.setTooltipText("Remove Modulation: " + channelName);
+            } else {
+                btnRemove.setTooltipText("Remove Modulation");
+            }
+            setLabel(srcName);
+            btnSourceName.setText(channelName);
+        }
+
+        void renderBackground(NVGcontext* vg) override {
+            drawInsetBackground(vg, theme, getPosContent(), getSizeContent());
+        }
+        GuiConstant::constant_t getGuiConstantHeight() const {
+            return GuiConstant::CONST_ROW_HEIGHT;
+        }
+        void layout() override {
+            const int32_t TRACK_HEIGHT_STEP = theme->get(getGuiConstantHeight());
+            auto padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
+            auto cs = getSizeContent();
+            auto srcNameW = 0.5f * cs.x;
+            auto w    = (cs.x-srcNameW) - padding * 2;
+            btnSourceName.size = {srcNameW, TRACK_HEIGHT_STEP};
+            btnSourceName.pos = {padding, 0};
+            fieldMinVal.size = ivec2(w*0.4-padding, TRACK_HEIGHT_STEP);
+            fieldMinVal.pos  = ivec2(padding+srcNameW, 0);
+            fieldMaxVal.size = ivec2(w*0.4-padding, TRACK_HEIGHT_STEP);
+            fieldMaxVal.pos  = ivec2(padding+srcNameW+w*0.4, fieldMinVal.top());
+            btnRemove.size   = ivec2(w*0.2, TRACK_HEIGHT_STEP);
+            btnRemove.pos    = ivec2(padding+srcNameW+w*0.8, fieldMaxVal.top());
+            for (guibase* gui : guis) {
+                gui->layout();
+            }
+        }
+        void determineSize(ivec2& prefSize) override {
+            const int32_t TRACK_HEIGHT_STEP = theme->get(getGuiConstantHeight());
+            auto padding2 = paddingBR(padding) + paddingTL(padding);
+            prefSize = ivec2(prefSize.x, TRACK_HEIGHT_STEP+padding2.y);
+        }
+        void buttonClicked(guibase* _button) override {
+            if (parent) {
+                parent->buttonClicked(_button);
+            }
+        }
+    };
+    class guictr_edit_modulation : public guictxtmenu_base {
+        automatable_t* paramAutomatable = nullptr;
+        int32_t paramIdx = 0;
+        guibutton btnAddModulation;
+        std::vector<guictr_edit_modulation_slot*> slots;
+        const Host::PluginManager* host = nullptr;
+        public:
+        guictr_edit_modulation()
+            : guictxtmenu_base()
+        {
+            this->guiType = gui_type::CTR_TYPE_EDIT_MODULATION;
+            add(&btnAddModulation);
+            btnAddModulation.setLabel("Add Modulation");
+            btnAddModulation.setText("Add");
+            padding = 2;
+        }
+        ~guictr_edit_modulation() override {
+            removeGuis();
+        }
+        void setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::automation_channel_ref _ref) {
+            this->host = host;
+            this->paramAutomatable = _paramAutomatable;
+            this->paramIdx         = _paramIdx;
+            updateSlots();
+        }
+        void updateSlots() {
+            dbgassert(host);
+            String text = "Modulation: ";
+            text += paramAutomatable->getAutomatableName();
+            text += " ";
+            text += paramAutomatable->getParamName(paramIdx);
+            setLabel(text);
+            auto isModulated = paramAutomatable->isParamModulated(paramIdx);
+            if (isModulated) {
+                auto& inputs = paramAutomatable->getModulations(paramIdx);
+                auto numInputs = inputs.size();
+                while (slots.size() > numInputs) {
+                    remove(slots.back());
+                    delete slots.back();
+                    slots.pop_back();
+                }
+                while (slots.size() < numInputs) {
+                    auto slot = new guictr_edit_modulation_slot();
+                    add(slot);
+                    slots.push_back(slot);
+                }
+                for (size_t i = 0; i < numInputs; ++i) {
+                    slots[i]->setAutomationRef(host, paramAutomatable, paramIdx, *inputs[i], i);
+                }
+            } else {
+                while (slots.size() > 0) {
+                    remove(slots.back());
+                    delete slots.back();
+                    slots.pop_back();
+                }
+            }
+            
+        }
+
+        void renderBackground(NVGcontext* vg) override {
+            drawInsetBackground(vg, theme, getPosContent(), getSizeContent());
+        }
+        GuiConstant::constant_t getGuiConstantHeight() const {
+            return GuiConstant::CONST_ROW_HEIGHT;
+        }
+        GuiConstant::constant_t getGuiConstantTitlebar() const {
+            return GuiConstant::CONST_ROW_HEIGHT;
+        }
+        void render(NVGcontext* vg) override {
+            nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
+            nvgTranslate(vg, pos.x, pos.y);
+            renderFrameBase(vg);
+            int flags = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : 0;
+            if (isSelected()) flags |= TITLEBAR_FLG_SELECTED;
+            renderTitleBar(vg, size, getLabel(), getGuiConstantTitlebar(), 0, flags, true);
+            renderFrameOutline(vg);
+            ivec2 posInset  = getPosContent();
+            nvgTranslate(vg, posInset.x-pos.x, posInset.y-pos.y);
+            nvgTranslateZ(vg, -4.0f);
+            for (guibase* gui: guis) {
+                nvgSave(vg);
+                gui->render(vg);
+                nvgRestore(vg);
+            }
+        }
+
+        void layout() override {
+            const int32_t TRACK_HEIGHT_STEP = theme->get(getGuiConstantHeight());
+            auto padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
+            auto cs      = getSizeContent();
+            auto w       = cs.x - padding * 2;
+            auto posSlots = ivec2(0, theme->get(getGuiConstantTitlebar()));
+            for (auto slot : slots) {
+                slot->size = ivec2(cs.x, TRACK_HEIGHT_STEP);
+                slot->pos  = posSlots;
+                posSlots.y += slot->size.y;
+            }
+            this->btnAddModulation.size = ivec2(w, TRACK_HEIGHT_STEP);
+            this->btnAddModulation.pos  = ivec2(padding, posSlots.y+padding);
+            for (guibase* gui : guis) {
+                gui->layout();
+            }
+        }
+        void determineSize(ivec2& prefSize) override {
+            const int32_t TRACK_HEIGHT_STEP = theme->get(getGuiConstantHeight());
+            auto innerHeight = TRACK_HEIGHT_STEP;
+            for (auto* slot : slots) {
+                ivec2 tmpSize = prefSize;
+                slot->determineSize(tmpSize);
+                innerHeight += tmpSize.y;
+            }
+            innerHeight += TRACK_HEIGHT_STEP;
+            auto padding2 = paddingBR(padding) + paddingTL(padding);
+            innerHeight += padding2.y;
+            prefSize = ivec2(prefSize.x, innerHeight + TRACK_HEIGHT_STEP);
+        }
+
+        void buttonClicked(guibase* _button) override {
+            if (_button->id >= 16) {
+                int32_t modulationIndex = _button->id - 16;
+                if (paramAutomatable) {
+                    paramAutomatable->removeModulation(modulationIndex);
+                    updateSlots();
+                    parentCtrl->relayout();
+                }
+                // closeContextMenu();
+            }
+        }
+    };
     class guictr_dragged_modulation_src : public guitooltip<guictr_dragged_modulation_src> {
-        const int HEIGHT_ENTRY = 20;
         DAW::automation_channel_ref ref;
     public:
         guictr_dragged_modulation_src() : guitooltip<guictr_dragged_modulation_src>(this) {
@@ -80,9 +308,8 @@ namespace DAW::UI {
             textField.render(vg);
         }
     }
-
-    class guibutton_modulate : public guibutton {
-        DAW::automation_channel_ref const ref;
+    class guibutton_modulate : public guibutton, public IDraggedModulationSource {
+        const DAW::automation_channel_ref ref;
         guictr_dragged_modulation_src dragged;
         bool hasDragged        = false;
         public:
@@ -92,7 +319,7 @@ namespace DAW::UI {
             drawParm = ICON_MODULATION;
             dragged.setParent(this);
         }
-        DAW::automation_channel_ref getChannelRef() const {
+        const DAW::automation_channel_ref& getChannelRef() const override {
             return ref;
         }
         void setControl(BaseCtrl* parentCtrl) override {
@@ -125,28 +352,46 @@ namespace DAW::UI {
 }
 namespace DAW {
     void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, DAW::automation_channel_ref ref) {
-        auto& inputs = dev->inputChannelsAutomation;
-        bool bFound = false;
-        for (auto& input : inputs) {
-            if (input.idx == paramIdx) {
-                input.ref = ref.ref;
-                bFound    = true;
+        if (dev->isParamModulated(paramIdx)) {
+            auto& inputs = dev->getModulations(paramIdx);
+            for (auto input : inputs) {
+                if (input->ref.refId == ref.ref.refId && input->ref.paramIdx == ref.ref.paramIdx) {
+                    return;
+                }
             }
         }
-        if (!bFound) {
-            auto inputRef = ref;
-            inputRef.idx = paramIdx;
-            inputRef.ref = ref.ref;
-            inputs.push_back(inputRef);
-        }
+        auto inputRef = ref;
+        inputRef.idx = paramIdx;
+        inputRef.ref = ref.ref;
+        dev->getModulations().push_back(inputRef);
+        dev->updateModulationMap();
     }
-    void DisonnectModulationInputChannel(automatable_t* dev, int32_t paramIdx) {
-        auto& inputs = dev->inputChannelsAutomation;
+    void DisonnectModulationForParam(automatable_t* dev, int32_t paramIdx) {
+        auto& inputs = dev->getModulations();
         for (int i = 0; i < CtrSize(inputs); i++) {
             if (inputs[i].idx == paramIdx) {
                 inputs.erase(inputs.begin() + i);
             }
         }
+        dev->updateModulationMap();
+    }
+    void DisonnectModulationInputChannel(automatable_t* dev, DAW::automation_channel_ref ref) {
+        auto& inputs = dev->getModulations();
+        for (int i = 0; i < CtrSize(inputs); i++) {
+            if (inputs[i].ref.refId == ref.ref.refId && inputs[i].ref.paramIdx == ref.ref.paramIdx) {
+                inputs.erase(inputs.begin() + i);
+            }
+        }
+    }
+    void OpenModulationEditor(DawCtrl* dawCtrl, ivec2 mousePos, automatable_t* atl, int32_t paramIdx, DAW::automation_channel_ref ref) {
+        dawCtrl->closeAllContextMenus();
+        auto ctxtMenu = new DAW::UI::guictr_edit_modulation();
+        ctxtMenu->size = {420, 420};
+        ctxtMenu->pos = {0, 0};
+        ctxtMenu->canTakeInputFocus = true;
+        ctxtMenu->maxHeight = -1;
+        ctxtMenu->setAutomationRef(dawCtrl->getDaw()->getPluginManager(), atl, paramIdx, ref);
+        dawCtrl->openContextMenu(ctxtMenu, mousePos);
     }
 }
 template<>
@@ -160,34 +405,69 @@ void guitooltip<DAW::UI::guictr_dragged_modulation_src>::setContent() {
     table.rows.push_back(std::move(row));
 }
 
-bool guiknob::isHighlighted() {
-    using DAW::UI::guictr_dragged_modulation_src;
-    if (parentCtrl->guiOver == this && paramAutomatable && parentCtrl->guiDragged && parentCtrl->guiDragged->getGuiType() == gui_type::CTR_TYPE_MODULATION_DRAGGED) {
-        return true;
-    }
-    if (paramAutomatable && parentCtrl->guiOver && parentCtrl->guiOver->getGuiType() == gui_type::CTR_TYPE_MODULATION_BUTTON) {
-        auto ref = static_cast<DAW::UI::guibutton_modulate*>(parentCtrl->guiOver)->getChannelRef();
-        for (auto& input : paramAutomatable->inputChannelsAutomation) {
-            if (input.idx == paramIdx) {
-                if (input.ref.refId == ref.ref.refId && input.ref.paramIdx == ref.ref.paramIdx) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
 void guiknob::modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
     
 }
+
 void guiknob::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
     if (this->paramAutomatable) {
         DAW::ConnectModulationInputChannel(this->paramAutomatable, paramIdx, g->getChannelRef());
     }
 }
 
+GuiColor::constant_t gui_slider_textfield::getBackgroundColor() const {
+    return gui_textfield::getBackgroundColor();
+}
+namespace DAW {
+    bool IsSourceAndDest(){
+        return false;
+    }
+}
+bool gui_slider_textfield::isHighlighted() {
+    if (!paramAutomatable) {
+        return false;
+    }
+    auto dragged = dawCtrl->getDraggedModulation();
+    if (dragged) {
+        return true;
+    }
+    auto focused = dawCtrl->getFocusedModulation();
+    if (focused) {
+        auto ref = focused->getChannelRef();
+        if (paramAutomatable->isParamConnectedTo(paramIdx, ref))
+            return true;
+    }
+    return false;
+}
+bool guiknob::isHighlighted() {
+    if (!paramAutomatable) {
+        return false;
+    }
+    auto dragged = dawCtrl->getDraggedModulation();
+    if (dragged) {
+        return true;
+    }
+    auto focused = dawCtrl->getFocusedModulation();
+    if (focused) {
+        auto ref = focused->getChannelRef();
+        if (paramAutomatable && paramAutomatable->isParamConnectedTo(paramIdx, ref))
+            return true;
+    }
+    return false;
+}
+
+
+void gui_slider_textfield::modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+}
+
+void gui_slider_textfield::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+    if (this->paramAutomatable) {
+        DAW::ConnectModulationInputChannel(this->paramAutomatable, paramIdx, g->getChannelRef());
+    }
+}
+
 namespace PluginMacros {
-    constexpr int32_t PARAM_NUM_MACROS = 12;
+    constexpr int32_t NUM_MACROS = 12;
     constexpr int32_t PARAM_MACROS_FIRST = 16;
     constexpr int32_t BINARY_SNAPSHOT_VERSION = 1;
 
@@ -203,6 +483,8 @@ namespace PluginMacros {
             knob(param->idx, param->idx, guiknob::knobtype::SLIDER_LABELED),
             btnModulate(module->getModulationChannel(idx))
         {
+            (void) this->module;
+            (void) this->idx;
             padding = margin = 0;
             setBackgroundRendered(false);
             setCanMouseHit(false);
@@ -251,7 +533,7 @@ namespace PluginMacros {
             std::vector<automatable_param_t*> paramsSorted;
             module->getSortedParams(paramsSorted);
             erase_if(paramsSorted, [](const automatable_param_t* p) {
-                return p->idx < PARAM_MACROS_FIRST || p->idx >= PARAM_MACROS_FIRST + PARAM_NUM_MACROS;
+                return p->idx < PARAM_MACROS_FIRST || p->idx >= PARAM_MACROS_FIRST + NUM_MACROS;
             });
             macroCtrs.reserve(paramsSorted.size());
             for (automatable_param_t* param : paramsSorted) {
@@ -349,7 +631,7 @@ namespace PluginMacros {
 
     struct module_macros::macro_impl_t {
         struct macro_automation_src_param_t : public automated_param_t {
-            module_macros* module;
+            module_macros* module = nullptr;
             bool isActive() const override { //??
                 return true;
             }
@@ -362,34 +644,54 @@ namespace PluginMacros {
             float getValueAtExact(double dTick) const override {
                 return module->getParamValue(PARAM_MACROS_FIRST + paramIdx);
             }
+            String getName() const override {
+                return StringFormat("Macro %d", paramIdx+1);
+            }
+            float modulateValue(tick_t tick, float f, const DAW::automation_scaling_t& scale) const override {
+                auto f1 = getValueAt(tick);
+                return scale.min + f1 * (scale.max - scale.min);
+            }
+            void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* inOut) const override {
+                float valFixed = module->getParamValue(PARAM_MACROS_FIRST + paramIdx);
+                std::fill(inOut, inOut + numSamples, scale.min + valFixed * (scale.max - scale.min));
+            }
+            void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) override {
+            }
+            void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const override {
+            }
         };
-        std::array<macro_automation_src_param_t, PARAM_NUM_MACROS> macroAutomationSrcParams;
-        const macro_automation_src_param_t* getModulationOutputData(int32_t channel) const {
-            dbgassert(channel >= 0 && channel < PARAM_NUM_MACROS);
-            dbgassert(channel < CtrSize(macroAutomationSrcParams));
-            return &macroAutomationSrcParams[channel % macroAutomationSrcParams.size()];
+        module_macros* module;
+        std::array<macro_automation_src_param_t, NUM_MACROS> macroAutomationSrcParams;
+        const macro_automation_src_param_t* getModulationOutputData(const DAW::automation_channel_ref& channel) {
+            auto chIdx = channel.ref.paramIdx;
+            if (!assert_expr(chIdx >= 0 && chIdx < NUM_MACROS))
+                return nullptr;
+            if (!assert_expr(chIdx < CtrSize(macroAutomationSrcParams)))
+                return nullptr;
+            return &macroAutomationSrcParams[chIdx];
         }
+        //TODO: handle disconnect
     };
     module_macros::module_macros(int32_t _projectGlobalId, IHostCallback* _hostCallback)
         : internal_automator("Macros", getModuleType(), _projectGlobalId, _hostCallback),
-        impl(new macro_impl_t{})
+        impl(new macro_impl_t{ this, { } })
     {
-        for (int32_t i = 0; i < PARAM_NUM_MACROS; ++i) {
+        for (int32_t i = 0; i < NUM_MACROS; ++i) {
             impl->macroAutomationSrcParams[i].module = this;
             impl->macroAutomationSrcParams[i].paramIdx = i;
             auto paramIdx = PARAM_MACROS_FIRST + i;
             automatable_param_t* regparam = registerParam(paramIdx);
             regparam->defaultValue = 0.0f;
             regparam->value = 0.0f;
-            regparam->name  = StringFormat("Macro %d", i);
-            regparam->shortLabel  = StringFormat("Macro %d", i);
+            regparam->name  = StringFormat("Macro %d", i + 1);
+            regparam->shortLabel  = StringFormat("Macro %d", i + 1);
             regparam->unit  = "%";
         }
     }
     module_macros::~module_macros() {
         delete impl;
     }
-    const automated_param_t* module_macros::getModulationOutputData(int32_t channel) const {
+    const automated_param_t* module_macros::getModulationOutputData(const DAW::automation_channel_ref& channel) {
         return impl->getModulationOutputData(channel);
     }
     using ViewCtrType = SinglePluginViewContainers<guictr_module_macros, module_macros>;

@@ -76,20 +76,20 @@ public:
             return;
         data.targetParam               = paramIdx;
         automatable_t* automatable     = this->at;
-        const automated_param_t* automation = nullptr;
+        const automation_lane_t* automLane = nullptr;
         if (automatable && paramIdx > -1) {
-            automation = automatable->getRegisteredConstAutomation(paramIdx);
+            automLane = automatable->getRegisteredConstAutomation(paramIdx);
         }
-        if (automation) {
-            data.points = automation->src.points;
+        if (automLane) {
+            data.points = automLane->src.points;
         } else {
             data.points.clear();
         }
     }
     bool isActive() {
         if (this->at) {
-            const automated_param_t* automation = this->at->getRegisteredConstAutomation(paramIdx);
-            return automation && automation->isActive();
+            const auto automLane = this->at->getRegisteredConstAutomation(paramIdx);
+            return automLane && automLane->isActive();
         }
         return false;
     }

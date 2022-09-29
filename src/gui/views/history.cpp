@@ -12,7 +12,7 @@ public:
     void buttonClicked(guibase* button) override {
         selectedIdx = indexOfCtr(this->listGuis, button);
         if (selectedIdx > -1) {
-            //if (parent) parent->buttonClicked(button);
+            // if (parent) parent->buttonClicked(button);
         }
     }
 };
@@ -24,10 +24,8 @@ public:
         icon = 0;
     }
     void dragMoveOn(guibase* target, ivec2 mousepos) override {
-//        target->pluginEntryDragMove(this, toControlsObjectSpace(mousepos, target));
     }
     void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-//        target->pluginEntryDragRelease(this, toControlsObjectSpace(mousepos, target));
     }
     String getText() override {
         return desc;

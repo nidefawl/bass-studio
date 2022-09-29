@@ -89,7 +89,7 @@ namespace PluginStereoWidth {
         paramsSmoothed = paramsTarget;
     }
 
-    void module_stereowidth::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
+    void module_stereowidth::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
         dbgassert( in->samples == format.blockSize
                 && out->samples == format.blockSize
                 && format.blockSize > 0

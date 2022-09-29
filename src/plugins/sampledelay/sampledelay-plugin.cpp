@@ -104,7 +104,7 @@ namespace PluginSampleDelay {
         internalplugin::postSetParameter(idx, preVal, val, flags);
     }
 
-    void module_sampledelay::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
+    void module_sampledelay::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
         dbgassert( in->samples == format.blockSize
                 && out->samples == format.blockSize
                 && format.blockSize > 0

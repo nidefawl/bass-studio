@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "assert_dbg.h"
+#include "automation.h"
 #include "mainctrl.h"
 #include "math/seq_math.h"
 #include "project.h"
@@ -72,7 +73,7 @@ namespace DAW {
                     if (device) {
                         auto automation = device->getOrCreateAutomation(automClipboard.paramRef.paramIdx);
                         if (automation) {
-                            automation->src.setRange(tick, tick + clipboard->selRange, automClipboard.dataPoints);
+                            automation->setRange(tick, tick + clipboard->selRange, automClipboard.dataPoints);
                         }
                     }
                 }
@@ -102,7 +103,7 @@ namespace DAW {
                         if (!automClipboard.dataPoints.empty() && subtrack->at) {
                             auto automation = subtrack->at->getOrCreateAutomation(subtrack->param);
                             if (automation) {
-                                automation->src.setRange(tickBegin, tickBegin + tickLen, automClipboard.dataPoints);
+                                automation->setRange(tickBegin, tickBegin + tickLen, automClipboard.dataPoints);
                             }
                         }
                     }
@@ -208,7 +209,7 @@ namespace DAW {
                             automationClipboard.paramRef = automatable->toRef();
                             automationClipboard.paramRef.paramIdx = subtrack->param;
                             std::vector<automation_point_t> data;
-                            automation->src.copyRange(tickBegin, tickEnd, data);
+                            automation->copyRange(tickBegin, tickEnd, data);
                             automationClipboard.dataPoints = std::move(data);
                             dbgassert(automationClipboard.paramRef.paramIdx > -1);
                             clipboard->automationLanes.push_back(std::move(automationClipboard));
@@ -230,13 +231,13 @@ namespace DAW {
                     auto trackImpl = tr->track->getStage();
                     std::vector<automatable_t*> targets;
                     trackImpl->getAutomatableTrackTargets(targets);
-                    std::vector<automated_param_t> allParams;
+                    std::vector<automation_lane_t> allParams;
                     for (auto& automatable : targets) {
                         allParams.clear();
                         automatable->getAllAutomatedParams(allParams);
                         for (const auto& automation : allParams) {
                             std::vector<automation_point_t> data;
-                            automation.src.copyRange(tickBegin, tickEnd, data);
+                            automation.copyRange(tickBegin, tickEnd, data);
                             automation_clipboard_t automationClipboard;
                             automationClipboard.dataPoints = std::move(data);
                             automationClipboard.start     = tickBegin;
@@ -282,7 +283,7 @@ namespace DAW {
                         gui_track_subtrack* subtrack = tr->subtracks[subTrackIdx];
                         automated_param_t* automation     = subtrack->getAutomation();
                         if (automation) {
-                            automation->src.setRange(tickBegin, tickEnd, empty);
+                            automation->setRange(tickBegin, tickEnd, empty);
                         }
                     }
                 }

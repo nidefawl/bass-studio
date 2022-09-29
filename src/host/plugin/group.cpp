@@ -286,7 +286,7 @@ std::shared_ptr<DAW::effect_processing_graph_t> module_group::getLastProcessingG
     return lastEffProcessingGraph;
 }
 
-void module_group::process(AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
+void module_group::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
     dbgassert(daw_tls::getTls().host);
     dbgassert(in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
     audio->input.copyFrom(in);
@@ -295,7 +295,6 @@ void module_group::process(AudioBlock* in, AudioBlock* out, double tick, double 
     if (!DAW::buildEffectProcessingGraph(pluginMgr, nullptr, audio, effProcessingGraph)) {
         log_lf(Log::L_ERROR, "Failed building effect graph\n");
     }
-    auto host = daw_tls::getTls().host;
     host->processAudio(handle->scratch, audio, &audio->input, &audio->output, host->prjGlobals, tick, samplePos, numSamples, state, effProcessingGraph.get());
     lastEffProcessingGraph = effProcessingGraph;
 #ifdef DAW_DEBUG_TRACK_GRAPHS

@@ -1,3 +1,4 @@
+#include "automation.h"
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "seq_util.h"
@@ -314,7 +315,7 @@ namespace DAW {
                         }
                         effect_node_t& trackSrcCfg = getEffNode(audioStageInputs, outputPostStageId);
                         trackCfg.dependencies.push_back(outputPostStageId);
-                        trackCfg.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(dsp_util::gainToLinScale(1.0f)), AutomationNone(0.5f), 0, src->flags });
+                        trackCfg.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(), AutomationNone(), 0, src->flags });
                         trackCfg.children.push_back(&trackSrcCfg);
                         trackSrcCfg.parents.push_back(&trackCfg);
 
@@ -327,12 +328,12 @@ namespace DAW {
                             }
                             effect_node_t& trackSrcCfg = getEffNode(map, effSrcId_I32);
                             trackCfg.dependencies.push_back(effSrcId_I32);
-                            trackCfg.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(dsp_util::gainToLinScale(1.0f)), AutomationNone(0.5f), 0, audiostageflags_t::NONE });
+                            trackCfg.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(), AutomationNone(), 0, audiostageflags_t::NONE });
                             trackCfg.children.push_back(&trackSrcCfg);
                             trackSrcCfg.parents.push_back(&trackCfg);
                         }
                     } else if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
-                        trackCfg.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(dsp_util::gainToLinScale(1.0f)), AutomationNone(0.5f), 0, audiostageflags_t::NONE });
+                        trackCfg.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(), AutomationNone(), 0, audiostageflags_t::NONE });
                     } else {
                         log_lf(Log::L_ERROR, "missing track input routing\n");
                     }
@@ -360,7 +361,7 @@ namespace DAW {
                     }
                     effect_node_t& trackSrcCfg = getEffNode(audioStageInputs, outputPostStageId);
                     nodeOutput.dependencies.push_back(outputPostStageId);
-                    nodeOutput.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(dsp_util::gainToLinScale(1.0f)), AutomationNone(0.5f), 0, src->flags });
+                    nodeOutput.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(), AutomationNone(), 0, src->flags });
                     nodeOutput.children.push_back(&trackSrcCfg);
                     trackSrcCfg.parents.push_back(&nodeOutput);
 
@@ -376,12 +377,12 @@ namespace DAW {
                         }
                         effect_node_t& trackSrcCfg = getEffNode(map, effSrcId_I32);
                         nodeOutput.dependencies.push_back(effSrcId_I32);
-                        nodeOutput.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(dsp_util::gainToLinScale(1.0f)), AutomationNone(0.5f), 0, audiostageflags_t::NONE });
+                        nodeOutput.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(), AutomationNone(), 0, audiostageflags_t::NONE });
                         nodeOutput.children.push_back(&trackSrcCfg);
                         trackSrcCfg.parents.push_back(&nodeOutput);
                     }
                 } else if (inputChannel.getType() == stage_type::INPUT_EXTERNAL_AUDIO) {
-                    nodeOutput.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(dsp_util::gainToLinScale(1.0f)), AutomationNone(0.5f), 0, audiostageflags_t::NONE });
+                    nodeOutput.pulls.push_back(effect_source_t{ trackEdgeId++, inputChannel, AutomationNone(), AutomationNone(), 0, audiostageflags_t::NONE });
                 } else {
                     log_lf(Log::L_ERROR, "missing track input routing\n");
                 }

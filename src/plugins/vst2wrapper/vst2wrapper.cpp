@@ -257,7 +257,7 @@ namespace PluginWrapper {
             AudioBlock inputBlock(inputs, this->getAeffect()->numInputs, numSamples);
             AudioBlock outputBlock(outputs, this->getAeffect()->numOutputs, numSamples);
             effect->blockInputs->copyFrom(&inputBlock);
-            effect->process(effect->blockInputs, effect->blockOutputs, tick, samplePos, numSamples, state);
+            effect->process(nullptr, effect->blockInputs, effect->blockOutputs, tick, samplePos, numSamples, state);
             outputBlock.copyFrom(effect->blockOutputs);
             effect->postProcess(&outputBlock, numSamples, true);
         }

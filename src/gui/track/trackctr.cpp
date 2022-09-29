@@ -408,7 +408,7 @@ void guictr_tracks::render(NVGcontext* vg) {
     nvgRestore(vg);
 
     nvgSave(vg);
-    dragdrop_target_indicator_t& target = dawCtrl->getDragDropTarget();
+    dragdrop_target_indicator_t& dragDropTarget = dawCtrl->getDragDropTarget();
     nvgTranslate(vg, 0, trackView.top());
     int ySplit = getPosYFirstReturnTrack(guiMgr.tracksVisibleFlat);
     if (ySplit > 0) {
@@ -436,34 +436,31 @@ void guictr_tracks::render(NVGcontext* vg) {
         }
     }
     nvgRestore(vg);
-    if (target.src == this && target.dst) {
+    if (dragDropTarget.src == this && dragDropTarget.dst) {
         nvgSave(vg);
         nvgTranslate(vg, 0, trackView.top());
-        auto& dragDropTarget = dawCtrl->getDragDropTarget();
-        if (dragDropTarget.src) {
-            int n       = this->theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
-            auto bgPos  = ivec2(n);
-            auto bgSize = this->getSizeContent() - ivec2(n * 2);
-            if (bgSize.x > 0 && bgSize.y > 0) {
-                nvgGlobalAlpha(vg, 0.5f);
-                nvgBeginPath(vg);
-                nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
-                if (dragdrop_target_indicator_t::target_area == target.type) {
-                    nvgPathWinding(vg, NVGwinding::NVG_CW);
-                    nvgRect(vg, target.dst->pos.x, target.dst->pos.y, target.dst->size.x, target.dst->size.y);
-                    nvgPathWinding(vg, NVGwinding::NVG_CCW);
-                }
-                nvgFillColor(vg, theme->getColor(getBackgroundColor()));
-                nvgFill(vg);
-                nvgGlobalAlpha(vg, 1.0f);
+        int n       = this->theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
+        auto bgPos  = ivec2(n);
+        auto bgSize = this->getSizeContent() - ivec2(n * 2);
+        if (bgSize.x > 0 && bgSize.y > 0) {
+            nvgGlobalAlpha(vg, 0.5f);
+            nvgBeginPath(vg);
+            nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
+            if (dragdrop_target_indicator_t::target_area == dragDropTarget.type) {
+                nvgPathWinding(vg, NVGwinding::NVG_CW);
+                nvgRect(vg, dragDropTarget.dst->pos.x, dragDropTarget.dst->pos.y, dragDropTarget.dst->size.x, dragDropTarget.dst->size.y);
+                nvgPathWinding(vg, NVGwinding::NVG_CCW);
             }
+            nvgFillColor(vg, theme->getColor(getBackgroundColor()));
+            nvgFill(vg);
+            nvgGlobalAlpha(vg, 1.0f);
         }
         const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-        ivec2 indicatorPos    = target.targetPos;
+        ivec2 indicatorPos    = dragDropTarget.targetPos;
         horizontalLineAt(this, vg, indicatorPos);
 
         int fontScale = titleHeight;
-        auto str = target.dst->getLabel() + StringFormat("[%d]", target.slotIdx);
+        auto str = dragDropTarget.dst->getLabel() + StringFormat("[%d]", dragDropTarget.slotIdx);
         renderCenteredMultilineText(vg, theme, str, fontScale, getLabelColor(), indicatorPos, ivec2(titleHeight * 30, titleHeight * 2));
 
         nvgRestore(vg);
@@ -781,4 +778,20 @@ guitrack_topleft::guitrack_topleft(guictr_tracks& _ctrTracks, DawCtrl* const _da
     for (auto guiBtn : guiButtons) {
         add(guiBtn);
     }
+}
+
+bool guitrack_mixers::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
+    if (this->contains(v)) {
+        ivec2 localMouse = this->toContainerSpace(v);
+        for (guibase* gui : guis) {
+            if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
+                if (!evt.getGuiHit())
+                    break;
+                return true;
+            }
+        }
+        evt.requestFocus(this);
+        return true;
+    }
+    return false;
 }

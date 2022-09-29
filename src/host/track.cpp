@@ -476,14 +476,10 @@ void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targe
     }
 }
 
-void track_impl_t::updateAutomatableTargets(DAW::Host::Host* const host, tick_t processingPos) {
-    std::vector<automated_param_connection_t> mods;
-    DAW::ResolveModulationInputRoutings(host, &mixer, mods);
-    mixer.updateAutomatedParameters(processingPos, mods);
+void track_impl_t::updateAutomatableTargets(DAW::Host::Host* const host, tick_t processingPos, playback_state state) {
+    mixer.updateAutomatedParameters(host, processingPos, state);
     if (arp) {
-        mods.clear();
-        DAW::ResolveModulationInputRoutings(host, arp, mods);
-        arp->updateAutomatedParameters(processingPos, mods);
+        arp->updateAutomatedParameters(host, processingPos, state);
     }
 }
 
@@ -678,19 +674,19 @@ void audio_stage_t::loadRoutingSnapshot(const track_effect_routing_snapshot_t& s
 
 void audio_stage_t::createModulationRoutingSnapshot(track_modulation_routing_snapshot_t& snapshot) {
     for (effectbase* effect : effects) {
-        snapshot.effectMods[static_cast<int32_t>(effect->projectGlobalId)] = effect->inputChannelsAutomation;
+        snapshot.effectMods[static_cast<int32_t>(effect->projectGlobalId)] = effect->getModulations();
     }
 }
 void audio_stage_t::loadModulationRoutingSnapshot(const track_modulation_routing_snapshot_t& snapshot) {
     for (effectbase* effect : effects) {
-        effect->inputChannelsAutomation.clear();
+        effect->setModulations({});
     }
     for (const auto& mapEntry : snapshot.effectMods) {
         auto* plugin = getPluginById(mapEntry.first);
         if (!plugin) {
             log_lf(Log::L_DEBUG, "Plugin with id %d not found\n", static_cast<int32_t>(mapEntry.first));
         } else {
-            plugin->inputChannelsAutomation = mapEntry.second;
+            plugin->setModulations(mapEntry.second);
         }
     }
 }
@@ -770,7 +766,7 @@ void PluginManager::activateDeferred(effectbase* const eff, int flags, effectbas
     /* Load plugins snapshot */
     effect->loadSnapshot(pluginSnapshot);
 
-    effect->inputChannelsAutomation = prevPlugin->inputChannelsAutomation;
+    effect->setModulations(prevPlugin->getModulations());
     effect->inputChannels = prevPlugin->inputChannels;
     effect->sName         = pluginSnapshot.name;
     effect->setProductName(pluginSnapshot.name);
@@ -1625,49 +1621,21 @@ namespace DAW {
     const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const DAW::automation_channel_ref& ref) {
         dbgassert(ref.ref.type == AUTOMATABLE_MODULATION_SRC);
         auto effBase = host->getPluginById(ref.ref.refId);
-        if (!effBase || !effBase->hasAutomationModulationOutput()) {
+        if (!(effBase && effBase->hasAutomationModulationOutput())) {
             return nullptr;
         }
 #ifndef NDEBUG
         auto effMod = dynamic_cast<internal_automator*>(effBase);
-        if (!assert_expr(effMod)) return nullptr;
+        if (!assert_expr(effMod))
+            return nullptr;
 #else
         auto effMod = static_cast<internal_automator*>(effBase);
 #endif
-        return effMod->getModulationOutputData(ref.ref.paramIdx);
+        auto p = effMod->getModulationOutputData(ref);
+        if (!assert_expr(effMod))
+            return nullptr;
+        return p;
     }
-    void ResolveModulationInputRoutings(const Host::PluginManager* const host, automatable_t* dev, std::vector<automated_param_connection_t>& modulations) {
-        const auto& inputs = dev->inputChannelsAutomation;
-        for (auto& channel : inputs) {
-            auto mod = DAW::ResolveModulationChannel(host, channel);
-            if (mod) {
-                modulations.push_back(automated_param_connection_t{channel.idx, mod});
-            }
-        }
-    }
-    /* bool resolveAutomationAtTime(const Host::PluginManager* const host, const automation_routing_t& ref, tick_t atTime, float* fOut) {
-        dbgassert(fOut);
-        switch (ref.type) {
-            case automation_routing_type::ROUTING_NONE:
-                *fOut = ref.val;
-                return true;
-            case automation_routing_type::ROUTING_PARAM:
-            case automation_routing_type::ROUTING_MODULATION:
-                automatable_t* at = resolveAutomatableRefDevice(host, ref.refLane);
-                if (at) {
-                    auto* atData = at->getActiveAutomation(ref.refLane.paramIdx);
-                    if (atData) {
-                        *fOut = atData->getValueAt(atTime);
-                    } else {
-                        *fOut = at->getParamValue(ref.refLane.paramIdx);
-
-                    }
-                    return true;
-                }
-                break;
-        }
-        return false;
-    } */
 }
 
 
@@ -1984,45 +1952,30 @@ automatable_t* track_impl_t::getAutomatableByType(const automatable_param_ref_t&
     return nullptr;
 }
 namespace DAW {
-    const automated_param_t* GetAutomationSrc(const Host::PluginManager* const host, const automation_routing_t routing) {
-        automated_param_t* src = nullptr;
+    automated_param_connection_t GetParameterModulationFromRouting(const Host::PluginManager* const host, const automation_routing_t routing) {
         if (routing.type == automation_routing_type::ROUTING_NONE)
-            return nullptr;
-        auto modulationSrcDevice = resolveAutomatableRefDevice(host, routing.refLane);
-        if (modulationSrcDevice && routing.type == automation_routing_type::ROUTING_PARAM)
-            return modulationSrcDevice->getActiveAutomation(routing.refLane.paramIdx);
-        if (modulationSrcDevice && dynamic_cast<internal_automator*>(modulationSrcDevice) && routing.type == automation_routing_type::ROUTING_MODULATION) {
-            auto modSrc = dynamic_cast<internal_automator*>(modulationSrcDevice);
-            return modSrc->getModulationOutputData(routing.refLane.paramIdx);
-        }
-        return src;
+            return {nullptr, 0};
+        auto atl = resolveAutomatableRefDevice(host, routing.destinationRef);
+        return automated_param_connection_t{atl, routing.destinationRef.paramIdx};
     }
-    automation_routing_t GetAutomationRouting(const automatable_t* dev, int32_t paramIdx) {
-        for (auto& channel : dev->inputChannelsAutomation) {
-            if (channel.idx == paramIdx) {
-                automatable_param_ref_t ref = channel.ref;
-                ref.paramIdx = paramIdx;
-                return automation_routing_t{ automation_routing_type::ROUTING_MODULATION, 0.0f, ref };
-            }
+    automation_routing_t GetRoutingFromDestinationParam(const automatable_t* dev, int32_t paramIdx) {
+        if (dev->isParamModulated(paramIdx)) {
+            return AutomationRef(dev, paramIdx);
         }
         auto at = dev->getRegisteredConstAutomation(paramIdx);
         if (at && at->isAutomated()) {
             return AutomationRef(dev, paramIdx);
         }
-        auto param = dev->getParam(paramIdx);
-        if (assert_expr(param)) {
-            return AutomationNone(param->value);
-        }
-        return AutomationNone(0.0);
+        return AutomationNone();
     }
 }// namespace DAW
 void track_impl_t::createModulationRoutingSnapshot(track_modulation_routing_snapshot_t& snapshot) {
     audio_stage_t::createModulationRoutingSnapshot(snapshot);
-    if (arp) snapshot.arp = arp->inputChannelsAutomation;
-    snapshot.mixer = mixer.inputChannelsAutomation;
+    if (arp) snapshot.arp = arp->getModulations();
+    snapshot.mixer = mixer.getModulations();
 }
 void track_impl_t::loadModulationRoutingSnapshot(const track_modulation_routing_snapshot_t& snapshot) {
     audio_stage_t::loadModulationRoutingSnapshot(snapshot);
-    if (arp) arp->inputChannelsAutomation = snapshot.arp;
-    mixer.inputChannelsAutomation         = snapshot.mixer;
+    if (arp) arp->setModulations(snapshot.arp);
+    mixer.setModulations(snapshot.mixer);
 }

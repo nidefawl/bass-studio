@@ -924,7 +924,7 @@ void DawInstance::menuCommand(menucmd_t command) {
                     targets.clear();
                     track->audio->getAutomatableTrackTargets(targets);
                     for (auto& target : targets) {
-                        target->visitAutomatedParams([](automated_param_t& param) {
+                        target->visitAutomatedParams([](auto& param) {
                             param.src.active = true;
                         });
                     }
@@ -2278,7 +2278,6 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbm
         }
         if (daw.dragdropclip.isLoaded) {
             MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP, kbmods);
-            evt.setDraggedThing(&daw.dragdropclip);
             for (guictr_base* ctr : containers) {
                 if (ctr->mouseHitTest(mousepos, evt)) {
                     break;
@@ -2306,7 +2305,6 @@ bool DawCtrl::filesDropMove(ivec2 mousepos, int kbmods) {
         daw.dragdropclip.isValidTarget = false;
 
         MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP, kbmods);
-        evt.setDraggedThing(&daw.dragdropclip);
         for (guictr_base* ctr : containers) {
             if (ctr->mouseHitTest(mousepos, evt)) {
                 break;
@@ -2346,7 +2344,6 @@ bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, int kbm
     if (daw.dragdropclip.isLoaded && daw.dragdropclip.isValidTarget) {
         log_lf(Log::L_DEBUG, "filesDropFinal %d %d isdragging=%d\n", mousepos.x, mousepos.y, daw.dragdropclip.isLoaded);
         MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP, kbmods);
-        evt.setDraggedThing(&daw.dragdropclip);
         for (guictr_base* ctr : containers) {
             if (ctr->mouseHitTest(mousepos, evt)) {
                 break;
