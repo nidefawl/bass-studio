@@ -353,9 +353,6 @@ namespace PluginWrapper {
         ~guictr_effectbase_vst2() override {
             removeGuis();
         }
-        void layoutEntries(ivec2 dir) override {
-            guictr_base::layoutEntries(dir);
-        }
         void buttonClicked(guibase* button) override {
             auto param = dynamic_cast<guiknob_pluginparam*>(button);
             if (param && module) {

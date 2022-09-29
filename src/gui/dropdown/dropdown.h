@@ -40,7 +40,7 @@ public:
         return -1;
     }
     virtual int32_t getLastIndex() {
-        return 0;
+        return -1;
     }
     virtual void setSelectedIndex(int32_t idx) {
     }

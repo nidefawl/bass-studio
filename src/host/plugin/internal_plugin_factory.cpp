@@ -3,6 +3,7 @@
 #include "group.h"
 #include "plugins/gain/gain-plugin.h"
 #include "plugins/latency/latency-plugin.h"
+#include "plugins/lfo/lfo-plugin.h"
 #include "plugins/macros/macros-plugin.h"
 #include "plugins/samplecrush/samplecrush-plugin.h"
 #include "plugins/sampledelay/sampledelay-plugin.h"
@@ -19,6 +20,8 @@ extern template effectbase* makeInstance<PluginSampleDelay::module_sampledelay>(
 extern template effectbase* makeInstance<PluginSampleCrush::module_samplecrush>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 extern template effectbase* makeInstance<PluginStereoWidth::module_stereowidth>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 extern template effectbase* makeInstance<PluginMacros::module_macros>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
+extern template effectbase* makeInstance<PluginLFO::module_lfo>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
+
 namespace PluginSynth {
     class module_synth;
 }
@@ -56,6 +59,9 @@ effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t module
         case PLUGIN_TYPE_MACROS:
             effect = makeInstance<PluginMacros::module_macros>(getNextGlobalModuleId(globalid), hostcallback);
             break;
+        case PLUGIN_TYPE_LFO:
+            effect = makeInstance<PluginLFO::module_lfo>(getNextGlobalModuleId(globalid), hostcallback);
+            break;
         case PLUGIN_TYPE_INTERNAL_EFFECT: {
             LoadResultVST2Plugin res = loadInternalPlugin(moduleId, globalid);
             if (res.result == 0 && res.plugin) {
@@ -76,6 +82,7 @@ effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t module
         case PLUGIN_TYPE_STEREO_WIDTH:
         case PLUGIN_TYPE_SYNTH:
         case PLUGIN_TYPE_MACROS:
+        case PLUGIN_TYPE_LFO:
             if (effect) {
                 effect->load(this);
                 pluginInstancesInternal.push_back(effect);

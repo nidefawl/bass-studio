@@ -120,10 +120,6 @@ namespace PluginMacros {
             w = 100*numKnobs;
             h = 300;
         }
-
-        void layoutEntries(ivec2 dir) override {
-            guictr_base::layoutEntries(dir);
-        }
         void buttonClicked(guibase* button) override {
             auto param = dynamic_cast<guiknob_pluginparam*>(button);
             if (param && module) {

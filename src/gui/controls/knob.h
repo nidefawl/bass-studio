@@ -78,11 +78,12 @@ public:
 
     virtual bool isAutomated();
     virtual bool isModulated();
-    virtual bool isHighlighted();
+    virtual bool isHighlighted() const;
 
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
+    GuiColor::constant_t getBackgroundColor() const override;
 
     bool focusEvent(MouseHitEvt& evt, bool focused) override {
         if (fnFocus) fnFocus(evt, focused);
@@ -166,7 +167,13 @@ public:
         setReturnCommits(true);
     }
     GuiColor::constant_t getBackgroundColor() const override;
-    virtual bool renderAsBipolar() = 0;
+    virtual bool renderAsBipolar() {
+        if (paramAutomatable) {
+            auto param = paramAutomatable->getParam(paramIdx);
+            return param->isBiPolar;
+        }
+        return false;
+    };
     virtual String getValueAsString(float param) {
         auto paramValDisplay = paramAutomatable->getParamValueDisplay(paramIdx);
         return paramValDisplay.value + paramValDisplay.unit;
@@ -186,7 +193,7 @@ public:
     }
     void handleRightClick(MouseEvent& evt) override;
     virtual bool isAutomated();
-    virtual bool isHighlighted();
+    virtual bool isHighlighted() const;
     virtual bool isModulated();
     void setColors();
 

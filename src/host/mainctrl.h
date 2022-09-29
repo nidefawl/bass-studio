@@ -552,7 +552,8 @@ public:
         return codepoint == 32 || codepoint == 45 || codepoint == 43;
     }
     DAW::UI::IDraggedModulationSource* getDraggedModulation() const {
-        if (guiDragged && guiDragged->getGuiType() == gui_type::CTR_TYPE_MODULATION_BUTTON) {
+        if (guiDragged && (guiDragged->getGuiType() == gui_type::CTR_TYPE_MODULATION_BUTTON
+                            || guiDragged->getGuiType() == gui_type::CTR_TYPE_MODULATION_DRAGGED)) {
             return dynamic_cast<DAW::UI::IDraggedModulationSource*>(guiDragged);
         }
         return nullptr;

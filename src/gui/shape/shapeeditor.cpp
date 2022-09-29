@@ -320,6 +320,31 @@ public:
             curveRender = &curveTmp;
         }
         DrawShape(*curveRender, vg, theme, vec2(0), cs, mouseLocal, higlightHit);
+
+        if (curveRender->renderPhase > -1.0f) {
+            // float lineThickness = 4.0f;
+            // nvgBatchedRect(vg, curveRender->renderPhase*cs.x, 0, lineThickness, size.y);
+            // NVGpaint paint{};
+            // paint.image = -1;
+            // paint.feather = 4.0f;
+            // paint.innerColor = theme->getColor(GuiColor::COL_PLAYHEAD);
+            // paint.customPar = 2;
+            // nvgFillPaint(vg, paint);
+            // nvgBatchedRender(vg);
+            float playBackX = curveRender->renderPhase * cs.x;
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, playBackX, 0);
+            nvgLineTo(vg, playBackX, cs.y);
+            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD_OUTLINE));
+            nvgStrokeWidth(vg, 2);
+            nvgStroke(vg);
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, playBackX, 0);
+            nvgLineTo(vg, playBackX, cs.y);
+            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD));
+            nvgStrokeWidth(vg, 1);
+            nvgStroke(vg);
+        }
     }
 
     void handleRightClick(MouseEvent& evt) override;
@@ -590,7 +615,7 @@ public:
             shape_preset_t shapeLoaded{};
             if (loadShapePresetFile(path, shapeLoaded)) {
                 if (shapeLoaded.version) {
-                    shape_t tmp{shapeLoaded.curve.pts};
+                    shape_t tmp{shapeLoaded.curve.pts, shapeLoaded.name, -1.0f};
                     tmp.sort();
                     *shape.curve = tmp;
                     controls.selectPreset.setString(shapeLoaded.name);
@@ -647,7 +672,7 @@ public:
             shape.bIsGridEnabledV = !shape.bIsGridEnabledV;
         }
         if (&controls.buttonSave == button) {
-            shape_preset_t shapePreset { 1, "test", shape_base_t{shape.curve->pts} };
+            shape_preset_t shapePreset { 1, "test", shape_base_t{shape.curve->pts, shape.curve->name, shape.curve->renderPhase} };
             String defaultPresetPath = presetManager.getPresetPath();
             CreateDirectoryIfNotExists(defaultPresetPath);
             String path;

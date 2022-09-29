@@ -118,6 +118,7 @@ public:
     guictxtmenu_select_modulation(DawCtrl* _dawCtrl, automatable_t* _atl, int32_t _paramIdx)
         : atl(_atl), paramIdx(_paramIdx)
     {
+        (void) paramIdx;
         this->dawCtrl = _dawCtrl;
         this->size.x = 240;
         int32_t inputIdx = 0;

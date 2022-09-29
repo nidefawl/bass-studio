@@ -573,7 +573,7 @@ AudioBlock& AllocateScratchAudioBuffer(process_scratch_buf_t& tmp, channelnum_t 
     }
     return tmp.block;
 }
-void MixWithGainAndPanAutomation(const Host* host, process_scratch_buf_t& tmp, AudioBlock* in, AudioBlock* out, float fGainScaled, float fPan, const automated_param_connection_t& autParGain, const automated_param_connection_t& autParPan, double tickBegin, double tickEnd) {
+void MixWithGainAndPanAutomation(const Host* host, process_scratch_buf_t& tmp, AudioBlock* in, AudioBlock* out, float fGainScaled, float fPan, const automated_param_connection_t& autParGain, const automated_param_connection_t& autParPan, double tickBegin, double tickEnd, float MTR_CEIL, float DBFS_MUTE_POS) {
     auto& bufGain = AllocateScratchBuffer(tmp, 0, out->samples);
     auto& bufPanL = AllocateScratchBuffer(tmp, 1, out->samples);
     auto& bufPanR = AllocateScratchBuffer(tmp, 2, out->samples);
@@ -584,12 +584,12 @@ void MixWithGainAndPanAutomation(const Host* host, process_scratch_buf_t& tmp, A
         std::fill(bufGain.begin(), bufGain.end(), fGainScaled);
     }
     if (autParPan.atl) {
-        autParPan.atl->sampleAutomation(host, autParGain.paramIdx, tickBegin, tickEnd, out->samples, bufPanL.data());
+        autParPan.atl->sampleAutomation(host, autParPan.paramIdx, tickBegin, tickEnd, out->samples, bufPanL.data());
     } else {
         std::fill(bufPanL.begin(), bufPanL.end(), fPan);
     }
     for (int32_t i = 0; i < out->samples; ++i) {
-        dsp_util::getGainLvl(bufGain[i], bufGain[i]);
+        dsp_util::getGainLvlWithRange(bufGain[i], MTR_CEIL, DBFS_MUTE_POS, bufGain[i]);
         DAW::Panning::CalculatePanning<DAW::Panning::PanLaw::SIN_4_5DB>(bufPanL[i], &bufPanL[i], &bufPanR[i]);
         bufGain[i] *= 1.0f/DAW::Panning::GetCenterGain();;
     }
@@ -671,7 +671,7 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
                         tmpBlock.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, 1.0f);
                         inputBlock = &tmpBlock;
                     }
-                    MixWithGainAndPanAutomation(host, tmp, inputBlock, &blockMixToOffset, fGainTrackLin, fPanTrack, autParGain, autParPan, processingPos, tickBlockEnd);
+                    MixWithGainAndPanAutomation(host, tmp, inputBlock, &blockMixToOffset, fGainTrackLin, fPanTrack, autParGain, autParPan, processingPos, tickBlockEnd, dsp_util::MTR_CEIL, dsp_util::DBFS_MUTE_POS);
                 }
             }
         }
@@ -1344,7 +1344,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
                 trackImpl->outputPost.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, fGainTrack);
             }
         } else {
-            MixWithGainAndPanAutomation(this, tmp, &trackImpl->output, &trackImpl->outputPost, fGainTrackLin, fPanTrack, autParGain, autParPan, postStageTickLatencyCompensated, postStageTickEnd);
+            MixWithGainAndPanAutomation(this, tmp, &trackImpl->output, &trackImpl->outputPost, fGainTrackLin, fPanTrack, autParGain, autParPan, postStageTickLatencyCompensated, postStageTickEnd, dsp_util::MTR_CEIL, dsp_util::DBFS_MUTE_POS);
         }
     }
 

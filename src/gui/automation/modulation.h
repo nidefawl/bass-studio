@@ -1,5 +1,6 @@
 #pragma once
 #include "automation.h"
+#include "gui/dropdown/dropdown_generic.h"
 #include "gui/gui.h"
 #include "gui/container/container.h"
 #include "gui/controls/button.h"
@@ -28,6 +29,7 @@ namespace DAW::UI {
         guibutton btnSourceName;
         gui_numberinput_float fieldMinVal;
         gui_numberinput_float fieldMaxVal;
+        guidropdown_generic<String> fieldMode;
         guibutton btnRemove;
         public:
         guictr_edit_modulation_slot()
@@ -41,9 +43,11 @@ namespace DAW::UI {
             add(&btnSourceName);
             add(&fieldMaxVal);
             add(&fieldMinVal);
+            add(&fieldMode);
             add(&btnRemove);
             fieldMaxVal.setLabel("Max");
             fieldMinVal.setLabel("Min");
+            fieldMode.setLabel("Mode");
             btnRemove.setLabel("Remove");
             btnRemove.setText("Remove");
             btnSourceName.setText("Source");
@@ -108,7 +112,8 @@ namespace DAW::UI {
         void buttonClicked(guibase* _button) override;
     };
 
-    class guictr_dragged_modulation_src : public guitooltip<guictr_dragged_modulation_src> {
+    class guictr_dragged_modulation_src : 
+        public guitooltip<guictr_dragged_modulation_src>, public DAW::UI::IDraggedModulationSource {
         DAW::automation_channel_ref ref;
     public:
         guictr_dragged_modulation_src() : guitooltip<guictr_dragged_modulation_src>(this) {
@@ -119,7 +124,7 @@ namespace DAW::UI {
         void setChannelRef(const DAW::automation_channel_ref& _ref) {
             ref = _ref;
         }
-        DAW::automation_channel_ref getChannelRef() const {
+        const DAW::automation_channel_ref& getChannelRef() const override {
             return ref;
         }
         ~guictr_dragged_modulation_src() override = default;

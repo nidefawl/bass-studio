@@ -32,6 +32,7 @@
 #include "guiconstant.h"
 #include "guiglobals.h"
 #include "host/plugin/internal_plugin.h"
+#include "host/plugin/plugin-lockable.h"
 #include "host/projectcontroller.h"
 #include "IPlugMidi.h"
 #include "logging.h"
@@ -1204,31 +1205,6 @@ namespace PluginSynth {
     };
 
     using ModulationSourceData = std::array<double, MathExprInputLen>;
-    class PluginLockable {
-        DawInstance* const daw;
-        std::recursive_mutex m_mutex;
-        std::atomic<int32_t> m_lockCount{ 0 };
-    public:
-        explicit PluginLockable(DawInstance* daw) 
-            : daw(daw) {
-        }
-        ThreadLock lock() {
-            if (daw)
-                return daw->lockPlayThread();
-            return ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, false);
-        }
-        ThreadLock lockProcessing() {
-            if (daw)
-                return ThreadLock::MakeVoidLock();
-            return ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, false);
-        }
-        ThreadLock tryLock() {
-            if (daw)
-                return daw->getPlayThread()->tryLockThread();
-            return ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, true);
-        }
-        virtual ~PluginLockable() = default;
-    };
     class module_synth;
     class SynthImpl : public PluginLockable, public SynthState {
     public:
@@ -1809,7 +1785,7 @@ namespace PluginSynth {
             for (int32_t i = 0; i < numSettings; ++i) {
                 snapshot.settings.push_back({ i, settings[i] });
             }
-            snapshot.shapes.push_back(shape_snapshot_t{ 0, DAW::Shape::shape_preset_t{1, "LFO", lfoShape} });
+            snapshot.shapes.push_back(DAW::Shape::shape_snapshot_t{ 0, DAW::Shape::shape_preset_t{1, "LFO", lfoShape} });
             return true;
         }
 
@@ -1867,13 +1843,13 @@ namespace PluginSynth {
             resetLfoShape();
             for (auto& shape : snapshot.shapes) {
                 if (shape.type == 0) {
-                    lfoShape.pts = shape.shape.curve.pts;
+                    lfoShape.setShape(shape.shape.curve);
                 } else {
                     dbgassert(0);
                 }
             }
             if (lfoShape.pts.size() < 2) {
-                lfoShape.pts.push_back({{ 0.5, 0.5 }, 0.5});
+                lfoShape.setShape(DAW::Shape::GetShapeSaw());
             }
 
             for (auto& mod : modulations) {

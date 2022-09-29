@@ -98,9 +98,7 @@ public:
     autolayout_mode getLayoutMode() const {
         return layoutMode;
     }
-    virtual void layoutEntries(ivec2 dir) {
-        const auto cs = getSizeContent();
-        auto pos = ivec2{};
+    virtual void layoutEntries(ivec2 pos, ivec2 cs, ivec2 dir) {
         int32_t numEntries = 0;
         for (guibase* gui : guis) {
             auto f = gui->getFlags();
@@ -122,24 +120,15 @@ public:
             pos += padding * dir;
         }
     }
-    void layoutVertical() {
-        const auto cs = getSizeContent();
-        auto pos = ivec2{};
-        for (guibase* gui : guis) {
-            gui->pos = pos;
-            gui->size = {cs.x, cs.y / guis.size()};
-            pos.y = gui->bottom();
-        }
-    }
     void layout() override {
         switch (layoutMode) {
             case LAYOUT_NONE:
                 break;
             case LAYOUT_HORIZONTAL:
-                layoutEntries({1, 0});
+                layoutEntries({}, getSizeContent(), {1, 0});
                 break;
             case LAYOUT_VERTICAL:
-                layoutEntries({0, 1});
+                layoutEntries({}, getSizeContent(), {0, 1});
                 break;
             default:
                 dbgassert(0);

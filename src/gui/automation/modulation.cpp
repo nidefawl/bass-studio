@@ -196,21 +196,31 @@ namespace DAW::UI {
         }
         setLabel(srcName);
         btnSourceName.setText(channelName);
+        fieldMode.setOptions({ "Replace", "Add", "Multiply" });
+        fieldMode.setSelectedIndex(math::clamp(static_cast<int32_t>(modChannelRef.scale.mode), 0, fieldMode.getLastIndex()));
+        fieldMode.setCallback([pMode = &modChannelRef.scale.mode](int idx, String& s) -> String {
+            *pMode = static_cast<DAW::ModulationMode>(idx);
+            return s;
+        });
     }
     void guictr_edit_modulation_slot::layout() {
         const int32_t TRACK_HEIGHT_STEP = theme->get(getGuiConstantHeight());
-        auto padding                    = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
-        auto cs                         = getSizeContent();
-        auto srcNameW                   = 0.5f * cs.x;
-        auto w                          = (cs.x - srcNameW) - padding * 2;
-        btnSourceName.size              = { srcNameW, TRACK_HEIGHT_STEP };
-        btnSourceName.pos               = { padding, 0 };
-        fieldMinVal.size                = ivec2(w * 0.4 - padding, TRACK_HEIGHT_STEP);
-        fieldMinVal.pos                 = ivec2(padding + srcNameW, 0);
-        fieldMaxVal.size                = ivec2(w * 0.4 - padding, TRACK_HEIGHT_STEP);
-        fieldMaxVal.pos                 = ivec2(padding + srcNameW + w * 0.4, fieldMinVal.top());
-        btnRemove.size                  = ivec2(w * 0.2, TRACK_HEIGHT_STEP);
-        btnRemove.pos                   = ivec2(padding + srcNameW + w * 0.8, fieldMaxVal.top());
+
+        auto padding       = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
+        auto cs            = getSizeContent();
+        auto srcNameW      = 0.3f * cs.x;
+        auto w             = (cs.x - srcNameW) - padding * 2;
+        btnSourceName.size = { srcNameW, TRACK_HEIGHT_STEP };
+        btnSourceName.pos  = { padding, 0 };
+        fieldMinVal.size   = ivec2(w * 0.25 - padding, TRACK_HEIGHT_STEP);
+        fieldMinVal.pos    = ivec2(padding + srcNameW, 0);
+        fieldMaxVal.size   = ivec2(w * 0.25 - padding, TRACK_HEIGHT_STEP);
+        fieldMaxVal.pos    = ivec2(fieldMinVal.right()+padding, fieldMinVal.top());
+        fieldMode.size     = ivec2(w * 0.3 - padding, TRACK_HEIGHT_STEP);
+        fieldMode.pos      = ivec2(fieldMaxVal.right()+padding, fieldMaxVal.top());
+        btnRemove.size     = ivec2(w * 0.2, TRACK_HEIGHT_STEP);
+        btnRemove.pos      = ivec2(fieldMode.right()+padding, fieldMode.top());
+
         for (guibase* gui : guis) {
             gui->layout();
         }
@@ -262,17 +272,13 @@ void guiknob::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, i
     }
 }
 
-GuiColor::constant_t gui_slider_textfield::getBackgroundColor() const {
-    return gui_textfield::getBackgroundColor();
-}
-
-bool gui_slider_textfield::isHighlighted() {
+bool gui_slider_textfield::isHighlighted() const {
     if (!paramAutomatable) {
         return false;
     }
     auto dragged = dawCtrl->getDraggedModulation();
     if (dragged) {
-        return true;
+        return dawCtrl->guiOver != this;
     }
     auto focused = dawCtrl->getFocusedModulation();
     if (focused) {
@@ -282,13 +288,13 @@ bool gui_slider_textfield::isHighlighted() {
     }
     return false;
 }
-bool guiknob::isHighlighted() {
+bool guiknob::isHighlighted() const {
     if (!paramAutomatable) {
         return false;
     }
     auto dragged = dawCtrl->getDraggedModulation();
     if (dragged) {
-        return true;
+        return dawCtrl->guiOver != this;
     }
     auto focused = dawCtrl->getFocusedModulation();
     if (focused) {
@@ -297,6 +303,20 @@ bool guiknob::isHighlighted() {
             return true;
     }
     return false;
+}
+
+GuiColor::constant_t gui_slider_textfield::getBackgroundColor() const {
+    if (isHighlighted()) {
+        return GuiColor::COL_KNOB_HIGHLIGHT_BACKGROUND;
+    }
+    return gui_textfield::getBackgroundColor();
+}
+
+GuiColor::constant_t guiknob::getBackgroundColor() const {
+    if (isHighlighted()) {
+        return GuiColor::COL_KNOB_HIGHLIGHT_BACKGROUND;
+    }
+    return guibase::getBackgroundColor();
 }
 
 

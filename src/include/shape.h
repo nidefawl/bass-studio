@@ -16,8 +16,15 @@ struct shape_pt_t {
 
 struct shape_base_t {
     std::vector<shape_pt_t> pts;
+    String name;
+    float renderPhase = -1.0f;
 };
 struct shape_t : public shape_base_t {
+    void setShape(shape_base_t const &other) {
+        pts = other.pts;
+        renderPhase = other.renderPhase;
+        name = other.name;
+    }
     inline float shapeSegment(float t, float shape) const {
         if (shape != 0.5f) {
             float shapeBi = 1.0f-shape*2.0f;
@@ -198,5 +205,15 @@ struct shape_t : public shape_base_t {
         return result;
     }
 };
-
+inline shape_base_t GetShapeSaw() {
+    auto pt1 = shape_pt_t{ { 0.0f, 1.0f }, 0.5f }; 
+    auto pt2 = shape_pt_t{ { 1.0f, 0.0f }, 0.5f };
+    return shape_base_t{ { { pt1, pt2 } }, "Saw", -1.0f };
+}
+inline shape_base_t GetShapeTriangle() {
+    auto pt1 = shape_pt_t{ { 0.0f, 0.0f }, 0.5f }; 
+    auto pt2 = shape_pt_t{ { 0.5f, 1.0f }, 0.5f };
+    auto pt3 = shape_pt_t{ { 1.0f, 0.0f }, 0.5f };
+    return shape_base_t{ { { pt1, pt2, pt3 } }, "Saw", -1.0f };
+}
 } // namespace DAW::Shape

@@ -50,6 +50,7 @@ template<class Archive>
 void serialize(Archive& archive, automation_scaling_t& m) {
     archive(make_nvp("min", m.min),
         make_nvp("max", m.max));
+    make_optional_nvp(archive, "mode", m.mode);
 }
 template<class Archive>
 void serialize(Archive& archive, automation_channel_ref& m) {

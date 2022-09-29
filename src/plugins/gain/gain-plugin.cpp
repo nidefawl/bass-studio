@@ -87,10 +87,9 @@ namespace PluginGain {
             }
             return;
         }
-        const auto bpm100 = project_controller_t::get()->getCurrentTempo(); //TODO: use hostCallback or provide time info struct in process() parameter list
         const auto tickBegin = tick;
-        const auto tickEnd = tickBegin + sampleToTickConvert<double, roundmode::none>(numSamples, bpm100, format.sampleRate);
-        DAW::Host::MixWithGainAndPanAutomation(host, impl->buf, &trackImpl->output, &trackImpl->outputPost, fGainTrackLin, fPanTrack, autParGain, autParPan, tickBegin, tickEnd);
+        const auto tickEnd = tickBegin + host->getAudioStreamProperties().ticksPerBlock;
+        DAW::Host::MixWithGainAndPanAutomation(host, impl->buf, in, out, fGainTrackLin, fPanTrack, autParGain, autParPan, tickBegin, tickEnd, MTR_CEIL, DBFS_MUTE_POS);
     }
 
     param_converted_t module_gain::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {

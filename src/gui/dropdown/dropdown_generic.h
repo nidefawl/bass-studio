@@ -1,5 +1,6 @@
 #pragma once
 #include "dropdown.h"
+#include "seq_util.h"
 #include "str_util.h"
 #include "gui/contextmenu/contextmenu_base.h"
 #include "gui/contextmenu/contextmenu.h"
@@ -29,6 +30,9 @@ public:
     // }
     void setOptions(const std::vector<T>& vecOptions) {
         this->options = vecOptions;
+    }
+    int32_t getLastIndex() override {
+        return CtrSize(options) -1;
     }
     void handleDraggedRelease(MouseEvent& evt) override {
         std::vector<String> strOptions;

@@ -159,6 +159,9 @@ public:
     guidropdown_selectfont() :
         guidropdownbase() {
     }
+    int32_t getLastIndex() override {
+        return CtrSize(RenderResources::fontsInstalled) - 1;
+    }
     String getString() override {
         guitheme_mgr* themeMgr = this->parentCtrl->getThemeMgr();
         if (this->parentCtrl) {

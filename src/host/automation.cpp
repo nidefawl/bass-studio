@@ -408,12 +408,14 @@ void automatable_t::sampleAutomation(const DAW::Host::PluginManager *const host,
     std::vector<int32_t> processedParamsSorted;
     auto param = getParam(paramIdx);
     if (!assert_expr(param)) {
+        std::fill(buffer, buffer + numSamples, 0.0f);
         return;
     }
-
     auto* automation = getRegisteredAutomation(paramIdx);
     if (automation && automation->isActive()) {
         automation->sampleAutomation(dTickBegin, dTickEnd, numSamples, {}, buffer);
+    } else {
+        std::fill(buffer, buffer + numSamples, param->nonAutomated);
     }
     if (isParamModulated(paramIdx)) {
         auto mods = getModulations(paramIdx);

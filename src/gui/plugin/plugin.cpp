@@ -1031,7 +1031,7 @@ void guidropdownprogram::setSelectedIndex(int32_t idx) {
 int32_t guidropdownprogram::getLastIndex() {
     uint32_t maxProgram = 0;
     plugin->getNumberOfPrograms(maxProgram);
-    return static_cast<int32_t>(maxProgram);
+    return static_cast<int32_t>(maxProgram) - 1;
 }
 
 int32_t guidropdownprogram::getSelectIndex() {

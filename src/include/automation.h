@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <memory>
 #include <vector>
 #include <unordered_map>
@@ -39,12 +40,15 @@ struct automatable_param_ref_t {
     int32_t subtrackType    = 0;
 };
 namespace DAW {
+    enum ModulationMode : uint8_t {
+        REPLACE,
+        ADD,
+        MUL,
+    };
     struct automation_scaling_t {
         float min = 0.0f;
         float max = 1.0f;
-        // float applyScale(float val) const {
-        //     return min + (max - min) * val;
-        // }
+        ModulationMode mode = ModulationMode::REPLACE;
     };
     struct automation_channel_ref {
         int32_t idx = -1;
@@ -52,26 +56,19 @@ namespace DAW {
         automation_scaling_t scale{};
     };
 }
-namespace DAW::Host {
-    class PluginManager;
-}
-//TODO: toRef should return this class:
-struct automatable_ref_t {
-    // audio_stage_ref_t trackRef
-    // int32_t projectGlobalIdEffectRef
-};
 
-class track_t;
 struct automation_point_t {
     tick_t time;
     float val;
 };
+
 inline float quantizeFloat(float f, int32_t steps) {
     if (!steps)
         return f;
     auto val = static_cast<int32_t>((float) steps * f);
     return (float) val / (float) steps;
 }
+
 struct automation_t {
     bool active               = true;
     std::vector<automation_point_t> points;
@@ -117,6 +114,7 @@ struct automated_param_t {
     virtual void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const = 0;
     virtual void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) = 0;
 };
+
 struct automation_lane_t : public automated_param_t {
     automation_t src{};
     automation_lane_t() = default;
@@ -153,6 +151,7 @@ struct automation_lane_t : public automated_param_t {
         return "Automation";
     }
 };
+
 struct automatable_t;
 struct automated_param_connection_t {
     automatable_t* atl = nullptr;
@@ -163,24 +162,29 @@ union param_step_fi_u {
     float valFloat;
     int32_t valInt;
 };
+
 struct param_unit_t {
     String value;
     String unit;
 };
+
 struct param_converted_t {
     float floatVal;
     bool success;
 };
+
 struct param_modulation_range_t {
     int32_t sourceId;
     int32_t paramIdx;
     double range;
     bool isBiPolar;
 };
+
 enum plugin_param_sync_state : uint8_t {
     PARAM_FLAG_DIRTY = 1,
     PARAM_FLAG_SET = 2
 };
+
 struct automatable_param_properties_t {
     int32_t quantizationSteps = 0;
     int32_t displayIndex = 0;
@@ -192,7 +196,9 @@ struct automatable_param_properties_t {
     uint8_t paramDisplayValState = 0; 
     uint8_t paramValueState = 0; 
     bool inUse         = false;
+    bool isBiPolar     = false;
 };
+
 struct automatable_param_t : public automatable_param_properties_t {
     int32_t idx        = -1;
     int32_t internalIdx = -1;
@@ -201,6 +207,10 @@ struct automatable_param_t : public automatable_param_properties_t {
     float nonAutomated = 0.0f;
 };
 
+class track_t;
+namespace DAW::Host {
+    class PluginManager;
+}
 struct automatable_t {
 private:
     int32_t nextRegisterId = 0;
@@ -484,9 +494,6 @@ int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int
 void simplifyData(std::vector<automation_point_t>& data);
 void toggleDeviceEnableState(automatable_t* effect, int flags);
 
-namespace DAW::Host {
-    class PluginManager;
-}
 namespace DAW {
     enum class automation_routing_type {
         ROUTING_NONE,

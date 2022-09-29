@@ -1,3 +1,4 @@
+#include "file/shapefile.h"
 #include "str_util.h"
 #include "logging.h"
 #include "synth-plugin.h"
@@ -7,6 +8,49 @@
 #include <cstdint>
 #include <utility>
 
+namespace DAW::Shape {
+    void writeShape(ByteBuffer::stream_write<std::vector<std::byte>>& out, const shape_snapshot_t& shape) {
+        out.write(shape.type);
+        out.write(shape.shape.version);
+        out.writeString(shape.shape.name);
+        out.write(size_t{shape.shape.curve.pts.size()});
+        for (const auto& point : shape.shape.curve.pts) {
+            out.write(point.pos.x);
+            out.write(point.pos.y);
+            out.write(point.shape);
+        }
+        
+    }
+    bool readShape(ByteBuffer::stream_read& in, shape_snapshot_t& out) {
+        int32_t shapeType = 0;
+        if (!in.read(shapeType))
+            return false;
+        shape_preset_t shape;
+        if (!in.read(shape.version))
+            return false;
+        if (!in. readString(shape.name))
+            return false;
+        size_t numPoints = 0;
+        if (!in.read(numPoints))
+            return false;
+        if (numPoints > 4096)
+            return false;
+        for (size_t j = 0; j < numPoints; ++j) {
+            float x = 0.0;
+            if (!in. read(x))
+                return false;
+            float y = 0.0;
+            if (!in. read(y))
+                return false;
+            float s = 0.0;
+            if (!in. read(s))
+                return false;
+            shape.curve.pts.push_back({{ x, y }, s});
+        }
+        out = shape_snapshot_t{ shapeType, std::move(shape) };
+        return true;
+    }
+}
 namespace PluginSynth {
 std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snapshot) {
     dbgassert(snapshot.version == SYNTH_SNAPSHOT_VERSION);
@@ -50,15 +94,7 @@ std::shared_ptr<std::vector<std::byte>> serializeSnapshot(const snapshot_t& snap
         out.write(setting.range);
     }
     for (const auto& shape : snapshot.shapes) {
-        out.write(shape.type);
-        out.write(shape.shape.version);
-        out.writeString(shape.shape.name);
-        out.write(size_t{shape.shape.curve.pts.size()});
-        for (const auto& point : shape.shape.curve.pts) {
-            out.write(point.pos.x);
-            out.write(point.pos.y);
-            out.write(point.shape);
-        }
+        DAW::Shape::writeShape(out, shape);
     }
     out.setPos(0);
     out.write(size_t(shrdHeapVec->size()));
@@ -189,32 +225,11 @@ bool deserializeSnapshot(const std::shared_ptr<std::vector<std::byte>>& data, sn
     if (snapshot.version >= 9) {
         snapshot.shapes.reserve(numShapes);
         for (size_t i = 0; i < numShapes; ++i) {
-            int32_t shapeType = 0;
-            if (!in.read(shapeType))
+            DAW::Shape::shape_snapshot_t shape;
+            if (!DAW::Shape::readShape(in, shape)) {
                 return false;
-            DAW::Shape::shape_preset_t shape;
-            if (!in.read(shape.version))
-                return false;
-            if (!in. readString(shape.name))
-                return false;
-            size_t numPoints = 0;
-            if (!in.read(numPoints))
-                return false;
-            if (numPoints > 4096)
-                return false;
-            for (size_t j = 0; j < numPoints; ++j) {
-                float x = 0.0;
-                if (!in. read(x))
-                    return false;
-                float y = 0.0;
-                if (!in. read(y))
-                    return false;
-                float s = 0.0;
-                if (!in. read(s))
-                    return false;
-                shape.curve.pts.push_back({{ x, y }, s});
             }
-            snapshot.shapes.push_back(shape_snapshot_t{ shapeType, std::move(shape) });
+            snapshot.shapes.push_back(std::move(shape));
         }
     }
     snapshotOut = std::move(snapshot);

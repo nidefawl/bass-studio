@@ -61,7 +61,7 @@ public:
 
 public:
     int32_t getSelectIndex() override { return fnGetCurrentIdx ? fnGetCurrentIdx() : -1; }
-    int32_t getLastIndex()  override { return CtrSize(options); }
+    int32_t getLastIndex() override { return CtrSize(options) - 1; }
     void setSelectedIndex(int32_t idx)  override { clicked(idx); }
     String getString() override { return fnGetCurrentVal ? fnGetCurrentVal() : "<null>"; }
     void handleDraggedRelease(MouseEvent& evt) override {

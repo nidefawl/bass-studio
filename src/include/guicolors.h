@@ -19,6 +19,7 @@ namespace GuiColor {
 
     extern constant_t COL_AUTOMATED;
     extern constant_t COL_KNOB_HIGHLIGHT;
+    extern constant_t COL_KNOB_HIGHLIGHT_BACKGROUND;
     extern constant_t COL_KNOB_MODULATED;
     extern constant_t COL_BASE_BG_DISABLED;
     extern constant_t COL_BASE_BG_FOCUSED;
