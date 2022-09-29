@@ -71,7 +71,7 @@ void guitheme_mgr::loadThemes() {
     try {
         themeFile = loadThemeFile();
     } catch (std::exception& e) {
-        log_lf(Log::L_ERROR, "Failed loading theme file %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(THEMEFILE_NAME)), e.what());
+        log_lf(Log::L_WARN, "Using internal theme: %s\n", e.what());
     }
     String selectedTheme   = themeFile.theme.name;
     auto it                = themeFile.themes.begin();
