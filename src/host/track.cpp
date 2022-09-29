@@ -1667,6 +1667,7 @@ namespace DAW {
                 inputs.erase(inputs.begin() + i);
             }
         }
+        dev->updateModulationMap();
     }
 }
 

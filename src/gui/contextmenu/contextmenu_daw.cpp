@@ -77,8 +77,8 @@ static constexpr int32_t ID_REENABLE = 2;
 static constexpr int32_t ID_SHOW = 3;
 static constexpr int32_t ID_SHOW_NEW = 4;
 static constexpr int32_t ID_RESET_TO_DEFAULT = 5;
-static constexpr int32_t ID_REMOVE_MODULATION = 6;
-static constexpr int32_t ID_MENU_MODULATION = 7;
+static constexpr int32_t ID_REMOVE_PARAM_MODULATION = 6;
+static constexpr int32_t ID_EDIT_PARAM_MODULATION = 7;
 void AddContextEntriesAutomation(guictxtmenu* ctxt, automatable_t* atl, int paramIdx) {
     const auto* at = atl->getRegisteredAutomation(paramIdx);
     if (at && at->isAutomated()) {
@@ -94,9 +94,9 @@ void AddContextEntriesAutomation(guictxtmenu* ctxt, automatable_t* atl, int para
 }
 void AddContextEntriesModulation(guictxtmenu* ctxt, automatable_t* atl, int paramIdx) {
     if (DAW::IsParamModulated(atl, paramIdx)) {
-        ctxt->addEntry(new ctxtmenu_entry("Remove Modulation", ID_REMOVE_MODULATION));
+        ctxt->addEntry(new ctxtmenu_entry("Remove Modulation", ID_REMOVE_PARAM_MODULATION));
     }
-    ctxt->addEntry(new ctxtmenu_entry("Edit Modulation", ID_MENU_MODULATION));
+    ctxt->addEntry(new ctxtmenu_entry("Edit Modulation", ID_EDIT_PARAM_MODULATION));
 }
 }
 class guictxtmenu_select_modulation : public guictxtmenu {
@@ -121,20 +121,23 @@ public:
         this->dawCtrl = _dawCtrl;
         this->size.x = 240;
         int32_t inputIdx = 0;
-        for (auto& input : _atl->getModulations()) {
-            auto modChannel = DAW::ResolveModulationChannel(_dawCtrl->getDaw()->getPluginManager(), input);
-            auto name = StringFormat("%d", inputIdx);
-            if (modChannel) {
-                name = modChannel->getName();
+        if (atl->isParamModulated(_paramIdx)) {
+            auto& mods = _atl->getModulations(_paramIdx);
+            for (auto& mod : mods) {
+                auto modChannel = DAW::ResolveModulationChannel(_dawCtrl->getDaw()->getPluginManager(), *mod);
+                auto name = StringFormat("%d", inputIdx);
+                if (modChannel) {
+                    name = modChannel->getName();
+                }
+                addEntry(new ctxtmenu_modulation_entry(name, inputIdx, *mod));
+                inputIdx++;
             }
-            addEntry(new ctxtmenu_modulation_entry(name, inputIdx, input));
-            inputIdx++;
         }
     }
     void clicked(int _id) override {
         if (_id >= 0) {
             auto ref = static_cast<ctxtmenu_modulation_entry*>(entries[_id])->getRef();
-            DAW::OpenModulationEditor(dawCtrl, dawCtrl->lastMouseEvent.mousepos, atl, paramIdx, ref);
+            DAW::DisonnectModulationInputChannel(atl, ref);
         }
         closeContextMenu();
     }
@@ -142,7 +145,7 @@ public:
 
 guictxtmenu* guictxtmenu_at_param::createPopupForEntry(ctxtmenu_entry* e, int lvl) {
     guictxtmenu* popup = nullptr;
-    if (e->id == DAW::ID_MENU_MODULATION) {
+    if (e->id == DAW::ID_REMOVE_PARAM_MODULATION) {
         popup = new guictxtmenu_select_modulation(dawCtrl, atl, paramIdx);
     }
     return popup;
@@ -150,7 +153,7 @@ guictxtmenu* guictxtmenu_at_param::createPopupForEntry(ctxtmenu_entry* e, int lv
 namespace DAW {
     bool HandleAutomatableContextMenu(DawCtrl* dawCtrl, automatable_t* atl, int paramIdx, int _id) {
         switch (_id) {
-            case ID_MENU_MODULATION: {
+            case ID_EDIT_PARAM_MODULATION: {
                 dawCtrl->closeContextMenu();
                 const auto& inputs = atl->getModulations();
                 if (!inputs.empty())
@@ -158,7 +161,7 @@ namespace DAW {
                 return true;
         
             }
-            case ID_REMOVE_MODULATION: {
+            case ID_REMOVE_PARAM_MODULATION: {
                 DAW::DisonnectModulationForParam(atl, paramIdx);
                 dawCtrl->closeContextMenu();
                 return true;
