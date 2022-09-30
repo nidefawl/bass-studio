@@ -554,11 +554,10 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
     if (this->ctxtmenu) {
         closeContextMenu();
     }
+    dbgassert(!this->ctxtmenu);
 
     guicontextmenu->setFontSize(getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
 
-    dbgassert(!this->ctxtmenu);
-    this->ctxtmenu = guicontextmenu;
 
     ivec2 wndPos(0);
     determineWindowPos(guicontextmenu, mainWindow, m_scale, flags, pos, wndPos);
@@ -571,8 +570,6 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
         if (ctxtWindow) {
             this->mainWindow->closeOverlay(ctxtWindow);
         }
-        dbgassert(!this->contextWindow);
-
         auto popupCtrl = std::make_shared<PopupCtrl>();
         popupCtrl->parentCtrl = this;
 #if BUILD_DAW_HOST
@@ -584,6 +581,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
         const ivec2 windowSize = ivec2(vec2(popupCtrl->m_size) * popupCtrl->m_scale);
         ctxtWindow             = this->mainWindow->createOverlay(popupCtrl, windowSize, createflags);
     }
+    this->ctxtmenu = guicontextmenu;
     this->contextWindow = ctxtWindow;
     if (ctxtWindow) {
         auto popupCtrl = ctxtWindow->getCtrl();
