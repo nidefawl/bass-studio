@@ -1,6 +1,7 @@
 #include <utility>
 #include <vector>
 #include "assert_dbg.h"
+#include "automation.h"
 #include "base_plugin.h"
 #include "host/daw_channel.h"
 #include "modules.h"
@@ -243,16 +244,13 @@ plugin_snapshot_t& effect_deferred::getSnapshot() {
     return nullptr;
 }
 
-void effectbase::updateOnEnableParam(automatable_param_t* param, bool wasEnable, bool isEnable, int flags) {
+void effectbase::updateOnEnableParam(bool wasEnable, bool isEnable, int flags) {
     this->bIsEnabled = isEnable;
     if (this->bIsEnabled != wasEnable) {
         if (this->bIsEnabled) {
             onEnable();
         } else {
             onDisable();
-        }
-        if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
-            param->inUse = true;
         }
     }
 }
@@ -349,8 +347,6 @@ int effect_deferred::getModuleStoredType() const {
 String effect_deferred::getAutomatableName() {
     return "plugin";
 }
-void effect_deferred::setParamValue(int32_t idx, float val, int flags) {
-}
 automatable_param_ref_t effect_deferred::toRef() const {
     automatable_param_ref_t ref;
     ref.type  = AUTOMATABLE_EFFECT;
@@ -388,35 +384,14 @@ guiplugin* effect_deferred::getGui() {
     return this->mImpl->gui.get();
 }
 
-
-
-void effectbase::setParamValue(int32_t idx, float val, int flags) {
-    automatable_param_t* param = getParamUnchecked(idx);
-    dbgassert(param);
-    float valPre = param->getValue();
-    if (flags & FLG_PAR_UPDATE_AUTOMATED) {
-        param->setModulated(val);
-    } else {
-        param->set(val);
-    }
-    if (param->idx == PARAM_ENABLE) {
-        bool wasEnable = this->bIsEnabled;
-        bool isEnabled = val > 0;
-        updateOnEnableParam(param, wasEnable, isEnabled, flags);
-    } else {
-        if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
-            param->inUse = true;
-        }
-        postSetParameter(param->idx, valPre, val, flags);
-        for (auto& pviewctr : this->views) {
-            if (pviewctr->isInUse()) {
-                pviewctr->onSetParameter(idx, val);
-            }
-        }
-    }
-}
-
 void effectbase::postSetParameter(int32_t idx, float preVal, float val, int flags) {
+    if (!(flags & FLG_PAR_UPDATE_MODULATED)) {
+        if (idx == PARAM_ENABLE) {
+            bool wasEnable = this->bIsEnabled;
+            bool isEnabled = val > 0;
+            updateOnEnableParam(wasEnable, isEnabled, flags);
+        }
+    }
     if (flags & FLG_PAR_UPDATE_FINISH) {
         track_t* track = this->trackImpl ?  this->trackImpl->getTrack() : nullptr;
         if (track) {

@@ -200,13 +200,39 @@ namespace PluginMacros {
             String getName() const override {
                 return StringFormat("Macro %d", paramIdx+1);
             }
-            float modulateValue(tick_t tick, float f, const DAW::automation_scaling_t& scale) const override {
-                auto f1 = getValueAt(tick);
-                return scale.min + f1 * (scale.max - scale.min);
+            float modulateValue(tick_t tick, float fIn, const DAW::automation_scaling_t& scale) const override {
+                const auto valScaled = scale.min + module->getParamValue(PARAM_MACROS_FIRST + paramIdx) * (scale.max - scale.min);
+                switch (scale.mode) {
+                    case DAW::ModulationMode::ADD:
+                        fIn += valScaled;
+                        break;
+                    case DAW::ModulationMode::MUL:
+                        fIn *= valScaled;
+                        break;
+                    case DAW::ModulationMode::REPLACE:
+                        fIn = valScaled;
+                        break;
+                }
+                return fIn;
             }
             void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* inOut) const override {
-                float valFixed = module->getParamValue(PARAM_MACROS_FIRST + paramIdx);
-                std::fill(inOut, inOut + numSamples, scale.min + valFixed * (scale.max - scale.min));
+                const auto valScaled = scale.min + module->getParamValue(PARAM_MACROS_FIRST + paramIdx) * (scale.max - scale.min);
+                if (scale.mode == DAW::ModulationMode::REPLACE) {
+                    std::fill(inOut, inOut + numSamples, valScaled);
+                } else {
+                    for (samplecount_t i = 0; i < numSamples; ++i) {
+                        switch (scale.mode) {
+                            case DAW::ModulationMode::ADD:
+                                inOut[i] += valScaled;
+                                break;
+                            case DAW::ModulationMode::MUL:
+                                inOut[i] *= valScaled;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
             }
             void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) override {
             }

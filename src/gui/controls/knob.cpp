@@ -53,6 +53,7 @@ bool guiknob::isAutomated() {
     }
     return false;
 }
+
 bool guiknob::isModulated() {
     if (paramAutomatable) {
         return DAW::IsParamModulated(paramAutomatable, paramIdx);
@@ -60,24 +61,12 @@ bool guiknob::isModulated() {
     return false;
 }
 
-void guiknob::setColors() {
-    if (isHighlighted()) {
-        valColor = GuiColor::COL_KNOB_HIGHLIGHT;
-        indColor = GuiColor::COL_KNOB_HIGHLIGHT;
-    } else if (isAutomated()) {
-        valColor = GuiColor::COL_AUTOMATED;
-        indColor = GuiColor::COL_AUTOMATED;
-    } else {
-        indColor = GuiColor::COL_KNOB_IND;
-        valColor = GuiColor::COL_KNOB;
-    }
-}
-
 void guiknob::render(NVGcontext* vg) {
     ivec2 insetP = pos + ivec2(0);
     ivec2 insetS = size - ivec2(0);
     renderButtonAt(vg, insetP, insetS, getValue());
 }
+
 void guiknob::handleDraggedBegin(MouseEvent& evt) {
     if (isCtrl(evt.kbmods)) {
         parent->buttonClicked(this);
@@ -93,6 +82,7 @@ void guiknob::handleDraggedBegin(MouseEvent& evt) {
     fModifyBeginValue = lastVal = getValue();
     changedValue                = false;
 }
+
 void guiknob::handleDraggedMove(MouseEvent& evt) {
     if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
         int disty = (int) evt.dragDistance->y;
@@ -114,12 +104,14 @@ void guiknob::handleDraggedMove(MouseEvent& evt) {
         }
     }
 }
+
 void guiknob::handleDraggedRelease(MouseEvent& evt) {
     if (changedValue && fnValueEditFinish) {
         fnValueEditFinish(fModifyBeginValue, lastVal);
     }
     changedValue = false;
 }
+
 bool guiknob::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
     float value = getValue();
     float scale = isCtrl(evt.kbmods) ? 200.0f : 20.0f;
@@ -132,6 +124,7 @@ bool guiknob::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset)
     setValue(value, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
     return true;
 }
+
 void guiknob::renderRangeIndicator(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float rangeValueMin, float rangeValueMax, NVGcolor color, int idx, int numRanges) {
     float knobValue = math::clamp(getValue(), bIsBipolar ? -1.0f : 0.0f, 1.0f);
     float cx      = insetP.x;
@@ -181,10 +174,10 @@ void guiknob::renderRangeIndicator(NVGcontext* vg, ivec2 insetP, ivec2 insetS, f
         // float radius             = (minSize * 0.8f) / 2.0f;
         // float lineThickness = math::max(1.0f, roundf((minSize / 8.0f) * 2.0f) / 2.0f);
     }
-
 }
+
 void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float value) {
-    setColors();
+    // setColors();
     renderWidgetBorder(vg, getStateFlags());
 
     NVGcolor c2 = theme->getColor(GuiColor::COL_BG_BRT);
@@ -197,13 +190,25 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
     float valModulated = val;
     bool bIsModulated = false;
     bool bIsBipolar = this->bIsBipolar;
+    bool bIsModulationHighlighted = false;
+    auto valColor = GuiColor::COL_KNOB;
+    auto indColor = GuiColor::COL_KNOB_IND;
     if (this->paramAutomatable) {
         bIsModulated = paramAutomatable->isParamModulated(paramIdx);
         auto param = paramAutomatable->getParam(paramIdx);
         if (param) {
             bIsBipolar |= param->isBiPolar;
-            val = math::clamp(param->getValue(), bIsBipolar||param->isBiPolar ? -1.0f : 0.0f, 1.0f);
-            valModulated = math::clamp(param->getValueModulated(), bIsBipolar||param->isBiPolar ? -1.0f : 0.0f, 1.0f);
+            val = math::clamp(param->getValue(), 0.0f, 1.0f);
+            valModulated = math::clamp(param->getValueModulated(), 0.0f, 1.0f);
+            auto autLane = paramAutomatable->getRegisteredAutomation(param->idx);
+            if (autLane && autLane->isActive()) {
+                val = math::clamp(param->getValueAutomated(), 0.0f, 1.0f);
+                valColor = GuiColor::COL_AUTOMATED;
+                indColor = GuiColor::COL_AUTOMATED;
+            }
+        }
+        if (bIsModulated) {
+            bIsModulationHighlighted = DAW::UI::IsHiglightedModulation(this, paramAutomatable, paramIdx);
         }
     }
 
@@ -212,7 +217,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
     float cy     = insetP.y;
     float width  = insetS.x;
     float height = insetS.y;
-    if (isHighlighted() && val < 0.025f) {
+    if (bIsModulationHighlighted && val < 0.025f) {
         val = 0.025f;
     }
     if (isBackgroundRendered()) {
@@ -233,7 +238,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
             float fRenderValue = pass == 0 ? val : valModulated;
             bool bSaturated = math::abs(fRenderValue*2.0f - 1.0f) > 1.0f;
             fRenderValue = math::clamp(fRenderValue, 0.0f, 1.0f);
-            auto color = pass == 0 ? valColor : GuiColor::COL_KNOB_MODULATED;
+            auto color = pass == 0 ? valColor : (bIsModulationHighlighted ? GuiColor::COL_KNOB_HIGHLIGHT : GuiColor::COL_KNOB_MODULATED);
             if (!bIsBipolar) {
                 rectSize = sizeKn * fRenderValue;
                 rectPos  = posKn;
@@ -571,48 +576,52 @@ bool gui_slider_textfield::isAutomated() {
     auto at = paramAutomatable->getRegisteredAutomation(paramIdx);
     return at && at->isAutomated();
 }
-void gui_slider_textfield::setColors() {
-    if (isHighlighted()) {
-        valColor = GuiColor::COL_KNOB_HIGHLIGHT;
-        indColor = GuiColor::COL_KNOB_HIGHLIGHT;
-    } else if (isAutomated()) {
-        valColor = GuiColor::COL_AUTOMATED;
-        indColor = GuiColor::COL_AUTOMATED;
-    } else {
-        indColor = GuiColor::COL_KNOB_IND;
-        valColor = GuiColor::COL_KNOB;
-    }
-}
 void gui_slider_textfield::render(NVGcontext* vg) {
     renderWidgetBorder(vg, getStateFlags());
-    setColors();
     if (paramAutomatable && paramIdx > -1) {
+        bool bIsModulated = paramAutomatable->isParamModulated(paramIdx);
+        bool bIsBipolar = this->renderAsBipolar();
+        bool bIsModulationHighlighted = false;
+        float val = 0.0f;
+        float valModulated = 0.0f;
+        auto param = paramAutomatable->getParam(paramIdx);
+        auto valColor = GuiColor::COL_KNOB;
+        auto indColor = GuiColor::COL_KNOB_IND;
+        if (param) {
+            bIsBipolar |= param->isBiPolar;
+            val = math::clamp(param->getValue(), 0.0f, 1.0f);
+            valModulated = math::clamp(param->getValueModulated(), 0.0f, 1.0f);
+            auto autLane = paramAutomatable->getRegisteredAutomation(param->idx);
+            if (autLane && autLane->isActive()) {
+                val = math::clamp(param->getValueAutomated(), 0.0f, 1.0f);
+                valColor = GuiColor::COL_AUTOMATED;
+                indColor = GuiColor::COL_AUTOMATED;
+            }
+        }
+        if (bIsModulated) {
+            bIsModulationHighlighted = DAW::UI::IsHiglightedModulation(this, paramAutomatable, paramIdx);
+        }
         vec2 insetP        = vec2(pos + 1);
         vec2 insetS        = vec2(size - 2);
         
-        auto param = paramAutomatable->getParam(paramIdx);
-        auto val = param->getValue();
-        auto valModulated = param->getValueModulated();
         float fParamScaled = getRenderScaledValue(val);
         float fParamModulated = getRenderScaledValue(valModulated);
-        if (isHighlighted() && fParamScaled < 0.025f) {
+        if (bIsModulationHighlighted && fParamScaled < 0.025f) {
             fParamScaled = 0.025f;
         }
-        float x            = insetP.x;
-        float y            = insetP.y;
+        float x = insetP.x;
+        float y = insetP.y;
         int nPasses = paramAutomatable->isParamModulated(paramIdx) ? 2 : 1;
         for (int pass = 0; pass < nPasses; ++pass) {
-            float rectWidth;
+            float rectWidth = 0;
             float fRenderValue = pass == 0 ? fParamScaled : fParamModulated;
             auto color = pass == 0 ? valColor : GuiColor::COL_KNOB_MODULATED;
-            if (renderAsBipolar()) {
-                // render bipolar: fParamScaled is 0..1
-                // make sure rectWidth is not negative
+            if (bIsBipolar) {
                 if (fRenderValue < 0.5f) {
-                    x         = insetP.x + insetS.x * fRenderValue;
+                    x = insetP.x + insetS.x * fRenderValue;
                     rectWidth = insetS.x * (0.5f - fRenderValue);
                 } else {
-                    x         = insetP.x + insetS.x * 0.5f;
+                    x = insetP.x + insetS.x * 0.5f;
                     rectWidth = insetS.x * (fRenderValue - 0.5f);
                 }
             } else {
@@ -653,6 +662,7 @@ void gui_slider_textfield::render(NVGcontext* vg) {
         gui_textfield::render(vg);
     }
 }
+
 bool gui_slider_textfield::handleCharInput(uint32_t codepoint) {
     if (isTextCommitted() && codepoint < 0xFF) {
         char keyChar = (char) codepoint;
@@ -668,6 +678,7 @@ bool gui_slider_textfield::handleCharInput(uint32_t codepoint) {
     }
     return false;
 }
+
 bool gui_slider_textfield::keyboardEvent(int key, int scancode, KeyEventType action, int modifiers) {
 
     if (action == KeyEventType::K_PRESS && isTextCommitted()) {
@@ -701,11 +712,13 @@ bool gui_slider_textfield::keyboardEvent(int key, int scancode, KeyEventType act
     }
     return false;
 }
+
 void gui_slider_textfield::onTextEndEdit() {
     float fNew = parseTextValue(gui_textfield::value());
     auto flags = param_update_flags::FLG_PAR_UPDATE_FINISH | param_update_flags::FLG_PAR_UPDATE_USER;
     paramAutomatable->setParamEdit(paramIdx, fNew, flags);
 }
+
 void gui_slider_textfield::handleDraggedBegin(MouseEvent& evt) {
     if (!isTextCommitted()) {
         gui_textfield::handleDraggedBegin(evt);
@@ -722,6 +735,7 @@ void gui_slider_textfield::handleDraggedBegin(MouseEvent& evt) {
         parentCtrl->captureMouse(this);
     }
 }
+
 void gui_slider_textfield::handleDraggedMove(MouseEvent& evt) {
     if (!isTextCommitted()) {
         gui_textfield::handleDraggedMove(evt);
@@ -739,23 +753,27 @@ void gui_slider_textfield::handleDraggedMove(MouseEvent& evt) {
         }
     }
 }
+
 void gui_slider_textfield::handleDraggedRelease(MouseEvent& evt) {
     if (!isTextCommitted()) {
         gui_textfield::handleDraggedRelease(evt);
         return;
     }
 }
+
 void gui_slider_textfield::updateAutomatableParam(float amt, bool applyUserInputScaling) {
     float fNew = modifyParam(paramAutomatable->getParam(paramIdx)->getValue(), amt, applyUserInputScaling);
     auto flags = param_update_flags::FLG_PAR_UPDATE_USER;
     paramAutomatable->setParamEdit(paramIdx, fNew, flags);
 }
+
 float gui_slider_textfield::parseTextValue(const String& str) {
     auto param             = paramAutomatable->getParam(paramIdx);
     param_unit_t paramUnit = { str, param->unit };
     auto parsed            = paramAutomatable->convertParamValueDisplay(paramIdx, paramUnit);
     return parsed.floatVal;
 }
+
 float gui_slider_textfield::modifyParam(float param, float amt, bool applyUserInputScaling) {
     if (applyUserInputScaling) {
         amt *= 0.01f;
@@ -784,55 +802,21 @@ void guiknob::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, i
     }
 }
 
-bool gui_slider_textfield::isHighlighted() const {
-#if BUILD_DAW_HOST
-    if (!paramAutomatable) {
-        return false;
-    }
-    auto dragged = dawCtrl->getDraggedModulation();
-    if (dragged) {
-        return dawCtrl->guiOver != this;
-    }
-    auto focused = dawCtrl->getFocusedModulation();
-    if (focused) {
-        auto ref = focused->getChannelRef();
-        if (paramAutomatable->isParamConnectedTo(paramIdx, ref))
-            return true;
-    }
-#endif
-    return false;
-}
-
-bool guiknob::isHighlighted() const {
-#if BUILD_DAW_HOST
-    if (!paramAutomatable) {
-        return false;
-    }
-    auto dragged = dawCtrl->getDraggedModulation();
-    if (dragged) {
-        return dawCtrl->guiOver != this;
-    }
-    auto focused = dawCtrl->getFocusedModulation();
-    if (focused) {
-        auto ref = focused->getChannelRef();
-        if (paramAutomatable && paramAutomatable->isParamConnectedTo(paramIdx, ref))
-            return true;
-    }
-#endif
-    return false;
-}
-
 GuiColor::constant_t gui_slider_textfield::getBackgroundColor() const {
-    if (isHighlighted()) {
+#if BUILD_DAW_HOST
+    if (DAW::UI::IsHiglightedModulation(this, paramAutomatable, paramIdx)) {
         return GuiColor::COL_KNOB_HIGHLIGHT_BACKGROUND;
     }
+#endif
     return gui_textfield::getBackgroundColor();
 }
 
 GuiColor::constant_t guiknob::getBackgroundColor() const {
-    if (isHighlighted()) {
+#if BUILD_DAW_HOST
+    if (DAW::UI::IsHiglightedModulation(this, paramAutomatable, paramIdx)) {
         return GuiColor::COL_KNOB_HIGHLIGHT_BACKGROUND;
     }
+#endif
     return guibase::getBackgroundColor();
 }
 

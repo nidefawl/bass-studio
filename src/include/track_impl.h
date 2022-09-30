@@ -70,18 +70,6 @@ public:
     String getAutomatableName() override {
         return "Mixer";
     }
-    /**
-     * setParamValue
-     * @param idx
-     * @param val
-     * @param flags valid flags are
-     * #define FLG_PAR_UPDATE_INIT 1
-     * #define FLG_PAR_UPDATE_USER 2
-     * #define FLG_PAR_UPDATE_UNDO 4
-     * #define FLG_PAR_UPDATE_AUTOMATED 8
-     *
-     */
-    void setParamValue(int32_t idx, float val, int flags) override;
     automatable_param_ref_t toRef() const override;
     track_t* getTrack() override;
     bool isEnabled() {

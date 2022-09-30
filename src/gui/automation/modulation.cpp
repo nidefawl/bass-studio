@@ -58,6 +58,7 @@ namespace DAW::UI {
             textField.render(vg);
         }
     }
+
     void guibutton_modulate::handleDraggedMove(MouseEvent& evt) {
         hasDragged = false;
         if (!hasDragged) {
@@ -71,6 +72,7 @@ namespace DAW::UI {
         }
         dawCtrl->objectDragMove(&dragged, evt);
     }
+
     void guibutton_modulate::handleDraggedRelease(MouseEvent& evt) {
         dbgassert(dragged.isDragRendered());
         if (hasDragged) {
@@ -80,6 +82,7 @@ namespace DAW::UI {
         if (parent)
             parent->buttonClicked(this);
     }
+
     void guictr_edit_modulation::buttonClicked(guibase* _button) {
         if (_button->id >= 16) {
             int32_t modulationIndex = _button->id - 16;
@@ -91,6 +94,7 @@ namespace DAW::UI {
             // closeContextMenu();
         }
     }
+
     void guictr_edit_modulation::determineSize(ivec2& prefSize) {
         const int32_t TRACK_HEIGHT_STEP = theme->get(getGuiConstantHeight());
         auto innerHeight                = TRACK_HEIGHT_STEP;
@@ -104,6 +108,7 @@ namespace DAW::UI {
         innerHeight += padding2.y;
         prefSize = ivec2(prefSize.x, innerHeight + TRACK_HEIGHT_STEP);
     }
+
     void guictr_edit_modulation::layout() {
         const int32_t TRACK_HEIGHT_STEP = theme->get(getGuiConstantHeight());
         auto padding                    = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
@@ -121,6 +126,7 @@ namespace DAW::UI {
             gui->layout();
         }
     }
+
     void guictr_edit_modulation::render(NVGcontext* vg) {
         nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
         nvgTranslate(vg, pos.x, pos.y);
@@ -138,6 +144,7 @@ namespace DAW::UI {
             nvgRestore(vg);
         }
     }
+
     void guictr_edit_modulation::updateSlots() {
         dbgassert(host);
         String text = "Modulation: ";
@@ -170,6 +177,7 @@ namespace DAW::UI {
             }
         }
     }
+
     void guictr_edit_modulation_slot::setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::automation_channel_ref _ref, int32_t modulationIndex) {
         dbgassert(host);
         dbgassert(_paramAutomatable);
@@ -203,6 +211,7 @@ namespace DAW::UI {
             return s;
         });
     }
+
     void guictr_edit_modulation_slot::layout() {
         const int32_t TRACK_HEIGHT_STEP = theme->get(getGuiConstantHeight());
 
@@ -225,17 +234,40 @@ namespace DAW::UI {
             gui->layout();
         }
     }
+
     void guictr_edit_modulation_slot::determineSize(ivec2& prefSize) {
         const int32_t TRACK_HEIGHT_STEP = theme->get(getGuiConstantHeight());
         auto padding2                   = paddingBR(padding) + paddingTL(padding);
         prefSize                        = ivec2(prefSize.x, TRACK_HEIGHT_STEP + padding2.y);
     }
+
     void guictr_edit_modulation::setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::automation_channel_ref _ref) {
         this->host             = host;
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
         updateSlots();
     }
+
+    bool IsHiglightedModulation(const guibase* gui, automatable_t* at, int32_t paramIdx) {
+        if (!at) {
+            return false;
+        }
+        auto dawCtrl = gui->dawCtrl;
+        if (dawCtrl) {
+            auto dragged = dawCtrl->getDraggedModulation();
+            if (dragged) {
+                return dawCtrl->guiOver != gui;
+            }
+            auto focused = dawCtrl->getFocusedModulation();
+            if (focused) {
+                auto ref = focused->getChannelRef();
+                if (at && at->isParamConnectedTo(paramIdx, ref))
+                    return true;
+            }
+        }
+        return false;
+    }
+
 }// namespace DAW::UI
 
 namespace DAW {

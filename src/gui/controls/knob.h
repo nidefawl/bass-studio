@@ -47,8 +47,8 @@ public:
     std::function<void(float, float)> fnValueEditChanged;
     std::function<void(float, float)> fnValueEditFinish;
     std::function<void(MouseHitEvt&, bool)> fnFocus;
-    GuiColor::constant_t valColor = GuiColor::COL_KNOB;
-    GuiColor::constant_t indColor = GuiColor::COL_KNOB_IND;
+    // GuiColor::constant_t valColor = GuiColor::COL_KNOB;
+    // GuiColor::constant_t indColor = GuiColor::COL_KNOB_IND;
     explicit guiknob(knobtype knobType) : guibase(), knobType(knobType) {
         setBackgroundRendered(false);
         setCanMouseHit(true);        
@@ -68,7 +68,6 @@ public:
     bool getIsBipolar() const {
         return bIsBipolar;
     }
-    void setColors();
     void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
@@ -78,7 +77,6 @@ public:
 
     virtual bool isAutomated();
     virtual bool isModulated();
-    virtual bool isHighlighted() const;
 
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
@@ -158,8 +156,6 @@ class gui_slider_textfield : public gui_textfield {
 protected:
     automatable_t* paramAutomatable = nullptr;
     int32_t paramIdx                = -1;
-    GuiColor::constant_t valColor;
-    GuiColor::constant_t indColor;
 public:
     gui_slider_textfield() : gui_textfield() {
         setCanMouseHit(true);
@@ -193,9 +189,8 @@ public:
     }
     void handleRightClick(MouseEvent& evt) override;
     virtual bool isAutomated();
-    virtual bool isHighlighted() const;
     virtual bool isModulated();
-    void setColors();
+    // void setColors();
 
     void modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
     void modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;

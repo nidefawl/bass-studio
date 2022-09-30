@@ -251,6 +251,16 @@ void midiarp::loadSnapshot(const arp_snapshot& snapshot) {
     loadAutomation(snapshot.automatedParams, this);
 }
 void midiarp::postSetParameter(int32_t idx, float preVal, float val, int flags) {
+    if (!(flags & FLG_PAR_UPDATE_MODULATED)) {
+        if (idx == PARAM_ENABLE) {
+            if ((flags & FLG_PAR_UPDATE_USER)) {
+                bEnableNextState        = val > 0;
+                bEnableStateUserToggled = true;
+            } else {
+                enable = val > 0;
+            }
+        }
+    }
     if (flags & FLG_PAR_UPDATE_FINISH) {
         dbgassert(this->trackImpl->getTrack());
         track_t* track                = this->trackImpl->getTrack();

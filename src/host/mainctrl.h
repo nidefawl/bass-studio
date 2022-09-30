@@ -574,6 +574,9 @@ public:
         return {};
     }
 };
+namespace DAW::UI {
+    bool IsHiglightedModulation(const guibase* gui, automatable_t* at, int32_t paramIdx);
+};
 
 class ProjectGraphMonitor {
     gui_notify* popupNotifyError = nullptr;

@@ -1396,21 +1396,6 @@ track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), au
     getParam(PARAM_ENABLE)->quantizationSteps = 1;
 }
 
-void track_params_t::setParamValue(int32_t idx, float val, int flags) {
-    automatable_param_t* param = getParamUnchecked(idx);
-    dbgassert(param);
-    float valPre = param->getValue();
-    if (flags & FLG_PAR_UPDATE_AUTOMATED) {
-        param->setModulated(val);
-    } else {
-        param->set(val);
-    }
-    if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
-        param->inUse = true;
-    }
-    postSetParameter(idx, valPre, val, flags);
-}
-
 track_t* track_params_t::getTrack() {
     return audiostage->getTrack();
 }
@@ -1978,19 +1963,21 @@ automatable_t* track_impl_t::getAutomatableByType(const automatable_param_ref_t&
 namespace DAW {
     automated_param_connection_t GetParameterModulationFromRouting(const Host::PluginManager* const host, const automation_routing_t routing) {
         if (routing.type == automation_routing_type::ROUTING_NONE)
-            return {nullptr, 0};
+            return {routing.type, nullptr, 0};
         auto atl = resolveAutomatableRefDevice(host, routing.destinationRef);
-        return automated_param_connection_t{atl, routing.destinationRef.paramIdx};
+        if (!atl)
+            return {automation_routing_type::ROUTING_NONE, nullptr, 0};
+        return automated_param_connection_t{routing.type, atl, routing.destinationRef.paramIdx};
     }
     automation_routing_t GetRoutingFromDestinationParam(const automatable_t* dev, int32_t paramIdx) {
         if (dev->isParamModulated(paramIdx)) {
-            return AutomationRef(dev, paramIdx);
+            return ModulationRef(dev, paramIdx);
         }
         auto at = dev->getRegisteredConstAutomation(paramIdx);
         if (at && at->isAutomated()) {
             return AutomationRef(dev, paramIdx);
         }
-        return AutomationNone();
+        return AutomationConstant(dev, paramIdx);
     }
 }// namespace DAW
 void track_impl_t::createModulationRoutingSnapshot(track_modulation_routing_snapshot_t& snapshot) {

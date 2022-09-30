@@ -59,34 +59,37 @@ namespace PluginGain {
                 && out->samples == format.blockSize
                 && format.blockSize > 0
                 && format.sampleRate > 0);
-
-
-        auto fGainTrackLin = getParam(PARAM_GAIN)->getValue();
-        auto fPanTrack = getParam(PARAM_PAN)->getValue();
-        auto autParGain = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_GAIN));
-        auto autParPan = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_PAN));
-
-
+        const auto autParGain = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_GAIN));
+        const auto autParPan = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_PAN));
         out->clear();
-        // fast path: no sample accurate automation
-        if (!autParGain.atl && !autParPan.atl) {
-            /* Calculate group gain level */
+        /* fast path: no sample accurate automation */
+        if (autParGain.type <= DAW::automation_routing_type::ROUTING_CONSTANT 
+            && (autParPan.type <= DAW::automation_routing_type::ROUTING_NONE 
+                ||  (autParPan.type <= DAW::automation_routing_type::ROUTING_CONSTANT && autParPan.atl->getParamValue(autParPan.paramIdx) == 0.5f))) {
             float fGain = 1.0f;
-            if (dsp_util::getGainLvlWithRange(fGainTrackLin, MTR_CEIL, DBFS_MUTE_POS, fGain)) {
-                // fast path: center pan
+            bool bIsNotMuted = true;
+            if (autParGain.type != DAW::automation_routing_type::ROUTING_NONE) {
+                bIsNotMuted = dsp_util::getGainLvlWithRange(autParGain.atl->getParamValue(PARAM_GAIN), MTR_CEIL, DBFS_MUTE_POS, fGain);
+            }
+            if (bIsNotMuted) {
+                float fPanTrack = 0.5f;
+                if (autParPan.type != DAW::automation_routing_type::ROUTING_NONE) {
+                    fPanTrack = autParPan.atl->getParamValue(PARAM_PAN);
+                }
+                /* fast path: center pan */
                 if (math::abs(fPanTrack - 0.5f) < 0.005f) {
                     out->addFromOp(in, AudioBlock::mix_op::ADD, fGain);
                 } else {
                     DAW::Panning::MultiplyConstant(in, out, fGain * (1.0f/DAW::Panning::GetCenterGain()), fPanTrack);
                 }
             } else {
-                // fast path: fully muted
+                /* fast path: fully muted */
             }
             return;
         }
         const auto tickBegin = tick;
         const auto tickEnd = tickBegin + host->getAudioStreamProperties().ticksPerBlock;
-        DAW::Host::MixWithGainAndPanAutomation(host, impl->buf, in, out, fGainTrackLin, fPanTrack, autParGain, autParPan, tickBegin, tickEnd, MTR_CEIL, DBFS_MUTE_POS);
+        DAW::Host::MixWithGainAndPanAutomation(host, impl->buf, in, out, autParGain, autParPan, tickBegin, tickEnd, state, MTR_CEIL, DBFS_MUTE_POS);
     }
 
     param_converted_t module_gain::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {

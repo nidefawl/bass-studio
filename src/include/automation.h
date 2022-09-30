@@ -15,9 +15,10 @@ enum param_update_flags : int32_t {
     FLG_PAR_UPDATE_USER = 2,
     FLG_PAR_UPDATE_UNDO = 4,
     FLG_PAR_UPDATE_AUTOMATED = 8,
-    FLG_PAR_UPDATE_NOSTORE = 16,
-    FLG_PAR_UPDATE_FINISH = 32,
-    FLG_PAR_UPDATE_FROM_CLIENT = 64,
+    FLG_PAR_UPDATE_MODULATED = 16,
+    FLG_PAR_UPDATE_NOSTORE = 32,
+    FLG_PAR_UPDATE_FINISH = 64,
+    FLG_PAR_UPDATE_FROM_CLIENT = 128,
 };
 
 #define PARAM_ENABLE 0
@@ -129,9 +130,7 @@ struct automation_lane_t : public automated_param_t {
     bool isAutomated() const override {
         return !src.points.empty();
     }
-    float modulateValue(tick_t tick, float f, const DAW::automation_scaling_t& scale) const override {
-        return src.getValueAt(tick);
-    }
+    float modulateValue(tick_t tick, float fIn, const DAW::automation_scaling_t& scale) const override;
     float getValueAt(tick_t tick) const override {
         return src.getValueAt(tick);
     }
@@ -150,12 +149,6 @@ struct automation_lane_t : public automated_param_t {
     String getName() const override {
         return "Automation";
     }
-};
-
-struct automatable_t;
-struct automated_param_connection_t {
-    automatable_t* atl = nullptr;
-    int32_t paramIdx = -1;
 };
 
 union param_step_fi_u {
@@ -201,38 +194,50 @@ struct automatable_param_properties_t {
 
 struct automatable_param_t : public automatable_param_properties_t {
     friend struct automatable_t;
-    int32_t idx        = -1;
+    int32_t idx         = -1;
     int32_t internalIdx = -1;
+
 private:
-    float defaultValue = 0.0f;
-    float value        = 0.0f;
-    float nonAutomated = 0.0f;
+    float defaultValue   = 0.0f;
+    float valueModulated = 0.0f;
+    float valueAutomated = 0.0f;
+    float value          = 0.0f;
+
 public:
     template<typename T>
     void initValue(T _value) {
-        value = _value.val;
+        valueModulated = _value.val;
         defaultValue = _value.val;
-        nonAutomated = _value.val;
+        value = _value.val;
         unit = _value.unit;
         name = shortLabel = _value.name;
     }
-    void setInitial(float _value) {
+    void setAll(float _value) {
+        valueAutomated = _value;
+        valueModulated = _value;
         value = _value;
-        defaultValue = _value;
-        nonAutomated = _value;
     }
-    void set(float _value) {
+    void setValue(float _value) {
         value = _value;
-        nonAutomated = _value;
+    }
+    void setInitial(float _value) {
+        defaultValue = _value;
+        setAll(_value);
     }
     void setModulated(float _value) {
-        value = _value;
+        valueModulated = _value;
+    }
+    void setAutomated(float _value) {
+        valueAutomated = _value;
     }
     float getValue() const {
-        return nonAutomated;
+        return value;
     }
     float getValueModulated() const {
-        return value;
+        return valueModulated;
+    }
+    float getValueAutomated() const {
+        return valueAutomated;
     }
     float getDefault() const {
         return defaultValue;
@@ -251,6 +256,8 @@ private:
     std::vector<automation_lane_t> automationLanes;//TODO: make this a map
     std::vector<DAW::automation_channel_ref> inputChannelsAutomation;
     std::unordered_map<int32_t, std::vector<DAW::automation_channel_ref*>> mapInputChannels;
+protected:
+    void setAutomatableParam(automatable_param_t* param, float value, int flags);
 public:
     virtual ~automatable_t() = default;
     automatable_param_t* registerParam(int32_t identifier) {
@@ -337,15 +344,12 @@ public:
      * setParamValue
      * @param idx
      * @param val
-     * @param flags valid flags are
-     * #define FLG_PAR_UPDATE_INIT 1
-     * #define FLG_PAR_UPDATE_USER 2
-     * #define FLG_PAR_UPDATE_UNDO 4
-     * #define FLG_PAR_UPDATE_AUTOMATED 8
-     *
+     * @param flags see param_update_flags
      */
+    virtual void setParamValue(int32_t idx, float val, int flags) {
+        setAutomatableParam(getParamUnchecked(idx), val, flags);
+    }
     virtual String getAutomatableName()      = 0;
-    virtual void setParamValue(int32_t idx, float val, int flags) = 0;
     virtual automatable_param_ref_t toRef() const = 0;
     virtual track_t* getTrack() = 0;
 
@@ -391,7 +395,7 @@ public:
                 targets.push_back(t.paramIdx);
         }
     }
-    void sampleAutomation(const DAW::Host::PluginManager *const host, int32_t paramIdx, double dTickBegin, double dTickEnd, samplecount_t numSamples, float* out);
+    void sampleAutomation(const DAW::Host::PluginManager *const host, int32_t paramIdx, double dTickBegin, double dTickEnd, playback_state state, samplecount_t numSamples, float* out);
     virtual void updateAutomatedParameters(const DAW::Host::PluginManager *const host, tick_t processingPos, playback_state state);
     void deactivateAutomation(int32_t paramIdx) {
         for (automation_lane_t& param : automationLanes) {
@@ -511,7 +515,7 @@ public:
         }
         automatable_param_t* param = getParamUnchecked(paramIdx);
         dbgassert(param);
-        return { param->value, param->value };
+        return { param->valueModulated, param->valueModulated };
     }
     void clearAutomations() {
         this->automationLanes.clear();
@@ -529,6 +533,7 @@ void toggleDeviceEnableState(automatable_t* effect, int flags);
 namespace DAW {
     enum class automation_routing_type {
         ROUTING_NONE,
+        ROUTING_CONSTANT,
         ROUTING_LANE,
         ROUTING_MODULATION,
     };
@@ -537,14 +542,34 @@ namespace DAW {
         automation_routing_type type  = automation_routing_type::ROUTING_NONE;
         automatable_param_ref_t destinationRef{};
     };
+
     inline automation_routing_t AutomationRef(const automatable_t* automatable, int32_t paramIdx) {
         auto atlRef = automatable->toRef();
         atlRef.paramIdx = paramIdx;
         return automation_routing_t{ automation_routing_type::ROUTING_LANE, atlRef };
     }
+
+    inline automation_routing_t ModulationRef(const automatable_t* automatable, int32_t paramIdx) {
+        auto atlRef = automatable->toRef();
+        atlRef.paramIdx = paramIdx;
+        return automation_routing_t{ automation_routing_type::ROUTING_MODULATION, atlRef };
+    }
+
+    inline automation_routing_t AutomationConstant(const automatable_t* automatable, int32_t paramIdx) {
+        auto atlRef = automatable->toRef();
+        atlRef.paramIdx = paramIdx;
+        return automation_routing_t{ automation_routing_type::ROUTING_CONSTANT, atlRef };
+    }
+
     inline automation_routing_t AutomationNone() {
         return automation_routing_t{ automation_routing_type::ROUTING_NONE, {} };
     }
+
+    struct automated_param_connection_t {
+        automation_routing_type type = automation_routing_type::ROUTING_NONE;
+        automatable_t* atl = nullptr;
+        int32_t paramIdx = -1;
+    };
 
     automated_param_connection_t GetParameterModulationFromRouting(const Host::PluginManager* const host, const automation_routing_t routing);
     automation_routing_t GetRoutingFromDestinationParam(const automatable_t* dev, int32_t paramIdx);

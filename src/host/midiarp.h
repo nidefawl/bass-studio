@@ -137,27 +137,6 @@ public:
         // parameter automation updates are done internally
     }
 
-    void setParamValue(int32_t idx, float val, int flags) override {
-        automatable_param_t* param = getParamUnchecked(idx);
-        dbgassert(param);
-        if (flags & FLG_PAR_UPDATE_AUTOMATED) {
-            param->setModulated(val);
-        } else {
-            param->set(val);
-        }
-        if (param->idx == PARAM_ENABLE) {
-            if ((flags & FLG_PAR_UPDATE_USER)) {
-                bEnableNextState        = val > 0;
-                bEnableStateUserToggled = true;
-            } else {
-                enable = val > 0;
-            }
-        }
-        if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
-            param->inUse = true;
-        }
-    }
-
     automatable_param_ref_t toRef() const override {
         automatable_param_ref_t ref;
         ref.type  = AUTOMATABLE_ARP;

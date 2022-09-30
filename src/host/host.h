@@ -179,5 +179,5 @@ public:
 }
 
 namespace DAW::Host {
-    void MixWithGainAndPanAutomation(const Host* host, process_scratch_buf_t& tmp, AudioBlock* in, AudioBlock* out, float fGainScaled, float fPan, const automated_param_connection_t& autParGain, const automated_param_connection_t& autParPan, double tickBegin, double tickEnd, float MTR_CEIL, float DBFS_MUTE_POS);
+    void MixWithGainAndPanAutomation(const Host* host, process_scratch_buf_t& tmp, AudioBlock* in, AudioBlock* out, const automated_param_connection_t& autParGain, const automated_param_connection_t& autParPan, double tickBegin, double tickEnd, playback_state state, float MTR_CEIL, float DBFS_MUTE_POS);
 }

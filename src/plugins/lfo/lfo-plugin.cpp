@@ -111,37 +111,33 @@ namespace PluginLFO {
                 return value * (valMax - valMin) + valMin;
             }
             float modulateValue(tick_t tick, float fIn, const DAW::automation_scaling_t& scale) const override {
-                auto fVal = fIn;
-                auto fLfo = sampleCurve(tick);
-                auto fScaled = scale.min + fLfo * (scale.max - scale.min);
+                const auto valScaled = scale.min + sampleCurve(tick) * (scale.max - scale.min);
                 switch (scale.mode) {
                     case DAW::ModulationMode::ADD:
-                        fVal += fScaled;
+                        fIn += valScaled;
                         break;
                     case DAW::ModulationMode::MUL:
-                        fVal *= fScaled;
+                        fIn *= valScaled;
                         break;
                     case DAW::ModulationMode::REPLACE:
-                        fVal = fScaled;
+                        fIn = valScaled;
                         break;
                 }
-                return fVal;
+                return fIn;
             }
             void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* inOut) const override {
                 for (samplecount_t i = 0; i < numSamples; ++i) {
-                    auto dTickOffset = dTickBegin + i*(dTickEnd - dTickBegin)/numSamples;
-                    auto f = sampleCurve(dTickOffset);
-                    auto fScaled = scale.min + f * (scale.max - scale.min);
-                    // *inOut++
+                    const auto dTickOffset     = dTickBegin + i * (dTickEnd - dTickBegin) / double(numSamples);
+                    const auto valScaled = scale.min + sampleCurve(dTickOffset) * (scale.max - scale.min);
                     switch (scale.mode) {
                         case DAW::ModulationMode::ADD:
-                            *inOut++ += fScaled;
+                            *inOut++ += valScaled;
                             break;
                         case DAW::ModulationMode::MUL:
-                            *inOut++ *= fScaled;
+                            *inOut++ *= valScaled;
                             break;
                         case DAW::ModulationMode::REPLACE:
-                            *inOut++ = fScaled;
+                            *inOut++ = valScaled;
                             break;
                     }
                 }

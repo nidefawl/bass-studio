@@ -1034,12 +1034,14 @@ namespace PluginSynth {
     };
 
     struct SynthParamBase : public SynthParam {
+        double valDouble    = 0.0;
+        double valModulated = 0.0;
+        double valInitial   = 0.0;
         ParamType type;
         Parameters enumParam;
         String name;
         String shortName;
-        // name when used in hierarchical UIs
-        String hierarchicalName;
+        String hierarchicalName; // shortest name: for use in hierarchical UIs
         String format;
         String unit;
         SynthParamBase(ParamType _type, Parameters _enumParam) : type(_type), enumParam(_enumParam) {
@@ -1049,10 +1051,20 @@ namespace PluginSynth {
         }
 
         ~SynthParamBase() override= default;
+        double getAsDouble() const noexcept {
+            return valDouble;
+        }
+        void resetToInitial() noexcept {
+            valDouble = valModulated = valInitial;
+        }
         virtual void set(double f, double fModulated) noexcept = 0;
-        virtual double getAsDouble() const noexcept = 0;
+        void setAll(double f) noexcept {
+            set(f, f);
+        }
+        virtual void setModulated(double f) noexcept {
+            set(getAsDouble(), f);
+        };
         virtual String getValueDisplay(double value) const = 0;
-        virtual void resetToInitial() noexcept = 0;
         virtual param_converted_t convertValueDisplay(const param_unit_t& displayValue) const = 0;
         const String& getName() const {
             return this->name;
@@ -1073,9 +1085,6 @@ namespace PluginSynth {
     struct SynthParam_Float : public SynthParamBase {
         explicit SynthParam_Float(Parameters _enumParam) : SynthParamBase(ParamType::FLOAT, _enumParam) {
         }
-        double valDouble    = 0.0;
-        double valModulated = 0.0;
-        double valInitial   = 0.0;
         double fmin         = 0.0;
         double fmax         = 1.0;
         SynthParam_Float* setRange(double _fmin, double _fmax) {
@@ -1086,15 +1095,12 @@ namespace PluginSynth {
         double Value() const noexcept {
             return math::clamp(valModulated * (fmax - fmin) + fmin, fmin, fmax);
         }
-        double ValueModulated(double valModulated) const noexcept {
-            return math::clamp((valModulated + valModulated) * (fmax - fmin) + fmin, fmin, fmax);
+        double ValueModulated(double voiceModulation) const noexcept {
+            return math::clamp((valModulated + voiceModulation) * (fmax - fmin) + fmin, fmin, fmax);
         }
         void setInitialValue(double f) {
-            double fVal = math::max(0.0, math::min(1.0, (f - fmin) / (fmax - fmin)));
-            valDouble = valInitial = fVal;
-        }
-        void resetToInitial() noexcept override {
-            valDouble = valInitial;
+            valInitial = math::clamp((math::clamp(f, fmin, fmax) - fmin) / (fmax - fmin), 0.0, 1.0);
+            resetToInitial();
         }
         double GetMin() {
             return fmin;
@@ -1105,9 +1111,6 @@ namespace PluginSynth {
         void set(double f, double fModulated) noexcept override {
             valDouble = f;
             valModulated = fModulated;
-        }
-        double getAsDouble() const noexcept override {
-            return valDouble;
         }
         String getValueDisplay(double value) const noexcept override {
             return StringFormat(StringAsCStr(format), math::clamp((value) * (fmax - fmin) + fmin, fmin, fmax));
@@ -1123,10 +1126,6 @@ namespace PluginSynth {
         }
         SynthParam_Int(ParamType _paramType, Parameters _enumParam) : SynthParamBase(_paramType, _enumParam) {
         }
-        double valFloat     = 0.0;
-        double valModulated = 0.0;
-        double valInitial   = 0.0;
-        int32_t iValue      = 0;
         int32_t iMin        = 0;
         int32_t iMax        = 1;
         SynthParam_Int* setRange(int32_t _iMin, int32_t _iMax) {
@@ -1140,28 +1139,19 @@ namespace PluginSynth {
         int32_t Value() const noexcept {
             return getInt32(valModulated);
         }
-        double ValueModulated(double valModulated) const noexcept {
+        double ValueModulated(double voiceModulation) const noexcept {
             const double dMin       = iMin;
             const double dMax       = iMax;
-            const double dModulated = (dMax - dMin) * valModulated + Value();
+            const double dModulated = (dMax - dMin) * (valModulated + voiceModulation) + Value();
             return math::clamp<double>(dModulated, dMin, dMax);
         }
-        double getAsDouble() const noexcept override {
-            return valFloat;
-        }
         void set(double f, double fModulated) noexcept override {
-            auto iVal = math::rounddS32(f * (iMax - iMin) + iMin);
-            iValue    = math::clamp(iVal, iMin, iMax);
-            valFloat  = f;
+            valDouble  = f;
             valModulated = fModulated;
         }
         void setInitialValue(int32_t i) noexcept {
-            iValue   = math::clamp(i, iMin, iMax),
-            valFloat = valModulated = valInitial = math::clamp((iValue - iMin) / static_cast<double>(iMax - iMin), 0.0, 1.0);
-        }
-        void resetToInitial() noexcept override {
-            iValue   = math::clamp(static_cast<int32_t>(valInitial * (iMax - iMin) + iMin), iMin, iMax);
-            valFloat = valModulated = valInitial;
+            valInitial = math::clamp((math::clamp(i, iMin, iMax) - iMin) / static_cast<double>(iMax - iMin), 0.0, 1.0);
+            resetToInitial();
         }
         String getValueDisplay(double value) const noexcept override {
             return StringFormat(StringAsCStr(format), math::clamp(math::rounddS32(value * (iMax - iMin) + iMin), iMin, iMax));
@@ -1374,7 +1364,7 @@ namespace PluginSynth {
             addIntParam(Parameters::FmCoarse)->setRange(0, 48)->setInitialValue(0);
             setParamName(getParam(Parameters::FmCoarse), "FM Coarse", "FM Coarse", "Coarse");
 
-            addFloatParam(Parameters::OscMix)->setRange(0.0, 1.0)->setInitialValue(1.0);
+            addFloatParam(Parameters::OscMix)->setRange(0.0, 1.0)->setInitialValue(0.5);
             setParamName(getParam(Parameters::OscMix), "Oscillator Mix", "OSC Mix", "Mix");
             addFloatParam(Parameters::Osc1Fine)->setRange(-1.0, 1.0)->setInitialValue(0.0);
             setParamName(getParam(Parameters::Osc1Fine), "Oscillator 1 fine", "OSC1 Fine", "Fine");
@@ -2842,6 +2832,7 @@ namespace PluginSynth {
                     case Parameters::FmFine:
                     case Parameters::ModEnvFm:
                     case Parameters::VolEnvFm:
+                    case Parameters::OscMix:
                     case Parameters::LfoFm:
                     case Parameters::FmCoarse:
                     case Parameters::Osc1Coarse:
@@ -2897,9 +2888,15 @@ namespace PluginSynth {
 
         void postSetParameter(int32_t idx, float preVal, float val, int flags) override {
             if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
-                SynthParamBase* param = vecParams[idx-1];
                 auto paramHost = getParam(idx);
-                param->set(paramHost->getValue(), paramHost->getValueModulated());
+                dbgassert(paramHost);
+                SynthParamBase* param = vecParams[idx-1];
+                if (flags & FLG_PAR_UPDATE_MODULATED) {
+                    param->setModulated(val);
+                } else {
+                    param->setAll(val);
+                }
+                // param->set(paramHost->getValue(), paramHost->getValueModulated());
                 this->impl->OnParamChange(param->enumParam);
             }
             internalplugin::postSetParameter(idx, preVal, val, flags);
@@ -2950,7 +2947,7 @@ namespace PluginSynth {
         void onPresetLoaded() {
             for (int32_t idx = 0; idx < CtrSize(vecParams); idx++) {
                 auto param = getParam(idx + 1);
-                param->set(vecParams[idx]->getAsDouble());
+                param->setAll(vecParams[idx]->getAsDouble());
             }
         }
 

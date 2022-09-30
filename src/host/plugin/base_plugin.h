@@ -224,12 +224,11 @@ public:
 
 public:
     virtual effect_deferred* toDeferred();
-    void updateOnEnableParam(automatable_param_t* param, bool wasEnable, bool isEnable, int flags);
+    void updateOnEnableParam(bool wasEnable, bool isEnable, int flags);
     virtual void getDeferredEffects(std::vector<effectbase*>& effects){};
     virtual void addPropertiesParameterList(Table::tbl& table);
     virtual void addPropertiesTooltip(Table::tbl& table);
     virtual void addPropertiesParameterTooltip(Table::tbl& table, int idx);
-    void setParamValue(int32_t idx, float val, int flags) override;
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     automatable_param_ref_t toRef() const override;
 };
@@ -255,7 +254,6 @@ public:
     }
     // automatable_t interface
     String getAutomatableName() override;
-    void setParamValue(int32_t idx, float val, int flags) override;
     automatable_param_ref_t toRef() const override;
 
     static std::shared_ptr<effect_deferred> fromEffect(effectbase* eff);

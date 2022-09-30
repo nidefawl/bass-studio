@@ -627,7 +627,7 @@ float vstplugin::getParamValue(int32_t idx) {
     dbgassert(param);
     if (param->internalIdx >= 0) {
         if (param->paramValueState & PARAM_FLAG_DIRTY) {
-            param->set(vst_getParameter(this, handle->aeffect, param->internalIdx));
+            param->setValue(vst_getParameter(this, handle->aeffect, param->internalIdx));
             param->paramValueState = PARAM_FLAG_SET;
         }
     }
