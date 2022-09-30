@@ -20,7 +20,7 @@
 using PFNBRIDGEMAIN = AEffect *(*)(audioMasterCallback, char *);
 
 //Check if it’s a plugin_name.xx.dll
-bool IsBootStrapDll(const char* path) {
+static bool IsBootStrapDll(const char* path) {
     bool ret = false;
     HMODULE hModule = LoadLibrary(path);
     if (!hModule) {
@@ -35,6 +35,7 @@ bool IsBootStrapDll(const char* path) {
     return ret;
 }
 
+namespace DAW::Host {
 //receives the plugin’s path as an argument
 int loadPlugin_jbridge(audioMasterCallback audiomasterCallback, const String& filepath, HMODULE* hmodule, AEffect** aeffect, uint64_t bugfixFlags) {
     const char* szPath = StringAsCStr(filepath);
@@ -87,3 +88,4 @@ int loadPlugin_jbridge(audioMasterCallback audiomasterCallback, const String& fi
     return 0;
 }
 #endif
+} // namespace DAW::Host

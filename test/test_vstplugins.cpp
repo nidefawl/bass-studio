@@ -31,10 +31,10 @@ namespace {
     size_t currentFileIdx = 0;
 
     void TickTest() {
-        static LoadResultVST2Plugin res(0, nullptr);
+        static DAW::Host::LoadResultVST2Plugin res(0, nullptr);
         static int currentTimerTick = 0;
         static int numPluginsTested = 0;
-        auto* host                  = pluginhost::getInstance();
+        auto* host = daw_tls::getTls().host;
         if (res.plugin == nullptr) {
             if (currentFileIdx >= dllFilesToTest.size()) {
                 PostQuitMessage(exitStatusCode);
@@ -51,7 +51,7 @@ namespace {
                 printf("loadPlugin: %s %d => GOOD\n", StringAsCStr(testCase.pathToDll), res.result);
             }
             if (res.result < 0) {
-                res = LoadResultVST2Plugin(0, nullptr);
+                res = DAW::Host::LoadResultVST2Plugin(0, nullptr);
             }
         } else {
             bool hasUI = res.plugin->getFlagsVST() & effFlagsHasEditor;
@@ -60,8 +60,8 @@ namespace {
             } else if (hasUI && currentTimerTick == 30) {
                 res.plugin->closeWindow();
             } else if ((hasUI && currentTimerTick == 40) || (!hasUI && currentTimerTick == 10)) {
-                host->unloadPlugin(res.plugin, pluginmanager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
-                res = LoadResultVST2Plugin(0, nullptr);
+                host->unloadPlugin(res.plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                res = DAW::Host::LoadResultVST2Plugin(0, nullptr);
                 currentTimerTick = -1;
                 numPluginsTested++;
             } else {

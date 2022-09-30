@@ -3,10 +3,12 @@
 #include "plugin/vst_plugin.h"
 #include "plugin/vst_plugin_handles.h"
 #include "track_impl.h"
-#include <dlfcn.h>
 
 #ifdef _WIN32
+#include <windows.h>
 String getModuleName(HMODULE);
+#elif defined(__linux__) || defined(__APPLE__)
+#include <dlfcn.h>
 #endif
 
 namespace DAW::Host {

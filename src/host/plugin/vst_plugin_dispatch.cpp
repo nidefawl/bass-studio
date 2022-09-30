@@ -97,6 +97,7 @@ void vst_process(vstplugin* plugin, AEffect* aeffect, float** bufIn, float** buf
 }
 
 #ifdef _WIN32
+namespace DAW::Host {
 FUNC_NOINLINE
 HMODULE safeLoadLib(const char* szLibName) {
     volatile HMODULE hmodule = nullptr;
@@ -111,4 +112,5 @@ HMODULE safeLoadLib(const char* szLibName) {
     seh_finally("ehsafeLoadLib")
     return hmodule;
 }
+} // namespace DAW::Host
 #endif//_WIN32

@@ -160,3 +160,6 @@ namespace DAW::UI {
         void handleDraggedRelease(MouseEvent& evt) override;
     };
 }
+
+template<>
+void guitooltip<DAW::UI::guictr_dragged_modulation_src>::setContent();
