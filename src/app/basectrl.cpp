@@ -449,7 +449,7 @@ void AppCtrl::onAppTick() {
                     newContextMenu->theme = getTheme();
                     lastTooltipSrc        = guiOver;
                     nextTooltipId++;
-                    openOverlayGui(newContextMenu, m_mousePos + ivec2(-16, 26), BASECTRL_WND_POS_RELATIVE | BASECTRL_WND_IS_TOOLTIP);
+                    openOverlayGui(newContextMenu, m_mousePos + ivec2(-16, 26), BASECTRL_WND_POS_RELATIVE | BASECTRL_WND_IS_TOOLTIP | BASECTRL_WND_IS_BORDERLESS);
                 }
                 hoverTime = 0;
             } else if (guiOver != lastHoveredTooltip) {
@@ -563,7 +563,9 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
     ivec2 wndPos(0);
     determineWindowPos(guicontextmenu, mainWindow, m_scale, flags, pos, wndPos);
 
-    const int createflags   = WINDOW_BORDERLESS_POPUP;
+    int createflags = 0;
+    if (flags & BASECTRL_WND_IS_BORDERLESS) createflags |= WINDOW_BORDERLESS_POPUP;
+    if (flags & BASECTRL_WND_IS_RESIZEABLE) createflags |= WINDOW_IS_RESIZABLE;
     window_main* ctxtWindow = this->contextWindow;
     if (!ctxtWindow || ctxtWindow->getCreationFlags() != createflags) {
         if (ctxtWindow) {
@@ -603,7 +605,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
             *popupCtrl->getTheme() = *getTheme();
             popupCtrl->m_scale     = m_scale;
         }
-        static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (ctxtWindow->getCreationFlags() & GLFW_RESIZABLE), (flags & BASECTRL_WND_IS_TOOLTIP) == 0);
+        static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (ctxtWindow->getCreationFlags() & WINDOW_IS_RESIZABLE), (flags & BASECTRL_WND_IS_TOOLTIP) == 0);
     } else {
         dbgassert(0);
     }
@@ -643,7 +645,7 @@ void AppCtrl::openDialog(guidialog_base* _guidialog) {
     popupCtrl->open(_guidialog, wndPos, (dialogWindow->getCreationFlags() & WINDOW_IS_RESIZABLE), true);
 }
 void AppCtrl::openContextMenu(guictxtmenu_base* b, ivec2 pos) {
-    openOverlayGui(b, pos, BASECTRL_WND_POS_RELATIVE);
+    openOverlayGui(b, pos, BASECTRL_WND_POS_RELATIVE | BASECTRL_WND_IS_BORDERLESS);
     // openAppMenu(0, b, pos);
 }
 void AppCtrl::closeContextMenu() {
@@ -705,29 +707,9 @@ bool AppCtrl::hasContextMenu() {
     return this->contextWindow && this->contextWindow->isShown();
 }
 bool AppCtrl::onCharInput(uint32_t codepoint) {
-    // window_main* wnd = this->contextWindow;
-    // if (wnd && wnd->isShown()) {
-    //     if (wnd->getCtrl()->hasInputFocus()) {
-    //         bool b = wnd->getCtrl()->onCharInput(codepoint);
-    //         if (b) {
-    //             wnd->requestRedraw();
-    //             return true;
-    //         }
-    //     }
-    // }
     return BaseCtrl::onCharInput(codepoint);
 }
 bool AppCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) {
-    // window_main* wnd = this->contextWindow;
-    // if (wnd && wnd->isShown()) {
-    //     if (wnd->getCtrl()->hasInputFocus()) {
-    //         bool b = wnd->getCtrl()->onKeyInput(key, scancode, keyState, mods, key_name);
-    //         if (b) {
-    //             wnd->requestRedraw();
-    //             return true;
-    //         }
-    //     }
-    // }
     return BaseCtrl::onKeyInput(key, scancode, keyState, mods, key_name);
 }
 

@@ -279,7 +279,7 @@ namespace DAW {
         ctxtMenu->canTakeInputFocus = true;
         ctxtMenu->maxHeight = -1;
         ctxtMenu->setAutomationRef(dawCtrl->getDaw()->getPluginManager(), atl, paramIdx, ref);
-        dawCtrl->openContextMenu(ctxtMenu, mousePos);
+        dawCtrl->openOverlayGui(ctxtMenu, mousePos, BASECTRL_WND_POS_RELATIVE | BASECTRL_WND_IS_RESIZEABLE);
     }
 } // namespace DAW
 

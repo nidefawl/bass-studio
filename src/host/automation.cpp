@@ -463,7 +463,7 @@ void automatable_t::sampleAutomation(const DAW::Host::PluginManager *const host,
     if (automation && automation->isActive() && DAW::isPlaybackState(state)) {
         automation->sampleAutomation(dTickBegin, dTickEnd, numSamples, {}, buffer);
     } else {
-        std::fill(buffer, buffer + numSamples, param->getValueAutomated());
+        std::fill(buffer, buffer + numSamples, param->getValue());
     }
     if (isParamModulated(paramIdx)) {
         auto mods = getModulations(paramIdx);

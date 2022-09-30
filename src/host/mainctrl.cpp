@@ -1672,22 +1672,13 @@ void DawInstance::onTick() {
 
     tls.host->onTick();
 
-    bool noPopups        = true;
-    bool canOpenAutosave = true;
-    bool hasAnyInputFocus = false;
-    for (auto* ctrl : dawCtrls) {
-        noPopups &= !ctrl->guiDragged && !ctrl->guiCaptured && !ctrl->ctxtmenu;
-        canOpenAutosave &= noPopups;
-        canOpenAutosave &= !ctrl->window->isMouseCaptured();
-        canOpenAutosave &= !ctrl->hasDialogWindows();
-        canOpenAutosave &= !ctrl->hasContextMenu();
-        hasAnyInputFocus |= ctrl->hasInputFocus();
-        /*canOpenAutosave &= last click was n seconds ago*/
-    }
-    canOpenAutosave &= hasAnyInputFocus;
     static int scriptState = -1;
     static const int64_t tmDelayStateChange = 555;
     static int64_t tmStateChange = 0;
+    bool noPopups = true;
+    for (auto* ctrl : dawCtrls) {
+        noPopups &= !ctrl->guiDragged && !ctrl->guiCaptured && !ctrl->ctxtmenu;
+    }
     if (noPopups && projectToLoad) {
         std::shared_ptr<project_to_load_t> projectToLoadCpy = projectToLoad;
         projectToLoad = nullptr;
@@ -1761,7 +1752,7 @@ void DawInstance::onTick() {
         }
     }
     
-    if (canOpenAutosave && tls.mainCtrl) {
+    if (tls.mainCtrl) {
         auto& settings = daw_tls::getSettings();
         if (settings.autosave.tmSaveDelayMinutes > 0) {
             if (0 == autosaveState.tmLastTrigger) {
@@ -1769,7 +1760,17 @@ void DawInstance::onTick() {
             }
             int64_t tmNow = getTimeMillis();
             if ((tmNow - tmLastSave) / 60000 > settings.autosave.tmSaveDelayMinutes) {
-                if ((tmNow - autosaveState.tmLastTrigger) / 60000 > math::max<int64_t>(settings.autosave.tmReminderDelayMinutes, 1)) {
+                bool canOpenAutosave = noPopups;
+                bool hasAnyInputFocus = false;
+                for (auto* ctrl : dawCtrls) {
+                    canOpenAutosave &= !ctrl->window->isMouseCaptured();
+                    canOpenAutosave &= !ctrl->hasDialogWindows();
+                    canOpenAutosave &= !ctrl->hasContextMenu();
+                    // hasAnyInputFocus |= ctrl->hasInputFocus();
+                    /*canOpenAutosave &= last click was n seconds ago*/
+                }
+                canOpenAutosave &= hasAnyInputFocus;
+                if (canOpenAutosave &&  (tmNow - autosaveState.tmLastTrigger) / 60000 > math::max<int64_t>(settings.autosave.tmReminderDelayMinutes, 1)) {
                     autosaveState.tmLastTrigger = tmNow;
                     auto tooltip                = makeGuiAutosave(1500);
                     auto ctrlSize               = tls.mainCtrl->m_size;

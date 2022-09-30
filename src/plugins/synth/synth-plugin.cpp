@@ -3459,17 +3459,6 @@ namespace PluginSynth {
                             log_lf(Log::L_ERROR, "Error in expression: %s\n", e.GetMsg().c_str());
                             textfieldFunction.setLabel(StringFormat("Error in expression: %s", e.GetMsg().c_str()));
                             textfieldFunction.setTextfieldColor(GuiColor::COL_INVALID_INPUT);
-                            // auto tooltip       = new gui_notify();
-                            // tooltip->setMessage("Failed parsing expression", e.GetMsg());
-                            // auto ctrlSize      = dawCtrl->m_size;
-                            // tooltip->size      = ivec2(620, 80);
-                            // tooltip->maxHeight = tooltip->size.y;
-                            // tooltip->layout();
-                            // tooltip->setDelay(10000);
-                            // dawCtrl->openOverlayGui(
-                            //     tooltip,
-                            //     ivec2(ctrlSize.x / 2, ctrlSize.y - 100) - tooltip->size / 2,
-                            //     BASECTRL_WND_POS_RELATIVE | BASECTRL_WND_IS_TOOLTIP);
                             {
                                 ThreadLock lock = synth->lock();
                                 MathExpr expr;
