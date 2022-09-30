@@ -87,5 +87,5 @@ int loadPlugin_jbridge(audioMasterCallback audiomasterCallback, const String& fi
     *hmodule = hModuleProxy;
     return 0;
 }
-#endif
 } // namespace DAW::Host
+#endif
