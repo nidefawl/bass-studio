@@ -200,12 +200,45 @@ struct automatable_param_properties_t {
 };
 
 struct automatable_param_t : public automatable_param_properties_t {
+    friend struct automatable_t;
     int32_t idx        = -1;
     int32_t internalIdx = -1;
+private:
     float defaultValue = 0.0f;
     float value        = 0.0f;
     float nonAutomated = 0.0f;
+public:
+    template<typename T>
+    void initValue(T _value) {
+        value = _value.val;
+        defaultValue = _value.val;
+        nonAutomated = _value.val;
+        unit = _value.unit;
+        name = shortLabel = _value.name;
+    }
+    void setInitial(float _value) {
+        value = _value;
+        defaultValue = _value;
+        nonAutomated = _value;
+    }
+    void set(float _value) {
+        value = _value;
+        nonAutomated = _value;
+    }
+    void setModulated(float _value) {
+        value = _value;
+    }
+    float getValue() const {
+        return nonAutomated;
+    }
+    float getValueModulated() const {
+        return value;
+    }
+    float getDefault() const {
+        return defaultValue;
+    }
 };
+
 
 class track_t;
 namespace DAW::Host {
@@ -258,7 +291,7 @@ public:
         return mapInputChannels.at(paramIdx);
     }
     bool isParamModulated(int32_t paramIdx) const {
-        return mapInputChannels.find(paramIdx) != mapInputChannels.end();
+        return mapInputChannels.count(paramIdx);
     }
     bool isParamConnectedTo(int32_t paramIdx, const DAW::automation_channel_ref& ref) const;
 
@@ -300,12 +333,6 @@ public:
             return a->idx < b->idx;
         });
     }
-
-    virtual String getAutomatableName()      = 0;
-    virtual float getParamValue(int32_t idx) = 0;
-    virtual param_unit_t getParamValueDisplay(int32_t idx);
-    virtual param_unit_t convertParamValueToDisplay(int32_t idx, float value);
-    virtual param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue);
     /**
      * setParamValue
      * @param idx
@@ -317,14 +344,19 @@ public:
      * #define FLG_PAR_UPDATE_AUTOMATED 8
      *
      */
+    virtual String getAutomatableName()      = 0;
     virtual void setParamValue(int32_t idx, float val, int flags) = 0;
-    virtual automatable_param_ref_t toRef() const               = 0;
-    virtual track_t* getTrack()                                   = 0;
+    virtual automatable_param_ref_t toRef() const = 0;
+    virtual track_t* getTrack() = 0;
 
+    virtual float getParamValue(int32_t idx);
+    virtual param_unit_t getParamValueDisplay(int32_t idx);
+    virtual param_unit_t convertParamValueToDisplay(int32_t idx, float value);
+    virtual param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue);
     virtual void setParamEdit(int32_t idx, float val, int flags);
 
     virtual void flipParamValue(int32_t idx) {
-        setParamValue(idx, 1.0f - getParamValue(idx), FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
+        setParamValue(idx, 1.0f - getParam(idx)->getValue(), FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
     }
     virtual void resetParamValue(int32_t paramIdx, int flags) {
         auto it = mapParams.find(paramIdx);

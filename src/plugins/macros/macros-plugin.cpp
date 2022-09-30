@@ -234,8 +234,7 @@ namespace PluginMacros {
             impl->macroAutomationSrcParams[i].paramIdx = i;
             auto paramIdx = PARAM_MACROS_FIRST + i;
             automatable_param_t* regparam = registerParam(paramIdx);
-            regparam->defaultValue = 0.0f;
-            regparam->value = 0.0f;
+            regparam->setInitial(0.0f);
             regparam->name  = StringFormat("Macro %d", i + 1);
             regparam->shortLabel  = StringFormat("Macro %d", i + 1);
             regparam->unit  = "%";

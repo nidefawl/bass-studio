@@ -248,7 +248,7 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginH
             } else {
                 auto flags = FLG_PAR_UPDATE_FROM_CLIENT;
                 plugin->setParamEdit(effParam->idx, opt, flags);
-                dbgassert(effParam->value == opt);
+                dbgassert(effParam->getValue() == opt);
                 // effParam->value = opt;
                 effParam->paramValueState = PARAM_FLAG_SET;
                 effParam->paramDisplayValState |= PARAM_FLAG_DIRTY;
@@ -433,7 +433,7 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginH
                 if (!throttleLog)
                     log_printf("%s audioMasterBeginEdit unknown param index %d %zd %f\n", StringAsCStr(plugin->getName()), index, value, opt);
             } else {
-              plugin->handle->paramEditing = {effParam->internalIdx, effParam->value};
+              plugin->handle->paramEditing = {effParam->internalIdx, effParam->getValue()};
             }
         }
         return 1;
@@ -449,7 +449,7 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginH
                     log_printf("%s audioMasterEndEdit unknown param index %d %zd %f\n", StringAsCStr(plugin->getName()), index, value, opt);
             } else {
                 dbgassert(plugin->trackImpl->getTrack());
-                auto newVal = effParam->value;
+                auto newVal = effParam->getValue();
                 auto oldVal = plugin->handle->paramEditing.valBefore;
                 track_t* track                = plugin->trackImpl->getTrack();
                 automatable_param_ref_t ref = plugin->toRef();

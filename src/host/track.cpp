@@ -1340,7 +1340,7 @@ void track_params_t::createSnapshot(track_params_snapshot_t& snapshot, const tra
         snapshot.params.reserve(getNumParameters());
         visitParams([&snapshot](auto& mapEntry) {
             automatable_param_t& param = mapEntry.second;
-            snapshot.params.push_back(param_snapshot_t{ param.idx, param.value, param.inUse ? 1 : 0 });
+            snapshot.params.push_back(param_snapshot_t{ param.idx, param.getValue(), param.inUse ? 1 : 0 });
         });
     }
     if (opts.storeAutomation) {
@@ -1377,23 +1377,18 @@ track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), au
             { PARAM_TRACK_GAIN, "Gain", "dB", dsp_util::gainToLinScale(1.0f) },
             { PARAM_TRACK_PAN, "Pan", "", 0.5f },
     } };
-    for (const track_param_entry_t& paramEntry : parameterTypes) {
-        automatable_param_t* regparam = registerParam(paramEntry.id);
-        regparam->defaultValue = paramEntry.val;
-        regparam->value = paramEntry.val;
-        regparam->name  = paramEntry.name;
-        regparam->unit  = paramEntry.unit;
+    for (const auto& paramEntry : parameterTypes) {
+        registerParam(paramEntry.id)->initValue(paramEntry);
     }
+    getParam(PARAM_TRACK_PAN)->isBiPolar = true;
     for (int i = 0; i < MAX_SEND_CHANNELS; i++) {
         automatable_param_t* regparam = registerParam(PARAM_OFFSET_SEND_GAIN + i);
-        regparam->defaultValue = 0.0f;
-        regparam->value = 0.0f;
+        regparam->setInitial(0.0f);
         regparam->name  = StringFormat("Send %d Gain", (i + 1));
         regparam->shortLabel  = "Gain";
         regparam->unit  = "dB";
         automatable_param_t* regparamPan = registerParam(PARAM_OFFSET_SEND_PAN + i);
-        regparamPan->defaultValue = 0.5f;
-        regparamPan->value = 0.5f;
+        regparamPan->setInitial(0.5f);
         regparamPan->name  = StringFormat("Send %d Pan", (i + 1));
         regparamPan->shortLabel  = "Pan";
         regparamPan->unit  = "dB";
@@ -1401,23 +1396,19 @@ track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), au
     getParam(PARAM_ENABLE)->quantizationSteps = 1;
 }
 
-float track_params_t::getParamValue(int32_t idx) {
-    automatable_param_t* param = getParamUnchecked(idx);
-    dbgassert(param);
-    //        return convertValFrom(idx, param->value);
-    return param->value;
-}
-
 void track_params_t::setParamValue(int32_t idx, float val, int flags) {
     automatable_param_t* param = getParamUnchecked(idx);
     dbgassert(param);
-    if (!(flags & FLG_PAR_UPDATE_AUTOMATED)) {
-        param->nonAutomated = val;
+    float valPre = param->getValue();
+    if (flags & FLG_PAR_UPDATE_AUTOMATED) {
+        param->setModulated(val);
+    } else {
+        param->set(val);
     }
     if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
         param->inUse = true;
     }
-    param->value = val;
+    postSetParameter(idx, valPre, val, flags);
 }
 
 track_t* track_params_t::getTrack() {

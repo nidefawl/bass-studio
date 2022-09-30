@@ -451,7 +451,9 @@ public:
     explicit DawCtrl(DawInstance& _daw)
     : daw(_daw)
     {
+#if BUILD_DAW_HOST
         this->parentDawCtrl = this;
+#endif
         setWindowName(BuildInfo::BUILD_BINARY_NAME);
     }
 

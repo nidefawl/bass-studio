@@ -50,7 +50,6 @@ public:
 
     // automatable_t interface
     String getAutomatableName() override;
-    float getParamValue(int32_t idx) override;
     param_unit_t convertParamValueToDisplay(int32_t idx, float value) override;
     automatable_param_ref_t toRef() const override;
 

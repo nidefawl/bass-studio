@@ -175,6 +175,7 @@ namespace DAW {
         track_gui_entry_t* entry{};
         if(!guiTrackCtr->getPointerEntry(track, &entry))
             return false;
+        dawCtrl->closeContextMenu();
         switch (_id) {
             case ID_SHOW_NEW: {
                 auto const lane = guiTrackCtr->addAutomationLane(entry, atl, paramIdx, true);

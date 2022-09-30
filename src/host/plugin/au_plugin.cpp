@@ -22,14 +22,6 @@ void auplugin::process(const DAW::Host::Host* const host, AudioBlock* in, AudioB
 }
 samplecount_t auplugin::getPluginLatency() { return 0; }
 
-float auplugin::getParamValue(int32_t idx) {
-    automatable_param_t* param = getParamUnchecked(idx);
-    dbgassert(param);
-    if (param->internalIdx >= 0) {
-        param->value = 0;// vst_getParameter(this, handle->aeffect, param->internalIdx);
-    }
-    return param->value;
-}
 param_unit_t auplugin::convertParamValueToDisplay(int32_t idx, float value) {
     auto* param = getParamUnchecked(idx);
     dbgassert(param);

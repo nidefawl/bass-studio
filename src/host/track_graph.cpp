@@ -456,7 +456,7 @@ namespace DAW {
                     }
                     track_node_t& trackReturnCfg = getNode(map, srcStageId);
                     trackReturnCfg.dependencies.push_back(trackImpl->stageId.stageId);
-                    trackReturnCfg.pushs.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT_POST), automationRef, automationRefPan, 0, trackImpl->flags });
+                    trackReturnCfg.pushs.push_back(track_source_t{ trackEdgeId++, ChannelStage(trackImpl, stage_bufferpoint::OUTPUT), automationRef, automationRefPan, 0, trackImpl->flags });
                     trackReturnCfg.children.push_back(&trackCfg);
                     trackCfg.parents.push_back(&trackReturnCfg);
                 }

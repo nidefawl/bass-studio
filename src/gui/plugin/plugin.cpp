@@ -172,7 +172,7 @@ guiplugin::guiplugin(effectbase* _effect)
     buttonBypass.colorActive = GuiColor::COL_BTN_BG_BYPASS_ACTIVE;
     buttonBypass.icon        = ICON_BYPASS;
     buttonBypass.fnGetState  = [_effect]() {
-        return _effect->getParamValue(PARAM_ENABLE) > 0;
+        return _effect->getParam(PARAM_ENABLE)->getValue() > 0;
     };
     //buttonBypass.setTint(0x80c040);
     buttonDelete.setLabel("Remove");
@@ -459,7 +459,7 @@ void effectbase::addPropertiesParameterList(Table::tbl& table) {
         tbl_row_t row;
         row.cols.push_back(tblString{param->name});
         row.cols.push_back(tblString{param->unit});
-        row.cols.push_back(tblString{StringFormat("%0.4f", param->value)});
+        row.cols.push_back(tblString{StringFormat("%0.4f", param->getValue())});
         row.cols.push_back(tblint{param->idx});
         row.cols.push_back(tblint{param->internalIdx});
         row.cols.push_back(tblint{param->flags});
@@ -476,7 +476,7 @@ void effectbase::addPropertiesTooltip(Table::tbl& table) {
     table.rows.push_back({ { tblstr{ "track" }, tblint{ (int64_t) this->getTrack(), "%12x" } } });
     table.rows.push_back({ { tblstr{ "tracklink" }, tblint{ (int64_t) this->getTrackLink(), "%12x" } } });
     table.rows.push_back({ { tblstr{ "bIsEnabled" }, tblint{ this->bIsEnabled } } });
-    table.rows.push_back({ { tblstr{ "PARAM_ENABLE" }, tblfloat{ this->getParamValue(PARAM_ENABLE) } } });
+    table.rows.push_back({ { tblstr{ "PARAM_ENABLE" }, tblfloat{ getParam(PARAM_ENABLE)->getValue() } } });
 }
 template<>
 void guitooltip<guiplugin>::setContent() {

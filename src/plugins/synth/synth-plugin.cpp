@@ -1048,11 +1048,11 @@ namespace PluginSynth {
             return this->type;
         }
 
-        ~SynthParamBase() override                  = default;
-        virtual void set(double f) noexcept         = 0;
+        ~SynthParamBase() override= default;
+        virtual void set(double f, double fModulated) noexcept = 0;
         virtual double getAsDouble() const noexcept = 0;
-        virtual String getValueDisplay(double value) const      = 0;
-        virtual void resetToInitial() noexcept      = 0;
+        virtual String getValueDisplay(double value) const = 0;
+        virtual void resetToInitial() noexcept = 0;
         virtual param_converted_t convertValueDisplay(const param_unit_t& displayValue) const = 0;
         const String& getName() const {
             return this->name;
@@ -1073,20 +1073,21 @@ namespace PluginSynth {
     struct SynthParam_Float : public SynthParamBase {
         explicit SynthParam_Float(Parameters _enumParam) : SynthParamBase(ParamType::FLOAT, _enumParam) {
         }
-        double valDouble = 0.0;
-        double valInitial = 0.0;
-        double fmin      = 0.0;
-        double fmax      = 1.0;
+        double valDouble    = 0.0;
+        double valModulated = 0.0;
+        double valInitial   = 0.0;
+        double fmin         = 0.0;
+        double fmax         = 1.0;
         SynthParam_Float* setRange(double _fmin, double _fmax) {
             fmin = _fmin;
             fmax = _fmax;
             return this;
         }
         double Value() const noexcept {
-            return math::clamp(valDouble * (fmax - fmin) + fmin, fmin, fmax);
+            return math::clamp(valModulated * (fmax - fmin) + fmin, fmin, fmax);
         }
         double ValueModulated(double valModulated) const noexcept {
-            return math::clamp((valDouble + valModulated) * (fmax - fmin) + fmin, fmin, fmax);
+            return math::clamp((valModulated + valModulated) * (fmax - fmin) + fmin, fmin, fmax);
         }
         void setInitialValue(double f) {
             double fVal = math::max(0.0, math::min(1.0, (f - fmin) / (fmax - fmin)));
@@ -1101,8 +1102,9 @@ namespace PluginSynth {
         double GetMax() {
             return fmax;
         }
-        void set(double f) noexcept override {
+        void set(double f, double fModulated) noexcept override {
             valDouble = f;
+            valModulated = fModulated;
         }
         double getAsDouble() const noexcept override {
             return valDouble;
@@ -1121,43 +1123,45 @@ namespace PluginSynth {
         }
         SynthParam_Int(ParamType _paramType, Parameters _enumParam) : SynthParamBase(_paramType, _enumParam) {
         }
-        double valFloat         = 0.0;
-        double valInitial       = 0.0;
-        int32_t iValue          = 0;
-        int32_t iMin            = 0;
-        int32_t iMax            = 1;
+        double valFloat     = 0.0;
+        double valModulated = 0.0;
+        double valInitial   = 0.0;
+        int32_t iValue      = 0;
+        int32_t iMin        = 0;
+        int32_t iMax        = 1;
         SynthParam_Int* setRange(int32_t _iMin, int32_t _iMax) {
             iMin = _iMin;
             iMax = _iMax;
             return this;
         }
+        int32_t getInt32(double value) const noexcept {
+            return math::clamp(math::rounddS32(valModulated * (iMax - iMin) + iMin), iMin, iMax);
+        }
         int32_t Value() const noexcept {
-            return math::max(iMin, math::min(iMax, this->iValue));
+            return getInt32(valModulated);
         }
         double ValueModulated(double valModulated) const noexcept {
             const double dMin       = iMin;
             const double dMax       = iMax;
-            const double dModulated = (dMax - dMin) * valModulated + double(iValue);
+            const double dModulated = (dMax - dMin) * valModulated + Value();
             return math::clamp<double>(dModulated, dMin, dMax);
-        }
-        int32_t getUnclampped() const noexcept {
-            return this->iValue;
         }
         double getAsDouble() const noexcept override {
             return valFloat;
         }
-        void set(double f) noexcept override {
+        void set(double f, double fModulated) noexcept override {
             auto iVal = math::rounddS32(f * (iMax - iMin) + iMin);
             iValue    = math::clamp(iVal, iMin, iMax);
             valFloat  = f;
+            valModulated = fModulated;
         }
         void setInitialValue(int32_t i) noexcept {
             iValue   = math::clamp(i, iMin, iMax),
-            valFloat = valInitial = math::clamp((iValue - iMin) / static_cast<double>(iMax - iMin), 0.0, 1.0);
+            valFloat = valModulated = valInitial = math::clamp((iValue - iMin) / static_cast<double>(iMax - iMin), 0.0, 1.0);
         }
         void resetToInitial() noexcept override {
             iValue   = math::clamp(static_cast<int32_t>(valInitial * (iMax - iMin) + iMin), iMin, iMax);
-            valFloat = valInitial;
+            valFloat = valModulated = valInitial;
         }
         String getValueDisplay(double value) const noexcept override {
             return StringFormat(StringAsCStr(format), math::clamp(math::rounddS32(value * (iMax - iMin) + iMin), iMin, iMax));
@@ -1745,7 +1749,7 @@ namespace PluginSynth {
             const auto numParams = CtrSize(vecParams);
             snapshot.params.reserve(numParams);
             for (int32_t i = 0; i < numParams; ++i) {
-                dbgassert(vecParams[i]->getAsDouble() >= 0.0 && vecParams[i]->getAsDouble() <= 1.0);
+                // dbgassert(vecParams[i]->getAsDouble() >= 0.0 && vecParams[i]->getAsDouble() <= 1.0);
                 snapshot.params.push_back({ i, vecParams[i]->getAsDouble() });
             }
             const auto numModulations = CtrSize(modulations);
@@ -1802,7 +1806,7 @@ namespace PluginSynth {
             }
             for (auto& ps : snapshot.params) {
                 if (ps.paramIdx >= 0 && ps.paramIdx < numParams) {
-                    vecParams[ps.paramIdx]->set(math::clamp(ps.value, 0.0, 1.0));
+                    vecParams[ps.paramIdx]->set(math::clamp(ps.value, 0.0, 1.0), math::clamp(ps.value, 0.0, 1.0));
                 } else {
                     dbgassert(0);
                 }
@@ -2818,8 +2822,7 @@ namespace PluginSynth {
                 int idx = PARAM_ENABLE + 1 + (&paramEntry - &vecParams.front());
                 automatable_param_t* regparam = registerParam(idx);
                 dbgassert(regparam && regparam->idx > 0);
-                regparam->defaultValue = paramEntry->getAsDouble();
-                regparam->value = paramEntry->getAsDouble();
+                regparam->setInitial(paramEntry->getAsDouble());
                 regparam->name  = paramEntry->shortName;
                 regparam->unit  = paramEntry->unit;
                 switch (paramEntry->type) {
@@ -2831,6 +2834,31 @@ namespace PluginSynth {
                         dbgassert(paramInt);
                         auto params = paramInt->iMax - paramInt->iMin;
                         regparam->quantizationSteps = params;
+                        break;
+                }
+                switch (paramEntry->enumParam) {
+                    case Parameters::Osc1Fine:
+                    case Parameters::Osc2Fine:
+                    case Parameters::FmFine:
+                    case Parameters::ModEnvFm:
+                    case Parameters::VolEnvFm:
+                    case Parameters::LfoFm:
+                    case Parameters::FmCoarse:
+                    case Parameters::Osc1Coarse:
+                    case Parameters::Osc2Coarse:
+                    case Parameters::FilterDrive:
+                    case Parameters::Osc1Split:
+                    case Parameters::Osc2Split:
+                    case Parameters::LfoPhase:
+                    case Parameters::FilterCutoff:
+                    case Parameters::FilterKeyTracking:
+                    case Parameters::VolEnvCutoff:
+                    case Parameters::ModEnvCutoff:
+                    case Parameters::LfoCutoff:
+                    case Parameters::Panning:
+                        regparam->isBiPolar = true;
+                        break;
+                    default:
                         break;
                 }
             }
@@ -2870,7 +2898,8 @@ namespace PluginSynth {
         void postSetParameter(int32_t idx, float preVal, float val, int flags) override {
             if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
                 SynthParamBase* param = vecParams[idx-1];
-                param->set(getParamValue(idx));
+                auto paramHost = getParam(idx);
+                param->set(paramHost->getValue(), paramHost->getValueModulated());
                 this->impl->OnParamChange(param->enumParam);
             }
             internalplugin::postSetParameter(idx, preVal, val, flags);
@@ -2920,7 +2949,8 @@ namespace PluginSynth {
 
         void onPresetLoaded() {
             for (int32_t idx = 0; idx < CtrSize(vecParams); idx++) {
-                getParam(idx + 1)->value = vecParams[idx]->getAsDouble();
+                auto param = getParam(idx + 1);
+                param->set(vecParams[idx]->getAsDouble());
             }
         }
 
@@ -3018,7 +3048,7 @@ namespace PluginSynth {
     void PluginVST2_Synth::setParameter(VstInt32 index, float value) {
         if (index >= 0 && index < CtrSize(vecParams)) {
             SynthParamBase* param = vecParams[index];
-            param->set(value);
+            param->set(value, value);
             this->impl->OnParamChange(param->enumParam);
         }
         for (auto& pviewctr : this->views) {

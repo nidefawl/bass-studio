@@ -80,7 +80,7 @@ public:
                 hostSidePlugin->getHostCallback()->onParametersChanged(hostSidePlugin, paramIdx, val, 0, 2);
                 paramAutomatable->postSetParameter(paramIdx, preVal, getValue(), FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
             };
-            setValueInit(hostSidePlugin->getParamValue(paramIdx));
+            setValueInit(paramAutomatable->getParam(paramIdx)->getValue());
             setLabel(hostSidePlugin->getParamName(paramIdx));
         }
     }

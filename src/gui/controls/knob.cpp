@@ -64,9 +64,6 @@ void guiknob::setColors() {
     if (isHighlighted()) {
         valColor = GuiColor::COL_KNOB_HIGHLIGHT;
         indColor = GuiColor::COL_KNOB_HIGHLIGHT;
-    } else if (isModulated()) {
-        valColor = GuiColor::COL_KNOB_MODULATED;
-        indColor = GuiColor::COL_KNOB_MODULATED;
     } else if (isAutomated()) {
         valColor = GuiColor::COL_AUTOMATED;
         indColor = GuiColor::COL_AUTOMATED;
@@ -197,12 +194,27 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
         c2 = theme->getColor(GuiColor::COL_BG_DRKER2);
 
     float val     = math::clamp(value, bIsBipolar ? -1.0f : 0.0f, 1.0f);
+    float valModulated = val;
+    bool bIsModulated = false;
+    bool bIsBipolar = this->bIsBipolar;
+    if (this->paramAutomatable) {
+        bIsModulated = paramAutomatable->isParamModulated(paramIdx);
+        auto param = paramAutomatable->getParam(paramIdx);
+        if (param) {
+            bIsBipolar |= param->isBiPolar;
+            val = math::clamp(param->getValue(), bIsBipolar||param->isBiPolar ? -1.0f : 0.0f, 1.0f);
+            valModulated = math::clamp(param->getValueModulated(), bIsBipolar||param->isBiPolar ? -1.0f : 0.0f, 1.0f);
+        }
+    }
+
     float minSize = math::min(insetS.x, insetS.y);
     float cx     = insetP.x;
     float cy     = insetP.y;
     float width  = insetS.x;
     float height = insetS.y;
-    
+    if (isHighlighted() && val < 0.025f) {
+        val = 0.025f;
+    }
     if (isBackgroundRendered()) {
         nvgBeginPath(vg);
         nvgRect(vg, cx, cy, insetS.x, height);
@@ -211,13 +223,54 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
         nvgFill(vg);
     }
     if (knobType == knobtype::SLIDER_LABELED) {
-        float lineThickness = math::max(1.0f, roundf((minSize / 32.0f) * 2.0f) / 2.0f);
-        float heightRange = insetS.y * val;
-        nvgBeginPath(vg);
-        nvgRect(vg, cx, cy + height - heightRange, insetS.x, heightRange);
-        nvgFillColor(vg, theme->getColor(valColor));
-        nvgFillCustomPar(vg, -3);
-        nvgFill(vg);
+        int nPasses = bIsModulated ? 2 : 1;
+        int sliderAxisDir = 1;
+        auto posKn = vec2(insetP);
+        auto sizeKn = vec2(insetS);
+        for (int pass = 0; pass < nPasses; ++pass) {
+            vec2 rectPos = {};
+            vec2 rectSize = {};
+            float fRenderValue = pass == 0 ? val : valModulated;
+            bool bSaturated = math::abs(fRenderValue*2.0f - 1.0f) > 1.0f;
+            fRenderValue = math::clamp(fRenderValue, 0.0f, 1.0f);
+            auto color = pass == 0 ? valColor : GuiColor::COL_KNOB_MODULATED;
+            if (!bIsBipolar) {
+                rectSize = sizeKn * fRenderValue;
+                rectPos  = posKn;
+                if (sliderAxisDir == 1) {
+                    rectPos.y += sizeKn.y - rectSize.y;
+                    rectSize.x = sizeKn.x;
+                } else {
+                    rectSize.y = sizeKn.y;
+                }
+            } else {
+                float biVal = fRenderValue * 2.0f - 1.0f;
+                float fRenderValueAbs = math::abs(biVal);
+                if (biVal < 0) {
+                    rectPos = posKn + sizeKn * 0.5f;
+                    rectSize = sizeKn * 0.5f * fRenderValueAbs;
+                } else {
+                    rectPos = posKn + sizeKn * 0.5f * (1.0f - fRenderValueAbs);
+                    rectSize = sizeKn * 0.5f * fRenderValueAbs;
+                }
+                rectPos[1-sliderAxisDir] = posKn[1-sliderAxisDir];
+                rectSize[1-sliderAxisDir] = sizeKn[1-sliderAxisDir];
+            }
+            if (rectSize[sliderAxisDir] > 0.45f) {
+                nvgBeginPath(vg);
+                nvgRect(vg, rectPos.x, rectPos.y, rectSize.x, rectSize.y);
+                nvgFillColor(vg, theme->getColor(color));
+                nvgFillCustomPar(vg, -3);
+                nvgFill(vg);
+                if (bSaturated) {
+                    nvgBeginPath(vg);
+                    nvgRect(vg, rectPos.x, rectPos.y, rectSize.x, rectSize.y);
+                    nvgFillColor(vg, theme->getColor(GuiColor::COL_MODULATION_SATURATED));
+                    nvgFillCustomPar(vg, -4);
+                    nvgFill(vg);
+                }
+            }
+        }
         auto modRangesOptional = getKnobModulationRanges();
         if (modRangesOptional) {
             dbgassert(CtrSize(*modRangesOptional));
@@ -276,9 +329,19 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
                 }
             }
         }
+        float lineThickness = math::max(1.0f, roundf((minSize / 32.0f) * 2.0f) / 2.0f);
         float heightHandle = math::max(3.0f, lineThickness + 3.0f);
+        auto handlePos = posKn;
+        auto handleSize = sizeKn;
+        if (sliderAxisDir == 1) {
+            handlePos = posKn + vec2(0, sizeKn.y * (1.0f - val) - heightHandle * 0.5f);
+            handleSize = vec2(sizeKn.x, heightHandle);
+        } else {
+            handlePos = posKn + vec2(sizeKn.x * val - heightHandle * 0.5f, 0);
+            handleSize = vec2(heightHandle, sizeKn.y);
+        }
         nvgBeginPath(vg);
-        nvgRect(vg, cx, cy + height - heightRange - heightHandle * 0.5f, insetS.x, heightHandle);
+        nvgRect(vg, handlePos.x, handlePos.y, handleSize.x, handleSize.y);
         c2.a = 0.5f;
         nvgFillColor(vg, c2);
         nvgFill(vg);
@@ -298,6 +361,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
         nvgStroke(vg);
         float rangeScaled = bIsBipolar ? range * 0.5f : range;
         float startOffset = bIsBipolar ? start + rangeScaled : start;
+        
         float end = startOffset + val * rangeScaled;
         if (fabs(val) > 1E-8F) {
             float endArc = end;
@@ -361,7 +425,7 @@ void guiknob::setKnobInternalHandlers() {
 #if BUILD_DAW_HOST
     fnGetValue = [this]() {
         if (paramAutomatable) {
-            return paramAutomatable->getParamValue(paramIdx);
+            return paramAutomatable->getParam(paramIdx)->getValue();
         }
         return value;
     };
@@ -511,9 +575,6 @@ void gui_slider_textfield::setColors() {
     if (isHighlighted()) {
         valColor = GuiColor::COL_KNOB_HIGHLIGHT;
         indColor = GuiColor::COL_KNOB_HIGHLIGHT;
-    } else if (isModulated()) {
-        valColor = GuiColor::COL_KNOB_MODULATED;
-        indColor = GuiColor::COL_KNOB_MODULATED;
     } else if (isAutomated()) {
         valColor = GuiColor::COL_AUTOMATED;
         indColor = GuiColor::COL_AUTOMATED;
@@ -528,29 +589,42 @@ void gui_slider_textfield::render(NVGcontext* vg) {
     if (paramAutomatable && paramIdx > -1) {
         vec2 insetP        = vec2(pos + 1);
         vec2 insetS        = vec2(size - 2);
-        float fParamScaled = getRenderScaledValue(paramAutomatable->getParamValue(paramIdx));
+        
+        auto param = paramAutomatable->getParam(paramIdx);
+        auto val = param->getValue();
+        auto valModulated = param->getValueModulated();
+        float fParamScaled = getRenderScaledValue(val);
+        float fParamModulated = getRenderScaledValue(valModulated);
+        if (isHighlighted() && fParamScaled < 0.025f) {
+            fParamScaled = 0.025f;
+        }
         float x            = insetP.x;
         float y            = insetP.y;
-        float rectWidth;
-        if (renderAsBipolar()) {
-            // render bipolar: fParamScaled is 0..1
-            // make sure rectWidth is not negative
-            if (fParamScaled < 0.5f) {
-                x         = insetP.x + insetS.x * fParamScaled;
-                rectWidth = insetS.x * (0.5f - fParamScaled);
+        int nPasses = paramAutomatable->isParamModulated(paramIdx) ? 2 : 1;
+        for (int pass = 0; pass < nPasses; ++pass) {
+            float rectWidth;
+            float fRenderValue = pass == 0 ? fParamScaled : fParamModulated;
+            auto color = pass == 0 ? valColor : GuiColor::COL_KNOB_MODULATED;
+            if (renderAsBipolar()) {
+                // render bipolar: fParamScaled is 0..1
+                // make sure rectWidth is not negative
+                if (fRenderValue < 0.5f) {
+                    x         = insetP.x + insetS.x * fRenderValue;
+                    rectWidth = insetS.x * (0.5f - fRenderValue);
+                } else {
+                    x         = insetP.x + insetS.x * 0.5f;
+                    rectWidth = insetS.x * (fRenderValue - 0.5f);
+                }
             } else {
-                x         = insetP.x + insetS.x * 0.5f;
-                rectWidth = insetS.x * (fParamScaled - 0.5f);
+                rectWidth = (fRenderValue) *insetS.x;
             }
-        } else {
-            rectWidth = (fParamScaled) *insetS.x;
-        }
-        if (rectWidth > 0.45f) {
-            nvgBeginPath(vg);
-            nvgRect(vg, x, y, rectWidth, insetS.y);
-            nvgFillColor(vg, theme->getColor(valColor));
-            nvgFillCustomPar(vg, -3);
-            nvgFill(vg);
+            if (rectWidth > 0.45f) {
+                nvgBeginPath(vg);
+                nvgRect(vg, x, y, rectWidth, insetS.y);
+                nvgFillColor(vg, theme->getColor(color));
+                nvgFillCustomPar(vg, -3);
+                nvgFill(vg);
+            }
         }
         float textWidth = 0;
         if (isTextCommitted()) {
@@ -584,7 +658,7 @@ bool gui_slider_textfield::handleCharInput(uint32_t codepoint) {
         char keyChar = (char) codepoint;
         if ((keyChar >= '0' && keyChar <= '9') || (keyChar == '-')) {
             MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
-            gui_textfield::setValue(getValueAsString(paramAutomatable->getParamValue(paramIdx)));
+            gui_textfield::setValue(getValueAsString(paramAutomatable->getParam(paramIdx)->getValue()));
             gui_textfield::focusEvent(evt, true);
             gui_textfield::setSelectionRange(-1, -1);
         }
@@ -599,7 +673,7 @@ bool gui_slider_textfield::keyboardEvent(int key, int scancode, KeyEventType act
     if (action == KeyEventType::K_PRESS && isTextCommitted()) {
         if ((key == KEY_ENTER || key == KEY_KP_ENTER)) {
             MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
-            gui_textfield::setValue(getValueAsString(paramAutomatable->getParamValue(paramIdx)));
+            gui_textfield::setValue(getValueAsString(paramAutomatable->getParam(paramIdx)->getValue()));
             gui_textfield::focusEvent(evt, true);
             gui_textfield::setSelectionRange(-1, -1);
         }
@@ -639,7 +713,7 @@ void gui_slider_textfield::handleDraggedBegin(MouseEvent& evt) {
     }
     if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
         MouseHitEvt mouseHitEvt(MouseHitType::MOUSE_LEFT, 0);
-        gui_textfield::setValue(getValueAsString(paramAutomatable->getParamValue(paramIdx)));
+        gui_textfield::setValue(getValueAsString(paramAutomatable->getParam(paramIdx)->getValue()));
         gui_textfield::focusEvent(mouseHitEvt, true);
         gui_textfield::setSelectionRange(-1, -1);
         return;
@@ -672,7 +746,7 @@ void gui_slider_textfield::handleDraggedRelease(MouseEvent& evt) {
     }
 }
 void gui_slider_textfield::updateAutomatableParam(float amt, bool applyUserInputScaling) {
-    float fNew = modifyParam(paramAutomatable->getParamValue(paramIdx), amt, applyUserInputScaling);
+    float fNew = modifyParam(paramAutomatable->getParam(paramIdx)->getValue(), amt, applyUserInputScaling);
     auto flags = param_update_flags::FLG_PAR_UPDATE_USER;
     paramAutomatable->setParamEdit(paramIdx, fNew, flags);
 }
@@ -691,7 +765,84 @@ float gui_slider_textfield::modifyParam(float param, float amt, bool applyUserIn
 
 bool gui_slider_textfield::isModulated() {
     if (paramAutomatable) {
+#if BUILD_DAW_HOST
         return DAW::IsParamModulated(paramAutomatable, paramIdx);
+#endif
     }
     return false;
+}
+
+void guiknob::modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+    
+}
+
+void guiknob::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+    if (this->paramAutomatable) {
+#if BUILD_DAW_HOST
+        DAW::ConnectModulationInputChannel(this->paramAutomatable, paramIdx, g->getChannelRef());
+#endif
+    }
+}
+
+bool gui_slider_textfield::isHighlighted() const {
+#if BUILD_DAW_HOST
+    if (!paramAutomatable) {
+        return false;
+    }
+    auto dragged = dawCtrl->getDraggedModulation();
+    if (dragged) {
+        return dawCtrl->guiOver != this;
+    }
+    auto focused = dawCtrl->getFocusedModulation();
+    if (focused) {
+        auto ref = focused->getChannelRef();
+        if (paramAutomatable->isParamConnectedTo(paramIdx, ref))
+            return true;
+    }
+#endif
+    return false;
+}
+
+bool guiknob::isHighlighted() const {
+#if BUILD_DAW_HOST
+    if (!paramAutomatable) {
+        return false;
+    }
+    auto dragged = dawCtrl->getDraggedModulation();
+    if (dragged) {
+        return dawCtrl->guiOver != this;
+    }
+    auto focused = dawCtrl->getFocusedModulation();
+    if (focused) {
+        auto ref = focused->getChannelRef();
+        if (paramAutomatable && paramAutomatable->isParamConnectedTo(paramIdx, ref))
+            return true;
+    }
+#endif
+    return false;
+}
+
+GuiColor::constant_t gui_slider_textfield::getBackgroundColor() const {
+    if (isHighlighted()) {
+        return GuiColor::COL_KNOB_HIGHLIGHT_BACKGROUND;
+    }
+    return gui_textfield::getBackgroundColor();
+}
+
+GuiColor::constant_t guiknob::getBackgroundColor() const {
+    if (isHighlighted()) {
+        return GuiColor::COL_KNOB_HIGHLIGHT_BACKGROUND;
+    }
+    return guibase::getBackgroundColor();
+}
+
+void gui_slider_textfield::modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+}
+
+void gui_slider_textfield::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+    if (this->paramAutomatable) {
+#if BUILD_DAW_HOST
+        DAW::ConnectModulationInputChannel(this->paramAutomatable, paramIdx, g->getChannelRef());
+#endif
+    }
 }

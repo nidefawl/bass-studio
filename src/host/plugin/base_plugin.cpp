@@ -64,13 +64,8 @@ effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGloba
     const std::array<effectbase_param_entry_t, 1> parameterTypes{ {
             { PARAM_ENABLE, "Enabled", "", 1.0f },
     } };
-    for (const effectbase_param_entry_t& paramEntry : parameterTypes) {
-        automatable_param_t* regparam = registerParam(paramEntry.id);
-
-        regparam->defaultValue = paramEntry.val;
-        regparam->value = paramEntry.val;
-        regparam->name  = paramEntry.name;
-        regparam->unit  = paramEntry.unit;
+    for (const auto& paramEntry : parameterTypes) {
+        registerParam(paramEntry.id)->initValue(paramEntry);
     }
     getParam(PARAM_ENABLE)->quantizationSteps = 1;
     initDefaultIODesc();
@@ -98,7 +93,7 @@ void effectbase::load(DAW::Host::PluginManager* host) {
     initMeters();
     dbgassert(nLoadCalls == 0);
     nLoadCalls++;
-    bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
+    bIsEnabled = getParam(PARAM_ENABLE)->getValue() > 0;
 }
 
 void effectbase::unload(DAW::Host::PluginManager* host, int flags) {
@@ -354,9 +349,6 @@ int effect_deferred::getModuleStoredType() const {
 String effect_deferred::getAutomatableName() {
     return "plugin";
 }
-float effect_deferred::getParamValue(int32_t idx) {
-    return 0;
-}
 void effect_deferred::setParamValue(int32_t idx, float val, int flags) {
 }
 automatable_param_ref_t effect_deferred::toRef() const {
@@ -401,11 +393,12 @@ guiplugin* effect_deferred::getGui() {
 void effectbase::setParamValue(int32_t idx, float val, int flags) {
     automatable_param_t* param = getParamUnchecked(idx);
     dbgassert(param);
-    float valPre = param->value;
-    if (!(flags & FLG_PAR_UPDATE_AUTOMATED)) {
-        param->nonAutomated = val;
+    float valPre = param->getValue();
+    if (flags & FLG_PAR_UPDATE_AUTOMATED) {
+        param->setModulated(val);
+    } else {
+        param->set(val);
     }
-    param->value = val;
     if (param->idx == PARAM_ENABLE) {
         bool wasEnable = this->bIsEnabled;
         bool isEnabled = val > 0;

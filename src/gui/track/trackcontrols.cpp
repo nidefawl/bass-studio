@@ -194,7 +194,7 @@ public:
     gui_slider_gain() : gui_slider_textfield() {
     }
     float getRenderScaledValue(float param) override {
-        float gainDb = dsp_util::linScaleToGain(paramAutomatable->getParamValue(paramIdx));
+        float gainDb = dsp_util::linScaleToGain(param);
         float fParamScaled = (gainDb - dsp_util::GAIN_DBFLOOR) / (dsp_util::GAIN_DB6 - dsp_util::GAIN_DBFLOOR);
         if (fParamScaled <= 0) {
             fParamScaled = 0;

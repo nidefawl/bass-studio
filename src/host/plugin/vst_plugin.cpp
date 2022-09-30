@@ -396,7 +396,8 @@ void vstplugin::load(DAW::Host::PluginManager* mgr) {
             fallbackCat.nParams++;
         }
         //TODO: wrap getParameter call in exception handler
-        param->value = param->defaultValue = handle->aeffect->getParameter(handle->aeffect, param->internalIdx);
+        auto parDispatch = handle->aeffect->getParameter(handle->aeffect, param->internalIdx);
+        param->setInitial(parDispatch);
     }
     paramsCategories.push_back(fallbackCat);
 
@@ -464,7 +465,7 @@ namespace {
             plugin->visitParams([&ps, vstplugin = plugin, usesBinaryChunks](auto& mapEntry) {
                 automatable_param_t& param = mapEntry.second;
                 if (param.inUse || !usesBinaryChunks) {
-                    float curValue = param.value;
+                    float curValue = param.getValue();
                     int paramFlags = param.inUse ? 1 : 0;
                     if (param.internalIdx >= 0) {
                         curValue = vst_getParameter(vstplugin, vstplugin->handle->aeffect, param.internalIdx);
@@ -626,11 +627,11 @@ float vstplugin::getParamValue(int32_t idx) {
     dbgassert(param);
     if (param->internalIdx >= 0) {
         if (param->paramValueState & PARAM_FLAG_DIRTY) {
-            param->value = vst_getParameter(this, handle->aeffect, param->internalIdx);
+            param->set(vst_getParameter(this, handle->aeffect, param->internalIdx));
             param->paramValueState = PARAM_FLAG_SET;
         }
     }
-    return param->value;
+    return param->getValueModulated();
 }
 param_unit_t vstplugin::getParamValueDisplay(int32_t idx) {
     auto param = getParam(idx);

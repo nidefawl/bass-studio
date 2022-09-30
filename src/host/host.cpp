@@ -766,8 +766,9 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
             if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::stage_type::INPUT_EXTERNAL_AUDIO) {
                 // TODO: latency compensate (add external output nodes to graph)
                 /* Calculate master tracks gain level */
+                //TODO: use MixInputs
                 float fGainMaster;
-                if (dsp_util::getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainMaster)) {
+                if (dsp_util::getGainLvl(trackImpl->mixer.getParam(PARAM_TRACK_GAIN)->getValue(), fGainMaster)) {
                 }
                 int routedOutputChannelCount = DAW::AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
                 auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
@@ -1324,11 +1325,11 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
         tick_t postStageTickLatencyCompensated = math::floordS32(req.tickPosProcess - postStageTicksLatency);
         tick_t postStageTickEnd = math::floordS32(postStageTickLatencyCompensated + ticksPerBlock);
 
-        float fGainTrackLin = trackImpl->mixer.getParamValue(PARAM_GAIN);
+        float fGainTrackLin = trackImpl->mixer.getParam(PARAM_GAIN)->getValue();
 
         auto autParGain = GetParameterModulationFromRouting(this, GetRoutingFromDestinationParam(&trackImpl->mixer, PARAM_GAIN));
         auto autParPan = GetParameterModulationFromRouting(this, GetRoutingFromDestinationParam(&trackImpl->mixer, PARAM_PAN));
-        float fPanTrack = trackImpl->mixer.getParamValue(PARAM_PAN);
+        float fPanTrack = trackImpl->mixer.getParam(PARAM_PAN)->getValue();
         bool bFixedGainAndPan = true;
         if (autParGain.atl || autParPan.atl) {
             bFixedGainAndPan = false;
@@ -1963,11 +1964,6 @@ bool resolveAudioChannel(const Host::Host* const host, channelnum_t numChannelsT
     if (inputChannel.getType() == stage_type::INPUT_AUDIOSTAGE) {
         audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
         if (stage) {
-            /* Calculate audio/midi tracks gain level */
-            float fGainTrack = 0.0f;
-            if (!dsp_util::getGainLvl(stage->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
-                fGainTrack = 0.0f;
-            }
             track_audio_src src;
             auto* buff = &stage->input;
             switch (inputChannel.stage.buffer) {

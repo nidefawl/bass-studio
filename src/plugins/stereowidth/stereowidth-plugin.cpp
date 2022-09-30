@@ -74,12 +74,8 @@ namespace PluginStereoWidth {
                 { PARAM_GAIN, "Gain", "dB", dsp_util::gainToLinScaleWithRange(1.0f, MTR_CEIL, DBFS_MUTE_POS) },
                 { PARAM_WIDTH,  "Width",  "%", 0.5f }
         } };
-        for (const effectgain_param_entry& paramEntry : parameterTypes) {
-            automatable_param_t* regparam = registerParam(paramEntry.id);
-            regparam->defaultValue = paramEntry.val;
-            regparam->value = paramEntry.val;
-            regparam->name  = paramEntry.name;
-            regparam->unit  = paramEntry.unit;
+        for (const auto& paramEntry : parameterTypes) {
+            registerParam(paramEntry.id)->initValue(paramEntry);
         }
     }
 
@@ -131,13 +127,13 @@ namespace PluginStereoWidth {
         dbgassert(param);
         if (param->unit == "dB") {
             float fGain = 1.0f;
-            if (dsp_util::getGainLvlWithRange(param->value, MTR_CEIL, DBFS_MUTE_POS, fGain)) {
+            if (dsp_util::getGainLvlWithRange(value, MTR_CEIL, DBFS_MUTE_POS, fGain)) {
                 return {StringFormat("%.3f", dsp_util::dBFS(fGain)), param->unit};
             }
             return {"-INF", param->unit};
         }
         if (param->unit == "%") {
-            return {StringFormat("%.3f", param->value * 200.0f), param->unit};
+            return {StringFormat("%.3f", value * 200.0f), param->unit};
         }
         return internalplugin::convertParamValueToDisplay(idx, value);
     }

@@ -49,13 +49,9 @@ const std::array<midiarp::arp_param_entry_t, 8> midiarp::parameterTypes = getMid
 midiarp::midiarp(track_impl_t* _trImpl) : automatable_t(), trackImpl(_trImpl) {
     curRandTimeOffset.resize(NUM_ARP_MAX_POLY_VOICES);
     memset(curRandTimeOffset.data(), 0, curRandTimeOffset.size() * sizeof(float));
-    for (const arp_param_entry_t& paramEntry : parameterTypes) {
-        automatable_param_t* regparam = registerParam(paramEntry.id);
-
-        regparam->defaultValue = paramEntry.val;
-        regparam->value = paramEntry.val;
-        regparam->name  = paramEntry.name;
-        regparam->unit  = paramEntry.unit;
+    for (const auto& paramEntry : parameterTypes) {
+        auto regparam = registerParam(paramEntry.id);
+        regparam->initValue(paramEntry);
         regparam->quantizationSteps  = paramEntry.quantizationSteps;
     }
     getParam(ARP_PARAM_CLOCK)->quantizationSteps = syncClock ? (NUM_ARP_STEPSIZE_OPTIONS - 1) : 0;
@@ -64,23 +60,23 @@ param_unit_t midiarp::convertParamValueToDisplay(int32_t idx, float value) {
     dbgassert(getParam(idx));
     switch (idx) {
         case ARP_PARAM_CLOCK:
-            return {StringFormat("%d", getStepSize()), "ticks"};
+            return {StringFormat("%d", getStepSize(value)), "ticks"};
         case ARP_PARAM_GATE:
         //     //return StringFormat("%.2f %%", math::clamp(arp->getGateF()*100.0f, 0.0f, 100.0f));
-            return {StringFormat("%d", getDuration()), "ticks"};
+            return {StringFormat("%d", getDuration(value)), "ticks"};
         case ARP_PARAM_PATTERN: {
-            int32_t option = getPatternIdx();
+            int32_t option = getPatternIdx(value);
             if (option == 0) {
                 return {"Chord", ""};
             }
             return {StringFormat("%d", option), ""};
         }
         case ARP_PARAM_RAND_TIME:
-            return {StringFormat("%s%d", getRandTmMode() ? "+/-" : "+", getRandTime()), "ticks"};
+            return {StringFormat("%s%d", getRandTmMode(getParamValue(ARP_PARAM_RAND_MODE)) ? "+/-" : "+", getRandTime(value)), "ticks"};
         case ARP_PARAM_RAND_MODE:
-            return {getRandTmMode() ? "+/-" : "+", ""};
+            return {getRandTmMode(value) ? "+/-" : "+", ""};
         case ARP_PARAM_RAND_VEL:
-            return {StringFormat("+/-%d", getRandVelocity()), ""};
+            return {StringFormat("+/-%d", getRandVelocity(value)), ""};
     }
     return automatable_t::convertParamValueToDisplay(idx, value);
 }
@@ -114,7 +110,7 @@ param_converted_t midiarp::convertParamValueDisplay(int32_t idx, const param_uni
 }
 
 
-tick_t midiarp::getStepSize() {
+tick_t midiarp::getStepSize(float f) {
 
     if (syncClock) {
         int32_t option = (int32_t) std::floor(getParamValue(ARP_PARAM_CLOCK) * (NUM_ARP_STEPSIZE_OPTIONS - 1));
@@ -152,20 +148,20 @@ float midiarp::getStepSizeParamValueFromMapped(tick_t len) {
     return math::clamp<float>(pow(valueMapped, 1.0f/expo), 0.0f, 1.0f);
 }
 
-int32_t midiarp::getRandTmMode() {
+int32_t midiarp::getRandTmMode(float f) {
     auto option = (int32_t) std::round(getParamValue(ARP_PARAM_RAND_MODE) * (NUM_RANDOM_TIME_MODES - 1));
     dbgassert(option < NUM_RANDOM_TIME_MODES);
     return option;
 }
 
-tick_t midiarp::getDuration() {
+tick_t midiarp::getDuration(float f) {
     float scMin = 1.0f / 8.0f;
     float scMax = 2.0f;
     float expo  = 1.1f;//math::calcExponentForScale(0.5f, 1.0f, scMin, scMax);
                        //TODO: hardcode or constexpr this exponent
     float valRaw = getGateF();
     float valueMapped = pow(valRaw, expo) * (scMax - scMin) + scMin;
-    tick_t len        = (tick_t) (std::floor(valueMapped * getStepSize()));
+    tick_t len        = (tick_t) (std::floor(valueMapped * getStepSize(getParamValue(ARP_PARAM_CLOCK))));
     dbgassert(len > 0);
     return len;
 }
@@ -175,7 +171,7 @@ float midiarp::getDurationParamValueFromMapped(tick_t len) {
     float scMax = 2.0f;
     float expo  = 1.1f;//math::calcExponentForScale(0.5f, 1.0f, scMin, scMax);
                        //TODO: hardcode or constexpr this exponent
-    float valueMapped = (len/static_cast<float>(getStepSize()) - scMin) / (scMax - scMin);
+    float valueMapped = (len/static_cast<float>(getStepSize(getParamValue(ARP_PARAM_CLOCK))) - scMin) / (scMax - scMin);
     if (valueMapped <= 0.0f) {
         return 0.0f;
     }
@@ -183,8 +179,8 @@ float midiarp::getDurationParamValueFromMapped(tick_t len) {
 }
 
 float midiarp::getRandTimeParamValueFromMapped(tick_t len) {
-    const int minDuration = 0;//math::max(0, getStepSize() >> 4);
-    const int maxDuration = math::max(0, getStepSize() >> 1);
+    const int minDuration = 0;//math::max(0, getStepSize(getParamValue(ARP_PARAM_CLOCK)) >> 4);
+    const int maxDuration = math::max(0, getStepSize(getParamValue(ARP_PARAM_CLOCK)) >> 1);
     float fMapped = (len - minDuration) / static_cast<float>(maxDuration - minDuration);
     if (fMapped < 0.0f) {
         fMapped = 0.0f;
@@ -196,7 +192,7 @@ float midiarp::getRandVelocityParamValueFromMapped(int32_t vel) {
     return math::clamp(sqrtf(vel / 127.0f), 0.0f, 1.0f);
 }
 int midiarp::isChordOutput() {
-    return getPatternIdx() == 0;
+    return getPatternIdx(getParamValue(ARP_PARAM_PATTERN)) == 0;
 }
 int getStepIdx(int option, int step, int nNotes) {
     if (nNotes < 2) {
@@ -235,7 +231,7 @@ int getStepIdx(int option, int step, int nNotes) {
     }
 }
 int midiarp::getArpStepIdx(int _step, int nNotes) {
-    int32_t option = getPatternIdx();
+    int32_t option = getPatternIdx(getParamValue(ARP_PARAM_PATTERN));
     if (option > 0) {
         option--;
     }
@@ -268,7 +264,7 @@ void midiarp::createSnapshot(arp_snapshot& snapshot, const tracksnapshot_store_o
         snapshot.params.reserve(getNumParameters());
         visitParams([&snapshot](auto& mapEntry) {
             automatable_param_t& param = mapEntry.second;
-            snapshot.params.push_back(param_snapshot_t{ param.idx, param.value });
+            snapshot.params.push_back(param_snapshot_t{ param.idx, param.getValue() });
         });
     }
     if (opts.storeAutomation) {
@@ -315,17 +311,17 @@ void midiarp::allNotesOff(std::vector<noteevent_t>& noteEvents) {
     heldInput.clear();
 }
 
-int32_t midiarp::getRandVelocity() {
-    float fRandVel = pow(getRandVelocityF(), 2.0f);
+int32_t midiarp::getRandVelocity(float f) {
+    float fRandVel = pow(f, 2.0f);
     auto len     = (tick_t) (std::round(fRandVel * (127)));
     return len;
 }
 
-tick_t midiarp::getRandTime() {
-    float fRaw = getRandTimeF();
+tick_t midiarp::getRandTime(float f) {
+    float fRaw = f;
     float fRandTm         = pow(fRaw, 2.0f);
     const int minDuration = 0;//math::max(0, getStepSize() >> 4);
-    const int maxDuration = math::max(0, getStepSize() >> 1);
+    const int maxDuration = math::max(0, getStepSize(getParamValue(ARP_PARAM_CLOCK)) >> 1);
     auto len = (tick_t) (std::floor(minDuration + fRandTm * (maxDuration - minDuration)));
     return len;
 }
@@ -407,10 +403,10 @@ void midiarp::initRandomDelays(tick_t tick, tick_t startFrame, tick_t endFrame, 
     uint64_t stepSeed_u64 = (((resetTime + nextStep * stepSize + (seed) *326597ULL) * 2825836522051561ULL + stepSize * 1285607ULL) + nextStep) * 55733ULL;
     arpRand.rng_seed(stepSeed_u64);
     velocitySeed_u64     = static_cast<uint64_t>(arpRand.rng_rand()) << 32 | arpRand.rng_rand();
-    int32_t randMode     = getRandTmMode();
+    int32_t randMode     = getRandTmMode(getParamValue(ARP_PARAM_RAND_MODE));
     bool noRandomOnReset = true;
 
-    int32_t rndTime = noRandomOnReset && nextStep == 0 ? 0 : this->getRandTime();
+    int32_t rndTime = noRandomOnReset && nextStep == 0 ? 0 : this->getRandTime(getParamValue(ARP_PARAM_RAND_TIME));
 
     markers2.clear();
     processTimePoints.clear();
@@ -559,7 +555,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
         const tick_t tick = t;
 
         bool enabledBefore    = this->enable;
-        tick_t stepSizeBefore = getStepSize();
+        tick_t stepSizeBefore = getStepSize(getParamValue(ARP_PARAM_CLOCK));
         if (bEnableStateUserToggled) {
             bEnableStateUserToggled = false;
             this->enable            = bEnableNextState;
@@ -576,8 +572,8 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
             }
         }
 
-        tick_t stepSize           = getStepSize();
-        tick_t noteDuration       = getDuration();
+        tick_t stepSize           = getStepSize(getParamValue(ARP_PARAM_CLOCK));
+        tick_t noteDuration       = getDuration(getParamValue(ARP_PARAM_GATE));
         const bool isChordPattern = isChordOutput();
 
         // handle on/off state changes
@@ -796,7 +792,7 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
                 noteArpStep.time        = tick;
                 noteArpStep.len         = noteDuration;
                 noteArpStep.wallTime    = wallClockTime;
-                int32_t rndVelIntensity = this->getRandVelocity();
+                int32_t rndVelIntensity = this->getRandVelocity(getParamValue(ARP_PARAM_RAND_VEL));
                 if (rndVelIntensity) {
                     uint64_t stepSeed_u64 = (velocitySeed_u64 + noteArpInput.time * 2888443ULL + noteArpInput.pitch * 341123ULL + stepRecalc) * 484751ULL;
                     arpRand.rng_seed(stepSeed_u64);

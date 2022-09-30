@@ -83,12 +83,8 @@ namespace PluginSampleCrush {
         const std::array<effectgain_param_entry, 1> parameterTypes{ {
             { PARAM_NUM_SAMPLES, "#Samples", "samples",  0.0f }
         } };
-        for (const effectgain_param_entry& paramEntry : parameterTypes) {
-            automatable_param_t* regparam = registerParam(paramEntry.id);
-            regparam->defaultValue = paramEntry.val;
-            regparam->value = paramEntry.val;
-            regparam->name  = paramEntry.name;
-            regparam->unit  = paramEntry.unit;
+        for (const auto& paramEntry : parameterTypes) {
+            registerParam(paramEntry.id)->initValue(paramEntry);
         }
     }
 
@@ -122,7 +118,7 @@ namespace PluginSampleCrush {
         auto param = getParam(idx);
         dbgassert(param);
         if (param->idx == PARAM_NUM_SAMPLES) {
-            auto nPow2 = (1 << convertToBits(param->value));
+            auto nPow2 = (1 << convertToBits(value));
             return {StringFormat("%d", nPow2), param->unit};
         }
         return internalplugin::convertParamValueToDisplay(idx, value);

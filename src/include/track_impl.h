@@ -70,7 +70,6 @@ public:
     String getAutomatableName() override {
         return "Mixer";
     }
-    float getParamValue(int32_t idx) override;
     /**
      * setParamValue
      * @param idx
@@ -86,7 +85,7 @@ public:
     automatable_param_ref_t toRef() const override;
     track_t* getTrack() override;
     bool isEnabled() {
-        return getParamUnchecked(PARAM_ENABLE)->value >= 0.5f;
+        return getParamUnchecked(PARAM_ENABLE)->getValue() >= 0.5f;
     }
     void createSnapshot(track_params_snapshot_t& snapshot, const tracksnapshot_store_opts_t& opts);
     void loadSnapshot(const track_params_snapshot_t& snapshot);

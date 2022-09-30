@@ -188,14 +188,10 @@ module_group::module_group(int32_t _projectGlobalId, IHostCallback* _hostCallbac
             { PARAM_PAN, "Pan", "", 0.5f },
             { PARAM_GROUPPLUGIN_INPUT_GAIN, "Input Gain", "dB", 1.0f },
     } };
-    for (const effectgroup_param_entry_t& paramEntry : parameterTypes) {
-        automatable_param_t* regparam = registerParam(paramEntry.id);
-
-        regparam->defaultValue = paramEntry.val;
-        regparam->value = paramEntry.val;
-        regparam->name  = paramEntry.name;
-        regparam->unit  = paramEntry.unit;
+    for (const auto& paramEntry : parameterTypes) {
+        registerParam(paramEntry.id)->initValue(paramEntry);
     }
+    getParam(PARAM_TRACK_PAN)->isBiPolar = true;
 }
 
 module_group::~module_group() {

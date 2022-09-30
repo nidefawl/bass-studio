@@ -101,18 +101,18 @@ public:
     float getRandVelocityF() {
         return getParamValue(ARP_PARAM_RAND_VEL);
     }
-    int getPatternIdx() {
-        auto option = (int32_t) std::floor(getParamValue(ARP_PARAM_PATTERN) * (NUM_PATTERNS - 1));
+    int getPatternIdx(float f) {
+        auto option = (int32_t) std::floor(f * (NUM_PATTERNS - 1));
         dbgassert(option < NUM_PATTERNS);
         return option;
     }
 
-    tick_t getStepSize();
-    int32_t getRandTmMode();
-    tick_t getDuration();
-    int32_t getRandVelocity();
+    tick_t getStepSize(float f);
+    int32_t getRandTmMode(float f);
+    tick_t getDuration(float f);
+    int32_t getRandVelocity(float f);
+    tick_t getRandTime(float f);
 
-    tick_t getRandTime();
     int isChordOutput();
     int getArpStepIdx(int _step, int nNotes);
 
@@ -124,11 +124,6 @@ public:
 
     String getAutomatableName() override {
         return "Arp";
-    }
-    float getParamValue(int32_t idx) override {
-        automatable_param_t* param = getParamUnchecked(idx);
-        dbgassert(param);
-        return param->value;
     }
     void reset(tick_t _resetTime) {
         resetTime     = _resetTime;
@@ -145,10 +140,11 @@ public:
     void setParamValue(int32_t idx, float val, int flags) override {
         automatable_param_t* param = getParamUnchecked(idx);
         dbgassert(param);
-        if (!(flags & FLG_PAR_UPDATE_AUTOMATED)) {
-            param->nonAutomated = val;
+        if (flags & FLG_PAR_UPDATE_AUTOMATED) {
+            param->setModulated(val);
+        } else {
+            param->set(val);
         }
-        param->value = val;
         if (param->idx == PARAM_ENABLE) {
             if ((flags & FLG_PAR_UPDATE_USER)) {
                 bEnableNextState        = val > 0;

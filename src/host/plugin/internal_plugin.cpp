@@ -31,8 +31,9 @@ namespace {
             plugin->visitParams([&ps](auto& mapEntry) {
                 automatable_param_t& param = mapEntry.second;
                 if (param.inUse) {
-                    dbgassert(param.value >= 0.0f && param.value <= 1.0f);
-                    ps.params.push_back(param_snapshot_t{ param.idx, param.value, param.inUse ? 1 : 0 });
+                    auto paramValue = param.getValue();
+                    dbgassert(paramValue >= 0.0f && paramValue <= 1.0f);
+                    ps.params.push_back(param_snapshot_t{ param.idx, paramValue, param.inUse ? 1 : 0 });
                 }
             });
         }
@@ -74,12 +75,6 @@ void internalplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
 
 String internalplugin::getAutomatableName() {
     return this->sName;
-}
-
-float internalplugin::getParamValue(int32_t idx) {
-    automatable_param_t* param = getParamUnchecked(idx);
-    dbgassert(param);
-    return param->value;
 }
 
 void internalplugin::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {

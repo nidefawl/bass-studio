@@ -253,7 +253,8 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 }
 
 void toggleDeviceEnableState(automatable_t* effect, int flags) {
-    float f = math::clamp(1.0f - effect->getParamValue(PARAM_ENABLE), 0.0f, 1.0f);
+    auto paramEnable = effect->getParam(PARAM_ENABLE);
+    auto f = paramEnable->getValue() > 0 ? 0 : 1;
     if (flags & FLG_PAR_UPDATE_USER) {
         effect->deactivateAutomation(PARAM_ENABLE);
     }
@@ -295,6 +296,7 @@ void storeAutomation(std::vector<automation_view_t>& automatedParams, automatabl
     }
     log_printf("Storing %d automation lanes for device %s\n", total, StringAsCStr(at->getAutomatableName()));
 }
+
 void automatable_t::setParamEdit(int32_t idx, float val, int flags) {
     auto* automation = getRegisteredAutomation(idx);
     if (automation) {
@@ -302,11 +304,19 @@ void automatable_t::setParamEdit(int32_t idx, float val, int flags) {
     }
     setParamValue(idx, val, flags);
 }
+
+float automatable_t::getParamValue(int32_t idx) {
+    automatable_param_t* param = getParamUnchecked(idx);
+    dbgassert(param);
+    return param->getValueModulated();
+}
+
 param_unit_t automatable_t::getParamValueDisplay(int32_t idx) {
     auto param = getParam(idx);
     dbgassert(param);
-    return convertParamValueToDisplay(param->idx, param->value);
+    return convertParamValueToDisplay(param->idx, param->getValueModulated());
 }
+
 param_unit_t automatable_t::convertParamValueToDisplay(int32_t idx, float value) {
     auto param = getParam(idx);
     dbgassert(param);
@@ -329,6 +339,7 @@ param_unit_t automatable_t::convertParamValueToDisplay(int32_t idx, float value)
     }
     return { StringFormat("%f", value), param->unit};
 }
+
 param_converted_t automatable_t::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
     auto param = getParam(idx);
     dbgassert(param);
@@ -376,6 +387,7 @@ param_converted_t automatable_t::convertParamValueDisplay(int32_t idx, const par
     }
     return {fTextFieldVal, false};
 }
+
 namespace DAW {
     float CalculateModulatedParameter(const Host::PluginManager *const host, tick_t tick, automatable_t* device, int32_t paramIdx, float value) {
         float val = value;
@@ -395,6 +407,7 @@ namespace DAW {
         return val;
     }
 }
+
 bool automatable_t::isParamConnectedTo(int32_t paramIdx, const DAW::automation_channel_ref& ref) const {
     for (auto& input : inputChannelsAutomation) {
         if (input.idx == paramIdx && input.ref.refId == ref.ref.refId && input.ref.paramIdx == ref.ref.paramIdx) {
@@ -403,6 +416,7 @@ bool automatable_t::isParamConnectedTo(int32_t paramIdx, const DAW::automation_c
     }
     return false;
 }
+
 void automatable_t::sampleAutomation(const DAW::Host::PluginManager *const host, int32_t paramIdx, double dTickBegin, double dTickEnd, samplecount_t numSamples, float* buffer) {
     std::vector<int32_t> modulatedParams;
     std::vector<int32_t> processedParamsSorted;
@@ -427,6 +441,7 @@ void automatable_t::sampleAutomation(const DAW::Host::PluginManager *const host,
         }
     }
 }
+
 void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *const host, tick_t tick, playback_state state) {
     if (automationLanes.empty() && inputChannelsAutomation.empty()) {
         return;

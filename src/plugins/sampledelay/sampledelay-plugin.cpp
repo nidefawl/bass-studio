@@ -91,12 +91,8 @@ namespace PluginSampleDelay {
         const std::array<effectgain_param_entry, 1> parameterTypes{ {
             { PARAM_DELAY, "Delay", "samples",  0.5f }
         } };
-        for (const effectgain_param_entry& paramEntry : parameterTypes) {
-            automatable_param_t* regparam = registerParam(paramEntry.id);
-            regparam->defaultValue = paramEntry.val;
-            regparam->value = paramEntry.val;
-            regparam->name  = paramEntry.name;
-            regparam->unit  = paramEntry.unit;
+        for (const auto& paramEntry : parameterTypes) {
+            registerParam(paramEntry.id)->initValue(paramEntry);
         }
     }
 
@@ -134,7 +130,7 @@ namespace PluginSampleDelay {
         auto param = getParam(idx);
         dbgassert(param);
         if (param->idx == PARAM_DELAY) {
-            auto delaySamples = convertToSamples(paramsSmoothed.delay);
+            auto delaySamples = convertToSamples(value);
             return {StringFormat("%zd", delaySamples), param->unit};
         }
         return internalplugin::convertParamValueToDisplay(idx, value);

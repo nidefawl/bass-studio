@@ -1,4 +1,5 @@
 #include "latency-plugin.h"
+#include "automation.h"
 #include "dsp_util.h"
 #include "event.h"
 #include "plugins/plugin-ui.h"
@@ -37,19 +38,17 @@ namespace PluginLatency {
         const std::array<effectgain_param_entry, 1> parameterTypes{ {
             { PARAM_LATENCY, "Latency", "samples",  0.5f }
         } };
-        for (const effectgain_param_entry& paramEntry : parameterTypes) {
-            automatable_param_t* regparam = registerParam(paramEntry.id);
-            regparam->defaultValue = paramEntry.val;
-            regparam->value = paramEntry.val;
-            regparam->name  = paramEntry.name;
-            regparam->unit  = paramEntry.unit;
+        for (const auto& paramEntry : parameterTypes) {
+            registerParam(paramEntry.id)->initValue(paramEntry);
         }
     }
 
     void module_latency::postSetParameter(int32_t idx, float preVal, float val, int flags) {
         switch (idx) {
             case PARAM_LATENCY:
-                setNewLatency(math::clamp(math::roundfS32(val * MAX_LATENCY), 0, MAX_LATENCY));
+                if (!(flags & FLG_PAR_UPDATE_AUTOMATED)) {
+                    setNewLatency(math::clamp(math::roundfS32(getParam(idx)->getValue() * MAX_LATENCY), 0, MAX_LATENCY));
+                }
                 break;
         }
         internalplugin::postSetParameter(idx, preVal, val, flags);
@@ -86,7 +85,7 @@ namespace PluginLatency {
         auto param = getParam(idx);
         dbgassert(param);
         if (param->idx == PARAM_LATENCY) {
-            return {StringFormat("%d", math::max(0, math::min(MAX_LATENCY, math::roundfS32(param->value * MAX_LATENCY)))), param->unit};
+            return {StringFormat("%d", math::max(0, math::min(MAX_LATENCY, math::roundfS32(value * MAX_LATENCY)))), param->unit};
         }
         return internalplugin::convertParamValueToDisplay(idx, value);
     }
@@ -106,7 +105,7 @@ namespace PluginLatency {
 
     void module_latency::onEnable() {
         this->delayLine = std::make_unique<DelayLine>();
-        setNewLatency(math::clamp(math::roundfS32(getParamValue(PARAM_LATENCY) * MAX_LATENCY), 0, MAX_LATENCY));
+        setNewLatency(math::clamp(math::roundfS32(getParam(PARAM_LATENCY)->getValue() * MAX_LATENCY), 0, MAX_LATENCY));
     }
 } // namespace PluginLatency
 

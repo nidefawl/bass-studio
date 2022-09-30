@@ -227,7 +227,8 @@ namespace PluginLFO {
         void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
             for (int32_t i = 0; i < NUM_CHANNELS; ++i) {
                 auto& channel = macroAutomationSrcParams[i];
-                channel.shape.renderPhase = channel.getPhase(tick) + module->getParamValue(PARAM_LFO_PHASE);
+                float phase = channel.getPhase(tick);
+                channel.shape.renderPhase = phase;
             }
         }
     };
@@ -242,27 +243,23 @@ namespace PluginLFO {
         impl(new lfo_impl_t{ DawInstance::get(), this, DAW::Shape::GetShapeSaw() })
     {
         auto reg = registerParam(PARAM_LFO_RATE);
-        reg->defaultValue = 0.5f;
-        reg->value = 0.5f;
+        reg->setInitial(0.5f);
         reg->name  = "Rate";
         reg->shortLabel  = "Rate";
         reg->unit  = "Ticks";
         reg = registerParam(PARAM_LFO_PHASE);
-        reg->defaultValue = 0.0f;
-        reg->value = 0.0f;
+        reg->setInitial(0.0f);
         reg->name  = "Phase";
         reg->shortLabel  = "Phase";
         reg->unit  = "°";
         reg = registerParam(PARAM_LFO_MINIMUM);
-        reg->defaultValue = 0.5f;
-        reg->value = 0.5f;
+        reg->setInitial(0.5f);
         reg->name  = "Minimum";
         reg->shortLabel  = "Min";
         reg->unit  = "";
         reg->isBiPolar = true;
         reg = registerParam(PARAM_LFO_MAXIMUM);
-        reg->defaultValue = 1.0f;
-        reg->value = 1.0f;
+        reg->setInitial(1.0f);
         reg->name  = "Maximum";
         reg->shortLabel  = "Max";
         reg->unit  = "";

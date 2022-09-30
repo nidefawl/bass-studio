@@ -133,10 +133,7 @@ namespace PluginWrapper {
             auto param = effect->getParam(index);
             if (!assert_expr(param))
                 return;
-            auto preVal = param->value;
-            auto flags = FLG_PAR_UPDATE_USER;
-            effect->setParamValue(index, value, flags);
-            effect->postSetParameter(index, preVal, effect->getParamValue(index), flags);
+            effect->setParamValue(index, value, FLG_PAR_UPDATE_USER);
         }
 
         float getParameter(VstInt32 index) override {
@@ -144,7 +141,7 @@ namespace PluginWrapper {
             auto param = effect->getParam(index);
             if (!assert_expr(param))
                 return 0.0f;
-            return param->value;
+            return param->getValue();
         }
 
         bool getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) override {

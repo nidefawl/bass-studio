@@ -177,8 +177,8 @@ namespace DAW::UI {
         this->modulationIndex  = modulationIndex;
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
-        auto& modChannels      = _paramAutomatable->getModulations();
-        auto& modChannelRef    = modChannels[modulationIndex];
+        auto& modChannels      = _paramAutomatable->getModulations(_paramIdx);
+        auto& modChannelRef    = *modChannels[modulationIndex];
         fieldMinVal.setRef(&modChannelRef.scale.min);
         fieldMaxVal.setRef(&modChannelRef.scale.max);
         auto channel = DAW::ResolveModulationChannel(host, modChannelRef);
@@ -260,71 +260,4 @@ void guitooltip<DAW::UI::guictr_dragged_modulation_src>::setContent() {
     }
     Table::tbl_row_t row{{std::move(cell)}};
     table.rows.push_back(std::move(row));
-}
-
-void guiknob::modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
-    
-}
-
-void guiknob::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
-    if (this->paramAutomatable) {
-        DAW::ConnectModulationInputChannel(this->paramAutomatable, paramIdx, g->getChannelRef());
-    }
-}
-
-bool gui_slider_textfield::isHighlighted() const {
-    if (!paramAutomatable) {
-        return false;
-    }
-    auto dragged = dawCtrl->getDraggedModulation();
-    if (dragged) {
-        return dawCtrl->guiOver != this;
-    }
-    auto focused = dawCtrl->getFocusedModulation();
-    if (focused) {
-        auto ref = focused->getChannelRef();
-        if (paramAutomatable->isParamConnectedTo(paramIdx, ref))
-            return true;
-    }
-    return false;
-}
-bool guiknob::isHighlighted() const {
-    if (!paramAutomatable) {
-        return false;
-    }
-    auto dragged = dawCtrl->getDraggedModulation();
-    if (dragged) {
-        return dawCtrl->guiOver != this;
-    }
-    auto focused = dawCtrl->getFocusedModulation();
-    if (focused) {
-        auto ref = focused->getChannelRef();
-        if (paramAutomatable && paramAutomatable->isParamConnectedTo(paramIdx, ref))
-            return true;
-    }
-    return false;
-}
-
-GuiColor::constant_t gui_slider_textfield::getBackgroundColor() const {
-    if (isHighlighted()) {
-        return GuiColor::COL_KNOB_HIGHLIGHT_BACKGROUND;
-    }
-    return gui_textfield::getBackgroundColor();
-}
-
-GuiColor::constant_t guiknob::getBackgroundColor() const {
-    if (isHighlighted()) {
-        return GuiColor::COL_KNOB_HIGHLIGHT_BACKGROUND;
-    }
-    return guibase::getBackgroundColor();
-}
-
-
-void gui_slider_textfield::modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
-}
-
-void gui_slider_textfield::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
-    if (this->paramAutomatable) {
-        DAW::ConnectModulationInputChannel(this->paramAutomatable, paramIdx, g->getChannelRef());
-    }
 }

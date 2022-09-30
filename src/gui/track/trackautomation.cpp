@@ -38,7 +38,7 @@ float ctrToDataScale(float screenX, float ctrHeight) {
 
 float gui_track_automation::getDstVal() {
     if (at) {
-        return at->getParamValue(paramIdx);
+        return at->getParam(paramIdx)->getValue();
     }
     return 0.5f;
 }
@@ -324,7 +324,7 @@ bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEven
             if (automation) {
                 val = automation->getValueAt(tick);
             } else {
-                val = at->getParamValue(paramIdx);
+                val = at->getParam(paramIdx)->getValue();
                 // val = at->quantizeVal(paramIdx, val);
             }
         }

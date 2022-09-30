@@ -45,13 +45,10 @@ namespace PluginGain {
                 { PARAM_GAIN, "Gain", "dB", dsp_util::gainToLinScaleWithRange(1.0f, MTR_CEIL, DBFS_MUTE_POS) },
                 { PARAM_PAN,  "Pan",  "", 0.5f }
         } };
-        for (const effectgain_param_entry& paramEntry : parameterTypes) {
-            automatable_param_t* regparam = registerParam(paramEntry.id);
-            regparam->defaultValue = paramEntry.val;
-            regparam->value = paramEntry.val;
-            regparam->name  = paramEntry.name;
-            regparam->unit  = paramEntry.unit;
+        for (const auto& paramEntry : parameterTypes) {
+            registerParam(paramEntry.id)->initValue(paramEntry);
         }
+        getParam(PARAM_TRACK_PAN)->isBiPolar = true;
     }
     module_gain::~module_gain() {
         delete impl;
@@ -64,8 +61,8 @@ namespace PluginGain {
                 && format.sampleRate > 0);
 
 
-        auto fGainTrackLin = this->getParamValue(PARAM_GAIN);
-        auto fPanTrack = this->getParamValue(PARAM_PAN);
+        auto fGainTrackLin = getParam(PARAM_GAIN)->getValue();
+        auto fPanTrack = getParam(PARAM_PAN)->getValue();
         auto autParGain = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_GAIN));
         auto autParPan = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_PAN));
 
@@ -111,7 +108,7 @@ namespace PluginGain {
         dbgassert(param);
         if (param->unit == "dB") {
             float fGain = 1.0f;
-            if (dsp_util::getGainLvlWithRange(getParamValue(PARAM_GAIN), MTR_CEIL, DBFS_MUTE_POS, fGain)) {
+            if (dsp_util::getGainLvlWithRange(value, MTR_CEIL, DBFS_MUTE_POS, fGain)) {
                 return {StringFormat("%.3f", dsp_util::dBFS(fGain)), param->unit};
             }
             return {"-INF", param->unit};
