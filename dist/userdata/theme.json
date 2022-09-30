@@ -5,6 +5,10 @@
             "data": {
                 "colors": [
                     {
+                        "key": "COL_KNOB_HIGHLIGHT",
+                        "value": 4284612816
+                    },
+                    {
                         "key": "COL_BASE_BG",
                         "value": 3759149072
                     },
@@ -115,6 +119,10 @@
                     {
                         "key": "COL_DRAGDROPMOVE_HIGHLIGHT",
                         "value": 4278239232
+                    },
+                    {
+                        "key": "COL_KNOB_HIGHLIGHT_BACKGROUND",
+                        "value": 4279304228
                     },
                     {
                         "key": "COL_GRID_DRK",
@@ -297,6 +305,10 @@
                         "value": 4293193469
                     },
                     {
+                        "key": "COL_MODULATION_SATURATED",
+                        "value": 4294945287
+                    },
+                    {
                         "key": "COL_GUI_HANDLE",
                         "value": 4292335575
                     },
@@ -319,6 +331,10 @@
                     {
                         "key": "COL_PLUGIN_VIEW_FRAME",
                         "value": 2147483647
+                    },
+                    {
+                        "key": "COL_KNOB_MODULATED",
+                        "value": 4278242390
                     },
                     {
                         "key": "COL_LEVEL_IND_GREEN_DRK",
@@ -488,6 +504,10 @@
             "data": {
                 "colors": [
                     {
+                        "key": "COL_KNOB_HIGHLIGHT",
+                        "value": 4284612816
+                    },
+                    {
                         "key": "COL_BASE_BG",
                         "value": 3759149072
                     },
@@ -598,6 +618,10 @@
                     {
                         "key": "COL_DRAGDROPMOVE_HIGHLIGHT",
                         "value": 4278239232
+                    },
+                    {
+                        "key": "COL_KNOB_HIGHLIGHT_BACKGROUND",
+                        "value": 4279304228
                     },
                     {
                         "key": "COL_GRID_DRK",
@@ -780,6 +804,10 @@
                         "value": 4293193469
                     },
                     {
+                        "key": "COL_MODULATION_SATURATED",
+                        "value": 4294945287
+                    },
+                    {
                         "key": "COL_GUI_HANDLE",
                         "value": 4292335575
                     },
@@ -802,6 +830,10 @@
                     {
                         "key": "COL_PLUGIN_VIEW_FRAME",
                         "value": 2147483647
+                    },
+                    {
+                        "key": "COL_KNOB_MODULATED",
+                        "value": 4278242390
                     },
                     {
                         "key": "COL_LEVEL_IND_GREEN_DRK",

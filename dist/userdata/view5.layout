@@ -7,16 +7,66 @@
                 "data": {
                     "value0": "",
                     "value1": 0,
-                    "value2": -1,
-                    "value3": 0,
+                    "value2": 0,
+                    "value3": 3,
                     "value4": [
                         {
                             "polymorphic_id": 1073741824,
                             "ptr_wrapper": {
                                 "id": 2147483650,
                                 "data": {
-                                    "value0": "Plugins",
-                                    "value1": 7
+                                    "value0": "Shape Editor",
+                                    "value1": 102
+                                }
+                            }
+                        },
+                        {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 2147483651,
+                                "data": {
+                                    "value0": "Properties",
+                                    "value1": 102
+                                }
+                            }
+                        },
+                        {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 2147483652,
+                                "data": {
+                                    "value0": "Debug 0",
+                                    "value1": 109
+                                }
+                            }
+                        },
+                        {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 2147483653,
+                                "data": {
+                                    "value0": "Export Audio",
+                                    "value1": 113
+                                }
+                            }
+                        },
+                        {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 2147483654,
+                                "data": {
+                                    "value0": "Performance",
+                                    "value1": 112
+                                }
+                            }
+                        },
+                        {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 2147483655,
+                                "data": {
+                                    "value0": "Debug 2",
+                                    "value1": 111
                                 }
                             }
                         }
@@ -28,32 +78,70 @@
         "value1": {
             "polymorphic_id": 1073741824,
             "ptr_wrapper": {
-                "id": 2147483651,
+                "id": 2147483656,
                 "data": {
                     "value0": "",
                     "value1": 0,
                     "value2": -1,
-                    "value3": 0,
+                    "value3": 1,
                     "value4": [
+                        {
+                            "polymorphic_id": 2147483649,
+                            "polymorphic_name": "guictrlayout_snapshot_t",
+                            "ptr_wrapper": {
+                                "id": 2147483657,
+                                "data": {
+                                    "value0": "Layout",
+                                    "value1": 101,
+                                    "value2": 1,
+                                    "value3": 3,
+                                    "value4": [
+                                        {
+                                            "polymorphic_id": 1073741824,
+                                            "ptr_wrapper": {
+                                                "id": 2147483658,
+                                                "data": {
+                                                    "value0": "Plugins",
+                                                    "value1": 107
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "polymorphic_id": 1073741824,
+                                            "ptr_wrapper": {
+                                                "id": 2147483659,
+                                                "data": {
+                                                    "value0": "Instances",
+                                                    "value1": 108
+                                                }
+                                            }
+                                        }
+                                    ],
+                                    "value5": []
+                                }
+                            }
+                        },
                         {
                             "polymorphic_id": 1073741824,
                             "ptr_wrapper": {
-                                "id": 2147483652,
+                                "id": 2147483660,
                                 "data": {
-                                    "value0": "Performance",
-                                    "value1": 12
+                                    "value0": "Debug 2",
+                                    "value1": 111
                                 }
                             }
                         }
                     ],
-                    "value5": []
+                    "value5": [
+                        0.729099690914154
+                    ]
                 }
             }
         },
         "value2": [
-            0.30237582325935366,
-            0.8001359701156616,
-            0.7686490416526794
+            0.5453125238418579,
+            0.49925148487091067,
+            0.793749988079071
         ]
     }
 }

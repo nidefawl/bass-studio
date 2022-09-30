@@ -15,8 +15,8 @@
                             "ptr_wrapper": {
                                 "id": 2147483650,
                                 "data": {
-                                    "value0": "Plugins",
-                                    "value1": 7
+                                    "value0": "Performance",
+                                    "value1": 112
                                 }
                             }
                         },
@@ -27,17 +27,17 @@
                                 "id": 2147483651,
                                 "data": {
                                     "value0": "Layout",
-                                    "value1": 0,
-                                    "value2": 1,
-                                    "value3": 3,
+                                    "value1": 101,
+                                    "value2": -1,
+                                    "value3": 1,
                                     "value4": [
                                         {
                                             "polymorphic_id": 1073741824,
                                             "ptr_wrapper": {
                                                 "id": 2147483652,
                                                 "data": {
-                                                    "value0": "Debug 2",
-                                                    "value1": 11
+                                                    "value0": "Export Audio",
+                                                    "value1": 113
                                                 }
                                             }
                                         },
@@ -46,23 +46,52 @@
                                             "ptr_wrapper": {
                                                 "id": 2147483653,
                                                 "data": {
-                                                    "value0": "Instances",
-                                                    "value1": 8
-                                                }
-                                            }
-                                        },
-                                        {
-                                            "polymorphic_id": 1073741824,
-                                            "ptr_wrapper": {
-                                                "id": 2147483654,
-                                                "data": {
-                                                    "value0": "Export Audio",
-                                                    "value1": 13
+                                                    "value0": "Debug 2",
+                                                    "value1": 111
                                                 }
                                             }
                                         }
                                     ],
-                                    "value5": []
+                                    "value5": [
+                                        0.5
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    "value5": [
+                        0.5458199381828308
+                    ]
+                }
+            }
+        },
+        "value1": {
+            "polymorphic_id": 1073741824,
+            "ptr_wrapper": {
+                "id": 2147483654,
+                "data": {
+                    "value0": "",
+                    "value1": 0,
+                    "value2": -1,
+                    "value3": 1,
+                    "value4": [
+                        {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 2147483655,
+                                "data": {
+                                    "value0": "Plugins",
+                                    "value1": 107
+                                }
+                            }
+                        },
+                        {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 2147483656,
+                                "data": {
+                                    "value0": "Instances",
+                                    "value1": 108
                                 }
                             }
                         }
@@ -73,24 +102,10 @@
                 }
             }
         },
-        "value1": {
-            "polymorphic_id": 1073741824,
-            "ptr_wrapper": {
-                "id": 2147483655,
-                "data": {
-                    "value0": "",
-                    "value1": 0,
-                    "value2": -1,
-                    "value3": 0,
-                    "value4": [],
-                    "value5": []
-                }
-            }
-        },
         "value2": [
-            0.17343750596046449,
-            0.5364173054695129,
-            1.0
+            0.18789061903953553,
+            0.5905688405036926,
+            0.793749988079071
         ]
     }
 }
