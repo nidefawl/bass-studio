@@ -724,3 +724,21 @@ void guibase::addProperties(Table::tbl* table) {
     addPropertiesFromGui(*this, table);
 }
 #endif
+#ifdef TRACK_ALLOCATIONS_GUIBASE
+namespace DebugAlloc {
+template<>
+void printLeaked(int64_t allocCount, const std::vector<guibase*>& allocList, const std::unordered_map<guibase*, DebugAlloc::AllocInfo>& mapAllocInfo) {
+    log_lf(Log::L_DEBUG, "allocations: %zd\n", allocCount);
+    for (auto& tStar : allocList) {
+        guibase* gui = tStar;
+        log_lf(Log::L_DEBUG, "leaked %zd %s\n", gui->allocId, gui->getClassName().c_str());// add debug info to clip instance (track/time )
+#if RECORD_ALLOC_STACKTRACES
+        log_lf(Log::L_DEBUG, "leaked %012zX %zd allocated from:\n", reinterpret_cast<int64_t>(tStar), allocInfo.allocId);// add debug info to clip instance (track/time )
+        for (auto& s : allocInfo.stacktrace) {
+            log_lf(Log::L_DEBUG, "  %s\n", StringAsCStr(s));
+        }
+#endif
+    }
+}
+}
+#endif

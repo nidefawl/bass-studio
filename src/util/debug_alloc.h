@@ -35,7 +35,7 @@ namespace DebugAlloc {
     void printLeaked(int64_t allocCount, const std::vector<T*>& allocList, const std::unordered_map<T*, AllocInfo>& mapAllocInfo) {
         log_lf(Log::L_DEBUG, "allocations: %zd\n", allocCount);
     #if RECORD_ALLOC_STACKTRACES
-        for (auto tStar : allocList) {
+        for (auto& tStar : allocList) {
             auto& allocInfo = mapAllocInfo.at(tStar);
             log_lf(Log::L_DEBUG, "leaked %012zX %zd allocated from:\n", reinterpret_cast<int64_t>(tStar), allocInfo.allocId);// add debug info to clip instance (track/time )
             for (auto& s : allocInfo.stacktrace) {
