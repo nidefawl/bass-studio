@@ -378,7 +378,7 @@ namespace PluginLFO {
             padding = margin = 0;
         }
         ~guictr_vert_layout() override {
-            removeGuis();
+            destroyGuis();
         };
         void layout() override {
             auto cs = getSizeContent();
@@ -397,8 +397,8 @@ namespace PluginLFO {
     };
     class guictr_module_lfo : public guictr_base {
         module_lfo* const module;
-        std::vector<guictr_vert_layout*> macroCtrs;
         std::vector<guiknob_pluginparam*> guiParams;
+        std::vector<guictr_vert_layout*> layoutCtrs;
         std::vector<gui_slider_textfield*> guiParamsTextfields;
         i_ctr_shape_editor* const shapeEditor;
         guictr_base* ctrShapeEditor;
@@ -483,12 +483,8 @@ namespace PluginLFO {
         }
 
         ~guictr_module_lfo() override {
-            removeGuis();
-            if (shapeEditor)
-                delete shapeEditor->getGuiContainer();
-            for (auto* knob : macroCtrs) {
-                delete knob;
-            }
+            remove(&editfield);
+            destroyGuis();
         }
 
         void getSizeScale(int& w, int& h) const {
