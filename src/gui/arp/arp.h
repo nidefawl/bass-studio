@@ -87,6 +87,9 @@ public:
     void rightClicked(MouseEvent& evt, guibase* button) override;
     ~gui_arp() override {
         removeGuis();
+        for (guiknob* knob : knobs) {
+            delete knob;
+        }
     }
     bool setScissorTransformContainer(NVGcontext* vg) override {
         ivec2 sizeInset = getSizeContent();
