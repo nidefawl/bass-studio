@@ -566,7 +566,7 @@ public:
         }
         return nullptr;
     }
-    std::optional<DAW::automation_channel_ref> getDraggedModulationRef() const {
+    std::optional<DAW::modulation_channel_ref> getDraggedModulationRef() const {
         auto dragged = getDraggedModulation();
         if (dragged) {
             return dragged->getChannelRef();

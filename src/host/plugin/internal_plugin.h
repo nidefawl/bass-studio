@@ -90,11 +90,11 @@ public:
     }
     ~internal_automator() override {
     }
-    virtual const automated_param_t* getModulationOutputData(const DAW::automation_channel_ref& channel) = 0;
-    DAW::automation_channel_ref getModulationChannel(int32_t channel) const {
+    virtual const automated_param_t* getModulationOutputData(const DAW::modulation_channel_ref& modChannel) = 0;
+    DAW::modulation_channel_ref getModulationChannel(int32_t channel) const {
         auto thisRef = toRef();
         thisRef.paramIdx = channel;
         thisRef.type = AUTOMATABLE_MODULATION_SRC;
-        return DAW::automation_channel_ref{ 0, thisRef, {} };
+        return DAW::modulation_channel_ref{ 0, thisRef, {} };
     }
 };

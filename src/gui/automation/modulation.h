@@ -19,7 +19,7 @@ namespace DAW::UI {
     class IDraggedModulationSource {
     public:
         virtual ~IDraggedModulationSource() = default;
-        virtual const automation_channel_ref& getChannelRef() const = 0;
+        virtual const modulation_channel_ref& getChannelRef() const = 0;
     };
 
     class guictr_edit_modulation_slot : public guictr_base {
@@ -56,7 +56,7 @@ namespace DAW::UI {
         ~guictr_edit_modulation_slot() override {
             removeGuis();
         }
-        void setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::automation_channel_ref _ref, int32_t modulationIndex);
+        void setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::modulation_channel_ref _ref, int32_t modulationIndex);
 
         void renderBackground(NVGcontext* vg) override {
             drawInsetBackground(vg, theme, getPosContent(), getSizeContent());
@@ -93,7 +93,7 @@ namespace DAW::UI {
             remove(&btnAddModulation);
             destroyGuis();
         }
-        void setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::automation_channel_ref _ref);
+        void setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::modulation_channel_ref _ref);
         void updateSlots();
 
         void renderBackground(NVGcontext* vg) override {
@@ -115,17 +115,17 @@ namespace DAW::UI {
 
     class guictr_dragged_modulation_src : 
         public guitooltip<guictr_dragged_modulation_src>, public DAW::UI::IDraggedModulationSource {
-        DAW::automation_channel_ref ref;
+        DAW::modulation_channel_ref ref;
     public:
         guictr_dragged_modulation_src() : guitooltip<guictr_dragged_modulation_src>(this) {
             this->guiType = gui_type::CTR_TYPE_MODULATION_DRAGGED;
             pos = { 0, 0 };
             setDragRendered(true);
         }
-        void setChannelRef(const DAW::automation_channel_ref& _ref) {
+        void setChannelRef(const DAW::modulation_channel_ref& _ref) {
             ref = _ref;
         }
-        const DAW::automation_channel_ref& getChannelRef() const override {
+        const DAW::modulation_channel_ref& getChannelRef() const override {
             return ref;
         }
         ~guictr_dragged_modulation_src() override = default;
@@ -140,17 +140,17 @@ namespace DAW::UI {
     };
 
     class guibutton_modulate : public guibutton, public IDraggedModulationSource {
-        const DAW::automation_channel_ref ref;
+        const DAW::modulation_channel_ref ref;
         guictr_dragged_modulation_src dragged;
         bool hasDragged        = false;
         public:
-        guibutton_modulate(DAW::automation_channel_ref ref) : guibutton(), ref(ref) {
+        guibutton_modulate(DAW::modulation_channel_ref ref) : guibutton(), ref(ref) {
             this->guiType = gui_type::CTR_TYPE_MODULATION_BUTTON;
             drawFn   = drawTextureSymbol;
             drawParm = ICON_MODULATION;
             dragged.setParent(this);
         }
-        const DAW::automation_channel_ref& getChannelRef() const override {
+        const DAW::modulation_channel_ref& getChannelRef() const override {
             return ref;
         }
         void setControl(BaseCtrl* parentCtrl) override {

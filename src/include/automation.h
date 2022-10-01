@@ -38,21 +38,34 @@ struct automatable_param_ref_t {
     int32_t refId           = -1;
     int32_t paramIdx        = -1;
 };
+
+inline bool operator==(const automatable_param_ref_t& lhs, const automatable_param_ref_t& rhs)
+{
+    return std::tie(lhs.type, lhs.refId, lhs.paramIdx) ==
+           std::tie(rhs.type, rhs.refId, rhs.paramIdx);
+}
+
+inline bool operator<(const automatable_param_ref_t& lhs, const automatable_param_ref_t& rhs)
+{
+    return std::tie(lhs.type, lhs.refId, lhs.paramIdx) <
+           std::tie(rhs.type, rhs.refId, rhs.paramIdx);
+}
+
 namespace DAW {
     enum ModulationMode : uint8_t {
         REPLACE,
         ADD,
         MUL,
     };
-    struct automation_scaling_t {
+    struct modulation_scaling_t {
         float min = 0.0f;
         float max = 1.0f;
         ModulationMode mode = ModulationMode::REPLACE;
     };
-    struct automation_channel_ref {
-        int32_t idx = -1;
-        automatable_param_ref_t ref{};
-        automation_scaling_t scale{};
+    struct modulation_channel_ref {
+        int32_t paramIdxDst = -1;
+        automatable_param_ref_t refSrc{};
+        modulation_scaling_t scale{};
     };
 }
 
@@ -82,7 +95,7 @@ struct automation_t {
     }
     float getValueAt(tick_t tick) const;
     float getValueAtExact(double dTick) const;
-    void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* out) const;
+    void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* out) const;
     void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const;
     void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
     std::pair<float, float> getMinMax();
@@ -105,10 +118,10 @@ struct automated_param_t {
     virtual ~automated_param_t() = default;
     virtual bool isActive() const = 0;
     virtual bool isAutomated() const = 0;
-    virtual float modulateValue(tick_t tick, float f, const DAW::automation_scaling_t& scale) const = 0;
+    virtual float modulateValue(tick_t tick, float f, const DAW::modulation_scaling_t& scale) const = 0;
     virtual float getValueAt(tick_t tick) const = 0;
     virtual float getValueAtExact(double dTick) const = 0;
-    virtual void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* inOut) const = 0;
+    virtual void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* inOut) const = 0;
     virtual String getName() const = 0;
     virtual void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const = 0;
     virtual void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) = 0;
@@ -128,14 +141,14 @@ struct automation_lane_t : public automated_param_t {
     bool isAutomated() const override {
         return !src.points.empty();
     }
-    float modulateValue(tick_t tick, float fIn, const DAW::automation_scaling_t& scale) const override;
+    float modulateValue(tick_t tick, float fIn, const DAW::modulation_scaling_t& scale) const override;
     float getValueAt(tick_t tick) const override {
         return src.getValueAt(tick);
     }
     float getValueAtExact(double dTick) const override {
         return src.getValueAtExact(dTick);
     }
-    void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* out) const override {
+    void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* out) const override {
         src.sampleAutomation(dTickBegin, dTickEnd, numSamples, scale, out);
     }
     void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const override {
@@ -252,8 +265,8 @@ private:
     int32_t nextRegisterId = 0;
     std::unordered_map<int32_t, automatable_param_t> mapParams;
     std::vector<automation_lane_t> automationLanes;//TODO: make this a map
-    std::vector<DAW::automation_channel_ref> inputChannelsAutomation;
-    std::unordered_map<int32_t, std::vector<DAW::automation_channel_ref*>> mapInputChannels;
+    std::vector<DAW::modulation_channel_ref> inputChannelsAutomation;
+    std::unordered_map<int32_t, std::vector<DAW::modulation_channel_ref*>> mapInputChannels;
 protected:
     void setAutomatableParam(automatable_param_t* param, float value, int flags);
 public:
@@ -269,7 +282,7 @@ public:
         return &mapParams[identifier];
     }
 
-    void setModulations(const std::vector<DAW::automation_channel_ref>& inputChannelsAutomation) {
+    void setModulations(const std::vector<DAW::modulation_channel_ref>& inputChannelsAutomation) {
         this->inputChannelsAutomation = inputChannelsAutomation;
         updateModulationMap();
     }
@@ -280,19 +293,19 @@ public:
         }
     }
     void updateModulationMap() {
-        std::unordered_map<int32_t, std::vector<DAW::automation_channel_ref*>> mapInputChannels;
+        std::unordered_map<int32_t, std::vector<DAW::modulation_channel_ref*>> mapInputChannels;
         for (auto& ref : inputChannelsAutomation) {
-            mapInputChannels[ref.idx].push_back(&ref);
+            mapInputChannels[ref.paramIdxDst].push_back(&ref);
         }
         this->mapInputChannels = std::move(mapInputChannels);
     }
-    std::vector<DAW::automation_channel_ref>& getModulations() {
+    std::vector<DAW::modulation_channel_ref>& getModulations() {
         return inputChannelsAutomation;
     }
-    const std::vector<DAW::automation_channel_ref>& getModulations() const {
+    const std::vector<DAW::modulation_channel_ref>& getModulations() const {
         return inputChannelsAutomation;
     }
-    const std::vector<DAW::automation_channel_ref*>& getModulations(int32_t paramIdx) const {
+    const std::vector<DAW::modulation_channel_ref*>& getModulations(int32_t paramIdx) const {
         return mapInputChannels.at(paramIdx);
     }
 
@@ -300,7 +313,7 @@ public:
     bool isParamModulated(int32_t paramIdx) const {
         return mapInputChannels.count(paramIdx);
     }
-    bool isParamConnectedTo(int32_t paramIdx, const DAW::automation_channel_ref& ref) const;
+    bool isParamConnectedTo(int32_t paramIdx, const DAW::modulation_channel_ref& modChannel) const;
 
     template<typename Functor>
     void visitParams(Functor f) {
@@ -575,9 +588,9 @@ namespace DAW {
     automation_routing_t GetRoutingFromDestinationParam(const automatable_t* dev, int32_t paramIdx);
 
     automatable_t* resolveAutomatableRefDevice(const Host::PluginManager* const host, const automatable_param_ref_t& ref);
-    const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const automation_channel_ref& ref);
-    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, automation_channel_ref ref);
-    void DisonnectModulationInputChannel(automatable_t* dev, automation_channel_ref ref);
+    const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const modulation_channel_ref& ref);
+    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, modulation_channel_ref ref);
+    void DisonnectModulationInputChannel(automatable_t* dev, modulation_channel_ref ref);
     void DisonnectModulationForParam(automatable_t* dev, int32_t paramIdx);
 
     inline bool IsParamModulated(automatable_t* dev, int32_t paramIdx) {

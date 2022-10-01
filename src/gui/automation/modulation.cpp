@@ -63,7 +63,7 @@ namespace DAW::UI {
         hasDragged = false;
         if (!hasDragged) {
             dragged.setChannelRef(ref);
-            dragged.setLabel(StringFormat("Modulation Macro %d", ref.idx));
+            dragged.setLabel(StringFormat("Modulation Macro %d", ref.paramIdxDst));
             dragged.pos = {};
             dragged.layout();
             dbgassert(dragged.isDragRendered());
@@ -179,7 +179,7 @@ namespace DAW::UI {
         }
     }
 
-    void guictr_edit_modulation_slot::setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::automation_channel_ref _ref, int32_t modulationIndex) {
+    void guictr_edit_modulation_slot::setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::modulation_channel_ref _ref, int32_t modulationIndex) {
         dbgassert(host);
         dbgassert(_paramAutomatable);
         btnRemove.id           = 16 + modulationIndex;
@@ -242,7 +242,7 @@ namespace DAW::UI {
         prefSize                        = ivec2(prefSize.x, TRACK_HEIGHT_STEP + padding2.y);
     }
 
-    void guictr_edit_modulation::setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::automation_channel_ref _ref) {
+    void guictr_edit_modulation::setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::modulation_channel_ref _ref) {
         this->host             = host;
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
@@ -272,7 +272,7 @@ namespace DAW::UI {
 }// namespace DAW::UI
 
 namespace DAW {
-    void OpenModulationEditor(DawCtrl* dawCtrl, ivec2 mousePos, automatable_t* atl, int32_t paramIdx, DAW::automation_channel_ref ref) {
+    void OpenModulationEditor(DawCtrl* dawCtrl, ivec2 mousePos, automatable_t* atl, int32_t paramIdx, DAW::modulation_channel_ref ref) {
         dawCtrl->closeAllContextMenus();
         auto ctxtMenu = new DAW::UI::guictr_edit_modulation();
         ctxtMenu->size = {420, 420};

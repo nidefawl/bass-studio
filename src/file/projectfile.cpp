@@ -47,15 +47,15 @@ void serialize(Archive& archive, channel_desc& m) {
     archive(make_nvp("input", m.name), make_nvp("count", m.count), make_nvp("offset", m.offset));
 }
 template<class Archive>
-void serialize(Archive& archive, automation_scaling_t& m) {
+void serialize(Archive& archive, modulation_scaling_t& m) {
     archive(make_nvp("min", m.min),
         make_nvp("max", m.max));
     make_optional_nvp(archive, "mode", m.mode);
 }
 template<class Archive>
-void serialize(Archive& archive, automation_channel_ref& m) {
-    archive(make_nvp("idx", m.idx),
-        make_nvp("ref", m.ref),
+void serialize(Archive& archive, modulation_channel_ref& m) {
+    archive(make_nvp("idx", m.paramIdxDst),
+        make_nvp("ref", m.refSrc),
         make_nvp("scale", m.scale));
 }
 }

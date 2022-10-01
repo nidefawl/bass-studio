@@ -104,13 +104,13 @@ class guictxtmenu_select_modulation : public guictxtmenu {
     int32_t const paramIdx;
 
     class ctxtmenu_modulation_entry : public ctxtmenu_entry {
-        const DAW::automation_channel_ref ref;
+        const DAW::modulation_channel_ref ref;
     public:
-        ctxtmenu_modulation_entry(String _title, int _id, DAW::automation_channel_ref ref)
+        ctxtmenu_modulation_entry(String _title, int _id, DAW::modulation_channel_ref ref)
             : ctxtmenu_entry(std::move(_title), _id), ref(ref)
         {
         }
-        DAW::automation_channel_ref getRef() const {
+        DAW::modulation_channel_ref getRef() const {
             return ref;
         }
     };

@@ -33,7 +33,7 @@ public:
     }
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     std::shared_ptr<PluginViewContainers> createViewCtrInternal() override;
-    const automated_param_t* getModulationOutputData(const DAW::automation_channel_ref& channel) override;
+    const automated_param_t* getModulationOutputData(const DAW::modulation_channel_ref& channel) override;
     std::shared_ptr<std::vector<std::byte>> storePresetData() override;
     bool loadPresetData(const std::shared_ptr<std::vector<std::byte>>& buf) override;
     param_converted_t convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) override;

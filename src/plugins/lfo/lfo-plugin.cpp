@@ -110,7 +110,7 @@ namespace PluginLFO {
                 auto value = shape.sampleCurve(moduloPhase, false);
                 return value * (valMax - valMin) + valMin;
             }
-            float modulateValue(tick_t tick, float fIn, const DAW::automation_scaling_t& scale) const override {
+            float modulateValue(tick_t tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
                 const auto valScaled = scale.min + sampleCurve(tick) * (scale.max - scale.min);
                 switch (scale.mode) {
                     case DAW::ModulationMode::ADD:
@@ -125,7 +125,7 @@ namespace PluginLFO {
                 }
                 return fIn;
             }
-            void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* inOut) const override {
+            void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* inOut) const override {
                 for (samplecount_t i = 0; i < numSamples; ++i) {
                     const auto dTickOffset     = dTickBegin + i * (dTickEnd - dTickBegin) / double(numSamples);
                     const auto valScaled = scale.min + sampleCurve(dTickOffset) * (scale.max - scale.min);
@@ -177,8 +177,8 @@ namespace PluginLFO {
                 macroAutomationSrcParams[i].syncRatios = GetSyncRatios();
             }
         }
-        const lfo_automation_src_param_t* getModulationOutputData(const DAW::automation_channel_ref& channel) {
-            auto chIdx = channel.ref.paramIdx;
+        const lfo_automation_src_param_t* getModulationOutputData(const DAW::modulation_channel_ref& channel) {
+            auto chIdx = channel.refSrc.paramIdx;
             if (!assert_expr(chIdx >= 0 && chIdx < NUM_CHANNELS))
                 return nullptr;
             if (!assert_expr(chIdx < CtrSize(macroAutomationSrcParams)))
@@ -271,7 +271,7 @@ namespace PluginLFO {
         return this->impl->getShape(idx);
     }
 
-    const automated_param_t* module_lfo::getModulationOutputData(const DAW::automation_channel_ref& channel) {
+    const automated_param_t* module_lfo::getModulationOutputData(const DAW::modulation_channel_ref& channel) {
         return impl->getModulationOutputData(channel);
     }
 

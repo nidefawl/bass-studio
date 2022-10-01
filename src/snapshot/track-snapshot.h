@@ -26,9 +26,9 @@ struct arp_snapshot {
 };
 
 struct track_modulation_routing_snapshot_t {
-    std::vector<DAW::automation_channel_ref> mixer;
-    std::vector<DAW::automation_channel_ref> arp;
-    std::map<int32_t, std::vector<DAW::automation_channel_ref>> effectMods;
+    std::vector<DAW::modulation_channel_ref> mixer;
+    std::vector<DAW::modulation_channel_ref> arp;
+    std::map<int32_t, std::vector<DAW::modulation_channel_ref>> effectMods;
 };
 
 struct track_impl_snapshot_t {

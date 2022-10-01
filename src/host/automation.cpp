@@ -170,7 +170,7 @@ float automation_t::getValueAtExact(double dTick) const {
     }
     return 0.5f;
 }
-void automation_t::sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* inOut) const {
+void automation_t::sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* inOut) const {
     //TODO: write optimal version!
     for (samplecount_t i = 0; i < numSamples; ++i) {
         const auto dTickOffset     = dTickBegin + i * (dTickEnd - dTickBegin) / double(numSamples);
@@ -442,9 +442,9 @@ namespace DAW {
     }
 }
 
-bool automatable_t::isParamConnectedTo(int32_t paramIdx, const DAW::automation_channel_ref& ref) const {
+bool automatable_t::isParamConnectedTo(int32_t paramIdx, const DAW::modulation_channel_ref& modChannel) const {
     for (auto& input : inputChannelsAutomation) {
-        if (input.idx == paramIdx && input.ref.refId == ref.ref.refId && input.ref.paramIdx == ref.ref.paramIdx) {
+        if (input.paramIdxDst == paramIdx && input.refSrc == modChannel.refSrc) {
             return true;
         }
     }
@@ -516,7 +516,7 @@ void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *co
     }
 }
 
-float automation_lane_t::modulateValue(tick_t tick, float fIn, const DAW::automation_scaling_t& scale) const {
+float automation_lane_t::modulateValue(tick_t tick, float fIn, const DAW::modulation_scaling_t& scale) const {
     const auto valScaled = scale.min + src.getValueAt(tick) * (scale.max - scale.min);
     switch (scale.mode) {
         case DAW::ModulationMode::ADD:

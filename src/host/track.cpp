@@ -845,9 +845,11 @@ void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, cons
 void saveTrackLayoutSettings(guictr_tracks* guiTracks, track_gui_entry_t* entry, tracklayout_settings_t& settings) {
     settings = entry->layout;
 }
+
 void loadTrackLayoutSettings(guictr_tracks* guiTracks, track_gui_entry_t* entry, const tracklayout_settings_t& settings) {
     entry->layout = settings;
 }
+
 void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, track_layout_snapshot_t& snapshot) {
     snapshot.subtracks.reserve(entry->subtracks.size());
     for (auto* subtrack : entry->subtracks) {
@@ -1025,6 +1027,7 @@ void audio_stage_t::onStartPlayback() {
     notesPre.reset();
     notesPost.reset();
 }
+
 void track_impl_t::onStartPlayback() {
     ThreadLock lock = midiMutex.lockThread();
     audio_stage_t::onStartPlayback();
@@ -1555,18 +1558,18 @@ namespace DAW {
             effectRouting->inputRoutingEffects = std::move(inputRoutingEffects);
         }
         for (auto* modulationRouting : allModulation) {
-            for (automation_channel_ref& r : modulationRouting->arp) {
-                r.ref.refId = getNewPluginId(r.ref.refId);
+            for (modulation_channel_ref& r : modulationRouting->arp) {
+                r.refSrc.refId = getNewPluginId(r.refSrc.refId);
             }
-            for (automation_channel_ref& r : modulationRouting->mixer) {
-                r.ref.refId = getNewPluginId(r.ref.refId);
+            for (modulation_channel_ref& r : modulationRouting->mixer) {
+                r.refSrc.refId = getNewPluginId(r.refSrc.refId);
             }
-            std::map<int32_t, std::vector<DAW::automation_channel_ref>> effectMods;
+            std::map<int32_t, std::vector<DAW::modulation_channel_ref>> effectMods;
             for (auto& reff : modulationRouting->effectMods) {
                 auto key = getNewPluginId(reff.first);
                 auto copyVals = reff.second;
                 for (auto& r : copyVals) {
-                    r.ref.refId = getNewPluginId(r.ref.refId);
+                    r.refSrc.refId = getNewPluginId(r.refSrc.refId);
                 }
                 effectMods[key] = copyVals;
             }
@@ -1597,9 +1600,9 @@ namespace DAW {
         return nullptr;
     }
 
-    const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const DAW::automation_channel_ref& ref) {
-        dbgassert(ref.ref.type == AUTOMATABLE_MODULATION_SRC);
-        auto effBase = host->getPluginById(ref.ref.refId);
+    const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const DAW::modulation_channel_ref& modChannel) {
+        dbgassert(modChannel.refSrc.type == AUTOMATABLE_MODULATION_SRC);
+        auto effBase = host->getPluginById(modChannel.refSrc.refId);
         if (!(effBase && effBase->hasAutomationModulationOutput())) {
             return nullptr;
         }
@@ -1610,39 +1613,39 @@ namespace DAW {
 #else
         auto effMod = static_cast<internal_automator*>(effBase);
 #endif
-        auto p = effMod->getModulationOutputData(ref);
+        auto p = effMod->getModulationOutputData(modChannel);
         if (!assert_expr(effMod))
             return nullptr;
         return p;
     }
-    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, DAW::automation_channel_ref ref) {
+    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, DAW::modulation_channel_ref modChannel) {
         if (dev->isParamModulated(paramIdx)) {
             auto& inputs = dev->getModulations(paramIdx);
             for (auto input : inputs) {
-                if (input->ref.refId == ref.ref.refId && input->ref.paramIdx == ref.ref.paramIdx) {
+                if (input->refSrc == modChannel.refSrc) {
                     return;
                 }
             }
         }
-        auto inputRef = ref;
-        inputRef.idx = paramIdx;
-        inputRef.ref = ref.ref;
+        auto inputRef = modChannel;
+        inputRef.paramIdxDst = paramIdx;
+        inputRef.refSrc = modChannel.refSrc;
         dev->getModulations().push_back(inputRef);
         dev->updateModulationMap();
     }
     void DisonnectModulationForParam(automatable_t* dev, int32_t paramIdx) {
         auto& inputs = dev->getModulations();
         for (int i = 0; i < CtrSize(inputs); i++) {
-            if (inputs[i].idx == paramIdx) {
+            if (inputs[i].paramIdxDst == paramIdx) {
                 inputs.erase(inputs.begin() + i);
             }
         }
         dev->updateModulationMap();
     }
-    void DisonnectModulationInputChannel(automatable_t* dev, DAW::automation_channel_ref ref) {
+    void DisonnectModulationInputChannel(automatable_t* dev, DAW::modulation_channel_ref modChannel) {
         auto& inputs = dev->getModulations();
         for (int i = 0; i < CtrSize(inputs); i++) {
-            if (inputs[i].ref.refId == ref.ref.refId && inputs[i].ref.paramIdx == ref.ref.paramIdx) {
+            if (inputs[i].refSrc == modChannel.refSrc) {
                 inputs.erase(inputs.begin() + i);
             }
         }

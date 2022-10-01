@@ -200,7 +200,7 @@ namespace PluginMacros {
             String getName() const override {
                 return StringFormat("Macro %d", paramIdx+1);
             }
-            float modulateValue(tick_t tick, float fIn, const DAW::automation_scaling_t& scale) const override {
+            float modulateValue(tick_t tick, float fIn, const DAW::modulation_scaling_t& scale) const override {
                 const auto valScaled = scale.min + module->getParamValue(PARAM_MACROS_FIRST + paramIdx) * (scale.max - scale.min);
                 switch (scale.mode) {
                     case DAW::ModulationMode::ADD:
@@ -215,7 +215,7 @@ namespace PluginMacros {
                 }
                 return fIn;
             }
-            void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::automation_scaling_t& scale, float* inOut) const override {
+            void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* inOut) const override {
                 const auto valScaled = scale.min + module->getParamValue(PARAM_MACROS_FIRST + paramIdx) * (scale.max - scale.min);
                 if (scale.mode == DAW::ModulationMode::REPLACE) {
                     std::fill(inOut, inOut + numSamples, valScaled);
@@ -241,8 +241,8 @@ namespace PluginMacros {
         };
         module_macros* module;
         std::array<macro_automation_src_param_t, NUM_MACROS> macroAutomationSrcParams;
-        const macro_automation_src_param_t* getModulationOutputData(const DAW::automation_channel_ref& channel) {
-            auto chIdx = channel.ref.paramIdx;
+        const macro_automation_src_param_t* getModulationOutputData(const DAW::modulation_channel_ref& channel) {
+            auto chIdx = channel.refSrc.paramIdx;
             if (!assert_expr(chIdx >= 0 && chIdx < NUM_MACROS))
                 return nullptr;
             if (!assert_expr(chIdx < CtrSize(macroAutomationSrcParams)))
@@ -269,7 +269,7 @@ namespace PluginMacros {
     module_macros::~module_macros() {
         delete impl;
     }
-    const automated_param_t* module_macros::getModulationOutputData(const DAW::automation_channel_ref& channel) {
+    const automated_param_t* module_macros::getModulationOutputData(const DAW::modulation_channel_ref& channel) {
         return impl->getModulationOutputData(channel);
     }
     using ViewCtrType = SinglePluginViewContainers<guictr_module_macros, module_macros>;
