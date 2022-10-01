@@ -16,9 +16,9 @@
 #include "math/seq_math.h"
 #include "renderresources.h"
 #include "seq_util.h"
-
 #include "str_util.h"
 #include "logging.h"
+#include "window.h"
 #include <array>
 #include <utility>
 
@@ -279,7 +279,7 @@ namespace DAW {
         ctxtMenu->canTakeInputFocus = true;
         ctxtMenu->maxHeight = -1;
         ctxtMenu->setAutomationRef(dawCtrl->getDaw()->getPluginManager(), atl, paramIdx, ref);
-        dawCtrl->openOverlayGui(ctxtMenu, mousePos, BASECTRL_WND_POS_RELATIVE | BASECTRL_WND_IS_RESIZEABLE);
+        dawCtrl->openOverlayGui(ctxtMenu, mousePos, WINDOW_POS_RELATIVE | WINDOW_IS_RESIZABLE | WINDOW_IS_BORDERLESS);
     }
 } // namespace DAW
 

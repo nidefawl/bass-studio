@@ -449,7 +449,7 @@ void AppCtrl::onAppTick() {
                     newContextMenu->theme = getTheme();
                     lastTooltipSrc        = guiOver;
                     nextTooltipId++;
-                    openOverlayGui(newContextMenu, m_mousePos + ivec2(-16, 26), BASECTRL_WND_POS_RELATIVE | BASECTRL_WND_IS_TOOLTIP | BASECTRL_WND_IS_BORDERLESS);
+                    openOverlayGui(newContextMenu, m_mousePos + ivec2(-16, 26), WINDOW_POS_RELATIVE | WINDOW_IS_TOOLTIP | WINDOW_IS_BORDERLESS);
                 }
                 hoverTime = 0;
             } else if (guiOver != lastHoveredTooltip) {
@@ -493,9 +493,9 @@ void determineWindowPos(guibase* guicontextmenu, window_main* mainWindow, float 
     ivec2 windowPos;
     mainWindow->getPos(&windowPos);
     wndPos = windowPos;
-    if (flags & BASECTRL_WND_POS_ABSOLUTE) {
+    if (flags & WINDOW_POS_ABSOLUTE) {
         wndPos = pos;
-    } else if (flags & BASECTRL_WND_POS_RELATIVE) {
+    } else if (flags & WINDOW_POS_RELATIVE) {
         wndPos = windowPos + ivec2(pos.x * m_scale, pos.y * m_scale);
     } else {
         ivec2 windowSize;
@@ -513,10 +513,10 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) 
     // guicontextmenu->setFontSize(getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
 
     ivec2 wndPos(0);
-    determineWindowPos(guicontextmenu, mainWindow, m_scale, BASECTRL_WND_POS_RELATIVE, pos, wndPos);
+    determineWindowPos(guicontextmenu, mainWindow, m_scale, WINDOW_POS_RELATIVE, pos, wndPos);
 
     if (!menuWindows[lvl].wnd) {
-        const int createflags = WINDOW_BORDERLESS_POPUP;
+        const int createflags = WINDOW_IS_BORDERLESS;
         auto popupCtrl        = std::make_shared<PopupCtrl>();
         popupCtrl->parentCtrl = this;
 #if BUILD_DAW_HOST
@@ -547,10 +547,10 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) 
         *popupCtrl->getTheme() = *getTheme();
         popupCtrl->m_scale     = m_scale;
     }
-    static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (entry.wnd->getCreationFlags() & WINDOW_IS_RESIZABLE), false);
+    static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (entry.wnd->getCreationFlags() & WINDOW_IS_RESIZABLE), entry.wnd->getCreationFlags() & WINDOW_IS_FOCUSED);
 }
 
-void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int flags) {
+void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int createflags) {
     if (this->ctxtmenu) {
         closeContextMenu();
     }
@@ -560,11 +560,8 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
 
 
     ivec2 wndPos(0);
-    determineWindowPos(guicontextmenu, mainWindow, m_scale, flags, pos, wndPos);
+    determineWindowPos(guicontextmenu, mainWindow, m_scale, createflags, pos, wndPos);
 
-    int createflags = 0;
-    if (flags & BASECTRL_WND_IS_BORDERLESS) createflags |= WINDOW_BORDERLESS_POPUP;
-    if (flags & BASECTRL_WND_IS_RESIZEABLE) createflags |= WINDOW_IS_RESIZABLE;
     window_main* ctxtWindow = this->contextWindow;
     if (!ctxtWindow || ctxtWindow->getCreationFlags() != createflags) {
         if (ctxtWindow) {
@@ -603,7 +600,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int fl
             *popupCtrl->getTheme() = *getTheme();
             popupCtrl->m_scale     = m_scale;
         }
-        static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (ctxtWindow->getCreationFlags() & WINDOW_IS_RESIZABLE), (flags & BASECTRL_WND_IS_TOOLTIP) == 0);
+        static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (ctxtWindow->getCreationFlags() & WINDOW_IS_RESIZABLE), (createflags & WINDOW_IS_FOCUSED));
     } else {
         dbgassert(0);
     }
@@ -643,7 +640,7 @@ void AppCtrl::openDialog(guidialog_base* _guidialog) {
     popupCtrl->open(_guidialog, wndPos, (dialogWindow->getCreationFlags() & WINDOW_IS_RESIZABLE), true);
 }
 void AppCtrl::openContextMenu(guictxtmenu_base* b, ivec2 pos) {
-    openOverlayGui(b, pos, BASECTRL_WND_POS_RELATIVE | BASECTRL_WND_IS_BORDERLESS);
+    openOverlayGui(b, pos, WINDOW_POS_RELATIVE | WINDOW_IS_BORDERLESS);
     // openAppMenu(0, b, pos);
 }
 void AppCtrl::closeContextMenu() {

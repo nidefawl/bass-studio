@@ -3,11 +3,15 @@
 #include "str_util.h"
 #include <memory>
 
-#define WINDOW_BORDERLESS_POPUP (1 << 1)
-#define WINDOW_IS_DIALOG (1 << 2)
-#define WINDOW_IS_RESIZABLE (1 << 3)
-#define WINDOW_IS_MAINWINDOW_MASTER (1 << 31)
-#define WINDOW_IS_MAINWINDOW_SLAVE (1 << 30)
+#define WINDOW_POS_RELATIVE           1
+#define WINDOW_POS_ABSOLUTE           2
+#define WINDOW_IS_BORDERLESS          4
+#define WINDOW_IS_FOCUSED             8
+#define WINDOW_IS_RESIZABLE          16
+#define WINDOW_IS_DIALOG             32
+#define WINDOW_IS_TOOLTIP            64
+#define WINDOW_IS_MAINWINDOW_MASTER  128
+#define WINDOW_IS_MAINWINDOW_SLAVE   256
 
 class BaseCtrl;
 class AppCtrl;

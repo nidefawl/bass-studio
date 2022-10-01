@@ -537,7 +537,7 @@ public:
 #ifdef __linux__
         // This workaround does cause reentrant problems:
         /* glfwWaitEventsTimeout(0.2);
-        if ((windowCreationFlags & WINDOW_BORDERLESS_POPUP) == 0)
+        if ((windowCreationFlags & WINDOW_IS_BORDERLESS) == 0)
             glfwFocusWindow(glfw);
         glfwWaitEventsTimeout(0.2); */
 #endif
@@ -1106,12 +1106,15 @@ public:
         //TODO: add this function to GLFW
         //glfwBringWindowToTop(glfw);
 #ifdef _WIN32
-        BringWindowToTop(hwnd);
-        if ((getCreationFlags() & WINDOW_IS_DIALOG) && parent) {
-            SetActiveWindow(hwnd);
-        }
+        // BringWindowToTop(hwnd);
+        // if ((getCreationFlags() & WINDOW_IS_DIALOG) && parent) {
+        //     SetActiveWindow(hwnd);
+        // }
+        // if ((getCreationFlags() & WINDOW_IS_BORDERLESS) == 0) {
+            // glfwFocusWindow(glfw);
+        // }
 #else
-        if ((windowCreationFlags & WINDOW_BORDERLESS_POPUP) == 0)
+        if ((windowCreationFlags & WINDOW_IS_BORDERLESS) == 0)
             glfwFocusWindow(glfw);
 #endif
     }
@@ -1376,13 +1379,13 @@ void appwindow_main::destroy() {
 void appwindow_main::createMainWindow(int w, int h, int flags) {
     setAppWindowHints();
     glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
-    if (flags & WINDOW_BORDERLESS_POPUP) {
-        glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
-        glfwWindowHint(GLFW_DECORATED, GL_FALSE);
-        glfwWindowHint(GLFW_HIDE_FROM_TASKBAR, GL_TRUE);
-    }
+    glfwWindowHint(GLFW_FOCUSED, (flags & WINDOW_IS_FOCUSED) != 0);
+    glfwWindowHint(GLFW_DECORATED, (flags & WINDOW_IS_BORDERLESS) == 0);
+    glfwWindowHint(GLFW_HIDE_FROM_TASKBAR, (flags & WINDOW_IS_BORDERLESS));
 
     appwindow::createBaseWindow(flags, this->name, w, h, nullptr, nullptr);
+
+    glfwSetWindowAttrib(glfw, GLFW_FOCUS_ON_SHOW, (flags & WINDOW_IS_FOCUSED) != 0);
 
     if (flags & (WINDOW_IS_MAINWINDOW_SLAVE | WINDOW_IS_MAINWINDOW_MASTER)) {
         glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
@@ -1395,19 +1398,14 @@ void appwindow_main::createMainWindow(int w, int h, int flags) {
         SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR) parent->getHWND());
 #endif
     }
-    if (flags & WINDOW_BORDERLESS_POPUP) {
-        glfwSetWindowAttrib(glfw, GLFW_FOCUS_ON_SHOW, 0);
 #ifdef _WIN32
-        //SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)parent->getHWND());
+    if (flags & WINDOW_IS_BORDERLESS) {
         LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
-        l      = l & ~WS_EX_APPWINDOW;
-        l      = l | WS_EX_TOOLWINDOW;
+        l = l & ~WS_EX_APPWINDOW;
+        l = l | WS_EX_NOACTIVATE;
         SetWindowLong(hwnd, GWL_EXSTYLE, l);
-        SetWindowLong(hwnd, GWL_STYLE, WS_CHILD | WS_CLIPSIBLINGS);
-#endif
-    } else {
-        glfwSetWindowAttrib(glfw, GLFW_FOCUS_ON_SHOW, 1);
     }
+#endif
 }
 
 int32_t AppWndProc_BlockReentrantEnabled = 0;
@@ -1607,7 +1605,7 @@ void appwindow_main::initControl() {
 #endif
 #if WINDOW_RESTORE_POS
 #ifdef __linux__
-    if ((windowCreationFlags & WINDOW_BORDERLESS_POPUP) == 0)
+    if ((windowCreationFlags & WINDOW_IS_BORDERLESS) == 0)
         this->showWindow();
 #endif
     if (!parent) {

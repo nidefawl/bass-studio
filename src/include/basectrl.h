@@ -38,12 +38,6 @@ KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key
 String getModKeyName(int modKey);
 String menuName(String s, KeyCombo combo);
 
-#define BASECTRL_WND_POS_RELATIVE         1
-#define BASECTRL_WND_POS_ABSOLUTE         2
-#define BASECTRL_WND_IS_TOOLTIP           4
-#define BASECTRL_WND_IS_BORDERLESS        8
-#define BASECTRL_WND_IS_RESIZEABLE       16
-
 void determineWindowPos(guibase* guicontextmenu, window_main* mainWindow, float m_scale, int flags, ivec2 pos, ivec2& wndPos);
 
 class determine_string_width {

@@ -44,6 +44,7 @@
 #include "trackctr_types.h"
 #include "gui/plugin/pluginctr.h"
 #include "host/host_pluginmanager.h"
+#include "window.h"
 
 using namespace DAW::AudioIO;
 using DAW::bus_type;
@@ -80,7 +81,7 @@ namespace DAW {
             return true;
         };
         field->setEndEditCallback(cb);
-        trackentry->parentCtrl->openContextMenu(ctxtMenu, popupPos);
+        trackentry->parentCtrl->openOverlayGui(ctxtMenu, popupPos, WINDOW_POS_RELATIVE | WINDOW_IS_BORDERLESS | WINDOW_IS_FOCUSED);
         // m_trackentry is not valid here
         field->setValue(trackentry->track->name);
         field->setSelectionRange(-1, -1);
