@@ -90,7 +90,8 @@ namespace DAW::UI {
             padding = 2;
         }
         ~guictr_edit_modulation() override {
-            removeGuis();
+            remove(&btnAddModulation);
+            destroyGuis();
         }
         void setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::automation_channel_ref _ref);
         void updateSlots();
