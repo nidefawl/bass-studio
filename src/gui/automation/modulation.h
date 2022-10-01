@@ -30,29 +30,10 @@ namespace DAW::UI {
         gui_numberinput_float fieldMinVal;
         gui_numberinput_float fieldMaxVal;
         guidropdown_generic<String> fieldMode;
+        guibuttonstate btnClamp;
         guibutton btnRemove;
-        public:
-        guictr_edit_modulation_slot()
-            : guictr_base(),
-            fieldMinVal(nullptr),
-            fieldMaxVal(nullptr)
-        {
-            margin  = 0;
-            padding = 2;
-            this->guiType = gui_type::CTR_TYPE_EDIT_MODULATION;
-            add(&btnSourceName);
-            add(&fieldMaxVal);
-            add(&fieldMinVal);
-            add(&fieldMode);
-            add(&btnRemove);
-            fieldMaxVal.setLabel("Max");
-            fieldMinVal.setLabel("Min");
-            fieldMode.setLabel("Mode");
-            btnRemove.setLabel("Remove");
-            btnRemove.setText("Remove");
-            btnSourceName.setText("Source");
-            btnSourceName.setLabel("Source");
-        }
+    public:
+        guictr_edit_modulation_slot();
         ~guictr_edit_modulation_slot() override {
             removeGuis();
         }
@@ -66,11 +47,7 @@ namespace DAW::UI {
         }
         void layout() override;
         void determineSize(ivec2& prefSize) override;
-        void buttonClicked(guibase* _button) override {
-            if (parent) {
-                parent->buttonClicked(_button);
-            }
-        }
+        void buttonClicked(guibase* _button) override;
     };
 
     class guictr_edit_modulation : public guictxtmenu_base {

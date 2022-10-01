@@ -53,14 +53,16 @@ inline bool operator<(const automatable_param_ref_t& lhs, const automatable_para
 
 namespace DAW {
     enum ModulationMode : uint8_t {
-        REPLACE,
+        REPLACE = 0,
         ADD,
         MUL,
+        BYPASS,
     };
     struct modulation_scaling_t {
         float min = 0.0f;
         float max = 1.0f;
         ModulationMode mode = ModulationMode::REPLACE;
+        bool bClamp = false;
     };
     struct modulation_channel_ref {
         int32_t paramIdxDst = -1;

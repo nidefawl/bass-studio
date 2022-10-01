@@ -212,6 +212,8 @@ namespace PluginMacros {
                     case DAW::ModulationMode::REPLACE:
                         fIn = valScaled;
                         break;
+                    default:
+                        break;
                 }
                 return fIn;
             }
@@ -228,8 +230,14 @@ namespace PluginMacros {
                             case DAW::ModulationMode::MUL:
                                 inOut[i] *= valScaled;
                                 break;
+                            case DAW::ModulationMode::REPLACE:
+                                inOut[i] = valScaled;
+                                break;
                             default:
                                 break;
+                        }
+                        if (scale.bClamp) {
+                            *inOut = math::clamp(*inOut, scale.min, scale.max);
                         }
                     }
                 }

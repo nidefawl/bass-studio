@@ -122,6 +122,11 @@ namespace PluginLFO {
                     case DAW::ModulationMode::REPLACE:
                         fIn = valScaled;
                         break;
+                    default:
+                        break;
+                }
+                if (scale.bClamp) {
+                    fIn = math::clamp(fIn, scale.min, scale.max);
                 }
                 return fIn;
             }
@@ -139,6 +144,11 @@ namespace PluginLFO {
                         case DAW::ModulationMode::REPLACE:
                             *inOut++ = valScaled;
                             break;
+                        default:
+                            break;
+                    }
+                    if (scale.bClamp) {
+                        *inOut = math::clamp(*inOut, scale.min, scale.max);
                     }
                 }
             }

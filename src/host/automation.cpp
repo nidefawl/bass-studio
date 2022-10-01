@@ -185,6 +185,11 @@ void automation_t::sampleAutomation(double dTickBegin, double dTickEnd, sampleco
             case DAW::ModulationMode::REPLACE:
                 *inOut++ = valScaled;
                 break;
+            default:
+                break;
+            if (scale.bClamp) {
+                *inOut = math::clamp(*inOut, scale.min, scale.max);
+            }
         }
     }
 }
@@ -528,6 +533,11 @@ float automation_lane_t::modulateValue(tick_t tick, float fIn, const DAW::modula
         case DAW::ModulationMode::REPLACE:
             fIn = valScaled;
             break;
+        default:
+            break;
+    }
+    if (scale.bClamp) {
+        fIn = math::clamp(fIn, scale.min, scale.max);
     }
     return fIn;
 }

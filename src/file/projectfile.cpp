@@ -51,6 +51,7 @@ void serialize(Archive& archive, modulation_scaling_t& m) {
     archive(make_nvp("min", m.min),
         make_nvp("max", m.max));
     make_optional_nvp(archive, "mode", m.mode);
+    make_optional_nvp(archive, "clamp", m.bClamp);
 }
 template<class Archive>
 void serialize(Archive& archive, modulation_channel_ref& m) {

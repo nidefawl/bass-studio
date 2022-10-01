@@ -73,6 +73,9 @@ public:
     void setStateRef(bool* _enabledPtr) {
         statePtr = _enabledPtr;
     }
+    bool* getStateRef() {
+        return statePtr;
+    }
     void render(NVGcontext* vg) override {
         int32_t fl = getStateFlags();
         renderWidgetBorder(vg, fl);

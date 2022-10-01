@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include "assert_dbg.h"
 #include "math/vec.h"
 #include "event.h"
 #include "str_util.h"
@@ -106,9 +107,11 @@ public:
             }
         }
         if (anyOpen) {
+            log_printf("closeAllSubmenus %s %d+1\n", StringAsCStr(getClassName()), lvl);
             //close all menus deeper than this menu
             appCtrlParent->closeAppMenusAtLvl(lvl + 1);
         }
+        dbgassert(parent && parentCtrl);
     }
     void setLevel(int _lvl) {
         lvl = _lvl;

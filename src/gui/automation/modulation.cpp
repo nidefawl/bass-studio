@@ -3,6 +3,9 @@
 #include "automation.h"
 #include "gui/gui.h"
 #include "gui/container/container.h"
+#include "gui/contextmenu/contextmenu_base.h"
+#include "gui/contextmenu/contextmenu.h"
+#include "gui/contextmenu/contextmenu_daw.h"
 #include "gui/controls/button.h"
 #include "gui/controls/inputfield.h"
 #include "gui/controls/knobpluginparam.h"
@@ -23,6 +26,114 @@
 #include <utility>
 
 namespace DAW::UI {
+    class ctxtmenu_modulation_endpoint : public ctxtmenu_entry_track_io {
+    public:
+        ctxtmenu_modulation_endpoint(int32_t _id, const String& name) : ctxtmenu_entry_track_io(_id, name) {
+        }
+        virtual automatable_param_ref_t getEndpoint() = 0;
+    };
+    class ctxtmenu_entry_stage_channel : public ctxtmenu_modulation_endpoint {
+    public:
+        const automatable_param_ref_t endpoint;
+
+        ctxtmenu_entry_stage_channel(int32_t _id, const String& name, automatable_param_ref_t _endpoint)
+            : ctxtmenu_modulation_endpoint(_id, name), endpoint(_endpoint) {
+        }
+        void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
+            ctxtmenu_entry_track_io::render(ctxtSize, vg, idx, mouse);
+        }
+
+        bool isBus() override {
+            return false;
+        }
+
+        automatable_param_ref_t getEndpoint() override {
+            return endpoint;
+        }
+    };
+    class ctxtmenu_entry_modulation_bus : public ctxtmenu_entry_track_io {
+    public:
+        const bus_type busType;
+        const String busName;
+
+        ctxtmenu_entry_modulation_bus(int32_t _id, const String& name, bus_type bustype)
+            : ctxtmenu_entry_track_io(_id, name),
+            busType(bustype),
+            busName(name) {
+        }
+
+        bool isBus() override {
+            return true;
+        }
+    };
+    class ctxtmenu_entry_modulation_bus_internal : public ctxtmenu_entry_modulation_bus {
+        const audio_stage_ref_t busStage;
+
+    public:
+        ctxtmenu_entry_modulation_bus_internal(int32_t _id, const String& name, audio_stage_ref_t _stageBus)
+            : ctxtmenu_entry_modulation_bus(_id, name, bus_type::internal), busStage(_stageBus) {
+        }
+        audio_stage_ref_t getStageRef() {
+            return busStage;
+        }
+    };
+
+    /* top select menu */
+    class guictxtmenu_modulation : public guictxtmenu {
+
+    public:
+        guictxtmenu_modulation(DawCtrl * _dawCtrl)
+        {
+            this->dawCtrl = _dawCtrl;
+            auto proj = _dawCtrl->getDaw()->getProject();
+            int32_t idx = 0;
+            for (auto* track : proj->getTracksFlatVec()) {
+                addEntry(new ctxtmenu_entry_modulation_bus_internal(idx++, track->name, track->audio->toRef()));
+            }
+        }
+        guictxtmenu_modulation(DawCtrl * _dawCtrl, audio_stage_ref_t _track, int lvl)
+        {
+            this->lvl = lvl;
+            this->dawCtrl = _dawCtrl;
+            auto const stage = _dawCtrl->getDaw()->getPluginManager()->getAudioStage(_track);
+            if (stage) {
+                int32_t idx = 0;
+                for (auto* effect : stage->effects) {
+                    addEntry(new ctxtmenu_entry_stage_channel(idx++, effect->getAutomatableName(), effect->toRef()));
+                }
+            }
+        }
+
+        void addEntry(ctxtmenu_entry* entry) = delete;
+        void addEntry(ctxtmenu_entry_track_io* entry) {
+            guictxtmenu::addEntry(entry);
+        }
+
+        void clickedElement(ctxtmenu_entry* e, int _id) override {
+            auto const ctxtEndpointEntry = static_cast<ctxtmenu_entry_track_io*>(e);
+            if (ctxtEndpointEntry->isBus()) {
+                return;
+            }
+            dbgassert(dynamic_cast<ctxtmenu_modulation_endpoint*>(e));
+            auto const entry = static_cast<ctxtmenu_modulation_endpoint*>(e);
+        }
+
+
+        guictxtmenu* createPopupForEntry(ctxtmenu_entry* e, int lvl) override {
+            guictxtmenu* popup = nullptr;
+            auto entry = dynamic_cast<ctxtmenu_entry_modulation_bus*>(e);
+            if (entry) {
+                if (entry->busType == bus_type::internal) {
+                    auto stageEntry = dynamic_cast<ctxtmenu_entry_modulation_bus_internal*>(entry);
+                    dbgassert(stageEntry);
+                    if (stageEntry) {
+                        popup = new guictxtmenu_modulation(dawCtrl, stageEntry->getStageRef(), lvl);
+                    }
+                }
+            }
+            return popup;
+        }
+    };
 
     void guictr_dragged_modulation_src::handleDraggedRelease(MouseEvent& evt) {
         dawCtrl->objectDragRelease(this, evt);
@@ -37,7 +148,6 @@ namespace DAW::UI {
     }
 
     void guictr_dragged_modulation_src::dragReleaseOn(guibase* target, ivec2 mousepos) {
-        log_printf("guictr_dragged_modulation_src drag on %s\n", StringAsCStr(target->getClassName()));
         target->modulationDragRelease(this, toControlsObjectSpace(mousepos, target));
     }
 
@@ -84,6 +194,14 @@ namespace DAW::UI {
     }
 
     void guictr_edit_modulation::buttonClicked(guibase* _button) {
+        if (_button ==  &btnAddModulation) {
+            auto* popup = new guictxtmenu_modulation(dawCtrl);
+            popup->size = btnAddModulation.size;
+            popup->setFontSize(dawCtrl->getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
+            popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
+            parentCtrl->openAppMenu(0, popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
+            return;
+        }
         if (_button->id >= 16) {
             int32_t modulationIndex = _button->id - 16;
             if (paramAutomatable) {
@@ -205,7 +323,8 @@ namespace DAW::UI {
         }
         setLabel(srcName);
         btnSourceName.setText(channelName);
-        fieldMode.setOptions({ "Replace", "Add", "Multiply" });
+        btnClamp.setStateRef(&modChannelRef.scale.bClamp);
+        fieldMode.setOptions({ "Replace", "Add", "Multiply", "Bypass" });
         fieldMode.setSelectedIndex(math::clamp(static_cast<int32_t>(modChannelRef.scale.mode), 0, fieldMode.getLastIndex()));
         fieldMode.setCallback([pMode = &modChannelRef.scale.mode](int idx, String& s) -> String {
             *pMode = static_cast<DAW::ModulationMode>(idx);
@@ -214,23 +333,21 @@ namespace DAW::UI {
     }
 
     void guictr_edit_modulation_slot::layout() {
-        const int32_t TRACK_HEIGHT_STEP = theme->get(getGuiConstantHeight());
-
-        auto padding       = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
-        auto cs            = getSizeContent();
-        auto srcNameW      = 0.3f * cs.x;
-        auto w             = (cs.x - srcNameW) - padding * 2;
-        btnSourceName.size = { srcNameW, TRACK_HEIGHT_STEP };
-        btnSourceName.pos  = { padding, 0 };
-        fieldMinVal.size   = ivec2(w * 0.25 - padding, TRACK_HEIGHT_STEP);
-        fieldMinVal.pos    = ivec2(padding + srcNameW, 0);
-        fieldMaxVal.size   = ivec2(w * 0.25 - padding, TRACK_HEIGHT_STEP);
-        fieldMaxVal.pos    = ivec2(fieldMinVal.right()+padding, fieldMinVal.top());
-        fieldMode.size     = ivec2(w * 0.3 - padding, TRACK_HEIGHT_STEP);
-        fieldMode.pos      = ivec2(fieldMaxVal.right()+padding, fieldMaxVal.top());
-        btnRemove.size     = ivec2(w * 0.2, TRACK_HEIGHT_STEP);
-        btnRemove.pos      = ivec2(fieldMode.right()+padding, fieldMode.top());
-
+        auto padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
+        auto cs = getSizeContent();
+        std::array<float, 6> scales{ 0.2f, 0.15f, 0.15f, 0.2f, 0.15f, 0.15f };
+        guibase* prevGui = nullptr;
+        size_t idx = 0;
+        float w = cs.x - (scales.size() - 1) * padding;
+        for (auto gui : guis) {
+            gui->pos = {};
+            if (prevGui) {
+                gui->pos.x = prevGui->pos.x + prevGui->size.x + padding;
+            }
+            dbgassert(idx < scales.size());
+            gui->size = { math::max(math::roundfS32(w * scales[idx++]), 16), cs.y };
+            prevGui = gui;
+        }
         for (guibase* gui : guis) {
             gui->layout();
         }
@@ -238,7 +355,7 @@ namespace DAW::UI {
 
     void guictr_edit_modulation_slot::determineSize(ivec2& prefSize) {
         const int32_t TRACK_HEIGHT_STEP = theme->get(getGuiConstantHeight());
-        auto padding2                   = paddingBR(padding) + paddingTL(padding);
+        auto padding2 = paddingBR(padding) + paddingTL(padding);
         prefSize                        = ivec2(prefSize.x, TRACK_HEIGHT_STEP + padding2.y);
     }
 
@@ -269,13 +386,46 @@ namespace DAW::UI {
         return false;
     }
 
+    guictr_edit_modulation_slot::guictr_edit_modulation_slot()
+        : guictr_base(),
+          fieldMinVal(nullptr),
+          fieldMaxVal(nullptr) {
+        margin        = 0;
+        padding       = 2;
+        this->guiType = gui_type::CTR_TYPE_EDIT_MODULATION;
+        add(&btnSourceName);
+        add(&fieldMinVal);
+        add(&fieldMaxVal);
+        add(&fieldMode);
+        add(&btnClamp);
+        add(&btnRemove);
+        fieldMaxVal.setLabel("Max");
+        fieldMinVal.setLabel("Min");
+        fieldMode.setLabel("Mode");
+        btnRemove.setText("Remove");
+        btnSourceName.setText("Source");
+        btnClamp.setText("Clamp");
+        btnClamp.setButtonColor(GuiColor::COL_BASE_BG_FRAME_HIGHLIGHT);
+    }
+    void guictr_edit_modulation_slot::buttonClicked(guibase* _button) {
+        if (&btnClamp == _button) {
+            auto* b = btnClamp.getStateRef();
+            if (b) {
+                *b = !*b;
+            }
+            return;
+        }
+        if (parent) {
+            parent->buttonClicked(_button);
+        }
+    }
 }// namespace DAW::UI
 
 namespace DAW {
     void OpenModulationEditor(DawCtrl* dawCtrl, ivec2 mousePos, automatable_t* atl, int32_t paramIdx, DAW::modulation_channel_ref ref) {
         dawCtrl->closeAllContextMenus();
         auto ctxtMenu = new DAW::UI::guictr_edit_modulation();
-        ctxtMenu->size = {420, 420};
+        ctxtMenu->size = {520, 420};
         ctxtMenu->pos = {0, 0};
         ctxtMenu->canTakeInputFocus = true;
         ctxtMenu->maxHeight = -1;
