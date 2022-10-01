@@ -398,7 +398,6 @@ namespace PluginLFO {
     class guictr_module_lfo : public guictr_base {
         module_lfo* const module;
         std::vector<guiknob_pluginparam*> guiParams;
-        std::vector<guictr_vert_layout*> layoutCtrs;
         std::vector<gui_slider_textfield*> guiParamsTextfields;
         i_ctr_shape_editor* const shapeEditor;
         guictr_base* ctrShapeEditor;
