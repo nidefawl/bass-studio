@@ -819,7 +819,7 @@ std::shared_ptr<guictr_layout_entry> guictr_layout::replaceContainerWith(guictr_
     return entry;
 }
 
-guictr_layout_entry::guictr_layout_entry(String _label, std::shared_ptr<guictr_base> _ctr)
+guictr_layout_entry::guictr_layout_entry(String _label, const std::shared_ptr<guictr_base>& _ctr)
     : type(_ctr->getGuiType()),
       frameType(_ctr->getGuiType() == CTR_TYPE_LAYOUT ? layout_ctr_type::GUICTR_LAYOUT : layout_ctr_type::GUICTR_BASE),
       ctr(_ctr),

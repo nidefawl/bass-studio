@@ -158,7 +158,7 @@ bool makeContainer(ContainerInstanceContext& ctxt, gui_type type, std::shared_pt
     }
     return false;
 }
-std::shared_ptr<guictr_layout_entry> createGuiCtrLayoutEntry(std::shared_ptr<guictr_base> ctr) {
+std::shared_ptr<guictr_layout_entry> createGuiCtrLayoutEntry(const std::shared_ptr<guictr_base>& ctr) {
     std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<guictr_layout_entry>(ctr->getLabel(), ctr);
     return entry1;
 }

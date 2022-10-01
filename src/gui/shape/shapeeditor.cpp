@@ -15,6 +15,7 @@
 #include "gui/controls/button.h"
 #include "gui/dialog/dialogs.h"
 #include "gui/dropdown/dropdown_preset_tree.h"
+#include "gui/gui.h"
 #include "gui/shape/shapeeditor.h"
 #include "guicolors.h"
 #include "guiglobals.h"
@@ -591,7 +592,7 @@ class guictr_curve_editor : public guictr_base, public i_ctr_shape_editor {
     int32_t inputHeight = HEIGHT_DEFAULT_INPUT;
 public:
     guictr_curve_editor() : guictr_base(){
-        guiType = CTR_TYPE_PROPERTIES;
+        guiType = CTR_TYPE_SHAPE_EDITOR;
         getContainerLabel(guiType, this->label);
         presetManager.setFileExtension("shape");
         presetManager.load(App::Platform::toUserdataPath("presets/Shapes"));
