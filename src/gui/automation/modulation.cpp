@@ -87,6 +87,7 @@ namespace DAW::UI {
         if (_button->id >= 16) {
             int32_t modulationIndex = _button->id - 16;
             if (paramAutomatable) {
+                auto lock = dawCtrl->lockPlayThread();
                 paramAutomatable->removeModulation(modulationIndex);
                 updateSlots();
                 parentCtrl->relayout();

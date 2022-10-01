@@ -1,8 +1,10 @@
+#include <cstdint>
 #include <functional>
 #include <vector>
 #include "assert_dbg.h"
 
 #include "error.h"
+#include "logging.h"
 #include "math/seq_math.h"
 #include "debugctr.h"
 #include "str_util.h"
@@ -516,15 +518,16 @@ void resetHistAndCheck(DawInstance* daw) {
     daw->getHist().clear(daw);
 
 #ifndef NDEBUG
-    int n = 0;
+    int32_t liveClips = 0;
     auto& tracks = daw->getTracks();
     for (auto track : tracks) {
         int nTrackClips = track->getMidi().getConstClips().size();
-        log_printf("track %s %d %s has %d clips\n", TrackTypeToName(track->type), track->projectIdx, StringAsCStr(track->name), nTrackClips);
-        n += nTrackClips;
+        liveClips += nTrackClips;
     }
-
-    dbgassert(n == getNumClipAllocations());
+    int32_t allocClips = getNumClipAllocations();
+    if (allocClips != liveClips) {
+        log_lf(Log::L_WARN, "Clip allocations (%d) does not match used clips (%d)", allocClips, liveClips);
+    }
 #endif
 }
 void gui_ctr_debug::buttonClicked(guibase* button) {

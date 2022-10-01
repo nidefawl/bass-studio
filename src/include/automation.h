@@ -297,6 +297,8 @@ public:
     const std::vector<DAW::automation_channel_ref*>& getModulations(int32_t paramIdx) const {
         return mapInputChannels.at(paramIdx);
     }
+
+    //TODO: have bIsModulated flag on param and keep in sync for perf and thread safety reasons
     bool isParamModulated(int32_t paramIdx) const {
         return mapInputChannels.count(paramIdx);
     }

@@ -797,6 +797,7 @@ void guiknob::modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec
 void guiknob::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
     if (this->paramAutomatable) {
 #if BUILD_DAW_HOST
+        auto lock = dawCtrl->lockPlayThread();
         DAW::ConnectModulationInputChannel(this->paramAutomatable, paramIdx, g->getChannelRef());
 #endif
     }
@@ -826,6 +827,7 @@ void gui_slider_textfield::modulationDragMove(DAW::UI::guictr_dragged_modulation
 void gui_slider_textfield::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
     if (this->paramAutomatable) {
 #if BUILD_DAW_HOST
+        auto lock = dawCtrl->lockPlayThread();
         DAW::ConnectModulationInputChannel(this->paramAutomatable, paramIdx, g->getChannelRef());
 #endif
     }
