@@ -51,7 +51,7 @@ int64_t audiotrack_t::readSamples(samplecount_t samplePos, samplecount_t numSamp
 
     if (samples.empty()) {
         //unexpected
-        dbgassert(0);
+        // dbgassert(0);
         return 0;
     }
 

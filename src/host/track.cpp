@@ -1737,14 +1737,16 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                                                             ssr.length,
                                                             trImpl->input.channels,
                                                             ssr.channels);
-                            dbgassert(nSamplesRead == ssr.length);
-                            ssr.length = nSamplesRead;
-                            cache->updateSample(ssr);
-                            samplesWritten += samplesRecorded;
-                            samplesRecorded = 0;
-                            pClip->name = file->name;
-                            pClip->audio.id = audioSampleId;
-                            pClip->rgb = tr->rgb;
+                            dbgassert(nSamplesRead <= ssr.length);
+                            if (nSamplesRead > 0) {
+                                ssr.length = nSamplesRead;
+                                cache->updateSample(ssr);
+                                samplesWritten += samplesRecorded;
+                                samplesRecorded = 0;
+                                pClip->name = file->name;
+                                pClip->audio.id = audioSampleId;
+                                pClip->rgb = tr->rgb;
+                            }
                         } else {
                             // sample wen't offline
                             audioSampleId = -1;
