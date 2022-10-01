@@ -116,11 +116,6 @@ namespace Table {
 
 using namespace Table;
 
-struct guiproperties_t {
-    SafeRef<guibase> safeRef;
-};
-
-
 class guidropdown_selectfont_ctxt : public guictxtmenu {
     guitheme_mgr* themeMgr;
     std::vector<String> strFontNames;
@@ -195,7 +190,12 @@ protected:
     bool m_bMouseDown       = false;
     bool m_bNeedsRelayout   = false;
 
-    T* m_currentObjPtr;
+    T* m_unsafePointer;
+
+    SafeRef<T> m_currentSafeRef;
+    T* getObjPtr() {
+        return safeRefGet(m_currentSafeRef);
+    }
 
     gui_textfield m_textField;
     gui_numberinput_i32 m_numberInputI32;
@@ -214,7 +214,8 @@ public:
           m_bGlobalInstance(_isGlobalInstance),
           m_bAutoUpdateContents(_isGlobalInstance),
           m_bOwnsObjPtr(_ownsPtr),
-          m_currentObjPtr(_ptr),
+          m_unsafePointer(nullptr),
+          m_currentSafeRef(SafeRef<T>()),
           m_numberInputI32(nullptr),
           m_numberInputFloat(nullptr)
     {
@@ -256,7 +257,7 @@ public:
     ~guiproperties_table() override {
         removeGuis();
         if (m_bOwnsObjPtr)
-            delete m_currentObjPtr;
+            delete m_unsafePointer;
     }
 
     // template specialization must provide
@@ -720,7 +721,7 @@ void addPropertiesFromGui(guictr_base& gui, Table::tbl* table) {
 }
 
 template <>
-void guiproperties_table<guiproperties_t>::layout() {
+void guiproperties_table<guibase>::layout() {
     m_table.tableWidth = getSizeContent().x - (INSET_TABLE<<1);
     AdjustColSizes(m_table);
     if (m_table.colSizes.size() == 2) {
@@ -729,7 +730,7 @@ void guiproperties_table<guiproperties_t>::layout() {
     }
 }
 template <>
-void guiproperties_table<guiproperties_t>::determineSize(glm::ivec2& prefSize) {
+void guiproperties_table<guibase>::determineSize(glm::ivec2& prefSize) {
     //if (size.x == 0)
     prefSize.x = math::max(250, prefSize.x);
     m_fontSize = G_FONT_SCALE(theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE));
@@ -737,22 +738,22 @@ void guiproperties_table<guiproperties_t>::determineSize(glm::ivec2& prefSize) {
     m_table.rows.clear();
     m_table.titleCols.clear();
     m_table.colSizes.clear();
-    guibase* ref = safeRefGet(m_currentObjPtr->safeRef);
-    if (ref && ref->parentCtrl)
+    auto obj = getObjPtr();
+    if (obj && obj->parentCtrl)
     {
-        ref->addProperties(&m_table);
+        obj->addProperties(&m_table);
     }
     prefSize.y = m_table.rows.size()* m_table.rowHeight+ m_table.rowHeight + 10;
 
 }
 template <>
-void guiproperties_table<guiproperties_t>::render(NVGcontext* vg)  {
+void guiproperties_table<guibase>::render(NVGcontext* vg)  {
     renderDefault(vg);
 }
 template <>
-void guiproperties_table<guiproperties_t>::validateReferences()  {
-    guibase* ref = safeRefGet(m_currentObjPtr->safeRef);
-    if (!ref) {
+void guiproperties_table<guibase>::validateReferences()  {
+    auto obj = getObjPtr();
+    if (!obj) {
         setActiveControl(nullptr);
         m_table.rows.clear();
         m_table.titleCols.clear();
@@ -760,9 +761,9 @@ void guiproperties_table<guiproperties_t>::validateReferences()  {
     }
 }
 template <>
-void guiproperties_table<guiproperties_t>::onTick(AppCtrl* appctrl) {
+void guiproperties_table<guibase>::onTick(AppCtrl* appctrl) {
     if (m_bAutoUpdateContents) {
-        guibase* ref = safeRefGet(m_currentObjPtr->safeRef);
+        auto obj = getObjPtr();
         auto ptrNew = appctrl->getGuiFocused();
         auto guibaseCheck = ptrNew;
         while (guibaseCheck) {
@@ -771,11 +772,11 @@ void guiproperties_table<guiproperties_t>::onTick(AppCtrl* appctrl) {
             }
             guibaseCheck = guibaseCheck->parent;
         }
-        if (ref != ptrNew) {
+        if (obj != ptrNew) {
             if (ptrNew) {
-                m_currentObjPtr->safeRef = ptrNew->makeSafeRef();
+                m_currentSafeRef = ptrNew->makeSafeRef();
             } else {
-                m_currentObjPtr->safeRef = SafeRef<guibase>();
+                m_currentSafeRef = SafeRef<guibase>();
             }
             m_bNeedsRelayout = true;
         }
@@ -786,25 +787,25 @@ void guiproperties_table<guiproperties_t>::onTick(AppCtrl* appctrl) {
     }
 }
 template <>
-void guiproperties_table<guiproperties_t>::setDebugPropertyHandle(void *vPtr)  {
-    guibase* ref = safeRefGet(m_currentObjPtr->safeRef);
+void guiproperties_table<guibase>::setDebugPropertyHandle(void *vPtr)  {
+    auto obj = getObjPtr();
     if (!vPtr) {
-        if (ref) {
+        if (m_currentSafeRef.handler) {
             m_table.rows.clear();
             m_table.titleCols.clear();
             m_table.colSizes.clear();
-            m_currentObjPtr->safeRef = SafeRef<guibase>();
+            m_currentSafeRef = SafeRef<guibase>();
             m_bNeedsRelayout         = true;
         }
     } else {
-        guibase* pGui = static_cast<guibase*>(vPtr);
-        if (ref != pGui) {
+        auto pObject = static_cast<guibase*>(vPtr);
+        if (getObjPtr() != pObject) {
             /* enable debug background rendering */
             //pGui->id |= (1<<16);
-            if (pGui) {
-                m_currentObjPtr->safeRef = pGui->makeSafeRef();
+            if (pObject) {
+                m_currentSafeRef = pObject->makeSafeRef();
             } else {
-                m_currentObjPtr->safeRef = SafeRef<guibase>();
+                m_currentSafeRef = SafeRef<guibase>();
             }
             m_bNeedsRelayout = true;
         }
@@ -913,8 +914,9 @@ void guiproperties_table<guitheme_t>::determineSize(glm::ivec2& prefSize) {
     m_table.rows.clear();
     m_table.titleCols.clear();
     m_table.colSizes.clear();
-    m_table.rows.push_back({{tblstr{"this"}, tblint{(int64_t) m_currentObjPtr, "%08X"}}});
-    if (m_currentObjPtr)
+    auto currentObjPtr = getObjPtr();
+    m_table.rows.push_back({{tblstr{"this"}, tblint{(int64_t) currentObjPtr, "%08X"}}});
+    if (currentObjPtr)
     {
         auto add = [this](auto && x, const auto& y) {
             m_table.rows.push_back({{x, y}});
@@ -922,17 +924,17 @@ void guiproperties_table<guitheme_t>::determineSize(glm::ivec2& prefSize) {
         std::vector<GuiColor::constant_t> vec = GuiColor::getAllConstants();
         std::sort(vec.begin(), vec.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
         for (auto _constant : vec) {
-            add(_constant, tbltype_theme_color{ m_currentObjPtr, _constant });
+            add(_constant, tbltype_theme_color{ currentObjPtr, _constant });
         }
         std::vector<GuiConstant::constant_t> vec2 = GuiConstant::getAllConstants();
         std::sort(vec2.begin(), vec2.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
         for (auto _constant2 : vec2) {
-            add(_constant2, tbltype_theme_constant{ m_currentObjPtr, _constant2 });
+            add(_constant2, tbltype_theme_constant{ currentObjPtr, _constant2 });
         }
         std::vector<UIFont::font_type_t> vec3 = UIFont::getAllConstants();
         std::sort(vec3.begin(), vec3.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
         for (auto _constant3 : vec3) {
-            add(tblstr{ _constant3.name }, tbltype_theme_font{ m_currentObjPtr, _constant3 });
+            add(tblstr{ _constant3.name }, tbltype_theme_font{ currentObjPtr, _constant3 });
         }
     }
 
@@ -958,12 +960,12 @@ void guiproperties_table<guitheme_t>::onTick(AppCtrl*) {
 template <>
 void guiproperties_table<guitheme_t>::setDebugPropertyHandle(void *vPtr) {
     if (!vPtr) {
-        m_currentObjPtr = nullptr;
+        m_unsafePointer = nullptr;
         m_table.rows.clear();
         m_table.titleCols.clear();
         m_table.colSizes.clear();
     } else {
-        m_currentObjPtr = static_cast<guitheme_t*>(vPtr);
+        m_unsafePointer = static_cast<guitheme_t*>(vPtr);
     }
 }
 
@@ -1106,7 +1108,7 @@ guictr_base* makeCtrTheme() {
     return ctr;
 }
 
-std::vector<guiproperties_table<guiproperties_t>*> g_propTableInstances;
+std::vector<guiproperties_table<guibase>*> g_propTableInstances;
 void setGlobalDebugPropertyHandle(void* ptr) {
     for (auto* instance : g_propTableInstances) {
         if (instance->parentCtrl) {
@@ -1117,21 +1119,21 @@ void setGlobalDebugPropertyHandle(void* ptr) {
 }
 
 guictr_properties_table* makeUniquePropertiesCtr() {
-    return new guiproperties_table<guiproperties_t>(new guiproperties_t(), false, true);
+    return new guiproperties_table<guibase>(new guibase(), false, true);
 }
 
 guictr_base* makeCtrProperties() {
-    auto* ptr = new guiproperties_table<guiproperties_t>(new guiproperties_t(), true, true);
+    auto* ptr = new guiproperties_table<guibase>(new guibase(), true, true);
     g_propTableInstances.push_back(ptr);
     return ptr;
 }
 
 template <>
-guiproperties_table<guiproperties_t>::~guiproperties_table() {
+guiproperties_table<guibase>::~guiproperties_table() {
     removeGuis();
     if (m_bGlobalInstance) {
         always_assert(removeEntry(g_propTableInstances, this));
     }
     if (m_bOwnsObjPtr)
-        delete m_currentObjPtr;
+        delete m_unsafePointer;
 }

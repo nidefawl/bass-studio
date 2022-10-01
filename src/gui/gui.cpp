@@ -707,8 +707,8 @@ guibase::~guibase() {
 SafeRef<guibase> guibase::makeSafeRef() {
     dbgassert(parentCtrl);
     if (!safeRef.handler) {
-        safeRef.handler = parentCtrl;
-        safeRef.refId   = safeRef.handler->safeRefCreate(this);
+        auto& storage = parentCtrl->getRefStorage();
+        safeRef = /* SafeRef<guibase> */{ storage.safeRefCreate(this), &storage };
     }
     return safeRef;
 }

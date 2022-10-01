@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include "tls.h"
 #include "types.h"
 #include <vector>
 
@@ -143,15 +144,11 @@ public:
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
 };
-class BaseCtrl : public SafeRefHandler<guibase> {
+class BaseCtrl {
 public:
     enum drag_ctr_event_type { DRAG_BEGIN, DRAG_MOVE, DRAG_END };
     struct drag_ctr_event {
         drag_ctr_event_type evtType;
-    };
-    struct stored_ref {
-        guibase* ptr;
-        int32_t refId;
     };
 protected:
     guitheme_mgr themes;
@@ -169,7 +166,7 @@ public:
     guictr_dragged_container_instance ctrDragHandler;
     std::shared_ptr<guictr_layout_entry> ctrContent;
     int32_t refIdNext = 1;
-    std::vector<stored_ref> refs;
+    SafeRefStorage<guibase> localRefs;
     int cursorIcon         = CURSOR_DEFAULT;
     ivec2 m_size           = {-1, -1};
     ivec2 m_mousePos       = {-1, -1};
@@ -245,28 +242,10 @@ public:
     void dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i_ctr_drop_area* area);
     virtual void dragContainerRelayout(drag_ctr_event evt) = 0;
     bool isDraggingContainer() const { return ctrContent != nullptr || bShowDebugFrames; }
-    int safeRefCreate(guibase* gui) override {
-        stored_ref ref{gui, (int32_t)refIdNext++};
-        refs.push_back(ref);
-        return ref.refId;
-    }
-    guibase* safeRefGetPtr(int32_t refId) override {
-        auto it = std::find_if(refs.begin(), refs.end(), [refId](const stored_ref& ref) { return ref.refId == refId; });
-        if (it != refs.end()) {
-            stored_ref& ref = *it;
-            return ref.ptr;
-        }
-        return nullptr;
-    }
-    void safeRefDestroy(int32_t refId) override {
-        auto it = std::find_if(refs.begin(), refs.end(), [refId](const stored_ref& ref) { return ref.refId == refId; });
-        if (it != refs.end()) {
-            it->ptr = nullptr;
-            refs.erase(it);
-            return;
-        }
-        dbgassert(0);
-    }
+    SafeRefStorage<guibase>& getRefStorage();
+    // int safeRefCreate(guibase* gui) override;
+    // guibase* safeRefGetPtr(int32_t refId) override;
+    // void safeRefDestroy(int32_t refId) override;
     bool isOk() const { return isOK; }
     virtual guitheme_t* getTheme() { return &themes.getRef(); }
     guitheme_mgr* getThemeMgr() { return &themes; }
@@ -294,7 +273,7 @@ public:
     virtual void windowSizeChanged(int32_t w, int32_t h);
     virtual void openContextMenu(guictxtmenu_base* b, ivec2 pos);
     virtual void closeContextMenu(){};
-    void closeAllAppMenus() { closeAppMenusAtLvl(0); };
+    void closeAllAppMenus();
     virtual void closeAppMenusAtLvl(int startlvl){};
     virtual void closeAllContextMenus();
     virtual void closeDialogs();

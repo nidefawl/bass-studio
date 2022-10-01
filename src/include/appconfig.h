@@ -1,6 +1,9 @@
 #pragma once
+#include "gui/gui.h"
+#include "saferef.h"
 #include "types.h"
 #include <map>
+#include <vector>
 #include "str_util.h"
 #include "util/profiling.h"
 
@@ -16,6 +19,7 @@ struct dawruntime {
     bool copyAutomation = true;
 };
 struct appruntime : public dawruntime {
+    SafeRefStorage<guibase> safeRefs;
     render_clip_cache_stats_t renderClipCacheStats{};
     prof_stats_render_t renderStats{};
     prof_stats_render_t prevRenderStats{};

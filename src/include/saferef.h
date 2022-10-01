@@ -26,7 +26,11 @@ class SafeRefStorage : public SafeRefHandler<T> {
 
 public:
     SafeRefStorage() = default;
-    virtual ~SafeRefStorage() = default;
+    virtual ~SafeRefStorage() {
+        for (auto& ref : refs) {
+            ref.ptr->safeRef.handler = nullptr;
+        }
+    }
     int safeRefCreate(T* gui) override {
         RefStored ref{ gui, (int32_t) refIdNext++ };
         refs.push_back(ref);
@@ -56,6 +60,11 @@ template<typename T>
 struct SafeRef {
     int refId = -1;
     SafeRefHandler<T>* handler = nullptr;// lifetime of handler must exceed refs lifetime
+};
+template<typename T>
+struct StoredReference {
+    T* ptr;
+    int32_t refId;
 };
 template<typename T>
 inline bool safeRefOk(SafeRef<T> ref) {

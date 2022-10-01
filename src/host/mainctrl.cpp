@@ -1759,18 +1759,19 @@ void DawInstance::onTick() {
                 autosaveState.tmLastTrigger = getTimeMillis();
             }
             int64_t tmNow = getTimeMillis();
-            if ((tmNow - tmLastSave) / 60000 > settings.autosave.tmSaveDelayMinutes) {
+            const auto ms60k = 60000;
+            if ((tmNow - tmLastSave) / ms60k > settings.autosave.tmSaveDelayMinutes) {
                 bool canOpenAutosave = noPopups;
                 bool hasAnyInputFocus = false;
                 for (auto* ctrl : dawCtrls) {
                     canOpenAutosave &= !ctrl->window->isMouseCaptured();
                     canOpenAutosave &= !ctrl->hasDialogWindows();
                     canOpenAutosave &= !ctrl->hasContextMenu();
-                    // hasAnyInputFocus |= ctrl->hasInputFocus();
+                    hasAnyInputFocus |= ctrl->hasInputFocus();
                     /*canOpenAutosave &= last click was n seconds ago*/
                 }
                 canOpenAutosave &= hasAnyInputFocus;
-                if (canOpenAutosave &&  (tmNow - autosaveState.tmLastTrigger) / 60000 > math::max<int64_t>(settings.autosave.tmReminderDelayMinutes, 1)) {
+                if (canOpenAutosave &&  (tmNow - autosaveState.tmLastTrigger) / ms60k > math::max<int64_t>(settings.autosave.tmReminderDelayMinutes, 1)) {
                     autosaveState.tmLastTrigger = tmNow;
                     auto tooltip                = makeGuiAutosave(1500);
                     auto ctrlSize               = tls.mainCtrl->m_size;

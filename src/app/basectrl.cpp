@@ -1,3 +1,4 @@
+#include "appconfig.h"
 #include "glheaders.h"
 #include <cstddef>
 #include <nanovg.h>
@@ -110,9 +111,6 @@ void processScrollEvt(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffs
 }
 
 BaseCtrl::~BaseCtrl() {
-    for (auto& ref : refs) {
-        ref.ptr->safeRef.handler = nullptr;
-    }
 }
 
 void BaseCtrl::mouseUp(ivec2 mousePos, int button, int kbmods) {
@@ -474,6 +472,7 @@ void AppCtrl::releaseGarbageGuis() {
 }
 void AppCtrl::destroyControl() {
     dbgassert(!this->ctxtmenu);
+    releaseGarbageGuis();
     dbgassert(garbageGuis.empty());
     this->contextWindow = nullptr;
     menuWindows.clear();
@@ -505,10 +504,10 @@ void determineWindowPos(guibase* guicontextmenu, window_main* mainWindow, float 
 }
 
 void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) {
+    closeAppMenusAtLvl(lvl);
     while (CtrSize(menuWindows) <= lvl) {
         menuWindows.push_back({ nullptr, nullptr });
     }
-
     // TODO: allow caller/guicontextmenu to decide what font size to apply here
     // guicontextmenu->setFontSize(getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
 
@@ -940,4 +939,15 @@ void guictr_dragged_container_instance::renderDragged(NVGcontext* vg, ivec2 mous
         //  }
         // nvgLineCap(vg, NVGlineCap::NVG_BUTT);
     }
+}
+void BaseCtrl::closeAllAppMenus() {
+    closeAppMenusAtLvl(0);
+}
+SafeRefStorage<guibase>& BaseCtrl::getRefStorage() {
+    if (daw_tls::isTlsInitialized()) {
+        auto runtime = daw_tls::getTls().runtime;
+        dbgassert(runtime);
+        return runtime->safeRefs;
+    }
+    return localRefs;
 }
