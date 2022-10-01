@@ -767,7 +767,6 @@ void PluginManager::activateDeferred(effectbase* const eff, int flags, effectbas
     effect->loadSnapshot(pluginSnapshot);
 
     effect->setModulations(prevPlugin->getModulations());
-    effect->inputChannels = prevPlugin->inputChannels;
     effect->sName         = pluginSnapshot.name;
     effect->setProductName(pluginSnapshot.name);
     effect->setParamValue(PARAM_ENABLE, pluginSnapshot.enabled ? 1.0f : 0.0f, FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE);
