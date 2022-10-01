@@ -78,3 +78,11 @@ struct tracklayout_settings_t {
     bool hideTrack     = false;
     bool hideSubtracks = false;
 };
+
+struct subtracksettings_t {
+    int32_t subtrackType    = 0;
+};
+
+struct subtracklayout_settings_t {
+    int height         = 4;
+};

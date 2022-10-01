@@ -76,14 +76,25 @@ void serialize(Archive& archive, param_snapshot_t& m) {
 }
 
 template<class Archive>
-void serialize(Archive& archive, automatable_param_ref_t& m) {
+void load(Archive& archive, automatable_param_ref_t& m, const std::uint32_t version) {
+    if (version == 0) {
+        int dummy = 0;
+        archive(make_nvp("type", m.type),
+            make_nvp("paramIdx", m.paramIdx),
+            make_nvp("height", dummy),
+            make_nvp("refId", m.refId));
+    } else {
+        archive(make_nvp("type", m.type),
+            make_nvp("paramIdx", m.paramIdx),
+            make_nvp("refId", m.refId));
+    }
+}
+template<class Archive>
+void save(Archive& archive, const automatable_param_ref_t& m, const std::uint32_t version) {
     archive(make_nvp("type", m.type),
         make_nvp("paramIdx", m.paramIdx),
-        make_nvp("height", m.height),
-        make_nvp("refId", m.refId),
-        make_nvp("subtrackType", m.subtrackType));
+        make_nvp("refId", m.refId));
 }
-
 template<class Archive>
 void serialize(Archive& archive, automation_view_t& m) {
     archive(make_nvp("param", m.targetParam),
@@ -279,9 +290,35 @@ void serialize(Archive& archive, tracklayout_settings_t& m) {
 }
 
 template<class Archive>
-void serialize(Archive& archive, track_layout_snapshot_t& m) {
+void serialize(Archive& archive, subtracksettings_t& m) {
+    archive(make_nvp("subtrackType", m.subtrackType));
+}
+
+template<class Archive>
+void serialize(Archive& archive, subtracklayout_settings_t& m) {
+    archive(make_nvp("subtrackType", m.height));
+}
+
+template<class Archive>
+void serialize(Archive& archive, subtrack_snapshot_t& m) {
+    archive(make_nvp("settings", m.settings),
+        make_nvp("layoutSettings", m.layoutSettings),
+        make_nvp("automationLane", m.atlRef));
+}
+
+template<class Archive>
+void save(Archive& archive, track_layout_snapshot_t const& m, const std::uint32_t version) {
+    
+    archive(make_nvp("layout", m.layout));
+    if (version > 0) {
+        archive(make_nvp("subtracks", m.subtracks));
+    }
+}
+
+template<class Archive>
+void load(Archive& archive, track_layout_snapshot_t& m, const std::uint32_t version) {
     archive(make_nvp("layout", m.layout),
-        make_nvp("subtracks", m.automationLanes));
+            make_nvp("subtracks", m.subtracks));
 }
 
 template<class Archive>
@@ -558,6 +595,8 @@ CEREAL_REGISTER_TYPE(guictrlayout_snapshot_t);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(guictrlayout_entry_snapshot_t, guictrlayout_snapshot_t)
 CEREAL_CLASS_VERSION(plugin_snapshot_t, 11);
 CEREAL_CLASS_VERSION(track_snapshot_t, 4);
+CEREAL_CLASS_VERSION(automatable_param_ref_t, 1);
+CEREAL_CLASS_VERSION(track_layout_snapshot_t, 1);
 CEREAL_CLASS_VERSION(project_file, FILE_FORMAT_VERSION);
 
 

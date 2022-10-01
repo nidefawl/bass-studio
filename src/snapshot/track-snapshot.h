@@ -42,9 +42,15 @@ struct track_impl_snapshot_t {
     track_impl_snapshot_t(track_impl_t* p, const tracksnapshot_store_opts_t& opts);
 };
 
+struct subtrack_snapshot_t {
+    subtracksettings_t settings;
+    subtracklayout_settings_t layoutSettings;
+    automatable_param_ref_t atlRef;
+};
+
 struct track_layout_snapshot_t {
     tracklayout_settings_t layout;
-    std::vector<automatable_param_ref_t> automationLanes;
+    std::vector<subtrack_snapshot_t> subtracks;
 };
 
 struct track_snapshot_t {

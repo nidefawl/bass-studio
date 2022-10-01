@@ -37,8 +37,6 @@ struct automatable_param_ref_t {
     automatable_type_t type = AUTOMATABLE_NONE;
     int32_t refId           = -1;
     int32_t paramIdx        = -1;
-    int32_t height          = 4;
-    int32_t subtrackType    = 0;
 };
 namespace DAW {
     enum ModulationMode : uint8_t {
