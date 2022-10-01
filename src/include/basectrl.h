@@ -94,7 +94,7 @@ struct guictr_layout_entry {
     String label;
     bool hasHandle = true;
     i_ctr_layout* parentLayoutContainer = nullptr;
-    guictr_layout_entry(String label, std::shared_ptr<guictr_base> _ctr);
+    guictr_layout_entry(String label, const std::shared_ptr<guictr_base>& _ctr);
     ~guictr_layout_entry();
     guictr_base* getGui();
     std::shared_ptr<guictr_base> getSharedGui() const { return ctr; }

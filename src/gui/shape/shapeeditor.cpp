@@ -477,8 +477,11 @@ public:
         dragged = {};
         if (hasControlHandles()) {
             curveTmp.eraseDuplicates();
-            if (callback)
+            if (callback) {
                 callback(curveTmp);
+            } else if (curve) {
+                *curve = curveTmp;
+            }
         }
     }
 private:
