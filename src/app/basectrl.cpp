@@ -547,7 +547,7 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) 
         *popupCtrl->getTheme() = *getTheme();
         popupCtrl->m_scale     = m_scale;
     }
-    static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (entry.wnd->getCreationFlags() & GLFW_RESIZABLE), false);
+    static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, (entry.wnd->getCreationFlags() & WINDOW_IS_RESIZABLE), false);
 }
 
 void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int flags) {
