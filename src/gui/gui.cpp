@@ -199,6 +199,21 @@ float guibase::renderText(NVGcontext* vg,
     return renderTextLabel(vg, pos, bounds, text, theme, fontSizeScaled, theme->getColor(c), align);
 }
 
+void getNvgMultiLineTextBounds(NVGcontext* vg, const String& s, float maxLineWidth, float lineh, float* bounds) {
+    NVGtextRow rows[16];
+    int nrows;
+    float textBoundsX = 0;
+    float textBoundsY = 0;
+    if ((nrows = nvgTextBreakLines(vg, s.c_str(), &s.back() + 1, maxLineWidth, rows, 16))) {
+        for (int i = 0; i < nrows; i++) {
+            NVGtextRow* row = &rows[i];
+            textBoundsX     = math::max(textBoundsX, row->width);
+            textBoundsY += lineh;
+        }
+    }
+    bounds[0] = textBoundsX;
+    bounds[1] = textBoundsY;
+};
 float renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, const String& str, float fontSize, GuiColor::constant_t c, ivec2 pos, ivec2 bounds) {
 
     float fontSizeScaled = fontSize;
@@ -227,34 +242,18 @@ float renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme,
     float lineh = 0;
     nvgTextMetrics(vg, nullptr, nullptr, &lineh);
 
-    auto getNvgMultiLineTextBounds = [lineh](NVGcontext* vg, String s, float maxLineWidth, float* bounds) -> void {
-        auto* btncstr = StringAsCStr(s);
-        NVGtextRow rows[16];
-        int nrows;
-        float textBoundsX = 0;
-        float textBoundsY = 0;
-        if ((nrows = nvgTextBreakLines(vg, btncstr, nullptr, maxLineWidth, rows, 16))) {
-            for (int i = 0; i < nrows; i++) {
-                NVGtextRow* row = &rows[i];
-                textBoundsX     = math::max(textBoundsX, row->width);
-                textBoundsY += lineh;
-            }
-        }
-        bounds[0] = textBoundsX;
-        bounds[1] = textBoundsY;
-    };
 
     vec2 vPos = pos;
     float textBounds[2];
-    getNvgMultiLineTextBounds(vg, str, bounds.x, textBounds);
+    getNvgMultiLineTextBounds(vg, str, bounds.x, lineh, textBounds);
     if (textBounds[1] > bounds.y && fontSizeScaled > 6) {
         nvgFontSize(vg, fontSizeScaled - 6);
-        getNvgMultiLineTextBounds(vg, str, bounds.x, textBounds);
+        getNvgMultiLineTextBounds(vg, str, bounds.x, lineh, textBounds);
     }
     vPos.y += bounds.y / 2.0f - (textBounds[1] / 2.0f);
     vPos.y += lineh / 2.0f;
 
-    nvgTextBox(vg, vPos.x, vPos.y, bounds.x, StringAsCStr(str), nullptr);
+    nvgTextBox(vg, vPos.x, vPos.y, bounds.x, str.c_str(), &str.back() + 1);
     return textBounds[0];
 }
 

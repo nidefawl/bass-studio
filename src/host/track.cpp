@@ -1478,7 +1478,8 @@ namespace DAW {
         std::vector<track_modulation_routing_snapshot_t*> allModulation;
         std::vector<plugin_snapshot_t*> q;
 
-        // if (host->isStageIdInUse(snapshot.stageIds)) {
+        // if (host->isStageIdInUse(snapshot.stageIds))
+        {
             auto stageId = host->getNextGlobalAudioStageId(0);
             log_lf(Log::L_DEBUG, "stageId %d is in use, assigning new id %d\n", snapshot.stageIds.stageId, static_cast<int32_t>(stageId.stageId));
             idMap[snapshot.stageIds.stageId] = static_cast<int32_t>(stageId.stageId);
@@ -1488,7 +1489,7 @@ namespace DAW {
             snapshot.stageIds = saveTrackIdSnapshot(stageId);
             all.push_back(&snapshot.data.effectRouting);
             allModulation.push_back(&snapshot.data.modulationRouting);
-        // }
+        }
 
         q.reserve(snapshot.data.pluginSnapshots.size());
         for (auto& plugin : snapshot.data.pluginSnapshots) {

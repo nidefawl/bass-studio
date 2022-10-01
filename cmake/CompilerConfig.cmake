@@ -56,6 +56,8 @@ if (MSVC)
   add_compile_definitions(_CRT_SECURE_NO_WARNINGS NOMINMAX) 
   add_compile_options(/external:anglebrackets /external:W0)
   add_compile_options(/MP7)
+  # add_compile_options(/fsanitize=address)
+  # add_link_options(/fsanitize=address)
 else()
   set(PROJECT_CFG_USE_STACK_PROTECTOR "OFF" CACHE STRING "Use fstack-protector (ON/OFF/DebugOnly)")
   set_property(CACHE PROJECT_CFG_USE_STACK_PROTECTOR PROPERTY STRINGS ON OFF DebugOnly)
@@ -97,8 +99,8 @@ else()
   # add_compile_options(-ftime-trace) # profile compilation times
   # address sanitizer: 
   # Disable ADD_POST_BUILD_COMMANDS and set ASAN_SYMBOLIZER_PATH=path\to\bin\llvm-symbolizer
-  # add_compile_options(-fsanitize=address)
-  # add_link_options(-fsanitize=address)
+  # add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+  # add_link_options(-fsanitize=address -fno-omit-frame-pointer)
   if(PROJECT_CFG_OPTIMIZE STREQUAL "x86-64-v3")
     # march=native optimization. Turn off for dist build
     add_compile_options(-march=${PROJECT_CFG_OPTIMIZE} -mtune=corei7)

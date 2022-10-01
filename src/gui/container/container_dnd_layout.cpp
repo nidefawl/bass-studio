@@ -426,7 +426,7 @@ void guictr_layout_entry_handle::render(NVGcontext* vg) {
         if (str.length() > 0) {
             int fontScale = 12;
             UTIL_setFont(vg, theme, fontScale, theme->getColor(getLabelColor()), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-            nvgText(vg, renderPos.x, renderPos.y, StringAsCStr(str), NULL);
+            nvgText(vg, renderPos.x, renderPos.y, str.c_str(), &str.back() + 1);
         }
     }
     for (auto c: guis) {
