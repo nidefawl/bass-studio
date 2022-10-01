@@ -54,7 +54,7 @@ void guictr_base::render(NVGcontext* vg) {
             continue;
         }
         if (c->size.x <= 0 || c->size.y <= 0) {
-            log_printf("warning, skip rendering child container %s with size <= 0 0\n", StringAsCStr(c->getClassName()));
+            // log_printf("warning, skip rendering child container %s with size <= 0 0\n", StringAsCStr(c->getClassName()));
             continue;
         }
         {
