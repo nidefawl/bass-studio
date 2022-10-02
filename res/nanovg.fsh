@@ -322,8 +322,8 @@ void main(void) {
 	result += 0.3*vec4(fragTexCoord.xy, 1.0, 1.0);
 #else
 #endif
-	if (result.a < 1.0/2048.0) 
-		discard;
+	// if (result.a < 1.0/2048.0) 
+	// 	discard;
 #ifdef NANOVG_GL3
 	outColor = result;
 #else
