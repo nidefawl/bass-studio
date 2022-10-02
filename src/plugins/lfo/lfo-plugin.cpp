@@ -127,10 +127,18 @@ namespace PluginLFO {
             bool bIsSync = false;
             std::vector<SyncRatio> syncRatios;
             float getPhase(double dTick) const {
-                auto rate = module->getParamValue(PARAM_LFO_RATE);
-                 // TODO: not super accurate
-                float invRate = 1.0f / GetSyncRate(syncRatios, bIsSync, rate);
-                auto phase = dTick * invRate + module->getParamValue(PARAM_LFO_PHASE);
+                const auto fRate = module->getParamValue(PARAM_LFO_RATE);
+                const auto fPhase = module->getParamValue(PARAM_LFO_PHASE);
+                double fPhaseOffset = 0.0f;
+                if (!bIsSync || syncRatios.empty()) {
+                    fPhaseOffset = dTick / double(GetScaledRate(fRate));
+                } else {
+                    auto index = math::clamp<int32_t>(math::floorfS32(fRate * CtrSize(syncRatios)), 0, syncRatios.size() - 1);
+                    auto ratio = syncRatios[index];
+                    double barPos = dTick / double(TICKS_BAR);
+                    fPhaseOffset = double((barPos * ratio.denominator) / ratio.numerator);
+                }
+                auto phase = fPhaseOffset + fPhase;
                 float moduloPhase = modf(phase, &phase);
                 return moduloPhase;
             }
