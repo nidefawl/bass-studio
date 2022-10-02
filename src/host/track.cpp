@@ -1049,6 +1049,7 @@ void audio_stage_t::onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickP
 
 void track_impl_t::onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) {
     audio_stage_t::onPlaybackJumpFromTo(fromSamplePos, fromTickPos, toSamplePos, toTickPos);
+    midiProcessed->clear();
 }
 
 void track_impl_t::sendNotesOff() {
