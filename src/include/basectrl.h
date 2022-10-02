@@ -335,13 +335,12 @@ protected:
     std::vector<appmenu_window_entry> menuWindows;
     std::vector<guibase*> garbageGuis;
     guidialog_base* dialog = nullptr;
-    bool closed            = false;
+    bool bIsVisible = false;
 
     int nextTooltipId = 0;
     int64_t tmLastHoveredTooltip        = 0;
     void* lastHoveredTooltip            = nullptr;
     void* lastTooltipSrc                = nullptr;
-
 public:
     bool hasMenuWindow() {
         for (auto& w : menuWindows) {
@@ -384,10 +383,11 @@ public:
     virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
 
     virtual void menuCommand(menucmd_t command){};
+    virtual void onBeforeShowWindow() {
+        bIsVisible = true;
+    }
     virtual void onWindowClose() {
-        // if (contextWindow && this->ctxtmenu) {
-        //   this->mainWindow->closeOverlay(contextWindow);
-        // }
+        bIsVisible = false;
         if (this->ctxtmenu) {
             dbgassert(contextWindow);
             contextWindow->getCtrl()->closePopup();
@@ -396,11 +396,7 @@ public:
     };
 
     bool onWindowCloseRequest() {
-        if (!closed) {
-            closed = true;
-            return true;
-        }
-        return false;
+        return true;
     };
 
     virtual void onTick()                                               = 0;

@@ -439,7 +439,7 @@ void AppCtrl::onAppTick() {
         if (ctxtmenu && !ctxtmenu->isTransient()) {
             hoverTime = 0;
         }
-        if (!ctxtmenu) {
+        if (!ctxtmenu && bIsVisible) {
             auto timeNow = getTimeMillis();
             if (guiOver == lastHoveredTooltip && timeNow - tmLastHoveredTooltip >= 360) {
                 auto newContextMenu = guiOver->getTooltip(this);
@@ -552,6 +552,9 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) 
 void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int createflags) {
     if (this->ctxtmenu) {
         closeContextMenu();
+        if (!bIsVisible) {
+            return;
+        }
     }
     dbgassert(!this->ctxtmenu);
 
