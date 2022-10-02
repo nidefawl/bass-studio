@@ -77,7 +77,7 @@ void guidialog_about::render(NVGcontext* vg) {
 
     const auto rowHeightDet = rowHeight*0.75f;
     float bounds[4]{0};
-    xRight = x + width / 6;
+    xRight = x + width / 6.0f;
 
     for (const DetailedAbout& t : strings2) {
         renderText(vg,
@@ -114,5 +114,5 @@ void guidialog_about::buttonClicked(guibase* button) {
             closeContextMenu();
             break;
     }
-    guidialog_about::buttonClicked(button);
+    guidialog_base::buttonClicked(button);
 }

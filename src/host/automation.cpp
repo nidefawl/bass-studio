@@ -3,6 +3,7 @@
 #include "assert_dbg.h"
 #include "automation.h"
 #include "config.h"
+#include "host/mainctrl.h"
 #include "math/seq_math.h"
 #include "plugin/vst_plugin.h"
 #include "gui/automation/automatable.h"
@@ -271,10 +272,7 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 void toggleDeviceEnableState(automatable_t* effect, int flags) {
     auto paramEnable = effect->getParam(PARAM_ENABLE);
     auto f = paramEnable->getValue() > 0 ? 0 : 1;
-    if (flags & FLG_PAR_UPDATE_USER) {
-        effect->deactivateAutomation(PARAM_ENABLE);
-    }
-    effect->setParamValue(PARAM_ENABLE, f, flags);
+    effect->setParamEdit(PARAM_ENABLE, f, flags);
 }
 
 void loadAutomation(const std::vector<automation_view_t>& automatedParams, automatable_t* at) {
@@ -290,8 +288,8 @@ void loadAutomation(const std::vector<automation_view_t>& automatedParams, autom
         }
         if (paramInstance) {
             auto* autom = at->getOrCreateAutomation(paramInstance->idx);
-            autom->src.points       = automatedParam.points;
-            autom->src.active       = automatedParam.active;
+            autom->src.points = automatedParam.points;
+            autom->src.setActive(automatedParam.active);
         } else {
             log_lf(Log::L_WARN, "Param %d missing for device %s\n", automatedParam.targetParam, StringAsCStr(at->getAutomatableName()));
         }
@@ -306,7 +304,7 @@ void storeAutomation(std::vector<automation_view_t>& automatedParams, automatabl
         automation_view_t atv;
         atv.targetParam = automatedParam.paramIdx;
         atv.points      = automatedParam.src.points;
-        atv.active      = automatedParam.src.active;
+        atv.active      = automatedParam.src.isActive();
         automatedParams.push_back(atv);
         total++;
     }
@@ -314,11 +312,15 @@ void storeAutomation(std::vector<automation_view_t>& automatedParams, automatabl
 }
 
 void automatable_t::setParamEdit(int32_t idx, float val, int flags) {
+    auto param = getParam(idx);
     auto* automation = getRegisteredAutomation(idx);
     if (automation) {
-        automation->src.active = false;
+        auto automationPref = param->getAutomationScale();
+        if (automationPref.mode == DAW::ModulationMode::REPLACE) {
+            automation->src.deactivate();
+        }
     }
-    setParamValue(idx, val, flags);
+    setAutomatableParam(param, val, flags);
 }
 
 void automatable_t::setAutomatableParam(automatable_param_t* param, float val, int flags) {
@@ -328,6 +330,10 @@ void automatable_t::setAutomatableParam(automatable_param_t* param, float val, i
         param->setModulated(val);
     } else if (flags & FLG_PAR_UPDATE_AUTOMATED) {
         param->setAutomated(val);
+        // auto automationPref = param->getAutomationScale();
+        // if (automationPref.mode == DAW::ModulationMode::REPLACE) {
+        //     param->setValue(val);
+        // }
     } else {
         param->setValue(val);
     }
@@ -340,7 +346,7 @@ void automatable_t::setAutomatableParam(automatable_param_t* param, float val, i
 float automatable_t::getParamValue(int32_t idx) {
     automatable_param_t* param = getParamUnchecked(idx);
     dbgassert(param);
-    if (isParamModulated(param->idx)) {
+    if (param->isModulated()) {
         return param->getValueModulated();
     }
     auto autLane = getRegisteredAutomation(param->idx);
@@ -427,28 +433,8 @@ param_converted_t automatable_t::convertParamValueDisplay(int32_t idx, const par
     return {fTextFieldVal, false};
 }
 
-namespace DAW {
-    float CalculateModulatedParameter(const Host::PluginManager *const host, tick_t tick, automatable_t* device, int32_t paramIdx, float value) {
-        float val = value;
-        auto* automation = device->getRegisteredAutomation(paramIdx);
-        if (automation && automation->isActive()) {
-            val = automation->getValueAt(tick);
-        }
-        if (device->isParamModulated(paramIdx)) {
-            auto mods = device->getModulations(paramIdx);
-            for (const auto& mod : mods) {
-                auto ch = DAW::ResolveModulationChannel(host, *mod);
-                if (ch->isActive()) {
-                    val = ch->modulateValue(tick, val, mod->scale);
-                }
-            }
-        }
-        return val;
-    }
-}
-
 bool automatable_t::isParamConnectedTo(int32_t paramIdx, const DAW::modulation_channel_ref& modChannel) const {
-    for (auto& input : inputChannelsAutomation) {
+    for (auto& input : inputChannelsModulation) {
         if (input.paramIdxDst == paramIdx && input.refSrc == modChannel.refSrc) {
             return true;
         }
@@ -464,15 +450,15 @@ void automatable_t::sampleAutomation(const DAW::Host::PluginManager *const host,
         std::fill(buffer, buffer + numSamples, 0.0f);
         return;
     }
+    std::fill(buffer, buffer + numSamples, param->getValue());
     auto* automation = getRegisteredAutomation(paramIdx);
     if (automation && automation->isActive() && DAW::isPlaybackState(state)) {
-        automation->sampleAutomation(dTickBegin, dTickEnd, numSamples, {}, buffer);
+        automation->sampleAutomation(dTickBegin, dTickEnd, numSamples, param->getAutomationScale(), buffer);
     } else {
-        std::fill(buffer, buffer + numSamples, param->getValue());
     }
-    if (isParamModulated(paramIdx)) {
+    if (param->isModulated()) {
         auto mods = getModulations(paramIdx);
-        for (const auto& mod : mods) {
+        for (const auto& mod : *mods) {
             auto ch = DAW::ResolveModulationChannel(host, *mod);
             if (ch && ch->isActive()) {
                 ch->sampleAutomation(dTickBegin, dTickEnd, numSamples, mod->scale, buffer);
@@ -482,11 +468,10 @@ void automatable_t::sampleAutomation(const DAW::Host::PluginManager *const host,
 }
 
 void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *const host, tick_t tick, playback_state state) {
-    if (automationLanes.empty() && inputChannelsAutomation.empty()) {
+    if (automationLanes.empty() && inputChannelsModulation.empty()) {
         return;
     }
-    std::vector<int32_t> modulatedParams; //TODO: get rid of vector
-    for (auto& entry : mapInputChannels) {
+    for (auto& entry : mapModulations) {
         int32_t paramIdx = entry.first;
         auto param = getParam(paramIdx);
         auto& modulations = entry.second;
@@ -494,7 +479,7 @@ void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *co
         float val = param->getValue();
         auto* autLane = getRegisteredAutomation(paramIdx);
         if (autLane && autLane->isActive() && DAW::isPlaybackState(state)) {
-            const auto valAutLane = autLane->src.getValueAt(tick);
+            const auto valAutLane = autLane->modulateValue(tick, val, param->getAutomationScale());
             setAutomatableParam(param, valAutLane, FLG_PAR_UPDATE_AUTOMATED);
             val = valAutLane;
         }
@@ -504,18 +489,23 @@ void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *co
                 val = ch->modulateValue(tick, val, mod->scale);
             }
         }
-        if (DAW::isPlaybackState(state)) {
-            insertSorted(modulatedParams, paramIdx);
-        }
         setAutomatableParam(param, val, FLG_PAR_UPDATE_MODULATED);
     }
     if (DAW::isPlaybackState(state)) {
         for (auto& automLane : automationLanes) {
             if (automLane.isActive()) {
-                if (std::binary_search(modulatedParams.cbegin(), modulatedParams.cend(), automLane.paramIdx)) {
+                if (mapModulations.count(automLane.paramIdx) > 0) {
                     continue;
                 }
-                setAutomatableParam(getParam(automLane.paramIdx), automLane.getValueAt(tick), FLG_PAR_UPDATE_AUTOMATED);
+                int32_t paramIdx = automLane.paramIdx;
+                auto param = getParam(paramIdx);
+                float val = param->getValue();
+                auto* autLane = getRegisteredAutomation(paramIdx);
+                if (autLane && autLane->isActive() && DAW::isPlaybackState(state)) {
+                    const auto valAutLane = autLane->modulateValue(tick, val, param->getAutomationScale());
+                    setAutomatableParam(param, valAutLane, FLG_PAR_UPDATE_AUTOMATED);
+                    val = valAutLane;
+                }
             }
         }
     }
@@ -540,4 +530,39 @@ float automation_lane_t::modulateValue(tick_t tick, float fIn, const DAW::modula
         fIn = math::clamp(fIn, scale.min, scale.max);
     }
     return fIn;
+}
+
+void automatable_t::updateModulationMap() {
+    std::unordered_map<int32_t, std::vector<DAW::modulation_channel_ref*>> map;
+    for (auto& ref : inputChannelsModulation) {
+        map[ref.paramIdxDst].push_back(&ref);
+    }
+    visitParams([&map](auto& param) {
+        param.second.setModulated( map.count(param.first) > 0);
+    });
+    this->mapModulations = std::move(map);
+}
+
+automation_lane_t* automatable_t::getOrCreateAutomation(int32_t paramIdx) {
+    dbgassert(mapParams.count(paramIdx));
+    auto it = std::find_if(automationLanes.begin(), automationLanes.end(), [paramIdx](automation_lane_t& ap) {
+        return ap.paramIdx == paramIdx;
+    });
+    if (it != automationLanes.end()) {
+        return &(*it);
+    }
+    dbgassert(!daw_tls::getTls().mainCtrl || daw_tls::getTls().mainCtrl->getDaw()->getPlayThread()->isLocked());
+    automationLanes.emplace_back(paramIdx, mapParams[paramIdx].quantizationSteps);
+    auto newLane = &automationLanes.back();
+    return newLane;
+}
+void automatable_t::removeModulation(int32_t modulationIndex) {
+    if (modulationIndex >= 0 && modulationIndex < CtrSize(inputChannelsModulation)) {
+        inputChannelsModulation.erase(inputChannelsModulation.begin() + modulationIndex);
+        updateModulationMap();
+    }
+}
+void automatable_t::setModulations(const std::vector<DAW::modulation_channel_ref>& inputChannelsModulation) {
+    this->inputChannelsModulation = inputChannelsModulation;
+    updateModulationMap();
 }

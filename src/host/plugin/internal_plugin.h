@@ -98,7 +98,7 @@ public:
     DAW::modulation_channel_ref getModulationChannel(int32_t channel) const {
         auto thisRef = toRef();
         thisRef.paramIdx = channel;
-        thisRef.type = AUTOMATABLE_MODULATION_SRC;
+        thisRef.type = AUTOMATABLE_MODULATOR_OUTPUT;
         return DAW::modulation_channel_ref{ 0, thisRef, {} };
     }
     bool hasAutomationModulationOutput() const override {

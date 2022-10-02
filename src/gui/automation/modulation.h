@@ -25,7 +25,7 @@ namespace DAW::UI::Modulation {
     class guictr_edit_modulation_slot : public guictr_base {
         automatable_t* paramAutomatable = nullptr;
         int32_t paramIdx = 0;
-        int32_t modulationIndex = 0;
+        int32_t slotIdx = 0;
         guibutton btnSourceName;
         gui_numberinput_float fieldMinVal;
         gui_numberinput_float fieldMaxVal;
@@ -37,8 +37,11 @@ namespace DAW::UI::Modulation {
         ~guictr_edit_modulation_slot() override {
             removeGuis();
         }
-        void setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::modulation_channel_ref _ref, int32_t modulationIndex);
-
+        void setSlotIndex(int32_t idx) {
+            slotIdx = idx;
+        }
+        void setModulationSource(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::modulation_channel_ref* _ref, int32_t modulationIndex);
+        void setParamAndAutomation(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, int32_t type);
         void renderBackground(NVGcontext* vg) override {
             drawInsetBackground(vg, theme, getPosContent(), getSizeContent());
         }
@@ -121,7 +124,7 @@ namespace DAW::UI::Modulation {
         gui_dragged_modulation dragged;
         bool hasDragged        = false;
         public:
-        guibutton_modulate(DAW::modulation_channel_ref ref) : guibutton(), ref(ref) {
+        explicit guibutton_modulate(DAW::modulation_channel_ref ref) : guibutton(), ref(ref) {
             this->guiType = gui_type::CTR_TYPE_MODULATION_BUTTON;
             drawFn   = drawTextureSymbol;
             drawParm = ICON_MODULATION;

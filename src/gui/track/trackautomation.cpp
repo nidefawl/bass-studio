@@ -281,16 +281,16 @@ void gui_track_automation::trackViewDragRelease(guitrack_editor* view, MouseEven
     postEdit();
 }
 void gui_track_automation::postEdit() {
-    automatable_t* automatable = this->at;
-    automation_t* automation   = NULL;
+    auto automatable = this->at;
     if (automatable) {
-        automation = &automatable->getOrCreateAutomation(paramIdx)->src;
-    }
-    if (automation) {
-        bool activate      = automation->points.empty() && !data.points.empty();
-        automation->points = data.points;
-        if (activate)
-            automation->active = true;
+        auto lock = dawCtrl->lockPlayThread();
+        auto atLane = &automatable->getOrCreateAutomation(paramIdx)->src;
+        if (atLane) {
+            bool activate      = atLane->points.empty() && !data.points.empty();
+            atLane->points = data.points;
+            if (activate)
+                atLane->activate();
+        }
     }
     dawCtrl->getDaw()->updateVisibleTrackContents();
 }

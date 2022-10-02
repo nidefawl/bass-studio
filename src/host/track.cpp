@@ -674,7 +674,10 @@ void audio_stage_t::loadRoutingSnapshot(const track_effect_routing_snapshot_t& s
 
 void audio_stage_t::createModulationRoutingSnapshot(track_modulation_routing_snapshot_t& snapshot) {
     for (effectbase* effect : effects) {
-        snapshot.effectMods[static_cast<int32_t>(effect->projectGlobalId)] = effect->getModulations();
+        auto& modulations = effect->getModulations();
+        if (!modulations.empty()) {
+            snapshot.effectMods[static_cast<int32_t>(effect->projectGlobalId)] = modulations;
+        }
     }
 }
 void audio_stage_t::loadModulationRoutingSnapshot(const track_modulation_routing_snapshot_t& snapshot) {
@@ -1397,6 +1400,7 @@ track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), au
         regparamPan->name  = StringFormat("Send %d Pan", (i + 1));
         regparamPan->shortLabel  = "Pan";
         regparamPan->unit  = "dB";
+        regparamPan->isBiPolar = true;
     }
     getParam(PARAM_ENABLE)->quantizationSteps = 1;
 }
@@ -1578,7 +1582,7 @@ namespace DAW {
     }
 
     automatable_t* resolveAutomatableRefDevice(const Host::PluginManager* const host, const automatable_param_ref_t& ref) {
-        dbgassert(ref.type != AUTOMATABLE_MODULATION_SRC);
+        dbgassert(ref.type != AUTOMATABLE_MODULATOR_OUTPUT);
         if (ref.type == AUTOMATABLE_EFFECT) {
             return host->getPluginById(ref.refId);
         }
@@ -1601,35 +1605,49 @@ namespace DAW {
     }
 
     const automated_param_t* ResolveModulationChannel(const Host::PluginManager* const host, const DAW::modulation_channel_ref& modChannel) {
-        dbgassert(modChannel.refSrc.type == AUTOMATABLE_MODULATION_SRC);
-        auto effBase = host->getPluginById(modChannel.refSrc.refId);
-        if (!(effBase && effBase->hasAutomationModulationOutput())) {
-            return nullptr;
+        if (modChannel.refSrc.type == AUTOMATABLE_MODULATOR_OUTPUT) {
+            auto effBase = host->getPluginById(modChannel.refSrc.refId);
+            if (!effBase || !effBase->hasAutomationModulationOutput()) {
+                return nullptr;
+            }
+            if (!effBase->hasAutomationModulationOutput()) {
+                return nullptr;
+            }
+    #ifndef NDEBUG
+            auto effMod = dynamic_cast<internal_modulator*>(effBase);
+            if (!assert_expr(effMod))
+                return nullptr;
+    #else
+            auto effMod = static_cast<internal_automator*>(effBase);
+    #endif
+            auto p = effMod->getModulationOutputData(modChannel);
+            if (!assert_expr(effMod))
+                return nullptr;
+            return p;
         }
-#ifndef NDEBUG
-        auto effMod = dynamic_cast<internal_modulator*>(effBase);
-        if (!assert_expr(effMod))
-            return nullptr;
-#else
-        auto effMod = static_cast<internal_automator*>(effBase);
-#endif
-        auto p = effMod->getModulationOutputData(modChannel);
-        if (!assert_expr(effMod))
-            return nullptr;
-        return p;
+        dbgassert(0);
+        return nullptr;
     }
-    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, DAW::modulation_channel_ref modChannel) {
+    void ConnectModulationInputChannel(automatable_t* dev, int32_t paramIdx, modulation_channel_ref modChannel, const modulation_scaling_t& scale) {
+        // int32_t numModulations = 0;
         if (dev->isParamModulated(paramIdx)) {
-            auto& inputs = dev->getModulations(paramIdx);
-            for (auto input : inputs) {
-                if (input->refSrc == modChannel.refSrc) {
+            auto* pModulations = dev->getModulations(paramIdx);
+            for (auto mod : *pModulations) {
+                if (mod->refSrc == modChannel.refSrc) {
                     return;
                 }
             }
+            // numModulations = CtrSize(inputs);
         }
         auto inputRef = modChannel;
         inputRef.paramIdxDst = paramIdx;
         inputRef.refSrc = modChannel.refSrc;
+        inputRef.scale = scale;
+
+        if (inputRef.scale.mode == ModulationMode::BYPASS) {
+            inputRef.scale.mode = ModulationMode::MUL;
+        }
+
         dev->getModulations().push_back(inputRef);
         dev->updateModulationMap();
     }
@@ -1954,7 +1972,7 @@ void clip_recorder::recordNoteEvents(playback_state state, tick_t tickBlockStart
 
 }
 automatable_t* track_impl_t::getAutomatableByType(const automatable_param_ref_t& ref) {
-    if (ref.type == AUTOMATABLE_MODULATION_SRC) {
+    if (ref.type == AUTOMATABLE_MODULATOR_OUTPUT) {
         return nullptr;
     }
     if (ref.type == AUTOMATABLE_EFFECT) {

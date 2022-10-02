@@ -84,7 +84,7 @@ namespace DAW::UI::Modulation {
     class guictxtmenu_modulation : public guictxtmenu {
     public:
         std::function<void(const DAW::modulation_channel_ref&)> fnCallback;
-        guictxtmenu_modulation(DawCtrl * _dawCtrl)
+        explicit guictxtmenu_modulation(DawCtrl * _dawCtrl)
         {
             this->dawCtrl = _dawCtrl;
             auto proj = _dawCtrl->getDaw()->getProject();
@@ -108,7 +108,7 @@ namespace DAW::UI::Modulation {
                         for (auto& channel : channelsSrc) {
                             modulation_channel_ref modChanRef;
                             modChanRef.refSrc = ref;
-                            modChanRef.refSrc.type = AUTOMATABLE_MODULATION_SRC;
+                            modChanRef.refSrc.type = AUTOMATABLE_MODULATOR_OUTPUT;
                             modChanRef.refSrc.paramIdx = channel.offset;
                             modChanRef.paramIdxDst = -1;
                             modChanRef.scale = { 0.0f, 1.0f };
@@ -175,7 +175,7 @@ namespace DAW::UI::Modulation {
         mousepos -= pos;
         mousepos += ivec2(20, 20);
         nvgTranslate(vg, mousepos.x, mousepos.y);
-        auto iconS = ivec2(fontSize);
+        auto iconS = ivec2(math::roundfS32(fontSize));
         NVGcolor color = theme->getColor(GuiColor::COL_KNOB_MODULATED);
         NVGcolor color2 = theme->getColor(GuiColor::COL_LABEL_ACTIVE);
         ivec2 bgCenter = pos + ivec2(0, size.y/2) - ivec2(iconS.x+INSET_TABLE, iconS.y/2);
@@ -219,7 +219,7 @@ namespace DAW::UI::Modulation {
             popup->fnCallback = [this](const DAW::modulation_channel_ref& ref) -> void {
                 if (dawCtrl && paramAutomatable){
                     auto lock = dawCtrl->lockPlayThread();
-                    DAW::ConnectModulationInputChannel(paramAutomatable, paramIdx, ref);
+                    DAW::ConnectModulationInputChannel(paramAutomatable, paramIdx, ref, {});
                     updateSlots();
                     layout();
                     parentCtrl->relayout();
@@ -301,51 +301,89 @@ namespace DAW::UI::Modulation {
         text += " ";
         text += paramAutomatable->getParamName(paramIdx);
         setLabel(text);
-        auto isModulated = paramAutomatable->isParamModulated(paramIdx);
-        if (isModulated) {
-            auto& inputs   = paramAutomatable->getModulations(paramIdx);
-            auto numInputs = inputs.size();
-            while (slots.size() > numInputs) {
-                remove(slots.back());
-                delete slots.back();
-                slots.pop_back();
-            }
-            while (slots.size() < numInputs) {
-                auto slot = new guictr_edit_modulation_slot();
-                add(slot);
-                slots.push_back(slot);
-            }
-            for (size_t i = 0; i < numInputs; ++i) {
-                slots[i]->setAutomationRef(host, paramAutomatable, paramIdx, *inputs[i], i);
-            }
-        } else {
-            while (slots.size() > 0) {
-                remove(slots.back());
-                delete slots.back();
-                slots.pop_back();
-            }
+        auto pModulations = paramAutomatable->getModulations(paramIdx);
+        size_t numInputs = 2;
+        if (pModulations) {
+            numInputs += pModulations->size();
+        }
+        while (slots.size() > numInputs) {
+            remove(slots.back());
+            delete slots.back();
+            slots.pop_back();
+        }
+        while (slots.size() < numInputs) {
+            auto slot = new guictr_edit_modulation_slot();
+            slot->setSlotIndex(CtrSize(slots));
+            add(slot);
+            slots.push_back(slot);
+        }
+        slots[0]->setParamAndAutomation(host, paramAutomatable, paramIdx, 0);
+        slots[1]->setParamAndAutomation(host, paramAutomatable, paramIdx, 1);
+        for (size_t i = 2; pModulations && i < numInputs; ++i) {
+            slots[i]->setModulationSource(host, paramAutomatable, paramIdx, (*pModulations)[i-2], i);
         }
     }
-
-    void guictr_edit_modulation_slot::setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::modulation_channel_ref _ref, int32_t modulationIndex) {
+    void guictr_edit_modulation_slot::setParamAndAutomation(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, int type) {
         dbgassert(host);
         dbgassert(_paramAutomatable);
-        btnRemove.id           = 16 + modulationIndex;
-        this->modulationIndex  = modulationIndex;
+        btnRemove.id           = 0;
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
-        auto& modChannels      = _paramAutomatable->getModulations(_paramIdx);
-        auto& modChannelRef    = *modChannels[modulationIndex];
-        fieldMinVal.setRef(&modChannelRef.scale.min);
-        fieldMaxVal.setRef(&modChannelRef.scale.max);
-        auto channel = DAW::ResolveModulationChannel(host, modChannelRef);
+        // auto& modChannelRef    = *_stableRef;
+        auto param = paramAutomatable->getParam(paramIdx);
+        if (!assert_expr(param)) {
+            return;
+        }
+        auto& scale = type == 0 ? param->getParameterScale() : param->getAutomationScale();
+        btnRemove.setEnabled(false);
+        btnRemove.setVisible(false);
+        if (type == 1) {
+            btnSourceName.setText("Automation");
+            fieldMinVal.setRef(&scale.min);
+            fieldMaxVal.setRef(&scale.max);
+            btnClamp.setStateRef(&scale.bClamp);
+            fieldMode.setOptions({ "Replace", "Add", "Multiply", "Bypass" });
+            fieldMode.setCallback([&scale](int idx, String& s) -> String {
+                scale.mode = static_cast<DAW::ModulationMode>(idx);
+                return s;
+            });
+        } else {
+            btnSourceName.setText("Parameter Value");
+            fieldMode.setOptions({ "Replace" });
+            fieldMinVal.setEnabled(false);
+            fieldMaxVal.setEnabled(false);
+            fieldMinVal.setVisible(false);
+            fieldMaxVal.setVisible(false);
+            fieldMode.setEnabled(false);
+  
+        }
+        fieldMode.setSelectedIndex(math::clamp(static_cast<int32_t>(scale.mode), 0, fieldMode.getLastIndex()));
+        String srcName = paramAutomatable->getAutomatableName();
+        srcName += " ";
+        srcName += paramAutomatable->getParamName(paramIdx);
+        setLabel(srcName);
+    }
+
+    void guictr_edit_modulation_slot::setModulationSource(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::modulation_channel_ref* _stableRef, int32_t modulationIndex) {
+        dbgassert(host);
+        dbgassert(_paramAutomatable);
+        dbgassert(_stableRef->refSrc.type == AUTOMATABLE_MODULATOR_OUTPUT);
+        btnRemove.id           = 16 + modulationIndex;
+        this->paramAutomatable = _paramAutomatable;
+        this->paramIdx         = _paramIdx;
+        // auto& modChannelRef    = *_stableRef;
+        fieldMinVal.setRef(&_stableRef->scale.min);
+        fieldMaxVal.setRef(&_stableRef->scale.max);
         String channelName;
-        if (channel) {
-            channelName = channel->getName();
+        if (_stableRef->refSrc.type == AUTOMATABLE_MODULATOR_OUTPUT) {
+            auto channel = DAW::ResolveModulationChannel(host, *_stableRef);
+            if (channel) {
+                channelName = channel->getName();
+            }
         }
         String srcName = paramAutomatable->getAutomatableName();
         srcName += " ";
-        srcName += paramAutomatable->getParamName(_paramIdx);
+        srcName += paramAutomatable->getParamName(paramIdx);
         if (!channelName.empty()) {
             btnRemove.setTooltipText("Remove Modulation: " + channelName);
         } else {
@@ -353,11 +391,11 @@ namespace DAW::UI::Modulation {
         }
         setLabel(srcName);
         btnSourceName.setText(channelName);
-        btnClamp.setStateRef(&modChannelRef.scale.bClamp);
+        btnClamp.setStateRef(&_stableRef->scale.bClamp);
         fieldMode.setOptions({ "Replace", "Add", "Multiply", "Bypass" });
-        fieldMode.setSelectedIndex(math::clamp(static_cast<int32_t>(modChannelRef.scale.mode), 0, fieldMode.getLastIndex()));
-        fieldMode.setCallback([pMode = &modChannelRef.scale.mode](int idx, String& s) -> String {
-            *pMode = static_cast<DAW::ModulationMode>(idx);
+        fieldMode.setSelectedIndex(math::clamp(static_cast<int32_t>(_stableRef->scale.mode), 0, fieldMode.getLastIndex()));
+        fieldMode.setCallback([_stableRef](int idx, String& s) -> String {
+            _stableRef->scale.mode = static_cast<DAW::ModulationMode>(idx);
             return s;
         });
     }

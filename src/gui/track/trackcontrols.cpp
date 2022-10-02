@@ -979,7 +979,6 @@ public:
         }
         if (&btnBypass == button) {
             track_params_t& trackParams = m_track->audio->mixer;
-            trackParams.deactivateAutomation(PARAM_ENABLE);
             auto fNew = float(!trackParams.isEnabled());
             auto flags = FLG_PAR_UPDATE_FINISH | FLG_PAR_UPDATE_USER;
             trackParams.setParamEdit(PARAM_ENABLE, fNew, flags);

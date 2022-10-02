@@ -925,7 +925,7 @@ void DawInstance::menuCommand(menucmd_t command) {
                     track->audio->getAutomatableTrackTargets(targets);
                     for (auto& target : targets) {
                         target->visitAutomatedParams([](auto& param) {
-                            param.src.active = true;
+                            param.src.activate();
                         });
                     }
                 }
@@ -1759,7 +1759,7 @@ void DawInstance::onTick() {
                 autosaveState.tmLastTrigger = getTimeMillis();
             }
             int64_t tmNow = getTimeMillis();
-            const auto ms60k = 60000;
+            const auto ms60k = 1000;
             if ((tmNow - tmLastSave) / ms60k > settings.autosave.tmSaveDelayMinutes) {
                 bool canOpenAutosave = noPopups;
                 bool hasAnyInputFocus = false;

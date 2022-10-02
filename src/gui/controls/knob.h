@@ -1,21 +1,17 @@
 #pragma once
-#include "automation.h"
-#include "gui/automation/modulation.h"
-#include "gui/controls/textfield.h"
-#include "nanovg/nanovg.h"
-#include <functional>
-#include <vector>
-#include <optional>
-#include "math/vec.h"
-#include "math/seq_math.h"
-#include "color_util.h"
-#include "str_util.h"
-#include "seq_util.h"
 #include "gui/gui.h"
+#include "gui/controls/textfield.h"
 #include "guicolors.h"
-#include "event.h"
+#include "math/seq_math.h"
+#include <functional>
+#include <optional>
 
 struct automatable_t;
+struct param_modulation_range_t;
+namespace DAW::UI::Modulation {
+    class gui_dragged_modulation;
+}
+
 class guiknob : public guibase {
 public:
     enum class knobtype {
@@ -41,6 +37,7 @@ protected:
     automatable_t* paramAutomatable = nullptr;
     int32_t paramIdx                = -1;
 
+    String valueDisplay = "  ";
 public:
     std::function<float()> fnGetValue;
     std::function<void(float, int)> fnSetValue;
@@ -48,8 +45,6 @@ public:
     std::function<void(float, float)> fnValueEditChanged;
     std::function<void(float, float)> fnValueEditFinish;
     std::function<void(MouseHitEvt&, bool)> fnFocus;
-    // GuiColor::constant_t valColor = GuiColor::COL_KNOB;
-    // GuiColor::constant_t indColor = GuiColor::COL_KNOB_IND;
     explicit guiknob(knobtype knobType) : guibase(), knobType(knobType) {
         setBackgroundRendered(false);
         setCanMouseHit(true);        
@@ -75,6 +70,9 @@ public:
     }
     int32_t getParamIdx() const { return paramIdx; }
     void setKnobInternalHandlers();
+    virtual float getRenderScaledValue(float param) {
+        return param;
+    }
 
     virtual bool isAutomated();
     virtual bool isModulated();
@@ -146,9 +144,7 @@ public:
 
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
     virtual void setToDefaultValue();
-    virtual std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges() {
-        return std::nullopt;
-    }
+    virtual std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges();
     void modulationDragMove(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) override;
     void modulationDragRelease(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) override;
 };
@@ -164,17 +160,8 @@ public:
         setReturnCommits(true);
     }
     GuiColor::constant_t getBackgroundColor() const override;
-    virtual bool renderAsBipolar() {
-        if (paramAutomatable) {
-            auto param = paramAutomatable->getParam(paramIdx);
-            return param->isBiPolar;
-        }
-        return false;
-    };
-    virtual String getValueAsString(float param) {
-        auto paramValDisplay = paramAutomatable->getParamValueDisplay(paramIdx);
-        return paramValDisplay.value + paramValDisplay.unit;
-    }
+    virtual bool renderAsBipolar();
+    virtual String getValueAsString(float param);
     virtual float getRenderScaledValue(float param) {
         return param;
     }

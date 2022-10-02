@@ -50,10 +50,10 @@ void gui_color_pick::init() {
         knob->setLabelsFontScale(0.5, 0.8f);
         knob->fnValueEditChanged = setEditColor;
         knob->fnValueEditFinish  = setEditColor;
-        knob->fnGetDisplayValue  = getDisplayValue;
+        knob->fnOverrideGetDisplay  = getDisplayValue;
         add(knob);
     }
-    knA.fnGetDisplayValue = [](float val) {
+    knA.fnOverrideGetDisplay = [](float val) {
         int32_t alpha = CLAMP_I((int32_t) (255.0f * val), 0, 255);
         return StringFormat("%d", alpha);
     };

@@ -60,7 +60,7 @@ public:
         }
     }
     void setSelectedIndex(int32_t idx) override {
-        if (idx >= 0) {
+        if (idx >= 0 && idx < CtrSize(options)) {
             auto& option = options.at(idx);
             current = optionToString(option);
         } else {

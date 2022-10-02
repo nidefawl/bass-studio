@@ -30,8 +30,7 @@ public:
         int inset = 2;
         bool renderLabelBorder = true;
     };
-    std::function<String(float)> fnGetDisplayValue;
-    String valueDisplay = "  ";
+    std::function<String(float)> fnOverrideGetDisplay;
 
 protected:
     knob_layout m_layout{};

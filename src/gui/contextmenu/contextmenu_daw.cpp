@@ -123,8 +123,8 @@ public:
         this->size.x = 240;
         int32_t inputIdx = 0;
         if (atl->isParamModulated(_paramIdx)) {
-            auto& mods = _atl->getModulations(_paramIdx);
-            for (auto& mod : mods) {
+            const auto pModulations = _atl->getModulations(_paramIdx);
+            for (auto& mod : *pModulations) {
                 auto modChannel = DAW::ResolveModulationChannel(_dawCtrl->getDaw()->getPluginManager(), *mod);
                 auto name = StringFormat("%d", inputIdx);
                 if (modChannel) {
@@ -206,7 +206,7 @@ namespace DAW {
                 if (param && !param->isActive()) {
                     guiTrackCtr->showAutomationLane(entry, atl, paramIdx);
                     dawCtrl->updateVisibleTrackContents();
-                    param->src.active = true;
+                    param->src.activate();
                 }
                 return true;
             }
