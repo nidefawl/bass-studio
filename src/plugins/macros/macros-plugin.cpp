@@ -14,6 +14,7 @@
 #include "host/mainctrl.h"
 #include "logging.h"
 #include "math/seq_math.h"
+#include "plugins/macros/macros-plugin.h"
 #include "renderresources.h"
 #include "seq_util.h"
 
@@ -32,7 +33,7 @@ namespace PluginMacros {
         module_macros* const module;
         const int32_t idx;
         guiknob_pluginparam knob;
-        DAW::UI::guibutton_modulate btnModulate;
+        DAW::UI::Modulation::guibutton_modulate btnModulate;
     public:
         explicit guictr_macro(module_macros* module, int32_t idx, automatable_param_t* param) : guictr_base(),
             module(module),
@@ -259,11 +260,10 @@ namespace PluginMacros {
         }
         //TODO: handle disconnect
     };
-    module_macros::module_macros(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-        : internal_automator("Macros", getModuleType(), _projectGlobalId, _hostCallback),
-        impl(new macro_impl_t{ this, { } })
-    {
-        for (int32_t i = 0; i < NUM_MACROS; ++i) {
+    void module_macros::initModChannels() {
+        outputModChannelsDesc.clear();
+        outputModChannelsDesc.reserve(NUM_MACROS);
+        for (channelnum_t i = 0; i < channelnum_t(NUM_MACROS); ++i) {
             impl->macroAutomationSrcParams[i].module = this;
             impl->macroAutomationSrcParams[i].paramIdx = i;
             auto paramIdx = PARAM_MACROS_FIRST + i;
@@ -272,7 +272,14 @@ namespace PluginMacros {
             regparam->name  = StringFormat("Macro %d", i + 1);
             regparam->shortLabel  = StringFormat("Macro %d", i + 1);
             regparam->unit  = "%";
+            outputModChannelsDesc.push_back({i, regparam->name});
         }
+    }
+    module_macros::module_macros(int32_t _projectGlobalId, IHostCallback* _hostCallback)
+        : internal_modulator("Macros", getModuleType(), _projectGlobalId, _hostCallback),
+        impl(new macro_impl_t{ this, { } })
+    {
+        initModChannels();
     }
     module_macros::~module_macros() {
         delete impl;

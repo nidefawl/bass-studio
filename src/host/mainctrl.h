@@ -574,7 +574,7 @@ public:
         return {};
     }
 };
-namespace DAW::UI {
+namespace DAW::UI::Modulation {
     bool IsHiglightedModulation(const guibase* gui, automatable_t* at, int32_t paramIdx);
 };
 

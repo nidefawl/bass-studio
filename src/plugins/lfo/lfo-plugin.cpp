@@ -239,15 +239,8 @@ namespace PluginLFO {
         }
     };
 
-    void module_lfo::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
-        impl->process(host, in, out, tick, samplePos, numSamples, state);
-        internalplugin::process(host, in, out, tick, samplePos, numSamples, state);
-    }
-
-    module_lfo::module_lfo(int32_t _projectGlobalId, IHostCallback* _hostCallback)
-        : internal_automator("LFO", getModuleType(), _projectGlobalId, _hostCallback),
-        impl(new lfo_impl_t{ DawInstance::get(), this, DAW::Shape::GetShapeSaw() })
-    {
+    void module_lfo::initModChannels() {
+        outputModChannelsDesc.clear();
         auto reg = registerParam(PARAM_LFO_RATE);
         reg->setInitial(0.5f);
         reg->name  = "Rate";
@@ -271,6 +264,19 @@ namespace PluginLFO {
         reg->unit  = "";
         reg->isBiPolar = true;
         impl->setIsSync(true);
+        outputModChannelsDesc.push_back({0, "LFO 0"});
+    }
+
+    void module_lfo::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
+        impl->process(host, in, out, tick, samplePos, numSamples, state);
+        internalplugin::process(host, in, out, tick, samplePos, numSamples, state);
+    }
+
+    module_lfo::module_lfo(int32_t _projectGlobalId, IHostCallback* _hostCallback)
+        : internal_modulator("LFO", getModuleType(), _projectGlobalId, _hostCallback),
+        impl(new lfo_impl_t{ DawInstance::get(), this, DAW::Shape::GetShapeSaw() })
+    {
+        initModChannels();
     }
 
     module_lfo::~module_lfo() {
@@ -466,7 +472,7 @@ namespace PluginLFO {
                 guiParamsTextfields.push_back(gui);
             }
             firstCtr->addElement({0.15f, minMaxCtr});
-            firstCtr->addElement({0.15f, new  DAW::UI::guibutton_modulate(module->getModulationChannel(0))});
+            firstCtr->addElement({0.15f, new DAW::UI::Modulation::guibutton_modulate(module->getModulationChannel(0))});
             add(firstCtr);
             shapeEditor->setShapeEditorShapeRef(&module->getShape(0));
             shapeEditor->setShapeEditorCallback([module=this->module](const DAW::Shape::shape_base_t& shape) -> void {

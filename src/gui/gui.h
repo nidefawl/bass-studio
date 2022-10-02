@@ -33,8 +33,8 @@ struct dragdrop_midifile;
 namespace RenderResources {
     struct NvgImageTexture;
 }
-namespace DAW::UI {
-    class guictr_dragged_modulation_src;
+namespace DAW::UI::Modulation {
+    class gui_dragged_modulation;
 }
 
 extern NVGcolor dbgcolorsArray[8];
@@ -271,14 +271,17 @@ public:
     ivec2 getLeftTop() {
         return pos;
     }
-    ivec2 getRightTop() {
-        return pos + ivec2(size.x, 0);
-    }
     ivec2 getRightBottom() {
         return pos + size;
     }
     int right() {
         return pos.x + size.x;
+    }
+    ivec2 getLeftBottom() {
+        return pos + ivec2(0, size.y);
+    }
+    ivec2 getRightTop() {
+        return pos + ivec2(size.x, 0);
     }
     int top() {
         return pos.y;
@@ -396,9 +399,9 @@ public:
     }
     virtual void trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
     }
-    virtual void modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+    virtual void modulationDragMove(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) {
     }
-    virtual void modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+    virtual void modulationDragRelease(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) {
     }
     virtual void dragBeginOn(guibase* target, ivec2 mousepos) {
     }

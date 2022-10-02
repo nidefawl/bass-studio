@@ -5,7 +5,6 @@
 #include "gui/container/container.h"
 #include "gui/controls/button.h"
 #include "gui/controls/inputfield.h"
-#include "gui/controls/knobpluginparam.h"
 #include "gui/tooltip/tooltip.h"
 #include "guicolors.h"
 #include "guiconstant.h"
@@ -21,7 +20,8 @@ namespace DAW::UI {
         virtual ~IDraggedModulationSource() = default;
         virtual const modulation_channel_ref& getChannelRef() const = 0;
     };
-
+}
+namespace DAW::UI::Modulation {
     class guictr_edit_modulation_slot : public guictr_base {
         automatable_t* paramAutomatable = nullptr;
         int32_t paramIdx = 0;
@@ -70,7 +70,7 @@ namespace DAW::UI {
             remove(&btnAddModulation);
             destroyGuis();
         }
-        void setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::modulation_channel_ref _ref);
+        void setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx);
         void updateSlots();
 
         void renderBackground(NVGcontext* vg) override {
@@ -90,11 +90,11 @@ namespace DAW::UI {
         void buttonClicked(guibase* _button) override;
     };
 
-    class guictr_dragged_modulation_src : 
-        public guitooltip<guictr_dragged_modulation_src>, public DAW::UI::IDraggedModulationSource {
+    class gui_dragged_modulation : 
+        public guitooltip<gui_dragged_modulation>, public IDraggedModulationSource {
         DAW::modulation_channel_ref ref;
     public:
-        guictr_dragged_modulation_src() : guitooltip<guictr_dragged_modulation_src>(this) {
+        gui_dragged_modulation() : guitooltip<gui_dragged_modulation>(this) {
             this->guiType = gui_type::CTR_TYPE_MODULATION_DRAGGED;
             pos = { 0, 0 };
             setDragRendered(true);
@@ -105,7 +105,7 @@ namespace DAW::UI {
         const DAW::modulation_channel_ref& getChannelRef() const override {
             return ref;
         }
-        ~guictr_dragged_modulation_src() override = default;
+        ~gui_dragged_modulation() override = default;
         bool isDragMoveable() override {
             return true;
         }
@@ -118,7 +118,7 @@ namespace DAW::UI {
 
     class guibutton_modulate : public guibutton, public IDraggedModulationSource {
         const DAW::modulation_channel_ref ref;
-        guictr_dragged_modulation_src dragged;
+        gui_dragged_modulation dragged;
         bool hasDragged        = false;
         public:
         guibutton_modulate(DAW::modulation_channel_ref ref) : guibutton(), ref(ref) {
@@ -140,4 +140,4 @@ namespace DAW::UI {
 }
 
 template<>
-void guitooltip<DAW::UI::guictr_dragged_modulation_src>::setContent();
+void guitooltip<DAW::UI::Modulation::gui_dragged_modulation>::setContent();

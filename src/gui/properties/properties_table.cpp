@@ -788,7 +788,6 @@ void guiproperties_table<guibase>::onTick(AppCtrl* appctrl) {
 }
 template <>
 void guiproperties_table<guibase>::setDebugPropertyHandle(void *vPtr)  {
-    auto obj = getObjPtr();
     if (!vPtr) {
         if (m_currentSafeRef.handler) {
             m_table.rows.clear();

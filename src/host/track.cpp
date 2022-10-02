@@ -1607,7 +1607,7 @@ namespace DAW {
             return nullptr;
         }
 #ifndef NDEBUG
-        auto effMod = dynamic_cast<internal_automator*>(effBase);
+        auto effMod = dynamic_cast<internal_modulator*>(effBase);
         if (!assert_expr(effMod))
             return nullptr;
 #else

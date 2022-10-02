@@ -208,7 +208,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
             }
         }
         if (bIsModulated) {
-            bIsModulationHighlighted = DAW::UI::IsHiglightedModulation(this, paramAutomatable, paramIdx);
+            bIsModulationHighlighted = DAW::UI::Modulation::IsHiglightedModulation(this, paramAutomatable, paramIdx);
         }
     }
 
@@ -599,7 +599,7 @@ void gui_slider_textfield::render(NVGcontext* vg) {
             }
         }
         if (bIsModulated) {
-            bIsModulationHighlighted = DAW::UI::IsHiglightedModulation(this, paramAutomatable, paramIdx);
+            bIsModulationHighlighted = DAW::UI::Modulation::IsHiglightedModulation(this, paramAutomatable, paramIdx);
         }
         vec2 insetP        = vec2(pos + 1);
         vec2 insetS        = vec2(size - 2);
@@ -790,11 +790,11 @@ bool gui_slider_textfield::isModulated() {
     return false;
 }
 
-void guiknob::modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+void guiknob::modulationDragMove(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) {
     
 }
 
-void guiknob::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+void guiknob::modulationDragRelease(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) {
     if (this->paramAutomatable) {
 #if BUILD_DAW_HOST
         auto lock = dawCtrl->lockPlayThread();
@@ -805,7 +805,7 @@ void guiknob::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, i
 
 GuiColor::constant_t gui_slider_textfield::getBackgroundColor() const {
 #if BUILD_DAW_HOST
-    if (DAW::UI::IsHiglightedModulation(this, paramAutomatable, paramIdx)) {
+    if (DAW::UI::Modulation::IsHiglightedModulation(this, paramAutomatable, paramIdx)) {
         return GuiColor::COL_KNOB_HIGHLIGHT_BACKGROUND;
     }
 #endif
@@ -814,17 +814,17 @@ GuiColor::constant_t gui_slider_textfield::getBackgroundColor() const {
 
 GuiColor::constant_t guiknob::getBackgroundColor() const {
 #if BUILD_DAW_HOST
-    if (DAW::UI::IsHiglightedModulation(this, paramAutomatable, paramIdx)) {
+    if (DAW::UI::Modulation::IsHiglightedModulation(this, paramAutomatable, paramIdx)) {
         return GuiColor::COL_KNOB_HIGHLIGHT_BACKGROUND;
     }
 #endif
     return guibase::getBackgroundColor();
 }
 
-void gui_slider_textfield::modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+void gui_slider_textfield::modulationDragMove(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) {
 }
 
-void gui_slider_textfield::modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) {
+void gui_slider_textfield::modulationDragRelease(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) {
     if (this->paramAutomatable) {
 #if BUILD_DAW_HOST
         auto lock = dawCtrl->lockPlayThread();

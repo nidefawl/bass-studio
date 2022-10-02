@@ -1,4 +1,5 @@
 #pragma once
+#include <optional>
 #include <vector>
 #include <memory>
 
@@ -83,18 +84,27 @@ public:
     std::shared_ptr<PluginViewContainers> openViewCtr(int32_t uiId);
 };
 
-class internal_automator : public internalplugin {
+class internal_modulator : public internalplugin {
+protected:
+    std::vector<DAW::modulation_channel_desc> outputModChannelsDesc;
 public:
-    internal_automator(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback)
+    internal_modulator(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback)
     : internalplugin(_sName, _pluginType, _projectGlobalId, _hostCallback) {
     }
-    ~internal_automator() override {
+    ~internal_modulator() override {
     }
+    virtual void initModChannels() = 0;
     virtual const automated_param_t* getModulationOutputData(const DAW::modulation_channel_ref& modChannel) = 0;
     DAW::modulation_channel_ref getModulationChannel(int32_t channel) const {
         auto thisRef = toRef();
         thisRef.paramIdx = channel;
         thisRef.type = AUTOMATABLE_MODULATION_SRC;
         return DAW::modulation_channel_ref{ 0, thisRef, {} };
+    }
+    bool hasAutomationModulationOutput() const override {
+        return true;
+    }
+    const std::vector<DAW::modulation_channel_desc>& getModulationOutputChannelDesc() const {
+        return outputModChannelsDesc;
     }
 };

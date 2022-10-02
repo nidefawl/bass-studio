@@ -179,6 +179,8 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         if (!entryHit || !entryHit->isMenuOpen() || entryHit->menu->type != ngui::menu_type::submenu) {
             //close other submenu at same level
             closeAllSubmenus();
+            if (!parent || !parentCtrl)
+                return true;
         } 
         if (entryHit && !entryHit->isMenuOpen() && entryHit->menu->type == ngui::menu_type::submenu) {
             entryHit->setIsMenuOpen(true);

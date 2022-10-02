@@ -1,5 +1,6 @@
 #pragma once
 #include "automation.h"
+#include "gui/automation/modulation.h"
 #include "gui/controls/textfield.h"
 #include "nanovg/nanovg.h"
 #include <functional>
@@ -148,8 +149,8 @@ public:
     virtual std::optional<std::vector<param_modulation_range_t>> getKnobModulationRanges() {
         return std::nullopt;
     }
-    void modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
-    void modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
+    void modulationDragMove(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) override;
+    void modulationDragRelease(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) override;
 };
 
 class gui_slider_textfield : public gui_textfield {
@@ -192,8 +193,8 @@ public:
     virtual bool isModulated();
     // void setColors();
 
-    void modulationDragMove(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
-    void modulationDragRelease(DAW::UI::guictr_dragged_modulation_src* g, ivec2 mousepos) override;
+    void modulationDragMove(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) override;
+    void modulationDragRelease(DAW::UI::Modulation::gui_dragged_modulation* g, ivec2 mousepos) override;
     void render(NVGcontext* vg) override;
     void layout() override {
         gui_textfield::layout();

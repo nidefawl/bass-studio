@@ -156,9 +156,7 @@ namespace DAW {
         switch (_id) {
             case ID_EDIT_PARAM_MODULATION: {
                 dawCtrl->closeContextMenu();
-                const auto& inputs = atl->getModulations();
-                if (!inputs.empty())
-                    DAW::OpenModulationEditor(dawCtrl, dawCtrl->lastMouseEvent.mousepos, atl, paramIdx, inputs.front());
+                DAW::OpenModulationEditor(dawCtrl, dawCtrl->lastMouseEvent.mousepos, atl, paramIdx);
                 return true;
         
             }

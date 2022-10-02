@@ -13,16 +13,14 @@ struct snapshot_t {
     int32_t version = 0;
     std::vector<ui_layout_t> uiLayout;
 };
-class module_macros : public internal_automator {
+class module_macros : public internal_modulator {
     struct macro_impl_t;
     macro_impl_t* const impl;
 public:
     explicit module_macros(int32_t _projectGlobalId, IHostCallback* _hostCallback);
     ~module_macros() override;
+    void initModChannels() override;
     int getModuleType() override { return PLUGIN_TYPE_MACROS; };
-    bool hasAutomationModulationOutput() const override {
-        return true;
-    }
     std::shared_ptr<PluginViewContainers> createViewCtrInternal() override;
     const automated_param_t* getModulationOutputData(const DAW::modulation_channel_ref& channel) override;
     std::shared_ptr<std::vector<std::byte>> storePresetData() override;

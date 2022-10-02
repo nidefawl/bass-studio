@@ -69,6 +69,10 @@ namespace DAW {
         automatable_param_ref_t refSrc{};
         modulation_scaling_t scale{};
     };
+    struct modulation_channel_desc {
+        channelnum_t offset = 0;
+        String name;
+    };
 }
 
 struct automation_point_t {

@@ -15,6 +15,7 @@
 #include "guiconstant.h"
 #include "host/host_pluginmanager.h"
 #include "host/mainctrl.h"
+#include "host/plugin/internal_plugin.h"
 #include "logging.h"
 #include "math/seq_math.h"
 #include "renderresources.h"
@@ -23,21 +24,22 @@
 #include "logging.h"
 #include "window.h"
 #include <array>
+#include <functional>
 #include <utility>
 
-namespace DAW::UI {
-    class ctxtmenu_modulation_endpoint : public ctxtmenu_entry_track_io {
+namespace DAW::UI::Modulation {
+    class ctxt_endpoint : public ctxtmenu_entry_track_io {
     public:
-        ctxtmenu_modulation_endpoint(int32_t _id, const String& name) : ctxtmenu_entry_track_io(_id, name) {
+        ctxt_endpoint(int32_t _id, const String& name) : ctxtmenu_entry_track_io(_id, name) {
         }
-        virtual automatable_param_ref_t getEndpoint() = 0;
+        virtual modulation_channel_ref getEndpoint() = 0;
     };
-    class ctxtmenu_entry_stage_channel : public ctxtmenu_modulation_endpoint {
+    class ctxt_modchannel : public ctxt_endpoint {
     public:
-        const automatable_param_ref_t endpoint;
+        const modulation_channel_ref endpoint;
 
-        ctxtmenu_entry_stage_channel(int32_t _id, const String& name, automatable_param_ref_t _endpoint)
-            : ctxtmenu_modulation_endpoint(_id, name), endpoint(_endpoint) {
+        ctxt_modchannel(int32_t _id, const String& name, modulation_channel_ref _endpoint)
+            : ctxt_endpoint(_id, name), endpoint(_endpoint) {
         }
         void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
             ctxtmenu_entry_track_io::render(ctxtSize, vg, idx, mouse);
@@ -47,16 +49,16 @@ namespace DAW::UI {
             return false;
         }
 
-        automatable_param_ref_t getEndpoint() override {
+        modulation_channel_ref getEndpoint() override {
             return endpoint;
         }
     };
-    class ctxtmenu_entry_modulation_bus : public ctxtmenu_entry_track_io {
+    class ctxt_bus : public ctxtmenu_entry_track_io {
     public:
         const bus_type busType;
         const String busName;
 
-        ctxtmenu_entry_modulation_bus(int32_t _id, const String& name, bus_type bustype)
+        ctxt_bus(int32_t _id, const String& name, bus_type bustype)
             : ctxtmenu_entry_track_io(_id, name),
             busType(bustype),
             busName(name) {
@@ -66,12 +68,12 @@ namespace DAW::UI {
             return true;
         }
     };
-    class ctxtmenu_entry_modulation_bus_internal : public ctxtmenu_entry_modulation_bus {
+    class ctxt_bus_track : public ctxt_bus {
         const audio_stage_ref_t busStage;
 
     public:
-        ctxtmenu_entry_modulation_bus_internal(int32_t _id, const String& name, audio_stage_ref_t _stageBus)
-            : ctxtmenu_entry_modulation_bus(_id, name, bus_type::internal), busStage(_stageBus) {
+        ctxt_bus_track(int32_t _id, const String& name, audio_stage_ref_t _stageBus)
+            : ctxt_bus(_id, name, bus_type::internal), busStage(_stageBus) {
         }
         audio_stage_ref_t getStageRef() {
             return busStage;
@@ -80,15 +82,15 @@ namespace DAW::UI {
 
     /* top select menu */
     class guictxtmenu_modulation : public guictxtmenu {
-
     public:
+        std::function<void(const DAW::modulation_channel_ref&)> fnCallback;
         guictxtmenu_modulation(DawCtrl * _dawCtrl)
         {
             this->dawCtrl = _dawCtrl;
             auto proj = _dawCtrl->getDaw()->getProject();
             int32_t idx = 0;
             for (auto* track : proj->getTracksFlatVec()) {
-                addEntry(new ctxtmenu_entry_modulation_bus_internal(idx++, track->name, track->audio->toRef()));
+                addEntry(new ctxt_bus_track(idx++, track->name, track->audio->toRef()));
             }
         }
         guictxtmenu_modulation(DawCtrl * _dawCtrl, audio_stage_ref_t _track, int lvl)
@@ -99,7 +101,21 @@ namespace DAW::UI {
             if (stage) {
                 int32_t idx = 0;
                 for (auto* effect : stage->effects) {
-                    addEntry(new ctxtmenu_entry_stage_channel(idx++, effect->getAutomatableName(), effect->toRef()));
+                    if (effect->hasAutomationModulationOutput()) {
+                        auto effMod = static_cast<internal_modulator*>(effect);
+                        auto& channelsSrc = effMod->getModulationOutputChannelDesc();
+                        auto ref = effMod->toRef();
+                        for (auto& channel : channelsSrc) {
+                            modulation_channel_ref modChanRef;
+                            modChanRef.refSrc = ref;
+                            modChanRef.refSrc.type = AUTOMATABLE_MODULATION_SRC;
+                            modChanRef.refSrc.paramIdx = channel.offset;
+                            modChanRef.paramIdxDst = -1;
+                            modChanRef.scale = { 0.0f, 1.0f };
+                            auto name = effect->getAutomatableName() + " (" + channel.name + ")";
+                            addEntry(new ctxt_modchannel(idx++, name, modChanRef));
+                        }
+                    }
                 }
             }
         }
@@ -114,20 +130,23 @@ namespace DAW::UI {
             if (ctxtEndpointEntry->isBus()) {
                 return;
             }
-            dbgassert(dynamic_cast<ctxtmenu_modulation_endpoint*>(e));
-            auto const entry = static_cast<ctxtmenu_modulation_endpoint*>(e);
+            dbgassert(dynamic_cast<ctxt_endpoint*>(e));
+            auto const entry = static_cast<ctxt_endpoint*>(e);
+            if (fnCallback)
+                fnCallback(entry->getEndpoint());
         }
 
 
         guictxtmenu* createPopupForEntry(ctxtmenu_entry* e, int lvl) override {
-            guictxtmenu* popup = nullptr;
-            auto entry = dynamic_cast<ctxtmenu_entry_modulation_bus*>(e);
+            guictxtmenu_modulation* popup = nullptr;
+            auto entry = dynamic_cast<ctxt_bus*>(e);
             if (entry) {
                 if (entry->busType == bus_type::internal) {
-                    auto stageEntry = dynamic_cast<ctxtmenu_entry_modulation_bus_internal*>(entry);
+                    auto stageEntry = dynamic_cast<ctxt_bus_track*>(entry);
                     dbgassert(stageEntry);
                     if (stageEntry) {
                         popup = new guictxtmenu_modulation(dawCtrl, stageEntry->getStageRef(), lvl);
+                        popup->fnCallback = fnCallback;
                     }
                 }
             }
@@ -135,23 +154,24 @@ namespace DAW::UI {
         }
     };
 
-    void guictr_dragged_modulation_src::handleDraggedRelease(MouseEvent& evt) {
+
+    void gui_dragged_modulation::handleDraggedRelease(MouseEvent& evt) {
         dawCtrl->objectDragRelease(this, evt);
     }
 
-    void guictr_dragged_modulation_src::handleDraggedMove(MouseEvent& evt) {
+    void gui_dragged_modulation::handleDraggedMove(MouseEvent& evt) {
         dawCtrl->objectDragMove(this, evt);
     }
 
-    void guictr_dragged_modulation_src::dragMoveOn(guibase* target, ivec2 mousepos) {
+    void gui_dragged_modulation::dragMoveOn(guibase* target, ivec2 mousepos) {
         target->modulationDragMove(this, toControlsObjectSpace(mousepos, target));
     }
 
-    void guictr_dragged_modulation_src::dragReleaseOn(guibase* target, ivec2 mousepos) {
+    void gui_dragged_modulation::dragReleaseOn(guibase* target, ivec2 mousepos) {
         target->modulationDragRelease(this, toControlsObjectSpace(mousepos, target));
     }
 
-    void guictr_dragged_modulation_src::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
+    void gui_dragged_modulation::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
         mousepos -= pos;
         mousepos += ivec2(20, 20);
         nvgTranslate(vg, mousepos.x, mousepos.y);
@@ -168,7 +188,6 @@ namespace DAW::UI {
             textField.render(vg);
         }
     }
-
     void guibutton_modulate::handleDraggedMove(MouseEvent& evt) {
         hasDragged = false;
         if (!hasDragged) {
@@ -195,11 +214,24 @@ namespace DAW::UI {
 
     void guictr_edit_modulation::buttonClicked(guibase* _button) {
         if (_button ==  &btnAddModulation) {
-            auto* popup = new guictxtmenu_modulation(dawCtrl);
+            auto* popup = new DAW::UI::Modulation::guictxtmenu_modulation(dawCtrl);
+             
+            popup->fnCallback = [this](const DAW::modulation_channel_ref& ref) -> void {
+                auto dawCtrl = this->dawCtrl;
+                if (dawCtrl){
+                    auto lock = dawCtrl->lockPlayThread();
+                    if (paramAutomatable) {
+                        DAW::ConnectModulationInputChannel(paramAutomatable, paramIdx, ref);
+                        updateSlots();
+                        layout();
+                        parentCtrl->relayout();
+                    }
+                }
+            };
             popup->size = btnAddModulation.size;
             popup->setFontSize(dawCtrl->getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
             popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-            parentCtrl->openAppMenu(0, popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
+            parentCtrl->openAppMenu(0, popup, toScreenSpace(btnAddModulation.getLeftBottom()) + ivec2(0, 1));
             return;
         }
         if (_button->id >= 16) {
@@ -216,16 +248,17 @@ namespace DAW::UI {
 
     void guictr_edit_modulation::determineSize(ivec2& prefSize) {
         const int32_t TRACK_HEIGHT_STEP = theme->get(getGuiConstantHeight());
-        auto innerHeight                = TRACK_HEIGHT_STEP;
+        auto padding                    = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
+        auto innerHeight                = TRACK_HEIGHT_STEP + padding;
         for (auto* slot : slots) {
             ivec2 tmpSize = prefSize;
             slot->determineSize(tmpSize);
             innerHeight += tmpSize.y;
         }
-        innerHeight += TRACK_HEIGHT_STEP;
-        auto padding2 = paddingBR(padding) + paddingTL(padding);
+        innerHeight += TRACK_HEIGHT_STEP + padding;
+        auto padding2 = paddingBR(this->padding) + paddingTL(this->padding);
         innerHeight += padding2.y;
-        prefSize = ivec2(prefSize.x, innerHeight + TRACK_HEIGHT_STEP);
+        prefSize = ivec2(prefSize.x, innerHeight);
     }
 
     void guictr_edit_modulation::layout() {
@@ -239,8 +272,8 @@ namespace DAW::UI {
             slot->pos  = posSlots;
             posSlots.y += slot->size.y;
         }
-        this->btnAddModulation.size = ivec2(w, TRACK_HEIGHT_STEP);
-        this->btnAddModulation.pos  = ivec2(padding, posSlots.y + padding);
+        btnAddModulation.size = ivec2(w*0.5, TRACK_HEIGHT_STEP);
+        btnAddModulation.pos  = ivec2(padding+(w-btnAddModulation.size.x)*0.5, posSlots.y + padding);
         for (guibase* gui : guis) {
             gui->layout();
         }
@@ -359,7 +392,7 @@ namespace DAW::UI {
         prefSize                        = ivec2(prefSize.x, TRACK_HEIGHT_STEP + padding2.y);
     }
 
-    void guictr_edit_modulation::setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx, DAW::modulation_channel_ref _ref) {
+    void guictr_edit_modulation::setAutomationRef(const Host::PluginManager* host, automatable_t* _paramAutomatable, int32_t _paramIdx) {
         this->host             = host;
         this->paramAutomatable = _paramAutomatable;
         this->paramIdx         = _paramIdx;
@@ -422,20 +455,20 @@ namespace DAW::UI {
 }// namespace DAW::UI
 
 namespace DAW {
-    void OpenModulationEditor(DawCtrl* dawCtrl, ivec2 mousePos, automatable_t* atl, int32_t paramIdx, DAW::modulation_channel_ref ref) {
+    void OpenModulationEditor(DawCtrl* dawCtrl, ivec2 mousePos, automatable_t* atl, int32_t paramIdx) {
         dawCtrl->closeAllContextMenus();
-        auto ctxtMenu = new DAW::UI::guictr_edit_modulation();
+        auto ctxtMenu = new DAW::UI::Modulation::guictr_edit_modulation();
         ctxtMenu->size = {520, 420};
         ctxtMenu->pos = {0, 0};
         ctxtMenu->canTakeInputFocus = true;
         ctxtMenu->maxHeight = -1;
-        ctxtMenu->setAutomationRef(dawCtrl->getDaw()->getPluginManager(), atl, paramIdx, ref);
+        ctxtMenu->setAutomationRef(dawCtrl->getDaw()->getPluginManager(), atl, paramIdx);
         dawCtrl->openOverlayGui(ctxtMenu, mousePos, WINDOW_POS_RELATIVE | WINDOW_IS_RESIZABLE | WINDOW_IS_BORDERLESS);
     }
 } // namespace DAW
 
 template<>
-void guitooltip<DAW::UI::guictr_dragged_modulation_src>::setContent() {
+void guitooltip<DAW::UI::Modulation::gui_dragged_modulation>::setContent() {
     table.tableWidth = 140;
     auto cell = Table::tblString{ptr->getTooltipText()};
     if (table.strW) {
