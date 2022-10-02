@@ -1618,7 +1618,7 @@ namespace DAW {
             if (!assert_expr(effMod))
                 return nullptr;
     #else
-            auto effMod = static_cast<internal_automator*>(effBase);
+            auto effMod = static_cast<internal_modulator*>(effBase);
     #endif
             auto p = effMod->getModulationOutputData(modChannel);
             if (!assert_expr(effMod))
