@@ -95,7 +95,7 @@ namespace DAW {
             if (trackList.validTrackIdx(trackBegin)) {
                 track_gui_entry_t* tr  = trackList.atNC(trackBegin);
                 int32_t subTrackOffset = cursor.getSubTrackBegin();
-                for (int i = 0; i <= clipboard->selTrackRange; i++) {
+                for (int i = 0; i <= clipboard->selTrackRange && i < CtrSize(clipboard->automationLanes); i++) {
                     int32_t subTrackIdx = subTrackOffset + i;
                     if (tr->validSubtrack(subTrackIdx)) {
                         gui_track_subtrack* subtrack          = tr->subtracks[subTrackIdx];
