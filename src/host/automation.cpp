@@ -337,7 +337,12 @@ void automatable_t::setAutomatableParam(automatable_param_t* param, float val, i
     } else {
         param->setValue(val);
     }
-    if ((flags & (FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE | FLG_PAR_UPDATE_AUTOMATED)) == 0) {
+    if ((flags & (FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FROM_CLIENT)) != 0)
+    {
+        param->inUse = true;
+    }
+    if ((flags & FLG_PAR_UPDATE_INIT) && !(flags & FLG_PAR_UPDATE_NOSTORE))
+    {
         param->inUse = true;
     }
     postSetParameter(param->idx, valPre, val, flags);
