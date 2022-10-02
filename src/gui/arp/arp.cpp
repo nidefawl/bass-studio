@@ -9,7 +9,7 @@ void gui_arp::buttonClicked(guibase* _button) {
         auto* arp = getArp();
         if (arp) {
             ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-            toggleDeviceEnableState(arp, FLG_PAR_UPDATE_USER);
+            toggleDeviceEnableState(arp, FLG_PAR_UPDATE_USER | FLG_PAR_UPDATE_FINISH);
         }
     }
     if (stl_contains(knobs, _button)) {
