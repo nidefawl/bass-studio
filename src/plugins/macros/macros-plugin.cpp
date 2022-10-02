@@ -216,6 +216,9 @@ namespace PluginMacros {
                     default:
                         break;
                 }
+                if (scale.bClamp) {
+                    fIn = math::clamp(fIn, scale.min, scale.max);
+                }
                 return fIn;
             }
             void sampleAutomation(double dTickBegin, double dTickEnd, samplecount_t numSamples, const DAW::modulation_scaling_t& scale, float* inOut) const override {
