@@ -306,19 +306,6 @@ void midiarp::onStartPlayback() {
 }
 void midiarp::allNotesOff(std::vector<noteevent_t>& noteEvents) {
     stepGenerated = -1;
-    for (arp_note_t& note : this->heldOutputNotes) {
-        if (note.isEnabled() && note.isHeld()) {
-            noteEvents.emplace_back(note.pitch, note.velocity, 0, note.start(), false, false);
-        }
-        note.setEnabled(false);
-        note.setIsHeld(false);
-    }
-    for (arp_note_t& note : this->heldInput) {
-        if (note.isEnabled() && note.isHeld()) {
-            noteEvents.emplace_back(note.pitch, note.velocity, 0, note.start(), false, false);
-        }
-    }
-    heldInput.clear();
 }
 
 int32_t midiarp::getRandVelocity(float f) {

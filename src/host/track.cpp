@@ -445,8 +445,6 @@ void audio_stage_t::sendNotesOff() {
     for (effectbase* effect : effects) {
         effect->sendNotesOff();
     }
-    notesPre.reset();
-    notesPost.reset();
 }
 
 void audio_stage_t::notifyPluginContainers() {
@@ -1051,7 +1049,6 @@ void audio_stage_t::onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickP
 
 void track_impl_t::onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) {
     audio_stage_t::onPlaybackJumpFromTo(fromSamplePos, fromTickPos, toSamplePos, toTickPos);
-    midiProcessed->clear();
 }
 
 void track_impl_t::sendNotesOff() {
@@ -1149,6 +1146,19 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
 
             updateProfilingTime(procMidiStats.tm2ProcNotes, tmr.getTimeReset());
 
+            // force end notes at loop end boundary
+            if (loopEnd > 0 && blockStart < loopEnd && blockEnd >= loopEnd) {
+                for (auto it = m_heldNotes.begin(); it != m_heldNotes.end();) {
+                    const note_t& noteHeld = *it;
+
+                    auto tickOffsetInBlockEnd = math::min(blockEnd - blockStart - 1, loopEnd - blockStart - 1);
+                    if (logProcessedNotes)
+                        log_lf(Log::L_WARN, "Block %d-%d: %s Force OFF (LOOP END @%d) at %d/%f = %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), loopEnd, tickOffsetInBlockEnd, ticksPerBlock, blockStart + tickOffsetInBlockEnd);
+                    noteEvents.emplace_back(noteHeld.pitch, noteHeld.velocity, tickOffsetInBlockEnd, blockStart + tickOffsetInBlockEnd, false, true);
+                    it = m_heldNotes.erase(it);
+                }
+            }
+
             // revalidate held notes ends so we end notes that were modified by the user (loop or clip modifactions)
             for (auto it = m_heldNotes.begin(); it != m_heldNotes.end();) {
                 const note_t& noteHeld = *it;
@@ -1164,24 +1174,12 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                 }
                 if (!found) {
                     if (logProcessedNotes)
-                        log_lf(Log::L_DEBUG, "Block %d-%d: %s Force OFF at %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), 0);
-                    noteEvents.emplace_back(noteHeld.pitch, noteHeld.velocity, 0, blockStart, false, false);
+                        log_lf(Log::L_WARN, "Block %d-%d: %s Force OFF at %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), blockEnd - 1);
+                    noteEvents.emplace_back(noteHeld.pitch, noteHeld.velocity, ticksPerBlock-1, blockEnd - 1, false, false);
                     it = m_heldNotes.erase(it);
                     continue;
                 }
                 ++it;
-            }
-            // force end notes at loop end boundary
-            if (loopEnd > 0 && blockStart < loopEnd && blockEnd >= loopEnd) {
-                for (auto it = m_heldNotes.begin(); it != m_heldNotes.end();) {
-                    const note_t& noteHeld = *it;
-
-                    auto tickOffsetInBlockEnd = math::min(blockEnd - blockStart - 1, loopEnd - blockStart - 1);
-                    if (logProcessedNotes)
-                        log_lf(Log::L_DEBUG, "Block %d-%d: %s Force OFF (LOOP END @%d) at %d/%f = %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), loopEnd, tickOffsetInBlockEnd, ticksPerBlock, blockStart + tickOffsetInBlockEnd);
-                    noteEvents.emplace_back(noteHeld.pitch, noteHeld.velocity, tickOffsetInBlockEnd, blockStart + tickOffsetInBlockEnd, false, true);
-                    it = m_heldNotes.erase(it);
-                }
             }
 
             updateProfilingTime(procMidiStats.tm3RevalidateEnds, tmr.getTimeReset());
@@ -1287,7 +1285,7 @@ void track_impl_t::postProcessMidiInput(playback_state state, int32_t flags, tic
                     }
                 }
                 if (!fnd) {
-                    log_lf(Log::L_WARN, "MIDI_OFF_NOTE note not found %s tickEnd %d\n", noteName(pitch), tickEnd);
+                    log_lf(Log::L_WARN, "MIDI_OFF_NOTE note not found %s tickEnd %d. midiProcessed size %zd\n", noteName(pitch), tickEnd, midiProcessed->m_list.size());
                 }
             }
         }

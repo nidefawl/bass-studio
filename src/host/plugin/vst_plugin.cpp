@@ -872,6 +872,7 @@ void vstplugin::process(const DAW::Host::Host* const host, AudioBlock* in, Audio
 }
 
 void vstplugin::sendNotesOff() {
+#ifdef VST_PLUGIN_TRACK_NOTES
     if (bCanReceiveMidi) {
         const auto& heldNotes = handle->heldNotes;
         VstEvent_t::ReallocVstEvents(&handle->midiEventsBuf, heldNotes.size() + 1);
@@ -887,8 +888,9 @@ void vstplugin::sendNotesOff() {
         //VstEvent_t midiEventsBufTemp = *midiEventsBuf;
         this->midiEventsDispatched += handle->midiEventsBuf->vstEvents->numEvents;
         this->dispatch(effProcessEvents, 0, 0, handle->midiEventsBuf->vstEvents);
-        handle->heldNotes.clear();
     }
+#endif
+    handle->heldNotes.clear();
 }
 void vstplugin::processMidi(midi_events_t& midiEvents) {
     if (bCanReceiveMidi) {
@@ -896,16 +898,20 @@ void vstplugin::processMidi(midi_events_t& midiEvents) {
         if (numEvents) {
             const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, midiEvents.bpm100, format.sampleRate);
             VstEvent_t::ReallocVstEvents(&handle->midiEventsBuf, numEvents);
+#ifdef VST_PLUGIN_TRACK_NOTES
             auto& heldNotes = handle->heldNotes;
+#endif
             VstEvent_t* midiEventsBuf = handle->midiEventsBuf;
             for (auto& evt : *midiEvents.noteEventsProcessed) {
                 midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, format.blockSize);
+#ifdef VST_PLUGIN_TRACK_NOTES
                 bool bContained = std::binary_search(std::begin(heldNotes), std::end(heldNotes), evt.pitch);
                 if (evt.isNoteOn && !bContained) {
                     insertSorted(heldNotes, evt.pitch);
                 } else if (!evt.isNoteOn && bContained) {
                     removeEntry(heldNotes, evt.pitch);
                 }
+#endif
             }
             dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) numEvents);
             //TODO: decide if we should make a copy, plugin may manipulate data

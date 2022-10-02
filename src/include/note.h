@@ -104,7 +104,7 @@ struct noteevent_t {
     bool isNoteOn      = false;
     bool isLoopNoteOff = false;
     noteevent_t(int32_t p, int32_t v, tick_t t, tick_t gt, bool b, bool b2)
-        : pitch(p), velocity(v), tickOffsetInBlock(t), globalTick(gt), isNoteOn(b), isLoopNoteOff(b2) {
+        : pitch(p), velocity(v), tickOffsetInBlock(math::max(0, t)), globalTick(gt), isNoteOn(b), isLoopNoteOff(b2) {
     }
 };
 

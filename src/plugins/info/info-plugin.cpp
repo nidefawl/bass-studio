@@ -306,10 +306,18 @@ namespace PluginHostInfo {
             for (int i = 0; i < len; i++) {
                 auto pEvent = events->events[i];
                 if (pEvent->type == VstEventTypes::kVstMidiType) {
-                    if (getLogVerbosity() > 6)
-                        log_printf("pEvent->type kVstMidiType\n");
                     VstMidiEvent* pME = (VstMidiEvent*) pEvent;
                     IMidiMsg msg(pME->deltaFrames, pME->midiData[0], pME->midiData[1], pME->midiData[2]);
+                    if (getLogVerbosity() > 7)
+                        msg.PrintMsg();
+                    if (getLogVerbosity() > 6 && msg.StatusMsg() == IMidiMsg::kNoteOff) {
+                        log_printf("NoteOff %d %d %d\n", msg.mOffset, msg.mData1, msg.mData2);
+                    }
+                    if (getLogVerbosity() > 6 && msg.StatusMsg() == IMidiMsg::kNoteOn) {
+                         log_printf("NoteOn %d %d %d\n", msg.mOffset, msg.mData1, msg.mData2);
+                    }
+                        
+
                     impl->ProcessMidiMsg(msg);
                     /*log_printf("event[%d].type %d\n", i, pME->type);
                     log_printf("event[%d].byteSize %d\n", i, pME->byteSize);
@@ -406,9 +414,9 @@ namespace PluginHostInfo {
 
         dbgassert(sampleFrames <= blockSize);
         if (!issetprogram && sampleFrames <= blockSize) {
-
+            auto v = getLogVerbosity();
             for (int s = 0; s < sampleFrames; s++) {
-                impl->processMidiSamplePos(s, getLogVerbosity());
+                impl->processMidiSamplePos(s, v);
             }
 
             if (this->getAeffect()->numOutputs == 1) {
