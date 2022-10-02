@@ -331,6 +331,10 @@ public:
         return valid;
     }
 
+    bool isVisible() {
+        return bIsVisible;
+    }
+
     GLFWwindow* getGLFW() {
         return glfw;
     }
@@ -591,9 +595,6 @@ public:
 #ifdef _WIN32
     virtual LRESULT windowProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
         switch (Msg) {
-            case WM_COMMAND:
-                menuCommand(menucmd_t{ LOWORD(wParam), "" });
-                return 0;
 #if WINDOW_HAS_MENUBAR
             case WM_INITMENUPOPUP: {
                 HMENU hmenuPopup = (HMENU) wParam;       // handle of submenu
@@ -919,6 +920,11 @@ public:
         }
     }
 
+    void showWindow() override {
+        ctrl->onBeforeShowWindow();
+        appwindow::showWindow();
+    }
+
     bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override {
         return ctrl->filesDropBegin(files, pos, kbmods);
     }
@@ -953,17 +959,6 @@ public:
 
 #ifdef _WIN32
     LRESULT windowProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) override {
-        switch (Msg) {
-            case WM_MOVING:
-            case WM_MOVE:
-            case WM_WINDOWPOSCHANGING:
-            case WM_WINDOWPOSCHANGED:
-            case WM_NCLBUTTONDOWN:
-                if (this->ctrl->window == this) {
-                    this->ctrl->closeAllContextMenus();
-                }
-                break;
-        }
         return appwindow::windowProc(_hwnd, Msg, wParam, lParam);
     }
 #endif
@@ -1455,7 +1450,7 @@ window_dialog* appwindow_main::createDialog(const String& sTitle, int w, int h, 
 static void glfw_cb_mousepos(GLFWwindow* w, double x, double y) {
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
-        if (wu && wu->isValid())
+        if (wu && wu->isValid() && wu->isVisible())
             wu->_onMouseMoved(x, y);
     } catch (std::exception& e) {
         handleStdException(e);
@@ -1465,7 +1460,7 @@ static void glfw_cb_mousepos(GLFWwindow* w, double x, double y) {
 static void glfw_cb_mousebutton(GLFWwindow* w, int button, int action, int mods) {
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
-        if (wu && wu->isValid())
+        if (wu && wu->isValid() && wu->isVisible())
             wu->onMouseButton(button, action, mods);
     } catch (std::exception& e) {
         handleStdException(e);
@@ -1475,7 +1470,7 @@ static void glfw_cb_mousebutton(GLFWwindow* w, int button, int action, int mods)
 static void glfw_cb_cursorenter(GLFWwindow* w, int entered) {
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
-        if (wu && wu->isValid())
+        if (wu && wu->isValid() && wu->isVisible())
             wu->onCursorEnter(entered);
     } catch (std::exception& e) {
         handleStdException(e);
@@ -1485,7 +1480,7 @@ static void glfw_cb_cursorenter(GLFWwindow* w, int entered) {
 static void glfw_cb_mousescroll(GLFWwindow* w, double xoffset, double yoffset) {
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
-        if (wu && wu->isValid())
+        if (wu && wu->isValid() && wu->isVisible())
             wu->onMouseScrolled(xoffset, yoffset);
     } catch (std::exception& e) {
         handleStdException(e);
@@ -1495,7 +1490,7 @@ static void glfw_cb_mousescroll(GLFWwindow* w, double xoffset, double yoffset) {
 void glfw_main_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int mods) {
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
-        if (wu && wu->isValid()) {
+        if (wu && wu->isValid() && wu->isVisible()) {
             const char* key_name = glfwGetKeyName(key, scancode);
             wu->onKeyInput(key, scancode, action, mods, key_name);
         }
@@ -1507,7 +1502,7 @@ void glfw_main_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int
 static void glfw_cb_charinput(GLFWwindow* w, uint32_t codepoint, int mods) {
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
-        if (wu && wu->isValid())
+        if (wu && wu->isValid() && wu->isVisible())
             wu->onCharInput(codepoint);
     } catch (std::exception& e) {
         handleStdException(e);
@@ -1517,7 +1512,7 @@ static void glfw_cb_charinput(GLFWwindow* w, uint32_t codepoint, int mods) {
 static void glfw_cb_refresh(GLFWwindow* w) {
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
-        if (wu && wu->isValid()) {
+        if (wu && wu->isValid() && wu->isVisible()) {
             wu->renderWindowAndChildren();
             wu->swapBufferAndChildren();
         }
