@@ -735,7 +735,7 @@ namespace PluginSynth {
     public:
         VoiceUnison()
             : voices(), first(&voices.front()) {
-            last = &voices.back();
+            last = &voices.back() + 1;
         }
         void setUnisonVoiceCount(int32_t unisonVoiceCount) {
             unisonVoiceCount     = math::max(1, unisonVoiceCount);
@@ -1280,7 +1280,9 @@ namespace PluginSynth {
             for (size_t i = 0; i < voices.size(); i++) {
                 auto& pv = voices[i];
                 pv.init(static_cast<int32_t>(i), static_cast<uint64_t>(synthRand.rng_rand()));
+                int32_t numVisited = 0;
                 pv.visitVoices([&](Voice& v) {
+                    numVisited++;
                     v.osc1a.setShape(pShape);
                     v.osc1b.setShape(pShape);
                     v.osc2a.setShape(pShape);
@@ -1289,6 +1291,7 @@ namespace PluginSynth {
                     v.lfo1.setShape(pShape);
                     v.lfo2.setShape(pShape);
                 });
+                dbgassert(numVisited == NUM_UNISON_VOICES);
             }
 
             auto addParam = [this](SynthParamBase* param, Parameters enumParam) {
