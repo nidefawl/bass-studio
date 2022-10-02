@@ -69,12 +69,12 @@ namespace PluginGain {
             float fGain = 1.0f;
             bool bIsNotMuted = true;
             if (autParGain.type != DAW::automation_routing_type::ROUTING_NONE) {
-                bIsNotMuted = dsp_util::getGainLvlWithRange(autParGain.atl->getParamValue(PARAM_GAIN), MTR_CEIL, DBFS_MUTE_POS, fGain);
+                bIsNotMuted = dsp_util::getGainLvlWithRange(autParGain.atl->getParamValue(autParGain.paramIdx), MTR_CEIL, DBFS_MUTE_POS, fGain);
             }
             if (bIsNotMuted) {
                 float fPanTrack = 0.5f;
                 if (autParPan.type != DAW::automation_routing_type::ROUTING_NONE) {
-                    fPanTrack = autParPan.atl->getParamValue(PARAM_PAN);
+                    fPanTrack = autParPan.atl->getParamValue(autParPan.paramIdx);
                 }
                 /* fast path: center pan */
                 if (math::abs(fPanTrack - 0.5f) < 0.005f) {

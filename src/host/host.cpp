@@ -639,12 +639,12 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
                 }
                 auto blockMixToOffset = ptrBlockMixDst->SubChannelsBlock(tracksrc.channel.dstChannelOffset, dstChannelCount);
                 if (autParGain.type <= automation_routing_type::ROUTING_CONSTANT 
-                    && (autParPan.type <= automation_routing_type::ROUTING_NONE 
-                        ||  (autParPan.type <= automation_routing_type::ROUTING_CONSTANT && autParPan.atl->getParamValue(autParPan.paramIdx) == 0.5f))) {
+                    && (autParPan.type == automation_routing_type::ROUTING_NONE 
+                        ||  (autParPan.type == automation_routing_type::ROUTING_CONSTANT && autParPan.atl->getParamValue(autParPan.paramIdx) == 0.5f))) {
                     float fGainTrack = 1.0f;
                     bool bIsNotMuted = true;
                     if (autParGain.type != automation_routing_type::ROUTING_NONE) {
-                        bIsNotMuted = dsp_util::getGainLvl(autParGain.atl->getParamValue(PARAM_GAIN), fGainTrack);
+                        bIsNotMuted = dsp_util::getGainLvl(autParGain.atl->getParamValue(autParGain.paramIdx), fGainTrack);
                     }
                     /* Fast path */
                     if (bIsNotMuted) {
@@ -1229,9 +1229,9 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
             midiProcessFlags = 0;
             break;
     }
-    if (track->type != TRACK_TYPE_MIDI) {
-        midiProcessFlags &= ~MidiFlags::PROCESS_ARP;
-    }
+    // if (track->type != TRACK_TYPE_MIDI) {
+    //     midiProcessFlags &= ~MidiFlags::PROCESS_ARP;
+    // }
 
     tmp.timer.reset();
     trackImpl->processMidiInput(playbackState, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, trackNode.inputLatency, *midiRealtimeInput);
@@ -1325,7 +1325,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
             float fGainTrack = 1.0f;
             bool bIsNotMuted = true;
             if (autParGain.type != automation_routing_type::ROUTING_NONE) {
-                bIsNotMuted = dsp_util::getGainLvl(autParGain.atl->getParamValue(PARAM_GAIN), fGainTrack);
+                bIsNotMuted = dsp_util::getGainLvl(autParGain.atl->getParamValue(autParGain.paramIdx), fGainTrack);
             }
             /* Fast path */
             if (bIsNotMuted) {
