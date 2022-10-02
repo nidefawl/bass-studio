@@ -348,4 +348,9 @@ public:
         nvgFillColor(vg, color);
         nvgFill(vg);
     }
+    void buttonClicked(guibase* button) override {
+        if (parent) {
+            parent->buttonClicked(button);
+        }
+    }
 };

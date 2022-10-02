@@ -3610,7 +3610,6 @@ namespace PluginSynth {
                     parent->buttonClicked(this);
                 }
             }
-            parent->buttonClicked(button);
             guictr_base::buttonClicked(button);
         }
 
@@ -3750,11 +3749,6 @@ namespace PluginSynth {
                 // nvgShapeAntiAlias(vg, USE_NANOVG_AA);
                 nvgTranslateZ(vg, 1.0f);
             }
-        }
-
-        void buttonClicked(guibase* button) override {
-            parent->buttonClicked(button);
-            guictr_base::buttonClicked(button);
         }
 
         void determineSize(ivec2& prefSize) override {

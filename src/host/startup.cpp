@@ -309,8 +309,8 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
             //     daw->setSelectedTrack(daw->getProject()->trackReturnCtr.front());
             //     daw->getMainControl()->showPluginView();
             // }
-            if (daw->getProject()->trackMidiAudioCtr.size()>1) {
-                daw->setSelectedTrack(daw->getProject()->trackMidiAudioCtr[1]);
+            if (daw->getProject()->trackMidiAudioCtr.size()>0) {
+                daw->setSelectedTrack(daw->getProject()->trackMidiAudioCtr[0]);
             }
             loadAllInstances(dawMainCtrl, "Macro");
             //     auto tr = daw->getProject()->trackMidiAudioCtr[1];

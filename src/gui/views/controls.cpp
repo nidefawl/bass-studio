@@ -281,8 +281,7 @@ void gui_timeinput::buttonClicked(guibase* button) {
             return;
         }
     }
-    if (parent)
-        parent->buttonClicked(this);
+    guictr_base::buttonClicked(button);
 }
 
 
@@ -375,8 +374,7 @@ void gui_tempocontrol::buttonClicked(guibase* button) {
         showEditField();
         return;
     }
-    if (parent)
-        parent->buttonClicked(this);
+    guictr_base::buttonClicked(button);
 }
 void gui_tempocontrol::onInputChanged(const gui_tempocontrol_input* input) {
     auto const daw = dawCtrl->getDaw();

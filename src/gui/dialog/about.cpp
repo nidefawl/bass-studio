@@ -1,5 +1,6 @@
 #include "glheaders.h"
 #include "about.h"
+#include "gui/dialog/about.h"
 #include "math/vec.h"
 #include "str_util.h"
 #include "gui/controls/button.h"
@@ -113,4 +114,5 @@ void guidialog_about::buttonClicked(guibase* button) {
             closeContextMenu();
             break;
     }
+    guidialog_about::buttonClicked(button);
 }

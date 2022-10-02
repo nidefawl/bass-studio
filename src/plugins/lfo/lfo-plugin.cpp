@@ -46,47 +46,78 @@ namespace PluginLFO {
     double GetScaledRate(float paramValue) {
         return math::clamp(paramValue * (RATE_MAX - RATE_MIN) + RATE_MIN, RATE_MIN, RATE_MAX);
     }
+    float RateToParam(float rate) {
+        return (rate - RATE_MIN) / (RATE_MAX - RATE_MIN);
+    }
     struct SyncRatio {
         int32_t numerator;
         int32_t denominator;
+        String text;
     };
-    std::vector<SyncRatio> GetSyncRatios() {
+    enum NoteRatio : uint8_t {
+        NORMAL = 1,
+        DOTTED = 2,
+        TRIPLET = 4,
+    };
+    std::vector<SyncRatio> GetSyncRatios(int ratioFlags = (NORMAL | DOTTED | TRIPLET)) {
         std::vector<SyncRatio> syncRatios;
         for (int32_t i = 64; i >= 1; i /= 2) {
-            syncRatios.push_back({ 3, i*2 }); // dotted
-            syncRatios.push_back({ 4, i*3 }); // triplet
-            syncRatios.push_back({ 1, i });   // straight
+            if (ratioFlags & NoteRatio::TRIPLET) {
+                syncRatios.push_back({ 1, i * 3, StringFormat("%d/%d", 1, i*3) });// triplet
+            }
+            if (ratioFlags & NoteRatio::NORMAL) {
+                syncRatios.push_back({ 1, i, StringFormat("%d/%d", 1, i) });// straight
+            }
+            if (ratioFlags & NoteRatio::DOTTED) {
+                syncRatios.push_back({ 3, i, StringFormat("%d/%d", 3, i) });// dotted
+            }
         }
+        for (int32_t i = 2; i < 32; i *= 2) {
+            if (ratioFlags & NoteRatio::TRIPLET) {
+                syncRatios.push_back({ i, 3, StringFormat("%d/%d", i*3, 1) });// triplet
+            }
+            if (ratioFlags & NoteRatio::NORMAL) {
+                syncRatios.push_back({ i, 1, StringFormat("%d/%d", i, 1) });// straight
+            }
+            if (ratioFlags & NoteRatio::DOTTED) {
+                syncRatios.push_back({ 3 * i, 1, StringFormat("%d/%d", 3 * i, 1) });// dotted
+            }
+        }
+        if (ratioFlags & NoteRatio::NORMAL) {
+            for (int32_t i : {32, 64, 128}) {
+                syncRatios.push_back({ i, 1, StringFormat("%d/%d", i, 1) });// straight
+            }
+        }
+        std::sort(syncRatios.begin(), syncRatios.end(), [](const SyncRatio& a, const SyncRatio& b) {
+            return (1000 * a.numerator / a.denominator) < (1000 * b.numerator / b.denominator);
+        });
         return syncRatios;
     }
-    std::vector<String> GetSyncRatioLabels() {
+    std::vector<String> GetSyncRatioLabels(int ratioFlags = (NORMAL | DOTTED | TRIPLET)) {
+        auto syncs = GetSyncRatios(ratioFlags);
         std::vector<String> syncRatios;
-        for (int32_t i = 64; i >= 1; i /= 2) {
-            syncRatios.push_back(StringFormat("%d/%d", 3, i*2)); // dotted
-            syncRatios.push_back(StringFormat("%d/%dT", 1, i)); // triplet
-            syncRatios.push_back(StringFormat("%d/%d", 1, i));   // straight
+        syncRatios.reserve(syncs.size());
+        for (auto& sync : syncs) {
+            syncRatios.push_back(sync.text);
         }
         return syncRatios;
     }
 
-    float GetSyncRate(bool bIsSync, float paramValue) {
-        if (!bIsSync) {
+    float GetSyncRate(const std::vector<SyncRatio>& syncRatios, bool bIsSync, float paramValue) {
+        if (!bIsSync || syncRatios.empty()) {
             return GetScaledRate(paramValue);
         }
 
-        static const std::vector<SyncRatio> syncRatios = GetSyncRatios();
         int32_t index = math::clamp<int32_t>(math::floorfS32(paramValue * syncRatios.size()), 0, syncRatios.size() - 1);
         const SyncRatio& syncRatio = syncRatios[index];
         return (TICKS_BAR * syncRatio.numerator) / syncRatio.denominator;
     }
-    String FormatSyncRate(bool bIsSync, float paramValue) {
-        if (!bIsSync) {
+    String FormatSyncRate(const std::vector<SyncRatio>& syncRatios, bool bIsSync, float paramValue) {
+        if (!bIsSync || syncRatios.empty()) {
             return StringFormat("%.2f", GetScaledRate(paramValue));
         }
-
-        static const std::vector<String> syncRatios = GetSyncRatioLabels();
         int32_t index = math::clamp<int32_t>(math::floorfS32(paramValue * syncRatios.size()), 0, syncRatios.size() - 1);
-        return syncRatios[index];
+        return syncRatios[index].text;
     }
 
     struct module_lfo::lfo_impl_t : public PluginLockable {
@@ -98,7 +129,7 @@ namespace PluginLFO {
             float getPhase(double dTick) const {
                 auto rate = module->getParamValue(PARAM_LFO_RATE);
                  // TODO: not super accurate
-                float invRate = 1.0f / GetSyncRate(bIsSync, rate);
+                float invRate = 1.0f / GetSyncRate(syncRatios, bIsSync, rate);
                 auto phase = dTick * invRate + module->getParamValue(PARAM_LFO_PHASE);
                 float moduloPhase = modf(phase, &phase);
                 return moduloPhase;
@@ -184,7 +215,7 @@ namespace PluginLFO {
                 macroAutomationSrcParams[i].paramIdx = i;
                 macroAutomationSrcParams[i].shape.setShape(initShape);
                 macroAutomationSrcParams[i].bIsSync = bIsSync;
-                macroAutomationSrcParams[i].syncRatios = GetSyncRatios();
+                macroAutomationSrcParams[i].syncRatios = GetSyncRatios(NORMAL | DOTTED | TRIPLET);
             }
         }
         const lfo_automation_src_param_t* getModulationOutputData(const DAW::modulation_channel_ref& channel) {
@@ -609,6 +640,20 @@ namespace PluginLFO {
         auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
         switch (idx) {
             case PARAM_LFO_RATE: {
+                auto& first = impl->macroAutomationSrcParams[0];
+                if (first.bIsSync) {
+                    auto numSyncRatios = CtrSize(first.syncRatios);
+                    for (int32_t i = 0; i < numSyncRatios; ++i) {
+                        if (first.syncRatios[i].text == displayValue.value) {
+                            return {((i)/float(numSyncRatios-1)), true};
+                        }
+                        if (first.syncRatios[i].text == displayValue.value + "/1") {
+                            return {((i)/float(numSyncRatios-1)), true};
+                        }
+                    }
+                } else {
+                    return {math::clamp(RateToParam(fTextFieldVal), 0.0f, 1.0f), true};
+                }
                 // float syncTicks = GetSyncRate(impl->getIsSync(), getParamValue(idx));
                 // return {math::clamp(fPow, 0.0f, 1.0f), true};
                 break;
@@ -630,7 +675,8 @@ namespace PluginLFO {
         auto param = getParam(idx);
         dbgassert(param);
         if (param->idx == PARAM_LFO_RATE) {
-            auto lfoRateStr = FormatSyncRate(impl->getIsSync(), value);
+            auto& firstInstance = impl->macroAutomationSrcParams[0];
+            auto lfoRateStr = FormatSyncRate(firstInstance.syncRatios, firstInstance.bIsSync, value);
             return {lfoRateStr, impl->getIsSync() ? "" : param->unit};
         }
         if (param->idx == PARAM_LFO_PHASE) {

@@ -60,8 +60,4 @@ public:
         guictr_base::setControl(parentCtrl);
         scrollbar.setControl(parentCtrl);
     }
-    void buttonClicked(guibase* button) override {
-        parent->buttonClicked(button);
-        guictr_base::buttonClicked(button);
-    }
 };

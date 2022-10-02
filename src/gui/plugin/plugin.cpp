@@ -853,7 +853,6 @@ bool guipluginview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     return false;
 }
 void guipluginview::buttonClicked(guibase* _button) {
-    guiplugin::buttonClicked(_button);
     if (_button == &buttonOpenEditor) {
         ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
         if (effect->bEditOpen) {
@@ -862,12 +861,15 @@ void guipluginview::buttonClicked(guibase* _button) {
             bool bResetPosition = isShift(parentCtrl->lastMouseEvent.kbmods);
             effect->showWindow(bResetPosition);
         }
+        return;
     }
     if (_button == &buttonShowParameterList) {
         params.setVisible(!params.isVisible());
         bParamListVisible = params.isVisible();
         this->onChildLayoutChanged(this);
+        return;
     }
+    guiplugin::buttonClicked(_button);
 }
 void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
     contentS.x = math::max(64, contentS.x);

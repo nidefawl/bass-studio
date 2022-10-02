@@ -1524,6 +1524,7 @@ void guidialog_settings::buttonClicked(guibase* button) {
             closeContextMenu();
             break;
     }
+    guidialog_base::buttonClicked(button);
 }
 
 } // namespace
