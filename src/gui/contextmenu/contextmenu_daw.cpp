@@ -137,8 +137,11 @@ public:
     }
     void clicked(int _id) override {
         if (_id >= 0) {
+            closeContextMenu();
+            auto lock = dawCtrl->lockPlayThread();
             auto ref = static_cast<ctxtmenu_modulation_entry*>(entries[_id])->getRef();
             DAW::DisonnectModulationInputChannel(atl, ref);
+            return;
         }
         closeContextMenu();
     }
@@ -161,8 +164,11 @@ namespace DAW {
         
             }
             case ID_REMOVE_PARAM_MODULATION: {
-                DAW::DisonnectModulationForParam(atl, paramIdx);
-                dawCtrl->closeContextMenu();
+                {
+                    dawCtrl->closeContextMenu();
+                    auto lock = dawCtrl->lockPlayThread();
+                    DAW::DisonnectModulationForParam(atl, paramIdx);
+                }
                 return true;
             }
         }

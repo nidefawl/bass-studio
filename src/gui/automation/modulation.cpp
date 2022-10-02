@@ -217,15 +217,12 @@ namespace DAW::UI::Modulation {
             auto* popup = new DAW::UI::Modulation::guictxtmenu_modulation(dawCtrl);
              
             popup->fnCallback = [this](const DAW::modulation_channel_ref& ref) -> void {
-                auto dawCtrl = this->dawCtrl;
-                if (dawCtrl){
+                if (dawCtrl && paramAutomatable){
                     auto lock = dawCtrl->lockPlayThread();
-                    if (paramAutomatable) {
-                        DAW::ConnectModulationInputChannel(paramAutomatable, paramIdx, ref);
-                        updateSlots();
-                        layout();
-                        parentCtrl->relayout();
-                    }
+                    DAW::ConnectModulationInputChannel(paramAutomatable, paramIdx, ref);
+                    updateSlots();
+                    layout();
+                    parentCtrl->relayout();
                 }
             };
             popup->size = btnAddModulation.size;
