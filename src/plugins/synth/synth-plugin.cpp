@@ -43,6 +43,7 @@
 #include "plugins/plugin-base.h"
 #include "plugins/plugin-window.h"
 #include "plugins/plugin.h"
+#include "plugins/synth/synth-plugin.h"
 #include "rand.h"
 #include "seq_time.h"
 #include "seq_util.h"
@@ -2857,6 +2858,10 @@ namespace PluginSynth {
             impl->init();
         }
 
+        ~module_synth() override {
+            delete impl;
+        }
+
         int getModuleType() override { return PLUGIN_TYPE_SYNTH; };
         void getUiSnapshot(snapshot_t& snapshot);
         void setUiSnapshot(snapshot_t& snapshot);
@@ -3011,6 +3016,10 @@ namespace PluginSynth {
         isSynth(true);
         programsAreChunks(true);
         impl->init();
+    }
+    
+    PluginVST2_Synth::~PluginVST2_Synth() {
+        delete impl;
     }
 
     void PluginVST2_Synth::onPresetLoaded() {
@@ -4003,6 +4012,9 @@ namespace PluginSynth {
             setFlag(FLG_RENDER_LABEL, true);
             setCanMouseHit(true);
         }
+        ~guictr_synth_param_container() override {
+            destroyGuis();
+        }
 
         void addParamKnob(guiknob_synthparam* knob) {
             knobs.push_back(knob);
@@ -4193,7 +4205,7 @@ namespace PluginSynth {
                 {&ctrLfo, &ctrShapeLfo, &ctrOsc1, &ctrOsc2},
                 {&ctrEnvV, &ctrEnvM, &ctrMacro},
             };
-            for (auto& row :moduleLayout) {
+            for (auto& row : moduleLayout) {
                 for (auto ctr : row) {
                     ctr->id = ctrIdx++;
                     add(ctr);
@@ -4361,14 +4373,6 @@ namespace PluginSynth {
 
         ~guicontainer_plugin_synth_editor() override {
             removeGuis();
-            for (auto& synthKnob : vecParamUI) {
-                delete synthKnob.knob;
-            }
-            for (auto& ctr : containers) {
-                delete ctr;
-            }
-            if (shapeEditor)
-                delete shapeEditor->getGuiContainer();
         }
 
         float getSplitterPos(int32_t idx) {
@@ -4857,7 +4861,7 @@ namespace PluginSynth {
 
         ~guicontainer_plugin_synth() override {
             remove(&editor);
-            add(&header);
+            remove(&header);
         }
 
         void layout() override {

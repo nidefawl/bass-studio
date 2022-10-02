@@ -366,7 +366,7 @@ namespace PluginSynth {
     public:
         using ThreadLock = std::lock_guard<std::recursive_mutex>;
         explicit PluginVST2_Synth(audioMasterCallback audioMaster);
-        ~PluginVST2_Synth() override = default;
+        ~PluginVST2_Synth() override;
     
         // internal API
         std::shared_ptr<PluginViewContainers> createViewCtrVst2() override;
