@@ -913,7 +913,7 @@ void guiproperties_table<guitheme_t>::determineSize(glm::ivec2& prefSize) {
     m_table.rows.clear();
     m_table.titleCols.clear();
     m_table.colSizes.clear();
-    auto currentObjPtr = getObjPtr();
+    auto currentObjPtr = m_unsafePointer;
     m_table.rows.push_back({{tblstr{"this"}, tblint{(int64_t) currentObjPtr, "%08X"}}});
     if (currentObjPtr)
     {
