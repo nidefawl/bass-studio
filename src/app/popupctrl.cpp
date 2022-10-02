@@ -45,6 +45,8 @@ void PopupCtrl::relayout(int32_t w, int32_t h) {
             popupCtrs->size      = singleCtr->size;
             popupCtrs->maxHeight = singleCtr->size.y;
             popupCtrs->determineSize(popupCtrs->size);
+            auto unscaledWindowSize = vec2(singleCtr->size) * m_scale;
+            window->setSize({math::ceilfS32(unscaledWindowSize.x), math::ceilfS32(unscaledWindowSize.y)});
         }
     }
     popupCtrs->layout();
@@ -59,7 +61,6 @@ bool PopupCtrl::mouseDownPre() {
 
 
 void PopupCtrl::open(guictxtmenu_base* _ctxtmenu, ivec2 pos, bool bResizeable, bool bFocused) {
-    this->closed = false;
     //dbgassert(!isShown());
     mouseInside       = false;
     this->bResizeable = bResizeable;
