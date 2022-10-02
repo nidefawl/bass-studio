@@ -2847,6 +2847,7 @@ namespace PluginSynth {
                     case Parameters::ModEnvCutoff:
                     case Parameters::LfoCutoff:
                     case Parameters::Panning:
+                    case Parameters::LfoShape:
                         regparam->isBiPolar = true;
                         break;
                     default:
