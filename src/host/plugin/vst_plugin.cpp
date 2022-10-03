@@ -622,8 +622,8 @@ String vstplugin::getAutomatableName() {
     return this->sName;
 }
 
-float vstplugin::getParamValue(int32_t idx) {
-    automatable_param_t* param = getParamUnchecked(idx);
+automatable_param_t* vstplugin::getParam(int32_t idx) {
+    auto param = effectbase::getParam(idx);
     dbgassert(param);
     if (param->internalIdx >= 0) {
         if (param->paramValueState & PARAM_FLAG_DIRTY) {
@@ -631,7 +631,10 @@ float vstplugin::getParamValue(int32_t idx) {
             param->paramValueState = PARAM_FLAG_SET;
         }
     }
-    return param->getValueModulated();
+    return param;
+}
+float vstplugin::getParamValue(int32_t idx) {
+    return effectbase::getParamValue(idx);
 }
 param_unit_t vstplugin::getParamValueDisplay(int32_t idx) {
     auto param = getParam(idx);

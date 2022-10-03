@@ -63,12 +63,6 @@ public:
             fnValueEditChanged = [this](float preVal, float val) {
                 setValueInit(val);
             };
-            // getValueDisplay = [this](float val) {
-            //     auto paramDisplay = hostSidePlugin->getParamValueDisplay(paramIdx);
-            //     if (paramDisplay.unit.empty())
-            //         return paramDisplay.value;
-            //     return paramDisplay.value + " " + paramDisplay.unit;
-            // };
             fnValueEditBegin = [this](float preVal, float val) {
                 hostSidePlugin->getHostCallback()->onParametersChanged(hostSidePlugin, paramIdx, val, 0, 0);
             };

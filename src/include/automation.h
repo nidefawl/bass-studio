@@ -476,7 +476,7 @@ public:
     /**
      * returns: null or temporary reference, do not keep around
      */
-    automatable_param_t* getParam(int32_t paramIdx) {
+    virtual automatable_param_t* getParam(int32_t paramIdx) {
         auto it = mapParams.find(paramIdx);
         // dbgassert(it != mapParams.end());
         if (it != mapParams.end()) {
@@ -484,7 +484,7 @@ public:
         }
         return nullptr;
     }
-    const automatable_param_t* getParam(int32_t paramIdx) const {
+    virtual const automatable_param_t* getParam(int32_t paramIdx) const {
         auto it = mapParams.find(paramIdx);
         // dbgassert(it != mapParams.end());
         if (it != mapParams.end()) {

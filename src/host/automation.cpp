@@ -364,7 +364,15 @@ float automatable_t::getParamValue(int32_t idx) {
 param_unit_t automatable_t::getParamValueDisplay(int32_t idx) {
     auto param = getParam(idx);
     dbgassert(param);
-    return convertParamValueToDisplay(param->idx, param->getValue());
+    float val = param->getValue();
+    if (param->isModulated()) {
+        val = param->getValueModulated();
+    }
+    auto autLane = getRegisteredAutomation(param->idx);
+    if (autLane && autLane->isActive()) {
+        val = param->getValueAutomated();
+    }
+    return convertParamValueToDisplay(param->idx, val);
 }
 
 param_unit_t automatable_t::convertParamValueToDisplay(int32_t idx, float value) {
