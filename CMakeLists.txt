@@ -364,6 +364,7 @@ if (WIN32 AND NOT MSVC AND PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
   else()
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)
     get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
+    get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH) # remove /lib
     set(PATH_RUNTIMES "${PATH_RUNTIMES}/bin")
     add_custom_target(windows-installer
       DEPENDS DAW vstscanner
