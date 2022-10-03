@@ -1,6 +1,7 @@
 #include "midiarp.h"
 #include "assert_dbg.h"
 #include "automation.h"
+#include "host/host_pluginmanager.h"
 #include "host/plugin/internal_plugin.h"
 #include "logging.h"
 #include "math/seq_math.h"
@@ -494,7 +495,7 @@ bool midiarp::isProcessingEnabled() {
     return true;
 }
 
-void midiarp::process(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
+void midiarp::process(const DAW::Host::PluginManager* const host, playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
                       tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd,
                       std::vector<noteevent_t>& noteEventsProcessed) {
     const float wallClockTime = getTimeMillisF() / 1000.0f;
@@ -502,7 +503,7 @@ void midiarp::process(playback_state state, tick_t cursorPos, const std::vector<
     if (!isProcessingEnabled() && !bEnableStateUserToggled && heldInput.empty() && heldOutputNotes.empty() && noteEventsIn.empty()) {
         noteEventsProcessed = noteEventsIn;
     } else {
-        processArpInternal(state, cursorPos, noteEventsIn, start, end, loopStart, loopEnd, wallClockTime, noteEventsProcessed);
+        processArpInternal(host, state, cursorPos, noteEventsIn, start, end, loopStart, loopEnd, wallClockTime, noteEventsProcessed);
     }
 
     updateMarkersAndAnimation(start, end, loopStart, loopEnd, wallClockTime);
@@ -524,7 +525,7 @@ void midiarp::process(playback_state state, tick_t cursorPos, const std::vector<
  * heldOutputNotes only contains pattern generated notes, not pass thru input notes
  * heldOutputNotes may contain disabled notes: They are released notes that will remain for a constant time for GUI animation purposes
  */
-void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
+void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
                                  tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, float wallClockTime,
                                  std::vector<noteevent_t>& noteEventsProcessed) {
 
@@ -562,12 +563,8 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
         if (!DAW::isPlaybackState(state)) {
             automationPos = cursorPos;
         }
-        for (automated_param_t& param : arpAutomatedParams) {
-            if (param.isActive()) {
-                float val = param.getValueAt(automationPos);
-                setParamValue(param.paramIdx, val, FLG_PAR_UPDATE_AUTOMATED);
-            }
-        }
+
+        automatable_t::updateAutomatedParameters(host, automationPos, state);
 
         tick_t stepSize           = getStepSize(getParamValue(ARP_PARAM_CLOCK));
         tick_t noteDuration       = getDuration(getParamValue(ARP_PARAM_GATE));
@@ -826,4 +823,8 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
         sortNoteEvents(noteEventsProcessed);
 }
 
+void midiarp::updateAutomatedParameters(const Host::PluginManager* const host, tick_t tick, playback_state state) {
+    // parameter automation updates are done internally
 }
+
+}// namespace DAW

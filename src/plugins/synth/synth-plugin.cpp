@@ -2897,15 +2897,12 @@ namespace PluginSynth {
 
         void postSetParameter(int32_t idx, float preVal, float val, int flags) override {
             if (idx > 0 && idx - 1 < CtrSize(vecParams)) {
-                auto paramHost = getParam(idx);
-                dbgassert(paramHost);
                 SynthParamBase* param = vecParams[idx-1];
                 if (flags & FLG_PAR_UPDATE_MODULATED) {
                     param->setModulated(val);
                 } else {
                     param->setAll(val);
                 }
-                // param->set(paramHost->getValue(), paramHost->getValueModulated());
                 this->impl->OnParamChange(param->enumParam);
             }
             internalplugin::postSetParameter(idx, preVal, val, flags);

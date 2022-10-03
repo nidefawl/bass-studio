@@ -323,6 +323,12 @@ private:
     std::vector<DAW::modulation_channel_ref> inputChannelsModulation;
     std::unordered_map<int32_t, std::vector<DAW::modulation_channel_ref*>> mapModulations;
 protected:
+    const std::unordered_map<int32_t, std::vector<DAW::modulation_channel_ref*>>& getModulationsMap() const {
+        return mapModulations;
+    }
+    const std::vector<automation_lane_t>& getAutomationLanes() const {
+        return automationLanes;
+    }
     void setAutomatableParam(automatable_param_t* param, float value, int flags);
 public:
     virtual ~automatable_t() = default;

@@ -1,6 +1,7 @@
 #pragma once
 #include "assert_dbg.h"
 #include "automation.h"
+#include "host/host.h"
 #include "logging.h"
 #include "note.h"
 #include "platform.h"
@@ -73,7 +74,7 @@ private:
     void initRandomDelays(tick_t tick, tick_t startFrame, tick_t endFrame, int32_t nextStep, tick_t stepSize, uint64_t seed, bool reset);
     bool isOutputNoteGateOn(const arp_note_t& noteHeldOut);
     void addNote(tick_t start, arp_note_t& note, std::vector<noteevent_t>& noteEvents);
-    void processArpInternal(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
+    void processArpInternal(const DAW::Host::PluginManager* const host, playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
                             tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, float wallClockTime,
                             std::vector<noteevent_t>& noteEventsProcessed);
     int updateMarkersAndAnimation(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, float wallClockTime);
@@ -133,9 +134,7 @@ public:
     void allNotesOff(std::vector<noteevent_t>& noteEvents);
     void onStartPlayback();
 
-    void updateAutomatedParameters(const Host::PluginManager *const host, tick_t tick, playback_state state) override {
-        // parameter automation updates are done internally
-    }
+    void updateAutomatedParameters(const Host::PluginManager* const host, tick_t tick, playback_state state) override;
 
     automatable_param_ref_t toRef() const override {
         automatable_param_ref_t ref;
@@ -146,7 +145,7 @@ public:
     void createSnapshot(arp_snapshot& snapshot, const tracksnapshot_store_opts_t& opts);
     void loadSnapshot(const arp_snapshot& snapshot);
 
-    void process(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
+    void process(const Host::PluginManager* const host, playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
                  tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd,
                  std::vector<noteevent_t>& noteEventsProcessed);
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;

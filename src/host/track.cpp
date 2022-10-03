@@ -1201,7 +1201,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
             tmr.reset();
             this->noteEventsProcessed.clear();
             if (arp && (flags & MidiFlags::PROCESS_ARP)) {
-                arp->process(state, cursorPos, noteEvents, blockStart, blockEnd, loopStart, loopEnd, noteEventsProcessed);
+                arp->process(host, state, cursorPos, noteEvents, blockStart, blockEnd, loopStart, loopEnd, noteEventsProcessed);
             } else {
                 noteEventsProcessed = std::move(noteEvents);
             }
