@@ -7,6 +7,7 @@
 #include <optional>
 
 struct automatable_t;
+struct automatable_param_t;
 struct param_modulation_range_t;
 namespace DAW::UI::Modulation {
     class gui_dragged_modulation;
@@ -70,9 +71,7 @@ public:
     }
     int32_t getParamIdx() const { return paramIdx; }
     void setKnobInternalHandlers();
-    virtual float getRenderScaledValue(float param) {
-        return param;
-    }
+    float getParamScaled(const automatable_param_t* param, int type);
 
     virtual bool isAutomated();
     virtual bool isModulated();
