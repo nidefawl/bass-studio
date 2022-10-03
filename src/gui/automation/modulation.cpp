@@ -320,7 +320,7 @@ namespace DAW::UI::Modulation {
         slots[0]->setParamAndAutomation(host, paramAutomatable, paramIdx, 0);
         slots[1]->setParamAndAutomation(host, paramAutomatable, paramIdx, 1);
         for (size_t i = 2; pModulations && i < numInputs; ++i) {
-            auto modulationIndex = static_cast<int32_t>(i - 2);
+            auto modulationIndex = static_cast<int32_t>(i) - 2;
             slots[i]->setModulationSource(host, paramAutomatable, paramIdx, (*pModulations)[modulationIndex], modulationIndex);
         }
     }

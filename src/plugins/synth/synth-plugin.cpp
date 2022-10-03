@@ -53,6 +53,7 @@
 #include "threads/playbackthread.h"
 #include "threads/threadlock.h"
 #include "tls.h"
+#include "types.h"
 #include "util/presetmanager.h"
 
 #include <algorithm>
@@ -2533,8 +2534,7 @@ namespace PluginSynth {
                 // });
             };
         }
-
-        void ProcessSynth(float** inputs, float** outputs, int nFrames) {
+        void ProcessSynth(float** inputs, float** outputs, int nFrames, const DAW::Host::Host* const host, double tick, playback_state state) {
             // lockProcessing only locks VST2 versions of the plugin
             auto lock = this->lockProcessing();
 
@@ -2560,6 +2560,9 @@ namespace PluginSynth {
                 std::memset(modulationValuesMin.data(), 0, modulationValuesMin.size()*sizeof(double));
             }
             for (int s = 0; s < nFrames; s++) {
+                if (host && moduleInstance) {
+                    ReadAutomation(host, tick, state, s, nFrames);
+                }
                 FlushMidi(s);
                 UpdateParameters(dt);
                 UpdateDrift(dt);
@@ -2648,6 +2651,7 @@ namespace PluginSynth {
             }
             this->activeVoiceCount = numActiveVoices;
         }
+        void ReadAutomation(const DAW::Host::Host* const host, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount);
 
         void OnParamChange(Parameters parameter) {
             double value                         = 0.0;
@@ -2926,7 +2930,7 @@ namespace PluginSynth {
             //     this->impl->onTransportChanged(timeinfo->flags & kVstTransportPlaying);
             // }
             out->clear();
-            this->impl->ProcessSynth(in->buf, out->buf, numSamples);
+            this->impl->ProcessSynth(in->buf, out->buf, numSamples, host, tick, state);
         }
 
         std::shared_ptr<std::vector<std::byte>> storePresetData() override {
@@ -3236,10 +3240,20 @@ namespace PluginSynth {
             if (timeinfo && timeinfo->flags & kVstTransportChanged) {
                 this->impl->onTransportChanged(timeinfo->flags & kVstTransportPlaying);
             }
+            auto state = playback_state::status_playback;
+            if (timeinfo && timeinfo->flags & kVstTransportPlaying) {
+                state = playback_state::status_playback;
+            } else {
+                state = playback_state::status_stop;
+            }
+            double tickPos = 0.0;
+            if (timeinfo && timeinfo->flags & kVstPpqPosValid) {
+                tickPos = timeinfo->ppqPos * TICKS_QUARTER;
+            }
             if (inputs)
                 dsp_util::fillChannels(inputs, this->getAeffect()->numInputs, sampleFrames, 0.0f);
             dsp_util::fillChannels(outputs, this->getAeffect()->numOutputs, sampleFrames, 0.0f);
-            this->impl->ProcessSynth(inputs, outputs, sampleFrames);
+            this->impl->ProcessSynth(inputs, outputs, sampleFrames, nullptr, tickPos, state);
         }
     }
 }// namespace PluginSynth
@@ -5052,4 +5066,9 @@ namespace PluginSynth {
         return nullptr;
     }
 
+    void SynthImpl::ReadAutomation(const DAW::Host::Host* const host, double tick, playback_state state, samplecount_t samplePos, samplecount_t sampleCount) {
+        auto bpm100 = host->prjGlobals.tempo100;
+        auto tickPosOffset = tick + sampleToTickConvert<double, roundmode::none>(samplePos, bpm100, host->m_sampleFormatInternal.sampleRate);
+        moduleInstance->updateAutomatedParameters(host, math::floordS32(tickPosOffset), state);
+    }
 }// namespace PluginSynth
