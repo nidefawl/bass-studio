@@ -919,11 +919,11 @@ void audio_stage_t::removeAudioStage(audio_stage_t* _child) {
 
 track_t* audio_stage_t::getTrack() const {
     const audio_stage_t* stage = this;
-    while (stage->parent) {
+    while (stage) {
+        if (stage->type == 0) {
+            return static_cast<const track_impl_t*>(stage)->track;
+        }
         stage = stage->parent;
-    }
-    if (stage->type == 0) {
-        return dynamic_cast<const track_impl_t*>(stage)->track;
     }
     //    dbgassert(0); // to be expected when deleting effectgroups
     return nullptr;

@@ -480,13 +480,12 @@ public:
         } else {
             addEntry(new ctxtmenu_entry_stage_channel(idx++, "Output", audio_channel_ref_t{ _busStage, stage_bufferpoint::OUTPUT_POST }));
         }
-        audio_stage_t* stage = _dawCtrl->getDaw()->getPluginManager()->getAudioStage(stageEndpoint.stageRef);
+        auto host = _dawCtrl->getDaw()->getPluginManager();
+        auto stage = host->getAudioStage(_busStage);
         if (stage) {
-            track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
-            dbgassert(trImpl);
-            if (trImpl) {
-                dbgassert(trImpl->getTrack());
-                auto& childTracks = trImpl->getTrack()->children;
+            auto track =  stage->getTrack();
+            if (track) {
+                auto& childTracks = track->children;
                 for (track_t* childTrack : childTracks) {
                     dbgassert(childTrack->audio);
                     addEntry(new ctxtmenu_entry_bus_internal(idx, childTrack->name, childTrack->audio->toRef(), stageEndpoint));

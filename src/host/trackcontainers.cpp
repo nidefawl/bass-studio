@@ -60,6 +60,7 @@ void trackallcontainer_t::checkConsistency() {
             dbgassert(STL_CONTAINS(trackAllCtr.tracksTree, trackTop));
             numTracksRoot++;
         } else {
+            dbgassert(STL_CONTAINS(trackTop->parent->children, trackTop));
             allTracksParent.push_back(trackTop);
         }
         for (track_t* trackChild : trackTop->children) {
