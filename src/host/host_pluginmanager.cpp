@@ -1,4 +1,5 @@
 #include "host/host_pluginmanager.h"
+#include "logging.h"
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
 #include "plugin/vst_plugin_handles.h"
@@ -200,6 +201,7 @@ bool PluginManager::addDeferredEffect(effectbase* plugin) {
     }
     auto it = std::find_if(pluginsDeferred.begin(), pluginsDeferred.end(), [plugin](auto* eff) { return eff->projectGlobalId == plugin->projectGlobalId; });
     if (it != pluginsDeferred.end()) {
+        log_lf(Log::L_ERROR, "Duplicate plugin id %d", plugin->projectGlobalId);
         return false;
     }
     pluginsDeferred.push_back(plugin);
@@ -478,12 +480,16 @@ int32_t PluginManager::validateIds()
     /** check for collisions of plugin ids between deferred and normal effect instances */
     for (auto plugin : pluginInstances) {
         auto id = plugin->projectGlobalId;
+        int32_t count = 0;
         for (auto plugin2 : pluginsDeferred) {
             if (plugin == plugin2)
                 continue;
             auto id2 = plugin2->projectGlobalId;
-            always_assert(id2 != id);
+            if (id == id2) {
+                count++;
+            }
         }
+        always_assert(count <= 1);
         for (auto plugin2 : pluginInstances) {
             if (plugin == plugin2)
                 continue;
