@@ -154,8 +154,9 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
         return false;
     }
     if (kevt.type != K_RELEASE) {
+        auto daw = dawCtrl->getDaw();
         trackstate_t preModifyState;
-        ThreadLock lock      = MainCtrl::getPlayThread()->lockThread();
+        ThreadLock lock      = daw->lockPlayThread();
         bool modified        = false;
         bool handledKeyinput = false;
         String desc          = "???";
@@ -334,10 +335,10 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
         }
         if (modified) {
             auto* track_action = new action_modify_track(desc, preModifyState.copy());// could be more efficient
-            DawInstance::get()->pushHist(track_action);
+            daw->pushHist(track_action);
         }
         if (handledKeyinput) {
-            DawInstance::get()->updateVisibleTrackContents();
+            daw->updateVisibleTrackContents();
         }
         return handledKeyinput;
     }
@@ -357,7 +358,7 @@ void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt)
         trSelected = getTrackFromMouse(iGuiMgr, local);
     }
     if (trSelected != nullptr) {
-        DawInstance::get()->setEditClip(nullptr);
+        dawCtrl->getDaw()->setEditClip(nullptr);
         if (evt.guiDragged == this) {// cursor move / range select
             DAW::Cursor& c  = dawCtrl->getCursor();
             c.selRange      = 0;
@@ -422,7 +423,7 @@ void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& ev
     track_gui_entry_t* trNxtSelected = nullptr;
     ivec2 local                      = evt.relMousepos;
     trNxtSelected                    = getTrackFromMouseClosest(iGuiMgr, local);
-    DawInstance::get()->setSelectedTrackEntry(trNxtSelected);
+    dawCtrl->getDaw()->setSelectedTrackEntry(trNxtSelected);
     trSelected    = nullptr;
     subTrSelected = nullptr;
 }
@@ -432,11 +433,10 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
     tick_t tickExact    = grid.screenToTickSnap(local.x, SNAP_OFF);
     track_t* track      = gClip->m_track;
     clip_t* clicked     = gClip->m_clip;
-    //ghostCopy = new gui_clip(clip->m_clip->clone());
-    //ghostCopy->m_clip->gClip = ghostCopy;
     track_gui_entry_t* trackClicked = getTrackFromMouse(iGuiMgr, local);
+
     if (trackClicked) {
-        DawInstance::get()->setSelectedTrackEntry(trackClicked);
+        dawCtrl->getDaw()->setSelectedTrackEntry(trackClicked);
     }
 
     action.dragtype  = DRAG_NONE;
@@ -478,7 +478,8 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
     if (action.dragtype) {
         if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT || action.dragtype == DRAG_CLIPS_RESIZE_RIGHT) {
-            ThreadLock lock               = MainCtrl::getPlayThread()->lockThread();
+            auto daw = dawCtrl->getDaw();
+            ThreadLock lock = daw->lockPlayThread();
             clip_t* clip                  = gui->m_clip;
             track_gui_entry_t* trackentry = gui->m_trackentry;
             track_t* track                = trackentry->track;
@@ -514,7 +515,7 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
             clip->setDirty();
             resizeOtherClips(track->getMidi(), clip);
             setSelectionRange(clip, trackentry);
-            DawInstance::get()->updateVisibleTrackContents();
+            daw->updateVisibleTrackContents();
             return;
         }
     }
@@ -557,6 +558,7 @@ void guitrack_editor::dragClipboardMove(ivec2 local, int kbmods) {
     }
 }
 void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
+    auto daw = dawCtrl->getDaw();
     if (action.dragtype) {
         bool showclip = true;
         if (action.dragtype == DRAG_CLIPS_MOVE || action.dragtype == DRAG_CLIPS_COPY) {
@@ -566,11 +568,11 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
             ivec2 local                      = evt.relMousepos;
             track_gui_entry_t* trNxtSelected = getTrackFromMouseClosest(iGuiMgr, local);
             if (trNxtSelected) {
-                DawInstance::get()->setSelectedTrackEntry(trNxtSelected);
+                daw->setSelectedTrackEntry(trNxtSelected);
             }
             bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
             if (selectionMoved && trNxtSelected) {
-                ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+                ThreadLock lock = daw->lockPlayThread();
 
                 //TODO: make this more efficient: right now tracks get copied that are not modified
                 DAW::Cursor allAffected = cursor.expandTo(cursorBegin);
@@ -592,17 +594,17 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
                 }
                 int32_t trackGuiIdx = dstTrack - trackOffset;
                 DAW::pasteFullClipboard(iGuiMgr, clipboard.get(), trackGuiIdx, dstPos, bCopyAutomation);
-                DawInstance::get()->updateVisibleTrackContents();
+                daw->updateVisibleTrackContents();
                 showclip                          = false;
                 auto* track_action = new action_modify_track("Move clips", std::move(resizePreModifyState));
-                DawInstance::get()->pushHist(track_action);
+                daw->pushHist(track_action);
             }
         } else if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT || action.dragtype == DRAG_CLIPS_RESIZE_RIGHT) {
             clip_t* clipPtr        = gui->m_clip;
-            ThreadLock lock        = MainCtrl::getPlayThread()->lockThread();
+            ThreadLock lock        = daw->lockPlayThread();
             track_t* trackPtr      = gui->m_track;
             trackdata_midi_t& midi = trackPtr->getMidi();
-            midi.deleteEmptyClips(DawInstance::get());
+            midi.deleteEmptyClips(daw);
             if (!midi.hasClip(clipPtr)) {
                 gui      = nullptr;
                 showclip = false;
@@ -610,12 +612,14 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 
             if (dragStartLayout.diff(trackPtr)) {
                 auto* track_action = new action_modify_track("Resize clips", m_resizePreModifyState.copy());
-                DawInstance::get()->pushHist(track_action);
+                daw->pushHist(track_action);
             }
         }
         action.dragtype = DRAG_NONE;
-        if (gui && showclip)
-            DawInstance::get()->setEditClip(gui);
+        if (gui && showclip) {
+            daw->setEditClip(gui);
+            dawCtrl->showClipEditor();
+        }
     }
 }
 
@@ -676,7 +680,7 @@ bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, int
         int32_t dstTrack                 = trNxtSelected->idx;
         bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
         DAW::pasteFullClipboard(iGuiMgr, action.clipboard.get(), dstTrack, dstPos, bCopyAutomation);
-        DawInstance::get()->updateVisibleTrackContents();
+        dawCtrl->getDaw()->updateVisibleTrackContents();
         action.clipboard   = nullptr;
         action.dragtype    = DRAG_NONE;
         clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt

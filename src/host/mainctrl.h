@@ -539,6 +539,8 @@ public:
     virtual bool isZooming()  = 0;
     virtual bool isClipEditorVisible() = 0;
     virtual bool isPluginViewVisible() = 0;
+    virtual void showPluginView() = 0;
+    virtual void showClipEditor() = 0;
 
     virtual void setViewMode(view_mode_t mode) = 0;
     view_mode_t getViewMode() const;
@@ -621,8 +623,8 @@ public:
     void setupView() override;
     bool isClipEditorVisible() override;
     bool isPluginViewVisible() override;
-    void showPluginView();
-    void showClipEditor();
+    void showPluginView() override;
+    void showClipEditor() override;
     void onPluginsChanged() override;
     bool processGlobalKeyevent(KeyEvent& event) override;
     guitrack_editor& getTrackEditor();
@@ -692,4 +694,6 @@ public:
     guictr_tracks* getTrackContainer() override;
     guictr_nodes_splitview* getNodesContainer() override;
     guictr_clipeditor* getClipEditor() override;
+    void showPluginView() override;
+    void showClipEditor() override;
 };

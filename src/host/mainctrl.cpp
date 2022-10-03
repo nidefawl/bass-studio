@@ -13,6 +13,7 @@
 #include "gui/container/container_layout_types.h"
 #include "gui/tooltip/tooltip.h"
 #include "guicolors.h"
+#include "host/mainctrl.h"
 #include "mainctrl.h"
 #include "math/seq_math.h"
 #include "error.h"
@@ -675,6 +676,13 @@ void MainCtrl::showPluginView() {
 
 void MainCtrl::showClipEditor() {
     containers[view->indexContent + 1] = &view->ctr_clipeditor;
+}
+
+void CompanionCtrl::showPluginView() {
+}
+
+void CompanionCtrl::showClipEditor() {
+    setViewMode(view_mode_t::NODE_EDITOR);
 }
 
 bool MainCtrl::isClipEditorVisible() {
