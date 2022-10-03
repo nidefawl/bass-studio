@@ -228,7 +228,7 @@ namespace DAW::UI::Modulation {
             popup->size = btnAddModulation.size;
             popup->setFontSize(dawCtrl->getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
             popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-            parentCtrl->openAppMenu(0, popup, toScreenSpace(btnAddModulation.getLeftBottom()) + ivec2(0, 1));
+            parentCtrl->openAppMenu(0, popup, toScreenSpace(btnAddModulation.getLeftBottom()) + ivec2(0, 1), WINDOW_IS_BORDERLESS | WINDOW_POS_RELATIVE);
             return;
         }
         if (_button->id >= 16) {

@@ -12,6 +12,7 @@
 #include "gui/contextmenu/contextmenu_base.h"
 #include "gui/contextmenu/contextmenu.h"
 #include "menu.h"
+#include "window.h"
 
 class guimenu_ctxtentry : public ctxtmenu_entry {
 public:
@@ -111,7 +112,7 @@ public:
         auto* popup = new guimenu(entry->menu, 0);
         popup->parentMenuBar = this;
         popup->size = math::maxvec2(vec2(APP_MENU_MIN_WIDTH, 0), popup->size);
-        parentCtrl->openAppMenu(0, popup, entry->toScreenSpace(ivec2(0, entry->size.y)) - popup->pos + ivec2(1));
+        parentCtrl->openAppMenu(0, popup, entry->toScreenSpace(ivec2(0, entry->size.y)) + ivec2(0, 1), WINDOW_IS_BORDERLESS | WINDOW_POS_RELATIVE);
         currentMenu = entry;
     }
     void hoverMenu(guictr_menubar_entry* entry) {

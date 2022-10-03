@@ -277,7 +277,7 @@ public:
     virtual void closeAppMenusAtLvl(int startlvl){};
     virtual void closeAllContextMenus();
     virtual void closeDialogs();
-    virtual void openAppMenu(int lvl, guictxtmenu_base* b, ivec2 pos){};
+    virtual void openAppMenu(int lvl, guictxtmenu_base* b, ivec2 pos, int flags){};
     virtual void closePopup(){}; // close this window if its a popup window
     virtual bool hasContextMenu() { return false; };
     virtual void objectDragMove(guibase* g, MouseEvent& mevt);
@@ -363,7 +363,7 @@ public:
     void closeContextMenu() override;
     void releaseGarbageGuis();
     void closeDialogs() override;
-    void openAppMenu(int lvl, guictxtmenu_base* b, ivec2 pos) override;
+    void openAppMenu(int lvl, guictxtmenu_base* b, ivec2 pos, int flags) override;
     void closeAppMenusAtLvl(int startlvl) override;
     bool hasContextMenu() override;
     bool onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) override;
@@ -414,7 +414,7 @@ public:
     ivec2 toScreenSpace(ivec2 p) override {
         ivec2 windowPos;
         this->mainWindow->getPos(&windowPos);
-        return windowPos + ivec2(vec2(p) * (1.0f / m_scale));
+        return windowPos + ivec2(vec2(p) * m_scale);
     }
     /**
      * openOverlayGui

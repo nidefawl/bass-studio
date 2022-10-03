@@ -616,7 +616,8 @@ public:
         popup->size             = size;
         popup->setFontSize(size.y);
         popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-        this->dawCtrl->openAppMenu(0, popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
+        auto posScreen = parentCtrl->toScreenSpace(toScreenSpace({0, size.y}) + ivec2(0, 1));
+        this->dawCtrl->openAppMenu(0, popup, posScreen, WINDOW_IS_BORDERLESS | WINDOW_POS_ABSOLUTE);
     }
 };
 
@@ -831,7 +832,7 @@ public:
         popup->size             = size;
         popup->setFontSize(size.y);
         popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-        this->dawCtrl->openAppMenu(0, popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
+        this->dawCtrl->openAppMenu(0, popup, toScreenSpace({0, size.y}) + ivec2(0, 1), WINDOW_IS_BORDERLESS | WINDOW_POS_RELATIVE);
     }
 };
 class gui_trackcontrols_io : public guictr_base {

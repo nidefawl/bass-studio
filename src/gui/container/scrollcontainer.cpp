@@ -176,3 +176,11 @@ bool guictr_scrollbar::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
     }
     return false;
 }
+ivec2 guictr_scrollbar::toScreenSpace(ivec2 in) const {
+    in += getPosContent();
+    in.y -= scrollOffset;
+    if (this->parent != NULL) {
+        in = this->parent->toScreenSpace(in);
+    }
+    return in;
+}

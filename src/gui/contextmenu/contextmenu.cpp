@@ -1,4 +1,5 @@
 #include "contextmenu.h"
+#include "window.h"
 
 guictxtmenu::guictxtmenu() : guictxtmenu_base() {
     setCanMouseHit(true);
@@ -113,11 +114,10 @@ bool guictxtmenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 popup->setLevel(this->getLevel() + 1);
                 popup->size = size;
                 popup->setFontSize(entryHit->fontSize);
-                popup->size.x               = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-                auto appCtrlParent          = parentCtrl->getParentCtrl();
-                ivec2 screenPosParentParent = appCtrlParent->toScreenSpace(ivec2(0, 0));
-                ivec2 screenPosParent       = parentCtrl->toScreenSpace(toScreenSpace(ivec2(right() + 2, top() + entryHit->y)));
-                appCtrlParent->openAppMenu(popup->getLevel(), popup, screenPosParent - screenPosParentParent - popup->pos + ivec2(1));
+                popup->size.x        = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
+                auto popupPosRelCtrl = toScreenSpace(ivec2(right() + 2, top() + entryHit->y));
+                auto appCtrlParent   = parentCtrl->getParentCtrl();
+                appCtrlParent->openAppMenu(popup->getLevel(), popup, parentCtrl->toScreenSpace(popupPosRelCtrl), WINDOW_IS_BORDERLESS | WINDOW_POS_ABSOLUTE);
             }
         }
         for (guibase* gui : guis) {
@@ -145,15 +145,7 @@ void guictxtmenu::closeAllSubmenus() {
         }
     }
     if (anyOpen) {
-        log_printf("BEGIN closeAllSubmenus %s %d+1\n", StringAsCStr(getClassName()), lvl);
-        //close all menus deeper than this menu
-        // AppCtrl::currentlyClosingSubmenus = parentCtrl;
-        // dbgassert(parentCtrl);
-        // dbgassert(!BaseCtrl::bugCount);
+        /* close all menus deeper than this menu */
         appCtrlParent->closeAppMenusAtLvl(lvl + 1);
-        // dbgassert(!BaseCtrl::bugCount);
-        // dbgassert(parentCtrl);
-        // AppCtrl::currentlyClosingSubmenus = nullptr;
-        // log_printf("END closeAllSubmenus %s %d+1\n", StringAsCStr(getClassName()), lvl);
     }
 }

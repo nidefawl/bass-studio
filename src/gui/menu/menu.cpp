@@ -2,6 +2,7 @@
 #include "buildinfo.h"
 #include "guicolors.h"
 #include "renderresources.h"
+#include "window.h"
 #include <nanovg.h>
 
 guimenu_ctxtentry::guimenu_ctxtentry(ngui::Menu* _menu)
@@ -185,16 +186,15 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         if (entryHit && !entryHit->isMenuOpen() && entryHit->menu->type == ngui::menu_type::submenu) {
             entryHit->setIsMenuOpen(true);
             //and open new one
-            auto* popup        = new guimenu(entryHit->menu, getLevel() + 1, entryHit);
-            popup->parentMenuBar  = this->parentMenuBar;
+            auto* popup = new guimenu(entryHit->menu, getLevel() + 1, entryHit);
+            popup->parentMenuBar = this->parentMenuBar;
             popup->size = math::maxvec2(vec2(APP_MENU_MIN_WIDTH, 0), popup->size);
-            ivec2 screenPosThis   = this->parentCtrl->toScreenSpace(ivec2(0, 0));
-            ivec2 screenPosParent = appCtrlParent->toScreenSpace(ivec2(0, 0));
-            ivec2 screenPos       = screenPosThis - screenPosParent + ivec2(size.x + 2, entryHit->y);
+            ivec2 popupPos = this->parentCtrl->toScreenSpace(toScreenSpace(ivec2(size.x, entryHit->y)) + ivec2(2, 0));
             appCtrlParent->openAppMenu(
                     popup->getLevel(),
                     popup,
-                    screenPos);
+                    popupPos,
+                    WINDOW_IS_BORDERLESS | WINDOW_POS_ABSOLUTE);
         }
         evt.requestFocus(this);
         return true;

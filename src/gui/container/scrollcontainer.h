@@ -52,6 +52,7 @@ public:
     ivec2 getScrollViewSize() const override {
         return getSizeContent();
     }
+    ivec2 toScreenSpace(ivec2 in) const override;
     void scrollOffsetChanged(int dir, float offset) override;
     bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override {
         return scrollbar.handleMouseScroll(evt, xoffset, yoffset);

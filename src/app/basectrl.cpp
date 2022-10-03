@@ -503,7 +503,7 @@ void determineWindowPos(guibase* guicontextmenu, window_main* mainWindow, float 
     }
 }
 
-void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) {
+void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos, int createflags) {
     closeAppMenusAtLvl(lvl);
     while (CtrSize(menuWindows) <= lvl) {
         menuWindows.push_back({ nullptr, nullptr });
@@ -512,10 +512,9 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) 
     // guicontextmenu->setFontSize(getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
 
     ivec2 wndPos(0);
-    determineWindowPos(guicontextmenu, mainWindow, m_scale, WINDOW_POS_RELATIVE, pos, wndPos);
+    determineWindowPos(guicontextmenu, mainWindow, m_scale, createflags, pos, wndPos);
 
     if (!menuWindows[lvl].wnd) {
-        const int createflags = WINDOW_IS_BORDERLESS;
         auto popupCtrl        = std::make_shared<PopupCtrl>();
         popupCtrl->parentCtrl = this;
 #if BUILD_DAW_HOST

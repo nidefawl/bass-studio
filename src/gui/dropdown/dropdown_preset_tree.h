@@ -182,7 +182,6 @@ public:
         auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
         popup->setFontSize(fontSizeScaled);
         popup->size.x      = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
-        auto appCtrlParent = parentCtrl;
-        appCtrlParent->openAppMenu(0, popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
+        parentCtrl->openAppMenu(0, popup, toScreenSpace({0, size.y}) + ivec2(0, 1), WINDOW_IS_BORDERLESS | WINDOW_POS_RELATIVE);
     }
 };
