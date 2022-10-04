@@ -2,7 +2,6 @@
 #include <atomic>
 #include <condition_variable>
 #include <mutex>
-
 #include "error.h"
 
 #ifndef _MSC_VER
@@ -46,7 +45,6 @@ public:
 };
 /*static*/ ThreadLock ThreadLock::MakeThreadLock(std::recursive_mutex& _mutex, std::atomic<int32_t>& _isLocked, const bool bTryLock) {
     return ThreadLock(new Impl(_mutex, _isLocked, bTryLock));
-    //return ThreadLock(nullptr);
 }
 /* static */ ThreadLock ThreadLock::MakeVoidLock() {
     return ThreadLock(nullptr);
@@ -58,7 +56,8 @@ ThreadLock::~ThreadLock() {
     delete _M_impl;
 }
 bool ThreadLock::isLocked() const noexcept {
-    return this->_M_impl->isLocked();
+    /* impl is null for void locks */
+    return !this->_M_impl || this->_M_impl->isLocked();
 }
 
 bool ThreadMutex::isLocked() {
