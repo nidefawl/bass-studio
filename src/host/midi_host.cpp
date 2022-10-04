@@ -234,7 +234,7 @@ int32_t getMidiTime(void* userData) {
 int32_t midihost::triggerNote(int32_t deviceIdx, int32_t channel, int32_t pitch, int32_t velocity) {
     //    log_lf(Log::L_DEBUG, "trigger %d\n", pitch);
     int32_t status = 0x90 | (channel & 0xF);
-    int32_t msg = Pm_Message(status, pitch, velocity);
+    PmMessage msg = Pm_Message(status, pitch, velocity);
     int32_t current_timestamp = getMidiTime(nullptr);
     MidiIOEvent evt{msg, current_timestamp};
     for (auto& dev : devicesInput) {
@@ -249,7 +249,7 @@ int32_t midihost::killNote(int32_t deviceIdx, int32_t channel, int32_t pitch) {
 
     //    log_lf(Log::L_DEBUG, "kill %d\n", pitch);
     int32_t status = 0x80 | (channel & 0xF);
-    int32_t msg = Pm_Message(status, pitch, 0);
+    PmMessage msg = Pm_Message(status, pitch, 0);
     int32_t current_timestamp = getMidiTime(nullptr);
     MidiIOEvent evt{msg, current_timestamp};
     for (auto& dev : devicesInput) {
@@ -273,7 +273,7 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
     /* if (current_timestamp % 1000 == 0)
         log_lf(Log::L_DEBUG, "time %d\n", current_timestamp); */
 
-    int32_t current_timestamp = getMidiTime(nullptr);
+    auto current_timestamp = getMidiTime(nullptr);
     /* do nothing until initialization completes */
     if (!enableProcessing || !isStreaming()) {
         //        /* this flag signals that no more midi processing will be done */
@@ -347,7 +347,7 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
 //                    int32_t status = 0x80 | (channel & 0xF);
 //                    int32_t pitch = Pm_MessageData1(msg.message);
 //                    int32_t velocity = 0;
-//                    int32_t noteOffMessage = Pm_Message(status, pitch, velocity);
+//                    PmMessage noteOffMessage = Pm_Message(status, pitch, velocity);
 //                    MidiIOEvent noteOffEvt {
 //                        noteOffMessage,
 //                        current_timestamp
@@ -408,17 +408,11 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
 
 bool midihost::initPm() {
     if (!pmIsInitalized) {
-        PmError err;
-        err = Pm_Initialize();
+        PmError err = Pm_Initialize();
         if (err != pmNoError) {
             Pm_Terminate();
             error("Pa_Initialize", err);
         } else {
-            /* make the message queues */
-            //            in_queue = Pm_QueueCreate(IN_QUEUE_SIZE, sizeof(PmEvent));
-            //            assert(in_queue != NULL);
-            //            out_queue = Pm_QueueCreate(OUT_QUEUE_SIZE, sizeof(PmEvent));
-            //            assert(out_queue != NULL);
             pmIsInitalized = true;
         }
     }
@@ -426,8 +420,6 @@ bool midihost::initPm() {
 }
 void midihost::deinitPm() {
     if (pmIsInitalized) {
-        //        Pm_QueueDestroy(in_queue);
-        //        Pm_QueueDestroy(out_queue);
         Pm_Terminate();
         pmIsInitalized = false;
     }

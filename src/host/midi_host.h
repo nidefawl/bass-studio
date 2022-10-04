@@ -8,9 +8,9 @@
 #include <vector>
 
 class project_controller_t;
-typedef void PmStream;
-typedef void PmQueue;
-typedef int32_t PmMessage;
+using PmStream = void;
+using PmQueue = void;
+using PmMessage = uint32_t;
 class midihost {
 public:
     struct opened_device_t {
