@@ -180,7 +180,7 @@ struct alignas(16) AudioBlock {
     }
 
     void copyFrom(const float * const * const srcBuf, samplecount_t srcSamples, channelnum_t srcChannels, channelnum_t channelOffset = 0) {
-        dbgassert(srcSamples == samples);
+        // dbgassert(srcSamples == samples);
         const channelnum_t nChannels = math::min(srcChannels, channels);
         const samplecount_t nSamples  = math::min(srcSamples, samples);
         for (channelnum_t i = 0; i < nChannels; i++) {
@@ -188,7 +188,14 @@ struct alignas(16) AudioBlock {
             auto dstChannelIdx = math::min<channelnum_t>(channels - 1, i);
             auto   srcBufChannel   = srcBuf[srcChannelIdx];
             float* dstBufChannel   = buf[dstChannelIdx];
-            memcpy(dstBufChannel, srcBufChannel, nSamples * sizeof(float));
+            // detect if we are copying to overlapping memory, otherwise use memcpy
+            if (srcBufChannel + nSamples <= dstBufChannel || dstBufChannel + nSamples <= srcBufChannel) {
+                memcpy(dstBufChannel, srcBufChannel, nSamples * sizeof(float));
+            } else {
+                for (samplecount_t j = 0; j < nSamples; j++) {
+                    dstBufChannel[j] = srcBufChannel[j];
+                }
+            }
         }
     }
 
@@ -202,7 +209,13 @@ struct alignas(16) AudioBlock {
             auto srcChannelIdx = math::min<channelnum_t>(srcChannels - 1, getMappedSrcChannel(dstChannelIdx, i));
             auto   srcBufChannel   = srcBuf[srcChannelIdx];
             float* dstBufChannel   = buf[dstChannelIdx];
-            memcpy(dstBufChannel, srcBufChannel, nSamples * sizeof(float));
+            if (srcBufChannel + nSamples <= dstBufChannel || dstBufChannel + nSamples <= srcBufChannel) {
+                memcpy(dstBufChannel, srcBufChannel, nSamples * sizeof(float));
+            } else {
+                for (samplecount_t j = 0; j < nSamples; j++) {
+                    dstBufChannel[j] = srcBufChannel[j];
+                }
+            }
         }
     }
 
@@ -211,20 +224,7 @@ struct alignas(16) AudioBlock {
         copyFrom(src->buf, src->samples, src->channels, getMappedSrcChannel);
     }
 
-    void copyFromPosToPos(const float * const * const srcBuf, samplecount_t offsetIn, samplecount_t offsetOut, samplecount_t len, channelnum_t srcChannels) {
-        dbgassert(srcChannels > 0);
-        const channelnum_t nChannels = channels;
-        const samplecount_t nSamples  = math::min(len, samples);
-        dbgassert(offsetOut + nSamples <= samples);
-        for (channelnum_t i = 0; i < nChannels; i++) {
-            auto srcChannelIdx = srcChannels < 1 ? 0 : math::min<channelnum_t>(srcChannels - 1, i);
-            auto dstChannelIdx = channels < 1 ? 0 : math::min<channelnum_t>(channels - 1, i);
-            auto srcBufChannel     = srcBuf[srcChannelIdx];
-            float* dstBufChannel   = buf[dstChannelIdx];
-            //TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
-            memcpy(dstBufChannel + offsetOut, srcBufChannel + offsetIn, nSamples * sizeof(float));
-        }
-    }
+    void copyFromPosToPos(const float* const* const srcBuf, samplecount_t offsetIn, samplecount_t offsetOut, samplecount_t len, channelnum_t srcChannels);
 
     void addFrom(AudioBlock* src, float gain) {
         addFrom(src->buf, src->samples, src->channels, gain);

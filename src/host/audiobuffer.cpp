@@ -85,6 +85,34 @@ void AudioBlock::realloc(samplecount_t _samples) {
     }
 }
 
+void AudioBlock::copyFromPosToPos(const float* const* const srcBuf, samplecount_t offsetIn, samplecount_t offsetOut, samplecount_t len, channelnum_t srcChannels) {
+    dbgassert(srcChannels > 0);
+    const channelnum_t nChannels = channels;
+    const samplecount_t nSamples = math::min(len, samples);
+    dbgassert(offsetOut + nSamples <= samples);
+    for (channelnum_t i = 0; i < nChannels; i++) {
+        auto srcChannelIdx   = srcChannels < 1 ? 0 : math::min<channelnum_t>(srcChannels - 1, i);
+        auto dstChannelIdx   = channels < 1 ? 0 : math::min<channelnum_t>(channels - 1, i);
+        auto srcBufChannel   = srcBuf[srcChannelIdx];
+        float* dstBufChannel = buf[dstChannelIdx];
+        //TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
+
+        // this memcpy would do overlapping copies, which is undefined behavior
+        // memcpy(dstBufChannel + offsetOut, srcBufChannel + offsetIn, nSamples * sizeof(float));
+
+        // detect if we are copying to overlapping memory, otherwise use memcpy
+        if (dstBufChannel + offsetOut >= srcBufChannel + offsetIn + nSamples || dstBufChannel + offsetOut + nSamples <= srcBufChannel + offsetIn) {
+            memcpy(dstBufChannel + offsetOut, srcBufChannel + offsetIn, nSamples * sizeof(float));
+        } else {
+            // copy the samples one by one
+            for (samplecount_t j = 0; j < nSamples; j++) {
+                dstBufChannel[offsetOut + j] = srcBufChannel[offsetIn + j];
+            }
+        }
+    }
+}
+
+
 void AudioBlock::addFromDelayLineOp(DelayLine* delayLine, const samplecount_t delay, const mix_op op, float gain) {
     auto& delayBlock = delayLine->getBlock();
     const auto readSamples = this->samples;
