@@ -459,13 +459,9 @@ public:
             if (cursor.selRange) {
                 track_t* tr = m_trackentry->track;
                 clip_t* cl  = nullptr;
-                if (tr && tr->type == TRACK_TYPE_MIDI) {
+                if (tr) {
                     cl           = new clip_t();
                     cl->clipType = CLIP_MIDI;
-                }
-                if (tr && tr->type == TRACK_TYPE_AUDIO) {
-                    cl           = new clip_t();
-                    cl->clipType = CLIP_AUDIO;
                 }
                 if (cl) {
                     cl->rgb = tr->rgb;
