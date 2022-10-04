@@ -355,6 +355,9 @@ public:
         int yOffset      = 0;
         float tickBeginX = clipLoopStartScrX();
         float tickEndX   = clipLoopEndScrX();
+        if (tickBeginX > tickEndX) {
+            std::swap(tickBeginX, tickEndX);
+        }
         if (!(tickBeginX - wLoopInidicator > cs.x || tickEndX + wLoopInidicator < 0)) {
             float barBeginX = math::max(-wLoopInidicator, tickBeginX);
             float barEndX   = math::min(cs.x + wLoopInidicator, tickEndX);

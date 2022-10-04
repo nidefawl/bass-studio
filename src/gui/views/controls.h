@@ -112,6 +112,7 @@ public:
         return parent ? parent->getTooltip(appctrl) : nullptr;
     }
     void onKeyInputChangeValue(ivec2 direction);
+    void setNewValue(int32_t val);
     bool handleKeyInput(KeyEvent& kevt) override;
 };
 class gui_timeinput : public guictr_base {
@@ -120,11 +121,16 @@ class gui_timeinput : public guictr_base {
     gui_timeinput_field beat;
     gui_timeinput_field sixteenths;
     gui_textfield editfield;
+    bool bCanGoNegative = false;
 public:
     gui_timeinput(int32_t* _time, const bool isRelative = false);
     ~gui_timeinput() override {
         removeGuis();
     }
+    void setCanGoNegative(const bool b) {
+        bCanGoNegative = b;
+    }
+    int32_t clampValue(int32_t val);
     void setRef(int32_t* time);
     void setConnectedBG();
     void layout() override;

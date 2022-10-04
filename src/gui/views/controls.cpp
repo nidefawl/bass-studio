@@ -138,7 +138,7 @@ void gui_timeinput_field::onKeyInputChangeValue(ivec2 direction) {
             curVal += disty * TICKS_16TH;
             break;
     }
-    *time = curVal;
+    setNewValue(curVal);
     if (parentInput)
         parentInput->onInputChanged(this);
 }
@@ -150,6 +150,7 @@ gui_timeinput::gui_timeinput(int32_t* _time, const bool isRelative)
     beat(this, 1, _time, isRelative),
     sixteenths(this, 2, _time, isRelative)
 {
+    setCanGoNegative(!isRelative);
     padding = 0;
     add(&bar);
     add(&beat);
@@ -646,4 +647,13 @@ void guictr_tempocontrols::render(NVGcontext* vg) {
         gui->render(vg);
         nvgRestore(vg);
     }
+}
+void gui_timeinput_field::setNewValue(int32_t val) {
+    *time = parentInput->clampValue(val);
+}
+int32_t gui_timeinput::clampValue(int32_t val) {
+    if (!bCanGoNegative) {
+        return math::max(0, val);
+    }
+    return val;
 }
