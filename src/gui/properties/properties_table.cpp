@@ -214,7 +214,7 @@ public:
           m_bGlobalInstance(_isGlobalInstance),
           m_bAutoUpdateContents(_isGlobalInstance),
           m_bOwnsObjPtr(_ownsPtr),
-          m_unsafePointer(nullptr),
+          m_unsafePointer(_ptr),
           m_currentSafeRef(SafeRef<T>()),
           m_numberInputI32(nullptr),
           m_numberInputFloat(nullptr)
@@ -1118,11 +1118,11 @@ void setGlobalDebugPropertyHandle(void* ptr) {
 }
 
 guictr_properties_table* makeUniquePropertiesCtr() {
-    return new guiproperties_table<guibase>(new guibase(), false, true);
+    return new guiproperties_table<guibase>(nullptr, false, false);
 }
 
 guictr_base* makeCtrProperties() {
-    auto* ptr = new guiproperties_table<guibase>(new guibase(), true, true);
+    auto* ptr = new guiproperties_table<guibase>(nullptr, true, false);
     g_propTableInstances.push_back(ptr);
     return ptr;
 }

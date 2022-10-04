@@ -21,13 +21,14 @@ namespace {
         return thread_idx.fetch_add(1, std::memory_order::memory_order_acquire);
     }
 
+    thread_local threadlocal_threadinfo_t threadPrivateTls;
     thread_local threadlocal_threadinfo_t* tlsThreadInfo = nullptr;
 
     void registerThreadInternal(const String& threadName, bool isKnownThread, bool isInternalThread) {
         static std::mutex gRegisterMutex;
         std::lock_guard<std::mutex> lock(gRegisterMutex);
         dbgassert(!tlsThreadInfo || !tlsThreadInfo->isKnownThread);
-        auto* threadInfo          = new threadlocal_threadinfo_t{};
+        auto* threadInfo          = &threadPrivateTls;
         threadInfo->threadId      = getNextThreadId();
         threadInfo->threadName    = threadName + "-" + std::to_string(threadInfo->threadId);
         threadInfo->isKnownThread = isKnownThread;

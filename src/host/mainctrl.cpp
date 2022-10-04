@@ -1134,9 +1134,9 @@ void DawCtrl::menuCommand(menucmd_t command) {
 }
 
 void MainCtrl::startApp() {
-    statusbarLogger = new MainCtrlErrorStatusBarLogger(&view->statusbar);
+    statusbarLogger = std::make_shared<MainCtrlErrorStatusBarLogger>(&view->statusbar);
     statusbarLogger->setLevel(Log::L_WARN);
-    getMultiLogger().addLogger(statusbarLogger);
+    getMultiLogger().addLogger(statusbarLogger.get());
     Profiling::profilingRegisterEntry<prof_stats_render_t>(this, "Main Render Stats");
     daw_tls::getTls().runtime->systeminfo = appsysteminfo{
         String((char*)glGetString(GL_RENDERER)),
@@ -2763,7 +2763,7 @@ void MainCtrl::destroy() {
         ThreadLock lock = daw.playThread.lockThread();
         //TODO: MultiLogger::removeLogger is not thread safe. This will eventually cause a race condition 
         // and a crash since not all threads and modules are synchronized here (just playthread and workerthreads)
-        getMultiLogger().removeLogger(statusbarLogger);
+        getMultiLogger().removeLogger(statusbarLogger.get());
         daw.unloadProject();
     }
     view = nullptr;

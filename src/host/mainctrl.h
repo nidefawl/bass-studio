@@ -598,7 +598,7 @@ class MainCtrl : public DawCtrl {
     std::array<dawview_layout_t, 10> layouts;
     String loadProject;
     int loadFlags = 0;
-    Logger* statusbarLogger = nullptr;
+    std::shared_ptr<Logger> statusbarLogger;
     ProjectGraphMonitor graphMonitor;
 public:
     static MainCtrl* get();
