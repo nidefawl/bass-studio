@@ -235,7 +235,7 @@ namespace DAW::UI::Modulation {
             int32_t modulationIndex = _button->id - 16;
             if (paramAutomatable) {
                 auto lock = dawCtrl->lockPlayThread();
-                paramAutomatable->removeModulation(modulationIndex);
+                paramAutomatable->removeModulation(paramIdx, modulationIndex);
                 updateSlots();
                 parentCtrl->relayout();
             }

@@ -344,7 +344,7 @@ public:
     }
 
     void setModulations(const std::vector<DAW::modulation_channel_ref>& inputChannelsModulation);
-    void removeModulation(int32_t modulationIndex);
+    void removeModulation(int32_t paramIdx, int32_t modulationIndex);
     void updateModulationMap();
     std::vector<DAW::modulation_channel_ref>& getModulations() {
         return inputChannelsModulation;

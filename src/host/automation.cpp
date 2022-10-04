@@ -569,10 +569,16 @@ automation_lane_t* automatable_t::getOrCreateAutomation(int32_t paramIdx) {
     auto newLane = &automationLanes.back();
     return newLane;
 }
-void automatable_t::removeModulation(int32_t modulationIndex) {
-    if (modulationIndex >= 0 && modulationIndex < CtrSize(inputChannelsModulation)) {
-        inputChannelsModulation.erase(inputChannelsModulation.begin() + modulationIndex);
-        updateModulationMap();
+void automatable_t::removeModulation(int32_t paramIdx, int32_t modulationIndex) {
+    int32_t curIdx = 0;
+    for (auto it = inputChannelsModulation.begin(); it != inputChannelsModulation.end(); ++it) {
+        if (it->paramIdxDst == paramIdx) {
+            if (curIdx++ == modulationIndex) {
+                inputChannelsModulation.erase(it);
+                updateModulationMap();
+                return;
+            }
+        }
     }
 }
 void automatable_t::setModulations(const std::vector<DAW::modulation_channel_ref>& inputChannelsModulation) {
