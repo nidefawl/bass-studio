@@ -63,10 +63,6 @@ struct thread_stats_process_timings_t {
     }
 };
 
-#define MAX_AUDIOPROCESSING_THREADS 32
-#define NUM_AUDIOPROCESSING_THREADS_INITIAL 6
-#define DAW_DEBUG_AUDIOGRAPH 0
-
 Host* getInstance();
 
 class Host : public PluginManager {

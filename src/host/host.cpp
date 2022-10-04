@@ -61,11 +61,14 @@
 #define THREADSYNC_SEMAPHORE 1
 #define THREADSYNC_ATOMIC 2
 
-
 #define THREADSYNC THREADSYNC_NONE
 #if THREADSYNC == THREADSYNC_SEMAPHORE
 #include <semaphore>
 #endif
+
+#define DAW_DEBUG_AUDIOGRAPH 0
+#define MAX_AUDIOPROCESSING_THREADS 32
+#define NUM_AUDIOPROCESSING_THREADS_INITIAL 6
 
 static int32_t dbgStep = 1;
 namespace DebugAlloc {
@@ -102,6 +105,10 @@ class TrackBlockProcessTask : public WorkerThread::ThreadTask {
     bool inUse = false;
     Host* m_host = nullptr;
 public:
+    ~TrackBlockProcessTask() {
+        log_printf("TrackBlockProcessTask::~TrackBlockProcessTask()\n");
+        log_printf("buf %d %d\n", buf.block.channelsAlloc, buf.block.channelsAlloc);
+    }
     struct process_task_stats_t {
         int64_t timeStart = 0;
         int64_t timeEnd = 0;
@@ -1850,10 +1857,16 @@ void Host::onTick() {
 }
 
 void Host::unload() {
-    dbgassert(!isStreaming() && "Stream is not stopped");
+#if DAW_DEBUG_AUDIOGRAPH
+    lastProcessingList = nullptr;
+    lastTrackGraph = nullptr;
+    //lastProcessingGraphs.clear();
+#endif
+    PluginManager::unload();
 }
 
 void Host::destroy() {
+    dbgassert(!isStreaming() && "Stream is not stopped");
     PluginManager::destroy();
     freeRingBuffer(ringbuffer);
     impl->stopThreads();

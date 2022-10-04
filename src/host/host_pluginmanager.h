@@ -205,7 +205,7 @@ public:
     void scanPlugins();
     bool isScanning();
     void stopScanner();
-    void releaseProjectResources();
+    void unload();
     void onTick();
     template<typename Functor>
     void visitAudioStageInstances(Functor f) {

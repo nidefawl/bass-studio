@@ -148,12 +148,7 @@ IHostCallback* PluginManager::getHostCallback() {
     return pluginHostCallback.get();
 }
 
-void PluginManager::releaseProjectResources() {
-#if DAW_DEBUG_AUDIOGRAPH
-    lastProcessingList = nullptr;
-    lastTrackGraph = nullptr;
-    //lastProcessingGraphs.clear();
-#endif
+void PluginManager::unload() {
     dbgassert(pluginInstances.empty());
     dbgassert(pluginInstancesVST2.empty());
     dbgassert(pluginInstancesInternal.empty());

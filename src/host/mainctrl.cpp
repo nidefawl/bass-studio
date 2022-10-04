@@ -754,7 +754,7 @@ void DawInstance::unloadProject() {
         delete track;
     }
 
-    tls.host->releaseProjectResources();
+    tls.host->unload();
     tls.audioCache->unloadAll();
 
     auto* ctrl = tls.mainCtrl;
@@ -1266,6 +1266,7 @@ void DawInstance::destroy() {
     delete tls.audioCache;
     delete tls.midiHost;
     delete tls.audioHost;
+    delete tls.host;
     tls.dawInstance    = nullptr;
     tls.host           = nullptr;
     tls.pluginManager  = nullptr;
