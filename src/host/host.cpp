@@ -106,8 +106,6 @@ class TrackBlockProcessTask : public WorkerThread::ThreadTask {
     Host* m_host = nullptr;
 public:
     ~TrackBlockProcessTask() {
-        log_printf("TrackBlockProcessTask::~TrackBlockProcessTask()\n");
-        log_printf("buf %d %d\n", buf.block.channelsAlloc, buf.block.channelsAlloc);
     }
     struct process_task_stats_t {
         int64_t timeStart = 0;

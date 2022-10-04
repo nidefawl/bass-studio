@@ -47,25 +47,8 @@ struct alignas(16) AudioBlock {
         *this = std::move(other);
     }
 
-    AudioBlock& operator=(AudioBlock&& other) noexcept {
-        channels = other.channels;
-        samples = other.samples;
-        if (other.channelsAlloc == stack) {
-            memcpy(heapBuf.data(), other.heapBuf.data(), sizeof(float*) * heapBuf.size());
-            buf = heapBuf.data();
-        } else {
-            buf = other.buf;
-        }
-        channelsAlloc = other.channelsAlloc;
-        dataAlloc = other.dataAlloc;
-        other.samples = 0;
-        other.channels = 0;
-        other.channelsAlloc = empty;
-        other.dataAlloc = empty;
-        other.buf = nullptr;
-        return *this;
-    }
-    
+    AudioBlock& operator=(AudioBlock&& other) noexcept;
+
     void allocChannelsArray() {
         if (channels <= heapBuf.size()) {
             channelsAlloc = alloc_type::stack; 
@@ -128,7 +111,7 @@ struct alignas(16) AudioBlock {
 
     ~AudioBlock() {
         instanceCount--;
-        if (dataAlloc == alloc_type::heap) {
+        if (channelsAlloc != alloc_type::empty && dataAlloc == alloc_type::heap) {
             for (channelnum_t i = 0; i < channels; i++) {
                 if (buf[i]) {
                     // delete[] buf[i];

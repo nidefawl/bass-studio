@@ -85,6 +85,38 @@ void AudioBlock::realloc(samplecount_t _samples) {
     }
 }
 
+AudioBlock& AudioBlock::operator=(AudioBlock&& other) noexcept {
+    // more trivial implementation: deallocates *this and does leaves other as empty
+    // this could possibly be implemented as full swap, but it's not needed
+    if (channelsAlloc != alloc_type::empty && dataAlloc == alloc_type::heap) {
+        for (channelnum_t i = 0; i < channels; i++) {
+            if (buf[i]) {
+                aligned_free(buf[i]);
+                buf[i] = nullptr;
+            }
+        }
+        dataAlloc = alloc_type::empty;
+        samples = 0;
+    }
+    if (channelsAlloc == alloc_type::heap) {
+        delete[] buf;
+        buf = nullptr;
+        channelsAlloc = alloc_type::empty;
+        channels = 0;
+    }
+    std::swap(channels, other.channels);
+    std::swap(samples, other.samples);
+    if (other.channelsAlloc <= stack) {
+        memcpy(heapBuf.data(), other.heapBuf.data(), sizeof(float*) * heapBuf.size());
+        buf = heapBuf.data();
+    } else {
+        std::swap(buf, other.buf);
+    }
+    std::swap(channelsAlloc, other.channelsAlloc);
+    std::swap(dataAlloc, other.dataAlloc);
+    return *this;
+}
+
 void AudioBlock::copyFromPosToPos(const float* const* const srcBuf, samplecount_t offsetIn, samplecount_t offsetOut, samplecount_t len, channelnum_t srcChannels) {
     dbgassert(srcChannels > 0);
     const channelnum_t nChannels = channels;
