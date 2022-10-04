@@ -478,6 +478,8 @@ void AppCtrl::destroyControl() {
     menuWindows.clear();
     dbgassert(isOk());
     destroy();
+    releaseGarbageGuis();
+    dbgassert(garbageGuis.empty());
 }
 void AppCtrl::closeAppMenusAtLvl(int startlvl) {
     for (int i = startlvl; i < CtrSize(menuWindows); i++) {
