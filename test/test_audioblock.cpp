@@ -144,6 +144,15 @@ namespace test_audioblock {
         // block2.copyFrom(&subBlock);
         TEST_END();
     }
+    void testType() {
+        struct Temp {
+            AudioBlock block;
+        } tmp;
+        auto test = AudioBlock{2, 512};
+        tmp.block = AudioBlock{4, 1024};
+        tmp.block.realloc(512);
+        tmp.block = std::move(test);
+    }
 }// namespace
 
 int main() {
@@ -152,5 +161,6 @@ int main() {
     test_audioblock::testExternAllocation();
     test_audioblock::testChannelCount();
     test_audioblock::testSelfOverlappingCopy();
+    test_audioblock::testType();
     return 0;
 }
