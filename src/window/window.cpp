@@ -1817,7 +1817,6 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         initColor();
 
         glfwSetErrorCallback(glfw_runtime_error_callback);
-
 #ifdef _WIN32
         glfwSetWin32WindowClassName(L"DAW");
 #endif
@@ -1975,8 +1974,6 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 #if defined(_WIN32) && BUILD_DAW_HOST
         getWindowInstance::destroyAllPluginWindows();
 #endif
-
-        mainWindow.reset();
 
         glfwTerminate();
 
