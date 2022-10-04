@@ -60,6 +60,11 @@ void waveformrender::init() {
 }
 void waveformrender::destroy() {
     impl->renderer->destroy();
+    for (auto& atlas : atlases) {
+        if (atlas.fb) {
+            nvgluDeleteFramebuffer(atlas.fb);
+        }
+    }
     for (BakeGLPath& path : bakedPaths) {
         if (path.uniforms_texture != 0) {
             glDeleteTextures(1, &path.uniforms_texture);
@@ -67,7 +72,10 @@ void waveformrender::destroy() {
         path.uniforms_texture = 0;
         path.vbo.destroy();
     }
+    atlases.clear();
+    queuedTasks.clear();
 }
+
 void waveformrender::getRenderedTextures(std::vector<TextureAtlas>& rendered) {
     for (auto& atlas : atlases) {
         if (!atlas.entries.empty()) {

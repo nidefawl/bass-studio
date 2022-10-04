@@ -233,6 +233,7 @@ static NVGLUTempFramebuffer* glnvg__allocFB(GLNVGcontext* gl)
 	}
 	ret = &gl->framebuffers[gl->nframebuffers++];
 	memset(ret, 0, sizeof(NVGLUTempFramebuffer));
+	ret->fb.image = -1;
 	return ret;
 }
 
@@ -266,7 +267,7 @@ static NVGLUframebuffer* nvglu__CreateFramebuffer(NVGcontext* ctx, NVGLUframebuf
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFBO);
 	glGetIntegerv(GL_RENDERBUFFER_BINDING, &defaultRBO);
 
-
+	dbgassert(fb->image == -1);
 //	fb->image = nvgCreateImageRGBA(ctx, w, h, imageFlags | NVG_IMAGE_FLIPY | NVG_IMAGE_PREMULTIPLIED, NULL);
 	fb->image = nvgCreateImageRGBA(ctx, w, h, imageFlags | NVG_IMAGE_FLIPY, NULL);
 	fb->flags = imageFlags;
@@ -334,6 +335,7 @@ NVGLUframebuffer* nvgluCreateFramebuffer(NVGcontext* ctx, int w, int h, int imag
 	if (fb == NULL) 
 		return NULL;
 	memset(fb, 0, sizeof(NVGLUframebuffer));
+	fb->image = -1;
 	if (NULL == nvglu__CreateFramebuffer(ctx, fb, w, h, imageFlags)) {
 		free(fb);
 		return NULL;
@@ -351,6 +353,7 @@ NVGLUframebuffer* nvgluCreateTempFramebuffer(NVGcontext* ctx, int w, int h, int 
 				&& fb->fb.flags == imageFlags) {
 			gl->framebuffers[i].idleframes = 0;
 			fb->inuse = 1;
+			dbgassert(fb->fb.image != -1);
 			return &gl->framebuffers[i].fb;
 		}
 	}
@@ -366,6 +369,7 @@ NVGLUframebuffer* nvgluCreateTempFramebuffer(NVGcontext* ctx, int w, int h, int 
 		fbTarget = glnvg__allocFB(gl);
 	}
 	if (fbTarget) {
+		dbgassert(fbTarget->fb.image == -1);
 		if (NULL == nvglu__CreateFramebuffer(ctx, &fbTarget->fb, w, h, imageFlags)) {
 			return NULL;
 		}
@@ -1833,6 +1837,14 @@ void nvgDeleteGLES2(NVGcontext* ctx)
 void nvgDeleteGLES3(NVGcontext* ctx)
 #endif
 {
+	GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(ctx)->userPtr;
+	for (int i = 0; gl->framebuffers && i < gl->nframebuffers; i++) {
+		nvglu__DeleteFramebuffer(&gl->framebuffers[i].fb);
+	}
+	if (gl->framebuffers && gl->cframebuffers) {
+		free(gl->framebuffers);
+	}
+
 	nvgDeleteInternal(ctx);
 }
 
