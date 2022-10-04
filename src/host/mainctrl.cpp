@@ -1220,7 +1220,9 @@ void DawInstance::destroy() {
         tls.midiHost->stopMidi();
         tls.audioHost->stopAudio();
     }
-
+    projectToLoad = nullptr;
+    pluginClipboard = nullptr;
+    dragdropclip.reset();
     printClipAllocations();
     printLeakedAudioBuffers();
     int totalAllocs = getNumClipAllocations();
