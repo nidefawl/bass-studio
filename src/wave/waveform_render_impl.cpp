@@ -1,3 +1,4 @@
+#include "assert_dbg.h"
 #include "glheaders.h"
 #include "seq_util.h"
 #include "waveform_render_impl.h"
@@ -99,6 +100,27 @@ void waveformrender::release(gui_waveform_texture_ref* waveformRef) {
     waveformRef->rendered = false;
 
 }
+static void removeTaskFromQueue(std::vector<waveform_update_task_t>& vecQTasks, gui_waveform_texture_ref* waveformRef) {
+    // remove waveform from atlas update queue
+    for (auto itTasks = vecQTasks.begin(); itTasks != vecQTasks.end();) {
+        auto& taskEntry = *itTasks;
+        for (auto it = taskEntry.queuedptrs.begin(); it != taskEntry.queuedptrs.end();) {
+            if (*it == waveformRef) {
+                it = taskEntry.queuedptrs.erase(it);
+                dbgassert(taskEntry.queuedRefCount > 0);
+                taskEntry.queuedRefCount--;
+            } else {
+                ++it;
+            }
+        }
+        if (taskEntry.queuedRefCount <= 0) {
+            //log_lf(Log::L_DEBUG, "Atlas QTask refcount <= 0. erasing.\n");
+            vecQTasks.erase(itTasks);
+        } else {
+            ++itTasks;
+        }
+    }
+}
 void waveformrender::releaseQueued(gui_waveform_texture_ref* waveformRef) {
     if (waveformRef->queued) {
         if (waveformRef->atlasId > -1) {
@@ -107,43 +129,9 @@ void waveformrender::releaseQueued(gui_waveform_texture_ref* waveformRef) {
             // check if atlas waveform is mapped to was initialized
             dbgassert(atlas.idx > -1);
             // remove waveform from atlas update queue
-            auto& vecQTasks = atlas.queuedTasks;
-            auto it = std::find_if(vecQTasks.begin(), vecQTasks.end(), [ptr = waveformRef](const waveform_update_task_t& taskEntry) {
-                        return isIn(taskEntry.queuedptrs, ptr);
-                      });
-            if (it != vecQTasks.end()) {
-                waveform_update_task_t& taskEntry = *it;
-                if (isIn(taskEntry.queuedptrs, waveformRef)) {
-                    auto it2 = std::find(taskEntry.queuedptrs.begin(), taskEntry.queuedptrs.end(), waveformRef);
-                    dbgassert(it2 != taskEntry.queuedptrs.end());
-                    taskEntry.queuedptrs.erase(it2);
-                    dbgassert(taskEntry.queuedRefCount > 0);
-                    taskEntry.queuedRefCount--;
-                    if (taskEntry.queuedRefCount <= 0) {
-                        //log_lf(Log::L_DEBUG, "Atlas QTask refcount <= 0. erasing.\n");
-                        vecQTasks.erase(it);
-                    }
-                }
-            }
+            removeTaskFromQueue(atlas.queuedTasks, waveformRef);
         }
-        auto& vecQTasks = this->queuedTasks;
-        auto it = std::find_if(vecQTasks.begin(), vecQTasks.end(), [ptr = waveformRef](const waveform_update_task_t& taskEntry) {
-                    return isIn(taskEntry.queuedptrs, ptr);
-                  });
-        if (it != vecQTasks.end()) {
-            waveform_update_task_t& taskEntry = *it;
-            if (isIn(taskEntry.queuedptrs, waveformRef)) {
-                auto it2 = std::find(taskEntry.queuedptrs.begin(), taskEntry.queuedptrs.end(), waveformRef);
-                dbgassert(it2 != taskEntry.queuedptrs.end());
-                taskEntry.queuedptrs.erase(it2);
-                dbgassert(taskEntry.queuedRefCount > 0);
-                taskEntry.queuedRefCount--;
-                if (taskEntry.queuedRefCount <= 0) {
-                    //log_lf(Log::L_DEBUG, "Renderer QTask refcount <= 0. erasing.\n");
-                    vecQTasks.erase(it);
-                }
-            }
-        }
+        removeTaskFromQueue(queuedTasks, waveformRef);
     }
     if (!waveformRef->rendered) {
         waveformRef->atlasId      = -1;
@@ -170,6 +158,7 @@ void waveformrender::releaseRendered(gui_waveform_texture_ref* waveformRef) {
         auto it2 = std::find(entry.ptrs.begin(), entry.ptrs.end(), waveformRef);
         dbgassert(it2 != entry.ptrs.end());
         entry.ptrs.erase(it2);
+        dbgassert(std::find(entry.ptrs.begin(), entry.ptrs.end(), waveformRef) == entry.ptrs.end());
         entry.refCount--;
         if (entry.refCount <= 0) {
             entry.tmRelease = getTimeMillis();
@@ -340,8 +329,11 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
                 waveformRef->rendered     = true;
                 waveformRef->refState     = 1;
                 entry.refCount++;
-                dbgassert(!isIn(entry.ptrs, waveformRef));
-                entry.ptrs.push_back(waveformRef);
+                if (!isIn(entry.ptrs, waveformRef)) {
+                    entry.ptrs.push_back(waveformRef);
+                } else {
+                    dbgassert(waveformRef->rendered);
+                }
                 return true;
             }
         }
@@ -354,8 +346,11 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
                 waveformRef->rendered     = false;
                 waveformRef->refState     = 2;
                 entry.queuedRefCount++;
-                dbgassert(!isIn(entry.queuedptrs, waveformRef));
-                entry.queuedptrs.push_back(waveformRef);
+                if (!isIn(entry.queuedptrs, waveformRef)) {
+                    entry.queuedptrs.push_back(waveformRef);
+                } else {
+                    dbgassert(waveformRef->queued);
+                }
                 return true;
             }
         }

@@ -29,16 +29,17 @@ int getClipNotesInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tic
 
 class track_t;
 class gui_clip;
+class rendered_audio_clip_t;
 
 class clip_audio_t {
 
 public:
     int32_t id = -1;
-    std::weak_ptr<audiofile_t> weakCachedAudio;
+    rendered_audio_clip_t* renderedAudio = nullptr;
 
 public:
     clip_audio_t()  = default;
-    ~clip_audio_t() = default;
+    ~clip_audio_t();
 
     clip_audio_t& operator=(const clip_audio_t& a) {
         copy(a);
@@ -49,7 +50,6 @@ public:
     }
     void copy(const clip_audio_t& obj) {
         this->id              = obj.id;
-        this->weakCachedAudio = obj.weakCachedAudio;
     }
     int32_t lenSamples() const;
 };
@@ -180,7 +180,6 @@ public:
 };
 
 struct noteview_cache_impl_t;
-
 class noteview_render_t : public clip_notes_t {
 public:
     ~noteview_render_t();
@@ -188,10 +187,12 @@ public:
     int32_t curRevision         = -1;
     noteview_cache_impl_t* data = nullptr;
 };
+
 inline bool operator==(const clip_notes_t& lhs, const clip_notes_t& rhs) {
     return lhs.m_list == rhs.m_list;
 }
 inline bool operator!=(const clip_notes_t& lhs, const clip_notes_t& rhs) { return !operator==(lhs, rhs); }
+
 class clip_t {
 public:
     clip_notes_t notes;

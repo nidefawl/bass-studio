@@ -13,6 +13,7 @@
 #include "trackautomation.h"
 #include "gui/cliprenderer/cliprenderer.h"
 #include "gui/track/trackcontrols.h"
+#include "wave/waveform_render.h"
 
 bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset);
 bool getClippedPosSize(const ivec2& parentSize, ivec2& posClipped, ivec2& sizeClipped);
@@ -126,14 +127,29 @@ public:
     void handleRightClick(MouseEvent& evt) override;
     void updateClipRenderCache(NVGcontext* vg) override;
 };
-class gui_audio_clip : public gui_clip {
-    bool prevIsValid = false;
+class rendered_audio_clip_t {
+    waveformrender* const waveformRenderer;
     audioclip_texture_t prevWaveform;
     audioclip_texture_t updatedWaveform;
     gui_waveform_texture_ref* waveformRef;
+    gui_waveform_texture_ref* tempWaveformRef;
+    bool prevIsValid = false;
+    public:
+    rendered_audio_clip_t(waveformrender* waveformRenderer);
+    virtual ~rendered_audio_clip_t();
+    waveformrender* getWaveformRenderer() {
+        return waveformRenderer;
+    }
+    void updateClipPrerender(NVGcontext* vg, audiofile_t* audio, bool culled);
+    gui_waveform_texture_ref* getWaveformTextureRef();
+    const audioclip_texture_t& getCurrentWaveformShape();
+    void updateWaveformTexture(const audioclip_texture_t& newShape);
+    void releaseWaveformTexture();
+};
+class gui_audio_clip : public gui_clip, public rendered_audio_clip_t {
 
 public:
-    gui_audio_clip(track_gui_entry_t* _track, clip_t* _clip);
+    gui_audio_clip(track_gui_entry_t* _track, clip_t* _clip, waveformrender* _waveformRenderer);
     ~gui_audio_clip() override;
 
     int getClipType() override {
@@ -145,7 +161,6 @@ public:
     void prerender(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
     void renderDebugPass(NVGcontext* vg) override;
-    void releaseRendered();
     void onIdle() override;
     void onTick(AppCtrl* appctrl) override;
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;

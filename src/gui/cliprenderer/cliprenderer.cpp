@@ -455,8 +455,6 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
     noteview_render_t& notesView = cl->getNoteViewRender();
     if (!notesView.data) {
         notesView.data = new noteview_cache_impl_t{};
-    } else {
-        // notesView.data->reset();
     }
     auto cache = notesView.data;
 

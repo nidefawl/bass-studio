@@ -33,6 +33,8 @@
 #include "host/midiarp.h"
 #include "logging.h"
 #include "host/host_pluginmanager.h"
+#include "wave/waveform_render.h"
+#include "wave/waveform_render_impl.h"
 
 
 /*static*/ void action_modify_track::loadTrackSnapshot(DawInstance* daw, track_t* track, const track_snapshot_t* trackStored) {
@@ -756,18 +758,64 @@ void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const 
         if (cl->clipType == CLIP_MIDI) {
             renderMidiClip(vg, theme, entry, cl, clipPos, clipSize);
         } else if (cl->clipType == CLIP_AUDIO) {
-            static int logOnce = 0;
-            if (!logOnce) {
-                logOnce = 1;
-                log_printf("dragged waveform rendering not implemented\n");
+            //TODO: move this out of here
+            auto prjGlobals = dawCtrl->getDaw()->getHost()->prjGlobals;
+            auto& clipAudio = cl->audio;
+            if (!clipAudio.renderedAudio) {
+                clipAudio.renderedAudio = new rendered_audio_clip_t(dawCtrl->getWaveformRenderer());
             }
-#ifdef TODO_IMPLEMENT_DRAGGED_WAVE_FORM_RENDERING
-//track_gui_entry_t entry;
-//always_assert(iGuiMgr.getTrackEntry(tr, entry));
-//dbgassert(entry.clipsGuis.count(cl));
-//const gui_waveform_texture_ref * ptr = dynamic_cast<gui_audio_clip*>(entry.clipsGuis[cl])->waveformRef;
-//renderAudioClip(vg, theme, tr, cl, ptr, clipPos, clipSize, clipPos, clipSize);
-#endif
+            audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->get(clipAudio.id);
+
+            if (!audio) {
+                clipAudio.renderedAudio->releaseWaveformTexture();
+                return;
+            }
+
+            dbgassert(clipSize.x > 0);
+
+            const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+            // const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP) / 2;
+            ivec2 shrink = ivec2(0, (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2));
+            ivec2 sizeClipped = clipSize - shrink;
+            ivec2 posClipped = clipPos + shrink;
+
+            // getClippedPosSize(parent->size, posClipped, sizeClipped);
+
+            if (posClipped.x + sizeClipped.x <= 0 || sizeClipped.x <= 0) {
+                clipAudio.renderedAudio->releaseWaveformTexture();
+                return;
+            }
+
+            const auto tempo100 = prjGlobals.tempo100;
+            const auto samplerate = audio->sample->sampleRate;
+            auto waveform = makeWaveformFromClip(tempo100, samplerate, grid, entry->content->size, cl, clipPos, clipSize - shrink, posClipped, sizeClipped);
+            if (waveform.size.x < 1 || waveform.size.y < 1) {
+                clipAudio.renderedAudio->releaseWaveformTexture();
+                clipAudio.renderedAudio->updateWaveformTexture(waveform);
+                return;
+            }
+            auto& currentWaveformShape = clipAudio.renderedAudio->getCurrentWaveformShape();
+            bool equal = ((waveform.size.y > 0) == (currentWaveformShape.size.y > 0)) && isEqualWaveform3(waveform, currentWaveformShape);
+
+            bool canQueue  = clipAudio.renderedAudio->getWaveformRenderer()->canQueueUpdate();
+            ivec2 sizeDiff = math::absvec2(waveform.size - currentWaveformShape.size);
+            ivec2 limit    = math::maxvec2(ivec2(1), ivec2(waveform.size.x / 4, 16));
+            if (!canQueue) {
+                limit.x = waveform.size.x / 4;
+            }
+            if (waveform.clipped || (dawCtrl && !dawCtrl->isZooming())) {
+                limit = { 0, 0 };
+            }
+            if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {
+                clipAudio.renderedAudio->updateWaveformTexture(waveform);
+                if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
+                    //releaseRendered();
+                }
+            }
+
+            clipAudio.renderedAudio->updateClipPrerender(vg, audio, false);
+            gui_waveform_texture_ref* ref = clipAudio.renderedAudio->getWaveformTextureRef();
+            renderAudioClip(vg, clipAudio.renderedAudio->getWaveformRenderer(), theme, entry->track, cl, audio, ref, clipPos, clipSize - shrink, posClipped, sizeClipped);
         }
     }
 }

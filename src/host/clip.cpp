@@ -16,6 +16,7 @@
 #include "types.h"
 #include "host/host.h"
 #include "util/debug_alloc.h"
+#include "gui/track/trackcontent.h"
 
 #ifdef TRACK_ALLOCATIONS_CLIP_T
 namespace DebugAlloc {
@@ -627,6 +628,10 @@ std::pair<note_t*, note_t*> getMinMaxTime(std::vector<note_t>& notes) {
 
     return std::make_pair(&*min, &*max);
 }
+
+clip_audio_t::~clip_audio_t() {
+    delete renderedAudio;
+};
 
 int32_t clip_audio_t::lenSamples() const {
     auto cache = audiocache::getInstance();
