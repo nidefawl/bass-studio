@@ -322,6 +322,7 @@ public:
         return tls.audioHost;
     }
     static DawInstance* get();
+    static DawInstance* getOptional();
 
     void initProcessingResources();
     void initRealtimeResources();

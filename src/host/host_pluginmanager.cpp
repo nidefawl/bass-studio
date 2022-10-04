@@ -38,6 +38,7 @@ PluginManager::PluginManager() noexcept
 }
 
 PluginManager::~PluginManager() {
+    delete mgrImpl;
     delete moduleMgr;
 }
 

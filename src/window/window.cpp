@@ -1729,7 +1729,6 @@ void closeGlobalLog();                          // Forward declare from util/log
 
 int startApplication(const std::vector<String>& args, AppInstanceService& appInstance) {
     seqthreads::registerThread("mainthread");
-
 #ifdef _WIN32
     OleInitialize(0);
 #endif

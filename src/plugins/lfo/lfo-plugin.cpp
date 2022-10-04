@@ -313,7 +313,7 @@ namespace PluginLFO {
 
     module_lfo::module_lfo(int32_t _projectGlobalId, IHostCallback* _hostCallback)
         : internal_modulator("LFO", getModuleType(), _projectGlobalId, _hostCallback),
-        impl(new lfo_impl_t{ DawInstance::get(), this, DAW::Shape::GetShapeSaw() })
+        impl(new lfo_impl_t{ DawInstance::getOptional(), this, DAW::Shape::GetShapeSaw() })
     {
         initModChannels();
     }

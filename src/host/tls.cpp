@@ -77,9 +77,16 @@ MainCtrl* MainCtrl::get() {
 }
 DawInstance* DawInstance::get() {
     dbgassert(daw_tls::tls.tlsInitialized);
-    dbgassert(daw_tls::tls.mainCtrl);
-    if (daw_tls::tls.mainCtrl)
-        return &daw_tls::tls.mainCtrl->daw;
+    auto mainCtrl = daw_tls::tls.mainCtrl;
+    dbgassert(mainCtrl);
+    if (mainCtrl)
+        return &mainCtrl->daw;
+    return nullptr;
+}
+DawInstance* DawInstance::getOptional() {
+    auto mainCtrl = daw_tls::tls.mainCtrl;
+    if (mainCtrl)
+        return &mainCtrl->daw;
     return nullptr;
 }
 audiohost* audiohost::getInstance() {

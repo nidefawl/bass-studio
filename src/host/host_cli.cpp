@@ -372,6 +372,8 @@ int runCommandLineHost(const std::vector<String>& args) {
                 auto treePos = track_tree_pos_t{TRACK_CTR_MIDIAUDIO, nullptr, 0};
                 project.trackList.moveTracks(loadedChildTracks, treePos);
             }
+            plugindb.closeDatabase();
+            
             if (!fOutWave.empty()) {
                 for (auto* trackMaster : project.trackMasterCtr) {
                     trackMaster->getStage()->flags |= audiostageflags_t::RECORD_OUTPUT;
