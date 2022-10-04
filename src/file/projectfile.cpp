@@ -309,17 +309,16 @@ void serialize(Archive& archive, subtrack_snapshot_t& m) {
 
 template<class Archive>
 void save(Archive& archive, track_layout_snapshot_t const& m, const std::uint32_t version) {
-    
-    archive(make_nvp("layout", m.layout));
-    if (version > 0) {
-        archive(make_nvp("subtracks", m.subtracks));
-    }
+    archive(make_nvp("layout", m.layout),
+            make_nvp("subtracks", m.subtracks));
 }
 
 template<class Archive>
 void load(Archive& archive, track_layout_snapshot_t& m, const std::uint32_t version) {
-    archive(make_nvp("layout", m.layout),
-            make_nvp("subtracks", m.subtracks));
+    archive(make_nvp("layout", m.layout));
+    if (version > 0) {
+        archive(make_nvp("subtracks", m.subtracks));
+    }
 }
 
 template<class Archive>
