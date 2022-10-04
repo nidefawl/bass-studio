@@ -753,9 +753,9 @@ void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const 
 
     if (getClipPosition(grid, scissorSize, cl, clipPos, clipSize, offset)) {
         clipPos.y += entry->content->pos.y;
-        if (cl->clipType == CLIP_MIDI && entry->track->type == TRACK_TYPE_MIDI) {
+        if (cl->clipType == CLIP_MIDI) {
             renderMidiClip(vg, theme, entry, cl, clipPos, clipSize);
-        } else if (cl->clipType == CLIP_AUDIO && entry->track->type == TRACK_TYPE_AUDIO) {
+        } else if (cl->clipType == CLIP_AUDIO) {
             static int logOnce = 0;
             if (!logOnce) {
                 logOnce = 1;
