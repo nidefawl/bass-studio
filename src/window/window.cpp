@@ -1314,7 +1314,8 @@ window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> overlayCtrl,
 
 void appwindow_main::destroyOverlayWindows() {
     releaseOverlayWindows();
-    for (std::shared_ptr<appwindow>& spChild : this->overlayWindows) {
+    auto overlayWindowsCopy = this->overlayWindows;
+    for (std::shared_ptr<appwindow>& spChild : overlayWindowsCopy) {
         appwindow_main* wndOverlay = dynamic_cast<appwindow_main*>(spChild.get());
         dbgassert(wndOverlay);
         if (wndOverlay) {
