@@ -13,14 +13,17 @@
 #include "types.h"
 
 void AudioBlock::BeginTrace() {
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
     AudioBlock::instanceCstrd = 0;
     AudioBlock::numAllocs = 0;
     AudioBlock::recordAllocs = true;
-
+#endif
 }
 void AudioBlock::EndTrace() {
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
     AudioBlock::recordAllocs = false;
     log_printf("AudioBlock stats: %d blocks, %d allocs\n", AudioBlock::instanceCstrd.load(), AudioBlock::numAllocs.load());
+#endif
 }
 
 AudioBuffer* allocateBuffer(channelnum_t nChannels) {
@@ -55,8 +58,10 @@ void AudioBlock::realloc(samplecount_t _samples) {
 
     if (samples != _samples) {
         if (channelsAlloc != alloc_type::empty && dataAlloc == alloc_type::heap) {
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
             if (recordAllocs)
                 numAllocs++;
+#endif
             for (channelnum_t i = 0; i < channels; i++) {
                 float* const newBuf = static_cast<float*>(aligned_malloc(sizeof(float) * _samples, 512));
 #if DEBUG_PRINT_AUDIOBUFFER_ALLOC
@@ -203,14 +208,20 @@ void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, sam
 }
 
 
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
 std::atomic<int32_t> DelayLine::instanceCount{ 0 };
 std::atomic<int32_t> AudioBlock::instanceCstrd{ 0 };
 std::atomic<int32_t> AudioBlock::numAllocs{ 0 };
 std::atomic<int32_t> AudioBlock::instanceCount{ 0 };
 volatile bool AudioBlock::recordAllocs{ false };
+#endif
 
 
 void printLeakedAudioBuffers() {
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
+    log_printf("AudioBlock::instanceCstrd: %d\n", AudioBlock::instanceCstrd.load());
     log_printf("AudioBlock::instanceCount: %d\n", AudioBlock::instanceCount.load());
+    log_printf("AudioBlock::numAllocs: %d\n", AudioBlock::numAllocs.load());
     log_printf("DelayLine::instanceCount: %d\n", DelayLine::instanceCount.load());
+#endif
 }

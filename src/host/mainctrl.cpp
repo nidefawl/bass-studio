@@ -1223,13 +1223,6 @@ void DawInstance::destroy() {
     projectToLoad = nullptr;
     pluginClipboard = nullptr;
     dragdropclip.reset();
-    printClipAllocations();
-    printLeakedAudioBuffers();
-    int totalAllocs = getNumClipAllocations();
-    if (totalAllocs != 0) {
-        log_printf("getNumClipAllocations == %d!\n", totalAllocs);
-        dbgassert(getNumClipAllocations() == 0);
-    }
 
     plugindb.closeDatabase();
 
@@ -1280,6 +1273,13 @@ void DawInstance::destroy() {
     tls.audioCache     = nullptr;
     tls.tlsInitialized = false;
     daw_tls::setTls(tls);
+    printClipAllocations();
+    printLeakedAudioBuffers();
+    int totalAllocs = getNumClipAllocations();
+    if (totalAllocs != 0) {
+        log_printf("getNumClipAllocations == %d!\n", totalAllocs);
+        dbgassert(getNumClipAllocations() == 0);
+    }
 }
 
 void DawCtrl::destroy() {

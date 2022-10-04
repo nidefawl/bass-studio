@@ -10,6 +10,8 @@
 #include "samplerate.h"
 #include "types.h"
 
+#define TRACK_ALLOCATIONS_AUDIOBLOCK 0
+
 enum alloc_type {
     empty = 0,
     stack = 1,
@@ -23,10 +25,12 @@ struct alignas(16) AudioBlock {
         MIX,
         ADD
     };
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
     static std::atomic<int32_t> instanceCstrd;
     static std::atomic<int32_t> numAllocs;
     static std::atomic<int32_t> instanceCount;
     static volatile bool recordAllocs;
+#endif
     static void BeginTrace();
     static void EndTrace();
     std::array<float*, 8> heapBuf{};
@@ -38,12 +42,13 @@ struct alignas(16) AudioBlock {
     alloc_type dataAlloc = empty;
 
 
-    AudioBlock()                  = default;
     AudioBlock(const AudioBlock&) = delete;
     AudioBlock& operator=(const AudioBlock&) = delete;
 
     AudioBlock(AudioBlock&& other) noexcept {
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
         instanceCount++;
+#endif
         *this = std::move(other);
     }
 
@@ -60,11 +65,20 @@ struct alignas(16) AudioBlock {
         } 
     }
 
+    AudioBlock() {
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
+        instanceCount++;
+        instanceCstrd++;
+#endif
+    }
+
     explicit AudioBlock(channelnum_t _channels, samplecount_t _samples, bool _bIsDebug = false)
         : channels(_channels), dataAlloc(heap) {
         allocChannelsArray();
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
         instanceCount++;
         instanceCstrd++;
+#endif
         realloc(_samples);
     }
 
@@ -74,8 +88,10 @@ struct alignas(16) AudioBlock {
         channels(_channels),
         channelsAlloc(external),
         dataAlloc(external) {
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
         instanceCount++;
         instanceCstrd++;
+#endif
     }
 
     explicit AudioBlock(const std::vector<float*>& vecChannels, samplecount_t _samples)
@@ -84,8 +100,10 @@ struct alignas(16) AudioBlock {
         dataAlloc(external) 
     {
         allocChannelsArray();
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
         instanceCount++;
         instanceCstrd++;
+#endif
         memcpy(buf, vecChannels.data(), vecChannels.size() * sizeof(decltype(vecChannels[0])));
 #ifndef NDEBUG
         float** pBuf = buf;
@@ -100,8 +118,10 @@ struct alignas(16) AudioBlock {
         channels(numChannels),
         dataAlloc(external) {
         allocChannelsArray();
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
         instanceCount++;
         instanceCstrd++;
+#endif
         dbgassert(samples);
         for (channelnum_t i = 0; i < channels; i++) {
             dbgassert(src.buf[i]);
@@ -110,7 +130,9 @@ struct alignas(16) AudioBlock {
     }
 
     ~AudioBlock() {
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
         instanceCount--;
+#endif
         if (channelsAlloc != alloc_type::empty && dataAlloc == alloc_type::heap) {
             for (channelnum_t i = 0; i < channels; i++) {
                 if (buf[i]) {
@@ -271,6 +293,7 @@ class DelayLine {
     AudioBlock block;
     samplecount_t writeOffset = 0;
 public:
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
     static std::atomic<int32_t> instanceCount;
     DelayLine() {
         instanceCount++;
@@ -278,6 +301,9 @@ public:
     ~DelayLine() {
         instanceCount--;
     }
+#else
+    DelayLine() = default;
+#endif
     DelayLine(const DelayLine& other) = delete;
     DelayLine(DelayLine&& other) = delete;
     DelayLine& operator=(const DelayLine& other) = delete;

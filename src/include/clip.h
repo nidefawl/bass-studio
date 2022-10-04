@@ -16,7 +16,8 @@
 
 
 #ifndef NDEBUG
-#define TRACK_ALLOCATIONS_CLIP_T
+// NOTE: This is a debug-only feature, and is not thread-safe.
+// #define TRACK_ALLOCATIONS_CLIP_T
 #endif
 
 #define CLIP_MIDI 0
