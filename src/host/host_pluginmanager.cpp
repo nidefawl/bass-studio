@@ -268,6 +268,7 @@ void PluginManager::releaseAudioStage(audio_stage_t* audioStage) {
     auto it = std::find(allAudioStages.begin(), allAudioStages.end(), audioStage);
     dbgassert(it != allAudioStages.end());
     allAudioStages.erase(it);
+    delete audioStage;
 }
 
 audio_stage_t* PluginManager::getAudioStage(const audio_stage_ref_t& ref) const {
