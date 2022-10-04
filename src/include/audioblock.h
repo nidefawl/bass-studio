@@ -58,6 +58,8 @@ struct alignas(16) AudioBlock {
         }
         channelsAlloc = other.channelsAlloc;
         dataAlloc = other.dataAlloc;
+        other.samples = 0;
+        other.channels = 0;
         other.channelsAlloc = empty;
         other.dataAlloc = empty;
         other.buf = nullptr;

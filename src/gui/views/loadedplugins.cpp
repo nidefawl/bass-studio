@@ -328,7 +328,7 @@ public:
         if (!lock.isLocked()) {
             // force lock and update if 5 seconds have elapsed
             if (tmNow - tmLastUpdate > 5000) {
-                lock = MainCtrl::getPlayThread()->lockThread();
+                lock = daw->lockPlayThread();
             } else {
                 return;
             }
