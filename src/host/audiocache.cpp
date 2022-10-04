@@ -175,12 +175,18 @@ bool LoadAudioSample(const String& path, audiosample_t* sample) {
         } closeWaveFile{&wav};
         std::vector<float> pSamples(wav.totalSampleCount);
         memset(pSamples.data(), 0, sizeof(float) * pSamples.size());
-        size_t nSamples = drwav_read_f32(&wav, wav.totalSampleCount, pSamples.data());
-        log_lf(Log::L_DEBUG, "totalSampleCount: %zu\n", wav.totalSampleCount);
-        log_lf(Log::L_DEBUG, "channels: %d\n", wav.fmt.channels);
-        log_lf(Log::L_DEBUG, "sampleRate: %d\n", wav.fmt.sampleRate);
-        log_lf(Log::L_DEBUG, "bitsPerSample: %d\n", wav.fmt.bitsPerSample);
-        log_lf(Log::L_DEBUG, "samples: %zu\n", nSamples);
+        samplecount_t numSamplesInterleaved = drwav_read_f32(&wav, wav.totalSampleCount, pSamples.data());
+        pSamples.resize(numSamplesInterleaved);
+        if (wav.channels <= 0) {
+            log_lf(Log::L_WARN, "File %s has 0 channels\n", StringAsCStr(path));
+            return false;
+        }
+        // log_lf(Log::L_TRACE, "totalSampleCount: %zu\n", wav.totalSampleCount);
+        // log_lf(Log::L_TRACE, "numSamplesRead: %zu\n", numSamplesRead);
+        // log_lf(Log::L_TRACE, "channels: %d\n", wav.fmt.channels);
+        // log_lf(Log::L_TRACE, "sampleRate: %d\n", wav.fmt.sampleRate);
+        // log_lf(Log::L_TRACE, "bitsPerSample: %d\n", wav.fmt.bitsPerSample);
+        // log_lf(Log::L_TRACE, "samples: %zu\n", nSamples);
 
 
         sample->bitsPerSample = wav.bitsPerSample;
@@ -189,19 +195,15 @@ bool LoadAudioSample(const String& path, audiosample_t* sample) {
         sample->nSamples      = 0;
 
         std::vector<samplechannel_t> loadedSampleChannels;
-        samplecount_t numSamplesInput = 0;
-        auto wavSamples = static_cast<samplecount_t>(wav.totalSampleCount);
+        samplecount_t numSamplesInput = numSamplesInterleaved / wav.channels;
         // deinterleave
         for (channelnum_t i = 0; i < sample->nChannels; i++) {
-            samplechannel_t channel(wavSamples / wav.channels);
-            float* out = channel.data();
+            samplechannel_t channel(numSamplesInput);
+            auto out = channel.begin();
             // interleaved sample is at samples[ chIdx + sampleIdx * chCount ]
-            for (samplecount_t j = i; j < wavSamples; j += wav.channels) {
-                *out = pSamples[j];
-                out++;
+            for (samplecount_t j = i; j < numSamplesInterleaved; j += wav.channels) {
+                *out++ = pSamples[j];
             }
-            auto samplesInChannel = static_cast<samplecount_t>(channel.size());
-            numSamplesInput = i == 0 ? samplesInChannel : math::min<samplecount_t>(numSamplesInput, samplesInChannel);
             loadedSampleChannels.push_back(std::move(channel));
         }
         if ((samplerate_t) sample->sampleRate != wav.sampleRate) {
@@ -218,11 +220,6 @@ bool LoadAudioSample(const String& path, audiosample_t* sample) {
                 channelPtrsOut[ch] = resampledChannels[ch].data();
             }
 
-
-            //log_lf(Log::L_DEBUG, "soxr_oneshot from %d to %d, samples %d -> %d, channels %d\n", wav.sampleRate, this->samplerate, wavSamples, olen, wav.channels);
-            //log_lf(Log::L_DEBUG, "pSamples.size %d\n", pSamples.size());
-            //log_lf(Log::L_DEBUG, "pSamples2.size %d\n", pSamples2.size());
-
             soxr_quality_spec_t q_spec             = soxr_quality_spec(0, 0);
             soxr_io_spec_t io_spec                 = soxr_io_spec(SOXR_FLOAT32_S, SOXR_FLOAT32_S);
             soxr_runtime_spec_t const runtime_spec = soxr_runtime_spec(0);
@@ -232,11 +229,11 @@ bool LoadAudioSample(const String& path, audiosample_t* sample) {
 
             soxr_t soxr = soxr_create(wav.sampleRate, sample->sampleRate, sample->nChannels, &error, &io_spec, &q_spec, &runtime_spec);
             if (!!error) {
-                log_printf("soxr_create failed: %s\n", soxr_strerror(error));
+                log_lf(Log::L_ERROR, "soxr_create failed: %s\n", soxr_strerror(error));
             } else {
                 error = soxr_process(soxr, channelPtrsIn.data(), numSamplesInput, nullptr, channelPtrsOut.data(), numSamplesResampled, &offset);
                 if (!!error) {
-                    log_printf("soxr_process failed: %s\n", soxr_strerror(error));
+                    log_lf(Log::L_ERROR, "soxr_process failed: %s\n", soxr_strerror(error));
                 } else {
                     sample->nSamples   = static_cast<int64_t>(offset);
                     sample->samples.resize(sample->nChannels);
@@ -252,7 +249,6 @@ bool LoadAudioSample(const String& path, audiosample_t* sample) {
             sample->samples = std::move(loadedSampleChannels);
         }
         int64_t timeBeginDownsample = getTimeMicros();
-        log_printf("Downsampling %s...\n", path.c_str());
 
         uint8_t maxDownS = 4;
         for (uint8_t downsampleStep = 1; downsampleStep < maxDownS; downsampleStep++) {
@@ -274,7 +270,10 @@ bool LoadAudioSample(const String& path, audiosample_t* sample) {
             sample->downsampled.push_back(std::move(downsampledChannels));
         }
         int64_t timeDiffDownsample = getTimeMicros() - timeBeginDownsample;
-        log_lf(Log::L_DEBUG, "Downsampling %s took %fsec\n", path.c_str(), timeDiffDownsample / 1000000.0);
+        double timeDiffInSeconds = timeDiffDownsample / 1000000.0;
+        if (timeDiffInSeconds > 1.0) {
+            log_lf(Log::L_WARN, "Downsampling %s took %fsec\n", path.c_str(), timeDiffInSeconds);
+        }
         return true;
     }
     return false;

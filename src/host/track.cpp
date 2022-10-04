@@ -69,7 +69,6 @@ void releaseClipResources(clip_t* cl, delete_cb* cb) {
     }
 }
 void releaseTrackResources(track_t* tr, delete_cb* cb) {
-    log_lf(Log::L_DEBUG, "release track %016zX\n", reinterpret_cast<uint64_t>(tr));
     dbgassert(tr && tr->audio);
     if (cb)
         cb->preTrackDelete(tr);

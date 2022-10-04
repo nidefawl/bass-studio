@@ -210,8 +210,6 @@ int waveformrender::queueUpdate(samplesource_t* audio, gui_waveform_texture_ref*
               }) == queuedTasks.end());
     queuedTasks.push_back(waveform_update_task);
     waveformRef->queued = true;
-    if (queuedTasks.size() % 20 == 0)
-        log_lf(Log::L_DEBUG, "queuedTasks.size() %zu\n", queuedTasks.size());
     return 1;
 }
 bool collides(const ivec2& pos1, const ivec2& size1, const ivec2& pos2, const ivec2& size2, ivec2& offset) {

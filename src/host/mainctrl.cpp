@@ -739,17 +739,14 @@ void DawInstance::unloadProject() {
 
     std::vector<track_t*> _tracks     = project.trackList.getAllTracksFlatVec();// iterate a copy
     std::vector<track_t*> _rootTracks = project.trackList.getAllTracksTreeVec();
-    log_lf(Log::L_DEBUG, "unloading project with %zu tracks\n", _tracks.size());
+    log_lf(Log::L_DEBUG, "Unloading project with %zu tracks\n", _tracks.size());
     for (auto it = _tracks.rbegin(); it != _tracks.rend(); it++) {
         track_t* track = *it;
-
-        log_lf(Log::L_DEBUG, "remove track %s\n", StringAsCStr(track->name));
         removeTrackImpl(track, FLG_TRK_CHANGE_LOAD);
     }
     project.trackList.clear();
     for (auto it = _tracks.rbegin(); it != _tracks.rend(); it++) {
         track_t* track = *it;
-        log_lf(Log::L_DEBUG, "delete track %s\n", StringAsCStr(track->name));
         releaseTrackResources(track, this);
         delete track;
     }
