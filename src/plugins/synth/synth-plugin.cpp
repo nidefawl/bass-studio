@@ -1493,6 +1493,12 @@ namespace PluginSynth {
         {
             initImpl();
         }
+        ~SynthImpl()
+        {
+            for (auto* ptr : vecParams) {
+                delete ptr;
+            }
+        }
         PresetManager& getPresetManager() {
             return presetManager;
         }
