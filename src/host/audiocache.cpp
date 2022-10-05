@@ -61,7 +61,7 @@ void audiocache::setSamplerate(samplerate_t _samplerate) {
         }
     }
     for (auto& f : reloadFiles) {
-        log_printf("reloading file %s with new samplerate %d\n", StringAsCStr(f.path), samplerate);
+        log_printf("reloading file %s with new samplerate %u\n", StringAsCStr(f.path), samplerate);
         loadFile(f.path, f.id);
     }
 }
@@ -166,7 +166,7 @@ audiofile_t* audiocache::createSample(create_sample_req_t& ssr) {
     dbgassert(mapId[_id] == pFile);
     return pFile;
 }
-bool LoadAudioSample(const String& path, audiosample_t* sample) {
+static bool LoadAudioSample(const String& path, audiosample_t* sample, samplerate_t samplerate) {
     drwav wav{};
     if (drwav_init_file(&wav, StringAsCStr(path))) {
         struct close_wave_file {
@@ -191,7 +191,7 @@ bool LoadAudioSample(const String& path, audiosample_t* sample) {
 
         sample->bitsPerSample = wav.bitsPerSample;
         sample->nChannels     = math::clamp<size_t>(wav.channels, 0, 255);
-        sample->sampleRate    = wav.sampleRate;
+        sample->sampleRate    = samplerate;
         sample->nSamples      = 0;
 
         std::vector<samplechannel_t> loadedSampleChannels;
@@ -206,12 +206,12 @@ bool LoadAudioSample(const String& path, audiosample_t* sample) {
             }
             loadedSampleChannels.push_back(std::move(channel));
         }
-        if ((samplerate_t) sample->sampleRate != wav.sampleRate) {
+        if (samplerate != wav.sampleRate) {
 
             std::vector<samplechannel_t> resampledChannels;
             std::vector<float*> channelPtrsOut(sample->nChannels);
             std::vector<float*> channelPtrsIn(sample->nChannels);
-            auto numSamplesResampled = static_cast<samplecount_t>(numSamplesInput * sample->sampleRate / (double) wav.sampleRate + .5); /* Assay output len. */
+            auto numSamplesResampled = static_cast<samplecount_t>(numSamplesInput * samplerate / (double) wav.sampleRate + .5); /* Assay output len. */
 
             for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
                 channelPtrsIn[ch] = loadedSampleChannels[ch].data();
@@ -227,7 +227,7 @@ bool LoadAudioSample(const String& path, audiosample_t* sample) {
             soxr_error_t error = 0;
             size_t offset = 0;
 
-            soxr_t soxr = soxr_create(wav.sampleRate, sample->sampleRate, sample->nChannels, &error, &io_spec, &q_spec, &runtime_spec);
+            soxr_t soxr = soxr_create(wav.sampleRate, samplerate, sample->nChannels, &error, &io_spec, &q_spec, &runtime_spec);
             if (!!error) {
                 log_lf(Log::L_ERROR, "soxr_create failed: %s\n", soxr_strerror(error));
             } else {
@@ -329,7 +329,7 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id) {
     auto pFile  = file.get();
     this->mapId[_id] = pFile;
     list.push_back(std::move(file));
-    if (LoadAudioSample(path, pFile->sample.get())) {
+    if (LoadAudioSample(path, pFile->sample.get(), samplerate)) {
         pFile->state = audiofile_t::filestate::LOADED;
         log_printf("Loaded %s\n", path.c_str());
     } else {
