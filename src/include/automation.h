@@ -4,6 +4,7 @@
 #include <vector>
 #include <unordered_map>
 #include "automation.h"
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "seq_time.h"
 #include "assert_dbg.h"
@@ -60,7 +61,7 @@ namespace DAW {
         float min = 0.0f;
         float max = 1.0f;
         ModulationMode mode = ModulationMode::BYPASS;
-        bool bClamp = false;
+        bool bClamp = true;
     };
     struct modulation_channel_ref {
         int32_t paramIdxDst = -1;
@@ -248,6 +249,7 @@ private:
 public:
     template<typename T>
     void initValue(T _value) {
+        _value.val = math::clamp(_value.val, 0.0f, 1.0f);
         valueModulated = _value.val;
         defaultValue = _value.val;
         value = _value.val;
@@ -267,7 +269,7 @@ public:
         setAll(_value);
     }
     void setModulated(float _value) {
-        valueModulated = _value;
+        valueModulated = math::clamp(_value, 0.0f, 1.0f);
     }
     void setAutomated(float _value) {
         valueAutomated = _value;
@@ -561,7 +563,7 @@ public:
         }
         automatable_param_t* param = getParamUnchecked(paramIdx);
         dbgassert(param);
-        return { param->valueModulated, param->valueModulated };
+        return { param->getValue(), param->getValue() };
     }
     void clearAutomations() {
         this->automationLanes.clear();

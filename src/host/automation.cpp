@@ -189,7 +189,7 @@ void automation_t::sampleAutomation(double dTickBegin, double dTickEnd, sampleco
             default:
                 break;
             if (scale.bClamp) {
-                *inOut = math::clamp(*inOut, scale.min, scale.max);
+                *inOut = math::clamp(*inOut, 0.0f, 1.0f);
             }
         }
     }
@@ -540,7 +540,7 @@ float automation_lane_t::modulateValue(tick_t tick, float fIn, const DAW::modula
             break;
     }
     if (scale.bClamp) {
-        fIn = math::clamp(fIn, scale.min, scale.max);
+        fIn = math::clamp(fIn, 0.0f, 1.0f);
     }
     return fIn;
 }

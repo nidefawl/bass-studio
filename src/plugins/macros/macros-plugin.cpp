@@ -217,7 +217,7 @@ namespace PluginMacros {
                         break;
                 }
                 if (scale.bClamp) {
-                    fIn = math::clamp(fIn, scale.min, scale.max);
+                    fIn = math::clamp(fIn, 0.0f, 1.0f);
                 }
                 return fIn;
             }
@@ -241,7 +241,7 @@ namespace PluginMacros {
                                 break;
                         }
                         if (scale.bClamp) {
-                            *inOut = math::clamp(*inOut, scale.min, scale.max);
+                            *inOut = math::clamp(*inOut, 0.0f, 1.0f);
                         }
                     }
                 }
