@@ -252,7 +252,6 @@ void rendered_audio_clip_t::updateClipPrerender(NVGcontext* vg, audiofile_t* aud
             dbgassert(waveformRef->waveform.size.x > 0 && waveformRef->waveform.size.y > 0);
             if (waveformRenderer->queueUpdate(audio, waveformRef)) {
                 dbgassert(/*!waveformRef->rendered && */waveformRef->queued);
-                log_printf("queued!\n");
             }
         }
     }
