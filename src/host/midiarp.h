@@ -3,6 +3,7 @@
 #include "automation.h"
 #include "host/host.h"
 #include "logging.h"
+#include "math/seq_math.h"
 #include "note.h"
 #include "platform.h"
 #include "seq_time.h"
@@ -103,9 +104,7 @@ public:
         return getParamValue(ARP_PARAM_RAND_VEL);
     }
     int getPatternIdx(float f) {
-        auto option = (int32_t) std::floor(f * (NUM_PATTERNS - 1));
-        dbgassert(option < NUM_PATTERNS);
-        return option;
+        return math::clamp(math::floorfS32(f * (NUM_PATTERNS)), 0, NUM_PATTERNS - 1);
     }
 
     tick_t getStepSize(float f);
