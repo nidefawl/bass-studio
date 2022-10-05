@@ -382,7 +382,7 @@ public:
     virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
     virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
 
-    virtual void menuCommand(menucmd_t command){};
+    virtual void menuCommand(const menucmd_t& command){};
     virtual void onBeforeShowWindow() {
         bIsVisible = true;
     }

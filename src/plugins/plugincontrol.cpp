@@ -50,7 +50,7 @@ void PluginControl::destroy() {
     }
 }
 
-void PluginControl::menuCommand(menucmd_t command) {
+void PluginControl::menuCommand(const menucmd_t& command) {
     switch (command.command) {
         case CMD_EXIT:
             mainWindow->requestClose();

@@ -16,6 +16,7 @@
 #include "basectrl.h"
 #include "host/mainctrl.h"
 
+#include "keyboard.h"
 #include "track.h"
 #include "trackautomation.h"
 #include "track_impl.h"
@@ -466,10 +467,10 @@ public:
         this->size.x = 320;
         if (_trackentry) {
 
-            auto newClip = new ctxtmenu_entry("Create empty clip", 20);
-            addEntry(newClip);
-            auto newClip2 = new ctxtmenu_entry("Consolidate selection", 21);
-            addEntry(newClip2);
+            auto entryNewClip = new ctxtmenu_entry("Create empty clip", 20);
+            addEntry(entryNewClip);
+            auto entryConsolidate = new ctxtmenu_entry("Consolidate selection", 21);
+            addEntry(entryConsolidate);
             addEntry(new ctxtmenu_splitter());
         }
         scaled_grid& grid = _dawCtrl->getGrid();
@@ -503,7 +504,9 @@ public:
                 }
             }
         } else if (_id == 21) {
-
+            KeyCombo kc = KC_CONSOLIDATE;
+            KeyEvent evt{KeyEventType::K_PRESS, kc.keyCode, 0, kc.keyMod, kc.keyChar};
+            dawCtrl->getTrackContainer()->trackView.handleKeyInput(evt);
         } else if (_id == 110 + 9) {// OFF
             grid.grid_dens.enabled = false;
         } else if (_id >= 110) {

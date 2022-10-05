@@ -181,7 +181,7 @@ namespace MiniApp {
             tls.audioCache = nullptr;
         }
 
-        void menuCommand(menucmd_t command) override {
+        void menuCommand(const menucmd_t& command) override {
             switch (command.command) {
                 case CMD_EXIT:
                     mainWindow->requestClose();
