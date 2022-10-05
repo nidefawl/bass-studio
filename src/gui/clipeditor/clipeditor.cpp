@@ -152,21 +152,22 @@ public:
         fixed->initFixed();
         addEntry(fixed);
     }
-    void clicked(int clickedid) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         scaled_grid& grid = editor->grid;
-        if (clickedid == 110 + 9) {// OFF
+        if (_id == 110 + 9) {// OFF
             grid.grid_dens.enabled = false;
-        } else if (clickedid >= 110) {
+        } else if (_id >= 110) {
             grid.grid_dens.enabled   = true;
-            grid.grid_dens.fixedBars = clickedid - 110;
+            grid.grid_dens.fixedBars = _id - 110;
             grid.grid_dens.isfixed   = true;
         } else {
             grid.grid_dens.enabled        = true;
-            grid.grid_dens.dynamicDensity = static_cast<int8_t>(math::clamp<int32_t>(clickedid - 100 + 2, 0, 8));
+            grid.grid_dens.dynamicDensity = static_cast<int8_t>(math::clamp<int32_t>(_id - 100 + 2, 0, 8));
             grid.grid_dens.isfixed        = false;
         }
         grid.notifyChange();
         closeContextMenu();
+        return true;
     }
 };
 

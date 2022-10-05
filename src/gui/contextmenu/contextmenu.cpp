@@ -1,5 +1,40 @@
 #include "contextmenu.h"
+#include "menu.h"
 #include "window.h"
+#include "renderresources.h"
+
+ctxtmenu_entry::ctxtmenu_entry(AppCtrl* ctrl, GlobalCommandType _type) 
+    : commandtype(_type)
+{
+    dbgassert(ctrl->getCommandManager());
+    auto cmd = ctrl->getCommandManager()->getCommand(commandtype);
+    dbgassert(cmd);
+    if (cmd) {
+        id    = static_cast<int32_t>(_type);
+        title = cmd->desc.name;
+        if (cmd->desc.iconId > -1) {
+            setIcon(&RenderResources::imgIcons[cmd->desc.iconId], GuiColor::COL_WHITE);
+        }
+    }
+}
+void ngui::Menu::addCommand(AppCtrl* ctrl, GlobalCommandType _type, int arg1, String customText) {
+    dbgassert(ctrl->getCommandManager());
+    auto cmd = ctrl->getCommandManager()->getCommand(_type);
+    dbgassert(cmd);
+    if (cmd) {
+        Menu& m   = makeChild_();
+        m.type    = menu_type::command;
+        m.command.command = static_cast<int32_t>(_type);
+        m.command.argInt = arg1;
+        if (!customText.empty()) {
+            m.title = std::move(customText);
+        } else {
+            m.title = cmd->desc.name;
+        }
+        m.icon    = cmd->desc.iconId;
+        add(&m);
+    }
+}
 
 guictxtmenu::guictxtmenu() : guictxtmenu_base() {
     setCanMouseHit(true);
@@ -14,12 +49,9 @@ guictxtmenu::~guictxtmenu() {
     }
 }
 
-void guictxtmenu::clickedElement(ctxtmenu_entry* e, int _id) {
-    clicked(_id);
-}
-
-void guictxtmenu::clicked(int _id) {
+bool guictxtmenu::clickedElement(ctxtmenu_entry* e, int _id) {
     closeContextMenu();
+    return true;
 }
 
 void guictxtmenu::setControl(BaseCtrl* parentCtrl) {

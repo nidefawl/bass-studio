@@ -131,8 +131,9 @@ namespace {
             return !hadMouseFocus;
         }
 
-        void clicked(int _id) {
+        bool clickedElement(ctxtmenu_entry* e, int _id) {
             closeContextMenu();
+            return true;
         }
 
         void onTick(AppCtrl* appctrl) override {

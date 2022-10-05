@@ -949,7 +949,7 @@ void DawInstance::menuCommand(const menucmd_t& command) {
                 break;
             case CMD_OPEN_SECOND_WINDOW:
                 if (companionWindows.empty()) {
-                    auto companionCtrlStdPtr = std::make_shared<CompanionCtrl>(*this);
+                    auto companionCtrlStdPtr = std::make_shared<CompanionCtrl>(mainCtrl, *this);
                     ivec2 windowSize;
                     mainCtrl->mainWindow->getSize(&windowSize);
                     auto compWindowNew = mainCtrl->mainWindow->createOverlay(companionCtrlStdPtr, windowSize, WINDOW_IS_MAINWINDOW_SLAVE | WINDOW_IS_RESIZABLE);
@@ -1065,7 +1065,7 @@ void DawInstance::menuCommand(const menucmd_t& command) {
                 if (command.argInt == 3) {
 
                     auto guidialog  = new guidialog_about();
-                    auto popupCtrl = std::make_shared<PopupCtrl>();
+                    auto popupCtrl = std::make_shared<PopupCtrl>(mainCtrl);
                     popupCtrl->setDawCtrl(mainCtrl);
                     popupCtrl->m_scale = mainCtrl->m_scale;
                     popupCtrl->m_size = math::maxvec2(ivec2(20, 20), guidialog->size);
@@ -1251,6 +1251,7 @@ void DawInstance::destroy() {
         log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
         ngui::showNotification(ngui::Style::Warning, "Couldn't write config file", "Some settings may have been reset");
     }
+    delete tls.commandManager;
     delete tls.runtime;
     delete tls.settings;
     delete tls.audioCache;
@@ -1268,6 +1269,7 @@ void DawInstance::destroy() {
     tls.project        = nullptr;
     tls.pluginDatabase = nullptr;
     tls.audioCache     = nullptr;
+    tls.commandManager = nullptr;
     tls.tlsInitialized = false;
     daw_tls::setTls(tls);
     printClipAllocations();
@@ -1331,6 +1333,7 @@ void DawInstance::initDaw() {
     initTls.midiHost       = new midihost();
     initTls.pluginDatabase = &plugindb;
     initTls.audioCache     = new audiocache(settings.iosettings.samplerate);
+    initTls.commandManager = new DAW::UI::CommandManager();
     initTls.host->setTls(initTls);
     this->tls = initTls;
 
@@ -1340,9 +1343,10 @@ void DawInstance::initDaw() {
         settings.iosettings.internalBlocksize,
         sampleformat_bits_t::FLOAT_32
     });
+    initTls.commandManager->init();
 }
 
-MainCtrl::MainCtrl(DawInstance& _daw) : DawCtrl(_daw) {
+MainCtrl::MainCtrl(DawInstance& _daw) : DawCtrl(nullptr, _daw) {
 }
 
 void MainCtrl::initApp(const std::vector<String>& args) {
@@ -1390,54 +1394,50 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
 
     menus.recent.type  = ngui::menu_type::submenu;
     menus.recent.title = "Open recent";
-    menus.recent.addCommand(CMD_NOARG(CMD_FILE_OPEN), "File 1");
     menus.file.type  = ngui::menu_type::submenu;
     menus.file.title = "File";
-    menus.file.addCommand(CMD_NOARG(CMD_FILE_NEW), menuName("New", KC_NEW), ICON_FILE);
-    menus.file.addCommand(CMD_NOARG(CMD_FILE_OPEN), menuName("Open", KC_OPEN), ICON_FOLDER);
+    menus.file.addCommand(this, GlobalCommandType::CMD_FILE_NEW);
+    menus.file.addCommand(this, GlobalCommandType::CMD_FILE_OPEN);
     menus.file.add(&menus.recent);
-    menus.file.addCommand(CMD_NOARG(CMD_FILE_SAVE), menuName("Save", KC_SAVE), ICON_SAVE);
-    menus.file.addCommand(CMD_NOARG(CMD_FILE_SAVEAS), "Save As", ICON_SAVE);
-    menus.file.addCommand(CMD_NOARG(CMD_SET_STARTUP_PROJECT), "Set as startup project");
+    menus.file.addCommand(this, GlobalCommandType::CMD_FILE_SAVE);
+    menus.file.addCommand(this, GlobalCommandType::CMD_FILE_SAVEAS);
+    menus.file.addCommand(this, GlobalCommandType::CMD_SET_STARTUP_PROJECT);
     menus.file.addSeperator();
-    menus.file.addCommand(CMD_NOARG(CMD_EXIT), "Quit", ICON_CLOSE);
+    menus.file.addCommand(this, GlobalCommandType::CMD_EXIT);
     menus.edit.type  = ngui::menu_type::submenu;
     menus.edit.title = "Edit";
-    menus.edit.addCommand(CMD_NOARG(CMD_UNDO), menuName("Undo", KC_UNDO));
-    menus.edit.addCommand(CMD_NOARG(CMD_REDO), menuName("Redo", KC_REDO));
+    menus.edit.addCommand(this, GlobalCommandType::CMD_UNDO);
+    menus.edit.addCommand(this, GlobalCommandType::CMD_REDO);
     menus.edit.addSeperator();
-    menus.edit.addCommand(CMD_NOARG(CMD_CUT), menuName("Cut", KC_CUT), ICON_CUT);
-    menus.edit.addCommand(CMD_NOARG(CMD_COPY), menuName("Copy", KC_COPY), ICON_COPY);
-    menus.edit.addCommand(CMD_NOARG(CMD_PASTE), menuName("Paste", KC_PASTE), ICON_PASTE);
-    menus.edit.addCommand(CMD_NOARG(CMD_DUPLICATE), menuName("Duplicate", KC_DUPLICATE), ICON_DUPLICATE);
+    menus.edit.addCommand(this, GlobalCommandType::CMD_CUT);
+    menus.edit.addCommand(this, GlobalCommandType::CMD_COPY);
+    menus.edit.addCommand(this, GlobalCommandType::CMD_PASTE);
+    menus.edit.addCommand(this, GlobalCommandType::CMD_DUPLICATE);
     menus.edit.addSeperator();
-    menus.edit.addCommand(CMD_NOARG(CMD_DELETE), menuName("Delete", KC_DELETE));
-    menus.edit.addCommand(CMD_NOARG(CMD_SELECT_ALL), menuName("Select All", KC_SELECTALL));
+    menus.edit.addCommand(this, GlobalCommandType::CMD_DELETE);
+    menus.edit.addCommand(this, GlobalCommandType::CMD_SELECT_ALL);
     menus.edit.addSeperator();
-    menus.edit.addCommand(CMD_NOARG(CMD_REACTIVATE_AUTOMATION), "Reactivate automation");
+    menus.edit.addCommand(this, GlobalCommandType::CMD_REACTIVATE_AUTOMATION);
     menus.tools.type  = ngui::menu_type::submenu;
     menus.tools.title = "Tools";
-    menus.tools.addCommand(CMD_NOARG(CMD_PREFERENCES), "Preferences");
-    menus.tools.addCommand(CMD_NOARG(CMD_ABOUT), "About");
-    menus.views.addCommand(CMD_NOARG(CMD_OPEN_SECOND_WINDOW), "Show Second Window");
-    menus.views.addSeperator();
+    menus.tools.addCommand(this, GlobalCommandType::CMD_PREFERENCES);
+    menus.tools.addCommand(this, GlobalCommandType::CMD_ABOUT);
+    menus.views.type  = ngui::menu_type::submenu;
     menus.views.title = "View";
+    menus.views.addCommand(this, GlobalCommandType::CMD_OPEN_SECOND_WINDOW);
+    menus.views.addSeperator();
     for (int i = static_cast<int>(gui_type::CTR_TYPE_PROPERTIES); i < CTR_TYPE_COUNT; i++) {
         String name;
         getContainerLabel(static_cast<gui_type>(i), name);
         if (name.empty())
             continue;
-        menus.views.addCommand(menucmd_t{
-                                       CMD_OPEN_VIEW,
-                                       name,
-                                       static_cast<int>(i) },
-                               "Show " + name);
+        menus.views.addCommand(this, GlobalCommandType::CMD_OPEN_VIEW, static_cast<int>(i), "Show " + name);
     }
     menus.views.addSeperator();
-    menus.views.addCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0), "Show Waveform Cache");
-    menus.views.addCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1), "Show dbg window");
-    menus.views.addCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2), "Show profiling results");
-    menus.views.addCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 3), "Show test dialog");
+    menus.views.addCommand(this, GlobalCommandType::CMD_SHOW_DEBUG_WINDOW, 0, "Show Waveform Cache");
+    menus.views.addCommand(this, GlobalCommandType::CMD_SHOW_DEBUG_WINDOW, 1, "Show dbg window");
+    menus.views.addCommand(this, GlobalCommandType::CMD_SHOW_DEBUG_WINDOW, 2, "Show profiling results");
+    menus.views.addCommand(this, GlobalCommandType::CMD_SHOW_DEBUG_WINDOW, 3, "Show test dialog");
 
     menubar.add(&menus.file);
     menubar.add(&menus.edit);

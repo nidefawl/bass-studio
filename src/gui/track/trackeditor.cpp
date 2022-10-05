@@ -1,4 +1,7 @@
 #include "appconfig.h"
+#include "assert_dbg.h"
+#include "commands.h"
+#include "event.h"
 #include "tls.h"
 #include "trackctr.h"
 #include <utility>
@@ -121,6 +124,223 @@ void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip) {
         }
     }
 }
+namespace DAW {
+    bool HandleEditorCommand(DawInstance* daw, track_gui_manager_i& iGuiMgr, DAW::Cursor& cursor, scaled_grid& grid, project_t& project, std::shared_ptr<clip_clipboard>& m_clipboard, const GlobalCommandType command, const KeyEvent& kevt) {
+        if (kevt.type != K_RELEASE) {
+            trackstate_t preModifyState;
+            ThreadLock lock      = daw->lockPlayThread();
+            bool modified        = false;
+            bool handledKeyinput = false;
+            String desc          = "???";
+            bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
+            if (kevt.type == K_PRESS) {
+                if (command == CMD_SELECT_ALL) {
+                    tick_t evtMin            = INVALID_TICK;
+                    tick_t evtMax            = INVALID_TICK;
+                    track_gui_entry_t* trMin = nullptr;
+                    track_gui_entry_t* trMax = nullptr;
+                    for (track_gui_entry_t* t : iGuiMgr.getTracksVisibleFlat()) {
+                        auto minMax = t->track->getMinMaxEvents();
+                        if (minMax.min != INVALID_TICK) {
+                            evtMin = evtMin == INVALID_TICK ? minMax.min : math::min(evtMin, minMax.min);
+                            if (!trMin || trMin->idx > t->idx) {
+                                trMin = t;
+                            }
+                            evtMax = evtMax == INVALID_TICK ? minMax.max : math::max(evtMax, minMax.max);
+                            if (!trMax || trMax->idx < t->idx) {
+                                trMax = t;
+                            }
+                        }
+                    }
+                    if (evtMin != INVALID_TICK) {
+                        cursor.cursorPos = evtMin;
+                        cursor.selRange  = evtMax - evtMin;
+                        cursor.setTrack(trMin->idx);
+                        cursor.selTrackRange    = (trMax->idx - cursor.cursorTrack);
+                        cursor.cursorSubTrack   = -1;
+                        cursor.selSubTrackRange = 0;
+                    }
+                    handledKeyinput = true;
+                }
+                if (command == CMD_CREATE_EMPTY_CLIP && cursor.getRange()) {
+                    int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
+                    int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
+                    project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
+                    preModifyState.cursor = cursor;
+                    /* maybe do    this->clipboard = copy */
+                    std::shared_ptr<clip_clipboard> clipboardCopy         = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
+                    std::shared_ptr<clip_clipboard> clipboardConsolidated = DAW::consolidateClipboard(clipboardCopy, cursor);
+                    cursor.setLeftAligned();
+                    //cursor.cursorPos += cursor.getRange();
+                    DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
+                    DAW::pasteClipboard(iGuiMgr, clipboardConsolidated.get(), cursor, bCopyAutomation);
+                    grid.makeTickVisible(cursor.cursorPos + clipboardConsolidated->selRange);
+                    handledKeyinput = true;
+                    modified        = true;
+                    desc            = idxBegin == idxEnd ? "Create clip" : "Create clips";
+                }
+                if (command == CMD_DELETE && cursor.getRange()) {
+                    int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
+                    int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
+                    project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
+                    preModifyState.cursor = cursor;
+                    DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
+                    handledKeyinput = true;
+                    modified        = true;
+                    desc            = "Delete clips";
+                } else if (command == CMD_CUT && cursor.getRange()) {
+                    m_clipboard      = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
+                    int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
+                    int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
+                    project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
+                    preModifyState.cursor = cursor;
+                    DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
+                    handledKeyinput = true;
+                    modified        = true;
+                    desc            = "Cut clips";
+                } else if (command == CMD_MUTE && cursor.getRange()) {
+                    m_clipboard      = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
+                    int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
+                    int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
+                    project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
+                    preModifyState.cursor = cursor;
+                    DAW::muteIntersecting(iGuiMgr, cursor);
+                    grid.makeTickVisible(cursor.cursorPos + cursor.selRange / 2);
+                    handledKeyinput = true;
+                    modified        = true;
+                    desc            = "Mute clips";
+                } else if (command == CMD_COPY && cursor.getRange()) {
+                    m_clipboard     = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
+                    handledKeyinput = true;
+                } else if (command == CMD_CONSOLIDATE && cursor.getRange() && !cursor.isSubtrackSelection()) {
+                    int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
+                    int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
+                    project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
+                    preModifyState.cursor = cursor;
+                    /* maybe do    this->clipboard = copy */
+                    std::shared_ptr<clip_clipboard> clipboardCopy         = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
+                    std::shared_ptr<clip_clipboard> clipboardConsolidated = DAW::consolidateClipboard(clipboardCopy, cursor);
+                    cursor.setLeftAligned();
+                    //cursor.cursorPos += cursor.getRange();
+                    DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
+                    DAW::pasteClipboard(iGuiMgr, clipboardConsolidated.get(), cursor, bCopyAutomation);
+                    grid.makeTickVisible(cursor.cursorPos + clipboardConsolidated->selRange);
+                    handledKeyinput = true;
+                    modified        = true;
+                    desc            = "Consolidate selection";
+                } else if (command == CMD_DUPLICATE && cursor.getRange()) {
+                    int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
+                    int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
+                    project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
+                    preModifyState.cursor = cursor;
+                    /* maybe do    this->clipboard = copy */
+                    std::shared_ptr<clip_clipboard> newClipboard = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
+                    cursor.setLeftAligned();
+                    cursor.cursorPos += cursor.getRange();
+                    DAW::pasteClipboard(iGuiMgr, newClipboard.get(), cursor, bCopyAutomation);
+                    grid.makeTickVisible(cursor.cursorPos + newClipboard->selRange);
+                    handledKeyinput = true;
+                    modified        = true;
+                    desc            = "Duplicate clips";
+                } else if ((command == CMD_PASTE_NO_AUTOMATION || command == CMD_PASTE) && m_clipboard) {
+                    if (command == CMD_PASTE_NO_AUTOMATION) {
+                        bCopyAutomation = false;
+                    }
+                    DAW::Cursor pasteRange = cursor;
+                    track_selection_t pasteSelection;
+                    pasteRange.selTrackRange = m_clipboard->selTrackRange;
+                    iGuiMgr.getTrackSelection(pasteRange, pasteSelection);
+                    project.trackList.copyTracks(pasteSelection.trackIdxMin, pasteSelection.trackIdxMax, preModifyState);
+                    preModifyState.cursor = cursor;
+                    cursor.setLeftAligned();
+                    if (m_clipboard->type == clip_clipboard::ClipboardFull)
+                        DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
+                    DAW::pasteClipboard(iGuiMgr, m_clipboard.get(), cursor, bCopyAutomation);
+                    cursor.selTrackRange = m_clipboard->selTrackRange;
+                    cursor.selRange      = m_clipboard->selRange;
+                    grid.makeTickVisible(cursor.getTickEnd());
+                    handledKeyinput = true;
+                    modified        = true;
+                    desc            = "Paste clips";
+                }
+            } else {
+            }
+            if (isArrowKey(kevt.keyCode)) {
+                ivec2 dir;
+                arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
+                if (dir.y) {
+                    if (isShift(kevt.mods)) {
+                        if (cursor.isSubtrackSelection()) {
+                            if (iGuiMgr.validTrackIdx(cursor.cursorTrack)) {
+                                cursor.selSubTrackRange += -dir.y;
+                                const track_gui_entry_t* tr = iGuiMgr.at(cursor.cursorTrack);
+                                fixCursorSubRange(cursor, CtrSize(tr->subtracks));
+                            }
+                        } else {
+                            cursor.selTrackRange += -dir.y;
+                            fixCursorTrackRange(cursor, CtrSize(iGuiMgr.getTracksVisibleFlat()));
+                        }
+                    } else {
+
+                        cursor.setLeftAligned();
+                        auto moveMainCursor = [&]() {
+                            cursor.setTrack(project.trackList.clampTrackIdx(cursor.cursorTrack - dir.y));
+                        };
+                        auto moveCursor = [&]() {
+                            if (cursor.isSubtrackSelection()) {
+                                if (!iGuiMgr.validTrackIdx(cursor.cursorTrack)) {
+                                    cursor.setTrack(0);
+                                    cursor.cursorSubTrack   = -1;
+                                    cursor.selSubTrackRange = 0;
+                                    return;
+                                }
+                                const track_gui_entry_t* tr = iGuiMgr.at(cursor.cursorTrack);
+                                cursor.cursorSubTrack -= dir.y;
+                                fixCursorSubRange(cursor, CtrSize(tr->subtracks));
+                                return;
+                            }
+                            moveMainCursor();
+                        };
+                        moveCursor();
+                    }
+                } else if (dir.x) {
+                    tick_t tickStBfr  = cursor.getTickBegin();
+                    tick_t tickEndBfr = cursor.getTickEnd();
+                    tick_t timeOffset = dir.x * grid.getTickLength();
+                    if (isShift(kevt.mods)) {
+                        cursor.selRange += timeOffset;
+                    } else {
+                        cursor.selRange         = 0;
+                        cursor.selTrackRange    = 0;
+                        cursor.selSubTrackRange = 0;
+                        cursor.cursorPos        = math::max(0, cursor.cursorPos + timeOffset);
+                    }
+                    if (tickStBfr != cursor.getTickBegin())
+                        grid.makeTickVisible(cursor.getTickBegin() + timeOffset);
+                    if (tickEndBfr != cursor.getTickEnd())
+                        grid.makeTickVisible(cursor.getTickEnd() + timeOffset);
+                }
+                handledKeyinput = true;
+            }
+            if (modified) {
+                auto* track_action = new action_modify_track(desc, preModifyState.copy());// could be more efficient
+                daw->pushHist(track_action);
+            }
+            if (handledKeyinput) {
+                daw->updateVisibleTrackContents();
+            }
+            return handledKeyinput;
+        }
+        return false;
+    }
+} // namespace DAW
+
+bool guitrack_editor::handleEditorCommand(KeyEvent& kevt, GlobalCommandType type) {
+    if (DAW::HandleEditorCommand(dawCtrl->getDaw(), iGuiMgr, cursor, grid, project, m_clipboard, type, kevt)) {
+        return true;
+    }
+    return false;
+}
 bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
     if (kevt.type != STATE_REPEAT && isCtrlKey(kevt.keyCode)) {
         if ((action.dragtype == DRAG_CLIPS_MOVE || action.dragtype == DRAG_CLIPS_COPY)) {
@@ -137,212 +357,14 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
         }
     }
     if (kevt.type != STATE_REPEAT && isAltKey(kevt.keyCode)) {
-        /* if ((action.dragtype == DRAG_CLIPS_MOVE || action.dragtype == DRAG_CLIPS_COPY)) {
-            if ((action.dragtype == DRAG_CLIPS_COPY) != (kevt.type == STATE_PRESS)) {
-                if (action.dragtype == DRAG_CLIPS_MOVE) {
-                    action.dragtype     = DRAG_CLIPS_COPY;
-                    dawCtrl->cursorIcon = CURSOR_DUPLICATE;
-                } else {
-                    action.dragtype     = DRAG_CLIPS_MOVE;
-                    dawCtrl->cursorIcon = CURSOR_DEFAULT;
-                }
-            }
-            return false;
-        } */
         dawCtrl->window->fireMouseMoved();
         return false;
     }
     if (action.dragtype) {
         return false;
     }
-    if (kevt.type != K_RELEASE) {
-        auto daw = dawCtrl->getDaw();
-        trackstate_t preModifyState;
-        ThreadLock lock      = daw->lockPlayThread();
-        bool modified        = false;
-        bool handledKeyinput = false;
-        String desc          = "???";
-        bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
-        if (kevt.type == K_PRESS) {
-            if (isKC(KC_SELECTALL, kevt)) {
-                tick_t evtMin            = INVALID_TICK;
-                tick_t evtMax            = INVALID_TICK;
-                track_gui_entry_t* trMin = nullptr;
-                track_gui_entry_t* trMax = nullptr;
-                for (track_gui_entry_t* t : iGuiMgr.getTracksVisibleFlat()) {
-                    auto minMax = t->track->getMinMaxEvents();
-                    if (minMax.min != INVALID_TICK) {
-                        evtMin = evtMin == INVALID_TICK ? minMax.min : math::min(evtMin, minMax.min);
-                        if (!trMin || trMin->idx > t->idx) {
-                            trMin = t;
-                        }
-                        evtMax = evtMax == INVALID_TICK ? minMax.max : math::max(evtMax, minMax.max);
-                        if (!trMax || trMax->idx < t->idx) {
-                            trMax = t;
-                        }
-                    }
-                }
-                if (evtMin != INVALID_TICK) {
-                    cursor.cursorPos = evtMin;
-                    cursor.selRange  = evtMax - evtMin;
-                    cursor.setTrack(trMin->idx);
-                    cursor.selTrackRange    = (trMax->idx - cursor.cursorTrack);
-                    cursor.cursorSubTrack   = -1;
-                    cursor.selSubTrackRange = 0;
-                }
-                handledKeyinput = true;
-            }
-            if (isKC(KC_DELETE, kevt) && cursor.getRange()) {
-                int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
-                int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
-                project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
-                preModifyState.cursor = cursor;
-                DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
-                handledKeyinput = true;
-                modified        = true;
-                desc            = "Delete clips";
-            } else if (isKC(KC_CUT, kevt) && cursor.getRange()) {
-                m_clipboard      = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
-                int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
-                int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
-                project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
-                preModifyState.cursor = cursor;
-                DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
-                handledKeyinput = true;
-                modified        = true;
-                desc            = "Cut clips";
-            } else if (isKC(KC_MUTE, kevt) && cursor.getRange()) {
-                m_clipboard      = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
-                int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
-                int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
-                project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
-                preModifyState.cursor = cursor;
-                DAW::muteIntersecting(iGuiMgr, cursor);
-                grid.makeTickVisible(cursor.cursorPos + cursor.selRange / 2);
-                handledKeyinput = true;
-                modified        = true;
-                desc            = "Mute clips";
-            } else if (isKC(KC_COPY, kevt) && cursor.getRange()) {
-                m_clipboard     = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
-                handledKeyinput = true;
-            } else if (isKC(KC_CONSOLIDATE, kevt) && cursor.getRange() && !cursor.isSubtrackSelection()) {
-                int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
-                int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
-                project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
-                preModifyState.cursor = cursor;
-                /* maybe do    this->clipboard = copy */
-                std::shared_ptr<clip_clipboard> clipboardCopy         = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
-                std::shared_ptr<clip_clipboard> clipboardConsolidated = DAW::consolidateClipboard(clipboardCopy, cursor);
-                cursor.setLeftAligned();
-                //cursor.cursorPos += cursor.getRange();
-                DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
-                DAW::pasteClipboard(iGuiMgr, clipboardConsolidated.get(), cursor, bCopyAutomation);
-                grid.makeTickVisible(cursor.cursorPos + clipboardConsolidated->selRange);
-                handledKeyinput = true;
-                modified        = true;
-                desc            = "Consolidate selection";
-            } else if (isKC(KC_DUPLICATE, kevt) && cursor.getRange()) {
-                int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
-                int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
-                project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
-                preModifyState.cursor = cursor;
-                /* maybe do    this->clipboard = copy */
-                std::shared_ptr<clip_clipboard> newClipboard = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
-                cursor.setLeftAligned();
-                cursor.cursorPos += cursor.getRange();
-                DAW::pasteClipboard(iGuiMgr, newClipboard.get(), cursor, bCopyAutomation);
-                grid.makeTickVisible(cursor.cursorPos + newClipboard->selRange);
-                handledKeyinput = true;
-                modified        = true;
-                desc            = "Duplicate clips";
-            } else if ((isKC(KC_PASTE_NO_AUTOMATION, kevt) || isKC(KC_PASTE, kevt)) && m_clipboard) {
-                if (isKC(KC_PASTE_NO_AUTOMATION, kevt)) {
-                    bCopyAutomation = false;
-                }
-                DAW::Cursor pasteRange = cursor;
-                track_selection_t pasteSelection;
-                pasteRange.selTrackRange = m_clipboard->selTrackRange;
-                iGuiMgr.getTrackSelection(pasteRange, pasteSelection);
-                project.trackList.copyTracks(pasteSelection.trackIdxMin, pasteSelection.trackIdxMax, preModifyState);
-                preModifyState.cursor = cursor;
-                cursor.setLeftAligned();
-                if (m_clipboard->type == clip_clipboard::ClipboardFull)
-                    DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
-                DAW::pasteClipboard(iGuiMgr, m_clipboard.get(), cursor, bCopyAutomation);
-                cursor.selTrackRange = m_clipboard->selTrackRange;
-                cursor.selRange      = m_clipboard->selRange;
-                grid.makeTickVisible(cursor.getTickEnd());
-                handledKeyinput = true;
-                modified        = true;
-                desc            = "Paste clips";
-            }
-        } else {
-        }
-        if (isArrowKey(kevt.keyCode)) {
-            ivec2 dir;
-            arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
-            if (dir.y) {
-                if (isShift(kevt.mods)) {
-                    if (cursor.isSubtrackSelection()) {
-                        if (iGuiMgr.validTrackIdx(cursor.cursorTrack)) {
-                            cursor.selSubTrackRange += -dir.y;
-                            const track_gui_entry_t* tr = iGuiMgr.at(cursor.cursorTrack);
-                            fixCursorSubRange(cursor, tr->subtracks.size());
-                        }
-                    } else {
-                        cursor.selTrackRange += -dir.y;
-                        fixCursorTrackRange(cursor, iGuiMgr.getTracksVisibleFlat().size());
-                    }
-                } else {
-
-                    cursor.setLeftAligned();
-                    auto moveMainCursor = [this, &dir]() {
-                        cursor.setTrack(project.trackList.clampTrackIdx(cursor.cursorTrack - dir.y));
-                    };
-                    auto moveCursor = [this, &dir, &moveMainCursor]() {
-                        if (cursor.isSubtrackSelection()) {
-                            if (!iGuiMgr.validTrackIdx(cursor.cursorTrack)) {
-                                cursor.setTrack(0);
-                                cursor.cursorSubTrack   = -1;
-                                cursor.selSubTrackRange = 0;
-                                return;
-                            }
-                            const track_gui_entry_t* tr = iGuiMgr.at(cursor.cursorTrack);
-                            cursor.cursorSubTrack -= dir.y;
-                            fixCursorSubRange(cursor, tr->subtracks.size());
-                            return;
-                        }
-                        moveMainCursor();
-                    };
-                    moveCursor();
-                }
-            } else if (dir.x) {
-                tick_t tickStBfr  = cursor.getTickBegin();
-                tick_t tickEndBfr = cursor.getTickEnd();
-                tick_t timeOffset = dir.x * grid.getTickLength();
-                if (isShift(kevt.mods)) {
-                    cursor.selRange += timeOffset;
-                } else {
-                    cursor.selRange         = 0;
-                    cursor.selTrackRange    = 0;
-                    cursor.selSubTrackRange = 0;
-                    cursor.cursorPos        = math::max(0, cursor.cursorPos + timeOffset);
-                }
-                if (tickStBfr != cursor.getTickBegin())
-                    grid.makeTickVisible(cursor.getTickBegin() + timeOffset);
-                if (tickEndBfr != cursor.getTickEnd())
-                    grid.makeTickVisible(cursor.getTickEnd() + timeOffset);
-            }
-            handledKeyinput = true;
-        }
-        if (modified) {
-            auto* track_action = new action_modify_track(desc, preModifyState.copy());// could be more efficient
-            daw->pushHist(track_action);
-        }
-        if (handledKeyinput) {
-            daw->updateVisibleTrackContents();
-        }
-        return handledKeyinput;
+    if (kevt.cmd && this->handleEditorCommand(kevt, kevt.cmd->type)) {
+        return true;
     }
     return false;
 }

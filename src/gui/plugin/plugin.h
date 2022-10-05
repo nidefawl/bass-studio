@@ -94,7 +94,7 @@ class guidropdown_select_program : public guictxtmenu {
 
 public:
     guidropdown_select_program(effectbase* _plugin);
-    void clicked(int _id) override;
+    bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
 class guidropdownprogram : public guidropdownbase {
     effectbase* plugin = nullptr;

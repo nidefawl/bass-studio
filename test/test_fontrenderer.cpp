@@ -46,6 +46,8 @@ class MiniAppCtrl : public AppCtrl {
     float fTime = 0.0f;
     float fTimeStart = 0.0f;
 public:
+    MiniAppCtrl() : AppCtrl(nullptr) {
+    }
 
     void startApp() override {
     }

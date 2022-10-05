@@ -50,7 +50,7 @@ class guidropdown_setting_options_ctxt_t : public guictxtmenu {
 
 public:
     explicit guidropdown_setting_options_ctxt_t(guidropdown_setting_options_t* _parent);
-    void clicked(int _id) override;
+    bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
 class guidropdown_setting_options_t : public guidropdownbase {
 public:
@@ -95,9 +95,10 @@ guidropdown_setting_options_ctxt_t::guidropdown_setting_options_ctxt_t(guidropdo
     }
 }
 
-void guidropdown_setting_options_ctxt_t::clicked(int _id) {
+bool guidropdown_setting_options_ctxt_t::clickedElement(ctxtmenu_entry* e, int _id) {
     closeContextMenu();
     parent->clicked(_id);
+    return true;
 }
 
 class gui_listentry_audiodevice : public gui_list_entry {

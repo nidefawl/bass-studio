@@ -11,29 +11,21 @@
 #include "track_impl.h"
 #include "guicolors.h"
 
-
-
-class guictxtmenu_clip : public guictxtmenu {
+class guictxtmenu_track_editor : public guictxtmenu {
+protected:
+    track_gui_entry_t* const m_trackentry;
     ctxtmenu_color_select* sel;
-    clip_t* const m_clip;
+public:
+    guictxtmenu_track_editor(DawCtrl* const _dawCtrl, track_gui_entry_t* const _trackentry, gui_clip* optionalContextClip);
+
+    bool clickedElement(ctxtmenu_entry* e, int _id) override;
+};
+class guictxtmenu_clip : public guictxtmenu_track_editor {
+    gui_clip* const m_gclip;
 
 public:
-    explicit guictxtmenu_clip(clip_t* const _clip) : m_clip(_clip) {
-        this->size.x = 120;
-
-        sel  = new ctxtmenu_color_select("Pick Color", 100);
-        addEntry(sel);
-    }
-    void clicked(int _id) override {
-        if (_id >= sel->id) {
-            _id -= sel->id;
-            int32_t col = colorPalette[_id];
-            if (m_clip) {
-                m_clip->rgb = col;
-            }
-        }
-        closeContextMenu();
-    }
+    explicit guictxtmenu_clip(DawCtrl* const _dawCtrl, gui_clip* const _gclip);
+    bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
 class guictxtmenu_notrack : public guictxtmenu {
 private:
@@ -50,7 +42,7 @@ public:
         idxImport = i;
         addEntry(new ctxtmenu_entry("Import Track", i++));
     }
-    void clicked(int _id) override;
+    bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
 
 
@@ -60,7 +52,7 @@ class guictxtmenu_at_param : public guictxtmenu {
 
 public:
     guictxtmenu_at_param(DawCtrl* _dawCtrl, automatable_t* _atl, int32_t _paramIdx);
-    void clicked(int _id) override;
+    bool clickedElement(ctxtmenu_entry* e, int _id) override;
 
     guictxtmenu* createPopupForEntry(ctxtmenu_entry* e, int lvl) override;
 };

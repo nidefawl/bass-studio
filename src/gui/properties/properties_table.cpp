@@ -136,14 +136,16 @@ public:
             idx++;
         }
     }
-    void clicked(int _id) override {
-        closeContextMenu();
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         if (_id >= 0 && _id < CtrSize(strFontNames)) {
+            closeContextMenu();
             themeMgr->getRef().setFont(fonttype, strFontNames[_id]);
             //TODO: reload fonts (repopulate RenderResources::fontsLoaded
 
             themeMgr->getRef().bindFonts();
+            return true;
         }
+        return false;
     }
 };
 
@@ -983,11 +985,13 @@ public:
             idx++;
         }
     }
-    void clicked(int _id) override {
-        closeContextMenu();
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         if (_id >= 0 && _id < CtrSize(strThemeNames)) {
+            closeContextMenu();
             themeMgr->setThemeName(strThemeNames[_id]);
+            return true;
         }
+        return false;
     }
 };
 

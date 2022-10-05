@@ -1,9 +1,11 @@
 #pragma once
 #include <utility>
 #include <vector>
+#include "event.h"
 #include "str_util.h"
 #include "exceptions.h"
 
+class AppCtrl;
 struct menucmd_t {
     int command = 0;
     String arg1;
@@ -59,6 +61,7 @@ namespace ngui {
             m.icon    = cmdIcon;
             add(&m);
         }
+        void addCommand(AppCtrl* ctrl, GlobalCommandType type, int arg1 = 0, String customText = "");
         void remove(Menu* m) {
             auto it = std::find(children.begin(), children.end(), m);
             if (it != children.end()) {

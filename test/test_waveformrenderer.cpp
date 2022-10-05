@@ -163,7 +163,7 @@ namespace MiniApp {
 
     public:
         explicit MiniAppCtrl(waveform_test& _waveformTest)
-            : waveformTest(_waveformTest) {
+            : AppCtrl(nullptr), waveformTest(_waveformTest) {
         }
 
         void destroy() override {

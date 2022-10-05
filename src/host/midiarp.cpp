@@ -535,8 +535,6 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
 #ifdef PLACE_MARKERS
     markers.push_back(marker_t{ end, col(7), "block end", (float) (tickMarkers++) });
 #endif
-    std::vector<automation_lane_t> arpAutomatedParams;
-    getAllAutomatedParams(arpAutomatedParams);
 
     std::vector<noteevent_t> noteEvents = noteEventsIn;
     sortNoteEvents(noteEvents);

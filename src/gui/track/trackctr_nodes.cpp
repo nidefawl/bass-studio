@@ -1652,7 +1652,7 @@ public:
         addEntry(cmdResetRouting = new ctxtmenu_entry("Reset Routing", 3));
     }
     ~guictxtmenu_nodes() override = default;
-    void clicked(int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         auto const daw = dawCtrl->getDaw();
         ThreadLock lock = daw->lockPlayThread();
         if (_id == cmdRefresh->id) {
@@ -1666,6 +1666,7 @@ public:
             m_nodesEditor->refresh();
         }
         closeContextMenu();
+        return true;
     }
 };
 

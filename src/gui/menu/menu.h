@@ -32,9 +32,7 @@ public:
     explicit guimenu(ngui::Menu* _menu, int _lvl = 0, guimenu_ctxtentry* parent = nullptr);
     ~guimenu() override = default;
 
-    void clicked(int _id) override;
-
-    void clickedElement(ctxtmenu_entry* e, int _id) override;
+    bool clickedElement(ctxtmenu_entry* e, int _id) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void onRemove() override;
     void onParentWindowClose() override;

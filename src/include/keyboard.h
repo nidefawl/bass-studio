@@ -269,6 +269,17 @@ struct KeyCombo {
     int keyMod          = 0;
     int keyCode         = 0;
     const char* keyChar = nullptr;
+    bool match(const KeyEvent& kevt) const {
+        if (kevt.mods != keyMod) {
+            return false;
+        }
+        if (keyChar != nullptr) {
+            return kevt.keyname && !std::strcmp(kevt.keyname, keyChar);
+        } else {
+            return kevt.keyCode == keyCode;
+        }
+    }
+    String toString() const;
 };
 extern KeyCombo KC_SAVE;
 extern KeyCombo KC_SAVEAS;
@@ -291,14 +302,7 @@ extern KeyCombo KC_CONSOLIDATE;
 extern KeyCombo KC_QUANTIZE;
 
 inline bool isKC(KeyCombo c, KeyEvent& kevt) {
-    if (kevt.mods != c.keyMod) {
-        return false;
-    }
-    if (c.keyChar != nullptr) {
-        return kevt.keyname && !std::strcmp(kevt.keyname, c.keyChar);
-    } else {
-        return kevt.keyCode == c.keyCode;
-    }
+    return c.match(kevt);
 }
 inline bool isArrowKey(int key) {
     return key == KEY_UP || key == KEY_DOWN || key == KEY_LEFT || key == KEY_RIGHT;

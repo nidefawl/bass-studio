@@ -331,7 +331,7 @@ public:
         addEntry(new ctxtmenu_entry("Duplicate", CMD_DUPLICATE));
         addEntry(new ctxtmenu_entry("Delete", CMD_DELETE));
     }
-    void clicked(int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         ThreadLock lock = dawCtrl->lockPlayThread();
         if (_id == CMD_SHOW_PARAM_LIST) {
             auto* gui = effect->getGui();
@@ -344,7 +344,7 @@ public:
                 ivec2 wndPos{ 0 };
                 dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
                 dawCtrl->openContextMenu(ctxtMenu, gui->toScreenSpace({gui->size.x, 0}));
-                return;
+                return true;
             }
         }
         if (_id == CMD_DELETE) {
@@ -394,6 +394,7 @@ public:
             }
         }
         closeContextMenu();
+        return true;
     }
 };
 void guiplugin::handleRightClick(MouseEvent& evt) {
@@ -935,11 +936,12 @@ guidropdown_select_program::guidropdown_select_program(effectbase* _plugin) : pl
     }
 }
 
-void guidropdown_select_program::clicked(int _id) {
+bool guidropdown_select_program::clickedElement(ctxtmenu_entry* e, int _id) {
     closeContextMenu();
     if (_id >= 0 && _id < CtrSize(plugin->programNames)) {
         plugin->setCurrentProgram(_id);
     }
+    return true;
 }
 
 String guidropdownprogram::getString() {

@@ -46,8 +46,9 @@ public:
     bool isTransient() const override {
         return !hadMouseFocus;
     }
-    void clicked(int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         closeContextMenu();
+        return true;
     }
     void onTick(AppCtrl* appctrl) override {
         layout();

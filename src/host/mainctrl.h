@@ -111,6 +111,7 @@ namespace DAW {
     void pasteFullClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick, bool pasteAutomation);
     void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, Cursor& cursor, bool pasteAutomation);
     void cutSelection(track_gui_manager_i& trackList, const Cursor& cursor, bool cutAutomation);
+    bool isSelectionEmpty(const track_gui_manager_i& trackList, const DAW::Cursor& _cursor, bool bIgnoreAutomation);
     void muteIntersecting(track_gui_manager_i& trackList, const Cursor& _cursor);
     void GetProjectReferencedSampleIds(const project_t& project, std::vector<int32_t>& uniqueSampleIds);
     String MakeUniqueTrackName(project_t* project, const String& strNewName);
@@ -404,9 +405,6 @@ public:
     track_t* createNewTrack(int trackType);
     track_t* insertNewTrack(int trackInsertPos, int trackType, int flags = FLG_TRK_CHANGE_USER);
 
-    //    void muteIntersecting(const DAW::Cursor& _cursor);
-    //    void copyClipsInRange(trackcontents_t* in, trackcontents_t* out, int32_t srcPos, int32_t dstPos, int32_t len);
-
     track_t* getSelectedTrack();
     void menuCommand(const menucmd_t& command);
     void destroy();
@@ -449,8 +447,8 @@ public:
     clip_view clipView;
     view_mode_t viewMode = view_mode_t::TRACK_TIMELINE;
 
-    explicit DawCtrl(DawInstance& _daw)
-    : daw(_daw)
+    explicit DawCtrl(AppCtrl* parent, DawInstance& _daw)
+    : AppCtrl(parent), daw(_daw)
     {
 #if BUILD_DAW_HOST
         this->parentDawCtrl = this;
@@ -663,7 +661,7 @@ class CompanionCtrl : public DawCtrl {
 
 public:
     DawViewContainersCompanion* view = nullptr;
-    explicit CompanionCtrl(DawInstance& _daw): DawCtrl(_daw) {
+    explicit CompanionCtrl(AppCtrl* parent, DawInstance& _daw): DawCtrl(parent, _daw) {
     }
 
     ~CompanionCtrl() override = default;

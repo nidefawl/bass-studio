@@ -17,6 +17,7 @@
 #include "logging.h"
 #include "plugin.h"
 #include "gui/plugin/pluginviewcontainers.h"
+#include "commands.h"
 
 struct NVGcontext;
 class guibase;
@@ -26,9 +27,9 @@ class guictxtmenu_base;
 class PluginControl : public AppCtrl {
     std::shared_ptr<PluginViewContainers> view;
     bool firstInit = true;
-
+    DAW::UI::CommandManager commandMgr;
 public:
-    explicit PluginControl(std::shared_ptr<PluginViewContainers> view);
+    explicit PluginControl(AppCtrl* parent, std::shared_ptr<PluginViewContainers> view);
     ~PluginControl() override;
     static PluginControl* get();
 

@@ -26,6 +26,7 @@
 #include "project.h"
 #include "str_util.h"
 #include "theme.h"
+#include "tls.h"
 #include "types.h"
 #include "window.h"
 
@@ -109,6 +110,19 @@ void processScrollEvt(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffs
     }
 }
 }
+
+BaseCtrl::BaseCtrl(AppCtrl* parent)
+    : parentCtrl(parent) {
+    if (parent) {
+        this->commands = parent->commands;
+    } else if (daw_tls::isTlsInitialized()) {
+        this->commands = daw_tls::getTls().commandManager;
+    }
+    themes.parent = this;
+    ctrDragHandler.setControl(this);
+    ctrDragHandler.setFlag(FLG_RENDER_LABEL, true);
+}
+
 
 BaseCtrl::~BaseCtrl() {
 }
@@ -276,6 +290,12 @@ bool BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
         return false;
     }
     KeyEvent event = keyEvent(key, scancode, keyState, mods, key_name);
+    event.cmd = commands->matchKeyCombo(event);
+    if (!event.cmd) {
+        log_lf(Log::L_TRACE, "No command for key combo %s\n", event.toString().c_str());
+    } else {
+        log_lf(Log::L_TRACE, "Matched command: %s\n", event.cmd->toString().c_str());
+    }
     if (guiDragged && guiDragged->handleKeyInput(event)) {
         return true;
     }
@@ -428,6 +448,10 @@ void BaseCtrl::setClipboardText(String s) {
     this->window->setClipboardText(s);
 }
 
+AppCtrl::AppCtrl(AppCtrl* parent)
+    : BaseCtrl(parent) {
+}
+
 void AppCtrl::onAppTick() {
     getTheme()->updateAnimation();
     onTick();
@@ -517,10 +541,9 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos, 
     determineWindowPos(guicontextmenu, mainWindow, m_scale, createflags, pos, wndPos);
 
     if (!menuWindows[lvl].wnd) {
-        auto popupCtrl        = std::make_shared<PopupCtrl>();
-        popupCtrl->parentCtrl = this;
+        auto popupCtrl        = std::make_shared<PopupCtrl>(this);
 #if BUILD_DAW_HOST
-        popupCtrl->parentDawCtrl = this->parentDawCtrl;
+        popupCtrl->setDawCtrl(this->parentDawCtrl);
 #endif
         *popupCtrl->getTheme() = *getTheme();
         popupCtrl->m_scale     = m_scale;
@@ -570,8 +593,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int cr
         if (ctxtWindow) {
             this->mainWindow->closeOverlay(ctxtWindow);
         }
-        auto popupCtrl = std::make_shared<PopupCtrl>();
-        popupCtrl->parentCtrl = this;
+        auto popupCtrl = std::make_shared<PopupCtrl>(this);
 #if BUILD_DAW_HOST
         popupCtrl->parentDawCtrl = this->parentDawCtrl;
 #endif
@@ -616,8 +638,7 @@ void AppCtrl::openDialog(guidialog_base* _guidialog) {
     ivec2 wndPos(0);
     determineWindowPos(_guidialog, mainWindow, m_scale, 0, ivec2(0), wndPos);
 
-    auto popupCtrl = std::make_shared<PopupCtrl>();
-    popupCtrl->parentCtrl = this;
+    auto popupCtrl = std::make_shared<PopupCtrl>(this);
 #if BUILD_DAW_HOST
     popupCtrl->parentDawCtrl = this->parentDawCtrl;
 #endif

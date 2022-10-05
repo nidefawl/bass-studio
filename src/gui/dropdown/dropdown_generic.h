@@ -89,10 +89,11 @@ public:
             idx++;
         }
     }
-    void clicked(int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         closeContextMenu();
         if (_id >= 0 && _id < CtrSize(options)) {
             parent->onOptionSelected(_id);
         }
+        return true;
     }
 };

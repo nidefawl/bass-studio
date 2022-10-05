@@ -24,7 +24,6 @@
 
 
 void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len) {
-    auto it = in.clips.cbegin();
     for (const auto* const c : in.clips) {
         if (c->end() > srcPos && c->time < srcPos + len) {
             clip_t clone(*c);
@@ -36,11 +35,19 @@ void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_
             }
             out.clips.push_back(std::make_shared<clip_t>(std::move(clone)));
         }
-        it++;
     }
     stable_sort(out.clips.begin(), out.clips.end(), [](auto const& a, auto const& b) {
         return a->time < b->time;
     });
+}
+
+bool hasClipsInRange(const trackdata_midi_t& in, int32_t srcPos, int32_t len) {
+    for (const auto* const c : in.getConstClips()) {
+        if (c->end() > srcPos && c->time < srcPos + len) {
+            return true;
+        }
+    }
+    return false;
 }
 
 namespace DAW {
@@ -289,6 +296,79 @@ namespace DAW {
                 }
             }
         }
+    }
+    bool isSelectionEmpty(const track_gui_manager_i& trackList, const DAW::Cursor& _cursor, bool bIgnoreAutomation) {
+        auto isEmpty = true;
+        int32_t tickBegin     = _cursor.getTickBegin();
+        int32_t tickEnd       = _cursor.getTickEnd();
+        int32_t trackBegin    = _cursor.getTrackBegin();
+        int32_t trackEnd      = _cursor.getTrackEnd();
+        int32_t trackSubBegin = _cursor.getSubTrackBegin();
+        int32_t trackSubEnd   = _cursor.getSubTrackEnd();
+        if (_cursor.isSubtrackSelection() && !bIgnoreAutomation) {
+            if (trackList.validTrackIdx(trackBegin)) {
+                const track_gui_entry_t* const tr = trackList.at(trackBegin);
+                for (int i = trackSubBegin; i <= trackSubEnd; i++) {
+                    if (tr->validSubtrack(i)) {
+                        const gui_track_subtrack* subtrack = tr->subtracks[i];
+                        const automatable_t* automatable   = subtrack->at;
+                        const automated_param_t* automation     = nullptr;
+                        if (automatable) {
+                            automation = automatable->getRegisteredConstAutomation(subtrack->param);
+                        }
+
+                        if (automation) {
+                            auto optionalMinMax = automation->getBeginEnd();
+                            if (optionalMinMax) {
+                                auto minMax = optionalMinMax.value();
+                                if (minMax.first <= tickBegin && minMax.second >= tickEnd) {
+                                    isEmpty = false;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (!_cursor.isSubtrackSelection()) {
+            auto selTrackRange = trackEnd - trackBegin;
+            auto selRange      = tickEnd - tickBegin;
+            for (int i = 0; i <= selTrackRange; i++) {
+                std::vector<automation_clipboard_t> automationLanes;
+                if (trackList.validTrackIdx(trackBegin + i)) {
+                    const track_gui_entry_t* tr = trackList.at(trackBegin + i);
+                    if (hasClipsInRange(tr->track->getConstMidi(), tickBegin, selRange)) {
+                        isEmpty = false;
+                        break;
+                    }
+                    if (bIgnoreAutomation)
+                        continue;
+                    auto trackImpl = tr->track->getStage();
+                    std::vector<automatable_t*> targets;
+                    trackImpl->getAutomatableTrackTargets(targets);
+                    std::vector<automation_lane_t*> allParams;
+                    for (auto& automatable : targets) {
+                        allParams.clear();
+                        automatable->getAllAutomatedParamRef(allParams);
+                        for (const auto& automation : allParams) {
+                            auto optionalMinMax = automation->getBeginEnd();
+                            if (optionalMinMax) {
+                                auto minMax = optionalMinMax.value();
+                                if (minMax.first <= tickBegin && minMax.second >= tickEnd) {
+                                    isEmpty = false;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!isEmpty) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        return isEmpty;
     }
 
 }// namespace DAW

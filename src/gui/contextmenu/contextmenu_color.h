@@ -100,7 +100,7 @@ public:
         auto* colorSelect = new ctxtmenu_color_select("Pick Color", 100);
         addEntry(colorSelect);
     }
-    void clicked(int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         if (_id >= 100) {
             _id -= 100;
             uint32_t col = colorPalette[_id];
@@ -108,6 +108,6 @@ public:
                 callback(col);
             }
         }
-        closeContextMenu();
+        return guictxtmenu::clickedElement(e, _id);
     }
 };

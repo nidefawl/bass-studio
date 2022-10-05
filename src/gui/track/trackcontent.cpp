@@ -3,6 +3,7 @@
 #include <numeric>
 #include <vector>
 
+#include "assert_dbg.h"
 #include "event.h"
 #include "gui/controls/button.h"
 #include "gui/dropdown/dropdown.h"
@@ -142,11 +143,11 @@ void gui_audio_clip::render(NVGcontext* vg) {
 }
 
 void gui_midi_clip::handleRightClick(MouseEvent& evt) {
-    parentCtrl->openContextMenu(new guictxtmenu_clip(this->m_clip), evt.mousepos);
+    parentCtrl->openContextMenu(new guictxtmenu_clip(dawCtrl, this), evt.mousepos);
 }
 
 void gui_audio_clip::handleRightClick(MouseEvent& evt) {
-    parentCtrl->openContextMenu(new guictxtmenu_clip(this->m_clip), evt.mousepos);
+    parentCtrl->openContextMenu(new guictxtmenu_clip(dawCtrl, this), evt.mousepos);
 }
 
 void gui_audio_clip::updateClipRenderCache(NVGcontext* vg) {
@@ -424,12 +425,12 @@ bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             }
         }
         if (evt.type == MouseHitType::MOUSE_RIGHT) {// righclick in selection (create clip etc.)
-            scaled_grid& grid = m_trackentry->parentCtrl->getGrid();
-            tick_t tick       = grid.screenToTickSnap(mpos.x, SNAP_OFF);
-            if (m_trackentry->parentCtrl->getCursor().contains(this->m_trackentry->idx, tick)) {
+            // scaled_grid& grid = m_trackentry->parentCtrl->getGrid();
+            // tick_t tick       = grid.screenToTickSnap(mpos.x, SNAP_OFF);
+            // if (m_trackentry->parentCtrl->getCursor().contains(this->m_trackentry->idx, tick)) {
                 evt.requestFocus(this);
                 return true;
-            }
+            // }
         }
         // tracks need to always cancel further mouse tests for z-order to work in parent container
         return true;
@@ -456,58 +457,19 @@ gui_track_subtrack::gui_track_subtrack(track_gui_entry_t* _entry, scaled_grid& _
     padding = 0;
 }
 
-class guictxtmenu_trackcontent : public guictxtmenu {
-    track_gui_entry_t* const m_trackentry;
+class guictxtmenu_trackcontent : public guictxtmenu_track_editor {
 
 public:
     //TODO make this take a safe reference to a track
     guictxtmenu_trackcontent(DawCtrl* const _dawCtrl, track_gui_entry_t* const _trackentry)
-        : m_trackentry(_trackentry) {
-        this->dawCtrl = _dawCtrl;
-        this->size.x = 320;
-        if (_trackentry) {
-
-            auto entryNewClip = new ctxtmenu_entry("Create empty clip", 20);
-            addEntry(entryNewClip);
-            auto entryConsolidate = new ctxtmenu_entry("Consolidate selection", 21);
-            addEntry(entryConsolidate);
-            addEntry(new ctxtmenu_splitter());
-        }
-        scaled_grid& grid = _dawCtrl->getGrid();
-        auto adaptive     = new ctxtmenu_time_select(grid, "Adaptive Grid", 0);
-        adaptive->initAdaptive();
-        addEntry(adaptive);
-        auto fixed = new ctxtmenu_time_select(grid, "Fixed Grid", 0);
-        fixed->initFixed();
-        addEntry(fixed);
+        : guictxtmenu_track_editor(_dawCtrl, _trackentry, nullptr) {
     }
-    void clicked(int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
+        if (guictxtmenu_track_editor::clickedElement(e, _id)) {
+            return true;
+        }
         scaled_grid& grid = dawCtrl->getGrid();
-        if (_id == 20) {
-            dbgassert(m_trackentry);
-            DAW::Cursor cursor = dawCtrl->getCursor().getLeftAligned();
-            if (cursor.selRange) {
-                track_t* tr = m_trackentry->track;
-                clip_t* cl  = nullptr;
-                if (tr) {
-                    cl           = new clip_t();
-                    cl->clipType = CLIP_MIDI;
-                }
-                if (cl) {
-                    cl->rgb = tr->rgb;
-                    cl->name = StringFormat("%s Clip", StringAsCStr(tr->name));
-                    cl->time = cursor.cursorPos;
-                    cl->setLen(cursor.selRange);
-                    cl->loopStart = 0;
-                    cl->loopLen   = cl->getLen();
-                    tr->getMidi().addClipSort(cl);
-                }
-            }
-        } else if (_id == 21) {
-            KeyCombo kc = KC_CONSOLIDATE;
-            KeyEvent evt{KeyEventType::K_PRESS, kc.keyCode, 0, kc.keyMod, kc.keyChar};
-            dawCtrl->getTrackContainer()->trackView.handleKeyInput(evt);
-        } else if (_id == 110 + 9) {// OFF
+        if (_id == 110 + 9) {// OFF
             grid.grid_dens.enabled = false;
         } else if (_id >= 110) {
             grid.grid_dens.enabled   = true;
@@ -520,6 +482,7 @@ public:
         }
         dawCtrl->getDaw()->updateVisibleTrackContents();
         closeContextMenu();
+        return true;
     }
 };
 

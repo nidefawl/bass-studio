@@ -117,7 +117,7 @@ public:
         }
     }
 
-    void clickedElement(ctxtmenu_entry* e, int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         auto appCtrlParent = parentCtrl->getParentCtrl();
         if (appCtrlParent) appCtrlParent->closeAllContextMenus();
         if ((_id & 1) == 0) {
@@ -127,6 +127,7 @@ public:
                     cb->loadPreset(ctxtEndpointEntry->getPath());
             }
         }
+        return true;
     }
 
     guictxtmenu* createPopupForEntry(ctxtmenu_entry* entry, int lvl) override {

@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <set>
+#include "commands.h"
 #include "tls.h"
 #include "types.h"
 #include <vector>
@@ -152,7 +153,8 @@ public:
     };
 protected:
     guitheme_mgr themes;
-    AppCtrl* parentCtrl = nullptr;
+    DAW::UI::CommandManager* commands = nullptr;
+    AppCtrl* const parentCtrl = nullptr;
 #if BUILD_DAW_HOST
     DawCtrl* parentDawCtrl = nullptr;
 #endif
@@ -181,7 +183,7 @@ public:
     guibase* guiCaptured   = nullptr; // updates when cursor is hidden, set from guiDragged
     guibase* guiFocused    = nullptr; // updates on mouse click, set from guiOver
     guibase* guiCtrFocused = nullptr; // updates on mouse click, handles keyboard input
-    MouseEvent lastMouseEvent;
+    MouseEvent lastMouseEvent{};
 
     bool bShowDebugFrames      = false;
     bool canTakeInputFocus = true; // TODO: use flags
@@ -191,11 +193,7 @@ public:
     bool isOK        = false;
 public:
     static MouseHitEvt mouseHitEvt(MouseHitType _type, int kbmods);
-    BaseCtrl() {
-        themes.parent = this;
-        ctrDragHandler.setControl(this);
-        ctrDragHandler.setFlag(FLG_RENDER_LABEL, true);
-    }
+    explicit BaseCtrl(AppCtrl* parent);
     virtual ~BaseCtrl();
     i_ctr_drop_area* determineDropCtrArea(MouseEvent& mevt) {
         MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, mevt.kbmods);
@@ -301,9 +299,7 @@ public:
     virtual AppCtrl* getParentCtrl() {
         return parentCtrl;
     }
-    virtual void setParentCtrl(AppCtrl* ctrl) {
-        parentCtrl = ctrl;
-    }
+    DAW::UI::CommandManager* getCommandManager() { return commands; }
 #if BUILD_DAW_HOST
     virtual DawCtrl* getDawCtrl() {
         return parentDawCtrl;
@@ -353,7 +349,7 @@ public:
 #if WINDOW_HAS_MENUBAR
     ngui::MenuBar menubar;
 #endif
-    AppCtrl() = default;
+    explicit AppCtrl(AppCtrl* parent);
     ~AppCtrl() override = default;
     void relayout(int32_t w, int32_t h) override = 0;
     virtual void onChildOverlayWindowDestroy(window_main*);
@@ -432,7 +428,7 @@ class PopupCtrl : public AppCtrl {
     bool bResizeable            = false;
 
 public:
-    PopupCtrl() = default;
+    explicit PopupCtrl(AppCtrl* parent) : AppCtrl(parent) {};
     ~PopupCtrl() override = default;
 
     void destroy() override;

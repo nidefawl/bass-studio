@@ -119,13 +119,12 @@ bool internalplugin::showWindow(bool bResetPosition) {
     if (!newView) {
         return false;
     }
-    auto ctrl = std::make_shared<PluginControl>(newView);
-    ctrl->setWindowName(getName());
-    ctrl->initApp(std::vector<String>());
     auto tls = daw_tls::getTls();
     auto mainCtrl = tls.mainCtrl;
+    auto ctrl = std::make_shared<PluginControl>(mainCtrl, newView);
+    ctrl->setWindowName(getName());
+    ctrl->initApp(std::vector<String>());
     if(mainCtrl) {
-        ctrl->setParentCtrl(mainCtrl);
         ctrl->setDawCtrl(mainCtrl);
         ctrl->m_scale     = mainCtrl->m_scale;
         *ctrl->getTheme() = *mainCtrl->getTheme();

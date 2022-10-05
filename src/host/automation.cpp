@@ -233,6 +233,14 @@ std::pair<float, float> automation_t::getMinMax() {
     return res;
 }
 
+std::optional<std::pair<tick_t, tick_t>> automation_t::getBeginEnd() const {
+    auto nPoints = CtrSize(points);
+    if (nPoints > 0) {
+        return std::make_pair(points.front().time, points.back().time);
+    }
+    return std::nullopt;
+}
+
 void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) {
     std::vector<automation_point_t> pointsTmp;
     pointsTmp.reserve(data.size() + points.size());

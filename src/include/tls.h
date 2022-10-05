@@ -4,6 +4,9 @@ namespace DAW::Host {
     class Host;
     class PluginManager;
 }
+namespace DAW::UI {
+    class CommandManager;
+}
 class audiohost;
 class midihost;
 class waveformrender;
@@ -16,18 +19,19 @@ struct appruntime;
 struct appsettings;
 namespace daw_tls {
     struct tlsinstance {
-        appruntime* runtime               = nullptr;
-        appsettings* settings             = nullptr;
-        DawInstance* dawInstance          = nullptr;
-        DAW::Host::Host* host       = nullptr;
+        appruntime* runtime                     = nullptr;
+        appsettings* settings                   = nullptr;
+        DawInstance* dawInstance                = nullptr;
+        DAW::Host::Host* host                   = nullptr;
         DAW::Host::PluginManager* pluginManager = nullptr;
-        audiohost* audioHost              = nullptr;
-        midihost* midiHost                = nullptr;
-        MainCtrl* mainCtrl                = nullptr;
-        audiocache* audioCache            = nullptr;
-        plugindatabase_t* pluginDatabase  = nullptr;
-        project_controller_t* project     = nullptr;
-        bool tlsInitialized               = false;
+        audiohost* audioHost                    = nullptr;
+        midihost* midiHost                      = nullptr;
+        MainCtrl* mainCtrl                      = nullptr;
+        audiocache* audioCache                  = nullptr;
+        plugindatabase_t* pluginDatabase        = nullptr;
+        project_controller_t* project           = nullptr;
+        DAW::UI::CommandManager* commandManager = nullptr;
+        bool tlsInitialized                     = false;
     };
     bool isTlsInitialized();
     tlsinstance& initNewTls();

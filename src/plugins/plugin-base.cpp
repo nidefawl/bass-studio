@@ -78,12 +78,11 @@ pluginwindow* createPluginClientVst2Window(AudioEffectX* _effect, std::shared_pt
 
 void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> view) {
     try {
-        std::shared_ptr<PluginControl> ctrl = std::make_shared<PluginControl>(view);
-        ctrl->initApp(std::vector<String>());
         auto tls = daw_tls::getTls();
         auto mainCtrl = tls.mainCtrl;
+        std::shared_ptr<PluginControl> ctrl = std::make_shared<PluginControl>(mainCtrl, view);
+        ctrl->initApp(std::vector<String>());
         if(mainCtrl) {
-            ctrl->setParentCtrl(mainCtrl);
             ctrl->setDawCtrl(mainCtrl);
             ctrl->m_scale     = mainCtrl->m_scale;
             *ctrl->getTheme() = *mainCtrl->getTheme();

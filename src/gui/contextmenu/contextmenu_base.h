@@ -1,6 +1,7 @@
 #pragma once
 #include <utility>
 #include <vector>
+#include "assert_dbg.h"
 #include "math/vec.h"
 #include "event.h"
 #include "gui/gui.h"
@@ -23,6 +24,7 @@ public:
     float fixedLeftOffset = -1;
     guitheme_t* theme     = nullptr;
     bool bIsMenuOpen = false;
+    GlobalCommandType commandtype = GlobalCommandType::CMD_NONE;
 
     RenderResources::NvgImageTexture* icon = nullptr;
     GuiColor::constant_t iconColor;
@@ -31,6 +33,8 @@ public:
         : id(_id), title(std::move(_title))
     {
     }
+
+    ctxtmenu_entry(AppCtrl* ctrl, GlobalCommandType _type);
 
     virtual ~ctxtmenu_entry() = default;
 

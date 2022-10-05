@@ -123,7 +123,7 @@ public:
         this->size.x = 260;
         addEntry(new ctxtmenu_entry("Load plugin", CMD_LOAD_PLUGIN));
     }
-    void clicked(int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         auto window = parentCtrl->window;
         // promptUserFilePath initiates a native dialog that would close this context menu
         // so we close it before this happens
@@ -146,7 +146,7 @@ public:
                         if (!pluginMgr->addDeferredEffect(effect)) {
                             log_printf("Failed loading effect\n");
                             delete effect;
-                            return;
+                            return true;
                         }
                         effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
                         effect->load(pluginMgr);
@@ -156,6 +156,7 @@ public:
                 }
             }
         }
+        return true;
     }
 };
 void guictr_plugins::handleRightClick(MouseEvent& evt) {

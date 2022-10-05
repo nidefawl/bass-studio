@@ -125,15 +125,16 @@ namespace DAW::UI::Modulation {
             guictxtmenu::addEntry(entry);
         }
 
-        void clickedElement(ctxtmenu_entry* e, int _id) override {
+        bool clickedElement(ctxtmenu_entry* e, int _id) override {
             auto const ctxtEndpointEntry = static_cast<ctxtmenu_entry_track_io*>(e);
             if (ctxtEndpointEntry->isBus()) {
-                return;
+                return false;
             }
             dbgassert(dynamic_cast<ctxt_endpoint*>(e));
             auto const entry = static_cast<ctxt_endpoint*>(e);
             if (fnCallback)
                 fnCallback(entry->getEndpoint());
+            return true;
         }
 
 

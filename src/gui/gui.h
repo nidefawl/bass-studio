@@ -36,6 +36,9 @@ namespace RenderResources {
 namespace DAW::UI::Modulation {
     class gui_dragged_modulation;
 }
+namespace DAW::UI {
+    struct Command;
+}
 
 extern NVGcolor dbgcolorsArray[8];
 static constexpr int32_t dbgcolorsArraySize = 8;
@@ -531,3 +534,4 @@ protected:
     void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment);
     void setTheme(guitheme_t* theme);
 };
+

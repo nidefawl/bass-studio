@@ -50,6 +50,7 @@ class trackdata_midi_t {
 public:
     friend void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip);
     friend void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len);
+    friend bool hasClipsInRange(const trackdata_midi_t& in, int32_t srcPos, int32_t len);
     friend void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickEnd, delete_cb* cb);
     friend void muteIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickEnd);
 
@@ -268,12 +269,10 @@ public:
     tick_minmax_t getMinMaxEvents() {
         tick_t evtMin = INVALID_TICK;
         tick_t evtMax = INVALID_TICK;
-        if (type == TRACK_TYPE_MIDI) {
-            auto minMax = midi.getMinMax();
-            if (minMax.first) {
-                evtMin = minMax.first->start();
-                evtMax = minMax.second->end();
-            }
+        auto minMax = midi.getMinMax();
+        if (minMax.first) {
+            evtMin = minMax.first->start();
+            evtMax = minMax.second->end();
         }
         //TODO: go thru automation
         return { evtMin, evtMax };

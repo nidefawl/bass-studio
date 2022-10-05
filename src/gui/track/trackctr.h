@@ -2,6 +2,7 @@
 #include <vector>
 #include <memory>
 #include "config.h"
+#include "event.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "exceptions.h"
@@ -97,6 +98,7 @@ public:
     }
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
+    bool handleEditorCommand(KeyEvent& kevt, GlobalCommandType type);
 
     void trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) override;
     void trackViewDragMove(guitrack_editor* view, MouseEvent& evt) override;

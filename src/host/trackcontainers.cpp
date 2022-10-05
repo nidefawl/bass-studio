@@ -1,12 +1,9 @@
 #include <algorithm>
-
-
 #include "exceptions.h"
 #include "seq_util.h"
 #include "seq_time.h"
 #include "track.h"
 #include "track_impl.h"
-
 #include "mainctrl.h"
 
 void releaseTrackContainer(track_vector& vec) {
@@ -36,6 +33,7 @@ void assertUniqueEntries(const track_vector& vector) {
     dbgassert(wasUnique);
 #endif
 }
+
 void trackallcontainer_t::checkConsistency() {
 #ifndef NDEBUG
     assertUniqueEntries(trackAllCtr.tracksFlat);
@@ -132,6 +130,7 @@ void trackallcontainer_t::checkConsistency() {
     }
 #endif
 }
+
 void trackallcontainer_t::addTrack(int trackInsertPos, track_t* newTrack) {
     auto it = std::find(trackAllCtr.tracksFlat.begin(), trackAllCtr.tracksFlat.end(), newTrack);
     if (it != trackAllCtr.tracksFlat.end()) {
@@ -181,6 +180,7 @@ void trackallcontainer_t::rebuildTrackList() {
         t->projectIdx = idx++;
     }
 }
+
 void trackallcontainer_t::removeTrack(track_t* track) {
     // trackInsertPos is tracktype-container index
     trackcontainer_tracktype_t* trackTypeCtr = trackTypeCtrs[track->type];
@@ -280,12 +280,14 @@ bool trackallcontainer_t::moveTracks(const std::vector<track_t*>& tracks, track_
 
     return true;
 }
+
 void trackallcontainer_t::copyTo(project_snapshot_t& project) {
     checkConsistency();
     trackMidiAudioCtr.copyTo(project.trackCtr);
     trackMasterCtr.copyTo(project.trackMasterCtr);
     trackReturnCtr.copyTo(project.trackReturnCtr);
 }
+
 void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
     log_lf(Log::L_DEBUG, "project.tracks: audio/midi: %zu return: %zu master: %zu\n",
               project.trackCtr.tracks.size(),
@@ -311,30 +313,23 @@ void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
     rebuildTrackList();
     checkConsistency();
 }
+
 void trackallcontainer_t::loadPlugins(project_snapshot_t& project) {
     trackMidiAudioCtr.loadPlugins(project.trackCtr);
     trackReturnCtr.loadPlugins(project.trackReturnCtr);
     trackMasterCtr.loadPlugins(project.trackMasterCtr);
 }
-//void trackallcontainer_t::loadSubtrackLayouts(project_snapshot_t& project) {
-//  trackMidiAudioCtr.loadSubtrackLayouts(project.trackCtr);
-//  trackReturnCtr.loadSubtrackLayouts(project.trackReturnCtr);
-//  trackMasterCtr.loadSubtrackLayouts(project.trackMasterCtr);
-//}
+
 void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, trackstate_t& _out) {
     _out.reset();
     for (track_t* t : trackAllCtr) {
-
-        //TODO: convert trackBegin (gui idx) to track list idx
         if (t->projectIdx >= trackBegin && t->projectIdx <= trackEnd) {
-            log_lf(Log::L_DEBUG, "copy track %d\n", t->projectIdx);
             auto* trackCopy = new track_snapshot_t(t, tracksnapshot_store_opts_t::NoPluginPresets());
             _out.tracks.push_back(trackCopy);
-        } else {
-            log_lf(Log::L_DEBUG, "NOT copy track %d\n", t->projectIdx);
         }
     }
 }
+
 void serializeTracks(const track_vector& tracksTree, trackcontainer_snapshot_t& out) {
     out.tracks.reserve(tracksTree.size());//not enough
     std::vector<const track_t*> tracksFlat;
@@ -362,6 +357,7 @@ void serializeTracks(const track_vector& tracksTree, trackcontainer_snapshot_t& 
         out.hierachy.push_back(idx);
     }
 }
+
 void deserializeTrackTree(trackcontainer_snapshot_t& in, track_vector& out) {
     dbgassert(in.hierachy.size() == in.tracks.size());
     auto& hierachyIndices = in.hierachy;
@@ -391,9 +387,11 @@ void deserializeTrackTree(trackcontainer_snapshot_t& in, track_vector& out) {
         trackRoot->childIdxTree = childIdx++;
     }
 }
+
 void trackcontainer_tracktype_t::copyTo(trackcontainer_snapshot_t& out) {
     serializeTracks(tracksTree, out);
 }
+
 void trackcontainer_tracktype_t::copyFrom(trackcontainer_snapshot_t& in) {
     dbgassert(empty());
     // fix up old project files, assume all tracks are top level tracks with no parent
@@ -423,6 +421,7 @@ void trackcontainer_tracktype_t::copyFrom(trackcontainer_snapshot_t& in) {
         tr->localIdxFlat = idx++;
     }
 }
+
 void trackcontainer_tracktype_t::loadPlugins(trackcontainer_snapshot_t& in) {
     for (track_snapshot_t& trackStatic : in.tracks) {
         track_t* trackLoaded = trackStatic.trackLoaded;
@@ -437,6 +436,7 @@ bool trackallcontainer_t::validTrackTypeIdx(int32_t type, int32_t idx) const {
     }
     return false;
 }
+
 track_t* trackallcontainer_t::getTrackTypeIdx(int32_t type, int32_t idx) {
     track_vector& vec = trackTypeCtrs[type]->tracksFlat;
     return vec[idx];
@@ -463,12 +463,14 @@ trackstate_t::~trackstate_t() {
         delete track;
     }
 }
+
 void trackstate_t::reset() {
     for (track_snapshot_t* track : tracks) {
         delete track;
     }
     tracks.clear();
 }
+
 trackstate_t trackstate_t::copy() {
     trackstate_t t;
     for (track_snapshot_t* thisSnapshot : this->tracks) {

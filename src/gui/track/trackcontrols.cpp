@@ -535,26 +535,27 @@ public:
         guictxtmenu::addEntry(entry);
     }
 
-    void clickedElement(ctxtmenu_entry* e, int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         auto const ctxtEndpointEntry = static_cast<ctxtmenu_entry_track_io*>(e);
         if (ctxtEndpointEntry->isBus()) {
-            return;
+            return false;
         }
         dbgassert(dynamic_cast<ctxtmenu_entry_endpoint*>(e));
         auto const entry = static_cast<ctxtmenu_entry_endpoint*>(e);
         auto const stage = dawCtrl->getDaw()->getPluginManager()->getAudioStage(stageEndpoint.stageRef);
         if (!stage)
-            return;
+            return true;
         auto const trImpl = dynamic_cast<track_impl_t*>(stage);
         dbgassert(trImpl);
         if (!assert_expr(trImpl))
-            return;
+            return true;
         if (stageEndpoint.buffer == stage_bufferpoint::INPUT) {
             trImpl->inputChannel = entry->getEndpoint();
         } else {
             trImpl->outputChannel = entry->getEndpoint();
         }
         dawCtrl->closeAllContextMenus();
+        return true;
     }
 
 
@@ -751,20 +752,20 @@ public:
         guictxtmenu::addEntry(entry);
     }
 
-    void clickedElement(ctxtmenu_entry* e, int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         auto const ctxtEndpointEntry = static_cast<ctxtmenu_entry_track_io*>(e);
         if (ctxtEndpointEntry->isBus()) {
-            return;
+            return false;
         }
         dbgassert(dynamic_cast<ctxtmenu_entry_midi_endpoint*>(e));
         auto const entry = static_cast<ctxtmenu_entry_midi_endpoint*>(e);
         auto const stage = dawCtrl->getDaw()->getPluginManager()->getAudioStage(stageEndpoint.stageRef);
         if (!stage)
-            return;
+            return true;
         auto const trImpl = dynamic_cast<track_impl_t*>(stage);
         dbgassert(trImpl);
         if (!assert_expr(trImpl))
-            return;
+            return true;
         if (stageEndpoint.buffer == stage_bufferpoint::INPUT) {
             auto ep = entry->getEndpoint();
             trImpl->midiChannel = ep;
@@ -772,6 +773,7 @@ public:
             // trImpl->outputChannel = entry->getEndpoint();
         }
         dawCtrl->closeAllContextMenus();
+        return true;
     }
 
     guictxtmenu* createPopupForEntry(ctxtmenu_entry* e, int lvl) override {
@@ -1125,7 +1127,7 @@ public:
             idx++;
         }
     }
-    void clicked(int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         std::vector<automatable_t*> targets;
         auto* trImpl = m_trackentry->track->getStage();
         trImpl->getAutomatableTrackTargets(targets);
@@ -1142,6 +1144,7 @@ public:
         }
         dawCtrl->updateVisibleTrackContents();
         closeContextMenu();
+        return true;
     }
 };
 class guidropdown_popup_sel_automation_param : public guictxtmenu {
@@ -1185,7 +1188,7 @@ public:
             });
         }
     }
-    void clickedElement(ctxtmenu_entry* e, int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         m_trackentry->state.selectedAutomationParam = -1;
         if (_id > 0) {
             automatable_t* autom = m_trackentry->state.selectedAutomationCtr;
@@ -1197,6 +1200,7 @@ public:
         }
         dawCtrl->getDaw()->updateVisibleTrackContents();
         closeContextMenu();
+        return true;
     }
 };
 class guidropdown_automation_device : public guidropdownbase {
@@ -2152,7 +2156,7 @@ public:
         _dawCtrl->getDaw()->setSelectedTrack(m_trackentry->track);
     }
     ~guictxtmenu_track() override = default;
-    void clicked(int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         auto const daw          = dawCtrl->getDaw();
         ThreadLock lock   = daw->lockPlayThread();
         track_t* const tr = m_trackentry->track;
@@ -2237,7 +2241,7 @@ public:
                 }
                 saveTrackContainer(trackContainerSnapshot, path);
             }
-            return;
+            return true;
         } else if (_id == cmdAddChildMidiTrack->id) {
             auto trackCtr     = m_trackentry->parent;
             track_t* newTrack = daw->createNewTrack(tr->type);
@@ -2251,7 +2255,7 @@ public:
             }
         } else if (_id == cmdRenameTrack->id) {
             DAW::OpenRenamePopup(dawCtrl, m_trackentry);
-            return;
+            return true;
         } else if (_id == cmdShowWaveform->id) {
 
             auto trackCtr = m_trackentry->parent;
@@ -2274,6 +2278,7 @@ public:
             daw->updateVisibleTrackContents();
         }
         closeContextMenu();
+        return true;
     }
 };
 void gui_track_controls::handleRightClick(MouseEvent& evt) {

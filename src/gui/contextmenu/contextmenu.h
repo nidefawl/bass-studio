@@ -25,8 +25,7 @@ public:
         return lvl;
     }
     void addEntry(ctxtmenu_entry* entry);
-    virtual void clicked(int _id);
-    virtual void clickedElement(ctxtmenu_entry* e, int _id);
+    virtual bool clickedElement(ctxtmenu_entry* e, int _id);
     void handleDraggedBegin(MouseEvent& evt) override;
     void layout() override;
     void determineSize(ivec2& prefSize) override;

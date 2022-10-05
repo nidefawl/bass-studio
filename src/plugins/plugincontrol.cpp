@@ -12,6 +12,7 @@
 #include <cstdarg>
 
 
+#include "tls.h"
 #include "window.h"
 #include "platform.h"
 
@@ -61,7 +62,12 @@ void PluginControl::menuCommand(const menucmd_t& command) {
 void PluginControl::initApp(const std::vector<String>& args) {
 }
 
-PluginControl::PluginControl(std::shared_ptr<PluginViewContainers> _view) : AppCtrl(), view(std::move(_view)) {
+PluginControl::PluginControl(AppCtrl* parent, std::shared_ptr<PluginViewContainers> _view)
+: AppCtrl(parent), view(std::move(_view))
+{
+    if (!this->commands) {
+        this->commands = &commandMgr;
+    }
 }
 
 PluginControl::~PluginControl() {

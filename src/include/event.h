@@ -2,8 +2,50 @@
 
 #include "math/vec.h"
 #include "mouse.h"
+#include "str_util.h"
 
 class guibase;
+namespace DAW::UI {
+    struct Command;
+}
+
+enum GlobalCommandType {
+    CMD_NONE = 0,
+    CMD_EXIT = 1,
+    CMD_FILE_NEW,
+    CMD_FILE_OPEN,
+    CMD_FILE_SAVE,
+    CMD_FILE_SAVEAS,
+    CMD_FILE_CLOSE,
+    CMD_GUI_GLOBAL_ZOOM_DECREASE,
+    CMD_GUI_GLOBAL_ZOOM_INCREASE,
+    CMD_UNDO,
+    CMD_REDO,
+    CMD_CUT,
+    CMD_COPY,
+    CMD_PASTE,
+    CMD_PASTE_NO_AUTOMATION,
+    CMD_DELETE,
+    CMD_DUPLICATE,
+    CMD_CONSOLIDATE,
+    CMD_MUTE,
+    CMD_QUANTIZE,
+    CMD_SOLO,
+    CMD_SELECT_ALL,
+    CMD_PREFERENCES,
+    CMD_ABOUT,
+    CMD_SHOW_DEBUG_WINDOW,
+    CMD_INSERT_AUDIO_TRACK,
+    CMD_INSERT_MIDI_TRACK,
+    CMD_INSERT_RETURN_TRACK,
+    CMD_INSERT_MASTER_TRACK,
+    CMD_OPEN_SECOND_WINDOW,
+    CMD_OPEN_VIEW,
+    CMD_REACTIVATE_AUTOMATION,
+    CMD_SET_STARTUP_PROJECT,
+    CMD_CREATE_EMPTY_CLIP,
+    NUM_COMMANDS
+};
 
 enum MouseEventType {
     M_EVT_BTN_DOWN,
@@ -90,9 +132,12 @@ enum KeyEventType {
     K_REPEAT,
 };
 struct KeyEvent {
-    KeyEventType type;
-    int keyCode;
-    int scancode;
-    int mods;
-    const char* keyname;
+    KeyEventType type = K_PRESS;
+    int keyCode{};
+    int scancode{};
+    int mods{};
+    const char* keyname = nullptr;
+    DAW::UI::Command* cmd = nullptr;
+    String toString() const;
+    bool isCommand(GlobalCommandType cmd) const;
 };

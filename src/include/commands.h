@@ -1,31 +1,32 @@
 #pragma once
+#include <vector>
+#include "str_util.h"
+#include "keyboard.h"
+#include "mouse.h"
+#include "event.h"
 
-enum GlobalCommand {
-    CMD_EXIT = 0,
-    CMD_FILE_NEW,
-    CMD_FILE_OPEN,
-    CMD_FILE_SAVE,
-    CMD_FILE_SAVEAS,
-    CMD_FILE_CLOSE,
-    CMD_GUI_GLOBAL_ZOOM_DECREASE,
-    CMD_GUI_GLOBAL_ZOOM_INCREASE,
-    CMD_UNDO,
-    CMD_REDO,
-    CMD_CUT,
-    CMD_COPY,
-    CMD_PASTE,
-    CMD_DELETE,
-    CMD_SELECT_ALL,
-    CMD_DUPLICATE,
-    CMD_PREFERENCES,
-    CMD_ABOUT,
-    CMD_SHOW_DEBUG_WINDOW,
-    CMD_INSERT_AUDIO_TRACK,
-    CMD_INSERT_MIDI_TRACK,
-    CMD_INSERT_RETURN_TRACK,
-    CMD_INSERT_MASTER_TRACK,
-    CMD_OPEN_SECOND_WINDOW,
-    CMD_OPEN_VIEW,
-    CMD_REACTIVATE_AUTOMATION,
-    CMD_SET_STARTUP_PROJECT,
+namespace DAW::UI {
+struct CommandDesc {
+    String name;
+    String description;
+    String shortcut;
+    int32_t iconId = -1;
 };
+struct Command {
+    GlobalCommandType type = GlobalCommandType::CMD_NONE;
+    CommandDesc desc;
+    std::vector<KeyCombo> keyCombos;
+    int group = 0;
+    String toString() const {
+        return desc.name;
+    }
+};
+class CommandManager {
+    std::vector<Command> commands;
+    void updateCommandShortcuts();
+public:
+    void init();
+    Command* matchKeyCombo(const KeyEvent& evt);
+    Command* getCommand(GlobalCommandType type);
+};
+} // namespace DAW::UI

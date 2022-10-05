@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 #include <unordered_map>
 #include "automation.h"
@@ -116,6 +117,7 @@ struct automation_t {
     void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const;
     void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
     std::pair<float, float> getMinMax();
+    std::optional<std::pair<tick_t, tick_t>> getBeginEnd() const;
     void activate() {
         active = true;
     }
@@ -154,6 +156,9 @@ struct automated_param_t {
     virtual String getName() const = 0;
     virtual void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const = 0;
     virtual void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) = 0;
+    virtual std::optional<std::pair<tick_t, tick_t>> getBeginEnd() const {
+        return std::nullopt;
+    }
 };
 
 struct automation_lane_t : public automated_param_t {
@@ -188,6 +193,9 @@ struct automation_lane_t : public automated_param_t {
     }
     String getName() const override {
         return "Automation";
+    }
+    std::optional<std::pair<tick_t, tick_t>> getBeginEnd() const override {
+        return src.getBeginEnd();
     }
 };
 
@@ -547,6 +555,11 @@ public:
             if (t.src.isAutomated()) {
                 out.push_back(t);
             }
+        }
+    }
+    void getAllAutomatedParamRef(std::vector<automation_lane_t*>& out) {
+        for (automation_lane_t& t : automationLanes) {
+            out.push_back(&t);
         }
     }
     virtual void postSetParameter(int32_t idx, float preVal, float val, int flags) {

@@ -3,6 +3,7 @@
 #include "gui/automation/automatable.h"
 #include "gui/contextmenu/contextmenu_base.h"
 #include "gui/contextmenu/contextmenu_daw.h"
+#include "gui/contextmenu/contextmenu_grid.h"
 #include "gui/contextmenu/contextmenu.h"
 #include "gui/track/trackcontent.h"
 #include "gui/track/trackctr.h"
@@ -26,11 +27,12 @@ guictxtmenu_at_param::guictxtmenu_at_param(DawCtrl* _dawCtrl, automatable_t* _at
     DAW::AddContextEntriesAutomation(this, _atl, paramIdx);
     DAW::AddContextEntriesModulation(this, _atl, paramIdx);
 }
-void guictxtmenu_at_param::clicked(int _id) {
+bool guictxtmenu_at_param::clickedElement(ctxtmenu_entry* e, int _id) {
     DAW::HandleAutomatableContextMenu(dawCtrl, atl, paramIdx, _id);
+    return true;
 }
 
-void guictxtmenu_notrack::clicked(int _id) {
+bool guictxtmenu_notrack::clickedElement(ctxtmenu_entry* e, int _id) {
     auto daw = DawInstance::get();
     auto window = parentCtrl->window;
     // promptUserFilePath initiates a native dialog that would close this context menu
@@ -70,6 +72,7 @@ void guictxtmenu_notrack::clicked(int _id) {
     } else {
         daw->insertNewTrack(-1, _id);
     }
+    return true;
 }
 namespace DAW {
 static constexpr int32_t ID_DELETE = 1;
@@ -135,15 +138,16 @@ public:
             }
         }
     }
-    void clicked(int _id) override {
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
         if (_id >= 0) {
             closeContextMenu();
             auto lock = dawCtrl->lockPlayThread();
             auto ref = static_cast<ctxtmenu_modulation_entry*>(entries[_id])->getRef();
             DAW::DisonnectModulationInputChannel(atl, ref);
-            return;
+            return true;
         }
         closeContextMenu();
+        return true;
     }
 };
 
@@ -220,4 +224,74 @@ namespace DAW {
         return false;
     }
 
+}// namespace DAW
+
+
+guictxtmenu_track_editor::guictxtmenu_track_editor(DawCtrl* const _dawCtrl, track_gui_entry_t* const _trackentry, gui_clip* optionalContextClip)
+    : guictxtmenu(), m_trackentry(_trackentry) {
+    this->size.x = 220;
+    this->dawCtrl = _dawCtrl;
+    this->maxHeight = 0;
+    auto& cursor = _dawCtrl->getCursor();
+    bool bHasContentSelected = optionalContextClip != nullptr;
+    if (!bHasContentSelected) {
+        bHasContentSelected = !DAW::isSelectionEmpty(m_trackentry->parent->guiMgr, cursor, true);
+    }
+    if (bHasContentSelected) {
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_CONSOLIDATE));
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_MUTE));
+    } else {
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_CREATE_EMPTY_CLIP));
+    }
+    addEntry(new ctxtmenu_splitter());
+    if (cursor.getRange()) {
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_CUT));
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_COPY));
+    }
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_PASTE));
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_PASTE_NO_AUTOMATION));
+    if (optionalContextClip || cursor.getRange()) {
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_DELETE));
+        addEntry(new ctxtmenu_splitter());
+        sel = new ctxtmenu_color_select("Pick Color", 100);
+        addEntry(sel);
+    }
+    addEntry(new ctxtmenu_splitter());
+    scaled_grid& grid = _dawCtrl->getGrid();
+    auto adaptive     = new ctxtmenu_time_select(grid, "Adaptive Grid", 0);
+    adaptive->initAdaptive();
+    addEntry(adaptive);
+    auto fixed = new ctxtmenu_time_select(grid, "Fixed Grid", 0);
+    fixed->initFixed();
+    addEntry(fixed);
+}
+
+bool guictxtmenu_track_editor::clickedElement(ctxtmenu_entry* e, int _id) {
+    if (e->commandtype != GlobalCommandType::CMD_NONE) {
+        dbgassert(m_trackentry->parent);
+        KeyEvent evt{};
+        m_trackentry->parent->trackView.handleEditorCommand(evt, e->commandtype);
+        closeContextMenu();
+        return true;
+    }
+    return false;
+}
+
+guictxtmenu_clip::guictxtmenu_clip(DawCtrl* const _dawCtrl, gui_clip* const _gclip) : guictxtmenu_track_editor(_dawCtrl, _gclip->m_trackentry, _gclip), m_gclip(_gclip) {
+}
+
+bool guictxtmenu_clip::clickedElement(ctxtmenu_entry* e, int _id) {
+    if (guictxtmenu_track_editor::clickedElement(e, _id)) {
+        return true;
+    }
+    if (_id >= sel->id) {
+        _id -= sel->id;
+        if (_id < COLOR_PALETTE_LEN) {
+            if (m_gclip->m_clip) {
+                m_gclip->m_clip->rgb = colorPalette[_id];
+            }
+        }
+    }
+    closeContextMenu();
+    return true;
 }

@@ -202,7 +202,7 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     return false;
 }
 
-void guimenu::clickedElement(ctxtmenu_entry* e, int _id) {
+bool guimenu::clickedElement(ctxtmenu_entry* e, int _id) {
     dbgassert(this->parentMenuBar);
     BaseCtrl* ctrlParentBar = this->parentMenuBar->getControl();
     dbgassert(ctrlParentBar);
@@ -215,8 +215,7 @@ void guimenu::clickedElement(ctxtmenu_entry* e, int _id) {
         }
         appCtrl->closeAllAppMenus();
     }
-}
-void guimenu::clicked(int _id) {
+    return true;
 }
 
 void guictr_menubar::render(NVGcontext* vg) {
