@@ -276,26 +276,27 @@ bool BaseCtrl::onCharInput(uint32_t codepoint) {
 }
 
 bool BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) {
+    using namespace DAW::UI;
     if (guiCaptured) {
         return false;
     }
     KeyEvent event = keyEvent(key, scancode, keyState, mods, key_name);
-    event.cmd = commands->matchKeyCombo(event);
-    /* if (!event.cmd) {
-        log_lf(Log::L_TRACE, "No command for key combo %s\n", event.toString().c_str());
-    } else {
-        log_lf(Log::L_TRACE, "Matched command: %s\n", event.cmd->toString().c_str());
-    } */
-    if (guiDragged && guiDragged->handleKeyInput(event)) {
+    auto boundCommand = commands->matchKeyCombo(event);
+    CommandContext commandContext;
+    if (boundCommand) {
+        event.cmd = boundCommand;
+        commandContext = boundCommand->getContext();
+    }
+    if (guiDragged && commandContext.matchesFocsedGui(guiDragged) && guiDragged->handleKeyInput(event)) {
         return true;
     }
-    if (guiFocused && guiFocused->handleKeyInput(event)) {
+    if (guiFocused && commandContext.matchesFocsedGui(guiFocused) && guiFocused->handleKeyInput(event)) {
         return true;
     }
-    if (guiCtrFocused && guiCtrFocused != guiFocused && guiCtrFocused->handleKeyInput(event)) {
+    if (guiCtrFocused && guiCtrFocused != guiFocused && commandContext.matchesFocsedGui(guiCtrFocused) && guiCtrFocused->handleKeyInput(event)) {
         return true;
     }
-    if (processGlobalKeyevent(event)) {
+    if (commandContext.ctxtType == CommandContextType::CMD_CTXT_GLOBAL && processGlobalKeyevent(event)) {
         return true;
     }
     if (parentCtrl && parentCtrl->onKeyInput(key, scancode, keyState, mods, key_name)) {

@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include "gui/gui.h"
 #include "str_util.h"
 #include "keyboard.h"
 #include "mouse.h"
@@ -23,8 +24,15 @@ struct CommandDesc {
     String shortcut;
     int32_t iconId = -1;
 };
+enum class CommandContextType {
+    CMD_CTXT_GLOBAL,
+    CMD_CTXT_FOCUSED,
+    CMD_CTXT_CTR_TYPE,
+};
 struct CommandContext {
-    int dummy = 0;
+    CommandContextType ctxtType = CommandContextType::CMD_CTXT_GLOBAL;
+    gui_type ctxtGuiType = gui_type::GUI_TYPE_UNKNOWN;
+    bool matchesFocsedGui(guibase* optionalGui) const;
 };
 struct Command {
     GlobalCommandType type = GlobalCommandType::CMD_NONE;
@@ -35,6 +43,9 @@ struct Command {
     CommandContext context{};
     String toString() const {
         return desc.name;
+    }
+    const CommandContext& getContext() const {
+        return context;
     }
 };
 class CommandManager {

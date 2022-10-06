@@ -184,7 +184,23 @@ namespace DAW::UI {
             log_printf("%04d\t%s\n", i, ptr);
 
         } */
+        auto requireFocusContext = CommandContext{CommandContextType::CMD_CTXT_FOCUSED, gui_type::GUI_TYPE_UNKNOWN};
         for (auto& cmd : commands) {
+            switch (cmd.type) {
+                case CMD_COPY:
+                case CMD_CUT:
+                case CMD_PASTE:
+                case CMD_PASTE_NO_AUTOMATION:
+                case CMD_DUPLICATE:
+                case CMD_CONSOLIDATE:
+                case CMD_QUANTIZE:
+                case CMD_MUTE:
+                case CMD_SOLO:
+                    cmd.context = requireFocusContext;
+                    break;
+                default:
+                    break;
+            }
             for (auto& kc : cmd.keyCombos) {
                 auto ptr = GlfwKeycodeToString(kc.keyCode, 0);
                 if (ptr) {
@@ -275,5 +291,19 @@ namespace DAW::UI {
             log_lf(Log::L_WARN, "Using default keybinds: %s\n", e.what());
         }
         updateKeybinds();
+    }
+    bool CommandContext::matchesFocsedGui(guibase* optionalGui) const {
+        using Type = CommandContextType;
+        bool bMatches = false;
+        switch (ctxtType) {
+            case Type::CMD_CTXT_CTR_TYPE:
+                bMatches = optionalGui && optionalGui->getGuiType() == ctxtGuiType;
+                break;
+            case Type::CMD_CTXT_GLOBAL:
+            case Type::CMD_CTXT_FOCUSED:
+                bMatches = true;
+                break;
+        }
+        return bMatches;
     }
 }// namespace DAW::UI
