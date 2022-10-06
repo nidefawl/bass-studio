@@ -635,16 +635,44 @@ template<typename T>
 void addPropertiesFromGui(T& gui, Table::tbl* table);
 
 
-template<>
-void addPropertiesFromGui(guibase& gui, Table::tbl* table) {
-    SafeRef<guibase> ref = gui.makeSafeRef();
-    std::vector<tbl_row_t>& rows = table->rows;
+void addCommonPropertiesFromGui(SafeRef<guibase>& ref, guibase& gui, std::vector<tbl_row_t>& rows) {
     rows.push_back({{tblstr{"this"}, ref}});
+    if (gui.parent) {
+        SafeRef<guibase> parentSafeRef = gui.parent->makeSafeRef();
+        rows.push_back({{tblstr{"parent"}, parentSafeRef}});
+    } else {
+        rows.push_back({{tblstr{"parent"}, tblstr{"<null>", 1}}});
+    }
     rows.push_back({{tblstr{"id"}, tbltypesaferef<int32_t>{ref, gui.id, nullptr}}});
+    String strGuiType;
+    switch (gui.getGuiType()) {
+        case CTR_TYPE_UNKNOWN:
+            strGuiType = "CTR_TYPE_UNKNOWN";
+            break;
+        case GUI_TYPE_UNKNOWN:
+            strGuiType = "GUI_TYPE_UNKNOWN";
+            break;
+        default:
+            break;
+    }
+    if (!strGuiType.empty()) {
+        rows.push_back({ { tblstr{ "gui_type" }, tblString{ strGuiType, 1 } } });
+    } else {
+        rows.push_back({ { tblstr{ "gui_type" }, tblint{ static_cast<int32_t>(gui.getGuiType()), "Type %d" } } });
+    }
     rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, gui.pos, nullptr}}});
     rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, gui.size, nullptr}}});
     rows.push_back({{tblstr{"right"}, tblint{gui.right()}}});
     rows.push_back({{tblstr{"bottom"}, tblint{gui.bottom()}}});
+    rows.push_back({{tblstr{"zOrder"}, tblint{gui.zOrder}}});
+#ifdef TRACK_ALLOCATIONS_GUIBASE
+    rows.push_back({{tblstr{"allocId"}, tblint{gui.allocId}}});
+#endif
+    rows.push_back({{tblstr{"refId"}, tblint{gui.safeRef.refId}}});
+    String strTheme = gui.theme->name+StringFormat("[%7zX]", reinterpret_cast<uint64_t>(gui.theme));
+    rows.push_back({{tblstr{"theme"}, tblString{strTheme, 1}}});
+    rows.push_back({{tblstr{"label"}, tblString{gui.label, 1}}});
+    rows.push_back({{tblstr{"tooltipText"}, tblString{gui.tooltipText, 1}}});
 
     rows.push_back({{tblstr{"FLG_VISIBLE"}, tbltype_gui_flags{ref, FLG_VISIBLE}}});
     rows.push_back({{tblstr{"FLG_RENDER_BACKGROUND"}, tbltype_gui_flags{ref, FLG_RENDER_BACKGROUND}}});
@@ -655,28 +683,19 @@ void addPropertiesFromGui(guibase& gui, Table::tbl* table) {
     rows.push_back({{tblstr{"FLG_ACT"}, tbltype_gui_flags{ref, FLG_ACT}}});
     rows.push_back({{tblstr{"FLG_DRG"}, tbltype_gui_flags{ref, FLG_DRG}}});
     rows.push_back({{tblstr{"FLG_HAS_COLOR_BG"}, tbltype_gui_flags{ref, FLG_HAS_COLOR_BG}}});
-
-    if (gui.parent) {
-        SafeRef<guibase> parentSafeRef = gui.parent->makeSafeRef();
-        rows.push_back({{tblstr{"parent"}, parentSafeRef}});
-    } else {
-        rows.push_back({{tblstr{"parent"}, tblstr{"<null>", 1}}});
-    }
-    String strTheme = gui.theme->name+StringFormat("[%7zX]", reinterpret_cast<uint64_t>(gui.theme));
-    rows.push_back({{tblstr{"theme"}, tblString{strTheme, 1}}});
-    rows.push_back({{tblstr{"theme2"}, tblString{strTheme, 1}}});
+}
+template<>
+void addPropertiesFromGui(guibase& gui, Table::tbl* table) {
+    SafeRef<guibase> ref = gui.makeSafeRef();
+    std::vector<tbl_row_t>& rows = table->rows;
+    addCommonPropertiesFromGui(ref, gui, rows);
 }
 
 template<>
 void addPropertiesFromGui(guictr_base& gui, Table::tbl* table) {
     SafeRef<guibase> ref = gui.makeSafeRef();
     std::vector<tbl_row_t>& rows = table->rows;
-    rows.push_back({{tblstr{"this"}, ref}});
-    rows.push_back({{tblstr{"id"}, tbltypesaferef<int32_t>{ref, gui.id, nullptr}}});
-    rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, gui.pos, nullptr}}});
-    rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, gui.size, nullptr}}});
-    rows.push_back({{tblstr{"right"}, tblint{gui.right()}}});
-    rows.push_back({{tblstr{"bottom"}, tblint{gui.bottom()}}});
+    addCommonPropertiesFromGui(ref, gui, rows);
     guictr_layout* ctrlayout = nullptr;
     if ((ctrlayout = dynamic_cast<guictr_layout*>(&gui))) {
         String layoutName;
@@ -696,33 +715,9 @@ void addPropertiesFromGui(guictr_base& gui, Table::tbl* table) {
         }
         rows.push_back({{tblstr{"layout"}, tblString{layoutName, 1}}});
     }
-    //int padding = CONTENT_INSET;
-    //int margin  = CTR_SPACING;
-    //ivec4 snapSides{ 0, 0, 0, 0 };
-    //std::vector<guibase*> guis;
-    //bool sortChildren = false;
     rows.push_back({{tblstr{"padding"}, tbltypesaferef<int32_t>{ref, gui.padding, nullptr}}});
     rows.push_back({{tblstr{"margin"}, tbltypesaferef<int32_t>{ref, gui.margin, nullptr}}});
     rows.push_back({{tblstr{"snapSides"}, tbltypesaferef<glm::ivec4>{ref, gui.snapSides, nullptr}}});
-
-    rows.push_back({{tblstr{"FLG_VISIBLE"}, tbltype_gui_flags{ref, FLG_VISIBLE}}});
-    rows.push_back({{tblstr{"FLG_RENDER_BACKGROUND"}, tbltype_gui_flags{ref, FLG_RENDER_BACKGROUND}}});
-    rows.push_back({{tblstr{"FLG_RENDER_BACKGROUND_INSET"}, tbltype_gui_flags{ref, FLG_RENDER_BACKGROUND_INSET}}});
-    rows.push_back({{tblstr{"FLG_ENBL"}, tbltype_gui_flags{ref, FLG_ENBL}}});
-    rows.push_back({{tblstr{"FLG_HVRD"}, tbltype_gui_flags{ref, FLG_HVRD}}});
-    rows.push_back({{tblstr{"FLG_FOC"}, tbltype_gui_flags{ref, FLG_FOC}}});
-    rows.push_back({{tblstr{"FLG_ACT"}, tbltype_gui_flags{ref, FLG_ACT}}});
-    rows.push_back({{tblstr{"FLG_DRG"}, tbltype_gui_flags{ref, FLG_DRG}}});
-    rows.push_back({{tblstr{"FLG_HAS_COLOR_BG"}, tbltype_gui_flags{ref, FLG_HAS_COLOR_BG}}});
-
-    if (gui.parent) {
-        SafeRef<guibase> parentSafeRef = gui.parent->makeSafeRef();
-        rows.push_back({{tblstr{"parent"}, parentSafeRef}});
-    } else {
-        rows.push_back({{tblstr{"parent"}, tblstr{"<null>", 1}}});
-    }
-    String strTheme = gui.theme->name+StringFormat("[%7zX]", reinterpret_cast<uint64_t>(gui.theme));
-    rows.push_back({{tblstr{"theme"}, tblString{strTheme, 1}}});
 }
 
 template <>

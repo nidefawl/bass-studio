@@ -344,7 +344,12 @@ public:
             }
         }
         if (cmd) {
-            textFieldDesc->setValue(cmd->desc.description);
+            auto desc = cmd->desc.description;
+            setTooltipText(desc);
+            textFieldDesc->setTooltipText(desc);
+            // textFieldCurrentBinding->setTooltipText("Default Keybind: " + cmd->defaultKeyCombo.toString());
+            btnResetKeybind->setTooltipText("Default Keybind: " + cmd->defaultKeyCombo.toString());
+            textFieldDesc->setValue(desc);
             ctrEditSelectedKeybind.setLabel("Edit keybind: " + cmd->desc.name);
         }
     }

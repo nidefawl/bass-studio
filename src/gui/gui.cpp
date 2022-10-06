@@ -654,7 +654,7 @@ void guitooltip<guibase>::setContent() {
 }
 
 guictxtmenu_base* guibase::getTooltip(AppCtrl* appctrl) {
-    if (!label.empty()) {
+    if (!getTooltipText().empty()) {
         auto tooltip = new guitooltip<guibase>(this);
         return tooltip;
     }

@@ -25,6 +25,7 @@ public:
         : guibutton(), parentInput(parent) {
         setFlag(FLG_RENDER_BACKGROUND_INSET, true);
         setFlag(FLG_BG_SHADING, true);
+        setLabel("Tempo");
     }
     void render(NVGcontext* vg) override;
     void handleDraggedBegin(MouseEvent& evt) override;
@@ -41,6 +42,7 @@ public:
     gui_tempocontrol();
     ~gui_tempocontrol() override {
         removeGuis();
+        editfield.setLabel("Tempo");
     }
     void layout() override {
         tempoInput.size = size;
@@ -79,6 +81,8 @@ public:
         padding = 0;
         add(&inputNum);
         add(&inputDen);
+        inputNum.setLabel("Signature Numerator");
+        inputDen.setLabel("Signature Denominator");
     }
     ~gui_signaturecontrol() override {
         removeGuis();

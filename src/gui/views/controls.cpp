@@ -34,11 +34,15 @@ using Table::tblString;
 
 template<>
 void guitooltip<gui_timeinput>::setContent() {
-    table.tableWidth = 140;
-    tbl_row_t row{};
-    row.cols.push_back(tblString{ "Tick" });
-    row.cols.push_back(tblint{ ptr->getTime() });
-    table.rows.push_back(row);
+    table.tableWidth = 60;
+    auto cell = tblString{ptr->getTooltipText()};
+    auto cell2 = tblString{StringFormat("Tick %d", ptr->getTime())};
+    if (table.strW) {
+        table.tableWidth = math::max(table.tableWidth, table.strW->getStringWidth(cell.str));
+        table.tableWidth = math::max(table.tableWidth, table.strW->getStringWidth(cell2.str));
+    }
+    table.rows.push_back({{std::move(cell)}});
+    table.rows.push_back({{std::move(cell2)}});
 }
 guictxtmenu_base* gui_timeinput::getTooltip(AppCtrl* appctrl) {
     auto tooltip = new guitooltip<gui_timeinput>(this);
@@ -535,7 +539,6 @@ guictr_tempocontrols::guictr_tempocontrols(project_t& _project, project_globals_
             parentCtrl->relayout();
         }
     };
-    zoom.setLabel("Zoom");
     songPos.setConnectedBG();
     loopPos.setConnectedBG();
     loopLen.setConnectedBG();
@@ -561,6 +564,18 @@ guictr_tempocontrols::guictr_tempocontrols(project_t& _project, project_globals_
     add(&zoom);
     add(&btnAudioOnOff);
     padding = 8;
+    zoom.setLabel("Zoom");
+    tempo.setLabel("Tempo");
+    btnRecord.setLabel("Record (Arm)");
+    btnPlay.setLabel("Play");
+    btnStop.setLabel("Stop");
+    btnLoop.setLabel("Loop");
+    btnAudioOnOff.setLabel("Audio CPU Usage");
+    signature.setLabel("Signature");
+    cursorPos.setLabel("Cursor Position");
+    songPos.setLabel("Playback Position");
+    loopPos.setLabel("Loop Start Position");
+    loopLen.setLabel("Loop Length");
 }
 guictr_tempocontrols::~guictr_tempocontrols() {
     remove(&btnAudioOnOff);
