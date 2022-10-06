@@ -32,7 +32,7 @@ enum class CommandContextType {
 struct CommandContext {
     CommandContextType ctxtType = CommandContextType::CMD_CTXT_GLOBAL;
     gui_type ctxtGuiType = gui_type::GUI_TYPE_UNKNOWN;
-    bool matchesFocsedGui(guibase* optionalGui) const;
+    bool matchesFocusedGui(guibase* optionalGui) const;
 };
 struct Command {
     GlobalCommandType type = GlobalCommandType::CMD_NONE;

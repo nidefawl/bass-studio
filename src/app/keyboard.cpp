@@ -292,7 +292,7 @@ namespace DAW::UI {
         }
         updateKeybinds();
     }
-    bool CommandContext::matchesFocsedGui(guibase* optionalGui) const {
+    bool CommandContext::matchesFocusedGui(guibase* optionalGui) const {
         using Type = CommandContextType;
         bool bMatches = false;
         switch (ctxtType) {

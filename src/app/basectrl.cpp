@@ -287,13 +287,13 @@ bool BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
         event.cmd = boundCommand;
         commandContext = boundCommand->getContext();
     }
-    if (guiDragged && commandContext.matchesFocsedGui(guiDragged) && guiDragged->handleKeyInput(event)) {
+    if (guiDragged && commandContext.matchesFocusedGui(guiDragged) && guiDragged->handleKeyInput(event)) {
         return true;
     }
-    if (guiFocused && commandContext.matchesFocsedGui(guiFocused) && guiFocused->handleKeyInput(event)) {
+    if (guiFocused && commandContext.matchesFocusedGui(guiFocused) && guiFocused->handleKeyInput(event)) {
         return true;
     }
-    if (guiCtrFocused && guiCtrFocused != guiFocused && commandContext.matchesFocsedGui(guiCtrFocused) && guiCtrFocused->handleKeyInput(event)) {
+    if (guiCtrFocused && guiCtrFocused != guiFocused && commandContext.matchesFocusedGui(guiCtrFocused) && guiCtrFocused->handleKeyInput(event)) {
         return true;
     }
     if (commandContext.ctxtType == CommandContextType::CMD_CTXT_GLOBAL && processGlobalKeyevent(event)) {
