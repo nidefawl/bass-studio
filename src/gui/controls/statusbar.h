@@ -8,6 +8,7 @@
 class gui_statusbar : public guictr_base {
 public:
     String text;
+    GuiColor::constant_t color = GuiColor::COL_TEXT;
     gui_statusbar() : guictr_base() {
         padding = CONTENT_INSET/2;
         margin = padding;
@@ -18,9 +19,10 @@ public:
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }
+        auto& bgColor = GuiColor::COL_BG_DRKER2;
         nvgBeginPath(vg);
         nvgRect(vg, pos.x, pos.y, size.x, size.y);
-        nvgFillColor(vg, rgbaToNvg(0x7f1f1f1f));
+        nvgFillColor(vg, theme->getColor(bgColor));
         nvgFill(vg);
         if (!setScissorTransform(vg)) {
             return;
@@ -33,7 +35,7 @@ public:
                             text,
                             theme,
                             cs.y,
-                            theme->getContrastColor(GuiColor::COL_CLEAR_COLOR),
+                            color == GuiColor::COL_TEXT ? theme->getContrastColor(bgColor) : theme->getColor(color),
                             NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         }
     }
@@ -44,7 +46,8 @@ public:
         }
         return false;
     }
-    void setTitle(String _text) {
-        text = _text;
+    void setTitle(String _text, GuiColor::constant_t& _color = GuiColor::COL_TEXT) {
+        text = std::move(_text);
+        color = _color;
     }
 };

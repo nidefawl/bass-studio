@@ -35,6 +35,13 @@ public:
     ~guictr_scrollbar() override {
         removeGuis();
     }
+    void destroyGuis() override {
+        if (hasScrollbar) {
+            remove(&scrollbar);
+            hasScrollbar = false;
+        }
+        guictr_base::destroyGuis();
+    }
     gui_scrollbar& getScrollbar() {
         return scrollbar;
     }

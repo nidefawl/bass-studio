@@ -566,6 +566,9 @@ namespace math {
     inline ivec2 absvec2(const ivec2 a) {
         return { math::abs(a.x), math::abs(a.y) };
     }
+    inline ivec2 roundvecS32(const vec2& a) {
+        return { math::roundfS32(a.x), math::roundfS32(a.y) };
+    }
     float distvec2(const vec2 a, const vec2 b);
     float distancePointLine(const vec2 pt, const vec2 a, const vec2 b);
     inline float calcExponentForScale(float inValue, float outValue, float scaleMin = 0.0f, float scaleMax = 1.0f) {

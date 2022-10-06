@@ -179,8 +179,7 @@ public:
     guictr_scrollbar scrollTop;
     gui_performance() : guictr_base() {
         setCanMouseHit(true);
-        guiType = CTR_TYPE_PERFORMANCE;
-        getContainerLabel(guiType, this->label);
+        setGuiType(CTR_TYPE_PERFORMANCE);
         padding = 4;
         margin = 2;
 

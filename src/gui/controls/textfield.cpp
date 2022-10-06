@@ -19,10 +19,6 @@
 #include <regex>
 #endif
 
-void gui_textfield::setEditable(bool editable) {
-    mEditable = editable;
-}
-
 ivec2 gui_textfield::preferredSize(NVGcontext* ctx) const {
     auto iH = math::ceilfS32(fontSize());
     ivec2 size(0, iH);
@@ -52,7 +48,7 @@ void gui_textfield::handleRightClick(MouseEvent& evt) {
 }
 void gui_textfield::handleDraggedBegin(MouseEvent& evt) {
     ivec2 local = evt.relMousepos;
-    if (mEditable) {
+    if (editable()) {
         if (mCommitted && mInputActivates) {
             beginEdit();
         }
@@ -73,7 +69,7 @@ void gui_textfield::handleDraggedBegin(MouseEvent& evt) {
 void gui_textfield::handleDraggedMove(MouseEvent& evt) {
     mMouseDragPos     = evt.relMousepos;
     this->mTextOffset = -123123;
-    if (mEditable && mFocused) {
+    if (editable() && mFocused) {
     }
 }
 void gui_textfield::handleDraggedRelease(MouseEvent& evt) {
@@ -170,7 +166,7 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
 
     /* nvgBeginPath(ctx);
     nvgRect(ctx, pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2);
-    if (mEditable && mFocused)
+    if (editable() && mFocused)
         nvgFillColor(ctx, theme->getColor(mValidFormat ? GuiColor::COL_BG_DRK_FOCUSED : GuiColor::COL_INVALID_INPUT));
     else
         nvgFillColor(ctx, theme->getColor(GuiColor::COL_BG_DRK));
@@ -286,7 +282,7 @@ bool gui_textfield::focusEvent(MouseHitEvt& evt, bool focused) {
     if (fnFocus) {
         fnFocus(evt, focused);
     }
-    if (mEditable) {
+    if (editable()) {
         if (focused) {
             beginEdit();
         } else {
@@ -297,10 +293,10 @@ bool gui_textfield::focusEvent(MouseHitEvt& evt, bool focused) {
     return true;
 }
 
-bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType action, int modifiers) {
-    if (mEditable && mFocused) {
-        if (action != KeyEventType::K_RELEASE) {
-            if (key == KEY_LEFT) {
+bool gui_textfield::keyboardEvent(KeyboardKey key, int /* scancode */, KeyboardState action, KeyboardMods modifiers) {
+    if (editable() && mFocused) {
+        if (action != KeyboardState::K_RELEASE) {
+            if (key == KeyboardKey::DAW_KB_LEFT) {
                 if (modifiers == KB_MOD_SHIFT) {
                     if (mSelectionPos == -1)
                         mSelectionPos = mCursorPos;
@@ -310,7 +306,7 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
 
                 if (mCursorPos > 0)
                     mCursorPos--;
-            } else if (key == KEY_RIGHT) {
+            } else if (key == KeyboardKey::DAW_KB_RIGHT) {
                 if (modifiers == KB_MOD_SHIFT) {
                     if (mSelectionPos == -1)
                         mSelectionPos = mCursorPos;
@@ -320,7 +316,7 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
 
                 if (mCursorPos < (int) mValueTemp.length())
                     mCursorPos++;
-            } else if (key == KEY_HOME) {
+            } else if (key == KeyboardKey::DAW_KB_HOME) {
                 if (modifiers == KB_MOD_SHIFT) {
                     if (mSelectionPos == -1)
                         mSelectionPos = mCursorPos;
@@ -329,7 +325,7 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
                 }
 
                 mCursorPos = 0;
-            } else if (key == KEY_END) {
+            } else if (key == KeyboardKey::DAW_KB_END) {
                 if (modifiers == KB_MOD_SHIFT) {
                     if (mSelectionPos == -1)
                         mSelectionPos = mCursorPos;
@@ -338,7 +334,7 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
                 }
 
                 mCursorPos = (int) mValueTemp.size();
-            } else if (key == KEY_BACKSPACE) {
+            } else if (key == KeyboardKey::DAW_KB_BACKSPACE) {
                 if (!deleteSelection()) {
                     if (mCursorPos > 0) {
                         mCursorPos--;
@@ -349,7 +345,7 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
                         }
                     }
                 }
-            } else if (key == KEY_DELETE) {
+            } else if (key == KeyboardKey::DAW_KB_DELETE) {
                 if (!deleteSelection()) {
                     if (filter && filter->isReplaceInput()) {
                     } else {
@@ -357,23 +353,23 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
                             mValueTemp.erase(mValueTemp.begin() + mCursorPos);
                     }
                 }
-            } else if (key == KEY_ESCAPE) {
+            } else if (key == KeyboardKey::DAW_KB_ESCAPE) {
                 if (!mCommitted)
                     endEdit(false);
-            } else if (mReturnCommits && (key == KEY_ENTER || key == KEY_KP_ENTER)) {
+            } else if (mReturnCommits && (key == KeyboardKey::DAW_KB_ENTER || key == KeyboardKey::DAW_KB_KP_ENTER)) {
                 if (!mCommitted)
                     endEdit(true);
                 else
                     beginEdit();
-            } else if (key == KEY_A && isCtrl(modifiers)) {
+            } else if (key == KeyboardKey::DAW_KB_A && isCtrl(modifiers)) {
                 mCursorPos    = (int) mValueTemp.length();
                 mSelectionPos = 0;
-            } else if (key == KEY_X && isCtrl(modifiers)) {
+            } else if (key == KeyboardKey::DAW_KB_X && isCtrl(modifiers)) {
                 copySelection();
                 deleteSelection();
-            } else if (key == KEY_C && isCtrl(modifiers)) {
+            } else if (key == KeyboardKey::DAW_KB_C && isCtrl(modifiers)) {
                 copySelection();
-            } else if (key == KEY_V && isCtrl(modifiers)) {
+            } else if (key == KeyboardKey::DAW_KB_V && isCtrl(modifiers)) {
                 deleteSelection();
                 pasteFromClipboard();
             }
@@ -386,7 +382,7 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
     return false;
 }
 bool gui_textfield::canHandleCharInput(uint32_t codepoint) {
-    if (mEditable) {
+    if (editable()) {
         const bool bIsGlobalKey = parentCtrl->isGlobalKeybindCodepoint(codepoint);
         const bool bIsFiltered = filter && filter->isAllowedChar(codepoint);
 
@@ -401,7 +397,7 @@ bool gui_textfield::canHandleCharInput(uint32_t codepoint) {
 }
 
 bool gui_textfield::handleCharInput(uint32_t codepoint) {
-    if (mEditable) {
+    if (editable()) {
         if (!mFocused) {
             return false;
         }

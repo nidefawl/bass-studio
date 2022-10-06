@@ -468,21 +468,7 @@ public:
         if (guictxtmenu_track_editor::clickedElement(e, _id)) {
             return true;
         }
-        scaled_grid& grid = dawCtrl->getGrid();
-        if (_id == 110 + 9) {// OFF
-            grid.grid_dens.enabled = false;
-        } else if (_id >= 110) {
-            grid.grid_dens.enabled   = true;
-            grid.grid_dens.fixedBars = _id - 110;
-            grid.grid_dens.isfixed   = true;
-        } else {
-            grid.grid_dens.enabled        = true;
-            grid.grid_dens.dynamicDensity = _id - 100;
-            grid.grid_dens.isfixed        = false;
-        }
-        dawCtrl->getDaw()->updateVisibleTrackContents();
-        closeContextMenu();
-        return true;
+        return false;
     }
 };
 

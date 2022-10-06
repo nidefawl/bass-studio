@@ -420,36 +420,6 @@ namespace PluginLFO {
         return false;
     }
 
-    class guictr_vert_layout : public guictr_base {
-        struct layout_entry_t {
-            float scale;
-            guibase* gui;
-        };
-        std::vector<layout_entry_t> layouts;
-    public:
-        explicit guictr_vert_layout()
-            : guictr_base()
-        {
-            padding = margin = 0;
-        }
-        ~guictr_vert_layout() override {
-            destroyGuis();
-        };
-        void layout() override {
-            auto cs = getSizeContent();
-            float y = 0;
-            for (auto& entry : layouts) {
-                entry.gui->size = { cs.x, cs.y * entry.scale };
-                entry.gui->pos = { 0, y };
-                y = entry.gui->bottom();
-            }
-            guictr_base::layout();
-        }
-        void addElement(const layout_entry_t& entry) {
-            layouts.push_back(entry);
-            add(entry.gui);
-        }
-    };
     class guictr_module_lfo : public guictr_base {
         module_lfo* const module;
         std::vector<guiknob_pluginparam*> guiParams;

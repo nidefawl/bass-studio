@@ -335,16 +335,16 @@ namespace DAW {
     }
 } // namespace DAW
 
-bool guitrack_editor::handleEditorCommand(KeyEvent& kevt, GlobalCommandType type) {
+bool guitrack_editor::handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
     if (DAW::HandleEditorCommand(dawCtrl->getDaw(), iGuiMgr, cursor, grid, project, m_clipboard, type, kevt)) {
         return true;
     }
     return false;
 }
 bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
-    if (kevt.type != STATE_REPEAT && isCtrlKey(kevt.keyCode)) {
+    if (kevt.type != K_REPEAT && isCtrlKey(kevt.keyCode)) {
         if ((action.dragtype == DRAG_CLIPS_MOVE || action.dragtype == DRAG_CLIPS_COPY)) {
-            if ((action.dragtype == DRAG_CLIPS_COPY) != (kevt.type == STATE_PRESS)) {
+            if ((action.dragtype == DRAG_CLIPS_COPY) != (kevt.type == K_PRESS)) {
                 if (action.dragtype == DRAG_CLIPS_MOVE) {
                     action.dragtype        = DRAG_CLIPS_COPY;
                     parentCtrl->cursorIcon = CURSOR_DUPLICATE;
@@ -356,7 +356,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
             return false;
         }
     }
-    if (kevt.type != STATE_REPEAT && isAltKey(kevt.keyCode)) {
+    if (kevt.type != K_REPEAT && isAltKey(kevt.keyCode)) {
         dawCtrl->window->fireMouseMoved();
         return false;
     }
@@ -546,7 +546,7 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
     dragClipboardMove(evt.relMousepos, evt.kbmods);
 }
 
-void guitrack_editor::dragClipboardMove(ivec2 local, int kbmods) {
+void guitrack_editor::dragClipboardMove(ivec2 local, KeyboardMods kbmods) {
     if (action.dragtype) {
         track_gui_entry_t* trNxtSelected = getTrackFromMouseClosest(iGuiMgr, local);
 
@@ -647,7 +647,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
     }
 }
 
-bool guitrack_editor::clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
+bool guitrack_editor::clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) {
     tick_t tick                     = grid.screenToTickSnap(mousepos.x, SNAP_ON);
     tick_t tickExact                = grid.screenToTickSnap(mousepos.x, SNAP_OFF);
     track_gui_entry_t* trackClicked = getTrackFromMouse(iGuiMgr, mousepos);
@@ -680,7 +680,7 @@ void guitrack_editor::clipDropCancel() {
         action.dragtype    = DRAG_NONE;
     }
 }
-bool guitrack_editor::clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
+bool guitrack_editor::clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) {
     if (!action.dragtype) {
         if (!clipDropBegin(clip, mousepos, kbmods))
             return false;
@@ -693,7 +693,7 @@ bool guitrack_editor::clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, int 
     }
     return false;
 }
-bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
+bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) {
     if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
 //        dragClipboardMove(mousepos);//TODO: maybe call move again to set final pos?
 

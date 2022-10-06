@@ -44,7 +44,7 @@ String getModKeyName(int modKey) {
 String menuName(String s, KeyCombo combo) {
     String modName = getModKeyName(combo.keyMod);
     String keyName = "";
-    if (combo.keyChar) {
+    if (!combo.keyChar.empty()) {
         keyName = StringToUpper(combo.keyChar);
     }
     if (!keyName.length()) {
@@ -56,7 +56,7 @@ String menuName(String s, KeyCombo combo) {
     }
     return StringFormat("%s\t%s", StringAsCStr(s), StringAsCStr(keyName));
 }
-MouseEvent mouseEvent(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, int kbmods, MouseEventType evtType) {
+MouseEvent mouseEvent(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, KeyboardMods kbmods, MouseEventType evtType) {
     MouseEvent mevt;
     mevt.type         = evtType;
     mevt.guiDragged   = gui;
@@ -67,26 +67,16 @@ MouseEvent mouseEvent(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, 
     mevt.dragOffset   = ctrl->dragOffset;
     mevt.dragDistance = &ctrl->dragDistance;
     dbgassert(kbmods >= 0);
-    mevt.kbmods       = kbmods;
+    mevt.kbmods       = static_cast<KeyboardMods>(kbmods);
     return mevt;
 }
 
 KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name) {
     KeyEvent kevt;
-    switch (keyState) {
-        case STATE_PRESS:
-            kevt.type = KeyEventType::K_PRESS;
-            break;
-        case STATE_REPEAT:
-            kevt.type = KeyEventType::K_REPEAT;
-            break;
-        case STATE_RELEASE:
-            kevt.type = KeyEventType::K_RELEASE;
-            break;
-    }
-    kevt.keyCode  = key;
+    kevt.type = static_cast<KeyboardState>(keyState);
+    kevt.keyCode  = static_cast<KeyboardKey>(key);
     kevt.scancode = scancode;
-    kevt.mods     = mods;
+    kevt.mods     = static_cast<KeyboardMods>(mods);
     kevt.keyname  = key_name;
     return kevt;
 }
@@ -101,7 +91,7 @@ ivec2 toControlsObjectSpace(ivec2 pos, guibase* gui) {
     return gui->toContainerSpace(pos);
 }
 namespace {
-void processScrollEvt(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffset, double yoffset, int kbmods) {
+void processScrollEvt(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffset, double yoffset, KeyboardMods kbmods) {
     MouseEvent evt = mouseEvent(ctrl, gui, mousePos, -1, kbmods, M_EVT_SCROLL);
     if (!gui->handleMouseScroll(evt, xoffset, yoffset)) {
         if (gui->parent) {
@@ -127,7 +117,7 @@ BaseCtrl::BaseCtrl(AppCtrl* parent)
 BaseCtrl::~BaseCtrl() {
 }
 
-void BaseCtrl::mouseUp(ivec2 mousePos, int button, int kbmods) {
+void BaseCtrl::mouseUp(ivec2 mousePos, int button, KeyboardMods kbmods) {
     if (guiCaptured != nullptr) {
         this->window->releaseMouse();
         guiCaptured = nullptr;
@@ -139,8 +129,8 @@ void BaseCtrl::mouseUp(ivec2 mousePos, int button, int kbmods) {
         guiDragged = nullptr;
     }
 }
-MouseHitEvt BaseCtrl::mouseHitEvt(MouseHitType _type, int kbmods) {
-    return { _type, kbmods };
+MouseHitEvt BaseCtrl::mouseHitEvt(MouseHitType _type, KeyboardMods kbmods) {
+    return { _type, static_cast<KeyboardMods>(kbmods) };
 }
 void BaseCtrl::focusGui(guibase* gui) {
     if (guiCaptured != nullptr) {
@@ -150,7 +140,7 @@ void BaseCtrl::focusGui(guibase* gui) {
     guibase* newFocus   = gui != nullptr ? gui->getFocusedControl() : nullptr;
     guiCtrFocused       = gui != nullptr ? gui->getFocusedContainer() : nullptr;
     if (oldFocused != newFocus) {
-        MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
+        MouseHitEvt evt(MouseHitType::MOUSE_LEFT, KeyboardMods::KB_MODS_NONE);
         if (oldFocused) {
             oldFocused->focusEvent(evt, false);
         }
@@ -161,7 +151,7 @@ void BaseCtrl::focusGui(guibase* gui) {
         }
     }
 }
-void BaseCtrl::mouseDown(ivec2 mousePos, int button, int kbmods, bool doubleclick) {
+void BaseCtrl::mouseDown(ivec2 mousePos, int button, KeyboardMods kbmods, bool doubleclick) {
     if (!mouseDownPre()) {
         return;
     }
@@ -207,7 +197,7 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, int kbmods, bool doubleclic
     }
 }
 
-void BaseCtrl::mouseScrolled(double xoffset, double yoffset, int kbmods) {
+void BaseCtrl::mouseScrolled(double xoffset, double yoffset, KeyboardMods kbmods) {
     ivec2 mousePos  = this->m_mousePos;
     MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_SCROLL, kbmods);
     for (guictr_base* ctr : containers) {
@@ -231,7 +221,7 @@ bool BaseCtrl::isCtrOrChildFocused(const guibase* gui) const {
     return false;
 }
 
-void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) {
+void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) {
     if (ctxtmenu && !ctxtmenu->isTransient()) {
         return;
     }
@@ -291,11 +281,11 @@ bool BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
     }
     KeyEvent event = keyEvent(key, scancode, keyState, mods, key_name);
     event.cmd = commands->matchKeyCombo(event);
-    if (!event.cmd) {
+    /* if (!event.cmd) {
         log_lf(Log::L_TRACE, "No command for key combo %s\n", event.toString().c_str());
     } else {
         log_lf(Log::L_TRACE, "Matched command: %s\n", event.cmd->toString().c_str());
-    }
+    } */
     if (guiDragged && guiDragged->handleKeyInput(event)) {
         return true;
     }
@@ -904,7 +894,7 @@ std::vector<std::weak_ptr<i_ctr_drop_area>> BaseCtrl::getTargets(MouseEvent& mev
     return targets;
 }
 std::vector<i_ctr_layout*> BaseCtrl::getContainers() {
-    MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, 0);
+    MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, KeyboardMods::KB_MODS_NONE);
     evtDragObj.setDraggedThing(nullptr);
     evtDragObj.requestFocus(nullptr);
     std::vector<i_ctr_layout*> ifMatches;

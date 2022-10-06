@@ -509,6 +509,11 @@ void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos
 
 guictr_properties_table* makeUniquePropertiesCtr();
 
+void guibase::setGuiType(gui_type guiType) {
+    this->guiType = guiType;
+    getContainerLabel(guiType, this->label);
+}
+
 void guibase::handleMouseDownBegin(MouseEvent& evt) {
     if (evt.button == 0) {
         handleDraggedBegin(evt);

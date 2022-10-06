@@ -63,7 +63,7 @@ namespace DAW::UI::Modulation {
         guictr_edit_modulation()
             : guictxtmenu_base()
         {
-            this->guiType = gui_type::CTR_TYPE_EDIT_MODULATION;
+            setGuiType(gui_type::CTR_TYPE_EDIT_MODULATION);
             add(&btnAddModulation);
             btnAddModulation.setLabel("Add Modulation");
             btnAddModulation.setText("Add");
@@ -98,7 +98,7 @@ namespace DAW::UI::Modulation {
         DAW::modulation_channel_ref ref;
     public:
         gui_dragged_modulation() : guitooltip<gui_dragged_modulation>(this) {
-            this->guiType = gui_type::CTR_TYPE_MODULATION_DRAGGED;
+            setGuiType(gui_type::CTR_TYPE_MODULATION_DRAGGED);
             pos = { 0, 0 };
             setDragRendered(true);
         }
@@ -125,7 +125,7 @@ namespace DAW::UI::Modulation {
         bool hasDragged        = false;
         public:
         explicit guibutton_modulate(DAW::modulation_channel_ref ref) : guibutton(), ref(ref) {
-            this->guiType = gui_type::CTR_TYPE_MODULATION_BUTTON;
+            setGuiType(gui_type::CTR_TYPE_MODULATION_BUTTON);
             drawFn   = drawTextureSymbol;
             drawParm = ICON_MODULATION;
             dragged.setParent(this);

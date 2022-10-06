@@ -278,3 +278,68 @@ void addPropertiesFromGui(guictr_base& gui, Table::tbl* table);
 void guictr_base::addProperties(Table::tbl* table) {
     addPropertiesFromGui(*this, table);
 }
+
+void guictr_vert_layout::layout() {
+    auto cs = getSizeContent();
+    vec2 xy{};
+    int32_t numEntries = CtrSize(layouts);
+
+    for (auto& entry : layouts) {
+        auto entrySize = vec2(cs);
+        entrySize[dir] *= entry.scale;
+        entry.gui->size = math::roundvecS32(entrySize);
+        entry.gui->pos  = math::roundvecS32(xy);
+        xy[dir]         = (entry.gui->pos[dir] + entry.gui->size[dir]);
+    }
+    // for (int32_t idx = 1; idx < numEntries - 1; ++idx) {
+    //     auto& entry = layouts[idx];
+    //     entry.gui->size[dir] -= layoutPadding[dir] + (numEntries - 1 == idx || idx == 0 ? 0 : layoutPadding[dir]);
+    //     if (idx > 0)
+    //         entry.gui->pos[dir] += layoutPadding[dir];
+    //     // entry.gui->size[1-dir] -= 2*layoutPadding[1-dir];
+    //     // entry.gui->pos[1-dir]  += layoutPadding[1-dir];
+    // }
+    guictr_base::layout();
+}
+
+void guictr_base::layoutEntries(ivec2 pos, ivec2 cs, ivec2 dir) {
+    int32_t numEntries = 0;
+    for (guibase* gui : guis) {
+        auto f = gui->getFlags();
+        if (f & FLG_NO_LAYOUT || !(f & FLG_VISIBLE))
+            continue;
+        numEntries++;
+    }
+    if (numEntries == 0)
+        return;
+
+    vec2 sizePadded = (vec2(cs) - vec2(dir) * float((numEntries - 1) * padding));
+    vec2 entrySize  = sizePadded / vec2(dir.x ? numEntries : 1, dir.y ? numEntries : 1);
+    vec2 offsetPos  = pos;
+    for (guibase* gui : guis) {
+        auto f = gui->getFlags();
+        if (f & FLG_NO_LAYOUT || !(f & FLG_VISIBLE))
+            continue;
+        gui->pos  = math::roundvecS32(offsetPos);
+        gui->size = math::roundvecS32(entrySize);
+        offsetPos += (entrySize + vec2(padding)) * vec2(dir);
+    }
+}
+
+void guictr_base::layout() {
+    switch (layoutMode) {
+        case LAYOUT_NONE:
+            break;
+        case LAYOUT_HORIZONTAL:
+            layoutEntries({}, getSizeContent(), { 1, 0 });
+            break;
+        case LAYOUT_VERTICAL:
+            layoutEntries({}, getSizeContent(), { 0, 1 });
+            break;
+        default:
+            dbgassert(0);
+    }
+    for (guibase* gui : guis) {
+        gui->layout();
+    }
+}

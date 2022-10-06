@@ -306,8 +306,7 @@ class gui_pluginsloaded_list : public guictr_base {
 
 public:
     gui_pluginsloaded_list() : guictr_base(), listCtr(listEntriesLoadedPlugins), listDeferredCtr(listEntriesDef) {
-        guiType = CTR_TYPE_PLUGINSLOADED;
-        getContainerLabel(guiType, this->label);
+        setGuiType(CTR_TYPE_PLUGINSLOADED);
         setBackgroundRendered(false);
         padding = 0;
         margin  = 0;

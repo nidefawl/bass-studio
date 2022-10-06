@@ -51,12 +51,13 @@ void PluginControl::destroy() {
     }
 }
 
-void PluginControl::menuCommand(const menucmd_t& command) {
+bool PluginControl::menuCommand(const menucmd_t& command) {
     switch (command.command) {
         case CMD_EXIT:
             mainWindow->requestClose();
-            break;
+            return true;
     }
+    return false;
 }
 
 void PluginControl::initApp(const std::vector<String>& args) {
@@ -106,7 +107,7 @@ void PluginControl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t
     AppCtrl::render(nanovgCtxt, x, y, w, h, ratio);
 }
 
-void PluginControl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) {
+void PluginControl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) {
     BaseCtrl::mouseMoved(mousePos, deltaPos, kbmods);
 }
 
@@ -118,36 +119,6 @@ void PluginControl::relayout(int32_t w, int32_t h) {
     for (guictr_base* ctr : containers) {
         ctr->layout();
     }
-}
-
-bool PluginControl::processGlobalKeyevent(KeyEvent& event) {
-    if (event.type != KeyEventType::K_RELEASE) {
-        if (isKC(KC_UNDO, event)) {
-            menuCommand(CMD_NOARG(CMD_UNDO));
-            return true;
-        }
-        if (isKC(KC_REDO, event)) {
-            menuCommand(CMD_NOARG(CMD_REDO));
-            return true;
-        }
-        if (isKC(KC_NEW, event)) {
-            menuCommand(CMD_NOARG(CMD_FILE_NEW));
-            return true;
-        }
-        if (isKC(KC_OPEN, event)) {
-            menuCommand(CMD_NOARG(CMD_FILE_OPEN));
-            return true;
-        }
-        if (isKC(KC_SAVE, event)) {
-            menuCommand(CMD_NOARG(CMD_FILE_SAVE));
-            return true;
-        }
-        if (isKC(KC_SAVEAS, event)) {
-            menuCommand(CMD_NOARG(CMD_FILE_SAVEAS));
-            return true;
-        }
-    }
-    return false;
 }
 
 bool PluginControl::mouseDownPre() {

@@ -82,6 +82,9 @@ bool getContainerLabel(gui_type type, String& out) {
         case CTR_TYPE_SHAPE_EDITOR:
             out = "Shape Editor";
             return true;
+        case CTR_TYPE_KEYBINDS:
+            out = "Keybinds";
+            return true;
         default:
             break;
     }
@@ -138,6 +141,9 @@ ContainerFactory& getContainerFactory() {
         containerFactory[gui_type::CTR_TYPE_SHAPE_EDITOR] = [](auto& ctxt) {
             auto shapeEditor = makeShapeEditor();
             return std::shared_ptr<guictr_base>(shapeEditor->getGuiContainer());
+        };
+        containerFactory[gui_type::CTR_TYPE_KEYBINDS] = [](auto& ctxt) {
+            return std::shared_ptr<guictr_base>(DAW::DialogSettings::makeKeybindsDialog(ctxt.daw));
         };
     }
     return containerFactory;

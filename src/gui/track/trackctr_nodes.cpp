@@ -1424,8 +1424,8 @@ void guictr_nodes_editor::reset() {
 }
 
 bool guictr_nodes_editor::handleKeyInput(KeyEvent& event) {
-    if (event.type != KeyEventType::K_RELEASE) {
-        if (event.type == KeyEventType::K_PRESS) {
+    if (event.type != KeyboardState::K_RELEASE) {
+        if (event.type == KeyboardState::K_PRESS) {
             KeyCombo kc = KC_REFRESH;
             kc.keyMod   = KB_MOD_CTRL;
             if (isKC(kc, event)) {

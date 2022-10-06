@@ -124,7 +124,7 @@ themefile loadThemeFile() {
             return tmpSettings;
         }
     }
-    throw std::runtime_error("Failed reading theme file " + cwdPathTheme);
+    throw appexception("Failed reading theme file " + cwdPathTheme);
 }
 void saveThemeFile(themefile& _settings) {
     String cwdPathTheme = App::Platform::toUserdataPath(THEMEFILE_NAME);

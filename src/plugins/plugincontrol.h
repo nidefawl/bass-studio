@@ -33,14 +33,13 @@ public:
     ~PluginControl() override;
     static PluginControl* get();
 
-    void mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) override;
-    void menuCommand(const menucmd_t& command) override;
+    void mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) override;
+    bool menuCommand(const menucmd_t& command) override;
     void onTick() override;
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
     void startApp() override;
     void destroy() override;
     void relayout(int32_t w, int32_t h) override;
-    bool processGlobalKeyevent(KeyEvent& event) override;
     bool mouseDownPre() override;
 
     void initApp(const std::vector<String>& args) override;

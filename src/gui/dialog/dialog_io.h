@@ -43,4 +43,36 @@ public:
     void addEntry(setting_dialog* ctr, String title);
 };
 
-}
+class guidropdown_setting_options_t;
+class guidropdown_setting_options_ctxt_t : public guictxtmenu {
+    guidropdown_setting_options_t* parent;
+    std::vector<String> strings;
+
+public:
+    explicit guidropdown_setting_options_ctxt_t(guidropdown_setting_options_t* _parent);
+    bool clickedElement(ctxtmenu_entry* e, int _id) override;
+};
+
+class guidropdown_setting_options_t : public guidropdownbase {
+public:
+    std::vector<String> options;
+    std::function<void(int32_t)> cbOnOptionSelected;
+    std::function<String()> fnGetCurrentVal;
+    std::function<int32_t()> fnGetCurrentIdx;
+
+public:
+    int32_t getSelectIndex() override { return fnGetCurrentIdx ? fnGetCurrentIdx() : -1; }
+    int32_t getLastIndex() override { return CtrSize(options) - 1; }
+    void setSelectedIndex(int32_t idx)  override { clicked(idx); }
+    String getString() override { return fnGetCurrentVal ? fnGetCurrentVal() : "<null>"; }
+    void handleDraggedRelease(MouseEvent& evt) override;
+    std::vector<String>& getOptions() { return options; }
+    void clicked(uint32_t idx) {
+        if (cbOnOptionSelected && idx < options.size()) 
+            cbOnOptionSelected(static_cast<int32_t>(idx));
+    }
+};
+
+setting_dialog* makeKeybindsDialog(DawInstance* daw);
+
+} // namespace DAW::DialogSettings

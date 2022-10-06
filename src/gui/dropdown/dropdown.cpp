@@ -16,7 +16,7 @@ bool guidropdownbase::handleMouseScroll(MouseEvent& evt, double xoffset, double 
 }
 
 bool guidropdownbase::handleKeyInput(KeyEvent& kevt) {
-    if (kevt.type == KeyEventType::K_PRESS || kevt.type == KeyEventType::K_REPEAT) {
+    if (kevt.type == KeyboardState::K_PRESS || kevt.type == KeyboardState::K_REPEAT) {
         if (isArrowKey(kevt.keyCode)) {
             ivec2 dir;
             arrowKeyToXY(kevt.keyCode, dir.x, dir.y);

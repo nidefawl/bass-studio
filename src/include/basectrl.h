@@ -192,7 +192,7 @@ public:
     bool mouseInside = false;
     bool isOK        = false;
 public:
-    static MouseHitEvt mouseHitEvt(MouseHitType _type, int kbmods);
+    static MouseHitEvt mouseHitEvt(MouseHitType _type, KeyboardMods kbmods);
     explicit BaseCtrl(AppCtrl* parent);
     virtual ~BaseCtrl();
     i_ctr_drop_area* determineDropCtrArea(MouseEvent& mevt) {
@@ -250,16 +250,19 @@ public:
     ivec2 getScaledSize() const { return {m_size.x * 1.0 / m_scale, m_size.y * 1.0 / m_scale}; }
     virtual void prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
     virtual void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
-    virtual bool processGlobalKeyevent(KeyEvent& event) { return false; }
+    virtual bool processGlobalKeyevent(const KeyEvent& event) { return false; }
+    virtual bool handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) {
+        return false;
+    }
     virtual bool mouseDownPre() { return true; }
     bool hasInputFocus() const { return bHasFocus && canTakeInputFocus; }
     void focusGui(guibase* g);
-    void mouseDown(ivec2 mousePos, int button, int kbmods, bool doubleclick);
-    void mouseUp(ivec2 mousePos, int button, int kbmods);
+    void mouseDown(ivec2 mousePos, int button, KeyboardMods kbmods, bool doubleclick);
+    void mouseUp(ivec2 mousePos, int button, KeyboardMods kbmods);
     virtual bool onCharInput(uint32_t codepoint);
     virtual bool onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name);
-    void mouseScrolled(double xoffset, double yoffset, int kbmods);
-    virtual void mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods);
+    void mouseScrolled(double xoffset, double yoffset, KeyboardMods kbmods);
+    virtual void mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods);
 
     bool isCtrOrChildFocused(const guibase* gui) const;
     bool isMouseInside() const { return mouseInside; }
@@ -374,11 +377,14 @@ public:
     void closePopup() override { }; // close this window if its a popup window
 
     virtual void filesDropCancel() { };
-    virtual bool filesDropMove(ivec2 pos, int kbmods) { return false; };
-    virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
-    virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
+    virtual bool filesDropMove(ivec2 pos, KeyboardMods kbmods) { return false; };
+    virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) { return false; };
+    virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) { return false; };
 
-    virtual void menuCommand(const menucmd_t& command){};
+    virtual bool menuCommand(const menucmd_t& command) {
+        return false;
+    }
+
     virtual void onBeforeShowWindow() {
         bIsVisible = true;
     }

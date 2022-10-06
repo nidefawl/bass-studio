@@ -304,6 +304,7 @@ void onModuleLoad() {
 #endif
             //exit(EXIT_FAILURE);
         }
+        DAW::UI::InitKeynames();
     } catch (std::exception& e) {
         ngui::showNotification(ngui::Style::Error, "Fatal error", e.what());
     }

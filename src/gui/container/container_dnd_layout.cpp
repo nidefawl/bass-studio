@@ -263,7 +263,7 @@ void guictr_layout::getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<i_ctr
 
 
 guictr_layout::guictr_layout() : guictr_base() {
-    guiType = CTR_TYPE_LAYOUT;
+    setGuiType(gui_type::CTR_TYPE_LAYOUT);
     //setBackgroundRendered(true);
     //setBackgroundRenderedInset(true);
     this->setCanMouseHit(true);

@@ -1,5 +1,6 @@
 
 
+#include "event.h"
 #include "guiglobals.h"
 #include "logging.h"
 #include "note.h"
@@ -140,32 +141,82 @@ public:
 
 class guictxtmenu_noteeditor : public guictxtmenu {
     guictr_noteeditor* editor;
+    ctxtmenu_color_select* sel = nullptr;
+    ctxtmenu_time_select* timeSel1 = nullptr;
+    ctxtmenu_time_select* timeSel2 = nullptr;
 
 public:
     guictxtmenu_noteeditor(guictr_noteeditor* _editor) {
         this->editor  = _editor;
-        this->size.x  = 320;
-        auto adaptive = new ctxtmenu_time_select(editor->grid, "Adaptive Grid", 0);
-        adaptive->initAdaptive();
-        addEntry(adaptive);
-        auto fixed = new ctxtmenu_time_select(editor->grid, "Fixed Grid", 0);
-        fixed->initFixed();
-        addEntry(fixed);
+        this->size.x  = 260;
+        this->dawCtrl = _editor->dawCtrl;
+        this->maxHeight = 0;
+        auto& cursor = dawCtrl->getCursor();
+
+        // bool bHasContentSelected = optionalContextClip != nullptr;
+        // if (!bHasContentSelected && m_trackentry && m_trackentry->parent) {
+        //     bHasContentSelected = !DAW::isSelectionEmpty(m_trackentry->parent->guiMgr, cursor, true);
+        // }
+        bool bHasContentSelected = cursor.getRange();
+        if (bHasContentSelected) {
+            addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_MUTE));
+            addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_QUANTIZE));
+            addEntry(new ctxtmenu_splitter());
+            addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_CUT));
+            addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_COPY));
+        }
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_PASTE));
+        if (bHasContentSelected) {
+            addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_DELETE));
+            // addEntry(new ctxtmenu_splitter());
+            // sel = new ctxtmenu_color_select("Pick Color", 100);
+            // addEntry(sel);
+        }
+        addEntry(new ctxtmenu_splitter());
+        scaled_grid& grid = dawCtrl->getGrid();
+        timeSel1     = new ctxtmenu_time_select(grid, "Adaptive Grid", 0);
+        timeSel1->initAdaptive();
+        addEntry(timeSel1);
+        timeSel2 = new ctxtmenu_time_select(grid, "Fixed Grid", 0);
+        timeSel2->initFixed();
+        addEntry(timeSel2);
     }
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
         scaled_grid& grid = editor->grid;
-        if (_id == 110 + 9) {// OFF
-            grid.grid_dens.enabled = false;
-        } else if (_id >= 110) {
-            grid.grid_dens.enabled   = true;
-            grid.grid_dens.fixedBars = _id - 110;
-            grid.grid_dens.isfixed   = true;
+        if (e == this->timeSel1 || e == this->timeSel2) {
+            if (_id == 110 + 9) {// OFF
+                grid.grid_dens.enabled = false;
+            } else if (_id >= 110) {
+                grid.grid_dens.enabled   = true;
+                grid.grid_dens.fixedBars = _id - 110;
+                grid.grid_dens.isfixed   = true;
+            } else {
+                grid.grid_dens.enabled        = true;
+                grid.grid_dens.dynamicDensity = static_cast<int8_t>(math::clamp<int32_t>(_id - 100 + 2, 0, 8));
+                // grid.grid_dens.dynamicDensity = _id - 100;
+                grid.grid_dens.isfixed        = false;
+            }
+            grid.notifyChange();
+        } else if (e == this->sel) {
+            if (_id >= sel->id) {
+                _id -= sel->id;
+                if (_id < COLOR_PALETTE_LEN) {
+                    auto clip = editor->view.clip();
+                    if (clip) {
+                        clip->rgb = colorPalette[_id];
+                    }
+                }
+            }
         } else {
-            grid.grid_dens.enabled        = true;
-            grid.grid_dens.dynamicDensity = static_cast<int8_t>(math::clamp<int32_t>(_id - 100 + 2, 0, 8));
-            grid.grid_dens.isfixed        = false;
+            if (dawCtrl && e->commandtype != GlobalCommandType::CMD_NONE) {
+                if (editor->content.handleEditorCommand({}, e->commandtype)) {
+                    // closeContextMenu();
+                    // return true;
+                }
+            }
+            // return guictxtmenu::clickedElement(e, _id);
         }
-        grid.notifyChange();
+        dawCtrl->getDaw()->updateVisibleTrackContents();
         closeContextMenu();
         return true;
     }
@@ -1273,31 +1324,12 @@ void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
     setGlobalSelectionFromClipSelection();
 }
 
-bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
+bool gui_clipcontent::handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
     clip_t* clip = view.clip();
     if (!clip) {
         return false;
     }
-    ThreadLock lock     = MainCtrl::getPlayThread()->lockThread();
     clip_notes_t& notes = clip->notes;
-    if (kevt.type != STATE_REPEAT && isCtrlKey(kevt.keyCode)) {
-        if ((dragMode == drag_notes_move || dragMode == drag_notes_copy)) {
-            if ((dragMode == drag_notes_copy) != (kevt.type == STATE_PRESS)) {
-                if (dragMode == drag_notes_move) {
-                    dragMode               = drag_notes_copy;
-                    parentCtrl->cursorIcon = CURSOR_DUPLICATE;
-                } else {
-                    dragMode               = drag_notes_move;
-                    parentCtrl->cursorIcon = CURSOR_DEFAULT;
-                }
-                mergeDraggedNotes(dragMode);
-            }
-            return false;
-        }
-    }
-    if (dragMode) {
-        return false;
-    }
     if (kevt.type != K_RELEASE) {
         clip_cursor_t& cursor          = view.cursor;
         const clip_notes_t notesBefore = notes; // copy
@@ -1306,7 +1338,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
         bool edit                      = false;
         String desc                    = "???";
         if (kevt.type == K_PRESS) {
-            if (isKC(KC_SELECTALL, kevt)) {
+            if (type == CMD_SELECT_ALL) {
                 notes.clearSelection();
                 notes.updateBounds();
                 notes.selectIdxRange(0, notes.m_list.size());
@@ -1314,13 +1346,13 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                 setSelectionFrame(getMinMaxTime(notes.selection));
                 handled = true;
             }
-            if (isKC(KC_DELETE, kevt) && !notes.selection.empty()) {
+            if (type == CMD_DELETE && !notes.selection.empty()) {
                 notes.deleteSelectedNotes(notes);
                 handled = true;
                 edit    = true;
                 desc    = "Delete notes";
             }
-            if (isKC(KC_MUTE, kevt) && !notes.selection.empty()) {
+            if (type == CMD_MUTE && !notes.selection.empty()) {
                 //        notes.muteToggleSelectedNotes(notes);
                 muteNotesToggle(view.draggedSelection);
                 mergeDraggedNotes(dragmode::drag_notes_move);
@@ -1329,19 +1361,19 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                 handled = true;
                 edit    = true;
                 desc    = "Mute notes";
-            } else if (isKC(KC_CUT, kevt) && !notes.selection.empty()) {
+            } else if (type == CMD_CUT && !notes.selection.empty()) {
                 view.clipboardCursorRange = cursor.end - cursor.start;
                 view.clipboard.setTo(notes.selection, -cursor.start);
                 notes.deleteSelectedNotes(notes);
                 handled = true;
                 edit    = true;
                 desc    = "Cut notes";
-            } else if (isKC(KC_COPY, kevt) && !notes.selection.empty()) {
+            } else if (type == CMD_COPY && !notes.selection.empty()) {
                 view.clipboardCursorRange = cursor.end - cursor.start;
                 view.clipboard.setTo(notes.selection, -cursor.start);
                 handled = true;
                 desc    = "Copy notes";// never appears in list
-            } else if (isKC(KC_DUPLICATE, kevt) && !notes.selection.empty()) {
+            } else if (type == CMD_DUPLICATE && !notes.selection.empty()) {
                 clip_notes_t tmpClipboard;
 #ifndef NDEBUG
                 for (note_t* selPtr: notes.selection) {
@@ -1371,7 +1403,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                 handled = true;
                 edit    = true;
                 desc    = "Duplicate notes";
-            } else if (isKC(KC_PASTE, kevt) && !view.clipboard.empty()) {
+            } else if (type == CMD_PASTE && !view.clipboard.empty()) {
                 notes.clearSelection();
                 view.copySelectedNoteList();
                 view.draggedSelection.clear();
@@ -1387,7 +1419,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                 handled = true;
                 edit    = true;
                 desc    = "Paste notes";
-            } else if (isKC(KC_QUANTIZE, kevt) && !notes.selection.empty()) {
+            } else if (type == CMD_QUANTIZE && !notes.selection.empty()) {
                 auto& settings = project_controller_t::get()->getQuantizeSettings();
                 if (settings.quantizeStart > 0 || settings.quantizeEnd > 0) {
                     log_lf(Log::L_DEBUG, "quantize to %d %d\n", settings.quantizeStart, settings.quantizeEnd);
@@ -1430,7 +1462,6 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
                     desc = "Quanitize notes";
                 }
             }
-        } else {
         }
         if (isArrowKey(kevt.keyCode)) {
             ivec2 dir;
@@ -1500,6 +1531,36 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
         }
         return handled;
     }
+    return false;
+}
+bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
+    clip_t* clip = view.clip();
+    if (!clip) {
+        return false;
+    }
+    if (kevt.type != K_REPEAT && isCtrlKey(kevt.keyCode)) {
+        if ((dragMode == drag_notes_move || dragMode == drag_notes_copy)) {
+            if ((dragMode == drag_notes_copy) != (kevt.type == K_PRESS)) {
+                if (dragMode == drag_notes_move) {
+                    dragMode               = drag_notes_copy;
+                    parentCtrl->cursorIcon = CURSOR_DUPLICATE;
+                } else {
+                    dragMode               = drag_notes_move;
+                    parentCtrl->cursorIcon = CURSOR_DEFAULT;
+                }
+                ThreadLock lock = dawCtrl->lockPlayThread();
+                mergeDraggedNotes(dragMode);
+            }
+            return true;
+        }
+    }
+    if (dragMode) {
+        return true;
+    }
+    if (kevt.cmd && handleEditorCommand(kevt, kevt.cmd->type)) {
+        return true;
+    }
+    
     return false;
 }
 

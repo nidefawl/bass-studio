@@ -164,7 +164,7 @@ public:
     }
 };
 gui_shaderview::gui_shaderview() : guictr_base(), impl(new gui_shaderview_impl_t) {
-    guiType = CTR_TYPE_SHADERVIEW;
+    setGuiType(gui_type::CTR_TYPE_SHADERVIEW);
     setBackgroundRendered(false);
 }
 gui_shaderview::~gui_shaderview() {

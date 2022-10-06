@@ -8,6 +8,7 @@
 #include <fstream>
 
 #include "config.h"
+#include "exceptions.h"
 #include "host/audio_config.h"
 #include "platform.h"
 #include "str_util.h"
@@ -216,7 +217,7 @@ void loadSettings(appsettings& settings) {
             return;
         }
     }
-    throw std::runtime_error("Failed reading application settings file " + cwdPathSettings);
+    throw appexception("Failed reading application settings file " + cwdPathSettings);
 }
 
 void saveSettings(appsettings& _settings) {

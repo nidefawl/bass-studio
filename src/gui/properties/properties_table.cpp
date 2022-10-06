@@ -221,8 +221,7 @@ public:
           m_numberInputI32(nullptr),
           m_numberInputFloat(nullptr)
     {
-        guiType = CTR_TYPE_PROPERTIES;
-        getContainerLabel(guiType, this->label);
+        setGuiType(gui_type::CTR_TYPE_PROPERTIES);
         setBackgroundRendered(true);
         padding = 4;
         margin = 2;
@@ -644,6 +643,8 @@ void addPropertiesFromGui(guibase& gui, Table::tbl* table) {
     rows.push_back({{tblstr{"id"}, tbltypesaferef<int32_t>{ref, gui.id, nullptr}}});
     rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, gui.pos, nullptr}}});
     rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, gui.size, nullptr}}});
+    rows.push_back({{tblstr{"right"}, tblint{gui.right()}}});
+    rows.push_back({{tblstr{"bottom"}, tblint{gui.bottom()}}});
 
     rows.push_back({{tblstr{"FLG_VISIBLE"}, tbltype_gui_flags{ref, FLG_VISIBLE}}});
     rows.push_back({{tblstr{"FLG_RENDER_BACKGROUND"}, tbltype_gui_flags{ref, FLG_RENDER_BACKGROUND}}});
@@ -674,6 +675,8 @@ void addPropertiesFromGui(guictr_base& gui, Table::tbl* table) {
     rows.push_back({{tblstr{"id"}, tbltypesaferef<int32_t>{ref, gui.id, nullptr}}});
     rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, gui.pos, nullptr}}});
     rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, gui.size, nullptr}}});
+    rows.push_back({{tblstr{"right"}, tblint{gui.right()}}});
+    rows.push_back({{tblstr{"bottom"}, tblint{gui.bottom()}}});
     guictr_layout* ctrlayout = nullptr;
     if ((ctrlayout = dynamic_cast<guictr_layout*>(&gui))) {
         String layoutName;
@@ -1027,8 +1030,7 @@ public:
           scrollContainer(),
           selectTheme()
     {
-        guiType = CTR_TYPE_THEME;
-        getContainerLabel(guiType, this->label);
+        setGuiType(gui_type::CTR_TYPE_THEME);
         padding = 4;
         margin = 2;
         buttonAdd.setText("+");

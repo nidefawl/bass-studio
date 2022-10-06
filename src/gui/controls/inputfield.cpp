@@ -113,10 +113,10 @@ void gui_numberinput_field_base::handleDraggedRelease(MouseEvent& evt) {
 
 bool gui_numberinput_field_base::handleKeyInput(KeyEvent& kevt) {
     if (kevt.type != K_RELEASE) {
-        if (kevt.keyCode == KEY_ENTER 
-            || kevt.keyCode == KEY_KP_ENTER 
-            || kevt.keyCode == KEY_ESCAPE) {
-            endEdit(kevt.keyCode == KEY_ENTER || kevt.keyCode == KEY_KP_ENTER);
+        if (kevt.keyCode == KeyboardKey::DAW_KB_ENTER 
+            || kevt.keyCode == KeyboardKey::DAW_KB_KP_ENTER 
+            || kevt.keyCode == KeyboardKey::DAW_KB_ESCAPE) {
+            endEdit(kevt.keyCode == KeyboardKey::DAW_KB_ENTER || kevt.keyCode == KeyboardKey::DAW_KB_KP_ENTER);
             return true;
         }
         if (isEditing) {

@@ -228,13 +228,13 @@ namespace DAW {
 
 
 guictxtmenu_track_editor::guictxtmenu_track_editor(DawCtrl* const _dawCtrl, track_gui_entry_t* const _trackentry, gui_clip* optionalContextClip)
-    : guictxtmenu(), m_trackentry(_trackentry) {
-    this->size.x = 220;
+    : guictxtmenu(), m_trackentry(_trackentry), m_gclip(optionalContextClip) {
+    this->size.x = 260;
     this->dawCtrl = _dawCtrl;
     this->maxHeight = 0;
     auto& cursor = _dawCtrl->getCursor();
     bool bHasContentSelected = optionalContextClip != nullptr;
-    if (!bHasContentSelected) {
+    if (!bHasContentSelected && m_trackentry && m_trackentry->parent) {
         bHasContentSelected = !DAW::isSelectionEmpty(m_trackentry->parent->guiMgr, cursor, true);
     }
     if (bHasContentSelected) {
@@ -258,40 +258,65 @@ guictxtmenu_track_editor::guictxtmenu_track_editor(DawCtrl* const _dawCtrl, trac
     }
     addEntry(new ctxtmenu_splitter());
     scaled_grid& grid = _dawCtrl->getGrid();
-    auto adaptive     = new ctxtmenu_time_select(grid, "Adaptive Grid", 0);
-    adaptive->initAdaptive();
-    addEntry(adaptive);
-    auto fixed = new ctxtmenu_time_select(grid, "Fixed Grid", 0);
-    fixed->initFixed();
-    addEntry(fixed);
+    timeSel1     = new ctxtmenu_time_select(grid, "Adaptive Grid", 0);
+    timeSel1->initAdaptive();
+    addEntry(timeSel1);
+    timeSel2 = new ctxtmenu_time_select(grid, "Fixed Grid", 0);
+    timeSel2->initFixed();
+    addEntry(timeSel2);
 }
 
-bool guictxtmenu_track_editor::clickedElement(ctxtmenu_entry* e, int _id) {
-    if (e->commandtype != GlobalCommandType::CMD_NONE) {
-        dbgassert(m_trackentry->parent);
-        KeyEvent evt{};
-        m_trackentry->parent->trackView.handleEditorCommand(evt, e->commandtype);
-        closeContextMenu();
-        return true;
+
+bool guictxtmenu::clickedElement(ctxtmenu_entry* e, int _id) {
+    if (dawCtrl && e->commandtype != GlobalCommandType::CMD_NONE) {
+        if (dawCtrl->handleGlobalCommand({}, e->commandtype, nullptr)) {
+            closeContextMenu();
+            return true;
+        }
     }
     return false;
 }
 
-guictxtmenu_clip::guictxtmenu_clip(DawCtrl* const _dawCtrl, gui_clip* const _gclip) : guictxtmenu_track_editor(_dawCtrl, _gclip->m_trackentry, _gclip), m_gclip(_gclip) {
+bool guictxtmenu_track_editor::clickedElement(ctxtmenu_entry* e, int _id) {
+    scaled_grid& grid = dawCtrl->getGrid();
+    if (e == this->timeSel1 || e == this->timeSel2) {
+        if (_id == 110 + 9) {// OFF
+            grid.grid_dens.enabled = false;
+        } else if (_id >= 110) {
+            grid.grid_dens.enabled   = true;
+            grid.grid_dens.fixedBars = _id - 110;
+            grid.grid_dens.isfixed   = true;
+        } else {
+            grid.grid_dens.enabled        = true;
+            grid.grid_dens.dynamicDensity = _id - 100;
+            grid.grid_dens.isfixed        = false;
+        }
+        grid.notifyChange();
+    } else if (e == this->sel) {
+        if (_id >= sel->id) {
+            _id -= sel->id;
+            if (_id < COLOR_PALETTE_LEN) {
+                if (m_gclip && m_gclip->m_clip) {
+                    m_gclip->m_clip->rgb = colorPalette[_id];
+                }
+            }
+        }
+    } else {
+        return guictxtmenu::clickedElement(e, _id);
+    }
+    dawCtrl->getDaw()->updateVisibleTrackContents();
+    closeContextMenu();
+    return true;
+}
+
+guictxtmenu_clip::guictxtmenu_clip(DawCtrl* const _dawCtrl, gui_clip* const _gclip)
+: guictxtmenu_track_editor(_dawCtrl, _gclip->m_trackentry, _gclip)
+{
 }
 
 bool guictxtmenu_clip::clickedElement(ctxtmenu_entry* e, int _id) {
     if (guictxtmenu_track_editor::clickedElement(e, _id)) {
         return true;
     }
-    if (_id >= sel->id) {
-        _id -= sel->id;
-        if (_id < COLOR_PALETTE_LEN) {
-            if (m_gclip->m_clip) {
-                m_gclip->m_clip->rgb = colorPalette[_id];
-            }
-        }
-    }
-    closeContextMenu();
-    return true;
+    return false;
 }

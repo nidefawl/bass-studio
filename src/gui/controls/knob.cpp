@@ -1,6 +1,7 @@
 #include "knob.h"
 #include "assert_dbg.h"
 #include "basectrl.h"
+#include "event.h"
 #include "knoblabeled.h"
 #include "gui/gui.h"
 #include "gui/container/container.h"
@@ -728,7 +729,7 @@ bool gui_slider_textfield::handleCharInput(uint32_t codepoint) {
     if (isTextCommitted() && codepoint < 0xFF) {
         char keyChar = (char) codepoint;
         if ((keyChar >= '0' && keyChar <= '9') || (keyChar == '-')) {
-            MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
+            MouseHitEvt evt(MouseHitType::MOUSE_LEFT, KeyboardMods::KB_MODS_NONE);
             gui_textfield::setValue(getValueAsString(paramAutomatable->getParam(paramIdx)->getValue()));
             gui_textfield::focusEvent(evt, true);
             gui_textfield::setSelectionRange(-1, -1);
@@ -740,11 +741,11 @@ bool gui_slider_textfield::handleCharInput(uint32_t codepoint) {
     return false;
 }
 
-bool gui_slider_textfield::keyboardEvent(int key, int scancode, KeyEventType action, int modifiers) {
+bool gui_slider_textfield::keyboardEvent(KeyboardKey key, int scancode, KeyboardState action, KeyboardMods modifiers) {
 
-    if (action == KeyEventType::K_PRESS && isTextCommitted()) {
-        if ((key == KEY_ENTER || key == KEY_KP_ENTER)) {
-            MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
+    if (action == KeyboardState::K_PRESS && isTextCommitted()) {
+        if ((key == KeyboardKey::DAW_KB_ENTER || key == KeyboardKey::DAW_KB_KP_ENTER)) {
+            MouseHitEvt evt(MouseHitType::MOUSE_LEFT, modifiers);
             gui_textfield::setValue(getValueAsString(paramAutomatable->getParam(paramIdx)->getValue()));
             gui_textfield::focusEvent(evt, true);
             gui_textfield::setSelectionRange(-1, -1);
@@ -754,15 +755,15 @@ bool gui_slider_textfield::keyboardEvent(int key, int scancode, KeyEventType act
     if (!isTextCommitted()) {
         return gui_textfield::keyboardEvent(key, scancode, action, modifiers);
     }
-    if (action == KeyEventType::K_PRESS || action == KeyEventType::K_REPEAT) {
-        if (key == KEY_UP) {
+    if (action == KeyboardState::K_PRESS || action == KeyboardState::K_REPEAT) {
+        if (key == KeyboardKey::DAW_KB_UP) {
             float amt = -1.0f;
             if (modifiers == KB_MOD_SHIFT) {
                 amt *= 0.1f;
             }
             updateAutomatableParam(amt, false);
             return true;
-        } else if (key == KEY_DOWN) {
+        } else if (key == KeyboardKey::DAW_KB_DOWN) {
             float amt = 1.0f;
             if (modifiers == KB_MOD_SHIFT) {
                 amt *= 0.1f;
@@ -786,7 +787,7 @@ void gui_slider_textfield::handleDraggedBegin(MouseEvent& evt) {
         return;
     }
     if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
-        MouseHitEvt mouseHitEvt(MouseHitType::MOUSE_LEFT, 0);
+        MouseHitEvt mouseHitEvt(MouseHitType::MOUSE_LEFT, evt.kbmods);
         gui_textfield::setValue(getValueAsString(paramAutomatable->getParam(paramIdx)->getValue()));
         gui_textfield::focusEvent(mouseHitEvt, true);
         gui_textfield::setSelectionRange(-1, -1);

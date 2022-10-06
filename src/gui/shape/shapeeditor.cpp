@@ -595,8 +595,7 @@ class guictr_curve_editor : public guictr_base, public i_ctr_shape_editor {
     int32_t inputHeight = HEIGHT_DEFAULT_INPUT;
 public:
     guictr_curve_editor() : guictr_base(){
-        guiType = CTR_TYPE_SHAPE_EDITOR;
-        getContainerLabel(guiType, this->label);
+        setGuiType(gui_type::CTR_TYPE_SHAPE_EDITOR);
         presetManager.setFileExtension("shape");
         presetManager.load(App::Platform::toUserdataPath("presets/Shapes"));
         add(&controls);

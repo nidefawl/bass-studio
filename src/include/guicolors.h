@@ -17,6 +17,9 @@ namespace GuiColor {
     constant_t getConstantById(uint32_t id);
     constant_t getConstantByName(const String& name);
 
+    inline bool operator==(const constant_t& lhs, const constant_t& rhs) { return lhs.idx == rhs.idx; }
+    inline bool operator<(const constant_t& lhs, const constant_t& rhs) { return lhs.idx < rhs.idx; }
+
     extern constant_t COL_AUTOMATED;
     extern constant_t COL_KNOB_HIGHLIGHT;
     extern constant_t COL_KNOB_HIGHLIGHT_BACKGROUND;

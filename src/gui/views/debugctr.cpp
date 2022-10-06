@@ -77,17 +77,19 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
     : guictr_base(),
       impl(new gui_ctr_debug::ctr_debug_impl_t{}),
       dgbCtrType(debugCtrType) {
+    auto guiType = gui_type::CTR_TYPE_DEBUG_0;
     switch (dgbCtrType) {
         case gui_ctr_debug_type_i32::TYPE_0:
-            guiType = CTR_TYPE_DEBUG_0;
+            guiType = gui_type::CTR_TYPE_DEBUG_0;
             break;
         case gui_ctr_debug_type_i32::TYPE_1:
-            guiType = CTR_TYPE_DEBUG_1;
+            guiType = gui_type::CTR_TYPE_DEBUG_1;
             break;
         case gui_ctr_debug_type_i32::TYPE_2:
-            guiType = CTR_TYPE_DEBUG_2;
+            guiType = gui_type::CTR_TYPE_DEBUG_2;
             break;
     }
+    setGuiType(guiType);
     auto const host = DawInstance::get()->getHost();
 #ifdef _WIN32
     msgCounterEnabled = true;
@@ -390,7 +392,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
             lvl++;
         }
 
-        strings.push_back(String("lastKey: ") + ctrl->lastKey);
+        strings.push_back(String("lastKey: ") + ctrl->lastKeyDebug);
         strings.push_back(StringFormat("undo size: %zu", daw->getHist().getNumUndoSteps()));
         strings.push_back(StringFormat("redo size: %zu", daw->getHist().getNumRedoSteps()));
         clip_view& clipView = ctrl->getClipView();

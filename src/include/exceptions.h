@@ -26,11 +26,11 @@ public:
 
 class appexception : public std::runtime_error {
 public:
-    explicit appexception(const char* msg) : runtime_error(msg) {}
+    explicit appexception(const String& str) : runtime_error(str) {}
 };
 
 class applogicexception : public std::runtime_error {
 public:
-    explicit applogicexception(String str) : runtime_error(str) {}
+    explicit applogicexception(const String& str) : runtime_error(str) {}
     explicit applogicexception(const char* msg) : runtime_error(msg) {}
 };

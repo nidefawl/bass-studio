@@ -49,11 +49,6 @@ guictxtmenu::~guictxtmenu() {
     }
 }
 
-bool guictxtmenu::clickedElement(ctxtmenu_entry* e, int _id) {
-    closeContextMenu();
-    return true;
-}
-
 void guictxtmenu::setControl(BaseCtrl* parentCtrl) {
     guictxtmenu_base::setControl(parentCtrl);
     for (auto* g : entries) {

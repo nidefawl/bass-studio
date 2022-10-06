@@ -108,8 +108,7 @@ public:
     explicit gui_export(export_settings_t& _settings)
         : guictr_base(),
           settings(_settings), tmFrameExport(&settings.exportPos, &settings.exportLen, &settings.isLocked) {
-        guiType = CTR_TYPE_EXPORT;
-        getContainerLabel(guiType, this->label);
+        setGuiType(CTR_TYPE_EXPORT);
         setBackgroundRendered(true);
         selectFolder.id = 0x10;
         selectFolder.setText(settings.exportPath);

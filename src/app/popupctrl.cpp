@@ -117,7 +117,6 @@ void PopupCtrl::destroy() {
     if (!isOK) {
         return;
     }
-    log_lf(Log::L_ERROR, "Destroy popup %s\n", StringAsCStr(windowName));
     isOK = false;
     this->containers.clear();
     this->containers.shrink_to_fit();

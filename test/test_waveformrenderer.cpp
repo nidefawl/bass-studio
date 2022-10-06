@@ -181,12 +181,13 @@ namespace MiniApp {
             tls.audioCache = nullptr;
         }
 
-        void menuCommand(const menucmd_t& command) override {
+        bool menuCommand(const menucmd_t& command) override {
             switch (command.command) {
                 case CMD_EXIT:
                     mainWindow->requestClose();
-                    break;
+                    return true;
             }
+            return false;
         }
         void startApp() override {
             for (auto* renderer : waveformTest.renderers) {
@@ -330,12 +331,8 @@ namespace MiniApp {
                 ctr->layout();
             }
         }
-        void mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) override {
+        void mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) override {
             BaseCtrl::mouseMoved(mousePos, deltaPos, kbmods);
-        }
-
-        bool processGlobalKeyevent(KeyEvent& event) override {
-            return false;
         }
 
         bool mouseDownPre() override {

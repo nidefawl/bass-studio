@@ -193,7 +193,7 @@ public:
         return true;
     }
     bool handleCharInput(uint32_t codepoint) override;
-    bool keyboardEvent(int key, int scancode, KeyEventType action, int modifiers) override;
+    bool keyboardEvent(KeyboardKey key, int scancode, KeyboardState action, KeyboardMods modifiers) override;
     void onTextEndEdit() override;
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;

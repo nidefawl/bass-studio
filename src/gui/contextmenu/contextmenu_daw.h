@@ -11,18 +11,20 @@
 #include "track_impl.h"
 #include "guicolors.h"
 
+class ctxtmenu_time_select;
 class guictxtmenu_track_editor : public guictxtmenu {
 protected:
     track_gui_entry_t* const m_trackentry;
-    ctxtmenu_color_select* sel;
+    gui_clip* const m_gclip;
+    ctxtmenu_color_select* sel = nullptr;
+    ctxtmenu_time_select* timeSel1 = nullptr;
+    ctxtmenu_time_select* timeSel2 = nullptr;
 public:
     guictxtmenu_track_editor(DawCtrl* const _dawCtrl, track_gui_entry_t* const _trackentry, gui_clip* optionalContextClip);
 
     bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
 class guictxtmenu_clip : public guictxtmenu_track_editor {
-    gui_clip* const m_gclip;
-
 public:
     explicit guictxtmenu_clip(DawCtrl* const _dawCtrl, gui_clip* const _gclip);
     bool clickedElement(ctxtmenu_entry* e, int _id) override;

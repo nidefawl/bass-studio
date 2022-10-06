@@ -274,7 +274,7 @@ public:
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
-
+    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type);
     void layout() override {
         for (guibase* gui : guis) {
             gui->layout();

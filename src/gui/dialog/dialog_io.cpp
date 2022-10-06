@@ -43,44 +43,6 @@ namespace DAW::DialogSettings {
 
 constexpr int ID_BTN_CLOSE    = 1;
 
-class guidropdown_setting_options_t;
-class guidropdown_setting_options_ctxt_t : public guictxtmenu {
-    guidropdown_setting_options_t* parent;
-    std::vector<String> strings;
-
-public:
-    explicit guidropdown_setting_options_ctxt_t(guidropdown_setting_options_t* _parent);
-    bool clickedElement(ctxtmenu_entry* e, int _id) override;
-};
-class guidropdown_setting_options_t : public guidropdownbase {
-public:
-    std::vector<String> options;
-    std::function<void(int)> cbOnOptionSelected;
-    std::function<String()> fnGetCurrentVal;
-    std::function<int32_t()> fnGetCurrentIdx;
-
-public:
-    int32_t getSelectIndex() override { return fnGetCurrentIdx ? fnGetCurrentIdx() : -1; }
-    int32_t getLastIndex() override { return CtrSize(options) - 1; }
-    void setSelectedIndex(int32_t idx)  override { clicked(idx); }
-    String getString() override { return fnGetCurrentVal ? fnGetCurrentVal() : "<null>"; }
-    void handleDraggedRelease(MouseEvent& evt) override {
-        if (options.empty()) return;
-        guictxtmenu_base* popup = new guidropdown_setting_options_ctxt_t(this);
-        popup->dawCtrl = dawCtrl;
-        popup->size = size;
-        popup->setFontSize(size.y);
-        this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
-    }
-    std::vector<String>& getOptions() { return options; }
-    void clicked(uint32_t idx) {
-        if (cbOnOptionSelected) {
-            if (idx < options.size()) {
-                cbOnOptionSelected((int32_t)idx);
-            }
-        }
-    }
-};
 
 guidropdown_setting_options_ctxt_t::guidropdown_setting_options_ctxt_t(guidropdown_setting_options_t* _parent)
     : parent(_parent) {
@@ -1307,7 +1269,7 @@ public:
         scanNow.id = 0x11;
         scanNow.setLabel("Scan VST2 Plugins");
         scanNow.setText(scanNow.getLabel());
-        pathVstVal.setEditable(true);
+        pathVstVal.setEnabled(false);
         pathVstVal.setValue(settings.pluginsettings.pathVst2);
         add(&pathVstVal);
         add(&selectFolder);
@@ -1424,6 +1386,7 @@ void guidialog_settings::init(DawInstance* daw)
     addEntry(new guidialog_audio_io(daw), "Audio I/O");
     addEntry(new guidialog_midi_io(daw), "Midi I/O");
     addEntry(new guidialog_settings_plugins(daw), "Plugins");
+    addEntry(makeKeybindsDialog(daw), "Keybinds");
     addEntry(new guidialog_settings_other(daw), "Other");
     add(&btnClose);
     btnClose.id = ID_BTN_CLOSE;
@@ -1437,7 +1400,7 @@ void guidialog_settings::init(DawInstance* daw)
 guidialog_settings::guidialog_settings(DawInstance* daw)
     : guidialog_base(ivec2{640, 760}, true)
 {
-    guiType = CTR_TYPE_SETTINGS;
+    setGuiType(gui_type::CTR_TYPE_SETTINGS);
     init(daw);
 }
 void guidialog_settings::addEntry(setting_dialog* ctr, String title) {
@@ -1528,4 +1491,12 @@ void guidialog_settings::buttonClicked(guibase* button) {
     guidialog_base::buttonClicked(button);
 }
 
-} // namespace
+void guidropdown_setting_options_t::handleDraggedRelease(MouseEvent& evt) {
+    if (options.empty()) return;
+    guictxtmenu_base* popup = new guidropdown_setting_options_ctxt_t(this);
+    popup->dawCtrl          = dawCtrl;
+    popup->size             = size;
+    popup->setFontSize(size.y);
+    this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
+}
+}// namespace DAW::DialogSettings

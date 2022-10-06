@@ -123,8 +123,7 @@ public:
         mInputActivates = b;
     }
 
-    bool editable() const { return mEditable; }
-    void setEditable(bool editable);
+    bool editable() const { return isEnabled(); }
 
     bool isTextCommitted() const { return mCommitted; }
 
@@ -175,7 +174,7 @@ public:
     void setEndEditCallback(const std::function<bool(const std::string& str)>& callback) { mCallbackEnd = callback; }
 
     bool focusEvent(MouseHitEvt& evt, bool focused) override;
-    virtual bool keyboardEvent(int key, int scancode, KeyEventType action, int modifiers);
+    virtual bool keyboardEvent(KeyboardKey key, int scancode, KeyboardState action, KeyboardMods modifiers);
     bool handleCharInput(uint32_t codepoint) override;
     bool canHandleCharInput(uint32_t codepoint);
 

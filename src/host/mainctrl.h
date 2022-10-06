@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 #include <set>
+#include "commands.h"
 #include "saferef.h"
 #include "types.h"
 #include <memory>
@@ -322,6 +323,9 @@ public:
     audiohost* getAudioHost() {
         return tls.audioHost;
     }
+    DAW::UI::CommandManager* getCommandManager() {
+        return tls.commandManager;
+    }
     static DawInstance* get();
     static DawInstance* getOptional();
 
@@ -406,7 +410,7 @@ public:
     track_t* insertNewTrack(int trackInsertPos, int trackType, int flags = FLG_TRK_CHANGE_USER);
 
     track_t* getSelectedTrack();
-    void menuCommand(const menucmd_t& command);
+    bool menuCommand(const menucmd_t& command);
     void destroy();
     void updateClipViews(clip_t* notifyClip, clip_cursor_t cursor);
     void onTick();
@@ -440,7 +444,7 @@ protected:
     int64_t tmLastRenderUpdatesMs       = 0;
 
 public:
-    String lastKey;
+    String lastKeyDebug;
     DawViewContainers* viewContainers = nullptr;
     DawInstance& daw;
     scaled_grid grid;
@@ -488,17 +492,18 @@ public:
 
 
     void resetMouseContext() override;
-    bool filesDropMove(ivec2 pos, int kbmods) override;
-    bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override;
+    bool filesDropMove(ivec2 pos, KeyboardMods kbmods) override;
+    bool filesDropBegin(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override;
     void filesDropCancel() override;
-    bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override;
-    void mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) override;
-    void menuCommand(const menucmd_t& command) override;
+    bool filesDropFinal(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override;
+    void mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) override;
+    bool menuCommand(const menucmd_t& command) override;
     void updateMenubar() override;
     void onTick() override;
     void destroy() override;
     void relayout(int32_t w, int32_t h) override;
-    bool processGlobalKeyevent(KeyEvent& event) override;
+    bool processGlobalKeyevent(const KeyEvent& event) override;
+    bool handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) override;
     bool mouseDownPre() override;
     void uncaptureMouse();
     void onUncaptureMouse();
@@ -625,13 +630,15 @@ public:
     void showPluginView() override;
     void showClipEditor() override;
     void onPluginsChanged() override;
-    bool processGlobalKeyevent(KeyEvent& event) override;
+    bool processGlobalKeyevent(const KeyEvent& event) override;
+    bool handleGlobalCommand(const KeyEvent& kev, GlobalCommandType type, DAW::UI::CommandContext* ctxt) override;
     guitrack_editor& getTrackEditor();
     void addDebug(String s);
     void resetMouseContext() override;
     void setEditClip(gui_clip* gclip) override;
     void layoutView(int32_t w, int32_t h) override;
     void setStatusText(String s) override;
+    void setStatusText(const String& s, GuiColor::constant_t color);
     void destroy() override;
     DAW::Cursor& getCursor() override {
         return daw.projectGlobals.cursor;
@@ -694,5 +701,6 @@ public:
     guictr_nodes_splitview* getNodesContainer() override;
     guictr_clipeditor* getClipEditor() override;
     void showPluginView() override;
+    bool handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) override;
     void showClipEditor() override;
 };

@@ -1256,7 +1256,7 @@ public:
           m_trackentry(_entry),
           automationSelectDevice(_entry),
           automationSelectParam(_entry) {
-        this->guiType = gui_type::CTR_TYPE_TRACK_TITLE;
+        setGuiType(gui_type::CTR_TYPE_TRACK_TITLE);
         setCanMouseHit(true);
         hideTrack.setRadius(12);
         hideAutomation.setRadius(10);

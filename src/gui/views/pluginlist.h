@@ -18,7 +18,7 @@ class effectbase;
 class gui_pluginlist_entry : public gui_list_entry {
 public:
     gui_pluginlist_entry() { 
-        guiType = gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY;
+        setGuiType(gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY);
         setDragRendered(true);
     };
     ~gui_pluginlist_entry() override = default;

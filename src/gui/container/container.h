@@ -2,6 +2,7 @@
 #include "nanovg/nanovg_min.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
+#include "seq_util.h"
 #include "str_util.h"
 #include "exceptions.h"
 #include "mouse.h"
@@ -21,7 +22,7 @@ enum autolayout_mode : uint8_t {
 enum class dock_pos : int32_t { NONE = 0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
 enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };
 
-#define CTR_TYPE_COUNT (static_cast<int>(gui_type::CTR_TYPE_SHAPE_EDITOR) + 1)
+#define CTR_TYPE_COUNT (static_cast<int>(gui_type::CTR_TYPE_KEYBINDS) + 1)
 
 class guictr_base : public guibase {
 protected:
@@ -98,45 +99,8 @@ public:
     autolayout_mode getLayoutMode() const {
         return layoutMode;
     }
-    virtual void layoutEntries(ivec2 pos, ivec2 cs, ivec2 dir) {
-        int32_t numEntries = 0;
-        for (guibase* gui : guis) {
-            auto f = gui->getFlags();
-            if (f & FLG_NO_LAYOUT || !(f & FLG_VISIBLE))
-                continue;
-            numEntries++;
-        }
-        if (numEntries == 0)
-            return;
-        auto sizePadded = (cs - dir*(numEntries-1)*padding);
-        auto size = sizePadded / ivec2(dir.x ? numEntries : 1, dir.y ? numEntries : 1);
-        for (guibase* gui : guis) {
-            auto f = gui->getFlags();
-            if (f & FLG_NO_LAYOUT || !(f & FLG_VISIBLE))
-                continue;
-            gui->pos = pos;
-            gui->size = size;
-            pos = ivec2{gui->right(), gui->bottom()} * dir;
-            pos += padding * dir;
-        }
-    }
-    void layout() override {
-        switch (layoutMode) {
-            case LAYOUT_NONE:
-                break;
-            case LAYOUT_HORIZONTAL:
-                layoutEntries({}, getSizeContent(), {1, 0});
-                break;
-            case LAYOUT_VERTICAL:
-                layoutEntries({}, getSizeContent(), {0, 1});
-                break;
-            default:
-                dbgassert(0);
-        }
-        for (guibase* gui : guis) {
-            gui->layout();
-        }
-    }
+    virtual void layoutEntries(ivec2 pos, ivec2 cs, ivec2 dir);
+    void layout() override;
 
     GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const override {
         return getInnerBackgroundColorFromState(stateflags);
@@ -353,4 +317,38 @@ public:
             parent->buttonClicked(button);
         }
     }
+};
+
+class guictr_vert_layout : public guictr_base {
+public:
+    struct layout_entry_t {
+        float scale;
+        guibase* gui;
+    };
+private:
+    std::vector<layout_entry_t> layouts;
+    const uint8_t dir = 1;
+    ivec2 layoutPadding = {1, 1};
+public:
+    explicit guictr_vert_layout(int32_t direction = 1)
+        : guictr_base(), dir(direction) {
+        setLayoutMode(autolayout_mode::LAYOUT_NONE);
+        padding = margin = 0;
+    }
+    ~guictr_vert_layout() override {
+        destroyGuis();
+    }
+    void setLayoutPadding(ivec2 _layoutPadding) {
+        layoutPadding = _layoutPadding;
+    }
+    void layout() override;
+    void addElement(const layout_entry_t& entry) {
+        layouts.push_back(entry);
+        add(entry.gui);
+    }
+    void clear() {
+        layouts.clear();
+        destroyGuis();
+    }
+
 };

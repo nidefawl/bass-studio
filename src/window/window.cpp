@@ -1,11 +1,13 @@
 #include "appconfig.h"
 #include "assert_dbg.h"
+#include "event.h"
 #include "glheaders.h"
 #include "hires_timer.h"
 #include "modules.h"
 #include "tls.h"
 #include "util/profiling.h"
 #include <GLFW/glfw3.h>
+#include <linux/input-event-codes.h>
 #include <utility>
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -572,23 +574,25 @@ public:
         glfwMaximizeWindow(glfw);
     }
 
-    bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override {
+    bool filesDropBegin(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
         return true;
     }
 
-    bool filesDropMove(ivec2 pos, int kbmods) override {
+    bool filesDropMove(ivec2 pos, KeyboardMods kbmods) override {
         return true;
     }
 
     void filesDropCancel() override {
     }
 
-    bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override {
+    bool filesDropFinal(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
         return true;
     }
 
-    virtual void menuCommand(const menucmd_t& command) {
+    virtual bool menuCommand(const menucmd_t& command) {
+        return false;
     }
+
     virtual void onMenuOpen(ngui::Menu* menu) {
     }
 
@@ -658,7 +662,7 @@ public:
         pos->y = y;
     }
 
-    int getKeyMods_() {
+    KeyboardMods getKeyMods_() {
         int shiftL = glfwGetKey(glfw, GLFW_KEY_LEFT_SHIFT);
         int shiftR = glfwGetKey(glfw, GLFW_KEY_RIGHT_SHIFT);
         int ctrlL  = glfwGetKey(glfw, GLFW_KEY_LEFT_CONTROL);
@@ -667,15 +671,15 @@ public:
         int altR   = glfwGetKey(glfw, GLFW_KEY_RIGHT_ALT);
         int mods   = 0;
         if (altL || altR) {
-            mods |= KB_MOD_ALT;
+            mods |= KeyboardMods::KB_MOD_ALT;
         }
         if (ctrlL || ctrlR) {
-            mods |= KB_MOD_CTRL;
+            mods |= KeyboardMods::KB_MOD_CTRL;
         }
         if (shiftL || shiftR) {
-            mods |= KB_MOD_SHIFT;
+            mods |= KeyboardMods::KB_MOD_SHIFT;
         }
-        return mods;
+        return static_cast<KeyboardMods>(mods);
     }
 };
 
@@ -869,14 +873,15 @@ public:
     }
 
     void onMouseButton(int button, int action, int mods) override {
+        auto mouseMods = static_cast<KeyboardMods>(static_cast<uint32_t>(mods) | static_cast<uint32_t>(getKeyMods()));
         if (action == GLFW_PRESS) {
             auto tmNow    = getTimeMillis();
             bool dblClick = this->tmDblClick != 0 && tmNow - this->tmDblClick < 500;
             dblClick &= glm::distance(lastclickpos, mousepos) < 4;
             this->tmDblClick = dblClick ? 0 : tmNow;
-            ctrl->mouseDown(getMousePos(1.0f / ctrl->m_scale), button, getKeyMods(), dblClick);
+            ctrl->mouseDown(getMousePos(1.0f / ctrl->m_scale), button, mouseMods, dblClick);
         } else if (action == GLFW_RELEASE) {
-            ctrl->mouseUp(getMousePos(1.0f / ctrl->m_scale), button, getKeyMods());
+            ctrl->mouseUp(getMousePos(1.0f / ctrl->m_scale), button, mouseMods);
         }
         lastclickpos = mousepos;
     }
@@ -925,11 +930,11 @@ public:
         appwindow::showWindow();
     }
 
-    bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override {
+    bool filesDropBegin(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
         return ctrl->filesDropBegin(files, pos, kbmods);
     }
 
-    bool filesDropMove(ivec2 pos, int kbmods) override {
+    bool filesDropMove(ivec2 pos, KeyboardMods kbmods) override {
         return ctrl->filesDropMove(pos, kbmods);
     }
 
@@ -937,7 +942,7 @@ public:
         ctrl->filesDropCancel();
     }
 
-    bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override {
+    bool filesDropFinal(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override {
         return ctrl->filesDropFinal(files, pos, kbmods);
     }
 
@@ -945,9 +950,11 @@ public:
         glfwSetWindowShouldClose(glfw, 1);
     }
 
-    void menuCommand(const menucmd_t& command) override {
+    bool menuCommand(const menucmd_t& command) override {
 #if WINDOW_HAS_MENUBAR
-        ctrl->menuCommand(command);
+        return ctrl->menuCommand(command);
+#else
+        return false;
 #endif
     }
 
@@ -1044,7 +1051,7 @@ public:
         return str;
     }
 
-    int getKeyMods() override {
+    KeyboardMods getKeyMods() override {
         return getKeyMods_();
     }
 
@@ -1266,7 +1273,7 @@ public:
         return str;
     }
 
-    int getKeyMods() override {
+    KeyboardMods getKeyMods() override {
         return getKeyMods_();
     }
 
@@ -1488,11 +1495,37 @@ static void glfw_cb_mousescroll(GLFWwindow* w, double xoffset, double yoffset) {
     }
 }
 
+const char* GlfwKeycodeToString(KeyboardKey keyCode, int scancode) {
+    using DAW::UI::GlobalKeyNames;
+    if (keyCode != KeyboardKey::DAW_KB_UNKNOWN)
+    {
+        int32_t key = static_cast<int32_t>(keyCode);
+        if (key >= 0 && key < CtrSize(GlobalKeyNames) && GlobalKeyNames[key]) {
+            return GlobalKeyNames[key];
+        }
+        if (keyCode != KeyboardKey::DAW_KB_KP_EQUAL &&
+            (keyCode < KeyboardKey::DAW_KB_KP_0 || keyCode > KeyboardKey::DAW_KB_KP_ADD) &&
+            (keyCode < KeyboardKey::DAW_KB_APOSTROPHE || keyCode > KeyboardKey::DAW_KB_WORLD_2))
+        {
+            return nullptr;
+        }
+
+        scancode = glfwGetKeyScancode(key);
+        if (scancode == -1)
+            return nullptr;
+        const auto keyName = glfwGetKeyName(static_cast<int32_t>(keyCode), scancode);
+        if (keyName) {
+            return keyName;
+        }
+    }
+    return nullptr;
+}
+
 void glfw_main_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int mods) {
     try {
         appwindow* wu = getUserPointerFromGlfw(w);
         if (wu && wu->isValid() && wu->isVisible()) {
-            const char* key_name = glfwGetKeyName(key, scancode);
+            const char* key_name = GlfwKeycodeToString(static_cast<KeyboardKey>(key), scancode);
             wu->onKeyInput(key, scancode, action, mods, key_name);
         }
     } catch (std::exception& e) {
@@ -1569,14 +1602,14 @@ static void glfw_cb_dragdrop(GLFWwindow* w, int path_count, const char* paths[],
         if (wu && wu->isValid()) {
             if (event == GLFW_DRAG_ENTER && paths && path_count > 0) {
                 std::vector<String> filePaths(&paths[0], &paths[path_count]);
-                wu->filesDropBegin(filePaths, wu->getMousePos(1.0f), 0);
+                wu->filesDropBegin(filePaths, wu->getMousePos(1.0f), KeyboardMods::KB_MODS_NONE);
             }
             if (event == GLFW_DRAG_MOVE) {
-                wu->filesDropMove(wu->getMousePos(1.0f), 0);
+                wu->filesDropMove(wu->getMousePos(1.0f), KeyboardMods::KB_MODS_NONE);
             }
             if (event == GLFW_DRAG_DROP && paths && path_count > 0) {
                 std::vector<String> filePaths(&paths[0], &paths[path_count]);
-                wu->filesDropFinal(filePaths, wu->getMousePos(1.0f), 0);
+                wu->filesDropFinal(filePaths, wu->getMousePos(1.0f), KeyboardMods::KB_MODS_NONE);
             }
             if (event == GLFW_DRAG_CANCEL) {
                 wu->filesDropCancel();
@@ -1829,6 +1862,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             ngui::showNotification(ngui::Style::Error, "Error", "glfwInit() reported an error. See logfile for detailed information.");
             exit(EXIT_FAILURE);
         }
+        DAW::UI::InitKeynames();
 
         std::shared_ptr<AppCtrl> ctrl = appInstance.makeApp(args);
 
@@ -2170,124 +2204,124 @@ public:
         int keyState;
         int mods;
     };
-    int vstToGlfwKey(unsigned char key) const {
+    KeyboardKey vstToGlfwKey(unsigned char key) const {
         switch (key) {
             case VKEY_BACK:
-                return KEY_BACKSPACE;
+                return KeyboardKey::DAW_KB_BACKSPACE;
             case VKEY_TAB:
-                return KEY_TAB;
+                return KeyboardKey::DAW_KB_TAB;
             case VKEY_CLEAR:
-                return KEY_DELETE;
+                return KeyboardKey::DAW_KB_DELETE;
             case VKEY_RETURN:
-                return KEY_ENTER;
+                return KeyboardKey::DAW_KB_ENTER;
             case VKEY_PAUSE:
-                return KEY_PAUSE;
+                return KeyboardKey::DAW_KB_PAUSE;
             case VKEY_ESCAPE:
-                return KEY_ESCAPE;
+                return KeyboardKey::DAW_KB_ESCAPE;
             case VKEY_SPACE:
-                return KEY_SPACE;
+                return KeyboardKey::DAW_KB_SPACE;
             case VKEY_NEXT:
-                return KEY_PAGE_DOWN;
+                return KeyboardKey::DAW_KB_PAGE_DOWN;
             case VKEY_END:
-                return KEY_END;
+                return KeyboardKey::DAW_KB_END;
             case VKEY_HOME:
-                return KEY_HOME;
+                return KeyboardKey::DAW_KB_HOME;
             case VKEY_LEFT:
-                return KEY_LEFT;
+                return KeyboardKey::DAW_KB_LEFT;
             case VKEY_UP:
-                return KEY_UP;
+                return KeyboardKey::DAW_KB_UP;
             case VKEY_RIGHT:
-                return KEY_RIGHT;
+                return KeyboardKey::DAW_KB_RIGHT;
             case VKEY_DOWN:
-                return KEY_DOWN;
+                return KeyboardKey::DAW_KB_DOWN;
             case VKEY_PAGEUP:
-                return KEY_PAGE_UP;
+                return KeyboardKey::DAW_KB_PAGE_UP;
             case VKEY_PAGEDOWN:
-                return KEY_PAGE_DOWN;
+                return KeyboardKey::DAW_KB_PAGE_DOWN;
             case VKEY_SELECT:
-                return -1;
+                return KeyboardKey::DAW_KB_UNKNOWN;
             case VKEY_PRINT:
-                return KEY_PRINT_SCREEN;
+                return KeyboardKey::DAW_KB_PRINT_SCREEN;
             case VKEY_ENTER:
-                return KEY_ENTER;
+                return KeyboardKey::DAW_KB_ENTER;
             case VKEY_SNAPSHOT:
-                return -1;
+                return KeyboardKey::DAW_KB_UNKNOWN;
             case VKEY_INSERT:
-                return KEY_INSERT;
+                return KeyboardKey::DAW_KB_INSERT;
             case VKEY_DELETE:
-                return KEY_DELETE;
+                return KeyboardKey::DAW_KB_DELETE;
             case VKEY_HELP:
-                return -1;
+                return KeyboardKey::DAW_KB_UNKNOWN;
             case VKEY_NUMPAD0:
-                return KEY_KP_0;
+                return KeyboardKey::DAW_KB_KP_0;
             case VKEY_NUMPAD1:
-                return KEY_KP_1;
+                return KeyboardKey::DAW_KB_KP_1;
             case VKEY_NUMPAD2:
-                return KEY_KP_2;
+                return KeyboardKey::DAW_KB_KP_2;
             case VKEY_NUMPAD3:
-                return KEY_KP_3;
+                return KeyboardKey::DAW_KB_KP_3;
             case VKEY_NUMPAD4:
-                return KEY_KP_4;
+                return KeyboardKey::DAW_KB_KP_4;
             case VKEY_NUMPAD5:
-                return KEY_KP_5;
+                return KeyboardKey::DAW_KB_KP_5;
             case VKEY_NUMPAD6:
-                return KEY_KP_6;
+                return KeyboardKey::DAW_KB_KP_6;
             case VKEY_NUMPAD7:
-                return KEY_KP_7;
+                return KeyboardKey::DAW_KB_KP_7;
             case VKEY_NUMPAD8:
-                return KEY_KP_8;
+                return KeyboardKey::DAW_KB_KP_8;
             case VKEY_NUMPAD9:
-                return KEY_KP_9;
+                return KeyboardKey::DAW_KB_KP_9;
             case VKEY_MULTIPLY:
-                return KEY_KP_MULTIPLY;
+                return KeyboardKey::DAW_KB_KP_MULTIPLY;
             case VKEY_ADD:
-                return KEY_KP_ADD;
+                return KeyboardKey::DAW_KB_KP_ADD;
             case VKEY_SEPARATOR:
-                return -1;
+                return KeyboardKey::DAW_KB_UNKNOWN;
             case VKEY_SUBTRACT:
-                return KEY_KP_SUBTRACT;
+                return KeyboardKey::DAW_KB_KP_SUBTRACT;
             case VKEY_DECIMAL:
-                return -1;
+                return KeyboardKey::DAW_KB_UNKNOWN;
             case VKEY_DIVIDE:
-                return KEY_KP_DIVIDE;
+                return KeyboardKey::DAW_KB_KP_DIVIDE;
             case VKEY_F1:
-                return KEY_F1;
+                return KeyboardKey::DAW_KB_F1;
             case VKEY_F2:
-                return KEY_F2;
+                return KeyboardKey::DAW_KB_F2;
             case VKEY_F3:
-                return KEY_F3;
+                return KeyboardKey::DAW_KB_F3;
             case VKEY_F4:
-                return KEY_F4;
+                return KeyboardKey::DAW_KB_F4;
             case VKEY_F5:
-                return KEY_F5;
+                return KeyboardKey::DAW_KB_F5;
             case VKEY_F6:
-                return KEY_F6;
+                return KeyboardKey::DAW_KB_F6;
             case VKEY_F7:
-                return KEY_F7;
+                return KeyboardKey::DAW_KB_F7;
             case VKEY_F8:
-                return KEY_F8;
+                return KeyboardKey::DAW_KB_F8;
             case VKEY_F9:
-                return KEY_F9;
+                return KeyboardKey::DAW_KB_F9;
             case VKEY_F10:
-                return KEY_F10;
+                return KeyboardKey::DAW_KB_F10;
             case VKEY_F11:
-                return KEY_F11;
+                return KeyboardKey::DAW_KB_F11;
             case VKEY_F12:
-                return KEY_F12;
+                return KeyboardKey::DAW_KB_F12;
             case VKEY_NUMLOCK:
-                return KEY_NUM_LOCK;
+                return KeyboardKey::DAW_KB_NUM_LOCK;
             case VKEY_SCROLL:
-                return KEY_SCROLL_LOCK;
+                return KeyboardKey::DAW_KB_SCROLL_LOCK;
             case VKEY_SHIFT:
-                return KEY_LEFT_SHIFT;
+                return KeyboardKey::DAW_KB_LEFT_SHIFT;
             case VKEY_CONTROL:
-                return KEY_LEFT_CONTROL;
+                return KeyboardKey::DAW_KB_LEFT_CONTROL;
             case VKEY_ALT:
-                return KEY_LEFT_ALT;
+                return KeyboardKey::DAW_KB_LEFT_ALT;
             case VKEY_EQUALS:
-                return KEY_EQUAL;
+                return KeyboardKey::DAW_KB_EQUAL;
         }
-        return 0;
+        return KeyboardKey::DAW_KB_UNKNOWN;
     }
     glfw_key_press toGlfwKeyCodes(VstKeyCode& keyCode) const {
         glfw_key_press keyPress{};
@@ -2305,10 +2339,10 @@ public:
         }
         if (keyCode.virt) {
             auto mappedVirtKey = vstToGlfwKey(keyCode.virt);
-            if (mappedVirtKey < 0) {
+            if (mappedVirtKey == KeyboardKey::DAW_KB_UNKNOWN) {
                 log_lf(Log::L_DEBUG, "Failed mapping virtual key %d\n", keyCode.virt);
             }
-            keyPress.key = mappedVirtKey;
+            keyPress.key = static_cast<int32_t>(mappedVirtKey);
         }
         if (keyCode.character) {
             if ((keyPress.mods & (KB_MOD_CTRL | KB_MOD_ALT | KB_MOD_SUPER)) != 0) {

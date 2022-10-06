@@ -1,3 +1,5 @@
+#include "assert_dbg.h"
+#include "event.h"
 #include "fileio.h"
 #include "glheaders.h"
 #include <cstddef>
@@ -132,7 +134,10 @@ public:
     void log(Log::Level lvl, const char* data, size_t len) override {
         if (Log::LEVEL_ALL != getLevel() && lvl < getLevel())
             return;
-        statusbar->setTitle(data);
+        auto color = GuiColor::COL_LABEL_ACTIVE;
+        if (lvl >= Log::L_WARN)
+            color = GuiColor::COL_INVALID_INPUT;
+        statusbar->setTitle(data, color);
     }
     void logStr(Log::Level lvl, String s) override {
     }
@@ -145,7 +150,7 @@ public:
     bool initialized = false;
     int revision     = -1;
     guictr_effectlibrary() : guictr_base() {
-        guiType = CTR_TYPE_EFFECTLIBRARY;
+        setGuiType(gui_type::CTR_TYPE_EFFECTLIBRARY);
         setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
         setBackgroundRendered(false);
         padding = 0;
@@ -813,9 +818,15 @@ void DawInstance::loadFileCStr(const char* str) {
 
 void DawInstance::saveFile(const String& path) {
     if (!path.empty()) {
-        if (tls.mainCtrl) tls.mainCtrl->setStatusText(StringFormat("Saved project %s", StringAsCStr(path)));
         std::shared_ptr<project_file> f = createProjectFile();
-        saveProject(f, path);
+        bool bSuccess = saveProject(f, path);
+        if (tls.mainCtrl) {
+            if (bSuccess) {
+                tls.mainCtrl->setStatusText(StringFormat("Saved project to %s", StringAsCStr(path)));
+            } else {
+                tls.mainCtrl->setStatusText(StringFormat("Failed to save project to %s", StringAsCStr(path)), GuiColor::COL_INVALID_INPUT);
+            }
+        }
         projectPath = path;
     }
 }
@@ -918,7 +929,7 @@ std::shared_ptr<window_abstract_t> getWindowDebugWaveformCache();
 std::shared_ptr<window_abstract_t> getWindowPerf();
 std::shared_ptr<window_abstract_t> getWindowDebugNanoVG();
 
-void DawInstance::menuCommand(const menucmd_t& command) {
+bool DawInstance::menuCommand(const menucmd_t& command) {
     try {
         auto mainCtrl = tls.mainCtrl;
         switch (command.command) {
@@ -934,7 +945,7 @@ void DawInstance::menuCommand(const menucmd_t& command) {
                         });
                     }
                 }
-                break;
+                return true;
             }
             case CMD_OPEN_VIEW:
                 if (getMainControl()) {
@@ -946,7 +957,7 @@ void DawInstance::menuCommand(const menucmd_t& command) {
                         addLayoutEntryRelayout(getMainControl(), ctrLayoutLeft, ctr, ctr->label);
                     }
                 }
-                break;
+                return true;
             case CMD_OPEN_SECOND_WINDOW:
                 if (companionWindows.empty()) {
                     auto companionCtrlStdPtr = std::make_shared<CompanionCtrl>(mainCtrl, *this);
@@ -973,21 +984,21 @@ void DawInstance::menuCommand(const menucmd_t& command) {
                 } else if (companionWindows.size() && companionWindows[0].ctrl && companionWindows[0].ctrl->isOk()) {
                     companionWindows[0].wnd->show();
                 }
-                return;
+                return true;
             case CMD_UNDO:
                 if (hist.canUndo()) {
                     ThreadLock lock = playThread.lockThread();
                     hist.undoStep(this);
                     updateVisibleTrackContents();
                 }
-                break;
+                return true;
             case CMD_REDO:
                 if (hist.canRedo()) {
                     ThreadLock lock = playThread.lockThread();
                     hist.redoStep(this);
                     updateVisibleTrackContents();
                 }
-                break;
+                return true;
             case CMD_FILE_NEW: {
                 stopPlaying();
                 setAudioThreadState(playback_state::status_no_process);
@@ -995,7 +1006,8 @@ void DawInstance::menuCommand(const menucmd_t& command) {
                 layoutTrackEditors();
                 updateVisibleTrackContents();
                 setAudioThreadState(playback_state::status_stop);
-            } break;
+                return true;
+            }
             case CMD_FILE_OPEN: {
                 if (command.arg1.empty()) {
                     String path;
@@ -1005,19 +1017,20 @@ void DawInstance::menuCommand(const menucmd_t& command) {
                 } else {
                     loadFile(command.arg1, FLAG_INVOKE_USER_CB_DEFERLOAD);
                 }
-            } break;
+                return true;
+            }
             case CMD_SET_STARTUP_PROJECT:
             case CMD_FILE_SAVEAS:
             case CMD_FILE_SAVE: {
                 if (command.command == CMD_SET_STARTUP_PROJECT && !projectPath.empty()) {
                     tls.settings->dawsettings.startupProjectPath = projectPath;
                     saveSettings(*tls.settings);
-                    break;
+                    return true;
                 }
                 String path = projectPath;
                 if (command.command == CMD_FILE_SAVEAS || path.empty()) {
                     if (!promptUserFilePath(mainCtrl->window, 1, vFILE_TYPE_PROJECT, path, lastProjectDirectory)) {
-                        break;
+                        return true;
                     }
                     String ext;
                     SplitPath(path, nullptr, nullptr, &ext);
@@ -1034,33 +1047,19 @@ void DawInstance::menuCommand(const menucmd_t& command) {
                     tls.settings->dawsettings.startupProjectPath = projectPath;
                     saveSettings(*tls.settings);
                 }
-                break;
+                return true;
             }
-            case CMD_FILE_CLOSE:
-                break;
-            case CMD_CUT:
-                break;
-            case CMD_COPY:
-                break;
-            case CMD_PASTE:
-                break;
-            case CMD_DELETE:
-                break;
-            case CMD_SELECT_ALL:
-                break;
-            case CMD_DUPLICATE:
-                break;
             case CMD_INSERT_AUDIO_TRACK:
             case CMD_INSERT_MIDI_TRACK:
             case CMD_INSERT_RETURN_TRACK:
             case CMD_INSERT_MASTER_TRACK: {
-
                 int32_t trackType = (command.command - CMD_INSERT_AUDIO_TRACK) % NUM_TRACK_TYPES;
                 insertNewTrack(-1, trackType);
-            } break;
+                return true;
+            }
             case CMD_ABOUT:
                 mainCtrl->openDialog(new guidialog_about());
-                break;
+                return true;
             case CMD_SHOW_DEBUG_WINDOW:
                 if (command.argInt == 3) {
 
@@ -1083,51 +1082,52 @@ void DawInstance::menuCommand(const menucmd_t& command) {
                         determineWindowPos(guidialog, mainCtrl->mainWindow, mainCtrl->m_scale, 0, ivec2(0), wndPos);
                         popupCtrl->open(guidialog, wndPos, true, true);
                     }
-                    return;
+                    return true;
                 }
 #if CREATE_DEBUG_COMPANION_WINDOW
                 if (command.argInt == 0) {
                     window_dialog* dialog = mainCtrl->mainWindow->createDialog("waveform atlas cache", 1280, 720, getWindowDebugWaveformCache());
                     dialog->show();
-                    return;
+                    return true;
                 }
                 if (command.argInt == 1) {
                     window_dialog* dialog = mainCtrl->mainWindow->createDialog("nanovg debug", 1280, 720, getWindowDebugNanoVG());
                     dialog->show();
-                    return;
+                    return true;
                 }
                 if (command.argInt == 2) {
                     window_dialog* dialog = mainCtrl->mainWindow->createDialog("performance graphs", 1280, 720, getWindowPerf());
                     dialog->show();
-                    return;
+                    return true;
                 }
 #endif
-                break;
+                return true;
             case CMD_PREFERENCES:
                 mainCtrl->openDialog(new DAW::DialogSettings::guidialog_settings(this));
-                break;
+                return true;
             case CMD_EXIT:
                 mainCtrl->mainWindow->requestClose();
-                break;
+                return true;
         }
     } catch (std::exception& e) {
         handleStdException(e);
     }
+    return false;
 }
 
-void DawCtrl::menuCommand(const menucmd_t& command) {
+bool DawCtrl::menuCommand(const menucmd_t& command) {
     switch (command.command) {
 
         case CMD_GUI_GLOBAL_ZOOM_DECREASE:
             m_scale = math::max(0.05f, m_scale - 0.05f);
             BaseCtrl::relayout();
-            return;
+            return true;
         case CMD_GUI_GLOBAL_ZOOM_INCREASE:
             m_scale = math::min(10.0f - 0.05f, m_scale + 0.05f);
             BaseCtrl::relayout();
-            return;
+            return true;
     }
-    daw.menuCommand(command);
+    return daw.menuCommand(command);
 }
 
 void MainCtrl::startApp() {
@@ -2219,7 +2219,7 @@ void DawCtrl::onUncaptureMouse() {
     guiCaptured = nullptr;
 }
 
-void DawCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) {
+void DawCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) {
     daw.dragdropTarget.reset();
 #if USE_GUI_MENU
     if (ctxtmenu && !ctxtmenu->isTransient() && viewContainers->getMenu()) {
@@ -2232,7 +2232,7 @@ void DawCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, int kbmods) {
     BaseCtrl::mouseMoved(mousePos, deltaPos, kbmods);
 }
 
-bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbmods) {
+bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
     log_lf(Log::L_DEBUG, "filesDropBegin %d %d isdragging=%d\n", mousepos.x, mousepos.y, daw.dragdropclip.isLoaded);
     daw.dragdropclip.reset();
     if (guiDragged || guiCaptured) {
@@ -2306,7 +2306,7 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbm
     return false;
 }
 
-bool DawCtrl::filesDropMove(ivec2 mousepos, int kbmods) {
+bool DawCtrl::filesDropMove(ivec2 mousepos, KeyboardMods kbmods) {
     if (guiDragged || guiCaptured) {
         daw.dragdropclip.reset();
         return false;
@@ -2346,7 +2346,7 @@ public:
 void DawCtrl::filesDropCancel() {
     daw.dragdropclip.reset();
 }
-bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, int kbmods) {
+bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
     clipreset rst(daw.dragdropclip);
     if (guiDragged || guiCaptured) {
         return false;
@@ -2369,16 +2369,10 @@ bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, int kbm
     return false;
 }
 
-#if defined(__GNUC__) && defined(ENABLE_MICHAELS_GLIBCXX_HACKS)
-namespace STLVectorDebugTracking {
-    void dbgPrintVectorAllocs();
-}
-#endif
-
-bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
-    if (event.type == KeyEventType::K_PRESS) {
-        if ((event.mods & KB_MOD_SHIFT) == event.mods && event.keyCode >= KEY_F1 && event.keyCode <= KEY_F10) {
-            uint8_t index = (event.keyCode - KEY_F1) % layouts.size();
+bool MainCtrl::processGlobalKeyevent(const KeyEvent& event) {
+    if (event.type == KeyboardState::K_PRESS) {
+        if ((event.mods & KB_MOD_SHIFT) == event.mods && event.keyCode >= KeyboardKey::DAW_KB_F1 && event.keyCode <= KeyboardKey::DAW_KB_F10) {
+            uint8_t index = (static_cast<int32_t>(event.keyCode) - static_cast<int32_t>(KeyboardKey::DAW_KB_F1)) % layouts.size();
             bool store    = (event.mods & KB_MOD_SHIFT);
             if (store) {
                 view->storeLayout(layouts[index]);
@@ -2391,8 +2385,8 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
             return true;
         }
     }
-    if (event.type == KeyEventType::K_PRESS) {
-        if (event.keyCode == KEY_L) {
+    if (event.type == KeyboardState::K_PRESS) {
+        if (event.keyCode == KeyboardKey::DAW_KB_L) {
             bShowDebugFrames = !bShowDebugFrames;
             dragContainerRelayout(drag_ctr_event{ drag_ctr_event_type::DRAG_END });
             return true;
@@ -2401,105 +2395,85 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
     return DawCtrl::processGlobalKeyevent(event);
 }
 
-bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
-
-    if (event.type != KeyEventType::K_RELEASE) {
-        if (event.keyCode == KEY_TAB) {
-            switch (this->viewMode) {
-                case view_mode_t::TRACK_TIMELINE:
-                    this->setViewMode(view_mode_t::MIXER);
-                    return true;
-                case view_mode_t::MIXER:
-                    this->setViewMode(view_mode_t::NODE_EDITOR);
-                    return true;
-                case view_mode_t::NODE_EDITOR:
-                    this->setViewMode(view_mode_t::TRACK_TIMELINE);
-                    return true;
-            }
-            return true;
-        }
-    }
-    if (event.type == KeyEventType::K_PRESS) {
-        lastKey = getKeyName(event.scancode);
-        if (!lastKey.length()) {
-            const char* ca = glfwGetKeyName(event.keyCode, event.scancode);
-            if (ca) {
-                lastKey = ca;
-            }
-        }
-    }
-    if (event.type != KeyEventType::K_RELEASE) {
-        if (!event.mods && event.keyCode == KEY_M) {
-            ThreadLock lock = daw.playThread.lockThread();
-#if defined(__GNUC__) && defined(ENABLE_MICHAELS_GLIBCXX_HACKS)
-            STLVectorDebugTracking::dbgPrintVectorAllocs();
-            return true;
-#endif
-        }
-        if (!event.mods && event.keyCode == KEY_S) {
-            logStackTrace();
-            return true;
-        }
-        if (event.keyCode == KEY_SPACE) {
+bool DawCtrl::handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) {
+    switch (type) {
+        case CMD_STARTSTOP_PLAYBOCK: {
             if (daw.isPlaying()) {
                 daw.stopPlaying();
             } else {
-                daw.startPlaying();
+                daw.startPlaying(); //TODO: pass cursor position
             }
             return true;
         }
-        if (isKC(KC_UNDO, event)) {
-            menuCommand(CMD_NOARG(CMD_UNDO));
-            return true;
-        }
-        if (isKC(KC_REDO, event)) {
-            menuCommand(CMD_NOARG(CMD_REDO));
-            return true;
-        }
-        if (isKC(KC_NEW, event)) {
-            menuCommand(CMD_NOARG(CMD_FILE_NEW));
-            return true;
-        }
-        if (isKC(KC_OPEN, event)) {
-            menuCommand(CMD_NOARG(CMD_FILE_OPEN));
-            return true;
-        }
-        if (isKC(KC_SAVE, event)) {
-            menuCommand(CMD_NOARG(CMD_FILE_SAVE));
-            return true;
-        }
-        if (isKC(KC_SAVEAS, event)) {
-            menuCommand(CMD_NOARG(CMD_FILE_SAVEAS));
-            return true;
-        }
-        if (isKC(KC_ZOOM_IN, event)) {
-            menuCommand(CMD_NOARG(CMD_GUI_GLOBAL_ZOOM_INCREASE));
-            return true;
-        }
-        if (isKC(KC_ZOOM_OUT, event)) {
-            menuCommand(CMD_NOARG(CMD_GUI_GLOBAL_ZOOM_DECREASE));
-            return true;
-        }
-        if (isKC({ 0, KEY_F1, nullptr }, event)) {
-            menuCommand(CMD_NOARG(CMD_OPEN_SECOND_WINDOW));
-            return true;
-        }
-        if (isKC({ 0, KEY_F2, nullptr }, event)) {
-            menuCommand(CMD_NOARG(CMD_PREFERENCES));
-            return true;
-        }
-        if (event.type != KeyEventType::K_REPEAT) {
-            if (isKC({ 0, KEY_P, nullptr }, event)) {
-                if (this->getDaw() && this->getDaw()->getMainControl()) {
-                    auto ctrLayoutLeft   = this->getDaw()->getMainControl()->view->ctr_Left;
-                    auto ctr_performance = std::shared_ptr<guictr_base>(makeGuiPerformance());
-                    ctr_performance->setLabel("Performance");
-                    addLayoutEntry(ctrLayoutLeft, ctr_performance, ctr_performance->label);
-                    ctrLayoutLeft->postContentChanged();
-                    ctrLayoutLeft->layout();
+        default:
+            break;
+    }
+    if (menuCommand(CMD_NOARG(type))) {
+        return true;
+    }
+    if (this->getTrackContainer()->trackView.handleEditorCommand(kevt, type)) {
+        return true;
+    }
+    if (this->getClipEditor()->noteeditor.content.handleEditorCommand(kevt, type)) {
+        return true;
+    }
+    return false;
+}
+bool CompanionCtrl::handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) {
+    switch (type) {
+        case CMD_SWITCH_VIEW: {
+            if (kevt.type != KeyboardState::K_RELEASE) {
+                switch (this->viewMode) {
+                    case view_mode_t::TRACK_TIMELINE:
+                        this->setViewMode(view_mode_t::MIXER);
+                        break;
+                    case view_mode_t::MIXER:
+                        this->setViewMode(view_mode_t::NODE_EDITOR);
+                        break;
+                    case view_mode_t::NODE_EDITOR:
+                        this->setViewMode(view_mode_t::TRACK_TIMELINE);
+                        break;
                 }
-                return true;
             }
+            return true;
+        }
+        default:
+            break;
+    }
+    return DawCtrl::handleGlobalCommand(kevt, type, ctxt);
+}
+
+bool MainCtrl::handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) {
+    switch (type) {
+        case CMD_SWITCH_VIEW: {
+            if (kevt.type != KeyboardState::K_RELEASE) {
+                if (this->viewMode == view_mode_t::TRACK_TIMELINE) {
+                    this->setViewMode(view_mode_t::NODE_EDITOR);
+                } else {
+                    this->setViewMode(view_mode_t::TRACK_TIMELINE);
+                }
+            }
+            return true;
+        }
+        default:
+            break;
+    }
+    return DawCtrl::handleGlobalCommand(kevt, type, ctxt);
+}
+
+bool DawCtrl::processGlobalKeyevent(const KeyEvent& event) {
+    if (event.type == KeyboardState::K_PRESS) {
+        lastKeyDebug = getKeyName(event.scancode);
+        if (!lastKeyDebug.length()) {
+            const char* ca = GlfwKeycodeToString(event.keyCode, event.scancode);
+            if (ca) {
+                lastKeyDebug = ca;
+            }
+        }
+    }
+    if (event.type != KeyboardState::K_RELEASE) {
+        if (event.cmd && handleGlobalCommand(event, event.cmd->type, &event.cmd->context)) {
+            return true;
         }
     }
     return false;
@@ -2839,6 +2813,10 @@ void MainCtrl::fixCursor() {
     } else {
         fixCursorTrackRange(cursor, guiMgr.getTracksVisibleFlat().size());
     }
+}
+
+void MainCtrl::setStatusText(const String& s, GuiColor::constant_t color) {
+    view->statusbar.setTitle(s, color);
 }
 
 void MainCtrl::setStatusText(String s) {

@@ -462,7 +462,7 @@ namespace DAW::UI::Modulation {
           fieldMaxVal(nullptr) {
         margin        = 0;
         padding       = 2;
-        this->guiType = gui_type::CTR_TYPE_EDIT_MODULATION;
+        setGuiType(gui_type::CTR_TYPE_EDIT_MODULATION);
         add(&btnSourceName);
         add(&fieldMinVal);
         add(&fieldMaxVal);

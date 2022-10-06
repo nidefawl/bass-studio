@@ -1,4 +1,5 @@
 #pragma once
+#include "event.h"
 #include "math/vec.h"
 #include "str_util.h"
 #include <memory>
@@ -30,7 +31,7 @@ public:
     virtual void requestRedraw()            = 0;
     virtual void setClipboardText(String s) = 0;
     virtual String getClipboardText()       = 0;
-    virtual int getKeyMods()                = 0;
+    virtual KeyboardMods getKeyMods()       = 0;
     virtual void captureMouse()             = 0;
     virtual void releaseMouse()             = 0;
     virtual bool isMouseCaptured()          = 0;

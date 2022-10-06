@@ -135,6 +135,7 @@ enum gui_type : uint16_t {
     CTR_TYPE_EDIT_MODULATION,
     CTR_TYPE_TRACK_TITLE,
     CTR_TYPE_SHAPE_EDITOR,
+    CTR_TYPE_KEYBINDS,
 };
 namespace DebugAlloc {
     template<typename T>
@@ -181,6 +182,7 @@ public:
     gui_type getGuiType() const {
         return guiType;
     }
+    void setGuiType(gui_type guiType);
     virtual bool isVisible() const {
         //if (size.x < 0 || size.y < 0)
         //  return false;
@@ -375,13 +377,13 @@ public:
     }
     virtual void trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
     }
-    virtual bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
+    virtual bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) {
         return false;
     }
-    virtual bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
+    virtual bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) {
         return false;
     }
-    virtual bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
+    virtual bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) {
         return false;
     }
     virtual void clipDropCancel() {

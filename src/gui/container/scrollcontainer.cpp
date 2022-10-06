@@ -42,20 +42,33 @@ void guictr_scrollbar::render(NVGcontext* vg) {
 
 void guictr_scrollbar::determineSize(glm::ivec2& prefSize) /* const */ {
     ivec2 pos = { 0, 0 };
+    ivec2 pad = { 0, 0 };
+    ivec2 layoutSize = prefSize;
+    switch(getLayoutMode()) {
+        case autolayout_mode::LAYOUT_VERTICAL:
+            layoutSize.x -= padding * 2;
+            break;
+        case autolayout_mode::LAYOUT_HORIZONTAL:
+            layoutSize.y -= padding * 2;
+            break;
+        case LAYOUT_NONE:
+            break;
+    }
+
     for (guibase* gui : guis) {
         if (gui == &scrollbar)
             continue;
 
         gui->pos  = pos;
-        gui->size = prefSize;
+        gui->size = layoutSize;
         gui->determineSize(gui->size);
         gui->layout();
         switch(getLayoutMode()) {
             case autolayout_mode::LAYOUT_VERTICAL:
-                pos.y += gui->size.y;
+                pos.y = gui->bottom() + pad.y;
                 break;
             case autolayout_mode::LAYOUT_HORIZONTAL:
-                pos.x += gui->size.x;
+                pos.x = gui->right() + pad.x;
                 break;
             case LAYOUT_NONE:
                 break;
@@ -95,10 +108,8 @@ void guictr_scrollbar::determineSize(glm::ivec2& prefSize) /* const */ {
 }
 
 void guictr_scrollbar::onChildLayoutChanged(guibase* g) {
-    //glm::ivec2 prefSize = getSizeContent();
-    //determineSize(prefSize);
     layout();
-    if (this->parent != NULL) {
+    if (this->parent) {
         this->parent->onChildLayoutChanged(this);
     }
 }
@@ -140,11 +151,11 @@ void guictr_scrollbar::layout() {
         }
         scrollOffsetChanged(1, scrollbar.scrollOffset);
     } else {
-        for (guibase* gui : guis) {
-            if (gui == &scrollbar)
-                continue;
-            gui->size.x = cs.x;
-        }
+        // for (guibase* gui : guis) {
+        //     if (gui == &scrollbar)
+        //         continue;
+        //     // gui->size.x = cs.x;
+        // }
         scrollOffsetChanged(1, 0);
     }
     for (guibase* gui : guis) {

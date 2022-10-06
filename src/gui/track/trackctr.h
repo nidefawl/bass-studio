@@ -98,7 +98,7 @@ public:
     }
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
-    bool handleEditorCommand(KeyEvent& kevt, GlobalCommandType type);
+    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type);
 
     void trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) override;
     void trackViewDragMove(guitrack_editor* view, MouseEvent& evt) override;
@@ -106,11 +106,11 @@ public:
     void dragSelectionBegin(gui_clip* gClip, MouseEvent& evt);
     void dragSelectionMove(gui_clip* gui, MouseEvent& evt);
     void dragSelectionRelease(gui_clip* gui, MouseEvent& evt);
-    void dragClipboardMove(ivec2 local, int kbmods);
+    void dragClipboardMove(ivec2 local, KeyboardMods kbmods);
 
-    bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) override;
-    bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) override;
-    bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) override;
+    bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override;
+    bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override;
+    bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override;
     void clipDropCancel() override;
 
     void handleRightClick(MouseEvent& evt) override;
