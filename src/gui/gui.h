@@ -136,6 +136,7 @@ enum gui_type : uint16_t {
     CTR_TYPE_TRACK_TITLE,
     CTR_TYPE_SHAPE_EDITOR,
     CTR_TYPE_KEYBINDS,
+    CTR_TYPE_PLUGINS
 };
 namespace DebugAlloc {
     template<typename T>

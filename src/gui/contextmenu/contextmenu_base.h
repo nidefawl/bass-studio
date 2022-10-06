@@ -24,6 +24,7 @@ public:
     float fixedLeftOffset = -1;
     guitheme_t* theme     = nullptr;
     bool bIsMenuOpen = false;
+    bool bGrayedOut = false;
     GlobalCommandType commandtype = GlobalCommandType::CMD_NONE;
 
     RenderResources::NvgImageTexture* icon = nullptr;
@@ -37,6 +38,14 @@ public:
     ctxtmenu_entry(AppCtrl* ctrl, GlobalCommandType _type);
 
     virtual ~ctxtmenu_entry() = default;
+
+    void setGrayedOut(bool b) {
+        bGrayedOut = b;
+    }
+
+    bool isGrayedOut() const {
+        return bGrayedOut;
+    }
 
     void setIcon(RenderResources::NvgImageTexture* _icon, GuiColor::constant_t color) {
         this->icon = _icon;
@@ -79,7 +88,7 @@ public:
                         title,
                         theme,
                         fontSize,
-                        theme->getColor(GuiColor::COL_TEXT),
+                        theme->getColor(bGrayedOut ? GuiColor::COL_LABEL_INACTIVE : GuiColor::COL_TEXT),
                         NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     }
     virtual bool contains(ivec2& ctxtSize, ivec2& mouse) const {

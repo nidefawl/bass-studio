@@ -1118,7 +1118,7 @@ void setGlobalDebugPropertyHandle(void* ptr) {
     }
 }
 
-guictr_properties_table* makeUniquePropertiesCtr() {
+/* static */guictr_properties_table* guictr_properties_table::MakeUniquePropertiesCtr() {
     return new guiproperties_table<guibase>(nullptr, false, false);
 }
 

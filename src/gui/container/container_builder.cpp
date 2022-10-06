@@ -50,7 +50,7 @@ bool getContainerLabel(gui_type type, String& out) {
             out = "Debug 0";
             return true;
         case CTR_TYPE_DEBUG_1:
-            out = "Debug 1";
+            out = "Debug AppCtrl State";
             return true;
         case CTR_TYPE_DEBUG_2:
             out = "Debug 2";
@@ -99,7 +99,7 @@ ContainerFactory& getContainerFactory() {
             return std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
         };
         containerFactory[gui_type::CTR_TYPE_DEBUG_1] = [](auto& ctxt) {
-            return std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1);
+            return std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::DEBUG_APPCTRL);
         };
         containerFactory[gui_type::CTR_TYPE_DEBUG_2] = [](auto& ctxt) {
             return std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2);

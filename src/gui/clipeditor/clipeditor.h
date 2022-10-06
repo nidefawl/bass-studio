@@ -375,6 +375,9 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
+    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
+        return content.handleEditorCommand(kevt, type);
+    }
 
     void gridChanged(scaled_grid& _grid) override;
 
@@ -403,6 +406,7 @@ public:
     void onTick(AppCtrl* appctrl) override;
     void render(NVGcontext* vg) override;
     void prerender(NVGcontext* vg) override;
+    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type);
 
     void releaseRendered();
     void updatePosition();
@@ -429,6 +433,9 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
+    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
+        return content.handleEditorCommand(kevt, type);
+    }
 
     void gridChanged(scaled_grid& _grid) override;
 
@@ -561,6 +568,12 @@ public:
             return audioeditor.handleKeyInput(kevt);
         }
         return noteeditor.handleKeyInput(kevt);
+    }
+    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
+        if (audioeditor.isVisible()) {
+            return audioeditor.handleEditorCommand(kevt, type);
+        }
+        return noteeditor.handleEditorCommand(kevt, type);
     }
 };
 

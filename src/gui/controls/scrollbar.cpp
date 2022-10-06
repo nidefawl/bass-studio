@@ -33,7 +33,7 @@ void gui_scrollbar::render(NVGcontext* vg) {
         }
         nvgRect(vg, pos.x + barOff.x + inset, pos.y + barOff.y + inset, barS.x - inset * 2, barS.y - inset * 2);
 
-        bool focused = parentCtrl->guiCtrFocused == this->parent || (parentCtrl->guiDragged == NULL && parentCtrl->guiOver == this);
+        bool focused = parentCtrl->guiCtrFocused == this->parent || (!parentCtrl->guiDragged && parentCtrl->guiOver == this);
         if (focused) {
 //            nvgStrokeWidth(vg, 1.0f);
 //            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_BG_DRK_FOCUSED));

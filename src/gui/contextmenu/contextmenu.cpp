@@ -23,6 +23,7 @@ void ngui::Menu::addCommand(AppCtrl* ctrl, GlobalCommandType _type, int arg1, St
     dbgassert(cmd);
     if (cmd) {
         Menu& m   = makeChild_();
+        m.registeredCommand = cmd;
         m.type    = menu_type::command;
         m.command.command = static_cast<int32_t>(_type);
         m.command.argInt = arg1;
@@ -31,7 +32,7 @@ void ngui::Menu::addCommand(AppCtrl* ctrl, GlobalCommandType _type, int arg1, St
         } else {
             m.title = cmd->desc.name;
         }
-        m.icon    = cmd->desc.iconId;
+        m.icon = cmd->desc.iconId;
         add(&m);
     }
 }
@@ -175,4 +176,10 @@ void guictxtmenu::closeAllSubmenus() {
         /* close all menus deeper than this menu */
         appCtrlParent->closeAppMenusAtLvl(lvl + 1);
     }
+}
+String ngui::Menu::getTitle() const {
+    if (registeredCommand) {
+        return GetMenuNameWithKeybind(title, registeredCommand->getFirstKeyCombo());
+    }
+    return title;
 }

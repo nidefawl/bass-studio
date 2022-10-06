@@ -223,7 +223,7 @@ std::shared_ptr<guictr_layout> makeTabListCtr1(DawCtrl* const dawCtrl) {
     auto ctr = std::make_shared<guictr_layout>();
 
     auto ctr_dbg0       = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
-    auto ctr_dbg1       = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1);
+    auto ctr_dbg1       = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::DEBUG_APPCTRL);
     auto ctr_dbg2       = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2);
     auto ctr_properties = std::shared_ptr<guictr_base>(makeCtrProperties());
     auto ctr_theme      = std::shared_ptr<guictr_base>(makeCtrTheme());
@@ -267,7 +267,7 @@ std::shared_ptr<guictr_layout> makeTabListCtr2(DawCtrl* const dawCtrl) {
     auto settings          = std::make_shared<DAW::DialogSettings::guidialog_settings>(dawCtrl->getDaw());
 
     auto ctr_dbg0 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
-    auto ctr_dbg1 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1);
+    auto ctr_dbg1 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::DEBUG_APPCTRL);
     auto ctr_dbg2 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2);
 
     ctr->setLayout(container_layout::TABBED);
@@ -737,6 +737,7 @@ void DawInstance::unloadProject() {
     for (auto* dawctrl : dawCtrls) {
         dawctrl->clipView.set(nullptr);
     }
+    setEmptyClipboard();
 
     projectGlobals.cursor.setEmptySelection();
 
@@ -758,12 +759,10 @@ void DawInstance::unloadProject() {
 
     tls.host->unload();
     tls.audioCache->unloadAll();
-
     auto* ctrl = tls.mainCtrl;
     if (ctrl) {
         auto& trackView = ctrl->view->ctr_tracks.trackView;
         trackView.m_resizePreModifyState.reset();
-        trackView.m_clipboard.reset();
         trackView.action.clipboard.reset();
         trackView.iGuiMgr.reset();
     }
@@ -783,24 +782,32 @@ void DawInstance::unloadProject() {
 
 void DawCtrl::updateMenubar() {
     menubar.disableAll = this->ctxtmenu != nullptr;
-    ngui::Menu* undo   = menus.edit.getByCmd(CMD_UNDO);
-    ngui::Menu* redo   = menus.edit.getByCmd(CMD_REDO);
-    if (daw.hist.canUndo()) {
-        undo->disabled = false;
-        undo->title    = menuName(StringFormat("Undo %s", StringAsCStr(daw.hist.getUndoStep())), KC_UNDO);
-    } else {
-        undo->disabled = true;
-        undo->title    = menuName("Undo", KC_UNDO);
-    }
-    if (daw.hist.canRedo()) {
-        redo->disabled = false;
-        redo->title    = menuName(StringFormat("Redo %s", StringAsCStr(daw.hist.getRedoStep())), KC_REDO);
-    } else {
-        redo->disabled = true;
-        redo->title    = menuName("Redo", KC_REDO);
-    }
-    menus.recent.clear();
 
+    ngui::Menu* undo = menus.edit.getByCmd(CMD_UNDO);
+    auto cmdUndo     = commands->getCommand(CMD_UNDO);
+    dbgassert(undo && cmdUndo);
+    if (undo && cmdUndo) {
+        undo->disabled    = !daw.hist.canUndo();
+        String customText = cmdUndo->desc.name;
+        if (!undo->disabled) {
+            customText += daw.hist.getUndoStep();
+        }
+        undo->setTitle(customText);
+    }
+
+    ngui::Menu* redo = menus.edit.getByCmd(CMD_REDO);
+    auto cmdRedo     = commands->getCommand(CMD_REDO);
+    dbgassert(redo && cmdRedo);
+    if (redo && cmdRedo) {
+        redo->disabled    = !daw.hist.canRedo();
+        String customText = cmdRedo->desc.name;
+        if (!redo->disabled) {
+            customText += daw.hist.getRedoStep();
+        }
+        redo->setTitle(customText);
+    }
+
+    menus.recent.clear();
     auto& settings = daw_tls::getSettings();
     for (auto& strFileRecentPath : settings.recentfiles.sortedEntries) {
         String a, b, c, d;//path, name, ext, nameExt
@@ -947,7 +954,7 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                 }
                 return true;
             }
-            case CMD_OPEN_VIEW:
+            case CMD_CREATE_VIEW:
                 if (getMainControl()) {
                     dbgassert(command.argInt >= 0);
                     std::shared_ptr<guictr_base> ctr;
@@ -1117,7 +1124,6 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
 
 bool DawCtrl::menuCommand(const menucmd_t& command) {
     switch (command.command) {
-
         case CMD_GUI_GLOBAL_ZOOM_DECREASE:
             m_scale = math::max(0.05f, m_scale - 0.05f);
             BaseCtrl::relayout();
@@ -1218,7 +1224,7 @@ void DawInstance::destroy() {
         tls.audioHost->stopAudio();
     }
     projectToLoad = nullptr;
-    pluginClipboard = nullptr;
+    clipboardPlugins = nullptr;
     dragdropclip.reset();
 
     plugindb.closeDatabase();
@@ -1426,12 +1432,14 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     menus.views.title = "View";
     menus.views.addCommand(this, GlobalCommandType::CMD_OPEN_SECOND_WINDOW);
     menus.views.addSeperator();
-    for (int i = static_cast<int>(gui_type::CTR_TYPE_PROPERTIES); i < CTR_TYPE_COUNT; i++) {
+    auto& mapGuiTypeToCstr = getContainerFactory();
+    for (auto& it : mapGuiTypeToCstr) {
+        auto guiType = it.first;
         String name;
-        getContainerLabel(static_cast<gui_type>(i), name);
+        getContainerLabel(guiType, name);
         if (name.empty())
             continue;
-        menus.views.addCommand(this, GlobalCommandType::CMD_OPEN_VIEW, static_cast<int>(i), "Show " + name);
+        menus.views.addCommand(this, GlobalCommandType::CMD_CREATE_VIEW, static_cast<int>(guiType), "Show " + name);
     }
     menus.views.addSeperator();
     menus.views.addCommand(this, GlobalCommandType::CMD_SHOW_DEBUG_WINDOW, 0, "Show Waveform Cache");
@@ -2097,6 +2105,14 @@ guictr_clipeditor* CompanionCtrl::getClipEditor() {
     return &view->ctr_clipeditor;
 }
 
+guictr_plugins* MainCtrl::getPluginsView() {
+    return &view->ctr_plugins;
+}
+
+guictr_plugins* CompanionCtrl::getPluginsView() {
+    return nullptr;
+}
+
 guictr_tracks* CompanionCtrl::getTrackContainer() {
     return &view->ctr_tracks2;
 }
@@ -2371,22 +2387,7 @@ bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, Keyboar
 
 bool MainCtrl::processGlobalKeyevent(const KeyEvent& event) {
     if (event.type == KeyboardState::K_PRESS) {
-        if ((event.mods & KB_MOD_SHIFT) == event.mods && event.keyCode >= KeyboardKey::DAW_KB_F1 && event.keyCode <= KeyboardKey::DAW_KB_F10) {
-            uint8_t index = (static_cast<int32_t>(event.keyCode) - static_cast<int32_t>(KeyboardKey::DAW_KB_F1)) % layouts.size();
-            bool store    = (event.mods & KB_MOD_SHIFT);
-            if (store) {
-                view->storeLayout(layouts[index]);
-                saveDawViewLayoutSnapshot(layouts[index], StringFormat("data/view%d.layout", index));
-            } else {
-                view->loadLayout(layouts[index]);
-                BaseCtrl::relayout();
-                dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
-            }
-            return true;
-        }
-    }
-    if (event.type == KeyboardState::K_PRESS) {
-        if (event.keyCode == KeyboardKey::DAW_KB_L) {
+        if (!event.cmd && event.keyCode == KeyboardKey::DAW_KB_L) {
             bShowDebugFrames = !bShowDebugFrames;
             dragContainerRelayout(drag_ctr_event{ drag_ctr_event_type::DRAG_END });
             return true;
@@ -2398,23 +2399,27 @@ bool MainCtrl::processGlobalKeyevent(const KeyEvent& event) {
 bool DawCtrl::handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) {
     switch (type) {
         case CMD_STARTSTOP_PLAYBOCK: {
-            if (daw.isPlaying()) {
-                daw.stopPlaying();
-            } else {
-                daw.startPlaying(); //TODO: pass cursor position
+            if (kevt.type != KeyboardState::K_RELEASE) {
+                if (daw.isPlaying()) {
+                    daw.stopPlaying();
+                } else {
+                    daw.startPlaying(); //TODO: pass cursor position
+                }
             }
             return true;
         }
         default:
             break;
     }
-    if (menuCommand(CMD_NOARG(type))) {
+    if (kevt.type != KeyboardState::K_RELEASE) {
+        if (menuCommand(CMD_NOARG(type))) {
+            return true;
+        }
+    }
+    if (this->getTrackContainer()->handleEditorCommand(kevt, type)) {
         return true;
     }
-    if (this->getTrackContainer()->trackView.handleEditorCommand(kevt, type)) {
-        return true;
-    }
-    if (this->getClipEditor()->noteeditor.content.handleEditorCommand(kevt, type)) {
+    if (this->getClipEditor()->handleEditorCommand(kevt, type)) {
         return true;
     }
     return false;
@@ -2445,6 +2450,24 @@ bool CompanionCtrl::handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType 
 
 bool MainCtrl::handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) {
     switch (type) {
+        case CMD_SWITCH_LAYOUT: {
+            if (kevt.type == KeyboardState::K_PRESS) {
+                if ((kevt.mods & KB_MOD_SHIFT) == kevt.mods && ctxt->argInt >= 0 && ctxt->argInt < CtrSize(layouts)) {
+                    auto index = ctxt->argInt % layouts.size();
+                    bool store    = (kevt.mods & KB_MOD_SHIFT);
+                    if (store) {
+                        view->storeLayout(layouts[index]);
+                        saveDawViewLayoutSnapshot(layouts[index], StringFormat("data/view%zu.layout", index));
+                    } else {
+                        view->loadLayout(layouts[index]);
+                        BaseCtrl::relayout();
+                        dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
+                    }
+                    return true;
+                }
+            }
+            return true;
+        }
         case CMD_SWITCH_VIEW: {
             if (kevt.type != KeyboardState::K_RELEASE) {
                 if (this->viewMode == view_mode_t::TRACK_TIMELINE) {
@@ -2458,7 +2481,13 @@ bool MainCtrl::handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type,
         default:
             break;
     }
-    return DawCtrl::handleGlobalCommand(kevt, type, ctxt);
+    if (DawCtrl::handleGlobalCommand(kevt, type, ctxt)) {
+        return true;
+    }
+    if (view->ctr_plugins.handleCommand(kevt, type)) {
+        return true;
+    }
+    return false;
 }
 
 bool DawCtrl::processGlobalKeyevent(const KeyEvent& event) {
@@ -2471,10 +2500,8 @@ bool DawCtrl::processGlobalKeyevent(const KeyEvent& event) {
             }
         }
     }
-    if (event.type != KeyboardState::K_RELEASE) {
-        if (event.cmd && handleGlobalCommand(event, event.cmd->type, &event.cmd->context)) {
-            return true;
-        }
+    if (event.cmd && handleGlobalCommand(event, event.cmd->type, &event.cmd->context)) {
+        return true;
     }
     return false;
 }

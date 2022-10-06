@@ -38,6 +38,7 @@ namespace ngui {
         bool disabled = false;
         bool checked  = false;
         Menu* parent  = nullptr;
+        DAW::UI::Command* registeredCommand = nullptr;
         int icon      = -1;
 
     private:
@@ -62,6 +63,10 @@ namespace ngui {
             add(&m);
         }
         void addCommand(AppCtrl* ctrl, GlobalCommandType type, int arg1 = 0, String customText = "");
+        String getTitle() const;
+        void setTitle(String title) {
+            this->title = std::move(title);
+        }
         void remove(Menu* m) {
             auto it = std::find(children.begin(), children.end(), m);
             if (it != children.end()) {

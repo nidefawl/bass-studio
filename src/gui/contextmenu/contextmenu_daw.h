@@ -7,6 +7,7 @@
 #include "contextmenu.h"
 #include "contextmenu_color.h"
 #include "gui/track/trackctr.h"
+#include "modules.h"
 #include "track.h"
 #include "track_impl.h"
 #include "guicolors.h"
@@ -84,4 +85,17 @@ public:
                         THEMECOL_TEXT,
                         NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     }
+};
+
+class effectbase;
+class guictr_plugins;
+class guictxtmenu_plugin : public guictxtmenu {
+    effectbase* const effectOptional;
+    guictr_plugins* const pluginCtrOptional;
+public:
+    const int CMD_SHOW_AUTOMATION = 1;
+    const int CMD_SHOW_PARAM_LIST = 2;
+    const int CMD_LOAD_PLUGIN = 3;
+    guictxtmenu_plugin(DawCtrl* _dawCtrl, guictr_plugins* _ctrOptional, effectbase* _effectOptional);
+    bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };

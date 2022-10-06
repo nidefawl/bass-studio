@@ -22,8 +22,6 @@ enum autolayout_mode : uint8_t {
 enum class dock_pos : int32_t { NONE = 0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
 enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };
 
-#define CTR_TYPE_COUNT (static_cast<int>(gui_type::CTR_TYPE_KEYBINDS) + 1)
-
 class guictr_base : public guibase {
 protected:
     autolayout_mode layoutMode{LAYOUT_NONE};

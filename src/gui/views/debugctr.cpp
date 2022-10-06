@@ -82,7 +82,7 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
         case gui_ctr_debug_type_i32::TYPE_0:
             guiType = gui_type::CTR_TYPE_DEBUG_0;
             break;
-        case gui_ctr_debug_type_i32::TYPE_1:
+        case gui_ctr_debug_type_i32::DEBUG_APPCTRL:
             guiType = gui_type::CTR_TYPE_DEBUG_1;
             break;
         case gui_ctr_debug_type_i32::TYPE_2:
@@ -348,7 +348,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         }
     }
 
-    if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_1) {
+    if (dgbCtrType == gui_ctr_debug_type_i32::DEBUG_APPCTRL) {
         auto const ctrl = dawCtrl;
         auto const daw = ctrl->getDaw();
 
@@ -411,6 +411,10 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         if (track && track->audio) {
             strings.push_back(StringFormat("level: %.4f", track->audio->meter.getMaxRMS()));
         }
+        const char* clipboardTypeNames[] = {
+            "None", "Clip", "Note", "Plugin", "Track"
+        };
+        strings.push_back(String("ClipboardType: ") + clipboardTypeNames[(int)daw->getClipboardType()]);
         if (ctrl->guiFocused && ctrl->guiFocused->parent == (guibase*) MainCtrl::get()->getPluginCtr()) {
             guiplugin* gplugin = dynamic_cast<guiplugin*>(ctrl->guiFocused);
             if (gplugin) {
@@ -513,10 +517,7 @@ int32_t getNumClipAllocations();//clip.cpp
 void resetHistAndCheck(DawInstance* daw) {
     std::vector<guictr_tracks *> trackContainers;
     daw->getTrackContainers(trackContainers);
-    for (auto guiTracks : trackContainers) {
-        guiTracks->trackView.action.clipboard.reset();
-        guiTracks->trackView.m_clipboard.reset();
-    }
+    daw->setEmptyClipboard();
     daw->getHist().clear(daw);
 
 #ifndef NDEBUG

@@ -6,7 +6,7 @@
 #include <nanovg.h>
 
 guimenu_ctxtentry::guimenu_ctxtentry(ngui::Menu* _menu)
-    : ctxtmenu_entry(_menu->title, _menu->command.command), menu(_menu) {
+    : ctxtmenu_entry(_menu->getTitle(), _menu->command.command), menu(_menu) {
     int32_t iconId = menu->icon;
     if (iconId > -1) {
         setIcon(&RenderResources::imgIcons[iconId], GuiColor::COL_WHITE);
@@ -109,7 +109,7 @@ void guictr_menubar_entry::render(NVGcontext* vg) {
     renderTextLabel(vg,
                     vec2(pos) + vec2(size)*0.5f,
                     vec2(size),
-                    menu->title,
+                    menu->getTitle(),
                     theme,
                     fontSize,
                     THEMECOL_TEXT,

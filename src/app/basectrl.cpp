@@ -41,20 +41,11 @@ String getModKeyName(int modKey) {
     }
     return "";
 }
-String menuName(String s, KeyCombo combo) {
-    String modName = getModKeyName(combo.keyMod);
-    String keyName = "";
-    if (!combo.keyChar.empty()) {
-        keyName = StringToUpper(combo.keyChar);
-    }
-    if (!keyName.length()) {
+String GetMenuNameWithKeybind(const String& s, const KeyCombo* combo) {
+    if (!combo || combo->keyCode == KeyboardKey::DAW_KB_INVALID) {
         return s;
     }
-    if (modName.length()) {
-        modName = modName + "+";
-        keyName = modName + keyName;
-    }
-    return StringFormat("%s\t%s", StringAsCStr(s), StringAsCStr(keyName));
+    return s + "\t" + combo->toString();
 }
 MouseEvent mouseEvent(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, KeyboardMods kbmods, MouseEventType evtType) {
     MouseEvent mevt;

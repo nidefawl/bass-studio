@@ -38,7 +38,7 @@ class guictr_layout;
 
 KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name);
 String getModKeyName(int modKey);
-String menuName(String s, KeyCombo combo);
+String GetMenuNameWithKeybind(const String& s, const KeyCombo* combo);
 
 void determineWindowPos(guibase* guicontextmenu, window_main* mainWindow, float m_scale, int flags, ivec2 pos, ivec2& wndPos);
 

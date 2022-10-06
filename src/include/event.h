@@ -1,5 +1,6 @@
 #pragma once
 
+#include "assert_dbg.h"
 #include "math/vec.h"
 #include "mouse.h"
 #include "str_util.h"
@@ -163,6 +164,11 @@ enum class KeyboardKey : int32_t {
     DAW_KB_MENU          = 348,
     DAW_NUM_KNOWN_KEYBOARD_KEYS
 };
+inline KeyboardKey GetKeyboardKeyOffset(KeyboardKey key, int32_t offset) {
+    auto offsetKey = static_cast<int32_t>(key) + offset;
+    dbgassert(offsetKey >= 0 && offsetKey < static_cast<int32_t>(KeyboardKey::DAW_NUM_KNOWN_KEYBOARD_KEYS) && "Invalid keyboard key offset");
+    return static_cast<KeyboardKey>(offsetKey);
+}
 
 enum KeyboardMods {
     KB_MODS_NONE = 0,
@@ -273,7 +279,8 @@ enum GlobalCommandType {
     CMD_INSERT_RETURN_TRACK,
     CMD_INSERT_MASTER_TRACK,
     CMD_OPEN_SECOND_WINDOW,
-    CMD_OPEN_VIEW,
+    CMD_CREATE_VIEW,
+    CMD_SWITCH_LAYOUT,
     CMD_REACTIVATE_AUTOMATION,
     CMD_SET_STARTUP_PROJECT,
     CMD_CREATE_EMPTY_CLIP,

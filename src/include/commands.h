@@ -32,17 +32,24 @@ enum class CommandContextType {
 struct CommandContext {
     CommandContextType ctxtType = CommandContextType::CMD_CTXT_GLOBAL;
     gui_type ctxtGuiType = gui_type::GUI_TYPE_UNKNOWN;
+    int32_t argInt = 0;
     bool matchesFocusedGui(guibase* optionalGui) const;
 };
 struct Command {
     GlobalCommandType type = GlobalCommandType::CMD_NONE;
     CommandDesc desc;
     std::vector<KeyCombo> keyCombos;
-    int group = 0;
+    int initOrder = 0;
     KeyCombo defaultKeyCombo{};
     CommandContext context{};
     String toString() const {
         return desc.name;
+    }
+    const KeyCombo* getFirstKeyCombo() const {
+        if (keyCombos.empty()) {
+            return nullptr;
+        }
+        return &keyCombos[0];
     }
     const CommandContext& getContext() const {
         return context;

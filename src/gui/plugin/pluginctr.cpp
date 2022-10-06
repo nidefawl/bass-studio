@@ -100,6 +100,10 @@ bool guictr_plugins::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             evt.requestFocus(this);
             return true;
         }
+        if (canMouseHit()) {
+            evt.requestFocus(this);
+            return true;
+        }
     }
     return false;
 }
@@ -115,53 +119,9 @@ bool guictr_plugins::getSelected(std::vector<effectbase*>& out) {
     return true;
 }
 
-class guictxtmenu_pluginctr : public guictxtmenu {
-public:
-    static constexpr int CMD_LOAD_PLUGIN = 1;
-    audio_stage_t* const stage;
-    guictxtmenu_pluginctr(audio_stage_t* _stage) : stage(_stage) {
-        this->size.x = 260;
-        addEntry(new ctxtmenu_entry("Load plugin", CMD_LOAD_PLUGIN));
-    }
-    bool clickedElement(ctxtmenu_entry* e, int _id) override {
-        auto window = parentCtrl->window;
-        // promptUserFilePath initiates a native dialog that would close this context menu
-        // so we close it before this happens
-        closeContextMenu();// deletes this
-                           // now we make sure not to access this-> after this point
-
-        if (_id == CMD_LOAD_PLUGIN) {
-
-            String path;
-            if (promptUserFilePath(window, 0, vFILE_TYPE_PLUGINSNAPSHOT, path)) {
-                ThreadLock lock = dawCtrl->lockPlayThread();
-                std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(path);
-                dbgassert(pluginSnapshot);
-                if (pluginSnapshot) {
-                    auto* pluginMgr = dawCtrl->getDaw()->getPluginManager();
-                    DAW::assignFreeStageIds(pluginMgr, *pluginSnapshot);
-                    auto effect = pluginMgr->loadPluginDeferred(*pluginSnapshot);
-                    if (effect) {
-                        effect->projectGlobalId = 0;// generate new id
-                        if (!pluginMgr->addDeferredEffect(effect)) {
-                            log_printf("Failed loading effect\n");
-                            delete effect;
-                            return true;
-                        }
-                        effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
-                        effect->load(pluginMgr);
-                        pluginMgr->insertNewPlugin(stage, effect, -2);// insert at end
-                        // host->activateDeferred(effect, 0);
-                    }
-                }
-            }
-        }
-        return true;
-    }
-};
 void guictr_plugins::handleRightClick(MouseEvent& evt) {
     if (this->stage) {
-        parentCtrl->openContextMenu(new guictxtmenu_pluginctr(this->stage), evt.mousepos);
+        parentCtrl->openContextMenu(new guictxtmenu_plugin(dawCtrl, this, nullptr), evt.mousepos);
     }
 }
 
@@ -226,20 +186,21 @@ std::shared_ptr<plugin_clipboard_t> copyPluginSelection(plugin_selection& sel) {
     }
     return clipboard;
 }
-bool handlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
+namespace DAW {
+bool HandlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
+    bool handledKeyinput = false;
+    String desc          = "???";
     plugin_selection& sel = ctrl->getPluginSel();
     if (!sel.pluginCtr || !sel.pluginCtr->stage) {
         return false;
     }
     auto daw = ctrl->getDaw();
-    ThreadLock lock      = ctrl->lockPlayThread();
-    bool handledKeyinput = false;
-    String desc          = "???";
     std::vector<effectbase*> effectChain;
     sel.pluginCtr->getEffects(effectChain);
     std::vector<effectbase*> selection;
     getSelectedEffects(sel, selection);
-
+    audio_stage_t* audioStage = sel.pluginCtr->stage;
+    audio_stage_t* audioStageAffected = nullptr;
     switch (action) {
         case action_plugin_ctr::PLUGINS_SELECTALL: {
             sel.firstSelection = effectChain.front()->getSlot();
@@ -248,42 +209,47 @@ bool handlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
         } break;
         case action_plugin_ctr::PLUGINS_DELETE:
             if (!selection.empty()) {
-                audio_stage_t* audioStage = selection[0]->getTrackLink();
-                dbgassert(audioStage);
+                auto lock = daw->lockPlayThread();
+                audioStageAffected = selection[0]->getTrackLink();
+                dbgassert(audioStageAffected);
                 for (effectbase* eff : selection) {
                     eff->closeWindow();
                 }
                 int32_t slot = selection[0]->getSlot();
-                std::vector<effectbase*> effects;
+                std::vector<effectbase*> pendingInstances;
                 for (effectbase* eff : selection) {
-                    audioStage->removePlugin(eff, false);
-                    effects.push_back(eff);
+                    audioStageAffected->removePlugin(eff, false);
+                    pendingInstances.push_back(eff);
                 }
-                auto* actionRemove = new action_remove_modules("Remove plugins", std::move(effects), audioStage->toRef(), slot);
+                auto* actionRemove = new action_remove_modules("Remove plugins", std::move(pendingInstances), audioStageAffected->toRef(), slot);
                 daw->pushHist(actionRemove);
-                audioStage->pluginsChanged();
-                daw->onPluginsChanged();
                 handledKeyinput = true;
             }
             break;
         case action_plugin_ctr::PLUGINS_CUT:
             if (!selection.empty()) {
+                auto lock = daw->lockPlayThread();
                 std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
                 daw->setPluginClipboard(clipboard);
-                audio_stage_t* audioStage = selection[0]->getTrackLink();
-                dbgassert(audioStage);
+                audioStageAffected = selection[0]->getTrackLink();
+                dbgassert(audioStageAffected);
                 for (effectbase* eff : selection) {
                     eff->closeWindow();
                 }
+                int32_t slot = selection[0]->getSlot();
+                std::vector<effectbase*> pendingInstances;
                 for (effectbase* eff : selection) {
-                    audioStage->removePlugin(eff, false);
+                    audioStageAffected->removePlugin(eff, false);
+                    pendingInstances.push_back(eff);
                 }
-                audioStage->pluginsChanged();
+                auto* actionCut = new action_remove_modules("Cut plugins", std::move(pendingInstances), audioStageAffected->toRef(), slot);
+                daw->pushHist(actionCut);
                 handledKeyinput = true;
             }
             break;
         case action_plugin_ctr::PLUGINS_COPY:
             if (!selection.empty()) {
+                auto lock = daw->lockPlayThread();
                 std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
                 daw->setPluginClipboard(clipboard);
                 handledKeyinput = true;
@@ -291,45 +257,53 @@ bool handlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
             break;
         case action_plugin_ctr::PLUGINS_DUPLICATE:
             if (!selection.empty()) {
+                auto lock = daw->lockPlayThread();
                 std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
                 pastePluginClipboard(clipboard, sel.pluginCtr->stage, selection.back()->getSlot() + 1);
                 handledKeyinput = true;
             }
             break;
         case action_plugin_ctr::PLUGINS_PASTE:
-            if (daw->getPluginClipboard()) {
+            if (daw->getClipboardType() == ClipBoardType::CLIPBOARD_PLUGINS) {
+                auto lock = daw->lockPlayThread();
                 std::shared_ptr<plugin_clipboard_t> clipboard = daw->getPluginClipboard();
+                plugin_clipboard_t copy = *clipboard;
                 int pluginPasteSlot = selection.empty() ? -2 : (selection.back()->getSlot() + 1);
                 pastePluginClipboard(clipboard, sel.pluginCtr->stage, pluginPasteSlot);
+                //TODO: handle undo
                 handledKeyinput = true;
             }
             break;
     }
+    if (handledKeyinput) {
+        if (audioStage)
+            audioStage->pluginsChanged();
+        if (audioStageAffected && audioStageAffected != audioStage)
+            audioStage->pluginsChanged();
+        daw->onPluginsChanged();
+    }
     return handledKeyinput;
 }
-bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
+}
+bool guictr_plugins::handleCommand(const KeyEvent& kevt, GlobalCommandType type) {
     if (kevt.type != K_RELEASE) {
-        plugin_selection& sel = dawCtrl->getPluginSel();
-        if (!sel.pluginCtr) {
-            return false;
-        }
         auto daw = dawCtrl->getDaw();
-        ThreadLock lock = daw->getPlayThread()->lockThread();
         bool handledKeyinput = false;
         if (kevt.type == K_PRESS) {
-            if (isKC(KC_SELECTALL, kevt)) {
-                handledKeyinput = handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_SELECTALL);
-            }
-            if (isKC(KC_DELETE, kevt)) {
-                handledKeyinput = handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_DELETE);
-            } else if (isKC(KC_CUT, kevt)) {
-                handledKeyinput = handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_CUT);
-            } else if (isKC(KC_COPY, kevt)) {
-                handledKeyinput = handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_COPY);
-            } else if (isKC(KC_DUPLICATE, kevt)) {
-                handledKeyinput = handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_DUPLICATE);
-            } else if (isKC(KC_PASTE, kevt) && DawInstance::get()->getPluginClipboard()) {
-                handledKeyinput = handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_PASTE);
+            using DAW::HandlePluginCtrCommand;
+            using DAW::action_plugin_ctr;
+            if (type == GlobalCommandType::CMD_SELECT_ALL) {
+                handledKeyinput = HandlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_SELECTALL);
+            } else if (type == GlobalCommandType::CMD_DELETE) {
+                handledKeyinput = HandlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_DELETE);
+            } else if (type == GlobalCommandType::CMD_CUT) {
+                handledKeyinput = HandlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_CUT);
+            } else if (type == GlobalCommandType::CMD_COPY) {
+                handledKeyinput = HandlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_COPY);
+            } else if (type == GlobalCommandType::CMD_DUPLICATE) {
+                handledKeyinput = HandlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_DUPLICATE);
+            } else if (type == GlobalCommandType::CMD_PASTE && DawInstance::get()->getPluginClipboard()) {
+                handledKeyinput = HandlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_PASTE);
             }
         }
         if (isArrowKey(kevt.keyCode)) {
@@ -349,6 +323,12 @@ bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
             handledKeyinput = true;
         }
         return handledKeyinput;
+    }
+    return false;
+}
+bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
+    if (kevt.cmd) {
+        return handleCommand(kevt, kevt.cmd->type);
     }
     return false;
 }

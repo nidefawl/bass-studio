@@ -226,8 +226,6 @@ void gui_quantizationsettings::buttonClicked(guibase* button) {
         settings.quantizeStart = inputStarts.getTime();
     }
     if (&btnQuantize == button) {
-        auto keyComboQuantize = KC_QUANTIZE;
-        KeyEvent kevt{KeyboardState::K_PRESS, keyComboQuantize.keyCode, 0, KeyboardMods::KB_MODS_NONE, keyComboQuantize.keyChar.c_str()};
-        dawCtrl->getClipEditor()->handleKeyInput(kevt);
+        dawCtrl->getClipEditor()->handleEditorCommand({}, GlobalCommandType::CMD_QUANTIZE);
     }
 }

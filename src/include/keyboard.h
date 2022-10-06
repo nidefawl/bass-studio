@@ -20,26 +20,6 @@ struct KeyCombo {
     static KeyCombo FromKeyEvent(const KeyEvent& kevt);
 };
 
-extern KeyCombo KC_SAVE;
-extern KeyCombo KC_SAVEAS;
-extern KeyCombo KC_OPEN;
-extern KeyCombo KC_NEW;
-extern KeyCombo KC_UNDO;
-extern KeyCombo KC_REDO;
-extern KeyCombo KC_COPY;
-extern KeyCombo KC_PASTE;
-extern KeyCombo KC_PASTE_NO_AUTOMATION;
-extern KeyCombo KC_CUT;
-extern KeyCombo KC_DELETE;
-extern KeyCombo KC_DUPLICATE;
-extern KeyCombo KC_SELECTALL;
-extern KeyCombo KC_MUTE;
-extern KeyCombo KC_REFRESH;
-extern KeyCombo KC_ZOOM_IN;
-extern KeyCombo KC_ZOOM_OUT;
-extern KeyCombo KC_CONSOLIDATE;
-extern KeyCombo KC_QUANTIZE;
-
 inline bool isKC(KeyCombo c, KeyEvent& kevt) {
     return c.match(kevt);
 }

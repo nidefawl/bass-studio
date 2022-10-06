@@ -13,6 +13,8 @@
 class vstplugin;
 class effectbase;
 struct audio_stage_t;
+namespace DAW {
+
 enum class action_plugin_ctr {
     PLUGINS_SELECTALL,
     PLUGINS_DELETE,
@@ -21,8 +23,10 @@ enum class action_plugin_ctr {
     PLUGINS_PASTE,
     PLUGINS_DUPLICATE
 };
-bool handlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action);
+bool HandlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action);
+}
 
+// whats that?
 class guictr_test : public guictr_base {
 public:
     guictr_test() : guictr_base() {
@@ -56,6 +60,7 @@ public:
     void handleDraggedRelease(MouseEvent& evt) override {
     }
 };
+
 class guiplaceholder : public guibase {
 public:
     String message;
@@ -79,6 +84,7 @@ public:
         size.x = math::max(100, size.y * 3 / 5);
     }
 };
+
 class guictr_dragged_plugins : public guictr_base {
     const int HEIGHT_ENTRY = 20;
 
@@ -118,6 +124,8 @@ public:
 
 public:
     guictr_plugins() : guictr_base() {
+        setGuiType(gui_type::CTR_TYPE_PLUGINS);
+        setCanMouseHit(true);
         setBackgroundRendered(true);
         dragged.setParent(this);
     }
@@ -126,7 +134,7 @@ public:
         guis.clear();
     }
     void setControl(BaseCtrl* parentCtrl) override {
-        guibase::setControl(parentCtrl);
+        guictr_base::setControl(parentCtrl);
         placeholder.setControl(parentCtrl);
         dragged.setControl(parentCtrl);
     }
@@ -189,6 +197,7 @@ public:
     void render(NVGcontext* vg) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
+    bool handleCommand(const KeyEvent& kevt, GlobalCommandType type);
     void layout() override;
     int slotFromCoord(ivec2 _pos);
     int slotFromChild(guibase* child) {

@@ -282,7 +282,7 @@ void guictr_base::addProperties(Table::tbl* table) {
 void guictr_vert_layout::layout() {
     auto cs = getSizeContent();
     vec2 xy{};
-    int32_t numEntries = CtrSize(layouts);
+    // int32_t numEntries = CtrSize(layouts);
 
     for (auto& entry : layouts) {
         auto entrySize = vec2(cs);

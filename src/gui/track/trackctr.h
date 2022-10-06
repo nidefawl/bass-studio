@@ -74,7 +74,7 @@ public:
     track_gui_entry_t* trSelected     = nullptr;
     gui_track_subtrack* subTrSelected = nullptr;
     clip_dragaction action;                   // move up in hierachy
-    std::shared_ptr<clip_clipboard> m_clipboard;// move up in hierachy
+    // std::shared_ptr<clip_clipboard> m_clipboard;// move up in hierachy
     tracklayout_t dragStartLayout;
     int32_t dragStartTick     = 0;
     int32_t dragStartTrackIdx = 0;
@@ -94,7 +94,7 @@ public:
         sortChildren = true;
     }
     ~guitrack_editor() override {
-        m_clipboard.reset();
+        // m_clipboard.reset();
     }
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
@@ -170,6 +170,7 @@ public:
     }
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
     void handleRightClick(MouseEvent& evt) override;
+    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type);
     void render(NVGcontext* vg) override;
     void addTrackEntry(track_gui_entry_t& e);
     void removeTrackEntry(track_gui_entry_t& e);
@@ -653,9 +654,7 @@ public:
     void gridChanged(scaled_grid& _grid) override {
         dawCtrl->updateVisibleTrackContents();
     }
-    bool handleKeyInput(KeyEvent& kevt) override {
-        return trackView.handleKeyInput(kevt);
-    }
+    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type);
     ivec2 getScrollTotalSize() const override {
         ivec2 cs = getSizeContent();
         cs.y     = contentHeight;

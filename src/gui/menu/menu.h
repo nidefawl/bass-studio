@@ -90,7 +90,7 @@ public:
         for (ngui::Menu* m : entryList) {
             auto* entry = new guictr_menubar_entry(m, this);
 
-            auto textW = strw.getStringWidth(m->title, fontSize, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+            auto textW = strw.getStringWidth(m->getTitle(), fontSize, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 
             entry->pos      = ivec2(x, y);
             entry->size     = ivec2(math::roundfS32(textW) + padding, size.y);

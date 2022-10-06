@@ -16,7 +16,7 @@ public:
 
     enum class gui_ctr_debug_type_i32 : int32_t {
         TYPE_0,
-        TYPE_1,
+        DEBUG_APPCTRL,
         TYPE_2
     };
 

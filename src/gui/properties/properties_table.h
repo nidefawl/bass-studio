@@ -2,6 +2,7 @@
 #include "gui/container/container.h"
 class guictr_properties_table : public guictr_base {
 public:
+    static guictr_properties_table* MakeUniquePropertiesCtr();
     guictr_properties_table() : guictr_base() {
         setBackgroundRendered(false);
     }

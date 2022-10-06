@@ -1,7 +1,9 @@
 
 
+#include "clipboard.h"
 #include "event.h"
 #include "guiglobals.h"
+#include "host/mainctrl.h"
 #include "logging.h"
 #include "note.h"
 #include "seq_time.h"
@@ -164,6 +166,7 @@ public:
             addEntry(new ctxtmenu_splitter());
             addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_CUT));
             addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_COPY));
+            addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_DUPLICATE));
         }
         addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_PASTE));
         if (bHasContentSelected) {
@@ -209,7 +212,7 @@ public:
             }
         } else {
             if (dawCtrl && e->commandtype != GlobalCommandType::CMD_NONE) {
-                if (editor->content.handleEditorCommand({}, e->commandtype)) {
+                if (editor->handleEditorCommand({}, e->commandtype)) {
                     // closeContextMenu();
                     // return true;
                 }
@@ -1325,6 +1328,11 @@ void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
 }
 
 bool gui_clipcontent::handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
+    auto daw = dawCtrl->getDaw();
+    if (focused() && type == CMD_PASTE && daw->getClipboardType() != ClipBoardType::CLIPBOARD_NOTES) {
+        // suppress paste of clips by returning true for "is handled"
+        return true;
+    }
     clip_t* clip = view.clip();
     if (!clip) {
         return false;
@@ -1362,15 +1370,19 @@ bool gui_clipcontent::handleEditorCommand(const KeyEvent& kevt, GlobalCommandTyp
                 edit    = true;
                 desc    = "Mute notes";
             } else if (type == CMD_CUT && !notes.selection.empty()) {
-                view.clipboardCursorRange = cursor.end - cursor.start;
-                view.clipboard.setTo(notes.selection, -cursor.start);
+                auto clipboard = std::make_shared<notes_clipboard>();
+                clipboard->cursorRange = cursor.end - cursor.start;
+                clipboard->notes.setTo(notes.selection, -cursor.start);
+                daw->setNotesClipboard(clipboard);
                 notes.deleteSelectedNotes(notes);
                 handled = true;
                 edit    = true;
                 desc    = "Cut notes";
             } else if (type == CMD_COPY && !notes.selection.empty()) {
-                view.clipboardCursorRange = cursor.end - cursor.start;
-                view.clipboard.setTo(notes.selection, -cursor.start);
+                auto clipboard = std::make_shared<notes_clipboard>();
+                clipboard->cursorRange = cursor.end - cursor.start;
+                clipboard->notes.setTo(notes.selection, -cursor.start);
+                daw->setNotesClipboard(clipboard);
                 handled = true;
                 desc    = "Copy notes";// never appears in list
             } else if (type == CMD_DUPLICATE && !notes.selection.empty()) {
@@ -1403,16 +1415,17 @@ bool gui_clipcontent::handleEditorCommand(const KeyEvent& kevt, GlobalCommandTyp
                 handled = true;
                 edit    = true;
                 desc    = "Duplicate notes";
-            } else if (type == CMD_PASTE && !view.clipboard.empty()) {
+            } else if (type == CMD_PASTE && daw->getClipboardType() == ClipBoardType::CLIPBOARD_NOTES && !daw->getNotesClipboard()->empty()) {
+                auto& clipboard = daw->getNotesClipboard();
                 notes.clearSelection();
                 view.copySelectedNoteList();
                 view.draggedSelection.clear();
-                for (note_t note: view.clipboard.m_list) {//not using reference here, copy while iterating
+                for (note_t note: clipboard->notes.m_list) {//not using reference here, copy while iterating
                     note.time += cursor.start;
                     view.draggedSelection.push_back(note);
                 }
                 mergeDraggedNotes(dragmode::drag_notes_move);
-                view.cursor.end = cursor.start + view.clipboardCursorRange;
+                view.cursor.end = cursor.start + clipboard->cursorRange;
                 auto pair = getMinMaxTime(notes.selection);
                 if (pair.second)
                     grid.makeTickVisible(pair.second->end());

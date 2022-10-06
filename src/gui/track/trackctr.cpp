@@ -20,8 +20,8 @@
 #include "logging.h"
 #include "subtrack.h"
 #include "appconfig.h"
-
 #include "gui/contextmenu/contextmenu_daw.h"
+#include "gui/plugin/pluginctr.h"
 
 void guitrack_mixers::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
@@ -176,7 +176,6 @@ void guictr_tracks::removeAllSubtracks(track_gui_entry_t* entry) {
 }
 void guictr_tracks::resetView() {
     trackView.m_resizePreModifyState.reset();
-    trackView.m_clipboard.reset();
     trackView.action.clipboard.reset();
     trackView.iGuiMgr.reset();
 }
@@ -793,5 +792,22 @@ bool guitrack_mixers::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
         evt.requestFocus(this);
         return true;
     }
+    return false;
+}
+
+bool guictr_tracks::handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
+    if (trackView.handleEditorCommand(kevt, type)) {
+        return true;
+    }
+    return trackControls.handleEditorCommand(kevt, type);
+}
+
+bool guitrack_mixers::handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
+    // if (type == GlobalCommandType::CMD_PASTE && dawCtrl->getDaw()->getClipboardType() == ClipBoardType::CLIPBOARD_PLUGINS) {
+    //     guictr_plugins* ctrPlugins = dawCtrl->getPluginsView();
+    //     if (ctrPlugins && ctrPlugins->handleCommand(kevt, type)) {
+    //         return true;
+    //     }
+    // }
     return false;
 }

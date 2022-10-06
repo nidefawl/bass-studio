@@ -102,7 +102,7 @@ public:
     void clear() {
         firstSelection = -1;
         lastSelection  = -1;
-        pluginCtr      = nullptr;
+        // pluginCtr      = nullptr;
     }
 };
 
@@ -127,7 +127,13 @@ inline bool operator==(const clip_cursor_t& lhs, const clip_cursor_t& rhs) {
     return lhs.start == rhs.start && lhs.end == rhs.end;
 }
 inline bool operator!=(const clip_cursor_t& lhs, const clip_cursor_t& rhs) { return !operator==(lhs, rhs); }
-
+struct notes_clipboard {
+    clip_notes_t notes;
+    tick_t cursorRange = 0;
+    bool empty() const {
+        return notes.empty();
+    }
+};
 class clip_view {
 public:
     gui_clip* gui = nullptr;
@@ -135,8 +141,6 @@ public:
     clip_notes_t dragStartNotes;
     std::vector<note_t> draggedSelectionBegin;
     std::vector<note_t> draggedSelection;
-    clip_notes_t clipboard;
-    tick_t clipboardCursorRange = 0;
     std::vector<int32_t> notePitches;
 
     void set(gui_clip* _clip) {
@@ -222,6 +226,13 @@ enum view_mode_t {
     NODE_EDITOR,
     MIXER
 };
+enum ClipBoardType {
+    CLIPBOARD_NONE,
+    CLIPBOARD_CLIPS,
+    CLIPBOARD_NOTES,
+    CLIPBOARD_PLUGINS,
+    CLIPBOARD_TRACKS,
+};
 
 class MainCtrl;
 class CompanionCtrl;
@@ -278,7 +289,11 @@ class DawInstance : public project_controller_t, public delete_cb {
     };
     std::shared_ptr<project_to_load_t> projectToLoad;
 
-    std::shared_ptr<plugin_clipboard_t> pluginClipboard;
+    ClipBoardType clipboardType = CLIPBOARD_NONE;
+    std::shared_ptr<plugin_clipboard_t> clipboardPlugins;
+    std::shared_ptr<clip_clipboard> clipboardClips;
+    std::shared_ptr<notes_clipboard> clipboardNotes;
+
     dragdrop_midifile dragdropclip;
     dragdrop_target_indicator_t dragdropTarget;
     autosave_state_t autosaveState;
@@ -295,6 +310,13 @@ private:
     //    int curTooltip = 0;
 public:
     DawInstance() : project_controller_t(&project, &projectGlobals) {
+        setEmptyClipboard();
+    }
+    void setEmptyClipboard() {
+        clipboardType = CLIPBOARD_NONE;
+        clipboardPlugins = std::make_shared<plugin_clipboard_t>();
+        clipboardClips   = std::make_shared<clip_clipboard>();
+        clipboardNotes   = std::make_shared<notes_clipboard>();
     }
     edithistory& getHist() {
         return hist;
@@ -351,10 +373,28 @@ public:
     void preClipDelete(clip_t* clip) override;
     void preTrackDelete(track_t* clip) override;
     void setPluginClipboard(std::shared_ptr<plugin_clipboard_t> clipboard) {
-        pluginClipboard = std::move(clipboard);
+        clipboardType = CLIPBOARD_PLUGINS;
+        clipboardPlugins = std::move(clipboard);
     }
-    std::shared_ptr<plugin_clipboard_t> getPluginClipboard() {
-        return pluginClipboard;
+    std::shared_ptr<plugin_clipboard_t>& getPluginClipboard() {
+        return clipboardPlugins;
+    }
+    void setClipClipboard(std::shared_ptr<clip_clipboard> clipboard) {
+        clipboardType = CLIPBOARD_CLIPS;
+        clipboardClips = std::move(clipboard);
+    }
+    std::shared_ptr<clip_clipboard>& getClipsClipboard() {
+        return clipboardClips;
+    }
+    void setNotesClipboard(std::shared_ptr<notes_clipboard> clipboard) {
+        clipboardType = CLIPBOARD_NOTES;
+        clipboardNotes = std::move(clipboard);
+    }
+    std::shared_ptr<notes_clipboard>& getNotesClipboard() {
+        return clipboardNotes;
+    }
+    ClipBoardType getClipboardType() const {
+        return clipboardType;
     }
 
     void setJumpFromTo(tick_t _tickJmpFrom, tick_t _tickJmpTo) {
@@ -554,6 +594,7 @@ public:
     virtual void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) = 0;
     virtual guictr_tracks* getTrackContainer() = 0;
     virtual guictr_clipeditor* getClipEditor() = 0;
+    virtual guictr_plugins* getPluginsView() = 0;
     virtual guictr_nodes_splitview* getNodesContainer() = 0;
     virtual void onPluginSelected();
     bool isGlobalKeybindCodepoint(uint32_t codepoint) override {
@@ -660,6 +701,7 @@ public:
     guictr_tracks* getTrackContainer() override;
     guictr_nodes_splitview* getNodesContainer() override;
     guictr_clipeditor* getClipEditor() override;
+    guictr_plugins* getPluginsView() override;
 };
 
 class CompanionCtrl : public DawCtrl {
@@ -700,6 +742,7 @@ public:
     guictr_tracks* getTrackContainer() override;
     guictr_nodes_splitview* getNodesContainer() override;
     guictr_clipeditor* getClipEditor() override;
+    guictr_plugins* getPluginsView() override;
     void showPluginView() override;
     bool handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) override;
     void showClipEditor() override;

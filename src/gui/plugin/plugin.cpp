@@ -306,97 +306,6 @@ void guiplugin::handleDraggedBegin(MouseEvent& evt) {
 //SELECTALL, DELETE, CUT, COPY, PASTE, DUPLICATE
 //};
 //bool handlePluginCtrCommand(action_plugin_ctr action);
-guictr_properties_table* makeUniquePropertiesCtr();
-class guictxtmenu_plugin : public guictxtmenu {
-    effectbase* const effect;
-public:
-    static constexpr int CMD_SHOW_AUTOMATION = 1;
-    static constexpr int CMD_SHOW_PARAM_LIST = 2;
-    static constexpr int CMD_DUPLICATE       = 3;
-    static constexpr int CMD_DELETE          = 4;
-    static constexpr int CMD_COPY            = 5;
-    static constexpr int CMD_CUT             = 6;
-    static constexpr int CMD_PASTE           = 7;
-    guictxtmenu_plugin(DawCtrl* _dawCtrl, effectbase* _effect)
-        : effect(_effect)
-    {
-        this->dawCtrl = _dawCtrl;
-        this->size.x = 260;
-        addEntry(new ctxtmenu_entry("Show all automation", CMD_SHOW_AUTOMATION));
-        addEntry(new ctxtmenu_entry("Show parameter list", CMD_SHOW_PARAM_LIST));
-        addEntry(new ctxtmenu_splitter());
-        addEntry(new ctxtmenu_entry("Copy", CMD_COPY));
-        addEntry(new ctxtmenu_entry("Cut", CMD_CUT));
-        addEntry(new ctxtmenu_entry("Paste", CMD_PASTE));
-        addEntry(new ctxtmenu_entry("Duplicate", CMD_DUPLICATE));
-        addEntry(new ctxtmenu_entry("Delete", CMD_DELETE));
-    }
-    bool clickedElement(ctxtmenu_entry* e, int _id) override {
-        ThreadLock lock = dawCtrl->lockPlayThread();
-        if (_id == CMD_SHOW_PARAM_LIST) {
-            auto* gui = effect->getGui();
-            if (gui) {
-                guictr_properties_table* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
-                guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
-                ctxtMenu->setBackgroundRendered(true);
-                ctxtMenu->size = { 640, 480 };
-                ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
-                ivec2 wndPos{ 0 };
-                dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
-                dawCtrl->openContextMenu(ctxtMenu, gui->toScreenSpace({gui->size.x, 0}));
-                return true;
-            }
-        }
-        if (_id == CMD_DELETE) {
-            handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_DELETE);
-        }
-        if (_id == CMD_COPY) {
-            handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_COPY);
-        }
-        if (_id == CMD_CUT) {
-            handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_CUT);
-        }
-        if (_id == CMD_PASTE) {
-            handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_PASTE);
-        }
-        if (_id == CMD_PASTE) {
-            handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_COPY);
-        }
-        if (_id == CMD_DUPLICATE) {
-            handlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_DUPLICATE);
-        }
-        if (_id == CMD_SHOW_AUTOMATION) {
-            auto tr = effect->getTrack();
-            auto trCtr = dawCtrl->getTrackContainer();
-            gui_track_automationlane* gtr_at = nullptr;
-            if (tr) {
-                track_gui_entry_t* entry = nullptr;
-                if (!trCtr->getTrackEntry(tr, &entry)) {
-                    dbgassert(0);
-                } else {
-                    entry->layout.hideTrack     = false;
-                    entry->layout.hideSubtracks = false;
-                    updateStoreLoadSubtracks(trCtr, entry);
-
-                    std::vector<int32_t> automated;
-                    effect->getAutomated(automated);
-                    for (int32_t param : automated) {
-                        auto lane = trCtr->addAutomationLane(entry, effect, param, true);
-                        if (!gtr_at) {
-                            gtr_at = lane;
-                        }
-                    }
-                }
-            }
-            if (trCtr && gtr_at) {
-                dawCtrl->updateVisibleTrackContents();
-                trCtr->scrollTo(gtr_at);
-            }
-        }
-        closeContextMenu();
-        return true;
-    }
-};
 void guiplugin::handleRightClick(MouseEvent& evt) {
     handleDraggedBegin(evt);
     const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
@@ -407,7 +316,11 @@ void guiplugin::handleRightClick(MouseEvent& evt) {
         b = evt.relMousepos.x < hpt;
     }
     if (b) {
-        parentCtrl->openContextMenu(new guictxtmenu_plugin(dawCtrl, effect), evt.mousepos);
+        guictr_plugins* parentPluginCtr = nullptr;
+        if (parent && parent->getGuiType() == gui_type::CTR_TYPE_PLUGINS) {
+            parentPluginCtr = static_cast<guictr_plugins*>(parent);
+        }
+        parentCtrl->openContextMenu(new guictxtmenu_plugin(dawCtrl, parentPluginCtr, effect), evt.mousepos);
     }
 }
 void guiplugin::dragMoveOn(guibase* target, ivec2 mousepos) {

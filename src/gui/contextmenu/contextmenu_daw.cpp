@@ -5,8 +5,10 @@
 #include "gui/contextmenu/contextmenu_daw.h"
 #include "gui/contextmenu/contextmenu_grid.h"
 #include "gui/contextmenu/contextmenu.h"
+#include "gui/properties/properties_table.h"
 #include "gui/track/trackcontent.h"
 #include "gui/track/trackctr.h"
+#include "gui/plugin/pluginctr.h"
 #include "host/host_pluginmanager.h"
 #include "host/mainctrl.h"
 #include "host/plugin/base_plugin.h"
@@ -233,6 +235,7 @@ guictxtmenu_track_editor::guictxtmenu_track_editor(DawCtrl* const _dawCtrl, trac
     this->dawCtrl = _dawCtrl;
     this->maxHeight = 0;
     auto& cursor = _dawCtrl->getCursor();
+    auto clipboardType = _dawCtrl->getDaw()->getClipboardType();
     bool bHasContentSelected = optionalContextClip != nullptr;
     if (!bHasContentSelected && m_trackentry && m_trackentry->parent) {
         bHasContentSelected = !DAW::isSelectionEmpty(m_trackentry->parent->guiMgr, cursor, true);
@@ -242,16 +245,20 @@ guictxtmenu_track_editor::guictxtmenu_track_editor(DawCtrl* const _dawCtrl, trac
         addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_MUTE));
     } else {
         addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_CREATE_EMPTY_CLIP));
+        entries.back()->setGrayedOut(cursor.getRange() < 2);
     }
     addEntry(new ctxtmenu_splitter());
-    if (cursor.getRange()) {
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_CUT));
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_COPY));
-    }
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_CUT));
+    entries.back()->setGrayedOut(!bHasContentSelected);
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_COPY));
+    entries.back()->setGrayedOut(!bHasContentSelected);
     addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_PASTE));
+    entries.back()->setGrayedOut(clipboardType != ClipBoardType::CLIPBOARD_CLIPS);
     addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_PASTE_NO_AUTOMATION));
-    if (optionalContextClip || cursor.getRange()) {
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_DELETE));
+    entries.back()->setGrayedOut(clipboardType != ClipBoardType::CLIPBOARD_CLIPS);
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_DELETE));
+    entries.back()->setGrayedOut(!bHasContentSelected);
+    if (bHasContentSelected) {
         addEntry(new ctxtmenu_splitter());
         sel = new ctxtmenu_color_select("Pick Color", 100);
         addEntry(sel);
@@ -319,4 +326,110 @@ bool guictxtmenu_clip::clickedElement(ctxtmenu_entry* e, int _id) {
         return true;
     }
     return false;
+}
+
+guictxtmenu_plugin::guictxtmenu_plugin(DawCtrl* _dawCtrl, guictr_plugins* _ctrOptional, effectbase* _effectOptional)
+    : effectOptional(_effectOptional), pluginCtrOptional(_ctrOptional) {
+    this->dawCtrl = _dawCtrl;
+    this->size.x  = 260;
+    auto clipboardType = dawCtrl->getDaw()->getClipboardType();
+    bool bHasSel = dawCtrl->getPluginSel().hasSelection();
+    if (_effectOptional) {
+        addEntry(new ctxtmenu_entry("Show all automation", CMD_SHOW_AUTOMATION));
+        addEntry(new ctxtmenu_entry("Show parameter list", CMD_SHOW_PARAM_LIST));
+        addEntry(new ctxtmenu_splitter());
+    }
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_CUT));
+    entries.back()->setGrayedOut(!bHasSel);
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_COPY));
+    entries.back()->setGrayedOut(!bHasSel);
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_PASTE));
+    entries.back()->setGrayedOut(clipboardType != ClipBoardType::CLIPBOARD_PLUGINS);
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_DELETE));
+    entries.back()->setGrayedOut(!bHasSel);
+    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_DUPLICATE));
+    entries.back()->setGrayedOut(!bHasSel);
+    addEntry(new ctxtmenu_splitter());
+    addEntry(new ctxtmenu_entry("Load plugin", CMD_LOAD_PLUGIN));
+}
+
+bool guictxtmenu_plugin::clickedElement(ctxtmenu_entry* e, int _id) {
+    if (pluginCtrOptional && e->commandtype != GlobalCommandType::CMD_NONE) {
+        closeContextMenu();
+        pluginCtrOptional->handleCommand({}, e->commandtype);
+        return true;
+    }
+    // return guictxtmenu::clickedElement(e, _id);
+    ThreadLock lock = dawCtrl->lockPlayThread();
+    if (_id == CMD_SHOW_PARAM_LIST && effectOptional) {
+        auto* gui = effectOptional->getGui();
+        if (gui) {
+            guictr_properties_table* dbgPropertiesCtrPopup = guictr_properties_table::MakeUniquePropertiesCtr();
+            guictxtmenu_base* ctxtMenu                     = new guictxtmenu_base();
+            ctxtMenu->setBackgroundRendered(true);
+            ctxtMenu->size = { 640, 480 };
+            ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
+            ivec2 wndPos{ 0 };
+            dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
+            dawCtrl->openContextMenu(ctxtMenu, gui->toScreenSpace({ gui->size.x, 0 }));
+            return true;
+        }
+    }
+    if (_id == CMD_SHOW_AUTOMATION && effectOptional) {
+        auto tr                          = effectOptional->getTrack();
+        auto trCtr                       = dawCtrl->getTrackContainer();
+        gui_track_automationlane* gtr_at = nullptr;
+        if (tr) {
+            track_gui_entry_t* entry = nullptr;
+            if (!trCtr->getTrackEntry(tr, &entry)) {
+                dbgassert(0);
+            } else {
+                entry->layout.hideTrack     = false;
+                entry->layout.hideSubtracks = false;
+                updateStoreLoadSubtracks(trCtr, entry);
+
+                std::vector<int32_t> automated;
+                effectOptional->getAutomated(automated);
+                for (int32_t param : automated) {
+                    auto lane = trCtr->addAutomationLane(entry, effectOptional, param, true);
+                    if (!gtr_at) {
+                        gtr_at = lane;
+                    }
+                }
+            }
+        }
+        if (trCtr && gtr_at) {
+            dawCtrl->updateVisibleTrackContents();
+            trCtr->scrollTo(gtr_at);
+        }
+    }
+    auto stage = pluginCtrOptional ? pluginCtrOptional->stage : nullptr;
+    if (_id == CMD_LOAD_PLUGIN && stage) {
+        auto window = parentCtrl->window;
+        String path;
+        if (promptUserFilePath(window, 0, vFILE_TYPE_PLUGINSNAPSHOT, path)) {
+            ThreadLock lock                                   = dawCtrl->lockPlayThread();
+            std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(path);
+            dbgassert(pluginSnapshot);
+            if (pluginSnapshot) {
+                auto* pluginMgr = dawCtrl->getDaw()->getPluginManager();
+                DAW::assignFreeStageIds(pluginMgr, *pluginSnapshot);
+                auto effect = pluginMgr->loadPluginDeferred(*pluginSnapshot);
+                if (effect) {
+                    effect->projectGlobalId = 0;// generate new id
+                    if (!pluginMgr->addDeferredEffect(effect)) {
+                        log_printf("Failed loading effect\n");
+                        delete effect;
+                        return true;
+                    }
+                    effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
+                    effect->load(pluginMgr);
+                    pluginMgr->insertNewPlugin(stage, effect, -2);// insert at end
+                    // host->activateDeferred(effect, 0);
+                }
+            }
+        }
+    }
+    closeContextMenu();
+    return true;
 }

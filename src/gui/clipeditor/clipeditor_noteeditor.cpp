@@ -703,6 +703,9 @@ void gui_audiocontent::layout() {
     }
 }
 
+bool gui_audiocontent::handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
+    return false;
+}
 
 guictr_audioeditor::guictr_audioeditor(clip_view& _view)
     : guictr_base(),

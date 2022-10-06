@@ -125,7 +125,7 @@ void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip) {
     }
 }
 namespace DAW {
-    bool HandleEditorCommand(DawInstance* daw, track_gui_manager_i& iGuiMgr, DAW::Cursor& cursor, scaled_grid& grid, project_t& project, std::shared_ptr<clip_clipboard>& m_clipboard, const GlobalCommandType command, const KeyEvent& kevt) {
+    bool HandleEditorCommand(DawInstance* daw, track_gui_manager_i& iGuiMgr, DAW::Cursor& cursor, scaled_grid& grid, project_t& project, const GlobalCommandType command, const KeyEvent& kevt) {
         if (kevt.type != K_RELEASE) {
             trackstate_t preModifyState;
             ThreadLock lock      = daw->lockPlayThread();
@@ -189,7 +189,8 @@ namespace DAW {
                     modified        = true;
                     desc            = "Delete clips";
                 } else if (command == CMD_CUT && cursor.getRange()) {
-                    m_clipboard      = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
+                    auto m_clipboard      = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
+                    daw->setClipClipboard(m_clipboard);
                     int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
                     int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
                     project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
@@ -199,7 +200,8 @@ namespace DAW {
                     modified        = true;
                     desc            = "Cut clips";
                 } else if (command == CMD_MUTE && cursor.getRange()) {
-                    m_clipboard      = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
+                    auto clipboard = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
+                    daw->setClipClipboard(clipboard);
                     int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
                     int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
                     project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
@@ -210,7 +212,8 @@ namespace DAW {
                     modified        = true;
                     desc            = "Mute clips";
                 } else if (command == CMD_COPY && cursor.getRange()) {
-                    m_clipboard     = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
+                    auto clipboard = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
+                    daw->setClipClipboard(clipboard);
                     handledKeyinput = true;
                 } else if (command == CMD_CONSOLIDATE && cursor.getRange() && !cursor.isSubtrackSelection()) {
                     int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
@@ -242,22 +245,23 @@ namespace DAW {
                     handledKeyinput = true;
                     modified        = true;
                     desc            = "Duplicate clips";
-                } else if ((command == CMD_PASTE_NO_AUTOMATION || command == CMD_PASTE) && m_clipboard) {
+                } else if ((command == CMD_PASTE_NO_AUTOMATION || command == CMD_PASTE) && daw->getClipboardType() == ClipBoardType::CLIPBOARD_CLIPS) {
                     if (command == CMD_PASTE_NO_AUTOMATION) {
                         bCopyAutomation = false;
                     }
+                    auto& clipboard = daw->getClipsClipboard();
                     DAW::Cursor pasteRange = cursor;
                     track_selection_t pasteSelection;
-                    pasteRange.selTrackRange = m_clipboard->selTrackRange;
+                    pasteRange.selTrackRange = clipboard->selTrackRange;
                     iGuiMgr.getTrackSelection(pasteRange, pasteSelection);
                     project.trackList.copyTracks(pasteSelection.trackIdxMin, pasteSelection.trackIdxMax, preModifyState);
                     preModifyState.cursor = cursor;
                     cursor.setLeftAligned();
-                    if (m_clipboard->type == clip_clipboard::ClipboardFull)
+                    if (clipboard->type == clip_clipboard::ClipboardFull)
                         DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
-                    DAW::pasteClipboard(iGuiMgr, m_clipboard.get(), cursor, bCopyAutomation);
-                    cursor.selTrackRange = m_clipboard->selTrackRange;
-                    cursor.selRange      = m_clipboard->selRange;
+                    DAW::pasteClipboard(iGuiMgr, clipboard.get(), cursor, bCopyAutomation);
+                    cursor.selTrackRange = clipboard->selTrackRange;
+                    cursor.selRange      = clipboard->selRange;
                     grid.makeTickVisible(cursor.getTickEnd());
                     handledKeyinput = true;
                     modified        = true;
@@ -336,7 +340,7 @@ namespace DAW {
 } // namespace DAW
 
 bool guitrack_editor::handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
-    if (DAW::HandleEditorCommand(dawCtrl->getDaw(), iGuiMgr, cursor, grid, project, m_clipboard, type, kevt)) {
+    if (DAW::HandleEditorCommand(dawCtrl->getDaw(), iGuiMgr, cursor, grid, project, type, kevt)) {
         return true;
     }
     return false;

@@ -507,8 +507,6 @@ void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos
     }
 }
 
-guictr_properties_table* makeUniquePropertiesCtr();
-
 void guibase::setGuiType(gui_type guiType) {
     this->guiType = guiType;
     getContainerLabel(guiType, this->label);
@@ -521,7 +519,7 @@ void guibase::handleMouseDownBegin(MouseEvent& evt) {
         handleRightClick(evt);
     } else if (evt.button > 1) {
 #if BUILD_DAW_HOST
-        guictr_properties_table* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
+        guictr_properties_table* dbgPropertiesCtrPopup = guictr_properties_table::MakeUniquePropertiesCtr();
         guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
         ctxtMenu->setBackgroundRendered(true);
         ctxtMenu->size = { 640, 480 };
