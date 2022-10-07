@@ -39,7 +39,7 @@ int browseForFolder(const String& title, const String& pathStart, String& _out) 
     }
     return 1;
 }
-int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out, String _defaultPath) {
+int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out, String _defaultPath, String _defaultName) {
     char supportedFiles[MAX_PATH] = "";
 
     int offset  = 0;
@@ -99,6 +99,8 @@ int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> 
         ofn.lpstrDefExt = StringAsCStr(fileTypes[0].ext);
         if (_defaultPath.length())
             ofn.lpstrInitialDir = StringAsCStr(_defaultPath);
+        if (_defaultName.length())
+            ofn.lpstrFileTitle = StringAsCStr(_defaultName);
 
         if (GetSaveFileName(&ofn)) {
             _out = szFileName;

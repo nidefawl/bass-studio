@@ -1,5 +1,6 @@
 #include <nanovg.h>
 #include "assert_dbg.h"
+#include "event.h"
 #include "guicolors.h"
 #include "str_util.h"
 #include "tls.h"
@@ -22,6 +23,7 @@
 #include "appconfig.h"
 #include "gui/contextmenu/contextmenu_daw.h"
 #include "gui/plugin/pluginctr.h"
+#include "trackctr_types.h"
 
 void guitrack_mixers::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
@@ -708,7 +710,7 @@ void guictr_tracks::addTrack(track_t* track, int flags) {
     }
 }
 void guitrack_mixers::handleRightClick(MouseEvent& evt) {
-    parentCtrl->openContextMenu(new guictxtmenu_notrack(), evt.mousepos);
+    parentCtrl->openContextMenu(new guictxtmenu_notrack(dawCtrl), evt.mousepos);
 }
 
 void getTrackGuiYBounds(const track_gui_entry_t* track, ivec2& topBottom) {
@@ -795,19 +797,35 @@ bool guitrack_mixers::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
     return false;
 }
 
-bool guictr_tracks::handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
-    if (trackView.handleEditorCommand(kevt, type)) {
+bool guictr_tracks::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
+    if (trackView.handleEditorCommand(ctxt)) {
         return true;
     }
-    return trackControls.handleEditorCommand(kevt, type);
+    return trackControls.handleEditorCommand(ctxt);
 }
 
-bool guitrack_mixers::handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
-    // if (type == GlobalCommandType::CMD_PASTE && dawCtrl->getDaw()->getClipboardType() == ClipBoardType::CLIPBOARD_PLUGINS) {
-    //     guictr_plugins* ctrPlugins = dawCtrl->getPluginsView();
-    //     if (ctrPlugins && ctrPlugins->handleCommand(kevt, type)) {
-    //         return true;
-    //     }
-    // }
+bool guitrack_mixers::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
+    auto daw = dawCtrl->getDaw();
+    if (ctxt.type == GlobalCommandType::CMD_BEGIN_RENAME) {
+        if (ctxt.kevt.type != KeyboardState::K_PRESS) {
+            return true;
+        }
+        auto selTrack = daw->getSelectedTrack();
+        track_gui_entry_t* entry = nullptr;
+        if (iGuiMgr.getPointerEntry(selTrack, &entry)) {
+            DAW::OpenRenameTrackPopup(dawCtrl, entry);
+        }
+        return true;
+    }
+    return false;
+}
+
+bool guitrack_mixers::handleKeyInput(KeyEvent& kevt) {
+    if (kevt.cmd) {
+        auto temp = kevt.cmd->getKeybindContextData(kevt);
+        if (handleEditorCommand(temp)) {
+            return true;
+        }
+    }
     return false;
 }

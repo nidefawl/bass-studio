@@ -148,17 +148,13 @@ class guictxtmenu_noteeditor : public guictxtmenu {
     ctxtmenu_time_select* timeSel2 = nullptr;
 
 public:
-    guictxtmenu_noteeditor(guictr_noteeditor* _editor) {
-        this->editor  = _editor;
+    explicit guictxtmenu_noteeditor(guictr_noteeditor* _editor) {
         this->size.x  = 260;
-        this->dawCtrl = _editor->dawCtrl;
         this->maxHeight = 0;
+        this->editor  = _editor;
+        this->dawCtrl = _editor->dawCtrl;
         auto& cursor = dawCtrl->getCursor();
 
-        // bool bHasContentSelected = optionalContextClip != nullptr;
-        // if (!bHasContentSelected && m_trackentry && m_trackentry->parent) {
-        //     bHasContentSelected = !DAW::isSelectionEmpty(m_trackentry->parent->guiMgr, cursor, true);
-        // }
         bool bHasContentSelected = cursor.getRange();
         if (bHasContentSelected) {
             addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_MUTE));
@@ -211,13 +207,10 @@ public:
                 }
             }
         } else {
-            if (dawCtrl && e->commandtype != GlobalCommandType::CMD_NONE) {
-                if (editor->handleEditorCommand({}, e->commandtype)) {
-                    // closeContextMenu();
-                    // return true;
-                }
+            if (dawCtrl && editor && e->commandtype != GlobalCommandType::CMD_NONE) {
+                DAW::UI::CommandContext ctxt = {e->commandtype};
+                editor->handleEditorCommand(ctxt);
             }
-            // return guictxtmenu::clickedElement(e, _id);
         }
         dawCtrl->getDaw()->updateVisibleTrackContents();
         closeContextMenu();
@@ -1327,8 +1320,10 @@ void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
     setGlobalSelectionFromClipSelection();
 }
 
-bool gui_clipcontent::handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
+bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
     auto daw = dawCtrl->getDaw();
+    auto type = ctxt.type;
+    auto& kevt = ctxt.kevt;
     if (focused() && type == CMD_PASTE && daw->getClipboardType() != ClipBoardType::CLIPBOARD_NOTES) {
         // suppress paste of clips by returning true for "is handled"
         return true;
@@ -1570,10 +1565,12 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
     if (dragMode) {
         return true;
     }
-    if (kevt.cmd && handleEditorCommand(kevt, kevt.cmd->type)) {
-        return true;
+    if (kevt.cmd) {
+        auto temp = kevt.cmd->getKeybindContextData(kevt);
+        if (handleEditorCommand(temp)) {
+            return true;
+        }
     }
-    
     return false;
 }
 

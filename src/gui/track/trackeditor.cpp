@@ -1,6 +1,7 @@
 #include "appconfig.h"
 #include "assert_dbg.h"
 #include "commands.h"
+#include "compiler.h"
 #include "event.h"
 #include "tls.h"
 #include "trackctr.h"
@@ -125,7 +126,35 @@ void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip) {
     }
 }
 namespace DAW {
-    bool HandleEditorCommand(DawInstance* daw, track_gui_manager_i& iGuiMgr, DAW::Cursor& cursor, scaled_grid& grid, project_t& project, const GlobalCommandType command, const KeyEvent& kevt) {
+
+    template<typename Functor>
+    void VisitIntersectingClips(track_gui_entry_t* trEntry, tick_t tickBegin, tick_t tickEnd, Functor f) {
+        auto& midi = trEntry->track->getMidi();
+        for (clip_t* c : midi.getClips()) {
+            if (c->start() < tickEnd && c->end() > tickBegin) {
+                f(trEntry, c);
+            }
+        }
+    }
+
+    template<typename Functor>
+    void VisitIntersecting(track_gui_manager_i& trackList, const DAW::Cursor& _cursor, Functor f) {
+        int32_t tickBegin  = _cursor.getTickBegin();
+        int32_t tickEnd    = _cursor.getTickEnd();
+        int32_t trackBegin = _cursor.getTrackBegin();
+        int32_t trackEnd   = _cursor.getTrackEnd();
+        if (!_cursor.isSubtrackSelection()) {
+            for (int i = trackBegin; i <= trackEnd; i++) {
+                if (trackList.validTrackIdx(i)) {
+                    track_gui_entry_t* tr = trackList.atNC(i);
+                    VisitIntersectingClips(tr, tickBegin, tickEnd, f);
+                }
+            }
+        }
+    }
+
+    bool HandleEditorCommand(DawInstance* daw, track_gui_manager_i& iGuiMgr, DAW::Cursor& cursor, scaled_grid& grid, project_t& project, const UI::CommandContext& ctxt) {
+        auto& kevt = ctxt.kevt;
         if (kevt.type != K_RELEASE) {
             trackstate_t preModifyState;
             ThreadLock lock      = daw->lockPlayThread();
@@ -133,6 +162,7 @@ namespace DAW {
             bool handledKeyinput = false;
             String desc          = "???";
             bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
+            auto command = ctxt.type;
             if (kevt.type == K_PRESS) {
                 if (command == CMD_SELECT_ALL) {
                     tick_t evtMin            = INVALID_TICK;
@@ -172,8 +202,12 @@ namespace DAW {
                     std::shared_ptr<clip_clipboard> clipboardConsolidated = DAW::consolidateClipboard(clipboardCopy, cursor);
                     cursor.setLeftAligned();
                     //cursor.cursorPos += cursor.getRange();
-                    DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
-                    DAW::pasteClipboard(iGuiMgr, clipboardConsolidated.get(), cursor, bCopyAutomation);
+                    DAW::cutSelection(daw, iGuiMgr, cursor, bCopyAutomation);
+                    DAW::pasteClipboard(daw, iGuiMgr, clipboardConsolidated.get(), cursor, bCopyAutomation);
+                    DAW::VisitIntersecting(iGuiMgr, cursor, [](track_gui_entry_t* trEntry, clip_t* c) {
+                        c->rgb = trEntry->track->rgb;
+                        c->setDirty();
+                    });
                     grid.makeTickVisible(cursor.cursorPos + clipboardConsolidated->selRange);
                     handledKeyinput = true;
                     modified        = true;
@@ -184,7 +218,7 @@ namespace DAW {
                     int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
                     project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
                     preModifyState.cursor = cursor;
-                    DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
+                    DAW::cutSelection(daw, iGuiMgr, cursor, bCopyAutomation);
                     handledKeyinput = true;
                     modified        = true;
                     desc            = "Delete clips";
@@ -195,22 +229,46 @@ namespace DAW {
                     int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
                     project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
                     preModifyState.cursor = cursor;
-                    DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
+                    DAW::cutSelection(daw, iGuiMgr, cursor, bCopyAutomation);
                     handledKeyinput = true;
                     modified        = true;
                     desc            = "Cut clips";
-                } else if (command == CMD_MUTE && cursor.getRange()) {
+                } else if (cursor.getRange() && (command == CMD_MUTE || command == CMD_SET_COLOR || command == CMD_SET_NAME)) {
                     auto clipboard = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
                     daw->setClipClipboard(clipboard);
                     int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
                     int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
                     project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
                     preModifyState.cursor = cursor;
-                    DAW::muteIntersecting(iGuiMgr, cursor);
+                    switch (command) {
+                        case CMD_MUTE:
+                            DAW::VisitIntersecting(iGuiMgr, cursor, [](track_gui_entry_t* trEntry, clip_t* c) {
+                                c->enabled = !c->enabled;
+                                c->setDirty();
+                            });
+                            desc = "Mute clips";
+                            break;
+                        case CMD_SET_COLOR:
+                            DAW::VisitIntersecting(iGuiMgr, cursor, [rgb = ctxt.argInt](track_gui_entry_t* trEntry, clip_t* c) {
+                                c->rgb = rgb;
+                                c->setDirty();
+                            });
+                            desc = "Set color";
+                            break;
+                        case CMD_SET_NAME:
+                            DAW::VisitIntersecting(iGuiMgr, cursor, [strName = ctxt.argStr](track_gui_entry_t* trEntry, clip_t* c) {
+                                c->name = strName;
+                                c->setDirty();
+                            });
+                            desc = "Set name";
+                            break;
+                        default:
+                            unreachable();
+                            break;
+                    }
                     grid.makeTickVisible(cursor.cursorPos + cursor.selRange / 2);
                     handledKeyinput = true;
                     modified        = true;
-                    desc            = "Mute clips";
                 } else if (command == CMD_COPY && cursor.getRange()) {
                     auto clipboard = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
                     daw->setClipClipboard(clipboard);
@@ -225,8 +283,12 @@ namespace DAW {
                     std::shared_ptr<clip_clipboard> clipboardConsolidated = DAW::consolidateClipboard(clipboardCopy, cursor);
                     cursor.setLeftAligned();
                     //cursor.cursorPos += cursor.getRange();
-                    DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
-                    DAW::pasteClipboard(iGuiMgr, clipboardConsolidated.get(), cursor, bCopyAutomation);
+                    DAW::cutSelection(daw, iGuiMgr, cursor, bCopyAutomation);
+                    DAW::pasteClipboard(daw, iGuiMgr, clipboardConsolidated.get(), cursor, bCopyAutomation);
+                    DAW::VisitIntersecting(iGuiMgr, cursor, [](track_gui_entry_t* trEntry, clip_t* c) {
+                        c->rgb = trEntry->track->rgb;
+                        c->setDirty();
+                    });
                     grid.makeTickVisible(cursor.cursorPos + clipboardConsolidated->selRange);
                     handledKeyinput = true;
                     modified        = true;
@@ -240,7 +302,7 @@ namespace DAW {
                     std::shared_ptr<clip_clipboard> newClipboard = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
                     cursor.setLeftAligned();
                     cursor.cursorPos += cursor.getRange();
-                    DAW::pasteClipboard(iGuiMgr, newClipboard.get(), cursor, bCopyAutomation);
+                    DAW::pasteClipboard(daw, iGuiMgr, newClipboard.get(), cursor, bCopyAutomation);
                     grid.makeTickVisible(cursor.cursorPos + newClipboard->selRange);
                     handledKeyinput = true;
                     modified        = true;
@@ -258,8 +320,8 @@ namespace DAW {
                     preModifyState.cursor = cursor;
                     cursor.setLeftAligned();
                     if (clipboard->type == clip_clipboard::ClipboardFull)
-                        DAW::cutSelection(iGuiMgr, cursor, bCopyAutomation);
-                    DAW::pasteClipboard(iGuiMgr, clipboard.get(), cursor, bCopyAutomation);
+                        DAW::cutSelection(daw, iGuiMgr, cursor, bCopyAutomation);
+                    DAW::pasteClipboard(daw, iGuiMgr, clipboard.get(), cursor, bCopyAutomation);
                     cursor.selTrackRange = clipboard->selTrackRange;
                     cursor.selRange      = clipboard->selRange;
                     grid.makeTickVisible(cursor.getTickEnd());
@@ -339,8 +401,19 @@ namespace DAW {
     }
 } // namespace DAW
 
-bool guitrack_editor::handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
-    if (DAW::HandleEditorCommand(dawCtrl->getDaw(), iGuiMgr, cursor, grid, project, type, kevt)) {
+bool guitrack_editor::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
+    if (ctxt.type == GlobalCommandType::CMD_BEGIN_RENAME) {
+        if (ctxt.kevt.type == KeyboardState::K_PRESS) {
+            DAW::OpenFloatingTextInput(dawCtrl, dawCtrl->m_mousePos, ivec2(200, 20), "", [trEditor = this](const String& str) {
+                DAW::UI::CommandContext ctxtSetName = {GlobalCommandType::CMD_SET_NAME, {}};
+                ctxtSetName.argStr = str;
+                trEditor->handleEditorCommand(ctxtSetName);
+                return false;
+            });
+        }
+        return true;
+    }
+    if (DAW::HandleEditorCommand(dawCtrl->getDaw(), iGuiMgr, cursor, grid, project, ctxt)) {
         return true;
     }
     return false;
@@ -367,8 +440,11 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
     if (action.dragtype) {
         return false;
     }
-    if (kevt.cmd && this->handleEditorCommand(kevt, kevt.cmd->type)) {
-        return true;
+    if (kevt.cmd) {
+        auto temp = kevt.cmd->getKeybindContextData(kevt);
+        if (handleEditorCommand(temp)) {
+            return true;
+        }
     }
     return false;
 }
@@ -618,10 +694,10 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
                 resizePreModifyState.cursor               = cursorBegin;
                 std::shared_ptr<clip_clipboard> clipboard = DAW::copySelection(iGuiMgr, cursorBegin, bCopyAutomation);
                 if (!isCtrl(evt.kbmods)) {
-                    DAW::cutSelection(iGuiMgr, cursorBegin, bCopyAutomation);
+                    DAW::cutSelection(daw, iGuiMgr, cursorBegin, bCopyAutomation);
                 }
                 int32_t trackGuiIdx = dstTrack - trackOffset;
-                DAW::pasteFullClipboard(iGuiMgr, clipboard.get(), trackGuiIdx, dstPos, bCopyAutomation);
+                DAW::pasteFullClipboard(daw, iGuiMgr, clipboard.get(), trackGuiIdx, dstPos, bCopyAutomation);
                 daw->updateVisibleTrackContents();
                 showclip                          = false;
                 auto* track_action = new action_modify_track("Move clips", std::move(resizePreModifyState));
@@ -700,15 +776,15 @@ bool guitrack_editor::clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, Keyb
 bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) {
     if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
 //        dragClipboardMove(mousepos);//TODO: maybe call move again to set final pos?
-
-        ThreadLock lock                  = MainCtrl::getPlayThread()->lockThread();
+        auto daw = dawCtrl->getDaw();
+        auto lock = daw->lockPlayThread();
         track_gui_entry_t* trNxtSelected = getTrackFromMouseClosest(iGuiMgr, mousepos);
         int32_t tick                     = grid.screenToTickSnap(mousepos.x, SNAP_ON);
         tick_t dstPos                    = tick;
         int32_t dstTrack                 = trNxtSelected->idx;
         bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
-        DAW::pasteFullClipboard(iGuiMgr, action.clipboard.get(), dstTrack, dstPos, bCopyAutomation);
-        dawCtrl->getDaw()->updateVisibleTrackContents();
+        DAW::pasteFullClipboard(daw, iGuiMgr, action.clipboard.get(), dstTrack, dstPos, bCopyAutomation);
+        daw->updateVisibleTrackContents();
         action.clipboard   = nullptr;
         action.dragtype    = DRAG_NONE;
         clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
@@ -716,62 +792,6 @@ bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, Key
         return true;
     }
     return false;
-}
-
-void guitrack_editor::prerender(NVGcontext* vg) {
-    for (guibase* gui : guis) {
-        gui->prerender(vg);
-    }
-    if (action.dragtype) {
-
-        clip_clipboard* _clipboard = action.clipboard.get();
-        for (int i = 0; _clipboard && i <= _clipboard->selTrackRange; i++) {
-            track_clipboard_t* trClipboard = _clipboard->tracks[i].get();
-            int32_t trackIdx               = _clipboard->srcTrack + i + (cursor.cursorTrack - action.cursorBegin.cursorTrack);
-            if (!project.trackList.validTrackIdx(trackIdx)) {
-                continue;
-            }
-            trackIdx = project.trackList.clampTrackIdx(trackIdx);
-            for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
-                clip_t* cl = (*it).get();
-                if (cl->clipType == CLIP_AUDIO) {
-#ifdef TODO_AUDIO_CLIP_DRAGGED_RENDER_WAVEFORM
-                    ivec2 clipPos      = ivec2();
-                    ivec2 clipSize     = tr->content->size;//TODO: get rid of *tr here, figure out size before and add default fallback
-                    audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->get(cl->audio.id);
-                    if (!audio || !getClipPosition(grid, tr->content->size, cl, clipPos, clipSize, 0)) {
-                        //log_printf("release %012x from prerender() (clipped) \n", &cl->audio.waveformRef);
-                        dawCtrl->getWaveformRenderer()->release(&cl->audio.waveformRef);
-                        //cl->audio.waveformRef.fbId = -1;
-                        //cl->audio.waveformRef.rendered = false;
-                        continue;
-                    }
-
-                    clipSize.y -= (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2);
-                    ivec2 posClipped  = clipPos;
-                    ivec2 sizeClipped = clipSize;
-                    tr->content->scissorClip(posClipped, sizeClipped);
-                    auto waveform                         = makeWaveformFromClip(project, grid, tr->content->size, cl, clipPos, clipSize, posClipped, sizeClipped);
-                    gui_waveform_texture_ref& waveformRef = cl->audio.waveformRef;
-                    if (!waveformRef.queued) {
-                        if (!waveformRef.rendered || waveform != waveformRef.waveform) {
-                            dbgassert(!waveformRef.queued);
-                            //log_printf("release %012x from prerender() (refresh) \n", &waveformRef);
-                            dawCtrl->getWaveformRenderer()->release(&waveformRef);
-                            if (waveform.size.x > 0 && waveform.size.y > 0) {
-                                waveformRef.waveform = waveform;
-                                /*int ret = */ dawCtrl->getWaveformRenderer()->queueUpdate(audio, &waveformRef);
-                            }
-
-                            //waveformRef.fbId = ret;
-                            //waveformRef.rendered = true;
-                        }
-                    }
-#endif
-                }
-            }
-        }
-    }
 }
 
 void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const entry, clip_t* cl, tick_t offset) {

@@ -197,7 +197,7 @@ public:
     void render(NVGcontext* vg) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
-    bool handleCommand(const KeyEvent& kevt, GlobalCommandType type);
+    bool handleCommand(DAW::UI::CommandContext& ctxt);
     void layout() override;
     int slotFromCoord(ivec2 _pos);
     int slotFromChild(guibase* child) {

@@ -76,6 +76,8 @@ namespace DAW::UI {
             dbgassert(std::find_if(commands.cbegin(), commands.cend(), [cmdType](auto& cmd) { return cmd.type == cmdType;}) != commands.cend());
         }
         for (auto& cmd : commands) {
+            if (cmd.contextMatcher.ctxtType == CommandContextType::CMD_CTXT_INTERNAL)
+                cmd.keyCombos.clear();
             if (cmd.keyCombos.empty()) {
                 cmd.desc.shortcut = "";
             } else {
@@ -120,11 +122,16 @@ namespace DAW::UI {
         commands.push_back({CMD_INSERT_MIDI_TRACK, {"Insert MIDI Track", "Insert a new MIDI track", "", ICON_PLUS}, {}});
         commands.push_back({CMD_INSERT_RETURN_TRACK, {"Insert Return Track", "Insert a new return track", "", ICON_PLUS}, {}});
         commands.push_back({CMD_INSERT_MASTER_TRACK, {"Insert Master Track", "Insert a new master track", "", ICON_PLUS}, {}});
+        commands.push_back({CMD_IMPORT_TRACK, {"Import Track", "Import a track from a file", "", ICON_FOLDER}, {}});
+        commands.push_back({CMD_EXPORT_TRACK, {"Export Track", "Export a track to a file", "", ICON_SAVE}, {}});
 
         commands.push_back({CMD_UNDO, {"Undo", "Undo last action", ""}, {KC_UNDO}});
         commands.push_back({CMD_REDO, {"Redo", "Redo last action", ""}, {KC_REDO}});
         commands.push_back({CMD_SELECT_ALL, {"Select All", "Select all items", ""}, {KC_SELECTALL}});
         commands.push_back({CMD_QUANTIZE, {"Quantize", "Quantize selected items", ""}, {KC_QUANTIZE}});
+        commands.push_back({CMD_SET_COLOR, {"Set Color", "Set color on selected items", ""}, {}});
+        commands.push_back({CMD_SET_NAME, {"Set Name", "Set name on selected items", ""}, {}});
+        commands.push_back({CMD_BEGIN_RENAME, {"Rename", "Rename selected items", ""}, {}});
         commands.push_back({CMD_CONSOLIDATE, {"Consolidate", "Consolidate selected items", ""}, {KC_CONSOLIDATE}});
         commands.push_back({CMD_MUTE, {"Mute", "Mute selected items", ""}, {KC_MUTE}});
         commands.push_back({CMD_SOLO, {"Solo", "Solo selected items", ""}, {}});
@@ -157,7 +164,7 @@ namespace DAW::UI {
             auto cmdOpenView1 = cmdOpenView;
             cmdOpenView1.desc.name = "Switch to Layout " + std::to_string(i + 1);
             cmdOpenView1.desc.description = StringFormat(cmdOpenView1.desc.description.c_str(), i + 1);
-            cmdOpenView1.context.argInt = i;
+            cmdOpenView1.keybindContextDataArg0 = i;
             if (i < 4) {
                 // bind F1-F4 to open the first 4 views
                 auto key = GetKeyboardKeyOffset(KeyboardKey::DAW_KB_F1, i);
@@ -170,11 +177,16 @@ namespace DAW::UI {
             log_printf("%04d\t%s\n", i, ptr);
 
         } */
-        auto requireFocusContext = CommandContext{CommandContextType::CMD_CTXT_FOCUSED, gui_type::GUI_TYPE_UNKNOWN};
+        auto ctxtMatcherFocusedOnly = Command::CmdCtxtMatcher{CommandContextType::CMD_CTXT_FOCUSED, gui_type::GUI_TYPE_UNKNOWN};
         int32_t idx = 0;
         for (auto& cmd : commands) {
             cmd.initOrder = idx++;
             switch (cmd.type) {
+                case CMD_SET_COLOR:
+                case CMD_SET_NAME:
+                    cmd.contextMatcher.ctxtType = CommandContextType::CMD_CTXT_INTERNAL;
+                    cmd.keyCombos.clear();
+                    break;
                 case CMD_COPY:
                 case CMD_CUT:
                 // case CMD_PASTE:
@@ -184,7 +196,8 @@ namespace DAW::UI {
                 case CMD_QUANTIZE:
                 case CMD_MUTE:
                 case CMD_SOLO:
-                    cmd.context = requireFocusContext;
+                case CMD_BEGIN_RENAME:
+                    cmd.contextMatcher = ctxtMatcherFocusedOnly;
                     break;
                 default:
                     break;
@@ -195,10 +208,11 @@ namespace DAW::UI {
                     kc.keyChar = ptr;
                 }
             }
-            if (cmd.keyCombos.empty()) {
-                cmd.keyCombos.push_back({});
-            }
-            cmd.defaultKeyCombo = cmd.keyCombos[0];
+            // if (cmd.keyCombos.empty()) {
+            //     cmd.keyCombos.push_back({});
+            // }
+            if (!cmd.keyCombos.empty())
+                cmd.defaultKeyCombo = cmd.keyCombos[0];
         }
     }
 
@@ -280,7 +294,7 @@ namespace DAW::UI {
         }
         updateKeybinds();
     }
-    bool CommandContext::matchesFocusedGui(guibase* optionalGui) const {
+    bool Command::CmdCtxtMatcher::matchesFocusedGui(guibase* optionalGui) const {
         using Type = CommandContextType;
         bool bMatches = false;
         switch (ctxtType) {
@@ -289,6 +303,7 @@ namespace DAW::UI {
                 break;
             case Type::CMD_CTXT_GLOBAL:
             case Type::CMD_CTXT_FOCUSED:
+            case Type::CMD_CTXT_INTERNAL:
                 bMatches = true;
                 break;
         }

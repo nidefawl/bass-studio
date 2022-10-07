@@ -703,7 +703,7 @@ void gui_audiocontent::layout() {
     }
 }
 
-bool gui_audiocontent::handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
+bool gui_audiocontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
     return false;
 }
 

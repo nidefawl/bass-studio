@@ -64,6 +64,7 @@ namespace ngui {
         }
         void addCommand(AppCtrl* ctrl, GlobalCommandType type, int arg1 = 0, String customText = "");
         String getTitle() const;
+        String getRight() const;
         void setTitle(String title) {
             this->title = std::move(title);
         }

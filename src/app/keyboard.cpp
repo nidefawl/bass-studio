@@ -32,7 +32,3 @@ String KeyCombo::toString() const {
     return modKeys;
 }
 
-bool KeyEvent::isCommand(GlobalCommandType cmd) const {
-    return this->cmd && this->cmd->type == cmd;
-}
-

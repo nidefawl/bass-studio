@@ -31,7 +31,8 @@ int promptUserFilePath(window_base* w,
                        int mode,
                        std::vector<SupportedFileType> fileTypes,
                        String& _out,
-                       String _defaultPath) {
+                       String _defaultPath,
+                       String _defaultName) {
     std::vector<nfdfilteritem_t> filterItems;
     filterItems.reserve(fileTypes.size());
     for (auto& fileType : fileTypes) {
@@ -42,7 +43,7 @@ int promptUserFilePath(window_base* w,
     if (mode == 0) {
         result = NFD_OpenDialog(&savePath, filterItems.data(), filterItems.size(), _defaultPath.empty() ? nullptr : _defaultPath.c_str());
     } else {
-        result = NFD_SaveDialog(&savePath, filterItems.data(), filterItems.size(), _defaultPath.empty() ? nullptr : _defaultPath.c_str(), nullptr);
+        result = NFD_SaveDialog(&savePath, filterItems.data(), filterItems.size(), _defaultPath.empty() ? nullptr : _defaultPath.c_str(), _defaultName.empty() ? nullptr : _defaultName.c_str());
     }
     if (result == NFD_OKAY) {
         _out = savePath;

@@ -109,13 +109,14 @@ public:
 namespace DAW {
     std::shared_ptr<clip_clipboard> copySelection(const track_gui_manager_i& trackList, const Cursor& _cursor, bool copyAutomation);
     std::shared_ptr<clip_clipboard> consolidateClipboard(std::shared_ptr<clip_clipboard>& clipboardIn, const Cursor& _cursor);
-    void pasteFullClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick, bool pasteAutomation);
-    void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, Cursor& cursor, bool pasteAutomation);
-    void cutSelection(track_gui_manager_i& trackList, const Cursor& cursor, bool cutAutomation);
+    void pasteFullClipboard(DawInstance* daw, track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick, bool pasteAutomation);
+    void pasteClipboard(DawInstance* daw, track_gui_manager_i& trackList, clip_clipboard* clipboard, Cursor& cursor, bool pasteAutomation);
+    void cutSelection(DawInstance* daw, track_gui_manager_i& trackList, const Cursor& cursor, bool cutAutomation);
     bool isSelectionEmpty(const track_gui_manager_i& trackList, const DAW::Cursor& _cursor, bool bIgnoreAutomation);
-    void muteIntersecting(track_gui_manager_i& trackList, const Cursor& _cursor);
     void GetProjectReferencedSampleIds(const project_t& project, std::vector<int32_t>& uniqueSampleIds);
     String MakeUniqueTrackName(project_t* project, const String& strNewName);
+    void OpenFloatingTextInput(DawCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& initialStr, const std::function<bool(const String& str)>& callback);
+    void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry);
 }// namespace DAW
 
 struct clip_cursor_t {
@@ -543,7 +544,7 @@ public:
     void destroy() override;
     void relayout(int32_t w, int32_t h) override;
     bool processGlobalKeyevent(const KeyEvent& event) override;
-    bool handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) override;
+    bool handleGlobalCommand(DAW::UI::CommandContext& ctxt) override;
     bool mouseDownPre() override;
     void uncaptureMouse();
     void onUncaptureMouse();
@@ -672,7 +673,7 @@ public:
     void showClipEditor() override;
     void onPluginsChanged() override;
     bool processGlobalKeyevent(const KeyEvent& event) override;
-    bool handleGlobalCommand(const KeyEvent& kev, GlobalCommandType type, DAW::UI::CommandContext* ctxt) override;
+    bool handleGlobalCommand(DAW::UI::CommandContext& ctxt) override;
     guitrack_editor& getTrackEditor();
     void addDebug(String s);
     void resetMouseContext() override;
@@ -744,6 +745,6 @@ public:
     guictr_clipeditor* getClipEditor() override;
     guictr_plugins* getPluginsView() override;
     void showPluginView() override;
-    bool handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) override;
+    bool handleGlobalCommand(DAW::UI::CommandContext& ctxt) override;
     void showClipEditor() override;
 };

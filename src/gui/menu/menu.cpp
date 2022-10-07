@@ -7,6 +7,7 @@
 
 guimenu_ctxtentry::guimenu_ctxtentry(ngui::Menu* _menu)
     : ctxtmenu_entry(_menu->getTitle(), _menu->command.command), menu(_menu) {
+    rightTitle = _menu->getRight();
     int32_t iconId = menu->icon;
     if (iconId > -1) {
         setIcon(&RenderResources::imgIcons[iconId], GuiColor::COL_WHITE);
@@ -17,11 +18,12 @@ void guimenu_ctxtentry::layout(ivec2 size, float _fontSize, determine_string_wid
     this->fontSize = _fontSize;
     this->height   = math::roundfS32(_fontSize * 1.1f);
     auto entryW = leftOffset()+strw.getStringWidth(title, _fontSize, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-    if (icon) entryW += height-4;
-    if (title.find('\t')) entryW += strw.getStringWidth("    ", _fontSize, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+    if (icon) entryW += height*1.5f;
+    if (!rightTitle.empty()) {
+        entryW += strw.getStringWidth(rightTitle, _fontSize, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+    }
     entryW *= 1.2f;
     this->width = math::max(size.x, math::roundfS32(entryW));
-
 }
 
 void guimenu_ctxtentry::render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
@@ -37,26 +39,19 @@ void guimenu_ctxtentry::render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mo
         nvgTranslate(vg, -height / 4, -(y+2));
     }
 
-    String t1 = title;
-    String t2;
-    auto p = title.find('\t');
-    if (p != String::npos) {
-        t1 = title.substr(0, p);
-        t2 = title.substr(p + 1);
-    }
 
     renderTextLabel(vg,
                     vec2(leftOffset(), y + height*0.5f),
                     vec2(width, height),
-                    t1,
+                    title,
                     theme,
                     fontSize,
                     theme->getColor(GuiColor::COL_TEXT),
                     NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 
     String rightSide;
-    if (t2.length()) {
-        rightSide = t2;
+    if (this->rightTitle.length()) {
+        rightSide = this->rightTitle;
     } else if (menu->type == ngui::menu_type::submenu) {
         rightSide = ">";
     }

@@ -15,6 +15,10 @@ ctxtmenu_entry::ctxtmenu_entry(AppCtrl* ctrl, GlobalCommandType _type)
         if (cmd->desc.iconId > -1) {
             setIcon(&RenderResources::imgIcons[cmd->desc.iconId], GuiColor::COL_WHITE);
         }
+        auto combo = cmd->getFirstKeyCombo();
+        if (combo && combo->keyCode != KeyboardKey::DAW_KB_INVALID) {
+            rightTitle = combo->toString();
+        }
     }
 }
 void ngui::Menu::addCommand(AppCtrl* ctrl, GlobalCommandType _type, int arg1, String customText) {
@@ -178,8 +182,76 @@ void guictxtmenu::closeAllSubmenus() {
     }
 }
 String ngui::Menu::getTitle() const {
-    if (registeredCommand) {
-        return GetMenuNameWithKeybind(title, registeredCommand->getFirstKeyCombo());
-    }
     return title;
+}
+
+String ngui::Menu::getRight() const {
+    if (registeredCommand) {
+        auto combo = registeredCommand->getFirstKeyCombo();
+        if (combo && combo->keyCode != KeyboardKey::DAW_KB_INVALID) {
+            return combo->toString();
+        }
+    }
+    return "";
+}
+
+void ctxtmenu_entry::layout(ivec2 size, float _fontSize, determine_string_width& strw) {
+    this->fontSize = _fontSize;
+    this->height   = math::roundfS32(_fontSize * 1.1f);
+    auto entryW    = leftOffset() + strw.getStringWidth(title, _fontSize, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    if (icon) entryW += height - 4;
+    if (!rightTitle.empty()) entryW += strw.getStringWidth(rightTitle, _fontSize, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+    this->width = math::max(size.x, math::roundfS32(entryW));
+}
+
+void ctxtmenu_entry::render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
+    if (contains(ctxtSize, mouse)) {
+        nvgBeginPath(vg);
+        nvgRect(vg, 0, y, ctxtSize.x, height);
+        nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+        nvgFill(vg);
+    }
+    if (this->icon) {
+        nvgTranslate(vg, height / 4, y + 2);
+        drawIconColored(vg, ivec2(height - 4), icon, theme->getColor(iconColor), 4);
+        nvgTranslate(vg, -height / 4, -(y + 2));
+    }
+
+    renderTextLabel(vg,
+                    vec2(leftOffset(), y + height * 0.5f),
+                    vec2(width, height),
+                    title,
+                    theme,
+                    fontSize,
+                    theme->getColor(bGrayedOut ? GuiColor::COL_LABEL_INACTIVE : GuiColor::COL_TEXT),
+                    NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+
+    String rightSide;
+    if (this->rightTitle.length()) {
+        rightSide = this->rightTitle;
+    } else if (showSubmenuArrow()) {
+        rightSide = ">";
+    }
+    if (rightSide.length()) {
+        auto defoffset = this->fontSize / 2.4f;
+        renderTextLabel(vg,
+                        vec2(width - defoffset, y + height * 0.5f),
+                        vec2(width, height),
+                        rightSide,
+                        theme,
+                        fontSize,
+                        THEMECOL_TEXT,
+                        NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+    }
+}
+
+float ctxtmenu_entry::leftOffset() {
+    if (fixedLeftOffset >= 0) {
+        return fixedLeftOffset;
+    }
+    auto offset = this->fontSize / 2.4f;
+    if (icon != nullptr) {
+        offset += height;
+    }
+    return offset;
 }

@@ -267,28 +267,36 @@ bool BaseCtrl::onCharInput(uint32_t codepoint) {
 }
 
 bool BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) {
-    using namespace DAW::UI;
+    using DAW::UI::Command;
+    using DAW::UI::CommandContextType;
     if (guiCaptured) {
         return false;
     }
     KeyEvent event = keyEvent(key, scancode, keyState, mods, key_name);
     auto boundCommand = commands->matchKeyCombo(event);
-    CommandContext commandContext;
+    Command::CmdCtxtMatcher ctxtMatcher;
     if (boundCommand) {
         event.cmd = boundCommand;
-        commandContext = boundCommand->getContext();
+        ctxtMatcher = boundCommand->getContextMatcher();
     }
-    if (guiDragged && commandContext.matchesFocusedGui(guiDragged) && guiDragged->handleKeyInput(event)) {
+    if (guiDragged && ctxtMatcher.matchesFocusedGui(guiDragged) && guiDragged->handleKeyInput(event)) {
         return true;
     }
-    if (guiFocused && commandContext.matchesFocusedGui(guiFocused) && guiFocused->handleKeyInput(event)) {
+    if (guiFocused && ctxtMatcher.matchesFocusedGui(guiFocused) && guiFocused->handleKeyInput(event)) {
         return true;
     }
-    if (guiCtrFocused && guiCtrFocused != guiFocused && commandContext.matchesFocusedGui(guiCtrFocused) && guiCtrFocused->handleKeyInput(event)) {
+    if (guiCtrFocused && guiCtrFocused != guiFocused && ctxtMatcher.matchesFocusedGui(guiCtrFocused) && guiCtrFocused->handleKeyInput(event)) {
         return true;
     }
-    if (commandContext.ctxtType == CommandContextType::CMD_CTXT_GLOBAL && processGlobalKeyevent(event)) {
+    //TODO: remove processGlobalKeyevent
+    if (processGlobalKeyevent(event)) {
         return true;
+    }
+    if (ctxtMatcher.ctxtType == CommandContextType::CMD_CTXT_GLOBAL && event.cmd) {
+        auto temp = event.cmd->getKeybindContextData(event);
+        if (handleGlobalCommand(temp)) {
+            return true;
+        }
     }
     if (parentCtrl && parentCtrl->onKeyInput(key, scancode, keyState, mods, key_name)) {
         return true;

@@ -28,20 +28,29 @@ enum class CommandContextType {
     CMD_CTXT_GLOBAL,
     CMD_CTXT_FOCUSED,
     CMD_CTXT_CTR_TYPE,
+    CMD_CTXT_INTERNAL,
 };
+
 struct CommandContext {
-    CommandContextType ctxtType = CommandContextType::CMD_CTXT_GLOBAL;
-    gui_type ctxtGuiType = gui_type::GUI_TYPE_UNKNOWN;
+    GlobalCommandType type = GlobalCommandType::CMD_NONE;
+    KeyEvent kevt{};
     int32_t argInt = 0;
-    bool matchesFocusedGui(guibase* optionalGui) const;
+    String argStr = "";
 };
 struct Command {
+    struct CmdCtxtMatcher {
+        CommandContextType ctxtType = CommandContextType::CMD_CTXT_GLOBAL;
+        gui_type ctxtGuiType = gui_type::GUI_TYPE_UNKNOWN;
+        bool matchesFocusedGui(guibase* optionalGui) const;
+    };
     GlobalCommandType type = GlobalCommandType::CMD_NONE;
     CommandDesc desc;
-    std::vector<KeyCombo> keyCombos;
+    std::vector<KeyCombo> keyCombos; // TODO: make keyCombos struct of KeyCombo and CommandContext
     int initOrder = 0;
     KeyCombo defaultKeyCombo{};
-    CommandContext context{};
+    CmdCtxtMatcher contextMatcher{};
+    int32_t keybindContextDataArg0 = 0;
+    String keybindContextDataArg1 = "";
     String toString() const {
         return desc.name;
     }
@@ -51,8 +60,11 @@ struct Command {
         }
         return &keyCombos[0];
     }
-    const CommandContext& getContext() const {
-        return context;
+    const CmdCtxtMatcher& getContextMatcher() const {
+        return contextMatcher;
+    }
+    CommandContext getKeybindContextData(const KeyEvent& kevt) const {
+        return {type, kevt, keybindContextDataArg0, keybindContextDataArg1};
     }
 };
 class CommandManager {
@@ -63,15 +75,11 @@ public:
     Command* matchKeyCombo(const KeyEvent& evt);
     Command* getCommand(GlobalCommandType type);
     template<typename T>
-    void visitCommands(T&& visitor) {
+    void visitCommandBindings(T&& visitor) {
         for (auto& cmd : commands) {
-            visitor(cmd);
-        }
-    }
-    template<typename T>
-    void visitCommands(T&& visitor) const {
-        for (const auto& cmd : commands) {
-            visitor(cmd);
+            if (cmd.contextMatcher.ctxtType != CommandContextType::CMD_CTXT_INTERNAL) {
+                visitor(cmd);
+            }
         }
     }
     void resetKeybinds();

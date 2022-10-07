@@ -38,7 +38,7 @@ bool getContainerLabel(gui_type type, String& out) {
             out = "Shader Test";
             return true;
         case CTR_TYPE_SETTINGS:
-            out = "Settings";
+            out = "Preferences";
             return true;
         case CTR_TYPE_EFFECTLIBRARY:
             out = "Plugins";

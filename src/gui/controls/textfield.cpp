@@ -82,6 +82,7 @@ void gui_textfield::onTextChange() {
 }
 void gui_textfield::onTextEndEdit() {
     if (mCallbackEnd && !mCallbackEnd(mValueTemp)) {
+        parentCtrl->closePopup();
     }
 }
 void setTfFont(NVGcontext* ctx, const gui_textfield* tf) {

@@ -16,6 +16,7 @@ class ctxtmenu_entry {
 public:
     int id = 0;
     String title;
+    String rightTitle;
 
     int width             = -1;
     int height            = 0;
@@ -52,45 +53,15 @@ public:
         this->iconColor = color;
     }
 
-    virtual void layout(ivec2 size, float _fontSize, determine_string_width& strw) {
-        this->fontSize = _fontSize;
-        this->height   = math::roundfS32(_fontSize * 1.1f);
-        this->width = math::max<float>(size.x, leftOffset()+strw.getStringWidth(title, _fontSize, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE));
+    virtual void layout(ivec2 size, float _fontSize, determine_string_width& strw);
+
+    virtual float leftOffset();
+
+    virtual bool showSubmenuArrow() {
+        return false;
     }
 
-    virtual float leftOffset() {
-        if (fixedLeftOffset >= 0) {
-            return fixedLeftOffset;
-        }
-        auto offset = this->fontSize / 2.4f;
-        if (icon != nullptr) {
-            offset += height;
-        }
-        return offset;
-    }
-
-    virtual void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
-        if (contains(ctxtSize, mouse)) {
-            nvgBeginPath(vg);
-            nvgRect(vg, 0, y, ctxtSize.x, height);
-            nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
-            nvgFill(vg);
-        }
-        if (this->icon) {
-            nvgTranslate(vg, height / 4, y+2);
-            drawIconColored(vg, ivec2(height - 4), icon, theme->getColor(iconColor), 4);
-            nvgTranslate(vg, -height / 4, -(y+2));
-        }
-
-        renderTextLabel(vg,
-                        vec2(leftOffset(), y + height * 0.5f),
-                        vec2(width, height),
-                        title,
-                        theme,
-                        fontSize,
-                        theme->getColor(bGrayedOut ? GuiColor::COL_LABEL_INACTIVE : GuiColor::COL_TEXT),
-                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-    }
+    virtual void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse);
     virtual bool contains(ivec2& ctxtSize, ivec2& mouse) const {
         return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
     }

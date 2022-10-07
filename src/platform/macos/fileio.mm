@@ -322,7 +322,9 @@ nfdresult_t NFD_PickFolder(const nfdchar_t *defaultPath,
 }
 
 int promptUserFilePath(window_base* w, int mode,
-		std::vector<SupportedFileType> fileTypes, String& _out) {
+		std::vector<SupportedFileType> fileTypes, String& _out,
+                       String _defaultPath,
+                       String _defaultName) {
     nfdchar_t *outPath = NULL;
 	String fileFilter = "";
 	for (SupportedFileType& type : fileTypes) {

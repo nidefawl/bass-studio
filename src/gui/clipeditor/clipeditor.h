@@ -274,7 +274,7 @@ public:
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
-    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type);
+    bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
     void layout() override {
         for (guibase* gui : guis) {
             gui->layout();
@@ -375,8 +375,8 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
-    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
-        return content.handleEditorCommand(kevt, type);
+    bool handleEditorCommand(DAW::UI::CommandContext& ctxt) {
+        return content.handleEditorCommand(ctxt);
     }
 
     void gridChanged(scaled_grid& _grid) override;
@@ -406,7 +406,7 @@ public:
     void onTick(AppCtrl* appctrl) override;
     void render(NVGcontext* vg) override;
     void prerender(NVGcontext* vg) override;
-    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type);
+    bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
 
     void releaseRendered();
     void updatePosition();
@@ -433,8 +433,8 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
-    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
-        return content.handleEditorCommand(kevt, type);
+    bool handleEditorCommand(DAW::UI::CommandContext& ctxt) {
+        return content.handleEditorCommand(ctxt);
     }
 
     void gridChanged(scaled_grid& _grid) override;
@@ -569,11 +569,11 @@ public:
         }
         return noteeditor.handleKeyInput(kevt);
     }
-    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type) {
+    bool handleEditorCommand(DAW::UI::CommandContext& ctxt) {
         if (audioeditor.isVisible()) {
-            return audioeditor.handleEditorCommand(kevt, type);
+            return audioeditor.handleEditorCommand(ctxt);
         }
-        return noteeditor.handleEditorCommand(kevt, type);
+        return noteeditor.handleEditorCommand(ctxt);
     }
 };
 

@@ -55,13 +55,11 @@ using DAW::midichannel_ref_t;
 const int resizeHitY  = 8;
 const int DRAG_RESIZE = 1;
 namespace DAW {
-    void OpenRenamePopup(DawCtrl* ctrl, track_gui_entry_t* trackentry) {
+    void OpenFloatingTextInput(DawCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& initialStr, const std::function<bool(const String& str)>& callback) {
         const int titleHeight = ctrl->getTheme()->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
-        auto title       = trackentry->mixer->getTitle();
-        auto popupPos    = title->toScreenSpace(ivec2(0));//+ivec2(title->hideTrack.right() + INSET_TITLE*2, 0);
         auto const field = new gui_textfield();
-        field->size      = title->size;
+        field->size      = popupSize;
         field->size.y    = titleHeight;
         field->pos       = { 0, 0 };
         field->setFontSize(titleHeight);
@@ -75,17 +73,21 @@ namespace DAW {
         ctxtMenu->maxHeight         = field->size.y;
         dbgassert(!ctxtMenu->isBackgroundRendered());
         ctxtMenu->setBackgroundRendered(false);
-        auto cb = [trackEntry = trackentry, ctxtMenu](const std::string& str) {
-            trackEntry->track->name = str;
-            ctxtMenu->closeContextMenu();
-            return true;
-        };
-        field->setEndEditCallback(cb);
-        trackentry->parentCtrl->openOverlayGui(ctxtMenu, popupPos, WINDOW_POS_RELATIVE | WINDOW_IS_BORDERLESS | WINDOW_IS_FOCUSED);
+        field->setEndEditCallback(callback);
+        ctrl->openOverlayGui(ctxtMenu, popupPos, WINDOW_POS_RELATIVE | WINDOW_IS_BORDERLESS | WINDOW_IS_FOCUSED);
         // m_trackentry is not valid here
-        field->setValue(trackentry->track->name);
+        field->setValue(initialStr);
         field->setSelectionRange(-1, -1);
         field->parentCtrl->focusGui(field);
+    }
+    void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry) {
+        auto cb = [trackEntry = trackentry](const String& str) {
+            trackEntry->track->name = str;
+            return false;
+        };
+        auto title       = trackentry->mixer->getTitle();
+        auto popupPos    = title->toScreenSpace(ivec2(0));
+        OpenFloatingTextInput(ctrl, popupPos, title->size, trackentry->track->name, cb);
     }
 }
 int trackHeight(track_gui_entry_t* const m_trackentry) {
@@ -1341,7 +1343,7 @@ public:
         if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
             const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
             if (evt.relMousepos.y < titleHeight)
-                DAW::OpenRenamePopup(dawCtrl, m_trackentry);
+                DAW::OpenRenameTrackPopup(dawCtrl, m_trackentry);
             return;
         }
         dawCtrl->getDaw()->setSelectedTrack(m_track);
@@ -2133,31 +2135,46 @@ class guictxtmenu_track : public guictxtmenu {
     ctxtmenu_entry* cmdReactivateAutomation;
     ctxtmenu_entry* cmdShowWaveform;
     ctxtmenu_entry* cmdAddChildMidiTrack;
-    ctxtmenu_entry* cmdSaveTrack;
     ctxtmenu_entry* cmdDeleteTrack;
 public:
     guictxtmenu_track(DawCtrl* _dawCtrl, track_gui_entry_t* const trackentry)
         : guictxtmenu(),
           m_trackentry(trackentry) {
+        this->size.x  = 260;
+        this->maxHeight = 0;
         this->dawCtrl = _dawCtrl;
-        this->size.x = 120;
         addEntry(cmdDuplicateTrack = new ctxtmenu_entry("Duplicate track", 1));
         addEntry(cmdRenameTrack = new ctxtmenu_entry("Rename track", 6));
-        addEntry(cmdAddChildMidiTrack = new ctxtmenu_entry("Add child MIDI Track", 4));
+        addEntry(cmdDeleteTrack = new ctxtmenu_entry("Delete track", 2));
         addEntry(new ctxtmenu_splitter());
         addEntry(cmdShowAllAutomation = new ctxtmenu_entry("Show all automation", 0));
         addEntry(cmdShowWaveform = new ctxtmenu_entry("Show waveform", 5));
         addEntry(cmdReactivateAutomation = new ctxtmenu_entry("Reactivate all automation", 7));
         addEntry(new ctxtmenu_splitter());
-        addEntry(cmdSaveTrack = new ctxtmenu_entry("Save track", 3));
-        addEntry(cmdDeleteTrack = new ctxtmenu_entry("Delete track", 2));
-        addEntry(new ctxtmenu_splitter());
         addEntry(cmdPickColor = new ctxtmenu_color_select("Pick Color", 100));
         _dawCtrl->getDaw()->setSelectedTrack(m_trackentry->track);
+        addEntry(new ctxtmenu_splitter());
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_EXPORT_TRACK));
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_IMPORT_TRACK));
+        addEntry(new ctxtmenu_splitter());
+        addEntry(cmdAddChildMidiTrack = new ctxtmenu_entry("Add child MIDI Track", 4));
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_MIDI_TRACK));
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_AUDIO_TRACK));
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_RETURN_TRACK));
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_MASTER_TRACK));
     }
     ~guictxtmenu_track() override = default;
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
-        auto const daw          = dawCtrl->getDaw();
+        if (e->commandtype != GlobalCommandType::CMD_NONE) {
+            auto ctxt = DAW::UI::CommandContext{e->commandtype};
+            closeContextMenu();
+            if (m_trackentry->parent->handleEditorCommand(ctxt)) {
+                return true;
+            }
+            dawCtrl->handleGlobalCommand(ctxt);
+            return true;
+        }
+        auto const daw    = dawCtrl->getDaw();
         ThreadLock lock   = daw->lockPlayThread();
         track_t* const tr = m_trackentry->track;
         if (_id >= cmdPickColor->id) {
@@ -2171,7 +2188,8 @@ public:
                     }
                 }
             }
-        } else if (_id == cmdReactivateAutomation->id) {
+        } else 
+        if (_id == cmdReactivateAutomation->id) {
             if (tr) {
                 std::vector<automatable_t*> targets;
                 tr->audio->getAutomatableTrackTargets(targets);
@@ -2226,22 +2244,6 @@ public:
         } else if (_id == cmdDeleteTrack->id) {
             daw->removeTrackId(m_trackentry->track->projectIdx);
             daw->updateVisibleTrackContents();
-        } else if (_id == cmdSaveTrack->id) {
-            auto window = parentCtrl->window;
-            track_snapshot_t snapshot(tr, tracksnapshot_store_opts_t::All());
-            trackcontainer_snapshot_t trackContainerSnapshot;
-            trackContainerSnapshot.tracks.push_back(snapshot);
-            closeContextMenu();
-            String path;
-            if (promptUserFilePath(window, 1, vFILE_TYPES_TRACKSNAPSHOT, path)) {
-                String ext;
-                SplitPath(path, nullptr, nullptr, &ext);
-                if (ext.empty()) {
-                    path += "." + vFILE_TYPES_TRACKSNAPSHOT[0].ext;
-                }
-                saveTrackContainer(trackContainerSnapshot, path);
-            }
-            return true;
         } else if (_id == cmdAddChildMidiTrack->id) {
             auto trackCtr     = m_trackentry->parent;
             track_t* newTrack = daw->createNewTrack(tr->type);
@@ -2254,7 +2256,7 @@ public:
                 trackCtr->scrollTo(entry->content);
             }
         } else if (_id == cmdRenameTrack->id) {
-            DAW::OpenRenamePopup(dawCtrl, m_trackentry);
+            DAW::OpenRenameTrackPopup(dawCtrl, m_trackentry);
             return true;
         } else if (_id == cmdShowWaveform->id) {
 

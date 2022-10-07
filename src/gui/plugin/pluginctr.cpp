@@ -1,6 +1,7 @@
 #include <deque>
 #include <memory>
 #include "assert_dbg.h"
+#include "commands.h"
 #include "pluginctr.h"
 #include "math/seq_math.h"
 #include "str_util.h"
@@ -285,13 +286,14 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
     return handledKeyinput;
 }
 }
-bool guictr_plugins::handleCommand(const KeyEvent& kevt, GlobalCommandType type) {
+bool guictr_plugins::handleCommand(DAW::UI::CommandContext& ctxt) {
+    auto& kevt = ctxt.kevt;
     if (kevt.type != K_RELEASE) {
-        auto daw = dawCtrl->getDaw();
         bool handledKeyinput = false;
         if (kevt.type == K_PRESS) {
             using DAW::HandlePluginCtrCommand;
             using DAW::action_plugin_ctr;
+            auto type = ctxt.type;
             if (type == GlobalCommandType::CMD_SELECT_ALL) {
                 handledKeyinput = HandlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_SELECTALL);
             } else if (type == GlobalCommandType::CMD_DELETE) {
@@ -328,7 +330,8 @@ bool guictr_plugins::handleCommand(const KeyEvent& kevt, GlobalCommandType type)
 }
 bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
     if (kevt.cmd) {
-        return handleCommand(kevt, kevt.cmd->type);
+        auto temp = DAW::UI::CommandContext{kevt.cmd->type, kevt, 0};
+        return handleCommand(temp);
     }
     return false;
 }

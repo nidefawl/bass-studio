@@ -98,7 +98,7 @@ public:
     }
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
-    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type);
+    bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
 
     void trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) override;
     void trackViewDragMove(guitrack_editor* view, MouseEvent& evt) override;
@@ -119,7 +119,6 @@ public:
     void renderAction(NVGcontext* vg, clip_dragaction& renderAction);
     void render(NVGcontext* vg) override;
     void renderDebugPass(NVGcontext* vg);
-    void prerender(NVGcontext* vg) override;
 
     void handleDraggedBegin(MouseEvent& evt) override {
         if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
@@ -153,6 +152,9 @@ public:
     void addTrackEntry(track_gui_entry_t& e);
     void removeTrackEntry(track_gui_entry_t& e);
     void layout() override;
+    guibase* getFocusedContainer() override {
+        return this;
+    }
 };
 
 
@@ -170,7 +172,7 @@ public:
     }
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
     void handleRightClick(MouseEvent& evt) override;
-    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type);
+    bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
     void render(NVGcontext* vg) override;
     void addTrackEntry(track_gui_entry_t& e);
     void removeTrackEntry(track_gui_entry_t& e);
@@ -179,6 +181,10 @@ public:
             gui->layout();
         }
     }
+    guibase* getFocusedContainer() override {
+        return this;
+    }
+    bool handleKeyInput(KeyEvent& kevt) override;
 };
 
 class te_constants {
@@ -654,7 +660,7 @@ public:
     void gridChanged(scaled_grid& _grid) override {
         dawCtrl->updateVisibleTrackContents();
     }
-    bool handleEditorCommand(const KeyEvent& kevt, GlobalCommandType type);
+    bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
     ivec2 getScrollTotalSize() const override {
         ivec2 cs = getSizeContent();
         cs.y     = contentHeight;

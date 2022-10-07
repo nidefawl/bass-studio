@@ -52,7 +52,7 @@ bool hasClipsInRange(const trackdata_midi_t& in, int32_t srcPos, int32_t len) {
 
 namespace DAW {
 
-    void pasteFullClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick, bool pasteAutomation) {
+    void pasteFullClipboard(DawInstance* daw, track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick, bool pasteAutomation) {
         tick_t tickOffset  = tick - clipboard->srcPos;
         tick_t trackOffset = track;
         for (int i = 0; i <= clipboard->selTrackRange; i++) {
@@ -69,7 +69,7 @@ namespace DAW {
                 cloned->time += tickOffset;
                 tick_t tickBegin = cloned->time;
                 tick_t tickEnd   = cloned->end();
-                cutIntersectingClips(tr->track->getMidi(), tickBegin, tickEnd, DawInstance::get());
+                cutIntersectingClips(tr->track->getMidi(), tickBegin, tickEnd, daw);
                 midi.addClip(cloned);
             }
             midi.sortClips();
@@ -88,11 +88,11 @@ namespace DAW {
         }
     }
 
-    void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, DAW::Cursor& cursor, bool pasteAutomation) {
+    void pasteClipboard(DawInstance* daw, track_gui_manager_i& trackList, clip_clipboard* clipboard, DAW::Cursor& cursor, bool pasteAutomation) {
         if (clipboard->type == clip_clipboard::ClipboardFull) {
             if (cursor.isSubtrackSelection())
                 return;
-            pasteFullClipboard(trackList, clipboard, cursor.getTrackBegin(), cursor.getTickBegin(), pasteAutomation);
+            pasteFullClipboard(daw, trackList, clipboard, cursor.getTrackBegin(), cursor.getTickBegin(), pasteAutomation);
         } else if (clipboard->type == clip_clipboard::ClipboardAutomation) {
             if (!cursor.isSubtrackSelection())
                 return;
@@ -114,21 +114,6 @@ namespace DAW {
                             }
                         }
                     }
-                }
-            }
-        }
-    }
-
-    void muteIntersecting(track_gui_manager_i& trackList, const DAW::Cursor& _cursor) {
-        int32_t tickBegin  = _cursor.getTickBegin();
-        int32_t tickEnd    = _cursor.getTickEnd();
-        int32_t trackBegin = _cursor.getTrackBegin();
-        int32_t trackEnd   = _cursor.getTrackEnd();
-        if (!_cursor.isSubtrackSelection()) {
-            for (int i = trackBegin; i <= trackEnd; i++) {
-                if (trackList.validTrackIdx(i)) {
-                    track_gui_entry_t* tr = trackList.atNC(i);
-                    muteIntersectingClips(tr->track->getMidi(), tickBegin, tickEnd);
                 }
             }
         }
@@ -263,7 +248,7 @@ namespace DAW {
         return clipboard;
     }
 
-    void cutSelection(track_gui_manager_i& trackList, const DAW::Cursor& _cursor, bool cutAutomation) {
+    void cutSelection(DawInstance* daw, track_gui_manager_i& trackList, const DAW::Cursor& _cursor, bool cutAutomation) {
         int32_t tickBegin  = _cursor.getTickBegin();
         int32_t tickEnd    = _cursor.getTickEnd();
         int32_t trackBegin = _cursor.getTrackBegin();
@@ -273,7 +258,7 @@ namespace DAW {
                 if (trackList.validTrackIdx(i)) {
                     track_gui_entry_t* tr = trackList.atNC(i);
                     //if (tr->track->type == TRACK_TYPE_MIDI) {
-                    cutIntersectingClips(tr->track->getMidi(), tickBegin, tickEnd, DawInstance::get());
+                    cutIntersectingClips(tr->track->getMidi(), tickBegin, tickEnd, daw);
                     // we don't cut automation for now
                     //}
                 }
@@ -374,14 +359,6 @@ namespace DAW {
 }// namespace DAW
 
 
-void muteIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickEnd) {
-    for (clip_t* c : midi.clips) {
-        if (c->start() < tickEnd && c->end() >= tickBegin) {
-            c->enabled = !c->enabled;
-            c->setDirty();
-        }
-    }
-}
 void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickEnd, delete_cb* cb) {
     auto it = midi.clips.begin();
 

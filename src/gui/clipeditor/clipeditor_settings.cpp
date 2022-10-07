@@ -1,6 +1,7 @@
 #include <algorithm>
 #include "clipeditor.h"
 
+#include "commands.h"
 #include "event.h"
 #include "guiconstant.h"
 #include "math/seq_math.h"
@@ -226,6 +227,7 @@ void gui_quantizationsettings::buttonClicked(guibase* button) {
         settings.quantizeStart = inputStarts.getTime();
     }
     if (&btnQuantize == button) {
-        dawCtrl->getClipEditor()->handleEditorCommand({}, GlobalCommandType::CMD_QUANTIZE);
+        auto temp = DAW::UI::CommandContext{GlobalCommandType::CMD_QUANTIZE};
+        dawCtrl->getClipEditor()->handleEditorCommand(temp);
     }
 }

@@ -790,7 +790,7 @@ void DawCtrl::updateMenubar() {
         undo->disabled    = !daw.hist.canUndo();
         String customText = cmdUndo->desc.name;
         if (!undo->disabled) {
-            customText += daw.hist.getUndoStep();
+            customText += " " + daw.hist.getUndoStep();
         }
         undo->setTitle(customText);
     }
@@ -802,7 +802,7 @@ void DawCtrl::updateMenubar() {
         redo->disabled    = !daw.hist.canRedo();
         String customText = cmdRedo->desc.name;
         if (!redo->disabled) {
-            customText += daw.hist.getRedoStep();
+            customText += " " + daw.hist.getRedoStep();
         }
         redo->setTitle(customText);
     }
@@ -940,6 +940,60 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
     try {
         auto mainCtrl = tls.mainCtrl;
         switch (command.command) {
+            case CMD_EXPORT_TRACK: {
+                auto selTrack = getSelectedTrack();
+                if (!selTrack) {
+                    return true;
+                }
+                track_snapshot_t snapshot(selTrack, tracksnapshot_store_opts_t::All());
+                trackcontainer_snapshot_t trackContainerSnapshot;
+                trackContainerSnapshot.tracks.push_back(snapshot);
+                String path;
+                auto exportDir = getProjectDirectory();
+                auto exportFilename = selTrack->name + "." + vFILE_TYPES_TRACKSNAPSHOT[0].ext;
+                if (promptUserFilePath(mainCtrl->window, 1, vFILE_TYPES_TRACKSNAPSHOT, path, exportDir, exportFilename)) {
+                    String ext;
+                    SplitPath(path, nullptr, nullptr, &ext);
+                    if (ext.empty()) {
+                        path += "." + vFILE_TYPES_TRACKSNAPSHOT[0].ext;
+                    }
+                    saveTrackContainer(trackContainerSnapshot, path);
+                }
+                return true;
+            }
+            case CMD_IMPORT_TRACK: {
+                String path;
+                auto importDir = getProjectDirectory();
+                if (promptUserFilePath(mainCtrl->window, 0, vFILE_TYPES_TRACKSNAPSHOT, path, importDir)) {
+                    std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(path);
+                    dbgassert(ctr);
+                    if (ctr) {
+                        auto* pluginMgr = getPluginManager();
+                        ThreadLock lock = getPlayThread()->lockThread();
+                        for (track_snapshot_t& ts : ctr->tracks) {
+                            ts.trackLoaded = new track_t(ts);
+                            addTrackImpl(-1, ts.trackLoaded, 0);
+                        }
+
+                        //load plugins
+                        for (track_snapshot_t& ts : ctr->tracks) {
+                            log_printf("track '%s' loading %zu plugins\n", StringAsCStr(ts.trackLoaded->name), ts.data.pluginSnapshots.size());
+                            DAW::assignFreeStageIdsTrackSnapshot(pluginMgr, ts);
+                            ts.trackLoaded->loadSnapshot(ts);
+                            std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
+                            for (auto effect: effects) {
+                                pluginMgr->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                            }
+                        }
+                        for (track_snapshot_t& ts: ctr->tracks) {
+                            ts.trackLoaded->getStage()->pluginsChanged();
+                        }
+                        onPluginsChanged();
+                        updateVisibleTrackContents();
+                    }
+                }
+                return true;
+            }
             case CMD_REACTIVATE_AUTOMATION: {
                 ThreadLock lock = playThread.lockThread();
                 std::vector<automatable_t*> targets;
@@ -1060,7 +1114,8 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
             case CMD_INSERT_MIDI_TRACK:
             case CMD_INSERT_RETURN_TRACK:
             case CMD_INSERT_MASTER_TRACK: {
-                int32_t trackType = (command.command - CMD_INSERT_AUDIO_TRACK) % NUM_TRACK_TYPES;
+                
+                int32_t trackType = (command.command - CMD_INSERT_MASTER_TRACK) % NUM_TRACK_TYPES;
                 insertNewTrack(-1, trackType);
                 return true;
             }
@@ -1409,19 +1464,19 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     menus.file.addCommand(this, GlobalCommandType::CMD_FILE_SAVEAS);
     menus.file.addCommand(this, GlobalCommandType::CMD_SET_STARTUP_PROJECT);
     menus.file.addSeperator();
+    menus.file.addCommand(this, GlobalCommandType::CMD_EXPORT_TRACK);
+    menus.file.addCommand(this, GlobalCommandType::CMD_IMPORT_TRACK);
+    menus.file.addSeperator();
     menus.file.addCommand(this, GlobalCommandType::CMD_EXIT);
     menus.edit.type  = ngui::menu_type::submenu;
     menus.edit.title = "Edit";
     menus.edit.addCommand(this, GlobalCommandType::CMD_UNDO);
     menus.edit.addCommand(this, GlobalCommandType::CMD_REDO);
     menus.edit.addSeperator();
-    menus.edit.addCommand(this, GlobalCommandType::CMD_CUT);
-    menus.edit.addCommand(this, GlobalCommandType::CMD_COPY);
-    menus.edit.addCommand(this, GlobalCommandType::CMD_PASTE);
-    menus.edit.addCommand(this, GlobalCommandType::CMD_DUPLICATE);
-    menus.edit.addSeperator();
-    menus.edit.addCommand(this, GlobalCommandType::CMD_DELETE);
-    menus.edit.addCommand(this, GlobalCommandType::CMD_SELECT_ALL);
+    menus.edit.addCommand(this, GlobalCommandType::CMD_INSERT_MIDI_TRACK);
+    menus.edit.addCommand(this, GlobalCommandType::CMD_INSERT_AUDIO_TRACK);
+    menus.edit.addCommand(this, GlobalCommandType::CMD_INSERT_RETURN_TRACK);
+    menus.edit.addCommand(this, GlobalCommandType::CMD_INSERT_MASTER_TRACK);
     menus.edit.addSeperator();
     menus.edit.addCommand(this, GlobalCommandType::CMD_REACTIVATE_AUTOMATION);
     menus.tools.type  = ngui::menu_type::submenu;
@@ -2396,8 +2451,9 @@ bool MainCtrl::processGlobalKeyevent(const KeyEvent& event) {
     return DawCtrl::processGlobalKeyevent(event);
 }
 
-bool DawCtrl::handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) {
-    switch (type) {
+bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
+    auto& kevt = ctxt.kevt;
+    switch (ctxt.type) {
         case CMD_STARTSTOP_PLAYBOCK: {
             if (kevt.type != KeyboardState::K_RELEASE) {
                 if (daw.isPlaying()) {
@@ -2411,23 +2467,23 @@ bool DawCtrl::handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, 
         default:
             break;
     }
-    if (kevt.type != KeyboardState::K_RELEASE) {
-        if (menuCommand(CMD_NOARG(type))) {
+    if (kevt.type == KeyboardState::K_PRESS) {
+        if (menuCommand(CMD_NOARG(ctxt.type))) {
             return true;
         }
     }
-    if (this->getTrackContainer()->handleEditorCommand(kevt, type)) {
+    if (this->getTrackContainer()->handleEditorCommand(ctxt)) {
         return true;
     }
-    if (this->getClipEditor()->handleEditorCommand(kevt, type)) {
+    if (this->getClipEditor()->handleEditorCommand(ctxt)) {
         return true;
     }
     return false;
 }
-bool CompanionCtrl::handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) {
-    switch (type) {
+bool CompanionCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
+    switch (ctxt.type) {
         case CMD_SWITCH_VIEW: {
-            if (kevt.type != KeyboardState::K_RELEASE) {
+            if (ctxt.kevt.type != KeyboardState::K_RELEASE) {
                 switch (this->viewMode) {
                     case view_mode_t::TRACK_TIMELINE:
                         this->setViewMode(view_mode_t::MIXER);
@@ -2445,15 +2501,16 @@ bool CompanionCtrl::handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType 
         default:
             break;
     }
-    return DawCtrl::handleGlobalCommand(kevt, type, ctxt);
+    return DawCtrl::handleGlobalCommand(ctxt);
 }
 
-bool MainCtrl::handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type, DAW::UI::CommandContext* ctxt) {
-    switch (type) {
+bool MainCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
+    auto& kevt = ctxt.kevt;
+    switch (ctxt.type) {
         case CMD_SWITCH_LAYOUT: {
             if (kevt.type == KeyboardState::K_PRESS) {
-                if ((kevt.mods & KB_MOD_SHIFT) == kevt.mods && ctxt->argInt >= 0 && ctxt->argInt < CtrSize(layouts)) {
-                    auto index = ctxt->argInt % layouts.size();
+                if ((kevt.mods & KB_MOD_SHIFT) == kevt.mods && ctxt.argInt >= 0 && ctxt.argInt < CtrSize(layouts)) {
+                    auto index = ctxt.argInt % layouts.size();
                     bool store    = (kevt.mods & KB_MOD_SHIFT);
                     if (store) {
                         view->storeLayout(layouts[index]);
@@ -2481,27 +2538,24 @@ bool MainCtrl::handleGlobalCommand(const KeyEvent& kevt, GlobalCommandType type,
         default:
             break;
     }
-    if (DawCtrl::handleGlobalCommand(kevt, type, ctxt)) {
+    if (DawCtrl::handleGlobalCommand(ctxt)) {
         return true;
     }
-    if (view->ctr_plugins.handleCommand(kevt, type)) {
+    if (view->ctr_plugins.handleCommand(ctxt)) {
         return true;
     }
     return false;
 }
 
-bool DawCtrl::processGlobalKeyevent(const KeyEvent& event) {
-    if (event.type == KeyboardState::K_PRESS) {
-        lastKeyDebug = getKeyName(event.scancode);
+bool DawCtrl::processGlobalKeyevent(const KeyEvent& kevt) {
+    if (kevt.type == KeyboardState::K_PRESS) {
+        lastKeyDebug = getKeyName(kevt.scancode);
         if (!lastKeyDebug.length()) {
-            const char* ca = GlfwKeycodeToString(event.keyCode, event.scancode);
+            const char* ca = GlfwKeycodeToString(kevt.keyCode, kevt.scancode);
             if (ca) {
                 lastKeyDebug = ca;
             }
         }
-    }
-    if (event.cmd && handleGlobalCommand(event, event.cmd->type, &event.cmd->context)) {
-        return true;
     }
     return false;
 }

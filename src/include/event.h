@@ -270,14 +270,17 @@ enum GlobalCommandType {
     CMD_MUTE,
     CMD_QUANTIZE,
     CMD_SOLO,
+    CMD_BEGIN_RENAME,
     CMD_SELECT_ALL,
     CMD_PREFERENCES,
     CMD_ABOUT,
     CMD_SHOW_DEBUG_WINDOW,
-    CMD_INSERT_AUDIO_TRACK,
-    CMD_INSERT_MIDI_TRACK,
-    CMD_INSERT_RETURN_TRACK,
     CMD_INSERT_MASTER_TRACK,
+    CMD_INSERT_RETURN_TRACK,
+    CMD_INSERT_MIDI_TRACK,
+    CMD_INSERT_AUDIO_TRACK,
+    CMD_IMPORT_TRACK,
+    CMD_EXPORT_TRACK,
     CMD_OPEN_SECOND_WINDOW,
     CMD_CREATE_VIEW,
     CMD_SWITCH_LAYOUT,
@@ -286,6 +289,8 @@ enum GlobalCommandType {
     CMD_CREATE_EMPTY_CLIP,
     CMD_SWITCH_VIEW,
     CMD_STARTSTOP_PLAYBOCK,
+    CMD_SET_COLOR,
+    CMD_SET_NAME,
     NUM_COMMANDS
 };
 
@@ -297,5 +302,4 @@ struct KeyEvent {
     const char* keyname = nullptr;
     DAW::UI::Command* cmd = nullptr;
     String toString() const;
-    bool isCommand(GlobalCommandType cmd) const;
 };

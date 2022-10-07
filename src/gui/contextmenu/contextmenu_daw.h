@@ -31,21 +31,16 @@ public:
     bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
 class guictxtmenu_notrack : public guictxtmenu {
-private:
-    int idxImport;
-
 public:
-    guictxtmenu_notrack() {
+    explicit guictxtmenu_notrack(DawCtrl* _dawCtrl) {
+        dawCtrl = _dawCtrl;
         this->size.x = 190;
-
-        int i = 0;
-        for (; i < NUM_TRACK_TYPES; i++) {
-            addEntry(new ctxtmenu_entry(StringFormat("Insert %s Track", TrackTypeToName(i)), i));
-        }
-        idxImport = i;
-        addEntry(new ctxtmenu_entry("Import Track", i++));
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_MIDI_TRACK));
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_AUDIO_TRACK));
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_RETURN_TRACK));
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_MASTER_TRACK));
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_IMPORT_TRACK));
     }
-    bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
 
 

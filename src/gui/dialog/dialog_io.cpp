@@ -1391,7 +1391,7 @@ void guidialog_settings::init(DawInstance* daw)
     add(&btnClose);
     btnClose.id = ID_BTN_CLOSE;
     btnClose.setText("Close");
-    setLabel("Settings");
+    setLabel("Preferences");
     setActiveEntry(0);
 }
 // guidialog_settings::guidialog_settings(ivec2 _dialogSize, bool _resizeable) : guidialog_base(_dialogSize, _resizeable) {

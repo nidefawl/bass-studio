@@ -255,7 +255,7 @@ public:
         listKeybinds.destroyGuis();
         auto commandMgr = daw->getCommandManager();
         int32_t buttonId = 16;
-        commandMgr->visitCommands([&](auto& cmd) {
+        commandMgr->visitCommandBindings([&](auto& cmd) {
             int32_t len = CtrSize(cmd.keyCombos);
             if (&cmd == currentCommand) {
                 if (currentKeybindIdx < 0 || currentKeybindIdx >=len) {

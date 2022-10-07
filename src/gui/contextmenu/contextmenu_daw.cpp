@@ -1,5 +1,7 @@
 #include "automation.h"
+#include "commands.h"
 #include "contextmenu_daw.h"
+#include "event.h"
 #include "gui/automation/automatable.h"
 #include "gui/contextmenu/contextmenu_base.h"
 #include "gui/contextmenu/contextmenu_daw.h"
@@ -34,48 +36,6 @@ bool guictxtmenu_at_param::clickedElement(ctxtmenu_entry* e, int _id) {
     return true;
 }
 
-bool guictxtmenu_notrack::clickedElement(ctxtmenu_entry* e, int _id) {
-    auto daw = DawInstance::get();
-    auto window = parentCtrl->window;
-    // promptUserFilePath initiates a native dialog that would close this context menu
-    // so we do it ourself controlled here
-    closeContextMenu();// deletes this
-    // now we make sure not to access heap (this) after this point
-    if (_id >= idxImport) {
-        String path;
-        if (promptUserFilePath(window, 0, vFILE_TYPES_TRACKSNAPSHOT, path)) {
-            std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(path);
-            dbgassert(ctr);
-            if (ctr) {
-                auto* pluginMgr = daw->getPluginManager();
-                ThreadLock lock = daw->getPlayThread()->lockThread();
-                for (track_snapshot_t& ts : ctr->tracks) {
-                    ts.trackLoaded = new track_t(ts);
-                    daw->addTrackImpl(-1, ts.trackLoaded, 0);
-                }
-
-                //load plugins
-                for (track_snapshot_t& ts : ctr->tracks) {
-                    log_printf("track '%s' loading %zu plugins\n", StringAsCStr(ts.trackLoaded->name), ts.data.pluginSnapshots.size());
-                    DAW::assignFreeStageIdsTrackSnapshot(pluginMgr, ts);
-                    ts.trackLoaded->loadSnapshot(ts);
-                    std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
-                    for (auto effect: effects) {
-                        pluginMgr->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
-                    }
-                }
-                for (track_snapshot_t& ts: ctr->tracks) {
-                    ts.trackLoaded->getStage()->pluginsChanged();
-                }
-                daw->onPluginsChanged();
-                daw->updateVisibleTrackContents();
-            }
-        }
-    } else {
-        daw->insertNewTrack(-1, _id);
-    }
-    return true;
-}
 namespace DAW {
 static constexpr int32_t ID_DELETE = 1;
 static constexpr int32_t ID_REENABLE = 2;
@@ -276,7 +236,8 @@ guictxtmenu_track_editor::guictxtmenu_track_editor(DawCtrl* const _dawCtrl, trac
 
 bool guictxtmenu::clickedElement(ctxtmenu_entry* e, int _id) {
     if (dawCtrl && e->commandtype != GlobalCommandType::CMD_NONE) {
-        if (dawCtrl->handleGlobalCommand({}, e->commandtype, nullptr)) {
+        auto temp = DAW::UI::CommandContext{e->commandtype};
+        if (dawCtrl->handleGlobalCommand(temp)) {
             closeContextMenu();
             return true;
         }
@@ -303,9 +264,9 @@ bool guictxtmenu_track_editor::clickedElement(ctxtmenu_entry* e, int _id) {
         if (_id >= sel->id) {
             _id -= sel->id;
             if (_id < COLOR_PALETTE_LEN) {
-                if (m_gclip && m_gclip->m_clip) {
-                    m_gclip->m_clip->rgb = colorPalette[_id];
-                }
+                auto temp = DAW::UI::CommandContext{GlobalCommandType::CMD_SET_COLOR};
+                temp.argInt = colorPalette[_id];
+                m_trackentry->parent->handleEditorCommand(temp);
             }
         }
     } else {
@@ -355,8 +316,9 @@ guictxtmenu_plugin::guictxtmenu_plugin(DawCtrl* _dawCtrl, guictr_plugins* _ctrOp
 
 bool guictxtmenu_plugin::clickedElement(ctxtmenu_entry* e, int _id) {
     if (pluginCtrOptional && e->commandtype != GlobalCommandType::CMD_NONE) {
+        DAW::UI::CommandContext ctxt = {e->commandtype};
         closeContextMenu();
-        pluginCtrOptional->handleCommand({}, e->commandtype);
+        pluginCtrOptional->handleCommand(ctxt);
         return true;
     }
     // return guictxtmenu::clickedElement(e, _id);
