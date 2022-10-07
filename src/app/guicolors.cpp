@@ -67,10 +67,6 @@ namespace GuiColor {
     }
 
     constant_t COL_AUTOMATED("COL_AUTOMATED", 0xffcc0056);
-    constant_t COL_KNOB_HIGHLIGHT("COL_KNOB_HIGHLIGHT", 0xFF6200D0);
-    constant_t COL_KNOB_HIGHLIGHT_BACKGROUND("COL_KNOB_HIGHLIGHT_BACKGROUND", 0xFF110024);
-    constant_t COL_KNOB_MODULATED("COL_KNOB_MODULATED", 0xff00cc56);
-    constant_t COL_MODULATION_SATURATED("COL_MODULATION_SATURATED", 0xffffaa07);
     constant_t COL_BASE_BG("COL_BASE_BG", 0xe0101010);
     constant_t COL_BASE_BG_DISABLED("COL_BASE_BG_DISABLED", 0xff030303);
     constant_t COL_BASE_BG_FOCUSED("COL_BASE_BG_FOCUSED", 0xff343e52);
@@ -117,7 +113,10 @@ namespace GuiColor {
     constant_t COL_INVALID_INPUT("COL_INVALID_INPUT", 0xffc85a5a);
     constant_t COL_KNOB("COL_KNOB", 0xff456cb8);
     constant_t COL_KNOB_BG("COL_KNOB_BG", 0xff0f1114);
+    constant_t COL_KNOB_HIGHLIGHT("COL_KNOB_HIGHLIGHT", 0xff6200d0);
+    constant_t COL_KNOB_HIGHLIGHT_BACKGROUND("COL_KNOB_HIGHLIGHT_BACKGROUND", 0xff6100cd);
     constant_t COL_KNOB_IND("COL_KNOB_IND", 0xffffffff);
+    constant_t COL_KNOB_MODULATED("COL_KNOB_MODULATED", 0xff00cc56);
     constant_t COL_LABEL_ACTIVE("COL_LABEL_ACTIVE", 0xffffffff);
     constant_t COL_LABEL_AUTOMATION_TRACK("COL_LABEL_AUTOMATION_TRACK", 0xff7f7f7f);
     constant_t COL_LABEL_CONTAINER("COL_LABEL_CONTAINER", 0xffd0d0d0);
@@ -133,15 +132,16 @@ namespace GuiColor {
     constant_t COL_LINE_SEPERATOR("COL_LINE_SEPERATOR", 0xcc000000);
     constant_t COL_LINE_XTH("COL_LINE_XTH", 0x20000000);
     constant_t COL_LOOPHANDLES("COL_LOOPHANDLES", 0xff787878);
+    constant_t COL_MODULATION_SATURATED("COL_MODULATION_SATURATED", 0xffffaa07);
     constant_t COL_NODES_EDGE("COL_NODES_EDGE", 0xff4c4f6e);
     constant_t COL_NOTE("COL_NOTE", 0xff5fdd77);
     constant_t COL_NOTE_ARP("COL_NOTE_ARP", 0xff744aff);
-    constant_t COL_NOTE_MOUSE("COL_NOTE_MOUSE", 0xff00ffff);
+    constant_t COL_NOTE_MOUSE("COL_NOTE_MOUSE", 0xea230fe2);
     constant_t COL_NOTE_MUTE("COL_NOTE_MUTE", 0xff666666);
     constant_t COL_NOTE_OUTLINE("COL_NOTE_OUTLINE", 0xff000000);
-    constant_t COL_NOTE_PLAYING("COL_NOTE_PLAYING", 0xffec6900);
-    constant_t COL_NOTE_REALTIME("COL_NOTE_REALTIME", 0xffff00ff);
-    constant_t COL_NOTE_SELECTED("COL_NOTE_SELECTED", 0xe8ea2c2c);
+    constant_t COL_NOTE_PLAYING("COL_NOTE_PLAYING", 0xceec6900);
+    constant_t COL_NOTE_REALTIME("COL_NOTE_REALTIME", 0xc8e9ff00);
+    constant_t COL_NOTE_SELECTED("COL_NOTE_SELECTED", 0xe2e62e45);
     constant_t COL_NOTE_TEXT("COL_NOTE_TEXT", 0xff333333);
     constant_t COL_OFF("COL_OFF", 0xffd2d2f0);
     constant_t COL_ON("COL_ON", 0xffd2f0d2);

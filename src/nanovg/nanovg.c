@@ -2967,6 +2967,7 @@ static void nvg__renderBatched(NVGcontext* ctx)
 	int nverts;
 	verts = ctx->cache->batchedVerts;
 	nverts = ctx->cache->nbatchedVerts;
+	if (nverts == 0) return;
 
 	NVGpaint paint = state->fill;
 	// Apply global alpha

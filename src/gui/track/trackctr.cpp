@@ -82,10 +82,10 @@ void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, 
 int32_t guictr_tracks::getTrackTotalHeight(track_gui_entry_t* e) {
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
-    int32_t trH = e->layout.hideTrack ? 1 : e->layout.height;
+    int32_t trH = e->isHidden() ? 1 : e->layout.height;
     int32_t totalHeight = trH * TRACK_HEIGHT_STEP;
 
-    if (!(e->layout.hideTrack || e->layout.hideSubtracks)) {
+    if (!(e->isHidden() || e->layout.hideSubtracks)) {
         for (auto t2 : e->subtracks) {
             totalHeight += t2->height * TRACK_HEIGHT_STEP + TRACK_HEIGHT_SPACING;
         }
@@ -101,12 +101,12 @@ int32_t guictr_tracks::setTrackPosition(track_gui_entry_t* e, int32_t y, bool is
     ivec2& mxrPos    = e->mixer->pos;
     cntPos           = ivec2(0, y);
     mxrPos           = ivec2(childTrackInsetX, y);
-    int32_t trH      = e->layout.hideTrack ? 1 : e->layout.height;
+    int32_t trH      = e->isHidden() ? 1 : e->layout.height;
     e->content->size = ivec2(trackView.size.x, trH * TRACK_HEIGHT_STEP);
     int32_t x2       = e->content->left();
     int32_t y2       = e->content->bottom();
 
-    if (!(e->layout.hideTrack || e->layout.hideSubtracks)) {
+    if (!(e->isHidden() || e->layout.hideSubtracks)) {
         for (auto t2 : e->subtracks) {
             int trackheight2 = t2->height * TRACK_HEIGHT_STEP;
 

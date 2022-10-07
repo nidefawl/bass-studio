@@ -74,7 +74,6 @@ public:
     track_gui_entry_t* trSelected     = nullptr;
     gui_track_subtrack* subTrSelected = nullptr;
     clip_dragaction action;                   // move up in hierachy
-    // std::shared_ptr<clip_clipboard> m_clipboard;// move up in hierachy
     tracklayout_t dragStartLayout;
     int32_t dragStartTick     = 0;
     int32_t dragStartTrackIdx = 0;
@@ -93,9 +92,7 @@ public:
         padding      = 0;
         sortChildren = true;
     }
-    ~guitrack_editor() override {
-        // m_clipboard.reset();
-    }
+    ~guitrack_editor() override = default;
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
@@ -466,11 +463,11 @@ public:
         bool bHidden = false;
         track_t* p   = entry->track->parent;
         while (!bHidden && p) {
-            track_gui_entry_t* parentEntry;
+            track_gui_entry_t* parentEntry{};
             if (!getPointerEntry(p, &parentEntry)) {
                 return false;
             }
-            bHidden |= parentEntry->layout.hideTrack;
+            bHidden |= parentEntry->isHidden();
             p = p->parent;
         }
         return !bHidden;
@@ -503,10 +500,10 @@ public:
         while (!stack.empty()) {
             track_t* current = stack.front();
             stack.pop_front();
-            track_gui_entry_t* entry;
+            track_gui_entry_t* entry{};
 
             if ((getPointerEntry(current, &entry))) {
-                if (!entry->layout.hideTrack && !current->children.empty()) {
+                if (!entry->isHidden() && !current->children.empty()) {
                     stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
                 }
                 dbgassert(isVisible(entry));
@@ -516,7 +513,7 @@ public:
                 } else {
                     trackEntriesBottom.push_back(entry);
                 }
-                entry->idx = vecNewTracksFlat.size();
+                entry->idx = CtrSize(vecNewTracksFlat);
                 vecNewTracksFlat.push_back(entry);
             }
         }
@@ -542,7 +539,7 @@ public:
         track_selection_t t;
         t.isContinuous = true;
         t.trackIdxMin  = 0;
-        t.trackIdxMax  = tracksVisibleFlat.size();
+        t.trackIdxMax  = CtrSize(tracksVisibleFlat);
         if (validTrackIdx(cursor.getTrackBegin())) {
             t.trackIdxMin = at(cursor.getTrackBegin())->track->projectIdx;
         }

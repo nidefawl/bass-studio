@@ -1652,7 +1652,7 @@ void gui_track_controls::render(NVGcontext* vg) {
     nvgStroke(vg);
 }
 bool canResizeTitleBar(const track_gui_entry_t* const m_trackentry) {
-    return !m_trackentry->layout.hideTrack && !m_trackentry->layout.hideSubtracks && m_trackentry->subtracks.size();
+    return !m_trackentry->isHidden() && !m_trackentry->layout.hideSubtracks && m_trackentry->subtracks.size();
 }
 /* 
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override {
@@ -1736,7 +1736,7 @@ void gui_track_controls::layout() {
         titleW -= TRACK_IO_WIDTH;
     }
     mixer->size = ivec2(TRACK_MIXER_WIDTH - TRACK_HEIGHT_SPACING, size.y);
-    int32_t trH = m_trackentry->layout.hideTrack ? 1 : m_trackentry->layout.height;
+    int32_t trH = m_trackentry->isHidden() ? 1 : m_trackentry->layout.height;
     title->size = ivec2(titleW - TRACK_HEIGHT_SPACING, trH * TRACK_HEIGHT_STEP);
     title->pos  = ivec2(TRACK_HEIGHT_SPACING_HALF, 0);
     mixer->pos  = ivec2(size.x - TRACK_MIXER_WIDTH + TRACK_HEIGHT_SPACING_HALF, 0);

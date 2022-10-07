@@ -38,6 +38,9 @@ struct track_gui_entry_t {
     bool validSubtrack(int32_t subtrackIdx) const {
         return subtrackIdx >= 0 && subtrackIdx < (int32_t) subtracks.size();
     }
+    bool isHidden() const {
+        return layout.hideTrack && track->children.empty();
+    }
 };
 
 void getTrackGuiYBounds(const track_gui_entry_t* track, ivec2& topBottom);

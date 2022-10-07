@@ -166,7 +166,7 @@ gui_midi_clip::~gui_midi_clip() {
 
 void gui_midi_clip::updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) {
     size   = this->parent->size;
-    culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
+    culled = !getClipPositionInt(grid, trackSize, m_clip, pos, size, 0);
 }
 
 void gui_midi_clip::prerender(NVGcontext* vg) {

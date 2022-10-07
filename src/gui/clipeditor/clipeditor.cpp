@@ -26,6 +26,8 @@
 #include "appconfig.h"
 #include <nanovg.h>
 
+#include <utility>
+
 constexpr int32_t VEL_SELECT_DISTANCE = 16;
 class action_modify_notes : public action_base {
 protected:
@@ -40,7 +42,7 @@ public:
     }
     //desc, clip, notesBefore, cursorBefore
     action_modify_notes(String description, const clip_view& view, const clip_notes_t& oldNotes, const clip_cursor_t& oldCursor) : action_base() {
-        desc = description;
+        desc = std::move(description);
         //    clip = view.clip;
         after       = view.clip()->notes;
         trackIdx    = view.track()->projectIdx;
@@ -234,19 +236,34 @@ void renderNote(NVGcontext* vg, gui_clipcontent* c, T* note, float yscale, tick_
     float insety = calcInset(1, nh);
     nvgBatchedRect(vg, nx + insetx, ny - yscale + insety, nw - insetx * 2, nh - insety * 2);
 }
-void renderNoteName(NVGcontext* vg, const gui_clipcontent* c, note_t* note, int idx, float yscale, tick_t absPos) {
-
-    const float ny     = c->toScreenF(note->pitch);
-    const float nx     = c->grid.tickToScreenD(note->time);
-    const float nw     = c->grid.tickLenToScreen(note->len);
-    const float nh     = yscale;
+void renderNoteName(NVGcontext* vg, const gui_clipcontent* c, note_t* note, float nx, float ny, float nw, float nh, tick_t absPos, bool bRenderPosLen) {
     const float insetx = calcInset(5, nw);
-    const String strNoteName = StringFormat("%s @%d %d", noteName(note->pitch), absPos, note->len);
-    renderTextLabel(vg, 
-        vec2(nx + insetx, ny - yscale + nh / 2.0f),
-        vec2(nw - insetx + 2, nh),
-        strNoteName,
-        c->theme, 18, c->theme->getColor(GuiColor::COL_NOTE_TEXT), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    const auto color = c->theme->getColor(GuiColor::COL_NOTE_TEXT);
+    auto posText = vec2(nx + insetx, ny - nh + nh / 2.0f);
+    auto sizeText = vec2(nw - insetx + 2, nh);
+    float w = renderTextLabel(vg,
+        posText,
+        sizeText,
+        noteName(note->pitch),
+        c->theme, 18, color, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    if (bRenderPosLen) {
+        const String strStart = tickAsBeatString(note->start(), false);
+        const String strEnd = tickAsBeatString(note->len, true);
+        posText.x += w+insetx;
+        sizeText.x -= w+insetx;
+        w = renderTextLabel(vg, 
+            posText,
+            sizeText,
+            strStart,
+            c->theme, 18, color, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        posText.x += w+insetx;
+        sizeText.x -= w+insetx;
+        renderTextLabel(vg, 
+            posText,
+            sizeText,
+            strEnd,
+            c->theme, 18, color, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    }
 }
 
 inline int32_t screenToVel(int y, int h) {
@@ -690,30 +707,34 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         }
     }
     // nvgBeginPath(vg);
-    int n2 = 0;
-    if (dragMode >= drag_notes_move) {
-        for (note_t& note: view.draggedSelection) {
-            renderNote(vg, this, &note, scale);
-            n2++;
+
+    x = (float) grid.tickToScreenD(view.cursor.start);
+    if (view.cursor.start == view.cursor.end) {
+        if (x >= -2 && x < size.x + 2) {
+            x += 0.5;
+            NVGcolor cursorColor = getCursorColor();
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, x, 1);
+            nvgLineTo(vg, x, size.y - 1);
+            nvgStrokeColor(vg, cursorColor);
+            nvgStrokeWidth(vg, 1.5f);
+            nvgStroke(vg);
         }
     } else {
-        for (note_t* pnote: notes.selection) {
-            renderNote(vg, this, pnote, scale);
-            n2++;
+        float x2 = (float) grid.tickToScreenD(view.cursor.end);
+        if (x2 > -4.0f && x < size.x + 4.0f) {
+            float xBegin = CLAMP_I(x, -4.0f, size.x + 3.0f);
+            float xEnd   = CLAMP_I(x2, -3.0f, size.x + 4.0f);
+            float width  = xEnd - xBegin;
+            nvgBeginPath(vg);
+            nvgRect(vg, xBegin, -2.0f, width, size.y + 2.0f);
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_SELECTION_BACKGROUND));
+            nvgFill(vg);
         }
     }
-    if (n2) {
-        NVGpaint paint{};
-        paint.image      = -1;
-        paint.innerColor = theme->getColor(GuiColor::COL_NOTE_SELECTED);
-        paint.customPar  = 1234;
-        nvgFillPaint(vg, paint);
-        nvgBatchedRender(vg);
-    }
-
 
     gui_clip* guiClip = view.gui;
-    track_t* track    = guiClip ? guiClip->m_track : NULL;
+    track_t* track    = guiClip ? guiClip->m_track : nullptr;
     if (track && track->audio) {
         clip_t* clip = guiClip->m_clip;
 
@@ -841,40 +862,56 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         }
     }
 
-    if (scale >= 18) {
-        int idx = 0;
+
+    int n2 = 0;
+    if (dragMode >= drag_notes_move) {
+        for (note_t& note: view.draggedSelection) {
+            renderNote(vg, this, &note, scale);
+            n2++;
+        }
+    } else {
+        for (note_t* pnote: notes.selection) {
+            renderNote(vg, this, pnote, scale);
+            n2++;
+        }
+    }
+    if (n2) {
+        NVGpaint paint{};
+        paint.image      = -1;
+        paint.innerColor = theme->getColor(GuiColor::COL_NOTE_SELECTED);
+        paint.customPar  = 1234;
+        nvgFillPaint(vg, paint);
+        nvgBatchedRender(vg);
+    }
+
+
+    if (scale >= 10) {
         for (note_t& note: notes.m_list) {
+            float nx = grid.tickToScreenD(note.time);
+            float nw = grid.tickLenToScreen(note.len);
+            if (nx + nw < -4)
+                continue;
+            if (nx > w + 4)
+                continue;
             tick_t absPos = note.start();
             if (view.clip()) {
                 absPos = note.start() + view.clip()->start() - view.clip()->offsetStart;
             }
-            //TODO: CULL
-            renderNoteName(vg, this, &note, idx++, scale, absPos);
+            renderNoteName(vg, this, &note, nx, toScreenF(note.pitch), nw, scale, absPos, false);
         }
-    }
-
-    x = (float) grid.tickToScreenD(view.cursor.start);
-    if (view.cursor.start == view.cursor.end) {
-        if (x >= -2 && x < size.x + 2) {
-            x += 0.5;
-            NVGcolor cursorColor = getCursorColor();
-            nvgBeginPath(vg);
-            nvgMoveTo(vg, x, 1);
-            nvgLineTo(vg, x, size.y - 1);
-            nvgStrokeColor(vg, cursorColor);
-            nvgStrokeWidth(vg, 1.5f);
-            nvgStroke(vg);
-        }
-    } else {
-        float x2 = (float) grid.tickToScreenD(view.cursor.end);
-        if (x2 > -4.0f && x < size.x + 4.0f) {
-            float xBegin = CLAMP_I(x, -4.0f, size.x + 3.0f);
-            float xEnd   = CLAMP_I(x2, -3.0f, size.x + 4.0f);
-            float width  = xEnd - xBegin;
-            nvgBeginPath(vg);
-            nvgRect(vg, xBegin, -2.0f, width, size.y + 2.0f);
-            nvgFillColor(vg, theme->getColor(GuiColor::COL_SELECTION_BACKGROUND));
-            nvgFill(vg);
+        for (note_t* pNote: notes.selection) {
+            auto& note = *pNote;
+            float nx = grid.tickToScreenD(note.time);
+            float nw = grid.tickLenToScreen(note.len);
+            if (nx + nw < -4)
+                continue;
+            if (nx > w + 4)
+                continue;
+            tick_t absPos = note.start();
+            if (view.clip()) {
+                absPos = note.start() + view.clip()->start() - view.clip()->offsetStart;
+            }
+            renderNoteName(vg, this, &note, nx, toScreenF(note.pitch), nw, scale, absPos, true);
         }
     }
 
@@ -891,7 +928,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
     }
     clip_notes_t& notes    = clip->notes;
     ivec2 local            = evt.relMousepos;
-    int32_t pitch          = toNoteF(local.y);
+    int32_t pitch          = math::floorfS32(toNoteF(local.y));
     int32_t velClicked     = screenToVel(local.y, size.y);
     const tick_t tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
     note_t* contextNote    = nullptr;
@@ -913,11 +950,11 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
             contextNote = notes.get(tickExact, pitch);
         }
         String desc = "???";
-        if (contextNote != NULL) {
+        if (contextNote) {
             if (!isVelocity) {
                 view.cursor.start = view.cursor.end = contextNote->start();
                 notes.remove(*contextNote);
-                contextNote = NULL;
+                contextNote = nullptr;
                 desc        = "Delete Note";
             } else {
                 contextNote->toggleFlag(NoteFlags::ENABLED);
@@ -943,7 +980,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
     } else {
 
         bool inSelection = false;
-        if (contextNote != NULL) {
+        if (contextNote) {
             inSelection = stl_contains(notes.selection, contextNote);
             if (!inSelection) {
                 notes.clearSelection();
@@ -960,7 +997,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                     inSelection = true;
                 }
             }
-            if (contextNote != NULL) {
+            if (contextNote) {
                 beginDragNote = *contextNote;
             }
         }
@@ -1082,8 +1119,8 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
         notes.selection = selectionStart;
         if (!isVelocity) {
 
-            int32_t pitchLow  = toNoteF(yEnd);
-            int32_t pitchHigh = toNoteF(yStart);
+            int32_t pitchLow  = math::floorfS32(toNoteF(yEnd));
+            int32_t pitchHigh = math::floorfS32(toNoteF(yStart));
             std::vector<note_t*> inRangeList;
             if (notes.getInRange(tickStart, tickEnd, pitchLow, pitchHigh, inRangeList)) {
                 std::set<note_t*>& selection = notes.selection;
@@ -1145,8 +1182,8 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 
 
         tick_t gridSize       = grid.getTickLength();
-        int32_t pitchStart    = toNoteFNoFolding(dragBegin.y);
-        int32_t pitchEnd      = toNoteFNoFolding(dragTo.y);
+        int32_t pitchStart    = math::floorfS32(toNoteFNoFolding(dragBegin.y));
+        int32_t pitchEnd      = math::floorfS32(toNoteFNoFolding(dragTo.y));
         tick_t pitchOffset    = pitchEnd - pitchStart;
         tick_t tickStartExact = grid.screenToTick(dragBegin.x);
         tick_t tickEndExact   = grid.screenToTick(dragTo.x);
@@ -1200,7 +1237,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
                 } else {
                     note.time += timeOffset;
                     if (layoutRoll.fold) {
-                        note.pitch = view.nextFoldNote(note.pitch, pitchOffset);
+                        note.pitch = math::floorfS32(view.nextFoldNote(note.pitch, pitchOffset));
                     } else {
                         note.pitch += pitchOffset;
                     }

@@ -1,4 +1,5 @@
 #pragma once
+#include <nanovg.h>
 #include <vector>
 #include "math/vec.h"
 #include "math/seq_math.h"
@@ -15,7 +16,8 @@
 #include "gui/track/trackcontrols.h"
 #include "wave/waveform_render.h"
 
-bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset);
+bool getClipPositionInt(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, double tickOffset, const float minWidth = 2.0f);
+bool getClipPositionFloat(scaled_grid& grid, const ivec2& scissorSize, const clip_t* cl, vec2& pos, vec2& size, double tickOffset, const float minWidth = 2.0f);
 bool getClippedPosSize(const ivec2& parentSize, ivec2& posClipped, ivec2& sizeClipped);
 
 struct gui_waveform_texture_ref;
@@ -106,6 +108,7 @@ public:
     virtual void renderDebugPass(NVGcontext* vg) = 0;
     virtual void updateClipRenderCache(NVGcontext* vg) = 0;
     virtual void updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) = 0;
+    virtual void renderFoldedContent(NVGcontext* vg, vec2 trPos, vec2 trSize);
 };
 struct midi_clip_render_cache_t;
 class gui_midi_clip : public gui_clip {
@@ -300,15 +303,24 @@ protected:
 public:
     gui_track(track_gui_entry_t* _entry, scaled_grid& _grid);
     ~gui_track() override = default;
+
+    void handleRightClick(MouseEvent& evt) override;
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    void prerender(NVGcontext* vg) override;
+    void renderDebugPass(NVGcontext* vg);
+    void renderTrackFolded(NVGcontext* vg);
+    void renderTrack(NVGcontext* vg);
+    void render(NVGcontext* vg) override;
+    virtual void updateVisibleTrackContents(project_globals_t& project, scaled_grid& grid);
+
     bool isStaticContainer() override {
         return false;
     }
 
-    void handleRightClick(MouseEvent& evt) override;
-
     bool handleKeyInput(KeyEvent& kevt) override {
         return parent->handleKeyInput(kevt);
     }
+
     void handleDraggedBegin(MouseEvent& evt) override {
         dawCtrl->getDaw()->setSelectedTrack(m_track);
         evt.relMousepos += getPosContent();
@@ -325,74 +337,35 @@ public:
         parent->handleDraggedRelease(evt);
     }
 
-    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-
-    void prerender(NVGcontext* vg) override;
-
-    void renderDebugPass(NVGcontext* vg) {
-        ivec2 posInset  = getPosContent();
-        ivec2 sizeInset = getSizeContent();
-
-        if (sizeInset.y <= 0 || sizeInset.x <= 0) {
-            return ;
-        }
-
-        nvgSave(vg);
-        nvgTranslate(vg, posInset.x, posInset.y);
-        for (auto& entry : m_trackentry->clipsGuis) {
-            if (entry.second) {
-                entry.second->renderDebugPass(vg);
-            }
-        }
-        nvgRestore(vg);
-    }
-
-    void render(NVGcontext* vg) override {
-        if (dawCtrl->getDaw()->getSelectedTrack() == m_track) {
-            nvgBeginPath(vg);
-            nvgRect(vg, pos.x, pos.y, size.x, size.y);
-            nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_SELECTEDTRACK));
-            nvgFill(vg);
-        }
-        nvgSave(vg);
-        if (setScissorTransform(vg)) {
-            for (auto& entry : m_trackentry->clipsGuis) {
-                if (entry.second) {
-                    entry.second->render(vg);
-                }
-            }
-        }
-        nvgRestore(vg);
-        nvgSave(vg);
-        automation.render(vg);
-        nvgRestore(vg);
-    }
-
-    virtual void updateVisibleTrackContents(project_globals_t& project, scaled_grid& grid);
-
     void layout() override {
         positionChanged();
         automation.layout();
     }
+
     void positionChanged() {
         automation.pos  = this->pos;
         automation.size = this->size;
     }
+
     void setParent(guibase* parent) override {
         guictr_base::setParent(parent);
         automation.setParent(this->parent);
     }
+
     void setControl(BaseCtrl* parentCtrl) override {
         guictr_base::setControl(parentCtrl);
         automation.setControl(parentCtrl);
     }
+
     void destroyGuis() override {
         automation.destroyGuis();
         guictr_base::destroyGuis();
     }
+
     track_t* getTrack() {
         return this->m_track;
     }
+
     track_gui_entry_t* getTrackEntry() {
         return this->m_trackentry;
     }

@@ -1,5 +1,7 @@
+#include <deque>
 #include <glm/geometric.hpp>
 #include <memory>
+#include <nanovg.h>
 #include <numeric>
 #include <vector>
 
@@ -35,27 +37,46 @@ constexpr int32_t CLIPPING_STEP_PX = 512;
 constexpr int32_t MARGIN_CLIPPING_PX = 32;
 
 
-bool getClipPosition(scaled_grid& grid, const ivec2& scissorSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
-    tick_t tickBegin  = cl->time + offset;
-    tick_t tickEnd    = cl->time + offset + cl->getLen();
+bool getClipPositionFloat(scaled_grid& grid, const ivec2& scissorSize, const clip_t* cl, vec2& pos, vec2& size, double tickOffset, const float minWidth) {
+    double tickBegin  = cl->time + tickOffset;
+    double tickEnd    = cl->time + tickOffset + cl->getLen();
     double tickBeginX = grid.tickToScreenD(tickBegin);
     double tickEndX   = grid.tickToScreenD(tickEnd);
     if (tickEndX < -MARGIN_CLIPPING_PX || tickBeginX > scissorSize.x + MARGIN_CLIPPING_PX) {
         return false;
     }
     double width = tickEndX - tickBeginX;
-
     dbgassert(FitsTypeRange<int32_t>(tickBeginX));
     dbgassert(FitsTypeRange<int32_t>(tickEndX));
-
-    int32_t tickBeginPx = math::rounddS32(tickBeginX);
-    int32_t widthPx     = math::rounddS32(width);
-
-    pos  = ivec2(tickBeginPx, INSET_TRACK_CONTENT);
-    size = math::maxvec2(ivec2(widthPx, size.y - INSET_TRACK_CONTENT * 2), ivec2(0));
-
-    //dbgassert(size.x > 0 && size.y > 0);
-
+    if (width >= minWidth) {
+        pos  = vec2(tickBeginX, INSET_TRACK_CONTENT);
+    } else {
+        width = minWidth;
+        double tickCenterX = grid.tickToScreenD((tickBegin + tickEnd) * 0.5);
+        pos  = vec2(tickCenterX - width * 0.5f, INSET_TRACK_CONTENT);
+    }
+    size = math::maxvec2f(vec2(width, size.y - INSET_TRACK_CONTENT * 2), vec2(0));
+    return size.x > 0.5f && size.y > 0.5f;
+}
+bool getClipPositionInt(scaled_grid& grid, const ivec2& scissorSize, const clip_t* cl, ivec2& pos, ivec2& size, double tickOffset, const float minWidth) {
+    double tickBegin  = cl->time + tickOffset;
+    double tickEnd    = cl->time + tickOffset + cl->getLen();
+    double tickBeginX = grid.tickToScreenD(tickBegin);
+    double tickEndX   = grid.tickToScreenD(tickEnd);
+    if (tickEndX < -MARGIN_CLIPPING_PX || tickBeginX > scissorSize.x + MARGIN_CLIPPING_PX) {
+        return false;
+    }
+    double width = tickEndX - tickBeginX;
+    dbgassert(FitsTypeRange<int32_t>(tickBeginX));
+    dbgassert(FitsTypeRange<int32_t>(tickEndX));
+    if (width >= minWidth) {
+        pos  = ivec2(math::rounddS32(tickBeginX), INSET_TRACK_CONTENT);
+    } else {
+        width = minWidth;
+        double tickCenterX = grid.tickToScreenD((tickBegin + tickEnd) * 0.5);
+        pos  = ivec2(math::rounddS32(tickCenterX - width * 0.5f), INSET_TRACK_CONTENT);
+    }
+    size = math::maxvec2(ivec2(math::rounddS32(width), size.y - INSET_TRACK_CONTENT * 2), ivec2(0));
     return size.x > 0 && size.y > 0;
 }
 
@@ -154,7 +175,7 @@ void gui_audio_clip::updateClipRenderCache(NVGcontext* vg) {
 
 void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) {
     size   = this->parent->size;
-    culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
+    culled = !getClipPositionInt(grid, trackSize, m_clip, pos, size, 0);
 
     audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->get(m_clip->audio.id);
 
@@ -515,4 +536,150 @@ void gui_track_subtrack::renderMixerInfo(NVGcontext* vg, ivec2 pos, ivec2 size) 
         vec2(size.x - INSET_TITLE, htt),
         curvalue,
         theme, fontSize, theme->getColor(GuiColor::COL_WHITE), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+}
+
+void gui_clip::renderFoldedContent(NVGcontext* vg, vec2 trPos, vec2 trSize) {
+    if (!culled) {
+        clip_t* const cl  = m_clip;
+        if (cl->getLen() <= 0) {
+            return;
+        }
+        NVGcolor color = rgbToNvg(cl->rgb);
+        if (!cl->enabled) {
+            color = rgbToNvg(0x333333);
+        }
+        // const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+    NVGpaint paint{};
+    paint.image     = -1;
+    paint.customPar = 1;
+    paint.innerColor = color;
+    nvgBatchedRect(vg, pos.x, trPos.y, size.x, trSize.y);
+    nvgFillPaint(vg, paint);
+    nvgBatchedRender(vg);
+        // nvgBeginPath(vg);
+        // nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
+        // nvgFillColor(vg, color);
+        // nvgFill(vg);
+        // nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
+        // nvgStrokeWidth(vg, 1.f);
+        // nvgStroke(vg);
+        // if (cl->name.length()) {
+        //     renderTextLabel(vg,
+        //                     vec2(pos)+vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0),
+        //                     vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE + 2, 0),
+        //                     cl->name,
+        //                     theme,
+        //                     HEIGHT_CLIP_TITLE,
+        //                     getContrastFontColor(cl->rgb),
+        //                     NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        // }
+    }
+}
+
+void gui_track::renderTrackFolded(NVGcontext* vg) {
+    auto ctrTracks = m_trackentry->parent;
+    if (!m_track->children.empty()) {
+        std::vector<track_gui_entry_t*> children;
+        std::vector<track_t*> queue;
+        queue.push_back(m_track);
+        while (!queue.empty()) {
+            track_t* const tr = queue.back();
+            queue.pop_back();
+            for (auto& child : tr->children) {
+                track_gui_entry_t* trEntryChild = nullptr;
+                if (ctrTracks->getTrackEntry(child, &trEntryChild)) {
+                    if (!trEntryChild->clipsGuis.empty()) {
+                        children.push_back(trEntryChild);
+                    }
+                }
+                queue.push_back(child);
+            }
+        }
+        if (children.empty())
+            return;
+        auto entryHeight = float(size.y) / children.size();
+        vec2 size = vec2(this->size.x, entryHeight);
+        vec2 pos = vec2(0, 0);
+        NVGpaint paint{};
+        paint.image     = -1;
+        paint.customPar = 1;
+        for (auto& child : children) {
+            for (auto& entry : child->clipsGuis) {
+                if (entry.first && entry.second) {
+                    clip_t* const cl = entry.first;
+                    vec2 clipPos{};
+                    vec2 clipSize = size;
+                    bool bCulled = !getClipPositionFloat(ctrTracks->grid, size, cl, clipPos, clipSize, 0.0);
+                    if (!bCulled) {
+                        NVGcolor color = rgbToNvg(cl->rgb);
+                        if (!cl->enabled) {
+                            color = rgbToNvg(0x333333);
+                        }
+                        paint.innerColor = color;
+                        clipPos += pos;
+                        nvgBatchedRect(vg, clipPos.x, clipPos.y, clipSize.x, clipSize.y);
+                        nvgFillPaint(vg, paint);
+                        nvgBatchedRender(vg);
+                        int inset = 2;
+                        if (clipSize.y > inset && clipSize.x > inset) {
+                            clipPos += vec2(inset, inset);
+                            clipSize -= vec2(inset * 2, inset * 2);
+                            color = { 0.1f, 0.1f, 0.1f, 0.42f };
+                            paint.innerColor = color;
+                            nvgBatchedRect(vg, clipPos.x, clipPos.y, clipSize.x, clipSize.y);
+                            nvgFillPaint(vg, paint);
+                            nvgBatchedRender(vg);
+                        }
+                    }
+                }
+            }
+            pos.y += entryHeight;
+        }
+    }
+}
+
+void gui_track::render(NVGcontext* vg) {
+    if (dawCtrl->getDaw()->getSelectedTrack() == m_track) {
+        nvgBeginPath(vg);
+        nvgRect(vg, pos.x, pos.y, size.x, size.y);
+        nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_SELECTEDTRACK));
+        nvgFill(vg);
+    }
+    nvgSave(vg);
+    if (setScissorTransform(vg)) {
+        if (!m_track->children.empty()) {
+            renderTrackFolded(vg);
+        }
+        renderTrack(vg);
+    }
+    nvgRestore(vg);
+    nvgSave(vg);
+    automation.render(vg);
+    nvgRestore(vg);
+}
+
+void gui_track::renderTrack(NVGcontext* vg) {
+    for (auto& entry : m_trackentry->clipsGuis) {
+        if (entry.second) {
+            entry.second->render(vg);
+        }
+    }
+}
+
+void gui_track::renderDebugPass(NVGcontext* vg) {
+    ivec2 posInset  = getPosContent();
+    ivec2 sizeInset = getSizeContent();
+
+    if (sizeInset.y <= 0 || sizeInset.x <= 0) {
+        return;
+    }
+
+    nvgSave(vg);
+    nvgTranslate(vg, posInset.x, posInset.y);
+    for (auto& entry : m_trackentry->clipsGuis) {
+        if (entry.second) {
+            entry.second->renderDebugPass(vg);
+        }
+    }
+    nvgRestore(vg);
 }
