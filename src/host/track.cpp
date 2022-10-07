@@ -128,9 +128,13 @@ void track_t::updateAudioClipLengths(int32_t bpm100, samplerate_t oldSampleRate,
     double conversionFactor = newSampleRate / double(oldSampleRate);
     for (clip_t* clip : midi.getClips()) {
         if (clip->clipType == CLIP_AUDIO) {
-            dbgassert(clip->lenSamples > 0);
-            clip->lenSamples = math::ceildS64(clip->lenSamples * conversionFactor);
-            clip->len = sampleToTickConvert<tick_t, roundmode::round>(clip->lenSamples, bpm100, newSampleRate);
+            dbgassert(clip->lenSamples > 0 || clip->len > 0);
+            if (clip->lenSamples > 0) {
+                clip->lenSamples = math::ceildS64(clip->lenSamples * conversionFactor);
+                clip->len = sampleToTickConvert<tick_t, roundmode::round>(clip->lenSamples, bpm100, newSampleRate);
+            } else if (clip->len > 0) {
+                clip->lenSamples = tickToSampleConvert<samplecount_t, roundmode::round>(clip->len, bpm100, newSampleRate);
+            }
         }
 
     }
@@ -941,49 +945,69 @@ void track_impl_t::addAudio(const AudioBlock& src, float fGain) {
     }
 }
 
-void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, int32_t readPos, int32_t readLen, float** dstBuffer) {
-
-    int32_t blockEnd  = readPos + readLen;
+void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, const project_globals_t& prjGlobals, samplecount_t samplePosBegin, samplecount_t numSamplesDst, float** dstBuffer) {
     tick_t audioBegin = math::max(start, loopStart);
     tick_t audioEnd   = loopEnd < 0 ? end : math::min(end, loopEnd);
     std::vector<clip_t*> clips;
     track->getMidi().getClipsInRange(audioBegin, audioEnd, clips);
+    auto cache = audiocache::getInstance();
     auto bpm100 = prjGlobals.tempo100;
     for (clip_t* clip : clips) {
-        tick_t clipStartTick    = clip->getOffsetStart();
-        tick_t clipEndTick      = clip->end();
-        int32_t clipStartSample = tickToSampleConvert<int32_t, roundmode::floor>(clipStartTick, bpm100, sampleFormat.sampleRate);
-        int32_t clipEndSample   = tickToSampleConvert<int32_t, roundmode::floor>(clipEndTick, bpm100, sampleFormat.sampleRate);
-        if (clipStartSample > blockEnd)
-            continue;
-        if (clipEndSample <= readPos)
-            continue;
-        int32_t clipEndSampleLen   = math::min((int32_t) readLen, clipEndSample - readPos);
-        int32_t clipStartSampleLen = readLen - math::max((int32_t) 0, clipStartSample - readPos);
-        int32_t srcStartOffset     = readPos - clipStartSample /* + clip->offsetSamples */;
-        int32_t dstStartOffset     = math::max(0, clipStartSample - readPos);
-        if (srcStartOffset + readLen <= 0)
-            continue;
+        /* fixed readoffset into backing sample */
+        samplecount_t clipSampleOffset = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->offsetStart, bpm100, sampleFormat.sampleRate);
 
-        audiofile_t* audio = audiocache::getInstance()->get(clip->audio.id);
+        /* positive if in the future, negative if in the past */
+        // samplecount_t clipSampleBegin = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->start()-start, bpm100, sampleFormat.sampleRate);
+        samplecount_t clipSampleBegin = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->start(), bpm100, sampleFormat.sampleRate) - samplePosBegin;
+        /* positive if in the future, negative if in the past */
+        // samplecount_t clipSampleEnd   = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->end()-start, bpm100, sampleFormat.sampleRate);
+        samplecount_t clipSampleEnd   = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->end(), bpm100, sampleFormat.sampleRate) - samplePosBegin;
+        if (clipSampleBegin >= numSamplesDst) {
+            continue;
+        }
+        if (clipSampleEnd <= 0) {
+            continue;
+        }
+        audiofile_t* audio = cache->get(clip->audio.id);
         if (audio) {
             audiosample_t* sample = audio->sample.get();
-            if (sample->samples.empty() || srcStartOffset >= (int32_t) sample->nSamples)
+            if (sample->samples.empty())
                 continue;
-            dbgassert(!sample->samples.empty());
-            for (uint32_t i = 0; i < this->input.channels; i++) {
-                float* dst      = dstBuffer[i];
-                auto& srcVector = i >= sample->samples.size() ? sample->samples[sample->samples.size() - 1] : sample->samples[i];
-                int32_t len     = math::min((int32_t) readLen - math::max(0, -srcStartOffset),
-                                            math::min(clipEndSampleLen, math::min(clipStartSampleLen, (int32_t) math::min<size_t>(sample->nSamples, srcVector.size()) - srcStartOffset)));
-                dbgassert(len >= 0);
-                if (len <= 0) {//TODO: could figure this out outside the loop
-                    continue;
+            auto numSamplesClipBounds = clipSampleEnd - clipSampleBegin;
+            auto numSamplesReadableData = math::min<samplecount_t>(samplecount_t(sample->samples.front().size()), sample->nSamples) - clipSampleOffset;
+            samplecount_t numSamplesClip = math::min<samplecount_t>(numSamplesReadableData, numSamplesClipBounds);
+            samplecount_t numSamplesOffsetDst = math::max<samplecount_t>(0, clipSampleBegin);
+            auto readSamples = math::min(numSamplesClip, numSamplesDst - numSamplesOffsetDst);
+            if (readSamples <= 0) {
+                dbgassert(0);
+                continue;
+            }
+            for (channelnum_t ch = 0; ch < this->input.channels; ++ch) {
+                float* dst      = dstBuffer[ch];
+                auto& srcVector = ch >= sample->samples.size() ? sample->samples[sample->samples.size() - 1] : sample->samples[ch];
+                dbgassert(sample->nSamples <= samplecount_t(srcVector.size()));
+                samplecount_t s = 0;
+                for (; s < readSamples; ++s) {
+                    auto dstOffset = numSamplesOffsetDst + s;
+                    if (dstOffset < 0) {
+                        // s += -dstOffset - 1;
+                        dbgassert(0);
+                        continue;
+                    }
+                    if (dstOffset >= numSamplesDst) {
+                        dbgassert(0);
+                        break;
+                    }
+                    auto srcOffset = clipSampleOffset + s - clipSampleBegin;
+                    if (srcOffset < 0) {
+                        s += -srcOffset - 1;
+                        continue;
+                    }
+                    if (srcOffset >= sample->nSamples) {
+                        break;
+                    }
+                    dst[dstOffset] = srcVector[srcOffset];
                 }
-                dbgassert(dstStartOffset + len <= (int32_t) readLen);
-                dbgassert(srcStartOffset + len <= (int32_t) srcVector.size());
-                dbgassert(dstStartOffset >= 0);
-                memcpy(dst + dstStartOffset, srcVector.data() + math::max(0, srcStartOffset), len * sizeof(float));
             }
         }
     }
@@ -1704,45 +1728,12 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                         ssr.format      = trImpl->sampleFormat;
                         ssr.id          = -1;
                         ssr.numChannels = trImpl->input.channels;
-                        String tempPath = "recorded";
-                        tempPath += FILE_PATHSEP_CHAR;
-                        String projName = projCtrl->getProjectName();
-                        if (projName.empty()) {
-                            projName = "Untitled";
-                        }
-                        tempPath += projName;
-                        tempPath += FILE_PATHSEP_CHAR;
-                        if (trImpl->track) {
-                            tempPath += trImpl->track->name;
-                            tempPath += " - Recorded.wav";
-                        } else {
-                            tempPath += "Recorded.wav";
-                        }
-                        String sampleFilePath = App::Platform::toUserdataPath(tempPath);
-                        App::Platform::sanitizePathToFile(sampleFilePath);
-                        String name;
-                        String ext;
-                        String path;
-                        int32_t idx = 0;
-                        String uniqueName = sampleFilePath;
-                        SplitPath(sampleFilePath, &path, &name, &ext);
-                        App::Platform::sanitizePathToDirectory(path);
-                        while ((FileExists(uniqueName) || cache->getByFilename(uniqueName) != nullptr) && ++idx < 10000) {
-                            String nextPath = path;
-                            nextPath += name;
-                            nextPath += "-";
-                            nextPath += std::to_string(idx);
-                            nextPath += ".";
-                            nextPath += ext;
-                            idx++;
-                            uniqueName = nextPath;
-                        }
-                        ssr.path = uniqueName;
-                        
+                        auto [fPath, fName] = daw->createUniqueNonExistingFilename("recorded", trImpl->track ? trImpl->track->name : "", "Recorded", "wav");
+                        ssr.path = fPath;
                         // createSample is not thread safe, we might be doing a lookup from waveformrenderer
                         auto file = cache->createSample(ssr);
                         audioSampleId = file->id;
-                        pClip->name = file->name;
+                        pClip->name = fName;
                         pClip->audio.id = audioSampleId;
                         pClip->rgb = tr->rgb;
                     }

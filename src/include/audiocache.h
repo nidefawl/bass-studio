@@ -43,7 +43,7 @@ struct store_sample_req_t {
 struct create_sample_req_t {
     int32_t id;
     sampleformat_t format;
-    samplecount_t numChannels;
+    channelnum_t numChannels;
     String path;
 };
 class audiocache {

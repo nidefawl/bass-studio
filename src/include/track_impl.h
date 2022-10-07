@@ -431,7 +431,7 @@ struct track_impl_t : public audio_stage_t {
     void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) override;
     void processMidiInput(playback_state state, int32_t flags, tick_t cursorPos, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency, const clip_notes_t& midiRealtimeInput);
     void postProcessMidiInput(playback_state state, int32_t flags, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency);
-    void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, int32_t readPos, int32_t readLen, float** dstBuffer);
+    void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, const project_globals_t& prjGlobals, samplecount_t readPos, samplecount_t readLen, float** dstBuffer);
     void addAudio(const AudioBlock& src, float fGain);
     void removePlugin(effectbase* _vst, bool notifyUp) override;
     const std::vector<DAW::arp_note_t>& getArpHeldNotes();

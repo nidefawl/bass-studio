@@ -349,9 +349,12 @@ public:
     DAW::UI::CommandManager* getCommandManager() {
         return tls.commandManager;
     }
+    const project_globals_t& getProjectGlobals() const {
+        return projectGlobals;
+    }
     static DawInstance* get();
     static DawInstance* getOptional();
-
+    std::pair<String, String> createUniqueNonExistingFilename(const String& baseDir, const String& sampleName, const String& trackName, const String& fileExt);
     void initProcessingResources();
     void initRealtimeResources();
     void initDaw();

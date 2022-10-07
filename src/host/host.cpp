@@ -1279,7 +1279,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     if (DAW::isPlaybackState(playbackState)) {
         AudioBlock& tmpBlock = AllocateScratchAudioBuffer(tmp, trackImpl->input.channels, trackImpl->input.samples);
         tmpBlock.clear();
-        trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, static_cast<int32_t>(sampleLatencyCompensated), static_cast<int32_t>(tmpBlock.samples), tmpBlock.buf);
+        trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, sampleLatencyCompensated, tmpBlock.samples, tmpBlock.buf);
         trackImpl->input.addFromOp(&tmpBlock, AudioBlock::mix_op::ADD, 1.0f);
     }
     track->getStage()->procStats.timeTrackFillAudioClips = tmp.timer.getTime();

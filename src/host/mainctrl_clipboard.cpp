@@ -62,7 +62,6 @@ namespace DAW {
             }
             int32_t trackIdx = trackList.clampTrackIdx(i + trackOffset);
             track_gui_entry_t* tr = trackList.atNC(trackIdx);
-            //if (tr->track->type == TRACK_TYPE_MIDI) {
             trackdata_midi_t& midi = tr->track->getMidi();
             for (auto & clip : trClipboard->clips) {
                 clip_t* cloned = clip->clone();

@@ -1256,6 +1256,50 @@ void DawInstance::initRealtimeResources() {
 
     setAudioThreadState(playback_state::status_stop);
 }
+std::pair<String, String> DawInstance::createUniqueNonExistingFilename(const String& baseDir, const String& trackName, const String& sampleName, const String& fileExt) {
+
+
+    String testFileName;
+    if (!trackName.empty()) {
+        testFileName += trackName;
+        testFileName += " - ";
+    }
+    testFileName += sampleName;
+
+    String tempPath = baseDir;
+    tempPath += FILE_PATHSEP_CHAR;
+    String projName = getProjectName();
+    if (projName.empty()) {
+        projName = "Untitled";
+    }
+    tempPath += projName;
+    tempPath += FILE_PATHSEP_CHAR;
+    tempPath += testFileName;
+    tempPath += ".";
+    tempPath += fileExt;
+
+    String sampleFilePath = App::Platform::toUserdataPath(tempPath);
+    App::Platform::sanitizePathToFile(sampleFilePath);
+    String name;
+    String ext;
+    String path;
+    int32_t idx = 0;
+    String uniqueName = sampleFilePath;
+    SplitPath(sampleFilePath, &path, &name, &ext);
+    App::Platform::sanitizePathToDirectory(path);
+    while ((FileExists(uniqueName) || tls.audioCache->getByFilename(uniqueName) != nullptr) && ++idx < 10000) {
+        // String nextPath = path;
+        testFileName = name;
+        testFileName += "-";
+        testFileName += std::to_string(idx);
+        testFileName += ".";
+        uniqueName = path;
+        uniqueName += testFileName;
+        uniqueName += ext;
+        idx++;
+    }
+    return {uniqueName, testFileName};
+}
 
 void DawInstance::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
     for (auto* ctrl : dawCtrls) {

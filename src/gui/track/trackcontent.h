@@ -108,7 +108,6 @@ public:
     virtual void renderDebugPass(NVGcontext* vg) = 0;
     virtual void updateClipRenderCache(NVGcontext* vg) = 0;
     virtual void updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) = 0;
-    virtual void renderFoldedContent(NVGcontext* vg, vec2 trPos, vec2 trSize);
 };
 struct midi_clip_render_cache_t;
 class gui_midi_clip : public gui_clip {

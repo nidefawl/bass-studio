@@ -1,10 +1,14 @@
 #include "appconfig.h"
 #include "assert_dbg.h"
+#include "audiosample.h"
 #include "commands.h"
 #include "compiler.h"
 #include "event.h"
+#include "seq_time.h"
 #include "tls.h"
+#include "track_types.h"
 #include "trackctr.h"
+#include <cstdint>
 #include <utility>
 #include <vector>
 #include "exceptions.h"
@@ -37,6 +41,7 @@
 #include "host/midiarp.h"
 #include "logging.h"
 #include "host/host_pluginmanager.h"
+#include "types.h"
 #include "wave/waveform_render.h"
 #include "wave/waveform_render_impl.h"
 
@@ -151,6 +156,79 @@ namespace DAW {
                 }
             }
         }
+    }
+
+    clip_t* ConsolidateAudioClips(DawInstance* daw, track_t* track, tick_t tickBegin, tick_t tickEnd, const String& name) {
+        auto& prjGlobals = daw->getProjectGlobals();
+        auto& trackData = track->getMidi();
+        auto clips = trackData.getConstClips();
+
+        create_sample_req_t csr;
+        csr.format      = track->audio->sampleFormat;
+        csr.id          = -1;
+        csr.numChannels = track->audio->input.channels;
+        auto [fPath, fName] = daw->createUniqueNonExistingFilename("samples", track->name, name, "wav");
+        csr.path = fPath;
+
+        auto numSamples = tickToSampleConvert<samplecount_t, roundmode::ceil>(tickEnd - tickBegin, prjGlobals.tempo100, csr.format.sampleRate);
+        auto cache = daw->getAudioCache();
+        //TODO: createSample is not thread safe, we might be doing a lookup from waveformrenderer
+        auto samplefile = cache->createSample(csr);
+        store_sample_req_t ssr;
+        ssr.id = samplefile->id;
+        ssr.format = csr.format;
+        ssr.offset = 0;
+        ssr.length = numSamples;
+        ssr.channels.resize(csr.numChannels);
+        for (auto& ch : ssr.channels) {
+            ch.resize(numSamples);
+            std::memset(ch.data(), 0, numSamples * sizeof(float));
+        }
+        float* dstBuffer[32]{};
+        for (channelnum_t i = 0; i < 32 && i < csr.numChannels; i++) {
+            dstBuffer[i] = ssr.channels[i].data();
+        }
+        // auto& chs = ssr.channels;
+        // for (samplecount_t pos = 0; pos < numSamples; ++pos) {
+        //     chs[0][pos] = pos/float(numSamples);
+        //     chs[1][pos] = 1.0f - chs[0][pos];
+        // }
+
+        // Copying can be done in one pass, but is done iteratively to allow for cancellation and progress
+        samplecount_t nSamplesRead = 0;
+        samplecount_t blockSize = 512;
+        double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(blockSize, prjGlobals.tempo100, csr.format.sampleRate);
+        samplecount_t samplePosFromTick = tickToSampleConvert<samplecount_t, roundmode::floor>(tickBegin, prjGlobals.tempo100, ssr.format.sampleRate);
+        double readTickBegin = tickBegin;
+        while (nSamplesRead < numSamples) {
+            double readTickEnd = readTickBegin + ticksPerBlock;
+            auto readSamplesLeft = numSamples - nSamplesRead;
+            auto numSamplesRead = math::min(blockSize, readSamplesLeft);
+            if (readSamplesLeft < blockSize) {
+                readTickEnd = sampleToTickConvert<double, roundmode::none>(readSamplesLeft, prjGlobals.tempo100, csr.format.sampleRate);
+            }
+            track->audio->fillAudio(math::floordS32(readTickBegin), math::floordS32(readTickEnd), -1, -1, prjGlobals, samplePosFromTick, numSamplesRead, dstBuffer);
+            readTickBegin = readTickEnd;
+            samplePosFromTick += blockSize;
+            nSamplesRead += blockSize;
+            for (channelnum_t i = 0; i < 32 && i < csr.numChannels; i++) {
+                dstBuffer[i] += blockSize;
+            }
+        }
+
+        cache->updateSample(ssr);
+
+        auto audioClip = new clip_t{};
+        audioClip->name = name.empty() ? fName : name;
+        audioClip->time = tickBegin;
+        audioClip->len = tickEnd - tickBegin;
+        audioClip->loopStart = 0;
+        audioClip->loopLen   = tickEnd - tickBegin;
+        audioClip->clipType = CLIP_AUDIO;
+        audioClip->audio.id = samplefile->id;
+        audioClip->rgb = track->rgb;
+
+        return audioClip;
     }
 
     bool HandleEditorCommand(DawInstance* daw, track_gui_manager_i& iGuiMgr, DAW::Cursor& cursor, scaled_grid& grid, project_t& project, const UI::CommandContext& ctxt) {
@@ -278,18 +356,72 @@ namespace DAW {
                     int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
                     project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
                     preModifyState.cursor = cursor;
-                    /* maybe do    this->clipboard = copy */
-                    std::shared_ptr<clip_clipboard> clipboardCopy         = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
+                    int32_t trackBegin    = cursor.getTrackBegin();
+                    int32_t trackEnd      = cursor.getTrackEnd();
+                    int32_t tickBegin    = cursor.getTickBegin();
+                    int32_t tickEnd      = cursor.getTickEnd();
+                    std::map<int32_t, std::array<int32_t, 2>> mapTrClCount;
+                    for (int32_t i = trackBegin; i <= trackEnd; i++) {
+                        track_clipboard_t trackClipboard;
+                        if (iGuiMgr.validTrackIdx(i)) {
+                            track_gui_entry_t* trEntry = iGuiMgr.atNC(i);
+                            mapTrClCount[i - trackBegin][CLIP_AUDIO] = 0;
+                            mapTrClCount[i - trackBegin][CLIP_MIDI] = 0;
+                            auto& trackData = trEntry->track->getConstMidi();
+                            auto& constClips = trackData.getConstClips();
+                            for (const auto& c : constClips) {
+                                if (c->clipType == CLIP_AUDIO || c->clipType == CLIP_MIDI) {
+                                    if (c->start() < tickEnd && c->end() > tickBegin) {
+                                        mapTrClCount[i - trackBegin][c->clipType]++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    std::shared_ptr<clip_clipboard> clipboardCopy = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
                     std::shared_ptr<clip_clipboard> clipboardConsolidated = DAW::consolidateClipboard(clipboardCopy, cursor);
+                    int32_t trackCnt = 0;
+                    for (auto& [trIdx, count] : mapTrClCount) {
+                        dbgassert(trIdx == trackCnt++);
+                        if (!assert_expr(iGuiMgr.validTrackIdx(trIdx))) {
+                            continue;
+                        }
+                        if (!assert_expr(trIdx < CtrSize(clipboardConsolidated->tracks))) {
+                            continue;
+                        }
+                        track_gui_entry_t* trEntry = iGuiMgr.atNC(trIdx);
+                        auto trClipboard = clipboardConsolidated->tracks[trIdx].get();
+                        if (!assert_expr(trClipboard->clips.size() == 1)) {
+                            continue;
+                        }
+                        if (!count[CLIP_AUDIO] && !count[CLIP_MIDI]) {
+                            trClipboard->clips.clear();
+                            continue;
+                        }
+                        auto& clip = trClipboard->clips[0];
+                        auto clipType = count[CLIP_AUDIO] > count[CLIP_MIDI] ? CLIP_AUDIO : CLIP_MIDI;
+                        if (clipType == CLIP_MIDI) {
+                            clip->audio = {};
+                        } else {
+                            clip_t* audioClip = DAW::ConsolidateAudioClips(daw, trEntry->track, cursor.getTickBegin(), cursor.getTickEnd(), clip->name);
+                            if (!assert_expr(audioClip)) {
+                                continue;
+                            }
+                            dbgassert(clip->time == audioClip->time);
+                            dbgassert(clip->len == audioClip->len);
+                            // audioClip->notes = clip->notes;
+                            clip->copy(*audioClip);
+                            clip->notes = {};
+                            delete audioClip;
+                        }
+                        clip->rgb = trEntry->track->rgb;
+                        clip->clipType = clipType;
+                        clip->setDirty();
+                    }
                     cursor.setLeftAligned();
-                    //cursor.cursorPos += cursor.getRange();
                     DAW::cutSelection(daw, iGuiMgr, cursor, bCopyAutomation);
                     DAW::pasteClipboard(daw, iGuiMgr, clipboardConsolidated.get(), cursor, bCopyAutomation);
-                    DAW::VisitIntersecting(iGuiMgr, cursor, [](track_gui_entry_t* trEntry, clip_t* c) {
-                        c->rgb = trEntry->track->rgb;
-                        c->setDirty();
-                    });
-                    grid.makeTickVisible(cursor.cursorPos + clipboardConsolidated->selRange);
+                    grid.makeTickVisible(cursor.getTickBegin()+cursor.getRange()/2);
                     handledKeyinput = true;
                     modified        = true;
                     desc            = "Consolidate selection";
@@ -298,7 +430,6 @@ namespace DAW {
                     int32_t idxEnd   = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
                     project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
                     preModifyState.cursor = cursor;
-                    /* maybe do    this->clipboard = copy */
                     std::shared_ptr<clip_clipboard> newClipboard = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
                     cursor.setLeftAligned();
                     cursor.cursorPos += cursor.getRange();

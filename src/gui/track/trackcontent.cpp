@@ -136,14 +136,16 @@ void gui_audio_clip::renderDebugPass(NVGcontext* vg) {
         ivec2 posClipped = pos + shrink;
 
         getClippedPosSize(parent->size, posClipped, sizeClipped);
+        if (sizeClipped.x > 0 && sizeClipped.y > 0) {
+            gui_waveform_texture_ref* ref = getWaveformTextureRef();
+            auto file = dawCtrl->getDaw()->getAudioCache()->get(m_clip->audio.id);
+            renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, file, ref, pos, size, posClipped, sizeClipped);
+            nvgBeginPath(vg);
+            nvgRect(vg, posClipped.x, posClipped.y, sizeClipped.x, sizeClipped.y);
+            nvgFillColor(vg, rgbaToNvg(0x7Fff00ff));
+            nvgFill(vg);
+        }
 
-        gui_waveform_texture_ref* ref = getWaveformTextureRef();
-        auto file = dawCtrl->getDaw()->getAudioCache()->get(m_clip->audio.id);
-        renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, file, ref, pos, size, posClipped, sizeClipped);
-        nvgBeginPath(vg);
-        nvgRect(vg, posClipped.x, posClipped.y, sizeClipped.x, sizeClipped.y);
-        nvgFillColor(vg, rgbaToNvg(0x7Fff00ff));
-        nvgFill(vg);
     }
 }
 
@@ -538,44 +540,6 @@ void gui_track_subtrack::renderMixerInfo(NVGcontext* vg, ivec2 pos, ivec2 size) 
         theme, fontSize, theme->getColor(GuiColor::COL_WHITE), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 }
 
-void gui_clip::renderFoldedContent(NVGcontext* vg, vec2 trPos, vec2 trSize) {
-    if (!culled) {
-        clip_t* const cl  = m_clip;
-        if (cl->getLen() <= 0) {
-            return;
-        }
-        NVGcolor color = rgbToNvg(cl->rgb);
-        if (!cl->enabled) {
-            color = rgbToNvg(0x333333);
-        }
-        // const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-    NVGpaint paint{};
-    paint.image     = -1;
-    paint.customPar = 1;
-    paint.innerColor = color;
-    nvgBatchedRect(vg, pos.x, trPos.y, size.x, trSize.y);
-    nvgFillPaint(vg, paint);
-    nvgBatchedRender(vg);
-        // nvgBeginPath(vg);
-        // nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
-        // nvgFillColor(vg, color);
-        // nvgFill(vg);
-        // nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
-        // nvgStrokeWidth(vg, 1.f);
-        // nvgStroke(vg);
-        // if (cl->name.length()) {
-        //     renderTextLabel(vg,
-        //                     vec2(pos)+vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0),
-        //                     vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE + 2, 0),
-        //                     cl->name,
-        //                     theme,
-        //                     HEIGHT_CLIP_TITLE,
-        //                     getContrastFontColor(cl->rgb),
-        //                     NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        // }
-    }
-}
-
 void gui_track::renderTrackFolded(NVGcontext* vg) {
     auto ctrTracks = m_trackentry->parent;
     if (!m_track->children.empty()) {
@@ -616,7 +580,14 @@ void gui_track::renderTrackFolded(NVGcontext* vg) {
                             color = rgbToNvg(0x333333);
                         }
                         paint.innerColor = color;
+                        if (clipPos.x < -clipSize.x-4) {
+                            continue;
+                        }
+                        if (clipPos.x > size.x+4) {
+                            continue;
+                        }
                         clipPos += pos;
+
                         nvgBatchedRect(vg, clipPos.x, clipPos.y, clipSize.x, clipSize.y);
                         nvgFillPaint(vg, paint);
                         nvgBatchedRender(vg);
