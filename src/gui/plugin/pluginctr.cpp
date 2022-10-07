@@ -2,8 +2,10 @@
 #include <memory>
 #include "assert_dbg.h"
 #include "commands.h"
+#include "compiler.h"
 #include "pluginctr.h"
 #include "math/seq_math.h"
+#include "seq_util.h"
 #include "str_util.h"
 #include "logging.h"
 #include "event.h"
@@ -188,30 +190,69 @@ std::shared_ptr<plugin_clipboard_t> copyPluginSelection(plugin_selection& sel) {
     return clipboard;
 }
 namespace DAW {
-bool HandlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
-    bool handledKeyinput = false;
-    String desc          = "???";
+bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::CommandContext& ctxt) {
+    static auto gCommandsHandled = {
+        GlobalCommandType::CMD_MOVE_CURSOR,
+        GlobalCommandType::CMD_SELECT_ALL,
+        GlobalCommandType::CMD_DELETE,
+        GlobalCommandType::CMD_CUT,
+        GlobalCommandType::CMD_COPY,
+        GlobalCommandType::CMD_DUPLICATE,
+        GlobalCommandType::CMD_PASTE,
+    };
+    auto cmdType = ctxt.type;
+    // early return
+    if (std::find(gCommandsHandled.begin(), gCommandsHandled.end(), cmdType) == gCommandsHandled.end()) {
+        return false;
+    }
+    if (ctxt.kevt.type == KeyboardState::K_RELEASE) {
+        return true;
+    }
     plugin_selection& sel = ctrl->getPluginSel();
     if (!sel.pluginCtr || !sel.pluginCtr->stage) {
-        return false;
+        return true;
     }
     auto daw = ctrl->getDaw();
     std::vector<effectbase*> effectChain;
-    sel.pluginCtr->getEffects(effectChain);
     std::vector<effectbase*> selection;
-    getSelectedEffects(sel, selection);
-    audio_stage_t* audioStage = sel.pluginCtr->stage;
-    audio_stage_t* audioStageAffected = nullptr;
-    switch (action) {
-        case action_plugin_ctr::PLUGINS_SELECTALL: {
+    switch (ctxt.type) {
+        case GlobalCommandType::CMD_MOVE_CURSOR: {
+            auto cursorDir = ivec2(ctxt.argInt0, ctxt.argInt1);
+            sel.pluginCtr->getEffects(effectChain);
+            if (cursorDir.x < 0 && sel.firstSelection > 0 && sel.lastSelection > 0) {
+                sel.firstSelection--;
+                sel.lastSelection--;
+                getSelectedEffects(sel, selection);
+                if (!selection.empty())
+                    ctr->makeVisisble(selection.front()->getGui());
+
+            } else if (cursorDir.x > 0 && sel.lastSelection < CtrSize(effectChain) - 1&& sel.firstSelection <= sel.lastSelection) {
+                sel.firstSelection++;
+                sel.lastSelection++;
+                getSelectedEffects(sel, selection);
+                if (!selection.empty())
+                    ctr->makeVisisble(selection.back()->getGui());
+            }
+            return cursorDir.x != 0;
+        } break;
+        case GlobalCommandType::CMD_SELECT_ALL: {
+            sel.pluginCtr->getEffects(effectChain);
             sel.firstSelection = effectChain.front()->getSlot();
             sel.lastSelection  = effectChain.back()->getSlot();
-            handledKeyinput    = true;
-        } break;
-        case action_plugin_ctr::PLUGINS_DELETE:
+            return true;
+        }
+        default:
+            break;
+    }
+    if (ctxt.kevt.type != KeyboardState::K_PRESS) {
+        return true;
+    }
+    bool handledKeyinput = false;
+    switch (ctxt.type) {
+        case GlobalCommandType::CMD_DELETE:
             if (!selection.empty()) {
                 auto lock = daw->lockPlayThread();
-                audioStageAffected = selection[0]->getTrackLink();
+                audio_stage_t* audioStageAffected = selection[0]->getTrackLink();
                 dbgassert(audioStageAffected);
                 for (effectbase* eff : selection) {
                     eff->closeWindow();
@@ -224,15 +265,18 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
                 }
                 auto* actionRemove = new action_remove_modules("Remove plugins", std::move(pendingInstances), audioStageAffected->toRef(), slot);
                 daw->pushHist(actionRemove);
+                audioStageAffected->pluginsChanged();
+                daw->onPluginsChanged();
                 handledKeyinput = true;
             }
             break;
-        case action_plugin_ctr::PLUGINS_CUT:
+        case GlobalCommandType::CMD_CUT:
+            getSelectedEffects(sel, selection);
             if (!selection.empty()) {
                 auto lock = daw->lockPlayThread();
                 std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
                 daw->setPluginClipboard(clipboard);
-                audioStageAffected = selection[0]->getTrackLink();
+                audio_stage_t* audioStageAffected = selection[0]->getTrackLink();
                 dbgassert(audioStageAffected);
                 for (effectbase* eff : selection) {
                     eff->closeWindow();
@@ -245,10 +289,13 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
                 }
                 auto* actionCut = new action_remove_modules("Cut plugins", std::move(pendingInstances), audioStageAffected->toRef(), slot);
                 daw->pushHist(actionCut);
+                audioStageAffected->pluginsChanged();
+                daw->onPluginsChanged();
                 handledKeyinput = true;
             }
             break;
-        case action_plugin_ctr::PLUGINS_COPY:
+        case GlobalCommandType::CMD_COPY:
+            getSelectedEffects(sel, selection);
             if (!selection.empty()) {
                 auto lock = daw->lockPlayThread();
                 std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
@@ -256,7 +303,8 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
                 handledKeyinput = true;
             }
             break;
-        case action_plugin_ctr::PLUGINS_DUPLICATE:
+        case GlobalCommandType::CMD_DUPLICATE:
+            getSelectedEffects(sel, selection);
             if (!selection.empty()) {
                 auto lock = daw->lockPlayThread();
                 std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
@@ -264,7 +312,7 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
                 handledKeyinput = true;
             }
             break;
-        case action_plugin_ctr::PLUGINS_PASTE:
+        case GlobalCommandType::CMD_PASTE:
             if (daw->getClipboardType() == ClipBoardType::CLIPBOARD_PLUGINS) {
                 auto lock = daw->lockPlayThread();
                 std::shared_ptr<plugin_clipboard_t> clipboard = daw->getPluginClipboard();
@@ -273,65 +321,34 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action) {
                 pastePluginClipboard(clipboard, sel.pluginCtr->stage, pluginPasteSlot);
                 //TODO: handle undo
                 handledKeyinput = true;
+                sel.pluginCtr->stage->pluginsChanged();
+                daw->onPluginsChanged();
             }
             break;
-    }
-    if (handledKeyinput) {
-        if (audioStage)
-            audioStage->pluginsChanged();
-        if (audioStageAffected && audioStageAffected != audioStage)
-            audioStage->pluginsChanged();
-        daw->onPluginsChanged();
+        default:
+            unreachable();
+            break;
     }
     return handledKeyinput;
 }
 }
 bool guictr_plugins::handleCommand(DAW::UI::CommandContext& ctxt) {
-    auto& kevt = ctxt.kevt;
-    if (kevt.type != K_RELEASE) {
-        bool handledKeyinput = false;
-        if (kevt.type == K_PRESS) {
-            using DAW::HandlePluginCtrCommand;
-            using DAW::action_plugin_ctr;
-            auto type = ctxt.type;
-            if (type == GlobalCommandType::CMD_SELECT_ALL) {
-                handledKeyinput = HandlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_SELECTALL);
-            } else if (type == GlobalCommandType::CMD_DELETE) {
-                handledKeyinput = HandlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_DELETE);
-            } else if (type == GlobalCommandType::CMD_CUT) {
-                handledKeyinput = HandlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_CUT);
-            } else if (type == GlobalCommandType::CMD_COPY) {
-                handledKeyinput = HandlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_COPY);
-            } else if (type == GlobalCommandType::CMD_DUPLICATE) {
-                handledKeyinput = HandlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_DUPLICATE);
-            } else if (type == GlobalCommandType::CMD_PASTE && DawInstance::get()->getPluginClipboard()) {
-                handledKeyinput = HandlePluginCtrCommand(dawCtrl, action_plugin_ctr::PLUGINS_PASTE);
-            }
-        }
-        if (isArrowKey(kevt.keyCode)) {
-            ivec2 dir;
-            arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
-            if (dir.y) {
-                if (isShift(kevt.mods)) {
-
-                } else {
-                }
-            } else if (dir.x) {
-                if (isShift(kevt.mods)) {
-
-                } else {
-                }
-            }
-            handledKeyinput = true;
-        }
-        return handledKeyinput;
-    }
-    return false;
+    return DAW::HandlePluginCtrCommand(dawCtrl, this, ctxt);
 }
 bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
     if (kevt.cmd) {
-        auto temp = DAW::UI::CommandContext{kevt.cmd->type, kevt, 0};
-        return handleCommand(temp);
+        auto temp = kevt.cmd->getKeybindContextData(kevt);
+        if (handleCommand(temp)) {
+            return true;
+        }
+    }
+    if (isArrowKey(kevt.keyCode)) {
+        ivec2 dir;
+        arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
+        DAW::UI::CommandContext ctxt = {GlobalCommandType::CMD_MOVE_CURSOR, kevt, dir.x, dir.y};
+        if (handleCommand(ctxt)) {
+            return true;
+        }
     }
     return false;
 }
@@ -804,6 +821,7 @@ void guictr_plugins::onTick(AppCtrl* ctrl) {
             case gui_type::CTR_TYPE_PLUGIN:
             case gui_type::CTR_TYPE_PLUGINS_DRAGGED:
             case gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY:
+            case gui_type::CTR_TYPE_MODULATION_DRAGGED:
                 break;
             default:
                 return;
@@ -957,4 +975,34 @@ void action_insert_effect::redo(DawInstance* daw) {
     daw->getPluginManager()->postPluginLoaded(stage, effect);
     daw->onPluginsChanged();
     weOwn = false;
+}
+
+void guictr_plugins::setScrolloffset(int offset) {
+    if (offset < 0) {
+        offset = 0;
+    }
+    int w          = getSizeContent().x;
+    int totalWidth = getTotalWidth();
+    if (w >= totalWidth) {
+        offset = 0;
+    } else if (offset >= totalWidth - w) {
+        offset = totalWidth - w;
+    }
+    this->scrolloffset = offset;
+    if (this->track) {
+        this->track->scrolloffset = offset;
+    }
+}
+
+void guictr_plugins::makeVisisble(guibase* entry) {
+    int w          = getSizeContent().x;
+    int totalWidth = getTotalWidth();
+    if (w < totalWidth && entry) {
+        int x = entry->pos.x;
+        if (x < scrolloffset) {
+            scrolloffset = x;
+        } else if (x + entry->size.x > scrolloffset + w) {
+            scrolloffset = x + entry->size.x - w;
+        }
+    }
 }

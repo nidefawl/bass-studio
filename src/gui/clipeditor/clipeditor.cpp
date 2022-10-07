@@ -1322,9 +1322,9 @@ void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
 
 bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
     auto daw = dawCtrl->getDaw();
-    auto type = ctxt.type;
+    auto command = ctxt.type;
     auto& kevt = ctxt.kevt;
-    if (focused() && type == CMD_PASTE && daw->getClipboardType() != ClipBoardType::CLIPBOARD_NOTES) {
+    if (focused() && command == CMD_PASTE && daw->getClipboardType() != ClipBoardType::CLIPBOARD_NOTES) {
         // suppress paste of clips by returning true for "is handled"
         return true;
     }
@@ -1341,7 +1341,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
         bool edit                      = false;
         String desc                    = "???";
         if (kevt.type == K_PRESS) {
-            if (type == CMD_SELECT_ALL) {
+            if (command == CMD_SELECT_ALL) {
                 notes.clearSelection();
                 notes.updateBounds();
                 notes.selectIdxRange(0, notes.m_list.size());
@@ -1349,13 +1349,13 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 setSelectionFrame(getMinMaxTime(notes.selection));
                 handled = true;
             }
-            if (type == CMD_DELETE && !notes.selection.empty()) {
+            if (command == CMD_DELETE && !notes.selection.empty()) {
                 notes.deleteSelectedNotes(notes);
                 handled = true;
                 edit    = true;
                 desc    = "Delete notes";
             }
-            if (type == CMD_MUTE && !notes.selection.empty()) {
+            if (command == CMD_MUTE && !notes.selection.empty()) {
                 //        notes.muteToggleSelectedNotes(notes);
                 muteNotesToggle(view.draggedSelection);
                 mergeDraggedNotes(dragmode::drag_notes_move);
@@ -1364,7 +1364,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 handled = true;
                 edit    = true;
                 desc    = "Mute notes";
-            } else if (type == CMD_CUT && !notes.selection.empty()) {
+            } else if (command == CMD_CUT && !notes.selection.empty()) {
                 auto clipboard = std::make_shared<notes_clipboard>();
                 clipboard->cursorRange = cursor.end - cursor.start;
                 clipboard->notes.setTo(notes.selection, -cursor.start);
@@ -1373,14 +1373,14 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 handled = true;
                 edit    = true;
                 desc    = "Cut notes";
-            } else if (type == CMD_COPY && !notes.selection.empty()) {
+            } else if (command == CMD_COPY && !notes.selection.empty()) {
                 auto clipboard = std::make_shared<notes_clipboard>();
                 clipboard->cursorRange = cursor.end - cursor.start;
                 clipboard->notes.setTo(notes.selection, -cursor.start);
                 daw->setNotesClipboard(clipboard);
                 handled = true;
                 desc    = "Copy notes";// never appears in list
-            } else if (type == CMD_DUPLICATE && !notes.selection.empty()) {
+            } else if (command == CMD_DUPLICATE && !notes.selection.empty()) {
                 clip_notes_t tmpClipboard;
 #ifndef NDEBUG
                 for (note_t* selPtr: notes.selection) {
@@ -1410,7 +1410,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 handled = true;
                 edit    = true;
                 desc    = "Duplicate notes";
-            } else if (type == CMD_PASTE && daw->getClipboardType() == ClipBoardType::CLIPBOARD_NOTES && !daw->getNotesClipboard()->empty()) {
+            } else if (command == CMD_PASTE && daw->getClipboardType() == ClipBoardType::CLIPBOARD_NOTES && !daw->getNotesClipboard()->empty()) {
                 auto& clipboard = daw->getNotesClipboard();
                 notes.clearSelection();
                 view.copySelectedNoteList();
@@ -1427,7 +1427,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 handled = true;
                 edit    = true;
                 desc    = "Paste notes";
-            } else if (type == CMD_QUANTIZE && !notes.selection.empty()) {
+            } else if (command == CMD_QUANTIZE && !notes.selection.empty()) {
                 auto& settings = project_controller_t::get()->getQuantizeSettings();
                 if (settings.quantizeStart > 0 || settings.quantizeEnd > 0) {
                     log_lf(Log::L_DEBUG, "quantize to %d %d\n", settings.quantizeStart, settings.quantizeEnd);
@@ -1471,9 +1471,8 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 }
             }
         }
-        if (isArrowKey(kevt.keyCode)) {
-            ivec2 dir;
-            arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
+        if (command == GlobalCommandType::CMD_MOVE_CURSOR) {
+            auto dir = ivec2(ctxt.argInt0, ctxt.argInt1);
             if (dir.y && !notes.selection.empty()) {
                 if ((kevt.mods & KB_MOD_SHIFT)) {
                     dir *= 12;
@@ -1568,6 +1567,14 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
     if (kevt.cmd) {
         auto temp = kevt.cmd->getKeybindContextData(kevt);
         if (handleEditorCommand(temp)) {
+            return true;
+        }
+    }
+    if (isArrowKey(kevt.keyCode)) {
+        ivec2 dir;
+        arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
+        DAW::UI::CommandContext ctxt = {GlobalCommandType::CMD_MOVE_CURSOR, kevt, dir.x, dir.y};
+        if (handleEditorCommand(ctxt)) {
             return true;
         }
     }

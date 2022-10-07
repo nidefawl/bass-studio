@@ -1,4 +1,5 @@
 #pragma once
+#include "event.h"
 #include "str_util.h"
 #include "color_util.h"
 #include "gui/container/container.h"
@@ -21,9 +22,9 @@ enum class action_plugin_ctr {
     PLUGINS_CUT,
     PLUGINS_COPY,
     PLUGINS_PASTE,
-    PLUGINS_DUPLICATE
+    PLUGINS_DUPLICATE,
+    PLUGINS_MOVE_CURSOR,
 };
-bool HandlePluginCtrCommand(DawCtrl* ctrl, action_plugin_ctr action);
 }
 
 // whats that?
@@ -138,34 +139,8 @@ public:
         placeholder.setControl(parentCtrl);
         dragged.setControl(parentCtrl);
     }
-    void makeVisisble(guibase* g) {
-        int w          = getSizeContent().x;
-        int totalWidth = getTotalWidth();
-        if (w < totalWidth) {
-            int x = g->pos.x;
-            if (x < scrolloffset) {
-                scrolloffset = x;
-            } else if (x + g->size.x > scrolloffset + w) {
-                scrolloffset = x + g->size.x - w;
-            }
-        }
-    }
-    void setScrolloffset(int offset) {
-        if (offset < 0) {
-            offset = 0;
-        }
-        int w          = getSizeContent().x;
-        int totalWidth = getTotalWidth();
-        if (w >= totalWidth) {
-            offset = 0;
-        } else if (offset >= totalWidth - w) {
-            offset = totalWidth - w;
-        }
-        this->scrolloffset = offset;
-        if (this->track) {
-            this->track->scrolloffset = offset;
-        }
-    }
+    void makeVisisble(guibase* g);
+    void setScrolloffset(int offset);
     ivec2 toContainerSpace(ivec2 in) const override {
         ivec2 offsetPos = in - getPosContent();
         offsetPos.x += scrolloffset;
@@ -256,6 +231,9 @@ public:
         return vec2((cs.x / (double) csp.x) * sc, cs.y / (double) csp.y);
     }
 
+    guibase* getFocusedContainer() override {
+        return this->ctr_plugins;
+    }
 
     void render(NVGcontext* vg) override;
     void handleDraggedBegin(MouseEvent& evt) override {

@@ -158,6 +158,7 @@ namespace DAW::UI {
         commands.push_back({CMD_SHOW_DEBUG_WINDOW, {"Debug", "Open the debug window", ""}, {}});
         commands.push_back({CMD_OPEN_SECOND_WINDOW, {"Open Second Window", "Open a second window", ""}, {}});
         commands.push_back({CMD_CREATE_VIEW, {"Open View", "Open a new view", ""}, {}});
+        commands.push_back({CMD_MOVE_CURSOR, {"Move cursor", "Move the cursor position", ""}, {}});
 
         auto cmdOpenView = Command{CMD_SWITCH_LAYOUT, {"Switch Layout", "Switch to Layout %d. Hold Shift Key to store", ""}, {}};
         for (int32_t i = 0; i < 10; i++) {
@@ -184,6 +185,7 @@ namespace DAW::UI {
             switch (cmd.type) {
                 case CMD_SET_COLOR:
                 case CMD_SET_NAME:
+                case CMD_MOVE_CURSOR:
                     cmd.contextMatcher.ctxtType = CommandContextType::CMD_CTXT_INTERNAL;
                     cmd.keyCombos.clear();
                     break;

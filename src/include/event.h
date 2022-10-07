@@ -291,6 +291,7 @@ enum GlobalCommandType {
     CMD_STARTSTOP_PLAYBOCK,
     CMD_SET_COLOR,
     CMD_SET_NAME,
+    CMD_MOVE_CURSOR,
     NUM_COMMANDS
 };
 

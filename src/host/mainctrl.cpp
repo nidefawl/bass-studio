@@ -2509,8 +2509,8 @@ bool MainCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
     switch (ctxt.type) {
         case CMD_SWITCH_LAYOUT: {
             if (kevt.type == KeyboardState::K_PRESS) {
-                if ((kevt.mods & KB_MOD_SHIFT) == kevt.mods && ctxt.argInt >= 0 && ctxt.argInt < CtrSize(layouts)) {
-                    auto index = ctxt.argInt % layouts.size();
+                if ((kevt.mods & KB_MOD_SHIFT) == kevt.mods && ctxt.argInt0 >= 0 && ctxt.argInt0 < CtrSize(layouts)) {
+                    auto index = ctxt.argInt0 % layouts.size();
                     bool store    = (kevt.mods & KB_MOD_SHIFT);
                     if (store) {
                         view->storeLayout(layouts[index]);

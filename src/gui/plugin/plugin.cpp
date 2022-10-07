@@ -302,10 +302,6 @@ void guiplugin::handleDraggedBegin(MouseEvent& evt) {
     }
 }
 
-//enum action_plugin_ctr {
-//SELECTALL, DELETE, CUT, COPY, PASTE, DUPLICATE
-//};
-//bool handlePluginCtrCommand(action_plugin_ctr action);
 void guiplugin::handleRightClick(MouseEvent& evt) {
     handleDraggedBegin(evt);
     const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);

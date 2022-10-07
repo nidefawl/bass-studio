@@ -268,7 +268,7 @@ bool guictxtmenu_track_editor::clickedElement(ctxtmenu_entry* e, int _id) {
                 _id -= sel->id;
                 if (_id < COLOR_PALETTE_LEN) {
                     cmd = DAW::UI::CommandContext{GlobalCommandType::CMD_SET_COLOR};
-                    cmd.argInt = colorPalette[_id];
+                    cmd.argInt0 = colorPalette[_id];
                     m_trackentry->parent->handleEditorCommand(cmd);
                 }
             }

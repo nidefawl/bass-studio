@@ -192,6 +192,12 @@ public:
     };
 
     void resetProjectCache() {
+        if (daw_tls::isTlsInitialized()) {
+            auto daw = daw_tls::getTls().dawInstance;
+            if (daw) {
+                dbgassert(daw->getPlayThread()->isLocked());
+            }
+        }
         processingGraph.reset();
         //delayLines.clear();//TODO: this might free a lot of memory and be expensive: profile!
     }
@@ -964,9 +970,9 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
         int64_t timeProcessing = 0;
         int64_t timeResampleOutput = 0;
 
-        auto& processingGraph = impl->processingGraph;
+        auto processingGraph = impl->processingGraph; // we need to make a copy
         for (uint32_t i = 0; i < audioProp.numBlocksInternal; i++) {
-            int32_t samplePosProcess = sample + sampleFormat.blockSize*i;
+            int32_t samplePosProcess = sample + sampleFormat.blockSize*i; //TODO: inspect precision
             double tickPosProcess = posDouble + audioProp.ticksPerBlock*i;
             AudioBufferTimeInfo bufferTimeInfo{ };
             AudioBlock block = resamplerInput->pop(bufferTimeInfo);

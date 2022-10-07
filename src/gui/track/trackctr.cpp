@@ -827,5 +827,13 @@ bool guitrack_mixers::handleKeyInput(KeyEvent& kevt) {
             return true;
         }
     }
+    if (isArrowKey(kevt.keyCode)) {
+        ivec2 dir;
+        arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
+        DAW::UI::CommandContext ctxt = {GlobalCommandType::CMD_MOVE_CURSOR, kevt, dir.x, dir.y};
+        if (handleEditorCommand(ctxt)) {
+            return true;
+        }
+    }
     return false;
 }

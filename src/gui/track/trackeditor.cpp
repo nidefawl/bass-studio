@@ -249,14 +249,14 @@ namespace DAW {
                             desc = "Mute clips";
                             break;
                         case CMD_SET_COLOR:
-                            DAW::VisitIntersecting(iGuiMgr, cursor, [rgb = ctxt.argInt](track_gui_entry_t* trEntry, clip_t* c) {
+                            DAW::VisitIntersecting(iGuiMgr, cursor, [rgb = ctxt.argInt0](track_gui_entry_t* trEntry, clip_t* c) {
                                 c->rgb = rgb;
                                 c->setDirty();
                             });
                             desc = "Set color";
                             break;
                         case CMD_SET_NAME:
-                            DAW::VisitIntersecting(iGuiMgr, cursor, [strName = ctxt.argStr](track_gui_entry_t* trEntry, clip_t* c) {
+                            DAW::VisitIntersecting(iGuiMgr, cursor, [strName = ctxt.argStr0](track_gui_entry_t* trEntry, clip_t* c) {
                                 c->name = strName;
                                 c->setDirty();
                             });
@@ -329,11 +329,10 @@ namespace DAW {
                     modified        = true;
                     desc            = "Paste clips";
                 }
-            } else {
             }
-            if (isArrowKey(kevt.keyCode)) {
-                ivec2 dir;
-                arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
+            
+            if (command == GlobalCommandType::CMD_MOVE_CURSOR) {
+                auto dir = ivec2(ctxt.argInt0, ctxt.argInt1);
                 if (dir.y) {
                     if (isShift(kevt.mods)) {
                         if (cursor.isSubtrackSelection()) {
@@ -406,7 +405,7 @@ bool guitrack_editor::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
         if (ctxt.kevt.type == KeyboardState::K_PRESS) {
             DAW::OpenFloatingTextInput(dawCtrl, dawCtrl->m_mousePos, ivec2(200, 20), "", [trEditor = this](const String& str) {
                 DAW::UI::CommandContext ctxtSetName = {GlobalCommandType::CMD_SET_NAME, {}};
-                ctxtSetName.argStr = str;
+                ctxtSetName.argStr0 = str;
                 trEditor->handleEditorCommand(ctxtSetName);
                 return false;
             });
@@ -443,6 +442,14 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
     if (kevt.cmd) {
         auto temp = kevt.cmd->getKeybindContextData(kevt);
         if (handleEditorCommand(temp)) {
+            return true;
+        }
+    }
+    if (isArrowKey(kevt.keyCode)) {
+        ivec2 dir;
+        arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
+        DAW::UI::CommandContext ctxt = {GlobalCommandType::CMD_MOVE_CURSOR, kevt, dir.x, dir.y};
+        if (handleEditorCommand(ctxt)) {
             return true;
         }
     }
