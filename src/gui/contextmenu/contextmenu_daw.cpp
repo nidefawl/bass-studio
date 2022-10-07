@@ -203,6 +203,7 @@ guictxtmenu_track_editor::guictxtmenu_track_editor(DawCtrl* const _dawCtrl, trac
     if (bHasContentSelected) {
         addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_CONSOLIDATE));
         addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_MUTE));
+        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_BEGIN_RENAME));
     } else {
         addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_CREATE_EMPTY_CLIP));
         entries.back()->setGrayedOut(cursor.getRange() < 2);
@@ -260,17 +261,29 @@ bool guictxtmenu_track_editor::clickedElement(ctxtmenu_entry* e, int _id) {
             grid.grid_dens.isfixed        = false;
         }
         grid.notifyChange();
-    } else if (e == this->sel) {
-        if (_id >= sel->id) {
-            _id -= sel->id;
-            if (_id < COLOR_PALETTE_LEN) {
-                auto temp = DAW::UI::CommandContext{GlobalCommandType::CMD_SET_COLOR};
-                temp.argInt = colorPalette[_id];
-                m_trackentry->parent->handleEditorCommand(temp);
+    } else {
+        if (dawCtrl) {
+            auto cmd = DAW::UI::CommandContext{e->commandtype};
+             if (e == this->sel) {
+                _id -= sel->id;
+                if (_id < COLOR_PALETTE_LEN) {
+                    cmd = DAW::UI::CommandContext{GlobalCommandType::CMD_SET_COLOR};
+                    cmd.argInt = colorPalette[_id];
+                    m_trackentry->parent->handleEditorCommand(cmd);
+                }
+            }
+            if (cmd.type != GlobalCommandType::CMD_NONE) {
+                if (m_trackentry) {
+                    m_trackentry->parent->handleEditorCommand(cmd);
+                    closeContextMenu();
+                    return true;
+                }
+                if (dawCtrl->handleGlobalCommand(cmd)) {
+                    closeContextMenu();
+                    return true;
+                }
             }
         }
-    } else {
-        return guictxtmenu::clickedElement(e, _id);
     }
     dawCtrl->getDaw()->updateVisibleTrackContents();
     closeContextMenu();
