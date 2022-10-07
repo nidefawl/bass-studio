@@ -383,7 +383,7 @@ public:
                 void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiColor::constant_t constant) override {
                     hover();
                     BaseCtrl* const ctrl = table->parentCtrl;
-                    if (theme == nullptr) {
+                    if (theme == nullptr && table->focused()) {
                         ctrl->getTheme()->pingConstant(constant);
                     } else {
                         ctrl->getTheme()->endPing();

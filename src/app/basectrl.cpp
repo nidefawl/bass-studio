@@ -213,6 +213,7 @@ bool BaseCtrl::isCtrOrChildFocused(const guibase* gui) const {
 }
 
 void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) {
+    getTheme()->endPing();
     if (ctxtmenu && !ctxtmenu->isTransient()) {
         return;
     }
