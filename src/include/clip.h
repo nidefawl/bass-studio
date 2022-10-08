@@ -223,6 +223,7 @@ public:
     clip_t() = default;
     ~clip_t() = default;
 #endif
+    clip_t(tick_t time, tick_t len, int32_t clipType = CLIP_MIDI);
     clip_t(const clip_t&);
     void setDirty() {
         this->dirty = true;

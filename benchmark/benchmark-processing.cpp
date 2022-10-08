@@ -116,7 +116,6 @@ public:
 };
 }
 int main(int argc, char** argv) {
-    std::vector<String> args(&argv[0], &argv[argc]);
     setExceptionHandler();
 
     App::Platform::initPlatformEnvironment("daw");

@@ -89,7 +89,11 @@ void audiocache::updateSample(const store_sample_req_t& ssr) {
         }
         for (channelnum_t ch = 0; ch < numChannels; ch++) {
             if (static_cast<samplecount_t>(sample->samples[ch].size()) < sample->nSamples) {
-                sample->samples[ch].resize(131072*(((sample->nSamples)+131072-1)/(131072)));
+                auto newSize = 131072 * (((sample->nSamples) + 131072 - 1) / (131072));
+                dbgassert(newSize >= sample->nSamples);
+                /* resize to fit new samples */
+                /* Note: this is a bit wasteful, but it's better than reallocating every time */
+                sample->samples[ch].resize(newSize);
             }
         }
         for (channelnum_t ch = 0; ch < numChannels; ch++) {
@@ -135,7 +139,7 @@ void audiocache::updateSample(const store_sample_req_t& ssr) {
         log_lf(Log::L_DEBUG, "Downsampling %s took %fsec\n", StringAsCStr(file->path), timeDiffDownsample);
     }
 }
-audiofile_t* audiocache::createSample(create_sample_req_t& ssr) {
+audiofile_t* audiocache::createSample(const create_sample_req_t& ssr) {
     std::unique_ptr<audiosample_t> sample = std::make_unique<audiosample_t>();
 
     sample->bitsPerSample = ssr.format.sampleformat == sampleformat_bits_t::FLOAT_32 ? 32 : 64;

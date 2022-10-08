@@ -1279,7 +1279,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     if (DAW::isPlaybackState(playbackState)) {
         AudioBlock& tmpBlock = AllocateScratchAudioBuffer(tmp, trackImpl->input.channels, trackImpl->input.samples);
         tmpBlock.clear();
-        trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, sampleLatencyCompensated, tmpBlock.samples, tmpBlock.buf);
+        trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, sampleLatencyCompensated, tmpBlock.samples, tmpBlock);
         trackImpl->input.addFromOp(&tmpBlock, AudioBlock::mix_op::ADD, 1.0f);
     }
     track->getStage()->procStats.timeTrackFillAudioClips = tmp.timer.getTime();
@@ -1917,10 +1917,8 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
 
         dbgassert(sample->sampleRate == dstSampleFormat.sampleRate);
         /* positive if in the future, negative if in the past */
-        // samplecount_t clipSampleBegin = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->start()-start, prjGlobals.tempo100, sampleFormat.sampleRate);
         samplecount_t clipSampleBegin = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->start(), prjGlobals.tempo100, dstSampleFormat.sampleRate) - samplePosBegin;
         /* positive if in the future, negative if in the past */
-        // samplecount_t clipSampleEnd   = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->end()-start, prjGlobals.tempo100, sampleFormat.sampleRate);
         samplecount_t clipSampleEnd   = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->end(), prjGlobals.tempo100, dstSampleFormat.sampleRate) - samplePosBegin;
         if (clipSampleBegin >= out.samples) {
             continue;
@@ -1928,16 +1926,20 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
         if (clipSampleEnd <= 0) {
             continue;
         }
+
         auto numSamplesClipBounds = clipSampleEnd - clipSampleBegin;
         auto numSamplesReadableData = sample->nSamples - clipSampleOffset;
-        // dbgassert(numSamplesClipBounds == numSamplesReadableData);
-        samplecount_t numSamplesClip = math::min<samplecount_t>(numSamplesReadableData, numSamplesClipBounds);
 
+        samplecount_t numSamplesClip = math::min<samplecount_t>(numSamplesReadableData, numSamplesClipBounds);
+        auto lastReadableSamplePos = clipSampleBegin + numSamplesClip;
+        if (lastReadableSamplePos < 0) {
+            continue;
+        }
         // 0 if clip starts before samplePosBegin, otherwise clipSampleBegin
         samplecount_t numSamplesOffsetDst = math::max<samplecount_t>(0, clipSampleBegin);
         
         auto numSamplesWritableData = out.samples - numSamplesOffsetDst; 
-        auto readSamples = math::min(numSamplesClip, numSamplesWritableData);
+        auto readSamples = math::min(numSamplesClip, math::min(numSamplesWritableData, lastReadableSamplePos));
         if (readSamples <= 0) {
             dbgassert(0);
             continue;

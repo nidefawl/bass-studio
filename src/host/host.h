@@ -28,7 +28,7 @@
 #include "host/host_pluginmanager.h"
 #include <memory>
 
-
+class audiocache;
 struct AudioBlock;
 namespace DAW::Host {
 class Host;
@@ -176,4 +176,5 @@ public:
 
 namespace DAW::Host {
     void MixWithGainAndPanAutomation(const Host* host, process_scratch_buf_t& tmp, AudioBlock* in, AudioBlock* out, const automated_param_connection_t& autParGain, const automated_param_connection_t& autParPan, double tickBegin, double tickEnd, playback_state state, float MTR_CEIL, float DBFS_MUTE_POS);
+    void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlobals, const std::vector<clip_t*>& clips, const sampleformat_t& dstSampleFormat, samplecount_t samplePosBegin, AudioBlock& out);
 }

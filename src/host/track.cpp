@@ -1,10 +1,12 @@
 #include <algorithm>
 
+#include "audioblock.h"
 #include "automation.h"
 #include "config.h"
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
 #include "host/effect_graph.h"
+#include "host/host.h"
 #include "host/plugin/internal_plugin.h"
 #include "math/seq_math.h"
 #include "exceptions.h"
@@ -945,72 +947,14 @@ void track_impl_t::addAudio(const AudioBlock& src, float fGain) {
     }
 }
 
-void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, const project_globals_t& prjGlobals, samplecount_t samplePosBegin, samplecount_t numSamplesDst, float** dstBuffer) {
+void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, const project_globals_t& prjGlobals, samplecount_t samplePosBegin, samplecount_t numSamplesDst, AudioBlock& outBuffer) {
+    //TODO: make audiocache a track_impl_t constructor parameter
+    auto cache = audiocache::getInstance();
     tick_t audioBegin = math::max(start, loopStart);
     tick_t audioEnd   = loopEnd < 0 ? end : math::min(end, loopEnd);
-    std::vector<clip_t*> clips;
+    std::vector<clip_t*> clips; //TODO get rid of temporary vector
     track->getMidi().getClipsInRange(audioBegin, audioEnd, clips);
-    auto cache = audiocache::getInstance();
-    auto bpm100 = prjGlobals.tempo100;
-    for (clip_t* clip : clips) {
-        /* fixed readoffset into backing sample */
-        samplecount_t clipSampleOffset = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->offsetStart, bpm100, sampleFormat.sampleRate);
-
-        /* positive if in the future, negative if in the past */
-        // samplecount_t clipSampleBegin = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->start()-start, bpm100, sampleFormat.sampleRate);
-        samplecount_t clipSampleBegin = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->start(), bpm100, sampleFormat.sampleRate) - samplePosBegin;
-        /* positive if in the future, negative if in the past */
-        // samplecount_t clipSampleEnd   = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->end()-start, bpm100, sampleFormat.sampleRate);
-        samplecount_t clipSampleEnd   = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->end(), bpm100, sampleFormat.sampleRate) - samplePosBegin;
-        if (clipSampleBegin >= numSamplesDst) {
-            continue;
-        }
-        if (clipSampleEnd <= 0) {
-            continue;
-        }
-        audiofile_t* audio = cache->get(clip->audio.id);
-        if (audio) {
-            audiosample_t* sample = audio->sample.get();
-            if (sample->samples.empty())
-                continue;
-            auto numSamplesClipBounds = clipSampleEnd - clipSampleBegin;
-            auto numSamplesReadableData = math::min<samplecount_t>(samplecount_t(sample->samples.front().size()), sample->nSamples) - clipSampleOffset;
-            samplecount_t numSamplesClip = math::min<samplecount_t>(numSamplesReadableData, numSamplesClipBounds);
-            samplecount_t numSamplesOffsetDst = math::max<samplecount_t>(0, clipSampleBegin);
-            auto readSamples = math::min(numSamplesClip, numSamplesDst - numSamplesOffsetDst);
-            if (readSamples <= 0) {
-                dbgassert(0);
-                continue;
-            }
-            for (channelnum_t ch = 0; ch < this->input.channels; ++ch) {
-                float* dst      = dstBuffer[ch];
-                auto& srcVector = ch >= sample->samples.size() ? sample->samples[sample->samples.size() - 1] : sample->samples[ch];
-                dbgassert(sample->nSamples <= samplecount_t(srcVector.size()));
-                samplecount_t s = 0;
-                for (; s < readSamples; ++s) {
-                    auto dstOffset = numSamplesOffsetDst + s;
-                    if (dstOffset < 0) {
-                        // s += -dstOffset - 1;
-                        dbgassert(0);
-                        continue;
-                    }
-                    if (dstOffset >= numSamplesDst) {
-                        dbgassert(0);
-                        break;
-                    }
-                    auto srcOffset = clipSampleOffset + s - clipSampleBegin;
-                    if (srcOffset < 0) {
-                        s += -srcOffset - 1;
-                        continue;
-                    }
-                    if (srcOffset >= sample->nSamples) {
-                        break;
-                    }
-                    dst[dstOffset] = srcVector[srcOffset];
-                }
-            }
-        }
-    }
+    DAW::Host::FillAudioBlockFromClips(cache, prjGlobals, clips, sampleFormat, samplePosBegin, outBuffer);
 }
 
 void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {

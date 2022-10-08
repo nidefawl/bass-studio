@@ -41,10 +41,11 @@ struct store_sample_req_t {
     std::vector<samplechannel_t> channels;
 };
 struct create_sample_req_t {
-    int32_t id;
-    sampleformat_t format;
-    channelnum_t numChannels;
-    String path;
+    sampleformat_t format{};
+    channelnum_t numChannels = 0;
+    bool isTemporarySample = false;
+    String path = "";
+    int32_t id = -1;
 };
 class audiocache {
     samplerate_t samplerate = 0;
@@ -64,7 +65,7 @@ public:
     void getLoaded(std::vector<audiofile_t*>& v);
     audiofile_t* loadFile(const String& s, int32_t id = -1);
     void updateSample(const store_sample_req_t& ssr);
-    audiofile_t* createSample(create_sample_req_t& ssr);
+    audiofile_t* createSample(const create_sample_req_t& ssr);
     void setSamplerate(samplerate_t samplerate);
     void unloadSampleId(int32_t id);
     audiofile_t* get(int32_t i);

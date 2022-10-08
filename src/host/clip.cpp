@@ -54,6 +54,15 @@ clip_t::clip_t(const clip_t& a) {
 }
 #endif
 
+clip_t::clip_t(tick_t time, tick_t len, int32_t clipType) {
+#ifdef TRACK_ALLOCATIONS_CLIP_T
+    allocId = DebugAlloc::getTracker<clip_t>()->objConstructor(this);
+#endif
+    this->time = time;
+    this->len = len;
+    this->clipType = clipType;
+}
+
 
 note_t& clip_notes_t::addSingle(note_t& t) {
     dbgassert(selection.empty());
