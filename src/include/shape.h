@@ -39,6 +39,9 @@ struct shape_t : public shape_base_t {
         }
         return t;
     }
+        if (diffX < 0.00001f) {
+            return pt1.pos.y;
+        }
     float sampleCurve(float posX, bool sampleLeftRight) const {
         dbgassert(!pts.empty());
         if (pts.empty())
@@ -75,7 +78,7 @@ struct shape_t : public shape_base_t {
         }
         float diffX = math::abs(pt1.pos.x - pt0.pos.x);
         if (diffX < 0.00001f) {
-            return pt0.pos.y;
+            return pt1.pos.y;
         }
         float t = (pX - pt0.pos.x) / (pt1.pos.x - pt0.pos.x);
         t = shapeSegment(t, pt0.shape);
