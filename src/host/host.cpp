@@ -1879,6 +1879,9 @@ void Host::destroy() {
 void Host::setTls(daw_tls::tlsinstance& tls) {
     PluginManager::setTls(tls);
     this->impl->tls = tls;
+    if (tls.dawInstance) {
+        this->prjGlobals = tls.dawInstance->getGlobals();
+    }
 }
 
 bool Host::writeRecordedData(project_controller_t* ctrl) {
@@ -1896,6 +1899,77 @@ int32_t Host::getPlayThreadId()
     return impl->playThreadId;
 }
 
+void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlobals, const std::vector<clip_t*>& clips, const sampleformat_t& dstSampleFormat, samplecount_t samplePosBegin, AudioBlock& out) {
+
+    for (clip_t* clip : clips) {
+        audiofile_t* audio = cache->get(clip->audio.id);
+        if (!audio)
+            continue;
+        audiosample_t* sample = audio->sample.get();
+        if (sample->samples.empty())
+            continue;
+        if (!assert_expr(sample->samples.size() == sample->nChannels))
+            continue;
+        if (!assert_expr(samplecount_t(sample->samples[0].size()) >= sample->nSamples))
+            continue;
+        /* fixed readoffset into backing sample */
+        samplecount_t clipSampleOffset = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->offsetStart, prjGlobals.tempo100, sample->sampleRate);
+
+        dbgassert(sample->sampleRate == dstSampleFormat.sampleRate);
+        /* positive if in the future, negative if in the past */
+        // samplecount_t clipSampleBegin = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->start()-start, prjGlobals.tempo100, sampleFormat.sampleRate);
+        samplecount_t clipSampleBegin = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->start(), prjGlobals.tempo100, dstSampleFormat.sampleRate) - samplePosBegin;
+        /* positive if in the future, negative if in the past */
+        // samplecount_t clipSampleEnd   = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->end()-start, prjGlobals.tempo100, sampleFormat.sampleRate);
+        samplecount_t clipSampleEnd   = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->end(), prjGlobals.tempo100, dstSampleFormat.sampleRate) - samplePosBegin;
+        if (clipSampleBegin >= out.samples) {
+            continue;
+        }
+        if (clipSampleEnd <= 0) {
+            continue;
+        }
+        auto numSamplesClipBounds = clipSampleEnd - clipSampleBegin;
+        auto numSamplesReadableData = sample->nSamples - clipSampleOffset;
+        // dbgassert(numSamplesClipBounds == numSamplesReadableData);
+        samplecount_t numSamplesClip = math::min<samplecount_t>(numSamplesReadableData, numSamplesClipBounds);
+
+        // 0 if clip starts before samplePosBegin, otherwise clipSampleBegin
+        samplecount_t numSamplesOffsetDst = math::max<samplecount_t>(0, clipSampleBegin);
+        
+        auto numSamplesWritableData = out.samples - numSamplesOffsetDst; 
+        auto readSamples = math::min(numSamplesClip, numSamplesWritableData);
+        if (readSamples <= 0) {
+            dbgassert(0);
+            continue;
+        }
+        if (clipSampleOffset - clipSampleBegin + readSamples < 0) {
+            continue;
+        }
+
+        channelnum_t numChannels = math::max(sample->nChannels, out.channels);
+        for (channelnum_t ch = 0; ch < numChannels; ++ch) {
+            auto* dst = (ch >= out.channels) ? out.buf[out.channels - 1] : out.buf[ch];
+            auto& srcVec = ch >= sample->samples.size() ? sample->samples[sample->samples.size() - 1] : sample->samples[ch];
+            dbgassert(sample->nSamples <= samplecount_t(srcVec.size()));
+            auto* src = srcVec.data();
+            samplecount_t s = -math::min(0L, clipSampleOffset - clipSampleBegin);
+            for (; s < readSamples; ++s) {
+                auto dstOffset = numSamplesOffsetDst + s;
+                dbgassert(dstOffset >= 0 && dstOffset < out.samples);
+                if (dstOffset >= out.samples) {
+                    dbgassert(0);
+                    break;
+                }
+                auto srcOffset = clipSampleOffset + s - clipSampleBegin;
+                dbgassert(srcOffset >= 0 && srcOffset <= sample->nSamples);
+                if (srcOffset >= sample->nSamples) {
+                    break;
+                }
+                dst[dstOffset] = src[srcOffset];
+            }
+        }
+    }
+}
 } // namespace DAW::Host
 
 namespace DAW {

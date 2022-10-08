@@ -84,7 +84,7 @@ public:
     sampleformat_t m_sampleFormatInternal = { 44100, 512, sampleformat_bits_t::NONE };
     sampleformat_t m_sampleFormatExternal = { 44100, 512, sampleformat_bits_t::NONE };
 
-
+    /* gets updated by caller (PlayThread) before processing */
     project_globals_t prjGlobals;
 
 
