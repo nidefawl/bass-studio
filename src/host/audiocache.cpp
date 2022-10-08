@@ -89,8 +89,10 @@ void audiocache::updateSample(const store_sample_req_t& ssr) {
         }
         for (channelnum_t ch = 0; ch < numChannels; ch++) {
             if (static_cast<samplecount_t>(sample->samples[ch].size()) < sample->nSamples) {
-                auto newSize = 131072 * (((sample->nSamples) + 131072 - 1) / (131072));
-                dbgassert(newSize >= sample->nSamples);
+                samplecount_t newSize = sample->nSamples;
+                if (ssr.preAllocate) {
+                    newSize = static_cast<samplecount_t>(ssr.preAllocate * (((newSize) + ssr.preAllocate - 1) / (ssr.preAllocate)));
+                }
                 /* resize to fit new samples */
                 /* Note: this is a bit wasteful, but it's better than reallocating every time */
                 sample->samples[ch].resize(newSize);
@@ -146,6 +148,12 @@ audiofile_t* audiocache::createSample(const create_sample_req_t& ssr) {
     sample->nChannels     = math::clamp<size_t>(ssr.numChannels, 0, 255);
     sample->sampleRate    = ssr.format.sampleRate;
     sample->nSamples      = 0;
+    if (ssr.preAllocate) {
+        sample->samples.resize(sample->nChannels);
+        for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
+            sample->samples[ch].resize(ssr.preAllocate);
+        }
+    }
     log_printf("createSample %s...\n", StringAsCStr(ssr.path));
     log_lf(Log::L_DEBUG, "channels: %u\n", sample->nChannels);
     log_lf(Log::L_DEBUG, "sampleRate: %u\n", sample->sampleRate);

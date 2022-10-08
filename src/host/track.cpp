@@ -1672,6 +1672,7 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                         ssr.format      = trImpl->sampleFormat;
                         ssr.id          = -1;
                         ssr.numChannels = trImpl->input.channels;
+                        ssr.preAllocate = 1024L*64;
                         auto [fPath, fName] = daw->createUniqueNonExistingFilename("recorded", trImpl->track ? trImpl->track->name : "", "Recorded", "wav");
                         ssr.path = fPath;
                         // createSample is not thread safe, we might be doing a lookup from waveformrenderer
@@ -1696,6 +1697,7 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                             dbgassert(nSamplesRead <= ssr.length);
                             if (nSamplesRead > 0) {
                                 ssr.length = nSamplesRead;
+                                ssr.preAllocate = 1024L*64;
                                 cache->updateSample(ssr);
                                 samplesWritten += samplesRecorded;
                                 samplesRecorded = 0;

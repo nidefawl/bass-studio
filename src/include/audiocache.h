@@ -38,6 +38,7 @@ struct store_sample_req_t {
     sampleformat_t format{};
     samplecount_t offset = 0;
     samplecount_t length = 0;
+    samplecount_t preAllocate = 0;
     std::vector<samplechannel_t> channels;
 };
 struct create_sample_req_t {
@@ -46,6 +47,7 @@ struct create_sample_req_t {
     bool isTemporarySample = false;
     String path = "";
     int32_t id = -1;
+    samplecount_t preAllocate = 0;
 };
 class audiocache {
     samplerate_t samplerate = 0;
