@@ -1,5 +1,6 @@
 #include "TestBase.hpp"
 #include <vector>
+#include "clipboard.h"
 #include "seq_time.h"
 #include "clip.h"
 #include "../host/mainctrl.h"
@@ -672,7 +673,7 @@ namespace {
         clipInstance.time = 0;
         clipInstance.len  = TICKS_BAR * 4;
         clip_t* clip      = &clipInstance;
-        clip_view view;
+        clip_notes_t clipNotes;
 
         int32_t cursorPos = 64;
 
@@ -694,7 +695,7 @@ namespace {
         //cut, shift cursor by 64 ticks, paste, repeat
         for (int i = 0; i < 100; i++) {
             //cut notes = ctrl+x
-            view.clipboard.setTo(clip->notes.selection, -cursorPos);
+            clipNotes.setTo(clip->notes.selection, -cursorPos);
             clip->notes.deleteSelectedNotes(clip->notes);
 
             TEST_ASSERT_THROW(clip->notes.get(tickL, pitch) == NULL);
@@ -709,7 +710,7 @@ namespace {
             clip->notes.selection.clear();
             tick_t pastCursorOffset = cursorPos;
             size_t pos              = clip->notes.m_list.size();
-            for (note_t clipboardNote : view.clipboard.m_list) {//not using reference here, copy while iterating
+            for (note_t clipboardNote : clipNotes.m_list) {//not using reference here, copy while iterating
                 clipboardNote.time += pastCursorOffset;
                 clip->notes.add(clipboardNote);
             }
