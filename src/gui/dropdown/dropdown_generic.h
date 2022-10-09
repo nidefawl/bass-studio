@@ -85,7 +85,11 @@ public:
         this->paddingV = 0;
         int32_t idx    = 0;
         for (auto& str : options) {
-            addEntry(new ctxtmenu_entry(str, idx));
+            if (str == "-") {
+                addEntry(new ctxtmenu_splitter());
+            } else {
+                addEntry(new ctxtmenu_entry(str, idx));
+            }
             idx++;
         }
     }

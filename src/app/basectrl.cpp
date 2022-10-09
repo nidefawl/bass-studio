@@ -818,7 +818,8 @@ void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i
             auto& ctrEntries = layoutCtr->getEntries();
             dbgassert(area->dockPosOffset >= 0 && area->dockPosOffset <= CtrSize(ctrEntries));
             auto entryToReplace            = ctrEntries[math::min<int32_t>(CtrSize(ctrEntries) - 1, area->dockPosOffset)];
-            auto oldEntryThatIsNowTabEntry = layoutCtr->replaceContainerWith(entryToReplace->getGui(), newContainer);
+            auto ctrEntry = createGuiCtrLayoutEntry(newContainer);
+            auto oldEntryThatIsNowTabEntry = layoutCtr->replaceContainerWith(entryToReplace->getGui(), ctrEntry);
 
             newContainer->placeContainer(ctrContent, area);
             newContainer->placeContainer(oldEntryThatIsNowTabEntry, area);
@@ -856,7 +857,8 @@ void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i
                 }
 
             } else {
-                auto layoutCtrEntry = parentLayoutCtr->replaceContainerWith(containerToReplace, newContainer);
+                auto ctrEntry = createGuiCtrLayoutEntry(newContainer);
+                auto layoutCtrEntry = parentLayoutCtr->replaceContainerWith(containerToReplace, ctrEntry);
 
                 newContainer->placeContainer(ctrContent, area);
                 area->dockPos = newDockPos;

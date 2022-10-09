@@ -1,8 +1,12 @@
 #include "container_dnd_layout.h"
 #include "basectrl.h"
+#include "event.h"
+#include "gui/container/container.h"
+#include "gui/contextmenu/contextmenu.h"
 #include "gui/gui.h"
 #include "host/mainctrl.h"
 #include "gui/container/container_layout_types.h"
+#include "gui/dropdown/dropdown_generic.h"
 #include "logging.h"
 #include "platform.h"
 #include "fileio.h"
@@ -41,6 +45,7 @@ public:
     }
 };
 class guictr_layout_entry_handle : public guictr_base {
+    friend class guictr_layout_entry_handle_context_menu;
     guictr_layout_entry_handle_button btnClose;
     guictr_layout_entry* const parentCtr;
     guictr_base* const ctr;
@@ -96,6 +101,7 @@ public:
         return state;
     }
     void render(NVGcontext* vg) override;
+    void handleRightClick(MouseEvent& evt) override;
 };
 
 
@@ -184,7 +190,7 @@ i_ctr_drop_area* guictr_layout::makeDropArea(int32_t idx) {
     vec[idx]->dockPosOffset       = -1;
     return vec[idx].get();
 }
-void guictr_layout::getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<i_ctr_drop_area>>& vecHandles) {
+void guictr_layout::getOverlays(MouseEvent&, std::vector<std::weak_ptr<i_ctr_drop_area>>& vecHandles) {
     if (this->entries.empty()) {
         setOverlayPos(makeDropArea(0), dock_pos::CENTER, ivec2(0), size, -1, -1);
         if (parent == nullptr) {
@@ -382,6 +388,57 @@ void guictr_layout_entry_handle::handleDraggedBegin(MouseEvent& evt) {
     if (!hasClicked) {
         hasClicked = true;
         parent->buttonClicked(this);
+    }
+}
+
+class guictr_layout_entry_handle_context_menu : public guictxtmenu {
+    guictr_layout_entry_handle* const ctrHandle;
+public:
+    explicit guictr_layout_entry_handle_context_menu(guictr_layout_entry_handle* _parent) : ctrHandle(_parent) {
+        this->size.x   = 120;
+        maxHeight = 0;
+        this->fontSize = FONT_SIZE_CTXT_SMALL;
+        this->paddingV = 0;
+        std::vector<String> options;
+        std::map<gui_type, ContainerBuilder>& fac = getContainerFactory();
+        for (auto& f: fac) {
+            if (f.first != ctrHandle->parentCtr->getType()
+                && f.first != gui_type::CTR_TYPE_LAYOUT) {
+                String label;
+                getContainerLabel(f.first, label);
+                addEntry(new ctxtmenu_entry(label, f.first + 100));
+            }
+        }
+        addEntry(new ctxtmenu_splitter());
+        addEntry(new ctxtmenu_entry("Close", 0));
+    }
+    bool clickedElement(ctxtmenu_entry* e, int _id) override {
+        if (_id >= 100) {
+            // std::shared_ptr<guictr_layout_entry> pCtr;
+            // ctrHandle->parentCtr->getContainerRef(pCtr, true);
+            auto ctrl = ctrHandle->parentCtrl;
+            gui_type type = static_cast<gui_type>(_id - 100);
+            std::shared_ptr<guictr_base> ctr;
+            auto context = ContainerInstanceContext{ctrHandle->dawCtrl->getDaw()};
+            if (makeContainer(context, type, ctr)) {
+                ctr->setLabel(e->title);
+                std::shared_ptr<guictr_layout_entry> ctrEntry = createGuiCtrLayoutEntry(ctr);
+                auto& layoutCtr = ctrHandle->parentCtr->parentLayoutContainer;
+                layoutCtr->replaceContainerWith(ctrHandle->ctr, ctrEntry);
+                ctrl->relayout();
+            }
+            closeContextMenu();
+        } else if (_id == 0) {
+            ctrHandle->buttonClicked(&ctrHandle->btnClose);
+            closeContextMenu();
+        }
+        return true;
+    }
+};
+
+void guictr_layout_entry_handle::handleRightClick(MouseEvent& evt) {
+    if (!hasDragged) {
+        parentCtrl->openContextMenu(new guictr_layout_entry_handle_context_menu(this), evt.mousepos);
     }
 }
 void guictr_layout_entry_handle::handleDraggedMove(MouseEvent& evt) {
@@ -778,8 +835,9 @@ void guictr_layout::render(NVGcontext* vg) {
         }
     }
 }
+// std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(newContainer);
 std::shared_ptr<guictr_layout_entry> guictr_layout::replaceContainerWith(guictr_base* ctr,
-                                                                         std::shared_ptr<guictr_layout> newContainer) {
+                                                                         std::shared_ptr<guictr_layout_entry>& newEntry) {
     std::shared_ptr<guictr_layout> retCtr;
     auto it = std::find_if(entries.begin(), entries.end(), [ctr](std::shared_ptr<guictr_layout_entry>& e) {
         return e->getGui() == ctr;
@@ -801,20 +859,19 @@ std::shared_ptr<guictr_layout_entry> guictr_layout::replaceContainerWith(guictr_
     int32_t posOffset = it - entries.begin();
     entries.erase(it);
 
-    std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(newContainer);
     auto insertPos                              = entries.begin() + posOffset;
 
-    entries.insert(insertPos, entry1);
-    auto guiCtr       = entry1->getGui();
-    entry1->hasHandle = dynamic_cast<guictr_layout*>(guiCtr) == nullptr || this->ctrLayout == container_layout::TABBED;
+    entries.insert(insertPos, newEntry);
+    auto guiCtr       = newEntry->getGui();
+    newEntry->hasHandle = dynamic_cast<guictr_layout*>(guiCtr) == nullptr || this->ctrLayout == container_layout::TABBED;
     guictr_base::add(guiCtr);
     //guiCtr->snapSides = ivec4(1);
-    guiHandle = entry1->getHandle();
-    if (guiHandle && entry1->hasHandle) {
+    guiHandle = newEntry->getHandle();
+    if (guiHandle && newEntry->hasHandle) {
         guictr_base::add(guiHandle);
         handles.push_back(guiHandle);
     }
-    entry1->parentLayoutContainer = this;
+    newEntry->parentLayoutContainer = this;
     updateSplitters();
     return entry;
 }

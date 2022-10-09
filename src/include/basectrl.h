@@ -91,7 +91,7 @@ struct guictr_layout_entry {
     const layout_ctr_type frameType;
     ivec2 pos{0};
     ivec2 size{0};
-    std::shared_ptr<guictr_base> ctr; /* non-owning */ // TODO: make this owning, unique ptr
+    std::shared_ptr<guictr_base> ctr;
     guictr_layout_entry_handle* ctrHandle;
     String label;
     bool hasHandle = true;
@@ -113,8 +113,9 @@ public:
     virtual void getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<i_ctr_drop_area>>& handles)                = 0;
     virtual bool placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_ctr_drop_area* area)                   = 0;
     virtual bool getContainerRef(guictr_layout_entry* ctr, std::shared_ptr<guictr_layout_entry>& out, bool remove) = 0;
-    virtual container_layout getLayout() const                                                                     = 0;
-    virtual void postContentChanged()                                                                              = 0;
+    virtual std::shared_ptr<guictr_layout_entry> replaceContainerWith(guictr_base* ctr, std::shared_ptr<guictr_layout_entry>& newEntry) = 0;
+    virtual container_layout getLayout() const = 0;
+    virtual void postContentChanged() = 0;
 };
 
 inline container_layout dock_pos_to_container_layout(dock_pos pos) {
