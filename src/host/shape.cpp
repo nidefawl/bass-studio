@@ -1,5 +1,6 @@
 #include "shape.h"
 #include "assert_dbg.h"
+#include <cstdint>
 #include <glm/geometric.hpp>
 #include <vector>
 #include "logging.h"
@@ -31,24 +32,27 @@ namespace DAW::Shape {
         }
         int32_t idx = -1;
         if (minX >= 0.0f) {
-            for (size_t i = 0; i < pts.size()-1; ++i) {
+            auto numPtsMin1 = CtrSize(pts) - 1;
+            if (flags & SHAPE_CYCLIC && minX < 0.5f) {
+                auto lastPt = pts.back();
+                lastPt.pos.x -= 1.0f;
+                if (lastPt.pos.x <= minX && pts.front().pos.x >= minX) {
+                    idx = numPtsMin1;
+                }
+            }
+            for (int32_t i = 0; idx < 0 &&  i < numPtsMin1; ++i) {
                 if (pts[i].pos.x <= minX && pts[i+1].pos.x >= minX) {
-                    idx = (int32_t)i;
-                    break;
+                    idx = i;
+                }
+            }
+            if ((flags & SHAPE_CYCLIC) && idx < 0 && minX > 0.5f) {
+                auto firstPt = pts.front();
+                firstPt.pos.x += 1.0f;
+                if (pts.back().pos.x <= minX && firstPt.pos.x >= minX) {
+                    idx = numPtsMin1;
                 }
             }
         }
-        // auto firstPt = pts[0].pos;
-        // if (pos.x > firstPt.x) {
-        //     firstPt.x += 1;
-        // }
-        // auto dist = minDist;
-        // if (pos.x > pts.back().pos.x) dist = math::distancePointLine(pos*scale, pts.back().pos*scale, (firstPt + vec2(1.0, 0.0))*scale);
-        // if (pos.x < pts.front().pos.x) dist = math::distancePointLine(pos*scale, (pts.back().pos - vec2(1.0, 0.0))*scale, firstPt*scale);
-        // if (minDist < 0 || dist < minDist) {
-        //     minDist = dist;
-        //     idx = static_cast<int32_t>(pts.size()) - 1;
-        // }
         if (idx > -1) {
             if (fDist) {
                 *fDist = minDist;
