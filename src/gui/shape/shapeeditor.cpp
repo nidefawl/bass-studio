@@ -813,21 +813,21 @@ void ShapeEdit::renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, 
         DrawShapeOneShot(*curveRender, vg, theme, GuiColor::COL_SHAPE_CURVE, GuiColor::COL_SHAPE_CURVE_HIGHLIGHT, pos, editorSize, mouseLocal, higlightHit);
     }
 
-    // if (curveRender->renderPhase > -1.0f) {
-    //     float playBackX = curveRender->renderPhase * editorSize.x;
-    //     nvgBeginPath(vg);
-    //     nvgMoveTo(vg, playBackX, 0);
-    //     nvgLineTo(vg, playBackX, editorSize.y);
-    //     nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD_OUTLINE));
-    //     nvgStrokeWidth(vg, 2);
-    //     nvgStroke(vg);
-    //     nvgBeginPath(vg);
-    //     nvgMoveTo(vg, playBackX, 0);
-    //     nvgLineTo(vg, playBackX, editorSize.y);
-    //     nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD));
-    //     nvgStrokeWidth(vg, 1);
-    //     nvgStroke(vg);
-    // }
+    if (curveRender->renderPhase > -1.0f) {
+        float playBackX = curveRender->renderPhase * editorSize.x;
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, playBackX, 0);
+        nvgLineTo(vg, playBackX, editorSize.y);
+        nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD_OUTLINE));
+        nvgStrokeWidth(vg, 2);
+        nvgStroke(vg);
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, playBackX, 0);
+        nvgLineTo(vg, playBackX, editorSize.y);
+        nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD));
+        nvgStrokeWidth(vg, 1);
+        nvgStroke(vg);
+    }
     nvgRestore(vg);
 }
 
