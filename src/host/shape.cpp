@@ -46,7 +46,7 @@ namespace DAW::Shape {
                 float x0 = pts[i].pos.x;
                 float x1 = pts[i + 1].pos.x;
                 float dx = x1 - x0;
-                if (dx * scale.x < 3.0f) {
+                if (dx * scale.x < 24.0f) {
                     float dist = math::distancePointLine(pos * scale, pts[i+1].pos * scale, pts[i].pos * scale);
                     if (dist < minDist) {
                         minDist = dist;
