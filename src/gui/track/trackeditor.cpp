@@ -849,12 +849,31 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
             ThreadLock lock        = daw->lockPlayThread();
             track_t* trackPtr      = gui->m_track;
             trackdata_midi_t& midi = trackPtr->getMidi();
-            midi.deleteEmptyClips(daw);
+            auto clips = midi.getClips();
+            auto it = clips.begin();
+            int32_t nRemoved = 0;
+            while (it != clips.end()) {
+                clip_t* c = *it;
+                if (c->getLen() <= 0) {
+                    it = clips.erase(it);
+                    releaseClipResources(c, daw);
+                    auto& clipLayouts = dragStartLayout.clips;
+                    clipLayouts.erase(std::remove_if(clipLayouts.begin(), clipLayouts.end(), [c](auto const& l) {
+                        return l.clip == c;
+                    }), clipLayouts.end());
+                    delete c;
+                    nRemoved++;
+                } else {
+                    it++;
+                }
+            }
+            if (nRemoved) {
+                midi.sortClips();
+            }
             if (!midi.hasClip(clipPtr)) {
                 gui      = nullptr;
                 showclip = false;
             }
-
             if (dragStartLayout.diff(trackPtr)) {
                 auto* track_action = new action_modify_track("Resize clips", m_resizePreModifyState.copy());
                 daw->pushHist(track_action);
