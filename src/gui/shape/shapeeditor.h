@@ -62,7 +62,7 @@ public:
     void onBeginDragCurveEditor(MouseEvent& evt);
     void onMoveDragCurveEditor(MouseEvent& evt);
     void onReleaseDragCurveEditor(MouseEvent& evt);
-    void onRightClickCurveEditor(MouseEvent& evt);
+    bool onRightClickCurveEditor(MouseEvent& evt);
     void renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, ivec2 relMousepos, bool bDrawGrid);
     void layoutEditor(ivec2 size);
 };

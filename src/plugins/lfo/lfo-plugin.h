@@ -13,7 +13,7 @@ struct ui_layout_t {
 };
 struct impl_channel_snapshot_t {
     DAW::Shape::shape_snapshot_t shape;
-    bool bSync = false;
+    int32_t syncFlags = false;
 };
 struct snapshot_t {
     int32_t version = 0;
@@ -40,5 +40,7 @@ public:
     void getUiSnapshot(snapshot_t& snapshot);
     void setUiSnapshot(snapshot_t& snapshot);
     DAW::Shape::shape_t& getShape(int idx);
+    int32_t getSyncRatio(int chIdx) const;
+    void setSyncRatio(int chIdx, int32_t ratio);
 };
 }

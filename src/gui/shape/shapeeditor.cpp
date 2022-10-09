@@ -427,11 +427,10 @@ public:
     }
 
     void handleRightClick(MouseEvent& evt) override {
-        onRightClickCurveEditor(evt);
-    }
-
-    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-        return guictr_base::mouseHitTest(mpos, evt);
+        if (onRightClickCurveEditor(evt)) {
+            return;
+        }
+        guictr_base::handleRightClick(evt);
     }
 
     void handleDraggedBegin(MouseEvent& evt) override {
@@ -471,10 +470,10 @@ public:
         removeGuis();
     }
     void buttonClicked(guibase* button) override {
-        parent->buttonClicked(button);
         if (&buttonGrid == button) {
             buttonGrid.setText(axes[axis] + " Grid: " + String(buttonGrid.getState() ? "On" : "Off"));
         }
+        guictr_base::buttonClicked(button);
     }
 };
 class guictr_curve_controls : public guictr_base {
@@ -504,9 +503,6 @@ public:
     }
     ~guictr_curve_controls() {
         removeGuis();
-    }
-    void buttonClicked(guibase* button) override {
-        parent->buttonClicked(button);
     }
     void layout() override {
         guictr_base::layout();
@@ -596,9 +592,11 @@ public:
     void buttonClicked(guibase* button) override {
         if (&controls.gridControlH.buttonGrid == button) {
             shape.bIsGridEnabledH = !shape.bIsGridEnabledH;
+            return;
         }
         if (&controls.gridControlV.buttonGrid == button) {
             shape.bIsGridEnabledV = !shape.bIsGridEnabledV;
+            return;
         }
         if (&controls.buttonSave == button) {
             shape_preset_t shapePreset { 1, shape_base_t{shape.curve->pts, shape.curve->name, shape.curve->renderPhase, shape.curve->flags} };
@@ -617,7 +615,9 @@ public:
                 controls.selectPreset.setString(name);
                 saveShapePresetFile(shapePreset, path);
             }
+            return;
         }
+        guictr_base::buttonClicked(button);
     }
 };
 
@@ -773,7 +773,7 @@ void ShapeEdit::onReleaseDragCurveEditor(MouseEvent& evt) {
     }
 }
 
-void ShapeEdit::onRightClickCurveEditor(MouseEvent& evt) {
+bool ShapeEdit::onRightClickCurveEditor(MouseEvent& evt) {
     if (hasControlHandles() && curve && !(curve->flags & SHAPE_LOCK_POINTS)) {
         vec2 local    = toNormalizedSpace(evt.relMousepos);
         float minDist = 0.0f;
@@ -781,9 +781,10 @@ void ShapeEdit::onRightClickCurveEditor(MouseEvent& evt) {
         if (minPt > -1) {
             curve->pts.erase(curve->pts.begin() + minPt);
             curve->sort();
-            return;
+            return true;
         }
     }
+    return false;
 }
 
 void ShapeEdit::renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, ivec2 relMousepos, bool bDrawGrid) {

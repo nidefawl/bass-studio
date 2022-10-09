@@ -1,6 +1,7 @@
 #include "lfo-plugin.h"
 #include "assert_dbg.h"
 #include "automation.h"
+#include "event.h"
 #include "file/shapefile.h"
 #include "gui/automation/modulation.h"
 #include "gui/container/container.h"
@@ -35,7 +36,7 @@
 
 namespace PluginLFO {
     constexpr int32_t NUM_CHANNELS = 12;
-    constexpr int32_t BINARY_SNAPSHOT_VERSION = 2;
+    constexpr int32_t BINARY_SNAPSHOT_VERSION = 3;
     constexpr int32_t PARAM_LFO_RATE = 16;
     constexpr int32_t PARAM_LFO_PHASE = 17;
     constexpr int32_t PARAM_LFO_MINIMUM = 18;
@@ -55,46 +56,46 @@ namespace PluginLFO {
         String text;
     };
     enum NoteRatio : uint8_t {
-        NORMAL = 1,
+        STRAIGHT = 1,
         DOTTED = 2,
         TRIPLET = 4,
     };
-    std::vector<SyncRatio> GetSyncRatios(int ratioFlags = (NORMAL | DOTTED | TRIPLET)) {
+    std::vector<SyncRatio> GetSyncRatios(int syncFlags = (STRAIGHT | DOTTED | TRIPLET)) {
         std::vector<SyncRatio> syncRatios;
         for (int32_t i = 64; i >= 1; i /= 2) {
-            if (ratioFlags & NoteRatio::TRIPLET) {
+            if (syncFlags & NoteRatio::TRIPLET) {
                 syncRatios.push_back({ 1, i * 3, StringFormat("%d/%d", 1, i*3) });// triplet
             }
-            if (ratioFlags & NoteRatio::NORMAL) {
+            if (syncFlags & NoteRatio::STRAIGHT) {
                 syncRatios.push_back({ 1, i, StringFormat("%d/%d", 1, i) });// straight
             }
-            if (ratioFlags & NoteRatio::DOTTED) {
+            if (syncFlags & NoteRatio::DOTTED) {
                 syncRatios.push_back({ 3, i, StringFormat("%d/%d", 3, i) });// dotted
             }
         }
         for (int32_t i = 2; i < 32; i *= 2) {
-            if (ratioFlags & NoteRatio::TRIPLET) {
-                syncRatios.push_back({ i, 3, StringFormat("%d/%d", i*3, 1) });// triplet
+            if (syncFlags & NoteRatio::TRIPLET) {
+                syncRatios.push_back({ i, 3, StringFormat("%d/%d", i, 3) });// triplet
             }
-            if (ratioFlags & NoteRatio::NORMAL) {
+            if (syncFlags & NoteRatio::STRAIGHT) {
                 syncRatios.push_back({ i, 1, StringFormat("%d/%d", i, 1) });// straight
             }
-            if (ratioFlags & NoteRatio::DOTTED) {
-                syncRatios.push_back({ 3 * i, 1, StringFormat("%d/%d", 3 * i, 1) });// dotted
+            if (syncFlags & NoteRatio::DOTTED) {
+                syncRatios.push_back({ 3 * i, 1, StringFormat("%d/%d", 3, i*2) });// dotted
             }
         }
-        if (ratioFlags & NoteRatio::NORMAL) {
+        if (syncFlags & NoteRatio::STRAIGHT) {
             for (int32_t i : {32, 64, 128}) {
                 syncRatios.push_back({ i, 1, StringFormat("%d/%d", i, 1) });// straight
             }
         }
         std::sort(syncRatios.begin(), syncRatios.end(), [](const SyncRatio& a, const SyncRatio& b) {
-            return (1000 * a.numerator / a.denominator) < (1000 * b.numerator / b.denominator);
+            return a.numerator * b.denominator < b.numerator * a.denominator;
         });
         return syncRatios;
     }
-    std::vector<String> GetSyncRatioLabels(int ratioFlags = (NORMAL | DOTTED | TRIPLET)) {
-        auto syncs = GetSyncRatios(ratioFlags);
+    std::vector<String> GetSyncRatioLabels(int syncFlags = (STRAIGHT | DOTTED | TRIPLET)) {
+        auto syncs = GetSyncRatios(syncFlags);
         std::vector<String> syncRatios;
         syncRatios.reserve(syncs.size());
         for (auto& sync : syncs) {
@@ -108,15 +109,15 @@ namespace PluginLFO {
             return GetScaledRate(paramValue);
         }
 
-        int32_t index = math::clamp<int32_t>(math::floorfS32(paramValue * syncRatios.size()), 0, syncRatios.size() - 1);
+        int32_t index = math::clamp<int32_t>(math::floorfS32(paramValue * syncRatios.size()), 0, CtrSize(syncRatios) - 1);
         const SyncRatio& syncRatio = syncRatios[index];
         return (TICKS_BAR * syncRatio.numerator) / syncRatio.denominator;
     }
-    String FormatSyncRate(const std::vector<SyncRatio>& syncRatios, bool bIsSync, float paramValue) {
-        if (!bIsSync || syncRatios.empty()) {
+    String FormatSyncRate(const std::vector<SyncRatio>& syncRatios, int32_t syncFlags, float paramValue) {
+        if (!syncFlags) {
             return StringFormat("%.2f", GetScaledRate(paramValue));
         }
-        int32_t index = math::clamp<int32_t>(math::floorfS32(paramValue * syncRatios.size()), 0, syncRatios.size() - 1);
+        int32_t index = math::clamp<int32_t>(math::floorfS32(paramValue * syncRatios.size()), 0, CtrSize(syncRatios) - 1);
         return syncRatios[index].text;
     }
 
@@ -124,16 +125,17 @@ namespace PluginLFO {
         struct lfo_automation_src_param_t : public automated_param_t {
             module_lfo* module = nullptr;
             DAW::Shape::shape_t shape;
-            bool bIsSync = false;
+            std::vector<SyncRatio> enabledSyncs;
+            int32_t syncFlags;
             std::vector<SyncRatio> syncRatios;
             float getPhase(double dTick) const {
                 const auto fRate = module->getParamValue(PARAM_LFO_RATE);
                 const auto fPhase = module->getParamValue(PARAM_LFO_PHASE);
                 double fPhaseOffset = 0.0f;
-                if (!bIsSync || syncRatios.empty()) {
-                    fPhaseOffset = dTick / double(GetScaledRate(fRate));
+                if (syncRatios.empty()) {
+                    fPhaseOffset = dTick / GetScaledRate(fRate);
                 } else {
-                    auto index = math::clamp<int32_t>(math::floorfS32(fRate * CtrSize(syncRatios)), 0, syncRatios.size() - 1);
+                    auto index = math::clamp<int32_t>(math::floorfS32(fRate * CtrSize(syncRatios)), 0, CtrSize(syncRatios) - 1);
                     auto ratio = syncRatios[index];
                     double barPos = dTick / double(TICKS_BAR);
                     fPhaseOffset = double((barPos * ratio.denominator) / ratio.numerator);
@@ -213,7 +215,6 @@ namespace PluginLFO {
         };
         module_lfo* module;
         std::array<lfo_automation_src_param_t, NUM_CHANNELS> macroAutomationSrcParams;
-        bool bIsSync = false;
         explicit lfo_impl_t(DawInstance* daw, module_lfo* module, const DAW::Shape::shape_base_t& initShape) 
             : PluginLockable(daw),
             module(module)
@@ -222,8 +223,7 @@ namespace PluginLFO {
                 macroAutomationSrcParams[i].module = module;
                 macroAutomationSrcParams[i].paramIdx = i;
                 macroAutomationSrcParams[i].shape.setShape(initShape);
-                macroAutomationSrcParams[i].bIsSync = bIsSync;
-                macroAutomationSrcParams[i].syncRatios = GetSyncRatios(NORMAL | DOTTED | TRIPLET);
+                macroAutomationSrcParams[i].syncRatios = GetSyncRatios();
             }
         }
         const lfo_automation_src_param_t* getModulationOutputData(const DAW::modulation_channel_ref& channel) {
@@ -242,20 +242,20 @@ namespace PluginLFO {
                 return shapeDummy;
             return this->macroAutomationSrcParams[chIdx].shape;
         }
-        bool getIsSync() const {
-            return bIsSync;
+        int32_t getSyncRatio(int chIdx) const {
+            dbgassert(chIdx >= 0 && chIdx < NUM_CHANNELS);
+            return this->macroAutomationSrcParams[chIdx].syncFlags;
         }
-        void setIsSync(bool bIsSync) {
-            this->bIsSync = bIsSync;
-            for (auto& param : macroAutomationSrcParams) {
-                param.bIsSync = bIsSync;
-            }
+        void setSyncRatio(int chIdx, int32_t ratio) {
+            dbgassert(chIdx >= 0 && chIdx < NUM_CHANNELS);
+            this->macroAutomationSrcParams[chIdx].syncFlags = ratio;
+            this->macroAutomationSrcParams[chIdx].syncRatios = GetSyncRatios(ratio);
         }
         bool getSnapshot(snapshot_t& snapshot) {
             snapshot.version = BINARY_SNAPSHOT_VERSION;
             for (int32_t i = 0; i < NUM_CHANNELS; ++i) {
                 auto shapeSnapshot = DAW::Shape::shape_snapshot_t{ i, DAW::Shape::shape_preset_t{2, macroAutomationSrcParams[i].shape} };
-                impl_channel_snapshot_t channelSnapshot{ std::move(shapeSnapshot), macroAutomationSrcParams[i].bIsSync };
+                impl_channel_snapshot_t channelSnapshot{ std::move(shapeSnapshot), macroAutomationSrcParams[i].syncFlags };
                 snapshot.channels.push_back(std::move(channelSnapshot));
             }
             return true;
@@ -265,7 +265,9 @@ namespace PluginLFO {
             for (int32_t i = 0; i < NUM_CHANNELS && i < CtrSize(snapshot.channels); ++i) {
                 auto& channelSnapshot = snapshot.channels[i];
                 macroAutomationSrcParams[i].shape.pts = channelSnapshot.shape.shape.curve.pts;
-                macroAutomationSrcParams[i].bIsSync = channelSnapshot.bSync;
+                if (snapshot.version > 2) {
+                    macroAutomationSrcParams[i].syncFlags = channelSnapshot.syncFlags;
+                }
             }
             return true;
         }
@@ -302,7 +304,7 @@ namespace PluginLFO {
         reg->shortLabel  = "Max";
         reg->unit  = "";
         reg->isBiPolar = true;
-        impl->setIsSync(true);
+        impl->setSyncRatio(0, TRIPLET|DOTTED|STRAIGHT);
         outputModChannelsDesc.push_back({0, "LFO 0"});
     }
 
@@ -341,7 +343,7 @@ namespace PluginLFO {
         out.write(size_t{snapshot.uiLayout.size()});
         for (const auto& channel : snapshot.channels) {
             DAW::Shape::writeShape(out, channel.shape);
-            out.write(channel.bSync);
+            out.write(channel.syncFlags);
         }
         for (const auto& modulation : snapshot.uiLayout) {
             out.write(modulation.uiId);
@@ -384,14 +386,21 @@ namespace PluginLFO {
             for (auto& channel : snapshot.channels) {
                 if (!DAW::Shape::readShape(in, channel.shape))
                     return false;
-                if (!in.read(channel.bSync))
-                    return false;
+                if (snapshot.version > 2) {
+                    if (!in.read(channel.syncFlags))
+                        return false;
+                } else {
+                    bool dummy;
+                    if (!in.read(dummy))
+                        return false;
+                    channel.syncFlags = TRIPLET | DOTTED | STRAIGHT;
+                }
             }
         }
         else {
             // snapshot.channels.resize(1);
             snapshot.channels[0].shape = {0, {2, DAW::Shape::GetShapeSaw(DAW::Shape::SHAPE_SHAPED|DAW::Shape::SHAPE_CYCLIC)}};
-            snapshot.channels[0].bSync = true;
+            snapshot.channels[0].syncFlags = TRIPLET | DOTTED | STRAIGHT;
         }
         for (auto& modulation : snapshot.uiLayout) {
             if (!in.read(modulation.uiId))
@@ -503,8 +512,152 @@ namespace PluginLFO {
             add(&editfield);
         }
 
-        bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-            return guictr_base::mouseHitTest(mpos, evt);
+
+
+        class ctxtmenu_lfo_sync : public ctxtmenu_entry {
+            module_lfo* const module;
+            int32_t channel;
+
+            struct _time_sel_entry {
+                int id;
+                int x;
+                int y;
+                int w;
+                String name;
+            };
+            std::vector<_time_sel_entry> entries;
+
+        public:
+            const int pad   = 10;
+            const int inset = 5;
+        public:
+            ctxtmenu_lfo_sync(module_lfo* _module, int32_t _channel, String _title, int _id)
+                : ctxtmenu_entry(std::move(_title), _id),
+                module(_module), channel(_channel)
+            {
+                entries.push_back({ NoteRatio::STRAIGHT, 0, 0, 0, "Straight" });
+                entries.push_back({ NoteRatio::TRIPLET, 0, 0, 0, "Triplet" });
+                entries.push_back({ NoteRatio::DOTTED, 0, 0, 0, "Dotted" });
+                entries.push_back({ 0, 0, 0, 0, "Off" });
+            }
+
+            void layout(ivec2 size, float _fontSize, determine_string_width& strw) override {
+                width = size.x;
+                this->fontSize = _fontSize;
+                const int h    = math::roundfS32(_fontSize);
+                layoutE(width, h, 3);
+            }
+
+            void layoutE(int tw, int h, int perRow) {
+                int iX      = inset;
+                int iY      = h + 2;
+                int elW     = (tw - inset * 2) / perRow;
+                for (_time_sel_entry& e : entries) {
+                    this->height = iY + h;
+                    e.x = iX;
+                    e.y = iY;
+                    e.w = elW;
+                    iX += e.w;
+                    if (iX >= tw - inset * 2) {
+                        iX = inset;
+                        iY += h;
+                    }
+                }
+            }
+
+
+            void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
+                auto h = fontSize * 1.1f;
+
+                int32_t sync = module->getSyncRatio(channel);
+                for (_time_sel_entry& e : entries) {
+                    if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
+                        nvgBeginPath(vg);
+                        nvgRect(vg, e.x, y + e.y + 2, e.w, h - 4);
+                        nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+                        nvgFill(vg);
+                    }
+                    if ((e.id&sync) || (e.id == 0 && sync == 0)) {
+                        nvgBeginPath(vg);
+                        nvgCircle(vg, e.x + 10, y + e.y + h / 2, 4);
+                        nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_OUTLINE));
+                        nvgFill(vg);
+                    }
+                }
+
+                renderTextLabel(vg,
+                                vec2(leftOffset(), y + h * 0.5f),
+                                vec2(width, h),
+                                title,
+                                theme,
+                                fontSize,
+                                theme->getColor(GuiColor::COL_TEXT),
+                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+
+                for (_time_sel_entry& e : entries) {
+                    renderTextLabel(vg,
+                                    vec2(e.x + 20.0f, y + e.y + h * 0.5f),
+                                    vec2(width, h),
+                                    e.name,
+                                    theme,
+                                    fontSize * 0.9f,
+                                    theme->getColor(GuiColor::COL_TEXT),
+                                    NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+                }
+            }
+
+            bool contains(ivec2& ctxtSize, ivec2& mouse) const override {
+                return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
+            }
+
+            int getClicked(ivec2& ctxtSize, ivec2& mouse) override {
+                if (contains(ctxtSize, mouse)) {
+                    const auto h = this->fontSize;
+                    for (_time_sel_entry& e : entries) {
+                        if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= 0 && mouse.x < e.x + e.w) {
+                            return 100 + e.id;
+                        }
+                    }
+                }
+                return -1;
+            }
+        };
+        class guictr_module_lfo_context_menu : public guictxtmenu {
+            module_lfo* const module;
+            int32_t channel;
+        public:
+            explicit guictr_module_lfo_context_menu(module_lfo* _module, int32_t _channel)
+            : guictxtmenu(), module(_module), channel(_channel) {
+                this->size.x   = 220;
+                maxHeight = 0;
+                this->fontSize = FONT_SIZE_CTXT_SMALL;
+                this->paddingV = 0;
+                // addEntry(new ctxtmenu_entry("test", 2));
+                addEntry(new ctxtmenu_lfo_sync(module, channel, "Sync", 0));
+            }
+            bool clickedElement(ctxtmenu_entry* e, int _id) override {
+                if (_id >= 100) {
+                    int flags = module->getSyncRatio(channel);
+                    int clicked = _id - 100;
+                    if (clicked == 0) {
+                        flags = 0;
+                    } else {
+                        if (flags & clicked) {
+                            flags &= ~clicked;
+                        } else {
+                            flags |= clicked;
+                        }
+                    }
+                    module->setSyncRatio(0, flags);
+                    return true;
+                }
+                closeContextMenu();
+                return true;
+            }
+        };
+
+        void rightClicked(MouseEvent& evt, guibase* what) override {
+            parentCtrl->openContextMenu(new guictr_module_lfo_context_menu(module, 0), evt.mousepos);
         }
 
         ~guictr_module_lfo() override {
@@ -620,7 +773,7 @@ namespace PluginLFO {
         switch (idx) {
             case PARAM_LFO_RATE: {
                 auto& first = impl->macroAutomationSrcParams[0];
-                if (first.bIsSync) {
+                if (first.syncFlags) {
                     auto numSyncRatios = CtrSize(first.syncRatios);
                     for (int32_t i = 0; i < numSyncRatios; ++i) {
                         if (first.syncRatios[i].text == displayValue.value) {
@@ -655,8 +808,8 @@ namespace PluginLFO {
         dbgassert(param);
         if (param->idx == PARAM_LFO_RATE) {
             auto& firstInstance = impl->macroAutomationSrcParams[0];
-            auto lfoRateStr = FormatSyncRate(firstInstance.syncRatios, firstInstance.bIsSync, value);
-            return {lfoRateStr, impl->getIsSync() ? "" : param->unit};
+            auto lfoRateStr = FormatSyncRate(firstInstance.syncRatios, firstInstance.syncFlags, value);
+            return {lfoRateStr, impl->getSyncRatio(0) ? "" : param->unit};
         }
         if (param->idx == PARAM_LFO_PHASE) {
             return {StringFormat("%.2f", value*360.0f), param->unit};
@@ -665,6 +818,12 @@ namespace PluginLFO {
             return {StringFormat("%.2f", value*2.0f-1.0f), param->unit};
         }
         return internalplugin::convertParamValueToDisplay(idx, value);
+    }
+    int32_t module_lfo::getSyncRatio(int chIdx) const {
+        return impl->getSyncRatio(chIdx); 
+    }
+    void module_lfo::setSyncRatio(int chIdx, int32_t ratio) {
+        impl->setSyncRatio(chIdx, ratio);
     }
 }// namespace PluginLFO
 

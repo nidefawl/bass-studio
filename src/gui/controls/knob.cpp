@@ -620,8 +620,7 @@ void guiknob::handleRightClick(MouseEvent& evt) {
         return;
     }
 #endif
-    if (parent)
-        parent->rightClicked(evt, this);
+    guibase::handleRightClick(evt);
 }
 void gui_slider_textfield::handleRightClick(MouseEvent& evt) {
     dbgassert(paramAutomatable && paramIdx > -1 && paramAutomatable->getParam(paramIdx));

@@ -349,6 +349,7 @@ public:
         return parentGui;
     }
     virtual void handleRightClick(MouseEvent& evt) {
+        if (parent) parent->rightClicked(evt, this);
     }
     virtual void handleDraggedBegin(MouseEvent& evt) {
     }
@@ -418,6 +419,7 @@ public:
     virtual void buttonClicked(guibase* button) {
     }
     virtual void rightClicked(MouseEvent& evt, guibase* button) {
+        if (parent) parent->rightClicked(evt, button);
     }
     /*
      * determines if drag operations should focus containers
