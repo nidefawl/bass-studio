@@ -1968,8 +1968,7 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
         samplecount_t numSamplesOffsetDst = math::max<samplecount_t>(0, clipSampleBegin);
         auto numSamplesWritableData = out.samples - numSamplesOffsetDst; 
         auto readSamples = math::min(clipMinSamples, math::min(numSamplesWritableData, lastReadableSamplePos));
-        if (!assert_expr(readSamples > 0)) {
-            dbgassert(0);
+        if (!(readSamples > 0)) {
             continue;
         }
 
