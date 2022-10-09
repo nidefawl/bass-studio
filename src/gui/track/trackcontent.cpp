@@ -7,6 +7,7 @@
 
 #include "assert_dbg.h"
 #include "event.h"
+#include "gui/clipeditor/clipeditor.h"
 #include "gui/controls/button.h"
 #include "gui/dropdown/dropdown.h"
 #include "gui/gui.h"
@@ -154,11 +155,14 @@ void gui_audio_clip::renderDebugPass(NVGcontext* vg) {
 
     }
 }
-DAW::Shape::ShapeEdit& gui_audio_clip::getShapeEdit() {
-    if (!shapeEdit) {
-        shapeEdit = std::make_unique<DAW::Shape::ShapeEdit>();
+DAW::Shape::ShapeEdit& gui_audio_clip::createShapeEdit() {
+    if (!editState) {
+        editState = std::make_unique<edit_state_t>();
     }
-    return *shapeEdit;
+    return editState->shapeEdit;
+}
+DAW::Shape::ShapeEdit* gui_audio_clip::getShapeEdit() {
+    return editState ? &editState->shapeEdit : nullptr;
 }
 
 void gui_audio_clip::render(NVGcontext* vg) {
@@ -180,9 +184,12 @@ void gui_audio_clip::render(NVGcontext* vg) {
             using hittype = DAW::Shape::shape_t::hittype;
             const vec2 editRelMouse = vec2(relMousepos) - fadeLayout->pos;
             bool bRenderedEdit = false;
-            if (editingFade == fadeIdx && shapeEdit && shapeEdit->dragged.type != hittype::HIT_NONE) {
-                shapeEdit->renderEditor(vg, fadeLayout->pos, theme, editRelMouse, true);
-                bRenderedEdit = true;
+            if (editingFade == fadeIdx) {
+                auto shapeEdit = getShapeEdit();
+                if (shapeEdit && shapeEdit->dragged.type != hittype::HIT_NONE) {
+                    shapeEdit->renderEditor(vg, fadeLayout->pos, theme, editRelMouse, true);
+                    bRenderedEdit = true;
+                }
             }
             const bool bContained = this->contains(relMousepos);
             const auto& shape = *fadeLayout->fade.shape;
@@ -244,9 +251,11 @@ bool gui_audio_clip::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 }
 
 void gui_audio_clip::handleDraggedBegin(MouseEvent& evt) {
+    auto shapeEdit = getShapeEdit();
     if (shapeEdit && shapeEdit->dragged.type != DAW::Shape::shape_t::hittype::HIT_NONE) {
         shapeEdit->dragged = {};
     }
+    auto daw = dawCtrl->getDaw();
     for (auto* fadeLayout : { &fadeInLayout, &fadeOutLayout }) {
         const uint8_t fadeIdx = fadeLayout == &fadeInLayout ? 0 : 1;
         const auto editRelMouse = vec2(evt.relMousepos + pos) - fadeLayout->pos;
@@ -255,30 +264,28 @@ void gui_audio_clip::handleDraggedBegin(MouseEvent& evt) {
         auto dragged = shape.getMouseHit(mousePosScaledToFade, fadeLayout->size);
         const float xDragEdge = (1.0f-fadeIdx) * fadeLayout->size.x;
         const float distAbs = math::abs(editRelMouse.x - xDragEdge);
+        bool bBeginEdit = false;
+        MouseEvent evtOffset = evt;
+        evtOffset.relMousepos = editRelMouse;
         if (distAbs < DAW::Shape::GetMinDistEdgeMouseHit()) {
+            bBeginEdit = true;
+            evtOffset.relMousepos.y = 0;
+            evtOffset.kbmods = KeyboardMods::KB_MODS_NONE;
+        } else if (fadeLayout->fade.hasFade()) {
+            if (dragged.type == DAW::Shape::shape_t::hittype::HIT_EDGE) {
+                bBeginEdit = true;
+                evtOffset.kbmods = KeyboardMods::KB_MOD_ALT;
+            }
+        }
+        if (bBeginEdit) {
             this->editingFade = fadeIdx;
-            auto& shapeEdit = getShapeEdit();
+            auto& shapeEdit = createShapeEdit();
             shapeEdit.setEditorCurve(&m_clip->getFade(editingFade).shape);
             shapeEdit.layoutEditor(fadeLayout->size);
-            MouseEvent evtOffset = evt;
-            evtOffset.relMousepos = editRelMouse;
-            evtOffset.relMousepos.y = 0;
-            evtOffset.kbmods = KeyboardMods::KB_MOD_ALT;
             shapeEdit.onBeginDragCurveEditor(evtOffset);
+            editState->dataBefore = m_clip->audio;
+            daw->setEditClip(this);
             return;
-        }
-        if (fadeLayout->fade.hasFade()) {
-            if (dragged.type == DAW::Shape::shape_t::hittype::HIT_EDGE) {
-                this->editingFade = fadeIdx;
-                auto& shapeEdit = getShapeEdit();
-                shapeEdit.setEditorCurve(&m_clip->getFade(editingFade).shape);
-                shapeEdit.layoutEditor(fadeLayout->size);
-                MouseEvent evtOffset = evt;
-                evtOffset.relMousepos = editRelMouse;
-                evtOffset.kbmods = KeyboardMods::KB_MOD_ALT;
-                shapeEdit.onBeginDragCurveEditor(evtOffset);
-                return;
-            }
         }
     }
     evt.relMousepos += pos;
@@ -286,6 +293,7 @@ void gui_audio_clip::handleDraggedBegin(MouseEvent& evt) {
 }
 
 void gui_audio_clip::handleDraggedMove(MouseEvent& evt) {
+    auto shapeEdit = getShapeEdit();
     if (shapeEdit && shapeEdit->dragged.type == DAW::Shape::shape_t::hittype::HIT_NODE) {
         auto mousePosTrackCtr = toControlsObjectSpace(evt.mousepos, parent);
         double tick = m_trackentry->parent->grid.screenToTickD(mousePosTrackCtr.x);
@@ -315,19 +323,30 @@ void gui_audio_clip::handleDraggedMove(MouseEvent& evt) {
 }
 
 void gui_audio_clip::handleDraggedRelease(MouseEvent& evt) {
+    bool bHasEdit = false;
+    auto shapeEdit = getShapeEdit();
     if (shapeEdit && shapeEdit->dragged.type == DAW::Shape::shape_t::hittype::HIT_NODE) {
-        m_trackentry->parent->layoutVisibleTracks();
-        shapeEdit->dragged = {};
-        bRequestRefresh = true;
-        return;
+        bHasEdit = true;
     }
     if (shapeEdit && shapeEdit->dragged.type == DAW::Shape::shape_t::hittype::HIT_EDGE) {
         MouseEvent evtOffset = evt;
         evtOffset.relMousepos = vec2(evt.relMousepos + pos) - (getFadeLayout(editingFade).pos);
         shapeEdit->onReleaseDragCurveEditor(evtOffset);
+        bHasEdit = true;
+    }
+    if (bHasEdit) {
         shapeEdit->dragged = {};
         m_trackentry->parent->layoutVisibleTracks();
         bRequestRefresh = true;
+        auto view = dawCtrl->getClipView();
+        if (assert_expr(view.clip() == m_clip)) {
+            auto daw = dawCtrl->getDaw();
+            auto clipBefore = *m_clip;
+            clipBefore.audio = editState->dataBefore;
+            String desc = "Edit Clip Fade" + String(editingFade == 0 ? " In" : " Out");
+            daw->pushHist(new action_modify_clip(desc, view, clipBefore, view.cursor));
+            m_clip->setDirty();
+        }
         return;
     }
     evt.relMousepos += pos;
@@ -348,7 +367,7 @@ void gui_audio_clip::handleRightClick(MouseEvent& evt) {
             auto& shape = *fadeLayout->fade.shape;
             auto dragged = shape.getMouseHit(mousePosScaledToFade, fadeLayout->size);
             if (dragged.type != DAW::Shape::shape_t::hittype::HIT_NONE) {
-                auto& shapeEdit = getShapeEdit();
+                auto& shapeEdit = createShapeEdit();
                 shapeEdit.setEditorCurve(&m_clip->getFade(fadeIdx).shape);
                 shapeEdit.layoutEditor(fadeLayout->size);
                 MouseEvent evtOffset = evt;
@@ -400,6 +419,7 @@ void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& gri
         layout.size = ivec2(endX - beginX, sizeClipped.y);
         layout.fade = *fadeRef;
     }
+    auto shapeEdit = getShapeEdit();
     if (shapeEdit && shapeEdit->dragged.type != DAW::Shape::shape_t::hittype::HIT_NONE) {
         shapeEdit->layoutEditor(getFadeLayout(editingFade).size);
     }

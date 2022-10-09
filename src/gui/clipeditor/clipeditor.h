@@ -23,9 +23,125 @@
 #include "gui/arp/arp.h"
 #include "gui/controls/inputfield.h"
 
+class action_modify_notes : public action_base {
+protected:
+public:
+    int32_t trackIdx = 0;
+    tick_t clipTime  = 0;
+    clip_notes_t before;
+    clip_notes_t after;
+    clip_cursor_t cursorBefore;
+    clip_cursor_t cursorAfter;
+    action_modify_notes() : action_base() {
+    }
+    //desc, clip, notesBefore, cursorBefore
+    action_modify_notes(String description, const clip_view& view, const clip_notes_t& oldNotes, const clip_cursor_t& oldCursor) : action_base() {
+        desc = std::move(description);
+        //    clip = view.clip;
+        after       = view.clip()->notes;
+        trackIdx    = view.track()->projectIdx;
+        clipTime    = view.clip()->time;
+        cursorAfter = view.cursor;
+        before      = oldNotes;
+
+        std::list<note_t*> selcopy;
+        for (note_t* sel : before.selection) {
+            selcopy.insert(selcopy.end(), sel);
+        }
+#ifndef NDEBUG
+        for (note_t* sel : selcopy) {
+            bool found = false;
+            for (note_t& ent : before.m_list) {
+                if (sel == &ent) {
+                    found = true;
+                    break;
+                }
+            }
+            dbgassert(found);
+        }
+#endif
+        cursorBefore = oldCursor;
+        before.removeDuplicates();
+        after.removeDuplicates();
+    }
+    void undo(DawInstance* daw) override {
+        track_t* tr = daw->getTracks()[trackIdx];
+        if (!tr)
+            return;
+        trackdata_midi_t& midi = tr->getMidi();
+        clip_t* clip           = midi.getClipAt(clipTime);
+        if (!clip)
+            return;
+        clip->notes = before;
+        clip->setDirty();
+        daw->updateClipViews(clip, cursorBefore);
+    }
+    void redo(DawInstance* daw) override {
+        track_t* tr = daw->getTracks()[trackIdx];
+        if (!tr)
+            return;
+        trackdata_midi_t& midi = tr->getMidi();
+        clip_t* clip           = midi.getClipAt(clipTime);
+        if (!clip)
+            return;
+        clip->notes = after;
+        clip->setDirty();
+        daw->updateClipViews(clip, cursorAfter);
+    }
+};
+
+class action_modify_clip : public action_base {
+protected:
+public:
+    int32_t trackIdx = 0;
+    tick_t clipTime  = 0;
+    clip_t before;
+    clip_t after;
+    clip_cursor_t cursorBefore;
+    clip_cursor_t cursorAfter;
+    action_modify_clip() : action_base() {
+    }
+    //desc, clip, notesBefore, cursorBefore
+    action_modify_clip(String description, const clip_view& view, const clip_t& oldC, const clip_cursor_t& oldCursor) : action_base() {
+        desc = description;
+        //        clip = view.clip;
+        after        = *view.clip();
+        trackIdx     = view.track()->projectIdx;
+        clipTime     = view.clip()->time;
+        cursorAfter  = view.cursor;
+        before       = oldC;
+        cursorBefore = oldCursor;
+    }
+    void undo(DawInstance* daw) override {
+        track_t* tr = daw->getTracks()[trackIdx];
+        if (!tr)
+            return;
+        trackdata_midi_t& midi = tr->getMidi();
+        clip_t* clip           = midi.getClipAt(clipTime);
+        if (!clip)
+            return;
+        *clip = before;
+        clip->setDirty();
+        daw->updateClipViews(clip, cursorBefore);
+    }
+    void redo(DawInstance* daw) override {
+        track_t* tr = daw->getTracks()[trackIdx];
+        if (!tr)
+            return;
+        trackdata_midi_t& midi = tr->getMidi();
+        clip_t* clip           = midi.getClipAt(clipTime);
+        if (!clip)
+            return;
+        *clip = after;
+        clip->setDirty();
+        daw->updateClipViews(clip, cursorAfter);
+    }
+};
+
 #define MAX_OCTAVES (8 - (-2))
 #define PIANOROLL_MIN_SCALE 4
 #define PIANOROLL_MAX_SCALE 48
+
 inline bool isSharp(int n) {
     n = n % 12;
     switch (n) {
@@ -110,6 +226,7 @@ public:
         }
     }
 };
+
 class gui_pianoroll : public guibase, public piano_scale {
     enum class dragmode {
         drag_none,

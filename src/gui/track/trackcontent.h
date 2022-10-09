@@ -160,7 +160,11 @@ public:
 private:
     fade_layout_t fadeInLayout;
     fade_layout_t fadeOutLayout;
-    std::unique_ptr<DAW::Shape::ShapeEdit> shapeEdit;
+    struct edit_state_t {
+        DAW::Shape::ShapeEdit shapeEdit;
+        clip_audio_t dataBefore;
+    };
+    std::unique_ptr<edit_state_t> editState;
     uint8_t editingFade = 0;
     fade_layout_t& getFadeLayout(bool output) {
         return !output ? fadeInLayout : fadeOutLayout;
@@ -168,7 +172,8 @@ private:
 public:
     gui_audio_clip(track_gui_entry_t* _track, clip_t* _clip, waveformrender* _waveformRenderer);
     ~gui_audio_clip() override;
-    DAW::Shape::ShapeEdit& getShapeEdit();
+    DAW::Shape::ShapeEdit& createShapeEdit();
+    DAW::Shape::ShapeEdit* getShapeEdit();
 
     int getClipType() override {
         return CLIP_AUDIO;
