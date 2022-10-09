@@ -849,7 +849,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
             ThreadLock lock        = daw->lockPlayThread();
             track_t* trackPtr      = gui->m_track;
             trackdata_midi_t& midi = trackPtr->getMidi();
-            auto clips = midi.getClips();
+            auto& clips = midi.getClips();
             auto it = clips.begin();
             int32_t nRemoved = 0;
             while (it != clips.end()) {
