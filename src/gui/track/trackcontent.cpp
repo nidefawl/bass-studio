@@ -223,7 +223,7 @@ void gui_audio_clip::render(NVGcontext* vg) {
             
             if (!bRenderedEdit && bRenderShape) {
                 const auto mousePosScaledToFade = viewToCtrlPt(editRelMouse, fadeLayout->size);
-                auto result = shape.getMouseHit(mousePosScaledToFade, fadeLayout->size);
+                auto result = !bContained ? DAW::Shape::shape_t::hit_result() : shape.getMouseHit(mousePosScaledToFade, fadeLayout->size);
                 if (!bContained || result.type != hittype::HIT_EDGE) {
                     result.type = hittype::HIT_NONE;
                 }

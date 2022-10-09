@@ -17,38 +17,50 @@ namespace DAW::Shape {
         if (pts.size() < 2) {
             return 0;
         }
-        float minX = -1;
+        float xMinSampledDist = -1;
         float minDist = -1.0f;
-        auto xPx = math::ceilfS32(scale.x/2.0f);
+        float sampleRes = scale.x * 0.5f;
+        auto xPx = math::ceilfS32(sampleRes);
         for (int32_t i = 0; i < xPx; ++i) {
-            float x = i / (scale.x/2.0f);
-            float y = sampleCurve(x, false);
-            vec2 pt = vec2(x, y) * scale;
+            float x = i / sampleRes;
+            float sampleX = pos.x + (x * 2.0f - 1.0f)*0.15f;
+            float y = sampleCurve(sampleX, false);
+            vec2 pt = vec2(sampleX, y) * scale;
             float dist = glm::distance(pos * scale, pt);
             if (minDist < 0.0f || dist < minDist) {
                 minDist = dist;
-                minX = x;
+                xMinSampledDist = sampleX;
             }
         }
         int32_t idx = -1;
-        if (minX >= 0.0f) {
+        {
             auto numPtsMin1 = CtrSize(pts) - 1;
-            if (flags & SHAPE_CYCLIC && minX < 0.5f) {
+            if (flags & SHAPE_CYCLIC && xMinSampledDist >= 0.0f && xMinSampledDist < 0.5f) {
                 auto lastPt = pts.back();
                 lastPt.pos.x -= 1.0f;
-                if (lastPt.pos.x <= minX && pts.front().pos.x >= minX) {
+                if (lastPt.pos.x <= xMinSampledDist && pts.front().pos.x >= xMinSampledDist) {
                     idx = numPtsMin1;
                 }
             }
-            for (int32_t i = 0; idx < 0 &&  i < numPtsMin1; ++i) {
-                if (pts[i].pos.x <= minX && pts[i+1].pos.x >= minX) {
+            for (int32_t i = 0; i < numPtsMin1; ++i) {
+                float x0 = pts[i].pos.x;
+                float x1 = pts[i + 1].pos.x;
+                float dx = x1 - x0;
+                if (dx * scale.x < 3.0f) {
+                    float dist = math::distancePointLine(pos * scale, pts[i+1].pos * scale, pts[i].pos * scale);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        idx = i;
+                    }
+                } 
+                if (idx < 0 && xMinSampledDist >= 0.0f && x0 <= xMinSampledDist && x1 >= xMinSampledDist) {
                     idx = i;
                 }
             }
-            if ((flags & SHAPE_CYCLIC) && idx < 0 && minX > 0.5f) {
+            if ((flags & SHAPE_CYCLIC) && xMinSampledDist >= 0.0f && idx < 0 && xMinSampledDist > 0.5f) {
                 auto firstPt = pts.front();
                 firstPt.pos.x += 1.0f;
-                if (pts.back().pos.x <= minX && firstPt.pos.x >= minX) {
+                if (pts.back().pos.x <= xMinSampledDist && firstPt.pos.x >= xMinSampledDist) {
                     idx = numPtsMin1;
                 }
             }

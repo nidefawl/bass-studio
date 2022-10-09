@@ -736,13 +736,18 @@ void ShapeEdit::onMoveDragCurveEditor(MouseEvent& evt) {
                     pt.shape    = math::clamp(pt.shape - fSign * fDist, 0.0f, 1.0f);
                 }
             } else {
+                float fd = (ptNext.pos.y - pt.pos.y);
+                float fy = (ptNext.pos.y + pt.pos.y) * 0.5f;
                 if (bIsGridEnabledV && !isAlt(evt.kbmods)) {
                     local.y = snapV(local.y);
-                    fDist   = local.y - pt.pos.y;
+                    fDist   = local.y - fy;
+                    if (math::abs(fDist) < 1.0f / this->gridStepsV) {
+                        fDist = 0.0f;
+                    }
                 }
-                pt.pos.y = math::clamp(pt.pos.y + fDist, 0.0f, 1.0f);
+                pt.pos.y = math::clamp(fy-fd*0.5f+fDist, 0.0f, 1.0f);
                 if (&ptNext != &pt) {
-                    ptNext.pos.y = math::clamp(ptNext.pos.y + fDist, 0.0f, 1.0f);
+                    ptNext.pos.y = math::clamp(fy+fd*0.5f+fDist, 0.0f, 1.0f);
                 }
             }
             if (callback)
@@ -793,7 +798,10 @@ void ShapeEdit::renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, 
         DrawGrid(vg, theme, pos, editorSize, gridStepsH, gridStepsV);
     }
     const auto mouseLocal = toNormalizedSpace(relMousepos);
-    auto higlightHit      = curve->getMouseHit(mouseLocal, editorSize);
+    auto higlightHit = shape_t::hit_result();
+    if (mouseLocal.x >= 0.0f && mouseLocal.x <= 1.0f && mouseLocal.y >= 0.0f && mouseLocal.y <= 1.0f) {
+        higlightHit = curve->getMouseHit(mouseLocal, editorSize);
+    }
     auto* curveRender     = curve;
     if (dragged.type != shape_t::hittype::HIT_NONE) {
         higlightHit = dragged;
