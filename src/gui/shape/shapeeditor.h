@@ -19,8 +19,8 @@ public:
 i_ctr_shape_editor* makeShapeEditor();
 
 namespace DAW::Shape {
-    void DrawShapeCyclic(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, vec2 pos, vec2 size, vec2 mousePos, const shape_t::hit_result& hit);
-    void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, vec2 pos, vec2 size, vec2 mousePos, const shape_t::hit_result& hit);
+    void DrawShapeCyclic(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, const GuiColor::constant_t& col, const GuiColor::constant_t& colHovered, vec2 pos, vec2 size, vec2 mousePos, const shape_t::hit_result& hit);
+    void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, const GuiColor::constant_t& col, const GuiColor::constant_t& colHovered, vec2 pos, vec2 size, vec2 mousePos, const shape_t::hit_result& hit);
 }
 
 namespace DAW::Shape {

@@ -97,6 +97,7 @@ namespace GuiColor {
     constant_t COL_BTN_SOLO_BG_PARENT("COL_BTN_SOLO_BG_PARENT", 0x6ce37777);
     constant_t COL_CLEAR_COLOR("COL_CLEAR_COLOR", 0xff0f0f0f);
     constant_t COL_CLIPEDITOR_SHARP("COL_CLIPEDITOR_SHARP", 0x39000000);
+    constant_t COL_CLIP_FADES("COL_CLIP_FADES", 0xff50a7f3);
     constant_t COL_CLIP_NOTE("COL_CLIP_NOTE", 0xffc9f2ff);
     constant_t COL_CLIP_NOTE_MUTED("COL_CLIP_NOTE_MUTED", 0xff121212);
     constant_t COL_CLIP_NOTE_OVERLAP("COL_CLIP_NOTE_OVERLAP", 0xff0000ff);
@@ -112,6 +113,8 @@ namespace GuiColor {
     constant_t COL_GUI_STROKE("COL_GUI_STROKE", 0xff8c8c8c);
     constant_t COL_INVALID_INPUT("COL_INVALID_INPUT", 0xffc85a5a);
     constant_t COL_KNOB("COL_KNOB", 0xff456cb8);
+    constant_t COL_SHAPE_CURVE("COL_SHAPE_CURVE", 0xff00cc56);
+    constant_t COL_SHAPE_CURVE_HIGHLIGHT("COL_SHAPE_CURVE_HIGHLIGHT", 0xffd6267a);
     constant_t COL_KNOB_BG("COL_KNOB_BG", 0xff0f1114);
     constant_t COL_KNOB_HIGHLIGHT("COL_KNOB_HIGHLIGHT", 0xff6200d0);
     constant_t COL_KNOB_HIGHLIGHT_BACKGROUND("COL_KNOB_HIGHLIGHT_BACKGROUND", 0xff6100cd);

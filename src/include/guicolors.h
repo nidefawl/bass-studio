@@ -54,6 +54,7 @@ namespace GuiColor {
     extern constant_t COL_BTN_SOLO_BG_ENABLED;
     extern constant_t COL_BTN_SOLO_BG_PARENT;
     extern constant_t COL_CLEAR_COLOR;
+    extern constant_t COL_CLIP_FADES;
     extern constant_t COL_CLIP_NOTE_MUTED;
     extern constant_t COL_CLIP_NOTE_OVERLAP;
     extern constant_t COL_CLIP_NOTE;
@@ -109,6 +110,8 @@ namespace GuiColor {
     extern constant_t COL_PLUG_TITLE;
     extern constant_t COL_PLUGIN_VIEW_FRAME;
     extern constant_t COL_SELECTION_BACKGROUND;
+    extern constant_t COL_SHAPE_CURVE;
+    extern constant_t COL_SHAPE_CURVE_HIGHLIGHT;
     extern constant_t COL_TEXT;
     extern constant_t COL_TEXTBOX_TEXT_DISABLED;
     extern constant_t COL_TEXTBOX_TEXT_MARKED;

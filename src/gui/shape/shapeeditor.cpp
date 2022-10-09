@@ -43,7 +43,7 @@
 
 namespace DAW::Shape {
 
-void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, vec2 pos, vec2 size, vec2 mousePos, const shape_t::hit_result& hit) {
+void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, const GuiColor::constant_t& col, const GuiColor::constant_t& colHovered, vec2 pos, vec2 size, vec2 mousePos, const shape_t::hit_result& hit) {
     if (curve.pts.empty())
         return;
     auto numCurvePts = CtrSize(curve.pts);
@@ -52,10 +52,10 @@ void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* the
     auto nPoints = CtrSize(curve.pts);
     // float radiusHandle = 3.0f;
     float strokeWidth = 3.0f;
-    auto lineColor = theme->getColor(GuiColor::COL_KNOB);
+    auto lineColor = theme->getColor(col);
     auto fillColor = lineColor;
     // auto handleColor = theme->getColor(GuiColor::COL_KNOB_IND);
-    auto hoverColor = theme->getColor(GuiColor::COL_AUTOMATED);
+    auto hoverColor = theme->getColor(colHovered);
     fillColor.a = 0.3;
     for (int32_t pass = 0; pass < 2; ++pass) {
         if (pass == 0) {
@@ -163,7 +163,7 @@ void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* the
         nvgFill(vg);
     } */
 }
-void DrawShapeCyclic(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, vec2 pos, vec2 size, vec2 mousePos, const shape_t::hit_result& hit) {
+void DrawShapeCyclic(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, const GuiColor::constant_t& col, const GuiColor::constant_t& colHovered, vec2 pos, vec2 size, vec2 mousePos, const shape_t::hit_result& hit) {
     if (curve.pts.empty())
         return;
 
@@ -181,10 +181,10 @@ void DrawShapeCyclic(const shape_t& curve, NVGcontext*vg, const guitheme_t* them
     auto nPoints = CtrSize(pts);
     float radiusHandle = 3.0f;
     float strokeWidth = 3.0f;
-    auto lineColor = theme->getColor(GuiColor::COL_KNOB);
+    auto lineColor = theme->getColor(col);
     auto fillColor = lineColor;
     auto handleColor = theme->getColor(GuiColor::COL_KNOB_IND);
-    auto hoverColor = theme->getColor(GuiColor::COL_AUTOMATED);
+    auto hoverColor = theme->getColor(colHovered);
     fillColor.a = 0.3;
     for (int32_t pass = 0; pass < 2; ++pass) {
         if (pass == 0) {
@@ -800,9 +800,9 @@ void ShapeEdit::renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, 
         curveRender = &curveTmp;
     }
     if (curveRender->flags & ShapeFlags::SHAPE_CYCLIC) {
-        DrawShapeCyclic(*curveRender, vg, theme, pos, editorSize, mouseLocal, higlightHit);
+        DrawShapeCyclic(*curveRender, vg, theme, GuiColor::COL_SHAPE_CURVE, GuiColor::COL_SHAPE_CURVE_HIGHLIGHT, pos, editorSize, mouseLocal, higlightHit);
     } else {
-        DrawShapeOneShot(*curveRender, vg, theme, pos, editorSize, mouseLocal, higlightHit);
+        DrawShapeOneShot(*curveRender, vg, theme, GuiColor::COL_SHAPE_CURVE, GuiColor::COL_SHAPE_CURVE_HIGHLIGHT, pos, editorSize, mouseLocal, higlightHit);
     }
 
     // if (curveRender->renderPhase > -1.0f) {
