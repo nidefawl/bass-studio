@@ -21,19 +21,56 @@ void serialize(Archive& archive, shape_pt_t& m) {
     archive(make_nvp("x", m.pos.x), make_nvp("y", m.pos.y), make_nvp("s", m.shape));
 }
 
-template <class Archive>
-void serialize(Archive& archive, shape_base_t& m) {
-    archive(make_nvp("pts", m.pts));
-}
+struct old_shape_base_t {
+    std::vector<shape_pt_t> pts;
+    String name;
+    float renderPhase = -1.0f;
+    int32_t flags;
+};
 
 template <class Archive>
-void serialize(Archive& archive, shape_preset_t& m) {
-    archive(make_nvp("version", m.version));
+void serialize(Archive& archive, old_shape_base_t& m) {
+    archive(make_nvp("pts", m.pts));
+}
+template <class Archive>
+void serialize(Archive& archive, shape_base_t& m) {
     archive(
         make_nvp("name", m.name),
+        make_nvp("flags", m.flags),
+        make_nvp("pts", m.pts)
+    );
+}
+
+
+template<class Archive>
+void load(Archive& archive, shape_preset_t& m) {
+    archive(make_nvp("version", m.version));
+    if (m.version < 2) {
+        old_shape_base_t old;
+        m.curve = {};
+        archive(
+            make_nvp("name", m.curve.name),
+            make_nvp("curve", old)
+        );
+        m.curve.flags = SHAPE_CYCLIC | SHAPE_SHAPED;
+        m.curve.pts = old.pts;
+    } else {
+        archive(
+            make_nvp("name", m.curve.name),
+            make_nvp("curve", m.curve)
+        );
+    }
+}
+
+template<class Archive>
+void save(Archive& archive, shape_preset_t const& m) {
+    archive(
+        make_nvp("version", m.version),
+        make_nvp("name", m.curve.name),
         make_nvp("curve", m.curve)
     );
 }
+
 bool loadShapePresetFile(const String& path, shape_preset_t& preset) {
     Stringstream ss;
     try {

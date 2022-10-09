@@ -1259,6 +1259,7 @@ namespace PluginSynth {
             lfoShape.pts.push_back({{ 0.5, 0.5 }, 0.5});
         }
         void initImpl() {
+            lfoShape = DAW::Shape::GetShapeSaw(DAW::Shape::SHAPE_SHAPED|DAW::Shape::SHAPE_CYCLIC);
             for (auto& setting : settings) {
                 setting = 1.0;
             }
@@ -1790,7 +1791,7 @@ namespace PluginSynth {
             for (int32_t i = 0; i < numSettings; ++i) {
                 snapshot.settings.push_back({ i, settings[i] });
             }
-            snapshot.shapes.push_back(DAW::Shape::shape_snapshot_t{ 0, DAW::Shape::shape_preset_t{1, "LFO", lfoShape} });
+            snapshot.shapes.push_back(DAW::Shape::shape_snapshot_t{ 0, DAW::Shape::shape_preset_t{2, lfoShape} });
             return true;
         }
 
@@ -1854,7 +1855,7 @@ namespace PluginSynth {
                 }
             }
             if (lfoShape.pts.size() < 2) {
-                lfoShape.setShape(DAW::Shape::GetShapeSaw());
+                lfoShape.setShape(DAW::Shape::GetShapeSaw(DAW::Shape::SHAPE_SHAPED|DAW::Shape::SHAPE_CYCLIC));
             }
 
             for (auto& mod : modulations) {

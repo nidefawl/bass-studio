@@ -254,7 +254,7 @@ namespace PluginLFO {
         bool getSnapshot(snapshot_t& snapshot) {
             snapshot.version = BINARY_SNAPSHOT_VERSION;
             for (int32_t i = 0; i < NUM_CHANNELS; ++i) {
-                auto shapeSnapshot = DAW::Shape::shape_snapshot_t{ i, DAW::Shape::shape_preset_t{1, "LFO", macroAutomationSrcParams[i].shape} };
+                auto shapeSnapshot = DAW::Shape::shape_snapshot_t{ i, DAW::Shape::shape_preset_t{2, macroAutomationSrcParams[i].shape} };
                 impl_channel_snapshot_t channelSnapshot{ std::move(shapeSnapshot), macroAutomationSrcParams[i].bIsSync };
                 snapshot.channels.push_back(std::move(channelSnapshot));
             }
@@ -313,7 +313,7 @@ namespace PluginLFO {
 
     module_lfo::module_lfo(int32_t _projectGlobalId, IHostCallback* _hostCallback)
         : internal_modulator("LFO", getModuleType(), _projectGlobalId, _hostCallback),
-        impl(new lfo_impl_t{ DawInstance::getOptional(), this, DAW::Shape::GetShapeSaw() })
+        impl(new lfo_impl_t{ DawInstance::getOptional(), this, DAW::Shape::GetShapeSaw(DAW::Shape::SHAPE_SHAPED|DAW::Shape::SHAPE_CYCLIC) })
     {
         initModChannels();
     }
@@ -389,7 +389,8 @@ namespace PluginLFO {
             }
         }
         else {
-            snapshot.channels[0].shape = {0, {0, "LFO", DAW::Shape::GetShapeSaw()}};
+            // snapshot.channels.resize(1);
+            snapshot.channels[0].shape = {0, {2, DAW::Shape::GetShapeSaw(DAW::Shape::SHAPE_SHAPED|DAW::Shape::SHAPE_CYCLIC)}};
             snapshot.channels[0].bSync = true;
         }
         for (auto& modulation : snapshot.uiLayout) {

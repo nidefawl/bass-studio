@@ -638,6 +638,10 @@ std::pair<note_t*, note_t*> getMinMaxTime(std::vector<note_t>& notes) {
     return std::make_pair(&*min, &*max);
 }
 
+bool operator==(const sample_fades_t& lhs, const sample_fades_t& rhs) {
+    return lhs.samplesFadePos == rhs.samplesFadePos && lhs.samplesFadeDuration == rhs.samplesFadeDuration && lhs.shape.pts == rhs.shape.pts;
+}
+
 clip_audio_t::~clip_audio_t() {
     delete renderedAudio;
 };
@@ -679,8 +683,17 @@ void clip_t::setLen(tick_t _len) {
         //TODO: this should be done explicitly
         auto pc = project_controller_t::get();
         auto host = DAW::Host::getInstance();
-        if (host && pc)
+        if (host && pc) {
             this->lenSamples = tickToSampleConvert<samplecount_t, roundmode::round>(_len, pc->getCurrentTempo(), host->m_sampleFormatInternal.sampleRate);
+            for (auto* fade : {&audio.fadeIn, &audio.fadeOut}) {
+                if (fade->durationMs > 0) {
+                    auto nSamples = host->m_sampleFormatInternal.sampleRate * 0.001 * fade->durationMs;
+                    if (nSamples > this->lenSamples) {
+                        fade->durationMs = this->lenSamples * 1000.0 / host->m_sampleFormatInternal.sampleRate;
+                    }
+                }
+            }
+        }
     }
     this->len = _len;
 }
@@ -709,4 +722,55 @@ void clip_t::setLenSamples(samplecount_t _lenSamples) {
         }
     }
     this->lenSamples = _lenSamples;
+}
+sample_fades_ref_t clip_t::getSampleFadeIn(int32_t tempo100, samplerate_t sr) const {
+    // if (!hasFadeIn()) {
+    //     return {};
+    // }
+    return {   
+        &audio.fadeIn.shape, 
+        tickToSampleConvert<samplecount_t, roundmode::floor>(offsetStart, tempo100, sr),
+        secondsToSamplesConvert<samplecount_t, roundmode::ceil>(audio.fadeIn.durationMs * 0.001, sr),
+    };
+}
+sample_fades_ref_t clip_t::getSampleFadeOut(int32_t tempo100, samplerate_t sr) const {
+    // if (!hasFadeOut()) {
+    //     return {};
+    // }
+    sample_fades_ref_t fadeOut;
+    fadeOut.samplesFadeDuration = secondsToSamplesConvert<samplecount_t, roundmode::ceil>(audio.fadeOut.durationMs * 0.001, sr);
+    fadeOut.samplesFadePos = tickToSampleConvert<samplecount_t, roundmode::ceil>(offsetStart+len, tempo100, sr) - fadeOut.samplesFadeDuration;
+    fadeOut.shape = &audio.fadeOut.shape;
+    return fadeOut;
+}
+
+clip_audio_t::clip_audio_t() {
+    using DAW::Shape::GetShapeSaw;
+    using DAW::Shape::GetShapeSawInverse;
+    using DAW::Shape::shape_t;
+    using DAW::Shape::ShapeFlags;
+    auto flags = ShapeFlags::SHAPE_SHAPED | ShapeFlags::SHAPE_EASEINOUT | ShapeFlags::SHAPE_LOCK_POINTS;
+    auto fadeInShape   = shape_t(GetShapeSawInverse(flags));
+    auto fadeOutShape  = shape_t(GetShapeSaw(flags));
+    // fadeIn             = { 128.0, fadeInShape };
+    // fadeOut            = { 128.0, fadeOutShape };
+    fadeIn             = { 0.0, fadeInShape };
+    fadeOut            = { 0.0, fadeOutShape };
+}
+
+void clip_t::adjustStartOffset(tick_t offset) {
+    if (isLoopEnabled() && offsetStart < loopStart) {
+        tick_t lenAdj = math::min(offset, loopStart - offsetStart);
+        offsetStart += lenAdj;
+        offset -= lenAdj;
+    }
+    bool inLoop = isLoopEnabled() && offsetStart >= loopStart;
+    this->offsetStart += offset;
+    while (inLoop && offsetStart < loopStart) {
+        offsetStart += loopLen;
+    }
+    while (inLoop && offsetStart >= loopStart + loopLen && offsetStart >= loopLen) {
+        offsetStart -= loopLen;
+    }
+    offsetStart = math::max(offsetStart, 0);
 }

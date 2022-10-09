@@ -622,10 +622,12 @@ inline bool isAlmostEqualWaveformSample(const audioclip_texture_t& lhs, const au
         //lhs.size == rhs.size &&
         //lhs.samplesPerPx == rhs.samplesPerPx &&
         //lhs.scale == rhs.scale &&
-        //lhs.scaleX == rhs.scaleX &&
+        lhs.scaleX == rhs.scaleX &&
         lhs.audioId == rhs.audioId &&
         lhs.sampleVersion == rhs.sampleVersion &&
         lhs.quality == rhs.quality && lhs.method == rhs.method) {
+        if (lhs.fades != rhs.fades)
+            return false;
 
         if (lhs.clipped || rhs.clipped)
             return lhs.scaleX == rhs.scaleX && lhs.scaleY == rhs.scaleY && lhs.size == rhs.size && lhs.samplesPerPx == rhs.samplesPerPx;

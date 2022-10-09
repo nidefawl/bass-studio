@@ -456,13 +456,20 @@ void load(Archive& archive, clip_notes_t& m) {
 }
 
 template<class Archive>
+void serialize(Archive& archive, clip_fade_t& m) {
+    archive(make_nvp("duration", m.durationMs), make_nvp("type", m.shape));
+}
+
+template<class Archive>
 void save(Archive& archive, clip_audio_t const& m) {
-    archive(make_nvp("id", m.id));
+    archive(make_nvp("id", m.id), make_nvp("fadeIn", m.fadeIn), make_nvp("fadeOut", m.fadeOut));
 }
 
 template<class Archive>
 void load(Archive& archive, clip_audio_t& m) {
     archive(make_nvp("id", m.id));
+    make_optional_nvp(archive, "fadeIn", m.fadeIn);
+    make_optional_nvp(archive, "fadeOut", m.fadeOut);
 }
 
 //TODO: don't archive each note seperately

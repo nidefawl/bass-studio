@@ -1,6 +1,7 @@
 #pragma once
 #include "types.h"
 #include <vector>
+#include <array>
 #include "math/vec.h"
 #include "audiosample.h"
 
@@ -15,9 +16,9 @@ struct NVGLUframebuffer;
 struct audioclip_texture_t {
     ivec2 pos{ 0 };
     ivec2 size{ 0 };
-    int64_t sampleBegin{ 0 };
-    int64_t sampleBeginOffset{ 0 };
-    int64_t sampleEnd{ 0 };
+    samplecount_t sampleBegin{ 0 };
+    samplecount_t sampleBeginOffset{ 0 };
+    samplecount_t sampleEnd{ 0 };
     double samplesPerPx    = 0;
     int quality            = 1;
     float scaleX           = 1.0f;
@@ -27,6 +28,7 @@ struct audioclip_texture_t {
     int64_t audioId        = -1;
     int64_t sampleVersion  = -1;
     bool clipped           = false;
+    std::array<sample_fades_t,2> fades{};
 };
 
 inline bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs) {
@@ -40,7 +42,11 @@ inline bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_tex
     if ((lhs.sampleEnd - lhs.sampleBegin) != (rhs.sampleEnd - rhs.sampleBegin)) {
         return false;
     }
-    return lhs.clipped == rhs.clipped && lhs.quality == rhs.quality && lhs.method == rhs.method;
+    if (lhs.clipped == rhs.clipped && lhs.quality == rhs.quality && lhs.method == rhs.method) {
+        if (lhs.fades != rhs.fades)
+            return false;
+    }
+    return false;
 }
 
 
@@ -56,7 +62,8 @@ inline bool operator==(const audioclip_texture_t& lhs, const audioclip_texture_t
            lhs.sampleBegin == rhs.sampleBegin &&
            lhs.sampleBeginOffset == rhs.sampleBeginOffset &&
            lhs.sampleEnd == rhs.sampleEnd &&
-           lhs.samplesPerPx == rhs.samplesPerPx;
+           lhs.samplesPerPx == rhs.samplesPerPx &&
+           lhs.fades == rhs.fades;
 }
 
 inline bool operator!=(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs) { return !operator==(lhs, rhs); }

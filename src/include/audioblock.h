@@ -174,6 +174,12 @@ struct alignas(16) AudioBlock {
         }
     }
 
+    void fill(float f) {
+        for (channelnum_t i = 0; i < channels; i++) {
+            std::fill(buf[i], buf[i] + samples, f);
+        }
+    }
+
     void copyTo(float** outputs) {
         for (channelnum_t i = 0; i < channels; i++) {
             memcpy(outputs[i], buf[i], samples * sizeof(float));

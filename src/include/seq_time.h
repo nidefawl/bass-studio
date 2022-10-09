@@ -7,7 +7,6 @@
 #include "samplerate.h"
 #include "str_util.h"
 
-using tick_t = int32_t;
 extern const tick_t INVALID_TICK;
 struct tick_minmax_t {
     tick_t min;
@@ -81,6 +80,36 @@ namespace roundmode {
 
 inline double tickToSampleDD(double tick, double srOverBpm) {
     return tick * MINUTE_100_OVER_TPQ * srOverBpm;
+}
+
+template<typename ReturnType, typename RoundMode>
+typename std::enable_if<std::is_same<RoundMode, roundmode::none>::value, ReturnType>::type
+secondsToSamplesConvert(double seconds, samplerate_t samplerate) {
+    return static_cast<ReturnType>(seconds * samplerate);
+}
+
+template<typename ReturnType, typename RoundMode>
+typename std::enable_if<std::is_same<RoundMode, roundmode::round>::value, ReturnType>::type
+secondsToSamplesConvert(double seconds, samplerate_t samplerate) {
+    return static_cast<ReturnType>(std::lround(seconds * samplerate));
+}
+
+template<typename ReturnType, typename RoundMode>
+typename std::enable_if<std::is_same<RoundMode, roundmode::floor>::value, ReturnType>::type
+secondsToSamplesConvert(double seconds, samplerate_t samplerate) {
+    return static_cast<ReturnType>(std::floor(seconds * samplerate));
+}
+
+template<typename ReturnType, typename RoundMode>
+typename std::enable_if<std::is_same<RoundMode, roundmode::floorclamp>::value, ReturnType>::type
+secondsToSamplesConvert(double seconds, samplerate_t samplerate) {
+    return static_cast<ReturnType>(math::max<double>(0.0, std::floor(seconds * samplerate)));
+}
+
+template<typename ReturnType, typename RoundMode>
+typename std::enable_if<std::is_same<RoundMode, roundmode::ceil>::value, ReturnType>::type
+secondsToSamplesConvert(double seconds, samplerate_t samplerate) {
+    return static_cast<ReturnType>(std::ceil(seconds * samplerate));
 }
 
 template<typename ReturnType, typename RoundMode, typename TickType>

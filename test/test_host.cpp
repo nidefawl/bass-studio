@@ -98,12 +98,11 @@ namespace test_host {
             samplecount_t numSamples = 512 + iClip * 13*17*55;
             auto samplefile = createSample(cache, sf, numChannels, numSamples, sampleTestData);
             auto audioClip = createClipFromSample(tickBegin, prjGlobals, samplefile);
+            audioClip->audio.fadeIn.durationMs = 0;
+            audioClip->audio.fadeOut.durationMs = 0;
             clips.push_back(audioClip);
             block.clear();
             auto samplePos = tickToSampleConvert<samplecount_t, roundmode::floor>(tickBegin, prjGlobals.tempo100, sf.sampleRate);
-            double secondsSamplePos = samplePos / (double)sf.sampleRate;
-            auto strBeatBarPos = beatBarNthToString(daw->toBeatBar16th(tickBegin, false), false);
-            auto strClpLenBeats = beatBarNthToString(daw->toBeatBar16th(audioClip->len, true), true);
             DAW::Host::FillAudioBlockFromClips(daw->getAudioCache(), daw->getProjectGlobals(), clips, sf, samplePos, block);
             float maxErrorClip = 0.0f;
             auto sampleLen = math::min(audioClip->lenSamples, block.samples);
@@ -115,7 +114,7 @@ namespace test_host {
                     float* blockChannel = block.buf[ch];
                     float valAbsDiff = math::abs(blockChannel[pos] - expected[ch]);
                     maxErrorClip = math::max(maxErrorClip, valAbsDiff);
-                    if (pos == block.samples>>1 || valAbsDiff >= maxError*0.7f) {
+                    if ((iClip==0&&ch==0&&pos<10) || pos == block.samples>>1 || valAbsDiff >= maxError*0.7f) {
                         log_out("channel %u pos %u: expected %f, actual %f, diff %f\n", ch, pos, expected[ch], blockChannel[pos], valAbsDiff);
                     }
                     TEST_ASSERT_THROW(valAbsDiff < maxError);
@@ -134,6 +133,38 @@ namespace test_host {
         }
         TEST_END();
     }
+    void testClipFades(DawInstance* daw, const sampleformat_t& sf, const channelnum_t numChannels) {
+        TEST_BEGIN("testClipFades");
+        auto& prjGlobals = daw->getGlobals();
+        auto cache = daw->getAudioCache();
+        TEST_ASSERT_THROW(!!cache);
+
+        std::vector<clip_t *> clips;
+        auto sampleTestData = [sf](samplecount_t pos, samplecount_t numSamples) -> float {
+            auto samplerate = sf.sampleRate;
+            // 440 Hz sine wave
+            auto freq = 440.0f;
+            auto phase = 2.0f * FLOAT_PI * freq * pos / samplerate;
+            return std::sinf(phase);
+        };
+        samplecount_t sampleLenClip = 100000;
+        samplecount_t samplePosClip = sampleLenClip;
+        auto samplefile = createSample(cache, sf, numChannels, sampleLenClip, sampleTestData);
+        auto tickPosClip = sampleToTickConvert<tick_t, roundmode::floor>(samplePosClip, prjGlobals.tempo100, sf.sampleRate);
+        auto audioClip = createClipFromSample(tickPosClip, prjGlobals, samplefile);
+        audioClip->len /= 2;
+        audioClip->offsetStart = audioClip->len/3;
+        auto off = tickToSampleConvert<samplecount_t, roundmode::floor>(audioClip->offsetStart, prjGlobals.tempo100, sf.sampleRate);
+        clips.push_back(audioClip);
+        auto block = AudioBlock(numChannels, sampleLenClip*3);
+        block.clear();
+        DAW::Host::FillAudioBlockFromClips(daw->getAudioCache(), daw->getProjectGlobals(), clips, sf, 0, block);
+
+        for (auto clip : clips) {
+            delete clip;
+        }
+        TEST_END();
+    }
 }// namespace
 
 int main() {
@@ -147,6 +178,7 @@ int main() {
     test_host::testFillAudioFromClips(daw.get(), sf, numChannels, 0, 0.001f);
     test_host::testFillAudioFromClips(daw.get(), sf, numChannels, 1, 0.001f);
     log_out("Max Error %f\n", test_host::maximumErrorSeen);
+    test_host::testClipFades(daw.get(), sf, numChannels);
     daw->unloadProject();
     daw->destroy();
     daw = nullptr;

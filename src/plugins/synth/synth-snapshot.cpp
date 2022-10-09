@@ -11,10 +11,13 @@
 namespace DAW::Shape {
     void writeShape(ByteBuffer::stream_write<std::vector<std::byte>>& out, const shape_snapshot_t& shape) {
         out.write(shape.type);
-        out.write(shape.shape.version);
-        out.writeString(shape.shape.name);
-        out.write(size_t{shape.shape.curve.pts.size()});
-        for (const auto& point : shape.shape.curve.pts) {
+        const auto& preset = shape.shape;
+        out.write(preset.version);
+        const auto& curve = preset.curve;
+        out.write(curve.flags);
+        out.writeString(curve.name);
+        out.write(size_t{curve.pts.size()});
+        for (const auto& point : curve.pts) {
             out.write(point.pos.x);
             out.write(point.pos.y);
             out.write(point.shape);
@@ -28,7 +31,14 @@ namespace DAW::Shape {
         shape_preset_t shape;
         if (!in.read(shape.version))
             return false;
-        if (!in. readString(shape.name))
+        auto& curve = shape.curve;
+        if (shape.version > 1) {
+            if (!in.read(curve.flags))
+                return false;
+        } else {
+            curve.flags = SHAPE_CYCLIC | SHAPE_SHAPED;
+        }
+        if (!in.readString(curve.name))
             return false;
         size_t numPoints = 0;
         if (!in.read(numPoints))
@@ -45,7 +55,7 @@ namespace DAW::Shape {
             float s = 0.0;
             if (!in. read(s))
                 return false;
-            shape.curve.pts.push_back({{ x, y }, s});
+            curve.pts.push_back({{ x, y }, s});
         }
         out = shape_snapshot_t{ shapeType, std::move(shape) };
         return true;

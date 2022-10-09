@@ -87,11 +87,14 @@ public:
         }
     }
     bool isActive() {
-        if (this->at) {
+        if (this->at && paramIdx > -1) {
             const auto automLane = this->at->getRegisteredConstAutomation(paramIdx);
             return automLane && automLane->isActive();
         }
         return false;
+    }
+    bool isRenderingLane() {
+        return this->at && paramIdx > -1;
     }
     ivec2 paddingTL(int _padding) const override {
         return {0, _padding};

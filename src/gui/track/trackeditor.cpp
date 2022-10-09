@@ -4,6 +4,7 @@
 #include "commands.h"
 #include "compiler.h"
 #include "event.h"
+#include "gui/gui.h"
 #include "seq_time.h"
 #include "tls.h"
 #include "track_types.h"
@@ -683,9 +684,11 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 
     action.dragtype  = DRAG_NONE;
     action.clipboard = nullptr;
-    if (evt.mousepos.x - gClip->toScreenSpace(ivec2(0)).x < DRAG_RANGE) {
+    const auto heightTitle = gClip->theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+    auto clipTrackPos = toControlsObjectSpace(evt.mousepos, gClip->parent);
+    if (gClip->isLeftDragZone(clipTrackPos, heightTitle)) {
         action.dragtype = DRAG_CLIPS_RESIZE_LEFT;
-    } else if (gClip->toScreenSpace(ivec2(gClip->size.x, 0)).x - evt.mousepos.x < DRAG_RANGE) {
+    } else if (gClip->isRightDragZone(clipTrackPos, heightTitle)) {
         action.dragtype = DRAG_CLIPS_RESIZE_RIGHT;
     }
     if (action.dragtype) {

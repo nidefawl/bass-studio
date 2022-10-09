@@ -1,6 +1,7 @@
 #pragma once
 #include <nanovg.h>
 #include <vector>
+#include "gui/shape/shapeeditor.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "seq_util.h"
@@ -59,7 +60,6 @@ public:
         if (culled) {
             return false;
         }
-        
         const auto heightTitle = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         if (isLeftDragZone(mpos, heightTitle)) {
             if (evt.type <= MouseHitType::MOUSE_RIGHT)
@@ -136,6 +136,8 @@ class rendered_audio_clip_t {
     gui_waveform_texture_ref* waveformRef;
     gui_waveform_texture_ref* tempWaveformRef;
     bool prevIsValid = false;
+protected:
+    bool bRequestRefresh = false;
     public:
     rendered_audio_clip_t(waveformrender* waveformRenderer);
     virtual ~rendered_audio_clip_t();
@@ -149,10 +151,24 @@ class rendered_audio_clip_t {
     void releaseWaveformTexture();
 };
 class gui_audio_clip : public gui_clip, public rendered_audio_clip_t {
-
+public:
+    struct fade_layout_t {
+        vec2 pos;
+        vec2 size;
+        sample_fades_ref_t fade;
+    };
+private:
+    fade_layout_t fadeInLayout;
+    fade_layout_t fadeOutLayout;
+    std::unique_ptr<DAW::Shape::ShapeEdit> shapeEdit;
+    uint8_t editingFade = 0;
+    fade_layout_t& getFadeLayout(bool output) {
+        return !output ? fadeInLayout : fadeOutLayout;
+    }
 public:
     gui_audio_clip(track_gui_entry_t* _track, clip_t* _clip, waveformrender* _waveformRenderer);
     ~gui_audio_clip() override;
+    DAW::Shape::ShapeEdit& getShapeEdit();
 
     int getClipType() override {
         return CLIP_AUDIO;
@@ -168,6 +184,20 @@ public:
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
     void onRemove() override;
     void handleRightClick(MouseEvent& evt) override;
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    vec2 ctrlPtToView(const vec2& ctrlPt, vec2 size) {
+        auto scaledPt = vec2{ctrlPt.x, 1.0f - ctrlPt.y};
+        return size * scaledPt;
+    }
+    vec2 viewToCtrlPt(const vec2& pt, vec2 size) {
+        vec2 ctrlPt = vec2(pt / size);
+        return vec2{ctrlPt.x, 1.0f - ctrlPt.y};
+    }
+    void handleDraggedBegin(MouseEvent& evt) override;
+
+    void handleDraggedMove(MouseEvent& evt) override;
+
+    void handleDraggedRelease(MouseEvent& evt) override;
 };
 
 

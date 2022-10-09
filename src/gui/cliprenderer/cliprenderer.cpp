@@ -73,8 +73,19 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
     w.method  = SampleMethod::sample_straight;
     w.audioId = m_clip->audio.id;
     w.clipped = size.x != sizeClipped.x;
+    if (m_clip->hasFadeIn()) {
+        auto fadeRef = m_clip->getSampleFadeIn(tempo100, samplerate);
+        w.fades[0] = {*fadeRef.shape, fadeRef.samplesFadePos, fadeRef.samplesFadeDuration};
+    } else {
+        w.fades[0] = {};
+    }
+    if (m_clip->hasFadeOut()) {
+        auto fadeRef = m_clip->getSampleFadeOut(tempo100, samplerate);
+        w.fades[1] = {*fadeRef.shape, fadeRef.samplesFadePos, fadeRef.samplesFadeDuration};
+    } else {
+        w.fades[1] = {};
+    }
     //log_lf(Log::L_DEBUG, "waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%d]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scale);
-
     return w;
 }
 

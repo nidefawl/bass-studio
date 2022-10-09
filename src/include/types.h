@@ -9,6 +9,7 @@ using uint8_t = std::uint8_t;
 using uint16_t = std::uint16_t;
 using uint32_t = std::uint32_t;
 
+using tick_t = int32_t;
 using samplecount_t = int64_t;
 using samplerate_t = uint32_t;
 using channelnum_t = uint8_t;

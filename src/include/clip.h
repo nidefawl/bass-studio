@@ -4,6 +4,7 @@
 #include <memory>
 #include "math/seq_math.h"
 #include "seq_time.h"
+#include "shape.h"
 #include "str_util.h"
 #include "seq_util.h"
 #include "note.h"
@@ -31,14 +32,25 @@ class track_t;
 class gui_clip;
 class rendered_audio_clip_t;
 
+struct clip_fade_t {
+    double durationMs = 0.0;
+    DAW::Shape::shape_t shape;
+};
 class clip_audio_t {
-
 public:
     int32_t id = -1;
     rendered_audio_clip_t* renderedAudio = nullptr;
+    clip_fade_t fadeIn;
+    clip_fade_t fadeOut;
 
+    /* debug only */
+    samplecount_t lastReadBegin = -1;
+    samplecount_t lastReadEnd = -1;
+    samplecount_t lastReadLen = -1;
+    samplecount_t lastWriteBegin = -1;
+    samplecount_t lastWriteEnd = -1;
 public:
-    clip_audio_t()  = default;
+    clip_audio_t();
     ~clip_audio_t();
 
     clip_audio_t& operator=(const clip_audio_t& a) {
@@ -49,7 +61,9 @@ public:
         copy(a);
     }
     void copy(const clip_audio_t& obj) {
-        this->id              = obj.id;
+        this->id = obj.id;
+        this->fadeIn = obj.fadeIn;
+        this->fadeOut = obj.fadeOut;
     }
     int32_t lenSamples() const;
 };
@@ -202,15 +216,15 @@ public:
     tick_t len = 0;
 
 public:
-    tick_t offsetStart    = 0;
+    tick_t offsetStart       = 0;
     samplecount_t lenSamples = 0;
-    tick_t loopStart      = 0;
-    tick_t loopLen        = 0;
-    int clipType          = CLIP_MIDI;
+    tick_t loopStart         = 0;
+    tick_t loopLen           = 0;
+    int clipType             = CLIP_MIDI;
     String name;
     uint32_t rgb     = 0x2B82AD;
     bool enabled     = true;
-    bool loopEnabled = true;
+    bool loopEnabled = false;
     bool noLayout    = true;
     clip_editor_layout_t editorLayout;
 
@@ -274,25 +288,7 @@ public:
     }
     tick_t getLoopBegin() const;
     tick_t getNumLoops() const;
-    void adjustStartOffset(tick_t offset) {
-        if (clipType == CLIP_AUDIO) {
-            //adjustStartSamples(offset);
-            //return;
-        }
-        if (isLoopEnabled() && offsetStart < loopStart) {
-            tick_t lenAdj = math::min(offset, loopStart - offsetStart);
-            offsetStart += lenAdj;
-            offset -= lenAdj;
-        }
-        bool inLoop = isLoopEnabled() && offsetStart >= loopStart;
-        this->offsetStart += offset;
-        while (inLoop && offsetStart < loopStart) {
-            offsetStart += loopLen;
-        }
-        while (inLoop && offsetStart >= loopStart + loopLen) {
-            offsetStart -= loopLen;
-        }
-    }
+    void adjustStartOffset(tick_t offset);
 
     tick_t getLen() const;
     tick_t& getLenRef();
@@ -300,7 +296,17 @@ public:
     void adjustLen(tick_t offset);
     samplecount_t getLenSamples() const;
     void setLenSamples(samplecount_t _lenSamples = 0);
-
+    sample_fades_ref_t getSampleFadeIn(int32_t tempo100, samplerate_t sr) const;
+    sample_fades_ref_t getSampleFadeOut(int32_t tempo100, samplerate_t sr) const;
+    bool hasFadeIn() const {
+        return audio.fadeIn.durationMs > 0;
+    }
+    bool hasFadeOut() const {
+        return audio.fadeOut.durationMs > 0;
+    }
+    clip_fade_t& getFade(bool output) {
+        return !output ? audio.fadeIn : audio.fadeOut;
+    }
     bool isLoopEnabled() const {
         return loopEnabled && this->loopLen > 0;
     }

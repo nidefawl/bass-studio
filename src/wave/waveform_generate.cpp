@@ -5,6 +5,7 @@
 #include "math/mat.h"
 #include "math/seq_math.h"
 #include "audiosample.h"
+#include "types.h"
 #include "waveform_render.h"
 #include "logging.h"
 #include "assert_dbg.h"
@@ -18,8 +19,8 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
         const float width   = waveformshape->size.x * (1.0f / waveformshape->scaleX);
         const float height  = waveformshape->size.y;
         const int nMaxDowns = sample->downsampled.size() + 1;
-        int nLevel          = 0;
-        int downsampleScale = 1;
+        samplecount_t nLevel          = 0;
+        samplecount_t downsampleScale = 1;
 
         // make a copy
         audioclip_texture_t waveformScaled = *waveformshape;
@@ -32,7 +33,7 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
         waveformScaled.sampleBeginOffset /= downsampleScale;
         waveformScaled.sampleBegin /= downsampleScale;
         waveformScaled.sampleEnd /= downsampleScale;
-        dbgassert(nLevel == 0 || nLevel - 1 < (int) sample->downsampled.size());
+        dbgassert(nLevel == 0 || nLevel - 1 < samplecount_t(sample->downsampled.size()));
 
         std::vector<samplechannel_t>& smpCh = nLevel == 0 ? sample->samples : sample->downsampled[nLevel - 1];
         int stepSize                        = 1;
@@ -55,14 +56,16 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
 
         const float channelHeight = height / (float) sample->nChannels;
         const float vOffset       = 1.0f / (float) verticesPerPx;
-        const float samplesToPx   = 1.0f / samplesPerPx;
-        const int nVecsEstimate   = width * verticesPerPx;
+        const double samplesToPx   = 1.0f / samplesPerPx;
+        const auto nVecsEstimate   = math::ceildS32(width * verticesPerPx);
         // int nVecsProduced         = 0;
+        auto clipFadeIn = waveformshape->fades[0];
+        auto clipFadeOut = waveformshape->fades[1];
 
         for (channelnum_t iChannel = 0; iChannel < sample->nChannels; iChannel++) {
             vec2list vecs;
             if (nVecsEstimate > 0)
-                vecs.reserve(nVecsEstimate + 500);
+                vecs.reserve(nVecsEstimate + 128);
             const float px             = x;
             const float py             = y + channelHeight * iChannel + channelHeight / 2.0f;
             const auto& samplesCh      = smpCh[iChannel];
@@ -86,11 +89,22 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
                         //End of sample, render next channel
                         break;
                     }
-                    int32_t sampleIdx = std::round(sampleOffset);//TODO: std::round is slow
-                    dbgassert((int) sampleIdx % stepSize == 0);
-                    float fCurX = (sampleOffset - renderOffset) * samplesToPx;
-                    const float data = samplesChPtr[sampleIdx];
-                    fAbsMax = math::absMax(fAbsMax, data);
+                    samplecount_t sampleIdx = math::rounddS64(sampleOffset);//TODO: std::round is slow
+                    dbgassert(sampleIdx % stepSize == 0);
+                    float fCurX = float((sampleOffset - renderOffset) * samplesToPx);
+                    float fade = 1.0f;
+                    for (auto* clipFade : { &clipFadeIn, &clipFadeOut }) {
+                        if (sampleIdx * downsampleScale >= clipFade->samplesFadePos && sampleIdx * downsampleScale < clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
+                            float fadePos = (sampleIdx * downsampleScale - clipFade->samplesFadePos) / float(clipFade->samplesFadeDuration);
+                            fade *= clipFade->shape.sampleCurveOneShot(fadePos);
+                        } else if (clipFade == &clipFadeOut && clipFade->samplesFadeDuration && sampleIdx * downsampleScale >= clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
+                            fade = 0.0f;
+                        } else if (clipFade == &clipFadeIn && clipFade->samplesFadeDuration && sampleIdx * downsampleScale < clipFade->samplesFadePos) {
+                            fade = 0.0f;
+                        }
+                    }
+                    const float data = samplesChPtr[sampleIdx] * fade;
+                    fAbsMax = math::absMax(fAbsMax, data * fade);
                     if (fCurX >= lastPtX + 1/16.0f) {
                         // if (samplesPerPx >= 256) {
                         //     int sumRange = 0;// samplesPerPx / 32;

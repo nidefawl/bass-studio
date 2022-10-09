@@ -9,7 +9,6 @@ namespace DAW::Shape {
 
 struct shape_preset_t {
     int32_t version = 0;
-    String name;
     shape_base_t curve;
 };
 struct shape_snapshot_t {
