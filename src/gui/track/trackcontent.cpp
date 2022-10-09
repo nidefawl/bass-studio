@@ -42,6 +42,7 @@ struct track_gui_entry_t;
 
 constexpr int32_t CLIPPING_STEP_PX = 512;
 constexpr int32_t MARGIN_CLIPPING_PX = 32;
+constexpr int32_t MIN_WIDTH_CLIP_FADES = 6;
 
 
 bool getClipPositionFloat(scaled_grid& grid, const ivec2& scissorSize, const clip_t* cl, vec2& pos, vec2& size, double tickOffset, const float minWidth) {
@@ -179,6 +180,9 @@ void gui_audio_clip::render(NVGcontext* vg) {
         renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, file, ref, pos, size, posClipped, sizeClipped);
         const auto relMousepos = toControlsObjectSpace(parentCtrl->m_mousePos, parent);
         for (auto* fadeLayout : { &fadeInLayout, &fadeOutLayout }) {
+            if (fadeLayout->size.x < MIN_WIDTH_CLIP_FADES || fadeLayout->size.y < MIN_WIDTH_CLIP_FADES) {
+                continue;
+            }
             const uint8_t fadeIdx = fadeLayout == &fadeInLayout ? 0 : 1;
             using DAW::Shape::shape_t;
             using hittype = DAW::Shape::shape_t::hittype;
@@ -244,7 +248,7 @@ bool gui_audio_clip::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         for (auto* fadeLayout : { &fadeInLayout, &fadeOutLayout }) {
             const uint8_t fadeIdx = fadeLayout == &fadeInLayout ? 0 : 1;
             const auto editRelMouse = vec2(mpos) - fadeLayout->pos;
-            if (editRelMouse.y < 0 || editRelMouse.y >= fadeLayout->size.y) {
+            if (editRelMouse.y < 0 || editRelMouse.y >= fadeLayout->size.y || fadeLayout->size.x < MIN_WIDTH_CLIP_FADES || fadeLayout->size.y < MIN_WIDTH_CLIP_FADES) {
                 continue;
             }
             const auto mousePosScaledToFade = viewToCtrlPt(editRelMouse, fadeLayout->size);
@@ -278,7 +282,7 @@ void gui_audio_clip::handleDraggedBegin(MouseEvent& evt) {
     for (auto* fadeLayout : { &fadeInLayout, &fadeOutLayout }) {
         const uint8_t fadeIdx = fadeLayout == &fadeInLayout ? 0 : 1;
         const auto editRelMouse = vec2(evt.relMousepos + pos) - fadeLayout->pos;
-        if (editRelMouse.y < 0 || editRelMouse.y >= fadeLayout->size.y) {
+        if (editRelMouse.y < 0 || editRelMouse.y >= fadeLayout->size.y || fadeLayout->size.x < MIN_WIDTH_CLIP_FADES || fadeLayout->size.y < MIN_WIDTH_CLIP_FADES) {
             continue;
         }
         const auto mousePosScaledToFade = viewToCtrlPt(editRelMouse, fadeLayout->size);
