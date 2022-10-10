@@ -313,12 +313,7 @@ public:
     DawInstance() : project_controller_t(&project, &projectGlobals) {
         setEmptyClipboard();
     }
-    void setEmptyClipboard() {
-        clipboardType = CLIPBOARD_NONE;
-        clipboardPlugins = std::make_shared<plugin_clipboard_t>();
-        clipboardClips   = std::make_shared<clip_clipboard>();
-        clipboardNotes   = std::make_shared<notes_clipboard>();
-    }
+    void setEmptyClipboard();
     edithistory& getHist() {
         return hist;
     }

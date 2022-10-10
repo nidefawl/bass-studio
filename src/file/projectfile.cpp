@@ -1,4 +1,5 @@
 #include "projectfile.h"
+#include "shapefile.h"
 
 #include "snapshot/snapshot.h"
 #include "snapshot/trackrouting-snapshot.h"
@@ -64,11 +65,6 @@ void serialize(Archive& archive, modulation_channel_ref& m) {
 template<class Archive>
 void serialize(Archive& archive, plugin_iodesc_snapshot_t& m) {
     archive(make_nvp("input", m.input), make_nvp("output", m.output));
-}
-
-template<class Archive>
-void serialize(Archive& archive, trackcontainer_snapshot_t& m) {
-    archive(make_nvp("tracklist", m.tracks), make_nvp("hierachy", m.hierachy));
 }
 
 template<class Archive>
@@ -392,6 +388,11 @@ void save(Archive& archive, const track_snapshot_t& m, const std::uint32_t versi
         make_nvp("storeOpts", m.storeOpts),
         make_nvp("layouts", m.layouts)
     );
+}
+
+template<class Archive>
+void serialize(Archive& archive, trackcontainer_snapshot_t& m) {
+    archive(make_nvp("tracklist", m.tracks), make_nvp("hierachy", m.hierachy));
 }
 
 template<class Archive>

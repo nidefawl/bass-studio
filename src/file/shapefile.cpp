@@ -16,11 +16,6 @@ using cereal::make_nvp;
 
 namespace DAW::Shape {
 
-template <class Archive>
-void serialize(Archive& archive, shape_pt_t& m) {
-    archive(make_nvp("x", m.pos.x), make_nvp("y", m.pos.y), make_nvp("s", m.shape));
-}
-
 struct old_shape_base_t {
     std::vector<shape_pt_t> pts;
     String name;
@@ -32,15 +27,6 @@ template <class Archive>
 void serialize(Archive& archive, old_shape_base_t& m) {
     archive(make_nvp("pts", m.pts));
 }
-template <class Archive>
-void serialize(Archive& archive, shape_base_t& m) {
-    archive(
-        make_nvp("name", m.name),
-        make_nvp("flags", m.flags),
-        make_nvp("pts", m.pts)
-    );
-}
-
 
 template<class Archive>
 void load(Archive& archive, shape_preset_t& m) {

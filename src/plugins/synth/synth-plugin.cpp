@@ -1532,7 +1532,7 @@ namespace PluginSynth {
                 });
             }
         }
-        void setLfoShape(const DAW::Shape::shape_base_t& shape) {
+        void setLfoShape(const DAW::Shape::shape_t& shape) {
             lfoShape.pts = shape.pts;
             notifyUiChanges();
         }
@@ -1849,13 +1849,13 @@ namespace PluginSynth {
             resetLfoShape();
             for (auto& shape : snapshot.shapes) {
                 if (shape.type == 0) {
-                    lfoShape.setShape(shape.shape.curve);
+                    lfoShape = shape.shape.curve;
                 } else {
                     dbgassert(0);
                 }
             }
             if (lfoShape.pts.size() < 2) {
-                lfoShape.setShape(DAW::Shape::GetShapeSaw(DAW::Shape::SHAPE_SHAPED|DAW::Shape::SHAPE_CYCLIC));
+                lfoShape = DAW::Shape::GetShapeSaw(DAW::Shape::SHAPE_SHAPED|DAW::Shape::SHAPE_CYCLIC);
             }
 
             for (auto& mod : modulations) {
@@ -4357,7 +4357,7 @@ namespace PluginSynth {
                 vecParamUI[param] = { param, knob, type, ctr, ivec2(0), ivec2(32, 32) };
             }
             shapeEditor->setShapeEditorShapeRef(&synth->getShape(0));
-            shapeEditor->setShapeEditorCallback([synth=this->synth](const DAW::Shape::shape_base_t& shape) -> void {
+            shapeEditor->setShapeEditorCallback([synth=this->synth](const DAW::Shape::shape_t& shape) -> void {
                 auto lock = synth->lock();
                 auto& synthShape = synth->getShape(0);
                 synthShape.pts = shape.pts;
@@ -4725,8 +4725,6 @@ namespace PluginSynth {
             auto voicePos = vec2(inset);
             auto voiceSize = vec2(voiceWidth, cs.y - inset * 2);
             {
-                auto colBg = theme->getColor(GuiColor::COL_NOTE_MUTE);
-                colBg.a = 0.12f;
                 for (int polyIndex = 0; polyIndex < NUM_POLY_VOICES; ++polyIndex) {
                     nvgBatchedRect(vg, voicePos.x, voicePos.y, voiceSize.x-2, voiceSize.y);
                     voicePos.x += voiceSize.x;    

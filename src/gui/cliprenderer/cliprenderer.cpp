@@ -462,7 +462,6 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
                         getContrastFontColor(cl->rgb),
                         NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     }
-    ivec2 posContents  = ivec2(pos.x, pos.y);
     noteview_render_t& notesView = cl->getNoteViewRender();
     if (!notesView.data) {
         notesView.data = new noteview_cache_impl_t{};

@@ -124,7 +124,7 @@ namespace test_audioblock {
         }
         const samplecount_t copyDstPos = 10;
         const samplecount_t copySrcPos = 10;
-        const float const* testInputArrays[] = {&testInputBuf[0], &testInputBuf[0]};
+        const float* testInputArrays[] = {&testInputBuf[0], &testInputBuf[0]};
         for (channelnum_t j = 0; j < numChannels; j++) {
             block2.SubChannelsBlock(j, 1).copyFromPosToPos(testInputArrays, 0, copySrcPos, copyLen, 1);
             for (samplecount_t i = 0; i < copyLen; i++) {

@@ -3107,14 +3107,25 @@ beatbar16th_t project_controller_t::toBeatBar16th(tick_t tick, bool isRelative) 
 tick_t project_controller_t::beatBarNthToTick(const beatbar16th_t& beatBarNth, bool isRelative) {
     return ::beatBarNthToTick(beatBarNth, projectGlobals->signatureNum, projectGlobals->signatureDenom, isRelative);
 }
+
 void MainCtrl::storeLayout(dawview_layout_t& layout) {
     view->storeLayout(layout);
 }
+
 void MainCtrl::loadLayout(const dawview_layout_t& viewLayout) {
     view->loadLayout(viewLayout);
     dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
 }
+
 void CompanionCtrl::storeLayout(dawview_layout_t& layout) {
 }
+
 void CompanionCtrl::loadLayout(const dawview_layout_t& viewLayout) {
+}
+
+void DawInstance::setEmptyClipboard() {
+    clipboardType    = CLIPBOARD_NONE;
+    clipboardPlugins = std::make_shared<plugin_clipboard_t>();
+    clipboardClips   = std::make_shared<clip_clipboard>();
+    clipboardNotes   = std::make_shared<notes_clipboard>();
 }

@@ -11,7 +11,7 @@ public:
     i_ctr_shape_editor() = default;
 
 public:
-    virtual void setShapeEditorCallback(std::function<void(const DAW::Shape::shape_base_t&)> callback) = 0;
+    virtual void setShapeEditorCallback(std::function<void(const DAW::Shape::shape_t&)> callback) = 0;
     virtual void setShapeEditorShapeRef(DAW::Shape::shape_t* shape) = 0;
     virtual guictr_base* getGuiContainer() = 0;
 };
@@ -40,7 +40,7 @@ public:
     bool bIsGridEnabledV = false;
     int32_t gridStepsH = 8;
     int32_t gridStepsV = 8;
-    std::function<void(const DAW::Shape::shape_base_t&)> callback;
+    std::function<void(const DAW::Shape::shape_t&)> callback;
     vec2 toParentSpace(const vec2& ctrlPt) {
         auto scaledPt = vec2{ctrlPt.x, 1.0f - ctrlPt.y};
         return editorSize * scaledPt;

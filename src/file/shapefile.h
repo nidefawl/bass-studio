@@ -4,12 +4,14 @@
 #include "shape.h"
 #include "str_util.h"
 #include "fileio.h"
+#include <cereal/cereal.hpp>
+#include <cereal/types/vector.hpp>
 
 namespace DAW::Shape {
 
 struct shape_preset_t {
     int32_t version = 0;
-    shape_base_t curve;
+    shape_t curve;
 };
 struct shape_snapshot_t {
     int32_t type = -1;
@@ -23,4 +25,22 @@ bool readShape(ByteBuffer::stream_read& in, shape_snapshot_t& out);
 
 extern std::vector<SupportedFileType> vFILE_TYPE_SHAPEPRESET;
 
+
+template <class Archive>
+void serialize(Archive& archive, shape_pt_t& m) {
+    archive(
+        cereal::make_nvp("x", m.pos.x),
+        cereal::make_nvp("y", m.pos.y),
+        cereal::make_nvp("s", m.shape)
+    );
+}
+
+template <class Archive>
+void serialize(Archive& archive, shape_t& m) {
+    archive(
+        cereal::make_nvp("name", m.name),
+        cereal::make_nvp("flags", m.flags),
+        cereal::make_nvp("pts", m.pts)
+    );
+}
 } // namespace DAW::Shape

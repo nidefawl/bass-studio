@@ -88,7 +88,7 @@ namespace test_host {
             // 440 Hz sine wave
             auto freq = 440.0f;
             auto phase = 2.0f * FLOAT_PI * freq * pos / samplerate;
-            return std::sinf(phase);
+            return ::sinf(phase);
         };
         tick_t tickBegin = 0;
         if (testMode == 0) {
@@ -145,7 +145,7 @@ namespace test_host {
             // 440 Hz sine wave
             auto freq = 440.0f;
             auto phase = 2.0f * FLOAT_PI * freq * pos / samplerate;
-            return std::sinf(phase);
+            return ::sinf(phase);
         };
         samplecount_t sampleLenClip = 100000;
         samplecount_t samplePosClip = sampleLenClip;

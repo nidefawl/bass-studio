@@ -169,7 +169,7 @@ namespace DAW::Shape {
             } else {
                 shapeExp = 1.0f / (1.0f + scale2 * std::fabs(shapeBi) * 16.f);
             }
-            t = std::powf(t, shapeExp);
+            t = ::powf(t, shapeExp);
         }
         if (flags & SHAPE_EASEINOUT) {
             t = t * t * (3.0f - 2.0f * t);
@@ -262,23 +262,23 @@ namespace DAW::Shape {
         return result;
     }
 
-    shape_base_t GetShapeSaw(int32_t flags) {
+    shape_t GetShapeSaw(int32_t flags) {
         auto pt1 = shape_pt_t{ { 0.0f, 1.0f }, 0.5f };
         auto pt2 = shape_pt_t{ { 1.0f, 0.0f }, 0.5f };
-        return shape_base_t{ { { pt1, pt2 } }, "Saw", -1.0f, flags };
+        return shape_t{ flags, { { pt1, pt2 } }, "Saw", -1.0f };
     }
 
-    shape_base_t GetShapeSawInverse(int32_t flags) {
+    shape_t GetShapeSawInverse(int32_t flags) {
         auto pt1 = shape_pt_t{ { 0.0f, 0.0f }, 0.5f };
         auto pt2 = shape_pt_t{ { 1.0f, 1.0f }, 0.5f };
-        return shape_base_t{ { { pt1, pt2 } }, "Inverse Saw", -1.0f, flags };
+        return shape_t{ flags, { { pt1, pt2 } }, "Inverse Saw", -1.0f };
     }
 
-    shape_base_t GetShapeTriangle(int32_t flags) {
+    shape_t GetShapeTriangle(int32_t flags) {
         auto pt1 = shape_pt_t{ { 0.0f, 0.0f }, 0.5f };
         auto pt2 = shape_pt_t{ { 0.5f, 1.0f }, 0.5f };
         auto pt3 = shape_pt_t{ { 1.0f, 0.0f }, 0.5f };
-        return shape_base_t{ { { pt1, pt2, pt3 } }, "Saw", -1.0f, flags };
+        return shape_t{ flags, { { pt1, pt2, pt3 } }, "Saw", -1.0f };
     }
 
 }// namespace DAW::Shape

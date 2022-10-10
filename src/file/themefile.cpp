@@ -3,6 +3,7 @@
 #include "color_util.h"
 #include "config.h"
 #include "theme.h"
+#include "exceptions.h"
 #include "guiconstant.h"
 #include "guicolors.h"
 #include "msgbox.h"

@@ -1,5 +1,5 @@
 #pragma once
-
+#include <array>
 #include "assert_dbg.h"
 #include "math/vec.h"
 #include "mouse.h"

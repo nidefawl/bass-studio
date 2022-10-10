@@ -4,7 +4,7 @@
 #include "event.h"
 
 String KeyEvent::toString() const {
-    return StringFormat("KeyEvent: type=%d, keyCode=%d, scancode=%d, mods=%d, keyname=%s", type, keyCode, scancode, mods, keyname);
+    return StringFormat("KeyEvent: type=%d, keyCode=%d, scancode=%d, mods=%d, keyname=%s", type, static_cast<int32_t>(keyCode), scancode, mods, keyname);
 }
 
 /* static */ KeyCombo KeyCombo::FromKeyEvent(const KeyEvent& kevt) {
@@ -27,7 +27,7 @@ String KeyCombo::toString() const {
     if (!keyChar.empty()) {
         return modKeys + keyChar;
     } else {
-        return modKeys + StringFormat("Keycode %d", keyCode);
+        return modKeys + StringFormat("Keycode %d", static_cast<int32_t>(keyCode));
     }
     return modKeys;
 }

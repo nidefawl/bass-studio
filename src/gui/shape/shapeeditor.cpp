@@ -559,7 +559,7 @@ public:
     ~guictr_curve_editor() override {
         removeGuis();
     }
-    void setShapeEditorCallback(std::function<void(const DAW::Shape::shape_base_t&)> callback) override {
+    void setShapeEditorCallback(std::function<void(const DAW::Shape::shape_t&)> callback) override {
         shape.callback = std::move(callback);
     }
     void setShapeEditorShapeRef(DAW::Shape::shape_t* shape) override {
@@ -599,7 +599,7 @@ public:
             return;
         }
         if (&controls.buttonSave == button) {
-            shape_preset_t shapePreset { 1, shape_base_t{shape.curve->pts, shape.curve->name, shape.curve->renderPhase, shape.curve->flags} };
+            shape_preset_t shapePreset { 1, *shape.curve };
             String defaultPresetPath = presetManager.getPresetPath();
             CreateDirectoryIfNotExists(defaultPresetPath);
             String path;
@@ -707,7 +707,8 @@ void ShapeEdit::onMoveDragCurveEditor(MouseEvent& evt) {
                 snapped.x += 1.0f;
             }
             auto unclamped = snapped;
-            snapped.x      = math::clamp(modf(snapped.x, &snapped.x), 0.0f, 1.0f);
+            double fModfInput = snapped.x;
+            snapped.x      = math::clamp<float>(modf(fModfInput, &fModfInput), 0.0f, 1.0f);
             snapped.y      = math::clamp(snapped.y, 0.0f, 1.0f);
             auto& pt       = curveTmp.pts[dragged.idx];
             if (unclamped.x > snapped.x + 0.9) {

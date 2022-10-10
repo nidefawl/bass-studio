@@ -25,33 +25,26 @@ enum ShapeFlags {
     SHAPE_LOCK_POINTS = 1 << 8,
 };
 
-struct shape_base_t {
+/* struct shape_base_t {
     std::vector<shape_pt_t> pts;
     String name;
     float renderPhase = -1.0f;
     int32_t flags = SHAPE_FLAGS_NONE;
-};
+}; */
 inline float GetMinDistPointMouseHit() { return 10.0f; }
 inline float GetMinDistEdgeMouseHit() { return 5.0f; }
 
-struct shape_t : public shape_base_t {
-    void setShape(shape_base_t const &other) {
-        pts = other.pts;
-        renderPhase = other.renderPhase;
-        name = other.name;
-        flags = other.flags;
-    }
+struct shape_t {
+    std::vector<shape_pt_t> pts;
+    String name;
+    float renderPhase = -1.0f;
+    int32_t flags = SHAPE_FLAGS_NONE;
     shape_t() = default;
     shape_t(int32_t shapeFlags, std::vector<shape_pt_t> pts, String name, float renderPhase = 1.0f) {
         this->flags = shapeFlags;
         this->pts = std::move(pts);
         this->name = std::move(name);
         this->renderPhase = renderPhase;
-    }
-    explicit shape_t(const shape_base_t &other) { setShape(other); }
-    shape_t &operator=(const shape_base_t &other) {
-        setShape(other);
-        return *this;
     }
     float shapeSegment(float t, float shape) const;
     float sampleCurveOneShot(float posX) const;
@@ -77,9 +70,9 @@ public:
     };
     hit_result getMouseHit(vec2 localPos, vec2 scale) const;
 };
-shape_base_t GetShapeSaw(int32_t flags = SHAPE_CYCLIC);
-shape_base_t GetShapeSawInverse(int32_t flags = SHAPE_CYCLIC);
-shape_base_t GetShapeTriangle(int32_t flags = SHAPE_CYCLIC);
+shape_t GetShapeSaw(int32_t flags = SHAPE_CYCLIC);
+shape_t GetShapeSawInverse(int32_t flags = SHAPE_CYCLIC);
+shape_t GetShapeTriangle(int32_t flags = SHAPE_CYCLIC);
 } // namespace DAW::Shape
 
 

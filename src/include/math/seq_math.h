@@ -129,7 +129,7 @@ namespace math {
         if (std::isinf(val))
             return 0;
 #endif
-        return std::floorf(val);
+        return ::floorf(val);
     }
 
     /**

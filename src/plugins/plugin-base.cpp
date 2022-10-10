@@ -130,7 +130,7 @@ BasePluginVST2::BasePluginVST2(audioMasterCallback audioMaster,
 }
 BasePluginVST2::BasePluginVST2(audioMasterCallback audioMaster,
                                uint32_t pluginUniqueID)
-    : AudioEffectX(audioMaster, numPrograms, numParams)
+    : AudioEffectX(audioMaster, 0, 0)
 {
     setInitialDelay(0);
     this->cEffect.version = 2;

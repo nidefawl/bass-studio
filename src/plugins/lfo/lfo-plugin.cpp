@@ -215,14 +215,14 @@ namespace PluginLFO {
         };
         module_lfo* module;
         std::array<lfo_automation_src_param_t, NUM_CHANNELS> macroAutomationSrcParams;
-        explicit lfo_impl_t(DawInstance* daw, module_lfo* module, const DAW::Shape::shape_base_t& initShape) 
+        explicit lfo_impl_t(DawInstance* daw, module_lfo* module, const DAW::Shape::shape_t& initShape) 
             : PluginLockable(daw),
             module(module)
         {
             for (int32_t i = 0; i < NUM_CHANNELS; ++i) {
                 macroAutomationSrcParams[i].module = module;
                 macroAutomationSrcParams[i].paramIdx = i;
-                macroAutomationSrcParams[i].shape.setShape(initShape);
+                macroAutomationSrcParams[i].shape = initShape;
                 macroAutomationSrcParams[i].syncRatios = GetSyncRatios();
             }
         }
@@ -494,7 +494,7 @@ namespace PluginLFO {
             firstCtr->addElement({0.15f, new DAW::UI::Modulation::guibutton_modulate(module->getModulationChannel(0))});
             add(firstCtr);
             shapeEditor->setShapeEditorShapeRef(&module->getShape(0));
-            shapeEditor->setShapeEditorCallback([module=this->module](const DAW::Shape::shape_base_t& shape) -> void {
+            shapeEditor->setShapeEditorCallback([module=this->module](const DAW::Shape::shape_t& shape) -> void {
                 auto lock = module->impl->lock();
                 auto& synthShape = module->getShape(0);
                 synthShape.pts = shape.pts;
