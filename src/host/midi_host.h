@@ -1,6 +1,6 @@
 #pragma once
 #include "config.h"
-#include "midi-msg.h"
+#include "midi-event.h"
 #include "samplerate.h"
 #include "seq_time.h"
 #include "str_util.h"

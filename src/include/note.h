@@ -96,18 +96,6 @@ public:
     }
 };
 
-struct noteevent_t {
-    int32_t pitch    = 0;
-    int32_t velocity = 127;
-    tick_t tickOffsetInBlock;
-    tick_t globalTick  = 0;
-    bool isNoteOn      = false;
-    bool isLoopNoteOff = false;
-    noteevent_t(int32_t p, int32_t v, tick_t t, tick_t gt, bool b, bool b2)
-        : pitch(p), velocity(v), tickOffsetInBlock(math::max(0, t)), globalTick(gt), isNoteOn(b), isLoopNoteOff(b2) {
-    }
-};
-
 inline bool operator==(const note_t& lhs, const note_t& rhs) {
     return lhs.time == rhs.time && lhs.pitch == rhs.pitch;
 }
@@ -189,4 +177,3 @@ inline void quantizeNoteEndTime(T& notesPtrs, tick_t quantize) {
 }
 int cutIntersecting(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes);
 bool cutSelfIntersecting(std::vector<note_t>& m_list);
-void sortNoteEvents(std::vector<noteevent_t>& noteEvents);

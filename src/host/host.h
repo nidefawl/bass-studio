@@ -1,18 +1,19 @@
 #pragma once
+#include <atomic>
+#include <map>
+#include <memory>
+#include <utility>
+#include <vector>
+#include "clip.h"
 #include "config.h"
 #include "modules.h"
 #include "str_util.h"
 #include "seq_time.h"
 #include "dsp_util.h"
-#include <utility>
-#include <vector>
-#include <atomic>
 #include "tls.h"
 #include "types.h"
-#include <map>
-
-#include <vstsdk-host-2.4/aeffectx.h>
 #include "note.h"
+#include "midi-event.h"
 #include "rand.h"
 #include "hires_timer.h"
 #include "project.h"
@@ -26,7 +27,7 @@
 #include "daw_channel.h"
 #include "util/profiling.h"
 #include "host/host_pluginmanager.h"
-#include <memory>
+#include <vstsdk-host-2.4/aeffectx.h>
 
 class audiocache;
 struct AudioBlock;
@@ -38,6 +39,8 @@ struct process_scratch_buf_t {
     hires_timer_t timer;// timer for cpu-time profiling
     AudioBlock block;
     std::vector<std::vector<float>> scratchBuffers;
+    std::vector<midievent_note_t> noteEventsTemp;
+    std::vector<midievent_ctrl_t> ctrlEventsTemp;
 };
 
 struct host_processing_stats_t {
@@ -64,6 +67,11 @@ struct thread_stats_process_timings_t {
 };
 
 Host* getInstance();
+
+struct midi_data_t {
+    clip_notes_t notes;
+    midi_input_events_t events;
+};
 
 class Host : public PluginManager {
 public:
@@ -108,7 +116,7 @@ private:
     host_processing_stats_t processing{ 0 };
 
     audiothread_ringbuffer_t ringbuffer;
-    clip_notes_t* midiRealtimeInput;
+    midi_data_t midiRealtimeInput;
 
 private:
     void processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state);

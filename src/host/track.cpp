@@ -43,7 +43,7 @@
 #include "plugindatabase.h"
 #include "wave/waveform_render_impl.h"
 #include "gui/track/subtrack.h"
-#include "midi-msg.h"
+#include "midi-event.h"
 #include "fileio.h"
 #include "clip.h"
 #include "assert_dbg.h"
@@ -799,7 +799,21 @@ void PluginManager::activateDeferred(effectbase* const eff, int flags, effectbas
     //    if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
 }
 
-} // namespace DAW::Host
+void midi_input_events_t::addMidiEvent(tick_t tick, uint32_t message, int32_t midiTime) {
+    if (!m_list.empty() && tick >= m_list.back().tick) {
+        m_list.push_back({ tick, message, midiTime });
+    } else {
+        for (auto it = m_list.begin(); it != m_list.end(); ++it) {
+            if (it->tick > tick) {
+                m_list.insert(it, { tick, message, midiTime });
+                return;
+            }
+        }
+        m_list.push_back({ tick, message, midiTime });
+    }
+}
+
+}// namespace DAW::Host
 
 void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot) {
     const auto& subtrackSnapshots = snapshot.subtracks;
@@ -957,8 +971,8 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
     DAW::Host::FillAudioBlockFromClips(cache, prjGlobals, clips, sampleFormat, samplePosBegin, outBuffer);
 }
 
-void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
-    std::sort(noteEvents.begin(), noteEvents.end(), [](const noteevent_t& a, const noteevent_t& b) {
+void sortNoteEvents(std::vector<midievent_note_t>& noteEvents) {
+    std::sort(noteEvents.begin(), noteEvents.end(), [](const midievent_note_t& a, const midievent_note_t& b) {
         // sort by tick, pitch, note off, note on
         if (a.globalTick == b.globalTick) {
             if (a.pitch == b.pitch) {
@@ -1021,11 +1035,31 @@ void track_impl_t::onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPo
 
 void track_impl_t::sendNotesOff() {
     audio_stage_t::sendNotesOff();
-    std::vector<noteevent_t> noteEvents;
+    std::vector<midievent_note_t> noteEvents;
     {
         ThreadLock lock = midiMutex.lockThread();
         if (arp) {
             arp->allNotesOff(noteEvents);
+        }
+    }
+}
+
+void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, const DAW::Host::midi_data_t& data, std::vector<note_t>& list, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts) {
+    for (auto& note : data.notes.m_list) {
+        if (note.isIntersectTimeIncludeEnds(absStart, absEnd)) {
+            note_t noteOffset(note);
+            if (!list.capacity()) {
+                list.reserve(4);
+            }
+            list.push_back(noteOffset);
+        }
+    }
+    for (auto& evt : data.events.m_list) {
+        if (evt.tick >= absStart && evt.tick < absEnd) {
+            if (!ctrlEvts.capacity()) {
+                ctrlEvts.reserve(4);
+            }
+            ctrlEvts.push_back(evt);
         }
     }
 }
@@ -1042,7 +1076,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                              tick_t loopStart, tick_t loopEnd,
                              project_globals_t& prjGlobals,
                              samplecount_t inputLatency,
-                             const clip_notes_t& midiRealtimeInput) {
+                             const DAW::Host::midi_data_t& midiRealtimeInput) {
     constexpr bool logProcessedNotes = false;
     if (arp || std::any_of(effects.begin(), effects.end(), [](const effectbase* ref) {
             return ref->bCanReceiveMidi;
@@ -1066,6 +1100,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
 
         updateProfilingTime(procMidiStats.tm0InputClips, tmr.getTimeReset());
 
+        std::vector<DAW::Host::midievent_ctrl_t> ctrlEvents;
         if (flags & MidiFlags::PROCESS_REALTIME) {
             bool processRealtimeInput = midiChannel.getType() == DAW::midistage_type::INPUT_EXTERNAL_MIDI
                                         || (this->midiChannel.getType() == DAW::midistage_type::INPUT_DEFAULT 
@@ -1073,13 +1108,13 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
             if (processRealtimeInput) {
                 tick_t heldBegin = blockStart;
                 tick_t heldEnd   = blockEnd;
-                getClipNotesInTimeRange(heldBegin, heldEnd, -1, loopEnd, midiRealtimeInput, notes);
+                CopyMidiEventsInRange(heldBegin, heldEnd, -1, loopEnd, midiRealtimeInput, notes, ctrlEvents);
             }
         }
 
         updateProfilingTime(procMidiStats.tm1InputRT, tmr.getTimeReset());
 
-        if (!notes.empty() || !m_heldNotes.empty() || arp) {
+        if (!notes.empty() || !ctrlEvents.empty() || !m_heldNotes.empty() || arp) {
             ThreadLock lock = midiMutex.lockThread();
 
 
@@ -1087,7 +1122,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
             tick_t blockLoopEnd   = loopEnd > -1 && blockEnd > loopEnd ? loopEnd : blockEnd;
 
 
-            std::vector<noteevent_t> noteEvents;
+            std::vector<midievent_note_t> noteEvents;
 
             tmr.reset();
 
@@ -1153,13 +1188,14 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
             updateProfilingTime(procMidiStats.tm3RevalidateEnds, tmr.getTimeReset());
 
             sortNoteEvents(noteEvents);
-            notesPre.update(blockStart, noteEvents);
+            notesPre.update(blockStart, noteEvents, ctrlEvents);
             updateProfilingTime(procMidiStats.tm4SortEvents, tmr.getTimeReset());
             
             auto* stageMidiInput = host->getAudioStage(midiChannel.stage.stageRef);
             if (stageMidiInput) {
                 noteEvents.clear();
-                stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, midiChannel.stage.buffer != DAW::stage_bufferpoint::INPUT);
+                ctrlEvents.clear();
+                stageMidiInput->getNotesDelayed(blockStart, ticksPerBlock, noteEvents, ctrlEvents, midiChannel.stage.buffer != DAW::stage_bufferpoint::INPUT);
             }
             if (isSet(this->flags, audiostageflags_t::RECORD_ARMED)) {
                 recorder.recordNoteEvents(state, blockStart, blockEnd, noteEvents);
@@ -1172,7 +1208,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
             } else {
                 noteEventsProcessed = std::move(noteEvents);
             }
-            notesPost.update(blockStart, noteEventsProcessed);
+            notesPost.update(blockStart, noteEventsProcessed, ctrlEvents);
             updateProfilingTime(procMidiStats.tm5ProcArp, tmr.getTimeReset());
 
             updateProfilingTime(procMidiStats.tm6WriteVstEvents, tmr.getTimeReset());
@@ -1186,12 +1222,12 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
     }
 }
 
-void audio_stage_t::getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<noteevent_t>& evtsOut, bool isPost) {
+void audio_stage_t::getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& evtsOut, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, bool isPost) {
     auto& notesStage = isPost ? notesPost : notesPre;
-    notesStage.getNotesDelayed(tickLatencyCompensated, ticksPerBlock, evtsOut);
+    notesStage.getNotesDelayed(tickLatencyCompensated, ticksPerBlock, evtsOut, ctrlEvts);
 }
-void audio_stage_t::sendNotesToEffect(const std::vector<noteevent_t>& evtsOut, tick_t tickLatencyCompensated, int32_t bpm100, effectbase* effect) {
-    midi_events_t events{ &evtsOut, tickLatencyCompensated, bpm100 };
+void audio_stage_t::sendMidiToEffect(const std::vector<midievent_note_t>& evtsOut, const std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, tick_t tickLatencyCompensated, int32_t bpm100, effectbase* effect) {
+    midi_data_processing_t events{ &evtsOut, &ctrlEvts, tickLatencyCompensated, bpm100 };
     effect->processMidi(events);
 }
 
@@ -1201,7 +1237,7 @@ void track_impl_t::postProcessMidiInput(playback_state state, int32_t flags, tic
     if (!noteEventsProcessed.empty()) {
 
         std::vector<note_t> newNotes;
-        for (noteevent_t& msg : noteEventsProcessed) {
+        for (midievent_note_t& msg : noteEventsProcessed) {
             if (msg.isNoteOn) {
                 note_t note;
                 //                note.setRealtime(false);
@@ -1221,7 +1257,7 @@ void track_impl_t::postProcessMidiInput(playback_state state, int32_t flags, tic
             midiProcessed->addAll(newNotes);
             notesProcessed = true;
         }
-        for (noteevent_t& msg : noteEventsProcessed) {
+        for (midievent_note_t& msg : noteEventsProcessed) {
             if (!msg.isNoteOn) {
                 int32_t pitch   = msg.pitch;
                 int32_t tickEnd = blockStart + msg.tickOffsetInBlock;
@@ -1827,7 +1863,7 @@ void clip_recorder::update(playback_state state, samplecount_t samplePosBlockSta
     }
     notesProcessed = false;
 }
-void clip_recorder::recordNoteEvents(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, const std::vector<noteevent_t>& noteEventsProcessed) {
+void clip_recorder::recordNoteEvents(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, const std::vector<midievent_note_t>& noteEventsProcessed) {
     bool notesProcessed = false;
     if (!midiProcessedInput.m_list.empty()) {
         auto it = midiProcessedInput.m_list.begin();

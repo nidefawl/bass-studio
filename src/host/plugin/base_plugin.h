@@ -34,7 +34,7 @@ struct handles_t;
 
 extern bool storePluginPresetWithSnapshot;// = true;
 extern bool loadPluginPresetWithSnapshot; // = false;
-struct midi_events_t;
+struct midi_data_processing_t;
 namespace PluginWrapper {
     class PluginInternalVST2;
 }
@@ -138,7 +138,7 @@ public:
     virtual void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) = 0;
     virtual void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) = 0;
     virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed);
-    virtual void processMidi(midi_events_t& midiEvents);
+    virtual void processMidi(midi_data_processing_t& midiEvents);
     virtual void sendNotesOff();
     virtual bool hasWindowEditor() {
         return false;

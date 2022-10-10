@@ -242,12 +242,12 @@ void internalplugin::sendNotesOff() {
     processMidiMessages(messages);
     this->midiEventsDispatched += CtrSize(messages);
 }
-void internalplugin::processMidi(midi_events_t& midiEvents) {
+void internalplugin::processMidi(midi_data_processing_t& midiEvents) {
     const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, midiEvents.bpm100, format.sampleRate);
     auto& heldNotes            = handlesIntPlugin->heldNotes;
     std::vector<IMidiMsg> messages;
-    messages.reserve(midiEvents.noteEventsProcessed->size());
-    for (auto& evt : *midiEvents.noteEventsProcessed) {
+    messages.reserve(midiEvents.noteEvents->size());
+    for (auto& evt : *midiEvents.noteEvents) {
         auto deltaFrames = math::floordS32(evt.tickOffsetInBlock * tickToSamples);
         dbgassert(deltaFrames >= 0 && deltaFrames < format.blockSize);
         bool bContained = std::binary_search(std::begin(heldNotes), std::end(heldNotes), evt.pitch);

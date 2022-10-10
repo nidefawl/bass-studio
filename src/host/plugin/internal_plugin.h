@@ -77,7 +77,7 @@ public:
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override { out->copyFrom(in); };
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
     virtual void processMidiMessages(std::vector<IMidiMsg>& midiEvents) { };
-    void processMidi(midi_events_t& midiEvents) override;
+    void processMidi(midi_data_processing_t& midiEvents) override;
     void sendNotesOff() override;
     
     void getAllViewCtrs(int32_t uiId, std::vector<std::shared_ptr<PluginViewContainers>>& vec);

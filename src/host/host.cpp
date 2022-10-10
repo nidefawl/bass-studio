@@ -39,7 +39,7 @@
 #include "platform.h"
 #include "midi_host.h"
 #include "midi-defs.h"
-#include "midi-msg.h"
+#include "midi-event.h"
 #include "assert_dbg.h"
 #include "track_impl.h"
 #include "projectcontroller.h"
@@ -305,7 +305,6 @@ Host::Host()
     : PluginManager(), impl(new host_impl{this})
 {
     allocRingBuffer(ringbuffer, 2);
-    midiRealtimeInput = new clip_notes_t;
     onTrackLayoutChange = [this]() {
         impl->resetProjectCache();
     };
@@ -313,7 +312,6 @@ Host::Host()
 
 Host::~Host() {
     delete impl;
-    delete midiRealtimeInput;
 }
 
 Host::audiostream_properties_t getAudioStreamPropertiesForFormat(sampleformat_t sampleFormat, sampleformat_t sampleFormatExternal, int32_t tempo100) {
@@ -360,7 +358,7 @@ void Host::sendNotesOff(effectbase* plugin) {
 }
 
 std::vector<note_t> Host::getRealtimeNotes() {
-    return this->midiRealtimeInput->m_list;
+    return this->midiRealtimeInput.notes.m_list;
 }
 
 void Host::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state) {
@@ -386,18 +384,21 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble
             }
         }
         if (!newNotes.empty()) {
-            midiRealtimeInput->addAll(newNotes);
+            midiRealtimeInput.notes.addAll(newNotes);
         }
+
         for (MidiIOEvent& msg : msgs) {
 
             int32_t command = MidiMsgStatus(msg.message) & MIDI_CODE_MASK;
-            //int32_t chan = MidiMsgStatus(msg.message) & MIDI_CHN_MASK;
+            if (command == MIDI_BEND || command == MIDI_CTRL) {
+                midiRealtimeInput.events.addMidiEvent(tickPosBlockStart, msg.message, msg.timestamp);
+            }
             if ((command == MIDI_ON_NOTE && MidiMsgData2(msg.message) == 0) || command == MIDI_OFF_NOTE) {
                 int32_t pitch = MidiMsgData1(msg.message);
                 int32_t tickEnd = tickPosBlockStart;
                 // kill oldest (first) note
                 bool fnd = false;
-                for (note_t& noteHeld : midiRealtimeInput->m_list) {
+                for (note_t& noteHeld : midiRealtimeInput.notes.m_list) {
                     if(noteHeld.pitch == pitch) {
                         if (!noteHeld.isHeld()) {
                             //log_printf("%s note was released before, looking for next one\n", noteName(noteHeld.pitch));
@@ -428,24 +429,24 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble
             }
         }
         if (newNotes.size() || notesProcessed) {
-            midiRealtimeInput->removeDuplicates();
+            midiRealtimeInput.notes.removeDuplicates();
             notesProcessed = true;
         }
     }
-    if (midiRealtimeInput->m_list.size()) {
-        auto it = midiRealtimeInput->m_list.begin();
-        while (it != midiRealtimeInput->m_list.end()) {
+    if (midiRealtimeInput.notes.m_list.size()) {
+        auto it = midiRealtimeInput.notes.m_list.begin();
+        while (it != midiRealtimeInput.notes.m_list.end()) {
             note_t& note = *it;
             if (!note.isHeld() && note.end() < posDouble) {
                 notesProcessed = true;
-                it = midiRealtimeInput->m_list.erase(it);
+                it = midiRealtimeInput.notes.m_list.erase(it);
             } else {
                 it++;
             }
         }
     }
     if (notesProcessed) {
-        midiRealtimeInput->updateBounds();
+        midiRealtimeInput.notes.updateBounds();
     }
 }
 
@@ -1243,7 +1244,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
     // }
 
     tmp.timer.reset();
-    trackImpl->processMidiInput(playbackState, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, trackNode.inputLatency, *midiRealtimeInput);
+    trackImpl->processMidiInput(playbackState, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals, trackNode.inputLatency, midiRealtimeInput);
 
     track->getStage()->procStats.timeTrackProcessMidi = tmp.timer.getTime();
 
@@ -1696,7 +1697,7 @@ void Host::onStartPlayback(project_controller_t* ctrl) {
 
 void Host::onStopPlayback(project_controller_t* ctrl) {
     getHostCallback()->isOfflineRendering = false;
-    midiRealtimeInput->m_list.clear();
+    midiRealtimeInput.notes.m_list.clear();
     visitAudioStageInstances([](auto stageImpl) {
         //if (!trackImpl->heldNotes.empty())
         {
@@ -1752,7 +1753,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
     hires_timer_t timer;
     int64_t timeTotal = 0;
     if (processingGraph != nullptr) {
-        std::vector<noteevent_t> eventsTemp;
+        //TODO: move to scratch_buf
         for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
             const DAW::processing_effect_node_t* ptrProcessingNode = *itAudioStage;
             const DAW::processing_effect_node_t& effNode = *ptrProcessingNode;
@@ -1821,9 +1822,10 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                     }
                     // resolve all inputs
                     effect->updateAutomatedParameters(this, processingPosLatencyCompensate, playbackState);
-                    eventsTemp.clear();
-                    effect->getTrackLink()->getNotesDelayed(processingPosLatencyCompensate, ticksPerBlock, eventsTemp, true);
-                    effect->getTrackLink()->sendNotesToEffect(eventsTemp, processingPosLatencyCompensate, prjGlobals.tempo100, effect);
+                    tmp.ctrlEventsTemp.clear();
+                    tmp.noteEventsTemp.clear();
+                    effect->getTrackLink()->getNotesDelayed(processingPosLatencyCompensate, ticksPerBlock, tmp.noteEventsTemp, tmp.ctrlEventsTemp, true);
+                    effect->getTrackLink()->sendMidiToEffect(tmp.noteEventsTemp, tmp.ctrlEventsTemp, processingPosLatencyCompensate, prjGlobals.tempo100, effect);
                     effect->process(this, effect->blockInputs, effect->blockOutputs, tickLatencyCompensated, sampleLatencyCompensated, numSamples, playbackState);
                     blockPostProcess = effect->blockOutputs;
                 }

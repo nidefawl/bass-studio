@@ -74,12 +74,12 @@ private:
 
     void initRandomDelays(tick_t tick, tick_t startFrame, tick_t endFrame, int32_t nextStep, tick_t stepSize, uint64_t seed, bool reset);
     bool isOutputNoteGateOn(const arp_note_t& noteHeldOut);
-    void addNote(tick_t start, arp_note_t& note, std::vector<noteevent_t>& noteEvents);
-    void processArpInternal(const DAW::Host::PluginManager* const host, playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
+    void addNote(tick_t start, arp_note_t& note, std::vector<midievent_note_t>& noteEvents);
+    void processArpInternal(const DAW::Host::PluginManager* const host, playback_state state, tick_t cursorPos, const std::vector<midievent_note_t>& noteEventsIn,
                             tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, float wallClockTime,
-                            std::vector<noteevent_t>& noteEventsProcessed);
+                            std::vector<midievent_note_t>& noteEventsProcessed);
     int updateMarkersAndAnimation(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, float wallClockTime);
-    int endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<noteevent_t>& noteEventsProcessed);
+    int endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<midievent_note_t>& noteEventsProcessed);
 
 public:
     std::vector<marker_t> markers;
@@ -130,7 +130,7 @@ public:
         step          = 0;
         stepGenerated = -1;
     }
-    void allNotesOff(std::vector<noteevent_t>& noteEvents);
+    void allNotesOff(std::vector<midievent_note_t>& noteEvents);
     void onStartPlayback();
 
     void updateAutomatedParameters(const Host::PluginManager* const host, tick_t tick, playback_state state) override;
@@ -144,9 +144,9 @@ public:
     void createSnapshot(arp_snapshot& snapshot, const tracksnapshot_store_opts_t& opts);
     void loadSnapshot(const arp_snapshot& snapshot);
 
-    void process(const Host::PluginManager* const host, playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
+    void process(const Host::PluginManager* const host, playback_state state, tick_t cursorPos, const std::vector<midievent_note_t>& noteEventsIn,
                  tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd,
-                 std::vector<noteevent_t>& noteEventsProcessed);
+                 std::vector<midievent_note_t>& noteEventsProcessed);
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     bool isProcessingEnabled();
 

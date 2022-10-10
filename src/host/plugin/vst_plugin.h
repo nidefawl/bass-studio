@@ -127,7 +127,7 @@ public:
     guiplugin* makeGui() override;
     guiplugin* getGui() override;
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
-    void processMidi(midi_events_t& midiEvents) override;
+    void processMidi(midi_data_processing_t& midiEvents) override;
     void sendNotesOff() override;
     samplecount_t getPluginLatency() override;
     int32_t getFlagsVST();

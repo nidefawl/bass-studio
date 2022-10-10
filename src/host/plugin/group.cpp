@@ -306,10 +306,10 @@ void module_group::process(const DAW::Host::Host* const host, AudioBlock* in, Au
     out->copyFrom(&audio->outputPost);
 }
 
-void module_group::processMidi(midi_events_t& midiEvents) {
-    audio->notesPre.update(midiEvents.tickLatencyCompensated, *midiEvents.noteEventsProcessed);
+void module_group::processMidi(midi_data_processing_t& midiEvents) {
+    audio->notesPre.update(midiEvents.tickLatencyCompensated, *midiEvents.noteEvents, *midiEvents.ctrlEvents);
     //TODO: let plugins process midi and update this after process(AudioBlock)
-    audio->notesPost.update(midiEvents.tickLatencyCompensated, *midiEvents.noteEventsProcessed);
+    audio->notesPost.update(midiEvents.tickLatencyCompensated, *midiEvents.noteEvents, *midiEvents.ctrlEvents);
 }
 
 void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {

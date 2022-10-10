@@ -12,7 +12,7 @@
 #include "gui/controls/list.h"
 #include "gui/controls/textfield.h"
 #include "host/midi_host.h"
-#include "midi-msg.h"
+#include "midi-event.h"
 #include "plugins/synth/IPlugMidi.h"
 #include "renderresources.h"
 #include "platform.h"
@@ -32,7 +32,7 @@ public:
     }
     explicit gui_midi_inspect_entry(MidiIOEvent& evt) : gui_list_entry(), evt(evt) {
         icon = ICON_MIDIPLUG;
-        setLabel(IMidiMsg::FromU32(evt.message).ToString());
+        setLabel(IMidiMsg::FromU32AndTick(evt.message, evt.timestamp).ToString());
     }
     void dragMoveOn(guibase* target, ivec2 mousepos) override {
     }

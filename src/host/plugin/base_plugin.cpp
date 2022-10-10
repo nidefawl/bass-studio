@@ -109,7 +109,7 @@ void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed
     meterIn.update(this->blockInputs, 1.0f);
 }
 
-void effectbase::processMidi(midi_events_t& midiEvents) {
+void effectbase::processMidi(midi_data_processing_t& midiEvents) {
 
 }
 

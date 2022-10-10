@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <limits>
 #include "note.h"
+#include "seq_util.h"
 #include "str_util.h"
 #include "math/seq_math.h"
 #include "exceptions.h"
@@ -500,28 +501,6 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
         list[pos].len = math::min(list[pos].end(), clipEnd) - list[pos].time;
     }
     return posNew - posOld;
-}
-
-int getClipNotesInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, const clip_notes_t& notesView, std::vector<note_t>& list) {
-
-
-    auto itNote     = notesView.m_list.begin();
-    auto itNotesEnd = notesView.m_list.end();
-    while (itNote != itNotesEnd) {
-        const note_t& note = *itNote;
-        if (note.isIntersectTimeIncludeEnds(absStart, absEnd)) {
-            note_t noteOffset(note);
-            //noteOffset.time += clipStart;
-            //noteOffset.len = math::min(noteOffset.end(), clipEnd) - noteOffset.time;
-            if (!list.capacity()) {
-                list.reserve(128);
-            }
-            list.push_back(noteOffset);
-        }
-        itNote++;
-    }
-
-    return list.size();
 }
 
 void clip_notes_t::selectLastN(size_t num) {

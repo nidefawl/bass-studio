@@ -17,9 +17,12 @@
  */
 
 #include <cassert>
+#include "str_util.h"
 #include "types.h"
+#include <cstdint>
 #include <cstdio>
 #include <algorithm>
+#include <string>
 
 #include "logging.h"
 
@@ -129,6 +132,9 @@ struct IMidiMsg {
         : mOffset(offs), mStatus(s), mData1(d1), mData2(d2) {}
     static inline IMidiMsg FromU32(uint32_t msg) {
         return IMidiMsg(0, msg & 0xFF, (msg >> 8) & 0xFF, (msg >> 16) & 0xFF);
+    }
+    static inline IMidiMsg FromU32AndTick(uint32_t msg, int32_t tick) {
+        return IMidiMsg(tick, msg & 0xFF, (msg >> 8) & 0xFF, (msg >> 16) & 0xFF);
     }
 
     /** /todo
@@ -327,19 +333,19 @@ struct IMidiMsg {
             case kNone:
                 return "none";
             case kNoteOff:
-                return "noteoff";
+                return "Note Off";
             case kNoteOn:
-                return "noteon";
+                return "Note On";
             case kPolyAftertouch:
-                return "aftertouch";
+                return "Poly Aftertouch";
             case kControlChange:
-                return "controlchange";
+                return "Control Change";
             case kProgramChange:
-                return "programchange";
+                return "Program Change";
             case kChannelAftertouch:
-                return "channelaftertouch";
+                return "Channel Aftertouch";
             case kPitchWheel:
-                return "pitchwheel";
+                return "Pitch Wheel";
             default:
                 return "unknown";
         };
@@ -349,8 +355,35 @@ struct IMidiMsg {
     void LogMsg() {
         log_printf("midi:(%s:%d:%d:%d)\n", StatusMsgStr(StatusMsg()), Channel(), mData1, mData2);
     }
+    String ControlName(int32_t control) {
+        switch(control) {
+            case kModWheel:
+                return "Mod Wheel";
+            case kBreathController:
+                return "Breath Controller";
+            case kAllNotesOff:
+                return "All Notes Off";
+        }
+        return std::to_string(control);
+    }
     String ToString() {
-        return StringFormat("midi:(%s:%d:%d:%d)", StatusMsgStr(StatusMsg()), Channel(), mData1, mData2);
+        String info = " ";
+        if (StatusMsg() == kNoteOn) {
+            info += noteName(NoteNumber());
+            info += " ";
+            info += StringFormat("%d", int(Velocity()));
+        }
+        if (StatusMsg() == kNoteOff) {
+            info += noteName(NoteNumber());
+            info += " ";
+            info += StringFormat("%d", int(Velocity()));
+        }
+        if (StatusMsg() == kControlChange) {
+            info += ControlName(ControlChangeIdx());
+            info += " ";
+            info += StringFormat("%d", int(ControlChange(ControlChangeIdx())));
+        }
+        return StringFormat("%08d Midi %s Ch %d %s %02X %02X", mOffset, StatusMsgStr(StatusMsg()), Channel(), StringAsCStr(info), mData1, mData2);
     }
 
     /** /todo */

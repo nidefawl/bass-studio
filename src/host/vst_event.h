@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdlib>
+#include "midi-event.h"
 #include "types.h"
 #include "note.h"
 #include "math/seq_math.h"
@@ -67,18 +68,22 @@ struct VstEvent_t {
         buf[2] = 0x40;
         buf[3] = 0;
     }
-
-    void writeVstMidiEvt(const noteevent_t& nevt, double tickToSamples, int32_t blockSize) {
-        int32_t idx = vstEvents->numEvents;
-        dbgassert(idx < maxEvents);
-        VstMidiEvent& evt = evtArr[idx];
+    VstMidiEvent& nextEvent() {
+        dbgassert(vstEvents->numEvents < maxEvents);
+        VstMidiEvent& evt = evtArr[vstEvents->numEvents];
+        evt = {};
         evt.type        = kVstMidiType;
         evt.byteSize    = 24;//sizeof(VstMidiEvent);
         evt.flags       = 0; //kVstMidiEventIsRealtime;
+        vstEvents->events[vstEvents->numEvents] = reinterpret_cast<VstEvent*>(&evt);
+        vstEvents->numEvents++;
+        return evt;
+    }
+
+    void writeVstNoteEvent(const midievent_note_t& nevt, double tickToSamples, int32_t blockSize) {
+        auto& evt = nextEvent();
         evt.deltaFrames = math::floordS32(nevt.tickOffsetInBlock * tickToSamples);
-
         dbgassert(evt.deltaFrames >= 0 && evt.deltaFrames < blockSize);
-
         if (nevt.isNoteOn) {
             numOns++;
             writeNoteOn((unsigned char*) evt.midiData, nevt.pitch, nevt.velocity);
@@ -86,35 +91,29 @@ struct VstEvent_t {
             numOffs++;
             writeNoteOff((unsigned char*) evt.midiData, nevt.pitch);
         }
+    }
 
-        vstEvents->events[idx] = reinterpret_cast<VstEvent*>(&evt);
-        vstEvents->numEvents++;
+    void writeVstCtrlEvent(const DAW::Host::midievent_ctrl_t& nevt, int32_t sampleOffsetInBlock) {
+        auto& evt = nextEvent();
+        evt.deltaFrames = sampleOffsetInBlock;
+        evt.midiData[0] = (nevt.message >> 0) & 0xFF;
+        evt.midiData[1] = (nevt.message >> 8) & 0xFF;
+        evt.midiData[2] = (nevt.message >> 16) & 0xFF;
+        evt.midiData[3] = (nevt.message >> 24) & 0xFF;
     }
 
     void writeMessage(unsigned char c0, unsigned char c1, unsigned char c2, unsigned char c3, int32_t delta) {
-        int32_t idx = vstEvents->numEvents;
-        dbgassert(idx < maxEvents);
-        VstMidiEvent& evt  = evtArr[idx];
-        evt.type           = kVstMidiType;
-        evt.byteSize       = 24;//sizeof(VstMidiEvent);
-        evt.flags          = 0; //kVstMidiEventIsRealtime
+        auto& evt = nextEvent();
         evt.deltaFrames    = 0;
-
-        unsigned char* buf = (unsigned char*) evt.midiData;
-
+        auto* buf = reinterpret_cast<unsigned char*>(evt.midiData);
         buf[0] = c0;
         buf[1] = c1;
         buf[2] = c2;
         buf[3] = c3;
-
-        vstEvents->events[idx] = reinterpret_cast<VstEvent*>(&evt);
-        vstEvents->numEvents++;
     }
+
     void writeInstantOff() {
         /* Send all notes off midi event */
         writeMessage(0xB0, 123, 0, 0, 0);
-        //for (int32_t i = 0; i < vstEvents->numEvents; i++) {
-        //    evtArr[i].deltaFrames = 0;
-        //}
     }
 };

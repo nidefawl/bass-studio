@@ -895,9 +895,9 @@ void vstplugin::sendNotesOff() {
 #endif
     handle->heldNotes.clear();
 }
-void vstplugin::processMidi(midi_events_t& midiEvents) {
+void vstplugin::processMidi(midi_data_processing_t& midiEvents) {
     if (bCanReceiveMidi) {
-        size_t numEvents = midiEvents.noteEventsProcessed->size();
+        size_t numEvents = midiEvents.noteEvents->size()+midiEvents.ctrlEvents->size();
         if (numEvents) {
             const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, midiEvents.bpm100, format.sampleRate);
             VstEvent_t::ReallocVstEvents(&handle->midiEventsBuf, numEvents);
@@ -905,8 +905,8 @@ void vstplugin::processMidi(midi_events_t& midiEvents) {
             auto& heldNotes = handle->heldNotes;
 #endif
             VstEvent_t* midiEventsBuf = handle->midiEventsBuf;
-            for (auto& evt : *midiEvents.noteEventsProcessed) {
-                midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, format.blockSize);
+            for (auto& evt : *midiEvents.noteEvents) {
+                midiEventsBuf->writeVstNoteEvent(evt, tickToSamples, format.blockSize);
 #ifdef VST_PLUGIN_TRACK_NOTES
                 bool bContained = std::binary_search(std::begin(heldNotes), std::end(heldNotes), evt.pitch);
                 if (evt.isNoteOn && !bContained) {
@@ -915,6 +915,14 @@ void vstplugin::processMidi(midi_events_t& midiEvents) {
                     removeEntry(heldNotes, evt.pitch);
                 }
 #endif
+            }
+            for (auto& evt : *midiEvents.ctrlEvents) {
+                auto offsetInBlock = math::floordS32((evt.tick - midiEvents.tickLatencyCompensated) * tickToSamples);
+                if (offsetInBlock < 0 || offsetInBlock >= format.blockSize) {
+                    log_lf(Log::L_WARN, "VST: ctrl event out of range: %d", offsetInBlock);
+                    continue;
+                }
+                midiEventsBuf->writeVstCtrlEvent(evt, offsetInBlock);
             }
             dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) numEvents);
             //TODO: decide if we should make a copy, plugin may manipulate data

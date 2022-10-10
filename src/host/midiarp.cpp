@@ -303,7 +303,7 @@ void midiarp::onStartPlayback() {
     markers.clear();
     markers2.clear();
 }
-void midiarp::allNotesOff(std::vector<noteevent_t>& noteEvents) {
+void midiarp::allNotesOff(std::vector<midievent_note_t>& noteEvents) {
     stepGenerated = -1;
 }
 
@@ -373,7 +373,7 @@ inline int cutNoteOutOfList(std::vector<T>& m_list, T& n, bool eliminateDupes) {
     }
     return nAdjusted;
 }
-void midiarp::addNote(tick_t start, arp_note_t& note, std::vector<noteevent_t>& noteEvents) {
+void midiarp::addNote(tick_t start, arp_note_t& note, std::vector<midievent_note_t>& noteEvents) {
     //find overlapping held notes;
     int retVal = cutNoteOutOfList(heldOutputNotes, note, true);
     if (retVal == -1) {
@@ -440,7 +440,7 @@ bool midiarp::isOutputNoteGateOn(const arp_note_t& noteHeldOut) {
     return true;
 }
 
-int midiarp::endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<noteevent_t>& noteEventsProcessed) {
+int midiarp::endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<midievent_note_t>& noteEventsProcessed) {
     if (heldOutputNotes.empty()) {
         return 0;
     }
@@ -493,9 +493,9 @@ bool midiarp::isProcessingEnabled() {
     return true;
 }
 
-void midiarp::process(const DAW::Host::PluginManager* const host, playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
+void midiarp::process(const DAW::Host::PluginManager* const host, playback_state state, tick_t cursorPos, const std::vector<midievent_note_t>& noteEventsIn,
                       tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd,
-                      std::vector<noteevent_t>& noteEventsProcessed) {
+                      std::vector<midievent_note_t>& noteEventsProcessed) {
     const float wallClockTime = getTimeMillisF() / 1000.0f;
 
     if (!isProcessingEnabled() && !bEnableStateUserToggled && heldInput.empty() && heldOutputNotes.empty() && noteEventsIn.empty()) {
@@ -523,9 +523,9 @@ void midiarp::process(const DAW::Host::PluginManager* const host, playback_state
  * heldOutputNotes only contains pattern generated notes, not pass thru input notes
  * heldOutputNotes may contain disabled notes: They are released notes that will remain for a constant time for GUI animation purposes
  */
-void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
+void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, playback_state state, tick_t cursorPos, const std::vector<midievent_note_t>& noteEventsIn,
                                  tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, float wallClockTime,
-                                 std::vector<noteevent_t>& noteEventsProcessed) {
+                                 std::vector<midievent_note_t>& noteEventsProcessed) {
 
     tickMarkers = 0;
 
@@ -536,7 +536,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
     markers.push_back(marker_t{ end, col(7), "block end", (float) (tickMarkers++) });
 #endif
 
-    std::vector<noteevent_t> noteEvents = noteEventsIn;
+    std::vector<midievent_note_t> noteEvents = noteEventsIn;
     sortNoteEvents(noteEvents);
 
     int nSend = 0;
@@ -575,7 +575,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
             for (arp_note_t& noteInHeld : this->heldInput) {
                 if (enable == noteInHeld.isHeld()) {
                     noteInHeld.setIsHeld(!enable);
-                    noteevent_t noteEvt(noteInHeld.pitch, noteInHeld.velocity, tick - start, tick, !enable, false);
+                    midievent_note_t noteEvt(noteInHeld.pitch, noteInHeld.velocity, tick - start, tick, !enable, false);
                     noteEventsProcessed.push_back(noteEvt);
                     if constexpr (logProcessedNotes) {
                         log_lf(Log::L_DEBUG, "Block %d: %s ARP PASSTHRU heldIn %s at %d = %d\n", start, noteName(noteInHeld.pitch), (!enable ? "ON" : "OFF"), tick - start, tick);
@@ -590,7 +590,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
                 if (noteOutHeld.isEnabled()) {
                     if (enable != noteOutHeld.isHeld()) {
                         noteOutHeld.setIsHeld(enable);
-                        noteevent_t noteEvt(noteOutHeld.pitch, noteOutHeld.velocity, tick - start, tick, enable, false);
+                        midievent_note_t noteEvt(noteOutHeld.pitch, noteOutHeld.velocity, tick - start, tick, enable, false);
                         noteEventsProcessed.push_back(noteEvt);
                         if constexpr (logProcessedNotes) {
                             log_lf(Log::L_DEBUG, "Block %d: %s ARP PASSTRU heldOut %s at %d = %d\n", start, noteName(noteOutHeld.pitch), (enable ? "ON" : "OFF"), tick - start, tick);
@@ -604,7 +604,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
 
         // TODO: store index of last processed event and start iterating at that location
         while (eventIdx < noteEvents.size()) {
-            const noteevent_t& evt = noteEvents[eventIdx];
+            const midievent_note_t& evt = noteEvents[eventIdx];
             const tick_t evtTick = evt.tickOffsetInBlock + start;
             if (evtTick > tick) {
                 break;
@@ -807,7 +807,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
         auto szTrackName = StringAsCStr(getTrack()->name);
         log_lf(Log::L_ERROR, "%s Block %d-%d: ARP did not process all events. Processed %zu of %zu\n", szTrackName, start, end, evtsProcessed, noteEventsIn.size());
         log_lf(Log::L_ERROR, "%s Block %d-%d: loopStart %d, loopEnd %d\n", szTrackName, start, end, loopStart, loopEnd);
-        for (noteevent_t& evt : noteEvents) {
+        for (midievent_note_t& evt : noteEvents) {
             log_lf(Log::L_ERROR, "Block %d-%d: Event %s %d %d %s\n", start, end, evt.isNoteOn ? "ON" : "OFF", evt.globalTick, evt.tickOffsetInBlock, noteName(evt.pitch));
         }
     }

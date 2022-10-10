@@ -12,7 +12,7 @@
 #include "audio_host.h"
 #include "midi_host.h"
 #include "midi-defs.h"
-#include "midi-msg.h"
+#include "midi-event.h"
 
 #include "types.h"
 #include "assert_dbg.h"
