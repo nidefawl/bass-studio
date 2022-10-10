@@ -927,6 +927,7 @@ void vstplugin::processMidi(midi_data_processing_t& midiEvents) {
             dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) numEvents);
             //TODO: decide if we should make a copy, plugin may manipulate data
             //VstEvent_t midiEventsBufTemp = *midiEventsBuf;
+            midiEventsBuf->sort();
             this->midiEventsDispatched += handle->midiEventsBuf->vstEvents->numEvents;
             this->dispatch(effProcessEvents, 0, 0, handle->midiEventsBuf->vstEvents);
         }

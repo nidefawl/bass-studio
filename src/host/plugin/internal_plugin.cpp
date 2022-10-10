@@ -4,6 +4,7 @@
 #include "assert_dbg.h"
 #include "automation.h"
 #include "modules.h"
+#include "plugins/synth/IPlugMidi.h"
 #include "seq_util.h"
 
 #include "snapshot/snapshot.h"
@@ -264,6 +265,19 @@ void internalplugin::processMidi(midi_data_processing_t& midiEvents) {
         } else {
             msg.MakeNoteOffMsg(evt.pitch, deltaFrames);
         }
+    }
+    for (auto& evt : *midiEvents.ctrlEvents) {
+        auto offsetInBlock = math::floordS32((evt.tick - midiEvents.tickLatencyCompensated) * tickToSamples);
+        if (offsetInBlock < 0 || offsetInBlock >= format.blockSize) {
+            log_lf(Log::L_WARN, "ctrl event out of range: %d", offsetInBlock);
+            continue;
+        }
+        messages.push_back(IMidiMsg::FromU32AndTick(evt.message, offsetInBlock));
+    }
+    if (!messages.empty()) {
+        std::sort(std::begin(messages), std::end(messages), [](const IMidiMsg& a, const IMidiMsg& b) {
+            return a.mOffset < b.mOffset;
+        });
     }
     processMidiMessages(messages);
     this->midiEventsDispatched += CtrSize(messages);

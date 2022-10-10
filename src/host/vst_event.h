@@ -80,6 +80,12 @@ struct VstEvent_t {
         return evt;
     }
 
+    void sort() {
+        std::sort(vstEvents->events, vstEvents->events + vstEvents->numEvents, [](VstEvent* a, VstEvent* b) {
+            return a->deltaFrames < b->deltaFrames;
+        });
+    }
+
     void writeVstNoteEvent(const midievent_note_t& nevt, double tickToSamples, int32_t blockSize) {
         auto& evt = nextEvent();
         evt.deltaFrames = math::floordS32(nevt.tickOffsetInBlock * tickToSamples);
