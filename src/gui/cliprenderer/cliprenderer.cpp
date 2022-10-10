@@ -102,7 +102,7 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
     nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
     nvgStrokeWidth(vg, 1.f);
     nvgStroke(vg);
-    if (file && file->state == audiofile_t::filestate::UNLOADED_MISSING) {
+    if (file && (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MISSING)) {
         auto colInvalid = theme->getColor(GuiColor::COL_INVALID_INPUT);
         colInvalid.a = 0.5;
         nvgBeginPath(vg);
@@ -113,7 +113,7 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
 
     auto textPos = vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0) + vec2(pos);
     auto textBounds = vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE + 2, 0);
-    if (file && file->state == audiofile_t::filestate::UNLOADED_MISSING) {
+    if (file && (file->state == audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MISSING)) {
         textPos.x += HEIGHT_CLIP_TITLE;
         textBounds.x -= HEIGHT_CLIP_TITLE;
         auto iconId = ICON_WARNING;

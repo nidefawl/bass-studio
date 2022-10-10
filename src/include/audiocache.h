@@ -14,23 +14,27 @@ struct audiofile_path_t {
     String path;
 };
 struct audiofile_t : public samplesource_t {
-    enum class filestate {
-        UNLOADED,
-        UNLOADED_MISSING,
-        LOADED_MODIFIED,
-        LOADED
+    enum AudioFileStateFlags : uint8_t {
+        AUDIOFILE_FLAGS_NONE = 0,
+        AUDIOFILE_FLAG_LOADED = 1 << 0,
+        AUDIOFILE_FLAG_MODIFIED = 1 << 1,
+        AUDIOFILE_FLAG_MISSING = 1 << 2,
     };
     int32_t id = 0;
     String path;
     String name;
     String ext;
-    filestate state = filestate::UNLOADED;
+    uint8_t state = AUDIOFILE_FLAGS_NONE;
+    String pathLoaded;
     std::unique_ptr<audiosample_t> sample;
     audiosample_t* getSample() override {
         return sample.get();
     }
     audiofile_path_t getPath() {
         return { id, path };
+    }
+    audiofile_path_t getPathLoaded() {
+        return { id, pathLoaded };
     }
 };
 struct store_sample_req_t {
@@ -65,7 +69,7 @@ public:
     }
     static audiocache* getInstance();
     void getLoaded(std::vector<audiofile_t*>& v);
-    audiofile_t* loadFile(const String& s, int32_t id = -1);
+    audiofile_t* loadFile(const String& s, int32_t id, const String& workingDir);
     void updateSample(const store_sample_req_t& ssr);
     audiofile_t* createSample(const create_sample_req_t& ssr);
     void setSamplerate(samplerate_t samplerate);
@@ -73,9 +77,10 @@ public:
     audiofile_t* get(int32_t i);
     audiofile_t* getByFilename(const String& pathFile);
     void store(const std::vector<int32_t>& refSampleIds, samplefile_index_t& v);
-    void load(samplefile_index_t& v);
+    void load(samplefile_index_t& v, const String& workingDir);
     void saveSamples(const std::vector<int32_t>& refSampleIds);
     void unloadAll();
     void unloadUnreferenced(const std::vector<int32_t>& refSampleIds);
+    void rellocateSamples(const std::vector<int32_t>& refSampleIds, const String& directory);
     bool isEmpty() const;
 };

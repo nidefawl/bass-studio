@@ -278,7 +278,10 @@ int runCommandLineHost(const std::vector<String>& args) {
                 project_snapshot_t& snapshot = projectFile->project;
                 project.copyFrom(snapshot);
                 projectGlobals = snapshot.globals;
-                cache.load(projectFile->sampleFileIndex);
+
+                String projectDirectory;
+                SplitPath(projectFile->path, &projectDirectory, nullptr, nullptr, nullptr);
+                cache.load(projectFile->sampleFileIndex, projectDirectory);
 
                 /** create all audio instances **/
                 for (track_t* t : projectController.getTracks()) {

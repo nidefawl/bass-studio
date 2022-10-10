@@ -1080,6 +1080,25 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                 }
                 return true;
             }
+            case CMD_BUNDLE_PROJECT_DIRECTORY: {
+                String bundlePath;
+                if (browseForFolder("Select project folder", projectPath, bundlePath)) {
+                    return true;
+                }
+                String dirName;
+                SplitPath(bundlePath, nullptr, &dirName, nullptr, nullptr);
+                
+                std::vector<int32_t> uniqueSampleIds;
+                DAW::GetProjectReferencedSampleIds(project, uniqueSampleIds);
+                getAudioCache()->rellocateSamples(uniqueSampleIds, bundlePath);
+                
+                lastProjectDirectory = bundlePath;
+                projectPath = bundlePath + FILE_PATHSEP_STR + dirName + ".project";
+                saveFile(projectPath);
+                tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::BUILD_BINARY_NAME, StringAsCStr(dirName)));
+                tls.settings->recentfiles.add(projectPath);
+                return true;
+            }
             case CMD_SET_STARTUP_PROJECT:
             case CMD_FILE_SAVEAS:
             case CMD_FILE_SAVE: {
@@ -1257,48 +1276,46 @@ void DawInstance::initRealtimeResources() {
     setAudioThreadState(playback_state::status_stop);
 }
 std::pair<String, String> DawInstance::createUniqueNonExistingFilename(const String& baseDir, const String& trackName, const String& sampleName, const String& fileExt) {
-
-
-    String testFileName;
+    String uniqueFileName;
     if (!trackName.empty()) {
-        testFileName += trackName;
-        testFileName += " - ";
+        uniqueFileName += trackName;
+        uniqueFileName += " - ";
     }
-    testFileName += sampleName;
+    uniqueFileName += sampleName;
 
-    String tempPath = baseDir;
-    tempPath += FILE_PATHSEP_CHAR;
+    String pathInput = baseDir;
+    pathInput += FILE_PATHSEP_CHAR;
     String projName = getProjectName();
     if (projName.empty()) {
         projName = "Untitled";
     }
-    tempPath += projName;
-    tempPath += FILE_PATHSEP_CHAR;
-    tempPath += testFileName;
-    tempPath += ".";
-    tempPath += fileExt;
+    pathInput += projName;
+    pathInput += FILE_PATHSEP_CHAR;
+    pathInput += uniqueFileName;
+    pathInput += ".";
+    pathInput += fileExt;
 
-    String sampleFilePath = App::Platform::toUserdataPath(tempPath);
+    String sampleFilePath = App::Platform::toUserdataPath(pathInput);
     App::Platform::sanitizePathToFile(sampleFilePath);
     String name;
     String ext;
     String path;
     int32_t idx = 0;
-    String uniqueName = sampleFilePath;
+    String uniqueFilePath = sampleFilePath;
     SplitPath(sampleFilePath, &path, &name, &ext);
     App::Platform::sanitizePathToDirectory(path);
-    while ((FileExists(uniqueName) || tls.audioCache->getByFilename(uniqueName) != nullptr) && ++idx < 10000) {
-        // String nextPath = path;
-        testFileName = name;
-        testFileName += "-";
-        testFileName += std::to_string(idx);
-        testFileName += ".";
-        uniqueName = path;
-        uniqueName += testFileName;
-        uniqueName += ext;
+    while ((FileExists(uniqueFilePath) || tls.audioCache->getByFilename(uniqueFilePath) != nullptr) && ++idx < 10000) {
         idx++;
+        uniqueFileName = name;
+        uniqueFileName += "-";
+        uniqueFileName += std::to_string(idx);
+        uniqueFileName += ".";
+        uniqueFileName += ext;
+        uniqueFilePath = path;
+        uniqueFilePath += FILE_PATHSEP_CHAR;
+        uniqueFilePath += uniqueFileName;
     }
-    return {uniqueName, testFileName};
+    return {uniqueFilePath, uniqueFileName};
 }
 
 void DawInstance::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
@@ -1506,6 +1523,7 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     menus.file.add(&menus.recent);
     menus.file.addCommand(this, GlobalCommandType::CMD_FILE_SAVE);
     menus.file.addCommand(this, GlobalCommandType::CMD_FILE_SAVEAS);
+    menus.file.addCommand(this, GlobalCommandType::CMD_BUNDLE_PROJECT_DIRECTORY);
     menus.file.addCommand(this, GlobalCommandType::CMD_SET_STARTUP_PROJECT);
     menus.file.addSeperator();
     menus.file.addCommand(this, GlobalCommandType::CMD_EXPORT_TRACK);
@@ -2045,7 +2063,9 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
                 tls.host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
             }
         }
-        tls.audioCache->load(file->sampleFileIndex);
+        String projectDirectory;
+        SplitPath(file->path, &projectDirectory, nullptr, nullptr, nullptr);
+        tls.audioCache->load(file->sampleFileIndex, projectDirectory);
     } else {
         /**
          * plugin loading was not deferred.
@@ -2129,7 +2149,9 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
             windowMain->postRender();
             /** TODO: vsync **/
             seqthreads::threadSleep(16);
-            tls.audioCache->load(file->sampleFileIndex);
+            String projectDirectory;
+            SplitPath(file->path, &projectDirectory, nullptr, nullptr, nullptr);
+            tls.audioCache->load(file->sampleFileIndex, projectDirectory);
         }
         ctr.setControl(nullptr);
         AppWndProc_disableBlockReentrant();
@@ -2358,7 +2380,7 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
         if (StrEndsWith(path, ".wav")) {
             String a, b, c, d;
             SplitPath(path, &a, &b, &c, &d);
-            audiofile_t* audio = daw.getAudioCache()->loadFile(path);
+            audiofile_t* audio = daw.getAudioCache()->loadFile(path, -1, "");
             if (audio) {
                 auto* sample = audio->sample.get();
                 if (sample) {
