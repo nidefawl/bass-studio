@@ -14,6 +14,7 @@ struct snapshot_t {
     std::vector<ui_layout_t> uiLayout;
 };
 class module_macros : public internal_modulator {
+    friend class ctxtmenu_macro_count;
     struct macro_impl_t;
     macro_impl_t* const impl;
 public:

@@ -68,7 +68,7 @@ namespace PluginMacros {
         guiknob_pluginparam* getKnob() { return &knob; }
     };
     class guictr_module_macros : public guictr_base {
-        effectbase* const module;
+        module_macros* const module;
         std::vector<guictr_macro*> macroCtrs;
         gui_textfield editfield;
         int32_t numKnobs = 2;
@@ -118,7 +118,7 @@ namespace PluginMacros {
             }
         }
         void getSizeScale(int& w, int& h) const {
-            w = 100*numKnobs;
+            w = 80*numKnobs;
             h = 300;
         }
         void buttonClicked(guibase* button) override {
@@ -180,6 +180,129 @@ namespace PluginMacros {
         bool getUiLayout(ui_layout_t& layout) const {
             layout.numActive = numKnobs;
             return true;
+        }
+
+        class ctxtmenu_macro_count : public ctxtmenu_entry {
+
+            struct _time_sel_entry {
+                int id;
+                int x;
+                int y;
+                int w;
+                String name;
+            };
+            std::vector<_time_sel_entry> entries;
+
+        public:
+            const int pad   = 10;
+            const int inset = 5;
+        public:
+            ctxtmenu_macro_count(String _title, int _id)
+                : ctxtmenu_entry(std::move(_title), _id)
+            {
+                entries.push_back({ 2, 0, 0, 0, "2" });
+                entries.push_back({ 4, 0, 0, 0, "4" });
+                entries.push_back({ 8, 0, 0, 0, "8" });
+            }
+
+            void layout(ivec2 size, float _fontSize, determine_string_width& strw) override {
+                width = size.x;
+                this->fontSize = _fontSize;
+                const int h    = math::roundfS32(_fontSize);
+                layoutE(width, h, 3);
+            }
+
+            void layoutE(int tw, int h, int perRow) {
+                int iX      = inset;
+                int iY      = h + 2;
+                int elW     = (tw - inset * 2) / perRow;
+                for (_time_sel_entry& e : entries) {
+                    this->height = iY + h;
+                    e.x = iX;
+                    e.y = iY;
+                    e.w = elW;
+                    iX += e.w;
+                    if (iX >= tw - inset * 2) {
+                        iX = inset;
+                        iY += h;
+                    }
+                }
+            }
+
+
+            void render(ivec2, NVGcontext* vg, int, ivec2 mouse) override {
+                auto h = fontSize * 1.1f;
+
+                for (_time_sel_entry& e : entries) {
+                    if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
+                        nvgBeginPath(vg);
+                        nvgRect(vg, e.x, y + e.y + 2, e.w, h - 4);
+                        nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+                        nvgFill(vg);
+                    }
+                }
+
+                renderTextLabel(vg,
+                                vec2(leftOffset(), y + h * 0.5f),
+                                vec2(width, h),
+                                title,
+                                theme,
+                                fontSize,
+                                theme->getColor(GuiColor::COL_TEXT),
+                                NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+
+                for (_time_sel_entry& e : entries) {
+                    renderTextLabel(vg,
+                                    vec2(e.x + 20.0f, y + e.y + h * 0.5f),
+                                    vec2(width, h),
+                                    e.name,
+                                    theme,
+                                    fontSize * 0.9f,
+                                    theme->getColor(GuiColor::COL_TEXT),
+                                    NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+                }
+            }
+
+            bool contains(ivec2& ctxtSize, ivec2& mouse) const override {
+                return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
+            }
+
+            int getClicked(ivec2& ctxtSize, ivec2& mouse) override {
+                if (contains(ctxtSize, mouse)) {
+                    const auto h = this->fontSize;
+                    for (_time_sel_entry& e : entries) {
+                        if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= 0 && mouse.x < e.x + e.w) {
+                            return 100 + e.id;
+                        }
+                    }
+                }
+                return -1;
+            }
+        };
+        class guictr_module_macros_context_menu : public guictxtmenu {
+            module_macros* const module;
+            guictr_module_macros* const ctr;
+        public:
+            explicit guictr_module_macros_context_menu(guictr_module_macros* _ctr, module_macros* _module)
+            : guictxtmenu(), module(_module), ctr(_ctr) {
+                this->size.x   = 220;
+                maxHeight = 0;
+                this->fontSize = FONT_SIZE_CTXT_SMALL;
+                this->paddingV = 0;
+                addEntry(new ctxtmenu_macro_count("Macros", 0));
+            }
+            bool clickedElement(ctxtmenu_entry* e, int _id) override {
+                if (_id >= 100) {
+                    ctr->setNumKnobs(_id-100);
+                    ctr->parent->onChildLayoutChanged(ctr);
+                }
+                closeContextMenu();
+                return true;
+            }
+        };
+
+        void rightClicked(MouseEvent& evt, guibase* what) override {
+            parentCtrl->openContextMenu(new guictr_module_macros_context_menu(this, this->module), evt.mousepos);
         }
     };
 
@@ -251,7 +374,7 @@ namespace PluginMacros {
             void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const override {
             }
         };
-        module_macros* module;
+        module_macros* module{};
         std::array<macro_automation_src_param_t, NUM_MACROS> macroAutomationSrcParams;
         const macro_automation_src_param_t* getModulationOutputData(const DAW::modulation_channel_ref& channel) {
             auto chIdx = channel.refSrc.paramIdx;
