@@ -110,6 +110,7 @@ DEFINE_TEST(test_host_minimal TRUE test_host_minimal.cpp common/test_common.cpp)
 DEFINE_TEST(test_memory_leak TRUE test_memory_leak.cpp)
 DEFINE_TEST(test_projectfile TRUE test_projectfile.cpp)
 DEFINE_TEST(test_muparser TRUE test_muparser.cpp)
+DEFINE_TEST(test_libarchive TRUE test_libarchive.cpp)
 
 
 if (PROJECT_BUILD_TESTS_UI) 
