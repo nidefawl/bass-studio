@@ -5,7 +5,7 @@
 struct KeyCombo {
     int keyMod          = 0;
     KeyboardKey keyCode = KeyboardKey::DAW_KB_INVALID;
-    String keyChar;
+    String keyChar      = "";
     bool match(const KeyEvent& kevt) const {
         if (kevt.mods != keyMod) {
             return false;

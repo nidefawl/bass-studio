@@ -1,6 +1,7 @@
 #include "commands.h"
 #include "assert_dbg.h"
 #include "event.h"
+#include "keyboard.h"
 #include "logging.h"
 #include "renderresources.h"
 #include "seq_util.h"
@@ -113,54 +114,55 @@ namespace DAW::UI {
         KeyCombo KC_ZOOM_IN             = { 0, KeyboardKey::DAW_KB_KP_ADD, "" };
         KeyCombo KC_ZOOM_OUT            = { 0, KeyboardKey::DAW_KB_KP_SUBTRACT, "" };
         commands.clear();
-        commands.push_back({CMD_SWITCH_VIEW, {"Switch View", "Switch to the next view", ""}, {{ KB_MODS_NONE, KeyboardKey::DAW_KB_TAB, "" }}});
+        auto Add = [this](GlobalCommandType type, CommandDesc&& desc, const KeyCombo& defaultCombo) {
+            this->commands.push_back({type, desc, {}, 0, defaultCombo, {}, 0, 0, ""});
+        };
+        Add(CMD_SWITCH_VIEW, {"Switch View", "Switch to the next view", ""}, { KB_MODS_NONE, KeyboardKey::DAW_KB_TAB, "" });
+        Add(CMD_STARTSTOP_PLAYBOCK, {"Start/Stop Playback", "Start or stop playback", ""}, { KB_MODS_NONE, KeyboardKey::DAW_KB_SPACE, "" });
+        Add(CMD_REACTIVATE_AUTOMATION, {"Reactivate Automation", "Reactivate automation for all tracks", ""}, {});
+        Add(CMD_CREATE_EMPTY_CLIP, {"Create Empty Clip", "Create an empty clip at the cursor position", ""}, {});
+        Add(CMD_INSERT_AUDIO_TRACK, {"Insert Audio Track", "Insert a new audio track", "", ICON_PLUS}, {});
+        Add(CMD_INSERT_MIDI_TRACK, {"Insert MIDI Track", "Insert a new MIDI track", "", ICON_PLUS}, {});
+        Add(CMD_INSERT_RETURN_TRACK, {"Insert Return Track", "Insert a new return track", "", ICON_PLUS}, {});
+        Add(CMD_INSERT_MASTER_TRACK, {"Insert Master Track", "Insert a new master track", "", ICON_PLUS}, {});
+        Add(CMD_IMPORT_TRACK, {"Import Track", "Import a track from a file", "", ICON_FOLDER}, {});
+        Add(CMD_EXPORT_TRACK, {"Export Track", "Export a track to a file", "", ICON_SAVE}, {});
+        Add(CMD_UNDO, {"Undo", "Undo last action", ""}, KC_UNDO);
+        Add(CMD_REDO, {"Redo", "Redo last action", ""}, KC_REDO);
+        Add(CMD_SELECT_ALL, {"Select All", "Select all items", ""}, KC_SELECTALL);
+        Add(CMD_QUANTIZE, {"Quantize", "Quantize selected items", ""}, KC_QUANTIZE);
+        Add(CMD_SET_COLOR, {"Set Color", "Set color on selected items", ""}, {});
+        Add(CMD_SET_NAME, {"Set Name", "Set name on selected items", ""}, {});
+        Add(CMD_BEGIN_RENAME, {"Rename", "Rename selected items", ""}, {});
+        Add(CMD_CONSOLIDATE, {"Consolidate", "Consolidate selected items", ""}, KC_CONSOLIDATE);
+        Add(CMD_MUTE, {"Mute", "Mute selected items", ""}, KC_MUTE);
+        Add(CMD_SOLO, {"Solo", "Solo selected items", ""}, {});
+        Add(CMD_DELETE, {"Delete", "Delete selected items", ""}, KC_DELETE);
+        Add(CMD_DUPLICATE, {"Duplicate", "Duplicate selected items", "", ICON_DUPLICATE}, KC_DUPLICATE);
+        Add(CMD_COPY, {"Copy", "Copy selected items", "", ICON_COPY}, KC_COPY);
+        Add(CMD_CUT, {"Cut", "Cut selected items", "", ICON_CUT}, KC_CUT);
+        Add(CMD_PASTE, {"Paste", "Paste items", "", ICON_PASTE}, KC_PASTE);
+        Add(CMD_PASTE_NO_AUTOMATION, {"Paste (no automation)", "Paste items without automation", "", ICON_PASTE}, KC_PASTE_NO_AUTOMATION);
 
-        commands.push_back({CMD_STARTSTOP_PLAYBOCK, {"Start/Stop Playback", "Start or stop playback", ""}, {{ KB_MODS_NONE, KeyboardKey::DAW_KB_SPACE, "" }}});
-        commands.push_back({CMD_REACTIVATE_AUTOMATION, {"Reactivate Automation", "Reactivate automation for all tracks", ""}, {}});
-        commands.push_back({CMD_CREATE_EMPTY_CLIP, {"Create Empty Clip", "Create an empty clip at the cursor position", ""}, {}});
-        commands.push_back({CMD_INSERT_AUDIO_TRACK, {"Insert Audio Track", "Insert a new audio track", "", ICON_PLUS}, {}});
-        commands.push_back({CMD_INSERT_MIDI_TRACK, {"Insert MIDI Track", "Insert a new MIDI track", "", ICON_PLUS}, {}});
-        commands.push_back({CMD_INSERT_RETURN_TRACK, {"Insert Return Track", "Insert a new return track", "", ICON_PLUS}, {}});
-        commands.push_back({CMD_INSERT_MASTER_TRACK, {"Insert Master Track", "Insert a new master track", "", ICON_PLUS}, {}});
-        commands.push_back({CMD_IMPORT_TRACK, {"Import Track", "Import a track from a file", "", ICON_FOLDER}, {}});
-        commands.push_back({CMD_EXPORT_TRACK, {"Export Track", "Export a track to a file", "", ICON_SAVE}, {}});
+        Add(CMD_FILE_NEW, {"New", "Create a new project", "", ICON_FILE}, KC_NEW);
+        Add(CMD_FILE_OPEN, {"Open", "Open a project", "", ICON_FOLDER}, KC_OPEN);
+        Add(CMD_FILE_SAVE, {"Save", "Save the project", "", ICON_SAVE}, KC_SAVE);
+        Add(CMD_FILE_SAVEAS, {"Save As", "Save the project as a new file", "", ICON_SAVE}, KC_SAVEAS);
+        Add(CMD_FILE_CLOSE, {"Close", "Close the project", "", ICON_CLOSE}, {});
+        Add(CMD_EXIT, {"Exit", "Exit the application", "", ICON_CLOSE}, {});
 
-        commands.push_back({CMD_UNDO, {"Undo", "Undo last action", ""}, {KC_UNDO}});
-        commands.push_back({CMD_REDO, {"Redo", "Redo last action", ""}, {KC_REDO}});
-        commands.push_back({CMD_SELECT_ALL, {"Select All", "Select all items", ""}, {KC_SELECTALL}});
-        commands.push_back({CMD_QUANTIZE, {"Quantize", "Quantize selected items", ""}, {KC_QUANTIZE}});
-        commands.push_back({CMD_SET_COLOR, {"Set Color", "Set color on selected items", ""}, {}});
-        commands.push_back({CMD_SET_NAME, {"Set Name", "Set name on selected items", ""}, {}});
-        commands.push_back({CMD_BEGIN_RENAME, {"Rename", "Rename selected items", ""}, {}});
-        commands.push_back({CMD_CONSOLIDATE, {"Consolidate", "Consolidate selected items", ""}, {KC_CONSOLIDATE}});
-        commands.push_back({CMD_MUTE, {"Mute", "Mute selected items", ""}, {KC_MUTE}});
-        commands.push_back({CMD_SOLO, {"Solo", "Solo selected items", ""}, {}});
-        commands.push_back({CMD_DELETE, {"Delete", "Delete selected items", ""}, {KC_DELETE}});
-        commands.push_back({CMD_DUPLICATE, {"Duplicate", "Duplicate selected items", "", ICON_DUPLICATE}, {KC_DUPLICATE}});
-        commands.push_back({CMD_COPY, {"Copy", "Copy selected items", "", ICON_COPY}, {KC_COPY}});
-        commands.push_back({CMD_CUT, {"Cut", "Cut selected items", "", ICON_CUT}, {KC_CUT}});
-        commands.push_back({CMD_PASTE, {"Paste", "Paste items", "", ICON_PASTE}, {KC_PASTE}});
-        commands.push_back({CMD_PASTE_NO_AUTOMATION, {"Paste (no automation)", "Paste items without automation", "", ICON_PASTE}, {KC_PASTE_NO_AUTOMATION}});
+        Add(CMD_GUI_GLOBAL_ZOOM_DECREASE, {"Zoom Out", "Decrease the global zoom level", "", ICON_MINUS}, KC_ZOOM_OUT);
+        Add(CMD_GUI_GLOBAL_ZOOM_INCREASE, {"Zoom In", "Increase the global zoom level", "", ICON_PLUS}, KC_ZOOM_IN);
 
-        commands.push_back({CMD_FILE_NEW, {"New", "Create a new project", "", ICON_FILE}, {KC_NEW}});
-        commands.push_back({CMD_FILE_OPEN, {"Open", "Open a project", "", ICON_FOLDER}, {KC_OPEN}});
-        commands.push_back({CMD_FILE_SAVE, {"Save", "Save the project", "", ICON_SAVE}, {KC_SAVE}});
-        commands.push_back({CMD_FILE_SAVEAS, {"Save As", "Save the project as a new file", "", ICON_SAVE}, {KC_SAVEAS}});
-        commands.push_back({CMD_FILE_CLOSE, {"Close", "Close the project", "", ICON_CLOSE}, {}});
-        commands.push_back({CMD_EXIT, {"Exit", "Exit the application", "", ICON_CLOSE}, {}});
+        Add(CMD_SET_STARTUP_PROJECT, {"Set Startup Project", "Set the current project as the startup project", ""}, {});
+        Add(CMD_PREFERENCES, {"Preferences", "Open the preferences window", ""}, {});
+        Add(CMD_ABOUT, {"About", "Open the about window", ""}, {});
+        Add(CMD_SHOW_DEBUG_WINDOW, {"Debug", "Open the debug window", ""}, {});
+        Add(CMD_OPEN_SECOND_WINDOW, {"Open Second Window", "Open a second window", ""}, {});
+        Add(CMD_CREATE_VIEW, {"Open View", "Open a new view", ""}, {});
+        Add(CMD_MOVE_CURSOR, {"Move cursor", "Move the cursor position", ""}, {});
 
-        commands.push_back({CMD_GUI_GLOBAL_ZOOM_DECREASE, {"Zoom Out", "Decrease the global zoom level", "", ICON_MINUS}, {KC_ZOOM_OUT}});
-        commands.push_back({CMD_GUI_GLOBAL_ZOOM_INCREASE, {"Zoom In", "Increase the global zoom level", "", ICON_PLUS}, {KC_ZOOM_IN}});
-
-        commands.push_back({CMD_SET_STARTUP_PROJECT, {"Set Startup Project", "Set the current project as the startup project", ""}, {}});
-        commands.push_back({CMD_PREFERENCES, {"Preferences", "Open the preferences window", ""}, {}});
-        commands.push_back({CMD_ABOUT, {"About", "Open the about window", ""}, {}});
-        commands.push_back({CMD_SHOW_DEBUG_WINDOW, {"Debug", "Open the debug window", ""}, {}});
-        commands.push_back({CMD_OPEN_SECOND_WINDOW, {"Open Second Window", "Open a second window", ""}, {}});
-        commands.push_back({CMD_CREATE_VIEW, {"Open View", "Open a new view", ""}, {}});
-        commands.push_back({CMD_MOVE_CURSOR, {"Move cursor", "Move the cursor position", ""}, {}});
-
-        auto cmdOpenView = Command{CMD_SWITCH_LAYOUT, {"Switch Layout", "Switch to Layout %d. Hold Shift Key to store", ""}, {}};
+        auto cmdOpenView = Command{CMD_SWITCH_LAYOUT, {"Switch Layout", "Switch to Layout %d. Hold Shift Key to store", ""}, {}, 0, {}, {}, 0, 0, ""};
         for (int32_t i = 0; i < 10; i++) {
             auto cmdOpenView1 = cmdOpenView;
             cmdOpenView1.desc.name = "Switch to Layout " + std::to_string(i + 1);
@@ -210,11 +212,10 @@ namespace DAW::UI {
                     kc.keyChar = ptr;
                 }
             }
-            // if (cmd.keyCombos.empty()) {
-            //     cmd.keyCombos.push_back({});
-            // }
-            if (!cmd.keyCombos.empty())
-                cmd.defaultKeyCombo = cmd.keyCombos[0];
+            auto ptr = GlfwKeycodeToString(cmd.defaultKeyCombo.keyCode, 0);
+            if (ptr) {
+                cmd.defaultKeyCombo.keyChar = ptr;
+            }
         }
     }
 

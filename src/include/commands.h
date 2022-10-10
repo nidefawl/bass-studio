@@ -19,9 +19,9 @@ KeybindsSnapshot loadKeybindsFile();
 void saveKeybindsFile(KeybindsSnapshot& _settings);
 
 struct CommandDesc {
-    String name;
-    String description;
-    String shortcut;
+    String name = "";
+    String description = "";
+    String shortcut = "";
     int32_t iconId = -1;
 };
 enum class CommandContextType {
