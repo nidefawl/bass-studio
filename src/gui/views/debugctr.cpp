@@ -101,12 +101,14 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
         auto knob        = new guiknob(guiknob::knobtype::KNOB_UNLABELED);
         knob->id         = ID_OPTION_SCALE_GLOBAL;
         knob->fnSetValue = [this](float f, int flags) {
-            float guiScale      = math::max(0.05f, f * 2.0f);
-            parentCtrl->m_scale = guiScale;
+            parentCtrl->getTheme()->set(GuiConstant::CONST_TRACK_HEIGHT_STEP, math::floorfS32(4.0f+60.0f*f));
             parentCtrl->relayout();
+            // float guiScale      = math::max(0.05f, f * 2.0f);
+            // parentCtrl->m_scale = guiScale;
+            // parentCtrl->relayout();
         };
         knob->fnGetValue = [this]() {
-            return math::max(0.05f, math::min(1.0f, parentCtrl->m_scale * 0.5f));
+            return math::max(0.05f, math::min(1.0f, (parentCtrl->getTheme()->get(GuiConstant::CONST_TRACK_HEIGHT_STEP)-4.0f)/60.0f));
         };
         debugGuis.push_back(knob);
     }

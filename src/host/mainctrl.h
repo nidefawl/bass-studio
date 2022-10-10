@@ -705,6 +705,7 @@ public:
     guictr_nodes_splitview* getNodesContainer() override;
     guictr_clipeditor* getClipEditor() override;
     guictr_plugins* getPluginsView() override;
+    void updateZoomLevel(float f) override;
 };
 
 class CompanionCtrl : public DawCtrl {

@@ -596,6 +596,7 @@ void CompanionCtrl::setupView() {
     viewContainers = view;
     for (guictr_base* ctr : containers) {
         ctr->setControl(this);
+        ctr->onAdded();
     }
     view->updateVisibility();
 }
@@ -606,6 +607,7 @@ void MainCtrl::setupView() {
     viewContainers = view;
     for (guictr_base* ctr : containers) {
         ctr->setControl(this);
+        ctr->onAdded();
     }
     view->updateVisibility();
 }
@@ -620,6 +622,7 @@ std::shared_ptr<guictr_layout> MainCtrl::replaceContainerWith(guictr_base* ctr,
         view->ctr_Right         = newContainer;
         view->ctr_Right->parent = nullptr;
         view->ctr_Right->setControl(this);
+        view->ctr_Right->onAdded();
     }
     if (ctr == view->ctr_Left.get()) {
         replaceEntry(containers, view->ctr_Left.get(), newContainer.get());
@@ -628,6 +631,7 @@ std::shared_ptr<guictr_layout> MainCtrl::replaceContainerWith(guictr_base* ctr,
         view->ctr_Left         = newContainer;
         view->ctr_Left->parent = nullptr;
         view->ctr_Left->setControl(this);
+        view->ctr_Left->onAdded();
     }
     return ret;
 }
@@ -1292,11 +1296,11 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
 bool DawCtrl::menuCommand(const menucmd_t& command) {
     switch (command.command) {
         case CMD_GUI_GLOBAL_ZOOM_DECREASE:
-            m_scale = math::max(0.05f, m_scale - 0.05f);
+            updateZoomLevel(math::max(0.5f, m_scale - 0.05f));
             BaseCtrl::relayout();
             return true;
         case CMD_GUI_GLOBAL_ZOOM_INCREASE:
-            m_scale = math::min(10.0f - 0.05f, m_scale + 0.05f);
+            updateZoomLevel(math::min(4.0f, m_scale + 0.05f));
             BaseCtrl::relayout();
             return true;
     }
@@ -1814,6 +1818,7 @@ void DawInstance::getTrackContainers(std::vector<guictr_tracks*>& trackContainer
 void DawInstance::setMainControl(MainCtrl* _mainCtrl) {
     dbgassert(!tls.mainCtrl);
     tls.mainCtrl = _mainCtrl;
+    _mainCtrl->updateZoomLevel(tls.settings->dawsettings.globalZoom);
     daw_tls::getTls().mainCtrl = tls.mainCtrl;
     tls.host->setTls(tls);
     this->dawCtrls.push_back(tls.mainCtrl);
@@ -3178,4 +3183,11 @@ void DawInstance::setEmptyClipboard() {
     clipboardPlugins = std::make_shared<plugin_clipboard_t>();
     clipboardClips   = std::make_shared<clip_clipboard>();
     clipboardNotes   = std::make_shared<notes_clipboard>();
+}
+void MainCtrl::updateZoomLevel(float f) {
+    DawCtrl::updateZoomLevel(f);
+    if (view) {
+        view->ctr_tempo.onGlobalZoomChanged();
+        daw.tls.settings->dawsettings.globalZoom = f;
+    }
 }

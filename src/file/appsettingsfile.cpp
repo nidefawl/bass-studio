@@ -131,15 +131,18 @@ void serialize(Archive& ar, appwindowsettings& settings) {
     make_optional_nvp(ar, "position", *(settings.size));
 #endif
 }
+
 template <class Archive>
 void serialize(Archive& ar, app_path_remapping& settings) {
     ar(make_nvp("pathRemapping", settings.pathRemapping));
 }
+
 template <class Archive>
 void serialize(Archive& ar, app_autosave_settings& settings) {
     ar(make_nvp("saveDelay", settings.tmSaveDelayMinutes));
     ar(make_nvp("reminderDelay", settings.tmReminderDelayMinutes));
 }
+
 template <class Archive>
 void serialize(Archive& ar, app_daw_settings& settings) {
     ar(
@@ -150,7 +153,9 @@ void serialize(Archive& ar, app_daw_settings& settings) {
         make_nvp("debugMode", settings.debugMode),
         make_nvp("shaderDebug", settings.shaderDebug)
     );
+    make_optional_nvp(ar, "globalZoom", settings.globalZoom);
 }
+
 template<class Archive>
 void load(Archive& ar, appsettings& settings, const std::uint32_t version) {
     settings.fileFmtVersion = version;

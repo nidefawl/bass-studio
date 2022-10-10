@@ -182,4 +182,12 @@ public:
     void render(NVGcontext* vg) override;
     void layout() override;
     void buttonClicked(guibase* button) override;
+    void onAdded() override {
+        guictr_base::onAdded();
+        onGlobalZoomChanged();
+    }
+    void onGlobalZoomChanged() {
+        if (parentCtrl)
+            globalZoom.zoom = parentCtrl->m_scale;
+    }
 };

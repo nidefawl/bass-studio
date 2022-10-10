@@ -324,6 +324,9 @@ public:
     virtual bool isGlobalKeybindCodepoint(uint32_t codepoint) {
         return false;
     }
+    virtual void updateZoomLevel(float f) {
+        m_scale = f;
+    }
 };
 
 class AppCtrl : public BaseCtrl {

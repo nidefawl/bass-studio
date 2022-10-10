@@ -533,9 +533,9 @@ guictr_tempocontrols::guictr_tempocontrols(project_t& _project, project_globals_
       loopLen(&projectGlobals.loopLen, true),
       zoom(&globalZoom) {
     zoom.fnValueEditChanged = [this](gui_numberinput_field_base*, GlobalZoom globalZoom) {
-        globalZoom.zoom = math::clamp(globalZoom.zoom, 0.25f, 4.0f);
+        globalZoom.zoom = math::clamp(globalZoom.zoom, 0.5f, 2.0f);
         if (parentCtrl) {
-            parentCtrl->m_scale = globalZoom.zoom;
+            parentCtrl->updateZoomLevel(globalZoom.zoom);
             parentCtrl->relayout();
         }
     };

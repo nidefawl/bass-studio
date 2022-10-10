@@ -121,6 +121,7 @@ struct app_daw_settings {
     bool vmmode = false;
     bool debugMode = false;
     bool shaderDebug = true;
+    float globalZoom = 1.0f;
 };
 struct appsettings {
     appsettings() noexcept = default; // need noexcept for static storage
