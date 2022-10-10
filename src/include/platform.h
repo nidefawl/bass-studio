@@ -13,6 +13,8 @@
 #define DAW_PLATFORM_VST2_PATH_DEFAULT "~/.vst"
 #endif
 
+#define FILE_PATHSEP_FORWARD_CHAR '/'
+#define FILE_PATHSEP_FORWARD_STR "/"
 
 double getTimeSecondsD();
 int64_t getTimeMillis();

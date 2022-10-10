@@ -9,7 +9,7 @@
 
 namespace {
 
-void test_libarchive() {
+void test_libarchive(String outName = "test_libarchive.tar.gz") {
     String textContentFile1 = "This is just some text content for file 1";
     std::byte binaryContentFile2_256[256];
     /* create a new gzip archive file on disk containing 3 files:
@@ -21,7 +21,7 @@ void test_libarchive() {
     struct archive* a = archive_write_new();
     archive_write_add_filter_gzip(a);
     archive_write_set_format_pax_restricted(a);
-    archive_write_open_filename(a, "test_libarchive.tar.gz");
+    archive_write_open_filename(a, outName.c_str());
 
     // add a file to the archive
     struct archive_entry* entry = archive_entry_new();
@@ -63,7 +63,7 @@ void test_libarchive() {
     a = archive_read_new();
     archive_read_support_filter_all(a);
     archive_read_support_format_all(a);
-    archive_read_open_filename(a, "test_libarchive.tar.gz", 10240);
+    archive_read_open_filename(a, outName.c_str(), 10240);
 
     // iterate over all files in the archive
     for (;;) {
@@ -107,5 +107,6 @@ void test_libarchive() {
 
 int main() {
   test_libarchive();
+  test_libarchive("");
   return 0;
 }

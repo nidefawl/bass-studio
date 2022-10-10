@@ -1,10 +1,15 @@
 #include "audiocache.h"
+#include <archive.h>
+#include <archive_entry.h>
+#include <cstdint>
 #include <cstring>
+#include <sys/types.h>
 #include <unordered_map>
 #include <atomic>
 #include "appsettings.h"
 #include "assert_dbg.h"
 #include "audioblock.h"
+#include "config.h"
 #include "math/seq_math.h"
 #include "samplerate.h"
 #include "str_util.h"
@@ -20,12 +25,12 @@
 #include <soxr.h>
 #include <vector>
 
-void audiocache::getLoaded(std::vector<audiofile_t*>& v) {
+/* void audiocache::getLoaded(std::vector<audiofile_t*>& v) {
     v.reserve(list.size());
     for (auto& w : list) {
         v.push_back(w.get());
     }
-}
+} */
 audiofile_t* audiocache::get(int32_t i) {
     size_t count = this->mapId.count(i);
     return count ? this->mapId.at(i) : nullptr;
@@ -63,7 +68,7 @@ void audiocache::setSamplerate(samplerate_t _samplerate) {
     }
     for (auto& f : reloadFiles) {
         log_printf("reloading file %s with new samplerate %u\n", StringAsCStr(f.path), samplerate);
-        loadFile(f.path, f.id, "");
+        loadFile(f.path, f.id, "", nullptr, nullptr);
     }
 }
 void audiocache::updateSample(const store_sample_req_t& ssr) {
@@ -167,6 +172,9 @@ audiofile_t* audiocache::createSample(const create_sample_req_t& ssr) {
     auto spFile    = std::make_unique<audiofile_t>();
     spFile->sample = std::move(sample);
     spFile->state = audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED | audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MODIFIED;
+    if (ssr.isTemporarySample) {
+        spFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_TEMPORARY;
+    }
     spFile->id     = _id;
     spFile->path   = ssr.path;
     String a, b, c, d;
@@ -179,9 +187,8 @@ audiofile_t* audiocache::createSample(const create_sample_req_t& ssr) {
     dbgassert(mapId[_id] == pFile);
     return pFile;
 }
-static bool LoadAudioSample(const String& path, audiosample_t* sample, samplerate_t samplerate) {
-    drwav wav{};
-    if (drwav_init_file(&wav, StringAsCStr(path))) {
+static bool LoadAudioSample(drwav& wav, audiosample_t* sample, samplerate_t samplerate, String taskDesc) {
+    {
         struct close_wave_file {
             drwav* wav;
             ~close_wave_file() { drwav_uninit(wav); }
@@ -191,7 +198,7 @@ static bool LoadAudioSample(const String& path, audiosample_t* sample, samplerat
         samplecount_t numSamplesInterleaved = drwav_read_f32(&wav, wav.totalSampleCount, pSamples.data());
         pSamples.resize(numSamplesInterleaved);
         if (wav.channels <= 0) {
-            log_lf(Log::L_WARN, "File %s has 0 channels\n", StringAsCStr(path));
+            log_lf(Log::L_WARN, "File %s has 0 channels\n", StringAsCStr(taskDesc));
             return false;
         }
         // log_lf(Log::L_TRACE, "totalSampleCount: %zu\n", wav.totalSampleCount);
@@ -285,54 +292,56 @@ static bool LoadAudioSample(const String& path, audiosample_t* sample, samplerat
         int64_t timeDiffDownsample = getTimeMicros() - timeBeginDownsample;
         double timeDiffInSeconds = timeDiffDownsample / 1000000.0;
         if (timeDiffInSeconds > 1.0) {
-            log_lf(Log::L_WARN, "Downsampling %s took %fsec\n", path.c_str(), timeDiffInSeconds);
+            log_lf(Log::L_WARN, "Downsampling %s took %fsec\n", taskDesc.c_str(), timeDiffInSeconds);
         }
         return true;
     }
     return false;
 }
-audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String& workingDir) {
+audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String& workingDir, struct archive* ar, struct archive_entry* entry) {
     String path = pathIn;
-    auto mappings = daw_tls::getSettings().pathmapping;
-    bool replacedPath = false;
-    // split path using platform specific path separator
-    // then check if any of the path parents are mapped in the hashmap and if so,
-    // replace the path with the mapped path
-    for (auto& mapping : mappings.pathRemapping) {
-        if (path.find(mapping.first) == 0) {
-            String newPath = path;
-            newPath.replace(0, mapping.first.size(), mapping.second);
-            App::Platform::sanitizePathToFile(newPath);
-            if (FileExists(newPath)) {
-                path = newPath;
-                replacedPath = true;
-                break;
+    if (!entry) {
+        auto mappings = daw_tls::getSettings().pathmapping;
+        bool replacedPath = false;
+        // split path using platform specific path separator
+        // then check if any of the path parents are mapped in the hashmap and if so,
+        // replace the path with the mapped path
+        for (auto& mapping : mappings.pathRemapping) {
+            if (path.find(mapping.first) == 0) {
+                String newPath = path;
+                newPath.replace(0, mapping.first.size(), mapping.second);
+                App::Platform::sanitizePathToFile(newPath);
+                if (FileExists(newPath)) {
+                    path = newPath;
+                    replacedPath = true;
+                    break;
+                }
             }
         }
-    }
-    if (!replacedPath) {
-        App::Platform::sanitizePathToFile(path);
-    }
+        if (!replacedPath) {
+            App::Platform::sanitizePathToFile(path);
+        }
 
-    //TODO: sanitize path so comparison matches, or ask os if path equals a file we already loaded before
-    for (auto& w : list) {
-        if (w->pathLoaded == path) {
-            auto pFile = w.get();
-            mapId[w->id] = pFile;
-            log_printf("skipping file %s (requested id %d), already loaded (id %d)\n", StringAsCStr(path), id, pFile->id);
-            return pFile;
-        }
-    }
-    if (!workingDir.empty() && !FileExists(path)) {
-        bool bIsAbsolute = (!path.empty() && path[0] == '/') || (path.size() > 1 && path[1] == ':');
-        if (!bIsAbsolute) {
-            String path2 = workingDir + FILE_PATHSEP_STR + path;
-            App::Platform::sanitizePathToFile(path2);
-            if (FileExists(path2)) {
-                path = path2;
+        //TODO: sanitize path so comparison matches, or ask os if path equals a file we already loaded before
+        for (auto& w : list) {
+            if (w->pathLoaded == path) {
+                auto pFile = w.get();
+                mapId[w->id] = pFile;
+                log_printf("skipping file %s (requested id %d), already loaded (id %d)\n", StringAsCStr(path), id, pFile->id);
+                return pFile;
             }
         }
-        
+        if (!workingDir.empty() && !FileExists(path)) {
+            bool bIsAbsolute = (!path.empty() && path[0] == '/') || (path.size() > 1 && path[1] == ':');
+            if (!bIsAbsolute) {
+                String path2 = workingDir + FILE_PATHSEP_STR + path;
+                App::Platform::sanitizePathToFile(path2);
+                if (FileExists(path2)) {
+                    path = path2;
+                }
+            }
+            
+        }
     }
 
     std::unique_ptr<audiosample_t> sample = std::make_unique<audiosample_t>();
@@ -354,17 +363,40 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String
     auto pFile  = file.get();
     this->mapId[_id] = pFile;
     list.push_back(std::move(file));
-    if (LoadAudioSample(path, pFile->sample.get(), samplerate)) {
+    drwav wav{};
+    std::vector<uint8_t> heapBuffer;
+    bool bCanRead = false;
+    if (!entry) {
+        bCanRead = drwav_init_file(&wav, StringAsCStr(path));
+        if (!bCanRead) {
+            log_lf(Log::L_WARN, "Failed to read file %s\n", path.c_str());
+        }
+    } else {
+        pFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_BUNDLED;
+        auto sizeToRead = archive_entry_size(entry);
+        heapBuffer.resize(sizeToRead);
+        auto sizeRead = archive_read_data(ar, heapBuffer.data(), heapBuffer.size());
+        if (sizeRead != sizeToRead) {
+            log_lf(Log::L_WARN, "Failed to read file %s: read %zd bytes, expected %zd bytes\n", path.c_str(), sizeRead, sizeToRead);
+        } else {
+            bCanRead = drwav_init_memory(&wav, heapBuffer.data(), heapBuffer.size());
+        }
+        if (!bCanRead) {
+            log_lf(Log::L_WARN, "Failed to read file %s\n", path.c_str());
+        }
+    }
+    if (LoadAudioSample(wav, pFile->sample.get(), samplerate, path)) {
         pFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED;
         log_printf("Loaded %s\n", path.c_str());
     } else {
         pFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MISSING;
-        log_printf("Failed to load %s\n", path.c_str());
+        log_lf(Log::L_WARN, "Failed to load %s\n", path.c_str());
+        return nullptr;
     }
     return pFile;
 }
 
-samplecount_t saveSampleToBuffer(audiofile_t& file,std::vector<std::byte>& bufferOut) {
+samplecount_t saveSampleToArchive(audiofile_t& file, struct archive_entry* entry, struct archive* ar) {
     auto sample = file.getSample();
     dbgassert(sample->nSamples == 0 || sample->nChannels == sample->samples.size());
     log_printf("saveSampleToBuffer %s id %d len %zd\n", StringAsCStr(file.name), file.id, sample->nSamples);
@@ -395,11 +427,18 @@ samplecount_t saveSampleToBuffer(audiofile_t& file,std::vector<std::byte>& buffe
     auto toWrite = drwav_uint64(sample->nSamples*format.channels);
     auto samplesWritten = drwav_write(pWav, toWrite, blockFull.buf[0]);
     drwav_close(pWav);
-    std::byte* pBytes = reinterpret_cast<std::byte*>(pData);
-    bufferOut.assign(pBytes, pBytes + dataSize);
+    archive_entry_set_size(entry, dataSize);
+    archive_write_header(ar, entry);
+    
+    if (pData && dataSize) {
+        auto bytesArchived = archive_write_data(ar, pData, dataSize);
+        if (bytesArchived != ssize_t(dataSize)) {
+            log_lf(Log::L_WARN, "Failed writing %s. Only %zd/%zu bytes written\n", StringAsCStr(file.name), bytesArchived, dataSize);
+        }
+    }
     drwav_free(pData);
     if (samplesWritten != toWrite) {
-        log_printf("Failed writing %s. Only %zu/%zu samples written\n", StringAsCStr(file.name), samplesWritten, toWrite);
+        log_lf(Log::L_WARN, "Failed writing %s. Only %zu/%zu samples written\n", StringAsCStr(file.name), samplesWritten, toWrite);
     }
     return samplecount_t(samplesWritten);
 }
@@ -446,7 +485,7 @@ samplecount_t saveSampleToFile(audiofile_t& file, const String& fOutWave) {
     auto samplesWritten = drwav_write(pWav, toWrite, blockFull.buf[0]);
 
     if (samplesWritten != toWrite) {
-        log_printf("Failed writing %s. Only %zu/%zu samples written\n", StringAsCStr(fOutWave), samplesWritten, toWrite);
+        log_lf(Log::L_WARN, "Failed writing %s. Only %zu/%zu samples written\n", StringAsCStr(fOutWave), samplesWritten, toWrite);
     }
 
     return samplecount_t(samplesWritten);
@@ -456,7 +495,8 @@ void audiocache::saveSamples(const std::vector<int32_t>& refSampleIds) {
         auto* ptr = w.get();
         if (std::binary_search(refSampleIds.cbegin(), refSampleIds.cend(), ptr->id)
             && (ptr->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED) 
-            && (ptr->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MODIFIED)) {
+            && (ptr->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MODIFIED)
+            && !(ptr->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_TEMPORARY)) {
             if (FileExists(ptr->path)) {
                 log_lf(Log::L_WARN, "Overwriting sample %s\n", ptr->path.c_str());
             }
@@ -469,6 +509,9 @@ void audiocache::rellocateSamples(const std::vector<int32_t>& refSampleIds, cons
     String targetDirectory = directory;
     for (auto& f : list) {
         auto* file = f.get();
+        if (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_TEMPORARY) {
+            continue;
+        }
         if (std::binary_search(refSampleIds.cbegin(), refSampleIds.cend(), file->id)) {
             String oldPath,name,fileExt,nameExt;
             SplitPath(file->path, &oldPath, &name, &fileExt, &nameExt);
@@ -501,6 +544,8 @@ void audiocache::rellocateSamples(const std::vector<int32_t>& refSampleIds, cons
 
             if (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED) {
                 saveSampleToFile(*file, uniquePath);
+            } else if (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_BUNDLED) {
+                //TODO: copy bundled sample
             } else if (FileExists(file->path)) {
                 //TODO: copy file
                 std::vector<uint8_t> data;
@@ -513,12 +558,77 @@ void audiocache::rellocateSamples(const std::vector<int32_t>& refSampleIds, cons
         }
     }
 }
+
+void audiocache::writeToArchive(const std::vector<int32_t>& refSampleIds, struct archive* ar) {
+    String targetDirectory = "";
+    for (auto& f : list) {
+        auto* file = f.get();
+        if (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_TEMPORARY) {
+            continue;
+        }
+        if (std::binary_search(refSampleIds.cbegin(), refSampleIds.cend(), file->id)) {
+            if (!(file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_BUNDLED)) {
+                String oldPath,name,fileExt,nameExt;
+                SplitPath(file->path, &oldPath, &name, &fileExt, &nameExt);
+                        
+                String uniqueName = name;
+                String uniquePath = targetDirectory;
+                uniquePath += FILE_PATHSEP_FORWARD_STR;
+                uniquePath += "samples";
+                uniquePath += FILE_PATHSEP_FORWARD_STR;
+                uniquePath += name;
+                uniquePath += ".";
+                uniquePath += fileExt;
+                int32_t idx = 0;
+                while ((getByFilename(uniquePath) != nullptr) && ++idx < 10000) {
+                    idx++;
+                    uniqueName = name;
+                    uniqueName += "_";
+                    uniqueName += std::to_string(idx);
+
+                    uniquePath = targetDirectory;
+                    uniquePath += FILE_PATHSEP_FORWARD_STR;
+                    uniquePath += "samples";
+                    uniquePath += FILE_PATHSEP_FORWARD_STR;
+                    uniquePath += uniqueName;
+                    uniquePath += ".";
+                    uniquePath += fileExt;
+                }
+                file->name = uniqueName;
+                file->path = String("samples") + FILE_PATHSEP_FORWARD_STR + uniqueName + "." + fileExt;
+                file->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_BUNDLED;
+            }
+
+            struct archive_entry* entry = archive_entry_new();
+            archive_entry_set_pathname(entry, file->path.c_str());
+            archive_entry_set_mtime(entry, time(nullptr), 0);
+            archive_entry_set_filetype(entry, AE_IFREG);
+            archive_entry_set_perm(entry, 0644);
+            if (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED) {
+                saveSampleToArchive(*file, entry, ar);
+            } else if (FileExists(file->path)) {
+                //TODO: copy file
+                std::vector<uint8_t> buffer;
+                ReadFileVector(file->path, buffer);
+                archive_entry_set_size(entry, buffer.size());
+                archive_write_header(ar, entry);
+                archive_write_data(ar, buffer.data(), buffer.size());
+                // WriteFileVector(uniquePath, data);
+            } else {
+                log_lf(Log::L_WARN, "Sample %s not found\n", file->path.c_str());
+            }
+            archive_entry_free(entry);
+        }
+    }
+}
 void audiocache::store(const std::vector<int32_t>& refSampleIds, samplefile_index_t& v) {
     v.list.reserve(list.size());
-    for (auto& w : list) {
-        auto* ptr = w.get();
-        if (std::binary_search(refSampleIds.cbegin(), refSampleIds.cend(), ptr->id)) {
-            v.list.push_back({ ptr->id, ptr->path });
+    for (auto& file : list) {
+        if (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_TEMPORARY) {
+            continue;
+        }
+        if (std::binary_search(refSampleIds.cbegin(), refSampleIds.cend(), file->id)) {
+            v.list.push_back({ file->id, file->path });
         }
     }
 }
@@ -546,11 +656,29 @@ void audiocache::unloadAll() {
     this->nextIdx = 0;
 }
 
-void audiocache::load(samplefile_index_t& v, const String& workingDir) {
+void audiocache::load(samplefile_index_t& v, ProjectFileType projectFileType, const String& bundlePath, const String& workingDir) {
     unloadAll();
     list.reserve(v.list.size());
-    for (auto& w : v.list) {
-        loadFile(w.name, w.id, workingDir);
+    if (projectFileType == PROJECT_FILETYPE_BUNDLE && !bundlePath.empty()) {
+
+        struct archive* ar = archive_read_new();
+        archive_read_support_filter_all(ar);
+        archive_read_support_format_all(ar);
+        archive_read_open_filename(ar, bundlePath.c_str(), 10240);
+        struct archive_entry* entry = nullptr;
+        while (archive_read_next_header(ar, &entry) == ARCHIVE_OK) {
+            const char* entryPath = archive_entry_pathname(entry);
+                for (auto& fileIndex : v.list) {
+                    if (fileIndex.name == entryPath) {
+                        loadFile(fileIndex.name, fileIndex.id, workingDir, ar, entry);
+                        break;
+                    }
+                }
+        }
+        archive_read_free(ar);
+    }
+    for (auto& fileIndex : v.list) {
+        loadFile(fileIndex.name, fileIndex.id, workingDir, nullptr, nullptr);
     }
 }
 

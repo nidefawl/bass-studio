@@ -3,6 +3,11 @@
 #include "cursor.h"
 #include "logging.h"
 
+enum ProjectFileType {
+    PROJECT_FILETYPE_JSON,
+    PROJECT_FILETYPE_BUNDLE,
+};
+
 struct export_settings_t {
     tick_t exportPos  = 0;
     tick_t exportLen  = 0;

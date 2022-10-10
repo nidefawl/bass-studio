@@ -14,8 +14,11 @@ struct project_file {
     std::vector<dawview_layout_t> layouts;
 };
 
-bool saveProject(std::shared_ptr<project_file> f, const String& path);
-std::shared_ptr<project_file> loadProjectFile(String& path);
+bool saveProject(const std::shared_ptr<project_file>& f, std::vector<uint8_t>& bufferOut);
+std::shared_ptr<project_file> loadProject(const std::vector<uint8_t>& vec);
+
+bool saveProjectToJsonFile(const std::shared_ptr<project_file>& f, const String& path);
+std::shared_ptr<project_file> loadProjectFromJsonFile(const String& path);
 
 bool saveTrackContainer(const trackcontainer_snapshot_t& container, const String& path);
 std::shared_ptr<trackcontainer_snapshot_t> loadTrackContainer(const String& path);

@@ -191,9 +191,10 @@ int runCommandLineHost(const std::vector<String>& args) {
             return EXIT_FAILURE;
         }
         std::shared_ptr<project_file> projectFile;
+        ProjectFileType projectFileType = ProjectFileType::PROJECT_FILETYPE_JSON;
         if (!file.empty()) {
             try {
-                projectFile = loadProjectFile(file);
+                projectFile = loadProjectFromJsonFile(file);
             } catch (std::exception& e) {
                 log_printf("exception %s\n", e.what());
                 return EXIT_FAILURE;
@@ -281,7 +282,7 @@ int runCommandLineHost(const std::vector<String>& args) {
 
                 String projectDirectory;
                 SplitPath(projectFile->path, &projectDirectory, nullptr, nullptr, nullptr);
-                cache.load(projectFile->sampleFileIndex, projectDirectory);
+                cache.load(projectFile->sampleFileIndex, projectFileType, projectFile->path, projectDirectory);
 
                 /** create all audio instances **/
                 for (track_t* t : projectController.getTracks()) {

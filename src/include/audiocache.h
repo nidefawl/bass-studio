@@ -2,28 +2,36 @@
 #include <unordered_map>
 #include <atomic>
 #include <memory>
+#include "project.h"
 #include "types.h"
 #include "str_util.h"
 #include "audiosample.h"
 #include "wave/waveform_render.h"
 #include "samplefileidx.h"
 
+
+struct archive;
 struct NVGcontext;
+
 struct audiofile_path_t {
     int32_t id = 0;
     String path;
 };
+
 struct audiofile_t : public samplesource_t {
     enum AudioFileStateFlags : uint8_t {
         AUDIOFILE_FLAGS_NONE = 0,
         AUDIOFILE_FLAG_LOADED = 1 << 0,
         AUDIOFILE_FLAG_MODIFIED = 1 << 1,
         AUDIOFILE_FLAG_MISSING = 1 << 2,
+        AUDIOFILE_FLAG_TEMPORARY = 1 << 3,
+        AUDIOFILE_FLAG_BUNDLED = 1 << 4,
     };
     int32_t id = 0;
     String path;
     String name;
     String ext;
+    String bundlePath;
     uint8_t state = AUDIOFILE_FLAGS_NONE;
     String pathLoaded;
     std::unique_ptr<audiosample_t> sample;
@@ -68,8 +76,8 @@ public:
         this->list.clear();
     }
     static audiocache* getInstance();
-    void getLoaded(std::vector<audiofile_t*>& v);
-    audiofile_t* loadFile(const String& s, int32_t id, const String& workingDir);
+    // void getLoaded(std::vector<audiofile_t*>& v);
+    audiofile_t* loadFile(const String& s, int32_t id, const String& workingDir, struct archive* ar, struct archive_entry* entryOptional);
     void updateSample(const store_sample_req_t& ssr);
     audiofile_t* createSample(const create_sample_req_t& ssr);
     void setSamplerate(samplerate_t samplerate);
@@ -77,10 +85,11 @@ public:
     audiofile_t* get(int32_t i);
     audiofile_t* getByFilename(const String& pathFile);
     void store(const std::vector<int32_t>& refSampleIds, samplefile_index_t& v);
-    void load(samplefile_index_t& v, const String& workingDir);
+    void load(samplefile_index_t& v, ProjectFileType projectFileType, const String& bundlePath, const String& workingDir);
     void saveSamples(const std::vector<int32_t>& refSampleIds);
     void unloadAll();
     void unloadUnreferenced(const std::vector<int32_t>& refSampleIds);
     void rellocateSamples(const std::vector<int32_t>& refSampleIds, const String& directory);
+    void writeToArchive(const std::vector<int32_t>& refSampleIds, struct archive* ar);
     bool isEmpty() const;
 };

@@ -4,6 +4,7 @@
 #include <vector>
 #include <set>
 #include "commands.h"
+#include "project.h"
 #include "saferef.h"
 #include "types.h"
 #include <memory>
@@ -263,6 +264,7 @@ class DawInstance : public project_controller_t, public delete_cb {
     friend class MainCtrl;
     friend class CompanionCtrl;
     friend class DawCtrl;
+    ProjectFileType projectFileType = ProjectFileType::PROJECT_FILETYPE_JSON;
     project_t project;
     project_globals_t projectGlobals;
     int initState      = 0;
@@ -467,6 +469,7 @@ public:
     void configureSampleRate();
 private:
     void onDawCompanionWindowClose(DawWindowCompanion& entry);
+    void saveProjectBundle(const String& path);
 };
 
 class DawCtrl : public AppCtrl {

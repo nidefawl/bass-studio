@@ -680,13 +680,10 @@ bool validateProjectFile(const std::shared_ptr<project_file>& projectfile) {
     return true;
 }
 
-std::shared_ptr<project_file> loadProjectFile(String& path) {
+std::shared_ptr<project_file> loadProject(const std::vector<uint8_t>& vec) {
     try {
-        std::vector<uint8_t> vec;
-        ReadFileVector(path, vec);
-
         Stringstream sstream(std::string(vec.begin(), vec.end()));
-        std::shared_ptr<project_file> f = std::make_shared<project_file>();
+        auto f = std::make_shared<project_file>();
         {
             JSONInputArchive ar(sstream);
             ar(make_nvp("project", f));
@@ -699,21 +696,17 @@ std::shared_ptr<project_file> loadProjectFile(String& path) {
             f->project.samplerate = 44100;
             log_lf(Log::L_WARN, "legacy project file without samplerate, setting samplerate to %u\n", 44100);
         }
-        f->path = path;
         if (!validateProjectFile(f)) {
             f.reset();
         }
         return f;
-    } catch (const FileIOException& e) {
-        log_printf("loadProject File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
     } catch (const std::exception& e) {
         log_printf("loadProject exception: %s\n", e.what());
     }
     return nullptr;
 }
 
-bool saveProject(std::shared_ptr<project_file> f, const String& path) {
-
+bool saveProject(const std::shared_ptr<project_file>& f, std::vector<uint8_t>& bufferOut) {
     try {
         Stringstream sstream;
         {
@@ -721,11 +714,38 @@ bool saveProject(std::shared_ptr<project_file> f, const String& path) {
             ar(make_nvp("project", f));
         }
         sstream.flush();
-        Stringstream::pos_type len = sstream.tellp();
-        std::vector<uint8_t> buf(len);
-        buf.assign(std::istreambuf_iterator<char>(sstream), std::istreambuf_iterator<char>());
-        WriteFileVector(path, buf);
+        bufferOut.assign(std::istreambuf_iterator<char>(sstream), std::istreambuf_iterator<char>());
         return true;
+    } catch (const std::exception& e) {
+        log_printf("saveProject exception: %s\n", e.what());
+    }
+    return false;
+}
+
+std::shared_ptr<project_file> loadProjectFromJsonFile(const String& path) {
+    try {
+        std::vector<uint8_t> vec;
+        ReadFileVector(path, vec);
+        auto f = loadProject(vec);
+        if (f) {
+            f->path = path;
+        }
+        return f;
+    } catch (const FileIOException& e) {
+        log_printf("loadProject File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+    }
+    return nullptr;
+}
+
+bool saveProjectToJsonFile(const std::shared_ptr<project_file>& f, const String& path) {
+
+    try {
+        std::vector<uint8_t> buf;
+        buf.reserve(2048);
+        if (saveProject(f, buf)) {
+            WriteFileVector(path, buf);
+            return true;
+        }
     } catch (const FileIOException& e) {
         log_printf("saveProject File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
     } catch (const std::exception& e) {
@@ -733,7 +753,6 @@ bool saveProject(std::shared_ptr<project_file> f, const String& path) {
     }
     return false;
 }
-
 
 std::shared_ptr<trackcontainer_snapshot_t> loadTrackContainer(const String& path) {
     try {

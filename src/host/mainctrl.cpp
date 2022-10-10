@@ -2,6 +2,8 @@
 #include "event.h"
 #include "fileio.h"
 #include "glheaders.h"
+#include <archive.h>
+#include <archive_entry.h>
 #include <cstddef>
 #include <nanovg.h>
 #include <GLFW/glfw3.h>
@@ -817,7 +819,10 @@ void DawCtrl::updateMenubar() {
 }
 
 static SupportedFileType FILE_TYPE_PROJECT{ "Project File", PROJECT_FILE_EXT };
+static SupportedFileType FILE_TYPE_PROJECT_BUNDLE{ "Project Bundle", PROJECT_BUNDLE_FILE_EXT };
 std::vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
+std::vector<SupportedFileType> vFILE_TYPE_BUNDLE = { FILE_TYPE_PROJECT_BUNDLE };
+std::vector<SupportedFileType> vFILE_TYPE_PROJECTS = { FILE_TYPE_PROJECT, FILE_TYPE_PROJECT_BUNDLE };
 
 void DawInstance::loadFileCStr(const char* str) {
     loadFile(str, 0);
@@ -826,7 +831,13 @@ void DawInstance::loadFileCStr(const char* str) {
 void DawInstance::saveFile(const String& path) {
     if (!path.empty()) {
         std::shared_ptr<project_file> f = createProjectFile();
-        bool bSuccess = saveProject(f, path);
+        bool bSuccess = false;
+        if (projectFileType == PROJECT_FILETYPE_JSON) {
+            bSuccess = saveProjectToJsonFile(f, path);
+        } else {
+            saveProjectBundle(path);
+            bSuccess = true;
+        }
         if (tls.mainCtrl) {
             if (bSuccess) {
                 tls.mainCtrl->setStatusText(StringFormat("Saved project to %s", StringAsCStr(path)));
@@ -835,19 +846,45 @@ void DawInstance::saveFile(const String& path) {
             }
         }
         projectPath = path;
+        String projectFileName;
+        SplitPath(path, &lastProjectDirectory, &projectFileName, nullptr, nullptr);
+        tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::BUILD_BINARY_NAME, StringAsCStr(projectFileName)));
+        tls.settings->recentfiles.add(path);
     }
 }
 
 void DawInstance::loadFile(String path, int flags) {
+    String loadFileExt, loadFileDirectory;
+    SplitPath(path, &loadFileDirectory, nullptr, &loadFileExt);
+    std::vector<uint8_t> projJsonData;
+    if (loadFileExt == PROJECT_BUNDLE_FILE_EXT && !path.empty()) {
+        struct archive* a = archive_read_new();
+        archive_read_support_filter_all(a);
+        archive_read_support_format_all(a);
+        archive_read_open_filename(a, path.c_str(), 10240);
+        struct archive_entry* entry = nullptr;
+        while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+            const char* entryPath = archive_entry_pathname(entry);
+            String entryPathExt;;
+            SplitPath(entryPath, nullptr, nullptr, &entryPathExt);
+            if (entryPathExt == PROJECT_FILE_EXT) {
+                projJsonData.resize(archive_entry_size(entry));
+                archive_read_data(a, projJsonData.data(), projJsonData.size());
+                break;
+            }
+        }
+        archive_read_free(a);
+    } else {
+        ReadFileVector(path, projJsonData);
+    }
     timer.reset();
-    std::shared_ptr<project_file> f = loadProjectFile(path);
+    std::shared_ptr<project_file> f = loadProject(projJsonData);
     if (!f) {
         if (tls.mainCtrl) {
             tls.mainCtrl->setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
         }
     } else {
-        SplitPath(path, &lastProjectDirectory, nullptr, nullptr, nullptr);
-        tls.settings->recentfiles.add(path);
+        f->path = path;
         const bool wasUserCallback = (flags & FLAG_INVOKE_USER_CB_DEFERLOAD) != 0;
         auto cb                    = [this, path, projFile = f, wasUserCallback](int n) {
             int loadFlags = 0;
@@ -935,6 +972,45 @@ void MainCtrl::onChildOverlayWindowClose(window_main* window) {
 std::shared_ptr<window_abstract_t> getWindowDebugWaveformCache();
 std::shared_ptr<window_abstract_t> getWindowPerf();
 std::shared_ptr<window_abstract_t> getWindowDebugNanoVG();
+
+void DawInstance::saveProjectBundle(const String& path) {
+    String ext;
+    String projectFileName;
+    String parentDir;
+    String bundlePath = path;
+    SplitPath(bundlePath, &parentDir, &projectFileName, &ext);
+    if (ext != PROJECT_BUNDLE_FILE_EXT) {
+        bundlePath = parentDir + FILE_PATHSEP_STR + projectFileName + "." PROJECT_BUNDLE_FILE_EXT;
+    }
+    String projFileName = projectFileName + "." PROJECT_FILE_EXT;
+    
+
+    std::vector<int32_t> uniqueSampleIds;
+    DAW::GetProjectReferencedSampleIds(project, uniqueSampleIds);
+    // create a new archive
+    struct archive* a = archive_write_new();
+    archive_write_add_filter_gzip(a);
+    archive_write_set_format_pax_restricted(a);
+    archive_write_open_filename(a, bundlePath.c_str());
+
+    getAudioCache()->writeToArchive(uniqueSampleIds, a);
+    std::shared_ptr<project_file> f = createProjectFile();
+    std::vector<uint8_t> buffer;
+    saveProject(f, buffer);
+    // // add a file to the archive
+    struct archive_entry* entry = archive_entry_new();
+    archive_entry_set_pathname(entry, projFileName.c_str());
+    archive_entry_set_mtime(entry, time(nullptr), 0);
+    archive_entry_set_size(entry, buffer.size());
+    archive_entry_set_filetype(entry, AE_IFREG);
+    archive_entry_set_perm(entry, 0644);
+    archive_write_header(a, entry);
+    archive_write_data(a, buffer.data(), buffer.size());
+    archive_entry_free(entry);
+    // finish writing the archive
+    archive_write_close(a);
+    archive_write_free(a);
+}
 
 bool DawInstance::menuCommand(const menucmd_t& command) {
     try {
@@ -1072,12 +1148,21 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
             case CMD_FILE_OPEN: {
                 if (command.arg1.empty()) {
                     String path;
-                    if (promptUserFilePath(mainCtrl->window, 0, vFILE_TYPE_PROJECT, path, lastProjectDirectory)) {
+                    if (promptUserFilePath(mainCtrl->window, 0, vFILE_TYPE_PROJECTS, path, lastProjectDirectory)) {
                         loadFile(path, FLAG_INVOKE_USER_CB_DEFERLOAD);
                     }
                 } else {
                     loadFile(command.arg1, FLAG_INVOKE_USER_CB_DEFERLOAD);
                 }
+                return true;
+            }
+            case CMD_BUNDLE_PROJECT_GZIP: {
+                String bundlePath;
+                if (!promptUserFilePath(tls.mainCtrl->window, 1, vFILE_TYPE_BUNDLE, bundlePath, lastProjectDirectory)) {
+                    return true;
+                }
+                projectFileType = PROJECT_FILETYPE_BUNDLE;
+                saveFile(bundlePath);
                 return true;
             }
             case CMD_BUNDLE_PROJECT_DIRECTORY: {
@@ -1091,12 +1176,8 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                 std::vector<int32_t> uniqueSampleIds;
                 DAW::GetProjectReferencedSampleIds(project, uniqueSampleIds);
                 getAudioCache()->rellocateSamples(uniqueSampleIds, bundlePath);
-                
-                lastProjectDirectory = bundlePath;
                 projectPath = bundlePath + FILE_PATHSEP_STR + dirName + ".project";
                 saveFile(projectPath);
-                tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::BUILD_BINARY_NAME, StringAsCStr(dirName)));
-                tls.settings->recentfiles.add(projectPath);
                 return true;
             }
             case CMD_SET_STARTUP_PROJECT:
@@ -1119,10 +1200,6 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                     }
                 }
                 saveFile(path);
-                String projectFileName;
-                SplitPath(path, &lastProjectDirectory, &projectFileName, nullptr, nullptr);
-                tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::BUILD_BINARY_NAME, StringAsCStr(projectFileName)));
-                tls.settings->recentfiles.add(path);
                 if (command.command == CMD_SET_STARTUP_PROJECT && !projectPath.empty()) {
                     tls.settings->dawsettings.startupProjectPath = projectPath;
                     saveSettings(*tls.settings);
@@ -1524,6 +1601,7 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     menus.file.addCommand(this, GlobalCommandType::CMD_FILE_SAVE);
     menus.file.addCommand(this, GlobalCommandType::CMD_FILE_SAVEAS);
     menus.file.addCommand(this, GlobalCommandType::CMD_BUNDLE_PROJECT_DIRECTORY);
+    menus.file.addCommand(this, GlobalCommandType::CMD_BUNDLE_PROJECT_GZIP);
     menus.file.addCommand(this, GlobalCommandType::CMD_SET_STARTUP_PROJECT);
     menus.file.addSeperator();
     menus.file.addCommand(this, GlobalCommandType::CMD_EXPORT_TRACK);
@@ -1752,7 +1830,7 @@ void DawInstance::triggerAutoSave() {
     projectPathAutosave = getProjectAutosaveFilename(projectPath);
 
     std::shared_ptr<project_file> f = createProjectFile();
-    saveProject(f, projectPathAutosave);
+    saveProjectToJsonFile(f, projectPathAutosave);
 }
 
 String DawInstance::getAutoSaveFilename() {
@@ -2003,6 +2081,14 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
     //TODO: assert that audiocache is empty
     dbgassert(tls.audioCache->isEmpty());
 
+    String loadFileExt, loadFileDirectory;
+    SplitPath(file->path, &loadFileDirectory, nullptr, &loadFileExt);
+    if (loadFileExt == PROJECT_BUNDLE_FILE_EXT) {
+        this->projectFileType = PROJECT_FILETYPE_BUNDLE;
+    } else {
+        this->projectFileType = PROJECT_FILETYPE_JSON;
+    }
+
     /** populates trackList **/
     project.copyFrom(file->project);
     projectGlobals      = file->project.globals;
@@ -2051,111 +2137,18 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
      */
     std::vector<effectbase*> pluginsDeferred;
     tls.host->getDeferredEffects(pluginsDeferred);
-    MainCtrl* renderCtrl = tls.mainCtrl;
-    bool showLoadingScreen = renderCtrl != nullptr && false;
-    if (!showLoadingScreen || !renderCtrl) {
-        if ((flags & FLAG_DEFER_LOAD) == 0) {
-            int len = pluginsDeferred.size();
-            for (int i = 0; i < len; i++) {
-                dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
-                auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
-                effectbase* pluginLoaded;
-                tls.host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
-            }
+
+    if ((flags & FLAG_DEFER_LOAD) == 0) {
+        int len = pluginsDeferred.size();
+        for (int i = 0; i < len; i++) {
+            dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
+            auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
+            effectbase* pluginLoaded;
+            tls.host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
         }
-        String projectDirectory;
-        SplitPath(file->path, &projectDirectory, nullptr, nullptr, nullptr);
-        tls.audioCache->load(file->sampleFileIndex, projectDirectory);
-    } else {
-        /**
-         * plugin loading was not deferred.
-         * handle request to load all plugins.
-         */
-
-        /** loading screen guictr class **/
-        class guictr_loading : public guictr_base {
-        public:
-            String text;
-            guictr_loading() {
-                setLabel("LOADING ");
-            }
-            void render(NVGcontext* vg) override {
-                guictr_base::render(vg);
-                vec2 cs       = getSizeContent();
-                auto cStrText = StringAsCStr(text);
-                setFont(vg, 32, THEMECOL_TEXT, NVG_ALIGN_TOP | NVG_ALIGN_CENTER);
-                nvgText(vg, cs.x / 2.0f, cs.y / 2.0f, cStrText, nullptr);
-            }
-        };
-        guictr_loading ctr;
-        ctr.size = renderCtrl->m_size;
-        ctr.setControl(renderCtrl);
-        ctr.layout();
-
-        /** precondition: an existing with opengl+nanoVG context **/
-        auto windowMain = dynamic_cast<window_main*>(renderCtrl->window);
-        dbgassert(windowMain);
-
-
-            /** get the list of all plugins in deferred loading state **/
-
-            int len = pluginsDeferred.size();
-            for (int i = 0; i < len; i++) {
-                dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
-                auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
-                windowMain->preRender();
-
-                NVGcolor col = renderCtrl->getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
-                glClearColor(col.r, col.g, col.b, col.a);
-                glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-                float ratio = 1.0;
-                auto vg     = renderCtrl->vg;
-
-                nvgBeginFrame(vg, renderCtrl->m_size.x, renderCtrl->m_size.y, ratio);
-                nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
-
-                nvgSave(vg);
-                ctr.text = plugin->getDfrdPluginName();
-                ctr.render(vg);
-                nvgRestore(vg);
-
-                nvgEndFrame(vg);
-
-                windowMain->postRender();
-
-                /** TODO: vsync **/
-                seqthreads::threadSleep(16);
-                effectbase* pluginLoaded;
-                tls.host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
-            }
-            log_printf("end plugin list loading\n");
-        const int32_t numSamplesToLoad = file->sampleFileIndex.list.size();
-        {
-            windowMain->preRender();
-            NVGcolor col = renderCtrl->getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
-            glClearColor(col.r, col.g, col.b, col.a);
-            glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-            float ratio = 1.0;
-            auto vg     = renderCtrl->vg;
-            nvgBeginFrame(vg, renderCtrl->m_size.x, renderCtrl->m_size.y, ratio);
-            nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
-
-            nvgSave(vg);
-            ctr.text = StringFormat("Loading %d samples", numSamplesToLoad);
-            ctr.render(vg);
-            nvgRestore(vg);
-            nvgEndFrame(vg);
-            windowMain->postRender();
-            /** TODO: vsync **/
-            seqthreads::threadSleep(16);
-            String projectDirectory;
-            SplitPath(file->path, &projectDirectory, nullptr, nullptr, nullptr);
-            tls.audioCache->load(file->sampleFileIndex, projectDirectory);
-        }
-        ctr.setControl(nullptr);
-        AppWndProc_disableBlockReentrant();
     }
+
+    tls.audioCache->load(file->sampleFileIndex, projectFileType, file->path, loadFileDirectory);
     for (track_t* tr : project.trackList) {
         tr->getStage()->pluginsChanged();
     }
@@ -2182,6 +2175,8 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
     /** set as current project **/
     this->projectPath = file->path;
+    lastProjectDirectory = loadFileDirectory;
+    tls.settings->recentfiles.add(file->path);
 
     this->tmLastSave  = getTimeMillis();
     if (tls.mainCtrl) {
@@ -2380,7 +2375,7 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
         if (StrEndsWith(path, ".wav")) {
             String a, b, c, d;
             SplitPath(path, &a, &b, &c, &d);
-            audiofile_t* audio = daw.getAudioCache()->loadFile(path, -1, "");
+            audiofile_t* audio = daw.getAudioCache()->loadFile(path, -1, "", nullptr, nullptr);
             if (audio) {
                 auto* sample = audio->sample.get();
                 if (sample) {
