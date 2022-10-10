@@ -1339,6 +1339,25 @@ public:
         int32_t resizeTopOrBottom = m_track->type < TRACK_TYPE_MIDI ? top() : bottom();
         return mpos.x >= left() && mpos.x < right() && mpos.y >= resizeTopOrBottom - resizeHitY && mpos.y < resizeTopOrBottom + resizeHitY;
     }
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        if (isResize(mpos)) {
+            evt.requestFocus(this);
+            if (evt.type <= MouseHitType::MOUSE_RIGHT)
+                evt.requestCursor(CURSOR_RESIZE_V);
+            return true;
+        }
+        if (contains(mpos)) {
+            ivec2 local = this->toContainerSpace(mpos);
+            for (guibase* gui : guis) {
+                if (gui->mouseHitTest(local, evt)) {
+                    return true;
+                }
+            }
+            evt.requestFocus(this);
+            return true;// always need to return true if contained, parent has z-order
+        }
+        return false;
+    }
     void handleDraggedBegin(MouseEvent& evt) override {
         if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
             const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
@@ -1357,7 +1376,8 @@ public:
             int32_t mouseDragDist = evt.relMousepos.y;
             int32_t heightStep    = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
             resize<track_gui_entry_t, TRACK_MIN_HEIGHT, TRACK_MAX_HEIGHT>(m_trackentry, m_trackentry, mouseDragDist, heightStep);
-            this->parent->onChildLayoutChanged(this);
+            parent->onChildLayoutChanged(this);
+            dawCtrl->updateVisibleTrackContents();
         } else {
             parentCtrl->objectDragMove(this, evt);
         }
@@ -1507,7 +1527,7 @@ public:
         return mpos.x >= left() && mpos.x < right() && mpos.y >= resizeTopOrBottom - resizeHitY && mpos.y < resizeTopOrBottom + resizeHitY;
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-        if (isResize(mpos)) {
+        if (isResize(mpos) && this->subtrack != this->m_trackentry->subtracks.back()) {
             evt.requestFocus(this);
             if (evt.type <= MouseHitType::MOUSE_RIGHT)
                 evt.requestCursor(CURSOR_RESIZE_V);
@@ -1533,8 +1553,16 @@ public:
     }
 
     void handleDraggedMove(MouseEvent& evt) override {
+        const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         if (dragMode == DRAG_RESIZE) {
-            this->parent->onChildLayoutChanged(this);
+            int32_t mouseDragDist = evt.relMousepos.y;
+            int32_t totalHeightSteps = math::min(128, math::max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
+            int32_t distSteps      = totalHeightSteps - subtrack->height;
+            if (distSteps && totalHeightSteps != subtrack->height) {
+                subtrack->height = totalHeightSteps;
+                parent->onChildLayoutChanged(this);
+                dawCtrl->updateVisibleTrackContents();
+            }
         }
     }
     void handleRightClick(MouseEvent& evt) override {
@@ -1697,7 +1725,7 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         evt.requestFocus(this);
     }
     if (evt.type <= MouseHitType::MOUSE_RIGHT) {
-        guibase* g = NULL;
+        guibase* g = nullptr;
         if (m_track->type < TRACK_TYPE_MIDI) {
             if (isResize(mpos)) {
                 g = this;
@@ -1718,6 +1746,32 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         }
     }
     return contained;// always need to return true if contained, parent has z-order
+}
+
+gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry) {
+    auto const guicontrols = new gui_track_controls(_entry);
+    guicontrols->setZOrder(_entry->track->type >= TRACK_TYPE_MIDI ? 0 : 1);
+    return guicontrols;
+}
+
+gui_track_content_base::gui_track_content_base(track_gui_entry_t* _entry)
+    : m_track(_entry->track), m_trackentry(_entry) {
+}
+
+void gui_track_controls::handleDraggedBegin(MouseEvent& evt) {
+    dawCtrl->getDaw()->setSelectedTrack(m_track);
+    if (isResize(evt.relMousepos + this->pos)) {
+        dragMode = DRAG_RESIZE;
+    }
+}
+
+void gui_track_controls::handleDraggedRelease(MouseEvent& evt) {
+    dragMode = -1;
+}
+
+bool gui_track_controls::isResize(ivec2 mpos) {
+    int32_t resizeTopOrBottom = m_track->type < TRACK_TYPE_MIDI ? top() : bottom();
+    return mpos.y >= resizeTopOrBottom - resizeHitY && mpos.y < resizeTopOrBottom + resizeHitY;
 }
 
 guibase* gui_track_controls::getTitle() {
@@ -1944,17 +1998,18 @@ gui_track_drop_position_t slotFromCoord(guictr_tracks* parent, track_gui_entry_t
         //continue;
         track_gui_entry_t* pTrackEntryNeighbour = *it;
 
-        auto* gui = pTrackEntryNeighbour->content;
+        auto* gui = pTrackEntryNeighbour->mixer;
+        auto* gui2 = pTrackEntryNeighbour->mixer;
         dbgassert(gui->isVisible());
         int32_t distDragPoint = checkDropPoint(gui->pos.y - dropMaxDistance, gui->pos.y + dropMaxDistance, _pos.y);
         if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
             minDistDragPoint = distDragPoint;
             minSlot = { slotIdx, pTrackEntryNeighbour, drop_type::track_before, { gui->pos.x, gui->pos.y } };
         }
-        distDragPoint = checkDropPoint(gui->pos.y + dropMaxDistance, gui->pos.y + gui->size.y - dropMaxDistance, _pos.y);
+        distDragPoint = checkDropPoint(gui2->pos.y + dropMaxDistance, gui2->pos.y + gui2->size.y - dropMaxDistance, _pos.y);
         if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
             minDistDragPoint = distDragPoint;
-            minSlot = { slotIdx, pTrackEntryNeighbour, drop_type::track_on, { gui->pos.x, gui->pos.y + gui->size.y / 2 } };
+            minSlot = { slotIdx, pTrackEntryNeighbour, drop_type::track_on, { gui2->pos.x, gui2->pos.y + gui2->size.y / 2 } };
         }
         if (pTrackEntryNeighbour->track->children.empty()) {
             distDragPoint = checkDropPoint(gui->pos.y + gui->size.y - dropMaxDistance, gui->pos.y + gui->size.y + dropMaxDistance, _pos.y);
@@ -2123,6 +2178,7 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
             m_trackentry->layout.hideTrack = true;
             updateStoreLoadSubtracks(m_trackentry->parent, m_trackentry);
         }
+        parent->onChildLayoutChanged(this);
         dawCtrl->updateVisibleTrackContents();
     }
 }
@@ -2283,14 +2339,7 @@ public:
         return true;
     }
 };
+
 void gui_track_controls::handleRightClick(MouseEvent& evt) {
     m_trackentry->parentCtrl->openContextMenu(new guictxtmenu_track(dawCtrl, this->m_trackentry), evt.mousepos);
-}
-gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry) {
-    auto const guicontrols = new gui_track_controls(_entry);
-    guicontrols->setZOrder(_entry->track->type >= TRACK_TYPE_MIDI ? 0 : 1);
-    return guicontrols;
-}
-gui_track_content_base::gui_track_content_base(track_gui_entry_t* _entry)
-    : m_track(_entry->track), m_trackentry(_entry) {
 }

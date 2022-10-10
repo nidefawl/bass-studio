@@ -23,15 +23,12 @@ class gui_track_subtrack_mixer;
 class gui_trackcontrols_title;
 
 class gui_track_controls : public gui_track_content_base {
-
-private:
     gui_trackcontrols_title* title;
     guictr_base* mixer;
     guictr_base* io;
     std::vector<gui_track_subtrack_mixer*> automationLaneControls;
     int dragMode          = -1;
     const int resizeHitY  = 8;
-    const int DRAG_RESIZE = 1;
 
 public:
     explicit gui_track_controls(track_gui_entry_t* _entry);
@@ -46,23 +43,11 @@ public:
     void removeAllSubtracks();
     void render(NVGcontext* vg) override;
     void renderGroupHandle(NVGcontext* vg);
-    void handleDraggedBegin(MouseEvent& evt) override {
-        dawCtrl->getDaw()->setSelectedTrack(m_track);
-        if (isResize(evt.relMousepos + this->pos)) {
-            dragMode = DRAG_RESIZE;
-        }
-    }
+    void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
-    void handleDraggedRelease(MouseEvent& evt) override {
-        dragMode = -1;
-    }
+    void handleDraggedRelease(MouseEvent& evt) override;
     void handleRightClick(MouseEvent& evt) override;
-
-    bool isResize(ivec2 mpos) {
-        int32_t resizeTopOrBottom = m_track->type < TRACK_TYPE_MIDI ? top() : bottom();
-        return mpos.y >= resizeTopOrBottom - resizeHitY && mpos.y < resizeTopOrBottom + resizeHitY;
-    }
-
+    bool isResize(ivec2 mpos);
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void layout() override;
     guibase* getTitle();

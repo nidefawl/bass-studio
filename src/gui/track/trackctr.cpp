@@ -437,34 +437,36 @@ void guictr_tracks::render(NVGcontext* vg) {
         }
     }
     nvgRestore(vg);
-    if (dragDropTarget.src == this && dragDropTarget.dst) {
-        nvgSave(vg);
-        nvgTranslate(vg, 0, trackView.top());
-        int n       = this->theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
-        auto bgPos  = ivec2(n);
-        auto bgSize = this->getSizeContent() - ivec2(n * 2);
-        if (bgSize.x > 0 && bgSize.y > 0) {
-            nvgGlobalAlpha(vg, 0.5f);
-            nvgBeginPath(vg);
-            nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
-            if (dragdrop_target_indicator_t::target_area == dragDropTarget.type) {
-                nvgPathWinding(vg, NVGwinding::NVG_CW);
-                nvgRect(vg, dragDropTarget.dst->pos.x, dragDropTarget.dst->pos.y, dragDropTarget.dst->size.x, dragDropTarget.dst->size.y);
-                nvgPathWinding(vg, NVGwinding::NVG_CCW);
+    if (dragDropTarget.dst) {
+        if (dragDropTarget.src == this) {
+            nvgSave(vg);
+            nvgTranslate(vg, 0, trackView.top());
+            int n       = this->theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
+            auto bgPos  = ivec2(n);
+            auto bgSize = this->getSizeContent() - ivec2(n * 2);
+            if (bgSize.x > 0 && bgSize.y > 0) {
+                nvgGlobalAlpha(vg, 0.5f);
+                nvgBeginPath(vg);
+                nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
+                if (dragdrop_target_indicator_t::target_area == dragDropTarget.type) {
+                    nvgPathWinding(vg, NVGwinding::NVG_CW);
+                    nvgRect(vg, dragDropTarget.dst->pos.x, dragDropTarget.dst->pos.y, dragDropTarget.dst->size.x, dragDropTarget.dst->size.y);
+                    nvgPathWinding(vg, NVGwinding::NVG_CCW);
+                }
+                nvgFillColor(vg, theme->getColor(getBackgroundColor()));
+                nvgFill(vg);
+                nvgGlobalAlpha(vg, 1.0f);
             }
-            nvgFillColor(vg, theme->getColor(getBackgroundColor()));
-            nvgFill(vg);
-            nvgGlobalAlpha(vg, 1.0f);
+            const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+            ivec2 indicatorPos    = dragDropTarget.targetPos;
+            horizontalLineAt(this, vg, indicatorPos);
+
+            int fontScale = titleHeight;
+            auto str = dragDropTarget.dst->getLabel() + StringFormat("[%d]", dragDropTarget.slotIdx);
+            renderCenteredMultilineText(vg, theme, str, fontScale, getLabelColor(), indicatorPos, ivec2(titleHeight * 30, titleHeight * 2));
+
+            nvgRestore(vg);
         }
-        const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-        ivec2 indicatorPos    = dragDropTarget.targetPos;
-        horizontalLineAt(this, vg, indicatorPos);
-
-        int fontScale = titleHeight;
-        auto str = dragDropTarget.dst->getLabel() + StringFormat("[%d]", dragDropTarget.slotIdx);
-        renderCenteredMultilineText(vg, theme, str, fontScale, getLabelColor(), indicatorPos, ivec2(titleHeight * 30, titleHeight * 2));
-
-        nvgRestore(vg);
     }
 
     nvgBeginPath(vg);
