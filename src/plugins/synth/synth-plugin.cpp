@@ -2233,7 +2233,7 @@ namespace PluginSynth {
                             double phase = GetModulatedParamVoice(v, Parameters::LfoPhase);
                             v.lfo1.initPhase(phase + lfoPhaseDrift * this->driftValue * v.rand.rng_double(), false);
                         }
-                        dbgassert(v.lfo1.phase >= -1.0 && v.lfo1.phase <= 1.0);
+                        // dbgassert(v.lfo1.phase >= -1.0 && v.lfo1.phase <= 1.0);
                         double lfoFreqHz    = floatParamFreq->ValueModulated(v.modValues[Parameters::LfoFrequency]) * bpmHz;
                         double dVoiceLfoBi  = v.lfo1.GetLfo(dt, lfoWave, lfoFreqHz, lfo1OneShot);
                         v.lfo1.phaseFade -= (v.lfo1.phaseFade) * 1000 * dt;
