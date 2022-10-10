@@ -748,7 +748,7 @@ void guitrack_topleft::buttonClicked(guibase* _button) {
         isFolded = !isFolded;
 
         for (track_gui_entry_t* entry : iGuiMgr.getTracksVisibleFlat()) {
-            if (entry->parent->parent == nullptr) {
+            if (entry->parent->parent == nullptr && TRACKTYPE_TO_CTR(entry->track->type) == TRACK_CTR_MIDIAUDIO) {
                 entry->layout.hideTrack = isFolded;
                 updateStoreLoadSubtracks(entry->parent, entry);
             }
