@@ -286,7 +286,12 @@ void guictr_vert_layout::layout() {
 
     for (auto& entry : layouts) {
         auto entrySize = vec2(cs);
-        entrySize[dir] *= entry.scale;
+        
+        if (entry.scale < 0) {
+            entrySize[dir] = -entry.scale;
+        } else {
+            entrySize[dir] *= entry.scale;
+        }
         entry.gui->size = math::roundvecS32(entrySize);
         entry.gui->pos  = math::roundvecS32(xy);
         xy[dir]         = (entry.gui->pos[dir] + entry.gui->size[dir]);

@@ -52,7 +52,7 @@ void showbytes(PmMessage data, int len) {
 
 const char vel_format[] = "    Vel %d";
 
-void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages) {
+void midihost::handleMessage(PmMessage data, PmTimestamp timestamp, std::vector<MidiIOEvent>& messages) {
     bool verbose = false;
     int command; /* the current command */
     int chan;    /* the midi channel of the current event */
@@ -88,7 +88,7 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
                                     StringAsCStr(StringFormat(vel_format, Pm_MessageData2(data))));
             log_out("%s\n", StringAsCStr(s));
         }
-        messages.push_back({data, 0});
+        messages.push_back({data, timestamp});
     } else if ((command == MIDI_ON_NOTE /* && Pm_MessageData2(data) == 0 */ || command == MIDI_OFF_NOTE)) {
         if (verbose) showbytes(data, 3);
         if (verbose) {
@@ -99,13 +99,14 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
                                     StringAsCStr(StringFormat(vel_format, Pm_MessageData2(data))));
             log_out("%s\n", StringAsCStr(s));
         }
-        messages.push_back({data, 0});
+        messages.push_back({data, timestamp});
     } else if (command == MIDI_CH_PROGRAM) {
         if (verbose) showbytes(data, 2);
         if (verbose) {
             log_lf(Log::L_DEBUG, "  ProgChg Chan %2d Prog %2d\n", chan, Pm_MessageData1(data) + 1);
         }
     } else if (command == MIDI_CTRL) {
+        messages.push_back({data, timestamp});
         /* controls 121 (MIDI_RESET_CONTROLLER) to 127 are channel
          * mode messages. */
         if (Pm_MessageData1(data) < MIDI_ALL_SOUND_OFF) {
@@ -163,6 +164,7 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
             log_lf(Log::L_DEBUG, "  A.Touch Chan %2d Val %2d\n", chan, Pm_MessageData1(data));
         }
     } else if (command == MIDI_BEND) {
+        messages.push_back({data, timestamp});
         if (verbose) showbytes(data, 3);
         if (verbose) {
             log_lf(Log::L_DEBUG, "P.Bend  Chan %2d Val %2d\n", chan, (Pm_MessageData1(data) + (Pm_MessageData2(data) << 7)));
@@ -241,6 +243,8 @@ int32_t midihost::triggerNote(int32_t deviceIdx, int32_t channel, int32_t pitch,
         if (deviceIdx < 0 || dev.deviceIdx == deviceIdx) {
             dev.temporaryNotes.push_back(evt);
             dev.midiMsgs.insert(dev.midiMsgs.begin(), evt);
+            if (dev.preserveInputForInspection)
+                dev.midiBufferInspect.push_back(evt);
         }
     }
     return current_timestamp;
@@ -255,6 +259,8 @@ int32_t midihost::killNote(int32_t deviceIdx, int32_t channel, int32_t pitch) {
     for (auto& dev : devicesInput) {
         if (deviceIdx < 0 || dev.deviceIdx == deviceIdx) {
             dev.midiMsgs.insert(dev.midiMsgs.begin(), evt);
+            if (dev.preserveInputForInspection)
+                dev.midiBufferInspect.push_back(evt);
         }
     }
 
@@ -306,7 +312,7 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
                     continue; /* ignore this data */
                 }
 
-                handleMessage(buffer.message, messages);
+                handleMessage(buffer.message, buffer.timestamp, messages);
 
                 /* send the message to the application */
                 /* you might want to filter clock or active sense messages here
@@ -331,10 +337,12 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
         } while (result);
         if (!messages.empty()) {
             for (auto& msg : messages) {
-                assert(0 == msg.timestamp);
-                msg.timestamp = current_timestamp;
+                if (0 == msg.timestamp)
+                    msg.timestamp = current_timestamp;
             }
             dev.midiMsgs.insert(dev.midiMsgs.begin(), messages.cbegin(), messages.cend());
+            if (dev.preserveInputForInspection)
+                dev.midiBufferInspect.insert(dev.midiBufferInspect.end(), messages.cbegin(), messages.cend());
         }
         // kill temporary notes after timeout
         if (!dev.temporaryNotes.empty()) {
@@ -490,7 +498,7 @@ void midihost::reopenAllConfiguredDevices(bool forceClose) {
                                to the MIDI THRU port. You may not want to do this.
                              */
                             Pm_SetFilter(newStream, 0);
-                            this->devicesInput.push_back(opened_device_t{{}, {}, newStream, info->name, deviceIdx, 0});
+                            this->devicesInput.push_back(opened_device_t{{}, {}, {}, newStream, info->name, deviceIdx, 0, false});
                         }
                         break;
                     }
@@ -521,7 +529,7 @@ void midihost::reopenAllConfiguredDevices(bool forceClose) {
                                 Pm_Close(newStream);
                             }
                         } else {
-                            this->devicesOutput.push_back(opened_device_t{{}, {}, newStream, info->name, deviceIdx, 1});
+                            this->devicesOutput.push_back(opened_device_t{{}, {}, {}, newStream, info->name, deviceIdx, 1, false});
                         }
                         break;
                     }
@@ -572,16 +580,40 @@ std::vector<MidiIOEvent> midihost::getInputMessages() {
         }
         return a.timestamp < b.timestamp;
     });
-    //    if (ret.size() > 0) {
-    //        int idx = 0;
-    //        for (auto &a : ret) {
-    //            int32_t status = Pm_MessageStatus(a.message) & MIDI_CODE_MASK;
-    //            if (status & 0x80) {
-    //                log_lf(Log::L_DEBUG, "note[%d] %s %s %d\n", idx, (status==0x80)!=0?"kill":"trig",
-    //                noteName(Pm_MessageData1(a.message)), a.timestamp);
-    //            }
-    //            idx++;
-    //        }
-    //    }
     return ret;
+}
+
+std::vector<MidiIOEvent> midihost::getInspectionInputMessages() {
+    std::vector<MidiIOEvent> ret;
+    for (auto& dev : devicesInput) {
+        ret.insert(ret.end(), dev.midiBufferInspect.cbegin(), dev.midiBufferInspect.cend());
+        dev.midiBufferInspect.clear();
+    }
+    std::sort(ret.begin(), ret.end(), [](auto& a, auto& b) {
+        if (a.timestamp == b.timestamp) {
+            // Put note on before note off
+            bool isNoteOnA = (Pm_MessageStatus(a.message) & MIDI_CODE_MASK) == 0x90;
+            bool isNoteOnB = (Pm_MessageStatus(b.message) & MIDI_CODE_MASK) == 0x90;
+            if (isNoteOnA != isNoteOnB) {
+                return isNoteOnA;
+            }
+        }
+        return a.timestamp < b.timestamp;
+    });
+    return ret;
+}
+
+void midihost::setInspection(bool bInput, bool bEnabled) {
+    for (auto& dev : devicesInput) {
+        dev.preserveInputForInspection = bInput && bEnabled;
+        if (!bEnabled) {
+            dev.midiBufferInspect.clear();
+        }
+    }
+    for (auto& dev : devicesOutput) {
+        dev.preserveInputForInspection = !bInput && bEnabled;
+        if (!bEnabled) {
+            dev.midiBufferInspect.clear();
+        }
+    }
 }

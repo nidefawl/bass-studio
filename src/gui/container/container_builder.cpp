@@ -16,6 +16,7 @@ guictr_base* makeGuiEffectLibrary();
 guictr_base* makeGuiPerformance();
 guictr_base* makeGuiExport();
 guictr_base* makeGuiClipEditor();
+guictr_base* makeGuiMidiInspect();
 
 bool getContainerLabel(gui_type type, String& out) {
     switch (type) {
@@ -85,6 +86,9 @@ bool getContainerLabel(gui_type type, String& out) {
         case CTR_TYPE_KEYBINDS:
             out = "Keybinds";
             return true;
+        case CTR_TYPE_MIDI_MONITOR:
+            out = "Midi Monitor";
+            return true;
         default:
             break;
     }
@@ -144,6 +148,9 @@ ContainerFactory& getContainerFactory() {
         };
         containerFactory[gui_type::CTR_TYPE_KEYBINDS] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(DAW::DialogSettings::makeKeybindsDialog(ctxt.daw));
+        };
+        containerFactory[gui_type::CTR_TYPE_MIDI_MONITOR] = [](auto& ctxt) {
+            return std::shared_ptr<guictr_base>(makeGuiMidiInspect());
         };
     }
     return containerFactory;

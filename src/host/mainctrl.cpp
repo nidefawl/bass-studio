@@ -915,6 +915,7 @@ void DawInstance::loadFile(String path, int flags) {
 void DawInstance::setEmptyProject() {
     ThreadLock lock = playThread.lockThread();
     unloadProject();
+    projectFileType = PROJECT_FILETYPE_JSON;
     int totalAllocs = getNumClipAllocations();
     if (totalAllocs != 0) {
         log_lf(Log::L_WARN, "getNumClipAllocations == %d!\n", totalAllocs);

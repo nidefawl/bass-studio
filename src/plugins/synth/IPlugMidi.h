@@ -127,6 +127,9 @@ struct IMidiMsg {
      */
     IMidiMsg(int offs = 0, uint8_t s = 0, uint8_t d1 = 0, uint8_t d2 = 0)
         : mOffset(offs), mStatus(s), mData1(d1), mData2(d2) {}
+    static inline IMidiMsg FromU32(uint32_t msg) {
+        return IMidiMsg(0, msg & 0xFF, (msg >> 8) & 0xFF, (msg >> 16) & 0xFF);
+    }
 
     /** /todo
      * @param noteNumber /todo
@@ -345,6 +348,9 @@ struct IMidiMsg {
     /** /todo */
     void LogMsg() {
         log_printf("midi:(%s:%d:%d:%d)\n", StatusMsgStr(StatusMsg()), Channel(), mData1, mData2);
+    }
+    String ToString() {
+        return StringFormat("midi:(%s:%d:%d:%d)", StatusMsgStr(StatusMsg()), Channel(), mData1, mData2);
     }
 
     /** /todo */

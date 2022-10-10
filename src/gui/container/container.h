@@ -323,7 +323,7 @@ public:
         float scale;
         guibase* gui;
     };
-private:
+protected:
     std::vector<layout_entry_t> layouts;
     const uint8_t dir = 1;
     ivec2 layoutPadding = {1, 1};

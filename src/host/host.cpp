@@ -374,7 +374,6 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble
         for (MidiIOEvent& msg : msgs) {
 
             int32_t command = MidiMsgStatus(msg.message) & MIDI_CODE_MASK;
-//            int32_t chan = MidiMsgStatus(msg.message) & MIDI_CHN_MASK;
             if (command == MIDI_ON_NOTE && MidiMsgData2(msg.message) != 0) {
                 note_t note;
                 note.setRealtime(true);
@@ -387,9 +386,6 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble
             }
         }
         if (!newNotes.empty()) {
-            //for (auto& note : newNotes) {
-            //    log_printf("%d note TRIG %s %d\n", noteName(note.pitch), note.start());
-            //}
             midiRealtimeInput->addAll(newNotes);
         }
         for (MidiIOEvent& msg : msgs) {
