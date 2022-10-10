@@ -1161,6 +1161,11 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                 if (!promptUserFilePath(tls.mainCtrl->window, 1, vFILE_TYPE_BUNDLE, bundlePath, lastProjectDirectory)) {
                     return true;
                 }
+                String ext;
+                SplitPath(bundlePath, nullptr, nullptr, &ext);
+                if (ext.empty()) {
+                    bundlePath += "." PROJECT_BUNDLE_FILE_EXT;
+                }
                 projectFileType = PROJECT_FILETYPE_BUNDLE;
                 saveFile(bundlePath);
                 return true;

@@ -12,6 +12,7 @@
 #include "config.h"
 #include "math/seq_math.h"
 #include "samplerate.h"
+#include "seq_util.h"
 #include "str_util.h"
 #include "audiosample.h"
 #include <dr_libs/dr_wav.h>
@@ -292,7 +293,7 @@ static bool LoadAudioSample(drwav& wav, audiosample_t* sample, samplerate_t samp
         int64_t timeDiffDownsample = getTimeMicros() - timeBeginDownsample;
         double timeDiffInSeconds = timeDiffDownsample / 1000000.0;
         if (timeDiffInSeconds > 1.0) {
-            log_lf(Log::L_WARN, "Downsampling %s took %fsec\n", taskDesc.c_str(), timeDiffInSeconds);
+            log_lf(Log::L_WARN, "Downsampling %s took %fsec\n", StringAsCStr(taskDesc), timeDiffInSeconds);
         }
         return true;
     }
@@ -369,7 +370,7 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String
     if (!entry) {
         bCanRead = drwav_init_file(&wav, StringAsCStr(path));
         if (!bCanRead) {
-            log_lf(Log::L_WARN, "Failed to read file %s\n", path.c_str());
+            log_lf(Log::L_WARN, "Failed to read file %s\n", StringAsCStr(path));
         }
     } else {
         pFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_BUNDLED;
@@ -377,20 +378,20 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String
         heapBuffer.resize(sizeToRead);
         auto sizeRead = archive_read_data(ar, heapBuffer.data(), heapBuffer.size());
         if (sizeRead != sizeToRead) {
-            log_lf(Log::L_WARN, "Failed to read file %s: read %zd bytes, expected %zd bytes\n", path.c_str(), sizeRead, sizeToRead);
+            log_lf(Log::L_WARN, "Failed to read file %s: read %zd bytes, expected %zd bytes\n", StringAsCStr(path), sizeRead, sizeToRead);
         } else {
             bCanRead = drwav_init_memory(&wav, heapBuffer.data(), heapBuffer.size());
         }
         if (!bCanRead) {
-            log_lf(Log::L_WARN, "Failed to read file %s\n", path.c_str());
+            log_lf(Log::L_WARN, "Failed to read file %s\n", StringAsCStr(path));
         }
     }
     if (LoadAudioSample(wav, pFile->sample.get(), samplerate, path)) {
         pFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED;
-        log_printf("Loaded %s\n", path.c_str());
+        log_printf("Loaded %s\n", StringAsCStr(path));
     } else {
         pFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MISSING;
-        log_lf(Log::L_WARN, "Failed to load %s\n", path.c_str());
+        log_lf(Log::L_WARN, "Failed to load %s\n", StringAsCStr(path));
         return nullptr;
     }
     return pFile;
@@ -498,9 +499,10 @@ void audiocache::saveSamples(const std::vector<int32_t>& refSampleIds) {
             && (ptr->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MODIFIED)
             && !(ptr->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_TEMPORARY)) {
             if (FileExists(ptr->path)) {
-                log_lf(Log::L_WARN, "Overwriting sample %s\n", ptr->path.c_str());
+                log_lf(Log::L_WARN, "Overwriting sample %s\n", StringAsCStr(ptr->path));
             }
             saveSampleToFile(*ptr, ptr->path);
+            ptr->pathLoaded = ptr->path;
             ptr->state &= ~audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MODIFIED;
         }
     }
@@ -539,20 +541,28 @@ void audiocache::rellocateSamples(const std::vector<int32_t>& refSampleIds, cons
                 uniquePath += ".";
                 uniquePath += fileExt;
             }
-            file->name = uniqueName;
-            file->path = String("samples") + FILE_PATHSEP_STR + uniqueName + "." + fileExt;
-
+            const String newPath = String("samples") + FILE_PATHSEP_STR + uniqueName + "." + fileExt;
             if (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED) {
                 saveSampleToFile(*file, uniquePath);
+                file->name = uniqueName;
+                file->path = newPath;
+                file->pathLoaded = file->path;
             } else if (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_BUNDLED) {
                 //TODO: copy bundled sample
-            } else if (FileExists(file->path)) {
-                //TODO: copy file
-                std::vector<uint8_t> data;
-                ReadFileVector(file->path, data);
-                WriteFileVector(uniquePath, data);
+            } else if (FileExists(file->pathLoaded)) {
+                String pathOld = file->path;
+                try {
+                    std::vector<uint8_t> data;
+                    ReadFileVector(pathOld, data);
+                    WriteFileVector(uniquePath, data);
+                    file->name = uniqueName;
+                    file->path = newPath;
+                    file->pathLoaded = file->path;
+                } catch (const std::exception& e) {
+                    log_printf("failed copying sample %s to %s: exception: %s\n", StringAsCStr(pathOld), StringAsCStr(file->path), e.what());
+                }
             } else {
-                log_lf(Log::L_WARN, "Sample %s not found\n", file->path.c_str());
+                log_lf(Log::L_WARN, "Sample %s not found\n", StringAsCStr(file->path));
                 continue;
             }
         }
@@ -567,6 +577,7 @@ void audiocache::writeToArchive(const std::vector<int32_t>& refSampleIds, struct
             continue;
         }
         if (std::binary_search(refSampleIds.cbegin(), refSampleIds.cend(), file->id)) {
+            String origPath = file->pathLoaded;
             if (!(file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_BUNDLED)) {
                 String oldPath,name,fileExt,nameExt;
                 SplitPath(file->path, &oldPath, &name, &fileExt, &nameExt);
@@ -600,22 +611,25 @@ void audiocache::writeToArchive(const std::vector<int32_t>& refSampleIds, struct
             }
 
             struct archive_entry* entry = archive_entry_new();
-            archive_entry_set_pathname(entry, file->path.c_str());
+            archive_entry_set_pathname(entry, StringAsCStr(file->path));
             archive_entry_set_mtime(entry, time(nullptr), 0);
             archive_entry_set_filetype(entry, AE_IFREG);
             archive_entry_set_perm(entry, 0644);
             if (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED) {
+                //TODO: load sample if not loaded!
                 saveSampleToArchive(*file, entry, ar);
-            } else if (FileExists(file->path)) {
-                //TODO: copy file
-                std::vector<uint8_t> buffer;
-                ReadFileVector(file->path, buffer);
-                archive_entry_set_size(entry, buffer.size());
-                archive_write_header(ar, entry);
-                archive_write_data(ar, buffer.data(), buffer.size());
-                // WriteFileVector(uniquePath, data);
+            } else if (!origPath.empty() && FileExists(origPath)) {
+                try {
+                    std::vector<uint8_t> buffer;
+                    ReadFileVector(origPath, buffer);
+                    archive_entry_set_size(entry, buffer.size());
+                    archive_write_header(ar, entry);
+                    archive_write_data(ar, buffer.data(), buffer.size());
+                } catch (const std::exception& e) {
+                    log_printf("failed copying sample %s to %s: exception: %s\n", StringAsCStr(origPath), StringAsCStr(file->path), e.what());
+                }
             } else {
-                log_lf(Log::L_WARN, "Sample %s not found\n", file->path.c_str());
+                log_lf(Log::L_WARN, "Sample %s not found\n", StringAsCStr(file->path));
             }
             archive_entry_free(entry);
         }
@@ -658,20 +672,27 @@ void audiocache::unloadAll() {
 
 void audiocache::load(samplefile_index_t& v, ProjectFileType projectFileType, const String& bundlePath, const String& workingDir) {
     unloadAll();
-    list.reserve(v.list.size());
+    samplefile_index_t copy = v;
+    list.reserve(copy.list.size());
     if (projectFileType == PROJECT_FILETYPE_BUNDLE && !bundlePath.empty()) {
 
         struct archive* ar = archive_read_new();
         archive_read_support_filter_all(ar);
         archive_read_support_format_all(ar);
-        archive_read_open_filename(ar, bundlePath.c_str(), 10240);
+        archive_read_open_filename(ar, StringAsCStr(bundlePath), 10240);
         struct archive_entry* entry = nullptr;
         while (archive_read_next_header(ar, &entry) == ARCHIVE_OK) {
             const char* entryPath = archive_entry_pathname(entry);
-                for (auto& fileIndex : v.list) {
-                    if (fileIndex.name == entryPath) {
-                        loadFile(fileIndex.name, fileIndex.id, workingDir, ar, entry);
-                        break;
+                auto it = v.list.begin();
+                const auto itEnd = v.list.end();
+                bool bLoaded = false;
+                for (; it != itEnd; ++it) {
+                    if (it->name == entryPath) {
+                        if (!bLoaded) {
+                            loadFile(it->name, it->id, workingDir, ar, entry);
+                            bLoaded = true;
+                        }
+                        it = v.list.erase(it);
                     }
                 }
         }
