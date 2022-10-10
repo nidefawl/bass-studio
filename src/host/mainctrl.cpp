@@ -1324,7 +1324,9 @@ void MainCtrl::startApp() {
 
     //TODO: move this out of here
     if (!loadProject.empty()) {
-        daw.loadFile(loadProject, loadFlags);
+        String file;
+        std::swap(file, loadProject);
+        daw.loadFile(file, loadFlags);
     } else {
         daw.setEmptyProject();
     }
@@ -1912,6 +1914,11 @@ void DawInstance::onTick() {
     for (auto* ctrl : dawCtrls) {
         noPopups &= !ctrl->guiDragged && !ctrl->guiCaptured && !ctrl->ctxtmenu;
     }
+    if (noPopups && tls.mainCtrl && !tls.mainCtrl->loadProject.empty()) {
+        String file;
+        std::swap(tls.mainCtrl->loadProject, file);
+        loadFile(file, FLAG_INVOKE_USER_CB_DEFERLOAD);
+    }
     if (noPopups && projectToLoad) {
         std::shared_ptr<project_to_load_t> projectToLoadCpy = projectToLoad;
         projectToLoad = nullptr;
@@ -2392,8 +2399,12 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
     if (guiDragged || guiCaptured) {
         return false;
     }
+    tmpFileDragPaths = files;
     if (files.size()) {
         String path = files.front();
+        if (StrEndsWith(path, "." PROJECT_BUNDLE_FILE_EXT)
+            || StrEndsWith(path, "." PROJECT_FILE_EXT))
+            return true;
         if (StrEndsWith(path, ".wav")) {
             String a, b, c, d;
             SplitPath(path, &a, &b, &c, &d);
@@ -2465,6 +2476,12 @@ bool DawCtrl::filesDropMove(ivec2 mousepos, KeyboardMods kbmods) {
         daw.dragdropclip.reset();
         return false;
     }
+    if (!tmpFileDragPaths.empty()) {
+        String path = tmpFileDragPaths.front();
+        if (StrEndsWith(path, "." PROJECT_BUNDLE_FILE_EXT)
+            || StrEndsWith(path, "." PROJECT_FILE_EXT))
+        return true;
+    }
     if (daw.dragdropclip.isLoaded) {
         daw.dragdropclip.isValidTarget = false;
 
@@ -2498,6 +2515,7 @@ public:
 };
 
 void DawCtrl::filesDropCancel() {
+    tmpFileDragPaths.clear();
     daw.dragdropclip.reset();
 }
 bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
@@ -2518,6 +2536,15 @@ bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, Keyboar
             ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
             bool result   = gui->clipDropFinal(daw.dragdropclip, mposObj, kbmods);
             return result;
+        }
+    }
+    if (files.size()) {
+        tmpFileDragPaths.clear();
+        String path = files.front();
+        if (StrEndsWith(path, "." PROJECT_BUNDLE_FILE_EXT)
+            || StrEndsWith(path, "." PROJECT_FILE_EXT)) {
+            daw.tls.mainCtrl->loadProject = path;
+            return true;
         }
     }
     return false;

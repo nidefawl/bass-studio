@@ -493,7 +493,7 @@ public:
     scaled_grid grid;
     clip_view clipView;
     view_mode_t viewMode = view_mode_t::TRACK_TIMELINE;
-
+    std::vector<String> tmpFileDragPaths;
     explicit DawCtrl(AppCtrl* parent, DawInstance& _daw)
     : AppCtrl(parent), daw(_daw)
     {
