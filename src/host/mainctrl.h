@@ -463,6 +463,7 @@ public:
     void layoutTrackEditors();
     bool onChildOverlayWindowClose(window_main*);
     void setSoloState(audio_stage_ref_t ref, bool enableSolo);
+    void unsoloAll();
     void setTrackArmed(audio_stage_ref_t ref, bool enabledArmed);
     void triggerAutoSave();
     String getAutoSaveFilename();

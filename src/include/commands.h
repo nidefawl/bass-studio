@@ -42,6 +42,7 @@ struct Command {
     struct CmdCtxtMatcher {
         CommandContextType ctxtType = CommandContextType::CMD_CTXT_GLOBAL;
         gui_type ctxtGuiType = gui_type::GUI_TYPE_UNKNOWN;
+        bool optionalShiftKey = false;
         bool matchesFocusedGui(guibase* optionalGui) const;
     };
     GlobalCommandType type = GlobalCommandType::CMD_NONE;

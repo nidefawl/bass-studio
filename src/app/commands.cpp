@@ -201,9 +201,17 @@ namespace DAW::UI {
                 case CMD_CONSOLIDATE:
                 case CMD_QUANTIZE:
                 case CMD_MUTE:
-                case CMD_SOLO:
                 case CMD_BEGIN_RENAME:
                     cmd.contextMatcher = ctxtMatcherFocusedOnly;
+                    break;
+                default:
+                    break;
+            }
+
+            switch (cmd.type) {
+                case CMD_SOLO:
+                case CMD_SWITCH_LAYOUT:
+                    cmd.contextMatcher.optionalShiftKey = true;
                     break;
                 default:
                     break;
@@ -221,10 +229,22 @@ namespace DAW::UI {
         }
     }
 
+    bool IsKeyEventKeyComboMatch(const KeyCombo& kc, const KeyEvent& kevt, bool optionalShiftKey) {
+        int modsA = kevt.mods;
+        if (optionalShiftKey) modsA &= ~KB_MOD_SHIFT;
+        if (modsA != kc.keyMod) {
+            return false;
+        }
+        if (!kc.keyChar.empty()) {
+            return kevt.keyname && kc.keyChar == kevt.keyname;
+        } else {
+            return kevt.keyCode == kc.keyCode;
+        }
+    }
     Command* CommandManager::matchKeyCombo(const KeyEvent& evt) {
         for (auto& cmd : commands) {
             for (auto& kc : cmd.keyCombos) {
-                if (kc.match(evt)) {
+                if (IsKeyEventKeyComboMatch(kc, evt, cmd.contextMatcher.optionalShiftKey)) {
                     return &cmd;
                 }
             }

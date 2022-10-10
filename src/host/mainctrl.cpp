@@ -936,14 +936,25 @@ void DawInstance::setSoloState(audio_stage_ref_t ref, bool enableSolo) {
     track_t* track = getTracks().resolveTrack(ref);
     dbgassert(track);
     dbgassert(track->audio);
-    track->audio->flags ^= audiostageflags_t::SOLO;
+    if (enableSolo) {
+        track->audio->flags |= audiostageflags_t::SOLO;
+    } else {
+        track->audio->flags &= ~audiostageflags_t::SOLO;
+    }
     DAW::updateSoloFlag(tls.host, &project, getTracks().getAllTracksFlatVecRef());
+}
+void DawInstance::unsoloAll() {
+    DAW::unsoloAll(tls.host, &project, getTracks().getAllTracksFlatVecRef());
 }
 void DawInstance::setTrackArmed(audio_stage_ref_t ref, bool enabledArmed) {
     track_t* track = getTracks().resolveTrack(ref);
     dbgassert(track);
     dbgassert(track->audio);
-    track->audio->flags ^= audiostageflags_t::RECORD_ARMED;
+    if (enabledArmed) {
+        track->audio->flags |= audiostageflags_t::RECORD_ARMED;
+    } else {
+        track->audio->flags &= ~audiostageflags_t::RECORD_ARMED;
+    }
 }
 
 bool DawInstance::onChildOverlayWindowClose(window_main* window) {
@@ -2527,6 +2538,23 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
                 } else {
                     daw.startPlaying(); //TODO: pass cursor position
                 }
+            }
+            return true;
+        }
+        case CMD_SOLO: {
+            auto selTrack = daw.selectedTrack;
+            if (selTrack && selTrack->audio && kevt.type == KeyboardState::K_PRESS) {
+                auto lock = daw.lockPlayThread();
+                bool isSolo = (selTrack->audio->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE;
+                if (!isShift(kevt.mods)) {
+                    daw.unsoloAll();
+                }
+                if (!isSolo) {
+                    selTrack->audio->flags |= audiostageflags_t::SOLO;
+                } else {
+                    selTrack->audio->flags &= ~audiostageflags_t::SOLO;
+                }
+                DAW::updateSoloFlag(daw.tls.host, &daw.project, daw.getTracks().getAllTracksFlatVecRef());
             }
             return true;
         }

@@ -6,6 +6,7 @@
 #include "gui/views/pluginlist.h"
 #include "guiglobals.h"
 #include "host/daw_channel.h"
+#include "keyboard.h"
 #include "math/seq_math.h"
 #include "host/mainctrl.h"
 #include "host/plugin/vst_plugin.h"
@@ -975,6 +976,9 @@ public:
         ThreadLock lock = daw->lockPlayThread();
         if (&btnSolo == button) {
             bool isSolo = (m_track->audio->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE;
+            if (!isShift(parentCtrl->lastMouseEvent.kbmods)) {
+                daw->unsoloAll();
+            }
             daw->setSoloState(m_track->audio->toRef(), !isSolo);
         }
         if (&btnRecord == button) {

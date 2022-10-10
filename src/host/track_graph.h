@@ -136,4 +136,5 @@ namespace DAW {
     bool validateTrackRoutings(const Host::Host* host, const track_vector& tracksFlat);
 
     void updateSoloFlag(const Host::Host* host, const project_t* project, const track_vector& tracksFlat);
+    void unsoloAll(const Host::Host* host, const project_t* project, const track_vector& tracksFlat);
 }// namespace DAW

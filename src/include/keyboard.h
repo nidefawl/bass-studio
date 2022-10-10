@@ -16,6 +16,13 @@ struct KeyCombo {
             return kevt.keyCode == keyCode;
         }
     }
+    bool matchWithoutMods(const KeyEvent& kevt) const {
+        if (!keyChar.empty()) {
+            return kevt.keyname && keyChar == kevt.keyname;
+        } else {
+            return kevt.keyCode == keyCode;
+        }
+    }
     String toString() const;
     static KeyCombo FromKeyEvent(const KeyEvent& kevt);
 };

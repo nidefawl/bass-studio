@@ -345,6 +345,13 @@ namespace DAW {
             }
         }
     }
+    void unsoloAll(const Host::Host* const host, const project_t* const project, const track_vector& tracksFlat) {
+        for (track_t* track : tracksFlat) {
+            audiostageflags_t& flags = track->getStage()->flags;
+            flags &= ~audiostageflags_t::SOLO_PARENT;
+            flags &= ~audiostageflags_t::SOLO;
+        }
+    }
     bool buildTrackRoutingGraph(const Host::Host* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<track_graph_t>& out_graph) {
         uint32_t trackEdgeId = 0;
         auto trackGraph = std::make_shared<track_graph_t>();
