@@ -140,7 +140,7 @@ public:
     }
     void onTick(AppCtrl* ctrl) override {
         guictr_base::onTick(ctrl);
-        update();
+        update(false);
     }
     void onRemove() override {
         auto daw = dawCtrl->getDaw();
@@ -149,24 +149,28 @@ public:
         midiHost->setInspection(true, false);
         guictr_vert_layout::onRemove();
     }
-    void update() {
+    void update(bool bForceUpdate) {
         auto daw = dawCtrl->getDaw();
-        ThreadLock lock = daw->getPlayThread()->tryLockThread();
-        auto tmNow = getTimeMillis();
-        if (!lock.isLocked()) {
-            // force lock and update if 5 seconds have elapsed
-            if (tmNow - tmLastUpdate > 5000) {
-                lock = daw->lockPlayThread();
-            } else {
-                return;
-            }
-        }
-        tmLastUpdate = tmNow;
+        std::vector<MidiIOEvent> evts;
+        {
 
-        auto midiHost = daw->getMidiHost();
-        midiHost->setInspection(true, true);
-        auto vecData = midiHost->getInspectionInputMessages();
-        for (auto& midiMsg : vecData) {
+            ThreadLock lock = daw->getPlayThread()->tryLockThread();
+            auto tmNow = getTimeMillis();
+            if (!lock.isLocked()) {
+                // force lock and update if 5 seconds have elapsed
+                if (bForceUpdate || tmNow - tmLastUpdate > 5000) {
+                    lock = daw->lockPlayThread();
+                } else {
+                    return;
+                }
+            }
+            tmLastUpdate = tmNow;
+
+            auto midiHost = daw->getMidiHost();
+            midiHost->setInspection(true, true);
+            evts = midiHost->getInspectionInputMessages();
+        }
+        for (auto& midiMsg : evts) {
             auto it = std::find_if(listEntriesMessages.begin(), listEntriesMessages.end(),
                                     [&midiMsg](gui_midi_inspect_entry* p) {
                                         return p->getEvt().timestamp == midiMsg.timestamp && p->getEvt().message == midiMsg.message;
@@ -191,7 +195,7 @@ public:
         if (&btnClear == button) {
             listCtr.list.setList({});
             listEntriesMessages.clear();
-            update();
+            update(true);
         }
     }
 };
