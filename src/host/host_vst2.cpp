@@ -474,8 +474,8 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginH
         return 0;
 #endif
     case audioMasterWantMidi:
-        if (!throttleLog)
-            logPluginCb(plugin, "depr audioMasterWantMidi %d %d %zd\n", opcode, index, value, 0);
+        return 0;
+    case audioMasterPinConnected:
         return 0;
     default:
         if (!throttleLog)
