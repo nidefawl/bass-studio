@@ -2,6 +2,7 @@
 #include <climits>
 #include <cstdarg>
 #include <stdlib.h>
+#include <string>
 #include <vector>
 #include "assert_dbg.h"
 #include "math/seq_math.h"
@@ -95,6 +96,10 @@ const char* noteName(int note) {//DONT KEEP REFERENCE
     if (ret < 0) ret = 0;
     FormatBuffer[ret] = 0;
     return FormatBuffer.data();
+}
+String noteNameAndNumber(int note) {
+    int noteNameIdx = math::clamp(note % 12, 0, 11);
+    return String(noteNames[noteNameIdx]) + " " + std::to_string((note / 12) - 2) + " (" + std::to_string(note) + ")";
 }
 #ifdef _WIN32
 #ifndef USE_WSTRING

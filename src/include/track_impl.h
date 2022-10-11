@@ -37,6 +37,10 @@
 #define PARAM_TRACK_GAIN 1
 #define PARAM_TRACK_PAN 2
 
+#ifndef NDEBUG
+#define DAW_DEBUG_MIDI_PROCESSING
+#endif
+
 struct VstEvent_t;
 
 class vstplugin;
@@ -152,6 +156,12 @@ struct audio_stage_t : public IDelayLineStorage {
     guictr_plugins* m_pluginCtr = nullptr;
 
     stats_processing_timings_t procStats;
+
+#ifdef DAW_DEBUG_MIDI_PROCESSING
+    DAW::Host::note_event_validator_t noteEventValidator;
+    DAW::Host::note_event_validator_t noteEventValidatorPost;
+#endif
+
     DAW::Host::noteevent_buffer notesPre;
     DAW::Host::noteevent_buffer notesPost;
     clip_recorder recorder;

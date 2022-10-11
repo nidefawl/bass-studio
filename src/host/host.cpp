@@ -374,6 +374,9 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
     std::vector<MidiIOEvent> msgs = midihost::getInstance()->getInputMessages();
     bool notesProcessed = false;
     if (!msgs.empty()) {
+        std::sort(msgs.begin(), msgs.end(), [](const auto& lhs, const auto& rhs) {
+            return lhs.timestamp < rhs.timestamp;
+        });
         const auto midiTimeNow = getMidiTime(nullptr);
         for (MidiIOEvent& msg : msgs) {
             auto timeUntilStart = (msg.timestamp - midiTimeNow);

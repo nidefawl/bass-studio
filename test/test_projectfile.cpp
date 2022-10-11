@@ -25,7 +25,7 @@ namespace {
             numLoaded++;
             std::shared_ptr<project_file> projectFile;
             String path = file.path;
-            projectFile = loadProjectFile(path);
+            projectFile = loadProjectFromJsonFile(path);
             if (!projectFile) {
                 numFails++;
                 log_lf(Log::L_ERROR, "Error: failed loading file %s\n", StringAsCStr(path));

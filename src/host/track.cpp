@@ -1058,12 +1058,27 @@ void sortControlEvents(std::vector<midievent_ctrl_t>& ctrlEvents) {
 }
 
 void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const DAW::Host::midi_data_t& data, std::vector<note_t>& list, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts) {
+    tick_t lastNoteStart = -1;
     for (auto& note : data.notes.m_list) {
+        dbgassert(lastNoteStart == -1 || note.start() >= lastNoteStart);
+        lastNoteStart = note.start();
         if (note.isIntersectTimeIncludeEnds(absStart, absEnd)) {
+            auto noteCopy = note;
+            int32_t ret = cutIntersectingNotesFindDupe(list, noteCopy);
+            if (ret == -1) {
+                continue;
+            }
+            if (ret != 0) {
+                log_lf(Log::L_DEBUG, "note cut: %d\n", ret);
+                continue;
+            }
             if (!list.capacity()) {
                 list.reserve(4);
             }
-            list.push_back(note);
+            auto it = std::find_if(list.begin(), list.end(), [&note](const note_t& n) {
+                return n.time > note.time;
+            });
+            list.insert(it, note);
         }
     }
     for (auto& evt : data.events.m_list) {
@@ -1119,6 +1134,16 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
         //    getParent->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
         //    getParent = getParent->parent;
         //}
+
+#ifdef DAW_DEBUG_MIDI_PROCESSING
+        tick_t lastNoteStart = -1;
+        for (note_t& note : notes) {
+            if (!(lastNoteStart == -1 || note.start() >= lastNoteStart)) {
+                log_lf(Log::L_WARN, "Track clip notes are note sorted by time\n");
+            }
+            lastNoteStart = note.start();
+        }
+#endif
     }
 
     updateProfilingTime(procMidiStats.tm0InputClips, tmr.getTimeReset());
@@ -1143,21 +1168,31 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
         for (note_t& note : notes) {
             // Find beginning notes
             if (note.start() >= blockLoopStart && note.start() < blockLoopEnd) {
-                if (logProcessedNotes)
-                    log_lf(Log::L_DEBUG, "Block %d-%d: %s ON at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.start() - blockStart, note.time, note.len);
-
-                noteEvents.emplace_back(note.pitch, note.velocity, note.start() - blockStart, note.start(), true, false);
-                m_heldNotes.push_back(note);
-            } else if (chaseNotes && note.start() < blockLoopStart && note.end() > blockLoopStart) {
-                // check in in heldNotes
                 auto it = std::find_if( m_heldNotes.begin(), m_heldNotes.end(), [&note](const note_t& held) {
                     return held.pitch == note.pitch;
                 });
+                if (it != m_heldNotes.end()) {
+                    log_lf(Log::L_WARN, "Block %d-%d: %s ALREADY HELD at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.start() - blockStart, note.time, note.len);
+                } else if (logProcessedNotes) {
+                    log_lf(Log::L_DEBUG, "Block %d-%d: %s ON at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.start() - blockStart, note.time, note.len);
+                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.start() - blockStart, note.start(), true, false});
+                    m_heldNotes.push_back(note);
+                }
+            } else if (chaseNotes && note.start() < blockLoopStart && note.end() > blockLoopStart) {
+                auto it = std::find_if( m_heldNotes.begin(), m_heldNotes.end(), [&note](const note_t& held) {
+                    return held.pitch == note.pitch;
+                });
+                // check in in heldNotes
                 if (it == m_heldNotes.end()) {
+                    tick_t minStartTime = blockStart;
+                    for (const auto& evt : noteEvents) {
+                        if (!evt.isNoteOn && evt.pitch  == note.pitch) {
+                            minStartTime = evt.globalTick;
+                        }
+                    }
                     if (logProcessedNotes)
-                        log_lf(Log::L_DEBUG, "Block %d-%d: %s CHASE ON at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.start() - blockStart, note.time, note.len);
-
-                    noteEvents.emplace_back(note.pitch, note.velocity, 0, blockStart, true, false);
+                        log_lf(Log::L_DEBUG, "Block %d-%d: %s CHASE ON at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), minStartTime-blockStart, note.time, note.len);
+                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, minStartTime-blockStart, minStartTime, true, false});
                     m_heldNotes.push_back(note);
                 }
             }
@@ -1168,8 +1203,8 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                         log_lf(Log::L_DEBUG, "Block %d-%d: %s OFF at %d/%f (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.end() - blockStart, ticksPerBlock, note.time, note.len);
                     auto tickOffsetInBlock = note.end() - blockStart;
                     dbgassert(tickOffsetInBlock >= 0);
-                    noteEvents.emplace_back(note.pitch, note.velocity, tickOffsetInBlock, note.end(), false, false);
-                } else {
+                    InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, tickOffsetInBlock, note.end(), false, false});
+                } else if (note.end() > blockLoopStart) {
                     log_lf(Log::L_WARN, "Block %d-%d: %s OFF WAS NOT HELD at %d/%f (abs time: %d len: %d) \n", blockStart, blockEnd, noteName(note.pitch), note.end() - blockStart, ticksPerBlock, note.time, note.len);
                 }
             }
@@ -1184,13 +1219,14 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
 
                 auto tickOffsetInBlockEnd = math::min(blockEnd - blockStart - 1, loopEnd - blockStart - 1);
                 if (logProcessedNotes)
-                    log_lf(Log::L_WARN, "Block %d-%d: %s Force OFF (LOOP END @%d) at %d/%f = %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), loopEnd, tickOffsetInBlockEnd, ticksPerBlock, blockStart + tickOffsetInBlockEnd);
-                noteEvents.emplace_back(noteHeld.pitch, noteHeld.velocity, tickOffsetInBlockEnd, blockStart + tickOffsetInBlockEnd, false, true);
+                    log_lf(Log::L_INFO, "Block %d-%d: %s Force OFF (LOOP END @%d) at %d/%f = %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), loopEnd, tickOffsetInBlockEnd, ticksPerBlock, blockStart + tickOffsetInBlockEnd);
+                InsertMidiEventSorted(noteEvents, {noteHeld.pitch, noteHeld.velocity, tickOffsetInBlockEnd, blockStart + tickOffsetInBlockEnd, false, true});
                 it = m_heldNotes.erase(it);
             }
         }
 
         // revalidate held notes ends so we end notes that were modified by the user (loop or clip modifactions)
+        // this also cuts of notes on clip looparounds
         for (auto it = m_heldNotes.begin(); it != m_heldNotes.end();) {
             const note_t& noteHeld = *it;
             bool found             = false;
@@ -1205,17 +1241,28 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
             }
             if (!found) {
                 if (logProcessedNotes)
-                    log_lf(Log::L_WARN, "Block %d-%d: %s Force OFF at %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), blockEnd - 1);
-                noteEvents.emplace_back(noteHeld.pitch, noteHeld.velocity, ticksPerBlock-1, blockEnd - 1, false, false);
+                    log_lf(Log::L_INFO, "Block %d-%d: %s Force OFF at %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), blockEnd - 1);
+                InsertMidiEventSorted(noteEvents, {noteHeld.pitch, noteHeld.velocity, math::floordS32(ticksPerBlock) - 1, blockEnd - 1, false, false});
                 it = m_heldNotes.erase(it);
                 continue;
             }
             ++it;
         }
 
+#ifdef DAW_DEBUG_MIDI_PROCESSING
+        noteEventValidator.validate(noteEvents);
+
+        tick_t lastNoteStart = -1;
+        tick_t tickOffsetInBlock = -1;
+        for (auto& event : noteEvents) {
+            dbgassert(lastNoteStart == -1 || event.globalTick >= lastNoteStart);
+            lastNoteStart = event.globalTick;
+            dbgassert(tickOffsetInBlock == -1 || event.tickOffsetInBlock >= tickOffsetInBlock);
+            tickOffsetInBlock = event.tickOffsetInBlock;
+        }
+#endif
         updateProfilingTime(procMidiStats.tm3RevalidateEnds, tmr.getTimeReset());
 
-        sortNoteEvents(noteEvents);
         notesPre.update(blockStart, noteEvents, ctrlEvents);
         updateProfilingTime(procMidiStats.tm4SortEvents, tmr.getTimeReset());
         
@@ -1241,6 +1288,13 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
         updateProfilingTime(procMidiStats.tm5ProcArp, tmr.getTimeReset());
 
         notesPost.update(blockStart, noteEventsProcessed, ctrlEvents);
+        updateProfilingTime(procMidiStats.tm6UpdateOutputPost, tmr.getTimeReset());
+
+#ifdef DAW_DEBUG_MIDI_PROCESSING
+        std::vector<midievent_note_t> noteEventsPostValidate;
+        std::vector<midievent_ctrl_t> ctrlEventsPostValidate;
+        notesPost.getNotesDelayed(blockStart, ticksPerBlock, noteEventsPostValidate, ctrlEventsPostValidate);
+        noteEventValidatorPost.validate(noteEventsPostValidate);
         if (logProcessedNotes && !midiRealtimeInput.notes.empty()) {
             log_lf(Log::L_DEBUG, "Realtime i: %zd. Notes: %zd. Events Processed: %zd. Post Event Buffered: %zd\n",
                                 midiRealtimeInput.notes.m_list.size(),
@@ -1248,10 +1302,10 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                                 noteEventsProcessed.size(),
                                 notesPost.noteEvts.size());
         }
-        updateProfilingTime(procMidiStats.tm6UpdateOutputPost, tmr.getTimeReset());
+#endif
     }
 
-#ifndef NDEBUG
+#ifndef DAW_DEBUG_MIDI_PROCESSING
     validateProcessedMidi(state, flags, blockStart, blockEnd, loopStart, loopEnd, prjGlobals, inputLatency);
     updateProfilingTime(procMidiStats.tm7ValidateMidi, tmr.getTimeReset());
 #endif
@@ -2033,7 +2087,9 @@ String midievent_note_t::ToString() {
     }
     return msg.ToString();
 }
+
 namespace DAW::Host {
+
 void noteevent_buffer::update(tick_t blockStart, const std::vector<midievent_note_t>& _noteEvts, const std::vector<midievent_ctrl_t>& _ctrlEvts) {
     this->currentTick = blockStart;
     addAll(noteEvts, _noteEvts);
@@ -2047,7 +2103,6 @@ void noteevent_buffer::update(tick_t blockStart, const std::vector<midievent_not
             it++;
         }
     }
-    sortNoteEvents(noteEvts);
     addAll(ctrlEvts, _ctrlEvts);
     auto it2 = ctrlEvts.begin();
     while (it2 != ctrlEvts.end()) {
@@ -2058,8 +2113,8 @@ void noteevent_buffer::update(tick_t blockStart, const std::vector<midievent_not
             it2++;
         }
     }
-    sortControlEvents(ctrlEvts);
 }
+
 void noteevent_buffer::getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& noteEvtsOuts, std::vector<midievent_ctrl_t>& ctrlEvtsOut) {
     if (tickLatencyCompensated > currentTick) {
         log_lf(Log::L_WARN, "tickLatencyCompensated=%d, ticksPerBlock=%f, currentTick=%d\n", tickLatencyCompensated, ticksPerBlock, currentTick);
@@ -2074,7 +2129,6 @@ void noteevent_buffer::getNotesDelayed(tick_t tickLatencyCompensated, const doub
                 dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
             }
         }
-        sortNoteEvents(noteEvtsOuts);;
     }
     if (!ctrlEvts.empty()) {
         for (auto& evt : ctrlEvts) {
@@ -2084,4 +2138,5 @@ void noteevent_buffer::getNotesDelayed(tick_t tickLatencyCompensated, const doub
         }
     }
 }
-}
+
+} // namespace DAW::Host

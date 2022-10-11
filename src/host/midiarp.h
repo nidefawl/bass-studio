@@ -27,6 +27,10 @@
 #define NUM_RANDOM_TIME_MODES 2
 #define NUM_ARP_MAX_POLY_VOICES 32
 
+#ifndef NDEBUG
+#define DAW_DEBUG_ARP 
+#endif
+
 struct arp_snapshot;
 namespace DAW {
 
@@ -85,6 +89,12 @@ public:
     std::vector<marker_t> markers;
     std::vector<marker_t> markers2;
 
+#ifdef DAW_DEBUG_ARP
+    std::array<int32_t, 128> debugNoteCounts{};
+    std::array<int32_t, 128> prevDebugNoteCounts{};
+    Host::note_event_validator_t inputValidator;
+#endif
+
     explicit midiarp(track_impl_t* _trImpl);
     ~midiarp() override = default;
     track_t* getTrack() override {
@@ -125,11 +135,7 @@ public:
     String getAutomatableName() override {
         return "Arp";
     }
-    void reset(tick_t _resetTime) {
-        resetTime     = _resetTime;
-        step          = 0;
-        stepGenerated = -1;
-    }
+    void reset(tick_t _resetTime);
     void allNotesOff(std::vector<midievent_note_t>& noteEvents);
     void onStartPlayback();
 

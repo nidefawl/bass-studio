@@ -307,6 +307,7 @@ void module_group::process(const DAW::Host::Host* const host, AudioBlock* in, Au
 }
 
 void module_group::processMidi(midi_data_processing_t& midiEvents) {
+    noteEventValidator.validate(*midiEvents.noteEvents);
     audio->notesPre.update(midiEvents.tickLatencyCompensated, *midiEvents.noteEvents, *midiEvents.ctrlEvents);
     //TODO: let plugins process midi and update this after process(AudioBlock)
     audio->notesPost.update(midiEvents.tickLatencyCompensated, *midiEvents.noteEvents, *midiEvents.ctrlEvents);

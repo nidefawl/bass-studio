@@ -175,5 +175,43 @@ inline void quantizeNoteEndTime(T& notesPtrs, tick_t quantize) {
         }
     }
 }
-int cutIntersecting(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes);
+int cutIntersectingEliminateDupes(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes);
 bool cutSelfIntersecting(std::vector<note_t>& m_list);
+
+
+/* shortens end of intersecting notes, does not remove any notes, instead looks for exact duplicates
+ * returns: -1 if exact duplicate is present
+ * otherwise the return value is a positive number and represents the number notes modified in the list
+ */
+template<typename T>
+int cutIntersectingNotesFindDupe(std::vector<T>& m_list, T& n) {
+    auto it = m_list.begin();
+    // find exact duplicate
+    while (it != m_list.end()) {
+        const T& val = *it++;
+        if (val.isEnabled() && val.pitch == n.pitch && val.time == n.time && val.len == n.len) {
+            return -1;
+        }
+    }
+
+    int nAdjusted = 0;
+    for (it = m_list.begin(); it != m_list.end(); ++it) {
+        T& c = *it;
+        if (!c.isEnabled())
+            continue;
+        if (c.pitch != n.pitch) {
+            continue;
+        } 
+        if (c.start() >= n.end() || c.end() <= n.start()) {
+            continue;
+        }
+        if (c.start() < n.start()) {
+            c.cutRight(n.start());
+            nAdjusted++;
+        } else if (c.start() > n.start()) {
+            n.cutRight(c.start());
+            nAdjusted++;
+        }
+    }
+    return nAdjusted;
+}

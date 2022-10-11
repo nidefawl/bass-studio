@@ -925,7 +925,6 @@ void vstplugin::processMidi(midi_data_processing_t& midiEvents) {
                 }
                 midiEventsBuf->writeMidiMessage(evt.message, offsetInBlock);
             }
-            midiEventsBuf->sort();
             this->midiEventsDispatched += handle->midiEventsBuf->vstEvents->numEvents;
             this->dispatch(effProcessEvents, 0, 0, handle->midiEventsBuf->vstEvents);
         }

@@ -1142,7 +1142,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
             auto itEnd = notesDraggedCopy.end();
             while (it != itEnd) {
                 note_t& noteTest = *it++;
-                if (cutIntersecting(notesDraggedNoDuplicates, noteTest, false) > 0) {
+                if (cutIntersectingEliminateDupes(notesDraggedNoDuplicates, noteTest, false) > 0) {
                     notesDraggedCopy = notesDraggedNoDuplicates;
                     it    = notesDraggedCopy.begin();
                     itEnd = notesDraggedCopy.end();

@@ -121,7 +121,7 @@ public:
 
             const String label = entryKey.substr(iLeftCut);
             printL(ident, StringAsCStr(label), StringFormat(StringAsCStr(format), entryVal));
-            if (ident && label == "ProcessMidi") {
+            if (ident && StrEndsWith(label, "ProcessMidi")) {
                 ident++;
                 printL(ident, "InputClips", StringFormat("%zd µs", stats.blockMidiStats.tm0InputClips));
                 printL(ident, "InputRealtime", StringFormat("%zd µs", stats.blockMidiStats.tm1InputRT));

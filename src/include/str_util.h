@@ -51,6 +51,7 @@ String FormatTempo(float tempo);
 String StringLimit(String s, int limit);
 void replaceString(String& s, String f, String r);
 const char* noteName(int note);//DONT KEEP REFERENCE
+String noteNameAndNumber(int note);//DONT KEEP REFERENCE
 namespace StrUtil {
 int32_t StringReplace(String& s, const String& f, const String& r);
 }

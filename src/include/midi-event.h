@@ -1,7 +1,9 @@
 #pragma once
+#include "assert_dbg.h"
 #include "types.h"
 #include "note.h"
 #include <vector>
+#include <array>
 
 struct MidiIOEvent {
     uint32_t message;
@@ -21,7 +23,39 @@ struct midievent_note_t {
     String ToString();
 };
 
+template<typename Evt>
+void InsertMidiEventSorted(std::vector<Evt>& list, Evt&& evt) {
+    auto insertPos = std::find_if(list.begin(), list.end(), [tick = evt.globalTick](const auto& ev) { return ev.globalTick > tick;});
+    list.insert(insertPos, evt);
+}
+
+template<typename Evt>
+void InsertMidiEventSortedCopy(std::vector<Evt>& list, const Evt& evt) {
+    auto insertPos = std::find_if(list.begin(), list.end(), [tick = evt.globalTick](const auto& ev) { return ev.globalTick > tick;});
+    list.insert(insertPos, evt);
+}
+
 namespace DAW::Host {
+    struct note_event_validator_t {
+        std::array<int32_t, 128> prevNoteCounts{};
+        void validate(const std::vector<midievent_note_t>& notes) {
+            for (const auto& note : notes) {
+                auto& count = prevNoteCounts[note.pitch];
+                if (note.isNoteOn) {
+                    count++;
+                } else {
+                    count--;
+                }
+                if (count > 1 || count < 0) {
+                    log_lf(Log::L_ERROR, "Note %d %s has %d events\n", note.pitch, noteName(note.pitch), count);
+                    dbgassert(0);
+                }
+            }
+        }
+        void reset() {
+            prevNoteCounts.fill(0);
+        }
+    };
 
     struct midievent_ctrl_t {
         tick_t tick;

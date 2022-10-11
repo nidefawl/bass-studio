@@ -78,38 +78,9 @@ note_t& clip_notes_t::add(note_t& t) {
     return m_list.back();
 }
 
-int cutIntersecting(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes) {
-    int nErased    = 0;
-    auto it        = m_list.begin();
-    int exactDupes = 0;
-    while (it != m_list.end()) {
-        note_t& c = *it;
-        if (c == n) {
-            if (eliminateDupes || exactDupes) {
-                it = m_list.erase(it);
-                nErased++;
-            } else {
-                it++;// allow exact duplicates
-            }
-            exactDupes++;
-        } else if (c.pitch != n.pitch) {
-            it++;
-        } else if (c.start() >= n.end() || c.end() <= n.start()) {
-            it++;
-        } else if (c.time < n.start()) {
-            c.cutRight(n.start());
-            it++;
-        } else {
-            it = m_list.erase(it);
-            nErased++;
-        }
-    }
-    return nErased;
-}
-
 int32_t clip_notes_t::paste(note_t& t, bool eliminateDupes) {
     dbgassert(selection.empty());
-    cutIntersecting(m_list, t, eliminateDupes);
+    cutIntersectingEliminateDupes(m_list, t, eliminateDupes);
     add(t);
     return 0;
 }
@@ -197,6 +168,35 @@ size_t removeDuplicatesImpl(std::vector<note_t>& m_list) {
     size_t removed = m_list.end() - itNewEnd;
     m_list.erase(itNewEnd, m_list.end());
     return removed;
+}
+
+int cutIntersectingEliminateDupes(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes) {
+    int nErased    = 0;
+    auto it        = m_list.begin();
+    int exactDupes = 0;
+    while (it != m_list.end()) {
+        note_t& c = *it;
+        if (c == n) {
+            if (eliminateDupes || exactDupes) {
+                it = m_list.erase(it);
+                nErased++;
+            } else {
+                it++;// allow exact duplicates
+            }
+            exactDupes++;
+        } else if (c.pitch != n.pitch) {
+            it++;
+        } else if (c.start() >= n.end() || c.end() <= n.start()) {
+            it++;
+        } else if (c.time < n.start()) {
+            c.cutRight(n.start());
+            it++;
+        } else {
+            it = m_list.erase(it);
+            nErased++;
+        }
+    }
+    return nErased;
 }
 
 bool cutSelfIntersecting(std::vector<note_t>& m_list) {
@@ -491,8 +491,9 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
     if (cutRight <= cutLeft)
         return 0;
 
-    clip_notes_t notesView;
+    clip_notes_t notesView; // TODO: avoid heap allocation
     getNotesView(math::max(cutLeft, relStart), math::min(cutRight, relEnd), notesView, true);
+#if 0
     size_t posOld = list.size();
     list.insert(list.end(), notesView.m_list.begin(), notesView.m_list.end());
     size_t posNew = list.size();
@@ -501,6 +502,19 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
         list[pos].len = math::min(list[pos].end(), clipEnd) - list[pos].time;
     }
     return posNew - posOld;
+#endif
+    for (auto& note : notesView.m_list) {
+        note.time += clipStart;
+        note.len = math::min(note.end(), clipEnd) - note.time;
+        if (cutIntersectingNotesFindDupe(list, note) == -1) {
+            continue;
+        }
+        auto it = std::find_if(list.begin(), list.end(), [&note](const note_t& n) {
+            return n.time > note.time;
+        });
+        list.insert(it, note);
+    }
+    return CtrSize(notesView.m_list);;
 }
 
 void clip_notes_t::selectLastN(size_t num) {

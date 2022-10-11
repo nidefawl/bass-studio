@@ -7,6 +7,7 @@
 #include <vstsdk-host-2.4/aeffect.h>
 #include <vstsdk-host-2.4/aeffectx.h>
 #include "config.h"
+#include "logging.h"
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "dsp_util.h"
@@ -88,7 +89,7 @@ namespace PluginHostInfo {
                     case IMidiMsg::kNoteOff:
                         if (!removeEntry(heldNotes, note)) {
                             invalidNoteMessages++;
-                            log_printf("Sample %03d: Note %s OFF msg, but NOT held\n", message.mOffset, noteName(note));
+                            log_lf(Log::L_ERROR, "Sample %03d: Note %s OFF msg, but NOT held\n", message.mOffset, noteName(note));
                         } else {
                             if (logVerbosity > 3)
                                 log_printf("Sample %03d: %s OFF\n", message.mOffset, noteName(note));
@@ -97,12 +98,12 @@ namespace PluginHostInfo {
                     case IMidiMsg::kNoteOn:
                         if (stl_contains(heldNotes, note)) {
                             invalidNoteMessages++;
-                            log_printf("Sample %03d: Note %s ON msg, but ALREADY held\n", message.mOffset, noteName(note));
+                            log_lf(Log::L_ERROR, "Sample %03d: Note %s ON msg, but ALREADY held\n", message.mOffset, noteName(note));
                         } else {
+                            heldNotes.push_back(note);
                             if (logVerbosity > 3)
                                 log_printf("Sample %03d: %s ON\n", message.mOffset, noteName(note));
                         }
-                        heldNotes.push_back(note);
                         break;
                     case IMidiMsg::kPitchWheel: {
                         break;
@@ -314,7 +315,7 @@ namespace PluginHostInfo {
                         log_printf("NoteOff %d %d %d\n", msg.mOffset, msg.mData1, msg.mData2);
                     }
                     if (getLogVerbosity() > 6 && msg.StatusMsg() == IMidiMsg::kNoteOn) {
-                         log_printf("NoteOn %d %d %d\n", msg.mOffset, msg.mData1, msg.mData2);
+                        log_printf("NoteOn %d %d %d\n", msg.mOffset, msg.mData1, msg.mData2);
                     }
                         
 
