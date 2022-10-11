@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <cstdlib>
 #include "midi-event.h"
 #include "types.h"
@@ -22,7 +23,7 @@ struct VstEvent_t {
     int32_t numOns  = 0;
     int32_t numOffs = 0;
 
-    explicit VstEvent_t(size_t s) : maxEvents(s) {
+    explicit VstEvent_t(size_t _maxEvents) : maxEvents(_maxEvents) {
         /**
          * Allocates following struct equivalent to:
             struct VstEvents
@@ -34,8 +35,8 @@ struct VstEvent_t {
             };
          */
 
-        size_t hdr = sizeof(VstEvents) + sizeof(VstEvent*) * (s - 2);
-        size_t len = sizeof(VstMidiEvent) * (s);
+        size_t hdr = sizeof(VstEvents) + sizeof(VstEvent*) * (_maxEvents - 2);
+        size_t len = sizeof(VstMidiEvent) * (_maxEvents);
         vstEvents  = static_cast<VstEvents*>(std::malloc(hdr));
         evtArr     = static_cast<VstMidiEvent*>(std::malloc(len));
         memset(vstEvents, 0, hdr);
@@ -44,8 +45,6 @@ struct VstEvent_t {
 
     void reset() {
         numOns = numOffs = 0;
-        //        vstEvents->numEvents = 0;
-        //        memset(vstEvents->events, 0, sizeof(VstEvent)*maxEvents);
         memset(vstEvents, 0, sizeof(VstEvents) + sizeof(VstEvent*) * (maxEvents - 2));
         memset(evtArr, 0, sizeof(VstMidiEvent) * (maxEvents));
     }
@@ -55,19 +54,6 @@ struct VstEvent_t {
         std::free(evtArr);
     }
 
-    void writeNoteOn(unsigned char* buf, int32_t pitch, int32_t velocity) {
-        buf[0] = 0x90;
-        buf[1] = CLAMP_I(pitch, 0, 0x7F);
-        buf[2] = CLAMP_I(velocity, 0, 0x7F);
-        buf[3] = 0;
-    }
-
-    void writeNoteOff(unsigned char* buf, int32_t pitch) {
-        buf[0] = 0x80;
-        buf[1] = CLAMP_I(pitch, 0, 0x7F);
-        buf[2] = 0x40;
-        buf[3] = 0;
-    }
     VstMidiEvent& nextEvent() {
         dbgassert(vstEvents->numEvents < maxEvents);
         VstMidiEvent& evt = evtArr[vstEvents->numEvents];
@@ -90,22 +76,32 @@ struct VstEvent_t {
         auto& evt = nextEvent();
         evt.deltaFrames = math::floordS32(nevt.tickOffsetInBlock * tickToSamples);
         dbgassert(evt.deltaFrames >= 0 && evt.deltaFrames < blockSize);
+        auto* buf = reinterpret_cast<unsigned char*>(evt.midiData);
         if (nevt.isNoteOn) {
             numOns++;
-            writeNoteOn((unsigned char*) evt.midiData, nevt.pitch, nevt.velocity);
+            buf[0] = 0x90;
+            buf[1] = math::clamp<unsigned char>(nevt.pitch, 0, 0x7F);
+            buf[2] = math::clamp<unsigned char>(nevt.velocity, 0, 0x7F);
+            buf[3] = 0;
+            evt.noteLength = 0;
+            // evt.flags |= kVstMidiEventIsRealtime;
         } else {
             numOffs++;
-            writeNoteOff((unsigned char*) evt.midiData, nevt.pitch);
+            buf[0] = 0x80;
+            buf[1] = math::clamp<unsigned char>(nevt.pitch, 0, 0x7F);
+            buf[2] = 0x40;
+            buf[3] = 0;
         }
     }
 
-    void writeVstCtrlEvent(const DAW::Host::midievent_ctrl_t& nevt, int32_t sampleOffsetInBlock) {
+    void writeMidiMessage(uint32_t message, int32_t sampleOffsetInBlock) {
         auto& evt = nextEvent();
         evt.deltaFrames = sampleOffsetInBlock;
-        evt.midiData[0] = (nevt.message >> 0) & 0xFF;
-        evt.midiData[1] = (nevt.message >> 8) & 0xFF;
-        evt.midiData[2] = (nevt.message >> 16) & 0xFF;
-        evt.midiData[3] = (nevt.message >> 24) & 0xFF;
+        auto* buf = reinterpret_cast<unsigned char*>(evt.midiData);
+        buf[0] = (message >> 0) & 0xFF;
+        buf[1] = (message >> 8) & 0xFF;
+        buf[2] = (message >> 16) & 0xFF;
+        buf[3] = (message >> 24) & 0xFF;
     }
 
     void writeMessage(unsigned char c0, unsigned char c1, unsigned char c2, unsigned char c3, int32_t delta) {

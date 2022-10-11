@@ -327,8 +327,13 @@ Host::audiostream_properties_t getAudioStreamPropertiesForFormat(sampleformat_t 
     return prop;
 }
 
-Host::audiostream_properties_t Host::getAudioStreamProperties() const {
-    return getAudioStreamPropertiesForFormat(m_sampleFormatInternal, m_sampleFormatExternal, prjGlobals.tempo100);
+const Host::audiostream_properties_t& Host::getAudioStreamProperties() const {
+    return this->audioProperties;
+}
+
+Host::audiostream_properties_t& Host::updateAudioStreamProperties() {
+    this->audioProperties = getAudioStreamPropertiesForFormat(m_sampleFormatInternal, m_sampleFormatExternal, prjGlobals.tempo100);
+    return this->audioProperties;
 }
 
 void Host::setSampleFormat(const sampleformat_t& _sampleFormat) {
@@ -361,41 +366,39 @@ std::vector<note_t> Host::getRealtimeNotes() {
     return this->midiRealtimeInput.notes.m_list;
 }
 
-void Host::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state) {
-    //TODO: This needs to be done per input and per track
-    tick_t tickPosBlockStart = math::ceildS32(posDouble);
-
+void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosBlockStart, playback_state state) {
+    constexpr bool logProcessedNotes = false;
+    auto realtimeMidiDelay = audioProperties.ticksPerBlock;
+    const auto msToTicks = sampleToTickConvert<double, roundmode::none>(m_sampleFormatInternal.blockSize, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate) / 1000.0;
+    midiRealtimeInput.events.m_list.clear();
     std::vector<MidiIOEvent> msgs = midihost::getInstance()->getInputMessages();
     bool notesProcessed = false;
     if (!msgs.empty()) {
-        std::vector<note_t> newNotes;
+        const auto midiTimeNow = getMidiTime(nullptr);
         for (MidiIOEvent& msg : msgs) {
-
+            auto timeUntilStart = (msg.timestamp - midiTimeNow);
+            auto tickEvtDelay = math::rounddS32(dTickPosBlockStart + (timeUntilStart * msToTicks) + realtimeMidiDelay);
             int32_t command = MidiMsgStatus(msg.message) & MIDI_CODE_MASK;
             if (command == MIDI_ON_NOTE && MidiMsgData2(msg.message) != 0) {
                 note_t note;
                 note.setRealtime(true);
                 note.setIsHeld(true);
-                note.time = tickPosBlockStart;
+                note.time = tickEvtDelay;
                 note.len = lenTicksInfinite;
                 note.pitch = MidiMsgData1(msg.message);
                 note.velocity = MidiMsgData2(msg.message);
-                newNotes.push_back(note);
+                midiRealtimeInput.notes.m_list.push_back(note);
+                notesProcessed = true;
+                if (logProcessedNotes) {
+                    log_lf(Log::L_DEBUG, "%f note START %s %d\n", dTickPosBlockStart, noteName(note.pitch), note.start());
+                }
             }
-        }
-        if (!newNotes.empty()) {
-            midiRealtimeInput.notes.addAll(newNotes);
-        }
 
-        for (MidiIOEvent& msg : msgs) {
-
-            int32_t command = MidiMsgStatus(msg.message) & MIDI_CODE_MASK;
             if (command == MIDI_BEND || command == MIDI_CTRL) {
-                midiRealtimeInput.events.addMidiEvent(tickPosBlockStart, msg.message, msg.timestamp);
+                midiRealtimeInput.events.addMidiEvent(tickEvtDelay, msg.message, msg.timestamp);
             }
             if ((command == MIDI_ON_NOTE && MidiMsgData2(msg.message) == 0) || command == MIDI_OFF_NOTE) {
                 int32_t pitch = MidiMsgData1(msg.message);
-                int32_t tickEnd = tickPosBlockStart;
                 // kill oldest (first) note
                 bool fnd = false;
                 for (note_t& noteHeld : midiRealtimeInput.notes.m_list) {
@@ -404,40 +407,38 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble
                             //log_printf("%s note was released before, looking for next one\n", noteName(noteHeld.pitch));
                             continue;
                         }
-                        if (noteHeld.start() > tickEnd) {
-                            //log_printf("%s note starts after this release (tickEnd %d, noteHeld.start() %d)\n",
-                            //        noteName(noteHeld.pitch), tickEnd, noteHeld.start());
+                        if (noteHeld.start() > tickEvtDelay) {
+                            //log_printf("%s note starts after this release (tickEvtDelay %d, noteHeld.start() %d)\n",
+                            //        noteName(noteHeld.pitch), tickEvtDelay, noteHeld.start());
                             continue;
                         }
-                        if (noteHeld.start() == tickEnd) {
-                            //log_printf("%s noteHeld.start() == tickEnd %d, adding TICKS_16TH/4\n", noteName(noteHeld.pitch), tickEnd);
-                            tickEnd += TICKS_16TH/4;
+                        if (noteHeld.start() == tickEvtDelay) {
+                            //log_printf("%s noteHeld.start() == tickEvtDelay %d, adding TICKS_16TH/4\n", noteName(noteHeld.pitch), tickEvtDelay);
+                            tickEvtDelay += TICKS_16TH/4;
                         }
-                        noteHeld.len = tickEnd - noteHeld.start();
+                        noteHeld.len = tickEvtDelay - noteHeld.start();
                         noteHeld.setIsHeld(false);
                         assert(noteHeld.len >= 0);
                         fnd = true;
                         notesProcessed = true;
-                        //log_printf("%d note KILL %s %d\n", noteName(noteHeld.pitch), noteHeld.start());
+                        if (logProcessedNotes) {
+                            log_printf("%f note KILL %s %d\n", dTickPosBlockStart, noteName(noteHeld.pitch), noteHeld.end());
+                        }
                         break;
                     }
                 }
                 if (!fnd) {
-                    log_printf("MIDI_OFF_NOTE note not found %s tickEnd %d\n", noteName(pitch), tickEnd);
+                    log_lf(Log::L_WARN, "MIDI_OFF_NOTE note not found %s tickEvtDelay %d\n", noteName(pitch), tickEvtDelay);
                 }
 
             }
-        }
-        if (newNotes.size() || notesProcessed) {
-            midiRealtimeInput.notes.removeDuplicates();
-            notesProcessed = true;
         }
     }
     if (midiRealtimeInput.notes.m_list.size()) {
         auto it = midiRealtimeInput.notes.m_list.begin();
         while (it != midiRealtimeInput.notes.m_list.end()) {
             note_t& note = *it;
-            if (!note.isHeld() && note.end() < posDouble) {
+            if (!note.isHeld() && note.end() < dTickPosBlockStart - realtimeMidiDelay * 4.0) {
                 notesProcessed = true;
                 it = midiRealtimeInput.notes.m_list.erase(it);
             } else {
@@ -446,6 +447,7 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble
         }
     }
     if (notesProcessed) {
+        std::sort(midiRealtimeInput.notes.m_list.begin(), midiRealtimeInput.notes.m_list.end());
         midiRealtimeInput.notes.updateBounds();
     }
 }
@@ -725,7 +727,7 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
 
     timerBlock.reset();
     const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
-    const audiostream_properties_t audioProp = getAudioStreamProperties();
+    const audiostream_properties_t audioProp = updateAudioStreamProperties();
 
     int32_t nBlocksProcessed = 0;
 
@@ -886,7 +888,7 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
 
     timerBlock.reset();
     const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
-    const audiostream_properties_t audioProp = getAudioStreamProperties();
+    const audiostream_properties_t audioProp = updateAudioStreamProperties();
 
     std::shared_ptr<resampler_t> resamplerOutput = impl->getResampler(sampleFormat, m_sampleFormatExternal, impl->outputChannels, 0);
     std::shared_ptr<resampler_t> resamplerInput = impl->getResampler(m_sampleFormatExternal, sampleFormat, impl->inputChannels, 1);
@@ -1647,8 +1649,8 @@ int32_t Host::processGraph(project_controller_t* ctrl,
         blockMidiStats.tm3RevalidateEnds += procMidiStats.tm3RevalidateEnds;
         blockMidiStats.tm4SortEvents += procMidiStats.tm4SortEvents;
         blockMidiStats.tm5ProcArp += procMidiStats.tm5ProcArp;
-        blockMidiStats.tm6WriteVstEvents += procMidiStats.tm6WriteVstEvents;
-        blockMidiStats.tm7ProcessOutput += procMidiStats.tm7ProcessOutput;
+        blockMidiStats.tm6UpdateOutputPost += procMidiStats.tm6UpdateOutputPost;
+        blockMidiStats.tm7ValidateMidi += procMidiStats.tm7ValidateMidi;
     }
     int k = 0;
     int64_t timeTotalProcessPluginsRaw = timeProcessingArr[k++];
@@ -1748,8 +1750,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                            playback_state playbackState,
                            const DAW::effect_processing_graph_t* const processingGraph) const
 {
-    // tick_t processingPos = math::floordS32(tickStageLatencyCompensated);
-    const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(stage->sampleFormat.blockSize, globals.tempo100, stage->sampleFormat.sampleRate);
+   
     hires_timer_t timer;
     int64_t timeTotal = 0;
     if (processingGraph != nullptr) {
@@ -1789,7 +1790,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
             std::vector<DAW::effect_source_t> allSources = effNode.pulls; // copy
 
             timer.reset();
-            MixInputs(this, effNode, tmp, this->impl, blockIn, allSources, numChannelsTrack, effNode.inputLatency, tickLatencyCompensated, tickLatencyCompensated + ticksPerBlock, playbackState, nullptr);
+            MixInputs(this, effNode, tmp, this->impl, blockIn, allSources, numChannelsTrack, effNode.inputLatency, tickLatencyCompensated, tickLatencyCompensated + getAudioStreamProperties().ticksPerBlock, playbackState, nullptr);
             AudioBlock* blockPostProcess = nullptr;
             int64_t timePassed = 0;
             if (effect) {
@@ -1824,7 +1825,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                     effect->updateAutomatedParameters(this, processingPosLatencyCompensate, playbackState);
                     tmp.ctrlEventsTemp.clear();
                     tmp.noteEventsTemp.clear();
-                    effect->getTrackLink()->getNotesDelayed(processingPosLatencyCompensate, ticksPerBlock, tmp.noteEventsTemp, tmp.ctrlEventsTemp, true);
+                    effect->getTrackLink()->getNotesDelayed(processingPosLatencyCompensate, audioProperties.ticksPerBlock, tmp.noteEventsTemp, tmp.ctrlEventsTemp, true);
                     effect->getTrackLink()->sendMidiToEffect(tmp.noteEventsTemp, tmp.ctrlEventsTemp, processingPosLatencyCompensate, prjGlobals.tempo100, effect);
                     effect->process(this, effect->blockInputs, effect->blockOutputs, tickLatencyCompensated, sampleLatencyCompensated, numSamples, playbackState);
                     blockPostProcess = effect->blockOutputs;

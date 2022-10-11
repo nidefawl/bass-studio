@@ -136,6 +136,7 @@ struct IMidiMsg {
     static inline IMidiMsg FromU32AndTick(uint32_t msg, int32_t tick) {
         return IMidiMsg(tick, msg & 0xFF, (msg >> 8) & 0xFF, (msg >> 16) & 0xFF);
     }
+    uint32_t ToU32() const { return (mData2 << 16) | (mData1 << 8) | mStatus; }
 
     /** /todo
      * @param noteNumber /todo

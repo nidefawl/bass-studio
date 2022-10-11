@@ -129,8 +129,8 @@ public:
                 printL(ident, "RevalidateEnds", StringFormat("%zd µs", stats.blockMidiStats.tm3RevalidateEnds));
                 printL(ident, "SortEvents", StringFormat("%zd µs", stats.blockMidiStats.tm4SortEvents));
                 printL(ident, "ProcArp", StringFormat("%zd µs", stats.blockMidiStats.tm5ProcArp));
-                printL(ident, "WriteVstEvents", StringFormat("%zd µs", stats.blockMidiStats.tm6WriteVstEvents));
-                printL(ident, "ProcessOutput", StringFormat("%zd µs", stats.blockMidiStats.tm7ProcessOutput));
+                printL(ident, "OuputPostUpdate", StringFormat("%zd µs", stats.blockMidiStats.tm6UpdateOutputPost));
+                printL(ident, "ValidateMidi", StringFormat("%zd µs", stats.blockMidiStats.tm7ValidateMidi));
             }
         }
         y += height / 2;

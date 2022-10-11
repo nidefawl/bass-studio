@@ -13,6 +13,8 @@ using PmQueue = void;
 using PmMessage = uint32_t;
 using PmTimestamp = int32_t;
 
+int32_t getMidiTime(void* userData);
+
 class midihost {
 public:
     struct opened_device_t {

@@ -6,14 +6,14 @@
 #define STATS_PROCESSING_MAX_SAMPLES 1024
 #define STATS_PROCESSING_INTERVAL_STEP 16
 struct track_midiprocess_profiling_t {
-    int64_t tm0InputClips     = 0;
-    int64_t tm1InputRT        = 0;
-    int64_t tm2ProcNotes      = 0;
-    int64_t tm3RevalidateEnds = 0;
-    int64_t tm4SortEvents     = 0;
-    int64_t tm5ProcArp        = 0;
-    int64_t tm6WriteVstEvents = 0;
-    int64_t tm7ProcessOutput  = 0;
+    int64_t tm0InputClips       = 0;
+    int64_t tm1InputRT          = 0;
+    int64_t tm2ProcNotes        = 0;
+    int64_t tm3RevalidateEnds   = 0;
+    int64_t tm4SortEvents       = 0;
+    int64_t tm5ProcArp          = 0;
+    int64_t tm6UpdateOutputPost = 0;
+    int64_t tm7ValidateMidi     = 0;
 };
 struct stats_processing_timings_t {
     int64_t statsProcSamples[STATS_PROCESSING_MAX_SAMPLES] = {};

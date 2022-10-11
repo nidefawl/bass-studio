@@ -94,7 +94,8 @@ public:
 
     /* gets updated by caller (PlayThread) before processing */
     project_globals_t prjGlobals;
-
+    /* gets updated by Host before processing */
+    Host::audiostream_properties_t audioProperties;
 
     std::atomic<int32_t> bypassEffectProcessing{ false };
     std::atomic<int32_t> multithreadedProcessing{ 1 };
@@ -140,7 +141,8 @@ public:
 
     void setSampleFormat(const sampleformat_t& _sampleFormat);
     void setOutput(std::shared_ptr<AudioIO::AudioStream> stream);
-    audiostream_properties_t getAudioStreamProperties() const;
+    const audiostream_properties_t& getAudioStreamProperties() const;
+    audiostream_properties_t& updateAudioStreamProperties();
     bool isStreaming();
 
     int32_t processRender(project_controller_t* ctrl, int32_t sample, double posDouble);

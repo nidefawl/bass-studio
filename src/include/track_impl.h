@@ -79,65 +79,7 @@ public:
     void loadSnapshot(const track_params_snapshot_t& snapshot);
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
 };
-class noteevent_buffer {
-    tick_t currentTick = 0;
-    std::vector<midievent_note_t> noteEvts;
-    std::vector<DAW::Host::midievent_ctrl_t> ctrlEvts;
-    public:
-    void update(tick_t blockStart, const std::vector<midievent_note_t>& _noteEvts, const std::vector<DAW::Host::midievent_ctrl_t>& _ctrlEvts) {
-        addAll(noteEvts, _noteEvts);
-        sortNoteEvents(noteEvts);
-        const tick_t eventTimeout = 100000;// TODO: calculate this depending on the total latency
-        auto it = noteEvts.begin();
-        while (it != noteEvts.end()) {
-            auto& evt = *it;
-            if (evt.globalTick < blockStart - (eventTimeout)) {
-                it = noteEvts.erase(it);
-            } else {
-                it++;
-            }
-        }
-        addAll(ctrlEvts, _ctrlEvts);
-        auto it2 = ctrlEvts.begin();
-        while (it2 != ctrlEvts.end()) {
-            auto& evt = *it2;
-            if (evt.tick < blockStart - (eventTimeout)) {
-                it2 = ctrlEvts.erase(it2);
-            } else {
-                it2++;
-            }
-        }
-        this->currentTick = blockStart;
-    }
-    void reset() {
-        noteEvts.clear();
-    }
-    void getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& noteEvtsOuts, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvtsOut) {
-        if (tickLatencyCompensated > currentTick) {
-            log_lf(Log::L_WARN, "tickLatencyCompensated=%d, ticksPerBlock=%f, currentTick=%d\n", tickLatencyCompensated, ticksPerBlock, currentTick);
-            return;
-        }
-        if (!noteEvts.empty()) {
-            for (auto& evt : noteEvts) {
-                if (evt.globalTick >= tickLatencyCompensated && evt.globalTick < tickLatencyCompensated + ticksPerBlock) {
-                    noteEvtsOuts.emplace_back(evt);
-                    auto& evtCompensated = noteEvtsOuts.back();
-                    evtCompensated.tickOffsetInBlock = (evtCompensated.globalTick - tickLatencyCompensated);
-                    dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
-                }
-            }
-            sortNoteEvents(noteEvtsOuts);
-        }
-        if (!ctrlEvts.empty()) {
-            for (auto& evt : ctrlEvts) {
-                if (evt.tick >= tickLatencyCompensated && evt.tick < tickLatencyCompensated + ticksPerBlock) {
-                    ctrlEvtsOut.emplace_back(evt);
-                }
-            }
-        }
-    }
 
-};
 struct clip_recorder {
     clip_t* recordingClip = nullptr;
     std::atomic<bool> isRecording{};
@@ -210,8 +152,8 @@ struct audio_stage_t : public IDelayLineStorage {
     guictr_plugins* m_pluginCtr = nullptr;
 
     stats_processing_timings_t procStats;
-    noteevent_buffer notesPre;
-    noteevent_buffer notesPost;
+    DAW::Host::noteevent_buffer notesPre;
+    DAW::Host::noteevent_buffer notesPost;
     clip_recorder recorder;
     std::shared_ptr<DAW::effect_processing_graph_t> processingGraph;
 
@@ -439,7 +381,7 @@ struct track_impl_t : public audio_stage_t {
     DAW::midichannel_ref_t midiChannel;
     std::vector<track_gui_entry_t*> guiInstances;
     std::vector<midievent_note_t> noteEventsProcessed;
-    clip_notes_t* midiProcessed = nullptr;
+    clip_notes_t* midiValidation = nullptr;
     ThreadMutex midiMutex;
     track_midiprocess_profiling_t procMidiStats;
     hires_timer_t tmr;
@@ -450,7 +392,7 @@ struct track_impl_t : public audio_stage_t {
     void onStopPlayback() override;
     void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) override;
     void processMidiInput(playback_state state, int32_t flags, tick_t cursorPos, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency, const DAW::Host::midi_data_t& midiRealtimeInput);
-    void postProcessMidiInput(playback_state state, int32_t flags, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency);
+    void validateProcessedMidi(playback_state state, int32_t flags, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency);
     void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, const project_globals_t& prjGlobals, samplecount_t readPos, samplecount_t readLen, AudioBlock& outBuffer);
     void addAudio(const AudioBlock& src, float fGain);
     void removePlugin(effectbase* _vst, bool notifyUp) override;

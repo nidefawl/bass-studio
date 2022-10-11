@@ -282,7 +282,7 @@ private:
                     const int32_t bpm100 = projGlobals.tempo100;
 
 
-                    const auto props = host->getAudioStreamProperties();
+                    const auto props = host->updateAudioStreamProperties();
 
 
                     const bool isLoopAround = tickPos + props.ticksPerBlock >= projGlobals.loopStart + projGlobals.loopLen;

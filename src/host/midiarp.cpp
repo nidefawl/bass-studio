@@ -537,7 +537,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
 #endif
 
     std::vector<midievent_note_t> noteEvents = noteEventsIn;
-    sortNoteEvents(noteEvents);
+    DAW::Host::sortNoteEvents(noteEvents);
 
     int nSend = 0;
     size_t eventIdx = 0;
@@ -816,7 +816,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
     nSend += endOutputNotes(arpLoopEnd, start, end, loopStart, loopEnd, noteEventsProcessed);
 
     if (nSend)
-        sortNoteEvents(noteEventsProcessed);
+        DAW::Host::sortNoteEvents(noteEventsProcessed);
 }
 
 void midiarp::updateAutomatedParameters(const Host::PluginManager* const host, tick_t tick, playback_state state) {

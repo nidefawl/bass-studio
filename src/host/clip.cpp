@@ -192,7 +192,7 @@ bool clip_notes_t::has(note_t* notePtr) const {
 }
 
 size_t removeDuplicatesImpl(std::vector<note_t>& m_list) {
-    sort(m_list.begin(), m_list.end());
+    std::sort(m_list.begin(), m_list.end());
     auto itNewEnd  = unique(m_list.begin(), m_list.end());
     size_t removed = m_list.end() - itNewEnd;
     m_list.erase(itNewEnd, m_list.end());

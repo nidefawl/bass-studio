@@ -5,6 +5,7 @@
 #include "automation.h"
 #include "config.h"
 #include "host/plugin/base_plugin.h"
+#include "plugins/synth/IPlugMidi.h"
 #include "vst_plugin.h"
 #include "host/vst_event.h"
 #include "math/seq_math.h"
@@ -922,11 +923,8 @@ void vstplugin::processMidi(midi_data_processing_t& midiEvents) {
                     log_lf(Log::L_WARN, "VST: ctrl event out of range: %d", offsetInBlock);
                     continue;
                 }
-                midiEventsBuf->writeVstCtrlEvent(evt, offsetInBlock);
+                midiEventsBuf->writeMidiMessage(evt.message, offsetInBlock);
             }
-            dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) numEvents);
-            //TODO: decide if we should make a copy, plugin may manipulate data
-            //VstEvent_t midiEventsBufTemp = *midiEventsBuf;
             midiEventsBuf->sort();
             this->midiEventsDispatched += handle->midiEventsBuf->vstEvents->numEvents;
             this->dispatch(effProcessEvents, 0, 0, handle->midiEventsBuf->vstEvents);
