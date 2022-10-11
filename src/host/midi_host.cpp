@@ -570,14 +570,6 @@ std::vector<MidiIOEvent> midihost::getInputMessages() {
         dev.midiMsgs.clear();
     }
     std::sort(ret.begin(), ret.end(), [](auto& a, auto& b) {
-        if (a.timestamp == b.timestamp) {
-            // Put note on before note off
-            bool isNoteOnA = (Pm_MessageStatus(a.message) & MIDI_CODE_MASK) == 0x90;
-            bool isNoteOnB = (Pm_MessageStatus(b.message) & MIDI_CODE_MASK) == 0x90;
-            if (isNoteOnA != isNoteOnB) {
-                return isNoteOnA;
-            }
-        }
         return a.timestamp < b.timestamp;
     });
     return ret;
@@ -590,14 +582,6 @@ std::vector<MidiIOEvent> midihost::getInspectionInputMessages() {
         dev.midiBufferInspect.clear();
     }
     std::sort(ret.begin(), ret.end(), [](auto& a, auto& b) {
-        if (a.timestamp == b.timestamp) {
-            // Put note on before note off
-            bool isNoteOnA = (Pm_MessageStatus(a.message) & MIDI_CODE_MASK) == 0x90;
-            bool isNoteOnB = (Pm_MessageStatus(b.message) & MIDI_CODE_MASK) == 0x90;
-            if (isNoteOnA != isNoteOnB) {
-                return isNoteOnA;
-            }
-        }
         return a.timestamp < b.timestamp;
     });
     return ret;

@@ -75,6 +75,7 @@ namespace DAW::Host {
         void update(tick_t blockStart, const std::vector<midievent_note_t>& _noteEvts, const std::vector<midievent_ctrl_t>& _ctrlEvts);
         void reset() {
             noteEvts.clear();
+            ctrlEvts.clear();
         }
         void getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& noteEvtsOuts, std::vector<midievent_ctrl_t>& ctrlEvtsOut);
     };

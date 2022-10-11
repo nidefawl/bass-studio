@@ -783,14 +783,14 @@ namespace PluginSynth {
             return getRandom() * 0.5;
         }
         void Release() {
-            std::for_each(first, last, [](Voice& voice) {
+            std::for_each(voices.begin(), voices.end(), [](Voice& voice) {
                 voice.Release();
             });
         }
 
         void SetNote(int n) {
             note = n;
-            std::for_each(first, last, [n](Voice& voice) {
+            std::for_each(voices.begin(), voices.end(), [n](Voice& voice) {
                 voice.SetNote(n);
             });
         }
@@ -799,19 +799,19 @@ namespace PluginSynth {
         }
 
         void SetPitchBendFactor(double f) {
-            std::for_each(first, last, [f](Voice& voice) {
+            std::for_each(voices.begin(), voices.end(), [f](Voice& voice) {
                 voice.SetPitchBendFactor(f);
             });
         }
 
         void ResetPitch() {
-            std::for_each(first, last, [](Voice& voice) {
+            std::for_each(voices.begin(), voices.end(), [](Voice& voice) {
                 voice.ResetPitch();
             });
         }
 
         void SetVelocity(double v) {
-            std::for_each(first, last, [v](Voice& voice) {
+            std::for_each(voices.begin(), voices.end(), [v](Voice& voice) {
                 voice.SetVelocity(v);
             });
         }

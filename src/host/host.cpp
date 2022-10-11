@@ -374,13 +374,13 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
     std::vector<MidiIOEvent> msgs = midihost::getInstance()->getInputMessages();
     bool notesProcessed = false;
     if (!msgs.empty()) {
-        std::sort(msgs.begin(), msgs.end(), [](const auto& lhs, const auto& rhs) {
-            return lhs.timestamp < rhs.timestamp;
-        });
         const auto midiTimeNow = getMidiTime(nullptr);
         for (MidiIOEvent& msg : msgs) {
             auto timeUntilStart = (msg.timestamp - midiTimeNow);
             auto tickEvtDelay = math::rounddS32(dTickPosBlockStart + (timeUntilStart * msToTicks) + realtimeMidiDelay);
+            if (tickEvtDelay < dTickPosBlockStart) {
+                log_lf(Log::L_WARN, "Midi event too late: %d", tickEvtDelay);
+            }
             int32_t command = MidiMsgStatus(msg.message) & MIDI_CODE_MASK;
             if (command == MIDI_ON_NOTE && MidiMsgData2(msg.message) != 0) {
                 note_t note;
@@ -449,10 +449,27 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
             }
         }
     }
+    if (midiRealtimeInput.events.m_list.size()) {
+        auto it = midiRealtimeInput.events.m_list.begin();
+        while (it != midiRealtimeInput.events.m_list.end()) {
+            auto& evt = *it;
+            if (evt.tick < dTickPosBlockStart - realtimeMidiDelay * 4.0) {
+                it = midiRealtimeInput.events.m_list.erase(it);
+            } else {
+                it++;
+            }
+        }
+    }
     if (notesProcessed) {
         std::sort(midiRealtimeInput.notes.m_list.begin(), midiRealtimeInput.notes.m_list.end());
         midiRealtimeInput.notes.updateBounds();
     }
+    /* if (!midiRealtimeInput.events.m_list.empty()) {
+        for (auto& evt : midiRealtimeInput.events.m_list) {
+            auto msg = IMidiMsg::FromU32AndTick(evt.message, evt.tick);
+            log_lf(Log::L_DEBUG, "Block %f: ctrlEvtsOut %s\n", dTickPosBlockStart, msg.ToString().c_str());
+        }
+    } */
 }
 
 void Host::preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings) {

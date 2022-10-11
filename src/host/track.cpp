@@ -1075,20 +1075,24 @@ void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const DAW::Host::midi
             if (!list.capacity()) {
                 list.reserve(4);
             }
-            auto it = std::find_if(list.begin(), list.end(), [&note](const note_t& n) {
+            auto it = std::find_if(list.begin(), list.end(), [&note](const auto& n) {
                 return n.time > note.time;
             });
             list.insert(it, note);
         }
     }
-    for (auto& evt : data.events.m_list) {
-        if (evt.tick >= absStart && evt.tick < absEnd) {
-            if (!ctrlEvts.capacity()) {
-                ctrlEvts.reserve(4);
-            }
-            ctrlEvts.push_back(evt);
-        }
-    }
+    // for (auto& evt : data.events.m_list) {
+    //     if (evt.tick >= absStart && evt.tick < absEnd) {
+    //         if (!ctrlEvts.capacity()) {
+    //             ctrlEvts.reserve(4);
+    //         }
+    //         auto it = std::find_if(ctrlEvts.begin(), ctrlEvts.end(), [&evt](const auto& n) {
+    //             return n.tick > evt.tick;
+    //         });
+    //         ctrlEvts.insert(it, evt);
+    //     }
+    // }
+    ctrlEvts = data.events.m_list;
     constexpr bool logProcessedNotes = false;
     if (logProcessedNotes && !data.notes.empty()) {
         // print absStart to absEnd range we looked at
@@ -2103,15 +2107,27 @@ void noteevent_buffer::update(tick_t blockStart, const std::vector<midievent_not
             it++;
         }
     }
-    addAll(ctrlEvts, _ctrlEvts);
-    auto it2 = ctrlEvts.begin();
-    while (it2 != ctrlEvts.end()) {
-        auto& evt = *it2;
-        if (evt.tick < currentTick - (eventTimeout)) {
-            it2 = ctrlEvts.erase(it2);
-        } else {
-            it2++;
+    // addAll(ctrlEvts, _ctrlEvts);
+    auto itSrc = _ctrlEvts.begin();
+    auto itEvt = ctrlEvts.begin();
+    while (itEvt != ctrlEvts.end() && itSrc != _ctrlEvts.end()) {
+        auto& src = *itSrc;
+        if (itEvt->tick < currentTick - (eventTimeout)) {
+            itEvt = ctrlEvts.erase(itEvt);
+            continue;
         }
+        if (itEvt->tick > src.tick) {
+            itEvt = ctrlEvts.insert(itEvt, src);
+            itSrc++;
+            continue;
+        }
+        if (itEvt->tick == src.tick && itEvt->message == src.message) {
+            break;
+        }
+        itEvt++;
+    }
+    while (itSrc != _ctrlEvts.end()) {
+        ctrlEvts.push_back(*itSrc++);
     }
 }
 
@@ -2136,6 +2152,13 @@ void noteevent_buffer::getNotesDelayed(tick_t tickLatencyCompensated, const doub
                 ctrlEvtsOut.emplace_back(evt);
             }
         }
+        /* if (!ctrlEvtsOut.empty()) {
+            log_lf(Log::L_DEBUG, "%zd events in range %d %f. %zd events total\n", ctrlEvtsOut.size(), tickLatencyCompensated, tickLatencyCompensated+ticksPerBlock, ctrlEvts.size());
+            for (auto& evt : ctrlEvtsOut) {
+                auto msg = IMidiMsg::FromU32AndTick(evt.message, evt.tick);
+                log_lf(Log::L_DEBUG, "in range: %s\n", msg.ToString().c_str());
+            }
+        } */
     }
 }
 
