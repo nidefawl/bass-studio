@@ -23,6 +23,7 @@
 #include "error.h"
 #include "basectrl.h"
 #include "saferef.h"
+#include "types.h"
 #include "util/profiling.h"
 #include "window.h"
 #include "platform.h"
@@ -2168,12 +2169,13 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
     tls.host->getDeferredEffects(pluginsDeferred);
 
     if ((flags & FLAG_DEFER_LOAD) == 0) {
-        int len = pluginsDeferred.size();
-        for (int i = 0; i < len; i++) {
+         auto len = pluginsDeferred.size();
+        for (size_t i = 0; i < len; i++) {
             dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
             auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
-            effectbase* pluginLoaded;
+            effectbase* pluginLoaded = nullptr;
             tls.host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
+            (void) pluginLoaded;
         }
     }
 
@@ -2418,7 +2420,9 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
                     //clip.notes = move(notes);
                     clip.audio.id = audio->id;
                     clip.setLenSamples(sample->nSamples);
-                    clip.setLen(daw.samplesToTicks(sample->nSamples));
+                    auto host = daw.getHost();
+                    dbgassert(host);
+                    clip.setLen(sampleToTickConvert<tick_t, roundmode::round>(sample->nSamples, daw.projectGlobals.tempo100, host->m_sampleFormatInternal.sampleRate));
                     clip.loopEnabled = false;
 
                     std::shared_ptr<track_clipboard_t> trClipboard = std::make_shared<track_clipboard_t>();
@@ -2518,6 +2522,7 @@ void DawCtrl::filesDropCancel() {
     tmpFileDragPaths.clear();
     daw.dragdropclip.reset();
 }
+
 bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
     clipreset rst(daw.dragdropclip);
     if (guiDragged || guiCaptured) {
@@ -3169,18 +3174,6 @@ int handleFatalError(int type, int implSpecType) {
         }
     } */
     return 0;
-}
-
-int32_t project_controller_t::tickToSamples(tick_t ticks) {
-    auto host = DawInstance::get()->getHost();
-    dbgassert(host);
-    return tickToSampleConvert<int32_t, roundmode::round>(ticks, projectGlobals->tempo100, host->m_sampleFormatInternal.sampleRate);
-}
-
-tick_t project_controller_t::samplesToTicks(int32_t sample) {
-    auto host = DawInstance::get()->getHost();
-    dbgassert(host);
-    return sampleToTickConvert<tick_t, roundmode::round>(sample, projectGlobals->tempo100, host->m_sampleFormatInternal.sampleRate);
 }
 
 beatbar16th_t project_controller_t::toBeatBar16th(tick_t tick, bool isRelative) {
