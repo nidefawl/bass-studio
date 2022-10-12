@@ -481,7 +481,7 @@ void MidiFile::splitTracks() {
     }
 
     MidiEventList* olddata = tracks[0];
-    tracks[0]              = NULL;
+    tracks[0]              = nullptr;
     tracks.resize(newtrackCount);
     for (i = 0; i < newtrackCount; i++) {
         tracks[i] = new MidiEventList;
@@ -540,7 +540,7 @@ void MidiFile::splitTracksByChannel() {
         return;
     }
 
-    tracks[0] = NULL;
+    tracks[0] = nullptr;
     tracks.resize(newtrackCount);
     for (i = 0; i < newtrackCount; i++) {
         tracks[i] = new MidiEventList;
@@ -1190,7 +1190,7 @@ double MidiFile::getTimeInSeconds(int tickvalue) {
     void* ptr = bsearch(&key, timemap.data(), timemap.size(),
                         sizeof(_TickTime), ticksearch);
 
-    if (ptr == NULL) {
+    if (ptr == nullptr) {
         // The specific tick value was not found, so do a linear
         // search for the two tick values which occur before and
         // after the tick value, and do a linear interpolation of
@@ -1221,7 +1221,7 @@ int MidiFile::getAbsoluteTickTime(double starttime) {
     void* ptr = bsearch(&key, timemap.data(), timemap.size(),
                         sizeof(_TickTime), secondsearch);
 
-    if (ptr == NULL) {
+    if (ptr == nullptr) {
         // The specific seconds value was not found, so do a linear
         // search for the two time values which occur before and
         // after the given time value, and do a linear interpolation of
@@ -1297,7 +1297,7 @@ int MidiFile::linkNotePairs() {
     int i;
     int sum = 0;
     for (i = 0; i < getTrackCount(); i++) {
-        if (tracks[i] == NULL) {
+        if (tracks[i] == nullptr) {
             continue;
         }
         sum += tracks[i]->linkNotePairs();
@@ -1311,7 +1311,7 @@ int MidiFile::linkEventPairs() {
 
 void MidiFile::clearLinks() {
     for (int i = 0; i < getTrackCount(); i++) {
-        if (tracks[i] == NULL) {
+        if (tracks[i] == nullptr) {
             continue;
         }
         tracks[i]->clearLinks();
@@ -1704,7 +1704,7 @@ void MidiFile::clear_no_deallocate() {
     for (int i = 0; i < getTrackCount(); i++) {
         tracks[i]->detach();
         delete tracks[i];
-        tracks[i] = NULL;
+        tracks[i] = nullptr;
     }
     tracks.resize(1);
     tracks[0]    = new MidiEventList;

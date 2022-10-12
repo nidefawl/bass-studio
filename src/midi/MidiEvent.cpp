@@ -108,7 +108,7 @@ MidiEvent& MidiEvent::operator=(const std::vector<uint8_t>& bytes) {
 
 /* Disassociate this event with another. Also tell the other event to disassociate from this event */
 void MidiEvent::unlinkEvent() {
-    if (eventlink == NULL) {
+    if (eventlink == nullptr) {
         return;
     }
     MidiEvent* mev = eventlink;
@@ -118,12 +118,12 @@ void MidiEvent::unlinkEvent() {
 
 /* Make a link between two messages */
 void MidiEvent::linkEvent(MidiEvent* mev) {
-    if (mev->eventlink != NULL) {
+    if (mev->eventlink != nullptr) {
         // unlink other event if it is linked to something else;
         mev->unlinkEvent();
     }
     // if this is already linked to something else, then unlink:
-    if (eventlink != NULL) {
+    if (eventlink != nullptr) {
         eventlink->unlinkEvent();
     }
     unlinkEvent();
@@ -138,14 +138,14 @@ void MidiEvent::linkEvent(MidiEvent& mev) {
 
 /* Returns a linked event.  Usually
    this is the note-off message for a note-on message and vice-versa.
-   Returns null if there are no links. */
+   Returns nullptr if there are no links. */
 MidiEvent* MidiEvent::getLinkedEvent() {
     return eventlink;
 }
 
-/* Returns true if there is an event which is not NULL.  This function is similar to getLinkedEvent(). */
+/* Returns true if there is an event which is not nullptr.  This function is similar to getLinkedEvent(). */
 int MidiEvent::isLinked() {
-    return eventlink == NULL ? 0 : 1;
+    return eventlink == nullptr ? 0 : 1;
 }
 
 /* For linked events (note-ons and note-offs),
@@ -154,7 +154,7 @@ int MidiEvent::isLinked() {
    delta tick mode.  Returns 0 if not linked. */
 int MidiEvent::getTickDuration() {
     MidiEvent* mev = getLinkedEvent();
-    if (mev == NULL) {
+    if (mev == nullptr) {
         return 0;
     }
     int tick2 = mev->tick;
@@ -171,7 +171,7 @@ int MidiEvent::getTickDuration() {
    Otherwise the duration will be reported as zero. */
 double MidiEvent::getDurationInSeconds() {
     MidiEvent* mev = getLinkedEvent();
-    if (mev == NULL) {
+    if (mev == nullptr) {
         return 0;
     }
     double seconds2 = mev->seconds;
