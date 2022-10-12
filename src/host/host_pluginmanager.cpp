@@ -197,7 +197,7 @@ bool PluginManager::addDeferredEffect(effectbase* plugin) {
     }
     auto it = std::find_if(pluginsDeferred.begin(), pluginsDeferred.end(), [plugin](auto* eff) { return eff->projectGlobalId == plugin->projectGlobalId; });
     if (it != pluginsDeferred.end()) {
-        log_lf(Log::L_ERROR, "Duplicate plugin id %d", plugin->projectGlobalId);
+        log_lf(Log::L_ERROR, "Duplicate plugin id %d\n", plugin->projectGlobalId);
         return false;
     }
     pluginsDeferred.push_back(plugin);

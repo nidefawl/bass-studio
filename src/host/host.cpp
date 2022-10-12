@@ -379,7 +379,7 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
             auto timeUntilStart = (msg.timestamp - midiTimeNow);
             auto tickEvtDelay = math::rounddS32(dTickPosBlockStart + (timeUntilStart * msToTicks) + realtimeMidiDelay);
             if (tickEvtDelay < dTickPosBlockStart) {
-                log_lf(Log::L_WARN, "Midi event too late: %d", tickEvtDelay);
+                log_lf(Log::L_WARN, "Midi event too late: %d\n", tickEvtDelay);
             }
             int32_t command = MidiMsgStatus(msg.message) & MIDI_CODE_MASK;
             if (command == MIDI_ON_NOTE && MidiMsgData2(msg.message) != 0) {
