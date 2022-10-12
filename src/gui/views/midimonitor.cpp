@@ -62,37 +62,10 @@ public:
             x += rowHeight + spacing;
         }
 
-        // const float percWidth = size.x / 4;
         float xText = size.x - spacing;
-        // auto* _entry = safeRefGet(ref);
-        // if (_entry) {
-        //     host_stats_reducted_t stats{};
-        //     auto host = dawCtrl->getDaw()->getHost();
-        //     host->getShortStats(stats);
-        //     float fPercentLoad = stats.timePerBlock_usec <= 0 ? 0 : _entry->procStats.timeTrackProcessPlugins * 100.0f / stats.timePerBlock_usec;
-        //     String str = StringFormat("%.2f%%", fPercentLoad);
-        //     float x2 = size.x - spacing;
-        //     xText = x2 - renderText(vg, vec2(x2, rowHeight / 2), vec2(size.x*0.8, size.y), str, 0, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
-        //     if (size.x > rowHeight*10) {
-        //         str = StringFormat("%zdµs", _entry->procStats.timeTrackProcessPlugins);
-        //         x2 = size.x - percWidth - spacing;
-        //          xText = x2 - renderText(vg, vec2(x2, rowHeight / 2), vec2(size.x*0.3, size.y), str, 0, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
-        //     }
-        // }
         renderText(vg, vec2(x, rowHeight*0.5f), vec2(xText-x, size.y), getText());
         nvgTranslate(vg, -pos.x, -pos.y);
     }
-//     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override {
-//         auto tooltip  = new gui_test(ref);
-//         auto* graph   = &tooltip->getGraph();
-//         graph->size   = { 256, 128 };
-//         graph->pos    = { 0, 0 };
-//         tooltip->size = graph->size;
-//         tooltip->layout();
-// //        tooltip->canTakeInputFocus = true;
-//         tooltip->maxHeight = graph->size.y;
-//         return tooltip;
-//     }
 };
 
 class gui_midi_inspect_ctr : public guictr_base {
@@ -180,6 +153,9 @@ public:
                 g = new gui_midi_inspect_entry(midiMsg);
                 listEntriesMessages.insert(listEntriesMessages.begin(), g);
             }
+        }
+        while (listEntriesMessages.size() > 100) {
+            listEntriesMessages.pop_back();
         }
         btnClear.setLabel("Clear");
         btnClear.setEnabled(!listEntriesMessages.empty());
