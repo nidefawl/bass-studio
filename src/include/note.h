@@ -215,3 +215,9 @@ int cutIntersectingNotesFindDupe(std::vector<T>& m_list, T& n) {
     }
     return nAdjusted;
 }
+
+namespace DAW {
+    inline constexpr int32_t ToNoteNumber(int32_t octave, int32_t note) {
+        return ((octave + 2) * 12) + note;
+    }
+}

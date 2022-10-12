@@ -138,10 +138,6 @@ public:
     }
 };
 
-#define MAX_OCTAVES (8 - (-2))
-#define PIANOROLL_MIN_SCALE 4
-#define PIANOROLL_MAX_SCALE 48
-
 inline bool isSharp(int n) {
     n = n % 12;
     switch (n) {
@@ -164,6 +160,7 @@ protected:
     layout_pianoroll_t& layoutRoll;
 
 public:
+    static const int32_t MAX_OCTAVES = (8 - (-2));
     piano_scale(layout_pianoroll_t& _layout, clip_view& _clipview, int& _sizeY)
         : sizeY(_sizeY),
           clipview(_clipview),
@@ -201,14 +198,8 @@ public:
         float rel       = offsetKey - layoutRoll.offset();
         return (sizeY) -rel;
     }
-    void setOffset(float f) {
-        auto minOffset            = -(layoutRoll.scale() * MAX_OCTAVES * 1);
-        auto maxOffset            = layoutRoll.scale() * (MAX_OCTAVES - 1) * 12;
-        this->layoutRoll.offset() = math::clamp(f, minOffset, maxOffset);
-    }
-    void setScale(float f) {
-        this->layoutRoll.scale() = math::clamp<float>(f, PIANOROLL_MIN_SCALE, PIANOROLL_MAX_SCALE);
-    }
+    void setOffset(float f);
+    void setScale(float f);
     void showRange(int32_t noteFrom, int32_t noteTo) {
         noteTo++;
         int32_t nNotes   = math::abs(noteFrom - noteTo);
@@ -381,6 +372,7 @@ public:
           isVelocity(_isVel) {
         padding = 0;
     }
+    void renderBackground(NVGcontext* vg) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void setStatusText();
     void expandSelectionFrame(std::pair<note_t*, note_t*> minMax);
@@ -392,11 +384,6 @@ public:
     void handleDraggedRelease(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
-    void layout() override {
-        for (guibase* gui : guis) {
-            gui->layout();
-        }
-    }
 
 protected:
     void setGlobalSelectionFromClipSelection();
@@ -568,130 +555,15 @@ public:
     guictr_audioeditor audioeditor;
     gui_clipsettings settings;
     gui_arp arp;
-    guictr_clipeditor(clip_view& _view)
-        : guictr_base(),
-          view(_view),
-          noteeditor(view),
-          audioeditor(view),
-          settings(noteeditor.grid, _view),
-          arp(_view) {
-        // padding = 2;
-        setBackgroundRendered(true);
-        setBackgroundRenderedInset(false);
-        add(&noteeditor);
-        add(&audioeditor);
-        add(&arp);
-        add(&settings);
-    }
-    ~guictr_clipeditor() override {
-        remove(&settings);
-        remove(&arp);
-        remove(&audioeditor);
-        remove(&noteeditor);
-    }
-    void storeLayout() {
-        const clip_t* clip = view.clip();
-        const bool isMidi  = clip && clip->clipType == CLIP_MIDI;
-        if (isMidi) {
-            noteeditor.storeLayout();
-        } else {
-            audioeditor.storeLayout();
-        }
-    }
-    void showEditClip() {
-        const clip_t* clip = view.clip();
-        const bool isMidi  = clip && clip->clipType == CLIP_MIDI;
-        arp.setVisible(isMidi);
-        noteeditor.setVisible(isMidi);
-        audioeditor.setVisible(!isMidi);
-        settings.showEditClip();
-        if (isMidi) {
-            noteeditor.showEditClip();
-            arp.showEditClip();
-        } else {
-            audioeditor.showEditClip();
-        }
-        layout();
-    }
-    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-        if (!view.clip()) return false;
-        return guictr_base::mouseHitTest(mpos, evt);
-    }
-    void render(NVGcontext* vg) override {
-        if (isBackgroundRendered()) {
-            renderBackground(vg);
-        }
-        //guictr_base::setScissorTransform(vg);
-        ivec2 posInset = getPosContent();
-        nvgTranslate(vg, posInset.x, posInset.y);
-        if (view.clip()) {
-            nvgSave(vg);
-            settings.render(vg);
-            nvgRestore(vg);
-            if (arp.isVisible()) {
-                nvgSave(vg);
-                arp.render(vg);
-                nvgRestore(vg);
-            }
-            if (noteeditor.isVisible()) {
-                noteeditor.render(vg);
-            }
-            if (audioeditor.isVisible()) {
-                audioeditor.render(vg);
-            }
-        } else {
-            auto cs = vec2(getSizeContent());
-            renderText(vg, cs * 0.5f, size, "No clip selected", 18, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-        }
-        for (guibase* gui : guis) {
-            if (gui == &audioeditor)
-                continue;
-            if (gui == &noteeditor)
-                continue;
-            if (gui == &settings)
-                continue;
-            if (gui == &arp)
-                continue;
-            gui->render(vg);
-        }
-        //nvgResetScissor(vg);
-        nvgResetTransform(vg);
-    }
-    void layout() override {
-                const int32_t padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
-
-        ivec2 cs      = getSizeContent();
-        settings.pos  = ivec2(0, 0);
-        settings.size = ivec2(250, cs.y);
-
-        guibase* leftContainer = &settings;
-        if (arp.isVisible()) {
-            leftContainer = &arp;
-            arp.pos       = ivec2(settings.right() + padding, 0);
-            arp.size      = ivec2(250, cs.y);
-        }
-
-        noteeditor.pos   = ivec2(leftContainer->right() + padding, 0);
-        noteeditor.size  = ivec2(cs.x - leftContainer->right(), cs.y);
-        audioeditor.pos  = ivec2(leftContainer->right() + padding, 0);
-        audioeditor.size = ivec2(cs.x - leftContainer->right(), cs.y);
-
-        for (guibase* gui : guis) {
-            gui->layout();
-        }
-    }
-    bool handleKeyInput(KeyEvent& kevt) override {
-        if (audioeditor.isVisible()) {
-            return audioeditor.handleKeyInput(kevt);
-        }
-        return noteeditor.handleKeyInput(kevt);
-    }
-    bool handleEditorCommand(DAW::UI::CommandContext& ctxt) {
-        if (audioeditor.isVisible()) {
-            return audioeditor.handleEditorCommand(ctxt);
-        }
-        return noteeditor.handleEditorCommand(ctxt);
-    }
+    explicit guictr_clipeditor(clip_view& _view);
+    ~guictr_clipeditor() override;
+    void storeLayout();
+    void showEditClip();
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    void render(NVGcontext* vg) override;
+    void layout() override;
+    bool handleKeyInput(KeyEvent& kevt) override;
+    bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
 };
 
 
@@ -717,73 +589,10 @@ public:
     void getFrameBounds(vec2& posFrame, vec2& sizeFrame);
     void resetCache();
 
-    void handleDraggedBegin(MouseEvent& evt) override {
-        dragMode = drag_none;
-        auto mainCtrl = dawCtrl->getDaw()->getMainControl();
-        if (!mainCtrl->isClipEditorVisible()) {
-            MainCtrl::get()->showClipEditor();
-            return;
-        }
-        float scaleX = getScaleX();
-        float scaleXSS = getScreenSpaceScaleX();
-        vec2 posFrame, sizeFrame;
-        getFrameBounds(posFrame, sizeFrame);
-        // if click is outside frame then set offset to mousepos
-        if (evt.mousepos.x < posFrame.x || evt.mousepos.x > posFrame.x + sizeFrame.x) {
-            auto newOffset = (evt.relMousepos.x-sizeFrame.x*0.5f)*(scaleXSS/scaleX);
-            grid.setOffset(math::roundfS32(math::max(0.0f, newOffset)));
-            grid.notifyChange();
-            return;
-        }
-        parentCtrl->captureMouse(this);
-        dragMode = drag_view;
-        dragDirection         = -1;
-    }
-    void handleDraggedMove(MouseEvent& evt) override {
-        if (dragMode == drag_none) {
-            return;
-        }
-
-        if (evt.guiDragged == this) {
-            float scaleX   = getScaleX();
-            float scaleXSS = getScreenSpaceScaleX();
-            bool bChanged = false;
-            if (math::abs(evt.dragDistance->x) > 3) {
-                auto newOffset = grid.offset + evt.dragDistance->x * 1.0 / scaleX;
-                evt.dragDistance->x   = 0;
-                grid.setOffset(math::rounddS32(math::max(0.0, newOffset)));
-                grid.notifyChange();
-                bChanged |= true;
-            }
-
-            if (math::abs(evt.dragDistance->y) > 3) {
-                auto disty = 1.0f + evt.dragDistance->y * -0.01f;
-                evt.dragDistance->y = 0;
-                float anchor_dragposx = math::max(0.0f, evt.relMousepos.x * (scaleXSS / scaleX) - grid.getOffset());
-                auto dragPosObjSpace = grid.toObjSpace(anchor_dragposx);
-                grid.setZoom(grid.zoom * disty);
-                auto newOffset = grid.calcOffset(anchor_dragposx, dragPosObjSpace);
-                grid.setOffset(math::rounddS32(newOffset));
-                bChanged |= true;
-            }
-            if (bChanged) {
-                grid.notifyChange();
-            }
-        }
-    }
-    void handleDraggedRelease(MouseEvent& evt) override {
-        if (dragMode == drag_none) {
-            return;
-        }
-        DawInstance::get()->updateVisibleTrackContents();
-    }
-    void layout() override {
-    }
-    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-        if (this->contains(mpos)) {
-            evt.requestFocus(this);
-            return true;
-        }
-        return false;
-    }
+    void handleDraggedBegin(MouseEvent& evt) override;
+    void handleDraggedMove(MouseEvent& evt) override;
+    void handleDraggedRelease(MouseEvent& evt) override;
+    // void layout() override {
+    // }
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 };

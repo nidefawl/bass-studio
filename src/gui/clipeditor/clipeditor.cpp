@@ -24,12 +24,14 @@
 #include "track_impl.h"
 #include "host/host_pluginmanager.h"
 #include "appconfig.h"
+#include <cstdint>
 #include <nanovg.h>
 
 #include <utility>
 
 constexpr int32_t VEL_SELECT_DISTANCE = 16;
-
+constexpr int32_t PIANOROLL_MIN_SCALE = 4;
+constexpr int32_t PIANOROLL_MAX_SCALE = 48;
 
 class guictxtmenu_noteeditor : public guictxtmenu {
     guictr_noteeditor* editor;
@@ -77,7 +79,7 @@ public:
                 grid.grid_dens.enabled = false;
             } else if (_id >= 110) {
                 grid.grid_dens.enabled   = true;
-                grid.grid_dens.fixedBars = _id - 110;
+                grid.grid_dens.fixedBars = int8_t(_id - 110);
                 grid.grid_dens.isfixed   = true;
             } else {
                 grid.grid_dens.enabled        = true;
@@ -107,6 +109,139 @@ public:
         return true;
     }
 };
+
+guictr_clipeditor::guictr_clipeditor(clip_view& _view)
+    : guictr_base(),
+      view(_view),
+      noteeditor(view),
+      audioeditor(view),
+      settings(noteeditor.grid, _view),
+      arp(_view) {
+    // padding = 2;
+    setBackgroundRendered(true);
+    setBackgroundRenderedInset(false);
+    add(&noteeditor);
+    add(&audioeditor);
+    add(&arp);
+    add(&settings);
+}
+
+guictr_clipeditor::~guictr_clipeditor() {
+    remove(&settings);
+    remove(&arp);
+    remove(&audioeditor);
+    remove(&noteeditor);
+}
+
+void guictr_clipeditor::storeLayout() {
+    const clip_t* clip = view.clip();
+    const bool isMidi  = clip && clip->clipType == CLIP_MIDI;
+    if (isMidi) {
+        noteeditor.storeLayout();
+    } else {
+        audioeditor.storeLayout();
+    }
+}
+
+void guictr_clipeditor::showEditClip() {
+    const clip_t* clip = view.clip();
+    const bool isMidi  = clip && clip->clipType == CLIP_MIDI;
+    arp.setVisible(isMidi);
+    noteeditor.setVisible(isMidi);
+    audioeditor.setVisible(!isMidi);
+    settings.showEditClip();
+    if (isMidi) {
+        noteeditor.showEditClip();
+        arp.showEditClip();
+    } else {
+        audioeditor.showEditClip();
+    }
+    layout();
+}
+
+bool guictr_clipeditor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    if (!view.clip()) return false;
+    return guictr_base::mouseHitTest(mpos, evt);
+}
+
+void guictr_clipeditor::render(NVGcontext* vg) {
+    if (isBackgroundRendered()) {
+        renderBackground(vg);
+    }
+    //guictr_base::setScissorTransform(vg);
+    ivec2 posInset = getPosContent();
+    nvgTranslate(vg, posInset.x, posInset.y);
+    if (view.clip()) {
+        nvgSave(vg);
+        settings.render(vg);
+        nvgRestore(vg);
+        if (arp.isVisible()) {
+            nvgSave(vg);
+            arp.render(vg);
+            nvgRestore(vg);
+        }
+        if (noteeditor.isVisible()) {
+            noteeditor.render(vg);
+        }
+        if (audioeditor.isVisible()) {
+            audioeditor.render(vg);
+        }
+    } else {
+        auto cs = vec2(getSizeContent());
+        renderText(vg, cs * 0.5f, size, "No clip selected", 18, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+    }
+    for (guibase* gui : guis) {
+        if (gui == &audioeditor)
+            continue;
+        if (gui == &noteeditor)
+            continue;
+        if (gui == &settings)
+            continue;
+        if (gui == &arp)
+            continue;
+        gui->render(vg);
+    }
+    //nvgResetScissor(vg);
+    nvgResetTransform(vg);
+}
+
+void guictr_clipeditor::layout() {
+    const int32_t padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
+
+    ivec2 cs      = getSizeContent();
+    settings.pos  = ivec2(0, 0);
+    settings.size = ivec2(250, cs.y);
+
+    guibase* leftContainer = &settings;
+    if (arp.isVisible()) {
+        leftContainer = &arp;
+        arp.pos       = ivec2(settings.right() + padding, 0);
+        arp.size      = ivec2(250, cs.y);
+    }
+
+    noteeditor.pos   = ivec2(leftContainer->right() + padding, 0);
+    noteeditor.size  = ivec2(cs.x - leftContainer->right(), cs.y);
+    audioeditor.pos  = ivec2(leftContainer->right() + padding, 0);
+    audioeditor.size = ivec2(cs.x - leftContainer->right(), cs.y);
+
+    for (guibase* gui : guis) {
+        gui->layout();
+    }
+}
+
+bool guictr_clipeditor::handleKeyInput(KeyEvent& kevt) {
+    if (audioeditor.isVisible()) {
+        return audioeditor.handleKeyInput(kevt);
+    }
+    return noteeditor.handleKeyInput(kevt);
+}
+
+bool guictr_clipeditor::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
+    if (audioeditor.isVisible()) {
+        return audioeditor.handleEditorCommand(ctxt);
+    }
+    return noteeditor.handleEditorCommand(ctxt);
+}
 
 void gui_clipcontent::handleRightClick(MouseEvent& evt) {
     guictr_noteeditor* editor = dynamic_cast<guictr_noteeditor*>(this->parent);
@@ -237,31 +372,38 @@ void duplicateClipLoop(DawInstance* daw, clip_view& view) {
         }
     }
 }
+
+void gui_clipcontent::renderBackground(NVGcontext* vg) {
+    ivec2 bgPos{0, 0};
+    ivec2 bgSize{this->size};
+    auto bgRepeat = grid.incr_bg * 2.0;
+    auto bgOffset = fmod(double(grid.offset), bgRepeat);
+    int steps_bg  = math::ceildS32((bgSize.x + bgRepeat) / grid.incr_bg);
+    nvgBeginPath(vg);
+    nvgRect(vg, bgPos.x + -2, bgPos.y, bgSize.x + 2, bgSize.y);
+    nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
+    nvgFill(vg);
+
+    double x = -bgOffset;
+    for (int i = 0; i < steps_bg; i += 2) {
+        nvgBeginPath(vg);
+        nvgRect(vg, float(bgPos.x + x), bgPos.y, float(grid.incr_bg), bgSize.y);
+        nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
+        nvgFill(vg);
+        x += grid.incr_bg * 2.0;
+        if (x > bgSize.x)
+            break;
+    }
+}
+
 void gui_clipcontent_velocities::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
-    float w         = (float) size.x;
-    double bgRepeat = grid.incr_bg * 2.0;
-    float bgOffset  = (float) fmod((double) grid.offset, bgRepeat);
-    int steps_bg    = math::ceildS32((w + bgRepeat) / grid.incr_bg);
-    float x         = -bgOffset;
+    renderBackground(vg);
 
-    nvgBeginPath(vg);
-    nvgRect(vg, -2, 0, w + 2, size.y);
-    nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
-    nvgFill(vg);
-    for (int i = 0; i < steps_bg; i += 2) {
-        nvgBeginPath(vg);
-        nvgRect(vg, x, 0, grid.incr_bg, size.y);
-        nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
-        nvgFill(vg);
-        x += grid.incr_bg * 2.0f;
-        if (x > w)
-            break;
-    }
-
-    const float h             = size.y;
+    float w = size.x;
+    const float h = size.y;
     const clip_notes_t& notes = view.clip()->notes;
     NVGpaint paint{};
     paint.image     = -1;
@@ -276,13 +418,13 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
             for (const note_t& note: notes.m_list) {
                 if ((i == 0) != note.isEnabled())
                     continue;
-                float nx = grid.tickToScreenD(note.time);
+                auto nx = grid.tickToScreenD(note.time);
                 if (nx + nw / 2.0f < -extendCullCheck) continue;
                 if (nx - nw / 2.0f > w + extendCullCheck) continue;
-                float nh     = velocityToFloat(note.velocity) * h;
-                float insetx = calcInset(1, nw);
-                float insety = calcInset(1, nh);
-                nvgBatchedRect(vg, nx - nw / 2.0f + insetx, size.y - nh + insety, nw - insetx * 2, nh - insety * 2);
+                auto nh     = velocityToFloat(note.velocity) * h;
+                auto insetx = calcInset(1, nw);
+                auto insety = calcInset(1, nh);
+                nvgBatchedRect(vg, float(nx - nw / 2.0f + insetx), size.y - nh + insety, nw - insetx * 2, nh - insety * 2);
                 nRendered++;
             }
             if (nRendered) {
@@ -294,11 +436,11 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
                 for (const note_t& note: notes.m_list) {
                     if ((i == 0) != note.isEnabled())
                         continue;
-                    float nx = grid.tickToScreenD(note.time);
+                    auto nx = grid.tickToScreenD(note.time);
                     if (nx + r < -extendCullCheck) continue;
                     if (nx - r > w + extendCullCheck) continue;
-                    float nh = velocityToFloat(note.velocity) * h;
-                    nvgBatchedRect(vg, nx - r, size.y - nh - r, r * 2, r * 2);
+                    auto nh = velocityToFloat(note.velocity) * h;
+                    nvgBatchedRect(vg, float(nx - r), size.y - nh - r, r * 2, r * 2);
                 }
                 paint.renderType = 5;
                 nvgFillPaint(vg, paint);
@@ -314,13 +456,13 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
             for (const note_t* pnote: notes.selection) {
                 if ((i == 0) != pnote->isEnabled())
                     continue;
-                float nx = grid.tickToScreenD(pnote->time);
+                auto nx = grid.tickToScreenD(pnote->time);
                 if (nx + nw / 2.0f < -extendCullCheck) continue;
                 if (nx - nw / 2.0f > w + extendCullCheck) continue;
-                float nh     = velocityToFloat(pnote->velocity) * h;
-                float insetx = calcInset(1, nw);
-                float insety = calcInset(1, nh);
-                nvgBatchedRect(vg, nx - nw / 2.0f + insetx, size.y - nh + insety, nw - insetx * 2, nh - insety * 2);
+                auto nh     = velocityToFloat(pnote->velocity) * h;
+                auto insetx = calcInset(1, nw);
+                auto insety = calcInset(1, nh);
+                nvgBatchedRect(vg, float(nx - nw / 2.0f + insetx), size.y - nh + insety, nw - insetx * 2, nh - insety * 2);
                 nRendered++;
             }
             if (nRendered) {
@@ -331,11 +473,11 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
                 for (const note_t* pnote: notes.selection) {
                     if ((i == 0) != pnote->isEnabled())
                         continue;
-                    float nx = grid.tickToScreenD(pnote->time);
+                    auto nx = grid.tickToScreenD(pnote->time);
                     if (nx + r < -extendCullCheck) continue;
                     if (nx - r > w + extendCullCheck) continue;
-                    float nh = velocityToFloat(pnote->velocity) * h;
-                    nvgBatchedRect(vg, nx - r, size.y - nh - r, r * 2, r * 2);
+                    auto nh = velocityToFloat(pnote->velocity) * h;
+                    nvgBatchedRect(vg, float(nx - r), size.y - nh - r, r * 2, r * 2);
                 }
                 paint.renderType = 5;
                 nvgFillPaint(vg, paint);
@@ -346,31 +488,27 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
     nvgShapeAntiAlias(vg, USE_NANOVG_AA);
     if (dragMode <= drag_frame) {
         const int32_t nw = 6;
-        const float r    = 6;
-        ivec2 imouse     = toControlsObjectSpace(dawCtrl->m_mousePos, this);
-        bool mouseIn     = dawCtrl->guiOver == this && contains(imouse + getPosContent());
+        const float r = 6;
+        ivec2 imouse  = toControlsObjectSpace(dawCtrl->m_mousePos, this);
+        bool mouseIn  = dawCtrl->guiOver == this && contains(imouse + getPosContent());
         if (mouseIn) {
             tick_t mouseTick = !mouseIn ? INVALID_TICK : grid.screenToTickSnap(imouse.x, SNAP_OFF);
-            //    vec2 fmouse = vec2(imouse);
             int32_t velClicked = screenToVel(imouse.y, size.y);
             int32_t velDist    = VEL_SELECT_DISTANCE * 127 / size.y;
-            //    const tick_t tickExact = grid.screenToTickSnap(imouse.x, SNAP_OFF);
             note_t* contextNote = getMinDistNoteVel(view.clip()->notes, mouseTick, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
             if (contextNote) {
-
-
                 nvgBeginPath(vg);
-                float nx     = grid.tickToScreenD(contextNote->time);
-                float nh     = velocityToFloat(contextNote->velocity) * h;
-                float insetx = calcInset(1, nw);
-                float insety = calcInset(1, nh);
-                nvgRect(vg, nx - nw / 2.0f + insetx, size.y - nh + insety, nw - insetx * 2, nh - insety * 2);
+                auto nx     = grid.tickToScreenD(contextNote->time);
+                auto nh     = velocityToFloat(contextNote->velocity) * h;
+                auto insetx = calcInset(1, nw);
+                auto insety = calcInset(1, nh);
+                nvgRect(vg, float(nx - nw / 2.0f + insetx), size.y - nh + insety, nw - insetx * 2, nh - insety * 2);
 
                 nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_SELECTED));
                 nvgFill(vg);
 
                 nvgBeginPath(vg);
-                nvgCircle(vg, nx, size.y - nh, r);
+                nvgCircle(vg, float(nx), size.y - nh, r);
 
                 nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_SELECTED));
                 nvgFill(vg);
@@ -387,7 +525,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
     //    fmouse.x = point->x;
     //  }
 
-    x = (float) grid.tickToScreenD(view.cursor.start);
+    auto x = float(grid.tickToScreenD(view.cursor.start));
     if (view.cursor.start == view.cursor.end) {
         if (x >= -2 && x < size.x + 2) {
             x += 0.5;
@@ -419,27 +557,10 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
-    float w         = (float) size.x;
-    double bgRepeat = grid.incr_bg * 2.0;
-    float bgOffset  = (float) fmod((double) grid.offset, bgRepeat);
-    int steps_bg    = math::ceildS32((w + bgRepeat) / grid.incr_bg);
-    float x         = -bgOffset;
+    renderBackground(vg);
 
-    nvgBeginPath(vg);
-    nvgRect(vg, -2, 0, w + 2, size.y);
-    nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
-    nvgFill(vg);
-    for (int i = 0; i < steps_bg; i += 2) {
-        nvgBeginPath(vg);
-        nvgRect(vg, x, 0, grid.incr_bg, size.y);
-        nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
-        nvgFill(vg);
-        x += grid.incr_bg * 2.0f;
-        if (x > w)
-            break;
-    }
-
-    float h             = size.y;
+    float w = size.x;
+    float h = size.y;
     clip_notes_t& notes = view.clip()->notes;
     bool fold           = layoutRoll.fold;
     float offset        = layoutRoll.offset();
@@ -509,8 +630,8 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         //    }
     } else {
 
-        int32_t firstOctave = floorf(firstKey / 12.0f);
-        firstKey            = firstKey % 12;
+        auto firstOctave = math::floordS32(firstKey / 12.0f);
+        firstKey = firstKey % 12;
 
         //    nvgSave(vg);
         //    nvgTranslate(vg, 0, yOff);
@@ -527,6 +648,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                     break;
                 }
             }
+            nvgSetShapeExtents(vg, 0, 0, size.x, size.y);
             nvgFillColor(vg, theme->getColor(GuiColor::COL_CLIPEDITOR_SHARP));
             nvgFill(vg);
 
@@ -570,16 +692,16 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             for (note_t& note: notes.m_list) {
                 if ((i == 0) != note.isEnabled())
                     continue;
-                float nx = grid.tickToScreenD(note.time);
-                float nw = grid.tickLenToScreen(note.len);
+                auto nx = grid.tickToScreenD(note.time);
+                auto nw = grid.tickLenToScreen(note.len);
                 if (nx + nw < -4)
                     continue;
                 if (nx > w + 4)
                     continue;
-                float ny     = toScreenF(note.pitch);
-                float nh     = scale;
-                float insetx = calcInset(1, nw);
-                float insety = calcInset(1, nh);
+                auto ny     = toScreenF(note.pitch);
+                auto nh     = scale;
+                auto insetx = calcInset(1, nw);
+                auto insety = calcInset(1, nh);
                 nvgBatchedRect(vg, nx + insetx, ny - scale + insety, nw - insetx * 2, nh - insety * 2);
                 nRendered++;
             }
@@ -596,7 +718,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
     }
     // nvgBeginPath(vg);
 
-    x = (float) grid.tickToScreenD(view.cursor.start);
+    auto x = float(grid.tickToScreenD(view.cursor.start));
     if (view.cursor.start == view.cursor.end) {
         if (x >= -2 && x < size.x + 2) {
             x += 0.5;
@@ -719,7 +841,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                             pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
                         }
                     }
-                    float nx = grid.tickToScreenD(pos);
+                    auto nx = grid.tickToScreenD(pos);
                     if (nx < -4)
                         continue;
                     if (nx > w + 4)
@@ -735,7 +857,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
                         setFont(vg, G_FONT_SCALE(24), THEMECOL_TEXT, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
                         float bounds[4];
                         float textX = nx + INSET_TRACK_CONTENT;
-                        float textY = m.yOffset * 24 + 24 / 2.0 + INSET_TRACK_CONTENT + yoff;
+                        float textY = m.yOffset * 24 + 24 / 2.0f + INSET_TRACK_CONTENT + yoff;
                         nvgTextBounds(vg, textX, textY, cstr.c_str(), nullptr, bounds);
                         nvgBeginPath(vg);
                         nvgRect(vg, bounds[0], bounds[1], bounds[2] - bounds[0], bounds[3] - bounds[1]);
@@ -775,8 +897,8 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 
     if (scale >= 10) {
         for (note_t& note: notes.m_list) {
-            float nx = grid.tickToScreenD(note.time);
-            float nw = grid.tickLenToScreen(note.len);
+            auto nx = grid.tickToScreenD(note.time);
+            auto nw = grid.tickLenToScreen(note.len);
             if (nx + nw < -4)
                 continue;
             if (nx > w + 4)
@@ -789,8 +911,8 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         }
         for (note_t* pNote: notes.selection) {
             auto& note = *pNote;
-            float nx = grid.tickToScreenD(note.time);
-            float nw = grid.tickLenToScreen(note.len);
+            auto nx = grid.tickToScreenD(note.time);
+            auto nw = grid.tickLenToScreen(note.len);
             if (nx + nw < -4)
                 continue;
             if (nx > w + 4)
@@ -979,10 +1101,10 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
     if (dragMode == drag_frame) {
         *evt.dragDistance     = ivec2(0);
 
-        float xStart     = math::min(dragBegin.x, dragTo.x);
-        float xEnd       = math::max(dragBegin.x, dragTo.x);
-        float yStart     = math::min(dragBegin.y, dragTo.y);
-        float yEnd       = math::max(dragBegin.y, dragTo.y);
+        auto xStart     = math::min(dragBegin.x, dragTo.x);
+        auto xEnd       = math::max(dragBegin.x, dragTo.x);
+        auto yStart     = math::min(dragBegin.y, dragTo.y);
+        auto yEnd       = math::max(dragBegin.y, dragTo.y);
         tick_t tickStart = grid.screenToTickSnap(xStart, SNAP_OFF);
         tick_t tickEnd   = grid.screenToTickSnap(xEnd, SNAP_OFF);
         tick_t tickOver  = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
@@ -1712,6 +1834,7 @@ float guictr_clipeditorview::getScreenSpaceScaleX() {
         return 1.0f;
     return csEditor.x / static_cast<float>(cs.x);
 }
+
 void guictr_clipeditorview::getFrameBounds(vec2& posFrame, vec2& sizeFrame) {
     float scaleX = getScaleX();
     float scaleXSS = getScreenSpaceScaleX();
@@ -1783,6 +1906,77 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
     }
 }
 
+void guictr_clipeditorview::handleDraggedBegin(MouseEvent& evt) {
+    dragMode      = drag_none;
+    auto mainCtrl = dawCtrl->getDaw()->getMainControl();
+    if (!mainCtrl->isClipEditorVisible()) {
+        MainCtrl::get()->showClipEditor();
+        return;
+    }
+    float scaleX   = getScaleX();
+    float scaleXSS = getScreenSpaceScaleX();
+    vec2 posFrame, sizeFrame;
+    getFrameBounds(posFrame, sizeFrame);
+    // if click is outside frame then set offset to mousepos
+    if (evt.mousepos.x < posFrame.x || evt.mousepos.x > posFrame.x + sizeFrame.x) {
+        auto newOffset = (evt.relMousepos.x - sizeFrame.x * 0.5f) * (scaleXSS / scaleX);
+        grid.setOffset(math::roundfS32(math::max(0.0f, newOffset)));
+        grid.notifyChange();
+        return;
+    }
+    parentCtrl->captureMouse(this);
+    dragMode      = drag_view;
+    dragDirection = -1;
+}
+
+void guictr_clipeditorview::handleDraggedMove(MouseEvent& evt) {
+    if (dragMode == drag_none) {
+        return;
+    }
+
+    if (evt.guiDragged == this) {
+        float scaleX   = getScaleX();
+        float scaleXSS = getScreenSpaceScaleX();
+        bool bChanged  = false;
+        if (math::abs(evt.dragDistance->x) > 3) {
+            auto newOffset      = grid.offset + evt.dragDistance->x * 1.0 / scaleX;
+            evt.dragDistance->x = 0;
+            grid.setOffset(math::rounddS32(math::max(0.0, newOffset)));
+            grid.notifyChange();
+            bChanged |= true;
+        }
+
+        if (math::abs(evt.dragDistance->y) > 3) {
+            auto disty            = 1.0f + evt.dragDistance->y * -0.01f;
+            evt.dragDistance->y   = 0;
+            float anchor_dragposx = math::max(0.0f, evt.relMousepos.x * (scaleXSS / scaleX) - grid.getOffset());
+            auto dragPosObjSpace  = grid.toObjSpace(anchor_dragposx);
+            grid.setZoom(grid.zoom * disty);
+            auto newOffset = grid.calcOffset(anchor_dragposx, dragPosObjSpace);
+            grid.setOffset(math::rounddS32(newOffset));
+            bChanged |= true;
+        }
+        if (bChanged) {
+            grid.notifyChange();
+        }
+    }
+}
+
+void guictr_clipeditorview::handleDraggedRelease(MouseEvent& evt) {
+    if (dragMode == drag_none) {
+        return;
+    }
+    DawInstance::get()->updateVisibleTrackContents();
+}
+
+bool guictr_clipeditorview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    if (this->contains(mpos)) {
+        evt.requestFocus(this);
+        return true;
+    }
+    return false;
+}
+
 float guictr_cliphandles::clipStartScrX() {
     return (float) (grid.tickToScreenD(view.clip()->offsetStart));
 }
@@ -1793,4 +1987,14 @@ float guictr_cliphandles::clipEndScrX() {
 
 guictr_base* makeGuiClipEditor() {
     return new guictr_clipeditor(MainCtrl::get()->getClipView());
+}
+
+void piano_scale::setOffset(float f) {
+    auto minOffset            = -(layoutRoll.scale() * MAX_OCTAVES * 1);
+    auto maxOffset            = layoutRoll.scale() * (MAX_OCTAVES - 1) * 12;
+    this->layoutRoll.offset() = math::clamp(f, minOffset, maxOffset);
+}
+
+void piano_scale::setScale(float f) {
+    this->layoutRoll.scale() = math::clamp<float>(f, PIANOROLL_MIN_SCALE, PIANOROLL_MAX_SCALE);
 }

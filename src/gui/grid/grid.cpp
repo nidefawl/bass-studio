@@ -68,7 +68,7 @@ tick_t scaled_grid::distPrev(tick_t tick) const {
     if (pos * len == tick) { pos--; }
     return (pos * len) - tick;
 }
-tick_t scaled_grid::screenToTickSnap(int32_t x, int snap) const {
+tick_t scaled_grid::screenToTickSnapExact(double x, int snap) const {
     tick_t tick = screenToTick(x);
     if (snap != SNAP_OFF && this->grid_dens.getSnap() != GRID_OFF) {
         const grid_div* min  = nullptr;
@@ -92,6 +92,9 @@ tick_t scaled_grid::screenToTickSnap(int32_t x, int snap) const {
         }
     }
     return tick;
+}
+tick_t scaled_grid::screenToTickSnap(int32_t x, int snap) const {
+    return screenToTickSnapExact(x, snap);
 }
 using float_type = double;
 

@@ -360,7 +360,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
                 nvgBeginPath(vg);
                 //TODO: iterate notePlayingPitch, not pitches
                 for (int i = firstKey; i < 12; i++) {
-                    if (STL_CONTAINS(notePlayingPitch, octave * 12 + i)) {
+                    if (STL_CONTAINS(notePlayingPitch, DAW::ToNoteNumber(octave, i))) {
                         nvgRect(vg, keysX, h - y, widthKeys, scale);
                     }
                     y += scale;

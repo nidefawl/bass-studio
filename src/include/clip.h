@@ -64,6 +64,10 @@ public:
         this->fadeOut = obj.fadeOut;
     }
     int32_t lenSamples() const;
+
+    bool isEmpty() const {
+        return id == -1;
+    }
 };
 
 class clip_notes_t {
@@ -187,7 +191,10 @@ public:
         }
     }
     void clear() {
-        copy(clip_notes_t());
+        copy({});
+    }
+    bool isEmpty() const {
+        return m_list.empty();
     }
 };
 
@@ -307,6 +314,9 @@ public:
     }
     bool isLoopEnabled() const {
         return loopEnabled && this->loopLen > 0;
+    }
+    bool isEmpty() const {
+        return notes.isEmpty() && audio.isEmpty();
     }
 
     void setLoopEnabled(bool bLoopEnabled = true) {

@@ -69,9 +69,6 @@ public:
         notifyChange();
     }
     void update(ivec2 contentsize) {
-        //if (!dirty && lastOffset == offset && lastZoom == zoom && lastW == contentsize.x) {
-        //    return;
-        //}
         dirty = false;
         calcLen(offset, zoom, contentsize.x);
         lastOffset = offset;
@@ -107,22 +104,8 @@ public:
         double screenpos = toScreenSpace(objx);
         return screenpos - screenx;
     }
-    /*double toObjSpace2(double screenx, double _zoom, double _offset) {
-        double relx           = screenx + _offset;
-        const double stepSize = _zoom * 128;
-        const double scale    = 1024.0f;
-        double barSize        = scale / stepSize;
-        double objx           = relx / barSize;
-        return objx;
-    }
-    double toScreenSpace2(double objx, double _zoom) {
-        const double stepSize = _zoom * 128;
-        const double scale    = 1024.0f;
-        double barSize        = scale / stepSize;
-        double screenx        = objx * barSize;
-        return screenx;
-    }*/
     tick_t screenToTickSnap(int32_t x, int snap) const;
+    tick_t screenToTickSnapExact(double x, int snap) const;
 
     tick_t screenToTick(double x) const {
         double d     = toObjSpace(x);

@@ -285,6 +285,7 @@ namespace PluginMacros {
         public:
             explicit guictr_module_macros_context_menu(guictr_module_macros* _ctr, module_macros* _module)
             : guictxtmenu(), module(_module), ctr(_ctr) {
+                (void) module;
                 this->size.x   = 220;
                 maxHeight = 0;
                 this->fontSize = FONT_SIZE_CTXT_SMALL;

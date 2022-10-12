@@ -4,6 +4,7 @@
 #include "math/seq_math.h"
 #include "gui/gui.h"
 #include "guicolors.h"
+#include "str_util.h"
 #include "track.h"
 #include "track_impl.h"
 #include "note.h"
@@ -17,6 +18,9 @@
 #include "gui/contextmenu/contextmenu_daw.h"
 #include "logging.h"
 
+
+static constexpr int32_t CLIPEDITOR_DEFAULT_MIN = DAW::ToNoteNumber(1, 0);
+static constexpr int32_t CLIPEDITOR_DEFAULT_MAX = DAW::ToNoteNumber(3, 0);
 
 void guictr_cliphandles::handleDraggedBegin(MouseEvent& evt) {
     dragHandle   = drag_handle_none;
@@ -368,7 +372,7 @@ guictr_noteeditor::guictr_noteeditor(clip_view& _view)
     btnToggleFold.setButtonColor(GuiColor::COL_FOLD_BUTTON);
     btnToggleFold.setText("Fold");
     btnToggleFold.setStateRef(&fold);
-    content.showRange(2 * 12, 4 * 12);
+    content.showRange(CLIPEDITOR_DEFAULT_MIN, CLIPEDITOR_DEFAULT_MAX);
 }
 
 guictr_noteeditor::~guictr_noteeditor() {
@@ -441,8 +445,8 @@ void guictr_noteeditor::handleDraggedBegin(MouseEvent& evt) {
 
 void guictr_noteeditor::zoomPianoRollToClipsNoteRange() {
     clip_t* clip = view.clip();
-    if (!clip) {
-        content.showRange(2 * 12, 4 * 12);
+    if (!clip || clip->isEmpty()) {
+        content.showRange(CLIPEDITOR_DEFAULT_MIN, CLIPEDITOR_DEFAULT_MAX);
         return;
     }
     int32_t minSemi = clip->notes.minNote.pitch;
