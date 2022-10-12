@@ -1,15 +1,7 @@
-//
-// Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
-// Creation Date: Sat Feb 14 21:40:14 PST 2015
-// Last Modified: Sat Feb 14 23:33:51 PST 2015
-// Filename:      midifile/src/MidiEvent.cpp
-// Website:       http://midifile.sapp.org
-// Syntax:        C++11
-// vim:           ts=3 expandtab
-//
-// Description:   A class which stores a MidiMessage and a timestamp
-//                for the MidiFile class.
-//
+/*
+ * Based on https://github.com/craigsapp/midifile
+ * Modifications (c) Michael Hept
+ */
 
 #include "MidiEvent.h"
 #include <cstdlib>

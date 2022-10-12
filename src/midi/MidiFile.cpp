@@ -1,36 +1,7 @@
 /*
- * Modifications (c) Michael Hept 2017-2022
- * Removed BinAsc support
+ * Based on https://github.com/craigsapp/midifile
+ * Modifications (c) Michael Hept
  */
-
-// Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
-// Creation Date: Fri Nov 26 14:12:01 PST 1999
-// Last Modified: Fri Dec  2 13:26:29 PST 1999
-// Last Modified: Wed Dec 13 10:33:30 PST 2000 Modified sorting routine
-// Last Modified: Tue Jan 22 23:23:37 PST 2002 Allowed reading of meta events
-// Last Modified: Tue Nov  4 23:09:19 PST 2003 Adjust noteoff in eventcompare
-// Last Modified: Tue Jun 29 09:43:10 PDT 2004 Fixed end-of-track problem
-// Last Modified: Sat Dec 17 23:11:57 PST 2005 Added millisecond ticks
-// Last Modified: Thu Sep 14 20:07:45 PDT 2006 Added SMPTE ASCII printing
-// Last Modified: Tue Apr  7 09:23:48 PDT 2009 Added addMetaEvent.
-// Last Modified: Fri Jun 12 22:58:34 PDT 2009 Renamed SigCollection class.
-// Last Modified: Mon Jul 26 13:38:23 PDT 2010 Added timing in seconds.
-// Last Modified: Tue Feb 22 13:26:40 PST 2011 Added write(std::ostream).
-// Last Modified: Mon Nov 18 13:10:37 PST 2013 Added .printHex function.
-// Last Modified: Mon Feb  9 12:22:18 PST 2015 Remove dep. on FileIO class.
-// Last Modified: Sat Feb 14 23:40:17 PST 2015 Split out subclasses.
-// Last Modified: Wed Feb 18 20:06:39 PST 2015 Added binasc MIDI read/write.
-// Last Modified: Thu Mar 19 13:09:00 PDT 2015 Improve Sysex read/write.
-// Last Modified: Fri Feb 19 00:32:39 PST 2016 Switch to Binasc stdout.
-// Filename:      midifile/src/MidiFile.cpp
-// Website:       http://midifile.sapp.org
-// Syntax:        C++11
-// vim:           ts=3 expandtab hlsearch
-//
-// Description:   A class which can read/write Standard MIDI files.
-//                MIDI data is stored by track in an array.  This
-//                class is used for example in the MidiPerform class.
-//
 
 #include "MidiFile.h"
 #include "midi/MidiEventList.h"

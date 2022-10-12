@@ -1,41 +1,10 @@
+#pragma once
 /*
- * Modifications (c) Michael Hept 2017-2022
- * Removed BinAsc support
- * Use std::string instead of const char*
- * Remove rwstatus field from MidiFile
+ * Based on https://github.com/craigsapp/midifile
+ * Modifications (c) Michael Hept
  */
 
-//
-// Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
-// Creation Date: Fri Nov 26 14:12:01 PST 1999
-// Last Modified: Fri Dec  2 13:26:44 PST 1999
-// Last Modified: Fri Nov 10 12:13:15 PST 2000 Added some more editing cap.
-// Last Modified: Thu Jan 10 10:03:39 PST 2002 Added allocateEvents()
-// Last Modified: Mon Jun 10 22:43:10 PDT 2002 Added clear()
-// Last Modified: Sat Dec 17 23:11:57 PST 2005 Added millisecond ticks
-// Last Modified: Tue Feb  5 11:51:43 PST 2008 Read() set to const char*
-// Last Modified: Tue Apr  7 09:23:48 PDT 2009 Added addMetaEvent
-// Last Modified: Fri Jun 12 22:58:34 PDT 2009 Renamed SigCollection class
-// Last Modified: Thu Jul 22 23:28:54 PDT 2010 Added tick to time mapping
-// Last Modified: Thu Jul 22 23:28:54 PDT 2010 Changed _MidiEvent to MidiEvent
-// Last Modified: Tue Feb 22 13:26:40 PST 2011 Added write(std::ostream)
-// Last Modified: Mon Nov 18 13:10:37 PST 2013 Added .printHex function.
-// Last Modified: Mon Feb  9 14:01:31 PST 2015 Removed FileIO dependency.
-// Last Modified: Sat Feb 14 22:35:25 PST 2015 Split out subclasses.
-// Filename:      midifile/include/MidiFile.h
-// Website:       http://midifile.sapp.org
-// Syntax:        C++11
-// vim:           ts=3 expandtab
-//
-// Description:   A class which can read/write Standard MIDI files.
-//                MIDI data is stored by track in an array.
-//
-
-#ifndef _MIDIFILE_H_INCLUDED
-#define _MIDIFILE_H_INCLUDED
-
 #include "MidiEventList.h"
-
 #include <vector>
 #include <istream>
 #include <fstream>
@@ -232,8 +201,3 @@ class MidiFile {
 
 int eventcompare(const void* a, const void* b);
 std::ostream& operator<<(std::ostream& out, MidiFile& aMidiFile);
-
-#endif /* _MIDIFILE_H_INCLUDED */
-
-
-

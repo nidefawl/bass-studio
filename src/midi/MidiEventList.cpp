@@ -1,18 +1,9 @@
-//
-// Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
-// Creation Date: Sat Feb 14 21:55:38 PST 2015
-// Last Modified: Sat Feb 14 21:55:40 PST 2015
-// Filename:      midifile/src-library/MidiEventList.cpp
-// Website:       http://midifile.sapp.org
-// Syntax:        C++11
-// vim:           ts=3 expandtab
-//
-// Description:   A class which stores a MidiEvents for a MidiFile track.
-//
-
+/*
+ * Based on https://github.com/craigsapp/midifile
+ * Modifications (c) Michael Hept
+ */
 
 #include "MidiEventList.h"
-
 #include <vector>
 #include <iostream>
 #include <algorithm>
