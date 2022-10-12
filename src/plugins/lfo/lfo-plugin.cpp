@@ -44,22 +44,27 @@ namespace PluginLFO {
 
     const double RATE_MIN = 1;
     const double RATE_MAX = TICKS_BAR*4;
+
     double GetScaledRate(float paramValue) {
         return math::clamp(paramValue * (RATE_MAX - RATE_MIN) + RATE_MIN, RATE_MIN, RATE_MAX);
     }
+
     float RateToParam(float rate) {
-        return (rate - RATE_MIN) / (RATE_MAX - RATE_MIN);
+        return float((rate - RATE_MIN) / (RATE_MAX - RATE_MIN));
     }
+
     struct SyncRatio {
         int32_t numerator;
         int32_t denominator;
         String text;
     };
+
     enum NoteRatio : uint8_t {
         STRAIGHT = 1,
         DOTTED = 2,
         TRIPLET = 4,
     };
+
     std::vector<SyncRatio> GetSyncRatios(int syncFlags = (STRAIGHT | DOTTED | TRIPLET)) {
         std::vector<SyncRatio> syncRatios;
         for (int32_t i = 64; i >= 1; i /= 2) {
@@ -94,6 +99,7 @@ namespace PluginLFO {
         });
         return syncRatios;
     }
+
     std::vector<String> GetSyncRatioLabels(int syncFlags = (STRAIGHT | DOTTED | TRIPLET)) {
         auto syncs = GetSyncRatios(syncFlags);
         std::vector<String> syncRatios;
@@ -113,6 +119,7 @@ namespace PluginLFO {
         const SyncRatio& syncRatio = syncRatios[index];
         return (TICKS_BAR * syncRatio.numerator) / syncRatio.denominator;
     }
+
     String FormatSyncRate(const std::vector<SyncRatio>& syncRatios, int32_t syncFlags, float paramValue) {
         if (!syncFlags) {
             return StringFormat("%.2f", GetScaledRate(paramValue));
@@ -120,6 +127,11 @@ namespace PluginLFO {
         int32_t index = math::clamp<int32_t>(math::floorfS32(paramValue * syncRatios.size()), 0, CtrSize(syncRatios) - 1);
         return syncRatios[index].text;
     }
+
+    struct impl_channel_snapshot_t {
+        DAW::Shape::shape_snapshot_t shape;
+        int32_t syncFlags = false;
+    };
 
     struct module_lfo::lfo_impl_t : public PluginLockable {
         struct lfo_automation_src_param_t : public automated_param_t {

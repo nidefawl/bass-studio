@@ -1,5 +1,4 @@
 #pragma once
-#include "file/shapefile.h"
 #include "shape.h"
 #include "str_util.h"
 #include "modules.h"
@@ -7,19 +6,20 @@
 #include "plugins/plugin-ui.h"
 
 namespace PluginLFO {
+
+struct impl_channel_snapshot_t;
+
 struct ui_layout_t {
     int32_t uiId = 0;
     int32_t numActive = 0;
 };
-struct impl_channel_snapshot_t {
-    DAW::Shape::shape_snapshot_t shape;
-    int32_t syncFlags = false;
-};
+
 struct snapshot_t {
     int32_t version = 0;
     std::vector<ui_layout_t> uiLayout;
     std::vector<impl_channel_snapshot_t> channels;
 };
+
 class module_lfo : public internal_modulator {
     friend class guictr_module_lfo;
     struct lfo_impl_t;
