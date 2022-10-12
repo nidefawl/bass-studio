@@ -25,7 +25,6 @@
 //
 
 MidiEventList::MidiEventList(void) {
-   reserve(1000);
 }
 
 
