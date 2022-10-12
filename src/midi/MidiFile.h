@@ -15,7 +15,7 @@
 #define TRACK_STATE_SPLIT 0
 #define TRACK_STATE_JOINED 1
 
-class _TickTime {
+class MidiFileTickTime {
 public:
     int tick;
     double seconds;
@@ -63,7 +63,6 @@ public:
     void mergeTracks(int aTrack1, int aTrack2);
     int getTrackCountAsType1();
 
-    int getEventCount(int aTrack);
     void allocateEvents(int track, int aSize);
     int getNumEvents(int aTrack);
 
@@ -178,7 +177,7 @@ protected:
     int midiTimingType      = TIME_STATE_ABSOLUTE;// absolute or delta
     std::string readFileName;                     // read file name
     int timemapvalid = 0;
-    std::vector<_TickTime> timemap;
+    std::vector<MidiFileTickTime> timemap;
 
 private:
     int extractMidiData(std::istream& inputfile, std::vector<unsigned char>& array,
@@ -188,8 +187,6 @@ private:
                        unsigned char d = 0);
     void writeVLValue(long aValue, std::vector<unsigned char>& data);
     int makeVLV(unsigned char* buffer, int number);
-    static int ticksearch(const void* A, const void* B);
-    static int secondsearch(const void* A, const void* B);
     void buildTimeMap();
     int linearTickInterpolationAtSecond(double seconds);
     double linearSecondInterpolationAtTick(int ticktime);

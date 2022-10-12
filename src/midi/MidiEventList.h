@@ -19,12 +19,10 @@ public:
     MidiEvent& operator[](int index);
     const MidiEvent& operator[](int index) const;
     MidiEvent& back();
-    MidiEvent& last();
     MidiEvent& getEvent(int index);
     void clear();
     void reserve(int rsize);
     int getSize() const;
-    int size() const;
     int linkNotePairs();
     int linkEventPairs();
     void clearLinks();

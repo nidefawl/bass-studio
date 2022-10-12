@@ -302,7 +302,7 @@ bool MidiFile::writeToOutputStream(std::ostream& out) {
     for (int i = 0; i < getTrackCount(); i++) {
         auto& track = *tracks[i];
         trackdata.clear();
-        auto numEvents = static_cast<int32_t>(tracks[i]->size());
+        auto numEvents = tracks[i]->getSize();
         for (int j = 0; j < numEvents; j++) {
             auto& evt = track[j];
             if (evt.empty()) {
@@ -388,7 +388,7 @@ int MidiFile::getTrackCount() const {
 void MidiFile::markSequence() {
     int sequence = 1;
     for (int i = 0; i < getTrackCount(); i++) {
-        for (int j = 0; j < tracks[i]->size(); j++) {
+        for (int j = 0; j < tracks[i]->getSize(); j++) {
             (*tracks[i])[j].seq = sequence++;
         }
     }
@@ -400,7 +400,7 @@ void MidiFile::markSequence() {
   occurding at the same tick may switch their ordering. */
 void MidiFile::clearSequence() {
     for (int i = 0; i < getTrackCount(); i++) {
-        for (int j = 0; j < tracks[i]->size(); j++) {
+        for (int j = 0; j < tracks[i]->getSize(); j++) {
             (*tracks[i])[j].seq = 0;
         }
     }
@@ -428,7 +428,7 @@ void MidiFile::joinTracks() {
     int length     = getTrackCount();
     int i, j;
     for (i = 0; i < length; i++) {
-        messagesum += (*tracks[i]).size();
+        messagesum += (*tracks[i]).getSize();
     }
     joinedTrack->reserve((int) (messagesum + 32 + messagesum * 0.1));
 
@@ -437,7 +437,7 @@ void MidiFile::joinTracks() {
         makeAbsoluteTicks();
     }
     for (i = 0; i < length; i++) {
-        for (j = 0; j < (int) tracks[i]->size(); j++) {
+        for (j = 0; j < (int) tracks[i]->getSize(); j++) {
             joinedTrack->push_back_no_copy(&(*tracks[i])[j]);
         }
     }
@@ -468,7 +468,7 @@ void MidiFile::splitTracks() {
 
     int maxTrack = 0;
     int i;
-    int length = tracks[0]->size();
+    int length = tracks[0]->getSize();
     for (i = 0; i < length; i++) {
         if ((*tracks[0])[i].track > maxTrack) {
             maxTrack = (*tracks[0])[i].track;
@@ -520,7 +520,7 @@ void MidiFile::splitTracksByChannel() {
     int i;
     MidiEventList& eventlist = *tracks[0];
     MidiEventList* olddata   = &eventlist;
-    int length               = eventlist.size();
+    int length               = eventlist.getSize();
     for (i = 0; i < length; i++) {
         if (eventlist[i].size() == 0) {
             continue;
@@ -615,12 +615,12 @@ void MidiFile::makeDeltaTicks() {
     int* timedata = new int[length];
     for (i = 0; i < length; i++) {
         timedata[i] = 0;
-        if (tracks[i]->size() > 0) {
+        if (tracks[i]->getSize() > 0) {
             timedata[i] = (*tracks[i])[0].tick;
         } else {
             continue;
         }
-        for (j = 1; j < (int) tracks[i]->size(); j++) {
+        for (j = 1; j < (int) tracks[i]->getSize(); j++) {
             temp          = (*tracks[i])[j].tick;
             int deltatick = temp - timedata[i];
             if (deltatick < 0) {
@@ -651,12 +651,12 @@ void MidiFile::makeAbsoluteTicks() {
     int* timedata = new int[length];
     for (i = 0; i < length; i++) {
         timedata[i] = 0;
-        if (tracks[i]->size() > 0) {
+        if (tracks[i]->getSize() > 0) {
             timedata[i] = (*tracks[i])[0].tick;
         } else {
             continue;
         }
-        for (j = 1; j < (int) tracks[i]->size(); j++) {
+        for (j = 1; j < (int) tracks[i]->getSize(); j++) {
             timedata[i] += (*tracks[i])[j].tick;
             (*tracks[i])[j].tick = timedata[i];
         }
@@ -693,16 +693,16 @@ int MidiFile::addEvent(int aTrack, int aTick, std::vector<uint8_t>& midiData) {
     anEvent.setMessage(midiData);
 
     tracks[aTrack]->push_back(anEvent);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 int MidiFile::addEvent(MidiEvent& mfevent) {
     if (getTrackState() == TRACK_STATE_JOINED) {
         tracks[0]->push_back(mfevent);
-        return (int) tracks[0]->size() - 1;
+        return (int) tracks[0]->getSize() - 1;
     } else {
         tracks[mfevent.track]->push_back(mfevent);
-        return (int) tracks[mfevent.track]->size() - 1;
+        return (int) tracks[mfevent.track]->getSize() - 1;
     }
 }
 
@@ -744,7 +744,7 @@ int MidiFile::addCopyright(int aTrack, int aTick, const std::string& text) {
     me->makeCopyright(text);
     me->tick = aTick;
     tracks[aTrack]->push_back_no_copy(me);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 int MidiFile::addTrackName(int aTrack, int aTick, const std::string& name) {
@@ -752,7 +752,7 @@ int MidiFile::addTrackName(int aTrack, int aTick, const std::string& name) {
     me->makeTrackName(name);
     me->tick = aTick;
     tracks[aTrack]->push_back_no_copy(me);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 int MidiFile::addInstrumentName(int aTrack, int aTick, const std::string& name) {
@@ -760,7 +760,7 @@ int MidiFile::addInstrumentName(int aTrack, int aTick, const std::string& name) 
     me->makeInstrumentName(name);
     me->tick = aTick;
     tracks[aTrack]->push_back_no_copy(me);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 int MidiFile::addLyric(int aTrack, int aTick, const std::string& text) {
@@ -768,7 +768,7 @@ int MidiFile::addLyric(int aTrack, int aTick, const std::string& text) {
     me->makeLyric(text);
     me->tick = aTick;
     tracks[aTrack]->push_back_no_copy(me);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 int MidiFile::addMarker(int aTrack, int aTick, const std::string& text) {
@@ -776,7 +776,7 @@ int MidiFile::addMarker(int aTrack, int aTick, const std::string& text) {
     me->makeMarker(text);
     me->tick = aTick;
     tracks[aTrack]->push_back_no_copy(me);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 int MidiFile::addCue(int aTrack, int aTick, const std::string& text) {
@@ -784,7 +784,7 @@ int MidiFile::addCue(int aTrack, int aTick, const std::string& text) {
     me->makeCue(text);
     me->tick = aTick;
     tracks[aTrack]->push_back_no_copy(me);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 int MidiFile::addTempo(int aTrack, int aTick, double aTempo) {
@@ -792,7 +792,7 @@ int MidiFile::addTempo(int aTrack, int aTick, double aTempo) {
     me->makeTempo(aTempo);
     me->tick = aTick;
     tracks[aTrack]->push_back_no_copy(me);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 /* MidiFile::addTimeSignature -- Add a time signature meta message
@@ -820,7 +820,7 @@ int MidiFile::addTimeSignature(int aTrack, int aTick, int top, int bottom,
     me->makeTimeSignature(top, bottom, clocksPerClick, num32ndsPerQuarter);
     me->tick = aTick;
     tracks[aTrack]->push_back_no_copy(me);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 /* MidiFile::addCompoundTimeSignature -- Add a time signature meta message
@@ -894,7 +894,7 @@ int MidiFile::addNoteOn(int aTrack, int aTick, int aChannel, int key, int vel) {
     me->makeNoteOn(aChannel, key, vel);
     me->tick = aTick;
     tracks[aTrack]->push_back_no_copy(me);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 /* MidiFile::addNoteOff -- Add a note-off message (using 0x80 messages). */
@@ -904,7 +904,7 @@ int MidiFile::addNoteOff(int aTrack, int aTick, int aChannel, int key,
     me->makeNoteOff(aChannel, key, vel);
     me->tick = aTick;
     tracks[aTrack]->push_back_no_copy(me);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 /* MidiFile::addNoteOff -- Add a note-off message (using 0x90 messages with
@@ -914,7 +914,7 @@ int MidiFile::addNoteOff(int aTrack, int aTick, int aChannel, int key) {
     me->makeNoteOff(aChannel, key);
     me->tick = aTick;
     tracks[aTrack]->push_back_no_copy(me);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 /* MidiFile::addController -- Add a controller message in the given
@@ -925,7 +925,7 @@ int MidiFile::addController(int aTrack, int aTick, int aChannel,
     me->makeController(aChannel, num, value);
     me->tick = aTick;
     tracks[aTrack]->push_back_no_copy(me);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 /* MidiFile::addPatchChange -- Add a patch-change message in the given
@@ -936,7 +936,7 @@ int MidiFile::addPatchChange(int aTrack, int aTick, int aChannel,
     me->makePatchChange(aChannel, patchnum);
     me->tick = aTick;
     tracks[aTrack]->push_back_no_copy(me);
-    return tracks[aTrack]->size() - 1;
+    return tracks[aTrack]->getSize() - 1;
 }
 
 /* MidiFile::addTimbre -- Add a patch-change message in the given
@@ -1004,7 +1004,7 @@ int MidiFile::addTrack(int count) {
 }
 
 void MidiFile::allocateEvents(int track, int aSize) {
-    int oldsize = tracks[track]->size();
+    int oldsize = tracks[track]->getSize();
     if (oldsize < aSize) {
         tracks[track]->reserve(aSize);
     }
@@ -1060,15 +1060,10 @@ int MidiFile::getTicksPerQuarterNote() {
     return ticksPerQuarterNote;
 }
 
-/* MidiFile::getEventCount -- returns the number of events
+/* MidiFile::getNumEvents -- returns the number of events
   in a given track. */
-int MidiFile::getEventCount(int aTrack) {
-    return tracks[aTrack]->size();
-}
-
-
 int MidiFile::getNumEvents(int aTrack) {
-    return tracks[aTrack]->size();
+    return tracks[aTrack]->getSize();
 }
 
 /* MidiFile::mergeTracks -- combine the data from two
@@ -1086,10 +1081,10 @@ void MidiFile::mergeTracks(int aTrack1, int aTrack2) {
     }
 
     int length = getTrackCount();
-    for (int i = 0; i < (int) tracks[aTrack1]->size(); i++) {
+    for (int i = 0; i < (int) tracks[aTrack1]->getSize(); i++) {
         mergedTrack->push_back((*tracks[aTrack1])[i]);
     }
-    for (int i = 0; i < (int) tracks[aTrack2]->size(); i++) {
+    for (int i = 0; i < (int) tracks[aTrack2]->getSize(); i++) {
         (*tracks[aTrack2])[i].track = aTrack1;
         mergedTrack->push_back((*tracks[aTrack2])[i]);
     }
@@ -1103,7 +1098,7 @@ void MidiFile::mergeTracks(int aTrack1, int aTrack2) {
     for (int i = aTrack2; i < length - 1; i++) {
         tracks[i]   = tracks[i + 1];
         auto& track = *tracks[i];
-        for (int j = 0; j < (int) track.size(); j++) {
+        for (int j = 0; j < (int) track.getSize(); j++) {
             track[j].track = i;
         }
     }
@@ -1136,7 +1131,7 @@ void MidiFile::setMillisecondTicks() {
 /* MidiFile::sortTrack -- */
 void MidiFile::sortTrack(MidiEventList& trackData) {
     if (midiTimingType == TIME_STATE_ABSOLUTE) {
-        qsort(trackData.data(), trackData.size(), sizeof(MidiEvent*), eventcompare);
+        qsort(trackData.data(), trackData.getSize(), sizeof(MidiEvent*), eventcompare);
     }
 }
 
@@ -1157,7 +1152,7 @@ int MidiFile::getTrackCountAsType1() {
     if (getTrackState() == TRACK_STATE_JOINED) {
         int output = 0;
         int i;
-        for (i = 0; i < (int) tracks[0]->size(); i++) {
+        for (i = 0; i < (int) tracks[0]->getSize(); i++) {
             if (getEvent(0, i).track > output) {
                 output = getEvent(0, i).track;
             }
@@ -1183,14 +1178,11 @@ double MidiFile::getTimeInSeconds(int tickvalue) {
         }
     }
 
-    _TickTime key;
-    key.tick    = tickvalue;
-    key.seconds = -1;
+    auto itEvtExactTick = std::find_if(timemap.begin(), timemap.end(), [tick=tickvalue](const MidiFileTickTime& a) {
+        return a.tick == tick;
+    });
 
-    void* ptr = bsearch(&key, timemap.data(), timemap.size(),
-                        sizeof(_TickTime), ticksearch);
-
-    if (ptr == nullptr) {
+    if (itEvtExactTick == timemap.end()) {
         // The specific tick value was not found, so do a linear
         // search for the two tick values which occur before and
         // after the tick value, and do a linear interpolation of
@@ -1199,7 +1191,7 @@ double MidiFile::getTimeInSeconds(int tickvalue) {
         // Since the code is not yet written, kill the program at this point:
         return linearSecondInterpolationAtTick(tickvalue);
     } else {
-        return ((_TickTime*) ptr)->seconds;
+        return itEvtExactTick->seconds;
     }
 }
 
@@ -1214,21 +1206,18 @@ int MidiFile::getAbsoluteTickTime(double starttime) {
         }
     }
 
-    _TickTime key;
-    key.tick    = -1;
-    key.seconds = starttime;
+    auto itEvtExactSeconds = std::find_if(timemap.begin(), timemap.end(), [sec=starttime](const MidiFileTickTime& a) {
+        return a.seconds == sec;
+    });
 
-    void* ptr = bsearch(&key, timemap.data(), timemap.size(),
-                        sizeof(_TickTime), secondsearch);
-
-    if (ptr == nullptr) {
+    if (itEvtExactSeconds == timemap.end()) {
         // The specific seconds value was not found, so do a linear
         // search for the two time values which occur before and
         // after the given time value, and do a linear interpolation of
         // the time in tick values to figure out the final time in ticks.
         return linearTickInterpolationAtSecond(starttime);
     } else {
-        return ((_TickTime*) ptr)->tick;
+        return itEvtExactSeconds->tick;
     }
 }
 
@@ -1243,10 +1232,10 @@ double MidiFile::getTotalTimeInSeconds() {
         }
     }
     double output = 0.0;
-    for (int i = 0; i < (int) tracks.size(); i++) {
-        if (tracks[i]->last().seconds > output) {
-            output = tracks[i]->last().seconds;
-        }
+    int numTracks = getTrackCount();
+    for (int i = 0; i < numTracks; i++) {
+        auto timeLast = tracks[i]->back().seconds;
+        output = (timeLast > output) ? timeLast : output;
     }
     return output;
 }
@@ -1264,11 +1253,11 @@ int MidiFile::getTotalTimeInTicks() {
     if (oldTimeState == TIME_STATE_DELTA) {
         makeDeltaTicks();
     }
-    int output = 0.0;
-    for (int i = 0; i < (int) tracks.size(); i++) {
-        if (tracks[i]->last().tick > output) {
-            output = tracks[i]->last().tick;
-        }
+    int output = 0;
+    int numTracks = getTrackCount();
+    for (int i = 0; i < numTracks; i++) {
+        auto timeLast = tracks[i]->back().tick;
+        output = (timeLast > output) ? timeLast : output;
     }
     return output;
 }
@@ -1472,7 +1461,7 @@ void MidiFile::buildTimeMap() {
     timemap.reserve(allocsize + 10);
     timemap.clear();
 
-    _TickTime value;
+    MidiFileTickTime value;
 
     int lasttick = 0;
     int curtick;
@@ -1770,32 +1759,6 @@ int eventcompare(const void* a, const void* b) {
     } else {
         return 0;
     }
-}
-
-/* for finding a tick entry in the time map. */
-int MidiFile::ticksearch(const void* A, const void* B) {
-    _TickTime& a = *((_TickTime*) A);
-    _TickTime& b = *((_TickTime*) B);
-
-    if (a.tick < b.tick) {
-        return -1;
-    } else if (a.tick > b.tick) {
-        return 1;
-    }
-    return 0;
-}
-
-/* for finding a second entry in the time map. */
-int MidiFile::secondsearch(const void* A, const void* B) {
-    _TickTime& a = *((_TickTime*) A);
-    _TickTime& b = *((_TickTime*) B);
-
-    if (a.seconds < b.seconds) {
-        return -1;
-    } else if (a.seconds > b.seconds) {
-        return 1;
-    }
-    return 0;
 }
 
 /* static read functions */

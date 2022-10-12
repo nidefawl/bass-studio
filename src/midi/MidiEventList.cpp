@@ -62,11 +62,6 @@ int MidiEventList::getSize() const {
     return (int) list.size();
 }
 
-
-int MidiEventList::size() const {
-    return getSize();
-}
-
 int MidiEventList::append(MidiEvent& event) {
     MidiEvent* ptr = new MidiEvent(event);
     list.push_back(ptr);

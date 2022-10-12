@@ -35,7 +35,7 @@ void LoadMidiTask::loadFile() {
                     clip_notes_t notes;
                     MidiEventList& list = midiFile[track];
                     list.linkEventPairs();
-                    auto numEventsTrack = list.size();
+                    auto numEventsTrack = list.getSize();
                     if (!numEventsTrack) {
                         log_lf(Log::L_WARN, "No events in midi track %d\n", track);
                     }
