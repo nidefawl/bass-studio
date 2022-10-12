@@ -920,7 +920,7 @@ void vstplugin::processMidi(midi_data_processing_t& midiEvents) {
             for (auto& evt : *midiEvents.ctrlEvents) {
                 auto offsetInBlock = math::floordS32((evt.tick - midiEvents.tickLatencyCompensated) * tickToSamples);
                 if (offsetInBlock < 0 || offsetInBlock >= format.blockSize) {
-                    log_lf(Log::L_WARN, "VST: ctrl event out of range: %d", offsetInBlock);
+                    log_lf(Log::L_WARN, "VST: ctrl event out of range: %d\n", offsetInBlock);
                     continue;
                 }
                 midiEventsBuf->writeMidiMessage(evt.message, offsetInBlock);

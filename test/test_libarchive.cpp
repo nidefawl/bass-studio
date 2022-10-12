@@ -73,13 +73,14 @@ void test_libarchive(String outName = "test_libarchive.tar.gz") {
             break;
         }
         if (r != ARCHIVE_OK) {
-            // log_error("archive_read_next_header() failed: %s", archive_error_string(a));
+            auto errorMsg = archive_error_string(a);
+            log_lf(Log::L_ERROR, "archive_read_next_header() failed: %s\n", errorMsg);
             break;
         }
+        auto pathName = archive_entry_pathname(entry);
         if (archive_entry_filetype(entry) == AE_IFREG) {
             auto size = archive_entry_size(entry);
             TEST_ASSERT_THROW(size > 0);
-            auto pathName = archive_entry_pathname(entry);
             TEST_ASSERT_THROW(pathName != nullptr);
             auto pathNameStr = String(pathName);
             auto buffer = std::shared_ptr<std::byte[]>(new std::byte[size]);
@@ -98,7 +99,7 @@ void test_libarchive(String outName = "test_libarchive.tar.gz") {
                 TEST_ASSERT_THROW(false);
             }
         } else {
-            // log_error("unexpected file type in archive: %s", archive_entry_pathname(entry));
+            log_lf(Log::L_ERROR, "file type in archive: %s\n", pathName);
         }
     }
 }       

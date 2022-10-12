@@ -531,7 +531,7 @@ void resetHistAndCheck(DawInstance* daw) {
     }
     int32_t allocClips = getNumClipAllocations();
     if (allocClips != liveClips) {
-        log_lf(Log::L_WARN, "Clip allocations (%d) does not match used clips (%d)", allocClips, liveClips);
+        log_lf(Log::L_WARN, "Clip allocations (%d) does not match used clips (%d)\n", allocClips, liveClips);
     }
 #endif
 }
