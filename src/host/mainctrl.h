@@ -133,7 +133,7 @@ struct notes_clipboard {
     clip_notes_t notes;
     tick_t cursorRange = 0;
     bool empty() const {
-        return notes.empty();
+        return notes.isEmpty();
     }
 };
 class clip_view {

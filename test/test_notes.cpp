@@ -699,7 +699,7 @@ namespace {
             clip->notes.deleteSelectedNotes(clip->notes);
 
             TEST_ASSERT_THROW(clip->notes.get(tickL, pitch) == NULL);
-            TEST_ASSERT_THROW(clip->notes.empty());
+            TEST_ASSERT_THROW(clip->notes.isEmpty());
 
             // move cursor to right
             cursorPos += 64;
@@ -716,7 +716,7 @@ namespace {
             }
             clip->notes.selectIdxRange(pos, clip->notes.m_list.size());
             TEST_ASSERT_THROW(clip->notes.get(tickL + cursorToNoteOffset, pitch) != NULL);
-            TEST_ASSERT_THROW(!clip->notes.empty());
+            TEST_ASSERT_THROW(!clip->notes.isEmpty());
             TEST_ASSERT_THROW(clip->notes.m_list.size() == 1);
         }
         TEST_END();

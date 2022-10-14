@@ -1094,7 +1094,7 @@ void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const DAW::Host::midi
     // }
     ctrlEvts = data.events.m_list;
     constexpr bool logProcessedNotes = false;
-    if (logProcessedNotes && !data.notes.empty()) {
+    if (logProcessedNotes && !data.notes.isEmpty()) {
         // print absStart to absEnd range we looked at
         // and print the min, max and number of events in data.notes
         log_lf(Log::L_DEBUG, "Notes in input: %zd. Notes copied: %zd\n", data.notes.m_list.size(), list.size());
@@ -1299,7 +1299,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
         std::vector<midievent_ctrl_t> ctrlEventsPostValidate;
         notesPost.getNotesDelayed(blockStart, ticksPerBlock, noteEventsPostValidate, ctrlEventsPostValidate);
         noteEventValidatorPost.validate(noteEventsPostValidate);
-        if (logProcessedNotes && !midiRealtimeInput.notes.empty()) {
+        if (logProcessedNotes && !midiRealtimeInput.notes.isEmpty()) {
             log_lf(Log::L_DEBUG, "Realtime i: %zd. Notes: %zd. Events Processed: %zd. Post Event Buffered: %zd\n",
                                 midiRealtimeInput.notes.m_list.size(),
                                 notes.size(),

@@ -410,7 +410,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
     paint.customPar = 1;
     nvgShapeAntiAlias(vg, 0);
     const float extendCullCheck = 8.0f;
-    if (!notes.empty()) {
+    if (!notes.isEmpty()) {
         const int32_t nw = 4;
         const float r    = 4;
         for (int i = 0; i < 2; i++) {
@@ -686,7 +686,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
     }
 
     //  nvgRestore(vg);
-    if (!notes.empty()) {
+    if (!notes.isEmpty()) {
         for (int i = 0; i < 2; i++) {
             int nRendered = 0;
             for (note_t& note: notes.m_list) {
@@ -1687,7 +1687,7 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
 
         if (sizeContents.x > 0 && sizeContents.y > 0) {
             clip_notes_t& notes = notesView;
-            if (!notes.empty()) {
+            if (!notes.isEmpty()) {
                 note_t minN      = notesView.minNote;
                 note_t maxN      = notesView.maxNote;
                 int32_t numNotes = math::max((int32_t) 8, maxN.pitch - minN.pitch);

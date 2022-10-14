@@ -65,7 +65,7 @@ void LoadMidiTask::loadFile() {
                     if (numBrokenEvents) {
                         log_lf(Log::L_WARN, "%d invalid midi events on track %d\n", numBrokenEvents, track);
                     }
-                    if (!notes.empty()) {
+                    if (!notes.isEmpty()) {
                         shared_ptr<track_clipboard_t> trClipboard = make_shared<track_clipboard_t>();
                         notes.updateBounds();
                         tick_t clipLength = roundUp(notes.lastNote.end() - notes.firstNote.start());

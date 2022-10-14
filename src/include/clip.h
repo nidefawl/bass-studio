@@ -41,22 +41,26 @@ public:
     clip_fade_t fadeIn;
     clip_fade_t fadeOut;
 
+#ifndef NDEBUG
     /* debug only */
     samplecount_t lastReadBegin = -1;
     samplecount_t lastReadEnd = -1;
     samplecount_t lastReadLen = -1;
     samplecount_t lastWriteBegin = -1;
     samplecount_t lastWriteEnd = -1;
+#endif
 public:
     clip_audio_t();
     ~clip_audio_t();
 
-    clip_audio_t& operator=(const clip_audio_t& a) {
-        copy(a);
+    clip_audio_t& operator=(const clip_audio_t& obj) {
+        if (this != &obj) {
+            copy(obj);
+        }
         return *this;
     }
-    clip_audio_t(const clip_audio_t& a) {
-        copy(a);
+    clip_audio_t(const clip_audio_t& obj) {
+        copy(obj);
     }
     void copy(const clip_audio_t& obj) {
         this->id = obj.id;
@@ -72,18 +76,6 @@ public:
 
 class clip_notes_t {
 public:
-    clip_notes_t() {
-        m_list.reserve(128);
-    }
-    clip_notes_t& operator=(const clip_notes_t& obj) {
-        copy(obj);
-        return *this;
-    }
-    clip_notes_t(const clip_notes_t& obj) {
-        copy(obj);
-    }
-    void copy(const clip_notes_t& obj);
-
     std::vector<note_t> m_list;
     std::set<note_t*> selection;
     note_t firstNote;
@@ -91,21 +83,20 @@ public:
     note_t minNote;
     note_t maxNote;
 
-    bool has(note_t* notePtr) const;
-    bool empty() const {
-        return m_list.empty();
+public:
+    clip_notes_t() = default;
+
+    clip_notes_t& operator=(const clip_notes_t& obj) {
+        if (this != &obj) {
+            copy(obj);
+        }
+        return *this;
     }
-    note_t& add(note_t& t);                               // does not update bounds
-    void remove(note_t& t);                               // does not update bounds
-    void mute(note_t& t);                                 // does not update bounds
-    note_t& addSingle(note_t& t);                         // updates bounds
-    void removeSingle(note_t& t);                         // updates bounds
-    int32_t paste(note_t& t, bool eliminateDupes = false);// updates bounds
-    void updateBounds();
-    note_t* get(tick_t time, int32_t pitch);
-    size_t removeDuplicates();
-    int getInRange(tick_t timeS, tick_t timeE, int32_t pitchL, int32_t pitchH, std::vector<note_t*>& list);
-    int getStartsInRangeV(tick_t timeS, tick_t timeE, int32_t velL, int32_t velH, int32_t tickDist, std::vector<note_t*>& list);
+
+    clip_notes_t(const clip_notes_t& obj) {
+        copy(obj);
+    }
+
     template<typename Functor>
     void visitNotes(Functor f) {
         std::for_each(m_list.begin(), m_list.end(), f);
@@ -114,88 +105,40 @@ public:
     void visitSelection(Functor f) {
         std::for_each(selection.begin(), selection.end(), f);
     }
+
+    void copy(const clip_notes_t& obj);
+    void clear();
+    void updateBounds();
+    bool isEmpty() const;
+    bool hasDuplicates() const;
+    bool has(note_t* notePtr) const;
+    note_t& add(note_t& t);                               // does not update bounds
+    void remove(note_t& t);                               // does not update bounds
+    void mute(note_t& t);                                 // does not update bounds
+    note_t& addSingle(note_t& t);                         // updates bounds
+    void removeSingle(note_t& t);                         // updates bounds
+    int32_t paste(note_t& t, bool eliminateDupes = false);// updates bounds
+    note_t* get(tick_t time, int32_t pitch);
+    size_t removeDuplicates();
+    int getInRange(tick_t timeS, tick_t timeE, int32_t pitchL, int32_t pitchH, std::vector<note_t*>& list);
+    int getStartsInRangeV(tick_t timeS, tick_t timeE, int32_t velL, int32_t velH, int32_t tickDist, std::vector<note_t*>& list);
+
     void setTo(std::set<note_t*>& notePtrs, tick_t offset);
     void addAll(std::vector<note_t>& list);
     void removeAll(std::vector<note_t>& list);
     void removeAllKeepDuplicates(std::vector<note_t>& list);
     void selectIdxRange(size_t start, size_t end);
     void selectLastN(size_t num);
+    void getNotePitches(std::vector<int32_t>& out);
+
+    void getSelectionIndices(std::vector<size_t>& selIdx) const;
+    void copySelectionTo(std::vector<note_t>& _out) const;
+    void clearSelection();
     void storeSelection(std::vector<note_t>& selNotes);
     size_t restoreSelection(std::vector<note_t>& selNotes);
-
-
-    void getSelectionIndices(std::vector<size_t>& selIdx) const {
-        const auto begin = m_list.begin();
-        for (note_t* n : selection) {
-            auto it = std::find_if(m_list.begin(), m_list.end(),
-                                   [n](const note_t& note) { return &note == n; });
-            if (it == m_list.end()) {
-                dbgassert(0);
-            }
-            selIdx.push_back(static_cast<size_t>(it - begin));
-        }
-        dbgassert(selection.size() == selIdx.size());
-    }
-    bool hasDuplicates() const {
-        return any_duplicates(m_list);
-    }
-
-    void deleteSelectedNotes(clip_notes_t& notes) {
-        std::vector<note_t> delNotes(selection.size());
-        copySelectionTo(delNotes);
-        clearSelection();
-        for (note_t& note : delNotes) {
-            notes.remove(note);
-        }
-        notes.updateBounds();
-    }
-    void muteToggleSelectedNotes(clip_notes_t& notes) {
-        std::vector<note_t> delNotes(selection.size());
-        copySelectionTo(delNotes);
-        for (note_t& note : delNotes) {
-            notes.mute(note);
-        }
-        //notes.updateBounds();
-    }
-    void getNotePitches(std::vector<int32_t>& out) {
-        for (note_t& note : m_list) {
-            auto it = std::find_if(out.begin(), out.end(), [&note](const int32_t& n) {
-                return note.pitch == n;
-            });
-            if (it == out.end()) {
-                out.push_back(note.pitch);
-            }
-        }
-        stable_sort(out.begin(), out.end(), [](int32_t const a, int32_t const b) {
-            return a < b;
-        });
-    }
-    void addOrRemoveSelection(note_t* note) {
-
-        auto it = std::find(selection.begin(), selection.end(), note);
-        if (it != selection.end()) {
-            selection.erase(it);
-        } else {
-            selection.insert(note);
-        }
-    }
-    void clearSelection() {
-        selection.clear();
-        removeDuplicates();
-    }
-    void copySelectionTo(std::vector<note_t>& _out) const {
-        _out.clear();
-        for (note_t* note : selection) {
-            note_t& ref = *note;
-            _out.push_back(ref);
-        }
-    }
-    void clear() {
-        copy({});
-    }
-    bool isEmpty() const {
-        return m_list.empty();
-    }
+    void deleteSelectedNotes(clip_notes_t& notes);
+    void muteToggleSelectedNotes(clip_notes_t& notes);
+    void addOrRemoveSelection(note_t* note);
 };
 
 struct noteview_cache_impl_t;
@@ -251,27 +194,12 @@ public:
         return new clip_t(*this);
     }
     clip_t& operator=(const clip_t& obj) {
-        copy(obj);
+        if (this != &obj) {
+            copy(obj);
+        }
         return *this;
     }
-    void copy(const clip_t& obj) {
-        this->name    = StringLimit(obj.name, 64);
-        clipType      = obj.clipType;
-        enabled       = obj.enabled;
-        rgb           = obj.rgb;
-        time          = obj.time;
-        len           = obj.len;
-        offsetStart   = obj.offsetStart;
-        lenSamples    = obj.lenSamples;
-        loopStart     = obj.loopStart;
-        loopLen       = obj.loopLen;
-        loopEnabled   = obj.loopEnabled;
-        notes         = obj.notes;
-        audio         = obj.audio;
-        noLayout      = obj.noLayout;
-        editorLayout  = obj.editorLayout;
-        dirty         = true;
-    }
+    void copy(const clip_t& obj);
     tick_t start() const {
         return time;
     }

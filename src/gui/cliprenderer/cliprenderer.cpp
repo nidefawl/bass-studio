@@ -206,7 +206,7 @@ void renderMidiClipToCache(NVGcontext* vg, noteview_cache_impl_t* impl, const gu
         auto sizeContent = size - ivec2(0, HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2);
         if (sizeContent.x > 0 && sizeContent.y > 0) {
             clip_notes_t& notes = notesView;
-            if (!notes.empty()) {
+            if (!notes.isEmpty()) {
                 note_t minN      = notesView.minNote;
                 note_t maxN      = notesView.maxNote;
                 int32_t numNotes = math::max((int32_t) 8, maxN.pitch - minN.pitch);

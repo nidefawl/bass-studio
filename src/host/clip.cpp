@@ -293,6 +293,7 @@ size_t clip_notes_t::removeDuplicates() {
 }
 
 void clip_notes_t::copy(const clip_notes_t& obj) {
+    dbgassert(this != &obj);
     m_list = obj.m_list;
     selection.clear();
     if (!obj.selection.empty()) {
@@ -766,4 +767,106 @@ void clip_t::adjustStartOffset(tick_t offset) {
         offsetStart -= loopLen;
     }
     offsetStart = math::max(offsetStart, 0);
+}
+
+void clip_t::copy(const clip_t& obj) {
+    dbgassert(this != &obj);
+    this->name   = StringLimit(obj.name, 64);
+    clipType     = obj.clipType;
+    enabled      = obj.enabled;
+    rgb          = obj.rgb;
+    time         = obj.time;
+    len          = obj.len;
+    offsetStart  = obj.offsetStart;
+    lenSamples   = obj.lenSamples;
+    loopStart    = obj.loopStart;
+    loopLen      = obj.loopLen;
+    loopEnabled  = obj.loopEnabled;
+    notes        = obj.notes;
+    audio        = obj.audio;
+    noLayout     = obj.noLayout;
+    editorLayout = obj.editorLayout;
+    dirty        = true;
+}
+
+void clip_notes_t::clear() {
+    copy({});
+}
+
+bool clip_notes_t::isEmpty() const {
+    return m_list.empty();
+}
+
+bool clip_notes_t::hasDuplicates() const {
+    return any_duplicates(m_list);
+}
+
+
+void clip_notes_t::getSelectionIndices(std::vector<size_t>& selIdx) const {
+    const auto begin = m_list.begin();
+    for (note_t* n : selection) {
+        auto it = std::find_if(m_list.begin(), m_list.end(),
+                               [n](const note_t& note) { return &note == n; });
+        if (it == m_list.end()) {
+            dbgassert(0);
+        }
+        selIdx.push_back(static_cast<size_t>(it - begin));
+    }
+    dbgassert(selection.size() == selIdx.size());
+}
+
+void clip_notes_t::deleteSelectedNotes(clip_notes_t& notes) {
+    std::vector<note_t> delNotes(selection.size());
+    copySelectionTo(delNotes);
+    clearSelection();
+    for (note_t& note : delNotes) {
+        notes.remove(note);
+    }
+    notes.updateBounds();
+}
+
+void clip_notes_t::muteToggleSelectedNotes(clip_notes_t& notes) {
+    std::vector<note_t> delNotes(selection.size());
+    copySelectionTo(delNotes);
+    for (note_t& note : delNotes) {
+        notes.mute(note);
+    }
+    //notes.updateBounds();
+}
+
+void clip_notes_t::getNotePitches(std::vector<int32_t>& out) {
+    for (note_t& note : m_list) {
+        auto it = std::find_if(out.begin(), out.end(), [&note](const int32_t& n) {
+            return note.pitch == n;
+        });
+        if (it == out.end()) {
+            out.push_back(note.pitch);
+        }
+    }
+    stable_sort(out.begin(), out.end(), [](int32_t const a, int32_t const b) {
+        return a < b;
+    });
+}
+
+void clip_notes_t::addOrRemoveSelection(note_t* note) {
+
+    auto it = std::find(selection.begin(), selection.end(), note);
+    if (it != selection.end()) {
+        selection.erase(it);
+    } else {
+        selection.insert(note);
+    }
+}
+
+void clip_notes_t::clearSelection() {
+    selection.clear();
+    removeDuplicates();
+}
+
+void clip_notes_t::copySelectionTo(std::vector<note_t>& _out) const {
+    _out.clear();
+    for (note_t* note : selection) {
+        note_t& ref = *note;
+        _out.push_back(ref);
+    }
 }
