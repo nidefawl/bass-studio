@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdio>
 #include "clipeditor.h"
 
 #include "math/seq_math.h"
@@ -359,7 +360,12 @@ guictr_noteeditor::guictr_noteeditor(clip_view& _view)
       content(grid, _view, *this),
       velocities(grid, _view, *this),
       timeline(grid),
-      clipHandles(grid, _view), view(_view) {
+      clipHandles(grid, _view),
+      view(_view),
+      splitterVel(0, 0.75f)
+{
+    splitterVel.setMinMax(0.5f, 0.95f);
+    splitterVel.setCallback(this);
     padding = 2;
     grid.showRange(0, TICKS_BAR * 4);
     grid.addCallback(this);
@@ -369,6 +375,7 @@ guictr_noteeditor::guictr_noteeditor(clip_view& _view)
     add(&timeline);
     add(&clipHandles);
     add(&btnToggleFold);
+    add(&splitterVel);
     btnToggleFold.setButtonColor(GuiColor::COL_FOLD_BUTTON);
     btnToggleFold.setText("Fold");
     btnToggleFold.setStateRef(&fold);
@@ -376,6 +383,7 @@ guictr_noteeditor::guictr_noteeditor(clip_view& _view)
 }
 
 guictr_noteeditor::~guictr_noteeditor() {
+    remove(&splitterVel);
     remove(&btnToggleFold);
     remove(&timeline);
     remove(&velocities);
@@ -383,6 +391,16 @@ guictr_noteeditor::~guictr_noteeditor() {
     remove(&piano);
     remove(&clipHandles);
 }
+
+void guictr_noteeditor::handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) {
+    if (clampedAt == 1) {
+        velocities.setVisible(false);
+    } else {
+        velocities.setVisible(true);
+    }
+    layout();
+}
+
 
 void guictr_noteeditor::buttonClicked(guibase* button) {
     if (button == &btnToggleFold) {
@@ -401,13 +419,13 @@ void guictr_noteeditor::renderBackground(NVGcontext* vg) {
 void guictr_noteeditor::layout() {
     ivec2 cs = getSizeContent();
 
-    if (size.y < velHeight * 2) {
-        velocities.setVisible(false);
-        piano.size      = ivec2(100, cs.y - heightTimeLine - heightClipIndicators);
+    auto heightContent = cs.y - heightTimeLine - heightClipIndicators;
+    if (!velocities.isVisible()) {
+        piano.size      = ivec2(pianoWidth, heightContent);
         velocities.size = ivec2(cs.x - piano.size.x, 0);
     } else {
-        velocities.setVisible(true);
-        piano.size      = ivec2(100, cs.y - heightTimeLine - heightClipIndicators - velHeight);
+        velHeight = math::clamp(splitterVel.rightOrBottom(heightContent), 0, 120);
+        piano.size      = ivec2(pianoWidth, heightContent - velHeight);
         velocities.size = ivec2(cs.x - piano.size.x, velHeight);
     }
 
@@ -421,6 +439,8 @@ void guictr_noteeditor::layout() {
     content.pos        = ivec2(timeline.left(), clipHandles.bottom());
     content.size       = ivec2(timeline.size.x, piano.size.y);
     velocities.pos     = ivec2(timeline.left(), content.bottom());
+    splitterVel.pos    = piano.getLeftBottom() - Splitter::SPLITTER_LAYOUT_THICKNESS / 2;
+    splitterVel.size   = ivec2(cs.x, Splitter::SPLITTER_LAYOUT_THICKNESS);
 
     clipHandles.clipViewSize = ivec2(content.size.x, content.size.y + clipHandles.size.y);
     grid.update(content.size);

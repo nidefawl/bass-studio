@@ -4577,10 +4577,10 @@ namespace PluginSynth {
             auto cs                             = getSizeContent();
             const auto titleHeight = math::roundfS32(cs.y * 0.1f * 0.27f);
             modulation.setTitleHeight(titleHeight);
-            const auto controlsWidth            = splitter.leftOrTop(cs.x) - padding / 2;
-            const auto modulationWidth          = splitter.rightOrBottom(cs.x) - padding / 2;
-            splitter.pos                        = ivec2(controlsWidth - Splitter::SPLITTER_LAYOUT_THICKNESS / 2, 0);
-            splitter.size                       = ivec2(Splitter::SPLITTER_LAYOUT_THICKNESS, cs.y);
+            const auto controlsWidth   = splitter.leftOrTop(cs.x) - padding / 2;
+            const auto modulationWidth = splitter.rightOrBottom(cs.x) - padding / 2;
+            splitter.pos               = ivec2(controlsWidth + padding / 2 - Splitter::SPLITTER_LAYOUT_THICKNESS / 2, 0);
+            splitter.size              = ivec2(Splitter::SPLITTER_LAYOUT_THICKNESS, cs.y);
             modulation.size      = ivec2(modulationWidth, cs.y*0.75f);
             modulation.pos       = ivec2(cs.x - modulationWidth, 0);
             int scale            = 4;//!list.isVisible() && !list2.isVisible()?4:3;

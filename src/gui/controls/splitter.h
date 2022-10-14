@@ -20,7 +20,7 @@ public:
 class Splitter : public guictr_base {
     int type;
     float scale;
-    float scaleMin, scaleMax;
+    float scaleMin{}, scaleMax{};
     splitter_cb* notifyCtrl = nullptr;
 public:
     static constexpr int SPLITTER_LAYOUT_THICKNESS = SPLITTER_HANDLE_SIZE;
@@ -28,11 +28,10 @@ public:
     Splitter(int _type, float _scale)
         : guictr_base(),
           type(_type),
-          scale(_scale),
-          scaleMin(0),
-          scaleMax(1) {
-        padding  = 0;
+          scale(_scale) {
+        padding = 0;
     }
+
     void setMinMax(float _min, float _max) {
         this->scaleMin = _min;
         this->scaleMax = _max;

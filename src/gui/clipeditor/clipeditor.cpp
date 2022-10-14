@@ -210,13 +210,13 @@ void guictr_clipeditor::layout() {
 
     ivec2 cs      = getSizeContent();
     settings.pos  = ivec2(0, 0);
-    settings.size = ivec2(250, cs.y);
+    settings.size = ivec2(240, cs.y);
 
     guibase* leftContainer = &settings;
     if (arp.isVisible()) {
         leftContainer = &arp;
         arp.pos       = ivec2(settings.right() + padding, 0);
-        arp.size      = ivec2(250, cs.y);
+        arp.size      = ivec2(220, cs.y);
     }
 
     noteeditor.pos   = ivec2(leftContainer->right() + padding, 0);

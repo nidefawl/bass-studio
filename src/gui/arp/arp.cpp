@@ -3,6 +3,8 @@
 #include "gui/contextmenu/contextmenu.h"
 #include "gui/contextmenu/contextmenu_daw.h"
 #include "gui/controls/knoblabeled.h"
+#include "guiconstant.h"
+#include "math/seq_math.h"
 #include "seq_util.h"
 
 class guiknob_arp : public guiknob {
@@ -193,8 +195,10 @@ void gui_arp::render(NVGcontext* vg) {
 }
 
 void gui_arp::layout() {
-    padding           = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
-    const auto hpt    = static_cast<float>(theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT));
+    padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
+    const auto hpt       = static_cast<float>(theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT));
+    const auto rowHeight = static_cast<float>(theme->get(GuiConstant::CONST_ROW_HEIGHT));
+    
     auto buttonSize   = hpt * 0.8f;
     auto inset1       = (hpt - buttonSize) * 0.5f;
     buttonBypass.size = ivec2(math::roundfS32(buttonSize));
@@ -202,7 +206,7 @@ void gui_arp::layout() {
     buttonBypass.setRadius(hpt / 3.f);
     guiknob* knobPrev = nullptr;
     for (guiknob* knob : knobs) {
-        knob->size = ivec2(48);
+        knob->size = ivec2(math::roundfS32(rowHeight * 2));
         knob->pos  = ivec2(padding, (knobPrev ? knobPrev->bottom() : hpt) + padding);
         knobPrev   = knob;
     }

@@ -41,7 +41,7 @@ std::array<midiarp::arp_param_entry_t, 8> getMidiParameterTypes() noexcept {
         p_{ ARP_PARAM_GATE, "Gate", "Ticks", 1 / 4.0f },
         p_{ ARP_PARAM_PATTERN, "Pattern", "", 0.0f, NUM_PATTERNS - 1 },
         p_{ ARP_PARAM_RAND_TIME, "Random Time", "Ticks", 0.0f, NUM_RANDOM_TIME_MODES - 1 },
-        p_{ ARP_PARAM_RAND_MODE, "Random Time Mode", "", 0.0f },
+        p_{ ARP_PARAM_RAND_MODE, "Random Mode", "", 0.0f },
         p_{ ARP_PARAM_RAND_VEL, "Random Velocity", "", 0.0f },
     } };
 }

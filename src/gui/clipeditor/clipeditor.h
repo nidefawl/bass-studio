@@ -1,6 +1,7 @@
 #pragma once
 #include <list>
 #include <vector>
+#include "gui/controls/splitter.h"
 #include "guiconstant.h"
 #include "logging.h"
 #include "math/vec.h"
@@ -452,7 +453,13 @@ public:
     void render(NVGcontext* vg) override;
 };
 
-class guictr_noteeditor : public guictr_base, public layout_pianoroll_t, grid_changed_cb, ce_constants {
+class guictr_noteeditor 
+    : public guictr_base,
+    public layout_pianoroll_t,
+    grid_changed_cb,
+    ce_constants,
+    splitter_cb
+{
 public:
     scaled_grid grid;
     gui_pianoroll piano;
@@ -463,6 +470,8 @@ public:
     clip_view& view;
     guibuttonstate btnToggleFold;
     int32_t velHeight = 120;
+    int32_t pianoWidth = 100;
+    Splitter splitterVel;
 
 private:
     void setLayout(layout_pianoroll_t& layout);
@@ -482,13 +491,15 @@ public:
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt) {
         return content.handleEditorCommand(ctxt);
     }
-
     void gridChanged(scaled_grid& _grid) override;
-
     void showEditClip();
     void storeLayout();
     const scaled_grid& getGrid() const {
         return grid;
+    }
+    void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override;
+    ivec2 getContainerSize() override {
+        return size;
     }
 };
 

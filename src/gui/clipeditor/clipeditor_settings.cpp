@@ -172,22 +172,22 @@ void gui_clipsettings::render(NVGcontext* vg) {
         nvgRestore(vg);
     }
 
-    const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+    const auto rowHeight = static_cast<float>(theme->get(GuiConstant::CONST_ROW_HEIGHT));
     nvgSave(vg);
     nvgTranslate(vg, 0, 0);
     for (guibase* gui: guis) {
         if (gui == &clipTimeStartOffsedSamples) break;
-        renderText(vg, vec2(padding, gui->top() + gui->size.y * 0.5f), vec2(gui->left()-padding, size.y), gui->label, TRACK_HEIGHT_STEP);
+        renderText(vg, vec2(padding, gui->top() + gui->size.y * 0.5f), vec2(gui->left()-padding, size.y), gui->label, rowHeight);
     }
     nvgRestore(vg);
 }
 
 void gui_clipsettings::layout() {
     padding = theme->get(GuiConstant::CONST_PADDING_EDITOR_CONTROLS);
-    const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+    const auto rowHeight = static_cast<float>(theme->get(GuiConstant::CONST_ROW_HEIGHT));
     int32_t w                       = getSizeContent().x;
     int32_t btnW                    = (w-padding)/2;
-    int32_t btnH = TRACK_HEIGHT_STEP;
+    int32_t btnH = math::roundfS32(rowHeight);
     int32_t btnX = btnW + padding/2;
     btnLoop.size                    = ivec2(btnW, btnH);
     btnLoop.pos                     = ivec2(btnX, padding + theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT));
