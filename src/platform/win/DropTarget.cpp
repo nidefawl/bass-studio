@@ -1,5 +1,6 @@
 #include "DropTarget.h"
 #include <ole2.h>
+#include "event.h"
 #include "math/vec.h"
 #include "str_win32.h"
 #include "keyboard.h"
@@ -71,7 +72,7 @@ ivec2 toScreenSpace(HWND hwnd, POINTL pt) {
     ClientToScreen(hwnd, &pos);
     return { pt.x - pos.x, pt.y - pos.y };
 }
-int toInternalKeyboardMods(DWORD grfKeyState) {
+KeyboardMods toInternalKeyboardMods(DWORD grfKeyState) {
     int mods = 0;
     if (grfKeyState & MK_CONTROL)
         mods |= KB_MOD_SYSTEM;
@@ -79,7 +80,7 @@ int toInternalKeyboardMods(DWORD grfKeyState) {
         mods |= KB_MOD_SHIFT;
     if (grfKeyState & MK_ALT)
         mods |= KB_MOD_ALT;
-    return mods;
+    return static_cast<KeyboardMods>(mods);
 }
 
 HRESULT __stdcall DropTargetImpl::DragEnter(IDataObject* pDataObject, DWORD grfKeyState, POINTL pt, DWORD* pdwEffect) {

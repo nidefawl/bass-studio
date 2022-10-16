@@ -87,6 +87,8 @@ int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> 
 
         OPENFILENAME ofn;
         char szFileName[MAX_PATH] = "";
+        char szFileTitle[MAX_PATH] = "";
+        safe_strcpy(szFileTitle, _defaultName);
 
         ZeroMemory(&ofn, sizeof(ofn));
 
@@ -99,8 +101,7 @@ int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> 
         ofn.lpstrDefExt = StringAsCStr(fileTypes[0].ext);
         if (_defaultPath.length())
             ofn.lpstrInitialDir = StringAsCStr(_defaultPath);
-        if (_defaultName.length())
-            ofn.lpstrFileTitle = StringAsCStr(_defaultName);
+        ofn.lpstrFileTitle = szFileTitle;
 
         if (GetSaveFileName(&ofn)) {
             _out = szFileName;

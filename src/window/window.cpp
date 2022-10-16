@@ -7,7 +7,6 @@
 #include "tls.h"
 #include "util/profiling.h"
 #include <GLFW/glfw3.h>
-#include <linux/input-event-codes.h>
 #include <utility>
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
