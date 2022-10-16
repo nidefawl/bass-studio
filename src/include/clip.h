@@ -89,7 +89,7 @@ struct clip_control_data_channel_t {
         if (shape.pts.empty()) {
             return defaultValue;
         }
-        return shape.sampleCurveUnclampped(x);
+        return shape.sampleCurveUnclamped(x);
     }
     void updateBounds() {
         if (shape.pts.empty()) {
@@ -107,6 +107,7 @@ struct clip_control_data_t {
     std::map<int32_t, clip_control_data_channel_t> ccChannels;
     clip_control_data_t();
     void updateBounds();
+    void createCCChannel(int32_t cc);
     bool hasData() const {
         if (pitchBend.hasData()) {
             return true;
@@ -119,6 +120,7 @@ struct clip_control_data_t {
         return false;
     }
     int getInTimeRange(clip_t* clip, tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, std::vector<DAW::Host::midievent_ctrl_t>& list);
+    void setFrom(clip_t* clip, tick_t tickBegin, tick_t len);
 };
 
 class clip_notes_t {

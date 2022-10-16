@@ -356,7 +356,7 @@ struct IMidiMsg {
     void LogMsg() {
         log_printf("midi:(%s:%d:%d:%d)\n", StatusMsgStr(StatusMsg()), Channel(), mData1, mData2);
     }
-    String ControlName(int32_t control) {
+    static inline String ControlName(int32_t control) {
         switch(control) {
             case kModWheel:
                 return "Mod Wheel";
@@ -365,7 +365,7 @@ struct IMidiMsg {
             case kAllNotesOff:
                 return "All Notes Off";
         }
-        return std::to_string(control);
+        return StringFormat("Midi CC%03d", control);
     }
     String ToString() {
         String info = " ";

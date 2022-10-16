@@ -128,7 +128,7 @@ namespace DAW::Shape {
         return y;
     }
 
-    float shape_t::sampleCurveUnclampped(float posX) const {
+    float shape_t::sampleCurveUnclamped(float posX) const {
         dbgassert(!pts.empty());
         if (pts.empty())
             return 0.0f;

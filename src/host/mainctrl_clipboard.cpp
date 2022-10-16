@@ -149,13 +149,16 @@ namespace DAW {
                 const auto& clips = shPtrClipboard->clips;
                 std::vector<note_t> notes;
                 for (const auto& shPtrClip : clips) {
-                    if (shPtrClip->end() <= tickBegin || shPtrClip->start() > tickEnd) {
+                    auto clipStart = shPtrClip->start();
+                    if (shPtrClip->end() <= tickBegin || clipStart > tickEnd) {
                         continue;
                     }
                     notes.clear();
                     shPtrClip->getInTimeRange(tickBegin, tickEnd, tickBegin, tickEnd, notes);
                     clip.notes.addAll(notes);
+                    clip.controlData.setFrom(shPtrClip.get(), tickBegin, shPtrClip->len);
                 }
+                
                 clip.notes.removeDuplicates();
                 clip.notes.visitNotes([tickBegin](note_t& note) {
                     note.time -= tickBegin;

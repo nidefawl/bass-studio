@@ -5,6 +5,7 @@
 #include "math/seq_math.h"
 #include "gui/gui.h"
 #include "guicolors.h"
+#include "plugins/synth/IPlugMidi.h"
 #include "str_util.h"
 #include "track.h"
 #include "track_impl.h"
@@ -384,9 +385,7 @@ guictr_noteeditor::guictr_noteeditor(clip_view& _view)
     btnToggleFold.setButtonColor(GuiColor::COL_FOLD_BUTTON);
     btnToggleFold.setText("Fold");
     btnToggleFold.setStateRef(&fold);
-    // btnToggleVelocities.setButtonColor(GuiColor::COL_FOLD_BUTTON);
     btnToggleVelocities.setText("Velocities");
-    // btnToggleControlData.setButtonColor(GuiColor::COL_FOLD_BUTTON);
     btnToggleControlData.setText("Control Data");
     dropdownSelectControlData.setText("Select");
     dropdownSelectControlData.fnOptionSelected = [this](int32_t option, String& str) {
@@ -396,11 +395,11 @@ guictr_noteeditor::guictr_noteeditor(clip_view& _view)
     std::vector<String> options = {
         "Pitch Bend" };
     for (int32_t i = 1; i < 127; ++i) {
-        options.push_back(StringFormat("Midi CC%03d", i));
+        String s = IMidiMsg::ControlName(i);
+        options.push_back(s);
     }
     dropdownSelectControlData.setOptions(options);
     dropdownSelectControlData.setSelectedIndex(ctrlData.getSelectedData());
-    // btnToggleVelocities.setStateRef(&fold);
     content.showRange(CLIPEDITOR_DEFAULT_MIN, CLIPEDITOR_DEFAULT_MAX);
 }
 

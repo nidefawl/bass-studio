@@ -407,8 +407,16 @@ gui_clipcontent_control_data::gui_clipcontent_control_data(scaled_grid& _grid, c
         const auto clip = view.clip();
         if (clip) {
             tmpShape = shape;
-            clip->controlData.pitchBend.shape = shape;
-            clip->controlData.updateBounds();
+            if (this->cc == 0) {
+                clip->controlData.pitchBend.shape = shape;
+                clip->controlData.pitchBend.updateBounds();
+            } else {
+                if (!clip->controlData.ccChannels.count(this->cc)) {
+                    clip->controlData.createCCChannel(this->cc);
+                }
+                clip->controlData.ccChannels[this->cc].shape = shape;
+                clip->controlData.ccChannels[this->cc].updateBounds();
+            }
         }
     };
 }
@@ -425,6 +433,9 @@ void gui_clipcontent_control_data::setSelectedData(int32_t cc) {
         if (cc == 0) {
             tmpShape = clip->controlData.pitchBend.shape;
         } else {
+            if (!clip->controlData.ccChannels.count(cc)) {
+                clip->controlData.createCCChannel(cc);
+            }
             tmpShape = clip->controlData.ccChannels[cc].shape;
         }
     } else {

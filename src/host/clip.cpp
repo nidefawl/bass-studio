@@ -878,6 +878,15 @@ clip_control_data_t::clip_control_data_t() {
     pitchBend.defaultValue = 0.5f;
     // pitchBend.shape.pts   = { { { 0, 0.5f }, 0.5f } };
     pitchBend.updateBounds();
+    updateBounds();
+}
+void clip_control_data_t::createCCChannel(int32_t cc) {
+    clip_control_data_channel_t newChannel;
+    newChannel.shape.flags = DAW::Shape::ShapeFlags::SHAPE_UNCLAMPPED | DAW::Shape::ShapeFlags::SHAPE_SHAPED;
+    newChannel.defaultValue = 0.0f;
+    newChannel.updateBounds();
+    ccChannels[cc] = std::move(newChannel);
+    updateBounds();
 }
 
 void clip_control_data_t::updateBounds() {
@@ -945,4 +954,87 @@ int clip_control_data_t::getInTimeRange(clip_t* clip, tick_t absStart, tick_t ab
         }
     }
     return count;
+}
+void clip_control_data_t::setFrom(clip_t* clip, tick_t tickBegin, tick_t len) {
+    auto offsetOut = clip->start() - tickBegin;
+    auto& dataIn = clip->controlData;
+    if (clip->isLoopEnabled()) {
+        const tick_t preLoopLen = !clip->loopEnabled ? clip->len : clip->offsetStart > clip->loopStart ? math::max(0, (/*loopEnd*/ clip->loopStart + clip->loopLen) - clip->offsetStart)
+                                                                            : math::max(0, clip->loopStart - clip->offsetStart);
+
+        for (auto& pt : dataIn.pitchBend.shape.pts) {
+            if (pt.pos.x < preLoopLen) {
+                pitchBend.shape.pts.push_back({{pt.pos.x+offsetOut, pt.pos.y}, pt.shape});
+                pitchBend.shape.sort();
+                pitchBend.shape.eraseDuplicates();
+            }
+        }
+        for (tick_t t = preLoopLen; t < len; t += clip->loopLen) {
+            for (auto& pt : dataIn.pitchBend.shape.pts) {
+                if (pt.pos.x >= preLoopLen) {
+                    pitchBend.shape.pts.push_back({{pt.pos.x+offsetOut+t, pt.pos.y}, pt.shape});
+                    pitchBend.shape.sort();
+                    pitchBend.shape.eraseDuplicates();
+                }
+            }
+            for (auto& pt : dataIn.pitchBend.shape.pts) {
+                if (pt.pos.x < preLoopLen) {
+                    pitchBend.shape.pts.push_back({{pt.pos.x+offsetOut+t, pt.pos.y}, pt.shape});
+                    pitchBend.shape.sort();
+                    pitchBend.shape.eraseDuplicates();
+                }
+            }
+        }
+        pitchBend.updateBounds();
+        for (auto& it : dataIn.ccChannels) {
+            if (!ccChannels.count(it.first)) {
+                createCCChannel(it.first);
+            }
+            auto& cc = ccChannels[it.first];
+            for (auto& pt : it.second.shape.pts) {
+                if (pt.pos.x < preLoopLen) {
+                    cc.shape.pts.push_back({{pt.pos.x+offsetOut, pt.pos.y}, pt.shape});
+                    cc.shape.sort();
+                    cc.shape.eraseDuplicates();
+                }
+            }
+            for (tick_t t = preLoopLen; t < len; t += clip->loopLen) {
+                for (auto& pt : it.second.shape.pts) {
+                    if (pt.pos.x >= preLoopLen) {
+                        cc.shape.pts.push_back({{pt.pos.x+offsetOut+t, pt.pos.y}, pt.shape});
+                        cc.shape.sort();
+                        cc.shape.eraseDuplicates();
+                    }
+                }
+                for (auto& pt : it.second.shape.pts) {
+                    if (pt.pos.x < preLoopLen) {
+                        cc.shape.pts.push_back({{pt.pos.x+offsetOut+t, pt.pos.y}, pt.shape});
+                        cc.shape.sort();
+                        cc.shape.eraseDuplicates();
+                    }
+                }
+            }
+        }
+    } else {
+        for (auto& pt : dataIn.pitchBend.shape.pts) {
+            pitchBend.shape.pts.push_back({{pt.pos.x+offsetOut, pt.pos.y}, pt.shape});
+            pitchBend.shape.sort();
+            pitchBend.shape.eraseDuplicates();
+        }
+        pitchBend.updateBounds();
+
+        for (auto& it : dataIn.ccChannels) {
+            if (!ccChannels.count(it.first)) {
+                createCCChannel(it.first);
+            }
+            auto& cc = ccChannels[it.first];
+            for (auto& pt : it.second.shape.pts) {
+                cc.shape.pts.push_back({{pt.pos.x+offsetOut, pt.pos.y}, pt.shape});
+                cc.shape.sort();
+                cc.shape.eraseDuplicates();
+            }
+            cc.updateBounds();
+        }
+        updateBounds();
+    }
 }

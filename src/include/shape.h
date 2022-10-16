@@ -50,7 +50,7 @@ struct shape_t {
     float shapeSegment(float t, float shape) const;
     float sampleCurveOneShot(float posX) const;
     float sampleCurve(float posX, bool sampleLeftRight) const;
-    float sampleCurveUnclampped(float posX) const;
+    float sampleCurveUnclamped(float posX) const;
     int getMinDistEdge(vec2 pos, vec2 scale, float* fDist) const;
 
     int getMinPt(vec2 local, vec2 scale, float* distance = nullptr) const;
