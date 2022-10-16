@@ -2113,7 +2113,7 @@ namespace DAW::Host {
 void noteevent_buffer::update(tick_t blockStart, const std::vector<midievent_note_t>& _noteEvts, const std::vector<midievent_ctrl_t>& _ctrlEvts) {
     this->currentTick = blockStart;
     addAll(noteEvts, _noteEvts);
-    const tick_t eventTimeout = 100000;// TODO: calculate this depending on the total latency
+    const tick_t eventTimeout = 10000;// TODO: calculate this depending on the total latency
     auto it                   = noteEvts.begin();
     while (it != noteEvts.end()) {
         auto& evt = *it;
