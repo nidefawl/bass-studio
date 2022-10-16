@@ -359,6 +359,7 @@ guictr_noteeditor::guictr_noteeditor(clip_view& _view)
       piano(_view, *this),
       content(grid, _view, *this),
       velocities(grid, _view, *this),
+      ctrlData(grid, _view),
       timeline(grid),
       clipHandles(grid, _view),
       view(_view),
@@ -371,21 +372,46 @@ guictr_noteeditor::guictr_noteeditor(clip_view& _view)
     grid.addCallback(this);
     add(&piano);
     add(&content);
+    add(&ctrlData);
     add(&velocities);
     add(&timeline);
     add(&clipHandles);
     add(&btnToggleFold);
+    add(&btnToggleVelocities);
+    add(&btnToggleControlData);
+    add(&dropdownSelectControlData);
     add(&splitterVel);
     btnToggleFold.setButtonColor(GuiColor::COL_FOLD_BUTTON);
     btnToggleFold.setText("Fold");
     btnToggleFold.setStateRef(&fold);
+    // btnToggleVelocities.setButtonColor(GuiColor::COL_FOLD_BUTTON);
+    btnToggleVelocities.setText("Velocities");
+    // btnToggleControlData.setButtonColor(GuiColor::COL_FOLD_BUTTON);
+    btnToggleControlData.setText("Control Data");
+    dropdownSelectControlData.setText("Select");
+    dropdownSelectControlData.fnOptionSelected = [this](int32_t option, String& str) {
+        ctrlData.setSelectedData(option);
+        return str;
+    };
+    std::vector<String> options = {
+        "Pitch Bend" };
+    for (int32_t i = 1; i < 127; ++i) {
+        options.push_back(StringFormat("Midi CC%03d", i));
+    }
+    dropdownSelectControlData.setOptions(options);
+    dropdownSelectControlData.setSelectedIndex(ctrlData.getSelectedData());
+    // btnToggleVelocities.setStateRef(&fold);
     content.showRange(CLIPEDITOR_DEFAULT_MIN, CLIPEDITOR_DEFAULT_MAX);
 }
 
 guictr_noteeditor::~guictr_noteeditor() {
     remove(&splitterVel);
+    remove(&dropdownSelectControlData);
+    remove(&btnToggleControlData);
+    remove(&btnToggleVelocities);
     remove(&btnToggleFold);
     remove(&timeline);
+    remove(&ctrlData);
     remove(&velocities);
     remove(&content);
     remove(&piano);
@@ -394,9 +420,9 @@ guictr_noteeditor::~guictr_noteeditor() {
 
 void guictr_noteeditor::handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) {
     if (clampedAt == 1) {
-        velocities.setVisible(false);
+        ctrlData.setVisible(false);
     } else {
-        velocities.setVisible(true);
+        ctrlData.setVisible(true);
     }
     layout();
 }
@@ -410,6 +436,16 @@ void guictr_noteeditor::buttonClicked(guibase* button) {
             zoomPianoRollToClipsNoteRange();
         }
     }
+    if (button == &btnToggleVelocities) {
+        bool bShowVel = this->velocities.isVisible();
+        this->velocities.setVisible(!bShowVel);
+        this->layout();
+    }
+    if (button == &btnToggleControlData) {
+        bool bShowCtrl = this->ctrlData.isVisible();
+        this->ctrlData.setVisible(!bShowCtrl);
+        this->layout();
+    }
 }
 
 void guictr_noteeditor::renderBackground(NVGcontext* vg) {
@@ -420,27 +456,43 @@ void guictr_noteeditor::layout() {
     ivec2 cs = getSizeContent();
 
     auto heightContent = cs.y - heightTimeLine - heightClipIndicators;
+    velHeight = math::clamp(splitterVel.rightOrBottom(heightContent), 0, 220);
     if (!velocities.isVisible()) {
-        piano.size      = ivec2(pianoWidth, heightContent);
-        velocities.size = ivec2(cs.x - piano.size.x, 0);
+        velocities.size = ivec2(cs.x - pianoWidth, 0);
     } else {
-        velHeight = math::clamp(splitterVel.rightOrBottom(heightContent), 0, 120);
-        piano.size      = ivec2(pianoWidth, heightContent - velHeight);
-        velocities.size = ivec2(cs.x - piano.size.x, velHeight);
+        heightContent -= velHeight;
+        velocities.size = ivec2(cs.x - pianoWidth, velHeight);
     }
-
+    if (!ctrlData.isVisible()) {
+        ctrlData.size = ivec2(cs.x - pianoWidth, 0);
+    } else {
+        heightContent -= velHeight;
+        ctrlData.size = ivec2(cs.x - pianoWidth, velHeight);
+    }
+    piano.size      = ivec2(pianoWidth, heightContent);
     piano.pos          = ivec2(0, heightTimeLine + heightClipIndicators);
     timeline.pos       = ivec2(piano.right(), 0);
-    timeline.size      = ivec2(cs.x - piano.size.x, heightTimeLine);
+    timeline.size      = ivec2(cs.x - pianoWidth, heightTimeLine);
     clipHandles.pos    = ivec2(timeline.left(), timeline.bottom());
     clipHandles.size   = ivec2(timeline.size.x, heightClipIndicators);
-    btnToggleFold.pos  = ivec2(padding, padding);
-    btnToggleFold.size = ivec2((piano.size.x) / 2, 18);
     content.pos        = ivec2(timeline.left(), clipHandles.bottom());
     content.size       = ivec2(timeline.size.x, piano.size.y);
     velocities.pos     = ivec2(timeline.left(), content.bottom());
+    ctrlData.pos     = ivec2(timeline.left(), velocities.bottom());
     splitterVel.pos    = piano.getLeftBottom() - Splitter::SPLITTER_LAYOUT_THICKNESS / 2;
     splitterVel.size   = ivec2(cs.x, Splitter::SPLITTER_LAYOUT_THICKNESS);
+    btnToggleFold.pos  = ivec2(padding, padding);
+    btnToggleFold.size = ivec2((pianoWidth) / 2, 18);
+    btnToggleVelocities.pos = btnToggleFold.getRightTop();
+    btnToggleVelocities.size = ivec2((pianoWidth) / 2, 18);
+    btnToggleControlData.pos = btnToggleFold.getLeftBottom();
+    btnToggleControlData.size = ivec2((pianoWidth) / 2, 18);
+    dropdownSelectControlData.setVisible(ctrlData.isVisible());
+    if (dropdownSelectControlData.isVisible()) {
+        dropdownSelectControlData.pos = ctrlData.getLeftTop() - ivec2(pianoWidth, 0);
+        dropdownSelectControlData.size = ivec2(pianoWidth, 18);
+    }
+    
 
     clipHandles.clipViewSize = ivec2(content.size.x, content.size.y + clipHandles.size.y);
     grid.update(content.size);
@@ -489,7 +541,7 @@ void guictr_noteeditor::zoomPianoRollToClipsNoteRange() {
 
 void guictr_noteeditor::showEditClip() {
     clip_t* clip = view.clip();
-    if (clip != NULL) {
+    if (clip) {
         if (clip->noLayout) {
             grid.showRange(clip->offsetStart, clip->offsetStart + clip->getLen());
             zoomPianoRollToClipsNoteRange();
@@ -499,11 +551,12 @@ void guictr_noteeditor::showEditClip() {
             setLayout(layout.layoutPianoRoll);
         }
     }
+    ctrlData.showEditClip();
 }
 
 void guictr_noteeditor::storeLayout() {
     clip_t* clip = view.clip();
-    if (clip != NULL) {
+    if (clip) {
         clip_editor_layout_t& layout = clip->editorLayout;
         layout.layoutPianoRoll       = *static_cast<layout_pianoroll_t*>(this);
         layout.layoutGrid            = grid;//TODO: add a cast to get rid of slicing warning
@@ -549,13 +602,29 @@ void guictr_noteeditor::render(NVGcontext* vg) {
     nvgSave(vg);
     content.render(vg);
     nvgRestore(vg);
-    nvgSave(vg);
-    velocities.render(vg);
-    nvgRestore(vg);
+    if (velocities.isVisible()) {
+        nvgSave(vg);
+        velocities.render(vg);
+        nvgRestore(vg);
+    }
+    if (ctrlData.isVisible()) {
+        nvgSave(vg);
+        ctrlData.render(vg);
+        nvgRestore(vg);
+    }
     nvgSave(vg);
     clipHandles.render(vg);
     nvgRestore(vg);
-    btnToggleFold.render(vg);
+    if (btnToggleFold.isVisible())
+        btnToggleFold.render(vg);
+    if (btnToggleVelocities.isVisible())
+        btnToggleVelocities.render(vg);
+    if (btnToggleControlData.isVisible())
+        btnToggleControlData.render(vg);
+    if (dropdownSelectControlData.isVisible())
+        dropdownSelectControlData.render(vg);
+    if (splitterVel.isVisible())
+        splitterVel.render(vg);
 }
 
 

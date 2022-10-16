@@ -1,5 +1,6 @@
 
 
+#include "assert_dbg.h"
 #include "clipboard.h"
 #include "event.h"
 #include "guiglobals.h"
@@ -20,6 +21,7 @@
 #include "gui/track/trackcontent.h"
 #include "clipeditor.h"
 #include "gui/cliprenderer/cliprenderer_cache.h"
+#include "shape.h"
 #include "track.h"
 #include "track_impl.h"
 #include "host/host_pluginmanager.h"
@@ -373,7 +375,7 @@ void duplicateClipLoop(DawInstance* daw, clip_view& view) {
     }
 }
 
-void gui_clipcontent::renderBackground(NVGcontext* vg) {
+void gui_clipcontent_base::renderBackground(NVGcontext* vg) {
     ivec2 bgPos{0, 0};
     ivec2 bgSize{this->size};
     auto bgRepeat = grid.incr_bg * 2.0;
@@ -396,15 +398,146 @@ void gui_clipcontent::renderBackground(NVGcontext* vg) {
     }
 }
 
+gui_clipcontent_control_data::gui_clipcontent_control_data(scaled_grid& _grid, clip_view& _view)
+    : gui_clipcontent_base(_grid, _view),
+    shapeEdit(_grid)
+{
+    shapeEdit.setEditorCurve(&tmpShape);
+    shapeEdit.callback = [this](const DAW::Shape::shape_t& shape) {
+        const auto clip = view.clip();
+        if (clip) {
+            tmpShape = shape;
+            clip->controlData.pitchBend.shape = shape;
+            clip->controlData.updateBounds();
+        }
+    };
+}
+
+gui_clipcontent_control_data::~gui_clipcontent_control_data() = default;
+
+void gui_clipcontent_control_data::showEditClip() {
+    setSelectedData(this->cc);
+}
+void gui_clipcontent_control_data::setSelectedData(int32_t cc) {
+    this->cc = cc;
+    const auto clip = view.clip();
+    if (clip) {
+        if (cc == 0) {
+            tmpShape = clip->controlData.pitchBend.shape;
+        } else {
+            tmpShape = clip->controlData.ccChannels[cc].shape;
+        }
+    } else {
+        tmpShape = DAW::Shape::GetShapeSaw(DAW::Shape::ShapeFlags::SHAPE_UNCLAMPPED | DAW::Shape::ShapeFlags::SHAPE_SHAPED);
+        tmpShape.pts[1].pos.x *= grid.getTickLength();
+    }
+}
+
+void gui_clipcontent_control_data::layout() {
+    shapeEdit.layoutEditor(size);
+    gui_clipcontent_base::layout();
+}
+
+bool gui_clipcontent_control_data::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    if (gui_clipcontent_base::mouseHitTest(mpos, evt)) {
+        return true;
+    }
+    if (this->contains(mpos)) {
+        // if (shapeEdit.mouseHitCurveEditor(tmpShape, localMouse)) 
+        // {
+            evt.requestFocus(this);
+            return true;
+        // }
+    }
+    return false;
+}
+
+void gui_clipcontent_control_data::handleDraggedBegin(MouseEvent& evt) {
+    shapeEdit.onBeginDragCurveEditor(evt);
+}
+
+void gui_clipcontent_control_data::handleDraggedMove(MouseEvent& evt) {
+    shapeEdit.onMoveDragCurveEditor(evt);
+}
+
+void gui_clipcontent_control_data::handleDraggedRelease(MouseEvent& evt) {
+    shapeEdit.onReleaseDragCurveEditor(evt);
+}
+
+void gui_clipcontent_control_data::handleRightClick(MouseEvent& evt) {
+    shapeEdit.onRightClickCurveEditor(evt);
+}
+
+void gui_clipcontent_control_data::render(NVGcontext* vg) {
+    if (!setScissorTransform(vg)) {
+        return;
+    }
+    renderBackground(vg);
+    renderGridLines(vg, theme, grid.gridList, size);
+    const auto clip = view.clip();
+    if (!assert_expr(clip)) {
+        return;
+    }
+    shapeEdit.layoutEditor(size);
+    ivec2 localMouse = toControlsObjectSpace(parentCtrl->m_mousePos, this);
+    // auto scaledPos = shapeEdit.toNormalizedSpace(localMouse);
+    // // auto higlightHit = tmpShape.getMouseHit(scaledPos, shapeEdit.editorScale);
+    // // float clipTickMin = grid.screenToTickD(0.0);
+    // // float clipTickMax = grid.screenToTickD(size.x);
+    const auto shapePos    = vec2(grid.tickToScreenD(0), 0);
+    // const auto shapeScale  = vec2(grid.tickLenToScreen(1.0), size.y);
+    shapeEdit.renderEditor(vg, shapePos, theme, localMouse, false);
+    // DAW::Shape::DrawShapeOneShot(tmpShape, 
+    //                             vg, 
+    //                             theme,
+    //                             GuiColor::COL_SHAPE_CURVE,
+    //                             GuiColor::COL_SHAPE_CURVE_HIGHLIGHT,
+    //                             shapePos,
+    //                             shapeScale,
+    //                             clipTickMin,
+    //                             clipTickMax,
+    //                             higlightHit);
+    // this->shapeEdit.setEditorCurve(&clip->controlData.pitchBend.shape);
+    // this->shapeEdit.renderEditor(vg, {}, theme, relMousepos, false);
+    auto x = float(grid.tickToScreenD(view.cursor.start));
+    if (view.cursor.start == view.cursor.end) {
+        if (x >= -2 && x < size.x + 2) {
+            x += 0.5;
+            NVGcolor cursorColor = getCursorColor();
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, x, 1);
+            nvgLineTo(vg, x, size.y - 1);
+            nvgStrokeColor(vg, cursorColor);
+            nvgStrokeWidth(vg, 1.5f);
+            nvgStroke(vg);
+        }
+    } else {
+        float x2 = (float) grid.tickToScreenD(view.cursor.end);
+        if (x2 > -4.0f && x < size.x + 4.0f) {
+            float xBegin = CLAMP_I(x, -4.0f, size.x + 3.0f);
+            float xEnd   = CLAMP_I(x2, -3.0f, size.x + 4.0f);
+            float width  = xEnd - xBegin;
+            nvgBeginPath(vg);
+            nvgRect(vg, xBegin, -2.0f, width, size.y + 2.0f);
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_SELECTION_BACKGROUND));
+            nvgFill(vg);
+        }
+    }
+}
+
 void gui_clipcontent_velocities::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
     renderBackground(vg);
-
+    renderGridLines(vg, theme, grid.gridList, size);
+    auto clip = view.clip();
+    if (!assert_expr(clip)) {
+        return;
+    }
     float w = size.x;
     const float h = size.y;
-    const clip_notes_t& notes = view.clip()->notes;
+    const clip_notes_t& notes = clip->notes;
     NVGpaint paint{};
     paint.image     = -1;
     paint.customPar = 1;
@@ -429,6 +562,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
             }
             if (nRendered) {
                 paint.innerColor = theme->getColor(i == 0 ? GuiColor::COL_NOTE : GuiColor::COL_NOTE_MUTE);
+                paint.innerColor.a *= 0.8f;
                 paint.renderType = 4;
                 nvgFillPaint(vg, paint);
                 nvgBatchedRender(vg);

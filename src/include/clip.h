@@ -1,5 +1,6 @@
 #pragma once
 #include <list>
+#include <map>
 #include <vector>
 #include <memory>
 #include "math/seq_math.h"
@@ -29,6 +30,9 @@ struct track_gui_entry_t;
 class track_t;
 class gui_clip;
 class rendered_audio_clip_t;
+namespace DAW::Host {
+    struct midievent_ctrl_t;
+}
 
 struct clip_fade_t {
     double durationMs = 0.0;
@@ -72,6 +76,49 @@ public:
     bool isEmpty() const {
         return id == -1;
     }
+};
+struct clip_control_data_channel_t {
+    DAW::Shape::shape_t shape;
+    float defaultValue = 0.0f;
+    float minTick = -1;
+    float maxTick = -1;
+    bool hasData() const {
+        return shape.pts.size() > 0;
+    }
+    float sampleAtTick(float x) {
+        if (shape.pts.empty()) {
+            return defaultValue;
+        }
+        return shape.sampleCurveUnclampped(x);
+    }
+    void updateBounds() {
+        if (shape.pts.empty()) {
+            minTick = -1;
+            maxTick = -1;
+        } else {
+            minTick = shape.pts.front().pos.x;
+            maxTick = shape.pts.back().pos.x;
+        }
+    }
+};
+class clip_t;
+struct clip_control_data_t {
+    clip_control_data_channel_t pitchBend;
+    std::map<int32_t, clip_control_data_channel_t> ccChannels;
+    clip_control_data_t();
+    void updateBounds();
+    bool hasData() const {
+        if (pitchBend.hasData()) {
+            return true;
+        }
+        for (auto& kv : ccChannels) {
+            if (kv.second.hasData()) {
+                return true;
+            }
+        }
+        return false;
+    }
+    int getInTimeRange(clip_t* clip, tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, std::vector<DAW::Host::midievent_ctrl_t>& list);
 };
 
 class clip_notes_t {
@@ -159,6 +206,7 @@ class clip_t {
 public:
     clip_notes_t notes;
     clip_audio_t audio;
+    clip_control_data_t controlData;
     tick_t time = 0;
     //private:
     tick_t len = 0;

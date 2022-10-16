@@ -24,6 +24,13 @@ namespace fp_math {
     double silenceNanInfd(double d) {
         return (__builtin_isnan(d) || __builtin_isinf(d)) ? 0.0 : d;
     }
+    bool isDenormalf(float f) {
+        return __builtin_isnormal(f) == 0;
+    }
+    bool isZeroOrDenormal(float f) {
+        return f == 0.0f || isDenormalf(f);
+    }
+    
 } // namespace fp_math
 #else //MSVC and other compilers
 #include <cmath>
@@ -52,6 +59,12 @@ namespace fp_math {
     }
     double silenceNanInfd(double d) {
         return (std::isnan(d) || std::isinf(d)) ? 0.0 : d;
+    }
+    bool isDenormalf(float f) {
+        return std::fpclassify(f) == FP_SUBNORMAL;
+    }
+    bool isZeroOrDenormal(float f) {
+        return f == 0.0f || isDenormalf(f);
     }
 } // namespace fp_math
 #endif

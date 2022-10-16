@@ -422,6 +422,16 @@ void serialize(Archive& archive, automation_point_t& m) {
 }
 
 template<class Archive>
+void serialize(Archive& archive, clip_control_data_channel_t& m) {
+    archive(make_nvp("shape", m.shape));
+}
+
+template<class Archive>
+void serialize(Archive& archive, clip_control_data_t& m) {
+    archive(make_nvp("pitchBend", m.pitchBend), make_nvp("cc", m.ccChannels));
+}
+
+template<class Archive>
 void serialize(Archive& archive, clip_t& m) {
     archive(make_nvp("name", m.name),
             make_nvp("time", m.time),
@@ -438,6 +448,7 @@ void serialize(Archive& archive, clip_t& m) {
             make_nvp("clip_audio", m.audio),
             make_nvp("type", m.clipType),
             make_nvp("lenSamples", m.lenSamples));
+    make_optional_nvp(archive, "clip_data", m.controlData);
     if (m.loopLen == 0) {
         m.loopStart = m.offsetStart;
         m.loopLen = m.len;

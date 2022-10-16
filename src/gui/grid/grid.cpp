@@ -69,7 +69,9 @@ tick_t scaled_grid::distPrev(tick_t tick) const {
     return (pos * len) - tick;
 }
 tick_t scaled_grid::screenToTickSnapExact(double x, int snap) const {
-    tick_t tick = screenToTick(x);
+    return tickSnapExact(screenToTick(x), snap);
+}
+tick_t scaled_grid::tickSnapExact(tick_t tick, int snap) const {
     if (snap != SNAP_OFF && this->grid_dens.getSnap() != GRID_OFF) {
         const grid_div* min  = nullptr;
         tick_t minDist = 0;

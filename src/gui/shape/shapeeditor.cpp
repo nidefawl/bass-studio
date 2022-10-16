@@ -43,53 +43,53 @@
 
 namespace DAW::Shape {
 
-void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, const GuiColor::constant_t& col, const GuiColor::constant_t& colHovered, vec2 pos, vec2 size, vec2 mousePos, const shape_t::hit_result& hit) {
+void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, const GuiColor::constant_t& col, const GuiColor::constant_t& colHovered, vec2 pos, vec2 sizeScaled, float xClipMin, float xClipMax, const shape_t::hit_result& hit) {
     if (curve.pts.empty())
         return;
     auto numCurvePts = CtrSize(curve.pts);
     //TODO: This is not efficient. Either add caching or at least use references and a scratch pad vector
     const std::vector<shape_pt_t>& pts = curve.pts;
     auto nPoints = CtrSize(curve.pts);
-    // float radiusHandle = 3.0f;
+    float radiusHandle = 3.0f;
     float strokeWidth = 3.0f;
     auto lineColor = theme->getColor(col);
     auto fillColor = lineColor;
-    // auto handleColor = theme->getColor(GuiColor::COL_KNOB_IND);
+    auto handleColor = theme->getColor(GuiColor::COL_KNOB_IND);
     auto hoverColor = theme->getColor(colHovered);
     fillColor.a = 0.3;
     for (int32_t pass = 0; pass < 2; ++pass) {
         if (pass == 0) {
             nvgBeginPath(vg);
-            nvgMoveTo(vg, pos.x + pts.front().pos.x*size.x-5, pos.y + size.y);
+            nvgMoveTo(vg, pos.x + pts.front().pos.x*sizeScaled.x-5, pos.y + sizeScaled.y);
         }
         for (int32_t edge = 0; edge < nPoints - 1; edge++) {
             const auto& pt0 = pts[edge];
             const auto& pt1 = pts[edge+1];
             auto ptD = pt1.pos - pt0.pos;
-            int32_t numSteps = math::max<int32_t>(0, math::ceilfS32(ptD.x*size.x*0.5f));
+            int32_t numSteps = math::max<int32_t>(0, math::ceilfS32(ptD.x*sizeScaled.x*0.5f));
             if (numSteps == 1)numSteps++;
             if (!numSteps) continue;
             if (pass == 0) {
-                nvgLineTo(vg, pos.x + pt0.pos.x*size.x, pos.y + (1.0f - pt0.pos.y) * size.y);
+                nvgLineTo(vg, pos.x + pt0.pos.x*sizeScaled.x, pos.y + (1.0f - pt0.pos.y) * sizeScaled.y);
             }
             if (pass == 1) { // lines
                 nvgBeginPath(vg);
-                nvgMoveTo(vg, pos.x + pt0.pos.x*size.x, pos.y + (1.0f - pt0.pos.y) * size.y);
+                nvgMoveTo(vg, pos.x + pt0.pos.x*sizeScaled.x, pos.y + (1.0f - pt0.pos.y) * sizeScaled.y);
             }
             for (int32_t step = 0; step < numSteps; step++) {
                 float x = step / float(numSteps);
                 float ts = curve.shapeSegment(x, pt0.shape);
                 dbgassert(ts >= 0.0f && ts <= 1.0f);
                 auto ps = vec2(x, ts) * ptD + pt0.pos;
-                if (ps.x < -0.1f)
+                if (ps.x < xClipMin)
                     continue;
-                if (ps.x > 1.1f)
+                if (ps.x > xClipMax)
                     continue;
                 ps.y = 1.0f - ps.y;
-                auto pt = ps * size + pos;
+                auto pt = ps * sizeScaled + pos;
                 nvgLineTo(vg, pt.x, pt.y);
             }
-            nvgLineTo(vg, pos.x + pt1.pos.x*size.x, pos.y + (1.0f - pt1.pos.y) * size.y);
+            nvgLineTo(vg, pos.x + pt1.pos.x*sizeScaled.x, pos.y + (1.0f - pt1.pos.y) * sizeScaled.y);
             if (pass == 1) {
                 nvgStrokeColor(vg, lineColor);
                 nvgStrokeWidth(vg, strokeWidth);
@@ -97,11 +97,11 @@ void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* the
             }
         }
         if (pass == 0) {
-            nvgLineTo(vg, pos.x + pts.back().pos.x*size.x+5, pos.y + size.y);
+            nvgLineTo(vg, pos.x + pts.back().pos.x*sizeScaled.x+5, pos.y + sizeScaled.y);
             nvgClosePath(vg);
             nvgFillColor(vg, fillColor);
             nvgFillCustomPar(vg, -2);
-            nvgSetShapeExtents(vg, pos.x, pos.y, size.x, size.y);
+            nvgSetShapeExtents(vg, pos.x, pos.y, sizeScaled.x, sizeScaled.y);
             nvgFill(vg);
         }
     }
@@ -117,19 +117,19 @@ void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* the
             const auto& pt1 = pts[idx+1];
             auto ptD = pt1.pos - pt0.pos;
             int32_t nVecs = 0;
-            int32_t numSteps = math::max<int32_t>(2, math::ceilfS32(ptD.x*size.x*0.5f));
+            int32_t numSteps = math::max<int32_t>(2, math::ceilfS32(ptD.x*sizeScaled.x*0.5f));
             nvgBeginPath(vg);
             for (int32_t step = 0; step < numSteps; step++) {
                 float x = step / float(numSteps - 1);
                 float ts = curve.shapeSegment(x, pt0.shape);
                 dbgassert(ts >= 0.0f && ts <= 1.0f);
                 auto ps = vec2(x, ts) * ptD + pt0.pos;
-                if (ps.x < -0.1f)
+                if (ps.x < xClipMin)
                     continue;
-                if (ps.x > 1.1f)
+                if (ps.x > xClipMax)
                     continue;
                 ps.y = 1.0f - ps.y;
-                auto pt = ps * size + pos;
+                auto pt = ps * sizeScaled + pos;
                 if (nVecs == 0) {
                     nvgMoveTo(vg, pt.x, pt.y);
                 } else {
@@ -143,9 +143,9 @@ void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* the
         }
     }
 
-    /* nvgBeginPath(vg);
+    nvgBeginPath(vg);
     for (int32_t i = 0; i < nPoints; i++) {
-        auto pt = vec2(pts[i].pos.x, 1.0 - pts[i].pos.y) * size + pos;
+        auto pt = vec2(pts[i].pos.x, 1.0 - pts[i].pos.y) * sizeScaled + pos;
         if (hit.type == shape_t::hittype::HIT_NODE && (i == hit.idx)) {
             continue;
         }
@@ -155,15 +155,128 @@ void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* the
     nvgFillCustomPar(vg, -2);
     nvgFill(vg);
     if (hit.type == shape_t::hittype::HIT_NODE && hit.idx >= 0 && hit.idx < numCurvePts) {
-        auto pt = vec2(pts[hit.idx].pos.x, 1.0 - pts[hit.idx].pos.y) * size + pos;
+        auto pt = vec2(pts[hit.idx].pos.x, 1.0 - pts[hit.idx].pos.y) * sizeScaled + pos;
         nvgBeginPath(vg);
         nvgCircleFastNDivs(vg, pt.x, pt.y, radiusHandle, 16);
         nvgFillColor(vg, hoverColor);
         nvgFillCustomPar(vg, -2);
         nvgFill(vg);
-    } */
+    }
 }
-void DrawShapeCyclic(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, const GuiColor::constant_t& col, const GuiColor::constant_t& colHovered, vec2 pos, vec2 size, vec2 mousePos, const shape_t::hit_result& hit) {
+
+void DrawShapeUnclamped(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, const GuiColor::constant_t& col, const GuiColor::constant_t& colHovered, vec2 pos, vec2 sizeScaled, const shape_t::hit_result& hit) {
+    if (curve.pts.empty())
+        return;
+    auto numCurvePts = CtrSize(curve.pts);
+    //TODO: This is not efficient. Either add caching or at least use references and a scratch pad vector
+    const std::vector<shape_pt_t>& pts = curve.pts;
+    auto nPoints = CtrSize(curve.pts);
+    float radiusHandle = 3.0f;
+    float strokeWidth = 3.0f;
+    auto lineColor = theme->getColor(col);
+    auto fillColor = lineColor;
+    auto handleColor = theme->getColor(GuiColor::COL_KNOB_IND);
+    auto hoverColor = theme->getColor(colHovered);
+    fillColor.a = 0.3;
+    for (int32_t pass = 0; pass < 2; ++pass) {
+        if (pass == 0) {
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, pos.x + pts.front().pos.x*sizeScaled.x, pos.y + sizeScaled.y);
+        }
+        for (int32_t edge = 0; edge < nPoints - 1; edge++) {
+            const auto& pt0 = pts[edge];
+            const auto& pt1 = pts[edge+1];
+            auto ptD = pt1.pos - pt0.pos;
+            int32_t numSteps = math::max<int32_t>(0, math::ceilfS32(ptD.x*sizeScaled.x*0.5f));
+            if (numSteps == 1)numSteps++;
+            if (!numSteps) continue;
+            if (pass == 0) {
+                nvgLineTo(vg, pos.x + pt0.pos.x*sizeScaled.x, pos.y + (1.0f - pt0.pos.y) * sizeScaled.y);
+            }
+            if (pass == 1) { // lines
+                nvgBeginPath(vg);
+                nvgMoveTo(vg, pos.x + pt0.pos.x*sizeScaled.x, pos.y + (1.0f - pt0.pos.y) * sizeScaled.y);
+            }
+            for (int32_t step = 0; step < numSteps; step++) {
+                float x = step / float(numSteps);
+                float ts = curve.shapeSegment(x, pt0.shape);
+                dbgassert(ts >= 0.0f && ts <= 1.0f);
+                auto ps = vec2(x, ts) * ptD + pt0.pos;
+                ps.y = 1.0f - ps.y;
+                auto pt = ps * sizeScaled + pos;
+                nvgLineTo(vg, pt.x, pt.y);
+            }
+            nvgLineTo(vg, pos.x + pt1.pos.x*sizeScaled.x, pos.y + (1.0f - pt1.pos.y) * sizeScaled.y);
+            if (pass == 1) {
+                nvgStrokeColor(vg, lineColor);
+                nvgStrokeWidth(vg, strokeWidth);
+                nvgStroke(vg);
+            }
+        }
+        if (pass == 0) {
+            nvgLineTo(vg, pos.x + pts.back().pos.x*sizeScaled.x, pos.y + sizeScaled.y);
+            nvgClosePath(vg);
+            nvgFillColor(vg, fillColor);
+            nvgFillCustomPar(vg, -2);
+            nvgSetShapeExtents(vg, pos.x, pos.y, sizeScaled.x, sizeScaled.y);
+            nvgFill(vg);
+        }
+    }
+    if (hit.type == shape_t::hittype::HIT_EDGE && hit.idx >= 0 && hit.idx < numCurvePts - 1) {
+        for (int32_t pass = 0; pass < 2; ++pass) {
+            int32_t idx = hit.idx;
+            if (pass > 0) {
+                if (idx != numCurvePts - 2)
+                    break;
+                idx = 0;
+            }
+            const auto& pt0 = pts[idx];
+            const auto& pt1 = pts[idx+1];
+            auto ptD = pt1.pos - pt0.pos;
+            int32_t nVecs = 0;
+            int32_t numSteps = math::max<int32_t>(2, math::ceilfS32(ptD.x*sizeScaled.x*0.5f));
+            nvgBeginPath(vg);
+            for (int32_t step = 0; step < numSteps; step++) {
+                float x = step / float(numSteps - 1);
+                float ts = curve.shapeSegment(x, pt0.shape);
+                dbgassert(ts >= 0.0f && ts <= 1.0f);
+                auto ps = vec2(x, ts) * ptD + pt0.pos;
+                ps.y = 1.0f - ps.y;
+                auto pt = ps * sizeScaled + pos;
+                if (nVecs == 0) {
+                    nvgMoveTo(vg, pt.x, pt.y);
+                } else {
+                    nvgLineTo(vg, pt.x, pt.y);
+                }
+                nVecs++;
+            }
+            nvgStrokeColor(vg, hoverColor);
+            nvgStrokeWidth(vg, strokeWidth+1);
+            nvgStroke(vg);
+        }
+    }
+
+    nvgBeginPath(vg);
+    for (int32_t i = 0; i < nPoints; i++) {
+        auto pt = vec2(pts[i].pos.x, 1.0 - pts[i].pos.y) * sizeScaled + pos;
+        if (hit.type == shape_t::hittype::HIT_NODE && (i == hit.idx)) {
+            continue;
+        }
+        nvgCircleFastNDivs(vg, pt.x, pt.y, radiusHandle, 12);
+    }
+    nvgFillColor(vg, handleColor);
+    nvgFillCustomPar(vg, -2);
+    nvgFill(vg);
+    if (hit.type == shape_t::hittype::HIT_NODE && hit.idx >= 0 && hit.idx < numCurvePts) {
+        auto pt = vec2(pts[hit.idx].pos.x, 1.0 - pts[hit.idx].pos.y) * sizeScaled + pos;
+        nvgBeginPath(vg);
+        nvgCircleFastNDivs(vg, pt.x, pt.y, radiusHandle, 16);
+        nvgFillColor(vg, hoverColor);
+        nvgFillCustomPar(vg, -2);
+        nvgFill(vg);
+    }
+}
+void DrawShapeCyclic(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, const GuiColor::constant_t& col, const GuiColor::constant_t& colHovered, vec2 pos, vec2 size, const shape_t::hit_result& hit) {
     if (curve.pts.empty())
         return;
 
@@ -623,22 +736,29 @@ public:
 
 void ShapeEdit::onBeginDragCurveEditor(MouseEvent& evt) {
     dragged = {};
-    if (hasControlHandles()) {
-        curveBegin = *curve;
-        curveTmp   = *curve;
-        vec2 local = toNormalizedSpace(evt.relMousepos);
-        if (evt.type == MouseEventType::M_EVT_DOUBLECLICK&&!(curve->flags & SHAPE_LOCK_POINTS)) {
-            curveTmp.pts.push_back({ { local.x, local.y }, 0.5f });
-            curveTmp.sort();
-            if (callback)
-                callback(curveTmp);
-        } else {
-            dragged      = curve->getMouseHit(local, editorSize);
-            dragBeginPos = local;
-        }
-        wasAltBegin   = isAlt(evt.kbmods);
-        wasShiftBegin = isShift(evt.kbmods);
+    curveBegin = *curve;
+    curveTmp   = *curve;
+    vec2 local = toNormalizedSpace(evt.relMousepos);
+    if (evt.type == MouseEventType::M_EVT_DOUBLECLICK&&!(curve->flags & SHAPE_LOCK_POINTS)) {
+        curveTmp.pts.push_back({ { local.x, local.y }, 0.5f });
+        curveTmp.sort();
+        if (callback)
+            callback(curveTmp);
+    } else if (hasControlHandles()) {
+        dragged      = curve->getMouseHit(local, editorScale);
+        dragBeginPos = local;
     }
+    wasAltBegin   = isAlt(evt.kbmods);
+    wasShiftBegin = isShift(evt.kbmods);
+}
+
+bool ShapeEdit::mouseHitCurveEditor(const shape_t& shape, ivec2 mpos) const {
+    if (hasControlHandles()) {
+        vec2 local = toNormalizedSpace(mpos);
+        auto hit = shape.getMouseHit(local, editorScale);
+        return hit.type != shape_t::hittype::HIT_NONE;
+    }
+    return false;
 }
 
 void ShapeEdit::onMoveDragCurveEditor(MouseEvent& evt) {
@@ -652,8 +772,10 @@ void ShapeEdit::onMoveDragCurveEditor(MouseEvent& evt) {
             if (bIsGridEnabledV && !isAlt(evt.kbmods)) {
                 local.y = snapV(local.y);
             }
-            local.x          = math::clamp(local.x, 0.0f, 1.0f);
-            local.y          = math::clamp(local.y, 0.0f, 1.0f);
+            if (!(curve->flags&ShapeFlags::SHAPE_UNCLAMPPED)) {
+                local.x = math::clamp(local.x, 0.0f, 1.0f);
+                local.y = math::clamp(local.y, 0.0f, 1.0f);
+            }
             float beginRange = local.x;
             float endRange   = beginRange + 1.0f / math::max<float>(1.0f, gridStepsH);
             float leftVal    = curveTmp.sampleCurve(beginRange, false);
@@ -668,7 +790,7 @@ void ShapeEdit::onMoveDragCurveEditor(MouseEvent& evt) {
                     break;
                 }
             }
-            if (beginRange >= 0.0f && beginRange <= 1.0f && endRange >= 0.0f && endRange <= 1.0f) {
+            if ((curve->flags&ShapeFlags::SHAPE_UNCLAMPPED) || ((beginRange >= 0.0f && beginRange <= 1.0f && endRange >= 0.0f && endRange <= 1.0f))) {
                 curveTmp.pts.insert(curveTmp.pts.begin() + idxInsert++, { { beginRange, leftVal }, 0.5f });
                 curveTmp.pts.insert(curveTmp.pts.begin() + idxInsert++, { { beginRange, local.y }, 0.5f });
                 curveTmp.pts.insert(curveTmp.pts.begin() + idxInsert++, { { endRange, local.y }, 0.5f });
@@ -689,33 +811,48 @@ void ShapeEdit::onMoveDragCurveEditor(MouseEvent& evt) {
             if (bIsGridEnabledV && !isAlt(evt.kbmods)) {
                 snapped.y = snapV(local.y);
             }
-            if (!canJumpOverPoints) {
-                if (snapped.x > 1.0f) {
-                    snapped.x = 1.0f;
+            if (!(curve->flags&ShapeFlags::SHAPE_UNCLAMPPED)) {
+                if (!canJumpOverPoints) {
+                    if (snapped.x > 1.0f) {
+                        snapped.x = 1.0f;
+                    }
+                    if (snapped.x < 0.0f) {
+                        snapped.x = 0.0f;
+                    }
+                    if (dragged.idx > 0) {
+                        snapped.x = math::max(snapped.x, curveTmp.pts[dragged.idx - 1].pos.x);
+                    }
+                    if (dragged.idx + 1 < CtrSize(curveTmp.pts)) {
+                        snapped.x = math::min(snapped.x, curveTmp.pts[dragged.idx + 1].pos.x);
+                    }
                 }
-                if (snapped.x < 0.0f) {
-                    snapped.x = 0.0f;
+                while (snapped.x < 0.0f) {
+                    snapped.x += 1.0f;
                 }
-                if (dragged.idx > 0) {
-                    snapped.x = math::max(snapped.x, curveTmp.pts[dragged.idx - 1].pos.x);
+                auto unclamped = snapped;
+                double fModfInput = snapped.x;
+                snapped.x      = math::clamp<float>(modf(fModfInput, &fModfInput), 0.0f, 1.0f);
+                snapped.y      = math::clamp(snapped.y, 0.0f, 1.0f);
+                auto& pt       = curveTmp.pts[dragged.idx];
+                if (unclamped.x > snapped.x + 0.9) {
+                    snapped.x += 1.0;
+                    dbgassert(snapped.x == 1.0);
                 }
-                if (dragged.idx + 1 < CtrSize(curveTmp.pts)) {
-                    snapped.x = math::min(snapped.x, curveTmp.pts[dragged.idx + 1].pos.x);
+                pt.pos = snapped;
+            } else {
+                if (!canJumpOverPoints) {
+                    if (dragged.idx > 0) {
+                        snapped.x = math::max(snapped.x, curveTmp.pts[dragged.idx - 1].pos.x);
+                    }
+                    if (dragged.idx + 1 < CtrSize(curveTmp.pts)) {
+                        snapped.x = math::min(snapped.x, curveTmp.pts[dragged.idx + 1].pos.x);
+                    }
                 }
+                snapped.y      = math::clamp(snapped.y, 0.0f, 1.0f);
+                snapped.x      = math::max(snapped.x, 0.0f);
+                auto& pt       = curveTmp.pts[dragged.idx];
+                pt.pos = snapped;
             }
-            while (snapped.x < 0.0f) {
-                snapped.x += 1.0f;
-            }
-            auto unclamped = snapped;
-            double fModfInput = snapped.x;
-            snapped.x      = math::clamp<float>(modf(fModfInput, &fModfInput), 0.0f, 1.0f);
-            snapped.y      = math::clamp(snapped.y, 0.0f, 1.0f);
-            auto& pt       = curveTmp.pts[dragged.idx];
-            if (unclamped.x > snapped.x + 0.9) {
-                snapped.x += 1.0;
-                dbgassert(snapped.x == 1.0);
-            }
-            pt.pos = snapped;
 
             curveTmp.sort();
             if (callback)
@@ -778,7 +915,7 @@ bool ShapeEdit::onRightClickCurveEditor(MouseEvent& evt) {
     if (hasControlHandles() && curve && !(curve->flags & SHAPE_LOCK_POINTS)) {
         vec2 local    = toNormalizedSpace(evt.relMousepos);
         float minDist = 0.0f;
-        int32_t minPt = curve->getMinPt(local, editorSize, &minDist);
+        int32_t minPt = curve->getMinPt(local, editorScale, &minDist);
         if (minPt > -1) {
             curve->pts.erase(curve->pts.begin() + minPt);
             curve->sort();
@@ -789,7 +926,9 @@ bool ShapeEdit::onRightClickCurveEditor(MouseEvent& evt) {
 }
 
 void ShapeEdit::renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, ivec2 relMousepos, bool bDrawGrid) {
-    if (editorSize.x < 1.0f || editorSize.y < 1.0f)
+    // if (editorScale.x < 1.0f || editorScale.y < 1.0f)
+    //     return;
+    if (!assert_expr(curve != nullptr))
         return;
     nvgSave(vg);
     nvgTranslate(vg, pos.x, pos.y);
@@ -797,35 +936,37 @@ void ShapeEdit::renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, 
     if (bDrawGrid) {
         int32_t gridStepsH = math::clamp<int32_t>(this->gridStepsH, 1, 128);
         int32_t gridStepsV = math::clamp<int32_t>(this->gridStepsV, 1, 128);
-        DrawGrid(vg, theme, pos, editorSize, gridStepsH, gridStepsV);
+        DrawGrid(vg, theme, pos, editorScale, gridStepsH, gridStepsV);
     }
     const auto mouseLocal = toNormalizedSpace(relMousepos);
     auto higlightHit = shape_t::hit_result();
-    if (mouseLocal.x >= 0.0f && mouseLocal.x <= 1.0f && mouseLocal.y >= 0.0f && mouseLocal.y <= 1.0f) {
-        higlightHit = curve->getMouseHit(mouseLocal, editorSize);
+    if (((curve->flags&ShapeFlags::SHAPE_UNCLAMPPED) || (mouseLocal.x >= 0.0f && mouseLocal.x <= 1.0f)) && mouseLocal.y >= 0.0f && mouseLocal.y <= 1.0f) {
+        higlightHit = curve->getMouseHit(mouseLocal, editorScale);
     }
     auto* curveRender     = curve;
     if (dragged.type != shape_t::hittype::HIT_NONE) {
         higlightHit = dragged;
         curveRender = &curveTmp;
     }
-    if (curveRender->flags & ShapeFlags::SHAPE_CYCLIC) {
-        DrawShapeCyclic(*curveRender, vg, theme, GuiColor::COL_SHAPE_CURVE, GuiColor::COL_SHAPE_CURVE_HIGHLIGHT, pos, editorSize, mouseLocal, higlightHit);
+    if (curveRender->flags & ShapeFlags::SHAPE_UNCLAMPPED) {
+        DrawShapeUnclamped(*curveRender, vg, theme, GuiColor::COL_SHAPE_CURVE, GuiColor::COL_SHAPE_CURVE_HIGHLIGHT, pos, editorScale, higlightHit);
+    } else if (curveRender->flags & ShapeFlags::SHAPE_CYCLIC) {
+        DrawShapeCyclic(*curveRender, vg, theme, GuiColor::COL_SHAPE_CURVE, GuiColor::COL_SHAPE_CURVE_HIGHLIGHT, pos, editorScale, higlightHit);
     } else {
-        DrawShapeOneShot(*curveRender, vg, theme, GuiColor::COL_SHAPE_CURVE, GuiColor::COL_SHAPE_CURVE_HIGHLIGHT, pos, editorSize, mouseLocal, higlightHit);
+        DrawShapeOneShot(*curveRender, vg, theme, GuiColor::COL_SHAPE_CURVE, GuiColor::COL_SHAPE_CURVE_HIGHLIGHT, pos, editorScale, -0.1f, 1.1f, higlightHit);
     }
 
     if (curveRender->renderPhase > -1.0f) {
-        float playBackX = curveRender->renderPhase * editorSize.x;
+        float playBackX = curveRender->renderPhase * editorScale.x;
         nvgBeginPath(vg);
         nvgMoveTo(vg, playBackX, 0);
-        nvgLineTo(vg, playBackX, editorSize.y);
+        nvgLineTo(vg, playBackX, editorScale.y);
         nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD_OUTLINE));
         nvgStrokeWidth(vg, 2);
         nvgStroke(vg);
         nvgBeginPath(vg);
         nvgMoveTo(vg, playBackX, 0);
-        nvgLineTo(vg, playBackX, editorSize.y);
+        nvgLineTo(vg, playBackX, editorScale.y);
         nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD));
         nvgStrokeWidth(vg, 1);
         nvgStroke(vg);
@@ -834,7 +975,7 @@ void ShapeEdit::renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, 
 }
 
 void ShapeEdit::layoutEditor(ivec2 size) {
-    editorSize = {math::max(4, size.x), size.y};
+    editorScale = {math::max(4, size.x), size.y};
 }
 
 void ShapeEdit::setEditorCurve(shape_t* curve) {

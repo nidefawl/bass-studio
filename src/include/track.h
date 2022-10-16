@@ -27,13 +27,14 @@ class track_t;
 struct track_impl_t;
 struct track_clipboard_t;
 class trackdata_midi_t;
-
 class gui_track;
 class gui_track_subtrack;
 class gui_track_automationlane;
 class gui_track_controls;
-
 class delete_cb;
+namespace DAW::Host {
+    struct midievent_ctrl_t;
+}
 using track_vector = std::vector<track_t*>;
 
 void deleteTrackContents(trackdata_midi_t* tr, delete_cb* cb);
@@ -154,6 +155,7 @@ public:
     void deleteClips(delete_cb* cb);
     void getClipsInRange(tick_t start, tick_t end, std::vector<clip_t*>& clips);
     void getNotesInRange(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& notes);
+    void getEventsInRange(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& notes, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvents);
 };
 
 struct clip_layout_t {

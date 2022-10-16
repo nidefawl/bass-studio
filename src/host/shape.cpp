@@ -7,6 +7,7 @@
 #include "math/seq_math.h"
 #include "math/vec.h"
 #include "seq_util.h"
+#include "math/seq_math.h"
 
 namespace DAW::Shape {
 
@@ -84,11 +85,17 @@ namespace DAW::Shape {
             return pts[0].pos.y;
         }
         float pX = posX;
-        while (pX > 1.0f) {
-            pX -= 1.0f;
-        }
-        while (pX < 0.0f) {
-            pX += 1.0f;
+        if (this->flags & SHAPE_CYCLIC) {
+            // while (pX > 1.0f) {
+            //     pX -= 1.0f;
+            // }
+            // while (pX < 0.0f) {
+            //     pX += 1.0f;
+            // }
+            pX = fmodf(pX, 1.0f);
+            if (pX < 0.0f) {
+                pX += 1.0f;
+            }
         }
         size_t idx = 0;
         for (size_t i = 0; i < pts.size(); i++) {
@@ -121,6 +128,40 @@ namespace DAW::Shape {
         return y;
     }
 
+    float shape_t::sampleCurveUnclampped(float posX) const {
+        dbgassert(!pts.empty());
+        if (pts.empty())
+            return 0.0f;
+        if (pts.size() == 1) {
+            return pts[0].pos.y;
+        }
+        float pX = posX;
+        size_t idx = 0;
+        for (size_t i = 0; i < pts.size(); i++) {
+            float px = pts[i].pos.x;
+            if (px >= pX) {
+                idx = i;
+                break;
+            }
+        }
+        auto pt0 = idx == 0 ? pts.front() : pts[idx - 1];
+        auto pt1 = pts[idx];
+        // if (pt0.pos.x >= pt1.pos.x) {
+        //     pt1.pos.x += 1;
+        // }
+        // if (pt0.pos.x > pX) {
+        //     pX += 1;
+        // }
+        float diffX = math::abs(pt1.pos.x - pt0.pos.x);
+        if (diffX < 0.00001f) {
+            return pt1.pos.y;
+        }
+        float t = (pX - pt0.pos.x) / (pt1.pos.x - pt0.pos.x);
+        t = shapeSegment(t, pt0.shape);
+        float y = pt0.pos.y + (pt1.pos.y - pt0.pos.y) * t;
+
+        return y;
+    }
     float shape_t::sampleCurveOneShot(float posX) const {
         dbgassert(!pts.empty());
         if (pts.empty())
@@ -184,15 +225,17 @@ namespace DAW::Shape {
         int minIdx         = -1;
         float minDist      = 0;
         const auto ctrSize = CtrSize(pts);
+        auto localScaled = local * scale;
         for (int i = 0; i < ctrSize; i++) {
-            auto dist = glm::distance(local * scale, pts[i].pos * scale);
+            auto ptScaled = pts[i].pos * scale;
+            auto dist = glm::distance(localScaled, ptScaled);
             if (minIdx < 0 || minDist > dist) {
                 minIdx  = i;
                 minDist = dist;
             }
         }
         if (!pts.empty() && pts.front().pos.x < 0.01f) {
-            auto dist = glm::distance(local * scale, (pts.front().pos + vec2(1.0f, 0.0f)) * scale);
+            auto dist = glm::distance(localScaled, (pts.front().pos + vec2(1.0f, 0.0f)) * scale);
             if (minIdx < 0 || minDist > dist) {
                 minIdx  = 0;
                 minDist = dist;
@@ -243,6 +286,10 @@ namespace DAW::Shape {
 
     shape_t::hit_result shape_t::getMouseHit(vec2 localPos, vec2 scale) const {
         hit_result result;
+        if (fp_math::isnanf(localPos.x) || fp_math::isnanf(localPos.y)) {
+            result.type = hittype::HIT_NONE;
+            return result;
+        }
         float minDist     = 0.0f;
         auto minPtIdx     = getMinPt(localPos, scale, &minDist);
         float minDistEdge = 0.0f;

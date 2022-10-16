@@ -106,6 +106,7 @@ public:
     }
     tick_t screenToTickSnap(int32_t x, int snap) const;
     tick_t screenToTickSnapExact(double x, int snap) const;
+    tick_t tickSnapExact(tick_t x, int snap) const;
 
     tick_t screenToTick(double x) const {
         double d     = toObjSpace(x);

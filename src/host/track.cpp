@@ -299,6 +299,17 @@ void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart
     }
 }
 
+
+void trackdata_midi_t::getEventsInRange(tick_t start, tick_t end, tick_t cutStart, tick_t cutEnd, std::vector<note_t>& notes, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvents) {
+    for (clip_t* clip : clips) {
+        if (clip->end() <= start || clip->start() > end) {
+            continue;
+        }
+        clip->getInTimeRange(start, end, cutStart, cutEnd, notes);
+        clip->controlData.getInTimeRange(clip, start, end, cutStart, cutEnd, ctrlEvents);
+    }
+}
+
 audio_stage_ref_t audio_stage_t::toRef() const {
     return { this->stageId.stageId };
 }
@@ -1092,7 +1103,12 @@ void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const DAW::Host::midi
     //         ctrlEvts.insert(it, evt);
     //     }
     // }
-    ctrlEvts = data.events.m_list;
+    for (auto& ctrlEvt : data.events.m_list) {
+        auto it = std::find_if(ctrlEvts.begin(), ctrlEvts.end(), [&ctrlEvt](const auto& n) {
+            return n.tick > ctrlEvt.tick;
+        });
+        ctrlEvts.insert(it, ctrlEvt);
+    }
     constexpr bool logProcessedNotes = false;
     if (logProcessedNotes && !data.notes.isEmpty()) {
         // print absStart to absEnd range we looked at
@@ -1131,7 +1147,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
     if (flags & MidiFlags::PROCESS_CLIPS) {
         tick_t heldBegin = blockStart - 1; // -1 to include the note that ends at blockStart
         tick_t heldEnd   = blockEnd;
-        track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
+        track->getMidi().getEventsInRange(heldBegin, heldEnd, -1, loopEnd, notes, ctrlEvents);
         //TODO: make feeding parent tracks notes into this one an option
         //auto getParent = track->parent;
         //while (getParent) {

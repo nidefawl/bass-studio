@@ -21,8 +21,9 @@ enum ShapeFlags {
     SHAPE_CYCLIC = 1 << 0,
     SHAPE_SHAPED = 1 << 1,
     SHAPE_EASEINOUT = 1 << 2,
-    SHAPE_INVERT = 1 << 4,
-    SHAPE_LOCK_POINTS = 1 << 8,
+    SHAPE_INVERT = 1 << 3,
+    SHAPE_LOCK_POINTS = 1 << 4,
+    SHAPE_UNCLAMPPED = 1 << 5,
 };
 
 /* struct shape_base_t {
@@ -49,6 +50,7 @@ struct shape_t {
     float shapeSegment(float t, float shape) const;
     float sampleCurveOneShot(float posX) const;
     float sampleCurve(float posX, bool sampleLeftRight) const;
+    float sampleCurveUnclampped(float posX) const;
     int getMinDistEdge(vec2 pos, vec2 scale, float* fDist) const;
 
     int getMinPt(vec2 local, vec2 scale, float* distance = nullptr) const;

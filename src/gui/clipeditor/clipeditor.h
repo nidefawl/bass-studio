@@ -1,7 +1,11 @@
 #pragma once
 #include <list>
 #include <vector>
+#include "grid_constants.h"
 #include "gui/controls/splitter.h"
+#include "gui/dropdown/dropdown.h"
+#include "gui/dropdown/dropdown_generic.h"
+#include "gui/shape/shapeeditor.h"
 #include "guiconstant.h"
 #include "logging.h"
 #include "math/vec.h"
@@ -23,6 +27,8 @@
 #include "host/mainctrl.h"
 #include "gui/arp/arp.h"
 #include "gui/controls/inputfield.h"
+
+class i_ctr_shape_editor;
 
 class action_modify_notes : public action_base {
 protected:
@@ -345,8 +351,20 @@ public:
     void buttonClicked(guibase* button) override;
     void showEditClip();
 };
-
-class gui_clipcontent : public guictr_base, public piano_scale {
+class gui_clipcontent_base : public guictr_base {
+public:
+    scaled_grid& grid;
+    clip_view& view;
+public:
+    gui_clipcontent_base(scaled_grid& _grid, clip_view& _view)
+        : guictr_base(),
+          grid(_grid),
+          view(_view) {
+        padding = 0;
+    }
+    void renderBackground(NVGcontext* vg) override;
+};
+class gui_clipcontent : public gui_clipcontent_base, public piano_scale {
 public:
     enum dragmode {
         drag_none,
@@ -363,17 +381,12 @@ public:
     ivec2 dragBegin = ivec2(0);
     ivec2 dragTo    = ivec2(0);
     note_t beginDragNote;
-    scaled_grid& grid;
-    clip_view& view;
     const bool isVelocity;
     gui_clipcontent(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout, bool _isVel)
-        : guictr_base(), piano_scale(_layout, _view, size.y),
-          grid(_grid),
-          view(_view),
+        : gui_clipcontent_base(_grid, _view), piano_scale(_layout, _view, size.y),
           isVelocity(_isVel) {
         padding = 0;
     }
-    void renderBackground(NVGcontext* vg) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void setStatusText();
     void expandSelectionFrame(std::pair<note_t*, note_t*> minMax);
@@ -402,6 +415,65 @@ public:
     gui_clipcontent_velocities(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, true) {
     }
     void render(NVGcontext* vg) override;
+};
+
+struct scaled_pos_t {
+    vec2 shapePos;
+    vec2 shapeScale;
+    vec2 scaledMouse;
+};
+class CCEdit : public DAW::Shape::ShapeEdit {
+    scaled_grid& grid;
+    ivec2 editorSize{};
+public:
+    CCEdit(scaled_grid& _grid)
+        : ShapeEdit(),
+        grid(_grid) {
+        bIsGridEnabledH = true;
+        bIsGridEnabledV = true;
+        gridStepsV = 2;
+    }
+    vec2 toParentSpace(const vec2& ctrlPt) const override {
+        auto scaledPt = vec2{ ctrlPt.x, 1.0f - ctrlPt.y };
+        return editorScale * scaledPt;
+    }
+
+    vec2 toNormalizedSpace(const vec2& pt) const override {
+        const auto shapePos        = vec2(grid.tickToScreenD(0), 0);
+        const auto mouseNormalized = (pt - shapePos) / vec2(editorScale);
+        const auto ticksToPx        = grid.tickLenToScreen(1.0);
+        return vec2{ pt.x / ticksToPx, 1.0 - mouseNormalized.y };
+    }
+    
+    void layoutEditor(ivec2 size) override {
+        editorSize = size;
+        editorScale = vec2(grid.tickLenToScreen(1.0), size.y);
+    }
+    float snapH(float x) override {
+        tick_t snappedTick = grid.tickSnapExact(math::roundfS32(x), SNAP_ON);
+        return snappedTick;
+    }
+    float snapV(float y) override {
+        return math::roundfS32(y * this->gridStepsV) / float(this->gridStepsV);
+    }
+};
+class gui_clipcontent_control_data : public gui_clipcontent_base {
+    CCEdit shapeEdit;
+    DAW::Shape::shape_t tmpShape;
+    int32_t cc = 0;
+public:
+    gui_clipcontent_control_data(scaled_grid& _grid, clip_view& _view);
+    ~gui_clipcontent_control_data() override;
+    void render(NVGcontext* vg) override;
+    void layout() override;
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    void handleDraggedBegin(MouseEvent& evt) override;
+    void handleDraggedMove(MouseEvent& evt) override;
+    void handleDraggedRelease(MouseEvent& evt) override;
+    void handleRightClick(MouseEvent& evt) override;
+    void showEditClip();
+    void setSelectedData(int32_t cc);
+    int32_t getSelectedData() const { return cc; }
 };
 
 class ce_constants {
@@ -465,10 +537,14 @@ public:
     gui_pianoroll piano;
     gui_clipcontent_notes content;
     gui_clipcontent_velocities velocities;
+    gui_clipcontent_control_data ctrlData;
     guitrack_timeline timeline;
     guictr_cliphandles clipHandles;
     clip_view& view;
     guibuttonstate btnToggleFold;
+    guibuttonstate btnToggleVelocities;
+    guibuttonstate btnToggleControlData;
+    guidropdown_generic<String> dropdownSelectControlData;
     int32_t velHeight = 120;
     int32_t pianoWidth = 100;
     Splitter splitterVel;

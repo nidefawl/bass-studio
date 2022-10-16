@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <limits>
 #include "note.h"
+#include "plugins/synth/IPlugMidi.h"
 #include "seq_util.h"
 #include "str_util.h"
 #include "math/seq_math.h"
@@ -784,6 +785,7 @@ void clip_t::copy(const clip_t& obj) {
     loopEnabled  = obj.loopEnabled;
     notes        = obj.notes;
     audio        = obj.audio;
+    controlData  = obj.controlData;
     noLayout     = obj.noLayout;
     editorLayout = obj.editorLayout;
     dirty        = true;
@@ -869,4 +871,78 @@ void clip_notes_t::copySelectionTo(std::vector<note_t>& _out) const {
         note_t& ref = *note;
         _out.push_back(ref);
     }
+}
+
+clip_control_data_t::clip_control_data_t() {
+    pitchBend.shape.flags = DAW::Shape::ShapeFlags::SHAPE_UNCLAMPPED | DAW::Shape::ShapeFlags::SHAPE_SHAPED;
+    pitchBend.defaultValue = 0.5f;
+    // pitchBend.shape.pts   = { { { 0, 0.5f }, 0.5f } };
+    pitchBend.updateBounds();
+}
+
+void clip_control_data_t::updateBounds() {
+}
+
+int clip_control_data_t::getInTimeRange(clip_t* clip, tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, std::vector<DAW::Host::midievent_ctrl_t>& list) {
+    if (!hasData()) {
+        return 0;
+    }
+    tick_t clipStart = clip->start();
+    tick_t clipEnd   = clip->end();
+    tick_t relStart  = absStart;
+    tick_t relEnd    = math::min(clipEnd, absEnd);
+    relStart -= clipStart;
+    relEnd -= clipStart;
+    tick_t cutLeft  = 0;
+    tick_t cutRight = clip->getLen();
+    if (cutStart > -1) {
+        cutLeft = math::max(cutLeft, cutStart - clip->start());
+    } else {
+        //cutLeft = relStart;
+    }
+    if (cutEnd > -1) {
+        cutRight = math::min(cutRight, cutEnd - clip->start());
+    } else {
+        //cutRight = relEnd;
+    }
+    if (cutRight <= cutLeft)
+        return 0;
+    auto absMin = math::max(cutLeft, relStart);
+    auto absMax = math::min(cutRight, relEnd);
+    int count = 0;
+    for (tick_t t = absMin; t < absMax; t += 4) {
+        tick_t tOffset = t;
+        if (clip->isLoopEnabled()) {
+            const tick_t preLoopLen = !clip->loopEnabled ? clip->len : clip->offsetStart > clip->loopStart ? math::max(0, (/*loopEnd*/ clip->loopStart + clip->loopLen) - clip->offsetStart)
+                                                                                : math::max(0, clip->loopStart - clip->offsetStart);
+            if (clip->loopLen > 0 && tOffset >= preLoopLen) {
+                tOffset = (tOffset - preLoopLen) % clip->loopLen;
+            }
+        }
+        if (pitchBend.hasData()) {
+            float f1 = pitchBend.sampleAtTick(tOffset);
+            IMidiMsg msg;
+            msg.MakePitchWheelMsg(f1*2.0-1.0f, 0, t);
+            DAW::Host::midievent_ctrl_t e;
+            e.message = msg.ToU32();
+            e.tick = clipStart + t;
+            e.midiTime = 0;
+            list.push_back(e);
+            ++count;
+        }
+        for (auto& it : ccChannels) {
+            if (it.second.hasData()) {
+                float f1 = it.second.sampleAtTick(tOffset);
+                IMidiMsg msg;
+                msg.MakeControlChangeMsg(static_cast<IMidiMsg::EControlChangeMsg>(it.first), f1, 0, t);
+                DAW::Host::midievent_ctrl_t e;
+                e.message = msg.ToU32();
+                e.tick = clipStart + t;
+                e.midiTime = 0;
+                list.push_back(e);
+                ++count;
+            }
+        }
+    }
+    return count;
 }

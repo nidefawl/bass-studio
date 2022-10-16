@@ -233,7 +233,7 @@ void gui_audio_clip::render(NVGcontext* vg) {
                     result.type = hittype::HIT_NONE;
                 }
                 
-                DAW::Shape::DrawShapeOneShot(*fadeLayout->fade.shape, vg, theme, col, col2, sPos, sSize, mousePosScaledToFade, result);
+                DAW::Shape::DrawShapeOneShot(*fadeLayout->fade.shape, vg, theme, col, col2, sPos, sSize, -0.1f, 1.1f, result);
             }
         }
     }

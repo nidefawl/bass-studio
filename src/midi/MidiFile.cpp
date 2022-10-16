@@ -609,31 +609,27 @@ void MidiFile::makeDeltaTicks() {
     if (getTickState() == TIME_STATE_DELTA) {
         return;
     }
-    int i, j;
-    int temp;
-    int length    = getTrackCount();
-    int* timedata = new int[length];
-    for (i = 0; i < length; i++) {
-        timedata[i] = 0;
-        if (tracks[i]->getSize() > 0) {
-            timedata[i] = (*tracks[i])[0].tick;
-        } else {
+    const auto numTracks = getTrackCount();
+    std::vector<int> timedata(numTracks);
+    for (int trackIdx = 0; trackIdx < numTracks; trackIdx++) {
+        auto& track = *tracks[trackIdx];
+        if (track.getSize() < 1) {
             continue;
         }
-        for (j = 1; j < (int) tracks[i]->getSize(); j++) {
-            temp          = (*tracks[i])[j].tick;
-            int deltatick = temp - timedata[i];
+        timedata[trackIdx] = track[0].tick;
+        for (int evtIdx = 1; evtIdx < track.getSize(); evtIdx++) {
+            auto evtTick = track[evtIdx].tick;
+            int deltatick = evtTick - timedata[trackIdx];
             if (deltatick < 0) {
                 std::cerr << "Error: negative delta tick value: " << deltatick << std::endl
                           << "Timestamps must be sorted first"
                           << " (use MidiFile::sortTracks() before writing)." << std::endl;
             }
-            (*tracks[i])[j].tick = deltatick;
-            timedata[i]          = temp;
+            track[evtIdx].tick = deltatick;
+            timedata[trackIdx] = evtTick;
         }
     }
     midiTimingType = TIME_STATE_DELTA;
-    delete[] timedata;
 }
 
 /* MidiFile::absoluteTicks -- convert the time data to
@@ -1073,8 +1069,7 @@ int MidiFile::getNumEvents(int aTrack) {
   used to be.  The results of this function call cannot
   be reversed. */
 void MidiFile::mergeTracks(int aTrack1, int aTrack2) {
-    MidiEventList* mergedTrack;
-    mergedTrack      = new MidiEventList;
+    MidiEventList* mergedTrack = new MidiEventList;
     int oldTimeState = getTickState();
     if (oldTimeState == TIME_STATE_DELTA) {
         makeAbsoluteTicks();
@@ -1231,12 +1226,23 @@ double MidiFile::getTotalTimeInSeconds() {
             return -1.0;// something went wrong
         }
     }
-    double output = 0.0;
+	bool revertToDelta = false;
+	if (isDeltaTicks()) {
+		makeAbsoluteTicks();
+		revertToDelta = true;
+	}
+	const MidiFile& mf = *this;
+	double output = 0.0;
     int numTracks = getTrackCount();
-    for (int i = 0; i < numTracks; i++) {
-        auto timeLast = tracks[i]->back().seconds;
-        output = (timeLast > output) ? timeLast : output;
-    }
+	for (int i=0; i<numTracks; i++) {
+        auto* track = tracks[i];
+		if (track->back().seconds > output) {
+			output = track->back().seconds;
+		}
+	}
+	if (revertToDelta) {
+		makeDeltaTicks();
+	}
     return output;
 }
 
@@ -1246,12 +1252,9 @@ double MidiFile::getTotalTimeInSeconds() {
    Note that this is expensive, so you should normally call this function
    while in aboslute tick mode. */
 int MidiFile::getTotalTimeInTicks() {
-    int oldTimeState = getTickState();
-    if (oldTimeState == TIME_STATE_DELTA) {
+	bool revertToDelta = false;
+	if (isDeltaTicks()) {
         makeAbsoluteTicks();
-    }
-    if (oldTimeState == TIME_STATE_DELTA) {
-        makeDeltaTicks();
     }
     int output = 0;
     int numTracks = getTrackCount();
@@ -1259,6 +1262,9 @@ int MidiFile::getTotalTimeInTicks() {
         auto timeLast = tracks[i]->back().tick;
         output = (timeLast > output) ? timeLast : output;
     }
+	if (revertToDelta) {
+		makeDeltaTicks();
+	}
     return output;
 }
 
