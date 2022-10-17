@@ -269,16 +269,19 @@ public:
 protected:
 
     void reloadCustomShaders() {
-        String strShaderSrcVertex;
-        String strShaderSrcFragment;
-        int64_t ret1 = ReadFileText("nanovg.vsh", strShaderSrcVertex);
-        int64_t ret2 = ReadFileText("nanovg.fsh", strShaderSrcFragment);
-        if (ret1 != -1 && ret2 != -1) {
-            int statusErr = nvgReloadShaders(nanovgCtxt, StringAsCStr(strShaderSrcVertex), StringAsCStr(strShaderSrcFragment));
-            if (statusErr && bIsFirstTimeReload) {
-                throw appexception("Couldn't initialize nanovg");
+        if (FileExists(App::Platform::toResourcePath("nanovg.vsh"))
+            || FileExists(App::Platform::toResourcePath("nanovg.fsh"))) {
+            String strShaderSrcVertex;
+            String strShaderSrcFragment;
+            int64_t ret1 = ReadFileText("nanovg.vsh", strShaderSrcVertex);
+            int64_t ret2 = ReadFileText("nanovg.fsh", strShaderSrcFragment);
+            if (ret1 != -1 && ret2 != -1) {
+                int statusErr = nvgReloadShaders(nanovgCtxt, StringAsCStr(strShaderSrcVertex), StringAsCStr(strShaderSrcFragment));
+                if (statusErr && bIsFirstTimeReload) {
+                    throw appexception("Couldn't initialize nanovg");
+                }
+                bIsFirstTimeReload = false;
             }
-            bIsFirstTimeReload = false;
         }
     }
 
