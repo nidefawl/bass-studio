@@ -373,6 +373,7 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String
             log_lf(Log::L_WARN, "Failed to read file %s\n", StringAsCStr(path));
         }
     } else {
+        dbgassert(entry && ar);
         pFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_BUNDLED;
         auto sizeToRead = archive_entry_size(entry);
         heapBuffer.resize(sizeToRead);
@@ -397,7 +398,9 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String
     return pFile;
 }
 
-samplecount_t saveSampleToArchive(audiofile_t& file, struct archive_entry* entry, struct archive* ar) {
+int saveSampleToArchive(audiofile_t& file, struct archive_entry* entry, struct archive* ar,
+                                std::function<void(const String&, int32_t, int32_t)>& onProgress,
+                                std::function<void(const String& msg, const String& file)>& onError) {
     auto sample = file.getSample();
     dbgassert(sample->nSamples == 0 || sample->nChannels == sample->samples.size());
     log_printf("saveSampleToBuffer %s id %d len %zd\n", StringAsCStr(file.name), file.id, sample->nSamples);
@@ -412,6 +415,10 @@ samplecount_t saveSampleToArchive(audiofile_t& file, struct archive_entry* entry
     size_t dataSize = 0;
     void* pData = nullptr;
     drwav* pWav = drwav_open_memory_write(&pData, &dataSize, &format);
+    if (!pWav) {
+        onError("drwav_open_memory_write returned NULL", file.path);
+        return ARCHIVE_FATAL;
+    }
 
     AudioBlock blockFull(1, sample->nSamples*format.channels);
 
@@ -428,20 +435,29 @@ samplecount_t saveSampleToArchive(audiofile_t& file, struct archive_entry* entry
     auto toWrite = drwav_uint64(sample->nSamples*format.channels);
     auto samplesWritten = drwav_write(pWav, toWrite, blockFull.buf[0]);
     drwav_close(pWav);
+    struct free_wave_buffer {
+        void* pData;
+        ~free_wave_buffer() { drwav_free(pData); }
+    } freeWaveBuffer{pData};
+    if (samplesWritten != toWrite || !pData) {
+        onError(StringFormat("drwav_write: Only %zu/%zu samples written\n", samplesWritten, toWrite), StringAsCStr(file.name));
+        return ARCHIVE_FATAL;
+    }
+
     archive_entry_set_size(entry, dataSize);
-    archive_write_header(ar, entry);
-    
+    auto ret = archive_write_header(ar, entry);
+    if (ARCHIVE_OK != ret) {
+        onError("Failed to write archive header", file.name);
+        return ret;
+    }
     if (pData && dataSize) {
-        auto bytesArchived = archive_write_data(ar, pData, dataSize);
-        if (bytesArchived != ssize_t(dataSize)) {
-            log_lf(Log::L_WARN, "Failed writing %s. Only %zd/%zu bytes written\n", StringAsCStr(file.name), bytesArchived, dataSize);
+        auto bytesWritten = archive_write_data(ar, pData, dataSize);
+        if (bytesWritten != ssize_t(dataSize)) {
+            onError(StringFormat("dataSize: Only %zd/%zu bytes written", bytesWritten, dataSize), file.name);
+            return ARCHIVE_FATAL;
         }
     }
-    drwav_free(pData);
-    if (samplesWritten != toWrite) {
-        log_lf(Log::L_WARN, "Failed writing %s. Only %zu/%zu samples written\n", StringAsCStr(file.name), samplesWritten, toWrite);
-    }
-    return samplecount_t(samplesWritten);
+    return ARCHIVE_OK;
 }
 samplecount_t saveSampleToFile(audiofile_t& file, const String& fOutWave) {
     if (fOutWave.empty()) {
@@ -569,8 +585,13 @@ void audiocache::rellocateSamples(const std::vector<int32_t>& refSampleIds, cons
     }
 }
 
-void audiocache::writeToArchive(const std::vector<int32_t>& refSampleIds, struct archive* ar) {
+int audiocache::writeToArchive( const std::vector<int32_t>& refSampleIds,
+                                struct archive* ar,
+                                std::function<void(const String&, int32_t, int32_t)>& onProgress,
+                                std::function<void(const String& msg, const String& file)>& onError) {
     String targetDirectory = "";
+    auto countTotal = CtrSize(refSampleIds);
+    auto nWritten = countTotal * 0;
     for (auto& f : list) {
         auto* file = f.get();
         if (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_TEMPORARY) {
@@ -611,20 +632,36 @@ void audiocache::writeToArchive(const std::vector<int32_t>& refSampleIds, struct
             }
 
             struct archive_entry* entry = archive_entry_new();
+            if (!entry) {
+                onError("Failed to create archive entry", file->path);
+                return ARCHIVE_FAILED;
+            }
             archive_entry_set_pathname(entry, StringAsCStr(file->path));
             archive_entry_set_mtime(entry, time(nullptr), 0);
             archive_entry_set_filetype(entry, AE_IFREG);
             archive_entry_set_perm(entry, 0644);
             if (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED) {
                 //TODO: load sample if not loaded!
-                saveSampleToArchive(*file, entry, ar);
+                auto ret = saveSampleToArchive(*file, entry, ar, onProgress, onError);
+                if (ARCHIVE_OK != ret) {
+                    return ret;
+                }
             } else if (!origPath.empty() && FileExists(origPath)) {
                 try {
                     std::vector<uint8_t> buffer;
                     ReadFileVector(origPath, buffer);
-                    archive_entry_set_size(entry, buffer.size());
-                    archive_write_header(ar, entry);
-                    archive_write_data(ar, buffer.data(), buffer.size());
+                    int64_t signedSize = static_cast<int64_t>(buffer.size());
+                    archive_entry_set_size(entry, signedSize);
+                    auto ret = archive_write_header(ar, entry);
+                    if (ARCHIVE_OK != ret) {
+                        onError("Failed to write archive header", file->path);
+                        return ret;
+                    }
+                    auto sizeWritten = archive_write_data(ar, buffer.data(), signedSize);
+                    if (sizeWritten != signedSize) {
+                        onError("Failed to write archive data", file->path);
+                        return ret;
+                    }
                 } catch (const std::exception& e) {
                     log_printf("failed copying sample %s to %s: exception: %s\n", StringAsCStr(origPath), StringAsCStr(file->path), e.what());
                 }
@@ -632,8 +669,11 @@ void audiocache::writeToArchive(const std::vector<int32_t>& refSampleIds, struct
                 log_lf(Log::L_WARN, "Sample %s not found\n", StringAsCStr(file->path));
             }
             archive_entry_free(entry);
+            onProgress(file->path, nWritten, countTotal);
+            nWritten++;
         }
     }
+    return ARCHIVE_OK;
 }
 void audiocache::store(const std::vector<int32_t>& refSampleIds, samplefile_index_t& v) {
     v.list.reserve(list.size());

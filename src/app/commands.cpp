@@ -149,7 +149,7 @@ namespace DAW::UI {
         Add(CMD_FILE_SAVE, {"Save", "Save the project", "", ICON_SAVE}, KC_SAVE);
         Add(CMD_FILE_SAVEAS, {"Save As", "Save the project as a new file", "", ICON_SAVE}, {});
         Add(CMD_BUNDLE_PROJECT_DIRECTORY, {"Bundle (Directory)", "Bundle the project to a directory", "", ICON_SAVE}, {});
-        Add(CMD_BUNDLE_PROJECT_GZIP, {"Bundle (gzip)", "Bundle the project as gzip file", "", ICON_SAVE}, {});
+        Add(CMD_BUNDLE_PROJECT_ZIP, {"Bundle (zip)", "Bundle the project as zip file", "", ICON_SAVE}, {});
         Add(CMD_FILE_CLOSE, {"Close", "Close the project", "", ICON_CLOSE}, {});
         Add(CMD_EXIT, {"Exit", "Exit the application", "", ICON_CLOSE}, {});
 

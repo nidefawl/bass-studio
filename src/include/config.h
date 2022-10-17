@@ -7,7 +7,7 @@
 
 #define FILE_FORMAT_VERSION 3
 #define PROJECT_FILE_EXT "project"
-#define PROJECT_BUNDLE_FILE_EXT "gz"
+#define PROJECT_BUNDLE_FILE_EXT "zip"
 #ifndef USE_GUI_MENU
 #define USE_GUI_MENU 1
 #endif

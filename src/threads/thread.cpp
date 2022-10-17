@@ -1,6 +1,5 @@
 #include <thread>
 #include <mutex>
-#include "tls.h"
 #include "types.h"
 #include <unordered_map>
 #include <atomic>
@@ -60,7 +59,6 @@ namespace seqthreads {
             isKnown = threadInfo->isKnownThread;
             isInternal = threadInfo->isInternalThread;
         } else {
-            dbgassert(!daw_tls::isTlsInitialized());
             isKnown = false;
             isInternal = false;
         }

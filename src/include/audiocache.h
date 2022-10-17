@@ -90,6 +90,9 @@ public:
     void unloadAll();
     void unloadUnreferenced(const std::vector<int32_t>& refSampleIds);
     void rellocateSamples(const std::vector<int32_t>& refSampleIds, const String& directory);
-    void writeToArchive(const std::vector<int32_t>& refSampleIds, struct archive* ar);
+    int writeToArchive( const std::vector<int32_t>& refSampleIds,
+                        struct archive* ar,
+                        std::function<void(const String&, int32_t, int32_t)>& onProgress,
+                        std::function<void(const String& msg, const String& file)>& onError);
     bool isEmpty() const;
 };

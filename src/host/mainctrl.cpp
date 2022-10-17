@@ -1001,32 +1001,70 @@ void DawInstance::saveProjectBundle(const String& path) {
     }
     String projFileName = projectFileName + "." PROJECT_FILE_EXT;
     
+    std::function<void(const String& msg, const String& file)> onError = [this](const String& msg, const String& file) {
+        log_lf(Log::L_ERROR, "Failed saving project to %s: %s\n", StringAsCStr(file), StringAsCStr(msg));
+        if (tls.mainCtrl) {
+            tls.mainCtrl->setStatusText(msg);
+        }
+    };
+    std::function<void(const String&, int32_t, int32_t)> onProgress = [path](const String& curFile, int32_t i, int32_t total) {
+        log_lf(Log::L_ERROR, "[%d/%d] Saving %s to %s\n", i, total, StringAsCStr(curFile), StringAsCStr(path));
+    };
 
     std::vector<int32_t> uniqueSampleIds;
     DAW::GetProjectReferencedSampleIds(project, uniqueSampleIds);
     // create a new archive
-    struct archive* a = archive_write_new();
-    archive_write_add_filter_gzip(a);
-    archive_write_set_format_pax_restricted(a);
-    archive_write_open_filename(a, bundlePath.c_str());
-
-    getAudioCache()->writeToArchive(uniqueSampleIds, a);
+    struct archive* ar = archive_write_new();
+    if (!ar || ARCHIVE_OK != archive_write_set_format_zip(ar)) {
+        onError("Failed to create archive", bundlePath);
+        return;
+    }
+    if (ARCHIVE_OK != archive_write_zip_set_compression_deflate(ar)) {
+        onError("Failed to compress archive", bundlePath);
+        return;
+    }
+    if (ARCHIVE_OK != archive_write_open_filename(ar, bundlePath.c_str())) {
+        onError("Failed to open archive for writing", bundlePath);
+        return;
+    }
+    if (ARCHIVE_OK != getAudioCache()->writeToArchive(uniqueSampleIds, ar, onProgress, onError)) {
+        onError("Failed to write audio cache to archive", bundlePath);
+        return;
+    }
     std::shared_ptr<project_file> f = createProjectFile();
     std::vector<uint8_t> buffer;
     saveProject(f, buffer);
     // // add a file to the archive
     struct archive_entry* entry = archive_entry_new();
+    if (!entry) {
+        onError("Failed to create archive entry", bundlePath);
+        return;
+    }
+    auto bufSize = ssize_t(buffer.size());
     archive_entry_set_pathname(entry, projFileName.c_str());
     archive_entry_set_mtime(entry, time(nullptr), 0);
-    archive_entry_set_size(entry, buffer.size());
+    archive_entry_set_size(entry, bufSize);
     archive_entry_set_filetype(entry, AE_IFREG);
     archive_entry_set_perm(entry, 0644);
-    archive_write_header(a, entry);
-    archive_write_data(a, buffer.data(), buffer.size());
+    if (ARCHIVE_OK != archive_write_header(ar, entry)) {
+        onError("Failed to write archive header", bundlePath);
+        return;
+    }
+    auto sizeWritten = archive_write_data(ar, buffer.data(), buffer.size());
+    if (sizeWritten != bufSize) {
+        onError("Failed to write archive data", bundlePath);
+        return;
+    }
     archive_entry_free(entry);
     // finish writing the archive
-    archive_write_close(a);
-    archive_write_free(a);
+    if (ARCHIVE_OK != archive_write_close(ar)) {
+        onError("Failed to close archive", bundlePath);
+        return;
+    }
+    if (ARCHIVE_OK != archive_write_free(ar)) {
+        onError("Failed to free archive", bundlePath);
+        return;
+    }
 }
 
 bool DawInstance::menuCommand(const menucmd_t& command) {
@@ -1173,7 +1211,7 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                 }
                 return true;
             }
-            case CMD_BUNDLE_PROJECT_GZIP: {
+            case CMD_BUNDLE_PROJECT_ZIP: {
                 String bundlePath;
                 if (!promptUserFilePath(tls.mainCtrl->window, 1, vFILE_TYPE_BUNDLE, bundlePath, lastProjectDirectory)) {
                     return true;
@@ -1625,7 +1663,7 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     menus.file.addCommand(this, GlobalCommandType::CMD_FILE_SAVE);
     menus.file.addCommand(this, GlobalCommandType::CMD_FILE_SAVEAS);
     menus.file.addCommand(this, GlobalCommandType::CMD_BUNDLE_PROJECT_DIRECTORY);
-    menus.file.addCommand(this, GlobalCommandType::CMD_BUNDLE_PROJECT_GZIP);
+    menus.file.addCommand(this, GlobalCommandType::CMD_BUNDLE_PROJECT_ZIP);
     menus.file.addCommand(this, GlobalCommandType::CMD_SET_STARTUP_PROJECT);
     menus.file.addSeperator();
     menus.file.addCommand(this, GlobalCommandType::CMD_EXPORT_TRACK);

@@ -65,7 +65,7 @@ struct waveform_test {
                 continue;
             }
             log_printf("loadFile %s\n", StringAsCStr(files[i].path));
-            auto sample = tls.audioCache->loadFile(files[i].path);
+            auto sample = tls.audioCache->loadFile(files[i].path, -1, "", nullptr, nullptr);
             if (!sample) {
                 log_printf("Failed loading sample %s\n", StringAsCStr(files[i].path));
             } else {
