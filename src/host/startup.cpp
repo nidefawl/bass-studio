@@ -246,7 +246,7 @@ void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t tra
 
     auto loadRes = pluginMgr->loadPlugin(modulePath, 0);
 
-    if (loadRes.result != 0) {
+    if (loadRes.library.isSuccess()) {
         dbgassert(0);
         return;
     }

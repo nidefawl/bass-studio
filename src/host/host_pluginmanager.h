@@ -68,16 +68,48 @@ struct builtin_module_reg_t {
     FnCreateModule fnNewInstance;
 };
 
-struct LoadResultVST2Plugin {
-public:
-    LoadResultVST2Plugin(int32_t _result, vstplugin* _plugin) : result(_result), plugin(_plugin), shellPluginHandle(nullptr){};
-    LoadResultVST2Plugin(int32_t _result, vstplugin* _plugin, handles_t* _shellHandle, String _path, String _name)
-        : result(_result), plugin(_plugin), shellPluginHandle(_shellHandle), path(std::move(_path)), name(std::move(_name)){};
-    int32_t result;
+enum class SharedLibPluginType : int32_t {
+    UNKNOWN = -1,
+    VST2 = 0,
+    VST2_SHELL = 1,
+    CLAP = 2,
+};
+
+enum class SharedLibState : int32_t {
+    FILE_NOT_FOUND = -3,
+    DL_OPEN_FAILED = -2,
+    DL_UNKNOWN_FORMAT = -1,
+    FAILED = 0,
+    SUCCESS = 1,
+};
+
+struct LoadResultSharedLibrary {
+    SharedLibPluginType type = SharedLibPluginType::UNKNOWN;
+    SharedLibState state = SharedLibState::FILE_NOT_FOUND;
+    String error = "";
+    void* module = nullptr;
+    void* entryPoint = nullptr;
+    static inline LoadResultSharedLibrary FromError(SharedLibState _state, const String& _error, SharedLibPluginType _type = SharedLibPluginType::UNKNOWN) {
+        return {_type, _state, _error, nullptr, nullptr};
+    }
+    static inline LoadResultSharedLibrary FromSuccess(SharedLibPluginType _type, void* module, void* entryPoint) {
+        return {_type, SharedLibState::SUCCESS, "", module, entryPoint};
+    }
+    bool isSuccess() const {
+        return state >= SharedLibState::SUCCESS && type != SharedLibPluginType::UNKNOWN;
+    }
+};
+
+struct LoadResultPlugin {
+    LoadResultSharedLibrary library;
     vstplugin* plugin;
     handles_t* shellPluginHandle;
     String path;
     String name;
+    explicit LoadResultPlugin(LoadResultSharedLibrary _lib) : library(std::move(_lib)), plugin(nullptr), shellPluginHandle(nullptr){};
+    LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin) : library(std::move(_lib)), plugin(_plugin), shellPluginHandle(nullptr){};
+    LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin, handles_t* _shellHandle, String _path, String _name)
+        : library(std::move(_lib)), plugin(_plugin), shellPluginHandle(_shellHandle), path(std::move(_path)), name(std::move(_name)){};
 };
 
 
@@ -137,7 +169,7 @@ private:
     std::vector<builtin_module_reg_t> builtinModules;
     SafeRefStorage<effectbase> safeRefs;
     std::shared_ptr<PluginHostCallback> pluginHostCallback;
-    LoadResultVST2Plugin loadInternalPlugin(int32_t type, int32_t globalId = 0);
+    LoadResultPlugin loadInternalPlugin(int32_t type, int32_t globalId = 0);
     /* These are currently not called */
     void onPluginsChanged(audio_stage_t* stage);
     void updatePluginWindows();
@@ -164,7 +196,7 @@ public:
     void removePlugin(effectbase* plugin);
     void unloadTrack(track_t* track);
     effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1);
-    LoadResultVST2Plugin loadPlugin(String filepath, uint32_t uId, int32_t globalId = 0, uint64_t bugfixFlags = 0);
+    LoadResultPlugin loadPlugin(const String& filepath, uint32_t uId, int32_t globalId = 0, uint64_t bugfixFlags = 0);
     effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
     void activateDeferred(effectbase* eff, int flags, effectbase** out_effectLoaded = nullptr);
     void updateSampleFormat(const sampleformat_t& _sampleFormat);

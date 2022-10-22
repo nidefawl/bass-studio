@@ -2,6 +2,7 @@
 #include <unordered_map>
 #include <atomic>
 #include <memory>
+#include <functional>
 #include "project.h"
 #include "types.h"
 #include "str_util.h"

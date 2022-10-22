@@ -515,11 +515,11 @@ namespace DAW {
             if (db->resolve(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
                 log_lf(Log::L_DEBUG, "Plugin is registered... loading %s, uId %d, forceLoad %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, forceLoad);
                 auto res = host->loadPlugin(resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags);
-                if (res.result == 0 && res.plugin) {
+                if (res.library.isSuccess()) {
                     res.plugin->localDbId = resolvedPlugin.localDbId;
                     effect = res.plugin;
                 } else {
-                    log_printf("Failed loading: Error loading plugin %s, uId %d. Res: %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, res.result);
+                    log_printf("Failed loading: Error loading plugin %s, uId %d. Res: %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, static_cast<int32_t>(res.library.state));
                 }
             } else {
                 log_printf("Failed loading: Unknown plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);

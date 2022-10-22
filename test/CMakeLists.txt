@@ -111,7 +111,7 @@ DEFINE_TEST(test_memory_leak TRUE test_memory_leak.cpp)
 DEFINE_TEST(test_projectfile TRUE test_projectfile.cpp)
 DEFINE_TEST(test_muparser TRUE test_muparser.cpp)
 DEFINE_TEST(test_libarchive TRUE test_libarchive.cpp)
-
+DEFINE_TEST(test_clap_plugin_host TRUE test_clap_plugin_host.cpp)
 
 if (PROJECT_BUILD_TESTS_UI) 
   DEFINE_TEST(test_vstplugins TRUE test_vstplugins.cpp common/test_common.cpp)

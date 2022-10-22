@@ -17,19 +17,20 @@ void PluginManager::registerModules() {
     builtinModules.push_back({ PLUG_INT_HOSTINFO, false, PluginHostInfo::getName(), PluginHostInfo::createPlugin });
     builtinModules.push_back({ PLUG_INT_SYNTH, true, PluginSynth::getName(), PluginSynth::createPlugin });
 }
-LoadResultVST2Plugin PluginManager::loadInternalPlugin(int32_t moduleId, int32_t globalId) {
+LoadResultPlugin PluginManager::loadInternalPlugin(int32_t moduleId, int32_t globalId) {
     auto it = std::find_if(builtinModules.begin(), builtinModules.end(), [moduleId](auto& reg) {
         return reg.id == moduleId;
     });
 
-    if (it == builtinModules.end())
-        return {-2, nullptr};
+    if (it == builtinModules.end()) {
+        return LoadResultPlugin{LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "Module not found")};
+    }
 
     builtin_module_reg_t& reg = *it;
 
     AudioEffectX* axeffect = reg.fnNewInstance(masterCallBackSlot);
     if (!axeffect) {
-        return {-1, nullptr};
+        return LoadResultPlugin{LoadResultSharedLibrary::FromError(SharedLibState::DL_UNKNOWN_FORMAT, "Failed to create plugin")};
     }
 
     globalId = getNextGlobalModuleId(globalId);
@@ -43,7 +44,7 @@ LoadResultVST2Plugin PluginManager::loadInternalPlugin(int32_t moduleId, int32_t
     pluginInstancesVST2.push_back(plugin);
     pluginInstances.push_back(plugin);
     plugin->load(this);
-    return {0, plugin};
+    return LoadResultPlugin{LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, nullptr, nullptr), plugin};
 }
 
 } // namespace DAW::Host

@@ -63,8 +63,8 @@ effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t module
             effect = makeInstance<PluginLFO::module_lfo>(getNextGlobalModuleId(globalid), hostcallback);
             break;
         case PLUGIN_TYPE_INTERNAL_EFFECT: {
-            LoadResultVST2Plugin res = loadInternalPlugin(moduleId, globalid);
-            if (res.result == 0 && res.plugin) {
+            LoadResultPlugin res = loadInternalPlugin(moduleId, globalid);
+            if (res.library.isSuccess()) {
                 effect = res.plugin;
             }
             break;

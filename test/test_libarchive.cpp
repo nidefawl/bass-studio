@@ -4,7 +4,6 @@
 #include "str_util.h"
 #include <archive.h>
 #include <archive_entry.h>
-#include <corecrt.h>
 #include <cstddef>
 #include <memory>
 

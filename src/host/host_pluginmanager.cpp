@@ -1,9 +1,12 @@
 #include "host/host_pluginmanager.h"
+#include "assert_dbg.h"
 #include "logging.h"
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
 #include "plugin/vst_plugin_handles.h"
+#include "str_util.h"
 #include "track_impl.h"
+#include <clap/clap.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -523,31 +526,32 @@ int32_t PluginManager::validateIds()
 
 #ifdef _WIN32
 HMODULE safeLoadLib(const char* szLibName);
-int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, HMODULE* out_hmodule) {
+#define CLOSE_MODULE_HANDLE(handle) FreeLibrary(handle)
+LoadResultSharedLibrary loadLib(const String& filepath) {
     if (!FileExists(filepath)) {
-        return -2;
+        return LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "File not found");
     }
-    HMODULE hmodule = safeLoadLib(StringAsCStr(filepath));
-    if (!hmodule) {
-        return -3;
+    HMODULE module = safeLoadLib(StringAsCStr(filepath));
+    if (!module) {
+        auto dwErr = GetLastError();
+        return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, FormatErrorMessage(dwErr, "LoadLibrary failed"));
     }
-
-    auto fn = reinterpret_cast<VSTPluginMain_t*>(GetProcAddress(hmodule, "VSTPluginMain"));
-    if (!fn) fn = reinterpret_cast<VSTPluginMain_t*>(GetProcAddress(hmodule, "main"));
-
-    if (!fn)
-    {
-        FreeLibrary(hmodule);
-        return -4;
+    auto symbolClapEntry = reinterpret_cast<void*>(GetProcAddress(module, "clap_entry"));
+    if (symbolClapEntry) {
+        return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType ::CLAP, module, symbolClapEntry);
     }
-
-    *out_hmodule = hmodule;
-    *out_fn = fn;
-
-    return 0;
+    auto symbolVSTPluginMain= reinterpret_cast<void*>(GetProcAddress(module, "VSTPluginMain"));
+    if (symbolVSTPluginMain) {
+        return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolVSTPluginMain);
+    }
+    auto symbolMain = reinterpret_cast<void*>(GetProcAddress(module, "main"));
+    if (symbolMain) {
+        return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolMain);
+    }
+    CLOSE_MODULE_HANDLE(module);
+    return LoadResultSharedLibrary::FromError(SharedLibState::DL_UNKNOWN_FORMAT, "Entry point not found");
 }
 
-#define CLOSE_MODULE_HANDLE(handle) FreeLibrary(handle)
 
 #endif
 
@@ -560,60 +564,52 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule);
 #endif
 
 #if defined(__linux__)
-int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
+
+#define CLOSE_MODULE_HANDLE(handle) dlclose(handle)
+
+LoadResultSharedLibrary loadLib(const String& filepath) {
     if (!FileExists(filepath)) {
-        return -2;
+        return LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "File not found");
     }
     void* module = dlopen(StringAsCStr(filepath), RTLD_NOW);
     if (!module) {
         auto dl_err = dlerror();
-        if (dl_err) {
-            log_lf(Log::L_ERROR, "dlopen failed: %s\n", dl_err);
-        }
-        return -3;
+        return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, StringFormat("dlopen failed: %s", dl_err));
     }
-
-    VSTPluginMain_t* fn = (VSTPluginMain_t*)dlsym(module, "VSTPluginMain");
-    if (fn == NULL)
-    {
-        fn = (VSTPluginMain_t*)dlsym(module, "main");
+    auto symbolClapEntry = dlsym(module, "clap_entry");
+    if (symbolClapEntry) {
+        return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::CLAP, module, symbolClapEntry);
     }
-    if (fn == NULL)
-    {
-        dlclose(module);
-        return -4;
+    auto symbolVSTPluginMain= dlsym(module, "VSTPluginMain");
+    if (symbolVSTPluginMain) {
+        return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolVSTPluginMain);
     }
-    *out_hmodule = module;
-    *out_fn = fn;
-
-    return 0;
+    auto symbolMain = dlsym(module, "main");
+    if (symbolMain) {
+        return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolMain);
+    }
+    CLOSE_MODULE_HANDLE(module);
+    return LoadResultSharedLibrary::FromError(SharedLibState::DL_UNKNOWN_FORMAT, "Entry point not found");
 }
-
-#define CLOSE_MODULE_HANDLE(handle) dlclose(handle)
 
 #endif
 #ifdef _WIN32
 int loadPlugin_jbridge(audioMasterCallback audiomasterCallback, const String& filepath, HMODULE* hmodule, AEffect** aeffect, uint64_t bugfixFlags);
 #endif //_WIN32
 
-LoadResultVST2Plugin PluginManager::loadPlugin(String filepath, uint32_t uId, int32_t globalId, uint64_t bugfixFlags) {
+LoadResultPlugin PluginManager::loadPlugin(const String& filepath, uint32_t uId, int32_t globalId, uint64_t bugfixFlags) {
     dbgassert(masterCallBackSlot);
 
     String path, name, nameWithoutExt;
     SplitPath(filepath, &path, &nameWithoutExt, nullptr, &name);
 
-    VSTPluginMain_t* fn = nullptr;
-    void* moduleHandle = nullptr;
-    AEffect* aeffect = nullptr;
-
+    auto libResult = loadLib(filepath);
+    void* moduleHandle = libResult.module;
 #ifdef _WIN32
-    HMODULE hmodule = nullptr;
+    HMODULE hmodule = reinterpret_cast<HMODULE>(libResult.module);
 #else
-    void* hmodule = nullptr;
+    void* hmodule = libResult.module;
 #endif //_WIN32
-
-    int32_t ret = loadLib(filepath, &fn, &hmodule);
-    moduleHandle = hmodule;
 
     if (uId != 0) {
         pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(uId);
@@ -621,29 +617,41 @@ LoadResultVST2Plugin PluginManager::loadPlugin(String filepath, uint32_t uId, in
         pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
     }
 
-    if (ret == 0) {
+    AEffect* aeffect = nullptr;
+    if (libResult.state == SharedLibState::SUCCESS && libResult.type == SharedLibPluginType::VST2) {
+        dbgassert(libResult.entryPoint);
+        VSTPluginMain_t* fn = reinterpret_cast<VSTPluginMain_t*>(libResult.entryPoint);
         aeffect = fn(masterCallBackSlot);
 #ifdef _WIN32
-    } else if (ret == -3) {
-        ret = loadPlugin_jbridge(masterCallBackSlot, filepath, &hmodule, &aeffect, bugfixFlags);
+    } else if (libResult.state == SharedLibState::DL_UNKNOWN_FORMAT) {
+        auto ret = loadPlugin_jbridge(masterCallBackSlot, filepath, &hmodule, &aeffect, bugfixFlags);
+        libResult.state = ret == 0 ? SharedLibState::SUCCESS : SharedLibState::DL_UNKNOWN_FORMAT;
+        libResult.type = ret == 0 ? SharedLibPluginType::VST2 : SharedLibPluginType::UNKNOWN;
         moduleHandle = hmodule;
 #endif //_WIN32
     }
+    struct dlerror_deleter {
+#ifdef _WIN32
+        HMODULE moduleToClose;
+#else
+        void* moduleToClose;
+#endif
+        ~dlerror_deleter() { if (moduleToClose) CLOSE_MODULE_HANDLE(moduleToClose);}
+    } moduleCloser{hmodule};
 
     pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
     
-    if (ret != 0) {
-        return {ret, nullptr};
+    if (libResult.state != SharedLibState::SUCCESS) {
+        return LoadResultPlugin{libResult};
     }
-
-    if (!aeffect) {
-        CLOSE_MODULE_HANDLE(hmodule);
-        return {-5, nullptr};
+    if (!aeffect || libResult.type != SharedLibPluginType::VST2) {
+        libResult.state = SharedLibState::DL_UNKNOWN_FORMAT;
+        return LoadResultPlugin{libResult};
     }
 
     if (aeffect->magic != kEffectMagic) {
-        CLOSE_MODULE_HANDLE(hmodule);
-        return {-6, nullptr};
+        libResult.state = SharedLibState::DL_UNKNOWN_FORMAT;
+        return LoadResultPlugin{libResult};
     }
 
     if (uId == 0) {
@@ -651,19 +659,20 @@ LoadResultVST2Plugin PluginManager::loadPlugin(String filepath, uint32_t uId, in
         VstIntPtr vstIntPtr = aeffect->dispatcher(aeffect, effGetPlugCategory, 0, 0, nullptr, 0);
         auto pluginCategory = static_cast<VstPlugCategory>(vstIntPtr);
         if (pluginCategory == VstPlugCategory::kPlugCategShell) {
-            return {1, nullptr, new handles_t(nullptr, aeffect, moduleHandle), filepath, nameWithoutExt};
+            libResult.type = SharedLibPluginType::VST2_SHELL;
+            return {libResult, nullptr, new handles_t(nullptr, aeffect, moduleHandle), filepath, nameWithoutExt};
         }
     }
 
     if (aeffect->user) {
-        CLOSE_MODULE_HANDLE(hmodule);
-        return {-7, nullptr};
+        libResult.state = SharedLibState::DL_UNKNOWN_FORMAT;
+        return LoadResultPlugin{libResult};
     }
 
     //NOTE: Plugins with no inputs and outputs might exists
     if (aeffect->numOutputs <= 0 && aeffect->numInputs <= 0) {
-        CLOSE_MODULE_HANDLE(hmodule);
-        return {-8, nullptr};
+        libResult.state = SharedLibState::DL_UNKNOWN_FORMAT;
+        return LoadResultPlugin{libResult};
     }
 
     globalId = getNextGlobalModuleId(globalId);
@@ -679,7 +688,8 @@ LoadResultVST2Plugin PluginManager::loadPlugin(String filepath, uint32_t uId, in
     plugin->load(this);
 
     dbgassert(plugin->handle && plugin->handle->aeffect);
-    return {0, plugin, plugin->handle, filepath, nameWithoutExt};
+    moduleCloser.moduleToClose = nullptr;
+    return {libResult, plugin, plugin->handle, filepath, nameWithoutExt};
 };
 
 void PluginManager::scanPlugins() {

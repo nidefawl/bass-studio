@@ -238,7 +238,7 @@ struct vstscanner_server_options {
     int32_t unresponsiveTimeoutSeconds = timeoutdefault;
 };
 
-static void getPluginData(DAW::Host::LoadResultVST2Plugin& res, response_type_vst24_t* _out) {
+static void getPluginData(DAW::Host::LoadResultPlugin& res, response_type_vst24_t* _out) {
     auto plugin = res.plugin;
     AEffect* aeffect     = plugin->handle->aeffect;
     _out->uniqueID       = aeffect->uniqueID;
@@ -645,13 +645,11 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
     int response = 0;
     log_message("Load plugin %s", req.szPath);
     try {
-
         auto res = pluginMgr->loadPlugin(req.szPath, 0);
-        log_message("result: %d", res.result);
-        if (res.result < 0) {
+        if (res.library.state != DAW::Host::SharedLibState::SUCCESS) {
+            log_message("Failed loading %s: %s (%d)", req.szPath, StringAsCStr(res.library.error), static_cast<int32_t>(res.library.state));
             response = CMD_PLUGIN_LOAD_ERROR;
         } else {
-            dbgassert(res.result == 0);
             dbgassert(res.plugin);
             response = CMD_PLUGIN_LOAD_SUCCESS_PLUGIN;
             getPluginData(res, &respPlugin);
@@ -710,12 +708,12 @@ static int runScannerClient() {
 
             log_message("Load plugin %s", req.szPath);
             auto res = pluginMgr->loadPlugin(req.szPath, 0);
-            log_message("result: %d", res.result);
-            if (res.result < 0) {
+            if (res.library.state != DAW::Host::SharedLibState::SUCCESS) {
+                log_message("Failed loading %s: %s (%d)", req.szPath, StringAsCStr(res.library.error), static_cast<int32_t>(res.library.state));
                 int response = CMD_PLUGIN_LOAD_ERROR;
                 writeToIPC(client, response);
             } else {
-                if (res.result == 1) {
+                if (res.library.type == DAW::Host::SharedLibPluginType::VST2_SHELL) {
                     handles_t* handles     = res.shellPluginHandle;
                     String nameShellPlugin = res.name;
                     log_printf("loading shell plugin: %s\n", StringAsCStr(nameShellPlugin));
@@ -757,8 +755,8 @@ static int runScannerClient() {
                         log_message("load shell entry: %08X", entry.pluginUID);
 
                         auto resShellPluginEntry = pluginMgr->loadPlugin(req.szPath, entry.pluginUID);
-                        if (resShellPluginEntry.result != 0) {
-                            log_message("FAILED LOADING SHELL PLUGIN: %d", resShellPluginEntry.result);
+                        if (resShellPluginEntry.library.state != DAW::Host::SharedLibState::SUCCESS) {
+                            log_message("Failed loading shell plugin %s: %s (%d)", req.szPath, StringAsCStr(res.library.error), static_cast<int32_t>(res.library.state));
                         } else {
                             dbgassert(resShellPluginEntry.plugin);
                             response = CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN;
@@ -777,7 +775,7 @@ static int runScannerClient() {
 #endif
                     response = CMD_PLUGIN_END_SUCCESS;
                     writeToIPC(client, response);
-                } else if (res.result == 0) {
+                } else if (res.library.state == DAW::Host::SharedLibState::SUCCESS) {
                     dbgassert(res.plugin);
                     int response = CMD_PLUGIN_LOAD_SUCCESS_PLUGIN;
                     writeToIPC(client, response);
