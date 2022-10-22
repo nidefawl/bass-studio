@@ -623,7 +623,7 @@ LoadResultPlugin PluginManager::loadPlugin(const String& filepath, uint32_t uId,
         VSTPluginMain_t* fn = reinterpret_cast<VSTPluginMain_t*>(libResult.entryPoint);
         aeffect = fn(masterCallBackSlot);
 #ifdef _WIN32
-    } else if (libResult.state == SharedLibState::DL_UNKNOWN_FORMAT) {
+    } else if (libResult.state == SharedLibState::DL_OPEN_FAILED) {
         auto ret = loadPlugin_jbridge(masterCallBackSlot, filepath, &hmodule, &aeffect, bugfixFlags);
         libResult.state = ret == 0 ? SharedLibState::SUCCESS : SharedLibState::DL_UNKNOWN_FORMAT;
         libResult.type = ret == 0 ? SharedLibPluginType::VST2 : SharedLibPluginType::UNKNOWN;
