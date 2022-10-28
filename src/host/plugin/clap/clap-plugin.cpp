@@ -159,7 +159,7 @@ guiplugin* clapplugin::makeGui() {
             dawHandles->gui->loadSnapshot(this->uiSnapshot);
             this->uiSnapshot.isValidSnapshot = false;
         }
-        dawHandles->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
+        dawHandles->gui->setTitle(StringFormat("%s (Clap)", StringAsCStr(this->sName)));
     }
 
     return dawHandles->gui.get();

@@ -143,6 +143,13 @@ static constexpr channelnum_t DEFAULT_CHANNEL_COUNT = 2;
  * @brief Manages lifetime of plugins and audio stages
  * TODO: refactor this class: audiostages should be managed by separate class
  */
+struct PluginLoadParameters {
+    String filepath;
+    uint32_t uId = 0;
+    int32_t globalId = 0;
+    uint64_t bugfixFlags = 0;
+    int32_t moduleFormat = -1;
+};
 class PluginManager {
 private:
     /**
@@ -201,7 +208,10 @@ public:
     void removePlugin(effectbase* plugin);
     void unloadTrack(track_t* track);
     effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1);
-    LoadResultPlugin loadPlugin(const String& filepath, uint32_t uId, int32_t globalId = 0, uint64_t bugfixFlags = 0);
+    LoadResultPlugin loadPlugin(const PluginLoadParameters& req);
+    LoadResultPlugin loadPlugin(const String& filepath, uint32_t uId, int32_t globalId = 0, uint64_t bugfixFlags = 0) {
+        return loadPlugin({filepath, uId, globalId, bugfixFlags});
+    }
     effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
     void activateDeferred(effectbase* eff, int flags, effectbase** out_effectLoaded = nullptr);
     void updateSampleFormat(const sampleformat_t& _sampleFormat);

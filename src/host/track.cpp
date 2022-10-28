@@ -514,7 +514,7 @@ namespace DAW {
             pluginentry_t resolvedPlugin;
             if (db->resolvePlugin(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
                 log_lf(Log::L_DEBUG, "Plugin is registered... loading %s, uId %d, forceLoad %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, forceLoad);
-                auto res = host->loadPlugin(resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags);
+                auto res = host->loadPlugin({resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags, resolvedPlugin.moduleFormat});
                 if (res.library.isSuccess()) {
                     res.plugin->localDbId = resolvedPlugin.localDbId;
                     effect = res.plugin;

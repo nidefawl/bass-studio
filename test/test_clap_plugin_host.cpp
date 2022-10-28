@@ -39,8 +39,7 @@ namespace test_clap_plugin_host {
         String filepath = "/data/dev/clap/clap-plugins/builds/ninja-headless/plugins/Debug"
                           "/"
                           "clap-plugins.clap";
-        uint32_t uId    = 0;
-        auto res        = host->loadPlugin(filepath, uId);
+        auto res        = host->loadPlugin({filepath, 0, 0, 0, 1});
         TEST_ASSERT_THROW(res.library.isSuccess());
         TEST_ASSERT_THROW(res.clapPlugin != nullptr);
         host->onTick();

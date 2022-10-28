@@ -541,7 +541,7 @@ int32_t PluginManager::validateIds()
 #ifdef _WIN32
 HMODULE safeLoadLib(const char* szLibName);
 #define CLOSE_MODULE_HANDLE(handle) FreeLibrary(handle)
-LoadResultSharedLibrary loadLib(const String& filepath) {
+LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
     if (!FileExists(filepath)) {
         return LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "File not found");
     }
@@ -550,17 +550,21 @@ LoadResultSharedLibrary loadLib(const String& filepath) {
         auto dwErr = GetLastError();
         return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, FormatErrorMessage(dwErr, "LoadLibrary failed"));
     }
-    auto symbolClapEntry = reinterpret_cast<void*>(GetProcAddress(module, "clap_entry"));
-    if (symbolClapEntry) {
-        return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType ::CLAP, module, symbolClapEntry);
+    if (moduleFmt == -1 || moduleFmt == 1) {
+        auto symbolClapEntry = reinterpret_cast<void*>(GetProcAddress(module, "clap_entry"));
+        if (symbolClapEntry) {
+            return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType ::CLAP, module, symbolClapEntry);
+        }
     }
-    auto symbolVSTPluginMain= reinterpret_cast<void*>(GetProcAddress(module, "VSTPluginMain"));
-    if (symbolVSTPluginMain) {
-        return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolVSTPluginMain);
-    }
-    auto symbolMain = reinterpret_cast<void*>(GetProcAddress(module, "main"));
-    if (symbolMain) {
-        return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolMain);
+    if (moduleFmt == -1 || moduleFmt == 0) {
+        auto symbolVSTPluginMain= reinterpret_cast<void*>(GetProcAddress(module, "VSTPluginMain"));
+        if (symbolVSTPluginMain) {
+            return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolVSTPluginMain);
+        }
+        auto symbolMain = reinterpret_cast<void*>(GetProcAddress(module, "main"));
+        if (symbolMain) {
+            return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolMain);
+        }
     }
     CLOSE_MODULE_HANDLE(module);
     return LoadResultSharedLibrary::FromError(SharedLibState::DL_UNKNOWN_FORMAT, "Entry point not found");
@@ -571,7 +575,7 @@ LoadResultSharedLibrary loadLib(const String& filepath) {
 
 #if defined(__APPLE__)
 
-int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule);
+LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt);
 
 #define CLOSE_MODULE_HANDLE(handle) dlclose(handle)
 
@@ -581,7 +585,7 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule);
 
 #define CLOSE_MODULE_HANDLE(handle) dlclose(handle)
 
-LoadResultSharedLibrary loadLib(const String& filepath) {
+LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
     if (!FileExists(filepath)) {
         return LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "File not found");
     }
@@ -590,17 +594,21 @@ LoadResultSharedLibrary loadLib(const String& filepath) {
         auto dl_err = dlerror();
         return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, StringFormat("dlopen failed: %s", dl_err));
     }
-    auto symbolClapEntry = dlsym(module, "clap_entry");
-    if (symbolClapEntry) {
-        return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::CLAP, module, symbolClapEntry);
+    if (moduleFmt == -1 || moduleFmt == 1) {
+        auto symbolClapEntry = dlsym(module, "clap_entry");
+        if (symbolClapEntry) {
+            return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::CLAP, module, symbolClapEntry);
+        }
     }
-    auto symbolVSTPluginMain= dlsym(module, "VSTPluginMain");
-    if (symbolVSTPluginMain) {
-        return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolVSTPluginMain);
-    }
-    auto symbolMain = dlsym(module, "main");
-    if (symbolMain) {
-        return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolMain);
+    if (moduleFmt == -1 || moduleFmt == 0) {
+        auto symbolVSTPluginMain= dlsym(module, "VSTPluginMain");
+        if (symbolVSTPluginMain) {
+            return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolVSTPluginMain);
+        }
+        auto symbolMain = dlsym(module, "main");
+        if (symbolMain) {
+            return LoadResultSharedLibrary::FromSuccess(SharedLibPluginType::VST2, module, symbolMain);
+        }
     }
     CLOSE_MODULE_HANDLE(module);
     return LoadResultSharedLibrary::FromError(SharedLibState::DL_UNKNOWN_FORMAT, "Entry point not found");
@@ -610,14 +618,16 @@ LoadResultSharedLibrary loadLib(const String& filepath) {
 #ifdef _WIN32
 int loadPlugin_jbridge(audioMasterCallback audiomasterCallback, const String& filepath, HMODULE* hmodule, AEffect** aeffect, uint64_t bugfixFlags);
 #endif //_WIN32
-
-LoadResultPlugin PluginManager::loadPlugin(const String& filepath, uint32_t uId, int32_t globalId, uint64_t bugfixFlags) {
+LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
     dbgassert(masterCallBackSlot);
+    const auto& filepath = req.filepath;
+    const auto uId = req.uId;
+    int32_t globalId = req.globalId;
 
     String path, name, nameWithoutExt;
     SplitPath(filepath, &path, &nameWithoutExt, nullptr, &name);
 
-    auto libResult = loadLib(filepath);
+    auto libResult = loadLib(filepath, req.moduleFormat);
     void* moduleHandle = libResult.module;
 #ifdef _WIN32
     HMODULE hmodule = reinterpret_cast<HMODULE>(libResult.module);
@@ -664,7 +674,7 @@ LoadResultPlugin PluginManager::loadPlugin(const String& filepath, uint32_t uId,
         aeffect = fn(masterCallBackSlot);
 #ifdef _WIN32
     } else if (libResult.state == SharedLibState::DL_OPEN_FAILED) {
-        auto ret = loadPlugin_jbridge(masterCallBackSlot, filepath, &hmodule, &aeffect, bugfixFlags);
+        auto ret = loadPlugin_jbridge(masterCallBackSlot, filepath, &hmodule, &aeffect, req.bugfixFlags);
         libResult.state = ret == 0 ? SharedLibState::SUCCESS : SharedLibState::DL_UNKNOWN_FORMAT;
         libResult.type = ret == 0 ? SharedLibPluginType::VST2 : SharedLibPluginType::UNKNOWN;
         moduleHandle = hmodule;
@@ -709,7 +719,7 @@ LoadResultPlugin PluginManager::loadPlugin(const String& filepath, uint32_t uId,
 
     globalId = getNextGlobalModuleId(globalId);
 
-    auto* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, getHostCallback(), path, nameWithoutExt, -1, bugfixFlags);
+    auto* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, getHostCallback(), path, nameWithoutExt, -1, req.bugfixFlags);
 
     aeffect->user = plugin;
     plugin->handle->localCurrentUniqueId = uId;

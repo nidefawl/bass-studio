@@ -570,7 +570,7 @@ guiplugin* vstplugin::makeGui() {
             handle->gui->loadSnapshot(this->uiSnapshot);
             this->uiSnapshot.isValidSnapshot = false;
         }
-        handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
+        handle->gui->setTitle(StringFormat("%s (VST)", StringAsCStr(this->sName)));
         if (handle->axEffect) {//only provided by internal vst2 instance (not a DLL)
             guiplugin* pGuiPlugin = handle->gui.get();
             auto* pGuiVstPlugin   = dynamic_cast<guivstplugin*>(pGuiPlugin);
