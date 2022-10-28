@@ -102,6 +102,7 @@ FUNCTION(CONFIGURE_TARGET_DEPS TARGETNAME)
     ${PROJECT_DEPS_PATH}/SplineLibrary/spline_library
     ${PROJECT_DEPS_PATH}/cereal/include
     ${PROJECT_DEPS_PATH}/clap/include
+    ${PROJECT_DEPS_PATH}/clap-helpers/include
   )
   target_include_directories(${TARGETNAME} SYSTEM PUBLIC ${PROJECT_DEPS_PATH}/muparser/include)
 
