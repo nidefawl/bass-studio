@@ -1,7 +1,7 @@
 #include "str_util.h"
 #include "common/test_common.h"
 #include "host/host_pluginmanager.h"
-#include "host/plugin/vst_plugin.h"
+#include "host/plugin/vst/vstplugin.h"
 #include "host/host.h"
 #include "host/host_pluginmanager.h"
 #include "tls.h"
@@ -41,7 +41,7 @@ namespace {
         static int currentTimerTick = 0;
         static int numPluginsTested = 0;
         auto* host = daw_tls::getTls().host;
-        if (res.plugin == nullptr) {
+        if (res.plugin == nullptr || res.vstPlugin == nullptr) {
             if (currentFileIdx >= dllFilesToTest.size()) {
                 PostQuitMessage(exitStatusCode);
                 return;
@@ -60,7 +60,7 @@ namespace {
                 res = LoadResultPlugin{LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "")};
             }
         } else {
-            bool hasUI = res.plugin->getFlagsVST() & effFlagsHasEditor;
+            bool hasUI = res.vstPlugin->getFlagsVST() & effFlagsHasEditor;
             if (hasUI && currentTimerTick == 10) {
                 res.plugin->showWindow(false);
             } else if (hasUI && currentTimerTick == 30) {
@@ -72,7 +72,7 @@ namespace {
                 numPluginsTested++;
             } else {
                 host->onTick();
-                res.plugin->updateWindow();
+                res.plugin->updateFromMainThread();
             }
             currentTimerTick++;
         }
@@ -137,7 +137,7 @@ extern volatile bool fatalError;
 void on_terminate();
 
 int main(int, char*[]) {
-    seqthreads::registerThread("mainthread");
+    seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
 
     std::set_terminate(on_terminate);
 #ifdef USE_WIN32_EXC_HOOKS

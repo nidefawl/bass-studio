@@ -17,8 +17,8 @@
 
 #include "plugins/plugin.h"
 #include "plugins/plugin-base.h"
-#include "host/plugin/base_plugin.h"
-#include "host/plugin/vst_plugin.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/vst/vstplugin.h"
 
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 

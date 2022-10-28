@@ -29,8 +29,8 @@
 #include "track.h"
 #include "basectrl.h"
 #include "host/mainctrl.h"
-#include "plugin/base_plugin.h"
-#include "plugin/vst_plugin.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/vst/vstplugin.h"
 #include "appsettings.h"
 #include "logging.h"
 #include "audio_config.h"
@@ -239,7 +239,7 @@ public:
         this->lastBlockThreadStats = std::move(this->blockThreadStats);
         this->blockThreadStats.clear();
         for (auto i = threadsRunningCount; i < threadCount && i < MAX_AUDIOPROCESSING_THREADS; i++) {
-            threads[i].startThread();
+            threads[i].startThread(StringFormat("AudioProcessingThread %d", i), seqthreads::ThreadType::AudioThread);
             auto task = threads[i].call([]() {
                 setSSEFlushDenormals();
             });
@@ -251,7 +251,7 @@ public:
     void startThreads() {
         uint32_t countStarted = 0;
         for (WorkerThread& thread : threads) {
-            thread.startThread();
+            thread.startThread(StringFormat("AudioProcessingThread %d", countStarted), seqthreads::ThreadType::AudioThread);
             auto task = thread.call([]() {
                 setSSEFlushDenormals();
             });

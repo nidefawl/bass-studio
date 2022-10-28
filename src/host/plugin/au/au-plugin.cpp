@@ -7,7 +7,7 @@
 
 #include "track.h"
 #include "track_impl.h"
-#include "au_plugin.h"
+#include "au-plugin.h"
 
 void auplugin::unload(DAW::Host::PluginManager* host, int flags) {}
 void auplugin::load(DAW::Host::PluginManager* host) {}

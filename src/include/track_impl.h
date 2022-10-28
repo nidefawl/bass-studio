@@ -28,7 +28,7 @@
 #include "track.h"
 #include "fileio.h"
 #include "host/host_pluginmanager.h"
-#include "host/plugin/base_plugin.h"
+#include "host/plugin/base/base-plugin.h"
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
 #include "util/profiling.h"

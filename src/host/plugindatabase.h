@@ -24,7 +24,7 @@ public:
     plugindatabase_t()  = default;
     ~plugindatabase_t() = default;
 
-    bool resolve(const plugin_snapshot_t& pluginSnapshot, pluginentry_t& _outResult, int loadFlags);
+    bool resolvePlugin(const plugin_snapshot_t& pluginSnapshot, pluginentry_t& _outResult, int loadFlags);
     void query(const String& q, std::vector<pluginentry_t>& _out);
     void openDatabase();
     void closeDatabase();

@@ -1,4 +1,7 @@
 #include "TestBase.hpp"
+#include "appsettings.h"
+#include "host/mainctrl.h"
+#include "host/plugin/clap/clap-plugin.h"
 #include "host/effect_graph.h"
 #include "str_util.h"
 #include "common/test_common.h"
@@ -6,35 +9,57 @@
 #include "host/host.h"
 #include "tls.h"
 #include "appconfig.h"
+#include "thread.h"
 #include <memory>
 
-namespace {
+namespace test_clap_plugin_host {
 
-void test_clap_plugin_loader() {
-  TEST_BEGIN("test_clap_plugin_loader");
-    auto host = std::make_unique<DAW::Host::Host>();
-    auto pluginMgr = host.get();
-    DAW::Host::PluginManager::assignMasterCallback(pluginMgr);
-    host->setSampleFormat(sampleformat_t{ static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32 });
-    auto& tls = daw_tls::initNewTls();
-    tls.host = host.get();
-    tls.pluginManager = pluginMgr;
-    host->setTls(tls);
-    String filepath = "/data/dev/daw-deps/clap-plugins/builds/ninja-headless/plugins/Debug" "/" "clap-plugins.clap";
-    uint32_t uId = 0;
-    pluginMgr->loadPlugin(filepath, uId);
-    
-    TEST_ASSERT_EQUAL(DAW::Host::getInstance(), host.get());
-    host->onTick();
-    host->unload();
-    host->destroy();
+    std::shared_ptr<DawInstance> initDaw(const sampleformat_t sampleformat) {
+        auto dawInstance = std::make_shared<DawInstance>();
+        log_out("Testing Samplerate %uHz at Blocksize %u\n", sampleformat.sampleRate, sampleformat.blockSize);
+        auto& settings      = *daw_tls::getTls().settings;
+        settings.saveOnExit = false;
+        settings.iosettings.midiconfigs.clear();
+        settings.iosettings.configs.clear();
+        settings.iosettings.asioConfig         = {};
+        settings.iosettings.internalSamplerate = sampleformat.sampleRate;
+        settings.iosettings.internalBlocksize  = sampleformat.blockSize;
+        settings.iosettings.blocksize          = sampleformat.blockSize;
+        settings.dawsettings.audioEnabled      = false;
 
-  TEST_END();
-}
+        dawInstance->initDaw();
+        dbgassert(dawInstance->getHost()->m_sampleFormatInternal == sampleformat);
+        dawInstance->startDaw();
+        dawInstance->initProcessingResources();
+        return dawInstance;
+    }
+    void test_clap_plugin(DawInstance* daw) {
+        TEST_BEGIN("test_clap_plugin_loader");
+        auto host       = daw->getHost();
+        String filepath = "/data/dev/clap/clap-plugins/builds/ninja-headless/plugins/Debug"
+                          "/"
+                          "clap-plugins.clap";
+        uint32_t uId    = 0;
+        auto res        = host->loadPlugin(filepath, uId);
+        TEST_ASSERT_THROW(res.library.isSuccess());
+        TEST_ASSERT_THROW(res.clapPlugin != nullptr);
+        host->onTick();
+        host->unloadPlugin(res.plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+        host->unload();
+        host->destroy();
 
-} // namespace
+        TEST_END();
+    }
+
+}// namespace test_clap_plugin_host
 
 int main() {
-  test_clap_plugin_loader();
-  return 0;
+    setExceptionHandler();
+    App::Platform::initPlatformEnvironment("daw");
+    seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
+    daw_tls::initNewTls();
+    auto sf  = sampleformat_t{ 44100, 512 };
+    auto daw = test_clap_plugin_host::initDaw(sf);
+    test_clap_plugin_host::test_clap_plugin(daw.get());
+    return 0;
 }

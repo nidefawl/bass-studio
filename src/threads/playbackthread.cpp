@@ -97,7 +97,7 @@ public:
         this->m_prjCtrl = projCtrl;
 
         m_t = std::thread([this]() {
-            seqthreads::registerThread("audiothread");
+            seqthreads::registerThread("audiothread", seqthreads::ThreadType::AudioThread);
             setSSEFlushDenormals();
             this->m_threadId = seqthreads::getCurrentThreadId();
             dbgassert(m_threadTls.tlsInitialized);

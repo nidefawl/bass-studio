@@ -2,7 +2,7 @@
 #include "assert_dbg.h"
 #include "automation.h"
 #include "host/host_pluginmanager.h"
-#include "host/plugin/internal_plugin.h"
+#include "host/plugin/internal/internal-plugin.h"
 #include "logging.h"
 #include "math/seq_math.h"
 #include "midi-event.h"

@@ -77,6 +77,7 @@ public:
         });
         textField.setPlaceholder("Search");
         textField2.setPlaceholder("SQL error");
+        textField.setValue("clap");
     }
     ~guictr_pluginlibrary() override {
         std::vector<gui_list_entry*> _newList;

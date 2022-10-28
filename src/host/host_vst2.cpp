@@ -1,7 +1,7 @@
 #include "host/host_pluginmanager.h"
 #include "assert_dbg.h"
-#include "plugin/vst_plugin.h"
-#include "plugin/vst_plugin_handles.h"
+#include "host/plugin/vst/vstplugin.h"
+#include "host/plugin/vst/vstplugin-handles.h"
 #include "thread.h"
 #include "history.h"
 #include "track_impl.h"
@@ -187,7 +187,7 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginH
     bool bIsInternalThread = false;
     seqthreads::getThreadInfo(bIsKnownThread, bIsInternalThread);
     if (!bIsKnownThread) {
-        seqthreads::registerThread("External", false);
+        seqthreads::registerThread("External", seqthreads::ThreadType::Unknown, false);
         daw_tls::setTls(host->getTls());
         log_lf(Log::L_WARN, "(First) Request from external thread: Plugin '%s' opcode %d %d %zd %f\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), opcode, index, value, opt);
         bIsInternalThread = false;

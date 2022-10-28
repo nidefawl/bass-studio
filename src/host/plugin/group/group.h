@@ -3,7 +3,7 @@
 #include "midi-event.h"
 #include "modules.h"
 #include "dsp_util.h"
-#include "internal_plugin.h"
+#include "host/plugin/internal/internal-plugin.h"
 #include "str_util.h"
 #include "snapshot/snapshot.h"
 

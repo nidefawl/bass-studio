@@ -1,8 +1,8 @@
 #include "logging.h"
 #if defined(__linux__) || defined(__APPLE__)
-#include "../../host_plugin_window.h"
-#include "../../host_pluginmanager.h"
-#include "../../plugin/base_plugin.h"
+#include "host/host_plugin_window.h"
+#include "host/host_pluginmanager.h"
+#include "host/plugin/base/base-plugin.h"
 #include <vector>
 #include <GLFW/glfw3.h>
 #ifdef __linux__
@@ -156,7 +156,7 @@ ivec2 host_plugin_window::getContentSize() const
 	return s;;
 }
 
-void host_plugin_window::updateWindow() const {
+void host_plugin_window::updateFromMainThread() const {
 #ifdef __linux__
 	// sendExposeEvent(glfw);
 #endif

@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "automation.h"
-#include "base_plugin.h"
+#include "host/plugin/base/base-plugin.h"
 #include "gui/plugin/plugin.h"
 #include "gui/plugin/pluginviewcontainers.h"
 #include "logging.h"
@@ -31,7 +31,6 @@ class internalplugin : public effectbase {
 public:
     struct internalplugin_handles_t {
         std::unique_ptr<guiinternalpluginview> gui;
-        std::vector<int32_t> heldNotes;
     };
 protected:
     struct internal_plugin_window_client {
@@ -59,7 +58,7 @@ public:
     guiplugin* getGui() override;
     bool onShow(host_plugin_window* _window) override;
     bool onClose() override;
-    void updateWindow() override;
+    void updateFromMainThread() override;
     bool hasWindowEditor() override {
         return true;
     }
@@ -76,9 +75,6 @@ public:
     String getAutomatableName() override;
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override { out->copyFrom(in); };
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
-    virtual void processMidiMessages(std::vector<IMidiMsg>& midiEvents) { };
-    void processMidi(midi_data_processing_t& midiEvents) override;
-    void sendNotesOff() override;
     
     void getAllViewCtrs(int32_t uiId, std::vector<std::shared_ptr<PluginViewContainers>>& vec);
     std::shared_ptr<PluginViewContainers> openViewCtr(int32_t uiId);

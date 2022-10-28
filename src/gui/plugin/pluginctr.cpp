@@ -26,10 +26,10 @@
 
 #include "host/mainctrl.h"
 #include "host/host_pluginmanager.h"
-#include "host/plugin/base_plugin.h"
-#include "host/plugin/internal_plugin.h"
-#include "host/plugin/vst_plugin.h"
-#include "host/plugin/vst_plugin_handles.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/internal/internal-plugin.h"
+#include "host/plugin/vst/vstplugin.h"
+#include "host/plugin/vst/vstplugin-handles.h"
 #include "host/plugindatabase.h"
 #include "threads/playbackthread.h"
 

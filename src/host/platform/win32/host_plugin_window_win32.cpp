@@ -4,7 +4,7 @@
 #include "str_util.h"
 #include "host/host_plugin_window.h"
 #include "host/host_pluginmanager.h"
-#include "host/plugin/vst_plugin.h"
+#include "host/plugin/vst/vstplugin.h"
 #include "host/mainctrl.h"
 #include <windows.h>
 #include <winuser.h>
@@ -360,7 +360,7 @@ void host_plugin_window::captureWindowFrame() {
     captureWindow(hwnd, capturedFrame);
 }
 
-void host_plugin_window::updateWindow() const {
+void host_plugin_window::updateFromMainThread() const {
     UpdateWindow(hwnd);
 }
 

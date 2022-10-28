@@ -35,8 +35,8 @@
 #include "properties_table.h"
 #include "gui/controls/inputfield.h"
 #include "automation.h"
-#include "host/plugin/base_plugin.h"
-#include "host/plugin/vst_plugin.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/vst/vstplugin.h"
 #include "logging.h"
 #include "renderresources.h"
 

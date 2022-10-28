@@ -36,10 +36,11 @@
 
 #include "host/mainctrl.h"
 #include "host/host_pluginmanager.h"
-#include "host/plugin/base_plugin.h"
-#include "host/plugin/internal_plugin.h"
-#include "host/plugin/vst_plugin.h"
-#include "host/plugin/vst_plugin_handles.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/internal/internal-plugin.h"
+#include "host/plugin/clap/clap-plugin.h"
+#include "host/plugin/vst/vstplugin.h"
+#include "host/plugin/vst/vstplugin-handles.h"
 #include "host/host_plugin_window.h"
 #include "gui/automation/automatable.h"
 #include "gui/properties/properties_table.h"
@@ -911,6 +912,23 @@ guivstplugin::~guivstplugin() {
 }
 guictxtmenu_base* guivstplugin::getTooltip(AppCtrl* appctrl) {
     auto tooltip = new guitooltip<guivstplugin>(this);
+    return tooltip;
+}
+
+template<>
+void guitooltip<guiclapplugin>::setContent() {
+    ptr->effect->addPropertiesTooltip(table);
+}
+
+guiclapplugin::guiclapplugin(clapplugin* _effect) : guipluginview(_effect), clap(_effect) {
+}
+guiclapplugin::~guiclapplugin() {
+    if (viewCtr) {
+        viewCtr->setFree();
+    }
+}
+guictxtmenu_base* guiclapplugin::getTooltip(AppCtrl* appctrl) {
+    auto tooltip = new guitooltip<guiclapplugin>(this);
     return tooltip;
 }
 guictxtmenu_base* guiinternalpluginview::getTooltip(AppCtrl* appctrl) {

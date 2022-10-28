@@ -13,7 +13,7 @@
 #include "gui/plugin/pluginctr.h"
 #include "host/host_pluginmanager.h"
 #include "host/mainctrl.h"
-#include "host/plugin/base_plugin.h"
+#include "host/plugin/base/base-plugin.h"
 #include "logging.h"
 #include "math/vec.h"
 #include "snapshot/track-snapshot.h"

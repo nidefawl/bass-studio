@@ -3,8 +3,8 @@
 #include "tls.h"
 #include "mainctrl.h"
 
-#include "plugin/base_plugin.h"
-#include "plugin/vst_plugin.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/vst/vstplugin.h"
 #include "host_pluginmanager.h"
 #include "midiarp.h"
 #include "track_impl.h"

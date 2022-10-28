@@ -90,9 +90,9 @@ public:
         dbgassert(!t.joinable());
         threadTLS = tls;
     }
-    void start() {
-        t = std::thread([this]() {
-            seqthreads::registerThread("workerthread");
+    void start(const String& name, seqthreads::ThreadType type) {
+        t = std::thread([this, name, type]() {
+            seqthreads::registerThread(name, type);
             this->threadid = seqthreads::getCurrentThreadId();
             dbgassert(threadTLS.tlsInitialized);
             daw_tls::setTls(threadTLS);
@@ -171,8 +171,8 @@ WorkerThread::~WorkerThread() {
 WorkerThread::WorkerThread() : m_threadImpl{ new WorkerThread::Impl{} } {
 }
 
-void WorkerThread::startThread() {
-    m_threadImpl->start();
+void WorkerThread::startThread(const String& name, seqthreads::ThreadType type) {
+    m_threadImpl->start(name, type);
 }
 void WorkerThread::stopThread() {
     m_threadImpl->stop();

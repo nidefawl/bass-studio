@@ -72,7 +72,7 @@ public:
     WorkerThread();
     ~WorkerThread() override;
     void setRealtimePriority(bool isRealtimePriority);
-    void startThread();
+    void startThread(const String& name, seqthreads::ThreadType type);
     void stopThread();
     void joinThread();
     int32_t getThreadId() override;

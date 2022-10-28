@@ -73,8 +73,8 @@
 #include "gui/dialog/dialog_io.h"
 #include "gui/dialog/dialogs.h"
 
-#include "plugin/base_plugin.h"
-#include "plugin/vst_plugin.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/vst/vstplugin.h"
 #include "track_impl.h"
 #include "audiocache.h"
 #include "seq_time.h"
@@ -1410,7 +1410,7 @@ void DawInstance::initRealtimeResources() {
 
 
     this->workerThread.setTls(tls);
-    this->workerThread.startThread();
+    this->workerThread.startThread("File Loader Thread", seqthreads::ThreadType::WorkerThread);
 
     setAudioThreadState(playback_state::status_stop);
 }

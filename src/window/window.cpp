@@ -1764,7 +1764,7 @@ void openGlobalLog(const String& logFileName);  // Forward declare from util/log
 void closeGlobalLog();                          // Forward declare from util/logging.cpp
 
 int startApplication(const std::vector<String>& args, AppInstanceService& appInstance) {
-    seqthreads::registerThread("mainthread");
+    seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
 #ifdef _WIN32
     OleInitialize(0);
 #endif

@@ -11,6 +11,7 @@
 #include "basectrl.h"
 #include "samplerate.h"
 #include "seq_time.h"
+#include "thread.h"
 #include "tls.h"
 #include "track.h"
 #include "track_impl.h"
@@ -119,7 +120,7 @@ int main(int argc, char** argv) {
     setExceptionHandler();
 
     App::Platform::initPlatformEnvironment("daw");
-    seqthreads::registerThread("mainthread");
+    seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
 
     auto dawInstance = std::make_shared<DawInstance>();
     try {

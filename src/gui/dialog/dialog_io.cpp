@@ -41,7 +41,6 @@
 
 namespace DAW::DialogSettings {
 
-constexpr int ID_BTN_CLOSE    = 1;
 
 
 guidropdown_setting_options_ctxt_t::guidropdown_setting_options_ctxt_t(guidropdown_setting_options_t* _parent)
@@ -1246,35 +1245,44 @@ public:
         }
     }
 };
-class guidialog_settings_plugins_vst2 : public guictr_base {
+class guidialog_settings_plugins_path_config : public guictr_base {
     DawInstance* const daw;
     appsettings& settings;
     guibutton scanNow;
-    guibutton selectFolder;
+    guibutton selectVstPlugPath;
+    guibutton selectClapPlugPath;
     gui_textfield pathVstVal;
+    gui_textfield pathClapVal;
 public:
     void onDialogShow() { updateOptions(); }
 
-    ~guidialog_settings_plugins_vst2() override {
+    ~guidialog_settings_plugins_path_config() override {
         removeGuis();
     }
-    guidialog_settings_plugins_vst2(DawInstance* _daw)
+    guidialog_settings_plugins_path_config(DawInstance* _daw)
         : guictr_base(),
           daw(_daw),
           settings(daw_tls::getSettings())
     {
-        selectFolder.id = 0x10;
-        selectFolder.setLabel("Select VST2 Plugin Directory");
-        selectFolder.setText(selectFolder.getLabel());
-        scanNow.id = 0x11;
-        scanNow.setLabel("Scan VST2 Plugins");
+        selectVstPlugPath.id = 0x10;
+        selectVstPlugPath.setLabel("Select VST2 Plugin Directory");
+        selectVstPlugPath.setText(selectVstPlugPath.getLabel());
+        selectClapPlugPath.id = 0x11;
+        selectClapPlugPath.setLabel("Select Clap Plugin Directory");
+        selectClapPlugPath.setText(selectClapPlugPath.getLabel());
+        scanNow.id = 0x12;
+        scanNow.setLabel("Scan Plugins");
         scanNow.setText(scanNow.getLabel());
         pathVstVal.setEnabled(false);
         pathVstVal.setValue(settings.pluginsettings.pathVst2);
+        pathClapVal.setEnabled(false);
+        pathClapVal.setValue(settings.pluginsettings.pathClap);
         add(&pathVstVal);
-        add(&selectFolder);
+        add(&pathClapVal);
+        add(&selectVstPlugPath);
+        add(&selectClapPlugPath);
         add(&scanNow);
-        setLabel("VST2 Plugins");
+        setLabel("Plugins");
         updateOptions();
     }
     void layout() override {
@@ -1285,17 +1293,21 @@ public:
 
         pathVstVal.size   = ivec2(cs.x - inset * 2, height);
         pathVstVal.pos    = ivec2(inset);
-        selectFolder.size = ivec2(cs.x - inset * 2, height);
-        selectFolder.pos  = ivec2(inset, pathVstVal.bottom() + inset);
+        selectVstPlugPath.size = ivec2(cs.x - inset * 2, height);
+        selectVstPlugPath.pos  = ivec2(inset, pathVstVal.bottom() + inset);
+        pathClapVal.size   = ivec2(cs.x - inset * 2, height);
+        pathClapVal.pos    = ivec2(inset, selectVstPlugPath.bottom() + inset);
+        selectClapPlugPath.size = ivec2(cs.x - inset * 2, height);
+        selectClapPlugPath.pos  = ivec2(inset, pathClapVal.bottom() + inset);
         scanNow.size      = ivec2(cs.x - inset * 2, height);
-        scanNow.pos       = ivec2(inset, selectFolder.bottom() + inset);
+        scanNow.pos       = ivec2(inset, selectClapPlugPath.bottom() + inset);
 
         for (auto gui : guis) {
             gui->layout();
         }
     }
     void buttonClicked(guibase* button) override {
-        if (button->id == 0x11) {
+        if (button->id == 0x12) {
             auto pluginMgr = daw->getPluginManager();
             if (!pluginMgr->isScanning()) {
                 pluginMgr->scanPlugins();
@@ -1303,18 +1315,34 @@ public:
             } else {
                 pluginMgr->checkScanner();
                 pluginMgr->stopScanner();
-                scanNow.setText("Scan VST2 Plugins");
+                scanNow.setText("Scan Plugins");
             }
 
             return;
         }
+        if (button->id == 0x11) {
+            // select clap folder
+            String out   = DAW_PLATFORM_CLAP_PATH_DEFAULT;
+            String curre = settings.pluginsettings.pathClap;
+            App::Platform::sanitizePathToDirectory(curre);
+
+            if (0 == browseForFolder(selectClapPlugPath.getLabel(), curre, out)) {
+                settings.pluginsettings.pathClap = out;
+                try {
+                    saveSettings(settings);
+                } catch (std::exception& e) {
+                    log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
+                }
+            }
+            return;
+        }
         if (button->id == 0x10) {
-            // select folder
+            // select vst folder
             String out   = DAW_PLATFORM_VST2_PATH_DEFAULT;
             String curre = settings.pluginsettings.pathVst2;
             App::Platform::sanitizePathToDirectory(curre);
 
-            if (0 == browseForFolder(selectFolder.getLabel(), curre, out)) {
+            if (0 == browseForFolder(selectVstPlugPath.getLabel(), curre, out)) {
                 settings.pluginsettings.pathVst2 = out;
                 try {
                     saveSettings(settings);
@@ -1333,38 +1361,39 @@ public:
     void updateOptions() {
         auto pluginMgr = daw->getPluginManager();
         if (!pluginMgr->isScanning()) {
-            scanNow.setText("Scan VST2 Plugins");
+            scanNow.setText("Scan Plugins");
         } else {
             scanNow.setText("Cancel Scanning");
         }
     }
     void onTick(AppCtrl* appctrl) override {
         pathVstVal.setValue(settings.pluginsettings.pathVst2);
+        pathClapVal.setValue(settings.pluginsettings.pathClap);
         updateOptions();
     }
 };
 class guidialog_settings_plugins : public setting_dialog {
-    guidialog_settings_plugins_vst2 settings_vst2;
+    guidialog_settings_plugins_path_config settinsgPath;
     public:
-    void onDialogShow() override { settings_vst2.onDialogShow(); }
+    void onDialogShow() override { settinsgPath.onDialogShow(); }
 
     ~guidialog_settings_plugins() override {
         removeGuis();
     }
     guidialog_settings_plugins(DawInstance* _daw)
         : setting_dialog(),
-          settings_vst2(_daw)
+          settinsgPath(_daw)
     {
-        add(&settings_vst2);
-        settings_vst2.setBackgroundRendered(true);
-        settings_vst2.setFlag(FLG_RENDER_LABEL, true);
+        add(&settinsgPath);
+        settinsgPath.setBackgroundRendered(true);
+        settinsgPath.setFlag(FLG_RENDER_LABEL, true);
         setLabel("Plugins");
     }
 
     void layout() override {
         const ivec2 cs = getSizeContent();
-        settings_vst2.pos   = ivec2(0);
-        settings_vst2.size  = cs;
+        settinsgPath.pos   = ivec2(0);
+        settinsgPath.size  = cs;
         for (auto gui : guis) {
             gui->layout();
         }
@@ -1388,9 +1417,9 @@ void guidialog_settings::init(DawInstance* daw)
     addEntry(new guidialog_settings_plugins(daw), "Plugins");
     addEntry(makeKeybindsDialog(daw), "Keybinds");
     addEntry(new guidialog_settings_other(daw), "Other");
-    add(&btnClose);
-    btnClose.id = ID_BTN_CLOSE;
-    btnClose.setText("Close");
+    add(&btnSave);
+    btnSave.id = 0x10;
+    btnSave.setText("Close");
     setLabel("Preferences");
     setActiveEntry(0);
 }
@@ -1428,7 +1457,7 @@ guidialog_settings::~guidialog_settings() {
     for (auto* entry : entries) {
         remove(&entry->tabButton);
     }
-    remove(&btnClose);
+    remove(&btnSave);
     // only this->activeEntry->tabCtr should be in this cointainer
     // at this point. And it must be a valid pointer
     dbgassert(guis.size() <= 1);
@@ -1445,10 +1474,10 @@ void guidialog_settings::layout() {
 
     ivec2 csize       = getSizeContent();
     int32_t closeSize = 32;
-    btnClose.size     = ivec2(closeSize * 4, closeSize);
-    btnClose.pos      = ivec2(csize.x - btnClose.size.x - inset, csize.y - btnClose.size.y);
+    btnSave.size     = ivec2(closeSize * 4, closeSize);
+    btnSave.pos      = ivec2(csize.x - btnSave.size.x - inset, csize.y - btnSave.size.y);
 
-    csize.y -= btnClose.size.y;
+    csize.y -= btnSave.size.y;
 
     int csW         = csize.x - inset * 2;
     ivec2 buttonPos = { inset, inset * 2 };
@@ -1483,10 +1512,9 @@ void guidialog_settings::buttonClicked(guibase* button) {
         setActiveEntry((int32_t)pos);
     }
 
-    switch (button->id) {
-        case ID_BTN_CLOSE:
-            closeContextMenu();
-            break;
+    if (button->id == 0x10) {
+        saveSettings(daw_tls::getSettings());
+        closeContextMenu();
     }
     guidialog_base::buttonClicked(button);
 }

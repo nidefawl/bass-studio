@@ -246,7 +246,7 @@ public:
         m_started = true;
         m_isRunning = true;
         m_t = std::thread([this, argbinary = binary, argparams = params, argwd = workingDir, argenv = env, argpipe = pipedOutput]() {
-            seqthreads::registerThread("childprocessthread");
+            seqthreads::registerThread("childprocessthread", seqthreads::ThreadType::ChildProcess);
             try {
                 std::vector<char> buf;
                 ProcessRunScope scopedProcess(argbinary, argparams, argwd, argenv, argpipe);

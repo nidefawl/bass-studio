@@ -31,7 +31,7 @@
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "guiglobals.h"
-#include "host/plugin/internal_plugin.h"
+#include "host/plugin/internal/internal-plugin.h"
 #include "host/plugin/plugin-lockable.h"
 #include "host/projectcontroller.h"
 #include "IPlugMidi.h"

@@ -4,9 +4,9 @@
 #include "assert_dbg.h"
 #include "automation.h"
 #include "config.h"
-#include "host/plugin/base_plugin.h"
+#include "host/plugin/base/base-plugin.h"
 #include "plugins/synth/IPlugMidi.h"
-#include "vst_plugin.h"
+#include "vstplugin.h"
 #include "host/vst_event.h"
 #include "math/seq_math.h"
 #include "str_util.h"
@@ -14,7 +14,7 @@
 #include "logging.h"
 #include "audioblock.h"
 #include "snapshot/snapshot.h"
-#include "vst_plugin_handles.h"
+#include "vstplugin-handles.h"
 #include "track.h"
 #include "track_impl.h"
 #include "host/host_pluginmanager.h"
@@ -43,7 +43,7 @@ bool vstplugin::onShow(host_plugin_window* _window) {
     if (this->windowHost == _window) {
         bEditOpen = true;
         this->dispatch(effEditOpen, 0, 0, (void*) _window->getHWND());
-        this->updateWindow();
+        this->updateFromMainThread();
     }
     return true;
 }
@@ -74,7 +74,7 @@ ivec2 vstplugin::constrainWindowSize(host_plugin_window*, ivec2 size) {
 
 void vstplugin::onWindowResize(ivec2 size) {
     if (handle->axEffect) {
-        return handle->axEffect->onWindowResize(size);
+        handle->axEffect->onWindowResize(size);
     }
 }
 
@@ -777,11 +777,11 @@ automatable_param_ref_t vstplugin::toRef() const {
 bool vstplugin::hasWindowEditor() {
     return handle->aeffect->flags & effFlagsHasEditor;
 }
-void vstplugin::updateWindow() {
+void vstplugin::updateFromMainThread() {
     if (this->windowHost) {
         this->dispatch(effEditIdle);
     }
-    effectbase::updateWindow();
+    effectbase::updateFromMainThread();
 }
 
 bool vstplugin::showWindow(bool bResetPosition) {

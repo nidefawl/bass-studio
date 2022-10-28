@@ -7,7 +7,7 @@
 #include "host/daw_channel.h"
 #include "host/effect_graph.h"
 #include "host/host.h"
-#include "host/plugin/internal_plugin.h"
+#include "host/plugin/internal/internal-plugin.h"
 #include "math/seq_math.h"
 #include "exceptions.h"
 #include "logging.h"
@@ -28,9 +28,9 @@
 #include "track.h"
 #include "cursor.h"
 #include "audiocache.h"
-#include "plugin/base_plugin.h"
-#include "plugin/vst_plugin.h"
-#include "plugin/vst_plugin_handles.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/vst/vstplugin.h"
+#include "host/plugin/vst/vstplugin-handles.h"
 #include "types.h"
 #include "host_pluginmanager.h"
 #include "track_impl.h"
@@ -508,11 +508,11 @@ void project_t::copyFrom(project_snapshot_t& project) {
 namespace DAW {
     effectbase* loadEffectModule(Host::PluginManager* host, const plugin_snapshot_t& pluginSnapshot, bool forceLoad) {
         effectbase* effect      = nullptr;
-        if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
+        if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST || pluginSnapshot.pluginType == PLUGIN_TYPE_CLAP) {
             log_printf("Next loading plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
             plugindatabase_t* db = plugindatabase_t::getInstance();
             pluginentry_t resolvedPlugin;
-            if (db->resolve(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
+            if (db->resolvePlugin(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
                 log_lf(Log::L_DEBUG, "Plugin is registered... loading %s, uId %d, forceLoad %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, forceLoad);
                 auto res = host->loadPlugin(resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags);
                 if (res.library.isSuccess()) {

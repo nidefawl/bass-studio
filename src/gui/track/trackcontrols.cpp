@@ -9,7 +9,7 @@
 #include "keyboard.h"
 #include "math/seq_math.h"
 #include "host/mainctrl.h"
-#include "host/plugin/vst_plugin.h"
+#include "host/plugin/vst/vstplugin.h"
 #include "gui/gui.h"
 #include "guicolors.h"
 #include "guiconstant.h"

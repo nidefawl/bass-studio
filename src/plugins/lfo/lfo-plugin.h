@@ -2,7 +2,7 @@
 #include "shape.h"
 #include "str_util.h"
 #include "modules.h"
-#include "host/plugin/internal_plugin.h"
+#include "host/plugin/internal/internal-plugin.h"
 #include "plugins/plugin-ui.h"
 
 namespace PluginLFO {

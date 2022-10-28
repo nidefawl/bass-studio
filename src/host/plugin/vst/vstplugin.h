@@ -12,7 +12,7 @@
 #include "platform.h"
 #include "meter.h"
 #include "snapshot/snapshot.h"
-#include "base_plugin.h"
+#include "host/plugin/base/base-plugin.h"
 
 struct AudioBlock;
 struct handles_t;
@@ -56,7 +56,6 @@ public:
     bool bIsPostInit       = false;
     int32_t pluginCategory = 0;
     int32_t vstVersion     = 0;
-    int32_t localDbId      = -1;
     int32_t vendorVersion  = 0;
     uint32_t uId           = 0;
     bool isInSuspend   = true;
@@ -91,12 +90,12 @@ public:
     bool getNameString(char* szBuf);
     void printNames();
     void onWindowResize(ivec2 size) override;
-    bool onShow(host_plugin_window* window) override;
+    bool onShow(host_plugin_window* _window) override;
     bool onClose() override;
     ivec2 constrainWindowSize(host_plugin_window* window, ivec2 size) override;
     bool hasWindowEditor() override;
     bool showWindow(bool bResetPosition) override;
-    void updateWindow() override;
+    void updateFromMainThread() override;
     bool updateWindowSize();
     void unload(DAW::Host::PluginManager* host, int flags) override;
     void load(DAW::Host::PluginManager* host) override;

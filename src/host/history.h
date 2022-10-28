@@ -1,7 +1,7 @@
 #pragma once
 #include "types.h"
 #include "edithistory.h"
-#include "plugin/base_plugin.h"
+#include "host/plugin/base/base-plugin.h"
 #include "mainctrl.h"
 #include "midiarp.h"
 

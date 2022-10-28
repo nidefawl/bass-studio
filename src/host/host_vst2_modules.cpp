@@ -2,9 +2,9 @@
 #include "str_util.h"
 #include "host_pluginmanager.h"
 #include "modules.h"
-#include "plugin/base_plugin.h"
-#include "plugin/vst_plugin.h"
-#include "plugin/vst_plugin_handles.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/vst/vstplugin.h"
+#include "host/plugin/vst/vstplugin-handles.h"
 
 #include "plugins/info/info-plugin.h"
 #include "plugins/synth/synth-plugin.h"

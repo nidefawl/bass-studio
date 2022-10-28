@@ -13,7 +13,7 @@
 #include "gui/plugin/pluginviewcontainers.h"
 #include "modules.h"
 #include "host/mainctrl.h"
-#include "host/plugin/internal_plugin.h"
+#include "host/plugin/internal/internal-plugin.h"
 #include "track.h"
 #include "track_impl.h"
 #include "audioblock.h"

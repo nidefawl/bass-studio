@@ -170,7 +170,7 @@ namespace test_host {
 int main() {
     setExceptionHandler();
     App::Platform::initPlatformEnvironment("daw");
-    seqthreads::registerThread("mainthread");
+    seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
     daw_tls::initNewTls();
     auto sf = sampleformat_t{44100, 512};
     auto daw = test_host::initDaw(sf);

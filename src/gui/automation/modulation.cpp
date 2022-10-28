@@ -15,7 +15,7 @@
 #include "guiconstant.h"
 #include "host/host_pluginmanager.h"
 #include "host/mainctrl.h"
-#include "host/plugin/internal_plugin.h"
+#include "host/plugin/internal/internal-plugin.h"
 #include "logging.h"
 #include "math/seq_math.h"
 #include "renderresources.h"

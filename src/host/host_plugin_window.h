@@ -59,7 +59,7 @@ public:
     ivec2 getContentSize() const;
     void setPosition(ivec2 newPos);
 
-    void updateWindow() const;
+    void updateFromMainThread() const;
     void captureWindowFrame();
     bool isRedirectingKeysToDawMainWindow() const {
         return bRedirectKeysToDawMainWindow;

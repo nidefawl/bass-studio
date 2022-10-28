@@ -1,4 +1,5 @@
 #pragma once
+#include "platform.h"
 #include "types.h"
 #include "config.h"
 #include "grid.h"
@@ -103,7 +104,8 @@ struct app_vst2_config {
 };
 
 struct app_plugin_configuration {
-    String pathVst2;
+    String pathClap = DAW_PLATFORM_CLAP_PATH_DEFAULT;
+    String pathVst2 = DAW_PLATFORM_VST2_PATH_DEFAULT;
     app_vst2_config configVst2;
 };
 

@@ -1,6 +1,6 @@
-#include "base_plugin.h"
-#include "empty.h"
-#include "group.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/empty/empty.h"
+#include "host/plugin/group/group.h"
 #include "plugins/gain/gain-plugin.h"
 #include "plugins/latency/latency-plugin.h"
 #include "plugins/lfo/lfo-plugin.h"
@@ -9,7 +9,7 @@
 #include "plugins/sampledelay/sampledelay-plugin.h"
 #include "plugins/stereowidth/stereowidth-plugin.h"
 #include "host/host_pluginmanager.h"
-#include "host/plugin/vst_plugin.h"
+#include "host/plugin/vst/vstplugin.h"
 #include "modules.h"
 
 extern template effectbase* makeInstance<module_empty>(int32_t _projectGlobalId, IHostCallback* _hostCallback);

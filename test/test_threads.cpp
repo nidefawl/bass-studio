@@ -43,7 +43,7 @@ namespace {
         tls.tlsInitialized = true;
         WorkerThread wthread;
         wthread.setTls(tls);
-        wthread.startThread();
+        wthread.startThread("WorkerThread", seqthreads::ThreadType::WorkerThread);
         for (TestTask& task : tasks) {
             if (task.id == 2) {
                 continue;

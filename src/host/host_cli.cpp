@@ -17,8 +17,8 @@
 #include "track_impl.h"
 #include "audio_host.h"
 #include "midi_host.h"
-#include "host/plugin/vst_plugin.h"
-#include "host/plugin/vst_plugin_handles.h"
+#include "host/plugin/vst/vstplugin.h"
+#include "host/plugin/vst/vstplugin-handles.h"
 #include "plugindatabase.h"
 #include "threads/playbackthread.h"
 #include <dr_libs/dr_wav.h>
@@ -131,7 +131,7 @@ void processWindowMessages() {}
 #endif
 
 int runCommandLineHost(const std::vector<String>& args) {
-    seqthreads::registerThread("mainthread");
+    seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
 #ifdef _WIN32
     if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE) ConsoleHandler, TRUE)) {
         fprintf(stderr, "Unable to install handler!\n");

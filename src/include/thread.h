@@ -7,8 +7,17 @@ bool set_thread_priority_realtime() noexcept;
 #endif
 
 namespace seqthreads {
+    enum class ThreadType {
+        Unknown,
+        MainThread,
+        AudioThread,
+        AudioThreadPool,
+        WorkerThread,
+        ChildProcess,
+    };
+    ThreadType CurrentThreadType() noexcept;
     int32_t getCurrentThreadId() noexcept;
-    void registerThread(String threadName, bool isInternalThread = true);
+    void registerThread(const String& threadName, ThreadType threadType = ThreadType::Unknown, bool isInternalThread = true);
     bool isInternalThread() noexcept;
     bool isKnownThread() noexcept;
     void getThreadInfo(bool& isKnown, bool& isInternal) noexcept;

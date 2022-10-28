@@ -11,11 +11,13 @@
  */
 
 #include "assert_dbg.h"
-#include "host/plugin/vst_plugin.h"
-#include "host/plugin/vst_plugin_handles.h"
+#include "host/plugin/clap/clap-plugin.h"
+#include "host/plugin/vst/vstplugin.h"
+#include "host/plugin/vst/vstplugin-handles.h"
 #include "host/host_pluginmanager.h"
 #include "host/host.h"
 #include "logging.h"
+#include "seq_util.h"
 #include "threads/childprocessthread.h"
 #include "appsettings.h"
 #include "buildinfo.h"
@@ -93,10 +95,11 @@ static int logPrefixIdx = PROC_SIDE_NONE;
 #define CMD_PLUGIN_LOAD_ERROR 1
 #define CMD_PLUGIN_LOAD_REQUEST 2
 #define CMD_PLUGIN_THREAD_QUIT 3
-#define CMD_PLUGIN_LOAD_SUCCESS_PLUGIN 4
-#define CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_SHELL 5
-#define CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN 6
-#define CMD_PLUGIN_END_SUCCESS 7
+#define CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGIN 4
+#define CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_SHELL 5
+#define CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_PLUGIN 6
+#define CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN 7
+#define CMD_PLUGIN_END_SUCCESS 8
 #define NUM_BUFS (16 * 1024)
 #define SCAN_IPC_PIPE_NAME "DAW1pipc"
 
@@ -142,6 +145,12 @@ struct response_type_vst24_t : response_type_t {
     char szProductName[256]{ 0 };
     char szEffectName[256]{ 0 };
     char szShellPluginName[256]{ 0 };
+};
+struct response_type_clapplugin_t : response_type_t {
+    uint32_t uniqueID{ 0 };
+    uint32_t version{ 0 };
+    uint32_t pluginCategory{ 0 };
+    bool isSynth{ 0 };
 };
 struct response_type_vst24_plugin_t : response_type_vst24_t {
 };
@@ -229,6 +238,7 @@ int writeToIPC(IPC& ipcConnection, T& hdr) {
 }
 
 struct vstscanner_server_options {
+    String clapPluginPath;
     String vstPlugPath;
     bool dryRun             = false;
     bool fullRescan         = false;
@@ -238,15 +248,15 @@ struct vstscanner_server_options {
     int32_t unresponsiveTimeoutSeconds = timeoutdefault;
 };
 
-static void getPluginData(DAW::Host::LoadResultPlugin& res, response_type_vst24_t* _out) {
-    auto plugin = res.plugin;
+static void getVSTPluginData(DAW::Host::LoadResultPlugin& res, response_type_vst24_t* _out) {
+    auto plugin = res.vstPlugin;
     AEffect* aeffect     = plugin->handle->aeffect;
     _out->uniqueID       = aeffect->uniqueID;
     _out->version        = aeffect->version;
     _out->vstVersion     = plugin->vstVersion;
     _out->pluginCategory = plugin->pluginCategory;
-    safe_strcpy(_out->szName, StringAsCStr(plugin->sName), plugin->sName.length());
-    safe_strcpy(_out->szPath, StringAsCStr(res.path), res.path.length());
+    safe_strcpy(_out->szName, plugin->sName);
+    safe_strcpy(_out->szPath, res.path);
     if (!plugin->dispatch(effGetVendorString, 0, 0, (void*) _out->szVendorName)) {
         _out->szVendorName[0] = 0;
     }
@@ -256,6 +266,15 @@ static void getPluginData(DAW::Host::LoadResultPlugin& res, response_type_vst24_
     if (!plugin->dispatch(effGetEffectName, 0, 0, (void*) _out->szEffectName)) {
         _out->szEffectName[0] = 0;
     }
+    _out->isSynth = plugin->isSynth;
+}
+
+static void getClapPluginData(DAW::Host::LoadResultPlugin& res, response_type_clapplugin_t* _out) {
+    auto plugin = res.clapPlugin;
+    _out->uniqueID       = 0;
+    _out->version        = 1;
+    safe_strcpy(_out->szName, plugin->sName);
+    safe_strcpy(_out->szPath, res.path);
     _out->isSynth = plugin->isSynth;
 }
 static int waitTimeout(ipc_server& server, ProcessThread* thread, const char* plugName, int minReadBuffSize, int64_t timeStartScan_ms, int64_t timeoutPluginScan_ms) {
@@ -300,12 +319,57 @@ static int readClientResponses(const vstscanner_server_options& options, ipc_ser
         }
         timeStartScan_ms = getTimeMillis();
         switch (responseType) {
-            case CMD_PLUGIN_LOAD_SUCCESS_PLUGIN: {
+            case CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN: {
+                response_type_clapplugin_t respLoadSinglePlugin;
+                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                    return -4;
+                }
+                if (E_READ_OK != readFromIPC(server, respLoadSinglePlugin)) {
+                    log_message("failed reading response_type_clapplugin_t");
+                    return -3;
+                }
+
+                printf("%s %s\n", respLoadSinglePlugin.szPath, "GOOD");
+                auto& data = respLoadSinglePlugin;
+                String relPath = file.name;
+                if (file.path.length() > options.clapPluginPath.length()) {
+                    relPath = file.path.substr(options.clapPluginPath.length());
+                    replaceString(relPath, FILE_PATHSEP_STR, "/");
+                }
+                try {
+                    queryInsertPlugin.reset();
+                    int bndIdx = 1;
+                    queryInsertPlugin.bind(bndIdx++, data.isSynth);
+                    queryInsertPlugin.bind(bndIdx++, 1); // clap plugin
+                    queryInsertPlugin.bind(bndIdx++, data.uniqueID);
+                    queryInsertPlugin.bind(bndIdx++, data.version);
+                    queryInsertPlugin.bind(bndIdx++, 0); // vstVersion
+                    queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
+                    queryInsertPlugin.bind(bndIdx++, (long long int) timeDisk);
+                    queryInsertPlugin.bind(bndIdx++, 1);
+                    queryInsertPlugin.bind(bndIdx++, file.path);
+                    queryInsertPlugin.bind(bndIdx++, relPath);
+                    queryInsertPlugin.bind(bndIdx++, data.szName);
+                    queryInsertPlugin.bind(bndIdx++, "");  // vendor
+                    queryInsertPlugin.bind(bndIdx++, ""); // product
+                    queryInsertPlugin.bind(bndIdx++, "");  // effect
+                    queryInsertPlugin.bind(bndIdx++, 0);
+                    queryInsertPlugin.bind(bndIdx++, forcedisable ? 1 : 0);
+                    queryInsertPlugin.bind(bndIdx++, 0);
+                    /*int insertRowsAffected = */ queryInsertPlugin.exec();
+                    nPluginsScanned++;
+                } catch (SQLite::Exception& e) {
+                    log_message("queryInsertPlugin failed with SQLite exception: %s (%d)", e.getErrorStr(), e.getErrorCode());
+                    return -5;
+                }
+
+                break;
+            }
+            case CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGIN: {
                 response_type_vst24_plugin_t respLoadSinglePlugin;
                 if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respLoadSinglePlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
-                log_message("READ response_type_vst24_plugin_t");
                 if (E_READ_OK != readFromIPC(server, respLoadSinglePlugin)) {
                     log_message("failed reading response_type_vst24_plugin_t");
                     return -3;
@@ -322,6 +386,7 @@ static int readClientResponses(const vstscanner_server_options& options, ipc_ser
                     queryInsertPlugin.reset();
                     int bndIdx = 1;
                     queryInsertPlugin.bind(bndIdx++, data.isSynth);
+                    queryInsertPlugin.bind(bndIdx++, 0); // vst plugin
                     queryInsertPlugin.bind(bndIdx++, data.uniqueID);
                     queryInsertPlugin.bind(bndIdx++, data.version);
                     queryInsertPlugin.bind(bndIdx++, data.vstVersion);
@@ -346,7 +411,7 @@ static int readClientResponses(const vstscanner_server_options& options, ipc_ser
 
                 break;
             }
-            case CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_SHELL: {
+            case CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_SHELL: {
                 log_message("READ response_type_vst24_shell_plugin_t");
                 response_type_vst24_shell_plugin_t respShellPlugin;
                 if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
@@ -358,7 +423,7 @@ static int readClientResponses(const vstscanner_server_options& options, ipc_ser
                 }
                 break;
             } break;
-            case CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN: {
+            case CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_PLUGIN: {
                 log_message("READ response_type_vst24_t");
                 response_type_vst24_t respShellPluginEntry;
                 if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respShellPluginEntry)), timeStartScan_ms, timeoutPluginScan_ms)) {
@@ -411,7 +476,7 @@ static int readClientResponses(const vstscanner_server_options& options, ipc_ser
     return -1;
 }
 
-static int runScannerServer(vstscanner_server_options options) {
+static int runScannerServer(const vstscanner_server_options& options) {
 
     if (!options.updatePattern.empty()) {
         log_message("Update *%s*", StringAsCStr(options.updatePattern));
@@ -425,12 +490,21 @@ static int runScannerServer(vstscanner_server_options options) {
 
         threadSleep(1000);
 
-        std::vector<FileFound> files;
-        findFilesWithExt(options.vstPlugPath, PLATFORM_PLUGIN_EXT, true, files);
-        log_message("Found %u files", (uint32_t) files.size());
-        if (files.empty()) {
+        std::vector<FileFound> filesClap;
+        std::vector<FileFound> filesVst_;
+        if (!options.vstPlugPath.empty()) {
+            findFilesWithExt(options.vstPlugPath, PLATFORM_PLUGIN_EXT, true, filesVst_);
+            log_message("Found %u .%s files in %s", CtrSize(filesVst_), PLATFORM_PLUGIN_EXT, StringAsCStr(options.vstPlugPath));
+        }
+        if (!options.clapPluginPath.empty()) {
+            findFilesWithExt(options.clapPluginPath, PLATFORM_CLAP_PLUGIN_EXT, true, filesClap);
+            log_message("Found %u .%s files in %s", CtrSize(filesClap), PLATFORM_CLAP_PLUGIN_EXT, StringAsCStr(options.clapPluginPath));
+        }
+        if (filesVst_.empty() && filesClap.empty()) {
             return 1;
         }
+        auto& allFiles = filesClap;
+        allFiles.insert(allFiles.end(), filesVst_.begin(), filesVst_.end());
 #ifdef _WIN32
         TCHAR szFileName[MAX_PATH + 1];
         GetModuleFileName(nullptr, szFileName, MAX_PATH + 1);
@@ -458,8 +532,8 @@ static int runScannerServer(vstscanner_server_options options) {
         bool pipeConnected                    = false;
         SQLite::Statement queryPlugin(db, "SELECT id, moddate, forcedisable, requestRescan, uid, shellplugin FROM plugins where path == ?");
         SQLite::Statement queryInsertPlugin(db, "INSERT INTO "
-                                                "plugins(isSynth, uid, version, vstVersion, category, moddate, state, path, relPath, name, vendorName, productName, effectName, requestRescan, forcedisable, shellplugin) "
-                                                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
+                                                "plugins(isSynth, moduleFormat, uid, version, vstVersion, category, moddate, state, path, relPath, name, vendorName, productName, effectName, requestRescan, forcedisable, shellplugin) "
+                                                "VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
         SQLite::Statement queryDelete(db, "DELETE from plugins where id == ? or path == ?");
 
         SQLite::Statement queryAll(db, "SELECT id, path from plugins");
@@ -482,7 +556,7 @@ static int runScannerServer(vstscanner_server_options options) {
             }
         }
 
-        for (FileFound& file : files) {
+        for (FileFound& file : allFiles) {
             if (userSentQuitRequest) {
                 break;
             }
@@ -630,7 +704,7 @@ static int runScannerServer(vstscanner_server_options options) {
     return 0;
 }
 
-static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t& respPlugin) {
+static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t& respVstPlugin, response_type_clapplugin_t& respClapPlugin) {
     log_message("runPluginTest");
 
     auto host = std::make_unique<DAW::Host::Host>();
@@ -651,8 +725,13 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
             response = CMD_PLUGIN_LOAD_ERROR;
         } else {
             dbgassert(res.plugin);
-            response = CMD_PLUGIN_LOAD_SUCCESS_PLUGIN;
-            getPluginData(res, &respPlugin);
+            if (res.vstPlugin) {
+                response = CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGIN;
+                getVSTPluginData(res, &respVstPlugin);
+            } else if (res.clapPlugin) {
+                response = CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN;
+                getClapPluginData(res, &respClapPlugin);
+            }
             pluginMgr->unloadPlugin(res.plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
         }
     } catch (...) {
@@ -745,7 +824,7 @@ static int runScannerClient() {
                         }
                         tempName[0] = 0;
                     }
-                    int32_t response = CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_SHELL;
+                    int32_t response = CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_SHELL;
                     writeToIPC(client, response);
                     respShellPlugin.numPlugins = (int) entries.size();
                     writeToIPC(client, respShellPlugin);
@@ -759,10 +838,11 @@ static int runScannerClient() {
                             log_message("Failed loading shell plugin %s: %s (%d)", req.szPath, StringAsCStr(res.library.error), static_cast<int32_t>(res.library.state));
                         } else {
                             dbgassert(resShellPluginEntry.plugin);
-                            response = CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN;
+                            response = CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_PLUGIN;
                             writeToIPC(client, response);
                             response_type_vst24_t respShellPluginEntry;
-                            getPluginData(resShellPluginEntry, &respShellPluginEntry);
+                            if (res.vstPlugin)
+                                getVSTPluginData(resShellPluginEntry, &respShellPluginEntry);
                             safe_strcpy(respShellPluginEntry.szName, entry.name);
                             writeToIPC(client, respShellPluginEntry);
                             log_message("unload shell entry: %08X", entry.pluginUID);
@@ -777,11 +857,20 @@ static int runScannerClient() {
                     writeToIPC(client, response);
                 } else if (res.library.state == DAW::Host::SharedLibState::SUCCESS) {
                     dbgassert(res.plugin);
-                    int response = CMD_PLUGIN_LOAD_SUCCESS_PLUGIN;
+                    int response = CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGIN;
+                    if (res.clapPlugin) {
+                        response = CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN;
+                    }
                     writeToIPC(client, response);
-                    response_type_vst24_plugin_t respPlugin;
-                    getPluginData(res, &respPlugin);
-                    writeToIPC(client, respPlugin);
+                    if (res.vstPlugin) {
+                        response_type_vst24_t resp;
+                        getVSTPluginData(res, &resp);
+                        writeToIPC(client, resp);
+                    } else if (res.clapPlugin) {
+                        response_type_clapplugin_t resp;
+                        getClapPluginData(res, &resp);
+                        writeToIPC(client, resp);
+                    }
                     pluginMgr->unloadPlugin(res.plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                     response = CMD_PLUGIN_END_SUCCESS;
                     writeToIPC(client, response);
@@ -800,7 +889,7 @@ static int runScannerClient() {
 } // namespace VSTScannerImpl
 
 int main(int argc, char* argv[]) {
-    seqthreads::registerThread("mainthread");
+    seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
     App::Platform::initPlatformEnvironment("daw");
     if (argc <= 1) {
         String cwdPathDB = App::Platform::toUserdataPath("data/plugins.db3");
@@ -841,6 +930,7 @@ int main(int argc, char* argv[]) {
         options.checkDiskTimestamp         = true;
         options.unresponsiveTimeoutSeconds = VSTScannerImpl::timeoutdefault;
         String vstPlugPath;
+        String clapPluginPath;
         for (int i = 2; i < argc; i++) {
             if (argv[i] && strlen(argv[i]) > 2 && argv[i][0] == '-') {
                 if (!strcmp(argv[i], "-wait")) {
@@ -865,6 +955,10 @@ int main(int argc, char* argv[]) {
                     vstPlugPath = argv[i + 1];
                     i++;
                 }
+                if (!strcmp(argv[i], "-clappath") && i + 1 < argc) {
+                    clapPluginPath = argv[i + 1];
+                    i++;
+                }
             }
         }
         if (vstPlugPath.empty()) {
@@ -872,14 +966,23 @@ int main(int argc, char* argv[]) {
             vstPlugPath = tls.settings->pluginsettings.pathVst2;
             log_message("settings.pluginsettings.pathVst2 '%s'", StringAsCStr(vstPlugPath));
         }
+        if (clapPluginPath.empty()) {
+            loadSettings(*tls.settings);
+            clapPluginPath = tls.settings->pluginsettings.pathClap;
+            log_message("settings.pluginsettings.pathClap '%s'", StringAsCStr(clapPluginPath));
+        }
         App::Platform::shellExpandPath(vstPlugPath);
         App::Platform::sanitizePathToDirectory(vstPlugPath);
-        if (vstPlugPath.empty()) {
-            log_lf(Log::L_ERROR, "Error: settings.pluginsettings.pathVst2 not configured\n");
+        App::Platform::shellExpandPath(clapPluginPath);
+        App::Platform::sanitizePathToDirectory(clapPluginPath);
+        if (clapPluginPath.empty() && vstPlugPath.empty()) {
+            log_lf(Log::L_ERROR, "Error: settings.pluginsettings.pathVst2 / settings.pluginsettings.pathClap not configured\n");
             return EXIT_FAILURE;
         }
         log_message("vstPlugPath '%s'", StringAsCStr(vstPlugPath));
-        options.vstPlugPath                = vstPlugPath;
+        options.vstPlugPath = vstPlugPath;
+        log_message("clapPluginPath '%s'", StringAsCStr(clapPluginPath));
+        options.clapPluginPath = clapPluginPath;
         runScannerServer(options);
 
         seqthreads::threadSleep(500);
@@ -890,9 +993,12 @@ int main(int argc, char* argv[]) {
         String fPath = argv[argc - 1];
         safe_strcpy(req.szPath, fPath);
         VSTScannerImpl::response_type_vst24_plugin_t respPlugin;
-        int retCode = VSTScannerImpl::runPluginTest(req, respPlugin);
-        if (retCode == CMD_PLUGIN_LOAD_SUCCESS_PLUGIN) {
-            log_message("Plugin %s: Good", StringAsCStr(fPath));
+        VSTScannerImpl::response_type_clapplugin_t respClap;
+        int retCode = VSTScannerImpl::runPluginTest(req, respPlugin, respClap);
+        if (retCode == CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGIN) {
+            log_message("Vst Plugin %s: Good", StringAsCStr(fPath));
+        } else if (retCode == CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN) {
+            log_message("Clap Plugin %s: Good", StringAsCStr(fPath));
         } else {
             log_lf(Log::L_WARN, "Plugin %s: Failed %d\n", StringAsCStr(fPath), retCode);
         }

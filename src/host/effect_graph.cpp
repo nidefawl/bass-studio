@@ -13,7 +13,7 @@
 #include "track_graph.h"
 #include "effect_graph.h"
 #include "daw_channel.h"
-#include "plugin/base_plugin.h"
+#include "host/plugin/base/base-plugin.h"
 #include "daw_channel.h"
 #include "host/host_pluginmanager.h"
 #include <vector>

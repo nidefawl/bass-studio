@@ -1,12 +1,15 @@
 #include "host/host_pluginmanager.h"
 #include "assert_dbg.h"
 #include "logging.h"
-#include "plugin/base_plugin.h"
-#include "plugin/vst_plugin.h"
-#include "plugin/vst_plugin_handles.h"
+#include "modules.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/clap/clap-plugin.h"
+#include "host/plugin/vst/vstplugin.h"
+#include "host/plugin/vst/vstplugin-handles.h"
 #include "str_util.h"
 #include "track_impl.h"
 #include <clap/clap.h>
+#include <memory>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -115,6 +118,10 @@ void PluginManager::unloadPlugin(effectbase* plugin, int flags) {
     case PLUGIN_TYPE_DEFERRED:
         always_assert(removeEntry(pluginsDeferred, plugin));
         break;
+    case PLUGIN_TYPE_CLAP:
+        always_assert(removeEntry(pluginInstancesClap, plugin));
+        always_assert(removeEntry(pluginInstances, plugin));
+        break;
     case PLUGIN_TYPE_INTERNAL_EFFECT:
     case PLUGIN_TYPE_VST:
         always_assert(removeEntry(pluginInstancesVST2, plugin));
@@ -133,6 +140,10 @@ void PluginManager::unloadPlugin(effectbase* plugin, int flags) {
             moduleMgr->releaseModule(vst->handle->hmodule);
         }
     }
+    if (plugin->getModuleType() == PLUGIN_TYPE_CLAP) {
+        clapplugin* clapPlugin = dynamic_cast<clapplugin*>(plugin);
+        moduleMgr->releaseModule(clapPlugin->getModuleHandle());
+    }
     delete plugin;
     if (notifyUp) {
         if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
@@ -143,7 +154,7 @@ void PluginManager::unloadPlugin(effectbase* plugin, int flags) {
 void PluginManager::updatePluginWindows() {
     for (auto* plugin : pluginInstances) {
         //plugin->dispatch(effEditIdle);
-        plugin->updateWindow();
+        plugin->updateFromMainThread();
     }
 }
 
@@ -286,7 +297,7 @@ audio_stage_t* PluginManager::getAudioStage(const audio_stage_ref_t& ref) const 
 }
 
 bool PluginManager::movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
-    ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+    ThreadLock lock = mgrImpl->tls.dawInstance->lockPlayThread();
     dbgassert(dstTr);
     dbgassert(trp);
     dbgassert(src < (int)trp->effects.size());
@@ -306,7 +317,7 @@ bool PluginManager::movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_
 }
 
 bool PluginManager::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
-    ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+    ThreadLock lock = mgrImpl->tls.dawInstance->lockPlayThread();
 #ifndef NDEBUG
     dbgassert(src >= 0 && dst >= 0);
     dbgassert(src != dst);
@@ -370,7 +381,6 @@ void PluginManager::onPluginsChanged(audio_stage_t* stage) {
 }
 void PluginManager::onTick() {
     // Currently no lock
-    //ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
     for (auto* current : pluginInstances) {
         //TODO: should we skip dispatching if current->bWantsEffIdle == false ?!
         if (current->bEditOpen && !current->bInEditIdle) {
@@ -378,9 +388,13 @@ void PluginManager::onTick() {
             current->bInEditIdle = false;
             if (current->windowHost) {
                 //current->window->captureWindowFrame();
-                current->updateWindow();
+                current->updateFromMainThread();
             }
         }
+    }
+    ThreadLock lock = mgrImpl->tls.dawInstance->lockPlayThread();
+    for (auto* clapPlugin : pluginInstancesClap) {
+        clapPlugin->updateFromMainThread();
     }
     checkScanner();
 }
@@ -611,6 +625,32 @@ LoadResultPlugin PluginManager::loadPlugin(const String& filepath, uint32_t uId,
     void* hmodule = libResult.module;
 #endif //_WIN32
 
+    struct RAIIModuleDeleter {
+#ifdef _WIN32
+        HMODULE moduleToClose;
+#else
+        void* moduleToClose;
+#endif
+        ~RAIIModuleDeleter() { if (moduleToClose) CLOSE_MODULE_HANDLE(moduleToClose);}
+    } moduleCloser{hmodule};
+
+    if (libResult.state == SharedLibState::SUCCESS && libResult.type == SharedLibPluginType::CLAP) {
+        globalId = getNextGlobalModuleId(globalId);
+        auto plugin = new clapplugin(*this, filepath, nameWithoutExt, uId, globalId, getHostCallback());
+        if (!plugin->loadClapPlugin(libResult)) {
+            delete plugin;
+            libResult.state = SharedLibState::FAILED;
+            return LoadResultPlugin{libResult};
+        }
+        plugin->dawHandles->localCurrentUniqueId = uId;
+        pluginInstancesClap.push_back(plugin);
+        pluginInstances.push_back(plugin);
+
+        plugin->load(this);
+        moduleCloser.moduleToClose = nullptr;
+        return {libResult, plugin, filepath, nameWithoutExt};
+    }
+
     if (uId != 0) {
         pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(uId);
     } else {
@@ -630,14 +670,6 @@ LoadResultPlugin PluginManager::loadPlugin(const String& filepath, uint32_t uId,
         moduleHandle = hmodule;
 #endif //_WIN32
     }
-    struct dlerror_deleter {
-#ifdef _WIN32
-        HMODULE moduleToClose;
-#else
-        void* moduleToClose;
-#endif
-        ~dlerror_deleter() { if (moduleToClose) CLOSE_MODULE_HANDLE(moduleToClose);}
-    } moduleCloser{hmodule};
 
     pluginHostCallback->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
     
@@ -762,5 +794,9 @@ bool PluginManager::isScanning() {
     return mgrImpl->scanningState > 0;
 }
 
-} // namespace DAW::Host
-
+LoadResultPlugin::LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin, handles_t* _shellHandle, String _path, String _name)
+    : library(std::move(_lib)), plugin(_plugin), vstPlugin(_plugin), shellPluginHandle(_shellHandle), path(std::move(_path)), name(std::move(_name)){};
+LoadResultPlugin::LoadResultPlugin(LoadResultSharedLibrary _lib, clapplugin* _plugin, String _path, String _name)
+    : library(std::move(_lib)), plugin(_plugin), clapPlugin(_plugin), path(std::move(_path)), name(std::move(_name)){};
+LoadResultPlugin::LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin) : library(std::move(_lib)), plugin(_plugin), vstPlugin(_plugin){};
+}// namespace DAW::Host

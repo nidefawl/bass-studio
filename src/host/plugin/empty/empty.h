@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "internal_plugin.h"
+#include "host/plugin/internal/internal-plugin.h"
 #include "modules.h"
 #include "str_util.h"
 

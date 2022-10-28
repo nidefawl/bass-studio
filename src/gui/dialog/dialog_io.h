@@ -30,7 +30,7 @@ class guidialog_settings : public guidialog_base {
     struct dialog_entry;
     std::vector<dialog_entry*> entries;
     dialog_entry* activeEntry = nullptr;
-    guibutton btnClose;
+    guibutton btnSave;
     void init(DawInstance* daw);
 
 public:

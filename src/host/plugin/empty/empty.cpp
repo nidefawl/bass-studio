@@ -1,24 +1,21 @@
-#include "types.h"
+#include "host/plugin/base/base-plugin.h"
 #include "empty.h"
 #include "event.h"
-#include "str_util.h"
-#include "renderresources.h"
-#include "gui/gui.h"
 #include "gui/container/container.h"
+#include "gui/gui.h"
+#include "gui/plugin/plugin.h"
 #include "gui/plugin/pluginctr.h"
 #include "gui/views/pluginlist.h"
-
-#include "base_plugin.h"
-#include "internal_plugin.h"
-
-#include "host/mainctrl.h"
 #include "host/host_pluginmanager.h"
+#include "host/mainctrl.h"
 #include "host/plugindatabase.h"
+#include "host/plugin/internal/internal-plugin.h"
+#include "renderresources.h"
+#include "str_util.h"
 #include "threads/playbackthread.h"
-
-#include "track.h"
 #include "track_impl.h"
-#include "gui/plugin/plugin.h"
+#include "track.h"
+#include "types.h"
 
 
 class guimodule_empty : public guiplugin {

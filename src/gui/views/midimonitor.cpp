@@ -16,7 +16,7 @@
 #include "plugins/synth/IPlugMidi.h"
 #include "renderresources.h"
 #include "platform.h"
-#include "host/plugin/base_plugin.h"
+#include "host/plugin/base/base-plugin.h"
 #include "host/mainctrl.h"
 #include "host/host.h"
 #include "host/audio_host.h"

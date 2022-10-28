@@ -11,7 +11,7 @@
 #include "platform.h"
 #include "meter.h"
 #include "snapshot/snapshot.h"
-#include "base_plugin.h"
+#include "host/plugin/base/base-plugin.h"
 
 struct AudioBlock;
 struct handles_t;

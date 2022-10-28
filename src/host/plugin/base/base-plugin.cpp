@@ -2,7 +2,7 @@
 #include <vector>
 #include "assert_dbg.h"
 #include "automation.h"
-#include "base_plugin.h"
+#include "host/plugin/base/base-plugin.h"
 #include "host/daw_channel.h"
 #include "modules.h"
 #include "track.h"
@@ -22,8 +22,8 @@
 #include "host/host_pluginmanager.h"
 #include "host/host_plugin_window.h"
 #include "snapshot/snapshot.h"
-#include "base_plugin.h"
-#include "internal_plugin.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/internal/internal-plugin.h"
 #include "track.h"
 #include "gui/plugin/pluginctr.h"
 #include "host/mainctrl.h"
@@ -109,12 +109,58 @@ void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed
     meterIn.update(this->blockInputs, 1.0f);
 }
 
-void effectbase::processMidi(midi_data_processing_t& midiEvents) {
-
+void effectbase::sendNotesOff() {
+    std::vector<IMidiMsg> messages;
+    messages.reserve(heldNotes.size() + 1);
+    for (const auto& notePitch : heldNotes) {
+        auto deltaFrames = 0;
+        messages.emplace_back();
+        IMidiMsg& msg = messages.back();
+        msg.MakeNoteOffMsg(notePitch, deltaFrames);
+    }
+    messages.emplace_back(0, 0xB0, 123, 0);// InstantOff
+    heldNotes.clear();
+    processMidiMessages(messages);
+    this->midiEventsDispatched += CtrSize(messages);
 }
 
-void effectbase::sendNotesOff() {
+void effectbase::processMidi(midi_data_processing_t& midiEvents) {
+    const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, midiEvents.bpm100, format.sampleRate);
+    std::vector<IMidiMsg> messages;
+    messages.reserve(midiEvents.noteEvents->size());
+    for (auto& evt : *midiEvents.noteEvents) {
+        auto deltaFrames = math::floordS32(evt.tickOffsetInBlock * tickToSamples);
+        dbgassert(deltaFrames >= 0 && deltaFrames < format.blockSize);
+        bool bContained = std::binary_search(std::begin(heldNotes), std::end(heldNotes), evt.pitch);
+        if (evt.isNoteOn && !bContained) {
+            insertSorted(heldNotes, evt.pitch);
+        } else if (!evt.isNoteOn && bContained) {
+            removeEntry(heldNotes, evt.pitch);
+        }
 
+        messages.emplace_back();
+        IMidiMsg& msg = messages.back();
+        if (evt.isNoteOn) {
+            msg.MakeNoteOnMsg(evt.pitch, evt.velocity, deltaFrames);
+        } else {
+            msg.MakeNoteOffMsg(evt.pitch, deltaFrames);
+        }
+    }
+    for (auto& evt : *midiEvents.ctrlEvents) {
+        auto offsetInBlock = math::floordS32((evt.tick - midiEvents.tickLatencyCompensated) * tickToSamples);
+        if (offsetInBlock < 0 || offsetInBlock >= format.blockSize) {
+            log_lf(Log::L_WARN, "ctrl event out of range: %d\n", offsetInBlock);
+            continue;
+        }
+        messages.push_back(IMidiMsg::FromU32AndTick(evt.message, offsetInBlock));
+    }
+    if (!messages.empty()) {
+        std::sort(std::begin(messages), std::end(messages), [](const IMidiMsg& a, const IMidiMsg& b) {
+            return a.mOffset < b.mOffset;
+        });
+    }
+    processMidiMessages(messages);
+    this->midiEventsDispatched += CtrSize(messages);
 }
 
 void effectbase::breakTrackLink() {
@@ -169,9 +215,9 @@ bool effectbase::onShow(host_plugin_window* _window) {
     return true;
 }
 
-void effectbase::updateWindow() {
+void effectbase::updateFromMainThread() {
     if (this->windowHost != nullptr) {
-        this->windowHost->updateWindow();
+        this->windowHost->updateFromMainThread();
     }
 }
 

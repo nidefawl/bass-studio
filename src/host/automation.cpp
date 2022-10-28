@@ -5,7 +5,7 @@
 #include "config.h"
 #include "host/mainctrl.h"
 #include "math/seq_math.h"
-#include "plugin/vst_plugin.h"
+#include "host/plugin/vst/vstplugin.h"
 #include "gui/automation/automatable.h"
 #include "seq_time.h"
 #include "seq_util.h"

@@ -7,9 +7,9 @@
 #include "gui/container/container.h"
 #include "gui/controls/textfield.h"
 #include "gui/controls/knobpluginparam.h"
-#include "host/plugin/base_plugin.h"
-#include "host/plugin/internal_plugin.h"
-#include "host/plugin/vst_plugin.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/plugin/internal/internal-plugin.h"
+#include "host/plugin/vst/vstplugin.h"
 #include "plugin.h"
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 

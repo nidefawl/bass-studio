@@ -40,11 +40,13 @@
 #ifdef __APPLE__
 #define PLATFORM_PLUGIN_EXT "vst"
 #endif
+#define PLATFORM_CLAP_PLUGIN_EXT "clap"
 
 class clip_notes_t;
 class effectbase;
 class effect_deferred;
 class vstplugin;
+class clapplugin;
 struct track_impl_t;
 struct audio_stage_t;
 struct track_audio_src;
@@ -102,14 +104,16 @@ struct LoadResultSharedLibrary {
 
 struct LoadResultPlugin {
     LoadResultSharedLibrary library;
-    vstplugin* plugin;
-    handles_t* shellPluginHandle;
+    effectbase* plugin = nullptr;
+    vstplugin* vstPlugin = nullptr;
+    clapplugin* clapPlugin = nullptr;
+    handles_t* shellPluginHandle = nullptr;
     String path;
     String name;
-    explicit LoadResultPlugin(LoadResultSharedLibrary _lib) : library(std::move(_lib)), plugin(nullptr), shellPluginHandle(nullptr){};
-    LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin) : library(std::move(_lib)), plugin(_plugin), shellPluginHandle(nullptr){};
-    LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin, handles_t* _shellHandle, String _path, String _name)
-        : library(std::move(_lib)), plugin(_plugin), shellPluginHandle(_shellHandle), path(std::move(_path)), name(std::move(_name)){};
+    explicit LoadResultPlugin(LoadResultSharedLibrary _lib) : library(std::move(_lib)){};
+    LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin);
+    LoadResultPlugin(LoadResultSharedLibrary _lib, vstplugin* _plugin, handles_t* _shellHandle, String _path, String _name);
+    LoadResultPlugin(LoadResultSharedLibrary _lib, clapplugin* _plugin, String _path, String _name);
 };
 
 
@@ -162,6 +166,7 @@ private:
     int32_t hostSlot    = -1;
     class ModuleManager;
     ModuleManager* moduleMgr;
+    std::vector<clapplugin*> pluginInstancesClap;
     std::vector<vstplugin*> pluginInstancesVST2;
     std::vector<effectbase*> pluginInstancesInternal;
     std::vector<effectbase*> pluginInstances;

@@ -1,7 +1,7 @@
 #pragma once
 #include "str_util.h"
 #include "modules.h"
-#include "host/plugin/internal_plugin.h"
+#include "host/plugin/internal/internal-plugin.h"
 
 namespace PluginStereoWidth {
 class ProgramParameters {

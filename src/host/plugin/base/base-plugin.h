@@ -52,11 +52,13 @@ public:
     std::unique_ptr<DelayLine> delayLine;
     DAW::rmsmeter meter;
     DAW::rmsmeter meterIn;
+    std::vector<int32_t> heldNotes;
     sampleformat_t format;
     AudioBlock* blockInputs        = nullptr;// guaranteed to have at least 2 channels
     AudioBlock* blockOutputs       = nullptr;// guaranteed to have at least 2 channels
     int32_t pluginType             = 0;
     int32_t projectGlobalId        = 0;
+    int32_t localDbId              = -1;
     IHostCallback* hostCallback  = nullptr;
     bool bIsEnabled                = false;
     bool bEditOpen                 = false;
@@ -98,7 +100,7 @@ public:
 
 protected:
     void initDefaultIODesc();
-    void initBuffers();
+    virtual void initBuffers();
     void initMeters();
 
 public:
@@ -138,6 +140,7 @@ public:
     virtual void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) = 0;
     virtual void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) = 0;
     virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed);
+    virtual void processMidiMessages(std::vector<IMidiMsg>& midiEvents) { };
     virtual void processMidi(midi_data_processing_t& midiEvents);
     virtual void sendNotesOff();
     virtual bool hasWindowEditor() {
@@ -152,7 +155,7 @@ public:
     virtual void onWindowResize(ivec2 size);
     virtual bool onShow(host_plugin_window* window);
     virtual bool onClose();
-    virtual void updateWindow();
+    virtual void updateFromMainThread(); // main thread idle 
     virtual ivec2 constrainWindowSize(host_plugin_window* window, ivec2 size) {
         return size;
     };

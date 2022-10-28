@@ -1,5 +1,6 @@
 #include <thread>
 #include <mutex>
+#include "thread.h"
 #include "types.h"
 #include <unordered_map>
 #include <atomic>
@@ -10,6 +11,7 @@
 namespace {
     struct threadlocal_threadinfo_t {
         int32_t threadId = 0;
+        seqthreads::ThreadType threadType = seqthreads::ThreadType::Unknown;
         bool isKnownThread = false;
         bool isInternalThread = false;
         String threadName;
@@ -17,18 +19,19 @@ namespace {
 
     int32_t getNextThreadId() noexcept {
         static std::atomic<int32_t> thread_idx(0);
-        return thread_idx.fetch_add(1, std::memory_order::memory_order_acquire);
+        return thread_idx.fetch_add(1, std::memory_order_acquire);
     }
 
     thread_local threadlocal_threadinfo_t threadPrivateTls;
     thread_local threadlocal_threadinfo_t* tlsThreadInfo = nullptr;
 
-    void registerThreadInternal(const String& threadName, bool isKnownThread, bool isInternalThread) {
+    void registerThreadInternal(const String& threadName, bool isKnownThread, bool isInternalThread, seqthreads::ThreadType threadType) {
         static std::mutex gRegisterMutex;
         std::lock_guard<std::mutex> lock(gRegisterMutex);
         dbgassert(!tlsThreadInfo || !tlsThreadInfo->isKnownThread);
         auto* threadInfo          = &threadPrivateTls;
         threadInfo->threadId      = getNextThreadId();
+        threadInfo->threadType    = threadType;
         threadInfo->threadName    = threadName + "-" + std::to_string(threadInfo->threadId);
         threadInfo->isKnownThread = isKnownThread;
         threadInfo->isInternalThread = isInternalThread;
@@ -37,13 +40,17 @@ namespace {
 }// namespace
 namespace seqthreads {
 
-    void registerThread(String threadName, bool isInternalThread) {
-        registerThreadInternal(threadName, true, isInternalThread);
+    void registerThread(const String& threadName, ThreadType threadType, bool isInternalThread) {
+        registerThreadInternal(threadName, true, isInternalThread, threadType);
     }
 
     int32_t getCurrentThreadId() noexcept {
         threadlocal_threadinfo_t* threadInfo = tlsThreadInfo;
         return threadInfo ? threadInfo->threadId : -1;
+    }
+    ThreadType CurrentThreadType() noexcept {
+        threadlocal_threadinfo_t* threadInfo = tlsThreadInfo;
+        return threadInfo ? threadInfo->threadType : ThreadType::Unknown;
     }
     bool isInternalThread() noexcept {
         threadlocal_threadinfo_t* threadInfo = tlsThreadInfo;
@@ -67,7 +74,7 @@ namespace seqthreads {
     String getCurrentThreadName() {
         threadlocal_threadinfo_t* threadInfo = tlsThreadInfo;
         if (!threadInfo) {
-            registerThreadInternal("unknown", false, false);
+            registerThreadInternal("unknown", false, false, seqthreads::ThreadType::Unknown);
             threadInfo = tlsThreadInfo;
         }
         return threadInfo ? threadInfo->threadName : "unknown";

@@ -7,10 +7,12 @@
 #define FILE_PATHSEP_CHAR '\\'
 #define FILE_PATHSEP_STR "\\"
 #define DAW_PLATFORM_VST2_PATH_DEFAULT "C:\\Program Files\\Steinberg\\VstPlugins"
+#define DAW_PLATFORM_CLAP_PATH_DEFAULT "C:\\Program Files\\Common Files\\CLAP"
 #else
 #define FILE_PATHSEP_CHAR '/'
 #define FILE_PATHSEP_STR "/"
 #define DAW_PLATFORM_VST2_PATH_DEFAULT "~/.vst"
+#define DAW_PLATFORM_CLAP_PATH_DEFAULT "~/.clap"
 #endif
 
 #define FILE_PATHSEP_FORWARD_CHAR '/'
