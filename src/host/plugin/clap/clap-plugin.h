@@ -37,13 +37,13 @@ public:
 public:
     clapplugin(DAW::Host::PluginManager& pluginMgr, const String& filePath, const String& name, uint32_t uId, int32_t globalId, IHostCallback* hostcallback);
     ~clapplugin() override;
+
+    // effectbase
     int getModuleType() override { return PLUGIN_TYPE_CLAP; };
     void* getModuleHandle() { return module; }
-    // automatable_t
     String getAutomatableName() override {
         return this->sName;
     }
-    // effectbase
     guiplugin* makeGui() override;
     guiplugin* getGui() override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
