@@ -264,7 +264,7 @@ std::vector<host_plugin_window*>& host_plugin_window::getWindows() {
 
 bool host_plugin_window::init(effectbase* _plugin, const String& name, ivec2 size, bool resizeable) {
     HWND mainHWND = getMainHWND();
-    assert(mainHWND);
+    dbgassert(mainHWND);
     setRedirectKeysToDawMainWindow(!resizeable);
     this->plugin       = _plugin;
     HINSTANCE instance = GetModuleHandle(nullptr);

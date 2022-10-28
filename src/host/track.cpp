@@ -1391,7 +1391,7 @@ void track_impl_t::validateProcessedMidi(playback_state state, int32_t flags, ti
                         }
                         noteHeld.len = tickEnd - noteHeld.start();
                         noteHeld.setIsHeld(false);
-                        assert(noteHeld.len >= 0);
+                        dbgassert(noteHeld.len >= 0);
                         fnd            = true;
                         notesProcessed = true;
                         if (logProcessedNotes)
@@ -2032,7 +2032,7 @@ void clip_recorder::recordNoteEvents(playback_state state, tick_t tickBlockStart
                         }
                         noteHeld.len = tickEnd - noteHeld.start();
                         noteHeld.setIsHeld(false);
-                        assert(noteHeld.len >= 0);
+                        dbgassert(noteHeld.len >= 0);
                         fnd            = true;
                         notesProcessed = true;
                         //log_printf("Block %d, note complete %d END %d (%s)\n", procPos, noteHeld.start(), noteHeld.end(), noteName(noteHeld.pitch));

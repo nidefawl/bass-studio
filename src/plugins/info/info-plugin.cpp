@@ -298,7 +298,7 @@ namespace PluginHostInfo {
     }
 
     VstInt32 PluginVST2_HostInfo::processEvents(VstEvents* events) {
-        assert(events);
+        dbgassert(events);
         if (events) {
             StdThreadLock lock(impl->getMutex());
             int32_t len = events->numEvents;
@@ -405,7 +405,7 @@ namespace PluginHostInfo {
             VstTimeInfo* timeinfo = getTimeInfo(flags);
             if (!timeinfo) {
                 log_printf("getTimeInfo() == nullptr\n");
-                assert(timeinfo);
+                dbgassert(timeinfo);
                 timeInfoToStrings(timeinfo, strings);
             }
             for (String& str2 : strings) {
@@ -524,7 +524,7 @@ namespace PluginHostInfo {
                 flags |= (1 << i);
             }
             VstTimeInfo* timeinfo = effx->getTimeInfo(flags);
-            assert(timeinfo);
+            dbgassert(timeinfo);
             PluginHostInfo::timeInfoToStrings(timeinfo, strings);
             setFont(vg, 16, THEMECOL_TEXT, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
             float lineh;

@@ -1,3 +1,6 @@
+#include <clap/ext/latency.h>
+#include <clap/plugin.h>
+#include <clap/stream.h>
 #include <exception>
 #include <iostream>
 #include <memory>
@@ -21,6 +24,7 @@
 #include "thread.h"
 
 #include <clap/helpers/reducing-param-queue.hxx>
+#include <vector>
 
 void clapplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     this->uiSnapshot = pluginSnapshot.uiSnapshot;
@@ -67,8 +71,23 @@ void clapplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
 }
 
 namespace {
+    struct clap_snapshot_ostream : public clap_ostream {
+        std::vector<uint8_t>& dataChunk;
+        clap_snapshot_ostream(std::vector<uint8_t>& data) : clap_ostream(), dataChunk(data) {
+            ctx = this;
+            write = write_cb;
+        }
+        static CLAP_ABI int64_t write_cb(const struct clap_ostream *stream, const void *voidBuffer, uint64_t size) {
+            auto self = reinterpret_cast<const clap_snapshot_ostream*>(stream);
+            auto buffer = reinterpret_cast<const uint8_t*>(voidBuffer);
+            auto pos = self->dataChunk.end();
+            self->dataChunk.reserve(self->dataChunk.size() + size);
+            self->dataChunk.insert(pos, buffer, buffer + size);
+            return size;
+        }
+    };
 
-    void createSnapshot(plugin_snapshot_t& ps, clapplugin* plugin, const tracksnapshot_store_opts_t& opts) {
+    void createSnapshot(plugin_snapshot_t& ps, clapplugin* plugin, const clap_plugin* clapPlugin, const clap_plugin_state* _pluginState, const tracksnapshot_store_opts_t& opts) {
         ps.version           = 11;
         ps.slot              = 0;
         ps.projectGlobalId   = plugin->projectGlobalId;
@@ -80,34 +99,14 @@ namespace {
         ps.uId           = plugin->getClapPluginId();
         ps.localDbId     = plugin->localDbId;
         ps.name = plugin->sName;
-
-        // bool usesBinaryChunks = plugin->getFlagsVST() & effFlagsProgramChunks;
-        // if (opts.storePluginPreset && (usesBinaryChunks)) {
-        //     {
-        //         void* pluginData       = nullptr;
-        //         int32_t pluginDataSize = plugin->dispatch(effGetChunk, 0, 0, &pluginData, 0);
-        //         if (pluginDataSize > 0 && pluginData) {
-        //             auto* ptrData = reinterpret_cast<uint8_t*>(pluginData);
-        //             ps.dataChunk.reserve(pluginDataSize);
-        //             ps.dataChunk.assign(ptrData, ptrData + pluginDataSize);
-        //             log_lf(Log::L_DEBUG, "Plugin %s: Save data1[%d]\n", StringAsCStr(plugin->sName), pluginDataSize);
-        //         }
-        //     }
-        //     if (storePluginPresetWithSnapshot) {
-        //         void* pluginData2       = nullptr;
-        //         int32_t pluginDataSize2 = plugin->dispatch(effGetChunk, 1, 0, &pluginData2, 0);
-        //         if (pluginDataSize2 > 0 && pluginData2) {
-        //             auto* ptrData = reinterpret_cast<uint8_t*>(pluginData2);
-        //             ps.dataChunk2.reserve(pluginDataSize2);
-        //             ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
-        //             log_lf(Log::L_DEBUG, "Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
-        //         }
-        //     }
-        // }
         if (opts.storePluginPreset) {
+            if (_pluginState) {
+                clap_snapshot_ostream clapOstream{ps.dataChunk};
+                _pluginState->save(clapPlugin, &clapOstream);
+            }
             auto numParamsReserve = math::min<int32_t>(150, plugin->getNumParameters());
             ps.params.reserve(numParamsReserve);
-            plugin->visitParams([&ps, vstplugin = plugin](auto& mapEntry) {
+            plugin->visitParams([&ps](auto& mapEntry) {
                 automatable_param_t& param = mapEntry.second;
                 if (param.inUse) {
                     float curValue = param.getValue();
@@ -129,7 +128,7 @@ namespace {
 }// namespace
 
 void clapplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
-    createSnapshot(ps, this, opts);
+    createSnapshot(ps, this, _plugin, _pluginState, opts);
     if (dawHandles->gui) {
         dawHandles->gui->makeSnapshot(ps.uiSnapshot, opts);
     }
@@ -306,6 +305,7 @@ void clapplugin::initPluginExtensions() {
     initPluginExtension(_pluginThreadPool, CLAP_EXT_THREAD_POOL);
     initPluginExtension(_pluginPresetLoad, CLAP_EXT_PRESET_LOAD);
     initPluginExtension(_pluginState, CLAP_EXT_STATE);
+    initPluginExtension(_pluginLatency, CLAP_EXT_LATENCY);
 
     _pluginExtensionsAreInitialized = true;
 }
@@ -362,7 +362,10 @@ void clapplugin::activate(sampleformat_t sampleFormat) {
     if (!_plugin)
         return;
 
-    assert(!isPluginActive());
+    dbgassert(!isPluginActive());
+
+    dawHandles->currentLatency = _pluginLatency ? _pluginLatency->get(_plugin) : 0;
+
     if (!_plugin->activate(_plugin, sampleFormat.sampleRate, sampleFormat.blockSize, sampleFormat.blockSize)) {
         setPluginState(InactiveWithError);
         return;
@@ -433,7 +436,7 @@ static clap_window makeClapWindow(WId window) {
 void clapplugin::setParentWindow(WId parentWindow) {
     checkForMainThread();
 
-    assert(_isGuiVisible == false);
+    dbgassert(_isGuiVisible == false);
 
     auto w = makeClapWindow(parentWindow);
     if (_isGuiFloating) {
@@ -1005,7 +1008,7 @@ void clapplugin::handlePluginOutputEvents() {
 void clapplugin::paramFlushOnMainThread() {
     checkForMainThread();
 
-    assert(!isPluginActive());
+    dbgassert(!isPluginActive());
 
     _scheduleParamFlush = false;
 
@@ -1272,6 +1275,22 @@ void clapplugin::paramsChanged() {
     }
 }
 
+void clapplugin::postSetParameter(int32_t idx, float preVal, float val, int flags) {
+    effectbase::postSetParameter(idx, preVal, val, flags);
+    automatable_param_t* param = getParamUnchecked(idx);
+    auto& pParam               = *_params[idx].get();
+    auto& info                 = pParam.info();
+    auto scaled                = info.min_value + val * (info.max_value - info.min_value);
+    if (!(flags & FLG_PAR_UPDATE_MODULATED)) {
+        setParamValueByHost(pParam, scaled);
+    } else {
+        setParamModulationByHost(pParam, scaled);
+    }
+    param->paramDisplayValState |= PARAM_FLAG_DIRTY;
+    param->paramValueState = PARAM_FLAG_SET;
+}
+
+
 void clapplugin::clapParamsClear(const clap_host* host,
                                  clap_id param_id,
                                  clap_param_clear_flags flags) {
@@ -1536,12 +1555,10 @@ void clapplugin::processMidiMessages(std::vector<IMidiMsg>& midiEvents) {
                 break;
 
             case IMidiMsg::EStatusMsg::kPolyAftertouch:
-                std::cerr << "Note AT key: " << (int) data1 << ", pres: " << (int) data2 << std::endl;
                 processNoteAt(sampleOffset, channel, data1, data2);
                 break;
 
             case IMidiMsg::EStatusMsg::kChannelAftertouch:
-                std::cerr << "Channel after touch" << std::endl;
                 break;
 
             case IMidiMsg::EStatusMsg::kPitchWheel:
@@ -1560,7 +1577,7 @@ void clapplugin::sendNotesOff(){
 }
 
 samplecount_t clapplugin::getPluginLatency() {
-    return 0;
+    return dawHandles->currentLatency;
 }
 
 void clapplugin::unload(DAW::Host::PluginManager* host, int flags) {
@@ -1662,6 +1679,7 @@ bool clapplugin::onShow(host_plugin_window* _window) {
     }
     return true;
 }
+
 void clapplugin::updateWindowSize() {
     uint32_t width  = 0;
     uint32_t height = 0;

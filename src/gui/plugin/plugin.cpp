@@ -288,7 +288,7 @@ void guiplugin::handleDraggedMove(MouseEvent& evt) {
 void guiplugin::handleDraggedRelease(MouseEvent& evt) {
     dawCtrl->objectDragRelease(this, evt);
     if (hasDragged) {
-        assert(0);
+        dbgassert(0);
         return;
     }
     if (isSelected()) {

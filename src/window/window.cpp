@@ -757,7 +757,7 @@ public:
     window_main* createOverlay(std::shared_ptr<AppCtrl> ctrl, ivec2 windowSize, int flags) override;
 
     void closeOverlay(window_main* wnd) override {
-        assert(wnd);
+        dbgassert(wnd);
         auto it = std::find_if(overlayWindows.begin(), overlayWindows.end(), [wnd](const auto& e) {
             return dynamic_cast<window_base*>(e.get()) == dynamic_cast<window_base*>(wnd);
         });

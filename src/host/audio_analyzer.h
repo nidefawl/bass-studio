@@ -25,7 +25,7 @@ public:
     audioanaylzer() : tLast(getTimeMicros()) {
     }
     void init(audiohost* _host, blocksize_t _blockSize, samplerate_t _sampleRate) {
-        assert(_host);
+        dbgassert(_host);
         this->host = _host;
         analyzerHf = std::make_unique<fft_processor_hf>(_blockSize, _sampleRate);
         analyzerLf = std::make_unique<fft_processor_lf>(_blockSize, _sampleRate);

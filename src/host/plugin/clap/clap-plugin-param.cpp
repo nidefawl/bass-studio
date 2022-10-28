@@ -45,7 +45,7 @@ bool PluginParam::isInfoEqualTo(const clap_param_info &info) const {
 }
 
 bool PluginParam::isInfoCriticallyDifferentTo(const clap_param_info &info) const {
-   assert(_info.id == info.id);
+   dbgassert(_info.id == info.id);
    const uint32_t criticalFlags =
       CLAP_PARAM_IS_AUTOMATABLE | CLAP_PARAM_IS_AUTOMATABLE_PER_NOTE_ID |
       CLAP_PARAM_IS_AUTOMATABLE_PER_KEY | CLAP_PARAM_IS_AUTOMATABLE_PER_CHANNEL |

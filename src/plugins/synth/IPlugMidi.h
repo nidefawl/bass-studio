@@ -421,7 +421,7 @@ struct ISysEx {
      * @return char* /todo
      */
     char* SysExStr(char* str, int maxlen, const uint8_t* pData, int size) {
-        assert(str != NULL && maxlen >= 3);
+        dbgassert(str != NULL && maxlen >= 3);
 
         if (!pData || !size) {
             *str = '\0';

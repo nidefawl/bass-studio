@@ -290,7 +290,7 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
     //    /* see if there is any midi input to process */
     for (auto& dev : devicesInput) {
         auto streamIn = dev.stream;
-        assert(streamIn);
+        dbgassert(streamIn);
         std::vector<MidiIOEvent> messages;
         do {
             result = Pm_Poll(streamIn);
@@ -298,7 +298,7 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
                 int status;
                 int rslt = Pm_Read(streamIn, &buffer, 1);
                 if (rslt == pmBufferOverflow) continue;
-                assert(rslt == 1);
+                dbgassert(rslt == 1);
 
                 /* record timestamp of most recent data */
                 last_timestamp = current_timestamp;
@@ -372,7 +372,7 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
 
 
     for (auto& dev : devicesOutput) {
-        assert(dev.stream);
+        dbgassert(dev.stream);
 
         /* see if there is application midi data to process */
         while (!dev.midiMsgs.empty()) {
@@ -454,7 +454,7 @@ std::vector<midi_channel> syncOpenCloseDeviceList(T& cfg, T2& openedDevs) {
             return iocfg.deviceName == dev.deviceName;
         });
         if (it2 == cfg.cend()) {
-            assert(dev.stream);
+            dbgassert(dev.stream);
             Pm_Close(dev.stream);
             dev.stream = nullptr;
             it = openedDevs.erase(it);
@@ -549,8 +549,8 @@ bool midihost::startMidi() {
         const PmDeviceInfo* info = Pm_GetDeviceInfo(i);
         if (info->output) log_printf("%d: %s, %s\n", i, info->interf, info->name);
     }
-    assert(this->devicesInput.empty());
-    assert(this->devicesOutput.empty());
+    dbgassert(this->devicesInput.empty());
+    dbgassert(this->devicesOutput.empty());
     reopenAllConfiguredDevices(false);
     return isStreaming();
 }

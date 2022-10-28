@@ -421,7 +421,7 @@ void Host::processMidiRealtimeInput(project_controller_t* ctrl, double dTickPosB
                         }
                         noteHeld.len = tickEvtDelay - noteHeld.start();
                         noteHeld.setIsHeld(false);
-                        assert(noteHeld.len >= 0);
+                        dbgassert(noteHeld.len >= 0);
                         fnd = true;
                         notesProcessed = true;
                         if (logProcessedNotes) {

@@ -38,7 +38,7 @@ void *NFDi_Malloc( size_t bytes )
 
 void NFDi_Free( void *ptr )
 {
-    assert(ptr);
+    dbgassert(ptr);
     free(ptr);
 }
 static NSArray *BuildAllowedFileTypes( const char *filterList )
@@ -104,8 +104,8 @@ static void SetDefaultPath( NSSavePanel *dialog, const nfdchar_t *defaultPath )
 /* fixme: pathset should be pathSet */
 static nfdresult_t AllocPathSet( NSArray *urls, nfdpathset_t *pathset )
 {
-    assert(pathset);
-    assert([urls count]);
+    dbgassert(pathset);
+    dbgassert([urls count]);
 
     pathset->count = (size_t)[urls count];
     pathset->indices = (size_t*)NFDi_Malloc( sizeof(size_t)*pathset->count );
@@ -139,7 +139,7 @@ static nfdresult_t AllocPathSet( NSArray *urls, nfdpathset_t *pathset )
         memcpy( p_buf, utf8Path, byteLen );
 
         ptrdiff_t index = p_buf - pathset->buf;
-        assert( index >= 0 );
+        dbgassert( index >= 0 );
         pathset->indices[count] = (size_t)index;
 
         p_buf += byteLen;

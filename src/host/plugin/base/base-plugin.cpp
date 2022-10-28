@@ -48,7 +48,7 @@ SafeRef<effectbase> effectbase::makeSafeRef() {
 effectbase::~effectbase() {
     delete blockInputs;
     delete blockOutputs;
-    assert(nLoadCalls == 0);
+    dbgassert(nLoadCalls == 0);
     if (safeRef.handler) {
         safeRef.handler->safeRefDestroy(safeRef.refId);
     }

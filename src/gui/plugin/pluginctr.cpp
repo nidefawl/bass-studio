@@ -879,7 +879,7 @@ void guictr_plugins::determineSize(glm::ivec2& prefSize) {
 }
 action_remove_modules::action_remove_modules(String s, std::vector<effectbase*>&& _effects, audio_stage_ref_t _ref, int32_t _dst) : action_base(), effects(_effects), ref(_ref), dstSlot(_dst) {
     desc = s;
-    assert(effects.size());
+    dbgassert(effects.size());
 }
 
 void action_remove_modules::releaseResources(DawInstance* daw) {

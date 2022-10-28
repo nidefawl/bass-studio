@@ -50,7 +50,7 @@ void gui_pianoroll::handleDraggedBegin(MouseEvent& evt) {
 
 void gui_pianoroll::handleDraggedMove(MouseEvent& evt) {
     if (dragMode == dragmode::drag_move_resize) {
-        assert(evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE);
+        dbgassert(evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE);
         if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
             bool lockGesture = true;
             bool isMove      = true;
@@ -93,7 +93,7 @@ void gui_pianoroll::handleDraggedMove(MouseEvent& evt) {
                     int32_t killTime = midihost::getInstance()->killNote(-1, 0, lastNote);
                     if (killTime < lastNoteTime) {
                         log_printf("kill time < lastnote start:  %d < %d\n", killTime, lastNoteTime);
-                        assert(0);
+                        dbgassert(0);
                     }
                 }
                 lastNote     = notePitch;

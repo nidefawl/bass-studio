@@ -363,7 +363,7 @@ private:
 				// with half the line thickness as the radius
 				createTriangleFan(vertices, innerSec, segment1.center.b, outer1->b, outer2->a, clockwise);
 			} else {
-				assert(false);
+				dbgassert(false);
 			}
 		}
 

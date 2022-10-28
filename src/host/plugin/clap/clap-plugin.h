@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <array>
 #include <atomic>
+#include <clap/ext/latency.h>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -17,6 +18,7 @@
 #include "host/plugin/base/base-plugin.h"
 #include "host/plugin/clap/clap-plugin-param.h"
 #include "samplerate.h"
+#include "types.h"
 
 namespace DAW::Host {
     class PluginManager;
@@ -28,6 +30,7 @@ public:
     struct daw_handles_t {
         std::shared_ptr<guiplugin> gui;
         uint32_t localCurrentUniqueId = 0;
+        samplecount_t currentLatency = 0;
     };
     void* module;
     daw_handles_t* const dawHandles;
@@ -54,20 +57,7 @@ public:
     void load(DAW::Host::PluginManager* host) override;
     void initBuffers() override;
     void updateFromMainThread() override;
-    void postSetParameter(int32_t idx, float preVal, float val, int flags) override {
-        effectbase::postSetParameter(idx, preVal, val, flags);
-        automatable_param_t* param = getParamUnchecked(idx);
-        auto& pParam = *_params[idx].get();
-        auto& info = pParam.info();
-        auto scaled = info.min_value + val * (info.max_value - info.min_value);
-        if (!(flags & FLG_PAR_UPDATE_MODULATED)) {
-            setParamValueByHost(pParam, scaled);
-        } else {
-            setParamModulationByHost(pParam, scaled);
-        }
-        param->paramDisplayValState |= PARAM_FLAG_DIRTY;
-        param->paramValueState = PARAM_FLAG_SET;
-    }
+    void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     void onWindowResize(ivec2 size) override;
     bool onShow(host_plugin_window* window) override;
     bool onClose() override;
@@ -148,8 +138,7 @@ private:
     static bool clapIsAudioThread(const clap_host* host);
 
     static void clapParamsRescan(const clap_host* host, clap_param_rescan_flags flags);
-    static void
-    clapParamsClear(const clap_host* host, clap_id param_id, clap_param_clear_flags flags);
+    static void clapParamsClear(const clap_host* host, clap_id param_id, clap_param_clear_flags flags);
     static void clapParamsRequestFlush(const clap_host* host);
     void scanParams();
     void scanParam(int32_t index);
@@ -257,6 +246,7 @@ private:
     const clap_plugin_thread_pool* _pluginThreadPool          = nullptr;
     const clap_plugin_preset_load* _pluginPresetLoad          = nullptr;
     const clap_plugin_state* _pluginState                     = nullptr;
+    const clap_plugin_latency* _pluginLatency                 = nullptr;
 
     bool _pluginExtensionsAreInitialized = false;
 
