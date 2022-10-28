@@ -58,6 +58,7 @@ public:
     void initBuffers() override;
     void updateFromMainThread() override;
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
+    param_unit_t convertParamValueToDisplay(int32_t idx, float value) override;
     void onWindowResize(ivec2 size) override;
     bool onShow(host_plugin_window* window) override;
     bool onClose() override;

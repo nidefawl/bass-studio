@@ -26,50 +26,6 @@
 #include <clap/helpers/reducing-param-queue.hxx>
 #include <vector>
 
-void clapplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
-    this->uiSnapshot = pluginSnapshot.uiSnapshot;
-    this->uiSnapshot.isValidSnapshot = true;
-    const int32_t programIdx = pluginSnapshot.currentProgram >= 0 ? pluginSnapshot.currentProgram : 0;
-    VstPatchChunkInfo info{};
-    info.version = 1;
-    info.numElements = 1;
-    info.pluginVersion = pluginSnapshot.vendorVersion;
-    info.pluginUniqueID = pluginSnapshot.uId;
-    // auto retBeginLoadBank = this->dispatch(effBeginLoadBank, 0, 0, (void*)&info);
-    // auto retBeginSetProgram = this->dispatch(effBeginSetProgram);
-    // this->dispatch(effSetProgram, 0, programIdx);
-    // log_lf(Log::L_DEBUG, "Plugin %s: effBeginLoadBank %zd\n", StringAsCStr(this->sName), retBeginLoadBank);
-    // log_lf(Log::L_DEBUG, "Plugin %s: retBeginSetProgram %zd\n", StringAsCStr(this->sName), retBeginSetProgram);
-    // bool bLoadProgramDataChunk = (this->getFlagsVST() & effFlagsProgramChunks) != 0;
-    // if (bLoadProgramDataChunk) {
-    //     if (!pluginSnapshot.dataChunk.empty()) {
-    //         auto& localMem = this->handle->dataChunkLocalMemory;
-    //         localMem       = pluginSnapshot.dataChunk;
-    //         log_lf(Log::L_DEBUG, "Plugin %s: Load data1[%zu]\n", StringAsCStr(this->sName), localMem.size());
-    //         this->dispatch(effSetChunk, 0, (int64_t) localMem.size(), (void*) localMem.data());
-    //     }
-    //     if (loadPluginPresetWithSnapshot && !pluginSnapshot.dataChunk2.empty()) {
-    //         log_lf(Log::L_DEBUG, "Plugin %s: Load data2[%zu]\n", StringAsCStr(this->sName), pluginSnapshot.dataChunk2.size());
-    //         this->dispatch(effSetChunk, 1, (int64_t) pluginSnapshot.dataChunk2.size(), (void*) pluginSnapshot.dataChunk2.data());
-    //     }
-    // } else {
-    //     this->dispatch(effSetProgram, 0, programIdx);
-    //     if (!pluginSnapshot.currentProgramName.empty()) {
-    //         this->dispatch(effSetProgramName, 0, 0, (void*)StringAsCStr(pluginSnapshot.currentProgramName));
-    //     }
-    // }
-    // if (!bLoadProgramDataChunk) {
-        DAW::loadEffectParamsFromSnapshot(pluginSnapshot, this);
-    // }
-    // this->dispatch(effEndSetProgram);
-    // this->dispatch(effSetProgram, 0, programIdx);
-    // this->dispatch(effSetProgram, 0, programIdx);
-    if (dawHandles->gui && this->uiSnapshot.isValidSnapshot) {
-        dawHandles->gui->loadSnapshot(this->uiSnapshot);
-        this->uiSnapshot.isValidSnapshot = false;
-    }
-}
-
 namespace {
     struct clap_snapshot_ostream : public clap_ostream {
         std::vector<uint8_t>& dataChunk;
@@ -80,9 +36,9 @@ namespace {
         static CLAP_ABI int64_t write_cb(const struct clap_ostream *stream, const void *voidBuffer, uint64_t size) {
             auto self = reinterpret_cast<const clap_snapshot_ostream*>(stream);
             auto buffer = reinterpret_cast<const uint8_t*>(voidBuffer);
-            auto pos = self->dataChunk.end();
-            self->dataChunk.reserve(self->dataChunk.size() + size);
-            self->dataChunk.insert(pos, buffer, buffer + size);
+            auto pos = self->dataChunk.size();
+            self->dataChunk.resize(self->dataChunk.size() + size);
+            std::memcpy(self->dataChunk.data() + pos, buffer, size);
             return size;
         }
     };
@@ -101,8 +57,8 @@ namespace {
         ps.name = plugin->sName;
         if (opts.storePluginPreset) {
             if (_pluginState) {
-                clap_snapshot_ostream clapOstream{ps.dataChunk};
-                _pluginState->save(clapPlugin, &clapOstream);
+                clap_snapshot_ostream clapByteStream{ps.dataChunk};
+                _pluginState->save(clapPlugin, &clapByteStream);
             }
             auto numParamsReserve = math::min<int32_t>(150, plugin->getNumParameters());
             ps.params.reserve(numParamsReserve);
@@ -125,7 +81,43 @@ namespace {
         }
     }
 
+    struct clap_snapshot_istream : public clap_istream {
+        std::vector<uint8_t> dataChunk;
+        mutable size_t readPos = 0;
+        clap_snapshot_istream(const std::vector<uint8_t>& data) : clap_istream(), dataChunk(data) {
+            ctx = this;
+            read = read_cb;
+        }
+        static CLAP_ABI int64_t read_cb(const struct clap_istream *stream, void *buffer, uint64_t size) {
+            auto self = reinterpret_cast<const clap_snapshot_istream*>(stream);
+            auto data = reinterpret_cast<uint8_t*>(buffer);
+            auto bufPosStart = self->dataChunk.data() + self->readPos;
+            auto sizeRead = math::min<int64_t>(size, self->dataChunk.size() - self->readPos);
+            std::memcpy(data, bufPosStart, sizeRead);
+            self->readPos += sizeRead;
+            return sizeRead;
+        }
+    };
 }// namespace
+
+void clapplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
+    this->uiSnapshot = pluginSnapshot.uiSnapshot;
+    this->uiSnapshot.isValidSnapshot = true;
+    VstPatchChunkInfo info{};
+    info.version = 1;
+    info.numElements = 1;
+    info.pluginVersion = pluginSnapshot.vendorVersion;
+    info.pluginUniqueID = pluginSnapshot.uId;
+    if (_pluginState) {
+        clap_snapshot_istream clapByteStream{pluginSnapshot.dataChunk};
+        _pluginState->load(_plugin, &clapByteStream);
+    }
+    DAW::loadEffectParamsFromSnapshot(pluginSnapshot, this);
+    if (dawHandles->gui && this->uiSnapshot.isValidSnapshot) {
+        dawHandles->gui->loadSnapshot(this->uiSnapshot);
+        this->uiSnapshot.isValidSnapshot = false;
+    }
+}
 
 void clapplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
     createSnapshot(ps, this, _plugin, _pluginState, opts);
@@ -1258,10 +1250,11 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
 void clapplugin::paramsChanged() {
     for (auto& [clapId, pParam] : _params) {
         auto paramId = static_cast<int32_t>(clapId);
-        auto param = getParam(paramId);
-        if (param) continue;
-        param = registerParam(paramId);
-        param->internalIdx         = 0;
+        int32_t paramIdentifier    = PARAM_OFFSET_EXTERNAL + paramId;
+        auto param = getParam(paramIdentifier);
+        if (!param)
+            param = registerParam(paramIdentifier);
+        param->internalIdx         = paramId;
         param->paramDisplayValState = PARAM_FLAG_DIRTY;
         param->paramValueState = PARAM_FLAG_DIRTY;
         auto& info = pParam->info();
@@ -1270,26 +1263,44 @@ void clapplugin::paramsChanged() {
         if (paramrange != 0.0) {
             param->setInitial((info.default_value-info.min_value)/paramrange);
         }
-        param->name = info.module;
-        param->name += info.name;
+        param->name = info.name;
+        // param->name = info.module;
+        // param->name += info.name;
     }
 }
 
 void clapplugin::postSetParameter(int32_t idx, float preVal, float val, int flags) {
     effectbase::postSetParameter(idx, preVal, val, flags);
     automatable_param_t* param = getParamUnchecked(idx);
-    auto& pParam               = *_params[idx].get();
-    auto& info                 = pParam.info();
-    auto scaled                = info.min_value + val * (info.max_value - info.min_value);
-    if (!(flags & FLG_PAR_UPDATE_MODULATED)) {
-        setParamValueByHost(pParam, scaled);
-    } else {
-        setParamModulationByHost(pParam, scaled);
+    if (param->internalIdx >= 0) {
+        auto& pParam               = *_params[param->internalIdx].get();
+        auto& info                 = pParam.info();
+        auto scaled                = info.min_value + val * (info.max_value - info.min_value);
+        if (!(flags & FLG_PAR_UPDATE_MODULATED)) {
+            setParamValueByHost(pParam, scaled);
+        } else {
+            setParamModulationByHost(pParam, scaled);
+        }
+        param->paramDisplayValState |= PARAM_FLAG_DIRTY;
+        param->paramValueState = PARAM_FLAG_SET;
     }
-    param->paramDisplayValState |= PARAM_FLAG_DIRTY;
-    param->paramValueState = PARAM_FLAG_SET;
 }
 
+param_unit_t clapplugin::convertParamValueToDisplay(int32_t idx, float value) {
+    automatable_param_t* param = getParamUnchecked(idx);
+    if (param->internalIdx >= 0) {
+        auto& pParam = *_params[param->internalIdx].get();
+        String data;
+        data.resize(256);
+        // clap_param_info_t info;
+        // if (_pluginParams->get_info(_plugin, param->internalIdx, &info)) {
+        // }
+        if (_pluginParams->value_to_text(_plugin, param->internalIdx, value, data.data(), data.size())) {
+            return param_unit_t{data, ""};
+        }
+    }
+    return effectbase::convertParamValueToDisplay(idx, value);
+}
 
 void clapplugin::clapParamsClear(const clap_host* host,
                                  clap_id param_id,
