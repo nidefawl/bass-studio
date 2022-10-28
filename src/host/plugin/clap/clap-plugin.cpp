@@ -16,6 +16,7 @@
 #include "gui/plugin/plugin.h"
 #include "hires_timer.h"
 #include "host/host_plugin_window.h"
+#include "host/plugin/clap/clap-plugin-param.h"
 #include "logging.h"
 #include "modules.h"
 #include "plugins/synth/IPlugMidi.h"
@@ -98,6 +99,15 @@ namespace {
             return sizeRead;
         }
     };
+
+    double ToPluginParam(PluginParam* param, double f) {
+        auto& info = param->info();
+        return info.min_value+f*(info.max_value-info.min_value);
+    }
+    double FromPluginParam(PluginParam* param, double f) {
+        auto& info = param->info();
+        return (f-info.min_value)/(info.max_value-info.min_value);
+    }
 }// namespace
 
 void clapplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
@@ -1046,7 +1056,7 @@ void clapplugin::updateClapFromMainThread() {
                 if (value.has_gesture)
                     it->second->setIsAdjusting(value.is_begin);
 
-                // emit paramAdjusted(param_id);
+                paramAdjusted(param_id);
             });
 
     if (_scheduleParamFlush && !isPluginActive()) {
@@ -1125,25 +1135,25 @@ void clapplugin::scanParams() { clapParamsRescan(&host_, CLAP_PARAM_RESCAN_ALL);
 
 void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
     checkForMainThread();
-    auto h = fromHost(host);
+    auto plugin = fromHost(host);
 
-    if (!h->canUsePluginParams())
+    if (!plugin->canUsePluginParams())
         return;
 
     // 1. it is forbidden to use CLAP_PARAM_RESCAN_ALL if the plugin is active
-    if (h->isPluginActive() && (flags & CLAP_PARAM_RESCAN_ALL)) {
+    if (plugin->isPluginActive() && (flags & CLAP_PARAM_RESCAN_ALL)) {
         throw std::logic_error(
                 "clap_host_params.recan(CLAP_PARAM_RESCAN_ALL) was called while the plugin is active!");
         return;
     }
 
     // 2. scan the params.
-    auto count = h->_pluginParams->count(h->_plugin);
+    auto count = plugin->_pluginParams->count(plugin->_plugin);
     std::unordered_set<clap_id> paramIds(count * 2ULL);
 
     for (uint32_t iPluginIndex = 0; iPluginIndex < count; ++iPluginIndex) {
         clap_param_info info;
-        if (!h->_pluginParams->get_info(h->_plugin, iPluginIndex, &info))
+        if (!plugin->_pluginParams->get_info(plugin->_plugin, iPluginIndex, &info))
             throw std::logic_error("clap_plugin_params.get_info did return false!");
 
         if (info.id == CLAP_INVALID_ID) {
@@ -1154,11 +1164,11 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
             throw std::logic_error(msg.str());
         }
 
-        auto it = h->_params.find(info.id);
+        auto it = plugin->_params.find(info.id);
 
         // check that the parameter is not declared twice
         if (paramIds.count(info.id) > 0) {
-            dbgassert(it != h->_params.end());
+            dbgassert(it != plugin->_params.end());
 
             std::ostringstream msg;
             msg << "the parameter with id: " << info.id << " was declared twice." << std::endl
@@ -1169,7 +1179,7 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
         }
         paramIds.insert(info.id);
 
-        if (it == h->_params.end()) {
+        if (it == plugin->_params.end()) {
             if (!(flags & CLAP_PARAM_RESCAN_ALL)) {
                 std::ostringstream msg;
                 msg << "a new parameter was declared, but the flag CLAP_PARAM_RESCAN_ALL was not "
@@ -1178,10 +1188,10 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
                 throw std::logic_error(msg.str());
             }
 
-            double value = h->getClapParamValue(info);
-            auto param   = std::make_unique<PluginParam>(*h, info, value);
-            h->checkValidParamValue(*param, value);
-            h->_params.insert_or_assign(info.id, std::move(param));
+            double value = plugin->getClapParamValue(info);
+            auto param   = std::make_unique<PluginParam>(*plugin, info, value);
+            plugin->checkValidParamValue(*param, value);
+            plugin->_params.insert_or_assign(info.id, std::move(param));
         } else {
             // update param info
             if (!it->second->isInfoEqualTo(info)) {
@@ -1207,7 +1217,7 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
                 it->second->setInfo(info);
             }
 
-            double value = h->getClapParamValue(info);
+            double value = plugin->getClapParamValue(info);
             if (it->second->value() != value) {
                 if (!clapParamsRescanMayValueChange(flags)) {
                     std::ostringstream msg;
@@ -1219,15 +1229,21 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
                 }
 
                 // update param value
-                h->checkValidParamValue(*it->second, value);
+                plugin->checkValidParamValue(*it->second, value);
                 it->second->setValue(value);
                 it->second->setModulation(value);
+                auto param = plugin->getParamUnchecked(it->first + PARAM_OFFSET_EXTERNAL);
+                if (param) {
+                    float valUnscaled = FromPluginParam(it->second.get(), value);
+                    param->paramDisplayValState = PARAM_FLAG_DIRTY;
+                    param->setValue(valUnscaled);
+                }
             }
         }
     }
 
     // remove parameters which are gone
-    for (auto it = h->_params.begin(); it != h->_params.end();) {
+    for (auto it = plugin->_params.begin(); it != plugin->_params.end();) {
         if (paramIds.find(it->first) != paramIds.end())
             ++it;
         else {
@@ -1239,19 +1255,28 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
                     << info.id << ", name: " << info.name << ", module: " << info.module << std::endl;
                 throw std::logic_error(msg.str());
             }
-            it = h->_params.erase(it);
+            it = plugin->_params.erase(it);
         }
     }
 
     if (flags & CLAP_PARAM_RESCAN_ALL)
-        h->paramsChanged();
+        plugin->paramsChanged();
+}
+
+void clapplugin::paramAdjusted(clap_id paramId) {
+    int32_t paramIdentifier    = PARAM_OFFSET_EXTERNAL + paramId;
+    auto param = effectbase::getParam(paramIdentifier);
+    if (param) {
+        param->paramDisplayValState = PARAM_FLAG_DIRTY;
+        param->paramValueState = PARAM_FLAG_DIRTY;
+    }
 }
 
 void clapplugin::paramsChanged() {
     for (auto& [clapId, pParam] : _params) {
         auto paramId = static_cast<int32_t>(clapId);
         int32_t paramIdentifier    = PARAM_OFFSET_EXTERNAL + paramId;
-        auto param = getParam(paramIdentifier);
+        auto param = effectbase::getParam(paramIdentifier);
         if (!param)
             param = registerParam(paramIdentifier);
         param->internalIdx         = paramId;
@@ -1274,8 +1299,7 @@ void clapplugin::postSetParameter(int32_t idx, float preVal, float val, int flag
     automatable_param_t* param = getParamUnchecked(idx);
     if (param->internalIdx >= 0) {
         auto& pParam               = *_params[param->internalIdx].get();
-        auto& info                 = pParam.info();
-        auto scaled                = info.min_value + val * (info.max_value - info.min_value);
+        auto scaled = ToPluginParam(&pParam, val);
         if (!(flags & FLG_PAR_UPDATE_MODULATED)) {
             setParamValueByHost(pParam, scaled);
         } else {
@@ -1289,14 +1313,16 @@ void clapplugin::postSetParameter(int32_t idx, float preVal, float val, int flag
 param_unit_t clapplugin::convertParamValueToDisplay(int32_t idx, float value) {
     automatable_param_t* param = getParamUnchecked(idx);
     if (param->internalIdx >= 0) {
+        if (!(param->paramDisplayValState & PARAM_FLAG_DIRTY))
+            return {param->paramDisplayValStr, ""};
         auto& pParam = *_params[param->internalIdx].get();
+        auto& info                 = pParam.info();
+        auto scaled                = info.min_value + value * (info.max_value - info.min_value);
         String data;
         data.resize(256);
-        // clap_param_info_t info;
-        // if (_pluginParams->get_info(_plugin, param->internalIdx, &info)) {
-        // }
-        if (_pluginParams->value_to_text(_plugin, param->internalIdx, value, data.data(), data.size())) {
-            return param_unit_t{data, ""};
+        if (_pluginParams->value_to_text(_plugin, param->internalIdx, scaled, data.data(), data.size())) {
+            param->paramDisplayValStr = data;
+            return param_unit_t{std::move(data), ""};
         }
     }
     return effectbase::convertParamValueToDisplay(idx, value);
@@ -1703,3 +1729,23 @@ void clapplugin::updateWindowSize() {
     }
     windowHost->resize({width, height});
 }
+
+automatable_param_t* clapplugin::getParam(int32_t idx) {
+    auto param = effectbase::getParam(idx);
+    if (param && param->internalIdx >= 0) {
+        if (param->paramValueState & PARAM_FLAG_DIRTY) {
+            // param->setValue(_params[param->internalIdx]->value());
+            auto& info = _params[param->internalIdx]->info();
+            param->shortLabel = info.name;
+            auto paramrange = info.max_value-info.min_value;
+            if (paramrange != 0.0) {
+                param->setValue((_params[param->internalIdx]->value()-info.min_value)/paramrange);
+            } else {
+                param->setValue(_params[param->internalIdx]->value());
+            }
+            param->paramValueState = PARAM_FLAG_SET;
+        }
+    }
+    return param;
+}
+

@@ -58,6 +58,7 @@ public:
     void initBuffers() override;
     void updateFromMainThread() override;
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
+    automatable_param_t* getParam(int32_t idx) override;
     param_unit_t convertParamValueToDisplay(int32_t idx, float value) override;
     void onWindowResize(ivec2 size) override;
     bool onShow(host_plugin_window* window) override;
@@ -120,8 +121,7 @@ public:                    //previously signals
     }
     void quickControlsSelectedPageChanged() { /* TODO */
     }
-    void paramAdjusted(clap_id paramId) { /* TODO */
-    }
+    void paramAdjusted(clap_id paramId);
 
 private:
     static clapplugin* fromHost(const clap_host* host);
