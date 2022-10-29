@@ -32,24 +32,10 @@ public:
 
    bool isBeingAdjusted() const noexcept { return _isBeingAdjusted; }
    void setIsAdjusting(bool isAdjusting) {
-      if (isAdjusting && !_isBeingAdjusted)
-         beginAdjust();
-      else if (!isAdjusting && _isBeingAdjusted)
-         endAdjust();
-   }
-   void beginAdjust() {
-      dbgassert(!_isBeingAdjusted);
-      _isBeingAdjusted = true;
-      // emit isBeingAdjustedChanged();
-   }
-   void endAdjust() {
-      dbgassert(_isBeingAdjusted);
-      _isBeingAdjusted = false;
-      // emit isBeingAdjustedChanged();
+      _isBeingAdjusted = isAdjusting;
    }
 
 public: //previously signals
-   void isBeingAdjustedChanged() { /* TODO */ }
    void infoChanged() { /* TODO */ }
    void valueChanged() { /* TODO */ }
    void modulatedValueChanged() { /* TODO */ }

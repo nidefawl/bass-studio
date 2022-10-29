@@ -31,6 +31,10 @@ public:
         std::shared_ptr<guiplugin> gui;
         uint32_t localCurrentUniqueId = 0;
         samplecount_t currentLatency = 0;
+        struct param_editing_t {
+            int32_t paramIdx = -1;
+            float   valBefore = 0;
+        } paramEditing;
     };
     void* module;
     daw_handles_t* const dawHandles;

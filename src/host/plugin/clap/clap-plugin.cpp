@@ -15,6 +15,8 @@
 #include "clap-plugin.h"
 #include "gui/plugin/plugin.h"
 #include "hires_timer.h"
+#include "host/history.h"
+#include "host/history.h"
 #include "host/host_plugin_window.h"
 #include "host/plugin/clap/clap-plugin-param.h"
 #include "logging.h"
@@ -23,6 +25,7 @@
 #include "samplerate.h"
 #include "snapshot/plugin-snapshot.h"
 #include "thread.h"
+#include "track_impl.h"
 
 #include <clap/helpers/reducing-param-queue.hxx>
 #include <vector>
@@ -84,7 +87,7 @@ namespace {
 
     struct clap_snapshot_istream : public clap_istream {
         std::vector<uint8_t> dataChunk;
-        mutable size_t readPos = 0;
+        mutable int64_t readPos = 0;
         clap_snapshot_istream(const std::vector<uint8_t>& data) : clap_istream(), dataChunk(data) {
             ctx  = this;
             read = read_cb;
@@ -92,10 +95,18 @@ namespace {
         static CLAP_ABI int64_t read_cb(const struct clap_istream* stream, void* buffer, uint64_t size) {
             auto self        = reinterpret_cast<const clap_snapshot_istream*>(stream);
             auto data        = reinterpret_cast<uint8_t*>(buffer);
-            auto bufPosStart = self->dataChunk.data() + self->readPos;
-            auto sizeRead    = math::min<int64_t>(size, self->dataChunk.size() - self->readPos);
-            std::memcpy(data, bufPosStart, sizeRead);
-            self->readPos += sizeRead;
+            auto srcSize     = int64_t(self->dataChunk.size());
+            auto dstSize     = math::max<int64_t>(0, int64_t(size));
+            auto srcSizeLeft = srcSize - self->readPos;
+            auto sizeRead    = math::min(dstSize, srcSizeLeft);
+            if (size) {
+                std::memset(data, 0, size);
+            }
+            if (sizeRead > 0) {
+                dbgassert(self->readPos + sizeRead <= srcSize && self->readPos + sizeRead >= 0 && self->readPos >= 0);
+                std::memcpy(data, self->dataChunk.data() + self->readPos, sizeRead);
+                self->readPos += sizeRead;
+            }
             return sizeRead;
         }
     };
@@ -992,10 +1003,35 @@ void clapplugin::updateClapFromMainThread() {
                 if (value.has_value)
                     it->second->setValue(value.value);
 
-                if (value.has_gesture)
+                if (value.has_gesture) {
                     it->second->setIsAdjusting(value.is_begin);
+                }
 
-                paramAdjusted(param_id);
+                int32_t paramIdentifier = PARAM_OFFSET_EXTERNAL + it->first;
+                auto param = effectbase::getParam(paramIdentifier);
+                if (param)
+                {
+                    int32_t flags = FLG_PAR_UPDATE_FROM_CLIENT;
+                    float valUnscaled = value.has_value ? FromPluginParam(it->second.get(), value.value) : param->getValue();
+                    if (value.has_gesture)
+                    {
+                        if (value.is_begin) {
+                            dawHandles->paramEditing = {paramIdentifier, valUnscaled};
+                        } else {
+                            auto oldVal = dawHandles->paramEditing.valBefore;
+                            track_t* track = trackImpl->getTrack();
+                            automatable_param_ref_t ref = toRef();
+                            parameter_ref_t p  = { track->projectIdx, ref.type, projectGlobalId, paramIdentifier };
+                            //TODO: move this into iHostCallback
+                            auto daw = pluginMgr->getTls().dawInstance;
+                            daw->pushHist(new action_modify_effect_parameter("Modify parameter", p, oldVal, valUnscaled));
+                            dawHandles->paramEditing = {};
+                            // flags |= FLG_PAR_UPDATE_FINISH;
+                        }
+                    }
+                    setParamEdit(paramIdentifier, valUnscaled, flags);
+                    param->paramDisplayValState = PARAM_FLAG_DIRTY;
+                }
             });
 
     if (_scheduleParamFlush && !isPluginActive()) {
@@ -1173,7 +1209,7 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
                 it->second->setModulation(value);
                 auto param = plugin->getParamUnchecked(it->first + PARAM_OFFSET_EXTERNAL);
                 if (param) {
-                    float valUnscaled           = FromPluginParam(it->second.get(), value);
+                    float valUnscaled = FromPluginParam(it->second.get(), value);
                     param->paramDisplayValState = PARAM_FLAG_DIRTY;
                     param->setValue(valUnscaled);
                 }
