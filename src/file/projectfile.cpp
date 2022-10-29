@@ -127,7 +127,12 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
     archive(
         make_nvp("pluginType", m.pluginType),
         make_nvp("name", m.name),
-        make_nvp("uId", m.uId),
+        make_nvp("uId", m.uId)
+    );
+    if (version >= 12) {
+        archive(make_nvp("clapId", m.clapId));
+    }
+    archive(
         make_nvp("slot", m.slot),
         make_nvp("parameters", m.params),
         make_nvp("automatedParams", m.automatedParams),
@@ -166,6 +171,7 @@ void save(Archive& archive, plugin_snapshot_t const& m, const std::uint32_t vers
     archive(make_nvp("pluginType", m.pluginType),
         make_nvp("name", m.name), 
         make_nvp("uId", m.uId), 
+        make_nvp("clapId", m.clapId), 
         make_nvp("slot", m.slot),
         make_nvp("parameters", m.params),
         make_nvp("automatedParams", m.automatedParams),
@@ -612,7 +618,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 
 CEREAL_REGISTER_TYPE(guictrlayout_snapshot_t);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(guictrlayout_entry_snapshot_t, guictrlayout_snapshot_t)
-CEREAL_CLASS_VERSION(plugin_snapshot_t, 11);
+CEREAL_CLASS_VERSION(plugin_snapshot_t, 12);
 CEREAL_CLASS_VERSION(track_snapshot_t, 4);
 CEREAL_CLASS_VERSION(automatable_param_ref_t, 1);
 CEREAL_CLASS_VERSION(track_layout_snapshot_t, 1);

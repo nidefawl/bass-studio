@@ -56,7 +56,8 @@ namespace {
         ps.ioChannels.output = plugin->outputChannelsDesc;
         ps.pluginType        = PLUGIN_TYPE_CLAP;
         ps.vendorVersion     = 0;
-        ps.uId               = plugin->getClapPluginId();
+        ps.uId               = plugin->getClapPluginIndex();
+        ps.clapId            = plugin->getClapPluginId();
         ps.localDbId         = plugin->localDbId;
         ps.name              = plugin->sName;
         if (opts.storePluginPreset) {
@@ -164,7 +165,7 @@ clapplugin::clapplugin(DAW::Host::PluginManager& pluginMgr, const String& filePa
     : effectbase(name, PLUGIN_TYPE_CLAP, globalId, hostcallback), dawHandles{ new clapplugin::daw_handles_t{} },
       _pluginMgr(pluginMgr),
       filePath(filePath),
-      uId(uId) {
+      clapPluginIndex(uId) {
     host_.host_data        = this;
     host_.clap_version     = CLAP_VERSION;
     host_.name             = BuildInfo::BUILD_BINARY_NAME;
@@ -233,14 +234,14 @@ bool clapplugin::loadClapPlugin(DAW::Host::LoadResultSharedLibrary& _library) {
     _pluginFactory = static_cast<const clap_plugin_factory*>(_pluginEntry->get_factory(CLAP_PLUGIN_FACTORY_ID));
 
     auto count = _pluginFactory->get_plugin_count(_pluginFactory);
-    if (uId > count) {
-        log_lf(Log::L_ERROR, "plugin index greater than count (%d/%d)\n", uId, count);
+    if (clapPluginIndex > count) {
+        log_lf(Log::L_ERROR, "plugin index greater than count (%d/%d)\n", clapPluginIndex, count);
         return false;
     }
 
-    auto desc = _pluginFactory->get_plugin_descriptor(_pluginFactory, uId);
+    auto desc = _pluginFactory->get_plugin_descriptor(_pluginFactory, clapPluginIndex);
     if (!desc) {
-        log_lf(Log::L_ERROR, "no plugin descriptor (%d/%d)\n", uId, count);
+        log_lf(Log::L_ERROR, "no plugin descriptor (%d/%d)\n", clapPluginIndex, count);
         return false;
     }
 
@@ -262,12 +263,57 @@ bool clapplugin::loadClapPlugin(DAW::Host::LoadResultSharedLibrary& _library) {
         return false;
     }
 
+    for (int i = 0; _plugin->desc->features && _plugin->desc->features[i]; ++i) {
+        auto entry = _plugin->desc->features[i];
+        if (!strcmp(entry, CLAP_PLUGIN_FEATURE_INSTRUMENT)) {
+            isSynth = true;
+            bCanReceiveMidi = true;
+            pluginCategory = 1;
+        }
+        if (!strcmp(entry, CLAP_PLUGIN_FEATURE_AUDIO_EFFECT)) {
+            pluginCategory = 0;
+        } 
+        if (!strcmp(entry, CLAP_PLUGIN_FEATURE_NOTE_EFFECT)) {
+            bCanSendMidi = true;
+        }
+    }
+    
+
+    if (_plugin->desc && _plugin->desc->name) {
+        sName = _plugin->desc->name;
+    }
+
     this->module = _library.module;
 
     initPluginExtensions();
     scanParams();
     scanQuickControls();
     return true;
+}
+
+ClapPluginDescription clapplugin::getDescription() {
+    auto clapPlugDesc = _plugin ? _plugin->desc : nullptr;
+    if (!clapPlugDesc)
+        return {};
+
+    ClapPluginDescription desc;
+    desc.clapVerMajor    = clapPlugDesc->clap_version.major;
+    desc.clapVerMinor    = clapPlugDesc->clap_version.minor;
+    desc.clapVerRevision = clapPlugDesc->clap_version.revision;
+    desc.id              = clapPlugDesc->id;
+    desc.name            = clapPlugDesc->name;
+    desc.vendor          = clapPlugDesc->vendor;
+    desc.url             = clapPlugDesc->url;
+    desc.manualUrl       = clapPlugDesc->manual_url;
+    desc.supportUrl      = clapPlugDesc->support_url;
+    desc.version         = clapPlugDesc->version;
+    desc.description     = clapPlugDesc->description;
+    for (int i = 0;; ++i) {
+        if (!clapPlugDesc->features || !clapPlugDesc->features[i])
+            break;
+        desc.features.emplace_back(clapPlugDesc->features[i]);
+    }
+    return desc;
 }
 
 void clapplugin::initPluginExtensions() {

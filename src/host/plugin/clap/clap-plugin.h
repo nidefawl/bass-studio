@@ -25,6 +25,20 @@ namespace DAW::Host {
 }
 class PluginHostSettings;
 using WId = WINDOW_HANDLE;
+struct ClapPluginDescription {
+    uint32_t clapVerMajor;
+    uint32_t clapVerMinor;
+    uint32_t clapVerRevision;
+    String id;
+    String name;
+    String vendor;
+    String url;
+    String manualUrl;
+    String supportUrl;
+    String version;
+    String description;
+    std::vector<String> features;
+};
 class clapplugin : public effectbase {
 public:
     struct daw_handles_t {
@@ -38,9 +52,11 @@ public:
     };
     void* module;
     daw_handles_t* const dawHandles;
+    int pluginCategory = -1;
 public:
     clapplugin(DAW::Host::PluginManager& pluginMgr, const String& filePath, const String& name, uint32_t uId, int32_t globalId, IHostCallback* hostcallback);
     ~clapplugin() override;
+    ClapPluginDescription getDescription();
 
     // effectbase
     int getModuleType() override { return PLUGIN_TYPE_CLAP; };
@@ -398,12 +414,15 @@ private:
     bool _scheduleMainThreadCallback = false;
 
     String filePath;
-    uint32_t uId;
+    uint32_t clapPluginIndex;
 public:
     String getClapPluginPath() const {
         return filePath;
     }
-    uint32_t getClapPluginId() const {
-        return uId;
+    uint32_t getClapPluginIndex() const {
+        return clapPluginIndex;
+    }
+    String getClapPluginId() const {
+        return _plugin && _plugin->desc ? _plugin->desc->id : "";
     }
 };

@@ -58,14 +58,16 @@ public:
         enum query_type : uint32_t {
             BY_LOCALID_AND_UUID = 0,
             BY_NAME_AND_UUID,
-            BY_UUID,
+            BY_CLAP_UUID,
+            BY_VST_UUID,
             BY_NAME,
-            NUM_QUERY_TYPES = 4
+            NUM_QUERY_TYPES = 5
         };
         auto name              = pluginSnapshot.name;
         auto uId               = pluginSnapshot.uId;
         auto localId           = pluginSnapshot.localDbId;
         auto pluginType        = pluginSnapshot.pluginType;
+        auto clapId            = pluginSnapshot.clapId;
         bool loadForceDisabled = (loadFlags & 1) != 0;
 
         if (pluginType == PluginType::PLUGIN_TYPE_VST) {
@@ -77,14 +79,18 @@ public:
 
         static const char* queryBy_LocalIdAndUUID = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and id == ? and uid == ? and __COND__";
         static const char* queryBy_NameAndUUID    = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and name == ? and uid == ? and __COND__ order by forcedisable ASC, version DESC, id DESC";
-        static const char* queryBy_UUID           = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and uid == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
+        static const char* queryBy_VST_UUID       = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and uid == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
+        static const char* queryBy_CLAP_UUID      = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and productName == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
         static const char* queryBy_Name           = "SELECT * FROM plugins where moduleFormat == ? and state == 1 and name == ? and __COND__ order by id DESC, forcedisable ASC, version DESC, productName DESC";
-        const char* queries[NUM_QUERY_TYPES]      = { queryBy_LocalIdAndUUID, queryBy_NameAndUUID, queryBy_UUID, queryBy_Name };
+        const char* queries[NUM_QUERY_TYPES]      = { queryBy_LocalIdAndUUID, queryBy_NameAndUUID, queryBy_CLAP_UUID, queryBy_VST_UUID, queryBy_Name };
         for (size_t i = 0; i < NUM_QUERY_TYPES; i++) {
             if (i == BY_LOCALID_AND_UUID && localId <= 0) {
                 continue;
             }
-            if (i == BY_UUID && pluginType == PluginType::PLUGIN_TYPE_CLAP) {
+            if (i == BY_CLAP_UUID && pluginType == PluginType::PLUGIN_TYPE_VST) {
+                continue;
+            }
+            if (i == BY_VST_UUID && pluginType == PluginType::PLUGIN_TYPE_CLAP) {
                 continue;
             }
             String query = queries[i];
@@ -105,7 +111,11 @@ public:
                     queryPlugin.bind(2, name);
                     queryPlugin.bind(3, uId);
                     break;
-                case BY_UUID:
+                case BY_CLAP_UUID:
+                    //TODO: let user pick if multiple
+                    queryPlugin.bind(2, clapId);
+                    break;
+                case BY_VST_UUID:
                     //TODO: let user pick if multiple
                     queryPlugin.bind(2, uId);
                     break;
@@ -121,6 +131,7 @@ public:
                 entry.localDbId    = queryPlugin.getColumn("id").getInt();
                 entry.moduleFormat = queryPlugin.getColumn("moduleFormat").getInt();
                 entry.uid          = queryPlugin.getColumn("uid").getUInt();
+                entry.clapId       = pluginType == PluginType::PLUGIN_TYPE_CLAP ? queryPlugin.getColumn("productName").getString() : "";
                 entry.isSynth      = queryPlugin.getColumn("isSynth").getInt() != 0;
                 entry.name         = queryPlugin.getColumn("name").getString();
                 entry.path         = queryPlugin.getColumn("path").getString();
@@ -166,6 +177,7 @@ public:
             entry.localDbId    = queryPlugin.getColumn("id").getInt();
             entry.moduleFormat = queryPlugin.getColumn("moduleFormat").getInt();
             entry.uid          = queryPlugin.getColumn("uid").getUInt();
+            entry.clapId       = entry.moduleFormat == 1 ? queryPlugin.getColumn("productName").getString() : "";
             entry.isSynth      = queryPlugin.getColumn("isSynth").getInt() != 0;
             entry.name         = queryPlugin.getColumn("name").getString();
             entry.path         = queryPlugin.getColumn("path").getString();

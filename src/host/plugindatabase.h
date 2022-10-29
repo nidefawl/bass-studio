@@ -6,6 +6,7 @@ struct pluginentry_t {
     int32_t moduleFormat;
     int32_t localDbId;
     uint32_t uid;
+    String clapId;
     bool isSynth;
     String name;
     String path;

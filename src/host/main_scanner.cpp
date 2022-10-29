@@ -140,7 +140,7 @@ struct response_type_vst24_t : response_type_t {
     uint32_t version{ 0 };
     uint32_t vstVersion{ 0 };
     uint32_t pluginCategory{ 0 };
-    bool isSynth{ 0 };
+    bool isSynth{ false };
     char szVendorName[256]{ 0 };
     char szProductName[256]{ 0 };
     char szEffectName[256]{ 0 };
@@ -148,9 +148,12 @@ struct response_type_vst24_t : response_type_t {
 };
 struct response_type_clapplugin_t : response_type_t {
     uint32_t uniqueID{ 0 };
-    uint32_t version{ 0 };
     uint32_t pluginCategory{ 0 };
-    bool isSynth{ 0 };
+    bool isSynth{ false };
+    char szVersion[256]{ 0 };
+    char szVendorName[256]{ 0 };
+    char szProductName[256]{ 0 };
+    char szEffectName[256]{ 0 };
 };
 struct response_type_vst24_plugin_t : response_type_vst24_t {
 };
@@ -272,10 +275,15 @@ static void getVSTPluginData(DAW::Host::LoadResultPlugin& res, response_type_vst
 static void getClapPluginData(DAW::Host::LoadResultPlugin& res, response_type_clapplugin_t* _out) {
     auto plugin = res.clapPlugin;
     _out->uniqueID       = 0;
-    _out->version        = 1;
+    _out->pluginCategory = plugin->pluginCategory;
     safe_strcpy(_out->szName, plugin->sName);
     safe_strcpy(_out->szPath, res.path);
     _out->isSynth = plugin->isSynth;
+    auto clapPlugDesc = plugin->getDescription();
+    safe_strcpy(_out->szProductName, clapPlugDesc.id);
+    safe_strcpy(_out->szVendorName, clapPlugDesc.vendor);
+    safe_strcpy(_out->szEffectName, clapPlugDesc.name);
+    safe_strcpy(_out->szVersion, clapPlugDesc.version);
 }
 static int waitTimeout(ipc_server& server, ProcessThread* thread, const char* plugName, int minReadBuffSize, int64_t timeStartScan_ms, int64_t timeoutPluginScan_ms) {
     uint32_t notificationStep     = 0;
@@ -342,7 +350,7 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
                     queryInsertPlugin.bind(bndIdx++, data.isSynth);
                     queryInsertPlugin.bind(bndIdx++, 1); // clap plugin
                     queryInsertPlugin.bind(bndIdx++, data.uniqueID);
-                    queryInsertPlugin.bind(bndIdx++, data.version);
+                    queryInsertPlugin.bind(bndIdx++, 1);
                     queryInsertPlugin.bind(bndIdx++, 0); // vstVersion
                     queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
                     queryInsertPlugin.bind(bndIdx++, (long long int) timeDisk);
@@ -350,9 +358,9 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
                     queryInsertPlugin.bind(bndIdx++, file.path);
                     queryInsertPlugin.bind(bndIdx++, relPath);
                     queryInsertPlugin.bind(bndIdx++, data.szName);
-                    queryInsertPlugin.bind(bndIdx++, "");  // vendor
-                    queryInsertPlugin.bind(bndIdx++, ""); // product
-                    queryInsertPlugin.bind(bndIdx++, "");  // effect
+                    queryInsertPlugin.bind(bndIdx++, data.szVendorName);  // vendor
+                    queryInsertPlugin.bind(bndIdx++, data.szProductName); // product
+                    queryInsertPlugin.bind(bndIdx++, data.szEffectName);  // effect
                     queryInsertPlugin.bind(bndIdx++, 0);
                     queryInsertPlugin.bind(bndIdx++, forcedisable ? 1 : 0);
                     queryInsertPlugin.bind(bndIdx++, 0);
@@ -920,7 +928,7 @@ int main(int argc, char* argv[]) {
 #endif
     auto& tls = daw_tls::initNewTls();
 
-    if (argc > 1 && !strcmp("-server", argv[1])) {
+    if (argc == 1 || (argc > 1 && !strcmp("-server", argv[1]))) {
         PluginScannerImplementation::logPrefixIdx = PROC_SIDE_SERVER;
         PluginScannerImplementation::pluginscanner_server_options options;
         options.launchProcess              = true;
