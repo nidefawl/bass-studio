@@ -23,9 +23,11 @@
 #include "modules.h"
 #include "plugins/synth/IPlugMidi.h"
 #include "samplerate.h"
+#include "seq_time.h"
 #include "snapshot/plugin-snapshot.h"
 #include "thread.h"
 #include "track_impl.h"
+#include "types.h"
 
 #include <clap/helpers/reducing-param-queue.hxx>
 #include <vector>
@@ -262,6 +264,7 @@ bool clapplugin::loadClapPlugin(DAW::Host::LoadResultSharedLibrary& _library) {
         log_lf(Log::L_WARN, "could not init the plugin with id: %s\n", desc->id);
         return false;
     }
+    configureIOPorts();
 
     for (int i = 0; _plugin->desc->features && _plugin->desc->features[i]; ++i) {
         auto entry = _plugin->desc->features[i];
@@ -300,17 +303,23 @@ ClapPluginDescription clapplugin::getDescription() {
     desc.clapVerMajor    = clapPlugDesc->clap_version.major;
     desc.clapVerMinor    = clapPlugDesc->clap_version.minor;
     desc.clapVerRevision = clapPlugDesc->clap_version.revision;
-    desc.id              = clapPlugDesc->id;
-    desc.name            = clapPlugDesc->name;
-    desc.vendor          = clapPlugDesc->vendor;
-    desc.url             = clapPlugDesc->url;
-    desc.manualUrl       = clapPlugDesc->manual_url;
-    desc.supportUrl      = clapPlugDesc->support_url;
-    desc.version         = clapPlugDesc->version;
-    desc.description     = clapPlugDesc->description;
-    for (int i = 0;; ++i) {
-        if (!clapPlugDesc->features || !clapPlugDesc->features[i])
-            break;
+    if (clapPlugDesc->id)
+        desc.id = clapPlugDesc->id;
+    if (clapPlugDesc->name)
+        desc.name = clapPlugDesc->name;
+    if (clapPlugDesc->vendor)
+        desc.vendor = clapPlugDesc->vendor;
+    if (clapPlugDesc->url)
+        desc.url = clapPlugDesc->url;
+    if (clapPlugDesc->manual_url)
+        desc.version = clapPlugDesc->manual_url;
+    if (clapPlugDesc->support_url)
+        desc.version = clapPlugDesc->support_url;
+    if (clapPlugDesc->version)
+        desc.version = clapPlugDesc->version;
+    if (clapPlugDesc->description)
+        desc.version = clapPlugDesc->description;
+    for (int i = 0; clapPlugDesc->features && clapPlugDesc->features[i]; ++i) {
         desc.features.emplace_back(clapPlugDesc->features[i]);
     }
     return desc;
@@ -409,19 +418,6 @@ void clapplugin::deactivate() {
     setPluginState(Inactive);
 }
 
-void clapplugin::setPorts(int numInputs, float** inputs, int numOutputs, float** outputs) {
-    _audioIn.channel_count = numInputs;
-    _audioIn.data32        = inputs;
-    _audioIn.data64        = nullptr;
-    _audioIn.constant_mask = 0;
-    _audioIn.latency       = 0;
-
-    _audioOut.channel_count = numOutputs;
-    _audioOut.data32        = outputs;
-    _audioOut.data64        = nullptr;
-    _audioOut.constant_mask = 0;
-    _audioOut.latency       = 0;
-}
 
 const char* clapplugin::getCurrentClapGuiApi() {
 #if defined(__linux__)
@@ -807,7 +803,7 @@ void clapplugin::processNoteOn(int sampleOffset, int channel, int key, int veloc
     ev.note_id         = -1;
     ev.velocity        = velocity / 127.0;
 
-    _evIn.push(&ev.header);
+    pushInputEvent(&ev.header);
 }
 
 void clapplugin::processNoteOff(int sampleOffset, int channel, int key, int velocity) {
@@ -825,7 +821,7 @@ void clapplugin::processNoteOff(int sampleOffset, int channel, int key, int velo
     ev.note_id         = -1;
     ev.velocity        = velocity / 127.0;
 
-    _evIn.push(&ev.header);
+    pushInputEvent(&ev.header);
 }
 
 void clapplugin::processNoteAt(int sampleOffset, int channel, int key, int pressure) {
@@ -850,7 +846,7 @@ void clapplugin::processCC(int sampleOffset, int channel, int cc, int value) {
     ev.data[1]         = cc;
     ev.data[2]         = value;
 
-    _evIn.push(&ev.header);
+    pushInputEvent(&ev.header);
 }
 
 void clapplugin::processClapPlugin() {
@@ -878,19 +874,45 @@ void clapplugin::processClapPlugin() {
 
     _process.transport = nullptr;
 
-    _process.in_events  = _evIn.clapInputEvents();
+    _process.in_events  = _eventListInput.clapInputEvents();
     _process.out_events = _evOut.clapOutputEvents();
 
-    _process.audio_inputs        = &_audioIn;
-    _process.audio_inputs_count  = 1;
-    _process.audio_outputs       = &_audioOut;
-    _process.audio_outputs_count = 1;
+
+    /* TODO: cache the input buffer structure */
+    dawHandles->clapInputBuffers.resize(inputChannelsDesc.size());
+    dawHandles->clapOutputBuffers.resize(outputChannelsDesc.size());
+    dawHandles->dawInputBuffers.resize(inputChannelsDesc.size());
+    dawHandles->dawOutputBuffers.resize(outputChannelsDesc.size());
+
+
+    for (size_t i = 0; i < inputChannelsDesc.size(); ++i) {
+        auto& ch = inputChannelsDesc[i];
+        auto& dawBlock = dawHandles->dawInputBuffers[i];
+        dawBlock = blockInputs->SubChannelsBlock(ch.offset, ch.count);
+        auto& clapBuffer = dawHandles->clapInputBuffers[i];
+        clapBuffer = {};
+        clapBuffer.channel_count = dawBlock.channels;
+        clapBuffer.data32        = dawBlock.buf;
+    }
+    for (size_t i = 0; i < outputChannelsDesc.size(); ++i) {
+        auto& ch = outputChannelsDesc[i];
+        auto& dawBlock = dawHandles->dawOutputBuffers[i];
+        dawBlock = blockOutputs->SubChannelsBlock(ch.offset, ch.count);
+        auto& clapBuffer = dawHandles->clapOutputBuffers[i];
+        clapBuffer = {};
+        clapBuffer.channel_count = dawBlock.channels;
+        clapBuffer.data32        = dawBlock.buf;
+    }
+
+    _process.audio_inputs        = dawHandles->clapInputBuffers.data();
+    _process.audio_inputs_count  = dawHandles->clapInputBuffers.size();
+    _process.audio_outputs       = dawHandles->clapOutputBuffers.data();
+    _process.audio_outputs_count = dawHandles->clapOutputBuffers.size();
 
     _evOut.clear();
-    generatePluginInputEvents();
 
     if (isPluginSleeping()) {
-        if (!_scheduleProcess && _evIn.empty())
+        if (!_scheduleProcess && _eventListInput.empty())
             // The plugin is sleeping, there is no request to wake it up and there are no events to
             // process
             return;
@@ -914,7 +936,7 @@ void clapplugin::processClapPlugin() {
     handlePluginOutputEvents();
 
     _evOut.clear();
-    _evIn.clear();
+    _eventListInput.clear();
 
     _engineToAppValueQueue.producerDone();
 
@@ -937,7 +959,7 @@ void clapplugin::generatePluginInputEvents() {
                 ev.channel         = -1;
                 ev.note_id         = -1;
                 ev.value           = value.value;
-                _evIn.push(&ev.header);
+                pushInputEvent(&ev.header);
             });
 
     _appToEngineModQueue.consume([this](clap_id param_id, const AppToEngineParamQueueValue& value) {
@@ -954,7 +976,7 @@ void clapplugin::generatePluginInputEvents() {
         ev.channel         = -1;
         ev.note_id         = -1;
         ev.amount          = value.value;
-        _evIn.push(&ev.header);
+        pushInputEvent(&ev.header);
     });
 }
 
@@ -1010,13 +1032,13 @@ void clapplugin::paramFlushOnMainThread() {
 
     _scheduleParamFlush = false;
 
-    _evIn.clear();
+    _eventListInput.clear();
     _evOut.clear();
 
     generatePluginInputEvents();
 
     if (canUsePluginParams())
-        _pluginParams->flush(_plugin, _evIn.clapInputEvents(), _evOut.clapOutputEvents());
+        _pluginParams->flush(_plugin, _eventListInput.clapInputEvents(), _evOut.clapOutputEvents());
     handlePluginOutputEvents();
 
     _evOut.clear();
@@ -1583,6 +1605,7 @@ bool clapplugin::canUsePluginGui() const noexcept {
 }
 
 void clapplugin::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
+    lastInputEvent = 0;
     processBegin(numSamples);
     processClapPlugin();
 }
@@ -1592,6 +1615,10 @@ void clapplugin::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed
 }
 
 void clapplugin::processMidiMessages(std::vector<IMidiMsg>& midiEvents) {
+    /* NOTE: input events need to be inserted in chronological order */
+    /* Process queued input events (t=0) */
+    generatePluginInputEvents();
+    /* Process midi events (t >= 0)*/
     for (auto& evt : midiEvents) {
         uint8_t eventType    = evt.mStatus >> 4;
         uint8_t channel      = evt.mStatus & 0xf;
@@ -1646,9 +1673,45 @@ void clapplugin::load(DAW::Host::PluginManager* host) {
     effectbase::load(host);
     activate(format);
 }
+void clapplugin::configureIOPorts() {
+    auto inputCount = channelnum_t(0);
+    auto outputCount = channelnum_t(0);
+    inputChannelsDesc.clear();
+    outputChannelsDesc.clear();
+    if (!isPluginActive() && _pluginAudioPorts) {
+        inputCount  = static_cast<channelnum_t>(math::clamp(_pluginAudioPorts->count(_plugin, true), 0U, 255U));
+        outputCount = static_cast<channelnum_t>(math::clamp(_pluginAudioPorts->count(_plugin, false), 0U, 255U));
+        channelnum_t portOffsetInput = 0;
+        for (channelnum_t i = 0; i < inputCount; ++i) {
+            clap_audio_port_info_t info{};
+            if (_pluginAudioPorts->get(_plugin, i, true, &info)) {
+                DAW::channel_desc desc;
+                desc.offset = portOffsetInput;
+                desc.count = info.channel_count;
+                desc.name = info.name;
+                inputChannelsDesc.push_back(desc);
+                portOffsetInput += desc.count;
+            }
+        }
+        channelnum_t portOffsetOutput = 0;
+        for (channelnum_t i = 0; i < outputCount; ++i) {
+            clap_audio_port_info_t info{};
+            if (_pluginAudioPorts->get(_plugin, i, false, &info)) {
+                DAW::channel_desc desc;
+                desc.offset = portOffsetOutput;
+                desc.count = info.channel_count;
+                desc.name = info.name;
+                outputChannelsDesc.push_back(desc);
+                portOffsetOutput += desc.count;
+            }
+        }
+    }
+
+
+}
 void clapplugin::initBuffers() {
+    configureIOPorts();
     effectbase::initBuffers();
-    setPorts(blockInputs->channels, blockInputs->buf, blockOutputs->channels, blockOutputs->buf);
 }
 
 void clapplugin::updateFromMainThread() {
@@ -1768,4 +1831,9 @@ automatable_param_t* clapplugin::getParam(int32_t idx) {
         }
     }
     return param;
+}
+void clapplugin::pushInputEvent(clap_event_header_t* ev) {
+    dbgassert(ev->time >= lastInputEvent);
+    _eventListInput.push(ev);
+    lastInputEvent = ev->time;
 }

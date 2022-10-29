@@ -13,6 +13,7 @@
 #include <clap/helpers/event-list.hh>
 #include <clap/helpers/reducing-param-queue.hh>
 
+#include "audioblock.h"
 #include "host/host_plugin_window.h"
 #include "host/host_pluginmanager.h"
 #include "host/plugin/base/base-plugin.h"
@@ -49,10 +50,15 @@ public:
             int32_t paramIdx = -1;
             float   valBefore = 0;
         } paramEditing;
+        std::vector<clap_audio_buffer> clapInputBuffers;
+        std::vector<clap_audio_buffer> clapOutputBuffers;
+        std::vector<AudioBlock> dawInputBuffers;
+        std::vector<AudioBlock> dawOutputBuffers;
     };
     void* module;
     daw_handles_t* const dawHandles;
     int pluginCategory = -1;
+    uint64_t lastInputEvent = 0;
 public:
     clapplugin(DAW::Host::PluginManager& pluginMgr, const String& filePath, const String& name, uint32_t uId, int32_t globalId, IHostCallback* hostcallback);
     ~clapplugin() override;
@@ -87,6 +93,7 @@ public:
     bool hasWindowEditor() override;
     bool showWindow(bool bResetPosition) override;
     void updateWindowSize();
+    void configureIOPorts();
 
     // clap host side
     bool loadClapPlugin(DAW::Host::LoadResultSharedLibrary& lib);
@@ -98,7 +105,6 @@ public:
 
     void setPluginWindowVisibility(bool isVisible);
 
-    void setPorts(int numInputs, float** inputs, int numOutputs, float** outputs);
     void setParentWindow(WId parentWindow);
 
     void processBegin(int nframes);
@@ -326,11 +332,11 @@ private:
     ClapHostSemaphore _threadPoolSemaphoreDone;
 
     /* process stuff */
-    clap_audio_buffer _audioIn  = {};
-    clap_audio_buffer _audioOut = {};
-    clap::helpers::EventList _evIn;
+    clap::helpers::EventList _eventListInput;
     clap::helpers::EventList _evOut;
     clap_process _process;
+
+    void pushInputEvent(clap_event_header_t* ev);
 
     /* param update queues */
     std::unordered_map<clap_id, std::unique_ptr<PluginParam>> _params;
