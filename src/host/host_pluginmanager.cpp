@@ -625,10 +625,13 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
     const auto uId = req.uId;
     int32_t globalId = req.globalId;
 
-    String path, name, nameWithoutExt;
-    SplitPath(filepath, &path, &nameWithoutExt, nullptr, &name);
-
-    auto libResult = loadLib(filepath, req.moduleFormat);
+    String path, name, nameWithoutExt, fileExt;
+    SplitPath(filepath, &path, &nameWithoutExt, &fileExt, &name);
+    auto moduleFormat = req.moduleFormat;
+    if (fileExt == "clap") {
+        moduleFormat = 1;
+    }
+    auto libResult = loadLib(filepath, moduleFormat);
     void* moduleHandle = libResult.module;
 #ifdef _WIN32
     HMODULE hmodule = reinterpret_cast<HMODULE>(libResult.module);
@@ -674,7 +677,7 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
         VSTPluginMain_t* fn = reinterpret_cast<VSTPluginMain_t*>(libResult.entryPoint);
         aeffect = fn(masterCallBackSlot);
 #ifdef _WIN32
-    } else if (libResult.state == SharedLibState::DL_OPEN_FAILED) {
+    } else if (libResult.state == SharedLibState::DL_OPEN_FAILED && moduleFormat <= 0) {
         auto ret = loadPlugin_jbridge(masterCallBackSlot, filepath, &hmodule, &aeffect, req.bugfixFlags);
         libResult.state = ret == 0 ? SharedLibState::SUCCESS : SharedLibState::DL_UNKNOWN_FORMAT;
         libResult.type = ret == 0 ? SharedLibPluginType::VST2 : SharedLibPluginType::UNKNOWN;

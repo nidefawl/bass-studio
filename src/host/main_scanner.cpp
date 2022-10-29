@@ -300,6 +300,10 @@ static int waitTimeout(ipc_server& server, ProcessThread* thread, const char* pl
                 notificationStep     = timeSince_ms / 1000;
                 log_message("Waiting for Plugin %s to respond... %zds left", plugName, secondsLeft);
             }
+            if (userSentQuitRequest) {
+                log_message("User requested quit");
+                return 1;
+            }
             if (thread && !thread->isRunning()) {
                 log_message("Client died");
                 return 2;
