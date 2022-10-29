@@ -3,6 +3,7 @@
 #include <nanovg.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "logging.h"
 #include "math/vec.h"
 #include "math/mat.h"
 #include "fileio.h"
@@ -38,12 +39,12 @@ class window_impl : public window_abstract_t {
         String srcFragment;
         int64_t ret = ReadFileText("textured.vsh", srcVertex);
         if (ret <= 0) {
-            printf("Cannot read file shader.vert\n");
+            log_lf(Log::L_ERROR, "Cannot read file textured.vsh\n");
             return 1;
         }
         ret = ReadFileText("textured.fsh", srcFragment);
         if (ret <= 0) {
-            printf("Cannot read file shader.frag\n");
+            log_lf(Log::L_ERROR, "Cannot read file textured.fsh\n");
             return 1;
         }
 
@@ -66,10 +67,10 @@ class window_impl : public window_abstract_t {
         String log = getLog(1, program);
         if (getStatus(program, GL_LINK_STATUS) != 1) {
             checkGLError("getStatus");
-            printf("Link error: %s\n", StringAsCStr(log));
+            log_lf(Log::L_ERROR, "Link error: %s\n", StringAsCStr(log));
             return 1;
         } else if (!log.empty()) {
-            printf("Link log: %s\n", StringAsCStr(log));
+            log_lf(Log::L_WARN, "Link log: %s\n", StringAsCStr(log));
         }
         checkGLError("linkProgram");
         glUseProgram(program);

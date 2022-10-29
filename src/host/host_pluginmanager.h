@@ -158,7 +158,7 @@ private:
     class pluginmanager_impl {
     public:
         daw_tls::tlsinstance tls;
-        std::unique_ptr<ProcessThread> vstscannerProcessThread;
+        std::unique_ptr<ProcessThread> threadPluginScannerProcess;
         int scanningState = 0;
         int32_t vst2TransportStateFlags = 0;
     };

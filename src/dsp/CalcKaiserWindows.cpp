@@ -282,7 +282,6 @@ double modZeroBessel(double x)
 		num *= x_2 * x_2;
 		fact *= i;
 		result += num / (fact * fact);
-//		printf("%f %f %f\n", num, fact, result);
 	}
 
 	return result;

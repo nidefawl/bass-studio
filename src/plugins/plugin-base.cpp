@@ -48,7 +48,7 @@ static int cb_(struct dl_phdr_info *Info, size_t Sz, void *Data)
         uintptr_t e = b + Info->dlpi_phdr[i].p_memsz;
         if(a>=b && a<e){
             //if this is cb_'s segment, we're done
-            printf("NAME=%s\n", Info->dlpi_name);
+            // printf("NAME=%s\n", Info->dlpi_name);
             *((String*)Data) = Info->dlpi_name;
             //nonzero signals end of iteration
             return 1;

@@ -64,11 +64,11 @@ int GLPathRendererParAdvanced::init() {
     String log = getLog(1, program);
     if (getStatus(program, GL_LINK_STATUS) != 1) {
         checkGLError("getStatus");
-        printf("Link error: %s\n", StringAsCStr(log));
+        log_lf(Log::L_ERROR, "Link error: %s\n", StringAsCStr(log));
         return 1;
     }
     if (!log.empty()) {
-        printf("Link log: %s\n", StringAsCStr(log));
+        log_lf(Log::L_WARN, "Link log: %s\n", StringAsCStr(log));
     }
     checkGLError("linkProgram");
     glUseProgram(program);

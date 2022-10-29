@@ -1030,7 +1030,6 @@ public:
                 const PmDeviceInfo* info = Pm_GetDeviceInfo(i);
                 if (info->input) log_printf("%d: %s, %s\n", i, info->interf, info->name);
             }
-            printf("MIDI output devices:\n");
             for (int i = 0; i < Pm_CountDevices(); i++) {
                 const PmDeviceInfo* info = Pm_GetDeviceInfo(i);
                 if (info->output) log_printf("%d: %s, %s\n", i, info->interf, info->name);

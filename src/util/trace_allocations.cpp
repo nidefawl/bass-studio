@@ -32,8 +32,8 @@ namespace {
     }
     void endTrace() {
         recordStats = false;
-        printf("Single  %zd allocations, %zu bytes\n", allocStats.numAllocations, allocStats.bytesAllocated);
-        printf("Array   %zd allocations, %zu bytes\n", allocArrayStats.numAllocations, allocArrayStats.bytesAllocated);
+        std::printf("Single  %zd allocations, %zu bytes\n", allocStats.numAllocations, allocStats.bytesAllocated);
+        std::printf("Array   %zd allocations, %zu bytes\n", allocArrayStats.numAllocations, allocArrayStats.bytesAllocated);
     }
 }
 

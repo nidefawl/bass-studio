@@ -158,7 +158,6 @@ public:
         if (ReadFile(pipe, buf, buflen, &bytesSent, nullptr)) {
             return static_cast<int>(bytesSent);
         }
-        printf("ReadFile: %lu\n", bytesSent);
         printLastError("ReadFile");
         return 0;
     }
@@ -167,7 +166,6 @@ public:
         if (WriteFile(pipe, buf, buflen, &bytesSent, nullptr)) {
             return static_cast<int>(bytesSent);
         }
-        printf("WriteFile: %lu\n", bytesSent);
         printLastError("WriteFile");
         return 0;
     }

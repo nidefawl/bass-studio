@@ -5,6 +5,7 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
+#include "logging.h"
 #include "str_util.h"
 #include "thread.h"
 #include "exceptions.h"
@@ -339,7 +340,7 @@ bool ProcessThread::checkException() {
         try {
             std::rethrow_exception(m_threadImpl->m_eptr);
         } catch (const std::exception& ex) {
-            printf("process[%s] had exception: %s\n", StringAsCStr(m_threadImpl->m_lastCmd), ex.what());
+            log_lf(Log::L_ERROR, "process[%s] had exception: %s\n", StringAsCStr(m_threadImpl->m_lastCmd), ex.what());
         }
         return true;
     }

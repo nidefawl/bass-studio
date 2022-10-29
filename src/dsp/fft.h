@@ -26,8 +26,7 @@ struct fft_ctxt_t {
         tmp.resize(fftLen);
         cfg = kiss_fftr_alloc(fftLen, 0 /*is_inverse_fft*/, NULL, NULL);
         if (!cfg) {
-            printf("not enough memory\n");
-            exit(1);
+            log_lf(Log::L_ERROR, "kiss_fftr_alloc returned nullptr\n");
         }
     }
     ~fft_ctxt_t() { kiss_fftr_free(cfg); }

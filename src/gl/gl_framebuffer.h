@@ -150,7 +150,7 @@ public:
         int status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
         if (status != GL_FRAMEBUFFER_COMPLETE) {
             isComplete = false;
-            printf("Framebuffer is incomplete (%d)\n", status);
+            log_lf(Log::L_ERROR, "Framebuffer is incomplete (%d)\n", status);
             return;
         }
         if (GL_ERROR_CHECKS) checkGLError("FrameBuffer glCheckFramebufferStatus");
@@ -290,7 +290,6 @@ public:
             }
         }
         if (n == 0) {
-            printf("drawbuffers GL_NONE!\n");
             drawBufAtt.push_back(GL_NONE);
             n++;
         }

@@ -99,7 +99,7 @@ endforeach ()
 
 if (MINGW)
   # The SEH assembly will not work correctly on clang mingw if any level of optimization is applied
-  set(SRC_FILES_NO_OPTIMIZE src/host/plugin/vst-plugin-dispatch.cpp)
+  set(SRC_FILES_NO_OPTIMIZE src/host/plugin/vst/vstplugin-dispatch.cpp)
   set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections")
   set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 endif()
@@ -225,7 +225,7 @@ if (PROJECT_REQUIRE_LIB)
   endif()
 
   if (PROJECT_BUILD_SCANNER)
-    DEFINE_EXECUTABLE("vstscanner" "src/host/main_scanner.cpp")
+    DEFINE_EXECUTABLE("pluginscanner" "src/host/main_scanner.cpp")
   endif()
 
   if (PROJECT_BUILD_CLI_HOST)
@@ -376,15 +376,15 @@ if (WIN32 AND NOT MSVC AND PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH) # remove /lib
     set(PATH_RUNTIMES "${PATH_RUNTIMES}/bin")
     add_custom_target(windows-installer
-      DEPENDS DAW vstscanner
+      DEPENDS DAW pluginscanner
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
       COMMAND ${CMAKE_COMMAND} -E make_directory dist/bin
       COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE:DAW> dist/bin/DAW.debug
       COMMAND ${CMAKE_OBJCOPY} --strip-all $<TARGET_FILE:DAW> dist/bin/DAW${CMAKE_EXECUTABLE_SUFFIX}
       COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=dist/bin/DAW.debug dist/bin/DAW${CMAKE_EXECUTABLE_SUFFIX}
-      COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE:vstscanner> dist/bin/vstscanner.debug
-      COMMAND ${CMAKE_OBJCOPY} --strip-all $<TARGET_FILE:vstscanner> dist/bin/vstscanner${CMAKE_EXECUTABLE_SUFFIX}
-      COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=dist/bin/vstscanner.debug dist/bin/vstscanner${CMAKE_EXECUTABLE_SUFFIX}
+      COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE:pluginscanner> dist/bin/pluginscanner.debug
+      COMMAND ${CMAKE_OBJCOPY} --strip-all $<TARGET_FILE:pluginscanner> dist/bin/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}
+      COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=dist/bin/pluginscanner.debug dist/bin/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}
       COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX} dist/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}
       # COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}archive_release${CMAKE_SHARED_MODULE_SUFFIX} dist/bin/${CMAKE_SHARED_LIBRARY_PREFIX}archive_release${CMAKE_SHARED_MODULE_SUFFIX}
       COMMAND ${CMAKE_COMMAND} -E copy ${PATH_RUNTIMES}/libc++${CMAKE_SHARED_MODULE_SUFFIX} dist/bin/libc++${CMAKE_SHARED_MODULE_SUFFIX}

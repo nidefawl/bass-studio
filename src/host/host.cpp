@@ -1417,7 +1417,7 @@ uint32_t Host::finishTreadTasks(uint32_t tasksRunning, bool wait) {
                             std::rethrow_exception(eptr);
                         }
                         catch(const std::exception &ex) {
-                            printf("task[%d] had exception: %s\n", (int)i, ex.what());
+                            log_lf(Log::L_ERROR, "task[%d] had exception: %s\n", (int)i, ex.what());
                         }
                     }
                 } else {

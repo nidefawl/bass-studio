@@ -28,6 +28,6 @@ void handleStdException(std::exception& e);
     do {                            \
         int* volatile iptr = 0;     \
         int i              = *iptr; \
-        printf("%d", i);            \
+        std::printf("%d", i);       \
     } while (0)
 #endif

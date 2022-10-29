@@ -62,11 +62,11 @@ int32_t buildShaderProgram(const std::vector<glshader_src>& srcList) {
     if (getStatus(newprogram, GL_LINK_STATUS) != 1) {
         glDeleteProgram(newprogram);
         checkGLError("getStatus");
-        printf("Link error: %s\n", StringAsCStr(log));
+        log_lf(Log::L_ERROR, "Link error: %s\n", StringAsCStr(log));
         return -1;
     }
     if (!log.empty()) {
-        printf("Link log: %s\n", StringAsCStr(log));
+        log_lf(Log::L_WARN, "Link log: %s\n", StringAsCStr(log));
     }
     checkGLError("linkProgram");
     return static_cast<int32_t>(newprogram);

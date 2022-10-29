@@ -93,7 +93,6 @@ String getLog(int logtype, GLuint obj) {
     }
     checkGLError("glGetProgramiv");
     if (maxLength <= 0) {
-        //    printf("GL_INFO_LOG_LENGTH: %d\n", maxLength);
         return "";
     }
     // The maxLength includes the NULL character

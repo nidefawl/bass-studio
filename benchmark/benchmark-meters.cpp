@@ -144,9 +144,7 @@ int main(int argc, char** argv) {
         benchmark::RunSpecifiedBenchmarks();
         benchmark::Shutdown();
     } catch (std::exception& e) {
-        std::printf("exception %s\n", e.what());
-    } catch (...) {
-        std::printf("unhandled exception\n");
+        log_lf(Log::L_ERROR, "exception %s\n", e.what());
     }
     return 0;
 }

@@ -47,7 +47,7 @@
 #endif
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
-namespace VSTScannerImpl {
+namespace PluginScannerImplementation {
 inline String APPLE_getExecutablePath() {
     String ret = "plugin_scan";
     char path[1024];
@@ -57,12 +57,12 @@ inline String APPLE_getExecutablePath() {
     }
     return ret;
 }
-} // namespace VSTScannerImpl
+} // namespace PluginScannerImplementation
 #endif
 
 void createTables(SQLite::Database& db);
 
-namespace VSTScannerImpl {
+namespace PluginScannerImplementation {
 
 #define PROC_SIDE_NONE 0
 #define PROC_SIDE_SERVER 1
@@ -78,7 +78,7 @@ static int logPrefixIdx = PROC_SIDE_NONE;
 
 #define log_message(...)                                                                      \
     do {                                                                                      \
-        String msg = String(::VSTScannerImpl::szLogPrefixes[::VSTScannerImpl::logPrefixIdx]); \
+        String msg = String(::PluginScannerImplementation::szLogPrefixes[::PluginScannerImplementation::logPrefixIdx]); \
         msg += StringFormat(__VA_ARGS__);                                                     \
         msg += "\n";                                                                          \
         getGlobalLogger()->log(Log::L_INFO, msg.c_str(), msg.length());                       \
@@ -237,7 +237,7 @@ int writeToIPC(IPC& ipcConnection, T& hdr) {
     return E_WRITE_OK;
 }
 
-struct vstscanner_server_options {
+struct pluginscanner_server_options {
     String clapPluginPath;
     String vstPlugPath;
     bool dryRun             = false;
@@ -304,7 +304,7 @@ static int waitTimeout(ipc_server& server, ProcessThread* thread, const char* pl
     return 0;
 }
 
-static int readClientResponses(const vstscanner_server_options& options, ipc_server& server, ProcessThread* thread, const request_type_vst24_t& req, SQLite::Statement& queryInsertPlugin, FileFound& file, int64_t timeDisk, bool forcedisable) {
+static int readClientResponses(const pluginscanner_server_options& options, ipc_server& server, ProcessThread* thread, const request_type_vst24_t& req, SQLite::Statement& queryInsertPlugin, FileFound& file, int64_t timeDisk, bool forcedisable) {
     auto timeStartScan_ms     = getTimeMillis();
     int64_t timeoutPluginScan_ms = options.unresponsiveTimeoutSeconds * int64_t(1000);
     int nPluginsScanned           = 0;
@@ -329,7 +329,7 @@ static int readClientResponses(const vstscanner_server_options& options, ipc_ser
                     return -3;
                 }
 
-                printf("%s %s\n", respLoadSinglePlugin.szPath, "GOOD");
+                log_lf(Log::L_INFO, "Plugin '%s': Status: %s\n", respLoadSinglePlugin.szPath, "GOOD");
                 auto& data = respLoadSinglePlugin;
                 String relPath = file.name;
                 if (file.path.length() > options.clapPluginPath.length()) {
@@ -375,7 +375,7 @@ static int readClientResponses(const vstscanner_server_options& options, ipc_ser
                     return -3;
                 }
 
-                printf("%s %s\n", respLoadSinglePlugin.szPath, "GOOD");
+                log_lf(Log::L_INFO, "Plugin '%s': Status: %s\n", respLoadSinglePlugin.szPath, "GOOD");
                 auto& data = respLoadSinglePlugin;
                 String relPath = file.name;
                 if (file.path.length() > options.vstPlugPath.length()) {
@@ -436,7 +436,7 @@ static int readClientResponses(const vstscanner_server_options& options, ipc_ser
 
 
                 auto& data = respShellPluginEntry;
-                printf("%s %s %s isSynth: %d, uid %08X\n", StringAsCStr(file.path), data.szName, "GOOD", data.isSynth, data.uniqueID);
+                log_lf(Log::L_INFO, "Shell pluign %s %s %s isSynth: %d, uid %08X\n", StringAsCStr(file.path), data.szName, "GOOD", data.isSynth, data.uniqueID);
                 try {
                     queryInsertPlugin.reset();
                     int bndIdx = 1;
@@ -476,7 +476,7 @@ static int readClientResponses(const vstscanner_server_options& options, ipc_ser
     return -1;
 }
 
-static int runScannerServer(const vstscanner_server_options& options) {
+static int runScannerServer(const pluginscanner_server_options& options) {
 
     if (!options.updatePattern.empty()) {
         log_message("Update *%s*", StringAsCStr(options.updatePattern));
@@ -567,7 +567,7 @@ static int runScannerServer(const vstscanner_server_options& options) {
             bool forcedisable  = false;
             queryPlugin.reset();
             queryPlugin.bind(1, file.path);
-            String reason = "New or not a VST dll";
+            String reason = "New plugin (or not a plugin .dll)";
             if (queryPlugin.executeStep()) {
                 id            = queryPlugin.getColumn(0).getInt();
                 forcedisable  = queryPlugin.getColumn(2).getInt() > 0;
@@ -886,7 +886,7 @@ static int runScannerClient() {
     return 0;
 }
 
-} // namespace VSTScannerImpl
+} // namespace PluginScannerImplementation
 
 int main(int argc, char* argv[]) {
     seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
@@ -907,13 +907,13 @@ int main(int argc, char* argv[]) {
         log_message("-update <plugin-name>\t(server only)\tRescan a specific plugin. Does partial name matching, case-insensitive");
         log_message("-rescan \t\t(server only)\tRescan all registered VST2 plugins, even if their disk timestamp has not changed");
         log_message("-path <directory>\t(server only)\tManually specify directory to scan for plugins");
-        log_message("-timeout <seconds>\t(server only)\tSet the timeout for unresponsive plugins. Default is %d seconds", VSTScannerImpl::timeoutdefault);
+        log_message("-timeout <seconds>\t(server only)\tSet the timeout for unresponsive plugins. Default is %d seconds", PluginScannerImplementation::timeoutdefault);
         log_message("\nThe default command to scan plugins is:");
         log_message("%s -server\n", argv[0]);
         return 0;
     }
 #ifdef _WIN32
-    if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE) VSTScannerImpl::ConsoleHandler, TRUE)) {
+    if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE) PluginScannerImplementation::ConsoleHandler, TRUE)) {
         log_lf(Log::L_ERROR, "Unable to install handler!\n");
         return EXIT_FAILURE;
     }
@@ -921,14 +921,14 @@ int main(int argc, char* argv[]) {
     auto& tls = daw_tls::initNewTls();
 
     if (argc > 1 && !strcmp("-server", argv[1])) {
-        VSTScannerImpl::logPrefixIdx = PROC_SIDE_SERVER;
-        VSTScannerImpl::vstscanner_server_options options;
+        PluginScannerImplementation::logPrefixIdx = PROC_SIDE_SERVER;
+        PluginScannerImplementation::pluginscanner_server_options options;
         options.launchProcess              = true;
         options.dryRun                     = false;
         options.updatePattern              = "";
         options.fullRescan                 = false;
         options.checkDiskTimestamp         = true;
-        options.unresponsiveTimeoutSeconds = VSTScannerImpl::timeoutdefault;
+        options.unresponsiveTimeoutSeconds = PluginScannerImplementation::timeoutdefault;
         String vstPlugPath;
         String clapPluginPath;
         for (int i = 2; i < argc; i++) {
@@ -989,12 +989,12 @@ int main(int argc, char* argv[]) {
     } else if (argc > 2 && !strcmp("-test", argv[argc - 2])) {
         setExceptionHandler();
         seqthreads::threadSleep(120);
-        VSTScannerImpl::request_type_vst24_t req;
+        PluginScannerImplementation::request_type_vst24_t req;
         String fPath = argv[argc - 1];
         safe_strcpy(req.szPath, fPath);
-        VSTScannerImpl::response_type_vst24_plugin_t respPlugin;
-        VSTScannerImpl::response_type_clapplugin_t respClap;
-        int retCode = VSTScannerImpl::runPluginTest(req, respPlugin, respClap);
+        PluginScannerImplementation::response_type_vst24_plugin_t respPlugin;
+        PluginScannerImplementation::response_type_clapplugin_t respClap;
+        int retCode = PluginScannerImplementation::runPluginTest(req, respPlugin, respClap);
         if (retCode == CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGIN) {
             log_message("Vst Plugin %s: Good", StringAsCStr(fPath));
         } else if (retCode == CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN) {
@@ -1003,10 +1003,10 @@ int main(int argc, char* argv[]) {
             log_lf(Log::L_WARN, "Plugin %s: Failed %d\n", StringAsCStr(fPath), retCode);
         }
     } else if (argc > 0 && !strcmp("-client", argv[argc - 1])) {
-        VSTScannerImpl::logPrefixIdx = PROC_SIDE_CLIENT;
+        PluginScannerImplementation::logPrefixIdx = PROC_SIDE_CLIENT;
         setExceptionHandler();
         seqthreads::threadSleep(120);
-        VSTScannerImpl::runScannerClient();
+        PluginScannerImplementation::runScannerClient();
     } else {
         log_lf(Log::L_ERROR, "No command. Use -server to update plugin database\n");
     }

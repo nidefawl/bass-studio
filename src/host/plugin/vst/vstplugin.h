@@ -88,7 +88,6 @@ public:
             void* ptr     = nullptr,
             float opt     = 0);
     bool getNameString(char* szBuf);
-    void printNames();
     void onWindowResize(ivec2 size) override;
     bool onShow(host_plugin_window* _window) override;
     bool onClose() override;

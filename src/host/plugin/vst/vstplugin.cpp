@@ -111,20 +111,6 @@ void vstplugin::onDisable() {
     }
 }
 
-void vstplugin::printNames() {
-    char buf[256];
-    printf("Name: %s\n", StringAsCStr(sName));
-    if (this->dispatch(effGetVendorString, 0, 0, (void*) buf) && buf[0] != 0) {
-        printf("effGetVendorString: %s\n", buf);
-    }
-    if (this->dispatch(effGetProductString, 0, 0, (void*) buf) && buf[0] != 0) {
-        printf("effGetProductString: %s\n", buf);
-    }
-    if (this->dispatch(effGetEffectName, 0, 0, (void*) buf) && buf[0] != 0) {
-        printf("effGetEffectName: %s\n", buf);
-    }
-}
-
 bool vstplugin::getNameString(char* szBuf) {
     if (this->dispatch(effGetProductString, 0, 0, (void*) szBuf) && szBuf[0] != 0) {
         return true;

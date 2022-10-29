@@ -1,5 +1,6 @@
 #include "host/host_pluginmanager.h"
 #include "assert_dbg.h"
+#include "fileio.h"
 #include "logging.h"
 #include "modules.h"
 #include "host/plugin/base/base-plugin.h"
@@ -737,25 +738,31 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
 void PluginManager::scanPlugins() {
     if (mgrImpl->scanningState == 0) {
         try {
-            mgrImpl->vstscannerProcessThread = std::make_unique<ProcessThread>();
-            String nameScannerExe = "daw-vstscanner.exe";
-            if (!FileExists(nameScannerExe)) {
-                nameScannerExe = "vstscanner-Clang-debug.exe";
+            mgrImpl->threadPluginScannerProcess = std::make_unique<ProcessThread>();
+            
+            auto scannerNames = {
+                "daw-pluginscanner.exe", 
+                "pluginscanner-Clang-debug.exe",
+                "pluginscanner-MSVC-debug.exe"
+            };
+            String filename = "daw-pluginscanner.exe";
+            for (auto* name : scannerNames) {
+                if (FileExists(name)){
+                    filename = name;
+                    break;
+                }
             }
-            if (!FileExists(nameScannerExe)) {
-                nameScannerExe = "vstscanner-MSVC-debug.exe";
-            }
-            mgrImpl->vstscannerProcessThread->startProcess(nameScannerExe, "-server -auto", "");
+            mgrImpl->threadPluginScannerProcess->startProcess(filename, "-server -auto", "");
             seqthreads::threadSleep(200);
-            if (!mgrImpl->vstscannerProcessThread->isRunning()) {
-                mgrImpl->vstscannerProcessThread->checkException();
-                log_lf(Log::L_ERROR, "Failed starting vstscanner\n");
+            if (!mgrImpl->threadPluginScannerProcess->isRunning()) {
+                mgrImpl->threadPluginScannerProcess->checkException();
+                log_lf(Log::L_ERROR, "Failed starting daw-pluginscanner\n");
             } else {
                 mgrImpl->scanningState = 1;
-                log_lf(Log::L_DEBUG, "vstscanner is running\n");
+                log_lf(Log::L_DEBUG, "daw-pluginscanner is running\n");
             }
         } catch (std::exception& e) {
-            log_lf(Log::L_ERROR, "Failed starting vstscanner: %s\n", e.what());
+            log_lf(Log::L_ERROR, "Failed starting daw-pluginscanner: %s\n", e.what());
         }
     }
 }
@@ -763,10 +770,10 @@ void PluginManager::scanPlugins() {
 void PluginManager::checkScanner() {
     try {
         static int nCalls = 0;
-        if (mgrImpl->scanningState && mgrImpl->vstscannerProcessThread) {
-            if (!mgrImpl->vstscannerProcessThread->isRunning()) {
-                mgrImpl->vstscannerProcessThread->joinProcess();
-                mgrImpl->vstscannerProcessThread.reset();
+        if (mgrImpl->scanningState && mgrImpl->threadPluginScannerProcess) {
+            if (!mgrImpl->threadPluginScannerProcess->isRunning()) {
+                mgrImpl->threadPluginScannerProcess->joinProcess();
+                mgrImpl->threadPluginScannerProcess.reset();
                 DawInstance::get()->getPluginDatabase().reopen();
                 this->mgrImpl->scanningState = 0;
             } else {
@@ -784,9 +791,9 @@ void PluginManager::checkScanner() {
 
 void PluginManager::stopScanner() {
     try {
-        if (mgrImpl->scanningState && mgrImpl->vstscannerProcessThread) {
-            if (mgrImpl->vstscannerProcessThread->isRunning()) {
-                mgrImpl->vstscannerProcessThread->killProcess();
+        if (mgrImpl->scanningState && mgrImpl->threadPluginScannerProcess) {
+            if (mgrImpl->threadPluginScannerProcess->isRunning()) {
+                mgrImpl->threadPluginScannerProcess->killProcess();
                 this->mgrImpl->scanningState = 0;
                 if (DawInstance::get()) {
                     DawInstance::get()->getPluginDatabase().reopen();

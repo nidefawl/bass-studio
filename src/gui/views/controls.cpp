@@ -461,7 +461,6 @@ void gui_signaturecontrol_input::handleDraggedMove(MouseEvent& evt) {
         } else {
             int prev = daw->sigDen();
             int now  = 1 << CLAMP_I((int) log2(prev) - disty, 0, 4);
-            printf("old %d new %d\n", prev, now);
             daw->setDen(now);
         }
         daw->updateVisibleTrackContents();

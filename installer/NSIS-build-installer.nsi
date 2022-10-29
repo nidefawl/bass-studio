@@ -94,7 +94,7 @@ ${INSTALL_TYPE}
 SetOverwrite ifnewer
 SetOutPath "$INSTDIR"
 File /oname=${MAIN_APP_EXE} "${DIST_LOC}\DAW.exe"
-File /oname=daw-vstscanner.exe "${DIST_LOC}\vstscanner.exe"
+File /oname=daw-pluginscanner.exe "${DIST_LOC}\pluginscanner.exe"
 File "${DIST_LOC}\libsoxr-clang-release.dll"
 File "${DIST_LOC}\libc++.dll"
 SetOutPath "$INSTDIR\res"
@@ -225,7 +225,7 @@ SectionEnd
 Section Uninstall
 ${INSTALL_TYPE}
 Delete "$INSTDIR\${MAIN_APP_EXE}"
-Delete "$INSTDIR\daw-vstscanner.exe"
+Delete "$INSTDIR\daw-pluginscanner.exe"
 Delete "$INSTDIR\libsoxr-clang-release.dll"
 Delete "$INSTDIR\libc++.dll"
 Delete "$INSTDIR\dash-lines-2D.fsh"
