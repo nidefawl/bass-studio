@@ -105,10 +105,7 @@ void vstplugin::onDisable() {
     isInSuspend = true;
     this->dispatch(effStopProcess);
     this->dispatch(effMainsChanged, 0, false);
-    auto stage = getTrackLink();
-    if (assert_expr(stage)) {
-        stage->sendNotesOff();
-    }
+    sendNotesOff();
 }
 
 bool vstplugin::getNameString(char* szBuf) {
