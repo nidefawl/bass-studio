@@ -446,7 +446,7 @@ bool PlaybackThread::isLocked() {
 }
 
 bool PlaybackThread::isRunning() {
-    return _M_impl->isLocked();
+    return _M_impl->isRunning();
 }
 
 ThreadLock& ThreadLock::operator=(ThreadLock&& other) noexcept {
