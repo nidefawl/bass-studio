@@ -54,8 +54,8 @@ public:
     DAW::rmsmeter meterIn;
     std::vector<int32_t> heldNotes;
     sampleformat_t format;
-    AudioBlock* blockInputs        = nullptr;// guaranteed to have at least 2 channels
-    AudioBlock* blockOutputs       = nullptr;// guaranteed to have at least 2 channels
+    AudioBlock* blockInputs        = nullptr;
+    AudioBlock* blockOutputs       = nullptr;
     int32_t pluginType             = 0;
     int32_t projectGlobalId        = 0;
     int32_t localDbId              = -1;
