@@ -10,6 +10,7 @@
 #include <unordered_set>
 
 #include "assert_dbg.h"
+#include "automation.h"
 #include "buildinfo.h"
 #include "clap-plugin.h"
 #include "gui/plugin/plugin.h"
@@ -1110,7 +1111,6 @@ void clapplugin::updateClapFromMainThread() {
 }
 
 void clapplugin::setParamValueByHost(PluginParam& param, double value) {
-    checkForMainThread();
 
     param.setValue(value);
 
@@ -1120,7 +1120,6 @@ void clapplugin::setParamValueByHost(PluginParam& param, double value) {
 }
 
 void clapplugin::setParamModulationByHost(PluginParam& param, double value) {
-    checkForMainThread();
 
     param.setModulation(value);
 
