@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <nanovg.h>
 #include <nanovg_min.h>
@@ -654,7 +655,7 @@ public:
                 if (shapeLoaded.version) {
                     auto& presetShape = shapeLoaded.curve;
                     shape_t tmp{presetShape.flags, std::move(presetShape.pts), presetShape.name, 0.0f };
-                    tmp.sort();
+                    // tmp.sort();
                     controls.selectPreset.setString(tmp.name);
                     *shape.curve = tmp;
                     if (shape.callback)
@@ -734,22 +735,37 @@ public:
     }
 };
 
-void ShapeEdit::onBeginDragCurveEditor(MouseEvent& evt) {
+bool ShapeEdit::onBeginDragCurveEditor(MouseEvent& evt) {
     dragged = {};
     curveBegin = *curve;
     curveTmp   = *curve;
     vec2 local = toNormalizedSpace(evt.relMousepos);
+    bool hasBegin = false;
     if (evt.type == MouseEventType::M_EVT_DOUBLECLICK&&!(curve->flags & SHAPE_LOCK_POINTS)) {
-        curveTmp.pts.push_back({ { local.x, local.y }, 0.5f });
-        curveTmp.sort();
+        int64_t idx = -1;
+        int64_t len = int64_t(curveTmp.pts.size());
+        for (int64_t i = 0; i < len; ++i) {
+            if (curveTmp.pts[i].pos.x>local.x) {
+                idx = i;
+                break;
+            }
+        }
+        if (idx == -1) {
+            curveTmp.pts.push_back({ { local.x, local.y }, 0.5f });
+        } else {
+            curveTmp.pts.insert(curveTmp.pts.begin() + idx, { { local.x, local.y }, 0.5f });
+        }
         if (callback)
             callback(curveTmp);
+        hasBegin = true;
     } else if (hasControlHandles()) {
         dragged      = curve->getMouseHit(local, editorScale);
         dragBeginPos = local;
+        hasBegin     = dragged.type != shape_t::hittype::HIT_NONE;
     }
     wasAltBegin   = isAlt(evt.kbmods);
     wasShiftBegin = isShift(evt.kbmods);
+    return hasBegin;
 }
 
 bool ShapeEdit::mouseHitCurveEditor(const shape_t& shape, ivec2 mpos) const {
@@ -795,7 +811,7 @@ void ShapeEdit::onMoveDragCurveEditor(MouseEvent& evt) {
                 curveTmp.pts.insert(curveTmp.pts.begin() + idxInsert++, { { beginRange, local.y }, 0.5f });
                 curveTmp.pts.insert(curveTmp.pts.begin() + idxInsert++, { { endRange, local.y }, 0.5f });
                 curveTmp.pts.insert(curveTmp.pts.begin() + idxInsert++, { { endRange, rightVal }, 0.5f });
-                curveTmp.sort();
+                // curveTmp.sort();
             }
             if (callback)
                 callback(curveTmp);
@@ -854,7 +870,7 @@ void ShapeEdit::onMoveDragCurveEditor(MouseEvent& evt) {
                 pt.pos = snapped;
             }
 
-            curveTmp.sort();
+            // curveTmp.sort();
             if (callback)
                 callback(curveTmp);
             if (curve && curve->flags & SHAPE_LOCK_POINTS) {
@@ -920,7 +936,7 @@ bool ShapeEdit::onRightClickCurveEditor(MouseEvent& evt) {
             if (callback) {
                 curveTmp = *curve;
                 curveTmp.pts.erase(curveTmp.pts.begin() + minPt);
-                curveTmp.sort();
+                // curveTmp.sort();
                 callback(curveTmp);
             } else if (curve) {
                 curve->pts.erase(curve->pts.begin() + minPt);

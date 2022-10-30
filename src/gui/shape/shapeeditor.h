@@ -47,7 +47,7 @@ public:
     virtual ~ShapeEdit() = default;
     bool hasControlHandles() const;
     void setEditorCurve(shape_t* curve);
-    void onBeginDragCurveEditor(MouseEvent& evt);
+    bool onBeginDragCurveEditor(MouseEvent& evt);
     void onMoveDragCurveEditor(MouseEvent& evt);
     void onReleaseDragCurveEditor(MouseEvent& evt);
     bool onRightClickCurveEditor(MouseEvent& evt);
