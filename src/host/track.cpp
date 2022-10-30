@@ -1185,8 +1185,10 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
                 });
                 if (it != m_heldNotes.end()) {
                     log_lf(Log::L_WARN, "Block %d-%d: %s ALREADY HELD at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.start() - blockStart, note.time, note.len);
-                } else if (logProcessedNotes) {
-                    log_lf(Log::L_DEBUG, "Block %d-%d: %s ON at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.start() - blockStart, note.time, note.len);
+                } else {
+                    if (logProcessedNotes) {
+                        log_lf(Log::L_DEBUG, "Block %d-%d: %s ON at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.start() - blockStart, note.time, note.len);
+                    }
                     InsertMidiEventSorted(noteEvents, {note.pitch, note.velocity, note.start() - blockStart, note.start(), true, false});
                     m_heldNotes.push_back(note);
                 }
@@ -1317,7 +1319,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
 #endif
     }
 
-#ifndef DAW_DEBUG_MIDI_PROCESSING
+#ifdef DAW_DEBUG_MIDI_PROCESSING
     validateProcessedMidi(state, flags, blockStart, blockEnd, loopStart, loopEnd, prjGlobals, inputLatency);
     updateProfilingTime(procMidiStats.tm7ValidateMidi, tmr.getTimeReset());
 #endif
