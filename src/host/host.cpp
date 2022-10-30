@@ -84,20 +84,24 @@ namespace DAW::Host {
 
 void UpdateClapTime(clap_event_transport_t& timeinfo, const sampleformat_t& m_sampleFormatInternal, const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state) {
     timeinfo.header.time = 0;
-    timeinfo.bar_number = math::floordS32(dTickPos / (double) TICKS_BAR);
-    timeinfo.bar_start = math::floordS64(dTickPos / (double) TICKS_BAR) * 4;
-    timeinfo.song_pos_beats = math::floordS64((dTickPos/(double)TICKS_QUARTER));
-    timeinfo.loop_start_beats = math::floordS64((prjGlobals.loopStart/(double)TICKS_QUARTER));
-    timeinfo.loop_end_beats = math::floordS64(((prjGlobals.loopStart+prjGlobals.loopLen)/(double)TICKS_QUARTER));
+    double dBarPos = dTickPos / double(TICKS_BAR);
+    double dQuarterPos = dTickPos / double(TICKS_QUARTER);
+    timeinfo.bar_number = math::floordS32(dBarPos);
+    timeinfo.bar_start = math::floordS64(timeinfo.bar_number * 4.0 * CLAP_BEATTIME_FACTOR);
+    timeinfo.song_pos_beats = math::floordS64(dQuarterPos * CLAP_BEATTIME_FACTOR);
+    timeinfo.loop_start_beats   = math::floordS64((prjGlobals.loopStart / double(TICKS_QUARTER)) * CLAP_BEATTIME_FACTOR);
+    timeinfo.loop_end_beats   = math::floordS64(((prjGlobals.loopStart+prjGlobals.loopLen) / double(TICKS_QUARTER)) * CLAP_BEATTIME_FACTOR);
     auto samplePosLoopStart = tickToSampleConvert<double, roundmode::none>(prjGlobals.loopStart, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate);
     auto samplePosLoopEnd = tickToSampleConvert<double, roundmode::none>(prjGlobals.loopStart+prjGlobals.loopLen, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate);
     auto samplePosSongPos = tickToSampleConvert<double, roundmode::none>(dTickPos, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate);
-    timeinfo.loop_start_seconds = math::floordS64(samplePosLoopStart / (double)m_sampleFormatInternal.sampleRate);
-    timeinfo.loop_end_seconds = math::floordS64(samplePosLoopEnd / (double)m_sampleFormatInternal.sampleRate);
-    timeinfo.song_pos_seconds = math::floordS64(samplePosSongPos / (double)m_sampleFormatInternal.sampleRate);
+    const double dOneOverSR = 1.0 / m_sampleFormatInternal.sampleRate;
+    timeinfo.loop_start_seconds = math::floordS64((samplePosLoopStart * dOneOverSR) * CLAP_SECTIME_FACTOR);
+    timeinfo.loop_end_seconds = math::floordS64((samplePosLoopEnd * dOneOverSR) * CLAP_SECTIME_FACTOR);
+    timeinfo.song_pos_seconds = math::floordS64((samplePosSongPos * dOneOverSR) * CLAP_SECTIME_FACTOR);
+
     timeinfo.tempo = prjGlobals.tempo100 / 100.0;
     timeinfo.tempo_inc = 0.0;
-    timeinfo.tsig_denom = prjGlobals.signatureDenom;
+    timeinfo.tsig_denom = 1 << prjGlobals.signatureDenom;
     timeinfo.tsig_num = prjGlobals.signatureNum;
     timeinfo.flags = 0;
     timeinfo.flags = CLAP_TRANSPORT_HAS_TEMPO;
