@@ -30,12 +30,13 @@
 #include "types.h"
 
 #include <clap/helpers/reducing-param-queue.hxx>
+#include <utility>
 #include <vector>
 
 namespace {
     struct clap_snapshot_ostream : public clap_ostream {
         std::vector<uint8_t>& dataChunk;
-        clap_snapshot_ostream(std::vector<uint8_t>& data) : clap_ostream(), dataChunk(data) {
+        explicit clap_snapshot_ostream(std::vector<uint8_t>& data) : clap_ostream(), dataChunk(data) {
             ctx   = this;
             write = write_cb;
         }
@@ -91,7 +92,7 @@ namespace {
     struct clap_snapshot_istream : public clap_istream {
         std::vector<uint8_t> dataChunk;
         mutable int64_t readPos = 0;
-        clap_snapshot_istream(const std::vector<uint8_t>& data) : clap_istream(), dataChunk(data) {
+        explicit clap_snapshot_istream(std::vector<uint8_t> data) : clap_istream(), dataChunk(std::move(data)) {
             ctx  = this;
             read = read_cb;
         }
@@ -163,10 +164,10 @@ guiplugin* clapplugin::getGui() {
     return dawHandles->gui.get();
 }
 
-clapplugin::clapplugin(DAW::Host::PluginManager& pluginMgr, const String& filePath, const String& name, uint32_t uId, int32_t globalId, IHostCallback* hostcallback)
+clapplugin::clapplugin(DAW::Host::PluginManager& pluginMgr, String filePath, const String& name, uint32_t uId, int32_t globalId, IHostCallback* hostcallback)
     : effectbase(name, PLUGIN_TYPE_CLAP, globalId, hostcallback), dawHandles{ new clapplugin::daw_handles_t{} },
       _pluginMgr(pluginMgr),
-      filePath(filePath),
+      filePath(std::move(filePath)),
       clapPluginIndex(uId) {
     host_.host_data        = this;
     host_.clap_version     = CLAP_VERSION;
@@ -441,7 +442,7 @@ const char* clapplugin::getCurrentClapGuiApi() {
 }
 
 static clap_window makeClapWindow(WId window) {
-    clap_window w;
+    clap_window w{};
 #if defined(__linux__)
     w.api = CLAP_WINDOW_API_X11;
     w.x11 = window;
@@ -670,7 +671,7 @@ class ClapHostSocketNotifier {
 public:
     int fd    = -1;
     int flags = 0;
-    const clap_plugin_posix_fd_support* pluginPosixFdSupport;
+    const clap_plugin_posix_fd_support* pluginPosixFdSupport = nullptr;
     std::vector<const clap_plugin_t*> callbacks{};
     ClapHostSocketNotifier(int fd, int flags) : fd(fd), flags(flags) {
     }
@@ -810,15 +811,15 @@ void clapplugin::processEnd(int nframes) {
 void clapplugin::processNoteOn(int sampleOffset, int channel, int key, int velocity) {
     checkForAudioThread();
 
-    clap_event_note ev;
+    clap_event_note ev{};
     ev.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
     ev.header.type     = CLAP_EVENT_NOTE_ON;
     ev.header.time     = sampleOffset;
     ev.header.flags    = 0;
     ev.header.size     = sizeof(ev);
     ev.port_index      = 0;
-    ev.key             = key;
-    ev.channel         = channel;
+    ev.key             = int16_t(key);
+    ev.channel         = int16_t(channel);
     ev.note_id         = -1;
     ev.velocity        = velocity / 127.0;
 
@@ -828,15 +829,15 @@ void clapplugin::processNoteOn(int sampleOffset, int channel, int key, int veloc
 void clapplugin::processNoteOff(int sampleOffset, int channel, int key, int velocity) {
     checkForAudioThread();
 
-    clap_event_note ev;
+    clap_event_note ev{};
     ev.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
     ev.header.type     = CLAP_EVENT_NOTE_OFF;
     ev.header.time     = sampleOffset;
     ev.header.flags    = 0;
     ev.header.size     = sizeof(ev);
     ev.port_index      = 0;
-    ev.key             = key;
-    ev.channel         = channel;
+    ev.key             = int16_t(key);
+    ev.channel         = int16_t(channel);
     ev.note_id         = -1;
     ev.velocity        = velocity / 127.0;
 
@@ -854,7 +855,7 @@ void clapplugin::processPitchBend(int sampleOffset, int channel, int value) {
 void clapplugin::processCC(int sampleOffset, int channel, int cc, int value) {
     checkForAudioThread();
 
-    clap_event_midi ev;
+    clap_event_midi ev{};
     ev.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
     ev.header.type     = CLAP_EVENT_MIDI;
     ev.header.time     = sampleOffset;
@@ -935,7 +936,7 @@ void clapplugin::processClapPlugin() {
 void clapplugin::generatePluginInputEvents() {
     _appToEngineValueQueue.consume(
             [this](clap_id param_id, const AppToEngineParamQueueValue& value) {
-                clap_event_param_value ev;
+                clap_event_param_value ev{};
                 ev.header.time     = 0;
                 ev.header.type     = CLAP_EVENT_PARAM_VALUE;
                 ev.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
@@ -952,7 +953,7 @@ void clapplugin::generatePluginInputEvents() {
             });
 
     _appToEngineModQueue.consume([this](clap_id param_id, const AppToEngineParamQueueValue& value) {
-        clap_event_param_mod ev;
+        clap_event_param_mod ev{};
         ev.header.time     = 0;
         ev.header.type     = CLAP_EVENT_PARAM_MOD;
         ev.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
@@ -1184,7 +1185,7 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
     std::unordered_set<clap_id> paramIds(count * 2ULL);
 
     for (uint32_t iPluginIndex = 0; iPluginIndex < count; ++iPluginIndex) {
-        clap_param_info info;
+        clap_param_info info{};
         if (!plugin->_pluginParams->get_info(plugin->_plugin, iPluginIndex, &info))
             throw std::logic_error("clap_plugin_params.get_info did return false!");
 
@@ -1385,7 +1386,7 @@ double clapplugin::getClapParamValue(const clap_param_info& info) {
     if (!canUsePluginParams())
         return 0;
 
-    double value;
+    double value = 0.0;
     if (_pluginParams->get_value(_plugin, info.id, &value))
         return value;
 
@@ -1569,7 +1570,7 @@ bool clapplugin::isPluginProcessing() const { return _state == ActiveAndProcessi
 bool clapplugin::isPluginSleeping() const { return _state == ActiveAndSleeping; }
 
 String clapplugin::paramValueToText(clap_id paramId, double value) {
-    std::array<char, 256> buffer;
+    std::array<char, 256> buffer{};
 
     if (!canUsePluginParams())
         return "-";
@@ -1609,38 +1610,31 @@ void clapplugin::processMidiMessages(std::vector<IMidiMsg>& midiEvents) {
     generatePluginInputEvents();
     /* Process midi events (t >= 0)*/
     for (auto& evt : midiEvents) {
+    
         uint8_t eventType    = evt.mStatus >> 4;
         uint8_t channel      = evt.mStatus & 0xf;
-        uint8_t data1        = evt.mData1;
-        uint8_t data2        = evt.mData2;
-        int32_t sampleOffset = evt.mOffset;
-
         switch (eventType) {
             case IMidiMsg::EStatusMsg::kNoteOn:
-                processNoteOn(sampleOffset, channel, data1, data2);
+                processNoteOn(evt.mOffset, channel, evt.mData1, evt.mData2);
                 break;
 
             case IMidiMsg::EStatusMsg::kNoteOff:
-                processNoteOff(sampleOffset, channel, data1, data2);
+                processNoteOff(evt.mOffset, channel, evt.mData1, evt.mData2);
                 break;
-
-            case IMidiMsg::EStatusMsg::kControlChange:
-                processCC(sampleOffset, channel, data1, data2);
-                break;
-
-            case IMidiMsg::EStatusMsg::kPolyAftertouch:
-                processNoteAt(sampleOffset, channel, data1, data2);
-                break;
-
-            case IMidiMsg::EStatusMsg::kChannelAftertouch:
-                break;
-
-            case IMidiMsg::EStatusMsg::kPitchWheel:
-                processPitchBend(sampleOffset, channel, (data2 << 7) | data1);
-                break;
-
-            default:
-                std::cerr << "unknown event type: " << (int) eventType << std::endl;
+            default:{
+                    clap_event_midi midiEvent{};
+                    midiEvent.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+                    midiEvent.header.type     = CLAP_EVENT_MIDI;
+                    midiEvent.header.time     = evt.mOffset;
+                    midiEvent.header.flags    = 0;
+                    midiEvent.header.size     = sizeof(midiEvent);
+                    midiEvent.port_index      = 0;
+                    midiEvent.data[0]         = evt.mStatus;
+                    midiEvent.data[1]         = evt.mData1;
+                    midiEvent.data[2]         = evt.mData2;
+                    // Don't push note events as midi
+                    pushInputEvent(&midiEvent.header);
+                }
                 break;
         }
     }

@@ -64,7 +64,7 @@ public:
     uint64_t lastInputEvent = 0;
     uint32_t pluginCount = 0;
 public:
-    clapplugin(DAW::Host::PluginManager& pluginMgr, const String& filePath, const String& name, uint32_t uId, int32_t globalId, IHostCallback* hostcallback);
+    clapplugin(DAW::Host::PluginManager& pluginMgr, String filePath, const String& name, uint32_t uId, int32_t globalId, IHostCallback* hostcallback);
     ~clapplugin() override;
 
     // effectbase
@@ -236,7 +236,7 @@ private:
     DAW::Host::PluginManager& _pluginMgr;
     sampleformat_t _sampleFormat{};
     int64_t steady_time = 0;
-    clap_host host_;
+    clap_host host_{};
     static const constexpr clap_host_log _hostLog = {
         clapplugin::clapLog,
     };
@@ -353,7 +353,7 @@ private:
     /* process stuff */
     clap::helpers::EventList _eventListInput;
     clap::helpers::EventList _evOut;
-    clap_process _process;
+    clap_process _process{};
 
     void pushInputEvent(clap_event_header_t* ev);
 
