@@ -16,7 +16,7 @@ enum alloc_type {
     empty = 0,
     stack = 1,
     heap = 2,
-    external = 4
+    external = 3
 };
 class DelayLine;
 class seq_rand;
