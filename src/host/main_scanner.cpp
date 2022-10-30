@@ -99,7 +99,9 @@ static int logPrefixIdx = PROC_SIDE_NONE;
 #define CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_SHELL 5
 #define CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_PLUGIN 6
 #define CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN 7
-#define CMD_PLUGIN_END_SUCCESS 8
+#define CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGINSHELL_SHELL 8
+#define CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGINSHELL_PLUGIN 9
+#define CMD_PLUGIN_END_SUCCESS 10
 #define NUM_BUFS (16 * 1024)
 #define SCAN_IPC_PIPE_NAME "DAW1pipc"
 
@@ -147,7 +149,7 @@ struct response_type_vst24_t : response_type_t {
     char szShellPluginName[256]{ 0 };
 };
 struct response_type_clapplugin_t : response_type_t {
-    uint32_t uniqueID{ 0 };
+    uint32_t pluginIndex{ 0 };
     uint32_t pluginCategory{ 0 };
     bool isSynth{ false };
     char szVersion[256]{ 0 };
@@ -157,7 +159,7 @@ struct response_type_clapplugin_t : response_type_t {
 };
 struct response_type_vst24_plugin_t : response_type_vst24_t {
 };
-struct response_type_vst24_shell_plugin_t : response_type_t {
+struct response_type_shell_plugin_begin_t : response_type_t {
     int numPlugins{};
 };
 struct recvbuf_t {
@@ -274,7 +276,7 @@ static void getVSTPluginData(DAW::Host::LoadResultPlugin& res, response_type_vst
 
 static void getClapPluginData(DAW::Host::LoadResultPlugin& res, response_type_clapplugin_t* _out) {
     auto plugin = res.clapPlugin;
-    _out->uniqueID       = 0;
+    _out->pluginIndex = 0;
     _out->pluginCategory = plugin->pluginCategory;
     safe_strcpy(_out->szName, plugin->sName);
     safe_strcpy(_out->szPath, res.path);
@@ -353,7 +355,7 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
                     int bndIdx = 1;
                     queryInsertPlugin.bind(bndIdx++, data.isSynth);
                     queryInsertPlugin.bind(bndIdx++, 1); // clap plugin
-                    queryInsertPlugin.bind(bndIdx++, data.uniqueID);
+                    queryInsertPlugin.bind(bndIdx++, data.pluginIndex);
                     queryInsertPlugin.bind(bndIdx++, 1);
                     queryInsertPlugin.bind(bndIdx++, 0); // vstVersion
                     queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
@@ -424,31 +426,80 @@ static int readClientResponses(const pluginscanner_server_options& options, ipc_
                 break;
             }
             case CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_SHELL: {
-                log_message("READ response_type_vst24_shell_plugin_t");
-                response_type_vst24_shell_plugin_t respShellPlugin;
+                response_type_shell_plugin_begin_t respShellPlugin;
                 if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
                 if (E_READ_OK != readFromIPC(server, respShellPlugin)) {
-                    log_message("failed reading response_type_vst24_shell_plugin_t");
+                    log_message("failed reading response_type_shell_plugin_begin_t");
                     return -3;
                 }
                 break;
             } break;
-            case CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_PLUGIN: {
-                log_message("READ response_type_vst24_t");
-                response_type_vst24_t respShellPluginEntry;
-                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respShellPluginEntry)), timeStartScan_ms, timeoutPluginScan_ms)) {
+            case CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGINSHELL_SHELL: {
+                response_type_shell_plugin_begin_t respShellPlugin;
+                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(respShellPlugin)), timeStartScan_ms, timeoutPluginScan_ms)) {
                     return -4;
                 }
-                if (E_READ_OK != readFromIPC(server, respShellPluginEntry)) {
+                if (E_READ_OK != readFromIPC(server, respShellPlugin)) {
+                    log_message("failed reading response_type_shell_plugin_begin_t");
+                    return -3;
+                }
+                break;
+            } break;
+            case CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGINSHELL_PLUGIN: {
+                response_type_clapplugin_t data;
+                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(data)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                    return -4;
+                }
+                if (E_READ_OK != readFromIPC(server, data)) {
                     log_message("failed reading response_type_vst24_t");
                     return -3;
                 }
+                String relPath = file.name;
+                if (file.path.length() > options.clapPluginPath.length()) {
+                    relPath = file.path.substr(options.clapPluginPath.length());
+                    replaceString(relPath, FILE_PATHSEP_STR, "/");
+                }
+                try {
+                    queryInsertPlugin.reset();
+                    int bndIdx = 1;
+                    queryInsertPlugin.bind(bndIdx++, data.isSynth);
+                    queryInsertPlugin.bind(bndIdx++, 1); // clap plugin
+                    queryInsertPlugin.bind(bndIdx++, data.pluginIndex);
+                    queryInsertPlugin.bind(bndIdx++, 1);
+                    queryInsertPlugin.bind(bndIdx++, 0); // vstVersion
+                    queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
+                    queryInsertPlugin.bind(bndIdx++, (long long int) timeDisk);
+                    queryInsertPlugin.bind(bndIdx++, 1);
+                    queryInsertPlugin.bind(bndIdx++, file.path);
+                    queryInsertPlugin.bind(bndIdx++, relPath);
+                    queryInsertPlugin.bind(bndIdx++, data.szName);
+                    queryInsertPlugin.bind(bndIdx++, data.szVendorName);  // vendor
+                    queryInsertPlugin.bind(bndIdx++, data.szProductName); // product
+                    queryInsertPlugin.bind(bndIdx++, data.szEffectName);  // effect
+                    queryInsertPlugin.bind(bndIdx++, 0);
+                    queryInsertPlugin.bind(bndIdx++, forcedisable ? 1 : 0);
+                    queryInsertPlugin.bind(bndIdx++, 0);
+                    /*int insertRowsAffected = */ queryInsertPlugin.exec();
+                    nPluginsScanned++;
+                } catch (SQLite::Exception& e) {
+                    log_message("queryInsertPlugin failed with SQLite exception: %s (%d)", e.getErrorStr(), e.getErrorCode());
+                    return -5;
+                }
 
-
-                auto& data = respShellPluginEntry;
-                log_lf(Log::L_INFO, "Shell pluign %s %s %s isSynth: %d, uid %08X\n", StringAsCStr(file.path), data.szName, "GOOD", data.isSynth, data.uniqueID);
+                break;
+            } break;
+            case CMD_PLUGIN_LOAD_SUCCESS_VST_PLUGINSHELL_PLUGIN: {
+                response_type_vst24_t data;
+                if (waitTimeout(server, thread, req.szPath, static_cast<int>(sizeof(data)), timeStartScan_ms, timeoutPluginScan_ms)) {
+                    return -4;
+                }
+                if (E_READ_OK != readFromIPC(server, data)) {
+                    log_message("failed reading response_type_vst24_t");
+                    return -3;
+                }
+                log_lf(Log::L_INFO, "Shell plugin %s %s %s isSynth: %d, uid %08X\n", StringAsCStr(file.path), data.szName, "GOOD", data.isSynth, data.uniqueID);
                 try {
                     queryInsertPlugin.reset();
                     int bndIdx = 1;
@@ -804,7 +855,53 @@ static int runScannerClient() {
                 int response = CMD_PLUGIN_LOAD_ERROR;
                 writeToIPC(client, response);
             } else {
-                if (res.library.type == DAW::Host::SharedLibPluginType::VST2_SHELL) {
+                if (res.clapPlugin && res.clapPlugin->pluginCount > 0) {
+                    handles_t* handles     = res.shellPluginHandle;
+                    String nameShellPlugin = res.name;
+                    log_printf("loading clap plugin: %s\n", StringAsCStr(nameShellPlugin));
+
+                    std::vector<response_type_clapplugin_t> entries;
+                    response_type_shell_plugin_begin_t respShellPlugin;
+                    safe_strcpy(respShellPlugin.szName, res.name);
+                    respShellPlugin.szName[255] = 0;
+                    auto fac = res.clapPlugin->getPluginFactory();
+                    auto plugCount = fac->get_plugin_count(fac);
+                    for (uint32_t i = 0; i < plugCount; ++i) {
+                        const clap_plugin_descriptor_t* desc = fac->get_plugin_descriptor(fac, i);
+                        if (desc && desc->name && desc->id) {
+                            response_type_clapplugin_t _out{};
+                            _out.pluginIndex = i;
+                            safe_strcpy(_out.szName, desc->name);
+                            safe_strcpy(_out.szEffectName, desc->name);
+                            safe_strcpy(_out.szProductName, desc->id);
+                            safe_strcpy(_out.szPath, req.szPath);
+                            if (desc->vendor) 
+                                safe_strcpy(_out.szVendorName, desc->vendor);
+                            if (desc->version)
+                                safe_strcpy(_out.szVersion, desc->version);
+                            for (int i = 0; desc->features && desc->features[i]; ++i) {
+                                auto entry = desc->features[i];
+                                if (!strcmp(entry, CLAP_PLUGIN_FEATURE_INSTRUMENT)) {
+                                    _out.isSynth = true;
+                                }
+                            }
+                            _out.pluginCategory = _out.isSynth ? 1 : 0;
+                            log_printf("Found clap plugin: %s '%s'\n", desc->id, desc->name);
+                            entries.push_back(_out);
+                        }
+                    }
+                    int32_t response = CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGINSHELL_SHELL;
+                    writeToIPC(client, response);
+                    respShellPlugin.numPlugins = (int) entries.size();
+                    writeToIPC(client, respShellPlugin);
+                    for (auto& entry : entries) {
+                        response = CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGINSHELL_PLUGIN;
+                        writeToIPC(client, response);
+                        writeToIPC(client, entry);
+                    }
+                    response = CMD_PLUGIN_END_SUCCESS;
+                    writeToIPC(client, response);
+                } else if (res.library.type == DAW::Host::SharedLibPluginType::VST2_SHELL) {
                     handles_t* handles     = res.shellPluginHandle;
                     String nameShellPlugin = res.name;
                     log_printf("loading shell plugin: %s\n", StringAsCStr(nameShellPlugin));
@@ -817,7 +914,7 @@ static int runScannerClient() {
 
                     std::vector<shell_plugin_entry_t> entries;
 
-                    response_type_vst24_shell_plugin_t respShellPlugin;
+                    response_type_shell_plugin_begin_t respShellPlugin;
                     safe_strcpy(respShellPlugin.szName, res.name);
                     respShellPlugin.szName[255] = 0;
                     // loop over all shell plugin entries
@@ -862,9 +959,6 @@ static int runScannerClient() {
                         }
                     }
                     log_message("-- end of shell plugin list --");
-#ifdef _WIN32
-                    FreeLibrary((HMODULE) handles->hmodule);
-#endif
                     response = CMD_PLUGIN_END_SUCCESS;
                     writeToIPC(client, response);
                 } else if (res.library.state == DAW::Host::SharedLibState::SUCCESS) {

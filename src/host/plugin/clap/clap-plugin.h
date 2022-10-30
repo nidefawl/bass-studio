@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <array>
 #include <atomic>
+#include <clap/events.h>
 #include <clap/ext/latency.h>
 #include <cstdint>
 #include <functional>
@@ -54,22 +55,25 @@ public:
         std::vector<clap_audio_buffer> clapOutputBuffers;
         std::vector<AudioBlock> dawInputBuffers;
         std::vector<AudioBlock> dawOutputBuffers;
+        clap_event_transport_t transport{};
+        DAW::Host::LoadResultSharedLibrary library;
+        bool bIsStopProcessing = false;
     };
-    void* module;
     daw_handles_t* const dawHandles;
     int pluginCategory = -1;
     uint64_t lastInputEvent = 0;
+    uint32_t pluginCount = 0;
 public:
     clapplugin(DAW::Host::PluginManager& pluginMgr, const String& filePath, const String& name, uint32_t uId, int32_t globalId, IHostCallback* hostcallback);
     ~clapplugin() override;
-    ClapPluginDescription getDescription();
 
     // effectbase
     int getModuleType() override { return PLUGIN_TYPE_CLAP; };
-    void* getModuleHandle() { return module; }
+    void* getModuleHandle() { return dawHandles->library.module; }
     String getAutomatableName() override {
         return this->sName;
     }
+    clap_event_transport_t& getTransport() { return dawHandles->transport; }
     guiplugin* makeGui() override;
     guiplugin* getGui() override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
@@ -94,8 +98,23 @@ public:
     bool showWindow(bool bResetPosition) override;
     void updateWindowSize();
     void configureIOPorts();
+    void onEnable() override;
+    void onDisable() override;
 
     // clap host side
+    const clap_plugin_entry* getPluginEntry() const {
+        return _pluginEntry;
+    }
+    const clap_plugin_factory* getPluginFactory() const {
+        return _pluginFactory;
+    }
+    uint32_t getPluginCount() const {
+        return pluginCount;
+    }
+    
+    ClapPluginDescription getDescription();
+    bool getIsAudioTheadOverride() const;
+
     bool loadClapPlugin(DAW::Host::LoadResultSharedLibrary& lib);
     void unloadClapPlugin();
 

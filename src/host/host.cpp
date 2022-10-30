@@ -1,4 +1,5 @@
 #include <atomic>
+#include <clap/events.h>
 #include <cstddef>
 #include <cstdlib>
 #include <algorithm>
@@ -31,6 +32,7 @@
 #include "host/mainctrl.h"
 #include "host/plugin/base/base-plugin.h"
 #include "host/plugin/vst/vstplugin.h"
+#include "host/plugin/clap/clap-plugin.h"
 #include "appsettings.h"
 #include "logging.h"
 #include "audio_config.h"
@@ -80,6 +82,39 @@ namespace DebugAlloc {
 
 namespace DAW::Host {
 
+void UpdateClapTime(clap_event_transport_t& timeinfo, const sampleformat_t& m_sampleFormatInternal, const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state) {
+    timeinfo.header.time = 0;
+    timeinfo.bar_number = math::floordS32(dTickPos / (double) TICKS_BAR);
+    timeinfo.bar_start = math::floordS64(dTickPos / (double) TICKS_BAR) * 4;
+    timeinfo.song_pos_beats = math::floordS64((dTickPos/(double)TICKS_QUARTER));
+    timeinfo.loop_start_beats = math::floordS64((prjGlobals.loopStart/(double)TICKS_QUARTER));
+    timeinfo.loop_end_beats = math::floordS64(((prjGlobals.loopStart+prjGlobals.loopLen)/(double)TICKS_QUARTER));
+    auto samplePosLoopStart = tickToSampleConvert<double, roundmode::none>(prjGlobals.loopStart, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate);
+    auto samplePosLoopEnd = tickToSampleConvert<double, roundmode::none>(prjGlobals.loopStart+prjGlobals.loopLen, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate);
+    auto samplePosSongPos = tickToSampleConvert<double, roundmode::none>(dTickPos, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate);
+    timeinfo.loop_start_seconds = math::floordS64(samplePosLoopStart / (double)m_sampleFormatInternal.sampleRate);
+    timeinfo.loop_end_seconds = math::floordS64(samplePosLoopEnd / (double)m_sampleFormatInternal.sampleRate);
+    timeinfo.song_pos_seconds = math::floordS64(samplePosSongPos / (double)m_sampleFormatInternal.sampleRate);
+    timeinfo.tempo = prjGlobals.tempo100 / 100.0;
+    timeinfo.tempo_inc = 0.0;
+    timeinfo.tsig_denom = prjGlobals.signatureDenom;
+    timeinfo.tsig_num = prjGlobals.signatureNum;
+    timeinfo.flags = 0;
+    timeinfo.flags = CLAP_TRANSPORT_HAS_TEMPO;
+    timeinfo.flags |= CLAP_TRANSPORT_HAS_BEATS_TIMELINE;
+    timeinfo.flags |= CLAP_TRANSPORT_HAS_SECONDS_TIMELINE;
+    timeinfo.flags |= CLAP_TRANSPORT_HAS_TIME_SIGNATURE;
+    bool loopEnabed = state != playback_state::status_render && prjGlobals.loopEnabled;
+    if (state == playback_state::status_playback || state == playback_state::status_render) {
+        timeinfo.flags |= CLAP_TRANSPORT_IS_PLAYING;
+    }
+    if (loopEnabed) {
+        timeinfo.flags |= CLAP_TRANSPORT_IS_LOOP_ACTIVE;
+    }
+    if (prjGlobals.recordArmed) {
+        timeinfo.flags |= CLAP_TRANSPORT_IS_RECORDING;
+    }
+}
 struct Host::track_block_processing_task_t {
     audiostream_properties_t audioProp;
     project_globals_t projectGlobals;
@@ -1836,10 +1871,16 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                     if (effect->pluginType == PLUGIN_TYPE_VST) {
                         VstTimeInfo timeinfo{};
                         PluginManager::UpdateVstTime(timeinfo, m_sampleFormatInternal, globals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
-                        auto* ptr = dynamic_cast<vstplugin*>(effect)->getLocalTimeInfoPtr();
+                        auto* ptr = static_cast<vstplugin*>(effect)->getLocalTimeInfoPtr();
                         if (ptr) {
                             *ptr = timeinfo;
                         }
+                    }
+                    if (effect->pluginType == PLUGIN_TYPE_CLAP) {
+                        clap_event_transport_t transport{};
+                        UpdateClapTime(transport, m_sampleFormatInternal, globals, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
+                        auto& pluginLocalTransport = static_cast<clapplugin*>(effect)->getTransport();
+                        pluginLocalTransport = transport;
                     }
                     // resolve all inputs
                     effect->updateAutomatedParameters(this, processingPosLatencyCompensate, playbackState);

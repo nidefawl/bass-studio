@@ -184,7 +184,6 @@ clapplugin::clapplugin(DAW::Host::PluginManager& pluginMgr, const String& filePa
 
 clapplugin::~clapplugin() {
     checkForMainThread();
-
     terminateThreadPool();
     delete dawHandles;
 }
@@ -231,19 +230,22 @@ bool clapplugin::loadClapPlugin(DAW::Host::LoadResultSharedLibrary& _library) {
     _pluginEntry = reinterpret_cast<const struct clap_plugin_entry*>(_library.entryPoint);
     dbgassert(_pluginEntry);
 
+    // String path;
+    // SplitPath(filePath, &path, nullptr, nullptr, nullptr);
+    // _pluginEntry->init(path.c_str());
     _pluginEntry->init(filePath.c_str());
 
     _pluginFactory = static_cast<const clap_plugin_factory*>(_pluginEntry->get_factory(CLAP_PLUGIN_FACTORY_ID));
 
-    auto count = _pluginFactory->get_plugin_count(_pluginFactory);
-    if (clapPluginIndex > count) {
-        log_lf(Log::L_ERROR, "plugin index greater than count (%d/%d)\n", clapPluginIndex, count);
+    pluginCount = _pluginFactory->get_plugin_count(_pluginFactory);
+    if (clapPluginIndex > pluginCount) {
+        log_lf(Log::L_ERROR, "plugin index greater than count (%d/%d)\n", clapPluginIndex, pluginCount);
         return false;
     }
 
     auto desc = _pluginFactory->get_plugin_descriptor(_pluginFactory, clapPluginIndex);
     if (!desc) {
-        log_lf(Log::L_ERROR, "no plugin descriptor (%d/%d)\n", clapPluginIndex, count);
+        log_lf(Log::L_ERROR, "no plugin descriptor (%d/%d)\n", clapPluginIndex, pluginCount);
         return false;
     }
 
@@ -286,7 +288,11 @@ bool clapplugin::loadClapPlugin(DAW::Host::LoadResultSharedLibrary& _library) {
         sName = _plugin->desc->name;
     }
 
-    this->module = _library.module;
+    _process.transport = &dawHandles->transport;
+    _process.in_events  = _eventListInput.clapInputEvents();
+    _process.out_events = _evOut.clapOutputEvents();
+
+    this->dawHandles->library = _library;
 
     initPluginExtensions();
     scanParams();
@@ -386,10 +392,8 @@ bool clapplugin::canActivate() const {
 void clapplugin::activate(sampleformat_t sampleFormat) {
     checkForMainThread();
 
-    if (!_plugin)
+    if (!_plugin || !canActivate())
         return;
-
-    dbgassert(!isPluginActive());
 
     dawHandles->currentLatency = _pluginLatency ? _pluginLatency->get(_plugin) : 0;
 
@@ -408,11 +412,12 @@ void clapplugin::deactivate() {
     if (!isPluginActive())
         return;
 
-    while (isPluginProcessing() || isPluginSleeping()) {
-        _scheduleDeactivate = true;
-        seqthreads::threadSleep(10);
+    if (_state == ActiveAndProcessing) {
+        dawHandles->bIsStopProcessing = true;
+        _plugin->stop_processing(_plugin);
+        setPluginState(ActiveAndReadyToDeactivate);
+        dawHandles->bIsStopProcessing = false;
     }
-    _scheduleDeactivate = false;
 
     _plugin->deactivate(_plugin);
     setPluginState(Inactive);
@@ -468,6 +473,7 @@ void clapplugin::setParentWindow(WId parentWindow) {
     }
 
     setPluginWindowVisibility(true);
+    updateWindowSize();
 }
 
 void clapplugin::setPluginWindowVisibility(bool isVisible) {
@@ -575,6 +581,11 @@ bool clapplugin::clapIsMainThread(const clap_host* host) {
 }
 
 bool clapplugin::clapIsAudioThread(const clap_host* host) {
+    return fromHost(host)->getIsAudioTheadOverride();
+}
+bool clapplugin::getIsAudioTheadOverride() const {
+    if (dawHandles->bIsStopProcessing)
+        return true;
     return seqthreads::CurrentThreadType() == seqthreads::ThreadType::AudioThread;
 }
 
@@ -758,19 +769,23 @@ void clapplugin::eventLoopSetFdNotifierFlags(int fd, int flags) {
 
 void clapplugin::clapGuiResizeHintsChanged(const clap_host_t* host) {
     /* TODO */
+    log_lf(Log::L_TRACE, "clapGuiResizeHintsChanged\n");
 }
 
 bool clapplugin::clapGuiRequestResize(const clap_host* host, uint32_t width, uint32_t height) {
+    log_lf(Log::L_TRACE, "clapGuiRequestResize %d %d\n", width, height);
     /* TODO */
     return true;
 }
 
 bool clapplugin::clapGuiRequestShow(const clap_host* host) {
+    log_lf(Log::L_TRACE, "clapGuiRequestShow\n");
     /* TODO */
     return true;
 }
 
 bool clapplugin::clapGuiRequestHide(const clap_host* host) {
+    log_lf(Log::L_TRACE, "clapGuiRequestHide\n");
     /* TODO */
     return true;
 }
@@ -872,44 +887,14 @@ void clapplugin::processClapPlugin() {
     if (_state == ActiveWithError)
         return;
 
-    _process.transport = nullptr;
-
-    _process.in_events  = _eventListInput.clapInputEvents();
-    _process.out_events = _evOut.clapOutputEvents();
-
-
-    /* TODO: cache the input buffer structure */
-    dawHandles->clapInputBuffers.resize(inputChannelsDesc.size());
-    dawHandles->clapOutputBuffers.resize(outputChannelsDesc.size());
-    dawHandles->dawInputBuffers.resize(inputChannelsDesc.size());
-    dawHandles->dawOutputBuffers.resize(outputChannelsDesc.size());
-
-
-    for (size_t i = 0; i < inputChannelsDesc.size(); ++i) {
-        auto& ch = inputChannelsDesc[i];
-        auto& dawBlock = dawHandles->dawInputBuffers[i];
-        dawBlock = blockInputs->SubChannelsBlock(ch.offset, ch.count);
-        auto& clapBuffer = dawHandles->clapInputBuffers[i];
-        clapBuffer = {};
-        clapBuffer.channel_count = dawBlock.channels;
-        clapBuffer.data32        = dawBlock.buf;
-    }
-    for (size_t i = 0; i < outputChannelsDesc.size(); ++i) {
-        auto& ch = outputChannelsDesc[i];
-        auto& dawBlock = dawHandles->dawOutputBuffers[i];
-        dawBlock = blockOutputs->SubChannelsBlock(ch.offset, ch.count);
-        auto& clapBuffer = dawHandles->clapOutputBuffers[i];
-        clapBuffer = {};
-        clapBuffer.channel_count = dawBlock.channels;
-        clapBuffer.data32        = dawBlock.buf;
-    }
-
-    _process.audio_inputs        = dawHandles->clapInputBuffers.data();
-    _process.audio_inputs_count  = dawHandles->clapInputBuffers.size();
-    _process.audio_outputs       = dawHandles->clapOutputBuffers.data();
-    _process.audio_outputs_count = dawHandles->clapOutputBuffers.size();
 
     _evOut.clear();
+
+    clap_event_header_t& transportHeader = dawHandles->transport.header;
+    transportHeader = {};
+    transportHeader.size = sizeof (clap_event_transport_t);
+    transportHeader.space_id = CLAP_CORE_EVENT_SPACE_ID;
+    transportHeader.type = CLAP_EVENT_TRANSPORT;
 
     if (isPluginSleeping()) {
         if (!_scheduleProcess && _eventListInput.empty())
@@ -1665,7 +1650,13 @@ samplecount_t clapplugin::getPluginLatency() {
     return dawHandles->currentLatency;
 }
 
+void clapplugin::onDisable() { deactivate(); }
+
+void clapplugin::onEnable() { activate(format); }
+
 void clapplugin::unload(DAW::Host::PluginManager* host, int flags) {
+    deactivate();
+    unloadClapPlugin();
     effectbase::unload(host, flags);
 }
 
@@ -1673,6 +1664,7 @@ void clapplugin::load(DAW::Host::PluginManager* host) {
     effectbase::load(host);
     activate(format);
 }
+
 void clapplugin::configureIOPorts() {
     auto inputCount = channelnum_t(0);
     auto outputCount = channelnum_t(0);
@@ -1706,12 +1698,42 @@ void clapplugin::configureIOPorts() {
             }
         }
     }
-
-
 }
+
 void clapplugin::initBuffers() {
     configureIOPorts();
     effectbase::initBuffers();
+    dawHandles->clapInputBuffers.resize(inputChannelsDesc.size());
+    dawHandles->clapOutputBuffers.resize(outputChannelsDesc.size());
+    // dawHandles->clapOutputBuffers[0].channel_count = 2;
+    // dawHandles->clapOutputBuffers[0].data32 = blockOutputs->buf;
+    dawHandles->dawInputBuffers.resize(inputChannelsDesc.size());
+    dawHandles->dawOutputBuffers.resize(outputChannelsDesc.size());
+
+    for (size_t i = 0; i < inputChannelsDesc.size(); ++i) {
+        auto& ch = inputChannelsDesc[i];
+        auto& dawBlock = dawHandles->dawInputBuffers[i];
+        dawBlock = blockInputs->SubChannelsBlock(ch.offset, ch.count);
+        auto& clapBuffer = dawHandles->clapInputBuffers[i];
+        clapBuffer = {};
+        clapBuffer.channel_count = dawBlock.channels;
+        clapBuffer.data32        = dawBlock.buf;
+    }
+    for (size_t i = 0; i < outputChannelsDesc.size(); ++i) {
+        auto& ch = outputChannelsDesc[i];
+        auto& dawBlock = dawHandles->dawOutputBuffers[i];
+        dawBlock = blockOutputs->SubChannelsBlock(ch.offset, ch.count);
+        auto& clapBuffer = dawHandles->clapOutputBuffers[i];
+        clapBuffer = {};
+        clapBuffer.channel_count = dawBlock.channels;
+        clapBuffer.data32        = dawBlock.buf;
+    }
+
+    _process.audio_inputs        = dawHandles->clapInputBuffers.data();
+    _process.audio_inputs_count  = dawHandles->clapInputBuffers.size();
+    _process.audio_outputs       = dawHandles->clapOutputBuffers.data();
+    _process.audio_outputs_count = dawHandles->clapOutputBuffers.size();
+
 }
 
 void clapplugin::updateFromMainThread() {
@@ -1756,12 +1778,12 @@ bool clapplugin::showWindow(bool bResetPosition) {
 
     uint32_t width  = 320;
     uint32_t height = 240;
-    if (!_pluginGui->get_size(_plugin, &width, &height)) {
-        log_lf(Log::L_WARN, "could not get the size of the plugin gui\n");
-        _isGuiCreated = false;
-        _pluginGui->destroy(_plugin);
-        return false;
-    }
+    // if (!_pluginGui->get_size(_plugin, &width, &height)) {
+    //     log_lf(Log::L_WARN, "could not get the size of the plugin gui\n");
+    //     _isGuiCreated = false;
+    //     _pluginGui->destroy(_plugin);
+    //     return false;
+    // }
     this->openWindow(bResetPosition, { width, height });
     return true;
 }
@@ -1773,6 +1795,7 @@ bool clapplugin::onClose() {
     bEditOpen = false;
     return true;
 }
+
 ivec2 clapplugin::constrainWindowSize(host_plugin_window* window, ivec2 size) {
     if (!bSupportsWindowResize) {
         // ERect* prc = nullptr;
@@ -1788,6 +1811,7 @@ ivec2 clapplugin::constrainWindowSize(host_plugin_window* window, ivec2 size) {
     }
     return size;
 }
+
 void clapplugin::onWindowResize(ivec2 size) {
     // axEffect->onWindowResize(size);
 }
@@ -1832,6 +1856,7 @@ automatable_param_t* clapplugin::getParam(int32_t idx) {
     }
     return param;
 }
+
 void clapplugin::pushInputEvent(clap_event_header_t* ev) {
     dbgassert(ev->time >= lastInputEvent);
     _eventListInput.push(ev);
