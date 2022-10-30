@@ -148,7 +148,6 @@ void UpdateTime(VstTimeInfo& timeinfo, int32_t transportStateFlags, const sample
     }
 }
 
-
 int32_t HostCanDo(const char* ptr) {
     if ((!strcmp(ptr, HostCanDos::canDoSendVstEvents)) ||
         (!strcmp(ptr, HostCanDos::canDoSendVstMidiEvent)) ||

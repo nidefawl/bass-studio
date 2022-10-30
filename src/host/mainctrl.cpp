@@ -1040,7 +1040,7 @@ void DawInstance::saveProjectBundle(const String& path) {
         onError("Failed to create archive entry", bundlePath);
         return;
     }
-    auto bufSize = ssize_t(buffer.size());
+    auto bufSize = int64_t(buffer.size());
     archive_entry_set_pathname(entry, projFileName.c_str());
     archive_entry_set_mtime(entry, time(nullptr), 0);
     archive_entry_set_size(entry, bufSize);

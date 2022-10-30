@@ -39,7 +39,7 @@ namespace fp_math {
     bool isNanOrInfd(double d);
     float silenceNanInff(float f);
     double silenceNanInfd(double d);
-    double isDenormalf(float f);
+    bool isDenormalf(float f);
     bool isZeroOrDenormal(float f);
 }
 namespace math {

@@ -452,7 +452,7 @@ int saveSampleToArchive(audiofile_t& file, struct archive_entry* entry, struct a
     }
     if (pData && dataSize) {
         auto bytesWritten = archive_write_data(ar, pData, dataSize);
-        if (bytesWritten != ssize_t(dataSize)) {
+        if (bytesWritten != int64_t(dataSize)) {
             onError(StringFormat("dataSize: Only %zd/%zu bytes written", bytesWritten, dataSize), file.name);
             return ARCHIVE_FATAL;
         }

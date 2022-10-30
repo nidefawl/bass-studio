@@ -39,7 +39,7 @@ namespace {
             ctx   = this;
             write = write_cb;
         }
-        static CLAP_ABI int64_t write_cb(const struct clap_ostream* stream, const void* voidBuffer, uint64_t size) {
+        static int64_t CLAP_ABI write_cb(const struct clap_ostream* stream, const void* voidBuffer, uint64_t size) {
             auto self   = reinterpret_cast<const clap_snapshot_ostream*>(stream);
             auto buffer = reinterpret_cast<const uint8_t*>(voidBuffer);
             auto pos    = self->dataChunk.size();
@@ -95,7 +95,7 @@ namespace {
             ctx  = this;
             read = read_cb;
         }
-        static CLAP_ABI int64_t read_cb(const struct clap_istream* stream, void* buffer, uint64_t size) {
+        static int64_t CLAP_ABI read_cb(const struct clap_istream* stream, void* buffer, uint64_t size) {
             auto self        = reinterpret_cast<const clap_snapshot_istream*>(stream);
             auto data        = reinterpret_cast<uint8_t*>(buffer);
             auto srcSize     = int64_t(self->dataChunk.size());

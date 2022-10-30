@@ -216,6 +216,7 @@ public:
     void activateDeferred(effectbase* eff, int flags, effectbase** out_effectLoaded = nullptr);
     void updateSampleFormat(const sampleformat_t& _sampleFormat);
     void UpdateVstTime(VstTimeInfo& timeInfo, const sampleformat_t& sampleFormat, const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state) const;
+
     void onBeforeBlock(const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state);
 
     vstplugin* getPlugin(AEffect* aeffect);

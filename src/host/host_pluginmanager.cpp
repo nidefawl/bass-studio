@@ -27,8 +27,8 @@ public:
 
     void releaseModule(void* module) {
 #ifdef _WIN32
-        String moduleName = getModuleName((HMODULE)module);
-        log_printf("Unload %s\n", StringAsCStr(moduleName));
+        // String moduleName = getModuleName((HMODULE)module);
+        // log_printf("Unload %s\n", StringAsCStr(moduleName));
         FreeLibrary((HMODULE)module);
 #endif
 #if defined(__linux__) || defined(__APPLE__)
@@ -133,19 +133,21 @@ void PluginManager::unloadPlugin(effectbase* plugin, int flags) {
         always_assert(removeEntry(pluginInstances, plugin));
         break;
     }
-
+    void* moduleHandleOpt = nullptr;
     //PopupCtrl::get()->close(); // Make sure context controls do not reference vst
     if (plugin->getModuleType() == PLUGIN_TYPE_VST || plugin->getModuleType() == PLUGIN_TYPE_INTERNAL_EFFECT) {
-        vstplugin* vst = dynamic_cast<vstplugin*>(plugin);
+        vstplugin* vst = static_cast<vstplugin*>(plugin);
         if (vst->internalModuleId <= 0) {
-            moduleMgr->releaseModule(vst->handle->hmodule);
+            moduleHandleOpt = vst->handle->hmodule;
         }
     }
     if (plugin->getModuleType() == PLUGIN_TYPE_CLAP) {
-        clapplugin* clapPlugin = dynamic_cast<clapplugin*>(plugin);
-        moduleMgr->releaseModule(clapPlugin->getModuleHandle());
+        moduleHandleOpt = static_cast<clapplugin*>(plugin)->getModuleHandle();
     }
     delete plugin;
+    if (moduleHandleOpt) {
+        moduleMgr->releaseModule(moduleHandleOpt);
+    }
     if (notifyUp) {
         if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
     }

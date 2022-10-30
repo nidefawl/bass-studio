@@ -92,7 +92,7 @@ void test_libarchive(String outName = "test_libarchive.zip") {
             TEST_ASSERT_THROW(pathName != nullptr);
             auto pathNameStr = String(pathName);
             auto buffer = std::shared_ptr<std::byte[]>(new std::byte[size]);
-            ssize_t readsize = archive_read_data(a, buffer.get(), size);
+            auto readsize = archive_read_data(a, buffer.get(), size);
             if (pathNameStr == "file1.txt") {
                 TEST_ASSERT_THROW(readsize == textContentFile1.size());
                 String fileContent = String((char*)buffer.get(), readsize);
