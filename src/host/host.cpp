@@ -212,6 +212,9 @@ public:
 
     std::shared_ptr<AudioIO::AudioStream> audioStream;
     std::shared_ptr<processing_graph_t> processingGraph;
+    AudioBlock blockInput;
+    AudioBlock blockOutput;
+    AudioBlock blockExtOut;
 
     channelnum_t inputChannels = 0;
     channelnum_t outputChannels = 0;
@@ -797,15 +800,21 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
 
     int32_t samplePosProcess = sample;
     double tickPosProcess = posDouble;
-    AudioBlock blockExtIn(impl->inputChannels, sampleFormat.blockSize);
-    AudioBlock blockExtOut(impl->outputChannels, sampleFormat.blockSize);
-    dsp_util::fillBlock(blockExtOut, 0.0f);
+    
+    if (impl->blockInput.channels != impl->inputChannels || impl->blockInput.samples != sampleFormat.blockSize) {
+        impl->blockInput = AudioBlock(impl->inputChannels, sampleFormat.blockSize);
+    }
+    if (impl->blockOutput.channels != impl->outputChannels || impl->blockOutput.samples != sampleFormat.blockSize) {
+        impl->blockOutput = AudioBlock(impl->outputChannels, sampleFormat.blockSize);
+    }
+    dsp_util::fillBlock(impl->blockInput, 0.0f);
+    dsp_util::fillBlock(impl->blockOutput, 0.0f);
 
     if (enableProfiling) {
         timerProfile.reset();
     }
 
-    nBlocksProcessed += processGraph(ctrl, audioProp, processingGraph.get(), &blockExtIn, &blockExtOut, samplePosProcess, tickPosProcess, state, false, false);
+    nBlocksProcessed += processGraph(ctrl, audioProp, processingGraph.get(), &impl->blockInput, &impl->blockOutput, samplePosProcess, tickPosProcess, state, false, false);
     dbgassert(nBlocksProcessed >= 1);
 
     if (enableProfiling) {
@@ -834,7 +843,7 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
                 }
                 int routedOutputChannelCount = DAW::AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
                 auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
-                blockExtOut.SubChannelsBlock(tracDst.srcChannelOffset, routedOutputChannelCount)
+                impl->blockOutput.SubChannelsBlock(tracDst.srcChannelOffset, routedOutputChannelCount)
                         .addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
 
             }
@@ -1035,15 +1044,17 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
             int32_t samplePosProcess = sample + sampleFormat.blockSize*i; //TODO: inspect precision
             double tickPosProcess = posDouble + audioProp.ticksPerBlock*i;
             AudioBufferTimeInfo bufferTimeInfo{ };
-            AudioBlock block = resamplerInput->pop(bufferTimeInfo);
+            resamplerInput->pop(bufferTimeInfo, impl->blockInput);
 
             //TODO: avoid allocation
-            AudioBlock blockExtOut(resamplerOutput->numChannels, sampleFormat.blockSize);
-            dsp_util::fillBlock(blockExtOut, 0.0f);
+            if (impl->blockExtOut.channels != resamplerOutput->numChannels || impl->blockExtOut.samples != sampleFormat.blockSize) {
+                impl->blockExtOut = AudioBlock(resamplerOutput->numChannels, sampleFormat.blockSize);
+            }
+            dsp_util::fillBlock(impl->blockExtOut, 0.0f);
             if (enableProfiling) {
                 timerProfile.reset();
             }
-            nBlocksProcessed += processGraph(ctrl, audioProp, processingGraph.get(), &block, &blockExtOut, samplePosProcess, tickPosProcess, state, inLoop, isLoopAround);
+            nBlocksProcessed += processGraph(ctrl, audioProp, processingGraph.get(), &impl->blockInput, &impl->blockExtOut, samplePosProcess, tickPosProcess, state, inLoop, isLoopAround);
 
             if (enableProfiling) {
                 timeProcessing += timerProfile.getTimeReset();
@@ -1055,7 +1066,7 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
             trackNode.type = track_node_type_t::TRACK;
             trackNode.type = track_node_type_t::TRACK;
             trackNode.inputLatency = processingGraph->trackGraph->maxLatencySamples;
-            MixInputs(this, trackNode, impl->singleThreadedBuf, this->impl, &blockExtOut, allSources, blockExtOut.channels, trackNode.inputLatency, tickPosProcess - ticksTotalLatency, tickPosProcess - ticksTotalLatency + audioProp.ticksPerBlock, state, &block);
+            MixInputs(this, trackNode, impl->singleThreadedBuf, this->impl, &impl->blockExtOut, allSources, impl->blockExtOut.channels, trackNode.inputLatency, tickPosProcess - ticksTotalLatency, tickPosProcess - ticksTotalLatency + audioProp.ticksPerBlock, state, &impl->blockInput);
 
 #if 0
             for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
@@ -1088,7 +1099,7 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
             if (enableProfiling) {
                 timeRouting += timerProfile.getTimeReset();
             }
-            resamplerOutput->push(blockExtOut, bufferTimeInfo);
+            resamplerOutput->push(impl->blockExtOut, bufferTimeInfo);
             if (enableProfiling) {
                 timeResampleOutput += timerProfile.getTimeReset();
             }
@@ -1128,14 +1139,14 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
         while (nResampledOutputBlocks > 0 && stream->getOutputQueueSize() < RING_BUF_SIZE*2/3) {
             if (enableProfiling) timerBlock.reset();
             AudioBufferTimeInfo bufferTimeInfo{ };
-            AudioBlock block = resamplerOutput->pop(bufferTimeInfo);
+            resamplerOutput->pop(bufferTimeInfo, impl->blockOutput);
             if (enableProfiling) time0 += timerBlock.getTimeReset();
             AudioBuffer** buffers = ringbuffer.buffers;
             AudioBuffer* const ptrExternalOutputs = buffers[writePos%RING_BUF_SIZE];
             dbgassert(!ptrExternalOutputs->inUse);
             ptrExternalOutputs->submitted = false;
             ptrExternalOutputs->output->realloc(m_sampleFormatExternal.blockSize);
-            ptrExternalOutputs->output->copyFrom(&block);
+            ptrExternalOutputs->output->copyFrom(&impl->blockOutput);
             if (enableProfiling) time1 += timerBlock.getTimeReset();
             ptrExternalOutputs->inUse = true;
             ptrExternalOutputs->submitted = true;

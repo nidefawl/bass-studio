@@ -21,7 +21,7 @@
 #include <soxr.h>
 
 
-//#define RESAMPLER_H_ENABLE_BUFFER_CHECKS
+#define RESAMPLER_H_ENABLE_BUFFER_CHECKS
 
 struct oversample_config_t {
     samplerate_t inputSampleRate     = 0;
@@ -173,7 +173,7 @@ struct resampler_t {
 #endif
         return true;
     }
-    AudioBlock pop(AudioBufferTimeInfo& timeinfo) {
+    void pop(AudioBufferTimeInfo& timeinfo, AudioBlock& blockOut) {
 
 #ifdef RESAMPLER_H_ENABLE_BUFFER_CHECKS
         dbgassert(outputQueue.size() > 0);
@@ -184,8 +184,9 @@ struct resampler_t {
             dbgassert(b->inUse == (b->samplesAvail > 0));
         }
 #endif
-
-        AudioBlock blockOut(numChannels, out.blockSize);
+        if (blockOut.channels != numChannels || blockOut.samples != out.blockSize) {
+            blockOut = AudioBlock(numChannels, out.blockSize);
+        }
         uint32_t writeOffset = 0;
 
         while (writeOffset < out.blockSize) {
@@ -221,8 +222,6 @@ struct resampler_t {
             dbgassert(b->inUse == (b->samplesAvail > 0));
         }
 #endif
-
-        return blockOut;
     }
     samplecount_t getNumSamplesOutputBuffer() const {
 #ifdef RESAMPLER_H_ENABLE_BUFFER_CHECKS
