@@ -1,4 +1,5 @@
 #pragma once
+#include "logging.h"
 #include "nanovg/nanovg.h"
 #include "host/mainctrl.h"
 #include "gui/gui.h"
@@ -96,6 +97,7 @@ public:
             }
             textField2.setValue("");
         } catch (std::exception& e) {
+            log_lf(Log::L_ERROR, "Error: %s\n", e.what());
             String strValue = e.what();
             textField2.setValue(strValue);
         }
