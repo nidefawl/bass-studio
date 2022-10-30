@@ -355,6 +355,8 @@ void clapplugin::unloadClapPlugin() {
     checkForMainThread();
 
     if (_isGuiCreated) {
+        if (_isGuiVisible)
+            _pluginGui->hide(_plugin);
         _pluginGui->destroy(_plugin);
         _isGuiCreated = false;
         _isGuiVisible = false;
@@ -417,6 +419,8 @@ void clapplugin::deactivate() {
         _plugin->stop_processing(_plugin);
         setPluginState(ActiveAndReadyToDeactivate);
         dawHandles->bIsStopProcessing = false;
+    } else if (_state == ActiveAndSleeping) {
+        setPluginState(ActiveAndReadyToDeactivate);
     }
 
     _plugin->deactivate(_plugin);
@@ -1831,8 +1835,6 @@ void clapplugin::updateWindowSize() {
 
     if (!_pluginGui->get_size(_plugin, &width, &height)) {
         log_lf(Log::L_WARN, "could not get the size of the plugin gui\n");
-        _isGuiCreated = false;
-        _pluginGui->destroy(_plugin);
         return;
     }
     windowHost->resize({ width, height });
