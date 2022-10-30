@@ -360,7 +360,7 @@ guictr_noteeditor::guictr_noteeditor(clip_view& _view)
       piano(_view, *this),
       content(grid, _view, *this),
       velocities(grid, _view, *this),
-      ctrlData(grid, _view),
+      ctrlData(grid, _view, *this),
       timeline(grid),
       clipHandles(grid, _view),
       view(_view),

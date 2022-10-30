@@ -138,6 +138,9 @@ enum gui_type : uint16_t {
     CTR_TYPE_KEYBINDS,
     CTR_TYPE_PLUGINS,
     CTR_TYPE_MIDI_MONITOR,
+    CTR_TYPE_CLIPEDITOR_NOTES,
+    CTR_TYPE_CLIPEDITOR_VELOCITY,
+    CTR_TYPE_CLIPEDITOR_CONTROLDATA,
 };
 namespace DebugAlloc {
     template<typename T>

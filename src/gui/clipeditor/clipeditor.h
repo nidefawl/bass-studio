@@ -381,10 +381,11 @@ public:
     ivec2 dragBegin = ivec2(0);
     ivec2 dragTo    = ivec2(0);
     note_t beginDragNote;
-    const bool isVelocity;
+    // const bool isVelocity;
     gui_clipcontent(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout, bool _isVel)
-        : gui_clipcontent_base(_grid, _view), piano_scale(_layout, _view, size.y),
-          isVelocity(_isVel) {
+        : gui_clipcontent_base(_grid, _view), piano_scale(_layout, _view, size.y)
+        //   ,isVelocity(_isVel) 
+    {
         padding = 0;
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
@@ -399,6 +400,7 @@ public:
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
 
+
 protected:
     void setGlobalSelectionFromClipSelection();
 };
@@ -406,6 +408,7 @@ protected:
 class gui_clipcontent_notes : public gui_clipcontent {
 public:
     gui_clipcontent_notes(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, false) {
+        setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_NOTES);
     }
     void render(NVGcontext* vg) override;
 };
@@ -413,6 +416,7 @@ public:
 class gui_clipcontent_velocities : public gui_clipcontent {
 public:
     gui_clipcontent_velocities(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, true) {
+        setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY);
     }
     void render(NVGcontext* vg) override;
 };
@@ -457,12 +461,13 @@ public:
         return math::roundfS32(y * this->gridStepsV) / float(this->gridStepsV);
     }
 };
-class gui_clipcontent_control_data : public gui_clipcontent_base {
+class gui_clipcontent_control_data : public gui_clipcontent {
     CCEdit shapeEdit;
     DAW::Shape::shape_t tmpShape;
     int32_t cc = 0;
+    bool bIsDraggingShape = false;
 public:
-    gui_clipcontent_control_data(scaled_grid& _grid, clip_view& _view);
+    gui_clipcontent_control_data(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout);
     ~gui_clipcontent_control_data() override;
     void render(NVGcontext* vg) override;
     void layout() override;
