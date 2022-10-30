@@ -183,8 +183,11 @@ float renderTextLabel(NVGcontext* vg,
     nvgFontSize(vg, fontSizeScaled);
     nvgFillColor(vg, color);
     nvgTextAlign(vg, alignment);
-    float f = nvgTextW(vg, pos.x, pos.y, bounds.x, text.c_str(), &text.back() + 1);
-    nvgTranslateZ(vg, 2.0f);
+    float f = 0.0f;
+    if (!text.empty()) {
+        f = nvgTextW(vg, pos.x, pos.y, bounds.x, text.c_str(), &text.back() + 1);
+        nvgTranslateZ(vg, 2.0f);
+    }
     return f;
 }
 float guibase::renderText(NVGcontext* vg,
