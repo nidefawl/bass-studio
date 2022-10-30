@@ -188,10 +188,6 @@ private:
     static void clapParamsRequestFlush(const clap_host* host);
     void scanParams();
     void scanParam(int32_t index);
-    PluginParam& checkValidParamId(const std::string_view& function,
-                                   const std::string_view& param_name,
-                                   clap_id param_id);
-    void checkValidParamValue(const PluginParam& param, double value);
     double getClapParamValue(const clap_param_info &info);
     static bool clapParamsRescanMayValueChange(uint32_t flags) {
         return flags & (CLAP_PARAM_RESCAN_ALL | CLAP_PARAM_RESCAN_VALUES);

@@ -4,7 +4,6 @@
 #include <exception>
 #include <iostream>
 #include <memory>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -25,6 +24,7 @@
 #include "samplerate.h"
 #include "seq_time.h"
 #include "snapshot/plugin-snapshot.h"
+#include "str_util.h"
 #include "thread.h"
 #include "track_impl.h"
 #include "types.h"
@@ -32,6 +32,8 @@
 #include <clap/helpers/reducing-param-queue.hxx>
 #include <utility>
 #include <vector>
+
+#define HLOG "Claphost: "
 
 namespace {
     struct clap_snapshot_ostream : public clap_ostream {
@@ -240,18 +242,18 @@ bool clapplugin::loadClapPlugin(DAW::Host::LoadResultSharedLibrary& _library) {
 
     pluginCount = _pluginFactory->get_plugin_count(_pluginFactory);
     if (clapPluginIndex > pluginCount) {
-        log_lf(Log::L_ERROR, "plugin index greater than count (%d/%d)\n", clapPluginIndex, pluginCount);
+        log_lf(Log::L_ERROR, HLOG "plugin index greater than count (%d/%d)\n", clapPluginIndex, pluginCount);
         return false;
     }
 
     auto desc = _pluginFactory->get_plugin_descriptor(_pluginFactory, clapPluginIndex);
     if (!desc) {
-        log_lf(Log::L_ERROR, "no plugin descriptor (%d/%d)\n", clapPluginIndex, pluginCount);
+        log_lf(Log::L_ERROR, HLOG "no plugin descriptor (%d/%d)\n", clapPluginIndex, pluginCount);
         return false;
     }
 
     if (!clap_version_is_compatible(desc->clap_version)) {
-        log_lf(Log::L_ERROR, "Incompatible clap version: Plugin is %d.%d.%d. Host is %d.%d.%d\n",
+        log_lf(Log::L_ERROR, HLOG "Incompatible clap version: Plugin is %d.%d.%d. Host is %d.%d.%d\n",
                desc->clap_version.major, desc->clap_version.minor, desc->clap_version.revision,
                CLAP_VERSION.major, CLAP_VERSION.minor, CLAP_VERSION.revision);
         return false;
@@ -1053,9 +1055,8 @@ void clapplugin::updateClapFromMainThread() {
             [this](clap_id param_id, const EngineToAppParamQueueValue& value) {
                 auto it = _params.find(param_id);
                 if (it == _params.end()) {
-                    std::ostringstream msg;
-                    msg << "Plugin produced a CLAP_EVENT_PARAM_SET with an unknown param_id: " << param_id;
-                    throw std::invalid_argument(msg.str());
+                    log_lf(Log::L_WARN, HLOG "Plugin produced a CLAP_EVENT_PARAM_SET with an unknown param_id: %d\n", param_id);
+                    return;
                 }
 
                 if (value.has_value)
@@ -1108,42 +1109,6 @@ void clapplugin::updateClapFromMainThread() {
     }
 }
 
-PluginParam& clapplugin::checkValidParamId(const std::string_view& function,
-                                           const std::string_view& param_name,
-                                           clap_id param_id) {
-    checkForMainThread();
-
-    if (param_id == CLAP_INVALID_ID) {
-        std::ostringstream msg;
-        msg << "Plugin called " << function << " with " << param_name << " == CLAP_INVALID_ID";
-        throw std::invalid_argument(msg.str());
-    }
-
-    auto it = _params.find(param_id);
-    if (it == _params.end()) {
-        std::ostringstream msg;
-        msg << "Plugin called " << function << " with  an invalid " << param_name
-            << " == " << param_id;
-        throw std::invalid_argument(msg.str());
-    }
-
-    dbgassert(it->first == param_id);
-    dbgassert(it->second->info().id == param_id);
-    return *it->second;
-}
-
-void clapplugin::checkValidParamValue(const PluginParam& param, double value) {
-    checkForMainThread();
-    if (!param.isValueValid(value)) {
-        std::ostringstream msg;
-        msg << "Invalid value for param. ";
-        param.printInfo(msg);
-        msg << "; value: " << value;
-        // std::cerr << msg.str() << std::endl;
-        throw std::invalid_argument(msg.str());
-    }
-}
-
 void clapplugin::setParamValueByHost(PluginParam& param, double value) {
     checkForMainThread();
 
@@ -1175,8 +1140,10 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
 
     // 1. it is forbidden to use CLAP_PARAM_RESCAN_ALL if the plugin is active
     if (plugin->isPluginActive() && (flags & CLAP_PARAM_RESCAN_ALL)) {
-        throw std::logic_error(
-                "clap_host_params.recan(CLAP_PARAM_RESCAN_ALL) was called while the plugin is active!");
+        log_lf(Log::L_ERROR, HLOG "clap_host_params.recan(CLAP_PARAM_RESCAN_ALL) was called while the plugin is active!\n");
+#ifndef NDEBUG
+            dbgassert(0);
+#endif // !NDEBUG
         return;
     }
 
@@ -1186,15 +1153,18 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
 
     for (uint32_t iPluginIndex = 0; iPluginIndex < count; ++iPluginIndex) {
         clap_param_info info{};
-        if (!plugin->_pluginParams->get_info(plugin->_plugin, iPluginIndex, &info))
-            throw std::logic_error("clap_plugin_params.get_info did return false!");
+        if (!plugin->_pluginParams->get_info(plugin->_plugin, iPluginIndex, &info)) {
+            log_lf(Log::L_WARN, HLOG "clap_plugin_params.get_info returned false for index %d\n", iPluginIndex);
+            continue;
+        }
 
         if (info.id == CLAP_INVALID_ID) {
-            std::ostringstream msg;
-            msg << "clap_plugin_params.get_info() reported a parameter with id = CLAP_INVALID_ID"
-                << std::endl
-                << " 2. name: " << info.name << ", module: " << info.module << std::endl;
-            throw std::logic_error(msg.str());
+            log_lf(Log::L_WARN, HLOG "clap_plugin_params.get_info reported a parameter with id = CLAP_INVALID_ID\n");
+            log_lf(Log::L_WARN, HLOG " 2. name: %s, module: %s\n", info.name, info.module);
+#ifndef NDEBUG
+            dbgassert(0);
+#endif // !NDEBUG
+            continue;
         }
 
         auto it = plugin->_params.find(info.id);
@@ -1202,67 +1172,62 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
         // check that the parameter is not declared twice
         if (paramIds.count(info.id) > 0) {
             dbgassert(it != plugin->_params.end());
-
-            std::ostringstream msg;
-            msg << "the parameter with id: " << info.id << " was declared twice." << std::endl
-                << " 1. name: " << it->second->info().name << ", module: " << it->second->info().module
-                << std::endl
-                << " 2. name: " << info.name << ", module: " << info.module << std::endl;
-            throw std::logic_error(msg.str());
+            log_lf(Log::L_WARN, HLOG "the parameter with id: %d was declared twice.\n", info.id);
+            log_lf(Log::L_WARN, HLOG " 1. name: %s, module: %s\n", it->second->info().name, it->second->info().module);
+            log_lf(Log::L_WARN, HLOG " 2. name: %s, module: %s\n", info.name, info.module);
+#ifndef NDEBUG
+            dbgassert(0);
+#endif // !NDEBUG
+            continue;
         }
         paramIds.insert(info.id);
 
         if (it == plugin->_params.end()) {
+#ifndef NDEBUG
             if (!(flags & CLAP_PARAM_RESCAN_ALL)) {
-                std::ostringstream msg;
-                msg << "a new parameter was declared, but the flag CLAP_PARAM_RESCAN_ALL was not "
-                       "specified; id: "
-                    << info.id << ", name: " << info.name << ", module: " << info.module << std::endl;
-                throw std::logic_error(msg.str());
+                log_lf(Log::L_WARN, HLOG "a new parameter was declared, but the flag CLAP_PARAM_RESCAN_ALL was not "
+                        "specified; id: %d, name: %s, module: %s\n", info.id, info.name, info.module);
             }
+#endif // !NDEBUG
 
             double value = plugin->getClapParamValue(info);
             auto param   = std::make_unique<PluginParam>(*plugin, info, value);
-            plugin->checkValidParamValue(*param, value);
+            if (!param->isValueValid(value)) {
+                log_lf(Log::L_WARN, HLOG "invalud value %f for parameter. id: %d, name: %s, module: %s\n", value,
+                        info.id, info.name, info.module);
+            }
             plugin->_params.insert_or_assign(info.id, std::move(param));
         } else {
             // update param info
             if (!it->second->isInfoEqualTo(info)) {
+#ifndef NDEBUG
                 if (!clapParamsRescanMayInfoChange(flags)) {
-                    std::ostringstream msg;
-                    msg << "a parameter's info did change, but the flag CLAP_PARAM_RESCAN_INFO "
-                           "was not specified; id: "
-                        << info.id << ", name: " << info.name << ", module: " << info.module
-                        << std::endl;
-                    throw std::logic_error(msg.str());
+                    log_lf(Log::L_WARN, HLOG "a parameter's info did change, but the flag CLAP_PARAM_RESCAN_INFO was not "
+                            "specified; id: %d, name: %s, module: %s\n", info.id, info.name, info.module);
                 }
-
-                if (!(flags & CLAP_PARAM_RESCAN_ALL) &&
-                    !it->second->isInfoCriticallyDifferentTo(info)) {
-                    std::ostringstream msg;
-                    msg << "a parameter's info has critical changes, but the flag CLAP_PARAM_RESCAN_ALL "
-                           "was not specified; id: "
-                        << info.id << ", name: " << info.name << ", module: " << info.module
-                        << std::endl;
-                    throw std::logic_error(msg.str());
+                if (!(flags & CLAP_PARAM_RESCAN_ALL) && !it->second->isInfoCriticallyDifferentTo(info)) {
+                    log_lf(Log::L_WARN, HLOG "a parameter's info has critical changes, but the flag CLAP_PARAM_RESCAN_ALL was not "
+                            "specified; id: %d, name: %s, module: %s\n", info.id, info.name, info.module);
                 }
+#endif // !NDEBUG
 
                 it->second->setInfo(info);
             }
 
             double value = plugin->getClapParamValue(info);
             if (it->second->value() != value) {
+#ifndef NDEBUG
                 if (!clapParamsRescanMayValueChange(flags)) {
-                    std::ostringstream msg;
-                    msg << "a parameter's value did change but, but the flag CLAP_PARAM_RESCAN_VALUES "
-                           "was not specified; id: "
-                        << info.id << ", name: " << info.name << ", module: " << info.module
-                        << std::endl;
-                    throw std::logic_error(msg.str());
+                    log_lf(Log::L_WARN, HLOG "a parameter's value did change but, but the flag CLAP_PARAM_RESCAN_VALUES was not "
+                            "specified; id: %d, name: %s, module: %s\n", info.id, info.name, info.module);
                 }
+#endif // !NDEBUG
 
                 // update param value
-                plugin->checkValidParamValue(*it->second, value);
+                if (!it->second->isValueValid(value)) {
+                    log_lf(Log::L_WARN, HLOG "invalud value %f for parameter. id: %d, name: %s, module: %s\n", value,
+                            info.id, info.name, info.module);
+                }
                 it->second->setValue(value);
                 it->second->setModulation(value);
                 auto param = plugin->getParamUnchecked(it->first + PARAM_OFFSET_EXTERNAL);
@@ -1280,14 +1245,13 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
         if (paramIds.find(it->first) != paramIds.end())
             ++it;
         else {
+#ifndef NDEBUG
             if (!(flags & CLAP_PARAM_RESCAN_ALL)) {
-                std::ostringstream msg;
                 auto& info = it->second->info();
-                msg << "a parameter was removed, but the flag CLAP_PARAM_RESCAN_ALL was not "
-                       "specified; id: "
-                    << info.id << ", name: " << info.name << ", module: " << info.module << std::endl;
-                throw std::logic_error(msg.str());
+                log_lf(Log::L_WARN, HLOG "a parameter was removed, but the flag CLAP_PARAM_RESCAN_ALL was not "
+                        "specified; id: %d, name: %s, module: %s\n", info.id, info.name, info.module);
             }
+#endif // !NDEBUG
             it = plugin->_params.erase(it);
         }
     }
@@ -1390,10 +1354,10 @@ double clapplugin::getClapParamValue(const clap_param_info& info) {
     if (_pluginParams->get_value(_plugin, info.id, &value))
         return value;
 
-    std::ostringstream msg;
-    msg << "failed to get the param value, id: " << info.id << ", name: " << info.name
-        << ", module: " << info.module;
-    throw std::logic_error(msg.str());
+    log_lf(Log::L_ERROR, HLOG "Failed to get the param value, id: %d, name: %s, module: %s\n",
+           info.id, info.name, info.module);
+    dbgassert(0);
+    return 0;
 }
 
 void clapplugin::scanQuickControls() {
@@ -1403,9 +1367,8 @@ void clapplugin::scanQuickControls() {
         return;
 
     if (!_pluginQuickControls->get || !_pluginQuickControls->count) {
-        std::ostringstream msg;
-        msg << "clap_plugin_quick_controls is partially implemented.";
-        throw std::logic_error(msg.str());
+        log_lf(Log::L_ERROR, HLOG "clap_plugin_quick_controls is partially implemented.\n");
+        return;
     }
 
     quickControlsSetSelectedPage(CLAP_INVALID_ID);
@@ -1423,16 +1386,13 @@ void clapplugin::scanQuickControls() {
     for (uint32_t iControlIndex = 0; iControlIndex < N; ++iControlIndex) {
         auto page = std::make_unique<clap_quick_controls_page>();
         if (!_pluginQuickControls->get(_plugin, iControlIndex, page.get())) {
-            std::ostringstream msg;
-            msg << "clap_plugin_quick_controls.get_page(" << iControlIndex << ") failed, while the page count is "
-                << N;
-            throw std::logic_error(msg.str());
+            log_lf(Log::L_ERROR, HLOG "clap_plugin_quick_controls.get_page(%d) failed, while the page count is %d\n", iControlIndex, N);
+            continue;
         }
 
         if (page->id == CLAP_INVALID_ID) {
-            std::ostringstream msg;
-            msg << "clap_plugin_quick_controls.get_page(" << iControlIndex << ") gave an invalid page_id";
-            throw std::invalid_argument(msg.str());
+            log_lf(Log::L_ERROR, HLOG "clap_plugin_quick_controls.get_page(%d) gave an invalid page_id\n", iControlIndex);
+            continue;
         }
 
         if (iControlIndex == 0)
@@ -1440,12 +1400,10 @@ void clapplugin::scanQuickControls() {
 
         auto it = _quickControlsPagesIndex.find(page->id);
         if (it != _quickControlsPagesIndex.end()) {
-            std::ostringstream msg;
-            msg << "clap_plugin_quick_controls.get_page(" << iControlIndex
-                << ") gave twice the same page_id:" << page->id << std::endl
-                << " 1. name: " << it->second->name << std::endl
-                << " 2. name: " << page->name;
-            throw std::invalid_argument(msg.str());
+            log_lf(Log::L_ERROR, HLOG "clap_plugin_quick_controls.get_page(%d) gave twice the same page_id: %d\n", iControlIndex, page->id);
+            log_lf(Log::L_ERROR, HLOG " 1. name: %s\n", it->second->name);
+            log_lf(Log::L_ERROR, HLOG " 2. name: %s\n", page->name);
+            continue;
         }
 
         _quickControlsPagesIndex.insert_or_assign(page->id, page.get());
@@ -1464,9 +1422,8 @@ void clapplugin::quickControlsSetSelectedPage(clap_id pageId) {
     if (pageId != CLAP_INVALID_ID) {
         auto it = _quickControlsPagesIndex.find(pageId);
         if (it == _quickControlsPagesIndex.end()) {
-            std::ostringstream msg;
-            msg << "quick control page_id " << pageId << " not found";
-            throw std::invalid_argument(msg.str());
+            log_lf(Log::L_ERROR, HLOG "quick control page_id %d not found\n", pageId);
+            dbgassert(0);
         }
     }
 
@@ -1488,10 +1445,10 @@ void clapplugin::clapQuickControlsChanged(const clap_host* host) {
 
     auto h = fromHost(host);
     if (!h->_pluginQuickControls) {
-        std::ostringstream msg;
-        msg << "Plugin called clap_host_quick_controls.changed() but does not provide "
-               "clap_plugin_quick_controls";
-        throw std::logic_error(msg.str());
+        log_lf(Log::L_ERROR, HLOG "Plugin called clap_host_quick_controls.changed() but does not provide "
+                             "clap_plugin_quick_controls\n");
+        dbgassert(0);
+        return;
     }
 
     h->scanQuickControls();
@@ -1503,8 +1460,10 @@ bool clapplugin::loadNativePluginPreset(const std::string& path) {
     if (!_pluginPresetLoad)
         return false;
 
-    if (!_pluginPresetLoad->from_file)
-        throw std::logic_error("clap_plugin_preset_load does not implement load_from_file");
+    if (!_pluginPresetLoad->from_file) {
+        log_lf(Log::L_ERROR, HLOG "clap_plugin_preset_load does not implement load_from_file\n");
+        return false;
+    }
 
     return _pluginPresetLoad->from_file(_plugin, path.c_str());
 }
@@ -1514,9 +1473,12 @@ void clapplugin::clapStateMarkDirty(const clap_host* host) {
 
     auto h = fromHost(host);
 
-    if (!h->_pluginState || !h->_pluginState->save || !h->_pluginState->load)
-        throw std::logic_error("Plugin called clap_host_state.set_dirty() but the host does not "
-                               "provide a complete clap_plugin_state interface.");
+    if (!h->_pluginState || !h->_pluginState->save || !h->_pluginState->load) {
+        
+        log_lf(Log::L_ERROR, HLOG "Plugin called clap_host_state.set_dirty() but the host does not "
+                               "provide a complete clap_plugin_state interface.\n");
+        return;
+    }
 
     h->_stateIsDirty = true;
 }
@@ -1828,7 +1790,7 @@ void clapplugin::updateWindowSize() {
     uint32_t height = 0;
 
     if (!_pluginGui->get_size(_plugin, &width, &height)) {
-        log_lf(Log::L_WARN, "could not get the size of the plugin gui\n");
+        log_lf(Log::L_WARN, HLOG "pluginGui->get_size returned false\n");
         return;
     }
     windowHost->resize({ width, height });
