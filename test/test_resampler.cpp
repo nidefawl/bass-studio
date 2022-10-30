@@ -49,6 +49,7 @@ namespace {
             seq_rand rnd;
             rnd.rng_seed(123123123);
             AudioBufferTimeInfo timeInfo;
+            AudioBlock blockOut;
             while (true) {
                 if (maxIterations > 0) {
                     maxIterations--;
@@ -59,7 +60,7 @@ namespace {
                     }
                 }
                 while (ptr->numBlocksToPop() > 0) {
-                    AudioBlock blockOut = ptr->pop(timeInfo);
+                    ptr->pop(timeInfo, blockOut);
                     TEST_ASSERT_THROW(blockOut.samples == sfOut.blockSize);
                     TEST_ASSERT_THROW(blockOut.channels == numChannels);
                     popped++;
