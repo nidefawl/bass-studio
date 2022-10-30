@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <atomic>
 #include <memory.h>
 #include <cstdlib>
@@ -11,6 +12,8 @@
 #include "rand.h"
 #include "math/seq_math.h"
 #include "types.h"
+#include "assert_dbg.h"
+#include "logging.h"
 
 void AudioBlock::BeginTrace() {
 #if TRACK_ALLOCATIONS_AUDIOBLOCK
@@ -63,12 +66,12 @@ void AudioBlock::realloc(samplecount_t _samples) {
                 numAllocs++;
 #endif
             for (channelnum_t i = 0; i < channels; i++) {
-                float* const newBuf = static_cast<float*>(aligned_malloc(sizeof(float) * _samples, 512));
+                float* const newBuf = static_cast<float*>(DAW::aligned_malloc(sizeof(float) * _samples, 512));
 #if DEBUG_PRINT_AUDIOBUFFER_ALLOC
                 log_lf(Log::L_TRACE, "AudioBlock buffer[%d] allocate 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
 #endif
                 if (!newBuf) {
-                    handleFailedAllocation(0x1000, _samples * sizeof(float));
+                    DAW::handleFailedAllocation(0x1000, _samples * sizeof(float));
                 } else {
                     memset(newBuf, 0, sizeof(float) * _samples);
                     if (buf[i]) {
@@ -78,7 +81,7 @@ void AudioBlock::realloc(samplecount_t _samples) {
 #if DEBUG_PRINT_AUDIOBUFFER_ALLOC
                         log_lf(Log::L_TRACE, "AudioBlock buffer[%d] release 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
 #endif
-                        aligned_free(buf[i]);
+                        DAW::aligned_free(buf[i]);
                     }
                 }
                 buf[i] = newBuf;
@@ -96,7 +99,7 @@ AudioBlock& AudioBlock::operator=(AudioBlock&& other) noexcept {
     if (channelsAlloc != alloc_type::empty && dataAlloc == alloc_type::heap) {
         for (channelnum_t i = 0; i < channels; i++) {
             if (buf[i]) {
-                aligned_free(buf[i]);
+                DAW::aligned_free(buf[i]);
                 buf[i] = nullptr;
             }
         }
@@ -224,4 +227,77 @@ void printLeakedAudioBuffers() {
     log_printf("AudioBlock::numAllocs: %d\n", AudioBlock::numAllocs.load());
     log_printf("DelayLine::instanceCount: %d\n", DelayLine::instanceCount.load());
 #endif
+}
+
+namespace DAW {
+#define TRACE_ALLOCATIONS 0
+#if TRACE_ALLOCATIONS == 0
+
+void* aligned_malloc(size_t size, size_t align) {
+    void* result;
+#if defined(_MSC_VER) || defined(__MINGW32__)
+    result = _aligned_malloc(size, align);
+#else
+    if (posix_memalign(&result, align, size)) result = 0;
+#endif
+    return result;
+}
+
+void aligned_free(void* ptr) {
+#if defined(_MSC_VER) || defined(__MINGW32__)
+    _aligned_free(ptr);
+#else
+    free(ptr);
+#endif
+}
+#else
+struct aligned_alloc_t {
+    void* ptr;
+    size_t size;
+    size_t align;
+};
+
+std::vector<aligned_alloc_t> allocations;
+std::mutex m_mtx;
+void* aligned_malloc(size_t size, size_t align) {
+    std::unique_lock<std::mutex> lock(m_mtx);
+    void* result;
+#if defined(_MSC_VER) || defined(__MINGW32__)
+    result = _aligned_malloc(size, align);
+#else
+    if (posix_memalign(&result, align, size)) result = 0;
+#endif
+    allocations.push_back({ result, size, align });
+    return result;
+}
+void aligned_free(void* ptr) {
+    std::unique_lock<std::mutex> lock(m_mtx);
+    int32_t index = -1;
+    aligned_alloc_t alloc;
+    for (int32_t i = 0; i < allocations.size(); i++) {
+        if (allocations[i].ptr == ptr) {
+            alloc = allocations[i];
+            index = i;
+            break;
+        }
+    }
+    if (index >= 0) {
+        allocations.erase(allocations.begin() + index);
+    } else {
+        log_lf(Log::L_ERROR, "aligned_free: ptr not found\n");
+        dbgassert(0);
+    }
+
+#if defined(_MSC_VER) || defined(__MINGW32__)
+    _aligned_free(ptr);
+#else
+    free(ptr);
+#endif
+}
+
+#endif
+void handleFailedAllocation(int allocId, size_t allocSize) {
+    log_printf("Failed allocation of size %zu at %d\n", allocSize, allocId);
+    dbgassert(0);
+}
 }

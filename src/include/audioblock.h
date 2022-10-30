@@ -137,7 +137,7 @@ struct alignas(16) AudioBlock {
             for (channelnum_t i = 0; i < channels; i++) {
                 if (buf[i]) {
                     // delete[] buf[i];
-                    aligned_free(buf[i]);
+                    DAW::aligned_free(buf[i]);
                 }
             }
         }
