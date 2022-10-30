@@ -464,18 +464,22 @@ bool gui_clipcontent_control_data::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 }
 
 void gui_clipcontent_control_data::handleDraggedBegin(MouseEvent& evt) {
+    evt.relMousepos.x -= grid.tickToScreenD(0);
     shapeEdit.onBeginDragCurveEditor(evt);
 }
 
 void gui_clipcontent_control_data::handleDraggedMove(MouseEvent& evt) {
+    evt.relMousepos.x -= grid.tickToScreenD(0);
     shapeEdit.onMoveDragCurveEditor(evt);
 }
 
 void gui_clipcontent_control_data::handleDraggedRelease(MouseEvent& evt) {
+    evt.relMousepos.x -= grid.tickToScreenD(0);
     shapeEdit.onReleaseDragCurveEditor(evt);
 }
 
 void gui_clipcontent_control_data::handleRightClick(MouseEvent& evt) {
+    evt.relMousepos.x -= grid.tickToScreenD(0);
     shapeEdit.onRightClickCurveEditor(evt);
 }
 
@@ -496,6 +500,7 @@ void gui_clipcontent_control_data::render(NVGcontext* vg) {
     // // float clipTickMin = grid.screenToTickD(0.0);
     // // float clipTickMax = grid.screenToTickD(size.x);
     const auto shapePos    = vec2(grid.tickToScreenD(0), 0);
+    localMouse.x -= shapePos.x;
     // const auto shapeScale  = vec2(grid.tickLenToScreen(1.0), size.y);
     shapeEdit.renderEditor(vg, shapePos, theme, localMouse, false);
     // DAW::Shape::DrawShapeOneShot(tmpShape, 
