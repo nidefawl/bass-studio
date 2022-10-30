@@ -917,8 +917,15 @@ bool ShapeEdit::onRightClickCurveEditor(MouseEvent& evt) {
         float minDist = 0.0f;
         int32_t minPt = curve->getMinPt(local, editorScale, &minDist);
         if (minPt > -1) {
-            curve->pts.erase(curve->pts.begin() + minPt);
-            curve->sort();
+            if (callback) {
+                curveTmp = *curve;
+                curveTmp.pts.erase(curveTmp.pts.begin() + minPt);
+                curveTmp.sort();
+                callback(curveTmp);
+            } else if (curve) {
+                curve->pts.erase(curve->pts.begin() + minPt);
+                curve->sort();
+            }
             return true;
         }
     }
