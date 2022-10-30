@@ -77,6 +77,7 @@ public:
         return id == -1;
     }
 };
+class clip_t;
 struct clip_control_data_channel_t {
     DAW::Shape::shape_t shape;
     float defaultValue = 0.0f;
@@ -91,6 +92,7 @@ struct clip_control_data_channel_t {
         }
         return shape.sampleCurveUnclamped(x);
     }
+    float sampleAtTick(clip_t* clip, tick_t x);
     void updateBounds() {
         if (shape.pts.empty()) {
             minTick = -1;
@@ -101,7 +103,6 @@ struct clip_control_data_channel_t {
         }
     }
 };
-class clip_t;
 struct clip_control_data_t {
     clip_control_data_channel_t pitchBend;
     std::map<int32_t, clip_control_data_channel_t> ccChannels;

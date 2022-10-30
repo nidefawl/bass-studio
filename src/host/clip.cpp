@@ -892,6 +892,20 @@ void clip_control_data_t::createCCChannel(int32_t cc) {
 void clip_control_data_t::updateBounds() {
 }
 
+float clip_control_data_channel_t::sampleAtTick(clip_t* clip, tick_t tOffset) {
+    if (shape.pts.empty()) {
+        return defaultValue;
+    }
+    if (clip->isLoopEnabled()) {
+        const tick_t preLoopLen = clip->offsetStart > clip->loopStart ? math::max(0, (/*loopEnd*/ clip->loopStart + clip->loopLen) - clip->offsetStart) : math::max(0, clip->loopStart - clip->offsetStart);
+        if (clip->loopLen > 0 && tOffset >= preLoopLen) {
+            tOffset = math::floorfS32(tOffset - preLoopLen) % clip->loopLen;
+        }
+    }
+    tOffset += clip->offsetStart;
+    return shape.sampleCurveUnclamped(tOffset);
+}
+
 int clip_control_data_t::getInTimeRange(clip_t* clip, tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, std::vector<DAW::Host::midievent_ctrl_t>& list) {
     if (!hasData()) {
         return 0;
@@ -921,15 +935,15 @@ int clip_control_data_t::getInTimeRange(clip_t* clip, tick_t absStart, tick_t ab
     int count = 0;
     for (tick_t t = absMin; t < absMax; t += 4) {
         tick_t tOffset = t;
-        if (clip->isLoopEnabled()) {
-            const tick_t preLoopLen = !clip->loopEnabled ? clip->len : clip->offsetStart > clip->loopStart ? math::max(0, (/*loopEnd*/ clip->loopStart + clip->loopLen) - clip->offsetStart)
-                                                                                : math::max(0, clip->loopStart - clip->offsetStart);
-            if (clip->loopLen > 0 && tOffset >= preLoopLen) {
-                tOffset = (tOffset - preLoopLen) % clip->loopLen;
-            }
-        }
+        // if (clip->isLoopEnabled()) {
+        //     const tick_t preLoopLen = !clip->loopEnabled ? clip->len : clip->offsetStart > clip->loopStart ? math::max(0, (/*loopEnd*/ clip->loopStart + clip->loopLen) - clip->offsetStart)
+        //                                                                         : math::max(0, clip->loopStart - clip->offsetStart);
+        //     if (clip->loopLen > 0 && tOffset >= preLoopLen) {
+        //         tOffset = (tOffset - preLoopLen) % clip->loopLen;
+        //     }
+        // }
         if (pitchBend.hasData()) {
-            float f1 = pitchBend.sampleAtTick(tOffset);
+            float f1 = pitchBend.sampleAtTick(clip, tOffset);
             IMidiMsg msg;
             msg.MakePitchWheelMsg(f1*2.0-1.0f, 0, t);
             DAW::Host::midievent_ctrl_t e;
@@ -941,7 +955,7 @@ int clip_control_data_t::getInTimeRange(clip_t* clip, tick_t absStart, tick_t ab
         }
         for (auto& it : ccChannels) {
             if (it.second.hasData()) {
-                float f1 = it.second.sampleAtTick(tOffset);
+                float f1 = it.second.sampleAtTick(clip, tOffset);
                 IMidiMsg msg;
                 msg.MakeControlChangeMsg(static_cast<IMidiMsg::EControlChangeMsg>(it.first), f1, 0, t);
                 DAW::Host::midievent_ctrl_t e;
