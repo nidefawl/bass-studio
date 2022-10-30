@@ -241,7 +241,6 @@ namespace UIFont {
         const auto fontIdx = math::clamp<uint32_t>(font.fontInstanceIdx, 0, fonts.fontsLoaded.size());
         auto& fontloaded  = fonts.fontsLoaded[fontIdx];
         if (fontloaded.nvgId == -999) {
-            log_lf(Log::L_DEBUG, "loading font %s %s\n", StringAsCStr(fontloaded.font.name), StringAsCStr(fontloaded.font.path));
             fontloaded.nvgId = nvgCreateFont(ctx, StringAsCStr(fontloaded.font.name), StringAsCStr(fontloaded.font.path));
         }
         nvgFontFaceId(ctx, fontloaded.nvgId);

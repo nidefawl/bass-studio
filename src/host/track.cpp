@@ -509,11 +509,10 @@ namespace DAW {
     effectbase* loadEffectModule(Host::PluginManager* host, const plugin_snapshot_t& pluginSnapshot, bool forceLoad) {
         effectbase* effect      = nullptr;
         if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST || pluginSnapshot.pluginType == PLUGIN_TYPE_CLAP) {
-            log_printf("Next loading plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
+            log_printf("Loading Plugin '%s'\n", StringAsCStr(pluginSnapshot.name));
             plugindatabase_t* db = plugindatabase_t::getInstance();
             pluginentry_t resolvedPlugin;
             if (db->resolvePlugin(pluginSnapshot, resolvedPlugin, forceLoad ? 1 : 0)) {
-                log_lf(Log::L_DEBUG, "Plugin is registered... loading %s, uId %d, forceLoad %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, forceLoad);
                 auto res = host->loadPlugin({resolvedPlugin.path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId, resolvedPlugin.bugfixFlags, resolvedPlugin.moduleFormat});
                 if (res.library.isSuccess()) {
                     res.plugin->localDbId = resolvedPlugin.localDbId;
@@ -759,7 +758,6 @@ void PluginManager::activateDeferred(effectbase* const eff, int flags, effectbas
 
     auto defEffect = dynamic_cast<effect_deferred*>(eff);
     plugin_snapshot_t pluginSnapshot = defEffect->getSnapshotConst();
-    log_printf("activating deferred plugin loadEffectModule %s\n", StringAsCStr(pluginSnapshot.name));
     effectbase* effect = loadEffectModule(this, pluginSnapshot, flags & FLAG_HOST_FORCELOAD_DISABLED_PLUGINS);
     if (out_effectLoaded) {
         *out_effectLoaded = effect;
@@ -771,11 +769,6 @@ void PluginManager::activateDeferred(effectbase* const eff, int flags, effectbas
     }
 
     /* Begin of loading plugin state (parameter values, binary preset, automation lanes) */
-
-    log_printf("Activate Plugin %s: %zu Parameters, %zu Automated parameters\n",
-               StringAsCStr(pluginSnapshot.name),
-               pluginSnapshot.params.size(),
-               pluginSnapshot.automatedParams.size());
 
     effectbase* prevPlugin = nullptr;
     always_assert(removeEntry(eff->trackImpl->deferredEffects, eff));
@@ -793,7 +786,6 @@ void PluginManager::activateDeferred(effectbase* const eff, int flags, effectbas
     /* Load plugin parameter automation lanes */
     loadAutomation(pluginSnapshot.automatedParams, effect);
 
-    log_lf(Log::L_DEBUG, "done activating deferred plugin %s: isenabled %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.enabled);
     if (pluginSnapshot.enabled) {
         effect->onEnable();
     }

@@ -160,8 +160,6 @@ private:
         midihost* midiHost = m_threadTls.midiHost;
         std::function<void()> renderCompleteFn = nullptr;
         export_settings_t exportSettingsLocal{};
-        double playbackDuration = 0;
-        hires_timer_t timer;
         hires_timer_t timer2;
 
         std::shared_ptr<PlaybackThreadReq> req;
@@ -199,9 +197,7 @@ private:
 
                                     host->preExportBegin(ctrl, exportSettingsLocal);
                                     host->onStartPlayback(this->m_prjCtrl);
-                                    timer.reset();
                                     timer2.reset();
-                                    playbackDuration = 0;
                                     break;
                                 }
                                 case playback_state::status_playback: {
@@ -215,9 +211,7 @@ private:
                                     samplePos              = tickToSampleConvert<int32_t, roundmode::floor>(startPos, bpm100, host->m_sampleFormatInternal.sampleRate);
                                     log_printf("START ON %s seconds: %.2f - sample %d\n", StringAsCStr(tickAsBeatString(startPos, false)), toSeconds(startPos, bpm100), samplePos);
                                     host->onStartPlayback(this->m_prjCtrl);
-                                    timer.reset();
                                     timer2.reset();
-                                    playbackDuration = 0;
                                     break;
                                 }
                                 case playback_state::status_stop: {
@@ -323,15 +317,14 @@ private:
                                 double nextTickPos    = projGlobals.loopStart;
                                 int32_t nextSamplePos = tickToSampleConvert<int32_t, roundmode::floor>(nextTickPos, bpm100, sampleRate);
                                 host->onPlaybackJumpFromTo(this->m_prjCtrl, samplePos, tickPos, nextSamplePos, nextTickPos);
-                                log_lf(Log::L_DEBUG, "JMP FROM %s to %s\n", StringAsCStr(tickAsBeatString(tickPos, false)), StringAsCStr(tickAsBeatString(nextTickPos, false)));
+                                // log_lf(Log::L_DEBUG, "JMP FROM %s to %s\n", StringAsCStr(tickAsBeatString(tickPos, false)), StringAsCStr(tickAsBeatString(nextTickPos, false)));
                                 tickPos   = nextTickPos;
                                 samplePos = nextSamplePos;
-                                log_lf(Log::L_DEBUG, "JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
+                                // log_lf(Log::L_DEBUG, "JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
                             }
                         }
                         if (m_status != status_stop) {
                             ctrl->getPlaybackPos() = math::rounddS32(tickPos);
-                            playbackDuration += props.microSecsPerBlock * 0.001 * numBlocksProcessed;
                         }
                         if (m_status == status_render) {
                             if (tickPos >= exportSettingsLocal.exportPos + exportSettingsLocal.exportLen) {
@@ -366,14 +359,6 @@ private:
                 }
                 if (m_status == playback_state::status_no_process) {
                     seqthreads::threadSleep(100);
-                }
-
-
-                if (playbackDuration > 10000 && m_status == status_playback) {
-                    double wallTimeMs = timer.getTimeDouble() * 1000.0;
-                    log_lf(Log::L_DEBUG, "playbackDuration %.4f wallTime %.4f error %.4f\n", playbackDuration, wallTimeMs, playbackDuration - wallTimeMs);
-                    playbackDuration = 0;
-                    timer.reset();
                 }
             }
         } catch (std::exception& e) {

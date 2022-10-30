@@ -2388,7 +2388,6 @@ guitrack_editor& MainCtrl::getTrackEditor() {
 }
 
 void MainCtrl::onPluginsChanged() {
-    log_lf(Log::L_DEBUG, "onPluginsChanged\n");
     view->ctr_nodes.reset();
     view->ctr_nodes.refresh();
     view->ctr_plugins.relayout();
