@@ -154,7 +154,36 @@ public:
                 strSQLOrder.clear();
             }
         } else {
-            strSQLCond = " state == 1 and forcedisable == 0 and name like ? ESCAPE '#' ";
+            strSQLCond = "";
+            bool customQuery2 = strSearchQuery.length() > 1 && strSearchQuery.at(0) == ':';
+            if (customQuery2) {
+                // find end (space)
+                size_t pos = strSearchQuery.find(' ');
+                if (pos == String::npos) {
+                    pos = strSearchQuery.length();
+                }
+                String tag = strSearchQuery.substr(1, pos - 1);
+                if (tag == "vst") {
+                    strSQLCond += " moduleFormat == 0 and ";
+                } else if (tag == "clap") {
+                    strSQLCond += " moduleFormat == 1 and ";
+                } else if (tag == "synth") {
+                    strSQLCond += " isSynth == 1 and ";
+                } else if (tag == "fx") {
+                    strSQLCond += " isSynth == 0 and ";
+                }
+                if (pos == String::npos) {
+                    pos = 0;
+                }
+                if (strSearchQuery.length() > pos) {
+                    strSearchQuery = strSearchQuery.substr(pos + 1);
+                } else {
+                    strSearchQuery.clear();
+                }
+
+            }
+            // else
+            strSQLCond += " state == 1 and forcedisable == 0 and name like ? ESCAPE '#' ";
             if (strSearchQuery.empty()) {
                 strSearchQuery = "%";
             } else {
