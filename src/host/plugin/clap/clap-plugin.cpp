@@ -545,6 +545,8 @@ const void* clapplugin::clapExtension(const clap_host* host, const char* extensi
 
     auto h = fromHost(host);
 
+    if (!strcmp(extension, CLAP_EXT_LATENCY))
+        return &h->_hostLatency;
     if (!strcmp(extension, CLAP_EXT_GUI))
         return &h->_hostGui;
     if (!strcmp(extension, CLAP_EXT_LOG))
@@ -781,7 +783,10 @@ void clapplugin::clapGuiResizeHintsChanged(const clap_host_t* host) {
 
 bool clapplugin::clapGuiRequestResize(const clap_host* host, uint32_t width, uint32_t height) {
     log_lf(Log::L_TRACE, "clapGuiRequestResize %d %d\n", width, height);
-    /* TODO */
+    auto plugin = fromHost(host);
+    if (plugin->windowHost) {
+        plugin->windowHost->resize({ width, height });
+    }
     return true;
 }
 
@@ -798,6 +803,11 @@ bool clapplugin::clapGuiRequestHide(const clap_host* host) {
 }
 
 void clapplugin::clapGuiClosed(const clap_host* host, bool wasDestroyed) { checkForMainThread(); }
+void clapplugin::clapLatencyChanced(const clap_host* host) {
+    checkForMainThread();
+    auto plugin = fromHost(host);
+    plugin->dawHandles->currentLatency = plugin->_pluginLatency ? plugin->_pluginLatency->get(plugin->_plugin) : 0;
+}
 
 void clapplugin::processBegin(int nframes) {
     _process.frames_count = nframes;
@@ -1251,6 +1261,7 @@ void clapplugin::clapParamsRescan(const clap_host* host, uint32_t flags) {
             }
 #endif // !NDEBUG
             it = plugin->_params.erase(it);
+            dbgassert(0); // Not supported yet
         }
     }
 

@@ -217,6 +217,7 @@ private:
     static bool clapGuiRequestShow(const clap_host* host);
     static bool clapGuiRequestHide(const clap_host* host);
     static void clapGuiClosed(const clap_host* host, bool wasDestroyed);
+    static void clapLatencyChanced(const clap_host* host);
 
     static void clapStateMarkDirty(const clap_host* host);
 
@@ -242,6 +243,9 @@ private:
         clapplugin::clapGuiRequestShow,
         clapplugin::clapGuiRequestHide,
         clapplugin::clapGuiClosed,
+    };
+    static const constexpr clap_host_latency _hostLatency = {
+        clapplugin::clapLatencyChanced,
     };
 
     // static const constexpr clap_host_audio_ports hostAudioPorts_;
