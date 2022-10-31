@@ -70,6 +70,7 @@ class audiocache {
 
 public:
     static constexpr uint8_t maxDownS = 8;
+    static void Downsample(audiosample_t* sample);
     explicit audiocache(samplerate_t _samplerate) {
         setSamplerate(_samplerate);
     }
