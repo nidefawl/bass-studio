@@ -195,7 +195,7 @@ bool effectbase::openWindow(bool bResetPosition, ivec2 defaultSize) {
         this->windowHost = host_plugin_window::make(this, this->sName, size, bSupportsWindowResize);
     }
     if (this->windowHost != nullptr) {
-        this->windowHost->show(posSize, bSetPos, bSetSize);
+        this->windowHost->show(posSize, bSetPos, bSetSize && bSupportsWindowResize && bWindowPosSizeValid);
     }
     return false;
 }

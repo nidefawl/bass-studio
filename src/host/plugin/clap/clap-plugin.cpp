@@ -470,7 +470,6 @@ void clapplugin::setParentWindow(WId parentWindow) {
         _pluginGui->set_transient(_plugin, &w);
         _pluginGui->suggest_title(_plugin, "using clap-host suggested title");
     } else {
-        updateWindowSize();
 
         if (!_pluginGui->set_parent(_plugin, &w)) {
             log_lf(Log::L_WARN, "could embbed the plugin gui\n");
