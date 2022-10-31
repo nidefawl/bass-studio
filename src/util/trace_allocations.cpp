@@ -2,6 +2,7 @@
 
 #if ENABLE_ALLOCATION_TRACKING
 
+#include "logging.h"
 #include <new>
 #include <cstdlib>
 #include <cstdio>
@@ -32,8 +33,8 @@ namespace {
     }
     void endTrace() {
         recordStats = false;
-        std::printf("Single  %zd allocations, %zu bytes\n", allocStats.numAllocations, allocStats.bytesAllocated);
-        std::printf("Array   %zd allocations, %zu bytes\n", allocArrayStats.numAllocations, allocArrayStats.bytesAllocated);
+        log_lf(Log::L_INFO, "Single  %zd allocations, %zu bytes\n", allocStats.numAllocations, allocStats.bytesAllocated);
+        log_lf(Log::L_INFO, "Array   %zd allocations, %zu bytes\n", allocArrayStats.numAllocations, allocArrayStats.bytesAllocated);
     }
 }
 

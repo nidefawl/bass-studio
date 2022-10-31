@@ -588,20 +588,18 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
     markers.push_back(marker_t{ end, col(7), "block end", (float) (tickMarkers++) });
 #endif
 
+    const auto& noteEventsInRef = noteEventsIn;
 #ifdef DAW_DEBUG_ARP
-    std::vector<midievent_note_t> noteEvents = noteEventsIn;
     {
         tick_t lastNoteStart = -1;
         tick_t tickOffsetInBlock = -1;
-        for (auto& event : noteEvents) {
+        for (auto& event : noteEventsInRef) {
             dbgassert(lastNoteStart == -1 || event.globalTick >= lastNoteStart);
             lastNoteStart = event.globalTick;
             dbgassert(tickOffsetInBlock == -1 || event.tickOffsetInBlock >= tickOffsetInBlock);
             tickOffsetInBlock = event.tickOffsetInBlock;
         }
     }
-#else
-    auto& noteEvents = noteEventsIn;
 #endif
 
     int nSend = 0;
@@ -612,9 +610,6 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
     const tick_t arpLoopEnd   = loopEnd > -1 ? math::min(loopEnd, end) : end;
     for (tick_t t = arpLoopStart; t < arpLoopEnd; t++) {
         const tick_t tick = t;
-        if (tick == 611336) {
-            log_printf("Tick 611336\n");
-        }
         bool enabledBefore    = this->enable;
         tick_t stepSizeBefore = getStepSize(getParamValue(ARP_PARAM_CLOCK));
         if (bEnableStateUserToggled) {
@@ -649,8 +644,8 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
 
 
         // TODO: store index of last processed event and start iterating at that location
-        while (eventIdx < noteEvents.size()) {
-            const midievent_note_t& evt = noteEvents[eventIdx];
+        while (eventIdx < noteEventsInRef.size()) {
+            const midievent_note_t& evt = noteEventsInRef[eventIdx];
             const tick_t evtTick = evt.tickOffsetInBlock + start;
             if (evtTick > tick) {
                 break;
@@ -877,7 +872,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
         auto szTrackName = StringAsCStr(getTrack()->name);
         log_lf(Log::L_ERROR, "%s Block %d-%d: ARP did not process all events. Processed %zu of %zu\n", szTrackName, start, end, evtsProcessed, noteEventsIn.size());
         log_lf(Log::L_ERROR, "%s Block %d-%d: loopStart %d, loopEnd %d\n", szTrackName, start, end, loopStart, loopEnd);
-        for (auto& evt : noteEvents) {
+        for (auto& evt : noteEventsInRef) {
             log_lf(Log::L_ERROR, "Block %d-%d: Event %s %d %d %s\n", start, end, evt.isNoteOn ? "ON" : "OFF", evt.globalTick, evt.tickOffsetInBlock, StringAsCStr(noteNameAndNumber(evt.pitch)));
         }
     }
@@ -888,7 +883,7 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
 #ifdef DAW_DEBUG_ARP
     tick_t lastNoteStart = -1;
     tick_t tickOffsetInBlock = -1;
-    for (auto& event : noteEvents) {
+    for (auto& event : noteEventsInRef) {
         dbgassert(lastNoteStart == -1 || event.globalTick >= lastNoteStart);
         lastNoteStart = event.globalTick;
         dbgassert(tickOffsetInBlock == -1 || event.tickOffsetInBlock >= tickOffsetInBlock);

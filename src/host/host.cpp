@@ -278,7 +278,7 @@ public:
     }
 
     void resetBlock() {
-        this->lastBlockThreadStats = std::move(this->blockThreadStats);
+        this->lastBlockThreadStats = this->blockThreadStats;
         this->blockThreadStats.clear();
         for (auto i = threadsRunningCount; i < threadCount && i < MAX_AUDIOPROCESSING_THREADS; i++) {
             threads[i].startThread(StringFormat("AudioProcessingThread %d", i), seqthreads::ThreadType::AudioThread);
@@ -670,12 +670,13 @@ void MixInputs(const Host* host, const processing_track_node_t& node, process_sc
     bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), DAW::isTrackSrcSolod);
 
     AudioBlock& tmpBlock = AllocateScratchAudioBuffer(tmp, ptrBlockMixDst->channels, ptrBlockMixDst->samples);
+    static thread_local track_audio_src srcTemp{};
+    auto& src = srcTemp;
     for (const DAW::track_source_t& tracksrc : allSources)
     {
         if (hasSolo && !DAW::isTrackSrcSolod(tracksrc))
             continue;
         if (DAW::isChannelConnected(tracksrc.channel)) {
-            track_audio_src src;
             if (DAW::resolveAudioChannel(host, numChannelsTrack, tracksrc.channel, ptrExternalInputs, src)) {
                 /**
                  * Mix routed tracks
@@ -748,7 +749,6 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
     dbgassert(m_sampleFormatInternal.blockSize > 0);
     dbgassert(m_sampleFormatInternal.sampleRate > 0);
     const bool enableProfiling = (dbgStep%333) != 0;
-    // DebugAlloc::beginTrace();
     //AudioBlock::BeginTrace();
 
     project_t* const project = ctrl->getProject();
@@ -776,6 +776,7 @@ int32_t Host::processRender(project_controller_t* ctrl, int32_t sample, double p
             return 0;
         }
     }
+    // DebugAlloc::beginTrace();
 
     if (enableProfiling) {
         stats.timings["Block.GraphBuild"] = timerProfile.getTimeReset();
@@ -1322,8 +1323,10 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
 
     const auto numChannelsTrack = trackImpl->input.channels;
 
-    std::vector<DAW::track_source_t> allSources = trackNode.pulls; // copy
-    allSources.insert(allSources.end(), trackNode.pushs.cbegin(), trackNode.pushs.cend()); // copy
+    auto& allSources = tmp.trackSources;
+    allSources.clear();
+    allSources.insert(allSources.end(), trackNode.pulls.cbegin(), trackNode.pulls.cend());
+    allSources.insert(allSources.end(), trackNode.pushs.cbegin(), trackNode.pushs.cend());
     tmp.timer.reset();
     MixInputs(this, trackNode, tmp, this->impl, &trackImpl->input, allSources, numChannelsTrack, trackNode.inputLatency, tickLatencyCompensated, tickLatencyCompensated + ticksPerBlock, playbackState, req.ptrExternalInputs);
     track->getStage()->procStats.timeTrackMixInputs = tmp.timer.getTime();
@@ -1857,10 +1860,8 @@ void Host::processAudio(process_scratch_buf_t& tmp,
 
             effectbase* const effect = effNode.effectOptional;
 
-            std::vector<DAW::effect_source_t> allSources = effNode.pulls; // copy
-
             timer.reset();
-            MixInputs(this, effNode, tmp, this->impl, blockIn, allSources, numChannelsTrack, effNode.inputLatency, tickLatencyCompensated, tickLatencyCompensated + getAudioStreamProperties().ticksPerBlock, playbackState, nullptr);
+            MixInputs(this, effNode, tmp, this->impl, blockIn, effNode.pulls, numChannelsTrack, effNode.inputLatency, tickLatencyCompensated, tickLatencyCompensated + getAudioStreamProperties().ticksPerBlock, playbackState, nullptr);
             AudioBlock* blockPostProcess = nullptr;
             int64_t timePassed = 0;
             if (effect) {
@@ -2202,13 +2203,12 @@ bool resolveAudioChannel(const Host::Host* const host, channelnum_t numChannelsT
             const auto idx = inputChannel.srcChannelOffset;
             const auto size = math::min<channelnum_t>(AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType), numChannelsTrack);
             if (idx+size <= ptrExternalInputs->channels) {
-                track_audio_src src;
+                out.channels.clear();
                 for (channelnum_t ch = 0; ch < size; ++ch) {
-                    src.channels.push_back(ptrExternalInputs->buf[idx+ch]);
+                    out.channels.push_back(ptrExternalInputs->buf[idx+ch]);
                 }
-                src.sampleFormat = host->m_sampleFormatExternal;
-                src.samples = ptrExternalInputs->samples;
-                out = std::move(src);
+                out.sampleFormat = host->m_sampleFormatExternal;
+                out.samples = ptrExternalInputs->samples;
                 return true;
             }
         }
@@ -2217,6 +2217,7 @@ bool resolveAudioChannel(const Host::Host* const host, channelnum_t numChannelsT
         audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
         if (stage) {
             track_audio_src src;
+            out.channels.clear();
             auto* buff = &stage->input;
             switch (inputChannel.stage.buffer) {
             case stage_bufferpoint::INPUT:
@@ -2230,11 +2231,10 @@ bool resolveAudioChannel(const Host::Host* const host, channelnum_t numChannelsT
                 break;
             }
             for (uint32_t i = 0; i < buff->channels; ++i) {
-                src.channels.push_back(buff->buf[i]);
+                out.channels.emplace_back(buff->buf[i]);
             }
-            src.sampleFormat = stage->sampleFormat;
-            src.samples = buff->samples;
-            out = std::move(src);
+            out.sampleFormat = stage->sampleFormat;
+            out.samples = buff->samples;
             return true;
         }
     }
@@ -2253,17 +2253,16 @@ bool resolveAudioChannel(const Host::Host* const host, channelnum_t numChannelsT
             }
             for (auto& desc : eff->outputChannelsDesc) {
                 if (desc.offset == inputChannel.srcChannelOffset) {
-                    track_audio_src src;
+                    out.channels.clear();
                     for (auto chIdx = desc.offset; chIdx < desc.offset+desc.count; ++chIdx) {
                         if (chIdx >= eff->blockOutputs->channels) {
                             log_lf(Log::L_WARN, "%s Output buffer has invalid size. Expected %u channels, found %u\n", StringAsCStr(eff->getName()), desc.offset+desc.count, eff->blockOutputs->channels);
                             return false;
                         }
-                        src.channels.push_back(eff->blockOutputs->buf[chIdx]);
+                        out.channels.push_back(eff->blockOutputs->buf[chIdx]);
                     }
-                    src.sampleFormat = stage->sampleFormat;
-                    src.samples = eff->blockOutputs->samples;
-                    out = std::move(src);
+                    out.sampleFormat = stage->sampleFormat;
+                    out.samples = eff->blockOutputs->samples;
                     return true;
                 }
             }

@@ -970,7 +970,12 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
     auto cache = audiocache::getInstance();
     tick_t audioBegin = math::max(start, loopStart);
     tick_t audioEnd   = loopEnd < 0 ? end : math::min(end, loopEnd);
-    std::vector<clip_t*> clips; //TODO get rid of temporary vector
+    static thread_local std::vector<clip_t*> clips;
+    if (clips.capacity() == 0) {
+        clips.reserve(16);
+    } else {
+        clips.clear();
+    }
     track->getMidi().getClipsInRange(audioBegin, audioEnd, clips);
     DAW::Host::FillAudioBlockFromClips(cache, prjGlobals, clips, sampleFormat, samplePosBegin, outBuffer);
 }
@@ -1129,9 +1134,24 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
     using namespace DAW::Host;
 
     tmr.reset();
-    std::vector<note_t> notes;
-    std::vector<midievent_ctrl_t> ctrlEvents;
-    std::vector<midievent_note_t> noteEvents;
+    static thread_local std::vector<note_t> notes;
+    static thread_local std::vector<midievent_ctrl_t> ctrlEvents;
+    static thread_local std::vector<midievent_note_t> noteEvents;
+    if (notes.capacity() == 0) {
+        notes.reserve(128);
+    } else {
+        notes.clear();
+    }
+    if (noteEvents.capacity() == 0) {
+        noteEvents.reserve(128);
+    } else {
+        noteEvents.clear();
+    }
+    if (ctrlEvents.capacity() == 0) {
+        ctrlEvents.reserve(128);
+    } else {
+        ctrlEvents.clear();
+    }
 
     constexpr bool logProcessedNotes = false;
     const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(sampleFormat.blockSize, prjGlobals.tempo100, sampleFormat.sampleRate);

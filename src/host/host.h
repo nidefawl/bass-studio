@@ -41,6 +41,7 @@ struct process_scratch_buf_t {
     std::vector<std::vector<float>> scratchBuffers;
     std::vector<midievent_note_t> noteEventsTemp;
     std::vector<midievent_ctrl_t> ctrlEventsTemp;
+    std::vector<DAW::track_source_t> trackSources;
 };
 
 struct host_processing_stats_t {

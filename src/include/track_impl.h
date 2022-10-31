@@ -38,7 +38,7 @@
 #define PARAM_TRACK_PAN 2
 
 #ifndef NDEBUG
-#define DAW_DEBUG_MIDI_PROCESSING
+// #define DAW_DEBUG_MIDI_PROCESSING
 #endif
 
 struct VstEvent_t;

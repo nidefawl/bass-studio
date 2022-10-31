@@ -386,16 +386,18 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
     /** add all pre-loop notes */
     bool fillLoop  = loopEnabled && localEnd > preLoopLen;
     bool inPreLoop = localStart < preLoopLen;
-    std::vector<note_t> listLoop;
+    static thread_local std::vector<note_t> listLoop;
+    if (listLoop.capacity() == 0) {
+        listLoop.reserve(128);
+    } else {
+        listLoop.clear();
+    }
     for (; itNote != itNoteEnd; itNote++) {
         const note_t& note = *itNote;
         if (forPlayback && !note.isEnabled()) {
             continue;
         }
         if (fillLoop && (note.start() >= loopStart && note.start() < loopStart + loopLen)) {//note.isIntersectTime(loopStart, loopStart + loopLen)) {
-            if (listLoop.capacity() == 0) {
-                listLoop.reserve(128);
-            }
             listLoop.push_back(note);
         }
         if (!inPreLoop)
@@ -493,7 +495,7 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
     if (cutRight <= cutLeft)
         return 0;
 
-    clip_notes_t notesView; // TODO: avoid heap allocation
+    static thread_local clip_notes_t notesView; // TODO: avoid heap allocation
     getNotesView(math::max(cutLeft, relStart), math::min(cutRight, relEnd), notesView, true);
 #if 0
     size_t posOld = list.size();
@@ -516,7 +518,7 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
         });
         list.insert(it, note);
     }
-    return CtrSize(notesView.m_list);;
+    return CtrSize(notesView.m_list);
 }
 
 void clip_notes_t::selectLastN(size_t num) {
