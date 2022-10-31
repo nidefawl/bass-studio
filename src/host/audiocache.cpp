@@ -113,7 +113,6 @@ void audiocache::updateSample(const store_sample_req_t& ssr) {
     }
     int64_t timeBeginDownsample = getTimeMicros();
 
-    uint8_t maxDownS = 4;
     int numDownS = 0;
     for (uint8_t downsampleStep = 1; downsampleStep < maxDownS; downsampleStep++) {
         samplecount_t lenSamplesDownsampled = sample->nSamples >> downsampleStep;
@@ -271,8 +270,7 @@ static bool LoadAudioSample(drwav& wav, audiosample_t* sample, samplerate_t samp
         }
         int64_t timeBeginDownsample = getTimeMicros();
 
-        uint8_t maxDownS = 4;
-        for (uint8_t downsampleStep = 1; downsampleStep < maxDownS; downsampleStep++) {
+        for (uint8_t downsampleStep = 1; downsampleStep < audiocache::maxDownS; downsampleStep++) {
             samplecount_t lenSamplesDownsampled = sample->nSamples >> downsampleStep;
 
             if (lenSamplesDownsampled < 10)

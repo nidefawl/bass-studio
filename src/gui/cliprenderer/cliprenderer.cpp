@@ -32,12 +32,11 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
 
     int32_t pxBegin        = posClipped.x;
     int32_t pxEnd          = posClipped.x + sizeClipped.x;
-    double tickBegin       = grid.screenToTickD(pos.x);
+    const auto tickBegin   = m_clip->start();
     double tickBeginOffset = grid.screenToTickD(pxBegin);
     double tickEnd         = grid.screenToTickD(pxEnd);
     if (size.x == sizeClipped.x) {
         tickBeginOffset = m_clip->start();
-        tickBegin       = m_clip->start();
         tickEnd         = m_clip->end();
     }
     audioclip_texture_t w;
@@ -71,10 +70,10 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
 
     int64_t nSamples = sampleEnd - sampleStartOffset;
     if (nSamples * pxPerSample > FBO_WIDTH) {
-        samplesPerPx = (nSamples / FBO_WIDTH);
+        samplesPerPx = nSamples / double(FBO_WIDTH);
     }
-    if (samplesPerPx > MAX_RES && (nSamples / MAX_RES) <= FBO_WIDTH) {
-        w.scaleX     = MAX_RES / samplesPerPx;
+    if (samplesPerPx > MAX_RES && (nSamples / double(MAX_RES)) <= FBO_WIDTH) {
+        w.scaleX     = float(double(MAX_RES) / samplesPerPx);
         samplesPerPx = MAX_RES;
     }
 

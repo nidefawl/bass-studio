@@ -69,6 +69,7 @@ class audiocache {
     std::unordered_map<int, audiofile_t*> mapId;
 
 public:
+    static constexpr uint8_t maxDownS = 8;
     explicit audiocache(samplerate_t _samplerate) {
         setSamplerate(_samplerate);
     }

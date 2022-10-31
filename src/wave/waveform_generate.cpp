@@ -81,10 +81,8 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
             {
                 double samplePos = samplePosRender;
                 //Quantize start offset to reduce jitter when start offset changes
-                //TODO: arithmetic
-                while ((int) (std::round(samplePos - samplePosClip)) % stepSize != 0) {
-                    samplePos++;
-                }
+                auto samplePosQuantized = math::rounddS64(samplePos - samplePosClip) % stepSize;
+                samplePos -= samplePosQuantized;
                 const double renderOffset = math::max(0.0, (double) (samplePosRender - samplePosClip));
                 float lastPtX             = -vOffset;
                 //log_lf(Log::L_DEBUG, "channel %d offset %f\n", iChannel, lastPtX);
@@ -168,6 +166,7 @@ void tesselateWaveformFromClip(audiosample_t* sample, float x, float y, audiocli
         double samplesPerPx = waveformshape->samplesPerPx;
         const float width   = waveformshape->size.x * (1.0f / waveformshape->scaleX);
         const float height  = waveformshape->size.y;
+
         const int nMaxDowns = sample->downsampled.size() + 1;
         samplecount_t nLevel          = 0;
         samplecount_t downsampleScale = 1;
@@ -175,7 +174,7 @@ void tesselateWaveformFromClip(audiosample_t* sample, float x, float y, audiocli
         // make a copy
         audioclip_texture_t waveformScaled = *waveformshape;
 
-        while ((samplesPerPx > 128) && nLevel + 1 < nMaxDowns) {
+        while ((samplesPerPx > 32) && nLevel + 1 < nMaxDowns) {
             samplesPerPx /= 2.0;
             nLevel++;
             downsampleScale *= 2;
@@ -229,10 +228,9 @@ void tesselateWaveformFromClip(audiosample_t* sample, float x, float y, audiocli
             {
                 double samplePos = samplePosRender;
                 //Quantize start offset to reduce jitter when start offset changes
-                //TODO: arithmetic
-                while ((int) (std::round(samplePos - samplePosClip)) % stepSize != 0) {
-                    samplePos++;
-                }
+                auto samplePosQuantized = math::rounddS64(samplePos - samplePosClip) % stepSize;
+                samplePos -= samplePosQuantized;
+                
                 const double renderOffset = math::max(0.0, (double) (samplePosRender - samplePosClip));
                 float lastPtX             = -vOffset;
                 float fAbsMax = 0.0f;
