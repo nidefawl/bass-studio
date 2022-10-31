@@ -271,6 +271,7 @@ if (PROJECT_REQUIRE_LIB)
     if (NOT WIN32)
       set_target_properties(${LINK_TARGET} PROPERTIES POSITION_INDEPENDENT_CODE ON)
       set_target_properties(slowstacktrace PROPERTIES POSITION_INDEPENDENT_CODE ON)
+      set_target_properties(libarchive PROPERTIES POSITION_INDEPENDENT_CODE ON)
     endif()
 
     set(SRC_FILES_VST2_PLUGIN
