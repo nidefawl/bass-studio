@@ -1,6 +1,7 @@
 
 
 #include "assert_dbg.h"
+#include "clip.h"
 #include "clipboard.h"
 #include "event.h"
 #include "gui/clipeditor/clipeditor.h"
@@ -406,9 +407,13 @@ gui_clipcontent_control_data::gui_clipcontent_control_data(scaled_grid& _grid, c
 {
     setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_CONTROLDATA);
     shapeEdit.setEditorCurve(&tmpShape);
-    shapeEdit.callback = [this](const DAW::Shape::shape_t& shape) {
+    shapeEdit.callback = [this](const DAW::Shape::shape_t& shape, bool bIsDragMove) {
         const auto clip = view.clip();
         if (clip) {
+            action_modify_clip_control_data* undoAction = nullptr;
+            if (!bIsDragMove) {
+                undoAction = new action_modify_clip_control_data("Modify clip control data", view, controlDataBegin, view.cursor);
+            }
             tmpShape = shape;
             if (this->cc == 0) {
                 clip->controlData.pitchBend.shape = shape;
@@ -420,6 +425,9 @@ gui_clipcontent_control_data::gui_clipcontent_control_data(scaled_grid& _grid, c
                 clip->controlData.ccChannels[this->cc].shape = shape;
                 clip->controlData.ccChannels[this->cc].updateBounds();
             }
+            if (undoAction) {
+                dawCtrl->getDaw()->pushHist(undoAction);
+            }
         }
     };
 }
@@ -427,6 +435,7 @@ gui_clipcontent_control_data::gui_clipcontent_control_data(scaled_grid& _grid, c
 gui_clipcontent_control_data::~gui_clipcontent_control_data() = default;
 
 void gui_clipcontent_control_data::showEditClip() {
+    shapeEdit.resetSelection();
     setSelectedData(this->cc);
 }
 void gui_clipcontent_control_data::setSelectedData(int32_t cc) {
@@ -469,6 +478,9 @@ bool gui_clipcontent_control_data::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 void gui_clipcontent_control_data::handleDraggedBegin(MouseEvent& evt) {
     MouseEvent kevt = evt;
     kevt.relMousepos.x -= grid.tickToScreenD(0);
+    if (view.clip()) {
+        controlDataBegin = view.clip()->controlData;
+    }
     if (shapeEdit.onBeginDragCurveEditor(kevt)) {
         bIsDraggingShape = true;
         return;
@@ -482,7 +494,22 @@ void gui_clipcontent_control_data::handleDraggedMove(MouseEvent& evt) {
         shapeEdit.onMoveDragCurveEditor(evt);
         return;
     }
-    gui_clipcontent::handleDraggedMove(evt);
+    dragTo = evt.relMousepos;
+    if (dragMode == drag_frame && size.y > 2) {
+        *evt.dragDistance     = ivec2(0);
+        auto xStart     = math::min(dragBegin.x, dragTo.x);
+        auto xEnd       = math::max(dragBegin.x, dragTo.x);
+        auto yStart     = math::min(dragBegin.y, dragTo.y) / float(size.y);
+        auto yEnd       = math::max(dragBegin.y, dragTo.y) / float(size.y);
+        tick_t tickStart = grid.screenToTickSnap(xStart, SNAP_OFF);
+        tick_t tickEnd   = grid.screenToTickSnap(xEnd, SNAP_OFF);
+        shapeEdit.setSelectRect(vec4{tickStart, 1.0-yEnd, tickEnd, 1.0-yStart});
+        // tick_t tickOver  = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
+        auto& cursor = view.cursor;
+        cursor.start = tickStart;
+        cursor.end   = tickEnd;
+    }
+    setGlobalSelectionFromClipSelection();
 }
 
 void gui_clipcontent_control_data::handleDraggedRelease(MouseEvent& evt) {
@@ -498,6 +525,9 @@ void gui_clipcontent_control_data::handleDraggedRelease(MouseEvent& evt) {
 void gui_clipcontent_control_data::handleRightClick(MouseEvent& evt) {
     MouseEvent kevt = evt;
     kevt.relMousepos.x -= grid.tickToScreenD(0);
+    if (view.clip()) {
+        controlDataBegin = view.clip()->controlData;
+    }
     if (shapeEdit.onRightClickCurveEditor(kevt)) {
         return;
     }
@@ -523,7 +553,7 @@ void gui_clipcontent_control_data::render(NVGcontext* vg) {
     const auto shapePos    = vec2(grid.tickToScreenD(0), 0);
     localMouse.x -= shapePos.x;
     // const auto shapeScale  = vec2(grid.tickLenToScreen(1.0), size.y);
-    shapeEdit.renderEditor(vg, shapePos, theme, localMouse, false);
+    shapeEdit.renderEditor(vg, shapePos, theme, localMouse, false, &shapeEdit.getSelectedNodeIndices());
     // DAW::Shape::DrawShapeOneShot(tmpShape, 
     //                             vg, 
     //                             theme,
@@ -1773,6 +1803,108 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
     }
     return false;
 }
+bool gui_clipcontent_control_data::handleKeyInput(KeyEvent& kevt) {
+    clip_t* clip = view.clip();
+    if (!clip) {
+        return false;
+    }
+    if (dragMode) {
+        return true;
+    }
+    if (kevt.cmd) {
+        auto temp = kevt.cmd->getKeybindContextData(kevt);
+        if (handleEditorCommand(temp)) {
+            return true;
+        }
+    }
+    if (isArrowKey(kevt.keyCode)) {
+        ivec2 dir;
+        arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
+        DAW::UI::CommandContext ctxt = {GlobalCommandType::CMD_MOVE_CURSOR, kevt, dir.x, dir.y};
+        if (handleEditorCommand(ctxt)) {
+            return true;
+        }
+    }
+    return false;
+}
+std::pair<tick_t, tick_t> getMinMaxTimeShape(std::vector<DAW::Shape::shape_pt_t>& shapePt);
+bool gui_clipcontent_control_data::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
+    auto daw = dawCtrl->getDaw();
+    auto command = ctxt.type;
+    auto& kevt = ctxt.kevt;
+    // if (focused() && command == CMD_PASTE && daw->getClipboardType() != ClipBoardType::CLIPBOARD_NOTES) {
+    //     // suppress paste of clips by returning true for "is handled"
+    //     return true;
+    // }
+    clip_t* clip = view.clip();
+    if (!clip) {
+        return false;
+    }
+    auto& ctrlData = clip->controlData;
+    auto& selection = shapeEdit.getSelectedNodeIndices();
+    if (kevt.type != K_RELEASE) {
+        clip_cursor_t& cursor      = view.cursor;
+        clip_t clipBefore          = *clip;
+        clip_cursor_t cursorBefore = cursor;// copy
+        clip_control_data_t ctrlDataBefore = ctrlData;
+        bool handled               = false;
+        bool edit                  = false;
+        String desc                = "???";
+        if (kevt.type == K_PRESS) {
+            if (command == CMD_SELECT_ALL) {
+                shapeEdit.resetSelection();
+                shapeEdit.selectAll();
+                if (!tmpShape.pts.empty()) {
+                    auto [tmMin, tmMax] = getMinMaxTimeShape(tmpShape.pts);
+                    auto& cursor = view.cursor;
+                    cursor.start = tmMin;
+                    cursor.end = tmMax;
+                }
+                setGlobalSelectionFromClipSelection();
+                handled = true;
+            }
+            if (command == CMD_DELETE && !selection.empty()) {
+                shapeEdit.deleteSelectedPoints();
+                handled = true;
+                edit    = true;
+                desc    = "Delete control points";
+            }
+        }
+        if (command == GlobalCommandType::CMD_MOVE_CURSOR) {
+            auto dir = ivec2(ctxt.argInt0, ctxt.argInt1);
+            if (dir.y && !selection.empty()) {
+                if ((kevt.mods & KB_MOD_SHIFT)) {
+                    dir *= 12;
+                }
+                // edit = true;
+            } else if (dir.x) {
+                tick_t timeOffset = dir.x;
+                tick_t minLen     = grid.pixelsToTicks(2);
+                if (!isAlt(kevt.mods)) {
+                    minLen = grid.getTickLength();
+                }
+                timeOffset *= minLen;
+                cursor.start += timeOffset;
+                cursor.end += timeOffset;
+                if (!selection.empty()) {
+                    edit = true;
+                } else {
+                    grid.makeTickVisible(cursor.start);
+                }
+            }
+            handled = true;
+            desc    = "Move control points";
+        }
+        if (edit) {
+            clip->controlData.updateBounds();
+            clip->setDirty();
+            dawCtrl->getDaw()->pushHist(new action_modify_clip_control_data(desc, view, ctrlDataBefore, cursorBefore));
+            showEditClip();
+        }
+        return handled;
+    }
+    return false;
+}
 bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
     clip_t* clip = view.clip();
     if (!clip) {
@@ -2183,4 +2315,15 @@ void piano_scale::setOffset(float f) {
 
 void piano_scale::setScale(float f) {
     this->layoutRoll.scale() = math::clamp<float>(f, PIANOROLL_MIN_SCALE, PIANOROLL_MAX_SCALE);
+}
+void CCEdit::setSelectRect(vec4 rect) {
+    selectedNodeIndices.clear();
+    auto& curve = *this->curve;
+    int32_t len = int32_t(curve.pts.size());
+    for (int32_t i = 0; i < len; ++i) {
+        auto& pt = curve.pts[i].pos;
+        if (rect.x <= pt.x && pt.x <= rect.z && rect.y <= pt.y && pt.y <= rect.w) {
+            selectedNodeIndices.push_back(i);
+        }
+    }
 }

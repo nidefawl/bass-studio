@@ -6,6 +6,7 @@
 #include "note.h"
 #include "plugins/synth/IPlugMidi.h"
 #include "seq_util.h"
+#include "shape.h"
 #include "str_util.h"
 #include "math/seq_math.h"
 #include "exceptions.h"
@@ -621,6 +622,13 @@ std::pair<note_t*, note_t*> getMinMaxTime(std::set<note_t*>& notePtrs) {
 
 
     return std::make_pair(*min, *max);
+}
+
+std::pair<tick_t, tick_t> getMinMaxTimeShape(std::vector<DAW::Shape::shape_pt_t>& shapePt) {
+    auto comp = [](DAW::Shape::shape_pt_t const& lhs, DAW::Shape::shape_pt_t const& rhs) { return lhs.pos.x < rhs.pos.x; };
+    auto min = std::min_element(shapePt.begin(), shapePt.end(), comp);
+    auto max = std::max_element(shapePt.begin(), shapePt.end(), comp);
+    return std::make_pair(tick_t(min->pos.x), tick_t(max->pos.x));
 }
 
 std::pair<note_t*, note_t*> getMinMaxTime(std::vector<note_t>& notes) {

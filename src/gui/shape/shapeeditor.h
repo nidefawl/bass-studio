@@ -11,7 +11,7 @@ public:
     i_ctr_shape_editor() = default;
 
 public:
-    virtual void setShapeEditorCallback(std::function<void(const DAW::Shape::shape_t&)> callback) = 0;
+    virtual void setShapeEditorCallback(std::function<void(const DAW::Shape::shape_t&, bool bIsDragMove)> callback) = 0;
     virtual void setShapeEditorShapeRef(DAW::Shape::shape_t* shape) = 0;
     virtual guictr_base* getGuiContainer() = 0;
 };
@@ -41,7 +41,7 @@ public:
     bool bIsGridEnabledV = false;
     int32_t gridStepsH = 8;
     int32_t gridStepsV = 8;
-    std::function<void(const DAW::Shape::shape_t&)> callback;
+    std::function<void(const DAW::Shape::shape_t&, bool bIsDragMove)> callback;
 public:
     ShapeEdit() = default;
     virtual ~ShapeEdit() = default;
@@ -52,7 +52,7 @@ public:
     void onReleaseDragCurveEditor(MouseEvent& evt);
     bool onRightClickCurveEditor(MouseEvent& evt);
     bool mouseHitCurveEditor(const shape_t& shape, ivec2 mpos) const;
-    void renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, ivec2 relMousepos, bool bDrawGrid);
+    void renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, ivec2 relMousepos, bool bDrawGrid, const std::vector<int32_t>* pSelectedPoints = nullptr);
     virtual void layoutEditor(ivec2 size);
     virtual float snapH(float x) {
         return math::roundfS32(x * this->gridStepsH) / float(this->gridStepsH);

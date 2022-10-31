@@ -1465,6 +1465,7 @@ void DawInstance::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
             view.copySelectedNoteList();
             view.updateNotePitches(false);
         }
+        ctrl->updateClipViews();
     }
 }
 
@@ -3248,4 +3249,10 @@ void MainCtrl::updateZoomLevel(float f) {
         view->ctr_tempo.onGlobalZoomChanged();
         daw.tls.settings->dawsettings.globalZoom = f;
     }
+}
+void MainCtrl::updateClipViews() {
+    view->ctr_clipeditor.showEditClip();
+}
+void CompanionCtrl::updateClipViews() {
+    view->ctr_clipeditor.showEditClip();
 }

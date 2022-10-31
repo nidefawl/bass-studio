@@ -165,7 +165,7 @@ void DrawShapeOneShot(const shape_t& curve, NVGcontext*vg, const guitheme_t* the
     }
 }
 
-void DrawShapeUnclamped(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, const GuiColor::constant_t& col, const GuiColor::constant_t& colHovered, vec2 pos, vec2 sizeScaled, const shape_t::hit_result& hit) {
+void DrawShapeUnclamped(const shape_t& curve, NVGcontext*vg, const guitheme_t* theme, const GuiColor::constant_t& col, const GuiColor::constant_t& colHovered, vec2 pos, vec2 sizeScaled, const shape_t::hit_result& hit, const std::vector<int32_t>* pSelectedPoints) {
     if (curve.pts.empty())
         return;
     auto numCurvePts = CtrSize(curve.pts);
@@ -270,6 +270,15 @@ void DrawShapeUnclamped(const shape_t& curve, NVGcontext*vg, const guitheme_t* t
     nvgFill(vg);
     if (hit.type == shape_t::hittype::HIT_NODE && hit.idx >= 0 && hit.idx < numCurvePts) {
         auto pt = vec2(pts[hit.idx].pos.x, 1.0 - pts[hit.idx].pos.y) * sizeScaled + pos;
+        nvgBeginPath(vg);
+        nvgCircleFastNDivs(vg, pt.x, pt.y, radiusHandle, 16);
+        nvgFillColor(vg, hoverColor);
+        nvgFillCustomPar(vg, -2);
+        nvgFill(vg);
+    }
+    for (auto idx : *pSelectedPoints) {
+        if (idx < 0 || idx >= numCurvePts) continue;
+        auto pt = vec2(pts[idx].pos.x, 1.0 - pts[idx].pos.y) * sizeScaled + pos;
         nvgBeginPath(vg);
         nvgCircleFastNDivs(vg, pt.x, pt.y, radiusHandle, 16);
         nvgFillColor(vg, hoverColor);
@@ -659,7 +668,7 @@ public:
                     controls.selectPreset.setString(tmp.name);
                     *shape.curve = tmp;
                     if (shape.callback)
-                        shape.callback(*shape.curve);
+                        shape.callback(*shape.curve, false);
                 }
             }
         });
@@ -673,7 +682,7 @@ public:
     ~guictr_curve_editor() override {
         removeGuis();
     }
-    void setShapeEditorCallback(std::function<void(const DAW::Shape::shape_t&)> callback) override {
+    void setShapeEditorCallback(std::function<void(const DAW::Shape::shape_t&, bool)> callback) override {
         shape.callback = std::move(callback);
     }
     void setShapeEditorShapeRef(DAW::Shape::shape_t* shape) override {
@@ -756,7 +765,7 @@ bool ShapeEdit::onBeginDragCurveEditor(MouseEvent& evt) {
             curveTmp.pts.insert(curveTmp.pts.begin() + idx, { { local.x, local.y }, 0.5f });
         }
         if (callback)
-            callback(curveTmp);
+            callback(curveTmp, false);
         hasBegin = true;
     } else if (hasControlHandles()) {
         dragged      = curve->getMouseHit(local, editorScale);
@@ -814,7 +823,7 @@ void ShapeEdit::onMoveDragCurveEditor(MouseEvent& evt) {
                 // curveTmp.sort();
             }
             if (callback)
-                callback(curveTmp);
+                callback(curveTmp, true);
             return;
         }
         if (dragged.type == shape_t::hittype::HIT_NODE && dragged.idx < CtrSize(curveBegin.pts)) {
@@ -872,7 +881,7 @@ void ShapeEdit::onMoveDragCurveEditor(MouseEvent& evt) {
 
             // curveTmp.sort();
             if (callback)
-                callback(curveTmp);
+                callback(curveTmp, true);
             if (curve && curve->flags & SHAPE_LOCK_POINTS) {
                 *curve = curveTmp;
             }
@@ -905,7 +914,7 @@ void ShapeEdit::onMoveDragCurveEditor(MouseEvent& evt) {
                 }
             }
             if (callback)
-                callback(curveTmp);
+                callback(curveTmp, true);
             if (curve && curve->flags & SHAPE_LOCK_POINTS) {
                 *curve = curveTmp;
             }
@@ -920,7 +929,7 @@ void ShapeEdit::onReleaseDragCurveEditor(MouseEvent& evt) {
             curveTmp.eraseDuplicates();
         }
         if (callback) {
-            callback(curveTmp);
+            callback(curveTmp, false);
         } else if (curve) {
             *curve = curveTmp;
         }
@@ -937,7 +946,7 @@ bool ShapeEdit::onRightClickCurveEditor(MouseEvent& evt) {
                 curveTmp = *curve;
                 curveTmp.pts.erase(curveTmp.pts.begin() + minPt);
                 // curveTmp.sort();
-                callback(curveTmp);
+                callback(curveTmp, false);
             } else if (curve) {
                 curve->pts.erase(curve->pts.begin() + minPt);
                 curve->sort();
@@ -948,7 +957,7 @@ bool ShapeEdit::onRightClickCurveEditor(MouseEvent& evt) {
     return false;
 }
 
-void ShapeEdit::renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, ivec2 relMousepos, bool bDrawGrid) {
+void ShapeEdit::renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, ivec2 relMousepos, bool bDrawGrid, const std::vector<int32_t>* pSelectedPoints) {
     // if (editorScale.x < 1.0f || editorScale.y < 1.0f)
     //     return;
     if (!assert_expr(curve != nullptr))
@@ -972,7 +981,7 @@ void ShapeEdit::renderEditor(NVGcontext* vg, vec2 pos, const guitheme_t* theme, 
         curveRender = &curveTmp;
     }
     if (curveRender->flags & ShapeFlags::SHAPE_UNCLAMPPED) {
-        DrawShapeUnclamped(*curveRender, vg, theme, GuiColor::COL_SHAPE_CURVE, GuiColor::COL_SHAPE_CURVE_HIGHLIGHT, pos, editorScale, higlightHit);
+        DrawShapeUnclamped(*curveRender, vg, theme, GuiColor::COL_SHAPE_CURVE, GuiColor::COL_SHAPE_CURVE_HIGHLIGHT, pos, editorScale, higlightHit, pSelectedPoints);
     } else if (curveRender->flags & ShapeFlags::SHAPE_CYCLIC) {
         DrawShapeCyclic(*curveRender, vg, theme, GuiColor::COL_SHAPE_CURVE, GuiColor::COL_SHAPE_CURVE_HIGHLIGHT, pos, editorScale, higlightHit);
     } else {

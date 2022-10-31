@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <list>
 #include <vector>
 #include "grid_constants.h"
@@ -145,6 +146,54 @@ public:
     }
 };
 
+class action_modify_clip_control_data : public action_base {
+protected:
+public:
+    int32_t trackIdx = 0;
+    tick_t clipTime  = 0;
+    clip_control_data_t before;
+    clip_control_data_t after;
+    clip_cursor_t cursorBefore;
+    clip_cursor_t cursorAfter;
+    action_modify_clip_control_data() : action_base() {
+    }
+    action_modify_clip_control_data(String description, const clip_view& view, const clip_control_data_t& oldC, const clip_cursor_t& oldCursor) : action_base() {
+        desc = description;
+        //        clip = view.clip;
+        after        = view.clip()->controlData;
+        trackIdx     = view.track()->projectIdx;
+        clipTime     = view.clip()->time;
+        cursorAfter  = view.cursor;
+        before       = oldC;
+        cursorBefore = oldCursor;
+    }
+    void undo(DawInstance* daw) override {
+        track_t* tr = daw->getTracks()[trackIdx];
+        if (!tr)
+            return;
+        trackdata_midi_t& midi = tr->getMidi();
+        clip_t* clip           = midi.getClipAt(clipTime);
+        if (!clip)
+            return;
+        clip->controlData = before;
+        clip->controlData.updateBounds();
+        clip->setDirty();
+        daw->updateClipViews(clip, cursorBefore);
+    }
+    void redo(DawInstance* daw) override {
+        track_t* tr = daw->getTracks()[trackIdx];
+        if (!tr)
+            return;
+        trackdata_midi_t& midi = tr->getMidi();
+        clip_t* clip           = midi.getClipAt(clipTime);
+        if (!clip)
+            return;
+        clip->controlData = after;
+        clip->controlData.updateBounds();
+        clip->setDirty();
+        daw->updateClipViews(clip, cursorAfter);
+    }
+};
 inline bool isSharp(int n) {
     n = n % 12;
     switch (n) {
@@ -429,6 +478,7 @@ struct scaled_pos_t {
 class CCEdit : public DAW::Shape::ShapeEdit {
     scaled_grid& grid;
     ivec2 editorSize{};
+    std::vector<int32_t> selectedNodeIndices;
 public:
     CCEdit(scaled_grid& _grid)
         : ShapeEdit(),
@@ -436,6 +486,9 @@ public:
         bIsGridEnabledH = true;
         bIsGridEnabledV = true;
         gridStepsV = 2;
+    }
+    const std::vector<int32_t>& getSelectedNodeIndices() const {
+        return selectedNodeIndices;
     }
     vec2 toParentSpace(const vec2& ctrlPt) const override {
         auto scaledPt = vec2{ ctrlPt.x, 1.0f - ctrlPt.y };
@@ -460,12 +513,38 @@ public:
     float snapV(float y) override {
         return math::roundfS32(y * this->gridStepsV) / float(this->gridStepsV);
     }
+    void setSelectRect(vec4 rect);
+    void resetSelection() {
+        selectedNodeIndices.clear();
+    }
+    void selectAll() {
+        selectedNodeIndices.clear();
+        auto len = int32_t(curve->pts.size());
+        for (int32_t i = 0; i < len; ++i) {
+            selectedNodeIndices.push_back(i);
+        }
+    }
+    void deleteSelectedPoints() {
+        std::vector<int32_t> indices = selectedNodeIndices;
+        curveTmp = *curve;
+        if (!indices.empty()) {
+            // sort indices
+            std::sort(indices.begin(), indices.end());
+            // be careful, indices change when deleting.
+            for (size_t i = indices.size(); i > 0; --i) {
+                curveTmp.pts.erase(curveTmp.pts.begin() + indices[i - 1]);
+            }
+        }
+        selectedNodeIndices.clear();
+        callback(curveTmp, true);
+    }
 };
 class gui_clipcontent_control_data : public gui_clipcontent {
     CCEdit shapeEdit;
     DAW::Shape::shape_t tmpShape;
     int32_t cc = 0;
     bool bIsDraggingShape = false;
+    clip_control_data_t controlDataBegin;
 public:
     gui_clipcontent_control_data(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout);
     ~gui_clipcontent_control_data() override;
@@ -479,6 +558,8 @@ public:
     void showEditClip();
     void setSelectedData(int32_t cc);
     int32_t getSelectedData() const { return cc; }
+    bool handleKeyInput(KeyEvent& kevt) override;
+    bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
 };
 
 class ce_constants {

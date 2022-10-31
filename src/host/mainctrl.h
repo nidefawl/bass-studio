@@ -561,6 +561,7 @@ public:
     virtual DAW::Cursor& getCursor()              = 0;
     virtual void setupView()                      = 0;
     virtual void layoutView(int32_t w, int32_t h) = 0;
+    virtual void updateClipViews() = 0;
 
     void updateVisibleTrackContents();
 
@@ -681,6 +682,7 @@ public:
     void resetMouseContext() override;
     void setEditClip(gui_clip* gclip) override;
     void layoutView(int32_t w, int32_t h) override;
+    void updateClipViews() override;
     void setStatusText(String s) override;
     void setStatusText(const String& s, GuiColor::constant_t color);
     void destroy() override;
@@ -721,6 +723,7 @@ public:
 
     void setupView() override;
     void layoutView(int32_t w, int32_t h) override;
+    void updateClipViews() override;
     void resetMouseContext() override;
     void destroy() override;
     bool isCompanion() const override {

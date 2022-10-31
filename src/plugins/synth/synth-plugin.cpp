@@ -4357,7 +4357,7 @@ namespace PluginSynth {
                 vecParamUI[param] = { param, knob, type, ctr, ivec2(0), ivec2(32, 32) };
             }
             shapeEditor->setShapeEditorShapeRef(&synth->getShape(0));
-            shapeEditor->setShapeEditorCallback([synth=this->synth](const DAW::Shape::shape_t& shape) -> void {
+            shapeEditor->setShapeEditorCallback([synth=this->synth](const DAW::Shape::shape_t& shape, bool bIsDragMove) -> void {
                 auto lock = synth->lock();
                 auto& synthShape = synth->getShape(0);
                 synthShape.pts = shape.pts;

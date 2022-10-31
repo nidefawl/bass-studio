@@ -506,7 +506,7 @@ namespace PluginLFO {
             firstCtr->addElement({0.15f, new DAW::UI::Modulation::guibutton_modulate(module->getModulationChannel(0))});
             add(firstCtr);
             shapeEditor->setShapeEditorShapeRef(&module->getShape(0));
-            shapeEditor->setShapeEditorCallback([module=this->module](const DAW::Shape::shape_t& shape) -> void {
+            shapeEditor->setShapeEditorCallback([module=this->module](const DAW::Shape::shape_t& shape, bool bIsDragMove) -> void {
                 auto lock = module->impl->lock();
                 auto& synthShape = module->getShape(0);
                 synthShape.pts = shape.pts;
