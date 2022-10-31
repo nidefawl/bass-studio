@@ -73,6 +73,7 @@ public:
     int renderUpdates(NVGcontext* ctxt, float pxRatio);
     int queueUpdate(samplesource_t* audio, gui_waveform_texture_ref* waveformRef);
     void draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 size);
+    void drawPart(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 sizeClipped, vec2 texTl, vec2 texBr);
 
     void release(gui_waveform_texture_ref* waveformRef);
     void releaseQueued(gui_waveform_texture_ref* waveformRef);

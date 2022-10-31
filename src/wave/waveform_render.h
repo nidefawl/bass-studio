@@ -14,11 +14,13 @@ enum SampleMethod {
 
 struct NVGLUframebuffer;
 struct audioclip_texture_t {
-    ivec2 pos{ 0 };
-    ivec2 size{ 0 };
-    samplecount_t sampleBegin{ 0 };
-    samplecount_t sampleBeginOffset{ 0 };
-    samplecount_t sampleEnd{ 0 };
+    ivec2 pos{};
+    ivec2 size{};
+    samplecount_t sampleBegin = 0;
+    samplecount_t sampleBeginOffset = 0;
+    samplecount_t sampleEnd = 0;
+    samplecount_t samplePreLoopLen = 0;
+    samplecount_t sampleLoopLen = 0;
     double samplesPerPx    = 0;
     int quality            = 1;
     float scaleX           = 1.0f;
@@ -28,6 +30,7 @@ struct audioclip_texture_t {
     int64_t audioId        = -1;
     int64_t sampleVersion  = -1;
     bool clipped           = false;
+    float posPreLoopEnd = 0.0f;
     std::array<sample_fades_t,2> fades{};
 };
 

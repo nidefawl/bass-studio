@@ -598,3 +598,30 @@ void waveformrender::draw(NVGcontext* ctxt, const gui_waveform_texture_ref* wave
     auto& entry                          = *it;
     drawImage(ctxt, atlas.fb->image, 1.0f, entry.pos.x, entry.pos.y, entry.size.x, entry.size.y, 0, 0, sizeClipped.x, sizeClipped.y);
 }
+
+void waveformrender::drawPart(NVGcontext* vg, const gui_waveform_texture_ref* waveformRef, ivec2 size, vec2 texTl, vec2 texBr) {
+    dbgassert(waveformRef->atlasId >= 0 && waveformRef->atlasId < (int) atlases.size());
+    auto& atlas = this->atlases[waveformRef->atlasId];
+    dbgassert(atlas.fb && atlas.glTexture > -1 && atlas.idx > -1);
+    const int atlasEntryId = waveformRef->atlasEntryId;
+    auto it                = std::find_if(atlas.entries.cbegin(), atlas.entries.cend(), [atlasEntryId](const TextureAtlasEntry& entry) {
+        return entry.id == atlasEntryId;
+                   });
+    dbgassert(it != atlas.entries.cend());
+    vec2 txSize = texBr - texTl;
+    vec2 s = it->pos;
+    s += vec2(it->size) * texTl;
+    auto a = vec2(size) / (vec2(it->size) * txSize);
+    ivec2 i{0, 0};
+    NVGpaint img;
+    nvgImageSize(vg, atlas.fb->image, &i.x, &i.y);
+
+    float x = 0;
+    float y = 0;
+    img = nvgImagePattern(vg, x - s.x * a.x, y - s.y * a.y, (float) i.x * a.x, (float) i.y * a.y,
+                          0, atlas.fb->image, 1.0f);
+    nvgBeginPath(vg);
+    nvgRect(vg, x, y, size.x, size.y);
+    nvgFillPaint(vg, img);
+    nvgFill(vg);
+}

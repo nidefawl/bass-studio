@@ -257,6 +257,12 @@ public:
     tick_t end() const {
         return time + getLen();
     }
+    tick_t getLoopLength() const {
+        return loopLen;
+    }
+    tick_t getLoopStart() const {
+        return loopStart;
+    }
     tick_t getOffsetStart() const {
         return time - offsetStart;
     }

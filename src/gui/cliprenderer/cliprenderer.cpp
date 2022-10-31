@@ -17,6 +17,7 @@
 #include "gui/track/trackcontent.h"
 #include "appconfig.h"
 #include <array>
+#include <math.h>
 #include <nanovg.h>
 #include <nanovg_internal.h>
 #include <nanovg_min.h>
@@ -39,11 +40,6 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
         tickBegin       = m_clip->start();
         tickEnd         = m_clip->end();
     }
-
-    int64_t sampleBegin       = tickToSampleConvert<int64_t, roundmode::floor>(tickBegin, tempo100, samplerate);
-    int64_t sampleStartOffset = tickToSampleConvert<int64_t, roundmode::floor>(tickBeginOffset + m_clip->offsetStart, tempo100, samplerate);
-    int64_t sampleEnd  = tickToSampleConvert<int64_t, roundmode::floor>(tickEnd + m_clip->offsetStart, tempo100, samplerate);
-
     audioclip_texture_t w;
     w.quality = 1;
 
@@ -53,6 +49,30 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
     w.pos                   = pos;
     //w.startOffset = startOffset;
     w.size           = ivec2(math::min(sizeClipped.x, FBO_WIDTH), math::min(size.y, FBO_HEIGHT));
+    w.clipped = size.x != sizeClipped.x;
+    if (m_clip->isLoopEnabled()) {
+        auto begin = m_clip->offsetStart > m_clip->loopStart ? m_clip->loopStart : m_clip->offsetStart;
+        auto end = m_clip->loopStart + m_clip->getLoopLength();
+        auto len = end - begin;
+        auto newWidth = grid.tickLenToScreen(len);
+        w.size.x = math::min(math::rounddS32(newWidth), FBO_WIDTH);
+        w.posPreLoopEnd = (m_clip->loopStart - m_clip->offsetStart) / float(len);
+        if (m_clip->offsetStart < m_clip->loopStart) {
+            w.samplePreLoopLen = tickToSampleConvert<samplecount_t, roundmode::none>(m_clip->offsetStart, tempo100, samplerate);
+        }
+        w.sampleLoopLen = tickToSampleConvert<samplecount_t, roundmode::none>(m_clip->getLoopLength(), tempo100, samplerate);
+        tickBegin       = m_clip->start();
+        tickBeginOffset = begin + m_clip->start();
+        tickEnd = end + m_clip->start();
+    } else {
+        tickBeginOffset += m_clip->offsetStart;
+        tickEnd += m_clip->offsetStart;
+    }
+
+    int64_t sampleBegin       = tickToSampleConvert<int64_t, roundmode::floor>(tickBegin, tempo100, samplerate);
+    int64_t sampleStartOffset = tickToSampleConvert<int64_t, roundmode::floor>(tickBeginOffset, tempo100, samplerate);
+    int64_t sampleEnd  = tickToSampleConvert<int64_t, roundmode::floor>(tickEnd, tempo100, samplerate);
+
     int64_t nSamples = sampleEnd - sampleStartOffset;
     if (nSamples * pxPerSample > FBO_WIDTH) {
         samplesPerPx = (nSamples / FBO_WIDTH);
@@ -72,7 +92,6 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
 
     w.method  = SampleMethod::sample_straight;
     w.audioId = m_clip->audio.id;
-    w.clipped = size.x != sizeClipped.x;
     if (m_clip->hasFadeIn()) {
         auto fadeRef = m_clip->getSampleFadeIn(tempo100, samplerate);
         w.fades[0] = {*fadeRef.shape, fadeRef.samplesFadePos, fadeRef.samplesFadeDuration};
@@ -131,29 +150,96 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
                         getContrastFontColor(cl->rgb),
                         NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     }
-    ivec2 posContents = ivec2(posClipped.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
+    ivec2 posContents = ivec2(pos.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
     tick_t clipLen = cl->getLen();
     float numBars  = clipLen / (float) TICKS_BAR;
     float barSize  = size.x / (float) numBars;
     if (sizeClipped.x > 0 && sizeClipped.y > 0 && waveformRef->rendered) {
-        nvgSave(vg);
-        nvgTranslate(vg, posContents.x, posContents.y);
-        wfrenderer->draw(vg, waveformRef, sizeClipped);
-        nvgRestore(vg);
+        if (waveformRef->waveform.sampleLoopLen) {
+            if (waveformRef->waveform.samplePreLoopLen) {
+                float x = waveformRef->waveform.posPreLoopEnd;
+                if (x > 0) {
+                    auto sizePreLoop = ivec2(vec2(waveformRef->waveform.size) * vec2(x, 1));
+                    if (sizePreLoop.x > 0 && sizePreLoop.y > 0 && pos.x + sizePreLoop.x + 5 > posClipped.x) {
+                        nvgTranslate(vg, pos.x, posContents.y);
+                        wfrenderer->drawPart(vg, waveformRef, sizePreLoop, {0, 0}, {x, 1});
+                        nvgTranslate(vg, -pos.x, -posContents.y);
+                    }
+                }
+            }
+        } else {
+            nvgTranslate(vg, posClipped.x, posContents.y);
+            wfrenderer->draw(vg, waveformRef, sizeClipped);
+            nvgTranslate(vg, -posClipped.x, -posContents.y);
+        }
+    }
+    if (sizeClipped.x > 0
+            && sizeClipped.y > 0
+            && waveformRef->rendered 
+            && cl->loopEnabled
+            && cl->loopLen > 0
+            && waveformRef->waveform.sampleLoopLen) {
+        //TODO: use exact loop-len to pixel conversion
+        float stepLen = barSize * cl->loopLen / float(TICKS_BAR);
+        float preLoopScale = math::max(waveformRef->waveform.posPreLoopEnd, 0.0f);
+        auto sizeLoop = vec2(waveformRef->waveform.size) * vec2(1.0f-preLoopScale, 1.0f);
+        float x = 0.0f;
+        if (waveformRef->waveform.samplePreLoopLen && waveformRef->waveform.posPreLoopEnd > 0) {
+            x = waveformRef->waveform.size.x * preLoopScale;
+        } else if (waveformRef->waveform.posPreLoopEnd < 0.0f) {
+            float tilingPos = ::fmod(-waveformRef->waveform.posPreLoopEnd, 1.0f);
+            nvgSave(vg);
+            nvgTranslate(vg, pos.x, posContents.y);
+            auto sizeFirstLoop = vec2(sizeLoop)*vec2(1.0f-tilingPos, 1.0f);
+            if (sizeFirstLoop.x > 0) {
+                wfrenderer->drawPart(vg, waveformRef, sizeFirstLoop, {tilingPos, 0}, {1, 1});
+            }
+            nvgRestore(vg);
+            x = sizeFirstLoop.x;
+        }
+        auto preLoopLen = cl->offsetStart < cl->loopStart ? cl->loopStart - cl->offsetStart : 0;
+        auto loopLen = cl->len - preLoopLen;
+        auto numLoops = loopLen / cl->loopLen;
+        for (int32_t i = 0; i <= numLoops; ++i) {
+            float xLoop = x + stepLen * i;
+            if (xLoop > size.x) {
+                break;
+            }
+            float txW = 1.0f;
+            if (xLoop + stepLen > size.x) {
+                sizeLoop = sizeLoop * vec2((size.x - xLoop) / stepLen, 1);
+                txW = (size.x - xLoop) / stepLen;
+            }
+            xLoop += pos.x;
+            if (xLoop + stepLen + 5 < posClipped.x) {
+                continue;
+            }
+            nvgSave(vg);
+            nvgTranslate(vg, xLoop, posContents.y);
+            if (sizeLoop.x > 0) {
+                wfrenderer->drawPart(vg, waveformRef, sizeLoop, {preLoopScale, 0}, {txW, 1});
+            }
+            nvgRestore(vg);
+        }
     }
     if (cl->loopEnabled && cl->loopLen > 0) {
-        tick_t posLoopIndicator = cl->getLoopBegin();
+        
         nvgBeginPath(vg);
-        while (posLoopIndicator < clipLen) {
+        for (tick_t posLoopIndicator = cl->getLoopBegin(); posLoopIndicator < clipLen; posLoopIndicator += cl->loopLen) {
             if (posLoopIndicator >= 0) {
                 float objPos = posLoopIndicator / (float) TICKS_BAR;
                 float nx     = barSize * objPos;
+                if (pos.x + nx < -5) {
+                    continue;
+                }
+                if (nx > size.x + 5) {
+                    continue;
+                }
                 nvgMoveTo(vg, pos.x + nx, pos.y);
                 nvgLineTo(vg, pos.x + nx, pos.y + HEIGHT_CLIP_TITLE / 4);
                 nvgMoveTo(vg, pos.x + nx, pos.y + HEIGHT_CLIP_TITLE * 3 / 4);
                 nvgLineTo(vg, pos.x + nx, pos.y + HEIGHT_CLIP_TITLE);
             }
-            posLoopIndicator += cl->loopLen;
         }
         nvgStrokeColor(vg, theme->getFrameColorBase());
         nvgStrokeWidth(vg, 1.f);
