@@ -116,7 +116,7 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
         }
     }
     clip->setDirty();
-    DawInstance::get()->updateVisibleTrackContents();
+    dawCtrl->getDaw()->updateVisibleTrackContents();
 }
 
 void guictr_cliphandles::handleDraggedRelease(MouseEvent& evt) {
@@ -720,7 +720,9 @@ inline bool isAlmostEqualWaveformSample(const audioclip_texture_t& lhs, const au
         lhs.quality == rhs.quality && lhs.method == rhs.method) {
         if (lhs.fades != rhs.fades)
             return false;
-
+        if (lhs.loopPos != rhs.loopPos) {
+            return false;
+        }
         if (lhs.clipped || rhs.clipped)
             return lhs.scaleX == rhs.scaleX && lhs.scaleY == rhs.scaleY && lhs.size == rhs.size && lhs.samplesPerPx == rhs.samplesPerPx;
         vec2 sd    = vec2(math::absvec2(lhs.size - rhs.size));
@@ -769,7 +771,7 @@ void gui_audiocontent::onTick(AppCtrl* appctrl) {
     }
 }
 void gui_audiocontent::prerender(NVGcontext* vg) {
-    const clip_t* clip = view.clip();
+    clip_t* clip = view.clip();
     if (!clip || clip->clipType != CLIP_AUDIO) {
         return;
     }

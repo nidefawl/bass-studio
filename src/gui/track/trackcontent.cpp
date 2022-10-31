@@ -445,8 +445,8 @@ void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& gri
         }
         auto dTick = sampleToTickConvert<double, roundmode::none>(fadeRef->samplesFadePos, prjGlobals.tempo100, audio->sample->sampleRate);
         auto dTickEnd = sampleToTickConvert<double, roundmode::none>(fadeRef->samplesFadePos + fadeRef->samplesFadeDuration, prjGlobals.tempo100, audio->sample->sampleRate);
-        auto beginX = grid.tickToScreenD(m_clip->getOffsetStart() + dTick);
-        auto endX = grid.tickToScreenD(m_clip->getOffsetStart() + dTickEnd);
+        auto beginX = grid.tickToScreenD(m_clip->start() + dTick);
+        auto endX = grid.tickToScreenD(m_clip->start() + dTickEnd);
         auto& layout = getFadeLayout(fadeIdx);
         layout.pos = ivec2(beginX, posClipped.y);
         layout.size = ivec2(endX - beginX, sizeClipped.y);
@@ -523,7 +523,7 @@ rendered_audio_clip_t::~rendered_audio_clip_t() {
     delete tempWaveformRef;
 }
 
-void rendered_audio_clip_t::updateClipPrerender(NVGcontext* vg, audiofile_t* audio, bool culled) {
+void rendered_audio_clip_t::updateClipPrerender(NVGcontext* vg, clip_t* clip, audiofile_t* audio, bool culled) {
     if (!waveformRef->queued) {
         if (!audio || this->updatedWaveform.size.x < 1 || this->updatedWaveform.size.y < 1) {
             return;
@@ -569,7 +569,7 @@ void rendered_audio_clip_t::releaseWaveformTexture() {
 void gui_audio_clip::prerender(NVGcontext* vg) {
     auto& clipAudio    = m_clip->audio;
     audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->get(clipAudio.id);
-    updateClipPrerender(vg, audio, culled);
+    updateClipPrerender(vg, m_clip, audio, culled);
 }
 
 using Table::table_entry_t;

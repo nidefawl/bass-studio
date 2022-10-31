@@ -1019,7 +1019,7 @@ void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const 
                 }
             }
 
-            clipAudio.renderedAudio->updateClipPrerender(vg, audio, false);
+            clipAudio.renderedAudio->updateClipPrerender(vg, cl, audio, false);
             gui_waveform_texture_ref* ref = clipAudio.renderedAudio->getWaveformTextureRef();
             renderAudioClip(vg, clipAudio.renderedAudio->getWaveformRenderer(), theme, entry->track, cl, audio, ref, clipPos, clipSize - shrink, posClipped, sizeClipped);
         }

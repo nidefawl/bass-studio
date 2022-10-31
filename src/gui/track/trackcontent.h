@@ -144,7 +144,7 @@ protected:
     waveformrender* getWaveformRenderer() {
         return waveformRenderer;
     }
-    void updateClipPrerender(NVGcontext* vg, audiofile_t* audio, bool culled);
+    void updateClipPrerender(NVGcontext* vg, clip_t* clip, audiofile_t* audio, bool culled);
     gui_waveform_texture_ref* getWaveformTextureRef();
     const audioclip_texture_t& getCurrentWaveformShape();
     void updateWaveformTexture(const audioclip_texture_t& newShape);

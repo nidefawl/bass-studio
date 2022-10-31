@@ -1977,17 +1977,8 @@ int32_t Host::getPlayThreadId()
     return impl->playThreadId;
 }
 
-void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlobals, const std::vector<clip_t*>& clips, const sampleformat_t& sf, samplecount_t samplePosBegin, AudioBlock& out) {
-#define DEBUG_FILL_AUDIO_BLOCK_FROM_CLIPS 0
-#if DEBUG_FILL_AUDIO_BLOCK_FROM_CLIPS
-    AudioBlock* bufDbgRight = nullptr;
-    AudioBlock* bufDbgLeft = nullptr;
-    auto bufLeft = out.SubChannelsBlock(0, 1);
-    auto bufRight = out.SubChannelsBlock(1, 1);
-    bufDbgLeft = &bufLeft;
-    bufDbgRight = &bufRight;
-#endif
 
+void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlobals, const std::vector<clip_t*>& clips, const sampleformat_t& sf, samplecount_t samplePosBegin, AudioBlock& out) {
     for (clip_t* clip : clips) {
         audiofile_t* audio = cache->get(clip->audio.id);
         if (!audio)
@@ -1999,45 +1990,27 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
             continue;
         if (!assert_expr(samplecount_t(sample->samples[0].size()) >= sample->nSamples))
             continue;
-        /* fixed readoffset into backing sample */
-        samplecount_t clipSampleOffset = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->offsetStart, prjGlobals.tempo100, sample->sampleRate);
-
         dbgassert(sample->sampleRate == sf.sampleRate);
         /* positive if in the future, negative if in the past */
         samplecount_t clipSampleBegin = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->start(), prjGlobals.tempo100, sf.sampleRate) - samplePosBegin;
         /* positive if in the future, negative if in the past */
         samplecount_t clipSampleEnd   = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->end(), prjGlobals.tempo100, sf.sampleRate) - samplePosBegin;
         if (clipSampleBegin >= out.samples) {
-#if DEBUG_FILL_AUDIO_BLOCK_FROM_CLIPS
-            if (bufDbgRight) bufDbgRight->fill(0.125f);
-#endif
             continue;
         }
         if (clipSampleEnd <= 0) {
-#if DEBUG_FILL_AUDIO_BLOCK_FROM_CLIPS
-            if (bufDbgRight) bufDbgRight->fill(0.25f);
-#endif
             continue;
         }
-#if DEBUG_FILL_AUDIO_BLOCK_FROM_CLIPS
-        if (clipSampleBegin >= 0) {
-            clip->audio.lastReadBegin = -1;
-            clip->audio.lastReadLen = -1;
-            clip->audio.lastReadEnd = -1;
-            clip->audio.lastWriteBegin = -1;
-            clip->audio.lastWriteEnd = -1;
-        }
-#endif
 
         auto numSamplesClipBounds = clipSampleEnd - clipSampleBegin;
-        auto numSamplesReadableData = sample->nSamples - clipSampleOffset;
+        auto numSamplesReadableData = numSamplesClipBounds;
+        if (clip->isLoopEnabled()) {
+            numSamplesReadableData = tickToSampleConvert<samplecount_t, roundmode::round>(clip->getLen(), prjGlobals.tempo100, sample->sampleRate);
+        }
 
         samplecount_t clipMinSamples = math::min<samplecount_t>(numSamplesReadableData, numSamplesClipBounds);
         auto lastReadableSamplePos = clipSampleBegin + clipMinSamples;
         if (lastReadableSamplePos < 0) {
-#if DEBUG_FILL_AUDIO_BLOCK_FROM_CLIPS
-            if (bufDbgRight) bufDbgRight->fill(0.5f);
-#endif
             continue;
         }
         // 0 if clip starts before samplePosBegin, otherwise clipSampleBegin
@@ -2048,51 +2021,30 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
             continue;
         }
 
-#if DEBUG_FILL_AUDIO_BLOCK_FROM_CLIPS
-        samplecount_t dbgWriteEnd = -1;
-        samplecount_t dbgWriteBegin = -1;
-        samplecount_t dbgReadBegin = -1;
-        samplecount_t dbgReadEnd = -1;
-        samplecount_t dbgReadLen = -1;
-#endif
-
-        auto getProcessedSample = [/*&*/](const clip_audio_t& clipAudio, const sample_fades_ref_t& fadeIn, const sample_fades_ref_t& fadeOut, const audiosample_t* sample, channelnum_t ch, samplecount_t sampleClipOffset, samplecount_t samplePos, float* srcBuf) {
-            float fade = 1.0f;
-            for (auto* clipFade : { &fadeIn, &fadeOut }) {
-                auto relClipSamplePos = samplePos;
-                if (relClipSamplePos >= clipFade->samplesFadePos && relClipSamplePos < clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
-                    float fadePos = (relClipSamplePos - clipFade->samplesFadePos) / float(clipFade->samplesFadeDuration);
-                    fade *= clipFade->shape->sampleCurveOneShot(fadePos);
-                }
-                if (relClipSamplePos < clipFade->samplesFadePos) {
-                    dbgassert(clipFade == &fadeOut);
-                }
-                if (relClipSamplePos >= clipFade->samplesFadePos+clipFade->samplesFadeDuration) {
-                    dbgassert(clipFade == &fadeIn);
-                }
-            }
-#if DEBUG_FILL_AUDIO_BLOCK_FROM_CLIPS
-            if (dbgReadBegin < 0) {
-                dbgReadBegin = samplePos;
-            }
-            dbgReadEnd = samplePos;
-#endif
-            return srcBuf[samplePos] * fade;
-        };
 
         sample_fades_ref_t fades[2] = {
             clip->getSampleFadeIn(prjGlobals.tempo100, sf.sampleRate), 
             clip->getSampleFadeOut(prjGlobals.tempo100, sf.sampleRate)
         };
+        /* fixed readoffset into backing sample */
+        samplecount_t clipSampleOffset = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->offsetStart, prjGlobals.tempo100, sample->sampleRate);
+        samplecount_t loopStart        = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->loopStart, prjGlobals.tempo100, sample->sampleRate);
+        samplecount_t loopEnd          = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->loopStart + clip->loopLen, prjGlobals.tempo100, sample->sampleRate);
+        samplecount_t preLoopLen       = 0;
+        if (clip->offsetStart < clip->loopStart) {
+            preLoopLen = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->loopStart - clip->offsetStart, prjGlobals.tempo100, sample->sampleRate);
+        }
 
         auto numChannels = math::max(sample->nChannels, out.channels);
+        DAW::AudioClipFadeLoopProcessor clipSample{fades[0], fades[1], sample, clipSampleOffset, preLoopLen, loopStart, loopEnd};
         for (auto ch = channelnum_t(0); ch < numChannels; ++ch) {
 
             auto& srcVec = ch >= sample->samples.size() ? sample->samples[sample->samples.size() - 1] : sample->samples[ch];
             dbgassert(sample->nSamples <= samplecount_t(srcVec.size()));
-            auto* src = srcVec.data();
             auto* dst = (ch >= out.channels) ? out.buf[out.channels - 1] : out.buf[ch];
-            samplecount_t start = 0; if (clipSampleBegin > 0) start = clipSampleBegin;
+            samplecount_t start = 0;
+            if (clipSampleBegin > 0)
+                start = clipSampleBegin;
             auto end = start + readSamples;
             for (auto s = start; s < end; ++s) {
                 auto dstOffset = s;
@@ -2103,47 +2055,11 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
                 if (!assert_expr(dstOffset < out.samples)) {
                     break;
                 }
-                auto srcOffset = clipSampleOffset + s - clipSampleBegin;
-                dbgassert(srcOffset >= 0 && srcOffset <= sample->nSamples);
-                if (srcOffset >= sample->nSamples) {
-                    break;
-                }
-                dst[dstOffset] = getProcessedSample(clip->audio, fades[0], fades[1], sample, ch, clipSampleOffset, srcOffset, src);
-#if DEBUG_FILL_AUDIO_BLOCK_FROM_CLIPS
-                if (dbgWriteBegin < 0) {
-                    dbgWriteBegin = dstOffset;
-                }
-                dbgWriteEnd = dstOffset;
-                if (bufDbgRight) bufDbgRight->buf[0][dstOffset] = 1.0f;
-#endif
+                auto srcOffset = 0 + s - clipSampleBegin;
+                dst[dstOffset] = clipSample.get(ch, srcOffset);
             }
         }
-#if DEBUG_FILL_AUDIO_BLOCK_FROM_CLIPS
-        dbgReadLen = dbgReadEnd - dbgReadBegin + 1;
-        if (clip->audio.lastReadEnd > -1) {
-            dbgassert(clip->audio.lastReadEnd + 1 ==  dbgReadBegin);
-        }
-        clip->audio.lastReadBegin = dbgReadBegin;
-        clip->audio.lastReadEnd = dbgReadEnd;
-        clip->audio.lastReadLen = dbgReadLen;
-
-        if (clip->audio.lastWriteEnd != -1) {
-            if ((clip->audio.lastWriteEnd + 1) % out.samples !=  dbgWriteBegin % out.samples) {
-                log_lf(Log::L_WARN, "clip %s: lastWriteEnd %zd + 1 != dbgWriteBegin %zd\n", clip->name.c_str(), clip->audio.lastWriteEnd, dbgWriteBegin);
-            }
-            // dbgassert(clip->audio.lastWriteEnd + 1 ==  dbgWriteBegin);
-        }
-        clip->audio.lastWriteBegin = dbgWriteBegin;
-        clip->audio.lastWriteEnd = dbgWriteEnd;
-#endif
     }
-#if DEBUG_FILL_AUDIO_BLOCK_FROM_CLIPS
-    
-    // bufDbgLeft.clear();
-    // bufDbgLeft.fill(float(!clips.empty()));
-    if (bufDbgLeft)
-        bufDbgLeft->SubChannelsSamplesBlock(0, 1, 0, 32).fill(-1);
-#endif
 }
 } // namespace DAW::Host
 

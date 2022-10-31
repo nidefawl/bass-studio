@@ -38,6 +38,7 @@ struct clip_fade_t {
     double durationMs = 0.0;
     DAW::Shape::shape_t shape;
 };
+
 class clip_audio_t {
 public:
     int32_t id = -1;
@@ -45,14 +46,6 @@ public:
     clip_fade_t fadeIn;
     clip_fade_t fadeOut;
 
-#ifndef NDEBUG
-    /* debug only */
-    samplecount_t lastReadBegin = -1;
-    samplecount_t lastReadEnd = -1;
-    samplecount_t lastReadLen = -1;
-    samplecount_t lastWriteBegin = -1;
-    samplecount_t lastWriteEnd = -1;
-#endif
 public:
     clip_audio_t();
     ~clip_audio_t();

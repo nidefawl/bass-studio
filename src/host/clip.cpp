@@ -734,7 +734,7 @@ sample_fades_ref_t clip_t::getSampleFadeIn(int32_t tempo100, samplerate_t sr) co
     // }
     return {   
         &audio.fadeIn.shape, 
-        tickToSampleConvert<samplecount_t, roundmode::floor>(offsetStart, tempo100, sr),
+        tickToSampleConvert<samplecount_t, roundmode::floor>(0, tempo100, sr),
         secondsToSamplesConvert<samplecount_t, roundmode::ceil>(audio.fadeIn.durationMs * 0.001, sr),
     };
 }
@@ -744,7 +744,7 @@ sample_fades_ref_t clip_t::getSampleFadeOut(int32_t tempo100, samplerate_t sr) c
     // }
     sample_fades_ref_t fadeOut;
     fadeOut.samplesFadeDuration = secondsToSamplesConvert<samplecount_t, roundmode::ceil>(audio.fadeOut.durationMs * 0.001, sr);
-    fadeOut.samplesFadePos = tickToSampleConvert<samplecount_t, roundmode::ceil>(offsetStart+len, tempo100, sr) - fadeOut.samplesFadeDuration;
+    fadeOut.samplesFadePos = tickToSampleConvert<samplecount_t, roundmode::ceil>(len, tempo100, sr) - fadeOut.samplesFadeDuration;
     fadeOut.shape = &audio.fadeOut.shape;
     return fadeOut;
 }
@@ -1062,3 +1062,56 @@ void clip_control_data_t::setFrom(clip_t* clip, tick_t tickBegin, tick_t len) {
         updateBounds();
     }
 }
+
+namespace DAW {
+
+float AudioClipFadeLoopProcessor::get(channelnum_t ch, samplecount_t samplePos) const {
+    float fade = 1.0f;
+    for (auto* clipFade : { &fadeIn, &fadeOut }) {
+        auto relClipSamplePos = samplePos;
+        if (relClipSamplePos >= clipFade->samplesFadePos && relClipSamplePos < clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
+            float fadePos = (relClipSamplePos - clipFade->samplesFadePos) / float(clipFade->samplesFadeDuration);
+            fade *= clipFade->shape->sampleCurveOneShot(fadePos);
+        }
+    }
+    auto readPos = offsetStart + samplePos;
+    if (loopEnd - loopStart > 0) {
+        if (samplePos >= preLoopLen) {
+            readPos = loopStart + ((readPos - preLoopLen) % (loopEnd - loopStart));
+        }
+    }
+    if (readPos >= 0 && readPos < sample->nSamples && ch < sample->samples.size()) {
+        return sample->samples[ch][readPos] * fade;
+    }
+    return 0.0f;
+}
+
+float AudioClipFadeLoopProcessor::getDownsampled(channelnum_t ch, samplecount_t samplePos, uint8_t nDownLevel) const {
+    float fade = 1.0f;
+    for (auto* clipFade : { &fadeIn, &fadeOut }) {
+        auto relClipSamplePos = samplePos;
+        if (relClipSamplePos >= clipFade->samplesFadePos && relClipSamplePos < clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
+            float fadePos = (relClipSamplePos - clipFade->samplesFadePos) / float(clipFade->samplesFadeDuration);
+            fade *= clipFade->shape->sampleCurveOneShot(fadePos);
+        }
+    }
+    auto readPos = offsetStart + samplePos;
+    if (loopEnd - loopStart > 0) {
+        if (samplePos >= preLoopLen) {
+            readPos = loopStart + ((readPos - preLoopLen) % (loopEnd - loopStart));
+        }
+    }
+    const std::vector<samplechannel_t>* vec = nullptr;
+    if (nDownLevel) {
+        vec = &sample->downsampled[nDownLevel - 1];
+    } else {
+        vec = &sample->samples;
+    }
+    if (readPos >= 0 && vec && ch < vec->size() && readPos < (*vec)[ch].size()) {
+        const auto& channel = (*vec)[ch];
+        return channel[readPos] * fade;
+    }
+    return 0.0f;
+}
+
+} // namespace DAW
