@@ -132,7 +132,7 @@ namespace DAW {
         }
         return numRemoved > 0;
     }
-    struct dependency_graph_flattened_t {
+    struct dependency_trackgraph_flattened_t {
         std::vector<track_node_t*> resolved;
         std::vector<track_node_t*> unresolved;
     };
@@ -143,7 +143,7 @@ namespace DAW {
      * @param node
      * @return
      */
-    bool dep_resolve(dependency_graph_flattened_t& ctxt, track_node_t* node) {
+    bool dep_resolve(dependency_trackgraph_flattened_t& ctxt, track_node_t* node) {
         ctxt.unresolved.push_back(node);
         for (auto child : node->children) {
             if (STL_CONTAINS(ctxt.unresolved, child)) {
@@ -169,7 +169,7 @@ namespace DAW {
         }
         track_node_t root;
         root.children.insert(root.children.begin(), dependencyGraph->roots.begin(), dependencyGraph->roots.end());
-        dependency_graph_flattened_t graphFlattened;
+        dependency_trackgraph_flattened_t graphFlattened;
         if (!dep_resolve(graphFlattened, &root)) {
             // log_lf(Log::L_ERROR, "Failed flattening track graph\n");
             return false;
