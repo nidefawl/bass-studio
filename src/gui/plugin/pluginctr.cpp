@@ -591,15 +591,14 @@ void guictr_dragged_plugins::setStrings(std::vector<String>&& list) {
     size = ivec2(table.tableWidth, table.rows.size() * table.rowHeight) + ivec2(INSET_TABLE << 1);
 }
 void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) {
-    //    log_printf("pluginMultiDragMove %d %d on guictr_plugins %12X\n", mousepos.x, mousepos.y, (int64_t)this);
     dawCtrl->getDragDropTarget().reset();
     if (!this->stage) return;
+    auto plugCtr = dawCtrl->getPluginsView();
     audio_stage_t* srcStage = g->getTrackLink();
 #ifndef NDEBUG
     for (auto* ptr : g->effects) {
         dbgassert(ptr->getTrackLink() == srcStage);
     }
-    dbgassert(srcStage->m_pluginCtr);
 #endif // NDEBUG
 
     int highlightSlot = slotFromCoord(mousepos);
@@ -610,7 +609,7 @@ void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousep
             return;
         }
     } else {
-        //prevent dragging onto if any of the effects is parent of this
+        /* prevent dragging onto if any of the effects is parent of this */
         audio_stage_t* p = this->stage;
         while (p) {
             if (p->owner && std::find(g->effects.begin(), g->effects.end(), p->owner) != g->effects.end()) {
@@ -618,32 +617,14 @@ void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousep
             }
             p = p->parent;
         }
-//        auto p = this->stage;
-//        while (p) {
-//
-//            p = p->parent;
-//        }
-//        if (this->stage)
-//            for (auto* ptr : g->effects) {
-//                ptr->is auto ptr1 = ptr->getTrackLink();
-//                if (ptr1 == this->stage) {
-//                    return;
-//                }
-//                if (isAudioStageChildOf(ptr1, this->stage)) {
-//                    return;
-//                }
-//            }
     }
-    //  if (abs((evt.dragStart - evt.mousepos).x) > getSizeContent().y / 4) {
     dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
         dragdrop_target_indicator_t::target_area,
         highlightSlot,
-        srcStage->m_pluginCtr,
+        plugCtr,
         this,
         { -1, -1 }
     };
-
-    //  }
 }
 void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
     dawCtrl->getDragDropTarget().reset();
