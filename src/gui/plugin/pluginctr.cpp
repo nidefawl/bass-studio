@@ -488,13 +488,13 @@ void guictr_plugins::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos
         if (track->type != TRACK_TYPE_MIDI) {
             return;
         }
-        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, 0, this, this, this->pos };
+        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, 0, this, this->pos };
         return;
     }
 
     auto slot = slotFromCoord(mousepos);
 
-    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, slot, this, this, this->pos };
+    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, slot, this, this->pos };
 }
 int guictr_plugins::slotFromCoord(ivec2 _pos) {
     if (stage->effects.empty())
@@ -593,7 +593,6 @@ void guictr_dragged_plugins::setStrings(std::vector<String>&& list) {
 void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) {
     dawCtrl->getDragDropTarget().reset();
     if (!this->stage) return;
-    auto plugCtr = dawCtrl->getPluginsView();
     audio_stage_t* srcStage = g->getTrackLink();
 #ifndef NDEBUG
     for (auto* ptr : g->effects) {
@@ -621,7 +620,6 @@ void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousep
     dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
         dragdrop_target_indicator_t::target_area,
         highlightSlot,
-        plugCtr,
         this,
         { -1, -1 }
     };
@@ -632,7 +630,6 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
     effectbase* effect = g->getModule();
     audio_stage_t* trp = effect->getTrackLink();
     dbgassert(trp);
-    dbgassert(trp->m_pluginCtr);
     int highlightSlot = slotFromCoord(mousepos);
     //  if (abs((evt.dragStart - evt.mousepos).x) > getSizeContent().y / 4) {
     int curSlot = trp == stage ? (effect->getSlot()) : -2;
@@ -642,47 +639,14 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
     dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
         dragdrop_target_indicator_t::target_area,
         highlightSlot,
-        trp->m_pluginCtr,
         this,
         { -1, -1 }
     };
     //  }
 }
-class action_shift_modules : public action_base {
-    audio_stage_ref_t ref;
-    int32_t dst;
-    int32_t src;
-    int32_t len;
-
-protected:
-public:
-    action_shift_modules(String s, audio_stage_ref_t _ref, int32_t _dst, int32_t _src, int32_t _len)
-        : action_base(), ref(_ref), dst(_dst), src(_src), len(_len) {
-        desc = s;
-    }
-    void undo(DawInstance* daw) override {
-        audio_stage_t* stage = daw->getPluginManager()->getAudioStage(ref);
-        if (!stage) {
-            setError("missing trackimpl");
-            return;
-        }
-        daw->getPluginManager()->movePluginsOnStage(stage, dst, src, len);
-        daw->onPluginsChanged();
-    }
-    void redo(DawInstance* daw) override {
-        audio_stage_t* stage = daw->getPluginManager()->getAudioStage(ref);
-        if (!stage) {
-            setError("missing trackimpl");
-            return;
-        }
-        daw->getPluginManager()->movePluginsOnStage(stage, src, dst, len);
-        daw->onPluginsChanged();
-    }
-};
 
 // gui_ctr_plugins receiving list of effectbase
 void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
-    auto dstSlot = dawCtrl->getDragDropTarget().slotIdx;
     dawCtrl->getDragDropTarget().reset();
     if (!this->stage) return;
     dbgassert(g->effects.size());

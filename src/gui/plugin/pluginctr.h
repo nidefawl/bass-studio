@@ -275,6 +275,39 @@ public:
     void redo(DawInstance* daw) override;
     void releaseResources(DawInstance* daw) override;
 };
+
+class action_shift_modules : public action_base {
+    audio_stage_ref_t ref;
+    int32_t dst;
+    int32_t src;
+    int32_t len;
+
+protected:
+public:
+    action_shift_modules(String s, audio_stage_ref_t _ref, int32_t _dst, int32_t _src, int32_t _len)
+        : action_base(), ref(_ref), dst(_dst), src(_src), len(_len) {
+        desc = s;
+    }
+    void undo(DawInstance* daw) override {
+        audio_stage_t* stage = daw->getPluginManager()->getAudioStage(ref);
+        if (!stage) {
+            setError("missing trackimpl");
+            return;
+        }
+        daw->getPluginManager()->movePluginsOnStage(stage, dst, src, len);
+        daw->onPluginsChanged();
+    }
+    void redo(DawInstance* daw) override {
+        audio_stage_t* stage = daw->getPluginManager()->getAudioStage(ref);
+        if (!stage) {
+            setError("missing trackimpl");
+            return;
+        }
+        daw->getPluginManager()->movePluginsOnStage(stage, src, dst, len);
+        daw->onPluginsChanged();
+    }
+};
+
 class action_move_modules : public action_base {
     audio_stage_ref_t refdst;
     audio_stage_ref_t refsrc;

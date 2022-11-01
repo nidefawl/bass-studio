@@ -1835,7 +1835,6 @@ void gui_track_content_base::pluginMultiDragMove(guictr_dragged_plugins* g, ivec
     dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
         dragdrop_target_indicator_t::target_area,
         highlightSlot,
-        m_trackentry->parent,
         m_trackentry->mixer,
         this->pos + this->size/2
     };
@@ -1884,23 +1883,20 @@ void gui_track_content_base::pluginMultiDragRelease(guictr_dragged_plugins* g, i
     if (targetslot >= 0) {
         if (srcStage != dstStage) {
             daw->getPluginManager()->movePluginsToStage(dstStage, srcStage, first, targetslot, last - first + 1);
-
             audio_stage_ref_t refsrc = srcStage->toRef();
             audio_stage_ref_t refdst = dstStage->toRef();
-            auto* track_action       = new action_move_modules("Move plugin", refdst, refsrc, targetslot, first, last - first + 1);
-            daw->pushHist(track_action);
+            daw->pushHist(new action_move_modules("Move plugin", refdst, refsrc, targetslot, first, last - first + 1));
         } else {
             if (targetslot > first) targetslot -= CtrSize(g->effects);
             if (first == targetslot)
                 return;
             daw->getPluginManager()->movePluginsOnStage(dstStage, first, targetslot, last - first + 1);
-            // audio_stage_ref_t ref = dstStage->toRef();
-            //auto* track_action    = new action_shift_modules("Move plugin", ref, targetslot, first, last - first + 1);
-            //TODO: make this work
-            //daw->pushHist(track_action);
+            audio_stage_ref_t ref = dstStage->toRef();
+            daw->pushHist(new action_shift_modules("Move plugin", ref, targetslot, first, last - first + 1));
         }
         mainCtrl->onPluginsChanged();
-        dstStage->m_pluginCtr->makeVisisble(g->effects.back()->getGui());
+        if (dstStage->m_pluginCtr)
+            dstStage->m_pluginCtr->makeVisisble(g->effects.back()->getGui());
     }
 }
 
@@ -1914,7 +1910,6 @@ void gui_track_content_base::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 
         dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
             dragdrop_target_indicator_t::target_area,
             0,
-            m_trackentry->parent,
             m_trackentry->mixer,
             this->pos + this->size/2
         };
@@ -1923,11 +1918,10 @@ void gui_track_content_base::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 
 
     int32_t dstSlot = g->isSynth() ? 0 : CtrSize(dstStage->effects);
 
-    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, dstSlot, this, this, this->pos };
+    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, dstSlot, this, this->pos };
     dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
         dragdrop_target_indicator_t::target_area,
         0,
-        m_trackentry->parent,
         m_trackentry->mixer,
         this->pos + this->size/2
     };
@@ -1954,10 +1948,8 @@ void gui_track_content_base::pluginEntryDragRelease(gui_pluginlist_entry* g, ive
         daw->pushHist(track_action);
         pluginMgr->postPluginLoaded(dstStage, effect);
         mainCtrl->onPluginsChanged();
-        dstStage->m_pluginCtr->makeVisisble(effect->getGui());
-        //    if (res.result == 0 && res.plugin) {
-        //        res.plugin->onEnable();
-        //    }
+        if (dstStage->m_pluginCtr)
+            dstStage->m_pluginCtr->makeVisisble(effect->getGui());
     }
 }
 
@@ -2068,16 +2060,19 @@ namespace {
         }
 
         dragdrop_target_indicator_t target;
-        guibase* parentGui = targetTrack ? (guibase*) targetTrack->mixer : (guibase*) parent;
+        guibase* dropTarget = parent;
+        if (targetTrack) {
+            dropTarget = targetTrack->mixer;
+        }
         switch (slot.droptype) {
             case drop_type::track_on:
-                target = { dragdrop_target_indicator_t::target_area, treeIdx, parent, parentGui, slot.droppedTrack->mixer->pos + ivec2(0, slot.droppedTrack->mixer->size.y / 2) };
+                target = { dragdrop_target_indicator_t::target_area, treeIdx, dropTarget, slot.droppedTrack->mixer->pos + ivec2(0, slot.droppedTrack->mixer->size.y / 2) };
                 break;
             case drop_type::track_before:
-                target = { dragdrop_target_indicator_t::target_line, treeIdx, parent, parentGui, slot.droppedTrack->mixer->pos + ivec2(0, 2) };
+                target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget, slot.droppedTrack->mixer->pos + ivec2(0, 2) };
                 break;
             case drop_type::track_after:
-                target = { dragdrop_target_indicator_t::target_line, treeIdx, parent, parentGui, slot.droppedTrack->mixer->pos + ivec2(0, slot.droppedTrack->mixer->size.y - 2) };
+                target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget, slot.droppedTrack->mixer->pos + ivec2(0, slot.droppedTrack->mixer->size.y - 2) };
                 break;
             case drop_type::none:
                 return;
