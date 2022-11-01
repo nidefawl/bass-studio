@@ -760,14 +760,14 @@ bool gui_slider_textfield::keyboardEvent(KeyboardKey key, int scancode, Keyboard
             if (modifiers == KB_MOD_SHIFT) {
                 amt *= 0.1f;
             }
-            updateAutomatableParam(amt, false);
+            updateAutomatableParam(amt, false, true);
             return true;
         } else if (key == KeyboardKey::DAW_KB_DOWN) {
             float amt = 1.0f;
             if (modifiers == KB_MOD_SHIFT) {
                 amt *= 0.1f;
             }
-            updateAutomatableParam(amt, false);
+            updateAutomatableParam(amt, false, true);
             return true;
         }
     }
@@ -781,6 +781,7 @@ void gui_slider_textfield::onTextEndEdit() {
 }
 
 void gui_slider_textfield::handleDraggedBegin(MouseEvent& evt) {
+    fBeginValue = paramAutomatable->getParam(paramIdx)->getValue();
     if (!isTextCommitted()) {
         gui_textfield::handleDraggedBegin(evt);
         return;
@@ -810,7 +811,7 @@ void gui_slider_textfield::handleDraggedMove(MouseEvent& evt) {
 
         evt.dragDistance->y = 0;
         if (paramAutomatable && paramIdx > -1) {
-            updateAutomatableParam(disty * 0.1f, true);
+            updateAutomatableParam(disty * 0.1f, true, false);
         }
     }
 }
@@ -820,11 +821,17 @@ void gui_slider_textfield::handleDraggedRelease(MouseEvent& evt) {
         gui_textfield::handleDraggedRelease(evt);
         return;
     }
+    float fNew = paramAutomatable->getParam(paramIdx)->getValue();
+    auto flags = param_update_flags::FLG_PAR_UPDATE_USER | param_update_flags::FLG_PAR_UPDATE_FINISH;
+    paramAutomatable->postSetParameter(paramIdx, fBeginValue, fNew, flags);
 }
 
-void gui_slider_textfield::updateAutomatableParam(float amt, bool applyUserInputScaling) {
+void gui_slider_textfield::updateAutomatableParam(float amt, bool applyUserInputScaling, bool isFinal) {
     float fNew = modifyParam(paramAutomatable->getParam(paramIdx)->getValue(), amt, applyUserInputScaling);
-    auto flags = param_update_flags::FLG_PAR_UPDATE_USER;
+    int32_t flags = param_update_flags::FLG_PAR_UPDATE_USER;
+    if (isFinal) {
+        flags |= param_update_flags::FLG_PAR_UPDATE_FINISH;
+    }
     paramAutomatable->setParamEdit(paramIdx, fNew, flags);
 }
 

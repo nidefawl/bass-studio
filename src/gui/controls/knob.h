@@ -151,7 +151,8 @@ public:
 class gui_slider_textfield : public gui_textfield {
 protected:
     automatable_t* paramAutomatable = nullptr;
-    int32_t paramIdx                = -1;
+    int32_t paramIdx  = -1;
+    float fBeginValue = 0.0f;
 public:
     gui_slider_textfield() : gui_textfield() {
         setCanMouseHit(true);
@@ -198,5 +199,5 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
-    void updateAutomatableParam(float amt, bool applyUserInputScaling);
+    void updateAutomatableParam(float amt, bool applyUserInputScaling, bool isFinal);
 };
