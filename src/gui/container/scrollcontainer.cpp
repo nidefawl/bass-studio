@@ -180,7 +180,7 @@ bool guictr_scrollbar::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
         for (guibase* gui : guis) {
             if (gui == &scrollbar && !scrollbar.isVisible())
                 continue;
-            if (gui->mouseHitTest(localMouse, evt)) {
+            if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
                 return true;
             }
         }

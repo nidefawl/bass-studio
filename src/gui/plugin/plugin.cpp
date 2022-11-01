@@ -142,9 +142,7 @@ bool guiplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (contains(mpos)) {
         ivec2 localMouse = this->toContainerSpace(mpos);
         for (guibase* gui : guis) {
-            if (!gui->isVisible())
-                continue;
-            if (gui->mouseHitTest(localMouse, evt)) {
+            if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
                 return true;
             }
         }
@@ -733,6 +731,8 @@ bool guipluginview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         ivec2 localMouse = this->toContainerSpace(mpos);
         for (auto* btn : guiButtonsTitlebar) {
             if (btn->isVisible() && btn->mouseHitTest(localMouse, evt)) {
+                if (MouseHitType::MOUSE_LEFT == evt.type)
+                    return true;
                 return true;
             }
         }
@@ -823,6 +823,7 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
         textFieldSearchBox.setVisible(false);
     }
     for (auto* ctr : viewCtrs) {
+        ctr->setVisible(layoutMode == 0);
         if (ctr->isVisible()) {
             ctr->pos          = ivec2(left, 0) + ivec2(insetCtrls, insetCtrls + hpt);
             ivec2 prefSizeCtr = ctr->size - ivec2(insetCtrls * 2);

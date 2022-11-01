@@ -1127,9 +1127,7 @@ bool gui_graph::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (this->contains(mpos)) {
         ivec2 localMouse = this->toContainerSpace(mpos);
         for (guibase* gui : guis) {
-            if (!gui->isVisible())
-                continue;
-            if (gui->mouseHitTest(localMouse, evt)) {
+            if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
                 return true;
             }
         }
@@ -1453,9 +1451,7 @@ bool guictr_nodes_editor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (this->contains(mpos)) {
         ivec2 localMouse = this->toContainerSpace(mpos);
         for (guibase* gui : guis) {
-            if (!gui->isVisible())
-                continue;
-            if (gui->mouseHitTest(localMouse, evt)) {
+            if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
                 return true;
             }
         }

@@ -466,7 +466,7 @@ namespace PluginHostInfo {
             if (this->contains(mpos)) {
                 ivec2 localMouse = this->toContainerSpace(mpos);
                 for (guibase* gui : guis) {
-                    if (gui->mouseHitTest(localMouse, evt)) {
+                    if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
                         return true;
                     }
                 }

@@ -96,7 +96,7 @@ bool guictr_plugins::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         //handle multi selection...
         ivec2 localMouse = this->toContainerSpace(mpos);
         for (guibase* gui : guis) {
-            if (gui->mouseHitTest(localMouse, evt)) {
+            if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
                 return true;
             }
         }
@@ -882,8 +882,12 @@ void guictr_plugins::determineSize(glm::ivec2& prefSize) {
 
     int32_t inset = margin / 2;
     ivec2 gPos(inset * 3, 0);
-    const auto hpt = theme->get(GuiConstant::CONST_SMALL_LABEL_HEIGHT);
-    gPos.x += hpt;
+    if (isDefaultPluginCtr) {
+        const auto hpt = theme->get(GuiConstant::CONST_SMALL_LABEL_HEIGHT);
+        gPos.x += hpt;
+    } else {
+        gPos.x += 2;
+    }
     for (guibase* gui : guis) {
         gui->pos  = gPos;
         gui->size = { guiH, guiH };
@@ -897,7 +901,7 @@ void guictr_plugins::determineSize(glm::ivec2& prefSize) {
         for (guibase* gui : guis) {
             maxX = math::max(gui->right(), maxX);
         }
-        prefSize.x = maxX;
+        prefSize.x = maxX + 4;
     }
 }
 action_remove_modules::action_remove_modules(String s, std::vector<effectbase*>&& _effects, audio_stage_ref_t _ref, int32_t _dst) : action_base(), effects(_effects), ref(_ref), dstSlot(_dst) {

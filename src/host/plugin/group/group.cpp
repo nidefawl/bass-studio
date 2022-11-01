@@ -59,6 +59,7 @@ public:
         prefSize.x = hpt + ctr.size.x + meterW;
     }
     void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
+        ctr.setVisible(layoutMode == 0);
     }
     void removeGuis() override {
         removeUNCHECKED(&ctr);
@@ -125,7 +126,7 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             if (layoutMode != 0) {
                 return false;
             }
-            if (ctr.mouseHitTest(localMouse, evt)) {
+            if (ctr.isVisible() && ctr.mouseHitTest(localMouse, evt)) {
                 return true;
             }
             const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
@@ -135,13 +136,11 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             return true;
         }
         for (guibase* gui : guis) {
-            if (!gui->isVisible())
-                continue;
-            if (gui->mouseHitTest(localMouse, evt)) {
+            if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
                 return true;
             }
         }
-        if (ctr.mouseHitTest(localMouse, evt)) {
+        if (ctr.isVisible() && ctr.mouseHitTest(localMouse, evt)) {
             return true;
         }
         if (isShift(evt.kbmods)) {

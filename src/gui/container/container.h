@@ -248,9 +248,7 @@ public:
             // iterate over guis vector in reverse
             for (auto it = guis.rbegin(); it != guis.rend(); ++it) {
                 auto gui = *it;
-                if (!gui->isVisible())
-                    continue;
-                if (gui->mouseHitTest(localMouse, evt)) {
+                if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
                     return true;
                 }
             }

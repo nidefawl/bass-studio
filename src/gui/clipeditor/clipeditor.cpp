@@ -1498,7 +1498,7 @@ bool gui_clipcontent::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 
         ivec2 local = this->toContainerSpace(mpos);
         for (guibase* gui: guis) {
-            if (gui->mouseHitTest(local, evt)) {
+            if (gui->isVisible() && gui->mouseHitTest(local, evt)) {
                 return true;
             }
         }

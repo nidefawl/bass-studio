@@ -1353,7 +1353,7 @@ public:
         if (contains(mpos)) {
             ivec2 local = this->toContainerSpace(mpos);
             for (guibase* gui : guis) {
-                if (gui->mouseHitTest(local, evt)) {
+                if (gui->isVisible() && gui->mouseHitTest(local, evt)) {
                     return true;
                 }
             }
@@ -1540,7 +1540,7 @@ public:
         if (contains(mpos)) {
             ivec2 local = this->toContainerSpace(mpos);
             for (guibase* gui : guis) {
-                if (gui->mouseHitTest(local, evt)) {
+                if (gui->isVisible() && gui->mouseHitTest(local, evt)) {
                     return true;
                 }
             }
@@ -1722,7 +1722,7 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             }
         }
         for (guibase* gui : guis) {
-            if (gui->mouseHitTest(local, evt)) {
+            if (gui->isVisible() && gui->mouseHitTest(local, evt)) {
                 return true;
             }
         }
