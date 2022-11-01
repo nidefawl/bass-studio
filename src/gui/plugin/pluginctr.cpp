@@ -434,6 +434,9 @@ void guictr_plugins::getEffects(std::vector<effectbase*>& out) {
 }
 void guictr_plugins::showTrack(audio_stage_t* audio) {
     removeGuis();
+    if (this->stage) {
+        this->stage->m_pluginCtr = nullptr;
+    }
     this->track = audio ? audio->getTrack() : nullptr;
     this->stage = audio;
     if (audio && this->track) {
