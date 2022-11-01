@@ -856,7 +856,6 @@ static int runScannerClient() {
                 writeToIPC(client, response);
             } else {
                 if (res.clapPlugin && res.clapPlugin->pluginCount > 0) {
-                    handles_t* handles     = res.shellPluginHandle;
                     String nameShellPlugin = res.name;
                     log_printf("loading clap plugin: %s\n", StringAsCStr(nameShellPlugin));
 

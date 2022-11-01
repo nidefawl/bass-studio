@@ -77,7 +77,7 @@ inline void CutShapeLeft(shape_t& shape, float x) {
     // sample curve at x
     float y = shape.sampleCurveUnclamped(x);
     // remove all points to the left of x
-    for (int i = 0; i < shape.pts.size(); ++i) {
+    for (size_t i = 0; i < shape.pts.size(); ++i) {
         if (shape.pts[i].pos.x < x) {
             shape.pts.erase(shape.pts.begin() + i);
             --i;
@@ -90,7 +90,7 @@ inline void CutShapeRight(shape_t& shape, float x) {
     // sample curve at x
     float y = shape.sampleCurveUnclamped(x);
     // remove all points to the right of x
-    for (int i = 0; i < shape.pts.size(); ++i) {
+    for (size_t i = 0; i < shape.pts.size(); ++i) {
         if (shape.pts[i].pos.x > x) {
             shape.pts.erase(shape.pts.begin() + i);
             --i;

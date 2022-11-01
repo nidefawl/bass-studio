@@ -438,10 +438,6 @@ void guictr_tracks::render(NVGcontext* vg) {
     }
     nvgRestore(vg);
 
-    if (dragDropTarget.dst) {
-        static int a = 0;
-        a++;
-    }
     if (dragDropTarget.dst && (dragDropTarget.dst->parent == &trackControls || dragDropTarget.dst->parent == &trackView)) {
         nvgSave(vg);
         nvgTranslate(vg, 0, trackView.top());

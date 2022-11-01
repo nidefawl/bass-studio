@@ -67,8 +67,6 @@ void audiocache::setSamplerate(samplerate_t _newSampleRate) {
         iospec.itype = SOXR_FLOAT32_I;
         iospec.otype = SOXR_FLOAT32_I;
 
-        size_t odone = 0;
-
         for (auto& f : list) {
             auto* file = f.get();
             if (!(file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED)) {

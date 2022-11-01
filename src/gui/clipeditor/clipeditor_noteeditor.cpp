@@ -106,14 +106,7 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
     if (dragHandle == drag_handle_loopbar) {
         tick_t curLoopStart = clip->loopStart;
         tick_t tickDelta    = (tickAt - curLoopStart);
-        bool inLoop         = clip->offsetStart >= clip->loopStart;
         clip->loopStart += tickDelta;
-        // if (inLoop && clip->offsetStart < clip->loopStart) {
-        //     clip->offsetStart += clip->loopLen;
-        // }
-        // if (inLoop && clip->offsetStart >= clip->loopStart + clip->loopLen) {
-        //     clip->offsetStart -= clip->loopLen;
-        // }
         clip->offsetStart = clip->loopStart;
     }
     clip->setDirty();

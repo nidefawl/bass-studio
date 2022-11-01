@@ -1226,23 +1226,22 @@ double MidiFile::getTotalTimeInSeconds() {
             return -1.0;// something went wrong
         }
     }
-	bool revertToDelta = false;
-	if (isDeltaTicks()) {
-		makeAbsoluteTicks();
-		revertToDelta = true;
-	}
-	const MidiFile& mf = *this;
-	double output = 0.0;
+    bool revertToDelta = false;
+    if (isDeltaTicks()) {
+        makeAbsoluteTicks();
+        revertToDelta = true;
+    }
+    double output = 0.0;
     int numTracks = getTrackCount();
-	for (int i=0; i<numTracks; i++) {
+    for (int i=0; i<numTracks; i++) {
         auto* track = tracks[i];
-		if (track->back().seconds > output) {
-			output = track->back().seconds;
-		}
-	}
-	if (revertToDelta) {
-		makeDeltaTicks();
-	}
+        if (track->back().seconds > output) {
+            output = track->back().seconds;
+        }
+    }
+    if (revertToDelta) {
+        makeDeltaTicks();
+    }
     return output;
 }
 
@@ -1252,8 +1251,8 @@ double MidiFile::getTotalTimeInSeconds() {
    Note that this is expensive, so you should normally call this function
    while in aboslute tick mode. */
 int MidiFile::getTotalTimeInTicks() {
-	bool revertToDelta = false;
-	if (isDeltaTicks()) {
+    bool revertToDelta = false;
+    if (isDeltaTicks()) {
         makeAbsoluteTicks();
     }
     int output = 0;
@@ -1262,9 +1261,9 @@ int MidiFile::getTotalTimeInTicks() {
         auto timeLast = tracks[i]->back().tick;
         output = (timeLast > output) ? timeLast : output;
     }
-	if (revertToDelta) {
-		makeDeltaTicks();
-	}
+    if (revertToDelta) {
+        makeDeltaTicks();
+    }
     return output;
 }
 
