@@ -2038,6 +2038,7 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
         auto numChannels = math::max(sample->nChannels, out.channels);
         DAW::AudioClipFadeLoopProcessor clipSample{fades[0], fades[1], sample, clipSampleOffset, preLoopLen, loopStart, loopEnd};
         for (auto ch = channelnum_t(0); ch < numChannels; ++ch) {
+            auto srcChannel = sample->nChannels == 1 ? 0 : ch;
             auto* dst = (ch >= out.channels) ? out.buf[out.channels - 1] : out.buf[ch];
             samplecount_t start = 0;
             if (clipSampleBegin > 0)
@@ -2053,7 +2054,7 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
                     break;
                 }
                 auto srcOffset = 0 + s - clipSampleBegin;
-                dst[dstOffset] = clipSample.get(ch, srcOffset);
+                dst[dstOffset] = clipSample.get(srcChannel, srcOffset);
             }
         }
     }
