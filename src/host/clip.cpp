@@ -1086,13 +1086,15 @@ float AudioClipFadeLoopProcessor::get(channelnum_t ch, samplecount_t samplePos) 
     return 0.0f;
 }
 
-float AudioClipFadeLoopProcessor::getDownsampled(channelnum_t ch, samplecount_t samplePos, uint8_t nDownLevel) const {
+float AudioClipFadeLoopProcessor::getDownsampled(channelnum_t ch, samplecount_t samplePos, uint8_t nDownLevel, int32_t& status) const {
     float fade = 1.0f;
+    status = 0;
     for (auto* clipFade : { &fadeIn, &fadeOut }) {
         auto relClipSamplePos = samplePos;
         if (relClipSamplePos >= clipFade->samplesFadePos && relClipSamplePos < clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
             float fadePos = (relClipSamplePos - clipFade->samplesFadePos) / float(clipFade->samplesFadeDuration);
             fade *= clipFade->shape->sampleCurveOneShot(fadePos);
+            status |= 2;
         }
     }
     auto readPos = offsetStart + samplePos;
@@ -1107,10 +1109,12 @@ float AudioClipFadeLoopProcessor::getDownsampled(channelnum_t ch, samplecount_t 
     } else {
         vec = &sample->samples;
     }
-    if (readPos >= 0 && vec && ch < vec->size() && readPos < (*vec)[ch].size()) {
+    if (readPos >= 0 && vec && ch < vec->size() && readPos < samplecount_t(vec->at(ch).size())) {
         const auto& channel = (*vec)[ch];
+        status |= 1;
         return channel[readPos] * fade;
     }
+    status = 0;
     return 0.0f;
 }
 

@@ -63,7 +63,7 @@ struct AudioClipFadeLoopProcessor {
     samplecount_t loopStart;
     samplecount_t loopEnd;
     float get(channelnum_t ch, samplecount_t samplePos) const;
-    float getDownsampled(channelnum_t ch, samplecount_t samplePos, uint8_t nDownLevel) const;
+    float getDownsampled(channelnum_t ch, samplecount_t samplePos, uint8_t nDownLevel, int32_t& status) const;
 };
 
 }

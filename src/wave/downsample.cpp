@@ -9,7 +9,7 @@
 #include "types.h"
 
 namespace {
-    constexpr bool useSoxrDownsample = true;
+    constexpr bool useSoxrDownsample = false;
 }
 
 int downsample(samplerate_t sampleRate, float* samplesIn, samplecount_t offset, samplecount_t numSamples, std::vector<float>& samplesOut, uint8_t downsampleBits) {
@@ -47,7 +47,7 @@ int downsample(samplerate_t sampleRate, float* samplesIn, samplecount_t offset, 
         if (coeffs == nullptr || sampleRate != lastSampleRate) {
             //Straight forward downsampling using internal LPF. I can't remember any details about this
             const double ft     = (sampleRate * 0.45f);
-            const double bt     = 8000 / (float) (1 << downsampleBits);
+            const double bt     = 20000 / (float) (1 << downsampleBits);
             const double ripple = 0.001;
 	        std::free(coeffs);
             coeffs = calcLPF(sampleRate, ft, ripple, bt, &lenCoeffs);

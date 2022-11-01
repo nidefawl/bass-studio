@@ -239,22 +239,34 @@ void tesselateWaveformFromClip(audiosample_t* sample, float x, float y, audiocli
                     samplecount_t sampleIdx = math::rounddS64(sampleOffset);//TODO: std::round is slow
                     dbgassert(sampleIdx % stepSize == 0);
                     float fCurX = float((sampleOffset - renderOffset) * samplesToPx);
-                    const float data = clipSample.getDownsampled(iChannel, sampleIdx, nLevel);
-                    fAbsMax = math::absMax(fAbsMax, data);
-                    if (fCurX >= lastPtX + 1/16.0f) {
-                        float fY = -fAbsMax * channelHeight / 2.0f;
-                        vecs.emplace_back(px + fCurX, py + fY);
-                        if (fCurX >= width) {
-                            break;
+                    int32_t status = 0;
+                    const float data = clipSample.getDownsampled(iChannel, sampleIdx, nLevel, status);
+                    if (status != 0) {
+                        fAbsMax = math::absMax(fAbsMax, data);
+                        if (fCurX >= lastPtX + 1/16.0f) {
+                            float fY = -fAbsMax * channelHeight / 2.0f;
+                            vecs.emplace_back(px + fCurX, py + fY);
+                            if (fCurX >= width) {
+                                break;
+                            }
+                            if (vecs.size() > 50000)break;
+                            lastPtX = fCurX;
+                            fAbsMax = 0.0f;
                         }
-                        if (vecs.size() > 50000)break;
-                        lastPtX = fCurX;
-                        fAbsMax = 0.0f;
+                        samplePos += stepSize;
+                    } else {
+                        if (!vecs.empty()) {
+                            channels.emplace_back(vecs);
+                            vecs.clear();
+                        }
                     }
                     samplePos += stepSize;
                 }
             }
-            channels.push_back(std::move(vecs));
+            if (!vecs.empty()) {
+                channels.emplace_back(vecs);
+                vecs.clear();
+            }
         }
     }
 }
