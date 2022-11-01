@@ -23,7 +23,7 @@
 #include "renderresources.h"
 #include "util/debug_alloc.h"
 #include "guifonts.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 
 NVGcolor g_colorPalette[COLOR_PALETTE_LEN];
 

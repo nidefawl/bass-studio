@@ -1,10 +1,10 @@
 #pragma once
 #include "types.h"
 #include "gui/container/container.h"
-#include "track.h"
-#include "trackctr_types.h"
+#include "host/track/track.h"
+#include "host/track/trackctr_types.h"
 #include "trackctr.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 
 class gui_track_content_base : public guictr_base {
 public:

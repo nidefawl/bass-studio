@@ -4,10 +4,10 @@
 #include "color_util.h"
 #include "gui/container/container.h"
 #include "gui/controls/button.h"
-#include "track.h"
+#include "host/track/track.h"
 #include "basectrl.h"
 #include "gui/table/table.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "math/vec.h"
 #include "gui/plugin/plugin.h"
 

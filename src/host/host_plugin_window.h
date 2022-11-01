@@ -1,7 +1,7 @@
 #pragma once
 
 #include "logging.h"
-#include "modules.h"
+#include "host/plugin/modules.h"
 #ifdef _WIN32
 #include <windows.h>
 #define WINDOW_HANDLE HWND

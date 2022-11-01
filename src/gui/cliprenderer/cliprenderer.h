@@ -1,8 +1,8 @@
 #pragma once
 #include "math/vec.h"
 #include "math/seq_math.h"
-#include "track.h"
-#include "clip.h"
+#include "host/track/track.h"
+#include "host/clip/clip.h"
 #include "grid.h"
 #include "theme.h"
 #include "wave/waveform_render.h"

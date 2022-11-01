@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <memory>
 #include "assert_dbg.h"
-#include "audioblock.h"
+#include "host/audiobuffer/audioblock.h"
 #include "config.h"
 #include "dsp_util.h"
 #include "dsp_util.h"
@@ -15,12 +15,12 @@
 #include "gui/plugin/plugin.h"
 #include "gui/plugin/pluginctr.h"
 #include "gui/plugin/pluginviewcontainers.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "host/plugin/internal/internal-plugin.h"
 #include "logging.h"
 #include "math/seq_math.h"
-#include "meter.h"
-#include "modules.h"
+#include "host/meter/meter.h"
+#include "host/plugin/modules.h"
 #include "platform.h"
 #include "plugins/plugin-base.h"
 #include "plugins/plugin-ui.h"
@@ -32,8 +32,8 @@
 #include "snapshot/snapshot.h"
 #include "str_util.h"
 #include "str_util.h"
-#include "track_impl.h"
-#include "track.h"
+#include "host/track/track_impl.h"
+#include "host/track/track.h"
 #include "window.h"
 
 namespace PluginSampleCrush {

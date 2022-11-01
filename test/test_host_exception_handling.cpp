@@ -1,6 +1,6 @@
 #include <vector>
 #include "str_util.h"
-#include "host/main_daw.h"
+#include "host/daw/main_daw.h"
 #include "util/testing_environment.h"
 
 int main(int, char*[]) {

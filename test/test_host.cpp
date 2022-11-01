@@ -1,23 +1,23 @@
 #include "TestBase.hpp"
 #include "appsettings.h"
-#include "audiocache.h"
+#include "host/audiocache/audiocache.h"
 #include "common/test_common.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "logging.h"
 #include "math/seq_math.h"
-#include "project.h"
+#include "host/project/project.h"
 #include "samplerate.h"
 #include "seq_time.h"
 #include "tls.h"
-#include "track_types.h"
+#include "host/track/track_types.h"
 #include "types.h"
 #include "util/testing_environment.h"
 #include <cmath>
 #include <memory>
 #include <utility>
 #include <vector>
-#include "audioblock.h"
-#include "clip.h"
+#include "host/audiobuffer/audioblock.h"
+#include "host/clip/clip.h"
 #include "host/host.h"
 
 namespace test_host {

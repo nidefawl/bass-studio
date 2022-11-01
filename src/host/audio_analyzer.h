@@ -3,7 +3,7 @@
 #include <memory>
 #include "dsp/fft.h"
 #include "platform.h"
-#include "audio_host.h"
+#include "host/audiohost/audio_host.h"
 
 using fft_processor_lf = fft_processor<512 * 8, 4>;
 using fft_processor_hf = fft_processor<512 * 2, 2>;

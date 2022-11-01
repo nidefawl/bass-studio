@@ -1,5 +1,5 @@
 #include "TestBase.hpp"
-#include "host/effect_graph.h"
+#include "host/graph/effect_graph.h"
 #include "str_util.h"
 #include "common/test_common.h"
 #include "host/host_pluginmanager.h"

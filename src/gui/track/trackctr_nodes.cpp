@@ -8,7 +8,7 @@
 #include <glm/vec2.hpp>
 #include <glm/gtx/norm.hpp>
 
-#include "automation.h"
+#include "host/automation/automation.h"
 #include "basectrl.h"
 #include "color_util.h"
 #include "exceptions.h"
@@ -21,7 +21,7 @@
 #include "gui/plugin/pluginctr.h"
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "host/plugin/base/base-plugin.h"
 #include "host/plugin/group/group.h"
 #include "host/plugin/internal/internal-plugin.h"
@@ -32,10 +32,10 @@
 #include "renderresources.h"
 #include "seq_util.h"
 #include "theme.h"
-#include "track_impl.h"
+#include "host/track/track_impl.h"
 #include "snapshot/track-snapshot.h"
-#include "track.h"
-#include "track.h"
+#include "host/track/track.h"
+#include "host/track/track.h"
 #include "trackcontent.h"
 #include "trackcontrols.h"
 #include "trackctr_nodes.h"

@@ -1,8 +1,8 @@
 #pragma once
 #include "basectrl.h"
-#include "project.h"
+#include "host/project/project.h"
 #include "snapshot/project-snapshot.h"
-#include "track.h"
+#include "host/track/track.h"
 #include "snapshot/track-snapshot.h"
 #include "gui/container/container_layout_snapshot.h"
 #include "types.h"

@@ -7,9 +7,9 @@
 #include "contextmenu.h"
 #include "contextmenu_color.h"
 #include "gui/track/trackctr.h"
-#include "modules.h"
-#include "track.h"
-#include "track_impl.h"
+#include "host/plugin/modules.h"
+#include "host/track/track.h"
+#include "host/track/track_impl.h"
 #include "guicolors.h"
 
 class ctxtmenu_time_select;

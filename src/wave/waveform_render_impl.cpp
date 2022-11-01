@@ -15,7 +15,7 @@
 #include "math/mat.h"
 #include "platform.h"
 #include "exceptions.h"
-#include "audiocache.h"
+#include "host/audiocache/audiocache.h"
 #include "waveform_render.h"
 #include "waveform_generate.h"
 #include "logging.h"

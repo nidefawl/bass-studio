@@ -3,13 +3,13 @@
 #include <vector>
 #include <memory>
 
-#include "automation.h"
+#include "host/automation/automation.h"
 #include "host/plugin/base/base-plugin.h"
 #include "gui/plugin/plugin.h"
 #include "gui/plugin/pluginviewcontainers.h"
 #include "logging.h"
 #include "math/vec.h"
-#include "meter.h"
+#include "host/meter/meter.h"
 #include "platform.h"
 #include "plugins/plugincontrol.h"
 #include "plugins/synth/IPlugMidi.h"

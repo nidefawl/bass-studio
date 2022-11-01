@@ -1,4 +1,4 @@
-#include "shape.h"
+#include "host/shape/shape.h"
 #include "exceptions.h"
 #include "shapefile.h"
 

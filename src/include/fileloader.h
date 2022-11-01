@@ -3,10 +3,10 @@
 #include "midi/MidiFile.h"
 #include "seq_time.h"
 #include "str_util.h"
-#include "clip.h"
+#include "host/clip/clip.h"
 #include "fileio.h"
 #include "logging.h"
-#include "clipboard.h"
+#include "host/daw/clipboard.h"
 
 class LoadMidiTask : public WorkerThread::ThreadTask {
     String path;

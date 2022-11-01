@@ -35,7 +35,7 @@
 #include "gui/controls/statusbar.h"
 #include "gui/menu/menu.h"
 #include "plugin.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 
 
 void PluginControl::destroy() {

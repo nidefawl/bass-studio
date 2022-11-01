@@ -11,7 +11,7 @@
 #include "math/mat.h"
 #include "str_util.h"
 #include "fileio.h"
-#include "audiocache.h"
+#include "host/audiocache/audiocache.h"
 
 #include "gl_pathrenderer.h"
 #include "gl_util.h"

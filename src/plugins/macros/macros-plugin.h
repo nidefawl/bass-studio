@@ -1,6 +1,6 @@
 #pragma once
 #include "str_util.h"
-#include "modules.h"
+#include "host/plugin/modules.h"
 #include "host/plugin/internal/internal-plugin.h"
 #include "plugins/plugin-ui.h"
 

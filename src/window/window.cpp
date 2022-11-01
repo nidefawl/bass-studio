@@ -3,7 +3,7 @@
 #include "event.h"
 #include "glheaders.h"
 #include "hires_timer.h"
-#include "modules.h"
+#include "host/plugin/modules.h"
 #include "tls.h"
 #include "util/profiling.h"
 #include <GLFW/glfw3.h>

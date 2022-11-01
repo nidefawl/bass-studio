@@ -3,8 +3,8 @@
 
 #include "fileloader.h"
 #include "logging.h"
-#include "track.h"
-#include "clipboard.h"
+#include "host/track/track.h"
+#include "host/daw/clipboard.h"
 
 tick_t roundUp(tick_t len) {
     if (len > 0 && (len & (TICKS_BAR - 1)) == 0) return len;

@@ -7,14 +7,14 @@
 #include "gui/plugin/pluginctr.h"
 #include "gui/views/pluginlist.h"
 #include "host/host_pluginmanager.h"
-#include "host/mainctrl.h"
-#include "host/plugindatabase.h"
+#include "host/daw/mainctrl.h"
+#include "host/plugindatabase/plugindatabase.h"
 #include "host/plugin/internal/internal-plugin.h"
 #include "renderresources.h"
 #include "str_util.h"
 #include "threads/playbackthread.h"
-#include "track_impl.h"
-#include "track.h"
+#include "host/track/track_impl.h"
+#include "host/track/track.h"
 #include "types.h"
 
 

@@ -1,7 +1,7 @@
 #pragma once
 #include "logging.h"
 #include "nanovg/nanovg.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "gui/gui.h"
 #include "str_util.h"
 #include "guicolors.h"
@@ -9,9 +9,9 @@
 #include "mouse.h"
 #include "gui/controls/textfield.h"
 #include "gui/controls/list.h"
-#include "host/plugindatabase.h"
+#include "host/plugindatabase/plugindatabase.h"
 #include "host/host_pluginmanager.h"
-#include "modules.h"
+#include "host/plugin/modules.h"
 #include "gui/tooltip/tooltip.h"
 #include "host/host_pluginmanager.h"
 

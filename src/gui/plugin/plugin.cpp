@@ -2,7 +2,7 @@
 #include <nanovg.h>
 #include <memory>
 #include "assert_dbg.h"
-#include "automation.h"
+#include "host/automation/automation.h"
 #include "fileio.h"
 #include "guiglobals.h"
 #include "platform.h"
@@ -11,7 +11,7 @@
 #include "logging.h"
 #include "event.h"
 #include "keyboard.h"
-#include "edithistory.h"
+#include "host/daw/edithistory.h"
 #include "renderresources.h"
 
 #include "gui/gui.h"
@@ -34,7 +34,7 @@
 
 #include "basectrl.h"
 
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "host/host_pluginmanager.h"
 #include "host/plugin/base/base-plugin.h"
 #include "host/plugin/internal/internal-plugin.h"

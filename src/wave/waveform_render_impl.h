@@ -2,7 +2,7 @@
 #include "math/vec.h"
 #include <vector>
 #include <array>
-#include "audiocache.h"
+#include "host/audiocache/audiocache.h"
 #include "waveform_render.h"
 #include "gl/gl_pathrenderer.h"
 

@@ -1,14 +1,14 @@
 #include "gui/track/trackcontent.h"
 #include "subtrack.h"
 #include "basectrl.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include <nanovg.h>
 #include "str_util.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "wave/waveform_render_impl.h"
-#include "track.h"
-#include "track_impl.h"
+#include "host/track/track.h"
+#include "host/track/track_impl.h"
 #include "color_util.h"
 #include "seq_util.h"
 #include <unordered_map>

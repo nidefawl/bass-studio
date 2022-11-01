@@ -1,10 +1,11 @@
 #pragma once
 #include <array>
 #include "dsp_util.h"
+#include "logging.h"
 #include "math/seq_math.h"
 #include "types.h"
 #include "config.h"
-#include "meter.h"
+#include "host/meter/meter.h"
 #include <kissfft/kiss_fftr.h>
 
 constexpr float MIN_FREQ = 20;

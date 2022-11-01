@@ -67,7 +67,7 @@ foreach (f ${HDR_ALL_FILES})
 endforeach ()
 
 foreach (f ${CPP_ALL_FILES})
-  if (f MATCHES "/host/main_.*\.cpp")
+  if (f MATCHES "/main_.*\.cpp")
     continue()
   endif()
   if (f MATCHES "/plugins/plugin-window\.cpp")
@@ -90,7 +90,7 @@ endforeach ()
 
 foreach (f ${CPP_ALL_FILES})
   if (f MATCHES ".*host/plugin/.*"
-    OR f MATCHES ".*main/.*"
+    OR f MATCHES "/main_.*"
     OR f MATCHES ".*platform/linux/.*")
     set_source_files_properties(${f} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
   endif()
@@ -183,7 +183,7 @@ if (PROJECT_REQUIRE_LIB)
 else()
   set(LINK_TARGET ${PROJECT_NAME})
   # define main exectuable
-  add_executable(${PROJECT_NAME} "src/host/main_daw.cpp"
+  add_executable(${PROJECT_NAME} "src/host/daw/main_daw.cpp"
                 ${RESOURCE_FILES} 
                 ${CPP_SRC_FILES} 
                 ${C_SRC_FILES} 
@@ -221,15 +221,15 @@ if (PROJECT_REQUIRE_LIB)
 
   # define main executable
   if (PROJECT_BUILD_DAW)
-    DEFINE_EXECUTABLE(${PROJECT_NAME} "src/host/main_daw.cpp;${RESOURCE_FILES}")
+    DEFINE_EXECUTABLE(${PROJECT_NAME} "src/host/daw/main_daw.cpp;${RESOURCE_FILES}")
   endif()
 
   if (PROJECT_BUILD_SCANNER)
-    DEFINE_EXECUTABLE("pluginscanner" "src/host/main_scanner.cpp")
+    DEFINE_EXECUTABLE("pluginscanner" "src/host/pluginscanner/main_scanner.cpp")
   endif()
 
   if (PROJECT_BUILD_CLI_HOST)
-    DEFINE_EXECUTABLE("host" "src/host/main_cmdline.cpp")
+    DEFINE_EXECUTABLE("host" "src/host/cli/main_cmdline.cpp")
   endif()
 
   FUNCTION(FN_DL_PLUGIN_BUILD plugBuildName plugBuildOutputName srcfilelist plugindefs)
@@ -306,9 +306,9 @@ target_precompile_headers(${LINK_TARGET} PUBLIC
   "$<$<COMPILE_LANGUAGE:CXX>:include/types.h>"
   "$<$<COMPILE_LANGUAGE:CXX>:include/math/vec.h>"
   "$<$<COMPILE_LANGUAGE:CXX>:include/math/mat.h>"
-  "$<$<COMPILE_LANGUAGE:CXX>:include/track_impl.h>"
+  "$<$<COMPILE_LANGUAGE:CXX>:host/track/track_impl.h>"
   "$<$<COMPILE_LANGUAGE:CXX>:include/basectrl.h>"
-  "$<$<COMPILE_LANGUAGE:CXX>:host/mainctrl.h>"
+  "$<$<COMPILE_LANGUAGE:CXX>:host/daw/mainctrl.h>"
   "$<$<COMPILE_LANGUAGE:CXX>:include/fileio.h>"
   "$<$<COMPILE_LANGUAGE:CXX>:include/renderresources.h>"
   "$<$<COMPILE_LANGUAGE:CXX>:gui/gui.h>"

@@ -2,8 +2,8 @@
 #include <memory>
 #include <vector>
 #include "gui/controls/inputfield.h"
-#include "project.h"
-#include "track.h"
+#include "host/project/project.h"
+#include "host/track/track.h"
 #include "types.h"
 #include "math/seq_math.h"
 #include "str_util.h"

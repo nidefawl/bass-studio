@@ -3,12 +3,12 @@
 #include "seq_time.h"
 #include "theme.h"
 #include "guicolors.h"
-#include "track.h"
+#include "host/track/track.h"
 #include "gui/gui.h"
 #include "gui/container/container.h"
 #include "grid.h"
-#include "trackctr_types.h"
-#include "automation.h"
+#include "host/track/trackctr_types.h"
+#include "host/automation/automation.h"
 
 class gui_track_automation : public guictr_base {
 public:

@@ -23,7 +23,7 @@
 #include "math/seq_math.h"
 #include "mouse.h"
 #include "platform.h"
-#include "project.h"
+#include "host/project/project.h"
 #include "str_util.h"
 #include "theme.h"
 #include "tls.h"

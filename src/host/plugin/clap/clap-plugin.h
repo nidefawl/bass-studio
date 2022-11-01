@@ -14,7 +14,7 @@
 #include <clap/helpers/event-list.hh>
 #include <clap/helpers/reducing-param-queue.hh>
 
-#include "audioblock.h"
+#include "host/audiobuffer/audioblock.h"
 #include "host/host_plugin_window.h"
 #include "host/host_pluginmanager.h"
 #include "host/plugin/base/base-plugin.h"

@@ -20,7 +20,7 @@ endif()
 MACRO(DEFINE_MINIMAL_BENCHMARK target_name)
   add_executable(${target_name}
     ${target_name}.cpp
-    ../src/host/audiobuffer.cpp
+    ../src/host/audiobuffer/audiobuffer.cpp
     ../test/common/test_common.cpp
     ../src/util/testing_environment.cpp
     ../src/util/logging.cpp

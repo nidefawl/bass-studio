@@ -1,6 +1,6 @@
 #include "str_util.h"
-#include "host/main_daw.h"
-#include "host/mainctrl.h"
+#include "host/daw/main_daw.h"
+#include "host/daw/mainctrl.h"
 #include <memory>
 #include <sstream>
 #include <iostream>

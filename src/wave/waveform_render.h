@@ -3,7 +3,7 @@
 #include <vector>
 #include <array>
 #include "math/vec.h"
-#include "audiosample.h"
+#include "host/audiosample.h"
 
 class clip_t;
 class waveformrender;

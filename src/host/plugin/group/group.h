@@ -1,7 +1,7 @@
 #pragma once
 
 #include "midi-event.h"
-#include "modules.h"
+#include "host/plugin/modules.h"
 #include "dsp_util.h"
 #include "host/plugin/internal/internal-plugin.h"
 #include "str_util.h"

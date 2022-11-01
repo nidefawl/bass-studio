@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include "byte-buffer.h"
-#include "shape.h"
+#include "host/shape/shape.h"
 #include "str_util.h"
 #include "fileio.h"
 #include <cereal/cereal.hpp>

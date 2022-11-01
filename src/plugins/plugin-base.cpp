@@ -26,7 +26,7 @@
 #include "exceptions.h"
 #include "msgbox.h"
 #include "platform.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 
 #include "assert_dbg.h"
 

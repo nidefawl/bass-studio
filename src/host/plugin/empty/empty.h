@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
 #include "host/plugin/internal/internal-plugin.h"
-#include "modules.h"
+#include "host/plugin/modules.h"
 #include "str_util.h"
 
 class module_empty : public internalplugin {

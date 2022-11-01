@@ -1,5 +1,5 @@
 #pragma once
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "math/vec.h"
 #include "str_util.h"
 #include "gui/controls/knob.h"

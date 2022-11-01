@@ -1,6 +1,6 @@
 #pragma once
 #include "assert_dbg.h"
-#include "automation.h"
+#include "host/automation/automation.h"
 #include "gui/controls/knob.h"
 #include "logging.h"
 #include "nanovg/nanovg_min.h"

@@ -2,18 +2,18 @@
 #include <utility>
 #include <vector>
 #include "assert_dbg.h"
-#include "automation.h"
-#include "modules.h"
+#include "host/automation/automation.h"
+#include "host/plugin/modules.h"
 #include "plugins/synth/IPlugMidi.h"
 #include "seq_util.h"
 
 #include "snapshot/snapshot.h"
 #include "host/plugin/base/base-plugin.h"
 #include "internal-plugin.h"
-#include "track.h"
+#include "host/track/track.h"
 #include "gui/plugin/pluginctr.h"
-#include "host/mainctrl.h"
-#include "host/history.h"
+#include "host/daw/mainctrl.h"
+#include "host/daw/history.h"
 #include "host/host_plugin_window.h"
 
 namespace {

@@ -1,4 +1,4 @@
-#include "automation.h"
+#include "host/automation/automation.h"
 #include "commands.h"
 #include "contextmenu_daw.h"
 #include "event.h"
@@ -12,15 +12,15 @@
 #include "gui/track/trackctr.h"
 #include "gui/plugin/pluginctr.h"
 #include "host/host_pluginmanager.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "host/plugin/base/base-plugin.h"
 #include "logging.h"
 #include "math/vec.h"
 #include "snapshot/track-snapshot.h"
 #include "str_util.h"
 #include "str_util.h"
-#include "track_impl.h"
-#include "track.h"
+#include "host/track/track_impl.h"
+#include "host/track/track.h"
 #include <cstdint>
 
 

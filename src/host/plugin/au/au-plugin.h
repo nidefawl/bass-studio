@@ -6,10 +6,10 @@
 #include "str_util.h"
 #include "seq_time.h"
 
-#include "automation.h"
+#include "host/automation/automation.h"
 #include "logging.h"
 #include "platform.h"
-#include "meter.h"
+#include "host/meter/meter.h"
 #include "snapshot/snapshot.h"
 #include "host/plugin/base/base-plugin.h"
 

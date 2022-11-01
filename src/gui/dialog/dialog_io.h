@@ -3,7 +3,7 @@
 #include "dialog.h"
 #include "gui/container/container.h"
 #include "gui/contextmenu/contextmenu_base.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "gui/controls/knob.h"
 #include "math/vec.h"
 #include "str_util.h"

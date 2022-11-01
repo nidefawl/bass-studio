@@ -3,8 +3,8 @@
 #include <memory>
 #include "rand.h"
 #include "seq_time.h"
-#include "host/resampler.h"
-#include "audioblock.h"
+#include "host/resampler/resampler.h"
+#include "host/audiobuffer/audioblock.h"
 #include "common/test_common.h"
 
 namespace {

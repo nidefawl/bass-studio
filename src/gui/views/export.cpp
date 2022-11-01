@@ -3,9 +3,9 @@
 #include "guicolors.h"
 #include "gui/controls/button.h"
 #include "controls.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "host/host_pluginmanager.h"
-#include "host/audio_host.h"
+#include "host/audiohost/audio_host.h"
 
 namespace {
     constexpr int TEXT_FONT_SIZE = 20;

@@ -15,7 +15,7 @@
 #include "renderresources.h"
 #include "gui/controls/button.h"
 #include "gui/controls/splitter.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "seq_util.h"
 
 struct guictr_tabbed::tabbed_entry {

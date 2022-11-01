@@ -1,12 +1,12 @@
 
 
 #include "assert_dbg.h"
-#include "clip.h"
-#include "clipboard.h"
+#include "host/clip/clip.h"
+#include "host/daw/clipboard.h"
 #include "event.h"
 #include "gui/clipeditor/clipeditor.h"
 #include "guiglobals.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "logging.h"
 #include "note.h"
 #include "seq_time.h"
@@ -23,9 +23,9 @@
 #include "gui/track/trackcontent.h"
 #include "clipeditor.h"
 #include "gui/cliprenderer/cliprenderer_cache.h"
-#include "shape.h"
-#include "track.h"
-#include "track_impl.h"
+#include "host/shape/shape.h"
+#include "host/track/track.h"
+#include "host/track/track_impl.h"
 #include "host/host_pluginmanager.h"
 #include "appconfig.h"
 #include <cstdint>

@@ -2,13 +2,13 @@
 #include "assert_dbg.h"
 #include "fileio.h"
 #include "logging.h"
-#include "modules.h"
+#include "host/plugin/modules.h"
 #include "host/plugin/base/base-plugin.h"
 #include "host/plugin/clap/clap-plugin.h"
 #include "host/plugin/vst/vstplugin.h"
 #include "host/plugin/vst/vstplugin-handles.h"
 #include "str_util.h"
-#include "track_impl.h"
+#include "host/track/track_impl.h"
 #include <clap/clap.h>
 #include <memory>
 

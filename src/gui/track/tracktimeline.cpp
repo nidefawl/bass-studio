@@ -7,7 +7,7 @@
 #include "math/seq_math.h"
 #include "grid.h"
 #include "gui/gui.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 
 void guitrack_timeline::handleDraggedBegin(MouseEvent& evt) {
     if (evt.guiDragged == this) {

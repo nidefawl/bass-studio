@@ -11,10 +11,10 @@
 #include "gui/container/container.h"
 #include "gui/container/scrollcontainer.h"
 #include "gui/controls/textfield.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "host/host_pluginmanager.h"
 #include "host/host.h"
-#include "host/audio_host.h"
+#include "host/audiohost/audio_host.h"
 #include "appconfig.h"
 
 class gui_performance_stats : public guictr_base {

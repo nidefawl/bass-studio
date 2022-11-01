@@ -10,7 +10,7 @@
 #include "plugins/stereowidth/stereowidth-plugin.h"
 #include "host/host_pluginmanager.h"
 #include "host/plugin/vst/vstplugin.h"
-#include "modules.h"
+#include "host/plugin/modules.h"
 
 extern template effectbase* makeInstance<module_empty>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 extern template effectbase* makeInstance<module_group>(int32_t _projectGlobalId, IHostCallback* _hostCallback);

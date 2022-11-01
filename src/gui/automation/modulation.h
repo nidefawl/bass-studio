@@ -1,5 +1,5 @@
 #pragma once
-#include "automation.h"
+#include "host/automation/automation.h"
 #include "gui/dropdown/dropdown_generic.h"
 #include "gui/gui.h"
 #include "gui/container/container.h"

@@ -1,12 +1,12 @@
 #include <cmath>
 #include <vector>
 
-#include "clip.h"
-#include "host/projectcontroller.h"
+#include "host/clip/clip.h"
+#include "host/project/projectcontroller.h"
 #include "math/vec.h"
 #include "math/mat.h"
 #include "math/seq_math.h"
-#include "audiosample.h"
+#include "host/audiosample.h"
 #include "tls.h"
 #include "types.h"
 #include "waveform_render.h"

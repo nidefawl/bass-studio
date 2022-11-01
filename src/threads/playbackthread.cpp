@@ -15,9 +15,9 @@
 #include "seq_time.h"
 #include "hires_timer.h"
 #include <readerwriterqueue/readerwriterqueue.hpp>
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "host/host.h"
-#include "host/midi_host.h"
+#include "host/midihost/midi_host.h"
 #include "logging.h"
 #include "sse.h"
 #include "appconfig.h"

@@ -24,12 +24,12 @@
 #include "fileio.h"
 #include "logging.h"
 
-#include "clip.h"
+#include "host/clip/clip.h"
 #include "host/daw_channel.h"
-#include "automation.h"
-#include "track.h"
+#include "host/automation/automation.h"
+#include "host/track/track.h"
 #include "layout.h"
-#include "project.h"
+#include "host/project/project.h"
 
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>

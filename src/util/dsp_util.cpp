@@ -2,7 +2,7 @@
 #include "samplerate.h"
 #include "config.h"
 #include "math/seq_math.h"
-#include "audioblock.h"
+#include "host/audiobuffer/audioblock.h"
 #include <cstdlib>
 #include "types.h"
 #include <cmath>

@@ -3,10 +3,10 @@
 #include "types.h"
 #include "seq_time.h"
 #include "math/seq_math.h"
-#include "clip.h"
-#include "project.h"
-#include "track.h"
-#include "host/projectcontroller.h"
+#include "host/clip/clip.h"
+#include "host/project/project.h"
+#include "host/track/track.h"
+#include "host/project/projectcontroller.h"
 #include "common/test_common.h"
 
 namespace {

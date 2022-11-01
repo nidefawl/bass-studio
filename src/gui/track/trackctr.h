@@ -8,9 +8,9 @@
 #include "exceptions.h"
 #include "seq_util.h"
 #include "color_util.h"
-#include "track.h"
-#include "clip.h"
-#include "clipboard.h"
+#include "host/track/track.h"
+#include "host/clip/clip.h"
+#include "host/daw/clipboard.h"
 #include "grid.h"
 #include "gui/gui.h"
 #include "gui/container/container.h"
@@ -22,8 +22,8 @@
 #include "cursor.h"
 #include "platform.h"
 #include "dsp_util.h"
-#include "host/mainctrl.h"
-#include "trackctr_types.h"
+#include "host/daw/mainctrl.h"
+#include "host/track/trackctr_types.h"
 
 void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry);
 struct track_selection_t {

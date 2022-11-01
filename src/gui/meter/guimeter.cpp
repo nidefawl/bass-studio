@@ -4,7 +4,7 @@
 #include "gui/gui.h"
 #include "theme.h"
 #include "dsp_util.h"
-#include "meter.h"
+#include "host/meter/meter.h"
 #include "color_util.h"
 
 void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const ivec2& size, DAW::rmsmeter* meter) {

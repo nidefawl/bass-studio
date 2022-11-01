@@ -34,7 +34,7 @@
 #include "gui/dropdown/dropdown.h"
 #include "properties_table.h"
 #include "gui/controls/inputfield.h"
-#include "automation.h"
+#include "host/automation/automation.h"
 #include "host/plugin/base/base-plugin.h"
 #include "host/plugin/vst/vstplugin.h"
 #include "logging.h"

@@ -3,7 +3,7 @@
 #include "fileio.h"
 #include "logging.h"
 #include "platform.h"
-#include "projectfile.h"
+#include "file/projectfile.h"
 #include "str_util.h"
 #include <vector>
 #include <memory>

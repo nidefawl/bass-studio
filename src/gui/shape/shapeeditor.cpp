@@ -39,7 +39,7 @@
 #include "platform.h"
 #include "theme.h"
 #include "util/presetmanager.h"
-#include "shape.h"
+#include "host/shape/shape.h"
 #include "file/shapefile.h"
 
 namespace DAW::Shape {

@@ -5,8 +5,8 @@
 #include "str_util.h"
 #include "seq_time.h"
 
-#include "track.h"
-#include "track_impl.h"
+#include "host/track/track.h"
+#include "host/track/track_impl.h"
 #include "au-plugin.h"
 
 void auplugin::unload(DAW::Host::PluginManager* host, int flags) {}

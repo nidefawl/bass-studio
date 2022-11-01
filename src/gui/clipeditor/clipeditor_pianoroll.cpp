@@ -1,14 +1,14 @@
 #include "clipeditor.h"
 #include "gui/gui.h"
 #include "guicolors.h"
-#include "track.h"
-#include "track_impl.h"
+#include "host/track/track.h"
+#include "host/track/track_impl.h"
 #include "note.h"
 #include "seq_time.h"
 #include "cursor.h"
 #include "keyboard.h"
 #include "grid.h"
-#include "host/midi_host.h"
+#include "host/midihost/midi_host.h"
 
 #include "gui/contextmenu/contextmenu_daw.h"
 

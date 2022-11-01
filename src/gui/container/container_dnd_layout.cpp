@@ -4,7 +4,7 @@
 #include "gui/container/container.h"
 #include "gui/contextmenu/contextmenu.h"
 #include "gui/gui.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "gui/container/container_layout_types.h"
 #include "gui/dropdown/dropdown_generic.h"
 #include "logging.h"

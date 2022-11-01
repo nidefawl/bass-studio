@@ -7,7 +7,7 @@
 #include "gui/controls/button.h"
 #include "gui/controls/knob.h"
 #include "gui/controls/textfield.h"
-#include "host/midiarp.h"
+#include "host/midiarp/midiarp.h"
 
 class guiknob_arp;
 class gui_arp : public guictr_base {

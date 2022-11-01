@@ -2,7 +2,7 @@
 #include <memory>
 #include <vector>
 #include <cmath>
-#include "automation.h"
+#include "host/automation/automation.h"
 #include "config.h"
 #include "gui/container/container.h"
 #include "gui/controls/textfield.h"

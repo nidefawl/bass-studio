@@ -11,15 +11,15 @@
 #include "gui/controls/button.h"
 #include "gui/controls/list.h"
 #include "gui/controls/textfield.h"
-#include "host/midi_host.h"
+#include "host/midihost/midi_host.h"
 #include "midi-event.h"
 #include "plugins/synth/IPlugMidi.h"
 #include "renderresources.h"
 #include "platform.h"
 #include "host/plugin/base/base-plugin.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "host/host.h"
-#include "host/audio_host.h"
+#include "host/audiohost/audio_host.h"
 
 namespace {
 

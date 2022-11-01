@@ -5,7 +5,7 @@
 #include "host/host.h"
 #include "host/host_pluginmanager.h"
 #include "tls.h"
-#include "project.h"
+#include "host/project/project.h"
 #include "appconfig.h"
 #include "thread.h"
 #include "fileio.h"

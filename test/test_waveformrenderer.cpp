@@ -23,7 +23,7 @@
 #include "gui/gui.h"
 #include "gui/container/container.h"
 
-#include "audiocache.h"
+#include "host/audiocache/audiocache.h"
 #include "wave/waveform_render.h"
 #include "wave/waveform_render_impl.h"
 

@@ -1,9 +1,9 @@
 #include "TestBase.hpp"
 #include <vector>
-#include "clipboard.h"
+#include "host/daw/clipboard.h"
 #include "seq_time.h"
-#include "clip.h"
-#include "../host/mainctrl.h"
+#include "host/clip/clip.h"
+#include "host/daw/mainctrl.h"
 #include "common/test_common.h"
 
 namespace {

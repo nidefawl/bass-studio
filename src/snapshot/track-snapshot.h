@@ -1,8 +1,8 @@
 #pragma once
 #include "snapshot/snapshot.h"
-#include "automation.h"
-#include "clip.h"
-#include "track_types.h"
+#include "host/automation/automation.h"
+#include "host/clip/clip.h"
+#include "host/track/track_types.h"
 #include "host/daw_channel.h"
 #include "snapshot/trackrouting-snapshot.h"
 #include <vector>

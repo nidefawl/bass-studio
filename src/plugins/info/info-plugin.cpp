@@ -25,7 +25,7 @@
 #include "info-plugin.h"
 #include "plugins/plugin-base.h"
 #include "plugins/plugin-window.h"
-#include "audioblock.h"
+#include "host/audiobuffer/audioblock.h"
 #include "midi-defs.h"
 #include "../synth/IPlugMidi.h"
 #include <vstsdk-plugin-2.4/audioeffectx.h>

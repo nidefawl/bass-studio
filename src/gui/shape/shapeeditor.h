@@ -1,6 +1,6 @@
 #pragma once
 #include <functional>
-#include "shape.h"
+#include "host/shape/shape.h"
 #include "gui/container/container.h"
 
 class i_ctr_shape_editor {

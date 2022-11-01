@@ -18,9 +18,9 @@
 #include "renderresources.h"
 #include "gui/controls/knob.h"
 #include "host/host.h"
-#include "host/audio_host.h"
+#include "host/audiohost/audio_host.h"
 #include "basectrl.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "appsettings.h"
 
 

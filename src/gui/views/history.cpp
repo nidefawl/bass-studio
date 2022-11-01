@@ -1,5 +1,5 @@
-#include "host/mainctrl.h"
-#include "edithistory.h"
+#include "host/daw/mainctrl.h"
+#include "host/daw/edithistory.h"
 #include "gui/container/container.h"
 #include "gui/controls/list.h"
 #include "gui/container/scrollcontainer.h"

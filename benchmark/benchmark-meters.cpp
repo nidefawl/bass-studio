@@ -1,13 +1,13 @@
 #include <benchmark/benchmark.h>
 #include <array>
 #include <cstdio>
-#include "audioblock.h"
+#include "host/audiobuffer/audioblock.h"
 #include "logging.h"
 #include "rand.h"
 #include "str_util.h"
 #include "exceptions.h"
-#include "meter.h"
-#include "meter_old.h"
+#include "host/meter/meter.h"
+#include "host/meter/meter_old.h"
 #include "platform.h"
 
 #include <functional>

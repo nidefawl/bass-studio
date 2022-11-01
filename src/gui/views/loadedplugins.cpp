@@ -13,9 +13,9 @@
 #include "renderresources.h"
 #include "platform.h"
 #include "host/plugin/base/base-plugin.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "host/host.h"
-#include "host/audio_host.h"
+#include "host/audiohost/audio_host.h"
 
 namespace {
     class guigraph2d : public guictr_base {

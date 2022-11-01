@@ -1,7 +1,7 @@
 #include <algorithm>
 #include "guicolors.h"
 #include "guiconstant.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include "math/vec.h"
 #include "gui/gui.h"
 #include "gui/controls/button.h"

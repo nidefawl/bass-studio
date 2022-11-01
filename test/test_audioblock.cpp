@@ -1,5 +1,5 @@
 #include "TestBase.hpp"
-#include "audioblock.h"
+#include "host/audiobuffer/audioblock.h"
 #include "common/test_common.h"
 #include "types.h"
 #include "util/testing_environment.h"

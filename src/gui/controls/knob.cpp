@@ -19,8 +19,8 @@
 #include "keyboard.h"
 #include "gui/table/table.h"
 #include "logging.h"
-#include "automation.h"
-#include "host/mainctrl.h"
+#include "host/automation/automation.h"
+#include "host/daw/mainctrl.h"
 #include "threads/threadlock.h"
 #include <cstdint>
 #include <nanovg.h>

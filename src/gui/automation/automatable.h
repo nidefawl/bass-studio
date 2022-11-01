@@ -1,6 +1,6 @@
 #pragma once
 #include "math/vec.h"
-#include "automation.h"
+#include "host/automation/automation.h"
 class DawCtrl;
 class guictxtmenu;
 namespace DAW {

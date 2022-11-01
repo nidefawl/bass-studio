@@ -4,7 +4,7 @@
 #include "snapshot/trackrouting-snapshot.h"
 #include "snapshot/track-snapshot.h"
 #include "host/daw_channel.h"
-#include "automation.h"
+#include "host/automation/automation.h"
 #include "str_util.h"
 #include "logging.h"
 #include <vector>

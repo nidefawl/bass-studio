@@ -1,5 +1,5 @@
 #pragma once
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 
 class PluginLockable {
     DawInstance* const daw;
