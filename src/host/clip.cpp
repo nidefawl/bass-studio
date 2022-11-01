@@ -701,6 +701,10 @@ void clip_t::setLen(tick_t _len) {
         }
     }
     this->len = _len;
+    if (!loopEnabled) {
+        this->loopStart = offsetStart;
+        this->loopLen = len;
+    }
 }
 
 void clip_t::adjustLen(tick_t offset) {
