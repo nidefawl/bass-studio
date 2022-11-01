@@ -162,7 +162,11 @@ namespace DAW {
             case ID_DELETE: {
                 auto* param = atl->getRegisteredAutomation(paramIdx);
                 if (param) {
+                    trackstate_t trackSnapshot;
+                    trackSnapshot.tracks.push_back(new track_snapshot_t(track, tracksnapshot_store_opts_t::AutomationOnly()));
+                    trackSnapshot.cursor = dawCtrl->getCursor();
                     param->src.points.clear();
+                    dawCtrl->getDaw()->pushHist(new action_modify_track("Delete Automation", std::move(trackSnapshot)));
                     dawCtrl->updateVisibleTrackContents();
                 }
                 return true;

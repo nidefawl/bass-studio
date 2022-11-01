@@ -112,10 +112,10 @@ void gui_track_automation::trackViewDragBegin(guitrack_editor* view, MouseEvent&
     DAW::Cursor& cursor    = view->cursor;
     dragged                = hitTest(local);
     dataPointsCopy   = data.points;
-    trackstate_t resizePreModifyState;
+    trackstate_t trackSnapshot;
     if (dragged.mode != dragmode::drag_none) {
-        resizePreModifyState.tracks.push_back(new track_snapshot_t(this->at->getTrack(), tracksnapshot_store_opts_t::AutomationOnly()));
-        resizePreModifyState.cursor = cursor;
+        trackSnapshot.tracks.push_back(new track_snapshot_t(this->at->getTrack(), tracksnapshot_store_opts_t::AutomationOnly()));
+        trackSnapshot.cursor = cursor;
     }
     if (dragged.mode != dragmode::drag_node && cursor.containsSubtrack(this->m_trackentry->idx, this->subtrackIdx, tickAt)) {
                 
@@ -136,7 +136,7 @@ void gui_track_automation::trackViewDragBegin(guitrack_editor* view, MouseEvent&
         dragged.numPoints = idx2 - idx + 1;
     }
     if (dragged.mode != dragmode::drag_none && dragged.mode != dragmode::drag_empty) {
-        dawCtrl->getDaw()->pushHist(new action_modify_track(StringFormat("Edit Automation (%d)", (int)dragged.mode), std::move(resizePreModifyState)));
+        dawCtrl->getDaw()->pushHist(new action_modify_track(StringFormat("Edit Automation (%d)", (int)dragged.mode), std::move(trackSnapshot)));
     }
 
     dataPointsEdited = data.points;
