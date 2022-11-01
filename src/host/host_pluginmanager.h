@@ -234,8 +234,8 @@ public:
     }
     int32_t validateIds();
 
-    bool movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
-    bool moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
+    bool movePluginsToStage(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
+    bool movePluginsOnStage(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
     bool insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst);
     bool postPluginLoaded(audio_stage_t* trp, effectbase* plugin);
     bool replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin);

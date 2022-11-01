@@ -299,7 +299,7 @@ audio_stage_t* PluginManager::getAudioStage(const audio_stage_ref_t& ref) const 
     return nullptr;
 }
 
-bool PluginManager::movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
+bool PluginManager::movePluginsToStage(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
     ThreadLock lock = mgrImpl->tls.dawInstance->lockPlayThread();
     dbgassert(dstTr);
     dbgassert(trp);
@@ -319,7 +319,7 @@ bool PluginManager::movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_
     return true;
 }
 
-bool PluginManager::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
+bool PluginManager::movePluginsOnStage(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
     ThreadLock lock = mgrImpl->tls.dawInstance->lockPlayThread();
 #ifndef NDEBUG
     dbgassert(src >= 0 && dst >= 0);

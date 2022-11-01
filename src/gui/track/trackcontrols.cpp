@@ -1883,7 +1883,7 @@ void gui_track_content_base::pluginMultiDragRelease(guictr_dragged_plugins* g, i
               StringAsCStr(dstStage->getTrack()->name), targetslot);
     if (targetslot >= 0) {
         if (srcStage != dstStage) {
-            daw->getPluginManager()->movePlugins(dstStage, srcStage, first, targetslot, last - first + 1);
+            daw->getPluginManager()->movePluginsToStage(dstStage, srcStage, first, targetslot, last - first + 1);
 
             audio_stage_ref_t refsrc = srcStage->toRef();
             audio_stage_ref_t refdst = dstStage->toRef();
@@ -1893,7 +1893,7 @@ void gui_track_content_base::pluginMultiDragRelease(guictr_dragged_plugins* g, i
             if (targetslot > first) targetslot -= CtrSize(g->effects);
             if (first == targetslot)
                 return;
-            daw->getPluginManager()->moveEffects(dstStage, first, targetslot, last - first + 1);
+            daw->getPluginManager()->movePluginsOnStage(dstStage, first, targetslot, last - first + 1);
             // audio_stage_ref_t ref = dstStage->toRef();
             //auto* track_action    = new action_shift_modules("Move plugin", ref, targetslot, first, last - first + 1);
             //TODO: make this work

@@ -685,7 +685,7 @@ public:
             setError("missing trackimpl");
             return;
         }
-        daw->getPluginManager()->moveEffects(stage, dst, src, len);
+        daw->getPluginManager()->movePluginsOnStage(stage, dst, src, len);
         daw->onPluginsChanged();
     }
     void redo(DawInstance* daw) override {
@@ -694,14 +694,14 @@ public:
             setError("missing trackimpl");
             return;
         }
-        daw->getPluginManager()->moveEffects(stage, src, dst, len);
+        daw->getPluginManager()->movePluginsOnStage(stage, src, dst, len);
         daw->onPluginsChanged();
     }
 };
 
+// gui_ctr_plugins receiving list of effectbase
 void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
-    // gui_ctr_plugins receiving list of effectbase
-    int32_t dstSlot = dawCtrl->getDragDropTarget().slotIdx;
+    auto dstSlot = dawCtrl->getDragDropTarget().slotIdx;
     dawCtrl->getDragDropTarget().reset();
     if (!this->stage) return;
     dbgassert(g->effects.size());
@@ -725,11 +725,6 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
     int first       = g->effects.front()->getSlot();
     int last        = g->effects.back()->getSlot();
 
-    log_printf("move %d plugins from %s:%d to %s:%d\n",
-              (int) g->effects.size(),
-              StringAsCStr(srcStage->getTrack()->name), first,
-              StringAsCStr(this->stage->getTrack()->name), dstSlot);
-
     int targetslot = slotFromCoord(mousepos);
     if (srcStage == this->stage) {
         if (targetslot >= first && targetslot <= last) {
@@ -738,23 +733,19 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
     }
 
     if (targetslot >= 0) {
+        auto daw = dawCtrl->getDaw();
         if (srcStage != this->stage) {
-            dawCtrl->getDaw()->getPluginManager()->movePlugins(this->stage, srcStage, first, targetslot, last - first + 1);
-
+            daw->getPluginManager()->movePluginsToStage(this->stage, srcStage, first, targetslot, last - first + 1);
             audio_stage_ref_t refsrc = srcStage->toRef();
             audio_stage_ref_t refdst = stage->toRef();
-            auto* track_action       = new action_move_modules("Move plugin", refdst, refsrc, targetslot, first, last - first + 1);
-            DawInstance::get()->pushHist(track_action);
+            daw->pushHist(new action_move_modules("Move plugin", refdst, refsrc, targetslot, first, last - first + 1));
         } else {
-            if (targetslot > first) targetslot -= g->effects.size();
-            //if (targetslot > curSlot) targetslot--;
+            if (targetslot > first) targetslot -= CtrSize(g->effects);
             if (first == targetslot)
                 return;
-            dawCtrl->getDaw()->getPluginManager()->moveEffects(this->stage, first, targetslot, last - first + 1);
-            // audio_stage_ref_t ref = this->stage->toRef();
-            //auto* track_action    = new action_shift_modules("Move plugin", ref, targetslot, first, last - first + 1);
-            //TODO: make this work
-            //DawInstance::get()->pushHist(track_action);
+            daw->getPluginManager()->movePluginsOnStage(this->stage, first, targetslot, last - first + 1);
+            audio_stage_ref_t ref = this->stage->toRef();
+            daw->pushHist(new action_shift_modules("Move plugin", ref, targetslot, first, last - first + 1));
         }
         if (this->parent) {
             this->parent->onChildLayoutChanged(this);
@@ -778,27 +769,23 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
     }
 
     if (targetslot >= 0) {
+        auto daw = dawCtrl->getDaw();
         if (trp != this->stage) {
-            dawCtrl->getDaw()->getPluginManager()->movePlugins(this->stage, trp, curSlot, targetslot, 1);
-
+            daw->getPluginManager()->movePluginsToStage(this->stage, trp, curSlot, targetslot, 1);
             audio_stage_ref_t refsrc = trp->toRef();
             audio_stage_ref_t refdst = stage->toRef();
-            auto* track_action       = new action_move_modules("Move plugin", refdst, refsrc, targetslot, curSlot, 1);
-            DawInstance::get()->pushHist(track_action);
+            daw->pushHist(new action_move_modules("Move plugin", refdst, refsrc, targetslot, curSlot, 1));
 
         } else {
             if (targetslot > curSlot) targetslot--;
-            dawCtrl->getDaw()->getPluginManager()->moveEffects(trp, curSlot, targetslot, 1);
+            daw->getPluginManager()->movePluginsOnStage(trp, curSlot, targetslot, 1);
             audio_stage_ref_t ref = trp->toRef();
-            auto* track_action    = new action_shift_modules("Move plugin", ref, targetslot, curSlot, 1);
-            DawInstance::get()->pushHist(track_action);
+            daw->pushHist(new action_shift_modules("Move plugin", ref, targetslot, curSlot, 1));
         }
         if (this->parent) {
             this->parent->onChildLayoutChanged(this);
         }
         showTrack(stage);
-    } else {
-        log_printf("targetslot < 0 %d\n", targetslot);
     }
 }
 
@@ -959,7 +946,7 @@ void action_move_modules::undo(DawInstance* daw) {
         setError("missing trackimpl");
         return;
     }
-    daw->getPluginManager()->movePlugins(srcStage, dstStage, dst, src, len);
+    daw->getPluginManager()->movePluginsToStage(srcStage, dstStage, dst, src, len);
     daw->onPluginsChanged();
 }
 void action_move_modules::redo(DawInstance* daw) {
@@ -969,7 +956,7 @@ void action_move_modules::redo(DawInstance* daw) {
         setError("missing trackimpl");
         return;
     }
-    daw->getPluginManager()->movePlugins(dstStage, srcStage, src, dst, len);
+    daw->getPluginManager()->movePluginsToStage(dstStage, srcStage, src, dst, len);
     daw->onPluginsChanged();
 }
 void action_insert_effect::releaseResources(DawInstance* daw) {
