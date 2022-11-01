@@ -69,7 +69,6 @@ void audiocache::setSamplerate(samplerate_t _newSampleRate) {
 
         size_t odone = 0;
 
-        double orate = static_cast<double>(_newSampleRate);
         for (auto& f : list) {
             auto* file = f.get();
             if (!(file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED)) {
@@ -81,23 +80,39 @@ void audiocache::setSamplerate(samplerate_t _newSampleRate) {
             }
             sample->downsampled = {};
 
-            auto ilen = static_cast<size_t>(sample->nSamples);
-            auto olen = static_cast<size_t>((sample->nSamples) * orate / static_cast<double>(sample->sampleRate) + .5); /* Assay output len. */
-            std::vector<samplechannel_t> samples(sample->nChannels);
-            for (channelnum_t c = 0; c < sample->nChannels; c++) {
-                auto& vecIn  = sample->samples[c];
-                auto& vecOut = samples[c];
-                vecOut.resize(olen);
-                auto error = soxr_oneshot(sample->sampleRate, _newSampleRate, 1,
-                                          vecIn.data(), ilen, nullptr,
-                                          vecOut.data(), olen, &odone,
-                                          &iospec, nullptr, nullptr);
-                dbgassert(!error);
+            auto numSamplesInput = static_cast<samplecount_t>(sample->nSamples);
+            auto numSamplesResampled = static_cast<samplecount_t>(sample->nSamples * double(_newSampleRate) / static_cast<double>(sample->sampleRate) + .5); /* Assay output len. */
+            std::vector<samplechannel_t> resampledChannels(sample->nChannels);
+            std::vector<float*> channelPtrsOut(sample->nChannels);
+            std::vector<float*> channelPtrsIn(sample->nChannels);
+            for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
+                channelPtrsIn[ch] = sample->samples[ch].data();
+                resampledChannels[ch].resize(numSamplesResampled);
+                channelPtrsOut[ch] = resampledChannels[ch].data();
             }
-            sample->samples = std::move(samples);
-            sample->sampleRate = _newSampleRate;
-            sample->nSamples = odone;
-            audiocache::Downsample(sample);
+
+            soxr_quality_spec_t q_spec             = soxr_quality_spec(0, 0);
+            soxr_io_spec_t io_spec                 = soxr_io_spec(SOXR_FLOAT32_S, SOXR_FLOAT32_S);
+            soxr_runtime_spec_t const runtime_spec = soxr_runtime_spec(0);
+
+            soxr_error_t error = 0;
+            size_t offset = 0;
+
+            soxr_t soxr = soxr_create(sample->sampleRate, _newSampleRate, sample->nChannels, &error, &io_spec, &q_spec, &runtime_spec);
+            if (!!error) {
+                log_lf(Log::L_ERROR, "soxr_create failed: %s\n", soxr_strerror(error));
+            } else {
+                error = soxr_process(soxr, channelPtrsIn.data(), numSamplesInput, nullptr, channelPtrsOut.data(), numSamplesResampled, &offset);
+                soxr_delete(soxr);
+                if (!!error) {
+                    log_lf(Log::L_ERROR, "soxr_process failed: %s\n", soxr_strerror(error));
+                } else {
+                    sample->nSamples = static_cast<int64_t>(offset);
+                    sample->samples = std::move(resampledChannels);
+                    sample->sampleRate = _newSampleRate;
+                    audiocache::Downsample(sample);
+                }
+            }
         }
     }
 }
@@ -209,29 +224,27 @@ static bool LoadAudioSample(drwav& wav, audiosample_t* sample, samplerate_t samp
         sample->sampleRate    = samplerate;
         sample->nSamples      = 0;
 
-        std::vector<samplechannel_t> loadedSampleChannels;
+        std::vector<samplechannel_t> loadedSampleChannels(sample->nChannels);
         samplecount_t numSamplesInput = numSamplesInterleaved / wav.channels;
         // deinterleave
         for (channelnum_t i = 0; i < sample->nChannels; i++) {
-            samplechannel_t channel(numSamplesInput);
-            auto out = channel.begin();
+            loadedSampleChannels[i].resize(numSamplesInput);
+            auto out = loadedSampleChannels[i].begin();
             // interleaved sample is at samples[ chIdx + sampleIdx * chCount ]
             for (samplecount_t j = i; j < numSamplesInterleaved; j += wav.channels) {
                 *out++ = pSamples[j];
             }
-            loadedSampleChannels.push_back(std::move(channel));
         }
         if (samplerate != wav.sampleRate) {
 
-            std::vector<samplechannel_t> resampledChannels;
+            std::vector<samplechannel_t> resampledChannels(sample->nChannels);
             std::vector<float*> channelPtrsOut(sample->nChannels);
             std::vector<float*> channelPtrsIn(sample->nChannels);
             auto numSamplesResampled = static_cast<samplecount_t>(numSamplesInput * samplerate / (double) wav.sampleRate + .5); /* Assay output len. */
 
             for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
                 channelPtrsIn[ch] = loadedSampleChannels[ch].data();
-                samplechannel_t channel(numSamplesResampled);
-                resampledChannels.push_back(std::move(channel));
+                resampledChannels[ch].resize(numSamplesResampled);
                 channelPtrsOut[ch] = resampledChannels[ch].data();
             }
 
@@ -250,11 +263,8 @@ static bool LoadAudioSample(drwav& wav, audiosample_t* sample, samplerate_t samp
                 if (!!error) {
                     log_lf(Log::L_ERROR, "soxr_process failed: %s\n", soxr_strerror(error));
                 } else {
-                    sample->nSamples   = static_cast<int64_t>(offset);
-                    sample->samples.resize(sample->nChannels);
-                    for (channelnum_t i = 0; i < sample->nChannels; i++) {
-                        sample->samples[i] = std::move(resampledChannels[i]);
-                    }
+                    sample->nSamples = static_cast<int64_t>(offset);
+                    sample->samples = std::move(resampledChannels);
                 }
             }
             soxr_delete(soxr);
