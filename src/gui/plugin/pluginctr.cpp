@@ -73,10 +73,11 @@ void setDraggedPluginsUI(guictr_dragged_plugins& gui, plugin_selection& sel) {
     gui.effects.clear();
     getSelectedEffects(sel, gui.effects);
     std::vector<String> list;
+    list.reserve(gui.effects.size());
     for (auto* effect : gui.effects) {
         list.push_back(effect->getAutomatableName());
     }
-    gui.setStrings(list);
+    gui.setStrings(std::move(list));
 }
 
 guibase* guictr_plugins::getDraggedControl() {
@@ -387,6 +388,12 @@ void guictr_plugins::onChildLayoutChanged(guibase* g) {
         showTrack(this->stage);
     }
 }
+uint32_t guictr_plugins::getTitlebarColorFromState(int32_t flags) {
+    uint32_t c = guictr_base::getTitlebarColorFromState(flags);
+    if (this->track)
+        return this->track->rgb;
+    return c;
+}
 void guictr_plugins::render(NVGcontext* vg) {
     if (isBackgroundRendered()) {
         renderBackground(vg);
@@ -394,9 +401,15 @@ void guictr_plugins::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
-    guibase* lastGui = NULL;
-    int32_t slot     = 0;
     nvgTranslate(vg, -scrolloffset, 0);
+
+    if (isDefaultPluginCtr) {
+        int flags = parentCtrl->isCtrOrChildFocused(this) ? TITLEBAR_FLG_FOCUSED : 0;
+        renderTitleBar(vg, getSizeContent(), this->label, GuiConstant::CONST_SMALL_LABEL_HEIGHT, getSizeContent().y, flags, false);
+    }
+    
+    int32_t slot     = 0;
+    guibase* lastGui = nullptr;
     dragdrop_target_indicator_t& target = dawCtrl->getDragDropTarget();
     for (guibase* gui : guis) {
         if (target.dst == this && target.slotIdx == slot) {
@@ -439,6 +452,7 @@ void guictr_plugins::showTrack(audio_stage_t* audio) {
     }
     this->track = audio ? audio->getTrack() : nullptr;
     this->stage = audio;
+    String name;
     if (audio && this->track) {
         audio->m_pluginCtr = this;
         dbgassert(audio->parent || MainCtrl::getPluginCtr() == this);
@@ -456,6 +470,7 @@ void guictr_plugins::showTrack(audio_stage_t* audio) {
                 placeholder.message = "Drop Effects here";
                 break;
         }
+        name = audio->getTrack()->name;
     }
     if (size.x > 0 && size.y > 0) {
         layout();
@@ -463,6 +478,7 @@ void guictr_plugins::showTrack(audio_stage_t* audio) {
     if (track && isDefaultPluginCtr) {
         setScrolloffset(this->track->scrolloffset);
     }
+    setLabel(name);
 }
 
 void guictr_plugins::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
@@ -559,14 +575,16 @@ void guictr_dragged_plugins::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2
     nvgFillColor(vg, THEMECOL_TEXT);
     Table::DrawTableNVG(this->table, vg, theme, pos + inset, size - inset * 2, HEIGHT_ENTRY - 4);
 }
-void guictr_dragged_plugins::setStrings(std::vector<String>& list) {
+void guictr_dragged_plugins::setStrings(std::vector<String>&& list) {
     table.tableWidth  = 200 - (INSET_TABLE<<1);
     table.titleHeight = HEIGHT_ENTRY;
     table.rowHeight   = HEIGHT_ENTRY;
     table.rows.clear();
-    for (String s : list) {
+    auto tStr = Table::tblstr{"Move Plugins"};
+    table.rows.push_back(Table::tbl_row_t{{tStr}});
+    for (auto& s : list) {
         Table::tbl_row_t row;
-        row.cols.push_back(s);
+        row.cols.emplace_back(std::move(s));
         table.rows.push_back(row);
     }
     Table::AdjustColSizes(table);
@@ -751,7 +769,7 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
     effectbase* effect = g->getModule();
     audio_stage_t* trp = effect->getTrackLink();
     if (!trp) {
-        dbgassert(0 && "TRP WAS NULL");
+        dbgassert(0 && "TRP WAS nullptr");
         return;
     }
     int curSlot = effect->getSlot();
@@ -864,6 +882,8 @@ void guictr_plugins::determineSize(glm::ivec2& prefSize) {
 
     int32_t inset = margin / 2;
     ivec2 gPos(inset * 3, 0);
+    const auto hpt = theme->get(GuiConstant::CONST_SMALL_LABEL_HEIGHT);
+    gPos.x += hpt;
     for (guibase* gui : guis) {
         gui->pos  = gPos;
         gui->size = { guiH, guiH };

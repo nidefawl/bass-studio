@@ -107,7 +107,7 @@ public:
         return trackImpl;
     }
     void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override;
-    void setStrings(std::vector<String>& list);
+    void setStrings(std::vector<String>&& list);
     void handleDraggedRelease(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void dragMoveOn(guibase* target, ivec2 mousepos) override;
@@ -169,6 +169,7 @@ public:
         nvgStroke(vg);
         nvgLineCap(vg, NVGlineCap::NVG_BUTT);
     }
+    uint32_t getTitlebarColorFromState(int32_t flags) override;
     void render(NVGcontext* vg) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;

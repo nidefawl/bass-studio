@@ -264,22 +264,32 @@ public:
         btnLoad.setVisible(this->layoutMode == 0);
     }
 };
+
 struct effect_deferred_impl {
     plugin_snapshot_t snapshot;
     std::unique_ptr<guideferred> gui = nullptr;
     int moduleType                   = 0;
 };
+
 effect_deferred::~effect_deferred() {
     delete mImpl;
 }
+
 String effect_deferred::getDfrdPluginName() const {
     return mImpl->snapshot.name;
 }
+
 const plugin_snapshot_t& effect_deferred::getSnapshotConst() const {
     return mImpl->snapshot;
 }
+
 plugin_snapshot_t& effect_deferred::getSnapshot() {
     return mImpl->snapshot;
+}
+
+void guideferred::render(NVGcontext* vg) {
+    text = module->mImpl->snapshot.name + " (Unloaded)";
+    guiplugin::render(vg);
 }
 
 /*static*/ std::shared_ptr<effect_deferred> effect_deferred::fromEffect(effectbase* eff) {
@@ -376,34 +386,36 @@ void effect_deferred::loadSnapshot(const plugin_snapshot_t& snapshot) {
 samplecount_t effect_deferred::getPluginLatency() {
     return 0;
 }
+
 String effect_deferred::getInfo(std::vector<String>& list) {
     return "";
 }
+
 int effect_deferred::getModuleType() {
     return PLUGIN_TYPE_DEFERRED;
 }
+
 void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
     ps = this->mImpl->snapshot;
 }
+
 void effect_deferred::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
 }
+
 int effect_deferred::getModuleStoredType() const {
     return this->mImpl->moduleType;
 }
+
 String effect_deferred::getAutomatableName() {
-    return "plugin";
+    return getDfrdPluginName() + " (Unloaded)";
 }
+
 automatable_param_ref_t effect_deferred::toRef() const {
     automatable_param_ref_t ref;
     ref.type  = AUTOMATABLE_EFFECT;
     ref.refId = this->projectGlobalId;
     return ref;
 }
-void guideferred::render(NVGcontext* vg) {
-    // btnLoad.setVisible(layoutMode == 0);
-    guiplugin::render(vg);
-}
-
 
 void guideferred::buttonClicked(guibase* _button) {
     guiplugin::buttonClicked(_button);

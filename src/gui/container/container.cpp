@@ -127,16 +127,19 @@ void guictr_base::renderFrameOutline(NVGcontext* vg) {
     nvgStrokeWidth(vg, 2.0);
     nvgStroke(vg);
 }
-
-void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, const GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle) {
-    NVGcolor c;
+uint32_t guictr_base::getTitlebarColorFromState(int32_t flags) {
+    uint32_t c = 0;
     if (flags & TITLEBAR_FLG_SELECTED) {
-        c = theme->getColor(GuiColor::COL_PLUG_TITLE_SELECTED);
+        c = theme->getColorInt32(GuiColor::COL_PLUG_TITLE_SELECTED);
     } else if (flags & TITLEBAR_FLG_FOCUSED) {
-        c = theme->getColor(GuiColor::COL_PLUG_TITLE_FOCUSED);
+        c = theme->getColorInt32(GuiColor::COL_PLUG_TITLE_FOCUSED);
     } else {
-        c = theme->getColor(GuiColor::COL_PLUG_TITLE);
+        c = theme->getColorInt32(GuiColor::COL_PLUG_TITLE);
     }
+    return c;
+}
+void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, const GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle) {
+    auto colorU32 = getTitlebarColorFromState(flags);
     const auto hpt = theme->get(constantHeight);
     if (hpt <= 0) {
         return;
@@ -165,7 +168,7 @@ void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, Strin
             }
         }
     }
-    nvgFillColor(vg, c);
+    nvgFillColor(vg, rgbaToNvg(colorU32));
     nvgFill(vg);
     if (textMaxWidth + 2 <= 0) {
         return;
