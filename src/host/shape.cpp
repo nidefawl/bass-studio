@@ -329,7 +329,7 @@ namespace DAW::Shape {
     }
 
     void shape_t::assertSorted() const {
-        for (int i = 1; i < pts.size(); ++i) {
+        for (size_t i = 1; i < pts.size(); ++i) {
             dbgassert(pts[i - 1].pos.x <= pts[i].pos.x);
         }
     }
