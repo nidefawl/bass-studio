@@ -21,7 +21,7 @@
 #include <soxr.h>
 
 
-#define RESAMPLER_H_ENABLE_BUFFER_CHECKS
+// #define RESAMPLER_H_ENABLE_BUFFER_CHECKS
 
 struct oversample_config_t {
     samplerate_t inputSampleRate     = 0;
