@@ -94,6 +94,21 @@ struct alignas(16) AudioBlock {
 #endif
     }
 
+    explicit AudioBlock(std::vector<std::vector<float>>& vecChannels)
+        : samples(samplecount_t(vecChannels[0].size())),
+        channels(static_cast<channelnum_t>(vecChannels.size())),
+        dataAlloc(external) 
+    {
+        dbgassert(vecChannels.size());
+        allocChannelsArray();
+#if TRACK_ALLOCATIONS_AUDIOBLOCK
+        instanceCount++;
+        instanceCstrd++;
+#endif
+        for (channelnum_t i = 0; i < channels; i++) {
+            buf[i] = vecChannels[i].data();
+        }
+    }
     explicit AudioBlock(const std::vector<float*>& vecChannels, samplecount_t _samples)
         : samples(_samples),
         channels(static_cast<channelnum_t>(vecChannels.size())),
