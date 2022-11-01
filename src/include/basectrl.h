@@ -249,6 +249,7 @@ public:
     virtual guitheme_t* getTheme() { return &themes.getRef(); }
     guitheme_mgr* getThemeMgr() { return &themes; }
     ivec2 getScaledSize() const { return {m_size.x * 1.0 / m_scale, m_size.y * 1.0 / m_scale}; }
+    virtual const std::vector<guictr_base*>& getRenderContainers() const { return containers; }
     virtual void prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
     virtual void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
     virtual bool processGlobalKeyevent(const KeyEvent& event) { return false; }

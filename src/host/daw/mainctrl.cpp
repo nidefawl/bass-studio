@@ -17,6 +17,7 @@
 #include "gui/container/container_layout_types.h"
 #include "gui/tooltip/tooltip.h"
 #include "guicolors.h"
+#include "host/daw/daw_async_task.h"
 #include "host/daw/mainctrl.h"
 #include "host/daw/mainctrl.h"
 #include "math/seq_math.h"
@@ -351,9 +352,9 @@ public:
 #endif
     }
     void updateVisibility() {
-        this->ctr_tracks2.setVisible(dawCtrl->containers[indexContent] == &this->ctr_tracks2);
-        this->ctr_nodes.setVisible(dawCtrl->containers[indexContent] == &this->ctr_nodes);
-        this->ctr_clipeditor.setVisible(dawCtrl->containers[indexContent] == &this->ctr_clipeditor);
+        this->ctr_tracks2.setVisible(dawCtrl->viewGuiContainers[indexContent] == &this->ctr_tracks2);
+        this->ctr_nodes.setVisible(dawCtrl->viewGuiContainers[indexContent] == &this->ctr_nodes);
+        this->ctr_clipeditor.setVisible(dawCtrl->viewGuiContainers[indexContent] == &this->ctr_clipeditor);
     }
 };
 
@@ -586,30 +587,40 @@ public:
     }
 
     void updateVisibility() {
-        this->ctr_tracks.setVisible(mainCtrl->containers[indexContent] == &this->ctr_tracks);
-        this->ctr_nodes.setVisible(mainCtrl->containers[indexContent] == &this->ctr_nodes);
+        this->ctr_tracks.setVisible(mainCtrl->viewGuiContainers[indexContent] == &this->ctr_tracks);
+        this->ctr_nodes.setVisible(mainCtrl->viewGuiContainers[indexContent] == &this->ctr_nodes);
     }
 };
 
 void CompanionCtrl::setupView() {
     view = new DawViewContainersCompanion(this, menubar, cursor, trackSelection, daw.project, daw.projectGlobals, grid, clipView, daw.dragdropclip);
-    view->addTo(this->containers);
+    view->addTo(this->viewGuiContainers);
     viewContainers = view;
-    for (guictr_base* ctr : containers) {
+    for (guictr_base* ctr : viewGuiContainers) {
         ctr->setControl(this);
         ctr->onAdded();
     }
+    for (guictr_base* ctr : viewAsyncProgress) {
+        ctr->setControl(this);
+        ctr->onAdded();
+    }
+    updateViewGuiContainers();
     view->updateVisibility();
 }
 
 void MainCtrl::setupView() {
     view = new DawViewContainersMain(this, menubar, daw.projectGlobals.cursor, daw.projectGlobals.trackSelection, daw.project, daw.projectGlobals, grid, clipView, daw.dragdropclip);
-    view->addTo(this->containers);
+    view->addTo(this->viewGuiContainers);
     viewContainers = view;
-    for (guictr_base* ctr : containers) {
+    for (guictr_base* ctr : viewGuiContainers) {
         ctr->setControl(this);
         ctr->onAdded();
     }
+    for (guictr_base* ctr : viewAsyncProgress) {
+        ctr->setControl(this);
+        ctr->onAdded();
+    }
+    updateViewGuiContainers();
     view->updateVisibility();
 }
 
@@ -617,22 +628,24 @@ std::shared_ptr<guictr_layout> MainCtrl::replaceContainerWith(guictr_base* ctr,
                                                               std::shared_ptr<guictr_layout> newContainer) {
     std::shared_ptr<guictr_layout> ret;
     if (ctr == view->ctr_Right.get()) {
-        replaceEntry(containers, view->ctr_Right.get(), newContainer.get());
+        replaceEntry(viewGuiContainers, view->ctr_Right.get(), newContainer.get());
         ret                     = view->ctr_Right;
         ret->parent             = nullptr;
         view->ctr_Right         = newContainer;
         view->ctr_Right->parent = nullptr;
         view->ctr_Right->setControl(this);
         view->ctr_Right->onAdded();
+        updateViewGuiContainers();
     }
     if (ctr == view->ctr_Left.get()) {
-        replaceEntry(containers, view->ctr_Left.get(), newContainer.get());
+        replaceEntry(viewGuiContainers, view->ctr_Left.get(), newContainer.get());
         ret                    = view->ctr_Left;
         ret->parent            = nullptr;
         view->ctr_Left         = newContainer;
         view->ctr_Left->parent = nullptr;
         view->ctr_Left->setControl(this);
         view->ctr_Left->onAdded();
+        updateViewGuiContainers();
     }
     return ret;
 }
@@ -642,37 +655,39 @@ void MainCtrl::setViewMode(view_mode_t mode) {
     switch (mode) {
         case MIXER:
         case TRACK_TIMELINE:
-            containers[view->indexContent] = &view->ctr_tracks;
+            viewGuiContainers[view->indexContent] = &view->ctr_tracks;
             break;
         case NODE_EDITOR:
-            containers[view->indexContent] = &view->ctr_nodes;
+            viewGuiContainers[view->indexContent] = &view->ctr_nodes;
             break;
     }
+    updateViewGuiContainers();
     view->updateVisibility();
     if (view->ctr_nodes.isVisible()) {
         view->ctr_nodes.refresh();
     }
-    focusGui(containers[view->indexContent]);
+    focusGui(viewGuiContainers[view->indexContent]);
 }
 
 void CompanionCtrl::setViewMode(view_mode_t mode) {
     this->viewMode = mode;
     switch (mode) {
         case MIXER:
-            containers[view->indexContent] = &view->ctr_nodes;
+            viewGuiContainers[view->indexContent] = &view->ctr_nodes;
             break;
         case TRACK_TIMELINE:
-            containers[view->indexContent] = &view->ctr_tracks2;
+            viewGuiContainers[view->indexContent] = &view->ctr_tracks2;
             break;
         case NODE_EDITOR:
-            containers[view->indexContent] = &view->ctr_clipeditor;
+            viewGuiContainers[view->indexContent] = &view->ctr_clipeditor;
             break;
     }
+    updateViewGuiContainers();
     view->updateVisibility();
     if (view->ctr_nodes.isVisible()) {
         view->ctr_nodes.refresh();
     }
-    focusGui(containers[view->indexContent]);
+    focusGui(viewGuiContainers[view->indexContent]);
 }
 
 view_mode_t DawCtrl::getViewMode() const {
@@ -683,11 +698,13 @@ void DawCtrl::onPluginSelected() {
 }
 
 void MainCtrl::showPluginView() {
-    containers[view->indexContent + 1] = &view->ctr_plugins;
+    viewGuiContainers[view->indexContent + 1] = &view->ctr_plugins;
+    updateViewGuiContainers();
 }
 
 void MainCtrl::showClipEditor() {
-    containers[view->indexContent + 1] = &view->ctr_clipeditor;
+    viewGuiContainers[view->indexContent + 1] = &view->ctr_clipeditor;
+    updateViewGuiContainers();
 }
 
 void CompanionCtrl::showPluginView() {
@@ -697,12 +714,24 @@ void CompanionCtrl::showClipEditor() {
     setViewMode(view_mode_t::NODE_EDITOR);
 }
 
+void DawCtrl::setAsyncTask(DAW::async_task_t* task) {
+    updateViewGuiContainers();
+}
+
+void MainCtrl::setAsyncTask(DAW::async_task_t* task) {
+    DawCtrl::setAsyncTask(task);
+}
+
+void CompanionCtrl::setAsyncTask(DAW::async_task_t* task) {
+    DawCtrl::setAsyncTask(task);
+}
+
 bool MainCtrl::isClipEditorVisible() {
-    return containers[view->indexContent + 1] == &view->ctr_clipeditor;
+    return viewGuiContainers[view->indexContent + 1] == &view->ctr_clipeditor;
 }
 
 bool MainCtrl::isPluginViewVisible() {
-    return containers[view->indexContent + 1] == &view->ctr_plugins;
+    return viewGuiContainers[view->indexContent + 1] == &view->ctr_plugins;
 }
 
 bool CompanionCtrl::isClipEditorVisible() {
@@ -1938,7 +1967,29 @@ void DawInstance::configureSampleRate() {
         }
     }
 }
+void DawInstance::onFastTick() {
+    using state = DAW::async_task_t::state;
+    auto runAsyncTask = asyncTask;
+    if (runAsyncTask) {
+        runAsyncTask->run();
+        switch (runAsyncTask->getState()) {
+            case state::idle:
+                dbgassert(0);
+                break;
+            case state::running:
+                break;
+            case state::error:
+                log_lf(Log::L_ERROR, "async task %s error: %s\n", runAsyncTask->getDesc().c_str(), runAsyncTask->getError().c_str());
+            case state::finished:
+            case state::cancelled:
+                delete runAsyncTask;
+                setAsyncTask(nullptr);
+                break;
+        }
+    }
+}
 void DawInstance::onTick() {
+    onFastTick();
     const bool bWroteMidiData = tls.host->writeRecordedData(this);
 
     if (bWroteMidiData) {
@@ -2327,6 +2378,8 @@ void MainCtrl::layoutView(int32_t w, int32_t h) {
             continue;
         ctr->layout();
     }
+    guiCtrProgress.pos = ivec2(w, h) / 2 - guiCtrProgress.size / 2;
+    guiCtrProgress.layout();
 }
 
 void CompanionCtrl::layoutView(int32_t w, int32_t h) {
@@ -2346,6 +2399,8 @@ void CompanionCtrl::layoutView(int32_t w, int32_t h) {
             continue;
         ctr->layout();
     }
+    guiCtrProgress.pos = ivec2(w, h) / 2 - guiCtrProgress.size / 2;
+    guiCtrProgress.layout();
 }
 
 void DawCtrl::relayout(int32_t w, int32_t h) {
@@ -2592,9 +2647,13 @@ bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, Keyboar
     }
     return false;
 }
-
+DAW::async_task_t* createTestTask();
 bool MainCtrl::processGlobalKeyevent(const KeyEvent& event) {
     if (event.type == KeyboardState::K_PRESS) {
+        if (!event.cmd && event.keyCode == KeyboardKey::DAW_KB_T) {
+            daw.setAsyncTask(createTestTask());
+            return true;
+        }
         if (!event.cmd && event.keyCode == KeyboardKey::DAW_KB_L) {
             bShowDebugFrames = !bShowDebugFrames;
             dragContainerRelayout(drag_ctr_event{ drag_ctr_event_type::DRAG_END });
@@ -3255,4 +3314,19 @@ void MainCtrl::updateClipViews() {
 }
 void CompanionCtrl::updateClipViews() {
     view->ctr_clipeditor.showEditClip();
+}
+void DawInstance::setAsyncTask(DAW::async_task_t* task) {
+    asyncTask = task;
+    for (auto& ctrl : dawCtrls) {
+        ctrl->setAsyncTask(task);
+    }
+}
+void DawCtrl::updateViewGuiContainers() {
+    viewRender = viewGuiContainers;
+    if (daw.getAsyncTask()) {
+        viewRender.push_back(&guiCtrProgress);
+        containers = viewAsyncProgress;
+        return;
+    }
+    containers = viewGuiContainers;
 }

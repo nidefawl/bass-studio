@@ -318,7 +318,8 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
     nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
 
 
-    for (guictr_base* ctr : containers) {
+    auto& renderContainers = getRenderContainers();
+    for (guictr_base* ctr : renderContainers) {
         if (ctr->size == ivec2{ 0, 0 }) {
             log_lf(Log::L_WARN, "warning, rendering container with size 0 0\n");
             continue;

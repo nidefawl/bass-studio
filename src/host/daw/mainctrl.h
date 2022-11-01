@@ -4,6 +4,9 @@
 #include <vector>
 #include <set>
 #include "commands.h"
+#include "gui/dialog/dialog.h"
+#include "gui/views/asynctask.h"
+#include "host/daw/daw_async_task.h"
 #include "host/project/project.h"
 #include "saferef.h"
 #include "types.h"
@@ -300,7 +303,7 @@ class DawInstance : public project_controller_t, public delete_cb {
     dragdrop_midifile dragdropclip;
     dragdrop_target_indicator_t dragdropTarget;
     autosave_state_t autosaveState;
-
+    DAW::async_task_t* asyncTask = nullptr;
 public:
     std::function<void(DawInstance*, std::shared_ptr<project_file>, int)> cbProjectLoadCompleteCallback;
     tick_t tickJmpFrom = 0;
@@ -319,6 +322,10 @@ public:
     edithistory& getHist() {
         return hist;
     }
+    DAW::async_task_t* getAsyncTask() {
+        return asyncTask;
+    }
+    void setAsyncTask(DAW::async_task_t* task);
     plugindatabase_t& getPluginDatabase() {
         return plugindb;
     }
@@ -455,6 +462,7 @@ public:
     void destroy();
     void updateClipViews(clip_t* notifyClip, clip_cursor_t cursor);
     void onTick();
+    void onFastTick();
     void setMainControl(MainCtrl*);
     MainCtrl* getMainControl();
     void getTrackContainers(std::vector<guictr_tracks*>& trackContainers);
@@ -476,8 +484,8 @@ private:
 class DawCtrl : public AppCtrl {
     Menus menus;
 protected:
+    void updateViewGuiContainers();
     waveformrender* waveformRenderer = nullptr;
-protected:
     hires_timer_t timer;
     seq_rand rand;
     int32_t numCallsWaitEvents = 0;
@@ -487,6 +495,11 @@ protected:
     int64_t tmLastRenderUpdatesMs       = 0;
 
 public:
+    std::vector<guictr_base*> viewGuiContainers;
+    gui_asyc_progress guiCtrProgress;
+    std::vector<guictr_base*> viewAsyncProgress = {&guiCtrProgress};
+    std::vector<guictr_base*> viewRender;
+    const std::vector<guictr_base*>& getRenderContainers() const override { return viewRender; }
     String lastKeyDebug;
     DawViewContainers* viewContainers = nullptr;
     DawInstance& daw;
@@ -589,6 +602,7 @@ public:
     virtual bool isPluginViewVisible() = 0;
     virtual void showPluginView() = 0;
     virtual void showClipEditor() = 0;
+    virtual void setAsyncTask(DAW::async_task_t* task);
 
     virtual void setViewMode(view_mode_t mode) = 0;
     view_mode_t getViewMode() const;
@@ -674,6 +688,7 @@ public:
     bool isPluginViewVisible() override;
     void showPluginView() override;
     void showClipEditor() override;
+    void setAsyncTask(DAW::async_task_t* task) override;
     void onPluginsChanged() override;
     bool processGlobalKeyevent(const KeyEvent& event) override;
     bool handleGlobalCommand(DAW::UI::CommandContext& ctxt) override;
@@ -753,4 +768,5 @@ public:
     void showPluginView() override;
     bool handleGlobalCommand(DAW::UI::CommandContext& ctxt) override;
     void showClipEditor() override;
+    void setAsyncTask(DAW::async_task_t* task) override;
 };
