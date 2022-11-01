@@ -328,4 +328,9 @@ namespace DAW::Shape {
         return shape_t{ flags, { { pt1, pt2, pt3 } }, "Saw", -1.0f };
     }
 
+    void shape_t::assertSorted() const {
+        for (int i = 1; i < pts.size(); ++i) {
+            dbgassert(pts[i - 1].pos.x <= pts[i].pos.x);
+        }
+    }
 }// namespace DAW::Shape

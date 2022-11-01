@@ -27,6 +27,8 @@ void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_
     for (const auto* const c : in.clips) {
         if (c->end() > srcPos && c->time < srcPos + len) {
             clip_t clone(*c);
+            clone.audio.fadeIn = {};
+            clone.audio.fadeOut = {};
             if (c->time < srcPos && c->end() > srcPos) {
                 cutClipLeft(&clone, srcPos - c->time);
             }
@@ -137,8 +139,8 @@ namespace DAW {
             clipboard->selRange      = tickEnd - tickBegin;
             clipboard->type          = clip_clipboard::ClipboardFull;
             for (const auto& shPtrClipboard : pClipboardIn->tracks) {
-                track_clipboard_t trackClipboardOut;
-                clip_t clip;
+                auto spClip = std::make_shared<clip_t>();
+                auto& clip = *spClip;
                 clip.clipType    = CLIP_MIDI;
                 clip.time        = tickBegin;
                 clip.offsetStart = 0;
@@ -148,6 +150,7 @@ namespace DAW {
                 //consolidated.setLen(tickEnd - tickBegin);
                 const auto& clips = shPtrClipboard->clips;
                 std::vector<note_t> notes;
+                clip.controlData.clear();
                 for (const auto& shPtrClip : clips) {
                     auto clipStart = shPtrClip->start();
                     if (shPtrClip->end() <= tickBegin || clipStart > tickEnd) {
@@ -156,15 +159,16 @@ namespace DAW {
                     notes.clear();
                     shPtrClip->getInTimeRange(tickBegin, tickEnd, tickBegin, tickEnd, notes);
                     clip.notes.addAll(notes);
-                    clip.controlData.setFrom(shPtrClip.get(), tickBegin, shPtrClip->len);
+                    clip.controlData.copyRangeFrom(shPtrClip.get(), tickBegin, clip.len);
                 }
-                
+                clip.controlData.eraseDuplicates();
+                clip.controlData.updateBounds();
                 clip.notes.removeDuplicates();
                 clip.notes.visitNotes([tickBegin](note_t& note) {
                     note.time -= tickBegin;
                 });
-                trackClipboardOut.clips.push_back(std::make_shared<clip_t>(std::move(clip)));
-                clipboard->tracks.push_back(std::make_shared<track_clipboard_t>(std::move(trackClipboardOut)));
+                clipboard->tracks.emplace_back(std::make_shared<track_clipboard_t>());
+                clipboard->tracks.back()->clips.emplace_back(std::move(spClip));
             }
         }
         return clipboard;

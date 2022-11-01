@@ -109,10 +109,6 @@ inline bool operator<(const note_t& lhs, const note_t& rhs) {
     }
     return lhs.time < rhs.time;
 }
-inline bool operator>(const note_t& lhs, const note_t& rhs) { return operator<(rhs, lhs); }
-inline bool operator<=(const note_t& lhs, const note_t& rhs) { return !operator>(lhs, rhs); }
-inline bool operator>=(const note_t& lhs, const note_t& rhs) { return !operator<(lhs, rhs); }
-
 
 std::pair<note_t*, note_t*> getMinMaxSemitones(std::vector<note_t>& notes);
 std::pair<note_t*, note_t*> getMinMaxTime(std::set<note_t*>& notePtrs);

@@ -101,6 +101,8 @@ struct clip_control_data_t {
     std::map<int32_t, clip_control_data_channel_t> ccChannels;
     clip_control_data_t();
     void updateBounds();
+    void eraseDuplicates();
+    void clear();
     void createCCChannel(int32_t cc);
     bool hasData() const {
         if (pitchBend.hasData()) {
@@ -114,7 +116,9 @@ struct clip_control_data_t {
         return false;
     }
     int getInTimeRange(clip_t* clip, tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, std::vector<DAW::Host::midievent_ctrl_t>& list);
-    void setFrom(clip_t* clip, tick_t tickBegin, tick_t len);
+    void copyRangeFrom(clip_t* clip, tick_t tickBegin, tick_t len);
+    void cutLeft(tick_t time);
+    void cutRight(tick_t time);
 };
 
 class clip_notes_t {
@@ -319,17 +323,8 @@ private:
 
 note_t* getFirstAfter(std::vector<note_t>& v, int32_t pitch, tick_t time);
 note_t* getFirstBefore(std::vector<note_t>& v, int32_t pitch, tick_t time);
-inline void cutClipLeft(clip_t* c, tick_t len) {
-    c->adjustStartOffset(len);
-    c->time += len;
-    c->setLen(c->getLen() - len);
-    dbgassert(c->time > 0);
-    dbgassert(c->getLenRef() > 0);
-}
-inline void cutClipRight(clip_t* c, tick_t len) {
-    c->setLen(c->getLen() - len);
-    dbgassert(c->getLenRef() > 0);
-}
+void cutClipLeft(clip_t* c, tick_t len);
+void cutClipRight(clip_t* c, tick_t len);
 inline bool operator==(const clip_t& lhs, const clip_t& rhs) {
     return lhs.time == rhs.time;//TODO: watch out!!
 }

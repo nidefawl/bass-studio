@@ -903,9 +903,6 @@ void clip_control_data_t::createCCChannel(int32_t cc) {
     updateBounds();
 }
 
-void clip_control_data_t::updateBounds() {
-}
-
 float clip_control_data_channel_t::sampleAtTick(clip_t* clip, tick_t tOffset) {
     if (shape.pts.empty()) {
         return defaultValue;
@@ -949,13 +946,6 @@ int clip_control_data_t::getInTimeRange(clip_t* clip, tick_t absStart, tick_t ab
     int count = 0;
     for (tick_t t = absMin; t < absMax; t += 4) {
         tick_t tOffset = t;
-        // if (clip->isLoopEnabled()) {
-        //     const tick_t preLoopLen = !clip->loopEnabled ? clip->len : clip->offsetStart > clip->loopStart ? math::max(0, (/*loopEnd*/ clip->loopStart + clip->loopLen) - clip->offsetStart)
-        //                                                                         : math::max(0, clip->loopStart - clip->offsetStart);
-        //     if (clip->loopLen > 0 && tOffset >= preLoopLen) {
-        //         tOffset = (tOffset - preLoopLen) % clip->loopLen;
-        //     }
-        // }
         if (pitchBend.hasData()) {
             float f1 = pitchBend.sampleAtTick(clip, tOffset);
             IMidiMsg msg;
@@ -983,87 +973,104 @@ int clip_control_data_t::getInTimeRange(clip_t* clip, tick_t absStart, tick_t ab
     }
     return count;
 }
-void clip_control_data_t::setFrom(clip_t* clip, tick_t tickBegin, tick_t len) {
-    auto offsetOut = clip->start() - tickBegin;
-    auto& dataIn = clip->controlData;
-    if (clip->isLoopEnabled()) {
-        const tick_t preLoopLen = !clip->loopEnabled ? clip->len : clip->offsetStart > clip->loopStart ? math::max(0, (/*loopEnd*/ clip->loopStart + clip->loopLen) - clip->offsetStart)
-                                                                            : math::max(0, clip->loopStart - clip->offsetStart);
-
-        for (auto& pt : dataIn.pitchBend.shape.pts) {
-            if (pt.pos.x < preLoopLen) {
-                pitchBend.shape.pts.push_back({{pt.pos.x+offsetOut, pt.pos.y}, pt.shape});
-                pitchBend.shape.sort();
-                pitchBend.shape.eraseDuplicates();
-            }
+void clip_control_data_t::cutLeft(tick_t time) {
+    if (pitchBend.hasData()) {
+        CutShapeLeft(pitchBend.shape, time);
+    }
+    for (auto& it : ccChannels) {
+        if (it.second.hasData()) {
+            CutShapeLeft(it.second.shape, time);
         }
-        for (tick_t t = preLoopLen; t < len; t += clip->loopLen) {
-            for (auto& pt : dataIn.pitchBend.shape.pts) {
-                if (pt.pos.x >= preLoopLen) {
-                    pitchBend.shape.pts.push_back({{pt.pos.x+offsetOut+t, pt.pos.y}, pt.shape});
-                    pitchBend.shape.sort();
-                    pitchBend.shape.eraseDuplicates();
-                }
-            }
-            for (auto& pt : dataIn.pitchBend.shape.pts) {
-                if (pt.pos.x < preLoopLen) {
-                    pitchBend.shape.pts.push_back({{pt.pos.x+offsetOut+t, pt.pos.y}, pt.shape});
-                    pitchBend.shape.sort();
-                    pitchBend.shape.eraseDuplicates();
-                }
-            }
+    }
+}
+void clip_control_data_t::cutRight(tick_t time) {
+    if (pitchBend.hasData()) {
+        CutShapeRight(pitchBend.shape, time);
+    }
+    for (auto& it : ccChannels) {
+        if (it.second.hasData()) {
+            CutShapeRight(it.second.shape, time);
         }
-        pitchBend.updateBounds();
-        for (auto& it : dataIn.ccChannels) {
-            if (!ccChannels.count(it.first)) {
-                createCCChannel(it.first);
-            }
-            auto& cc = ccChannels[it.first];
-            for (auto& pt : it.second.shape.pts) {
-                if (pt.pos.x < preLoopLen) {
-                    cc.shape.pts.push_back({{pt.pos.x+offsetOut, pt.pos.y}, pt.shape});
-                    cc.shape.sort();
-                    cc.shape.eraseDuplicates();
-                }
-            }
-            for (tick_t t = preLoopLen; t < len; t += clip->loopLen) {
-                for (auto& pt : it.second.shape.pts) {
-                    if (pt.pos.x >= preLoopLen) {
-                        cc.shape.pts.push_back({{pt.pos.x+offsetOut+t, pt.pos.y}, pt.shape});
-                        cc.shape.sort();
-                        cc.shape.eraseDuplicates();
-                    }
-                }
-                for (auto& pt : it.second.shape.pts) {
-                    if (pt.pos.x < preLoopLen) {
-                        cc.shape.pts.push_back({{pt.pos.x+offsetOut+t, pt.pos.y}, pt.shape});
-                        cc.shape.sort();
-                        cc.shape.eraseDuplicates();
-                    }
+    }
+}
+void CopyControlDataChannel(clip_control_data_channel_t& dst, tick_t writePos, const clip_control_data_channel_t& src, tick_t readPos, tick_t len, tick_t offsetStart, tick_t loopStart, tick_t loopLen) {
+    tick_t preLoopLen = 0;
+    if (offsetStart < loopStart) {
+        preLoopLen = loopStart - offsetStart;
+        if (preLoopLen) {
+            for (auto& pt : src.shape.pts) {
+                if (pt.pos.x >= 0 && pt.pos.x < preLoopLen && pt.pos.x >= readPos && pt.pos.x <= readPos + len) {
+                    dst.shape.pts.push_back({{pt.pos.x + writePos - readPos, pt.pos.y}, pt.shape});
                 }
             }
         }
     } else {
-        for (auto& pt : dataIn.pitchBend.shape.pts) {
-            pitchBend.shape.pts.push_back({{pt.pos.x+offsetOut, pt.pos.y}, pt.shape});
-            pitchBend.shape.sort();
-            pitchBend.shape.eraseDuplicates();
+        readPos += offsetStart;
+    }
+    for (tick_t t = preLoopLen; t < len; ) {
+        for (auto& pt : src.shape.pts) {
+            if (pt.pos.x >= loopStart && pt.pos.x <= loopStart+loopLen && pt.pos.x+t >= readPos && pt.pos.x+t <= readPos + len) {
+                dst.shape.pts.push_back({{pt.pos.x + t + writePos - readPos, pt.pos.y}, pt.shape});
+            }
         }
-        pitchBend.updateBounds();
+        t += loopLen;
+    }
+}
 
+void clip_control_data_t::updateBounds() {
+    pitchBend.updateBounds();
+    for (auto& cc : ccChannels) {
+        cc.second.updateBounds();
+    }
+}
+
+void clip_control_data_t::eraseDuplicates() {
+    pitchBend.shape.assertSorted();
+    pitchBend.shape.eraseDuplicates();
+    for (auto& cc : ccChannels) {
+        cc.second.shape.assertSorted();
+        cc.second.shape.eraseDuplicates();
+    }
+}
+
+void clip_control_data_t::clear() {
+    pitchBend.shape.pts.clear();
+    ccChannels.clear();
+}
+
+void clip_control_data_t::copyRangeFrom(clip_t* clip, tick_t tickBegin, tick_t len) {
+    auto writePos = clip->start() - tickBegin;
+    auto readPos = math::max(0, tickBegin - clip->start());
+    auto readEnd = math::min(clip->len, tickBegin + len - clip->start());
+    auto readLen = readEnd - readPos;
+    auto& dataIn = clip->controlData;
+    if (clip->isLoopEnabled()) {
+        CopyControlDataChannel(pitchBend, writePos, dataIn.pitchBend, readPos, readLen, clip->offsetStart, clip->loopStart, clip->loopLen);
+        for (auto& it : dataIn.ccChannels) {
+            if (!ccChannels.count(it.first)) {
+                createCCChannel(it.first);
+            }
+            auto& cc = ccChannels[it.first];
+            CopyControlDataChannel(cc, writePos, it.second, readPos, readLen, clip->offsetStart, clip->loopStart, clip->loopLen);
+        }
+    } else {
+        readPos += clip->offsetStart;
+        for (auto& pt : dataIn.pitchBend.shape.pts) {
+            if (pt.pos.x >= readPos && pt.pos.x <= readPos + readLen) {
+                pitchBend.shape.pts.push_back({{pt.pos.x + writePos - readPos, pt.pos.y}, pt.shape});
+            }
+        }
         for (auto& it : dataIn.ccChannels) {
             if (!ccChannels.count(it.first)) {
                 createCCChannel(it.first);
             }
             auto& cc = ccChannels[it.first];
             for (auto& pt : it.second.shape.pts) {
-                cc.shape.pts.push_back({{pt.pos.x+offsetOut, pt.pos.y}, pt.shape});
-                cc.shape.sort();
-                cc.shape.eraseDuplicates();
+                if (pt.pos.x >= readPos && pt.pos.x <= readPos + readLen) {
+                    cc.shape.pts.push_back({{pt.pos.x + writePos - readPos, pt.pos.y}, pt.shape});
+                }
             }
-            cc.updateBounds();
         }
-        updateBounds();
     }
 }
 
@@ -1123,3 +1130,18 @@ float AudioClipFadeLoopProcessor::getDownsampled(channelnum_t ch, samplecount_t 
 }
 
 } // namespace DAW
+
+void cutClipLeft(clip_t* c, tick_t len) {
+    c->adjustStartOffset(len);
+    c->time += len;
+    c->setLen(c->getLen() - len);
+    c->audio.fadeIn = {};
+    dbgassert(c->time > 0);
+    dbgassert(c->getLenRef() > 0);
+}
+
+void cutClipRight(clip_t* c, tick_t len) {
+    c->setLen(c->getLen() - len);
+    c->audio.fadeOut = {};
+    dbgassert(c->getLenRef() > 0);
+}

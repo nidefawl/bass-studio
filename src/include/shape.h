@@ -56,6 +56,7 @@ struct shape_t {
     int getMinPt(vec2 local, vec2 scale, float* distance = nullptr) const;
     void eraseDuplicates();
     void sort();
+    void assertSorted() const;
     shape_pt_t& getPointAfterIdx(int idx);
 
 public:
@@ -72,6 +73,32 @@ public:
     };
     hit_result getMouseHit(vec2 localPos, vec2 scale) const;
 };
+inline void CutShapeLeft(shape_t& shape, float x) {
+    // sample curve at x
+    float y = shape.sampleCurveUnclamped(x);
+    // remove all points to the left of x
+    for (int i = 0; i < shape.pts.size(); ++i) {
+        if (shape.pts[i].pos.x < x) {
+            shape.pts.erase(shape.pts.begin() + i);
+            --i;
+        }
+    }
+    // add a point at x,y
+    shape.pts.insert(shape.pts.begin(), {vec2(x, y), 0.5f});
+}
+inline void CutShapeRight(shape_t& shape, float x) {
+    // sample curve at x
+    float y = shape.sampleCurveUnclamped(x);
+    // remove all points to the right of x
+    for (int i = 0; i < shape.pts.size(); ++i) {
+        if (shape.pts[i].pos.x > x) {
+            shape.pts.erase(shape.pts.begin() + i);
+            --i;
+        }
+    }
+    // add a point at x,y
+    shape.pts.push_back({vec2(x, y), 0.5f});
+}
 shape_t GetShapeSaw(int32_t flags = SHAPE_CYCLIC);
 shape_t GetShapeSawInverse(int32_t flags = SHAPE_CYCLIC);
 shape_t GetShapeTriangle(int32_t flags = SHAPE_CYCLIC);
