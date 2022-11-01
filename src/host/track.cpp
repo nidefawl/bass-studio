@@ -335,9 +335,15 @@ void track_impl_t::removePlugin(effectbase* _effect, bool notifyUp) {
 }
 
 void audio_stage_t::removePlugin(effectbase* _effect, bool notifyUp) {
-    for (auto trackentry : _effect->getTrackLink()->getTrack()->getStage()->guiInstances) {
-        trackentry->state.selectedAutomationCtr = nullptr;
-        trackentry->parent->removeAllAutomationLanes(trackentry, _effect);
+    auto stage = _effect->getTrackLink();
+    if (stage && notifyUp) {
+        auto trackFromStage = stage->getTrack();
+        if (trackFromStage && trackFromStage->getStage()) {
+            for (auto trackentry : trackFromStage->getStage()->guiInstances) {
+                trackentry->state.selectedAutomationCtr = nullptr;
+                trackentry->parent->removeAllAutomationLanes(trackentry, _effect);
+            }
+        }
     }
     removeEntry(deferredEffects, _effect);
     if (!removeEntry(effects, _effect)) {
@@ -347,7 +353,6 @@ void audio_stage_t::removePlugin(effectbase* _effect, bool notifyUp) {
     for (effectbase* effect : effects) {
         effect->setSlot(slot++);
     }
-    auto stage = _effect->getTrackLink();
     _effect->breakTrackLink();
     if (stage && notifyUp) {
         stage->notifyPluginContainers();
