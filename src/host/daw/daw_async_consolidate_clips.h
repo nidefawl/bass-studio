@@ -82,7 +82,7 @@ inline clip_t* ConsolidateAudioClips(DawInstance* daw, track_t* track, tick_t ti
 }
 
     struct consolidate_fill_audio_t {
-        static constexpr samplecount_t blockSize = samplecount_t(8*1024);
+        static constexpr samplecount_t blockSize = samplecount_t(32*1024);
         DawInstance* const daw;
         sampleformat_t format{};
         AudioBlock blockTemp;
@@ -113,7 +113,7 @@ public:
             ssr.id = sampleId;
             ssr.format = format;
             ssr.channels.resize(numChannels);
-            ssr.preAllocate = numSamples;
+            ssr.preAllocate = 0;
             for (auto& ch : ssr.channels) {
                 ch.resize(blockSize);
             }
@@ -133,13 +133,10 @@ public:
             dbgassert(readLen > 0);
             DAW::Host::FillAudioBlockFromClips(cache, prjGlobals, clips, format, samplePos, blockTemp);
             samplePos += readLen;
-            dbgassert(samplePos > 0);
-            dbgassert(numSamplesRead >= 0);
             ssr.offset = numSamplesRead;
-            numSamplesRead += readLen;
-            dbgassert(numSamplesRead >= 0);
             ssr.length = readLen;
             cache->updateSample(ssr);
+            numSamplesRead += readLen;
             if (numSamplesRead >= numSamples) {
                 finished = true;
             }
@@ -289,21 +286,20 @@ struct consolidate_task_t : public async_task_t {
                     auto sampleFormat = stage->sampleFormat;
                     auto [fPath, fName] = daw->createUniqueNonExistingFilename("samples", trEntry->track->name, clip->name, "wav");
                     auto& prjGlobals = daw->getProjectGlobals();
-
-                    create_sample_req_t csr;
-                    csr.format      = sampleFormat;
-                    csr.id          = -1;
-                    csr.numChannels = stage->input.channels;
-                    csr.path = fName;
                     clip->name = fName;
                     clip->rgb = trEntry->track->rgb;
                     //TODO: createSample is not thread safe, we might be doing a lookup from waveformrenderer
                     auto cache = daw->getAudioCache();
-                    auto samplefile = cache->createSample(csr);
-                    dbgassert(samplefile);
-                    // TODO: get clips from clipboard
                     auto samplePos = tickToSampleConvert<samplecount_t, roundmode::ceil>(cursor.getTickBegin(), prjGlobals.tempo100, sampleFormat.sampleRate);
                     auto numSamples = tickToSampleConvert<samplecount_t, roundmode::ceil>(cursor.selRange, prjGlobals.tempo100, sampleFormat.sampleRate);
+                    create_sample_req_t csr;
+                    csr.format      = sampleFormat;
+                    csr.id          = -1;
+                    csr.numChannels = stage->input.channels;
+                    csr.path        = fPath;
+                    csr.preAllocate = numSamples;
+                    auto samplefile = cache->createSample(csr);
+                    dbgassert(samplefile);
                     fillAudio = std::make_shared<consolidate_fill_audio_t>(daw, sampleFormat, stage->input.channels, samplefile->id, samplePos, numSamples);
                     trEntry->track->getMidi().getClipsInRange(cursor.getTickBegin(), cursor.getTickEnd(), fillAudio->clips);
                     clipAudioInProgress = clip;
