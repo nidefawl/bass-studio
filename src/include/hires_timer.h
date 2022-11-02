@@ -1,10 +1,15 @@
 #pragma once
 #include "types.h"
+#if defined(__linux__) || defined(__APPLE__)
+#define HIRES_TIMER_STACK_SIZE 32
+#elif defined(_WIN32)
+#define HIRES_TIMER_STACK_SIZE 32
+#endif
 
 class hires_timer_t {
-    class Impl;
-    Impl* m_impl;
+    alignas(HIRES_TIMER_STACK_SIZE) unsigned char m_state[HIRES_TIMER_STACK_SIZE]{};
 
+    void queryStop();
 public:
     hires_timer_t();
     ~hires_timer_t();

@@ -5,7 +5,7 @@
 #include "host/host_plugin_window.h"
 #include "host/host_pluginmanager.h"
 #include "host/plugin/vst/vstplugin.h"
-#include "host/mainctrl.h"
+#include "host/daw/mainctrl.h"
 #include <windows.h>
 #include <winuser.h>
 #include <tchar.h>

@@ -1,6 +1,5 @@
 #include "playbackthread.h"
 #include "types.h"
-#include <__type_traits/is_swappable.h>
 #include <atomic>
 #include <queue>
 #include <thread>
