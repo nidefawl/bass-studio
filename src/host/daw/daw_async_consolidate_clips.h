@@ -161,6 +161,7 @@ struct consolidate_task_t : public async_task_t {
     int32_t currentTrack = 0;
     std::shared_ptr<consolidate_fill_audio_t> fillAudio;
     String progressDesc = "";
+    clip_t* clipAudioInProgress = nullptr;
     String getTaskName() const override {
         return "Consolidate";
     }
@@ -175,8 +176,29 @@ struct consolidate_task_t : public async_task_t {
             progressDesc = StringFormat("Clip %d/%d", currentTrack+1, numTracks);
             break;
         case state::running:
-            consolidateAudio();
-            if (currentTrack >= this->numTracks) {
+            if (fillAudio) {
+                fillAudio->processSingleBlock();
+                if (fillAudio->isFinished()) {
+                    progressDesc = StringFormat("Clip %d/%d", currentTrack+1, numTracks);
+                    auto clip = clipAudioInProgress;
+                    clip->time = cursor.getTickBegin();
+                    clip->len = cursor.getTickEnd() - cursor.getTickBegin();
+                    clip->loopStart = 0;
+                    clip->loopLen   = cursor.getTickEnd() - cursor.getTickBegin();
+                    clip->clipType = CLIP_AUDIO;
+                    clip->audio.id = fillAudio->sampleId;
+                    clip->notes = {};
+                    clip->setDirty();
+                    fillAudio = nullptr;
+                    ++currentTrack;
+                    if (currentTrack < numTracks) {
+                        progressDesc = StringFormat("Clip %d/%d", currentTrack+1, numTracks);
+                    }
+                }
+
+            } else if (currentTrack < numTracks) {
+                processNextTrack();
+            } else {
                 pasteClipboard();
                 setFinished();
             }
@@ -220,7 +242,7 @@ struct consolidate_task_t : public async_task_t {
         this->clipboardConsolidated = DAW::consolidateClipboard(clipboardCopy, cursor);
         this->numTracks = CtrSize(clipboardConsolidated->tracks);
     }
-    void consolidateAudio() {
+    void processNextTrack() {
         int32_t trackBegin = cursor.getTrackBegin();
         int32_t trackCnt = 0;
         for (auto& [trIdx, count] : mapTrClCount) {
@@ -260,6 +282,7 @@ struct consolidate_task_t : public async_task_t {
                 currentTrack = trackCnt;
                 progressDesc = StringFormat("Clip %d/%d", currentTrack+1, numTracks);
             } else {
+                dbgassert(!fillAudio);
                 if (!fillAudio) {
                     auto stage = trEntry->track->audio;
                     dbgassert(stage);
@@ -283,22 +306,7 @@ struct consolidate_task_t : public async_task_t {
                     auto numSamples = tickToSampleConvert<samplecount_t, roundmode::ceil>(cursor.selRange, prjGlobals.tempo100, sampleFormat.sampleRate);
                     fillAudio = std::make_shared<consolidate_fill_audio_t>(daw, sampleFormat, stage->input.channels, samplefile->id, samplePos, numSamples);
                     trEntry->track->getMidi().getClipsInRange(cursor.getTickBegin(), cursor.getTickEnd(), fillAudio->clips);
-
-                }
-                fillAudio->processSingleBlock();
-                if (fillAudio->isFinished()) {
-                    currentTrack = trackCnt;
-                    progressDesc = StringFormat("Clip %d/%d", currentTrack+1, numTracks);
-                    clip->time = cursor.getTickBegin();
-                    clip->len = cursor.getTickEnd() - cursor.getTickBegin();
-                    clip->loopStart = 0;
-                    clip->loopLen   = cursor.getTickEnd() - cursor.getTickBegin();
-                    clip->clipType = CLIP_AUDIO;
-                    clip->audio.id = fillAudio->sampleId;
-                    clip->notes = {};
-                    clip->rgb = trEntry->track->rgb;
-                    clip->setDirty();
-                    fillAudio = nullptr;
+                    clipAudioInProgress = clip;
                 }
                 break;
             }
