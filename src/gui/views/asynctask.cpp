@@ -87,7 +87,6 @@ void gui_asyc_progress::render(NVGcontext* vg) {
     }
     const int htt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
     const auto cs = getSizeContent();
-    // renderText(vg, vec2(cs.x / 2, cs.y / 6), vec2(cs.x - htt * 4, cs.y / 3), this->label, htt*0.8f, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 
     auto task = dawCtrl->getDaw()->getAsyncTask();
     if (task) {

@@ -412,6 +412,7 @@ public:
     virtual void startApp()                                             = 0; /* OpenGL context exists in startApp */
     virtual void destroy()                                              = 0;
     void onAppTick();
+    virtual void onFastTick() {};
     void destroyControl();
     bool hasDialogWindows() override {
         if (hasMenuWindow()) return true;

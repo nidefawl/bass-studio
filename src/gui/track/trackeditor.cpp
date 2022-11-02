@@ -288,6 +288,7 @@ namespace DAW {
                     task.daw = daw;
                     task.iGuiMgr = &iGuiMgr;
                     task.cursor = cursor;
+                    task.cursor.setLeftAligned();
                     task.clipboardCopy = DAW::copySelection(iGuiMgr, cursor, bCopyAutomation);
                     task.bCopyAutomation = bCopyAutomation;
                     daw->setAsyncTask(pTask);

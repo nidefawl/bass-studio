@@ -462,7 +462,7 @@ public:
     void destroy();
     void updateClipViews(clip_t* notifyClip, clip_cursor_t cursor);
     void onTick();
-    void onFastTick();
+    void processTasksMainThread();
     void setMainControl(MainCtrl*);
     MainCtrl* getMainControl();
     void getTrackContainers(std::vector<guictr_tracks*>& trackContainers);
@@ -683,6 +683,7 @@ public:
     }
     void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) override;
     void onTick() override;
+    void onFastTick() override;
     void setupView() override;
     bool isClipEditorVisible() override;
     bool isPluginViewVisible() override;

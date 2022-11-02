@@ -82,51 +82,35 @@ inline clip_t* ConsolidateAudioClips(DawInstance* daw, track_t* track, tick_t ti
 }
 
     struct consolidate_fill_audio_t {
+private:
         DawInstance* const daw;
-        track_t* const track;
         sampleformat_t format{};
-        channelnum_t numChannels;
-        int32_t sampleId = 0;
-        tick_t windowBegin = 0;
-        tick_t windowEnd = 0;
         samplecount_t blockSize = 2048;
-        samplecount_t samplePos = 0;
         AudioBlock blockTemp;
-        samplecount_t numSamplesRead = 0;
-        samplecount_t numSamples = 0;
         project_globals_t prjGlobals;
-        String name;
-        String path;
-        bool finished = false;
         store_sample_req_t ssr;
-        consolidate_fill_audio_t(DawInstance* daw, track_t* track, tick_t tickBegin, tick_t tickEnd, const String& name)
-            : daw(daw),
-            track(track),
-            format(track->audio->sampleFormat),
-            numChannels(track->audio->input.channels),
-            windowBegin(tickBegin),
-            windowEnd(tickEnd),
-            prjGlobals(daw->getProjectGlobals())
+        samplecount_t samplePos = 0;
+        samplecount_t numSamples = 0;
+        samplecount_t numSamplesRead = 0;
+        bool finished = false;
+public:
+        int32_t sampleId = 0;
+        std::vector<clip_t*> clips;
+public:
+        consolidate_fill_audio_t(
+            DawInstance* daw,
+            sampleformat_t format,
+            channelnum_t numChannels,
+            int32_t sampleId,
+            samplecount_t samplePos,
+            samplecount_t numSamples)
+        : daw(daw),
+            format(format),
+            prjGlobals(daw->getProjectGlobals()),
+            samplePos(samplePos),
+            numSamples(numSamples),
+            sampleId(sampleId)
         {
-            auto [fPath, fName] = daw->createUniqueNonExistingFilename("samples", track->name, name, "wav");
-            this->name = fName;
-            this->path = fPath;
-            auto& prjGlobals = daw->getProjectGlobals();
-            auto& trackData = track->getMidi();
-            auto clips = trackData.getConstClips();
-            samplePos = tickToSampleConvert<samplecount_t, roundmode::ceil>(tickBegin, prjGlobals.tempo100, format.sampleRate);
-            numSamples = tickToSampleConvert<samplecount_t, roundmode::ceil>(tickEnd - tickBegin, prjGlobals.tempo100, format.sampleRate);
-
-            create_sample_req_t csr;
-            csr.format      = format;
-            csr.id          = -1;
-            csr.numChannels = numChannels;
-            csr.path = this->name;
-            //TODO: createSample is not thread safe, we might be doing a lookup from waveformrenderer
-            auto cache = daw->getAudioCache();
-            auto samplefile = cache->createSample(csr);
-            dbgassert(samplefile);
-            sampleId = samplefile->id;
             ssr.id = sampleId;
             ssr.format = format;
             ssr.channels.resize(numChannels);
@@ -139,19 +123,23 @@ inline clip_t* ConsolidateAudioClips(DawInstance* daw, track_t* track, tick_t ti
         double getProgress() const {
             return numSamples ? (double)numSamplesRead / (double)numSamples : 0.0;
         }
-        void copyStep() {
+        void processSingleBlock() {
             if (finished) {
                 return;
             }
+            auto cache = daw->getAudioCache();
             blockTemp.clear();
             auto readSamplesLeft = numSamples - numSamplesRead;
             auto readLen = math::min(blockSize, readSamplesLeft);
-            track->audio->fillAudio(windowBegin, windowEnd, -1, -1, prjGlobals, samplePos, readLen, blockTemp);
+            dbgassert(readLen > 0);
+            DAW::Host::FillAudioBlockFromClips(cache, prjGlobals, clips, format, samplePos, blockTemp);
             samplePos += readLen;
+            dbgassert(samplePos > 0);
+            dbgassert(numSamplesRead >= 0);
             ssr.offset = numSamplesRead;
             numSamplesRead += readLen;
+            dbgassert(numSamplesRead >= 0);
             ssr.length = readLen;
-            auto cache = daw->getAudioCache();
             cache->updateSample(ssr);
             if (numSamplesRead >= numSamples) {
                 finished = true;
@@ -273,22 +261,41 @@ struct consolidate_task_t : public async_task_t {
                 currentTrack = trackCnt;
                 progressDesc = StringFormat("Clip %d/%d", currentTrack+1, numTracks);
             } else {
-                //DawInstance* daw, track_t* track, tick_t tickBegin, tick_t tickEnd, const String& name
                 if (!fillAudio) {
-                    fillAudio = std::make_shared<consolidate_fill_audio_t>(daw, trEntry->track, cursor.getTickBegin(), cursor.getTickEnd(), clip->name);
+                    auto stage = trEntry->track->audio;
+                    dbgassert(stage);
+                    auto sampleFormat = stage->sampleFormat;
+                    auto [fPath, fName] = daw->createUniqueNonExistingFilename("samples", trEntry->track->name, clip->name, "wav");
+                    auto& prjGlobals = daw->getProjectGlobals();
+
+                    create_sample_req_t csr;
+                    csr.format      = sampleFormat;
+                    csr.id          = -1;
+                    csr.numChannels = stage->input.channels;
+                    csr.path = fName;
+                    clip->name = fName;
+                    clip->rgb = trEntry->track->rgb;
+                    //TODO: createSample is not thread safe, we might be doing a lookup from waveformrenderer
+                    auto cache = daw->getAudioCache();
+                    auto samplefile = cache->createSample(csr);
+                    dbgassert(samplefile);
+                    // TODO: get clips from clipboard
+                    auto samplePos = tickToSampleConvert<samplecount_t, roundmode::ceil>(cursor.getTickBegin(), prjGlobals.tempo100, sampleFormat.sampleRate);
+                    auto numSamples = tickToSampleConvert<samplecount_t, roundmode::ceil>(cursor.selRange, prjGlobals.tempo100, sampleFormat.sampleRate);
+                    fillAudio = std::make_shared<consolidate_fill_audio_t>(daw, sampleFormat, stage->input.channels, samplefile->id, samplePos, numSamples);
+                    trEntry->track->getMidi().getClipsInRange(cursor.getTickBegin(), cursor.getTickEnd(), fillAudio->clips);
+
                 }
-                fillAudio->copyStep();
+                fillAudio->processSingleBlock();
                 if (fillAudio->isFinished()) {
                     currentTrack = trackCnt;
                     progressDesc = StringFormat("Clip %d/%d", currentTrack+1, numTracks);
-                    clip->name = clip->name.empty() ? fillAudio->name : clip->name;
                     clip->time = cursor.getTickBegin();
                     clip->len = cursor.getTickEnd() - cursor.getTickBegin();
                     clip->loopStart = 0;
                     clip->loopLen   = cursor.getTickEnd() - cursor.getTickBegin();
                     clip->clipType = CLIP_AUDIO;
                     clip->audio.id = fillAudio->sampleId;
-                    clip->rgb = fillAudio->track->rgb;
                     clip->notes = {};
                     clip->rgb = trEntry->track->rgb;
                     clip->setDirty();

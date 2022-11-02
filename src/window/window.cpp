@@ -803,6 +803,9 @@ public:
         ctrl->onAppTick();
         renderStatsWindow.timeAppTick = timerProfileWindow.getTimeReset();
     }
+    void onFastTick() {
+        ctrl->onFastTick();
+    }
     void releaseOverlayWindows() {
         if (!overlayWindowsToClose.empty()) {
             for (auto& window : overlayWindowsToClose) {
@@ -1959,6 +1962,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             if (glfwWindowShouldClose(glfwHandle)) {
                 break;
             }
+            mainWindow->onFastTick();
             int64_t tmHRNow = hiresRuntime.getTime();
             int64_t tmLRNow = tmHRNow/1000L;
             const auto timerDelayTarget_us = 20000L;

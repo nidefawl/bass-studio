@@ -1792,6 +1792,9 @@ void ProjectGraphMonitor::onTick(MainCtrl* ctrl) {
     bWorkingProcessingGraph = bSuccess;
 }
 
+void MainCtrl::onFastTick() {
+    daw.processTasksMainThread();
+}
 void MainCtrl::onTick() {
     daw.onTick();
     DawCtrl::onTick();
@@ -1967,7 +1970,7 @@ void DawInstance::configureSampleRate() {
         }
     }
 }
-void DawInstance::onFastTick() {
+void DawInstance::processTasksMainThread() {
     using state = DAW::async_task_t::state;
     auto runAsyncTask = asyncTask;
     if (runAsyncTask) {
@@ -1989,7 +1992,6 @@ void DawInstance::onFastTick() {
     }
 }
 void DawInstance::onTick() {
-    onFastTick();
     const bool bWroteMidiData = tls.host->writeRecordedData(this);
 
     if (bWroteMidiData) {
