@@ -1979,7 +1979,7 @@ void DawInstance::onFastTick() {
             case state::running:
                 break;
             case state::error:
-                log_lf(Log::L_ERROR, "async task %s error: %s\n", runAsyncTask->getDesc().c_str(), runAsyncTask->getError().c_str());
+                log_lf(Log::L_ERROR, "async task %s error: %s\n", runAsyncTask->getTaskName().c_str(), runAsyncTask->getError().c_str());
             case state::finished:
             case state::cancelled:
                 delete runAsyncTask;

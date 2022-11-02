@@ -3,6 +3,7 @@
 
 class gui_asyc_progress : public guidialog_base {
     guibutton btnCancel;
+    String desc;
 public:
     gui_asyc_progress();
     ~gui_asyc_progress() override;

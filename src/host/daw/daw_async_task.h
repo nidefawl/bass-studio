@@ -16,10 +16,11 @@ struct async_task_t {
     std::atomic<bool> canceled{ false };
     String errorMessage;
     virtual ~async_task_t() = default;
-    virtual String getDesc() const = 0;
-    virtual void getPreciseProgress(double& progress, String& text) {
-        progress = 0;
-        text     = "";
+    virtual String getTaskName() const = 0;
+    virtual String getProgressDesc() const = 0;
+    virtual void getPreciseProgress(double& progressOverall, double& progressDetail) {
+        progressOverall = 0;
+        progressDetail = 0;
     }
     
     virtual void run() = 0;
@@ -44,9 +45,6 @@ struct async_task_t {
     bool isIdle() const {
         return m_state == state::idle;
     }
-    void setState(state s) {
-        m_state = s;
-    }
     void setError(String err) {
         errorMessage = std::move(err);
         m_state = state::error;
@@ -62,9 +60,6 @@ struct async_task_t {
     }
     void setCancelled() {
         m_state = state::cancelled;
-    }
-    void setIdle() {
-        m_state = state::idle;
     }
 };
 

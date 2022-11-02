@@ -1,14 +1,24 @@
 #pragma once
 #include "asynctask.h"
 #include "gui/container/container.h"
+#include "guicolors.h"
 #include "host/daw/mainctrl.h"
 #include "str_util.h"
+#include <nanovg.h>
 
 class async_test_task_impl : public DAW::async_task_t {
     static constexpr int MAX = 100;
-    int32_t current = 0;
-    String getDesc() const override {
+    int32_t step = 0;
+    int32_t step2 = 0;
+    String progressDesc = "testing";
+    // virtual String getTaskName() const = 0;
+    // virtual String getProgressDesc() const = 0;
+    // virtual void getPreciseProgress(double& progressOverall, double& progressDetail) {
+    String getTaskName() const override {
         return "Test task";
+    }
+    String getProgressDesc() const override {
+        return progressDesc;
     }
     void run() override {
         switch (m_state) {
@@ -16,10 +26,15 @@ class async_test_task_impl : public DAW::async_task_t {
             m_state = state::running;
             break;
         case state::running:
-            if (current < MAX) {
-                current++;
+            if (step2 < MAX) {
+                step2++;
+                progressDesc = StringFormat("testing %d/%d", step2, MAX);
             } else {
-                m_state = state::finished;
+                if (step++>4) {
+                    m_state = state::finished;
+                } else {
+                    step2 = 0;
+                }
             }
             break;
         case state::error:
@@ -28,9 +43,9 @@ class async_test_task_impl : public DAW::async_task_t {
             break;
         }
     }
-    void getPreciseProgress(double& progress, String& text) override {
-        progress = current / double(MAX);
-        text     = StringFormat("%d/%d", current, MAX);
+    void getPreciseProgress(double& progressOverall, double& progressDetail) override {
+        progressOverall = step / 5.0;
+        progressDetail = step2 / (double)MAX;
     }
 };
 DAW::async_task_t* createTestTask() {
@@ -52,7 +67,8 @@ void gui_asyc_progress::onTick(AppCtrl* ctrl) {
         if (task->isFinished() || task->isError() || task->isCancelled()) {
             btnCancel.setText("Close");
         }
-        label = task->getDesc();
+        label = task->getTaskName();
+        desc = task->getProgressDesc();
     }
     guidialog_base::onTick(ctrl);
 }
@@ -71,27 +87,33 @@ void gui_asyc_progress::render(NVGcontext* vg) {
     }
     const int htt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
     const auto cs = getSizeContent();
-    renderText(vg, vec2(cs.x / 2, cs.y / 6), vec2(cs.x - htt * 4, cs.y / 3), this->label, htt, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+    // renderText(vg, vec2(cs.x / 2, cs.y / 6), vec2(cs.x - htt * 4, cs.y / 3), this->label, htt*0.8f, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 
     auto task = dawCtrl->getDaw()->getAsyncTask();
     if (task) {
-        double progress = 0;
-        String text;
-        task->getPreciseProgress(progress, text);
-
-        const int h = htt / 2;
-        const int w = cs.x - htt * 4;
-        const int x = cs.x / 2 - w / 2;
-        const int y = cs.y / 2 - h / 2;
-        nvgBeginPath(vg);
-        nvgRoundedRect(vg, x, y, w, h, 2);
-        nvgFillColor(vg, nvgRGBA(0, 0, 0, 64));
-        nvgFill(vg);
-        nvgBeginPath(vg);
-        nvgRoundedRect(vg, x, y, w * progress, h, 2);
-        nvgFillColor(vg, nvgRGBA(255, 255, 255, 64));
-        nvgFill(vg);
-        renderText(vg, vec2(x + w / 2, y + h / 2), vec2(w, h), text, h, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        double progressOverall = 0;
+        double progressDetail = 0;
+        task->getPreciseProgress(progressOverall, progressDetail);
+        for (int i = 0; i < 2; ++i) {
+            const int h = htt;
+            const int w = cs.x - htt * 1;
+            const int x = cs.x / 2 - w / 2;
+            const int y = (i==1?(cs.y / 2):(cs.y/6)) - h / 2;
+            double progress = i == 0 ? progressOverall : progressDetail;
+            nvgBeginPath(vg);
+            nvgRect(vg, x, y, w, h);
+            nvgFillColor(vg, theme->getColor(getBackgroundColorFromState(getStateFlags())));
+            nvgFillCustomPar(vg, -2);
+            nvgFill(vg);
+            nvgBeginPath(vg);
+            nvgRect(vg, x, y, w * progress, h);
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_KNOB));
+            nvgFillCustomPar(vg, -3);
+            nvgFill(vg);
+            float fontHeight = h * 0.5f;
+            renderText(vg, vec2(x + w/2, y + h / 2), vec2(w*0.5f, h), StringFormat("%.0f%%", progress * 100), fontHeight, NVG_ALIGN_CENTER| NVG_ALIGN_MIDDLE);
+            renderText(vg, vec2(x + fontHeight, y + h / 2), vec2(w-fontHeight, h), i == 0 ? label : desc, h * 0.65f, NVG_ALIGN_LEFT| NVG_ALIGN_MIDDLE);
+        }
 
     }
 }
