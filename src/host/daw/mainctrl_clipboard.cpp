@@ -26,8 +26,8 @@ void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_
     for (const auto* const c : in.clips) {
         if (c->end() > srcPos && c->time < srcPos + len) {
             clip_t clone(*c);
-            clone.audio.fadeIn = {};
-            clone.audio.fadeOut = {};
+            clone.audio.fadeIn.durationMs = 0;
+            clone.audio.fadeOut.durationMs = 0;
             if (c->time < srcPos && c->end() > srcPos) {
                 cutClipLeft(&clone, srcPos - c->time);
             }
