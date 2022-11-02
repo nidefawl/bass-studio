@@ -37,7 +37,6 @@ namespace PluginSynth {
     extern int32_t gDebugOverrides;
 }
 
-extern bool traceAllocs;
 extern volatile bool fatalError;
 namespace {
 class FakeAudioStream : public DAW::AudioIO::AudioStream {
@@ -129,7 +128,7 @@ int main(int argc, char** argv) {
         const sampleformat_t sampleformat = {44100, 512, sampleformat_bits_t::FLOAT_32};
         log_out("Testing Samplerate %uHz at Blocksize %u\n", sampleformat.sampleRate, sampleformat.blockSize);
         log_out("Deadline for block: %zuns\n", (sampleformat.blockSize*uint64_t(1000000000))/sampleformat.sampleRate);
-        getGlobalLogger()->setLevel(Log::L_WARN);
+        getGlobalLogger()->setLevel(Log::LEVEL_ALL);
 
         std::shared_ptr<DAW::AudioIO::AudioStream> audiostream = std::make_shared<FakeAudioStream>(sampleformat, inputChannels, outputChannels);
 
@@ -161,7 +160,7 @@ int main(int argc, char** argv) {
         host->prjGlobals           = projectGlobals;
         host->setThreadCount(8);
         host->setOutput(audiostream);
-        host->cacheAudioGraph = false;
+        host->cacheAudioGraph = true;
 
         struct TestContext {
             const char* benchmarkName;
@@ -200,12 +199,11 @@ int main(int argc, char** argv) {
                     stream->enqueueInput(nullptr);
                 }
                 // if (nIt == 8)
-                //     DebugAlloc::beginTrace();
-                //     // traceAllocs = true;
+                    // DebugAlloc::beginTrace();
+                // log_lf(Log::L_DEBUG, "process Block %d Sample %d Tick %f\n", nIt, samplePos, tickPos);
                 int32_t processedBlock = host->processPlayback(dawInstance, samplePos, tickPos, playback_state::status_playback, inLoop, isLoopAround);
                 // if (nIt == 8)
-                //     DebugAlloc::endTrace();
-                //     // traceAllocs = false;
+                    // DebugAlloc::endTrace();
                 // nIt++;
                 while (stream->getOutputQueueSize() > 0) {
                     AudioBuffer* dequeuedBuf = nullptr;
@@ -222,6 +220,14 @@ int main(int argc, char** argv) {
                     samplePos = tickToSampleConvert<int32_t, roundmode::floor>(tickPos, tempo100, sf.sampleRate);
                 }
             };
+            while (stream->getInputQueueSize() < 1) {
+                    stream->enqueueInput(nullptr);
+            }
+            // log_lf(Log::L_DEBUG, "process Block %d Sample %d Tick %f\n", nIt, samplePos, tickPos);
+            const bool isLoopAround = tickPos + ticksPerBlock >= projGlobals.loopStart + projGlobals.loopLen;
+            const bool inLoop = projGlobals.loopEnabled && (tickPos >= projGlobals.loopStart) && (tickPos < projGlobals.loopStart + projGlobals.loopLen);
+            host->processPlayback(dawInstance, samplePos, tickPos, playback_state::status_stop, inLoop, isLoopAround);
+
             host->onStopPlayback(dawInstance);
         };
         trackdata_midi_t trDataMidi;
@@ -229,20 +235,25 @@ int main(int argc, char** argv) {
             auto clip = new clip_t;
             for (int i = 0; i < 4; i++) {
                 note_t note;
-                note.time     = i * TICKS_BAR;
-                note.len      = TICKS_BAR;
+                note.time     = i * TICKS_16TH;
+                note.len      = TICKS_16TH - TICKS_16TH/8;
                 note.velocity = 123;
                 note.pitch    = 32 + 0;
                 clip->notes.add(note);
                 note.pitch = 32 + 3;
+                note.time += TICKS_16TH*i/8;
                 clip->notes.add(note);
                 note.pitch = 32 + 7;
+                note.time += TICKS_16TH*i/8;
                 clip->notes.add(note);
                 note.pitch = 32 + 12;
+                note.time += TICKS_16TH*i/8;
                 clip->notes.add(note);
                 note.pitch = 32 + 24;
+                note.time += TICKS_16TH*i/8;
                 clip->notes.add(note);
                 note.pitch = 32 - 12;
+                note.time += TICKS_16TH*i/8;
                 clip->notes.add(note);
             }
             clip->notes.updateBounds();
