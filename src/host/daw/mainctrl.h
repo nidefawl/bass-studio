@@ -111,6 +111,7 @@ public:
 };
 
 namespace DAW {
+    struct load_project_task;
     std::shared_ptr<clip_clipboard> copySelection(const track_gui_manager_i& trackList, const Cursor& _cursor, bool copyAutomation);
     std::shared_ptr<clip_clipboard> consolidateClipboard(std::shared_ptr<clip_clipboard>& clipboardIn, const Cursor& _cursor);
     void pasteFullClipboard(DawInstance* daw, track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick, bool pasteAutomation);
@@ -267,6 +268,7 @@ class DawInstance : public project_controller_t, public delete_cb {
     friend class MainCtrl;
     friend class CompanionCtrl;
     friend class DawCtrl;
+    friend struct DAW::load_project_task;
     ProjectFileType projectFileType = ProjectFileType::PROJECT_FILETYPE_JSON;
     project_t project;
     project_globals_t projectGlobals;
@@ -289,10 +291,6 @@ class DawInstance : public project_controller_t, public delete_cb {
     int64_t tmLastSave = 0L;
     String projectPathAutosave;
     track_t* selectedTrack = nullptr;
-    struct project_to_load_t {
-        std::shared_ptr<project_file> projectfile;
-        int loadflags;
-    };
     std::shared_ptr<project_to_load_t> projectToLoad;
 
     ClipBoardType clipboardType = CLIPBOARD_NONE;
@@ -425,15 +423,17 @@ public:
      */
     std::shared_ptr<project_file> createProjectFile();
     
-    /** assuming current thread is main thread when this is called **/
+    bool setProjectToLoad(const std::shared_ptr<project_file>& file, int flags);
     /**
      * setLoadedProject - releases current project and resources and loads in new project from passed project_file
      * @param file - shared_ptr to project_file instance containg project data to load from
      * @param flags - 0 or FLAG_DEFER_LOAD (don't load vst plugins, use placeholders)
      * @return reserved - always true
      */
-    bool setLoadedProject(std::shared_ptr<project_file> file, int flags);
-    bool setProjectToLoad(std::shared_ptr<project_file> file, int flags);
+    bool setLoadedProject(const std::shared_ptr<project_file>& file, int flags);
+    void loadProject0(const std::shared_ptr<project_file>& file);
+    bool loadProject1(const std::shared_ptr<project_file>& file, int flags);
+    void loadProjectFinish();
     void unloadUnreferencedSamples();
     void startPlaying();
     void stopPlaying();
@@ -557,6 +557,9 @@ public:
     void updateMenubar() override;
     void onTick() override;
     void destroy() override;
+    void relayout() override {
+        BaseCtrl::relayout();
+    }
     void relayout(int32_t w, int32_t h) override;
     bool processGlobalKeyevent(const KeyEvent& event) override;
     bool handleGlobalCommand(DAW::UI::CommandContext& ctxt) override;
@@ -657,6 +660,7 @@ class ProjectGraphMonitor {
 class MainCtrl : public DawCtrl {
     friend class DawInstance;
     friend class DawCtrl;
+    friend struct DAW::load_project_task;
     DawViewContainersMain* view = nullptr;
     std::array<dawview_layout_t, 10> layouts;
     String loadProject;

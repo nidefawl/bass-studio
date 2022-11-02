@@ -140,8 +140,8 @@ public:
     playback_state getState() const {
         return m_status;
     }
-    bool isLocked() {
-        return this->m_lockCount > 0;
+    bool isLockedOrNotProcessing() {
+        return this->m_lockCount > 0 || this->m_status == status_no_process;
     }
     bool isRunning() {
         return this->m_threadId > 0 && !m_exited;
@@ -426,8 +426,8 @@ ThreadLock PlaybackThread::tryLockThread() {
     return t;
 }
 
-bool PlaybackThread::isLocked() {
-    return _M_impl->isLocked();
+bool PlaybackThread::isLockedOrNotProcessing() {
+    return _M_impl->isLockedOrNotProcessing();
 }
 
 bool PlaybackThread::isRunning() {

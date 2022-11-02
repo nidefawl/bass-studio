@@ -14,6 +14,11 @@ struct project_file {
     std::vector<dawview_layout_t> layouts;
 };
 
+struct project_to_load_t {
+    std::shared_ptr<project_file> projectfile;
+    int loadflags;
+};
+
 bool saveProject(const std::shared_ptr<project_file>& f, std::vector<uint8_t>& bufferOut);
 std::shared_ptr<project_file> loadProject(const std::vector<uint8_t>& vec);
 

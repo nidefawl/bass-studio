@@ -147,7 +147,7 @@ bool plugin_selection::hasSelection() const {
 void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_stage_t* stage, int32_t pos) {
     
     auto daw = DawInstance::get();
-    dbgassert(daw->getPlayThread()->isLocked());
+    dbgassert(daw->getPlayThread()->isLockedOrNotProcessing());
     auto pluginMgr = daw->getPluginManager();
     for (plugin_snapshot_t& pluginSnapshot : clipboard->plugins) {
         DAW::assignFreeStageIds(pluginMgr, pluginSnapshot);

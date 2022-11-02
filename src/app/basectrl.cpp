@@ -305,7 +305,8 @@ bool BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
     return false;
 }
 void BaseCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
-    for (guictr_base* ctr : containers) {
+    auto& renderContainers = getRenderContainers();
+    for (guictr_base* ctr : renderContainers) {
         ctr->prerender(vg);
     }
 }

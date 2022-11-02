@@ -30,7 +30,7 @@ public:
     void setTls(daw_tls::tlsinstance tls) override;
 
     // just for debug asserts, not synchronization control, since this has race conditions
-    bool isLocked();
+    bool isLockedOrNotProcessing();
     bool isRunning();
 private:
     Impl* _M_impl;

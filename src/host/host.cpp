@@ -239,7 +239,7 @@ public:
         if (daw_tls::isTlsInitialized()) {
             auto daw = daw_tls::getTls().dawInstance;
             if (daw) {
-                dbgassert(daw->getPlayThread()->isLocked());
+                dbgassert(daw->getPlayThread()->isLockedOrNotProcessing());
             }
         }
         processingGraph.reset();

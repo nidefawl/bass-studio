@@ -14,8 +14,15 @@ struct async_task_t {
     };
     state m_state = state::idle;
     std::atomic<bool> canceled{ false };
+    bool bRequestFrame = false;
     String errorMessage;
     virtual ~async_task_t() = default;
+    void requestFrame() { bRequestFrame = true; }
+    bool getAndResetReqFrame() {
+        bool b = bRequestFrame;
+        bRequestFrame = false;
+        return b;
+    }
     virtual String getTaskName() const = 0;
     virtual String getProgressDesc() const = 0;
     virtual void getPreciseProgress(double& progressOverall, double& progressDetail) {

@@ -166,5 +166,4 @@ void PopupCtrl::onTick() {
     for (guictr_base* ctr : containers) {
         ctr->onIdle();
     }
-    mainWindow->requestRedraw();
 }

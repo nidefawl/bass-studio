@@ -10,12 +10,14 @@
 #include "assert_dbg.h"
 #include "host/audiobuffer/audioblock.h"
 #include "config.h"
+#include "host/daw/daw_async_project_load.h"
 #include "math/seq_math.h"
 #include "samplerate.h"
 #include "seq_util.h"
 #include "str_util.h"
 #include "host/audiosample.h"
 #include <dr_libs/dr_wav.h>
+#include "thread.h"
 #include "tls.h"
 #include "types.h"
 #include "wave/downsample.h"
@@ -290,6 +292,7 @@ void audiocache::Downsample(audiosample_t* sample) {
         std::vector<samplechannel_t> downsampledChannels(2);
         for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
             samplechannel_t chDownSmpld(static_cast<size_t>(lenSamplesDownsampled));
+            seqthreads::threadSleep(22);
             downsample(sample->sampleRate,
                         sample->samples.at(ch).data(),
                         0,
@@ -716,36 +719,20 @@ void audiocache::unloadAll() {
     this->nextIdx = 0;
 }
 
-void audiocache::load(samplefile_index_t& v, ProjectFileType projectFileType, const String& bundlePath, const String& workingDir) {
+void audiocache::load(samplefile_index_t& sampleIndex, ProjectFileType projectFileType, const String& bundlePath, const String& workingDir) {
     unloadAll();
-    samplefile_index_t copy = v;
-    list.reserve(copy.list.size());
+    struct archive* ar = nullptr;
     if (projectFileType == PROJECT_FILETYPE_BUNDLE && !bundlePath.empty()) {
-
-        struct archive* ar = archive_read_new();
+        ar = archive_read_new();
         archive_read_support_filter_all(ar);
         archive_read_support_format_all(ar);
         archive_read_open_filename(ar, StringAsCStr(bundlePath), 10240);
-        struct archive_entry* entry = nullptr;
-        while (archive_read_next_header(ar, &entry) == ARCHIVE_OK) {
-            const char* entryPath = archive_entry_pathname(entry);
-                auto it = v.list.begin();
-                const auto itEnd = v.list.end();
-                bool bLoaded = false;
-                for (; it != itEnd; ++it) {
-                    if (it->name == entryPath) {
-                        if (!bLoaded) {
-                            loadFile(it->name, it->id, workingDir, ar, entry);
-                            bLoaded = true;
-                        }
-                        it = v.list.erase(it);
-                    }
-                }
-        }
-        archive_read_free(ar);
     }
-    for (auto& fileIndex : v.list) {
-        loadFile(fileIndex.name, fileIndex.id, workingDir, nullptr, nullptr);
+    DAW::samplefile_index_incremental_loader_t loader(this, ar, sampleIndex, workingDir);
+    while (!loader.isFinished()) {
+        log_lf(Log::L_ERROR, "1Loading sample %s\n", StringAsCStr(loader.curFileName));
+        loader.loadSingleStep();
+        log_lf(Log::L_ERROR, "2Loading sample %s\n", StringAsCStr(loader.curFileName));
     }
 }
 

@@ -130,7 +130,9 @@ void PluginControl::onTick() {
     for (guictr_base* ctr : containers) {
         ctr->onTick(this);
     }
-    mainWindow->requestRedraw();
+    for (guictr_base* ctr : containers) {
+        ctr->onIdle();
+    }
 }
 
 void PluginControl::onGuiOpen() {

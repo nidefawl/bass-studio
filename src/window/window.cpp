@@ -691,6 +691,7 @@ class appwindow_main : public appwindow, public window_main {
     int64_t tmDblClick               = 0;
     // int64_t tmLastShaderReloadMillis = 0;
     bool bEnableWindowProfiling = false;
+    bool bHasRedrawRequest = false;
 protected:
     void destroyOverlayWindows();
 
@@ -1041,6 +1042,12 @@ public:
     }
 
     void requestRedraw() override {
+        bHasRedrawRequest = true;
+    }
+    bool getRedrawRequest() {
+        bool b = bHasRedrawRequest;
+        bHasRedrawRequest = false;
+        return b;
     }
 
     void setClipboardText(String s) override {
@@ -1963,6 +1970,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                 break;
             }
             mainWindow->onFastTick();
+            bool bForceRender = mainWindow->getRedrawRequest();
             int64_t tmHRNow = hiresRuntime.getTime();
             int64_t tmLRNow = tmHRNow/1000L;
             const auto timerDelayTarget_us = 20000L;
@@ -1978,7 +1986,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
                 tmHRNow = hiresRuntime.getTime();
             }
             const int64_t minFrameDelayMicros = 1'000'000LL / 100LL;
-            if (tmHRNow - tmHRLastDraw >= minFrameDelayMicros) {
+            if (bForceRender || tmHRNow - tmHRLastDraw >= minFrameDelayMicros) {
                 hiresTimer1.reset();
 
                 // glfwMakeContextCurrent(mainWindow->getGLFW());

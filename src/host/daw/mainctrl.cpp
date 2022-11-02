@@ -100,6 +100,7 @@
 #ifdef __linux__
 #include "platform/linux/windowsize.h"
 #endif
+#include "daw_async_project_load.h"
 
 const int FLAG_DEFER_LOAD               = 0x1;
 const int FLAG_INVOKE_USER_CB_DEFERLOAD = 0x2;
@@ -716,6 +717,9 @@ void CompanionCtrl::showClipEditor() {
 
 void DawCtrl::setAsyncTask(DAW::async_task_t* task) {
     updateViewGuiContainers();
+    relayout();
+    updateVisibleTrackContents();
+    onPluginsChanged();
 }
 
 void MainCtrl::setAsyncTask(DAW::async_task_t* task) {
@@ -763,7 +767,7 @@ void CompanionCtrl::resetMouseContext() {
 
 void DawInstance::unloadProject() {
     AppWndProc_enableBlockReentrant();
-    dbgassert(!playThread.isRunning() || playThread.isLocked());
+    dbgassert(!playThread.isRunning() || playThread.isLockedOrNotProcessing());
     for (auto* ctrl : dawCtrls) {
         ctrl->closeContextMenu();
         ctrl->resetMouseContext();
@@ -1765,7 +1769,6 @@ void DawCtrl::onTick() {
     //    throw std::bad_alloc();
     //}
     //log_lf(Log::L_DEBUG, "onTick %d\n", std::this_thread::get_id());
-    mainWindow->requestRedraw();
 }
 
 void ProjectGraphMonitor::onTick(MainCtrl* ctrl) {
@@ -1975,6 +1978,9 @@ void DawInstance::processTasksMainThread() {
     auto runAsyncTask = asyncTask;
     if (runAsyncTask) {
         runAsyncTask->run();
+        if (runAsyncTask->getAndResetReqFrame()) {
+            getMainControl()->requestRedraw();
+        }
         switch (runAsyncTask->getState()) {
             case state::idle:
                 dbgassert(0);
@@ -2000,9 +2006,6 @@ void DawInstance::onTick() {
 
     tls.host->onTick();
 
-    static int scriptState = -1;
-    static const int64_t tmDelayStateChange = 555;
-    static int64_t tmStateChange = 0;
     bool noPopups = true;
     for (auto* ctrl : dawCtrls) {
         noPopups &= !ctrl->guiDragged && !ctrl->guiCaptured && !ctrl->ctxtmenu;
@@ -2013,76 +2016,8 @@ void DawInstance::onTick() {
         loadFile(file, FLAG_INVOKE_USER_CB_DEFERLOAD);
     }
     if (noPopups && projectToLoad) {
-        std::shared_ptr<project_to_load_t> projectToLoadCpy = projectToLoad;
+        setAsyncTask(new DAW::load_project_task(this, std::move(projectToLoad)));
         projectToLoad = nullptr;
-        bool projectLoadErrored = false;
-        AppWndProc_enableBlockReentrant();
-        try {
-            setLoadedProject(projectToLoadCpy->projectfile, projectToLoadCpy->loadflags);
-        } catch (std::exception& e) {
-            log_printf("Failed loading project: %s\n", e.what());
-            projectLoadErrored = true;
-        } catch (...) {
-            log_printf("Failed loading project. Unhandled exception\n");
-            projectLoadErrored = true;
-        }
-        AppWndProc_disableBlockReentrant();
-        if (cbProjectLoadCompleteCallback) {
-            cbProjectLoadCompleteCallback(this, projectToLoadCpy->projectfile, projectLoadErrored ? 1 : 0);
-            cbProjectLoadCompleteCallback = nullptr;
-        }
-        log_printf("Project load completed %s\n", projectLoadErrored ? "with errors" : "succesfully");
-        if (scriptState != -1) {
-            scriptState = 2;
-            tmStateChange = getTimeMillis();
-        }
-    } else {
-        static size_t fileIndexToLoad = 0;
-        static recentfilelist fileListStatic = tls.settings->recentfiles;
-        static seq_rand rnd;
-                
-        if (fileListStatic.sortedEntries.empty()) {
-            fileListStatic = tls.settings->recentfiles;
-        }
-        auto tmMillis = getTimeMillis();
-        if (scriptState == 0 && (tmMillis - tmStateChange) > tmDelayStateChange) {
-            tmStateChange = tmMillis;
-            rnd.rng_seed(static_cast<uint64_t>(tmStateChange));
-            fileIndexToLoad++;
-            if (fileIndexToLoad >= fileListStatic.sortedEntries.size()) {
-                fileIndexToLoad = 0;
-            }
-            if (fileIndexToLoad < fileListStatic.sortedEntries.size()) {
-                String filename = fileListStatic.sortedEntries[fileIndexToLoad];
-                loadFile(filename, FLAG_INVOKE_USER_CB_DEFERLOAD);
-                if (projectToLoad) {
-                    scriptState = 1;
-                }
-            }
-        }
-        if (scriptState == 2 && (tmMillis - tmStateChange) > tmDelayStateChange) {
-            tmStateChange = tmMillis;
-            startPlaying();
-            scriptState = 3;
-        }
-        if (scriptState >= 3 && (tmMillis - tmStateChange) > tmDelayStateChange) {
-            std::vector<effectbase*> pluginsDeferred;
-            tls.host->getDeferredEffects(pluginsDeferred);
-            if (!pluginsDeferred.empty()) {
-                auto idx = rnd.rng_bits(8)%pluginsDeferred.size();
-                auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[idx]);
-                effectbase* pluginLoaded;
-                ThreadLock lock = getPlayThread()->lockThread();
-                tls.host->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
-            } else {
-                scriptState = 10;
-            }
-            tmStateChange = getTimeMillis();
-            scriptState++;
-            if (scriptState >= 10) {
-                scriptState = 0;
-            }
-        }
     }
     
     if (tls.mainCtrl) {
@@ -2158,7 +2093,7 @@ void GetProjectReferencedSampleIds(const project_t& project, std::vector<int32_t
         }
     }
 }
-}
+}// namespace DAW
 void DawInstance::unloadUnreferencedSamples() {
     std::vector<int32_t> uniqueSampleIds;
     DAW::GetProjectReferencedSampleIds(project, uniqueSampleIds);
@@ -2166,7 +2101,7 @@ void DawInstance::unloadUnreferencedSamples() {
     tls.audioCache->unloadUnreferenced(uniqueSampleIds);
 }
 
-bool DawInstance::setProjectToLoad(std::shared_ptr<project_file> file, int flags) {
+bool DawInstance::setProjectToLoad(const std::shared_ptr<project_file>& file, int flags) {
     projectToLoad = std::make_shared<project_to_load_t>(project_to_load_t{ std::move(file), flags });
     return true;
 }
@@ -2192,11 +2127,17 @@ bool DawInstance::setProjectToLoad(std::shared_ptr<project_file> file, int flags
  * @param flags - 0 or FLAG_DEFER_LOAD (don't load vst plugins, use placeholders)
  * @return
  */
-bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
+bool DawInstance::setLoadedProject(const std::shared_ptr<project_file>& file, int flags) {
+    ThreadLock lock = playThread.lockThread();
+    loadProject0(file);
+    bool b = loadProject1(file, flags);
+    loadProjectFinish();
+    return b;
+}
+void DawInstance::loadProject0(const std::shared_ptr<project_file>& file) {
 
     setAudioThreadState(playback_state::status_no_process);
     log_printf("Loading project %s: %zu tracks\n", StringAsCStr(file->path), project.trackList.size());
-    ThreadLock lock = playThread.lockThread();
     unloadProject();
     /** make sure call to unloadProject unloaded all vst2 instances **/
     dbgassert(tls.host->getVst2Instances().empty());
@@ -2211,6 +2152,10 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
         this->projectFileType = PROJECT_FILETYPE_JSON;
     }
 
+    /** set as current project **/
+    this->projectPath = file->path;
+    lastProjectDirectory = loadFileDirectory;
+    this->layoutsFromProjectFile = file->layouts;
     /** populates trackList **/
     project.copyFrom(file->project);
     projectGlobals      = file->project.globals;
@@ -2246,6 +2191,8 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
     /** inform host about track layout changes so it resets and updates internal structures **/
     tls.host->onTrackLayoutChange();
+}
+bool DawInstance::loadProject1(const std::shared_ptr<project_file>& file, int flags) {
     /**
      * The following loop calls activateDeferred on all tracks, effectively doing the following sequence for each track:
      *  - load shared libraries
@@ -2271,13 +2218,11 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
         }
     }
 
-    tls.audioCache->load(file->sampleFileIndex, projectFileType, file->path, loadFileDirectory);
+    tls.audioCache->load(file->sampleFileIndex, projectFileType, file->path, lastProjectDirectory);
     for (track_t* tr : project.trackList) {
         tr->getStage()->pluginsChanged();
     }
     tls.host->onTrackLayoutChange();
-
-    this->layoutsFromProjectFile = file->layouts;
     /** validate cursor state **/
     auto ctrl = tls.mainCtrl;
     if (ctrl) {
@@ -2290,33 +2235,38 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
         ctrl->grid.setLayout(file->layout.layoutGrid);
         ctrl->view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
     }
-
     updateVisibleTrackContents();
+    return true;
+}
+void DawInstance::loadProjectFinish() {
     for (DawCtrl* pDawCtrl : dawCtrls) {
         pDawCtrl->fixCursor();
     }
-
-    /** set as current project **/
-    this->projectPath = file->path;
-    lastProjectDirectory = loadFileDirectory;
-    tls.settings->recentfiles.add(file->path);
-
+    tls.settings->recentfiles.add(projectPath);
     this->tmLastSave  = getTimeMillis();
+    String s = StringFormat("Loaded project %s", StringAsCStr(this->projectPath));
+    log_lf(Log::L_INFO, "%s\n", StringAsCStr(s));
     if (tls.mainCtrl) {
-        tls.mainCtrl->setStatusText(StringFormat("Loaded project %s", StringAsCStr(this->projectPath)));
+        tls.mainCtrl->setStatusText(s);
         String projectFileName;
         SplitPath(this->projectPath, nullptr, &projectFileName, nullptr);
         tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::BUILD_BINARY_NAME, StringAsCStr(projectFileName)));
     }
 
     setAudioThreadState(playback_state::status_stop);
-    return true;
+    if (cbProjectLoadCompleteCallback) {
+        auto projectLoadErrored = false;
+        cbProjectLoadCompleteCallback(this, projectToLoad->projectfile, projectLoadErrored ? 1 : 0);
+        cbProjectLoadCompleteCallback = nullptr;
+    }
+    updateVisibleTrackContents();
 }
+
 
 void MainCtrl::dragContainerRelayout(drag_ctr_event evt) {
     viewContainers->dragContainerRelayout(this, evt);
     if (evt.evtType == BaseCtrl::drag_ctr_event_type::DRAG_END) {
-        BaseCtrl::relayout();
+        relayout();
     }
 }
 
@@ -2748,7 +2698,7 @@ bool MainCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
                         saveDawViewLayoutSnapshot(layouts[index], StringFormat("data/view%zu.layout", index));
                     } else {
                         view->loadLayout(layouts[index]);
-                        BaseCtrl::relayout();
+                        relayout();
                         dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
                     }
                     return true;
@@ -3202,7 +3152,7 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
     //log_printf("prerender %d\n", seqthreads::getCurrentThreadId());
 
     hires_timer_t timer;
-    for (guictr_base* ctr : containers) {
+    for (guictr_base* ctr : getRenderContainers()) {
         ctr->prerender(nanovgCtxt);
     }
     renderStats.timePrerender = timer.getTime();
@@ -3326,9 +3276,128 @@ void DawInstance::setAsyncTask(DAW::async_task_t* task) {
 void DawCtrl::updateViewGuiContainers() {
     viewRender = viewGuiContainers;
     if (daw.getAsyncTask()) {
+        resetMouseContext();
         viewRender.push_back(&guiCtrProgress);
         containers = viewAsyncProgress;
         return;
     }
     containers = viewGuiContainers;
 }
+
+namespace DAW {
+
+void load_project_task::run() {
+    switch (m_state) {
+    case state::idle:
+        m_state = state::running;
+        break;
+    case state::running: {
+        project_file* file = projectToLoad->projectfile.get();
+        AppWndProc_enableBlockReentrant();
+        try {
+            switch (step) {
+                case 0:
+                    daw->loadProject0(projectToLoad->projectfile);
+                    if ((projectToLoad->loadflags & FLAG_DEFER_LOAD) == 0) {
+                        daw->getHost()->getDeferredEffects(pluginsDeferred);
+                        numSubsteps = CtrSize(pluginsDeferred);
+                        taskDesc = StringFormat("Load %d Plugins", numSubsteps);
+                    }
+                    step++;
+                break;
+                case 1:
+                    if ((projectToLoad->loadflags & FLAG_DEFER_LOAD) == 0) {
+                        if (substep < numSubsteps) {
+                            auto* plugin = pluginsDeferred[substep];
+                            progressDesc = "Load Plugin " + plugin->getName();
+                            effectbase* pluginLoaded = nullptr;
+                            daw->getHost()->activateDeferred(plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
+                            substep++;
+                        }
+                    }
+                    if (substep == numSubsteps) {
+                        auto cache = daw->getAudioCache();
+                        cache->unloadAll();
+                        struct archive* ar = nullptr;
+                        if (daw->projectFileType == PROJECT_FILETYPE_BUNDLE && !file->path.empty()) {
+                            ar = archive_read_new();
+                            archive_read_support_filter_all(ar);
+                            archive_read_support_format_all(ar);
+                            archive_read_open_filename(ar, StringAsCStr(file->path), 10240);
+                        }
+                        this->sampleLoader = std::make_shared<DAW::samplefile_index_incremental_loader_t>(cache, ar, file->sampleFileIndex, daw->lastProjectDirectory);
+
+                        taskDesc = StringFormat("Load %zu Samples", file->sampleFileIndex.list.size());
+                        step++;
+                        substep = 0;
+                        numSubsteps = 0;
+                        // while (!loader.isFinished()) {
+                        //     log_lf(Log::L_ERROR, "1Loading sample %s\n", StringAsCStr(loader.curFileName));
+                        //     loader.loadSingleStep();
+                        //     log_lf(Log::L_ERROR, "2Loading sample %s\n", StringAsCStr(loader.curFileName));
+                        // }
+                    }
+                break;
+                case 2: {
+                    if (sampleLoader) {
+                        sampleLoader->loadSingleStep();
+                        progressDesc = sampleLoader->curFileName;
+                        if (sampleLoader->isFinished()) {
+                            sampleLoader.reset();
+                            step++;
+                        }
+                    }
+                    break;
+                case 3:
+                    progressDesc = "Finalize";
+                    for (track_t* tr : daw->project.trackList) {
+                        tr->getStage()->pluginsChanged();
+                    }
+                    daw->getHost()->onTrackLayoutChange();
+                    /** validate cursor state **/
+                    auto ctrl = daw->getMainControl();
+                    if (ctrl) {
+                        if (daw->layoutsFromProjectFile.size() > 0) {
+                            ctrl->loadLayout(daw->layoutsFromProjectFile[0]);
+                        }
+                        ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackCtr);
+                        ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackReturnCtr);
+                        ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackMasterCtr);
+                        ctrl->grid.setLayout(file->layout.layoutGrid);
+                        ctrl->view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
+                    }
+                    daw->loadProjectFinish();
+                }
+                default:
+                    setFinished();
+                break;
+            }
+        } catch (std::exception& e) {
+            log_printf("Failed loading project: %s\n", e.what());
+            projectLoadErrored = true;
+        } catch (...) {
+            log_printf("Failed loading project. Unhandled exception\n");
+            projectLoadErrored = true;
+        }
+        AppWndProc_disableBlockReentrant();
+        requestFrame();
+        break;
+    }
+    case state::error:
+    case state::finished:
+    case state::cancelled:
+        break;
+    }
+}
+void load_project_task::getPreciseProgress(double& progressOverall, double& progressDetail) {
+    if (sampleLoader) {
+        progressDetail = sampleLoader->getProgress();
+    } else if (numSubsteps) {
+        progressDetail = substep / (double) numSubsteps;
+    } else {
+        progressDetail = step < 2 ? 0 : 1;
+    }
+    progressOverall = (step / 2 + progressDetail) / 2.0;
+}
+
+} // namespace DAW

@@ -3,6 +3,7 @@
 #include "gui/container/container.h"
 #include "guicolors.h"
 #include "host/daw/mainctrl.h"
+#include "logging.h"
 #include "str_util.h"
 #include <nanovg.h>
 
@@ -11,9 +12,6 @@ class async_test_task_impl : public DAW::async_task_t {
     int32_t step = 0;
     int32_t step2 = 0;
     String progressDesc = "testing";
-    // virtual String getTaskName() const = 0;
-    // virtual String getProgressDesc() const = 0;
-    // virtual void getPreciseProgress(double& progressOverall, double& progressDetail) {
     String getTaskName() const override {
         return "Test task";
     }
@@ -90,6 +88,8 @@ void gui_asyc_progress::render(NVGcontext* vg) {
 
     auto task = dawCtrl->getDaw()->getAsyncTask();
     if (task) {
+        label = task->getTaskName();
+        desc = task->getProgressDesc();
         double progressOverall = 0;
         double progressDetail = 0;
         task->getPreciseProgress(progressOverall, progressDetail);
@@ -110,8 +110,10 @@ void gui_asyc_progress::render(NVGcontext* vg) {
             nvgFillCustomPar(vg, -3);
             nvgFill(vg);
             float fontHeight = h * 0.5f;
-            renderText(vg, vec2(x + w/2, y + h / 2), vec2(w*0.5f, h), StringFormat("%.0f%%", progress * 100), fontHeight, NVG_ALIGN_CENTER| NVG_ALIGN_MIDDLE);
-            renderText(vg, vec2(x + fontHeight, y + h / 2), vec2(w-fontHeight, h), i == 0 ? label : desc, h * 0.65f, NVG_ALIGN_LEFT| NVG_ALIGN_MIDDLE);
+            float pos = renderText(vg, vec2(x + fontHeight, y + h / 2), vec2(w-fontHeight, h), i == 0 ? label : desc, h * 0.65f, NVG_ALIGN_LEFT| NVG_ALIGN_MIDDLE);
+            if (pos < w * 0.45f) {
+                renderText(vg, vec2(x + w / 2, y + h / 2), vec2(w * 0.5f, h), StringFormat("%.0f%%", progress * 100), fontHeight, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+            }
         }
 
     }
