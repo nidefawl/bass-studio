@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
         const sampleformat_t sampleformat = {44100, 512, sampleformat_bits_t::FLOAT_32};
         log_out("Testing Samplerate %uHz at Blocksize %u\n", sampleformat.sampleRate, sampleformat.blockSize);
         log_out("Deadline for block: %zuns\n", (sampleformat.blockSize*uint64_t(1000000000))/sampleformat.sampleRate);
-        getGlobalLogger()->setLevel(Log::LEVEL_ALL);
+        getGlobalLogger()->setLevel(Log::L_WARN);
 
         std::shared_ptr<DAW::AudioIO::AudioStream> audiostream = std::make_shared<FakeAudioStream>(sampleformat, inputChannels, outputChannels);
 
@@ -198,12 +198,12 @@ int main(int argc, char** argv) {
                 while (stream->getInputQueueSize() < 1) {
                     stream->enqueueInput(nullptr);
                 }
-                if (nIt == 8)
-                    DebugAlloc::beginTrace();
+                // if (nIt == 8)
+                    // DebugAlloc::beginTrace();
                 // log_lf(Log::L_DEBUG, "process Block %d Sample %d Tick %f\n", nIt, samplePos, tickPos);
                 int32_t processedBlock = host->processPlayback(dawInstance, samplePos, tickPos, playback_state::status_playback, inLoop, isLoopAround);
-                if (nIt == 8)
-                    DebugAlloc::endTrace();
+                // if (nIt == 8)
+                    // DebugAlloc::endTrace();
                 nIt++;
                 while (stream->getOutputQueueSize() > 0) {
                     AudioBuffer* dequeuedBuf = nullptr;
