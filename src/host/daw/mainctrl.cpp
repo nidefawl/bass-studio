@@ -2456,15 +2456,15 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
             || StrEndsWith(path, "." PROJECT_FILE_EXT))
             return true;
         if (StrEndsWith(path, ".wav")) {
-            String a, b, c, d;
-            SplitPath(path, &a, &b, &c, &d);
+            String nameWithoutExt;
+            SplitPath(path, nullptr, &nameWithoutExt, nullptr, nullptr);
             audiofile_t* audio = daw.getAudioCache()->loadFile(path, -1, "", nullptr, nullptr);
             if (audio) {
                 auto* sample = audio->sample.get();
                 if (sample) {
                     clip_t clip;
                     clip.clipType = CLIP_AUDIO;
-                    clip.name     = b;
+                    clip.name     = nameWithoutExt;
                     //clip.notes = move(notes);
                     clip.audio.id = audio->id;
                     clip.setLenSamples(sample->nSamples);

@@ -675,7 +675,7 @@ private:
     gui_waveform_texture_ref* waveformRef;
     int32_t tickOffset  = 0;
     void renderAudioClip(NVGcontext* vg);
-
+    clip_dragaction action;
 public:
     gui_audiocontent(scaled_grid& _grid, clip_view& _view);
     ~gui_audiocontent() override;
@@ -684,6 +684,79 @@ public:
     void render(NVGcontext* vg) override;
     void prerender(NVGcontext* vg) override;
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
+
+
+    bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override {
+        bool hit = guictr_base::mouseHitTest(v, evt);
+        if (!hit && this->contains(v) && evt.type == MOUSE_DRAGDROP_CLIP) {
+            evt.requestFocus(this);
+            return true;
+        }
+        return hit;
+    }
+    bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+        bool bHasAudioSample = false;
+        for (auto& track : clip.clipboard->tracks) {
+            for (auto& clip : track->clips) {
+                if (clip->audio.id >= 0) {
+                    bHasAudioSample = true;
+                    break;
+                }
+            }
+            if (bHasAudioSample)
+                break;
+        }
+        if (bHasAudioSample) {
+            clip_clipboard* clipboard = clip.clipboard.get();
+            clipboard->srcTrack       = 0;
+            action.dragtype           = clip_dragtype_t::DROP_FILE_EXTERNAL;
+            action.clipboard          = clip.clipboard;
+            action.cursorBegin        = {};
+            clip.isValidTarget        = true;//inform higher level that we accept and process this drop attempt
+            clip.target               = makeSafeRef();
+            return true;
+        }
+        return false;
+    }
+    bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+        if (!action.dragtype) {
+            if (!clipDropBegin(clip, mousepos, kbmods))
+                return false;
+        }
+        if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
+            // dragClipboardMove(mousepos, kbmods);
+            clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
+            clip.target        = makeSafeRef();
+            return true;
+        }
+        return false;
+    }
+    bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override {
+        if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
+
+            for (auto& track : clip.clipboard->tracks) {
+                for (auto& clip : track->clips) {
+                    if (clip->audio.id >= 0) {
+                        auto thisClip = this->view.clip();
+                        thisClip->audio.id = clip->audio.id;
+                        thisClip->setDirty();
+                        dawCtrl->getDaw()->updateVisibleTrackContents();
+                        dawCtrl->showClipEditor();
+                        dawCtrl->getDaw()->setEditClip(this->view.gui);
+                        return true;
+                    }
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+    void clipDropCancel() override {
+        if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
+            action.clipboard = nullptr;
+            action.dragtype  = DRAG_NONE;
+        }
+    }
 
     void releaseRendered();
     void updatePosition();
