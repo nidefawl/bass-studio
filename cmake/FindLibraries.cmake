@@ -101,6 +101,7 @@ FUNCTION(CONFIGURE_TARGET_DEPS TARGETNAME)
     ${PROJECT_DEPS_PATH}/cereal/include
     ${PROJECT_DEPS_PATH}/clap/include
     ${PROJECT_DEPS_PATH}/clap-helpers/include
+    ${PROJECT_DEPS_PATH}/dr_libs
   )
   target_include_directories(${TARGETNAME} SYSTEM PUBLIC ${PROJECT_DEPS_PATH}/muparser/include)
 

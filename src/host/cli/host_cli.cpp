@@ -22,6 +22,7 @@
 #include "host/plugindatabase/plugindatabase.h"
 #include "threads/playbackthread.h"
 #include <dr_libs/dr_wav.h>
+#include "types.h"
 #include "util/testing_environment.h"
 #include "appconfig.h"
 #include "host/host.h"
@@ -392,13 +393,16 @@ int runCommandLineHost(const std::vector<String>& args) {
             int64_t samplesWritten = 0;
 
             projectGlobals.cursor.cursorPos = projectGlobals.loopStart;
-            if (fStart >= 0.0) {
-                projectGlobals.cursor.cursorPos = math::rounddS32(fStart * TICKS_BAR);
-                projectGlobals.loopStart        = math::rounddS32(fStart * TICKS_BAR);
-            }
             if (fStart >= 0.0 && fLength >= 0.0) {
                 projectGlobals.loopEnabled = false;
                 //                project.loopLen = math::roundD(fLength*TICKS_BAR);
+            } else if (projectGlobals.loopEnabled) {
+                fStart = projectGlobals.loopStart / float(TICKS_BAR);
+                fLength = projectGlobals.loopLen / float(TICKS_BAR);
+            }
+            if (fStart >= 0.0) {
+                projectGlobals.cursor.cursorPos = math::rounddS32(fStart * TICKS_BAR);
+                projectGlobals.loopStart        = math::rounddS32(fStart * TICKS_BAR);
             }
 
             host->prjGlobals = projectGlobals;
@@ -506,24 +510,29 @@ int runCommandLineHost(const std::vector<String>& args) {
             }
 
             int trackIndex      = 0;
+            AudioBlock blockTrack;
             for (auto* trackMaster : project.trackMasterCtr) {
                 auto* trImpl = trackMaster->getStage();
                 if (isSet(trImpl->flags, audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::RECORD_OUTPUT)) {
                     trImpl->audioOutput.convertToSamples(tls.host);
+                    auto sampleBegin = tickToSampleConvert<samplecount_t, roundmode::floor>(fStart * TICKS_BAR, host->prjGlobals.tempo100,
+                                                                         host->m_sampleFormatInternal.sampleRate);
+                    auto sampleLen = tickToSampleConvert<samplecount_t, roundmode::ceil>(fLength * TICKS_BAR,
+                                                                            host->prjGlobals.tempo100,
+                                                                            host->m_sampleFormatInternal.sampleRate);
                     std::vector<audiotrack_split_t*> samples;
-                    trImpl->audioOutput.visitSamples_NoLock([&samples](std::shared_ptr<audiotrack_split_t>& split) {
+                    trImpl->audioOutput.visitSamples_NoLock([&samples,sampleBegin,sampleLen](std::shared_ptr<audiotrack_split_t>& split) {
                         auto* ptrSplit = split.get();
-                        if (ptrSplit) {
+                        if (ptrSplit && !(ptrSplit->samplePos >= sampleBegin + sampleLen || ptrSplit->samplePos + ptrSplit->getSample()->nSamples <= sampleBegin)) {
                             samples.push_back(ptrSplit);
                         }
                     });
                     if (!samples.empty()) {
-                        static constexpr int32_t PER_BLOCK_BYTES   = (1024 * 512);
-                        static constexpr int32_t PER_BLOCK_SAMPLES = (PER_BLOCK_BYTES / (sizeof(float)));
-                        AudioBlock blockTrack(1, PER_BLOCK_SAMPLES * trImpl->output.channels);
                         std::sort(samples.begin(), samples.end(), [](audiotrack_split_t* lhs, audiotrack_split_t* rhs) {
                             return lhs->samplePos < rhs->samplePos;
                         });
+                        samplecount_t splitSize = samples.front()->sample.nSamples;
+                        auto totalLen = samplecount_t(samples.size()*splitSize);
 
                         drwav_data_format format;
                         format.container = drwav_container_riff; // <-- drwav_container_riff = normal WAV files,
@@ -532,32 +541,35 @@ int runCommandLineHost(const std::vector<String>& args) {
                         format.channels      = trImpl->output.channels;
                         format.sampleRate    = trImpl->sampleFormat.sampleRate;
                         format.bitsPerSample = 32;
-                        drwav* pWav;
                         if (!fOutWave.empty()) {
-                            String nameWaveFileTrack =
-                                    fOutWave + "_" + std::to_string(trackIndex) + "_" + trackMaster->name + "_f32.wav";
-                            pWav = drwav_open_file_write(StringAsCStr(nameWaveFileTrack), &format);
+                            String nameWaveFileTrack = fOutWave + "_" + std::to_string(trackIndex) + "_" + trackMaster->name + "_f32.wav";
+                            drwav wav;
+                            if (!drwav_init_file_write_sequential_pcm_frames(&wav, StringAsCStr(nameWaveFileTrack), &format, totalLen, nullptr)) {
+                                log_lf(Log::L_WARN, "drwav_init_file_write_sequential_pcm_frames failed\n");
+                                return 0;
+                            }
                             struct close_wave_file_write {
                                 drwav* wav;
-                                ~close_wave_file_write() { drwav_close(wav); }
-                            } closeWaveFile{pWav};
+                                ~close_wave_file_write() { drwav_uninit(wav); }
+                            } closeWaveFile{&wav};
                             for (audiotrack_split_t* split : samples) {
                                 auto* sample = split->getSample();
                                 dbgassert(sample->nChannels == trImpl->output.channels);
                                 dbgassert(sample->nChannels == sample->samples.size());
                                 dbgassert(sample->nSamples == static_cast<int64_t>(sample->samples[0].size()));
                                 dbgassert(sample->nSamples == static_cast<int64_t>(sample->samples[1].size()));
-                                dbgassert(blockTrack.samples == sample->nSamples * 2);
-                                dbgassert(blockTrack.samples >= sample->nSamples * 2);
-                                float* in1      = sample->samples[0].data();
-                                float* in2      = sample->samples[1].data();
-                                float* largeBuf = blockTrack.buf[0];
-                                for (int64_t nSample = 0; nSample < sample->nSamples; nSample++) {
-                                    *largeBuf++ = *in1++;
-                                    *largeBuf++ = *in2++;
+                                if (blockTrack.samples < sample->nSamples * sample->nChannels) {
+                                    blockTrack = AudioBlock(1, sample->nSamples * sample->nChannels);
                                 }
-
-                                samplesWritten += drwav_write(pWav, blockTrack.samples, blockTrack.buf[0]);
+                                auto beginOffset = math::max<samplecount_t>(0, sampleBegin - split->samplePos);
+                                auto readLen     = math::min<samplecount_t>(sample->nSamples, (sampleBegin + sampleLen) - split->samplePos) - beginOffset;
+                                float* largeBuf = blockTrack.buf[0];
+                                for (int64_t nSample = 0; nSample < readLen; ++nSample) {
+                                    for (channelnum_t ch = 0; ch < sample->nChannels; ++ch) {
+                                        *largeBuf++ = sample->samples[ch][beginOffset + nSample];
+                                }
+                                }
+                                samplesWritten += samplecount_t(drwav_write_pcm_frames(&wav, readLen, blockTrack.buf[0]));
                             }
                             log_printf("wrote %zd samples to %s\n", samplesWritten, StringAsCStr(nameWaveFileTrack));
                         }
@@ -568,9 +580,7 @@ int runCommandLineHost(const std::vector<String>& args) {
 
 
             std::vector<track_t*> _tracks = project.trackList.getAllTracksFlatVec();
-            log_printf("DELETE _tracks %zu\n", _tracks.size());
             for (track_t* tr : _tracks) {
-                log_printf("DELETE TRACK %s\n", StringAsCStr(tr->name));
                 host->unloadTrack(tr);
                 project.trackList.removeTrack(tr);
             }

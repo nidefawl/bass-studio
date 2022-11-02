@@ -583,13 +583,16 @@ int64_t Host::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, sam
     format.sampleRate = trImpl->sampleFormat.sampleRate;
     format.bitsPerSample = 32;
 
-    //String nameWaveFileTrack = fOutWave+"_"+std::to_string(trackIndex)+"_"+trackMaster->name+"_f32.wav";
-    String nameWaveFileTrack = fOutWave;
-    drwav* pWav = drwav_open_file_write(StringAsCStr(nameWaveFileTrack), &format);
+    drwav wav;
+    if (!drwav_init_file_write_sequential_pcm_frames(&wav, StringAsCStr(fOutWave), &format, numSamples, nullptr)) {
+        log_lf(Log::L_WARN, "drwav_init_file_write_sequential_pcm_frames failed\n");
+        return 0;
+    }
+
     struct close_wave_file_write {
         drwav* wav;
-        ~close_wave_file_write() { drwav_close(wav); }
-    } closeWaveFile{pWav};
+        ~close_wave_file_write() { drwav_uninit(wav); }
+    } closeWaveFile{&wav};
 
 
     AudioBlock blockFull(1, SPLIT_SAMPLECOUNT*numChannels);
@@ -620,13 +623,13 @@ int64_t Host::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, sam
                 *out0++ = *in2++;
             }
             samplesWritten2 += readLen;
-            samplesWritten += drwav_write(pWav, readLen * numChannels, blockFull.buf[0]);
+            samplesWritten += samplecount_t(drwav_write_pcm_frames(&wav, readLen, blockFull.buf[0]));
         }
         sampleIdx++;
     }
 
-    log_printf("Wrote %zd chunks/%zd samples into %s\n", sampleIdx, samplesWritten, StringAsCStr(nameWaveFileTrack));
-    log_printf("processed %zu splits and %zd samples\n", samples.size(), samplesWritten2);
+    log_lf(Log::L_INFO,"Wrote %zd chunks/%zd samples into %s\n", sampleIdx, samplesWritten, StringAsCStr(fOutWave));
+    log_lf(Log::L_INFO,"Processed %zu splits and %zd samples\n", samples.size(), samplesWritten2);
 
     return samplesWritten;
 }

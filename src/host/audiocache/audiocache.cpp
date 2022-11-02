@@ -199,21 +199,20 @@ audiofile_t* audiocache::createSample(const create_sample_req_t& ssr) {
     dbgassert(mapId[_id] == pFile);
     return pFile;
 }
-static bool LoadAudioSample(drwav& wav, audiosample_t* sample, samplerate_t samplerate, String taskDesc) {
+static bool LoadAudioSample(drwav& wav, audiosample_t* sample, samplerate_t samplerate, const char* taskDesc) {
     {
         struct close_wave_file {
             drwav* wav;
             ~close_wave_file() { drwav_uninit(wav); }
         } closeWaveFile{&wav};
-        std::vector<float> pSamples(wav.totalSampleCount);
+        std::vector<float> pSamples(wav.totalPCMFrameCount * wav.channels);
         memset(pSamples.data(), 0, sizeof(float) * pSamples.size());
-        samplecount_t numSamplesInterleaved = drwav_read_f32(&wav, wav.totalSampleCount, pSamples.data());
-        pSamples.resize(numSamplesInterleaved);
+        auto numSamplesInput = samplecount_t(drwav_read_pcm_frames_f32(&wav, wav.totalPCMFrameCount, pSamples.data()));
         if (wav.channels <= 0) {
-            log_lf(Log::L_WARN, "File %s has 0 channels\n", StringAsCStr(taskDesc));
+            log_lf(Log::L_WARN, "File %s has 0 channels\n", taskDesc);
             return false;
         }
-        // log_lf(Log::L_TRACE, "totalSampleCount: %zu\n", wav.totalSampleCount);
+        // log_lf(Log::L_TRACE, "totalSampleCount: %zu\n", wavTotalSampleCount);
         // log_lf(Log::L_TRACE, "numSamplesRead: %zu\n", numSamplesRead);
         // log_lf(Log::L_TRACE, "channels: %d\n", wav.fmt.channels);
         // log_lf(Log::L_TRACE, "sampleRate: %d\n", wav.fmt.sampleRate);
@@ -227,13 +226,12 @@ static bool LoadAudioSample(drwav& wav, audiosample_t* sample, samplerate_t samp
         sample->nSamples      = 0;
 
         std::vector<samplechannel_t> loadedSampleChannels(sample->nChannels);
-        samplecount_t numSamplesInput = numSamplesInterleaved / wav.channels;
         // deinterleave
         for (channelnum_t i = 0; i < sample->nChannels; i++) {
             loadedSampleChannels[i].resize(numSamplesInput);
             auto out = loadedSampleChannels[i].begin();
             // interleaved sample is at samples[ chIdx + sampleIdx * chCount ]
-            for (samplecount_t j = i; j < numSamplesInterleaved; j += wav.channels) {
+            for (samplecount_t j = i; j < numSamplesInput * wav.channels; j += wav.channels) {
                 *out++ = pSamples[j];
             }
         }
@@ -377,7 +375,7 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String
     std::vector<uint8_t> heapBuffer;
     bool bCanRead = false;
     if (!entry) {
-        bCanRead = drwav_init_file(&wav, StringAsCStr(path));
+        bCanRead = drwav_init_file(&wav, StringAsCStr(path), nullptr);
         if (!bCanRead) {
             log_lf(Log::L_WARN, "Failed to read file %s\n", StringAsCStr(path));
         }
@@ -390,13 +388,13 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String
         if (sizeRead != sizeToRead) {
             log_lf(Log::L_WARN, "Failed to read file %s: read %zd bytes, expected %zd bytes\n", StringAsCStr(path), sizeRead, sizeToRead);
         } else {
-            bCanRead = drwav_init_memory(&wav, heapBuffer.data(), heapBuffer.size());
+            bCanRead = drwav_init_memory(&wav, heapBuffer.data(), heapBuffer.size(), nullptr);
         }
         if (!bCanRead) {
             log_lf(Log::L_WARN, "Failed to read file %s\n", StringAsCStr(path));
         }
     }
-    if (LoadAudioSample(wav, pFile->sample.get(), samplerate, path)) {
+    if (LoadAudioSample(wav, pFile->sample.get(), samplerate, path.c_str())) {
         pFile->state |= audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_LOADED;
         log_printf("Loaded %s\n", StringAsCStr(path));
     } else {
@@ -423,9 +421,9 @@ int saveSampleToArchive(audiofile_t& file, struct archive_entry* entry, struct a
 
     size_t dataSize = 0;
     void* pData = nullptr;
-    drwav* pWav = drwav_open_memory_write(&pData, &dataSize, &format);
-    if (!pWav) {
-        onError("drwav_open_memory_write returned NULL", file.path);
+    drwav wav{};/* , &format */
+    if (!drwav_init_memory_write_sequential_pcm_frames(&wav, &pData, &dataSize, &format, sample->nSamples*format.channels, nullptr)) {
+        onError("drwav_init_memory returned NULL", file.path);
         return ARCHIVE_FATAL;
     }
 
@@ -440,13 +438,12 @@ int saveSampleToArchive(audiofile_t& file, struct archive_entry* entry, struct a
             out0 += format.channels;
         }
     }
-
-    auto toWrite = drwav_uint64(sample->nSamples*format.channels);
-    auto samplesWritten = drwav_write(pWav, toWrite, blockFull.buf[0]);
-    drwav_close(pWav);
+    static_assert(sizeof(drwav_uint64) == 8, "drwav_uint64 is not 64 bits");
+    auto toWrite = sample->nSamples;
+    auto samplesWritten = samplecount_t(drwav_write_pcm_frames(&wav, toWrite, blockFull.buf[0]));
     struct free_wave_buffer {
         void* pData;
-        ~free_wave_buffer() { drwav_free(pData); }
+        ~free_wave_buffer() { drwav_free(pData, nullptr); }
     } freeWaveBuffer{pData};
     if (samplesWritten != toWrite || !pData) {
         onError(StringFormat("drwav_write: Only %zu/%zu samples written\n", samplesWritten, toWrite), StringAsCStr(file.name));
@@ -488,12 +485,15 @@ samplecount_t saveSampleToFile(audiofile_t& file, const String& fOutWave) {
     format.channels = sample->nChannels;
     format.sampleRate = sample->sampleRate;
     format.bitsPerSample = 32;
-
-    drwav* pWav = drwav_open_file_write(StringAsCStr(fOutWave), &format);
+    drwav wav;
+    if (!drwav_init_file_write_sequential_pcm_frames(&wav, StringAsCStr(fOutWave), &format, sample->nSamples, nullptr)) {
+        log_lf(Log::L_WARN, "drwav_init_file_write_sequential_pcm_frames failed\n");
+        return 0;
+    }
     struct close_wave_file_write {
         drwav* wav;
-        ~close_wave_file_write() { drwav_close(wav); }
-    } closeWaveFile{pWav};
+        ~close_wave_file_write() { drwav_uninit(wav); }
+    } closeWaveFile{&wav};
 
     AudioBlock blockFull(1, sample->nSamples*format.channels);
 
@@ -507,9 +507,8 @@ samplecount_t saveSampleToFile(audiofile_t& file, const String& fOutWave) {
         }
     }
 
-    auto toWrite = drwav_uint64(sample->nSamples*format.channels);
-    auto samplesWritten = drwav_write(pWav, toWrite, blockFull.buf[0]);
-
+    auto toWrite = sample->nSamples;
+    auto samplesWritten = samplecount_t(drwav_write_pcm_frames(&wav, toWrite, blockFull.buf[0]));
     if (samplesWritten != toWrite) {
         log_lf(Log::L_WARN, "Failed writing %s. Only %zu/%zu samples written\n", StringAsCStr(fOutWave), samplesWritten, toWrite);
     }
@@ -533,7 +532,7 @@ void audiocache::saveSamples(const std::vector<int32_t>& refSampleIds) {
     }
 }
 void audiocache::rellocateSamples(const std::vector<int32_t>& refSampleIds, const String& directory) {
-    String targetDirectory = directory;
+    auto& targetDirectory = directory;
     for (auto& f : list) {
         auto* file = f.get();
         if (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_TEMPORARY) {
@@ -730,9 +729,7 @@ void audiocache::load(samplefile_index_t& sampleIndex, ProjectFileType projectFi
     }
     DAW::samplefile_index_incremental_loader_t loader(this, ar, sampleIndex, workingDir);
     while (!loader.isFinished()) {
-        log_lf(Log::L_ERROR, "1Loading sample %s\n", StringAsCStr(loader.curFileName));
         loader.loadSingleStep();
-        log_lf(Log::L_ERROR, "2Loading sample %s\n", StringAsCStr(loader.curFileName));
     }
 }
 
