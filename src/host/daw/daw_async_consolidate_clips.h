@@ -114,6 +114,7 @@ public:
             ssr.format = format;
             ssr.channels.resize(numChannels);
             ssr.preAllocate = 0;
+            ssr.bDownsample = false;
             for (auto& ch : ssr.channels) {
                 ch.resize(blockSize);
             }
@@ -124,6 +125,10 @@ public:
         }
         void processSingleBlock() {
             if (finished) {
+                return;
+            }
+            if (clips.empty()) {
+                finished = true;
                 return;
             }
             auto cache = daw->getAudioCache();
@@ -138,6 +143,9 @@ public:
             cache->updateSample(ssr);
             numSamplesRead += readLen;
             if (numSamplesRead >= numSamples) {
+                auto file = cache->get(sampleId);
+                dbgassert(file);
+                audiocache::Downsample(file->getSample());
                 finished = true;
             }
         }

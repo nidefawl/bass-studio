@@ -53,6 +53,7 @@ struct store_sample_req_t {
     samplecount_t length = 0;
     samplecount_t preAllocate = 0;
     std::vector<samplechannel_t> channels;
+    bool bDownsample = false;
 };
 struct create_sample_req_t {
     sampleformat_t format{};

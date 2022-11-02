@@ -153,7 +153,9 @@ void audiocache::updateSample(const store_sample_req_t& ssr) {
             memcpy(dstChannel.data() + ssr.offset, srcChannel.data(), ssr.length * sizeof(float));
         }
     }
-    audiocache::Downsample(sample);
+    if (ssr.bDownsample) {
+        audiocache::Downsample(sample);
+    }
 }
 audiofile_t* audiocache::createSample(const create_sample_req_t& ssr) {
     std::unique_ptr<audiosample_t> sample = std::make_unique<audiosample_t>();
