@@ -290,12 +290,9 @@ void loadAutomation(const std::vector<automation_view_t>& automatedParams, autom
     at->clearAutomations();
     for (const automation_view_t& automatedParam : automatedParams) {
         int32_t targetParam = automatedParam.targetParam;
-        automatable_param_t* paramInstance = at->getParam(targetParam);
-        if (!paramInstance) {
-            paramInstance = at->getParam(targetParam + PARAM_OFFSET_EXTERNAL);
-        }
-        if (paramInstance) {
-            auto* autom = at->getOrCreateAutomation(paramInstance->idx);
+        auto param = at->getParam(targetParam);
+        if (param) {
+            auto* autom = at->getOrCreateAutomation(param->idx);
             autom->src.points = automatedParam.points;
             autom->src.setActive(automatedParam.active);
         } else {

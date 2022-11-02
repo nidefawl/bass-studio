@@ -608,8 +608,7 @@ String vstplugin::getAutomatableName() {
 
 automatable_param_t* vstplugin::getParam(int32_t idx) {
     auto param = effectbase::getParam(idx);
-    dbgassert(param);
-    if (param->internalIdx >= 0) {
+    if (param && param->internalIdx >= 0) {
         if (param->paramValueState & PARAM_FLAG_DIRTY) {
             param->setValue(vst_getParameter(this, handle->aeffect, param->internalIdx));
             param->paramValueState = PARAM_FLAG_SET;
