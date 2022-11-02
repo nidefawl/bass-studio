@@ -754,8 +754,8 @@ sample_fades_ref_t clip_t::getSampleFadeOut(int32_t tempo100, samplerate_t sr) c
 }
 
 clip_audio_t::clip_audio_t() {
-    setDefaultFade(true);
-    setDefaultFade(false);
+    setEmptyFade(true);
+    setEmptyFade(false);
 }
 
 void clip_audio_t::setDefaultFade(bool bIn) {
@@ -770,6 +770,21 @@ void clip_audio_t::setDefaultFade(bool bIn) {
     } else {
         auto fadeOutShape = shape_t(GetShapeSaw(flags));
         fadeOut = { 128.0, fadeOutShape };
+    }
+}
+
+void clip_audio_t::setEmptyFade(bool bIn) {
+    using DAW::Shape::GetShapeSaw;
+    using DAW::Shape::GetShapeSawInverse;
+    using DAW::Shape::shape_t;
+    using DAW::Shape::ShapeFlags;
+    auto flags = ShapeFlags::SHAPE_SHAPED | ShapeFlags::SHAPE_EASEINOUT | ShapeFlags::SHAPE_LOCK_POINTS;
+    if (bIn) {
+        auto fadeInShape = shape_t(GetShapeSawInverse(flags));
+        fadeIn  = { 0.0, fadeInShape };
+    } else {
+        auto fadeOutShape = shape_t(GetShapeSaw(flags));
+        fadeOut = { 0.0, fadeOutShape };
     }
 }
 
@@ -1085,9 +1100,8 @@ namespace DAW {
 float AudioClipFadeLoopProcessor::get(channelnum_t ch, samplecount_t samplePos) const {
     float fade = 1.0f;
     for (auto* clipFade : { &fadeIn, &fadeOut }) {
-        auto relClipSamplePos = samplePos;
-        if (relClipSamplePos >= clipFade->samplesFadePos && relClipSamplePos < clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
-            float fadePos = (relClipSamplePos - clipFade->samplesFadePos) / float(clipFade->samplesFadeDuration);
+        if (clipFade->samplesFadeDuration > 0 && samplePos >= clipFade->samplesFadePos && samplePos < clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
+            float fadePos = (samplePos - clipFade->samplesFadePos) / float(clipFade->samplesFadeDuration);
             fade *= clipFade->shape->sampleCurveOneShot(fadePos);
         }
     }
@@ -1107,9 +1121,8 @@ float AudioClipFadeLoopProcessor::getDownsampled(channelnum_t ch, samplecount_t 
     float fade = 1.0f;
     status = 0;
     for (auto* clipFade : { &fadeIn, &fadeOut }) {
-        auto relClipSamplePos = samplePos;
-        if (relClipSamplePos >= clipFade->samplesFadePos && relClipSamplePos < clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
-            float fadePos = (relClipSamplePos - clipFade->samplesFadePos) / float(clipFade->samplesFadeDuration);
+        if (clipFade->samplesFadeDuration > 0 && samplePos >= clipFade->samplesFadePos && samplePos < clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
+            float fadePos = (samplePos - clipFade->samplesFadePos) / float(clipFade->samplesFadeDuration);
             fade *= clipFade->shape->sampleCurveOneShot(fadePos);
             status |= 2;
         }
@@ -1141,13 +1154,13 @@ void cutClipLeft(clip_t* c, tick_t len) {
     c->adjustStartOffset(len);
     c->time += len;
     c->setLen(c->getLen() - len);
-    c->audio.fadeIn = {};
+    c->audio.setEmptyFade(true);
     dbgassert(c->time > 0);
     dbgassert(c->getLenRef() > 0);
 }
 
 void cutClipRight(clip_t* c, tick_t len) {
     c->setLen(c->getLen() - len);
-    c->audio.fadeOut = {};
+    c->audio.setEmptyFade(false);
     dbgassert(c->getLenRef() > 0);
 }

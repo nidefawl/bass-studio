@@ -70,6 +70,7 @@ public:
         return id == -1;
     }
     void setDefaultFade(bool bIn);
+    void setEmptyFade(bool bIn);
 };
 class clip_t;
 struct clip_control_data_channel_t {
