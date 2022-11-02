@@ -1,5 +1,6 @@
 #include "playbackthread.h"
 #include "types.h"
+#include <__type_traits/is_swappable.h>
 #include <atomic>
 #include <queue>
 #include <thread>
@@ -24,13 +25,6 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#endif
-
-#ifndef _MSC_VER
-#pragma GCC diagnostic push
-#endif
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wpessimizing-move"
 #endif
 
 using namespace moodycamel;
@@ -433,17 +427,3 @@ bool PlaybackThread::isLockedOrNotProcessing() {
 bool PlaybackThread::isRunning() {
     return _M_impl->isRunning();
 }
-
-ThreadLock& ThreadLock::operator=(ThreadLock&& other) noexcept {
-    this->_M_impl = other._M_impl;
-    other._M_impl = nullptr;
-    return *this;
-}
-ThreadLock::ThreadLock(ThreadLock&& other) noexcept {
-    this->_M_impl = other._M_impl;
-    other._M_impl = nullptr;
-}
-
-#ifndef _MSC_VER
-#pragma GCC diagnostic pop
-#endif

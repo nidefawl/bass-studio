@@ -1265,7 +1265,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
         }
 
         // revalidate held notes ends so we end notes that were modified by the user (loop or clip modifactions)
-        // this also cuts of notes on clip looparounds
+        // this also cuts off notes on clip looparounds
         for (auto it = m_heldNotes.begin(); it != m_heldNotes.end();) {
             const note_t& noteHeld = *it;
             bool found             = false;
