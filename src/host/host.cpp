@@ -2002,21 +2002,11 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
             continue;
         }
 
-        auto numSamplesClipBounds = clipSampleEnd - clipSampleBegin;
-        auto numSamplesReadableData = numSamplesClipBounds;
-        if (clip->isLoopEnabled()) {
-            numSamplesReadableData = tickToSampleConvert<samplecount_t, roundmode::round>(clip->getLen(), prjGlobals.tempo100, sample->sampleRate);
-        }
-
-        samplecount_t clipMinSamples = math::min<samplecount_t>(numSamplesReadableData, numSamplesClipBounds);
-        auto lastReadableSamplePos = clipSampleBegin + clipMinSamples;
-        if (lastReadableSamplePos < 0) {
-            continue;
-        }
+        samplecount_t clipSampleLen = tickToSampleConvert<samplecount_t, roundmode::round>(clip->getLen(), prjGlobals.tempo100, sample->sampleRate);
         // 0 if clip starts before samplePosBegin, otherwise clipSampleBegin
         samplecount_t numSamplesOffsetDst = math::max<samplecount_t>(0, clipSampleBegin);
         auto numSamplesWritableData = out.samples - numSamplesOffsetDst; 
-        auto readSamples = math::min(clipMinSamples, math::min(numSamplesWritableData, lastReadableSamplePos));
+        auto readSamples = math::min(clipSampleLen, numSamplesWritableData);
         if (!(readSamples > 0)) {
             continue;
         }
@@ -2028,11 +2018,16 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
         };
         /* fixed readoffset into backing sample */
         samplecount_t clipSampleOffset = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->offsetStart, prjGlobals.tempo100, sample->sampleRate);
-        samplecount_t loopStart        = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->loopStart, prjGlobals.tempo100, sample->sampleRate);
-        samplecount_t loopEnd          = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->loopStart + clip->loopLen, prjGlobals.tempo100, sample->sampleRate);
         samplecount_t preLoopLen       = 0;
-        if (clip->offsetStart < clip->loopStart) {
-            preLoopLen = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->loopStart - clip->offsetStart, prjGlobals.tempo100, sample->sampleRate);
+        samplecount_t loopStart        = 0;
+        samplecount_t loopEnd          = 0;
+
+        if (clip->isLoopEnabled()) {
+            loopStart = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->loopStart, prjGlobals.tempo100, sample->sampleRate);
+            loopEnd   = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->loopStart + clip->loopLen, prjGlobals.tempo100, sample->sampleRate);
+            if (clip->offsetStart < clip->loopStart) {
+                preLoopLen = tickToSampleConvert<samplecount_t, roundmode::floor>(clip->loopStart - clip->offsetStart, prjGlobals.tempo100, sample->sampleRate);
+            }
         }
 
         auto numChannels = math::max(sample->nChannels, out.channels);

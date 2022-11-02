@@ -82,10 +82,9 @@ inline clip_t* ConsolidateAudioClips(DawInstance* daw, track_t* track, tick_t ti
 }
 
     struct consolidate_fill_audio_t {
-private:
+        static constexpr samplecount_t blockSize = samplecount_t(8*1024);
         DawInstance* const daw;
         sampleformat_t format{};
-        samplecount_t blockSize = 2048;
         AudioBlock blockTemp;
         project_globals_t prjGlobals;
         store_sample_req_t ssr;
