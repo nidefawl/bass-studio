@@ -33,8 +33,8 @@ public:
     void processMidi(midi_data_processing_t& midiEvents) override;
     void onEnable() override;
     void onDisable() override;
-    void unload(DAW::Host::PluginManager* host, int flags) override;
-    void onPreUnload(int flags) override;
+    void unload(DAW::Host::PluginManager* host) override;
+    void onPreUnload() override;
     void load(DAW::Host::PluginManager* host) override;
     void breakTrackLink() override;
     void setTrackLink(audio_stage_t* trImpl) override;

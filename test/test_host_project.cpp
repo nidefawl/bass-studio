@@ -9,8 +9,6 @@
 int main(int, char*[]) {
     std::vector<String> args{
         "-f", "cpp-test-data/test-vst.project",
-        "-s", "2745.0",
-        "-l", "4.0",
         "-o", "test-render",
         "--render"
     };

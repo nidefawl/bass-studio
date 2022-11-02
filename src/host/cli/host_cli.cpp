@@ -363,6 +363,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                             }
                         }
                     }
+                    host->onTrackLayoutChange();
                 }
 
                 /** reset maximum stage id and determine new maximum stage id **/
@@ -567,7 +568,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                                 for (int64_t nSample = 0; nSample < readLen; ++nSample) {
                                     for (channelnum_t ch = 0; ch < sample->nChannels; ++ch) {
                                         *largeBuf++ = sample->samples[ch][beginOffset + nSample];
-                                }
+                                    }
                                 }
                                 samplesWritten += samplecount_t(drwav_write_pcm_frames(&wav, readLen, blockTrack.buf[0]));
                             }

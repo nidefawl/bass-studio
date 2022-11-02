@@ -186,7 +186,8 @@ private:
     void onPluginsChanged(audio_stage_t* stage);
     void updatePluginWindows();
 public:
-    std::function<void()> onTrackLayoutChange;
+    virtual void onTrackLayoutChange() {
+    }
     static const int FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY    = 1;
     static const int FLAG_HOST_FORCELOAD_DISABLED_PLUGINS = 2;
     static bool assignMasterCallback(PluginManager* host);
@@ -204,7 +205,7 @@ public:
     int32_t getNextSampleId(int32_t id);
     int32_t getNextGlobalModuleId(int32_t globalId);
 
-    void unloadPlugin(effectbase* plugin, int flags = 0);
+    void unloadPlugin(effectbase* plugin);
     void removePlugin(effectbase* plugin);
     void unloadTrack(track_t* track);
     effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1);

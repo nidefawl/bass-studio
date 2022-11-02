@@ -97,7 +97,7 @@ void effectbase::load(DAW::Host::PluginManager* host) {
     bIsEnabled = getParam(PARAM_ENABLE)->getValue() > 0;
 }
 
-void effectbase::unload(DAW::Host::PluginManager* host, int flags) {
+void effectbase::unload(DAW::Host::PluginManager* host) {
     dbgassert(host == pluginMgr);
     pluginMgr = nullptr;
     dbgassert(nLoadCalls == 1);
@@ -163,9 +163,6 @@ void effectbase::processMidi(midi_data_processing_t& midiEvents) {
     this->midiEventsDispatched += CtrSize(messages);
 }
 
-void effectbase::breakTrackLink() {
-    trackImpl = nullptr;
-}
 void effectbase::setTrackLink(audio_stage_t* audioStage) {
     trackImpl = audioStage;
 }
@@ -420,12 +417,13 @@ automatable_param_ref_t effect_deferred::toRef() const {
 void guideferred::buttonClicked(guibase* _button) {
     guiplugin::buttonClicked(_button);
     if (_button == &btnLoad) {
-        auto dawCtrlCopy = dawCtrl;
-        auto lock = dawCtrlCopy->lockPlayThread();
-        auto pluginMgr = dawCtrlCopy->getDaw()->getPluginManager();
-        pluginMgr->activateDeferred(module, DAW::Host::PluginManager::FLAG_HOST_FORCELOAD_DISABLED_PLUGINS);
-        // do not access this from here to function exit
-        dawCtrlCopy->onPluginsChanged();
+        auto daw = dawCtrl->getDaw();
+        daw->closeContextMenus();
+        auto lock = daw->lockPlayThread();
+        auto pluginMgr = daw->getPluginManager();
+        auto moduleHandle = module;
+        pluginMgr->activateDeferred(moduleHandle, DAW::Host::PluginManager::FLAG_HOST_FORCELOAD_DISABLED_PLUGINS);
+        daw->onPluginsChanged();
     }
 }
 guiplugin* effect_deferred::makeGui() {

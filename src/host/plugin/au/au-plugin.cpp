@@ -9,7 +9,7 @@
 #include "host/track/track_impl.h"
 #include "au-plugin.h"
 
-void auplugin::unload(DAW::Host::PluginManager* host, int flags) {}
+void auplugin::unload(DAW::Host::PluginManager* host) {}
 void auplugin::load(DAW::Host::PluginManager* host) {}
 
 String auplugin::getAutomatableName() { return "AU_PLUGIN"; }

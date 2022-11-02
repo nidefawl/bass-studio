@@ -83,7 +83,7 @@ public:
     void sendNotesOff() override;
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
     samplecount_t getPluginLatency() override;
-    void unload(DAW::Host::PluginManager* host, int flags) override;
+    void unload(DAW::Host::PluginManager* host) override;
     void load(DAW::Host::PluginManager* host) override;
     void initBuffers() override;
     void updateFromMainThread() override;

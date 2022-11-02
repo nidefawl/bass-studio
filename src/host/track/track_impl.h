@@ -210,7 +210,7 @@ struct audio_stage_t : public IDelayLineStorage {
         }
         return effDelayLines[id].get();
     }
-    virtual void removePlugin(effectbase* _vst, bool notifyUp);
+    void removePlugin(effectbase* _vst);
     void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
     samplecount_t getInternalLatency() const;
     samplecount_t getOutputLatency() const;
@@ -235,7 +235,6 @@ struct audio_stage_t : public IDelayLineStorage {
     virtual void sendMidiToEffect(const std::vector<midievent_note_t>& evtsOut, const std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, tick_t tickLatencyCompensated, int32_t bpm100, effectbase* effect);
     virtual void getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& evtsOut, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, bool isPost);
     virtual void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos);
-    void notifyPluginContainers();
     virtual void onStopPlayback();
     const automated_param_t* getParameterAutomationModulation(const automatable_t* dev, int32_t paramIdx) const;
 };
@@ -405,7 +404,6 @@ struct track_impl_t : public audio_stage_t {
     void validateProcessedMidi(playback_state state, int32_t flags, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, project_globals_t& prjGlobals, samplecount_t inputLatency);
     void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, const project_globals_t& prjGlobals, samplecount_t readPos, samplecount_t readLen, AudioBlock& outBuffer);
     void addAudio(const AudioBlock& src, float fGain);
-    void removePlugin(effectbase* _vst, bool notifyUp) override;
     const std::vector<DAW::arp_note_t>& getArpHeldNotes();
     std::vector<marker_t>& getArpMarkers(int n);
     void updateAutomatableTargets(DAW::Host::Host* const host, tick_t processingPos, playback_state state);

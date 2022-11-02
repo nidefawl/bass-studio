@@ -330,21 +330,20 @@ effectbase* audio_stage_t::getPluginById(int32_t projectGlobalId) const {
     return nullptr;
 }
 
-void track_impl_t::removePlugin(effectbase* _effect, bool notifyUp) {
-    audio_stage_t::removePlugin(_effect, notifyUp);
-}
-
-void audio_stage_t::removePlugin(effectbase* _effect, bool notifyUp) {
-    auto stage = _effect->getTrackLink();
-    if (stage && notifyUp) {
-        auto trackFromStage = stage->getTrack();
-        if (trackFromStage && trackFromStage->getStage()) {
-            for (auto trackentry : trackFromStage->getStage()->guiInstances) {
+void effectbase::breakTrackLink() {
+    if (trackImpl) {
+        auto track = trackImpl->getTrack();
+        if (track && track->getStage()) {
+            for (auto& trackentry : track->getStage()->guiInstances) {
                 trackentry->state.selectedAutomationCtr = nullptr;
-                trackentry->parent->removeAllAutomationLanes(trackentry, _effect);
+                trackentry->parent->removeAllAutomationLanes(trackentry, this);
             }
         }
     }
+    trackImpl = nullptr;
+}
+
+void audio_stage_t::removePlugin(effectbase* _effect) {
     removeEntry(deferredEffects, _effect);
     if (!removeEntry(effects, _effect)) {
         return;
@@ -354,9 +353,6 @@ void audio_stage_t::removePlugin(effectbase* _effect, bool notifyUp) {
         effect->setSlot(slot++);
     }
     _effect->breakTrackLink();
-    if (stage && notifyUp) {
-        stage->notifyPluginContainers();
-    }
 }
 
 bool audio_stage_t::replaceEffect(int32_t idx, effectbase* _effect, effectbase** _prevEffect) {
@@ -364,14 +360,20 @@ bool audio_stage_t::replaceEffect(int32_t idx, effectbase* _effect, effectbase**
     if (idx >= 0 && idx < (int32_t) effects.size()) {
         auto cur   = effects[idx];
         auto stage = cur->getTrackLink();
-        for (auto trackentry : cur->getTrackLink()->getTrack()->getStage()->guiInstances) {
-            trackentry->state.selectedAutomationCtr = nullptr;
-            trackentry->parent->removeAllAutomationLanes(trackentry, _effect);
+        if (stage) {
+            auto stageUI = stage->getTrack()->getStage();
+            if (stageUI) {
+                for (auto trackentry : stageUI->guiInstances) {
+                    trackentry->state.selectedAutomationCtr = nullptr;
+                    trackentry->parent->removeAllAutomationLanes(trackentry, cur);
+                }
+            }
         }
         cur->breakTrackLink();
-        if (stage) {
-            stage->notifyPluginContainers();
-        }
+        //TODO: do this after the effect is replaced
+        // if (stage) {
+        //     stage->notifyPluginContainers();
+        // }
         *_prevEffect = cur;
         effects[idx] = _effect;
         _effect->setTrackLink(this);
@@ -379,7 +381,7 @@ bool audio_stage_t::replaceEffect(int32_t idx, effectbase* _effect, effectbase**
         for (effectbase* effect : effects) {
             effect->setSlot(slot++);
         }
-        this->notifyPluginContainers();
+        // this->notifyPluginContainers();
         return true;
     }
     return false;
@@ -403,7 +405,7 @@ void audio_stage_t::insertEffect(int32_t idx, effectbase* _effect) {
     for (effectbase* effect : effects) {
         effect->setSlot(slot++);
     }
-    this->notifyPluginContainers();
+    // this->notifyPluginContainers();
 }
 
 track_impl_t::~track_impl_t() {
@@ -428,12 +430,24 @@ samplecount_t audio_stage_t::getInputLatency() const {
 }
 
 void audio_stage_t::pluginsChanged() {
+    processingGraph.reset();
     if (routingState != audiostagerouting_state_t::CUSTOM) {
         configureDefaultRoutings();
     }
     DAW::validateEffectRoutings(this->host, this);
-
-    this->processingGraph.reset();
+    audio_stage_t* audioStage = this;
+    while (audioStage != nullptr) {
+        guictr_plugins* pluginCtr = audioStage->m_pluginCtr;
+        if (pluginCtr) {
+            dbgassert(MainCtrl::get());
+            plugin_selection& sel = MainCtrl::get()->getPluginSel();
+            if (sel.pluginCtr == pluginCtr) {
+                sel.clear();
+            }
+            pluginCtr->showTrack(audioStage);
+        }
+        audioStage = audioStage->parent;
+    }
 }
 
 void audio_stage_t::getStageTargets(std::vector<automatable_t*>& targets) {
@@ -467,23 +481,6 @@ void audio_stage_t::sendNotesOff() {
     for (effectbase* effect : effects) {
         effect->sendNotesOff();
     }
-}
-
-void audio_stage_t::notifyPluginContainers() {
-    audio_stage_t* audioStage = this;
-    while (audioStage != nullptr) {
-        guictr_plugins* pluginCtr = audioStage->m_pluginCtr;
-        if (pluginCtr) {
-            dbgassert(MainCtrl::get());
-            plugin_selection& sel = MainCtrl::get()->getPluginSel();
-            if (sel.pluginCtr == pluginCtr) {
-                sel.clear();
-            }
-            pluginCtr->showTrack(audioStage);
-        }
-        audioStage = audioStage->parent;
-    }
-    processingGraph.reset();
 }
 
 void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targets, bool includeEffects) {
@@ -538,7 +535,7 @@ namespace DAW {
         audio_stage_t* audioStage = module->getTrackLink();
         dbgassert(audioStage);
         module->closeWindow();
-        audioStage->removePlugin(module, true);
+        audioStage->removePlugin(module);
         std::vector<effectbase*> effects;
         effects.push_back(module);
         auto* actionRemove = new action_remove_modules("Remove plugin", std::move(effects), audioStage->toRef(), module->getSlot());
@@ -744,7 +741,6 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
             effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
             effect->load(host);
             host->insertNewPlugin(this, effect, pluginSnapshot.slot);
-            //host->postPluginLoaded(this, effect);
             dbgassert(effect->trackImpl == this);
             dbgassert(!effects.empty());
             if (effect->getModuleStoredType() == PLUGIN_TYPE_GROUP) {
@@ -763,7 +759,7 @@ void PluginManager::activateDeferred(effectbase* const eff, int flags, effectbas
 
     auto defEffect = dynamic_cast<effect_deferred*>(eff);
     plugin_snapshot_t pluginSnapshot = defEffect->getSnapshotConst();
-    effectbase* effect = loadEffectModule(this, pluginSnapshot, flags & FLAG_HOST_FORCELOAD_DISABLED_PLUGINS);
+    effectbase* effect = loadEffectModule(this, pluginSnapshot, (flags & FLAG_HOST_FORCELOAD_DISABLED_PLUGINS) != 0);
     if (out_effectLoaded) {
         *out_effectLoaded = effect;
     }
@@ -796,16 +792,7 @@ void PluginManager::activateDeferred(effectbase* const eff, int flags, effectbas
     }
 
     /* Unload the (previous) deferred placeholder plugin */
-    unloadPlugin(prevPlugin, flags);
-
-    bool notifyUp = !(flags & FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
-    if (notifyUp) {
-        // When loading multiple plugins only fire it for the last one, or run postPluginLoaded externally
-
-        //TODO: this shouldn't be here!
-        postPluginLoaded(effect->getTrackLink(), effect);
-    }
-    //    if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
+    unloadPlugin(prevPlugin);
 }
 
 void midi_input_events_t::addMidiEvent(tick_t tick, uint32_t message, int32_t midiTime) {

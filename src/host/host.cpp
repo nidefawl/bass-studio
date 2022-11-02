@@ -347,13 +347,14 @@ Host::Host()
     : PluginManager(), impl(new host_impl{this})
 {
     allocRingBuffer(ringbuffer, 2);
-    onTrackLayoutChange = [this]() {
-        impl->resetProjectCache();
-    };
 }
 
 Host::~Host() {
     delete impl;
+}
+
+void Host::onTrackLayoutChange() {
+    impl->resetProjectCache();
 }
 
 Host::audiostream_properties_t getAudioStreamPropertiesForFormat(sampleformat_t sampleFormat, sampleformat_t sampleFormatExternal, int32_t tempo100) {

@@ -96,7 +96,7 @@ public:
     bool showWindow(bool bResetPosition) override;
     void updateFromMainThread() override;
     bool updateWindowSize();
-    void unload(DAW::Host::PluginManager* host, int flags) override;
+    void unload(DAW::Host::PluginManager* host) override;
     void load(DAW::Host::PluginManager* host) override;
     void configureIOChannels();
     void postLoad();

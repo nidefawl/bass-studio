@@ -159,7 +159,7 @@ public:
     virtual ivec2 constrainWindowSize(host_plugin_window* window, ivec2 size) {
         return size;
     };
-    virtual void unload(DAW::Host::PluginManager* host, int flags);
+    virtual void unload(DAW::Host::PluginManager* host);
     virtual void load(DAW::Host::PluginManager* host);
     virtual samplecount_t getPluginLatency() = 0;
     virtual String getInfo(std::vector<String>& list) { return ""; };
@@ -179,7 +179,7 @@ public:
     virtual void loadSnapshot(const plugin_snapshot_t& snapshot) = 0;
     virtual void breakTrackLink();
     virtual void setTrackLink(audio_stage_t* audioStage);
-    virtual void onPreUnload(int flags) {
+    virtual void onPreUnload() {
     }
     virtual bool isBypass() {
         return !this->bIsEnabled;

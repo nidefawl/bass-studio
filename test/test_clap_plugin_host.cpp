@@ -43,7 +43,7 @@ namespace test_clap_plugin_host {
         TEST_ASSERT_THROW(res.library.isSuccess());
         TEST_ASSERT_THROW(res.clapPlugin != nullptr);
         host->onTick();
-        host->unloadPlugin(res.plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+        host->unloadPlugin(res.plugin);
         host->unload();
         host->destroy();
 

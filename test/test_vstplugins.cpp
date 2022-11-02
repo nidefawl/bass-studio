@@ -66,7 +66,7 @@ namespace {
             } else if (hasUI && currentTimerTick == 30) {
                 res.plugin->closeWindow();
             } else if ((hasUI && currentTimerTick == 40) || (!hasUI && currentTimerTick == 10)) {
-                host->unloadPlugin(res.plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                host->unloadPlugin(res.plugin);
                 res = LoadResultPlugin{LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "")};
                 currentTimerTick = -1;
                 numPluginsTested++;

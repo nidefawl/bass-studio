@@ -808,6 +808,7 @@ void DawInstance::unloadProject() {
     }
     for (DawCtrl* pDawCtrl : dawCtrls) {
         if (pDawCtrl->isOk()) {
+            pDawCtrl->onPluginsChanged();
             pDawCtrl->resetView();
         }
     }
@@ -1148,9 +1149,6 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                             for (auto effect: effects) {
                                 pluginMgr->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
                             }
-                        }
-                        for (track_snapshot_t& ts: ctr->tracks) {
-                            ts.trackLoaded->getStage()->pluginsChanged();
                         }
                         onPluginsChanged();
                         updateVisibleTrackContents();
@@ -1866,11 +1864,11 @@ void MainCtrl::onTick() {
 }
 
 void DawInstance::onPluginsChanged() {
+    tls.pluginManager->onTrackLayoutChange();
     for (DawCtrl* pDawCtrl : dawCtrls) {
         dbgassert(pDawCtrl->isOk());
         pDawCtrl->onPluginsChanged();
     }
-    tls.pluginManager->onTrackLayoutChange();
 }
 
 void DawInstance::updateVisibleTrackContents() {
@@ -2178,6 +2176,8 @@ void DawInstance::loadProject0(const std::shared_ptr<project_file>& file) {
     }
     /** pre-load all plugin instances **/
     project.trackList.loadPlugins(file->project);
+    
+    onPluginsChanged();
 
     /** reset maximum stage id and determine new maximum stage id **/
     tls.host->updateMaximumStageId();
@@ -2218,6 +2218,8 @@ bool DawInstance::loadProject1(const std::shared_ptr<project_file>& file, int fl
         }
     }
 
+    onPluginsChanged();
+
     tls.audioCache->load(file->sampleFileIndex, projectFileType, file->path, lastProjectDirectory);
     for (track_t* tr : project.trackList) {
         tr->getStage()->pluginsChanged();
@@ -2239,6 +2241,7 @@ bool DawInstance::loadProject1(const std::shared_ptr<project_file>& file, int fl
     return true;
 }
 void DawInstance::loadProjectFinish() {
+    onPluginsChanged();
     for (DawCtrl* pDawCtrl : dawCtrls) {
         pDawCtrl->fixCursor();
     }

@@ -91,29 +91,15 @@ void PluginHostCallback::onUiChanged(effectbase* effect) {
 void PluginManager::setTls(daw_tls::tlsinstance& tls) {
     this->mgrImpl->tls = tls;
 }
-
-void PluginManager::unloadPlugin(effectbase* plugin, int flags) {
-    bool notifyUp = !(flags & FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
-    if (notifyUp) {
-        //TODO: this shouldn't be here!
-        if (MainCtrl::get())
-            MainCtrl::get()->closeContextMenu();
-    }
-
-    plugin->onPreUnload(flags);
+void PluginManager::unloadPlugin(effectbase* plugin) {
+    plugin->onPreUnload();
     audio_stage_t* audioStage = plugin->getTrackLink();
     if (audioStage) {
-        audioStage->removePlugin(plugin, false);
-        if (notifyUp) {
-            audioStage->pluginsChanged();
-
-        }
+        audioStage->removePlugin(plugin);
+        audioStage->pluginsChanged();
     }
 
-    if (notifyUp) {
-        plugin->closeWindow();
-    }
-    plugin->unload(this, flags);
+    plugin->unload(this);
 
     switch (plugin->getModuleType()) {
     case PLUGIN_TYPE_DEFERRED:
@@ -147,9 +133,6 @@ void PluginManager::unloadPlugin(effectbase* plugin, int flags) {
     delete plugin;
     if (moduleHandleOpt) {
         moduleMgr->releaseModule(moduleHandleOpt);
-    }
-    if (notifyUp) {
-        if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
     }
     dbgassert(validateIds());
 }
@@ -226,17 +209,15 @@ void PluginManager::unloadTrack(track_t* track) {
     auto audio = track->audio;
     std::vector<effectbase*> effects = audio->effects; // make a copy before unloading plugins
     for (effectbase* effect : effects) {
-        unloadPlugin(effect, FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+        unloadPlugin(effect);
     }
     dbgassert(audio->deferredEffects.empty());
 }
 
 void PluginManager::removePlugin(effectbase* plugin) {
     audio_stage_t* audioStage = plugin->getTrackLink();
-    audioStage->removePlugin(plugin, true);
+    audioStage->removePlugin(plugin);
     audioStage->pluginsChanged();
-    if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
-    onTrackLayoutChange();
 }
 
 void PluginManager::getAllInstances(std::vector<effectbase*>& effects) {
@@ -309,13 +290,11 @@ bool PluginManager::movePluginsToStage(audio_stage_t* dstTr, audio_stage_t* trp,
     std::vector<effectbase*> tmpEffects = trp->effects;
     for (int32_t i = 0; i < len; i++) {
         effectbase* tmpPlugin = tmpEffects[src + i];
-        trp->removePlugin(tmpPlugin, true);
+        trp->removePlugin(tmpPlugin);
         dstTr->insertEffect(dst+i, tmpPlugin);
     }
     trp->pluginsChanged();
     dstTr->pluginsChanged();
-    onTrackLayoutChange();
-    if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
     return true;
 }
 
@@ -356,25 +335,19 @@ bool PluginManager::movePluginsOnStage(audio_stage_t* trp, int32_t src, int32_t 
     for (effectbase* effect : trp->effects) {
         effect->setSlot(slot++);
     }
-    onTrackLayoutChange();
+    trp->pluginsChanged();
     return true;
 }
 
 bool PluginManager::replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin) {
     bool retVal = trp->replaceEffect(dst, plugin, prevPlugin);
-    onTrackLayoutChange();
+    trp->pluginsChanged();
     return retVal;
 }
 
 bool PluginManager::insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst) {
-    //if (plugin->isSynth) {
-    //    vstplugin* old = trp->setInstrument(plugin);
-    //    if (old) {
-    //        unloadPlugin(old);
-    //    }
-    //} else {
-        trp->insertEffect(dst, plugin);
-    //}
+    trp->insertEffect(dst, plugin);
+    trp->pluginsChanged();
     return true;
 }
 
@@ -403,9 +376,7 @@ void PluginManager::onTick() {
 }
 
 bool PluginManager::postPluginLoaded(audio_stage_t* trp, effectbase* plugin) {
-    trp->pluginsChanged();
     onTrackLayoutChange();
-    if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
     dbgassert(validateIds());
     return true;
 }
@@ -779,12 +750,12 @@ void PluginManager::checkScanner() {
             if (!mgrImpl->threadPluginScannerProcess->isRunning()) {
                 mgrImpl->threadPluginScannerProcess->joinProcess();
                 mgrImpl->threadPluginScannerProcess.reset();
-                DawInstance::get()->getPluginDatabase().reopen();
+                mgrImpl->tls.dawInstance->getPluginDatabase().reopen();
                 this->mgrImpl->scanningState = 0;
             } else {
                 if (++nCalls >= 10) {
                     nCalls = 0;
-                    DawInstance::get()->getPluginDatabase().reopen();
+                    mgrImpl->tls.dawInstance->getPluginDatabase().reopen();
                 }
             }
 
@@ -800,10 +771,8 @@ void PluginManager::stopScanner() {
             if (mgrImpl->threadPluginScannerProcess->isRunning()) {
                 mgrImpl->threadPluginScannerProcess->killProcess();
                 this->mgrImpl->scanningState = 0;
-                if (DawInstance::get()) {
-                    DawInstance::get()->getPluginDatabase().reopen();
-                }
-
+                if (mgrImpl->tls.dawInstance)
+                    mgrImpl->tls.dawInstance->getPluginDatabase().reopen();
             }
 
         }

@@ -1623,10 +1623,10 @@ void clapplugin::onDisable() { deactivate(); }
 
 void clapplugin::onEnable() { activate(format); }
 
-void clapplugin::unload(DAW::Host::PluginManager* host, int flags) {
+void clapplugin::unload(DAW::Host::PluginManager* host) {
     deactivate();
     unloadClapPlugin();
-    effectbase::unload(host, flags);
+    effectbase::unload(host);
 }
 
 void clapplugin::load(DAW::Host::PluginManager* host) {

@@ -130,7 +130,7 @@ public:
     Host(Host const&) = delete;
     ~Host();
     void operator=(Host const&) = delete;
-
+    void onTrackLayoutChange() override;
     void setTls(daw_tls::tlsinstance& tls);
     void destroy();
 

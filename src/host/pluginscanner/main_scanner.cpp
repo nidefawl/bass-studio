@@ -795,7 +795,7 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
                 response = CMD_PLUGIN_LOAD_SUCCESS_CLAP_PLUGIN;
                 getClapPluginData(res, &respClapPlugin);
             }
-            pluginMgr->unloadPlugin(res.plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+            pluginMgr->unloadPlugin(res.plugin);
         }
     } catch (...) {
         log_message("exception while loading %s", req.szPath);
@@ -954,7 +954,7 @@ static int runScannerClient() {
                             safe_strcpy(respShellPluginEntry.szName, entry.name);
                             writeToIPC(client, respShellPluginEntry);
                             log_message("unload shell entry: %08X", entry.pluginUID);
-                            pluginMgr->unloadPlugin(resShellPluginEntry.plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                            pluginMgr->unloadPlugin(resShellPluginEntry.plugin);
                         }
                     }
                     log_message("-- end of shell plugin list --");
@@ -976,7 +976,7 @@ static int runScannerClient() {
                         getClapPluginData(res, &resp);
                         writeToIPC(client, resp);
                     }
-                    pluginMgr->unloadPlugin(res.plugin, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+                    pluginMgr->unloadPlugin(res.plugin);
                     response = CMD_PLUGIN_END_SUCCESS;
                     writeToIPC(client, response);
                 }

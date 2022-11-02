@@ -133,7 +133,7 @@ bool vstplugin::updateWindowSize() {
 void AppWndProc_disableBlockReentrant();
 void AppWndProc_enableBlockReentrant();
 
-void vstplugin::unload(DAW::Host::PluginManager* host, int flags) {
+void vstplugin::unload(DAW::Host::PluginManager* host) {
     dbgassert(host == pluginMgr);
     pluginMgr = nullptr;
     dbgassert(nLoadCalls == 1);

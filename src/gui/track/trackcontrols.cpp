@@ -998,7 +998,6 @@ public:
             for (auto effect : effects) {
                 pluginMgr->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
             }
-            pluginMgr->postPluginLoaded(m_track->audio, nullptr);
             daw->onPluginsChanged();
             onChildLayoutChanged(button);
 
@@ -1876,10 +1875,6 @@ void gui_track_content_base::pluginMultiDragRelease(guictr_dragged_plugins* g, i
             return;
         }
     }
-    log_printf("move %d plugins from %s:%d to %s:%d\n",
-              (int) g->effects.size(),
-              StringAsCStr(srcStage->getTrack()->name), first,
-              StringAsCStr(dstStage->getTrack()->name), targetslot);
     if (targetslot >= 0) {
         if (srcStage != dstStage) {
             daw->getPluginManager()->movePluginsToStage(dstStage, srcStage, first, targetslot, last - first + 1);
@@ -1894,7 +1889,7 @@ void gui_track_content_base::pluginMultiDragRelease(guictr_dragged_plugins* g, i
             audio_stage_ref_t ref = dstStage->toRef();
             daw->pushHist(new action_shift_modules("Move plugin", ref, targetslot, first, last - first + 1));
         }
-        mainCtrl->onPluginsChanged();
+        daw->onPluginsChanged();
         if (dstStage->m_pluginCtr)
             dstStage->m_pluginCtr->makeVisisble(g->effects.back()->getGui());
     }
@@ -1946,7 +1941,6 @@ void gui_track_content_base::pluginEntryDragRelease(gui_pluginlist_entry* g, ive
         audio_stage_ref_t refdst = dstStage->toRef();
         auto* track_action = new action_insert_effect("Insert plugin", effect, refdst, dstSlot);
         daw->pushHist(track_action);
-        pluginMgr->postPluginLoaded(dstStage, effect);
         mainCtrl->onPluginsChanged();
         if (dstStage->m_pluginCtr)
             dstStage->m_pluginCtr->makeVisisble(effect->getGui());
@@ -2288,6 +2282,7 @@ public:
                 newTrack->loadSnapshot(trSnap);
                 newTrack->name = DAW::MakeUniqueTrackName(dawCtrl->getDaw()->getProject(), strNewName);
                 //ensure unique IDs
+                daw->onPluginsChanged();
                 dbgassert(daw->getPluginManager()->validateIds());
                 m_trackentry->parent->layout();
                 daw->updateVisibleTrackContents();

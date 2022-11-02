@@ -225,7 +225,7 @@ void module_group::onEnable() {
 void module_group::onDisable() {
 }
 
-void module_group::onPreUnload(int flags) {
+void module_group::onPreUnload() {
     dbgassert(this->audio);
     if (this->audio->m_pluginCtr == &this->handle->gui->ctr) {
         this->handle->gui->ctr.showTrack(nullptr);
@@ -233,7 +233,7 @@ void module_group::onPreUnload(int flags) {
     }
     std::vector<effectbase*> effects = this->audio->effects;// make a copy before unloading plugins
     for (effectbase* effect : effects) {
-        pluginMgr->unloadPlugin(effect, flags);
+        pluginMgr->unloadPlugin(effect);
     }
 }
 
@@ -242,8 +242,8 @@ void module_group::load(DAW::Host::PluginManager* host) {
     this->audio = host->createAudioStage();
 }
 
-void module_group::unload(DAW::Host::PluginManager* host, int flags) {
-    effectbase::unload(host, flags);
+void module_group::unload(DAW::Host::PluginManager* host) {
+    effectbase::unload(host);
     //onPreunload(flags);
     host->releaseAudioStage(audio);
     this->audio = nullptr;

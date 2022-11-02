@@ -109,10 +109,9 @@ void generateDummyProject(DawCtrl* dawCtrl) {
                 dbgassert(pluginHostInfo);
 
                 dawInstance->getPluginManager()->insertNewPlugin(track1->getStage(), pluginHostInfo, 0);
+                dawInstance->onPluginsChanged();
                 pluginHostInfo->onEnable();
-                track1->getStage()->pluginsChanged();
                 pluginHostInfo->setParamValue(PARAM_OFFSET_EXTERNAL+0, 0.0f, FLG_PAR_UPDATE_INIT);
-                //host->postPluginLoaded(track1->getStage(), pluginHostInfo);
             }
         }
     }
@@ -253,8 +252,8 @@ void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t tra
 
     audio_stage_t* trImpl1 = trackList[trackIdx]->getStage();
     pluginMgr->insertNewPlugin(trImpl1, loadRes.plugin, 0);
+    dawInstance->onPluginsChanged();
     loadRes.plugin->onEnable();
-    pluginMgr->postPluginLoaded(trImpl1, loadRes.plugin);
 
 
 #if 0

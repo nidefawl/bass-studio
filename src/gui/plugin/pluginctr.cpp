@@ -261,7 +261,7 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
                 int32_t slot = selection[0]->getSlot();
                 std::vector<effectbase*> pendingInstances;
                 for (effectbase* eff : selection) {
-                    audioStageAffected->removePlugin(eff, false);
+                    audioStageAffected->removePlugin(eff);
                     pendingInstances.push_back(eff);
                 }
                 auto* actionRemove = new action_remove_modules("Remove plugins", std::move(pendingInstances), audioStageAffected->toRef(), slot);
@@ -285,7 +285,7 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
                 int32_t slot = selection[0]->getSlot();
                 std::vector<effectbase*> pendingInstances;
                 for (effectbase* eff : selection) {
-                    audioStageAffected->removePlugin(eff, false);
+                    audioStageAffected->removePlugin(eff);
                     pendingInstances.push_back(eff);
                 }
                 auto* actionCut = new action_remove_modules("Cut plugins", std::move(pendingInstances), audioStageAffected->toRef(), slot);
@@ -537,10 +537,7 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
         audio_stage_ref_t refdst = stage->toRef();
         auto* track_action = new action_insert_effect("Insert plugin", effect, refdst, dstSlot);
         daw->pushHist(track_action);
-        pluginMgr->postPluginLoaded(stage, effect);
-        //    if (res.result == 0 && res.plugin) {
-        //        res.plugin->onEnable();
-        //    }
+        daw->onPluginsChanged();
     }
     showTrack(stage);
     if (this->parent) {
@@ -692,6 +689,7 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
             audio_stage_ref_t ref = this->stage->toRef();
             daw->pushHist(new action_shift_modules("Move plugin", ref, targetslot, first, last - first + 1));
         }
+        daw->onPluginsChanged();
         if (this->parent) {
             this->parent->onChildLayoutChanged(this);
         }
@@ -727,6 +725,7 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
             audio_stage_ref_t ref = trp->toRef();
             daw->pushHist(new action_shift_modules("Move plugin", ref, targetslot, curSlot, 1));
         }
+        daw->onPluginsChanged();
         if (this->parent) {
             this->parent->onChildLayoutChanged(this);
         }
@@ -844,7 +843,7 @@ action_remove_modules::action_remove_modules(String s, std::vector<effectbase*>&
 void action_remove_modules::releaseResources(DawInstance* daw) {
     if (weOwn) {
         for (effectbase* eff : effects) {
-            daw->getPluginManager()->unloadPlugin(eff, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+            daw->getPluginManager()->unloadPlugin(eff);
         }
         effects.clear();
         weOwn = false;
@@ -861,7 +860,7 @@ void action_remove_modules::undo(DawInstance* daw) {
     int32_t slot = 0;
     for (effectbase* eff : effects) {
         daw->getPluginManager()->insertNewPlugin(stage, eff, dstSlot + slot);
-        daw->getPluginManager()->postPluginLoaded(stage, eff);
+        daw->onPluginsChanged();
         dbgassert(eff->getSlot() == dstSlot + slot);
         slot++;
     }
@@ -906,7 +905,7 @@ void action_move_modules::redo(DawInstance* daw) {
 }
 void action_insert_effect::releaseResources(DawInstance* daw) {
     if (weOwn) {
-        daw->getPluginManager()->unloadPlugin(this->effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+        daw->getPluginManager()->unloadPlugin(this->effect);
         effect = nullptr;
         weOwn  = false;
     }
