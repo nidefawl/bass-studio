@@ -317,6 +317,7 @@ struct consolidate_task_t : public async_task_t {
         }
     }
     void pasteClipboard() {
+        auto lock = daw->lockPlayThread();
         trackstate_t preModifyState;
         int32_t idxBegin = iGuiMgr->getTrackProjectIndex(cursor.getTrackBegin());
         int32_t idxEnd   = iGuiMgr->getTrackProjectIndex(cursor.getTrackEnd());
