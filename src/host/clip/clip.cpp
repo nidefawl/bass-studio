@@ -754,17 +754,23 @@ sample_fades_ref_t clip_t::getSampleFadeOut(int32_t tempo100, samplerate_t sr) c
 }
 
 clip_audio_t::clip_audio_t() {
+    setDefaultFade(true);
+    setDefaultFade(false);
+}
+
+void clip_audio_t::setDefaultFade(bool bIn) {
     using DAW::Shape::GetShapeSaw;
     using DAW::Shape::GetShapeSawInverse;
     using DAW::Shape::shape_t;
     using DAW::Shape::ShapeFlags;
     auto flags = ShapeFlags::SHAPE_SHAPED | ShapeFlags::SHAPE_EASEINOUT | ShapeFlags::SHAPE_LOCK_POINTS;
-    auto fadeInShape   = shape_t(GetShapeSawInverse(flags));
-    auto fadeOutShape  = shape_t(GetShapeSaw(flags));
-    // fadeIn             = { 128.0, fadeInShape };
-    // fadeOut            = { 128.0, fadeOutShape };
-    fadeIn             = { 0.0, fadeInShape };
-    fadeOut            = { 0.0, fadeOutShape };
+    if (bIn) {
+        auto fadeInShape = shape_t(GetShapeSawInverse(flags));
+        fadeIn  = { 128.0, fadeInShape };
+    } else {
+        auto fadeOutShape = shape_t(GetShapeSaw(flags));
+        fadeOut = { 128.0, fadeOutShape };
+    }
 }
 
 void clip_t::adjustStartOffset(tick_t offset) {

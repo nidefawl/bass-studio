@@ -488,6 +488,10 @@ void load(Archive& archive, clip_audio_t& m) {
     archive(make_nvp("id", m.id));
     make_optional_nvp(archive, "fadeIn", m.fadeIn);
     make_optional_nvp(archive, "fadeOut", m.fadeOut);
+    if (m.fadeIn.shape.pts.empty()) 
+        m.setDefaultFade(true);
+    if (m.fadeOut.shape.pts.empty())
+        m.setDefaultFade(false);
 }
 
 //TODO: don't archive each note seperately

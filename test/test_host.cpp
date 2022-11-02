@@ -98,8 +98,6 @@ namespace test_host {
             samplecount_t numSamples = 512 + iClip * 13*17*55;
             auto samplefile = createSample(cache, sf, numChannels, numSamples, sampleTestData);
             auto audioClip = createClipFromSample(tickBegin, prjGlobals, samplefile);
-            audioClip->audio.fadeIn.durationMs = 0;
-            audioClip->audio.fadeOut.durationMs = 0;
             clips.push_back(audioClip);
             block.clear();
             auto samplePos = tickToSampleConvert<samplecount_t, roundmode::floor>(tickBegin, prjGlobals.tempo100, sf.sampleRate);
