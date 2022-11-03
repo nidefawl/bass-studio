@@ -592,7 +592,7 @@ namespace PluginLFO {
                     if ((e.id&sync) || (e.id == 0 && sync == 0)) {
                         nvgBeginPath(vg);
                         nvgCircle(vg, e.x + 10, y + e.y + h / 2, 4);
-                        nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_OUTLINE));
+                        nvgFillColor(vg, theme->getColor(GuiColor::COL_TEXT));
                         nvgFill(vg);
                     }
                 }

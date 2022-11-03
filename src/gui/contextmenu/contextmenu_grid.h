@@ -96,7 +96,7 @@ public:
                  ((!fixed && n == grid.grid_dens.dynamicDensity) || (fixed && n == grid.grid_dens.fixedBars)))) {
                 nvgBeginPath(vg);
                 nvgCircle(vg, e.x + 10, y + e.y + h / 2, 4);
-                nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_OUTLINE));
+                nvgFillColor(vg, theme->getColor(GuiColor::COL_TEXT));
                 nvgFill(vg);
             }
             n++;
