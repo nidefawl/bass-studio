@@ -290,7 +290,6 @@ void audiocache::Downsample(audiosample_t* sample) {
         std::vector<samplechannel_t> downsampledChannels(2);
         for (channelnum_t ch = 0; ch < sample->nChannels; ch++) {
             samplechannel_t chDownSmpld(static_cast<size_t>(lenSamplesDownsampled));
-            seqthreads::threadSleep(22);
             downsample(sample->sampleRate,
                         sample->samples.at(ch).data(),
                         0,
