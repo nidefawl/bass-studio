@@ -648,37 +648,27 @@ void gui_audiocontent::releaseRendered() {
 
 audioclip_texture_t makeWaveformFromSample(const int32_t tempo100, const samplerate_t samplerate, scaled_grid& grid, const clip_audio_t& clipAudio,
                                            const ivec2& pos, const ivec2& size) {
-
-    int32_t pxBegin = 0;
-    int32_t pxEnd   = size.x;
-
-    double tickBeginOffset = grid.screenToTickD(pxBegin);
-    double tickEnd         = grid.screenToTickD(pxEnd);
-
-    double sampleStartOffset = tickToSampleConvert<double, roundmode::floor>(tickBeginOffset, tempo100, samplerate);
-    double sampleEnd         = tickToSampleConvert<double, roundmode::floor>(tickEnd, tempo100, samplerate);
-
+    double sampleStartOffset = tickToSampleConvert<double, roundmode::floor>(grid.screenToTickD(0), tempo100, samplerate);
+    double sampleEnd         = tickToSampleConvert<double, roundmode::floor>(grid.screenToTickD(size.x), tempo100, samplerate);
     double lenSamples   = sampleEnd - sampleStartOffset;
     double samplesPerPx = lenSamples / size.x;
-
 
     audioclip_texture_t w;
     w.quality = 2;
 
     double pxPerSample      = 1.0 / samplesPerPx;
     constexpr double MAX_RES = 2048.0;
-    constexpr double FBO_WIDTH_D = FBO_WIDTH;
 
     w.scaleX = 1.0f;
     w.pos    = pos;
     w.size   = ivec2(math::min(size.x, FBO_WIDTH), math::min(size.y, FBO_HEIGHT));
 
     double nSamplesD = sampleEnd - sampleStartOffset;
-    if (nSamplesD * pxPerSample > FBO_WIDTH_D) {
-        samplesPerPx = (nSamplesD / FBO_WIDTH_D);
+    if (nSamplesD * pxPerSample > FBO_WIDTH) {
+        samplesPerPx = nSamplesD / double(FBO_WIDTH);
     }
-    if (samplesPerPx > MAX_RES && (nSamplesD / MAX_RES) <= FBO_WIDTH_D) {
-        w.scaleX     = static_cast<float>(MAX_RES / samplesPerPx);
+    if (samplesPerPx > MAX_RES && (nSamplesD / double(MAX_RES)) <= FBO_WIDTH) {
+        w.scaleX     = float(double(MAX_RES) / samplesPerPx);
         samplesPerPx = MAX_RES;
     }
 
