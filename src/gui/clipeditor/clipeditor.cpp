@@ -1829,13 +1829,8 @@ bool gui_clipcontent_control_data::handleKeyInput(KeyEvent& kevt) {
 }
 std::pair<tick_t, tick_t> getMinMaxTimeShape(std::vector<DAW::Shape::shape_pt_t>& shapePt);
 bool gui_clipcontent_control_data::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
-    auto daw = dawCtrl->getDaw();
     auto command = ctxt.type;
     auto& kevt = ctxt.kevt;
-    // if (focused() && command == CMD_PASTE && daw->getClipboardType() != ClipBoardType::CLIPBOARD_NOTES) {
-    //     // suppress paste of clips by returning true for "is handled"
-    //     return true;
-    // }
     clip_t* clip = view.clip();
     if (!clip) {
         return false;
