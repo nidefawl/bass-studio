@@ -176,6 +176,7 @@ class guictr_tempocontrols : public guictr_base {
     gui_timeinput loopLen;
     gui_numberinput_field_generic<GlobalZoom> zoom;
     GlobalZoom globalZoom;
+    guibuttonstate btnUiLayoutLock;
 public:
     guictr_tempocontrols(project_t& _project, project_globals_t& _projectGlobals);
     ~guictr_tempocontrols() override;

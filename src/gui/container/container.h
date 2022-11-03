@@ -73,8 +73,7 @@ public:
     void onRemove() override;
     void onAdded() override;
 
-    void determineSize(ivec2& prefSize) override {
-    }
+    void determineSize(ivec2& prefSize) override;
 
     virtual ivec2 paddingTL(int _padding) const {
         return ivec2(_padding - margin * snapSides.x, _padding - margin * snapSides.y);

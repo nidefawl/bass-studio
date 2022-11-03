@@ -478,7 +478,11 @@ void guictr_plugins::showTrack(audio_stage_t* audio) {
     if (track && isDefaultPluginCtr) {
         setScrolloffset(this->track->scrolloffset);
     }
-    setLabel(name);
+    if (name.empty()) {
+        setLabel("No Track Selected");
+    } else {
+        setLabel(name);
+    }
 }
 
 void guictr_plugins::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
@@ -807,7 +811,7 @@ void guictr_plugins::determineSize(glm::ivec2& prefSize) {
 
     ivec2 sizeInset     = prefSize - (paddingTL(padding) + paddingBR(padding));
     int32_t guiH        = sizeInset.y - margin;
-    int32_t titleHeight = math::min(((320 / 8) >> 1) << 1, ((guiH / 8) >> 1) << 1);
+    int32_t titleHeight = math::clamp(((guiH / 8) >> 1) << 1, 8, ((320 / 8) >> 1) << 1);
     theme->set(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, titleHeight);
 
 

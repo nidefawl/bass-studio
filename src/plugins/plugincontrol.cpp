@@ -117,7 +117,9 @@ void PluginControl::relayout(int32_t w, int32_t h) {
     view->layout(w, h);
 
     for (guictr_base* ctr : containers) {
-        ctr->layout();
+        if (ctr->isVisible()) {
+            ctr->layout();
+        }
     }
 }
 
@@ -128,10 +130,12 @@ bool PluginControl::mouseDownPre() {
 
 void PluginControl::onTick() {
     for (guictr_base* ctr : containers) {
-        ctr->onTick(this);
+        if (ctr->isVisible())
+            ctr->onTick(this);
     }
     for (guictr_base* ctr : containers) {
-        ctr->onIdle();
+        if (ctr->isVisible())
+            ctr->onIdle();
     }
 }
 

@@ -24,6 +24,7 @@ struct guictrlayout_snapshot_t : public guictrlayout_entry_snapshot_t {
 struct dawview_layout_t {
     std::shared_ptr<guictrlayout_snapshot_t> left;
     std::shared_ptr<guictrlayout_snapshot_t> right;
+    std::shared_ptr<guictrlayout_snapshot_t> center;
     std::vector<float> splitterPositions;
 };
 

@@ -69,7 +69,7 @@ void gui_arp::buttonClicked(guibase* _button) {
     if (stl_contains(knobs, _button)) {
         auto button = dynamic_cast<guiknob_arp*>(_button);
         auto* arp = getArp();
-        if (button && arp) {
+        if (button && arp && button->getParamIdx() > -1) {
             auto paramIdx = button->getParamIdx();
             auto paramValue = arp->getParamValueDisplay(paramIdx);
             editfield.mCallbackEnd = [this, button, arpBegin = arp, paramValue, paramIdx](const std::string& str) {
@@ -161,7 +161,7 @@ void gui_arp::render(NVGcontext* vg) {
     ivec2 posInset = getPosContent();
     nvgTranslate(vg, posInset.x - pos.x, posInset.y - pos.y);
     nvgTranslateZ(vg, -4.0f);
-    if (arp) {
+    if (arp && knobs.front()->getParamIdx() > -1) {
         ivec2 cs = getSizeContent();
         for (guiknob* knob : knobs) {
             knob->render(vg);

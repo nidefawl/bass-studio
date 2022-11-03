@@ -25,6 +25,7 @@
 #include "gui/controls/splitter.h"
 #include "gui/container/container_layout_types.h"
 #include "gui/container/container_layout_snapshot.h"
+#include "tls.h"
 
 
 class guictr_layout;
@@ -35,7 +36,6 @@ class guictr_layout : public guictr_base, public i_ctr_layout, public splitter_c
     bool setOverlayPosForTab(i_ctr_drop_area* area, dock_pos dockPos, int32_t dockOffset, bool rightSideHandle);
     i_ctr_drop_area* makeDropArea(int32_t idx);
 
-public:
 private:
     container_layout ctrLayout = container_layout::SOLE;
     int32_t activePosition     = -1;
@@ -51,13 +51,15 @@ private:
         return this->label;
     }
     Splitter* getSplitter(int32_t pos);
-
+    bool bHideHandlesWhenLocked = false;
 public:
     guictr_layout();
     ~guictr_layout() override {
         removeGuis();
         entries.clear();
     }
+    bool isHandleShown() const;
+    void setHideHandlesWhenLocked(bool b) { bHideHandlesWhenLocked = b; }
     ivec2 paddingTL(int _padding) const override {
         if (parentCtrl && parentCtrl->isDraggingContainer()) {
             return ivec2(8);
@@ -85,6 +87,7 @@ public:
             entry->parentLayoutContainer = nullptr;
         }
         entries.clear();
+        handles.clear();
         activePosition = -1;
     }
     int32_t getActivePosition() const {
@@ -141,8 +144,12 @@ public:
         //}
     }
     void setLayout(container_layout ctrLayoutNew) {
+        if (this->ctrLayout == ctrLayoutNew) {
+            return;
+        }
         this->ctrLayout = ctrLayoutNew;
         updateVisible();
+        updateSplitters();
     }
     void postContentChanged() override {
         simplify();
@@ -192,6 +199,7 @@ public:
     bool getContainerRef(guictr_layout_entry* ctr, std::shared_ptr<guictr_layout_entry>& out, bool remove) override;
     void addEntry(std::shared_ptr<guictr_layout_entry> ctr, int32_t posOffset = -2);
     bool placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_ctr_drop_area* area) override;
+    bool activateEntry(guictr_layout_entry* entry) override;
 
     void getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<i_ctr_drop_area>>& handles) override;
     //void replaceContentWith(guictr_layout* ctr);

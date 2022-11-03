@@ -161,9 +161,9 @@ bool PopupCtrl::initPopup(window_overlay* _window, NVGcontext* nanovg) {
 
 void PopupCtrl::onTick() {
     for (guictr_base* ctr : containers) {
-        ctr->onTick(this);
+        if (ctr->isVisible()) ctr->onTick(this);
     }
     for (guictr_base* ctr : containers) {
-        ctr->onIdle();
+        if (ctr->isVisible()) ctr->onIdle();
     }
 }

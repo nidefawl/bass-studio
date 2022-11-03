@@ -1,5 +1,6 @@
 #pragma once
 #include "event.h"
+#include "keyboard.h"
 #include "str_util.h"
 #include "color_util.h"
 #include "gui/container/container.h"
@@ -239,7 +240,10 @@ public:
     void render(NVGcontext* vg) override;
     void handleDraggedBegin(MouseEvent& evt) override {
         if (evt.guiDragged == this) {
-            MainCtrl::get()->showPluginView();
+            dawCtrl->showPluginView();
+            if (isCtrl(evt.kbmods) || evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
+                dawCtrl->getDaw()->getMainControl()->toggleViewModeEditArea();
+            }
             lastscrolloffset = ctr_plugins->scrolloffset;
         }
     }

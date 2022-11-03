@@ -22,6 +22,7 @@ class Splitter : public guictr_base {
     float scale;
     float scaleMin{}, scaleMax{};
     splitter_cb* notifyCtrl = nullptr;
+    ivec2 windowSize{};
 public:
     static constexpr int SPLITTER_LAYOUT_THICKNESS = SPLITTER_HANDLE_SIZE;
 
@@ -44,10 +45,12 @@ public:
         }
         return false;
     }
-    int32_t leftOrTop(int32_t wh) const {
+    int32_t leftOrTop(int32_t wh) {
+        windowSize = ivec2(wh);
         return math::roundfS32(wh * scale);
     }
-    int32_t rightOrBottom(int32_t wh) const {
+    int32_t rightOrBottom(int32_t wh) {
+        windowSize = ivec2(wh);
         return wh - leftOrTop(wh);
     }
     void handleDraggedBegin(MouseEvent& evt) override {
@@ -82,5 +85,8 @@ public:
     }
     int getType() const {
         return type;
+    }
+    void setSplitterType(int type) {
+        this->type = type;
     }
 };

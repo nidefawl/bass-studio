@@ -260,7 +260,8 @@ namespace MiniApp {
         void prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) override {
 
             for (guictr_base* ctr : containers) {
-                ctr->prerender(nanovgCtxt);
+                if (ctr->isVisible())
+                    ctr->prerender(nanovgCtxt);
             }
             if (getTimeMillis() - tmLastRelease >= 60) {
                 tmLastRelease = getTimeMillis();
@@ -317,7 +318,7 @@ namespace MiniApp {
 
         void onTick() override {
             for (guictr_base* ctr : containers) {
-                ctr->onTick(this);
+                if (ctr->isVisible()) ctr->onTick(this);
             }
             mainWindow->requestRedraw();
         }
@@ -328,7 +329,7 @@ namespace MiniApp {
             view->layout(w, h);
 
             for (guictr_base* ctr : containers) {
-                ctr->layout();
+                if (ctr->isVisible()) ctr->layout();
             }
         }
         void mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) override {

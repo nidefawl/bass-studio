@@ -1,4 +1,6 @@
 #include "container_dnd_layout.h"
+#include "appsettings.h"
+#include "assert_dbg.h"
 #include "basectrl.h"
 #include "event.h"
 #include "gui/container/container.h"
@@ -10,8 +12,11 @@
 #include "logging.h"
 #include "platform.h"
 #include "fileio.h"
+#include "seq_util.h"
 #include "str_util.h"
+#include "tls.h"
 
+#include <algorithm>
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
@@ -78,8 +83,7 @@ public:
     }
     void buttonClicked(guibase* button) override {
         if (button == &btnClose) {
-            std::shared_ptr<guictr_layout_entry> out;
-            parentCtr->getContainerRef(out, true);
+            parentCtr->removeEntryFromParent();
             parentCtrl->relayout();
         }
     }
@@ -279,6 +283,40 @@ guictr_layout::guictr_layout() : guictr_base() {
     //margin = padding-4;
 }
 void guictr_layout::layout() {
+    auto p = parent;
+    bool bHideHandles = this->bHideHandlesWhenLocked;
+    while(!bHideHandles && p) {
+        if (p->getGuiType() == CTR_TYPE_LAYOUT) {
+            auto* pLayout = static_cast<guictr_layout*>(p);
+            bHideHandles |= pLayout->bHideHandlesWhenLocked;
+            p = p->parent;
+        }
+    }
+    if (bHideHandles) {
+        auto needsHandle = !daw_tls::getSettings().dawsettings.uiLayoutLocked;
+        for (auto& entry : entries) {
+            if (!entry->hasHandle) {
+                continue;
+            }
+            auto guiHandle = entry->getHandle();
+            if ((!!guiHandle->parent) != needsHandle) {
+                if (needsHandle) {
+                    guictr_base::add(guiHandle);
+                    handles.push_back(guiHandle);
+                } else {
+                    removeEntry(handles, guiHandle);
+                    guictr_base::remove(guiHandle);
+                }
+            }
+        }
+    }
+    for (auto gui : guis) {
+        bool bIn = std::find_if(handles.begin(), handles.end(), [gui](auto& handle) { return handle == gui; }) != handles.end();
+        bIn |= std::find_if(entries.begin(), entries.end(), [gui](auto& entry) { return entry->getGui() == gui; }) != entries.end();
+        bIn |= std::find_if(splitters.begin(), splitters.end(), [gui](auto& entry) { return entry.get() == gui; }) != splitters.end();
+        String bla = gui->getClassName();
+        dbgassert(bIn);
+    }
     ivec2 cs = getSizeContent();
     switch (this->ctrLayout) {
         case container_layout::SPLIT_V:
@@ -289,6 +327,9 @@ void guictr_layout::layout() {
             break;
         default:
             break;
+    }
+    if (cs.x <= 0 || cs.y <= 0) {
+        return;
     }
     vec2 segSizeF    = vec2(cs);
     vec2 axis        = vec2(0);
@@ -309,20 +350,21 @@ void guictr_layout::layout() {
             axis.y   = 1.0f;
             break;
     }
-    static const int32_t handleHeight  = 20;
-    static const int32_t paddingHandle = 1;
+    const bool isShown = isHandleShown();
+    const int32_t handleHeight = isShown ? 20 : 0;
+    const int32_t paddingHandle = 1;
 
     float tabW      = segSizeF.x;
     size_t entryIdx = 0;
     if (this->ctrLayout == container_layout::TABBED) {
         axis.x                          = 1;
-        static const int32_t ctrPadding = 1;
+        const int32_t ctrPadding = 1;
         for (auto& entry: entries) {
             auto* gui       = entry->getGui();
             auto* guiHandle = entry->getHandle();
             entry->pos = gui->pos = ivec2(ctrPadding) + ivec2(0, handleHeight);
             entry->size = gui->size = math::maxvec2(cs - ivec2(ctrPadding * 2) - ivec2(0, handleHeight), ivec2(4, 4));
-            if (guiHandle) {
+            if (guiHandle && isShown) {
                 guiHandle->pos  = ivec2((float) entryIdx * vec2(tabW, 0) + vec2(paddingHandle, 0));
                 guiHandle->size = ivec2(math::maxvec2f(vec2(tabW, handleHeight), vec2(4, 4)) - vec2(paddingHandle * 2, 0));
             }
@@ -330,10 +372,10 @@ void guictr_layout::layout() {
         }
     } else {
         for (auto& entry: entries) {
-            int controlHeight               = entry->hasHandle ? handleHeight : 0;
+            int controlHeight               = isShown && entry->hasHandle ? handleHeight : 0;
             auto* gui                       = entry->getGui();
             auto* guiHandle                 = entry->getHandle();
-            static const int32_t ctrPadding = guiHandle && entry->hasHandle ? 1 : 0;
+            const int32_t ctrPadding = isShown && guiHandle && entry->hasHandle ? 1 : 0;
             vec2 segPos                     = vec2((float) entryIdx * segSizeF * axis);
             if (this->ctrLayout == container_layout::SPLIT_V || this->ctrLayout == container_layout::SPLIT_H) {
                 float curScale = 1.0f;
@@ -354,14 +396,14 @@ void guictr_layout::layout() {
             }
             entry->pos = gui->pos = ivec2(segPos + vec2(0, controlHeight) + vec2(ctrPadding));
             entry->size = gui->size = ivec2(math::maxvec2f(segSizeF - vec2(ctrPadding * 2) - vec2(0, controlHeight), vec2(4, 4)));
-            if (guiHandle && entry->hasHandle) {
+            if (isShown && guiHandle && entry->hasHandle) {
                 guiHandle->pos  = ivec2(segPos + vec2(paddingHandle, 0));
                 guiHandle->size = ivec2(vec2(tabW, controlHeight) - vec2(paddingHandle * 2, 0));
             }
             if (entryIdx > 0 && splitters.size() > entryIdx - 1) {
                 ivec2 splitterPos  = entry->pos;
                 ivec2 splitterSize = entry->size;
-                if (guiHandle && entry->hasHandle) {
+                if (isShown && guiHandle && entry->hasHandle) {
                     splitterPos  = guiHandle->pos;
                     splitterSize = entry->size + guiHandle->size;
                 }
@@ -373,7 +415,15 @@ void guictr_layout::layout() {
         }
     }
     for (auto* gui: guis) {
+        String name = gui->getClassName();
+        dbgassert(gui->size.x > 0);
+        dbgassert(gui->size.y > 0);
         gui->determineSize(gui->size);
+        if (gui->size.x <= 0) {
+            gui->determineSize(gui->size);
+        }
+        dbgassert(gui->size.x > 0);
+        dbgassert(gui->size.y > 0);
         //TODO: do not layout invisible (tabbed) entries
         gui->layout();
     }
@@ -417,7 +467,7 @@ public:
             auto ctrl = ctrHandle->parentCtrl;
             gui_type type = static_cast<gui_type>(_id - 100);
             std::shared_ptr<guictr_base> ctr;
-            auto context = ContainerInstanceContext{ctrHandle->dawCtrl->getDaw()};
+            auto context = ContainerInstanceContext{ctrHandle->dawCtrl->getDaw(), {}};
             if (makeContainer(context, type, ctr)) {
                 ctr->setLabel(e->title);
                 std::shared_ptr<guictr_layout_entry> ctrEntry = createGuiCtrLayoutEntry(ctr);
@@ -549,40 +599,46 @@ std::vector<float> guictr_layout::getSplitterPositions() {
 }
 
 void guictr_layout::setSplitterPositions(std::vector<float>& splitterPositons) {
-    if (splitterPositons.size() == this->splitters.size()) {
-        for (size_t i = 0; i < splitterPositons.size(); ++i) {
-            splitters[i]->setScale(splitterPositons[i]);
-        }
-        updateSplitterMinMax(splitters);
+    int oldLen = CtrSize(splitters);
+    for (int i = 0; i < oldLen; ++i) {
+        guictr_base::remove(splitters.back().get());
+        splitters.pop_back();
     }
+    for (size_t i = 0; i < splitterPositons.size(); ++i) {
+        splitters.push_back(std::make_unique<Splitter>(ctrLayout == container_layout::SPLIT_V ? 1 : 0, splitterPositons[i]));
+        splitters[i]->setCallback(this);
+        guictr_base::add(splitters.back().get());
+    }
+    updateSplitterMinMax(splitters);
 }
 
 void guictr_layout::updateSplitters() {
-    for (auto& splitter: splitters) {
-        if (splitter->parent) {
-            guictr_base::remove(splitter.get());
-        }
-    }
-    splitters.clear();
-    int numSplitters = entries.size() - 1;
-    if (numSplitters <= 0)
-        return;
+    int splitterLayout = 0;
+    int numSplitters = 0;
     if (this->ctrLayout == container_layout::SPLIT_H || this->ctrLayout == container_layout::SPLIT_V) {
-        int splitterLayout = ctrLayout == container_layout::SPLIT_V ? 1 : 0;
-        float off          = 1.0f / (numSplitters + 1);
-        for (int i = 0; i < numSplitters; ++i) {
-            float splitPos =         off + i * off;
-            auto splitter  = std::make_shared<Splitter>(splitterLayout, splitPos);
-            splitters.push_back(splitter);
-            splitter->setMinMax(splitPos - off * 0.8f, splitPos + off * 0.8f);
-            splitter->setCallback(this);
-        }
-        updateSplitterMinMax(splitters);
-        for (auto& splitter: splitters) {
-            guictr_base::add(splitter.get());
-        }
+        numSplitters = math::max<int>(0, CtrSize(entries) - 1);
+        splitterLayout = ctrLayout == container_layout::SPLIT_V ? 1 : 0;
+    }
+
+    float off = 1.0f / (numSplitters + 1);
+    int oldLen = CtrSize(splitters);
+    for (int i = oldLen; i < numSplitters; ++i) {
+        float splitPos = off + i * off;
+        splitters.push_back(std::make_unique<Splitter>(splitterLayout, splitPos));
+        splitters[i]->setCallback(this);
+        guictr_base::add(splitters.back().get());
+    }
+    for (int i = numSplitters; i < oldLen; ++i) {
+        guictr_base::remove(splitters.back().get());
+        splitters.pop_back();
+    }
+    for (int i = 0; i < numSplitters; ++i) {
+        splitters[i]->setSplitterType(splitterLayout);
+        float splitPos = off + i * off;
+        splitters[i]->setMinMax(splitPos - off * 0.8f, splitPos + off * 0.8f);
     }
 }
+
 void guictr_layout::handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) {
     updateSplitterMinMax(splitters);
     layout();
@@ -663,6 +719,32 @@ bool guictr_layout::getContainerRef(guictr_layout_entry* ctr, std::shared_ptr<gu
     return true;
 }
 
+bool guictr_layout::activateEntry(guictr_layout_entry* entry) {
+    auto it = std::find_if(this->entries.begin(), this->entries.end(), [entry](auto& e) {
+        if (entry == e.get()) {
+            return true;
+        }
+        auto guiType = e->getGui()->getGuiType();
+        if (guiType != gui_type::CTR_TYPE_LAYOUT) {
+            return false;
+        }
+        auto* ctr = static_cast<guictr_layout*>(e->getGui());
+        if (ctr->activateEntry(entry)) {
+            return true;
+        }
+        return false;
+    });
+    if (it != entries.end()) {
+        auto pos = it - entries.begin();
+        if (pos != this->activePosition) {
+            this->activePosition = static_cast<int32_t>(pos);
+            updateVisible();
+        }
+        return true;
+    }
+    return false;
+}
+
 void guictr_layout::addEntry(std::shared_ptr<guictr_layout_entry> ctr, int32_t posOffset) {
     auto it = std::find(entries.begin(), entries.end(), ctr);
     if (it != entries.end()) {
@@ -676,12 +758,15 @@ void guictr_layout::addEntry(std::shared_ptr<guictr_layout_entry> ctr, int32_t p
     auto guiCtr = ctr->getGui();
     // a handle is present if the child is not a guictr_layout, or if this container is using tabbed layout
     ctr->hasHandle = dynamic_cast<guictr_layout*>(guiCtr) == nullptr || this->ctrLayout == container_layout::TABBED;
+
     guictr_base::add(guiCtr);
     //guiCtr->snapSides = ivec4(1);
-    auto* guiHandle = ctr->getHandle();
-    if (guiHandle && ctr->hasHandle) {
-        guictr_base::add(guiHandle);
-        handles.push_back(guiHandle);
+    if (isHandleShown()) {
+        auto* guiHandle = ctr->getHandle();
+        if (guiHandle && ctr->hasHandle) {
+            guictr_base::add(guiHandle);
+            handles.push_back(guiHandle);
+        }
     }
     ctr->parentLayoutContainer = this;
     updateSplitters();
@@ -736,11 +821,12 @@ bool guictr_layout::placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_c
     ctr->hasHandle = dynamic_cast<guictr_layout*>(guiCtr) == nullptr || this->ctrLayout == container_layout::TABBED;
     guictr_base::add(guiCtr);
 
-    auto* guiHandle = ctr->getHandle();
-
-    if (guiHandle && ctr->hasHandle) {
-        guictr_base::add(guiHandle);
-        handles.push_back(guiHandle);
+    if (isHandleShown()) {
+        auto* guiHandle = ctr->getHandle();
+        if (guiHandle && ctr->hasHandle) {
+            guictr_base::add(guiHandle);
+            handles.push_back(guiHandle);
+        }
     }
     ctr->parentLayoutContainer = this;
     if (this->ctrLayout == container_layout::TABBED) {
@@ -885,6 +971,12 @@ bool guictr_layout_entry::getContainerRef(std::shared_ptr<guictr_layout_entry>& 
     return parentLayoutContainer->getContainerRef(this, out, remove);
 }
 
+void guictr_layout_entry::removeEntryFromParent() {
+    if (parentLayoutContainer) {
+        std::shared_ptr<guictr_layout_entry> out;
+        dbgassert(parentLayoutContainer->getContainerRef(this, out, true));
+    }
+}
 guictr_base* guictr_layout_entry::getGui() {
     return ctr.get();
 }
@@ -911,13 +1003,16 @@ void loadContainerEntrySnapshot(ContainerFactory& fac,
                                 std::shared_ptr<guictr_layout_entry>& out) {
     out  = nullptr;
     const auto typeLoad = snapshot->type;
-    if (fac.count(typeLoad)) {
-        ContainerBuilder& builder  = fac[typeLoad];
-        std::shared_ptr<guictr_base> sharedContainer = builder(ctxt);
-        if (!sharedContainer) {
-            log_printf("Failed building container of type %d\n", typeLoad);
+    auto it = ctxt.entriesPreconstructed.find(typeLoad);
+    if (it != ctxt.entriesPreconstructed.end()) {
+        if (it->second.size() > 0) {
+            out = it->second.back();
+            it->second.pop_back();
             return;
         }
+    }
+    std::shared_ptr<guictr_base> sharedContainer;
+    if (makeContainer(ctxt, typeLoad, sharedContainer)) {
         //sharedContainer->label = snapshot->label;
         getContainerLabel(typeLoad, sharedContainer->label);
         out = createGuiCtrLayoutEntry(sharedContainer);
@@ -960,4 +1055,20 @@ void loadContainerSnapshot(ContainerFactory& fac,
     ctrlayout->setSplitterPositions(snapshot->splitterPositions);
     ctrlayout->setActiveEntry(snapshot->activePosition);
     //ctrlayout->postContentChanged();
+}
+
+bool guictr_layout::isHandleShown() const {
+    if (!daw_tls::getSettings().dawsettings.uiLayoutLocked) {
+        return true;
+    }
+    auto p = parent;
+    bool bHideHandles = this->bHideHandlesWhenLocked;
+    while(!bHideHandles && p) {
+        if (p->getGuiType() == CTR_TYPE_LAYOUT) {
+            auto* pLayout = static_cast<guictr_layout*>(p);
+            bHideHandles |= pLayout->bHideHandlesWhenLocked;
+            p = p->parent;
+        }
+    }
+    return !bHideHandles;
 }

@@ -626,6 +626,7 @@ public:
           trackTimeline(_grid),
           loophandles(_project, _projectGlobals, _grid),
           scrollbar(1, 0.0f, *this) {
+        setGuiType(gui_type::CTR_TYPE_TRACKS);
         dawCtrl = _dawCtrl,
         setCanMouseHit(true);
         setBackgroundRendered(true);

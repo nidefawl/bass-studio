@@ -105,6 +105,7 @@ struct guictr_layout_entry {
     layout_ctr_type getFrameType() const { return frameType; }
     String getLabel() const { return label; }
     bool getContainerRef(std::shared_ptr<guictr_layout_entry>& out, bool remove);
+    void removeEntryFromParent();
 };
 
 class i_ctr_layout {
@@ -116,6 +117,7 @@ public:
     virtual std::shared_ptr<guictr_layout_entry> replaceContainerWith(guictr_base* ctr, std::shared_ptr<guictr_layout_entry>& newEntry) = 0;
     virtual container_layout getLayout() const = 0;
     virtual void postContentChanged() = 0;
+    virtual bool activateEntry(guictr_layout_entry* entry) = 0;
 };
 
 inline container_layout dock_pos_to_container_layout(dock_pos pos) {

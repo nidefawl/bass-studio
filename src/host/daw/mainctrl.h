@@ -232,6 +232,17 @@ enum view_mode_t {
     NODE_EDITOR,
     MIXER
 };
+namespace DAW {
+enum EditAreaType : uint32_t {
+    EDIT_AREA_CLIP_EDITOR,
+    EDIT_AREA_PLUGIN_CONTAINER
+};
+enum EditAreaLayout : uint32_t {
+    EDIT_AREA_SINGLE = 0,
+    EDIT_AREA_SPLIT_VERTICAL,
+    EDIT_AREA_SPLIT_HORIZONTAL,
+};
+}
 enum ClipBoardType {
     CLIPBOARD_NONE,
     CLIPBOARD_CLIPS,
@@ -249,7 +260,6 @@ struct guictrlayout_snapshot_t;
 
 class DawViewContainers {
 public:
-    int indexContent    = 0;
     DawViewContainers() = default;
     virtual ~DawViewContainers() = default;
 
@@ -717,6 +727,9 @@ public:
     void fixCursor() override;
     bool isZooming() override;
     void setViewMode(view_mode_t mode) override;
+    void toggleViewModeEditArea();
+    void setEditAreaLayout(DAW::EditAreaLayout layout);
+    void setEditAreaType(DAW::EditAreaType editAreaType);
     void storeLayout(dawview_layout_t& layout) override;
     void loadLayout(const dawview_layout_t& viewLayout) override;
     std::shared_ptr<guictr_layout> replaceContainerWith(guictr_base* ctr,

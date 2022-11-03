@@ -593,6 +593,7 @@ void serialize(Archive& archive, guictrlayout_entry_snapshot_t& m) {
 template<class Archive>
 void serialize(Archive& archive, dawview_layout_t& m) {
     archive(m.left, m.right, m.splitterPositions);
+    make_optional_nvp(archive, "center", m.center);
 }
 
 template<class Archive>

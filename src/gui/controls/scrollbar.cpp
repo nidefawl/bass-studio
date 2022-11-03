@@ -112,11 +112,11 @@ void gui_scrollbar::setScrollOffset(float f) {
 void Splitter::handleDraggedMove(MouseEvent& evt) {
     ivec2 windowSize;
     ivec2 mpos;
-    if (notifyCtrl) {
+    if (notifyCtrl && this->parent) {
         windowSize = notifyCtrl->getContainerSize();
         mpos       = evt.mousepos - this->parent->toScreenSpace(ivec2(0));
     } else {
-        windowSize = parentCtrl->getScaledSize();
+        windowSize = this->windowSize == ivec2{0, 0} ? parentCtrl->getScaledSize() : this->windowSize;
         mpos       = evt.mousepos;
     }
     float sc      = type == 0 ? (mpos.y / (float) (windowSize.y)) : (mpos.x / (float) (windowSize.x));

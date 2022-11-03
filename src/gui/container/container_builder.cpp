@@ -43,10 +43,10 @@ bool getContainerLabel(gui_type type, String& out) {
             out = "Preferences";
             return true;
         case CTR_TYPE_EFFECTLIBRARY:
-            out = "Plugins";
+            out = "Plugin Library";
             return true;
         case CTR_TYPE_PLUGINSLOADED:
-            out = "Instances";
+            out = "Loaded Plugins";
             return true;
         case CTR_TYPE_DEBUG_0:
             out = "Debug 0";
@@ -89,6 +89,15 @@ bool getContainerLabel(gui_type type, String& out) {
             return true;
         case CTR_TYPE_MIDI_MONITOR:
             out = "Midi Monitor";
+            return true;
+        case CTR_TYPE_TRACKS:
+            out = "Tracks";
+            return true;
+        case CTR_TYPE_NODES:
+            out = "Nodes";
+            return true;
+        case CTR_TYPE_PLUGINS:
+            out = "Plugins";
             return true;
         default:
             break;

@@ -308,6 +308,11 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
         settings.dawsettings.audioEnabled = !settings.dawsettings.audioEnabled;
         dawCtrl->getDaw()->configureSampleRate();
     }
+    if (button == &this->btnUiLayoutLock) {
+        auto& settings = daw_tls::getSettings();
+        settings.dawsettings.uiLayoutLocked = !settings.dawsettings.uiLayoutLocked;
+        dawCtrl->relayout();
+    }
 }
 
 void guibutton_audioengine::prerender(NVGcontext* vg) {
@@ -548,6 +553,9 @@ guictr_tempocontrols::guictr_tempocontrols(project_t& _project, project_globals_
     btnLoop.drawParm = ICON_LOOP;
     btnLoop.setFlag(FLG_RENDER_BUTTON_WITH_LED, true);
     btnLoop.setStateRef(&projectGlobals.loopEnabled);
+    btnUiLayoutLock.setStateRef(&daw_tls::getSettings().dawsettings.uiLayoutLocked);
+    btnUiLayoutLock.drawFn   = drawTextureSymbol;
+    btnUiLayoutLock.drawParm = ICON_OPT_LOCKED;
     btnRecord.setStateRef(&projectGlobals.recordArmed);
     btnRecord.setButtonColor(GuiColor::COL_BTN_RECORD_ARM_BG);
     add(&loopLen);
@@ -560,6 +568,7 @@ guictr_tempocontrols::guictr_tempocontrols(project_t& _project, project_globals_
     add(&btnPlay);
     add(&btnRecord);
     add(&songPos);
+    add(&btnUiLayoutLock);
     add(&zoom);
     add(&btnAudioOnOff);
     padding = 8;
@@ -575,10 +584,12 @@ guictr_tempocontrols::guictr_tempocontrols(project_t& _project, project_globals_
     songPos.setLabel("Playback Position");
     loopPos.setLabel("Loop Start Position");
     loopLen.setLabel("Loop Length");
+    btnUiLayoutLock.setLabel("Lock UI Layout");
 }
 guictr_tempocontrols::~guictr_tempocontrols() {
     remove(&btnAudioOnOff);
     remove(&zoom);
+    remove(&btnUiLayoutLock);
     remove(&songPos);
     remove(&btnRecord);
     remove(&btnPlay);
@@ -648,12 +659,17 @@ void guictr_tempocontrols::layout() {
     btnAudioOnOff.pos  = ivec2(math::max(songPos.right() + spacing, cs.x - 5 - btnAudioOnOff.size.x), 5);
     zoom.size          = ivec2(90, 28);
     zoom.pos = btnAudioOnOff.pos - ivec2(zoom.size.x+spacingCtrls, 0);
+    btnUiLayoutLock.size = ivec2(32, 32);
+    btnUiLayoutLock.pos  = zoom.pos - ivec2(btnUiLayoutLock.size.x+spacingCtrls, 0);
     for (guibase* gui : guis) {
         gui->layout();
     }
 }
 void guictr_tempocontrols::render(NVGcontext* vg) {
     //guictr_base::setScissorTransform(vg);
+
+    bool bIsLockedUiLayout = daw_tls::getSettings().dawsettings.uiLayoutLocked;
+    btnUiLayoutLock.drawParm = bIsLockedUiLayout ? ICON_OPT_LOCKED : ICON_OPT_UNLOCKED;
     ivec2 posInset = getPosContent();
     nvgTranslate(vg, posInset.x, posInset.y);
     for (guibase* gui : guis) {

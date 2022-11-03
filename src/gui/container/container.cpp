@@ -24,10 +24,6 @@ void guictr_base::setControl(BaseCtrl* parentCtrl) {
 }
 void guictr_base::setParent(guibase* parent) {
     guibase::setParent(parent);
-    for (guibase* g : guis) {
-        dbgassert(g->parent == this);
-        g->setParent(this);
-    }
 }
 void guictr_base::onRemove() {
     // The derived class has to remove guis
@@ -349,5 +345,21 @@ void guictr_base::layout() {
     }
     for (guibase* gui : guis) {
         gui->layout();
+    }
+}
+
+void guictr_base::determineSize(ivec2& prefSize) {
+    if (prefSize.x == 0 && prefSize.y == 0) {
+        auto padding2 = paddingBR(padding) + paddingTL(padding);
+        ivec2 maxSize = ivec2(0);
+        for (guibase* gui : guis) {
+            if (!gui->isVisible())
+                continue;
+            maxSize.x = math::max(maxSize.x, gui->right());
+            maxSize.y = math::max(maxSize.y, gui->bottom());
+        }
+        if (maxSize.x > 0 && maxSize.y > 0) {
+            prefSize = maxSize + padding2;
+        }
     }
 }

@@ -1545,6 +1545,7 @@ guictr_nodes_splitview::guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& 
       graphTop(_cursor, _project, _dragdropclip),
       graphBottom(_cursor, _project, _dragdropclip),
       splitter(0, 0.5) {
+    setGuiType(gui_type::CTR_TYPE_NODES);
     graphBottom.graph.graphType = GraphType::Bottom;
     splitter.setMinMax(0.1f, 0.9f);
     splitter.setCallback(this);

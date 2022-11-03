@@ -155,6 +155,7 @@ void serialize(Archive& ar, app_daw_settings& settings) {
         make_nvp("shaderDebug", settings.shaderDebug)
     );
     make_optional_nvp(ar, "globalZoom", settings.globalZoom);
+    make_optional_nvp(ar, "uiLayoutLocked", settings.uiLayoutLocked);
 }
 
 template<class Archive>

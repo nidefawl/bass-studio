@@ -99,7 +99,7 @@ enum guiflag : int32_t {
     FLG_BG_SHADING               = 0x00002000,
     FLG_IMPL_SPEC2               = 0x00004000,
     FLG_NO_LAYOUT                = 0x00008000,
-    FLG_RENDER_BUTTON_WITH_LED   = 0x00010000
+    FLG_RENDER_BUTTON_WITH_LED   = 0x00010000,
 };
 enum guiflag_titlebar : int32_t {
     TITLEBAR_FLG_NONE = 0,
@@ -141,6 +141,8 @@ enum gui_type : uint16_t {
     CTR_TYPE_CLIPEDITOR_NOTES,
     CTR_TYPE_CLIPEDITOR_VELOCITY,
     CTR_TYPE_CLIPEDITOR_CONTROLDATA,
+    CTR_TYPE_TRACKS,
+    CTR_TYPE_NODES,
 };
 namespace DebugAlloc {
     template<typename T>

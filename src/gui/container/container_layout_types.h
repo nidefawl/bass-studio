@@ -1,11 +1,16 @@
 #pragma once
 #include "gui/controls/button.h"
 #include "container.h"
+#include "gui/gui.h"
+#include <memory>
+#include <vector>
+#include <map>
 
 class DawInstance;
 struct guictr_layout_entry;
 struct ContainerInstanceContext {
     DawInstance* const daw;
+    std::map<gui_type, std::vector<std::shared_ptr<guictr_layout_entry>>> entriesPreconstructed;
 };
 
 using ContainerBuilder = std::function<std::shared_ptr<guictr_base>(ContainerInstanceContext& ctxt)>;

@@ -151,7 +151,7 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, KeyboardMods kbmods, bool d
     }
     MouseHitEvt evt = mouseHitEvt(fromButton(button), kbmods);
     for (guictr_base* ctr : containers) {
-        if (ctr->mouseHitTest(mousePos, evt)) {
+        if (ctr->isVisible() && ctr->mouseHitTest(mousePos, evt)) {
             break;
         }
     }
@@ -192,7 +192,7 @@ void BaseCtrl::mouseScrolled(double xoffset, double yoffset, KeyboardMods kbmods
     ivec2 mousePos  = this->m_mousePos;
     MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_SCROLL, kbmods);
     for (guictr_base* ctr : containers) {
-        if (ctr->mouseHitTest(mousePos, evt)) {
+        if (ctr->isVisible() && ctr->mouseHitTest(mousePos, evt)) {
             break;
         }
     }
@@ -220,7 +220,7 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) {
     this->m_mousePos = mousePos;
     MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_OVER, kbmods);
     for (guictr_base* ctr : containers) {
-        if (ctr->mouseHitTest(mousePos, evt)) {
+        if (ctr->isVisible() && ctr->mouseHitTest(mousePos, evt)) {
             break;
         }
     }
@@ -307,7 +307,9 @@ bool BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
 void BaseCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
     auto& renderContainers = getRenderContainers();
     for (guictr_base* ctr : renderContainers) {
-        ctr->prerender(vg);
+        if (ctr->isVisible()) {
+            ctr->prerender(vg);
+        }
     }
 }
 void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
@@ -321,6 +323,9 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
 
     auto& renderContainers = getRenderContainers();
     for (guictr_base* ctr : renderContainers) {
+        if (!ctr->isVisible()) {
+            continue;
+        }
         if (ctr->size == ivec2{ 0, 0 }) {
             log_lf(Log::L_WARN, "warning, rendering container with size 0 0\n");
             continue;
@@ -758,7 +763,7 @@ void BaseCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
     MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, mevt.kbmods);
     evt.setDraggedThing(g);
     for (guictr_base* ctr : containers) {
-        if (ctr->mouseHitTest(mevt.mousepos, evt)) {
+        if (ctr->isVisible() && ctr->mouseHitTest(mevt.mousepos, evt)) {
             break;
         }
     }
@@ -772,7 +777,7 @@ void BaseCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
     MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, mevt.kbmods);
     evt.setDraggedThing(g);
     for (guictr_base* ctr : containers) {
-        if (ctr->mouseHitTest(mevt.mousepos, evt)) {
+        if (ctr->isVisible() && ctr->mouseHitTest(mevt.mousepos, evt)) {
             break;
         }
     }
@@ -910,7 +915,7 @@ std::vector<i_ctr_layout*> BaseCtrl::getContainers() {
     while (!stack.empty()) {
         guictr_base* current = stack.front();
         stack.pop_front();
-        if (current->guis.size()) {
+        if (current->isVisible() && current->guis.size()) {
             ctrMatches.clear();
             for (auto* tChildTest : current->guis) {
                 // TODO: check for visibility, or redesing guiyctr_layout in tabbed mode to not have inactive containers in its guis list
