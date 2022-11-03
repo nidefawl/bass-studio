@@ -7,6 +7,7 @@
 #include "gui/dialog/dialog_io.h"
 #include "gui/views/debugctr.h"
 #include "gui/shape/shapeeditor.h"
+#include "logging.h"
 
 guictr_base* makeCtrProperties();
 guictr_base* makeCtrTheme();
@@ -154,6 +155,26 @@ ContainerFactory& getContainerFactory() {
         };
     }
     return containerFactory;
+}
+ContainerRegistry& getContainerRegistry() {
+    static ContainerRegistry sortedVector;
+    static bool init = false;
+    if (!init) {
+        init = true;
+        auto fac = getContainerFactory();
+        for (auto& it : fac) {
+            auto guiType = it.first;
+            String name;
+            getContainerLabel(guiType, name);
+            if (name.empty())
+                continue;
+            sortedVector.emplace_back(guiType, name);
+        }
+        std::sort(sortedVector.begin(), sortedVector.end(), [](const auto& a, const auto& b) {
+            return a.second < b.second;
+        });
+    }
+    return sortedVector;
 }
 bool makeContainer(ContainerInstanceContext& ctxt, gui_type type, std::shared_ptr<guictr_base>& out) {
     auto& fac = getContainerFactory();

@@ -400,13 +400,11 @@ public:
         this->fontSize = FONT_SIZE_CTXT_SMALL;
         this->paddingV = 0;
         std::vector<String> options;
-        std::map<gui_type, ContainerBuilder>& fac = getContainerFactory();
-        for (auto& f: fac) {
-            if (f.first != ctrHandle->parentCtr->getType()
-                && f.first != gui_type::CTR_TYPE_LAYOUT) {
-                String label;
-                getContainerLabel(f.first, label);
-                addEntry(new ctxtmenu_entry(label, f.first + 100));
+        auto& mapGuiTypeToStr = getContainerRegistry();
+        for (auto& [guiType, name]: mapGuiTypeToStr) {
+            if (guiType != ctrHandle->parentCtr->getType()
+                && guiType != gui_type::CTR_TYPE_LAYOUT) {
+                addEntry(new ctxtmenu_entry(name, guiType + 100));
             }
         }
         addEntry(new ctxtmenu_splitter());

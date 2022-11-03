@@ -1721,22 +1721,9 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     menus.views.title = "View";
     menus.views.addCommand(this, GlobalCommandType::CMD_OPEN_SECOND_WINDOW);
     menus.views.addSeperator();
-    auto& mapGuiTypeToCstr = getContainerFactory();
-
-    std::vector<std::pair<gui_type, String>> sorted;
-    for (auto& it : mapGuiTypeToCstr) {
-        auto guiType = it.first;
-        String name;
-        getContainerLabel(guiType, name);
-        if (name.empty())
-            continue;
-        sorted.emplace_back(guiType, name);
-    }
-    std::sort(sorted.begin(), sorted.end(), [](const auto& a, const auto& b) {
-        return a.second < b.second;
-    });
-    for (auto& it : sorted) {
-        menus.views.addCommand(this, GlobalCommandType::CMD_CREATE_VIEW, static_cast<int>(it.first), "Show " + it.second);
+    auto& mapGuiTypeToStr = getContainerRegistry();
+    for (auto& [guiType, name] : mapGuiTypeToStr) {
+        menus.views.addCommand(this, GlobalCommandType::CMD_CREATE_VIEW, static_cast<int>(guiType), "Show " + name);
     }
 
     menus.views.addSeperator();
