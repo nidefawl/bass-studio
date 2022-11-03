@@ -142,6 +142,12 @@ ContainerFactory& getContainerFactory() {
         containerFactory[gui_type::CTR_TYPE_CLIPEDITOR] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(makeGuiClipEditor());
         };
+        containerFactory[gui_type::CTR_TYPE_KEYBINDS] = [](auto& ctxt) {
+            return std::shared_ptr<guictr_base>(DAW::DialogSettings::makeKeybindsDialog(ctxt.daw));
+        };
+        containerFactory[gui_type::CTR_TYPE_MIDI_MONITOR] = [](auto& ctxt) {
+            return std::shared_ptr<guictr_base>(makeGuiMidiInspect());
+        };
 #endif
         containerFactory[gui_type::CTR_TYPE_PROPERTIES] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(makeCtrProperties());
@@ -155,12 +161,6 @@ ContainerFactory& getContainerFactory() {
         containerFactory[gui_type::CTR_TYPE_SHAPE_EDITOR] = [](auto& ctxt) {
             auto shapeEditor = makeShapeEditor();
             return std::shared_ptr<guictr_base>(shapeEditor->getGuiContainer());
-        };
-        containerFactory[gui_type::CTR_TYPE_KEYBINDS] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(DAW::DialogSettings::makeKeybindsDialog(ctxt.daw));
-        };
-        containerFactory[gui_type::CTR_TYPE_MIDI_MONITOR] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(makeGuiMidiInspect());
         };
     }
     return containerFactory;

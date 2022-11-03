@@ -160,7 +160,7 @@ void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audiocli
         }
     }
 }
-
+#if BUILD_DAW_HOST
 void tesselateWaveformFromClip(audiosample_t* sample, float x, float y, audioclip_texture_t* waveformshape, std::vector<vec2list>& channels) {
     if (sample->nSamples) {
         double samplesPerPx = waveformshape->samplesPerPx;
@@ -270,6 +270,7 @@ void tesselateWaveformFromClip(audiosample_t* sample, float x, float y, audiocli
         }
     }
 }
+#endif
 /**
  * Does use downsampled data
  * @param sample
@@ -351,14 +352,16 @@ void tesselateWaveformEnergy(audiosample_t* sample, float x, float y, audioclip_
 
 void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_texture_t* waveformshape, SampleMethod method, std::vector<vec2list>& channels) {
     switch (method) {
+        case SampleMethod::sample_clip:
+#if BUILD_DAW_HOST
+            tesselateWaveformFromClip(sample, x, y, waveformshape, channels);
+            break;
+#endif
         case SampleMethod::sample_straight:
             tesselateWaveformStraight(sample, x, y, waveformshape, channels);
             break;
         case SampleMethod::sample_energy:
             tesselateWaveformEnergy(sample, x, y, waveformshape, channels);
-            break;
-        case SampleMethod::sample_clip:
-            tesselateWaveformFromClip(sample, x, y, waveformshape, channels);
             break;
         default:
             dbgassert(0);
