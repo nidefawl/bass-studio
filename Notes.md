@@ -1,18 +1,13 @@
-# Ideas 
 
+# Random Ideas
 Add optional horizontal grid steps to automation (allow offset/scale?)  
-Cleanup automation stuff: setParamValue is called with inconsistent flags  
-Resizing a clip can stop held notes. This has to be handled somehow  
-Add a keyboard on the bottom, make it small so its not using up screenspace. Display all held notes from all tracks in different colors so I can quickly see what key the song is currently in etc.  
-Automation sub tracks are not removed from track when moving plugin to another track  
+Add a keyboard on the bottom, make it small so its not using up screenspace. Display all held notes from all tracks in different colors so I can quickly see what key the song is currently in etc. 
 Exp/Log slopes for automation data  
 Basic +/- pitch for wave samples  
 Sample database  
 Categories for plugins (at least effects/instruments for now)  
 Selection info (Show duration in bars/secs/samples)  
-Add a way to copy clips + automation or only clips (keybind? key modifier?)  
 Parallel groups for plugins  
-Make startup.cpp only compile into daw-application  
 Allow sonogram to be used in a mouse over popup window (not working)  
 Tool to auto process samples: run samples thru specific vst preset, run samples thru my effect chains (that I extract from ableton projects)  
 "Duplicate muted" for tracks/plugins/etc: Duplicates the instance but keeps it muted/inactive  
@@ -22,9 +17,7 @@ Show inactive automation in a list
 Show automated parameters in a list, and on a tab in the plugin container  
 
 Add lists/tables for debugging:
-- all loaded plugins (done: list view showing type as icon, name and cpu usage)
 - all tracks
-- all guibase instances
 - all automation
 
 Alternative VST2 management:
@@ -56,27 +49,20 @@ track editor vertical drag-move zooming like note-editor
 consider handling context menu ownership with shared_ptrs. I may require to use shared from this to solve issues with call close-context-menu from click handlers  
 scrubbing with beat sync  
 add vertical plugin chain in mix view (like cubase mixer)  
+
 # Bugs
-Meters are buggy after sample rate or blocksize changes 
 solo buttons do not update after track routing changes  
 solo on nested tracks that route to master does not work
 Add Un-solo all button  
 Fix recent file list: state should be saved to disk each load/save  
 fix shift-clicking not extending selection to clicked clips boundaries  
 Fix selecting regions while holding shift (i.e. when scrolling is required to make bigger selection)  
-Fix undo/redo for automation data  
-automation lanes are read in stopped mode  
-status bar does not show text  
-clipsettings labels overlap input fields  
 ALT key sometimes stuck, wonderful old bug from GLFW.  
-ALT key to disable grid is not allowing note-resize below grid size  
-notes border rendering not respecting z-order when note rectangles overlap  
 
 # TODO high priority
 add unit tests for vstscanner
 custom block length processing  
-per track samplerate / blocksize   
-test doing multiblock processing in tight loop to increase automation samplerate/resolution   
+per track samplerate / blocksize
 
 Parameter filtering:
 - Host outgoing data will probably stay unfiltered
@@ -87,7 +73,6 @@ Parameter filtering:
 
 
 # TODO low priority
-render group contents into folded group track background  
 global midi pitch offset (and per track global offset bypass)  
 randomize note velocity + offset (shuffle/humanize/groove)  
 per track velocity scaling (min max curve?!)  
@@ -99,31 +84,20 @@ remove height limitation from automation tracks
 Allow reordering automation tracks  
 
 plugin preset indexing, plugin preset search  
-quantize midi   
 legato button in midi editor  
-consolidate clips  
-plugin preset store/load  
-group+plugin snapshots  
-add keybind constant  
-keybind editor/presets  
 multiselection of tracks  
 Mixing desk view  
-Compressed binary file format  
-stress-test synchronization  
-use templates + template specialization for the 3 window classes in window.cpp  
-scale factor for UI font sizes  
-support waves shell plugins   
 add a toggle button for current tracks complete effect chain. This should probably be the function of the power/enable button of a track. Adding a mute button that keeps audio processing enabled  
 midi export  
 freeze track  
-don't fully close vst-windows, just hide them and defer destruction so they reopen quickly   
-try rendering vst-windows into gui at fixed location (kind of a bookmark)  
-add a view of a list of all thirdparty+internal plugin instances   
 
+# Performance
+reduce sizeof(clip_t), sizeof(note_t)  
+Analyze sizeof() all gui classes  
+add more detailed timings: time spent in own code/third party code/windows code(possible ?)   
+histogram of timings of processPlayback invocations	  
 
-# Timing & Accuracy of Audioprocessing
-## Tick accuracy
-
+# Tick accuracy
 
 in playback thread the tickPos accumulates fp math error:
   
@@ -144,8 +118,7 @@ After 4 minutes of playback at 128bpm the floats will produce significant errors
     2097152/(128*4096) = 4 minutes
     At 4,194,304 the precision is 0.5 = 8 minutes
 
-Type Conversions
-----------------
+# Type Conversions
 
 Implement or adapt these functions  
 
@@ -155,8 +128,8 @@ Implement or adapt these functions
 
 seq_time::toTick takes bpm as int32 and project_globals stores it as uint32
 
-Testing VST2 plugins
-====================
+
+# Tested VST2 Plugins
 ## Ohmforce Frohmage: 
 Spawns its own thread and calls the host-callback from it (endEdit): Currently the opCode is not handled. 
  
@@ -169,15 +142,10 @@ Stepped parameters cannot be changed (Synced delay times )
 ## volume shaper 
 does not run in debug and fucks up debug sessions
 
-## mpowersynth
- is blocking the main window render refresh timer if in foreground  
- (have project with 1 track mpowersynth, playing, have plugin window active in foreground, look playhead position, fps is not constant, window refreshs are not triggered reliably)  
- I reduced its framerate for now
-## test_vstplugins
-### Implemented
-- load unload show hide onTick
-### Todo
-- show/hide multiple times
+# Automated 3rd-party plugin testing
+Tests to write:
+
+- show/hide window multiple times
 - load multiple instances
 - simulate audio processing as in DAW (UI and audio thread) set parameter, dispatch events, set automation, process block
 - write down communication with timings (opCodes in and out, called dispatch functions) and write to file
@@ -190,36 +158,19 @@ does not run in debug and fucks up debug sessions
   - total number of requests per opcode
   - min/max timings of dispatches
 
-Performance
-===========
-Find a way to get a list of all used classes and template instantiation  
-reduce sizeof(clip_t), sizeof(note_t)  
-Analyze sizeof() all gui classes  
-add more detailed timings: time spent in own code/third party code/windows code(possible ?)   
-histogram of timings of processPlayback invocations	  
+# Thread safety
 
-Thread safety
-=============
-automation editing is not synchronized: can cause a race condition
-
-vst host mastercallback
-=======================
-look into unused opcodes:
- - VstProcessLevels/audioMasterGetCurrentProcessLevel etc
-
-thread safety
--------------
-TODO: Find out what exact thread we got called from  
+automation editing is not synchronized: can cause a race condition (still?)
+The vst2 host master callback is using a previously initialized thread_local struct to 
+find out what exact thread we got called from.
 This could be one of: the playthread, an audio workerthread, the UI thread  
 If the thread is not known (plugin created it) we can't guarantee  
-proper lockfree synchronization. So, depending on the opcode the call gets ignored if  
-it is the wrong thread.  
+proper lockfree synchronization. So, depending on the opcode the call gets ignored if it not the audio thread or unknown
 audioMasterSizeWindow: Ignored if not from the UI thread (Should be rare from non UI-threads)  
 audioMasterUpdateDisplay: Already handled by the onTick handler (20ms interval)  
 audioMasterUpdateDisplay: Update the parameter list and program name  
 
-(infinite) reentrant calls
---------------------------
+# Reentrant calls (infinite recursion)
 TODO: Detect reentrance and guard against it.  
 Any outgoing call into 3rd party or windows code might end up here again in a reentrant scenario.  
 i.e. audioMasterSizeWindow calls updateWindowSize. That could trigger a message box that spawns
@@ -231,7 +182,7 @@ really rare problem.
 
 Entrance counting has to be done per plugin and thread-id.
 
-### Reentrant detection implementation
+# Reentrant detection implementation
 Limit the number of allowed threads to enter the callback to UI + playback + n audio workers (1+1+32 max)  
 each plugin instance has bool array of len 34  
 each thread gets an index assinged  
@@ -258,156 +209,28 @@ plugin->isInCallback[threadId]--
 ```
 
 
-TODOs Code Architecture
-------------------------
+# Interface / Code Arch
 
-DawInstance should be usable without a GUI-Ctrl instance  
-MainCtrl::getPlayThread() is bad interface for no-GUI headless applications  
+DawInstance must be usable without a MainCtrl instance  
+TODOs: MainCtrl::getPlayThread() is bad interface for no-GUI headless applications
 
-DawCtrl::filesDropBegin:
-- figure out which thread the calls come from
-- make sure it the code inside is fast and never blocks.  
-  Right now wave files are loaded sync'd and the thread task for loading midi simply waits until completion, so both things block
-- Read win32 docs on constraints of IDropTarget  
 
-track_t::projectIdx should be constant (UID):  
-- when restoring track contents using trackstate_t the resolution of tracks should be done using the UID for robustness reasons  
-- Solution: Use toRef(), stageIds are (runtime?) constant
-
-TODOs Includes, visibility and namespaces
------------------------------------------
-
-remove all includes of `<math.h>`  
-reduce includes of `table.h`  
-remove the guiplugin.h include in `vst_pluign_handles.h`  
-cleanup trackcontainer.cpp (done?)  
+# TODOs Includes, visibility and namespaces
 refactor everything into namespaces 
 Fix visibility of fields of all classes  
 
-TODOs Naming
-------------
-
-all interface types must have suffix _i or otherwise consistend names  
-make _t and no-_t type names consistent  
-make struct and class types consistent:   
-- structs have no functions besides ctors/dtors/copy/move operators
-- classes have functions
-
-TODOs Tests
-------------
-
-add more (unit) tests  
+# TODOs Tests
 Test handling of exceptions and segfaults on threads and worker thread tasks (TrackBlockProcessTask)  
 Test handling of tasks and threads not responding (stuck in inf loop)  
 
-TODOs Syntax consistency
-------------------------
-
-change to initializer braces assignment for ivec2 (so we can easily change the type)  
-
-    find: \s*=\s*ivec2\s*\(\s*([^, ]*),\s*([^, ]*)\s*\)\s*;  
-    replace: = {\1, \2};
-TODOs GUI / Rendering
----------------------
+# TODOs GUI / Rendering
 determine_string_width can access opengl context in rare cases from guibase::layout() when context isn't present/bound
-# Warnings
 
-TODOs Warnings
----------------
-
-Fix the sign conversion warnings or establish rules
-
-
-Project warn levels
--------------------
-
-
-  Clang basic warnings
-    
-    -Wall -Wno-inconsistent-missing-override -Wno-unused-parameter 
-
-  MSVC is really verbose on /W4 and produces too much noise.  
-  I missed some really important warnings because of the noise.
-  I think its better to use /W3 and enable selected warnings on top.
-
-  MSVC Disable system header warnings (`#include <systemheader>`) 
-
-    /external:anglebrackets /external:W0
-
-  MSVC Disabled Warnings
-
-    /wd4067 unexpected tokens following preprocessor directive - expected a newline: triggers on semicolon after macro function invocation
-    /wd4267 'var' : conversion from 'size_t' to 'type', possible loss of data
-    /wd4244 'argument' : conversion from 'type1' to 'type2', possible loss of data
-
-
-Testcase warn levels
---------------------
-
-  clang (not sure about them)
-
-    -Wall -Wextra -pedantic -Wnon-virtual-dtor -Woverloaded-virtual -Wconversion
-  
-
-  MSVC
-
-    /external:anglebrackets /external:W0
-    /W3
-
-
-C++ Tooling
-===========
-
-MSVC Builds
------------
-ws2_32.dll disappeared in deps between 20.dec and 24.dec
-
-Formatting
-----------
-
-Clang format is really good, but not perfect.  
-Some of the settings need to be toggled depending on the current file.
-
-Otherwise it will just ruin array initialization or formatted output.
-
-
-### Excluded
-
-    src/dsp/memoryarchive.h
-    src/include/glcorearb.h
-    src/include/glheaders.h
-    src/nanovg/*
-    src/midi/*
-    src/gl/polyline/*
-    src/vstsdk-host-2.4/**
-    src/vstsdk-plugin-2.4/**
-    src/dr_libs.c
-    src/external_glad.c
-    src/external_kissfft.c
-    src/external_kissfftr.c
-    src/util/PtrQueue.h
-    src/util/SPSCQueue.h
-    src/util/atomicops.h
-    src/util/readerwriterqueue.h
-    src/wave/dr_wav.h
-    src/icon_resource.h
-
-
-Third party libs should be moved to a common folder (third-party or external or xtern)
-
-Memory usage
-============
-It is quite memory intense:
-
-    sr = 44100
-    channels = 2
-    bytesPerSample = 4
-    seconds = 600
-    sizeInMB = (bytesPerSample * channels * sr * seconds) / ( 1000**2 )
-    21 mb per minute of audio per track
-    so for a 10 track 10 minute project its 2.1gb
-
-
-### Problems
-
-- Comment blocks are intended incorrectly -> remove tabs first
+# BaseCtrl gui context pointers
+Right now the onRemove function of guibase calls BaseCtrl to reset the following pointers. 
+This would not be required if the following pointers were saferefs:
+    guibase* guiOver       = nullptr; // updates on mouse move "current mouseover"
+    guibase* guiDragged    = nullptr; // updates on mouse click "currently dragged", set from guiOver
+    guibase* guiCaptured   = nullptr; // updates when cursor is hidden, set from guiDragged
+    guibase* guiFocused    = nullptr; // updates on mouse click, set from guiOver
+    guibase* guiCtrFocused = nullptr; // updates on mouse click, handles keyboard input
