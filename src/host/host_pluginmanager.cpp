@@ -1,6 +1,7 @@
 #include "host/host_pluginmanager.h"
 #include "assert_dbg.h"
 #include "fileio.h"
+#include "host/daw_channel.h"
 #include "logging.h"
 #include "host/plugin/modules.h"
 #include "host/plugin/base/base-plugin.h"
@@ -250,10 +251,12 @@ void PluginManager::releaseAudio(track_t* track) {
 }
 
 audio_stage_t* PluginManager::createAudioStage() {
+    validateIds();
     auto audio = new audio_stage_t(this,
                                    getNextGlobalAudioStageId(0),
                                    pluginHostCallback->m_sampleFormatInternal,
                                    DAW::Host::DEFAULT_CHANNEL_COUNT);
+    validateIds();
     allAudioStages.push_back(audio);
     return audio;
 }
@@ -414,6 +417,20 @@ bool PluginManager::isStageIdInUse(track_id_snapshot_t stageId) {
     for (auto* id : {&stageId.stageId, &stageId.inputStageId, &stageId.outputStageId, &stageId.outputPostStageId }) {
         if (static_cast<int32_t>(*id) <= audioStageId)
             return true;
+    }
+    return false;
+}
+bool PluginManager::isStageIdInUse(const audio_stage_id_t& stageId) {
+    if (stageId.stageId == TRACKID_INVALID_I32) {
+        return false;
+    }
+    for (auto* id : {&stageId.stageId, &stageId.inputStageId, &stageId.outputStageId, &stageId.outputPostStageId }) {
+        for (auto* stage : allAudioStages) {
+            for (auto* id2 : {&stage->stageId.stageId, &stage->stageId.inputStageId, &stage->stageId.outputStageId, &stage->stageId.outputPostStageId }) {
+                if (*id == *id2)
+                    return true;
+            }
+        }
     }
     return false;
 }

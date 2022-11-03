@@ -226,6 +226,9 @@ public:
     std::vector<vstplugin*> getVst2Instances() {
         return pluginInstancesVST2;
     }
+    size_t getNumAudioStages() const {
+        return allAudioStages.size();
+    }
     bool addDeferredEffect(effectbase* plugin);
     void getDeferredEffects(std::vector<effectbase*>& effects) {
         effects = pluginsDeferred;
@@ -250,6 +253,7 @@ public:
     void updateMaximumStageId();
     audio_stage_id_t getNextGlobalAudioStageId(int32_t globalId);
     bool isStageIdInUse(track_id_snapshot_t stageId);
+    bool isStageIdInUse(const audio_stage_id_t& stageId);
     void checkScanner();
     void scanPlugins();
     bool isScanning();

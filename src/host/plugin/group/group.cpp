@@ -328,10 +328,26 @@ void module_group::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     dbgassert(audio);
     // if the snapshot holds a stage id then use it, otherwise keep current stageId
     if (pluginSnapshot.stageIds.inputStageId != -1) {
-        audio->stageId.stageId           = static_cast<audiostageid_i32>(pluginSnapshot.stageIds.stageId);
-        audio->stageId.inputStageId      = static_cast<audiostageid_i32>(pluginSnapshot.stageIds.inputStageId);
-        audio->stageId.outputStageId     = static_cast<audiostageid_i32>(pluginSnapshot.stageIds.outputStageId);
-        audio->stageId.outputPostStageId = static_cast<audiostageid_i32>(pluginSnapshot.stageIds.outputPostStageId);
+        audio_stage_id_t stageId = {
+            static_cast<audiostageid_i32>(pluginSnapshot.stageIds.stageId),
+            static_cast<audiostageid_i32>(pluginSnapshot.stageIds.inputStageId),
+            static_cast<audiostageid_i32>(pluginSnapshot.stageIds.outputStageId),
+            static_cast<audiostageid_i32>(pluginSnapshot.stageIds.outputPostStageId)
+        };
+        audio->host->validateIds();
+        if (audio->host->isStageIdInUse(stageId)) {
+            log_lf(Log::L_WARN, "Found duplicate stage id in plugin snapshot. Routing might be broken.\n");
+            if (audio->getTrack())
+                log_lf(Log::L_WARN, "This stage is %s on track %s\n", "Group", audio->getTrack()->name.c_str());
+            auto otherStage = audio->host->getAudioStage({stageId.stageId});
+            if (otherStage) {
+                String stageDesc = otherStage->mixer.getAutomatableName();
+                log_lf(Log::L_WARN, "Other stage is %s on track %s\n", stageDesc.c_str(), otherStage->getTrack()->name.c_str());
+            }
+        } else {
+            audio->stageId = stageId;
+        }
+        audio->host->validateIds();
     }
     audio->loadPlugins(pluginSnapshot.pluginSnapshots);
     audio->loadRoutingSnapshot(pluginSnapshot.effectRouting);

@@ -230,10 +230,25 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
     const auto& implSnapshot = snapshot.data;
     // if the snapshot holds a stage id then use it, otherwise keep current stageId
     if (snapshot.stageIds.inputStageId != -1) {
-        audio->stageId.stageId           = static_cast<audiostageid_i32>(snapshot.stageIds.stageId);
-        audio->stageId.inputStageId      = static_cast<audiostageid_i32>(snapshot.stageIds.inputStageId);
-        audio->stageId.outputStageId     = static_cast<audiostageid_i32>(snapshot.stageIds.outputStageId);
-        audio->stageId.outputPostStageId = static_cast<audiostageid_i32>(snapshot.stageIds.outputPostStageId);
+        audio_stage_id_t stageId = {
+            static_cast<audiostageid_i32>(snapshot.stageIds.stageId),
+            static_cast<audiostageid_i32>(snapshot.stageIds.inputStageId),
+            static_cast<audiostageid_i32>(snapshot.stageIds.outputStageId),
+            static_cast<audiostageid_i32>(snapshot.stageIds.outputPostStageId)
+        };
+        audio->host->validateIds();
+        if (audio->host->isStageIdInUse(stageId)) {
+            log_lf(Log::L_WARN, "Found duplicate stage id in snapshot. Routing might be broken.\n");
+            log_lf(Log::L_WARN, "This stage is %s on track %s\n", "Mixer", snapshot.trackSettings.name.c_str());
+            auto otherStage = audio->host->getAudioStage({stageId.stageId});
+            if (otherStage) {
+                String stageDesc = otherStage->mixer.getAutomatableName();
+                log_lf(Log::L_WARN, "Other stage is %s on track %s\n", stageDesc.c_str(), otherStage->getTrack()->name.c_str());
+            }
+        } else {
+            audio->stageId = stageId;
+        }
+
     }
     //TODO: test if stageId is in use. Caller is responsible for generating new stageId
 
