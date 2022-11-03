@@ -166,7 +166,7 @@ void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, Strin
     }
     nvgFillColor(vg, rgbaToNvg(colorU32));
     nvgFill(vg);
-    if (textMaxWidth + 2 <= 0) {
+    if (textMaxWidth - 5 <= 0) {
         return;
     }
     if (text[0]) {
