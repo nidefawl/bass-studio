@@ -2235,6 +2235,10 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
 void guictr_clipeditorview::handleDraggedBegin(MouseEvent& evt) {
     dragMode      = drag_none;
     auto mainCtrl = dawCtrl->getDaw()->getMainControl();
+    if (isCtrl(evt.kbmods) || evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
+        dawCtrl->getDaw()->getMainControl()->toggleViewModeEditArea();
+        return;
+    }
     if (!mainCtrl->isClipEditorVisible()) {
         MainCtrl::get()->showClipEditor();
         return;
