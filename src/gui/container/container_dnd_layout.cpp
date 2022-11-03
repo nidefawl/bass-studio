@@ -599,15 +599,29 @@ std::vector<float> guictr_layout::getSplitterPositions() {
 }
 
 void guictr_layout::setSplitterPositions(std::vector<float>& splitterPositons) {
-    int oldLen = CtrSize(splitters);
-    for (int i = 0; i < oldLen; ++i) {
+    int splitterLayout = 0;
+    size_t numSplitters = 0;
+    if (this->ctrLayout == container_layout::SPLIT_H || this->ctrLayout == container_layout::SPLIT_V) {
+        numSplitters = math::max<int64_t>(0, CtrSize(entries) - 1);
+        splitterLayout = ctrLayout == container_layout::SPLIT_V ? 1 : 0;
+    }
+    for (size_t i = numSplitters; i < splitters.size(); ++i) {
         guictr_base::remove(splitters.back().get());
         splitters.pop_back();
     }
-    for (size_t i = 0; i < splitterPositons.size(); ++i) {
-        splitters.push_back(std::make_unique<Splitter>(ctrLayout == container_layout::SPLIT_V ? 1 : 0, splitterPositons[i]));
+    float off = 1.0f / (numSplitters + 1);
+    for (size_t i = splitters.size(); i < numSplitters; ++i) {
+        float splitPos = off + i * off;
+        if (splitterPositons.size() > i) {
+            splitPos = splitterPositons[i];
+        }
+        splitters.push_back(std::make_unique<Splitter>(splitterLayout, splitPos));
         splitters[i]->setCallback(this);
         guictr_base::add(splitters.back().get());
+    }
+    for (size_t i = 0; i < splitters.size() && i < splitterPositons.size(); ++i) {
+        splitters[i]->setSplitterType(splitterLayout);
+        splitters[i]->setScale(splitterPositons[i]);
     }
     updateSplitterMinMax(splitters);
 }
@@ -637,6 +651,32 @@ void guictr_layout::updateSplitters() {
         float splitPos = off + i * off;
         splitters[i]->setMinMax(splitPos - off * 0.8f, splitPos + off * 0.8f);
     }
+}
+void guictr_layout::removeAllEntries() {
+    dbgassert(splitters.empty() || splitters.size() == entries.size() - 1);
+    for (auto& entry : entries) {
+        guictr_base::remove(entry->getGui());
+        auto* guiHandle = entry->getHandle();
+        if (guiHandle) {
+            removeEntry(handles, guiHandle);
+            guictr_base::remove(guiHandle);
+        }
+        entry->parentLayoutContainer = nullptr;
+    }
+    entries.clear();
+    handles.clear();
+    activePosition = -1;
+    updateSplitters();
+    dbgassert(splitters.empty() && guis.empty());
+    dbgassert(splitters.empty() || splitters.size() == entries.size() - 1);
+}
+
+void guictr_layout::assertEntries() const {
+    dbgassert(splitters.empty() || splitters.size() == entries.size() - 1);
+    for (auto& entry : entries) {
+        dbgassert(entry->parentLayoutContainer == this);
+    }
+    dbgassert(entries.empty() == guis.empty());
 }
 
 void guictr_layout::handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) {
@@ -697,7 +737,7 @@ bool guictr_layout::getContainerRef(guictr_layout_entry* ctr, std::shared_ptr<gu
     if (!remove) {
         return true;
     }
-    int32_t pos        = it - entries.begin();
+    auto pos = it - entries.begin();
     bool removedActive = getActivePosition() == pos;
     entries.erase(it);
     guictr_base::remove(ctr->getGui());
@@ -709,11 +749,11 @@ bool guictr_layout::getContainerRef(guictr_layout_entry* ctr, std::shared_ptr<gu
     ctr->parentLayoutContainer = nullptr;
     updateSplitters();
     if (removedActive && this->ctrLayout == container_layout::TABBED) {
-        if (pos - 1 >= 0 || entries.empty()) {
-            pos--;
+        auto sPos = int32_t(pos);
+        if (sPos - 1 >= 0 || entries.empty()) {
+            sPos--;
         }
-        //setActiveEntry(pos);
-        this->activePosition = pos;
+        this->activePosition = sPos;
         updateVisible();
     }
     return true;
@@ -931,10 +971,10 @@ std::shared_ptr<guictr_layout_entry> guictr_layout::replaceContainerWith(guictr_
     }
     entry->parentLayoutContainer = nullptr;
 
-    int32_t posOffset = it - entries.begin();
+    auto posOffset = it - entries.begin();
     entries.erase(it);
 
-    auto insertPos                              = entries.begin() + posOffset;
+    auto insertPos = entries.begin() + posOffset;
 
     entries.insert(insertPos, newEntry);
     auto guiCtr       = newEntry->getGui();
@@ -1071,4 +1111,128 @@ bool guictr_layout::isHandleShown() const {
         }
     }
     return !bHideHandles;
+}
+
+void guictr_layout::simplify() {
+    struct InlineEntry {
+        int32_t index = 0;
+        std::shared_ptr<guictr_layout_entry> entry;
+    };
+    std::vector<std::shared_ptr<guictr_layout_entry>> entriesToRemove;
+    std::vector<InlineEntry> entriesInsert;
+    int32_t index = 0;
+    for (const auto& entry : entries) {
+        auto guiCtrLayout = dynamic_cast<guictr_layout*>(entry->getGui());
+        if (guiCtrLayout) {
+            guiCtrLayout->simplify();
+            auto& childEntries = guiCtrLayout->getEntries();
+            if (childEntries.empty()) {
+                entriesToRemove.push_back(entry);
+            } else if (childEntries.size() == 1) {
+                auto& childEntry = childEntries[0];
+                InlineEntry inlineEntry;
+                guiCtrLayout->getContainerRef(childEntry.get(), inlineEntry.entry, true);
+                inlineEntry.index = index;
+                entriesToRemove.push_back(entry);
+                entriesInsert.push_back(inlineEntry);
+            }
+        }
+        index++;
+    }
+    if (!entriesToRemove.empty()) {
+        log_lf(Log::L_DEBUG, "remove %zu container entries\n", entriesToRemove.size());
+    }
+    for (const auto& entry : entriesToRemove) {
+        std::shared_ptr<guictr_layout_entry> out;
+        getContainerRef(entry.get(), out, true);
+    }
+    for (const auto& entry : entriesInsert) {
+        addEntry(entry.entry, entry.index);
+    }
+    if (entries.size() < 2) {
+        setLayout(container_layout::SOLE);
+    }
+    //if (this->ctrLayout != container_layout::TABBED) {
+    //for (auto handle : handles) {
+    //handle->setVisible(false);
+    //}
+    //}
+}
+
+void guictr_layout::setLayout(container_layout ctrLayoutNew) {
+    if (this->ctrLayout == ctrLayoutNew) {
+        return;
+    }
+    this->ctrLayout = ctrLayoutNew;
+    updateVisible();
+    updateSplitters();
+}
+
+void guictr_layout::postContentChanged() {
+    dbgassert(splitters.empty() || splitters.size() == entries.size() - 1);
+    simplify();
+    dbgassert(splitters.empty() || splitters.size() == entries.size() - 1);
+    updateVisible();
+    dbgassert(splitters.empty() || splitters.size() == entries.size() - 1);
+    if (this->parent) {
+        layout();
+    }
+}
+
+void guictr_layout::setActiveEntry(int32_t idx) {
+    this->activePosition = idx;
+    updateVisible();
+    if (this->parent) {
+        layout();
+    }
+}
+
+void guictr_layout::onChildLayoutChanged(guibase* g) {
+    //postContentChanged();
+    if (this->parent) {
+        this->parent->onChildLayoutChanged(g);
+    } else {
+        if (this->parentCtrl) {
+            this->parentCtrl->relayout();
+        }
+    }
+}
+
+void guictr_layout::buttonClicked(guibase* button) {
+    if (this->ctrLayout == container_layout::TABBED) {
+        int32_t pos = 0;
+        for (auto& entry : entries) {
+            if (entry->getHandle() == button) {
+                setActiveEntry(pos);
+                return;
+            }
+            pos++;
+        }
+    }
+}
+
+ivec2 guictr_layout::paddingTL(int _padding) const {
+    if (parentCtrl && parentCtrl->isDraggingContainer()) {
+        return ivec2(8);
+    }
+    //return ivec2(0, _padding);
+    //return ivec2(_padding - margin*snapSides.x, _padding - margin*snapSides.y);
+    return { _padding - margin * snapSides.x, 0 };
+}
+
+ivec2 guictr_layout::paddingBR(int _padding) const {
+    if (parentCtrl && parentCtrl->isDraggingContainer()) {
+        return ivec2(8);
+    }
+    //return ivec2(0, _padding);
+    //return ivec2(_padding - margin*snapSides.z, _padding - margin*snapSides.w);
+    return { _padding - margin * snapSides.z, 0 };
+}
+
+String guictr_layout::getLayoutCtrName() {
+    if (this->label.empty()) {
+        auto ctrName = getClassName();
+        return ctrName;//StringFormat("%12zX", reinterpret_cast<uint64_t>(this));
+    }
+    return this->label;
 }

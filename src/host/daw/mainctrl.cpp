@@ -691,6 +691,9 @@ public:
     }
 
     void loadLayout(const dawview_layout_t& viewLayout) {
+        ctr_Left->assertEntries();
+        ctr_Right->assertEntries();
+        ctr_Center->assertEntries();
         ctr_Right->removeAllEntries();
         ctr_Left->removeAllEntries();
         ctrEntryTabbedTop->removeEntryFromParent();
@@ -700,6 +703,9 @@ public:
         ctrEntryClipEdit->removeEntryFromParent();
         ctrEntryPlugins->removeEntryFromParent();
         ctr_Center->removeAllEntries();
+        ctr_Left->assertEntries();
+        ctr_Right->assertEntries();
+        ctr_Center->assertEntries();
         dbgassert(ctr_Left->dawCtrl);
         DawInstance* const daw = ctr_Left->dawCtrl->getDaw();
         dbgassert(daw);
@@ -734,6 +740,9 @@ public:
         for (size_t i = 0; i < viewLayout.splitterPositions.size() && i < splitters.size(); i++) {
             splitters[i]->setScale(viewLayout.splitterPositions[i]);
         }
+        ctr_Left->assertEntries();
+        ctr_Right->assertEntries();
+        ctr_Center->assertEntries();
     }
 
     void storeLayout(dawview_layout_t& layout) {
@@ -976,6 +985,9 @@ void DawInstance::unloadProject() {
         trackView.action.clipboard.reset();
         trackView.iGuiMgr.reset();
     }
+
+    /** reset maximum stage id and determine new maximum stage id **/
+    tls.host->updateMaximumStageId();
     for (DawCtrl* pDawCtrl : dawCtrls) {
         if (pDawCtrl->isOk()) {
             pDawCtrl->onPluginsChanged();
@@ -2306,9 +2318,13 @@ void DawInstance::loadProject0(const std::shared_ptr<project_file>& file) {
     log_printf("Loading project %s: %zu tracks\n", StringAsCStr(file->path), project.trackList.size());
     unloadProject();
     /** make sure call to unloadProject unloaded all vst2 instances **/
+    dbgassert(tls.host->getNumAudioStages() == 0);
     dbgassert(tls.host->getVst2Instances().empty());
     //TODO: assert that audiocache is empty
     dbgassert(tls.audioCache->isEmpty());
+#ifndef NDEBUG
+    tls.host->validateIds();
+#endif
 
     String loadFileExt, loadFileDirectory;
     SplitPath(file->path, &loadFileDirectory, nullptr, &loadFileExt);
@@ -2335,6 +2351,12 @@ void DawInstance::loadProject0(const std::shared_ptr<project_file>& file) {
         tls.host->createAudio(t);
     }
 
+    /** reset maximum stage id and determine new maximum stage id **/
+    tls.host->updateMaximumStageId();
+
+#ifndef NDEBUG
+    tls.host->validateIds();
+#endif
 
     /** create all gui instances **/
     for (track_t* tr : project.trackList) {
@@ -2345,6 +2367,9 @@ void DawInstance::loadProject0(const std::shared_ptr<project_file>& file) {
     /** pre-load all plugin instances **/
     project.trackList.loadPlugins(file->project);
     
+#ifndef NDEBUG
+    tls.host->validateIds();
+#endif
     onPluginsChanged();
 
     /** reset maximum stage id and determine new maximum stage id **/
@@ -2409,6 +2434,9 @@ bool DawInstance::loadProject1(const std::shared_ptr<project_file>& file, int fl
     return true;
 }
 void DawInstance::loadProjectFinish() {
+    /** reset maximum stage id and determine new maximum stage id **/
+    tls.host->updateMaximumStageId();
+
     onPluginsChanged();
     for (DawCtrl* pDawCtrl : dawCtrls) {
         pDawCtrl->fixCursor();
