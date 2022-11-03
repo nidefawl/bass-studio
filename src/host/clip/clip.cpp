@@ -1105,11 +1105,14 @@ float AudioClipFadeLoopProcessor::get(channelnum_t ch, samplecount_t samplePos) 
             fade *= clipFade->shape->sampleCurveOneShot(fadePos);
         }
     }
-    auto readPos = offsetStart + samplePos;
+    auto readPos = samplePos;
     if (loopEnd - loopStart > 0) {
         if (samplePos >= preLoopLen) {
+            readPos += math::max<samplecount_t>(0, offsetStart - loopStart);
             readPos = loopStart + ((readPos - preLoopLen) % (loopEnd - loopStart));
         }
+    } else {
+        readPos += offsetStart;
     }
     if (readPos >= 0 && readPos < sample->nSamples && ch < sample->samples.size()) {
         return sample->samples[ch][readPos] * fade;
@@ -1127,11 +1130,14 @@ float AudioClipFadeLoopProcessor::getDownsampled(channelnum_t ch, samplecount_t 
             status |= 2;
         }
     }
-    auto readPos = offsetStart + samplePos;
+    auto readPos = samplePos;
     if (loopEnd - loopStart > 0) {
         if (samplePos >= preLoopLen) {
+            readPos += math::max<samplecount_t>(0, offsetStart - loopStart);
             readPos = loopStart + ((readPos - preLoopLen) % (loopEnd - loopStart));
         }
+    } else {
+        readPos += offsetStart;
     }
     const std::vector<samplechannel_t>* vec = nullptr;
     if (nDownLevel) {
