@@ -1014,7 +1014,7 @@ bool guictr_layout_entry::getContainerRef(std::shared_ptr<guictr_layout_entry>& 
 void guictr_layout_entry::removeEntryFromParent() {
     if (parentLayoutContainer) {
         std::shared_ptr<guictr_layout_entry> out;
-        dbgassert(parentLayoutContainer->getContainerRef(this, out, true));
+        assert_expr(parentLayoutContainer->getContainerRef(this, out, true));
     }
 }
 guictr_base* guictr_layout_entry::getGui() {
