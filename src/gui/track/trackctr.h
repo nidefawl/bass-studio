@@ -24,6 +24,7 @@
 #include "dsp_util.h"
 #include "host/daw/mainctrl.h"
 #include "host/track/trackctr_types.h"
+#include "types.h"
 
 void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry);
 struct track_selection_t {
@@ -54,7 +55,9 @@ public:
 
 namespace DAW {
     int32_t getPosYFirstReturnTrack(const track_gui_vector_td& tracksVisibleFlat);
-    gui_clip* getClipFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse);
+    gui_clip* GetClipFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse);
+    gui_clip* GetClipGuiFromTime(track_gui_entry_t* tr, tick_t time);
+    gui_clip* GetClipGuiFromTimeAndTrackIdx(track_gui_manager_i& iGuiMgr, int32_t trackIdx, tick_t time);
     track_gui_entry_t* getTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse);
     track_gui_entry_t* getTrackFromMouseClosest(track_gui_manager_i& iGuiMgr, ivec2 mouse);
     gui_track_subtrack* getSubTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap);

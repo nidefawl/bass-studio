@@ -163,7 +163,7 @@ namespace DAW {
     track_gui_entry_t* getTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse) {
         return getTrackFromMouseImpl(iGuiMgr, mouse);
     }
-    gui_clip* getClipFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse) {
+    gui_clip* GetClipFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse) {
         const track_gui_vector_td& _tracks = iGuiMgr.getTracksVisibleFlat();
         for (auto it = _tracks.rbegin(); it != _tracks.rend(); ++it) {
             auto tr = *it;
@@ -181,6 +181,23 @@ namespace DAW {
                     }
                 }
             }
+        }
+        return nullptr;
+    }
+    gui_clip* GetClipGuiFromTime(track_gui_entry_t* tr, tick_t time) {
+        for (auto& [clip, guiClip] : tr->clipsGuis) {
+            if (guiClip->parent && guiClip->isVisible()
+                && !guiClip->isCulled()
+                && clip->start() <= time && clip->end() > time) {
+                return guiClip;
+            }
+        }
+        return nullptr;
+    }
+    gui_clip* GetClipGuiFromTimeAndTrackIdx(track_gui_manager_i& iGuiMgr, int32_t trackIdx, tick_t time) {
+        if (iGuiMgr.validTrackIdx(trackIdx)) {
+            track_gui_entry_t* tr = iGuiMgr.atNC(trackIdx);
+            return GetClipGuiFromTime(tr, time);
         }
         return nullptr;
     }
@@ -640,7 +657,8 @@ void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& ev
     trSelected    = nullptr;
     subTrSelected = nullptr;
     if (trNxtSelected) {
-        gui_clip* gClip = DAW::getClipFromMouse(iGuiMgr, local);
+        int32_t tick = grid.screenToTickSnap(local.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
+        auto gClip = DAW::GetClipGuiFromTime(trNxtSelected, tick);
         if (gClip) {
             clipboard_view_t view;
             DAW::GetClipboardView(iGuiMgr, cursor, view);

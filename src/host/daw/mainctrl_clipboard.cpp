@@ -20,6 +20,7 @@
 #include "gui/track/trackctr.h"
 #include "gui/track/trackcontent.h"
 #include "host/track/track_impl.h"
+#include "types.h"
 
 
 void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len) {
@@ -376,6 +377,16 @@ namespace DAW {
                 midi.getClipsInRange(cursor.getTickBegin(), cursor.getTickEnd(), view.tracks[i].second);
             }
         }
+    }
+    clip_t* GetClipFromTime(clipboard_view_t& view, tick_t time) {
+        for (auto& track : view.tracks) {
+            for (auto& clip : track.second) {
+                if (clip->start() <= time && clip->end() >= time) {
+                    return clip;
+                }
+            }
+        }
+        return nullptr;
     }
 
 }// namespace DAW
