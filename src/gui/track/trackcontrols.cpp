@@ -1508,7 +1508,7 @@ public:
             DAW::Cursor& cursor = m_trackentry->parentCtrl->getCursor();
             int32_t laneIdx     = this->subtrack->idx;
             if (cursor.inSubTrack(m_trackentry->idx, laneIdx)) {
-                fixCursorSubRange(cursor, m_trackentry->subtracks.size() - 1);
+                cursor.fixCursorSubRange(m_trackentry->subtracks.size() - 1);
             }
             dawCtrl->getTrackContainer()->removeSubtrack(m_trackentry, subtrack);
             dawCtrl->getDaw()->updateVisibleTrackContents();
@@ -1749,12 +1749,6 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         }
     }
     return contained;// always need to return true if contained, parent has z-order
-}
-
-gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry) {
-    auto const guicontrols = new gui_track_controls(_entry);
-    guicontrols->setZOrder(_entry->track->type >= TRACK_TYPE_MIDI ? 0 : 1);
-    return guicontrols;
 }
 
 gui_track_content_base::gui_track_content_base(track_gui_entry_t* _entry)

@@ -185,10 +185,10 @@ void trackallcontainer_t::removeTrack(track_t* track) {
     // trackInsertPos is tracktype-container index
     trackcontainer_tracktype_t* trackTypeCtr = trackTypeCtrs[track->type];
 
-    if (!trackTypeCtr->remove(track)) {
-        dbgassert(0);
-        throw applogicexception("trackcontainer_t - attempt to remove non-present element");
+    if (!assert_expr(trackTypeCtr->remove(track))) {
+        return; // attempt to remove non-present element
     }
+
     int32_t idx = 0;
     for (track_t* tr : trackTypeCtr->tracksFlat) {
         tr->localIdxFlat = idx++;

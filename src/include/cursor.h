@@ -41,6 +41,9 @@ namespace DAW {
         int32_t getSubTrackEnd() const {
             return math::max(cursorSubTrack, cursorSubTrack + selSubTrackRange);
         }
+        int32_t getTrackRange() const {
+            return getTrackEnd() - getTrackBegin();
+        }
         void setTrack(int32_t track) {
             cursorTrack = track;
         }
@@ -132,63 +135,53 @@ namespace DAW {
             cursor.setEnd(math::max(cursor.getTickEnd(), cursor2.getTickEnd()));
             return cursor;
         }
-#if 0
-    Cursor operator+(const Cursor &c2) const
-    {
-        Cursor tmp;
-        tmp.cursorTrack = math::min(getTrackBegin(), c2.getTrackBegin());
-        tmp.selTrackRange = math::max(getTrackEnd(), c2.getTrackEnd()) - tmp.cursorTrack;
-        tmp.cursorPos = math::min(getTickBegin(), c2.getTickBegin());
-        tmp.selRange = math::max(getTickEnd(), c2.getTickEnd()) - tmp.cursorPos;
-        tmp.cursorSubTrack = math::min(getSubTrackBegin(), c2.getSubTrackBegin());
-        tmp.selSubTrackRange = math::max(getSubTrackEnd(), c2.getSubTrackEnd()) - tmp.cursorSubTrack;
-        return tmp;
-    }
-#endif
+        void fixCursorSubRange(int32_t size) {
+            DAW::Cursor& cursor = *this;
+            if (!size) {
+                cursor.cursorSubTrack   = -1;
+                cursor.selSubTrackRange = 0;
+                return;
+            }
+            if (cursor.selSubTrackRange < 0) {
+                while (cursor.cursorSubTrack + cursor.selSubTrackRange < 0) {
+                    cursor.selSubTrackRange++;
+                }
+            } else if (cursor.selSubTrackRange > 0) {
+                while (cursor.cursorSubTrack + cursor.selSubTrackRange >= size) {
+                    cursor.selSubTrackRange--;
+                }
+            }
+            while (cursor.cursorSubTrack < 0) {
+                cursor.cursorSubTrack++;
+            }
+            while (cursor.cursorSubTrack >= size) {
+                cursor.cursorSubTrack--;
+            }
+        }
+        void fixCursorTrackRange(int32_t size) {
+            DAW::Cursor& cursor = *this;
+            if (!size) {
+                cursor.setTrack(-1);
+                cursor.selTrackRange = 0;
+                return;
+            }
+            if (cursor.selTrackRange < 0) {
+                while (cursor.cursorTrack + cursor.selTrackRange < 0) {
+                    cursor.selTrackRange++;
+                }
+            } else if (cursor.selTrackRange > 0) {
+                while (cursor.cursorTrack + cursor.selTrackRange >= size) {
+                    cursor.selTrackRange--;
+                }
+            }
+            while (cursor.cursorTrack < 0) {
+                cursor.cursorTrack++;
+            }
+            while (cursor.cursorTrack >= size) {
+                cursor.cursorTrack--;
+            }
+        }
     };
 
 }// namespace DAW
-inline void fixCursorSubRange(DAW::Cursor& cursor, int32_t size) {
-    if (!size) {
-        cursor.cursorSubTrack   = -1;
-        cursor.selSubTrackRange = 0;
-        return;
-    }
-    if (cursor.selSubTrackRange < 0) {
-        while (cursor.selSubTrackRange <= -size) {
-            cursor.selSubTrackRange++;
-        }
-    } else {
-        while (cursor.selSubTrackRange >= size) {
-            cursor.selSubTrackRange--;
-        }
-    }
-    while (cursor.getSubTrackBegin() < 0) {
-        cursor.cursorSubTrack++;
-    }
-    while (cursor.getSubTrackEnd() >= size) {
-        cursor.cursorSubTrack--;
-    }
-}
-inline void fixCursorTrackRange(DAW::Cursor& cursor, int32_t size) {
-    if (!size) {
-        cursor.setTrack(-1);
-        cursor.selTrackRange = 0;
-        return;
-    }
-    if (cursor.selTrackRange < 0) {
-        while (cursor.selTrackRange <= -size) {
-            cursor.selTrackRange++;
-        }
-    } else {
-        while (cursor.selTrackRange >= size) {
-            cursor.selTrackRange--;
-        }
-    }
-    while (cursor.getTrackBegin() < 0) {
-        cursor.cursorTrack++;
-    }
-    while (cursor.getTrackEnd() >= size) {
-        cursor.cursorTrack--;
-    }
-}
+

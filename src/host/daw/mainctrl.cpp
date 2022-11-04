@@ -954,7 +954,7 @@ void DawInstance::unloadProject() {
     projectPath = "";
     setSelectedTrack(nullptr);
     for (auto* dawctrl : dawCtrls) {
-        dawctrl->clipView.set(nullptr);
+        dawctrl->clipView.reset();
     }
     setEmptyClipboard();
 
@@ -2014,7 +2014,7 @@ void MainCtrl::onTick() {
                 bHit = true;
             }
             if (bHit) {
-                tr = getTrackFromMouse(this->view->ctr_tracks.guiMgr, posRelative);
+                tr = DAW::getTrackFromMouse(this->view->ctr_tracks.guiMgr, posRelative);
                 if (tr && tr == lastHoveredTrack && daw.getSelectedTrack() != tr->track) {
                     hoverTicks = lastHoveredTrackTicks + 1;
                     if (lastHoveredTrackTicks >= 6) {
@@ -3117,7 +3117,7 @@ void DawInstance::removeTrackImpl(track_t* track, int flags) {
         tls.mainCtrl->getPluginCtr()->hideTrack(track->audio);
         // TODO: handle plugins correctly, right now they remain loaded in pluginhost
         if (tls.mainCtrl->clipView.gui && tls.mainCtrl->clipView.gui->m_track == track) {
-            tls.mainCtrl->clipView.set(nullptr);
+            tls.mainCtrl->clipView.reset();
         }
     }
     project.trackList.removeTrack(track);
@@ -3143,7 +3143,7 @@ track_t* DawInstance::getTrackId(uint32_t trackId) {
 void DawInstance::preClipDelete(clip_t* clip) {
     for (auto* ctrl : this->dawCtrls) {
         if (ctrl->clipView.clip() == clip) {
-            ctrl->clipView.set(nullptr);
+            ctrl->clipView.reset();
         }
         ctrl->onGuiRemoved(clip);
     }
@@ -3153,7 +3153,7 @@ void DawInstance::preClipDelete(clip_t* clip) {
 void DawInstance::preTrackDelete(track_t* track) {
     for (auto* ctrl : this->dawCtrls) {
         if (ctrl->clipView.gui && ctrl->clipView.gui->m_track == track) {
-            setEditClip(nullptr);
+            setEditClip(nullptr, {});
             break;
         }
     }
@@ -3238,20 +3238,25 @@ void CompanionCtrl::fixCursor() {
     auto& guiMgr = view->ctr_tracks2.guiMgr;
     if (cursor.isSubtrackSelection() && guiMgr.validTrackIdx(cursor.cursorTrack)) {
         const track_gui_entry_t* tr = guiMgr.at(cursor.cursorTrack);
-        fixCursorSubRange(cursor, tr->subtracks.size());
+        cursor.fixCursorSubRange(tr->subtracks.size());
     } else {
-        fixCursorTrackRange(cursor, guiMgr.getTracksVisibleFlat().size());
+        cursor.fixCursorTrackRange(guiMgr.getTracksVisibleFlat().size());
     }
 }
 
+DAW::Cursor& MainCtrl::getCursor() {
+    fixCursor();
+    return daw.projectGlobals.cursor;
+}
+
 void MainCtrl::fixCursor() {
-    auto& cursor = getCursor();
+    auto& cursor = daw.projectGlobals.cursor;
     auto& guiMgr = view->ctr_tracks.guiMgr;
     if (cursor.isSubtrackSelection() && guiMgr.validTrackIdx(cursor.cursorTrack)) {
         const track_gui_entry_t* tr = guiMgr.at(cursor.cursorTrack);
-        fixCursorSubRange(cursor, tr->subtracks.size());
+        cursor.fixCursorSubRange(tr->subtracks.size());
     } else {
-        fixCursorTrackRange(cursor, guiMgr.getTracksVisibleFlat().size());
+        cursor.fixCursorTrackRange(guiMgr.getTracksVisibleFlat().size());
     }
 }
 
@@ -3288,30 +3293,30 @@ void DawInstance::resetAutomationContext() {
 }
 
 void DawInstance::resetEditClip() {
-    setEditClip(nullptr);
+    setEditClip(nullptr, {});
 }
 
-void DawInstance::setEditClip(gui_clip* gclip) {
+void DawInstance::setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
     for (auto* ctrl : this->dawCtrls) {
-        ctrl->setEditClip(gclip);
+        ctrl->setEditClip(gclip, clipboardView);
     }
 }
 
-void DawCtrl::setEditClip(gui_clip* gclip) {
+void DawCtrl::setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
     dbgassert(0);
 }
 
-void MainCtrl::setEditClip(gui_clip* gclip) {
+void MainCtrl::setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
     view->ctr_clipeditor.storeLayout();
-    clipView.set(gclip);
+    clipView.set(gclip, clipboardView);
     view->ctr_clipeditor.showEditClip();
     view->ctr_clipeditorview.resetCache();
     view->onEditClipChanged(gclip!=nullptr);
 }
 
-void CompanionCtrl::setEditClip(gui_clip* gclip) {
+void CompanionCtrl::setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
     view->ctr_clipeditor.storeLayout();
-    clipView.set(gclip);
+    clipView.set(gclip, clipboardView);
     view->ctr_clipeditor.showEditClip();
 }
 void MainCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
@@ -3583,3 +3588,80 @@ void load_project_task::getPreciseProgress(double& progressOverall, double& prog
 }
 
 } // namespace DAW
+
+void clip_view::updateNotePitches(bool reset) {
+    if (reset)
+        notePitches.clear();
+    clip_t* currentClip = clip();
+    if (currentClip)
+        currentClip->notes.getNotePitches(notePitches);
+    for (auto& [track, vecClips] : this->selectionView.tracks) {
+        for (clip_t* clip : vecClips) {
+            if (clip == currentClip) {
+                continue;
+            }
+            clip->notes.getNotePitches(notePitches);
+        }
+    }
+}
+
+void clip_view::copySelectedNoteList() {
+    dragStartNotes = clip()->notes;
+    clip()->notes.copySelectionTo(draggedSelection);
+    clip()->notes.copySelectionTo(draggedSelectionBegin);
+}
+
+void clip_view::set(gui_clip* _clip, const clipboard_view_t& clipboardView) {
+    selectionView = clipboardView;
+    this->gui     = _clip;
+    updateNotePitches(true);
+}
+
+void clip_view::reset() {
+    selectionView = {};
+    this->gui     = nullptr;
+    updateNotePitches(true);
+}
+
+float clip_view::toFoldNote(float note) const {
+    const auto len   = notePitches.size();
+    const auto iNote = math::floorfS32(note);
+    for (uint32_t i = 0; i < len; i++) {
+        if (notePitches[i] >= iNote) {
+            return i;
+        }
+    }
+    if (len) {
+        if (iNote >= notePitches[len - 1])
+            return len + (note - notePitches[len - 1]);
+    }
+    return note;
+}
+
+float clip_view::nextFoldNote(float note, int dir) {
+    float f = toFoldNote(note);
+    return unfoldNoteClamped(f + dir);
+}
+
+float clip_view::unfoldNoteClamped(float note) {
+    const auto len = CtrSize(notePitches);
+    if (len) {
+        const auto idx = math::clamp<int32_t>(math::floorfS32(note), 0, len - 1);
+        return notePitches[idx];
+    }
+    return 0;
+}
+
+float clip_view::unfoldNote(float note) {
+    const auto len = CtrSize(notePitches);
+    if (len) {
+        const auto iNote = math::floorfS32(note);
+        if (iNote < 0)
+            return notePitches[0] + note;
+
+        if (iNote >= len)
+            return note - len + 1 + notePitches[len - 1];
+        return notePitches[iNote];
+    }
+    return 0;
+}

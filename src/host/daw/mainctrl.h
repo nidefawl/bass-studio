@@ -122,6 +122,7 @@ namespace DAW {
     String MakeUniqueTrackName(project_t* project, const String& strNewName);
     void OpenFloatingTextInput(DawCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& initialStr, const std::function<bool(const String& str)>& callback);
     void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry);
+    void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, clipboard_view_t& view);
 }// namespace DAW
 
 struct clip_cursor_t {
@@ -148,75 +149,29 @@ public:
     std::vector<note_t> draggedSelectionBegin;
     std::vector<note_t> draggedSelection;
     std::vector<int32_t> notePitches;
+    clipboard_view_t selectionView;
 
-    void set(gui_clip* _clip) {
-        this->gui = _clip;
-        updateNotePitches(true);
-    }
+    void set(gui_clip* _clip, const clipboard_view_t& clipboardView);
+    void reset();
 
     clip_t* clip() const;
     track_t* track() const;
 
-    void copySelectedNoteList() {
-        dragStartNotes = clip()->notes;
-        clip()->notes.copySelectionTo(draggedSelection);
-        clip()->notes.copySelectionTo(draggedSelectionBegin);
-    }
+    void copySelectedNoteList();
 
     void getNotePitches(std::vector<int32_t>& out) const {
         out = notePitches;
     }
 
-    float toFoldNote(float note) const {
-        const auto len = notePitches.size();
-        const auto iNote = math::floorfS32(note);
-        for (uint32_t i = 0; i < len; i++) {
-            if (notePitches[i] >= iNote) {
-                return i;
-            }
-        }
-        if (len) {
-            if (iNote >= notePitches[len - 1])
-                return len + (note - notePitches[len - 1]);
-        }
-        return note;
-    }
+    float toFoldNote(float note) const;
 
-    float nextFoldNote(float note, int dir) {
-        float f = toFoldNote(note);
-        return unfoldNoteClamped(f + dir);
-    }
+    float nextFoldNote(float note, int dir);
 
-    float unfoldNoteClamped(float note) {
-        const auto len = CtrSize(notePitches);
-        if (len) {
-            const auto idx = math::clamp<int32_t>(math::floorfS32(note), 0, len - 1);
-            return notePitches[idx];
-        }
-        return 0;
-    }
+    float unfoldNoteClamped(float note);
 
-    float unfoldNote(float note) {
-        const auto len = CtrSize(notePitches);
-        if (len) {
-            const auto iNote = math::floorfS32(note);
-            if (iNote < 0)
-                return notePitches[0] + note;
+    float unfoldNote(float note);
 
-            if (iNote >= len)
-                return note - len + 1 + notePitches[len - 1];
-            return notePitches[iNote];
-        }
-        return 0;
-    }
-
-    void updateNotePitches(bool reset) {
-        if (reset)
-            notePitches.clear();
-        clip_t* clipPtr = clip();
-        if (clipPtr)
-            clipPtr->notes.getNotePitches(notePitches);
-    }
+    void updateNotePitches(bool reset);
 };
 
 struct Menus {
@@ -458,7 +413,7 @@ public:
     bool toggleLoop();
     void resetMouseContext();
     void resetEditClip();
-    void setEditClip(gui_clip* gclip);
+    void setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView);
     void resetAutomationContext();
     void closeContextMenus();
     void closeDialogs();
@@ -583,7 +538,7 @@ public:
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
     void startApp() override { };
 
-    virtual void setEditClip(gui_clip* gclip);
+    virtual void setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView);
     virtual DAW::Cursor& getCursor()              = 0;
     virtual void setupView()                      = 0;
     virtual void layoutView(int32_t w, int32_t h) = 0;
@@ -710,15 +665,13 @@ public:
     guitrack_editor& getTrackEditor();
     void addDebug(String s);
     void resetMouseContext() override;
-    void setEditClip(gui_clip* gclip) override;
+    void setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) override;
     void layoutView(int32_t w, int32_t h) override;
     void updateClipViews() override;
     void setStatusText(String s) override;
     void setStatusText(const String& s, GuiColor::constant_t color);
     void destroy() override;
-    DAW::Cursor& getCursor() override {
-        return daw.projectGlobals.cursor;
-    }
+    DAW::Cursor& getCursor() override;
     void onChildOverlayWindowClose(window_main*) override;
     void addTrackToView(track_t* track, int flags) override;
     void removeTrackFromView(track_t* track, int flags) override;
@@ -777,7 +730,7 @@ public:
     void setViewMode(view_mode_t mode) override;
     void storeLayout(dawview_layout_t& layout) override;
     void loadLayout(const dawview_layout_t& viewLayout) override;
-    void setEditClip(gui_clip* gclip) override;
+    void setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) override;
     void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) override;
     guictr_tracks* getTrackContainer() override;
     guictr_nodes_splitview* getNodesContainer() override;

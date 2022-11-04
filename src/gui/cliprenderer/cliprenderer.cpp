@@ -460,7 +460,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
         color = rgbToNvg(0x333333);
     }
     
-    const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP) / 2;
+    const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     nvgBeginPath(vg);
     nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
     nvgFillColor(vg, color);

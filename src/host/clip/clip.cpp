@@ -101,7 +101,6 @@ void clip_notes_t::remove(note_t& t) {
     dbgassert(selection.empty());
     auto it = std::find(m_list.begin(), m_list.end(), t);
     if (it == m_list.end()) {
-
         throw applogicexception("track - attempt to remove non-present note");
     }
     m_list.erase(it);
@@ -110,7 +109,6 @@ void clip_notes_t::remove(note_t& t) {
 void clip_notes_t::mute(note_t& t) {
     auto it = std::find(m_list.begin(), m_list.end(), t);
     if (it == m_list.end()) {
-
         throw applogicexception("track - attempt to mute non-present note");
     }
     note_t& noteFound = *it;

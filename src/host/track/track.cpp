@@ -294,14 +294,12 @@ void trackdata_midi_t::deleteEmptyClips(delete_cb* cb) {
     sortClips();
 }
 
-void trackdata_midi_t::getClipsInRange(tick_t start, tick_t end, std::vector<clip_t*>& _clips) {
+void trackdata_midi_t::getClipsInRange(tick_t start, tick_t end, std::vector<clip_t*>& _clips) const {
     for (clip_t* clip : clips) {
         if (clip->end() <= start || clip->start() > end) {
             continue;
         }
-        if (clip->clipType == CLIP_AUDIO) {
-            _clips.push_back(clip);
-        }
+        _clips.push_back(clip);
     }
 }
 
@@ -909,7 +907,7 @@ void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry
         guiTracks->removeAllSubtracks(entry);
         DAW::Cursor& cursor = entry->parentCtrl->getCursor();
         if (cursor.inSubTrackAny(entry->track->projectIdx)) {
-            fixCursorSubRange(cursor, 0);
+            cursor.fixCursorSubRange(0);
         }
     } else {
         loadSubtrackLayout(guiTracks, entry, entry->state.layoutSaved);

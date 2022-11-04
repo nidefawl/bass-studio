@@ -74,6 +74,7 @@ void drawTri(NVGcontext* vg, float xTop, float yTop, float h, const int dir, con
 void drawImage(NVGcontext* vg, int image, float alpha,
                float sx, float sy, float sw, float sh,// sprite location on texture
                float x, float y, float w, float h);   // position and size of the sprite rectangle on screen
+void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, const ivec2& cs);
 
 guitheme_t* getDefaultTheme();
 ivec2 toControlsObjectSpace(ivec2 pos, guibase* gui);

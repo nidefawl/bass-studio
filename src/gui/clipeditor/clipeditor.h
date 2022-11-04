@@ -455,6 +455,7 @@ protected:
 };
 
 class gui_clipcontent_notes : public gui_clipcontent {
+    void renderClipNoteRects(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, tick_t tickOffset, float scale, NVGcolor color, bool renderMuted);
 public:
     gui_clipcontent_notes(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, false) {
         setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_NOTES);
@@ -742,7 +743,7 @@ public:
                         thisClip->setDirty();
                         dawCtrl->getDaw()->updateVisibleTrackContents();
                         dawCtrl->showClipEditor();
-                        dawCtrl->getDaw()->setEditClip(this->view.gui);
+                        dawCtrl->getDaw()->setEditClip(this->view.gui, {});
                         return true;
                     }
                 }

@@ -109,6 +109,33 @@ bool getClippedPosSize(const ivec2& parentSize, ivec2& posClipped, ivec2& sizeCl
     return wasClipped;
 }
 
+namespace DAW {
+    gui_track* createTrackGui(track_gui_entry_t* _entry, scaled_grid& grid) {
+        auto* const guitrack = new gui_track(_entry, grid);
+        guitrack->setZOrder(TRACKTYPE_TO_CTR(_entry->track->type) == TRACK_CTR_MIDIAUDIO ? 0 : 1);
+        return guitrack;
+    }
+
+    gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry) {
+        auto const guicontrols = new gui_track_controls(_entry);
+        guicontrols->setZOrder(_entry->track->type >= TRACK_TYPE_MIDI ? 0 : 1);
+        return guicontrols;
+    }
+
+    gui_clip* createClipGui(guictr_base* parent, track_gui_entry_t* trackentry, clip_t* clip) {
+        auto waveformRenderer = parent->dawCtrl->getWaveformRenderer();
+        if (0 == trackentry->clipsGuis.count(clip)) {
+            if (clip->clipType == CLIP_MIDI) {
+                trackentry->clipsGuis[clip] = new gui_midi_clip(trackentry, clip);
+            } else {
+                trackentry->clipsGuis[clip] = new gui_audio_clip(trackentry, clip, waveformRenderer);
+            }
+            clip->trackEntries.push_back(trackentry);
+        }
+        return trackentry->clipsGuis[clip];
+    }
+}
+
 gui_audio_clip::gui_audio_clip(track_gui_entry_t* _track, clip_t* _clip, waveformrender* _waveformRenderer)
     : gui_clip(_track, _clip),
     rendered_audio_clip_t(_waveformRenderer)
@@ -317,7 +344,9 @@ void gui_audio_clip::handleDraggedBegin(MouseEvent& evt) {
             shapeEdit.layoutEditor(fadeLayout->size);
             shapeEdit.onBeginDragCurveEditor(evtOffset);
             editState->dataBefore = m_clip->audio;
-            daw->setEditClip(this);
+            clipboard_view_t view;
+            DAW::GetClipboardView(m_trackentry->parent->guiMgr, dawCtrl->getCursor(), view);
+            daw->setEditClip(this, view);
             return;
         }
     }
@@ -654,31 +683,12 @@ gui_track::gui_track(track_gui_entry_t* _entry, scaled_grid& _grid)
     padding = 0;
 }
 
-gui_track* createTrackGui(track_gui_entry_t* _entry, scaled_grid& grid) {
-    auto* const guitrack = new gui_track(_entry, grid);
-    guitrack->setZOrder(TRACKTYPE_TO_CTR(_entry->track->type) == TRACK_CTR_MIDIAUDIO ? 0 : 1);
-    return guitrack;
-}
-
-gui_clip* createClipGui(guictr_base* parent, track_gui_entry_t* trackentry, clip_t* clip) {
-    auto waveformRenderer = parent->dawCtrl->getWaveformRenderer();
-    if (0 == trackentry->clipsGuis.count(clip)) {
-        if (clip->clipType == CLIP_MIDI) {
-            trackentry->clipsGuis[clip] = new gui_midi_clip(trackentry, clip);
-        } else {
-            trackentry->clipsGuis[clip] = new gui_audio_clip(trackentry, clip, waveformRenderer);
-        }
-        clip->trackEntries.push_back(trackentry);
-    }
-    return trackentry->clipsGuis[clip];
-}
-
 void gui_track::updateVisibleTrackContents(project_globals_t& project, scaled_grid& grid) {
     automation.setData();
     automation.updateVisibleTrackContents(grid);
     std::vector<clip_t*> clips = m_track->getMidi().getClips();
     for (clip_t* clip : clips) {
-        auto* gui = createClipGui(this, m_trackentry, clip);
+        auto* gui = DAW::createClipGui(this, m_trackentry, clip);
         dbgassert(gui);
         if (gui->parent != this) {
             add(gui);

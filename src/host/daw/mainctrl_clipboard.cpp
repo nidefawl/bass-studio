@@ -360,6 +360,23 @@ namespace DAW {
         }
         return isEmpty;
     }
+    void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, clipboard_view_t& view) {
+        if (!cursor.getRange())
+            return;
+        auto numTracks = math::max(0, cursor.getTrackRange() + 1);
+        view.tracks.resize(numTracks);
+        for (int i = 0; i < numTracks; i++) {
+            auto trackIdx = cursor.getTrackBegin() + i;
+            if (trackList.validTrackIdx(trackIdx)) {
+                const track_gui_entry_t* tr = trackList.at(trackIdx);
+
+                view.tracks[i].first = tr->track;
+                auto& midi = tr->track->getConstMidi();
+                view.tracks[i].second.clear();
+                midi.getClipsInRange(cursor.getTickBegin(), cursor.getTickEnd(), view.tracks[i].second);
+            }
+        }
+    }
 
 }// namespace DAW
 

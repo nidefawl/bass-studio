@@ -79,6 +79,9 @@ public:
         }
         return false;
     }
+    bool isCulled() const {
+        return culled;
+    }
     bool handleKeyInput(KeyEvent& kevt) override {
         return parent->handleKeyInput(kevt);
     }

@@ -52,16 +52,16 @@ public:
     virtual bool getTrackSelection(const DAW::Cursor& cursor, track_selection_t& sel) const = 0;
 };
 
-int32_t getPosYFirstReturnTrack(const track_gui_vector_td& tracksVisibleFlat);
-track_gui_entry_t* getTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse);
-track_gui_entry_t* getTrackFromMouseClosest(track_gui_manager_i& iGuiMgr, ivec2 mouse);
-
-gui_track_subtrack* getSubTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap);
-gui_track* createTrackGui(track_gui_entry_t* _entry, scaled_grid&);// trackcontent.cpp
-gui_clip* createClipGui(guictr_base* parent, track_gui_entry_t* trackentry, clip_t* clip);
-gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry);// trackcontrols.cpp
-void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, const ivec2& cs);
-
+namespace DAW {
+    int32_t getPosYFirstReturnTrack(const track_gui_vector_td& tracksVisibleFlat);
+    gui_clip* getClipFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse);
+    track_gui_entry_t* getTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse);
+    track_gui_entry_t* getTrackFromMouseClosest(track_gui_manager_i& iGuiMgr, ivec2 mouse);
+    gui_track_subtrack* getSubTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap);
+    gui_track* createTrackGui(track_gui_entry_t* _entry, scaled_grid&);// trackcontent.cpp
+    gui_clip* createClipGui(guictr_base* parent, track_gui_entry_t* trackentry, clip_t* clip);
+    gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry);// trackcontrols.cpp
+}
 
 class guitrack_editor : public guictr_base {
 public:

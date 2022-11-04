@@ -25,6 +25,15 @@
 #include "gui/plugin/pluginctr.h"
 #include "host/track/trackctr_types.h"
 
+void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, const ivec2& cs) {
+    nvgBeginPath(vg);
+    nvgMoveTo(vg, 0, seperatorY);
+    nvgLineTo(vg, cs.x, seperatorY);
+    nvgStrokeColor(vg, theme->getColor(GuiColor::COL_LINE_SEPERATOR));
+    nvgStrokeWidth(vg, TRACK_HEIGHT_SPACING);
+    nvgStroke(vg);
+}
+
 void guitrack_mixers::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
@@ -49,7 +58,7 @@ void guitrack_mixers::render(NVGcontext* vg) {
             nvgRestore(vg);
         }
     }
-    int ySplit = getPosYFirstReturnTrack(iGuiMgr.getTracksVisibleFlat());
+    int ySplit = DAW::getPosYFirstReturnTrack(iGuiMgr.getTracksVisibleFlat());
     if (ySplit > 0) {
         nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
         for (track_gui_entry_t* entry : iGuiMgr.getTracksVisibleFlat()) {
@@ -71,14 +80,6 @@ void guitrack_mixers::removeTrackEntry(track_gui_entry_t& e) {
     this->remove(e.mixer);
 }
 
-void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, const ivec2& cs) {
-    nvgBeginPath(vg);
-    nvgMoveTo(vg, 0, seperatorY);
-    nvgLineTo(vg, cs.x, seperatorY);
-    nvgStrokeColor(vg, theme->getColor(GuiColor::COL_LINE_SEPERATOR));
-    nvgStrokeWidth(vg, TRACK_HEIGHT_SPACING);
-    nvgStroke(vg);
-}
 int32_t guictr_tracks::getTrackTotalHeight(track_gui_entry_t* e) {
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
@@ -411,7 +412,7 @@ void guictr_tracks::render(NVGcontext* vg) {
     nvgSave(vg);
     dragdrop_target_indicator_t& dragDropTarget = dawCtrl->getDragDropTarget();
     nvgTranslate(vg, 0, trackView.top());
-    int ySplit = getPosYFirstReturnTrack(guiMgr.tracksVisibleFlat);
+    int ySplit = DAW::getPosYFirstReturnTrack(guiMgr.tracksVisibleFlat);
     if (ySplit > 0) {
         nvgSave(vg);
         nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
@@ -696,8 +697,8 @@ void guictr_tracks::addTrack(track_t* track, int flags) {
     entry->parentCtrl = this->dawCtrl;
     entry->track      = track;
     entry->parent     = this;
-    entry->mixer      = createTrackGuiMixer(entry);
-    entry->content    = createTrackGui(entry, grid);
+    entry->mixer      = DAW::createTrackGuiMixer(entry);
+    entry->content    = DAW::createTrackGui(entry, grid);
 
     guiMgr.addTrack(entry);
     trackControls.addTrackEntry(*entry);
