@@ -1,4 +1,3 @@
-#pragma once
 #include "asynctask.h"
 #include "gui/container/container.h"
 #include "guicolors.h"
