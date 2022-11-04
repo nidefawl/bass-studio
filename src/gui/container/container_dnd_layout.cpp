@@ -293,7 +293,7 @@ void guictr_layout::layout() {
         }
     }
     if (bHideHandles) {
-        auto needsHandle = !daw_tls::getSettings().dawsettings.uiLayoutLocked;
+        auto needsHandle = !daw_tls::getSettings().dawsettings.uiLayoutLocked || parentCtrl->isDraggingContainer();
         for (auto& entry : entries) {
             if (!entry->hasHandle) {
                 continue;
@@ -627,6 +627,13 @@ void guictr_layout::setSplitterPositions(std::vector<float>& splitterPositons) {
 }
 
 void guictr_layout::updateSplitters() {
+#ifndef NDEBUG
+    for (auto& entry : entries) {
+        dbgassert(entry->parentLayoutContainer == this);
+        dbgassert(!entry->getHandle() || (entry->getHandle()->parent == this && stl_contains(handles, entry->getHandle())) || entry->getHandle()->parent == nullptr);
+    }
+#endif
+
     int splitterLayout = 0;
     int numSplitters = 0;
     if (this->ctrLayout == container_layout::SPLIT_H || this->ctrLayout == container_layout::SPLIT_V) {
@@ -663,12 +670,12 @@ void guictr_layout::removeAllEntries() {
         }
         entry->parentLayoutContainer = nullptr;
     }
+    dbgassert(handles.empty());
     entries.clear();
     handles.clear();
     activePosition = -1;
     updateSplitters();
     dbgassert(splitters.empty() && guis.empty());
-    dbgassert(splitters.empty() || splitters.size() == entries.size() - 1);
 }
 
 void guictr_layout::assertEntries() const {
@@ -729,7 +736,6 @@ bool guictr_layout::getContainerRef(guictr_layout_entry* ctr, std::shared_ptr<gu
         return ctr == e.get();
     });
     if (it == entries.end()) {
-        //throw applogicexception(StringFormat("%s - attempt to remove non-present element", StringAsCStr(getClassName())));
         dbgassert(0);
         return false;
     }
@@ -896,6 +902,14 @@ void guictr_layout::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
+
+#ifndef NDEBUG
+    for (auto& entry : entries) {
+        dbgassert(entry->parentLayoutContainer == this);
+        dbgassert(!entry->getHandle() || (entry->getHandle()->parent == this && stl_contains(handles, entry->getHandle())) || entry->getHandle()->parent == nullptr);
+    }
+#endif
+
     if (this->id & (1 << 16)) {
         for (auto& h: handles) {
             nvgBeginPath(vg);
@@ -1098,7 +1112,7 @@ void loadContainerSnapshot(ContainerFactory& fac,
 }
 
 bool guictr_layout::isHandleShown() const {
-    if (!daw_tls::getSettings().dawsettings.uiLayoutLocked) {
+    if (!daw_tls::getSettings().dawsettings.uiLayoutLocked || (parentCtrl && parentCtrl->isDraggingContainer())) {
         return true;
     }
     auto p = parent;
