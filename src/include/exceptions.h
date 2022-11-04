@@ -1,6 +1,7 @@
 #pragma once
 #include <stdexcept>
 #include "str_util.h"
+#include "assert_dbg.h"
 
 String FormatErrorMessage(uint32_t error, const String& msg = "");
 class FileIOException : public std::runtime_error {
@@ -26,11 +27,17 @@ public:
 
 class appexception : public std::runtime_error {
 public:
-    explicit appexception(const String& str) : runtime_error(str) {}
+    explicit appexception(const String& str) : runtime_error(str) {
+        dbgassert(0);
+    }
 };
 
 class applogicexception : public std::runtime_error {
 public:
-    explicit applogicexception(const String& str) : runtime_error(str) {}
-    explicit applogicexception(const char* msg) : runtime_error(msg) {}
+    explicit applogicexception(const String& str) : runtime_error(str) {
+        dbgassert(0);
+    }
+    explicit applogicexception(const char* msg) : runtime_error(msg) {
+        dbgassert(0);
+    }
 };
