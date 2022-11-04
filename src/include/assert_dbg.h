@@ -1,5 +1,14 @@
 #pragma once
+
+#ifndef DBG_ASSERT_DISABLE
 #ifdef NDEBUG
+#define DBG_ASSERT_DISABLE 1
+#else
+#define DBG_ASSERT_DISABLE 0
+#endif
+#endif
+
+#if DBG_ASSERT_DISABLE
 
 #define assert_expr(_Expression) (!!(_Expression))
 
@@ -8,7 +17,7 @@
 #define dbgassert(_Expression)
 #define always_assert(_Expression) ((void)(_Expression))
 
-#else/* !defined (NDEBUG) */
+#else // DBG_ASSERT_DISABLE
 
 #ifdef __cplusplus
 #include "compiler.h"
@@ -41,4 +50,4 @@ void C_failedAssert(const char* expr, const char *file, int line);
 #endif
 
 
-#endif /* NDEBUG */
+#endif // DBG_ASSERT_DISABLE
