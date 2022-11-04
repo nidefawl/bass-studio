@@ -29,7 +29,7 @@
         {
             "label": "Update compile_commands.json",
             "type": "shell",
-            "command": "./local-update-cc.sh",
+            "command": "./scripts/update-compile-commands-local.sh",
             "problemMatcher": []
         },
         {
