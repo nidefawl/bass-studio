@@ -11,6 +11,8 @@ private:
 public:
     FileIOException(uint32_t error, const String& msg)
         : std::runtime_error(FormatErrorMessage(error, msg)), m_error((int32_t) error) {}
+    explicit FileIOException(const String& msg)
+        : std::runtime_error(msg), m_error(1) {}
 
     int32_t GetErrorCode() const { return m_error; }
 };

@@ -125,7 +125,7 @@ namespace MouseCursors {
                 if (ReadImage(path, out) < 0) {
                     log_lf(Log::L_ERROR, "Error loading image %s\n", StringAsCStr(path));
                 }
-            } catch (appexception& e) {
+            } catch (std::exception& e) {
                 log_lf(Log::L_ERROR, "Failed loading cursor %s: %s\n", StringAsCStr(path), e.what());
             }
         }

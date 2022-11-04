@@ -224,7 +224,7 @@ void loadSettings(appsettings& settings) {
             return;
         }
     }
-    throw appexception("Failed reading application settings file " + cwdPathSettings);
+    throw FileIOException("Failed reading application settings file " + cwdPathSettings);
 }
 
 void saveSettings(appsettings& _settings) {

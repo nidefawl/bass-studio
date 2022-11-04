@@ -42,7 +42,7 @@ KeybindsSnapshot loadKeybindsFile() {
             return tmpSettings;
         }
     }
-    throw appexception("Failed reading keybinds file " + cwdPathTheme);
+    throw FileIOException("Failed reading keybinds file " + cwdPathTheme);
 }
 void saveKeybindsFile(KeybindsSnapshot& _settings) {
     String cwdPathTheme = App::Platform::toUserdataPath(KEYBIND_SETTINGS_FILENAME);
