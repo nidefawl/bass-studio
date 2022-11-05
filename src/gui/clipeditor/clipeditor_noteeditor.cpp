@@ -781,7 +781,7 @@ void guictr_noteeditor::render(NVGcontext* vg) {
     auto handlesPos = timeline.getLeftBottom();
     auto handlesSize = ivec2(timeline.size.x, handlesHeight);
     nvgSave(vg);
-    if (size.x > 5 && size.y > 5) {
+    if (handlesSize.x > 5 && handlesSize.y > 5) {
         nvgIntersectScissor(vg, handlesPos.x, handlesPos.y, handlesSize.x, handlesSize.y);
         renderClipHandlesBackground(vg, theme, grid, vec2{0, heightSelIndicator}+vec2(handlesPos), handlesSize);
         int32_t trackIdx = 0;
