@@ -123,12 +123,12 @@ void Splitter::handleDraggedMove(MouseEvent& evt) {
         windowSize = this->windowSize == ivec2{0, 0} ? parentCtrl->getScaledSize() : this->windowSize;
         windowPos = windowBegin;
     }
-    log_lf(Log::L_TRACE, "windowSize: %d %d \n", windowSize.x, windowSize.y);
-    log_lf(Log::L_TRACE, "windowBegin: %d %d \n", windowPos.x, windowPos.y);
+    // log_lf(Log::L_TRACE, "windowSize: %d %d \n", windowSize.x, windowSize.y);
+    // log_lf(Log::L_TRACE, "windowBegin: %d %d \n", windowPos.x, windowPos.y);
     ivec2 relPos = evt.mousepos - windowPos;
-    log_lf(Log::L_TRACE, "mpos: %d %d \n", relPos.x, relPos.y);
+    // log_lf(Log::L_TRACE, "mpos: %d %d \n", relPos.x, relPos.y);
     float sc      = type == 0 ? (relPos.y / (float) (windowSize.y)) : (relPos.x / (float) (windowSize.x));
-    log_lf(Log::L_TRACE, "sc: %f \n", sc);
+    // log_lf(Log::L_TRACE, "sc: %f \n", sc);
     int clampedAt = 0;
     if (sc < scaleMin) {
         clampedAt = -1;
