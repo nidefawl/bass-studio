@@ -647,12 +647,11 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
                     dbgassert(cursor.getSubTrackEnd() < (int) subTr->m_trackentry->subtracks.size());
                 }
 
-            } else if(trNxtSelected) {
-                cursor.selTrackRange = (trNxtSelected->idx - trSelected->idx);
-
+            } else if(trSelected && trNxtSelected) {
+                cursor.selTrackRange = (trNxtSelected->idx  - trSelected->idx);
+            } else {
+                cursor.selTrackRange = 0;
             }
-//            beatbar16th_t songPos = dawCtrl->toBeatBar16th(tick);
-//            log_printf("Select at Track %d - %d %d %d %d = %u.%u.%u\n", trSelected->idx, c.cursorPos, tick, c.selRange, local.x, songPos.bar, songPos.beat, songPos.th);
         }
     }
 }
@@ -693,8 +692,10 @@ void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& ev
                 dbgassert(cursor.getSubTrackBegin() < (int) subTr->m_trackentry->subtracks.size());
                 dbgassert(cursor.getSubTrackEnd() < (int) subTr->m_trackentry->subtracks.size());
             }
-        } else if(trNxtSelected) {
-            cursor.selTrackRange = (trNxtSelected->idx - trSelected->idx);
+        } else if(trSelected && trNxtSelected) {
+            cursor.selTrackRange = (trNxtSelected->idx  - trSelected->idx);
+        } else {
+            cursor.selTrackRange = 0;
         }
         // beatbar16th_t songPos = daw->toBeatBar16th(tick, false);
         // log_printf("Select at Track %d - %d %d %d %d = %u.%u.%u\n", trSelected->idx, cursor.cursorPos, tick, cursor.selRange, local.x, songPos.bar, songPos.beat, songPos.th);
