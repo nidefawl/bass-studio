@@ -647,9 +647,8 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
                     dbgassert(cursor.getSubTrackEnd() < (int) subTr->m_trackentry->subtracks.size());
                 }
 
-            } else {
+            } else if(trNxtSelected) {
                 cursor.selTrackRange = (trNxtSelected->idx - trSelected->idx);
-                log_printf("sel track pos %d range %d\n", cursor.getTrackBegin(), cursor.getTrackRange());
 
             }
 //            beatbar16th_t songPos = dawCtrl->toBeatBar16th(tick);
@@ -658,24 +657,61 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
     }
 }
 void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
-    trackViewDragMove(view, evt);
-    auto daw = dawCtrl->getDaw();
     ivec2 local = evt.relMousepos;
-    track_gui_entry_t* trNxtSelected = DAW::getTrackFromMouseClosest(iGuiMgr, local);
-    daw->setSelectedTrackEntry(trNxtSelected);
-    trSelected    = nullptr;
-    subTrSelected = nullptr;
-    if (trNxtSelected) {
-        int32_t tick = grid.screenToTickSnap(local.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
-        if (assert_expr(cursor.contains(trNxtSelected->idx, tick))) {
-            auto gClip = DAW::GetClipGuiFromTime(trNxtSelected, tick);
-            if (gClip) {
-                clipboard_view_t view;
-                DAW::GetClipboardView(iGuiMgr, cursor, view, gClip);
-                daw->setEditClip(gClip, view);
+    DAW::Cursor& cursor = dawCtrl->getCursor();
+    auto daw = dawCtrl->getDaw();
+
+    track_gui_entry_t* trNxtSelected = nullptr;
+    gui_track_subtrack* subTr        = DAW::getSubTrackFromMouse(iGuiMgr, local, true);
+    if (subTrSelected) {
+        if (subTr && subTr->m_track != subTrSelected->m_track) {
+            subTr = nullptr;
+        }
+        trNxtSelected = DAW::getTrackFromMouse(iGuiMgr, local);
+        if (trNxtSelected && trNxtSelected->idx < subTrSelected->m_trackentry->idx) {
+            subTr = subTrSelected->m_trackentry->subtracks.front();
+        }
+        if (trNxtSelected && trNxtSelected->idx > subTrSelected->m_trackentry->idx) {
+            subTr = subTrSelected->m_trackentry->subtracks.back();
+        }
+    } else {
+        trNxtSelected = DAW::getTrackFromMouseClosest(iGuiMgr, local);
+
+        if (!trNxtSelected)
+            return;
+        //if track is folded get last child in linear layout
+    }
+    int32_t tick = grid.screenToTickSnap(local.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
+    if (evt.guiDragged == this) {// cursor move / range select
+        cursor.selRange = tick - cursor.cursorPos;
+        if (cursor.isSubtrackSelection()) {
+            dbgassert(subTrSelected);
+            if (subTr) {
+                cursor.selSubTrackRange = (subTr->idx - subTrSelected->idx);
+                dbgassert(cursor.getSubTrackEnd() > -1);
+                dbgassert(cursor.getSubTrackBegin() <= cursor.getSubTrackEnd());
+                dbgassert(cursor.getSubTrackBegin() < (int) subTr->m_trackentry->subtracks.size());
+                dbgassert(cursor.getSubTrackEnd() < (int) subTr->m_trackentry->subtracks.size());
+            }
+        } else if(trNxtSelected) {
+            cursor.selTrackRange = (trNxtSelected->idx - trSelected->idx);
+        }
+        // beatbar16th_t songPos = daw->toBeatBar16th(tick, false);
+        // log_printf("Select at Track %d - %d %d %d %d = %u.%u.%u\n", trSelected->idx, cursor.cursorPos, tick, cursor.selRange, local.x, songPos.bar, songPos.beat, songPos.th);
+        if (!subTrSelected && trNxtSelected) {
+            if (cursor.inTrackRange(trNxtSelected->idx)) {
+                auto gClip = DAW::GetClipGuiFromTime(trNxtSelected, tick);
+                if (gClip && gClip->m_clip->start() <= tick && gClip->m_clip->start() + gClip->m_clip->end() >= tick) {
+                    clipboard_view_t view;
+                    DAW::GetClipboardView(iGuiMgr, cursor, view, gClip);
+                    daw->setEditClip(gClip, view);
+                }
             }
         }
     }
+    trSelected    = nullptr;
+    subTrSelected = nullptr;
+    daw->setSelectedTrackEntry(trNxtSelected);
 }
 void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
     selectionMoved      = false;
