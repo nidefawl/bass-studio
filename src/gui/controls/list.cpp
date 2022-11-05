@@ -20,6 +20,7 @@ void gui_list_entry::handleDraggedRelease(MouseEvent& evt) {
 }
 
 void gui_list_entry::render(NVGcontext* vg) {
+    if (size.x<1||size.y<1) return;
     BaseCtrl* ctrl  = parentCtrl;
     float spacing   = INSET_TITLE;
     float x         = spacing;

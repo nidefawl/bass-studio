@@ -327,6 +327,8 @@ public:
     }
 
     void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
         auto centerPos = getCenterPos2f();
         nvgBeginPath(vg);
         nvgCircle(vg, centerPos.x, centerPos.y, nodePortRadius);
@@ -624,6 +626,8 @@ public:
     }
 
     void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
         if (parentCtrl && parentCtrl->guiDragged == this) {
             nvgGlobalAlpha(vg, 0.5f);
         }

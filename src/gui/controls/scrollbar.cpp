@@ -1,4 +1,5 @@
 #include <nanovg.h>
+#include "logging.h"
 #include "math/seq_math.h"
 #include "math/vec.h"
 #include "scrollbar.h"
@@ -11,6 +12,9 @@
 #include "splitter.h"
 
 void gui_scrollbar::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg)) {
+        return;
+    }
     nvgBeginPath(vg);
     nvgRect(vg, pos.x, pos.y, size.x, size.y);
     NVGcolor bg = theme->getColor(GuiColor::COL_BASE_BG);
@@ -110,16 +114,21 @@ void gui_scrollbar::setScrollOffset(float f) {
 }
 
 void Splitter::handleDraggedMove(MouseEvent& evt) {
-    ivec2 windowSize;
-    ivec2 mpos;
+    ivec2 windowPos{};
+    ivec2 windowSize{};
     if (notifyCtrl && this->parent) {
         windowSize = notifyCtrl->getContainerSize();
-        mpos       = evt.mousepos - this->parent->toScreenSpace(ivec2(0));
+        windowPos  = notifyCtrl->getContainerPos();
     } else {
         windowSize = this->windowSize == ivec2{0, 0} ? parentCtrl->getScaledSize() : this->windowSize;
-        mpos       = evt.mousepos - this->windowBegin;
+        windowPos = windowBegin;
     }
-    float sc      = type == 0 ? (mpos.y / (float) (windowSize.y)) : (mpos.x / (float) (windowSize.x));
+    log_lf(Log::L_TRACE, "windowSize: %d %d \n", windowSize.x, windowSize.y);
+    log_lf(Log::L_TRACE, "windowBegin: %d %d \n", windowPos.x, windowPos.y);
+    ivec2 relPos = evt.mousepos - windowPos;
+    log_lf(Log::L_TRACE, "mpos: %d %d \n", relPos.x, relPos.y);
+    float sc      = type == 0 ? (relPos.y / (float) (windowSize.y)) : (relPos.x / (float) (windowSize.x));
+    log_lf(Log::L_TRACE, "sc: %f \n", sc);
     int clampedAt = 0;
     if (sc < scaleMin) {
         clampedAt = -1;

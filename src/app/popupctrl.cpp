@@ -131,6 +131,8 @@ public:
         //margin=0;
     }
     void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
         renderFrameBase(vg);
         nvgSave(vg);
         guictr_scrollbar::render(vg);

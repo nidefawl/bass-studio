@@ -205,6 +205,9 @@ void gui_audio_clip::render(NVGcontext* vg) {
         gui_waveform_texture_ref* ref = getWaveformTextureRef();
         auto file = dawCtrl->getDaw()->getAudioCache()->get(m_clip->audio.id);
         renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, file, ref, pos, size, posClipped, sizeClipped);
+        if (fadeInLayout.size.y < 5 || sizeClipped.x < 1 || sizeClipped.y < 1) {
+            return;
+        }
         const auto relMousepos = toControlsObjectSpace(parentCtrl->m_mousePos, parent);
         for (auto* fadeLayout : { &fadeInLayout, &fadeOutLayout }) {
             const uint8_t fadeIdx = fadeLayout == &fadeInLayout ? 0 : 1;
@@ -272,7 +275,7 @@ bool gui_audio_clip::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (gui_clip::mouseHitTest(mpos, evt)) {
         return true;
     }
-    if (this->contains(mpos)) {
+    if (this->contains(mpos) && fadeInLayout.size.y > 5) {
         for (auto* fadeLayout : { &fadeInLayout, &fadeOutLayout }) {
             const uint8_t fadeIdx = fadeLayout == &fadeInLayout ? 0 : 1;
             const auto editRelMouse = vec2(mpos) - fadeLayout->pos;
@@ -882,6 +885,8 @@ void gui_track::renderTrackFolded(NVGcontext* vg) {
 }
 
 void gui_track::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     if (dawCtrl->getDaw()->getSelectedTrack() == m_track) {
         nvgBeginPath(vg);
         nvgRect(vg, pos.x, pos.y, size.x, size.y);

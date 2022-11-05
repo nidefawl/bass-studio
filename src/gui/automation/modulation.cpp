@@ -278,6 +278,8 @@ namespace DAW::UI::Modulation {
     }
 
     void guictr_edit_modulation::render(NVGcontext* vg) {
+        if (!isRenderableSizeAndContext(vg))
+            return;
         nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
         nvgTranslate(vg, pos.x, pos.y);
         renderFrameBase(vg);

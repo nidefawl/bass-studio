@@ -213,6 +213,8 @@ void gui_input_filtered::layout() {
 }
 
 void gui_input_filtered::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     int32_t fl = getStateFlags();
     renderWidgetBorder(vg, fl);
     if (isEditing) {

@@ -70,6 +70,8 @@ public:
     }
     ~guiplaceholder() override = default;
     void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
         nvgBeginPath(vg);
         NVGcolor c;
         if (this == parentCtrl->guiOver) {

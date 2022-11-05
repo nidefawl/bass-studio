@@ -21,6 +21,7 @@
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/polymorphic.hpp>
+#include <memory>
 #include <nanovg.h>
 
 static const int32_t dropIndicatorWidth = 8;
@@ -29,6 +30,8 @@ public:
     guictr_layout_entry_handle_button() : guibutton() {
     }
     void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
         int32_t fl = getStateFlags();
         //renderWidgetBorder(vg, fl);
         renderButtonLabel(vg, fl);
@@ -690,8 +693,16 @@ void guictr_layout::handleSplitterChanged(Splitter& splitter, float scale, int c
     updateSplitterMinMax(splitters);
     layout();
 }
+ivec2 guictr_layout::getContainerPos() {
+    const bool isShown = isHandleShown();
+    const int32_t handleHeight = isShown && handles.size() ? 20 : 0;
+    return toScreenSpace(ivec2(0, handleHeight));
+}
 ivec2 guictr_layout::getContainerSize() {
-    return size;
+    ivec2 cs = getSizeContent();
+    const bool isShown = isHandleShown();
+    const int32_t handleHeight = isShown && handles.size() ? 20 : 0;;
+    return cs - ivec2(0, handleHeight);
 }
 void guictr_layout::updateVisible() {
     int32_t entryIdx = 0;
@@ -790,7 +801,40 @@ bool guictr_layout::activateEntry(guictr_layout_entry* entry) {
     }
     return false;
 }
-
+std::shared_ptr<guictr_layout_entry> guictr_layout::findByTagEntry(int32_t tag) {
+    for (auto& entry : entries) {
+        if (entry->getEntryTag() == tag) {
+            return entry;
+        }
+        auto guiType = entry->getGui()->getGuiType();
+        if (guiType != gui_type::CTR_TYPE_LAYOUT) {
+            continue;
+        }
+        auto* ctr = static_cast<guictr_layout*>(entry->getGui());
+        auto found = ctr->findByTagEntry(tag);
+        if (found) {
+            return found;
+        }
+    }
+    return nullptr;
+}
+std::shared_ptr<guictr_layout_entry> guictr_layout::findByTagContainer(int32_t tag) {
+    for (auto& entry : entries) {
+        auto guiType = entry->getGui()->getGuiType();
+        if (guiType != gui_type::CTR_TYPE_LAYOUT) {
+            continue;
+        }
+        auto* ctr = static_cast<guictr_layout*>(entry->getGui());
+        if (ctr->getTag() == tag) {
+            return entry;
+        }
+        auto found = ctr->findByTagContainer(tag);
+        if (found) {
+            return found;
+        }
+    }
+    return nullptr;
+}
 void guictr_layout::addEntry(std::shared_ptr<guictr_layout_entry> ctr, int32_t posOffset) {
     auto it = std::find(entries.begin(), entries.end(), ctr);
     if (it != entries.end()) {
@@ -1047,6 +1091,7 @@ void storeContainerEntrySnapshot(guictr_layout_entry* ctrlayoutEntry, std::share
         auto sharedSnapshot = std::make_shared<guictrlayout_entry_snapshot_t>();
         snapshot            = sharedSnapshot;
     }
+    snapshot->entryTag = ctrlayoutEntry->getEntryTag();
     snapshot->type  = ctrlayoutEntry->getType();
     snapshot->label = ctrlayoutEntry->getLabel();
 }
@@ -1065,21 +1110,25 @@ void loadContainerEntrySnapshot(ContainerFactory& fac,
             return;
         }
     }
+    std::shared_ptr<guictr_layout> sharedContainerLayout;
     std::shared_ptr<guictr_base> sharedContainer;
-    if (makeContainer(ctxt, typeLoad, sharedContainer)) {
-        //sharedContainer->label = snapshot->label;
-        getContainerLabel(typeLoad, sharedContainer->label);
-        out = createGuiCtrLayoutEntry(sharedContainer);
-        if (out->getFrameType() == layout_ctr_type::GUICTR_LAYOUT) {
-            auto* ctrLayoutSnapshot = dynamic_cast<guictrlayout_snapshot_t*>(snapshot.get());
-            auto* ctrLayout = dynamic_cast<guictr_layout*>(out->getGui());
-            dbgassert(ctrLayout);
-            dbgassert(ctrLayoutSnapshot);
-            loadContainerSnapshot(fac, ctxt, ctrLayout, ctrLayoutSnapshot);
-        }
+    if (typeLoad == gui_type::CTR_TYPE_LAYOUT) {
+        sharedContainerLayout = std::make_shared<guictr_layout>();
+        sharedContainer       = sharedContainerLayout;
     } else {
-        log_printf("Failed loading container of type %d\n", typeLoad);
+        if (!makeContainer(ctxt, typeLoad, sharedContainer)) {
+            log_lf(Log::L_WARN, "Failed loading container of type %d\n", typeLoad);
+            return;
+        }
     }
+    getContainerLabel(typeLoad, sharedContainer->label);
+    out = createGuiCtrLayoutEntry(sharedContainer);
+    out->selfLayoutCtr = sharedContainerLayout;
+    if (out->getFrameType() == layout_ctr_type::GUICTR_LAYOUT) {
+        auto* ctrLayoutSnapshot = dynamic_cast<guictrlayout_snapshot_t*>(snapshot.get());
+        loadContainerSnapshot(fac, ctxt, sharedContainerLayout.get(), ctrLayoutSnapshot);
+    }
+    out->setEntryTag(snapshot->entryTag);
 }
 
 void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* snapshot) {
@@ -1087,6 +1136,7 @@ void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* s
     snapshot->splitterPositions = ctrlayout->getSplitterPositions();
     snapshot->activePosition    = ctrlayout->getActivePosition();
     snapshot->ctrLayout         = ctrlayout->getLayout();
+    snapshot->containerTag      = ctrlayout->getTag();
     snapshot->entries.reserve(entries.size());
     for (auto& sharedEntry: entries) {
         std::shared_ptr<guictrlayout_entry_snapshot_t> shrdEntrySnapshot;
@@ -1108,6 +1158,7 @@ void loadContainerSnapshot(ContainerFactory& fac,
     }
     ctrlayout->setSplitterPositions(snapshot->splitterPositions);
     ctrlayout->setActiveEntry(snapshot->activePosition);
+    ctrlayout->setTag(snapshot->containerTag);
     //ctrlayout->postContentChanged();
 }
 
@@ -1194,7 +1245,7 @@ void guictr_layout::postContentChanged() {
 }
 
 void guictr_layout::setActiveEntry(int32_t idx) {
-    this->activePosition = idx;
+    this->activePosition = math::clamp(idx, 0, CtrSize(entries) - 1);
     updateVisible();
     if (this->parent) {
         layout();

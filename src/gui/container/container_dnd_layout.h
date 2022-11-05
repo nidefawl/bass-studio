@@ -46,12 +46,21 @@ private:
     String getLayoutCtrName();
     Splitter* getSplitter(int32_t pos);
     bool bHideHandlesWhenLocked = false;
+    int32_t tag;
 public:
     guictr_layout();
     ~guictr_layout() override {
         removeGuis();
         entries.clear();
     }
+    void setTag(int32_t tag) {
+        this->tag = tag;
+    }
+    int32_t getTag() const {
+        return tag;
+    }
+    std::shared_ptr<guictr_layout_entry> findByTagContainer(int32_t tag);
+    std::shared_ptr<guictr_layout_entry> findByTagEntry(int32_t tag);
 
     ivec2 paddingTL(int _padding) const override;
     ivec2 paddingBR(int _padding) const override;
@@ -92,6 +101,7 @@ public:
     std::shared_ptr<guictr_layout_entry> replaceContainerWith(guictr_base* ctr, std::shared_ptr<guictr_layout_entry>& newEntry) override;
     
     void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override;
+    ivec2 getContainerPos() override;
     ivec2 getContainerSize() override;
 };
 

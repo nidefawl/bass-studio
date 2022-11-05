@@ -1140,6 +1140,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
     using namespace DAW::Host;
 
     tmr.reset();
+    this->noteEventsProcessed.clear();
     static thread_local std::vector<note_t> notes;
     static thread_local std::vector<midievent_ctrl_t> ctrlEvents;
     static thread_local std::vector<midievent_note_t> noteEvents;
@@ -1350,7 +1351,6 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
     updateProfilingTime(procMidiStats.tm7ValidateMidi, tmr.getTimeReset());
 #endif
 
-    this->noteEventsProcessed.clear();
 }
 
 void audio_stage_t::getNotesDelayed(tick_t tickLatencyCompensated, const double ticksPerBlock, std::vector<midievent_note_t>& evtsOut, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts, bool isPost) {
@@ -2118,7 +2118,7 @@ void track_impl_t::loadModulationRoutingSnapshot(const track_modulation_routing_
     if (arp) arp->setModulations(snapshot.arp);
     mixer.setModulations(snapshot.mixer);
 }
-String midievent_note_t::ToString() {
+String midievent_note_t::ToString() const {
     IMidiMsg msg;
     if(isNoteOn) {
         msg.MakeNoteOnMsg(pitch, globalTick, 0);

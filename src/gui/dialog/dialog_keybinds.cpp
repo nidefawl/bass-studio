@@ -149,6 +149,8 @@ public:
         }
         bool focused() const override;
         void render(NVGcontext* vg) override {
+            if (!isRenderableSizeAndContext(vg))
+                return;
             auto spacing = INSET_TITLE;
             if (focused()) {
                 nvgBeginPath(vg);

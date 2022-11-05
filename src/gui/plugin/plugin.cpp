@@ -68,6 +68,8 @@ void guiplugin::addGuiBtnTitlebar(guibuttontoggle* btn) {
 }
 
 void guiplugin::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     renderBase(vg);
     for (guibase* gui : guis) {
         if (!gui->isVisible())
@@ -451,6 +453,9 @@ public:
         knobTest.size = ivec2(size.y, size.y) - ivec2(spacing * 2);
     }
     void render(NVGcontext* vg) override {
+        if (size.x < 1 || size.y < 1) {
+            return;
+        }
         float rowHeight = size.y;
         float x         = knobTest.right() + spacing;
         if (dawCtrl->isCtrOrChildFocused(this)) {
@@ -701,6 +706,8 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
     dbgassert(prefSize.y > 0);
 }
 void guipluginview::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     renderBase(vg);
     if (layoutMode != 1) {
         for (auto* ctr : viewCtrs) {

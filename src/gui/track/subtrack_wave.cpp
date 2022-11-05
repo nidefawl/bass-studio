@@ -92,6 +92,8 @@ public:
     }
 
     void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
 
         if (!culled) {
 

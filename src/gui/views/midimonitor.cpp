@@ -44,6 +44,8 @@ public:
     }
 
     void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
         BaseCtrl* ctrl  = parentCtrl;
         float spacing   = INSET_TITLE;
         float x         = spacing;

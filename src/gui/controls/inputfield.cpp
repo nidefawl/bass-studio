@@ -4,6 +4,8 @@
 #include "str_util.h"
 
 void gui_numberinput_field_base::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     const auto stateFlags = getStateFlags();
     renderWidgetBorder(vg, stateFlags);
     if (isEditing) {

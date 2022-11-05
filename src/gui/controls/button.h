@@ -49,6 +49,8 @@ public:
         return str;
     }
     void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
         int32_t fl = getStateFlags();
         renderWidgetBorder(vg, fl);
         renderButtonLabel(vg, fl);
@@ -77,6 +79,8 @@ public:
         return statePtr;
     }
     void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
         int32_t fl = getStateFlags();
         renderWidgetBorder(vg, fl);
         renderButtonLabel(vg, fl);

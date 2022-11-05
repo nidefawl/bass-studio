@@ -393,6 +393,8 @@ void gui_midi_clip::renderDebugPass(NVGcontext* vg) {
 
 void gui_midi_clip::render(NVGcontext* vg) {
     if (!culled) {
+        if (!isRenderableSizeAndContext(vg))
+            return;
         clip_t* const cl  = m_clip;
         if (cl->getLen() <= 0) {
             return;

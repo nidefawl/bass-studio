@@ -184,5 +184,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
 }
 
 void gui_trackmeter::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     renderMeterAt(vg, theme, pos, size, meter);
 }

@@ -585,10 +585,12 @@ void serialize(Archive& archive, samplefile_entry_t& m) {
 template<class Archive>
 void serialize(Archive& archive, guictrlayout_snapshot_t& m) {
     archive(m.label, m.type, m.activePosition, m.ctrLayout, m.entries, m.splitterPositions);
+    make_optional_nvp(archive, "containerTag", m.containerTag);
 }
 template<class Archive>
 void serialize(Archive& archive, guictrlayout_entry_snapshot_t& m) {
     archive(m.label, m.type);
+    make_optional_nvp(archive, "entryTag", m.entryTag);
 }
 template<class Archive>
 void serialize(Archive& archive, dawview_layout_t& m) {

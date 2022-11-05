@@ -215,5 +215,8 @@ public:
     void buttonClicked(guibase* _button) override;
     void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override;
     ivec2 getContainerSize() override;
+    ivec2 getContainerPos() override {
+        return {0, 0};
+    }
     void onPluginSelected();
 };

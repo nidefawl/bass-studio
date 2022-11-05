@@ -63,6 +63,8 @@ bool guiknob::isModulated() {
 }
 
 void guiknob::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     ivec2 insetP = pos + ivec2(0);
     ivec2 insetS = size - ivec2(0);
     renderButtonAt(vg, insetP, insetS, getValue());
@@ -544,6 +546,8 @@ void guiknob_labeled_base::layout() {
 }
 
 void guiknob_labeled_base::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
 
     // ivec2 insetS = size - ivec2(INS_BRD * 2);
     // if (isSlider) {
@@ -655,6 +659,8 @@ static void renderSlider(NVGcontext* vg, const vec2& insetP, const vec2& insetS,
     }
 }
 void gui_slider_textfield::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     renderWidgetBorder(vg, getStateFlags());
     if (paramAutomatable && paramIdx > -1) {
         auto param = paramAutomatable->getParam(paramIdx);

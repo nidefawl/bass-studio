@@ -55,6 +55,8 @@ gui_timeinput_field::gui_timeinput_field(gui_timeinput* parentInput, int _idx, i
 }
 
 void gui_timeinput_field::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     int32_t flags = getStateFlags();
     renderWidgetBorder(vg, flags);
     setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
@@ -215,6 +217,8 @@ namespace {
     }
 }// namespace
 void gui_timeinput::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     int flags = getStateFlags();
     for (auto g : guis) {
         if (g->hovered() || g->pressed())
@@ -328,6 +332,8 @@ void guibutton_audioengine::prerender(NVGcontext* vg) {
 }
 
 void guibutton_audioengine::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     audiohost* ahost = audiohost::getInstance();
     if (!ahost || !ahost->isStreaming()) {
         setText("Off");
@@ -440,6 +446,8 @@ bool guibutton_audioengine::getState() const {
     return DAW::Host::getInstance()->isStreaming();
 }
 void gui_signaturecontrol_input::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     int32_t fl = getStateFlags();
     renderWidgetBorder(vg, fl);
     setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
@@ -488,6 +496,8 @@ gui_tempocontrol::gui_tempocontrol()
     add(&editfield);
 }
 void gui_tempocontrol_input::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     renderWidgetBorder(vg, getStateFlags());
     String tempo = FormatTempo(dawCtrl->getDaw()->getCurrentTempoBPM());
     setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
@@ -518,6 +528,8 @@ void gui_signaturecontrol::layout() {
     inputDen.pos.x = (size.x / 4) * 3 - inputNum.size.x / 2;
 }
 void gui_signaturecontrol::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     renderWidgetBorder(vg, getStateFlags());
     if (!setScissorTransform(vg)) {
         return;
@@ -666,6 +678,8 @@ void guictr_tempocontrols::layout() {
     }
 }
 void guictr_tempocontrols::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     //guictr_base::setScissorTransform(vg);
 
     bool bIsLockedUiLayout = daw_tls::getSettings().dawsettings.uiLayoutLocked;

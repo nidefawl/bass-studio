@@ -262,6 +262,8 @@ public:
     }
 
     void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
         if (dawCtrl->getDaw()->getSelectedTrack() == m_track) {
             nvgBeginPath(vg);
             nvgRect(vg, pos.x, pos.y, size.x, size.y);

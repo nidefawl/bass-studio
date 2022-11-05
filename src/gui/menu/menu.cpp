@@ -84,6 +84,8 @@ bool guictr_menubar_entry::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 }
 
 void guictr_menubar_entry::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     guictr_menubar_entry* cur = parentMenuBar->currentMenu;
 
     bool focused = parentCtrl->guiOver == this;
@@ -214,7 +216,8 @@ bool guimenu::clickedElement(ctxtmenu_entry* e, int _id) {
 }
 
 void guictr_menubar::render(NVGcontext* vg) {
-    setScissorTransform(vg);
+    if (!setScissorTransform(vg))
+        return;
     nvgBeginPath(vg);
     nvgRect(vg, 0, 0, size.x, size.y);
     nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));

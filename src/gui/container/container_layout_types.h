@@ -1,4 +1,5 @@
 #pragma once
+#include "basectrl.h"
 #include "gui/container/container_builder.h"
 #include "gui/controls/button.h"
 #include "container.h"
@@ -19,6 +20,7 @@ using ContainerFactory = std::map<gui_type, ContainerBuilder>;
 using ContainerRegistry = std::vector<std::pair<gui_type, String>>;
 ContainerFactory& getContainerFactory();
 ContainerRegistry& getContainerRegistry();
+std::shared_ptr<guictr_layout_entry> createGuiCtrLayoutEntry(const std::shared_ptr<guictr_layout>& ctr);
 std::shared_ptr<guictr_layout_entry> createGuiCtrLayoutEntry(const std::shared_ptr<guictr_base>& ctr);
 bool getContainerLabel(gui_type type, String& out);
 bool makeContainer(ContainerInstanceContext& ctxt, gui_type type, std::shared_ptr<guictr_base>& out);

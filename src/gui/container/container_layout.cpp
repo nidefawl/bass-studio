@@ -244,6 +244,9 @@ void guictr_stacked::handleSplitterChanged(Splitter& splitter, float scale, int 
     }
     dbgassert(0 && "entry not found");
 }
+ivec2 guictr_stacked::getContainerPos() {
+    return toScreenSpace({0, 0});
+}
 ivec2 guictr_stacked::getContainerSize() {
     return size;
 }

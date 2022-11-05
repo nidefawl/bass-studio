@@ -64,6 +64,8 @@ public:
         return colorBackground;
     }
     void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
         guictr_base::render(vg);
         if (strErrSrc.length() > 0) {
             auto cs = getSizeContent();

@@ -92,10 +92,12 @@ struct guictr_layout_entry {
     ivec2 pos{0};
     ivec2 size{0};
     std::shared_ptr<guictr_base> ctr;
+    std::shared_ptr<guictr_layout> selfLayoutCtr;
     guictr_layout_entry_handle* ctrHandle;
     String label;
     bool hasHandle = true;
     i_ctr_layout* parentLayoutContainer = nullptr;
+    int32_t entryTag = -1;
     guictr_layout_entry(String label, const std::shared_ptr<guictr_base>& _ctr);
     ~guictr_layout_entry();
     guictr_base* getGui();
@@ -106,6 +108,12 @@ struct guictr_layout_entry {
     String getLabel() const { return label; }
     bool getContainerRef(std::shared_ptr<guictr_layout_entry>& out, bool remove);
     void removeEntryFromParent();
+    std::shared_ptr<guictr_layout>& getAsLayoutCtr() { return selfLayoutCtr; }
+    int32_t getEntryTag() const { return entryTag; }
+    void setEntryTag(int32_t tag) { entryTag = tag; }
+    void assertState() const {
+        dbgassert(!!parentLayoutContainer == !!ctr->parent);
+    }
 };
 
 class i_ctr_layout {

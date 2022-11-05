@@ -321,14 +321,12 @@ private:
     std::shared_ptr<guictr_nodes_splitview> spGuiCtrNodes;
     std::shared_ptr<guictr_clipeditor> spGuiCtrClipEditor;
     std::shared_ptr<guictr_plugins> spGuiCtrPlugins;
-    std::shared_ptr<guictr_layout> tabbedTop;
-    std::shared_ptr<guictr_layout> tabbedBottom;
     std::shared_ptr<guictr_layout_entry> ctrEntryTracks;
     std::shared_ptr<guictr_layout_entry> ctrEntryNodes;
     std::shared_ptr<guictr_layout_entry> ctrEntryClipEdit;
     std::shared_ptr<guictr_layout_entry> ctrEntryPlugins;
-    std::shared_ptr<guictr_layout_entry> ctrEntryTabbedTop;
-    std::shared_ptr<guictr_layout_entry> ctrEntryTabbedBottom;
+    std::shared_ptr<guictr_layout_entry> ctrCtrTop;
+    std::shared_ptr<guictr_layout_entry> ctrCtrBottom;
 public:
     guictr_tracks& ctr_tracks;
     guictr_nodes_splitview& ctr_nodes;
@@ -357,14 +355,12 @@ public:
           spGuiCtrNodes(std::make_shared<guictr_nodes_splitview>(_cursor, _project, dragdropclip)),
           spGuiCtrClipEditor(std::make_shared<guictr_clipeditor>()),
           spGuiCtrPlugins(std::make_shared<guictr_plugins>()),
-          tabbedTop(std::make_shared<guictr_layout>()),
-          tabbedBottom(std::make_shared<guictr_layout>()),
           ctrEntryTracks(createGuiCtrLayoutEntry(spGuiCtrTracks)),
           ctrEntryNodes(createGuiCtrLayoutEntry(spGuiCtrNodes)),
           ctrEntryClipEdit(createGuiCtrLayoutEntry(spGuiCtrClipEditor)),
           ctrEntryPlugins(createGuiCtrLayoutEntry(spGuiCtrPlugins)),
-          ctrEntryTabbedTop(createGuiCtrLayoutEntry(tabbedTop)),
-          ctrEntryTabbedBottom(createGuiCtrLayoutEntry(tabbedBottom)),
+          ctrCtrTop(createGuiCtrLayoutEntry(std::make_shared<guictr_layout>())),
+          ctrCtrBottom(createGuiCtrLayoutEntry(std::make_shared<guictr_layout>())),
           ctr_tracks(*spGuiCtrTracks),
           ctr_nodes(*spGuiCtrNodes),
           ctr_clipeditor(*spGuiCtrClipEditor),
@@ -409,27 +405,49 @@ public:
     }
 
     void resetCenterContainer() {
-        ctrEntryTabbedTop->removeEntryFromParent();
-        ctrEntryTabbedBottom->removeEntryFromParent();
+        ctrCtrTop->removeEntryFromParent();
+        ctrCtrBottom->removeEntryFromParent();
         ctrEntryTracks->removeEntryFromParent();
         ctrEntryNodes->removeEntryFromParent();
         ctrEntryClipEdit->removeEntryFromParent();
         ctrEntryPlugins->removeEntryFromParent();
 
         ctr_Center->removeAllEntries();
-        tabbedBottom->removeAllEntries();
-        tabbedTop->removeAllEntries();
+        ctrCtrBottom->getAsLayoutCtr()->removeAllEntries();
+        ctrCtrTop->getAsLayoutCtr()->removeAllEntries();
+        for (int i = 0; i < 4; i++) {
+            while (auto ctr = ctr_Center->findByTagEntry(i)) {
+                ctr->setEntryTag(0);
+                ctr->removeEntryFromParent();
+            }
+        }
+        for (int i = 0; i < 2; i++) {
+            while (auto ctr = ctr_Center->findByTagContainer(i)) {
+                if (!assert_expr(ctr->getGui()->getGuiType() == gui_type::CTR_TYPE_LAYOUT)) {
+                    break;
+                }
+                auto guiLayout = static_cast<guictr_layout*>(ctr->getGui());
+                guiLayout->setTag(-1);
+                guiLayout->removeAllEntries();
+            }
+        }
+        ctrCtrTop->getAsLayoutCtr()->setTag(0);
+        ctrCtrBottom->getAsLayoutCtr()->setTag(1);
+        ctrEntryTracks->setEntryTag(0);
+        ctrEntryNodes->setEntryTag(1);
+        ctrEntryClipEdit->setEntryTag(2);
+        ctrEntryPlugins->setEntryTag(3);
         ctr_Center->setLayout(container_layout::SPLIT_H);
         ctr_Center->setHideHandlesWhenLocked(true);
-        tabbedTop->setLayout(container_layout::TABBED);
-        tabbedBottom->setLayout(container_layout::TABBED);
+        ctrCtrTop->getAsLayoutCtr()->setLayout(container_layout::TABBED);
+        ctrCtrBottom->getAsLayoutCtr()->setLayout(container_layout::TABBED);
 
-        tabbedTop->addEntry(ctrEntryTracks);
-        tabbedTop->addEntry(ctrEntryNodes);
-        tabbedBottom->addEntry(ctrEntryClipEdit);
-        tabbedBottom->addEntry(ctrEntryPlugins);
-        ctr_Center->addEntry(ctrEntryTabbedTop);
-        ctr_Center->addEntry(ctrEntryTabbedBottom);
+        ctrCtrTop->getAsLayoutCtr()->addEntry(ctrEntryTracks);
+        ctrCtrTop->getAsLayoutCtr()->addEntry(ctrEntryNodes);
+        ctrCtrBottom->getAsLayoutCtr()->addEntry(ctrEntryClipEdit);
+        ctrCtrBottom->getAsLayoutCtr()->addEntry(ctrEntryPlugins);
+        ctr_Center->addEntry(ctrCtrTop);
+        ctr_Center->addEntry(ctrCtrBottom);
         editAreaLayout = DAW::EditAreaLayout::EDIT_AREA_SINGLE;
         editAreaType = DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER;
         setEditAreaLayout(DAW::EditAreaLayout::EDIT_AREA_SPLIT_HORIZONTAL);
@@ -447,14 +465,38 @@ public:
     }
 
     void resetBottomArea() {
-        ctrEntryTabbedBottom->removeEntryFromParent();
+        ctrCtrBottom->removeEntryFromParent();
         ctrEntryClipEdit->removeEntryFromParent();
         ctrEntryPlugins->removeEntryFromParent();
-        ctrEntryTabbedBottom->removeEntryFromParent();
-        tabbedBottom->removeAllEntries();
-        tabbedBottom->addEntry(ctrEntryClipEdit);
-        tabbedBottom->addEntry(ctrEntryPlugins);
-        ctr_Center->addEntry(ctrEntryTabbedBottom);
+        ctrCtrBottom->removeEntryFromParent();
+        auto ctrTabBottom = ctr_Center->findByTagContainer(1);
+        if (ctrTabBottom) {
+            ctrTabBottom->removeEntryFromParent();
+        }
+        auto& bottom = ctrCtrBottom->getAsLayoutCtr();
+        bottom->removeAllEntries();
+        bottom->addEntry(ctrEntryClipEdit);
+        bottom->addEntry(ctrEntryPlugins);
+        bottom->setTag(1);
+        ctr_Center->addEntry(ctrCtrBottom);
+        ctr_Center->postContentChanged();
+    }
+
+    void resetTopArea() {
+        ctrCtrTop->removeEntryFromParent();
+        ctrEntryTracks->removeEntryFromParent();
+        ctrEntryNodes->removeEntryFromParent();
+        ctrCtrTop->removeEntryFromParent();
+        auto ctrTabTop = ctr_Center->findByTagContainer(0);
+        if (ctrTabTop) {
+            ctrTabTop->removeEntryFromParent();
+        }
+        auto& top = ctrCtrTop->getAsLayoutCtr();
+        top->removeAllEntries();
+        top->addEntry(ctrEntryTracks);
+        top->addEntry(ctrEntryNodes);
+        top->setTag(0);
+        ctr_Center->addEntry(ctrCtrTop);
         ctr_Center->postContentChanged();
     }
 
@@ -469,6 +511,17 @@ public:
         if (mainCtrl->viewMode == mode)
             return;
         mainCtrl->viewMode = mode;
+        bool bHasDefaultLayout = false;
+        auto ctrTabTop = ctr_Center->findByTagContainer(0);
+        if (ctrTabTop) {
+            auto ctrLayoutTop = static_cast<guictr_layout*>(ctrTabTop->getGui());
+            auto& entries = ctrLayoutTop->getEntries();
+            bHasDefaultLayout = stl_contains(entries, ctrEntryClipEdit) && stl_contains(entries, ctrEntryPlugins);
+            bHasDefaultLayout &= ctrLayoutTop->parent != nullptr && ctrLayoutTop->isVisible();
+        }
+        if (!bHasDefaultLayout) {
+            resetTopArea();
+        }
         switch (mode) {
             case TRACK_TIMELINE:
             case MIXER:
@@ -486,16 +539,22 @@ public:
         if (editAreaLayout == layout)
             return;
         editAreaLayout = layout;
-        auto& entries = tabbedBottom->getEntries();
-        bool bHasDefaultLayout = stl_contains(entries, ctrEntryClipEdit) && stl_contains(entries, ctrEntryPlugins);
-        bHasDefaultLayout &= tabbedBottom->parent != nullptr && tabbedBottom->isVisible();
+
+        bool bHasDefaultLayout = false;
+        auto ctrTabBottom = ctr_Center->findByTagContainer(0);
+        if (ctrTabBottom) {
+            auto ctrLayoutBottom = static_cast<guictr_layout*>(ctrTabBottom->getGui());
+            auto& entries = ctrLayoutBottom->getEntries();
+            bHasDefaultLayout = stl_contains(entries, ctrEntryClipEdit) && stl_contains(entries, ctrEntryPlugins);
+            bHasDefaultLayout &= ctrLayoutBottom->parent != nullptr && ctrLayoutBottom->isVisible();
+        }
         if (!bHasDefaultLayout) {
             resetBottomArea();
         }
-        std::shared_ptr<guictr_layout_entry> outEntry;
+        auto& bottom = ctrCtrBottom->getAsLayoutCtr();
         switch (editAreaLayout) {
             case DAW::EDIT_AREA_SINGLE:
-                tabbedBottom->setLayout(container_layout::TABBED);
+                bottom->setLayout(container_layout::TABBED);
                 switch (editAreaType) {
                     case DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER:
                         ctr_Center->activateEntry(ctrEntryPlugins.get());
@@ -506,10 +565,10 @@ public:
                 }
                 break;
             case DAW::EDIT_AREA_SPLIT_VERTICAL:
-                tabbedBottom->setLayout(container_layout::SPLIT_V);
+                bottom->setLayout(container_layout::SPLIT_V);
                 break;
             case DAW::EDIT_AREA_SPLIT_HORIZONTAL:
-                tabbedBottom->setLayout(container_layout::SPLIT_H);
+                bottom->setLayout(container_layout::SPLIT_H);
                 break;
         }
     }
@@ -655,8 +714,14 @@ public:
         ctr_Center->assertEntries();
         ctr_Right->removeAllEntries();
         ctr_Left->removeAllEntries();
-        ctrEntryTabbedTop->removeEntryFromParent();
-        ctrEntryTabbedBottom->removeEntryFromParent();
+        ctrEntryTracks->assertState();
+        ctrEntryNodes->assertState();
+        ctrEntryClipEdit->assertState();
+        ctrEntryPlugins->assertState();
+        ctrCtrTop->assertState();
+        ctrCtrBottom->assertState();
+        ctrCtrTop->removeEntryFromParent();
+        ctrCtrBottom->removeEntryFromParent();
         ctrEntryTracks->removeEntryFromParent();
         ctrEntryNodes->removeEntryFromParent();
         ctrEntryClipEdit->removeEntryFromParent();
@@ -681,6 +746,7 @@ public:
         if (viewLayout.center) {
             auto& fac = getContainerFactory();
             loadContainerSnapshot(fac, context, ctr_Center.get(), viewLayout.center.get());
+
             if (ctrEntryTracks->getGui()->parent && ctrEntryTracks->getGui()->isVisible()) {
                 mainCtrl->setViewMode(view_mode_t::TRACK_TIMELINE);
             }
@@ -693,8 +759,33 @@ public:
             } else if (ctrEntryPlugins->getGui()->parent && ctrEntryPlugins->getGui()->isVisible()) {
                 mainCtrl->setEditAreaType(DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER);
             }
+            //TODO find tabbed ctrs top and bottom
         } else {
             resetCenterContainer();
+        }
+        std::shared_ptr<guictr_layout_entry> ctrEntryTop;
+        std::shared_ptr<guictr_layout_entry> ctrEntryBottom;
+        for (int i = 0; i < 2; i++) {
+            while (auto ctr = ctr_Center->findByTagContainer(i)) {
+                if (!assert_expr(ctr->getGui()->getGuiType() == gui_type::CTR_TYPE_LAYOUT)) {
+                    break;
+                }
+                if (i == 0 && !ctrEntryTop) {
+                    ctrEntryTop = ctr;
+                } else if (i == 1 && !ctrEntryBottom) {
+                    ctrEntryBottom = ctr;
+                }
+                auto ctrLayout = ctr->getAsLayoutCtr();
+                ctrLayout->setTag(-1);
+            }
+        }
+        this->ctrCtrTop = ctrEntryTop;
+        this->ctrCtrBottom = ctrEntryBottom;
+        if (ctrEntryTop) {
+            ctrEntryTop->getAsLayoutCtr()->setTag(0);
+        }
+        if (ctrEntryBottom) {
+            ctrEntryBottom->getAsLayoutCtr()->setTag(1);
         }
         for (size_t i = 0; i < viewLayout.splitterPositions.size() && i < splitters.size(); i++) {
             splitters[i]->setScale(viewLayout.splitterPositions[i]);

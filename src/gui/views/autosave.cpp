@@ -81,6 +81,8 @@ public:
         }
     }
     void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
         nvgSave(vg);
         guictxtmenu_base::render(vg);
         nvgRestore(vg);

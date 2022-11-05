@@ -4561,6 +4561,10 @@ namespace PluginSynth {
             return size;
         }
 
+        ivec2 getContainerPos() override {
+            return {0, 0};
+        }
+
         void layout() override {
             for (auto& knob : vecParamUI) {
                 if (knob.type == guiknob::knobtype::KNOB_LABELED) {
@@ -4716,6 +4720,8 @@ namespace PluginSynth {
         }
 
         void render(NVGcontext* vg) override {
+            if (!isRenderableSizeAndContext(vg))
+                return;
             guictr_base::render(vg);
             auto cs = getSizeContent();
             auto voiceWidth = math::max(2.5f, float(cs.x) / NUM_POLY_VOICES);

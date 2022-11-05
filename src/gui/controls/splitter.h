@@ -14,6 +14,7 @@ protected:
     ~splitter_cb() = default;
 public:
     virtual void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) = 0;
+    virtual ivec2 getContainerPos() = 0;
     virtual ivec2 getContainerSize() = 0;
 };
 

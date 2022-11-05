@@ -57,6 +57,8 @@ void guidropdownbase::select(dropdown_field_selectitem req, int32_t idxOffset) {
 }
 
 void guidropdownbase::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     const auto stateFlags = getStateFlags();
     renderWidgetBorder(vg, stateFlags);
     auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
