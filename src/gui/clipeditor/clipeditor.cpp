@@ -154,6 +154,7 @@ void guictr_clipeditor::storeLayout() {
 void guictr_clipeditor::selectEditClip(gui_clip* gclip) {
     noteeditor.selectEditClip(gclip);
     settings.showEditClip();
+    arp.showEditClip();
 }
 void guictr_clipeditor::showEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
     view.set(gclip, clipboardView);
