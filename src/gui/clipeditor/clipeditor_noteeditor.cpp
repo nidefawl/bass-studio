@@ -781,59 +781,61 @@ void guictr_noteeditor::render(NVGcontext* vg) {
     auto handlesPos = timeline.getLeftBottom();
     auto handlesSize = ivec2(timeline.size.x, handlesHeight);
     nvgSave(vg);
-    nvgIntersectScissor(vg, handlesPos.x, handlesPos.y, handlesSize.x, handlesSize.y);
-    renderClipHandlesBackground(vg, theme, grid, vec2{0, heightSelIndicator}+vec2(handlesPos), handlesSize);
-    int32_t trackIdx = 0;
-    int32_t activeTrackIdx = -1;
-    auto viewTrack = view.track();
-    auto trackHandleHeight = (handlesHeight-heightSelIndicator) / math::max(1, CtrSize(view.selectionView.tracks));
-    for (auto& [trackEntry, vecClips] : view.selectionView.tracks) {
-            // nvgRect(vg, handlesPos.x, handlesPos.y + heightSelIndicator + trackHandleHeight * trackIdx+trackHandleHeight-heightSelIndicator, timeline.size.x, heightSelIndicator);
-        auto col = trackIdx % 2 == 0 ? GuiColor::COL_GRID_DRK : GuiColor::COL_GRID_BRT;
-        auto nvgCol = viewTrack == trackEntry.track ? rgbToNvg(trackEntry.track->rgb) : theme->getColor(col);
-        nvgBeginPath(vg);
-        nvgRect(vg, handlesPos.x, handlesPos.y + heightSelIndicator + trackHandleHeight * trackIdx + 2, timeline.size.x, trackHandleHeight-2);
-        nvgCol.a *= 0.5f;
-        nvgFillColor(vg, nvgCol);
-        nvgFillCustomPar(vg, -1);
-        nvgFill(vg);
-        if (viewTrack == trackEntry.track) {
-            activeTrackIdx = trackIdx;
-        }
-        trackIdx++;
-    }
-    renderGridList(vg, theme, grid, handlesPos, handlesSize);
-    guictr_cliphandles* viewClipHandle = nullptr;
-    if (!clipsHandles.empty() && clipsHandles.front()->isVisible()) {
-        auto thizClip = view.clip();
-        for (auto& handle: clipsHandles) {
-            if (!handle->isVisible()) {
-                break;
+    if (size.x > 5 && size.y > 5) {
+        nvgIntersectScissor(vg, handlesPos.x, handlesPos.y, handlesSize.x, handlesSize.y);
+        renderClipHandlesBackground(vg, theme, grid, vec2{0, heightSelIndicator}+vec2(handlesPos), handlesSize);
+        int32_t trackIdx = 0;
+        int32_t activeTrackIdx = -1;
+        auto viewTrack = view.track();
+        auto trackHandleHeight = (handlesHeight-heightSelIndicator) / math::max(1, CtrSize(view.selectionView.tracks));
+        for (auto& [trackEntry, vecClips] : view.selectionView.tracks) {
+                // nvgRect(vg, handlesPos.x, handlesPos.y + heightSelIndicator + trackHandleHeight * trackIdx+trackHandleHeight-heightSelIndicator, timeline.size.x, heightSelIndicator);
+            auto col = trackIdx % 2 == 0 ? GuiColor::COL_GRID_DRK : GuiColor::COL_GRID_BRT;
+            auto nvgCol = viewTrack == trackEntry.track ? rgbToNvg(trackEntry.track->rgb) : theme->getColor(col);
+            nvgBeginPath(vg);
+            nvgRect(vg, handlesPos.x, handlesPos.y + heightSelIndicator + trackHandleHeight * trackIdx + 2, timeline.size.x, trackHandleHeight-2);
+            nvgCol.a *= 0.5f;
+            nvgFillColor(vg, nvgCol);
+            nvgFillCustomPar(vg, -1);
+            nvgFill(vg);
+            if (viewTrack == trackEntry.track) {
+                activeTrackIdx = trackIdx;
             }
-            auto clip = handle->getClipView().clip();
-            if (clip == thizClip) {
-                viewClipHandle = handle.get();
-            } else if (assert_expr(clip)) {
-                nvgTranslate(vg, handle->pos.x, handle->pos.y);
-                handle->renderHandle(vg, -1);
-                nvgTranslate(vg, -handle->pos.x, -handle->pos.y);
+            trackIdx++;
+        }
+        renderGridList(vg, theme, grid, handlesPos, handlesSize);
+        guictr_cliphandles* viewClipHandle = nullptr;
+        if (!clipsHandles.empty() && clipsHandles.front()->isVisible()) {
+            auto thizClip = view.clip();
+            for (auto& handle: clipsHandles) {
+                if (!handle->isVisible()) {
+                    break;
+                }
+                auto clip = handle->getClipView().clip();
+                if (clip == thizClip) {
+                    viewClipHandle = handle.get();
+                } else if (assert_expr(clip)) {
+                    nvgTranslate(vg, handle->pos.x, handle->pos.y);
+                    handle->renderHandle(vg, -1);
+                    nvgTranslate(vg, -handle->pos.x, -handle->pos.y);
+                }
+            }
+            if (viewClipHandle) {
+                nvgTranslate(vg, viewClipHandle->pos.x, viewClipHandle->pos.y);
+                viewClipHandle->renderHandle(vg, activeTrackIdx);
+                nvgTranslate(vg, -viewClipHandle->pos.x, -viewClipHandle->pos.y);
             }
         }
+        renderSelectionIndicator(vg, theme, grid, handlesPos, vec2(timeline.size.x, heightSelIndicator), view.isAbsoluteTimeMode()?nullptr:clip, dawCtrl->getCursor(), heightSelIndicator);
+        // renderPlayHead(vg, theme, grid, handlesPos, handlesSize, clip, playbackPos, view.isAbsoluteTimeMode(), 1.0f);
+        nvgRestore(vg);
         if (viewClipHandle) {
             nvgTranslate(vg, viewClipHandle->pos.x, viewClipHandle->pos.y);
-            viewClipHandle->renderHandle(vg, activeTrackIdx);
+            viewClipHandle->renderLoopHandle(vg, vec2(viewClipHandle->size.x, content.bottom() - viewClipHandle->top()));
             nvgTranslate(vg, -viewClipHandle->pos.x, -viewClipHandle->pos.y);
         }
+        renderPlayHead(vg, theme, grid, content.pos, content.size, clip, playbackPos, view.isAbsoluteTimeMode(), 0.75f);
     }
-    renderSelectionIndicator(vg, theme, grid, handlesPos, vec2(timeline.size.x, heightSelIndicator), view.isAbsoluteTimeMode()?nullptr:clip, dawCtrl->getCursor(), heightSelIndicator);
-    // renderPlayHead(vg, theme, grid, handlesPos, handlesSize, clip, playbackPos, view.isAbsoluteTimeMode(), 1.0f);
-    nvgRestore(vg);
-    if (viewClipHandle) {
-        nvgTranslate(vg, viewClipHandle->pos.x, viewClipHandle->pos.y);
-        viewClipHandle->renderLoopHandle(vg, vec2(viewClipHandle->size.x, content.bottom() - viewClipHandle->top()));
-        nvgTranslate(vg, -viewClipHandle->pos.x, -viewClipHandle->pos.y);
-    }
-    renderPlayHead(vg, theme, grid, content.pos, content.size, clip, playbackPos, view.isAbsoluteTimeMode(), 0.75f);
     if (btnToggleFold.isVisible())
         btnToggleFold.render(vg);
     if (btnToggleVelocities.isVisible())
