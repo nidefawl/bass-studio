@@ -343,7 +343,7 @@ public:
     std::vector<std::shared_ptr<Splitter>> splitters;
     DAW::EditAreaLayout editAreaLayout = DAW::EditAreaLayout::EDIT_AREA_SINGLE;
     DAW::EditAreaType editAreaType = DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER;
-    enum class SplitterPos : uint32_t {
+    enum SplitterPos : uint32_t {
         LEFT = 0,
         RIGHT,
     };
@@ -463,7 +463,7 @@ public:
     }
 
     Splitter* getSplitter(SplitterPos pos) {
-        return splitters[static_cast<uint32_t>(pos)].get();
+        return splitters[pos].get();
     }
     void setViewMode(view_mode_t mode) {
         if (mainCtrl->viewMode == mode)
@@ -589,6 +589,9 @@ public:
 
         getSplitter(SplitterPos::RIGHT)->pos  = ivec2(ctr_Right->pos.x - Splitter::SPLITTER_LAYOUT_THICKNESS/2, hTopControls);
         getSplitter(SplitterPos::RIGHT)->size = ivec2(Splitter::SPLITTER_LAYOUT_THICKNESS, hContent);
+
+        getSplitter(SplitterPos::RIGHT)->setWindowPosSize(ctr_Left->getRightTop(), ctr_Right->getRightBottom() - ctr_Left->getRightTop());
+        getSplitter(SplitterPos::LEFT)->setWindowPosSize(ctr_Left->getLeftTop(), ctr_Right->getRightBottom() - ctr_Left->getLeftTop());
 
         ctr_Right->postContentChanged();
         ctr_Left->postContentChanged();

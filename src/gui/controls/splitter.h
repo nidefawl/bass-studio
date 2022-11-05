@@ -22,6 +22,7 @@ class Splitter : public guictr_base {
     float scale;
     float scaleMin{}, scaleMax{};
     splitter_cb* notifyCtrl = nullptr;
+    ivec2 windowBegin{};
     ivec2 windowSize{};
 public:
     static constexpr int SPLITTER_LAYOUT_THICKNESS = SPLITTER_HANDLE_SIZE;
@@ -36,6 +37,10 @@ public:
     void setMinMax(float _min, float _max) {
         this->scaleMin = _min;
         this->scaleMax = _max;
+    }
+    void setWindowPosSize(ivec2 begin, ivec2 size) {
+        this->windowBegin = begin;
+        this->windowSize  = size;
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (this->contains(mpos) /*&& evt.type <= MouseHitType::MOUSE_RIGHT*/) {

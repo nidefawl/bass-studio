@@ -117,7 +117,7 @@ void Splitter::handleDraggedMove(MouseEvent& evt) {
         mpos       = evt.mousepos - this->parent->toScreenSpace(ivec2(0));
     } else {
         windowSize = this->windowSize == ivec2{0, 0} ? parentCtrl->getScaledSize() : this->windowSize;
-        mpos       = evt.mousepos;
+        mpos       = evt.mousepos - this->windowBegin;
     }
     float sc      = type == 0 ? (mpos.y / (float) (windowSize.y)) : (mpos.x / (float) (windowSize.x));
     int clampedAt = 0;
