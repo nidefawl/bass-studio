@@ -27,4 +27,5 @@ struct layout_grid_t {
 struct clip_editor_layout_t {
     layout_grid_t layoutGrid;
     layout_pianoroll_t layoutPianoRoll;
+    bool noLayout    = true;
 };

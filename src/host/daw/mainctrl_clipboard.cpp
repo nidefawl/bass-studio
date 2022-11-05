@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <functional>
+#include <utility>
 #include <vector>
 #include <memory>
 
@@ -362,19 +363,31 @@ namespace DAW {
         return isEmpty;
     }
     void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, clipboard_view_t& view) {
-        if (!cursor.getRange())
-            return;
+        clipboard_track_view_t trackView;
         auto numTracks = math::max(0, cursor.getTrackRange() + 1);
-        view.tracks.resize(numTracks);
         for (int i = 0; i < numTracks; i++) {
             auto trackIdx = cursor.getTrackBegin() + i;
             if (trackList.validTrackIdx(trackIdx)) {
                 const track_gui_entry_t* tr = trackList.at(trackIdx);
-
-                view.tracks[i].first = tr->track;
                 auto& midi = tr->track->getConstMidi();
-                view.tracks[i].second.clear();
-                midi.getClipsInRange(cursor.getTickBegin(), cursor.getTickEnd(), view.tracks[i].second);
+                auto szBefore = trackView.second.size();
+                midi.getClipsInRange(cursor.getTickBegin(), cursor.getTickEnd(), trackView.second);
+                if (view.totalClipCount == 0 && trackView.second.size()) {
+                    view.minClipStart = trackView.second.front()->start();
+                    view.maxClipEnd   = trackView.second.back()->end();
+                }
+                for (auto it = trackView.second.begin() + int64_t(szBefore); it != trackView.second.end(); ++it) {
+                    view.minClipStart = math::min(view.minClipStart, (*it)->start());
+                    view.maxClipEnd   = math::max(view.maxClipEnd, (*it)->end());
+                }
+                if (trackView.second.empty())
+                    continue;
+                trackView.first = *tr;
+                view.totalClipCount += trackView.second.size();
+                view.tracks.push_back(std::move(trackView));
+                
+
+                trackView = {};
             }
         }
     }

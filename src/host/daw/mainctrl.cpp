@@ -304,12 +304,12 @@ public:
     guictr_tracks ctr_tracks2;
     guictr_clipeditor ctr_clipeditor;
     Splitter splitterCenter;
-    DawViewContainersCompanion(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
+    DawViewContainersCompanion(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, dragdrop_midifile& dragdropclip)
         : dawCtrl(_dawCtrl),
           ctr_menu(menubar),
           ctr_nodes(_cursor, _project, dragdropclip),
           ctr_tracks2(_dawCtrl, _cursor, _trackSelection, _project, _projectGlobals, grid, dragdropclip),
-          ctr_clipeditor(clipView),
+          ctr_clipeditor(),
           splitterCenter(0, 0.8f) {
         splitterCenter.setMinMax(0.2f, 0.86f);
     }
@@ -392,14 +392,14 @@ public:
         RIGHT,
     };
           
-    DawViewContainersMain(MainCtrl* const _mainCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
+    DawViewContainersMain(MainCtrl* const _mainCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, dragdrop_midifile& dragdropclip)
         : mainCtrl(_mainCtrl),
           ctr_Left(std::make_shared<guictr_layout>()),
           ctr_Center(std::make_shared<guictr_layout>()),
           ctr_Right(std::make_shared<guictr_layout>()),
           spGuiCtrTracks(std::make_shared<guictr_tracks>(_mainCtrl, _cursor, _trackSelection, _project, _projectGlobals, grid, dragdropclip)),
           spGuiCtrNodes(std::make_shared<guictr_nodes_splitview>(_cursor, _project, dragdropclip)),
-          spGuiCtrClipEditor(std::make_shared<guictr_clipeditor>(clipView)),
+          spGuiCtrClipEditor(std::make_shared<guictr_clipeditor>()),
           spGuiCtrPlugins(std::make_shared<guictr_plugins>()),
           tabbedTop(std::make_shared<guictr_layout>()),
           tabbedBottom(std::make_shared<guictr_layout>()),
@@ -416,7 +416,7 @@ public:
           ctr_menu(menubar),
           ctr_tempo(_project, _projectGlobals),
           ctr_pluginview(&ctr_plugins),
-          ctr_clipeditorview(clipView, ctr_clipeditor.noteeditor)
+          ctr_clipeditorview(spGuiCtrClipEditor->getClipView(), ctr_clipeditor.noteeditor)
     {
         auto subctr_tabbed  = makeTabListCtr1(_mainCtrl);
         auto subctr_tabbed2 = makeTabListCtr2(_mainCtrl);
@@ -760,7 +760,7 @@ public:
 };
 
 void CompanionCtrl::setupView() {
-    view = new DawViewContainersCompanion(this, menubar, cursor, trackSelection, daw.project, daw.projectGlobals, grid, clipView, daw.dragdropclip);
+    view = new DawViewContainersCompanion(this, menubar, cursor, trackSelection, daw.project, daw.projectGlobals, grid, daw.dragdropclip);
     view->addTo(this->viewGuiContainers);
     viewContainers = view;
     for (guictr_base* ctr : viewGuiContainers) {
@@ -777,7 +777,7 @@ void CompanionCtrl::setupView() {
 }
 
 void MainCtrl::setupView() {
-    view = new DawViewContainersMain(this, menubar, daw.projectGlobals.cursor, daw.projectGlobals.trackSelection, daw.project, daw.projectGlobals, grid, clipView, daw.dragdropclip);
+    view = new DawViewContainersMain(this, menubar, daw.projectGlobals.cursor, daw.projectGlobals.trackSelection, daw.project, daw.projectGlobals, grid, daw.dragdropclip);
     view->addTo(this->viewGuiContainers);
     viewContainers = view;
     for (guictr_base* ctr : viewGuiContainers) {
@@ -953,9 +953,7 @@ void DawInstance::unloadProject() {
     }
     projectPath = "";
     setSelectedTrack(nullptr);
-    for (auto* dawctrl : dawCtrls) {
-        dawctrl->clipView.reset();
-    }
+    resetClipViews();
     setEmptyClipboard();
 
     projectGlobals.cursor.setEmptySelection();
@@ -1672,14 +1670,22 @@ std::pair<String, String> DawInstance::createUniqueNonExistingFilename(const Str
 
 void DawInstance::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
     for (auto* ctrl : dawCtrls) {
-        clip_view& view = ctrl->getClipView();
-        if (view.clip() == notifyClip) {
-            view.cursor = cursor;
-            view.copySelectedNoteList();
-            view.updateNotePitches(false);
-        }
-        ctrl->updateClipViews();
+        ctrl->updateClipViews(notifyClip, cursor);
     }
+}
+
+void DawCtrl::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
+    auto& view = getClipEditor()->getClipView();
+    if (view.clip() == notifyClip) {
+        view.cursor = cursor;
+        view.copySelectedNoteList();
+        view.updateNotePitches(false);
+        getClipEditor()->showEditClip(view.gui, view.selectionView);
+    }
+}
+
+void DawCtrl::resetClipViews() {
+    getClipEditor()->getClipView().reset();
 }
 
 void DawInstance::destroy() {
@@ -3113,13 +3119,7 @@ void DawInstance::removeTrackId(uint32_t trackId) {
 }
 
 void DawInstance::removeTrackImpl(track_t* track, int flags) {
-    if (tls.mainCtrl) {
-        tls.mainCtrl->getPluginCtr()->hideTrack(track->audio);
-        // TODO: handle plugins correctly, right now they remain loaded in pluginhost
-        if (tls.mainCtrl->clipView.gui && tls.mainCtrl->clipView.gui->m_track == track) {
-            tls.mainCtrl->clipView.reset();
-        }
-    }
+    resetClipViews();
     project.trackList.removeTrack(track);
     for (DawCtrl* pDawCtrl : dawCtrls) {
         if (pDawCtrl->isOk()) {
@@ -3142,22 +3142,15 @@ track_t* DawInstance::getTrackId(uint32_t trackId) {
 
 void DawInstance::preClipDelete(clip_t* clip) {
     for (auto* ctrl : this->dawCtrls) {
-        if (ctrl->clipView.clip() == clip) {
-            ctrl->clipView.reset();
-        }
         ctrl->onGuiRemoved(clip);
     }
+    resetClipViews();
     //resetMouseContext();
 }
 
 void DawInstance::preTrackDelete(track_t* track) {
-    for (auto* ctrl : this->dawCtrls) {
-        if (ctrl->clipView.gui && ctrl->clipView.gui->m_track == track) {
-            setEditClip(nullptr, {});
-            break;
-        }
-    }
     resetMouseContext();
+    resetClipViews();
 }
 
 void DawInstance::setTempo(int32_t _tempo100) {
@@ -3308,16 +3301,14 @@ void DawCtrl::setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView
 
 void MainCtrl::setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
     view->ctr_clipeditor.storeLayout();
-    clipView.set(gclip, clipboardView);
-    view->ctr_clipeditor.showEditClip();
+    view->ctr_clipeditor.showEditClip(gclip, clipboardView);
     view->ctr_clipeditorview.resetCache();
     view->onEditClipChanged(gclip!=nullptr);
 }
 
 void CompanionCtrl::setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
     view->ctr_clipeditor.storeLayout();
-    clipView.set(gclip, clipboardView);
-    view->ctr_clipeditor.showEditClip();
+    view->ctr_clipeditor.showEditClip(gclip, clipboardView);
 }
 void MainCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
     DawCtrl::render(nanovgCtxt, x, y, w, h, ratio);
@@ -3448,12 +3439,7 @@ void MainCtrl::updateZoomLevel(float f) {
         daw.tls.settings->dawsettings.globalZoom = f;
     }
 }
-void MainCtrl::updateClipViews() {
-    view->ctr_clipeditor.showEditClip();
-}
-void CompanionCtrl::updateClipViews() {
-    view->ctr_clipeditor.showEditClip();
-}
+
 void DawInstance::setAsyncTask(DAW::async_task_t* task) {
     asyncTask = task;
     for (auto& ctrl : dawCtrls) {
@@ -3595,7 +3581,7 @@ void clip_view::updateNotePitches(bool reset) {
     clip_t* currentClip = clip();
     if (currentClip)
         currentClip->notes.getNotePitches(notePitches);
-    for (auto& [track, vecClips] : this->selectionView.tracks) {
+    for (auto& [trackEntry, vecClips] : this->selectionView.tracks) {
         for (clip_t* clip : vecClips) {
             if (clip == currentClip) {
                 continue;
@@ -3613,8 +3599,12 @@ void clip_view::copySelectedNoteList() {
 
 void clip_view::set(gui_clip* _clip, const clipboard_view_t& clipboardView) {
     selectionView = clipboardView;
+    bIsAbsoluteMode = clipboardView.totalClipCount > 1;
     this->gui     = _clip;
     updateNotePitches(true);
+}
+void clip_view::setSelected(gui_clip* _clip) {
+    this->gui     = _clip;
 }
 
 void clip_view::reset() {
@@ -3664,4 +3654,14 @@ float clip_view::unfoldNote(float note) {
         return notePitches[iNote];
     }
     return 0;
+}
+
+clip_view& DawCtrl::getClipView() {
+    return getClipEditor()->getClipView();
+}
+
+void DawInstance::resetClipViews() {
+    for (auto* dawctrl : dawCtrls) {
+        dawctrl->resetClipViews();
+    }
 }

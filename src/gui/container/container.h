@@ -179,6 +179,15 @@ public:
         gui->onAdded();
     }
 
+    void moveToBegin(guibase* gui) {
+        auto it = std::find(guis.begin(), guis.end(), gui);
+        if (it == guis.end()) {
+            throw applogicexception(StringFormat("%s - attempt to move gui that is not in list", StringAsCStr(getClassName())));
+        }
+        guis.erase(it);
+        guis.insert(guis.begin(), gui);
+    }
+
     template<typename Container>
     void sortChildrenByList(Container& container) {
         //TODO: very inefficient

@@ -223,7 +223,6 @@ public:
     uint32_t rgb     = 0x2B82AD;
     bool enabled     = true;
     bool loopEnabled = false;
-    bool noLayout    = true;
     clip_editor_layout_t editorLayout;
 
 public:

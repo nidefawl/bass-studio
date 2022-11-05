@@ -296,7 +296,7 @@ void trackdata_midi_t::deleteEmptyClips(delete_cb* cb) {
 
 void trackdata_midi_t::getClipsInRange(tick_t start, tick_t end, std::vector<clip_t*>& _clips) const {
     for (clip_t* clip : clips) {
-        if (clip->end() <= start || clip->start() > end) {
+        if (clip->end() <= start || clip->start() >= end) {
             continue;
         }
         _clips.push_back(clip);

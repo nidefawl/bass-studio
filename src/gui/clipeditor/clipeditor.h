@@ -1,7 +1,9 @@
 #pragma once
 #include <cstdint>
 #include <list>
+#include <memory>
 #include <vector>
+#include "assert_dbg.h"
 #include "grid_constants.h"
 #include "gui/controls/splitter.h"
 #include "gui/dropdown/dropdown.h"
@@ -28,6 +30,8 @@
 #include "host/daw/mainctrl.h"
 #include "gui/arp/arp.h"
 #include "gui/controls/inputfield.h"
+#include "theme.h"
+#include "types.h"
 
 class i_ctr_shape_editor;
 
@@ -412,6 +416,7 @@ public:
         padding = 0;
     }
     void renderBackground(NVGcontext* vg) override;
+    tick_t getTickOffset() const;
 };
 class gui_clipcontent : public gui_clipcontent_base, public piano_scale {
 public:
@@ -455,7 +460,7 @@ protected:
 };
 
 class gui_clipcontent_notes : public gui_clipcontent {
-    void renderClipNoteRects(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, tick_t tickOffset, float scale, NVGcolor color, bool renderMuted);
+    void renderClipNoteRects(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, tick_t tickOffset, float scale, float inset, NVGcolor color, bool renderMuted);
 public:
     gui_clipcontent_notes(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, false) {
         setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_NOTES);
@@ -571,9 +576,9 @@ protected:
     const int32_t heightClipIndicators = heightSelIndicator + heightLoopInidicator * 2;
 };
 
+class guictr_editor_base;
 class guictr_cliphandles : public guibase, ce_constants {
-    scaled_grid& grid;
-    clip_view& view;
+public:
     enum dragmode {
         drag_handle_none,
         drag_handle_left,
@@ -582,15 +587,43 @@ class guictr_cliphandles : public guibase, ce_constants {
         drag_handle_loopright,
         drag_handle_loopbar
     };
+    struct dist_dragzone {
+        float dist    = 0;
+        dragmode mode = drag_handle_none;
+    };
+    struct dist_dragzone_handle : public dist_dragzone {
+        guictr_cliphandles* handle = nullptr;
+    };
+private:
+    guictr_editor_base& parentEditor;
+    scaled_grid& grid;
+    clip_view view;
+    int32_t trackSelectionIdx = 0;
+    bool bIsHandleActive = true;
+    dragmode dragModeMouseOver = drag_handle_none;
     dragmode dragHandle = drag_handle_none;
-
 public:
-    ivec2 clipViewSize{0, 0};
     int32_t dragOffset = 0;
-
 public:
-    guictr_cliphandles(scaled_grid& _grid, clip_view& _view) : guibase(), grid(_grid), view(_view) {
+    explicit guictr_cliphandles(guictr_editor_base& parentEditor, scaled_grid& _grid)
+        : parentEditor(parentEditor), grid(_grid) {
+        setBackgroundRendered(true);
     }
+    void setHandleActive(bool b) {
+        bIsHandleActive = b;
+    }
+    bool isHandleActive() const {
+        return bIsHandleActive;
+    }
+    void setDragMode(dragmode mode) {
+        dragModeMouseOver = mode;
+    }
+    tick_t getTickOffset() const;
+    tick_t getTickOffsetOffset() const;
+    clip_view& getClipView() { return view; }
+    const clip_view& getClipView() const { return view; }
+    void setTrackSelectionIdx(int32_t idx) { trackSelectionIdx = idx; }
+    int32_t getTrackSelectionIdx() const { return trackSelectionIdx; }
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
@@ -599,49 +632,69 @@ public:
         y = y - mpos.y;
         return x * x + y * y;
     }
-    dragmode getDragZone(ivec2 local);
+    dist_dragzone_handle getDragZone(ivec2 local);
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-    float clipStartScrX();
-    float clipEndScrX();
-    float clipLoopStartScrX() {
-        return (float) grid.tickToScreenD(view.clip()->loopStart);
-    }
-    float clipLoopEndScrX() {
-        return (float) grid.tickToScreenD(view.clip()->loopStart + view.clip()->loopLen);
-    }
+    float clipStartScrX() const;
+    float clipEndScrX() const;
+    float clipLoopStartScrX() const;
+    float clipLoopEndScrX() const;
     void render(NVGcontext* vg) override;
+    void renderHandle(NVGcontext* vg, int32_t trackSelIdx) const;
+    void renderLoopHandle(NVGcontext* vg, vec2 editorSize) const;
+    bool containsHandlePos(ivec2 mpos) const;
+};
+
+void renderClipHandlesBackground(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid, vec2 handlesPos, vec2 handlesSize);
+void renderGridList(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid, vec2 handlesPos, vec2 handlesSize);
+void renderSelectionIndicator(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid , ivec2 handlesPos, ivec2 handlesSize, const clip_t* viewClip, const DAW::Cursor& c, float heightSelIndicator);
+void renderPlayHead(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid, ivec2 handlesPos, ivec2 handlesSize, const clip_t* viewClip, tick_t playbackPos, bool bIsAbsoluteTime, float fWidth);
+
+class guictr_editor_base : public guictr_base, public grid_changed_cb, public ce_constants {
+protected:
+    clip_view& view;
+    scaled_grid grid;
+    guitrack_timeline timeline;
+public:
+    explicit guictr_editor_base(clip_view& _view) : guictr_base(),
+      view(_view),
+      timeline(grid) {
+    }
+
+    clip_view& getClipView() { return view; }
+    virtual void selectEditClip(gui_clip* gclip) {
+        if (gclip != view.gui) {
+            view.setSelected(gclip);
+        }
+    }
+    virtual ivec2 getContentSize() const = 0;
 };
 
 class guictr_noteeditor 
-    : public guictr_base,
+    : public guictr_editor_base,
     public layout_pianoroll_t,
-    grid_changed_cb,
-    ce_constants,
     splitter_cb
 {
 public:
-    scaled_grid grid;
     gui_pianoroll piano;
     gui_clipcontent_notes content;
     gui_clipcontent_velocities velocities;
     gui_clipcontent_control_data ctrlData;
-    guitrack_timeline timeline;
-    guictr_cliphandles clipHandles;
-    clip_view& view;
+    std::vector<std::shared_ptr<guictr_cliphandles>> clipsHandles;
     guibuttonstate btnToggleFold;
     guibuttonstate btnToggleVelocities;
     guibuttonstate btnToggleControlData;
     guidropdown_generic<String> dropdownSelectControlData;
+    Splitter splitterVel;
     int32_t velHeight = 120;
     int32_t pianoWidth = 100;
-    Splitter splitterVel;
+    int32_t handlesHeight = heightClipIndicators;
 
 private:
     void setLayout(layout_pianoroll_t& layout);
     void zoomPianoRollToClipsNoteRange();
 
 public:
-    guictr_noteeditor(clip_view& _view);
+    explicit guictr_noteeditor(clip_view& _view);
     ~guictr_noteeditor() override;
 
     void buttonClicked(guibase* button) override;
@@ -656,7 +709,11 @@ public:
     }
     void gridChanged(scaled_grid& _grid) override;
     void showEditClip();
+    void selectEditClip(gui_clip* gclip) override;
     void storeLayout();
+    scaled_grid& getGrid() {
+        return grid;
+    }
     const scaled_grid& getGrid() const {
         return grid;
     }
@@ -664,6 +721,10 @@ public:
     ivec2 getContainerSize() override {
         return size;
     }
+    ivec2 getContentSize() const override {
+        return content.size;
+    }
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 };
 
 class gui_audiocontent : public guictr_base {
@@ -764,17 +825,13 @@ public:
     //protected:
     //void setGlobalSelectionFromClipSelection();
 };
-class guictr_audioeditor : public guictr_base, grid_changed_cb, ce_constants {
+class guictr_audioeditor : public guictr_editor_base {
 public:
-    scaled_grid grid;
     gui_audiocontent content;
-    guitrack_timeline timeline;
     guictr_cliphandles clipHandles;
-    clip_view& view;
-
 private:
 public:
-    guictr_audioeditor(clip_view& _view);
+    explicit guictr_audioeditor(clip_view& _view);
     ~guictr_audioeditor() override;
 
     void buttonClicked(guibase* button) override;
@@ -793,24 +850,31 @@ public:
     int32_t getTotalWidth();
     void showEditClip();
     void storeLayout();
+    ivec2 getContentSize() const override {
+        return content.size;
+    }
 };
 class guictr_clipeditor : public guictr_base {
-    clip_view& view;
+    clip_view view;
 
 public:
     guictr_noteeditor noteeditor;
     guictr_audioeditor audioeditor;
     gui_clipsettings settings;
     gui_arp arp;
-    explicit guictr_clipeditor(clip_view& _view);
+    explicit guictr_clipeditor();
     ~guictr_clipeditor() override;
     void storeLayout();
-    void showEditClip();
+    void showEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView);
+    void selectEditClip(gui_clip* gclip);
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void render(NVGcontext* vg) override;
     void layout() override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
+    clip_view& getClipView() {
+        return view;
+    }
 };
 
 

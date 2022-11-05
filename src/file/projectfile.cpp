@@ -418,6 +418,7 @@ template<class Archive>
 void serialize(Archive& archive, clip_editor_layout_t& m) {
     archive(make_nvp("layoutGrid", m.layoutGrid),
             make_nvp("layoutPianoRoll", m.layoutPianoRoll));
+    make_optional_nvp(archive, "noLayout", m.noLayout);
 }
 
 template<class Archive>
@@ -448,7 +449,6 @@ void serialize(Archive& archive, clip_t& m) {
             make_nvp("rgb", m.rgb),
             make_nvp("loopStart", m.loopStart),
             make_nvp("loopEnabled", m.loopEnabled),
-            make_nvp("noLayout", m.noLayout),
             make_nvp("editorLayout", m.editorLayout),
             make_nvp("clip_notes", m.notes),
             make_nvp("clip_audio", m.audio),

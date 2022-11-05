@@ -819,7 +819,6 @@ void clip_t::copy(const clip_t& obj) {
     notes        = obj.notes;
     audio        = obj.audio;
     controlData  = obj.controlData;
-    noLayout     = obj.noLayout;
     editorLayout = obj.editorLayout;
     dirty        = true;
 }

@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 #include <set>
+#include "assert_dbg.h"
 #include "commands.h"
 #include "gui/dialog/dialog.h"
 #include "gui/views/asynctask.h"
@@ -151,8 +152,12 @@ public:
     std::vector<note_t> draggedSelection;
     std::vector<int32_t> notePitches;
     clipboard_view_t selectionView;
-
+    bool bIsAbsoluteMode = false;
+    bool isAbsoluteTimeMode() const {
+        return bIsAbsoluteMode;
+    }
     void set(gui_clip* _clip, const clipboard_view_t& clipboardView);
+    void setSelected(gui_clip* _clip);
     void reset();
 
     clip_t* clip() const;
@@ -415,6 +420,7 @@ public:
     void resetMouseContext();
     void resetEditClip();
     void setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView);
+    void resetClipViews();
     void resetAutomationContext();
     void closeContextMenus();
     void closeDialogs();
@@ -470,7 +476,6 @@ public:
     DawViewContainers* viewContainers = nullptr;
     DawInstance& daw;
     scaled_grid grid;
-    clip_view clipView;
     view_mode_t viewMode = view_mode_t::TRACK_TIMELINE;
     std::vector<String> tmpFileDragPaths;
     explicit DawCtrl(AppCtrl* parent, DawInstance& _daw)
@@ -487,9 +492,7 @@ public:
     scaled_grid& getGrid() {
         return grid;
     }
-    clip_view& getClipView() {
-        return clipView;
-    }
+    clip_view& getClipView();
     DawInstance* getDaw() {
         return &daw;
     }
@@ -543,7 +546,8 @@ public:
     virtual DAW::Cursor& getCursor()              = 0;
     virtual void setupView()                      = 0;
     virtual void layoutView(int32_t w, int32_t h) = 0;
-    virtual void updateClipViews() = 0;
+    virtual void updateClipViews(clip_t* notifyClip, clip_cursor_t cursor);
+    virtual void resetClipViews();
 
     void updateVisibleTrackContents();
 
@@ -668,7 +672,6 @@ public:
     void resetMouseContext() override;
     void setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) override;
     void layoutView(int32_t w, int32_t h) override;
-    void updateClipViews() override;
     void setStatusText(String s) override;
     void setStatusText(const String& s, GuiColor::constant_t color);
     void destroy() override;
@@ -710,7 +713,6 @@ public:
 
     void setupView() override;
     void layoutView(int32_t w, int32_t h) override;
-    void updateClipViews() override;
     void resetMouseContext() override;
     void destroy() override;
     bool isCompanion() const override {

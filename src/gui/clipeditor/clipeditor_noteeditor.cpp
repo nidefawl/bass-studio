@@ -1,11 +1,17 @@
 #include <algorithm>
 #include <cstdio>
+#include <memory>
+#include <nanovg.h>
+#include "assert_dbg.h"
 #include "clipeditor.h"
 
+#include "color_util.h"
+#include "gui/track/trackctr.h"
 #include "math/seq_math.h"
 #include "gui/gui.h"
 #include "guicolors.h"
 #include "plugins/synth/IPlugMidi.h"
+#include "seq_util.h"
 #include "str_util.h"
 #include "host/track/track.h"
 #include "host/track/track_impl.h"
@@ -14,6 +20,7 @@
 #include "cursor.h"
 #include "keyboard.h"
 #include "grid.h"
+#include "types.h"
 #include "wave/waveform_render.h"
 #include "wave/waveform_render_impl.h"
 
@@ -25,14 +32,18 @@ static constexpr int32_t CLIPEDITOR_DEFAULT_MIN = DAW::ToNoteNumber(1, 0);
 static constexpr int32_t CLIPEDITOR_DEFAULT_MAX = DAW::ToNoteNumber(3, 0);
 
 void guictr_cliphandles::handleDraggedBegin(MouseEvent& evt) {
-    dragHandle   = drag_handle_none;
+    dragHandle  = dragModeMouseOver; //getDragZone(local);
+    dragModeMouseOver = drag_handle_none;
     clip_t* clip = view.clip();
     if (!clip) {
+        dragHandle   = drag_handle_none;
         return;
     }
-    ivec2 local = evt.relMousepos;
-    dragHandle  = getDragZone(local);
-    dragOffset  = local.x - (int32_t) (grid.tickToScreenD(clip->loopStart));
+    if (dragHandle == drag_handle_none) {
+        parentEditor.selectEditClip(view.gui);
+        return;
+    }
+    dragOffset  = evt.relMousepos.x - (int32_t) (grid.tickToScreenD(getTickOffset() + clip->loopStart));
 }
 
 void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
@@ -47,65 +58,105 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
     if (dragHandle == drag_handle_none) {
         return;
     }
-    ThreadLock lock        = MainCtrl::getPlayThread()->lockThread();
+    ThreadLock lock = dawCtrl->lockPlayThread();
     trackdata_midi_t& midi = track->getMidi();
-    clip_t* clNext         = midi.getNextClip(clip);
-    dbgassert(clNext == NULL || (clNext != clip));
-    dbgassert(clNext == NULL || clNext->start() >= clip->end());
+    clip_t* clNext = midi.getNextClip(clip);
+    dbgassert(!clNext || (clNext != clip));
+    dbgassert(!clNext || clNext->start() >= clip->end());
     int32_t mousePosX = evt.relMousepos.x;
     if (dragHandle == drag_handle_loopbar) {
         mousePosX -= dragOffset;
     }
-    tick_t tickAt     = grid.screenToTickSnap(mousePosX, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
-    tick_t curEnd     = clip->offsetStart + clip->getLen();
+    tick_t tickRelative = grid.screenToTickSnap(mousePosX, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON) - getTickOffset();
+    tick_t clipEndOffset     = clip->offsetStart + clip->getLen();
     tick_t curLoopEnd = clip->loopStart + clip->loopLen;
     if (dragHandle == drag_handle_right) {
-        tick_t tickDelta = (tickAt - curEnd);
-        tick_t newLen    = clip->getLen() + tickDelta;
-        if (newLen > 0) {
+        if (!parentEditor.getClipView().isAbsoluteTimeMode()) {
+            tick_t tickDelta = (tickRelative - clipEndOffset);
+            tick_t newLen    = clip->getLen() + tickDelta;
             tick_t newEnd = clip->start() + newLen;
             if (clNext && newEnd >= clNext->start()) {
-                clip->setLen(clNext->start() - clip->start());
-            } else {
-                clip->setLen(newLen);
+                newLen = clNext->start() - clip->start();
             }
+            if (newLen <= 0 || newLen == clip->getLen()) {
+                return;
+            }
+            clip->setLen(newLen);
+        } else {
+            tick_t newEnd = clip->start() + tickRelative;
+            if (clNext && newEnd >= clNext->start()) {
+                newEnd = clNext->start();
+            }
+            if (newEnd <= clip->start() || newEnd == clip->end()) {
+                return;
+            }
+            clip->setLen(newEnd - clip->start());
         }
     }
     if (dragHandle == drag_handle_left) {
-        tick_t curStart  = clip->offsetStart;
-        tick_t tickDelta = (tickAt - curStart);
-        tick_t newStart  = clip->offsetStart + tickDelta;
-        if (newStart < curEnd) {
-            tick_t newLen = curEnd - newStart;
-            tick_t newEnd = clip->start() + newLen;
-            if (clNext && newEnd >= clNext->start()) {
-                clip->setLen(clNext->start() - clip->start());
-                clip->offsetStart = curEnd - clip->getLen();
-            } else {
-                clip->offsetStart = newStart;
-                clip->setLen(curEnd - newStart);
+        if (!parentEditor.getClipView().isAbsoluteTimeMode()) {
+            tick_t curStart  = clip->offsetStart;
+            tick_t tickDelta = (tickRelative - curStart);
+            tick_t newStart  = clip->offsetStart + tickDelta;
+            if (newStart < clipEndOffset) {
+                tick_t newLen = clipEndOffset - newStart;
+                tick_t newEnd = clip->start() + newLen;
+                if (clNext && newEnd >= clNext->start()) {
+                    auto newLen = clNext->start() - clip->start();
+                    if (!newLen) return;
+                    clip->setLen(newLen);
+                    clip->offsetStart = clipEndOffset - clip->getLen();
+                } else {
+                    clip->offsetStart = newStart;
+                    auto newLen = clipEndOffset - newStart;
+                    if (!newLen) return;
+                    clip->setLen(newLen);
+                }
             }
+        } else {
+            clip_t* clPrev = midi.getPrevClip(clip);
+            tick_t newStart  = clip->start() + tickRelative;
+            auto clipEnd = clip->end();
+            if (newStart < 0) {
+                newStart = 0;
+            }
+            if (newStart >= clipEnd) {
+                newStart = clipEnd - 1;
+            }
+            if (clPrev && newStart < clPrev->end()) {
+                newStart = clPrev->end();
+            }
+            if (clip->time == newStart)
+                return;
+            clip->time = newStart;
+            clip->len = clipEnd - newStart;
         }
     }
     if (dragHandle == drag_handle_loopright) {
-        tick_t tickDelta = (tickAt - curLoopEnd);
+        tick_t tickDelta = (tickRelative - curLoopEnd);
         tick_t newLen    = clip->loopLen + tickDelta;
         if (newLen > 0) {
+            if (clip->loopLen == newLen)
+                return;
             clip->loopLen = newLen;
         }
     }
     if (dragHandle == drag_handle_loopleft) {
         tick_t curLoopStart = clip->loopStart;
-        tick_t tickDelta    = (tickAt - curLoopStart);
+        tick_t tickDelta    = (tickRelative - curLoopStart);
         tick_t newStart     = clip->loopStart + tickDelta;
         if (newStart < curLoopEnd) {
+            if (clip->loopStart == newStart && clip->loopLen == curLoopEnd - newStart)
+                return;
             clip->loopStart = newStart;
             clip->loopLen   = curLoopEnd - newStart;
         }
     }
     if (dragHandle == drag_handle_loopbar) {
         tick_t curLoopStart = clip->loopStart;
-        tick_t tickDelta    = (tickAt - curLoopStart);
+        tick_t tickDelta    = (tickRelative - curLoopStart);
+        if (!tickDelta)
+            return;
         clip->loopStart += tickDelta;
         clip->offsetStart = clip->loopStart;
     }
@@ -117,55 +168,67 @@ void guictr_cliphandles::handleDraggedRelease(MouseEvent& evt) {
     dragHandle = drag_handle_none;
 }
 
-guictr_cliphandles::dragmode guictr_cliphandles::getDragZone(ivec2 local) {
+guictr_cliphandles::dist_dragzone_handle guictr_cliphandles::getDragZone(ivec2 local) {
     if (view.clip()) {
-        struct dist_draghandle {
-            float dist    = 0;
-            dragmode mode = drag_handle_none;
-        };
 
-        float dragTop    = heightLoopInidicator / 2.0f;
-        float dragBottom = dragTop + heightLoopInidicator;
+        float halfHeight = size.y / 2.0f;
+        float dragTop    = halfHeight * 0.5f;
+        float dragBottom = halfHeight + halfHeight * 0.5f;
         float distBar    = std::numeric_limits<float>::max();
         float barSX      = clipLoopStartScrX();
         float barEX      = clipLoopEndScrX();
-        if (local.x >= barSX && local.x < barEX && local.y >= heightLoopInidicator && local.y < heightLoopInidicator * 2) {
+        if (local.x >= barSX && local.x < barEX && local.y >= halfHeight && local.y < halfHeight * 2) {
             distBar = DRAG_RANGE * DRAG_RANGE * 0.8f;
         }
-        std::vector<dist_draghandle> hndls{
-            { dist(clipStartScrX(), dragTop, local), dragmode::drag_handle_left },
-            { dist(clipEndScrX(), dragTop, local), dragmode::drag_handle_right },
-            { dist(barSX, dragBottom, local), dragmode::drag_handle_loopleft },
-            { dist(barEX, dragBottom, local), dragmode::drag_handle_loopright },
+        std::array<dist_dragzone, 5> hndls{
+            dist_dragzone{ dist(clipStartScrX()+3, dragTop, local), dragmode::drag_handle_left },
+            { dist(clipEndScrX()-3, dragTop, local), dragmode::drag_handle_right },
+            { dist(barSX+3, dragBottom, local), dragmode::drag_handle_loopleft },
+            { dist(barEX-3, dragBottom, local), dragmode::drag_handle_loopright },
             { distBar, dragmode::drag_handle_loopbar }
         };
-        std::sort(hndls.begin(), hndls.end(), [](dist_draghandle const& a, dist_draghandle const& b) {
+        if (!bIsHandleActive) {
+            for (auto& hndl : hndls) {
+                if (hndl.mode == dragmode::drag_handle_loopbar
+                    || hndl.mode == dragmode::drag_handle_loopleft
+                    || hndl.mode == dragmode::drag_handle_loopright) {
+                    hndl.mode = dragmode::drag_handle_none;
+                }
+            }
+        }
+        std::sort(hndls.begin(), hndls.end(), [](dist_dragzone const& a, dist_dragzone const& b) {
+            if (a.mode == dragmode::drag_handle_none)
+                return false;
+            if (b.mode == dragmode::drag_handle_none)
+                return true;
             return a.dist < b.dist;
         });
         if (hndls[0].dist < DRAG_RANGE * DRAG_RANGE) {
-            return hndls[0].mode;
+            return {hndls[0], this};
         }
     }
-    return drag_handle_none;
+    return { {std::numeric_limits<float>::max(), dragmode::drag_handle_none}, nullptr };
+}
+
+bool guictr_cliphandles::containsHandlePos(ivec2 mpos) const {
+    if (bIsHandleActive) {
+        float barSX      = clipLoopStartScrX();
+        float barEX      = clipLoopEndScrX();
+        float halfHeight = size.y / 2.0f;
+        if (mpos.x >= barSX && mpos.x < barEX && mpos.y >= halfHeight && mpos.y < halfHeight * 2) {
+            return true;
+        }
+    }
+    return mpos.x >= clipStartScrX() && mpos.x < clipEndScrX();
 }
 
 bool guictr_cliphandles::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (this->contains(mpos)) {
         ivec2 local = this->toContainerSpace(mpos);
         if (view.clip() && evt.type <= MouseHitType::MOUSE_RIGHT) {
-            dragmode mode = getDragZone(local);
-            if (mode == dragmode::drag_handle_loopleft || mode == dragmode::drag_handle_left) {
-                evt.requestCursor(CURSOR_CLIP_SIZE_LEFT);
-                evt.requestFocus(this);
-                return true;
-            }
-            if (mode == dragmode::drag_handle_loopright || mode == dragmode::drag_handle_right) {
-                evt.requestCursor(CURSOR_CLIP_SIZE_RIGHT);
-                evt.requestFocus(this);
-                return true;
-            }
-            if (mode == dragmode::drag_handle_loopbar) {
-                evt.requestCursor(CURSOR_RESIZE_H);
+            auto absTimeMode = parentEditor.getClipView().isAbsoluteTimeMode();
+            if (absTimeMode && containsHandlePos(local)) {
+                dragModeMouseOver = drag_handle_none;
                 evt.requestFocus(this);
                 return true;
             }
@@ -173,81 +236,41 @@ bool guictr_cliphandles::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     }
     return false;
 }
-
-void guictr_cliphandles::render(NVGcontext* vg) {
-    ivec2 cs = clipViewSize;
-    if (cs.y <= 0 || cs.x <= 0) {
+void guictr_cliphandles::renderLoopHandle(NVGcontext* vg, vec2 editorSize) const {
+    auto clip = view.clip();
+    if (!clip) {
         return;
     }
-    tick_t clipOffset = (view.clip()) ? view.clip()->getOffsetStart() : 0;
-    nvgIntersectScissor(vg, pos.x, pos.y, cs.x, cs.y);
-    nvgTranslate(vg, pos.x, pos.y);
-    nvgBeginPath(vg);
-    nvgRect(vg, -2, 0, cs.x + 2, size.y);
-    nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
-    nvgFill(vg);
-    //{
-    //
-    //    float w        = (float) size.x;
-    //    float bgRepeat = grid.incr_bg * 2.0f;
-    //    float bgOffset = (float) std::fmod(grid.offset, bgRepeat);
-    //    int steps_bg   = math::ceildS32((w + bgRepeat) / grid.incr_bg);
-    //    float x        = -bgOffset;
-    //    for (int i = 0; i < steps_bg; i += 2) {
-    //        nvgBeginPath(vg);
-    //        nvgRect(vg, x, 0, grid.incr_bg, size.y);
-    //        nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
-    //        nvgFill(vg);
-    //        x += grid.incr_bg * 2.0f;
-    //        if (x > w)
-    //            break;
-    //    }
-    //}
-    for (grid_div g: grid.gridList) {
-        nvgBeginPath(vg);
-        nvgMoveTo(vg, g.screenpos, 0);
-        nvgLineTo(vg, g.screenpos, heightLoopInidicator * 2);
-        NVGcolor col;
-        switch (g.color) {
-            case 0:
-                col = theme->getColor(GuiColor::COL_LINE_BAR);
-                break;
-            case 1:
-                col = theme->getColor(GuiColor::COL_LINE_QRT);
-                break;
-            case 2:
-            default:
-                col = theme->getColor(GuiColor::COL_LINE_XTH);
-                break;
-        }
-        nvgStrokeColor(vg, col);
-        nvgStrokeWidth(vg, g.thickness);
-        nvgStroke(vg);
+    NVGcolor colLI        = theme->getColor(GuiColor::COL_LOOPHANDLES);
+    const NVGcolor colLIStroke  = theme->getFrameColorOutline();
+    const float strokeWidthLI   = theme->getFloat(GuiConstant::CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH);
+    const auto heightLoopInidicator = float(size.y*0.5f);
+    const float wLoopInidicator = heightLoopInidicator;
+    if (!bIsHandleActive) {
+        colLI.r *= 0.5f;
+        colLI.g *= 0.5f;
+        colLI.b *= 0.5f;
     }
-    nvgBeginPath(vg);
-    nvgRect(vg, -2, heightLoopInidicator * 2, cs.x + 2, heightSelIndicator);
-    nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
-    nvgFill(vg);
-    if (view.clip()) {
-        const NVGcolor colLI        = theme->getColor(GuiColor::COL_LOOPHANDLES);
-        const NVGcolor colLIStroke  = theme->getFrameColorOutline();
-        const float strokeWidthLI   = theme->getFloat(GuiConstant::CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH);
-        const float wLoopInidicator = heightLoopInidicator;
+    float tickBeginX = clipStartScrX();
+    float tickEndX   = clipEndScrX();
 
-        float tickBeginX = clipStartScrX();
-        float tickEndX   = clipEndScrX();
+    float yOffset = 0;
+    auto cs = editorSize;
+    yOffset += heightLoopInidicator;
+    tickBeginX = clipLoopStartScrX();
+    tickEndX   = clipLoopEndScrX();
+    if (!(tickBeginX - wLoopInidicator > cs.x || tickEndX + wLoopInidicator < 0)) {
+        float barBeginX = math::max(-wLoopInidicator, tickBeginX);
+        float barEndX   = math::min(cs.x + wLoopInidicator, tickEndX);
+        nvgBeginPath(vg);
+        nvgRect(vg, barBeginX, yOffset, barEndX - barBeginX, heightLoopInidicator);
 
-        int yOffset = 0;
+        nvgFillColor(vg, colLI);
+        nvgFill(vg);
+        nvgStrokeColor(vg, colLIStroke);
+        nvgStrokeWidth(vg, strokeWidthLI);
+        nvgStroke(vg);
 
-        if (!(tickBeginX - wLoopInidicator > cs.x || tickEndX + wLoopInidicator < 0)) {
-            float barBeginX = math::max(-wLoopInidicator, tickBeginX);
-            float barEndX   = math::min(cs.x + wLoopInidicator, tickEndX);
-            NVGcolor color  = rgbToNvg(view.clip()->rgb);
-            nvgBeginPath(vg);
-            nvgRect(vg, barBeginX, yOffset, barEndX - barBeginX, heightLoopInidicator * 2);
-            nvgFillColor(vg, color);
-            nvgFill(vg);
-        }
         if (tickBeginX > -wLoopInidicator && tickBeginX < cs.x + wLoopInidicator) {
             nvgBeginPath(vg);
             nvgMoveTo(vg, tickBeginX, yOffset);
@@ -255,7 +278,7 @@ void guictr_cliphandles::render(NVGcontext* vg) {
             nvgStrokeColor(vg, colLI);
             nvgStrokeWidth(vg, strokeWidthLI);
             nvgStroke(vg);
-            drawTri(vg, tickBeginX, yOffset, heightLoopInidicator, 0, colLI, colLIStroke, strokeWidthLI);
+            drawTri(vg, tickBeginX, yOffset, wLoopInidicator, 0, colLI, colLIStroke, strokeWidthLI);
         }
 
         if (tickEndX > -wLoopInidicator && tickEndX < cs.x + wLoopInidicator) {
@@ -265,99 +288,130 @@ void guictr_cliphandles::render(NVGcontext* vg) {
             nvgStrokeColor(vg, colLI);
             nvgStrokeWidth(vg, strokeWidthLI);
             nvgStroke(vg);
-            drawTri(vg, tickEndX, yOffset, heightLoopInidicator, 1, colLI, colLIStroke, strokeWidthLI);
+            drawTri(vg, tickEndX, yOffset, wLoopInidicator, 1, colLI, colLIStroke, strokeWidthLI);
         }
-        yOffset += heightLoopInidicator;
-        tickBeginX = clipLoopStartScrX();
-        tickEndX   = clipLoopEndScrX();
-        if (!(tickBeginX - wLoopInidicator > cs.x || tickEndX + wLoopInidicator < 0)) {
-            float barBeginX = math::max(-wLoopInidicator, tickBeginX);
-            float barEndX   = math::min(cs.x + wLoopInidicator, tickEndX);
-            nvgBeginPath(vg);
-            nvgRect(vg, barBeginX, yOffset, barEndX - barBeginX, heightLoopInidicator);
+    }
+    yOffset += heightLoopInidicator;
+}
+void guictr_cliphandles::renderHandle(NVGcontext* vg, int32_t trackSelIdx) const {
+    auto clip = view.clip();
+    if (!clip) {
+        return;
+    }
+    NVGcolor colLI        = theme->getColor(GuiColor::COL_LOOPHANDLES);
+    const NVGcolor colLIStroke  = theme->getFrameColorOutline();
+    const float strokeWidthLI   = theme->getFloat(GuiConstant::CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH);
+    const auto heightLoopInidicator = float(size.y*0.5f);
+    const float wLoopInidicator = heightLoopInidicator;
+    if (trackSelIdx != this->trackSelectionIdx) {
+        colLI.r *= 0.5f;
+        colLI.g *= 0.5f;
+        colLI.b *= 0.5f;
+    }
+    float tickBeginX = clipStartScrX();
+    float tickEndX   = clipEndScrX();
 
-            nvgFillColor(vg, colLI);
-            nvgFill(vg);
-            nvgStrokeColor(vg, colLIStroke);
-            nvgStrokeWidth(vg, strokeWidthLI);
-            nvgStroke(vg);
-
-            if (tickBeginX > -wLoopInidicator && tickBeginX < cs.x + wLoopInidicator) {
-                nvgBeginPath(vg);
-                nvgMoveTo(vg, tickBeginX, yOffset);
-                nvgLineTo(vg, tickBeginX, yOffset + cs.y);
-                nvgStrokeColor(vg, colLI);
-                nvgStrokeWidth(vg, strokeWidthLI);
-                nvgStroke(vg);
-                drawTri(vg, tickBeginX, yOffset, wLoopInidicator, 0, colLI, colLIStroke, strokeWidthLI);
-            }
-
-            if (tickEndX > -wLoopInidicator && tickEndX < cs.x + wLoopInidicator) {
-                nvgBeginPath(vg);
-                nvgMoveTo(vg, tickEndX, yOffset);
-                nvgLineTo(vg, tickEndX, yOffset + cs.y);
-                nvgStrokeColor(vg, colLI);
-                nvgStrokeWidth(vg, strokeWidthLI);
-                nvgStroke(vg);
-                drawTri(vg, tickEndX, yOffset, wLoopInidicator, 1, colLI, colLIStroke, strokeWidthLI);
-            }
-        }
-        yOffset += heightLoopInidicator;
+    float yOffset = 0;
+    auto cs = size;
+    if (!(tickBeginX - wLoopInidicator > cs.x || tickEndX + wLoopInidicator < 0)) {
+        float barBeginX = math::max(-wLoopInidicator, tickBeginX);
+        float barEndX   = math::min(cs.x + wLoopInidicator, tickEndX);
+        NVGcolor color  = rgbToNvg(view.clip()->rgb);
+        nvgBeginPath(vg);
+        nvgRect(vg, barBeginX, yOffset, barEndX - barBeginX, heightLoopInidicator * 2);
+        nvgFillColor(vg, color);
+        nvgFillCustomPar(vg, -4);
+        nvgFill(vg);
+        nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
+        nvgStrokeWidth(vg, 1.f);
+        nvgStroke(vg);
+    }
+    if (tickBeginX > -wLoopInidicator && tickBeginX < cs.x + wLoopInidicator) {
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, tickBeginX, yOffset);
+        nvgLineTo(vg, tickBeginX, yOffset + cs.y);
+        nvgStrokeColor(vg, colLI);
+        nvgStrokeWidth(vg, strokeWidthLI);
+        nvgStroke(vg);
+        drawTri(vg, tickBeginX, yOffset, heightLoopInidicator, 0, colLI, colLIStroke, strokeWidthLI);
     }
 
-    /* render track-editor selection range in clipview */
-    DAW::Cursor& c = dawCtrl->getCursor();
+    if (tickEndX > -wLoopInidicator && tickEndX < cs.x + wLoopInidicator) {
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, tickEndX, yOffset);
+        nvgLineTo(vg, tickEndX, yOffset + cs.y);
+        nvgStrokeColor(vg, colLI);
+        nvgStrokeWidth(vg, strokeWidthLI);
+        nvgStroke(vg);
+        drawTri(vg, tickEndX, yOffset, heightLoopInidicator, 1, colLI, colLIStroke, strokeWidthLI);
+    }
+}
+/* render track-editor selection range in clipview */
+void renderSelectionIndicator(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid , ivec2 handlesPos, ivec2 handlesSize, const clip_t* viewClip, const DAW::Cursor& c, float heightSelIndicator) {
+    nvgBeginPath(vg);
+    nvgRect(vg, handlesPos.x - 2, handlesPos.y, handlesSize.x + 4, heightSelIndicator);
+    nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
+    nvgFill(vg);
     if (c.selRange) {
-        int32_t tickBegin = c.getTickBegin() - clipOffset;
-        int32_t tickEnd   = c.getTickEnd() - clipOffset;
-        float tickBeginX  = (float) grid.tickToScreenD(tickBegin);
-        float tickEndX    = (float) grid.tickToScreenD(tickEnd);
-        if (tickEndX > -4.0f && tickBeginX < cs.x + 4.0f) {
-            tickBeginX  = CLAMP_I(tickBeginX, -4.0f, cs.x + 3.0f);
-            tickEndX    = CLAMP_I(tickEndX, -3.0f, cs.x + 4.0f);
-            float width = (float) (tickEndX - tickBeginX);
-            nvgBeginPath(vg);
-            nvgRect(vg, (float) tickBeginX, heightLoopInidicator * 2.0f, width, heightSelIndicator);
-            nvgFillColor(vg, theme->getColor(GuiColor::COL_SELECTION_BACKGROUND));
-            nvgFill(vg);
-        }
-    }
-    //-view.clip->start()+view.clip->offsetStart
-    clip_t* clip = view.clip();
-    if (clip) {
-        tick_t pos = DawInstance::get()->getPlaybackPos() - clip->time + clip->offsetStart;
-        if (clip->loopEnabled && clip->loopLen > 0) {
-            if (pos > clip->loopStart) {
-                pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+        auto clipOffset = (viewClip) ? viewClip->getOffsetStart() : 0;
+        auto tickBegin = c.getTickBegin() - clipOffset;
+        auto tickEnd   = c.getTickEnd() - clipOffset;
+        auto tickBeginX  = grid.tickToScreenD(tickBegin);
+        auto tickEndX    = grid.tickToScreenD(tickEnd);
+        if (tickEndX > -4.0 && tickBeginX < handlesSize.x + 4.0) {
+            auto width = tickEndX - tickBeginX;
+            if (width < 0.5f) {
+                return;
             }
-        }
-        float playBackX = (float) grid.tickToScreenD(pos);
-        if (playBackX > -4.0f && playBackX < cs.x + 4.0f) {
+            auto inset = math::max(1.0f, heightSelIndicator * 0.25f);
             nvgBeginPath(vg);
-            nvgMoveTo(vg, playBackX, 0);
-            nvgLineTo(vg, playBackX, cs.y);
-            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD_OUTLINE));
-            nvgStrokeWidth(vg, 3);
-            nvgStroke(vg);
-            nvgBeginPath(vg);
-            nvgMoveTo(vg, playBackX, 0);
-            nvgLineTo(vg, playBackX, cs.y);
-            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD));
-            nvgStrokeWidth(vg, 1);
-            nvgStroke(vg);
+            nvgRect(vg, handlesPos.x + tickBeginX, handlesPos.y + inset, width, heightSelIndicator - inset * 2.0f);
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_SELECTED));
+            nvgFill(vg);
         }
     }
 }
 
+void renderPlayHead(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid, ivec2 handlesPos, ivec2 handlesSize, const clip_t* viewClip, tick_t playbackPos, bool bIsAbsoluteTime, float fWidth) {
+    if (viewClip) {
+        tick_t tickPos = playbackPos;
+        if (!bIsAbsoluteTime) {
+            tickPos -= viewClip->time + viewClip->offsetStart;
+            if (viewClip->loopEnabled && viewClip->loopLen > 0) {
+                if (tickPos > viewClip->loopStart) {
+                    tickPos = viewClip->loopStart + (tickPos - viewClip->loopStart) % viewClip->loopLen;
+                }
+            }
+        }
+        float playBackX = (float) grid.tickToScreenD(tickPos);
+        if (playBackX > -4.0f && playBackX < handlesSize.x + 4.0f) {
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, handlesPos.x + playBackX, handlesPos.y);
+            nvgLineTo(vg, handlesPos.x + playBackX, handlesSize.y);
+            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD_OUTLINE));
+            nvgStrokeWidth(vg, 3 * fWidth);
+            nvgStroke(vg);
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, handlesPos.x + playBackX, handlesPos.y);
+            nvgLineTo(vg, handlesPos.x + playBackX, handlesPos.y + handlesSize.y);
+            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLAYHEAD));
+            nvgStrokeWidth(vg, 1 * fWidth);
+            nvgStroke(vg);
+        }
+    }
+}
+void guictr_cliphandles::render(NVGcontext* vg) {
+    nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
+    nvgTranslate(vg, pos.x, pos.y);
+    renderHandle(vg, 0);
+}
+
 guictr_noteeditor::guictr_noteeditor(clip_view& _view)
-    : guictr_base(), layout_pianoroll_t(),
+    : guictr_editor_base(_view), layout_pianoroll_t(),
       piano(_view, *this),
       content(grid, _view, *this),
       velocities(grid, _view, *this),
       ctrlData(grid, _view, *this),
-      timeline(grid),
-      clipHandles(grid, _view),
-      view(_view),
       splitterVel(0, 0.75f)
 {
     splitterVel.setMinMax(0.5f, 0.95f);
@@ -370,7 +424,7 @@ guictr_noteeditor::guictr_noteeditor(clip_view& _view)
     add(&ctrlData);
     add(&velocities);
     add(&timeline);
-    add(&clipHandles);
+    // add(&clipHandles);
     add(&btnToggleFold);
     add(&btnToggleVelocities);
     add(&btnToggleControlData);
@@ -408,7 +462,8 @@ guictr_noteeditor::~guictr_noteeditor() {
     remove(&velocities);
     remove(&content);
     remove(&piano);
-    remove(&clipHandles);
+    removeGuis();
+    // remove(&clipHandles);
 }
 
 void guictr_noteeditor::handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) {
@@ -448,7 +503,7 @@ void guictr_noteeditor::renderBackground(NVGcontext* vg) {
 void guictr_noteeditor::layout() {
     ivec2 cs = getSizeContent();
 
-    auto heightContent = cs.y - heightTimeLine - heightClipIndicators;
+    auto heightContent = cs.y - heightTimeLine - handlesHeight;
     velHeight = math::clamp(splitterVel.rightOrBottom(heightContent), 0, 220);
     if (!velocities.isVisible()) {
         velocities.size = ivec2(cs.x - pianoWidth, 0);
@@ -463,12 +518,16 @@ void guictr_noteeditor::layout() {
         ctrlData.size = ivec2(cs.x - pianoWidth, velHeight);
     }
     piano.size      = ivec2(pianoWidth, heightContent);
-    piano.pos          = ivec2(0, heightTimeLine + heightClipIndicators);
+    piano.pos          = ivec2(0, heightTimeLine + handlesHeight);
     timeline.pos       = ivec2(piano.right(), 0);
     timeline.size      = ivec2(cs.x - pianoWidth, heightTimeLine);
-    clipHandles.pos    = ivec2(timeline.left(), timeline.bottom());
-    clipHandles.size   = ivec2(timeline.size.x, heightClipIndicators);
-    content.pos        = ivec2(timeline.left(), clipHandles.bottom());
+    auto clipHandlesPos = ivec2(timeline.left(), timeline.bottom() + heightSelIndicator);
+    auto insetClipHandleY = 4;
+    for (auto& clipHandles : clipsHandles) {
+        clipHandles->pos  = clipHandlesPos + ivec2(0, heightLoopInidicator * 2 * clipHandles->getTrackSelectionIdx() + insetClipHandleY);
+        clipHandles->size = ivec2(timeline.size.x, heightLoopInidicator * 2 - insetClipHandleY * 2);
+    }
+    content.pos        = ivec2(timeline.left(), timeline.bottom() + handlesHeight);
     content.size       = ivec2(timeline.size.x, piano.size.y);
     velocities.pos     = ivec2(timeline.left(), content.bottom());
     ctrlData.pos     = ivec2(timeline.left(), velocities.bottom());
@@ -486,8 +545,6 @@ void guictr_noteeditor::layout() {
         dropdownSelectControlData.size = ivec2(pianoWidth, 18);
     }
     
-
-    clipHandles.clipViewSize = ivec2(content.size.x, content.size.y + clipHandles.size.y);
     grid.update(content.size);
     for (guibase* gui: guis) {
         gui->layout();
@@ -533,27 +590,113 @@ void guictr_noteeditor::zoomPianoRollToClipsNoteRange() {
 }
 
 void guictr_noteeditor::showEditClip() {
-    clip_t* clip = view.clip();
-    if (clip) {
-        if (clip->noLayout) {
-            grid.showRange(clip->offsetStart, clip->offsetStart + clip->getLen());
+    clip_t* currentClip = view.clip();
+    if (currentClip) {
+        bool bIsAbsMode = view.isAbsoluteTimeMode();
+        auto& layout = bIsAbsMode ? view.selectionView.editorLayout : currentClip->editorLayout;
+        if (layout.noLayout) {
+            if (bIsAbsMode) {
+                grid.showRange(view.selectionView.minClipStart, view.selectionView.maxClipEnd);
+            } else {
+                grid.showRange(currentClip->offsetStart, currentClip->offsetStart + currentClip->getLen());
+            }
             zoomPianoRollToClipsNoteRange();
         } else {
-            clip_editor_layout_t& layout = clip->editorLayout;
             grid.setLayout(layout.layoutGrid);
             setLayout(layout.layoutPianoRoll);
         }
     }
     ctrlData.showEditClip();
+    auto newClipHandleCount = view.selectionView.totalClipCount;
+    auto curClipHandleCount = clipsHandles.size();
+    for (size_t i = newClipHandleCount; i < curClipHandleCount; i++) {
+        clipsHandles[i]->setVisible(false);
+        clipsHandles[i]->getClipView().reset();
+    }
+    for (size_t i = curClipHandleCount; i < newClipHandleCount; i++) {
+        if (clipsHandles.size() <= i || !clipsHandles[i]) {
+            clipsHandles.push_back(std::make_shared<guictr_cliphandles>(*this, grid));
+            this->add(clipsHandles[i].get());
+        }
+    }
+    auto numTracks = view.selectionView.tracks.size();
+    handlesHeight = math::max<int32_t>(1, numTracks) * heightLoopInidicator * 2 + heightSelIndicator;
+    bool foundThis = false;
+    auto it = clipsHandles.begin();
+    for (size_t trackIdx = 0; trackIdx < numTracks; trackIdx++) {
+        auto& [trackEntry, vecTrackClips] = view.selectionView.tracks[trackIdx];
+        auto numClipsOnTrack = vecTrackClips.size();
+        for (size_t clipIdx = 0; clipIdx < numClipsOnTrack && it != clipsHandles.end(); clipIdx++) {
+            auto& selClip = vecTrackClips[clipIdx];
+            auto& clipHandles = **(it++);
+            dbgassert(it <= clipsHandles.end());
+            if (!assert_expr(trackEntry.clipsGuis.count(selClip))) {
+                continue;
+            }
+            auto selGClip = trackEntry.clipsGuis[selClip];
+            dbgassert(selGClip);
+            dbgassert(selGClip->m_clip);
+            dbgassert(selGClip->m_clip == selClip);
+            clipHandles.setVisible(true);
+            clipHandles.getClipView().set(selGClip, {});
+            clipHandles.setTrackSelectionIdx(trackIdx);
+            dbgassert(clipHandles.getClipView().clip() == selClip);
+            clipHandles.setHandleActive(selClip == currentClip);
+            moveToBegin(&clipHandles);
+            if (clipHandles.isHandleActive()) {
+                foundThis = true;
+            }
+        }
+    }
+    dbgassert(!currentClip || !view.selectionView.totalClipCount || foundThis);
+    dbgassert(clipsHandles.size() >= view.selectionView.totalClipCount);
+    for (size_t i = 0; i < view.selectionView.totalClipCount; i++) {
+        dbgassert(clipsHandles[i]->isVisible());
+        dbgassert(clipsHandles[i]->getClipView().clip());
+    }
+    for (size_t i = view.selectionView.totalClipCount; i < clipsHandles.size(); i++) {
+        dbgassert(!clipsHandles[i]->isVisible());
+        dbgassert(!clipsHandles[i]->getClipView().clip());
+    }
+}
+
+void guictr_noteeditor::selectEditClip(gui_clip* gclip) {
+    if (gclip != view.gui) {
+        view.setSelected(gclip);
+        if (!assert_expr(clipsHandles.size() >= view.selectionView.totalClipCount)) {
+            return;
+        }
+        clip_t* currentClip = view.clip();
+        auto numTracks = view.selectionView.tracks.size();
+        auto it = clipsHandles.begin();
+        for (size_t trackIdx = 0; trackIdx < numTracks; trackIdx++) {
+            auto& [trackEntry, vecTrackClips] = view.selectionView.tracks[trackIdx];
+            auto numClipsOnTrack = vecTrackClips.size();
+            for (size_t clipIdx = 0; clipIdx < numClipsOnTrack && it != clipsHandles.end(); clipIdx++) {
+                auto& selClip = vecTrackClips[clipIdx];
+                auto& clipHandles = **(it++);
+                dbgassert(it <= clipsHandles.end());
+                if (!assert_expr(trackEntry.clipsGuis.count(selClip))) {
+                    continue;
+                }
+                clipHandles.setHandleActive(selClip == currentClip);
+                if (clipHandles.isHandleActive()) {
+                    moveToBegin(&clipHandles);
+                }
+            }
+        }
+
+    }
 }
 
 void guictr_noteeditor::storeLayout() {
+    clip_editor_layout_t& layout = view.selectionView.editorLayout;
+    layout.layoutPianoRoll = *static_cast<layout_pianoroll_t*>(this);
+    layout.layoutGrid = grid;//TODO: add a cast to get rid of slicing warning
+    layout.noLayout   = false;
     clip_t* clip = view.clip();
     if (clip) {
-        clip_editor_layout_t& layout = clip->editorLayout;
-        layout.layoutPianoRoll       = *static_cast<layout_pianoroll_t*>(this);
-        layout.layoutGrid            = grid;//TODO: add a cast to get rid of slicing warning
-        clip->noLayout               = false;
+        clip->editorLayout = layout;
     }
 }
 
@@ -581,6 +724,35 @@ void guictr_noteeditor::setLayout(layout_pianoroll_t& layout) {
     fold        = layout.fold;
 }
 
+void renderClipHandlesBackground(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid, vec2 handlesPos, vec2 handlesSize) {
+    nvgBeginPath(vg);
+    nvgRect(vg, handlesPos.x - 2, handlesPos.y, handlesSize.x + 2, handlesSize.y);
+    nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
+    nvgFill(vg);
+}
+void renderGridList(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid, vec2 handlesPos, vec2 handlesSize) {
+    for (grid_div g : grid.gridList) {
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, handlesPos.x + g.screenpos, handlesPos.y - 2);
+        nvgLineTo(vg, handlesPos.x + g.screenpos, handlesPos.y + handlesSize.y + 2);
+        NVGcolor col;
+        switch (g.color) {
+            case 0:
+                col = theme->getColor(GuiColor::COL_LINE_BAR);
+                break;
+            case 1:
+                col = theme->getColor(GuiColor::COL_LINE_QRT);
+                break;
+            case 2:
+            default:
+                col = theme->getColor(GuiColor::COL_LINE_XTH);
+                break;
+        }
+        nvgStrokeColor(vg, col);
+        nvgStrokeWidth(vg, g.thickness);
+        nvgStroke(vg);
+    }
+}
 void guictr_noteeditor::render(NVGcontext* vg) {
     renderBackground(vg);
     if (!setScissorTransform(vg)) {
@@ -605,9 +777,64 @@ void guictr_noteeditor::render(NVGcontext* vg) {
         ctrlData.render(vg);
         nvgRestore(vg);
     }
+    auto playbackPos = dawCtrl->getDaw()->getPlaybackPos();
+    auto clip = view.clip();
+    auto handlesPos = timeline.getLeftBottom();
+    auto handlesSize = ivec2(timeline.size.x, handlesHeight);
     nvgSave(vg);
-    clipHandles.render(vg);
+    nvgIntersectScissor(vg, handlesPos.x, handlesPos.y, handlesSize.x, handlesSize.y);
+    renderClipHandlesBackground(vg, theme, grid, vec2{0, heightSelIndicator}+vec2(handlesPos), handlesSize);
+    int32_t trackIdx = 0;
+    int32_t activeTrackIdx = -1;
+    auto viewTrack = view.track();
+    auto trackHandleHeight = (handlesHeight-heightSelIndicator) / math::max(1, CtrSize(view.selectionView.tracks));
+    for (auto& [trackEntry, vecClips] : view.selectionView.tracks) {
+            // nvgRect(vg, handlesPos.x, handlesPos.y + heightSelIndicator + trackHandleHeight * trackIdx+trackHandleHeight-heightSelIndicator, timeline.size.x, heightSelIndicator);
+        auto col = trackIdx % 2 == 0 ? GuiColor::COL_GRID_DRK : GuiColor::COL_GRID_BRT;
+        auto nvgCol = viewTrack == trackEntry.track ? rgbToNvg(trackEntry.track->rgb) : theme->getColor(col);
+        nvgBeginPath(vg);
+        nvgRect(vg, handlesPos.x, handlesPos.y + heightSelIndicator + trackHandleHeight * trackIdx + 2, timeline.size.x, trackHandleHeight-2);
+        nvgCol.a *= 0.5f;
+        nvgFillColor(vg, nvgCol);
+        nvgFillCustomPar(vg, -1);
+        nvgFill(vg);
+        if (viewTrack == trackEntry.track) {
+            activeTrackIdx = trackIdx;
+        }
+        trackIdx++;
+    }
+    renderGridList(vg, theme, grid, handlesPos, handlesSize);
+    guictr_cliphandles* viewClipHandle = nullptr;
+    if (!clipsHandles.empty() && clipsHandles.front()->isVisible()) {
+        auto thizClip = view.clip();
+        for (auto& handle: clipsHandles) {
+            if (!handle->isVisible()) {
+                break;
+            }
+            auto clip = handle->getClipView().clip();
+            if (clip == thizClip) {
+                viewClipHandle = handle.get();
+            } else if (assert_expr(clip)) {
+                nvgTranslate(vg, handle->pos.x, handle->pos.y);
+                handle->renderHandle(vg, -1);
+                nvgTranslate(vg, -handle->pos.x, -handle->pos.y);
+            }
+        }
+        if (viewClipHandle) {
+            nvgTranslate(vg, viewClipHandle->pos.x, viewClipHandle->pos.y);
+            viewClipHandle->renderHandle(vg, activeTrackIdx);
+            nvgTranslate(vg, -viewClipHandle->pos.x, -viewClipHandle->pos.y);
+        }
+    }
+    renderSelectionIndicator(vg, theme, grid, handlesPos, vec2(timeline.size.x, heightSelIndicator), view.isAbsoluteTimeMode()?nullptr:clip, dawCtrl->getCursor(), heightSelIndicator);
+    // renderPlayHead(vg, theme, grid, handlesPos, handlesSize, clip, playbackPos, view.isAbsoluteTimeMode(), 1.0f);
     nvgRestore(vg);
+    if (viewClipHandle) {
+        nvgTranslate(vg, viewClipHandle->pos.x, viewClipHandle->pos.y);
+        viewClipHandle->renderLoopHandle(vg, vec2(viewClipHandle->size.x, content.bottom() - viewClipHandle->top()));
+        nvgTranslate(vg, -viewClipHandle->pos.x, -viewClipHandle->pos.y);
+    }
+    renderPlayHead(vg, theme, grid, content.pos, content.size, clip, playbackPos, view.isAbsoluteTimeMode(), 0.75f);
     if (btnToggleFold.isVisible())
         btnToggleFold.render(vg);
     if (btnToggleVelocities.isVisible())
@@ -788,11 +1015,9 @@ bool gui_audiocontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
 }
 
 guictr_audioeditor::guictr_audioeditor(clip_view& _view)
-    : guictr_base(),
+    : guictr_editor_base(_view),
       content(grid, _view),
-      timeline(grid),
-      clipHandles(grid, _view),
-      view(_view) {
+      clipHandles(*this, grid) {
     padding = 2;
     grid.showRange(0, TICKS_BAR * 4);
     grid.addCallback(this);
@@ -822,12 +1047,11 @@ void guictr_audioeditor::layout() {
     ivec2 cs         = getSizeContent();
     timeline.pos     = ivec2(0, 0);
     timeline.size    = ivec2(cs.x, heightTimeLine);
-    clipHandles.pos  = ivec2(timeline.left(), timeline.bottom());
-    clipHandles.size = ivec2(timeline.size.x, heightClipIndicators);
+    clipHandles.pos  = ivec2(timeline.left(), timeline.bottom()+ heightSelIndicator);
+    clipHandles.size = ivec2(timeline.size.x, heightLoopInidicator * 2);
     content.pos      = ivec2(timeline.left(), clipHandles.bottom());
     content.size     = ivec2(timeline.size.x, cs.y - heightTimeLine - heightClipIndicators);
 
-    clipHandles.clipViewSize = ivec2(content.size.x, content.size.y + clipHandles.size.y);
     grid.update(content.size);
     for (guibase* gui: guis) {
         gui->layout();
@@ -850,12 +1074,13 @@ void guictr_audioeditor::handleDraggedBegin(MouseEvent& evt) {
 }
 
 void guictr_audioeditor::showEditClip() {
+    this->clipHandles.getClipView() = view;
     clip_t* clip = view.clip();
-    if (clip != NULL) {
-        if (clip->noLayout) {
+    if (clip) {
+        auto& layout = clip->editorLayout;
+        if (layout.noLayout) {
             grid.showRange(clip->offsetStart, clip->offsetStart + clip->getLen());
         } else {
-            clip_editor_layout_t& layout = clip->editorLayout;
             grid.setLayout(layout.layoutGrid);
         }
     }
@@ -864,10 +1089,10 @@ void guictr_audioeditor::showEditClip() {
 
 void guictr_audioeditor::storeLayout() {
     clip_t* clip = view.clip();
-    if (clip != NULL) {
-        clip_editor_layout_t& layout = clip->editorLayout;
-        layout.layoutGrid            = grid;//TODO: add a cast to get rid of slicing warning
-        clip->noLayout               = false;
+    if (clip) {
+        auto& layout = clip->editorLayout;
+        layout.layoutGrid = grid;//TODO: add a cast to get rid of slicing warning
+        layout.noLayout   = false;
     }
 }
 
@@ -899,7 +1124,19 @@ void guictr_audioeditor::render(NVGcontext* vg) {
     nvgSave(vg);
     content.render(vg);
     nvgRestore(vg);
+    auto playbackPos = dawCtrl->getDaw()->getPlaybackPos();
+    auto clip = view.clip();
+    auto handlesPos = timeline.getLeftBottom();
+    auto handlesSize = vec2(clipHandles.size) + vec2(0, heightSelIndicator);
+    nvgSave(vg);
+    nvgIntersectScissor(vg, handlesPos.x, handlesPos.y, handlesSize.x, handlesSize.y);
+    renderClipHandlesBackground(vg, theme, grid, clipHandles.pos, clipHandles.size);
+    renderGridList(vg, theme, grid, handlesPos, handlesSize);
     nvgSave(vg);
     clipHandles.render(vg);
     nvgRestore(vg);
+    clipHandles.renderLoopHandle(vg, {handlesSize.x, content.bottom() - handlesPos.y});
+    renderSelectionIndicator(vg, theme, grid, handlesPos, vec2(timeline.size.x, heightSelIndicator), clip, dawCtrl->getCursor(), heightSelIndicator);
+    nvgRestore(vg);
+    renderPlayHead(vg, theme, grid, pos, size, clip, playbackPos, view.isAbsoluteTimeMode(), 1.0f);
 }

@@ -1,10 +1,13 @@
 #pragma once
 #include <vector>
 #include <utility>
+#include "host/clip/clip.h"
+#include "note.h"
 #include "types.h"
 #include "seq_time.h"
 #include "host/automation/automation.h"
 #include "host/track/track.h"
+#include "host/track/trackctr_types.h"
 
 class clip_t;
 class track_t;
@@ -26,11 +29,14 @@ struct clip_clipboard {
     int32_t selTrackRange = 0;
     clipboard_type_e type = ClipboardFull;
 };
-using clipboard_track_view_t = std::pair<track_t*, std::vector<clip_t*>>;
+using clipboard_track_view_t = std::pair<track_gui_entry_t, std::vector<clip_t*>>;
 struct clipboard_view_t {
     std::vector<clipboard_track_view_t> tracks{};
+    size_t totalClipCount = 0;
+    tick_t minClipStart = 0;
+    tick_t maxClipEnd   = 0;
+    clip_editor_layout_t editorLayout;
 };
-
 
 struct plugin_snapshot_t;
 struct plugin_clipboard_t {

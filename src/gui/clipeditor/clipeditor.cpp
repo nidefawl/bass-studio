@@ -29,6 +29,7 @@
 #include "host/track/track_impl.h"
 #include "host/host_pluginmanager.h"
 #include "appconfig.h"
+#include "types.h"
 #include <cstdint>
 #include <nanovg.h>
 
@@ -79,7 +80,7 @@ public:
         addEntry(timeSel2);
     }
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
-        scaled_grid& grid = editor->grid;
+        auto& grid = editor->getGrid();
         if (e == this->timeSel1 || e == this->timeSel2) {
             if (_id == 110 + 9) {// OFF
                 grid.grid_dens.enabled = false;
@@ -98,7 +99,7 @@ public:
             if (_id >= sel->id) {
                 _id -= sel->id;
                 if (_id < COLOR_PALETTE_LEN) {
-                    auto clip = editor->view.clip();
+                    auto clip = editor->getClipView().clip();
                     if (clip) {
                         clip->rgb = colorPalette[_id];
                     }
@@ -116,13 +117,12 @@ public:
     }
 };
 
-guictr_clipeditor::guictr_clipeditor(clip_view& _view)
+guictr_clipeditor::guictr_clipeditor()
     : guictr_base(),
-      view(_view),
       noteeditor(view),
       audioeditor(view),
-      settings(noteeditor.grid, _view),
-      arp(_view) {
+      settings(noteeditor.getGrid(), view),
+      arp(view) {
     setGuiType(gui_type::CTR_TYPE_CLIPEDITOR);
     // padding = 2;
     setBackgroundRendered(true);
@@ -150,7 +150,11 @@ void guictr_clipeditor::storeLayout() {
     }
 }
 
-void guictr_clipeditor::showEditClip() {
+void guictr_clipeditor::selectEditClip(gui_clip* gclip) {
+    noteeditor.selectEditClip(gclip);
+}
+void guictr_clipeditor::showEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
+    view.set(gclip, clipboardView);
     const clip_t* clip = view.clip();
     const bool isMidi  = clip && clip->clipType == CLIP_MIDI;
     arp.setVisible(isMidi);
@@ -626,6 +630,10 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
     float w = size.x;
     const float h = size.y;
     const clip_notes_t& notes = clip->notes;
+    auto tickOffset = tick_t(0);
+    if (view.isAbsoluteTimeMode()) {
+        tickOffset = clip->time;
+    }
     NVGpaint paint{};
     paint.image     = -1;
     paint.customPar = 1;
@@ -639,7 +647,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
             for (const note_t& note: notes.m_list) {
                 if ((i == 0) != note.isEnabled())
                     continue;
-                auto nx = grid.tickToScreenD(note.time);
+                auto nx = grid.tickToScreenD(note.time + tickOffset);
                 if (nx + nw / 2.0f < -extendCullCheck) continue;
                 if (nx - nw / 2.0f > w + extendCullCheck) continue;
                 auto nh     = velocityToFloat(note.velocity) * h;
@@ -658,7 +666,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
                 for (const note_t& note: notes.m_list) {
                     if ((i == 0) != note.isEnabled())
                         continue;
-                    auto nx = grid.tickToScreenD(note.time);
+                    auto nx = grid.tickToScreenD(note.time + tickOffset);
                     if (nx + r < -extendCullCheck) continue;
                     if (nx - r > w + extendCullCheck) continue;
                     auto nh = velocityToFloat(note.velocity) * h;
@@ -678,7 +686,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
             for (const note_t* pnote: notes.selection) {
                 if ((i == 0) != pnote->isEnabled())
                     continue;
-                auto nx = grid.tickToScreenD(pnote->time);
+                auto nx = grid.tickToScreenD(pnote->time + tickOffset);
                 if (nx + nw / 2.0f < -extendCullCheck) continue;
                 if (nx - nw / 2.0f > w + extendCullCheck) continue;
                 auto nh     = velocityToFloat(pnote->velocity) * h;
@@ -695,7 +703,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
                 for (const note_t* pnote: notes.selection) {
                     if ((i == 0) != pnote->isEnabled())
                         continue;
-                    auto nx = grid.tickToScreenD(pnote->time);
+                    auto nx = grid.tickToScreenD(pnote->time + tickOffset);
                     if (nx + r < -extendCullCheck) continue;
                     if (nx - r > w + extendCullCheck) continue;
                     auto nh = velocityToFloat(pnote->velocity) * h;
@@ -717,10 +725,10 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
             tick_t mouseTick = !mouseIn ? INVALID_TICK : grid.screenToTickSnap(imouse.x, SNAP_OFF);
             int32_t velClicked = screenToVel(imouse.y, size.y);
             int32_t velDist    = VEL_SELECT_DISTANCE * 127 / size.y;
-            note_t* contextNote = getMinDistNoteVel(view.clip()->notes, mouseTick, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
+            note_t* contextNote = getMinDistNoteVel(view.clip()->notes, mouseTick - tickOffset, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
             if (contextNote) {
                 nvgBeginPath(vg);
-                auto nx     = grid.tickToScreenD(contextNote->time);
+                auto nx     = grid.tickToScreenD(contextNote->time + tickOffset);
                 auto nh     = velocityToFloat(contextNote->velocity) * h;
                 auto insetx = calcInset(1, nw);
                 auto insety = calcInset(1, nh);
@@ -779,7 +787,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
     }
 }
 
-void gui_clipcontent_notes::renderClipNoteRects(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, tick_t tickOffset, float scale, NVGcolor color, bool renderMuted) {
+void gui_clipcontent_notes::renderClipNoteRects(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, tick_t tickOffset, float scale, float inset, NVGcolor color, bool renderMuted) {
     if (!clipNotes.empty()) {
         NVGpaint paint{};
         paint.customPar  = 1;
@@ -795,10 +803,20 @@ void gui_clipcontent_notes::renderClipNoteRects(NVGcontext* vg, const std::vecto
                 continue;
             if (nx > renderPos.x+renderSize.x + 4)
                 continue;
-            auto ny     = toScreenF(note.pitch);
-            auto nh     = scale;
-            auto insetx = calcInset(1, nw);
-            auto insety = calcInset(1, nh);
+            float ny     = toScreenF(note.pitch);
+            float nh     = scale;
+            float insetx = math::clamp((nw-1.0f)*0.5f, 0.0f, 1.0f);
+            float insety = math::clamp((nh-1.0f)*0.5f, 0.0f, 1.0f);
+            if (nw < 1.0f) {
+                float center = nx + nw * 0.5f;
+                nx = center - 0.5f;
+                nw = 1.0f;
+            }
+            if (nh < 1.0f) {
+                float center = ny + nh * 0.5f;
+                ny = center - 0.5f;
+                nh = 1.0f;
+            }
             nvgBatchedRect(vg, nx + insetx, ny - scale + insety, nw - insetx * 2, nh - insety * 2);
             nRendered++;
         }
@@ -940,25 +958,31 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
     }
     auto& selView = view.selectionView;
     clip_t* currentClip = view.clip();
-    for (auto& [track, vecClips] : selView.tracks) {
+    for (auto& [trackEntry, vecClips] : selView.tracks) {
         for (clip_t* clip : vecClips) {
-            if (clip == currentClip) {
-                continue;
+            auto tickOffset = clip->time;
+            if (!view.isAbsoluteTimeMode()) {
+                tickOffset += currentClip->offsetStart;
+                if (clip != currentClip) {
+                    tickOffset += clip->time - currentClip->time;
+                }
             }
-            auto tickOffset = clip->time - currentClip->time + currentClip->offsetStart;
             // auto col = track == view.track() ? clip->rgb : track->rgb;
             auto col = clip->rgb;
             auto& notesView = clip->getNoteViewRender();
             if (notesView.isEmpty()) {
                 continue;
             }
-            auto firstNoteTime = notesView.firstNote.time + tickOffset;
-            renderClipNoteRects(vg, notesView.m_list, {}, cs, tickOffset, scale, rgbToNvg(col), false);
+            renderClipNoteRects(vg, notesView.m_list, {}, cs, tickOffset, scale, 1.0f, rgbToNvg(col), false);
         }
     }
     auto& clipNotes = currentClip->notes;
-    renderClipNoteRects(vg, clipNotes.m_list, {}, cs, 0.0, scale, theme->getColor(GuiColor::COL_NOTE_MUTE), true);
-    renderClipNoteRects(vg, clipNotes.m_list, {}, cs, 0.0, scale, theme->getColor(GuiColor::COL_NOTE), false);
+    auto tickOffset = tick_t(0);
+    if (view.isAbsoluteTimeMode()) {
+        tickOffset = currentClip->time;
+    }
+    renderClipNoteRects(vg, clipNotes.m_list, {}, cs, tickOffset, scale, 1.0f, theme->getColor(GuiColor::COL_NOTE_MUTE), true);
+    renderClipNoteRects(vg, clipNotes.m_list, {}, cs, tickOffset, scale, 1.0f, theme->getColor(GuiColor::COL_NOTE), false);
     
     auto x = float(grid.tickToScreenD(view.cursor.start));
     if (view.cursor.start == view.cursor.end) {
@@ -1121,12 +1145,12 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
     int n2 = 0;
     if (dragMode >= drag_notes_move) {
         for (note_t& note: view.draggedSelection) {
-            renderNote(vg, this, &note, scale);
+            renderNote(vg, this, &note, scale, tickOffset);
             n2++;
         }
     } else {
         for (note_t* pnote: notes.selection) {
-            renderNote(vg, this, pnote, scale);
+            renderNote(vg, this, pnote, scale, tickOffset);
             n2++;
         }
     }
@@ -1142,7 +1166,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 
     if (scale >= 10) {
         for (auto& note: notes.m_list) {
-            auto nx = grid.tickToScreenD(note.time);
+            auto nx = grid.tickToScreenD(note.time + tickOffset);
             auto nw = grid.tickLenToScreen(note.len);
             if (nx + nw < -4)
                 continue;
@@ -1185,13 +1209,17 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
     ivec2 local            = evt.relMousepos;
     int32_t pitch          = math::floorfS32(toNoteF(local.y));
     int32_t velClicked     = screenToVel(local.y, size.y);
+    auto tickOffset = tick_t(0);
+    if (view.isAbsoluteTimeMode()) {
+        tickOffset = clip->time;
+    }
     const tick_t tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
     note_t* contextNote    = nullptr;
     if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
         int32_t velDist = VEL_SELECT_DISTANCE * 127 / size.y;
-        contextNote     = getMinDistNoteVel(notes, tickExact, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
+        contextNote     = getMinDistNoteVel(notes, tickExact - tickOffset, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
     } else if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
-        contextNote = notes.get(tickExact, pitch);
+        contextNote = notes.get(tickExact - tickOffset, pitch);
     }
     tick_t tickGridNearest = grid.screenToTickSnap(local.x, SNAP_ON);
     tick_t tickGridLeast   = grid.prev(tickExact);
@@ -1203,7 +1231,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
             notes.clearSelection();
             clip_notes_t notesBefore = notes;
             if (contextNote) {
-                contextNote = notes.get(tickExact, pitch);
+                contextNote = notes.get(tickExact - tickOffset, pitch);
             }
             String desc = "???";
             if (contextNote) {
@@ -1219,15 +1247,17 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                 if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
                     note_t note;
                     note.pitch = pitch;
-                    note.time  = tickGridLeast;
+                    note.time  = tickGridLeast - tickOffset;
                     note.len   = grid.getTickLength();
                     notes.paste(note);
-                    contextNote = notes.get(tickGridLeast, pitch);
-                    notes.selection.insert(contextNote);
-                    view.copySelectedNoteList();
-                    MainCtrl::get()->setStatusText(StringFormat("%d %d %d", note.pitch, note.time, note.len));
-                    desc = "Add Note";
-                    setSelectionFrame(getMinMaxTime(view.draggedSelection));
+                    contextNote = notes.get(tickGridLeast - tickOffset, pitch);
+                    if (assert_expr(contextNote)) {
+                        notes.selection.insert(contextNote);
+                        view.copySelectedNoteList();
+                        MainCtrl::get()->setStatusText(StringFormat("%d %d %d", note.pitch, note.time, note.len));
+                        desc = "Add Note";
+                        setSelectionFrame(getMinMaxTime(view.draggedSelection));
+                    }
                 }
             }
             DawInstance::get()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
@@ -1242,9 +1272,9 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                     notes.clearSelection();
                     if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
                         int32_t velDist = VEL_SELECT_DISTANCE * 127 / size.y;
-                        contextNote     = getMinDistNoteVel(notes, tickExact, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
+                        contextNote     = getMinDistNoteVel(notes, tickExact - tickOffset, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
                     } else if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
-                        contextNote = notes.get(tickExact, pitch);
+                        contextNote = notes.get(tickExact - tickOffset, pitch);
                     }
                     if (contextNote) {
                         beginDragNote = *contextNote;
@@ -1261,8 +1291,8 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                 if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
                     dragMode = drag_velocity;
                 } else if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
-                    auto distL = local.x - grid.tickToScreenD(contextNote->start());
-                    auto distR = grid.tickToScreenD(contextNote->end()) - local.x;
+                    auto distL = local.x - grid.tickToScreenD(contextNote->start() + tickOffset);
+                    auto distR = grid.tickToScreenD(contextNote->end() + tickOffset) - local.x;
                     if (distL < DRAG_RANGE) {
                         dragMode = drag_note_left;
                     }
@@ -1319,8 +1349,13 @@ void gui_clipcontent::setGlobalSelectionFromClipSelection() {
         return;
     }
     DAW::Cursor& cursor = dawCtrl->getCursor();
-    cursor.cursorPos    = view.cursor.start + clip->start() - clip->offsetStart;
-    cursor.selRange     = view.cursor.end - view.cursor.start;
+    if (!view.isAbsoluteTimeMode()) {
+        cursor.cursorPos = view.cursor.start + clip->start() - clip->offsetStart;
+        cursor.selRange  = view.cursor.end - view.cursor.start;
+    } else {
+        cursor.cursorPos = view.cursor.start;
+        cursor.selRange  = view.cursor.end - view.cursor.start;
+    }
 }
 void gui_clipcontent::setStatusText() {
     clip_notes_t& notes = view.clip()->notes;
@@ -1343,6 +1378,10 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
     if (!clip)
         return;
     clip_notes_t& notes = clip->notes;
+    auto tickOffset = tick_t(0);
+    if (view.isAbsoluteTimeMode()) {
+        tickOffset = clip->time;
+    }
     if (dragMode == drag_none)
         return;
     dragTo = evt.relMousepos;
@@ -1380,7 +1419,8 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
             int32_t pitchLow  = math::floorfS32(toNoteF(yEnd));
             int32_t pitchHigh = math::floorfS32(toNoteF(yStart));
             std::vector<note_t*> inRangeList;
-            if (notes.getInRange(tickStart, tickEnd, pitchLow, pitchHigh, inRangeList)) {
+            //TODO: selection must happen from looped notes in absolute mode
+            if (notes.getInRange(tickStart - tickOffset, tickEnd - tickOffset, pitchLow, pitchHigh, inRangeList)) {
                 std::set<note_t*>& selection = notes.selection;
                 for (note_t* inSelRange: inRangeList) {
                     auto result = selection.insert(inSelRange);
@@ -1393,7 +1433,8 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
             int32_t velLow  = screenToVel(yEnd, size.y);
             int32_t velHigh = screenToVel(yStart, size.y);
             std::vector<note_t*> inRangeList;
-            if (notes.getStartsInRangeV(tickStart, tickEnd, velLow, velHigh, grid.pixelsToTicks(VEL_SELECT_DISTANCE), inRangeList)) {
+            //TODO: selection must happen from looped notes in absolute mode
+            if (notes.getStartsInRangeV(tickStart - tickOffset, tickEnd - tickOffset, velLow, velHigh, grid.pixelsToTicks(VEL_SELECT_DISTANCE), inRangeList)) {
                 std::set<note_t*>& selection = notes.selection;
                 for (note_t* inSelRange: inRangeList) {
                     auto result = selection.insert(inSelRange);
@@ -1416,7 +1457,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
         *evt.dragDistance = ivec2(0);
         //    tick_t tickOver = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
         //    clip_cursor_t& cursor = view.cursor;
-        ThreadLock lock       = MainCtrl::getPlayThread()->lockThread();
+        ThreadLock lock       = dawCtrl->lockPlayThread();
         int32_t velOffset     = (dragBegin.y - dragTo.y) * 127 / size.y;
         view.draggedSelection = view.draggedSelectionBegin;
         {
@@ -1451,6 +1492,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
         const note_t noteDrag = this->beginDragNote;
         if (modeMove == SNAP_LEAST) {
             tick_t handlePos = dragMode == drag_note_right ? noteDrag.end() : noteDrag.start();
+            handlePos += tickOffset;
             if (math::abs(timeOffsetEx) > gridSize / 4) {
                 tick_t next = grid.next(handlePos + timeOffsetEx) - handlePos;
                 tick_t prev = grid.prev(handlePos + timeOffsetEx) - handlePos;
@@ -1534,18 +1576,26 @@ bool gui_clipcontent::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 return true;
             }
         }
-        if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES && view.clip() && evt.type <= MouseHitType::MOUSE_RIGHT) {
-            auto pitch     = toNoteF(local.y);
-            auto tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
-            const auto* contextNote = view.clip()->notes.get(tickExact, math::floorfS32(pitch));
-            if (contextNote) {
-                auto distL = local.x - grid.tickToScreenD(contextNote->start());
-                auto distR = grid.tickToScreenD(contextNote->end()) - local.x;
-                if (distL < DRAG_RANGE) {
-                    evt.requestCursor(CURSOR_CLIP_SIZE_LEFT);
+        if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES && evt.type <= MouseHitType::MOUSE_RIGHT) {
+            auto clip  = view.clip();
+            if (clip) {
+                auto pitch = toNoteF(local.y);
+                auto tickExact  = grid.screenToTickSnap(local.x, SNAP_OFF);
+                auto tickOffset = tick_t(0);
+                if (view.isAbsoluteTimeMode()) {
+                    tickOffset = clip->time;
                 }
-                if (distR < DRAG_RANGE && (distL >= DRAG_RANGE || distR < distL)) {
-                    evt.requestCursor(CURSOR_CLIP_SIZE_RIGHT);
+                //TODO: selection must happen from looped notes in absolute mode
+                const auto* contextNote = clip->notes.get(tickExact - tickOffset, math::floorfS32(pitch));
+                if (contextNote) {
+                    auto distL = local.x - grid.tickToScreenD(contextNote->start() + tickOffset);
+                    auto distR = grid.tickToScreenD(contextNote->end() + tickOffset) - local.x;
+                    if (distL < DRAG_RANGE) {
+                        evt.requestCursor(CURSOR_CLIP_SIZE_LEFT);
+                    }
+                    if (distR < DRAG_RANGE && (distL >= DRAG_RANGE || distR < distL)) {
+                        evt.requestCursor(CURSOR_CLIP_SIZE_RIGHT);
+                    }
                 }
             }
         }
@@ -1573,15 +1623,15 @@ void gui_clipcontent::mergeDraggedNotes(dragmode mergeMode) {
 void gui_clipcontent::expandSelectionFrame(std::pair<note_t*, note_t*> minMax) {
     if (minMax.first && minMax.second) {
         auto& cursor = view.cursor;
-        cursor.start = math::min(cursor.start, minMax.first->time);
-        cursor.end   = math::max(cursor.end, (minMax.second->time + minMax.second->len));
+        cursor.start = math::min(cursor.start, minMax.first->time + getTickOffset());
+        cursor.end   = math::max(cursor.end, (minMax.second->time + minMax.second->len + getTickOffset()));
     }
 }
 void gui_clipcontent::setSelectionFrame(std::pair<note_t*, note_t*> minMax) {
     if (minMax.first && minMax.second) {
         auto& cursor = view.cursor;
-        cursor.start = minMax.first->time;
-        cursor.end   = minMax.second->time + minMax.second->len;
+        cursor.start = minMax.first->time + getTickOffset();
+        cursor.end   = minMax.second->time + minMax.second->len + getTickOffset();
     }
 }
 void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
@@ -1593,7 +1643,7 @@ void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
     clip_t* clip = view.clip();
     if (clip) {
         if (dragMode >= drag_notes_move) {
-            ThreadLock lock     = MainCtrl::getPlayThread()->lockThread();
+            ThreadLock lock = dawCtrl->lockPlayThread();
             clip_notes_t& notes = clip->notes;
             mergeDraggedNotes(dragMode);
             setSelectionFrame(getMinMaxTime(notes.selection));
@@ -1978,7 +2028,7 @@ guictr_clipeditorview::guictr_clipeditorview(clip_view& _view, guictr_noteeditor
       view(_view),
       cache(new midi_clip_render_cache_t{}),
       noteeditor(_noteeditor),
-      grid(_noteeditor.grid)
+      grid(_noteeditor.getGrid())
 {
 }
 guictr_clipeditorview::~guictr_clipeditorview() {
@@ -2174,7 +2224,7 @@ float guictr_clipeditorview::getScaleX() {
 
 float guictr_clipeditorview::getScreenSpaceScaleX() {
     auto cs = getSizeContent();
-    auto csEditor = noteeditor.timeline.size;
+    auto csEditor = noteeditor.getContentSize();
     if (cs.x <= 0)
         return 1.0f;
     return csEditor.x / static_cast<float>(cs.x);
@@ -2326,16 +2376,37 @@ bool guictr_clipeditorview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     return false;
 }
 
-float guictr_cliphandles::clipStartScrX() {
-    return (float) (grid.tickToScreenD(view.clip()->offsetStart));
+float guictr_cliphandles::clipStartScrX() const {
+    return (float) (grid.tickToScreenD(getTickOffsetOffset()));
 }
 
-float guictr_cliphandles::clipEndScrX() {
-    return (float) (grid.tickToScreenD(view.clip()->offsetStart + view.clip()->getLen()));
+float guictr_cliphandles::clipEndScrX() const {
+    auto clip = view.clip();
+    if (!assert_expr(clip)) {
+        return 0;
+    }
+    return (float) (grid.tickToScreenD(getTickOffsetOffset() + clip->getLen()));
 }
+
+float guictr_cliphandles::clipLoopStartScrX() const {
+    auto clip = view.clip();
+    if (!assert_expr(clip)) {
+        return 0;
+    }
+    return (float) grid.tickToScreenD(getTickOffset() + clip->loopStart);
+}
+
+float guictr_cliphandles::clipLoopEndScrX() const {
+    auto clip = view.clip();
+    if (!assert_expr(clip)) {
+        return 0;
+    }
+    return (float) grid.tickToScreenD(getTickOffset() + clip->loopStart + clip->loopLen);
+}
+
 
 guictr_base* makeGuiClipEditor() {
-    return new guictr_clipeditor(MainCtrl::get()->getClipView());
+    return new guictr_clipeditor();
 }
 
 void piano_scale::setOffset(float f) {
@@ -2347,6 +2418,7 @@ void piano_scale::setOffset(float f) {
 void piano_scale::setScale(float f) {
     this->layoutRoll.scale() = math::clamp<float>(f, PIANOROLL_MIN_SCALE, PIANOROLL_MAX_SCALE);
 }
+
 void CCEdit::setSelectRect(vec4 rect) {
     selectedNodeIndices.clear();
     auto& curve = *this->curve;
@@ -2357,4 +2429,124 @@ void CCEdit::setSelectRect(vec4 rect) {
             selectedNodeIndices.push_back(i);
         }
     }
+}
+
+tick_t guictr_cliphandles::getTickOffset() const {
+    auto tickOffset = tick_t(0);
+    auto selClipView = parentEditor.getClipView();
+    auto selClip = selClipView.clip();
+    auto thizClip = view.clip();
+    if (selClipView.isAbsoluteTimeMode() && thizClip) {
+        tickOffset = thizClip->time;
+    } 
+    if (!selClipView.isAbsoluteTimeMode() && selClip && thizClip && selClip != thizClip) {
+        tickOffset = selClip->time - thizClip->time + thizClip->offsetStart;
+    }
+    return tickOffset;
+}
+
+tick_t guictr_cliphandles::getTickOffsetOffset() const {
+    auto clip   = view.clip();
+    auto offset = getTickOffset();
+    if (!assert_expr(clip)) {
+        return offset;
+    }
+    if (!parentEditor.getClipView().isAbsoluteTimeMode()) {
+        offset += clip->offsetStart;
+    }
+    return offset;
+}
+bool guictr_noteeditor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    if (this->contains(mpos)) {
+        ivec2 localMouse = this->toContainerSpace(mpos);
+        size_t numHandleDist = 0;
+        bool bIsClick = evt.type == MouseHitType::MOUSE_LEFT;
+        if (bIsClick) {
+            numHandleDist = 0;
+        }
+        std::array<guictr_cliphandles::dist_dragzone_handle, 4> dragZones;
+        for (auto& clipHandle : clipsHandles) {
+            if (clipHandle->contains(localMouse)) {
+                ivec2 localMouseHandle = clipHandle->toContainerSpace(localMouse);
+                auto dragZone = clipHandle->getDragZone(localMouseHandle);
+                if (dragZone.handle && dragZone.mode != guictr_cliphandles::dragmode::drag_handle_none) {
+                    dragZones[numHandleDist++] = dragZone;
+                    if (numHandleDist >= dragZones.size()) {
+                        break;
+                    }
+                }
+            }
+
+        }
+        if (numHandleDist > 0) {
+            std::sort(dragZones.begin(), dragZones.begin() + numHandleDist, [](const auto& a, const auto& b) {
+                return a.dist < b.dist;
+            });
+            auto closesDragZone = dragZones.front();
+            bool bIsNotLoopDrag = closesDragZone.mode != guictr_cliphandles::dragmode::drag_handle_loopbar && 
+                            closesDragZone.mode != guictr_cliphandles::dragmode::drag_handle_loopleft &&
+                            closesDragZone.mode != guictr_cliphandles::dragmode::drag_handle_loopright;
+            if (!bIsNotLoopDrag) {
+                bIsNotLoopDrag = true;
+            }
+            if (!closesDragZone.handle->isHandleActive()) {
+                dbgassert(closesDragZone.mode != guictr_cliphandles::dragmode::drag_handle_loopbar && 
+                            closesDragZone.mode != guictr_cliphandles::dragmode::drag_handle_loopleft &&
+                            closesDragZone.mode != guictr_cliphandles::dragmode::drag_handle_loopright);
+            }
+
+            switch (closesDragZone.mode) {
+                case guictr_cliphandles::dragmode::drag_handle_loopleft:
+                case guictr_cliphandles::dragmode::drag_handle_left:
+                    evt.requestCursor(CURSOR_CLIP_SIZE_LEFT);
+                    evt.requestFocus(closesDragZone.handle);
+                    closesDragZone.handle->setDragMode(closesDragZone.mode);
+                    return true;
+                case guictr_cliphandles::dragmode::drag_handle_loopright:
+                case guictr_cliphandles::dragmode::drag_handle_right:
+                    evt.requestCursor(CURSOR_CLIP_SIZE_RIGHT);
+                    evt.requestFocus(closesDragZone.handle);
+                    closesDragZone.handle->setDragMode(closesDragZone.mode);
+                    return true;
+                case guictr_cliphandles::dragmode::drag_handle_loopbar:
+                    evt.requestCursor(CURSOR_RESIZE_H);
+                    evt.requestFocus(closesDragZone.handle);
+                    closesDragZone.handle->setDragMode(closesDragZone.mode);
+                    return true;
+                default:
+                    break;
+            }
+        }
+        // iterate over guis vector in reverse
+        for (auto it = guis.rbegin(); it != guis.rend(); ++it) {
+            auto gui = *it;
+            if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
+                return true;
+            }
+        }
+        if (evt.type == MouseHitType::MOUSE_SCROLL) {
+            evt.requestFocus(this);
+            return true;
+        }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+            evt.requestFocus(this);
+            return true;
+        }
+        if (canMouseHit()) {
+            evt.requestFocus(this);
+            return true;
+        }
+    }
+    return false;
+}
+
+tick_t gui_clipcontent_base::getTickOffset() const {
+    auto clip = view.clip();
+    if (!assert_expr(clip)) {
+        return 0;
+    }
+    if (view.isAbsoluteTimeMode()) {
+        return clip->time;
+    }
+    return 0;
 }

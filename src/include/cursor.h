@@ -72,7 +72,7 @@ namespace DAW {
             return false;
         }
         bool contains(int32_t track, tick_t tick) const {
-            return track >= getTrackBegin() && track <= getTrackEnd() && tick >= getTickBegin() && tick < getTickEnd();
+            return track >= getTrackBegin() && track <= getTrackEnd() && tick >= getTickBegin() && tick <= getTickEnd();
         }
         bool containsSubtrack(int32_t track, int32_t subTrack, tick_t tick) const {
             if (tick >= getTickBegin() && tick < getTickEnd() && track >= getTrackBegin() && track <= getTrackEnd()) {
