@@ -119,8 +119,8 @@ public:
 
 guictr_clipeditor::guictr_clipeditor()
     : guictr_base(),
-      noteeditor(view),
-      audioeditor(view),
+      noteeditor(*this, view),
+      audioeditor(*this, view),
       settings(noteeditor.getGrid(), view),
       arp(view) {
     setGuiType(gui_type::CTR_TYPE_CLIPEDITOR);
@@ -152,6 +152,7 @@ void guictr_clipeditor::storeLayout() {
 
 void guictr_clipeditor::selectEditClip(gui_clip* gclip) {
     noteeditor.selectEditClip(gclip);
+    settings.showEditClip();
 }
 void guictr_clipeditor::showEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
     view.set(gclip, clipboardView);

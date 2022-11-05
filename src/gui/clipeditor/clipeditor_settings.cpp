@@ -120,7 +120,7 @@ void gui_clipsettings::buttonClicked(guibase* button) {
 
 void gui_clipsettings::showEditClip() {
     clip_t* clip = view.clip();
-    if (clip != NULL) {
+    if (clip) {
         btnLoop.setStateRef(&clip->loopEnabled);
         clipLoopStart.setRef(&clip->loopStart);
         clipLoopLen.setRef(&clip->loopLen);
@@ -139,11 +139,10 @@ void gui_clipsettings::showEditClip() {
         clipTimeStartOffsetTicks.setRef(nullptr);
         clipAudioId.setRef(nullptr);
     }
-    auto project = project_controller_t::get();
+    auto project = dawCtrl->getDaw();
     if (project) {
         auto& settings = project->getQuantizeSettings();
         quantization.setQuantization(settings.quantizeStart, settings.quantizeEnd);
-
     }
 }
 

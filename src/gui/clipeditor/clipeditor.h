@@ -460,7 +460,8 @@ protected:
 };
 
 class gui_clipcontent_notes : public gui_clipcontent {
-    void renderClipNoteRects(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, tick_t tickOffset, float scale, float inset, NVGcolor color, bool renderMuted);
+    void renderClipNoteRects(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, 
+                                tick_t tickOffset, float scale, float inset, NVGcolor color, bool renderMuted);
 public:
     gui_clipcontent_notes(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, false) {
         setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_NOTES);
@@ -651,13 +652,16 @@ void renderPlayHead(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& 
 
 class guictr_editor_base : public guictr_base, public grid_changed_cb, public ce_constants {
 protected:
+    guictr_clipeditor& parentClipEditor;
     clip_view& view;
     scaled_grid grid;
     guitrack_timeline timeline;
 public:
-    explicit guictr_editor_base(clip_view& _view) : guictr_base(),
-      view(_view),
-      timeline(grid) {
+    explicit guictr_editor_base(guictr_clipeditor& parentClipEditor, clip_view& _view)
+        : guictr_base(),
+          parentClipEditor(parentClipEditor),
+          view(_view),
+          timeline(grid) {
     }
 
     clip_view& getClipView() { return view; }
@@ -667,8 +671,10 @@ public:
         }
     }
     virtual ivec2 getContentSize() const = 0;
+    guictr_clipeditor& getClipEditor() { return parentClipEditor; }
 };
 
+class guictr_clipeditor;
 class guictr_noteeditor 
     : public guictr_editor_base,
     public layout_pianoroll_t,
@@ -694,7 +700,7 @@ private:
     void zoomPianoRollToClipsNoteRange();
 
 public:
-    explicit guictr_noteeditor(clip_view& _view);
+    explicit guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_view& _view);
     ~guictr_noteeditor() override;
 
     void buttonClicked(guibase* button) override;
@@ -831,7 +837,7 @@ public:
     guictr_cliphandles clipHandles;
 private:
 public:
-    explicit guictr_audioeditor(clip_view& _view);
+    explicit guictr_audioeditor(guictr_clipeditor& parentClipEditor, clip_view& _view);
     ~guictr_audioeditor() override;
 
     void buttonClicked(guibase* button) override;
@@ -856,7 +862,6 @@ public:
 };
 class guictr_clipeditor : public guictr_base {
     clip_view view;
-
 public:
     guictr_noteeditor noteeditor;
     guictr_audioeditor audioeditor;

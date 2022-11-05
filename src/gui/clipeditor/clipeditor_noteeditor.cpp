@@ -40,7 +40,7 @@ void guictr_cliphandles::handleDraggedBegin(MouseEvent& evt) {
         return;
     }
     if (dragHandle == drag_handle_none) {
-        parentEditor.selectEditClip(view.gui);
+        parentEditor.getClipEditor().selectEditClip(view.gui);
         return;
     }
     dragOffset  = evt.relMousepos.x - (int32_t) (grid.tickToScreenD(getTickOffset() + clip->loopStart));
@@ -406,8 +406,8 @@ void guictr_cliphandles::render(NVGcontext* vg) {
     renderHandle(vg, 0);
 }
 
-guictr_noteeditor::guictr_noteeditor(clip_view& _view)
-    : guictr_editor_base(_view), layout_pianoroll_t(),
+guictr_noteeditor::guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_view& _view)
+    : guictr_editor_base(parentClipEditor, _view), layout_pianoroll_t(),
       piano(_view, *this),
       content(grid, _view, *this),
       velocities(grid, _view, *this),
@@ -685,7 +685,6 @@ void guictr_noteeditor::selectEditClip(gui_clip* gclip) {
                 }
             }
         }
-
     }
 }
 
@@ -1014,8 +1013,8 @@ bool gui_audiocontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
     return false;
 }
 
-guictr_audioeditor::guictr_audioeditor(clip_view& _view)
-    : guictr_editor_base(_view),
+guictr_audioeditor::guictr_audioeditor(guictr_clipeditor& parentClipEditor, clip_view& _view)
+    : guictr_editor_base(parentClipEditor, _view),
       content(grid, _view),
       clipHandles(*this, grid) {
     padding = 2;
