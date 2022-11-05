@@ -277,6 +277,8 @@ void guictr_tracks::layout() {
     int scrollW         = gui_scrollbar::defaultW;
 
     ivec2 cs       = getSizeContent();
+    cs.x = math::max(scrollW+trackControlsWidth+5, cs.x);
+    cs.y = math::max(64, cs.y);
     scrollbar.pos  = ivec2(cs.x - scrollW, 0);
     scrollbar.size = ivec2(scrollW, cs.y);
 
@@ -409,36 +411,39 @@ void guictr_tracks::render(NVGcontext* vg) {
     trackTimeline.render(vg);
     nvgRestore(vg);
 
-    nvgSave(vg);
-    dragdrop_target_indicator_t& dragDropTarget = dawCtrl->getDragDropTarget();
-    nvgTranslate(vg, 0, trackView.top());
-    int ySplit = DAW::getPosYFirstReturnTrack(guiMgr.tracksVisibleFlat);
-    if (ySplit > 0) {
+    ivec2 trackViewInnerSize = trackView.getSizeContent();
+    if (trackViewInnerSize.y > 1 && trackViewInnerSize.x > 1) {
         nvgSave(vg);
-        nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-        for (track_t* t : project.trackMidiAudioCtr) {
-            track_gui_entry_t* entry;
-            if (guiMgr.getTrackEntry(t, &entry) && guiMgr.isVisible(entry)) {
-                drawSeperator(vg, theme, entry->mixer->bottom() + TRACK_HEIGHT_SPACING_HALF, cs);
+        nvgTranslate(vg, 0, trackView.top());
+        int ySplit = DAW::getPosYFirstReturnTrack(guiMgr.tracksVisibleFlat);
+        if (ySplit > 0) {
+            nvgSave(vg);
+            nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
+            for (track_t* t : project.trackMidiAudioCtr) {
+                track_gui_entry_t* entry;
+                if (guiMgr.getTrackEntry(t, &entry) && guiMgr.isVisible(entry)) {
+                    drawSeperator(vg, theme, entry->mixer->bottom() + TRACK_HEIGHT_SPACING_HALF, cs);
+                }
+            }
+            nvgRestore(vg);
+        }
+        if (!project.tracksBottom.empty() && (ySplit <= 0 || trackView.size.y > ySplit)) {
+            if (ySplit > 0) {
+                nvgIntersectScissor(vg, 0, ySplit, cs.x, trackView.size.y - ySplit);
+            } else {
+                nvgIntersectScissor(vg, 0, 0, cs.x, trackView.size.y);
+            }
+            for (track_t* t : project.tracksBottom) {
+                track_gui_entry_t* entry;
+                if (guiMgr.getTrackEntry(t, &entry) && guiMgr.isVisible(entry)) {
+                    drawSeperator(vg, theme, entry->mixer->top() - TRACK_HEIGHT_SPACING_HALF, cs);
+                }
             }
         }
         nvgRestore(vg);
     }
-    if (!project.tracksBottom.empty() && (ySplit <= 0 || trackView.size.y > ySplit)) {
-        if (ySplit > 0) {
-            nvgIntersectScissor(vg, 0, ySplit, cs.x, trackView.size.y - ySplit);
-        } else {
-            nvgIntersectScissor(vg, 0, 0, cs.x, trackView.size.y);
-        }
-        for (track_t* t : project.tracksBottom) {
-            track_gui_entry_t* entry;
-            if (guiMgr.getTrackEntry(t, &entry) && guiMgr.isVisible(entry)) {
-                drawSeperator(vg, theme, entry->mixer->top() - TRACK_HEIGHT_SPACING_HALF, cs);
-            }
-        }
-    }
-    nvgRestore(vg);
 
+    dragdrop_target_indicator_t& dragDropTarget = dawCtrl->getDragDropTarget();
     if (dragDropTarget.dst && (dragDropTarget.dst->parent == &trackControls || dragDropTarget.dst->parent == &trackView)) {
         nvgSave(vg);
         nvgTranslate(vg, 0, trackView.top());
@@ -490,7 +495,7 @@ void guictr_tracks::render(NVGcontext* vg) {
         trackView.renderDebugPass(vg);
     }
 
-    if (trackView.size.x > 0) {
+    if (trackViewInnerSize.y > 1 && trackViewInnerSize.x > 1) {
         nvgIntersectScissor(vg, trackView.pos.x, 0, trackView.size.x, cs.y);
         nvgTranslate(vg, trackView.pos.x, 0);
         tick_t pos = dawCtrl->getDaw()->getPlaybackPos();
