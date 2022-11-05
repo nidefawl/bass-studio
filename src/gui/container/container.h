@@ -125,7 +125,7 @@ public:
     virtual void renderContainerLabel(NVGcontext* vg);
 
     void render(NVGcontext* vg) override;
-
+    bool isRenderableSizeAndContext(NVGcontext* vg) override;
     virtual bool setScissorTransformContainer(NVGcontext* vg);
     bool setScissorTransform(NVGcontext* vg) override;
 

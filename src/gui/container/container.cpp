@@ -94,6 +94,8 @@ void guictr_base::renderContainerLabel(NVGcontext* vg) {
 }
 
 void guictr_base::renderBackground(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     // dbgassert(isBackgroundRendered());
     // bool focused = parentCtrl->isCtrOrChildFocused(this);
     drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, isBackgroundRenderedInset());
@@ -188,6 +190,8 @@ void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, Strin
 }
 
 void guictr_base::drawInsetBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     if (sizeInset.y > 0 && sizeInset.x > 0) {
         nvgBeginPath(vg);
         nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
@@ -239,7 +243,17 @@ bool guictr_base::setScissorTransformContainer(NVGcontext* vg) {
     return true;
 }
 
+bool guictr_base::isRenderableSizeAndContext(NVGcontext* vg) {
+    ivec2 sizeInset = getSizeContent();
+    if (sizeInset.y <= 0 || sizeInset.x <= 0) {
+        return false;
+    }
+    return true;
+}
 bool guictr_base::setScissorTransform(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg)) {
+        return false;
+    }
     ivec2 posInset  = getPosContent();
     ivec2 sizeInset = getSizeContent();
     if (sizeInset.y <= 0 || sizeInset.x <= 0) {

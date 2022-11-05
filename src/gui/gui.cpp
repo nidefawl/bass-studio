@@ -559,6 +559,9 @@ void guibase::setTheme(guitheme_t* theme) {
 }
 
 void guibuttontoggle::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg)) {
+        return;
+    }
     vec2 cen = vec2(size / 2);
     cen.x += pos.x;
     cen.y += pos.y;

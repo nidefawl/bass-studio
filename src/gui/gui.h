@@ -435,14 +435,18 @@ public:
     virtual bool isDragMoveable() {
         return false;
     }
-    virtual bool setScissorTransform(NVGcontext* vg) {
-        ivec2 posInset  = pos;
-        ivec2 sizeInset = size;
-        if (sizeInset.y <= 0 || sizeInset.x <= 0) {
+    virtual bool isRenderableSizeAndContext(NVGcontext* vg) {
+        if (size.y <= 0 || size.x <= 0) {
             return false;
         }
-        nvgIntersectScissor(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-        nvgTranslate(vg, posInset.x, posInset.y);
+        return true;
+    }
+    virtual bool setScissorTransform(NVGcontext* vg) {
+        if (!isRenderableSizeAndContext(vg)) {
+            return false;
+        }
+        nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
+        nvgTranslate(vg, pos.x, pos.y);
         return true;
     }
     virtual void scissorClip(ivec2& vpos, ivec2& vsize) {
