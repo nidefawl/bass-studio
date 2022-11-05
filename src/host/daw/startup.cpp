@@ -174,7 +174,7 @@ void openPluginWindows(DawCtrl* dawCtrl, String pluginName) {
             track_t* tr = eff->getTrack();
             if (tr) {
                 dawCtrl->getDaw()->setSelectedTrack(tr);
-                MainCtrl::get()->showPluginView();
+                dawCtrl->showPluginView();
             }
         }
     }
@@ -202,7 +202,7 @@ void loadAllInstances(DawCtrl* dawCtrl, String pluginName) {
 }
 void showPluginView(DawCtrl* dawCtrl, String pluginName) {
     DawInstance* dawInstance = dawCtrl->getDaw();
-    MainCtrl::get()->showPluginView();
+    dawCtrl->showPluginView();
     {
         std::vector<effectbase*> effects;
         dawInstance->getPluginManager()->getAllInstances(effects);

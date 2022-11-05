@@ -92,6 +92,9 @@ void PluginHostCallback::onUiChanged(effectbase* effect) {
 void PluginManager::setTls(daw_tls::tlsinstance& tls) {
     this->mgrImpl->tls = tls;
 }
+
+/* Make sure opened context menu controls do not reference effectbase or its gui
+   instance after this call */
 void PluginManager::unloadPlugin(effectbase* plugin) {
     plugin->onPreUnload();
     audio_stage_t* audioStage = plugin->getTrackLink();
@@ -121,7 +124,6 @@ void PluginManager::unloadPlugin(effectbase* plugin) {
         break;
     }
     void* moduleHandleOpt = nullptr;
-    //PopupCtrl::get()->close(); // Make sure context controls do not reference vst
     if (plugin->getModuleType() == PLUGIN_TYPE_VST || plugin->getModuleType() == PLUGIN_TYPE_INTERNAL_EFFECT) {
         vstplugin* vst = static_cast<vstplugin*>(plugin);
         if (vst->internalModuleId <= 0) {

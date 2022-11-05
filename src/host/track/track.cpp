@@ -453,6 +453,7 @@ void audio_stage_t::pluginsChanged() {
         guictr_plugins* pluginCtr = audioStage->m_pluginCtr;
         if (pluginCtr) {
             dbgassert(MainCtrl::get());
+            
             plugin_selection& sel = MainCtrl::get()->getPluginSel();
             if (sel.pluginCtr == pluginCtr) {
                 sel.clear();

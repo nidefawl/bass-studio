@@ -1,4 +1,5 @@
 #include "gui/container/container.h"
+#include "gui/container/container_builder.h"
 
 
 class gui_samplesloaded : public guictr_base {
@@ -34,7 +35,8 @@ public:
     }
 };
 
-
-guictr_base* makeGuiSamplesLoaded() {
-    return new gui_samplesloaded();
+namespace DAW::UI {
+    guictr_base* makeGuiSamplesLoaded(create_ctr_t ctxt) {
+        return new gui_samplesloaded();
+    }
 }

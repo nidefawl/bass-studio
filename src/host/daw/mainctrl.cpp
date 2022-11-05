@@ -14,65 +14,65 @@
 #include <vector>
 #include <memory>
 
-#include "gui/container/container_layout_types.h"
-#include "gui/tooltip/tooltip.h"
+#include "appsettings.h"
+#include "basectrl.h"
+#include "color_util.h"
+#include "commands.h"
+#include "cursor.h"
+#include "edithistory.h"
+#include "error.h"
+#include "exceptions.h"
+#include "file/projectfile.h"
+#include "fileloader.h"
+#include "grid.h"
 #include "guicolors.h"
+#include "host/clip/clip.h"
 #include "host/daw/daw_async_task.h"
 #include "host/daw/mainctrl.h"
-#include "host/daw/mainctrl.h"
+#include "host/project/project.h"
+#include "host/track/track.h"
+#include "keyboard.h"
+#include "logging.h"
 #include "math/seq_math.h"
-#include "error.h"
-#include "basectrl.h"
+#include "menu.h"
+#include "msgbox.h"
+#include "note.h"
+#include "platform.h"
 #include "saferef.h"
+#include "seq_util.h"
+#include "str_util.h"
+#include "thread.h"
+#include "tls.h"
 #include "types.h"
 #include "util/profiling.h"
 #include "window.h"
-#include "platform.h"
-#include "keyboard.h"
-#include "commands.h"
-#include "host/project/project.h"
-#include "file/projectfile.h"
-#include "grid.h"
-#include "note.h"
-#include "cursor.h"
-#include "exceptions.h"
-#include "color_util.h"
-#include "str_util.h"
-#include "seq_util.h"
-#include "appsettings.h"
-#include "host/track/track.h"
-#include "host/clip/clip.h"
-#include "fileloader.h"
-#include "edithistory.h"
-#include "logging.h"
-#include "menu.h"
-#include "thread.h"
-#include "msgbox.h"
-#include "tls.h"
 
-#include "gui/gui.h"
-#include "gui/container/container.h"
-#include "gui/controls/button.h"
-#include "gui/controls/splitter.h"
-#include "gui/contextmenu/contextmenu_base.h"
-#include "gui/views/controls.h"
-#include "gui/controls/scrollbar.h"
-#include "gui/controls/statusbar.h"
-#include "gui/plugin/pluginctr.h"
 #include "gui/clipeditor/clipeditor.h"
-#include "gui/track/trackctr.h"
-#include "gui/track/trackctr_nodes.h"
-#include "gui/track/trackcontent.h"
+#include "gui/container/container_builder.h"
+#include "gui/container/container_layout_types.h"
+#include "gui/container/container.h"
+#include "gui/contextmenu/contextmenu_base.h"
+#include "gui/controls/button.h"
 #include "gui/controls/list.h"
-#include "gui/views/pluginlist.h"
-#include "gui/menu/menu.h"
-#include "gui/views/debugctr.h"
-#include "gui/views/notify.h"
-#include "wave/waveform_render_impl.h"
-#include "gui/views/shaderview.h"
+#include "gui/controls/scrollbar.h"
+#include "gui/controls/splitter.h"
+#include "gui/controls/statusbar.h"
 #include "gui/dialog/about.h"
 #include "gui/dialog/dialog_io.h"
 #include "gui/dialog/dialogs.h"
+#include "gui/gui.h"
+#include "gui/menu/menu.h"
+#include "gui/plugin/pluginctr.h"
+#include "gui/tooltip/tooltip.h"
+#include "gui/track/trackcontent.h"
+#include "gui/track/trackctr_nodes.h"
+#include "gui/track/trackctr.h"
+#include "gui/views/controls.h"
+#include "gui/views/debugctr.h"
+#include "gui/views/notify.h"
+#include "gui/views/pluginlist.h"
+#include "gui/views/shaderview.h"
+#include "wave/waveform_render_impl.h"
 
 #include "host/plugin/base/base-plugin.h"
 #include "host/plugin/vst/vstplugin.h"
@@ -124,10 +124,6 @@ void dragdrop_midifile::reset() {
     clipboard.reset();
 }
 
-guictr_base* makeCtrProperties();//guiproperties.cpp
-guictr_base* makeCtrTheme();     //guiproperties.cpp
-guictr_base* makeCtrHistory();   //guihistory.cpp
-
 class MainCtrlErrorStatusBarLogger : public Logger {
     gui_statusbar* const statusbar;
 public:
@@ -147,52 +143,6 @@ public:
     void logStr(Log::Level lvl, String s) override {
     }
 };
-
-class guictr_effectlibrary : public guictr_base {
-public:
-    guictr_pluginlibrary ctr_pluginlist;
-    guictr_modulelibrary ctr_effectlist;
-    bool initialized = false;
-    int revision     = -1;
-    guictr_effectlibrary() : guictr_base() {
-        setGuiType(gui_type::CTR_TYPE_EFFECTLIBRARY);
-        setLayoutMode(autolayout_mode::LAYOUT_VERTICAL);
-        setBackgroundRendered(false);
-        padding = 0;
-        margin  = 0;
-        add(&ctr_pluginlist);
-        add(&ctr_effectlist);
-    }
-
-    ~guictr_effectlibrary() override {
-        removeGuis();
-    }
-
-    void onTick(AppCtrl* ctrl) override {
-        guictr_base::onTick(ctrl);
-        if (parent && !initialized) {
-            initialized = true;
-            update();
-        }
-        if (dawCtrl && dawCtrl->getDaw()->getPluginDatabase().getRevision() != this->revision) {
-            update();
-        }
-    }
-
-    void update() {
-        ctr_pluginlist.update();
-        ctr_effectlist.update();
-        if (dawCtrl) {
-            this->revision = dawCtrl->getDaw()->getPluginDatabase().getRevision();
-        }
-    }
-};
-
-guictr_base* makeGuiPluginsLoadedList();
-guictr_base* makeGuiPerformance();
-guictr_base* makeGuiEffectLibrary() {
-    return new guictr_effectlibrary();
-}
 
 template<typename T>
 void addLayoutEntry(T& t, const std::shared_ptr<guictr_base>& ctr, String title) {
@@ -225,14 +175,17 @@ void addLayoutEntryRelayout(BaseCtrl* ctrl, T& t, const std::shared_ptr<guictr_b
 }
 
 std::shared_ptr<guictr_layout> makeTabListCtr1(DawCtrl* const dawCtrl) {
+    using namespace DAW::UI;
+    auto daw = dawCtrl->getDaw();
+    auto createContainer = create_ctr_t{daw};
     auto ctr = std::make_shared<guictr_layout>();
 
-    auto ctr_dbg0       = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
-    auto ctr_dbg1       = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::DEBUG_APPCTRL);
-    auto ctr_dbg2       = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2);
-    auto ctr_properties = std::shared_ptr<guictr_base>(makeCtrProperties());
-    auto ctr_theme      = std::shared_ptr<guictr_base>(makeCtrTheme());
-    auto ctr_history    = std::shared_ptr<guictr_base>(makeCtrHistory());
+    auto ctr_dbg0       = std::make_shared<gui_ctr_debug>(createContainer, gui_ctr_debug::DebugCtrType::TYPE_0);
+    auto ctr_dbg1       = std::make_shared<gui_ctr_debug>(createContainer, gui_ctr_debug::DebugCtrType::DEBUG_APPCTRL);
+    auto ctr_dbg2       = std::make_shared<gui_ctr_debug>(createContainer, gui_ctr_debug::DebugCtrType::TYPE_2);
+    auto ctr_properties = std::shared_ptr<guictr_base>(makeGuiObjectProperties(createContainer));
+    auto ctr_theme      = std::shared_ptr<guictr_base>(makeGuiThemeEditor(createContainer));
+    auto ctr_history    = std::shared_ptr<guictr_base>(makeGuiHistoryList(createContainer));
     auto shaderView     = std::make_shared<gui_shaderview>();
     auto settings       = std::make_shared<DAW::DialogSettings::guidialog_settings>(dawCtrl->getDaw());
     auto layout         = std::make_shared<guictr_layout>();
@@ -263,17 +216,20 @@ std::shared_ptr<guictr_layout> makeTabListCtr1(DawCtrl* const dawCtrl) {
 }
 
 std::shared_ptr<guictr_layout> makeTabListCtr2(DawCtrl* const dawCtrl) {
+    using namespace DAW::UI;
+    auto daw = dawCtrl->getDaw();
+    auto createContainer = create_ctr_t{daw};
     auto ctr = std::make_shared<guictr_layout>();
 
-    auto ctr_effectlib     = std::make_shared<guictr_effectlibrary>();
-    auto ctr_properties    = std::shared_ptr<guictr_base>(makeCtrProperties());
-    auto ctr_loadedplugins = std::shared_ptr<guictr_base>(makeGuiPluginsLoadedList());
-    auto ctr_performance   = std::shared_ptr<guictr_base>(makeGuiPerformance());
+    auto ctr_effectlib    = std::shared_ptr<guictr_base>(makeGuiEffectLibrary(createContainer));
+    auto ctr_properties    = std::shared_ptr<guictr_base>(makeGuiObjectProperties(createContainer));
+    auto ctr_loadedplugins = std::shared_ptr<guictr_base>(makeGuiPluginsLoadedList(createContainer));
+    auto ctr_performance   = std::shared_ptr<guictr_base>(makeGuiPerformance(createContainer));
     auto settings          = std::make_shared<DAW::DialogSettings::guidialog_settings>(dawCtrl->getDaw());
 
-    auto ctr_dbg0 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
-    auto ctr_dbg1 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::DEBUG_APPCTRL);
-    auto ctr_dbg2 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2);
+    auto ctr_dbg0 = std::make_shared<gui_ctr_debug>(createContainer, gui_ctr_debug::DebugCtrType::TYPE_0);
+    auto ctr_dbg1 = std::make_shared<gui_ctr_debug>(createContainer, gui_ctr_debug::DebugCtrType::DEBUG_APPCTRL);
+    auto ctr_dbg2 = std::make_shared<gui_ctr_debug>(createContainer, gui_ctr_debug::DebugCtrType::TYPE_2);
 
     ctr->setLayout(container_layout::TABBED);
     //ctr->setBackgroundRendered(true);
@@ -3008,7 +2964,6 @@ public:
         trackPtr = nullptr;
         trackIdx = _trackPtr->projectIdx;
         localIdx = _trackPtr->localIdxFlat;
-        dbgassert(DawInstance::get()->getTrackId(trackIdx) == _trackPtr);
     }
 
     ~action_modify_track_add() override = default;
@@ -3057,7 +3012,6 @@ public:
         trackPtr = _trackPtr;
         trackIdx = _trackPtr->projectIdx;
         localIdx = _trackPtr->localIdxFlat;
-        dbgassert(DawInstance::get()->getTrackId(trackIdx) != trackPtr);
     }
 
     ~action_modify_track_remove() override = default;

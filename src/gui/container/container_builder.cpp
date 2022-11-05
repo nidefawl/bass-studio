@@ -1,6 +1,7 @@
 #include "container_dnd_layout.h"
 #include "basectrl.h"
 #include "container.h"
+#include "gui/container/container_builder.h"
 #include "gui/container/container_layout_types.h"
 #include "gui/gui.h"
 #include "gui/views/shaderview.h"
@@ -8,16 +9,7 @@
 #include "gui/views/debugctr.h"
 #include "gui/shape/shapeeditor.h"
 #include "logging.h"
-
-guictr_base* makeCtrProperties();
-guictr_base* makeCtrTheme();
-guictr_base* makeCtrHistory();
-guictr_base* makeGuiPluginsLoadedList();
-guictr_base* makeGuiEffectLibrary();
-guictr_base* makeGuiPerformance();
-guictr_base* makeGuiExport();
-guictr_base* makeGuiClipEditor();
-guictr_base* makeGuiMidiInspect();
+#include "tls.h"
 
 bool getContainerLabel(gui_type type, String& out) {
     switch (type) {
@@ -110,16 +102,16 @@ ContainerFactory& getContainerFactory() {
     if (!init) {
 #if BUILD_DAW_HOST
         containerFactory[gui_type::CTR_TYPE_DEBUG_0] = [](auto& ctxt) {
-            return std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
+            return std::make_shared<gui_ctr_debug>(ctxt, gui_ctr_debug::DebugCtrType::TYPE_0);
         };
         containerFactory[gui_type::CTR_TYPE_DEBUG_1] = [](auto& ctxt) {
-            return std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::DEBUG_APPCTRL);
+            return std::make_shared<gui_ctr_debug>(ctxt, gui_ctr_debug::DebugCtrType::DEBUG_APPCTRL);
         };
         containerFactory[gui_type::CTR_TYPE_DEBUG_2] = [](auto& ctxt) {
-            return std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2);
+            return std::make_shared<gui_ctr_debug>(ctxt, gui_ctr_debug::DebugCtrType::TYPE_2);
         };
         containerFactory[gui_type::CTR_TYPE_HISTORY] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(makeCtrHistory());
+            return std::shared_ptr<guictr_base>(DAW::UI::makeGuiHistoryList(ctxt));
         };
         containerFactory[gui_type::CTR_TYPE_SHADERVIEW] = [](auto& ctxt) {
             return std::make_shared<gui_shaderview>();
@@ -128,32 +120,32 @@ ContainerFactory& getContainerFactory() {
             return std::make_shared<DAW::DialogSettings::guidialog_settings>(ctxt.daw);
         };
         containerFactory[gui_type::CTR_TYPE_EFFECTLIBRARY] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(makeGuiEffectLibrary());
+            return std::shared_ptr<guictr_base>(DAW::UI::makeGuiEffectLibrary(ctxt));
         };
         containerFactory[gui_type::CTR_TYPE_PLUGINSLOADED] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(makeGuiPluginsLoadedList());
+            return std::shared_ptr<guictr_base>(DAW::UI::makeGuiPluginsLoadedList(ctxt));
         };
         containerFactory[gui_type::CTR_TYPE_PERFORMANCE] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(makeGuiPerformance());
+            return std::shared_ptr<guictr_base>(DAW::UI::makeGuiPerformance(ctxt));
         };
         containerFactory[gui_type::CTR_TYPE_EXPORT] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(makeGuiExport());
+            return std::shared_ptr<guictr_base>(DAW::UI::makeGuiExport(ctxt));
         };
         containerFactory[gui_type::CTR_TYPE_CLIPEDITOR] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(makeGuiClipEditor());
+            return std::shared_ptr<guictr_base>(DAW::UI::makeGuiClipEditor(ctxt));
         };
         containerFactory[gui_type::CTR_TYPE_KEYBINDS] = [](auto& ctxt) {
             return std::shared_ptr<guictr_base>(DAW::DialogSettings::makeKeybindsDialog(ctxt.daw));
         };
         containerFactory[gui_type::CTR_TYPE_MIDI_MONITOR] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(makeGuiMidiInspect());
+            return std::shared_ptr<guictr_base>(DAW::UI::makeGuiMidiInspect(ctxt));
         };
 #endif
         containerFactory[gui_type::CTR_TYPE_PROPERTIES] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(makeCtrProperties());
+            return std::shared_ptr<guictr_base>(DAW::UI::makeGuiObjectProperties(ctxt));
         };
         containerFactory[gui_type::CTR_TYPE_THEME] = [](auto& ctxt) {
-            return std::shared_ptr<guictr_base>(makeCtrTheme());
+            return std::shared_ptr<guictr_base>(DAW::UI::makeGuiThemeEditor(ctxt));
         };
         containerFactory[gui_type::CTR_TYPE_LAYOUT] = [](auto& ctxt) {
             return std::make_shared<guictr_layout>();
@@ -190,7 +182,8 @@ bool makeContainer(ContainerInstanceContext& ctxt, gui_type type, std::shared_pt
     out       = nullptr;
     if (fac.count(type)) {
         ContainerBuilder& builder = fac[type];
-        std::shared_ptr<guictr_base> sharedContainer = builder(ctxt);
+        auto createContainer = create_ctr_t{ctxt.daw};
+        std::shared_ptr<guictr_base> sharedContainer = builder(createContainer);
         if (!sharedContainer) {
             log_printf("Failed building container of type %d\n", type);
             return false;

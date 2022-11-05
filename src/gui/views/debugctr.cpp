@@ -73,31 +73,32 @@ gui_ctr_debug::~gui_ctr_debug() {
     }
     delete impl;
 }
-gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
+gui_ctr_debug::gui_ctr_debug(create_ctr_t ctxt, DebugCtrType debugCtrType)
     : guictr_base(),
       impl(new gui_ctr_debug::ctr_debug_impl_t{}),
       dgbCtrType(debugCtrType) {
+    dbgassert(ctxt.daw);
     auto guiType = gui_type::CTR_TYPE_DEBUG_0;
     switch (dgbCtrType) {
-        case gui_ctr_debug_type_i32::TYPE_0:
+        case DebugCtrType::TYPE_0:
             guiType = gui_type::CTR_TYPE_DEBUG_0;
             break;
-        case gui_ctr_debug_type_i32::DEBUG_APPCTRL:
+        case DebugCtrType::DEBUG_APPCTRL:
             guiType = gui_type::CTR_TYPE_DEBUG_1;
             break;
-        case gui_ctr_debug_type_i32::TYPE_2:
+        case DebugCtrType::TYPE_2:
             guiType = gui_type::CTR_TYPE_DEBUG_2;
             break;
     }
     setGuiType(guiType);
-    auto const host = DawInstance::get()->getHost();
+    auto const host = ctxt.daw->getHost();
 #ifdef _WIN32
     msgCounterEnabled = true;
 #endif
     setBackgroundRendered(true);
     setCanMouseHit(true);
     std::vector<guibase*>& debugGuis = impl->debugGuis;
-    if (dgbCtrType != gui_ctr_debug_type_i32::TYPE_2) {
+    if (dgbCtrType != DebugCtrType::TYPE_2) {
         auto knob        = new guiknob(guiknob::knobtype::KNOB_UNLABELED);
         knob->id         = ID_OPTION_SCALE_GLOBAL;
         knob->fnSetValue = [this](float f, int flags) {
@@ -112,7 +113,7 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
         };
         debugGuis.push_back(knob);
     }
-    if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_2) {
+    if (dgbCtrType == DebugCtrType::TYPE_2) {
         auto knob        = new guiknob(guiknob::knobtype::KNOB_UNLABELED);
         knob->id         = ID_KNOB_SET_THREAD_COUNT;
         knob->fnSetValue = [this, knob, host](float f, int flags) {
@@ -130,7 +131,7 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
         };
         debugGuis.push_back(knob);
     }
-    if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_0) {
+    if (dgbCtrType == DebugCtrType::TYPE_0) {
         {
 
             auto btn = new guibutton;
@@ -239,7 +240,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         return;
     }
 
-    if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_2 && impl->sampleformat.sampleRate > 0) {
+    if (dgbCtrType == DebugCtrType::TYPE_2 && impl->sampleformat.sampleRate > 0) {
         auto mikrosPerBlock = (impl->sampleformat.blockSize * 1000000UL) / impl->sampleformat.sampleRate;
         int inset           = 30;
         auto cs             = getSizeContent();
@@ -350,7 +351,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         }
     }
 
-    if (dgbCtrType == gui_ctr_debug_type_i32::DEBUG_APPCTRL) {
+    if (dgbCtrType == DebugCtrType::DEBUG_APPCTRL) {
         auto const ctrl = dawCtrl;
         auto const daw = ctrl->getDaw();
 
@@ -416,12 +417,12 @@ void gui_ctr_debug::render(NVGcontext* vg) {
             "None", "Clip", "Note", "Plugin", "Track"
         };
         strings.push_back(String("ClipboardType: ") + clipboardTypeNames[(int)daw->getClipboardType()]);
-        if (ctrl->guiFocused && ctrl->guiFocused->parent == (guibase*) MainCtrl::get()->getPluginCtr()) {
+        if (ctrl->guiFocused && ctrl->guiFocused->getGuiType() == gui_type::CTR_TYPE_PLUGIN) {
             guiplugin* gplugin = dynamic_cast<guiplugin*>(ctrl->guiFocused);
             if (gplugin) {
-                effectbase* vst = gplugin->getModule();
-                strings.push_back("\n\n");
-                vst->getInfo(strings);
+                effectbase* effect = gplugin->getModule();
+                strings.emplace_back("\n\n");
+                effect->getInfo(strings);
             }
         }
         struct win32_msg {

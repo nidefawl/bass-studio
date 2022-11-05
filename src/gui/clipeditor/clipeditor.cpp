@@ -2,6 +2,7 @@
 
 #include "assert_dbg.h"
 #include "color_util.h"
+#include "gui/container/container_builder.h"
 #include "host/clip/clip.h"
 #include "host/daw/clipboard.h"
 #include "event.h"
@@ -828,6 +829,9 @@ void gui_clipcontent_notes::renderClipNoteRects(NVGcontext* vg, const std::vecto
     }
 }
 void gui_clipcontent_notes::render(NVGcontext* vg) {
+    if (size.x < 5 || size.y < 5) {
+        return;
+    }
     if (!setScissorTransform(vg)) {
         return;
     }
@@ -1255,13 +1259,13 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
                     if (assert_expr(contextNote)) {
                         notes.selection.insert(contextNote);
                         view.copySelectedNoteList();
-                        MainCtrl::get()->setStatusText(StringFormat("%d %d %d", note.pitch, note.time, note.len));
+                        dawCtrl->setStatusText(StringFormat("%d %d %d", note.pitch, note.time, note.len));
                         desc = "Add Note";
                         setSelectionFrame(getMinMaxTime(view.draggedSelection));
                     }
                 }
             }
-            DawInstance::get()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
+            dawCtrl->getDaw()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
             clip->setDirty();
             view.updateNotePitches(false);
             inSelection = true;
@@ -1371,7 +1375,7 @@ void gui_clipcontent::setStatusText() {
             selStatus += StringFormat("time %d to %d", pair2.first->start(), pair2.second->end());
         }
     }
-    MainCtrl::get()->setStatusText(selStatus);
+    dawCtrl->setStatusText(selStatus);
 }
 
 void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
@@ -1656,7 +1660,7 @@ void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
             } else {
                 action = "Move notes";
             }
-            DawInstance::get()->pushHist(new action_modify_notes(action, view, view.dragStartNotes, dragStartCursor));
+            dawCtrl->getDaw()->pushHist(new action_modify_notes(action, view, view.dragStartNotes, dragStartCursor));
             view.copySelectedNoteList();
             clip->setDirty();
             view.updateNotePitches(false);
@@ -1775,7 +1779,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 edit    = true;
                 desc    = "Paste notes";
             } else if (command == CMD_QUANTIZE && !notes.selection.empty()) {
-                auto& settings = project_controller_t::get()->getQuantizeSettings();
+                auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
                 if (settings.quantizeStart > 0 || settings.quantizeEnd > 0) {
                     log_lf(Log::L_DEBUG, "quantize to %d %d\n", settings.quantizeStart, settings.quantizeEnd);
                     /* Quantize notes to grid 
@@ -1879,7 +1883,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
         }
         if (edit) {
             notes.updateBounds();
-            DawInstance::get()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
+            dawCtrl->getDaw()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
             clip->setDirty();
             view.updateNotePitches(false);
         }
@@ -2311,7 +2315,7 @@ void guictr_clipeditorview::handleDraggedBegin(MouseEvent& evt) {
         return;
     }
     if (!mainCtrl->isClipEditorVisible()) {
-        MainCtrl::get()->showClipEditor();
+        dawCtrl->showClipEditor();
         return;
     }
     float scaleX   = getScaleX();
@@ -2367,7 +2371,7 @@ void guictr_clipeditorview::handleDraggedRelease(MouseEvent& evt) {
     if (dragMode == drag_none) {
         return;
     }
-    DawInstance::get()->updateVisibleTrackContents();
+    dawCtrl->getDaw()->updateVisibleTrackContents();
 }
 
 bool guictr_clipeditorview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
@@ -2406,9 +2410,10 @@ float guictr_cliphandles::clipLoopEndScrX() const {
     return (float) grid.tickToScreenD(getTickOffset() + clip->loopStart + clip->loopLen);
 }
 
-
-guictr_base* makeGuiClipEditor() {
+namespace DAW::UI {
+guictr_base* makeGuiClipEditor(create_ctr_t ctxt) {
     return new guictr_clipeditor();
+}
 }
 
 void piano_scale::setOffset(float f) {

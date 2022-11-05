@@ -83,7 +83,7 @@ void action_modify_track::undo(DawInstance* daw) {
     daw->resetEditClip();
     bool initAfter = after.tracks.empty();
     if (initAfter) {
-        after.cursor = MainCtrl::get()->getCursor();
+        after.cursor = daw->getMainControl()->getCursor();
     }
     trackallcontainer_t& trCtr = daw->getTracks();
     for (track_snapshot_t* trackStored : before.tracks) {
@@ -98,7 +98,7 @@ void action_modify_track::undo(DawInstance* daw) {
             log_printf("idx is now invalid\n");
         }
     }
-    MainCtrl::get()->getCursor() = before.cursor;
+    daw->getMainControl()->getCursor() = before.cursor;
 }
 void action_modify_track::redo(DawInstance* daw) {
     daw->resetMouseContext();
@@ -110,7 +110,7 @@ void action_modify_track::redo(DawInstance* daw) {
             loadTrackSnapshot(daw, track, trackStored);
         }
     }
-    MainCtrl::get()->getCursor() = after.cursor;
+    daw->getMainControl()->getCursor() = after.cursor;
 }
 
 void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip) {
@@ -652,7 +652,7 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
                 log_printf("sel track pos %d range %d\n", cursor.getTrackBegin(), cursor.getTrackRange());
 
             }
-//            beatbar16th_t songPos = MainCtrl::get()->toBeatBar16th(tick);
+//            beatbar16th_t songPos = dawCtrl->toBeatBar16th(tick);
 //            log_printf("Select at Track %d - %d %d %d %d = %u.%u.%u\n", trSelected->idx, c.cursorPos, tick, c.selRange, local.x, songPos.bar, songPos.beat, songPos.th);
         }
     }

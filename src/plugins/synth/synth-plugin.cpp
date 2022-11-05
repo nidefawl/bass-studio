@@ -2931,7 +2931,7 @@ namespace PluginSynth {
             auto barStartPos = math::floord(tick / double(TICKS_BAR)) * 4;
             this->impl->setPPQPos(ppqPos);
             this->impl->setBarPos(barStartPos);
-            this->impl->setTempo(project_controller_t::get()->getCurrentTempoBPM()); //TODO: use hostCallback or provide time info struct in process() parameter list
+            this->impl->setTempo(host->prjGlobals.tempo100 / 100.0); //TODO: use hostCallback or provide time info struct in process() parameter list
             // TODO: transport changes
             // if (timeinfo && timeinfo->flags & kVstTransportChanged) {
             //     this->impl->onTransportChanged(timeinfo->flags & kVstTransportPlaying);

@@ -59,7 +59,7 @@ void gui_timeinput_field::render(NVGcontext* vg) {
     renderWidgetBorder(vg, flags);
     setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     int32_t _time      = time ? *time : 0;
-    beatbar16th_t step =  project_controller_t::get()->toBeatBar16th(_time, isRelative);
+    beatbar16th_t step =  dawCtrl->getDaw()->toBeatBar16th(_time, isRelative);
     int32_t val        = step[idx];
     if ((val < 0) == isRelative) {
         val++;

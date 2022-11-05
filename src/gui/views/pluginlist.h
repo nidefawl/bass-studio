@@ -175,23 +175,6 @@ public:
         setBackgroundRendered(true);
         padding = 4;
         margin = 2;
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_LFO, 0, "LFO", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_MACROS, 0, "Macros", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_EMPTY, 0, "Empty", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GAIN, 0, "Gain", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GROUP, 0, "Group", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_LATENCY, 0, "Latency", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SAMPLE_CRUSH, 0, "Sample Crush", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SAMPLE_DELAY, 0, "Sample Delay", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_STEREO_WIDTH, 0, "Stereo Width", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SYNTH, 0, "Synth", true });
-        auto daw = DawInstance::get();
-        auto pluginMgr = daw->getPluginManager();
-        std::vector<DAW::Host::builtin_module_reg_t>& vecReg = pluginMgr->getBuiltinModuleRegistry();
-        for (auto& reg : vecReg) {
-            effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_INTERNAL_EFFECT, reg.id, reg.name, reg.isSynth });
-            break;
-        }
         pluginListCtr.padding = 0;
         pluginListCtr.setBackgroundRendered(false);
         add(&textField);
@@ -202,6 +185,29 @@ public:
             return true;
         });
         textField.setPlaceholder("Search");
+    }
+    void setControl(BaseCtrl* parentCtrl) override {
+        guictr_base::setControl(parentCtrl);
+        if (!parentCtrl || !dawCtrl) {
+            return;
+        }
+        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_LFO, 0, "LFO", false });
+        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_MACROS, 0, "Macros", false });
+        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_EMPTY, 0, "Empty", false });
+        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GAIN, 0, "Gain", false });
+        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GROUP, 0, "Group", false });
+        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_LATENCY, 0, "Latency", false });
+        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SAMPLE_CRUSH, 0, "Sample Crush", false });
+        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SAMPLE_DELAY, 0, "Sample Delay", false });
+        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_STEREO_WIDTH, 0, "Stereo Width", false });
+        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SYNTH, 0, "Synth", true });
+        auto daw = dawCtrl->getDaw();
+        auto pluginMgr = daw->getPluginManager();
+        std::vector<DAW::Host::builtin_module_reg_t>& vecReg = pluginMgr->getBuiltinModuleRegistry();
+        for (auto& reg : vecReg) {
+            effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_INTERNAL_EFFECT, reg.id, reg.name, reg.isSynth });
+            break;
+        }
     }
     ~guictr_modulelibrary() override {
         removeGuis();

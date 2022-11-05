@@ -218,11 +218,11 @@ void gui_clipsettings::layout() {
 void gui_quantizationsettings::buttonClicked(guibase* button) {
     if (&inputEnds == button) {
         tickEnd = math::max(0, tickEnd);
-        auto& settings = project_controller_t::get()->getQuantizeSettings();
+        auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
         settings.quantizeEnd = inputEnds.getTime();
     } else if (&inputStarts == button) {
         tickStart = math::max(0, tickStart);
-        auto& settings = project_controller_t::get()->getQuantizeSettings();
+        auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
         settings.quantizeStart = inputStarts.getTime();
     }
     if (&btnQuantize == button) {

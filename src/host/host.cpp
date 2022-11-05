@@ -1968,8 +1968,8 @@ void Host::setTls(daw_tls::tlsinstance& tls) {
 
 bool Host::writeRecordedData(project_controller_t* ctrl) {
     bool bHasNewData = false;
-    auto cache = audiocache::getInstance();
-    auto daw = DawInstance::get();
+    auto cache = getTls().audioCache;
+    auto daw = getTls().dawInstance;
     visitTrackAudioStageInstances([&](auto* track) {
         bHasNewData |= track->recorder.writeRecordedData(ctrl, track, cache, daw);
     });

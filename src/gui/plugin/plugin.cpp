@@ -751,7 +751,7 @@ bool guipluginview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             return true;
         }
         if (isShift(evt.kbmods)) {
-            if (MainCtrl::get()->getPluginSel().pluginCtr != this->parent) {
+            if (dawCtrl->getPluginSel().pluginCtr != this->parent) {
                 return true;
             }
         }
@@ -765,7 +765,7 @@ bool guipluginview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 }
 void guipluginview::buttonClicked(guibase* _button) {
     if (_button == &buttonOpenEditor) {
-        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+        ThreadLock lock = dawCtrl->lockPlayThread();
         if (effect->bEditOpen) {
             effect->closeWindow();
         } else {

@@ -1,3 +1,4 @@
+#include "gui/container/container_builder.h"
 #include "host/daw/mainctrl.h"
 #include "host/daw/edithistory.h"
 #include "gui/container/container.h"
@@ -95,7 +96,10 @@ public:
         guictr_base::setControl(parentCtrl);
     }
 };
-guictr_base* makeCtrHistory() {
-    guictr_history_view* ctr = new guictr_history_view();
-    return ctr;
+
+namespace DAW::UI {
+    guictr_base* makeGuiHistoryList(create_ctr_t ctxt) {
+        guictr_history_view* ctr = new guictr_history_view();
+        return ctr;
+    }
 }

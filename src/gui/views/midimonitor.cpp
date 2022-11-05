@@ -2,6 +2,7 @@
 #include <nanovg.h>
 #include <utility>
 #include "color_util.h"
+#include "gui/container/container_builder.h"
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "gui/gui.h"
@@ -178,6 +179,8 @@ public:
 
 } // namespace
  
-guictr_base* makeGuiMidiInspect() {
-    return new gui_midi_inspect();
+namespace DAW::UI {
+    guictr_base* makeGuiMidiInspect(create_ctr_t ctxt) {
+        return new gui_midi_inspect();
+    }
 }

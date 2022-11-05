@@ -1,3 +1,4 @@
+#include "gui/container/container_builder.h"
 #include "gui/gui.h"
 #include "gui/container/container.h"
 #include "guicolors.h"
@@ -131,7 +132,7 @@ public:
         selectFolder.setText(settings.exportPath);
         selectFolder.setTooltipText(settings.exportPath);
         if (!tmFrameExport.isLocked()) {
-            auto& globals = DawInstance::get()->getGlobals();
+            auto& globals = dawCtrl->getDaw()->getGlobals();
             if (globals.cursor.getRange()) {
                 settings.exportPos = globals.cursor.getTickBegin();
                 settings.exportLen = globals.cursor.getRange();
@@ -220,8 +221,10 @@ public:
 };
 
 
-guictr_base* makeGuiExport() {
-    dbgassert(project_controller_t::get());
-    auto& settings = project_controller_t::get()->getExportSettings();
-    return new gui_export(settings);
+namespace DAW::UI {
+    guictr_base* makeGuiExport(create_ctr_t ctxt) {
+        dbgassert(ctxt.daw);
+        auto& settings = ctxt.daw->getExportSettings();
+        return new gui_export(settings);
+    }
 }

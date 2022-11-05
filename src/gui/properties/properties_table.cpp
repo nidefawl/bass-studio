@@ -5,6 +5,7 @@
 #include <memory>
 #include <numeric>
 
+#include "gui/container/container_builder.h"
 #include "math/seq_math.h"
 #include "saferef.h"
 #include "str_util.h"
@@ -1101,9 +1102,11 @@ public:
     }
 };
 
-guictr_base* makeCtrTheme() {
-    auto* ctr = new guictr_theme_settings();
-    return ctr;
+namespace DAW::UI {
+    guictr_base* makeGuiThemeEditor(create_ctr_t ctxt) {
+        auto* ctr = new guictr_theme_settings();
+        return ctr;
+    }
 }
 
 std::vector<guiproperties_table<guibase>*> g_propTableInstances;
@@ -1120,10 +1123,12 @@ void setGlobalDebugPropertyHandle(void* ptr) {
     return new guiproperties_table<guibase>(nullptr, false, false);
 }
 
-guictr_base* makeCtrProperties() {
-    auto* ptr = new guiproperties_table<guibase>(nullptr, true, false);
-    g_propTableInstances.push_back(ptr);
-    return ptr;
+namespace DAW::UI {
+    guictr_base* makeGuiObjectProperties(create_ctr_t ctxt) {
+        auto* ptr = new guiproperties_table<guibase>(nullptr, true, false);
+        g_propTableInstances.push_back(ptr);
+        return ptr;
+    }
 }
 
 template <>

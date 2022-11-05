@@ -69,7 +69,7 @@ void guitrack_timeline::adjustOffset(float gridOffset) {
     grid.notifyChange();
 }
 void guitrack_timeline::handleDraggedRelease(MouseEvent& evt) {
-    DawInstance::get()->updateVisibleTrackContents();
+    dawCtrl->getDaw()->updateVisibleTrackContents();
 }
 void guitrack_timeline::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {

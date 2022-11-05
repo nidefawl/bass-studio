@@ -14,18 +14,18 @@ class gui_ctr_debug : public guictr_base {
 public:
     static constexpr int BTN_FONT_SIZE = 16;
 
-    enum class gui_ctr_debug_type_i32 : int32_t {
+    enum class DebugCtrType : int32_t {
         TYPE_0,
         DEBUG_APPCTRL,
         TYPE_2
     };
 
 private:
-    const gui_ctr_debug_type_i32 dgbCtrType;
+    const DebugCtrType dgbCtrType;
     std::vector<String> g_debugStrings;
 
 public:
-    gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType);
+    gui_ctr_debug(create_ctr_t ctxt, DebugCtrType debugCtrType);
     ~gui_ctr_debug() override;
     void render(NVGcontext* vg) override;
     void layout() override;

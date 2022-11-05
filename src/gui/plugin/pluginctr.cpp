@@ -82,7 +82,7 @@ void setDraggedPluginsUI(guictr_dragged_plugins& gui, plugin_selection& sel) {
 
 guibase* guictr_plugins::getDraggedControl() {
     if (isSelected()) {
-        auto& sel = MainCtrl::get()->getPluginSel();
+        auto& sel = dawCtrl->getPluginSel();
         setDraggedPluginsUI(sel.pluginCtr->dragged, sel);
         return &sel.pluginCtr->dragged;
     }
@@ -118,7 +118,7 @@ bool guictr_plugins::isSelected() {
 }
 
 bool guictr_plugins::getSelected(std::vector<effectbase*>& out) {
-    auto& sel = MainCtrl::get()->getPluginSel();
+    auto& sel = dawCtrl->getPluginSel();
     getSelectedEffects(sel, out);
     return true;
 }
@@ -144,9 +144,7 @@ bool plugin_selection::hasSelection() const {
     return firstSelection >= 0 && lastSelection >= 0 && pluginCtr && pluginCtr->stage;
 }
 
-void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_stage_t* stage, int32_t pos) {
-    
-    auto daw = DawInstance::get();
+void pastePluginClipboard(DawInstance* daw, std::shared_ptr<plugin_clipboard_t>& clipboard, audio_stage_t* stage, int32_t pos) {
     dbgassert(daw->getPlayThread()->isLockedOrNotProcessing());
     auto pluginMgr = daw->getPluginManager();
     for (plugin_snapshot_t& pluginSnapshot : clipboard->plugins) {
@@ -309,7 +307,7 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
             if (!selection.empty()) {
                 auto lock = daw->lockPlayThread();
                 std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
-                pastePluginClipboard(clipboard, sel.pluginCtr->stage, selection.back()->getSlot() + 1);
+                pastePluginClipboard(daw, clipboard, sel.pluginCtr->stage, selection.back()->getSlot() + 1);
                 handledKeyinput = true;
             }
             break;
@@ -319,7 +317,7 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
                 std::shared_ptr<plugin_clipboard_t> clipboard = daw->getPluginClipboard();
                 plugin_clipboard_t copy = *clipboard;
                 int pluginPasteSlot = selection.empty() ? -2 : (selection.back()->getSlot() + 1);
-                pastePluginClipboard(clipboard, sel.pluginCtr->stage, pluginPasteSlot);
+                pastePluginClipboard(daw, clipboard, sel.pluginCtr->stage, pluginPasteSlot);
                 //TODO: handle undo
                 handledKeyinput = true;
                 sel.pluginCtr->stage->pluginsChanged();

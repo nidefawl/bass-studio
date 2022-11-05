@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <vector>
+#include "gui/container/container_builder.h"
 #include "seq_util.h"
 #include "str_util.h"
 #include "util/profiling.h"
@@ -223,6 +224,8 @@ public:
     }
 };
 
-guictr_base* makeGuiPerformance() {
-    return new gui_performance();
+namespace DAW::UI {
+    guictr_base* makeGuiPerformance(create_ctr_t ctxt) {
+        return new gui_performance();
+    }
 }

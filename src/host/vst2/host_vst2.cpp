@@ -225,9 +225,8 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginH
         if (!validProcessingState && plugin->hasTrackLink()) {
             auto parent = plugin->trackImpl;
             while (parent->parent) parent = parent->parent;
-            // get this from the host instead of the tls
-            auto projCtrl = project_controller_t::get();
-            if (projCtrl && projCtrl->getTracks().resolveTrack(parent->toRef())) {
+            auto daw = host->getTls().dawInstance;
+            if (daw && daw->getTracks().resolveTrack(parent->toRef())) {
                 validProcessingState = true;
             }
         }
@@ -453,7 +452,7 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginH
                 track_t* track                = plugin->trackImpl->getTrack();
                 automatable_param_ref_t ref = plugin->toRef();
                 parameter_ref_t p             = { track->projectIdx, ref.type, plugin->projectGlobalId, effParam->idx };
-                DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, oldVal, newVal));
+                host->getTls().dawInstance->pushHist(new action_modify_effect_parameter("Modify parameter", p, oldVal, newVal));
 
             }
         }

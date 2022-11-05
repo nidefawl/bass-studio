@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <nanovg.h>
 #include "color_util.h"
+#include "gui/container/container_builder.h"
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "gui/gui.h"
@@ -270,8 +271,10 @@ public:
             if (effectbase) {
                 track_t* tr = effectbase->getTrack();
                 if (tr) {
-                    dawCtrl->getDaw()->setSelectedTrack(tr);
-                    MainCtrl::get()->showPluginView();
+                    auto daw = dawCtrl->getDaw();
+
+                    daw->setSelectedTrack(tr);
+                    daw->getMainControl()->showPluginView();
                 }
             }
         }
@@ -401,7 +404,7 @@ public:
     }
     void buttonClicked(guibase* button) override {
         if (&btnLoadAll == button) {
-            DawInstance* daw = DawInstance::get();
+            auto daw = dawCtrl->getDaw();
             ThreadLock lock = daw->getPlayThread()->lockThread();
             auto* host = daw->getHost();
             std::vector<effectbase*> pluginsDeferred;
@@ -453,6 +456,8 @@ public:
     }
 };
 
-guictr_base* makeGuiPluginsLoadedList() {
-    return new gui_pluginsloaded_list();
+namespace DAW::UI {
+    guictr_base* makeGuiPluginsLoadedList(create_ctr_t ctxt) {
+        return new gui_pluginsloaded_list();
+    }
 }

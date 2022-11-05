@@ -304,8 +304,8 @@ private:
                         tickPos += props.ticksPerBlock * numBlocksProcessed;
                         if (m_status == status_playback) {
                             if (inLoop && tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
-                                // if (DawInstance::get()) {
-                                //     DawInstance::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
+                                // if (m_threadTls.dawInstance) {
+                                    // m_threadTls.dawInstance->setJumpFromTo(tickPos, projGlobals.loopStart);
                                 // }
                                 double nextTickPos    = projGlobals.loopStart;
                                 int32_t nextSamplePos = tickToSampleConvert<int32_t, roundmode::floor>(nextTickPos, bpm100, sampleRate);

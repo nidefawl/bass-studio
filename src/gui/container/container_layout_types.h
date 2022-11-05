@@ -1,4 +1,5 @@
 #pragma once
+#include "gui/container/container_builder.h"
 #include "gui/controls/button.h"
 #include "container.h"
 #include "gui/gui.h"
@@ -13,7 +14,7 @@ struct ContainerInstanceContext {
     std::map<gui_type, std::vector<std::shared_ptr<guictr_layout_entry>>> entriesPreconstructed;
 };
 
-using ContainerBuilder = std::function<std::shared_ptr<guictr_base>(ContainerInstanceContext& ctxt)>;
+using ContainerBuilder = std::function<std::shared_ptr<guictr_base>(create_ctr_t& ctxt)>;
 using ContainerFactory = std::map<gui_type, ContainerBuilder>;
 using ContainerRegistry = std::vector<std::pair<gui_type, String>>;
 ContainerFactory& getContainerFactory();
