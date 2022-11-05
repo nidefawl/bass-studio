@@ -2,10 +2,12 @@
 #include <cstdio>
 #include <memory>
 #include <nanovg.h>
+#include <nanovg_min.h>
 #include "assert_dbg.h"
 #include "clipeditor.h"
 
 #include "color_util.h"
+#include "gui/container/container.h"
 #include "gui/track/trackctr.h"
 #include "math/seq_math.h"
 #include "gui/gui.h"
@@ -376,12 +378,7 @@ void renderPlayHead(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& 
     if (viewClip) {
         tick_t tickPos = playbackPos;
         if (!bIsAbsoluteTime) {
-            tickPos -= viewClip->time + viewClip->offsetStart;
-            if (viewClip->loopEnabled && viewClip->loopLen > 0) {
-                if (tickPos > viewClip->loopStart) {
-                    tickPos = viewClip->loopStart + (tickPos - viewClip->loopStart) % viewClip->loopLen;
-                }
-            }
+            tickPos = viewClip->getLoopedTick(playbackPos - viewClip->start());
         }
         float playBackX = (float) grid.tickToScreenD(tickPos);
         if (playBackX > -4.0f && playBackX < handlesSize.x + 4.0f) {
@@ -401,20 +398,22 @@ void renderPlayHead(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& 
     }
 }
 void guictr_cliphandles::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
     nvgTranslate(vg, pos.x, pos.y);
     renderHandle(vg, 0);
 }
 
 guictr_noteeditor::guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_view& _view)
-    : guictr_editor_base(parentClipEditor, _view), layout_pianoroll_t(),
+    : guictr_editor_base(parentClipEditor, &content, _view), layout_pianoroll_t(),
       piano(_view, *this),
       content(grid, _view, *this),
       velocities(grid, _view, *this),
       ctrlData(grid, _view, *this),
       splitterVel(0, 0.75f)
 {
-    splitterVel.setMinMax(0.5f, 0.95f);
+    splitterVel.setMinMax(0.1f, 0.9f);
     splitterVel.setCallback(this);
     padding = 2;
     grid.showRange(0, TICKS_BAR * 4);
@@ -500,56 +499,6 @@ void guictr_noteeditor::renderBackground(NVGcontext* vg) {
     drawInsetBackground(vg, theme, getPosContent(), getSizeContent());
 }
 
-void guictr_noteeditor::layout() {
-    ivec2 cs = getSizeContent();
-
-    auto heightContent = cs.y - heightTimeLine - handlesHeight;
-    velHeight = math::clamp(splitterVel.rightOrBottom(heightContent), 0, 220);
-    if (!velocities.isVisible()) {
-        velocities.size = ivec2(cs.x - pianoWidth, 0);
-    } else {
-        heightContent -= velHeight;
-        velocities.size = ivec2(cs.x - pianoWidth, velHeight);
-    }
-    if (!ctrlData.isVisible()) {
-        ctrlData.size = ivec2(cs.x - pianoWidth, 0);
-    } else {
-        heightContent -= velHeight;
-        ctrlData.size = ivec2(cs.x - pianoWidth, velHeight);
-    }
-    piano.size      = ivec2(pianoWidth, heightContent);
-    piano.pos          = ivec2(0, heightTimeLine + handlesHeight);
-    timeline.pos       = ivec2(piano.right(), 0);
-    timeline.size      = ivec2(cs.x - pianoWidth, heightTimeLine);
-    auto clipHandlesPos = ivec2(timeline.left(), timeline.bottom() + heightSelIndicator);
-    auto insetClipHandleY = 4;
-    for (auto& clipHandles : clipsHandles) {
-        clipHandles->pos  = clipHandlesPos + ivec2(0, heightLoopInidicator * 2 * clipHandles->getTrackSelectionIdx() + insetClipHandleY);
-        clipHandles->size = ivec2(timeline.size.x, heightLoopInidicator * 2 - insetClipHandleY * 2);
-    }
-    content.pos        = ivec2(timeline.left(), timeline.bottom() + handlesHeight);
-    content.size       = ivec2(timeline.size.x, piano.size.y);
-    velocities.pos     = ivec2(timeline.left(), content.bottom());
-    ctrlData.pos     = ivec2(timeline.left(), velocities.bottom());
-    splitterVel.pos    = piano.getLeftBottom() - Splitter::SPLITTER_LAYOUT_THICKNESS / 2;
-    splitterVel.size   = ivec2(cs.x, Splitter::SPLITTER_LAYOUT_THICKNESS);
-    btnToggleFold.pos  = ivec2(padding, padding);
-    btnToggleFold.size = ivec2((pianoWidth) / 2, 18);
-    btnToggleVelocities.pos = btnToggleFold.getRightTop();
-    btnToggleVelocities.size = ivec2((pianoWidth) / 2, 18);
-    btnToggleControlData.pos = btnToggleFold.getLeftBottom();
-    btnToggleControlData.size = ivec2((pianoWidth) / 2, 18);
-    dropdownSelectControlData.setVisible(ctrlData.isVisible());
-    if (dropdownSelectControlData.isVisible()) {
-        dropdownSelectControlData.pos = ctrlData.getLeftTop() - ivec2(pianoWidth, 0);
-        dropdownSelectControlData.size = ivec2(pianoWidth, 18);
-    }
-    
-    grid.update(content.size);
-    for (guibase* gui: guis) {
-        gui->layout();
-    }
-}
 
 void guictr_noteeditor::gridChanged(scaled_grid& _grid) {
     ivec2 cs = getSizeContent();
@@ -565,7 +514,10 @@ void guictr_noteeditor::handleDraggedBegin(MouseEvent& evt) {
     }
 }
 
+void guictr_editor_base::zoomPianoRollToClipsNoteRange() {
+}
 void guictr_noteeditor::zoomPianoRollToClipsNoteRange() {
+    guictr_editor_base::zoomPianoRollToClipsNoteRange();
     clip_t* clip = view.clip();
     if (!clip || clip->isEmpty()) {
         content.showRange(CLIPEDITOR_DEFAULT_MIN, CLIPEDITOR_DEFAULT_MAX);
@@ -590,6 +542,20 @@ void guictr_noteeditor::zoomPianoRollToClipsNoteRange() {
 }
 
 void guictr_noteeditor::showEditClip() {
+    guictr_editor_base::showEditClip();
+    ctrlData.showEditClip();
+    clip_t* currentClip = view.clip();
+    if (currentClip) {
+        bool bIsAbsMode = view.isAbsoluteTimeMode();
+        auto& layout = bIsAbsMode ? view.selectionView.editorLayout : currentClip->editorLayout;
+        if (layout.noLayout) {
+            zoomPianoRollToClipsNoteRange();
+        } else {
+            setLayout(layout.layoutPianoRoll);
+        }
+    }
+}
+void guictr_editor_base::showEditClip() {
     clip_t* currentClip = view.clip();
     if (currentClip) {
         bool bIsAbsMode = view.isAbsoluteTimeMode();
@@ -600,13 +566,10 @@ void guictr_noteeditor::showEditClip() {
             } else {
                 grid.showRange(currentClip->offsetStart, currentClip->offsetStart + currentClip->getLen());
             }
-            zoomPianoRollToClipsNoteRange();
         } else {
             grid.setLayout(layout.layoutGrid);
-            setLayout(layout.layoutPianoRoll);
         }
     }
-    ctrlData.showEditClip();
     auto newClipHandleCount = view.selectionView.totalClipCount;
     auto curClipHandleCount = clipsHandles.size();
     for (size_t i = newClipHandleCount; i < curClipHandleCount; i++) {
@@ -660,7 +623,7 @@ void guictr_noteeditor::showEditClip() {
     }
 }
 
-void guictr_noteeditor::selectEditClip(gui_clip* gclip) {
+void guictr_editor_base::selectEditClip(gui_clip* gclip) {
     if (gclip != view.gui) {
         view.setSelected(gclip);
         if (!assert_expr(clipsHandles.size() >= view.selectionView.totalClipCount)) {
@@ -691,12 +654,7 @@ void guictr_noteeditor::selectEditClip(gui_clip* gclip) {
 void guictr_noteeditor::storeLayout() {
     clip_editor_layout_t& layout = view.selectionView.editorLayout;
     layout.layoutPianoRoll = *static_cast<layout_pianoroll_t*>(this);
-    layout.layoutGrid = grid;//TODO: add a cast to get rid of slicing warning
-    layout.noLayout   = false;
-    clip_t* clip = view.clip();
-    if (clip) {
-        clip->editorLayout = layout;
-    }
+    guictr_editor_base::storeLayout();
 }
 
 bool guictr_noteeditor::handleKeyInput(KeyEvent& kevt) {
@@ -752,30 +710,10 @@ void renderGridList(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& 
         nvgStroke(vg);
     }
 }
-void guictr_noteeditor::render(NVGcontext* vg) {
-    renderBackground(vg);
-    if (!setScissorTransform(vg)) {
-        return;
-    }
-    nvgSave(vg);
-    piano.render(vg);
-    nvgRestore(vg);
-    nvgSave(vg);
-    timeline.render(vg);
-    nvgRestore(vg);
-    nvgSave(vg);
-    content.render(vg);
-    nvgRestore(vg);
-    if (velocities.isVisible()) {
-        nvgSave(vg);
-        velocities.render(vg);
-        nvgRestore(vg);
-    }
-    if (ctrlData.isVisible()) {
-        nvgSave(vg);
-        ctrlData.render(vg);
-        nvgRestore(vg);
-    }
+void guictr_noteeditor::renderClipHandles(NVGcontext* vg) {
+    guictr_editor_base::renderClipHandles(vg);
+}
+void guictr_editor_base::renderClipHandles(NVGcontext* vg) {
     auto playbackPos = dawCtrl->getDaw()->getPlaybackPos();
     auto clip = view.clip();
     auto handlesPos = timeline.getLeftBottom();
@@ -793,7 +731,7 @@ void guictr_noteeditor::render(NVGcontext* vg) {
             auto col = trackIdx % 2 == 0 ? GuiColor::COL_GRID_DRK : GuiColor::COL_GRID_BRT;
             auto nvgCol = viewTrack == trackEntry.track ? rgbToNvg(trackEntry.track->rgb) : theme->getColor(col);
             nvgBeginPath(vg);
-            nvgRect(vg, handlesPos.x, handlesPos.y + heightSelIndicator + trackHandleHeight * trackIdx + 2, timeline.size.x, trackHandleHeight-2);
+            nvgRect(vg, handlesPos.x, handlesPos.y + heightSelIndicator + trackHandleHeight * trackIdx + 2, handlesSize.x, trackHandleHeight-2);
             nvgCol.a *= 0.5f;
             nvgFillColor(vg, nvgCol);
             nvgFillCustomPar(vg, -1);
@@ -831,11 +769,37 @@ void guictr_noteeditor::render(NVGcontext* vg) {
         nvgRestore(vg);
         if (viewClipHandle) {
             nvgTranslate(vg, viewClipHandle->pos.x, viewClipHandle->pos.y);
-            viewClipHandle->renderLoopHandle(vg, vec2(viewClipHandle->size.x, content.bottom() - viewClipHandle->top()));
+            viewClipHandle->renderLoopHandle(vg, vec2(viewClipHandle->size.x, pContent->bottom() - viewClipHandle->top()));
             nvgTranslate(vg, -viewClipHandle->pos.x, -viewClipHandle->pos.y);
         }
-        renderPlayHead(vg, theme, grid, content.pos, content.size, clip, playbackPos, view.isAbsoluteTimeMode(), 0.75f);
+        renderPlayHead(vg, theme, grid, pContent->pos, pContent->size, clip, playbackPos, view.isAbsoluteTimeMode(), 0.75f);
     }
+}
+void guictr_noteeditor::render(NVGcontext* vg) {
+    renderBackground(vg);
+    if (!setScissorTransform(vg)) {
+        return;
+    }
+    nvgSave(vg);
+    piano.render(vg);
+    nvgRestore(vg);
+    nvgSave(vg);
+    timeline.render(vg);
+    nvgRestore(vg);
+    nvgSave(vg);
+    content.render(vg);
+    nvgRestore(vg);
+    if (velocities.isVisible()) {
+        nvgSave(vg);
+        velocities.render(vg);
+        nvgRestore(vg);
+    }
+    if (ctrlData.isVisible()) {
+        nvgSave(vg);
+        ctrlData.render(vg);
+        nvgRestore(vg);
+    }
+    renderClipHandles(vg);
     if (btnToggleFold.isVisible())
         btnToggleFold.render(vg);
     if (btnToggleVelocities.isVisible())
@@ -850,7 +814,7 @@ void guictr_noteeditor::render(NVGcontext* vg) {
 
 
 gui_audiocontent::gui_audiocontent(scaled_grid& _grid, clip_view& _view)
-    : guictr_base(), grid(_grid), view(_view), waveformRef(new gui_waveform_texture_ref{}) {
+    : gui_clipcontent_base(_grid, _view), waveformRef(new gui_waveform_texture_ref{}) {
     padding = 0;
 }
 gui_audiocontent::~gui_audiocontent() {
@@ -867,6 +831,8 @@ void gui_audiocontent::renderAudioClip(NVGcontext* vg) {
     nvgRestore(vg);
 }
 void gui_audiocontent::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     renderAudioClip(vg);
 }
 void gui_audiocontent::releaseRendered() {
@@ -977,8 +943,8 @@ void gui_audiocontent::updatePosition() {
     }
 }
 void gui_audiocontent::onTick(AppCtrl* appctrl) {
-    if (tickOffset++ > 60) {
-        tickOffset = 0;
+    if (tickTimerRefresh++ > 60) {
+        tickTimerRefresh = 0;
         //updatePosition();
     }
 }
@@ -1006,9 +972,7 @@ void gui_audiocontent::prerender(NVGcontext* vg) {
 }
 
 void gui_audiocontent::layout() {
-    for (guibase* gui: guis) {
-        gui->layout();
-    }
+    guictr_base::layout();
 }
 
 bool gui_audiocontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
@@ -1016,21 +980,19 @@ bool gui_audiocontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
 }
 
 guictr_audioeditor::guictr_audioeditor(guictr_clipeditor& parentClipEditor, clip_view& _view)
-    : guictr_editor_base(parentClipEditor, _view),
-      content(grid, _view),
-      clipHandles(*this, grid) {
+    : guictr_editor_base(parentClipEditor, &content, _view),
+      content(grid, _view)
+{
     padding = 2;
     grid.showRange(0, TICKS_BAR * 4);
     grid.addCallback(this);
     add(&content);
     add(&timeline);
-    add(&clipHandles);
 }
 
 guictr_audioeditor::~guictr_audioeditor() {
     remove(&timeline);
     remove(&content);
-    remove(&clipHandles);
 }
 
 void guictr_audioeditor::buttonClicked(guibase* button) {
@@ -1044,18 +1006,78 @@ int32_t guictr_audioeditor::getTotalWidth() {
     return math::max(10000, getSizeContent().x);
 }
 
-void guictr_audioeditor::layout() {
-    ivec2 cs         = getSizeContent();
-    timeline.pos     = ivec2(0, 0);
-    timeline.size    = ivec2(cs.x, heightTimeLine);
-    clipHandles.pos  = ivec2(timeline.left(), timeline.bottom()+ heightSelIndicator);
-    clipHandles.size = ivec2(timeline.size.x, heightLoopInidicator * 2);
-    content.pos      = ivec2(timeline.left(), clipHandles.bottom());
-    content.size     = ivec2(timeline.size.x, cs.y - heightTimeLine - heightClipIndicators);
+void guictr_noteeditor::layout() {
+    ivec2 cs = getSizeContent();
+    timeline.pos       = ivec2(pianoWidth, 0);
+    timeline.size      = ivec2(cs.x - pianoWidth, heightTimeLine);
+    guictr_editor_base::layout();
 
+    piano.pos  = ivec2(0, timeline.bottom() + handlesHeight);
+    piano.size = ivec2(pianoWidth, cs.y - piano.pos.y);
+    posContentArea = piano.getRightTop();
+    sizeContentArea = cs - posContentArea;
+    velHeight = math::clamp(splitterVel.rightOrBottom(sizeContentArea.y), 0, 220);
+
+    if (velocities.isVisible() && ctrlData.isVisible()) {
+        velHeight /= 2;
+    }
+
+    auto sizeContent = sizeContentArea;
+    if (!velocities.isVisible()) {
+        velocities.size = ivec2(cs.x - pianoWidth, 0);
+    } else {
+        sizeContent.y -= velHeight;
+        velocities.size = ivec2(cs.x - pianoWidth, velHeight);
+    }
+    if (!ctrlData.isVisible()) {
+        ctrlData.size = ivec2(cs.x - pianoWidth, 0);
+    } else {
+        sizeContent.y -= velHeight;
+        ctrlData.size = ivec2(cs.x - pianoWidth, velHeight);
+    }
+    piano.size.y       = sizeContent.y;
+    content.pos        = posContentArea;
+    content.size       = sizeContent;
+    velocities.pos     = content.getLeftBottom();
+    ctrlData.pos       = velocities.getLeftBottom();
+    splitterVel.pos    = piano.getLeftBottom() - Splitter::SPLITTER_LAYOUT_THICKNESS / 2;
+    splitterVel.size   = ivec2(cs.x, Splitter::SPLITTER_LAYOUT_THICKNESS);
+    btnToggleFold.pos  = ivec2(padding, padding);
+    btnToggleFold.size = ivec2((pianoWidth) / 2, 18);
+    btnToggleVelocities.pos = btnToggleFold.getRightTop();
+    btnToggleVelocities.size = ivec2((pianoWidth) / 2, 18);
+    btnToggleControlData.pos = btnToggleFold.getLeftBottom();
+    btnToggleControlData.size = ivec2((pianoWidth) / 2, 18);
+    dropdownSelectControlData.setVisible(ctrlData.isVisible());
+    if (dropdownSelectControlData.isVisible()) {
+        dropdownSelectControlData.pos = ctrlData.getLeftTop() - ivec2(pianoWidth, 0);
+        dropdownSelectControlData.size = ivec2(pianoWidth, 18);
+    }
     grid.update(content.size);
     for (guibase* gui: guis) {
         gui->layout();
+    }
+}
+
+void guictr_audioeditor::layout() {
+    ivec2 cs = getSizeContent();
+    timeline.pos       = ivec2(0);
+    timeline.size      = ivec2(cs.x, heightTimeLine);
+    guictr_editor_base::layout();
+    content.pos        = ivec2(timeline.left(), timeline.bottom() + handlesHeight);
+    content.size       = ivec2(timeline.size.x, cs.y - (timeline.bottom() + handlesHeight));
+    grid.update(content.size);
+    for (guibase* gui: guis) {
+        gui->layout();
+    }
+}
+
+void guictr_editor_base::layout() {
+    auto clipHandlesPos = ivec2(timeline.left(), timeline.bottom() + heightSelIndicator);
+    auto insetClipHandleY = 4;
+    for (auto& clipHandles : clipsHandles) {
+        clipHandles->pos  = clipHandlesPos + ivec2(0, heightLoopInidicator * 2 * clipHandles->getTrackSelectionIdx() + insetClipHandleY);
+        clipHandles->size = ivec2(timeline.size.x, heightLoopInidicator * 2 - insetClipHandleY * 2);
     }
 }
 
@@ -1075,26 +1097,12 @@ void guictr_audioeditor::handleDraggedBegin(MouseEvent& evt) {
 }
 
 void guictr_audioeditor::showEditClip() {
-    this->clipHandles.getClipView() = view;
-    clip_t* clip = view.clip();
-    if (clip) {
-        auto& layout = clip->editorLayout;
-        if (layout.noLayout) {
-            grid.showRange(clip->offsetStart, clip->offsetStart + clip->getLen());
-        } else {
-            grid.setLayout(layout.layoutGrid);
-        }
-    }
+    guictr_editor_base::showEditClip();
     content.updatePosition();
 }
 
 void guictr_audioeditor::storeLayout() {
-    clip_t* clip = view.clip();
-    if (clip) {
-        auto& layout = clip->editorLayout;
-        layout.layoutGrid = grid;//TODO: add a cast to get rid of slicing warning
-        layout.noLayout   = false;
-    }
+    guictr_editor_base::storeLayout();
 }
 
 bool guictr_audioeditor::handleKeyInput(KeyEvent& kevt) {
@@ -1114,7 +1122,6 @@ bool guictr_audioeditor::handleMouseScroll(MouseEvent& evt, double xoffset, doub
 }
 
 void guictr_audioeditor::render(NVGcontext* vg) {
-
     renderBackground(vg);
     if (!setScissorTransform(vg)) {
         return;
@@ -1125,19 +1132,5 @@ void guictr_audioeditor::render(NVGcontext* vg) {
     nvgSave(vg);
     content.render(vg);
     nvgRestore(vg);
-    auto playbackPos = dawCtrl->getDaw()->getPlaybackPos();
-    auto clip = view.clip();
-    auto handlesPos = timeline.getLeftBottom();
-    auto handlesSize = vec2(clipHandles.size) + vec2(0, heightSelIndicator);
-    nvgSave(vg);
-    nvgIntersectScissor(vg, handlesPos.x, handlesPos.y, handlesSize.x, handlesSize.y);
-    renderClipHandlesBackground(vg, theme, grid, clipHandles.pos, clipHandles.size);
-    renderGridList(vg, theme, grid, handlesPos, handlesSize);
-    nvgSave(vg);
-    clipHandles.render(vg);
-    nvgRestore(vg);
-    clipHandles.renderLoopHandle(vg, {handlesSize.x, content.bottom() - handlesPos.y});
-    renderSelectionIndicator(vg, theme, grid, handlesPos, vec2(timeline.size.x, heightSelIndicator), clip, dawCtrl->getCursor(), heightSelIndicator);
-    nvgRestore(vg);
-    renderPlayHead(vg, theme, grid, pos, size, clip, playbackPos, view.isAbsoluteTimeMode(), 1.0f);
+    renderClipHandles(vg);
 }

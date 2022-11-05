@@ -264,6 +264,19 @@ public:
     tick_t getOffsetStart() const {
         return time - offsetStart;
     }
+    tick_t getLoopedTick(tick_t tick) const {
+        tick_t pos = tick;
+        auto preLoopLen = offsetStart < loopStart ? loopStart - offsetStart : 0;
+        if (isLoopEnabled()) {
+            if (tick >= preLoopLen) {
+                pos += math::max<tick_t>(0, offsetStart - loopStart);
+                pos = loopStart + ((pos - preLoopLen) % (loopLen));
+            }
+        } else {
+            pos += offsetStart;
+        }
+        return pos;
+    }
     int getInTimeRange(tick_t timeS, tick_t timeE, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& list);
     void getNotesView(tick_t timeS, tick_t timeE, clip_notes_t& notesView, bool forPlayback) const;
     noteview_render_t& getNoteViewRender() const {

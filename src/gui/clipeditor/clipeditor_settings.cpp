@@ -148,6 +148,8 @@ void gui_clipsettings::showEditClip() {
 
 
 void gui_clipsettings::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
     nvgTranslate(vg, pos.x, pos.y);
     renderFrameBase(vg);

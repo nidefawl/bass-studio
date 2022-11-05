@@ -653,25 +653,42 @@ void renderPlayHead(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& 
 class guictr_editor_base : public guictr_base, public grid_changed_cb, public ce_constants {
 protected:
     guictr_clipeditor& parentClipEditor;
+    gui_clipcontent_base* pContent;
     clip_view& view;
     scaled_grid grid;
     guitrack_timeline timeline;
+    std::vector<std::shared_ptr<guictr_cliphandles>> clipsHandles;
+    int32_t handlesHeight = heightClipIndicators;
+    virtual void zoomPianoRollToClipsNoteRange();
 public:
-    explicit guictr_editor_base(guictr_clipeditor& parentClipEditor, clip_view& _view)
+    explicit guictr_editor_base(guictr_clipeditor& parentClipEditor, gui_clipcontent_base* pContent, clip_view& _view)
         : guictr_base(),
           parentClipEditor(parentClipEditor),
+          pContent(pContent),
           view(_view),
           timeline(grid) {
     }
-
-    clip_view& getClipView() { return view; }
-    virtual void selectEditClip(gui_clip* gclip) {
-        if (gclip != view.gui) {
-            view.setSelected(gclip);
-        }
+    ~guictr_editor_base() override {
+        removeGuis();
     }
+
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    void layout() override;
+    
+    clip_view& getClipView() { return view; }
     virtual ivec2 getContentSize() const = 0;
     guictr_clipeditor& getClipEditor() { return parentClipEditor; }
+    virtual void showEditClip();
+    virtual void selectEditClip(gui_clip* gclip);
+    virtual void storeLayout() {
+        auto& layout = view.selectionView.editorLayout;
+        layout.layoutGrid = grid;
+        auto clip = view.clip();
+        if (clip) {
+            clip->editorLayout = layout;
+        }
+    }
+    virtual void renderClipHandles(NVGcontext* vg);
 };
 
 class guictr_clipeditor;
@@ -685,7 +702,6 @@ public:
     gui_clipcontent_notes content;
     gui_clipcontent_velocities velocities;
     gui_clipcontent_control_data ctrlData;
-    std::vector<std::shared_ptr<guictr_cliphandles>> clipsHandles;
     guibuttonstate btnToggleFold;
     guibuttonstate btnToggleVelocities;
     guibuttonstate btnToggleControlData;
@@ -693,12 +709,11 @@ public:
     Splitter splitterVel;
     int32_t velHeight = 120;
     int32_t pianoWidth = 100;
-    int32_t handlesHeight = heightClipIndicators;
-
-private:
+    ivec2 posContentArea{ 0, 0 };
+    ivec2 sizeContentArea{ 0, 0 };
+protected:
     void setLayout(layout_pianoroll_t& layout);
-    void zoomPianoRollToClipsNoteRange();
-
+    void zoomPianoRollToClipsNoteRange() override;
 public:
     explicit guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_view& _view);
     ~guictr_noteeditor() override;
@@ -706,6 +721,7 @@ public:
     void buttonClicked(guibase* button) override;
     void renderBackground(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
+    void renderClipHandles(NVGcontext* vg) override;
     void layout() override;
     void handleDraggedBegin(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
@@ -714,9 +730,8 @@ public:
         return content.handleEditorCommand(ctxt);
     }
     void gridChanged(scaled_grid& _grid) override;
-    void showEditClip();
-    void selectEditClip(gui_clip* gclip) override;
-    void storeLayout();
+    void showEditClip() override;
+    void storeLayout() override;
     scaled_grid& getGrid() {
         return grid;
     }
@@ -725,23 +740,21 @@ public:
     }
     void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override;
     ivec2 getContainerSize() override {
-        return size;
+        return sizeContentArea;
     }
     ivec2 getContentSize() const override {
-        return content.size;
+        return sizeContentArea;
+    }
+    ivec2 getContainerPos() override {
+        return toScreenSpace(posContentArea);
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 };
 
-class gui_audiocontent : public guictr_base {
-public:
-    scaled_grid& grid;
-    clip_view& view;
-
-private:
+class gui_audiocontent : public gui_clipcontent_base {
     audioclip_texture_t updatedWaveform;
     gui_waveform_texture_ref* waveformRef;
-    int32_t tickOffset  = 0;
+    int32_t tickTimerRefresh  = 0;
     void renderAudioClip(NVGcontext* vg);
     clip_dragaction action;
 public:
@@ -834,7 +847,7 @@ public:
 class guictr_audioeditor : public guictr_editor_base {
 public:
     gui_audiocontent content;
-    guictr_cliphandles clipHandles;
+    // guictr_cliphandles clipHandles;
 private:
 public:
     explicit guictr_audioeditor(guictr_clipeditor& parentClipEditor, clip_view& _view);
@@ -844,6 +857,7 @@ public:
     void renderBackground(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
     void layout() override;
+    // bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void handleDraggedBegin(MouseEvent& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
@@ -854,8 +868,8 @@ public:
     void gridChanged(scaled_grid& _grid) override;
 
     int32_t getTotalWidth();
-    void showEditClip();
-    void storeLayout();
+    void showEditClip() override;
+    void storeLayout() override;
     ivec2 getContentSize() const override {
         return content.size;
     }

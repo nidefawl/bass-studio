@@ -165,12 +165,9 @@ void guictr_clipeditor::showEditClip(gui_clip* gclip, const clipboard_view_t& cl
     noteeditor.setVisible(isMidi);
     audioeditor.setVisible(!isMidi);
     settings.showEditClip();
-    if (isMidi) {
-        noteeditor.showEditClip();
-        arp.showEditClip();
-    } else {
-        audioeditor.showEditClip();
-    }
+    noteeditor.showEditClip();
+    audioeditor.showEditClip();
+    arp.showEditClip();
     layout();
 }
 
@@ -402,6 +399,8 @@ void duplicateClipLoop(DawInstance* daw, clip_view& view) {
 }
 
 void gui_clipcontent_base::renderBackground(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     ivec2 bgPos{0, 0};
     ivec2 bgSize{this->size};
     auto bgRepeat = grid.incr_bg * 2.0;
@@ -831,6 +830,8 @@ void gui_clipcontent_notes::renderClipNoteRects(NVGcontext* vg, const std::vecto
     }
 }
 void gui_clipcontent_notes::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     if (size.x < 5 || size.y < 5) {
         return;
     }
@@ -2250,6 +2251,8 @@ void guictr_clipeditorview::getFrameBounds(vec2& posFrame, vec2& sizeFrame) {
 }
 
 void guictr_clipeditorview::render(NVGcontext* vg) {
+    if (!isRenderableSizeAndContext(vg))
+        return;
     ivec2 posContents = this->getPosContent();
     ivec2 sizeContents = this->getSizeContent();
 
@@ -2465,7 +2468,7 @@ tick_t guictr_cliphandles::getTickOffsetOffset() const {
     }
     return offset;
 }
-bool guictr_noteeditor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+bool guictr_editor_base::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (this->contains(mpos)) {
         ivec2 localMouse = this->toContainerSpace(mpos);
         size_t numHandleDist = 0;
@@ -2547,6 +2550,9 @@ bool guictr_noteeditor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         }
     }
     return false;
+}
+bool guictr_noteeditor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    return guictr_editor_base::mouseHitTest(mpos, evt);
 }
 
 tick_t gui_clipcontent_base::getTickOffset() const {
