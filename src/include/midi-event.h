@@ -20,7 +20,7 @@ struct midievent_note_t {
     midievent_note_t(int32_t p, int32_t v, tick_t t, tick_t gt, bool b, bool b2)
         : pitch(p), velocity(v), tickOffsetInBlock(math::max(0, t)), globalTick(gt), isNoteOn(b), isLoopNoteOff(b2) {
     }
-    String ToString();
+    String ToString() const;
 };
 
 template<typename Evt>
@@ -38,8 +38,9 @@ void InsertMidiEventSortedCopy(std::vector<Evt>& list, const Evt& evt) {
 namespace DAW::Host {
     struct note_event_validator_t {
         std::array<int32_t, 128> prevNoteCounts{};
-        void validate(const std::vector<midievent_note_t>& notes) {
-            for (const auto& note : notes) {
+        int32_t numValidationErrors = 0;
+        void validate(const std::vector<midievent_note_t>& evts) {
+            for (const auto& note : evts) {
                 auto& count = prevNoteCounts[note.pitch];
                 if (note.isNoteOn) {
                     count++;
@@ -48,7 +49,15 @@ namespace DAW::Host {
                 }
                 if (count > 1 || count < 0) {
                     log_lf(Log::L_ERROR, "Note %d %s has %d events\n", note.pitch, noteName(note.pitch), count);
-                    dbgassert(0);
+                    // dbgassert(0);
+                    if (numValidationErrors++ < 5) {
+                        // Print all events
+                        for (const auto& evt : evts) {
+                            String asString = evt.ToString();
+                            auto idx = &evt - &evts[0];
+                            log_lf(Log::L_ERROR, "Evt[%ld] %s\n", idx, asString.c_str());
+                        }
+                    }
                 }
             }
         }
