@@ -34,6 +34,13 @@ void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, 
     nvgStroke(vg);
 }
 
+int32_t track_gui_entry_t::getHeight() const {
+    if (layout.hideTrack) {
+        return math::max<int32_t>(1, CtrSize(track->children));
+    }
+    return layout.height;
+}
+
 void guitrack_mixers::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
@@ -83,7 +90,7 @@ void guitrack_mixers::removeTrackEntry(track_gui_entry_t& e) {
 int32_t guictr_tracks::getTrackTotalHeight(track_gui_entry_t* e) {
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
-    int32_t trH = e->isHidden() ? 1 : e->layout.height;
+    int32_t trH = e->getHeight();
     int32_t totalHeight = trH * TRACK_HEIGHT_STEP;
 
     if (!(e->isHidden() || e->layout.hideSubtracks)) {
@@ -97,17 +104,16 @@ int32_t guictr_tracks::setTrackPosition(track_gui_entry_t* e, int32_t y, bool is
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
     int32_t childTrackInsetX = e->track->getChildLvl() * 8;
-
+    bool bIsHidden   = e->isHidden();
     ivec2& cntPos    = e->content->pos;
     ivec2& mxrPos    = e->mixer->pos;
     cntPos           = ivec2(0, y);
     mxrPos           = ivec2(childTrackInsetX, y);
-    int32_t trH      = e->isHidden() ? 1 : e->layout.height;
+    int32_t trH      = e->getHeight();
     e->content->size = ivec2(trackView.size.x, trH * TRACK_HEIGHT_STEP);
     int32_t x2       = e->content->left();
     int32_t y2       = e->content->bottom();
-
-    if (!(e->isHidden() || e->layout.hideSubtracks)) {
+    if (!(bIsHidden || e->layout.hideSubtracks)) {
         for (auto t2 : e->subtracks) {
             int trackheight2 = t2->height * TRACK_HEIGHT_STEP;
 
@@ -753,10 +759,11 @@ void guitrack_topleft::buttonClicked(guibase* _button) {
         isFolded = !isFolded;
 
         for (track_gui_entry_t* entry : iGuiMgr.getTracksVisibleFlat()) {
-            if (entry->parent->parent == nullptr && TRACKTYPE_TO_CTR(entry->track->type) == TRACK_CTR_MIDIAUDIO) {
-                entry->layout.hideTrack = isFolded;
-                updateStoreLoadSubtracks(entry->parent, entry);
+            if (!isFolded && TRACKTYPE_TO_CTR(entry->track->type) != TRACK_CTR_MIDIAUDIO) {
+                continue;
             }
+            entry->layout.hideTrack = isFolded;
+            updateStoreLoadSubtracks(entry->parent, entry);
         }
         dawCtrl->updateVisibleTrackContents();
     }

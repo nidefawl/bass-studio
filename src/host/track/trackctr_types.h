@@ -41,6 +41,7 @@ struct track_gui_entry_t {
     bool isHidden() const {
         return layout.hideTrack && track->children.empty();
     }
+    int32_t getHeight() const;
 };
 
 void getTrackGuiYBounds(const track_gui_entry_t* track, ivec2& topBottom);
