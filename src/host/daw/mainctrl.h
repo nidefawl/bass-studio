@@ -123,7 +123,7 @@ namespace DAW {
     String MakeUniqueTrackName(project_t* project, const String& strNewName);
     void OpenFloatingTextInput(DawCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& initialStr, const std::function<bool(const String& str)>& callback);
     void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry);
-    void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, clipboard_view_t& view);
+    void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, clipboard_view_t& view, gui_clip* contextClip);
     clip_t* GetClipFromTime(clipboard_view_t& view, tick_t time);
 }// namespace DAW
 

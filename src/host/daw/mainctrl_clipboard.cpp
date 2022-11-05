@@ -362,16 +362,33 @@ namespace DAW {
         }
         return isEmpty;
     }
-    void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, clipboard_view_t& view) {
+    void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, clipboard_view_t& view, gui_clip* contextClip) {
         clipboard_track_view_t trackView;
-        auto numTracks = math::max(0, cursor.getTrackRange() + 1);
+        DAW::Cursor cursorCopy = cursor;
+        if (contextClip && contextClip->m_clip) {
+            auto clip = contextClip->m_clip;
+            if (contextClip->m_trackentry->idx < cursor.getTrackBegin()) {
+                cursorCopy.setTrackBegin(contextClip->m_trackentry->idx);
+            }
+            if (contextClip->m_trackentry->idx > cursor.getTrackEnd()) {
+                cursorCopy.setTrackEnd(contextClip->m_trackentry->idx);
+            }
+            if (clip->start() < cursorCopy.getTickBegin()) {
+                cursorCopy.setBegin(clip->start());
+            }
+            if (clip->end() > cursorCopy.getTickEnd()) {
+                cursorCopy.setEnd(clip->end());
+            }
+        }
+
+        auto numTracks = math::max(0, cursorCopy.getTrackRange() + 1);
         for (int i = 0; i < numTracks; i++) {
-            auto trackIdx = cursor.getTrackBegin() + i;
+            auto trackIdx = cursorCopy.getTrackBegin() + i;
             if (trackList.validTrackIdx(trackIdx)) {
                 const track_gui_entry_t* tr = trackList.at(trackIdx);
                 auto& midi = tr->track->getConstMidi();
                 auto szBefore = trackView.second.size();
-                midi.getClipsInRange(cursor.getTickBegin(), cursor.getTickEnd(), trackView.second);
+                midi.getClipsInRange(cursorCopy.getTickBegin(), cursorCopy.getTickEnd(), trackView.second);
                 if (view.totalClipCount == 0 && trackView.second.size()) {
                     view.minClipStart = trackView.second.front()->start();
                     view.maxClipEnd   = trackView.second.back()->end();

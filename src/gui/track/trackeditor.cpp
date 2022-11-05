@@ -671,12 +671,7 @@ void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& ev
             auto gClip = DAW::GetClipGuiFromTime(trNxtSelected, tick);
             if (gClip) {
                 clipboard_view_t view;
-                if (cursor.getRange()) {
-                    DAW::GetClipboardView(iGuiMgr, cursor, view);
-                }
-                if (view.tracks.empty()) {
-                    view = DAW::GetClipboardViewFromGuiClip(gClip);
-                }
+                DAW::GetClipboardView(iGuiMgr, cursor, view, gClip);
                 daw->setEditClip(gClip, view);
             }
         }
@@ -894,12 +889,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
         action.dragtype = DRAG_NONE;
         if (showclip) {
             clipboard_view_t view;
-            if (cursor.getRange()) {
-                DAW::GetClipboardView(iGuiMgr, cursor, view);
-            }
-            if (view.tracks.empty()) {
-                view = DAW::GetClipboardViewFromGuiClip(gui);
-            }
+            DAW::GetClipboardView(iGuiMgr, cursor, view, gui);
             daw->setEditClip(gui, view);
             if (gui)
                 dawCtrl->showClipEditor();

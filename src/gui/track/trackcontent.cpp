@@ -345,13 +345,7 @@ void gui_audio_clip::handleDraggedBegin(MouseEvent& evt) {
             shapeEdit.onBeginDragCurveEditor(evtOffset);
             editState->dataBefore = m_clip->audio;
             clipboard_view_t view;
-            auto& cursor = dawCtrl->getCursor();
-            if (cursor.getRange()) {
-                DAW::GetClipboardView(m_trackentry->parent->guiMgr, cursor, view);
-            }
-            if (view.tracks.empty()) {
-                view = DAW::GetClipboardViewFromGuiClip(this);
-            }
+            DAW::GetClipboardView(m_trackentry->parent->guiMgr, dawCtrl->getCursor(), view, this);
             daw->setEditClip(this, view);
             return;
         }
