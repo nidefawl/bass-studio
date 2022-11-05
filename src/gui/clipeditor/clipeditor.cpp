@@ -153,6 +153,7 @@ void guictr_clipeditor::storeLayout() {
 
 void guictr_clipeditor::selectEditClip(gui_clip* gclip) {
     noteeditor.selectEditClip(gclip);
+    audioeditor.selectEditClip(gclip);
     settings.showEditClip();
     arp.showEditClip();
 }
