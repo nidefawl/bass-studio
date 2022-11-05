@@ -1721,7 +1721,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
             } else if (command == CMD_COPY && !notes.selection.empty()) {
                 auto clipboard = std::make_shared<notes_clipboard>();
                 clipboard->cursorRange = cursor.end - cursor.start;
-                clipboard->notes.setTo(notes.selection, -cursor.start);
+                clipboard->notes.setTo(notes.selection, -(cursor.start - getTickOffset()));
                 daw->setNotesClipboard(clipboard);
                 handled = true;
                 desc    = "Copy notes";// never appears in list
@@ -1732,7 +1732,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     dbgassert(notes.has(selPtr));
                 }
 #endif
-                tmpClipboard.setTo(notes.selection, -cursor.start);
+                tmpClipboard.setTo(notes.selection, -(cursor.start - getTickOffset()));
                 tick_t cursorRange = cursor.end - cursor.start;
                 cursor.start += cursorRange;
                 cursor.end += cursorRange;
@@ -1740,7 +1740,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 view.copySelectedNoteList();
                 view.draggedSelection.clear();
                 for (note_t note: tmpClipboard.m_list) {//not using reference here, copy while iterating
-                    note.time += cursor.start;
+                    note.time += cursor.start - getTickOffset();
                     view.draggedSelection.push_back(note);
                 }
                 mergeDraggedNotes(dragmode::drag_notes_copy);
@@ -1751,7 +1751,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
 #endif
                 auto pair = getMinMaxTime(notes.selection);
                 if (pair.second)
-                    grid.makeTickVisible(pair.second->end());
+                    grid.makeTickVisible(pair.second->end() + getTickOffset());
                 handled = true;
                 edit    = true;
                 desc    = "Duplicate notes";
@@ -1761,14 +1761,15 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 view.copySelectedNoteList();
                 view.draggedSelection.clear();
                 for (note_t note: clipboard->notes.m_list) {//not using reference here, copy while iterating
-                    note.time += cursor.start;
+                    // note.time += cursor.start;
+                    note.time += cursor.start - getTickOffset();
                     view.draggedSelection.push_back(note);
                 }
                 mergeDraggedNotes(dragmode::drag_notes_move);
                 view.cursor.end = cursor.start + clipboard->cursorRange;
                 auto pair = getMinMaxTime(notes.selection);
                 if (pair.second)
-                    grid.makeTickVisible(pair.second->end());
+                    grid.makeTickVisible(pair.second->end() + getTickOffset());
                 handled = true;
                 edit    = true;
                 desc    = "Paste notes";
@@ -1808,7 +1809,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
 #endif
                     auto pair = getMinMaxTime(notes.selection);
                     if (pair.second)
-                        grid.makeTickVisible(pair.second->end());
+                        grid.makeTickVisible(pair.second->end() + getTickOffset());
                     expandSelectionFrame(pair);
                     edit = true;
                     handled = true;
@@ -1860,16 +1861,16 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     auto pair = getMinMaxTime(notes.selection);
                     if (dir.x < 0) {
                         if (pair.first) {
-                            grid.makeTickVisible(pair.first->start());
+                            grid.makeTickVisible(pair.first->start() + getTickOffset());
                         }
                     } else if (dir.x > 0) {
                         if (pair.second) {
-                            grid.makeTickVisible(pair.second->end());
+                            grid.makeTickVisible(pair.second->end() + getTickOffset());
                         }
                     }
                     edit = true;
                 } else {
-                    grid.makeTickVisible(cursor.start);
+                    grid.makeTickVisible(cursor.start + getTickOffset());
                 }
             }
             handled = true;
@@ -1966,7 +1967,7 @@ bool gui_clipcontent_control_data::handleEditorCommand(DAW::UI::CommandContext& 
                 if (!selection.empty()) {
                     edit = true;
                 } else {
-                    grid.makeTickVisible(cursor.start);
+                    grid.makeTickVisible(cursor.start + getTickOffset());
                 }
             }
             handled = true;
