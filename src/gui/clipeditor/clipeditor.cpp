@@ -170,11 +170,23 @@ void guictr_clipeditor::selectEditClip(gui_clip* gclip) {
         parent->layout();
     }
 }
+
 void guictr_clipeditor::showEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
     bool bChanged = gclip != view.gui;
     view.set(gclip, clipboardView);
     if (bChanged || !gclip) {
         onViewChanged(gclip);
+        noteeditor.showEditClip();
+        audioeditor.showEditClip();
+        parent->layout();
+    }
+}
+
+void guictr_clipeditor::resetClipView() {
+    bool bChanged = nullptr != view.gui;
+    view.set(nullptr, {});
+    if (bChanged) {
+        onViewChanged(nullptr);
         noteeditor.showEditClip();
         audioeditor.showEditClip();
         parent->layout();

@@ -902,6 +902,7 @@ public:
     clip_view& getClipView() {
         return view;
     }
+    void resetClipView();
 };
 
 

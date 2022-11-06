@@ -1735,7 +1735,7 @@ void DawCtrl::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
 }
 
 void DawCtrl::resetClipViews() {
-    getClipEditor()->getClipView().reset();
+    getClipEditor()->resetClipView();
 }
 
 void DawInstance::destroy() {
