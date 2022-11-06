@@ -2133,7 +2133,7 @@ namespace DAW::Host {
 void noteevent_buffer::update(tick_t blockStart, const std::vector<midievent_note_t>& _noteEvts, const std::vector<midievent_ctrl_t>& _ctrlEvts) {
     this->currentTick = blockStart;
     addAll(noteEvts, _noteEvts);
-    const tick_t eventTimeout = 10000;// TODO: calculate this depending on the total latency
+    const tick_t eventTimeout = 5555;// TODO: calculate this depending on the total latency
     auto it                   = noteEvts.begin();
     while (it != noteEvts.end()) {
         auto& evt = *it;
@@ -2146,19 +2146,21 @@ void noteevent_buffer::update(tick_t blockStart, const std::vector<midievent_not
     // addAll(ctrlEvts, _ctrlEvts);
     auto itSrc = _ctrlEvts.begin();
     auto itEvt = ctrlEvts.begin();
-    while (itEvt != ctrlEvts.end() && itSrc != _ctrlEvts.end()) {
-        auto& src = *itSrc;
+    while (itEvt != ctrlEvts.end()) {
         if (itEvt->tick < currentTick - (eventTimeout)) {
             itEvt = ctrlEvts.erase(itEvt);
             continue;
         }
-        if (itEvt->tick > src.tick) {
-            itEvt = ctrlEvts.insert(itEvt, src);
-            itSrc++;
-            continue;
-        }
-        if (itEvt->tick == src.tick && itEvt->message == src.message) {
-            break;
+        if (itSrc != _ctrlEvts.end()) {
+            auto& src = *itSrc;
+            if (itEvt->tick > src.tick) {
+                itEvt = ctrlEvts.insert(itEvt, src);
+                itSrc++;
+                continue;
+            }
+            if (itEvt->tick == src.tick && itEvt->message == src.message) {
+                itSrc++;
+            }
         }
         itEvt++;
     }
