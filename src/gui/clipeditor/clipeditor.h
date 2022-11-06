@@ -267,7 +267,7 @@ public:
         setScale(rangeScale);//TODO: maybe only zoom out here, not in (or determine on upper level)
         setOffset(math::min(noteFrom, noteTo) * layoutRoll.scale());
     }
-    void makeNoteVisible(int32_t noteFrom) {
+    void makeNotePitchVisible(int32_t noteFrom) {
         float foldNote   = layoutRoll.bFoldNotes ? this->clipview.toFoldNote(noteFrom) : noteFrom;
         float offsetNote = foldNote * layoutRoll.scale();
         if (offsetNote < layoutRoll.offset()) {// below visible area

@@ -648,6 +648,7 @@ void guictr_editor_base::showEditClip() {
             }
         }
     }
+    (void) foundThis;
     dbgassert(!currentClip || !view.selectionView.totalClipCount || foundThis);
     dbgassert(clipsHandles.size() >= view.selectionView.totalClipCount);
     for (size_t i = 0; i < view.selectionView.totalClipCount; i++) {
@@ -814,9 +815,11 @@ void guictr_noteeditor::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
+#ifndef NDEBUG
     for (auto& c : clipsHandles) {
         dbgassert(c->pos.x == timeline.pos.x && c->pos.x == pianoWidth);
     }
+#endif
     nvgSave(vg);
     piano.render(vg);
     nvgRestore(vg);
@@ -1049,9 +1052,11 @@ void guictr_noteeditor::layout() {
     timeline.pos       = ivec2(pianoWidth, 0);
     timeline.size      = ivec2(cs.x - pianoWidth, heightTimeLine);
     guictr_editor_base::layout();
+#ifndef NDEBUG
     for (auto& c : clipsHandles) {
         dbgassert(c->pos.x == timeline.pos.x && c->pos.x == pianoWidth);
     }
+#endif
 
     piano.pos  = ivec2(0, timeline.bottom() + handlesHeight);
     piano.size = ivec2(pianoWidth, cs.y - piano.pos.y);

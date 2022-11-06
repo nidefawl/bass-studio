@@ -1776,7 +1776,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
             } else if (command == CMD_CUT && !notes.selection.empty()) {
                 auto clipboard = std::make_shared<notes_clipboard>();
                 clipboard->cursorRange = cursor.end - cursor.start;
-                clipboard->notes.setTo(notes.selection, -cursor.start);
+                clipboard->notes.setTo(notes.selection, -(cursor.start - getTickOffset()));
                 daw->setNotesClipboard(clipboard);
                 notes.deleteSelectedNotes(notes);
                 handled = true;
@@ -1895,11 +1895,11 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                 auto pair = getMinMaxSemitones(view.draggedSelection);
                 if (dir.y < 0) {
                     if (pair.first) {
-                        makeNoteVisible(pair.first->pitch);
+                        makeNotePitchVisible(pair.first->pitch);
                     }
                 } else if (dir.y > 0) {
                     if (pair.second) {
-                        makeNoteVisible(pair.second->pitch);
+                        makeNotePitchVisible(pair.second->pitch);
                     }
                 }
                 edit = true;
@@ -1934,7 +1934,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     }
                     edit = true;
                 } else {
-                    grid.makeTickVisible(cursor.start + getTickOffset());
+                    grid.makeTickVisible(cursor.start);
                 }
             }
             handled = true;
