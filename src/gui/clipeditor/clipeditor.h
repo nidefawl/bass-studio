@@ -236,7 +236,7 @@ public:
         int32_t rel     = (sizeY - 1) - y;
         float offsetKey = rel + layoutRoll.offset();
         float note      = offsetKey / layoutRoll.scale();
-        if (layoutRoll.fold) {
+        if (layoutRoll.bFoldNotes) {
             if (clamp) {
                 return this->clipview.unfoldNoteClamped(note);
             }
@@ -251,7 +251,7 @@ public:
         return toNoteFImpl(y, false);
     }
     float toScreenF(float note) const {
-        if (layoutRoll.fold) {
+        if (layoutRoll.bFoldNotes) {
             note = this->clipview.toFoldNote(note);
         }
         float offsetKey = note * layoutRoll.scale();
@@ -268,7 +268,7 @@ public:
         setOffset(math::min(noteFrom, noteTo) * layoutRoll.scale());
     }
     void makeNoteVisible(int32_t noteFrom) {
-        float foldNote   = layoutRoll.fold ? this->clipview.toFoldNote(noteFrom) : noteFrom;
+        float foldNote   = layoutRoll.bFoldNotes ? this->clipview.toFoldNote(noteFrom) : noteFrom;
         float offsetNote = foldNote * layoutRoll.scale();
         if (offsetNote < layoutRoll.offset()) {// below visible area
             setOffset(offsetNote);
@@ -608,6 +608,7 @@ public:
     explicit guictr_cliphandles(guictr_editor_base& parentEditor, scaled_grid& _grid)
         : parentEditor(parentEditor), grid(_grid) {
         setBackgroundRendered(true);
+        setGuiType(gui_type::GUI_CLIPEDITOR_CLIPHANDLES);
     }
     void setHandleActive(bool b) {
         bIsHandleActive = b;
@@ -666,6 +667,7 @@ public:
           pContent(pContent),
           view(_view),
           timeline(grid) {
+        setCanMouseHit(true);
     }
     ~guictr_editor_base() override {
         removeGuis();
@@ -701,22 +703,27 @@ public:
     gui_clipcontent_notes content;
     gui_clipcontent_velocities velocities;
     gui_clipcontent_control_data ctrlData;
+    guibuttonstate btnShowClipSettings;
+    guibuttonstate btnShowArp;
+    guibuttonstate btnShowVelocities;
+    guibuttonstate btnShowControlData;
     guibuttonstate btnToggleFold;
-    guibuttonstate btnToggleVelocities;
-    guibuttonstate btnToggleControlData;
     guidropdown_generic<String> dropdownSelectControlData;
     Splitter splitterVel;
     int32_t velHeight = 120;
     int32_t pianoWidth = 100;
     ivec2 posContentArea{ 0, 0 };
     ivec2 sizeContentArea{ 0, 0 };
+    std::array<guibase*, 5> buttonList = { &btnShowClipSettings, &btnShowArp, &btnShowVelocities, &btnShowControlData, &btnToggleFold };
+    bool bShowControlData = true;
+    bool bShowVelocity = true;
 protected:
     void setLayout(layout_pianoroll_t& layout);
     void zoomPianoRollToClipsNoteRange() override;
 public:
     explicit guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_view& _view);
     ~guictr_noteeditor() override;
-
+    void setControl(BaseCtrl *parentCtrl) override;
     void buttonClicked(guibase* button) override;
     void renderBackground(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
@@ -730,6 +737,7 @@ public:
     }
     void gridChanged(scaled_grid& _grid) override;
     void showEditClip() override;
+    void selectEditClip(gui_clip* gclip) override;
     void storeLayout() override;
     scaled_grid& getGrid() {
         return grid;
@@ -883,6 +891,7 @@ public:
     explicit guictr_clipeditor();
     ~guictr_clipeditor() override;
     void storeLayout();
+    void onViewChanged(gui_clip* gclip);
     void showEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView);
     void selectEditClip(gui_clip* gclip);
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;

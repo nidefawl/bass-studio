@@ -172,20 +172,22 @@ NVGcolor getContrastFontColorNvg(NVGcolor i) {
     return rgbToNvg(getContrastFontColoru32(nvgToRGB(i)));
 }
 
-uint32_t getContrastFontColoru32(uint32_t color) {
+float getLuminance(uint32_t color) {
     glm::vec4 rgb4 = int32vec4(color);
     for (int i = 0; i < 3; i++) {
-        double c = rgb4[i];
-        if (c <= 0.03928) {
-            c = c / 12.92;
+        auto& c = rgb4[i];
+        if (c <= 0.03928f) {
+            c = c / 12.92f;
         } else {
-            c = pow(((c + 0.055) / 1.055), 2.4);
+            c = math::powf(((c + 0.055f) / 1.055f), 2.4f);
         }
-        rgb4[i] = (float) c;
     }
-    double lum = 0.2126f * rgb4.x + 0.7152f * rgb4.y + 0.0722f * rgb4.z;
+    return 0.2126f * rgb4.x + 0.7152f * rgb4.y + 0.0722f * rgb4.z;
+}
 
-    if (lum > 0.179) {
+uint32_t getContrastFontColoru32(uint32_t color) {
+    auto lum = getLuminance(color);
+    if (lum > 0.179f) {
         return 0x000000;
     }
     return 0xffffff;

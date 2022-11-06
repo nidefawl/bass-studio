@@ -48,6 +48,11 @@ namespace daw_tls {
         dbgassert(tls.settings);
         return *tls.settings;
     }
+    app_daw_settings& getDawSettings() {
+        dbgassert(tls.tlsInitialized);
+        dbgassert(tls.settings);
+        return tls.settings->dawsettings;
+    }
 }// namespace daw_tls
 
 plugindatabase_t* plugindatabase_t::getInstance() {

@@ -147,7 +147,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
     nvgFillColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_WHITE));
     nvgFill(vg);
 
-    bool fold        = layoutRoll.fold;
+    bool fold        = layoutRoll.bFoldNotes;
     float offset     = layoutRoll.offset();
     float scale      = layoutRoll.scale();
     int32_t firstKey = math::max((int32_t) floorf(offset / scale), 0);

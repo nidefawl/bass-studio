@@ -4,20 +4,20 @@
 struct layout_pianoroll_t {
     float yscale      = 10.0f;
     float yoffset     = 0.0f;
-    bool fold         = false;
+    bool bFoldNotes         = false;
     float yscalefold  = 10.0f;
     float yoffsetfold = 0.0f;
     float& offset() {
-        return fold ? this->yoffsetfold : this->yoffset;
+        return bFoldNotes ? this->yoffsetfold : this->yoffset;
     }
     float& scale() {
-        return fold ? this->yscalefold : this->yscale;
+        return bFoldNotes ? this->yscalefold : this->yscale;
     }
     float offset() const {
-        return fold ? this->yoffsetfold : this->yoffset;
+        return bFoldNotes ? this->yoffsetfold : this->yoffset;
     }
     float scale() const {
-        return fold ? this->yscalefold : this->yscale;
+        return bFoldNotes ? this->yscalefold : this->yscale;
     }
 };
 struct layout_grid_t {

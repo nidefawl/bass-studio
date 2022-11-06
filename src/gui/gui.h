@@ -113,6 +113,7 @@ enum gui_type : uint16_t {
     GUI_TYPE_KNOB,
     GUI_TYPE_SCROLLBAR,
     GUI_TYPE_TEXTFIELD,
+    GUI_CLIPEDITOR_CLIPHANDLES,
     CTR_TYPE_UNKNOWN = 100,
     CTR_TYPE_LAYOUT,
     CTR_TYPE_PROPERTIES,
@@ -518,9 +519,7 @@ public:
         return getBackgroundColorFromState(getStateFlags());
     }
 
-    virtual GuiColor::constant_t getLabelColor() const {
-        return (getStateFlags() & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
-    }
+    virtual GuiColor::constant_t getLabelColor() const;
 
     virtual GuiColor::constant_t getBackgroundColorFromState(int32_t stateflags) const {
         if (!(stateflags & FLG_ENBL)) {

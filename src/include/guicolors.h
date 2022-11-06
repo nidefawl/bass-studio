@@ -50,6 +50,7 @@ namespace GuiColor {
     extern constant_t COL_BTN_BG_SHOW_ACTIVE;
     extern constant_t COL_BTN_LOAD_DEF_PLUGINS;
     extern constant_t COL_BTN_RECORD_ARM_BG;
+    extern constant_t COL_BTN_SHOW_HIDE;
     extern constant_t COL_BTN_SOLO_BG_DISABLED;
     extern constant_t COL_BTN_SOLO_BG_ENABLED;
     extern constant_t COL_BTN_SOLO_BG_PARENT;

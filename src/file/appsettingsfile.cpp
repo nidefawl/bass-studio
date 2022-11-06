@@ -156,6 +156,8 @@ void serialize(Archive& ar, app_daw_settings& settings) {
     );
     make_optional_nvp(ar, "globalZoom", settings.globalZoom);
     make_optional_nvp(ar, "uiLayoutLocked", settings.uiLayoutLocked);
+    make_optional_nvp(ar, "uiShowSettingsArp", settings.uiShowSettingsArp);
+    make_optional_nvp(ar, "uiShowSettingsClip", settings.uiShowSettingsClip);
 }
 
 template<class Archive>

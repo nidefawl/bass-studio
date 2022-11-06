@@ -482,6 +482,19 @@ void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& col
     nvgFill(vg);
 }
 
+GuiColor::constant_t guibase::getLabelColor() const {
+    if (isFlag(FLG_HAS_COLOR_BG) && theme) {
+        auto colBgU32 = theme->getColorInt32(getBackgroundColor());
+        auto lum = getLuminance(colBgU32);
+        if (lum > 0.179) {
+            return GuiColor::COL_BLACK;
+        }
+        return GuiColor::COL_WHITE;
+    }
+    return (getStateFlags() & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
+}
+
+
 void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) const {
     if (flags & FLG_RENDER_BACKGROUND) {
         renderWidgetBorderPosSize(vg, flags, pos, size);
@@ -624,6 +637,7 @@ int32_t guibase::getStateFlags() const {
     }
     return flgs;
 }
+
 void guibase::setControl(BaseCtrl* parentCtrl) {
     this->parentCtrl = parentCtrl;
 #if BUILD_DAW_HOST

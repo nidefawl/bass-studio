@@ -1,5 +1,6 @@
 
 
+#include "appsettings.h"
 #include "assert_dbg.h"
 #include "color_util.h"
 #include "gui/container/container_builder.h"
@@ -151,28 +152,37 @@ void guictr_clipeditor::storeLayout() {
     }
 }
 
-void guictr_clipeditor::selectEditClip(gui_clip* gclip) {
-    noteeditor.selectEditClip(gclip);
-    audioeditor.selectEditClip(gclip);
+void guictr_clipeditor::onViewChanged(gui_clip* gclip) {
     settings.showEditClip();
     arp.showEditClip();
+    bool bIsMidi = !gclip || gclip->m_clip->clipType == CLIP_MIDI;
+    noteeditor.setVisible(bIsMidi);
+    audioeditor.setVisible(!bIsMidi);
+}
+
+void guictr_clipeditor::selectEditClip(gui_clip* gclip) {
+    bool bChanged = gclip != view.gui;
+    view.setSelected(gclip);
+    if (bChanged || !gclip) {
+        onViewChanged(gclip);
+        noteeditor.selectEditClip(gclip);
+        audioeditor.selectEditClip(gclip);
+        parent->layout();
+    }
 }
 void guictr_clipeditor::showEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
+    bool bChanged = gclip != view.gui;
     view.set(gclip, clipboardView);
-    const clip_t* clip = view.clip();
-    const bool isMidi  = clip && clip->clipType == CLIP_MIDI;
-    arp.setVisible(isMidi);
-    noteeditor.setVisible(isMidi);
-    audioeditor.setVisible(!isMidi);
-    settings.showEditClip();
-    noteeditor.showEditClip();
-    audioeditor.showEditClip();
-    arp.showEditClip();
-    layout();
+    if (bChanged || !gclip) {
+        onViewChanged(gclip);
+        noteeditor.showEditClip();
+        audioeditor.showEditClip();
+        parent->layout();
+    }
 }
 
 bool guictr_clipeditor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-    if (!view.clip()) return false;
+    // if (!view.clip()) return false;
     return guictr_base::mouseHitTest(mpos, evt);
 }
 
@@ -183,24 +193,31 @@ void guictr_clipeditor::render(NVGcontext* vg) {
     //guictr_base::setScissorTransform(vg);
     ivec2 posInset = getPosContent();
     nvgTranslate(vg, posInset.x, posInset.y);
-    if (view.clip()) {
-        nvgSave(vg);
-        settings.render(vg);
-        nvgRestore(vg);
-        if (arp.isVisible()) {
+    auto& dawSettings = daw_tls::getDawSettings();
+    auto clip = view.clip();
+    if (clip) {
+        if (settings.isVisible() && dawSettings.uiShowSettingsClip) {
+            nvgSave(vg);
+            settings.render(vg);
+            nvgRestore(vg);
+        }
+        if (arp.isVisible() && dawSettings.uiShowSettingsArp) {
             nvgSave(vg);
             arp.render(vg);
             nvgRestore(vg);
         }
-        if (noteeditor.isVisible()) {
-            noteeditor.render(vg);
-        }
+    } else {
+        auto cs = vec2(getSizeContent());
+        renderText(vg, cs * 0.5f, size, "No clip selected", 18, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+    }
+    if (clip && clip->clipType == CLIP_AUDIO) {
         if (audioeditor.isVisible()) {
             audioeditor.render(vg);
         }
     } else {
-        auto cs = vec2(getSizeContent());
-        renderText(vg, cs * 0.5f, size, "No clip selected", 18, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+        if (noteeditor.isVisible()) {
+            noteeditor.render(vg);
+        }
     }
     for (guibase* gui : guis) {
         if (gui == &audioeditor)
@@ -223,31 +240,49 @@ void guictr_clipeditor::layout() {
     ivec2 cs      = getSizeContent();
     settings.pos  = ivec2(0, 0);
     settings.size = ivec2(240, cs.y);
+    settings.layout();
 
-    guibase* leftContainer = &settings;
+    guibase* leftContainer = nullptr;
+    auto& dawSettings = daw_tls::getDawSettings();
+    arp.setVisible(dawSettings.uiShowSettingsArp);
+    settings.setVisible(dawSettings.uiShowSettingsClip);
+    if (settings.isVisible()) {
+        leftContainer = &settings;
+    }
     if (arp.isVisible()) {
         leftContainer = &arp;
         arp.size      = ivec2(220, cs.y);
-        arp.pos       = ivec2(settings.right() + padding, 0);
+        if (settings.isVisible()) {
+            arp.pos = ivec2(settings.right() + padding, 0);
+        } else {
+            arp.pos = ivec2(0, 0);
+        }
+        arp.layout();
     }
-    settings.layout();
-    arp.layout();
-    ivec2 sizeSettings{};
-    ivec2 sizeArp{};
-    settings.determineSize(sizeSettings);
-    arp.determineSize(sizeArp);
-    if (cs.y - sizeSettings.y > sizeArp.y + padding) {
-        settings.size.y = sizeSettings.y;
-        arp.size.y = math::min(cs.y - sizeSettings.y - padding, sizeArp.y);
-        arp.pos.y = settings.bottom() + padding;
-        arp.pos.x = settings.left();
-        arp.size.x = settings.size.x;
+    if (settings.isVisible() && arp.isVisible()) {
+        ivec2 sizeSettings{};
+        ivec2 sizeArp{};
+        settings.determineSize(sizeSettings);
+        arp.determineSize(sizeArp);
+        if (cs.y - sizeSettings.y > sizeArp.y + padding) {
+            settings.size.y = sizeSettings.y;
+            arp.size.y = math::min(cs.y - sizeSettings.y - padding, sizeArp.y);
+            arp.pos.y = settings.bottom() + padding;
+            arp.pos.x = settings.left();
+            arp.size.x = settings.size.x;
+        }
     }
 
-    noteeditor.pos   = ivec2(leftContainer->right() + padding, 0);
-    noteeditor.size  = ivec2(cs.x - leftContainer->right(), cs.y);
-    audioeditor.pos  = ivec2(leftContainer->right() + padding, 0);
-    audioeditor.size = ivec2(cs.x - leftContainer->right(), cs.y);
+    ivec2 posEditor = ivec2(0, 0);
+    ivec2 sizeEditor = cs;
+    if (leftContainer) {
+        posEditor = ivec2(leftContainer->right() + padding, 0);
+        sizeEditor = ivec2(cs.x - posEditor.x, cs.y);
+    }
+    noteeditor.pos   = posEditor;
+    noteeditor.size  = sizeEditor;
+    audioeditor.pos  = posEditor;
+    audioeditor.size = sizeEditor;
 
     for (guibase* gui : guis) {
         gui->layout();
@@ -563,7 +598,10 @@ void gui_clipcontent_control_data::render(NVGcontext* vg) {
     renderBackground(vg);
     renderGridLines(vg, theme, grid.gridList, size);
     const auto clip = view.clip();
-    if (!assert_expr(clip)) {
+    if (!clip) {
+        if (dragMode == drag_frame) {
+            renderFrame(vg, dragBegin, dragTo);
+        }
         return;
     }
     shapeEdit.layoutEditor(size);
@@ -627,7 +665,10 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
     renderBackground(vg);
     renderGridLines(vg, theme, grid.gridList, size);
     auto clip = view.clip();
-    if (!assert_expr(clip)) {
+    if (!clip) {
+        if (dragMode == drag_frame) {
+            renderFrame(vg, dragBegin, dragTo);
+        }
         return;
     }
     float w = size.x;
@@ -728,7 +769,8 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
             tick_t mouseTick = !mouseIn ? INVALID_TICK : grid.screenToTickSnap(imouse.x, SNAP_OFF);
             int32_t velClicked = screenToVel(imouse.y, size.y);
             int32_t velDist    = VEL_SELECT_DISTANCE * 127 / size.y;
-            note_t* contextNote = getMinDistNoteVel(view.clip()->notes, mouseTick - tickOffset, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
+            auto clip = view.clip();
+            note_t* contextNote = !clip ? nullptr : getMinDistNoteVel(clip->notes, mouseTick - tickOffset, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
             if (contextNote) {
                 nvgBeginPath(vg);
                 auto nx     = grid.tickToScreenD(contextNote->time + tickOffset);
@@ -842,7 +884,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
     auto cs = getSizeContent();
     float w = cs.x;
     float h = cs.y;
-    bool fold           = layoutRoll.fold;
+    bool fold           = layoutRoll.bFoldNotes;
     float offset        = layoutRoll.offset();
     float scale         = layoutRoll.scale();
     int32_t firstKey    = math::max((int32_t) floorf(offset / scale), 0);
@@ -969,7 +1011,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
     for (auto& [trackEntry, vecClips] : selView.tracks) {
         for (clip_t* clip : vecClips) {
             auto tickOffset = clip->time;
-            if (!view.isAbsoluteTimeMode()) {
+            if (!view.isAbsoluteTimeMode() && currentClip) {
                 tickOffset += currentClip->offsetStart;
                 if (clip != currentClip) {
                     tickOffset += clip->time - currentClip->time;
@@ -984,13 +1026,15 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             renderClipNoteRects(vg, notesView.m_list, {}, cs, tickOffset, scale, 1.0f, rgbToNvg(col), false);
         }
     }
-    auto& clipNotes = currentClip->notes;
     auto tickOffset = tick_t(0);
-    if (view.isAbsoluteTimeMode()) {
-        tickOffset = currentClip->time;
+    if (currentClip) {
+        auto& clipNotes = currentClip->notes;
+        if (view.isAbsoluteTimeMode()) {
+            tickOffset = currentClip->time;
+        }
+        renderClipNoteRects(vg, clipNotes.m_list, {}, cs, tickOffset, scale, 1.0f, theme->getColor(GuiColor::COL_NOTE_MUTE), true);
+        renderClipNoteRects(vg, clipNotes.m_list, {}, cs, tickOffset, scale, 1.0f, theme->getColor(GuiColor::COL_NOTE), false);
     }
-    renderClipNoteRects(vg, clipNotes.m_list, {}, cs, tickOffset, scale, 1.0f, theme->getColor(GuiColor::COL_NOTE_MUTE), true);
-    renderClipNoteRects(vg, clipNotes.m_list, {}, cs, tickOffset, scale, 1.0f, theme->getColor(GuiColor::COL_NOTE), false);
     
     auto x = float(grid.tickToScreenD(view.cursor.start));
     if (view.cursor.start == view.cursor.end) {
@@ -1149,56 +1193,56 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         }
     }
 
-    const auto& notes = view.clip()->notes;
-    int n2 = 0;
-    if (dragMode >= drag_notes_move) {
-        for (note_t& note: view.draggedSelection) {
-            renderNote(vg, this, &note, scale, tickOffset);
-            n2++;
-        }
-    } else {
-        for (note_t* pnote: notes.selection) {
-            renderNote(vg, this, pnote, scale, tickOffset);
-            n2++;
-        }
-    }
-    if (n2) {
-        NVGpaint paint{};
-        paint.image      = -1;
-        paint.innerColor = theme->getColor(GuiColor::COL_NOTE_SELECTED);
-        paint.customPar  = 1234;
-        nvgFillPaint(vg, paint);
-        nvgBatchedRender(vg);
-    }
-
-
-    if (scale >= 10) {
-        for (auto& note: notes.m_list) {
-            auto nx = grid.tickToScreenD(note.time + tickOffset);
-            auto nw = grid.tickLenToScreen(note.len);
-            if (nx + nw < -4)
-                continue;
-            if (nx > w + 4)
-                continue;
-            tick_t absPos = note.start();
-            if (view.clip()) {
-                absPos = note.start() + view.clip()->start() - view.clip()->offsetStart;
+    if (currentClip) {
+        const auto& notes = currentClip->notes;
+        int n2 = 0;
+        if (dragMode >= drag_notes_move) {
+            for (note_t& note: view.draggedSelection) {
+                renderNote(vg, this, &note, scale, tickOffset);
+                n2++;
             }
-            renderNoteName(vg, this, &note, nx, toScreenF(note.pitch), nw, scale, absPos, false);
-        }
-        for (note_t* pNote: notes.selection) {
-            auto& note = *pNote;
-            auto nx = grid.tickToScreenD(note.time + tickOffset);
-            auto nw = grid.tickLenToScreen(note.len);
-            if (nx + nw < -4)
-                continue;
-            if (nx > w + 4)
-                continue;
-            tick_t absPos = note.start();
-            if (view.clip()) {
-                absPos = note.start() + view.clip()->start() - view.clip()->offsetStart;
+        } else {
+            for (note_t* pnote: notes.selection) {
+                renderNote(vg, this, pnote, scale, tickOffset);
+                n2++;
             }
-            renderNoteName(vg, this, &note, nx, toScreenF(note.pitch), nw, scale, absPos, true);
+        }
+        if (n2) {
+            NVGpaint paint{};
+            paint.image      = -1;
+            paint.innerColor = theme->getColor(GuiColor::COL_NOTE_SELECTED);
+            paint.customPar  = 1234;
+            nvgFillPaint(vg, paint);
+            nvgBatchedRender(vg);
+        }
+        if (scale >= 10) {
+            for (auto& note: notes.m_list) {
+                auto nx = grid.tickToScreenD(note.time + tickOffset);
+                auto nw = grid.tickLenToScreen(note.len);
+                if (nx + nw < -4)
+                    continue;
+                if (nx > w + 4)
+                    continue;
+                tick_t absPos = note.start();
+                if (currentClip) {
+                    absPos = note.start() + currentClip->start() - currentClip->offsetStart;
+                }
+                renderNoteName(vg, this, &note, nx, toScreenF(note.pitch), nw, scale, absPos, false);
+            }
+            for (note_t* pNote: notes.selection) {
+                auto& note = *pNote;
+                auto nx = grid.tickToScreenD(note.time + tickOffset);
+                auto nw = grid.tickLenToScreen(note.len);
+                if (nx + nw < -4)
+                    continue;
+                if (nx > w + 4)
+                    continue;
+                tick_t absPos = note.start();
+                if (currentClip) {
+                    absPos = note.start() + currentClip->start() - currentClip->offsetStart;
+                }
+                renderNoteName(vg, this, &note, nx, toScreenF(note.pitch), nw, scale, absPos, true);
+            }
         }
     }
 
@@ -1544,7 +1588,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
                     }
                 } else {
                     note.time += timeOffset;
-                    if (layoutRoll.fold) {
+                    if (layoutRoll.bFoldNotes) {
                         note.pitch = math::floorfS32(view.nextFoldNote(note.pitch, pitchOffset));
                     } else {
                         note.pitch += pitchOffset;
@@ -1832,7 +1876,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     dir *= 12;
                 }
                 changePitch(view.draggedSelection, dir.y,
-                            layoutRoll.fold, layoutRoll.fold ? view.notePitches : std::vector<int32_t>{});
+                            layoutRoll.bFoldNotes, layoutRoll.bFoldNotes ? view.notePitches : std::vector<int32_t>{});
                 mergeDraggedNotes(dragmode::drag_notes_move);
                 notes.updateBounds();
                 setSelectionFrame(getMinMaxTime(notes.selection));
@@ -2221,13 +2265,18 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
 float guictr_clipeditorview::getScaleX() {
     float scaleX = 1.0f;
     auto* clip = view.clip();
+    auto contentLenTicks = TICKS_BAR*4;
     if (clip) {
-        auto barBeginEditor = grid.toObjSpace(0.0);
-        auto barEndEditor = grid.toObjSpace(noteeditor.content.size.x);
-        auto barLenClip = clip->getLen() / static_cast<double>(TICKS_BAR);
-        auto barLenEditor = barEndEditor - barBeginEditor;
-        scaleX  = math::max(static_cast<float>(barLenEditor/barLenClip), 0.0f);
+        contentLenTicks = clip->getLen();
     }
+    if (view.isAbsoluteTimeMode()) {
+        contentLenTicks = view.selectionView.maxClipEnd;
+    }
+    auto barBeginEditor = grid.toObjSpace(0.0);
+    auto barEndEditor = grid.toObjSpace(noteeditor.content.size.x);
+    auto barLenClip = contentLenTicks / static_cast<double>(TICKS_BAR);
+    auto barLenEditor = barEndEditor - barBeginEditor;
+    scaleX  = math::max(static_cast<float>(barLenEditor/barLenClip), 0.0f);
     return scaleX;
 }
 
@@ -2472,13 +2521,11 @@ bool guictr_editor_base::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (this->contains(mpos)) {
         ivec2 localMouse = this->toContainerSpace(mpos);
         size_t numHandleDist = 0;
-        bool bIsClick = evt.type == MouseHitType::MOUSE_LEFT;
-        if (bIsClick) {
-            numHandleDist = 0;
-        }
+
         std::array<guictr_cliphandles::dist_dragzone_handle, 4> dragZones;
         for (auto& clipHandle : clipsHandles) {
-            if (clipHandle->contains(localMouse)) {
+            dbgassert(clipHandle->pos.x == timeline.pos.x);
+            if (clipHandle->isVisible() && clipHandle->parent && clipHandle->contains(localMouse)) {
                 ivec2 localMouseHandle = clipHandle->toContainerSpace(localMouse);
                 auto dragZone = clipHandle->getDragZone(localMouseHandle);
                 if (dragZone.handle && dragZone.mode != guictr_cliphandles::dragmode::drag_handle_none) {
@@ -2544,7 +2591,7 @@ bool guictr_editor_base::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             evt.requestFocus(this);
             return true;
         }
-        if (canMouseHit()) {
+        if (canMouseHit() && evt.type == MouseHitType::MOUSE_LEFT) {
             evt.requestFocus(this);
             return true;
         }

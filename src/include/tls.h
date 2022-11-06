@@ -17,6 +17,7 @@ class project_controller_t;
 class DawInstance;
 struct appruntime;
 struct appsettings;
+struct app_daw_settings;
 namespace daw_tls {
     struct tlsinstance {
         appruntime* runtime                     = nullptr;
@@ -38,4 +39,5 @@ namespace daw_tls {
     void setTls(tlsinstance& tls);
     tlsinstance& getTls();
     appsettings& getSettings();
+    app_daw_settings& getDawSettings();
 };// namespace daw_tls

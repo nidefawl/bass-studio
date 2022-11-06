@@ -125,6 +125,8 @@ struct app_daw_settings {
     bool shaderDebug = true;
     float globalZoom = 1.0f;
     bool uiLayoutLocked = false;
+    bool uiShowSettingsClip = true;
+    bool uiShowSettingsArp = true;
 };
 struct appsettings {
     appsettings() noexcept = default; // need noexcept for static storage

@@ -411,7 +411,7 @@ template<class Archive>
 void serialize(Archive& archive, layout_pianoroll_t& m) {
     archive(make_nvp("offset", m.yoffset),
             make_nvp("scale", m.yscale));
-    make_optional_nvp(archive, "fold", m.fold);
+    make_optional_nvp(archive, "fold", m.bFoldNotes);
 }
 
 template<class Archive>
