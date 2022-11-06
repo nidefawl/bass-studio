@@ -684,7 +684,7 @@ void guictr_layout::removeAllEntries() {
 void guictr_layout::assertEntries() const {
     dbgassert(splitters.empty() || splitters.size() == entries.size() - 1);
     for (auto& entry : entries) {
-        dbgassert(entry->parentLayoutContainer == this);
+        dbgassert(entry->parentLayoutContainer == this && entry->getGui()->parent == this);
     }
     dbgassert(entries.empty() == guis.empty());
 }
@@ -1079,6 +1079,10 @@ guictr_base* guictr_layout_entry::getGui() {
     return ctr.get();
 }
 
+void guictr_layout_entry::assertState() const {
+    dbgassert(!!parentLayoutContainer == !!ctr->parent);
+}
+
 void storeContainerEntrySnapshot(guictr_layout_entry* ctrlayoutEntry, std::shared_ptr<guictrlayout_entry_snapshot_t>& snapshot) {
     dbgassert(ctrlayoutEntry->getType() != gui_type::CTR_TYPE_UNKNOWN);
     if (ctrlayoutEntry->getFrameType() == layout_ctr_type::GUICTR_LAYOUT) {
@@ -1300,4 +1304,11 @@ String guictr_layout::getLayoutCtrName() {
         return ctrName;//StringFormat("%12zX", reinterpret_cast<uint64_t>(this));
     }
     return this->label;
+}
+guictr_layout::~guictr_layout() {
+    removeGuis();
+    for (auto& entry : entries) {
+        entry->parentLayoutContainer = nullptr;
+    }
+    // activePosition = -1;
 }

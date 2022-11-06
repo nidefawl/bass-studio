@@ -49,10 +49,7 @@ private:
     int32_t tag;
 public:
     guictr_layout();
-    ~guictr_layout() override {
-        removeGuis();
-        entries.clear();
-    }
+    ~guictr_layout() override;
     void setTag(int32_t tag) {
         this->tag = tag;
     }
