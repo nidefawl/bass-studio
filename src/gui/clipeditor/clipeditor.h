@@ -484,12 +484,14 @@ struct scaled_pos_t {
 };
 class CCEdit : public DAW::Shape::ShapeEdit {
     scaled_grid& grid;
+    clip_view& view;
     ivec2 editorSize{};
     std::vector<int32_t> selectedNodeIndices;
 public:
-    CCEdit(scaled_grid& _grid)
+    CCEdit(scaled_grid& _grid, clip_view& _view)
         : ShapeEdit(),
-        grid(_grid) {
+        grid(_grid),
+        view(_view) {
         bIsGridEnabledH = true;
         bIsGridEnabledV = true;
         gridStepsV = 2;
@@ -513,10 +515,7 @@ public:
         editorSize = size;
         editorScale = vec2(grid.tickLenToScreen(1.0), size.y);
     }
-    float snapH(float x) override {
-        tick_t snappedTick = grid.tickSnapExact(math::roundfS32(x), SNAP_ON);
-        return snappedTick;
-    }
+    float snapH(float x) override;
     float snapV(float y) override {
         return math::roundfS32(y * this->gridStepsV) / float(this->gridStepsV);
     }

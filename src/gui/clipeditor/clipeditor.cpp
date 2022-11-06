@@ -425,7 +425,7 @@ void gui_clipcontent_base::renderBackground(NVGcontext* vg) {
 
 gui_clipcontent_control_data::gui_clipcontent_control_data(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout)
     : gui_clipcontent(_grid, _view, _layout, true),
-    shapeEdit(_grid)
+    shapeEdit(_grid, _view)
 {
     setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_CONTROLDATA);
     shapeEdit.setEditorCurve(&tmpShape);
@@ -499,7 +499,7 @@ bool gui_clipcontent_control_data::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 
 void gui_clipcontent_control_data::handleDraggedBegin(MouseEvent& evt) {
     MouseEvent kevt = evt;
-    kevt.relMousepos.x -= grid.tickToScreenD(0);
+    kevt.relMousepos.x -= grid.tickToScreenD(getTickOffset());
     if (view.clip()) {
         controlDataBegin = view.clip()->controlData;
     }
@@ -512,7 +512,7 @@ void gui_clipcontent_control_data::handleDraggedBegin(MouseEvent& evt) {
 
 void gui_clipcontent_control_data::handleDraggedMove(MouseEvent& evt) {
     if (bIsDraggingShape) {
-        evt.relMousepos.x -= grid.tickToScreenD(0);
+        evt.relMousepos.x -= grid.tickToScreenD(getTickOffset());
         shapeEdit.onMoveDragCurveEditor(evt);
         return;
     }
@@ -523,8 +523,8 @@ void gui_clipcontent_control_data::handleDraggedMove(MouseEvent& evt) {
         auto xEnd       = math::max(dragBegin.x, dragTo.x);
         auto yStart     = math::min(dragBegin.y, dragTo.y) / float(size.y);
         auto yEnd       = math::max(dragBegin.y, dragTo.y) / float(size.y);
-        tick_t tickStart = grid.screenToTickSnap(xStart, SNAP_OFF);
-        tick_t tickEnd   = grid.screenToTickSnap(xEnd, SNAP_OFF);
+        tick_t tickStart = grid.screenToTickSnap(xStart, SNAP_OFF) - getTickOffset();
+        tick_t tickEnd   = grid.screenToTickSnap(xEnd, SNAP_OFF) - getTickOffset();
         shapeEdit.setSelectRect(vec4{tickStart, 1.0-yEnd, tickEnd, 1.0-yStart});
         // tick_t tickOver  = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
         auto& cursor = view.cursor;
@@ -536,7 +536,7 @@ void gui_clipcontent_control_data::handleDraggedMove(MouseEvent& evt) {
 
 void gui_clipcontent_control_data::handleDraggedRelease(MouseEvent& evt) {
     if (bIsDraggingShape) {
-        evt.relMousepos.x -= grid.tickToScreenD(0);
+        evt.relMousepos.x -= grid.tickToScreenD(getTickOffset());
         shapeEdit.onReleaseDragCurveEditor(evt);
         bIsDraggingShape = false;
         return;
@@ -546,7 +546,7 @@ void gui_clipcontent_control_data::handleDraggedRelease(MouseEvent& evt) {
 
 void gui_clipcontent_control_data::handleRightClick(MouseEvent& evt) {
     MouseEvent kevt = evt;
-    kevt.relMousepos.x -= grid.tickToScreenD(0);
+    kevt.relMousepos.x -= grid.tickToScreenD(getTickOffset());
     if (view.clip()) {
         controlDataBegin = view.clip()->controlData;
     }
@@ -572,7 +572,7 @@ void gui_clipcontent_control_data::render(NVGcontext* vg) {
     // // auto higlightHit = tmpShape.getMouseHit(scaledPos, shapeEdit.editorScale);
     // // float clipTickMin = grid.screenToTickD(0.0);
     // // float clipTickMax = grid.screenToTickD(size.x);
-    const auto shapePos    = vec2(grid.tickToScreenD(0), 0);
+    const auto shapePos    = vec2(grid.tickToScreenD(getTickOffset()), 0);
     localMouse.x -= shapePos.x;
     // const auto shapeScale  = vec2(grid.tickLenToScreen(1.0), size.y);
     shapeEdit.renderEditor(vg, shapePos, theme, localMouse, false, &shapeEdit.getSelectedNodeIndices());
@@ -1188,7 +1188,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         }
         for (note_t* pNote: notes.selection) {
             auto& note = *pNote;
-            auto nx = grid.tickToScreenD(note.time);
+            auto nx = grid.tickToScreenD(note.time + tickOffset);
             auto nw = grid.tickLenToScreen(note.len);
             if (nx + nw < -4)
                 continue;
@@ -2564,4 +2564,16 @@ tick_t gui_clipcontent_base::getTickOffset() const {
         return clip->time;
     }
     return 0;
+}
+float CCEdit::snapH(float x) {
+    clip_t* offsetClip = nullptr;
+    if (view.isAbsoluteTimeMode()) {
+        offsetClip = view.clip();
+    }
+    if (offsetClip)
+        x += offsetClip->start();
+    x = grid.tickSnapExact(math::roundfS32(x), SNAP_ON);
+    if (offsetClip)
+        x -= offsetClip->start();
+    return x;
 }

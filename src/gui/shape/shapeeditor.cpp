@@ -789,6 +789,7 @@ bool ShapeEdit::mouseHitCurveEditor(const shape_t& shape, ivec2 mpos) const {
 void ShapeEdit::onMoveDragCurveEditor(MouseEvent& evt) {
     if (hasControlHandles()) {
         vec2 local = toNormalizedSpace(evt.relMousepos);
+        log_lf(Log::L_TRACE, "local %f %f\n", local.x, local.y);
         if (wasShiftBegin&&!(curve->flags & SHAPE_LOCK_POINTS)) {
             curveTmp = curveBegin;
             if (bIsGridEnabledH) {
