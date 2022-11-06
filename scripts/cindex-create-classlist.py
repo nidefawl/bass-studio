@@ -237,12 +237,11 @@ if __name__ == "__main__":
         tu = index.parse(
                 None, 
                 args=clang_invocation_args, 
-                options = 0
+                options=0
                 # options=cindex.TranslationUnit.PARSE_DETAILED_PROCESSING_RECORD | cindex.TranslationUnit.PARSE_CACHE_COMPLETION_RESULTS
         )
         for diagnostic in tu.diagnostics:
             logging.debug(diagnostic)
-        # traverseAst(set_result, tu.cursor, source_path)
         sizeBefore = [len(d) for d in dicts]
         traverseAstSrcPath(tu.cursor, source_path, findDefs, dicts)
         sizeAfter = [len(d) for d in dicts]
@@ -262,6 +261,8 @@ if __name__ == "__main__":
         # replace source_path in file if file starts with it
         zipped = zip(dictsSorted, outputNamesJson, outputNamesCsv);
         for data, jsonName, csvName in zipped:
+            if len(data) == 0:
+                continue
             for v in data:
                 if v["file"].startswith(source_path):
                     newFile = v["file"][len(source_path):]
