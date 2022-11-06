@@ -779,14 +779,14 @@ public:
                 ctrLayout->setTag(-1);
             }
         }
-        this->ctrCtrTop = ctrEntryTop;
-        this->ctrCtrBottom = ctrEntryBottom;
         if (ctrEntryTop) {
-            ctrEntryTop->getAsLayoutCtr()->setTag(0);
+            this->ctrCtrTop = ctrEntryTop;
         }
         if (ctrEntryBottom) {
-            ctrEntryBottom->getAsLayoutCtr()->setTag(1);
+            this->ctrCtrBottom = ctrEntryBottom;
         }
+        this->ctrCtrTop->getAsLayoutCtr()->setTag(0);
+        this->ctrCtrBottom->getAsLayoutCtr()->setTag(1);
         for (size_t i = 0; i < viewLayout.splitterPositions.size() && i < splitters.size(); i++) {
             splitters[i]->setScale(viewLayout.splitterPositions[i]);
         }
