@@ -753,8 +753,8 @@ void guictr_editor_base::renderClipHandles(NVGcontext* vg) {
     auto clip = view.clip();
     auto handlesPos = timeline.getLeftBottom();
     auto handlesSize = ivec2(timeline.size.x, handlesHeight);
-    nvgSave(vg);
     if (handlesSize.x > 5 && handlesSize.y > 5) {
+        nvgSave(vg);
         nvgIntersectScissor(vg, handlesPos.x, handlesPos.y, handlesSize.x, handlesSize.y);
         renderClipHandlesBackground(vg, theme, grid, vec2{0, heightSelIndicator}+vec2(handlesPos), handlesSize);
         int32_t trackIdx = 0;
