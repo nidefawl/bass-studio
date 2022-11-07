@@ -69,7 +69,6 @@ class guictxtmenu_base;
 class appwindow_main;
 class DawViewContainers;
 class DawViewContainersMain;
-class DawViewContainersCompanion;
 class track_gui_manager_i;
 
 enum clip_dragtype_t {
@@ -220,15 +219,27 @@ struct track_gui_entry_t;
 struct guictrlayout_snapshot_t;
 
 class DawViewContainers {
+protected:
+    std::vector<std::shared_ptr<guictr_layout>> topLevelContainers;
 public:
     DawViewContainers() = default;
     virtual ~DawViewContainers() = default;
+    void add(std::shared_ptr<guictr_layout> container) {
+        topLevelContainers.emplace_back(std::move(container));
+    }
+    template<typename T>
+    bool visitLayoutContainers(T&& visitor) {
+        for (auto& container : topLevelContainers) {
+            if (!visitor(container)) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     virtual void addTo(std::vector<guictr_base*>& v) = 0;
     virtual void layout(int32_t winW, int32_t winH) = 0;
     virtual guictr_menubar* getMenu() = 0;
-    virtual void dragContainerRelayout(MainCtrl* ctrl, BaseCtrl::drag_ctr_event evt) {
-    }
 };
 
 struct autosave_state_t {
@@ -254,6 +265,7 @@ class DawInstance : public project_controller_t, public delete_cb {
     std::vector<DawWindowCompanion> companionWindows;
     std::vector<DawCtrl*> dawCtrls;
     std::vector<dawview_layout_t> layoutsFromProjectFile;
+    std::array<dawview_layout_t, 10> layouts;
     edithistory hist;
     WorkerThread workerThread;
     PlaybackThread playThread;
@@ -286,6 +298,9 @@ private:
 public:
     DawInstance() : project_controller_t(&project, &projectGlobals) {
         setEmptyClipboard();
+    }
+    std::array<dawview_layout_t, 10>& getLayouts() {
+        return layouts;
     }
     void setEmptyClipboard();
     edithistory& getHist() {
@@ -432,7 +447,8 @@ public:
     track_t* getSelectedTrack();
     bool menuCommand(const menucmd_t& command);
     void destroy();
-    void updateClipViews(clip_t* notifyClip, clip_cursor_t cursor);
+    void updateClipViews(clip_t* notifyClip);
+    void updateClipViewsAndCursor(clip_t* notifyClip, clip_cursor_t cursor);
     void onTick();
     void processTasksMainThread();
     void setMainControl(MainCtrl*);
@@ -456,7 +472,6 @@ private:
 class DawCtrl : public AppCtrl {
     Menus menus;
 protected:
-    void updateViewGuiContainers();
     waveformrender* waveformRenderer = nullptr;
     hires_timer_t timer;
     seq_rand rand;
@@ -473,9 +488,9 @@ public:
     std::vector<guictr_base*> viewRender;
     const std::vector<guictr_base*>& getRenderContainers() const override { return viewRender; }
     String lastKeyDebug;
-    DawViewContainers* viewContainers = nullptr;
+    DawViewContainersMain* view = nullptr;
     DawInstance& daw;
-    scaled_grid grid;
+    // scaled_grid grid;
     view_mode_t viewMode = view_mode_t::TRACK_TIMELINE;
     std::vector<String> tmpFileDragPaths;
     explicit DawCtrl(AppCtrl* parent, DawInstance& _daw)
@@ -489,10 +504,8 @@ public:
 
     ~DawCtrl() override = default;
 
-    scaled_grid& getGrid() {
-        return grid;
-    }
-    clip_view& getClipView();
+    void updateViewGuiContainers();
+
     DawInstance* getDaw() {
         return &daw;
     }
@@ -515,7 +528,7 @@ public:
         return this->waveformRenderer;
     }
 
-
+    void focusChanged(guibase* oldFocused, guibase* newFocused) override;
     void resetMouseContext() override;
     bool filesDropMove(ivec2 pos, KeyboardMods kbmods) override;
     bool filesDropBegin(std::vector<String>& files, ivec2 pos, KeyboardMods kbmods) override;
@@ -542,17 +555,15 @@ public:
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
     void startApp() override { };
 
-    virtual void setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView);
+    void setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView);
     virtual DAW::Cursor& getCursor()              = 0;
-    virtual void setupView()                      = 0;
-    virtual void layoutView(int32_t w, int32_t h) = 0;
-    virtual void updateClipViews(clip_t* notifyClip, clip_cursor_t cursor);
-    virtual void resetClipViews();
+    void setupView();
+    void layoutView(int32_t w, int32_t h);
+    void updateClipViews(clip_t* notifyClip);
+    void updateClipViewsAndCursor(clip_t* notifyClip, clip_cursor_t cursor);
+    void resetClipViews();
 
     void updateVisibleTrackContents();
-
-    virtual void onPluginsChanged() {
-    }
 
     virtual void setStatusText(String s) {
     }
@@ -564,29 +575,34 @@ public:
     virtual void resetAutomationContext() {
     }
 
-    virtual void addTrackToView(track_t* track, int flags)      = 0;
-    virtual void removeTrackFromView(track_t* track, int flags) = 0;
+    void addTrackToView(track_t* track, int flags);
+    void removeTrackFromView(track_t* track, int flags);
 
-    virtual void resetView()  = 0;
-    virtual void layoutView() = 0;
-    virtual void fixCursor()  = 0;
-    virtual bool isZooming()  = 0;
-    virtual bool isClipEditorVisible() = 0;
-    virtual bool isPluginViewVisible() = 0;
-    virtual void showPluginView() = 0;
-    virtual void showClipEditor() = 0;
-    virtual void setAsyncTask(DAW::async_task_t* task);
+    void updateZoomLevel(float f) override;
+    void resetView();
+    void layoutView();
+    void fixCursor();
+    bool isZooming();
+    bool isClipEditorVisible();
+    bool isPluginViewVisible();
+    void showPluginView();
+    void showClipEditor();
+    void setAsyncTask(DAW::async_task_t* task);
 
-    virtual void setViewMode(view_mode_t mode) = 0;
     view_mode_t getViewMode() const;
-    virtual void storeLayout(dawview_layout_t& layout) = 0;
-    virtual void loadLayout(const dawview_layout_t& viewLayout) = 0;
+    void setViewMode(view_mode_t mode);
+    void toggleViewModeEditArea();
+    void setEditAreaLayout(DAW::EditAreaLayout layout);
+    void setEditAreaType(DAW::EditAreaType editAreaType);
+    void storeLayout(dawview_layout_t& layout);
+    void loadLayout(const dawview_layout_t& viewLayout);
+    std::shared_ptr<guictr_layout> replaceContainerWith(guictr_base* ctr,
+                                                        std::shared_ptr<guictr_layout> newContainer) override;
+    void dragContainerRelayout(drag_ctr_event evt) override;
+    void getTrackContainers(std::vector<guictr_tracks*>& trackContainers);
+    std::shared_ptr<guictr_tracks> getTrackContainer();
+    std::shared_ptr<guictr_clipeditor> getClipEditor();
 
-    virtual void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) = 0;
-    virtual guictr_tracks* getTrackContainer() = 0;
-    virtual guictr_clipeditor* getClipEditor() = 0;
-    virtual guictr_plugins* getPluginsView() = 0;
-    virtual guictr_nodes_splitview* getNodesContainer() = 0;
     virtual void onPluginSelected();
     bool isGlobalKeybindCodepoint(uint32_t codepoint) override {
         return codepoint == 32 || codepoint == 45 || codepoint == 43;
@@ -631,8 +647,6 @@ class MainCtrl : public DawCtrl {
     friend class DawInstance;
     friend class DawCtrl;
     friend struct DAW::load_project_task;
-    DawViewContainersMain* view = nullptr;
-    std::array<dawview_layout_t, 10> layouts;
     String loadProject;
     int loadFlags = 0;
     std::shared_ptr<Logger> statusbarLogger;
@@ -646,8 +660,6 @@ public:
         MainCtrl* ctrl = MainCtrl::get();
         return ctrl ? ctrl->daw.getPlayThread() : nullptr;
     }
-    static guictr_plugins* getPluginCtr();
-    static guictr_tracks* getGuiTrackCtr();
 
     void initApp(const std::vector<String>& args) override;
     void startApp() override;
@@ -658,46 +670,13 @@ public:
     void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) override;
     void onTick() override;
     void onFastTick() override;
-    void setupView() override;
-    bool isClipEditorVisible() override;
-    bool isPluginViewVisible() override;
-    void showPluginView() override;
-    void showClipEditor() override;
-    void setAsyncTask(DAW::async_task_t* task) override;
-    void onPluginsChanged() override;
     bool processGlobalKeyevent(const KeyEvent& event) override;
-    bool handleGlobalCommand(DAW::UI::CommandContext& ctxt) override;
-    guitrack_editor& getTrackEditor();
     void addDebug(String s);
-    void resetMouseContext() override;
-    void setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) override;
-    void layoutView(int32_t w, int32_t h) override;
     void setStatusText(String s) override;
     void setStatusText(const String& s, GuiColor::constant_t color);
     void destroy() override;
     DAW::Cursor& getCursor() override;
     void onChildOverlayWindowClose(window_main*) override;
-    void addTrackToView(track_t* track, int flags) override;
-    void removeTrackFromView(track_t* track, int flags) override;
-    void resetView() override;
-    void layoutView() override;
-    void fixCursor() override;
-    bool isZooming() override;
-    void setViewMode(view_mode_t mode) override;
-    void toggleViewModeEditArea();
-    void setEditAreaLayout(DAW::EditAreaLayout layout);
-    void setEditAreaType(DAW::EditAreaType editAreaType);
-    void storeLayout(dawview_layout_t& layout) override;
-    void loadLayout(const dawview_layout_t& viewLayout) override;
-    std::shared_ptr<guictr_layout> replaceContainerWith(guictr_base* ctr,
-                                                        std::shared_ptr<guictr_layout> newContainer) override;
-    void dragContainerRelayout(drag_ctr_event evt) override;
-    void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) override;
-    guictr_tracks* getTrackContainer() override;
-    guictr_nodes_splitview* getNodesContainer() override;
-    guictr_clipeditor* getClipEditor() override;
-    guictr_plugins* getPluginsView() override;
-    void updateZoomLevel(float f) override;
 };
 
 class CompanionCtrl : public DawCtrl {
@@ -705,42 +684,9 @@ class CompanionCtrl : public DawCtrl {
     DAW::TrackSelection trackSelection;
 
 public:
-    DawViewContainersCompanion* view = nullptr;
-    explicit CompanionCtrl(AppCtrl* parent, DawInstance& _daw): DawCtrl(parent, _daw) {
-    }
-
+    explicit CompanionCtrl(AppCtrl* parent, DawInstance& _daw): DawCtrl(parent, _daw) { };
     ~CompanionCtrl() override = default;
-
-    void setupView() override;
-    void layoutView(int32_t w, int32_t h) override;
-    void resetMouseContext() override;
     void destroy() override;
-    bool isCompanion() const override {
-        return true;
-    }
-    void onPluginsChanged() override;
-    DAW::Cursor& getCursor() override {
-        return cursor;
-    }
-    void addTrackToView(track_t* track, int flags) override;
-    void removeTrackFromView(track_t* track, int flags) override;
-    void resetView() override;
-    void layoutView() override;
-    void fixCursor() override;
-    bool isZooming() override;
-    bool isClipEditorVisible() override;
-    bool isPluginViewVisible() override;
-    void setViewMode(view_mode_t mode) override;
-    void storeLayout(dawview_layout_t& layout) override;
-    void loadLayout(const dawview_layout_t& viewLayout) override;
-    void setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) override;
-    void getTrackContainers(std::vector<guictr_tracks*>& trackContainers) override;
-    guictr_tracks* getTrackContainer() override;
-    guictr_nodes_splitview* getNodesContainer() override;
-    guictr_clipeditor* getClipEditor() override;
-    guictr_plugins* getPluginsView() override;
-    void showPluginView() override;
-    bool handleGlobalCommand(DAW::UI::CommandContext& ctxt) override;
-    void showClipEditor() override;
-    void setAsyncTask(DAW::async_task_t* task) override;
+    bool isCompanion() const override { return true; };
+    DAW::Cursor& getCursor() override { return cursor; };
 };

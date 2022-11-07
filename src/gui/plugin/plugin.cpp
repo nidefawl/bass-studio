@@ -549,7 +549,6 @@ public:
 //                        }
 //                    }
                     nvgUpdateImage(vg, tex, frame.bytes.data());
-                    MainCtrl::getPluginCtr()->relayout();
                 } else if (tex > 0) {
                     nvgDeleteImage(vg, tex);
                     tex     = -1;

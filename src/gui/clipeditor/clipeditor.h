@@ -4,12 +4,14 @@
 #include <memory>
 #include <vector>
 #include "assert_dbg.h"
+#include "basectrl.h"
 #include "grid_constants.h"
 #include "gui/controls/splitter.h"
 #include "gui/dropdown/dropdown.h"
 #include "gui/dropdown/dropdown_generic.h"
 #include "gui/shape/shapeeditor.h"
 #include "guiconstant.h"
+#include "layout.h"
 #include "logging.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
@@ -44,6 +46,7 @@ public:
     clip_notes_t after;
     clip_cursor_t cursorBefore;
     clip_cursor_t cursorAfter;
+    bool bHasCursor = true;
     action_modify_notes() : action_base() {
     }
     //desc, clip, notesBefore, cursorBefore
@@ -85,8 +88,10 @@ public:
         if (!clip)
             return;
         clip->notes = before;
-        clip->setDirty();
-        daw->updateClipViews(clip, cursorBefore);
+        if (bHasCursor)
+            daw->updateClipViewsAndCursor(clip, cursorBefore);
+        else
+            daw->updateClipViews(clip);
     }
     void redo(DawInstance* daw) override {
         track_t* tr = daw->getTracks()[trackIdx];
@@ -98,7 +103,10 @@ public:
             return;
         clip->notes = after;
         clip->setDirty();
-        daw->updateClipViews(clip, cursorAfter);
+        if (bHasCursor)
+            daw->updateClipViewsAndCursor(clip, cursorAfter);
+        else
+            daw->updateClipViews(clip);
     }
 };
 
@@ -111,6 +119,7 @@ public:
     clip_t after;
     clip_cursor_t cursorBefore;
     clip_cursor_t cursorAfter;
+    bool bHasCursor = false;
     action_modify_clip() : action_base() {
     }
     //desc, clip, notesBefore, cursorBefore
@@ -123,6 +132,16 @@ public:
         cursorAfter  = view.cursor;
         before       = oldC;
         cursorBefore = oldCursor;
+        bHasCursor   = true;
+    }
+    action_modify_clip(String description, const track_t* track, const clip_t& oldC, const clip_t* newC) : action_base() {
+        desc = description;
+        //        clip = view.clip;
+        after        = *newC;
+        trackIdx     = track->projectIdx;
+        clipTime     = newC->time;
+        before       = oldC;
+        bHasCursor   = false;
     }
     void undo(DawInstance* daw) override {
         track_t* tr = daw->getTracks()[trackIdx];
@@ -134,7 +153,10 @@ public:
             return;
         *clip = before;
         clip->setDirty();
-        daw->updateClipViews(clip, cursorBefore);
+        if (bHasCursor)
+            daw->updateClipViewsAndCursor(clip, cursorBefore);
+        else
+            daw->updateClipViews(clip);
     }
     void redo(DawInstance* daw) override {
         track_t* tr = daw->getTracks()[trackIdx];
@@ -146,7 +168,10 @@ public:
             return;
         *clip = after;
         clip->setDirty();
-        daw->updateClipViews(clip, cursorAfter);
+        if (bHasCursor)
+            daw->updateClipViewsAndCursor(clip, cursorAfter);
+        else
+            daw->updateClipViews(clip);
     }
 };
 
@@ -159,6 +184,7 @@ public:
     clip_control_data_t after;
     clip_cursor_t cursorBefore;
     clip_cursor_t cursorAfter;
+    bool bHasCursor = false;
     action_modify_clip_control_data() : action_base() {
     }
     action_modify_clip_control_data(String description, const clip_view& view, const clip_control_data_t& oldC, const clip_cursor_t& oldCursor) : action_base() {
@@ -182,7 +208,10 @@ public:
         clip->controlData = before;
         clip->controlData.updateBounds();
         clip->setDirty();
-        daw->updateClipViews(clip, cursorBefore);
+        if (bHasCursor)
+            daw->updateClipViewsAndCursor(clip, cursorBefore);
+        else
+            daw->updateClipViews(clip);
     }
     void redo(DawInstance* daw) override {
         track_t* tr = daw->getTracks()[trackIdx];
@@ -195,7 +224,10 @@ public:
         clip->controlData = after;
         clip->controlData.updateBounds();
         clip->setDirty();
-        daw->updateClipViews(clip, cursorAfter);
+        if (bHasCursor)
+            daw->updateClipViewsAndCursor(clip, cursorAfter);
+        else
+            daw->updateClipViews(clip);
     }
 };
 inline bool isSharp(int n) {
@@ -314,7 +346,7 @@ class gui_quantizationsettings : public guictr_base {
     gui_timeinput inputEnds;
     guibutton btnQuantize;
 public:
-    gui_quantizationsettings()
+    explicit gui_quantizationsettings()
         : guictr_base(),
         inputStarts(&tickStart, true),
         inputEnds(&tickEnd, true)
@@ -382,7 +414,6 @@ public:
 
 class gui_clipsettings : public guictr_base {
 public:
-    //scaled_grid& grid;
     clip_view& view;
     guibuttonstate btnLoop;
     gui_timeinput clipLoopStart;
@@ -395,7 +426,7 @@ public:
     guibutton btnDuplicateLoop;
     guibutton btnSelectMuted;
     gui_quantizationsettings quantization;
-    gui_clipsettings(scaled_grid& _grid, clip_view& _view);
+    gui_clipsettings(clip_view& _view);
     ~gui_clipsettings() override;
     void render(NVGcontext* vg) override;
 
@@ -907,7 +938,9 @@ public:
 
 
 class guictr_clipeditorview : public guictr_base {
-    clip_view& view;
+    std::shared_ptr<GuiCtrLayoutEntry> clipEditor;
+    scaled_grid m_grid;
+    clip_view m_view;
     midi_clip_render_cache_t* const cache;
     int dragDirection      = -1;
     enum dragmode {
@@ -916,11 +949,34 @@ class guictr_clipeditorview : public guictr_base {
     };
     dragmode dragMode = drag_none;
 public:
-    guictr_noteeditor& noteeditor;
-    scaled_grid& grid;
 
-    guictr_clipeditorview(clip_view& _view, guictr_noteeditor& _noteeditor);
+    guictr_clipeditorview();
     ~guictr_clipeditorview();
+    void setClipEditor(std::shared_ptr<GuiCtrLayoutEntry>& _clipEditor) {
+        clipEditor = _clipEditor;
+        auto clipEditor = getClipEditor();
+        if (clipEditor) {
+            m_grid = clipEditor->noteeditor.getGrid();
+            m_view = clipEditor->noteeditor.getClipView();
+        }
+    }
+    guictr_clipeditor* getClipEditor() {
+        if (clipEditor && clipEditor->getType() == gui_type::CTR_TYPE_CLIPEDITOR)
+            return guictr_cast<guictr_clipeditor>(clipEditor);
+        return nullptr;
+    }
+    scaled_grid& getGrid() {
+        auto clipEditor = getClipEditor();
+        if (clipEditor)
+            return clipEditor->noteeditor.getGrid();
+        return m_grid;
+    }
+    clip_view& getClipView() {
+        auto clipEditor = getClipEditor();
+        if (clipEditor)
+            return clipEditor->getClipView();
+        return m_view;
+    }
     void prerender(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
     float getScaleX();

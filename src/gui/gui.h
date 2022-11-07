@@ -145,6 +145,8 @@ enum gui_type : uint16_t {
     CTR_TYPE_CLIPEDITOR_CONTROLDATA,
     CTR_TYPE_TRACKS,
     CTR_TYPE_NODES,
+    CTR_TYPE_TRACKS_TIMELINE,
+    CTR_TYPE_TRACKS_EDITOR,
 };
 namespace DebugAlloc {
     template<typename T>
@@ -483,7 +485,7 @@ public:
     }
     virtual void onChildLayoutChanged(guibase* g) {
         if (this->parent) {
-            this->parent->onChildLayoutChanged(this);
+            this->parent->onChildLayoutChanged(g);
         }
     }
     virtual guibase* getFocusedControl() {
@@ -550,3 +552,21 @@ protected:
     void setTheme(guitheme_t* theme);
 };
 
+template<typename T, gui_type guitype>
+T* gui_cast(guibase* entry) {
+    if (entry && entry->getGuiType() == guitype) {
+        return static_cast<T*>(entry);
+    }
+    return nullptr;
+}
+
+template<typename T, gui_type guitype>
+T* guiParentType(guibase* parent) {
+    while (parent) {
+        if (parent->getGuiType() == guitype) {
+            return static_cast<T*>(parent);
+        }
+        parent = parent->parent;
+    }
+    return nullptr;
+}

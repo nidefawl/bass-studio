@@ -782,7 +782,7 @@ void guiproperties_table<guibase>::onTick(AppCtrl* appctrl) {
     }
     if (m_bNeedsRelayout) {
         m_bNeedsRelayout = false;
-        onChildLayoutChanged(this);
+        layout();
     }
 }
 template <>

@@ -22,6 +22,18 @@ enum autolayout_mode : uint8_t {
 enum class dock_pos : int32_t { NONE = 0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
 enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };
 
+enum GuiContainerTag : int32_t {
+    TAG_LEFT = 100,
+    TAG_CENTER,
+    TAG_RIGHT,
+    TAG_TAB_TOP,
+    TAG_TAB_BOTTOM,
+    TAG_TRACKS,
+    TAG_NODES,
+    TAG_CLIPEDIT,
+    TAG_PLUGINS,
+};
+
 class guictr_base : public guibase {
 protected:
     autolayout_mode layoutMode{LAYOUT_NONE};
@@ -162,6 +174,7 @@ public:
     }
 
     virtual void add(guibase* gui) {
+        dbgassert(gui && gui != this);
         auto it = std::find(guis.begin(), guis.end(), gui);
         if (it != guis.end()) {
             throw applogicexception(StringFormat("%s - attempt to add gui twice", StringAsCStr(getClassName())));

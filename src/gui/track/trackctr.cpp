@@ -161,7 +161,7 @@ void guictr_tracks::removeSubtrack(track_gui_entry_t* entry, gui_track_subtrack*
 }
 
 gui_track_automationlane* guictr_tracks::addAutomationLane(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx, bool insertFront) {
-    auto* al = new gui_track_automationlane(entry, grid, at, paramIdx);
+    auto* al = new gui_track_automationlane(entry, m_grid, at, paramIdx);
     addSubTrack(entry, al, insertFront);
     return al;
 }
@@ -259,9 +259,9 @@ void guictr_tracks::updateVisibleTracks() {
         entry->content->setVisible(bVisible);
         entry->mixer->setVisible(bVisible);
         if (bVisible) {
-            entry->content->updateVisibleTrackContents(projectGlobals, grid);
+            entry->content->updateVisibleTrackContents(projectGlobals, m_grid);
             for (gui_track_subtrack* au : entry->subtracks) {
-                au->updateVisibleTrackContents(grid);
+                au->updateVisibleTrackContents(m_grid);
             }
         }
     }
@@ -269,9 +269,9 @@ void guictr_tracks::updateVisibleTracks() {
 void guictr_tracks::layoutVisibleTracks() {
     track_gui_vector_td& tracks = guiMgr.tracksVisibleFlat;
     for (track_gui_entry_t* entry : tracks) {
-        entry->content->updateVisibleTrackContents(projectGlobals, grid);
+        entry->content->updateVisibleTrackContents(projectGlobals, m_grid);
         for (gui_track_subtrack* au : entry->subtracks) {
-            au->updateVisibleTrackContents(grid);
+            au->updateVisibleTrackContents(m_grid);
         }
     }
 }
@@ -301,6 +301,7 @@ void guictr_tracks::layout() {
     trackControls.size = ivec2(trackControlsWidth, trackView.size.y);
 
     loophandles.clipViewSize = ivec2(trackView.size.x, trackView.size.y + loophandles.size.y);
+    m_grid.update(trackView.size);
 
     ivec2 csTrackView = trackView.getSizeContent();
 
@@ -506,7 +507,7 @@ void guictr_tracks::render(NVGcontext* vg) {
         nvgTranslate(vg, trackView.pos.x, 0);
         tick_t pos = dawCtrl->getDaw()->getPlaybackPos();
 
-        float playBackX = (float) grid.tickToScreenD(pos);
+        float playBackX = (float) m_grid.tickToScreenD(pos);
         if (playBackX > -4.0f && playBackX < cs.x + 4.0f) {
             nvgBeginPath(vg);
             nvgMoveTo(vg, playBackX, 0);
@@ -708,8 +709,8 @@ void guictr_tracks::addTrack(track_t* track, int flags) {
     entry->parentCtrl = this->dawCtrl;
     entry->track      = track;
     entry->parent     = this;
-    entry->mixer      = DAW::createTrackGuiMixer(entry);
-    entry->content    = DAW::createTrackGui(entry, grid);
+    entry->mixer      = DAW::createTrackGuiMixer(entry, m_grid);
+    entry->content    = DAW::createTrackGui(entry, m_grid);
 
     guiMgr.addTrack(entry);
     trackControls.addTrackEntry(*entry);
@@ -723,7 +724,11 @@ void guictr_tracks::addTrack(track_t* track, int flags) {
     }
 }
 void guitrack_mixers::handleRightClick(MouseEvent& evt) {
-    parentCtrl->openContextMenu(new guictxtmenu_notrack(dawCtrl), evt.mousepos);
+    auto trackEditor = guiParentType<guitrack_editor, gui_type::CTR_TYPE_TRACKS_EDITOR>(this->parent);
+    if (!assert_expr(trackEditor)) {
+        return;
+    }
+    parentCtrl->openContextMenu(new guictxtmenu_notrack(trackEditor), evt.mousepos);
 }
 
 void getTrackGuiYBounds(const track_gui_entry_t* track, ivec2& topBottom) {
@@ -850,4 +855,10 @@ bool guitrack_mixers::handleKeyInput(KeyEvent& kevt) {
         }
     }
     return false;
+}
+void guictr_tracks::onAdded() {
+    guictr_base::onAdded();
+}
+void guictr_tracks::onRemove() {
+    guictr_base::onRemove();
 }

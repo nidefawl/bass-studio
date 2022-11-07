@@ -219,53 +219,24 @@ public:
     bool getSelected(std::vector<effectbase*>& out);
 };
 class guictr_pluginview : public guictr_base {
+    std::shared_ptr<GuiCtrLayoutEntry> pluginCtr;
 public:
     int lastscrolloffset = 0;
-    guictr_plugins* ctr_plugins;
-    guictr_pluginview(guictr_plugins* _plugins) : guictr_base() {
-        this->ctr_plugins = _plugins;
+    guictr_pluginview() : guictr_base() {
         setCanMouseHit(true);
     }
     ~guictr_pluginview() override = default;
-    vec2 getScale() {
-        ivec2 cs  = this->getSizeContent();
-        ivec2 csp = ctr_plugins->getSizeContent();
-        int32_t w = ctr_plugins->getTotalWidth();
-        float sc  = math::max(1.0f, csp.x / (float) w);
-        return vec2((cs.x / (double) csp.x) * sc, cs.y / (double) csp.y);
+    void setPluginCtr(std::shared_ptr<GuiCtrLayoutEntry>& _pluginCtr) {
+        pluginCtr = _pluginCtr;
     }
-
-    guibase* getFocusedContainer() override {
-        return this->ctr_plugins;
-    }
-
+    guictr_plugins* getPluginCtr();
+    vec2 getScale();
+    guibase* getFocusedContainer() override;
     void render(NVGcontext* vg) override;
-    void handleDraggedBegin(MouseEvent& evt) override {
-        if (evt.guiDragged == this) {
-            dawCtrl->showPluginView();
-            if (isCtrl(evt.kbmods) || evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
-                dawCtrl->getDaw()->getMainControl()->toggleViewModeEditArea();
-            }
-            lastscrolloffset = ctr_plugins->scrolloffset;
-        }
-    }
-    float getMinScale() {
-        ivec2 cs  = this->getSizeContent();
-        ivec2 csp = ctr_plugins->getSizeContent();
-        if (cs.x > 0 && cs.y > 0 && csp.x > 0 && csp.y > 0) {
-            int32_t w = ctr_plugins->getTotalWidth();
-            return math::min((cs.x / (float) math::max(csp.x, w)), cs.y / (float) csp.y);
-        }
-        return 1.0f;
-    }
-    void handleDraggedMove(MouseEvent& evt) override {
-        if (evt.guiDragged == this) {
-            ivec2 move = evt.mousepos - evt.dragStart;
-            ctr_plugins->setScrolloffset(lastscrolloffset + (int) (move.x * (1.0 / getMinScale())));
-        }
-    }
-    void layout() override {
-    }
+    void handleDraggedBegin(MouseEvent& evt) override;
+    float getMinScale();
+    void handleDraggedMove(MouseEvent& evt) override;
+    void layout() override;
 };
 
 class action_remove_modules : public action_base {

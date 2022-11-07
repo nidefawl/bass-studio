@@ -409,6 +409,10 @@ namespace DAW {
                 } else if (command == CMD_CONSOLIDATE && cursor.getRange() && !cursor.isSubtrackSelection()) {
                     auto pTask = new consolidate_task_t{};
                     auto& task = *pTask;
+                    auto ctr = dawCtrl->getGuiCtrFocused();
+                    if (ctr) {
+                        task.refGui = ctr->makeSafeRef();
+                    }
                     task.dawCtrl = dawCtrl;
                     task.daw = daw;
                     task.iGuiMgr = &iGuiMgr;

@@ -453,7 +453,6 @@ void guictr_plugins::showTrack(audio_stage_t* audio) {
     String name;
     if (audio && this->track) {
         audio->m_pluginCtr = this;
-        dbgassert(audio->parent || MainCtrl::getPluginCtr() == this);
         if (!audio->effects.empty()) {
             for (effectbase* vst : audio->effects) {
                 addGui(vst);
@@ -744,27 +743,30 @@ void guictr_pluginview::render(NVGcontext* vg) {
         drawBackground(vg, theme, cp + ivec2(0, -topOffset), cs+ivec2(0, topOffset), margin, false);
     }
     drawInsetBackground(vg, theme, cp, cs);
-    ivec2 csp = ctr_plugins->getSizeContent();
-    int32_t w = ctr_plugins->getTotalWidth();
-    if (cs.x > 0 && cs.y > 0 && csp.x > 0 && csp.y > 0 && w > 1) {
-        float scY       = cs.y / (float) csp.y;
-        float scContent = math::min(1.0f, csp.x / (float) w);
-        float minScale  = math::min((cs.x / (float) math::max(csp.x, w)), scY);
-        nvgSave(vg);
-        if (setScissorTransform(vg)) {
-            nvgScale(vg, minScale, scY);
-            for (guibase* gui : ctr_plugins->guis) {
-                nvgSave(vg);
-                gui->render(vg);
-                nvgRestore(vg);
+    auto ctrPlugins = getPluginCtr();
+    if (ctrPlugins && ctrPlugins->isVisible()) {
+        ivec2 csp = ctrPlugins->getSizeContent();
+        int32_t w = ctrPlugins->getTotalWidth();
+        if (cs.x > 0 && cs.y > 0 && csp.x > 0 && csp.y > 0 && w > 1) {
+            float scY       = cs.y / (float) csp.y;
+            float scContent = math::min(1.0f, csp.x / (float) w);
+            float minScale  = math::min((cs.x / (float) math::max(csp.x, w)), scY);
+            nvgSave(vg);
+            if (setScissorTransform(vg)) {
+                nvgScale(vg, minScale, scY);
+                for (guibase* gui : ctrPlugins->guis) {
+                    nvgSave(vg);
+                    gui->render(vg);
+                    nvgRestore(vg);
+                }
             }
+            nvgRestore(vg);
+            nvgBeginPath(vg);
+            nvgRect(vg, cp.x + ctrPlugins->scrolloffset * minScale, cp.y, cs.x * scContent, cs.y);
+            nvgStrokeWidth(vg, 3);
+            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLUGIN_VIEW_FRAME));
+            nvgStroke(vg);
         }
-        nvgRestore(vg);
-        nvgBeginPath(vg);
-        nvgRect(vg, cp.x + ctr_plugins->scrolloffset * minScale, cp.y, cs.x * scContent, cs.y);
-        nvgStrokeWidth(vg, 3);
-        nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PLUGIN_VIEW_FRAME));
-        nvgStroke(vg);
     }
 }
 void guictr_plugins::onTick(AppCtrl* ctrl) {
@@ -780,15 +782,13 @@ void guictr_plugins::onTick(AppCtrl* ctrl) {
             default:
                 return;
         }
-        guictr_plugins* ctr   = MainCtrl::getPluginCtr();
-        ivec2 cs              = ctr->getSizeContent();
+        ivec2 cs = getSizeContent();
         ivec2 screenPosMouse  = ctrl->m_mousePos;
         ivec2 screenPosCtrMin = toScreenSpace(ivec2(scrolloffset, 0));
         ivec2 screenPosCtrMax = screenPosCtrMin + cs;
         if (screenPosMouse.y >= screenPosCtrMin.y && screenPosMouse.y <= screenPosCtrMax.y) {
             if (screenPosMouse.x < screenPosCtrMin.x + SCROLL_START_X && scrolloffset > 0) {
                 setScrolloffset(scrolloffset - (int) ((TIMER_MS / 50.0) * 40));
-                ctrl->requestRedraw();
             } else if (screenPosMouse.x > screenPosCtrMax.x - SCROLL_START_X && scrolloffset < getTotalWidth() - cs.x) {
                 setScrolloffset(scrolloffset + (int) ((TIMER_MS / 50.0) * 40));
                 ctrl->requestRedraw();
@@ -965,4 +965,69 @@ void guictr_plugins::makeVisisble(guibase* entry) {
             scrolloffset = x + entry->size.x - w;
         }
     }
+}
+
+vec2 guictr_pluginview::getScale() {
+    auto pluginCtr = getPluginCtr();
+    if (!pluginCtr) {
+        return { 1, 1 };
+    }
+    ivec2 cs  = this->getSizeContent();
+    ivec2 csp = pluginCtr->getSizeContent();
+    int32_t w = pluginCtr->getTotalWidth();
+    float sc  = math::max(1.0f, csp.x / (float) w);
+    return { (cs.x / (double) csp.x) * sc, cs.y / (double) csp.y };
+}
+
+guibase* guictr_pluginview::getFocusedContainer() {
+    auto pluginCtr = getPluginCtr();
+    if (!pluginCtr) {
+        return parent;
+    }
+    return pluginCtr;
+}
+
+guictr_plugins* guictr_pluginview::getPluginCtr() {
+    if (pluginCtr && pluginCtr->getType() == gui_type::CTR_TYPE_PLUGINS)
+        return guictr_cast<guictr_plugins>(pluginCtr);
+    return nullptr;
+}
+
+void guictr_pluginview::handleDraggedBegin(MouseEvent& evt) {
+    if (evt.guiDragged == this) {
+        dawCtrl->showPluginView();
+        if (isCtrl(evt.kbmods) || evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
+            dawCtrl->getDaw()->getMainControl()->toggleViewModeEditArea();
+        }
+        auto pluginCtr = getPluginCtr();
+        if (pluginCtr) {
+            lastscrolloffset = pluginCtr->scrolloffset;
+        }
+    }
+}
+
+float guictr_pluginview::getMinScale() {
+    auto pluginCtr = getPluginCtr();
+    if (pluginCtr) {
+        ivec2 cs  = this->getSizeContent();
+        ivec2 csp = pluginCtr->getSizeContent();
+        if (cs.x > 0 && cs.y > 0 && csp.x > 0 && csp.y > 0) {
+            int32_t w = pluginCtr->getTotalWidth();
+            return math::min((cs.x / (float) math::max(csp.x, w)), cs.y / (float) csp.y);
+        }
+    }
+    return 1.0f;
+}
+
+void guictr_pluginview::handleDraggedMove(MouseEvent& evt) {
+    if (evt.guiDragged == this) {
+        auto pluginCtr = getPluginCtr();
+        if (pluginCtr) {
+            ivec2 move = evt.mousepos - evt.dragStart;
+            pluginCtr->setScrolloffset(lastscrolloffset + (int) (move.x * (1.0 / getMinScale())));
+        }
+    }
+}
+
+void guictr_pluginview::layout() {
 }

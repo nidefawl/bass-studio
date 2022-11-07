@@ -163,6 +163,7 @@ namespace DAW::UI {
         Add(CMD_OPEN_SECOND_WINDOW, {"Open Second Window", "Open a second window", ""}, {});
         Add(CMD_CREATE_VIEW, {"Open View", "Open a new view", ""}, {});
         Add(CMD_MOVE_CURSOR, {"Move cursor", "Move the cursor position", ""}, {});
+        Add(CMD_RESET_UI_DEFAULT_LAYOUT, {"Reset UI Layout", "Reset the UI layout to the default layout", ""}, {});
 
         auto cmdOpenView = Command{CMD_SWITCH_LAYOUT, {"Switch Layout", "Switch to Layout %d. Hold Shift Key to store", ""}, {}, 0, {}, {}, 0, 0, ""};
         for (int32_t i = 0; i < 10; i++) {

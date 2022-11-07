@@ -1510,7 +1510,7 @@ public:
             if (cursor.inSubTrack(m_trackentry->idx, laneIdx)) {
                 cursor.fixCursorSubRange(m_trackentry->subtracks.size() - 1);
             }
-            dawCtrl->getTrackContainer()->removeSubtrack(m_trackentry, subtrack);
+            m_trackentry->parent->removeSubtrack(m_trackentry, subtrack);
             dawCtrl->getDaw()->updateVisibleTrackContents();
         }
     }
@@ -1574,8 +1574,8 @@ public:
         }
     }
 };
-gui_track_controls::gui_track_controls(track_gui_entry_t* _entry)
-    : gui_track_content_base(_entry),
+gui_track_controls::gui_track_controls(track_gui_entry_t* _entry, scaled_grid& _grid)
+    : gui_track_content_base(_entry, _grid),
       title(new gui_trackcontrols_title(_entry)),
       mixer(new gui_trackcontrols_mixer(_entry)),
       io(new gui_trackcontrols_io(_entry)) {
@@ -1751,8 +1751,8 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     return contained;// always need to return true if contained, parent has z-order
 }
 
-gui_track_content_base::gui_track_content_base(track_gui_entry_t* _entry)
-    : m_track(_entry->track), m_trackentry(_entry) {
+gui_track_content_base::gui_track_content_base(track_gui_entry_t* _entry, scaled_grid& _grid)
+    : m_grid(_grid), m_track(_entry->track), m_trackentry(_entry) {
 }
 
 void gui_track_controls::handleDraggedBegin(MouseEvent& evt) {
@@ -1935,7 +1935,7 @@ void gui_track_content_base::pluginEntryDragRelease(gui_pluginlist_entry* g, ive
         audio_stage_ref_t refdst = dstStage->toRef();
         auto* track_action = new action_insert_effect("Insert plugin", effect, refdst, dstSlot);
         daw->pushHist(track_action);
-        mainCtrl->onPluginsChanged();
+        daw->onPluginsChanged();
         if (dstStage->m_pluginCtr)
             dstStage->m_pluginCtr->makeVisisble(effect->getGui());
     }
@@ -2317,7 +2317,7 @@ public:
                 }
             } else {
                 tr->audio->flags |= audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::RECORD_OUTPUT;
-                auto gui = makeGuiSubtrack(m_trackentry, dawCtrl, gui_track_subtrack::SUBTRACK_TYPE_WAVE);
+                auto gui = makeGuiSubtrack(m_trackentry, m_trackentry->parent->getGrid(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
                 trackCtr->addSubTrack(m_trackentry, gui, true);
             }
 

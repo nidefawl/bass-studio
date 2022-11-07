@@ -509,7 +509,9 @@ void guiknob::setKnobInternalHandlers() {
             auto* track = paramAutomatable->getTrack();
             if (!track)
                 return;
-            auto* guiTrackCtr   = dawCtrl->getTrackContainer();
+            auto guiTrackCtr = dawCtrl->getTrackContainer();
+            if (!guiTrackCtr)
+                return;
             track_gui_entry_t* entry{};
             if (!guiTrackCtr->getPointerEntry(track, &entry))
                 return;

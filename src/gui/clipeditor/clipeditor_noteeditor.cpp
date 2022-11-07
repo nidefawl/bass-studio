@@ -1025,7 +1025,6 @@ guictr_audioeditor::guictr_audioeditor(guictr_clipeditor& parentClipEditor, clip
       content(grid, _view)
 {
     padding = 2;
-    grid.showRange(0, TICKS_BAR * 4);
     grid.addCallback(this);
     add(&content);
     add(&timeline);

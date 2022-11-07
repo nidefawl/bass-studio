@@ -215,13 +215,13 @@ public:
     static constexpr int SUBTRACK_TYPE_AUTOMATION = 1;
     static constexpr int SUBTRACK_TYPE_WAVE       = 2;
 
+protected:
+    scaled_grid& m_grid;
 public:
     track_t* const m_track;
     track_gui_entry_t* const m_trackentry;
-
 protected:
     gui_track_automation guiTrAutomation;
-
 public:
     automatable_t* at;
     int32_t param;
@@ -229,6 +229,9 @@ public:
     int32_t height = 4;
     int32_t idx    = -1;
     gui_track_subtrack(track_gui_entry_t* _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param);
+    scaled_grid& getGrid() {
+        return m_grid;
+    }
     //TODO: prefix with get
     virtual int subtrackType() { return SUBTRACK_TYPE_EMPTY; }
     automated_param_t* getAutomation() const {
@@ -275,30 +278,7 @@ public:
         nvgRestore(vg);
     }
     virtual void renderMixerInfo(NVGcontext* vg, ivec2 pos, ivec2 size);
-    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-        if (guiTrAutomation.mouseHitTest(mpos, evt)) {
-            return true;
-        }
-        if (this->contains(mpos)) {
-            ivec2 localMouse = this->toContainerSpace(mpos);
-            for (guibase* gui : guis) {
-                if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
-                    return true;
-                }
-            }
-            if (evt.type == MouseHitType::MOUSE_RIGHT) {// righclick in selection (create clip etc.)
-                scaled_grid& grid = m_trackentry->parentCtrl->getGrid();
-                tick_t tick       = grid.screenToTickSnap(mpos.x, SNAP_OFF);
-                if (m_trackentry->parentCtrl->getCursor().contains(this->m_trackentry->idx, tick)) {
-                    evt.requestFocus(this);
-                    return true;
-                }
-            }
-            // tracks need to always cancel further mouse tests for z-order to work in parent container
-            return true;
-        }
-        return false;
-    }
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void positionChanged() {
         guiTrAutomation.pos  = this->pos;
         guiTrAutomation.size = this->size;

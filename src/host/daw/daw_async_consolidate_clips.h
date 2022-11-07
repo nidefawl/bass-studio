@@ -4,6 +4,7 @@
 #include "assert_dbg.h"
 #include "cursor.h"
 #include "daw_async_task.h"
+#include "gui/gui.h"
 #include "host/audiobuffer/audioblock.h"
 #include "host/audiocache/audiocache.h"
 #include "host/clip/clip.h"
@@ -12,6 +13,7 @@
 #include "host/daw/mainctrl.h"
 #include "host/track/track_impl.h"
 #include "host/track/track_types.h"
+#include "saferef.h"
 #include "types.h"
 
 namespace DAW {
@@ -154,6 +156,7 @@ public:
         }
     };
 struct consolidate_task_t : public async_task_t {
+    SafeRef<guibase> refGui;
     DawCtrl* dawCtrl;
     DawInstance* daw;
     track_gui_manager_i* iGuiMgr;
@@ -326,7 +329,14 @@ struct consolidate_task_t : public async_task_t {
         cursor.setLeftAligned();
         DAW::cutSelection(daw, *iGuiMgr, cursor, bCopyAutomation);
         DAW::pasteClipboard(daw, *iGuiMgr, clipboardConsolidated.get(), cursor, bCopyAutomation);
-        dawCtrl->getGrid().makeTickVisible(cursor.getTickBegin()+cursor.getRange()/2);
+
+        auto gui = safeRefGet(refGui);
+        if (gui) {
+            auto editor = guiParentType<guitrack_editor, gui_type::CTR_TYPE_TRACKS_EDITOR>(gui);
+            if (editor) {
+                editor->getGrid().makeTickVisible(cursor.getTickBegin()+cursor.getRange()/2);
+            }
+        }
         auto* track_action = new action_modify_track("Consolidate selection", preModifyState.copy());// could be more efficient
         daw->pushHist(track_action);
         daw->updateVisibleTrackContents();

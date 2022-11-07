@@ -116,8 +116,8 @@ namespace DAW {
         return guitrack;
     }
 
-    gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry) {
-        auto const guicontrols = new gui_track_controls(_entry);
+    gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry, scaled_grid& grid) {
+        auto const guicontrols = new gui_track_controls(_entry, grid);
         guicontrols->setZOrder(_entry->track->type >= TRACK_TYPE_MIDI ? 0 : 1);
         return guicontrols;
     }
@@ -361,7 +361,7 @@ void gui_audio_clip::handleDraggedMove(MouseEvent& evt) {
     auto shapeEdit = getShapeEdit();
     if (shapeEdit && shapeEdit->dragged.type == DAW::Shape::shape_t::hittype::HIT_NODE) {
         auto mousePosTrackCtr = toControlsObjectSpace(evt.mousepos, parent);
-        double tick = m_trackentry->parent->grid.screenToTickD(mousePosTrackCtr.x);
+        double tick = m_trackentry->parent->m_grid.screenToTickD(mousePosTrackCtr.x);
         
         auto& fadeToEdit = m_clip->getFade(editingFade);
         double relative = math::clamp<double>(tick - m_clip->start(), 0, m_clip->getLen());
@@ -403,15 +403,12 @@ void gui_audio_clip::handleDraggedRelease(MouseEvent& evt) {
         shapeEdit->dragged = {};
         m_trackentry->parent->layoutVisibleTracks();
         bRequestRefresh = true;
-        auto view = dawCtrl->getClipView();
-        if (assert_expr(view.clip() == m_clip)) {
-            auto daw = dawCtrl->getDaw();
-            auto clipBefore = *m_clip;
-            clipBefore.audio = editState->dataBefore;
-            String desc = "Edit Clip Fade" + String(editingFade == 0 ? " In" : " Out");
-            daw->pushHist(new action_modify_clip(desc, view, clipBefore, view.cursor));
-            m_clip->setDirty();
-        }
+        auto daw = dawCtrl->getDaw();
+        auto clipBefore = *m_clip;
+        clipBefore.audio = editState->dataBefore;
+        String desc = "Edit Clip Fade" + String(editingFade == 0 ? " In" : " Out");
+        daw->pushHist(new action_modify_clip(desc, m_trackentry->track, *m_clip, &clipBefore));
+        m_clip->setDirty();
         return;
     }
     evt.relMousepos += pos;
@@ -420,7 +417,11 @@ void gui_audio_clip::handleDraggedRelease(MouseEvent& evt) {
 
 
 void gui_midi_clip::handleRightClick(MouseEvent& evt) {
-    parentCtrl->openContextMenu(new guictxtmenu_clip(dawCtrl, this), evt.mousepos);
+    auto trackEditor = guiParentType<guitrack_editor, gui_type::CTR_TYPE_TRACKS_EDITOR>(this->parent);
+    if (!assert_expr(trackEditor)) {
+        return;
+    }
+    parentCtrl->openContextMenu(new guictxtmenu_clip(trackEditor, this), evt.mousepos);
 }
 
 void gui_audio_clip::handleRightClick(MouseEvent& evt) {
@@ -442,7 +443,11 @@ void gui_audio_clip::handleRightClick(MouseEvent& evt) {
             }
         }
     }
-    parentCtrl->openContextMenu(new guictxtmenu_clip(dawCtrl, this), evt.mousepos);
+    auto trackEditor = guiParentType<guitrack_editor, gui_type::CTR_TYPE_TRACKS_EDITOR>(this->parent);
+    if (!assert_expr(trackEditor)) {
+        return;
+    }
+    parentCtrl->openContextMenu(new guictxtmenu_clip(trackEditor, this), evt.mousepos);
 }
 
 void gui_audio_clip::updateClipRenderCache(NVGcontext* vg) {
@@ -682,7 +687,7 @@ void gui_clip::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
 }
 
 gui_track::gui_track(track_gui_entry_t* _entry, scaled_grid& _grid)
-    : gui_track_content_base(_entry), automation(_entry, _grid, _entry->state.selectedAutomationCtr, _entry->state.selectedAutomationParam, subtrackIdx) {
+    : gui_track_content_base(_entry, _grid), automation(_entry, _grid, _entry->state.selectedAutomationCtr, _entry->state.selectedAutomationParam, subtrackIdx) {
     padding = 0;
 }
 
@@ -746,6 +751,7 @@ gui_track_automationlane::gui_track_automationlane(track_gui_entry_t* _entry, sc
 
 gui_track_subtrack::gui_track_subtrack(track_gui_entry_t* _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param)
     : guictr_base(),
+      m_grid(_grid),
       m_track(_entry->track),
       m_trackentry(_entry),
       guiTrAutomation(_entry, _grid, this->at, param, idx),
@@ -758,8 +764,8 @@ class guictxtmenu_trackcontent : public guictxtmenu_track_editor {
 
 public:
     //TODO make this take a safe reference to a track
-    guictxtmenu_trackcontent(DawCtrl* const _dawCtrl, track_gui_entry_t* const _trackentry)
-        : guictxtmenu_track_editor(_dawCtrl, _trackentry, nullptr) {
+    guictxtmenu_trackcontent(guitrack_editor* const _editor, track_gui_entry_t* const _trackentry)
+        : guictxtmenu_track_editor(_editor, _trackentry, nullptr) {
     }
     bool clickedElement(ctxtmenu_entry* e, int _id) override {
         if (guictxtmenu_track_editor::clickedElement(e, _id)) {
@@ -770,16 +776,28 @@ public:
 };
 
 void gui_track_automationlane::handleRightClick(MouseEvent& evt) {
-    parentCtrl->openContextMenu(new guictxtmenu_trackcontent(m_trackentry->parentCtrl, m_trackentry), evt.mousepos);
+    auto trackEditor = guiParentType<guitrack_editor, gui_type::CTR_TYPE_TRACKS_EDITOR>(this->parent);
+    if (!assert_expr(trackEditor)) {
+        return;
+    }
+    parentCtrl->openContextMenu(new guictxtmenu_trackcontent(trackEditor, m_trackentry), evt.mousepos);
 }
 void gui_track_subtrack::handleRightClick(MouseEvent& evt) {
-    parentCtrl->openContextMenu(new guictxtmenu_trackcontent(m_trackentry->parentCtrl, m_trackentry), evt.mousepos);
+    auto trackEditor = guiParentType<guitrack_editor, gui_type::CTR_TYPE_TRACKS_EDITOR>(this->parent);
+    if (!assert_expr(trackEditor)) {
+        return;
+    }
+    parentCtrl->openContextMenu(new guictxtmenu_trackcontent(trackEditor, m_trackentry), evt.mousepos);
 }
 void gui_track::handleRightClick(MouseEvent& evt) {
-    parentCtrl->openContextMenu(new guictxtmenu_trackcontent(m_trackentry->parentCtrl, m_trackentry), evt.mousepos);
+    auto trackEditor = guiParentType<guitrack_editor, gui_type::CTR_TYPE_TRACKS_EDITOR>(this->parent);
+    if (!assert_expr(trackEditor)) {
+        return;
+    }
+    parentCtrl->openContextMenu(new guictxtmenu_trackcontent(trackEditor, m_trackentry), evt.mousepos);
 }
 void guitrack_editor::handleRightClick(MouseEvent& evt) {
-    parentCtrl->openContextMenu(new guictxtmenu_trackcontent(dawCtrl, nullptr), evt.mousepos);
+    parentCtrl->openContextMenu(new guictxtmenu_trackcontent(this, nullptr), evt.mousepos);
 }
 
 void gui_track_subtrack::renderMixerInfo(NVGcontext* vg, ivec2 pos, ivec2 size) {
@@ -848,7 +866,7 @@ void gui_track::renderTrackFolded(NVGcontext* vg) {
                     clip_t* const cl = entry.first;
                     vec2 clipPos{};
                     vec2 clipSize = size;
-                    bool bCulled = !getClipPositionFloat(ctrTracks->grid, size, cl, clipPos, clipSize, 0.0);
+                    bool bCulled = !getClipPositionFloat(ctrTracks->m_grid, size, cl, clipPos, clipSize, 0.0);
                     if (!bCulled) {
                         NVGcolor color = rgbToNvg(cl->rgb);
                         if (!cl->enabled) {
@@ -933,4 +951,29 @@ void gui_track::renderDebugPass(NVGcontext* vg) {
         }
     }
     nvgRestore(vg);
+}
+
+bool gui_track_subtrack::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    if (guiTrAutomation.mouseHitTest(mpos, evt)) {
+        return true;
+    }
+    if (this->contains(mpos)) {
+        ivec2 localMouse = this->toContainerSpace(mpos);
+        for (guibase* gui : guis) {
+            if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
+                return true;
+            }
+        }
+        if (evt.type == MouseHitType::MOUSE_RIGHT) {// righclick in selection (create clip etc.)
+            scaled_grid& grid = m_trackentry->content->getGrid();
+            tick_t tick       = grid.screenToTickSnap(mpos.x, SNAP_OFF);
+            if (m_trackentry->parentCtrl->getCursor().contains(this->m_trackentry->idx, tick)) {
+                evt.requestFocus(this);
+                return true;
+            }
+        }
+        // tracks need to always cancel further mouse tests for z-order to work in parent container
+        return true;
+    }
+    return false;
 }

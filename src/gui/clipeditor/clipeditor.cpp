@@ -73,11 +73,10 @@ public:
             // addEntry(sel);
         }
         addEntry(new ctxtmenu_splitter());
-        scaled_grid& grid = dawCtrl->getGrid();
-        timeSel1     = new ctxtmenu_time_select(grid, "Adaptive Grid", 0);
+        timeSel1     = new ctxtmenu_time_select(_editor->getGrid(), "Adaptive Grid", 0);
         timeSel1->initAdaptive();
         addEntry(timeSel1);
-        timeSel2 = new ctxtmenu_time_select(grid, "Fixed Grid", 0);
+        timeSel2 = new ctxtmenu_time_select(_editor->getGrid(), "Fixed Grid", 0);
         timeSel2->initFixed();
         addEntry(timeSel2);
     }
@@ -123,7 +122,7 @@ guictr_clipeditor::guictr_clipeditor()
     : guictr_base(),
       noteeditor(*this, view),
       audioeditor(*this, view),
-      settings(noteeditor.getGrid(), view),
+      settings(view),
       arp(view) {
     setGuiType(gui_type::CTR_TYPE_CLIPEDITOR);
     // padding = 2;
@@ -178,7 +177,8 @@ void guictr_clipeditor::showEditClip(gui_clip* gclip, const clipboard_view_t& cl
         onViewChanged(gclip);
         noteeditor.showEditClip();
         audioeditor.showEditClip();
-        parent->layout();
+        if (parent)
+            parent->layout();
     }
 }
 
@@ -189,7 +189,8 @@ void guictr_clipeditor::resetClipView() {
         onViewChanged(nullptr);
         noteeditor.showEditClip();
         audioeditor.showEditClip();
-        parent->layout();
+        if (parent)
+            parent->layout();
     }
 }
 
@@ -2088,12 +2089,9 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
     return false;
 }
 
-guictr_clipeditorview::guictr_clipeditorview(clip_view& _view, guictr_noteeditor& _noteeditor)
+guictr_clipeditorview::guictr_clipeditorview()
     : guictr_base(),
-      view(_view),
-      cache(new midi_clip_render_cache_t{}),
-      noteeditor(_noteeditor),
-      grid(_noteeditor.getGrid())
+      cache(new midi_clip_render_cache_t{})
 {
 }
 guictr_clipeditorview::~guictr_clipeditorview() {
@@ -2105,7 +2103,11 @@ void guictr_clipeditorview::resetCache() {
 }
 
 void guictr_clipeditorview::prerender(NVGcontext* vg) {
-    clip_view& view  = dawCtrl->getClipView();
+    auto clipEditor = getClipEditor();
+    if (!clipEditor) {
+        return;
+    }
+    clip_view& view  = clipEditor->getClipView();
     clip_t* const cl = view.clip();
     if (!cl) {
         cache->reset();
@@ -2276,6 +2278,8 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
 
 float guictr_clipeditorview::getScaleX() {
     float scaleX = 1.0f;
+    auto& view = getClipView();
+    auto& grid = getGrid();
     auto* clip = view.clip();
     auto contentLenTicks = TICKS_BAR*4;
     if (clip) {
@@ -2284,8 +2288,13 @@ float guictr_clipeditorview::getScaleX() {
     if (view.isAbsoluteTimeMode()) {
         contentLenTicks = view.selectionView.maxClipEnd;
     }
+    auto clipEditor = getClipEditor();
+    if (!clipEditor) {
+        return 1.0f;
+    }
+    auto csEditor = clipEditor->noteeditor.sizeContentArea;
     auto barBeginEditor = grid.toObjSpace(0.0);
-    auto barEndEditor = grid.toObjSpace(noteeditor.content.size.x);
+    auto barEndEditor = grid.toObjSpace(csEditor.x);
     auto barLenClip = contentLenTicks / static_cast<double>(TICKS_BAR);
     auto barLenEditor = barEndEditor - barBeginEditor;
     scaleX  = math::max(static_cast<float>(barLenEditor/barLenClip), 0.0f);
@@ -2294,13 +2303,18 @@ float guictr_clipeditorview::getScaleX() {
 
 float guictr_clipeditorview::getScreenSpaceScaleX() {
     auto cs = getSizeContent();
-    auto csEditor = noteeditor.getContentSize();
+    auto clipEditor = getClipEditor();
+    if (!clipEditor) {
+        return 1.0f;
+    }
+    auto csEditor = clipEditor->noteeditor.sizeContentArea;
     if (cs.x <= 0)
         return 1.0f;
     return csEditor.x / static_cast<float>(cs.x);
 }
 
 void guictr_clipeditorview::getFrameBounds(vec2& posFrame, vec2& sizeFrame) {
+    auto& grid = getGrid();
     float scaleX = getScaleX();
     float scaleXSS = getScreenSpaceScaleX();
     ivec2 posContents = this->getPosContent();
@@ -2324,6 +2338,7 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
     }
     drawInsetBackground(vg, theme, posContents, sizeContents);
 
+    auto& view = getClipView();
     clip_t* const cl = view.clip();
     if (cl && cache->valid) {
         NVGcolor color = rgbToNvg(cl->rgb);
@@ -2375,14 +2390,12 @@ void guictr_clipeditorview::render(NVGcontext* vg) {
 
 void guictr_clipeditorview::handleDraggedBegin(MouseEvent& evt) {
     dragMode      = drag_none;
-    auto mainCtrl = dawCtrl->getDaw()->getMainControl();
     if (isCtrl(evt.kbmods) || evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
-        dawCtrl->getDaw()->getMainControl()->toggleViewModeEditArea();
+        dawCtrl->toggleViewModeEditArea();
         return;
     }
-    if (!mainCtrl->isClipEditorVisible()) {
+    if (!dawCtrl->isClipEditorVisible()) {
         dawCtrl->showClipEditor();
-        return;
     }
     float scaleX   = getScaleX();
     float scaleXSS = getScreenSpaceScaleX();
@@ -2390,6 +2403,7 @@ void guictr_clipeditorview::handleDraggedBegin(MouseEvent& evt) {
     getFrameBounds(posFrame, sizeFrame);
     // if click is outside frame then set offset to mousepos
     if (evt.mousepos.x < posFrame.x || evt.mousepos.x > posFrame.x + sizeFrame.x) {
+        auto& grid = getGrid();
         auto newOffset = (evt.relMousepos.x - sizeFrame.x * 0.5f) * (scaleXSS / scaleX);
         grid.setOffset(math::roundfS32(math::max(0.0f, newOffset)));
         grid.notifyChange();
@@ -2406,6 +2420,7 @@ void guictr_clipeditorview::handleDraggedMove(MouseEvent& evt) {
     }
 
     if (evt.guiDragged == this) {
+        auto& grid = getGrid();
         float scaleX   = getScaleX();
         float scaleXSS = getScreenSpaceScaleX();
         bool bChanged  = false;
@@ -2616,7 +2631,7 @@ bool guictr_noteeditor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 
 tick_t gui_clipcontent_base::getTickOffset() const {
     auto clip = view.clip();
-    if (!assert_expr(clip)) {
+    if (!(clip)) {
         return 0;
     }
     if (view.isAbsoluteTimeMode()) {

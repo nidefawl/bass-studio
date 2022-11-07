@@ -30,6 +30,7 @@
 #include "host/plugin/vst/vstplugin-handles.h"
 #include "host/daw/edithistory.h"
 #include "gui/plugin/plugin.h"
+#include "gui/clipeditor/clipeditor.h"
 #include "appconfig.h"
 
 #ifdef _WIN32
@@ -397,11 +398,14 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         strings.push_back(String("lastKey: ") + ctrl->lastKeyDebug);
         strings.push_back(StringFormat("undo size: %zu", daw->getHist().getNumUndoSteps()));
         strings.push_back(StringFormat("redo size: %zu", daw->getHist().getNumRedoSteps()));
-        clip_view& clipView = ctrl->getClipView();
-        if (clipView.clip()) {
-            strings.push_back(StringFormat("Clip: %s", StringAsCStr(clipView.clip()->name)));
-            strings.push_back(StringFormat("Notes: %zu", clipView.clip()->notes.m_list.size()));
-            strings.push_back(StringFormat("Selection size: %zu", clipView.clip()->notes.selection.size()));
+        auto editor = dawCtrl->getClipEditor();
+        if (editor) {
+            clip_view& clipView = editor->getClipView();
+            if (clipView.clip()) {
+                strings.push_back(StringFormat("Clip: %s", StringAsCStr(clipView.clip()->name)));
+                strings.push_back(StringFormat("Notes: %zu", clipView.clip()->notes.m_list.size()));
+                strings.push_back(StringFormat("Selection size: %zu", clipView.clip()->notes.selection.size()));
+            }
         }
         auto host = dawCtrl->getDaw()->getHost();
         strings.push_back("sample format");

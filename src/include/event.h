@@ -294,6 +294,7 @@ enum GlobalCommandType {
     CMD_SET_COLOR,
     CMD_SET_NAME,
     CMD_MOVE_CURSOR,
+    CMD_RESET_UI_DEFAULT_LAYOUT,
     NUM_COMMANDS
 };
 

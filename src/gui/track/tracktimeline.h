@@ -15,6 +15,7 @@ public:
     explicit guitrack_timeline(scaled_grid& _grid)
         : guictr_base(),
           grid(_grid) {
+        setGuiType(gui_type::CTR_TYPE_TRACKS_TIMELINE);
         setCanMouseHit(true);
         grid.addCallback(this);
         padding = 0;

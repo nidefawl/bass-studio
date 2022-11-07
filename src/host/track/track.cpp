@@ -841,14 +841,14 @@ void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, cons
                 if (!assert_expr(plugin->getParam(atlRef.paramIdx))) {
                     continue;
                 }
-                al = new gui_track_automationlane(entry, guiTracks->grid, plugin, atlRef.paramIdx);
+                al = new gui_track_automationlane(entry, guiTracks->m_grid, plugin, atlRef.paramIdx);
             }
             if (atlRef.type == AUTOMATABLE_MIXER) {
                 auto& mixer = track->getStage()->mixer;
                 if (!assert_expr(mixer.getParam(atlRef.paramIdx))) {
                     continue;
                 }
-                al = new gui_track_automationlane(entry, guiTracks->grid, &track->getStage()->mixer, atlRef.paramIdx);
+                al = new gui_track_automationlane(entry, guiTracks->m_grid, &track->getStage()->mixer, atlRef.paramIdx);
             }
             if (atlRef.type == AUTOMATABLE_ARP) {
                 auto arp = track->getStage()->arp;
@@ -858,10 +858,10 @@ void loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, cons
                 if (!assert_expr(arp->getParam(atlRef.paramIdx))) {
                     continue;
                 }
-                al = new gui_track_automationlane(entry, guiTracks->grid, arp, atlRef.paramIdx);
+                al = new gui_track_automationlane(entry, guiTracks->m_grid, arp, atlRef.paramIdx);
             }
         } else if (stSnapshot.settings.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
-            al = makeGuiSubtrack(entry, guiTracks->dawCtrl, stSnapshot.settings.subtrackType);
+            al = makeGuiSubtrack(entry, guiTracks->getGrid(), stSnapshot.settings.subtrackType);
             if (entry->track && entry->track->audio)
                 entry->track->audio->flags |= audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::RECORD_OUTPUT;
         }

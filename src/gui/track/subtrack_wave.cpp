@@ -24,7 +24,6 @@ class gui_subtrack_waveview : public gui_track_subtrack {
         std::shared_ptr<audiotrack_split_t> sample;
     };
     bool culled = true;
-    scaled_grid& grid;
     std::unordered_map<int64_t, waveview_entry> splits;
     int32_t tickOffset  = 0;
     int32_t updateCalls = 0;
@@ -32,8 +31,8 @@ class gui_subtrack_waveview : public gui_track_subtrack {
     std::vector<audiotrack_split_t*> waveviewSamplesPresent;
     std::vector<int64_t> waveviewSampleIdsPresent;
 public:
-    gui_subtrack_waveview(track_gui_entry_t* _entry, DawCtrl* ctrl)
-        : gui_track_subtrack(_entry, ctrl->getGrid(), nullptr, 0), grid(ctrl->getGrid()) {
+    gui_subtrack_waveview(track_gui_entry_t* _entry, scaled_grid& grid)
+        : gui_track_subtrack(_entry, grid, nullptr, 0) {
     }
     ~gui_subtrack_waveview() override {
         for (auto& entry : splits) {
@@ -55,7 +54,7 @@ public:
         if (tickOffset++ > 60) {
             tickOffset = 0;
             ivec2 ts   = { 0, 0 };
-            updatePosition(dawCtrl->getDaw()->getGlobals(), grid, ts, false);
+            updatePosition(dawCtrl->getDaw()->getGlobals(), getGrid(), ts, false);
         }
     }
 
@@ -162,7 +161,7 @@ public:
         const double tickRenderStart = sampleToTickConvert<double, roundmode::none>(entry.sample->samplePos, tempo100, samplerate);
         const double tickRenderLen = sampleToTickConvert<double, roundmode::none>(entry.sample->sample.nSamples, tempo100, samplerate);
 
-
+        auto& grid = getGrid();
         const double posStart    = grid.tickToScreenD(tickRenderStart);
         double renderSizeX = grid.tickLenToScreen(tickRenderLen);
 
@@ -384,6 +383,6 @@ public:
     }
 };
 
-gui_track_subtrack* makeGuiSubtrack(track_gui_entry_t* entry, DawCtrl* ctrl, int type) {
-    return new gui_subtrack_waveview(entry, ctrl);
+gui_track_subtrack* makeGuiSubtrack(track_gui_entry_t* entry, scaled_grid& grid, int type) {
+    return new gui_subtrack_waveview(entry, grid);
 }

@@ -11,7 +11,7 @@ struct guictrlayout_entry_snapshot_t {
     virtual ~guictrlayout_entry_snapshot_t() = default;
     gui_type type;
     String label;
-    int32_t entryTag;
+    int32_t entryTag = -1;
 };
 
 struct guictrlayout_snapshot_t : public guictrlayout_entry_snapshot_t {

@@ -124,6 +124,9 @@ MouseHitEvt BaseCtrl::mouseHitEvt(MouseHitType _type, KeyboardMods kbmods) {
     return { _type, static_cast<KeyboardMods>(kbmods) };
 }
 void BaseCtrl::focusGui(guibase* gui) {
+    if (gui && !gui->parent) {
+        return;
+    }
     if (guiCaptured != nullptr) {
         return;
     }
@@ -140,7 +143,10 @@ void BaseCtrl::focusGui(guibase* gui) {
         } else if (!newFocus) {
             guiFocused = nullptr;
         }
+        focusChanged(oldFocused, newFocus);
     }
+}
+void BaseCtrl::focusChanged(guibase* oldFocused, guibase* newFocused) {
 }
 void BaseCtrl::mouseDown(ivec2 mousePos, int button, KeyboardMods kbmods, bool doubleclick) {
     if (!mouseDownPre()) {
@@ -335,7 +341,7 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
         nvgRestore(vg);
     }
     if (dragDropTargets_ContainerMove.size()) {
-        for (std::weak_ptr<i_ctr_drop_area>& weakPtrTarget : dragDropTargets_ContainerMove) {
+        for (std::weak_ptr<DropAreaUILayout>& weakPtrTarget : dragDropTargets_ContainerMove) {
 
             if (!weakPtrTarget.expired()) {
                 // TODO: I don't even want to lock here, BaseCtrl::render() is considered const, not changing state of objects.
@@ -786,7 +792,7 @@ void BaseCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
         g->dragReleaseOn(gui, mevt.mousepos);
     }
 }
-void BaseCtrl::dragContainerBegin(MouseEvent& evt, guictr_layout_entry* ctrDragSrc) {
+void BaseCtrl::dragContainerBegin(MouseEvent& evt, GuiCtrLayoutEntry* ctrDragSrc) {
     dbgassert(!ctrContent.get());
     // get a shared pointer reference to ctrDragSrc, this is a bit awkward, as are all interfaces using shared_ptr
     // stores the reference to ctrDragSrc in shared_ptr ctrContent.
@@ -803,12 +809,20 @@ void BaseCtrl::dragContainerBegin(MouseEvent& evt, guictr_layout_entry* ctrDragS
 }
 void BaseCtrl::dragContainerMove(MouseEvent& evt) {
     dragContainerRelayout(drag_ctr_event{ drag_ctr_event_type::DRAG_MOVE });
-    std::vector<i_ctr_layout*> list                     = getContainers();
-    std::vector<std::weak_ptr<i_ctr_drop_area>> targets = getTargets(evt, list);
-    dragDropTargets_ContainerMove                       = targets;
-    ctrDragHandler.pos                                  = evt.mousepos;
+    std::vector<guictr_layout_base*> list                     = getContainers();
+    std::vector<std::weak_ptr<DropAreaUILayout>> targets = getTargets(evt, list);
+    std::sort(targets.begin(), targets.end(), [](const auto& a, const auto& b) {
+        auto p1 = a.lock();
+        auto p2 = b.lock();
+        if (p1 && p2) {
+            return p1->priority > p2->priority; 
+        }
+        return false;
+    });
+    dragDropTargets_ContainerMove = targets;
+    ctrDragHandler.pos = evt.mousepos;
 }
-void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i_ctr_drop_area* area) {
+void BaseCtrl::dropContainer(std::shared_ptr<GuiCtrLayoutEntry>& ctrContent, DropAreaUILayout* area) {
     bool hasRemovedContainer = false;
     bool hasPlacedContainer  = false;
     auto* szLabel1           = StringAsCStr(ctrContent->getGui()->label);
@@ -817,7 +831,7 @@ void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i
 
     dock_pos dockPos                  = area->getDockPos();
     container_layout ctrLayout        = layoutCtr->getLayout();
-    container_layout updatedCtrLayout = dock_pos_to_container_layout(dockPos);
+    container_layout updatedCtrLayout = layoutCtr->DockPosToContainerLayout(dockPos);
     if (area->childContainerIndex > -1 || (ctrLayout != updatedCtrLayout && ctrLayout != container_layout::SOLE)) {
         auto newContainer = std::make_shared<guictr_layout>();
         newContainer->setLayout(updatedCtrLayout);
@@ -845,10 +859,8 @@ void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i
                     newDockPos = dock_pos::BOTTOM;
                     break;
                 case dock_pos::BOTTOM:
-                    newDockPos = dock_pos::TOP;
-                    break;
                 default:
-                    dbgassert(0);
+                    newDockPos = dock_pos::TOP;
                     break;
             }
             auto containerToReplace =
@@ -857,7 +869,7 @@ void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i
             if (!parentLayoutCtr) {
                 std::shared_ptr<guictr_layout> prevCtr = this->replaceContainerWith(containerToReplace, newContainer);
                 if (prevCtr) {
-                    std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(prevCtr);
+                    std::shared_ptr<GuiCtrLayoutEntry> entry1 = createGuiCtrLayoutEntry(prevCtr);
                     newContainer->placeContainer(ctrContent, area);
                     area->dockPos = newDockPos;
                     newContainer->placeContainer(entry1, area);
@@ -883,7 +895,7 @@ void BaseCtrl::dropContainer(std::shared_ptr<guictr_layout_entry>& ctrContent, i
     }
 }
 void BaseCtrl::dragContainerRelease(MouseEvent& evt) {
-    i_ctr_drop_area* area = determineDropCtrArea(evt);
+    DropAreaUILayout* area = determineDropCtrArea(evt);
 
     if (area && ctrContent) {
         this->dropContainer(ctrContent, area);
@@ -894,20 +906,20 @@ void BaseCtrl::dragContainerRelease(MouseEvent& evt) {
     dragDropTargets_ContainerMove.clear();
     dragContainerRelayout(drag_ctr_event{ drag_ctr_event_type::DRAG_END });
 }
-std::vector<std::weak_ptr<i_ctr_drop_area>> BaseCtrl::getTargets(MouseEvent& mevt, std::vector<i_ctr_layout*> ifMatches) {
-    std::vector<std::weak_ptr<i_ctr_drop_area>> targets;
-    for (i_ctr_layout* ctr : ifMatches) {
-        std::vector<std::weak_ptr<i_ctr_drop_area>> ctrtargets;
+std::vector<std::weak_ptr<DropAreaUILayout>> BaseCtrl::getTargets(MouseEvent& mevt, std::vector<guictr_layout_base*> ifMatches) {
+    std::vector<std::weak_ptr<DropAreaUILayout>> targets;
+    for (guictr_layout_base* ctr : ifMatches) {
+        std::vector<std::weak_ptr<DropAreaUILayout>> ctrtargets;
         ctr->getOverlays(mevt, ctrtargets);
         targets.insert(targets.begin(), ctrtargets.begin(), ctrtargets.end());
     }
     return targets;
 }
-std::vector<i_ctr_layout*> BaseCtrl::getContainers() {
+std::vector<guictr_layout_base*> BaseCtrl::getContainers() {
     MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, KeyboardMods::KB_MODS_NONE);
     evtDragObj.setDraggedThing(nullptr);
     evtDragObj.requestFocus(nullptr);
-    std::vector<i_ctr_layout*> ifMatches;
+    std::vector<guictr_layout_base*> ifMatches;
     std::deque<guictr_base*> stack;
     std::vector<guictr_base*> ctrMatches;
     dbgassert(stack.empty());
@@ -930,7 +942,7 @@ std::vector<i_ctr_layout*> BaseCtrl::getContainers() {
                 stack.insert(stack.begin(), ctrMatches.begin(), ctrMatches.end());
             }
         }
-        i_ctr_layout* ifMatch = dynamic_cast<i_ctr_layout*>(current);
+        guictr_layout_base* ifMatch = dynamic_cast<guictr_layout_base*>(current);
         if (ifMatch) {
             ifMatches.push_back(ifMatch);
         }

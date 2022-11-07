@@ -1,4 +1,5 @@
 #include <nanovg.h>
+#include "assert_dbg.h"
 #include "logging.h"
 #include "math/vec.h"
 #include "math/seq_math.h"

@@ -59,7 +59,9 @@ public:
     double incr_bg  = 0;
 
 public:
-    scaled_grid() = default;
+    scaled_grid() {
+        showRange(0, TICKS_BAR * 4);
+    }
     void addCallback(grid_changed_cb* cb) {
         this->callbacks.push_back(cb);
     }

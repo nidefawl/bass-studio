@@ -15,31 +15,32 @@
 class ctxtmenu_time_select;
 class guictxtmenu_track_editor : public guictxtmenu {
 protected:
+    guitrack_editor* const m_editor;
     track_gui_entry_t* const m_trackentry;
     gui_clip* const m_gclip;
     ctxtmenu_color_select* sel = nullptr;
     ctxtmenu_time_select* timeSel1 = nullptr;
     ctxtmenu_time_select* timeSel2 = nullptr;
 public:
-    guictxtmenu_track_editor(DawCtrl* const _dawCtrl, track_gui_entry_t* const _trackentry, gui_clip* optionalContextClip);
+    guictxtmenu_track_editor(guitrack_editor* const _editor, track_gui_entry_t* const _trackentry, gui_clip* optionalContextClip);
 
     bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
 class guictxtmenu_clip : public guictxtmenu_track_editor {
 public:
-    explicit guictxtmenu_clip(DawCtrl* const _dawCtrl, gui_clip* const _gclip);
+    explicit guictxtmenu_clip(guitrack_editor* const _editor, gui_clip* const _gclip);
     bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
 class guictxtmenu_notrack : public guictxtmenu {
 public:
-    explicit guictxtmenu_notrack(DawCtrl* _dawCtrl) {
-        dawCtrl = _dawCtrl;
+    explicit guictxtmenu_notrack(guitrack_editor* const _editor) {
+        dawCtrl = _editor->dawCtrl;
         this->size.x = 190;
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_MIDI_TRACK));
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_AUDIO_TRACK));
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_RETURN_TRACK));
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_INSERT_MASTER_TRACK));
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_IMPORT_TRACK));
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_INSERT_MIDI_TRACK));
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_INSERT_AUDIO_TRACK));
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_INSERT_RETURN_TRACK));
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_INSERT_MASTER_TRACK));
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_IMPORT_TRACK));
     }
 };
 

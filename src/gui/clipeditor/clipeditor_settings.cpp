@@ -18,9 +18,8 @@
 #include "grid.h"
 
 
-gui_clipsettings::gui_clipsettings(scaled_grid&, clip_view& _view)
+gui_clipsettings::gui_clipsettings(clip_view& _view)
     : guictr_base(),
-      /*grid(_grid),*/
       view(_view),
       clipLoopStart(nullptr),
       clipLoopLen(nullptr, true),
@@ -30,7 +29,7 @@ gui_clipsettings::gui_clipsettings(scaled_grid&, clip_view& _view)
       clipTimeStartOffsedSamples(nullptr),
       clipAudioId(nullptr),
       quantization()
-    {
+{
     setCanMouseHit(true);
     btnLoop.drawFn   = drawTextureSymbol;
     btnLoop.drawParm = ICON_LOOP;
@@ -89,8 +88,8 @@ void selectAllMuted(DawInstance* daw, clip_view& view) {
 void gui_clipsettings::buttonClicked(guibase* button) {
     auto const daw = dawCtrl->getDaw();
     if (&btnLoop == button) {
-        clip_t* clip = view.clip();
-        if (clip != NULL) {
+        auto clip = view.clip();
+        if (clip) {
             clip->loopEnabled = !clip->loopEnabled;
         }
     }
@@ -228,7 +227,11 @@ void gui_quantizationsettings::buttonClicked(guibase* button) {
         settings.quantizeStart = inputStarts.getTime();
     }
     if (&btnQuantize == button) {
+        auto clipEditor = guiParentType<guictr_clipeditor, gui_type::CTR_TYPE_CLIPEDITOR>(this->parent);
+        if (!assert_expr(clipEditor)) {
+            return;
+        }
         auto temp = DAW::UI::CommandContext{GlobalCommandType::CMD_QUANTIZE};
-        dawCtrl->getClipEditor()->handleEditorCommand(temp);
+        clipEditor->handleEditorCommand(temp);
     }
 }

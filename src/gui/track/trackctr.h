@@ -64,7 +64,7 @@ namespace DAW {
     gui_track_subtrack* getSubTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap);
     gui_track* createTrackGui(track_gui_entry_t* _entry, scaled_grid&);// trackcontent.cpp
     gui_clip* createClipGui(guictr_base* parent, track_gui_entry_t* trackentry, clip_t* clip);
-    gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry);// trackcontrols.cpp
+    gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry, scaled_grid&);// trackcontrols.cpp
 }
 
 class guitrack_editor : public guictr_base {
@@ -92,11 +92,13 @@ public:
           projectGlobals(_projectGlobals),
           grid(_grid),
           dragdrop(_dragdropclip) {
+        setGuiType(gui_type::CTR_TYPE_TRACKS_EDITOR);
         this->dawCtrl = _dawCtrl;
         padding      = 0;
         sortChildren = true;
     }
     ~guitrack_editor() override = default;
+    scaled_grid& getGrid() { return grid; }
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
@@ -602,7 +604,7 @@ class guictr_tracks : public guictr_base, grid_changed_cb, te_constants, public 
     int32_t globalIndex = 0;
 
 public:
-    scaled_grid& grid;
+    scaled_grid m_grid;
     project_t& project;
     project_globals_t& projectGlobals;
     track_gui_manager_t guiMgr;
@@ -618,23 +620,22 @@ protected:
     int32_t contentViewSize = 0;
 
 public:
-    guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
+    guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_midifile& _dragdropclip)
         : guictr_base(),
-          grid(_grid),
           project(_project),
           projectGlobals(_projectGlobals),
           guiMgr(),
           trackTopLeft(*this, _dawCtrl, guiMgr, _project),
           trackControls(guiMgr, _project),
-          trackView(_dawCtrl, guiMgr, _cursor, _project, _projectGlobals, _grid, _dragdropclip),
-          trackTimeline(_grid),
-          loophandles(_project, _projectGlobals, _grid),
+          trackView(_dawCtrl, guiMgr, _cursor, _project, _projectGlobals, m_grid, _dragdropclip),
+          trackTimeline(m_grid),
+          loophandles(_project, _projectGlobals, m_grid),
           scrollbar(1, 0.0f, *this) {
         setGuiType(gui_type::CTR_TYPE_TRACKS);
         dawCtrl = _dawCtrl,
         setCanMouseHit(true);
         setBackgroundRendered(true);
-        _grid.addCallback(this);
+        m_grid.addCallback(this);
         add(&trackTimeline);
         add(&loophandles);
         add(&trackTopLeft);
@@ -649,6 +650,9 @@ public:
         remove(&trackTopLeft);
         remove(&loophandles);
         remove(&trackTimeline);
+    }
+    scaled_grid& getGrid() {
+        return m_grid;
     }
 
     int32_t setTrackPosition(track_gui_entry_t* e, int32_t y, bool isBottom);
@@ -699,6 +703,8 @@ public:
     double getScrollOffsetPixels() const {
         return this->scrollbar.toPixels();
     }
+    void onRemove() override;
+    void onAdded() override;
     void removeTrack(track_t* track, int flags);
     void addTrack(track_t* track, int flags);
     void removeAllTracks();

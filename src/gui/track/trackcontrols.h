@@ -7,16 +7,20 @@
 #include "host/daw/mainctrl.h"
 
 class gui_track_content_base : public guictr_base {
+    scaled_grid& m_grid;
 public:
     track_t* const m_track;
     track_gui_entry_t* const m_trackentry;
-    explicit gui_track_content_base(track_gui_entry_t* _entry);
+    explicit gui_track_content_base(track_gui_entry_t* _entry, scaled_grid& _grid);
     void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override;
     void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override;
     void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override;
     void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
     void trackEntryDragMove(gui_track* g, ivec2 mousepos) override;
     void trackEntryDragRelease(gui_track* g, ivec2 mousepos) override;
+    scaled_grid& getGrid() {
+        return m_grid;
+    }
 };
 
 class gui_track_subtrack_mixer;
@@ -31,7 +35,7 @@ class gui_track_controls : public gui_track_content_base {
     const int resizeHitY  = 8;
 
 public:
-    explicit gui_track_controls(track_gui_entry_t* _entry);
+    explicit gui_track_controls(track_gui_entry_t* _entry, scaled_grid& _grid);
     ~gui_track_controls() override;
     bool isStaticContainer() override {
         return false;

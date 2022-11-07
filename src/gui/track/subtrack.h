@@ -1,6 +1,6 @@
 #pragma once
 class track_t;
-class MainCtrl;
+struct track_gui_entry_t;
 class gui_track_subtrack;
-
-gui_track_subtrack* makeGuiSubtrack(track_gui_entry_t* entry, DawCtrl* ctrl, int type);
+class scaled_grid;
+gui_track_subtrack* makeGuiSubtrack(track_gui_entry_t* entry, scaled_grid& grid, int type);

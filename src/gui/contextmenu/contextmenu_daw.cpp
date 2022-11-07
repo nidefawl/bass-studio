@@ -141,7 +141,10 @@ namespace DAW {
 
         auto* track = atl->getTrack();
         dbgassert(track);
-        auto* guiTrackCtr   = dawCtrl->getTrackContainer();
+        auto guiTrackCtr = dawCtrl->getTrackContainer();
+        if (!guiTrackCtr) {
+            return false;
+        }
         track_gui_entry_t* entry{};
         if(!guiTrackCtr->getPointerEntry(track, &entry))
             return false;
@@ -193,35 +196,35 @@ namespace DAW {
 }// namespace DAW
 
 
-guictxtmenu_track_editor::guictxtmenu_track_editor(DawCtrl* const _dawCtrl, track_gui_entry_t* const _trackentry, gui_clip* optionalContextClip)
-    : guictxtmenu(), m_trackentry(_trackentry), m_gclip(optionalContextClip) {
+guictxtmenu_track_editor::guictxtmenu_track_editor(guitrack_editor* const _editor, track_gui_entry_t* const _trackentry, gui_clip* optionalContextClip)
+    : guictxtmenu(), m_editor(_editor), m_trackentry(_trackentry), m_gclip(optionalContextClip) {
     this->size.x = 260;
-    this->dawCtrl = _dawCtrl;
+    this->dawCtrl = _editor->dawCtrl;
     this->maxHeight = 0;
-    auto& cursor = _dawCtrl->getCursor();
-    auto clipboardType = _dawCtrl->getDaw()->getClipboardType();
+    auto& cursor = dawCtrl->getCursor();
+    auto clipboardType = dawCtrl->getDaw()->getClipboardType();
     bool bHasContentSelected = optionalContextClip != nullptr;
     if (!bHasContentSelected && m_trackentry && m_trackentry->parent) {
         bHasContentSelected = !DAW::isSelectionEmpty(m_trackentry->parent->guiMgr, cursor, true);
     }
     if (bHasContentSelected) {
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_CONSOLIDATE));
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_MUTE));
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_BEGIN_RENAME));
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_CONSOLIDATE));
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_MUTE));
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_BEGIN_RENAME));
     } else {
-        addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_CREATE_EMPTY_CLIP));
+        addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_CREATE_EMPTY_CLIP));
         entries.back()->setGrayedOut(cursor.getRange() < 2);
     }
     addEntry(new ctxtmenu_splitter());
-    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_CUT));
+    addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_CUT));
     entries.back()->setGrayedOut(!bHasContentSelected);
-    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_COPY));
+    addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_COPY));
     entries.back()->setGrayedOut(!bHasContentSelected);
-    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_PASTE));
+    addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_PASTE));
     entries.back()->setGrayedOut(clipboardType != ClipBoardType::CLIPBOARD_CLIPS);
-    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_PASTE_NO_AUTOMATION));
+    addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_PASTE_NO_AUTOMATION));
     entries.back()->setGrayedOut(clipboardType != ClipBoardType::CLIPBOARD_CLIPS);
-    addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_DELETE));
+    addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_DELETE));
     entries.back()->setGrayedOut(!bHasContentSelected);
     if (bHasContentSelected) {
         addEntry(new ctxtmenu_splitter());
@@ -229,7 +232,7 @@ guictxtmenu_track_editor::guictxtmenu_track_editor(DawCtrl* const _dawCtrl, trac
         addEntry(sel);
     }
     addEntry(new ctxtmenu_splitter());
-    scaled_grid& grid = _dawCtrl->getGrid();
+    scaled_grid& grid = _editor->getGrid();
     timeSel1     = new ctxtmenu_time_select(grid, "Adaptive Grid", 0);
     timeSel1->initAdaptive();
     addEntry(timeSel1);
@@ -251,7 +254,7 @@ bool guictxtmenu::clickedElement(ctxtmenu_entry* e, int _id) {
 }
 
 bool guictxtmenu_track_editor::clickedElement(ctxtmenu_entry* e, int _id) {
-    scaled_grid& grid = dawCtrl->getGrid();
+    scaled_grid& grid = m_editor->getGrid();
     if (e == this->timeSel1 || e == this->timeSel2) {
         if (_id == 110 + 9) {// OFF
             grid.grid_dens.enabled = false;
@@ -294,8 +297,8 @@ bool guictxtmenu_track_editor::clickedElement(ctxtmenu_entry* e, int _id) {
     return true;
 }
 
-guictxtmenu_clip::guictxtmenu_clip(DawCtrl* const _dawCtrl, gui_clip* const _gclip)
-: guictxtmenu_track_editor(_dawCtrl, _gclip->m_trackentry, _gclip)
+guictxtmenu_clip::guictxtmenu_clip(guitrack_editor* const _editor, gui_clip* const _gclip)
+: guictxtmenu_track_editor(_editor, _gclip->m_trackentry, _gclip)
 {
 }
 
@@ -355,17 +358,17 @@ bool guictxtmenu_plugin::clickedElement(ctxtmenu_entry* e, int _id) {
         }
     }
     if (_id == CMD_SHOW_AUTOMATION && effectOptional) {
-        auto tr                          = effectOptional->getTrack();
-        auto trCtr                       = dawCtrl->getTrackContainer();
+        auto tr = effectOptional->getTrack();
+        auto trCtr = dawCtrl->getTrackContainer();
         gui_track_automationlane* gtr_at = nullptr;
-        if (tr) {
+        if (tr && trCtr) {
             track_gui_entry_t* entry = nullptr;
             if (!trCtr->getTrackEntry(tr, &entry)) {
                 dbgassert(0);
             } else {
                 entry->layout.hideTrack     = false;
                 entry->layout.hideSubtracks = false;
-                updateStoreLoadSubtracks(trCtr, entry);
+                updateStoreLoadSubtracks(trCtr.get(), entry);
 
                 std::vector<int32_t> automated;
                 effectOptional->getAutomated(automated);

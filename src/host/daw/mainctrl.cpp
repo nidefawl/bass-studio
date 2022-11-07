@@ -25,6 +25,7 @@
 #include "file/projectfile.h"
 #include "fileloader.h"
 #include "grid.h"
+#include "gui/container/container_dnd_layout.h"
 #include "guicolors.h"
 #include "host/clip/clip.h"
 #include "host/daw/daw_async_task.h"
@@ -144,17 +145,17 @@ public:
     }
 };
 
-template<typename T>
-void addLayoutEntry(T& t, const std::shared_ptr<guictr_base>& ctr, String title) {
+template<typename T, typename Y>
+void addLayoutEntry(T& t, const std::shared_ptr<Y>& ctr, String title) {
     ctr->setLabel(std::move(title));
-    std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(ctr);
+    auto entry1 = createGuiCtrLayoutEntry(ctr);
     t->addEntry(entry1);
 }
-template<typename T>
-void addLayoutEntryRelayout(BaseCtrl* ctrl, T& t, const std::shared_ptr<guictr_base>& ctr, String title) {
+template<typename T, typename Y>
+void addLayoutEntryRelayout(BaseCtrl* ctrl, T& t, const std::shared_ptr<Y>& ctr, String title) {
     ctr->setLabel(std::move(title));
-    std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(ctr);
-    i_ctr_drop_area area(t.get());
+    auto entry1 = createGuiCtrLayoutEntry(ctr);
+    DropAreaUILayout area(t.get());
     switch (t->getLayout()) {
             break;
         case container_layout::SOLE:
@@ -179,39 +180,13 @@ std::shared_ptr<guictr_layout> makeTabListCtr1(DawCtrl* const dawCtrl) {
     auto daw = dawCtrl->getDaw();
     auto createContainer = create_ctr_t{daw};
     auto ctr = std::make_shared<guictr_layout>();
-
-    auto ctr_dbg0       = std::make_shared<gui_ctr_debug>(createContainer, gui_ctr_debug::DebugCtrType::TYPE_0);
-    auto ctr_dbg1       = std::make_shared<gui_ctr_debug>(createContainer, gui_ctr_debug::DebugCtrType::DEBUG_APPCTRL);
-    auto ctr_dbg2       = std::make_shared<gui_ctr_debug>(createContainer, gui_ctr_debug::DebugCtrType::TYPE_2);
-    auto ctr_properties = std::shared_ptr<guictr_base>(makeGuiObjectProperties(createContainer));
-    auto ctr_theme      = std::shared_ptr<guictr_base>(makeGuiThemeEditor(createContainer));
-    auto ctr_history    = std::shared_ptr<guictr_base>(makeGuiHistoryList(createContainer));
-    auto shaderView     = std::make_shared<gui_shaderview>();
-    auto settings       = std::make_shared<DAW::DialogSettings::guidialog_settings>(dawCtrl->getDaw());
-    auto layout         = std::make_shared<guictr_layout>();
-
     ctr->setLayout(container_layout::TABBED);
-    //ctr->setBackgroundRendered(true);
-    ctr_dbg0->setLabel("Debug 0");
-    ctr_dbg1->setLabel("Debug 1");
-    ctr_dbg2->setLabel("Debug 2");
-    ctr_properties->setLabel("Properties");
-    ctr_theme->setLabel("Theme");
-    ctr_history->setLabel("History");
-    shaderView->setLabel("Shader");
-    settings->setLabel("settings");
-
-    addLayoutEntry(ctr, ctr_dbg0, ctr_dbg0->label);
-    addLayoutEntry(ctr, ctr_dbg1, ctr_dbg1->label);
-    addLayoutEntry(ctr, ctr_dbg2, ctr_dbg2->label);
-    addLayoutEntry(ctr, ctr_history, ctr_history->label);
-    addLayoutEntry(ctr, ctr_properties, ctr_properties->label);
-    addLayoutEntry(ctr, ctr_theme, ctr_theme->label);
-    addLayoutEntry(ctr, shaderView, shaderView->label);
-    addLayoutEntry(ctr, settings, settings->label);
-    addLayoutEntry(ctr, layout, "Empty layoutctr");
+    ctr->addEntry(createGuiCtrLayoutEntry(std::make_shared<DAW::DialogSettings::guidialog_settings>(dawCtrl->getDaw())));
+    ctr->addEntry(createGuiCtrLayoutEntry(std::shared_ptr<guictr_base>(makeGuiThemeEditor(createContainer))));
+    ctr->addEntry(createGuiCtrLayoutEntry(std::shared_ptr<guictr_base>(makeGuiHistoryList(createContainer))));
+    ctr->addEntry(createGuiCtrLayoutEntry(std::shared_ptr<guictr_base>(makeGuiObjectProperties(createContainer))));
+    ctr->addEntry(createGuiCtrLayoutEntry(std::make_shared<gui_shaderview>()));
     ctr->setActiveEntry(0);
-
     return ctr;
 }
 
@@ -220,118 +195,26 @@ std::shared_ptr<guictr_layout> makeTabListCtr2(DawCtrl* const dawCtrl) {
     auto daw = dawCtrl->getDaw();
     auto createContainer = create_ctr_t{daw};
     auto ctr = std::make_shared<guictr_layout>();
-
-    auto ctr_effectlib    = std::shared_ptr<guictr_base>(makeGuiEffectLibrary(createContainer));
-    auto ctr_properties    = std::shared_ptr<guictr_base>(makeGuiObjectProperties(createContainer));
-    auto ctr_loadedplugins = std::shared_ptr<guictr_base>(makeGuiPluginsLoadedList(createContainer));
-    auto ctr_performance   = std::shared_ptr<guictr_base>(makeGuiPerformance(createContainer));
-    auto settings          = std::make_shared<DAW::DialogSettings::guidialog_settings>(dawCtrl->getDaw());
-
-    auto ctr_dbg0 = std::make_shared<gui_ctr_debug>(createContainer, gui_ctr_debug::DebugCtrType::TYPE_0);
-    auto ctr_dbg1 = std::make_shared<gui_ctr_debug>(createContainer, gui_ctr_debug::DebugCtrType::DEBUG_APPCTRL);
-    auto ctr_dbg2 = std::make_shared<gui_ctr_debug>(createContainer, gui_ctr_debug::DebugCtrType::TYPE_2);
-
     ctr->setLayout(container_layout::TABBED);
-    //ctr->setBackgroundRendered(true);
-    ctr_effectlib->setLabel("Plugins");
-    ctr_loadedplugins->setLabel("Instances");
-    ctr_performance->setLabel("Performance");
-    ctr_properties->setLabel("Properties");
-    ctr_dbg0->setLabel("Debug 0");
-    addLayoutEntry(ctr, ctr_dbg0, ctr_dbg0->label);
-    ctr_dbg1->setLabel("Debug 1");
-    addLayoutEntry(ctr, ctr_dbg1, ctr_dbg1->label);
-    ctr_dbg2->setLabel("Debug 2");
-    addLayoutEntry(ctr, ctr_dbg2, ctr_dbg2->label);
-    addLayoutEntry(ctr, ctr_effectlib, ctr_effectlib->label);
-    addLayoutEntry(ctr, ctr_loadedplugins, ctr_loadedplugins->label);
-    addLayoutEntry(ctr, ctr_performance, ctr_performance->label);
-    addLayoutEntry(ctr, ctr_properties, ctr_properties->label);
+    ctr->addEntry(createGuiCtrLayoutEntry(std::shared_ptr<guictr_base>(makeGuiEffectLibrary(createContainer))));
+    ctr->addEntry(createGuiCtrLayoutEntry(std::shared_ptr<guictr_base>(makeGuiPluginsLoadedList(createContainer))));
+    ctr->addEntry(createGuiCtrLayoutEntry(std::shared_ptr<guictr_base>(makeGuiPerformance(createContainer))));
+    ctr->addEntry(createGuiCtrLayoutEntry(std::shared_ptr<guictr_base>(makeGuiObjectProperties(createContainer))));
     ctr->setActiveEntry(0);
-
     return ctr;
 }
-class DawViewContainersCompanion : public DawViewContainers {
-    DawCtrl* const dawCtrl;
-
-public:
-    guictr_menubar ctr_menu;
-    guictr_nodes_splitview ctr_nodes;
-    guictr_tracks ctr_tracks2;
-    guictr_clipeditor ctr_clipeditor;
-    Splitter splitterCenter;
-    DawViewContainersCompanion(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, dragdrop_midifile& dragdropclip)
-        : dawCtrl(_dawCtrl),
-          ctr_menu(menubar),
-          ctr_nodes(_cursor, _project, dragdropclip),
-          ctr_tracks2(_dawCtrl, _cursor, _trackSelection, _project, _projectGlobals, grid, dragdropclip),
-          ctr_clipeditor(),
-          splitterCenter(0, 0.8f) {
-        splitterCenter.setMinMax(0.2f, 0.86f);
-    }
-    guictr_menubar* getMenu() override {
-        return &ctr_menu;
-    }
-
-    void layout(int32_t winW, int32_t winH) override {
-        auto& centerCtr = ctr_tracks2;
-        int winX        = 0;
-        int winY        = 0;
-#if USE_GUI_MENU
-        int hMenu = 28;
-        winH -= hMenu;
-        winY += hMenu;
-        ctr_menu.pos  = vec2(0, 0);
-        ctr_menu.size = vec2(winW, hMenu);
-#endif
-        int hTopControls    = 0;
-        int hStatusBar      = 0;
-        int hCenter         = winH - hTopControls - hStatusBar;
-        int hTrackCtr       = hCenter;
-        splitterCenter.pos  = ivec2(winX, winY + hTrackCtr - Splitter::SPLITTER_LAYOUT_THICKNESS/2);
-        splitterCenter.size = ivec2(winW, Splitter::SPLITTER_LAYOUT_THICKNESS);
-        ctr_clipeditor.size = ctr_nodes.size = centerCtr.size = { winW, hTrackCtr };
-        ctr_clipeditor.pos  = ctr_nodes.pos  = centerCtr.pos  = { winX, winY };
-    }
-    void addTo(std::vector<guictr_base*>& v) override {
-        ctr_clipeditor.setControl(dawCtrl);
-        ctr_tracks2.setControl(dawCtrl);
-        ctr_nodes.setControl(dawCtrl);
-
-        v.push_back(&splitterCenter);
-
-        v.push_back(&ctr_tracks2);
-        v.push_back(&ctr_clipeditor);
-        v.push_back(&ctr_nodes);
-
-#if USE_GUI_MENU
-        v.push_back(&ctr_menu);
-#endif
-    }
-};
 
 class DawViewContainersMain : public DawViewContainers {
-    MainCtrl* const mainCtrl;
+    DawCtrl* const dawCtrl;
 public:
     std::shared_ptr<guictr_layout> ctr_Left;
     std::shared_ptr<guictr_layout> ctr_Center;
     std::shared_ptr<guictr_layout> ctr_Right;
-private:
-    std::shared_ptr<guictr_tracks> spGuiCtrTracks;
-    std::shared_ptr<guictr_nodes_splitview> spGuiCtrNodes;
-    std::shared_ptr<guictr_clipeditor> spGuiCtrClipEditor;
-    std::shared_ptr<guictr_plugins> spGuiCtrPlugins;
-    std::shared_ptr<guictr_layout_entry> ctrEntryTracks;
-    std::shared_ptr<guictr_layout_entry> ctrEntryNodes;
-    std::shared_ptr<guictr_layout_entry> ctrEntryClipEdit;
-    std::shared_ptr<guictr_layout_entry> ctrEntryPlugins;
-    std::shared_ptr<guictr_layout_entry> ctrCtrTop;
-    std::shared_ptr<guictr_layout_entry> ctrCtrBottom;
+    std::shared_ptr<GuiCtrLayoutEntry> ctrEntryTracks;
+    std::shared_ptr<GuiCtrLayoutEntry> ctrEntryNodes;
+    std::shared_ptr<GuiCtrLayoutEntry> ctrEntryClipEdit;
+    std::shared_ptr<GuiCtrLayoutEntry> ctrEntryPlugins;
 public:
-    guictr_tracks& ctr_tracks;
-    guictr_nodes_splitview& ctr_nodes;
-    guictr_clipeditor& ctr_clipeditor;
-    guictr_plugins& ctr_plugins;
     guictr_menubar ctr_menu;
     guictr_tempocontrols ctr_tempo;
     guictr_test ctr_test;
@@ -346,38 +229,33 @@ public:
         RIGHT,
     };
           
-    DawViewContainersMain(MainCtrl* const _mainCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, dragdrop_midifile& dragdropclip)
-        : mainCtrl(_mainCtrl),
+    DawViewContainersMain(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_midifile& dragdropclip)
+        : dawCtrl(_dawCtrl),
           ctr_Left(std::make_shared<guictr_layout>()),
           ctr_Center(std::make_shared<guictr_layout>()),
           ctr_Right(std::make_shared<guictr_layout>()),
-          spGuiCtrTracks(std::make_shared<guictr_tracks>(_mainCtrl, _cursor, _trackSelection, _project, _projectGlobals, grid, dragdropclip)),
-          spGuiCtrNodes(std::make_shared<guictr_nodes_splitview>(_cursor, _project, dragdropclip)),
-          spGuiCtrClipEditor(std::make_shared<guictr_clipeditor>()),
-          spGuiCtrPlugins(std::make_shared<guictr_plugins>()),
-          ctrEntryTracks(createGuiCtrLayoutEntry(spGuiCtrTracks)),
-          ctrEntryNodes(createGuiCtrLayoutEntry(spGuiCtrNodes)),
-          ctrEntryClipEdit(createGuiCtrLayoutEntry(spGuiCtrClipEditor)),
-          ctrEntryPlugins(createGuiCtrLayoutEntry(spGuiCtrPlugins)),
-          ctrCtrTop(createGuiCtrLayoutEntry(std::make_shared<guictr_layout>())),
-          ctrCtrBottom(createGuiCtrLayoutEntry(std::make_shared<guictr_layout>())),
-          ctr_tracks(*spGuiCtrTracks),
-          ctr_nodes(*spGuiCtrNodes),
-          ctr_clipeditor(*spGuiCtrClipEditor),
-          ctr_plugins(*spGuiCtrPlugins),
+          ctrEntryTracks(createGuiCtrLayoutEntry(std::make_shared<guictr_tracks>(_dawCtrl, _cursor, _trackSelection, _project, _projectGlobals, dragdropclip))),
+          ctrEntryNodes(createGuiCtrLayoutEntry(std::make_shared<guictr_nodes_splitview>(_cursor, _project, dragdropclip))),
+          ctrEntryClipEdit(createGuiCtrLayoutEntry(std::make_shared<guictr_clipeditor>())),
+          ctrEntryPlugins(createGuiCtrLayoutEntry(std::make_shared<guictr_plugins>())),
           ctr_menu(menubar),
           ctr_tempo(_project, _projectGlobals),
-          ctr_pluginview(&ctr_plugins),
-          ctr_clipeditorview(spGuiCtrClipEditor->getClipView(), ctr_clipeditor.noteeditor)
+          ctr_pluginview(),
+          ctr_clipeditorview()
     {
-        auto subctr_tabbed  = makeTabListCtr1(_mainCtrl);
-        auto subctr_tabbed2 = makeTabListCtr2(_mainCtrl);
-        splitters.push_back(std::make_shared<Splitter>(1, 0.02f));//left
-        splitters.push_back(std::make_shared<Splitter>(1, 0.8f)); //right
+        add(ctr_Left);
+        add(ctr_Center);
+        add(ctr_Right);
+        auto subctr_tabbed  = makeTabListCtr1(_dawCtrl);
+        auto subctr_tabbed2 = makeTabListCtr2(_dawCtrl);
+        splitters.push_back(std::make_shared<Splitter>(1, 0.05f));//left
+        splitters.push_back(std::make_shared<Splitter>(1, 0.73f)); //right
+        splitters[0]->setMinMax(0.05f, 0.9f);
+        splitters[1]->setMinMax(0.25f, 0.95f);
         subctr_tabbed2->setLabel("Top");
         subctr_tabbed->setLabel("Bottom");
-        std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(subctr_tabbed2);
-        std::shared_ptr<guictr_layout_entry> entry2 = createGuiCtrLayoutEntry(subctr_tabbed);
+        std::shared_ptr<GuiCtrLayoutEntry> entry1 = createGuiCtrLayoutEntry(subctr_tabbed2);
+        std::shared_ptr<GuiCtrLayoutEntry> entry2 = createGuiCtrLayoutEntry(subctr_tabbed);
         ctr_Left->setLabel("Left Docker");
         ctr_Right->setLabel("Right Docker");
         ctr_Center->setLabel("Center Docker");
@@ -386,61 +264,149 @@ public:
         ctr_Right->addEntry(entry1);
         ctr_Right->addEntry(entry2);
 
-        splitters[0]->setMinMax(0.05f, 0.9f);
-        splitters[1]->setMinMax(0.25f, 0.9f);
+        auto ctrCtrTop = createGuiCtrLayoutEntry(std::make_shared<guictr_layout>());
+        auto ctrCtrBottom = createGuiCtrLayoutEntry(std::make_shared<guictr_layout>());
+        ctrCtrTop->setEntryTag(GuiContainerTag::TAG_TAB_TOP);
+        ctrCtrBottom->setEntryTag(GuiContainerTag::TAG_TAB_BOTTOM);
+        ctrEntryTracks->setEntryTag(GuiContainerTag::TAG_TRACKS);
+        ctrEntryNodes->setEntryTag(GuiContainerTag::TAG_NODES);
+        ctrEntryClipEdit->setEntryTag(GuiContainerTag::TAG_CLIPEDIT);
+        ctrEntryPlugins->setEntryTag(GuiContainerTag::TAG_PLUGINS);
+
 
         ctr_tempo.setSnapSides(ivec4(0, 0, 0, 1));
         statusbar.setSnapSides(ivec4(0, 1, 0, 1));
         ctr_clipeditorview.setSnapSides(ivec4(0, 1, 0, 0));
         ctr_pluginview.setSnapSides(ivec4(0, 1, 0, 0));
-        ctr_clipeditor.setSnapSides(ivec4(0, 1, 0, 0));
-        ctr_plugins.setSnapSides(ivec4(0, 1, 0, 0));
+        // ctr_clipeditor.setSnapSides(ivec4(0, 1, 0, 0));
+        // ctr_plugins.setSnapSides(ivec4(0, 1, 0, 0));
         subctr_tabbed2->setSnapSides(ivec4(1, 0, 0, 1));
         ctr_Left->setSnapSides(ivec4(0, 0, 1, 1));
         ctr_Center->setSnapSides(ivec4(0));
         ctr_Right->setSnapSides(ivec4(1, 0, 0, 1));
 
         subctr_tabbed->setSnapSides(ivec4(1, 0, 0, 0));
-        resetCenterContainer();
     }
 
+    template<typename T>
+    bool visitEntries(T&& visitor) {
+        for (auto& container : topLevelContainers) {
+            if (!container->visitEntries(visitor)) {
+                return false;
+            }
+        }
+        if (!ctrEntryTracks->getParentContainer()) {
+            if (!visitor(ctrEntryTracks)) {
+                return false;
+            }
+        }
+        if (!ctrEntryNodes->getParentContainer()) {
+            if (!visitor(ctrEntryNodes)) {
+                return false;
+            }
+        }
+        if (!ctrEntryClipEdit->getParentContainer()) {
+            if (!visitor(ctrEntryClipEdit)) {
+                return false;
+            }
+        }
+        if (!ctrEntryPlugins->getParentContainer()) {
+            if (!visitor(ctrEntryPlugins)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    std::shared_ptr<GuiCtrLayoutEntry> findByTagEntry(GuiContainerTag tag) {
+        for (auto& ctr : {ctr_Left.get(), ctr_Right.get(), ctr_Center.get()}) {
+            if (auto ctrWithTag = ctr->findByTagEntry(tag)) {
+                return ctrWithTag;
+            }
+        }
+        return nullptr;
+    }
+
+    std::shared_ptr<GuiCtrLayoutEntry> findByGuiType(gui_type guitype) {
+        for (auto& ctr : {ctr_Left.get(), ctr_Right.get(), ctr_Center.get()}) {
+            if (auto ctrWithTag = ctr->findByGuiType(guitype)) {
+                return ctrWithTag;
+            }
+        }
+        return nullptr;
+    }
+    std::shared_ptr<GuiCtrLayoutEntry> findByTagOrGuiType(GuiContainerTag tag, gui_type guitype) {
+        std::shared_ptr<GuiCtrLayoutEntry> entries;
+        visitEntries([&entries, tag, guitype](auto& entry) {
+            if (entry->getGui()->isVisible() && entry->getEntryTag() == tag) {
+                entries = entry;
+                return false;
+            }
+            if (entry->getGui()->isVisible() && entry->getGui()->getGuiType() == guitype) {
+                entries = entry;
+                return false;
+            }
+            return true;
+        });
+        return entries;
+    }
+    std::shared_ptr<guictr_layout> replaceLayoutCtr(guictr_base* ctr, std::shared_ptr<guictr_layout>& newContainer) {
+        for (auto& container : topLevelContainers) {
+            if (ctr == container.get()) {
+                auto copy = container;
+                if (ctr_Left.get() == ctr)
+                    ctr_Left = newContainer;
+                else if (ctr_Right.get() == ctr)
+                    ctr_Right = newContainer;
+                else if (ctr_Center.get() == ctr)
+                {
+                    ctr_Center = newContainer;
+                    ctr_Center->setHideHandlesWhenLocked(true);
+                    ctr_Center->setLabel("Center Docker");
+                    copy->setHideHandlesWhenLocked(false);
+                    copy->setLabel("Layout");
+                }
+                container = newContainer;
+                copy->parent = nullptr;
+                container->parent = nullptr;
+                return copy;
+            }
+        }
+        return nullptr;
+    }
+
+
     void resetCenterContainer() {
-        ctrCtrTop->removeEntryFromParent();
-        ctrCtrBottom->removeEntryFromParent();
         ctrEntryTracks->removeEntryFromParent();
         ctrEntryNodes->removeEntryFromParent();
         ctrEntryClipEdit->removeEntryFromParent();
         ctrEntryPlugins->removeEntryFromParent();
-
         ctr_Center->removeAllEntries();
-        ctrCtrBottom->getAsLayoutCtr()->removeAllEntries();
-        ctrCtrTop->getAsLayoutCtr()->removeAllEntries();
-        for (int i = 0; i < 4; i++) {
-            while (auto ctr = ctr_Center->findByTagEntry(i)) {
-                ctr->setEntryTag(0);
-                ctr->removeEntryFromParent();
-            }
-        }
-        for (int i = 0; i < 2; i++) {
-            while (auto ctr = ctr_Center->findByTagContainer(i)) {
-                if (!assert_expr(ctr->getGui()->getGuiType() == gui_type::CTR_TYPE_LAYOUT)) {
-                    break;
-                }
-                auto guiLayout = static_cast<guictr_layout*>(ctr->getGui());
-                guiLayout->setTag(-1);
-                guiLayout->removeAllEntries();
-            }
-        }
-        ctrCtrTop->getAsLayoutCtr()->setTag(0);
-        ctrCtrBottom->getAsLayoutCtr()->setTag(1);
-        ctrEntryTracks->setEntryTag(0);
-        ctrEntryNodes->setEntryTag(1);
-        ctrEntryClipEdit->setEntryTag(2);
-        ctrEntryPlugins->setEntryTag(3);
+        // visitLayoutContainers([](auto& ctr) {
+        //     ctr->removeAllEntries();
+        //     return true;
+        // });
         ctr_Center->setLayout(container_layout::SPLIT_H);
-        ctr_Center->setHideHandlesWhenLocked(true);
+        auto ctrCtrTop = findByTagEntry(GuiContainerTag::TAG_TAB_TOP);
+        if (ctrCtrTop) {
+            ctrCtrTop->getAsLayoutCtr()->removeAllEntries();
+            ctrCtrTop->removeEntryFromParent();
+            ctrCtrTop.reset();
+        }
+        auto ctrCtrBottom = findByTagEntry(GuiContainerTag::TAG_TAB_BOTTOM);
+        if (ctrCtrBottom) {
+            ctrCtrBottom->getAsLayoutCtr()->removeAllEntries();
+            ctrCtrBottom->removeEntryFromParent();
+            ctrCtrBottom.reset();
+        }
+
+        ctrCtrTop = createGuiCtrLayoutEntry(std::make_shared<guictr_layout>());
+        ctrCtrTop->setEntryTag(GuiContainerTag::TAG_TAB_TOP);
         ctrCtrTop->getAsLayoutCtr()->setLayout(container_layout::TABBED);
+        ctrCtrBottom = createGuiCtrLayoutEntry(std::make_shared<guictr_layout>());
+        ctrCtrBottom->setEntryTag(GuiContainerTag::TAG_TAB_BOTTOM);
         ctrCtrBottom->getAsLayoutCtr()->setLayout(container_layout::TABBED);
+        ctr_Center->setHideHandlesWhenLocked(true);
 
         ctrCtrTop->getAsLayoutCtr()->addEntry(ctrEntryTracks);
         ctrCtrTop->getAsLayoutCtr()->addEntry(ctrEntryNodes);
@@ -448,56 +414,23 @@ public:
         ctrCtrBottom->getAsLayoutCtr()->addEntry(ctrEntryPlugins);
         ctr_Center->addEntry(ctrCtrTop);
         ctr_Center->addEntry(ctrCtrBottom);
-        editAreaLayout = DAW::EditAreaLayout::EDIT_AREA_SINGLE;
+        editAreaLayout = DAW::EditAreaLayout::EDIT_AREA_SPLIT_HORIZONTAL;
         editAreaType = DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER;
-        setEditAreaLayout(DAW::EditAreaLayout::EDIT_AREA_SPLIT_HORIZONTAL);
+        setEditAreaLayout(DAW::EditAreaLayout::EDIT_AREA_SINGLE);
         setEditAreaType(DAW::EditAreaType::EDIT_AREA_CLIP_EDITOR);
         ctr_Center->postContentChanged();
-        switch (mainCtrl->viewMode) {
-            case TRACK_TIMELINE:
-            case MIXER:
-                ctr_Center->activateEntry(ctrEntryTracks.get());
-                break;
-            case NODE_EDITOR:
-                ctr_Center->activateEntry(ctrEntryNodes.get());
-                break;
+        auto focusCtr = ctrEntryTracks.get();
+        if (dawCtrl->viewMode == NODE_EDITOR) {
+            focusCtr = ctrEntryNodes.get();
         }
+        activateEntry(focusCtr);
     }
 
-    void resetBottomArea() {
-        ctrCtrBottom->removeEntryFromParent();
-        ctrEntryClipEdit->removeEntryFromParent();
-        ctrEntryPlugins->removeEntryFromParent();
-        ctrCtrBottom->removeEntryFromParent();
-        auto ctrTabBottom = ctr_Center->findByTagContainer(1);
-        if (ctrTabBottom) {
-            ctrTabBottom->removeEntryFromParent();
-        }
-        auto& bottom = ctrCtrBottom->getAsLayoutCtr();
-        bottom->removeAllEntries();
-        bottom->addEntry(ctrEntryClipEdit);
-        bottom->addEntry(ctrEntryPlugins);
-        bottom->setTag(1);
-        ctr_Center->addEntry(ctrCtrBottom);
-        ctr_Center->postContentChanged();
-    }
-
-    void resetTopArea() {
-        ctrCtrTop->removeEntryFromParent();
-        ctrEntryTracks->removeEntryFromParent();
-        ctrEntryNodes->removeEntryFromParent();
-        ctrCtrTop->removeEntryFromParent();
-        auto ctrTabTop = ctr_Center->findByTagContainer(0);
-        if (ctrTabTop) {
-            ctrTabTop->removeEntryFromParent();
-        }
-        auto& top = ctrCtrTop->getAsLayoutCtr();
-        top->removeAllEntries();
-        top->addEntry(ctrEntryTracks);
-        top->addEntry(ctrEntryNodes);
-        top->setTag(0);
-        ctr_Center->addEntry(ctrCtrTop);
-        ctr_Center->postContentChanged();
+    void activateEntry(GuiCtrLayoutEntry* focusCtr) {
+        visitLayoutContainers([focusCtr](auto& ctr) {
+            ctr->activateEntry(focusCtr);
+            return true;
+        });
     }
 
     guictr_menubar* getMenu() override {
@@ -507,94 +440,179 @@ public:
     Splitter* getSplitter(SplitterPos pos) {
         return splitters[pos].get();
     }
+    std::shared_ptr<GuiCtrLayoutEntry> placeInCenterContainer(GuiContainerTag tag) {
+        auto entry = createGuiCtrLayoutEntry(std::make_shared<guictr_layout>());
+        entry->setEntryTag(tag);
+        entry->getAsLayoutCtr()->setLayout(container_layout::TABBED);
+        switch (ctr_Center->getLayout()) {
+            case container_layout::SPLIT_H:
+                break;
+            case container_layout::SPLIT_V:
+            case container_layout::TABBED:
+            default:
+                if (!ctr_Center->getEntries().empty()) {
+                    // create a new SPLIT_H container and replace ctr_Center (by calling dawCtrl)
+                    auto newCtrContainer = std::make_shared<guictr_layout>();
+                    newCtrContainer->setLayout(container_layout::SPLIT_H);
+                    auto cur = ctr_Center;
+                    auto replacedCtr = dawCtrl->replaceContainerWith(ctr_Center.get(), newCtrContainer);
+                    dbgassert(cur == replacedCtr);
+                    dbgassert(ctr_Center == newCtrContainer);
+                    auto replacedEntry = createGuiCtrLayoutEntry(replacedCtr);
+                    newCtrContainer->addEntry(replacedEntry);
+                    newCtrContainer->setLayout(container_layout::SPLIT_H);
+                    replacedEntry->updateLabel();
+                }
+                break;
+        }
+        switch (tag) {
+            case GuiContainerTag::TAG_TAB_TOP:
+                ctr_Center->addEntry(entry, -1);
+                break;
+            case GuiContainerTag::TAG_TAB_BOTTOM:
+                ctr_Center->addEntry(entry, -2);
+                break;
+            default:
+                break;
+        }
+        return entry;
+    }
     void setViewMode(view_mode_t mode) {
-        if (mainCtrl->viewMode == mode)
+        if (dawCtrl->viewMode == mode)
             return;
-        mainCtrl->viewMode = mode;
-        bool bHasDefaultLayout = false;
-        auto ctrTabTop = ctr_Center->findByTagContainer(0);
-        if (ctrTabTop) {
-            auto ctrLayoutTop = static_cast<guictr_layout*>(ctrTabTop->getGui());
-            auto& entries = ctrLayoutTop->getEntries();
-            bHasDefaultLayout = stl_contains(entries, ctrEntryClipEdit) && stl_contains(entries, ctrEntryPlugins);
-            bHasDefaultLayout &= ctrLayoutTop->parent != nullptr && ctrLayoutTop->isVisible();
-        }
-        if (!bHasDefaultLayout) {
-            resetTopArea();
-        }
+        dawCtrl->viewMode = mode;
+
+        bool bContentChanged = false;
+        std::shared_ptr<GuiCtrLayoutEntry> spShowEntry;
+        int insertPos = -1;
         switch (mode) {
             case TRACK_TIMELINE:
             case MIXER:
-                ctr_Center->activateEntry(ctrEntryTracks.get());
-                mainCtrl->focusGui(&ctr_tracks);
+                spShowEntry = ctrEntryTracks;
                 break;
             case NODE_EDITOR:
-                ctr_Center->activateEntry(ctrEntryNodes.get());
-                mainCtrl->focusGui(&ctr_nodes);
-                ctr_nodes.refresh();
+                spShowEntry = ctrEntryNodes;
+                insertPos = -2;
                 break;
         }
-    }
-    void setEditAreaLayout(DAW::EditAreaLayout layout) {
-        if (editAreaLayout == layout)
+        if (!spShowEntry)
             return;
+        if (!spShowEntry->getParentContainer()) {
+            auto ctrTabTop = findByTagEntry(GuiContainerTag::TAG_TAB_TOP);
+            if (!ctrTabTop) {
+                ctrTabTop = placeInCenterContainer(GuiContainerTag::TAG_TAB_TOP);
+                bContentChanged = true;
+            }
+            if (ctrTabTop) {
+                ctrTabTop->getAsLayoutCtr()->addEntry(spShowEntry, insertPos);
+                bContentChanged = true;
+            }
+        }
+
+        if (spShowEntry->getParentContainer() && spShowEntry->getGui()->parent) {
+            activateEntry(spShowEntry.get());
+            dawCtrl->focusGui(spShowEntry->getGui());
+        }
+
+        if (bContentChanged) {
+            dawCtrl->dragContainerRelayout({ BaseCtrl::drag_ctr_event_type::DRAG_END });
+            dawCtrl->relayout();
+            dawCtrl->updateVisibleTrackContents();
+        }
+    }
+
+    void setEditAreaLayout(DAW::EditAreaLayout layout) {
         editAreaLayout = layout;
 
-        bool bHasDefaultLayout = false;
-        auto ctrTabBottom = ctr_Center->findByTagContainer(0);
-        if (ctrTabBottom) {
-            auto ctrLayoutBottom = static_cast<guictr_layout*>(ctrTabBottom->getGui());
-            auto& entries = ctrLayoutBottom->getEntries();
-            bHasDefaultLayout = stl_contains(entries, ctrEntryClipEdit) && stl_contains(entries, ctrEntryPlugins);
-            bHasDefaultLayout &= ctrLayoutBottom->parent != nullptr && ctrLayoutBottom->isVisible();
-        }
-        if (!bHasDefaultLayout) {
-            resetBottomArea();
-        }
-        auto& bottom = ctrCtrBottom->getAsLayoutCtr();
+        auto ctrTabBottom = findByTagEntry(GuiContainerTag::TAG_TAB_BOTTOM);
         switch (editAreaLayout) {
             case DAW::EDIT_AREA_SINGLE:
-                bottom->setLayout(container_layout::TABBED);
+                if (ctrTabBottom) {
+                    ctrTabBottom->getAsLayoutCtr()->setLayout(container_layout::TABBED);
+                }
                 switch (editAreaType) {
                     case DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER:
-                        ctr_Center->activateEntry(ctrEntryPlugins.get());
+                        if (ctrEntryPlugins->getParentContainer()) {
+                            activateEntry(ctrEntryPlugins.get());
+                        }
                         break;
                     case DAW::EditAreaType::EDIT_AREA_CLIP_EDITOR:
-                        ctr_Center->activateEntry(ctrEntryClipEdit.get());
+                        if (ctrEntryClipEdit->getParentContainer()) {
+                            activateEntry(ctrEntryClipEdit.get());
+                        }
                         break;
+                }
+                if (ctrTabBottom) {
+                    ctrTabBottom->getAsLayoutCtr()->setLayout(container_layout::TABBED);
+                    ctrTabBottom->getGui()->layout();
                 }
                 break;
             case DAW::EDIT_AREA_SPLIT_VERTICAL:
-                bottom->setLayout(container_layout::SPLIT_V);
+                if (ctrTabBottom) {
+                    ctrTabBottom->getAsLayoutCtr()->setLayout(container_layout::SPLIT_V);
+                    ctrTabBottom->getGui()->layout();
+                }
                 break;
             case DAW::EDIT_AREA_SPLIT_HORIZONTAL:
-                bottom->setLayout(container_layout::SPLIT_H);
+                if (ctrTabBottom) {
+                    ctrTabBottom->getAsLayoutCtr()->setLayout(container_layout::SPLIT_H);
+                    ctrTabBottom->getGui()->layout();
+                }
                 break;
         }
     }
     void setEditAreaType(DAW::EditAreaType editAreaType) {
-        if (this->editAreaType == editAreaType)
-            return;
         this->editAreaType = editAreaType;
+
+        std::shared_ptr<GuiCtrLayoutEntry> spShowEntry;
+        int insertPos = -1;
         switch (editAreaType) {
             case DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER:
-                ctr_Center->activateEntry(ctrEntryPlugins.get());
+                spShowEntry = ctrEntryPlugins;
+                insertPos = -2;
                 break;
             case DAW::EditAreaType::EDIT_AREA_CLIP_EDITOR:
-                ctr_Center->activateEntry(ctrEntryClipEdit.get());
+                spShowEntry = ctrEntryClipEdit;
                 break;
+        }
+        if (!spShowEntry)
+            return;
+        bool bContentChanged = false;
+        std::shared_ptr<GuiCtrLayoutEntry> ctrTabBottom;
+        if (!spShowEntry->getParentContainer()) {
+            ctrTabBottom = findByTagEntry(GuiContainerTag::TAG_TAB_BOTTOM);
+            if (!ctrTabBottom) {
+                ctrTabBottom = placeInCenterContainer(GuiContainerTag::TAG_TAB_BOTTOM);
+                bContentChanged = true;
+            }
+            container_layout layouts[] = {container_layout::TABBED, container_layout::SPLIT_V, container_layout::SPLIT_H};
+            ctrTabBottom->getAsLayoutCtr()->setLayout(layouts[editAreaLayout]);
+            if (ctrTabBottom) {
+                ctrTabBottom->getAsLayoutCtr()->addEntry(spShowEntry, insertPos);
+                bContentChanged = true;
+            }
+        }
+
+        if (spShowEntry->getParentContainer() && spShowEntry->getGui()->parent) {
+            activateEntry(spShowEntry.get());
+            dawCtrl->focusGui(spShowEntry->getGui());
+        }
+
+        if (bContentChanged) {
+            dawCtrl->dragContainerRelayout({ BaseCtrl::drag_ctr_event_type::DRAG_END });
+            dawCtrl->relayout();
         }
     }
     void onEditClipChanged(bool bHasClip) {
         if (editAreaLayout == DAW::EditAreaLayout::EDIT_AREA_SINGLE && editAreaType == DAW::EditAreaType::EDIT_AREA_CLIP_EDITOR) {
-            if (!bHasClip && ctrEntryClipEdit->parentLayoutContainer) {
+            if (!bHasClip && ctrEntryClipEdit->getParentContainer()) {
             }
-            if (bHasClip && !ctrEntryClipEdit->parentLayoutContainer) {
+            if (bHasClip && !ctrEntryClipEdit->getParentContainer()) {
             }
         }
         
         if (bHasClip) {
-            ctr_Center->activateEntry(ctrEntryClipEdit.get());
+            activateEntry(ctrEntryClipEdit.get());
         }
     }
     void layout(int32_t winW, int32_t winH) override {
@@ -660,73 +678,44 @@ public:
         ctr_pluginview.pos     = { ctr_clipeditorview.right(), winBottom - heightViewSelect - heightStatusBar };
         ctr_pluginview.size     = { ctr_Center->right()-ctr_pluginview.left(), heightViewSelect };
     }
-
     void addTo(std::vector<guictr_base*>& v) override {
         for (auto& s : splitters)
             v.push_back(s.get());
         v.push_back(&ctr_tempo);
         v.push_back(&ctr_pluginview);
         v.push_back(&ctr_clipeditorview);
-        v.push_back(ctr_Left.get());
-        v.push_back(ctr_Center.get());
-        v.push_back(ctr_Right.get());
+        visitLayoutContainers([&](auto& ctr) {
+            v.push_back(ctr.get());
+            return true;
+        });
         v.push_back(&statusbar);
 #if USE_GUI_MENU
         v.push_back(&ctr_menu);
 #endif
     }
-
-    void dragContainerRelayout(MainCtrl* ctrl, BaseCtrl::drag_ctr_event evt) override {
-        if (evt.evtType != BaseCtrl::drag_ctr_event_type::DRAG_MOVE) {
-            ctr_Right->postContentChanged();
-            ctr_Left->postContentChanged();
-            ctr_Center->postContentChanged();
-            ctr_Right->layout();
-            ctr_Left->layout();
-            ctr_Center->layout();
-        }
-        if (evt.evtType == BaseCtrl::drag_ctr_event_type::DRAG_END) {
-            bool bRelayout = false;
-
-            guictr_layout* layoutCtrs[2] = { ctr_Left.get(), ctr_Right.get() };
-            for (auto* layoutCtr : layoutCtrs) {
-                if (layoutCtr->getLayout() == container_layout::SOLE && layoutCtr->getEntries().size() == 1 && layoutCtr->getEntries().front()->getFrameType() == layout_ctr_type::GUICTR_LAYOUT) {
-                    std::shared_ptr<guictr_layout_entry> out;
-                    layoutCtr->getContainerRef(layoutCtr->getEntries().front().get(), out, true);
-                    dbgassert(out);
-                    std::shared_ptr<guictr_layout> shrdLayoutCtr;
-                    dbgassert(out->getSharedGui());
-                    shrdLayoutCtr = std::dynamic_pointer_cast<guictr_layout>(out->getSharedGui());
-                    ctrl->replaceContainerWith(layoutCtr, shrdLayoutCtr);
-                    bRelayout = true;
-                }
-            }
-            if (bRelayout) {
-                //TODO: rename relayout(void)
-                static_cast<BaseCtrl*>(ctrl)->relayout();
-            }
-        }
+    void resetToDefault() {
+        getSplitter(SplitterPos::LEFT)->setScale(0.2);
+        getSplitter(SplitterPos::RIGHT)->setScale(0.8);
+        ctr_Right->removeAllEntries();
+        ctr_Left->removeAllEntries();
+        resetCenterContainer();
+        dbgassert(ctrEntryClipEdit->getEntryTag() == GuiContainerTag::TAG_CLIPEDIT);
+        dbgassert(ctrEntryNodes->getEntryTag() == GuiContainerTag::TAG_NODES);
+        dbgassert(ctrEntryPlugins->getEntryTag() == GuiContainerTag::TAG_PLUGINS);
+        dbgassert(ctrEntryTracks->getEntryTag() == GuiContainerTag::TAG_TRACKS);
+        dbgassert(findByTagEntry(GuiContainerTag::TAG_TAB_TOP));
+        dbgassert(findByTagEntry(GuiContainerTag::TAG_TAB_BOTTOM));
     }
 
     void loadLayout(const dawview_layout_t& viewLayout) {
-        ctr_Left->assertEntries();
-        ctr_Right->assertEntries();
-        ctr_Center->assertEntries();
         ctr_Right->removeAllEntries();
         ctr_Left->removeAllEntries();
-        ctrEntryTracks->assertState();
-        ctrEntryNodes->assertState();
-        ctrEntryClipEdit->assertState();
-        ctrEntryPlugins->assertState();
-        ctrCtrTop->assertState();
-        ctrCtrBottom->assertState();
-        ctrCtrTop->removeEntryFromParent();
-        ctrCtrBottom->removeEntryFromParent();
         ctrEntryTracks->removeEntryFromParent();
         ctrEntryNodes->removeEntryFromParent();
         ctrEntryClipEdit->removeEntryFromParent();
         ctrEntryPlugins->removeEntryFromParent();
         ctr_Center->removeAllEntries();
+        ctrEntryPlugins->assertState();
         ctr_Left->assertEntries();
         ctr_Right->assertEntries();
         ctr_Center->assertEntries();
@@ -734,10 +723,15 @@ public:
         DawInstance* const daw = ctr_Left->dawCtrl->getDaw();
         dbgassert(daw);
         auto context = ContainerInstanceContext{daw, {}};
-        context.entriesPreconstructed[gui_type::CTR_TYPE_TRACKS] = { ctrEntryTracks };
-        context.entriesPreconstructed[gui_type::CTR_TYPE_NODES] = { ctrEntryNodes };
-        context.entriesPreconstructed[gui_type::CTR_TYPE_CLIPEDITOR] = { ctrEntryClipEdit };
-        context.entriesPreconstructed[gui_type::CTR_TYPE_PLUGINS] = { ctrEntryPlugins };
+        dbgassert(ctrEntryClipEdit->getEntryTag() == GuiContainerTag::TAG_CLIPEDIT);
+        dbgassert(ctrEntryNodes->getEntryTag() == GuiContainerTag::TAG_NODES);
+        dbgassert(ctrEntryPlugins->getEntryTag() == GuiContainerTag::TAG_PLUGINS);
+        dbgassert(ctrEntryTracks->getEntryTag() == GuiContainerTag::TAG_TRACKS);
+        context.entriesPreconstructed[GuiContainerTag::TAG_TRACKS] = { ctrEntryTracks };
+        context.entriesPreconstructed[GuiContainerTag::TAG_NODES] = { ctrEntryNodes };
+        context.entriesPreconstructed[GuiContainerTag::TAG_CLIPEDIT] = { ctrEntryClipEdit };
+        context.entriesPreconstructed[GuiContainerTag::TAG_PLUGINS] = { ctrEntryPlugins };
+
         if (viewLayout.left && viewLayout.right) {
             auto& fac = getContainerFactory();
             loadContainerSnapshot(fac, context, ctr_Right.get(), viewLayout.right.get());
@@ -746,56 +740,46 @@ public:
         if (viewLayout.center) {
             auto& fac = getContainerFactory();
             loadContainerSnapshot(fac, context, ctr_Center.get(), viewLayout.center.get());
-
-            if (ctrEntryTracks->getGui()->parent && ctrEntryTracks->getGui()->isVisible()) {
-                mainCtrl->setViewMode(view_mode_t::TRACK_TIMELINE);
-            }
-
-            if (ctrEntryNodes->getGui()->parent && ctrEntryNodes->getGui()->isVisible()) {
-                mainCtrl->setViewMode(view_mode_t::NODE_EDITOR);
-            }
-            if (ctrEntryClipEdit->getGui()->parent && ctrEntryClipEdit->getGui()->isVisible()) {
-                mainCtrl->setEditAreaType(DAW::EditAreaType::EDIT_AREA_CLIP_EDITOR);
-            } else if (ctrEntryPlugins->getGui()->parent && ctrEntryPlugins->getGui()->isVisible()) {
-                mainCtrl->setEditAreaType(DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER);
-            }
-            //TODO find tabbed ctrs top and bottom
         } else {
-            resetCenterContainer();
+            // resetCenterContainer();
         }
-        std::shared_ptr<guictr_layout_entry> ctrEntryTop;
-        std::shared_ptr<guictr_layout_entry> ctrEntryBottom;
-        for (int i = 0; i < 2; i++) {
-            while (auto ctr = ctr_Center->findByTagContainer(i)) {
-                if (!assert_expr(ctr->getGui()->getGuiType() == gui_type::CTR_TYPE_LAYOUT)) {
-                    break;
+        struct TagGuiType {
+            GuiContainerTag tag;
+            gui_type type;
+            std::shared_ptr<GuiCtrLayoutEntry>* pSp;
+        };
+        const std::array<TagGuiType, 4> tagGuiTypes = {
+            TagGuiType{GuiContainerTag::TAG_TRACKS, gui_type::CTR_TYPE_TRACKS, &ctrEntryTracks},
+            TagGuiType{GuiContainerTag::TAG_NODES, gui_type::CTR_TYPE_NODES, &ctrEntryNodes},
+            TagGuiType{GuiContainerTag::TAG_CLIPEDIT, gui_type::CTR_TYPE_CLIPEDITOR, &ctrEntryClipEdit},
+            TagGuiType{GuiContainerTag::TAG_PLUGINS, gui_type::CTR_TYPE_PLUGINS, &ctrEntryPlugins},
+        };
+        for (auto& tagGuiType : tagGuiTypes) {
+            auto byTag = findByTagEntry(tagGuiType.tag);
+            if (!byTag) {
+                auto byGuiType = findByGuiType(tagGuiType.type);
+                if (byGuiType) {
+                    byGuiType->setEntryTag(tagGuiType.tag);
+                    *tagGuiType.pSp = byGuiType;
                 }
-                if (i == 0 && !ctrEntryTop) {
-                    ctrEntryTop = ctr;
-                } else if (i == 1 && !ctrEntryBottom) {
-                    ctrEntryBottom = ctr;
-                }
-                auto ctrLayout = ctr->getAsLayoutCtr();
-                ctrLayout->setTag(-1);
             }
+            dbgassert(!!findByGuiType(tagGuiType.type) == !!findByTagEntry(tagGuiType.tag));
         }
-        if (ctrEntryTop) {
-            this->ctrCtrTop = ctrEntryTop;
-        }
-        if (ctrEntryBottom) {
-            this->ctrCtrBottom = ctrEntryBottom;
-        }
-        this->ctrCtrTop->getAsLayoutCtr()->setTag(0);
-        this->ctrCtrBottom->getAsLayoutCtr()->setTag(1);
+
         for (size_t i = 0; i < viewLayout.splitterPositions.size() && i < splitters.size(); i++) {
             splitters[i]->setScale(viewLayout.splitterPositions[i]);
         }
         ctr_Left->assertEntries();
         ctr_Right->assertEntries();
         ctr_Center->assertEntries();
+        ctrEntryPlugins->assertState();
     }
 
     void storeLayout(dawview_layout_t& layout) {
+        dbgassert(ctrEntryClipEdit->getEntryTag() == GuiContainerTag::TAG_CLIPEDIT);
+        dbgassert(ctrEntryNodes->getEntryTag() == GuiContainerTag::TAG_NODES);
+        dbgassert(ctrEntryPlugins->getEntryTag() == GuiContainerTag::TAG_PLUGINS);
+        dbgassert(ctrEntryTracks->getEntryTag() == GuiContainerTag::TAG_TRACKS);
         layout.left  = std::make_shared<guictrlayout_snapshot_t>();
         layout.right = std::make_shared<guictrlayout_snapshot_t>();
         layout.center = std::make_shared<guictrlayout_snapshot_t>();
@@ -809,27 +793,10 @@ public:
     }
 };
 
-void CompanionCtrl::setupView() {
-    view = new DawViewContainersCompanion(this, menubar, cursor, trackSelection, daw.project, daw.projectGlobals, grid, daw.dragdropclip);
+void DawCtrl::setupView() {
+    view = new DawViewContainersMain(this, menubar, daw.projectGlobals.cursor, daw.projectGlobals.trackSelection, daw.project, daw.projectGlobals, daw.dragdropclip);
+    view->resetCenterContainer();
     view->addTo(this->viewGuiContainers);
-    viewContainers = view;
-    for (guictr_base* ctr : viewGuiContainers) {
-        ctr->setControl(this);
-        ctr->onAdded();
-    }
-    for (guictr_base* ctr : viewAsyncProgress) {
-        ctr->setControl(this);
-        ctr->onAdded();
-    }
-    updateViewGuiContainers();
-    setViewMode(view_mode_t::NODE_EDITOR);
-    setViewMode(view_mode_t::TRACK_TIMELINE);
-}
-
-void MainCtrl::setupView() {
-    view = new DawViewContainersMain(this, menubar, daw.projectGlobals.cursor, daw.projectGlobals.trackSelection, daw.project, daw.projectGlobals, grid, daw.dragdropclip);
-    view->addTo(this->viewGuiContainers);
-    viewContainers = view;
     for (guictr_base* ctr : viewGuiContainers) {
         ctr->setControl(this);
         ctr->onAdded();
@@ -844,53 +811,42 @@ void MainCtrl::setupView() {
     setEditAreaLayout(DAW::EditAreaLayout::EDIT_AREA_SPLIT_HORIZONTAL);
 }
 
-std::shared_ptr<guictr_layout> MainCtrl::replaceContainerWith(guictr_base* ctr,
-                                                              std::shared_ptr<guictr_layout> newContainer) {
-    std::shared_ptr<guictr_layout> ret;
-    if (ctr == view->ctr_Right.get()) {
-        replaceEntry(viewGuiContainers, view->ctr_Right.get(), newContainer.get());
-        ret                     = view->ctr_Right;
-        ret->parent             = nullptr;
-        view->ctr_Right         = newContainer;
-        view->ctr_Right->parent = nullptr;
-        view->ctr_Right->setControl(this);
-        view->ctr_Right->onAdded();
-        updateViewGuiContainers();
-    }
-    if (ctr == view->ctr_Left.get()) {
-        replaceEntry(viewGuiContainers, view->ctr_Left.get(), newContainer.get());
-        ret                    = view->ctr_Left;
-        ret->parent            = nullptr;
-        view->ctr_Left         = newContainer;
-        view->ctr_Left->parent = nullptr;
-        view->ctr_Left->setControl(this);
-        view->ctr_Left->onAdded();
+std::shared_ptr<guictr_layout> DawCtrl::replaceContainerWith(guictr_base* ctr, std::shared_ptr<guictr_layout> newContainer) {                         
+    std::shared_ptr<guictr_layout> ret = view->replaceLayoutCtr(ctr, newContainer);
+    if (ret) {
+        newContainer->parent = nullptr;
+        newContainer->setControl(this);
+        newContainer->onAdded();
+        ret->parent = nullptr;
+        ret->setControl(nullptr); // TODO: this might give problems
+        ret->onRemove();
+        viewGuiContainers.clear();
+        view->addTo(viewGuiContainers);
         updateViewGuiContainers();
     }
     return ret;
 }
 
 
-void MainCtrl::showPluginView() {
+void DawCtrl::showPluginView() {
     setEditAreaType(DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER);
 }
 
-void MainCtrl::showClipEditor() {
+void DawCtrl::showClipEditor() {
     setEditAreaType(DAW::EditAreaType::EDIT_AREA_CLIP_EDITOR);
 }
 
-void MainCtrl::setEditAreaType(DAW::EditAreaType editAreaType) {
+void DawCtrl::setEditAreaType(DAW::EditAreaType editAreaType) {
     view->setEditAreaType(editAreaType);
     setEditAreaLayout(view->editAreaLayout);
 }
 
-void MainCtrl::setEditAreaLayout(DAW::EditAreaLayout layout) {
+void DawCtrl::setEditAreaLayout(DAW::EditAreaLayout layout) {
     view->setEditAreaLayout(layout);
     relayout();
-    view->ctr_plugins.relayout();
 }
 
-void MainCtrl::toggleViewModeEditArea() {
+void DawCtrl::toggleViewModeEditArea() {
     switch (view->editAreaLayout) {
         case DAW::EDIT_AREA_SINGLE:
             setEditAreaLayout(DAW::EDIT_AREA_SPLIT_HORIZONTAL);
@@ -904,75 +860,46 @@ void MainCtrl::toggleViewModeEditArea() {
     }
 }
 
-void MainCtrl::setViewMode(view_mode_t mode) {
+void DawCtrl::setViewMode(view_mode_t mode) {
     view->setViewMode(mode);
 }
 
-void CompanionCtrl::setViewMode(view_mode_t mode) {
-    this->viewMode = mode;
-    view->ctr_nodes.setVisible(mode == MIXER);
-    view->ctr_tracks2.setVisible(mode == TRACK_TIMELINE);
-    view->ctr_clipeditor.setVisible(mode == NODE_EDITOR);
-    updateViewGuiContainers();
-    if (view->ctr_nodes.isVisible()) {
-        view->ctr_nodes.refresh();
-    }
-    switch (mode) {
-        case TRACK_TIMELINE:
-            focusGui(&view->ctr_tracks2);
-            break;
-        case MIXER:
-            focusGui(&view->ctr_nodes);
-            break;
-        case NODE_EDITOR:
-            focusGui(&view->ctr_clipeditor);
-            break;
-    }
-}
 
 view_mode_t DawCtrl::getViewMode() const {
     return this->viewMode;
 }
+
 void DawCtrl::onPluginSelected() {
-    getNodesContainer()->onPluginSelected();
-}
-
-void CompanionCtrl::showPluginView() {
-}
-
-void CompanionCtrl::showClipEditor() {
-    setViewMode(view_mode_t::NODE_EDITOR);
+    view->visitEntries([](auto& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_NODES) {
+            guictr_cast<guictr_nodes_splitview>(entry)->onPluginSelected();
+        }
+        return true;
+    });
 }
 
 void DawCtrl::setAsyncTask(DAW::async_task_t* task) {
     updateViewGuiContainers();
     relayout();
     updateVisibleTrackContents();
-    onPluginsChanged();
 }
 
-void MainCtrl::setAsyncTask(DAW::async_task_t* task) {
-    DawCtrl::setAsyncTask(task);
+bool DawCtrl::isClipEditorVisible() {
+    bool bFound = false;
+    view->visitEntries([&bFound](auto& ctr) {
+        bFound |= ctr->getType() == gui_type::CTR_TYPE_CLIPEDITOR && ctr->isVisible();
+        return !bFound;
+    });
+    return bFound;
 }
 
-void CompanionCtrl::setAsyncTask(DAW::async_task_t* task) {
-    DawCtrl::setAsyncTask(task);
-}
-
-bool MainCtrl::isClipEditorVisible() {
-    return view->ctr_clipeditor.isVisible();
-}
-
-bool MainCtrl::isPluginViewVisible() {
-    return view->ctr_plugins.isVisible();
-}
-
-bool CompanionCtrl::isClipEditorVisible() {
-    return this->viewMode == view_mode_t::NODE_EDITOR;
-}
-
-bool CompanionCtrl::isPluginViewVisible() {
-    return false;
+bool DawCtrl::isPluginViewVisible() {
+    bool bFound = false;
+    view->visitEntries([&bFound](auto& ctr) {
+        bFound |= ctr->getType() == gui_type::CTR_TYPE_PLUGINS && ctr->isVisible();
+        return !bFound;
+    });
+    return bFound;
 }
 
 void MainCtrl::addDebug(String s) {
@@ -980,18 +907,14 @@ void MainCtrl::addDebug(String s) {
 
 void DawCtrl::resetMouseContext() {
     BaseCtrl::resetMouseContext();
-}
-
-void MainCtrl::resetMouseContext() {
-    DawCtrl::resetMouseContext();
-    if (view)
-        view->ctr_nodes.reset();
-}
-
-void CompanionCtrl::resetMouseContext() {
-    DawCtrl::resetMouseContext();
-    if (view)
-        view->ctr_nodes.reset();
+    if (view) {
+        view->visitEntries([](auto& entry) {
+            if (entry->getType() == gui_type::CTR_TYPE_NODES) {
+                guictr_cast<guictr_nodes_splitview>(entry)->reset();
+            }
+            return true;
+        });
+    }
 }
 
 void DawInstance::unloadProject() {
@@ -1028,17 +951,22 @@ void DawInstance::unloadProject() {
     tls.audioCache->unloadAll();
     auto* ctrl = tls.mainCtrl;
     if (ctrl) {
-        auto& trackView = ctrl->view->ctr_tracks.trackView;
-        trackView.m_resizePreModifyState.reset();
-        trackView.action.clipboard.reset();
-        trackView.iGuiMgr.reset();
+        ctrl->view->visitEntries([](auto& ctr) {
+            if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
+                auto trackCtr = guictr_cast<guictr_tracks>(ctr);
+                auto& trackView = trackCtr->trackView;
+                trackView.m_resizePreModifyState.reset();
+                trackView.action.clipboard.reset();
+                trackView.iGuiMgr.reset();
+            }
+            return true;
+        });
     }
 
     /** reset maximum stage id and determine new maximum stage id **/
     tls.host->updateMaximumStageId();
     for (DawCtrl* pDawCtrl : dawCtrls) {
         if (pDawCtrl->isOk()) {
-            pDawCtrl->onPluginsChanged();
             pDawCtrl->resetView();
         }
     }
@@ -1400,17 +1328,33 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                 }
                 return true;
             }
-            case CMD_CREATE_VIEW:
+            case CMD_CREATE_VIEW:            
                 if (getMainControl()) {
+                    auto guiType = static_cast<gui_type>(command.argInt);
                     dbgassert(command.argInt >= 0);
                     std::shared_ptr<guictr_base> ctr;
                     auto context = ContainerInstanceContext{this, {}};
-                    if (makeContainer(context, static_cast<gui_type>(command.argInt), ctr)) {
+                    if (makeContainer(context, guiType, ctr)) {
                         auto ctrLayoutLeft = getMainControl()->view->ctr_Left;
                         addLayoutEntryRelayout(getMainControl(), ctrLayoutLeft, ctr, ctr->label);
                     }
                 }
                 return true;
+            case CMD_RESET_UI_DEFAULT_LAYOUT: {
+                auto mainCtrl = getMainControl();
+                if (mainCtrl) {
+                    mainCtrl->view->resetToDefault();
+                    mainCtrl->dragContainerRelayout({ BaseCtrl::drag_ctr_event_type::DRAG_END });
+                    mainCtrl->showClipEditor();
+                    mainCtrl->setViewMode(view_mode_t::TRACK_TIMELINE);
+                    tls.settings->dawsettings.globalZoom = 1.0;
+                    for (auto& dawCtrl : dawCtrls) {
+                        dawCtrl->updateZoomLevel(1.0);
+                        dawCtrl->updateVisibleTrackContents();
+                    }
+                }
+                return true;
+            }
             case CMD_OPEN_SECOND_WINDOW:
                 if (companionWindows.empty()) {
                     auto companionCtrlStdPtr = std::make_shared<CompanionCtrl>(mainCtrl, *this);
@@ -1425,9 +1369,15 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                         if (this->layoutsFromProjectFile.size() > idxOfWindow) {
                             companionCtrlStdPtr->loadLayout(this->layoutsFromProjectFile[idxOfWindow]);
                         }
-                        for (track_t* tr : project.trackList) {
-                            companionCtrlStdPtr->view->ctr_tracks2.addTrack(tr, FLG_TRK_CHANGE_LOAD);
-                        }
+                        companionCtrlStdPtr->view->visitEntries([this](auto& entry) {
+                            if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
+                                guictr_tracks* tracksCtr = guictr_cast<guictr_tracks>(entry);
+                                for (track_t* tr : project.trackList) {
+                                    tracksCtr->addTrack(tr, FLG_TRK_CHANGE_LOAD);
+                                }
+                            }
+                            return true;
+                        });
                         companionCtrlStdPtr->fixCursor();
                         companionCtrlStdPtr->updateVisibleTrackContents();
                     }
@@ -1630,7 +1580,7 @@ void MainCtrl::startApp() {
     } else {
         daw.setEmptyProject();
     }
-    
+    auto& layouts = daw.getLayouts();
     view->storeLayout(layouts[0]);
     for (size_t i = 1; i < layouts.size(); i++) {
         std::shared_ptr<dawview_layout_t> viewLayout = loadDawViewLayoutSnapshot(StringFormat("data/view%zu.layout", i));
@@ -1638,7 +1588,7 @@ void MainCtrl::startApp() {
             layouts[i] = *viewLayout.get();
         }
     }
-    view->loadLayout(layouts[1]);
+    // view->loadLayout(layouts[1]);
     dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
     DawCtrl::startApp();
 }
@@ -1718,24 +1668,54 @@ std::pair<String, String> DawInstance::createUniqueNonExistingFilename(const Str
     return {uniqueFilePath, uniqueFileName};
 }
 
-void DawInstance::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
+void DawInstance::updateClipViews(clip_t* notifyClip) {
     for (auto* ctrl : dawCtrls) {
-        ctrl->updateClipViews(notifyClip, cursor);
+        ctrl->updateClipViews(notifyClip);
     }
 }
 
-void DawCtrl::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
-    auto& view = getClipEditor()->getClipView();
-    if (view.clip() == notifyClip) {
-        view.cursor = cursor;
-        view.copySelectedNoteList();
-        view.updateNotePitches(false);
-        getClipEditor()->showEditClip(view.gui, view.selectionView);
+
+void DawInstance::updateClipViewsAndCursor(clip_t* notifyClip, clip_cursor_t cursor) {
+    for (auto* ctrl : dawCtrls) {
+        ctrl->updateClipViewsAndCursor(notifyClip, cursor);
     }
+}
+
+void DawCtrl::updateClipViewsAndCursor(clip_t* notifyClip, clip_cursor_t cursor) {
+    view->visitEntries([notifyClip, &cursor](auto& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {  
+            auto clipEditor = guictr_cast<guictr_clipeditor>(entry);
+            auto& view = clipEditor->getClipView();
+            if (view.clip() == notifyClip) {
+                view.cursor = cursor;
+                view.copySelectedNoteList();
+                view.updateNotePitches(false);
+                clipEditor->showEditClip(view.gui, view.selectionView);
+            }
+        }
+        return true;
+    });
+}
+
+void DawCtrl::updateClipViews(clip_t* notifyClip) {
+    view->visitEntries([notifyClip](auto& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {  
+            auto clipEditor = guictr_cast<guictr_clipeditor>(entry);
+            auto& view = clipEditor->getClipView();
+            if (view.clip() == notifyClip) {
+                clipEditor->showEditClip(view.gui, view.selectionView);
+            }
+        }
+        return true;
+    });
 }
 
 void DawCtrl::resetClipViews() {
-    getClipEditor()->resetClipView();
+    view->visitEntries([](auto& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR)
+            guictr_cast<guictr_clipeditor>(entry)->resetClipView();
+        return true;
+    });
 }
 
 void DawInstance::destroy() {
@@ -1822,9 +1802,9 @@ void DawCtrl::destroy() {
     waveformRenderer = nullptr;
 
     isOK = false;
-    if (viewContainers) {
-        delete viewContainers;
-        viewContainers = nullptr;
+    if (view) {
+        delete view;
+        view = nullptr;
     }
 }
 
@@ -1958,9 +1938,13 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     menus.views.type  = ngui::menu_type::submenu;
     menus.views.title = "View";
     menus.views.addCommand(this, GlobalCommandType::CMD_OPEN_SECOND_WINDOW);
+    menus.views.addCommand(this, GlobalCommandType::CMD_RESET_UI_DEFAULT_LAYOUT);
     menus.views.addSeperator();
     auto& mapGuiTypeToStr = getContainerRegistry();
     for (auto& [guiType, name] : mapGuiTypeToStr) {
+        if (guiType == gui_type::CTR_TYPE_LAYOUT) {
+            continue;
+        }
         menus.views.addCommand(this, GlobalCommandType::CMD_CREATE_VIEW, static_cast<int>(guiType), "Show " + name);
     }
 
@@ -1980,11 +1964,20 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
 #endif
 
     auto& settings = daw_tls::getSettings();
-    if (isCompanion()) {
-        grid.grid_dens = settings.wndCompanion.dens;
-    } else {
-        grid.grid_dens = settings.wndMain.dens;
-    }
+
+    //TODO: layout settings should be handled on editor container level
+    view->visitEntries([&](auto& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
+            auto tracks = guictr_cast<guictr_tracks>(entry);
+            auto& grid = tracks->getGrid();
+            if (isCompanion()) {
+                grid.grid_dens = settings.wndCompanion.dens;
+            } else {
+                grid.grid_dens = settings.wndMain.dens;
+            }
+        }
+        return true;
+    });
 
     isOK = true;
     return isOK;
@@ -2054,33 +2047,40 @@ void MainCtrl::onTick() {
     }
 
     if (guiDragged && !guiCaptured && guiDragged->isDragMoveable()) {
-        track_gui_entry_t* tr  = nullptr;
         int32_t hoverTicks     = 0;
-        guictr_base& ctrMixers = view->ctr_tracks.trackControls;
-        guictr_base& ctrTrackView = view->ctr_tracks.trackView;
-        if (view->ctr_tracks.isVisible()) {
-            ivec2 trackViewLocalPos = toControlsObjectSpace(m_mousePos, &view->ctr_tracks);
-            ivec2 posRelative(0, 0);
-            bool bHit = false;
-            if (ctrMixers.contains(trackViewLocalPos)) {
-                posRelative = m_mousePos - ctrMixers.toScreenSpace(ivec2(0));
-                bHit = true;
-            } else if (ctrTrackView.contains(trackViewLocalPos)) {
-                posRelative = m_mousePos - ctrTrackView.toScreenSpace(ivec2(0));
-                bHit = true;
-            }
-            if (bHit) {
-                tr = DAW::getTrackFromMouse(this->view->ctr_tracks.guiMgr, posRelative);
-                if (tr && tr == lastHoveredTrack && daw.getSelectedTrack() != tr->track) {
-                    hoverTicks = lastHoveredTrackTicks + 1;
-                    if (lastHoveredTrackTicks >= 6) {
-                        daw.setSelectedTrackEntry(tr);
-                        showPluginView();
-                        hoverTicks = 0;
+        track_gui_entry_t* tr  = nullptr;
+        view->visitEntries([&](auto& entry) {
+            if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
+                guictr_tracks* tracksCtr = guictr_cast<guictr_tracks>(entry);
+                guictr_base& ctrMixers = tracksCtr->trackControls;
+                guictr_base& ctrTrackView = tracksCtr->trackView;
+                if (tracksCtr->isVisible()) {
+                    ivec2 trackViewLocalPos = toControlsObjectSpace(m_mousePos, tracksCtr);
+                    ivec2 posRelative(0, 0);
+                    bool bHit = false;
+                    if (ctrMixers.contains(trackViewLocalPos)) {
+                        posRelative = m_mousePos - ctrMixers.toScreenSpace(ivec2(0));
+                        bHit = true;
+                    } else if (ctrTrackView.contains(trackViewLocalPos)) {
+                        posRelative = m_mousePos - ctrTrackView.toScreenSpace(ivec2(0));
+                        bHit = true;
+                    }
+                    if (bHit) {
+                        tr = DAW::getTrackFromMouse(tracksCtr->guiMgr, posRelative);
+                        if (tr && tr == lastHoveredTrack && daw.getSelectedTrack() != tr->track) {
+                            hoverTicks = lastHoveredTrackTicks + 1;
+                            if (lastHoveredTrackTicks >= 6) {
+                                daw.setSelectedTrackEntry(tr);
+                                showPluginView();
+                                hoverTicks = 0;
+                            }
+                        }
+                        return false;
                     }
                 }
             }
-        }
+            return true;
+        });
         if (view->ctr_pluginview.isVisible() && view->ctr_pluginview.contains(m_mousePos)) {
             hoverTicks = lastHoveredTrackTicks + 1;
             if (lastHoveredTrackTicks >= 6) {
@@ -2103,7 +2103,18 @@ void DawInstance::onPluginsChanged() {
     tls.pluginManager->onTrackLayoutChange();
     for (DawCtrl* pDawCtrl : dawCtrls) {
         dbgassert(pDawCtrl->isOk());
-        pDawCtrl->onPluginsChanged();
+        pDawCtrl->view->visitEntries([](auto& entry) {
+            if (entry->getType() == gui_type::CTR_TYPE_PLUGINS) {
+                auto trackCtr = guictr_cast<guictr_plugins>(entry);
+                trackCtr->relayout();
+            }
+            if (entry->getType() == gui_type::CTR_TYPE_NODES) {
+                auto trackCtr = guictr_cast<guictr_nodes_splitview>(entry);
+                trackCtr->reset();
+                trackCtr->refresh();
+            }
+            return true;
+        });
     }
 }
 
@@ -2310,9 +2321,15 @@ std::shared_ptr<project_file> DawInstance::createProjectFile() {
     DAW::GetProjectReferencedSampleIds(project, uniqueSampleIds);
     tls.audioCache->saveSamples(uniqueSampleIds);
     tls.audioCache->store(uniqueSampleIds, file->sampleFileIndex);
-    if (tls.mainCtrl) {
-        file->layout.layoutGrid    = tls.mainCtrl->grid;
-        file->layout.scrollOffsetX = tls.mainCtrl->view->ctr_tracks.getScrollOffset();
+
+    //TODO: layout settings should be handled on editor container level
+    auto mainCtrl = getMainControl();
+    if (mainCtrl) {
+        auto ctrTracks = mainCtrl->getTrackContainer();
+        if (ctrTracks) {
+            file->layout.layoutGrid = ctrTracks->getGrid();
+            file->layout.scrollOffsetX = ctrTracks->getScrollOffset();
+        }
     }
     return file;
 }
@@ -2415,8 +2432,8 @@ void DawInstance::loadProject0(const std::shared_ptr<project_file>& file) {
 #endif
 
     /** create all gui instances **/
-    for (track_t* tr : project.trackList) {
-        for (DawCtrl* pDawCtrl : dawCtrls) {
+    for (DawCtrl* pDawCtrl : dawCtrls) {
+        for (track_t* tr : project.trackList) {
             pDawCtrl->addTrackToView(tr, FLG_TRK_CHANGE_LOAD);
         }
     }
@@ -2480,11 +2497,17 @@ bool DawInstance::loadProject1(const std::shared_ptr<project_file>& file, int fl
         if (this->layoutsFromProjectFile.size() > 0) {
             ctrl->loadLayout(this->layoutsFromProjectFile[0]);
         }
-        ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackCtr);
-        ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackReturnCtr);
-        ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackMasterCtr);
-        ctrl->grid.setLayout(file->layout.layoutGrid);
-        ctrl->view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
+        ctrl->view->visitEntries([f = file.get()](auto& entry) {
+            if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
+                auto trackCtr = guictr_cast<guictr_tracks>(entry);
+                trackCtr->getGrid().setLayout(f->layout.layoutGrid);
+                trackCtr->loadTrackLayouts(f->project.trackCtr);
+                trackCtr->loadTrackLayouts(f->project.trackReturnCtr);
+                trackCtr->loadTrackLayouts(f->project.trackMasterCtr);
+                trackCtr->setScrollOffset(f->layout.scrollOffsetX);
+            }
+            return true;
+        });
     }
     updateVisibleTrackContents();
     return true;
@@ -2518,69 +2541,63 @@ void DawInstance::loadProjectFinish() {
 }
 
 
-void MainCtrl::dragContainerRelayout(drag_ctr_event evt) {
-    viewContainers->dragContainerRelayout(this, evt);
+void DawCtrl::dragContainerRelayout(drag_ctr_event evt) {
+    if (evt.evtType != BaseCtrl::drag_ctr_event_type::DRAG_MOVE) {
+        view->visitLayoutContainers([](auto& ctr) {
+            ctr->postContentChanged();
+            ctr->layout();
+            return true;
+        });
+    }
     if (evt.evtType == BaseCtrl::drag_ctr_event_type::DRAG_END) {
+        view->visitLayoutContainers([this](auto& layoutCtr) {
+            if (layoutCtr->getLayout() == container_layout::SOLE
+                && layoutCtr->canSimplify()
+                && layoutCtr->getEntries().size() == 1
+                && layoutCtr->getEntries().front()->getFrameType() == LayoutCtrType::GUICTR_LAYOUT
+                && layoutCtr->getEntries().front()->getAsLayoutCtr()->canSimplify()) {
+                std::shared_ptr<GuiCtrLayoutEntry> out;
+                layoutCtr->getContainerRef(layoutCtr->getEntries().front().get(), out, true);
+                dbgassert(out);
+                dbgassert(out->getAsLayoutCtr());
+                this->replaceContainerWith(layoutCtr.get(), out->getAsLayoutCtr());
+                out->updateLabel();
+            }
+            return true;
+        });
         relayout();
     }
 }
 
-void MainCtrl::getTrackContainers(std::vector<guictr_tracks*>& trackContainers) {
-    trackContainers.push_back(&view->ctr_tracks);
+void DawCtrl::getTrackContainers(std::vector<guictr_tracks*>& trackContainers) {
+    view->visitEntries([&trackContainers](auto& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
+            trackContainers.push_back(guictr_cast<guictr_tracks>(entry));
+        }
+        return true;
+    });
 }
 
-void CompanionCtrl::getTrackContainers(std::vector<guictr_tracks*>& trackContainers) {
-    trackContainers.push_back(&view->ctr_tracks2);
-}
-
-guictr_tracks* MainCtrl::getTrackContainer() {
-    return &view->ctr_tracks;
-}
-
-guictr_nodes_splitview* MainCtrl::getNodesContainer() {
-    return &view->ctr_nodes;
-}
-
-guictr_clipeditor* MainCtrl::getClipEditor() {
-    return &view->ctr_clipeditor;
-}
-
-guictr_clipeditor* CompanionCtrl::getClipEditor() {
-    return &view->ctr_clipeditor;
-}
-
-guictr_plugins* MainCtrl::getPluginsView() {
-    return &view->ctr_plugins;
-}
-
-guictr_plugins* CompanionCtrl::getPluginsView() {
+std::shared_ptr<guictr_tracks> DawCtrl::getTrackContainer() {
+    auto entry = view->findByTagOrGuiType(GuiContainerTag::TAG_TRACKS, gui_type::CTR_TYPE_TRACKS);
+    if (entry) {
+        return std::static_pointer_cast<guictr_tracks>(entry->getSharedGui());
+    }
     return nullptr;
 }
 
-guictr_tracks* CompanionCtrl::getTrackContainer() {
-    return &view->ctr_tracks2;
-}
-
-guictr_nodes_splitview* CompanionCtrl::getNodesContainer() {
-    return &view->ctr_nodes;
-}
-
-void MainCtrl::layoutView(int32_t w, int32_t h) {
-    w = math::max(640, w);
-    h = math::max(480, h);
-    viewContainers->layout(w, h);
-
-    for (guictr_base* ctr : containers) {
-        ctr->layout();
+std::shared_ptr<guictr_clipeditor> DawCtrl::getClipEditor() {
+    auto entry = view->findByTagOrGuiType(GuiContainerTag::TAG_CLIPEDIT, gui_type::CTR_TYPE_CLIPEDITOR);
+    if (entry) {
+        return std::static_pointer_cast<guictr_clipeditor>(entry->getSharedGui());
     }
-    guiCtrProgress.pos = ivec2(w, h) / 2 - guiCtrProgress.size / 2;
-    guiCtrProgress.layout();
+    return nullptr;
 }
 
-void CompanionCtrl::layoutView(int32_t w, int32_t h) {
+void DawCtrl::layoutView(int32_t w, int32_t h) {
     w = math::max(640, w);
     h = math::max(480, h);
-    viewContainers->layout(w, h);
+    view->layout(w, h);
 
     for (guictr_base* ctr : containers) {
         ctr->layout();
@@ -2599,15 +2616,27 @@ void DawCtrl::relayout(int32_t w, int32_t h) {
 
 void DawInstance::setSelectedTrackEntry(track_gui_entry_t* trackEntry) {
     selectedTrack = trackEntry ? trackEntry->track : nullptr;
-    if (tls.mainCtrl) {
-        tls.mainCtrl->view->ctr_plugins.showTrack(trackEntry && trackEntry->track ? trackEntry->track->audio : nullptr);
+    for (auto& dawCtrl : dawCtrls) {
+        dawCtrl->view->visitEntries([trackEntry](auto& entry) {
+            if (entry->getType() == gui_type::CTR_TYPE_PLUGINS) {
+                auto trackCtr = guictr_cast<guictr_plugins>(entry);
+                trackCtr->showTrack(trackEntry && trackEntry->track ? trackEntry->track->audio : nullptr);
+            }
+            return true;
+        });
     }
 }
 
 void DawInstance::setSelectedTrack(track_t* track) {
     selectedTrack = track;
-    if (tls.mainCtrl) {
-        tls.mainCtrl->view->ctr_plugins.showTrack(track ? track->audio : nullptr);
+    for (auto& dawCtrl : dawCtrls) {
+        dawCtrl->view->visitEntries([track](auto& entry) {
+            if (entry->getType() == gui_type::CTR_TYPE_PLUGINS) {
+                auto trackCtr = guictr_cast<guictr_plugins>(entry);
+                trackCtr->showTrack(track ? track->audio : nullptr);
+            }
+            return true;
+        });
     }
 }
 
@@ -2615,42 +2644,57 @@ track_t* DawInstance::getSelectedTrack() {
     return selectedTrack;
 }
 
-guictr_plugins* MainCtrl::getPluginCtr() {
-    auto ctrlThis = get();
-    return ctrlThis ? &ctrlThis->view->ctr_plugins : nullptr;
+void DawCtrl::addTrackToView(track_t* track, int flags) {
+    int32_t nTrackViews =0;
+    view->visitEntries([track, flags, &nTrackViews](auto& ctr) {
+        if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
+            nTrackViews++;
+            guictr_cast<guictr_tracks>(ctr)->addTrack(track, flags);
+        }
+        return true;
+    });
+    dbgassert(nTrackViews);
 }
 
-guictr_tracks* MainCtrl::getGuiTrackCtr() {
-    auto ctrlThis = get();
-    return ctrlThis ? &ctrlThis->view->ctr_tracks : nullptr;
+void DawCtrl::removeTrackFromView(track_t* track, int flags) {
+    int32_t nTrackViews =0;
+    view->visitEntries([track, flags, &nTrackViews](auto& ctr) {
+        if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
+            nTrackViews++;
+            guictr_cast<guictr_tracks>(ctr)->removeTrack(track, flags);
+        }
+        return true;
+    });
+    dbgassert(nTrackViews);
 }
 
-guitrack_editor& MainCtrl::getTrackEditor() {
-    return view->ctr_tracks.trackView;
-}
-
-void MainCtrl::onPluginsChanged() {
-    view->ctr_nodes.reset();
-    view->ctr_nodes.refresh();
-    view->ctr_plugins.relayout();
+void DawCtrl::resetView() {
+    view->visitEntries([](auto& ctr) {
+        if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
+            guictr_cast<guictr_tracks>(ctr)->resetView();
+        }
+        return true;
+    });
 }
 
 void DawCtrl::updateVisibleTrackContents() {
-    static int n = 0;
-    if (n++ % 20 == 0) {
-        log_lf(Log::L_DEBUG, "updateVisibleTrackContents call #%d\n", n);
-    }
-    guictr_tracks* trackContainer = getTrackContainer();
-    trackContainer->updateVisibleTracks();
-    double scrollPixelOffset = trackContainer->getScrollOffsetPixels();
-    trackContainer->layout();
-    grid.update(trackContainer->trackView.getSizeContent());
-    trackContainer->layoutVisibleTracks();
-    trackContainer->scrollToPixelOffset(scrollPixelOffset);
+    view->visitEntries([](auto& ctr) {
+        if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
+            auto trackCtr = guictr_cast<guictr_tracks>(ctr);
+            if (trackCtr->isVisible()) {
+                trackCtr->updateVisibleTracks();
+                double scrollPixelOffset = trackCtr->getScrollOffsetPixels();
+                trackCtr->layout();
+                trackCtr->layoutVisibleTracks();
+                trackCtr->scrollToPixelOffset(scrollPixelOffset);
+            }
+        }
+        return true;
+    });
 }
 
-bool MainCtrl::isZooming() {
-    return guiCaptured == &view->ctr_tracks.trackTimeline;
+bool DawCtrl::isZooming() {
+    return guiCaptured && guiCaptured->getGuiType() == gui_type::CTR_TYPE_TRACKS_TIMELINE;
 }
 
 void DawCtrl::uncaptureMouse() {
@@ -2664,9 +2708,9 @@ void DawCtrl::onUncaptureMouse() {
 void DawCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) {
     daw.dragdropTarget.reset();
 #if USE_GUI_MENU
-    if (ctxtmenu && !ctxtmenu->isTransient() && viewContainers->getMenu()) {
+    if (ctxtmenu && !ctxtmenu->isTransient() && view->getMenu()) {
         MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_OVER, kbmods);
-        if (viewContainers->getMenu()->mouseHitTest(mousePos, evt)) {
+        if (view->getMenu()->mouseHitTest(mousePos, evt)) {
         }
         return;
     }
@@ -2879,51 +2923,9 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
             }
             return true;
         }
-        default:
-            break;
-    }
-    if (kevt.type == KeyboardState::K_PRESS) {
-        if (menuCommand(CMD_NOARG(ctxt.type))) {
-            return true;
-        }
-    }
-    if (this->getTrackContainer()->handleEditorCommand(ctxt)) {
-        return true;
-    }
-    if (this->getClipEditor()->handleEditorCommand(ctxt)) {
-        return true;
-    }
-    return false;
-}
-bool CompanionCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
-    switch (ctxt.type) {
-        case CMD_SWITCH_VIEW: {
-            if (ctxt.kevt.type != KeyboardState::K_RELEASE) {
-                switch (this->viewMode) {
-                    case view_mode_t::TRACK_TIMELINE:
-                        this->setViewMode(view_mode_t::MIXER);
-                        break;
-                    case view_mode_t::MIXER:
-                        this->setViewMode(view_mode_t::NODE_EDITOR);
-                        break;
-                    case view_mode_t::NODE_EDITOR:
-                        this->setViewMode(view_mode_t::TRACK_TIMELINE);
-                        break;
-                }
-            }
-            return true;
-        }
-        default:
-            break;
-    }
-    return DawCtrl::handleGlobalCommand(ctxt);
-}
-
-bool MainCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
-    auto& kevt = ctxt.kevt;
-    switch (ctxt.type) {
         case CMD_SWITCH_LAYOUT: {
             if (kevt.type == KeyboardState::K_PRESS) {
+                auto& layouts = daw.getLayouts();
                 if ((kevt.mods & KB_MOD_SHIFT) == kevt.mods && ctxt.argInt0 >= 0 && ctxt.argInt0 < CtrSize(layouts)) {
                     auto index = ctxt.argInt0 % layouts.size();
                     bool store    = (kevt.mods & KB_MOD_SHIFT);
@@ -2953,10 +2955,26 @@ bool MainCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
         default:
             break;
     }
-    if (DawCtrl::handleGlobalCommand(ctxt)) {
-        return true;
+    if (kevt.type == KeyboardState::K_PRESS) {
+        if (menuCommand(CMD_NOARG(ctxt.type))) {
+            return true;
+        }
     }
-    if (view->ctr_plugins.handleCommand(ctxt)) {
+    bool bHandled = false;
+    view->visitEntries([&ctxt, &bHandled](auto& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_TRACKS
+            && guictr_cast<guictr_tracks>(entry)->handleEditorCommand(ctxt)) {  
+            bHandled = true;
+            return false;
+        }
+        if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR
+            && guictr_cast<guictr_clipeditor>(entry)->handleEditorCommand(ctxt)) {  
+            bHandled = true;
+            return false;
+        }
+        return true;
+    });
+    if (bHandled) {
         return true;
     }
     return false;
@@ -3212,8 +3230,12 @@ void DawInstance::setTempo(int32_t _tempo100) {
 }
 
 void MainCtrl::destroy() {
-    auto& settings = daw_tls::getSettings();
-    settings.wndMain.dens = grid.grid_dens;
+    auto ctrTracks = getTrackContainer();
+    //TODO: layout settings should be handled on editor container level
+    if (ctrTracks) {
+        auto& settings = daw_tls::getSettings();
+        settings.wndMain.dens = ctrTracks->getGrid().grid_dens;
+    }
     {
         ThreadLock lock = daw.playThread.lockThread();
         //TODO: MultiLogger::removeLogger is not thread safe. This will eventually cause a race condition 
@@ -3221,84 +3243,36 @@ void MainCtrl::destroy() {
         getMultiLogger().removeLogger(statusbarLogger.get());
         daw.unloadProject();
     }
-    view = nullptr;
     DawCtrl::destroy();
     daw.destroy();
 }
 
 void CompanionCtrl::destroy() {
-    auto& settings = daw_tls::getSettings();
-    settings.wndCompanion.dens = grid.grid_dens;
-    view->ctr_tracks2.removeAllTracks();
-    view = nullptr;
+    auto ctrTracks = getTrackContainer();
+    //TODO: layout settings should be handled on editor container level
+    if (ctrTracks) {
+        auto& settings = daw_tls::getSettings();
+        settings.wndCompanion.dens = ctrTracks->getGrid().grid_dens;
+    }
     DawCtrl::destroy();
 }
 
-void CompanionCtrl::onPluginsChanged() {
-    view->ctr_nodes.reset();
-    view->ctr_nodes.refresh();
+void DawCtrl::layoutView() {
 }
 
-void MainCtrl::addTrackToView(track_t* track, int flags) {
-    view->ctr_tracks.addTrack(track, flags);
-}
-
-void MainCtrl::removeTrackFromView(track_t* track, int flags) {
-    view->ctr_tracks.removeTrack(track, flags);
-}
-
-void CompanionCtrl::addTrackToView(track_t* track, int flags) {
-    view->ctr_tracks2.addTrack(track, flags);
-}
-
-void CompanionCtrl::removeTrackFromView(track_t* track, int flags) {
-    view->ctr_tracks2.removeTrack(track, flags);
-}
-
-void CompanionCtrl::resetView() {
-    view->ctr_tracks2.resetView();
-}
-
-void MainCtrl::resetView() {
-    view->ctr_tracks.resetView();
-}
-
-void CompanionCtrl::layoutView() {
-    // view->ctr_tracks2.layout();
-}
-
-void MainCtrl::layoutView() {
-    // view->ctr_tracks.layout();
-}
-
-bool CompanionCtrl::isZooming() {
-    return guiCaptured == &view->ctr_tracks2.trackTimeline;
-}
-
-void CompanionCtrl::fixCursor() {
-    auto& guiMgr = view->ctr_tracks2.guiMgr;
-    if (cursor.isSubtrackSelection() && guiMgr.validTrackIdx(cursor.cursorTrack)) {
-        const track_gui_entry_t* tr = guiMgr.at(cursor.cursorTrack);
-        cursor.fixCursorSubRange(tr->subtracks.size());
-    } else {
-        cursor.fixCursorTrackRange(guiMgr.getTracksVisibleFlat().size());
-    }
+void DawCtrl::fixCursor() {
+    // auto& cursor = getCursor();
+    // auto& guiMgr = view->ctr_tracks2.guiMgr;
+    // if (cursor.isSubtrackSelection() && guiMgr.validTrackIdx(cursor.cursorTrack)) {
+    //     const track_gui_entry_t* tr = guiMgr.at(cursor.cursorTrack);
+    //     cursor.fixCursorSubRange(tr->subtracks.size());
+    // } else {
+    //     cursor.fixCursorTrackRange(guiMgr.getTracksVisibleFlat().size());
+    // }
 }
 
 DAW::Cursor& MainCtrl::getCursor() {
-    fixCursor();
     return daw.projectGlobals.cursor;
-}
-
-void MainCtrl::fixCursor() {
-    auto& cursor = daw.projectGlobals.cursor;
-    auto& guiMgr = view->ctr_tracks.guiMgr;
-    if (cursor.isSubtrackSelection() && guiMgr.validTrackIdx(cursor.cursorTrack)) {
-        const track_gui_entry_t* tr = guiMgr.at(cursor.cursorTrack);
-        cursor.fixCursorSubRange(tr->subtracks.size());
-    } else {
-        cursor.fixCursorTrackRange(guiMgr.getTracksVisibleFlat().size());
-    }
 }
 
 void MainCtrl::setStatusText(const String& s, GuiColor::constant_t color) {
@@ -3344,20 +3318,18 @@ void DawInstance::setEditClip(gui_clip* gclip, const clipboard_view_t& clipboard
 }
 
 void DawCtrl::setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
-    dbgassert(0);
-}
-
-void MainCtrl::setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
-    view->ctr_clipeditor.storeLayout();
-    view->ctr_clipeditor.showEditClip(gclip, clipboardView);
     view->ctr_clipeditorview.resetCache();
     view->onEditClipChanged(gclip!=nullptr);
+    view->visitEntries([gclip, &clipboardView](auto& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {  
+            auto clipEditor = guictr_cast<guictr_clipeditor>(entry);
+            clipEditor->storeLayout();
+            clipEditor->showEditClip(gclip, clipboardView);
+        }
+        return true;
+    });
 }
 
-void CompanionCtrl::setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
-    view->ctr_clipeditor.storeLayout();
-    view->ctr_clipeditor.showEditClip(gclip, clipboardView);
-}
 void MainCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
     DawCtrl::render(nanovgCtxt, x, y, w, h, ratio);
     daw_tls::tlsinstance& tls = daw_tls::getTls();
@@ -3365,6 +3337,7 @@ void MainCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
     tls.runtime->prevRenderStats = tls.runtime->renderStats;
     tls.runtime->renderStats     = {};
 }
+
 void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
 
     auto& renderStats = daw_tls::getTls().runtime->renderStats;
@@ -3459,19 +3432,13 @@ tick_t project_controller_t::beatBarNthToTick(const beatbar16th_t& beatBarNth, b
     return ::beatBarNthToTick(beatBarNth, projectGlobals->signatureNum, projectGlobals->signatureDenom, isRelative);
 }
 
-void MainCtrl::storeLayout(dawview_layout_t& layout) {
+void DawCtrl::storeLayout(dawview_layout_t& layout) {
     view->storeLayout(layout);
 }
 
-void MainCtrl::loadLayout(const dawview_layout_t& viewLayout) {
+void DawCtrl::loadLayout(const dawview_layout_t& viewLayout) {
     view->loadLayout(viewLayout);
     dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
-}
-
-void CompanionCtrl::storeLayout(dawview_layout_t& layout) {
-}
-
-void CompanionCtrl::loadLayout(const dawview_layout_t& viewLayout) {
 }
 
 void DawInstance::setEmptyClipboard() {
@@ -3480,8 +3447,8 @@ void DawInstance::setEmptyClipboard() {
     clipboardClips   = std::make_shared<clip_clipboard>();
     clipboardNotes   = std::make_shared<notes_clipboard>();
 }
-void MainCtrl::updateZoomLevel(float f) {
-    DawCtrl::updateZoomLevel(f);
+void DawCtrl::updateZoomLevel(float f) {
+    AppCtrl::updateZoomLevel(f);
     if (view) {
         view->ctr_tempo.onGlobalZoomChanged();
         daw.tls.settings->dawsettings.globalZoom = f;
@@ -3494,6 +3461,7 @@ void DawInstance::setAsyncTask(DAW::async_task_t* task) {
         ctrl->setAsyncTask(task);
     }
 }
+
 void DawCtrl::updateViewGuiContainers() {
     viewRender = viewGuiContainers;
     if (daw.getAsyncTask()) {
@@ -3581,11 +3549,17 @@ void load_project_task::run() {
                         if (daw->layoutsFromProjectFile.size() > 0) {
                             ctrl->loadLayout(daw->layoutsFromProjectFile[0]);
                         }
-                        ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackCtr);
-                        ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackReturnCtr);
-                        ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackMasterCtr);
-                        ctrl->grid.setLayout(file->layout.layoutGrid);
-                        ctrl->view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
+                        ctrl->view->visitEntries([f = file](auto& entry) {
+                            if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
+                                auto trackCtr = guictr_cast<guictr_tracks>(entry);
+                                trackCtr->getGrid().setLayout(f->layout.layoutGrid);
+                                trackCtr->loadTrackLayouts(f->project.trackCtr);
+                                trackCtr->loadTrackLayouts(f->project.trackReturnCtr);
+                                trackCtr->loadTrackLayouts(f->project.trackMasterCtr);
+                                trackCtr->setScrollOffset(f->layout.scrollOffsetX);
+                            }
+                            return true;
+                        });
                     }
                     daw->loadProjectFinish();
                 }
@@ -3704,12 +3678,30 @@ float clip_view::unfoldNote(float note) {
     return 0;
 }
 
-clip_view& DawCtrl::getClipView() {
-    return getClipEditor()->getClipView();
-}
-
 void DawInstance::resetClipViews() {
     for (auto* dawctrl : dawCtrls) {
         dawctrl->resetClipViews();
+    }
+}
+void DawCtrl::focusChanged(guibase* oldFocused, guibase* newFocused) {
+    AppCtrl::focusChanged(oldFocused, newFocused);
+    if (newFocused) {
+        auto trackEditor = guiParentType<guitrack_editor, gui_type::CTR_TYPE_TRACKS_EDITOR>(newFocused);
+        auto clipEditor = guiParentType<guictr_clipeditor, gui_type::CTR_TYPE_CLIPEDITOR>(newFocused);
+        auto ctrPlugins = guiParentType<guictr_plugins, gui_type::CTR_TYPE_PLUGINS>(newFocused);
+        if (clipEditor) {
+            auto ctrlLayoutParent = guiParentType<guictr_layout, gui_type::CTR_TYPE_LAYOUT>(clipEditor->parent);
+            if (ctrlLayoutParent) {
+                auto sharedPtrHandle = ctrlLayoutParent->getEntry(clipEditor);
+                view->ctr_clipeditorview.setClipEditor(sharedPtrHandle);
+            }
+        }
+        if (ctrPlugins) {
+            auto ctrlLayoutParent = guiParentType<guictr_layout, gui_type::CTR_TYPE_LAYOUT>(ctrPlugins->parent);
+            if (ctrlLayoutParent) {
+                auto sharedPtrHandle = ctrlLayoutParent->getEntry(ctrPlugins);
+                view->ctr_pluginview.setPluginCtr(sharedPtrHandle);
+            }
+        }
     }
 }
