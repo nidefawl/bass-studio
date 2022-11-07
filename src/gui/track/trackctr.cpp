@@ -724,11 +724,11 @@ void guictr_tracks::addTrack(track_t* track, int flags) {
     }
 }
 void guitrack_mixers::handleRightClick(MouseEvent& evt) {
-    auto trackEditor = guiParentType<guitrack_editor, gui_type::CTR_TYPE_TRACKS_EDITOR>(this->parent);
-    if (!assert_expr(trackEditor)) {
+    auto ctrTracks = guiParentType<guictr_tracks, gui_type::CTR_TYPE_TRACKS>(this->parent);
+    if (!assert_expr(ctrTracks)) {
         return;
     }
-    parentCtrl->openContextMenu(new guictxtmenu_notrack(trackEditor), evt.mousepos);
+    parentCtrl->openContextMenu(new guictxtmenu_notrack(ctrTracks), evt.mousepos);
 }
 
 void getTrackGuiYBounds(const track_gui_entry_t* track, ivec2& topBottom) {

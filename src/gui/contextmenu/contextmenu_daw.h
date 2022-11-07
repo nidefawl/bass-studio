@@ -33,7 +33,7 @@ public:
 };
 class guictxtmenu_notrack : public guictxtmenu {
 public:
-    explicit guictxtmenu_notrack(guitrack_editor* const _editor) {
+    explicit guictxtmenu_notrack(guictr_tracks* const _editor) {
         dawCtrl = _editor->dawCtrl;
         this->size.x = 190;
         addEntry(new ctxtmenu_entry(dawCtrl, GlobalCommandType::CMD_INSERT_MIDI_TRACK));
