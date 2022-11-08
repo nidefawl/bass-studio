@@ -503,6 +503,7 @@ void GuiCtrLayoutEntryHandle::handleDraggedMove(MouseEvent& evt) {
 void GuiCtrLayoutEntryHandle::handleDraggedRelease(MouseEvent& evt) {
     if (parent)
         parent->buttonClicked(this);
+    hasDragged = false;
 }
 void GuiCtrLayoutEntryHandle::render(NVGcontext* vg) {
     if (!isVisible()) {
