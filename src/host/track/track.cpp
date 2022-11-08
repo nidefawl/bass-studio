@@ -60,9 +60,10 @@ void releaseClipResources(clip_t* cl, delete_cb* cb) {
     for (track_gui_entry_t* entry : copyEntries) {
         track_t* track = entry->track;
         if (track) {
-            if (entry->clipsGuis.count(cl)) {
-                auto* pGui = entry->clipsGuis[cl];
-                dbgassert(pGui);
+            auto it = entry->clipsGuis.find(cl);
+            if (it != entry->clipsGuis.end()) {
+                auto* pGui = it->second;
+                dbgassert(it->second);
                 entry->content->remove(pGui);
                 delete pGui;
             } else {
@@ -77,20 +78,20 @@ void releaseTrackResources(track_t* tr, delete_cb* cb) {
         cb->preTrackDelete(tr);
     auto* mgr = daw_tls::getTls().pluginManager;
     mgr->unloadTrack(tr);
-    tr->getMidi().deleteClips(cb);
+    tr->getClips().deleteClips(cb);
     dbgassert(tr->audio->guiInstances.empty());
     mgr->releaseAudio(tr);
     dbgassert(tr && !tr->audio);
 }
 
-std::vector<clip_t*>::iterator trackdata_midi_t::removeClip(clip_t* clip) {
+std::vector<clip_t*>::iterator trackdata_clips_t::removeClip(clip_t* clip) {
     auto it = std::find(clips.begin(), clips.end(), clip);
     if (it == clips.end()) {
         throw applogicexception("track - attempt to remove non-present clip");
     }
     return clips.erase(it);
 }
-std::pair<clip_t*, clip_t*> trackdata_midi_t::getMinMax() {
+std::pair<clip_t*, clip_t*> trackdata_clips_t::getMinMax() {
     auto minmax = std::minmax_element(clips.begin(), clips.end(),
                                       [](clip_t* const& lhs, clip_t* const& rhs) {
                                           return lhs->time < rhs->time;
@@ -104,11 +105,11 @@ std::pair<clip_t*, clip_t*> trackdata_midi_t::getMinMax() {
     }
     return pairPtr;
 }
-tick_t trackdata_midi_t::start() {
+tick_t trackdata_clips_t::start() {
     auto minmax = getMinMax();
     return minmax.first ? minmax.first->time : 0;
 }
-tick_t trackdata_midi_t::end() {
+tick_t trackdata_clips_t::end() {
     auto minmax = getMinMax();
     return minmax.second ? minmax.second->end() : 0;
 }
@@ -116,11 +117,11 @@ tick_t trackdata_midi_t::end() {
 track_t& track_t::operator=(const track_snapshot_t& obj) {
     *static_cast<tracksettings_t*>(this) = obj.trackSettings;
     if (obj.storeOpts.storeClips) {
-        dbgassert(midi.getConstClips().empty());
+        dbgassert(m_clips.getClips().empty());
         for (const clip_t& clip : obj.clips) {
-            midi.addClip(new clip_t(clip));
+            m_clips.addClip(new clip_t(clip));
         }
-        midi.sortClips();
+        m_clips.sortClips();
     }
     if (obj.storeOpts.storeLayouts) {
         scrolloffset = 0;
@@ -129,7 +130,7 @@ track_t& track_t::operator=(const track_snapshot_t& obj) {
 }
 void track_t::updateAudioClipLengths(int32_t bpm100, samplerate_t oldSampleRate, samplerate_t newSampleRate) {
     double conversionFactor = newSampleRate / double(oldSampleRate);
-    for (clip_t* clip : midi.getClips()) {
+    for (clip_t* clip : m_clips.getClips()) {
         if (clip->clipType == CLIP_AUDIO) {
             dbgassert(clip->lenSamples > 0 || clip->len > 0);
             if (clip->lenSamples > 0) {
@@ -145,9 +146,9 @@ void track_t::updateAudioClipLengths(int32_t bpm100, samplerate_t oldSampleRate,
 track_t::track_t(const track_snapshot_t& obj)
     : tracksettings_t(obj.trackSettings), localIdxFlat(obj.localIdx) {
     if (obj.storeOpts.storeClips) {
-        dbgassert(midi.getConstClips().empty());
+        dbgassert(m_clips.getClips().empty());
         for (const clip_t& clip : obj.clips) {
-            midi.addClip(new clip_t(clip));
+            m_clips.addClip(new clip_t(clip));
         }
     }
 }
@@ -197,7 +198,7 @@ track_snapshot_t::track_snapshot_t(const track_t* track, const tracksnapshot_sto
       localIdx(track->localIdxFlat),
       data(track->audio, opts) {
 
-    auto& otherClips = track->getConstMidi().getConstClips();
+    auto& otherClips = track->getClips().getClips();
     for (auto clip : otherClips) {
         clips.emplace_back(*clip);
     }
@@ -269,7 +270,7 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
 void track_t::releaseTrackContent() {
 }
 
-void trackdata_midi_t::deleteClips(delete_cb* cb) {
+void trackdata_clips_t::deleteClips(delete_cb* cb) {
     for (auto clip : clips) {
         releaseClipResources(clip, cb);
     }
@@ -279,7 +280,7 @@ void trackdata_midi_t::deleteClips(delete_cb* cb) {
     clips.clear();
 }
 
-void trackdata_midi_t::deleteEmptyClips(delete_cb* cb) {
+void trackdata_clips_t::deleteEmptyClips(delete_cb* cb) {
     auto it = clips.begin();
     while (it != clips.end()) {
         clip_t* c = *it;
@@ -294,7 +295,7 @@ void trackdata_midi_t::deleteEmptyClips(delete_cb* cb) {
     sortClips();
 }
 
-void trackdata_midi_t::getClipsInRange(tick_t start, tick_t end, std::vector<clip_t*>& _clips) const {
+void trackdata_clips_t::getClipsInRange(tick_t start, tick_t end, std::vector<clip_t*>& _clips) const {
     for (clip_t* clip : clips) {
         if (clip->end() <= start || clip->start() >= end) {
             continue;
@@ -303,7 +304,7 @@ void trackdata_midi_t::getClipsInRange(tick_t start, tick_t end, std::vector<cli
     }
 }
 
-void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart, tick_t cutEnd, std::vector<note_t>& notes) {
+void trackdata_clips_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart, tick_t cutEnd, std::vector<note_t>& notes) {
     for (clip_t* clip : clips) {
         if (clip->end() <= start || clip->start() > end) {
             continue;
@@ -313,7 +314,7 @@ void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart
 }
 
 
-void trackdata_midi_t::getEventsInRange(tick_t start, tick_t end, tick_t cutStart, tick_t cutEnd, std::vector<note_t>& notes, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvents) {
+void trackdata_clips_t::getEventsInRange(tick_t start, tick_t end, tick_t cutStart, tick_t cutEnd, std::vector<note_t>& notes, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvents) {
     for (clip_t* clip : clips) {
         if (clip->end() <= start || clip->start() > end) {
             continue;
@@ -968,7 +969,7 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
     } else {
         clips.clear();
     }
-    track->getMidi().getClipsInRange(audioBegin, audioEnd, clips);
+    track->getClips().getClipsInRange(audioBegin, audioEnd, clips);
     DAW::Host::FillAudioBlockFromClips(cache, prjGlobals, clips, sampleFormat, samplePosBegin, outBuffer);
 }
 
@@ -1152,7 +1153,7 @@ void track_impl_t::processMidiInput(playback_state state, int32_t flags,
     if (flags & MidiFlags::PROCESS_CLIPS) {
         tick_t heldBegin = blockStart - 1; // -1 to include the note that ends at blockStart
         tick_t heldEnd   = blockEnd;
-        track->getMidi().getEventsInRange(heldBegin, heldEnd, -1, loopEnd, notes, ctrlEvents);
+        track->getClips().getEventsInRange(heldBegin, heldEnd, -1, loopEnd, notes, ctrlEvents);
         //TODO: make feeding parent tracks notes into this one an option
         //auto getParent = track->parent;
         //while (getParent) {
@@ -1881,8 +1882,8 @@ bool clip_recorder::writeRecordedData(project_controller_t* projCtrl, track_impl
                 daw->cutIntersecting(tr, tickBegin, tickEnd);
                 pClip->setDirty();
                 pClip->notes.updateBounds();
-                tr->getMidi().addClip(pClip);
-                tr->getMidi().sortClips();
+                tr->getClips().addClip(pClip);
+                tr->getClips().sortClips();
                 return true;
             } else {
                 delete pClip;

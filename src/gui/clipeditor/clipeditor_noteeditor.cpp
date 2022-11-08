@@ -48,7 +48,7 @@ void guictr_cliphandles::handleDraggedBegin(MouseEvent& evt) {
     if (dragHandle == drag_handle_none) {
         if (!parentEditor.getClipView().isAbsoluteTimeMode())
             return;
-        parentEditor.getClipEditor().selectEditClip(view.gui);
+        parentEditor.getClipEditor().selectEditClip(view.clip());
         return;
     }
     dragOffset  = evt.relMousepos.x - (int32_t) (grid.tickToScreenD(getTickOffset() + clip->loopStart));
@@ -67,7 +67,7 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
         return;
     }
     ThreadLock lock = dawCtrl->lockPlayThread();
-    trackdata_midi_t& midi = track->getMidi();
+    trackdata_clips_t& midi = track->getClips();
     clip_t* clNext = midi.getNextClip(clip);
     dbgassert(!clNext || (clNext != clip));
     dbgassert(!clNext || clNext->start() >= clip->end());
@@ -411,7 +411,7 @@ void guictr_cliphandles::render(NVGcontext* vg) {
     renderHandle(vg, 0);
 }
 
-guictr_noteeditor::guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_view& _view)
+guictr_noteeditor::guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_view_t& _view)
     : guictr_editor_base(parentClipEditor, &content, _view), layout_pianoroll_t(),
       piano(_view, *this),
       content(grid, _view, *this),
@@ -574,8 +574,8 @@ void guictr_noteeditor::zoomPianoRollToClipsNoteRange() {
     content.showRange(minSemi, maxSemi);
 }
 
-void guictr_noteeditor::selectEditClip(gui_clip* gclip) {
-    guictr_editor_base::selectEditClip(gclip);
+void guictr_noteeditor::selectEditClip(clip_t* clip) {
+    guictr_editor_base::selectEditClip(clip);
     ctrlData.showEditClip();
 }
 void guictr_noteeditor::showEditClip() {
@@ -584,7 +584,7 @@ void guictr_noteeditor::showEditClip() {
     clip_t* currentClip = view.clip();
     if (currentClip) {
         bool bIsAbsMode = view.isAbsoluteTimeMode();
-        auto& layout = bIsAbsMode ? view.selectionView.editorLayout : currentClip->editorLayout;
+        auto& layout = bIsAbsMode ? view.m_selectionView.editorLayout : currentClip->editorLayout;
         if (layout.noLayout) {
             zoomPianoRollToClipsNoteRange();
         } else {
@@ -596,10 +596,10 @@ void guictr_editor_base::showEditClip() {
     clip_t* currentClip = view.clip();
     if (currentClip) {
         bool bIsAbsMode = view.isAbsoluteTimeMode();
-        auto& layout = bIsAbsMode ? view.selectionView.editorLayout : currentClip->editorLayout;
+        auto& layout = bIsAbsMode ? view.m_selectionView.editorLayout : currentClip->editorLayout;
         if (layout.noLayout) {
             if (bIsAbsMode) {
-                grid.showRange(view.selectionView.minClipStart, view.selectionView.maxClipEnd);
+                grid.showRange(view.m_selectionView.minClipStart, view.m_selectionView.maxClipEnd);
             } else {
                 grid.showRange(currentClip->offsetStart, currentClip->offsetStart + currentClip->getLen());
             }
@@ -607,7 +607,7 @@ void guictr_editor_base::showEditClip() {
             grid.setLayout(layout.layoutGrid);
         }
     }
-    auto newClipHandleCount = view.selectionView.totalClipCount;
+    auto newClipHandleCount = view.m_selectionView.totalClipCount;
     auto curClipHandleCount = clipsHandles.size();
     for (size_t i = newClipHandleCount; i < curClipHandleCount; i++) {
         clipsHandles[i]->setVisible(false);
@@ -619,12 +619,12 @@ void guictr_editor_base::showEditClip() {
             this->add(clipsHandles[i].get());
         }
     }
-    auto numTracks = view.selectionView.tracks.size();
+    auto numTracks = view.m_selectionView.tracks.size();
     handlesHeight = math::max<int32_t>(1, numTracks) * heightLoopInidicator * 2 + heightSelIndicator;
     bool foundThis = false;
     auto it = clipsHandles.begin();
     for (size_t trackIdx = 0; trackIdx < numTracks; trackIdx++) {
-        auto& [trackEntry, vecTrackClips] = view.selectionView.tracks[trackIdx];
+        auto& [trackEntry, vecTrackClips] = view.m_selectionView.tracks[trackIdx];
         auto numClipsOnTrack = vecTrackClips.size();
         for (size_t clipIdx = 0; clipIdx < numClipsOnTrack && it != clipsHandles.end(); clipIdx++) {
             auto& selClip = vecTrackClips[clipIdx];
@@ -638,7 +638,7 @@ void guictr_editor_base::showEditClip() {
             dbgassert(selGClip->m_clip);
             dbgassert(selGClip->m_clip == selClip);
             clipHandles.setVisible(true);
-            clipHandles.getClipView().set(selGClip, {});
+            clipHandles.getClipView().setSingleClip(selClip);
             clipHandles.setTrackSelectionIdx(trackIdx);
             dbgassert(clipHandles.getClipView().clip() == selClip);
             clipHandles.setHandleActive(selClip == currentClip);
@@ -649,27 +649,29 @@ void guictr_editor_base::showEditClip() {
         }
     }
     (void) foundThis;
-    dbgassert(!currentClip || !view.selectionView.totalClipCount || foundThis);
-    dbgassert(clipsHandles.size() >= view.selectionView.totalClipCount);
-    for (size_t i = 0; i < view.selectionView.totalClipCount; i++) {
+#ifndef NDEBUG
+    dbgassert(!currentClip || !view.m_selectionView.totalClipCount || foundThis);
+    dbgassert(clipsHandles.size() >= view.m_selectionView.totalClipCount);
+    for (size_t i = 0; i < view.m_selectionView.totalClipCount; i++) {
         dbgassert(clipsHandles[i]->isVisible());
         dbgassert(clipsHandles[i]->getClipView().clip());
     }
-    for (size_t i = view.selectionView.totalClipCount; i < clipsHandles.size(); i++) {
+    for (size_t i = view.m_selectionView.totalClipCount; i < clipsHandles.size(); i++) {
         dbgassert(!clipsHandles[i]->isVisible());
         dbgassert(!clipsHandles[i]->getClipView().clip());
     }
+#endif
 }
 
-void guictr_editor_base::selectEditClip(gui_clip* gclip) {
-    if (!assert_expr(clipsHandles.size() >= view.selectionView.totalClipCount)) {
+void guictr_editor_base::selectEditClip(clip_t* clip) {
+    if (!assert_expr(clipsHandles.size() >= view.m_selectionView.totalClipCount)) {
         return;
     }
     clip_t* currentClip = view.clip();
-    auto numTracks = view.selectionView.tracks.size();
+    auto numTracks = view.m_selectionView.tracks.size();
     auto it = clipsHandles.begin();
     for (size_t trackIdx = 0; trackIdx < numTracks; trackIdx++) {
-        auto& [trackEntry, vecTrackClips] = view.selectionView.tracks[trackIdx];
+        auto& [trackEntry, vecTrackClips] = view.m_selectionView.tracks[trackIdx];
         auto numClipsOnTrack = vecTrackClips.size();
         for (size_t clipIdx = 0; clipIdx < numClipsOnTrack && it != clipsHandles.end(); clipIdx++) {
             auto& selClip = vecTrackClips[clipIdx];
@@ -687,7 +689,7 @@ void guictr_editor_base::selectEditClip(gui_clip* gclip) {
 }
 
 void guictr_noteeditor::storeLayout() {
-    clip_editor_layout_t& layout = view.selectionView.editorLayout;
+    clip_editor_layout_t& layout = view.m_selectionView.editorLayout;
     layout.layoutPianoRoll = *static_cast<layout_pianoroll_t*>(this);
     guictr_editor_base::storeLayout();
 }
@@ -760,8 +762,8 @@ void guictr_editor_base::renderClipHandles(NVGcontext* vg) {
         int32_t trackIdx = 0;
         int32_t activeTrackIdx = -1;
         auto viewTrack = view.track();
-        auto trackHandleHeight = (handlesHeight-heightSelIndicator) / math::max(1, CtrSize(view.selectionView.tracks));
-        for (auto& [trackEntry, vecClips] : view.selectionView.tracks) {
+        auto trackHandleHeight = (handlesHeight-heightSelIndicator) / math::max(1, CtrSize(view.m_selectionView.tracks));
+        for (auto& [trackEntry, vecClips] : view.m_selectionView.tracks) {
                 // nvgRect(vg, handlesPos.x, handlesPos.y + heightSelIndicator + trackHandleHeight * trackIdx+trackHandleHeight-heightSelIndicator, timeline.size.x, heightSelIndicator);
             auto col = trackIdx % 2 == 0 ? GuiColor::COL_GRID_DRK : GuiColor::COL_GRID_BRT;
             auto nvgCol = viewTrack == trackEntry.track ? rgbToNvg(trackEntry.track->rgb) : theme->getColor(col);
@@ -854,7 +856,7 @@ void guictr_noteeditor::render(NVGcontext* vg) {
 }
 
 
-gui_audiocontent::gui_audiocontent(scaled_grid& _grid, clip_view& _view)
+gui_audiocontent::gui_audiocontent(scaled_grid& _grid, clip_view_t& _view)
     : gui_clipcontent_base(_grid, _view), waveformRef(new gui_waveform_texture_ref{}) {
     padding = 0;
 }
@@ -1020,7 +1022,7 @@ bool gui_audiocontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
     return false;
 }
 
-guictr_audioeditor::guictr_audioeditor(guictr_clipeditor& parentClipEditor, clip_view& _view)
+guictr_audioeditor::guictr_audioeditor(guictr_clipeditor& parentClipEditor, clip_view_t& _view)
     : guictr_editor_base(parentClipEditor, &content, _view),
       content(grid, _view)
 {

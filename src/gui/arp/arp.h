@@ -13,12 +13,12 @@ class guiknob_arp;
 class gui_arp : public guictr_base {
     gui_textfield editfield;
     guibuttontoggle buttonBypass;
-    clip_view& clipview;
+    clip_view_t& clipview;
     std::array<guiknob_arp*, 6> knobs{};
 
 public:
     DAW::midiarp* getArp();
-    explicit gui_arp(clip_view& _clipview);
+    explicit gui_arp(clip_view_t& _clipview);
     void handleDraggedBegin(MouseEvent& evt) override;
     void buttonClicked(guibase* _button) override;
     void rightClicked(MouseEvent& evt, guibase* button) override;

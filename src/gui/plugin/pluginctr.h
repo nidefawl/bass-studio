@@ -1,5 +1,6 @@
 #pragma once
 #include "event.h"
+#include "gui/gui.h"
 #include "keyboard.h"
 #include "str_util.h"
 #include "color_util.h"
@@ -127,7 +128,14 @@ public:
     int scrolloffset        = 0;
     bool isDefaultPluginCtr = true;
     int32_t uuid = 0;
-    
+    struct guiplugin_entry {
+        automatable_param_ref_t pluginRef;
+        std::shared_ptr<guiplugin> guiPlugin;
+    };
+    std::vector<guiplugin_entry> guiPlugins;
+    void onRemove() override;
+    void onAdded() override;
+
 public:
     explicit guictr_plugins(int32_t uuid) 
     : guictr_base(),
@@ -201,7 +209,6 @@ public:
         return last->pos.x + last->size.x + 50;
     }
 
-    void onAdded() override;
     void onTick(AppCtrl* ctrl) override;
     void pluginDragMove(guiplugin* g, ivec2 mousepos) override;
     void pluginDragRelease(guiplugin* g, ivec2 mousepos) override;

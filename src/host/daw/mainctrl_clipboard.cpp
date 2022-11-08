@@ -24,7 +24,7 @@
 #include "types.h"
 
 
-void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len) {
+void copyClipsInRange(const trackdata_clips_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len) {
     for (const auto* const c : in.clips) {
         if (c->end() > srcPos && c->time < srcPos + len) {
             clip_t clone(*c);
@@ -44,8 +44,8 @@ void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_
     });
 }
 
-bool hasClipsInRange(const trackdata_midi_t& in, int32_t srcPos, int32_t len) {
-    for (const auto* const c : in.getConstClips()) {
+bool hasClipsInRange(const trackdata_clips_t& in, int32_t srcPos, int32_t len) {
+    for (const auto* const c : in.getClips()) {
         if (c->end() > srcPos && c->time < srcPos + len) {
             return true;
         }
@@ -65,13 +65,13 @@ namespace DAW {
             }
             int32_t trackIdx = trackList.clampTrackIdx(i + trackOffset);
             track_gui_entry_t* tr = trackList.atNC(trackIdx);
-            trackdata_midi_t& midi = tr->track->getMidi();
+            trackdata_clips_t& midi = tr->track->getClips();
             for (auto & clip : trClipboard->clips) {
                 clip_t* cloned = clip->clone();
                 cloned->time += tickOffset;
                 tick_t tickBegin = cloned->time;
                 tick_t tickEnd   = cloned->end();
-                cutIntersectingClips(tr->track->getMidi(), tickBegin, tickEnd, daw);
+                cutIntersectingClips(tr->track->getClips(), tickBegin, tickEnd, daw);
                 midi.addClip(cloned);
             }
             midi.sortClips();
@@ -226,7 +226,7 @@ namespace DAW {
                 std::vector<automation_clipboard_t> automationLanes;
                 if (trackList.validTrackIdx(trackBegin + i)) {
                     const track_gui_entry_t* tr = trackList.at(trackBegin + i);
-                    copyClipsInRange(tr->track->getConstMidi(), trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
+                    copyClipsInRange(tr->track->getClips(), trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
                     auto trackImpl = tr->track->getStage();
                     std::vector<automatable_t*> targets;
                     trackImpl->getAutomatableTrackTargets(targets);
@@ -265,7 +265,7 @@ namespace DAW {
                 if (trackList.validTrackIdx(i)) {
                     track_gui_entry_t* tr = trackList.atNC(i);
                     //if (tr->track->type == TRACK_TYPE_MIDI) {
-                    cutIntersectingClips(tr->track->getMidi(), tickBegin, tickEnd, daw);
+                    cutIntersectingClips(tr->track->getClips(), tickBegin, tickEnd, daw);
                     // we don't cut automation for now
                     //}
                 }
@@ -330,7 +330,7 @@ namespace DAW {
                 std::vector<automation_clipboard_t> automationLanes;
                 if (trackList.validTrackIdx(trackBegin + i)) {
                     const track_gui_entry_t* tr = trackList.at(trackBegin + i);
-                    if (hasClipsInRange(tr->track->getConstMidi(), tickBegin, selRange)) {
+                    if (hasClipsInRange(tr->track->getClips(), tickBegin, selRange)) {
                         isEmpty = false;
                         break;
                     }
@@ -362,8 +362,8 @@ namespace DAW {
         }
         return isEmpty;
     }
-    void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, clipboard_view_t& view, gui_clip* contextClip) {
-        clipboard_track_view_t trackView;
+    void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, editor_view_selection_t& view, gui_clip* contextClip) {
+        track_view_selection_t trackView;
         DAW::Cursor cursorCopy = cursor;
         if (contextClip && contextClip->m_clip) {
             auto clip = contextClip->m_clip;
@@ -386,7 +386,7 @@ namespace DAW {
             auto trackIdx = cursorCopy.getTrackBegin() + i;
             if (trackList.validTrackIdx(trackIdx)) {
                 const track_gui_entry_t* tr = trackList.at(trackIdx);
-                auto& midi = tr->track->getConstMidi();
+                auto& midi = tr->track->getClips();
                 auto szBefore = trackView.second.size();
                 midi.getClipsInRange(cursorCopy.getTickBegin(), cursorCopy.getTickEnd(), trackView.second);
                 if (view.totalClipCount == 0 && trackView.second.size()) {
@@ -408,7 +408,7 @@ namespace DAW {
             }
         }
     }
-    clip_t* GetClipFromTime(clipboard_view_t& view, tick_t time) {
+    clip_t* GetClipFromTime(editor_view_selection_t& view, tick_t time) {
         for (auto& track : view.tracks) {
             for (auto& clip : track.second) {
                 if (clip->start() <= time && clip->end() >= time) {
@@ -422,7 +422,7 @@ namespace DAW {
 }// namespace DAW
 
 
-void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickEnd, delete_cb* cb) {
+void cutIntersectingClips(trackdata_clips_t& midi, tick_t tickBegin, tick_t tickEnd, delete_cb* cb) {
     auto it = midi.clips.begin();
 
     while (it != midi.clips.end()) {
@@ -465,7 +465,7 @@ void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickE
 
 //TODO: rename
 void DawInstance::cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd) {
-    cutIntersectingClips(tr->getMidi(), tickBegin, tickEnd, this);
+    cutIntersectingClips(tr->getClips(), tickBegin, tickEnd, this);
 }
 
 //TODO: rename

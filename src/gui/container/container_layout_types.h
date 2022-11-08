@@ -12,8 +12,10 @@ class DawInstance;
 struct GuiCtrLayoutEntry;
 struct ContainerInstanceContext {
     DawInstance* const daw = nullptr;
+    DawCtrl* const dawCtrl = nullptr;
     std::map<int32_t, std::shared_ptr<GuiCtrLayoutEntry>> entriesPreconstructed{};
     std::map<gui_type, int32_t> stats{};
+    std::map<gui_type, std::vector<std::shared_ptr<GuiCtrLayoutEntry>>> entriesConstructed{};
 };
 
 using ContainerBuilder = std::function<std::shared_ptr<guictr_base>(create_ctr_t& ctxt)>;

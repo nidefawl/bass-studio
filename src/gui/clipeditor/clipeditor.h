@@ -50,13 +50,13 @@ public:
     action_modify_notes() : action_base() {
     }
     //desc, clip, notesBefore, cursorBefore
-    action_modify_notes(String description, const clip_view& view, const clip_notes_t& oldNotes, const clip_cursor_t& oldCursor) : action_base() {
+    action_modify_notes(String description, const clip_view_t& view, const clip_notes_t& oldNotes, const clip_cursor_t& oldCursor) : action_base() {
         desc = std::move(description);
         //    clip = view.clip;
         after       = view.clip()->notes;
         trackIdx    = view.track()->projectIdx;
         clipTime    = view.clip()->time;
-        cursorAfter = view.cursor;
+        cursorAfter = view.m_cursor;
         before      = oldNotes;
 
         std::list<note_t*> selcopy;
@@ -83,7 +83,7 @@ public:
         track_t* tr = daw->getTracks()[trackIdx];
         if (!tr)
             return;
-        trackdata_midi_t& midi = tr->getMidi();
+        trackdata_clips_t& midi = tr->getClips();
         clip_t* clip           = midi.getClipAt(clipTime);
         if (!clip)
             return;
@@ -97,7 +97,7 @@ public:
         track_t* tr = daw->getTracks()[trackIdx];
         if (!tr)
             return;
-        trackdata_midi_t& midi = tr->getMidi();
+        trackdata_clips_t& midi = tr->getClips();
         clip_t* clip           = midi.getClipAt(clipTime);
         if (!clip)
             return;
@@ -123,13 +123,13 @@ public:
     action_modify_clip() : action_base() {
     }
     //desc, clip, notesBefore, cursorBefore
-    action_modify_clip(String description, const clip_view& view, const clip_t& oldC, const clip_cursor_t& oldCursor) : action_base() {
+    action_modify_clip(String description, const clip_view_t& view, const clip_t& oldC, const clip_cursor_t& oldCursor) : action_base() {
         desc = description;
         //        clip = view.clip;
         after        = *view.clip();
         trackIdx     = view.track()->projectIdx;
         clipTime     = view.clip()->time;
-        cursorAfter  = view.cursor;
+        cursorAfter  = view.m_cursor;
         before       = oldC;
         cursorBefore = oldCursor;
         bHasCursor   = true;
@@ -147,7 +147,7 @@ public:
         track_t* tr = daw->getTracks()[trackIdx];
         if (!tr)
             return;
-        trackdata_midi_t& midi = tr->getMidi();
+        trackdata_clips_t& midi = tr->getClips();
         clip_t* clip           = midi.getClipAt(clipTime);
         if (!clip)
             return;
@@ -162,7 +162,7 @@ public:
         track_t* tr = daw->getTracks()[trackIdx];
         if (!tr)
             return;
-        trackdata_midi_t& midi = tr->getMidi();
+        trackdata_clips_t& midi = tr->getClips();
         clip_t* clip           = midi.getClipAt(clipTime);
         if (!clip)
             return;
@@ -187,13 +187,13 @@ public:
     bool bHasCursor = false;
     action_modify_clip_control_data() : action_base() {
     }
-    action_modify_clip_control_data(String description, const clip_view& view, const clip_control_data_t& oldC, const clip_cursor_t& oldCursor) : action_base() {
+    action_modify_clip_control_data(String description, const clip_view_t& view, const clip_control_data_t& oldC, const clip_cursor_t& oldCursor) : action_base() {
         desc = description;
         //        clip = view.clip;
         after        = view.clip()->controlData;
         trackIdx     = view.track()->projectIdx;
         clipTime     = view.clip()->time;
-        cursorAfter  = view.cursor;
+        cursorAfter  = view.m_cursor;
         before       = oldC;
         cursorBefore = oldCursor;
     }
@@ -201,7 +201,7 @@ public:
         track_t* tr = daw->getTracks()[trackIdx];
         if (!tr)
             return;
-        trackdata_midi_t& midi = tr->getMidi();
+        trackdata_clips_t& midi = tr->getClips();
         clip_t* clip           = midi.getClipAt(clipTime);
         if (!clip)
             return;
@@ -217,7 +217,7 @@ public:
         track_t* tr = daw->getTracks()[trackIdx];
         if (!tr)
             return;
-        trackdata_midi_t& midi = tr->getMidi();
+        trackdata_clips_t& midi = tr->getClips();
         clip_t* clip           = midi.getClipAt(clipTime);
         if (!clip)
             return;
@@ -246,14 +246,14 @@ inline bool isSharp(int n) {
 class piano_scale {
 private:
     int& sizeY;
-    clip_view& clipview;
+    clip_view_t& clipview;
 
 protected:
     layout_pianoroll_t& layoutRoll;
 
 public:
     static const int32_t MAX_OCTAVES = (8 - (-2));
-    piano_scale(layout_pianoroll_t& _layout, clip_view& _clipview, int& _sizeY)
+    piano_scale(layout_pianoroll_t& _layout, clip_view_t& _clipview, int& _sizeY)
         : sizeY(_sizeY),
           clipview(_clipview),
           layoutRoll(_layout) {
@@ -320,13 +320,13 @@ class gui_pianoroll : public guibase, public piano_scale {
     ivec2 startDrag;
     int dragDirection     = -1;
     float dragPosObjSpace = 0;
-    clip_view& view;
+    clip_view_t& view;
     dragmode dragMode    = dragmode::drag_none;
     int32_t lastNote     = -1;
     int32_t lastNoteTime = -1;
 
 public:
-    gui_pianoroll(clip_view& _view, layout_pianoroll_t& _layout);
+    gui_pianoroll(clip_view_t& _view, layout_pianoroll_t& _layout);
     ~gui_pianoroll() override = default;
     void render(NVGcontext* vg) override;
 
@@ -414,7 +414,7 @@ public:
 
 class gui_clipsettings : public guictr_base {
 public:
-    clip_view& view;
+    clip_view_t& view;
     guibuttonstate btnLoop;
     gui_timeinput clipLoopStart;
     gui_timeinput clipLoopLen;
@@ -426,7 +426,7 @@ public:
     guibutton btnDuplicateLoop;
     guibutton btnSelectMuted;
     gui_quantizationsettings quantization;
-    gui_clipsettings(clip_view& _view);
+    gui_clipsettings(clip_view_t& _view);
     ~gui_clipsettings() override;
     void render(NVGcontext* vg) override;
 
@@ -438,9 +438,9 @@ public:
 class gui_clipcontent_base : public guictr_base {
 public:
     scaled_grid& grid;
-    clip_view& view;
+    clip_view_t& view;
 public:
-    gui_clipcontent_base(scaled_grid& _grid, clip_view& _view)
+    gui_clipcontent_base(scaled_grid& _grid, clip_view_t& _view)
         : guictr_base(),
           grid(_grid),
           view(_view) {
@@ -467,7 +467,7 @@ public:
     ivec2 dragTo    = ivec2(0);
     note_t beginDragNote;
     // const bool isVelocity;
-    gui_clipcontent(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout, bool _isVel)
+    gui_clipcontent(scaled_grid& _grid, clip_view_t& _view, layout_pianoroll_t& _layout, bool _isVel)
         : gui_clipcontent_base(_grid, _view), piano_scale(_layout, _view, size.y)
         //   ,isVelocity(_isVel) 
     {
@@ -494,7 +494,7 @@ class gui_clipcontent_notes : public gui_clipcontent {
     void renderClipNoteRects(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, 
                                 tick_t tickOffset, float scale, float inset, NVGcolor color, bool renderMuted);
 public:
-    gui_clipcontent_notes(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, false) {
+    gui_clipcontent_notes(scaled_grid& _grid, clip_view_t& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, false) {
         setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_NOTES);
     }
     void render(NVGcontext* vg) override;
@@ -502,7 +502,7 @@ public:
 
 class gui_clipcontent_velocities : public gui_clipcontent {
 public:
-    gui_clipcontent_velocities(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, true) {
+    gui_clipcontent_velocities(scaled_grid& _grid, clip_view_t& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, true) {
         setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY);
     }
     void render(NVGcontext* vg) override;
@@ -515,11 +515,11 @@ struct scaled_pos_t {
 };
 class CCEdit : public DAW::Shape::ShapeEdit {
     scaled_grid& grid;
-    clip_view& view;
+    clip_view_t& view;
     ivec2 editorSize{};
     std::vector<int32_t> selectedNodeIndices;
 public:
-    CCEdit(scaled_grid& _grid, clip_view& _view)
+    CCEdit(scaled_grid& _grid, clip_view_t& _view)
         : ShapeEdit(),
         grid(_grid),
         view(_view) {
@@ -583,7 +583,7 @@ class gui_clipcontent_control_data : public gui_clipcontent {
     bool bIsDraggingShape = false;
     clip_control_data_t controlDataBegin;
 public:
-    gui_clipcontent_control_data(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout);
+    gui_clipcontent_control_data(scaled_grid& _grid, clip_view_t& _view, layout_pianoroll_t& _layout);
     ~gui_clipcontent_control_data() override;
     void render(NVGcontext* vg) override;
     void layout() override;
@@ -628,7 +628,7 @@ public:
 private:
     guictr_editor_base& parentEditor;
     scaled_grid& grid;
-    clip_view view;
+    clip_view_t view;
     int32_t trackSelectionIdx = 0;
     bool bIsHandleActive = true;
     dragmode dragModeMouseOver = drag_handle_none;
@@ -652,8 +652,8 @@ public:
     }
     tick_t getTickOffset() const;
     tick_t getTickOffsetOffset() const;
-    clip_view& getClipView() { return view; }
-    const clip_view& getClipView() const { return view; }
+    clip_view_t& getClipView() { return view; }
+    const clip_view_t& getClipView() const { return view; }
     void setTrackSelectionIdx(int32_t idx) { trackSelectionIdx = idx; }
     int32_t getTrackSelectionIdx() const { return trackSelectionIdx; }
     void handleDraggedBegin(MouseEvent& evt) override;
@@ -674,6 +674,10 @@ public:
     void renderHandle(NVGcontext* vg, int32_t trackSelIdx) const;
     void renderLoopHandle(NVGcontext* vg, vec2 editorSize) const;
     bool containsHandlePos(ivec2 mpos) const;
+    void setControl(BaseCtrl* parentCtrl) override {
+        view = {};
+        guibase::setControl(parentCtrl);
+    }
 };
 
 void renderClipHandlesBackground(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid, vec2 handlesPos, vec2 handlesSize);
@@ -685,14 +689,14 @@ class guictr_editor_base : public guictr_base, public grid_changed_cb, public ce
 protected:
     guictr_clipeditor& parentClipEditor;
     gui_clipcontent_base* pContent;
-    clip_view& view;
+    clip_view_t& view;
     scaled_grid grid;
     guitrack_timeline timeline;
     std::vector<std::shared_ptr<guictr_cliphandles>> clipsHandles;
     int32_t handlesHeight = heightClipIndicators;
     virtual void zoomPianoRollToClipsNoteRange();
 public:
-    explicit guictr_editor_base(guictr_clipeditor& parentClipEditor, gui_clipcontent_base* pContent, clip_view& _view)
+    explicit guictr_editor_base(guictr_clipeditor& parentClipEditor, gui_clipcontent_base* pContent, clip_view_t& _view)
         : guictr_base(),
           parentClipEditor(parentClipEditor),
           pContent(pContent),
@@ -707,13 +711,13 @@ public:
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void layout() override;
     
-    clip_view& getClipView() { return view; }
+    clip_view_t& getClipView() { return view; }
     virtual ivec2 getContentSize() const = 0;
     guictr_clipeditor& getClipEditor() { return parentClipEditor; }
     virtual void showEditClip();
-    virtual void selectEditClip(gui_clip* gclip);
+    virtual void selectEditClip(clip_t* clip);
     virtual void storeLayout() {
-        auto& layout = view.selectionView.editorLayout;
+        auto& layout = view.m_selectionView.editorLayout;
         layout.layoutGrid = grid;
         auto clip = view.clip();
         if (clip) {
@@ -752,7 +756,7 @@ protected:
     void setLayout(layout_pianoroll_t& layout);
     void zoomPianoRollToClipsNoteRange() override;
 public:
-    explicit guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_view& _view);
+    explicit guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_view_t& _view);
     ~guictr_noteeditor() override;
     void setControl(BaseCtrl *parentCtrl) override;
     void buttonClicked(guibase* button) override;
@@ -768,7 +772,7 @@ public:
     }
     void gridChanged(scaled_grid& _grid) override;
     void showEditClip() override;
-    void selectEditClip(gui_clip* gclip) override;
+    void selectEditClip(clip_t* clip) override;
     void storeLayout() override;
     scaled_grid& getGrid() {
         return grid;
@@ -796,7 +800,7 @@ class gui_audiocontent : public gui_clipcontent_base {
     void renderAudioClip(NVGcontext* vg);
     clip_dragaction action;
 public:
-    gui_audiocontent(scaled_grid& _grid, clip_view& _view);
+    gui_audiocontent(scaled_grid& _grid, clip_view_t& _view);
     ~gui_audiocontent() override;
     void layout() override;
     void onTick(AppCtrl* appctrl) override;
@@ -853,15 +857,17 @@ public:
     bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, KeyboardMods kbmods) override {
         if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
 
+            auto thisClip = this->view.clip();
+            if (!thisClip)
+                return false;
             for (auto& track : clip.clipboard->tracks) {
                 for (auto& clip : track->clips) {
                     if (clip->audio.id >= 0) {
-                        auto thisClip = this->view.clip();
                         thisClip->audio.id = clip->audio.id;
                         thisClip->setDirty();
                         dawCtrl->getDaw()->updateVisibleTrackContents();
                         dawCtrl->showClipEditor();
-                        dawCtrl->getDaw()->setEditClip(this->view.gui, {});
+                        dawCtrl->getDaw()->setSingleClip(thisClip);
                         return true;
                     }
                 }
@@ -888,7 +894,7 @@ public:
     // guictr_cliphandles clipHandles;
 private:
 public:
-    explicit guictr_audioeditor(guictr_clipeditor& parentClipEditor, clip_view& _view);
+    explicit guictr_audioeditor(guictr_clipeditor& parentClipEditor, clip_view_t& _view);
     ~guictr_audioeditor() override;
 
     void buttonClicked(guibase* button) override;
@@ -913,7 +919,7 @@ public:
     }
 };
 class guictr_clipeditor : public guictr_base {
-    clip_view view;
+    clip_view_t view;
 public:
     guictr_noteeditor noteeditor;
     guictr_audioeditor audioeditor;
@@ -922,25 +928,30 @@ public:
     explicit guictr_clipeditor();
     ~guictr_clipeditor() override;
     void storeLayout();
-    void onViewChanged(gui_clip* gclip);
-    void showEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView);
-    void selectEditClip(gui_clip* gclip);
+    void onViewChanged(clip_t* clip);
+    void setSingleClip(clip_t* clip);
+    void setEditorSelection(clip_t* clip, const editor_view_selection_t& clipboardView);
+    void selectEditClip(clip_t* clip);
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void render(NVGcontext* vg) override;
     void layout() override;
     bool handleKeyInput(KeyEvent& kevt) override;
     bool handleEditorCommand(DAW::UI::CommandContext& ctxt);
-    clip_view& getClipView() {
+    clip_view_t& getClipView() {
         return view;
     }
     void resetClipView();
+    void setControl(BaseCtrl* parentCtrl) override {
+        resetClipView();
+        guictr_base::setControl(parentCtrl);
+    }
 };
 
 
 class guictr_clipeditorview : public guictr_base {
     std::shared_ptr<GuiCtrLayoutEntry> clipEditor;
     scaled_grid m_grid;
-    clip_view m_view;
+    clip_view_t m_view;
     midi_clip_render_cache_t* const cache;
     int dragDirection      = -1;
     enum dragmode {
@@ -951,13 +962,13 @@ class guictr_clipeditorview : public guictr_base {
 public:
 
     guictr_clipeditorview();
-    ~guictr_clipeditorview();
+    ~guictr_clipeditorview() override;
     void setClipEditor(std::shared_ptr<GuiCtrLayoutEntry>& _clipEditor) {
         clipEditor = _clipEditor;
         auto clipEditor = getClipEditor();
         if (clipEditor) {
             m_grid = clipEditor->noteeditor.getGrid();
-            m_view = clipEditor->noteeditor.getClipView();
+            // m_view = clipEditor->noteeditor.getClipView();
         }
     }
     guictr_clipeditor* getClipEditor() {
@@ -971,7 +982,7 @@ public:
             return clipEditor->noteeditor.getGrid();
         return m_grid;
     }
-    clip_view& getClipView() {
+    clip_view_t& getClipView() {
         auto clipEditor = getClipEditor();
         if (clipEditor)
             return clipEditor->getClipView();

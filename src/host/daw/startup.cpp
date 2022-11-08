@@ -45,7 +45,7 @@ void generateDummyProject(DawCtrl* dawCtrl) {
     DawInstance* dawInstance = dawCtrl->getDaw();
     // auto host = dawInstance->getHost();
     dawInstance->unloadProject();
-    trackdata_midi_t trDataMidi;
+    trackdata_clips_t trDataMidi;
     {
         auto clip = new clip_t;
         for (int i = 0; i < 4; i++) {
@@ -97,7 +97,7 @@ void generateDummyProject(DawCtrl* dawCtrl) {
                 auto track1 = new track_t(TRACK_TYPE_MIDI, StringFormat("Track #%d.%d.%d", topGrps, subGrps, i), true);
                 trSubGrp->addChild(track1);
                 // deep copy (of clip_t instances)
-                track1->getMidi() = trDataMidi;
+                track1->getClips() = trDataMidi;
                 dawInstance->addTrackImpl(-1, track1, 0);
                 track1->getStage()->arp->setParamValue(PARAM_ENABLE, 1.0f, FLG_PAR_UPDATE_INIT);
                 track1->getStage()->arp->setParamValue(ARP_PARAM_CLOCK, 0.4f, FLG_PAR_UPDATE_INIT);
@@ -123,7 +123,7 @@ void generateDummyProject(DawCtrl* dawCtrl) {
 void generateDummyProject2(DawCtrl* dawCtrl) {
     DawInstance* dawInstance = dawCtrl->getDaw();
     dawInstance->unloadProject();
-    trackdata_midi_t trDataMidi;
+    trackdata_clips_t trDataMidi;
     {
         auto clip = new clip_t;
         for (int i = 0; i < 4; i++) {
@@ -152,7 +152,7 @@ void generateDummyProject2(DawCtrl* dawCtrl) {
     for (int i = 0; i < 32; ++i) {
         auto track1 = new track_t(TRACK_TYPE_MIDI, StringFormat("track%d", i), true);
         // deep copy (of clip_t instances)
-        track1->getMidi() = trDataMidi;
+        track1->getClips() = trDataMidi;
         dawInstance->addTrackImpl(-1, track1, 0);
         delete track1->getStage()->arp;
         track1->getStage()->arp = nullptr;

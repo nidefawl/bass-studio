@@ -10,18 +10,18 @@ protected:
 
 public:
     SafeRefHandler()                        = default;
-    virtual int safeRefCreate(T*)           = 0;
-    virtual T* safeRefGetPtr(int32_t refId) = 0;
-    virtual void safeRefDestroy(int32_t refId) = 0;
+    virtual size_t safeRefCreate(T*)           = 0;
+    virtual T* safeRefGetPtr(size_t refId) = 0;
+    virtual void safeRefDestroy(size_t refId) = 0;
 };
 
 template<typename T>
 class SafeRefStorage : public SafeRefHandler<T> {
     struct RefStored {
         T* ptr;
-        int32_t refId;
+        size_t refId;
     };
-    int32_t refIdNext = 0;
+    size_t refIdNext = 0;
     std::vector<RefStored> refs;
 
 public:
@@ -31,12 +31,12 @@ public:
             ref.ptr->safeRef.handler = nullptr;
         }
     }
-    int safeRefCreate(T* gui) override {
-        RefStored ref{ gui, (int32_t) refIdNext++ };
+    size_t safeRefCreate(T* gui) override {
+        RefStored ref{ gui, refIdNext++ };
         refs.push_back(ref);
         return ref.refId;
     }
-    T* safeRefGetPtr(int32_t refId) override {
+    T* safeRefGetPtr(size_t refId) override {
         auto it = std::find_if(refs.begin(), refs.end(), [refId](const RefStored& ref) {
             return ref.refId == refId;
         });
@@ -46,7 +46,7 @@ public:
         }
         return nullptr;
     }
-    void safeRefDestroy(int32_t refId) override {
+    void safeRefDestroy(size_t refId) override {
         auto it = std::find_if(refs.begin(), refs.end(), [refId](const RefStored& ref) {
             return ref.refId == refId;
         });
@@ -58,13 +58,13 @@ public:
 };
 template<typename T>
 struct SafeRef {
-    int refId = -1;
+    size_t refId = -1;
     SafeRefHandler<T>* handler = nullptr;// lifetime of handler must exceed refs lifetime
 };
 template<typename T>
 struct StoredReference {
     T* ptr;
-    int32_t refId;
+    size_t refId;
 };
 template<typename T>
 inline bool safeRefOk(SafeRef<T> ref) {

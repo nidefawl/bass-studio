@@ -122,8 +122,8 @@ namespace DAW {
     String MakeUniqueTrackName(project_t* project, const String& strNewName);
     void OpenFloatingTextInput(DawCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& initialStr, const std::function<bool(const String& str)>& callback);
     void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry);
-    void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, clipboard_view_t& view, gui_clip* contextClip);
-    clip_t* GetClipFromTime(clipboard_view_t& view, tick_t time);
+    void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, editor_view_selection_t& view, gui_clip* contextClip);
+    clip_t* GetClipFromTime(editor_view_selection_t& view, tick_t time);
 }// namespace DAW
 
 struct clip_cursor_t {
@@ -142,25 +142,52 @@ struct notes_clipboard {
         return notes.isEmpty();
     }
 };
-class clip_view {
+
+class clip_ref_t {
+    project_t* m_project = nullptr;
+    track_t* m_track     = nullptr;
+    clip_t* m_clip       = nullptr;
 public:
-    gui_clip* gui = nullptr;
-    clip_cursor_t cursor;
+    clip_ref_t() = default;
+    bool isValid() const;
+    bool isValidUpdate();
+
+    clip_t* clip() const;
+    track_t* track() const;
+    void set(clip_t* clip);
+};
+
+class clip_view_t {
+    clip_ref_t m_clipRef;
+public:
+    clip_cursor_t m_cursor;
     clip_notes_t dragStartNotes;
     std::vector<note_t> draggedSelectionBegin;
     std::vector<note_t> draggedSelection;
     std::vector<int32_t> notePitches;
-    clipboard_view_t selectionView;
+    editor_view_selection_t m_selectionView;
     bool bIsAbsoluteMode = false;
+    clip_ref_t& clipRef() {
+        return m_clipRef;
+    }
+    const clip_ref_t& clipRef() const {
+        return m_clipRef;
+    }
+
     bool isAbsoluteTimeMode() const {
         return bIsAbsoluteMode;
     }
-    void set(gui_clip* _clip, const clipboard_view_t& clipboardView);
-    void setSelected(gui_clip* _clip);
+    void setSingleClip(clip_t* _clip);
+    void setEditorSelection(clip_t* _clip, const editor_view_selection_t& clipboardView);
+    void setSelected(clip_t* _clip);
     void reset();
 
-    clip_t* clip() const;
-    track_t* track() const;
+    clip_t* clip() const {
+        return m_clipRef.clip();
+    }
+    track_t* track() const {
+        return m_clipRef.track();
+    }
 
     void copySelectedNoteList();
 
@@ -431,7 +458,8 @@ public:
     bool toggleLoop();
     void resetMouseContext();
     void resetEditClip();
-    void setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView);
+    void setSingleClip(clip_t* _clip);
+    void setEditorSelection(clip_t* _clip, const editor_view_selection_t& clipboardView);
     void resetClipViews();
     void resetAutomationContext();
     void closeContextMenus();
@@ -529,7 +557,7 @@ public:
     track_t* getSelectedTrack() {
         return selectedTrack;
     }
-
+    void onViewCreated(std::shared_ptr<GuiCtrLayoutEntry>& ctrEntry);
     void setSelectedTrackEntry(track_gui_entry_t* trackEntry);
     void setSelectedTrack(track_t* track);
     void focusChanged(guibase* oldFocused, guibase* newFocused) override;
@@ -559,13 +587,16 @@ public:
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
     void startApp() override { };
 
-    void setEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView);
     virtual DAW::Cursor& getCursor()              = 0;
     void setupView();
     void layoutView(int32_t w, int32_t h);
+    void setSingleClip(clip_t* _clip);
+    void setEditorSelection(clip_t* _clip, const editor_view_selection_t& clipboardView);
     void updateClipViews(clip_t* notifyClip);
     void updateClipViewsAndCursor(clip_t* notifyClip, clip_cursor_t cursor);
     void resetClipViews();
+    void onTrackContentRemoved(track_gui_entry_t& e);
+    void onTrackMixerRemoved(track_gui_entry_t& e);
 
     void updateVisibleTrackContents();
 

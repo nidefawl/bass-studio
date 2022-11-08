@@ -2225,7 +2225,7 @@ public:
                 tr->rgb = colorPalette[_id];
                 bool bUpdateClips = isShift(parentCtrl->lastMouseEvent.kbmods);
                 if (bUpdateClips) {
-                    for (auto& clip : tr->getMidi().getClips()) {
+                    for (auto& clip : tr->getClips().getClips()) {
                         clip->rgb = tr->rgb;
                     }
                 }

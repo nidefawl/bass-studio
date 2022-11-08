@@ -347,9 +347,9 @@ void gui_audio_clip::handleDraggedBegin(MouseEvent& evt) {
             shapeEdit.layoutEditor(fadeLayout->size);
             shapeEdit.onBeginDragCurveEditor(evtOffset);
             editState->dataBefore = m_clip->audio;
-            clipboard_view_t view;
+            editor_view_selection_t view;
             DAW::GetClipboardView(m_trackentry->parent->guiMgr, dawCtrl->getCursor(), view, this);
-            daw->setEditClip(this, view);
+            daw->setEditorSelection(m_clip, view);
             return;
         }
     }
@@ -694,7 +694,7 @@ gui_track::gui_track(track_gui_entry_t* _entry, scaled_grid& _grid)
 void gui_track::updateVisibleTrackContents(project_globals_t& project, scaled_grid& grid) {
     automation.setData();
     automation.updateVisibleTrackContents(grid);
-    std::vector<clip_t*> clips = m_track->getMidi().getClips();
+    std::vector<clip_t*> clips = m_track->getClips().getClips();
     for (clip_t* clip : clips) {
         auto* gui = DAW::createClipGui(this, m_trackentry, clip);
         dbgassert(gui);

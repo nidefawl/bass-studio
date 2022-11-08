@@ -151,30 +151,42 @@ void guictr_clipeditor::storeLayout() {
     }
 }
 
-void guictr_clipeditor::onViewChanged(gui_clip* gclip) {
+void guictr_clipeditor::onViewChanged(clip_t* clip) {
     settings.showEditClip();
     arp.showEditClip();
-    bool bIsMidi = !gclip || gclip->m_clip->clipType == CLIP_MIDI;
+    bool bIsMidi = !clip || clip->clipType == CLIP_MIDI;
     noteeditor.setVisible(bIsMidi);
     audioeditor.setVisible(!bIsMidi);
 }
 
-void guictr_clipeditor::selectEditClip(gui_clip* gclip) {
-    bool bChanged = gclip != view.gui;
-    view.setSelected(gclip);
-    if (bChanged || !gclip) {
-        onViewChanged(gclip);
-        noteeditor.selectEditClip(gclip);
-        audioeditor.selectEditClip(gclip);
+void guictr_clipeditor::selectEditClip(clip_t* clip) {
+    bool bChanged = clip != view.clip();
+    view.setSelected(clip);
+    if (bChanged || !clip) {
+        onViewChanged(clip);
+        noteeditor.selectEditClip(clip);
+        audioeditor.selectEditClip(clip);
         parent->layout();
     }
 }
 
-void guictr_clipeditor::showEditClip(gui_clip* gclip, const clipboard_view_t& clipboardView) {
-    bool bChanged = gclip != view.gui;
-    view.set(gclip, clipboardView);
-    if (bChanged || !gclip) {
-        onViewChanged(gclip);
+void guictr_clipeditor::setSingleClip(clip_t* clip) {
+    bool bChanged = clip != view.clip();
+    view.setSingleClip(clip);
+    if (bChanged || !clip) {
+        onViewChanged(clip);
+        noteeditor.showEditClip();
+        audioeditor.showEditClip();
+        if (parent)
+            parent->layout();
+    }
+}
+
+void guictr_clipeditor::setEditorSelection(clip_t* clip, const editor_view_selection_t& clipboardView) {
+    bool bChanged = clip != view.clip();
+    view.setEditorSelection(clip, clipboardView);
+    if (bChanged || !clip) {
+        onViewChanged(clip);
         noteeditor.showEditClip();
         audioeditor.showEditClip();
         if (parent)
@@ -183,8 +195,8 @@ void guictr_clipeditor::showEditClip(gui_clip* gclip, const clipboard_view_t& cl
 }
 
 void guictr_clipeditor::resetClipView() {
-    bool bChanged = nullptr != view.gui;
-    view.set(nullptr, {});
+    bool bChanged = nullptr != view.clip();
+    view.reset();
     if (bChanged) {
         onViewChanged(nullptr);
         noteeditor.showEditClip();
@@ -394,7 +406,7 @@ note_t* getMinDistNoteVel(clip_notes_t& notes, int32_t tickExact, int32_t tickDi
     return minDistNote;
 }
 
-void duplicateClipLoop(DawInstance* daw, clip_view& view) {
+void duplicateClipLoop(DawInstance* daw, clip_view_t& view) {
     clip_t* clip = view.clip();
     if (!clip) {
         return;
@@ -404,7 +416,7 @@ void duplicateClipLoop(DawInstance* daw, clip_view& view) {
         ThreadLock lock                = daw->lockPlayThread();
         clip_t clipBefore              = *clip;
         clip_notes_t& notes            = clip->notes;
-        clip_cursor_t& cursor          = view.cursor;
+        clip_cursor_t& cursor          = view.m_cursor;
         clip_cursor_t cursorBefore     = cursor;// copy
         const clip_notes_t notesBefore = notes; // copy
 
@@ -471,7 +483,7 @@ void gui_clipcontent_base::renderBackground(NVGcontext* vg) {
     }
 }
 
-gui_clipcontent_control_data::gui_clipcontent_control_data(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout)
+gui_clipcontent_control_data::gui_clipcontent_control_data(scaled_grid& _grid, clip_view_t& _view, layout_pianoroll_t& _layout)
     : gui_clipcontent(_grid, _view, _layout, true),
     shapeEdit(_grid, _view)
 {
@@ -482,7 +494,7 @@ gui_clipcontent_control_data::gui_clipcontent_control_data(scaled_grid& _grid, c
         if (clip) {
             action_modify_clip_control_data* undoAction = nullptr;
             if (!bIsDragMove) {
-                undoAction = new action_modify_clip_control_data("Modify clip control data", view, controlDataBegin, view.cursor);
+                undoAction = new action_modify_clip_control_data("Modify clip control data", view, controlDataBegin, view.m_cursor);
             }
             tmpShape = shape;
             if (this->cc == 0) {
@@ -575,7 +587,7 @@ void gui_clipcontent_control_data::handleDraggedMove(MouseEvent& evt) {
         tick_t tickEnd   = grid.screenToTickSnap(xEnd, SNAP_OFF) - getTickOffset();
         shapeEdit.setSelectRect(vec4{tickStart, 1.0-yEnd, tickEnd, 1.0-yStart});
         // tick_t tickOver  = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
-        auto& cursor = view.cursor;
+        auto& cursor = view.m_cursor;
         cursor.start = tickStart;
         cursor.end   = tickEnd;
     }
@@ -639,8 +651,8 @@ void gui_clipcontent_control_data::render(NVGcontext* vg) {
     //                             higlightHit);
     // this->shapeEdit.setEditorCurve(&clip->controlData.pitchBend.shape);
     // this->shapeEdit.renderEditor(vg, {}, theme, relMousepos, false);
-    auto x = float(grid.tickToScreenD(view.cursor.start));
-    if (view.cursor.start == view.cursor.end) {
+    auto x = float(grid.tickToScreenD(view.m_cursor.start));
+    if (view.m_cursor.start == view.m_cursor.end) {
         if (x >= -2 && x < size.x + 2) {
             x += 0.5;
             NVGcolor cursorColor = getCursorColor();
@@ -652,7 +664,7 @@ void gui_clipcontent_control_data::render(NVGcontext* vg) {
             nvgStroke(vg);
         }
     } else {
-        float x2 = (float) grid.tickToScreenD(view.cursor.end);
+        float x2 = (float) grid.tickToScreenD(view.m_cursor.end);
         if (x2 < x) {
             std::swap(x, x2);
         }
@@ -813,8 +825,8 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
     //    fmouse.x = point->x;
     //  }
 
-    auto x = float(grid.tickToScreenD(view.cursor.start));
-    if (view.cursor.start == view.cursor.end) {
+    auto x = float(grid.tickToScreenD(view.m_cursor.start));
+    if (view.m_cursor.start == view.m_cursor.end) {
         if (x >= -2 && x < size.x + 2) {
             x += 0.5;
             NVGcolor cursorColor = getCursorColor();
@@ -826,7 +838,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
             nvgStroke(vg);
         }
     } else {
-        float x2 = (float) grid.tickToScreenD(view.cursor.end);
+        float x2 = (float) grid.tickToScreenD(view.m_cursor.end);
         if (x2 < x) {
             std::swap(x, x2);
         }
@@ -1019,7 +1031,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             firstKey = 0;
         }
     }
-    auto& selView = view.selectionView;
+    auto& selView = view.m_selectionView;
     clip_t* currentClip = view.clip();
     for (auto& [trackEntry, vecClips] : selView.tracks) {
         for (clip_t* clip : vecClips) {
@@ -1049,8 +1061,8 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         renderClipNoteRects(vg, clipNotes.m_list, {}, cs, tickOffset, scale, 1.0f, theme->getColor(GuiColor::COL_NOTE), false);
     }
     
-    auto x = float(grid.tickToScreenD(view.cursor.start));
-    if (view.cursor.start == view.cursor.end) {
+    auto x = float(grid.tickToScreenD(view.m_cursor.start));
+    if (view.m_cursor.start == view.m_cursor.end) {
         if (x >= -2 && x < cs.x + 2) {
             x += 0.5;
             NVGcolor cursorColor = getCursorColor();
@@ -1062,7 +1074,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             nvgStroke(vg);
         }
     } else {
-        float x2 = (float) grid.tickToScreenD(view.cursor.end);
+        float x2 = (float) grid.tickToScreenD(view.m_cursor.end);
         if (x2 < x) {
             std::swap(x, x2);
         }
@@ -1077,10 +1089,9 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
         }
     }
 
-    gui_clip* guiClip = view.gui;
-    track_t* track    = guiClip ? guiClip->m_track : nullptr;
-    if (track && track->audio) {
-        clip_t* clip = guiClip->m_clip;
+    clip_t* clip = view.clip();
+    auto track = view.track();
+    if (clip && track && track->audio) {
 
 
         /* auto daw = dawCtrl->getDaw();
@@ -1292,7 +1303,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
     if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES || guiType == gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY) {
         if (evt.type == M_EVT_DOUBLECLICK) {
             ThreadLock lock            = MainCtrl::getPlayThread()->lockThread();
-            clip_cursor_t cursorBefore = view.cursor;
+            clip_cursor_t cursorBefore = view.m_cursor;
             notes.clearSelection();
             clip_notes_t notesBefore = notes;
             if (contextNote) {
@@ -1301,7 +1312,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
             String desc = "???";
             if (contextNote) {
                 if (guiType == gui_type::CTR_TYPE_CLIPEDITOR_NOTES) {
-                    view.cursor.start = view.cursor.end = contextNote->start();
+                    view.m_cursor.start = view.m_cursor.end = contextNote->start();
                     notes.remove(*contextNote);
                     contextNote = nullptr;
                     desc        = "Delete Note";
@@ -1378,7 +1389,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 
                 notes.selection.clear();
                 setSelectionFrame(getMinMaxTime(view.draggedSelection));
-                dragStartCursor = view.cursor;
+                dragStartCursor = view.m_cursor;
             }
         }
     }
@@ -1387,15 +1398,15 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
             notes.removeDuplicates();
         if (isShift(evt.kbmods)) {
             selectionStart = notes.selection;
-            if (math::abs(view.cursor.start - tickGridNearest) < math::abs(view.cursor.end - tickGridNearest)) {
-                view.cursor.start = tickGridNearest;
+            if (math::abs(view.m_cursor.start - tickGridNearest) < math::abs(view.m_cursor.end - tickGridNearest)) {
+                view.m_cursor.start = tickGridNearest;
             } else {
-                view.cursor.end = tickGridNearest;
+                view.m_cursor.end = tickGridNearest;
             }
         } else {
             selectionStart.clear();
             notes.clearSelection();
-            view.cursor.start = view.cursor.end = tickGridNearest;
+            view.m_cursor.start = view.m_cursor.end = tickGridNearest;
             view.copySelectedNoteList();
         }
 
@@ -1415,11 +1426,11 @@ void gui_clipcontent::setGlobalSelectionFromClipSelection() {
     }
     DAW::Cursor& cursor = dawCtrl->getCursor();
     if (!view.isAbsoluteTimeMode()) {
-        cursor.cursorPos = view.cursor.start + clip->start() - clip->offsetStart;
-        cursor.selRange  = view.cursor.end - view.cursor.start;
+        cursor.cursorPos = view.m_cursor.start + clip->start() - clip->offsetStart;
+        cursor.selRange  = view.m_cursor.end - view.m_cursor.start;
     } else {
-        cursor.cursorPos = view.cursor.start;
-        cursor.selRange  = view.cursor.end - view.cursor.start;
+        cursor.cursorPos = view.m_cursor.start;
+        cursor.selRange  = view.m_cursor.end - view.m_cursor.start;
     }
 }
 void gui_clipcontent::setStatusText() {
@@ -1461,7 +1472,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
         tick_t tickEnd   = grid.screenToTickSnap(xEnd, SNAP_OFF);
         tick_t tickOver  = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
 
-        clip_cursor_t& cursor = view.cursor;
+        clip_cursor_t& cursor = view.m_cursor;
         if (isShift(evt.kbmods)) {
             tick_t gridSize = grid.getTickLength();
             if (math::abs(cursor.start - tickOver) < math::abs(cursor.end - tickOver)) {
@@ -1521,7 +1532,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
     } else if (dragMode == drag_velocity) {
         *evt.dragDistance = ivec2(0);
         //    tick_t tickOver = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
-        //    clip_cursor_t& cursor = view.cursor;
+        //    clip_cursor_t& cursor = view.m_cursor;
         ThreadLock lock       = dawCtrl->lockPlayThread();
         int32_t velOffset     = (dragBegin.y - dragTo.y) * 127 / size.y;
         view.draggedSelection = view.draggedSelectionBegin;
@@ -1687,14 +1698,14 @@ void gui_clipcontent::mergeDraggedNotes(dragmode mergeMode) {
 }
 void gui_clipcontent::expandSelectionFrame(std::pair<note_t*, note_t*> minMax) {
     if (minMax.first && minMax.second) {
-        auto& cursor = view.cursor;
+        auto& cursor = view.m_cursor;
         cursor.start = math::min(cursor.start, minMax.first->time + getTickOffset());
         cursor.end   = math::max(cursor.end, (minMax.second->time + minMax.second->len + getTickOffset()));
     }
 }
 void gui_clipcontent::setSelectionFrame(std::pair<note_t*, note_t*> minMax) {
     if (minMax.first && minMax.second) {
-        auto& cursor = view.cursor;
+        auto& cursor = view.m_cursor;
         cursor.start = minMax.first->time + getTickOffset();
         cursor.end   = minMax.second->time + minMax.second->len + getTickOffset();
     }
@@ -1744,7 +1755,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
     }
     clip_notes_t& notes = clip->notes;
     if (kevt.type != K_RELEASE) {
-        clip_cursor_t& cursor          = view.cursor;
+        clip_cursor_t& cursor          = view.m_cursor;
         const clip_notes_t notesBefore = notes; // copy
         clip_cursor_t cursorBefore     = cursor;// copy
         bool handled                   = false;
@@ -1831,7 +1842,7 @@ bool gui_clipcontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
                     view.draggedSelection.push_back(note);
                 }
                 mergeDraggedNotes(dragmode::drag_notes_move);
-                view.cursor.end = cursor.start + clipboard->cursorRange;
+                view.m_cursor.end = cursor.start + clipboard->cursorRange;
                 auto pair = getMinMaxTime(notes.selection);
                 if (pair.second)
                     grid.makeTickVisible(pair.second->end() + getTickOffset());
@@ -1986,7 +1997,7 @@ bool gui_clipcontent_control_data::handleEditorCommand(DAW::UI::CommandContext& 
     auto& ctrlData = clip->controlData;
     auto& selection = shapeEdit.getSelectedNodeIndices();
     if (kevt.type != K_RELEASE) {
-        clip_cursor_t& cursor      = view.cursor;
+        clip_cursor_t& cursor      = view.m_cursor;
         clip_t clipBefore          = *clip;
         clip_cursor_t cursorBefore = cursor;// copy
         clip_control_data_t ctrlDataBefore = ctrlData;
@@ -1999,7 +2010,7 @@ bool gui_clipcontent_control_data::handleEditorCommand(DAW::UI::CommandContext& 
                 shapeEdit.selectAll();
                 if (!tmpShape.pts.empty()) {
                     auto [tmMin, tmMax] = getMinMaxTimeShape(tmpShape.pts);
-                    auto& cursor = view.cursor;
+                    auto& cursor = view.m_cursor;
                     cursor.start = tmMin;
                     cursor.end = tmMax;
                 }
@@ -2107,7 +2118,7 @@ void guictr_clipeditorview::prerender(NVGcontext* vg) {
     if (!clipEditor) {
         return;
     }
-    clip_view& view  = clipEditor->getClipView();
+    clip_view_t& view  = clipEditor->getClipView();
     clip_t* const cl = view.clip();
     if (!cl) {
         cache->reset();
@@ -2286,7 +2297,7 @@ float guictr_clipeditorview::getScaleX() {
         contentLenTicks = clip->getLen();
     }
     if (view.isAbsoluteTimeMode()) {
-        contentLenTicks = view.selectionView.maxClipEnd;
+        contentLenTicks = view.m_selectionView.maxClipEnd;
     }
     auto clipEditor = getClipEditor();
     if (!clipEditor) {

@@ -57,7 +57,7 @@ namespace DAW {
     int32_t getPosYFirstReturnTrack(const track_gui_vector_td& tracksVisibleFlat);
     gui_clip* GetClipFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse);
     gui_clip* GetClipGuiFromTime(track_gui_entry_t* tr, tick_t time);
-    clipboard_view_t GetClipboardViewFromGuiClip(gui_clip* guiClip);
+    editor_view_selection_t GetClipboardViewFromGuiClip(gui_clip* guiClip);
     gui_clip* GetClipGuiFromTimeAndTrackIdx(track_gui_manager_i& iGuiMgr, int32_t trackIdx, tick_t time);
     track_gui_entry_t* getTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse);
     track_gui_entry_t* getTrackFromMouseClosest(track_gui_manager_i& iGuiMgr, ivec2 mouse);

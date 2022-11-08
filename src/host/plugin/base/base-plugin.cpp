@@ -230,7 +230,7 @@ void effectbase::onWindowDestroy() {
 void effectbase::onWindowResize(ivec2 size) {
 }
 
-guiplugin* effectbase::getPluginGui(int32_t uuid) {
+std::shared_ptr<guiplugin> effectbase::getPluginGui(int32_t uuid) {
     if (!uiInstances.count(uuid)) {
         std::shared_ptr<guiplugin> newGui = createGuiPlugin(uuid);
         auto it = uiSnapshots.find(uuid);
@@ -240,7 +240,7 @@ guiplugin* effectbase::getPluginGui(int32_t uuid) {
         }
         uiInstances[uuid] = std::move(newGui);
     }
-    return uiInstances[uuid].get();
+    return uiInstances[uuid];
 }
 
 class guideferred : public guiplugin {

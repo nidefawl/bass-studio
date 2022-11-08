@@ -467,7 +467,7 @@ public:
             auto ctrl = ctrHandle->parentCtrl;
             gui_type type = static_cast<gui_type>(_id - 100);
             std::shared_ptr<guictr_base> ctr;
-            auto context = ContainerInstanceContext{ctrHandle->dawCtrl->getDaw(), {}};
+            auto context = ContainerInstanceContext{ctrHandle->dawCtrl->getDaw(), ctrHandle->dawCtrl, {}};
             if (makeContainer(context, type, ctr)) {
                 ctr->setLabel(e->title);
                 std::shared_ptr<GuiCtrLayoutEntry> ctrEntry = createGuiCtrLayoutEntry(ctr);
@@ -476,6 +476,7 @@ public:
                     layoutCtr->replaceContainerWith(ctrHandle->ctr, ctrEntry);
                     ctrl->relayout();
                 }
+                dawCtrl->onViewCreated(ctrEntry);
             }
             closeContextMenu();
         } else if (_id == 0) {
@@ -1175,10 +1176,8 @@ void loadContainerEntrySnapshot(ContainerFactory& fac,
                 }
                 loadContainerSnapshot(fac, ctxt, ctrLayout.get(), ctrLayoutSnapshot);
             }
-            return;
         }
-    }
-    if (typeLoad == gui_type::CTR_TYPE_LAYOUT) {
+    } else if (typeLoad == gui_type::CTR_TYPE_LAYOUT) {
         out = createGuiCtrLayoutEntry(std::make_shared<guictr_layout>());
         out->setEntryTag(snapshot->entryTag);
         getContainerLabel(typeLoad, out->getAsLayoutCtr()->label);
@@ -1189,13 +1188,20 @@ void loadContainerEntrySnapshot(ContainerFactory& fac,
         loadContainerSnapshot(fac, ctxt, out->getAsLayoutCtr().get(), ctrLayoutSnapshot);
     } else {
         std::shared_ptr<guictr_base> sharedContainer;
-        if (!makeContainer(ctxt, typeLoad, sharedContainer)) {
-            log_lf(Log::L_WARN, "Failed loading container of type %d\n", typeLoad);
-            return;
+        if (makeContainer(ctxt, typeLoad, sharedContainer)) {
+            out = createGuiCtrLayoutEntry(sharedContainer);
+            out->setEntryTag(snapshot->entryTag);
+            getContainerLabel(typeLoad, sharedContainer->label);
         }
-        out = createGuiCtrLayoutEntry(sharedContainer);
-        out->setEntryTag(snapshot->entryTag);
-        getContainerLabel(typeLoad, sharedContainer->label);
+    }
+    if (out) {
+        if (!ctxt.entriesConstructed.count(out->getType())) {
+            ctxt.entriesConstructed[out->getType()] = { out };
+        } else {
+            ctxt.entriesConstructed[out->getType()].push_back(out);
+        }
+    } else {
+        log_lf(Log::L_WARN, "Failed loading container of type %d (tag %d)\n", typeLoad, snapshot->entryTag);
     }
 }
 
@@ -1386,6 +1392,7 @@ String guictr_layout::getLayoutCtrName() {
 guictr_layout::~guictr_layout() {
     removeGuis();
     for (auto& entry : entries) {
+        dbgassert(entry->getParentContainer() == this);
         entry->setParentContainer(nullptr);
     }
     // activePosition = -1;

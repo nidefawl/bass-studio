@@ -17,7 +17,7 @@ class guiknob_arp : public guiknob {
     }
 };
 
-gui_arp::gui_arp(clip_view& _clipview)
+gui_arp::gui_arp(clip_view_t& _clipview)
     : clipview(_clipview) {
     setCanMouseHit(true);
     add(&buttonBypass);

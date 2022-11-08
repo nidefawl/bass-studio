@@ -18,7 +18,7 @@
 #include "grid.h"
 
 
-gui_clipsettings::gui_clipsettings(clip_view& _view)
+gui_clipsettings::gui_clipsettings(clip_view_t& _view)
     : guictr_base(),
       view(_view),
       clipLoopStart(nullptr),
@@ -73,8 +73,8 @@ void gui_clipsettings::renderBackground(NVGcontext* vg) {
     drawInsetBackground(vg, theme, getPosContent(), getSizeContent());
 }
 
-void duplicateClipLoop(DawInstance* daw, clip_view& view);//clipeditor.cpp;
-void selectAllMuted(DawInstance* daw, clip_view& view) {
+void duplicateClipLoop(DawInstance* daw, clip_view_t& view);//clipeditor.cpp;
+void selectAllMuted(DawInstance* daw, clip_view_t& view) {
     clip_notes_t& notes = view.clip()->notes;
     notes.selection.clear();
     notes.visitNotes([&notes](note_t& n) {
@@ -108,7 +108,7 @@ void gui_clipsettings::buttonClicked(guibase* button) {
             for (track_gui_entry_t* entry: clip->trackEntries) {
                 track_t* track = entry->track;
                 if (track) {
-                    resizeOtherClips(track->getMidi(), clip);
+                    resizeOtherClips(track->getClips(), clip);
                     daw->layoutTrackEditors();
                     daw->updateVisibleTrackContents();
                 }

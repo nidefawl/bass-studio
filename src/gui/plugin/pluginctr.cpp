@@ -1,4 +1,5 @@
 #include <__algorithm/remove_if.h>
+#include <algorithm>
 #include <deque>
 #include <memory>
 #include <vector>
@@ -133,17 +134,22 @@ void guictr_plugins::handleRightClick(MouseEvent& evt) {
     }
 }
 
-void guictr_plugins::onAdded() {
-    if (parent) {
-        setTheme(parent->theme);
-    }
-}
 void guictr_plugins::addGui(effectbase* plugin) {
-    guiplugin* base = plugin->getPluginGui(this->uuid);
-    if (base) {
-        add(base);
+    auto gui = plugin->getPluginGui(this->uuid);
+    if (gui) {
+        auto it = std::find_if(
+                    guiPlugins.begin(),
+                    guiPlugins.end(),
+                    [g = gui.get()](guiplugin_entry& p) { 
+                        return p.guiPlugin.get() == g; 
+                  });
+        if (it == guiPlugins.end()) {
+            guiPlugins.push_back({plugin->toRef(), gui});
+        }
+        this->add(gui.get());
     }
 }
+
 bool plugin_selection::hasSelection() const {
     return firstSelection >= 0 && lastSelection >= 0 && pluginCtr && pluginCtr->stage;
 }
@@ -490,6 +496,7 @@ void guictr_plugins::hideTrack() {
 
 void guictr_plugins::relayout() {
     removeGuis();
+    guiPlugins.clear();
     String name;
     auto audio = this->stage;
     if (audio && this->track) {
@@ -1066,4 +1073,15 @@ void guictr_pluginview::handleDraggedMove(MouseEvent& evt) {
 }
 
 void guictr_pluginview::layout() {
+}
+void guictr_plugins::onRemove() {
+    hideTrack();
+    guiPlugins.clear();
+    guictr_base::onRemove();
+}
+void guictr_plugins::onAdded() {
+    guictr_base::onAdded();
+    if (parent) {
+        setTheme(parent->theme);
+    }
 }

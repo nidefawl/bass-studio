@@ -344,15 +344,15 @@ bool guictxtmenu_plugin::clickedElement(ctxtmenu_entry* e, int _id) {
     // return guictxtmenu::clickedElement(e, _id);
     ThreadLock lock = dawCtrl->lockPlayThread();
     if (_id == CMD_SHOW_PARAM_LIST && effectOptional) {
-        auto* gui = effectOptional->getPluginGui(dawCtrl->isCompanion() ? 1 : 0);
-        if (effectOptional) {
+        auto gui = effectOptional->getPluginGui(dawCtrl->isCompanion() ? 1 : 0);
+        if (effectOptional && gui) {
             guictr_properties_table* dbgPropertiesCtrPopup = guictr_properties_table::MakeUniquePropertiesCtr();
             guictxtmenu_base* ctxtMenu                     = new guictxtmenu_base();
             ctxtMenu->setBackgroundRendered(true);
             ctxtMenu->size = { 640, 480 };
             ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
             ivec2 wndPos{ 0 };
-            dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
+            dbgPropertiesCtrPopup->setDebugPropertyHandle(gui.get());
             dawCtrl->openContextMenu(ctxtMenu, gui->toScreenSpace({ gui->size.x, 0 }));
             return true;
         }

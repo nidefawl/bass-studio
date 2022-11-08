@@ -21,8 +21,8 @@ namespace DAW {
 
 inline clip_t* ConsolidateAudioClips(DawInstance* daw, track_t* track, tick_t tickBegin, tick_t tickEnd, const String& name) {
     auto& prjGlobals = daw->getProjectGlobals();
-    auto& trackData = track->getMidi();
-    auto clips = trackData.getConstClips();
+    auto& trackData = track->getClips();
+    auto clips = trackData.getClips();
 
     create_sample_req_t csr;
     csr.format      = track->audio->sampleFormat;
@@ -236,8 +236,8 @@ struct consolidate_task_t : public async_task_t {
                 track_gui_entry_t* trEntry = iGuiMgr->atNC(trIdx);
                 mapTrClCount[trIdx][CLIP_AUDIO] = 0;
                 mapTrClCount[trIdx][CLIP_MIDI] = 0;
-                auto& trackData = trEntry->track->getConstMidi();
-                auto& constClips = trackData.getConstClips();
+                auto& trackData = trEntry->track->getClips();
+                auto& constClips = trackData.getClips();
                 for (const auto& c : constClips) {
                     if (c->clipType == CLIP_AUDIO || c->clipType == CLIP_MIDI) {
                         if (c->start() < tickEnd && c->end() > tickBegin) {
@@ -312,7 +312,7 @@ struct consolidate_task_t : public async_task_t {
                     auto samplefile = cache->createSample(csr);
                     dbgassert(samplefile);
                     fillAudio = std::make_shared<consolidate_fill_audio_t>(daw, sampleFormat, stage->input.channels, samplefile->id, samplePos, numSamples);
-                    trEntry->track->getMidi().getClipsInRange(cursor.getTickBegin(), cursor.getTickEnd(), fillAudio->clips);
+                    trEntry->track->getClips().getClipsInRange(cursor.getTickBegin(), cursor.getTickEnd(), fillAudio->clips);
                     clipAudioInProgress = clip;
                 }
                 break;

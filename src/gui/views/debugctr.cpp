@@ -400,7 +400,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         strings.push_back(StringFormat("redo size: %zu", daw->getHist().getNumRedoSteps()));
         auto editor = dawCtrl->getClipEditor();
         if (editor) {
-            clip_view& clipView = editor->getClipView();
+            clip_view_t& clipView = editor->getClipView();
             if (clipView.clip()) {
                 strings.push_back(StringFormat("Clip: %s", StringAsCStr(clipView.clip()->name)));
                 strings.push_back(StringFormat("Notes: %zu", clipView.clip()->notes.m_list.size()));
@@ -530,7 +530,7 @@ void resetHistAndCheck(DawInstance* daw) {
     int32_t liveClips = 0;
     auto& tracks = daw->getTracks();
     for (auto track : tracks) {
-        int nTrackClips = track->getMidi().getConstClips().size();
+        int nTrackClips = track->getClips().getClips().size();
         liveClips += nTrackClips;
     }
     int32_t allocClips = getNumClipAllocations();

@@ -530,9 +530,9 @@ namespace {
         TEST_BEGIN("testNoteView");
         // Test trackdata_midi_t destruction after copy
         {
-            trackdata_midi_t midiCopyOuter;
+            trackdata_clips_t midiCopyOuter;
             {
-                trackdata_midi_t midiDataInner;
+                trackdata_clips_t midiDataInner;
                 midiDataInner.addClip(new clip_t);
                 midiCopyOuter = midiDataInner;
                 midiDataInner.deleteClips(nullptr);
@@ -555,15 +555,15 @@ namespace {
         // Test clip_t bounds correctness
         TEST_ASSERT_THROW(clip->notes.lastNote.time == lastnoteTime);
 
-        trackdata_midi_t midi;
+        trackdata_clips_t midi;
         midi.addClip(clip);
 
 
         // Test trackdata_midi_t equality after copy
 
-        trackdata_midi_t midiCopy;
+        trackdata_clips_t midiCopy;
         midiCopy = midi;
-        trackdata_midi_t midiCopy2 = midiCopy;
+        trackdata_clips_t midiCopy2 = midiCopy;
         TEST_ASSERT_EQUAL(midiCopy2.start(), midi.start());
         TEST_ASSERT_EQUAL(midiCopy2.end(), midi.end());
         midiCopy.deleteClips(nullptr);

@@ -80,11 +80,16 @@ void guitrack_mixers::render(NVGcontext* vg) {
         }
     }
 }
+
 void guitrack_mixers::addTrackEntry(track_gui_entry_t& e) {
     this->add(e.mixer);
 }
+
 void guitrack_mixers::removeTrackEntry(track_gui_entry_t& e) {
     this->remove(e.mixer);
+    if (dawCtrl) {
+        dawCtrl->onTrackMixerRemoved(e);
+    }
 }
 
 int32_t guictr_tracks::getTrackTotalHeight(track_gui_entry_t* e) {
@@ -100,6 +105,7 @@ int32_t guictr_tracks::getTrackTotalHeight(track_gui_entry_t* e) {
     }
     return totalHeight;
 }
+
 int32_t guictr_tracks::setTrackPosition(track_gui_entry_t* e, int32_t y, bool isBottom) {
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 
@@ -155,6 +161,7 @@ void guictr_tracks::addSubTrack(track_gui_entry_t* entry, gui_track_subtrack* su
     trackView.addSubtrack(entry, subtrack, insertFront);
     entry->mixer->addSubtrackMixer(entry, subtrack);
 }
+
 void guictr_tracks::removeSubtrack(track_gui_entry_t* entry, gui_track_subtrack* subtrack) {
     trackView.removeSubtrack(entry, subtrack);
     entry->mixer->removeSubtrackMixer(subtrack);
@@ -165,24 +172,29 @@ gui_track_automationlane* guictr_tracks::addAutomationLane(track_gui_entry_t* en
     addSubTrack(entry, al, insertFront);
     return al;
 }
+
 void guictr_tracks::removeAutomationLane(gui_track_automationlane* al) {
     track_gui_entry_t* entry;
     always_assert(guiMgr.getTrackEntry(al->m_track, &entry));
     entry->mixer->removeSubtrackMixer(al);
     trackView.removeSubtrack(entry, al);
 }
+
 void guictr_tracks::removeAllAutomationLanes(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx) {
     entry->mixer->removeAllAutomationLanes(at, paramIdx);
     trackView.removeAllAutomationLanes(entry, at, paramIdx);
 }
+
 void guictr_tracks::removeAllAutomationLanes(track_gui_entry_t* entry, automatable_t* at) {
     entry->mixer->removeAllAutomationLanes(at);
     trackView.removeAllAutomationLanes(entry, at);
 }
+
 void guictr_tracks::removeAllSubtracks(track_gui_entry_t* entry) {
     entry->mixer->removeAllSubtracks();
     trackView.removeAllSubtracks(entry);
 }
+
 void guictr_tracks::resetView() {
     trackView.m_resizePreModifyState.reset();
     trackView.action.clipboard.reset();
@@ -655,6 +667,9 @@ bool track_gui_manager_t::getTrackEntryCopy(const track_t* t, track_gui_entry_t&
 }
 void guitrack_editor::removeTrackEntry(track_gui_entry_t& entry) {
     if (entry.content) {
+        if (dawCtrl) {
+            dawCtrl->onTrackContentRemoved(entry);
+        }
         entry.content->destroyGuis();
         remove(entry.content);
         dbgassert(entry.clipsGuis.empty());
@@ -669,6 +684,7 @@ void guitrack_editor::removeTrackEntry(track_gui_entry_t& entry) {
         entry.subtracks.clear();
     }
 }
+
 void guitrack_editor::layout() {
     for (guibase* gui : guis) {
         gui->layout();
@@ -678,7 +694,7 @@ void guitrack_editor::layout() {
 void guictr_tracks::removeTrack(track_t* track, int flags) {
     track_gui_entry_t* entry = nullptr;
     if (!guiMgr.getPointerEntry(track, &entry)) {
-        log_printf("attempt to double remove track from container\n");
+        // log_printf("attempt to double remove track from container\n");
         return;
     }
     dbgassert(track->audio);
@@ -818,7 +834,6 @@ bool guictr_tracks::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
 }
 
 bool guitrack_mixers::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
-    auto daw = dawCtrl->getDaw();
     if (ctxt.type == GlobalCommandType::CMD_BEGIN_RENAME) {
         if (ctxt.kevt.type != KeyboardState::K_PRESS) {
             return true;

@@ -109,7 +109,8 @@ public:
     effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback);
     ~effectbase() override;
     
-    guiplugin* getPluginGui(int32_t uuid);
+    std::shared_ptr<guiplugin> getPluginGui(int32_t uuid);
+
     virtual std::shared_ptr<guiplugin> createGuiPlugin(int32_t uuid) {
         return nullptr;
     }

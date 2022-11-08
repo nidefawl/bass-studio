@@ -51,7 +51,7 @@
 
 /*static*/ void action_modify_track::loadTrackSnapshot(DawInstance* daw, track_t* track, const track_snapshot_t* trackStored) {
     if (trackStored->storeOpts.storeClips) {
-        track->getMidi().deleteClips(daw);
+        track->getClips().deleteClips(daw);
         track->releaseTrackContent();
     }
     *track = *trackStored;
@@ -113,7 +113,7 @@ void action_modify_track::redo(DawInstance* daw) {
     daw->getMainControl()->getCursor() = after.cursor;
 }
 
-void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip) {
+void resizeOtherClips(trackdata_clips_t& midi, clip_t* clip) {
     for (clip_t* c : midi.clips) {
         if (c == clip)
             continue;
@@ -194,9 +194,9 @@ namespace DAW {
         }
         return nullptr;
     }
-    clipboard_view_t GetClipboardViewFromGuiClip(gui_clip* guiClip) {
-        clipboard_view_t view;
-        view.tracks.emplace_back<clipboard_track_view_t>({*guiClip->m_trackentry, {guiClip->m_clip}});
+    editor_view_selection_t GetClipboardViewFromGuiClip(gui_clip* guiClip) {
+        editor_view_selection_t view;
+        view.tracks.emplace_back<track_view_selection_t>({*guiClip->m_trackentry, {guiClip->m_clip}});
         view.totalClipCount = 1;
         view.minClipStart   = guiClip->m_clip->start();
         view.maxClipEnd     = guiClip->m_clip->end();
@@ -262,7 +262,7 @@ namespace DAW {
     }
     template<typename Functor>
     void VisitIntersectingClips(track_gui_entry_t* trEntry, tick_t tickBegin, tick_t tickEnd, Functor f) {
-        auto& midi = trEntry->track->getMidi();
+        auto& midi = trEntry->track->getClips();
         for (clip_t* c : midi.getClips()) {
             if (c->start() < tickEnd && c->end() > tickBegin) {
                 f(trEntry, c);
@@ -598,7 +598,7 @@ void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt)
         trSelected = DAW::getTrackFromMouse(iGuiMgr, local);
     }
     if (trSelected != nullptr) {
-        dawCtrl->getDaw()->setEditClip(nullptr, {});
+        dawCtrl->getDaw()->resetEditClip();
         if (evt.guiDragged == this) {// cursor move / range select
             DAW::Cursor& c  = dawCtrl->getCursor();
             c.selRange      = 0;
@@ -707,9 +707,9 @@ void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& ev
             if (cursor.inTrackRange(trNxtSelected->idx)) {
                 auto gClip = DAW::GetClipGuiFromTime(trNxtSelected, tick);
                 if (gClip && gClip->m_clip->start() <= tick && gClip->m_clip->start() + gClip->m_clip->end() >= tick) {
-                    clipboard_view_t view;
+                    editor_view_selection_t view;
                     DAW::GetClipboardView(iGuiMgr, cursor, view, gClip);
-                    daw->setEditClip(gClip, view);
+                    daw->setEditorSelection(gClip->m_clip, view);
                 }
             }
         }
@@ -741,7 +741,7 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
     }
     if (action.dragtype) {
         setSelectionRange(clicked, gClip->m_trackentry);
-        dragStartLayout    = track->getMidi();//copy
+        dragStartLayout    = track->getClips();//copy
         action.cursorBegin = cursor;
         m_resizePreModifyState.reset();
         int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
@@ -806,7 +806,7 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
                 }
             }
             clip->setDirty();
-            resizeOtherClips(track->getMidi(), clip);
+            resizeOtherClips(track->getClips(), clip);
             setSelectionRange(clip, trackentry);
             daw->updateVisibleTrackContents();
             return;
@@ -896,7 +896,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
             clip_t* clipPtr        = gui->m_clip;
             ThreadLock lock        = daw->lockPlayThread();
             track_t* trackPtr      = gui->m_track;
-            trackdata_midi_t& midi = trackPtr->getMidi();
+            trackdata_clips_t& midi = trackPtr->getClips();
             auto& clips = midi.getClips();
             auto it = clips.begin();
             int32_t nRemoved = 0;
@@ -928,10 +928,10 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
             }
         }
         action.dragtype = DRAG_NONE;
-        if (showclip) {
-            clipboard_view_t view;
+        if (showclip && gui && gui->m_clip) {
+            editor_view_selection_t view;
             DAW::GetClipboardView(iGuiMgr, cursor, view, gui);
-            daw->setEditClip(gui, view);
+            daw->setEditorSelection(gui->m_clip, view);
             if (gui)
                 dawCtrl->showClipEditor();
         }

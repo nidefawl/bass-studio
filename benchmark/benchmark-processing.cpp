@@ -230,7 +230,7 @@ int main(int argc, char** argv) {
 
             host->onStopPlayback(dawInstance);
         };
-        trackdata_midi_t trDataMidi;
+        trackdata_clips_t trDataMidi;
         {
             auto clip = new clip_t;
             for (int i = 0; i < 4; i++) {
@@ -308,7 +308,7 @@ int main(int argc, char** argv) {
             for (int i = 0; i < 32; ++i) {
                 auto track1 = new track_t(TRACK_TYPE_MIDI, StringFormat("track%d", i), true);
                 // deep copy (of clip_t instances)
-                track1->getMidi() = trDataMidi;
+                track1->getClips() = trDataMidi;
                 dawInstance->addTrackImpl(-1, track1, 0);
             }
 
@@ -321,7 +321,7 @@ int main(int argc, char** argv) {
             for (int i = 0; i < 32; ++i) {
                 auto track1 = new track_t(TRACK_TYPE_MIDI, StringFormat("track%d", i), true);
                 // deep copy (of clip_t instances)
-                track1->getMidi() = trDataMidi;
+                track1->getClips() = trDataMidi;
                 dawInstance->addTrackImpl(-1, track1, 0);
                 delete track1->getStage()->arp;
                 track1->getStage()->arp = nullptr;
@@ -338,7 +338,7 @@ int main(int argc, char** argv) {
             for (int i = 0; i < 32; ++i) {
                 auto track1 = new track_t(TRACK_TYPE_MIDI, StringFormat("track%d", i), true);
                 // deep copy (of clip_t instances)
-                track1->getMidi() = trDataMidi;
+                track1->getClips() = trDataMidi;
                 dawInstance->addTrackImpl(-1, track1, 0);
                 track1->getStage()->arp->setParamValue(PARAM_ENABLE, 1.0f, FLG_PAR_UPDATE_INIT);
                 track1->getStage()->arp->setParamValue(ARP_PARAM_CLOCK, 0.4f, FLG_PAR_UPDATE_INIT);
@@ -383,7 +383,7 @@ int main(int argc, char** argv) {
                         auto track1 = new track_t(TRACK_TYPE_MIDI, StringFormat("Track #%d.%d.%d", topGrps, subGrps, i), true);
                         trSubGrp->addChild(track1);
                         // deep copy (of clip_t instances)
-                        track1->getMidi() = trDataMidi;
+                        track1->getClips() = trDataMidi;
                         dawInstance->addTrackImpl(-1, track1, 0);
                         delete track1->getStage()->arp;
                         track1->getStage()->arp = nullptr;
@@ -431,7 +431,7 @@ int main(int argc, char** argv) {
                         auto track1 = new track_t(TRACK_TYPE_MIDI, StringFormat("Track #%d.%d.%d", topGrps, subGrps, i), true);
                         trSubGrp->addChild(track1);
                         // deep copy (of clip_t instances)
-                        track1->getMidi() = trDataMidi;
+                        track1->getClips() = trDataMidi;
                         dawInstance->addTrackImpl(-1, track1, 0);
                         track1->getStage()->arp->setParamValue(PARAM_ENABLE, 1.0f, FLG_PAR_UPDATE_INIT);
                         track1->getStage()->arp->setParamValue(ARP_PARAM_CLOCK, 0.4f, FLG_PAR_UPDATE_INIT);
@@ -477,7 +477,7 @@ int main(int argc, char** argv) {
                         auto track1 = new track_t(TRACK_TYPE_MIDI, StringFormat("Track #%d.%d.%d", topGrps, subGrps, i), true);
                         trSubGrp->addChild(track1);
                         // deep copy (of clip_t instances)
-                        track1->getMidi() = trDataMidi;
+                        track1->getClips() = trDataMidi;
                         dawInstance->addTrackImpl(-1, track1, 0);
                         track1->getStage()->arp->setParamValue(PARAM_ENABLE, 1.0f, FLG_PAR_UPDATE_INIT);
                         track1->getStage()->arp->setParamValue(ARP_PARAM_CLOCK, 0.4f, FLG_PAR_UPDATE_INIT);

@@ -667,7 +667,7 @@ void addCommonPropertiesFromGui(SafeRef<guibase>& ref, guibase& gui, std::vector
 #ifdef TRACK_ALLOCATIONS_GUIBASE
     rows.push_back({{tblstr{"allocId"}, tblint{gui.allocId}}});
 #endif
-    rows.push_back({{tblstr{"refId"}, tblint{gui.safeRef.refId}}});
+    rows.push_back({{tblstr{"refId"}, tblint{int64_t(gui.safeRef.refId)}}});
     String strTheme = gui.theme->name+StringFormat("[%7zX]", reinterpret_cast<uint64_t>(gui.theme));
     rows.push_back({{tblstr{"theme"}, tblString{strTheme, 1}}});
     rows.push_back({{tblstr{"label"}, tblString{gui.label, 1}}});

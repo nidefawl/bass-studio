@@ -12,7 +12,7 @@
 
 #include "gui/contextmenu/contextmenu_daw.h"
 
-gui_pianoroll::gui_pianoroll(clip_view& _view, layout_pianoroll_t& _layout)
+gui_pianoroll::gui_pianoroll(clip_view_t& _view, layout_pianoroll_t& _layout)
     : guibase(),
       piano_scale(_layout, _view, size.y),
       view(_view) {

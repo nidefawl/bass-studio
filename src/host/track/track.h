@@ -13,6 +13,7 @@
 #include "cursor.h"
 #include "note.h"
 #include "host/clip/clip.h"
+#include "seq_util.h"
 #include "str_util.h"
 #include "logging.h"
 #include "host/project/project.h"
@@ -26,7 +27,7 @@
 class track_t;
 struct track_impl_t;
 struct track_clipboard_t;
-class trackdata_midi_t;
+class trackdata_clips_t;
 class gui_track;
 class gui_track_subtrack;
 class gui_track_automationlane;
@@ -37,7 +38,7 @@ namespace DAW::Host {
 }
 using track_vector = std::vector<track_t*>;
 
-void deleteTrackContents(trackdata_midi_t* tr, delete_cb* cb);
+void deleteTrackContents(trackdata_clips_t* tr, delete_cb* cb);
 void releaseTrackResources(track_t* tr, delete_cb* cb);
 void releaseClipResources(clip_t* cl, delete_cb* cb);
 
@@ -47,36 +48,38 @@ struct track_tree_pos_t {
     int32_t treeIdx;
 };
 
-class trackdata_midi_t {
+class trackdata_clips_t {
 public:
-    friend void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip);
-    friend void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len);
-    friend bool hasClipsInRange(const trackdata_midi_t& in, int32_t srcPos, int32_t len);
-    friend void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickEnd, delete_cb* cb);
+    friend void resizeOtherClips(trackdata_clips_t& midi, clip_t* clip);
+    friend void copyClipsInRange(const trackdata_clips_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len);
+    friend bool hasClipsInRange(const trackdata_clips_t& in, int32_t srcPos, int32_t len);
+    friend void cutIntersectingClips(trackdata_clips_t& midi, tick_t tickBegin, tick_t tickEnd, delete_cb* cb);
 
 private:
     std::vector<clip_t*> clips;
 
 public:
-    trackdata_midi_t() = default;
-    trackdata_midi_t(const trackdata_midi_t& a) {
+    trackdata_clips_t() = default;
+    trackdata_clips_t(const trackdata_clips_t& a) {
         deepcopy(a);
     }
-    ~trackdata_midi_t() {
+    ~trackdata_clips_t() {
         dbgassert(clips.empty());
     }
 
-    trackdata_midi_t& operator=(const trackdata_midi_t& a) {
-        for (clip_t* clip : clips) {
-            releaseClipResources(clip, nullptr);
-            delete clip;
+    trackdata_clips_t& operator=(const trackdata_clips_t& a) {
+        if (this != &a) {
+            for (clip_t* clip : clips) {
+                releaseClipResources(clip, nullptr);
+                delete clip;
+            }
+            clips.clear();
+            deepcopy(a);
         }
-        clips.clear();
-        deepcopy(a);
         return *this;
     }
 
-    void deepcopy(const trackdata_midi_t& obj) {
+    void deepcopy(const trackdata_clips_t& obj) {
         clips.reserve(obj.clips.size());
         for (clip_t* clip : obj.clips) {
             addClip(new clip_t(*clip));
@@ -84,7 +87,7 @@ public:
         sortClips();
     }
 
-    const std::vector<clip_t*>& getConstClips() const {
+    const std::vector<clip_t*>& getClips() const {
         return clips;
     }
 
@@ -200,18 +203,18 @@ class tracklayout_t {
 public:
     std::list<clip_layout_t> clips;
     tracklayout_t() = default;
-    explicit tracklayout_t(const trackdata_midi_t& a) {
+    explicit tracklayout_t(const trackdata_clips_t& a) {
         copy(a);
     }
 
-    tracklayout_t& operator=(const trackdata_midi_t& a) {
+    tracklayout_t& operator=(const trackdata_clips_t& a) {
         copy(a);
         return *this;
     }
 
-    void copy(const trackdata_midi_t& a) {
+    void copy(const trackdata_clips_t& a) {
         clips.clear();
-        for (clip_t* clip : a.getConstClips()) {
+        for (clip_t* clip : a.getClips()) {
             clips.emplace_back(clip,
                 clip->time,
                 clip->len,
@@ -250,7 +253,7 @@ public:
 };
 
 class track_t : public tracksettings_t {
-    trackdata_midi_t midi;
+    trackdata_clips_t m_clips;
 
 public:
 #ifndef NDEBUG
@@ -258,19 +261,16 @@ public:
     //gdb cannot display std::string when built without clib-debug flag (SLOW)
     const char* szName = nullptr;
 #endif
-    trackdata_midi_t& getMidi() {
-        return midi;
+    trackdata_clips_t& getClips() {
+        return m_clips;
     }
-    const trackdata_midi_t& getConstMidi() {
-        return midi;
-    }
-    const trackdata_midi_t& getConstMidi() const {
-        return midi;
+    const trackdata_clips_t& getClips() const {
+        return m_clips;
     }
     tick_minmax_t getMinMaxEvents() {
         tick_t evtMin = INVALID_TICK;
         tick_t evtMax = INVALID_TICK;
-        auto minMax = midi.getMinMax();
+        auto minMax = m_clips.getMinMax();
         if (minMax.first) {
             evtMin = minMax.first->start();
             evtMax = minMax.second->end();
@@ -536,6 +536,9 @@ public:
     bool validTrackIdx(int32_t idx) const {
         return idx >= 0 && idx < (int32_t) trackAllCtr.size();
     }
+    bool validTrack(track_t* tr) const {
+        return tr && stl_contains(trackAllCtr.tracksFlat, tr);
+    }
     bool validTrackTypeIdx(int32_t type, int32_t idx) const;
     track_t* getTrackTypeIdx(int32_t type, int32_t idx);
 
@@ -634,4 +637,4 @@ public:
     virtual void preTrackDelete(track_t* clip) = 0;
 };
 
-void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip);
+void resizeOtherClips(trackdata_clips_t& midi, clip_t* clip);

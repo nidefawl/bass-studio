@@ -29,9 +29,10 @@ struct clip_clipboard {
     int32_t selTrackRange = 0;
     clipboard_type_e type = ClipboardFull;
 };
-using clipboard_track_view_t = std::pair<track_gui_entry_t, std::vector<clip_t*>>;
-struct clipboard_view_t {
-    std::vector<clipboard_track_view_t> tracks{};
+using track_view_selection_t = std::pair<track_gui_entry_t, std::vector<clip_t*>>;
+
+struct editor_view_selection_t {
+    std::vector<track_view_selection_t> tracks{};
     size_t totalClipCount = 0;
     tick_t minClipStart = 0;
     tick_t maxClipEnd   = 0;
