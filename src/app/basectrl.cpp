@@ -424,6 +424,9 @@ void BaseCtrl::resetMouseContext() {
         }
     }
     guiCaptured = guiFocused = guiOver = guiDragged = nullptr;
+    ctrContent                  = nullptr;
+    ctrDragHandler.validPreview = false;
+    dragDropTargets_ContainerMove.clear();
 }
 
 bool BaseCtrl::captureMouse(guibase* gui) {
@@ -793,7 +796,7 @@ void BaseCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
     }
 }
 void BaseCtrl::dragContainerBegin(MouseEvent& evt, GuiCtrLayoutEntry* ctrDragSrc) {
-    dbgassert(!ctrContent.get());
+    ctrContent.reset();
     // get a shared pointer reference to ctrDragSrc, this is a bit awkward, as are all interfaces using shared_ptr
     // stores the reference to ctrDragSrc in shared_ptr ctrContent.
     // extends the lifetime of that container so we can safely access it in render and mouse move callbacks.

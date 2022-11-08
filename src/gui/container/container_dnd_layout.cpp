@@ -1323,12 +1323,12 @@ void guictr_layout::postContentChanged() {
         auto ctrLayoutParent = guiParentType<guictr_layout, gui_type::CTR_TYPE_LAYOUT>(parent);
         if (ctrLayoutParent) {
             ctrLayoutParent->postContentChanged();
+            return;
         }
-    } else {
-        simplify();
     }
+    simplify();
     updateVisible();
-    if (!parent&&parentCtrl) {
+    if (parentCtrl) {
         layout();
     }
 }
