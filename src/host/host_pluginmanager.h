@@ -192,7 +192,7 @@ public:
     static const int FLAG_HOST_FORCELOAD_DISABLED_PLUGINS = 2;
     static bool assignMasterCallback(PluginManager* host);
     PluginManager() noexcept;
-    ~PluginManager();
+    virtual ~PluginManager();
     void setTls(daw_tls::tlsinstance& tls);
     daw_tls::tlsinstance& getTls() const {
         return mgrImpl->tls;
@@ -219,6 +219,8 @@ public:
     void UpdateVstTime(VstTimeInfo& timeInfo, const sampleformat_t& sampleFormat, const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state) const;
 
     void onBeforeBlock(const project_globals_t& prjGlobals, double samplePos, double dTickPos, playback_state state);
+    virtual void onAudioStageChanged(audio_stage_t*) {
+    }
 
     vstplugin* getPlugin(AEffect* aeffect);
     effectbase* getPluginById(int32_t projectGlobalId, bool activeOnly = true) const;

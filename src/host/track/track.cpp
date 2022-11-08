@@ -447,21 +447,7 @@ void audio_stage_t::pluginsChanged() {
     if (routingState != audiostagerouting_state_t::CUSTOM) {
         configureDefaultRoutings();
     }
-    DAW::validateEffectRoutings(this->host, this);
-    audio_stage_t* audioStage = this;
-    while (audioStage != nullptr) {
-        guictr_plugins* pluginCtr = audioStage->m_pluginCtr;
-        if (pluginCtr) {
-            dbgassert(MainCtrl::get());
-            
-            plugin_selection& sel = MainCtrl::get()->getPluginSel();
-            if (sel.pluginCtr == pluginCtr) {
-                sel.clear();
-            }
-            pluginCtr->showTrack(audioStage);
-        }
-        audioStage = audioStage->parent;
-    }
+    host->onAudioStageChanged(this);
 }
 
 void audio_stage_t::getStageTargets(std::vector<automatable_t*>& targets) {

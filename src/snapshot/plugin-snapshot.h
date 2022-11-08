@@ -44,7 +44,7 @@ struct plugin_snapshot_t {
     track_effect_routing_snapshot_t effectRouting;
     track_modulation_routing_snapshot_t modulationRouting;
     track_id_snapshot_t stageIds;
-    plugin_ui_snapshot_t uiSnapshot;
+    std::map<int32_t, plugin_ui_snapshot_t> uiSnapshots;
     std::vector<uint8_t> dataChunk;
     std::vector<uint8_t> dataChunk2;
     std::vector<param_snapshot_t> params;

@@ -20,7 +20,6 @@ struct guictrlayout_snapshot_t : public guictrlayout_entry_snapshot_t {
     int32_t activePosition     = -1;
     std::vector<std::shared_ptr<guictrlayout_entry_snapshot_t>> entries;
     std::vector<float> splitterPositions;
-    int32_t containerTag;
 };
 
 struct dawview_layout_t {

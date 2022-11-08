@@ -153,7 +153,7 @@ struct audio_stage_t : public IDelayLineStorage {
      * backward pointer to gui containing this effect stage.
      * Used in drag/move handling
      */
-    guictr_plugins* m_pluginCtr = nullptr;
+    std::vector<std::shared_ptr<guictr_plugins>> gui; 
 
     stats_processing_timings_t procStats;
 

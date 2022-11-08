@@ -83,7 +83,8 @@ void vstplugin::onEnable() {
         bIsPostInit = true;
         postLoad();
         bool bShowWindow = this->bugfixFlags & VST2_BUG_NEED_SHOW_WINDOW_TO_LOAD_PRESET;
-        bShowWindow |= uiSnapshot.isWindowOpen;
+        bShowWindow |= bOpenWindowOnEnable;
+        bOpenWindowOnEnable = false;
         if (bShowWindow) {
             showWindow(false);
         }
@@ -403,7 +404,6 @@ void vstplugin::postLoad() {
 namespace {
 
     void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, const tracksnapshot_store_opts_t& opts) {
-        ps.version           = 11;
         ps.slot              = 0;
         ps.projectGlobalId   = plugin->projectGlobalId;
         ps.enabled           = plugin->bIsEnabled;
@@ -471,8 +471,6 @@ namespace {
 }// namespace
 
 void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
-    this->uiSnapshot = pluginSnapshot.uiSnapshot;
-    this->uiSnapshot.isValidSnapshot = true;
     this->bIsLoadingProgram = true;
     const int32_t programIdx = pluginSnapshot.currentProgram >= 0 ? pluginSnapshot.currentProgram : 0;
     VstPatchChunkInfo info{};
@@ -510,16 +508,24 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     this->dispatch(effSetProgram, 0, programIdx);
     // this->dispatch(effSetProgram, 0, programIdx);
     this->bIsLoadingProgram = false;
-    if (handle->gui && this->uiSnapshot.isValidSnapshot) {
-        handle->gui->loadSnapshot(this->uiSnapshot);
-        this->uiSnapshot.isValidSnapshot = false;
+    for (auto& [uuid, snapshot] : pluginSnapshot.uiSnapshots) {
+        bOpenWindowOnEnable |= snapshot.isWindowOpen;
+        auto gui = uiInstances.find(uuid);
+        if (gui != uiInstances.end()) {
+            gui->second->loadSnapshot(snapshot);
+        } else {
+            this->uiSnapshots[uuid] = snapshot;
+            this->uiSnapshots[uuid].isValidSnapshot = true;
+        }
     }
 }
 
 void vstplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
     createSnapshot(ps, this, opts);
-    if (handle->gui) {
-        handle->gui->makeSnapshot(ps.uiSnapshot, opts);
+    for (auto& [uuid, gui] : uiInstances) {
+        plugin_ui_snapshot_t uiSnapshot;
+        gui->makeSnapshot(uiSnapshot, opts);
+        ps.uiSnapshots[uuid] = uiSnapshot;
     }
     ps.slot = this->slot;
 }
@@ -540,43 +546,26 @@ public:
 };
 #endif
 
-guiplugin* vstplugin::makeGui() {
-
-    dbgassert(handle->hmodule || handle->axEffect);
-    if (!handle->gui) {
-        std::shared_ptr<guipluginview> view;
-        //auto vstPluginView = std::make_unique<guivstplugin>(this);
-        //view = vstPluginView;
-        //handle->gui = vstPluginView;
-        handle->gui = std::make_shared<guivstplugin>(this);
-        if (handle->gui && this->uiSnapshot.isValidSnapshot) {
-            handle->gui->loadSnapshot(this->uiSnapshot);
-            this->uiSnapshot.isValidSnapshot = false;
-        }
-        handle->gui->setTitle(StringFormat("%s (VST)", StringAsCStr(this->sName)));
-        if (handle->axEffect) {//only provided by internal vst2 instance (not a DLL)
-            guiplugin* pGuiPlugin = handle->gui.get();
-            auto* pGuiVstPlugin   = dynamic_cast<guivstplugin*>(pGuiPlugin);
-            dbgassert(pGuiVstPlugin);
-            auto* baseVst2 = dynamic_cast<BasePluginVST2*>(handle->axEffect);
-            dbgassert(baseVst2);
-            auto viewCtr = baseVst2->openViewCtrVst2(UID_VIEW_CTR_PLUGIN_CTR);
-            if (viewCtr && baseVst2 && pGuiVstPlugin) {
-                pGuiVstPlugin->viewCtr = viewCtr;
-                viewCtr->addTo(pGuiVstPlugin->viewCtrs);
-            }
+std::shared_ptr<guiplugin> vstplugin::createGuiPlugin(int32_t uuid) {
+    auto gui = std::make_shared<guivstplugin>(this);
+    gui->setTitle(StringFormat("%s (VST)", StringAsCStr(this->sName)));
+    if (handle->axEffect) {//only provided by internal vst2 instance (not a DLL)
+        guiplugin* pGuiPlugin = gui.get();
+        auto* pGuiVstPlugin   = dynamic_cast<guivstplugin*>(pGuiPlugin);
+        dbgassert(pGuiVstPlugin);
+        auto* baseVst2 = dynamic_cast<BasePluginVST2*>(handle->axEffect);
+        dbgassert(baseVst2);
+        auto viewCtr = baseVst2->openViewCtrVst2(UID_VIEW_CTR_PLUGIN_CTR);
+        if (viewCtr && baseVst2 && pGuiVstPlugin) {
+            pGuiVstPlugin->viewCtr = viewCtr;
+            viewCtr->addTo(pGuiVstPlugin->viewCtrs);
         }
     }
-
-    return handle->gui.get();
+    return gui;
 }
 
 vstplugin::~vstplugin() {
     delete handle;
-}
-
-guiplugin* vstplugin::getGui() {
-    return handle->gui.get();
 }
 
 samplecount_t vstplugin::getPluginLatency() {

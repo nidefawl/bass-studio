@@ -273,7 +273,6 @@ class DawInstance : public project_controller_t, public delete_cb {
     String lastProjectDirectory;
     int64_t tmLastSave = 0L;
     String projectPathAutosave;
-    track_t* selectedTrack = nullptr;
     std::shared_ptr<project_to_load_t> projectToLoad;
 
     ClipBoardType clipboardType = CLIPBOARD_NONE;
@@ -360,8 +359,6 @@ public:
     track_t* getTrackId(uint32_t trackId);
     void removeTrackId(uint32_t trackId);
     void unloadProject();
-    void setSelectedTrackEntry(track_gui_entry_t* trackEntry);
-    void setSelectedTrack(track_t* track);
     void preClipDelete(clip_t* clip) override;
     void preTrackDelete(track_t* clip) override;
     void setPluginClipboard(std::shared_ptr<plugin_clipboard_t> clipboard) {
@@ -443,8 +440,6 @@ public:
     void cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd);
     track_t* createNewTrack(int trackType);
     track_t* insertNewTrack(int trackInsertPos, int trackType, int flags = FLG_TRK_CHANGE_USER);
-
-    track_t* getSelectedTrack();
     bool menuCommand(const menucmd_t& command);
     void destroy();
     void updateClipViews(clip_t* notifyClip);
@@ -455,7 +450,10 @@ public:
     MainCtrl* getMainControl();
     void getTrackContainers(std::vector<guictr_tracks*>& trackContainers);
     void updateVisibleTrackContents();
+    /* called after 1-n plugins were added, removed, moved or rerouted */
     void onPluginsChanged();
+    /* called immediately after a plugin or track configuration changed */
+    void onAudioStageChanged(audio_stage_t* stage);
     void layoutTrackEditors();
     bool onChildOverlayWindowClose(window_main*);
     void setSoloState(audio_stage_ref_t ref, bool enableSolo);
@@ -481,6 +479,7 @@ protected:
     int32_t lastHoveredTrackTicks       = 0;
     int64_t tmLastRenderUpdatesMs       = 0;
 
+    track_t* selectedTrack = nullptr;
 public:
     std::vector<guictr_base*> viewGuiContainers;
     gui_asyc_progress guiCtrProgress;
@@ -527,7 +526,12 @@ public:
     waveformrender* getWaveformRenderer() {
         return this->waveformRenderer;
     }
+    track_t* getSelectedTrack() {
+        return selectedTrack;
+    }
 
+    void setSelectedTrackEntry(track_gui_entry_t* trackEntry);
+    void setSelectedTrack(track_t* track);
     void focusChanged(guibase* oldFocused, guibase* newFocused) override;
     void resetMouseContext() override;
     bool filesDropMove(ivec2 pos, KeyboardMods kbmods) override;

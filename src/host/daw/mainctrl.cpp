@@ -229,7 +229,7 @@ public:
         RIGHT,
     };
           
-    DawViewContainersMain(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_midifile& dragdropclip)
+    DawViewContainersMain(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_midifile& dragdropclip, int32_t instanceId)
         : dawCtrl(_dawCtrl),
           ctr_Left(std::make_shared<guictr_layout>()),
           ctr_Center(std::make_shared<guictr_layout>()),
@@ -237,7 +237,7 @@ public:
           ctrEntryTracks(createGuiCtrLayoutEntry(std::make_shared<guictr_tracks>(_dawCtrl, _cursor, _trackSelection, _project, _projectGlobals, dragdropclip))),
           ctrEntryNodes(createGuiCtrLayoutEntry(std::make_shared<guictr_nodes_splitview>(_cursor, _project, dragdropclip))),
           ctrEntryClipEdit(createGuiCtrLayoutEntry(std::make_shared<guictr_clipeditor>())),
-          ctrEntryPlugins(createGuiCtrLayoutEntry(std::make_shared<guictr_plugins>())),
+          ctrEntryPlugins(createGuiCtrLayoutEntry(std::make_shared<guictr_plugins>(instanceId))),
           ctr_menu(menubar),
           ctr_tempo(_project, _projectGlobals),
           ctr_pluginview(),
@@ -670,9 +670,9 @@ public:
         getSplitter(SplitterPos::RIGHT)->setWindowPosSize(ctr_Left->getRightTop(), ctr_Right->getRightBottom() - ctr_Left->getRightTop());
         getSplitter(SplitterPos::LEFT)->setWindowPosSize(ctr_Left->getLeftTop(), ctr_Right->getRightBottom() - ctr_Left->getLeftTop());
 
-        ctr_Right->postContentChanged();
-        ctr_Left->postContentChanged();
-        ctr_Center->postContentChanged();
+        // ctr_Right->postContentChanged();
+        // ctr_Left->postContentChanged();
+        // ctr_Center->postContentChanged();
 
         ctr_clipeditorview.pos = { widthLeft, winBottom - heightViewSelect - heightStatusBar };
         ctr_pluginview.pos     = { ctr_clipeditorview.right(), winBottom - heightViewSelect - heightStatusBar };
@@ -794,7 +794,7 @@ public:
 };
 
 void DawCtrl::setupView() {
-    view = new DawViewContainersMain(this, menubar, daw.projectGlobals.cursor, daw.projectGlobals.trackSelection, daw.project, daw.projectGlobals, daw.dragdropclip);
+    view = new DawViewContainersMain(this, menubar, getCursor(), daw.projectGlobals.trackSelection, daw.project, daw.projectGlobals, daw.dragdropclip, isCompanion() ? 2 : 1);
     view->resetCenterContainer();
     view->addTo(this->viewGuiContainers);
     for (guictr_base* ctr : viewGuiContainers) {
@@ -923,9 +923,9 @@ void DawInstance::unloadProject() {
     for (auto* ctrl : dawCtrls) {
         ctrl->closeContextMenu();
         ctrl->resetMouseContext();
+        ctrl->setSelectedTrack(nullptr);
     }
     projectPath = "";
-    setSelectedTrack(nullptr);
     resetClipViews();
     setEmptyClipboard();
 
@@ -1263,27 +1263,6 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
     try {
         auto mainCtrl = tls.mainCtrl;
         switch (command.command) {
-            case CMD_EXPORT_TRACK: {
-                auto selTrack = getSelectedTrack();
-                if (!selTrack) {
-                    return true;
-                }
-                track_snapshot_t snapshot(selTrack, tracksnapshot_store_opts_t::All());
-                trackcontainer_snapshot_t trackContainerSnapshot;
-                trackContainerSnapshot.tracks.push_back(snapshot);
-                String path;
-                auto exportDir = getProjectDirectory();
-                auto exportFilename = selTrack->name + "." + vFILE_TYPES_TRACKSNAPSHOT[0].ext;
-                if (promptUserFilePath(mainCtrl->window, 1, vFILE_TYPES_TRACKSNAPSHOT, path, exportDir, exportFilename)) {
-                    String ext;
-                    SplitPath(path, nullptr, nullptr, &ext);
-                    if (ext.empty()) {
-                        path += "." + vFILE_TYPES_TRACKSNAPSHOT[0].ext;
-                    }
-                    saveTrackContainer(trackContainerSnapshot, path);
-                }
-                return true;
-            }
             case CMD_IMPORT_TRACK: {
                 String path;
                 auto importDir = getProjectDirectory();
@@ -1369,15 +1348,6 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                         if (this->layoutsFromProjectFile.size() > idxOfWindow) {
                             companionCtrlStdPtr->loadLayout(this->layoutsFromProjectFile[idxOfWindow]);
                         }
-                        companionCtrlStdPtr->view->visitEntries([this](auto& entry) {
-                            if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
-                                guictr_tracks* tracksCtr = guictr_cast<guictr_tracks>(entry);
-                                for (track_t* tr : project.trackList) {
-                                    tracksCtr->addTrack(tr, FLG_TRK_CHANGE_LOAD);
-                                }
-                            }
-                            return true;
-                        });
                         companionCtrlStdPtr->fixCursor();
                         companionCtrlStdPtr->updateVisibleTrackContents();
                     }
@@ -1554,6 +1524,27 @@ bool DawCtrl::menuCommand(const menucmd_t& command) {
             updateZoomLevel(math::min(4.0f, m_scale + 0.05f));
             BaseCtrl::relayout();
             return true;
+        case CMD_EXPORT_TRACK: {
+            auto selTrack = getSelectedTrack();
+            if (!selTrack) {
+                return true;
+            }
+            track_snapshot_t snapshot(selTrack, tracksnapshot_store_opts_t::All());
+            trackcontainer_snapshot_t trackContainerSnapshot;
+            trackContainerSnapshot.tracks.push_back(snapshot);
+            String path;
+            auto exportDir = daw.getProjectDirectory();
+            auto exportFilename = selTrack->name + "." + vFILE_TYPES_TRACKSNAPSHOT[0].ext;
+            if (promptUserFilePath(window, 1, vFILE_TYPES_TRACKSNAPSHOT, path, exportDir, exportFilename)) {
+                String ext;
+                SplitPath(path, nullptr, nullptr, &ext);
+                if (ext.empty()) {
+                    path += "." + vFILE_TYPES_TRACKSNAPSHOT[0].ext;
+                }
+                saveTrackContainer(trackContainerSnapshot, path);
+            }
+            return true;
+        }
     }
     return daw.menuCommand(command);
 }
@@ -2067,10 +2058,10 @@ void MainCtrl::onTick() {
                     }
                     if (bHit) {
                         tr = DAW::getTrackFromMouse(tracksCtr->guiMgr, posRelative);
-                        if (tr && tr == lastHoveredTrack && daw.getSelectedTrack() != tr->track) {
+                        if (tr && tr == lastHoveredTrack && getSelectedTrack() != tr->track) {
                             hoverTicks = lastHoveredTrackTicks + 1;
                             if (lastHoveredTrackTicks >= 6) {
-                                daw.setSelectedTrackEntry(tr);
+                                setSelectedTrackEntry(tr);
                                 showPluginView();
                                 hoverTicks = 0;
                             }
@@ -2115,6 +2106,13 @@ void DawInstance::onPluginsChanged() {
             }
             return true;
         });
+    }
+}
+
+void DawInstance::onAudioStageChanged(audio_stage_t* stage) {
+    for (DawCtrl* pDawCtrl : dawCtrls) {
+        dbgassert(pDawCtrl->isOk());
+        pDawCtrl->getPluginSel().clear();
     }
 }
 
@@ -2614,34 +2612,19 @@ void DawCtrl::relayout(int32_t w, int32_t h) {
     layoutView(w, h);
 }
 
-void DawInstance::setSelectedTrackEntry(track_gui_entry_t* trackEntry) {
-    selectedTrack = trackEntry ? trackEntry->track : nullptr;
-    for (auto& dawCtrl : dawCtrls) {
-        dawCtrl->view->visitEntries([trackEntry](auto& entry) {
-            if (entry->getType() == gui_type::CTR_TYPE_PLUGINS) {
-                auto trackCtr = guictr_cast<guictr_plugins>(entry);
-                trackCtr->showTrack(trackEntry && trackEntry->track ? trackEntry->track->audio : nullptr);
-            }
-            return true;
-        });
-    }
+void DawCtrl::setSelectedTrackEntry(track_gui_entry_t* trackEntry) {
+    setSelectedTrack(trackEntry ? trackEntry->track : nullptr);
 }
 
-void DawInstance::setSelectedTrack(track_t* track) {
+void DawCtrl::setSelectedTrack(track_t* track) {
     selectedTrack = track;
-    for (auto& dawCtrl : dawCtrls) {
-        dawCtrl->view->visitEntries([track](auto& entry) {
-            if (entry->getType() == gui_type::CTR_TYPE_PLUGINS) {
-                auto trackCtr = guictr_cast<guictr_plugins>(entry);
-                trackCtr->showTrack(track ? track->audio : nullptr);
-            }
-            return true;
-        });
-    }
-}
-
-track_t* DawInstance::getSelectedTrack() {
-    return selectedTrack;
+    view->visitEntries([track](auto& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_PLUGINS) {
+            auto spCtrPlugins = std::static_pointer_cast<guictr_plugins>(entry->getSharedGui());
+            spCtrPlugins->showTrack(track ? track->audio : nullptr, spCtrPlugins);
+        }
+        return true;
+    });
 }
 
 void DawCtrl::addTrackToView(track_t* track, int flags) {
@@ -2681,8 +2664,8 @@ void DawCtrl::updateVisibleTrackContents() {
     view->visitEntries([](auto& ctr) {
         if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
             auto trackCtr = guictr_cast<guictr_tracks>(ctr);
+            trackCtr->updateVisibleTracks();
             if (trackCtr->isVisible()) {
-                trackCtr->updateVisibleTracks();
                 double scrollPixelOffset = trackCtr->getScrollOffsetPixels();
                 trackCtr->layout();
                 trackCtr->layoutVisibleTracks();
@@ -2907,7 +2890,7 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
             return true;
         }
         case CMD_SOLO: {
-            auto selTrack = daw.selectedTrack;
+            auto selTrack = getSelectedTrack();
             if (selTrack && selTrack->audio && kevt.type == KeyboardState::K_PRESS) {
                 auto lock = daw.lockPlayThread();
                 bool isSolo = (selTrack->audio->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE;
@@ -2933,8 +2916,7 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
                         view->storeLayout(layouts[index]);
                         saveDawViewLayoutSnapshot(layouts[index], StringFormat("data/view%zu.layout", index));
                     } else {
-                        view->loadLayout(layouts[index]);
-                        relayout();
+                        loadLayout(layouts[index]);
                         dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
                     }
                     return true;
@@ -3248,11 +3230,14 @@ void MainCtrl::destroy() {
 }
 
 void CompanionCtrl::destroy() {
-    auto ctrTracks = getTrackContainer();
-    //TODO: layout settings should be handled on editor container level
-    if (ctrTracks) {
-        auto& settings = daw_tls::getSettings();
-        settings.wndCompanion.dens = ctrTracks->getGrid().grid_dens;
+    {
+        auto ctrTracks = getTrackContainer();
+        //TODO: layout settings should be handled on editor container level
+        if (ctrTracks) {
+            auto& settings = daw_tls::getSettings();
+            settings.wndCompanion.dens = ctrTracks->getGrid().grid_dens;
+        }
+        ctrTracks.reset();
     }
     DawCtrl::destroy();
 }
@@ -3439,6 +3424,8 @@ void DawCtrl::storeLayout(dawview_layout_t& layout) {
 void DawCtrl::loadLayout(const dawview_layout_t& viewLayout) {
     view->loadLayout(viewLayout);
     dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
+    updateVisibleTrackContents();
+    relayout();
 }
 
 void DawInstance::setEmptyClipboard() {

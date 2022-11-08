@@ -905,7 +905,7 @@ void gui_track::renderTrackFolded(NVGcontext* vg) {
 void gui_track::render(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg))
         return;
-    if (dawCtrl->getDaw()->getSelectedTrack() == m_track) {
+    if (dawCtrl->getSelectedTrack() == m_track) {
         nvgBeginPath(vg);
         nvgRect(vg, pos.x, pos.y, size.x, size.y);
         nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_SELECTEDTRACK));

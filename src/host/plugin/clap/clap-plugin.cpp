@@ -54,7 +54,6 @@ namespace {
     };
 
     void createSnapshot(plugin_snapshot_t& ps, clapplugin* plugin, const clap_plugin* clapPlugin, const clap_plugin_state* _pluginState, const tracksnapshot_store_opts_t& opts) {
-        ps.version           = 11;
         ps.slot              = 0;
         ps.projectGlobalId   = plugin->projectGlobalId;
         ps.enabled           = plugin->bIsEnabled;
@@ -129,42 +128,37 @@ namespace {
 }// namespace
 
 void clapplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
-    this->uiSnapshot                 = pluginSnapshot.uiSnapshot;
-    this->uiSnapshot.isValidSnapshot = true;
     if (_pluginState) {
         clap_snapshot_istream clapByteStream{ pluginSnapshot.dataChunk };
         _pluginState->load(_plugin, &clapByteStream);
     }
     DAW::loadEffectParamsFromSnapshot(pluginSnapshot, this);
-    if (dawHandles->gui && this->uiSnapshot.isValidSnapshot) {
-        dawHandles->gui->loadSnapshot(this->uiSnapshot);
-        this->uiSnapshot.isValidSnapshot = false;
+    for (auto& [uuid, snapshot] : pluginSnapshot.uiSnapshots) {
+        bOpenWindowOnEnable |= snapshot.isWindowOpen;
+        auto gui = dawHandles->gui.find(uuid);
+        if (gui != dawHandles->gui.end()) {
+            gui->second->loadSnapshot(snapshot);
+        } else {
+            this->uiSnapshots[uuid] = snapshot;
+            this->uiSnapshots[uuid].isValidSnapshot = true;
+        }
     }
 }
 
 void clapplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
     createSnapshot(ps, this, _plugin, _pluginState, opts);
-    if (dawHandles->gui) {
-        dawHandles->gui->makeSnapshot(ps.uiSnapshot, opts);
+    for (auto& [uuid, gui] : dawHandles->gui) {
+        plugin_ui_snapshot_t uiSnapshot;
+        gui->makeSnapshot(uiSnapshot, opts);
+        ps.uiSnapshots[uuid] = uiSnapshot;
     }
     ps.slot = this->slot;
 }
 
-guiplugin* clapplugin::makeGui() {
-    if (!dawHandles->gui) {
-        dawHandles->gui = std::make_shared<guiclapplugin>(this);
-        if (dawHandles->gui && this->uiSnapshot.isValidSnapshot) {
-            dawHandles->gui->loadSnapshot(this->uiSnapshot);
-            this->uiSnapshot.isValidSnapshot = false;
-        }
-        dawHandles->gui->setTitle(StringFormat("%s (Clap)", StringAsCStr(this->sName)));
-    }
-
-    return dawHandles->gui.get();
-}
-
-guiplugin* clapplugin::getGui() {
-    return dawHandles->gui.get();
+std::shared_ptr<guiplugin> clapplugin::createGuiPlugin(int32_t uuid) {
+    auto gui = std::make_shared<guiclapplugin>(this);
+    gui->setTitle(StringFormat("%s (Clap)", StringAsCStr(this->sName)));
+    return gui;
 }
 
 clapplugin::clapplugin(DAW::Host::PluginManager& pluginMgr, String filePath, const String& name, uint32_t uId, int32_t globalId, IHostCallback* hostcallback)

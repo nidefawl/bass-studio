@@ -70,6 +70,7 @@ public:
     bool isSynth                   = false;
     bool bWindowPosSizeValid       = false;
     bool bInEditIdle               = false;
+    bool bOpenWindowOnEnable       = false;
     int32_t slot                   = -1;
     int midiEventsDispatched       = 0;
     audio_stage_t* trackImpl       = nullptr;
@@ -84,7 +85,8 @@ public:
     String sProductName;
     String sVendorName;
     stats_processing_timings_t procStats;
-    plugin_ui_snapshot_t uiSnapshot{};
+    std::map<int32_t, plugin_ui_snapshot_t> uiSnapshots;
+    std::map<int32_t, std::shared_ptr<guiplugin>> uiInstances;
     SafeRef<effectbase> safeRef;
     int32_t requestCaptureGUI    = 0;
 protected:
@@ -107,6 +109,11 @@ public:
     effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId, IHostCallback* _hostCallback);
     ~effectbase() override;
     
+    guiplugin* getPluginGui(int32_t uuid);
+    virtual std::shared_ptr<guiplugin> createGuiPlugin(int32_t uuid) {
+        return nullptr;
+    }
+
     SafeRef<effectbase> makeSafeRef();
     PluginType getPluginType() const { return static_cast<PluginType>(pluginType); }
     String getName() const { return sName; };
@@ -134,8 +141,6 @@ public:
     virtual bool hasAutomationModulationOutput() const {
         return false;
     }
-    virtual guiplugin* makeGui() = 0;
-    virtual guiplugin* getGui()  = 0;
 
     virtual void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) = 0;
     virtual void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) = 0;
@@ -249,8 +254,7 @@ public:
     String getInfo(std::vector<String>& list) override;
     int getModuleType() override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
-    guiplugin* makeGui() override;
-    guiplugin* getGui() override;
+    std::shared_ptr<guiplugin> createGuiPlugin(int32_t uuid) override;
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     bool hasWindowEditor() override {
         return false;

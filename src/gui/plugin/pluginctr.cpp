@@ -1,5 +1,7 @@
+#include <__algorithm/remove_if.h>
 #include <deque>
 #include <memory>
+#include <vector>
 #include "assert_dbg.h"
 #include "commands.h"
 #include "compiler.h"
@@ -84,7 +86,9 @@ guibase* guictr_plugins::getDraggedControl() {
     if (isSelected()) {
         auto& sel = dawCtrl->getPluginSel();
         setDraggedPluginsUI(sel.pluginCtr->dragged, sel);
-        return &sel.pluginCtr->dragged;
+        if (!sel.pluginCtr->dragged.effects.empty()) {
+            return &sel.pluginCtr->dragged;
+        }
     }
     return this;
 }
@@ -135,7 +139,7 @@ void guictr_plugins::onAdded() {
     }
 }
 void guictr_plugins::addGui(effectbase* plugin) {
-    guiplugin* base = plugin->makeGui();
+    guiplugin* base = plugin->getPluginGui(this->uuid);
     if (base) {
         add(base);
     }
@@ -223,14 +227,14 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
                 sel.lastSelection--;
                 getSelectedEffects(sel, selection);
                 if (!selection.empty())
-                    ctr->makeVisisble(selection.front()->getGui());
+                    ctr->makeVisible(selection.front());
 
             } else if (cursorDir.x > 0 && sel.lastSelection < CtrSize(effectChain) - 1&& sel.firstSelection <= sel.lastSelection) {
                 sel.firstSelection++;
                 sel.lastSelection++;
                 getSelectedEffects(sel, selection);
                 if (!selection.empty())
-                    ctr->makeVisisble(selection.back()->getGui());
+                    ctr->makeVisible(selection.back());
             }
             return cursorDir.x != 0;
         } break;
@@ -352,15 +356,6 @@ bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
     return false;
 }
 
-void guictr_plugins::hideTrack(audio_stage_t* _track) {
-    if (this->stage == _track) {
-        this->stage->m_pluginCtr = nullptr;
-        this->track            = nullptr;
-        this->stage            = nullptr;
-        removeGuis();
-        layout();
-    }
-}
 void guictr_plugins::onSelected(MouseEvent& evt, guiplugin* plugin) {
     plugin_selection& sel = MainCtrl::get()->getPluginSel();
     if (isShift(evt.kbmods)) {
@@ -381,9 +376,10 @@ void guictr_plugins::onSelected(MouseEvent& evt, guiplugin* plugin) {
 }
 void guictr_plugins::onChildLayoutChanged(guibase* g) {
     if (!isDefaultPluginCtr) {
-        parent->onChildLayoutChanged(this);
+        if (parent)
+            parent->onChildLayoutChanged(this);
     } else {
-        showTrack(this->stage);
+        relayout();
     }
 }
 uint32_t guictr_plugins::getTitlebarColorFromState(int32_t flags) {
@@ -432,9 +428,7 @@ void guictr_plugins::render(NVGcontext* vg) {
     }
     nvgResetTransform(vg);
 }
-void guictr_plugins::relayout() {
-    showTrack(this->stage);
-}
+
 void guictr_plugins::getEffects(std::vector<effectbase*>& out) {
     if (!this->stage) {
         out.clear();
@@ -443,28 +437,74 @@ void guictr_plugins::getEffects(std::vector<effectbase*>& out) {
     }
     out = this->stage->effects;// copy
 }
-void guictr_plugins::showTrack(audio_stage_t* audio) {
+
+void guictr_plugins::showTrack(audio_stage_t* stage, std::shared_ptr<guictr_plugins>& ctr) {
+    if (this->stage != stage) {
+        if (this->stage) {
+            auto& guiList = this->stage->gui;
+            guiList.erase(
+                std::remove_if(
+                    guiList.begin(),
+                    guiList.end(), 
+                    [ptr=this](auto& x) {
+                            return x.get() == ptr; 
+                }),
+                guiList.end()
+            );
+        }
+    }
+    this->track = stage ? stage->getTrack() : nullptr;
+    this->stage = stage;
+    if (stage) {
+        auto it = std::find_if(stage->gui.begin(), stage->gui.end(), [ptr=this](auto& x) { return x.get() == ptr; });
+        if (it == stage->gui.end()) {
+            stage->gui.push_back(ctr);
+        }
+    }
+    relayout();
+}
+void guictr_plugins::resetTrackIf(audio_stage_t* _stage) {
+    if (this->stage == _stage) {
+        hideTrack();
+    }
+}
+
+void guictr_plugins::hideTrack() {
     removeGuis();
     if (this->stage) {
-        this->stage->m_pluginCtr = nullptr;
+        auto& guiList = this->stage->gui;
+        guiList.erase(
+            std::remove_if(
+                guiList.begin(),
+                guiList.end(), 
+                [ptr=this](auto& x) {
+                        return x.get() == ptr; 
+            }),
+            guiList.end()
+        );
     }
-    this->track = audio ? audio->getTrack() : nullptr;
-    this->stage = audio;
+    this->track            = nullptr;
+    this->stage            = nullptr;
+    layout();
+}
+
+void guictr_plugins::relayout() {
+    removeGuis();
     String name;
+    auto audio = this->stage;
     if (audio && this->track) {
-        audio->m_pluginCtr = this;
         if (!audio->effects.empty()) {
-            for (effectbase* vst : audio->effects) {
-                addGui(vst);
+            for (effectbase* plugin : audio->effects) {
+                addGui(plugin);
             }
         } else
-            add(&placeholder);
+            add(&pluginCtrEmpty);
         switch (track->type) {
             case TRACK_TYPE_MIDI:
-                placeholder.message = "Drop Instruments here";
+                pluginCtrEmpty.message = "Drop Instruments here";
                 break;
             default:
-                placeholder.message = "Drop Effects here";
+                pluginCtrEmpty.message = "Drop Effects here";
                 break;
         }
         name = audio->getTrack()->name;
@@ -540,10 +580,8 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
         daw->pushHist(track_action);
         daw->onPluginsChanged();
     }
-    showTrack(stage);
-    if (this->parent) {
-        this->parent->onChildLayoutChanged(this);
-    }
+    relayout();
+    onChildLayoutChanged(this);
 }
 void guictr_dragged_plugins::handleDraggedRelease(MouseEvent& evt) {
     dawCtrl->objectDragRelease(this, evt);
@@ -597,7 +635,8 @@ void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousep
         dbgassert(ptr->getTrackLink() == srcStage);
     }
 #endif // NDEBUG
-
+    if (g->effects.empty()) 
+        return;
     int highlightSlot = slotFromCoord(mousepos);
     if (this->stage == srcStage) {
         int first = g->effects.front()->getSlot();
@@ -647,7 +686,8 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
 void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
     dawCtrl->getDragDropTarget().reset();
     if (!this->stage) return;
-    dbgassert(g->effects.size());
+    if (g->effects.empty()) 
+        return;
 
     audio_stage_t* srcStage          = g->getTrackLink();
     audio_stage_t* thisStageOrParent = this->stage;
@@ -691,10 +731,8 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
             daw->pushHist(new action_shift_modules("Move plugin", ref, targetslot, first, last - first + 1));
         }
         daw->onPluginsChanged();
-        if (this->parent) {
-            this->parent->onChildLayoutChanged(this);
-        }
-        showTrack(stage);
+        relayout();
+        onChildLayoutChanged(this);
     }
 }
 void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
@@ -727,10 +765,8 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
             daw->pushHist(new action_shift_modules("Move plugin", ref, targetslot, curSlot, 1));
         }
         daw->onPluginsChanged();
-        if (this->parent) {
-            this->parent->onChildLayoutChanged(this);
-        }
-        showTrack(stage);
+        onChildLayoutChanged(this);
+        relayout();
     }
 }
 
@@ -954,17 +990,17 @@ void guictr_plugins::setScrolloffset(int offset) {
     }
 }
 
-void guictr_plugins::makeVisisble(guibase* entry) {
+void guictr_plugins::makeVisible(effectbase* plugin) {
     int w          = getSizeContent().x;
     int totalWidth = getTotalWidth();
-    if (w < totalWidth && entry) {
-        int x = entry->pos.x;
-        if (x < scrolloffset) {
-            scrolloffset = x;
-        } else if (x + entry->size.x > scrolloffset + w) {
-            scrolloffset = x + entry->size.x - w;
-        }
-    }
+    // if (w < totalWidth && entry) {
+    //     int x = entry->pos.x;
+    //     if (x < scrolloffset) {
+    //         scrolloffset = x;
+    //     } else if (x + entry->size.x > scrolloffset + w) {
+    //         scrolloffset = x + entry->size.x - w;
+    //     }
+    // }
 }
 
 vec2 guictr_pluginview::getScale() {

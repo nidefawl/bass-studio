@@ -716,7 +716,7 @@ void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& ev
     }
     trSelected    = nullptr;
     subTrSelected = nullptr;
-    daw->setSelectedTrackEntry(trNxtSelected);
+    dawCtrl->setSelectedTrackEntry(trNxtSelected);
 }
 void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
     selectionMoved      = false;
@@ -727,7 +727,7 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
     track_gui_entry_t* trackClicked = DAW::getTrackFromMouse(iGuiMgr, local);
 
     if (trackClicked) {
-        dawCtrl->getDaw()->setSelectedTrackEntry(trackClicked);
+        dawCtrl->setSelectedTrackEntry(trackClicked);
     }
 
     action.dragtype  = DRAG_NONE;
@@ -861,7 +861,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
             ivec2 local                      = evt.relMousepos;
             track_gui_entry_t* trNxtSelected = DAW::getTrackFromMouseClosest(iGuiMgr, local);
             if (trNxtSelected) {
-                daw->setSelectedTrackEntry(trNxtSelected);
+                dawCtrl->setSelectedTrackEntry(trNxtSelected);
             }
             bool bCopyAutomation = daw_tls::getTls().runtime->copyAutomation;
             if (selectionMoved && trNxtSelected) {

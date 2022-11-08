@@ -34,10 +34,11 @@
 class guimodule_group : public guiplugin {
 public:
     module_group* const module;
-    guictr_plugins ctr;
-    explicit guimodule_group(module_group* _vst);
+    int32_t uuid = 0;
+    std::shared_ptr<guictr_plugins> ctr;
+    guimodule_group(module_group* _vst, int32_t _uuid);
     ~guimodule_group() override {
-        remove(&ctr);
+        remove(ctr.get());
     }
     void render(NVGcontext* vg) override;
     void buttonClicked(guibase* _button) override;
@@ -48,41 +49,44 @@ public:
 
         const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
         int32_t meterW    = math::max(16, (int32_t) (theme->get(GuiConstant::CONST_METER_WIDTH) * hpt / 32.0));
-        ctr.pos           = ivec2(hpt, 0);
+        ctr->pos           = ivec2(hpt, 0);
 
         if (layoutMode == 0) {
-            ctr.size = { prefSize.y, prefSize.y };
-            ctr.layout();
+            ctr->size = { prefSize.y, prefSize.y };
+            ctr->layout();
         } else {
-            ctr.size = { 0, prefSize.y };
+            ctr->size = { 0, prefSize.y };
         }
-        prefSize.x = hpt + ctr.size.x + meterW;
+        prefSize.x = hpt + ctr->size.x + meterW;
     }
     void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
-        ctr.setVisible(layoutMode == 0);
+        ctr->setVisible(layoutMode == 0);
     }
     void removeGuis() override {
-        removeUNCHECKED(&ctr);
+        removeUNCHECKED(ctr.get());
         for (guibase* g : guis) {
             g->onRemove();
             g->setParent(nullptr);
         }
         guis.clear();
-        addUNCHECKED(&ctr);
+        addUNCHECKED(ctr.get());
     }
     void onAdded() override {
-        ctr.showTrack(module->getAudioStage());
+        ctr->showTrack(module->getAudioStage(), ctr);
     }
 };
 
-guimodule_group::guimodule_group(module_group* _vst)
+guimodule_group::guimodule_group(module_group* _vst, int32_t _uuid)
     : guiplugin(_vst),
-      module(_vst) {
+      module(_vst),
+      uuid(_uuid),
+      ctr(std::make_shared<guictr_plugins>(_uuid)) {
     isHorizontalTitle      = false;
-    ctr.isDefaultPluginCtr = false;
-    ctr.margin = ctr.padding = 0;
-    add(&ctr);
+    ctr->isDefaultPluginCtr = false;
+    ctr->margin = ctr->padding = 0;
+    add(ctr.get());
 }
+
 void guimodule_group::onChildLayoutChanged(guibase* g) {
     layout();
     if (this->parent != nullptr) {
@@ -93,9 +97,9 @@ void guimodule_group::onChildLayoutChanged(guibase* g) {
 void guimodule_group::render(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg))
         return;
-    dbgassert(ctr.parent == this);
+    dbgassert(ctr->parent == this);
     dragdrop_target_indicator_t& target = dawCtrl->getDragDropTarget();
-    bool extend = target.dst == &this->ctr;
+    bool extend = target.dst == this->ctr.get();
     int extX    = 8;
     if (extend) {
         size.x += extX;
@@ -103,7 +107,7 @@ void guimodule_group::render(NVGcontext* vg) {
     renderBase(vg);
     if (layoutMode == 0) {
         nvgSave(vg);
-        ctr.render(vg);
+        ctr->render(vg);
         nvgRestore(vg);
     }
     for (auto* btn : guiButtonsTitlebar) {
@@ -128,13 +132,13 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             if (layoutMode != 0) {
                 return false;
             }
-            if (ctr.isVisible() && ctr.mouseHitTest(localMouse, evt)) {
+            if (ctr->isVisible() && ctr->mouseHitTest(localMouse, evt)) {
                 return true;
             }
             const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
             if (localMouse.x <= hpt - 10 || localMouse.x > size.x - hpt + 10)
                 return false;
-            evt.requestFocus(&this->ctr);
+            evt.requestFocus(this->ctr.get());
             return true;
         }
         for (guibase* gui : guis) {
@@ -142,7 +146,7 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 return true;
             }
         }
-        if (ctr.isVisible() && ctr.mouseHitTest(localMouse, evt)) {
+        if (ctr->isVisible() && ctr->mouseHitTest(localMouse, evt)) {
             return true;
         }
         if (isShift(evt.kbmods)) {
@@ -167,13 +171,12 @@ void guimodule_group::buttonClicked(guibase* _button) {
 
 
 struct module_group::internal_handles_t {
-    std::unique_ptr<guimodule_group> gui;
-    DAW::Host::process_scratch_buf_t scratch;
+    DAW::Host::process_scratch_buf_t scratch{};
 };
 
 module_group::module_group(int32_t _projectGlobalId, IHostCallback* _hostCallback)
     : internalplugin("Group", PLUGIN_TYPE_GROUP, _projectGlobalId, _hostCallback),
-      handle(new module_group::internal_handles_t{ nullptr, {} }),
+      handle(new module_group::internal_handles_t{}),
       audio(nullptr)
 {
     bCanReceiveMidi = true;
@@ -199,22 +202,10 @@ module_group::~module_group() {
     delete handle;
 }
 
-guiplugin* module_group::makeGui() {
-    if (!handle->gui) {
-        dbgassert(this->audio);
-        handle->gui = std::make_unique<guimodule_group>(this);
-        handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
-        this->audio->m_pluginCtr = &this->handle->gui->ctr;
-        handle->gui->ctr.stage = this->audio;
-        handle->gui->ctr.track = this->audio->getTrack();
-    }
-    return handle->gui.get();
-    //return handle->gui;
-}
-
-guiplugin* module_group::getGui() {
-    return handle->gui.get();
-    //return handle->gui;
+std::shared_ptr<guiplugin> module_group::createGuiPlugin(int32_t uuid) {
+    auto gui = std::make_shared<guimodule_group>(this, uuid);
+    gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
+    return gui;
 }
 
 samplecount_t module_group::getPluginLatency() {
@@ -229,10 +220,10 @@ void module_group::onDisable() {
 
 void module_group::onPreUnload() {
     dbgassert(this->audio);
-    if (this->audio->m_pluginCtr == &this->handle->gui->ctr) {
-        this->handle->gui->ctr.showTrack(nullptr);
-        this->audio->m_pluginCtr = nullptr;
-    }
+    // if (this->audio->m_pluginCtr == &this->handle->gui->ctr) {
+    //     this->handle->gui->ctr.showTrack(nullptr);
+    //     this->audio->m_pluginCtr = nullptr;
+    // }
     std::vector<effectbase*> effects = this->audio->effects;// make a copy before unloading plugins
     for (effectbase* effect : effects) {
         pluginMgr->unloadPlugin(effect);

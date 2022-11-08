@@ -344,8 +344,8 @@ bool guictxtmenu_plugin::clickedElement(ctxtmenu_entry* e, int _id) {
     // return guictxtmenu::clickedElement(e, _id);
     ThreadLock lock = dawCtrl->lockPlayThread();
     if (_id == CMD_SHOW_PARAM_LIST && effectOptional) {
-        auto* gui = effectOptional->getGui();
-        if (gui) {
+        auto* gui = effectOptional->getPluginGui(dawCtrl->isCompanion() ? 1 : 0);
+        if (effectOptional) {
             guictr_properties_table* dbgPropertiesCtrPopup = guictr_properties_table::MakeUniquePropertiesCtr();
             guictxtmenu_base* ctxtMenu                     = new guictxtmenu_base();
             ctxtMenu->setBackgroundRendered(true);

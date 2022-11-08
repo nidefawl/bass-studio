@@ -11,6 +11,7 @@
 #include "host/daw/mainctrl.h"
 #include "math/vec.h"
 #include "gui/plugin/plugin.h"
+#include <memory>
 
 class vstplugin;
 class effectbase;
@@ -119,30 +120,33 @@ public:
 
 class guictr_plugins : public guictr_base {
 public:
-    guiplaceholder placeholder;
+    guiplaceholder pluginCtrEmpty;
     guictr_dragged_plugins dragged;
     track_t* track          = nullptr;
     audio_stage_t* stage    = nullptr;
     int scrolloffset        = 0;
     bool isDefaultPluginCtr = true;
-
+    int32_t uuid = 0;
+    
 public:
-    guictr_plugins() : guictr_base() {
+    explicit guictr_plugins(int32_t uuid) 
+    : guictr_base(),
+        uuid(uuid) {
         setGuiType(gui_type::CTR_TYPE_PLUGINS);
         setCanMouseHit(true);
         setBackgroundRendered(true);
         dragged.setParent(this);
     }
     ~guictr_plugins() override {
-        removeEntry(guis, &placeholder);
+        removeEntry(guis, &pluginCtrEmpty);
         guis.clear();
     }
     void setControl(BaseCtrl* parentCtrl) override {
         guictr_base::setControl(parentCtrl);
-        placeholder.setControl(parentCtrl);
+        pluginCtrEmpty.setControl(parentCtrl);
         dragged.setControl(parentCtrl);
     }
-    void makeVisisble(guibase* g);
+    void makeVisible(effectbase* plugin);
     void setScrolloffset(int offset);
     ivec2 toContainerSpace(ivec2 in) const override {
         ivec2 offsetPos = in - getPosContent();
@@ -205,10 +209,11 @@ public:
     void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
     void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override;
     void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override;
-    void showTrack(audio_stage_t* track);
-    void hideTrack(audio_stage_t* track);
-    void onSelected(MouseEvent& evt, guiplugin* plugin);
+    void showTrack(audio_stage_t* track, std::shared_ptr<guictr_plugins>& ctr);
     void relayout();
+    void resetTrackIf(audio_stage_t* _track);
+    void hideTrack();
+    void onSelected(MouseEvent& evt, guiplugin* plugin);
     void addGui(effectbase* plugin);
     void onChildLayoutChanged(guibase* g) override;
     void determineSize(ivec2& prefSize) override;

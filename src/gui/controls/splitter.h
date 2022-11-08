@@ -70,8 +70,14 @@ public:
     float getScale() const {
         return this->scale;
     }
+    float getScaleClamped() const {
+        return math::clamp(scale, scaleMin, scaleMax);
+    }
     void setScale(float f) {
         this->scale = f;
+    }
+    void setScaleClamped(float f) {
+        this->scale = math::clamp(f, scaleMin, scaleMax);
     }
     float getMin() const {
         return scaleMin;

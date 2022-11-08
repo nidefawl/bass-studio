@@ -575,7 +575,7 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override {
         gui_graph_entry::handleDraggedBegin(evt);
         if (node->trackOptional)
-            dawCtrl->getDaw()->setSelectedTrack(node->trackOptional);
+            dawCtrl->setSelectedTrack(node->trackOptional);
     }
 
     void handleDraggedRelease(MouseEvent& evt) override {
@@ -1195,7 +1195,7 @@ void gui_graph::updateList(bool resetPositions) {
             if (groupSelected) {
                 lastProcessingList = groupSelected->getLastProcessingGraph();
             } else {
-                auto track = daw->getSelectedTrack();
+                auto track = dawCtrl->getSelectedTrack();
                 if (track && track->audio) {
                     std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
                     if (!DAW::buildEffectProcessingGraph(host, nullptr, track->audio, effProcessingGraph)) {
@@ -1412,7 +1412,7 @@ void guictr_nodes_editor::resetRouting() {
                     audio->configureDefaultRoutings();
                 }
             } else {
-                auto track = daw->getSelectedTrack();
+                auto track = dawCtrl->getSelectedTrack();
                 if (track && track->audio) {
                     track->audio->configureDefaultRoutings();
                 }

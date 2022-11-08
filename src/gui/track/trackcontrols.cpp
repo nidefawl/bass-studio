@@ -1368,7 +1368,7 @@ public:
                 DAW::OpenRenameTrackPopup(dawCtrl, m_trackentry);
             return;
         }
-        dawCtrl->getDaw()->setSelectedTrack(m_track);
+        dawCtrl->setSelectedTrack(m_track);
         if (isResize(evt.relMousepos + this->pos)) {
             dragMode = DRAG_RESIZE;
         }
@@ -1420,7 +1420,6 @@ public:
             return;
         }
         NVGcolor color = rgbToNvg(m_track->rgb);
-        DawInstance* daw      = dawCtrl->getDaw();
         const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         const int rectHeight  = math::min(titleHeight, size.y);
         nvgBeginPath(vg);
@@ -1428,7 +1427,7 @@ public:
         nvgFillColor(vg, color);
         nvgFill(vg);
 
-        if (daw->getSelectedTrack() == m_track) {
+        if (dawCtrl->getSelectedTrack() == m_track) {
             NVGcolor color2 = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK_TITLE);
             int right       = hideTrack.right() + (hideTrack.pos.x) /*inset*/;
             nvgBeginPath(vg);
@@ -1549,7 +1548,7 @@ public:
         return false;
     }
     void handleDraggedBegin(MouseEvent& evt) override {
-        dawCtrl->getDaw()->setSelectedTrack(m_track);
+        dawCtrl->setSelectedTrack(m_track);
         if (isResize(evt.relMousepos + this->pos)) {
             dragMode = DRAG_RESIZE;
         }
@@ -1653,7 +1652,7 @@ void gui_track_controls::render(NVGcontext* vg) {
         return;
     }
     auto bgColor     = theme->getColor(GuiColor::COL_BG_BRT);
-    if (dawCtrl->getDaw()->getSelectedTrack() == m_track) {
+    if (dawCtrl->getSelectedTrack() == m_track) {
         bgColor = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK);
     }
     nvgBeginPath(vg);
@@ -1756,7 +1755,7 @@ gui_track_content_base::gui_track_content_base(track_gui_entry_t* _entry, scaled
 }
 
 void gui_track_controls::handleDraggedBegin(MouseEvent& evt) {
-    dawCtrl->getDaw()->setSelectedTrack(m_track);
+    dawCtrl->setSelectedTrack(m_track);
     if (isResize(evt.relMousepos + this->pos)) {
         dragMode = DRAG_RESIZE;
     }
@@ -1835,9 +1834,8 @@ void gui_track_content_base::pluginMultiDragMove(guictr_dragged_plugins* g, ivec
 
 void gui_track_content_base::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
     auto daw = dawCtrl->getDaw();
-    auto mainCtrl = daw->getMainControl();
-    mainCtrl->showPluginView();
-    daw->setSelectedTrackEntry(m_trackentry);    // gui_ctr_plugins receiving list of effectbase
+    dawCtrl->showPluginView();
+    dawCtrl->setSelectedTrackEntry(m_trackentry);    // gui_ctr_plugins receiving list of effectbase
     dawCtrl->getDragDropTarget().reset();
     dbgassert(g->effects.size());
 
@@ -1884,8 +1882,9 @@ void gui_track_content_base::pluginMultiDragRelease(guictr_dragged_plugins* g, i
             daw->pushHist(new action_shift_modules("Move plugin", ref, targetslot, first, last - first + 1));
         }
         daw->onPluginsChanged();
-        if (dstStage->m_pluginCtr)
-            dstStage->m_pluginCtr->makeVisisble(g->effects.back()->getGui());
+        for (auto& gui : dstStage->gui) {
+            gui->makeVisible(g->effects.back());
+        }
     }
 }
 
@@ -1918,9 +1917,8 @@ void gui_track_content_base::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 
 
 void gui_track_content_base::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
     auto daw = dawCtrl->getDaw();
-    auto mainCtrl = daw->getMainControl();
-    mainCtrl->showPluginView();
-    daw->setSelectedTrackEntry(m_trackentry);  
+    dawCtrl->showPluginView();
+    dawCtrl->setSelectedTrackEntry(m_trackentry);  
     auto const pluginMgr = daw->getPluginManager();
     auto& dragDropTarget = dawCtrl->getDragDropTarget();
     dragDropTarget.reset();
@@ -1936,8 +1934,9 @@ void gui_track_content_base::pluginEntryDragRelease(gui_pluginlist_entry* g, ive
         auto* track_action = new action_insert_effect("Insert plugin", effect, refdst, dstSlot);
         daw->pushHist(track_action);
         daw->onPluginsChanged();
-        if (dstStage->m_pluginCtr)
-            dstStage->m_pluginCtr->makeVisisble(effect->getGui());
+        for (auto& gui : dstStage->gui) {
+            gui->makeVisible(effect);
+        }
     }
 }
 
@@ -2195,7 +2194,7 @@ public:
         addEntry(cmdReactivateAutomation = new ctxtmenu_entry("Reactivate all automation", 7));
         addEntry(new ctxtmenu_splitter());
         addEntry(cmdPickColor = new ctxtmenu_color_select("Pick Color", 100));
-        _dawCtrl->getDaw()->setSelectedTrack(m_trackentry->track);
+        _dawCtrl->setSelectedTrack(m_trackentry->track);
         addEntry(new ctxtmenu_splitter());
         addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_EXPORT_TRACK));
         addEntry(new ctxtmenu_entry(_dawCtrl, GlobalCommandType::CMD_IMPORT_TRACK));

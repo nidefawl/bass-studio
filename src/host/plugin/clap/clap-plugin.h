@@ -44,7 +44,7 @@ struct ClapPluginDescription {
 class clapplugin : public effectbase {
 public:
     struct daw_handles_t {
-        std::shared_ptr<guiplugin> gui;
+        std::map<int32_t, std::unique_ptr<guiplugin>> gui;
         uint32_t localCurrentUniqueId = 0;
         samplecount_t currentLatency = 0;
         struct param_editing_t {
@@ -74,8 +74,7 @@ public:
         return this->sName;
     }
     clap_event_transport_t& getTransport() { return dawHandles->transport; }
-    guiplugin* makeGui() override;
-    guiplugin* getGui() override;
+    std::shared_ptr<guiplugin> createGuiPlugin(int32_t uuid) override;
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;

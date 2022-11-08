@@ -122,8 +122,7 @@ public:
 
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override;
-    guiplugin* makeGui() override;
-    guiplugin* getGui() override;
+    std::shared_ptr<guiplugin> createGuiPlugin(int32_t uuid) override;
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     void processMidi(midi_data_processing_t& midiEvents) override;
     void sendNotesOff() override;

@@ -30,7 +30,6 @@ struct track_impl_t;
 class internalplugin : public effectbase {
 public:
     struct internalplugin_handles_t {
-        std::unique_ptr<guiinternalpluginview> gui;
     };
 protected:
     struct internal_plugin_window_client {
@@ -54,8 +53,7 @@ public:
 
     samplecount_t getPluginLatency() override { return 0; };
 
-    guiplugin* makeGui() override;
-    guiplugin* getGui() override;
+    std::shared_ptr<guiplugin> createGuiPlugin(int32_t uuid) override;
     bool onShow(host_plugin_window* _window) override;
     bool onClose() override;
     void updateFromMainThread() override;

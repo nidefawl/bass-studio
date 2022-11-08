@@ -16,8 +16,7 @@ String auplugin::getAutomatableName() { return "AU_PLUGIN"; }
 
 void auplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {}
 void auplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {}
-guiplugin* auplugin::makeGui() { return nullptr; }
-guiplugin* auplugin::getGui() { return nullptr; }
+std::shared_ptr<guiplugin> auplugin::createGuiPlugin(int32_t uuid) { return nullptr; }
 void auplugin::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
 }
 samplecount_t auplugin::getPluginLatency() { return 0; }

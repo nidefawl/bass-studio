@@ -675,12 +675,6 @@ void guitrack_editor::layout() {
     }
 }
 
-void guictr_tracks::removeAllTracks() {
-    track_gui_vector_td tracksCopy = guiMgr.getTracksVisibleFlat();
-    for (auto* entry : tracksCopy) {
-        removeTrack(entry->track, FLG_TRK_CHANGE_LOAD);
-    }
-}
 void guictr_tracks::removeTrack(track_t* track, int flags) {
     track_gui_entry_t* entry = nullptr;
     if (!guiMgr.getPointerEntry(track, &entry)) {
@@ -829,7 +823,7 @@ bool guitrack_mixers::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
         if (ctxt.kevt.type != KeyboardState::K_PRESS) {
             return true;
         }
-        auto selTrack = daw->getSelectedTrack();
+        auto selTrack = dawCtrl->getSelectedTrack();
         track_gui_entry_t* entry = nullptr;
         if (iGuiMgr.getPointerEntry(selTrack, &entry)) {
             DAW::OpenRenameTrackPopup(dawCtrl, entry);
@@ -856,9 +850,30 @@ bool guitrack_mixers::handleKeyInput(KeyEvent& kevt) {
     }
     return false;
 }
+
 void guictr_tracks::onAdded() {
     guictr_base::onAdded();
+    removeAllTracks();
+    for (track_t* tr : project.trackList) {
+        removeTrack(tr, FLG_TRK_CHANGE_LOAD);
+    }
+    addAllTracks();
 }
+
 void guictr_tracks::onRemove() {
+    removeAllTracks();
     guictr_base::onRemove();
+}
+
+void guictr_tracks::addAllTracks() {
+    for (track_t* tr : project.trackList) {
+        addTrack(tr, FLG_TRK_CHANGE_LOAD);
+    }
+}
+
+void guictr_tracks::removeAllTracks() {
+    track_gui_vector_td tracksCopy = guiMgr.getTracksVisibleFlat();
+    for (auto* entry : tracksCopy) {
+        removeTrack(entry->track, FLG_TRK_CHANGE_LOAD);
+    }
 }

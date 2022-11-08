@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include <cstdio>
+#include <map>
 
 struct audio_stage_t;
 struct VstEvent_t;
@@ -22,7 +23,6 @@ struct handles_t {
     BasePluginVST2* axEffect = nullptr;// Optional/Internal plugin only: handle to plugin implementation instance
     AEffect* aeffect       = nullptr;// hmodule owns if axEffect == null
     void* hmodule          = nullptr;// we dont own
-    std::shared_ptr<guiplugin> gui;
     std::vector<uint8_t> dataChunkLocalMemory;
     handles_t(BasePluginVST2* ex, AEffect* e, void* m) {
         axEffect = ex;

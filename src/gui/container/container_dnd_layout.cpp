@@ -375,15 +375,15 @@ void guictr_layout::layout() {
             if (this->ctrLayout == container_layout::SPLIT_V || this->ctrLayout == container_layout::SPLIT_H) {
                 float curScale = 1.0f;
                 if (splitters.size() > entryIdx) {
-                    curScale = splitters[entryIdx]->getScale();
+                    curScale = splitters[entryIdx]->getScaleClamped();
                 }
                 float prevScale = 0.0f;
                 if (entryIdx >= 1) {
-                    prevScale = splitters[entryIdx - 1]->getScale();
+                    prevScale = splitters[entryIdx - 1]->getScaleClamped();
                 }
                 segSizeF = (curScale - prevScale) * vec2(cs) * axis + vec2(cs) * vec2(axis.y, axis.x);
                 if (entryIdx >= 1) {
-                    segPos = splitters[entryIdx - 1]->getScale() * vec2(cs) * axis;
+                    segPos = splitters[entryIdx - 1]->getScaleClamped() * vec2(cs) * axis;
                 }
                 if (this->ctrLayout == container_layout::SPLIT_V) {
                     tabW = segSizeF.x;
@@ -682,6 +682,7 @@ void guictr_layout::updateSplitters() {
         splitters[i]->setSplitterType(splitterLayout);
         float splitPos = off + i * off;
         splitters[i]->setMinMax(splitPos - off * 0.8f, splitPos + off * 0.8f);
+        splitters[i]->setScale(splitters[i]->getScaleClamped());
     }
     dbgassert(splitters.empty() || splitters.size() == entries.size() - 1);
 }
@@ -1077,9 +1078,11 @@ bool GuiCtrLayoutEntry::getContainerRef(std::shared_ptr<GuiCtrLayoutEntry>& out,
 }
 
 void GuiCtrLayoutEntry::removeEntryFromParent() {
-    if (getParentContainer()) {
+    auto parent = getParentContainer();
+    if (parent) {
         std::shared_ptr<GuiCtrLayoutEntry> out;
-        assert_expr(getParentContainer()->getContainerRef(this, out, true));
+        assert_expr(parent->getContainerRef(this, out, true));
+        parent->postContentChanged();
     }
 }
 guictr_base* GuiCtrLayoutEntry::getGui() {
@@ -1123,7 +1126,7 @@ void GuiCtrLayoutEntry::setEntryTag(int32_t tag) {
     else
         entryTag = tag;
     if (selfLayoutCtr) {
-        selfLayoutCtr->setTag(tag);
+        selfLayoutCtr->setTag(entryTag);
     }
     updateLabel();
 }
@@ -1198,7 +1201,6 @@ void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* s
     snapshot->splitterPositions = ctrlayout->getSplitterPositions();
     snapshot->activePosition    = ctrlayout->getActivePosition();
     snapshot->ctrLayout         = ctrlayout->getLayout();
-    snapshot->containerTag      = ctrlayout->getTag();
     snapshot->entries.reserve(entries.size());
     for (auto& sharedEntry: entries) {
         std::shared_ptr<guictrlayout_entry_snapshot_t> shrdEntrySnapshot;
@@ -1220,7 +1222,6 @@ void loadContainerSnapshot(ContainerFactory& fac,
     }
     ctrlayout->setSplitterPositions(snapshot->splitterPositions);
     ctrlayout->setActiveEntry(snapshot->activePosition);
-    ctrlayout->setTag(snapshot->containerTag);
     //ctrlayout->postContentChanged();
 }
 
@@ -1244,9 +1245,6 @@ bool guictr_layout::canSimplify() const {
     return getTag() < 0;
 }
 void guictr_layout::simplify() {
-    if (!canSimplify()) {
-        return;
-    }
     struct InlineEntry {
         int32_t index = 0;
         std::shared_ptr<GuiCtrLayoutEntry> entry;
@@ -1256,36 +1254,40 @@ void guictr_layout::simplify() {
     int32_t index = 0;
     for (const auto& entry : entries) {
         auto guiCtrLayout = entry->getAsLayoutCtr();
-        if (guiCtrLayout && guiCtrLayout->canSimplify()) {
+        if (guiCtrLayout) {
             guiCtrLayout->simplify();
-            auto& childEntries = guiCtrLayout->getEntries();
-            if (childEntries.empty()) {
-                entriesToRemove.push_back(entry);
-            } else if (childEntries.size() == 1 && entry->getEntryTag() < 0) {
-                auto& childEntry = childEntries[0];
-                InlineEntry inlineEntry;
-                guiCtrLayout->getContainerRef(childEntry.get(), inlineEntry.entry, true);
-                inlineEntry.index = index;
-                entriesToRemove.push_back(entry);
-                entriesInsert.push_back(inlineEntry);
+            if (canSimplify()) {
+                auto& childEntries = guiCtrLayout->getEntries();
+                if (childEntries.empty()) {
+                    entriesToRemove.push_back(entry);
+                } else if (childEntries.size() == 1 && entry->getEntryTag() < 0) {
+                    auto& childEntry = childEntries[0];
+                    InlineEntry inlineEntry;
+                    guiCtrLayout->getContainerRef(childEntry.get(), inlineEntry.entry, true);
+                    inlineEntry.index = index;
+                    entriesToRemove.push_back(entry);
+                    entriesInsert.push_back(inlineEntry);
+                }
             }
         }
         index++;
     }
-    if (!entriesToRemove.empty()) {
-        log_lf(Log::L_DEBUG, "remove %zu container entries\n", entriesToRemove.size());
-    }
-    for (const auto& entry : entriesToRemove) {
-        std::shared_ptr<GuiCtrLayoutEntry> out;
-        getContainerRef(entry.get(), out, true);
-    }
-    for (const auto& entry : entriesInsert) {
-        addEntry(entry.entry, entry.index);
-    }
-    if (entries.size() < 2) {
-        setLayout(container_layout::SOLE);
-    } else if (entries.size() > 1 && getLayout() == container_layout::SOLE) {
-        setLayout(container_layout::TABBED);
+    if (canSimplify()) {
+        if (!entriesToRemove.empty()) {
+            log_lf(Log::L_DEBUG, "remove %zu container entries\n", entriesToRemove.size());
+        }
+        for (const auto& entry : entriesToRemove) {
+            std::shared_ptr<GuiCtrLayoutEntry> out;
+            getContainerRef(entry.get(), out, true);
+        }
+        for (const auto& entry : entriesInsert) {
+            addEntry(entry.entry, entry.index);
+        }
+        if (entries.size() < 2) {
+            setLayout(container_layout::SOLE);
+        } else if (entries.size() > 1 && getLayout() == container_layout::SOLE) {
+            setLayout(container_layout::TABBED);
+        }
     }
 }
 
@@ -1308,6 +1310,12 @@ void guictr_layout::setLayout(container_layout ctrLayoutNew) {
 }
 
 void guictr_layout::postContentChanged() {
+    if (this->parent && entries.size() == 0) {
+        auto ctrLayoutParent = guiParentType<guictr_layout, gui_type::CTR_TYPE_LAYOUT>(parent);
+        if (ctrLayoutParent) {
+            ctrLayoutParent->postContentChanged();
+        }
+    }
     simplify();
     updateVisible();
     if (this->parent) {
@@ -1390,8 +1398,8 @@ bool GuiCtrLayoutEntry::isVisible() {
         if (!ctrLayoutParent) {
             break;
         }
-        ctrLayout = ctrLayoutParent;
         layoutEntryThis = ctrLayoutParent->getEntry(ctrLayout).get();
+        ctrLayout = ctrLayoutParent;
     }
     return layoutEntryThis && layoutEntryThis->ctr->parent && layoutEntryThis->ctr->parent->isVisible();
 }

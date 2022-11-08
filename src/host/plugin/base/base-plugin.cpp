@@ -230,6 +230,19 @@ void effectbase::onWindowDestroy() {
 void effectbase::onWindowResize(ivec2 size) {
 }
 
+guiplugin* effectbase::getPluginGui(int32_t uuid) {
+    if (!uiInstances.count(uuid)) {
+        std::shared_ptr<guiplugin> newGui = createGuiPlugin(uuid);
+        auto it = uiSnapshots.find(uuid);
+        if (it != uiSnapshots.end()) {
+            newGui->loadSnapshot(it->second);
+            it->second.isValidSnapshot = false;
+        }
+        uiInstances[uuid] = std::move(newGui);
+    }
+    return uiInstances[uuid].get();
+}
+
 class guideferred : public guiplugin {
     effect_deferred* const module;
     guibutton btnLoad;
@@ -426,18 +439,11 @@ void guideferred::buttonClicked(guibase* _button) {
         daw->onPluginsChanged();
     }
 }
-guiplugin* effect_deferred::makeGui() {
-    dbgassert(this->mImpl);
-    if (!this->mImpl->gui) {
-        this->mImpl->gui = std::make_unique<guideferred>(this);
-        this->mImpl->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
-    }
-    return this->mImpl->gui.get();
-}
-guiplugin* effect_deferred::getGui() {
-    dbgassert(this->mImpl);
-    dbgassert(this->mImpl->gui.get());
-    return this->mImpl->gui.get();
+
+std::shared_ptr<guiplugin> effect_deferred::createGuiPlugin(int32_t uuid) {
+    auto gui = std::make_unique<guideferred>(this);
+    gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
+    return gui;
 }
 
 void effectbase::postSetParameter(int32_t idx, float preVal, float val, int flags) {

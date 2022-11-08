@@ -339,7 +339,7 @@ bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEven
 }
 
 void gui_track_automation::handleDraggedBegin(MouseEvent& evt) {
-    dawCtrl->getDaw()->setSelectedTrack(m_track);
+    dawCtrl->setSelectedTrack(m_track);
     evt.relMousepos += getPosContent();
     parent->handleDraggedBegin(evt);
 }

@@ -160,8 +160,12 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
     if (version >= 10) {
         archive(make_nvp("stageIds", m.stageIds), make_nvp("routing", m.effectRouting));
     }
-    if (version >= 11) {
-        archive(make_nvp("ui", m.uiSnapshot));
+    if (version < 14) {
+        plugin_ui_snapshot_t ui;
+        archive(make_nvp("ui", ui));
+        m.uiSnapshots[1] = ui;
+    } else {
+        archive(make_nvp("uisnapshot", m.uiSnapshots));
     }
     archive(make_nvp("plugins", m.pluginSnapshots));
 }
@@ -193,10 +197,10 @@ void save(Archive& archive, plugin_snapshot_t const& m, const std::uint32_t vers
         make_nvp("programIdx", m.currentProgram),
         make_nvp("programName", m.currentProgramName),
         make_nvp("ioChannels", m.ioChannels),
-        make_nvp("version", m.version),
+        make_nvp("version", 14),
         make_nvp("stageIds", m.stageIds),
         make_nvp("routing", m.effectRouting),
-        make_nvp("ui", m.uiSnapshot),
+        make_nvp("uisnapshot", m.uiSnapshots),
         make_nvp("plugins", m.pluginSnapshots)
     );
 }
@@ -585,13 +589,14 @@ void serialize(Archive& archive, samplefile_entry_t& m) {
 template<class Archive>
 void serialize(Archive& archive, guictrlayout_snapshot_t& m) {
     archive(m.label, m.type, m.activePosition, m.ctrLayout, m.entries, m.splitterPositions);
-    make_optional_nvp(archive, "containerTag", m.containerTag);
 }
+
 template<class Archive>
 void serialize(Archive& archive, guictrlayout_entry_snapshot_t& m) {
     archive(m.label, m.type);
     make_optional_nvp(archive, "entryTag", m.entryTag);
 }
+
 template<class Archive>
 void serialize(Archive& archive, dawview_layout_t& m) {
     archive(m.left, m.right, m.splitterPositions);
@@ -625,7 +630,7 @@ void save(Archive& archive, project_file const& file, const std::uint32_t versio
 
 CEREAL_REGISTER_TYPE(guictrlayout_snapshot_t);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(guictrlayout_entry_snapshot_t, guictrlayout_snapshot_t)
-CEREAL_CLASS_VERSION(plugin_snapshot_t, 12);
+CEREAL_CLASS_VERSION(plugin_snapshot_t, 14);
 CEREAL_CLASS_VERSION(track_snapshot_t, 4);
 CEREAL_CLASS_VERSION(automatable_param_ref_t, 1);
 CEREAL_CLASS_VERSION(track_layout_snapshot_t, 1);

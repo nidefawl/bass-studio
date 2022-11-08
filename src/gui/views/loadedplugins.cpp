@@ -273,10 +273,8 @@ public:
             if (effectbase) {
                 track_t* tr = effectbase->getTrack();
                 if (tr) {
-                    auto daw = dawCtrl->getDaw();
-
-                    daw->setSelectedTrack(tr);
-                    daw->getMainControl()->showPluginView();
+                    dawCtrl->setSelectedTrack(tr);
+                    dawCtrl->showPluginView();
                 }
             }
         }

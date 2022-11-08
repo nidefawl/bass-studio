@@ -2058,7 +2058,11 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
         }
     }
 }
-} // namespace DAW::Host
+void Host::onAudioStageChanged(audio_stage_t* stage) {
+    DAW::validateEffectRoutings(this, stage);
+    this->impl->tls.dawInstance->onAudioStageChanged(stage);
+}
+}// namespace DAW::Host
 
 namespace DAW {
 bool resolveEffectDefaultConnection(const Host::PluginManager* const host, const project_t* const project, const audio_stage_t* const stage, effectbase* const effect, channel_ref_t& out) {

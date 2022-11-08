@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <memory>
 #include <utility>
 #include <vector>
 #include "assert_dbg.h"
@@ -18,7 +19,6 @@
 
 namespace {
     void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, const tracksnapshot_store_opts_t& opts) {
-        ps.version           = 11;
         ps.slot              = 0;
         ps.projectGlobalId   = plugin->projectGlobalId;
         ps.enabled           = plugin->bIsEnabled;
@@ -46,8 +46,10 @@ namespace {
 
 void internalplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) {
     createSnapshot(ps, this, opts);
-    if (handlesIntPlugin->gui) {
-        handlesIntPlugin->gui->makeSnapshot(ps.uiSnapshot, opts);
+    for (auto& [uuid, gui] : uiInstances) {
+        plugin_ui_snapshot_t uiSnapshot;
+        gui->makeSnapshot(uiSnapshot, opts);
+        ps.uiSnapshots[uuid] = uiSnapshot;
     }
     ps.slot = this->slot;
     auto dataBuf = storePresetData();
@@ -59,18 +61,22 @@ void internalplugin::makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_sto
 }
 
 void internalplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
-    this->uiSnapshot = pluginSnapshot.uiSnapshot;
-    this->uiSnapshot.isValidSnapshot = true;
     DAW::loadEffectParamsFromSnapshot(pluginSnapshot, this);
-    if (handlesIntPlugin->gui && this->uiSnapshot.isValidSnapshot) {
-        handlesIntPlugin->gui->loadSnapshot(this->uiSnapshot);
-        this->uiSnapshot.isValidSnapshot = false;
-    }
     if (pluginSnapshot.dataChunk.size() > 0) {
         auto dataBuf = std::make_shared<std::vector<std::byte>>();
         dataBuf->resize(pluginSnapshot.dataChunk.size());
         memcpy(dataBuf->data(), pluginSnapshot.dataChunk.data(), dataBuf->size());
         loadPresetData(dataBuf);
+    }
+    for (auto& [uuid, snapshot] : pluginSnapshot.uiSnapshots) {
+        bOpenWindowOnEnable |= snapshot.isWindowOpen;
+        auto gui = uiInstances.find(uuid);
+        if (gui != uiInstances.end()) {
+            gui->second->loadSnapshot(snapshot);
+        } else {
+            this->uiSnapshots[uuid] = snapshot;
+            this->uiSnapshots[uuid].isValidSnapshot = true;
+        }
     }
 }
 
@@ -93,16 +99,10 @@ internalplugin::~internalplugin() {
     delete handlesIntPlugin;
 }
 
-guiplugin* internalplugin::makeGui() {
-    if (!handlesIntPlugin->gui) {
-        handlesIntPlugin->gui = std::make_unique<guiinternalpluginview>(this);
-        handlesIntPlugin->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
-    }
-    return handlesIntPlugin->gui.get();
-}
-
-guiplugin* internalplugin::getGui() {
-    return handlesIntPlugin->gui.get();
+std::shared_ptr<guiplugin> internalplugin::createGuiPlugin(int32_t uuid) {
+    auto gui = std::make_shared<guiinternalpluginview>(this);
+    gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
+    return gui;
 }
 
 window_plugin* createBuildinPluginWindow(std::shared_ptr<PluginControl> _ctrl, int w, int h, void* hostWindowId);

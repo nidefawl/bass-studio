@@ -51,7 +51,7 @@ public:
     guictr_layout();
     ~guictr_layout() override;
     void setTag(int32_t tag) {
-        this->tag = tag;
+        this->tag = tag < 100 ? -1 : tag;
     }
     int32_t getTag() const {
         return tag;

@@ -708,6 +708,7 @@ public:
     void removeTrack(track_t* track, int flags);
     void addTrack(track_t* track, int flags);
     void removeAllTracks();
+    void addAllTracks();
     void showAutomationLane(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx);
     void addSubTrack(track_gui_entry_t* entry, gui_track_subtrack* subtrack, bool insertFront);
     void removeSubtrack(track_gui_entry_t* entry, gui_track_subtrack* subtrack);

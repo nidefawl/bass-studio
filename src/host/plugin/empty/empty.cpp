@@ -44,16 +44,10 @@ module_empty::~module_empty() {
     delete handle;
 }
 
-guiplugin* module_empty::makeGui() {
-    if (!handle->gui) {
-        handle->gui = std::make_unique<guimodule_empty>(this);
-        handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
-    }
-    return handle->gui.get();
-}
-
-guiplugin* module_empty::getGui() {
-    return handle->gui.get();
+std::shared_ptr<guiplugin> module_empty::createGuiPlugin(int32_t uuid) {
+    auto gui = std::make_shared<guimodule_empty>(this);
+    gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
+    return gui;
 }
 
 void module_empty::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {

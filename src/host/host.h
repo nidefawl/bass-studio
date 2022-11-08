@@ -128,9 +128,10 @@ private:
 public:
     Host();
     Host(Host const&) = delete;
-    ~Host();
+    ~Host() override;
     void operator=(Host const&) = delete;
     void onTrackLayoutChange() override;
+    void onAudioStageChanged(audio_stage_t* stage) override;
     void setTls(daw_tls::tlsinstance& tls);
     void destroy();
 

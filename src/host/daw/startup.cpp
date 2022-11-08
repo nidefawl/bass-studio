@@ -173,7 +173,7 @@ void openPluginWindows(DawCtrl* dawCtrl, String pluginName) {
             eff->showWindow(false);
             track_t* tr = eff->getTrack();
             if (tr) {
-                dawCtrl->getDaw()->setSelectedTrack(tr);
+                dawCtrl->setSelectedTrack(tr);
                 dawCtrl->showPluginView();
             }
         }
@@ -191,7 +191,7 @@ void loadAllInstances(DawCtrl* dawCtrl, String pluginName) {
                 track_t* tr = eff->getTrack();
                 if (tr) {
                     if (!bOnce) {
-                        dawCtrl->getDaw()->setSelectedTrack(tr);
+                        dawCtrl->setSelectedTrack(tr);
                         dawCtrl->getDaw()->getMainControl()->showPluginView();
                     }
                     dawInstance->getPluginManager()->activateDeferred(eff, 0);
@@ -210,7 +210,7 @@ void showPluginView(DawCtrl* dawCtrl, String pluginName) {
             if (eff->getName().find(pluginName) != String::npos) {
                 track_t* tr = eff->getTrack();
                 if (tr) {
-                    dawCtrl->getDaw()->setSelectedTrack(tr);
+                    dawCtrl->setSelectedTrack(tr);
                     return;
                 }
             }
@@ -223,7 +223,7 @@ void showPluginView(DawCtrl* dawCtrl, String pluginName) {
             if (eff->getName().find(pluginName) != String::npos) {
                 track_t* tr = eff->getTrack();
                 if (tr) {
-                    dawCtrl->getDaw()->setSelectedTrack(tr);
+                    dawCtrl->setSelectedTrack(tr);
                     auto lock = dawInstance->lockPlayThread();
                     dawInstance->getPluginManager()->activateDeferred(eff, 0);
                     return;
@@ -309,7 +309,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
             //     daw->getMainControl()->showPluginView();
             // }
             if (daw->getProject()->trackMidiAudioCtr.size()>0) {
-                daw->setSelectedTrack(daw->getProject()->trackMidiAudioCtr[0]);
+                dawMainCtrl->setSelectedTrack(daw->getProject()->trackMidiAudioCtr[0]);
             }
             loadAllInstances(dawMainCtrl, "Macro");
             //     auto tr = daw->getProject()->trackMidiAudioCtr[1];

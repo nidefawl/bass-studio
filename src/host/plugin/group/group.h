@@ -26,8 +26,7 @@ public:
 
 public:
     int getModuleType() override { return PLUGIN_TYPE_GROUP; };
-    guiplugin* makeGui() override;
-    guiplugin* getGui() override;
+    std::shared_ptr<guiplugin> createGuiPlugin(int32_t uuid) override;
     samplecount_t getPluginLatency() override;
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     void processMidi(midi_data_processing_t& midiEvents) override;
