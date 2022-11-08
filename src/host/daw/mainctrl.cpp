@@ -1787,16 +1787,14 @@ void DawCtrl::destroy() {
     if (!isOK) {
         return;
     }
-
-    waveformRenderer->destroy();
-    delete waveformRenderer;
-    waveformRenderer = nullptr;
-
     isOK = false;
     if (view) {
         delete view;
         view = nullptr;
     }
+    waveformRenderer->destroy();
+    delete waveformRenderer;
+    waveformRenderer = nullptr;
 }
 
 void DawInstance::startDaw() {
