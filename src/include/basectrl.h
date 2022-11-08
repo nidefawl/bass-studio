@@ -218,6 +218,11 @@ public:
     static MouseHitEvt mouseHitEvt(MouseHitType _type, KeyboardMods kbmods);
     explicit BaseCtrl(AppCtrl* parent);
     virtual ~BaseCtrl();
+    BaseCtrl(const BaseCtrl& other) = delete;
+    BaseCtrl& operator=(const BaseCtrl& other) = delete;
+    BaseCtrl(BaseCtrl&& other) = delete;
+    BaseCtrl& operator=(BaseCtrl&& other) = delete;
+    
     DropAreaUILayout* determineDropCtrArea(MouseEvent& mevt) {
         MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT, mevt.kbmods);
         evtDragObj.setDraggedThing(nullptr);
