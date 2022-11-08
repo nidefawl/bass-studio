@@ -1998,8 +1998,11 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     menubar.add(&menus.tools);
     menubar.add(&menus.views);
     this->updateMenubar();
+
 #if !USE_GUI_MENU
     this->mainWindow->updateMenu();
+#else
+    this->view->ctr_menu.updateMenu();
 #endif
 
     auto& settings = daw_tls::getSettings();

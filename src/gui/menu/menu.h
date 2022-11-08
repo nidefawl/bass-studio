@@ -55,6 +55,9 @@ public:
     guibase* getFocusedContainer() override {
         return nullptr;
     }
+    ngui::Menu* getMenu() {
+        return menu;
+    }
 };
 class guictr_menubar : public guictr_base {
     //std::vector<guictr_menubar_entry> list;
@@ -70,12 +73,11 @@ public:
         destroyGuis();
     }
     void render(NVGcontext* vg) override;
-    void updateMenu() {
-        layout();
+    void setControl(BaseCtrl *parentCtrl) override {
+        guictr_base::setControl(parentCtrl);
+        updateMenu();
     }
-    void layout() override {
-        dbgassert(parentCtrl);
-        dbgassert(parentCtrl->vg);
+    void updateMenu() {
         parentCtrl->closeAllAppMenus();
         destroyGuis();
 
@@ -83,20 +85,25 @@ public:
         int padding   = math::max(1, math::roundfS32(size.y * 0.5f));
 
         std::vector<ngui::Menu*> entryList = menubar.children;
-        determine_string_width strw(parentCtrl, theme);
-
-        int x = 0;
-        int y = 0;
         for (ngui::Menu* m : entryList) {
             auto* entry = new guictr_menubar_entry(m, this);
-
-            auto textW = strw.getStringWidth(m->getTitle(), fontSize, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-
-            entry->pos      = ivec2(x, y);
-            entry->size     = ivec2(math::roundfS32(textW) + padding, size.y);
             entry->fontSize = fontSize;
             entry->padding  = padding;
             add(entry);
+        }
+    }
+    void layout() override {
+        auto fontSize = size.y * 0.8f;
+        int padding   = math::max(1, math::roundfS32(size.y * 0.5f));
+        std::vector<ngui::Menu*> entryList = menubar.children;
+        determine_string_width strw(parentCtrl, theme);
+        int x = 0;
+        int y = 0;
+        for (auto entry : guis) {
+            auto* m = static_cast<guictr_menubar_entry*>(entry);
+            auto textW = strw.getStringWidth(m->getMenu()->getTitle(), fontSize, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+            entry->pos      = ivec2(x, y);
+            entry->size     = ivec2(math::roundfS32(textW) + padding, size.y);
             x = entry->right();
         }
         for (guibase* gui : guis) {
