@@ -312,6 +312,8 @@ guictr_layout::guictr_layout() : guictr_base() {
     //margin = padding-4;
 }
 void guictr_layout::layout() {
+    if (!theme)
+        return;
     updateHandles();
     ivec2 cs = getSizeContent();
     switch (this->ctrLayout) {
@@ -1311,15 +1313,16 @@ void guictr_layout::setLayout(container_layout ctrLayoutNew) {
 }
 
 void guictr_layout::postContentChanged() {
-    if (this->parent && entries.size() == 0) {
+    if (this->parent) {
         auto ctrLayoutParent = guiParentType<guictr_layout, gui_type::CTR_TYPE_LAYOUT>(parent);
         if (ctrLayoutParent) {
             ctrLayoutParent->postContentChanged();
         }
+    } else {
+        simplify();
     }
-    simplify();
     updateVisible();
-    if (this->parent) {
+    if (!parent&&parentCtrl) {
         layout();
     }
 }
@@ -1327,7 +1330,7 @@ void guictr_layout::postContentChanged() {
 void guictr_layout::setActiveEntry(int32_t idx) {
     this->activePosition = math::clamp(idx, 0, CtrSize(entries) - 1);
     updateVisible();
-    if (this->parent) {
+    if (!parent&&parentCtrl) {
         layout();
     }
 }
@@ -1337,7 +1340,7 @@ bool guictr_layout::isEntryVisible(GuiCtrLayoutEntry* entry) {
 
 void guictr_layout::onChildLayoutChanged(guibase* g) {
     //postContentChanged();
-    if (this->parent) {
+    if (!parent&&parentCtrl) {
         layout();
     }
 }

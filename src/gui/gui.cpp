@@ -648,9 +648,6 @@ void guibase::setControl(BaseCtrl* parentCtrl) {
     if (parentCtrl) {
         setTheme(parentCtrl->getTheme());
     }
-    if (!this->parentCtrl) {
-        theme->endPing();
-    }
 }
 
 void guibase::setParent(guibase* parent) {
