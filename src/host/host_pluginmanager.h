@@ -5,6 +5,7 @@
 #include "seq_time.h"
 #include "dsp_util.h"
 #include <functional>
+#include <optional>
 #include <utility>
 #include <vector>
 #include <atomic>
@@ -247,13 +248,13 @@ public:
     bool replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin);
 
 
-    void createAudio(track_t* track);
+    void createAudio(track_t* track, std::optional<audio_stage_id_t> stageId = std::nullopt);
     void releaseAudio(track_t* track);
     audio_stage_t* createAudioStage();
     void releaseAudioStage(audio_stage_t* audioStage);
     audio_stage_t* getAudioStage(const audio_stage_ref_t& ref) const;
     void updateMaximumStageId();
-    audio_stage_id_t getNextGlobalAudioStageId(int32_t globalId);
+    audio_stage_id_t getNextGlobalAudioStageId(int32_t globalId = -1);
     bool isStageIdInUse(track_id_snapshot_t stageId);
     bool isStageIdInUse(const audio_stage_id_t& stageId);
     void checkScanner();

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <optional>
 
 #include "host/audiobuffer/audioblock.h"
 #include "host/automation/automation.h"
@@ -225,33 +226,32 @@ track_snapshot_t::track_snapshot_t(const track_t* track, const tracksnapshot_sto
 }
 
 
-void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
-    auto audio = this->audio;
-    dbgassert(audio);
+void track_t::loadSnapshot(DAW::Host::PluginManager* host, const track_snapshot_t& snapshot) {
     const auto& implSnapshot = snapshot.data;
-    // if the snapshot holds a stage id then use it, otherwise keep current stageId
-    if (snapshot.stageIds.inputStageId != -1) {
-        audio_stage_id_t stageId = {
-            static_cast<audiostageid_i32>(snapshot.stageIds.stageId),
-            static_cast<audiostageid_i32>(snapshot.stageIds.inputStageId),
-            static_cast<audiostageid_i32>(snapshot.stageIds.outputStageId),
-            static_cast<audiostageid_i32>(snapshot.stageIds.outputPostStageId)
-        };
-        audio->host->validateIds();
-        if (audio->host->isStageIdInUse(stageId)) {
-            log_lf(Log::L_WARN, "Found duplicate stage id in snapshot. Routing might be broken.\n");
-            log_lf(Log::L_WARN, "This stage is %s on track %s\n", "Mixer", snapshot.trackSettings.name.c_str());
-            auto otherStage = audio->host->getAudioStage({stageId.stageId});
-            if (otherStage) {
-                String stageDesc = otherStage->mixer.getAutomatableName();
-                log_lf(Log::L_WARN, "Other stage is %s on track %s\n", stageDesc.c_str(), otherStage->getTrack()->name.c_str());
+    /** if the snapshot holds a stage id then use it, otherwise keep current stageId */
+    if (!audio) {
+        std::optional<audio_stage_id_t> stageIdOptional = std::nullopt;
+        if (snapshot.stageIds.inputStageId != -1) {
+            auto stageId = audio_stage_id_t{
+                static_cast<audiostageid_i32>(snapshot.stageIds.stageId),
+                static_cast<audiostageid_i32>(snapshot.stageIds.inputStageId),
+                static_cast<audiostageid_i32>(snapshot.stageIds.outputStageId),
+                static_cast<audiostageid_i32>(snapshot.stageIds.outputPostStageId)
+            };
+            if (host->isStageIdInUse(stageId)) {
+                log_lf(Log::L_WARN, "Found duplicate stage id in snapshot. Routing might be broken.\n");
+                log_lf(Log::L_WARN, "This stage is %s on track %s\n", "Mixer", snapshot.trackSettings.name.c_str());
+                auto otherStage = host->getAudioStage({stageId.stageId});
+                if (otherStage) {
+                    String stageDesc = otherStage->mixer.getAutomatableName();
+                    log_lf(Log::L_WARN, "Other stage is %s on track %s\n", stageDesc.c_str(), otherStage->getTrack()->name.c_str());
+                }
+            } else {
+                stageIdOptional = stageId;
             }
-        } else {
-            audio->stageId = stageId;
         }
-
+        host->createAudio(this, stageIdOptional);
     }
-    //TODO: test if stageId is in use. Caller is responsible for generating new stageId
 
     audio->mixer.loadSnapshot(implSnapshot.trackParams);
     if (audio->arp) {
@@ -1554,7 +1554,7 @@ namespace DAW {
                 s->projectGlobalId = pluginId;
             }
             if (host->isStageIdInUse(s->stageIds)) {
-                auto stageId = host->getNextGlobalAudioStageId(0);
+                auto stageId = host->getNextGlobalAudioStageId();
                 log_lf(Log::L_DEBUG, "stageId %d is in use, assigning new id %d\n", s->stageIds.stageId, static_cast<int32_t>(stageId.stageId));
                 idMap[s->stageIds.stageId] = static_cast<int32_t>(stageId.stageId);
                 idMap[s->stageIds.inputStageId] = static_cast<int32_t>(stageId.inputStageId);
@@ -1609,7 +1609,7 @@ namespace DAW {
 
         // if (host->isStageIdInUse(snapshot.stageIds))
         {
-            auto stageId = host->getNextGlobalAudioStageId(0);
+            auto stageId = host->getNextGlobalAudioStageId();
             log_lf(Log::L_DEBUG, "stageId %d is in use, assigning new id %d\n", snapshot.stageIds.stageId, static_cast<int32_t>(stageId.stageId));
             idMap[snapshot.stageIds.stageId] = static_cast<int32_t>(stageId.stageId);
             idMap[snapshot.stageIds.inputStageId] = static_cast<int32_t>(stageId.inputStageId);
@@ -1637,7 +1637,7 @@ namespace DAW {
                 s->projectGlobalId = pluginId;
             }
             if (host->isStageIdInUse(s->stageIds)) {
-                auto stageId = host->getNextGlobalAudioStageId(0);
+                auto stageId = host->getNextGlobalAudioStageId();
                 log_lf(Log::L_DEBUG, "stageId %d is in use, assigning new id %d\n", s->stageIds.stageId, static_cast<int32_t>(stageId.stageId));
                 idMap[s->stageIds.stageId] = static_cast<int32_t>(stageId.stageId);
                 idMap[s->stageIds.inputStageId] = static_cast<int32_t>(stageId.inputStageId);

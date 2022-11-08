@@ -22,7 +22,7 @@
 #include "host/daw_channel.h"
 #include "track_types.h"
 #include "types.h"
-
+#include "tls.h"
 
 class track_t;
 struct track_impl_t;
@@ -35,6 +35,7 @@ class gui_track_controls;
 class delete_cb;
 namespace DAW::Host {
     struct midievent_ctrl_t;
+    class PluginManager;
 }
 using track_vector = std::vector<track_t*>;
 
@@ -303,7 +304,7 @@ public:
 #endif
     }
     void releaseTrackContent();
-    void loadSnapshot(const track_snapshot_t& snap);
+    void loadSnapshot(DAW::Host::PluginManager* host, const track_snapshot_t& snap);
 
     int32_t projectIdx   = -1;// global flat idx (skips invisible tracks)
     int32_t childIdxTree = -1;// index in parent child list (position in parents child list)
@@ -484,7 +485,7 @@ public:
     trackcontainer_tracktype_t& operator=(const trackcontainer_tracktype_t& a) = delete;
     void copyTo(trackcontainer_snapshot_t& out);
     void copyFrom(trackcontainer_snapshot_t& in);
-    void loadPlugins(trackcontainer_snapshot_t& in);
+    void loadTrackSnapshots(DAW::Host::PluginManager* host, trackcontainer_snapshot_t& in);
 };
 
 struct project_snapshot_t;
@@ -525,7 +526,7 @@ public:
     void copyTo(project_snapshot_t& out);
     void copyFrom(project_snapshot_t& in);
     void copyTracks(int32_t trackBegin, int32_t trackLen, trackstate_t& _out);
-    void loadPlugins(project_snapshot_t& project);
+    void loadProjectSnapshot(DAW::Host::PluginManager* host, project_snapshot_t& project);
     void checkConsistency();
 
 

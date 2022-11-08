@@ -1000,7 +1000,7 @@ void DawInstance::unloadProject() {
         });
     }
 
-    /** reset maximum stage id and determine new maximum stage id **/
+    /** reset maximum stage id and determine new maximum stage id */
     tls.host->updateMaximumStageId();
     for (DawCtrl* pDawCtrl : dawCtrls) {
         if (pDawCtrl->isOk()) {
@@ -1318,7 +1318,7 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                         for (track_snapshot_t& ts : ctr->tracks) {
                             log_printf("track '%s' loading %zu plugins\n", StringAsCStr(ts.trackLoaded->name), ts.data.pluginSnapshots.size());
                             DAW::assignFreeStageIdsTrackSnapshot(pluginMgr, ts);
-                            ts.trackLoaded->loadSnapshot(ts);
+                            ts.trackLoaded->loadSnapshot(tls.host, ts);
                             std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
                             for (auto effect: effects) {
                                 pluginMgr->activateDeferred(effect, DAW::Host::PluginManager::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
@@ -2442,7 +2442,7 @@ void DawInstance::loadProject0(const std::shared_ptr<project_file>& file) {
     setAudioThreadState(playback_state::status_no_process);
     log_printf("Loading project %s: %zu tracks\n", StringAsCStr(file->path), project.trackList.size());
     unloadProject();
-    /** make sure call to unloadProject unloaded all vst2 instances **/
+    /** make sure call to unloadProject unloaded all vst2 instances */
     dbgassert(tls.host->getNumAudioStages() == 0);
     dbgassert(tls.host->getVst2Instances().empty());
     //TODO: assert that audiocache is empty
@@ -2459,55 +2459,49 @@ void DawInstance::loadProject0(const std::shared_ptr<project_file>& file) {
         this->projectFileType = PROJECT_FILETYPE_JSON;
     }
 
-    /** set as current project **/
+    /** set as current project */
     this->projectPath = file->path;
     lastProjectDirectory = loadFileDirectory;
     this->layoutsFromProjectFile = file->layouts;
-    /** populates trackList **/
+
+    /** populates trackList */
     project.copyFrom(file->project);
+
     projectGlobals      = file->project.globals;
     getExportSettings() = file->project.exportSettings;
     getQuantizeSettings() = file->project.quantizeSettings;
 
+    /** load track snapshots */
+    project.trackList.loadProjectSnapshot(tls.host, file->project);
 
-    /** create all audio instances **/
+    /** fix audio clip lengths */
     for (track_t* t : project.trackList) {
         t->updateAudioClipLengths(projectGlobals.tempo100, file->project.samplerate, tls.host->m_sampleFormatInternal.sampleRate);
-        tls.host->createAudio(t);
     }
 
-    /** reset maximum stage id and determine new maximum stage id **/
-    tls.host->updateMaximumStageId();
-
-#ifndef NDEBUG
-    tls.host->validateIds();
-#endif
-
-    /** create all gui instances **/
+    /** create all gui instances */
     for (DawCtrl* pDawCtrl : dawCtrls) {
         for (track_t* tr : project.trackList) {
             pDawCtrl->addTrackToView(tr, FLG_TRK_CHANGE_LOAD);
         }
     }
-    /** pre-load all plugin instances **/
-    project.trackList.loadPlugins(file->project);
     
 #ifndef NDEBUG
     tls.host->validateIds();
 #endif
     onPluginsChanged();
 
-    /** reset maximum stage id and determine new maximum stage id **/
+    /** reset maximum stage id and determine new maximum stage id */
     tls.host->updateMaximumStageId();
 
-    /** remove routings to missing track **/
+    /** remove routings to missing track */
     DAW::validateTrackRoutings(tls.host, project.getTracksFlatVec());
-    /** create all gui instances **/
+    /** create all gui instances */
     for (track_t* tr : project.trackList) {
         DAW::validateEffectRoutings(tls.host, tr->audio);
     }
 
-    /** inform host about track layout changes so it resets and updates internal structures **/
+    /** inform host about track layout changes so it resets and updates internal structures */
     tls.host->onTrackLayoutChange();
 }
 bool DawInstance::loadProject1(const std::shared_ptr<project_file>& file, int flags) {
@@ -2543,7 +2537,7 @@ bool DawInstance::loadProject1(const std::shared_ptr<project_file>& file, int fl
         tr->getStage()->pluginsChanged();
     }
     tls.host->onTrackLayoutChange();
-    /** validate cursor state **/
+    /** validate cursor state */
     auto ctrl = tls.mainCtrl;
     if (ctrl) {
         if (this->layoutsFromProjectFile.size() > 0) {
@@ -2565,7 +2559,7 @@ bool DawInstance::loadProject1(const std::shared_ptr<project_file>& file, int fl
     return true;
 }
 void DawInstance::loadProjectFinish() {
-    /** reset maximum stage id and determine new maximum stage id **/
+    /** reset maximum stage id and determine new maximum stage id */
     tls.host->updateMaximumStageId();
 
     onPluginsChanged();
@@ -3633,7 +3627,7 @@ void load_project_task::run() {
                         tr->getStage()->pluginsChanged();
                     }
                     daw->getHost()->onTrackLayoutChange();
-                    /** validate cursor state **/
+                    /** validate cursor state */
                     auto ctrl = daw->getMainControl();
                     if (ctrl) {
                         if (daw->layoutsFromProjectFile.size() > 0) {

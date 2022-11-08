@@ -314,10 +314,10 @@ void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
     checkConsistency();
 }
 
-void trackallcontainer_t::loadPlugins(project_snapshot_t& project) {
-    trackMidiAudioCtr.loadPlugins(project.trackCtr);
-    trackReturnCtr.loadPlugins(project.trackReturnCtr);
-    trackMasterCtr.loadPlugins(project.trackMasterCtr);
+void trackallcontainer_t::loadProjectSnapshot(DAW::Host::PluginManager* host, project_snapshot_t& project) {
+    trackMidiAudioCtr.loadTrackSnapshots(host, project.trackCtr);
+    trackReturnCtr.loadTrackSnapshots(host, project.trackReturnCtr);
+    trackMasterCtr.loadTrackSnapshots(host, project.trackMasterCtr);
 }
 
 void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, trackstate_t& _out) {
@@ -422,10 +422,15 @@ void trackcontainer_tracktype_t::copyFrom(trackcontainer_snapshot_t& in) {
     }
 }
 
-void trackcontainer_tracktype_t::loadPlugins(trackcontainer_snapshot_t& in) {
+void trackcontainer_tracktype_t::loadTrackSnapshots(DAW::Host::PluginManager* host, trackcontainer_snapshot_t& in) {
     for (track_snapshot_t& trackStatic : in.tracks) {
         track_t* trackLoaded = trackStatic.trackLoaded;
-        trackLoaded->loadSnapshot(trackStatic);
+        trackLoaded->loadSnapshot(host, trackStatic);
+    }
+    for (track_t* track : this->tracksFlat) {
+        if (!track->audio) {
+            host->createAudio(track);
+        }
     }
 }
 

@@ -227,15 +227,20 @@ void PluginManager::getAllInstances(std::vector<effectbase*>& effects) {
     effects = pluginInstances;
 }
 
-void PluginManager::createAudio(track_t* track) {
+void PluginManager::createAudio(track_t* track, std::optional<audio_stage_id_t> stageId) {
+    int32_t stageIdFirst = -1;
+    if (stageId) {
+        stageIdFirst = static_cast<int32_t>(stageId->stageId);
+    }
     auto audio = new track_impl_t(this,
-                                  getNextGlobalAudioStageId(0),
+                                  getNextGlobalAudioStageId(stageIdFirst),
                                   track,
                                   pluginHostCallback->m_sampleFormatInternal,
                                   DAW::Host::DEFAULT_CHANNEL_COUNT);
     allAudioStages.push_back(audio);
     trackAudioStages.push_back(audio);
     track->audio = audio;
+    dbgassert(validateIds());
 }
 
 void PluginManager::releaseAudio(track_t* track) {
@@ -255,7 +260,7 @@ void PluginManager::releaseAudio(track_t* track) {
 audio_stage_t* PluginManager::createAudioStage() {
     validateIds();
     auto audio = new audio_stage_t(this,
-                                   getNextGlobalAudioStageId(0),
+                                   getNextGlobalAudioStageId(),
                                    pluginHostCallback->m_sampleFormatInternal,
                                    DAW::Host::DEFAULT_CHANNEL_COUNT);
     validateIds();
@@ -403,7 +408,7 @@ audio_stage_id_t PluginManager::getNextGlobalAudioStageId(int32_t globalId) {
     audiostageid_i32* stageIds[4] = {&stageId.stageId, &stageId.inputStageId, &stageId.outputStageId, &stageId.outputPostStageId };
     auto startId = globalId;
     if (globalId <= 0) {
-        startId = ++audioStageId;
+        startId = audioStageId;
     }
     for (audiostageid_i32* id : stageIds) {
         *id = static_cast<audiostageid_i32>(startId++);
@@ -445,7 +450,7 @@ void PluginManager::updateMaximumStageId() {
         maximumStageId = math::max<int32_t>(maximumStageId, static_cast<int32_t>(stage->stageId.outputStageId));
         maximumStageId = math::max<int32_t>(maximumStageId, static_cast<int32_t>(stage->stageId.outputPostStageId));
     }
-    this->audioStageId = maximumStageId;
+    this->audioStageId = maximumStageId + 1;
 }
 
 int32_t PluginManager::getNextSampleId(int32_t id) {

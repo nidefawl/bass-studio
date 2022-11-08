@@ -2272,7 +2272,7 @@ public:
                 // trSnap.stageIds.inputStageId = -1;
                 *newTrack                    = trSnap;
                 daw->addTrackImpl(tr->localIdxFlat + 1, newTrack, FLG_TRK_CHANGE_USER);
-                newTrack->loadSnapshot(trSnap);
+                newTrack->loadSnapshot(daw->getHost(), trSnap);
                 newTrack->name = DAW::MakeUniqueTrackName(dawCtrl->getDaw()->getProject(), strNewName);
                 //ensure unique IDs
                 daw->onPluginsChanged();

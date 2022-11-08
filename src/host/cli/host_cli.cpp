@@ -292,7 +292,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                 }
 
                 /** pre-load all plugin instances **/
-                project.trackList.loadPlugins(snapshot);
+                project.trackList.loadProjectSnapshot(host.get(), snapshot);
 
                 /** reset maximum stage id and determine new maximum stage id **/
                 host->updateMaximumStageId();
@@ -351,7 +351,7 @@ int runCommandLineHost(const std::vector<String>& args) {
                     // load plugins
                     for (track_snapshot_t& ts : ctr->tracks) {
                         log_printf("track '%s' loading %zu plugins\n", StringAsCStr(ts.trackLoaded->name), ts.data.pluginSnapshots.size());
-                        ts.trackLoaded->loadSnapshot(ts);
+                        ts.trackLoaded->loadSnapshot(host.get(), ts);
                     }
                     if (activateDeferred) {
                         // activate plugins
