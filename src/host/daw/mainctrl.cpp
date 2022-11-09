@@ -146,14 +146,14 @@ public:
 };
 
 template<typename T, typename Y>
-std::shared_ptr<GuiCtrLayoutEntry> addLayoutEntry(T& t, const std::shared_ptr<Y>& ctr, String title) {
+SPLayoutEntry addLayoutEntry(T& t, const std::shared_ptr<Y>& ctr, String title) {
     ctr->setLabel(std::move(title));
     auto entry1 = createGuiCtrLayoutEntry(ctr);
     t->addEntry(entry1);
     return entry1;
 }
 template<typename T, typename Y>
-std::shared_ptr<GuiCtrLayoutEntry> addLayoutEntryRelayout(BaseCtrl* ctrl, T& t, const std::shared_ptr<Y>& ctr, String title) {
+SPLayoutEntry addLayoutEntryRelayout(BaseCtrl* ctrl, T& t, const std::shared_ptr<Y>& ctr, String title) {
     ctr->setLabel(std::move(title));
     auto entry1 = createGuiCtrLayoutEntry(ctr);
     DropAreaUILayout area(t.get());
@@ -218,10 +218,10 @@ public:
     std::shared_ptr<guictr_layout> ctr_Left;
     std::shared_ptr<guictr_layout> ctr_Center;
     std::shared_ptr<guictr_layout> ctr_Right;
-    std::shared_ptr<GuiCtrLayoutEntry> ctrEntryTracks;
-    std::shared_ptr<GuiCtrLayoutEntry> ctrEntryNodes;
-    std::shared_ptr<GuiCtrLayoutEntry> ctrEntryClipEdit;
-    std::shared_ptr<GuiCtrLayoutEntry> ctrEntryPlugins;
+    SPLayoutEntry ctrEntryTracks;
+    SPLayoutEntry ctrEntryNodes;
+    SPLayoutEntry ctrEntryClipEdit;
+    SPLayoutEntry ctrEntryPlugins;
     std::vector<std::shared_ptr<guictr_clipeditor>> vecClipEditors;
 
     guictr_menubar ctr_menu;
@@ -235,7 +235,7 @@ public:
     DAW::EditAreaType editAreaType = DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER;
 
 private:
-    std::shared_ptr<GuiCtrLayoutEntry> placeInCenterContainer(GuiContainerTag tag) {
+    SPLayoutEntry placeInCenterContainer(GuiContainerTag tag) {
         auto entry = createGuiCtrLayoutEntry(std::make_shared<guictr_layout>());
         entry->setEntryTag(tag);
         entry->getAsLayoutCtr()->setLayout(container_layout::TABBED);
@@ -312,8 +312,8 @@ public:
         splitters[1]->setMinMax(0.25f, 0.95f);
         subctr_tabbed2->setLabel("Top");
         subctr_tabbed->setLabel("Bottom");
-        std::shared_ptr<GuiCtrLayoutEntry> entry1 = createGuiCtrLayoutEntry(subctr_tabbed2);
-        std::shared_ptr<GuiCtrLayoutEntry> entry2 = createGuiCtrLayoutEntry(subctr_tabbed);
+        SPLayoutEntry entry1 = createGuiCtrLayoutEntry(subctr_tabbed2);
+        SPLayoutEntry entry2 = createGuiCtrLayoutEntry(subctr_tabbed);
         ctr_Left->setLabel("Left Docker");
         ctr_Right->setLabel("Right Docker");
         ctr_Center->setLabel("Center Docker");
@@ -376,7 +376,7 @@ public:
         return true;
     }
 
-    std::shared_ptr<GuiCtrLayoutEntry> findByTagEntry(GuiContainerTag tag) {
+    SPLayoutEntry findByTagEntry(GuiContainerTag tag) {
         for (auto& ctr : {ctr_Left.get(), ctr_Right.get(), ctr_Center.get()}) {
             if (auto ctrWithTag = ctr->findByTagEntry(tag)) {
                 return ctrWithTag;
@@ -385,7 +385,7 @@ public:
         return nullptr;
     }
 
-    std::shared_ptr<GuiCtrLayoutEntry> findByGuiType(gui_type guitype) {
+    SPLayoutEntry findByGuiType(gui_type guitype) {
         for (auto& ctr : {ctr_Left.get(), ctr_Right.get(), ctr_Center.get()}) {
             if (auto ctrWithTag = ctr->findByGuiType(guitype)) {
                 return ctrWithTag;
@@ -393,8 +393,8 @@ public:
         }
         return nullptr;
     }
-    std::shared_ptr<GuiCtrLayoutEntry> findByTagOrGuiType(GuiContainerTag tag, gui_type guitype) {
-        std::shared_ptr<GuiCtrLayoutEntry> entries;
+    SPLayoutEntry findByTagOrGuiType(GuiContainerTag tag, gui_type guitype) {
+        SPLayoutEntry entries;
         visitEntries([&entries, tag, guitype](auto& entry) {
             if (entry->getGui()->isVisible() && entry->getEntryTag() == tag) {
                 entries = entry;
@@ -493,7 +493,7 @@ public:
         dawCtrl->viewMode = mode;
 
         bool bContentChanged = false;
-        std::shared_ptr<GuiCtrLayoutEntry> spShowEntry;
+        SPLayoutEntry spShowEntry;
         int insertPos = -1;
         switch (mode) {
             case TRACK_TIMELINE:
@@ -575,7 +575,7 @@ public:
     void setEditAreaType(DAW::EditAreaType editAreaType) {
         this->editAreaType = editAreaType;
 
-        std::shared_ptr<GuiCtrLayoutEntry> spShowEntry;
+        SPLayoutEntry spShowEntry;
         int insertPos = -1;
         switch (editAreaType) {
             case DAW::EditAreaType::EDIT_AREA_PLUGIN_CONTAINER:
@@ -589,7 +589,7 @@ public:
         if (!spShowEntry)
             return;
         bool bContentChanged = false;
-        std::shared_ptr<GuiCtrLayoutEntry> ctrTabBottom;
+        SPLayoutEntry ctrTabBottom;
         if (!spShowEntry->getParentContainer()) {
             ctrTabBottom = findByTagEntry(GuiContainerTag::TAG_TAB_BOTTOM);
             if (!ctrTabBottom) {
@@ -617,7 +617,7 @@ public:
 
     void onEditClipChanged(bool bHasClip) {
         if (bHasClip) {
-            std::shared_ptr<GuiCtrLayoutEntry> firstMatch = nullptr;
+            SPLayoutEntry firstMatch = nullptr;
             visitEntries([&](auto& entry) {
                 if (entry->getEntryTag() == GuiContainerTag::TAG_CLIPEDIT) {
                     if (!firstMatch || !firstMatch->isVisible())
@@ -782,7 +782,7 @@ public:
         struct TagGuiType {
             GuiContainerTag tag;
             gui_type type;
-            std::shared_ptr<GuiCtrLayoutEntry>* pSp;
+            SPLayoutEntry* pSp;
         };
         const std::array<TagGuiType, 4> tagGuiTypes = {
             TagGuiType{GuiContainerTag::TAG_TRACKS, gui_type::CTR_TYPE_TRACKS, &ctrEntryTracks},
@@ -2605,7 +2605,7 @@ void DawCtrl::dragContainerRelayout(drag_ctr_event evt) {
                 && layoutCtr->getEntries().size() == 1
                 && layoutCtr->getEntries().front()->getFrameType() == LayoutCtrType::GUICTR_LAYOUT
                 && layoutCtr->getEntries().front()->getAsLayoutCtr()->canSimplify()) {
-                std::shared_ptr<GuiCtrLayoutEntry> out;
+                SPLayoutEntry out;
                 layoutCtr->getContainerRef(layoutCtr->getEntries().front().get(), out, true);
                 dbgassert(out);
                 dbgassert(out->getAsLayoutCtr());
@@ -3363,7 +3363,7 @@ void DawCtrl::setSingleClip(clip_t* clip) {
 void DawCtrl::setEditorSelection(clip_t* clip, const editor_view_selection_t& clipboardView) {
     view->ctr_clipeditorview.resetCache();
     view->onEditClipChanged(clip!=nullptr);
-    view->visitEntries([clip, &clipboardView](auto& entry) {
+    view->visitEntries([clip, &clipboardView](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {  
             auto clipEditor = guictr_cast<guictr_clipeditor>(entry);
             clipEditor->storeLayout();
@@ -3800,7 +3800,7 @@ void DawCtrl::focusChanged(guibase* oldFocused, guibase* newFocused) {
     }
 }
 
-void DawCtrl::onViewCreated(std::shared_ptr<GuiCtrLayoutEntry>& ctrEntry) {
+void DawCtrl::onViewCreated(SPLayoutEntry& ctrEntry) {
     if (ctrEntry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {
         view->vecClipEditors.push_back(std::static_pointer_cast<guictr_clipeditor>(ctrEntry->getSharedGui()));
     }

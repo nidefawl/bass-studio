@@ -557,7 +557,7 @@ public:
     track_t* getSelectedTrack() {
         return selectedTrack;
     }
-    void onViewCreated(std::shared_ptr<GuiCtrLayoutEntry>& ctrEntry);
+    void onViewCreated(SPLayoutEntry& ctrEntry);
     void setSelectedTrackEntry(track_gui_entry_t* trackEntry);
     void setSelectedTrack(track_t* track);
     void focusChanged(guibase* oldFocused, guibase* newFocused) override;

@@ -231,14 +231,14 @@ public:
     bool getSelected(std::vector<effectbase*>& out);
 };
 class guictr_pluginview : public guictr_base {
-    std::shared_ptr<GuiCtrLayoutEntry> pluginCtr;
+    SPLayoutEntry pluginCtr;
 public:
     int lastscrolloffset = 0;
     guictr_pluginview() : guictr_base() {
         setCanMouseHit(true);
     }
     ~guictr_pluginview() override = default;
-    void setPluginCtr(std::shared_ptr<GuiCtrLayoutEntry>& _pluginCtr) {
+    void setPluginCtr(SPLayoutEntry& _pluginCtr) {
         pluginCtr = _pluginCtr;
     }
     guictr_plugins* getPluginCtr();

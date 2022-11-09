@@ -162,7 +162,7 @@ bool guictr_layout::setOverlayPosForTab(DropAreaUILayout* area, const dock_pos d
     auto numEntries = CtrSize(entries);
     if (dockOffset > -1 && dockOffset <= numEntries && numEntries > 0) {
         auto dockIndex = dockOffset >= numEntries ? static_cast<int32_t>(entries.size()) - 1U : dockOffset;
-        const std::shared_ptr<GuiCtrLayoutEntry>& entry = entries[dockIndex];
+        const SPLayoutEntry& entry = entries[dockIndex];
         const guibase* entryHandle = entry->getHandle();
         if (entryHandle) {
             if (rightSideHandle) {
@@ -470,7 +470,7 @@ public:
             auto context = ContainerInstanceContext{ctrHandle->dawCtrl->getDaw(), ctrHandle->dawCtrl, {}};
             if (makeContainer(context, type, ctr)) {
                 ctr->setLabel(e->title);
-                std::shared_ptr<GuiCtrLayoutEntry> ctrEntry = createGuiCtrLayoutEntry(ctr);
+                SPLayoutEntry ctrEntry = createGuiCtrLayoutEntry(ctr);
                 auto layoutCtr = ctrHandle->parentCtr->getParentContainer();
                 if (layoutCtr) {
                     layoutCtr->replaceContainerWith(ctrHandle->ctr, ctrEntry);
@@ -769,7 +769,7 @@ bool guictr_layout::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     return false;
 }
 
-bool guictr_layout::getContainerRef(GuiCtrLayoutEntry* entry, std::shared_ptr<GuiCtrLayoutEntry>& out, bool remove) {
+bool guictr_layout::getContainerRef(GuiCtrLayoutEntry* entry, SPLayoutEntry& out, bool remove) {
     auto it = std::find_if(this->entries.begin(), this->entries.end(), [entry](auto& e) {
         return entry == e.get();
     });
@@ -832,7 +832,7 @@ bool guictr_layout::activateEntry(GuiCtrLayoutEntry* entry) {
     }
     return false;
 }
-std::shared_ptr<GuiCtrLayoutEntry> guictr_layout::findByTagEntry(int32_t tag) {
+SPLayoutEntry guictr_layout::findByTagEntry(int32_t tag) {
     for (auto& entry : entries) {
         if (entry->getEntryTag() == tag) {
             return entry;
@@ -849,7 +849,7 @@ std::shared_ptr<GuiCtrLayoutEntry> guictr_layout::findByTagEntry(int32_t tag) {
     }
     return nullptr;
 }
-std::shared_ptr<GuiCtrLayoutEntry> guictr_layout::findByGuiType(gui_type guitype) {
+SPLayoutEntry guictr_layout::findByGuiType(gui_type guitype) {
     for (auto& entry : entries) {
         if (entry->getGui()->getGuiType() == guitype) {
             return entry;
@@ -867,7 +867,7 @@ std::shared_ptr<GuiCtrLayoutEntry> guictr_layout::findByGuiType(gui_type guitype
     return nullptr;
 }
 
-void guictr_layout::addEntry(std::shared_ptr<GuiCtrLayoutEntry> entry, int32_t posOffset) {
+void guictr_layout::addEntry(SPLayoutEntry entry, int32_t posOffset) {
     auto it = std::find(entries.begin(), entries.end(), entry);
     if (it != entries.end()) {
         throw applogicexception(StringFormat("%s - attempt to add element twice", StringAsCStr(getClassName())));
@@ -892,7 +892,7 @@ void guictr_layout::addEntry(std::shared_ptr<GuiCtrLayoutEntry> entry, int32_t p
     entry->updateLabel();
 }
 
-bool guictr_layout::placeContainer(std::shared_ptr<GuiCtrLayoutEntry> entry, DropAreaUILayout* area) {
+bool guictr_layout::placeContainer(SPLayoutEntry entry, DropAreaUILayout* area) {
 
     // prevent dropping into self
     guibase* parent = this;
@@ -907,7 +907,7 @@ bool guictr_layout::placeContainer(std::shared_ptr<GuiCtrLayoutEntry> entry, Dro
     int32_t dockPosOffset = area->dockPosOffset;
     auto updatedCtrLayout = DockPosToContainerLayout(dockPos);
 
-    std::shared_ptr<GuiCtrLayoutEntry> out;
+    SPLayoutEntry out;
     if (entry->getParentContainer() != nullptr) {
         //undock from current container
         if (!entry->getContainerRef(out, true)) {
@@ -1026,16 +1026,16 @@ void guictr_layout::render(NVGcontext* vg) {
     }
 }
 // std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(newContainer);
-std::shared_ptr<GuiCtrLayoutEntry> guictr_layout::replaceContainerWith(guictr_base* ctr,
-                                                                         std::shared_ptr<GuiCtrLayoutEntry>& newEntry) {
+SPLayoutEntry guictr_layout::replaceContainerWith(guictr_base* ctr,
+                                                                         SPLayoutEntry& newEntry) {
     std::shared_ptr<guictr_layout> retCtr;
-    auto it = std::find_if(entries.begin(), entries.end(), [ctr](std::shared_ptr<GuiCtrLayoutEntry>& e) {
+    auto it = std::find_if(entries.begin(), entries.end(), [ctr](SPLayoutEntry& e) {
         return e->getGui() == ctr;
     });
     if (!assert_expr(it != entries.end())) {
         return nullptr;
     }
-    std::shared_ptr<GuiCtrLayoutEntry> entry = *it;// copy for return
+    SPLayoutEntry entry = *it;// copy for return
     guictr_base::remove(entry->getGui());
     auto* guiHandle = entry->getHandle();
     if (guiHandle) {
@@ -1077,14 +1077,14 @@ guibase* GuiCtrLayoutEntry::getHandle() {
     return ctrHandle;
 }
 
-bool GuiCtrLayoutEntry::getContainerRef(std::shared_ptr<GuiCtrLayoutEntry>& out, bool remove) {
+bool GuiCtrLayoutEntry::getContainerRef(SPLayoutEntry& out, bool remove) {
     return getParentContainer()->getContainerRef(this, out, remove);
 }
 
 void GuiCtrLayoutEntry::removeEntryFromParent() {
     auto parent = getParentContainer();
     if (parent) {
-        std::shared_ptr<GuiCtrLayoutEntry> out;
+        SPLayoutEntry out;
         assert_expr(parent->getContainerRef(this, out, true));
         parent->postContentChanged();
     }
@@ -1157,7 +1157,7 @@ void storeContainerEntrySnapshot(GuiCtrLayoutEntry* ctrlayoutEntry, std::shared_
 void loadContainerEntrySnapshot(ContainerFactory& fac,
                                 ContainerInstanceContext& ctxt,
                                 std::shared_ptr<guictrlayout_entry_snapshot_t>& snapshot,
-                                std::shared_ptr<GuiCtrLayoutEntry>& out) {
+                                SPLayoutEntry& out) {
     out  = nullptr;
     const auto typeLoad = snapshot->type;
     ctxt.stats[typeLoad]++;
@@ -1223,7 +1223,7 @@ void loadContainerSnapshot(ContainerFactory& fac,
                             guictrlayout_snapshot_t* snapshot) {
     ctrlayout->setLayout(snapshot->ctrLayout);
     for (auto& shrdEntrySnapshot: snapshot->entries) {
-        std::shared_ptr<GuiCtrLayoutEntry> sharedEntry;
+        SPLayoutEntry sharedEntry;
         loadContainerEntrySnapshot(fac, ctxt, shrdEntrySnapshot, sharedEntry);
         if (sharedEntry) {
             ctrlayout->addEntry(sharedEntry, -2);
@@ -1256,9 +1256,9 @@ bool guictr_layout::canSimplify() const {
 void guictr_layout::simplify() {
     struct InlineEntry {
         int32_t index = 0;
-        std::shared_ptr<GuiCtrLayoutEntry> entry;
+        SPLayoutEntry entry;
     };
-    std::vector<std::shared_ptr<GuiCtrLayoutEntry>> entriesToRemove;
+    std::vector<SPLayoutEntry> entriesToRemove;
     std::vector<InlineEntry> entriesInsert;
     int32_t index = 0;
     for (const auto& entry : entries) {
@@ -1286,7 +1286,7 @@ void guictr_layout::simplify() {
             log_lf(Log::L_DEBUG, "remove %zu container entries\n", entriesToRemove.size());
         }
         for (const auto& entry : entriesToRemove) {
-            std::shared_ptr<GuiCtrLayoutEntry> out;
+            SPLayoutEntry out;
             getContainerRef(entry.get(), out, true);
         }
         for (const auto& entry : entriesInsert) {

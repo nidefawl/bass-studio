@@ -825,7 +825,7 @@ void BaseCtrl::dragContainerMove(MouseEvent& evt) {
     dragDropTargets_ContainerMove = targets;
     ctrDragHandler.pos = evt.mousepos;
 }
-void BaseCtrl::dropContainer(std::shared_ptr<GuiCtrLayoutEntry>& ctrContent, DropAreaUILayout* area) {
+void BaseCtrl::dropContainer(SPLayoutEntry& ctrContent, DropAreaUILayout* area) {
     bool hasRemovedContainer = false;
     bool hasPlacedContainer  = false;
     auto* szLabel1           = StringAsCStr(ctrContent->getGui()->label);
@@ -872,7 +872,7 @@ void BaseCtrl::dropContainer(std::shared_ptr<GuiCtrLayoutEntry>& ctrContent, Dro
             if (!parentLayoutCtr) {
                 std::shared_ptr<guictr_layout> prevCtr = this->replaceContainerWith(containerToReplace, newContainer);
                 if (prevCtr) {
-                    std::shared_ptr<GuiCtrLayoutEntry> entry1 = createGuiCtrLayoutEntry(prevCtr);
+                    SPLayoutEntry entry1 = createGuiCtrLayoutEntry(prevCtr);
                     newContainer->placeContainer(ctrContent, area);
                     area->dockPos = newDockPos;
                     newContainer->placeContainer(entry1, area);

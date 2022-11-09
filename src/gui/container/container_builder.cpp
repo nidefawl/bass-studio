@@ -194,13 +194,13 @@ bool makeContainer(ContainerInstanceContext& ctxt, gui_type type, std::shared_pt
     }
     return false;
 }
-std::shared_ptr<GuiCtrLayoutEntry> createGuiCtrLayoutEntry(const std::shared_ptr<guictr_layout>& ctr) {
-    std::shared_ptr<GuiCtrLayoutEntry> entry1 = std::make_shared<GuiCtrLayoutEntry>(ctr->getLabel(), ctr);
+SPLayoutEntry createGuiCtrLayoutEntry(const std::shared_ptr<guictr_layout>& ctr) {
+    SPLayoutEntry entry1 = std::make_shared<GuiCtrLayoutEntry>(ctr->getLabel(), ctr);
     entry1->selfLayoutCtr = ctr;
     return entry1;
 }
-std::shared_ptr<GuiCtrLayoutEntry> createGuiCtrLayoutEntry(const std::shared_ptr<guictr_base>& ctr) {
+SPLayoutEntry createGuiCtrLayoutEntry(const std::shared_ptr<guictr_base>& ctr) {
     dbgassert(ctr->getGuiType() != gui_type::CTR_TYPE_LAYOUT);
-    std::shared_ptr<GuiCtrLayoutEntry> entry1 = std::make_shared<GuiCtrLayoutEntry>(ctr->getLabel(), ctr);
+    SPLayoutEntry entry1 = std::make_shared<GuiCtrLayoutEntry>(ctr->getLabel(), ctr);
     return entry1;
 }

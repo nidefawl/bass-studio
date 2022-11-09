@@ -949,7 +949,7 @@ public:
 
 
 class guictr_clipeditorview : public guictr_base {
-    std::shared_ptr<GuiCtrLayoutEntry> clipEditor;
+    SPLayoutEntry clipEditor;
     scaled_grid m_grid;
     clip_view_t m_view;
     midi_clip_render_cache_t* const cache;
@@ -963,7 +963,7 @@ public:
 
     guictr_clipeditorview();
     ~guictr_clipeditorview() override;
-    void setClipEditor(std::shared_ptr<GuiCtrLayoutEntry>& _clipEditor) {
+    void setClipEditor(SPLayoutEntry& _clipEditor) {
         clipEditor = _clipEditor;
         auto clipEditor = getClipEditor();
         if (clipEditor) {

@@ -14,6 +14,7 @@
 #include "event.h"
 #include "gui/gui.h"
 #include "gui/container/container.h"
+#include "gui/container/container_layout_types.h"
 #include "hires_timer.h"
 #include "keyboard.h"
 #include "logging.h"
@@ -61,99 +62,6 @@ public:
     float getStringWidth(const String& text);
 };
 
-class guictr_layout_base;
-class GuiCtrLayoutEntryHandle;
-class guictr_dragged_container_instance;
-class guictr_layout_base;
-class DropAreaUILayout {
-    guictr_layout_base* const parent;
-
-public:
-    ivec2 pos{0, 0};
-    ivec2 size{0, 0};
-    int32_t priority            = 0;
-    dock_pos dockPos            = dock_pos::NONE;
-    int32_t dockPosOffset       = -1;
-    int32_t childContainerIndex = -1;
-    String label;
-    bool bAlwaysShow = false;
-    void init() {
-        pos = {};
-        size = {};
-        priority = 0;
-        dockPos = dock_pos::NONE;
-        dockPosOffset = -1;
-        childContainerIndex = -1;
-        label = "";
-        bAlwaysShow = false;
-    }
-    explicit DropAreaUILayout(guictr_layout_base* _parent) : parent(_parent) {}
-    void render(NVGcontext* vg);
-    bool contains(ivec2 mpos) const { return mpos.x >= pos.x && mpos.y >= pos.y && mpos.x < pos.x + size.x && mpos.y < pos.y + size.y; }
-    guictr_layout_base* getLayoutCtr() { return parent; }
-    dock_pos getDockPos() const { return dockPos; }
-    void setAlwaysShow(bool b) { bAlwaysShow = b; }
-    bool isAlwaysShow() const { return bAlwaysShow; }
-};
-enum LayoutCtrType { GUICTR_LAYOUT, GUICTR_BASE };
-struct GuiCtrLayoutEntry {
-    const gui_type type;
-    const LayoutCtrType frameType;
-    ivec2 pos{0};
-    ivec2 size{0};
-    std::shared_ptr<guictr_base> ctr;
-    std::shared_ptr<guictr_layout> selfLayoutCtr;
-    GuiCtrLayoutEntryHandle* ctrHandle;
-    String label;
-    int32_t indexInParent = 0;
-private:
-    guictr_layout_base* parent = nullptr;
-    int32_t entryTag = -1;
-public:
-    GuiCtrLayoutEntry(String label, const std::shared_ptr<guictr_base>& _ctr);
-    ~GuiCtrLayoutEntry();
-    GuiCtrLayoutEntry(const GuiCtrLayoutEntry& other) = delete;
-    GuiCtrLayoutEntry& operator=(const GuiCtrLayoutEntry& other) = delete;
-    GuiCtrLayoutEntry(GuiCtrLayoutEntry&& other) = delete;
-    GuiCtrLayoutEntry& operator=(GuiCtrLayoutEntry&& other) = delete;
-    guictr_layout_base* getParentContainer() { return parent; }
-    const guictr_layout_base* getParentContainer() const { return parent; }
-    void setParentContainer(guictr_layout_base* _parent) { parent = _parent; }
-    
-    guictr_base* getGui();
-    std::shared_ptr<guictr_base> getSharedGui() const { return ctr; }
-    guibase* getHandle();
-    gui_type getType() const { return type; }
-    LayoutCtrType getFrameType() const { return frameType; }
-    String getLabel() const { return label; }
-    bool getContainerRef(std::shared_ptr<GuiCtrLayoutEntry>& out, bool remove);
-    void removeEntryFromParent();
-    std::shared_ptr<guictr_layout>& getAsLayoutCtr() { return selfLayoutCtr; }
-    int32_t getEntryTag() const { return entryTag; }
-    void setEntryTag(int32_t tag);
-    void assertState() const;
-    void updateLabel();
-    bool isVisible();
-};
-template<typename T, typename Y>
-T* guictr_cast(Y& entry) {
-    if (!assert_expr(!!entry))
-        return nullptr;
-    return static_cast<T*>(entry->getGui());
-}
-
-class guictr_layout_base {
-public:
-    virtual ~guictr_layout_base() = default;
-    virtual void getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<DropAreaUILayout>>& handles)                = 0;
-    virtual bool placeContainer(std::shared_ptr<GuiCtrLayoutEntry> ctr, DropAreaUILayout* area)                   = 0;
-    virtual bool getContainerRef(GuiCtrLayoutEntry* ctr, std::shared_ptr<GuiCtrLayoutEntry>& out, bool remove) = 0;
-    virtual std::shared_ptr<GuiCtrLayoutEntry> replaceContainerWith(guictr_base* ctr, std::shared_ptr<GuiCtrLayoutEntry>& newEntry) = 0;
-    virtual container_layout getLayout() const = 0;
-    virtual void postContentChanged() = 0;
-    virtual bool activateEntry(GuiCtrLayoutEntry* entry) = 0;
-    virtual bool isEntryVisible(GuiCtrLayoutEntry* entry) = 0;
-};
 
 class guictr_dragged_container_instance : public guictr_base {
 public:
@@ -168,6 +76,7 @@ public:
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
 };
+
 class BaseCtrl {
 public:
     enum drag_ctr_event_type { DRAG_BEGIN, DRAG_MOVE, DRAG_END };
@@ -189,7 +98,7 @@ public:
     /* list of target areas where the currently dragged object can be moved to */
     std::vector<std::weak_ptr<DropAreaUILayout>> dragDropTargets_ContainerMove;
     guictr_dragged_container_instance ctrDragHandler;
-    std::shared_ptr<GuiCtrLayoutEntry> ctrContent;
+    SPLayoutEntry ctrContent;
     int32_t refIdNext = 1;
     SafeRefStorage<guibase> localRefs;
     int cursorIcon         = CURSOR_DEFAULT;
@@ -266,7 +175,7 @@ public:
     void dragContainerBegin(MouseEvent& evt, GuiCtrLayoutEntry* ctrDragSrc);
     void dragContainerMove(MouseEvent& evt);
     void dragContainerRelease(MouseEvent& evt);
-    void dropContainer(std::shared_ptr<GuiCtrLayoutEntry>& ctrContent, DropAreaUILayout* area);
+    void dropContainer(SPLayoutEntry& ctrContent, DropAreaUILayout* area);
     virtual void dragContainerRelayout(drag_ctr_event evt) = 0;
     bool isDraggingContainer() const { return ctrContent != nullptr || bShowDebugFrames; }
     SafeRefStorage<guibase>& getRefStorage();

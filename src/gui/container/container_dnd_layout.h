@@ -39,7 +39,7 @@ class guictr_layout : public guictr_base, public guictr_layout_base, public spli
 private:
     container_layout ctrLayout = container_layout::SOLE;
     int32_t activePosition     = -1;
-    std::vector<std::shared_ptr<GuiCtrLayoutEntry>> entries;
+    std::vector<SPLayoutEntry> entries;
     std::vector<guibase*> handles;
     std::vector<std::shared_ptr<DropAreaUILayout>> dragdropContainerAreaHelpers;
     std::vector<std::shared_ptr<Splitter>> splitters;
@@ -70,17 +70,17 @@ public:
         return true;
     }
     // std::shared_ptr<guictr_layout_entry> findByTagContainer(int32_t tag);
-    std::shared_ptr<GuiCtrLayoutEntry> findByTagEntry(int32_t tag);
-    std::shared_ptr<GuiCtrLayoutEntry> findByGuiType(gui_type guitype);
+    SPLayoutEntry findByTagEntry(int32_t tag);
+    SPLayoutEntry findByGuiType(gui_type guitype);
 
     int32_t getActivePosition() const {
         return activePosition;
     }
-    std::vector<std::shared_ptr<GuiCtrLayoutEntry>>& getEntries() {
+    std::vector<SPLayoutEntry>& getEntries() {
         return entries;
     }
 
-    std::shared_ptr<GuiCtrLayoutEntry> getEntry(guictr_base* ctr) {
+    SPLayoutEntry getEntry(guictr_base* ctr) {
         for (auto& entry : entries) {
             if (entry->getGui() == ctr)
                 return entry;
@@ -99,15 +99,15 @@ public:
     void postContentChanged() override;
     void assertEntries() const;
     void setLayout(container_layout ctrLayoutNew);
-    void addEntry(std::shared_ptr<GuiCtrLayoutEntry> ctr, int32_t posOffset = -2);
+    void addEntry(SPLayoutEntry ctr, int32_t posOffset = -2);
     void removeAllEntries();
     void setActiveEntry(int32_t idx);
     bool isEntryVisible(GuiCtrLayoutEntry* entry) override;
-    bool getContainerRef(GuiCtrLayoutEntry* ctr, std::shared_ptr<GuiCtrLayoutEntry>& out, bool remove) override;
-    bool placeContainer(std::shared_ptr<GuiCtrLayoutEntry> ctr, DropAreaUILayout* area) override;
+    bool getContainerRef(GuiCtrLayoutEntry* ctr, SPLayoutEntry& out, bool remove) override;
+    bool placeContainer(SPLayoutEntry ctr, DropAreaUILayout* area) override;
     bool activateEntry(GuiCtrLayoutEntry* entry) override;
     void getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<DropAreaUILayout>>& handles) override;
-    std::shared_ptr<GuiCtrLayoutEntry> replaceContainerWith(guictr_base* ctr, std::shared_ptr<GuiCtrLayoutEntry>& newEntry) override;
+    SPLayoutEntry replaceContainerWith(guictr_base* ctr, SPLayoutEntry& newEntry) override;
     container_layout DockPosToContainerLayout(dock_pos pos) {
         switch (pos) {
             case dock_pos::TOP:
