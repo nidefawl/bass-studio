@@ -103,6 +103,12 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
 }
 
 void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_t* theme, const track_t* tr, const clip_t* cl, const audiofile_t* file, const gui_waveform_texture_ref* waveformRef, ivec2 pos, ivec2 size, ivec2 posClipped, ivec2 sizeClipped) {
+    if (size.y < 1 || sizeClipped.y < 1) {
+        return;
+    }
+    if (size.x < 1 || sizeClipped.x < 1) {
+        return;
+    }
     if (cl->getLen() <= 0) {
         return;
     }
@@ -115,7 +121,7 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
     nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
     nvgStrokeWidth(vg, 1.f);
     nvgStroke(vg);
-    if (file && (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MISSING)) {
+    if (file && (file->state & audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MISSING) && size.x > 0 && size.y - HEIGHT_CLIP_TITLE > 4) {
         auto colInvalid = theme->getColor(GuiColor::COL_INVALID_INPUT);
         colInvalid.a = 0.5;
         nvgBeginPath(vg);
@@ -148,7 +154,7 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
     tick_t clipLen = cl->getLen();
     float numBars  = clipLen / (float) TICKS_BAR;
     float barSize  = size.x / (float) numBars;
-    if (sizeClipped.x > 0 && sizeClipped.y > 0 && waveformRef->rendered) {
+    if (sizeClipped.x > 0 && sizeClipped.y > 2 && waveformRef->rendered) {
         nvgTranslate(vg, posClipped.x, posContents.y);
         wfrenderer->draw(vg, waveformRef, sizeClipped);
         nvgTranslate(vg, -posClipped.x, -posContents.y);
