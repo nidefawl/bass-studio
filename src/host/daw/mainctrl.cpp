@@ -278,7 +278,7 @@ private:
     }
 
     void activateEntry(GuiCtrLayoutEntry* focusCtr) {
-        visitLayoutContainers([focusCtr](auto& ctr) {
+        visitLayoutContainers([focusCtr](std::shared_ptr<guictr_layout>& ctr) {
             ctr->activateEntry(focusCtr);
             return true;
         });
@@ -395,7 +395,7 @@ public:
     }
     SPLayoutEntry findByTagOrGuiType(GuiContainerTag tag, gui_type guitype) {
         SPLayoutEntry entries;
-        visitEntries([&entries, tag, guitype](auto& entry) {
+        visitEntries([&entries, tag, guitype](SPLayoutEntry& entry) {
             if (entry->getGui()->isVisible() && entry->getEntryTag() == tag) {
                 entries = entry;
                 return false;
@@ -439,7 +439,7 @@ public:
         ctrEntryClipEdit->removeEntryFromParent();
         ctrEntryPlugins->removeEntryFromParent();
         ctr_Center->removeAllEntries();
-        // visitLayoutContainers([](auto& ctr) {
+        // visitLayoutContainers([](std::shared_ptr<guictr_layout>& ctr) {
         //     ctr->removeAllEntries();
         //     return true;
         // });
@@ -618,7 +618,7 @@ public:
     void onEditClipChanged(bool bHasClip) {
         if (bHasClip) {
             SPLayoutEntry firstMatch = nullptr;
-            visitEntries([&](auto& entry) {
+            visitEntries([&](SPLayoutEntry& entry) {
                 if (entry->getEntryTag() == GuiContainerTag::TAG_CLIPEDIT) {
                     if (!firstMatch || !firstMatch->isVisible())
                         firstMatch = entry;
@@ -627,7 +627,7 @@ public:
                 return true;
             });
             if (!firstMatch) {
-                visitEntries([&](auto& entry) {
+                visitEntries([&](SPLayoutEntry& entry) {
                     if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {
                         if (!firstMatch || !firstMatch->isVisible())
                             firstMatch = entry;
@@ -712,7 +712,7 @@ public:
         v.push_back(&ctr_tempo);
         v.push_back(&ctr_pluginview);
         v.push_back(&ctr_clipeditorview);
-        visitLayoutContainers([&](auto& ctr) {
+        visitLayoutContainers([&](std::shared_ptr<guictr_layout>& ctr) {
             v.push_back(ctr.get());
             return true;
         });
@@ -906,7 +906,7 @@ view_mode_t DawCtrl::getViewMode() const {
 }
 
 void DawCtrl::onPluginSelected() {
-    view->visitEntries([](auto& entry) {
+    view->visitEntries([](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_NODES) {
             guictr_cast<guictr_nodes_splitview>(entry)->onPluginSelected();
         }
@@ -922,7 +922,7 @@ void DawCtrl::setAsyncTask(DAW::async_task_t* task) {
 
 bool DawCtrl::isClipEditorVisible() {
     bool bFound = false;
-    view->visitEntries([&bFound](auto& ctr) {
+    view->visitEntries([&bFound](SPLayoutEntry& ctr) {
         bFound |= ctr->getType() == gui_type::CTR_TYPE_CLIPEDITOR && ctr->isVisible();
         return !bFound;
     });
@@ -931,7 +931,7 @@ bool DawCtrl::isClipEditorVisible() {
 
 bool DawCtrl::isPluginViewVisible() {
     bool bFound = false;
-    view->visitEntries([&bFound](auto& ctr) {
+    view->visitEntries([&bFound](SPLayoutEntry& ctr) {
         bFound |= ctr->getType() == gui_type::CTR_TYPE_PLUGINS && ctr->isVisible();
         return !bFound;
     });
@@ -944,7 +944,7 @@ void MainCtrl::addDebug(String s) {
 void DawCtrl::resetMouseContext() {
     BaseCtrl::resetMouseContext();
     if (view) {
-        view->visitEntries([](auto& entry) {
+        view->visitEntries([](SPLayoutEntry& entry) {
             if (entry->getType() == gui_type::CTR_TYPE_NODES) {
                 guictr_cast<guictr_nodes_splitview>(entry)->reset();
             }
@@ -956,7 +956,7 @@ void DawCtrl::resetMouseContext() {
 void DawInstance::unloadProject() {
     AppWndProc_enableBlockReentrant();
     dbgassert(!playThread.isRunning() || playThread.isLockedOrNotProcessing());
-    for (auto* ctrl : dawCtrls) {
+    for (DawCtrl* ctrl : dawCtrls) {
         ctrl->resetClipViews();
         ctrl->closeContextMenu();
         ctrl->resetMouseContext();
@@ -988,7 +988,7 @@ void DawInstance::unloadProject() {
     tls.audioCache->unloadAll();
     auto* ctrl = tls.mainCtrl;
     if (ctrl) {
-        ctrl->view->visitEntries([](auto& ctr) {
+        ctrl->view->visitEntries([](SPLayoutEntry& ctr) {
             if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
                 auto trackCtr = guictr_cast<guictr_tracks>(ctr);
                 auto& trackView = trackCtr->trackView;
@@ -1711,7 +1711,7 @@ void DawInstance::updateClipViewsAndCursor(clip_t* notifyClip, clip_cursor_t cur
 }
 
 void DawCtrl::updateClipViewsAndCursor(clip_t* notifyClip, clip_cursor_t cursor) {
-    view->visitEntries([notifyClip, &cursor](auto& entry) {
+    view->visitEntries([notifyClip, &cursor](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {  
             auto clipEditor = guictr_cast<guictr_clipeditor>(entry);
             auto& view = clipEditor->getClipView();
@@ -1728,7 +1728,7 @@ void DawCtrl::updateClipViewsAndCursor(clip_t* notifyClip, clip_cursor_t cursor)
 }
 
 void DawCtrl::updateClipViews(clip_t* notifyClip) {
-    view->visitEntries([notifyClip](auto& entry) {
+    view->visitEntries([notifyClip](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {  
             auto clipEditor = guictr_cast<guictr_clipeditor>(entry);
             auto& view = clipEditor->getClipView();
@@ -1749,7 +1749,7 @@ void DawCtrl::resetClipViews() {
         clipEdit->resetClipView();
     }
     size_t countVisit = 0;
-    view->visitEntries([&countVisit](auto& entry) {
+    view->visitEntries([&countVisit](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR)
             countVisit++;
         return true;
@@ -2008,7 +2008,7 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     auto& settings = daw_tls::getSettings();
 
     //TODO: layout settings should be handled on editor container level
-    view->visitEntries([&](auto& entry) {
+    view->visitEntries([&](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
             auto tracks = guictr_cast<guictr_tracks>(entry);
             auto& grid = tracks->getGrid();
@@ -2091,7 +2091,7 @@ void MainCtrl::onTick() {
     if (guiDragged && !guiCaptured && guiDragged->isDragMoveable()) {
         int32_t hoverTicks     = 0;
         track_gui_entry_t* tr  = nullptr;
-        view->visitEntries([&](auto& entry) {
+        view->visitEntries([&](SPLayoutEntry& entry) {
             if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
                 guictr_tracks* tracksCtr = guictr_cast<guictr_tracks>(entry);
                 guictr_base& ctrMixers = tracksCtr->trackControls;
@@ -2145,7 +2145,7 @@ void DawInstance::onPluginsChanged() {
     tls.pluginManager->onTrackLayoutChange();
     for (DawCtrl* pDawCtrl : dawCtrls) {
         dbgassert(pDawCtrl->isOk());
-        pDawCtrl->view->visitEntries([](auto& entry) {
+        pDawCtrl->view->visitEntries([](SPLayoutEntry& entry) {
             if (entry->getType() == gui_type::CTR_TYPE_PLUGINS) {
                 auto trackCtr = guictr_cast<guictr_plugins>(entry);
                 trackCtr->relayout();
@@ -2546,7 +2546,7 @@ bool DawInstance::loadProject1(const std::shared_ptr<project_file>& file, int fl
         if (this->layoutsFromProjectFile.size() > 0) {
             ctrl->loadLayout(this->layoutsFromProjectFile[0]);
         }
-        ctrl->view->visitEntries([f = file.get()](auto& entry) {
+        ctrl->view->visitEntries([f = file.get()](SPLayoutEntry& entry) {
             if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
                 auto trackCtr = guictr_cast<guictr_tracks>(entry);
                 trackCtr->getGrid().setLayout(f->layout.layoutGrid);
@@ -2592,14 +2592,14 @@ void DawInstance::loadProjectFinish() {
 
 void DawCtrl::dragContainerRelayout(drag_ctr_event evt) {
     if (evt.evtType != BaseCtrl::drag_ctr_event_type::DRAG_MOVE) {
-        view->visitLayoutContainers([](auto& ctr) {
+        view->visitLayoutContainers([](std::shared_ptr<guictr_layout>& ctr) {
             ctr->postContentChanged();
             ctr->layout();
             return true;
         });
     }
     if (evt.evtType == BaseCtrl::drag_ctr_event_type::DRAG_END) {
-        view->visitLayoutContainers([this](auto& layoutCtr) {
+        view->visitLayoutContainers([this](std::shared_ptr<guictr_layout>& layoutCtr) {
             if (layoutCtr->getLayout() == container_layout::SOLE
                 && layoutCtr->canSimplify()
                 && layoutCtr->getEntries().size() == 1
@@ -2619,7 +2619,7 @@ void DawCtrl::dragContainerRelayout(drag_ctr_event evt) {
 }
 
 void DawCtrl::getTrackContainers(std::vector<guictr_tracks*>& trackContainers) {
-    view->visitEntries([&trackContainers](auto& entry) {
+    view->visitEntries([&trackContainers](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
             trackContainers.push_back(guictr_cast<guictr_tracks>(entry));
         }
@@ -2669,7 +2669,7 @@ void DawCtrl::setSelectedTrackEntry(track_gui_entry_t* trackEntry) {
 
 void DawCtrl::setSelectedTrack(track_t* track) {
     selectedTrack = track;
-    view->visitEntries([track](auto& entry) {
+    view->visitEntries([track](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_PLUGINS) {
             auto spCtrPlugins = std::static_pointer_cast<guictr_plugins>(entry->getSharedGui());
             spCtrPlugins->showTrack(track ? track->audio : nullptr, spCtrPlugins);
@@ -2680,7 +2680,7 @@ void DawCtrl::setSelectedTrack(track_t* track) {
 
 void DawCtrl::addTrackToView(track_t* track, int flags) {
     int32_t nTrackViews =0;
-    view->visitEntries([track, flags, &nTrackViews](auto& ctr) {
+    view->visitEntries([track, flags, &nTrackViews](SPLayoutEntry& ctr) {
         if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
             nTrackViews++;
             guictr_cast<guictr_tracks>(ctr)->addTrack(track, flags);
@@ -2692,7 +2692,7 @@ void DawCtrl::addTrackToView(track_t* track, int flags) {
 
 void DawCtrl::removeTrackFromView(track_t* track, int flags) {
     int32_t nTrackViews =0;
-    view->visitEntries([track, flags, &nTrackViews](auto& ctr) {
+    view->visitEntries([track, flags, &nTrackViews](SPLayoutEntry& ctr) {
         if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
             nTrackViews++;
             guictr_cast<guictr_tracks>(ctr)->removeTrack(track, flags);
@@ -2703,7 +2703,7 @@ void DawCtrl::removeTrackFromView(track_t* track, int flags) {
 }
 
 void DawCtrl::resetView() {
-    view->visitEntries([](auto& ctr) {
+    view->visitEntries([](SPLayoutEntry& ctr) {
         if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
             guictr_cast<guictr_tracks>(ctr)->resetView();
         }
@@ -2712,7 +2712,7 @@ void DawCtrl::resetView() {
 }
 
 void DawCtrl::updateVisibleTrackContents() {
-    view->visitEntries([](auto& ctr) {
+    view->visitEntries([](SPLayoutEntry& ctr) {
         if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
             auto trackCtr = guictr_cast<guictr_tracks>(ctr);
             trackCtr->updateVisibleTracks();
@@ -2994,7 +2994,7 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
         }
     }
     bool bHandled = false;
-    view->visitEntries([&ctxt, &bHandled](auto& entry) {
+    view->visitEntries([&ctxt, &bHandled](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_TRACKS
             && guictr_cast<guictr_tracks>(entry)->handleEditorCommand(ctxt)) {  
             bHandled = true;
@@ -3350,7 +3350,7 @@ void DawInstance::resetEditClip() {
 void DawCtrl::setSingleClip(clip_t* clip) {
     view->ctr_clipeditorview.resetCache();
     view->onEditClipChanged(clip!=nullptr);
-    view->visitEntries([clip](auto& entry) {
+    view->visitEntries([clip](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {  
             auto clipEditor = guictr_cast<guictr_clipeditor>(entry);
             clipEditor->storeLayout();
@@ -3636,7 +3636,7 @@ void load_project_task::run() {
                         if (daw->layoutsFromProjectFile.size() > 0) {
                             ctrl->loadLayout(daw->layoutsFromProjectFile[0]);
                         }
-                        ctrl->view->visitEntries([f = file](auto& entry) {
+                        ctrl->view->visitEntries([f = file](SPLayoutEntry& entry) {
                             if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
                                 auto trackCtr = guictr_cast<guictr_tracks>(entry);
                                 trackCtr->getGrid().setLayout(f->layout.layoutGrid);
