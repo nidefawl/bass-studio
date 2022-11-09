@@ -583,7 +583,7 @@ public:
                 insertPos = -2;
                 break;
             case DAW::EditAreaType::EDIT_AREA_CLIP_EDITOR:
-                spShowEntry = ctrEntryClipEdit;
+                spShowEntry = findActiveClipEditor();
                 break;
         }
         if (!spShowEntry)
@@ -615,31 +615,30 @@ public:
         }
     }
 
-    void onEditClipChanged(bool bHasClip) {
-        if (bHasClip) {
-            SPLayoutEntry firstMatch = nullptr;
+    SPLayoutEntry findActiveClipEditor() {
+        SPLayoutEntry firstMatch = nullptr;
+        visitEntries([&](SPLayoutEntry& entry) {
+            if (entry->getEntryTag() == GuiContainerTag::TAG_CLIPEDIT) {
+                if (!firstMatch || !firstMatch->isVisible())
+                    firstMatch = entry;
+                return false;
+            }
+            return true;
+        });
+        if (!firstMatch) {
             visitEntries([&](SPLayoutEntry& entry) {
-                if (entry->getEntryTag() == GuiContainerTag::TAG_CLIPEDIT) {
+                if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {
                     if (!firstMatch || !firstMatch->isVisible())
                         firstMatch = entry;
                     return false;
                 }
                 return true;
             });
-            if (!firstMatch) {
-                visitEntries([&](SPLayoutEntry& entry) {
-                    if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {
-                        if (!firstMatch || !firstMatch->isVisible())
-                            firstMatch = entry;
-                        return false;
-                    }
-                    return true;
-                });
-            }
-            if (firstMatch) {
-                activateEntry(firstMatch.get());
-            }
         }
+        if (!firstMatch) {
+            return ctrEntryClipEdit;
+        }
+        return firstMatch;
     }
 
     void layout(int32_t winW, int32_t winH) override {
@@ -1715,12 +1714,11 @@ void DawCtrl::updateClipViewsAndCursor(clip_t* notifyClip, clip_cursor_t cursor)
         if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {  
             auto clipEditor = guictr_cast<guictr_clipeditor>(entry);
             auto& view = clipEditor->getClipView();
-            auto viewClip = view.clip();
-            if (viewClip == notifyClip) {
+            if (view.contains(notifyClip)) {
                 view.m_cursor = cursor;
                 view.copySelectedNoteList();
                 view.updateNotePitches(false);
-                clipEditor->onViewChanged(viewClip);
+                clipEditor->updateClipViewReferences();
             }
         }
         return true;
@@ -1732,11 +1730,10 @@ void DawCtrl::updateClipViews(clip_t* notifyClip) {
         if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {  
             auto clipEditor = guictr_cast<guictr_clipeditor>(entry);
             auto& view = clipEditor->getClipView();
-            auto viewClip = view.clip();
-            if (viewClip == notifyClip) {
+            if (view.contains(notifyClip)) {
                 view.copySelectedNoteList();
                 view.updateNotePitches(false);
-                clipEditor->onViewChanged(viewClip);
+                clipEditor->updateClipViewReferences();
             }
         }
         return true;
@@ -1745,8 +1742,8 @@ void DawCtrl::updateClipViews(clip_t* notifyClip) {
 
 void DawCtrl::resetClipViews() {
     auto countVec = view->vecClipEditors.size();
-    for (auto& clipEdit : view->vecClipEditors) {
-        clipEdit->resetClipView();
+    for (auto& clipEditor : view->vecClipEditors) {
+        clipEditor->resetClipView();
     }
     size_t countVisit = 0;
     view->visitEntries([&countVisit](SPLayoutEntry& entry) {
@@ -3123,7 +3120,7 @@ public:
 
     void undo(DawInstance* daw) override {
         daw->resetMouseContext();
-        daw->resetEditClip();
+        daw->resetClipViews();
         trackPtr = daw->getTrackId(trackIdx);
         dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->sampleFormat.blockSize % 8 == 0);// see if pointer is valid
         dbgassert(localIdx == trackPtr->localIdxFlat);
@@ -3135,7 +3132,7 @@ public:
     void redo(DawInstance* daw) override {
         dbgassert(trackPtr);
         daw->resetMouseContext();
-        daw->resetEditClip();
+        daw->resetClipViews();
         daw->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
         dbgassert(localIdx == trackPtr->localIdxFlat);
         localIdx = trackPtr->localIdxFlat;
@@ -3171,7 +3168,7 @@ public:
 
     void undo(DawInstance* daw) override {
         daw->resetMouseContext();
-        daw->resetEditClip();
+        daw->resetClipViews();
         daw->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
         dbgassert(localIdx == trackPtr->localIdxFlat);
         localIdx = trackPtr->localIdxFlat;
@@ -3181,7 +3178,7 @@ public:
 
     void redo(DawInstance* daw) override {
         daw->resetMouseContext();
-        daw->resetEditClip();
+        daw->resetClipViews();
         trackPtr = daw->getTrackId(trackIdx);
         dbgassert(trackPtr);
         //SERIALIZE TRACK VSTs
@@ -3343,17 +3340,11 @@ void DawInstance::resetAutomationContext() {
     }
 }
 
-void DawInstance::resetEditClip() {
-    setEditorSelection(nullptr, {});
-}
-
 void DawCtrl::setSingleClip(clip_t* clip) {
     view->ctr_clipeditorview.resetCache();
-    view->onEditClipChanged(clip!=nullptr);
     view->visitEntries([clip](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {  
             auto clipEditor = guictr_cast<guictr_clipeditor>(entry);
-            clipEditor->storeLayout();
             clipEditor->setSingleClip(clip);
         }
         return true;
@@ -3362,11 +3353,9 @@ void DawCtrl::setSingleClip(clip_t* clip) {
 
 void DawCtrl::setEditorSelection(clip_t* clip, const editor_view_selection_t& clipboardView) {
     view->ctr_clipeditorview.resetCache();
-    view->onEditClipChanged(clip!=nullptr);
     view->visitEntries([clip, &clipboardView](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR) {  
             auto clipEditor = guictr_cast<guictr_clipeditor>(entry);
-            clipEditor->storeLayout();
             clipEditor->setEditorSelection(clip, clipboardView);
         }
         return true;
@@ -3730,6 +3719,20 @@ void clip_view_t::reset() {
     updateNotePitches(true);
 }
 
+bool clip_view_t::contains(clip_t* _clip) const {
+    auto currentClip = clip();
+    if (currentClip == _clip)
+        return true;
+    for (auto& [trackEntry, vecClips] : this->m_selectionView.tracks) {
+        for (clip_t* viewClip : vecClips) {
+            if (viewClip == _clip) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
 float clip_view_t::toFoldNote(float note) const {
     const auto len   = notePitches.size();
     const auto iNote = math::floorfS32(note);
@@ -3778,6 +3781,7 @@ void DawInstance::resetClipViews() {
         dawctrl->resetClipViews();
     }
 }
+
 void DawCtrl::focusChanged(guibase* oldFocused, guibase* newFocused) {
     AppCtrl::focusChanged(oldFocused, newFocused);
     if (newFocused) {

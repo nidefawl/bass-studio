@@ -80,7 +80,7 @@ void action_modify_track::undo(DawInstance* daw) {
     log_lf(Log::L_DEBUG, "action_modify_track undo, num tracks: %zd\n", before.tracks.size());
 
     daw->resetMouseContext();
-    daw->resetEditClip();
+    daw->resetClipViews();
     bool initAfter = after.tracks.empty();
     if (initAfter) {
         after.cursor = daw->getMainControl()->getCursor();
@@ -102,7 +102,7 @@ void action_modify_track::undo(DawInstance* daw) {
 }
 void action_modify_track::redo(DawInstance* daw) {
     daw->resetMouseContext();
-    daw->resetEditClip();
+    daw->resetClipViews();
     trackallcontainer_t& trCtr = daw->getTracks();
     for (track_snapshot_t* trackStored : after.tracks) {
         if (trCtr.validTrackTypeIdx(trackStored->trackSettings.type, trackStored->localIdx)) {
@@ -598,7 +598,7 @@ void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt)
         trSelected = DAW::getTrackFromMouse(iGuiMgr, local);
     }
     if (trSelected != nullptr) {
-        dawCtrl->getDaw()->resetEditClip();
+        dawCtrl->getDaw()->resetClipViews();
         if (evt.guiDragged == this) {// cursor move / range select
             DAW::Cursor& c  = dawCtrl->getCursor();
             c.selRange      = 0;
@@ -703,23 +703,36 @@ void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& ev
         }
         // beatbar16th_t songPos = daw->toBeatBar16th(tick, false);
         // log_printf("Select at Track %d - %d %d %d %d = %u.%u.%u\n", trSelected->idx, cursor.cursorPos, tick, cursor.selRange, local.x, songPos.bar, songPos.beat, songPos.th);
-        if (!subTrSelected && trNxtSelected) {
-            if (cursor.inTrackRange(trNxtSelected->idx)) {
+        if (!cursor.isSubtrackSelection()) {
+            // if (cursor.inTrackRange(trNxtSelected->idx)) {
                 auto gClip = DAW::GetClipGuiFromTime(trNxtSelected, tick);
-                if (gClip && gClip->m_clip->start() <= tick && gClip->m_clip->start() + gClip->m_clip->end() >= tick) {
+                if (1) {
                     editor_view_selection_t view;
                     DAW::GetClipboardView(iGuiMgr, cursor, view, gClip);
-                    daw->setEditorSelection(gClip->m_clip, view);
+                    daw->setEditorSelection(gClip ? gClip->m_clip : nullptr, view);
                 }
-            }
+            // }
         }
     }
     trSelected    = nullptr;
     subTrSelected = nullptr;
     dawCtrl->setSelectedTrackEntry(trNxtSelected);
+    // if (evt.guiDragged == this) {
+    //     editor_view_selection_t view;
+    //     DAW::GetClipboardView(iGuiMgr, cursor, view, nullptr);
+    //     daw->setEditorSelection(nullptr, view);
+    //     // if (gui)
+    //     //     dawCtrl->showClipEditor();
+    // }
 }
 void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
     selectionMoved      = false;
+    action.dragtype  = DRAG_NONE;
+    action.clipboard = nullptr;
+    if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
+        dawCtrl->showClipEditor();
+        return;
+    }
     ivec2 local         = evt.relMousepos;
     tick_t tickExact    = grid.screenToTickSnap(local.x, SNAP_OFF);
     track_t* track      = gClip->m_track;
@@ -730,8 +743,6 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
         dawCtrl->setSelectedTrackEntry(trackClicked);
     }
 
-    action.dragtype  = DRAG_NONE;
-    action.clipboard = nullptr;
     const auto heightTitle = gClip->theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     auto clipTrackPos = toControlsObjectSpace(evt.mousepos, gClip->parent);
     if (gClip->isLeftDragZone(clipTrackPos, heightTitle)) {
@@ -928,12 +939,12 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
             }
         }
         action.dragtype = DRAG_NONE;
-        if (showclip && gui && gui->m_clip) {
+        if (showclip) {
             editor_view_selection_t view;
             DAW::GetClipboardView(iGuiMgr, cursor, view, gui);
             daw->setEditorSelection(gui->m_clip, view);
-            if (gui)
-                dawCtrl->showClipEditor();
+            // if (gui)
+            //     dawCtrl->showClipEditor();
         }
     }
 }

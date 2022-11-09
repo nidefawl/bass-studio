@@ -433,7 +433,7 @@ public:
     void layout() override;
     void renderBackground(NVGcontext* vg) override;
     void buttonClicked(guibase* button) override;
-    void showEditClip();
+    void updateClipViewReferences();
 };
 class gui_clipcontent_base : public guictr_base {
 public:
@@ -695,6 +695,7 @@ protected:
     std::vector<std::shared_ptr<guictr_cliphandles>> clipsHandles;
     int32_t handlesHeight = heightClipIndicators;
     virtual void zoomPianoRollToClipsNoteRange();
+    clip_editor_layout_t lastLayout{};
 public:
     explicit guictr_editor_base(guictr_clipeditor& parentClipEditor, gui_clipcontent_base* pContent, clip_view_t& _view)
         : guictr_base(),
@@ -708,22 +709,23 @@ public:
         removeGuis();
     }
 
+    scaled_grid& getGrid() {
+        return grid;
+    }
+    const scaled_grid& getGrid() const {
+        return grid;
+    }
+
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void layout() override;
     
     clip_view_t& getClipView() { return view; }
     virtual ivec2 getContentSize() const = 0;
     guictr_clipeditor& getClipEditor() { return parentClipEditor; }
-    virtual void showEditClip();
+    virtual void relayout();
     virtual void selectEditClip(clip_t* clip);
-    virtual void storeLayout() {
-        auto& layout = view.m_selectionView.editorLayout;
-        layout.layoutGrid = grid;
-        auto clip = view.clip();
-        if (clip) {
-            clip->editorLayout = layout;
-        }
-    }
+    void onClipChanged();
+    virtual void storeEditorLayout();
     virtual void renderClipHandles(NVGcontext* vg);
 };
 
@@ -771,15 +773,9 @@ public:
         return content.handleEditorCommand(ctxt);
     }
     void gridChanged(scaled_grid& _grid) override;
-    void showEditClip() override;
+    void relayout() override;
     void selectEditClip(clip_t* clip) override;
-    void storeLayout() override;
-    scaled_grid& getGrid() {
-        return grid;
-    }
-    const scaled_grid& getGrid() const {
-        return grid;
-    }
+    void storeEditorLayout() override;
     void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override;
     ivec2 getContainerSize() override {
         return sizeContentArea;
@@ -885,14 +881,11 @@ public:
 
     void releaseRendered();
     void updatePosition();
-    //protected:
-    //void setGlobalSelectionFromClipSelection();
 };
+
 class guictr_audioeditor : public guictr_editor_base {
 public:
     gui_audiocontent content;
-    // guictr_cliphandles clipHandles;
-private:
 public:
     explicit guictr_audioeditor(guictr_clipeditor& parentClipEditor, clip_view_t& _view);
     ~guictr_audioeditor() override;
@@ -912,8 +905,8 @@ public:
     void gridChanged(scaled_grid& _grid) override;
 
     int32_t getTotalWidth();
-    void showEditClip() override;
-    void storeLayout() override;
+    void relayout() override;
+    void storeEditorLayout() override;
     ivec2 getContentSize() const override {
         return content.size;
     }
@@ -927,8 +920,9 @@ public:
     gui_arp arp;
     explicit guictr_clipeditor();
     ~guictr_clipeditor() override;
-    void storeLayout();
-    void onViewChanged(clip_t* clip);
+    void storeEditorLayout();
+    void updateClipViewReferences();
+    void resetClipView();
     void setSingleClip(clip_t* clip);
     void setEditorSelection(clip_t* clip, const editor_view_selection_t& clipboardView);
     void selectEditClip(clip_t* clip);
@@ -940,7 +934,6 @@ public:
     clip_view_t& getClipView() {
         return view;
     }
-    void resetClipView();
     void setControl(BaseCtrl* parentCtrl) override {
         resetClipView();
         guictr_base::setControl(parentCtrl);

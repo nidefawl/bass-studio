@@ -215,7 +215,7 @@ void gui_arp::layout() {
     }
 }
 
-void gui_arp::showEditClip() {
+void gui_arp::updateClipViewReferences() {
     auto arp = getArp();
     for (auto* knob : knobs) {
         knob->setArp(arp);

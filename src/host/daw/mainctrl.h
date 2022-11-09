@@ -167,6 +167,7 @@ public:
     std::vector<int32_t> notePitches;
     editor_view_selection_t m_selectionView;
     bool bIsAbsoluteMode = false;
+
     clip_ref_t& clipRef() {
         return m_clipRef;
     }
@@ -177,33 +178,31 @@ public:
     bool isAbsoluteTimeMode() const {
         return bIsAbsoluteMode;
     }
-    void setSingleClip(clip_t* _clip);
-    void setEditorSelection(clip_t* _clip, const editor_view_selection_t& clipboardView);
-    void setSelected(clip_t* _clip);
-    void reset();
 
     clip_t* clip() const {
         return m_clipRef.clip();
     }
+
     track_t* track() const {
         return m_clipRef.track();
     }
-
-    void copySelectedNoteList();
 
     void getNotePitches(std::vector<int32_t>& out) const {
         out = notePitches;
     }
 
-    float toFoldNote(float note) const;
-
-    float nextFoldNote(float note, int dir);
-
-    float unfoldNoteClamped(float note);
-
-    float unfoldNote(float note);
+    bool contains(clip_t* _clip) const;
+    void copySelectedNoteList();
+    void reset();
+    void setEditorSelection(clip_t* _clip, const editor_view_selection_t& clipboardView);
+    void setSelected(clip_t* _clip);
+    void setSingleClip(clip_t* _clip);
 
     void updateNotePitches(bool reset);
+    float nextFoldNote(float note, int dir);
+    float toFoldNote(float note) const;
+    float unfoldNote(float note);
+    float unfoldNoteClamped(float note);
 };
 
 struct Menus {
@@ -457,7 +456,6 @@ public:
     bool isPlaying();
     bool toggleLoop();
     void resetMouseContext();
-    void resetEditClip();
     void setSingleClip(clip_t* _clip);
     void setEditorSelection(clip_t* _clip, const editor_view_selection_t& clipboardView);
     void resetClipViews();

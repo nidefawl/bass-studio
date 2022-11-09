@@ -26,5 +26,5 @@ public:
     bool setScissorTransformContainer(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
     void layout() override;
-    void showEditClip();
+    void updateClipViewReferences();
 };

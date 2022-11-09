@@ -141,19 +141,21 @@ guictr_clipeditor::~guictr_clipeditor() {
     remove(&noteeditor);
 }
 
-void guictr_clipeditor::storeLayout() {
+void guictr_clipeditor::storeEditorLayout() {
     const clip_t* clip = view.clip();
-    const bool isMidi  = clip && clip->clipType == CLIP_MIDI;
-    if (isMidi) {
-        noteeditor.storeLayout();
-    } else {
-        audioeditor.storeLayout();
+    if (clip || view.isAbsoluteTimeMode()) {
+        if (!clip || clip->clipType == CLIP_MIDI) {
+            noteeditor.storeEditorLayout();
+        } else {
+            audioeditor.storeEditorLayout();
+        }
     }
 }
 
-void guictr_clipeditor::onViewChanged(clip_t* clip) {
-    settings.showEditClip();
-    arp.showEditClip();
+void guictr_clipeditor::updateClipViewReferences() {
+    settings.updateClipViewReferences();
+    arp.updateClipViewReferences();
+    auto clip = view.clip();
     bool bIsMidi = !clip || clip->clipType == CLIP_MIDI;
     noteeditor.setVisible(bIsMidi);
     audioeditor.setVisible(!bIsMidi);
@@ -161,9 +163,10 @@ void guictr_clipeditor::onViewChanged(clip_t* clip) {
 
 void guictr_clipeditor::selectEditClip(clip_t* clip) {
     bool bChanged = clip != view.clip();
+    storeEditorLayout();
     view.setSelected(clip);
     if (bChanged || !clip) {
-        onViewChanged(clip);
+        updateClipViewReferences();
         noteeditor.selectEditClip(clip);
         audioeditor.selectEditClip(clip);
         parent->layout();
@@ -172,11 +175,14 @@ void guictr_clipeditor::selectEditClip(clip_t* clip) {
 
 void guictr_clipeditor::setSingleClip(clip_t* clip) {
     bool bChanged = clip != view.clip();
+    storeEditorLayout();
     view.setSingleClip(clip);
     if (bChanged || !clip) {
-        onViewChanged(clip);
-        noteeditor.showEditClip();
-        audioeditor.showEditClip();
+        updateClipViewReferences();
+        noteeditor.onClipChanged();
+        audioeditor.onClipChanged();
+        noteeditor.relayout();
+        audioeditor.relayout();
         if (parent)
             parent->layout();
     }
@@ -184,23 +190,30 @@ void guictr_clipeditor::setSingleClip(clip_t* clip) {
 
 void guictr_clipeditor::setEditorSelection(clip_t* clip, const editor_view_selection_t& clipboardView) {
     bool bChanged = clip != view.clip();
+    if (bChanged) {
+        storeEditorLayout();
+    }
     view.setEditorSelection(clip, clipboardView);
     if (bChanged || !clip) {
-        onViewChanged(clip);
-        noteeditor.showEditClip();
-        audioeditor.showEditClip();
+        updateClipViewReferences();
+        noteeditor.onClipChanged();
+        audioeditor.onClipChanged();
+        noteeditor.relayout();
+        audioeditor.relayout();
         if (parent)
             parent->layout();
     }
 }
 
 void guictr_clipeditor::resetClipView() {
+
     bool bChanged = nullptr != view.clip();
+    storeEditorLayout();
     view.reset();
     if (bChanged) {
-        onViewChanged(nullptr);
-        noteeditor.showEditClip();
-        audioeditor.showEditClip();
+        updateClipViewReferences();
+        noteeditor.relayout();
+        audioeditor.relayout();
         if (parent)
             parent->layout();
     }
