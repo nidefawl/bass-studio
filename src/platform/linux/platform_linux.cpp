@@ -1,4 +1,5 @@
 #if defined(__linux__) || defined(__APPLE__)
+#include <csignal>
 #include "types.h"
 #include <sys/time.h>
 #include <sys/types.h>
@@ -13,11 +14,20 @@
 #include <wordexp.h>
 
 #ifdef __linux__
+extern volatile bool fatalError;
 
 bool set_thread_priority_realtime() noexcept {
     sched_param params{};
     params.sched_priority = 5;
     return sched_setscheduler(0, SCHED_FIFO, &params) == 0;
+}
+
+void SignalHandlerLinux(int signal) {
+    if (!fatalError) {
+        fatalError = true;
+        logStackTrace();
+    }
+    abort();
 }
 
 #endif
@@ -84,6 +94,8 @@ void allocConsole() {
 }
 
 void setExceptionHandler() {
+    signal(SIGABRT, SignalHandlerLinux);
+    signal(SIGSEGV, SignalHandlerLinux);
 }
 
 String getKeyName(int scancode) {
