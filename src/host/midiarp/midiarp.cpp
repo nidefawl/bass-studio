@@ -841,15 +841,40 @@ void midiarp::processArpInternal(const DAW::Host::PluginManager* const host, pla
                         if constexpr (logProcessedNotes) {
                             log_lf(Log::L_DEBUG, "intersecting. ret val %d\n", retVal);
                         }
-                        // process ending output notes
-                        nSend += endOutputNotes(tick, start, end, loopStart, loopEnd, noteEventsProcessed);
+                    }
+                    bool bHasSamePitchNoteEndingOnSameTick = false;
+                    if constexpr (logProcessedNotes) {
+                        if (noteArpStep.isHeld()) {
+                            for (const auto& note : heldOutputNotes) {
+                                if (note.pitch == noteArpStep.pitch && note.end() == noteArpStep.start()) {
+                                    bHasSamePitchNoteEndingOnSameTick = true;
+                                    break;
+                                }
+                            }
+                        }
                     }
                     heldOutputNotes.push_back(noteArpStep);
+                    // process ending output notes first
+                    auto numEnded = endOutputNotes(tick, start, end, loopStart, loopEnd, noteEventsProcessed);
+                    if constexpr (logProcessedNotes) {
+                        if (bHasSamePitchNoteEndingOnSameTick) {
+                            if (numEnded == 0) {
+                                log_lf(Log::L_ERROR, "bHasSamePitchNoteEndingOnSameTick && numEnded == 0\n");
+                            } else {
+                                if constexpr (logProcessedNotes) {
+                                    log_lf(Log::L_DEBUG, "Ended %d notes before activating new one\n", numEnded);
+                                }
+                            }
+                        }
+                    }
+                    (void) bHasSamePitchNoteEndingOnSameTick;
+                    (void) numEnded;
 
                     if (noteArpStep.isHeld()) {
                         if constexpr (logProcessedNotes) {
                             log_lf(Log::L_DEBUG, "Block %d: %s ARP ON at %d = %d, arp enabled: %d\n", start, StringAsCStr(noteNameAndNumber(noteArpStep.pitch)), noteArpStep.start() - start, noteArpStep.start(), enable);
                         }
+                        nSend += numEnded;
                         InsertArpEventSorted(this, noteEventsProcessed, {noteArpStep.pitch, noteArpStep.velocity, noteArpStep.start() - start, noteArpStep.start(), true, false});
                         nSend++;
                     }
