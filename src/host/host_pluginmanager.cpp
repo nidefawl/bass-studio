@@ -137,7 +137,7 @@ void PluginManager::unloadPlugin(effectbase* plugin) {
     if (moduleHandleOpt) {
         moduleMgr->releaseModule(moduleHandleOpt);
     }
-    dbgassert(validateIds());
+    validateIds();
 }
 
 void PluginManager::updatePluginWindows() {
@@ -240,7 +240,7 @@ void PluginManager::createAudio(track_t* track, std::optional<audio_stage_id_t> 
     allAudioStages.push_back(audio);
     trackAudioStages.push_back(audio);
     track->audio = audio;
-    dbgassert(validateIds());
+    validateIds();
 }
 
 void PluginManager::releaseAudio(track_t* track) {
@@ -255,16 +255,16 @@ void PluginManager::releaseAudio(track_t* track) {
     dbgassert(it2 != trackAudioStages.end());
     trackAudioStages.erase(it2);
     delete audioStage;
+    validateIds();
 }
 
 audio_stage_t* PluginManager::createAudioStage() {
-    validateIds();
     auto audio = new audio_stage_t(this,
                                    getNextGlobalAudioStageId(),
                                    pluginHostCallback->m_sampleFormatInternal,
                                    DAW::Host::DEFAULT_CHANNEL_COUNT);
-    validateIds();
     allAudioStages.push_back(audio);
+    validateIds();
     return audio;
 }
 
@@ -361,10 +361,6 @@ bool PluginManager::insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int3
     return true;
 }
 
-void PluginManager::onPluginsChanged(audio_stage_t* stage) {
-    log_printf("Plugins changed on audio stage %d\n", static_cast<int32_t>(stage->stageId.stageId));
-    dbgassert(validateIds());
-}
 void PluginManager::onTick() {
     // Currently no lock
     for (auto* current : pluginInstances) {
@@ -387,7 +383,7 @@ void PluginManager::onTick() {
 
 bool PluginManager::postPluginLoaded(audio_stage_t* trp, effectbase* plugin) {
     onTrackLayoutChange();
-    dbgassert(validateIds());
+    validateIds();
     return true;
 }
 
@@ -411,7 +407,8 @@ audio_stage_id_t PluginManager::getNextGlobalAudioStageId(int32_t globalId) {
         startId = audioStageId;
     }
     for (audiostageid_i32* id : stageIds) {
-        *id = static_cast<audiostageid_i32>(startId++);
+        *id = static_cast<audiostageid_i32>(startId);
+        startId++;
     }
     update_maximum(audioStageId, startId);
     return stageId;
@@ -422,7 +419,7 @@ bool PluginManager::isStageIdInUse(track_id_snapshot_t stageId) {
         return false;
     }
     for (auto* id : {&stageId.stageId, &stageId.inputStageId, &stageId.outputStageId, &stageId.outputPostStageId }) {
-        if (static_cast<int32_t>(*id) <= audioStageId)
+        if (static_cast<int32_t>(*id) < audioStageId)
             return true;
     }
     return false;
@@ -445,12 +442,12 @@ bool PluginManager::isStageIdInUse(const audio_stage_id_t& stageId) {
 void PluginManager::updateMaximumStageId() {
     int32_t maximumStageId = 0;
     for (auto* stage : allAudioStages) {
-        maximumStageId = math::max<int32_t>(maximumStageId, static_cast<int32_t>(stage->stageId.stageId));
-        maximumStageId = math::max<int32_t>(maximumStageId, static_cast<int32_t>(stage->stageId.inputStageId));
-        maximumStageId = math::max<int32_t>(maximumStageId, static_cast<int32_t>(stage->stageId.outputStageId));
-        maximumStageId = math::max<int32_t>(maximumStageId, static_cast<int32_t>(stage->stageId.outputPostStageId));
+        maximumStageId = math::max<int32_t>(maximumStageId, 1 + static_cast<int32_t>(stage->stageId.stageId));
+        maximumStageId = math::max<int32_t>(maximumStageId, 1 + static_cast<int32_t>(stage->stageId.inputStageId));
+        maximumStageId = math::max<int32_t>(maximumStageId, 1 + static_cast<int32_t>(stage->stageId.outputStageId));
+        maximumStageId = math::max<int32_t>(maximumStageId, 1 + static_cast<int32_t>(stage->stageId.outputPostStageId));
     }
-    this->audioStageId = maximumStageId + 1;
+    this->audioStageId = maximumStageId;
 }
 
 int32_t PluginManager::getNextSampleId(int32_t id) {
@@ -465,16 +462,18 @@ int32_t PluginManager::validateIds()
 {
 #ifndef NDEBUG
     /** check for double usage of stageIds across all audiostages */
+    auto curMaxAudioStageId = this->audioStageId.load();
     for (auto stage : allAudioStages) {
         audiostageid_i32* stageIds[4] = {&stage->stageId.stageId, &stage->stageId.inputStageId, &stage->stageId.outputStageId,
                                          &stage->stageId.outputPostStageId};
         for (auto* pStageId : stageIds) {
+            dbgassert(curMaxAudioStageId > *pStageId);
             for (auto* pStageId2 : stageIds) {
                 if (pStageId2 == pStageId) {
-                    always_assert(static_cast<int32_t>(*pStageId) == static_cast<int32_t>(*pStageId2));
+                    always_assert(*pStageId == *pStageId2);
                     continue;
                 }
-                always_assert(static_cast<int32_t>(*pStageId) != static_cast<int32_t>(*pStageId2));
+                always_assert(*pStageId != *pStageId2);
             }
         }
         for (auto stage2 : allAudioStages) {
@@ -484,7 +483,7 @@ int32_t PluginManager::validateIds()
                                               &stage2->stageId.outputPostStageId};
             for (auto* pStageId : stageIds) {
                 for (auto* pStageId2 : stageIds2) {
-                    always_assert(static_cast<int32_t>(*pStageId) != static_cast<int32_t>(*pStageId2));
+                    always_assert(*pStageId != *pStageId2);
                 }
             }
         }
@@ -534,6 +533,12 @@ int32_t PluginManager::validateIds()
     }
 #endif // NDEBUG
     return 1;
+}
+
+void PluginManager::assignNewStageId(audio_stage_t* trp, audio_stage_id_t newId) {
+    trp->stageId = newId;
+    updateMaximumStageId();
+    validateIds();
 }
 
 #ifdef _WIN32

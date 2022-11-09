@@ -14,7 +14,7 @@ struct track_audio_src;
 struct audio_stage_t;
 struct io_configuration_snapshot_t;
 
-enum class audiostageid_i32 : int32_t {};
+enum audiostageid_i32 : int32_t {};
 
 #define TRACKID_INVALID_I32 ((audiostageid_i32) - 1)
 #define TRACKID_DEFAULT_I32 (audiostageid_i32) 0

@@ -182,8 +182,8 @@ void pastePluginClipboard(DawInstance* daw, std::shared_ptr<plugin_clipboard_t>&
     stage->pluginsChanged();
     pluginMgr->onTrackLayoutChange();
     daw->onPluginsChanged();
-    pluginMgr->validateIds();
 }
+
 std::shared_ptr<plugin_clipboard_t> copyPluginSelection(plugin_selection& sel) {
     std::vector<plugin_snapshot_t> pluginSnapshots;
     std::vector<effectbase*> selection;

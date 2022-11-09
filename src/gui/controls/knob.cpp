@@ -663,14 +663,16 @@ static void renderSlider(NVGcontext* vg, const vec2& insetP, const vec2& insetS,
 void gui_slider_textfield::render(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg))
         return;
+    vec2 insetP        = vec2(pos + 1);
+    vec2 insetS        = vec2(size - 2);
+    if (insetS.x < 2 || insetS.y < 2)
+        return;
     renderWidgetBorder(vg, getStateFlags());
     if (paramAutomatable && paramIdx > -1) {
         auto param = paramAutomatable->getParam(paramIdx);
         if (!assert_expr(param)) {
             return;
         }
-        vec2 insetP        = vec2(pos + 1);
-        vec2 insetS        = vec2(size - 2);
         auto autLane = paramAutomatable->getRegisteredAutomation(param->idx);
         float fBaseValue = param->getValue();
         float fRenderValue = fBaseValue;

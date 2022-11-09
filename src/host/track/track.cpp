@@ -794,6 +794,7 @@ void PluginManager::activateDeferred(effectbase* const eff, int flags, effectbas
 
     /* Unload the (previous) deferred placeholder plugin */
     unloadPlugin(prevPlugin);
+    validateIds();
 }
 
 void midi_input_events_t::addMidiEvent(tick_t tick, uint32_t message, int32_t midiTime) {

@@ -1001,7 +1001,7 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
     const bool canProcess = queueSizeOutput < RING_BUF_SIZE / 2 && resamplerInput->numBlocksToPop() >= audioProp.numBlocksInternal;
 
     if (enableProfiling) timerProfile.reset();
-    dbgassert(validateIds());
+
     stats.timings["Block.ValidateIds"] = timerProfile.getTimeReset();
 
     int32_t nBlocksProcessed = 0;

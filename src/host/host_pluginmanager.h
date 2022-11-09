@@ -168,7 +168,7 @@ private:
     std::vector<audio_stage_t*> allAudioStages;
     std::vector<track_impl_t*> trackAudioStages;
     std::atomic<int32_t> pluginId{ 1 << 16 };
-    std::atomic<int32_t> audioStageId{ 100 };
+    std::atomic<int32_t> audioStageId{ 0 };
     std::atomic<int32_t> sampleId{ (1 << 30) };//TODO: collides with audiocache::nextIdx
     audioMasterCallback masterCallBackSlot = nullptr;
     int32_t hostSlot    = -1;
@@ -184,7 +184,6 @@ private:
     std::shared_ptr<PluginHostCallback> pluginHostCallback;
     LoadResultPlugin loadInternalPlugin(int32_t type, int32_t globalId = 0);
     /* These are currently not called */
-    void onPluginsChanged(audio_stage_t* stage);
     void updatePluginWindows();
 public:
     virtual void onTrackLayoutChange() {
@@ -246,7 +245,7 @@ public:
     bool insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst);
     bool postPluginLoaded(audio_stage_t* trp, effectbase* plugin);
     bool replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin);
-
+    void assignNewStageId(audio_stage_t* trp, audio_stage_id_t newId);
 
     void createAudio(track_t* track, std::optional<audio_stage_id_t> stageId = std::nullopt);
     void releaseAudio(track_t* track);

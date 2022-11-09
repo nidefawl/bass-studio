@@ -327,7 +327,6 @@ void module_group::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
             static_cast<audiostageid_i32>(pluginSnapshot.stageIds.outputStageId),
             static_cast<audiostageid_i32>(pluginSnapshot.stageIds.outputPostStageId)
         };
-        audio->host->validateIds();
         if (audio->host->isStageIdInUse(stageId)) {
             log_lf(Log::L_WARN, "Found duplicate stage id in plugin snapshot. Routing might be broken.\n");
             if (audio->getTrack())
@@ -338,9 +337,8 @@ void module_group::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
                 log_lf(Log::L_WARN, "Other stage is %s on track %s\n", stageDesc.c_str(), otherStage->getTrack()->name.c_str());
             }
         } else {
-            audio->stageId = stageId;
+            audio->host->assignNewStageId(audio, stageId);
         }
-        audio->host->validateIds();
     }
     audio->loadPlugins(pluginSnapshot.pluginSnapshots);
     audio->loadRoutingSnapshot(pluginSnapshot.effectRouting);
