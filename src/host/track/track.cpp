@@ -1060,10 +1060,14 @@ void sortControlEvents(std::vector<midievent_ctrl_t>& ctrlEvents) {
 }
 
 void CopyMidiEventsInRange(tick_t absStart, tick_t absEnd, const DAW::Host::midi_data_t& data, std::vector<note_t>& list, std::vector<DAW::Host::midievent_ctrl_t>& ctrlEvts) {
+#ifndef NDEBUG
     tick_t lastNoteStart = -1;
+#endif
     for (auto& note : data.notes.m_list) {
+#ifndef NDEBUG
         dbgassert(lastNoteStart == -1 || note.start() >= lastNoteStart);
         lastNoteStart = note.start();
+#endif
         if (note.isIntersectTimeIncludeEnds(absStart, absEnd)) {
             auto noteCopy = note;
             int32_t ret = cutIntersectingNotesFindDupe(list, noteCopy);
