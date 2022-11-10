@@ -20,6 +20,7 @@ public:
 
 class Splitter : public guictr_base {
     int type;
+    float scaleDefault;
     float scale;
     float scaleMin{}, scaleMax{};
     splitter_cb* notifyCtrl = nullptr;
@@ -31,6 +32,7 @@ public:
     Splitter(int _type, float _scale)
         : guictr_base(),
           type(_type),
+          scaleDefault(_scale),
           scale(_scale) {
         padding = 0;
     }
@@ -84,6 +86,9 @@ public:
     }
     float getMax() const {
         return scaleMax;
+    }
+    float getDefault() const {
+        return scaleDefault;
     }
     void render(NVGcontext* vg) override;
 

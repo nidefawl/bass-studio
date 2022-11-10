@@ -306,10 +306,13 @@ public:
         add(ctr_Right);
         auto subctr_tabbed  = makeTabListCtr1(_dawCtrl);
         auto subctr_tabbed2 = makeTabListCtr2(_dawCtrl);
-        splitters.push_back(std::make_shared<Splitter>(1, 0.05f));//left
-        splitters.push_back(std::make_shared<Splitter>(1, 0.73f)); //right
-        splitters[0]->setMinMax(0.05f, 0.9f);
-        splitters[1]->setMinMax(0.25f, 0.95f);
+        float splitterDef = 0.15f;
+        float splitterMin = 0.08f;
+        splitters.push_back(std::make_shared<Splitter>(1, splitterDef)); // left
+        splitters.push_back(std::make_shared<Splitter>(1, 1.0f - splitterDef)); // right
+        splitters[0]->setMinMax(splitterMin, 0.5f - splitterMin);
+        splitters[1]->setMinMax(0.5f + splitterMin, 1.0f - splitterMin);
+
         subctr_tabbed2->setLabel("Top");
         subctr_tabbed->setLabel("Bottom");
         SPLayoutEntry entry1 = createGuiCtrLayoutEntry(subctr_tabbed2);
@@ -657,22 +660,21 @@ public:
         if (ctr_Left->getEntries().empty()) {
             leftSplitter->setScale(0);
         } else if (leftSplitter->getScale() < leftSplitter->getMin()) {
-            leftSplitter->setScale(leftSplitter->getMin());
+            leftSplitter->setScale(leftSplitter->getDefault());
         }
         if (ctr_Right->getEntries().empty()) {
             rightSplitter->setScale(1);
         } else if (rightSplitter->getScale() > rightSplitter->getMax()) {
-            rightSplitter->setScale(rightSplitter->getMax());
+            rightSplitter->setScale(rightSplitter->getDefault());
         }
         int hTopControls     = 48;
         int heightViewSelect = 60;
         int heightStatusBar = 16;
         int hCenter      = winH - hTopControls - heightViewSelect - heightStatusBar;
         int hContent     = winH - hTopControls - heightStatusBar;
-        int widthLeft           = getSplitter(SplitterPos::LEFT)->leftOrTop(winW);
-        int widthCenterAndRight = getSplitter(SplitterPos::LEFT)->rightOrBottom(winW);
-        int widthCenter         = getSplitter(SplitterPos::RIGHT)->leftOrTop(widthCenterAndRight);
-        int widthRight          = getSplitter(SplitterPos::RIGHT)->rightOrBottom(widthCenterAndRight);
+        int widthLeft           = leftSplitter->leftOrTop(winW);
+        int widthRight          = rightSplitter->rightOrBottom(winW);
+        int widthCenter         = winW - widthLeft - widthRight;
 
         ctr_Center->size = vec2(widthCenter, hCenter);
         ctr_Center->pos  = vec2(widthLeft, winY + hTopControls);
@@ -684,21 +686,17 @@ public:
         ctr_Left->pos          = { winX, winY + hTopControls };
         ctr_Left->size         = { widthLeft, hContent };
 
-        getSplitter(SplitterPos::LEFT)->pos    = ivec2(widthLeft - Splitter::SPLITTER_LAYOUT_THICKNESS/2, hTopControls);
-        getSplitter(SplitterPos::LEFT)->size   = ivec2(Splitter::SPLITTER_LAYOUT_THICKNESS, hContent);
+        leftSplitter->pos    = ivec2(widthLeft - Splitter::SPLITTER_LAYOUT_THICKNESS/2, hTopControls);
+        leftSplitter->size   = ivec2(Splitter::SPLITTER_LAYOUT_THICKNESS, hContent);
 
         ctr_Right->pos  = { widthLeft + widthCenter, winY + hTopControls };
         ctr_Right->size = { widthRight, hContent };
 
-        getSplitter(SplitterPos::RIGHT)->pos  = ivec2(ctr_Right->pos.x - Splitter::SPLITTER_LAYOUT_THICKNESS/2, hTopControls);
-        getSplitter(SplitterPos::RIGHT)->size = ivec2(Splitter::SPLITTER_LAYOUT_THICKNESS, hContent);
+        rightSplitter->pos  = ivec2(ctr_Right->pos.x - Splitter::SPLITTER_LAYOUT_THICKNESS/2, hTopControls);
+        rightSplitter->size = ivec2(Splitter::SPLITTER_LAYOUT_THICKNESS, hContent);
 
-        getSplitter(SplitterPos::RIGHT)->setWindowPosSize(ctr_Left->getRightTop(), ctr_Right->getRightBottom() - ctr_Left->getRightTop());
-        getSplitter(SplitterPos::LEFT)->setWindowPosSize(ctr_Left->getLeftTop(), ctr_Right->getRightBottom() - ctr_Left->getLeftTop());
-
-        // ctr_Right->postContentChanged();
-        // ctr_Left->postContentChanged();
-        // ctr_Center->postContentChanged();
+        rightSplitter->setWindowPosSize(ctr_Left->getLeftTop(), ctr_Right->getRightBottom() - ctr_Left->getLeftTop());
+        leftSplitter->setWindowPosSize(ctr_Left->getLeftTop(), ctr_Right->getRightBottom() - ctr_Left->getLeftTop());
 
         ctr_clipeditorview.pos = { widthLeft, winBottom - heightViewSelect - heightStatusBar };
         ctr_pluginview.pos     = { ctr_clipeditorview.right(), winBottom - heightViewSelect - heightStatusBar };
