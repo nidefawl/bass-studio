@@ -812,19 +812,16 @@ void BaseCtrl::dragContainerBegin(MouseEvent& evt, GuiCtrLayoutEntry* ctrDragSrc
 }
 void BaseCtrl::dragContainerMove(MouseEvent& evt) {
     dragContainerRelayout(drag_ctr_event{ drag_ctr_event_type::DRAG_MOVE });
-    std::vector<guictr_layout_base*> list                     = getContainers();
+    std::vector<guictr_layout_base*> list = getContainers();
     std::vector<std::weak_ptr<DropAreaUILayout>> targets = getTargets(evt, list);
     std::sort(targets.begin(), targets.end(), [](const auto& a, const auto& b) {
         auto p1 = a.lock();
         auto p2 = b.lock();
         if (p1 && p2) {
-            if (p1->priority == p2->priority) {
-                // smaller = higher priority
-                auto area1 = p1->size.x * p1->size.y;
-                auto area2 = p2->size.x * p2->size.y;
-                return area1 < area2;
-            }
-            return p1->priority < p2->priority;
+            // smaller = higher priority
+            auto area1 = p1->size.x * p1->size.y;
+            auto area2 = p2->size.x * p2->size.y;
+            return area1 < area2;
         }
         return false;
     });

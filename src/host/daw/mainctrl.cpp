@@ -304,8 +304,10 @@ public:
         add(ctr_Left);
         add(ctr_Center);
         add(ctr_Right);
+
         auto subctr_tabbed  = makeTabListCtr1(_dawCtrl);
         auto subctr_tabbed2 = makeTabListCtr2(_dawCtrl);
+
         float splitterDef = 0.15f;
         float splitterMin = 0.08f;
         splitters.push_back(std::make_shared<Splitter>(1, splitterDef)); // left
@@ -720,8 +722,10 @@ public:
     }
 
     void resetToDefault() {
-        getSplitter(SplitterPos::LEFT)->setScale(0.2);
-        getSplitter(SplitterPos::RIGHT)->setScale(0.8);
+        auto leftSplitter  = getSplitter(SplitterPos::LEFT);
+        auto rightSplitter = getSplitter(SplitterPos::RIGHT);
+        leftSplitter->setScale(leftSplitter->getDefault());
+        rightSplitter->setScale(rightSplitter->getDefault());
         ctr_Right->removeAllEntries();
         ctr_Left->removeAllEntries();
         init();
@@ -800,7 +804,7 @@ public:
         }
 
         for (size_t i = 0; i < viewLayout.splitterPositions.size() && i < splitters.size(); i++) {
-            splitters[i]->setScale(viewLayout.splitterPositions[i]);
+            splitters[i]->setScaleClamped(viewLayout.splitterPositions[i]);
         }
         ctr_Left->assertEntries();
         ctr_Right->assertEntries();
