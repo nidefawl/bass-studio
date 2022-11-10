@@ -3,7 +3,7 @@ list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(PROJECT_NAME "DAW" CACHE STRING "Project name")
 set(PRODUCT_NAME "DAW" CACHE STRING "Product name")
 set(CMAKE_USER_MAKE_RULES_OVERRIDE FixCMakeInitFlags)
-project(${PROJECT_NAME} LANGUAGES C CXX VERSION 0.5.8)
+project(${PROJECT_NAME} LANGUAGES C CXX VERSION 0.5.8.1)
 include(GetGitRevision)
 include(CompilerConfig)
 include(BuildConfig)
@@ -153,6 +153,7 @@ source_group("res" FILES ${RESOURCE_FILES})
 
 
 message(STATUS "CMAKE_CXX_COMPILER_ID ${CMAKE_CXX_COMPILER_ID}")
+
 message(STATUS "PROJECT_WORKING_DIR ${ABS_WORKING_DIR}")
 message(STATUS "PROJECT_REQUIRE_LIB ${PROJECT_REQUIRE_LIB}")
 message(STATUS "PROJECT_BUILD_DAW ${PROJECT_BUILD_DAW}")
@@ -168,6 +169,17 @@ message(STATUS "PROJECT_CFG_NO_OMIT_FRAME_POINTER ${PROJECT_CFG_NO_OMIT_FRAME_PO
 if (PROJECT_BUILD_WITH_SANITIZER)
   message(WARNING "Building with sanitizer: ${PROJECT_CFG_FSANITIZE}")
 endif()
+
+message(STATUS "PROJECT_PRODUCT_NAME ${PROJECT_PRODUCT_NAME}")
+message(STATUS "PRODUCT_HOST_NAME ${PRODUCT_HOST_NAME}")
+message(STATUS "PROJECT_BINARY_NAME ${PROJECT_BINARY_NAME}")
+
+message(STATUS "PRODUCT_VERSION ${PRODUCT_VERSION}")
+
+message(STATUS "PROJECT_VENDOR_NAME ${PROJECT_VENDOR_NAME}")
+message(STATUS "PRODUCT_COPYRIGHT ${PRODUCT_COPYRIGHT}")
+message(STATUS "PRODUCT_URL_DOCS ${PRODUCT_URL_DOCS}")
+message(STATUS "PRODUCT_URL_VENDOR ${PRODUCT_URL_VENDOR}")
 
 # build a fat library only if PROJECT_REQUIRE_LIB is ON
 # if PROJECT_REQUIRE_LIB is OFF we link objects directly to output executable (faster)
@@ -191,7 +203,7 @@ else()
                 ${MM_SRC_FILES} 
                 ${PROJECT_DEPS_SRC_FILES} 
                 ${HDR_FILES})
-  CONFIGURE_TARGET_OUTPUT(${PROJECT_NAME} ${PROJECT_BINARY_NAME})
+  CONFIGURE_TARGET_OUTPUT(${PROJECT_NAME} ${PROJECT_BINARY_NAME} ${PROJECT_PRODUCT_NAME})
 endif()
 
 
@@ -212,25 +224,25 @@ endif()
 target_compile_options(${LINK_TARGET} PUBLIC ${BUILD_WARNING_FLAGS})
 
 if (PROJECT_REQUIRE_LIB)
-  MACRO(DEFINE_EXECUTABLE target_name target_sources)
+  MACRO(DEFINE_EXECUTABLE target_name programDisplayName target_sources)
     source_group("src" FILES ${target_sources})
     add_executable(${target_name} ${target_sources})
     target_link_libraries(${target_name} PRIVATE "dawlib")
     target_compile_options(${target_name} PRIVATE ${BUILD_WARNING_FLAGS})
-    CONFIGURE_TARGET_OUTPUT(${target_name} ${target_name})
+    CONFIGURE_TARGET_OUTPUT(${target_name} ${target_name} ${programDisplayName})
   ENDMACRO()
 
   # define main executable
   if (PROJECT_BUILD_DAW)
-    DEFINE_EXECUTABLE(${PROJECT_BINARY_NAME} "src/host/daw/main_daw.cpp;${RESOURCE_FILES}")
+    DEFINE_EXECUTABLE(${PROJECT_BINARY_NAME} ${PROJECT_PRODUCT_NAME} "src/host/daw/main_daw.cpp;${RESOURCE_FILES}")
   endif()
 
   if (PROJECT_BUILD_SCANNER)
-    DEFINE_EXECUTABLE("pluginscanner" "src/host/pluginscanner/main_scanner.cpp")
+    DEFINE_EXECUTABLE("pluginscanner" "${PROJECT_PRODUCT_NAME} Pluginscanner" "src/host/pluginscanner/main_scanner.cpp")
   endif()
 
   if (PROJECT_BUILD_CLI_HOST)
-    DEFINE_EXECUTABLE("host" "src/host/cli/main_cmdline.cpp")
+    DEFINE_EXECUTABLE("host" "${PROJECT_PRODUCT_NAME} Command Line Host" "src/host/cli/main_cmdline.cpp")
   endif()
 
   FUNCTION(FN_DL_PLUGIN_BUILD plugBuildName plugBuildOutputName srcfilelist plugindefs)
@@ -244,7 +256,7 @@ if (PROJECT_REQUIRE_LIB)
     set_target_properties(${plugBuildName} PROPERTIES PREFIX "")
     source_group(${plugBuildName} FILES ${srcfilelist})
     target_link_libraries(${plugBuildName} PRIVATE "dawlib")
-    CONFIGURE_TARGET_OUTPUT(${plugBuildName} ${plugBuildOutputName})
+    CONFIGURE_TARGET_OUTPUT(${plugBuildName} ${plugBuildName} ${plugBuildOutputName})
 
     # target_link_libraries(${plugBuildName} PRIVATE winmm)
     if (CMAKE_COMPILER_IS_GNUCXX)
@@ -379,20 +391,46 @@ if (WIN32 AND NOT MSVC AND PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH) # remove /lib
     set(PATH_RUNTIMES "${PATH_RUNTIMES}/bin")
     add_custom_target(windows-installer
-      DEPENDS DAW pluginscanner
+      VERBATIM
+      DEPENDS ${PROJECT_BINARY_NAME} pluginscanner
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      COMMAND ${CMAKE_COMMAND} -E make_directory dist/bin
-      COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE:DAW> dist/bin/DAW.debug
-      COMMAND ${CMAKE_OBJCOPY} --strip-all $<TARGET_FILE:DAW> dist/bin/DAW${CMAKE_EXECUTABLE_SUFFIX}
-      COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=dist/bin/DAW.debug dist/bin/DAW${CMAKE_EXECUTABLE_SUFFIX}
-      COMMAND ${CMAKE_OBJCOPY} --only-keep-debug $<TARGET_FILE:pluginscanner> dist/bin/pluginscanner.debug
-      COMMAND ${CMAKE_OBJCOPY} --strip-all $<TARGET_FILE:pluginscanner> dist/bin/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}
-      COMMAND ${CMAKE_OBJCOPY} --add-gnu-debuglink=dist/bin/pluginscanner.debug dist/bin/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}
-      COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX} dist/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}
+      COMMAND ${CMAKE_COMMAND}
+        -E make_directory dist/bin
+      COMMAND ${CMAKE_OBJCOPY}
+        --only-keep-debug "$<TARGET_FILE:${PROJECT_BINARY_NAME}>" "dist/bin/${PROJECT_BINARY_NAME}.debug"
+      COMMAND ${CMAKE_OBJCOPY}
+        --strip-all "$<TARGET_FILE:${PROJECT_BINARY_NAME}>" "dist/bin/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+      COMMAND ${CMAKE_OBJCOPY}
+        "--add-gnu-debuglink=dist/bin/${PROJECT_BINARY_NAME}.debug" "dist/bin/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+      COMMAND ${CMAKE_OBJCOPY}
+        --only-keep-debug "$<TARGET_FILE:pluginscanner>" "dist/bin/pluginscanner.debug"
+      COMMAND ${CMAKE_OBJCOPY}
+        --strip-all "$<TARGET_FILE:pluginscanner>" "dist/bin/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+      COMMAND ${CMAKE_OBJCOPY}
+        --add-gnu-debuglink=dist/bin/pluginscanner.debug "dist/bin/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+      COMMAND ${CMAKE_COMMAND} 
+        -E copy
+        "${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
+        "dist/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
       # COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}archive_release${CMAKE_SHARED_MODULE_SUFFIX} dist/bin/${CMAKE_SHARED_LIBRARY_PREFIX}archive_release${CMAKE_SHARED_MODULE_SUFFIX}
-      COMMAND ${CMAKE_COMMAND} -E copy ${PATH_RUNTIMES}/libc++${CMAKE_SHARED_MODULE_SUFFIX} dist/bin/libc++${CMAKE_SHARED_MODULE_SUFFIX}
+      COMMAND ${CMAKE_COMMAND} 
+        -E copy
+        "${PATH_RUNTIMES}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
+        "dist/bin/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
       # COMMAND ${CMAKE_COMMAND} -E copy ${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX} dist/bin/libunwind${CMAKE_SHARED_MODULE_SUFFIX}
-      COMMAND ${NSIS_MAKE} /DAPP_VERSION=${CMAKE_PROJECT_VERSION} /DPRODUCT_VERSION=${CMAKE_PROJECT_VERSION}.0 /DPROJ_LOC=${CMAKE_CURRENT_SOURCE_DIR} /DDIST_LOC=${CMAKE_CURRENT_SOURCE_DIR}/dist/bin installer/NSIS-build-installer.nsi
+      COMMAND ${NSIS_MAKE}
+        "-DPROJ_LOC=${CMAKE_CURRENT_SOURCE_DIR}"
+        "-DDIST_LOC=${CMAKE_CURRENT_SOURCE_DIR}/dist/bin"
+        "-DPRODUCT_VERSION_REVISION=${CMAKE_PROJECT_VERSION}"
+        "-DPRODUCT_VERSION=${PRODUCT_VERSION}"
+        "-DPROJECT_BINARY_PATH=$<TARGET_FILE:${PROJECT_BINARY_NAME}>"
+        "-DPROJECT_BINARY_NAME=${PROJECT_BINARY_NAME}"
+        "-DPRODUCT_NAME_DISPLAY=${PROJECT_PRODUCT_NAME}"
+        "-DPROJECT_BINARY_NAME=${PROJECT_BINARY_NAME}"
+        "-DPROJECT_VENDOR_NAME=${PROJECT_VENDOR_NAME}"
+        "-DPRODUCT_URL_VENDOR=${PRODUCT_URL_VENDOR}"
+        "-DPRODUCT_COPYRIGHT=${PRODUCT_COPYRIGHT}"
+        "installer/NSIS-build-installer.nsi"
     )
   endif()
 endif()

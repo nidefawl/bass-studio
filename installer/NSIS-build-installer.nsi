@@ -4,55 +4,64 @@
 
 Unicode True
 !ifndef PROJ_LOC
-!define PROJ_LOC "C:\Users\Michael\daw"
+!error "PROJ_LOC not defined"
 !endif
 !ifndef DIST_LOC
-!define DIST_LOC "C:\Users\Michael\daw\dist\bin"
+!error "DIST_LOC not defined"
 !endif
-!ifndef APP_VERSION
-!define APP_VERSION "undefined"
+!ifndef PROJECT_BINARY_PATH
+!error "PROJECT_BINARY_PATH not defined"
 !endif
 !ifndef PRODUCT_VERSION
-!define PRODUCT_VERSION "undefined"
+!error "PRODUCT_VERSION not defined"
 !endif
-!define APP_SHORTNAME "daw"
-!define APP_NAME "DAW"
-!define COMP_NAME "Hept"
-!define WEB_SITE "tbd"
-!define VERSION ${APP_VERSION}
-!define COPYRIGHT "Michael Hept � 2022"
-!define DESCRIPTION "DAW"
+!ifndef PRODUCT_NAME_DISPLAY
+!error "PRODUCT_NAME_DISPLAY not defined"
+!endif
+!ifndef PROJECT_BINARY_NAME
+!error "PROJECT_BINARY_NAME not defined"
+!endif
+!ifndef PROJECT_VENDOR_NAME
+!error "PROJECT_VENDOR_NAME not defined"
+!endif
+!ifndef PRODUCT_URL_VENDOR
+!error "PRODUCT_URL_VENDOR not defined"
+!endif
+!ifndef PRODUCT_COPYRIGHT
+!error "PRODUCT_COPYRIGHT not defined"
+!endif
+
 !define LICENSE_TXT "${PROJ_LOC}\installer\license_en.rtf"
-!define INSTALLER_NAME "${PROJ_LOC}\installer\daw-v${APP_VERSION}-setup.exe"
-!define MAIN_APP_EXE ${APP_SHORTNAME}-${APP_VERSION}.exe
+!define INSTALLER_NAME "/mnt/srv-private\${PROJECT_BINARY_NAME}-v${PRODUCT_VERSION}-setup.exe"
+!define MAIN_APP_EXE ${PROJECT_BINARY_NAME}-${PRODUCT_VERSION}.exe
 !define INSTALL_TYPE "SetShellVarContext current"
 !define REG_ROOT "HKCU"
-!define REG_APP_PATH "Software\Microsoft\Windows\CurrentVersion\App Paths\${APP_NAME}\${APP_NAME}-${APP_VERSION}"
-!define UNINSTALL_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}\${APP_NAME}-${APP_VERSION}"
-
+!define REG_APP_PATH "Software\Microsoft\Windows\CurrentVersion\App Paths\${PROJECT_BINARY_NAME}\${PROJECT_BINARY_NAME}-${PRODUCT_VERSION}"
+!define UNINSTALL_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PROJECT_BINARY_NAME}\${PROJECT_BINARY_NAME}-${PRODUCT_VERSION}"
 !define REG_START_MENU "Start Menu Folder"
+!define STARTMENU_LINK_NAME "${PRODUCT_NAME_DISPLAY} ${PRODUCT_VERSION}"
 
 var SM_Folder
 
 ######################################################################
 
 VIProductVersion "${PRODUCT_VERSION}"
-VIAddVersionKey "ProductName"  "${APP_NAME}"
-VIAddVersionKey "CompanyName"  "${COMP_NAME}"
-VIAddVersionKey "LegalCopyright"  "${COPYRIGHT}"
-VIAddVersionKey "FileDescription"  "${DESCRIPTION}"
-VIAddVersionKey "FileVersion"  "${VERSION}"
+VIAddVersionKey "ProductName"  "${PRODUCT_NAME_DISPLAY}"
+VIAddVersionKey "CompanyName"  "${PROJECT_VENDOR_NAME}"
+VIAddVersionKey "LegalCopyright"  "${PRODUCT_COPYRIGHT}"
+VIAddVersionKey "FileDescription"  "${PROJECT_PRODUCT_NAME} ${PRODUCT_VERSION}"
+VIAddVersionKey "FileVersion"  "${PRODUCT_VERSION}"
 
 ######################################################################
 
 SetCompressor ZLIB
-Name "${APP_NAME}"
-Caption "${APP_NAME}"
+Name "${PRODUCT_NAME_DISPLAY}"
+Caption "${PRODUCT_NAME_DISPLAY}"
 OutFile "${INSTALLER_NAME}"
-BrandingText "${APP_NAME}"
+BrandingText "${PRODUCT_NAME_DISPLAY}"
 XPStyle on
 InstallDirRegKey "${REG_ROOT}" "${REG_APP_PATH}" ""
-InstallDir "$PROGRAMFILES64\${APP_SHORTNAME}-${APP_VERSION}"
+InstallDir "$PROGRAMFILES64\${PROJECT_BINARY_NAME}\${PROJECT_BINARY_NAME}-${PRODUCT_VERSION}"
 
 ######################################################################
 
@@ -68,7 +77,7 @@ InstallDir "$PROGRAMFILES64\${APP_SHORTNAME}-${APP_VERSION}"
 !insertmacro MUI_PAGE_DIRECTORY
 
 !ifdef REG_START_MENU
-!define MUI_STARTMENUPAGE_DEFAULTFOLDER "${APP_NAME}\${APP_NAME}-${APP_VERSION}"
+!define MUI_STARTMENUPAGE_DEFAULTFOLDER "${PRODUCT_NAME_DISPLAY}\${PRODUCT_NAME_DISPLAY}-${PRODUCT_VERSION}"
 !define MUI_STARTMENUPAGE_REGISTRY_ROOT "${REG_ROOT}"
 !define MUI_STARTMENUPAGE_REGISTRY_KEY "${UNINSTALL_PATH}"
 !define MUI_STARTMENUPAGE_REGISTRY_VALUENAME "${REG_START_MENU}"
@@ -93,7 +102,7 @@ Section -MainProgram
 ${INSTALL_TYPE}
 SetOverwrite ifnewer
 SetOutPath "$INSTDIR"
-File /oname=${MAIN_APP_EXE} "${DIST_LOC}\DAW.exe"
+File /oname=${MAIN_APP_EXE} "${PROJECT_BINARY_PATH}"
 File /oname=daw-pluginscanner.exe "${DIST_LOC}\pluginscanner.exe"
 File "${DIST_LOC}\libsoxr-clang-release.dll"
 File "${DIST_LOC}\libc++.dll"
@@ -185,38 +194,25 @@ WriteUninstaller "$INSTDIR\uninstall.exe"
 !ifdef REG_START_MENU
 !insertmacro MUI_STARTMENU_WRITE_BEGIN Application
 CreateDirectory "$SMPROGRAMS\$SM_Folder"
-CreateShortCut "$SMPROGRAMS\$SM_Folder\${APP_NAME}-${APP_VERSION}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
-CreateShortCut "$DESKTOP\${APP_NAME}-${APP_VERSION}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
-CreateShortCut "$SMPROGRAMS\$SM_Folder\Uninstall ${APP_NAME}-${APP_VERSION}.lnk" "$INSTDIR\uninstall.exe"
+CreateShortCut "$SMPROGRAMS\$SM_Folder\${STARTMENU_LINK_NAME}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
+CreateShortCut "$SMPROGRAMS\$SM_Folder\Uninstall ${STARTMENU_LINK_NAME}.lnk" "$INSTDIR\uninstall.exe"
 
-!ifdef WEB_SITE
-WriteIniStr "$INSTDIR\${APP_NAME} website.url" "InternetShortcut" "URL" "${WEB_SITE}"
-CreateShortCut "$SMPROGRAMS\$SM_Folder\${APP_NAME} Website.lnk" "$INSTDIR\${APP_NAME} website.url"
+!ifdef PRODUCT_URL_VENDOR
+WriteIniStr "$INSTDIR\${STARTMENU_LINK_NAME} Website.url" "InternetShortcut" "URL" "${PRODUCT_URL_VENDOR}"
+CreateShortCut "$SMPROGRAMS\$SM_Folder\${STARTMENU_LINK_NAME} Website.lnk" "$INSTDIR\${STARTMENU_LINK_NAME} Website.url"
 !endif
 !insertmacro MUI_STARTMENU_WRITE_END
 !endif
 
-!ifndef REG_START_MENU
-CreateDirectory "$SMPROGRAMS\$APP_SHORTNAME"
-CreateShortCut "$SMPROGRAMS\$APP_SHORTNAME\${APP_NAME}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
-CreateShortCut "$DESKTOP\${APP_NAME}.lnk" "$INSTDIR\${MAIN_APP_EXE}"
-CreateShortCut "$SMPROGRAMS\$APP_SHORTNAME\Uninstall ${APP_NAME}.lnk" "$INSTDIR\uninstall.exe"
-
-!ifdef WEB_SITE
-WriteIniStr "$INSTDIR\${APP_NAME} website.url" "InternetShortcut" "URL" "${WEB_SITE}"
-CreateShortCut "$SMPROGRAMS\$APP_SHORTNAME\${APP_NAME} Website.lnk" "$INSTDIR\${APP_NAME} website.url"
-!endif
-!endif
-
 WriteRegStr ${REG_ROOT} "${REG_APP_PATH}" "" "$INSTDIR\${MAIN_APP_EXE}"
-WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "DisplayName" "${APP_NAME}"
+WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "DisplayName" "${PRODUCT_NAME_DISPLAY}"
 WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "UninstallString" "$INSTDIR\uninstall.exe"
 WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "DisplayIcon" "$INSTDIR\${MAIN_APP_EXE}"
-WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "DisplayVersion" "${VERSION}"
-WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "Publisher" "${COMP_NAME}"
+WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "DisplayVersion" "${PRODUCT_VERSION}"
+WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "Publisher" "${PROJECT_VENDOR_NAME}"
 
-!ifdef WEB_SITE
-WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "URLInfoAbout" "${WEB_SITE}"
+!ifdef PRODUCT_URL_VENDOR
+WriteRegStr ${REG_ROOT} "${UNINSTALL_PATH}"  "URLInfoAbout" "${PRODUCT_URL_VENDOR}"
 !endif
 SectionEnd
 
@@ -306,33 +302,21 @@ RmDir "$INSTDIR\res\icons"
 RmDir "$INSTDIR\res"
  
 Delete "$INSTDIR\uninstall.exe"
-!ifdef WEB_SITE
-Delete "$INSTDIR\${APP_NAME} website.url"
+!ifdef PRODUCT_URL_VENDOR
+Delete "$INSTDIR\${PRODUCT_NAME_DISPLAY} Website.url"
 !endif
 
 RmDir "$INSTDIR"
 
 !ifdef REG_START_MENU
 !insertmacro MUI_STARTMENU_GETFOLDER "Application" $SM_Folder
-Delete "$SMPROGRAMS\$SM_Folder\${APP_NAME}.lnk"
-Delete "$SMPROGRAMS\$SM_Folder\Uninstall ${APP_NAME}.lnk"
-!ifdef WEB_SITE
-Delete "$SMPROGRAMS\$SM_Folder\${APP_NAME} Website.lnk"
+Delete "$SMPROGRAMS\$SM_Folder\${STARTMENU_LINK_NAME}.lnk"
+Delete "$SMPROGRAMS\$SM_Folder\Uninstall ${STARTMENU_LINK_NAME}.lnk"
+!ifdef PRODUCT_URL_VENDOR
+Delete "$SMPROGRAMS\$SM_Folder\${STARTMENU_LINK_NAME} Website.lnk"
 !endif
-Delete "$DESKTOP\${APP_NAME}.lnk"
-
+Delete "$DESKTOP\${PRODUCT_NAME_DISPLAY}.lnk"
 RmDir "$SMPROGRAMS\$SM_Folder"
-!endif
-
-!ifndef REG_START_MENU
-Delete "$SMPROGRAMS\$APP_SHORTNAME\${APP_NAME}.lnk"
-Delete "$SMPROGRAMS\$APP_SHORTNAME\Uninstall ${APP_NAME}.lnk"
-!ifdef WEB_SITE
-Delete "$SMPROGRAMS\$APP_SHORTNAME\${APP_NAME} Website.lnk"
-!endif
-Delete "$DESKTOP\${APP_NAME}.lnk"
-
-RmDir "$SMPROGRAMS\"${APP_SHORTNAME}""
 !endif
 
 DeleteRegKey ${REG_ROOT} "${REG_APP_PATH}"

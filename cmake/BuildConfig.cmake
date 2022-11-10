@@ -1,5 +1,11 @@
+if (NOT PRODUCT_VERSION)
+  set(PRODUCT_VERSION ${CMAKE_PROJECT_VERSION})
+endif()
 if (NOT PROJECT_PRODUCT_NAME)
   set(PROJECT_PRODUCT_NAME ${PROJECT_NAME})
+endif()
+if (NOT PROJECT_VENDOR_NAME)
+  set(PROJECT_VENDOR_NAME "stolen")
 endif()
 if (NOT PROJECT_BINARY_NAME)
   set(PROJECT_BINARY_NAME ${PROJECT_NAME})
@@ -13,12 +19,13 @@ endif()
 if (NOT PRODUCT_URL_VENDOR)
   set(PRODUCT_URL_VENDOR "")
 endif()
-if (NOT PRODUCT_VENDOR)
-  set(PRODUCT_VENDOR "stolen")
+if (NOT PRODUCT_COPYRIGHT)
+  set(PRODUCT_COPYRIGHT "© ${PROJECT_VENDOR_NAME}")
+  set(PRODUCT_COPYRIGHT "(c) ${PROJECT_VENDOR_NAME}")
 endif()
 
 # macro to set common properties on an executable
-FUNCTION(CONFIGURE_TARGET_OUTPUT buildtarget outputname)
+FUNCTION(CONFIGURE_TARGET_OUTPUT buildtarget outputname programDisplayName)
   # As per CMake docs: Add empty generator expr to avoid a configuration subdirectory on multi configs
   set_target_properties(${buildtarget} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ABS_WORKING_DIR}$<0:...>)
   set_target_properties(${buildtarget} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${ABS_WORKING_DIR}$<0:...>)
@@ -30,26 +37,19 @@ FUNCTION(CONFIGURE_TARGET_OUTPUT buildtarget outputname)
   if (NOT MSVC AND PROJECT_GENERATE_LINKER_MAP) 
     set_target_properties(${buildtarget} PROPERTIES LINK_FLAGS "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/${buildtarget}_linker.map")
   endif()
-  set(TARGET_VERSION "0.0.0.0")
-  if (NOT ${PROJECT_VERSION} STREQUAL "")
-    set(TARGET_VERSION ${PROJECT_VERSION})
-  else()
-    set(TARGET_VERSION ${CMAKE_PROJECT_VERSION})
-  endif()
-  if (NOT ${TARGET_VERSION} STREQUAL "")
-    set_target_properties(${buildtarget} PROPERTIES VERSION "${TARGET_VERSION}")
+  if (NOT ${PRODUCT_VERSION} STREQUAL "")
+    set_target_properties(${buildtarget} PROPERTIES VERSION "${PRODUCT_VERSION}")
   endif()
   if (WIN32 AND NOT PROJECT_NO_WINDRES)
-    string(REPLACE "." "," WIN_EXE_VERSION "${TARGET_VERSION}")
+    string(REPLACE "." "," WIN_EXE_VERSION "${PRODUCT_VERSION}")
     set(VER_FILEVERSION ${WIN_EXE_VERSION})
-    set(VER_FILEVERSION_STR "${TARGET_VERSION}")
-    set(VER_FILDESCRIPTION_STR "${PROJECT_NAME} ${TARGET_VERSION}")
+    set(VER_FILEVERSION_STR "${PRODUCT_VERSION}")
+    set(VER_FILDESCRIPTION_STR "${programDisplayName} ${PRODUCT_VERSION}")
     set(VER_PRODUCTVERSION ${WIN_EXE_VERSION})
-    set(VER_PRODUCTVERSION_STR "${TARGET_VERSION}")
-    set(VER_PRODUCTNAME_STR "${PROJECT_NAME}")
-    set(VER_FILENAME_STR "${PROJECT_NAME}.exe")
-    set(VER_COPYRIGHT_STR "(c) ${PRODUCT_VENDOR}")
-    set(VER_COPYRIGHT_STR "© ${PRODUCT_VENDOR}")
+    set(VER_PRODUCTVERSION_STR "${PRODUCT_VERSION}")
+    set(VER_PRODUCTNAME_STR "${programDisplayName}")
+    set(VER_FILENAME_STR "${outputname}.exe")
+    set(VER_COPYRIGHT_STR "${PRODUCT_COPYRIGHT}")
 
     configure_file(
       "${MAIN_SRC_PATH}/version.rc.in"
@@ -73,7 +73,7 @@ namespace BuildInfo {
   const char* COMPILE_DEFS         = R\"($<JOIN:$<TARGET_PROPERTY:${buildtarget},COMPILE_DEFINITIONS>, >)\";
   const char* COMPILER_ID          = R\"(${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})\";
   const char* COMPILER_PATH        = R\"(${CMAKE_CXX_COMPILER})\";
-  const char* BUILD_BINARY_VERSION = R\"(${CMAKE_PROJECT_VERSION})\";
+  const char* BUILD_BINARY_VERSION = R\"(${PRODUCT_VERSION})\";
   const char* BUILD_BINARY_NAME    = R\"(${PROJECT_BINARY_NAME})\";
   const char* BUILD_TIMESTAMP      = __TIMESTAMP__;
   const char* PRODUCT_VENDOR       = R\"(${PROJECT_VENDOR_NAME})\";
@@ -83,6 +83,7 @@ namespace BuildInfo {
   const char* PRODUCT_NAME_UPPER   = R\"($<UPPER_CASE:${PROJECT_BINARY_NAME}>)\";
   const char* PRODUCT_NAME_LOWER   = R\"($<LOWER_CASE:${PROJECT_BINARY_NAME}>)\";
   const char* PRODUCT_HOST_NAME    = R\"(${PROJECT_PRODUCT_NAME})\";
+  const char* PRODUCT_COPYRIGHT    = R\"(${PRODUCT_COPYRIGHT})\";
 } // namespace BuildInfo"
     NEWLINE_STYLE LF
   )
