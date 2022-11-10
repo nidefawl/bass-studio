@@ -124,7 +124,7 @@ struct app_daw_settings {
     bool debugMode = false;
     bool shaderDebug = true;
     float globalZoom = 1.0f;
-    bool uiLayoutLocked = false;
+    bool uiLayoutLocked = true;
     bool uiShowSettingsClip = true;
     bool uiShowSettingsArp = true;
 };
