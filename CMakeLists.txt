@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(PROJECT_NAME "DAW" CACHE STRING "Project name")
+set(PRODUCT_NAME "DAW" CACHE STRING "Product name")
 set(CMAKE_USER_MAKE_RULES_OVERRIDE FixCMakeInitFlags)
 project(${PROJECT_NAME} LANGUAGES C CXX VERSION 0.5.8)
 include(GetGitRevision)
@@ -190,7 +191,7 @@ else()
                 ${MM_SRC_FILES} 
                 ${PROJECT_DEPS_SRC_FILES} 
                 ${HDR_FILES})
-  CONFIGURE_TARGET_OUTPUT(${PROJECT_NAME} ${PROJECT_NAME})
+  CONFIGURE_TARGET_OUTPUT(${PROJECT_NAME} ${PROJECT_BINARY_NAME})
 endif()
 
 
@@ -221,7 +222,7 @@ if (PROJECT_REQUIRE_LIB)
 
   # define main executable
   if (PROJECT_BUILD_DAW)
-    DEFINE_EXECUTABLE(${PROJECT_NAME} "src/host/daw/main_daw.cpp;${RESOURCE_FILES}")
+    DEFINE_EXECUTABLE(${PROJECT_BINARY_NAME} "src/host/daw/main_daw.cpp;${RESOURCE_FILES}")
   endif()
 
   if (PROJECT_BUILD_SCANNER)

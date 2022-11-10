@@ -12,7 +12,7 @@ void test_memory_leak() {
 } // namespace
 
 int main() {
-  // App::Platform::initPlatformEnvironment("daw");
+  // App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
   test_memory_leak();
   return 0;
 }

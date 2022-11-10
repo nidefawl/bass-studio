@@ -170,8 +170,8 @@ clapplugin::clapplugin(DAW::Host::PluginManager& pluginMgr, String filePath, con
     host_.clap_version     = CLAP_VERSION;
     host_.name             = BuildInfo::BUILD_BINARY_NAME;
     host_.version          = BuildInfo::BUILD_BINARY_VERSION;
-    host_.vendor           = "";
-    host_.url              = "";
+    host_.vendor           = BuildInfo::PRODUCT_VENDOR;
+    host_.url              = BuildInfo::PRODUCT_URL_VENDOR;
     host_.get_extension    = clapplugin::clapExtension;
     host_.request_callback = clapplugin::clapRequestCallback;
     host_.request_process  = clapplugin::clapRequestProcess;

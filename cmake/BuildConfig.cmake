@@ -1,3 +1,21 @@
+if (NOT PROJECT_PRODUCT_NAME)
+  set(PROJECT_PRODUCT_NAME ${PROJECT_NAME})
+endif()
+if (NOT PROJECT_BINARY_NAME)
+  set(PROJECT_BINARY_NAME "${PROJECT_NAME}-${BUILD_BINARY_SUFFIX}")
+endif()
+if (NOT PRODUCT_HOST_NAME)
+  set(PRODUCT_HOST_NAME "${PROJECT_NAME}")
+endif()
+if (NOT PRODUCT_URL_DOCS)
+  set(PRODUCT_URL_DOCS "")
+endif()
+if (NOT PRODUCT_URL_VENDOR)
+  set(PRODUCT_URL_VENDOR "")
+endif()
+if (NOT PRODUCT_VENDOR)
+  set(PRODUCT_VENDOR "stolen")
+endif()
 
 # macro to set common properties on an executable
 FUNCTION(CONFIGURE_TARGET_OUTPUT buildtarget outputname)
@@ -30,7 +48,9 @@ FUNCTION(CONFIGURE_TARGET_OUTPUT buildtarget outputname)
     set(VER_PRODUCTVERSION_STR "${TARGET_VERSION}")
     set(VER_PRODUCTNAME_STR "${PROJECT_NAME}")
     set(VER_FILENAME_STR "${PROJECT_NAME}.exe")
-    set(VER_COPYRIGHT_STR "(c) Michael Hept")
+    set(VER_COPYRIGHT_STR "(c) ${PRODUCT_VENDOR}")
+    set(VER_COPYRIGHT_STR "© ${PRODUCT_VENDOR}")
+
     configure_file(
       "${MAIN_SRC_PATH}/version.rc.in"
       "${CMAKE_CURRENT_BINARY_DIR}/${buildtarget}_version.rc"
@@ -54,8 +74,15 @@ namespace BuildInfo {
   const char* COMPILER_ID          = R\"(${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION})\";
   const char* COMPILER_PATH        = R\"(${CMAKE_CXX_COMPILER})\";
   const char* BUILD_BINARY_VERSION = R\"(${CMAKE_PROJECT_VERSION})\";
-  const char* BUILD_BINARY_NAME    = R\"(Daw-${BUILD_BINARY_SUFFIX})\";
+  const char* BUILD_BINARY_NAME    = R\"(${PROJECT_BINARY_NAME})\";
   const char* BUILD_TIMESTAMP      = __TIMESTAMP__;
+  const char* PRODUCT_VENDOR       = R\"(${PROJECT_VENDOR_NAME})\";
+  const char* PRODUCT_URL_DOCS     = R\"(${PRODUCT_URL_DOCS})\";
+  const char* PRODUCT_URL_VENDOR   = R\"(${PRODUCT_URL_VENDOR})\";
+  const char* PRODUCT_NAME_DISPLAY = R\"(${PROJECT_PRODUCT_NAME})\";
+  const char* PRODUCT_NAME_UPPER   = R\"($<UPPER_CASE:${PROJECT_BINARY_NAME}>)\";
+  const char* PRODUCT_NAME_LOWER   = R\"($<LOWER_CASE:${PROJECT_BINARY_NAME}>)\";
+  const char* PRODUCT_HOST_NAME    = R\"(${PROJECT_PRODUCT_NAME})\";
 } // namespace BuildInfo"
     NEWLINE_STYLE LF
   )

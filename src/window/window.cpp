@@ -165,11 +165,11 @@ static void setAppWindowHints() {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
 
 #ifdef __linux__
-    glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "DAW");
-    glfwWindowHintString(GLFW_X11_CLASS_NAME, "DAW");
+    glfwWindowHintString(GLFW_X11_INSTANCE_NAME, BuildInfo::PRODUCT_NAME_UPPER);
+    glfwWindowHintString(GLFW_X11_CLASS_NAME, BuildInfo::PRODUCT_NAME_UPPER);
 #endif
 #ifdef __APPLE__
-    glfwWindowHintString(GLFW_COCOA_FRAME_NAME, "DAW");
+    glfwWindowHintString(GLFW_COCOA_FRAME_NAME, BuildInfo::PRODUCT_NAME_UPPER);
 #endif
 }
 
@@ -1824,7 +1824,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
             }
         }
 
-        App::Platform::initPlatformEnvironment("daw");
+        App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
 
         //TODO: fix rpath/dll path to avoid loading unrelated dyn libs
 
@@ -1864,7 +1864,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 
         glfwSetErrorCallback(glfw_runtime_error_callback);
 #ifdef _WIN32
-        glfwSetWin32WindowClassName(L"DAW");
+        glfwSetWin32WindowClassName(LBUILD_APP_NAME_UPPER);
 #endif
 
         // glfwInitHint(GLFW_CONTEXT_KEEPCURRENT, 1);
@@ -2140,11 +2140,11 @@ public:
     void createPluginWindow(const char* title, int w, int h, void* parentWindowHandle) {
         setAppWindowHints();
 #ifdef __linux__
-        glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "DAW");
-        glfwWindowHintString(GLFW_X11_CLASS_NAME, "DAW");
+        glfwWindowHintString(GLFW_X11_INSTANCE_NAME, BuildInfo::PRODUCT_NAME_UPPER);
+        glfwWindowHintString(GLFW_X11_CLASS_NAME, BuildInfo::PRODUCT_NAME_UPPER);
 #endif
 #ifdef __APPLE__
-        glfwWindowHintString(GLFW_COCOA_FRAME_NAME, "DAW");
+        glfwWindowHintString(GLFW_COCOA_FRAME_NAME, BuildInfo::PRODUCT_NAME_UPPER);
 #endif
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
         glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
@@ -2509,11 +2509,11 @@ public:
     void createPluginWindow(const char* title, int w, int h, void* parentWindowHandle) {
         setAppWindowHints();
 #ifdef __linux__
-        glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "DAW");
-        glfwWindowHintString(GLFW_X11_CLASS_NAME, "DAW");
+        glfwWindowHintString(GLFW_X11_INSTANCE_NAME, BuildInfo::PRODUCT_NAME_UPPER);
+        glfwWindowHintString(GLFW_X11_CLASS_NAME, BuildInfo::PRODUCT_NAME_UPPER);
 #endif
 #ifdef __APPLE__
-        glfwWindowHintString(GLFW_COCOA_FRAME_NAME, "DAW");
+        glfwWindowHintString(GLFW_COCOA_FRAME_NAME, BuildInfo::PRODUCT_NAME_UPPER);
 #endif
         glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
         glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);

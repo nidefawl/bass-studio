@@ -52,7 +52,7 @@ namespace {
 }// namespace
 
 int main() {
-    App::Platform::initPlatformEnvironment("daw");
+    App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
     test_projectfile_loader();
     return 0;
 }

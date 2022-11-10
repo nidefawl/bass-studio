@@ -1,8 +1,9 @@
-#include "logging.h"
 #if defined(__linux__) || defined(__APPLE__)
+#include "logging.h"
 #include "host/host_plugin_window.h"
 #include "host/host_pluginmanager.h"
 #include "host/plugin/base/base-plugin.h"
+#include "buildinfo.h"
 #include <vector>
 #include <GLFW/glfw3.h>
 #ifdef __linux__
@@ -90,11 +91,11 @@ bool host_plugin_window::init(effectbase* plugin, const String& name, ivec2 size
 	glfwWindowHint(GLFW_RESIZABLE, resizeable ? GLFW_TRUE : GLFW_FALSE);
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 #ifdef __linux__
-        glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "DAW");
-        glfwWindowHintString(GLFW_X11_CLASS_NAME, "DAW");
+        glfwWindowHintString(GLFW_X11_INSTANCE_NAME, BuildInfo::PRODUCT_NAME_UPPER);
+        glfwWindowHintString(GLFW_X11_CLASS_NAME, BuildInfo::PRODUCT_NAME_UPPER);
 #endif
 #ifdef __APPLE__
-        glfwWindowHintString(GLFW_COCOA_FRAME_NAME, "DAW");
+        glfwWindowHintString(GLFW_COCOA_FRAME_NAME, BuildInfo::PRODUCT_NAME_UPPER);
 #endif
 	glfw = glfwCreateWindow(size.x, size.y, StringAsCStr(name), NULL, NULL);
     glfwSetWindowCloseCallback(glfw, glfw_cb_windowclose);

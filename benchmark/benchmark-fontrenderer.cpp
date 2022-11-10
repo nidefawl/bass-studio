@@ -85,7 +85,7 @@ static void loadStrings(std::vector<String>& strings) {
 
 int main(int argc, char** argv) {
     std::vector<String> args(&argv[0], &argv[argc]);
-    App::Platform::initPlatformEnvironment("daw");
+    App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
     try {
         glfwSetErrorCallback(glfw_error_callback);
         glfwInitHint(GLFW_CONTEXT_KEEPCURRENT, 1);

@@ -276,7 +276,7 @@ void onModuleLoad() {
     log_lf(Log::L_DEBUG, "moduleName %s\n", StringAsCStr(moduleName));
     String path = "";
     SplitPath(moduleName, &path, nullptr, nullptr, nullptr);
-    App::Platform::initPlatformEnvironment("daw", path);
+    App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER, path);
     isFirstPluginLoad = true;
     log_lf(Log::L_DEBUG, "resPath %s\n", StringAsCStr(App::Platform::toResourcePath("")));
     try {

@@ -524,7 +524,7 @@ public:
 #if BUILD_DAW_HOST
         this->parentDawCtrl = this;
 #endif
-        setWindowName(BuildInfo::BUILD_BINARY_NAME);
+        setWindowName(BuildInfo::PRODUCT_NAME_DISPLAY);
     }
 
     ~DawCtrl() override = default;

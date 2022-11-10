@@ -995,7 +995,7 @@ static int runScannerClient() {
 
 int main(int argc, char* argv[]) {
     seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
-    App::Platform::initPlatformEnvironment("daw");
+    App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
     if (argc < 1) {
         String cwdPathDB = App::Platform::toUserdataPath("data/plugins.db3");
         log_message("Daw VST scanner version %s\n", BuildInfo::BUILD_BINARY_VERSION);

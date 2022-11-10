@@ -371,7 +371,7 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginH
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterGetVendorString %d %d %zd\n", opcode, index, value, 0);
         if (ptr) {
-            strcpy(static_cast<char*>(ptr), "NFMH");
+            strcpy(static_cast<char*>(ptr), BuildInfo::PRODUCT_VENDOR);
             return 1;
         }
         return 0;
@@ -379,7 +379,7 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginH
         if (!throttleLog)
             logPluginCb(plugin, "audioMasterGetProductString %d %d %zd\n", opcode, index, value, 0);
         if (ptr) {
-            strcpy(static_cast<char*>(ptr), "DAW");
+            strcpy(static_cast<char*>(ptr), BuildInfo::PRODUCT_HOST_NAME);
             return 1;
         }
         return 0;

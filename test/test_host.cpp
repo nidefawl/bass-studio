@@ -167,7 +167,7 @@ namespace test_host {
 
 int main() {
     setExceptionHandler();
-    App::Platform::initPlatformEnvironment("daw");
+    App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
     seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
     daw_tls::initNewTls();
     auto sf = sampleformat_t{44100, 512};

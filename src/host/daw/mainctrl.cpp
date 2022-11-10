@@ -1081,7 +1081,7 @@ void DawInstance::saveFile(const String& path) {
         projectPath = path;
         String projectFileName;
         SplitPath(path, &lastProjectDirectory, &projectFileName, nullptr, nullptr);
-        tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::BUILD_BINARY_NAME, StringAsCStr(projectFileName)));
+        tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::PRODUCT_NAME_DISPLAY, StringAsCStr(projectFileName)));
         tls.settings->recentfiles.add(path);
     }
 }
@@ -1153,7 +1153,7 @@ void DawInstance::setEmptyProject() {
     insertNewTrack(-1, TRACK_TYPE_MIDI, FLG_TRK_CHANGE_LOAD);
     insertNewTrack(-1, TRACK_TYPE_MASTER, 0);
     resetShaderTimeOffset();
-    tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::BUILD_BINARY_NAME, "New Project"));
+    tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::PRODUCT_NAME_DISPLAY, "New Project"));
 }
 
 void DawInstance::onDawCompanionWindowClose(DawWindowCompanion& entry) {
@@ -2574,7 +2574,7 @@ void DawInstance::loadProjectFinish() {
         tls.mainCtrl->setStatusText(s);
         String projectFileName;
         SplitPath(this->projectPath, nullptr, &projectFileName, nullptr);
-        tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::BUILD_BINARY_NAME, StringAsCStr(projectFileName)));
+        tls.mainCtrl->setWindowName(StringFormat("%s - %s", BuildInfo::PRODUCT_NAME_DISPLAY, StringAsCStr(projectFileName)));
     }
 
     setAudioThreadState(playback_state::status_stop);

@@ -165,7 +165,7 @@ int runCommandLineHost(const std::vector<String>& args) {
 
 
     try {
-        App::Platform::initPlatformEnvironment("daw");
+        App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
         auto& tls = daw_tls::initNewTls();
         loadSettings(*tls.settings);
         auto& settings = *tls.settings;

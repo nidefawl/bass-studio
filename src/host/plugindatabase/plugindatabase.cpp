@@ -1,6 +1,7 @@
 
 #include "plugindatabase.h"
 #include "host/plugin/modules.h"
+#include "logging.h"
 #include "tls.h"
 #include "types.h"
 #include "str_util.h"
@@ -10,6 +11,9 @@
 #include "appsettings.h"
 #include "snapshot/snapshot.h"
 #include "snapshot/plugin-snapshot.h"
+#include <exception>
+#include <memory>
+#include <utility>
 #include <vector>
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
@@ -43,17 +47,36 @@ void createTables(SQLite::Database& db) {
 }
 
 class plugindatabase_t::Impl {
-    SQLite::Database db;
+    String path;
+    std::shared_ptr<SQLite::Database> db;
     std::map<uint32_t, uint32_t> remapVst2;
 public:
-    explicit Impl(const String& path)
-        : db(path, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE) {
-        createTables(db);
+    explicit Impl(String path) : path(std::move(path)) {
         auto& settings = daw_tls::getSettings();
         remapVst2 = settings.pluginsettings.configVst2.uidRemapping;
     }
     ~Impl() = default;
+    bool ensureOpen() {
+        if (!db) {
+            try {
+                String parentPath;
+                SplitPath(path, &parentPath, nullptr, nullptr);
+                CreateDirectoryIfNotExists(parentPath);
+                db = std::make_shared<SQLite::Database>(path, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
+                if (db) {
+                    createTables(*db);
+                }
+                return true;
+            } catch (const std::exception& e) {
+                log_lf(Log::L_ERROR, "Failed to open plugin database: %s\n", e.what());
+            }
+        }
+        return db.get() != nullptr;
+    }
     bool resolvePlugin(const plugin_snapshot_t& pluginSnapshot, pluginentry_t& _outResult, int loadFlags) {
+        if (!ensureOpen()) {
+            return false;
+        }
         _outResult = {};
         enum query_type : uint32_t {
             BY_LOCALID_AND_UUID = 0,
@@ -100,7 +123,7 @@ public:
                 replaceString(query, "__COND__", "forcedisable == 0");
             }
 
-            SQLite::Statement queryPlugin(db, query);
+            SQLite::Statement queryPlugin(*db, query);
             queryPlugin.bind(1, pluginType == PluginType::PLUGIN_TYPE_VST ? 0 : 1);
             switch (i) {
                 case BY_LOCALID_AND_UUID:
@@ -144,6 +167,9 @@ public:
         return false;
     }
     void query(const String& strQuery, std::vector<pluginentry_t>& _out) {
+        if (!ensureOpen()) {
+            return;
+        }
         String strSearchQuery = strQuery;
         String strSQLCond     = "1";
         String strSQLOrder    = "ORDER by name COLLATE NOCASE ASC";
@@ -196,7 +222,7 @@ public:
         String strSQLQuery = "SELECT * FROM plugins where " + strSQLCond + " " + strSQLOrder;
         if (customQuery)
             log_lf(Log::L_DEBUG, "str: %s\n", StringAsCStr(strSQLQuery));
-        SQLite::Statement queryPlugin(db, strSQLQuery);
+        SQLite::Statement queryPlugin(*db, strSQLQuery);
         if (!customQuery) {
             queryPlugin.bind(1, strSearchQuery);
         }

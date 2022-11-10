@@ -18,7 +18,7 @@ extern volatile bool fatalError;
 int main(int argc, char** argv) {
     std::vector<String> args(&argv[0], &argv[argc]);
     setSSEFlushDenormals();
-    // App::Platform::initPlatformEnvironment("daw");
+    // App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
     try {
         AudioBlock block(32, 512, false);
         AudioBlock block1024(32, 1024, false);

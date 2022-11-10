@@ -1012,9 +1012,6 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             nvgFillColor(vg, theme->getColor(GuiColor::COL_CLIPEDITOR_SHARP));
             nvgFill(vg);
 
-
-            renderGridLines(vg, theme, grid.gridList, cs);
-
             y = yoct;
             nvgBeginPath(vg);
             if (firstKey == 0 && octave == 0) {
@@ -1043,6 +1040,10 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             }
             firstKey = 0;
         }
+
+
+        renderGridLines(vg, theme, grid.gridList, cs);
+
     }
     auto& selView = view.m_selectionView;
     clip_t* currentClip = view.clip();

@@ -33,7 +33,7 @@ void test_findFilesWithExt_non_recursive() {
 } // namespace
 
 int main() {
-  App::Platform::initPlatformEnvironment("daw");
+  App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
   test_findFilesWithExt_recursive();
   test_findFilesWithExt_non_recursive();
   return 0;
