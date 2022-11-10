@@ -1861,13 +1861,12 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 
         setMinimumResolutionTimer();
         initColor();
-
         glfwSetErrorCallback(glfw_runtime_error_callback);
 #ifdef _WIN32
-        glfwSetWin32WindowClassName(LBUILD_APP_NAME_UPPER);
+        glfwSetWin32WindowClassName(BuildInfo::PRODUCT_NAME_UPPER);
 #endif
-
         // glfwInitHint(GLFW_CONTEXT_KEEPCURRENT, 1);
+
         auto glfwInitRet = glfwInit();
         if (!glfwInitRet) {
             log_lf(Log::L_ERROR, "glfwInit() returned %d\n", glfwInitRet);
