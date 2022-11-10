@@ -292,14 +292,14 @@ void guiplugin::handleDraggedRelease(MouseEvent& evt) {
         return;
     }
     if (isSelected()) {
-        static_cast<guictr_plugins*>(this->parent)->onSelected(evt, this);
+        static_cast<guictr_plugins*>(this->parent)->onSelected(evt, effect);
     }
 }
 void guiplugin::handleDraggedBegin(MouseEvent& evt) {
     hasDragged = false;
     if (!isSelected()) {
         //hasDragged = true;
-        static_cast<guictr_plugins*>(this->parent)->onSelected(evt, this);
+        static_cast<guictr_plugins*>(this->parent)->onSelected(evt, effect);
     }
 }
 

@@ -818,7 +818,13 @@ void BaseCtrl::dragContainerMove(MouseEvent& evt) {
         auto p1 = a.lock();
         auto p2 = b.lock();
         if (p1 && p2) {
-            return p1->priority > p2->priority; 
+            if (p1->priority == p2->priority) {
+                // smaller = higher priority
+                auto area1 = p1->size.x * p1->size.y;
+                auto area2 = p2->size.x * p2->size.y;
+                return area1 < area2;
+            }
+            return p1->priority < p2->priority;
         }
         return false;
     });

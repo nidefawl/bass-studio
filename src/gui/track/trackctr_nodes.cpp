@@ -1153,7 +1153,7 @@ void gui_graph::updateList(bool resetPositions) {
     {
         module_group* groupSelected = nullptr;
         auto const host = daw->getHost();
-        plugin_selection& sel = daw->getMainControl()->getPluginSel();
+        plugin_selection& sel = dawCtrl->getPluginSel();
         if (sel.getSelectionCount() > 0) {
             std::vector<effectbase *> out;
             if (sel.pluginCtr->getSelected(out)) {
@@ -1377,10 +1377,9 @@ void guictr_nodes_editor::resetPositions() {
 }
 
 void guictr_nodes_editor::resetRouting() {
-    auto const daw = dawCtrl->getDaw();
     {
         module_group* groupSelected = nullptr;
-        plugin_selection& sel = daw->getMainControl()->getPluginSel();
+        plugin_selection& sel = dawCtrl->getPluginSel();
         if (sel.getSelectionCount() > 0) {
             std::vector<effectbase *> out;
             if (sel.pluginCtr->getSelected(out)) {

@@ -154,7 +154,7 @@ public:
         pluginCtrEmpty.setControl(parentCtrl);
         dragged.setControl(parentCtrl);
     }
-    void makeVisible(effectbase* plugin);
+    void scrollToPluginGui(effectbase* plugin);
     void setScrolloffset(int offset);
     ivec2 toContainerSpace(ivec2 in) const override {
         ivec2 offsetPos = in - getPosContent();
@@ -220,7 +220,7 @@ public:
     void relayout();
     void resetTrackIf(audio_stage_t* _track);
     void hideTrack();
-    void onSelected(MouseEvent& evt, guiplugin* plugin);
+    void onSelected(MouseEvent& evt, effectbase* plugin);
     void addGui(effectbase* plugin);
     void onChildLayoutChanged(guibase* g) override;
     void determineSize(ivec2& prefSize) override;

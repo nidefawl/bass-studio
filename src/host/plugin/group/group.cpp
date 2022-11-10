@@ -150,7 +150,7 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             return true;
         }
         if (isShift(evt.kbmods)) {
-            if (MainCtrl::get()->getPluginSel().pluginCtr != this->parent) {
+            if (dawCtrl->getPluginSel().pluginCtr != this->parent) {
                 return true;
             }
         }

@@ -17,6 +17,7 @@
 #include "host/daw/mainctrl.h"
 #include "host/host.h"
 #include "host/audiohost/audio_host.h"
+#include "seq_util.h"
 
 namespace {
     class guigraph2d : public guictr_base {
@@ -151,7 +152,7 @@ public:
     SafeRef<effectbase>& getRef() {
         return ref;
     }
-    gui_pluginsloaded_list_entry(SafeRef<effectbase> _ref) : gui_list_entry(), ref(_ref) {
+    explicit gui_pluginsloaded_list_entry(SafeRef<effectbase> _ref) : gui_list_entry(), ref(_ref) {
         auto* _entry = safeRefGet(ref);
         dbgassert(_entry);
         icon = _entry->isSynth ? ICON_SYNTH : ICON_EFFECT;
@@ -267,14 +268,15 @@ public:
         }
     }
     void buttonClicked(guibase* button) override {
-        if (STL_CONTAINS(entries, button)) {
-            gui_pluginsloaded_list_entry* entry = dynamic_cast<gui_pluginsloaded_list_entry*>(button);
-            auto* effectbase                    = safeRefGet(entry->getRef());
+        if (stl_contains(entries, button)) {
+            auto entry = static_cast<gui_pluginsloaded_list_entry*>(button);
+            auto* effectbase = safeRefGet(entry->getRef());
             if (effectbase) {
                 track_t* tr = effectbase->getTrack();
                 if (tr) {
                     dawCtrl->setSelectedTrack(tr);
                     dawCtrl->showPluginView();
+                    dawCtrl->revealPlugin(effectbase);
                 }
             }
         }

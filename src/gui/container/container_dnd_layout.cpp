@@ -220,7 +220,7 @@ void guictr_layout::getOverlays(MouseEvent&, std::vector<std::weak_ptr<DropAreaU
         area->pos += inset;
         area->size -= inset * 2;
         minW = 64;
-        area->priority--;
+        // area->priority--;
         for (auto axis : {0,1}) {
             if (area->size[axis] < minW) {
                 area->pos[axis] -= (minW - area->size[axis]) / 2;

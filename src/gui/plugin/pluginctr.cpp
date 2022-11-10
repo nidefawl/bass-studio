@@ -233,14 +233,14 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
                 sel.lastSelection--;
                 getSelectedEffects(sel, selection);
                 if (!selection.empty())
-                    ctr->makeVisible(selection.front());
+                    ctr->scrollToPluginGui(selection.front());
 
             } else if (cursorDir.x > 0 && sel.lastSelection < CtrSize(effectChain) - 1&& sel.firstSelection <= sel.lastSelection) {
                 sel.firstSelection++;
                 sel.lastSelection++;
                 getSelectedEffects(sel, selection);
                 if (!selection.empty())
-                    ctr->makeVisible(selection.back());
+                    ctr->scrollToPluginGui(selection.back());
             }
             return cursorDir.x != 0;
         } break;
@@ -362,21 +362,21 @@ bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
     return false;
 }
 
-void guictr_plugins::onSelected(MouseEvent& evt, guiplugin* plugin) {
-    plugin_selection& sel = MainCtrl::get()->getPluginSel();
+void guictr_plugins::onSelected(MouseEvent& evt, effectbase* plugin) {
+    plugin_selection& sel = dawCtrl->getPluginSel();
     if (isShift(evt.kbmods)) {
         if (sel.hasSelection() && sel.pluginCtr == this) {
-            if (plugin->effect->getSlot() > sel.lastSelection) {
-                sel.lastSelection = plugin->effect->getSlot();
+            if (plugin->getSlot() > sel.lastSelection) {
+                sel.lastSelection = plugin->getSlot();
             }
-            if (plugin->effect->getSlot() < sel.firstSelection) {
-                sel.firstSelection = plugin->effect->getSlot();
+            if (plugin->getSlot() < sel.firstSelection) {
+                sel.firstSelection = plugin->getSlot();
             }
         }
     } else {
         sel.pluginCtr      = this;
-        sel.firstSelection = plugin->effect->getSlot();
-        sel.lastSelection  = plugin->effect->getSlot();
+        sel.firstSelection = plugin->getSlot();
+        sel.lastSelection  = plugin->getSlot();
     }
     dawCtrl->onPluginSelected();
 }
@@ -445,6 +445,10 @@ void guictr_plugins::getEffects(std::vector<effectbase*>& out) {
 }
 
 void guictr_plugins::showTrack(audio_stage_t* stage, std::shared_ptr<guictr_plugins>& ctr) {
+    auto& sel = dawCtrl->getPluginSel();
+    if (sel.pluginCtr == this) {
+        sel.clear();
+    }
     if (this->stage != stage) {
         if (this->stage) {
             auto& guiList = this->stage->gui;
@@ -477,6 +481,10 @@ void guictr_plugins::resetTrackIf(audio_stage_t* _stage) {
 
 void guictr_plugins::hideTrack() {
     removeGuis();
+    auto& sel = dawCtrl->getPluginSel();
+    if (sel.pluginCtr == this) {
+        sel.clear();
+    }
     if (this->stage) {
         auto& guiList = this->stage->gui;
         guiList.erase(
@@ -489,8 +497,8 @@ void guictr_plugins::hideTrack() {
             guiList.end()
         );
     }
-    this->track            = nullptr;
-    this->stage            = nullptr;
+    this->track = nullptr;
+    this->stage = nullptr;
     layout();
 }
 
@@ -526,6 +534,16 @@ void guictr_plugins::relayout() {
         setLabel("No Track Selected");
     } else {
         setLabel(name);
+    }
+    auto& sel = dawCtrl->getPluginSel();
+    if (sel.pluginCtr == this) {
+        // validate range
+        if (sel.firstSelection < 0 || sel.firstSelection >= CtrSize(guiPlugins)) {
+            sel.firstSelection = -1;
+        }
+        if (sel.lastSelection < 0 || sel.lastSelection >= CtrSize(guiPlugins)) {
+            sel.lastSelection = -1;
+        }
     }
 }
 
@@ -997,17 +1015,21 @@ void guictr_plugins::setScrolloffset(int offset) {
     }
 }
 
-void guictr_plugins::makeVisible(effectbase* plugin) {
+void guictr_plugins::scrollToPluginGui(effectbase* plugin) {
     int w          = getSizeContent().x;
     int totalWidth = getTotalWidth();
-    // if (w < totalWidth && entry) {
-    //     int x = entry->pos.x;
-    //     if (x < scrolloffset) {
-    //         scrolloffset = x;
-    //     } else if (x + entry->size.x > scrolloffset + w) {
-    //         scrolloffset = x + entry->size.x - w;
-    //     }
-    // }
+    auto plugRef = plugin->toRef();
+    if (w < totalWidth) {
+        auto it = std::find_if(guiPlugins.begin(), guiPlugins.end(), [&plugRef](guiplugin_entry& e) { return e.pluginRef == plugRef; });
+        if (it != guiPlugins.end()) {
+            int x = it->guiPlugin->pos.x;
+            if (x < scrolloffset) {
+                scrolloffset = x;
+            } else if (x + it->guiPlugin->size.x > scrolloffset + w) {
+                scrolloffset = x + it->guiPlugin->size.x - w;
+            }
+        }
+    }
 }
 
 vec2 guictr_pluginview::getScale() {

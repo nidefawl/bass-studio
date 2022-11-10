@@ -2673,6 +2673,17 @@ void DawCtrl::setSelectedTrack(track_t* track) {
     });
 }
 
+void DawCtrl::revealPlugin(effectbase* effect) {
+    view->visitEntries([&](SPLayoutEntry& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_PLUGINS) {
+            auto spCtrPlugins = std::static_pointer_cast<guictr_plugins>(entry->getSharedGui());
+            spCtrPlugins->scrollToPluginGui(effect);
+            spCtrPlugins->onSelected(lastMouseEvent, effect);
+        }
+        return true;
+    });
+}
+
 void DawCtrl::addTrackToView(track_t* track, int flags) {
     int32_t nTrackViews =0;
     view->visitEntries([track, flags, &nTrackViews](SPLayoutEntry& ctr) {

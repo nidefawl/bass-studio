@@ -1883,7 +1883,7 @@ void gui_track_content_base::pluginMultiDragRelease(guictr_dragged_plugins* g, i
         }
         daw->onPluginsChanged();
         for (auto& gui : dstStage->gui) {
-            gui->makeVisible(g->effects.back());
+            gui->scrollToPluginGui(g->effects.back());
         }
     }
 }
@@ -1935,7 +1935,7 @@ void gui_track_content_base::pluginEntryDragRelease(gui_pluginlist_entry* g, ive
         daw->pushHist(track_action);
         daw->onPluginsChanged();
         for (auto& gui : dstStage->gui) {
-            gui->makeVisible(effect);
+            gui->scrollToPluginGui(effect);
         }
     }
 }
