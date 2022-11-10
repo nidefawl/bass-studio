@@ -63,6 +63,7 @@
 #include "platform/win/windowsize.h"
 #include "platform/win/platform_win.h"
 #include "platform/win/DropTarget.h"
+#include "str_win32.h"
 #endif
 #ifdef __linux__
 #include "platform/linux/windowsize.h"
@@ -1863,7 +1864,11 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         initColor();
         glfwSetErrorCallback(glfw_runtime_error_callback);
 #ifdef _WIN32
-        glfwSetWin32WindowClassName(BuildInfo::PRODUCT_NAME_UPPER);
+        std::vector<wchar_t> convertedStr;
+        auto errorCode = stringToWchar(CP_UTF8, BuildInfo::PRODUCT_NAME_UPPER, ::strlen(BuildInfo::PRODUCT_NAME_UPPER), convertedStr);
+        if (!errorCode) {
+            glfwSetWin32WindowClassName(convertedStr.data());
+        }
 #endif
         // glfwInitHint(GLFW_CONTEXT_KEEPCURRENT, 1);
 
