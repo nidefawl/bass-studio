@@ -444,10 +444,6 @@ public:
         ctrEntryClipEdit->removeEntryFromParent();
         ctrEntryPlugins->removeEntryFromParent();
         ctr_Center->removeAllEntries();
-        // visitLayoutContainers([](std::shared_ptr<guictr_layout>& ctr) {
-        //     ctr->removeAllEntries();
-        //     return true;
-        // });
         ctr_Center->setLayout(container_layout::SPLIT_H);
         auto ctrCtrTop = findByTagEntry(GuiContainerTag::TAG_TAB_TOP);
         if (ctrCtrTop) {
@@ -768,7 +764,7 @@ public:
             auto& fac = getContainerFactory();
             loadContainerSnapshot(fac, context, ctr_Center.get(), viewLayout.center.get());
         } else {
-            // resetCenterContainer();
+            init();
         }
         vecClipEditors.clear();
         if (context.entriesConstructed.count(gui_type::CTR_TYPE_CLIPEDITOR)) {
