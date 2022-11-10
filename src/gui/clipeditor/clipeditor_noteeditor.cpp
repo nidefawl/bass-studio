@@ -634,10 +634,6 @@ void guictr_editor_base::relayout() {
             if (!assert_expr(trackEntry.clipsGuis.count(selClip))) {
                 continue;
             }
-            auto selGClip = trackEntry.clipsGuis[selClip];
-            dbgassert(selGClip);
-            dbgassert(selGClip->m_clip);
-            dbgassert(selGClip->m_clip == selClip);
             clipHandles.setVisible(true);
             clipHandles.getClipView().setSingleClip(selClip);
             clipHandles.setTrackSelectionIdx(trackIdx);

@@ -709,11 +709,13 @@ void guictr_layout::removeAllEntries() {
 }
 
 void guictr_layout::assertEntries() const {
+#ifndef NDEBUG
     dbgassert(splitters.empty() || splitters.size() == entries.size() - 1);
     for (auto& entry : entries) {
         dbgassert(entry->getParentContainer() == this && entry->getGui()->parent == this);
     }
     dbgassert(entries.empty() == guis.empty());
+#endif
 }
 
 void guictr_layout::handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) {

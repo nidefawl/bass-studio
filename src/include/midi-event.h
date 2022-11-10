@@ -55,7 +55,7 @@ namespace DAW::Host {
                         for (const auto& evt : evts) {
                             String asString = evt.ToString();
                             auto idx = &evt - &evts[0];
-                            log_lf(Log::L_ERROR, "Evt[%ld] %s\n", idx, asString.c_str());
+                            log_lf(Log::L_ERROR, "Evt[%zd] %s\n", idx, asString.c_str());
                         }
                     }
                 }
