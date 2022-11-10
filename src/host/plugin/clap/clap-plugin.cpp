@@ -168,7 +168,7 @@ clapplugin::clapplugin(DAW::Host::PluginManager& pluginMgr, String filePath, con
       clapPluginIndex(uId) {
     host_.host_data        = this;
     host_.clap_version     = CLAP_VERSION;
-    host_.name             = BuildInfo::BUILD_BINARY_NAME;
+    host_.name             = BuildInfo::PRODUCT_HOST_NAME;
     host_.version          = BuildInfo::BUILD_BINARY_VERSION;
     host_.vendor           = BuildInfo::PRODUCT_VENDOR;
     host_.url              = BuildInfo::PRODUCT_URL_VENDOR;
