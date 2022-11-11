@@ -328,6 +328,18 @@ public:
     virtual void onTick(AppCtrl* appctrl) {
     }
     virtual guictxtmenu_base* getTooltip(AppCtrl* appctrl);
+    virtual bool isVisibleInParent() const {
+        auto p = this;
+        while (p->isVisible()) {
+            if (!p->parent)
+                return true;
+            p = p->parent;
+        }
+        return false;
+    }
+    virtual bool canOpenTooltip() const {
+        return isVisibleInParent();
+    }
     void setTooltipText(String _tooltipText) {
         tooltipText = std::move(_tooltipText);
     }

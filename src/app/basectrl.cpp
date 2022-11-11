@@ -472,7 +472,8 @@ void AppCtrl::onAppTick() {
         }
         if (!ctxtmenu && bIsVisible) {
             auto timeNow = getTimeMillis();
-            if (guiOver == lastHoveredTooltip && timeNow - tmLastHoveredTooltip >= 360) {
+            if (guiOver == lastHoveredTooltip && timeNow - tmLastHoveredTooltip >= 360
+                && guiOver->canOpenTooltip()) {
                 auto newContextMenu = guiOver->getTooltip(this);
                 if (newContextMenu) {
                     newContextMenu->theme = getTheme();
