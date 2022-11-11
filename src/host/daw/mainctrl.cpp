@@ -3246,8 +3246,14 @@ track_t* DawInstance::getTrackId(uint32_t trackId) {
 }
 
 void DawInstance::preClipDelete(clip_t* clip) {
-    for (auto* ctrl : this->dawCtrls) {
-        ctrl->onGuiRemoved(clip);
+    for (auto entry : clip->trackEntries) {
+        auto it = entry->clipsGuis.find(clip);
+        if (it != entry->clipsGuis.end() 
+            && it->second 
+            && entry->parentCtrl
+            && stl_contains(dawCtrls, entry->parentCtrl)) {
+            entry->parentCtrl->onGuiRemoved(it->second);
+        }
     }
     resetClipViews();
     //resetMouseContext();
