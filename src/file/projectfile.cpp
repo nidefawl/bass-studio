@@ -160,12 +160,12 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
     if (version >= 10) {
         archive(make_nvp("stageIds", m.stageIds), make_nvp("routing", m.effectRouting));
     }
-    if (version < 14) {
+    if (version >= 14) {
+        archive(make_nvp("uisnapshot", m.uiSnapshots));
+    } else if (version >= 11) {
         plugin_ui_snapshot_t ui;
         archive(make_nvp("ui", ui));
         m.uiSnapshots[1] = ui;
-    } else {
-        archive(make_nvp("uisnapshot", m.uiSnapshots));
     }
     archive(make_nvp("plugins", m.pluginSnapshots));
 }
