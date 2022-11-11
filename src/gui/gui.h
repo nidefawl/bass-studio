@@ -190,6 +190,9 @@ protected:
 
 public:
     SafeRef<guibase> makeSafeRef();
+    SafeRef<guibase> toRef() {
+        return makeSafeRef();
+    }
     gui_type getGuiType() const {
         return guiType;
     }

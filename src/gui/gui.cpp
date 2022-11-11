@@ -3,6 +3,7 @@
 #include <nanovg_min.h>
 #include <typeinfo>
 #include <utility>
+#include "appconfig.h"
 #include "assert_dbg.h"
 #include "gui/tooltip/tooltip.h"
 #include "guiglobals.h"
@@ -21,6 +22,7 @@
 #include "gui/properties/properties_table.h"
 #include "gui/contextmenu/contextmenu_base.h"
 #include "renderresources.h"
+#include "thread.h"
 #include "util/debug_alloc.h"
 #include "guifonts.h"
 #include "host/daw/mainctrl.h"
@@ -667,6 +669,10 @@ String guibase::getClassName() const {
 
 template<>
 void guitooltip<guibase>::setContent() {
+    auto ptr = getInstanceOrNull();
+    if (!ptr) {
+        return;
+    }
     table.tableWidth = 140;
     auto cell = Table::tblString{ptr->getTooltipText()};
     if (table.strW) {
@@ -715,11 +721,15 @@ void guibase::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
 guibase::guibase(gui_type guiType)
     : guiType(guiType)
 {
+    dbgassert(seqthreads::CurrentThreadType() == seqthreads::ThreadType::MainThread);
+
 #ifdef TRACK_ALLOCATIONS_GUIBASE
     allocId = DebugAlloc::getTracker<guibase>()->objConstructor(this);
 #endif
+    makeSafeRef();
 }
 guibase::~guibase() {
+    dbgassert(seqthreads::CurrentThreadType() == seqthreads::ThreadType::MainThread);
 #ifdef TRACK_ALLOCATIONS_GUIBASE
     DebugAlloc::getTracker<guibase>()->objDestructor(this);
 #endif
@@ -733,9 +743,10 @@ guibase::~guibase() {
 }
 
 SafeRef<guibase> guibase::makeSafeRef() {
-    dbgassert(parentCtrl);
+    // dbgassert(parentCtrl);
     if (!safeRef.handler) {
-        auto& storage = parentCtrl->getRefStorage();
+        auto runtime = daw_tls::getTls().runtime;
+        auto& storage = runtime->safeRefs;
         safeRef = /* SafeRef<guibase> */{ storage.safeRefCreate(this), &storage };
     }
     return safeRef;
