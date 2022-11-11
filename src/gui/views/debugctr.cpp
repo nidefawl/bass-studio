@@ -364,15 +364,20 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         strings.push_back(String("parentCtrl->getTheme: ") + str);
         str = StringFormat("%012zX", reinterpret_cast<int64_t>(theme));
         strings.push_back(String("this->theme: ") + str);
-        str = ctrl->guiOver ? ctrl->guiOver->getClassName() : "<null>";
+        auto guiOver = parentCtrl->getGuiOver();
+        auto guiDragged = parentCtrl->getGuiDragged();
+        auto guiCaptured = parentCtrl->getGuiCaptured();
+        auto guiCtrFocused = parentCtrl->getGuiCtrFocused();
+        auto guiFocused = parentCtrl->getGuiFocused();
+        str = guiOver ? guiOver->getClassName() : "<null>";
         strings.push_back(String("guiOver: ") + str);
-        str = ctrl->guiDragged ? ctrl->guiDragged->getClassName() : "<null>";
+        str = guiDragged ? guiDragged->getClassName() : "<null>";
         strings.push_back(String("guiDragged: ") + str);
-        str = ctrl->guiCaptured ? ctrl->guiCaptured->getClassName() : "<null>";
+        str = guiCaptured ? guiCaptured->getClassName() : "<null>";
         strings.push_back(String("guiCaptured: ") + str);
-        str = ctrl->guiCtrFocused ? ctrl->guiCtrFocused->getClassName() : "<null>";
+        str = guiCtrFocused ? guiCtrFocused->getClassName() : "<null>";
         strings.push_back(String("guiCtrFocused: ") + str);
-        str = ctrl->guiFocused ? ctrl->guiFocused->getClassName() : "<null>";
+        str = guiFocused ? guiFocused->getClassName() : "<null>";
         strings.push_back(String("guiFocused: ") + str);
         str = "<null>";
         auto& target = ctrl->getDragDropTarget();
@@ -380,7 +385,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
             strings.push_back(String("DragDropTarget: ") + target.dst->getClassName());
         }
 
-        guibase* p = ctrl->guiFocused;
+        guibase* p = guiFocused;
         int lvl    = 0;
         while (p) {
             String s = "";
@@ -421,8 +426,8 @@ void gui_ctr_debug::render(NVGcontext* vg) {
             "None", "Clip", "Note", "Plugin", "Track"
         };
         strings.push_back(String("ClipboardType: ") + clipboardTypeNames[(int)daw->getClipboardType()]);
-        if (ctrl->guiFocused && ctrl->guiFocused->getGuiType() == gui_type::CTR_TYPE_PLUGIN) {
-            guiplugin* gplugin = dynamic_cast<guiplugin*>(ctrl->guiFocused);
+        if (guiFocused && guiFocused->getGuiType() == gui_type::CTR_TYPE_PLUGIN) {
+            guiplugin* gplugin = dynamic_cast<guiplugin*>(guiFocused);
             if (gplugin) {
                 effectbase* effect = gplugin->getModule();
                 strings.emplace_back("\n\n");

@@ -632,11 +632,11 @@ public:
     void render(NVGcontext* vg) override {
         if (!isRenderableSizeAndContext(vg))
             return;
-        if (parentCtrl && parentCtrl->guiDragged == this) {
+        if (parentCtrl && parentCtrl->getGuiDragged() == this) {
             nvgGlobalAlpha(vg, 0.5f);
         }
         gui_graph_entry::render(vg);
-        if (parentCtrl && parentCtrl->guiDragged == this) {
+        if (parentCtrl && parentCtrl->getGuiDragged() == this) {
             nvgGlobalAlpha(vg, 1.0f);
         }
     }

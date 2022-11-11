@@ -446,7 +446,7 @@ namespace DAW::UI::Modulation {
         if (dawCtrl) {
             auto dragged = dawCtrl->getDraggedModulation();
             if (dragged) {
-                return dawCtrl->guiOver != gui;
+                return dawCtrl->getGuiOver() != gui;
             }
             auto focused = dawCtrl->getFocusedModulation();
             if (focused) {

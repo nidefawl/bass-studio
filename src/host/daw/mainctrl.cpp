@@ -2303,7 +2303,7 @@ void DawInstance::onTick() {
 
     bool noPopups = true;
     for (auto* ctrl : dawCtrls) {
-        noPopups &= !ctrl->guiDragged && !ctrl->guiCaptured && !ctrl->ctxtmenu;
+        noPopups &= !ctrl->getGuiDragged() && !ctrl->getGuiCaptured() && !ctrl->ctxtmenu;
     }
     if (noPopups && tls.mainCtrl && !tls.mainCtrl->loadProject.empty()) {
         String file;

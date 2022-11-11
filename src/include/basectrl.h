@@ -110,11 +110,24 @@ public:
     ivec2 dragDistance{0};
 
     guictxtmenu_base* ctxtmenu = nullptr;
+protected:
     guibase* guiOver       = nullptr; // updates on mouse move "current mouseover"
     guibase* guiDragged    = nullptr; // updates on mouse click "currently dragged", set from guiOver
     guibase* guiCaptured   = nullptr; // updates when cursor is hidden, set from guiDragged
     guibase* guiFocused    = nullptr; // updates on mouse click, set from guiOver
     guibase* guiCtrFocused = nullptr; // updates on mouse click, handles keyboard input
+public:
+    guibase* getGuiOver() { return guiOver; }
+    guibase* getGuiDragged() { return guiDragged; }
+    guibase* getGuiCaptured() { return guiCaptured; }
+    guibase* getGuiFocused() { return guiFocused; }
+    guibase* getGuiCtrFocused() { return guiCtrFocused; }
+    const guibase* getGuiOver() const { return guiOver; }
+    const guibase* getGuiDragged() const { return guiDragged; }
+    const guibase* getGuiCaptured() const { return guiCaptured; }
+    const guibase* getGuiFocused() const { return guiFocused; }
+    const guibase* getGuiCtrFocused() const { return guiCtrFocused; }
+
     MouseEvent lastMouseEvent{};
 
     bool bShowDebugFrames      = false;
@@ -161,8 +174,6 @@ public:
         }
         return gui;
     }
-    guibase* getGuiFocused() const { return guiFocused; }
-    guibase* getGuiCtrFocused() const { return guiCtrFocused; }
     std::vector<guictr_layout_base*> getContainers();
     std::vector<std::weak_ptr<DropAreaUILayout>> getTargets(MouseEvent& mevt, std::vector<guictr_layout_base*> ifMatches);
     /**

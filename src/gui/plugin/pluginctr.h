@@ -76,7 +76,7 @@ public:
             return;
         nvgBeginPath(vg);
         NVGcolor c;
-        if (this == parentCtrl->guiOver) {
+        if (this == parentCtrl->getGuiOver()) {
             c = theme->getFrameColorHighlight();
         } else {
             c = theme->getFrameColorOutline();

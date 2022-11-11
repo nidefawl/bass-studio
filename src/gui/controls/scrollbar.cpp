@@ -37,7 +37,7 @@ void gui_scrollbar::render(NVGcontext* vg) {
         }
         nvgRect(vg, pos.x + barOff.x + inset, pos.y + barOff.y + inset, barS.x - inset * 2, barS.y - inset * 2);
 
-        bool focused = parentCtrl->guiCtrFocused == this->parent || (!parentCtrl->guiDragged && parentCtrl->guiOver == this);
+        bool focused = parentCtrl->getGuiCtrFocused() == this->parent || (!parentCtrl->getGuiDragged() && parentCtrl->getGuiOver() == this);
         if (focused) {
 //            nvgStrokeWidth(vg, 1.0f);
 //            nvgStrokeColor(vg, theme->getColor(GuiColor::COL_BG_DRK_FOCUSED));
@@ -75,7 +75,7 @@ void Splitter::render(NVGcontext* vg) {
             continue;
         }
     }
-    if (parentCtrl && (parentCtrl->getGuiFocused() == this || parentCtrl->guiOver == this)) {
+    if (parentCtrl && (parentCtrl->getGuiFocused() == this || parentCtrl->getGuiOver() == this)) {
         nvgSave(vg);
         nvgBeginPath(vg);
         if (this->type) {

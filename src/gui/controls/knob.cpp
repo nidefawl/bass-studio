@@ -343,7 +343,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS, float v
             }
         }
         float fTextValue = 0.0f;
-        if (parentCtrl->guiOver == this) {
+        if (parentCtrl->getGuiOver() == this) {
             fTextValue = getParamByType(param, 0);
             fScaled = getParamScaled(param, 0);
         } else {
@@ -709,7 +709,7 @@ void gui_slider_textfield::render(NVGcontext* vg) {
         float textWidth = 0;
         if (isTextCommitted()) {
             float fTextValue = fRenderValue;
-            if (parentCtrl->guiOver == this) {
+            if (parentCtrl->getGuiOver() == this) {
                 fTextValue = fBaseValue;
             }
             const String strLvl = getValueAsString(fTextValue);

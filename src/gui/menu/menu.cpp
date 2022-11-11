@@ -88,7 +88,7 @@ void guictr_menubar_entry::render(NVGcontext* vg) {
         return;
     guictr_menubar_entry* cur = parentMenuBar->currentMenu;
 
-    bool focused = parentCtrl->guiOver == this;
+    bool focused = parentCtrl->getGuiOver() == this;
     if (cur) focused = false;
     if (focused || cur == this) {
         NVGcolor colHighlight;

@@ -832,27 +832,31 @@ void guictr_pluginview::render(NVGcontext* vg) {
 }
 void guictr_plugins::onTick(AppCtrl* ctrl) {
 #define SCROLL_START_X 30
-    if (isDefaultPluginCtr && ctrl->guiDragged) {
-        auto ctrType = ctrl->guiDragged->getGuiType();
-        switch(ctrType) {
-            case gui_type::CTR_TYPE_PLUGIN:
-            case gui_type::CTR_TYPE_PLUGINS_DRAGGED:
-            case gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY:
-            case gui_type::CTR_TYPE_MODULATION_DRAGGED:
-                break;
-            default:
-                return;
-        }
-        ivec2 cs = getSizeContent();
-        ivec2 screenPosMouse  = ctrl->m_mousePos;
-        ivec2 screenPosCtrMin = toScreenSpace(ivec2(scrolloffset, 0));
-        ivec2 screenPosCtrMax = screenPosCtrMin + cs;
-        if (screenPosMouse.y >= screenPosCtrMin.y && screenPosMouse.y <= screenPosCtrMax.y) {
-            if (screenPosMouse.x < screenPosCtrMin.x + SCROLL_START_X && scrolloffset > 0) {
-                setScrolloffset(scrolloffset - (int) ((TIMER_MS / 50.0) * 40));
-            } else if (screenPosMouse.x > screenPosCtrMax.x - SCROLL_START_X && scrolloffset < getTotalWidth() - cs.x) {
-                setScrolloffset(scrolloffset + (int) ((TIMER_MS / 50.0) * 40));
-                ctrl->requestRedraw();
+    if (isDefaultPluginCtr) {
+        auto draggedCtr = ctrl->getGuiDragged();
+        if (draggedCtr) {
+            auto ctrType = draggedCtr->getGuiType();
+            switch(ctrType) {
+                case gui_type::CTR_TYPE_PLUGIN:
+                case gui_type::CTR_TYPE_PLUGINS_DRAGGED:
+                case gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY:
+                case gui_type::CTR_TYPE_MODULATION_DRAGGED: {
+                    ivec2 cs = getSizeContent();
+                    ivec2 screenPosMouse  = ctrl->m_mousePos;
+                    ivec2 screenPosCtrMin = toScreenSpace(ivec2(scrolloffset, 0));
+                    ivec2 screenPosCtrMax = screenPosCtrMin + cs;
+                    if (screenPosMouse.y >= screenPosCtrMin.y && screenPosMouse.y <= screenPosCtrMax.y) {
+                        if (screenPosMouse.x < screenPosCtrMin.x + SCROLL_START_X && scrolloffset > 0) {
+                            setScrolloffset(scrolloffset - (int) ((TIMER_MS / 50.0) * 40));
+                        } else if (screenPosMouse.x > screenPosCtrMax.x - SCROLL_START_X && scrolloffset < getTotalWidth() - cs.x) {
+                            setScrolloffset(scrolloffset + (int) ((TIMER_MS / 50.0) * 40));
+                            ctrl->requestRedraw();
+                        }
+                    }
+                    break;
+                }
+                default:
+                    break;
             }
         }
     }

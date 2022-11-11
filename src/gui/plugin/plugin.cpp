@@ -337,8 +337,11 @@ guibase* guiplugin::getDraggedControl() {
     return this;
 }
 bool guiplugin::isSelected() {
-    dbgassert(this->parentCtrl);
-    if (!this->parentCtrl->guiCtrFocused) {
+    if (!parentCtrl) {
+        return false;
+    }
+    auto guiCtrFocused = parentCtrl->getGuiCtrFocused();
+    if (!guiCtrFocused) {
         return false;
     }
     auto& sel = dawCtrl->getPluginSel();
@@ -347,7 +350,7 @@ bool guiplugin::isSelected() {
     if (sel.pluginCtr == this->parent) {
         if (this->effect->getSlot() >= sel.firstSelection &&
             this->effect->getSlot() <= sel.lastSelection) {
-            return isChildOf(this->parentCtrl->guiCtrFocused);
+            return isChildOf(guiCtrFocused);
         }
         return false;
     }
