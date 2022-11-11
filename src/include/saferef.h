@@ -69,7 +69,14 @@ template<typename T>
 struct SafeRef {
     size_t refId = -1;
     SafeRefHandler<T>* handler = nullptr;// lifetime of handler must exceed refs lifetime
+    bool isEmpty() const {
+        return refId == -1;
+    }
 };
+template<typename T>
+bool operator==(const SafeRef<T>& a, const SafeRef<T>& b) {
+    return a.refId == b.refId;
+}
 template<typename T>
 struct StoredReference {
     T* ptr;

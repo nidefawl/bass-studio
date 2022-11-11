@@ -615,14 +615,13 @@ bool guibase::isSelected() {
     return false;
 }
 bool guibase::hovered() const {
-    return parentCtrl && this == parentCtrl->getGuiOver();
+    return parentCtrl && toRef() == parentCtrl->getGuiOverRef();
 }
 bool guibase::pressed() const {
-    return parentCtrl && this == parentCtrl->getGuiDragged();
+    return parentCtrl && toRef() == parentCtrl->getGuiDraggedRef();
 }
 bool guibase::focused() const {
-    return parentCtrl 
-        && (this == parentCtrl->getGuiFocused() || parentCtrl->isCtrOrChildFocused(this));
+    return parentCtrl && parentCtrl->isCtrOrChildFocused(this);
 }
 int32_t guibase::getStateFlags() const {
     int dynFlags = FLG_DRG | FLG_HVRD | FLG_FOC | FLG_VISIBLE | FLG_RENDER_BACKGROUND;

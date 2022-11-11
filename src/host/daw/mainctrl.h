@@ -577,8 +577,6 @@ public:
     bool processGlobalKeyevent(const KeyEvent& event) override;
     bool handleGlobalCommand(DAW::UI::CommandContext& ctxt) override;
     bool mouseDownPre() override;
-    void uncaptureMouse();
-    void onUncaptureMouse();
     void prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) override;
 
 
@@ -641,20 +639,22 @@ public:
     bool isGlobalKeybindCodepoint(uint32_t codepoint) override {
         return codepoint == 32 || codepoint == 45 || codepoint == 43;
     }
-    DAW::UI::IDraggedModulationSource* getDraggedModulation() const {
+    DAW::UI::IDraggedModulationSource* getDraggedModulation() {
+        auto guiDragged = getGuiDragged();
         if (guiDragged && (guiDragged->getGuiType() == gui_type::CTR_TYPE_MODULATION_BUTTON
                             || guiDragged->getGuiType() == gui_type::CTR_TYPE_MODULATION_DRAGGED)) {
             return dynamic_cast<DAW::UI::IDraggedModulationSource*>(guiDragged);
         }
         return nullptr;
     }
-    DAW::UI::IDraggedModulationSource* getFocusedModulation() const {
+    DAW::UI::IDraggedModulationSource* getFocusedModulation() {
+        auto guiOver = getGuiOver();
         if (guiOver && guiOver->getGuiType() == gui_type::CTR_TYPE_MODULATION_BUTTON) {
             return dynamic_cast<DAW::UI::IDraggedModulationSource*>(guiOver);
         }
         return nullptr;
     }
-    std::optional<DAW::modulation_channel_ref> getDraggedModulationRef() const {
+    std::optional<DAW::modulation_channel_ref> getDraggedModulationRef() {
         auto dragged = getDraggedModulation();
         if (dragged) {
             return dragged->getChannelRef();

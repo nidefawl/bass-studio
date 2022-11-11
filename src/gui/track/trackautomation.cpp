@@ -489,9 +489,9 @@ void gui_track_automation::render(NVGcontext* vg) {
         nvgFill(vg);
     }
 
-    bool mouseIn              = dawCtrl->getGuiOver() == this && contains(imouse + getPosContent());
-    tick_t mouseTick    = !mouseIn ? INVALID_TICK : grid.screenToTickSnap(imouse.x, SNAP_OFF);
-    vec2 fmouse               = vec2(imouse);
+    bool mouseIn     = dawCtrl->getGuiOverRef() == toRef() && contains(imouse + getPosContent());
+    tick_t mouseTick = !mouseIn ? INVALID_TICK : grid.screenToTickSnap(imouse.x, SNAP_OFF);
+    vec2 fmouse      = vec2(imouse);
     bool bIsDragging = dragged.mode;
     auto mouseHit = hitTest(fmouse);
     const hit_result& currentDragged = dragged.mode || !mouseIn ? dragged : mouseHit;

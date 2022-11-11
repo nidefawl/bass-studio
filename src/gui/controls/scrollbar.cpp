@@ -75,7 +75,7 @@ void Splitter::render(NVGcontext* vg) {
             continue;
         }
     }
-    if (parentCtrl && (parentCtrl->getGuiFocused() == this || parentCtrl->getGuiOver() == this)) {
+    if (parentCtrl && (parentCtrl->getGuiFocusedRef() == toRef() || parentCtrl->getGuiOverRef() == toRef())) {
         nvgSave(vg);
         nvgBeginPath(vg);
         if (this->type) {

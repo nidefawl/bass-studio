@@ -98,7 +98,7 @@ public:
     /* list of target areas where the currently dragged object can be moved to */
     std::vector<std::weak_ptr<DropAreaUILayout>> dragDropTargets_ContainerMove;
     guictr_dragged_container_instance ctrDragHandler;
-    SPLayoutEntry ctrContent;
+    SPLayoutEntry draggedLayoutContainer;
     int32_t refIdNext = 1;
     SafeRefStorage<guibase> localRefs;
     int cursorIcon         = CURSOR_DEFAULT;
@@ -111,22 +111,27 @@ public:
 
     guictxtmenu_base* ctxtmenu = nullptr;
 protected:
-    guibase* guiOver       = nullptr; // updates on mouse move "current mouseover"
-    guibase* guiDragged    = nullptr; // updates on mouse click "currently dragged", set from guiOver
-    guibase* guiCaptured   = nullptr; // updates when cursor is hidden, set from guiDragged
-    guibase* guiFocused    = nullptr; // updates on mouse click, set from guiOver
-    guibase* guiCtrFocused = nullptr; // updates on mouse click, handles keyboard input
+    SafeRef<guibase> guiOver;       // updates on mouse move "current mouseover"
+    SafeRef<guibase> guiDragged;    // updates on mouse click "currently dragged", set from guiOver
+    SafeRef<guibase> guiCaptured;   // updates when cursor is hidden, set from guiDragged
+    SafeRef<guibase> guiFocused;    // updates on mouse click, set from guiOver
+    SafeRef<guibase> guiCtrFocused; // updates on mouse click, handles keyboard input
 public:
-    guibase* getGuiOver() { return guiOver; }
-    guibase* getGuiDragged() { return guiDragged; }
-    guibase* getGuiCaptured() { return guiCaptured; }
-    guibase* getGuiFocused() { return guiFocused; }
-    guibase* getGuiCtrFocused() { return guiCtrFocused; }
-    const guibase* getGuiOver() const { return guiOver; }
-    const guibase* getGuiDragged() const { return guiDragged; }
-    const guibase* getGuiCaptured() const { return guiCaptured; }
-    const guibase* getGuiFocused() const { return guiFocused; }
-    const guibase* getGuiCtrFocused() const { return guiCtrFocused; }
+    guibase* getGuiOver() { return safeRefGet(guiOver); }
+    guibase* getGuiDragged() { return safeRefGet(guiDragged); }
+    guibase* getGuiCaptured() { return safeRefGet(guiCaptured); }
+    guibase* getGuiFocused() { return safeRefGet(guiFocused); }
+    guibase* getGuiCtrFocused() { return safeRefGet(guiCtrFocused); }
+    const guibase* getGuiOver() const { return safeRefGet(guiOver); }
+    const guibase* getGuiDragged() const { return safeRefGet(guiDragged); }
+    const guibase* getGuiCaptured() const { return safeRefGet(guiCaptured); }
+    const guibase* getGuiFocused() const { return safeRefGet(guiFocused); }
+    const guibase* getGuiCtrFocused() const { return safeRefGet(guiCtrFocused); }
+    const SafeRef<guibase>& getGuiOverRef() const { return guiOver; }
+    const SafeRef<guibase>& getGuiDraggedRef() const { return guiDragged; }
+    const SafeRef<guibase>& getGuiCapturedRef() const { return guiCaptured; }
+    const SafeRef<guibase>& getGuiFocusedRef() const { return guiFocused; }
+    const SafeRef<guibase>& getGuiCtrFocusedRef() const { return guiCtrFocused; }
 
     MouseEvent lastMouseEvent{};
 
@@ -188,7 +193,7 @@ public:
     void dragContainerRelease(MouseEvent& evt);
     void dropContainer(SPLayoutEntry& ctrContent, DropAreaUILayout* area);
     virtual void dragContainerRelayout(drag_ctr_event evt) = 0;
-    bool isDraggingContainer() const { return ctrContent != nullptr || bShowDebugFrames; }
+    bool isDraggingContainer() const { return draggedLayoutContainer != nullptr || bShowDebugFrames; }
     SafeRefStorage<guibase>& getRefStorage();
     // int safeRefCreate(guibase* gui) override;
     // guibase* safeRefGetPtr(int32_t refId) override;
@@ -243,7 +248,13 @@ public:
     virtual void resetMouseContext();
     virtual void onMenuOpen(ngui::Menu* menu) {}
     virtual ivec2 toScreenSpace(ivec2 p) = 0;
-    void setDragged(guibase* g) { guiDragged = g; }
+    void setDragged(guibase* g) {
+        if (!g) {
+            guiDragged = {};
+        } else {
+            guiDragged = g->toRef();
+        }
+    }
     virtual std::shared_ptr<guictr_layout> replaceContainerWith(guictr_base* ctr, std::shared_ptr<guictr_layout> newContainer) {
         return nullptr;
     }

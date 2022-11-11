@@ -205,7 +205,7 @@ inline MouseHitType fromButton(const int button) {
 struct MouseEvent {
     MouseEventType type;
     int button;
-    guibase* guiDragged;
+    guibase* guiDragged; // TODO: Use a SafeRef<guibase> instead
     ivec2 mousepos;
     ivec2 relMousepos;
     ivec2 dragStart;

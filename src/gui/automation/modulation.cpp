@@ -439,14 +439,14 @@ namespace DAW::UI::Modulation {
     }
 
     bool IsHiglightedModulation(const guibase* gui, automatable_t* at, int32_t paramIdx) {
-        if (!at) {
+        if (!at || !gui) {
             return false;
         }
         auto dawCtrl = gui->dawCtrl;
         if (dawCtrl) {
             auto dragged = dawCtrl->getDraggedModulation();
             if (dragged) {
-                return dawCtrl->getGuiOver() != gui;
+                return dawCtrl->getGuiOverRef() != gui->toRef();
             }
             auto focused = dawCtrl->getFocusedModulation();
             if (focused) {

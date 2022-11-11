@@ -2083,6 +2083,8 @@ void MainCtrl::onTick() {
         notify->layout();
     }
 
+    auto guiCaptured = getGuiCaptured();
+    auto guiDragged = getGuiDragged();
     if (guiDragged && !guiCaptured && guiDragged->isDragMoveable()) {
         int32_t hoverTicks     = 0;
         track_gui_entry_t* tr  = nullptr;
@@ -2303,7 +2305,7 @@ void DawInstance::onTick() {
 
     bool noPopups = true;
     for (auto* ctrl : dawCtrls) {
-        noPopups &= !ctrl->getGuiDragged() && !ctrl->getGuiCaptured() && !ctrl->ctxtmenu;
+        noPopups &= ctrl->getGuiDraggedRef().isEmpty() && ctrl->getGuiCapturedRef().isEmpty() && !ctrl->ctxtmenu;
     }
     if (noPopups && tls.mainCtrl && !tls.mainCtrl->loadProject.empty()) {
         String file;
@@ -2734,15 +2736,8 @@ void DawCtrl::updateVisibleTrackContents() {
 }
 
 bool DawCtrl::isZooming() {
+    auto guiCaptured = getGuiCaptured();
     return guiCaptured && guiCaptured->getGuiType() == gui_type::CTR_TYPE_TRACKS_TIMELINE;
-}
-
-void DawCtrl::uncaptureMouse() {
-    this->mainWindow->releaseMouse();
-}
-
-void DawCtrl::onUncaptureMouse() {
-    guiCaptured = nullptr;
 }
 
 void DawCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) {
@@ -2761,7 +2756,7 @@ void DawCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) {
 bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
     log_lf(Log::L_DEBUG, "filesDropBegin %d %d isdragging=%d\n", mousepos.x, mousepos.y, daw.dragdropclip.isLoaded);
     daw.dragdropclip.reset();
-    if (guiDragged || guiCaptured) {
+    if (!guiDragged.isEmpty() || !guiCaptured.isEmpty()) {
         return false;
     }
     tmpFileDragPaths = files;
@@ -2839,7 +2834,7 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, Keyboar
 }
 
 bool DawCtrl::filesDropMove(ivec2 mousepos, KeyboardMods kbmods) {
-    if (guiDragged || guiCaptured) {
+    if (!guiDragged.isEmpty() || !guiCaptured.isEmpty()) {
         daw.dragdropclip.reset();
         return false;
     }
@@ -2888,7 +2883,7 @@ void DawCtrl::filesDropCancel() {
 
 bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, KeyboardMods kbmods) {
     clipreset rst(daw.dragdropclip);
-    if (guiDragged || guiCaptured) {
+    if (!guiDragged.isEmpty() || !guiCaptured.isEmpty()) {
         return false;
     }
     if (daw.dragdropclip.isLoaded && daw.dragdropclip.isValidTarget) {

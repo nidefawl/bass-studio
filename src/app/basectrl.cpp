@@ -24,6 +24,7 @@
 #include "mouse.h"
 #include "platform.h"
 #include "host/project/project.h"
+#include "saferef.h"
 #include "str_util.h"
 #include "theme.h"
 #include "tls.h"
@@ -109,15 +110,18 @@ BaseCtrl::~BaseCtrl() {
 }
 
 void BaseCtrl::mouseUp(ivec2 mousePos, int button, KeyboardMods kbmods) {
-    if (guiCaptured != nullptr) {
+    if (!guiCaptured.isEmpty()) {
         this->window->releaseMouse();
-        guiCaptured = nullptr;
+        guiCaptured = {};
     }
-    if (guiDragged) {
-        cursorIcon     = CURSOR_DEFAULT;
-        lastMouseEvent = mouseEvent(this, guiDragged, mousePos, button, kbmods, M_EVT_BTN_UP);
-        guiDragged->handleDraggedRelease(lastMouseEvent);
-        guiDragged = nullptr;
+    if (!guiDragged.isEmpty()) {
+        cursorIcon = CURSOR_DEFAULT;
+        auto drag = getGuiDragged();
+        if (drag) {
+            lastMouseEvent = mouseEvent(this, drag, mousePos, button, kbmods, M_EVT_BTN_UP);
+            drag->handleDraggedRelease(lastMouseEvent);
+        }
+        guiDragged = {};
     }
 }
 MouseHitEvt BaseCtrl::mouseHitEvt(MouseHitType _type, KeyboardMods kbmods) {
@@ -127,21 +131,26 @@ void BaseCtrl::focusGui(guibase* gui) {
     if (gui && !gui->parent) {
         return;
     }
-    if (guiCaptured != nullptr) {
+    if (!guiCaptured.isEmpty()) {
         return;
     }
-    guibase* oldFocused = guiFocused;
+    guibase* oldFocused = getGuiFocused();
     guibase* newFocus   = gui != nullptr ? gui->getFocusedControl() : nullptr;
-    guiCtrFocused       = gui != nullptr ? gui->getFocusedContainer() : nullptr;
+    auto newFocusedCtr  = gui != nullptr ? gui->getFocusedContainer() : nullptr;
+    if (!newFocusedCtr) {
+        guiCtrFocused = {};
+    } else {
+        guiCtrFocused = newFocusedCtr->toRef();
+    }
     if (oldFocused != newFocus) {
         MouseHitEvt evt(MouseHitType::MOUSE_LEFT, KeyboardMods::KB_MODS_NONE);
         if (oldFocused) {
             oldFocused->focusEvent(evt, false);
         }
         if (newFocus && newFocus->focusEvent(evt, true)) {
-            guiFocused = newFocus;
+            guiFocused = newFocus->toRef();
         } else if (!newFocus) {
-            guiFocused = nullptr;
+            guiFocused = {};
         }
         focusChanged(oldFocused, newFocus);
     }
@@ -152,7 +161,7 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, KeyboardMods kbmods, bool d
     if (!mouseDownPre()) {
         return;
     }
-    if (guiCaptured != nullptr) {
+    if (!guiCaptured.isEmpty()) {
         return;
     }
     MouseHitEvt evt = mouseHitEvt(fromButton(button), kbmods);
@@ -161,20 +170,29 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, KeyboardMods kbmods, bool d
             break;
         }
     }
-    guiOver = evt.getGuiHit();
+    auto gui = evt.getGuiHit();
+    if (!gui) {
+        guiOver = {};
+    } else {
+        guiOver = gui->toRef();
+    }
 
-    guibase* gui        = evt.getGuiHit();
-    guibase* oldFocused = guiFocused;
+    guibase* oldFocused = getGuiFocused();
     guibase* newFocus   = gui != nullptr ? gui->getFocusedControl() : nullptr;
-    guiCtrFocused       = gui != nullptr ? gui->getFocusedContainer() : nullptr;
+    auto newFocusedCtr  = gui != nullptr ? gui->getFocusedContainer() : nullptr;
+    if (!newFocusedCtr) {
+        guiCtrFocused = {};
+    } else {
+        guiCtrFocused = newFocusedCtr->toRef();
+    }
     if (oldFocused != newFocus) {
         if (oldFocused) {
             oldFocused->focusEvent(evt, false);
         }
         if (newFocus && newFocus->focusEvent(evt, true)) {
-            guiFocused = newFocus;
+            guiFocused = newFocus->toRef();
         } else if (!newFocus) {
-            guiFocused = nullptr;
+            guiFocused = {};
         }
     }
     // if (evt.hasCursorChanged()) {
@@ -182,13 +200,17 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, KeyboardMods kbmods, bool d
     // }
     if (button == 0) {
         // left button gets focus from mouse move only
-        guiDragged = !!(gui) ? gui->getDraggedControl() : nullptr;
+        auto drag = !!(gui) ? gui->getDraggedControl() : nullptr;
+        if (drag) {
+            guiDragged = drag->toRef();
+        } else {
+            guiDragged = {};
+        }
     }
     if (gui != nullptr) {
         dragDistance = ivec2(0);
         dragStart    = mousePos;
         dragOffset   = gui->toScreenSpace(ivec2(0)) - mousePos;
-
         lastMouseEvent = mouseEvent(this, gui, mousePos, button, evt.kbmods, doubleclick ? M_EVT_DOUBLECLICK : M_EVT_BTN_DOWN);
         gui->handleMouseDownBegin(lastMouseEvent);
     }
@@ -209,8 +231,8 @@ void BaseCtrl::mouseScrolled(double xoffset, double yoffset, KeyboardMods kbmods
 }
 
 bool BaseCtrl::isCtrOrChildFocused(const guibase* gui) const {
-    if (gui == this->guiCtrFocused) return true;
-    guibase* p = this->guiFocused;
+    if (gui && gui->toRef() == guiCtrFocused) return true;
+    auto* p = this->getGuiFocused();
     while (p != nullptr) {
         if (p == gui) return true;
         p = p->parent;
@@ -234,31 +256,45 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos, KeyboardMods kbmods) {
     cursorIcon = evt.getCursor();
     // }
     if (!window->isMouseCaptured()) {
-        guiOver = evt.getGuiHit();
+        auto gui = evt.getGuiHit();
+        if (!gui) {
+            guiOver = {};
+        } else {
+            guiOver = gui->toRef();
+        }
     }
     if (ctxtmenu == nullptr) {
-        if (guiCaptured != nullptr) {
+        if (!guiCaptured.isEmpty()) {
             dragDistance += deltaPos;
-            lastMouseEvent = mouseEvent(this, guiCaptured, mousePos, -1, kbmods, M_EVT_CAPTURED_MOVE);
-            guiCaptured->handleDraggedMove(lastMouseEvent);
+            auto guiCaptured = getGuiCaptured();
+            if (guiCaptured) {
+                lastMouseEvent = mouseEvent(this, guiCaptured, mousePos, -1, kbmods, M_EVT_CAPTURED_MOVE);
+                guiCaptured->handleDraggedMove(lastMouseEvent);
+            }
             return;
         }
-        if (guiDragged != nullptr) {
+        if (!guiDragged.isEmpty()) {
             dragDistance += deltaPos;
-            lastMouseEvent = mouseEvent(this, guiDragged, mousePos, -1, kbmods, M_EVT_MOVE);
-            guiDragged->handleDraggedMove(lastMouseEvent);
+            auto guiDragged = getGuiDragged();
+            if (guiDragged) {
+                lastMouseEvent = mouseEvent(this, guiDragged, mousePos, -1, kbmods, M_EVT_MOVE);
+                guiDragged->handleDraggedMove(lastMouseEvent);
+            }
             return;
         }
     }
 }
 
 bool BaseCtrl::onCharInput(uint32_t codepoint) {
+    auto guiCaptured = getGuiCaptured();
     if (guiCaptured) {
         return false;
     }
+    auto guiFocused = getGuiFocused();
     if (guiFocused && guiFocused->handleCharInput(codepoint)) {
         return true;
     }
+    auto guiCtrFocused = getGuiCtrFocused();
     if (guiCtrFocused && guiCtrFocused != guiFocused && guiCtrFocused->handleCharInput(codepoint)) {
         return true;
     }
@@ -276,6 +312,7 @@ bool BaseCtrl::onCharInput(uint32_t codepoint) {
 bool BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) {
     using DAW::UI::Command;
     using DAW::UI::CommandContextType;
+    auto guiCaptured = getGuiCaptured();
     if (guiCaptured) {
         return false;
     }
@@ -286,12 +323,15 @@ bool BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
         event.cmd = boundCommand;
         ctxtMatcher = boundCommand->getContextMatcher();
     }
+    auto guiDragged = getGuiDragged();
     if (guiDragged && ctxtMatcher.matchesFocusedGui(guiDragged) && guiDragged->handleKeyInput(event)) {
         return true;
     }
+    auto guiFocused = getGuiFocused();
     if (guiFocused && ctxtMatcher.matchesFocusedGui(guiFocused) && guiFocused->handleKeyInput(event)) {
         return true;
     }
+    auto guiCtrFocused = getGuiCtrFocused();
     if (guiCtrFocused && guiCtrFocused != guiFocused && ctxtMatcher.matchesFocusedGui(guiCtrFocused) && guiCtrFocused->handleKeyInput(event)) {
         return true;
     }
@@ -366,6 +406,7 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
             }
         }
     }
+    auto guiDragged = getGuiDragged();
     if (guiDragged) {
         if (guiDragged->size == ivec2{ 0, 0 }) {
             log_lf(Log::L_WARN, "warning, rendering container with size 0 0\n");
@@ -401,37 +442,42 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
 }
 void BaseCtrl::onGuiRemoved(void* gui) {
     // Only use gui pointer for comparison!
-    if (this->guiOver == gui) {
-        this->guiOver = nullptr;
+    if (getGuiOver() == gui) {
+        this->guiOver = {};
     }
-    if (this->guiCaptured == gui) {
-        this->guiCaptured = nullptr;
+    if (this->getGuiCaptured() == gui) {
+        this->guiCaptured = {};
     }
-    if (this->guiFocused == gui) {
-        this->guiFocused = nullptr;
+    if (this->getGuiFocused() == gui) {
+        this->guiFocused = {};
     }
-    if (this->guiDragged == gui) {
-        this->guiDragged = nullptr;
+    if (this->getGuiDragged() == gui) {
+        this->guiDragged = {};
     }
-    if (this->guiCtrFocused == gui) {
-        this->guiCtrFocused = nullptr;
+    if (this->getGuiCtrFocused() == gui) {
+        this->guiCtrFocused = {};
     }
 }
 void BaseCtrl::resetMouseContext() {
+    auto guiCtrFocused = getGuiCtrFocused();
     if (guiCtrFocused) {
         if (!guiCtrFocused->isStaticContainer()) {
             guiCtrFocused = nullptr;
         }
     }
-    guiCaptured = guiFocused = guiOver = guiDragged = nullptr;
-    ctrContent                  = nullptr;
+    guiCaptured = guiFocused = guiOver = guiDragged = {};
+    draggedLayoutContainer = nullptr;
     ctrDragHandler.validPreview = false;
     dragDropTargets_ContainerMove.clear();
 }
 
 bool BaseCtrl::captureMouse(guibase* gui) {
-    if (guiCaptured == nullptr) {
-        guiCaptured = gui;
+    if (guiCaptured.isEmpty()) {
+        if (!gui) {
+            guiCaptured = {};
+        } else {
+            guiCaptured = gui->toRef();
+        }
         this->window->captureMouse();
         return true;
     }
@@ -462,7 +508,8 @@ AppCtrl::AppCtrl(AppCtrl* parent)
 void AppCtrl::onAppTick() {
     getTheme()->updateAnimation();
     onTick();
-    if (!guiDragged && !guiCaptured && guiOver && (!this->ctxtmenu || ctxtmenu->isTransient())) {
+    auto guiOver = getGuiOver();
+    if (guiDragged.isEmpty() && guiCaptured.isEmpty() && guiOver && (!this->ctxtmenu || ctxtmenu->isTransient())) {
         auto hoverTime = tmLastHoveredTooltip;
         if (ctxtmenu && ctxtmenu->isTransient() && (lastTooltipSrc && guiOver && guiOver != lastTooltipSrc)) {
             closeContextMenu();
@@ -797,13 +844,13 @@ void BaseCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
     }
 }
 void BaseCtrl::dragContainerBegin(MouseEvent& evt, GuiCtrLayoutEntry* ctrDragSrc) {
-    ctrContent.reset();
+    draggedLayoutContainer.reset();
     // get a shared pointer reference to ctrDragSrc, this is a bit awkward, as are all interfaces using shared_ptr
     // stores the reference to ctrDragSrc in shared_ptr ctrContent.
     // extends the lifetime of that container so we can safely access it in render and mouse move callbacks.
-    if (ctrDragSrc->getContainerRef(ctrContent, false)) {
-        dbgassert(ctrContent.get());
-        auto vecSizeScaled  = vec2(ctrContent->getGui()->size) * 0.3f;
+    if (ctrDragSrc->getContainerRef(draggedLayoutContainer, false)) {
+        dbgassert(draggedLayoutContainer.get());
+        auto vecSizeScaled  = vec2(draggedLayoutContainer->getGui()->size) * 0.3f;
         ctrDragHandler.size = math::maxvec2(ivec2(32, 12), vecSizeScaled);
         ctrDragHandler.setLabel("Move " + ctrDragSrc->getGui()->label);
         setDragged(&ctrDragHandler);
@@ -904,11 +951,11 @@ void BaseCtrl::dropContainer(SPLayoutEntry& ctrContent, DropAreaUILayout* area) 
 void BaseCtrl::dragContainerRelease(MouseEvent& evt) {
     DropAreaUILayout* area = determineDropCtrArea(evt);
 
-    if (area && ctrContent) {
-        this->dropContainer(ctrContent, area);
+    if (area && draggedLayoutContainer) {
+        this->dropContainer(draggedLayoutContainer, area);
     }
     // end the extension of the dragged containers lifetime
-    ctrContent                  = nullptr;
+    draggedLayoutContainer                  = nullptr;
     ctrDragHandler.validPreview = false;
     dragDropTargets_ContainerMove.clear();
     dragContainerRelayout(drag_ctr_event{ drag_ctr_event_type::DRAG_END });

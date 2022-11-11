@@ -801,7 +801,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
         const int32_t nw = 6;
         const float r = 6;
         ivec2 imouse  = toControlsObjectSpace(dawCtrl->m_mousePos, this);
-        bool mouseIn  = dawCtrl->getGuiOver() == this && contains(imouse + getPosContent());
+        bool mouseIn  = dawCtrl->getGuiOverRef() == toRef() && contains(imouse + getPosContent());
         if (mouseIn) {
             tick_t mouseTick = !mouseIn ? INVALID_TICK : grid.screenToTickSnap(imouse.x, SNAP_OFF);
             int32_t velClicked = screenToVel(imouse.y, size.y);

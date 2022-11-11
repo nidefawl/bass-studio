@@ -87,8 +87,8 @@ void PopupCtrl::open(guictxtmenu_base* _ctxtmenu, ivec2 pos, bool bResizeable, b
     popupCtrs->determineSize(popupCtrs->size);
     popupCtrs->layout();
 
-    this->guiFocused    = _ctxtmenu;
-    this->guiCtrFocused = _ctxtmenu;
+    this->guiFocused    = _ctxtmenu->toRef();
+    this->guiCtrFocused = _ctxtmenu->toRef();
 
     if (this->window) {
         auto* appW = dynamic_cast<window_main*>(this->window);
