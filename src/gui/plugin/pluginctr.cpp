@@ -256,6 +256,7 @@ bool HandlePluginCtrCommand(DawCtrl* ctrl, guictr_plugins* ctr, DAW::UI::Command
     if (ctxt.kevt.type != KeyboardState::K_PRESS) {
         return true;
     }
+    getSelectedEffects(sel, selection);
     bool handledKeyinput = false;
     switch (ctxt.type) {
         case GlobalCommandType::CMD_DELETE:

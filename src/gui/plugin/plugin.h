@@ -88,6 +88,10 @@ public:
     bool setScissorTransformContainer(NVGcontext* vg) override;
     virtual void makeSnapshot(plugin_ui_snapshot_t& puis, const tracksnapshot_store_opts_t& opts);
     virtual void loadSnapshot(const plugin_ui_snapshot_t& puis);
+    guibase* getFocusedContainer() override {
+        return parent;
+    }
+    
 };
 
 class guidropdown_select_program : public guictxtmenu {
