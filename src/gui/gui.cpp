@@ -140,7 +140,9 @@ vec2 getTextLabelBounds(NVGcontext* vg,
     nvgFontSize(vg, fontSizeScaled);
     nvgTextAlign(vg, alignment);
     float bounds[4]{ 0 };
-    nvgTextBounds(vg, pos.x, pos.y, text.c_str(), &text.back() + 1, bounds);
+    if (!text.empty()) {
+        nvgTextBounds(vg, pos.x, pos.y, text.c_str(), &text.back() + 1, bounds);
+    }
     return {bounds[2] - bounds[0], bounds[3] - bounds[1]};
 }
 float renderTextLabel(NVGcontext* vg,
@@ -207,11 +209,13 @@ void getNvgMultiLineTextBounds(NVGcontext* vg, const String& s, float maxLineWid
     int nrows;
     float textBoundsX = 0;
     float textBoundsY = 0;
-    if ((nrows = nvgTextBreakLines(vg, s.c_str(), &s.back() + 1, maxLineWidth, rows, 16))) {
-        for (int i = 0; i < nrows; i++) {
-            NVGtextRow* row = &rows[i];
-            textBoundsX     = math::max(textBoundsX, row->width);
-            textBoundsY += lineh;
+    if (!s.empty()) {
+        if ((nrows = nvgTextBreakLines(vg, s.c_str(), &s.back() + 1, maxLineWidth, rows, 16))) {
+            for (int i = 0; i < nrows; i++) {
+                NVGtextRow* row = &rows[i];
+                textBoundsX     = math::max(textBoundsX, row->width);
+                textBoundsY += lineh;
+            }
         }
     }
     bounds[0] = textBoundsX;
@@ -255,8 +259,9 @@ float renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme,
     }
     vPos.y += bounds.y / 2.0f - (textBounds[1] / 2.0f);
     vPos.y += lineh / 2.0f;
-
-    nvgTextBox(vg, vPos.x, vPos.y, bounds.x, str.c_str(), &str.back() + 1);
+    if (!str.empty()) {
+        nvgTextBox(vg, vPos.x, vPos.y, bounds.x, str.c_str(), &str.back() + 1);
+    }
     return textBounds[0];
 }
 
