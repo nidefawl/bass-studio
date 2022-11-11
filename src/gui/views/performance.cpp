@@ -16,6 +16,7 @@
 #include "host/host_pluginmanager.h"
 #include "host/host.h"
 #include "host/audiohost/audio_host.h"
+#include "gui/meter/guimeter.h"
 #include "appconfig.h"
 
 class gui_performance_stats : public guictr_base {
@@ -39,6 +40,7 @@ public:
         auto const daw = dawCtrl->getDaw();
         auto const host = daw->getHost();
         auto const audioHost = daw->getAudioHost();
+        auto stream = audioHost ? audioHost->getStream(0) : nullptr;
         if (getTimeMicros() - timeLastUpdate >= 250000) {
             timeLastUpdate  = getTimeMicros();
             ThreadLock lock = daw->getPlayThread()->tryLockThread();
@@ -47,20 +49,21 @@ public:
                 host->getStats(stats);
             }
         }
-        //const int fontSize = 12;
+        const auto cs = getSizeContent();
         int32_t height = theme->get(GuiConstant::CONST_ROW_HEIGHT);
 
         auto inset = math::max<int32_t>(5, height / 2);
         int x  = inset;
         int y  = inset;
-        int x2 = getSizeContent().x - inset;
+        int x2 = cs.x - inset;
 
-        auto printL = [&](int inset, const char* caption, const String& str) {
-            float offsetX = (inset + 1) * x;
-            renderText(vg, vec2(offsetX, y), vec2(size.x - inset*2, height), caption, height, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-            renderText(vg, vec2(x2, y), vec2(size.x - inset*2, height), str, height, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
+        auto printL = [&](int n, const char* caption, const String& str) {
+            float offsetX = (n) * inset + x;
+            renderText(vg, vec2(offsetX, y), vec2(cs.x - inset*2, height), caption, height, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+            renderText(vg, vec2(x2, y), vec2(cs.x - inset*2, height), str, height, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
             y += height;
         };
+
 
         if (stats.usageRaw >= 1.0) {
             nvgFillColor(vg, theme->getColor(GuiColor::COL_LEVEL_IND_YELLOW_DRKER));
@@ -69,21 +72,71 @@ public:
         }
         auto& renderStats = daw_tls::getTls().runtime->prevRenderStats;
         printL(0, "Usage", StringFormat("%.2f%% (%.2f%%)", stats.usage * 100.0f, stats.usageRaw * 100.0f));
+        printL(0, "playThreadLockCount (frame)", StringFormat("%zd", renderStats.playThreadLockCount));
         nvgFillColor(vg, THEMECOL_TEXT);
-        
-        prof_stats_window_t profDataWindow;
-        if (ProfilingImpl::profilingGetRecentFrame(dawCtrl->window, &profDataWindow)) {
-            printL(0, "App Tick", StringFormat("%zd µs", profDataWindow.timeAppTick));
-            printL(0, "Render", StringFormat("%zd µs", profDataWindow.timeRender));
-        }
-        printL(1, "Prerender", StringFormat("%zd µs", renderStats.timePrerender));
-        printL(1, "UpdateWaveforms", StringFormat("%zd µs", renderStats.timeUpdateWaveforms));
-        printL(1, "RenderEditor", StringFormat("%zd µs", renderStats.timeRenderEditor));
-        printL(1, "RenderTrackControls", StringFormat("%zd µs", renderStats.timeRenderTrackControls));
-        printL(0, "Clips in view", StringFormat("%zd", renderStats.clipsRendered));
-        printL(0, "Notes in view", StringFormat("%zd", renderStats.notesRendered));
         y += height / 2;
 
+        if (stream) {
+            auto meterPos = ivec2{inset, y};
+            auto meterSize = ivec2{cs.x - inset, theme->get(GuiConstant::CONST_METER_WIDTH)};
+            auto metersInput = stream->getMeterInput().getSubChannelMeter(0, 2);
+            auto metersOutput = stream->getMeterOutput().getSubChannelMeter(0, 2);
+            auto metersInputHost = host->getMeterInput();
+            auto metersOutputHost = host->getMeterOutput();
+            auto meterCallbackInput = stream->getMeterCallbackInput();
+            auto meterCallbackOutput = stream->getMeterCallbackOutput();
+            if (meterCallbackInput) {
+                printL(0, "Audio Callback Input", StringFormat("%.3f", meterCallbackInput->getMaxRMS()));
+                renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, meterCallbackInput);
+                y += meterSize.y + 5;
+            }
+            printL(0, "Audio Stream Input", StringFormat("%.3f", metersInput.getMaxRMS()));
+            renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &metersInput);
+            y += meterSize.y + 5;
+            if (metersInputHost) {
+                auto subMeter = metersInputHost->getSubChannelMeter(0, 2);
+                printL(0, "Host Input", StringFormat("%.3f", subMeter.getMaxRMS()));
+                renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &subMeter);
+                y += meterSize.y + 5;
+            }
+
+            if (meterCallbackOutput) {
+                printL(0, "Audio Callback Output", StringFormat("%.3f", meterCallbackOutput->getMaxRMS()));
+                renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, meterCallbackOutput);
+                y += meterSize.y + 5;
+            }
+            printL(0, "Audio Stream Output", StringFormat("%.3f", metersOutput.getMaxRMS()));
+            renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &metersOutput);
+            y += meterSize.y + 5;
+            if (metersOutputHost) {
+                auto subMeter = metersOutputHost->getSubChannelMeter(0, 2);
+                printL(0, "Host Output", StringFormat("%.3f", subMeter.getMaxRMS()));
+                renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &subMeter);
+                y += meterSize.y + 5;
+            }
+        }
+        y += height / 2;
+        
+        if (stream) {
+            printL(0, "audioCallback tDelta", StringFormat("%d µs", stream->audioCallbackInvocationDelay_usec));
+            printL(0, "outputBufferUnderuns", StringFormat("%u", stream->bufferUnderuns));
+            printL(0, "inputBufferUnderuns", StringFormat("%u", stream->inputBufferUnderuns));
+            printL(0, "stream input time", StringFormat("%f", stream->inputTimeSeconds));
+            printL(0, "stream output time", StringFormat("%f", stream->outputTimeSeconds));
+            printL(0, "d time", StringFormat("%f", stream->inputTimeSeconds-stream->outputTimeSeconds));
+            printL(0, "stream input pos", StringFormat("%zd", stream->inputSamplePos));
+            printL(0, "stream output pos", StringFormat("%zd", stream->outputSamplePos));
+            printL(0, "d pos", StringFormat("%zd", stream->inputSamplePos-stream->outputSamplePos));
+        }
+
+        y += height / 2;
+        printL(0, "input q len", StringFormat("%d", stats.inputQueueLen));
+        printL(0, "output q len", StringFormat("%d", stats.outputQueueLen));
+        printL(0, "INPUT  resampler", StringFormat("%d samples|%d blocks", stats.resamplerInNumSamples, stats.resamplerInNumBlocks));
+        printL(0, "OUTPUT resampler", StringFormat("%d samples|%d blocks", stats.resamplerOutNumSamples, stats.resamplerOutNumBlocks));
+        printL(0, "output q len", StringFormat("%d", stats.outputQueueLen));
+
+        y += height / 2;
         printL(0, "Blocks Processed", StringFormat("%d", stats.blocksProcessed));
         printL(0, "Samples Processed", StringFormat("%d", stats.samplesProcessed));
         printL(0, "All Plugins", StringFormat("%zd µs (%zd µs)", stats.timeProcessPlugins, stats.timeProcessPluginsRaw));
@@ -135,25 +188,19 @@ public:
             }
         }
         y += height / 2;
-        printL(0, "audioCallback tDelta", StringFormat("%d µs", audioHost ? audioHost->audioCallbackInvocationDelay_usec : 0));
-        printL(0, "outputBufferUnderuns", StringFormat("%u", audioHost ? audioHost->bufferUnderuns : 0));
-        printL(0, "inputBufferUnderuns", StringFormat("%u", audioHost ? audioHost->inputBufferUnderuns : 0));
-        auto stream = audioHost ? audioHost->getStream(0) : nullptr;
-        if (stream) {
-            printL(0, "stream input time", StringFormat("%f", stream->inputTimeSeconds));
-            printL(0, "stream output time", StringFormat("%f", stream->outputTimeSeconds));
-            printL(0, "d time", StringFormat("%f", stream->inputTimeSeconds-stream->outputTimeSeconds));
-            printL(0, "stream input pos", StringFormat("%zd", stream->inputSamplePos));
-            printL(0, "stream output pos", StringFormat("%zd", stream->outputSamplePos));
-            printL(0, "d pos", StringFormat("%zd", stream->inputSamplePos-stream->outputSamplePos));
-        }
-        printL(0, "input q len", StringFormat("%d", stats.inputQueueLen));
-        printL(0, "output q len", StringFormat("%d", stats.outputQueueLen));
-        printL(0, "INPUT  resampler", StringFormat("%d samples|%d blocks", stats.resamplerInNumSamples, stats.resamplerInNumBlocks));
-        printL(0, "OUTPUT resampler", StringFormat("%d samples|%d blocks", stats.resamplerOutNumSamples, stats.resamplerOutNumBlocks));
-        printL(0, "output q len", StringFormat("%d", stats.outputQueueLen));
 
-        printL(0, "playThreadLockCount (frame)", StringFormat("%zd", renderStats.playThreadLockCount));
+        prof_stats_window_t profDataWindow;
+        if (ProfilingImpl::profilingGetRecentFrame(dawCtrl->window, &profDataWindow)) {
+            printL(0, "App Tick", StringFormat("%zd µs", profDataWindow.timeAppTick));
+            printL(0, "Render", StringFormat("%zd µs", profDataWindow.timeRender));
+        }
+        printL(1, "Prerender", StringFormat("%zd µs", renderStats.timePrerender));
+        printL(1, "UpdateWaveforms", StringFormat("%zd µs", renderStats.timeUpdateWaveforms));
+        printL(1, "RenderEditor", StringFormat("%zd µs", renderStats.timeRenderEditor));
+        printL(1, "RenderTrackControls", StringFormat("%zd µs", renderStats.timeRenderTrackControls));
+        printL(0, "Clips in view", StringFormat("%zd", renderStats.clipsRendered));
+        printL(0, "Notes in view", StringFormat("%zd", renderStats.notesRendered));
+        y += height / 2;
         {
             const char* sufArr[3] = { "B", "KB", "MB" };
             size_t clipSufIdx     = 0;

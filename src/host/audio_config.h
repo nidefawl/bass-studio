@@ -82,6 +82,10 @@ namespace AudioIO {
         virtual bool isActive() const = 0;
         virtual channelnum_t getNumInputChannels() const = 0;
         virtual channelnum_t getNumOutputChannels() const = 0;
+        virtual int32_t getAudioCallbackInvocationDelay_usec() const = 0;
+        virtual uint32_t getBufferUnderuns() const = 0;
+        virtual uint32_t getInputBufferUnderuns() const = 0;
+        virtual uint32_t getNumCallbacks() const = 0;
     };
 } // namespace AudioIO
 

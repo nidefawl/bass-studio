@@ -48,6 +48,10 @@ public:
         std::array<DAW::meter_runningsum, MAX_AUDIO_IO_CHANNELS> meterDataOutput;
         DAW::rmsmeter metersInput;
         DAW::rmsmeter metersOutput;
+        std::array<DAW::meter_runningsum, MAX_AUDIO_IO_CHANNELS> meterDataCBInput;
+        std::array<DAW::meter_runningsum, MAX_AUDIO_IO_CHANNELS> meterDataCBOutput;
+        std::shared_ptr<DAW::rmsmeter> meterCallbackInput;
+        std::shared_ptr<DAW::rmsmeter> meterCallbackOutput;
 
         std::vector<std::shared_ptr<IOChannel>> channelsInput;
         std::vector<std::shared_ptr<IOChannel>> channelsOutput;
@@ -74,12 +78,40 @@ public:
         samplecount_t inputSamplePos = 0;
         samplecount_t outputSamplePos = 0;
 
+        uint32_t numInvocations = 0;
+        int32_t audioCallbackInvocationDelay_usec   = 0;
         int64_t lastAudioCallbackInvocationTime_i64 = 0;
+        uint32_t bufferUnderuns      = 0;
+        uint32_t inputBufferUnderuns = 0;
 
         HostIOStream(audiohost* const _host, int32_t _streamId, int32_t _streamIdx, DAW::AudioIO::io_cfg_tracks& cfg, channelnum_t nOutputChannels, channelnum_t nInputChannels);
         ~HostIOStream() override;
         audiothread_ringbuffer_t& getRingbuffer() {
             return ringbuffer;
+        }
+        DAW::rmsmeter& getMeterInput() {
+            return metersInput;
+        }
+        DAW::rmsmeter& getMeterOutput() {
+            return metersOutput;
+        }
+        DAW::rmsmeter* getMeterCallbackInput() {
+            return meterCallbackInput.get();
+        }
+        DAW::rmsmeter* getMeterCallbackOutput() {
+            return meterCallbackOutput.get();
+        }
+        int32_t getAudioCallbackInvocationDelay_usec() const override {
+            return audioCallbackInvocationDelay_usec;
+        }
+        uint32_t getBufferUnderuns() const override {
+            return bufferUnderuns;
+        }
+        uint32_t getInputBufferUnderuns() const override {
+            return inputBufferUnderuns;
+        }
+        uint32_t getNumCallbacks() const override {
+            return numInvocations;
         }
         static inline String getTrackName(IOChannel* track, bool isInput) {
             return DAW::AudioIO::getTrackName(track->type, track->index, isInput);
@@ -118,12 +150,6 @@ private:
     samplerate_t lSampleRate = 0;
     blocksize_t lBlockSize      = 0;
 
-public:
-    uint32_t blockReads          = 0;
-    uint32_t bufferUnderuns      = 0;
-    uint32_t inputBufferUnderuns = 0;
-
-    int32_t audioCallbackInvocationDelay_usec = 0;
 public:
     audiohost()  = default;
     ~audiohost() = default;

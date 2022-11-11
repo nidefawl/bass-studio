@@ -132,7 +132,7 @@ public:
     rmsmeter(meter_runningsum* _channels, channelnum_t _numChannels)
         : channels(_numChannels)
     {
-        dbgassert(channels.size());
+        // dbgassert(channels.size());
         isDefaultCstr = false;
         count = _numChannels;
         for (channelnum_t idx = 0; idx < _numChannels; ++idx) {
@@ -140,6 +140,13 @@ public:
         }
     }
     rmsmeter() = default;
+
+    rmsmeter submeter(channelnum_t _offset, channelnum_t _numChannels) {
+        dbgassert(_offset + _numChannels <= channels.size());
+        meter_runningsum* offsetChannels = channels[_offset];
+        return { offsetChannels, _numChannels };
+    }
+
     float getRms(int i) const {
         dbgassert(channels.size());
         return channels[i]->fLvl;

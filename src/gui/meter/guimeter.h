@@ -8,6 +8,7 @@
 #include "host/meter/meter.h"
 
 void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const ivec2& size, DAW::rmsmeter* meter);
+void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, const vec2 &size, DAW::rmsmeter *meter);
 
 class gui_trackmeter : public guibase {
     DAW::rmsmeter* const meter;

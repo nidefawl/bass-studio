@@ -183,6 +183,166 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
     nvgRestore(vg);
 }
 
+void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, const vec2 &size, DAW::rmsmeter *meter) {
+    const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
+    const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+    const auto NCHANNELS = meter->getNumChannels();
+    UIFont::font_instance instance    = theme->getFont(UIFont::FONT_DECIMAL);
+    UIFont::bindFont(vg, instance);
+    //  int32_t spacing = CONST_LAYOUT_MARGIN;
+    //  ivec2 inset(spacing);
+    auto widthGain = size.y * 3;
+    vec2 mtrPos  = pos;
+    vec2 mtrSize = {size.x - widthGain - CONST_PADDING_TRACK_CONTROLS, size.y};
+    vec2 gainPos  = {size.x - widthGain, mtrPos.y};
+    vec2 gainSize = { widthGain, mtrSize.y };
+
+    bool hasLegend = false;
+    float lW       = mtrSize.y * 0.15f;
+    // hasLegend      = lW > 10;
+    // if (hasLegend) {
+    //     mtrSize.x -= lW;
+    // }
+
+    nvgBeginPath(vg);
+    nvgRect(vg, gainPos.x, gainPos.y, gainSize.x, gainSize.y);
+    nvgFillColor(vg, theme->getBgColor(0));
+    //  nvgFillColor(vg, G_GREEN);
+    nvgFill(vg);
+    const auto scaledZero = dsp_util::scaledRange(0, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+
+    const auto hZero = (1.0f - scaledZero) * mtrSize.x;
+    const auto xZero = mtrPos.x + mtrSize.x - hZero;
+    auto lvls         = meter->getLevels();
+    auto y           = mtrPos.y;
+    auto channelH    = (mtrSize.y - (NCHANNELS - 1) * CONST_PADDING_TRACK_CONTROLS) / (float) NCHANNELS;
+
+    float mixedlevels[3]    = { 0, 0, 0 };
+    for (channelnum_t i = 0; i < NCHANNELS; i++) {
+        auto& chLvl     = lvls[i];
+        float fMax      = chLvl.fMax;
+        float fRms      = chLvl.fLvl;
+        float fPeak     = chLvl.fPeak;
+        mixedlevels[0]  = math::max(mixedlevels[0], fMax);
+        mixedlevels[1]  = fRms;
+        mixedlevels[2]  = math::max(mixedlevels[2], fPeak);
+        float levels[3] = { fMax, fRms, fPeak };
+        //    float levels[3] = {fMax, fRms, fPeak};
+        if (mtrSize.x > 4) {
+            nvgBeginPath(vg);
+            nvgRect(vg, mtrPos.x, y, mtrSize.x, channelH);
+            nvgFillColor(vg, theme->getFrameColorOutline());
+            nvgFill(vg);
+            NVGcolor colGainLvl[6] = {
+                G_GREEN_DRK,
+                G_YELLOW_DRK,
+                G_GREEN,
+                G_YELLOW,
+                G_GREEN_DRKER,
+                G_YELLOW_DRKER,
+            };
+            for (int j = 0; j < 3; j++) {
+                auto fLvl = levels[j];
+                if (fLvl < math::F_MIN) {
+                    continue;
+                }
+                auto scale = dsp_util::scaledRange(dsp_util::dBFS(fLvl), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+                auto hVal = (1.0f - scale) * mtrSize.x;
+                auto x = mtrPos.x;
+                if (j == 2) {
+                    nvgBeginPath(vg);
+                    nvgMoveTo(vg, x + hVal, y);
+                    nvgLineTo(vg, x + hVal, y + channelH);
+                    //int32_t col = fLvl >= 1.0f ? 1 : 0;
+                    int32_t col = x < xZero ? 1 : 0;
+                    nvgStrokeColor(vg, colGainLvl[j * 2 + col]);
+                    nvgStrokeWidth(vg, 1.5f);
+                    nvgStroke(vg);
+                    continue;
+                }
+                if (hVal > 0.5) {
+                    auto hOvershoot = math::max(0.0f, hVal - hZero);
+                    nvgBeginPath(vg);
+                    nvgRect(vg, x, y, math::min(hVal, hZero), channelH);
+                    nvgFillColor(vg, colGainLvl[j * 2 + 0]);
+                    nvgFillCustomPar(vg, -3);
+                    nvgFill(vg);
+                    if (hOvershoot > 0) {
+                        nvgBeginPath(vg);
+                        nvgRect(vg, hZero, y, hOvershoot, channelH);
+                        nvgFillCustomPar(vg, -3);
+                        nvgFillColor(vg, colGainLvl[j * 2 + 1]);
+                        nvgFill(vg);
+                    }
+                }
+            }
+        }
+
+
+        y += channelH;
+        y += CONST_PADDING_TRACK_CONTROLS;
+    }
+
+    if (hasLegend && size.x > TRACK_HEIGHT_STEP * 1.5) {
+        float y2 = pos.y + size.y - lW;
+        const int steps    = 8;
+        float stops[steps] = {
+            0.0f, -3.0f, -6.0f, -12.0f, -24.0f, -36.0f, -48.0f, -60.0f
+        };
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, xZero, mtrPos.y);
+        nvgLineTo(vg, xZero, y2 + lW * 2.0f / 8.0f);
+        nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
+        nvgStrokeWidth(vg, 1.0f);
+        nvgStroke(vg);
+        nvgBeginPath(vg);
+        for (float lvlStop : stops) {
+            auto scale  = dsp_util::scaledRange(lvlStop, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+            auto x = mtrPos.x + scale * mtrSize.x;
+            nvgMoveTo(vg, x, mtrPos.y);
+            nvgLineTo(vg, x, y2 + lW * 2.0f / 8.0f);
+        }
+        nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
+        nvgStrokeWidth(vg, 0.75f);
+        nvgStroke(vg);
+        nvgFontSize(vg, lW * 0.7f);
+        nvgFillColor(vg, THEMECOL_TEXT);
+        nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
+        float prevStopX = -4;
+        for (int i = 0; i < steps; i++) {
+            auto lvlStop = stops[i];
+            auto scale  = dsp_util::scaledRange(lvlStop, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
+            auto x = mtrPos.x + scale * mtrSize.x;
+            if (i > 0 && x - prevStopX < lW * 0.6) {
+                continue;
+            }
+            prevStopX = x;
+
+            String text = StringFormat("%.0f", lvlStop);
+            nvgText(vg, x, y2 + lW * 7.8f / 8.0f, text.c_str(), &text.back() + 1);
+        }
+    }
+                    
+    mixedlevels[1] /= (float) NCHANNELS;
+    float fMaxAll = mixedlevels[2];
+    float lvl     = dsp_util::dBFS(fMaxAll);
+    nvgSave(vg);
+    getContrastFontColor(nvgToRGBA(theme->getBgColor(0)));
+    nvgIntersectScissor(vg, gainPos.x, gainPos.y, gainSize.x, gainSize.y);
+    nvgFontSize(vg, gainSize.y * 0.7f);
+    nvgFillColor(vg, THEMECOL_TEXT);
+    nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
+
+    String text = ".";
+    if (lvl > -96.0f) {
+        text = StringFormat("%.1f", lvl);
+    } else {
+        text = StringFormat("%.0f", lvl);
+    }
+    nvgText(vg, gainPos.x + gainSize.x - 0.5f, gainPos.y + gainSize.y * 0.5f + 0.5f, text.c_str(), &text.back() + 1);
+    nvgRestore(vg);
+}
+
 void gui_trackmeter::render(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg))
         return;

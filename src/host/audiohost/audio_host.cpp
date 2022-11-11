@@ -171,6 +171,7 @@ class audiohost_callback {
             return paComplete;
         }
         auto* stream = static_cast<audiohost::HostIOStream*>(userData);
+        stream->numInvocations++;
         audiohost* host = stream->host;
         float** inputs  = (float**) inputBuffer;
         float** outputs = (float**) outputBuffer;
@@ -189,7 +190,12 @@ class audiohost_callback {
         }
         auto timeNow_i64 = getTimeMicros();
         if (0 != stream->lastAudioCallbackInvocationTime_i64) {
-            host->audioCallbackInvocationDelay_usec = timeNow_i64 - stream->lastAudioCallbackInvocationTime_i64;
+            auto timeDelta_i32 = static_cast<int32_t>(timeNow_i64 - stream->lastAudioCallbackInvocationTime_i64);
+            if (stream->audioCallbackInvocationDelay_usec == 0) {
+                stream->audioCallbackInvocationDelay_usec = timeDelta_i32;
+            } else {
+                stream->audioCallbackInvocationDelay_usec = (stream->audioCallbackInvocationDelay_usec * 99 + timeDelta_i32) / 100;
+            }
         }
         stream->lastAudioCallbackInvocationTime_i64 = timeNow_i64;
         //TODO: still a race condition on_terminate here
@@ -197,9 +203,16 @@ class audiohost_callback {
         channelnum_t numOutChannelsWritten = 0;
         if (stream->try_dequeue(block)) {
             dbgassert(block);
-            if (framesPerBuffer == static_cast<decltype(framesPerBuffer)>(block->output->samples)) {
+            auto meterOutput = stream->getMeterCallbackOutput();
+            if (meterOutput) {
+                meterOutput->update(block->output, 1.0f);
+                meterOutput->onTick(block->output->samples / double(stream->getSampleRate()));
+            }
+            if (framesPerBuffer != static_cast<decltype(framesPerBuffer)>(block->output->samples)) {
+                log_lf(Log::L_ERROR, "audioCallback: framesPerBuffer != block->output->samples (%lu != %lu)\n", framesPerBuffer, block->output->samples);
+            } else if (framesPerBuffer == static_cast<decltype(framesPerBuffer)>(block->output->samples)) {
                 auto channels = math::min<channelnum_t>(block->output->channels, stream->nOutputChannels);
-                for (channelnum_t i = 0; i < channels; i++) {
+                for (channelnum_t i = 0; outputs && i < channels; i++) {
                     float* channel = block->output->buf[i];
                     memcpy(outputs[i], channel, framesPerBuffer * sizeof(float));
                 }
@@ -211,7 +224,7 @@ class audiohost_callback {
             stream->outputTimeSeconds = block->time.inputTimeSeconds;
             block->inUse = false;
         } else {
-            host->bufferUnderuns++;
+            stream->bufferUnderuns++;
         }
 
         // fill channels that haven't been written to with zeroes
@@ -220,7 +233,6 @@ class audiohost_callback {
         }
 
         dsp_util::fillSaturate(outputs, stream->nOutputChannels, framesPerBuffer);
-        host->blockReads++;
 
         auto& ringbuffer      = stream->getRingbuffer();
         auto& writePos        = ringbuffer.writePos;
@@ -228,7 +240,7 @@ class audiohost_callback {
 
         AudioBuffer* bufferWrite = buffers[writePos];
         if (bufferWrite->inUse) {
-            host->inputBufferUnderuns++;
+            stream->inputBufferUnderuns++;
         } else {
             bufferWrite->output->realloc(framesPerBuffer);
             if (inputs) {
@@ -239,6 +251,11 @@ class audiohost_callback {
                 }
             } else {
                 bufferWrite->output->clear();
+            }
+            auto meterInput = stream->getMeterCallbackInput();
+            if (meterInput) {
+                meterInput->update(bufferWrite->output, 1.0f);
+                meterInput->onTick(bufferWrite->output->samples / double(stream->getSampleRate()));
             }
             bufferWrite->submitted      = true;
             bufferWrite->inUse          = true;
@@ -270,10 +287,11 @@ static void StreamFinished(void* userData) {
 audiohost::HostIOStream::HostIOStream(audiohost* const _host, int32_t _streamId, int32_t _streamIdx, io_cfg_tracks& cfg, channelnum_t _nOutputChannels, channelnum_t _nInputChannels)
     : metersInput(meterDataInput.data(), meterDataInput.size()),
       metersOutput(meterDataOutput.data(), meterDataOutput.size()),
+      meterCallbackInput(!_nInputChannels ? nullptr : std::make_shared<DAW::rmsmeter>(meterDataCBInput.data(), math::min<channelnum_t>(_nInputChannels, 2))),
+      meterCallbackOutput(!_nOutputChannels ? nullptr : std::make_shared<DAW::rmsmeter>(meterDataCBOutput.data(), math::min<channelnum_t>(_nOutputChannels, 2))),
       host(_host), streamId(_streamId), streamIdx(_streamIdx),
       nInputChannels(_nInputChannels),
-      nOutputChannels(_nOutputChannels)
-{
+      nOutputChannels(_nOutputChannels) {
     allocRingBuffer(ringbuffer, math::max<channelnum_t>(nInputChannels, 2));
     channelsInput.resize(cfg.input.size());
     channelsOutput.resize(cfg.output.size());
@@ -434,6 +452,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     if (!initPa())
         return false;
     stopAudio();
+
     int apiCount               = Pa_GetHostApiCount();
     auto samplerate            = iosettings.samplerate;
     auto blocksize             = iosettings.blocksize;

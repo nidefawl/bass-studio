@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstring>
 #include <memory.h>
+#include <memory>
 #include "host/automation/automation.h"
 #include "host/clip/clip.h"
 #include "host/host.h"
@@ -13,6 +14,7 @@
 #include "host/daw_channel.h"
 #include "host/daw/history.h"
 #include "host/host_pluginmanager.h"
+#include "host/meter/meter.h"
 #include "math/seq_math.h"
 #include "host/plugin/modules.h"
 #include "note.h"
@@ -203,6 +205,10 @@ public:
     daw_tls::tlsinstance tls;
     std::array<WorkerThread, MAX_AUDIOPROCESSING_THREADS> threads;
     std::array<TrackBlockProcessTask, MAX_AUDIOPROCESSING_THREADS> tasks;
+    std::array<DAW::meter_runningsum, MAX_AUDIO_IO_CHANNELS> meterDataInput;
+    std::array<DAW::meter_runningsum, MAX_AUDIO_IO_CHANNELS> meterDataOutput;
+    std::shared_ptr<DAW::rmsmeter> meterInput;
+    std::shared_ptr<DAW::rmsmeter> meterOutput;
     std::vector<std::shared_ptr<resampler_t>> resamplers;
     std::map<uint32_t, std::shared_ptr<DelayLine>> delayLines;
     std::vector<thread_stats_process_timings_t> blockThreadStats;
@@ -226,7 +232,10 @@ public:
 #elif THREADSYNC == THREADSYNC_ATOMIC
     std::atomic_int_fast8_t atomicWorkerCount{0};
 #endif
-    explicit host_impl(Host* host) {
+    explicit host_impl(Host* host) 
+    : meterInput(std::make_shared<DAW::rmsmeter>(meterDataInput.data(), meterDataInput.size())),
+      meterOutput(std::make_shared<DAW::rmsmeter>(meterDataOutput.data(), meterDataOutput.size()))
+    {
         for (TrackBlockProcessTask& task : tasks) {
             task.init(host);
         }
@@ -1050,6 +1059,9 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
             double tickPosProcess = posDouble + audioProp.ticksPerBlock*i;
             AudioBufferTimeInfo bufferTimeInfo{ };
             resamplerInput->pop(bufferTimeInfo, impl->blockInput);
+            impl->meterInput->update(&impl->blockInput, 1.0f);
+            impl->meterInput->onTick(impl->blockInput.samples / double(m_sampleFormatInternal.sampleRate));
+
 
             //TODO: avoid allocation
             if (impl->blockExtOut.channels != resamplerOutput->numChannels || impl->blockExtOut.samples != sampleFormat.blockSize) {
@@ -1104,6 +1116,8 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
             if (enableProfiling) {
                 timeRouting += timerProfile.getTimeReset();
             }
+            impl->meterOutput->update(&impl->blockExtOut, 1.0f);
+            impl->meterOutput->onTick(impl->blockExtOut.samples / double(m_sampleFormatInternal.sampleRate));
             resamplerOutput->push(impl->blockExtOut, bufferTimeInfo);
             if (enableProfiling) {
                 timeResampleOutput += timerProfile.getTimeReset();
@@ -1940,6 +1954,18 @@ void Host::processAudio(process_scratch_buf_t& tmp,
 
 void Host::onTick() {
     PluginManager::onTick();
+    if (isStreaming() && this->impl->audioStream && this->impl->audioStream->getNumCallbacks()) {
+        double msec = impl->audioStream->getAudioCallbackInvocationDelay_usec() / 1000.0;
+        auto sr = impl->audioStream->getSampleRate();
+        auto bs = impl->audioStream->getBlockSize();
+        auto expectedTimeDelta = double(bs) / double(sr) * 1000.0;
+        double maxError = 0.1;
+        if (msec > expectedTimeDelta + maxError) {
+            log_lf(Log::L_ERROR, "audioCallback: time delta too large: %f ms (expected %f ms)\n", msec, expectedTimeDelta);
+        } else if (msec < expectedTimeDelta - maxError) {
+            log_lf(Log::L_ERROR, "audioCallback: time delta too small: %f ms (expected %f ms)\n", msec, expectedTimeDelta);
+        }
+    }
 }
 
 void Host::unload() {
@@ -2062,6 +2088,15 @@ void Host::onAudioStageChanged(audio_stage_t* stage) {
     DAW::validateEffectRoutings(this, stage);
     this->impl->tls.dawInstance->onAudioStageChanged(stage);
 }
+
+std::shared_ptr<DAW::rmsmeter> Host::getMeterInput() {
+    return impl->meterInput;
+}
+
+std::shared_ptr<DAW::rmsmeter> Host::getMeterOutput() {
+    return impl->meterOutput;
+}
+
 }// namespace DAW::Host
 
 namespace DAW {

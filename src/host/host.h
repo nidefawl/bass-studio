@@ -27,10 +27,12 @@
 #include "daw_channel.h"
 #include "util/profiling.h"
 #include "host/host_pluginmanager.h"
+#include "meter/meter.h"
 #include <vstsdk-host-2.4/aeffectx.h>
 
 class audiocache;
 struct AudioBlock;
+
 namespace DAW::Host {
 class Host;
 
@@ -130,6 +132,8 @@ public:
     Host(Host const&) = delete;
     ~Host() override;
     void operator=(Host const&) = delete;
+    std::shared_ptr<DAW::rmsmeter> getMeterInput();
+    std::shared_ptr<DAW::rmsmeter> getMeterOutput();
     void onTrackLayoutChange() override;
     void onAudioStageChanged(audio_stage_t* stage) override;
     void setTls(daw_tls::tlsinstance& tls);
