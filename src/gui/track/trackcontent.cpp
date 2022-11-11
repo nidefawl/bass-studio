@@ -618,30 +618,39 @@ using Table::tblstr;
 using Table::tblString;
 
 template<>
-void guitooltip<clip_t>::setContent() {
+void guitooltip<gui_audio_clip>::setContent() {
+    auto guiPtr = getInstanceOrNull();
+    if (!guiPtr) {
+        return;
+    }
+    auto clipPtr = guiPtr->m_clip;
+    if (!clipPtr) {
+        return;
+    }
+
     table.tableWidth = 400;
     using tbl_rows = std::vector<table_entry_t>;
     {
         //TODO: fix dawCtrl in tooltips/popups
-        audiofile_t* c = audiocache::getInstance()->get(ptr->audio.id);
+        audiofile_t* c = audiocache::getInstance()->get(clipPtr->audio.id);
 
         String path;
         if (c) {
             path = StringFormat("%s.%s", StringAsCStr(c->name), StringAsCStr(c->ext));
         } else {
-            path = StringFormat("<MISSING SAMPLE %d>", ptr->audio.id);
+            path = StringFormat("<MISSING SAMPLE %d>", clipPtr->audio.id);
         }
-        tbl_rows vec{ tblString{ StringFormat("Audio Clip (sample-id %d)", ptr->audio.id) }, tblString{ path } };
+        tbl_rows vec{ tblString{ StringFormat("Audio Clip (sample-id %d)", clipPtr->audio.id) }, tblString{ path } };
         table.rows.push_back(tbl_row_t{ vec });
     }
     {
-        table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{ "num samples" }, tblint{ ptr->getLenSamples() } } });
+        table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{ "num samples" }, tblint{ clipPtr->getLenSamples() } } });
     }
     {
-        table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{ "ticks start" }, tblint{ ptr->start() } } });
-        table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{ "ticks end" }, tblint{ ptr->end() } } });
-        table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{ "ticks length" }, tblint{ ptr->getLen() } } });
-        table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{ "color" }, tblint{ ptr->rgb, "%08x" } } });
+        table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{ "ticks start" }, tblint{ clipPtr->start() } } });
+        table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{ "ticks end" }, tblint{ clipPtr->end() } } });
+        table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{ "ticks length" }, tblint{ clipPtr->getLen() } } });
+        table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{ "color" }, tblint{ clipPtr->rgb, "%08x" } } });
     }
 #ifdef TODO_PROPERTIES_TABLE_CLIP_WAVEFORM_PROPERTIES
     {
@@ -663,7 +672,7 @@ void guitooltip<clip_t>::setContent() {
 }
 
 guictxtmenu_base* gui_audio_clip::getTooltip(AppCtrl* appctrl) {
-    auto tooltip = new guitooltip<clip_t>(this->m_clip);
+    auto tooltip = new guitooltip<gui_audio_clip>(this);
     return tooltip;
 }
 

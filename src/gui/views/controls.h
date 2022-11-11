@@ -4,6 +4,7 @@
 #include "gui/controls/inputfield.h"
 #include "host/project/project.h"
 #include "host/track/track.h"
+#include "saferef.h"
 #include "types.h"
 #include "math/seq_math.h"
 #include "str_util.h"
@@ -102,12 +103,8 @@ public:
     const bool isRelative;
 private:
     gui_timeinput* const parentInput;
-    int32_t* time;
 public:
-    gui_timeinput_field(gui_timeinput* parentInput, int _idx, int32_t* _time, const bool _isRelative);
-    void setRef(int32_t* time) {
-        this->time = time;
-    }
+    gui_timeinput_field(gui_timeinput* parentInput, int _idx, const bool _isRelative);
     void render(NVGcontext* vg) override;
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
@@ -120,28 +117,36 @@ public:
     bool handleKeyInput(KeyEvent& kevt) override;
 };
 class gui_timeinput : public guictr_base {
-    int32_t* time = nullptr;
+    SafeRef<guibase> ref;
+    int32_t* refPtr = nullptr; //TODO: make this a safe reference
     gui_timeinput_field bar;
     gui_timeinput_field beat;
     gui_timeinput_field sixteenths;
     gui_textfield editfield;
     bool bCanGoNegative = false;
 public:
-    gui_timeinput(int32_t* _time, const bool isRelative = false);
+    explicit gui_timeinput(const bool isRelative = false);
     ~gui_timeinput() override {
         removeGuis();
+    }
+    int32_t* getSafeIntRef() {
+        auto ptr = safeRefGet(ref);
+        if (ptr && refPtr) {
+            return refPtr;
+        }
+        return nullptr;
     }
     void setCanGoNegative(const bool b) {
         bCanGoNegative = b;
     }
     int32_t clampValue(int32_t val);
-    void setRef(int32_t* time);
+    void setRef(SafeRef<guibase> ref, int32_t* time);
+    void clearRef();
     void setConnectedBG();
     void layout() override;
     void buttonClicked(guibase* button) override;
     void render(NVGcontext* vg) override;
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
-    int32_t getTime();
     void onInputChanged(const gui_timeinput_field* input);
     void showEditField();
 };

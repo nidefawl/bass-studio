@@ -12,10 +12,14 @@ using Table::tblint;
 using Table::tblstr;
 using Table::tblString;
 
-template<>
-void guitooltip<String>::setContent() {
-    using tbl_rows = std::vector<table_entry_t>;
-    table.tableWidth = 140;
-    tbl_rows vec{ tblString{ *ptr } };
-    table.rows.push_back(tbl_row_t{ vec });
-}
+// template<>
+// void guitooltip<String>::setContent() {
+//     auto ptr = getInstanceOrNull();
+//     if (!ptr) {
+//         return;
+//     }
+//     using tbl_rows = std::vector<table_entry_t>;
+//     table.tableWidth = 140;
+//     tbl_rows vec{ tblString{ *ptr } };
+//     table.rows.push_back(tbl_row_t{ vec });
+// }

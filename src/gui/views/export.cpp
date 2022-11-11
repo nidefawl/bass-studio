@@ -25,8 +25,9 @@ public:
     guictr_timeframe(tick_t* s, tick_t* d, bool* l)
         : guictr_base(),
           tmTickStart(s),
-          tmTickLen(d, true),
+          tmTickLen(true),
           pIsLocked(l) {
+        tmTickLen.setRef(toRef(), d);
         padding = 0;
         margin  = 0;
         tmTickStart.setLabel("Start");

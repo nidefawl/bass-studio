@@ -391,6 +391,10 @@ void effectbase::addPropertiesTooltip(Table::tbl& table) {
 }
 template<>
 void guitooltip<guiplugin>::setContent() {
+    auto ptr = getInstanceOrNull();
+    if (!ptr) {
+        return;
+    }
     ptr->effect->addPropertiesTooltip(table);
 }
 
@@ -907,6 +911,10 @@ void vstplugin::addPropertiesTooltip(Table::tbl& table) {
 
 template<>
 void guitooltip<guivstplugin>::setContent() {
+    auto ptr = getInstanceOrNull();
+    if (!ptr) {
+        return;
+    }
     ptr->effect->addPropertiesTooltip(table);
 }
 
@@ -924,6 +932,10 @@ guictxtmenu_base* guivstplugin::getTooltip(AppCtrl* appctrl) {
 
 template<>
 void guitooltip<guiclapplugin>::setContent() {
+    auto ptr = getInstanceOrNull();
+    if (!ptr) {
+        return;
+    }
     ptr->effect->addPropertiesTooltip(table);
 }
 

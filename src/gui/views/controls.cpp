@@ -34,9 +34,17 @@ using Table::tblString;
 
 template<>
 void guitooltip<gui_timeinput>::setContent() {
+    auto ptr = getInstanceOrNull();
+    if (!ptr) {
+        return;
+    }
+    auto tmRef = ptr->getSafeIntRef();
+    if (!tmRef) {
+        return;
+    }
     table.tableWidth = 60;
     auto cell = tblString{ptr->getTooltipText()};
-    auto cell2 = tblString{StringFormat("Tick %d", ptr->getTime())};
+    auto cell2 = tblString{StringFormat("Tick %d", *tmRef)};
     if (table.strW) {
         table.tableWidth = math::max(table.tableWidth, table.strW->getStringWidth(cell.str));
         table.tableWidth = math::max(table.tableWidth, table.strW->getStringWidth(cell2.str));
@@ -48,8 +56,8 @@ guictxtmenu_base* gui_timeinput::getTooltip(AppCtrl* appctrl) {
     auto tooltip = new guitooltip<gui_timeinput>(this);
     return tooltip;
 }
-gui_timeinput_field::gui_timeinput_field(gui_timeinput* parentInput, int _idx, int32_t* _time, const bool _isRelative)
-    : guibutton(), idx(_idx), isRelative(_isRelative), parentInput(parentInput), time(_time) {
+gui_timeinput_field::gui_timeinput_field(gui_timeinput* parentInput, int _idx, const bool _isRelative)
+    : guibutton(), idx(_idx), isRelative(_isRelative), parentInput(parentInput) {
     setFlag(FLG_RENDER_BACKGROUND_INSET, true);
     setFlag(FLG_BG_SHADING, true);
 }
@@ -60,6 +68,7 @@ void gui_timeinput_field::render(NVGcontext* vg) {
     int32_t flags = getStateFlags();
     renderWidgetBorder(vg, flags);
     setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+    auto time = parentInput->getSafeIntRef();
     int32_t _time      = time ? *time : 0;
     beatbar16th_t step =  dawCtrl->getDaw()->toBeatBar16th(_time, isRelative);
     int32_t val        = step[idx];
@@ -74,6 +83,7 @@ void gui_timeinput_field::render(NVGcontext* vg) {
 }
 
 void gui_timeinput_field::handleDraggedBegin(MouseEvent& evt) {
+    auto time = parentInput->getSafeIntRef();
     if (time && (isCtrl(evt.kbmods) || (evt.type == MouseEventType::M_EVT_DOUBLECLICK))) { 
         if (parent) parent->buttonClicked(this);
         return;
@@ -84,6 +94,7 @@ void gui_timeinput_field::handleDraggedBegin(MouseEvent& evt) {
 }
 
 void gui_timeinput_field::handleDraggedMove(MouseEvent& evt) {
+    auto time = parentInput->getSafeIntRef();
     if (time && evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
         int disty = (int) evt.dragDistance->y / 20;
         if (math::abs(disty) < 1)
@@ -120,6 +131,9 @@ bool gui_timeinput_field::handleKeyInput(KeyEvent& kevt) {
 }
 
 void gui_timeinput_field::onKeyInputChangeValue(ivec2 direction) {
+    auto time = parentInput->getSafeIntRef();
+    if (!time)
+        return;
     auto disty = direction.y;
     int32_t curVal      = *time;
     switch (idx) {
@@ -149,12 +163,11 @@ void gui_timeinput_field::onKeyInputChangeValue(ivec2 direction) {
         parentInput->onInputChanged(this);
 }
 
-gui_timeinput::gui_timeinput(int32_t* _time, const bool isRelative)
+gui_timeinput::gui_timeinput(const bool isRelative)
     : guictr_base(),
-    time(_time),
-    bar(this, 0, _time, isRelative),
-    beat(this, 1, _time, isRelative),
-    sixteenths(this, 2, _time, isRelative)
+    bar(this, 0, isRelative),
+    beat(this, 1, isRelative),
+    sixteenths(this, 2, isRelative)
 {
     setCanGoNegative(!isRelative);
     padding = 0;
@@ -175,14 +188,14 @@ gui_timeinput::gui_timeinput(int32_t* _time, const bool isRelative)
     sixteenths.setFlag(FLG_RENDER_BACKGROUND_INSET, true);
 }
 
-int32_t gui_timeinput::getTime() {
-    return time ? *time : 0;
+void gui_timeinput::setRef(SafeRef<guibase> ref, int32_t* time) {
+    this->ref  = ref;
+    this->refPtr = time;
 }
-void gui_timeinput::setRef(int32_t* time) {
-    this->time = time;
-    bar.setRef(time);
-    beat.setRef(time);
-    sixteenths.setRef(time);
+
+void gui_timeinput::clearRef() {
+    this->ref  = {};
+    this->refPtr = nullptr;
 }
 
 void gui_timeinput::setConnectedBG() {
@@ -257,38 +270,44 @@ void gui_timeinput::onInputChanged(const gui_timeinput_field* input) {
         parent->buttonClicked(this);
 }
 void gui_timeinput::showEditField() {
+    auto p = getSafeIntRef();
+    if (!p)
+        return;
     const bool isRelative = bar.isRelative;
     auto daw = dawCtrl->getDaw();
     editfield.mCallbackEnd = [this, isRelative](const std::string& str) {
-        auto daw = dawCtrl->getDaw();
-        auto beatBarNth = stringToBeatBarNth(str, isRelative, daw->getGlobals().signatureNum, daw->getGlobals().signatureDenom);
-        auto tick = daw->beatBarNthToTick(beatBarNth, isRelative);
-        editfield.setVisible(false);
-        if (time) {
-            *time = tick;
+        auto p = getSafeIntRef();
+        if (p) {
+            auto daw = dawCtrl->getDaw();
+            auto beatBarNth = stringToBeatBarNth(str, isRelative, daw->getGlobals().signatureNum, daw->getGlobals().signatureDenom);
+            auto tick = daw->beatBarNthToTick(beatBarNth, isRelative);
+            *p = tick;
             onInputChanged(&bar);
         }
+        editfield.setVisible(false);
         return true;
     };
     editfield.pos  = {};
     editfield.size = size;
     editfield.setVisible(true);
     editfield.layout();
-    auto beatBarNth = daw->toBeatBar16th(getTime(), isRelative);
-    log_lf(Log::L_DEBUG, "beatBarNthToString beg: %s\n", StringAsCStr(beatBarNthToString(beatBarNth, isRelative)));
-    editfield.setValue(beatBarNthToString(beatBarNth, bar.isRelative));
-    editfield.setSelectionRange(-1, -1);
+    if (p) {
+        auto beatBarNth = daw->toBeatBar16th(*p, isRelative);
+        log_lf(Log::L_DEBUG, "beatBarNthToString beg: %s\n", StringAsCStr(beatBarNthToString(beatBarNth, isRelative)));
+        editfield.setValue(beatBarNthToString(beatBarNth, bar.isRelative));
+        editfield.setSelectionRange(-1, -1);
+    } else {
+        editfield.setValue("");
+    }
     editfield.setFontSize(bar.size.y);
     parentCtrl->focusGui(&editfield);
 }
 
 void gui_timeinput::buttonClicked(guibase* button) {
-    if (time) {
-        auto field = dynamic_cast<gui_timeinput_field*>(button);
-        if (field) {
-            showEditField();
-            return;
-        }
+    auto field = dynamic_cast<gui_timeinput_field*>(button);
+    if (field) {
+        showEditField();
+        return;
     }
     guictr_base::buttonClicked(button);
 }
@@ -543,11 +562,15 @@ void gui_signaturecontrol::render(NVGcontext* vg) {
 guictr_tempocontrols::guictr_tempocontrols(project_t& _project, project_globals_t& _projectGlobals)
     : guictr_base(),
       projectGlobals(_projectGlobals),
-      cursorPos(&projectGlobals.cursor.cursorPos),
-      songPos(&projectGlobals.playbackPos),
-      loopPos(&projectGlobals.loopStart),
-      loopLen(&projectGlobals.loopLen, true),
+      cursorPos(false),
+      songPos(false),
+      loopPos(false),
+      loopLen(true),
       zoom(&globalZoom) {
+    cursorPos.setRef(toRef(), &projectGlobals.cursor.cursorPos);
+    songPos.setRef(toRef(), &projectGlobals.playbackPos);
+    loopPos.setRef(toRef(), &projectGlobals.loopStart);
+    loopLen.setRef(toRef(), &projectGlobals.loopLen);
     zoom.fnValueEditChanged = [this](gui_numberinput_field_base*, GlobalZoom globalZoom) {
         globalZoom.zoom = math::clamp(globalZoom.zoom, 0.5f, 2.0f);
         if (parentCtrl) {
@@ -693,7 +716,10 @@ void guictr_tempocontrols::render(NVGcontext* vg) {
     }
 }
 void gui_timeinput_field::setNewValue(int32_t val) {
-    *time = parentInput->clampValue(val);
+    auto ptr = parentInput->getSafeIntRef();
+    if (!ptr)
+        return;
+    *ptr = parentInput->clampValue(val);
 }
 int32_t gui_timeinput::clampValue(int32_t val) {
     if (!bCanGoNegative) {

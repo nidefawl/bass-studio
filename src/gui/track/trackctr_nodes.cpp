@@ -378,6 +378,10 @@ public:
 
 template<>
 void guitooltip<gui_graph_port>::setContent() {
+    auto ptr = getInstanceOrNull();
+    if (!ptr) {
+        return;
+    }
     ptr->addPropertiesTooltip(table);
 }
 

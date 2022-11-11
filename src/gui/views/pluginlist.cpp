@@ -5,6 +5,10 @@
 
 template<>
 void guitooltip<gui_vstpluginlist_entry>::setContent() {
+    auto ptr = getInstanceOrNull();
+    if (!ptr) {
+        return;
+    }
     using Table::tblint;
     using Table::tblString;
     table.tableWidth = 80;

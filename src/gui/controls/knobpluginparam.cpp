@@ -8,6 +8,10 @@ using Table::tblfloat;
 
 template<>
 void guitooltip<guiknob_pluginparam>::setContent() {
+    auto ptr = getInstanceOrNull();
+    if (!ptr) {
+        return;
+    }
     auto eff = ptr->getEffectInstance();
     auto paramIdx = ptr->getParamIdx();
     if (eff)

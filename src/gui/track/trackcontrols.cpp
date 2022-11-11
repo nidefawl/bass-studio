@@ -157,41 +157,6 @@ void resize(track_gui_entry_t* const m_trackentry, T* al, int32_t mouseDragDist,
         al->layout.height        = totalHeightSteps;
     }
 }
-struct audio_info_t {
-    String name;
-    track_impl_t* audio;
-};
-template<>
-void guitooltip<audio_info_t>::setContent() {
-
-    using Table::table_entry_t;
-    using Table::tbl;
-    using Table::tbl_row_t;
-    using Table::tblfloat;
-    using Table::tblint;
-    using Table::tblstr;
-    using Table::tblString;
-    table.tableWidth = 250;
-    {
-        table.rows.push_back({ { tblstr{ "track" }, tblString{ ptr->name } } });
-        auto audio = ptr->audio;
-        table.rows.push_back({ { tblstr{ "stageId" }, tblint{ static_cast<int32_t>(ptr->audio->stageId.stageId) } } });
-        table.rows.push_back({ { tblstr{ "inputStageId" }, tblint{ static_cast<int32_t>(ptr->audio->stageId.inputStageId) } } });
-        table.rows.push_back({ { tblstr{ "outputStageId" }, tblint{ static_cast<int32_t>(ptr->audio->stageId.outputStageId) } } });
-        table.rows.push_back({ { tblstr{ "outputPostStageId" }, tblint{ static_cast<int32_t>(ptr->audio->stageId.outputPostStageId) } } });
-        table.rows.push_back({ { tblstr{ "latency input " }, tblint{ audio->getInputLatency() } } });
-        table.rows.push_back({ { tblstr{ "latency intern" }, tblint{ audio->getInternalLatency() } } });
-        table.rows.push_back({ { tblstr{ "latency output" }, tblint{ audio->getOutputLatency() } } });
-        table.rows.push_back({ { tblstr{ "sampleRate" }, tblint{ audio->sampleFormat.sampleRate } } });
-    }
-}
-
-template<>
-guitooltip<audio_info_t>::~guitooltip() {
-    removeGuis();
-    delete ptr;
-}
-
 
 class gui_slider_gain : public gui_slider_textfield {
 public:
@@ -1282,6 +1247,12 @@ public:
         removeUNCHECKED(&automationSelectParam);
         removeUNCHECKED(&automationSelectDevice);
     }
+    track_gui_entry_t* getTrackEntry() {
+        return m_trackentry;
+    }
+    const track_gui_entry_t* getTrackEntry() const {
+        return m_trackentry;
+    }
     bool isStaticContainer() override {
         return false;
     }
@@ -1460,7 +1431,7 @@ public:
     }
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override {
         if (this->m_track->audio) {
-            auto tooltip = new guitooltip<audio_info_t>(new audio_info_t{ m_track->name, m_track->audio });
+            auto tooltip = new guitooltip<gui_trackcontrols_title>(this);
             return tooltip;
         }
         return nullptr;
@@ -2329,4 +2300,40 @@ public:
 
 void gui_track_controls::handleRightClick(MouseEvent& evt) {
     m_trackentry->parentCtrl->openContextMenu(new guictxtmenu_track(dawCtrl, this->m_trackentry), evt.mousepos);
+}
+
+template<>
+void guitooltip<gui_trackcontrols_title>::setContent() {
+    auto guiPtr = getInstanceOrNull();
+    if (!guiPtr) {
+        return;
+    }
+    auto trackEntry = guiPtr->getTrackEntry();
+    if (!trackEntry) {
+        return;
+    }
+    auto ptr = trackEntry->track;
+    if (!ptr) {
+        return;
+    }
+    using Table::table_entry_t;
+    using Table::tbl;
+    using Table::tbl_row_t;
+    using Table::tblfloat;
+    using Table::tblint;
+    using Table::tblstr;
+    using Table::tblString;
+    table.tableWidth = 250;
+    {
+        table.rows.push_back({ { tblstr{ "track" }, tblString{ ptr->name } } });
+        auto audio = ptr->audio;
+        table.rows.push_back({ { tblstr{ "stageId" }, tblint{ static_cast<int32_t>(ptr->audio->stageId.stageId) } } });
+        table.rows.push_back({ { tblstr{ "inputStageId" }, tblint{ static_cast<int32_t>(ptr->audio->stageId.inputStageId) } } });
+        table.rows.push_back({ { tblstr{ "outputStageId" }, tblint{ static_cast<int32_t>(ptr->audio->stageId.outputStageId) } } });
+        table.rows.push_back({ { tblstr{ "outputPostStageId" }, tblint{ static_cast<int32_t>(ptr->audio->stageId.outputPostStageId) } } });
+        table.rows.push_back({ { tblstr{ "latency input " }, tblint{ audio->getInputLatency() } } });
+        table.rows.push_back({ { tblstr{ "latency intern" }, tblint{ audio->getInternalLatency() } } });
+        table.rows.push_back({ { tblstr{ "latency output" }, tblint{ audio->getOutputLatency() } } });
+        table.rows.push_back({ { tblstr{ "sampleRate" }, tblint{ audio->sampleFormat.sampleRate } } });
+    }
 }

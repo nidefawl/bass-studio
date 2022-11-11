@@ -3,6 +3,7 @@
 #include <map>
 #include <vector>
 #include <memory>
+#include "gui/gui.h"
 #include "math/seq_math.h"
 #include "seq_time.h"
 #include "host/shape/shape.h"
@@ -320,6 +321,8 @@ public:
     }
 
     std::vector<track_gui_entry_t*> trackEntries;
+
+    gui_clip* getGuiClip(DawCtrl* parentCtrl);
 
 private:
     mutable bool dirty = true;

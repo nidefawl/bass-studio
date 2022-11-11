@@ -1167,3 +1167,14 @@ void cutClipRight(clip_t* c, tick_t len) {
     c->audio.setEmptyFade(false);
     dbgassert(c->getLenRef() > 0);
 }
+gui_clip* clip_t::getGuiClip(DawCtrl* parentCtrl) {
+    for (auto& entry : trackEntries) {
+        if (entry->parentCtrl == parentCtrl) {
+            auto it = entry->clipsGuis.find(this);
+            if (it != entry->clipsGuis.end()) {
+                return it->second;
+            }
+        }
+    }
+    return nullptr;
+}

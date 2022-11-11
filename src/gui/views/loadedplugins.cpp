@@ -247,8 +247,8 @@ public:
 
         list.sort([](gui_list_entry* ptrA, gui_list_entry* ptrB) {
             dbgassert(ptrA && ptrB);
-            effectbase* ptrEffA = safeRefGet(dynamic_cast<gui_pluginsloaded_list_entry*>(ptrA)->getRef());
-            effectbase* ptrEffB = safeRefGet(dynamic_cast<gui_pluginsloaded_list_entry*>(ptrB)->getRef());
+            effectbase* ptrEffA = safeRefGet(static_cast<gui_pluginsloaded_list_entry*>(ptrA)->getRef());
+            effectbase* ptrEffB = safeRefGet(static_cast<gui_pluginsloaded_list_entry*>(ptrB)->getRef());
             dbgassert(ptrEffB && ptrEffA);
             if (!ptrEffA)
                 return true;

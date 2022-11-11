@@ -21,11 +21,11 @@
 gui_clipsettings::gui_clipsettings(clip_view_t& _view)
     : guictr_base(),
       view(_view),
-      clipLoopStart(nullptr),
-      clipLoopLen(nullptr, true),
-      clipTimeStart(nullptr),
-      clipTimeLen(nullptr, true),
-      clipTimeStartOffsetTicks(nullptr, true),
+      clipLoopStart(),
+      clipLoopLen(true),
+      clipTimeStart(),
+      clipTimeLen(true),
+      clipTimeStartOffsetTicks(true),
       clipTimeStartOffsedSamples(nullptr),
       clipAudioId(nullptr),
       quantization()
@@ -35,11 +35,11 @@ gui_clipsettings::gui_clipsettings(clip_view_t& _view)
     btnLoop.drawParm = ICON_LOOP;
     btnLoop.setFlag(FLG_RENDER_BUTTON_WITH_LED, true);
     btnLoop.setStateRef(nullptr);
-    clipLoopStart.setRef(nullptr);
-    clipLoopLen.setRef(nullptr);
-    clipTimeStart.setRef(nullptr);
-    clipTimeLen.setRef(nullptr);
-    clipTimeStartOffsetTicks.setRef(nullptr);
+    clipLoopStart.clearRef();
+    clipLoopLen.clearRef();
+    clipTimeStart.clearRef();
+    clipTimeLen.clearRef();
+    clipTimeStartOffsetTicks.clearRef();
     clipTimeStartOffsedSamples.setRef(nullptr);
     clipAudioId.setRef(nullptr);
     btnLoop.setLabel("Loop");
@@ -120,22 +120,30 @@ void gui_clipsettings::buttonClicked(guibase* button) {
 
 void gui_clipsettings::updateClipViewReferences() {
     clip_t* clip = view.clip();
+    bool bHasRef = false;
     if (clip && parentCtrl) {
-        btnLoop.setStateRef(&clip->loopEnabled);
-        clipLoopStart.setRef(&clip->loopStart);
-        clipLoopLen.setRef(&clip->loopLen);
-        clipTimeStart.setRef(&clip->time);
-        clipTimeLen.setRef(&clip->getLenRef());
-        clipTimeStartOffsetTicks.setRef(&clip->offsetStart);
-        clipAudioId.setRef(&clip->audio.id);
-    } else {
+        auto guiClip = clip->getGuiClip(this->dawCtrl);
+        if (guiClip) {
+            auto ref = guiClip->toRef();
+            bHasRef = true;
+            btnLoop.setStateRef(&clip->loopEnabled);
+            clipLoopStart.setRef(ref, &clip->loopStart);
+            clipLoopLen.setRef(ref, &clip->loopLen);
+            clipTimeStart.setRef(ref, &clip->time);
+            clipTimeLen.setRef(ref, &clip->getLenRef());
+            clipTimeStartOffsedSamples.setRef(nullptr);
+            clipTimeStartOffsetTicks.setRef(ref, &clip->offsetStart);
+            clipAudioId.setRef(&clip->audio.id);
+        }
+    }
+    if (!bHasRef) {
         btnLoop.setStateRef(nullptr);
-        clipLoopStart.setRef(nullptr);
-        clipLoopLen.setRef(nullptr);
-        clipTimeStart.setRef(nullptr);
-        clipTimeLen.setRef(nullptr);
+        clipLoopStart.clearRef();
+        clipLoopLen.clearRef();
+        clipTimeStart.clearRef();
+        clipTimeLen.clearRef();
         clipTimeStartOffsedSamples.setRef(nullptr);
-        clipTimeStartOffsetTicks.setRef(nullptr);
+        clipTimeStartOffsetTicks.clearRef();
         clipAudioId.setRef(nullptr);
     }
     if (dawCtrl) {
@@ -222,11 +230,17 @@ void gui_quantizationsettings::buttonClicked(guibase* button) {
     if (&inputEnds == button) {
         tickEnd = math::max(0, tickEnd);
         auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
-        settings.quantizeEnd = inputEnds.getTime();
+        auto p = inputEnds.getSafeIntRef();
+        if (p) {
+            settings.quantizeEnd = *p;
+        }
     } else if (&inputStarts == button) {
         tickStart = math::max(0, tickStart);
         auto& settings = dawCtrl->getDaw()->getQuantizeSettings();
-        settings.quantizeStart = inputStarts.getTime();
+        auto p = inputStarts.getSafeIntRef();
+        if (p) {
+            settings.quantizeEnd = *p;
+        }
     }
     if (&btnQuantize == button) {
         auto clipEditor = guiParentType<guictr_clipeditor, gui_type::CTR_TYPE_CLIPEDITOR>(this->parent);

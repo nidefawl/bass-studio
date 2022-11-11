@@ -1,5 +1,6 @@
 #pragma once
 #include "basectrl.h"
+#include "gui/container/container_layout_types.h"
 #include "guicolors.h"
 #include "math/vec.h"
 #include "gui/gui.h"
@@ -8,6 +9,7 @@
 #include "gui/container/container.h"
 #include "gui/controls/textfield.h"
 #include "gui/table/table.h"
+#include "saferef.h"
 
 #include <memory>
 #include <numeric>
@@ -17,13 +19,13 @@ template<typename T>
 class guitooltip : public guictxtmenu {
 protected:
     
-    T* ptr;
+    SafeRef<guibase> ref;
     bool hadMouseFocus = false;
     Table::tbl table;
     gui_textfield textField;
 public:
     
-    guitooltip(T* _ptr) : ptr(_ptr) {
+    guitooltip(T* _ptr) : ref(_ptr->toRef()) {
         add(&textField);
         padding = 1;
         margin = padding;
@@ -33,6 +35,13 @@ public:
     }
     ~guitooltip() override {
         removeGuis();
+    }
+    T* getInstanceOrNull() {
+        auto p = safeRefGet(ref);
+        if (p) {
+            return static_cast<T*>(p);
+        }
+        return nullptr;
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (contains(mpos)) {

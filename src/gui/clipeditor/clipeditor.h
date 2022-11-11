@@ -348,9 +348,11 @@ class gui_quantizationsettings : public guictr_base {
 public:
     explicit gui_quantizationsettings()
         : guictr_base(),
-        inputStarts(&tickStart, true),
-        inputEnds(&tickEnd, true)
+        inputStarts(true),
+        inputEnds(true)
     {
+        inputStarts.setRef(toRef(), &tickStart);
+        inputEnds.setRef(toRef(), &tickEnd);
         setLabel("Quantize");
         setBackgroundRendered(true);
         setBackgroundRenderedInset(true);

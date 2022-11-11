@@ -508,6 +508,10 @@ namespace DAW {
 
 template<>
 void guitooltip<DAW::UI::Modulation::gui_dragged_modulation>::setContent() {
+    auto ptr = getInstanceOrNull();
+    if (!ptr) {
+        return;
+    }
     table.tableWidth = 140;
     auto cell = Table::tblString{ptr->getTooltipText()};
     if (table.strW) {

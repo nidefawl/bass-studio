@@ -39,6 +39,10 @@ using Table::tblString;
 
 template<>
 void guitooltip<guiknob>::setContent() {
+    auto ptr = getInstanceOrNull();
+    if (!ptr) {
+        return;
+    }
     table.tableWidth = 80;
     table.rows.push_back({ { tblfloat{ ptr->getValue() } } });
 }
