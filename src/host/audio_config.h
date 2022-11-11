@@ -69,6 +69,14 @@ namespace AudioIO {
 
     class AudioStream {
         public:
+        struct stream_timings_t {
+            samplecount_t samplePos  = 0;
+            samplecount_t samplePosProcIn  = 0;
+            samplecount_t samplePosProcOut  = 0;
+            int64_t tmDeltaCbMin = 0;
+            int64_t tmDeltaCbMax = 0;
+            int64_t tmDeltaCbAvg = -1;
+        };
         virtual ~AudioStream() = default;
 
         virtual void enqueue(AudioBuffer*) = 0;
@@ -82,7 +90,7 @@ namespace AudioIO {
         virtual bool isActive() const = 0;
         virtual channelnum_t getNumInputChannels() const = 0;
         virtual channelnum_t getNumOutputChannels() const = 0;
-        virtual int32_t getAudioCallbackInvocationDelay_usec() const = 0;
+        virtual DAW::AudioIO::AudioStream::stream_timings_t getStreamTimings() const = 0;
         virtual uint32_t getBufferUnderuns() const = 0;
         virtual uint32_t getInputBufferUnderuns() const = 0;
         virtual uint32_t getNumCallbacks() const = 0;

@@ -118,7 +118,11 @@ public:
         y += height / 2;
         
         if (stream) {
-            printL(0, "audioCallback tDelta", StringFormat("%d µs", stream->audioCallbackInvocationDelay_usec));
+            auto timings = stream->getStreamTimings();
+            printL(0, "audioCallback tDelta", StringFormat("%.1fµs min %.1fµs max %.1fµs avg", timings.tmDeltaCbMin / 1000.0, timings.tmDeltaCbMax / 1000.0, timings.tmDeltaCbAvg / 1000.0));
+            printL(0, "audioCallback samplePos", StringFormat("%zd", timings.samplePos));
+            printL(0, "audioCallback samplePosProcIn", StringFormat("%zd", timings.samplePosProcIn));
+            printL(0, "audioCallback samplePosProcOut", StringFormat("%zd", timings.samplePosProcOut));
             printL(0, "outputBufferUnderuns", StringFormat("%u", stream->bufferUnderuns));
             printL(0, "inputBufferUnderuns", StringFormat("%u", stream->inputBufferUnderuns));
             printL(0, "stream input time", StringFormat("%f", stream->inputTimeSeconds));

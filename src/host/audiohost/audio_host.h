@@ -79,7 +79,7 @@ public:
         samplecount_t outputSamplePos = 0;
 
         uint32_t numInvocations = 0;
-        int32_t audioCallbackInvocationDelay_usec   = 0;
+        DAW::AudioIO::AudioStream::stream_timings_t audioCallbackInvocationDelay;
         int64_t lastAudioCallbackInvocationTime_i64 = 0;
         uint32_t bufferUnderuns      = 0;
         uint32_t inputBufferUnderuns = 0;
@@ -101,8 +101,8 @@ public:
         DAW::rmsmeter* getMeterCallbackOutput() {
             return meterCallbackOutput.get();
         }
-        int32_t getAudioCallbackInvocationDelay_usec() const override {
-            return audioCallbackInvocationDelay_usec;
+        DAW::AudioIO::AudioStream::stream_timings_t getStreamTimings() const override {
+            return audioCallbackInvocationDelay;
         }
         uint32_t getBufferUnderuns() const override {
             return bufferUnderuns;
@@ -130,7 +130,7 @@ public:
             return this->host->lSampleRate;
         }
         blocksize_t getBlockSize() const override {
-                return this->host->lBlockSize;
+            return this->host->lBlockSize;
         }
         bool isActive() const override {
             return !streamShouldEnd && !streamFinished;

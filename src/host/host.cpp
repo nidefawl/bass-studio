@@ -215,7 +215,6 @@ public:
     std::vector<thread_stats_process_timings_t> lastBlockThreadStats;
     std::mutex mtx;
     process_scratch_buf_t singleThreadedBuf;
-
     std::shared_ptr<AudioIO::AudioStream> audioStream;
     std::shared_ptr<processing_graph_t> processingGraph;
     AudioBlock blockInput;
@@ -232,6 +231,7 @@ public:
 #elif THREADSYNC == THREADSYNC_ATOMIC
     std::atomic_int_fast8_t atomicWorkerCount{0};
 #endif
+    int64_t tmLastError = 0;
     explicit host_impl(Host* host) 
     : meterInput(std::make_shared<DAW::rmsmeter>(meterDataInput.data(), meterDataInput.size())),
       meterOutput(std::make_shared<DAW::rmsmeter>(meterDataOutput.data(), meterDataOutput.size()))
@@ -1954,16 +1954,21 @@ void Host::processAudio(process_scratch_buf_t& tmp,
 
 void Host::onTick() {
     PluginManager::onTick();
-    if (isStreaming() && this->impl->audioStream && this->impl->audioStream->getNumCallbacks()) {
-        double msec = impl->audioStream->getAudioCallbackInvocationDelay_usec() / 1000.0;
+    if (isStreaming()
+            && this->impl->audioStream
+            && this->impl->audioStream->getNumCallbacks()
+            && getTimeMillis() - this->impl->tmLastError > 10000) {
+        auto timings = impl->audioStream->getStreamTimings();
+        this->impl->tmLastError = getTimeMillis();
+        double msec = timings.tmDeltaCbAvg / 1000.0;
         auto sr = impl->audioStream->getSampleRate();
         auto bs = impl->audioStream->getBlockSize();
         auto expectedTimeDelta = double(bs) / double(sr) * 1000.0;
         double maxError = 0.1;
         if (msec > expectedTimeDelta + maxError) {
-            log_lf(Log::L_ERROR, "audioCallback: time delta too large: %f ms (expected %f ms)\n", msec, expectedTimeDelta);
+            log_lf(Log::L_WARN, "audioCallback: time delta too large: %.5f ms avg, %.5f ms min, %.5f ms max (expected %f ms)\n", msec, timings.tmDeltaCbMin / 1000.0, timings.tmDeltaCbMax / 1000.0, expectedTimeDelta);
         } else if (msec < expectedTimeDelta - maxError) {
-            log_lf(Log::L_ERROR, "audioCallback: time delta too small: %f ms (expected %f ms)\n", msec, expectedTimeDelta);
+            log_lf(Log::L_WARN, "audioCallback: time delta too small: %.5f ms avg, %.5f ms min, %.5f ms max (expected %f ms)\n", msec, timings.tmDeltaCbMin / 1000.0, timings.tmDeltaCbMax / 1000.0, expectedTimeDelta);
         }
     }
 }

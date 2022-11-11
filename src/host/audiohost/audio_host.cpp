@@ -163,14 +163,16 @@ bool error(const char* msg, PaError err) {
 class audiohost_callback {
     public:
     static int audioCallback(const void* inputBuffer, void* outputBuffer,
-                            unsigned long framesPerBuffer,
+                            unsigned long framesPerBufferUlong,
                             const PaStreamCallbackTimeInfo* timeInfo,
                             PaStreamCallbackFlags statusFlags,
                             void* userData) {
         if (!userData) {
             return paComplete;
         }
+        samplecount_t callbackNumSamples = static_cast<samplecount_t>(framesPerBufferUlong);
         auto* stream = static_cast<audiohost::HostIOStream*>(userData);
+        auto& timings = stream->audioCallbackInvocationDelay;
         stream->numInvocations++;
         audiohost* host = stream->host;
         float** inputs  = (float**) inputBuffer;
@@ -178,23 +180,28 @@ class audiohost_callback {
         if (stream->streamShouldEnd) {
             for (channelnum_t i = 0; outputs && i < stream->nOutputChannels; i++) {
                 if (outputs[i]) {
-                    memset(outputs[i], 0, framesPerBuffer * sizeof(float));
+                    memset(outputs[i], 0, callbackNumSamples * sizeof(float));
                 }
             }
             return paComplete;
         }
 
-        dsp_util::fillChannels(outputs, stream->nOutputChannels, framesPerBuffer, 0.0f);
+
+        dsp_util::fillChannels(outputs, stream->nOutputChannels, callbackNumSamples, 0.0f);
         if (!host) {
             return paAbort;
         }
         auto timeNow_i64 = getTimeMicros();
         if (0 != stream->lastAudioCallbackInvocationTime_i64) {
-            auto timeDelta_i32 = static_cast<int32_t>(timeNow_i64 - stream->lastAudioCallbackInvocationTime_i64);
-            if (stream->audioCallbackInvocationDelay_usec == 0) {
-                stream->audioCallbackInvocationDelay_usec = timeDelta_i32;
+            auto tmDelta_i64 = timeNow_i64 - stream->lastAudioCallbackInvocationTime_i64;
+            if (timings.tmDeltaCbAvg < 0) {
+                timings.tmDeltaCbAvg = tmDelta_i64;
+                timings.tmDeltaCbMin = tmDelta_i64;
+                timings.tmDeltaCbMax = tmDelta_i64;
             } else {
-                stream->audioCallbackInvocationDelay_usec = (stream->audioCallbackInvocationDelay_usec * 99 + timeDelta_i32) / 100;
+                timings.tmDeltaCbAvg = (timings.tmDeltaCbAvg * 99 + tmDelta_i64) / 100;
+                timings.tmDeltaCbMin = math::min(timings.tmDeltaCbMin, tmDelta_i64);
+                timings.tmDeltaCbMax = math::max(timings.tmDeltaCbMax, tmDelta_i64);
             }
         }
         stream->lastAudioCallbackInvocationTime_i64 = timeNow_i64;
@@ -208,15 +215,16 @@ class audiohost_callback {
                 meterOutput->update(block->output, 1.0f);
                 meterOutput->onTick(block->output->samples / double(stream->getSampleRate()));
             }
-            if (framesPerBuffer != static_cast<decltype(framesPerBuffer)>(block->output->samples)) {
-                log_lf(Log::L_ERROR, "audioCallback: framesPerBuffer != block->output->samples (%lu != %lu)\n", framesPerBuffer, block->output->samples);
-            } else if (framesPerBuffer == static_cast<decltype(framesPerBuffer)>(block->output->samples)) {
+            if (callbackNumSamples != static_cast<decltype(callbackNumSamples)>(block->output->samples)) {
+                log_lf(Log::L_ERROR, "audioCallback: framesPerBuffer != block->output->samples (%lu != %lu)\n", callbackNumSamples, block->output->samples);
+            } else if (callbackNumSamples == static_cast<decltype(callbackNumSamples)>(block->output->samples)) {
                 auto channels = math::min<channelnum_t>(block->output->channels, stream->nOutputChannels);
                 for (channelnum_t i = 0; outputs && i < channels; i++) {
                     float* channel = block->output->buf[i];
-                    memcpy(outputs[i], channel, framesPerBuffer * sizeof(float));
+                    memcpy(outputs[i], channel, callbackNumSamples * sizeof(float));
                 }
                 numOutChannelsWritten = channels;
+                timings.samplePosProcOut += block->output->samples;
             }
             // if (stream->firstInputTimeSeconds < 0.0) {
             //     stream->firstInputTimeSeconds = timeInfo->outputBufferDacTime;
@@ -229,10 +237,10 @@ class audiohost_callback {
 
         // fill channels that haven't been written to with zeroes
         for (channelnum_t i = numOutChannelsWritten; i < stream->nOutputChannels; i++) {
-            memset(outputs[i], 0, framesPerBuffer * sizeof(float));
+            memset(outputs[i], 0, callbackNumSamples * sizeof(float));
         }
 
-        dsp_util::fillSaturate(outputs, stream->nOutputChannels, framesPerBuffer);
+        dsp_util::fillSaturate(outputs, stream->nOutputChannels, callbackNumSamples);
 
         auto& ringbuffer      = stream->getRingbuffer();
         auto& writePos        = ringbuffer.writePos;
@@ -242,10 +250,10 @@ class audiohost_callback {
         if (bufferWrite->inUse) {
             stream->inputBufferUnderuns++;
         } else {
-            bufferWrite->output->realloc(framesPerBuffer);
+            bufferWrite->output->realloc(callbackNumSamples);
             if (inputs) {
                 channelnum_t nChannels = math::min<channelnum_t>(bufferWrite->output->channels, stream->nInputChannels);
-                bufferWrite->output->copyFrom(inputs, framesPerBuffer, nChannels);
+                bufferWrite->output->copyFrom(inputs, callbackNumSamples, nChannels);
                 for (channelnum_t i = nChannels; i < stream->nInputChannels; i++) {
                     memset(bufferWrite->output->buf[i], 0, bufferWrite->output->samples * sizeof(float));
                 }
@@ -261,6 +269,7 @@ class audiohost_callback {
             bufferWrite->inUse          = true;
             bufferWrite->time = {};
             bufferWrite->time.inputTimeSeconds = timeInfo->inputBufferAdcTime;
+            timings.samplePosProcIn += bufferWrite->output->samples;
             writePos++;
             writePos &= RING_BUF_MASK;
             if (stream) {
@@ -269,6 +278,7 @@ class audiohost_callback {
                 bufferWrite->inUse = false;
             }
         }
+        timings.samplePos += callbackNumSamples;
 
 
         return paContinue;
