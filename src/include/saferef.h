@@ -1,4 +1,5 @@
 #pragma once
+#include "logging.h"
 #include "types.h"
 #include <vector>
 #include <algorithm>
@@ -64,6 +65,7 @@ public:
             ref->ptr = nullptr;
         }
     }
+    void onPreDestroy();
 };
 template<typename T>
 struct SafeRef {

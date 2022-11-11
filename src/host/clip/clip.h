@@ -119,10 +119,14 @@ struct clip_control_data_t {
         return false;
     }
     int getInTimeRange(clip_t* clip, tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, std::vector<DAW::Host::midievent_ctrl_t>& list);
-    void copyRangeFrom(clip_t* clip, tick_t tickBegin, tick_t len);
+    void copyRangeFrom(clip_t* clip, tick_t writePos, tick_t tickBegin, tick_t len);
     void cutLeft(tick_t time);
     void cutRight(tick_t time);
 };
+
+namespace DAW {
+void CopyControlDataChannel(clip_control_data_channel_t& dst, tick_t writePos, const clip_control_data_channel_t& src, tick_t readPos, tick_t len, tick_t offsetStart,  tick_t loopStart, tick_t loopLen);
+}
 
 class clip_notes_t {
 public:

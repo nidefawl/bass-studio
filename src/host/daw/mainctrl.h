@@ -569,6 +569,7 @@ public:
     bool menuCommand(const menucmd_t& command) override;
     void updateMenubar() override;
     void onTick() override;
+    void onPreDestroy() override;
     void destroy() override;
     void relayout() override {
         BaseCtrl::relayout();
@@ -709,6 +710,7 @@ public:
     void setStatusText(String s) override;
     void setStatusText(const String& s, GuiColor::constant_t color);
     void destroy() override;
+    void onPreDestroy() override;
     DAW::Cursor& getCursor() override;
     void onChildOverlayWindowClose(window_main*) override;
 };

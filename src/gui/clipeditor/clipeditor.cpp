@@ -428,6 +428,7 @@ void duplicateClipLoop(DawInstance* daw, clip_view_t& view) {
         ThreadLock lock                = daw->lockPlayThread();
         clip_t clipBefore              = *clip;
         clip_notes_t& notes            = clip->notes;
+        clip_control_data_t& data      = clip->controlData;
         clip_cursor_t& cursor          = view.m_cursor;
         clip_cursor_t cursorBefore     = cursor;// copy
         const clip_notes_t notesBefore = notes; // copy
@@ -458,6 +459,11 @@ void duplicateClipLoop(DawInstance* daw, clip_view_t& view) {
                 notesCopy.updateBounds();
 
                 notes = notesCopy;
+            }
+            {
+                clip_control_data_t dataCopy = data;// copy
+                dataCopy.copyRangeFrom(clip, loopEnd, loopStart, clip->loopLen);
+                data = dataCopy;
             }
 
             clip->loopLen *= 2;

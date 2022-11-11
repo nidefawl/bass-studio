@@ -717,6 +717,25 @@ void guibase::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
         render(vg);
     }
 }
+
+template<>
+void SafeRefStorage<guibase>::onPreDestroy() {
+    size_t numRefsLeaked = 0;
+    std::vector<String> someNames;
+    for (auto& ref : refs) {
+        if (ref->ptr) {
+            log_lf(Log::L_WARN, "%s alive\n", ref->ptr->getClassName().c_str());
+            ref->ptr->safeRef.handler = nullptr;
+            ref->ptr = nullptr;
+            numRefsLeaked++;
+        }
+    }
+    if (numRefsLeaked > 0) {
+        String name = typeName(*this);
+        log_lf(Log::L_WARN, "%s: %zu refs still alive\n", name.c_str(), numRefsLeaked);
+    }
+}
+
 guibase::guibase(gui_type guiType)
     : guiType(guiType)
 {

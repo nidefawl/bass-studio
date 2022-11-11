@@ -1799,12 +1799,13 @@ void DawInstance::destroy() {
         ngui::showNotification(ngui::Style::Warning, "Couldn't write config file", "Some settings may have been reset");
     }
     delete tls.commandManager;
-    delete tls.runtime;
     delete tls.settings;
     delete tls.audioCache;
     delete tls.midiHost;
     delete tls.audioHost;
     delete tls.host;
+    tls.runtime->safeRefs.onPreDestroy();
+    delete tls.runtime;
     tls.dawInstance    = nullptr;
     tls.host           = nullptr;
     tls.pluginManager  = nullptr;
@@ -3269,20 +3270,24 @@ void DawInstance::setTempo(int32_t _tempo100) {
     }, true);
 }
 
-void MainCtrl::destroy() {
+void DawCtrl::onPreDestroy() {
     auto ctrTracks = getTrackContainer();
     //TODO: layout settings should be handled on editor container level
     if (ctrTracks) {
         auto& settings = daw_tls::getSettings();
         settings.wndMain.dens = ctrTracks->getGrid().grid_dens;
     }
-    {
-        ThreadLock lock = daw.playThread.lockThread();
-        //TODO: MultiLogger::removeLogger is not thread safe. This will eventually cause a race condition 
-        // and a crash since not all threads and modules are synchronized here (just playthread and workerthreads)
-        getMultiLogger().removeLogger(statusbarLogger.get());
-        daw.unloadProject();
-    }
+}
+void MainCtrl::onPreDestroy() {
+    DawCtrl::onPreDestroy();
+    ThreadLock lock = daw.playThread.lockThread();
+    //TODO: MultiLogger::removeLogger is not thread safe. This will eventually cause a race condition 
+    // and a crash since not all threads and modules are synchronized here (just playthread and workerthreads)
+    getMultiLogger().removeLogger(statusbarLogger.get());
+    daw.unloadProject();
+}
+
+void MainCtrl::destroy() {
     DawCtrl::destroy();
     daw.destroy();
 }

@@ -1011,7 +1011,9 @@ void clip_control_data_t::cutRight(tick_t time) {
         }
     }
 }
-void CopyControlDataChannel(clip_control_data_channel_t& dst, tick_t writePos, const clip_control_data_channel_t& src, tick_t readPos, tick_t len, tick_t offsetStart, tick_t loopStart, tick_t loopLen) {
+
+namespace DAW {
+void CopyControlDataChannel(clip_control_data_channel_t& dst, tick_t writePos, const clip_control_data_channel_t& src, tick_t readPos, tick_t len, tick_t offsetStart,  tick_t loopStart, tick_t loopLen) {
     tick_t preLoopLen = 0;
     if (offsetStart < loopStart) {
         preLoopLen = loopStart - offsetStart;
@@ -1033,6 +1035,7 @@ void CopyControlDataChannel(clip_control_data_channel_t& dst, tick_t writePos, c
         }
         t += loopLen;
     }
+}
 }
 
 void clip_control_data_t::updateBounds() {
@@ -1056,20 +1059,20 @@ void clip_control_data_t::clear() {
     ccChannels.clear();
 }
 
-void clip_control_data_t::copyRangeFrom(clip_t* clip, tick_t tickBegin, tick_t len) {
-    auto writePos = clip->start() - tickBegin;
+void clip_control_data_t::copyRangeFrom(clip_t* clip, tick_t writePos, tick_t tickBegin, tick_t len) {
+    // auto writePos = clip->start() - tickBegin;
     auto readPos = math::max(0, tickBegin - clip->start());
     auto readEnd = math::min(clip->len, tickBegin + len - clip->start());
     auto readLen = readEnd - readPos;
     auto& dataIn = clip->controlData;
     if (clip->isLoopEnabled()) {
-        CopyControlDataChannel(pitchBend, writePos, dataIn.pitchBend, readPos, readLen, clip->offsetStart, clip->loopStart, clip->loopLen);
+        DAW::CopyControlDataChannel(pitchBend, writePos, dataIn.pitchBend, readPos, readLen, clip->offsetStart, clip->loopStart, clip->loopLen);
         for (auto& it : dataIn.ccChannels) {
             if (!ccChannels.count(it.first)) {
                 createCCChannel(it.first);
             }
             auto& cc = ccChannels[it.first];
-            CopyControlDataChannel(cc, writePos, it.second, readPos, readLen, clip->offsetStart, clip->loopStart, clip->loopLen);
+            DAW::CopyControlDataChannel(cc, writePos, it.second, readPos, readLen, clip->offsetStart, clip->loopStart, clip->loopLen);
         }
     } else {
         readPos += clip->offsetStart;

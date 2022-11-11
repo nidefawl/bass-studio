@@ -459,13 +459,13 @@ void BaseCtrl::onGuiRemoved(void* gui) {
     }
 }
 void BaseCtrl::resetMouseContext() {
-    auto guiCtrFocused = getGuiCtrFocused();
-    if (guiCtrFocused) {
-        if (!guiCtrFocused->isStaticContainer()) {
-            guiCtrFocused = nullptr;
-        }
-    }
-    guiCaptured = guiFocused = guiOver = guiDragged = {};
+    // auto guiCtrFocused = getGuiCtrFocused();
+    // if (guiCtrFocused) {
+    //     if (!guiCtrFocused->isStaticContainer()) {
+    //         this->guiCtrFocused = {};
+    //     }
+    // }
+    // guiCaptured = guiFocused = guiOver = guiDragged = {};
     draggedLayoutContainer = nullptr;
     ctrDragHandler.validPreview = false;
     dragDropTargets_ContainerMove.clear();
@@ -550,6 +550,7 @@ void AppCtrl::releaseGarbageGuis() {
     garbageGuis.clear();
 }
 void AppCtrl::destroyControl() {
+    onPreDestroy();
     dbgassert(!this->ctxtmenu);
     releaseGarbageGuis();
     dbgassert(garbageGuis.empty());

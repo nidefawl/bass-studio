@@ -160,7 +160,7 @@ namespace DAW {
                     notes.clear();
                     shPtrClip->getInTimeRange(tickBegin, tickEnd, tickBegin, tickEnd, notes);
                     clip.notes.addAll(notes);
-                    clip.controlData.copyRangeFrom(shPtrClip.get(), tickBegin, clip.len);
+                    clip.controlData.copyRangeFrom(shPtrClip.get(), shPtrClip->start() - tickBegin,  tickBegin, clip.len);
                 }
                 clip.controlData.eraseDuplicates();
                 clip.controlData.updateBounds();
