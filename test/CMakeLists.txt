@@ -86,6 +86,17 @@ DEFINE_TEST(
 )
 
 DEFINE_TEST(
+  test_saferef FALSE
+  test_saferef.cpp
+  common/test_common.cpp
+  common/test_stubs.cpp
+  ../src/util/testing_environment.cpp
+  ../src/util/str_util.cpp
+  ../src/util/str_util.cpp
+  ../src/threads/thread.cpp
+)
+
+DEFINE_TEST(
   test_logger FALSE
   test_logger.cpp
   common/test_common.cpp

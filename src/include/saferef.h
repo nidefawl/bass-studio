@@ -12,6 +12,7 @@ public:
     SafeRefHandler()                        = default;
     virtual size_t safeRefCreate(T*)           = 0;
     virtual T* safeRefGetPtr(size_t refId) = 0;
+    virtual const T* safeRefGetPtr(size_t refId) const = 0;
     virtual void safeRefDestroy(size_t refId) = 0;
 };
 
@@ -22,37 +23,45 @@ class SafeRefStorage : public SafeRefHandler<T> {
         size_t refId;
     };
     size_t refIdNext = 0;
-    std::vector<RefStored> refs;
+    std::vector<RefStored*> refs;
 
 public:
     SafeRefStorage() = default;
     virtual ~SafeRefStorage() {
         for (auto& ref : refs) {
-            ref.ptr->safeRef.handler = nullptr;
+            if (ref->ptr)
+                ref->ptr->safeRef.handler = nullptr;
+            ref->ptr = nullptr;
+            delete ref;
         }
     }
     size_t safeRefCreate(T* gui) override {
-        RefStored ref{ gui, refIdNext++ };
-        refs.push_back(ref);
-        return ref.refId;
+        auto ref = new RefStored{ gui, refIdNext++ };
+        // insert sorted so binary_search works
+        auto it = std::lower_bound(refs.begin(), refs.end(), ref, [](auto& a, auto& b) {
+            return a->refId < b->refId;
+        });
+        refs.insert(it, ref);
+        return reinterpret_cast<size_t>(ref);
     }
     T* safeRefGetPtr(size_t refId) override {
-        auto it = std::find_if(refs.begin(), refs.end(), [refId](const RefStored& ref) {
-            return ref.refId == refId;
-        });
-        if (it != refs.end()) {
-            RefStored& ref = *it;
-            return ref.ptr;
+        auto ref = reinterpret_cast<RefStored*>(refId);
+        if (ref->ptr) {
+            return ref->ptr;
+        }
+        return nullptr;
+    }
+    const T* safeRefGetPtr(size_t refId) const override {
+        auto ref = reinterpret_cast<const RefStored*>(refId);
+        if (ref->ptr) {
+            return ref->ptr;
         }
         return nullptr;
     }
     void safeRefDestroy(size_t refId) override {
-        auto it = std::find_if(refs.begin(), refs.end(), [refId](const RefStored& ref) {
-            return ref.refId == refId;
-        });
-        if (it != refs.end()) {
-            it->ptr = nullptr;
-            refs.erase(it);
+        auto ref = reinterpret_cast<RefStored*>(refId);
+        if (ref->ptr) {
+            ref->ptr = nullptr;
         }
     }
 };
