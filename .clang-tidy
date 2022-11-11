@@ -24,6 +24,7 @@ Checks: >
     -misc-no-recursion,
     -readability-*,
     -google-readability-*,
+    -cert-err33-c,
     -hicpp-*,
     -llvm-*,
     -llvmlibc-*,
