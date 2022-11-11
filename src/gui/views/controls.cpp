@@ -176,7 +176,7 @@ gui_timeinput::gui_timeinput(int32_t* _time, const bool isRelative)
 }
 
 int32_t gui_timeinput::getTime() {
-    return *time;
+    return time ? *time : 0;
 }
 void gui_timeinput::setRef(int32_t* time) {
     this->time = time;
@@ -274,7 +274,7 @@ void gui_timeinput::showEditField() {
     editfield.size = size;
     editfield.setVisible(true);
     editfield.layout();
-    auto beatBarNth = daw->toBeatBar16th(*time, isRelative);
+    auto beatBarNth = daw->toBeatBar16th(getTime(), isRelative);
     log_lf(Log::L_DEBUG, "beatBarNthToString beg: %s\n", StringAsCStr(beatBarNthToString(beatBarNth, isRelative)));
     editfield.setValue(beatBarNthToString(beatBarNth, bar.isRelative));
     editfield.setSelectionRange(-1, -1);
