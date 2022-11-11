@@ -75,7 +75,9 @@ void gui_clipsettings::renderBackground(NVGcontext* vg) {
 
 void duplicateClipLoop(DawInstance* daw, clip_view_t& view);//clipeditor.cpp;
 void selectAllMuted(DawInstance* daw, clip_view_t& view) {
-    clip_notes_t& notes = view.clip()->notes;
+    auto clip = view.clip();
+    if (!clip) return;
+    clip_notes_t& notes = clip->notes;
     notes.selection.clear();
     notes.visitNotes([&notes](note_t& n) {
         if (!n.isEnabled()) {
@@ -87,11 +89,10 @@ void selectAllMuted(DawInstance* daw, clip_view_t& view) {
 }
 void gui_clipsettings::buttonClicked(guibase* button) {
     auto const daw = dawCtrl->getDaw();
+    auto clip = view.clip();
+    if (!clip) return;
     if (&btnLoop == button) {
-        auto clip = view.clip();
-        if (clip) {
-            clip->loopEnabled = !clip->loopEnabled;
-        }
+        clip->loopEnabled = !clip->loopEnabled;
     }
     if (&btnDuplicateLoop == button) {
         duplicateClipLoop(daw, view);

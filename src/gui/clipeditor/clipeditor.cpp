@@ -231,15 +231,14 @@ void guictr_clipeditor::render(NVGcontext* vg) {
     //guictr_base::setScissorTransform(vg);
     ivec2 posInset = getPosContent();
     nvgTranslate(vg, posInset.x, posInset.y);
-    auto& dawSettings = daw_tls::getDawSettings();
     auto clip = view.clip();
     if (clip) {
-        if (settings.isVisible() && dawSettings.uiShowSettingsClip) {
+        if (settings.isVisible()) {
             nvgSave(vg);
             settings.render(vg);
             nvgRestore(vg);
         }
-        if (arp.isVisible() && dawSettings.uiShowSettingsArp) {
+        if (arp.isVisible()) {
             nvgSave(vg);
             arp.render(vg);
             nvgRestore(vg);
@@ -2675,4 +2674,10 @@ float CCEdit::snapH(float x) {
     if (offsetClip)
         x -= offsetClip->start();
     return x;
+}
+
+bool gui_clipsettings::isVisible() const {
+    auto clip = view.clip();
+    if (!clip) return false;
+    return guictr_base::isVisible() && daw_tls::getDawSettings().uiShowSettingsClip;
 }

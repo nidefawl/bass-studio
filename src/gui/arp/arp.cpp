@@ -1,4 +1,5 @@
 #include "arp.h"
+#include "appsettings.h"
 #include "gui/automation/automatable.h"
 #include "gui/contextmenu/contextmenu.h"
 #include "gui/contextmenu/contextmenu_daw.h"
@@ -122,7 +123,18 @@ void gui_arp::handleDraggedBegin(MouseEvent& evt) {
 }
 
 DAW::midiarp* gui_arp::getArp() {
-    track_t* track = clipview.track();
+    auto track = clipview.track();
+    if (track) {
+        auto audio = track->audio;
+        if (audio) {
+            return audio->arp;
+        }
+    }
+    return nullptr;
+}
+
+const DAW::midiarp* gui_arp::getArp() const {
+    auto track = clipview.track();
     if (track) {
         auto audio = track->audio;
         if (audio) {
@@ -220,4 +232,9 @@ void gui_arp::updateClipViewReferences() {
     for (auto* knob : knobs) {
         knob->setArp(arp);
     }
+}
+
+bool gui_arp::isVisible() const {
+    if (!getArp()) return false;
+    return guictr_base::isVisible() && daw_tls::getDawSettings().uiShowSettingsArp;
 }

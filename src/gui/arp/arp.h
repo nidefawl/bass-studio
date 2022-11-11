@@ -18,6 +18,7 @@ class gui_arp : public guictr_base {
 
 public:
     DAW::midiarp* getArp();
+    const DAW::midiarp* getArp() const;
     explicit gui_arp(clip_view_t& _clipview);
     void handleDraggedBegin(MouseEvent& evt) override;
     void buttonClicked(guibase* _button) override;
@@ -27,4 +28,5 @@ public:
     void render(NVGcontext* vg) override;
     void layout() override;
     void updateClipViewReferences();
+    bool isVisible() const override;
 };

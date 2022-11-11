@@ -426,7 +426,7 @@ public:
     guibutton btnDuplicateLoop;
     guibutton btnSelectMuted;
     gui_quantizationsettings quantization;
-    gui_clipsettings(clip_view_t& _view);
+    explicit gui_clipsettings(clip_view_t& _view);
     ~gui_clipsettings() override;
     void render(NVGcontext* vg) override;
 
@@ -434,6 +434,7 @@ public:
     void renderBackground(NVGcontext* vg) override;
     void buttonClicked(guibase* button) override;
     void updateClipViewReferences();
+    bool isVisible() const override;
 };
 class gui_clipcontent_base : public guictr_base {
 public:
