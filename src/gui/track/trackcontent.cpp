@@ -476,15 +476,18 @@ void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& gri
     auto fadeOut = m_clip->getSampleFadeOut(prjGlobals.tempo100, audio->sample->sampleRate);
     this->fadeInLayout = { };
     this->fadeOutLayout = { };
+    auto pxLen = grid.pixelsToTicks(1);
     for (auto* fadeRef : { &fadeIn, &fadeOut }) {
         const uint8_t fadeIdx = fadeRef == &fadeIn ? 0 : 1;
-        if (fadeRef->hasFade()) {
-        }
         auto dTick = sampleToTickConvert<double, roundmode::none>(fadeRef->samplesFadePos, prjGlobals.tempo100, audio->sample->sampleRate);
         auto dTickEnd = sampleToTickConvert<double, roundmode::none>(fadeRef->samplesFadePos + fadeRef->samplesFadeDuration, prjGlobals.tempo100, audio->sample->sampleRate);
         auto beginX = grid.tickToScreenD(m_clip->start() + dTick);
         auto endX = grid.tickToScreenD(m_clip->start() + dTickEnd);
         auto& layout = getFadeLayout(fadeIdx);
+        if (pxLen > 400) {
+            layout.fade = {};
+            continue;
+        }
         layout.pos = ivec2(beginX, posClipped.y);
         layout.size = ivec2(endX - beginX, sizeClipped.y);
         layout.fade = *fadeRef;
