@@ -3101,16 +3101,22 @@ track_t* DawInstance::insertNewTrack(int trackInsertPos, int trackType, int flag
 
 class action_modify_track_add : public action_base {
 public:
-    int32_t trackIdx = -1;
-    int32_t localIdx = -1;
+    int32_t trackIdx  = -1;
+    int32_t localIdx  = -1;
+    int32_t parentIdx = -1;
+    int32_t childIdxTree = -1;
     track_t* trackPtr;
     action_modify_track_add() = delete;
 
     action_modify_track_add(String description, track_t* _trackPtr) : action_base() {
-        desc     = description;
+        desc     = std::move(description);
         trackPtr = nullptr;
         trackIdx = _trackPtr->projectIdx;
         localIdx = _trackPtr->localIdxFlat;
+        if (_trackPtr->parent) {
+            parentIdx = _trackPtr->parent->projectIdx;
+        }
+        childIdxTree = _trackPtr->childIdxTree;
     }
 
     ~action_modify_track_add() override = default;
@@ -3127,22 +3133,31 @@ public:
         daw->resetMouseContext();
         daw->resetClipViews();
         trackPtr = daw->getTrackId(trackIdx);
-        dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->sampleFormat.blockSize % 8 == 0);// see if pointer is valid
+        dbgassert(trackPtr);
         dbgassert(localIdx == trackPtr->localIdxFlat);
-        //SERIALIZE TRACK VSTs
+        if (trackPtr->parent) {
+            parentIdx = trackPtr->parent->projectIdx;
+        } else {
+            parentIdx = -1;
+        }
+        childIdxTree = trackPtr->childIdxTree;
         localIdx = trackPtr->localIdxFlat;
         daw->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
     }
 
     void redo(DawInstance* daw) override {
         dbgassert(trackPtr);
-        daw->resetMouseContext();
+        // daw->resetMouseContext();
         daw->resetClipViews();
+        auto parent = parentIdx >= 0 ? daw->getTrackId(parentIdx) : nullptr;
+        trackPtr->childIdxTree = childIdxTree;
+        if (parent) {
+            parent->addChild(trackPtr);
+        }
         daw->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
         dbgassert(localIdx == trackPtr->localIdxFlat);
         localIdx = trackPtr->localIdxFlat;
         trackPtr = nullptr;
-        //UNSERIALIZE TRACK VSTs
     }
 };
 
@@ -3150,15 +3165,19 @@ class action_modify_track_remove : public action_base {
 public:
     int32_t trackIdx = -1;
     int32_t localIdx = -1;
+    int32_t parentIdx = -1;
+    int32_t childIdxTree = -1;
     track_t* trackPtr;
 
     action_modify_track_remove() = delete;
 
-    action_modify_track_remove(String description, track_t* _trackPtr) : action_base() {
-        desc     = description;
+    action_modify_track_remove(String description, track_t* _trackPtr, int32_t _parentIdx, int32_t _childIdxTree) : action_base() {
+        desc     = std::move(description);
         trackPtr = _trackPtr;
         trackIdx = _trackPtr->projectIdx;
         localIdx = _trackPtr->localIdxFlat;
+        parentIdx = _parentIdx;
+        childIdxTree = _childIdxTree;
     }
 
     ~action_modify_track_remove() override = default;
@@ -3172,23 +3191,32 @@ public:
     }
 
     void undo(DawInstance* daw) override {
+        String name = trackPtr->name;
         daw->resetMouseContext();
         daw->resetClipViews();
+        auto parent = parentIdx >= 0 ? daw->getTrackId(parentIdx) : nullptr;
+        trackPtr->childIdxTree = childIdxTree;
+        if (parent) {
+            parent->addChild(trackPtr);
+        }
         daw->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
         dbgassert(localIdx == trackPtr->localIdxFlat);
         localIdx = trackPtr->localIdxFlat;
         trackPtr = nullptr;
-        //UNSERIALIZE TRACK VSTs
     }
 
     void redo(DawInstance* daw) override {
         daw->resetMouseContext();
         daw->resetClipViews();
         trackPtr = daw->getTrackId(trackIdx);
+        if (trackPtr->parent) {
+            parentIdx = trackPtr->parent->projectIdx;
+        } else {
+            parentIdx = -1;
+        }
+        String name = trackPtr->name;
         dbgassert(trackPtr);
-        //SERIALIZE TRACK VSTs
         daw->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
-        dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->sampleFormat.blockSize % 8 == 0);// see if pointer is valid
         dbgassert(localIdx == trackPtr->localIdxFlat);
     }
 };
@@ -3221,6 +3249,8 @@ void DawInstance::removeTrackId(uint32_t trackId) {
 
 void DawInstance::removeTrackImpl(track_t* track, int flags) {
     resetClipViews();
+    auto parentId = track->parent ? track->parent->projectIdx : -1;
+    auto childTreeIdx = track->childIdxTree;
     project.trackList.removeTrack(track);
     for (DawCtrl* pDawCtrl : dawCtrls) {
         if (pDawCtrl->isOk()) {
@@ -3232,7 +3262,7 @@ void DawInstance::removeTrackImpl(track_t* track, int flags) {
     DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.outputStageId);
     DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.outputPostStageId);
     if (flags & FLG_TRK_CHANGE_USER) {
-        pushHist(new action_modify_track_remove(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track));
+        pushHist(new action_modify_track_remove(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track, parentId, childTreeIdx));
     }
     tls.host->onTrackLayoutChange();
 }

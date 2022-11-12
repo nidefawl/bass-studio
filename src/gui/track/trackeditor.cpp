@@ -79,7 +79,7 @@
 void action_modify_track::undo(DawInstance* daw) {
     log_lf(Log::L_DEBUG, "action_modify_track undo, num tracks: %zd\n", before.tracks.size());
 
-    daw->resetMouseContext();
+    // daw->resetMouseContext();
     daw->resetClipViews();
     bool initAfter = after.tracks.empty();
     if (initAfter) {
@@ -101,7 +101,7 @@ void action_modify_track::undo(DawInstance* daw) {
     daw->getMainControl()->getCursor() = before.cursor;
 }
 void action_modify_track::redo(DawInstance* daw) {
-    daw->resetMouseContext();
+    // daw->resetMouseContext();
     daw->resetClipViews();
     trackallcontainer_t& trCtr = daw->getTracks();
     for (track_snapshot_t* trackStored : after.tracks) {

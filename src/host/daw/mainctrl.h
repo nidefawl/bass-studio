@@ -569,8 +569,8 @@ public:
     bool menuCommand(const menucmd_t& command) override;
     void updateMenubar() override;
     void onTick() override;
-    void onPreDestroy() override;
     void destroy() override;
+    void onPreDestroy() override;
     void relayout() override {
         BaseCtrl::relayout();
     }
