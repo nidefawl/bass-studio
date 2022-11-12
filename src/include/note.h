@@ -137,8 +137,10 @@ inline void changePitch(std::vector<note_t>& notesPtrs, int32_t semitones, bool 
     }
 }
 inline void muteNotesToggle(std::vector<note_t>& notesPtrs) {
+    if (notesPtrs.empty()) return;
+    bool bIsEnabled = !notesPtrs[0].isEnabled();
     for (note_t& note : notesPtrs) {
-        note.toggleFlag(NoteFlags::ENABLED);
+        note.setEnabled(bIsEnabled);
     }
 }
 inline void offsetStartTime(std::vector<note_t>& notesPtrs, tick_t offset) {
