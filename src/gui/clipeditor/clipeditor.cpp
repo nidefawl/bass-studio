@@ -122,7 +122,7 @@ guictr_clipeditor::guictr_clipeditor()
     : guictr_base(),
       noteeditor(*this, view),
       audioeditor(*this, view),
-      settings(view),
+      settings(*this, view),
       arp(view) {
     setGuiType(gui_type::CTR_TYPE_CLIPEDITOR);
     // padding = 2;
@@ -159,6 +159,7 @@ void guictr_clipeditor::updateClipViewReferences() {
     bool bIsMidi = !clip || clip->clipType == CLIP_MIDI;
     noteeditor.setVisible(bIsMidi);
     audioeditor.setVisible(!bIsMidi);
+    noteeditor.updateCopiedClipData();
 }
 
 void guictr_clipeditor::selectEditClip(clip_t* clip) {
@@ -463,6 +464,8 @@ void duplicateClipLoop(DawInstance* daw, clip_view_t& view) {
             {
                 clip_control_data_t dataCopy = data;// copy
                 dataCopy.copyRangeFrom(clip, loopEnd, loopStart, clip->loopLen);
+                dataCopy.eraseDuplicates();
+                dataCopy.updateBounds();
                 data = dataCopy;
             }
 

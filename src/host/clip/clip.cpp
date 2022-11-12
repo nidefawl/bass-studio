@@ -1059,10 +1059,8 @@ void clip_control_data_t::clear() {
     ccChannels.clear();
 }
 
-void clip_control_data_t::copyRangeFrom(clip_t* clip, tick_t writePos, tick_t tickBegin, tick_t len) {
-    // auto writePos = clip->start() - tickBegin;
-    auto readPos = math::max(0, tickBegin - clip->start());
-    auto readEnd = math::min(clip->len, tickBegin + len - clip->start());
+void clip_control_data_t::copyRangeFrom(clip_t* clip, tick_t writePos, tick_t readPos, tick_t len) {
+    auto readEnd = readPos + len;
     auto readLen = readEnd - readPos;
     auto& dataIn = clip->controlData;
     if (clip->isLoopEnabled()) {

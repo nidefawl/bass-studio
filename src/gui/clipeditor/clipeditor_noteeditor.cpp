@@ -492,6 +492,17 @@ void guictr_noteeditor::handleSplitterChanged(Splitter& splitter, float scale, i
 
 
 void guictr_noteeditor::buttonClicked(guibase* button) {
+    if (button == &timeline) {
+        auto currentClip = view.clip();
+        if (!currentClip)
+            return;
+        if (view.isAbsoluteTimeMode()) {
+            grid.showRange(view.m_selectionView.minClipStart, view.m_selectionView.maxClipEnd);
+        } else {
+            grid.showRange(currentClip->notes.firstNote.start(), math::max<tick_t>(currentClip->notes.lastNote.end(), currentClip->loopStart + currentClip->loopLen));
+        }
+        return;
+    }
     if (button == &btnToggleFold) {
         bFoldNotes = !bFoldNotes;
         view.updateNotePitches(true);
@@ -576,11 +587,14 @@ void guictr_noteeditor::zoomPianoRollToClipsNoteRange() {
 
 void guictr_noteeditor::selectEditClip(clip_t* clip) {
     guictr_editor_base::selectEditClip(clip);
+    updateCopiedClipData();
+}
+void guictr_noteeditor::updateCopiedClipData() {
     ctrlData.showEditClip();
 }
 void guictr_noteeditor::relayout() {
     guictr_editor_base::relayout();
-    ctrlData.showEditClip();
+    updateCopiedClipData();
     clip_t* currentClip = view.clip();
     bool bIsAbsMode = view.isAbsoluteTimeMode();
     clip_editor_layout_t layout = lastLayout;
@@ -608,7 +622,8 @@ void guictr_editor_base::relayout() {
         layout = view.m_selectionView.editorLayout;
         grid.setLayout(layout.layoutGrid);
     }
-    auto newClipHandleCount = view.m_selectionView.totalClipCount;
+    lastLayout = layout;
+    auto newClipHandleCount = bIsAbsMode  ? view.m_selectionView.totalClipCount : 1;
     auto curClipHandleCount = clipsHandles.size();
     for (size_t i = newClipHandleCount; i < curClipHandleCount; i++) {
         clipsHandles[i]->setVisible(false);
@@ -621,9 +636,23 @@ void guictr_editor_base::relayout() {
         }
     }
     auto numTracks = view.m_selectionView.tracks.size();
+    if (!bIsAbsMode) {
+        numTracks = 1;
+    }
     handlesHeight = math::max<int32_t>(1, numTracks) * heightLoopInidicator * 2 + heightSelIndicator;
-    bool foundThis = false;
     auto it = clipsHandles.begin();
+    if (!bIsAbsMode) {
+        numTracks = 1;
+        auto& clipHandles = **(it++);
+        clipHandles.setVisible(true);
+        clipHandles.getClipView().setSingleClip(currentClip);
+        clipHandles.setTrackSelectionIdx(0);
+        dbgassert(clipHandles.getClipView().clip() == currentClip);
+        clipHandles.setHandleActive(true);
+        moveToBegin(&clipHandles);
+        return;
+    }
+    bool foundThis = false;
     for (size_t trackIdx = 0; trackIdx < numTracks; trackIdx++) {
         auto& [trackEntry, vecTrackClips] = view.m_selectionView.tracks[trackIdx];
         auto numClipsOnTrack = vecTrackClips.size();
@@ -658,7 +687,6 @@ void guictr_editor_base::relayout() {
         dbgassert(!clipsHandles[i]->getClipView().clip());
     }
 #endif
-    lastLayout = layout;
 }
 
 void guictr_editor_base::onClipChanged() {
@@ -670,7 +698,7 @@ void guictr_editor_base::onClipChanged() {
             getGrid().showRange(view.m_selectionView.minClipStart, view.m_selectionView.maxClipEnd);
         }
     } else if (currentClip) {
-        if (currentClip->editorLayout.noLayout && lastLayout.noLayout) {
+        if (currentClip->editorLayout.noLayout) {
             getGrid().showRange(currentClip->offsetStart, currentClip->offsetStart + currentClip->getLen());
         }
     }

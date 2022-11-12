@@ -18,8 +18,9 @@
 #include "grid.h"
 
 
-gui_clipsettings::gui_clipsettings(clip_view_t& _view)
+gui_clipsettings::gui_clipsettings(guictr_clipeditor& parentClipEditor, clip_view_t& _view)
     : guictr_base(),
+      parentClipEditor(parentClipEditor),
       view(_view),
       clipLoopStart(),
       clipLoopLen(true),
@@ -96,6 +97,8 @@ void gui_clipsettings::buttonClicked(guibase* button) {
     }
     if (&btnDuplicateLoop == button) {
         duplicateClipLoop(daw, view);
+        parentClipEditor.getNoteEditor().updateCopiedClipData();
+        parentClipEditor.getNoteEditor().getGrid().makeTickVisible(clip->loopStart + clip->loopLen);
     }
     if (&btnSelectMuted == button) {
         selectAllMuted(daw, view);

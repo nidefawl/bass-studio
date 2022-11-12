@@ -148,7 +148,7 @@ public:
         if (!tr)
             return;
         trackdata_clips_t& midi = tr->getClips();
-        clip_t* clip           = midi.getClipAt(clipTime);
+        clip_t* clip = midi.getClipAt(clipTime);
         if (!clip)
             return;
         *clip = before;
@@ -163,7 +163,7 @@ public:
         if (!tr)
             return;
         trackdata_clips_t& midi = tr->getClips();
-        clip_t* clip           = midi.getClipAt(clipTime);
+        clip_t* clip = midi.getClipAt(clipTime);
         if (!clip)
             return;
         *clip = after;
@@ -415,6 +415,7 @@ public:
 
 
 class gui_clipsettings : public guictr_base {
+    guictr_clipeditor& parentClipEditor;
 public:
     clip_view_t& view;
     guibuttonstate btnLoop;
@@ -428,7 +429,7 @@ public:
     guibutton btnDuplicateLoop;
     guibutton btnSelectMuted;
     gui_quantizationsettings quantization;
-    explicit gui_clipsettings(clip_view_t& _view);
+    explicit gui_clipsettings(guictr_clipeditor& parent, clip_view_t& _view);
     ~gui_clipsettings() override;
     void render(NVGcontext* vg) override;
 
@@ -730,6 +731,7 @@ public:
     void onClipChanged();
     virtual void storeEditorLayout();
     virtual void renderClipHandles(NVGcontext* vg);
+    virtual void updateCopiedClipData() { };
 };
 
 class guictr_clipeditor;
@@ -779,6 +781,7 @@ public:
     void relayout() override;
     void selectEditClip(clip_t* clip) override;
     void storeEditorLayout() override;
+    void updateCopiedClipData() override;
     void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override;
     ivec2 getContainerSize() override {
         return sizeContentArea;
@@ -923,6 +926,12 @@ public:
     gui_arp arp;
     explicit guictr_clipeditor();
     ~guictr_clipeditor() override;
+    guictr_noteeditor& getNoteEditor() {
+        return noteeditor;
+    }
+    guictr_audioeditor& getAudioEditor() {
+        return audioeditor;
+    }
     void storeEditorLayout();
     void updateClipViewReferences();
     void resetClipView();

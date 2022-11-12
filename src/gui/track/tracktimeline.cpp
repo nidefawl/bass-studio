@@ -11,6 +11,10 @@
 
 void guitrack_timeline::handleDraggedBegin(MouseEvent& evt) {
     if (evt.guiDragged == this) {
+        if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
+            parent->buttonClicked(this);
+            return;
+        }
         parentCtrl->captureMouse(this);
         startDrag             = evt.relMousepos;
         dragDirection         = -1;
