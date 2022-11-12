@@ -2037,11 +2037,10 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
             continue;
         }
 
-        samplecount_t clipSampleLen = tickToSampleConvert<samplecount_t, roundmode::round>(clip->getLen(), prjGlobals.tempo100, sample->sampleRate);
         // 0 if clip starts before samplePosBegin, otherwise clipSampleBegin
         samplecount_t numSamplesOffsetDst = math::max<samplecount_t>(0, clipSampleBegin);
         auto numSamplesWritableData = out.samples - numSamplesOffsetDst; 
-        auto readSamples = math::min(clipSampleLen, numSamplesWritableData);
+        auto readSamples = math::min(clipSampleEnd, numSamplesWritableData);
         if (!(readSamples > 0)) {
             continue;
         }

@@ -1097,12 +1097,15 @@ namespace DAW {
 
 float AudioClipFadeLoopProcessor::get(channelnum_t ch, samplecount_t samplePos) const {
     float fade = 1.0f;
-    for (auto* clipFade : { &fadeIn, &fadeOut }) {
-        if (clipFade->samplesFadeDuration > 0 && samplePos >= clipFade->samplesFadePos && samplePos < clipFade->samplesFadePos + clipFade->samplesFadeDuration) {
-            float fadePos = (samplePos - clipFade->samplesFadePos) / float(clipFade->samplesFadeDuration);
-            fade *= clipFade->shape->sampleCurveOneShot(fadePos);
-        }
+    if (fadeIn.samplesFadeDuration > 0 && samplePos >= fadeIn.samplesFadePos && samplePos < fadeIn.samplesFadePos + fadeIn.samplesFadeDuration) {
+        float fadePos = (samplePos - fadeIn.samplesFadePos) / float(fadeIn.samplesFadeDuration);
+        fade *= fadeIn.shape->sampleCurveOneShot(fadePos);
     }
+    if (fadeOut.samplesFadeDuration > 0 && samplePos >= fadeOut.samplesFadePos) {
+        float fadePos = (samplePos - fadeOut.samplesFadePos) / float(fadeOut.samplesFadeDuration);
+        fade *= fadeOut.shape->sampleCurveOneShot(fadePos);
+    }
+    dbgassert(samplePos < fadeOut.samplesFadePos + fadeOut.samplesFadeDuration + 5);
     auto readPos = samplePos;
     if (loopEnd - loopStart > 0) {
         if (samplePos >= preLoopLen) {
