@@ -530,9 +530,6 @@ public:
         }
         return in;
     }
-    virtual bool isStaticContainer() {
-        return false;
-    }
     virtual int32_t getStateFlags() const;
 
     virtual GuiColor::constant_t getBackgroundColor() const {

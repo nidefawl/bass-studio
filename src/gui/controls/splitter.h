@@ -66,9 +66,6 @@ public:
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override {
     }
-    bool isStaticContainer() override {
-        return true;
-    }
     float getScale() const {
         return this->scale;
     }

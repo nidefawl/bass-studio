@@ -856,9 +856,6 @@ public:
             }
         }
     }
-    bool isStaticContainer() override {
-        return false;
-    }
 };
 class gui_trackcontrols_mixer : public guictr_base {
     track_t* const m_track;
@@ -1070,9 +1067,6 @@ public:
             }
         }
     }
-    bool isStaticContainer() override {
-        return false;
-    }
 };
 
 
@@ -1252,9 +1246,6 @@ public:
     }
     const track_gui_entry_t* getTrackEntry() const {
         return m_trackentry;
-    }
-    bool isStaticContainer() override {
-        return false;
     }
     void layout() override {
         const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
@@ -1462,9 +1453,6 @@ public:
     }
     ~gui_track_subtrack_mixer() override {
         remove(&removeLane);
-    }
-    bool isStaticContainer() override {
-        return false;
     }
     void layout() override {
         const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);

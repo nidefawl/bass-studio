@@ -37,9 +37,6 @@ class gui_track_controls : public gui_track_content_base {
 public:
     explicit gui_track_controls(track_gui_entry_t* _entry, scaled_grid& _grid);
     ~gui_track_controls() override;
-    bool isStaticContainer() override {
-        return false;
-    }
     void addSubtrackMixer(track_gui_entry_t* entry, gui_track_subtrack* al);
     void removeSubtrackMixer(gui_track_subtrack* al);
     void removeAllAutomationLanes(automatable_t* at, int32_t paramIdx);

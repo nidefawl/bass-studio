@@ -245,9 +245,6 @@ public:
     bool handleKeyInput(KeyEvent& kevt) override {
         return parent->handleKeyInput(kevt);
     }
-    bool isStaticContainer() override {
-        return false;
-    }
     void handleDraggedBegin(MouseEvent& evt) override {
         dawCtrl->setSelectedTrack(m_track);
         evt.relMousepos += getPosContent();
@@ -331,10 +328,6 @@ public:
     void renderTrack(NVGcontext* vg);
     void render(NVGcontext* vg) override;
     virtual void updateVisibleTrackContents(project_globals_t& project, scaled_grid& grid);
-
-    bool isStaticContainer() override {
-        return false;
-    }
 
     bool handleKeyInput(KeyEvent& kevt) override {
         return parent->handleKeyInput(kevt);

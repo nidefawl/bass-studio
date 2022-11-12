@@ -459,13 +459,8 @@ void BaseCtrl::onGuiRemoved(void* gui) {
     }
 }
 void BaseCtrl::resetMouseContext() {
-    // auto guiCtrFocused = getGuiCtrFocused();
-    // if (guiCtrFocused) {
-    //     if (!guiCtrFocused->isStaticContainer()) {
-    //         this->guiCtrFocused = {};
-    //     }
-    // }
-    // guiCaptured = guiFocused = guiOver = guiDragged = {};
+    this->guiCtrFocused = {};
+    guiCaptured = guiFocused = guiOver = guiDragged = {};
     draggedLayoutContainer = nullptr;
     ctrDragHandler.validPreview = false;
     dragDropTargets_ContainerMove.clear();
