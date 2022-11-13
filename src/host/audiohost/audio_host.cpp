@@ -215,9 +215,9 @@ class audiohost_callback {
                 meterOutput->update(block->output, 1.0f);
                 meterOutput->onTick(block->output->samples / double(stream->getSampleRate()));
             }
-            if (callbackNumSamples != static_cast<decltype(callbackNumSamples)>(block->output->samples)) {
-                log_lf(Log::L_ERROR, "audioCallback: framesPerBuffer != block->output->samples (%lu != %lu)\n", callbackNumSamples, block->output->samples);
-            } else if (callbackNumSamples == static_cast<decltype(callbackNumSamples)>(block->output->samples)) {
+            if (callbackNumSamples != block->output->samples) {
+                log_lf(Log::L_ERROR, "audioCallback: framesPerBuffer != block->output->samples (%zu != %zu)\n", callbackNumSamples, block->output->samples);
+            } else if (callbackNumSamples == block->output->samples) {
                 auto channels = math::min<channelnum_t>(block->output->channels, stream->nOutputChannels);
                 for (channelnum_t i = 0; outputs && i < channels; i++) {
                     float* channel = block->output->buf[i];
