@@ -129,8 +129,8 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
         int denum_step        = 4;
         int step              = 1;
         int denum_substep     = 0;
-        float_type minBarSize = 24;
-        float_type minSubSize = 24;
+        float_type minBarSize = 12;
+        float_type minSubSize = 12;
         //        grid_dens.isfixed        = false;
         //        grid_dens.fixedBars      = 6;
         //        grid_dens.dynamicDensity = 3;
