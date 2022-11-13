@@ -25,7 +25,7 @@
 #include <memory>
 #include <nanovg.h>
 
-static const int32_t dropIndicatorWidth = 8;
+static constexpr int32_t DROP_INDICATOR_WIDTH = 8;
 class guictr_layout_entry_handle_button : public guibutton {
 public:
     guictr_layout_entry_handle_button() : guibutton() {
@@ -53,6 +53,7 @@ public:
         return (getStateFlags() & FLG_HVRD) && (getStateFlags() & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
     }
 };
+
 class GuiCtrLayoutEntryHandle : public guictr_base {
     friend class guictr_layout_entry_handle_context_menu;
     guictr_layout_entry_handle_button btnClose;
@@ -112,30 +113,29 @@ public:
     void handleRightClick(MouseEvent& evt) override;
 };
 
-
 bool guictr_layout::setOverlayPos(DropAreaUILayout* area, const dock_pos dockPos, ivec2 overlayPos, ivec2 overlaySize, int32_t dockPosOfffset, int32_t childContainerIndex) {
     ivec2 relPos  = overlayPos;
     ivec2 relSize = overlaySize;
     switch (dockPos) {
         case dock_pos::LEFT:
-            relPos += ivec2(-dropIndicatorWidth / 2, 0);
-            relSize = ivec2(overlaySize.x / 3 + dropIndicatorWidth, overlaySize.y);
+            relPos += ivec2(-DROP_INDICATOR_WIDTH / 2, 0);
+            relSize = ivec2(overlaySize.x / 3 + DROP_INDICATOR_WIDTH, overlaySize.y);
             break;
         case dock_pos::RIGHT:
-            relPos += ivec2(overlaySize.x * 2 / 3 - dropIndicatorWidth / 2, 0);
-            relSize = ivec2(overlaySize.x / 3 + dropIndicatorWidth, overlaySize.y);
+            relPos += ivec2(overlaySize.x * 2 / 3 - DROP_INDICATOR_WIDTH / 2, 0);
+            relSize = ivec2(overlaySize.x / 3 + DROP_INDICATOR_WIDTH, overlaySize.y);
             break;
         case dock_pos::TOP:
-            relPos += ivec2(0, -dropIndicatorWidth / 2);
-            relSize = ivec2(overlaySize.x, overlaySize.y / 3 + dropIndicatorWidth);
+            relPos += ivec2(0, -DROP_INDICATOR_WIDTH / 2);
+            relSize = ivec2(overlaySize.x, overlaySize.y / 3 + DROP_INDICATOR_WIDTH);
             break;
         case dock_pos::BOTTOM:
-            relPos += ivec2(0, overlaySize.y * 2 / 3 - dropIndicatorWidth / 2);
-            relSize = ivec2(overlaySize.x, overlaySize.y / 3 + dropIndicatorWidth);
+            relPos += ivec2(0, overlaySize.y * 2 / 3 - DROP_INDICATOR_WIDTH / 2);
+            relSize = ivec2(overlaySize.x, overlaySize.y / 3 + DROP_INDICATOR_WIDTH);
             break;
         case dock_pos::CENTER:
-            relPos += ivec2(dropIndicatorWidth / 2, dropIndicatorWidth / 2);
-            relSize = ivec2(overlaySize.x - dropIndicatorWidth, overlaySize.y - dropIndicatorWidth);
+            relPos += ivec2(DROP_INDICATOR_WIDTH / 2, DROP_INDICATOR_WIDTH / 2);
+            relSize = ivec2(overlaySize.x - DROP_INDICATOR_WIDTH, overlaySize.y - DROP_INDICATOR_WIDTH);
             break;
         case dock_pos::STACK:
             dbgassert(0);
@@ -155,6 +155,7 @@ bool guictr_layout::setOverlayPos(DropAreaUILayout* area, const dock_pos dockPos
     area->label               = "DockPos " + std::to_string(static_cast<int32_t>(area->dockPos)) + " of " + this->getLayoutCtrName();
     return true;
 }
+
 bool guictr_layout::setOverlayPosForTab(DropAreaUILayout* area, const dock_pos dockPos, const int32_t dockOffset, const bool rightSideHandle) {
     ivec2 relPos  = ivec2(0);
     ivec2 relSize = size;
@@ -166,22 +167,18 @@ bool guictr_layout::setOverlayPosForTab(DropAreaUILayout* area, const dock_pos d
         const guibase* entryHandle = entry->getHandle();
         if (entryHandle) {
             if (rightSideHandle) {
-                relPos = paddingTL(padding) + entryHandle->pos + ivec2(entryHandle->size.x - dropIndicatorWidth / 2, 0);
+                relPos = paddingTL(padding) + entryHandle->pos + ivec2(entryHandle->size.x - DROP_INDICATOR_WIDTH / 2, 0);
             } else {
-                relPos = paddingTL(padding) + entryHandle->pos + ivec2(-dropIndicatorWidth / 2, 0);
+                relPos = paddingTL(padding) + entryHandle->pos + ivec2(-DROP_INDICATOR_WIDTH / 2, 0);
             }
-            relSize = ivec2(dropIndicatorWidth, entryHandle->size.y);
+            relSize = ivec2(DROP_INDICATOR_WIDTH, entryHandle->size.y);
         } else {
             // not expected to be called, backup code path
-            relPos  = paddingTL(padding) + entry->getGui()->pos - ivec2(FONT_SIZE_CTXT_SMALL + dropIndicatorWidth / 2, 0);
-            relSize = ivec2(dropIndicatorWidth, FONT_SIZE_CTXT_SMALL);
+            relPos  = paddingTL(padding) + entry->getGui()->pos - ivec2(FONT_SIZE_CTXT_SMALL + DROP_INDICATOR_WIDTH / 2, 0);
+            relSize = ivec2(DROP_INDICATOR_WIDTH, FONT_SIZE_CTXT_SMALL);
         }
         area->dockPos = dockPos;
-        if (rightSideHandle) {
-            area->dockPosOffset = dockOffset + 1;
-        } else {
-            area->dockPosOffset = dockOffset;
-        }
+        area->dockPosOffset = dockOffset;
         area->priority++;
         area->pos   = toScreenSpace(relPos - paddingTL(padding));
         area->size  = math::maxvec2(ivec2(relSize), ivec2(10, 10));
@@ -241,17 +238,20 @@ void guictr_layout::getOverlays(MouseEvent&, std::vector<std::weak_ptr<DropAreaU
         return;
     }
     {
-        for (size_t i = 0; i < entries.size(); i++) {
-            setOverlayPosForTab(makeDropArea(areaOffset), dock_pos::STACK, i, false);
-            vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
-            areaOffset++;
-            // for non tabbed always emit droparea for left and right side of handle
-            if (i + 1 == entries.size() || this->ctrLayout != container_layout::TABBED) {
-                setOverlayPosForTab(makeDropArea(areaOffset), dock_pos::STACK, i, true);
-                vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
-                areaOffset++;
+            for (size_t i = 0; i < entries.size(); i++) {
+                if (entries[i]->getFrameType() != LayoutCtrType::GUICTR_LAYOUT) {
+                    setOverlayPosForTab(makeDropArea(areaOffset), dock_pos::STACK, i, false);
+                    vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
+                    areaOffset++;
+                    // for non tabbed always emit droparea for left and right side of handle
+                    if (i + 1 == entries.size() || this->ctrLayout != container_layout::TABBED) {
+                        setOverlayPosForTab(makeDropArea(areaOffset), dock_pos::STACK, i, true);
+                        vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
+                        areaOffset++;
+                    }
+                }
             }
-        }
+        // }
         if (!parent && ctrLayout == container_layout::TABBED) {
             // return overlays for all 4 sides of each container entry that is not of type guictr_layout
             for (int j = 0; j < 4; j++) {
