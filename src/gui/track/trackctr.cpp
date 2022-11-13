@@ -892,3 +892,51 @@ void guictr_tracks::removeAllTracks() {
         removeTrack(entry->track, FLG_TRK_CHANGE_LOAD);
     }
 }
+
+guictr_tracks::guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, dragdrop_midifile& _dragdropclip)
+    : guictr_base(),
+      project(_project),
+      projectGlobals(_projectGlobals),
+      guiMgr(),
+      trackTopLeft(*this, _dawCtrl, guiMgr, _project),
+      trackControls(guiMgr, _project),
+      trackView(_dawCtrl, guiMgr, _cursor, _project, _projectGlobals, m_grid, _dragdropclip),
+      trackTimeline(m_grid),
+      loophandles(_project, _projectGlobals, m_grid),
+      scrollbar(1, 0.0f, *this) {
+    padding = 2;
+    margin  = 2;
+    setGuiType(gui_type::CTR_TYPE_TRACKS);
+    dawCtrl = _dawCtrl,
+    setCanMouseHit(true);
+    setBackgroundRendered(true);
+    m_grid.addCallback(this);
+    add(&trackTimeline);
+    add(&loophandles);
+    add(&trackTopLeft);
+    add(&trackControls);
+    add(&trackView);
+    add(&scrollbar);
+}
+
+guictr_tracks::~guictr_tracks() {
+    remove(&scrollbar);
+    remove(&trackView);
+    remove(&trackControls);
+    remove(&trackTopLeft);
+    remove(&loophandles);
+    remove(&trackTimeline);
+}
+
+bool guictr_tracks::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+    if (isCtrl(evt.kbmods)) {
+        float zomDelta   = 1.0f + yoffset * -0.2f;
+        ivec2 localMouse = trackTimeline.toContainerSpace(evt.relMousepos);
+        trackTimeline.adjustZoom(localMouse.x, zomDelta);
+        return true;
+    } else if (isShift(evt.kbmods)) {
+        trackTimeline.adjustOffset(-yoffset * 32);
+        return true;
+    }
+    return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
+}

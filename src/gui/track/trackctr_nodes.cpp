@@ -1337,6 +1337,8 @@ guictr_nodes_editor::guictr_nodes_editor(DAW::Cursor& _cursor, project_t& _proje
       project(_project),
       graph(),
       scrollbar(1, 0.0f, *this) {
+    padding = 2;
+    margin  = 2;
     setBackgroundRendered(true);
     setCanMouseHit(true);
     add(&scrollbar);
