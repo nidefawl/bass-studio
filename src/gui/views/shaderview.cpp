@@ -48,7 +48,6 @@ struct testshader : gl_shader_pipeline {
         const char* fnameFsh = "test.fsh";
         int newprogram       = compileShaderCombo(srcParser, fnameVsh, fnameFsh);
         if (newprogram < 0) {
-            dbgassert(newprogram != -2);
             return -1;
         }
         program = newprogram;
