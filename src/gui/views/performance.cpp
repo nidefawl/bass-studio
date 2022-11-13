@@ -99,19 +99,20 @@ public:
                 renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &subMeter);
                 y += meterSize.y + 5;
             }
-
-            if (meterCallbackOutput) {
-                printL(0, "Audio Callback Output", StringFormat("%.3f", meterCallbackOutput->getMaxRMS()));
-                renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, meterCallbackOutput);
-                y += meterSize.y + 5;
-            }
-            printL(0, "Audio Stream Output", StringFormat("%.3f", metersOutput.getMaxRMS()));
-            renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &metersOutput);
-            y += meterSize.y + 5;
             if (metersOutputHost) {
                 auto subMeter = metersOutputHost->getSubChannelMeter(0, 2);
                 printL(0, "Host Output", StringFormat("%.3f", subMeter.getMaxRMS()));
                 renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &subMeter);
+                y += meterSize.y + 5;
+            }
+
+            printL(0, "Audio Stream Output", StringFormat("%.3f", metersOutput.getMaxRMS()));
+            renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, &metersOutput);
+            y += meterSize.y + 5;
+
+            if (meterCallbackOutput) {
+                printL(0, "Audio Callback Output", StringFormat("%.3f", meterCallbackOutput->getMaxRMS()));
+                renderMeterHorizontal(vg, theme, ivec2{inset, y}, meterSize, meterCallbackOutput);
                 y += meterSize.y + 5;
             }
         }
