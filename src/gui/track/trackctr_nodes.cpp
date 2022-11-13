@@ -1001,6 +1001,16 @@ void gui_graph::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
+    const int htt = theme->get(GuiConstant::CONST_SMALL_LABEL_HEIGHT);
+    renderTextLabel(vg,
+                    vec2(pos) + vec2(htt/4, size.y),
+                    vec2(size.x, math::min(htt, size.y)),
+                    getLabel(),
+                    theme,
+                    htt,
+                    theme->getColor(GuiColor::COL_LABEL_AUTOMATION_TRACK),
+                    NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM
+                    );
     const auto posIn = ivec2(parentCtrl->m_mousePos);
     const auto mouseLocal = toControlsObjectSpace(posIn, this);
     nvgSave(vg);
@@ -1185,10 +1195,13 @@ void gui_graph::updateList(bool resetPositions) {
                         lastProcessingList = std::move(effProcessingGraph);
                     }
                 }
+                if (track)
+                    setLabel(track->name + " " +groupSelected->getAutomatableName());
             } else { /* project graph */
                 std::shared_ptr<DAW::processing_graph_t> processingGraph;
                 auto const project = daw->getProject();
                 auto tracksFlatAll = project->trackList.getAllTracksFlatVec();//TODO: get rid of copy
+                setLabel("Project");
                 if (!DAW::buildProcessingGraph(host, project, tracksFlatAll, processingGraph)) {
                     log_lf(Log::L_ERROR, "Failed building track graph\n");
                 } else {
@@ -1198,6 +1211,9 @@ void gui_graph::updateList(bool resetPositions) {
         } else { /* bottom graph */
             if (groupSelected) {
                 lastProcessingList = groupSelected->getLastProcessingGraph();
+                auto track = groupSelected->getTrack();
+                if (track)
+                    setLabel(track->name + " " +groupSelected->getAutomatableName());
             } else {
                 auto track = dawCtrl->getSelectedTrack();
                 if (track && track->audio) {
@@ -1208,6 +1224,8 @@ void gui_graph::updateList(bool resetPositions) {
                         lastProcessingList = std::move(effProcessingGraph);
                     }
                 }
+                if (track)
+                    setLabel(track->name);
             }
         }
     }
