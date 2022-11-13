@@ -2,6 +2,7 @@
 #include <nanovg.h>
 #include <vector>
 #include "gui/shape/shapeeditor.h"
+#include "guiglobals.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "seq_util.h"
@@ -45,12 +46,16 @@ public:
                mpos.y < pos.y + heightTitle;
     }
     bool isLeftDragZone(ivec2 mpos, int32_t heightTitle) {
+        if (size.x < DRAG_RANGE * 2 + 1)
+            return false;
         return mpos.x >= pos.x &&
                mpos.y >= pos.y &&
                mpos.x < pos.x + DRAG_RANGE &&
                mpos.y < pos.y + heightTitle;
     }
     bool isRightDragZone(ivec2 mpos, int32_t heightTitle) {
+        if (size.x < DRAG_RANGE * 2 + 1)
+            return false;
         return mpos.x >= pos.x + size.x - DRAG_RANGE &&
                mpos.y >= pos.y &&
                mpos.x < pos.x + size.x &&
