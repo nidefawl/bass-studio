@@ -103,7 +103,7 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
 }
 
 void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_t* theme, const track_t* tr, const clip_t* cl, const audiofile_t* file, const gui_waveform_texture_ref* waveformRef, ivec2 pos, ivec2 size, ivec2 posClipped, ivec2 sizeClipped) {
-    if (size.y < 1 || sizeClipped.y < 1) {
+    if (size.y < 1) {
         return;
     }
     if (size.x < 1 || sizeClipped.x < 1) {
@@ -114,6 +114,8 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
     }
     const auto HEIGHT_CLIP_TITLE = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     NVGcolor color = rgbToNvg(cl->rgb);
+    auto textPos = vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0) + vec2(pos);
+    auto textBounds = vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE + 2, 0);
     nvgBeginPath(vg);
     nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
     nvgFillColor(vg, color);
@@ -128,11 +130,6 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
         nvgRect(vg, pos.x, pos.y+HEIGHT_CLIP_TITLE, size.x, size.y-HEIGHT_CLIP_TITLE);
         nvgFillColor(vg, colInvalid);
         nvgFill(vg);
-    }
-
-    auto textPos = vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0) + vec2(pos);
-    auto textBounds = vec2(size.x, HEIGHT_CLIP_TITLE)-vec2(INSET_TITLE + 2, 0);
-    if (file && (file->state == audiofile_t::AudioFileStateFlags::AUDIOFILE_FLAG_MISSING)) {
         textPos.x += HEIGHT_CLIP_TITLE;
         textBounds.x -= HEIGHT_CLIP_TITLE;
         auto iconId = ICON_WARNING;
@@ -140,7 +137,7 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
         drawIcon(vg, vec2(HEIGHT_CLIP_TITLE), &RenderResources::imgIcons[iconId], -2);
         nvgTranslate(vg, -pos.x, -pos.y);
     }
-    if (cl->name.length()) {
+    if (cl->name.length() && textBounds.x > 0 && textBounds.y > 0) {
         renderTextLabel(vg,
                         textPos,
                         textBounds,
