@@ -628,6 +628,7 @@ public:
 
     void setDebugPropertyHandle(void *ptr) override;
     void determineSize(glm::ivec2& prefSize) override;
+    bool focusEvent(MouseHitEvt& evt, bool focused) override;
 };
 
 template<typename T>
@@ -890,6 +891,18 @@ template <>
 void cellClicked(const click_ctxt_t& ctxt, const tbltype_theme_font& obj) {
     ctxt.callback->onClick(ctxt, obj.theme, obj.fonttype);
 }
+}
+
+template <>
+bool guiproperties_table<guitheme_t>::focusEvent(MouseHitEvt& evt, bool focused) {
+    BaseCtrl* const ctrl = parentCtrl;
+    ctrl->getTheme()->endPing();
+    return guictr_base::focusEvent(evt, focused);
+}
+
+template <>
+bool guiproperties_table<guibase>::focusEvent(MouseHitEvt& evt, bool focused) {
+    return guictr_base::focusEvent(evt, focused);
 }
 
 template <>
