@@ -1739,11 +1739,11 @@ void DawCtrl::updateClipViews(clip_t* notifyClip) {
 }
 
 void DawCtrl::resetClipViews() {
-    auto countVec = view->vecClipEditors.size();
+    // auto countVec = view->vecClipEditors.size();
     for (auto& clipEditor : view->vecClipEditors) {
         clipEditor->resetClipView();
     }
-    size_t countVisit = 0;
+    /* size_t countVisit = 0;
     view->visitEntries([&countVisit](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_CLIPEDITOR)
             countVisit++;
@@ -1751,7 +1751,7 @@ void DawCtrl::resetClipViews() {
     });
     if (countVec != countVisit) {
         log_lf(Log::L_WARN, "countVec=%zu, countVisit=%zu\n", countVec, countVisit);
-    }
+    } */
 }
 
 void DawInstance::destroy() {
