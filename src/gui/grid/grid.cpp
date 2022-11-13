@@ -150,8 +150,8 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
         } else {
             step          = 1;
             denum_substep = 32;
-            minBarSize    = (float_type) (1 << (8 - grid_dens.dynamicDensity));
-            minSubSize    = (float_type) (1 << (8 - grid_dens.dynamicDensity));
+            minBarSize    = (float_type) (1 << (this->gridMaxDens - math::min<uint8_t>(grid_dens.dynamicDensity, this->gridMaxDens)));
+            minSubSize    = (float_type) (1 << (this->gridMaxDens - math::min<uint8_t>(grid_dens.dynamicDensity, this->gridMaxDens)));
         }
         while (step < (1 << 14) && barSize * step < minBarSize) {
             step = step * 2;

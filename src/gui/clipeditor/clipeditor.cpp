@@ -91,8 +91,7 @@ public:
                 grid.grid_dens.isfixed   = true;
             } else {
                 grid.grid_dens.enabled        = true;
-                grid.grid_dens.dynamicDensity = static_cast<int8_t>(math::clamp<int32_t>(_id - 100 + 2, 0, 8));
-                // grid.grid_dens.dynamicDensity = _id - 100;
+                grid.grid_dens.dynamicDensity = int8_t(_id - 100);
                 grid.grid_dens.isfixed        = false;
             }
             grid.notifyChange();

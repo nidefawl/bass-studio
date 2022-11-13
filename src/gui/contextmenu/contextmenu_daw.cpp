@@ -260,11 +260,11 @@ bool guictxtmenu_track_editor::clickedElement(ctxtmenu_entry* e, int _id) {
             grid.grid_dens.enabled = false;
         } else if (_id >= 110) {
             grid.grid_dens.enabled   = true;
-            grid.grid_dens.fixedBars = _id - 110;
+            grid.grid_dens.fixedBars = int8_t(_id - 100);
             grid.grid_dens.isfixed   = true;
         } else {
             grid.grid_dens.enabled        = true;
-            grid.grid_dens.dynamicDensity = _id - 100;
+            grid.grid_dens.dynamicDensity = int8_t(_id - 100);
             grid.grid_dens.isfixed        = false;
         }
         grid.notifyChange();

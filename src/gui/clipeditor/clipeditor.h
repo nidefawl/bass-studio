@@ -694,7 +694,7 @@ protected:
     guictr_clipeditor& parentClipEditor;
     gui_clipcontent_base* pContent;
     clip_view_t& view;
-    scaled_grid grid;
+    scaled_grid m_grid;
     guitrack_timeline timeline;
     std::vector<std::shared_ptr<guictr_cliphandles>> clipsHandles;
     int32_t handlesHeight = heightClipIndicators;
@@ -706,18 +706,19 @@ public:
           parentClipEditor(parentClipEditor),
           pContent(pContent),
           view(_view),
-          timeline(grid) {
+          timeline(m_grid) {
         setCanMouseHit(true);
+        m_grid.setGridMaxDens(6);
     }
     ~guictr_editor_base() override {
         removeGuis();
     }
 
     scaled_grid& getGrid() {
-        return grid;
+        return m_grid;
     }
     const scaled_grid& getGrid() const {
-        return grid;
+        return m_grid;
     }
 
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;

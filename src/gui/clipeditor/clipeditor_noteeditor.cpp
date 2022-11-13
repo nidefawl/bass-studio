@@ -414,16 +414,16 @@ void guictr_cliphandles::render(NVGcontext* vg) {
 guictr_noteeditor::guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_view_t& _view)
     : guictr_editor_base(parentClipEditor, &content, _view), layout_pianoroll_t(),
       piano(_view, *this),
-      content(grid, _view, *this),
-      velocities(grid, _view, *this),
-      ctrlData(grid, _view, *this),
+      content(m_grid, _view, *this),
+      velocities(m_grid, _view, *this),
+      ctrlData(m_grid, _view, *this),
       splitterVel(0, 0.75f)
 {
     padding = 2;
     splitterVel.setMinMax(0.1f, 0.9f);
     splitterVel.setCallback(this);
-    grid.showRange(0, TICKS_BAR * 4);
-    grid.addCallback(this);
+    m_grid.showRange(0, TICKS_BAR * 4);
+    m_grid.addCallback(this);
     add(&piano);
     add(&content);
     add(&ctrlData);
@@ -497,9 +497,9 @@ void guictr_noteeditor::buttonClicked(guibase* button) {
         if (!currentClip)
             return;
         if (view.isAbsoluteTimeMode()) {
-            grid.showRange(view.m_selectionView.minClipStart, view.m_selectionView.maxClipEnd);
+            m_grid.showRange(view.m_selectionView.minClipStart, view.m_selectionView.maxClipEnd);
         } else {
-            grid.showRange(currentClip->notes.firstNote.start(), math::max<tick_t>(currentClip->notes.lastNote.end(), currentClip->loopStart + currentClip->loopLen));
+            m_grid.showRange(currentClip->notes.firstNote.start(), math::max<tick_t>(currentClip->notes.lastNote.end(), currentClip->loopStart + currentClip->loopLen));
         }
         return;
     }
@@ -617,10 +617,10 @@ void guictr_editor_base::relayout() {
     clip_editor_layout_t layout = lastLayout;
     if (!bIsAbsMode && currentClip && !currentClip->editorLayout.noLayout) {
         layout = currentClip->editorLayout;
-        grid.setLayout(layout.layoutGrid);
+        m_grid.setLayout(layout.layoutGrid);
     } else if (bIsAbsMode && !view.m_selectionView.editorLayout.noLayout && view.m_selectionView.totalClipCount) {
         layout = view.m_selectionView.editorLayout;
-        grid.setLayout(layout.layoutGrid);
+        m_grid.setLayout(layout.layoutGrid);
     }
     lastLayout = layout;
     auto newClipHandleCount = bIsAbsMode  ? view.m_selectionView.totalClipCount : 1;
@@ -631,7 +631,7 @@ void guictr_editor_base::relayout() {
     }
     for (size_t i = curClipHandleCount; i < newClipHandleCount; i++) {
         if (clipsHandles.size() <= i || !clipsHandles[i]) {
-            clipsHandles.push_back(std::make_shared<guictr_cliphandles>(*this, grid));
+            clipsHandles.push_back(std::make_shared<guictr_cliphandles>(*this, m_grid));
             this->add(clipsHandles[i].get());
         }
     }
@@ -829,7 +829,7 @@ void guictr_editor_base::renderClipHandles(NVGcontext* vg) {
     if (handlesSize.x > 5 && handlesSize.y > 5) {
         nvgSave(vg);
         nvgIntersectScissor(vg, handlesPos.x, handlesPos.y, handlesSize.x, handlesSize.y);
-        renderClipHandlesBackground(vg, theme, grid, vec2{0, heightSelIndicator}+vec2(handlesPos), handlesSize);
+        renderClipHandlesBackground(vg, theme, m_grid, vec2{0, heightSelIndicator}+vec2(handlesPos), handlesSize);
         int32_t trackIdx = 0;
         int32_t activeTrackIdx = -1;
         auto viewTrack = view.track();
@@ -849,7 +849,7 @@ void guictr_editor_base::renderClipHandles(NVGcontext* vg) {
             }
             trackIdx++;
         }
-        renderGridList(vg, theme, grid, handlesPos, handlesSize);
+        renderGridList(vg, theme, m_grid, handlesPos, handlesSize);
         guictr_cliphandles* viewClipHandle = nullptr;
         if (!clipsHandles.empty() && clipsHandles.front()->isVisible()) {
             auto thizClip = view.clip();
@@ -872,7 +872,7 @@ void guictr_editor_base::renderClipHandles(NVGcontext* vg) {
                 nvgTranslate(vg, -viewClipHandle->pos.x, -viewClipHandle->pos.y);
             }
         }
-        renderSelectionIndicator(vg, theme, grid, handlesPos, vec2(timeline.size.x, heightSelIndicator), view.isAbsoluteTimeMode()?nullptr:clip, dawCtrl->getCursor(), heightSelIndicator);
+        renderSelectionIndicator(vg, theme, m_grid, handlesPos, vec2(timeline.size.x, heightSelIndicator), view.isAbsoluteTimeMode()?nullptr:clip, dawCtrl->getCursor(), heightSelIndicator);
         // renderPlayHead(vg, theme, grid, handlesPos, handlesSize, clip, playbackPos, view.isAbsoluteTimeMode(), 1.0f);
         nvgRestore(vg);
         if (viewClipHandle) {
@@ -880,7 +880,7 @@ void guictr_editor_base::renderClipHandles(NVGcontext* vg) {
             viewClipHandle->renderLoopHandle(vg, vec2(viewClipHandle->size.x, pContent->bottom() - viewClipHandle->top()));
             nvgTranslate(vg, -viewClipHandle->pos.x, -viewClipHandle->pos.y);
         }
-        renderPlayHead(vg, theme, grid, pContent->pos, pContent->size, clip, playbackPos, view.isAbsoluteTimeMode(), 0.75f);
+        renderPlayHead(vg, theme, m_grid, pContent->pos, pContent->size, clip, playbackPos, view.isAbsoluteTimeMode(), 0.75f);
     }
 }
 void guictr_noteeditor::render(NVGcontext* vg) {
@@ -1095,10 +1095,10 @@ bool gui_audiocontent::handleEditorCommand(DAW::UI::CommandContext& ctxt) {
 
 guictr_audioeditor::guictr_audioeditor(guictr_clipeditor& parentClipEditor, clip_view_t& _view)
     : guictr_editor_base(parentClipEditor, &content, _view),
-      content(grid, _view)
+      content(m_grid, _view)
 {
     padding = 2;
-    grid.addCallback(this);
+    m_grid.addCallback(this);
     add(&content);
     add(&timeline);
 }
@@ -1177,7 +1177,7 @@ void guictr_noteeditor::layout() {
         dropdownSelectControlData.pos = ctrlData.getLeftTop() - ivec2(pianoWidth, 0);
         dropdownSelectControlData.size = ivec2(pianoWidth, 18);
     }
-    grid.update(content.size);
+    m_grid.update(content.size);
     for (guibase* gui: guis) {
         gui->layout();
     }
@@ -1190,7 +1190,7 @@ void guictr_audioeditor::layout() {
     guictr_editor_base::layout();
     content.pos        = ivec2(timeline.left(), timeline.bottom() + handlesHeight);
     content.size       = ivec2(timeline.size.x, cs.y - (timeline.bottom() + handlesHeight));
-    grid.update(content.size);
+    m_grid.update(content.size);
     for (guibase* gui: guis) {
         gui->layout();
     }

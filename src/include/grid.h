@@ -49,7 +49,7 @@ protected:
     double lastZoom = DEFAULT_ZOOM;
     int lastW       = 200;
     bool dirty      = false;
-
+    uint8_t gridMaxDens = 8;
 public:
     grid_density grid_dens;
     std::vector<grid_div> gridList;
@@ -61,6 +61,9 @@ public:
 public:
     scaled_grid() {
         showRange(0, TICKS_BAR * 4);
+    }
+    void setGridMaxDens(uint8_t dens) {
+        gridMaxDens = math::clamp<uint8_t>(dens, 1, 8);
     }
     void addCallback(grid_changed_cb* cb) {
         this->callbacks.push_back(cb);
