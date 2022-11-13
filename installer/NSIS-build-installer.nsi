@@ -18,6 +18,9 @@ Unicode True
 !ifndef PRODUCT_VERSION_MAJOR_MINOR_PATCH_REVISION
 !error "PRODUCT_VERSION_MAJOR_MINOR_PATCH_REVISION not defined"
 !endif
+!ifndef PROJECT_INSTALLER_OUTPUT_PATH
+!error "PROJECT_INSTALLER_OUTPUT_PATH not defined"
+!endif
 !ifndef PRODUCT_NAME_DISPLAY
 !error "PRODUCT_NAME_DISPLAY not defined"
 !endif
@@ -34,8 +37,8 @@ Unicode True
 !error "PRODUCT_COPYRIGHT not defined"
 !endif
 
-!define LICENSE_TXT "${PROJ_LOC}\installer\license_en.rtf"
-!define INSTALLER_NAME "/mnt/srv-private\${PROJECT_BINARY_NAME}-v${PRODUCT_VERSION}-setup.exe"
+!define LICENSE_TXT "${PROJ_LOC}/installer/license_en.rtf"
+!define INSTALLER_NAME "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_BINARY_NAME}-v${PRODUCT_VERSION}-setup.exe"
 !define MAIN_APP_EXE ${PROJECT_BINARY_NAME}-${PRODUCT_VERSION}.exe
 !define INSTALL_TYPE "SetShellVarContext current"
 !define REG_ROOT "HKCU"
