@@ -940,9 +940,15 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
         }
         action.dragtype = DRAG_NONE;
         if (showclip) {
+            editor_view_selection_t view;
+            if (cursor.getRange() > 0) {
+                DAW::GetClipboardView(iGuiMgr, cursor, view, gui);
+                if (view.totalClipCount > 1) {
+                    daw->setEditorSelection(gui->m_clip, view);
+                    return;
+                }
+            }
             daw->setSingleClip(gui->m_clip);
-            // if (gui)
-            //     dawCtrl->showClipEditor();
         }
     }
 }

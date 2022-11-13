@@ -699,7 +699,7 @@ void guictr_editor_base::onClipChanged() {
         }
     } else if (currentClip) {
         if (currentClip->editorLayout.noLayout) {
-            getGrid().showRange(currentClip->offsetStart, currentClip->offsetStart + currentClip->getLen());
+            getGrid().showRange(currentClip->notes.firstNote.start(), math::max<tick_t>(currentClip->notes.lastNote.end(), currentClip->loopStart + currentClip->loopLen));
         }
     }
 }
