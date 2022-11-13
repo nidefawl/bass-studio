@@ -15,6 +15,9 @@ Unicode True
 !ifndef PRODUCT_VERSION
 !error "PRODUCT_VERSION not defined"
 !endif
+!ifndef PRODUCT_VERSION_MAJOR_MINOR_PATCH_REVISION
+!error "PRODUCT_VERSION_MAJOR_MINOR_PATCH_REVISION not defined"
+!endif
 !ifndef PRODUCT_NAME_DISPLAY
 !error "PRODUCT_NAME_DISPLAY not defined"
 !endif
@@ -45,7 +48,7 @@ var SM_Folder
 
 ######################################################################
 
-VIProductVersion "${PRODUCT_VERSION}"
+VIProductVersion "${PRODUCT_VERSION_MAJOR_MINOR_PATCH_REVISION}"
 VIAddVersionKey "ProductName"  "${PRODUCT_NAME_DISPLAY}"
 VIAddVersionKey "CompanyName"  "${PROJECT_VENDOR_NAME}"
 VIAddVersionKey "LegalCopyright"  "${PRODUCT_COPYRIGHT}"
