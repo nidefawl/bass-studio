@@ -124,8 +124,15 @@ guictr_clipeditor::guictr_clipeditor()
       audioeditor(*this, view),
       settings(*this, view),
       arp(view) {
+    padding = 0;
+    margin = 0;
+    noteeditor.padding = 2;
+    audioeditor.padding = 2;
+    arp.padding = 2;
+    noteeditor.margin = 2;
+    audioeditor.margin = 2;
+    arp.margin = 2;
     setGuiType(gui_type::CTR_TYPE_CLIPEDITOR);
-    // padding = 2;
     setBackgroundRendered(true);
     setBackgroundRenderedInset(false);
     add(&noteeditor);
@@ -316,6 +323,7 @@ void guictr_clipeditor::layout() {
     if (leftContainer) {
         posEditor = ivec2(leftContainer->right() + padding, 0);
         sizeEditor = ivec2(cs.x - posEditor.x, cs.y);
+    } else {
     }
     noteeditor.pos   = posEditor;
     noteeditor.size  = sizeEditor;

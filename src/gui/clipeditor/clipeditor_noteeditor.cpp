@@ -419,9 +419,9 @@ guictr_noteeditor::guictr_noteeditor(guictr_clipeditor& parentClipEditor, clip_v
       ctrlData(grid, _view, *this),
       splitterVel(0, 0.75f)
 {
+    padding = 2;
     splitterVel.setMinMax(0.1f, 0.9f);
     splitterVel.setCallback(this);
-    padding = 2;
     grid.showRange(0, TICKS_BAR * 4);
     grid.addCallback(this);
     add(&piano);
