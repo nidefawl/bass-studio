@@ -1,6 +1,7 @@
 #include "trackcontrols.h"
 
 #include "assert_dbg.h"
+#include "gui/automation/modulation.h"
 #include "host/clip/clip.h"
 #include "config.h"
 #include "gui/views/pluginlist.h"
@@ -53,8 +54,6 @@ using DAW::stage_bufferpoint;
 using DAW::channel_ref_t;
 using DAW::midichannel_ref_t;
 
-const int resizeHitY  = 8;
-const int DRAG_RESIZE = 1;
 namespace DAW {
     void OpenFloatingTextInput(DawCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& initialStr, const std::function<bool(const String& str)>& callback) {
         const int titleHeight = ctrl->getTheme()->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
@@ -1204,6 +1203,7 @@ public:
     }
 };
 class gui_trackcontrols_title : public guictr_base {
+
     track_t* const m_track;
     track_gui_entry_t* const m_trackentry;
     guidropdown_automation_device automationSelectDevice;
@@ -1211,7 +1211,7 @@ class gui_trackcontrols_title : public guictr_base {
     guibuttontoggle hideTrack;
     guibuttontoggle hideAutomation;
     guibuttontoggle addAutomationLane;
-    int dragMode = -1;
+    DragModeTrack dragMode = DragModeTrack::DRAG_TRACK_NONE;
 
 public:
     explicit gui_trackcontrols_title(track_gui_entry_t* _entry)
@@ -1302,7 +1302,7 @@ public:
     }
     bool isResize(ivec2 mpos) {
         int32_t resizeTopOrBottom = m_track->type < TRACK_TYPE_MIDI ? top() : bottom();
-        return mpos.x >= left() && mpos.x < right() && mpos.y >= resizeTopOrBottom - resizeHitY && mpos.y < resizeTopOrBottom + resizeHitY;
+        return mpos.x >= left() && mpos.x < right() && mpos.y >= resizeTopOrBottom - DRAG_RANGE/2 && mpos.y < resizeTopOrBottom + DRAG_RANGE/2;
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (isResize(mpos)) {
@@ -1324,6 +1324,7 @@ public:
         return false;
     }
     void handleDraggedBegin(MouseEvent& evt) override {
+        dragMode = DragModeTrack::DRAG_TRACK_NONE;
         if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
             const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
             if (evt.relMousepos.y < titleHeight)
@@ -1332,12 +1333,12 @@ public:
         }
         dawCtrl->setSelectedTrack(m_track);
         if (isResize(evt.relMousepos + this->pos)) {
-            dragMode = DRAG_RESIZE;
+            dragMode = DragModeTrack::DRAG_TRACK_RESIZE;
         }
     }
 
     void handleDraggedMove(MouseEvent& evt) override {
-        if (dragMode == DRAG_RESIZE) {
+        if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE) {
             int32_t mouseDragDist = evt.relMousepos.y;
             int32_t heightStep    = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
             resize<track_gui_entry_t, TRACK_MIN_HEIGHT, TRACK_MAX_HEIGHT>(m_trackentry, m_trackentry, mouseDragDist, heightStep);
@@ -1349,12 +1350,12 @@ public:
     }
 
     void handleDraggedRelease(MouseEvent& evt) override {
-        if (dragMode == DRAG_RESIZE) {
+        if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE) {
 
         } else {
             parentCtrl->objectDragRelease(this, evt);
         }
-        dragMode = -1;
+        dragMode = DragModeTrack::DRAG_TRACK_NONE;
     }
     void buttonClicked(guibase* button) override {
         if (button == &hideTrack) {
@@ -1438,7 +1439,7 @@ public:
 
 private:
     guibuttontoggle removeLane;
-    int dragMode = -1;
+    DragModeTrack dragMode = DragModeTrack::DRAG_TRACK_NONE;
 
 public:
     gui_track_subtrack_mixer(track_gui_entry_t* _entry, gui_track_subtrack* _subtrack)
@@ -1485,7 +1486,7 @@ public:
     }
     bool isResize(ivec2 mpos) {
         int32_t resizeTopOrBottom = bottom();
-        return mpos.x >= left() && mpos.x < right() && mpos.y >= resizeTopOrBottom - resizeHitY && mpos.y < resizeTopOrBottom + resizeHitY;
+        return mpos.x >= left() && mpos.x < right() && mpos.y >= resizeTopOrBottom - DRAG_RANGE/2 && mpos.y < resizeTopOrBottom + DRAG_RANGE/2;
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (isResize(mpos) && this->subtrack != this->m_trackentry->subtracks.back()) {
@@ -1509,13 +1510,13 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override {
         dawCtrl->setSelectedTrack(m_track);
         if (isResize(evt.relMousepos + this->pos)) {
-            dragMode = DRAG_RESIZE;
+            dragMode = DragModeTrack::DRAG_TRACK_RESIZE;
         }
     }
 
     void handleDraggedMove(MouseEvent& evt) override {
         const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-        if (dragMode == DRAG_RESIZE) {
+        if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE) {
             int32_t mouseDragDist = evt.relMousepos.y;
             int32_t totalHeightSteps = math::min(128, math::max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
             int32_t distSteps      = totalHeightSteps - subtrack->height;
@@ -1640,29 +1641,11 @@ void gui_track_controls::render(NVGcontext* vg) {
     nvgStrokeWidth(vg, 1);
     nvgStroke(vg);
 }
+
 bool canResizeTitleBar(const track_gui_entry_t* const m_trackentry) {
     return !m_trackentry->isHidden() && !m_trackentry->layout.hideSubtracks && m_trackentry->subtracks.size();
 }
-/* 
-    bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override {
-        if (this->contains(v)) {
-            // if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-            //     evt.requestFocus(this);
-            //     return true;
-            // }
-            ivec2 localMouse = this->toContainerSpace(v);
-            for (guibase* gui : guis) {
-                if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
-                    if (!evt.getGuiHit()) 
-                        break;
-                    return true;
-                }
-            }
-            evt.requestFocus(this);
-            return true;
-        }
-        return false;
-    } */
+
 bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     ivec2 local    = this->toContainerSpace(mpos);
     bool contained = contains(mpos);
@@ -1677,6 +1660,7 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 evt.requestFocus(this);
                 return true;
             }
+            return false;
         }
         for (guibase* gui : guis) {
             if (gui->isVisible() && gui->mouseHitTest(local, evt)) {
@@ -1716,17 +1700,17 @@ gui_track_content_base::gui_track_content_base(track_gui_entry_t* _entry, scaled
 void gui_track_controls::handleDraggedBegin(MouseEvent& evt) {
     dawCtrl->setSelectedTrack(m_track);
     if (isResize(evt.relMousepos + this->pos)) {
-        dragMode = DRAG_RESIZE;
+        dragMode = DragModeTrack::DRAG_TRACK_RESIZE;
     }
 }
 
 void gui_track_controls::handleDraggedRelease(MouseEvent& evt) {
-    dragMode = -1;
+    dragMode = DragModeTrack::DRAG_TRACK_NONE;
 }
 
 bool gui_track_controls::isResize(ivec2 mpos) {
     int32_t resizeTopOrBottom = m_track->type < TRACK_TYPE_MIDI ? top() : bottom();
-    return mpos.y >= resizeTopOrBottom - resizeHitY && mpos.y < resizeTopOrBottom + resizeHitY;
+    return mpos.y >= resizeTopOrBottom - DRAG_RANGE/2 && mpos.y < resizeTopOrBottom + DRAG_RANGE/2;
 }
 
 guibase* gui_track_controls::getTitle() {
@@ -2101,7 +2085,7 @@ void gui_track_content_base::trackEntryDragRelease(gui_track* g, ivec2 mousepos)
 
 void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-    if (dragMode == DRAG_RESIZE) {
+    if (dragMode == DragModeTrack::DRAG_TRACK_RESIZE) {
         int32_t mouseDragDist = evt.relMousepos.y;
         bool resizeTop        = m_track->type < TRACK_TYPE_MIDI;
         if (resizeTop) {

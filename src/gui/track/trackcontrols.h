@@ -6,6 +6,11 @@
 #include "trackctr.h"
 #include "host/daw/mainctrl.h"
 
+enum class DragModeTrack : uint8_t {
+    DRAG_TRACK_NONE,
+    DRAG_TRACK_RESIZE,
+};
+
 class gui_track_content_base : public guictr_base {
     scaled_grid& m_grid;
 public:
@@ -31,8 +36,7 @@ class gui_track_controls : public gui_track_content_base {
     guictr_base* mixer;
     guictr_base* io;
     std::vector<gui_track_subtrack_mixer*> automationLaneControls;
-    int dragMode          = -1;
-    const int resizeHitY  = 8;
+    DragModeTrack dragMode = DragModeTrack::DRAG_TRACK_NONE;
 
 public:
     explicit gui_track_controls(track_gui_entry_t* _entry, scaled_grid& _grid);
