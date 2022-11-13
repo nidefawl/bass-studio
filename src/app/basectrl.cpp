@@ -194,6 +194,7 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, KeyboardMods kbmods, bool d
         } else if (!newFocus) {
             guiFocused = {};
         }
+        focusChanged(oldFocused, newFocus);
     }
     // if (evt.hasCursorChanged()) {
     cursorIcon = evt.getCursor();
