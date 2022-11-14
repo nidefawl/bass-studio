@@ -1411,7 +1411,7 @@ void appwindow_main::createMainWindow(int w, int h, int flags) {
 
     if ((flags & WINDOW_IS_DIALOG) && parent) {
 #ifdef _WIN32
-        SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR) parent->getHWND());
+        // SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR) parent->getHWND());
 #endif
     }
 #ifdef _WIN32
