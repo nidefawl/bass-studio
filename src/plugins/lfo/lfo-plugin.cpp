@@ -446,6 +446,7 @@ namespace PluginLFO {
         module_lfo* const module;
         std::vector<guiknob_pluginparam*> guiParams;
         std::vector<gui_slider_textfield*> guiParamsTextfields;
+        guictr_vert_layout firstCtr;
         i_ctr_shape_editor* const shapeEditor;
         guictr_base* ctrShapeEditor;
         gui_textfield editfield;
@@ -461,6 +462,16 @@ namespace PluginLFO {
             editfield.setReturnCommits(true);
         }
     public:
+        void layout() override {
+            auto cs = getSizeContent() - ivec2(padding, 0);
+            auto leftSize = math::clamp<int32_t>(math::min(math::roundfS32(cs.y * 0.2f), math::roundfS32(cs.y * 0.2f)), 16, 128);
+            firstCtr.size        = { leftSize, cs.y };
+            ctrShapeEditor->size = { cs.x - leftSize, cs.y };
+            ctrShapeEditor->pos  = { cs.x - ctrShapeEditor->size.x, 0 };
+            for (auto gui : guis) {
+                gui->layout();
+            }
+        }
         explicit guictr_module_lfo(module_lfo* module) : guictr_base(),
             module(module),
             shapeEditor(makeShapeEditor())
@@ -468,19 +479,18 @@ namespace PluginLFO {
             init();
             std::vector<automatable_param_t*> paramsSorted;
             module->getSortedParams(paramsSorted);
-            auto firstCtr = new guictr_vert_layout();
             {
                 auto p = module->getParam(PARAM_LFO_RATE);
                 auto gui = new guiknob_pluginparam(p->idx, p->idx, guiknob::knobtype::SLIDER_LABELED);
                 gui->setAutomationRef(module, p->idx);
-                firstCtr->addElement({0.5f, gui});
+                firstCtr.addElement({0.5f, gui});
                 guiParams.push_back(gui);
             }
             {
                 auto p = module->getParam(PARAM_LFO_PHASE);
                 auto gui = new guiknob_pluginparam(p->idx, p->idx, guiknob::knobtype::KNOB_LABELED);
                 gui->setAutomationRef(module, p->idx);
-                firstCtr->addElement({0.2f, gui});
+                firstCtr.addElement({0.2f, gui});
                 guiParams.push_back(gui);
             }
             auto minMaxCtr = new guictr_vert_layout();
@@ -502,9 +512,9 @@ namespace PluginLFO {
                 minMaxCtr->addElement({0.5f, gui});
                 guiParamsTextfields.push_back(gui);
             }
-            firstCtr->addElement({0.15f, minMaxCtr});
-            firstCtr->addElement({0.15f, new DAW::UI::Modulation::guibutton_modulate(module->getModulationChannel(0))});
-            add(firstCtr);
+            firstCtr.addElement({0.15f, minMaxCtr});
+            firstCtr.addElement({0.15f, new DAW::UI::Modulation::guibutton_modulate(module->getModulationChannel(0))});
+            add(&firstCtr);
             shapeEditor->setShapeEditorShapeRef(&module->getShape(0));
             shapeEditor->setShapeEditorCallback([module=this->module](const DAW::Shape::shape_t& shape, bool bIsDragMove) -> void {
                 auto lock = module->impl->lock();
@@ -674,6 +684,7 @@ namespace PluginLFO {
 
         ~guictr_module_lfo() override {
             remove(&editfield);
+            remove(&firstCtr);
             destroyGuis();
         }
 
