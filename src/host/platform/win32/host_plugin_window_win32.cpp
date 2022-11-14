@@ -350,6 +350,7 @@ void host_plugin_window::show(ivec4 posSize, bool bSetPos, bool bSetSize) {
         resize(ivec2(posSize.z, posSize.w));
     }
     plugin->onShow(this);
+    plugin->onWindowResize(getContentSize());
     // auto plugWindowSize = plugin->getWindowSize();
 }
 
@@ -372,7 +373,8 @@ void host_plugin_window::updateFromMainThread() const {
 
 void host_plugin_window::onResize (ivec2 newSize)
 {
-	plugin->onWindowResize(newSize);
+    if (plugin->bEditOpen)
+	    plugin->onWindowResize(newSize);
 }
 
 void host_plugin_window::resize(ivec2 newSize) const {
@@ -387,7 +389,6 @@ void host_plugin_window::resize(ivec2 newSize) const {
     AdjustWindowRectEx(&clientRect, windowInfo.dwStyle, false, windowInfo.dwExStyle);
     SetWindowPos(hwnd, HWND_TOP, 0, 0, clientRect.right - clientRect.left,
                     clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
-	plugin->onWindowResize(newSize);
 }
 
 void host_plugin_window::setPosition(ivec2 newPos) {
