@@ -4,6 +4,7 @@
 #include "automation.h"
 #include "config.h"
 #include "host/daw/mainctrl.h"
+#include "logging.h"
 #include "math/seq_math.h"
 #include "host/plugin/vst/vstplugin.h"
 #include "gui/automation/automatable.h"
@@ -313,7 +314,9 @@ void storeAutomation(std::vector<automation_view_t>& automatedParams, automatabl
         automatedParams.push_back(atv);
         total++;
     }
-    log_printf("Storing %d automation lanes for device %s\n", total, StringAsCStr(at->getAutomatableName()));
+    if (total) {
+        log_lf(Log::L_TRACE, "Storing %d automation lanes for device %s\n", total, StringAsCStr(at->getAutomatableName()));
+    }
 }
 
 void automatable_t::setParamEdit(int32_t idx, float val, int flags) {

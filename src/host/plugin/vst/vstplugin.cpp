@@ -419,7 +419,7 @@ namespace {
                     auto* ptrData = reinterpret_cast<uint8_t*>(pluginData);
                     ps.dataChunk.reserve(pluginDataSize);
                     ps.dataChunk.assign(ptrData, ptrData + pluginDataSize);
-                    log_lf(Log::L_DEBUG, "Plugin %s: Save data1[%d]\n", StringAsCStr(plugin->sName), pluginDataSize);
+                    // log_lf(Log::L_TRACE, "Plugin %s: Save data1[%d]\n", StringAsCStr(plugin->sName), pluginDataSize);
                 }
             }
             if (storePluginPresetWithSnapshot) {
@@ -429,7 +429,7 @@ namespace {
                     auto* ptrData = reinterpret_cast<uint8_t*>(pluginData2);
                     ps.dataChunk2.reserve(pluginDataSize2);
                     ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
-                    log_lf(Log::L_DEBUG, "Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
+                    // log_lf(Log::L_TRACE, "Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
                 }
             }
         }
