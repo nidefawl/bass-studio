@@ -51,29 +51,37 @@ PluginManager::~PluginManager() {
 }
 
 void PluginManager::updateSampleFormat(const sampleformat_t& _sampleFormat) {
-    for (auto* audio : this->allAudioStages) {
-        audio->sampleFormat = _sampleFormat;
-        audio->input.realloc(_sampleFormat.blockSize);
-        audio->output.realloc(_sampleFormat.blockSize);
-        audio->outputPost.realloc(_sampleFormat.blockSize);
+    for (auto stage : this->allAudioStages) {
+        stage->sampleFormat = _sampleFormat;
+        stage->input.realloc(_sampleFormat.blockSize);
+        stage->output.realloc(_sampleFormat.blockSize);
+        stage->outputPost.realloc(_sampleFormat.blockSize);
     }
-    for (effectbase* plugin : this->pluginInstances) {
-        plugin->setSampleFormat(_sampleFormat);
-        plugin->initBuffers();
-        plugin->initMeters();
-    }
-    for (effectbase* plugin : this->pluginsDeferred) {
-        plugin->setSampleFormat(_sampleFormat);
-        plugin->initBuffers();
-        plugin->initMeters();
-    }
-    for (vstplugin* plugin : this->pluginInstancesVST2) {
+    for (auto plugin : this->pluginInstancesVST2) {
         plugin->onDisable();
+    }
+    for (auto plugin : this->pluginInstancesClap) {
+        plugin->onDisable();
+    }
+    for (auto plugin : this->pluginInstances) {
+        plugin->setSampleFormat(_sampleFormat);
+        plugin->initBuffers();
+        plugin->initMeters();
+    }
+    for (auto plugin : this->pluginsDeferred) {
+        plugin->setSampleFormat(_sampleFormat);
+        plugin->initBuffers();
+        plugin->initMeters();
+    }
+    for (auto plugin : this->pluginInstancesVST2) {
         plugin->dispatch(effSetBlockSize, 0, _sampleFormat.blockSize);
         plugin->dispatch(effSetSampleRate, 0, 0, nullptr, (float) _sampleFormat.sampleRate);
         plugin->onEnable();
     }
-    for (auto* stage : this->allAudioStages) {
+    for (auto plugin : this->pluginInstancesClap) {
+        plugin->onEnable();
+    }
+    for (auto stage : this->allAudioStages) {
         stage->pluginsChanged();
     }
 }
