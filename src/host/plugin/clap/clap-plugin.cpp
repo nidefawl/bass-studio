@@ -1612,6 +1612,7 @@ void clapplugin::process(const DAW::Host::Host* const host, AudioBlock* in, Audi
                         auto& paramAutomation = dawHandles->paramAutomations[numAutomations++];
                         paramAutomation.index = automLane.paramIdx;
                         auto& values = paramAutomation.values;
+                        values.resize(numSamples);
                         std::fill(values.begin(), values.end(), FromPluginParam(pParam, pParam->value()));
                         autLane->sampleAutomation(dTick, dTickEnd, numSamples, param->getAutomationScale(), values.data());
                     }
