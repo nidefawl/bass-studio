@@ -270,11 +270,17 @@ bool host_plugin_window::init(effectbase* _plugin, const String& name, ivec2 siz
     HINSTANCE instance = GetModuleHandle(nullptr);
     registerWindowClass(instance);
 
+    RECT clientRect{};
+    clientRect.right  = size.x;
+    clientRect.bottom = size.y;
+
     DWORD exStyle    = WS_EX_APPWINDOW;
     DWORD dwStyle    = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS;
     if (resizeable) {
         dwStyle |= WS_SIZEBOX | WS_MAXIMIZEBOX;
     }
+    AdjustWindowRectEx(&clientRect, dwStyle, false, exStyle);
+    size = { clientRect.right - clientRect.left, clientRect.bottom - clientRect.top };
 
     hwnd = CreateWindowEx(exStyle, gWindowClassName, StringAsCStr(name), dwStyle,
                           0, 0, size.x, size.y, mainHWND, nullptr, instance, nullptr);
@@ -291,11 +297,11 @@ bool host_plugin_window::init(effectbase* _plugin, const String& name, ivec2 siz
         // if (plugWindowSize.x > 0 && plugWindowSize.y > 0) {
             // resize(size);
         // }
-        RECT rcOwner;
-        RECT rcDlg;
         RECT rc;
-        GetWindowRect(mainHWND, &rcOwner);
+        RECT rcDlg;
+        RECT rcOwner;
         GetWindowRect(hwnd, &rcDlg);
+        GetWindowRect(mainHWND, &rcOwner);
         CopyRect(&rc, &rcOwner);
         OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
         OffsetRect(&rc, -rc.left, -rc.top);
@@ -381,6 +387,7 @@ void host_plugin_window::resize(ivec2 newSize) const {
     AdjustWindowRectEx(&clientRect, windowInfo.dwStyle, false, windowInfo.dwExStyle);
     SetWindowPos(hwnd, HWND_TOP, 0, 0, clientRect.right - clientRect.left,
                     clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
+	plugin->onWindowResize(newSize);
 }
 
 void host_plugin_window::setPosition(ivec2 newPos) {
