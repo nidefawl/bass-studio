@@ -1623,7 +1623,7 @@ void clapplugin::process(const DAW::Host::Host* const host, AudioBlock* in, Audi
     auto itMidiIn = dawHandles->midiEvents.begin();
     for (samplecount_t s = 0; s < numSamples; ++s) {
         /* Process midi events (t >= 0)*/
-        if (itMidiIn != dawHandles->midiEvents.end()) {
+        while (itMidiIn != dawHandles->midiEvents.end()) {
             auto& evt = *itMidiIn;
             if (evt.mOffset <= s) {
                 uint8_t eventType    = evt.mStatus >> 4;
@@ -1653,6 +1653,9 @@ void clapplugin::process(const DAW::Host::Host* const host, AudioBlock* in, Audi
                         break;
                 }
                 ++itMidiIn;
+            } else {
+                // No more midi events for this sample
+                break;
             }
         }
         for (size_t n = 0; n < numMods; ++n) {
