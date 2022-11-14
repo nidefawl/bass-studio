@@ -522,7 +522,7 @@ void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *co
                 auto param = getParam(paramIdx);
                 float val = param->getValue();
                 auto* autLane = getRegisteredAutomation(paramIdx);
-                if (autLane && autLane->isActive() && DAW::isPlaybackState(state)) {
+                if (autLane && autLane->isActive()) {
                     const auto valAutLane = autLane->modulateValue(tick, val, param->getAutomationScale());
                     setAutomatableParam(param, valAutLane, FLG_PAR_UPDATE_AUTOMATED);
                     val = valAutLane;

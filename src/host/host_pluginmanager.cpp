@@ -658,7 +658,6 @@ LoadResultPlugin PluginManager::loadPlugin(const PluginLoadParameters& req) {
             libResult.state = SharedLibState::FAILED;
             return LoadResultPlugin{libResult};
         }
-        plugin->dawHandles->localCurrentUniqueId = uId;
         pluginInstancesClap.push_back(plugin);
         pluginInstances.push_back(plugin);
 

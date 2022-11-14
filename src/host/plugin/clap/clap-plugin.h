@@ -42,10 +42,14 @@ struct ClapPluginDescription {
     std::vector<String> features;
 };
 class clapplugin : public effectbase {
-public:
+private:
+
+    struct ParamModulation {
+        int32_t index;
+        std::vector<float> values;
+    };
     struct daw_handles_t {
         std::map<int32_t, std::unique_ptr<guiplugin>> gui;
-        uint32_t localCurrentUniqueId = 0;
         samplecount_t currentLatency = 0;
         struct param_editing_t {
             int32_t paramIdx = -1;
@@ -58,6 +62,9 @@ public:
         clap_event_transport_t transport{};
         DAW::Host::LoadResultSharedLibrary library;
         bool bIsStopProcessing = false;
+        std::vector<IMidiMsg> midiEvents;
+        std::vector<ParamModulation> paramModulations;
+        std::vector<ParamModulation> paramAutomations;
     };
     daw_handles_t* const dawHandles;
     int pluginCategory = -1;
@@ -69,6 +76,7 @@ public:
 
     // effectbase
     int getModuleType() override { return PLUGIN_TYPE_CLAP; };
+    int getModuleCategory() const { return pluginCategory; };
     void* getModuleHandle() { return dawHandles->library.module; }
     String getAutomatableName() override {
         return this->sName;
@@ -78,6 +86,7 @@ public:
     void makeSnapshot(plugin_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) override;
     void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
+    void updateAutomatedParameters(const DAW::Host::PluginManager *const host, tick_t processingPos, playback_state state) override;
     void processMidiMessages(std::vector<IMidiMsg>& midiEvents) override;
     void sendNotesOff() override;
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
@@ -132,7 +141,6 @@ private:
     void processNoteAt(int sampleOffset, int channel, int key, int pressure);
     void processPitchBend(int sampleOffset, int channel, int value);
     void processCC(int sampleOffset, int channel, int cc, int value);
-    void processClapPlugin();
     void processEnd(int nframes);
 
     void updateClapFromMainThread();

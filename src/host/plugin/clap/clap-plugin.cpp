@@ -1,3 +1,4 @@
+#include <clap/events.h>
 #include <clap/ext/latency.h>
 #include <clap/plugin.h>
 #include <clap/stream.h>
@@ -126,6 +127,10 @@ namespace {
         return (f - info.min_value) / (info.max_value - info.min_value);
     }
 }// namespace
+
+namespace DAW {
+    bool gClapUseSampleAccurateModulation = true;
+}
 
 void clapplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
     if (_pluginState) {
@@ -875,70 +880,6 @@ void clapplugin::processCC(int sampleOffset, int channel, int cc, int value) {
     pushInputEvent(&ev.header);
 }
 
-void clapplugin::processClapPlugin() {
-    checkForAudioThread();
-
-    if (!_plugin)
-        return;
-
-    // Can't process a plugin that is not active
-    if (!isPluginActive())
-        return;
-
-    // Do we want to deactivate the plugin?
-    if (_scheduleDeactivate) {
-        _scheduleDeactivate = false;
-        if (_state == ActiveAndProcessing)
-            _plugin->stop_processing(_plugin);
-        setPluginState(ActiveAndReadyToDeactivate);
-        return;
-    }
-
-    // We can't process a plugin which failed to start processing
-    if (_state == ActiveWithError)
-        return;
-
-
-    _evOut.clear();
-
-    clap_event_header_t& transportHeader = dawHandles->transport.header;
-    transportHeader = {};
-    transportHeader.size = sizeof (clap_event_transport_t);
-    transportHeader.space_id = CLAP_CORE_EVENT_SPACE_ID;
-    transportHeader.type = CLAP_EVENT_TRANSPORT;
-
-    if (isPluginSleeping()) {
-        if (!_scheduleProcess && _eventListInput.empty())
-            // The plugin is sleeping, there is no request to wake it up and there are no events to
-            // process
-            return;
-
-        _scheduleProcess = false;
-        if (!_plugin->start_processing(_plugin)) {
-            // the plugin failed to start processing
-            setPluginState(ActiveWithError);
-            return;
-        }
-
-        setPluginState(ActiveAndProcessing);
-    }
-
-    int32_t status = CLAP_PROCESS_SLEEP;
-    if (isPluginProcessing())
-        status = _plugin->process(_plugin, &_process);
-
-    (void) status;
-
-    handlePluginOutputEvents();
-
-    _evOut.clear();
-    _eventListInput.clear();
-
-    _engineToAppValueQueue.producerDone();
-
-    // TODO: send plugin to sleep if possible
-}
-
 void clapplugin::generatePluginInputEvents() {
     _appToEngineValueQueue.consume(
             [this](clap_id param_id, const AppToEngineParamQueueValue& value) {
@@ -1574,50 +1515,263 @@ bool clapplugin::canUsePluginGui() const noexcept {
            _pluginGui->suggest_title && _pluginGui->is_api_supported;
 }
 
-void clapplugin::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
+void clapplugin::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double dTick, double samplePos, int32_t numSamples, playback_state state) {
     lastInputEvent = 0;
     processBegin(numSamples);
-    processClapPlugin();
+
+    checkForAudioThread();
+
+    if (!_plugin)
+        return;
+
+    // Can't process a plugin that is not active
+    if (!isPluginActive())
+        return;
+
+    // Do we want to deactivate the plugin?
+    if (_scheduleDeactivate) {
+        _scheduleDeactivate = false;
+        if (_state == ActiveAndProcessing)
+            _plugin->stop_processing(_plugin);
+        setPluginState(ActiveAndReadyToDeactivate);
+        return;
+    }
+
+    // We can't process a plugin which failed to start processing
+    if (_state == ActiveWithError)
+        return;
+
+    /* NOTE: input events need to be inserted in chronological order */
+    /* Process queued input events (t=0) */
+    dbgassert(lastInputEvent == 0);
+    generatePluginInputEvents();
+
+    auto& automationLanes = getAutomationLanes();
+    // auto& inputChannelsModulation = getModulations();
+    auto& mapModulations = getModulationsMap();
+
+    auto tempo100 = host->prjGlobals.tempo100;
+    // auto samplesToTicks = sampleToTickConvert<double, roundmode::none>(1.0, tempo100, format.sampleRate);
+    auto ticksPerBlock = sampleToTickConvert<double, roundmode::none>(numSamples, tempo100, format.sampleRate);;
+    auto dTickEnd = dTick + ticksPerBlock;
+
+    size_t numMods = 0;
+    size_t numAutomations = 0;
+    if (DAW::gClapUseSampleAccurateModulation) {
+        for (auto& entry : mapModulations) {
+            int32_t paramIdx = entry.first;
+            auto param = getParam(paramIdx);
+            if (!assert_expr(param) || param->internalIdx < 0) {
+                continue;
+            }
+            auto pParam = _params[param->internalIdx].get();
+            if (!pParam->isModulatable()) {
+                continue;
+            }
+            while (dawHandles->paramModulations.size() <= numMods) {
+                dawHandles->paramModulations.emplace_back();
+            }
+            auto& paramModulation = dawHandles->paramModulations[numMods++];
+            paramModulation.index = paramIdx;
+            auto& values = paramModulation.values;
+            values.resize(numSamples);
+            std::fill(values.begin(), values.end(), FromPluginParam(pParam, pParam->value()));
+            auto* autLane = getRegisteredAutomation(paramIdx);
+            if (autLane && autLane->isActive() && DAW::isPlaybackState(state)) {
+                autLane->sampleAutomation(dTick, dTickEnd, numSamples, param->getAutomationScale(), values.data());
+            }
+            auto& modulations = entry.second;
+            for (const auto& mod : modulations) {
+                auto ch = DAW::ResolveModulationChannel(host, *mod);
+                if (ch && ch->isActive()) {
+                    ch->sampleAutomation(dTick, dTickEnd, numSamples, mod->scale, values.data());
+                }
+            }
+        }
+        if (DAW::isPlaybackState(state)) {
+            for (auto& automLane : automationLanes) {
+                if (automLane.isActive()) {
+                    if (mapModulations.count(automLane.paramIdx) > 0) {
+                        continue;
+                    }
+                    int32_t paramIdx = automLane.paramIdx;
+                    auto param = getParam(paramIdx);
+                    if (!assert_expr(param) || param->internalIdx < 0) {
+                        continue;
+                    }
+                    auto pParam = _params[param->internalIdx].get();
+                    if (!pParam->isAutomatable()) {
+                        continue;
+                    }
+                    auto* autLane = getRegisteredAutomation(paramIdx);
+                    if (autLane && autLane->isActive()) {
+                        auto param = getParam(paramIdx);
+                        while (dawHandles->paramAutomations.size() <= numAutomations) {
+                            dawHandles->paramAutomations.emplace_back();
+                        }
+                        auto& paramAutomation = dawHandles->paramAutomations[numAutomations++];
+                        paramAutomation.index = automLane.paramIdx;
+                        auto& values = paramAutomation.values;
+                        std::fill(values.begin(), values.end(), FromPluginParam(pParam, pParam->value()));
+                        autLane->sampleAutomation(dTick, dTickEnd, numSamples, param->getAutomationScale(), values.data());
+                    }
+                }
+            }
+        }
+    }
+            
+    auto itMidiIn = dawHandles->midiEvents.begin();
+    for (samplecount_t s = 0; s < numSamples; ++s) {
+        /* Process midi events (t >= 0)*/
+        if (itMidiIn != dawHandles->midiEvents.end()) {
+            auto& evt = *itMidiIn;
+            if (evt.mOffset <= s) {
+                uint8_t eventType    = evt.mStatus >> 4;
+                uint8_t channel      = evt.mStatus & 0xf;
+                switch (eventType) {
+                    case IMidiMsg::EStatusMsg::kNoteOn:
+                        processNoteOn(evt.mOffset, channel, evt.mData1, evt.mData2);
+                        break;
+
+                    case IMidiMsg::EStatusMsg::kNoteOff:
+                        processNoteOff(evt.mOffset, channel, evt.mData1, evt.mData2);
+                        break;
+                    default:{
+                            clap_event_midi midiEvent{};
+                            midiEvent.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+                            midiEvent.header.type     = CLAP_EVENT_MIDI;
+                            midiEvent.header.time     = evt.mOffset;
+                            midiEvent.header.flags    = 0;
+                            midiEvent.header.size     = sizeof(midiEvent);
+                            midiEvent.port_index      = 0;
+                            midiEvent.data[0]         = evt.mStatus;
+                            midiEvent.data[1]         = evt.mData1;
+                            midiEvent.data[2]         = evt.mData2;
+                            // Don't push note events as midi
+                            pushInputEvent(&midiEvent.header);
+                        }
+                        break;
+                }
+                ++itMidiIn;
+            }
+        }
+        for (size_t n = 0; n < numMods; ++n) {
+            auto& paramMod = dawHandles->paramModulations[n];
+            auto dawparam = getParam(paramMod.index);
+            if (!assert_expr(dawparam) || dawparam->internalIdx < 0) {
+                continue;
+            }
+            auto& param = _params[dawparam->internalIdx];
+            if (!param->isModulatable()) {
+                continue;
+            }
+            auto& vecData = paramMod.values;
+            if (size_t(s) >= vecData.size()) {
+                continue;
+            }
+            auto scaled = ToPluginParam(param.get(), vecData[s]);
+            auto offset = scaled - param->value();
+            clap_event_param_mod ev{};
+            ev.header.time     = s;
+            ev.header.type     = CLAP_EVENT_PARAM_MOD;
+            ev.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+            ev.header.flags    = 0;
+            ev.header.size     = sizeof(ev);
+            ev.param_id        = dawparam->internalIdx;
+            ev.cookie          = param->info().cookie;
+            ev.port_index      = 0;
+            ev.key             = -1;
+            ev.channel         = -1;
+            ev.note_id         = -1;
+            ev.amount          = offset;
+            pushInputEvent(&ev.header);
+        }
+
+        for (size_t n = 0; n < numAutomations; ++n) {
+            auto& paramAutomation = dawHandles->paramAutomations[n];
+            auto dawparam = getParam(paramAutomation.index);
+            if (!assert_expr(dawparam) || dawparam->internalIdx < 0) {
+                continue;
+            }
+            auto& param = _params[dawparam->internalIdx];
+            if (!param->isModulatable()) {
+                continue;
+            }
+            auto& vecData = paramAutomation.values;
+            if (size_t(s) >= vecData.size()) {
+                continue;
+            }
+            auto scaled = ToPluginParam(param.get(), vecData[s]);
+            clap_event_param_mod ev{};
+            ev.header.time     = s;
+            ev.header.type     = CLAP_EVENT_PARAM_VALUE;
+            ev.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
+            ev.header.flags    = 0;
+            ev.header.size     = sizeof(ev);
+            ev.param_id        = dawparam->internalIdx;
+            ev.cookie          = param->info().cookie;
+            ev.port_index      = 0;
+            ev.key             = -1;
+            ev.channel         = -1;
+            ev.note_id         = -1;
+            ev.amount          = scaled;
+            pushInputEvent(&ev.header);
+        }
+    }
+    dawHandles->midiEvents.clear();
+
+    _evOut.clear();
+
+    clap_event_header_t& transportHeader = dawHandles->transport.header;
+    transportHeader = {};
+    transportHeader.size = sizeof (clap_event_transport_t);
+    transportHeader.space_id = CLAP_CORE_EVENT_SPACE_ID;
+    transportHeader.type = CLAP_EVENT_TRANSPORT;
+
+    if (isPluginSleeping()) {
+        if (!_scheduleProcess && _eventListInput.empty())
+            // The plugin is sleeping, there is no request to wake it up and there are no events to
+            // process
+            return;
+
+        _scheduleProcess = false;
+        if (!_plugin->start_processing(_plugin)) {
+            // the plugin failed to start processing
+            setPluginState(ActiveWithError);
+            return;
+        }
+
+        setPluginState(ActiveAndProcessing);
+    }
+
+    int32_t status = CLAP_PROCESS_SLEEP;
+    if (isPluginProcessing())
+        status = _plugin->process(_plugin, &_process);
+
+    (void) status;
+
+    handlePluginOutputEvents();
+
+    _evOut.clear();
+    _eventListInput.clear();
+
+    _engineToAppValueQueue.producerDone();
+
+    // TODO: send plugin to sleep if possible
 }
 
 void clapplugin::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
     effectbase::postProcess(out, samples, hasProcessed);
 }
 
-void clapplugin::processMidiMessages(std::vector<IMidiMsg>& midiEvents) {
-    /* NOTE: input events need to be inserted in chronological order */
-    /* Process queued input events (t=0) */
-    generatePluginInputEvents();
-    /* Process midi events (t >= 0)*/
-    for (auto& evt : midiEvents) {
-    
-        uint8_t eventType    = evt.mStatus >> 4;
-        uint8_t channel      = evt.mStatus & 0xf;
-        switch (eventType) {
-            case IMidiMsg::EStatusMsg::kNoteOn:
-                processNoteOn(evt.mOffset, channel, evt.mData1, evt.mData2);
-                break;
-
-            case IMidiMsg::EStatusMsg::kNoteOff:
-                processNoteOff(evt.mOffset, channel, evt.mData1, evt.mData2);
-                break;
-            default:{
-                    clap_event_midi midiEvent{};
-                    midiEvent.header.space_id = CLAP_CORE_EVENT_SPACE_ID;
-                    midiEvent.header.type     = CLAP_EVENT_MIDI;
-                    midiEvent.header.time     = evt.mOffset;
-                    midiEvent.header.flags    = 0;
-                    midiEvent.header.size     = sizeof(midiEvent);
-                    midiEvent.port_index      = 0;
-                    midiEvent.data[0]         = evt.mStatus;
-                    midiEvent.data[1]         = evt.mData1;
-                    midiEvent.data[2]         = evt.mData2;
-                    // Don't push note events as midi
-                    pushInputEvent(&midiEvent.header);
-                }
-                break;
-        }
+void clapplugin::updateAutomatedParameters(const DAW::Host::PluginManager *const host, tick_t tick, playback_state state) {
+    if (!DAW::gClapUseSampleAccurateModulation) {
+        effectbase::updateAutomatedParameters(host, tick, state);
     }
+}
+
+void clapplugin::processMidiMessages(std::vector<IMidiMsg>& midiEvents) {
+    dawHandles->midiEvents = midiEvents;
 }
 
 void clapplugin::sendNotesOff() {

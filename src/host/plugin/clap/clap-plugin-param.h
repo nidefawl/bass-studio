@@ -1,5 +1,6 @@
 #pragma once
 #include "assert_dbg.h"
+#include <clap/ext/params.h>
 #include <ostream>
 #include <unordered_map>
 #include <clap/clap.h>
@@ -28,6 +29,9 @@ public:
    bool isInfoEqualTo(const clap_param_info &info) const;
    bool isInfoCriticallyDifferentTo(const clap_param_info &info) const;
    clap_param_info &info() noexcept { return _info; }
+   bool isReadOnly() const noexcept { return _info.flags & CLAP_PARAM_IS_READONLY; }
+   bool isModulatable() const noexcept { return !isReadOnly() && _info.flags & CLAP_PARAM_IS_MODULATABLE; }
+   bool isAutomatable() const noexcept { return !isReadOnly() && _info.flags & CLAP_PARAM_IS_AUTOMATABLE; }
    const clap_param_info &info() const noexcept { return _info; }
 
    bool isBeingAdjusted() const noexcept { return _isBeingAdjusted; }

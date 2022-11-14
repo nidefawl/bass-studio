@@ -277,7 +277,7 @@ static void getVSTPluginData(DAW::Host::LoadResultPlugin& res, response_type_vst
 static void getClapPluginData(DAW::Host::LoadResultPlugin& res, response_type_clapplugin_t* _out) {
     auto plugin = res.clapPlugin;
     _out->pluginIndex = 0;
-    _out->pluginCategory = plugin->pluginCategory;
+    _out->pluginCategory = plugin->getModuleCategory();
     safe_strcpy(_out->szName, plugin->sName);
     safe_strcpy(_out->szPath, res.path);
     _out->isSynth = plugin->isSynth;
@@ -855,7 +855,7 @@ static int runScannerClient() {
                 int response = CMD_PLUGIN_LOAD_ERROR;
                 writeToIPC(client, response);
             } else {
-                if (res.clapPlugin && res.clapPlugin->pluginCount > 0) {
+                if (res.clapPlugin && res.clapPlugin->getPluginCount() > 0) {
                     String nameShellPlugin = res.name;
                     log_printf("loading clap plugin: %s\n", StringAsCStr(nameShellPlugin));
 

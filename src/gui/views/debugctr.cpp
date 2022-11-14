@@ -42,6 +42,10 @@
 #define DISPLAY_HWND_DRAWS 0
 #endif
 
+namespace DAW {
+    extern bool gClapUseSampleAccurateModulation;
+}
+
 enum ID_BTN : int32_t {
     ID_BTN_RESET_HIST = 0,
     ID_OPTION_SCALE_GLOBAL,
@@ -62,6 +66,7 @@ enum ID_BTN : int32_t {
     ID_BTN_RESET_AUDIOCACHE,
     ID_BTN_UNLOAD_UNREFERENCED_AUDIOCACHE,
     ID_BTN_RESET_RESAMPLERS,
+    ID_BTN_TOGGLE_CLAP_SAMPLEACCURATE_MODULATION,
 };
 struct gui_ctr_debug::ctr_debug_impl_t {
     std::vector<guibase*> debugGuis;
@@ -233,6 +238,13 @@ gui_ctr_debug::gui_ctr_debug(create_ctr_t ctxt, DebugCtrType debugCtrType)
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_RESET_RESAMPLERS;
             btn3->setText("Reset resamplers");
+            debugGuis.push_back(btn3);
+        }
+        {
+            auto btn3 = new guibutton;
+            btn3->id  = ID_BTN_TOGGLE_CLAP_SAMPLEACCURATE_MODULATION;
+            btn3->setText("Clap sampleaccurate modulation (OFF)");
+            btn3->setText(String(DAW::gClapUseSampleAccurateModulation ? "Clap: Sample accurate modulation (ON)" : "Clap: Sample accurate modulation (OFF)"));
             debugGuis.push_back(btn3);
         }
     }
@@ -551,6 +563,7 @@ void resetHistAndCheck(DawInstance* daw) {
     }
 #endif
 }
+
 void gui_ctr_debug::buttonClicked(guibase* button) {
     auto const daw = dawCtrl->getDaw();
     auto const host = daw->getHost();
@@ -633,8 +646,13 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
                 host->multithreadedProcessing = 1 - host->multithreadedProcessing;
             }, true);
             static_cast<guibutton*>(button)->setText(String(host->multithreadedProcessing ? "Multithreaded processing (ON)" : "Multithreaded processing (OFF)"));
-
             break;
+        case ID_BTN_TOGGLE_CLAP_SAMPLEACCURATE_MODULATION: {
+            auto lock = daw->getPlayThread()->lockThread();
+            DAW::gClapUseSampleAccurateModulation = !DAW::gClapUseSampleAccurateModulation;
+            static_cast<guibutton*>(button)->setText(String(DAW::gClapUseSampleAccurateModulation ? "Clap: Sample accurate modulation (ON)" : "Clap: Sample accurate modulation (OFF)"));
+            break;
+        }
     }
 }
 
