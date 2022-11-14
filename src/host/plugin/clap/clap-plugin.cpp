@@ -1116,6 +1116,9 @@ void clapplugin::updateClapFromMainThread() {
 void clapplugin::setParamValueByHost(PluginParam& param, double value) {
 
     param.setValue(value);
+    if (param.info().flags & CLAP_PARAM_IS_READONLY) {
+        return;
+    }
 
     _appToEngineValueQueue.set(param.info().id, { param.info().cookie, value });
     _appToEngineValueQueue.producerDone();
@@ -1125,7 +1128,12 @@ void clapplugin::setParamValueByHost(PluginParam& param, double value) {
 void clapplugin::setParamModulationByHost(PluginParam& param, double value) {
 
     param.setModulation(value);
-
+    if (param.info().flags & CLAP_PARAM_IS_READONLY) {
+        return;
+    }
+    if (!(param.info().flags & CLAP_PARAM_IS_MODULATABLE)) {
+        return;
+    }
     _appToEngineModQueue.set(param.info().id, { param.info().cookie, value });
     _appToEngineModQueue.producerDone();
     clapParamsRequestFlush(&host_);
