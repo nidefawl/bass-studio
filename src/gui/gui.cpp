@@ -751,10 +751,6 @@ guibase::~guibase() {
 #ifdef TRACK_ALLOCATIONS_GUIBASE
     DebugAlloc::getTracker<guibase>()->objDestructor(this);
 #endif
-    BaseCtrl* ctrl = parentCtrl;
-    if (ctrl) {
-        ctrl->onGuiRemoved(this);
-    }
     if (safeRef.handler) {
         safeRef.handler->safeRefDestroy(safeRef.refId);
     }

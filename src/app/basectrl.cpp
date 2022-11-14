@@ -440,24 +440,7 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
 
     nvgEndFrame(vg);
 }
-void BaseCtrl::onGuiRemoved(void* gui) {
-    // Only use gui pointer for comparison!
-    if (getGuiOver() == gui) {
-        this->guiOver = {};
-    }
-    if (this->getGuiCaptured() == gui) {
-        this->guiCaptured = {};
-    }
-    if (this->getGuiFocused() == gui) {
-        this->guiFocused = {};
-    }
-    if (this->getGuiDragged() == gui) {
-        this->guiDragged = {};
-    }
-    if (this->getGuiCtrFocused() == gui) {
-        this->guiCtrFocused = {};
-    }
-}
+
 void BaseCtrl::resetMouseContext() {
     this->guiCtrFocused = {};
     guiCaptured = guiFocused = guiOver = guiDragged = {};

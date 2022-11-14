@@ -243,8 +243,6 @@ public:
     virtual String getClipboardText();
     virtual void setClipboardText(String s);
     virtual void requestRedraw() { this->window->requestRedraw(); }
-    // Only use this pointer for comparison!
-    void onGuiRemoved(void* gui);
     virtual void resetMouseContext();
     virtual void onMenuOpen(ngui::Menu* menu) {}
     virtual ivec2 toScreenSpace(ivec2 p) = 0;
