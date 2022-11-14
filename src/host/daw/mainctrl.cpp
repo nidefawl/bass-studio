@@ -1085,31 +1085,36 @@ void DawInstance::saveFile(const String& path) {
 }
 
 void DawInstance::loadFile(String path, int flags) {
+    std::shared_ptr<project_file> f = nullptr;
     String loadFileExt, loadFileDirectory;
     SplitPath(path, &loadFileDirectory, nullptr, &loadFileExt);
     std::vector<uint8_t> projJsonData;
-    if (loadFileExt == PROJECT_BUNDLE_FILE_EXT && !path.empty()) {
-        struct archive* a = archive_read_new();
-        archive_read_support_filter_all(a);
-        archive_read_support_format_all(a);
-        archive_read_open_filename(a, path.c_str(), 10240);
-        struct archive_entry* entry = nullptr;
-        while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
-            const char* entryPath = archive_entry_pathname(entry);
-            String entryPathExt;;
-            SplitPath(entryPath, nullptr, nullptr, &entryPathExt);
-            if (entryPathExt == PROJECT_FILE_EXT) {
-                projJsonData.resize(archive_entry_size(entry));
-                archive_read_data(a, projJsonData.data(), projJsonData.size());
-                break;
+    try {
+        if (loadFileExt == PROJECT_BUNDLE_FILE_EXT && !path.empty()) {
+            struct archive* a = archive_read_new();
+            archive_read_support_filter_all(a);
+            archive_read_support_format_all(a);
+            archive_read_open_filename(a, path.c_str(), 10240);
+            struct archive_entry* entry = nullptr;
+            while (archive_read_next_header(a, &entry) == ARCHIVE_OK) {
+                const char* entryPath = archive_entry_pathname(entry);
+                String entryPathExt;;
+                SplitPath(entryPath, nullptr, nullptr, &entryPathExt);
+                if (entryPathExt == PROJECT_FILE_EXT) {
+                    projJsonData.resize(archive_entry_size(entry));
+                    archive_read_data(a, projJsonData.data(), projJsonData.size());
+                    break;
+                }
             }
+            archive_read_free(a);
+        } else {
+            ReadFileVector(path, projJsonData);
         }
-        archive_read_free(a);
-    } else {
-        ReadFileVector(path, projJsonData);
+        timer.reset(); 
+        f = loadProject(projJsonData);
+    } catch (const std::exception& e) {
+        log_printf("Failed loading file '%s': %s\n", StringAsCStr(path), e.what());
     }
-    timer.reset();
-    std::shared_ptr<project_file> f = loadProject(projJsonData);
     if (!f) {
         if (tls.mainCtrl) {
             tls.mainCtrl->setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
