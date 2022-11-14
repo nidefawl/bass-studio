@@ -2586,7 +2586,7 @@ void DawInstance::loadProjectFinish() {
     setAudioThreadState(playback_state::status_stop);
     if (cbProjectLoadCompleteCallback) {
         auto projectLoadErrored = false;
-        cbProjectLoadCompleteCallback(this, projectToLoad->projectfile, projectLoadErrored ? 1 : 0);
+        cbProjectLoadCompleteCallback(this, projectLoadErrored ? 1 : 0);
         cbProjectLoadCompleteCallback = nullptr;
     }
     updateVisibleTrackContents();

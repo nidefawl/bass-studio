@@ -286,7 +286,7 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
             return;
         }
         auto dawInstance = dawMainCtrl->getDaw();
-        dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance* daw, std::shared_ptr<project_file> file, int errorState) {
+        dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance* daw, int errorState) {
             /**
             * Code for setting cursor and loop position
             */

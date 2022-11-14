@@ -311,7 +311,7 @@ class DawInstance : public project_controller_t, public delete_cb {
     autosave_state_t autosaveState;
     DAW::async_task_t* asyncTask = nullptr;
 public:
-    std::function<void(DawInstance*, std::shared_ptr<project_file>, int)> cbProjectLoadCompleteCallback;
+    std::function<void(DawInstance*, int)> cbProjectLoadCompleteCallback;
     tick_t tickJmpFrom = 0;
     tick_t tickJmpTo   = 0;
     plugin_selection pluginSel;
