@@ -135,20 +135,10 @@ void AppWndProc_disableBlockReentrant();
 void AppWndProc_enableBlockReentrant();
 
 void vstplugin::unload(DAW::Host::PluginManager* host) {
-    dbgassert(host == pluginMgr);
-    pluginMgr = nullptr;
-    dbgassert(nLoadCalls == 1);
-    nLoadCalls--;
-    if (this->windowHost) {
-        this->windowHost->close();
-    }
-    if (this->windowHost) {
-        this->windowHost->destroy();
-    }
+    effectbase::unload(host);
     AppWndProc_enableBlockReentrant();
     this->dispatch(effClose);
     AppWndProc_disableBlockReentrant();
-    log_printf("unload %s\n", StringAsCStr(this->sName));
 }
 void vstplugin::configureIOChannels() {
     const bool useGetPinProperties = (this->bugfixFlags & vst_workarounds::VST2_R4_BUG_STEREO_PLUGIN_REPORTS_MONO) == 0;

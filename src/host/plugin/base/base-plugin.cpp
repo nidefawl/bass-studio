@@ -97,11 +97,17 @@ void effectbase::load(DAW::Host::PluginManager* host) {
     bIsEnabled = getParam(PARAM_ENABLE)->getValue() > 0;
 }
 
-void effectbase::unload(DAW::Host::PluginManager* host) {
+void effectbase::unload(DAW::Host::PluginManager* host) {   
     dbgassert(host == pluginMgr);
     pluginMgr = nullptr;
     dbgassert(nLoadCalls == 1);
     nLoadCalls--;
+    if (this->windowHost) {
+        this->windowHost->close();
+    }
+    if (this->windowHost) {
+        this->windowHost->destroy();
+    }
 }
 
 void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
