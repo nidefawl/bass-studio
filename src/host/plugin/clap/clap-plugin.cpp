@@ -1307,12 +1307,17 @@ void clapplugin::postSetParameter(int32_t idx, float preVal, float val, int flag
     automatable_param_t* param = getParamUnchecked(idx);
     if (param->internalIdx >= 0) {
         auto& pParam = *_params[param->internalIdx].get();
+        if ((flags & FLG_PAR_UPDATE_AUTOMATED) 
+            && !(pParam.info().flags & CLAP_PARAM_IS_AUTOMATABLE)) {
+                return;
+        }
         if (!(flags & FLG_PAR_UPDATE_FROM_CLIENT)) {
             auto scaled  = ToPluginParam(&pParam, val);
             if (!(flags & FLG_PAR_UPDATE_MODULATED)) {
                 setParamValueByHost(pParam, scaled);
             } else {
-                setParamModulationByHost(pParam, scaled);
+                auto offset = scaled - pParam.value();
+                setParamModulationByHost(pParam, offset);
             }
         }
         param->paramDisplayValState |= PARAM_FLAG_DIRTY;
