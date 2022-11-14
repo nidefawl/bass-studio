@@ -1144,7 +1144,7 @@ namespace PluginSynth {
         double ValueModulated(double voiceModulation) const noexcept {
             const double dMin       = iMin;
             const double dMax       = iMax;
-            const double dModulated = (dMax - dMin) * (valModulated + voiceModulation) + Value();
+            const double dModulated = (dMax - dMin) * (valModulated + voiceModulation) + dMin;
             return math::clamp<double>(dModulated, dMin, dMax);
         }
         void set(double f, double fModulated) noexcept override {
