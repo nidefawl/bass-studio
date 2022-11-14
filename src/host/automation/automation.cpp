@@ -492,7 +492,7 @@ void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *co
     if (automationLanes.empty() && inputChannelsModulation.empty()) {
         return;
     }
-    for (auto& entry : mapModulations) {
+    for (const auto& entry : mapModulations) {
         int32_t paramIdx = entry.first;
         auto param = getParam(paramIdx);
         auto& modulations = entry.second;
@@ -504,7 +504,7 @@ void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *co
             setAutomatableParam(param, valAutLane, FLG_PAR_UPDATE_AUTOMATED);
             val = valAutLane;
         }
-        for (const auto& mod : modulations) {
+        for (const auto* mod : modulations) {
             auto ch = DAW::ResolveModulationChannel(host, *mod);
             if (ch && ch->isActive()) {
                 val = ch->modulateValue(tick, val, mod->scale);
@@ -513,7 +513,7 @@ void automatable_t::updateAutomatedParameters(const DAW::Host::PluginManager *co
         setAutomatableParam(param, val, FLG_PAR_UPDATE_MODULATED);
     }
     if (DAW::isPlaybackState(state)) {
-        for (auto& automLane : automationLanes) {
+        for (const auto& automLane : automationLanes) {
             if (automLane.isActive()) {
                 if (mapModulations.count(automLane.paramIdx) > 0) {
                     continue;

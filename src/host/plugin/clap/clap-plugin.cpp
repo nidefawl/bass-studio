@@ -1558,7 +1558,7 @@ void clapplugin::process(const DAW::Host::Host* const host, AudioBlock* in, Audi
     size_t numMods = 0;
     size_t numAutomations = 0;
     if (DAW::gClapUseSampleAccurateModulation) {
-        for (auto& entry : mapModulations) {
+        for (const auto& entry : mapModulations) {
             int32_t paramIdx = entry.first;
             auto param = getParam(paramIdx);
             if (!assert_expr(param) || param->internalIdx < 0) {
@@ -1581,7 +1581,7 @@ void clapplugin::process(const DAW::Host::Host* const host, AudioBlock* in, Audi
                 autLane->sampleAutomation(dTick, dTickEnd, numSamples, param->getAutomationScale(), values.data());
             }
             auto& modulations = entry.second;
-            for (const auto& mod : modulations) {
+            for (const auto* mod : modulations) {
                 auto ch = DAW::ResolveModulationChannel(host, *mod);
                 if (ch && ch->isActive()) {
                     ch->sampleAutomation(dTick, dTickEnd, numSamples, mod->scale, values.data());
@@ -1589,7 +1589,7 @@ void clapplugin::process(const DAW::Host::Host* const host, AudioBlock* in, Audi
             }
         }
         if (DAW::isPlaybackState(state)) {
-            for (auto& automLane : automationLanes) {
+            for (const auto& automLane : automationLanes) {
                 if (automLane.isActive()) {
                     if (mapModulations.count(automLane.paramIdx) > 0) {
                         continue;
