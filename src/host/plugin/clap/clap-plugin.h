@@ -112,12 +112,13 @@ public:
     }
     
     ClapPluginDescription getDescription();
-    bool getIsAudioTheadOverride() const;
 
     bool loadClapPlugin(DAW::Host::LoadResultSharedLibrary& lib);
     void unloadClapPlugin();
 
     bool canActivate() const;
+private:
+    bool getIsAudioTheadOverride() const;
     void activate(sampleformat_t sampleFormat);
     void deactivate();
 
@@ -159,13 +160,13 @@ public:
 
     String paramValueToText(clap_id paramId, double value);
 
-public:                    //previously signals
+    //previously signals
     void paramsChanged();
+    void paramAdjusted(clap_id paramId);
     void quickControlsPagesChanged() { /* TODO */
     }
     void quickControlsSelectedPageChanged() { /* TODO */
     }
-    void paramAdjusted(clap_id paramId);
 
 private:
     static clapplugin* fromHost(const clap_host* host);
