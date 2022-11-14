@@ -526,7 +526,7 @@ public:
     void updateOptions() {
         auto& settings = daw_tls::getSettings();
         auto audiohost = daw->getAudioHost();
-        if (audiohost->initPa()) {
+        if (settings.dawsettings.audioEnabled && audiohost->initPa()) {
             String deviceAPIName     = settings.iosettings.device_api;
             int apiCount             = Pa_GetHostApiCount();
             int deviceApiIdxSelected = -1;

@@ -104,9 +104,12 @@ public:
     }
 };
 
+namespace DAW {
 
 guictxtmenu_base* makeGuiAutosave(int64_t delay) {
     gui_autosave* gui = new gui_autosave();
     gui->setDelay(delay);
     return gui;
 }
+
+} // namespace DAW

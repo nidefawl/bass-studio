@@ -421,7 +421,7 @@ public:
     /**
      * Loads project file at location path
      * @param path - path to a valid .project file
-     * @param flags - 0 or FLAG_DEFER_LOAD or FLAG_INVOKE_USER_CB_DEFERLOAD
+     * @param flags - 0 or DAW::PluginLoadFlags::FLAG_DEFER_LOAD or FLAG_INVOKE_USER_CB_DEFERLOAD
      */
     void loadFile(String path, int flags);
     void loadFileCStr(const char* str);
@@ -436,7 +436,7 @@ public:
     /**
      * setLoadedProject - releases current project and resources and loads in new project from passed project_file
      * @param file - shared_ptr to project_file instance containg project data to load from
-     * @param flags - 0 or FLAG_DEFER_LOAD (don't load vst plugins, use placeholders)
+     * @param flags - 0 or DAW::PluginLoadFlags::FLAG_DEFER_LOAD (don't load vst plugins, use placeholders)
      * @return reserved - always true
      */
     bool setLoadedProject(const std::shared_ptr<project_file>& file, int flags);
@@ -612,7 +612,7 @@ public:
     void removeTrackFromView(track_t* track, int flags);
 
     void updateZoomLevel(float f) override;
-    void resetView();
+    void onPostUnloadProject();
     void layoutView();
     void fixCursor();
     bool isZooming();
@@ -629,6 +629,7 @@ public:
     void setEditAreaType(DAW::EditAreaType editAreaType);
     void storeLayout(dawview_layout_t& layout);
     void loadLayout(const dawview_layout_t& viewLayout);
+    void loadTrackLayouts(const std::shared_ptr<project_file>& file);
     std::shared_ptr<guictr_layout> replaceContainerWith(guictr_base* ctr,
                                                         std::shared_ptr<guictr_layout> newContainer) override;
     void dragContainerRelayout(drag_ctr_event evt) override;
