@@ -101,7 +101,7 @@ public:
     }
     void setValue(float newValue, int flags) {
         float curval = getValue();
-        newValue     = math::clamp(newValue, bIsBipolar ? -1.0f : 0.0f, 1.0f);
+        newValue     = math::clamp(newValue, 0.0f, 1.0f);
         value        = newValue;
         if (fnSetValue) {
             fnSetValue(newValue, flags);
@@ -114,7 +114,7 @@ public:
     }
 
     float getValueClamped() {
-        return math::clamp(getValue(), bIsBipolar ? -1.0f : 0.0f, 1.0f);
+        return math::clamp(getValue(), 0.0f, 1.0f);
     }
 
     virtual float getValue() {

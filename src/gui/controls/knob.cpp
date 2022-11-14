@@ -106,7 +106,7 @@ void guiknob::handleDraggedMove(MouseEvent& evt) {
             }
             setValue(value, FLG_PAR_UPDATE_USER);
             evt.dragDistance->y = 0;
-            lastVal             = value;
+            lastVal             = this->value;
             changedValue        = true;
         }
     }
