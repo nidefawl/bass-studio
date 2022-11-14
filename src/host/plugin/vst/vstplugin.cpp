@@ -640,7 +640,9 @@ void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags
     effectbase::postSetParameter(idx, preVal, val, flags);
     automatable_param_t* param = getParamUnchecked(idx);
     if (param->internalIdx >= 0) {
-        vst_setParameter(this, handle->aeffect, param->internalIdx, val);
+        if (!(flags & FLG_PAR_UPDATE_FROM_CLIENT)) {
+            vst_setParameter(this, handle->aeffect, param->internalIdx, val);
+        }
         param->paramDisplayValState |= PARAM_FLAG_DIRTY;
         param->paramValueState = PARAM_FLAG_SET;
     }
