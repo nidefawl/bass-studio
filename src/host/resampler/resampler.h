@@ -41,55 +41,45 @@ struct oversampler_t : public oversample_config_t {
     std::vector<float*> channelPtrsIn;
     soxr_t soxr            = nullptr;
     soxr_error_t soxrError = nullptr;
+    double sampleDelay = 0.0;
     explicit oversampler_t(oversample_config_t cfg) {
         *static_cast<oversample_config_t*>(this) = cfg;
+        openResampler();
+    }
+
+    void openResampler() {
+        closeResampler();
         channelPtrsIn.resize(numChannels);
         channelPtrsOut.resize(numChannels);
         for (uint32_t i = 0; i < numChannels; i++) {
             channelPtrsIn[i]  = nullptr;
             channelPtrsOut[i] = nullptr;
         }
-
         soxr_quality_spec_t q_spec             = soxr_quality_spec(0, 0);
         soxr_io_spec_t io_spec                 = soxr_io_spec(SOXR_FLOAT32_S, SOXR_FLOAT32_S);
         soxr_runtime_spec_t const runtime_spec = soxr_runtime_spec(0);
-
         soxr = soxr_create((double) inputSampleRate, (double) outputSampleRate, numChannels, &soxrError, &io_spec, &q_spec, &runtime_spec);
         if (!!soxrError) {
             log_lf(Log::L_ERROR, "soxr_create failed: %s\n", soxr_strerror(soxrError));
         }
     }
-    bool runResample(AudioBlock& srcBlock, AudioBlock& dstBlock, uint32_t& nOutputProcessed) {
-        dbgassert(srcBlock.samples == this->numSamplesInput);
-        dbgassert(srcBlock.channels >= this->numChannels);
-        dbgassert(dstBlock.samples >= this->numSamplesResampled);
-        dbgassert(dstBlock.channels >= this->numChannels);
-
-        for (channelnum_t i = 0; i < numChannels; i++) {
-            if (i < srcBlock.channels) {
-                channelPtrsIn[i] = srcBlock.buf[i];
-            } else {
-                channelPtrsIn[i] = nullptr;
-            }
-            if (i < dstBlock.channels) {
-                channelPtrsOut[i] = dstBlock.buf[i];
-            } else {
-                channelPtrsOut[i] = nullptr;
-            }
-        }
+    void closeResampler() {
         if (soxr) {
-            size_t outputProcessed = 0;
-            soxrError = soxr_process(soxr, channelPtrsIn.data(), numSamplesInput, nullptr, channelPtrsOut.data(), numSamplesResampled, &outputProcessed);
-            if (!soxrError) {
-                nOutputProcessed = static_cast<uint32_t>(outputProcessed);
-                return outputProcessed > 0;
-            } 
-            log_lf(Log::L_ERROR, "soxr_process failed: %s\n", soxr_strerror(soxrError));
+            soxr_delete(soxr);
+            soxr = nullptr;
         }
-        return false;
     }
+    void resetResampler() {
+        if (soxr) {
+            soxr_clear(soxr);
+        }
+    }
+    samplecount_t getResamplerDelay() {
+        return math::ceildS64(sampleDelay);
+    }
+    bool runResample(AudioBlock& srcBlock, AudioBlock& dstBlock, uint32_t& nOutputProcessed);
     ~oversampler_t() {
-        soxr_delete(soxr);
+        closeResampler();
     }
 };
 
@@ -125,13 +115,22 @@ struct resampler_t {
             delete b;
         }
     }
+    samplecount_t getResamplerDelay() {
+        return static_cast<samplecount_t>(resampler.getResamplerDelay());
+    }
+    void resetResampler() {
+        resampler.resetResampler();
+        log_lf(Log::L_WARN, "Flushing %zd samples. %zu output buffers\n", numSamplesQueued, outputBuffers.size());
+        releaseBuffers();
+    }
     buf_t* getFreeOutputBuffer() {
         for (buf_t* b : outputBuffers) {
             if (!b->inUse) {
                 return b;
             }
         }
-        outputBuffers.push_back(new buf_t{ new AudioBlock(numChannels, resampler.numSamplesResampled), {}, 0, 0, false });
+        auto len = resampler.numSamplesResampled + 32;
+        outputBuffers.push_back(new buf_t{ new AudioBlock(numChannels, len), {}, 0, 0, false });
         if (outputBuffers.size() % 128 == 0)
             log_printf("Allocate new output buffer, total %zu buffers\n", outputBuffers.size());
         return outputBuffers.back();

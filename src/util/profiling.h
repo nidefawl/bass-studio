@@ -57,6 +57,8 @@ struct host_stats_t {
     int32_t resamplerInNumSamples  = 0;
     int32_t resamplerOutNumBlocks  = 0;
     int32_t resamplerOutNumSamples = 0;
+    int64_t resamplerDelayInput    = 0;
+    int64_t resamplerDelayOutput   = 0;
     int64_t lastInvocationTime_i64 = 0;
 };
 

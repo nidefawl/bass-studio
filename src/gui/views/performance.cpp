@@ -139,6 +139,7 @@ public:
         printL(0, "output q len", StringFormat("%d", stats.outputQueueLen));
         printL(0, "INPUT  resampler", StringFormat("%d samples|%d blocks", stats.resamplerInNumSamples, stats.resamplerInNumBlocks));
         printL(0, "OUTPUT resampler", StringFormat("%d samples|%d blocks", stats.resamplerOutNumSamples, stats.resamplerOutNumBlocks));
+        printL(0, "Resampler delay IN/OUT", StringFormat("%zd/%zd samples", stats.resamplerDelayInput, stats.resamplerDelayOutput));
         printL(0, "output q len", StringFormat("%d", stats.outputQueueLen));
 
         y += height / 2;

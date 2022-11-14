@@ -281,9 +281,17 @@ public:
         return *it;
     }
 
-    void resetResamplers() {
+    void destroyResamplers() {
         resamplers.clear();
         resamplers.shrink_to_fit();
+    }
+
+    void resetResamplers() {
+        for (auto& resampler : resamplers) {
+            if (resampler) {
+                resampler->resetResampler();
+            }
+        }
     }
 
     void resetBlock() {
@@ -989,7 +997,8 @@ int32_t Host::processPlayback(project_controller_t* ctrl, int32_t sample, double
     stats.resamplerInNumSamples = resamplerInput->getNumSamplesOutputBuffer();
     stats.resamplerOutNumBlocks = resamplerOutput->numBlocksToPop();
     stats.resamplerOutNumSamples = resamplerOutput->getNumSamplesOutputBuffer();
-
+    stats.resamplerDelayInput = resamplerInput->getResamplerDelay();
+    stats.resamplerDelayOutput = resamplerOutput->getResamplerDelay();
 
     while (queueSizeInput) {
         AudioBuffer* ptrExternalInputs = nullptr;
@@ -1800,6 +1809,10 @@ void Host::onStopPlayback(project_controller_t* ctrl) {
     });
 }
 
+void Host::resetResamplers() {
+    impl->resetResamplers();
+}
+
 void Host::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
     impl->audioStream = stream;
     if (stream) {
@@ -1807,6 +1820,8 @@ void Host::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
         const auto numOutputChannels = math::max<channelnum_t>(stream->getNumOutputChannels(), impl->outputChannels);
 
         if (numInputChannels != impl->inputChannels || numOutputChannels != impl->outputChannels) {
+            impl->destroyResamplers();
+        } else {
             impl->resetResamplers();
         }
         if (numOutputChannels != impl->outputChannels) {
