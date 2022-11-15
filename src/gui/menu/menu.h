@@ -14,7 +14,7 @@
 #include "menu.h"
 #include "window.h"
 
-class guimenu_ctxtentry : public ctxtmenu_entry {
+class guimenu_ctxtentry final : public ctxtmenu_entry {
 public:
     ngui::Menu* menu;
     explicit guimenu_ctxtentry(ngui::Menu* _menu);
@@ -22,7 +22,7 @@ public:
     void layout(ivec2 size, float _fontSize, determine_string_width& strw) override;
 };
 class guictr_menubar;
-class guimenu : public guictxtmenu {
+class guimenu final : public guictxtmenu {
     //ngui::Menu* menu;
     std::vector<guimenu_ctxtentry*> guimenuEntries;
     guimenu_ctxtentry* const parentSubmenuEntry;
@@ -38,7 +38,7 @@ public:
     void onParentWindowClose() override;
     void layout() override;
 };
-class guictr_menubar_entry : public guibase {
+class guictr_menubar_entry final : public guibase {
 public:
     ngui::Menu* const menu;
     guictr_menubar* const parentMenuBar;
@@ -59,7 +59,7 @@ public:
         return menu;
     }
 };
-class guictr_menubar : public guictr_base {
+class guictr_menubar final : public guictr_base {
     //std::vector<guictr_menubar_entry> list;
     ngui::MenuBar& menubar;
 

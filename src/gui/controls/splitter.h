@@ -18,7 +18,7 @@ public:
     virtual ivec2 getContainerSize() = 0;
 };
 
-class Splitter : public guictr_base {
+class Splitter final : public guictr_base {
     int type;
     float scaleDefault;
     float scale;

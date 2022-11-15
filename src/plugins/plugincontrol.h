@@ -24,7 +24,7 @@ class guibase;
 class guictr_base;
 class guictxtmenu_base;
 
-class PluginControl : public AppCtrl {
+class PluginControl final : public AppCtrl {
     std::shared_ptr<PluginViewContainers> view;
     bool firstInit = true;
     DAW::UI::CommandManager commandMgr;

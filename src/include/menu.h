@@ -109,7 +109,7 @@ namespace ngui {
         }
     };
 
-    struct MenuBar : Menu {
+struct MenuBar final : Menu {
         bool disableAll = false;
     };
 }

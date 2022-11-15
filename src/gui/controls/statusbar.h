@@ -5,7 +5,7 @@
 #include "gui/container/container.h"
 #include "theme.h"
 
-class gui_statusbar : public guictr_base {
+class gui_statusbar final : public guictr_base {
 public:
     String text;
     GuiColor::constant_t color = GuiColor::COL_TEXT;

@@ -15,7 +15,7 @@ public:
     virtual int readData(char* buf, uint32_t len) = 0;
 };
 
-class ipc_server : public ipc_connection {
+class ipc_server final : public ipc_connection {
     class Impl;
     Impl* m_impl = nullptr;
 public:
@@ -32,7 +32,7 @@ public:
     ipc_server& operator=(const ipc_server&) = delete;
 };
 
-class ipc_client : public ipc_connection {
+class ipc_client final : public ipc_connection {
     class Impl;
     Impl* m_impl = nullptr;
 public:

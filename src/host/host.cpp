@@ -142,7 +142,7 @@ struct Host::track_block_processing_task_t {
 #endif
 };
 
-class TrackBlockProcessTask : public WorkerThread::ThreadTask {
+class TrackBlockProcessTask final : public WorkerThread::ThreadTask {
     process_scratch_buf_t buf;
     Host::track_block_processing_task_t blockProcTask;
     bool inUse = false;
@@ -200,7 +200,7 @@ public:
 /**
  * VST Host implementation internals
  */
-class Host::host_impl : public IDelayLineStorage {
+class Host::host_impl final : public IDelayLineStorage {
 public:
     daw_tls::tlsinstance tls;
     std::array<WorkerThread, MAX_AUDIOPROCESSING_THREADS> threads;

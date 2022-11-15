@@ -93,7 +93,7 @@ struct samplefile_index_incremental_loader_t {
     }
 };
 
-struct load_project_task : public async_task_t {
+struct load_project_task final : public async_task_t {
     DawInstance* daw;
     std::shared_ptr<project_to_load_t> projectToLoad;
     int32_t step = 0;

@@ -9,7 +9,7 @@
 #include "platform.h"
 
 
-class gui_autosave : public guictxtmenu_base {
+class gui_autosave final : public guictxtmenu_base {
 protected:
     bool hadMouseFocus = false;
     guibutton btnSaveNow;

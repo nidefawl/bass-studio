@@ -272,7 +272,7 @@ struct autosave_state_t {
     int64_t tmLastTrigger   = 0L;
 };
 
-class DawInstance : public project_controller_t, public delete_cb {
+class DawInstance final : public project_controller_t, public delete_cb {
     friend class MainCtrl;
     friend class CompanionCtrl;
     friend class DawCtrl;
@@ -679,7 +679,7 @@ class ProjectGraphMonitor {
         return popupNotifyError;
     }
 };
-class MainCtrl : public DawCtrl {
+class MainCtrl final : public DawCtrl {
     friend class DawInstance;
     friend class DawCtrl;
     friend struct DAW::load_project_task;
@@ -716,7 +716,7 @@ public:
     void onChildOverlayWindowClose(window_main*) override;
 };
 
-class CompanionCtrl : public DawCtrl {
+class CompanionCtrl final : public DawCtrl {
     DAW::Cursor cursor;
     DAW::TrackSelection trackSelection;
 

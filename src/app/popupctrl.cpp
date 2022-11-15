@@ -124,7 +124,7 @@ void PopupCtrl::destroy() {
     popupCtrs = nullptr;
 }
 
-class guictr_scrollbar_outline : public guictr_scrollbar {
+class guictr_scrollbar_outline final : public guictr_scrollbar {
 public:
     guictr_scrollbar_outline() : guictr_scrollbar() {
         //padding=0;
@@ -155,10 +155,6 @@ bool PopupCtrl::initAppWindow(window_main* _window, NVGcontext* nanovg) {
     }
     isOK = true;
     return isOK;
-}
-bool PopupCtrl::initPopup(window_overlay* _window, NVGcontext* nanovg) {
-    dbgassert(0);
-    return false;
 }
 
 void PopupCtrl::onTick() {

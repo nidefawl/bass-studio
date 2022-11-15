@@ -132,7 +132,7 @@ struct automation_t {
     }
 };
 
-struct automation_view_t : public automation_t {
+struct automation_view_t final : public automation_t {
     int32_t targetParam = -1;
 };
 
@@ -161,7 +161,7 @@ struct automated_param_t {
     }
 };
 
-struct automation_lane_t : public automated_param_t {
+struct automation_lane_t final : public automated_param_t {
     automation_t src{};
     automation_lane_t() = default;
     automation_lane_t(int32_t _paramIdx, int32_t quantizationSteps) {
@@ -242,7 +242,7 @@ struct automatable_param_properties_t {
     bool isBiPolar     = false;
 };
 
-struct automatable_param_t : public automatable_param_properties_t {
+struct automatable_param_t final : public automatable_param_properties_t {
     friend struct automatable_t;
     int32_t idx         = -1;
     int32_t internalIdx = -1;

@@ -31,7 +31,7 @@ public:
 class gui_track_subtrack_mixer;
 class gui_trackcontrols_title;
 
-class gui_track_controls : public gui_track_content_base {
+class gui_track_controls final : public gui_track_content_base {
     gui_trackcontrols_title* title;
     guictr_base* mixer;
     guictr_base* io;

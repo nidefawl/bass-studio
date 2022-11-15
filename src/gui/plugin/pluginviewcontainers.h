@@ -42,7 +42,7 @@ public:
     }
 };
 template<typename PluginGUI, typename Plugin>
-class SinglePluginViewContainers : public PluginViewContainers {
+class SinglePluginViewContainers final : public PluginViewContainers {
 protected:
     uint32_t width;
     uint32_t height;

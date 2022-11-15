@@ -102,7 +102,7 @@ public:
 
     virtual void render(BakeGLPath& out, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) = 0;
 };
-class GLPathRendererDashLines : public IPathRenderer {
+class GLPathRendererDashLines final : public IPathRenderer {
     std::vector<VertexAttr> attributes{
         {"a_position", 2, GL_FLOAT},
         {"a_segment", 2, GL_FLOAT},
@@ -128,7 +128,7 @@ public:
     void render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };
 
-class GLPathRendererPolyline2d : public IPathRenderer {
+class GLPathRendererPolyline2d final : public IPathRenderer {
     std::vector<VertexAttr> attributes{
             {"a_position", 2, GL_FLOAT},
     };
@@ -144,7 +144,7 @@ public:
     void render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };
 
-class GLPathRendererParBasic : public IPathRenderer {
+class GLPathRendererParBasic final : public IPathRenderer {
     std::vector<VertexAttr> attributes{
             {"a_vertex", 4, GL_FLOAT}
     };
@@ -161,7 +161,7 @@ public:
 };
 
 
-class GLPathRendererParAdvanced : public IPathRenderer {
+class GLPathRendererParAdvanced final : public IPathRenderer {
     std::vector<VertexAttr> attributes{
             {"a_vertex", 4, GL_FLOAT}
     };

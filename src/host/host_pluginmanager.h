@@ -118,7 +118,7 @@ struct LoadResultPlugin {
 };
 
 
-class PluginHostCallback : public IHostCallback {
+class PluginHostCallback final : public IHostCallback {
     PluginManager* const host;
     public:
     explicit PluginHostCallback(PluginManager* _host)

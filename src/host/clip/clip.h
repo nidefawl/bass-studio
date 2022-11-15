@@ -196,7 +196,7 @@ public:
 };
 
 struct noteview_cache_impl_t;
-class noteview_render_t : public clip_notes_t {
+class noteview_render_t final : public clip_notes_t {
 public:
     ~noteview_render_t();
     int32_t reqRevision         = -1;

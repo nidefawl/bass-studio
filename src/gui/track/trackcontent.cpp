@@ -772,7 +772,7 @@ gui_track_subtrack::gui_track_subtrack(track_gui_entry_t* _entry, scaled_grid& _
     padding = 0;
 }
 
-class guictxtmenu_trackcontent : public guictxtmenu_track_editor {
+class guictxtmenu_trackcontent final : public guictxtmenu_track_editor {
 
 public:
     //TODO make this take a safe reference to a track

@@ -8,7 +8,7 @@
 #include <functional>
 #include <nanovg.h>
 
-class guidialog_cb_yes_no : public guidialog_base {
+class guidialog_cb_yes_no final : public guidialog_base {
     guibutton btnYes;
     guibutton btnNo;
 

@@ -42,7 +42,7 @@ public:
     virtual void gridChanged(scaled_grid& grid) = 0;
 };
 
-class scaled_grid : public layout_grid_t {
+class scaled_grid final : public layout_grid_t {
 protected:
     std::vector<grid_changed_cb*> callbacks;
     int lastOffset  = 0;

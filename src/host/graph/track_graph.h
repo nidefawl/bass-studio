@@ -49,7 +49,7 @@ namespace DAW {
         PROCESSING,
         PROCESSED
     };
-    struct processing_track_node_t : public track_node_t {
+struct processing_track_node_t final : public track_node_t {
         processing_track_node_t()  = default;
         track_t* trackOptional     = nullptr;
         effectbase* effectOptional = nullptr;

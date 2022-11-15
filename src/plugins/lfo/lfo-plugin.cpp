@@ -133,8 +133,8 @@ namespace PluginLFO {
         int32_t syncFlags = false;
     };
 
-    struct module_lfo::lfo_impl_t : public PluginLockable {
-        struct lfo_automation_src_param_t : public automated_param_t {
+struct module_lfo::lfo_impl_t final : public PluginLockable {
+struct lfo_automation_src_param_t final : public automated_param_t {
             module_lfo* module = nullptr;
             DAW::Shape::shape_t shape;
             std::vector<SyncRatio> enabledSyncs;
@@ -442,7 +442,7 @@ namespace PluginLFO {
         return false;
     }
 
-    class guictr_module_lfo : public guictr_base {
+class guictr_module_lfo final : public guictr_base {
         module_lfo* const module;
         std::vector<guiknob_pluginparam*> guiParams;
         std::vector<gui_slider_textfield*> guiParamsTextfields;
@@ -536,7 +536,7 @@ namespace PluginLFO {
 
 
 
-        class ctxtmenu_lfo_sync : public ctxtmenu_entry {
+class ctxtmenu_lfo_sync final : public ctxtmenu_entry {
             module_lfo* const module;
             int32_t channel;
 
@@ -644,7 +644,7 @@ namespace PluginLFO {
                 return -1;
             }
         };
-        class guictr_module_lfo_context_menu : public guictxtmenu {
+class guictr_module_lfo_context_menu final : public guictxtmenu {
             module_lfo* const module;
             int32_t channel;
         public:

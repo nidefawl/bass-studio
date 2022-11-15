@@ -515,7 +515,7 @@ void DrawGrid(NVGcontext* vg, const guitheme_t* theme, vec2 pos, vec2 size, int 
         }
     }
 }
-class guictr_curve_shape : public guictr_base, public ShapeEdit {
+class guictr_curve_shape final : public guictr_base, public ShapeEdit {
     friend class guictr_curve_editor;
     shape_t curveInternal;
 public:
@@ -567,7 +567,7 @@ public:
         onReleaseDragCurveEditor(evt);
     }
 };
-class guictr_curve_grid_control : public guictr_base {
+class guictr_curve_grid_control final : public guictr_base {
     friend class guictr_curve_controls;
     friend class guictr_curve_editor;
     const int32_t axis;
@@ -599,7 +599,7 @@ public:
         guictr_base::buttonClicked(button);
     }
 };
-class guictr_curve_controls : public guictr_base {
+class guictr_curve_controls final : public guictr_base {
     friend class guictr_curve_editor;
     guictr_curve_grid_control gridControlH;
     guictr_curve_grid_control gridControlV;
@@ -640,7 +640,7 @@ public:
         buttonSave.layout();
     }
 };
-class guictr_curve_editor : public guictr_base, public i_ctr_shape_editor {
+class guictr_curve_editor final : public guictr_base, public i_ctr_shape_editor {
     seq_rand rand;
     guictr_curve_shape shape;
     guictr_curve_controls controls;

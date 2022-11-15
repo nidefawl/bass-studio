@@ -34,7 +34,7 @@ namespace DAW::UI::Modulation {
         }
         virtual modulation_channel_ref getEndpoint() = 0;
     };
-    class ctxt_modchannel : public ctxt_endpoint {
+class ctxt_modchannel final : public ctxt_endpoint {
     public:
         const modulation_channel_ref endpoint;
 
@@ -68,7 +68,7 @@ namespace DAW::UI::Modulation {
             return true;
         }
     };
-    class ctxt_bus_track : public ctxt_bus {
+class ctxt_bus_track final : public ctxt_bus {
         const audio_stage_ref_t busStage;
 
     public:
@@ -81,7 +81,7 @@ namespace DAW::UI::Modulation {
     };
 
     /* top select menu */
-    class guictxtmenu_modulation : public guictxtmenu {
+class guictxtmenu_modulation final : public guictxtmenu {
     public:
         std::function<void(const DAW::modulation_channel_ref&)> fnCallback;
         explicit guictxtmenu_modulation(DawCtrl * _dawCtrl)

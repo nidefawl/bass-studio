@@ -10,7 +10,7 @@
 #include "renderresources.h"
 
 
-class gui_notify : public guictr_base {
+class gui_notify final : public guictr_base {
 protected:
     bool hadMouseFocus = false;
     guibutton btnHide;

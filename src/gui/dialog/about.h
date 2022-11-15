@@ -9,7 +9,7 @@
 #include <tuple>
 #include "dialog.h"
 
-class guidialog_about : public guidialog_base {
+class guidialog_about final : public guidialog_base {
     using AboutLine = std::tuple<String, String>;
     using DetailedAbout = std::tuple<const char*, const char*>;
     guibutton btnClose;

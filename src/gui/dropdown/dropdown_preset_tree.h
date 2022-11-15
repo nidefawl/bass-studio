@@ -8,7 +8,7 @@
 #include "threads/threadlock.h"
 #include "util/presetmanager.h"
 
-class guidropdown_select_preset_file : public guictxtmenu {
+class guidropdown_select_preset_file final : public guictxtmenu {
 public:
 struct select_preset_cb_t {
     std::function<void(const String& path)> loadPreset;
@@ -20,7 +20,7 @@ private:
     // PluginVST2_Synth* plugin;
     PresetManager presetManager;
 
-    class ctxtmenu_entry_folder : public ctxtmenu_entry {
+class ctxtmenu_entry_folder final : public ctxtmenu_entry {
         String path;
 
     public:
@@ -59,7 +59,7 @@ private:
             }
         }
     };
-    class ctxtmenu_entry_preset : public ctxtmenu_entry {
+class ctxtmenu_entry_preset final : public ctxtmenu_entry {
         const PresetManager::Preset& preset;
 
     public:
@@ -140,7 +140,7 @@ public:
     }
 };
 
-class guidropdown_select_preset : public guidropdownbase {
+class guidropdown_select_preset final : public guidropdownbase {
     PresetManager presetManager;
     std::shared_ptr<guidropdown_select_preset_file::select_preset_cb_t> cb;
     String selected;

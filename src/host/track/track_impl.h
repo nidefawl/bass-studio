@@ -59,7 +59,7 @@ struct track_audio_src {
         return AudioBlock(channels, static_cast<samplecount_t>(samples));
     }
 };
-struct track_params_t : public automatable_t {
+struct track_params_t final : public automatable_t {
 private:
     audio_stage_t* const audiostage;
     struct track_param_entry_t {
@@ -381,7 +381,7 @@ struct track_gui_entry_t;
 inline void updateProfilingTime(int64_t& field, int64_t tm, uint8_t weighting = 20) {
     field = (field * (weighting-1) + tm) / weighting;
 }
-struct track_impl_t : public audio_stage_t {
+struct track_impl_t final : public audio_stage_t {
     DAW::midiarp* arp = nullptr;
     track_t* track;
     std::vector<note_t> m_heldNotes;
@@ -417,7 +417,7 @@ struct track_impl_t : public audio_stage_t {
     automatable_t* getAutomatableByType(const automatable_param_ref_t& ref);
 };
 
-class action_modify_track : public action_base {
+class action_modify_track final : public action_base {
 protected:
     trackstate_t before;
     trackstate_t after;

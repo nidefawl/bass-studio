@@ -9,7 +9,7 @@
 #include "contextmenu.h"
 #include "basectrl.h"
 
-class ctxtmenu_color_select : public ctxtmenu_entry {
+class ctxtmenu_color_select final : public ctxtmenu_entry {
 public:
     const int WH      = 16;
     const int ROWS    = COLOR_PALETTE_ROWS;
@@ -93,7 +93,7 @@ public:
         return -1;
     }
 };
-class guictxtmenu_colorpalette : public guictxtmenu {
+class guictxtmenu_colorpalette final : public guictxtmenu {
 public:
     std::function<void(uint32_t)> callback = nullptr;
     guictxtmenu_colorpalette() {

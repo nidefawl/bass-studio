@@ -5,7 +5,7 @@
 
 namespace PluginGain {
 struct impl_data_t;
-class module_gain : public internalplugin {
+class module_gain final : public internalplugin {
     impl_data_t* impl;
 public:
     const float DBFS_MUTE_POS = -101.0f;

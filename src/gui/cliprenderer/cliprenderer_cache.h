@@ -48,7 +48,7 @@ struct noteview_cache_impl_t {
     }
 };
 
-struct midi_clip_render_cache_t : public noteview_cache_impl_t {
+struct midi_clip_render_cache_t final : public noteview_cache_impl_t {
     midi_clip_render_cache_t() : noteview_cache_impl_t() {
     }
 };

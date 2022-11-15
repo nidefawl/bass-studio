@@ -26,7 +26,7 @@ public:
     virtual void onDialogShow() = 0;
 };
 
-class guidialog_settings : public guidialog_base {
+class guidialog_settings final : public guidialog_base {
     struct dialog_entry;
     std::vector<dialog_entry*> entries;
     dialog_entry* activeEntry = nullptr;
@@ -44,7 +44,7 @@ public:
 };
 
 class guidropdown_setting_options_t;
-class guidropdown_setting_options_ctxt_t : public guictxtmenu {
+class guidropdown_setting_options_ctxt_t final : public guictxtmenu {
     guidropdown_setting_options_t* parent;
     std::vector<String> strings;
 
@@ -53,7 +53,7 @@ public:
     bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
 
-class guidropdown_setting_options_t : public guidropdownbase {
+class guidropdown_setting_options_t final : public guidropdownbase {
 public:
     std::vector<String> options;
     std::function<void(int32_t)> cbOnOptionSelected;

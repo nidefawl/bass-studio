@@ -86,7 +86,7 @@ public:
         renderButtonLabel(vg, fl);
     }
 };
-class guibuttontoggle : public guibuttonstate {
+class guibuttontoggle final : public guibuttonstate {
     int _getIcon() {
         return getIcon ? getIcon() : icon;
     }

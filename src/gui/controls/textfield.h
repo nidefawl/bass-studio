@@ -14,7 +14,7 @@ public:
     virtual String parse(String string)                         = 0;
 };
 
-class input_filter_hex32 : public input_filter {
+class input_filter_hex32 final : public input_filter {
     uint32_t toInt(uint32_t c) {
         if (c >= '0' && c <= '9') return c - '0';
         if (c >= 'A' && c <= 'F') return 10 + c - 'A';

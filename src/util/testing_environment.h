@@ -17,7 +17,7 @@ namespace daw_test {
 #endif
     }
 
-class failed_assert_exception : public std::runtime_error {
+class failed_assert_exception final : public std::runtime_error {
 public:
     explicit failed_assert_exception(const char* msg) : runtime_error(msg) {}
 };

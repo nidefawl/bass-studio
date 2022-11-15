@@ -114,7 +114,7 @@ void setSamples(ProfilingDataChannelBase* const ch,
 }
 
 
-struct gl_shader_perfgraph : gl_shader_pipeline {
+struct gl_shader_perfgraph final : gl_shader_pipeline {
     bool isValid = false;
     GLint u_renderColor     = 0;
     GLint u_renderInfo      = 0;
@@ -163,7 +163,7 @@ struct gl_shader_perfgraph : gl_shader_pipeline {
 };
 // static constexpr uint64_t nextPowerOfTwo64 (uint64_t x) { return 1ULL<<(sizeof(uint64_t) * 8 - __builtin_clzll(x)); }
 
-class window_impl : public window_abstract_t {
+class window_impl final : public window_abstract_t {
     static constexpr size_t TEXTURE_WIDTH  = DBG_PERF_HIST_SIZE;
     static constexpr size_t TEXTURE_HEIGHT = 16;
     std::vector<float> texData;

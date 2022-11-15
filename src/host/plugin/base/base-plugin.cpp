@@ -249,7 +249,7 @@ std::shared_ptr<guiplugin> effectbase::getPluginGui(int32_t uuid) {
     return uiInstances[uuid];
 }
 
-class guideferred : public guiplugin {
+class guideferred final : public guiplugin {
     effect_deferred* const module;
     guibutton btnLoad;
 

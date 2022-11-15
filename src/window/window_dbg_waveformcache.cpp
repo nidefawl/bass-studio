@@ -17,7 +17,7 @@
 
 namespace windowdebug_waveformcache {
 
-class window_impl : public window_abstract_t {
+class window_impl final : public window_abstract_t {
     GLuint program2dTexture;
     GLint u_mvp;
     GLint u_tex0;

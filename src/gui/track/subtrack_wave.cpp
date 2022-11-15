@@ -13,7 +13,7 @@
 #include "seq_util.h"
 #include <unordered_map>
 
-class gui_subtrack_waveview : public gui_track_subtrack {
+class gui_subtrack_waveview final : public gui_track_subtrack {
     struct waveview_entry {
         bool flagUpdated      = false;
         int64_t sampleVersion = -1;

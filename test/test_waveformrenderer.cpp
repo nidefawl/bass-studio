@@ -153,7 +153,7 @@ namespace MiniApp {
         }
     };
     template<typename T>
-    class MiniAppCtrl : public AppCtrl {
+    class MiniAppCtrl final : public AppCtrl {
         T* view = nullptr;
         waveform_test& waveformTest;
         uint64_t tmLastRelease = 0;

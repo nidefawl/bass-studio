@@ -35,7 +35,7 @@
 
 namespace DAW::DialogSettings {
 
-class guibutton_keybind_update : public guibutton {
+class guibutton_keybind_update final : public guibutton {
     KeyEvent lastEvent;
     bool bIsRecording = false;
     public:
@@ -109,9 +109,9 @@ class guibutton_keybind_update : public guibutton {
         return lastEvent;
     }
 };
-class guidialog_keybinds : public setting_dialog {
+class guidialog_keybinds final : public setting_dialog {
 public:
-    class gui_keybind_entry : public gui_list_entry {
+class gui_keybind_entry final : public gui_list_entry {
         guidialog_keybinds* const parentDialog;
         UI::Command* const command;
         int32_t keyComboIdx;

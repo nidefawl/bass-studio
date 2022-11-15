@@ -14,7 +14,7 @@ namespace {
     std::vector<SupportedFileType> vFILE_TYPE_EXPORT = { FILE_TYPE_EXPORT };
 }// namespace
 class gui_export;
-class guictr_timeframe : public guictr_base {
+class guictr_timeframe final : public guictr_base {
     friend class gui_export;
     gui_timeinput tmTickStart;
     gui_timeinput tmTickLen;
@@ -100,7 +100,7 @@ public:
         return *pIsLocked;
     }
 };
-class gui_export : public guictr_base {
+class gui_export final : public guictr_base {
     export_settings_t& settings;
     guictr_timeframe tmFrameExport;
     guibutton btnExport;

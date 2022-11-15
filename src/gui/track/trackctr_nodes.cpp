@@ -245,7 +245,7 @@ namespace DAW {
     }
 }// namespace DAW
 class gui_graph_n;
-class gui_graph_port : public guibase {
+class gui_graph_port final : public guibase {
     friend class gui_graph::guictr_graph_impl;
     gui_graph_n* parentGraphNode;
     stage_bufferpoint stageBufferPoint;
@@ -385,7 +385,7 @@ void guitooltip<gui_graph_port>::setContent() {
     ptr->addPropertiesTooltip(table);
 }
 
-class guinodeinfo_text : public guictr_base {
+class guinodeinfo_text final : public guictr_base {
     const DAW::processing_track_node_t* const node;
     float posY = 0;
 public:
@@ -439,7 +439,7 @@ public:
     }
 };
 
-class gui_graph_n : public gui_graph_entry {
+class gui_graph_n final : public gui_graph_entry {
     friend class gui_graph;
     friend class gui_graph_port;
     gui_graph::guictr_graph_impl* const graphImpl;
@@ -715,7 +715,7 @@ namespace NodeGraph {
         return it != portsOutput.end() ? *it : nullptr;
     }
     
-class action_modify_track_routing : public action_base {
+class action_modify_track_routing final : public action_base {
     audio_stage_ref_t ref;
     track_io_configuration_snapshot_t snapshotBefore;
     track_io_configuration_snapshot_t snapshotAfter;
@@ -745,7 +745,7 @@ public:
         }
     }
 };
-class action_modify_stage_routing : public action_base {
+class action_modify_stage_routing final : public action_base {
     audio_stage_ref_t ref;
     track_effect_routing_snapshot_t snapshotBefore;
     track_effect_routing_snapshot_t snapshotAfter;
@@ -1661,7 +1661,7 @@ vec2 gui_graph::toParentSpace2f(vec2 localCoord) const {
     return (vec2(getPosContent()) + localCoord) * scale + offset;
 }
 
-class guictxtmenu_nodes : public guictxtmenu {
+class guictxtmenu_nodes final : public guictxtmenu {
     guictr_nodes_editor* const m_nodesEditor;
     ctxtmenu_entry* cmdRefresh;
     ctxtmenu_entry* cmdResetPositions;

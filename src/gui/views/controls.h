@@ -19,7 +19,7 @@
 #include "util/profiling.h"
 
 class gui_tempocontrol;
-class gui_tempocontrol_input : public guibutton {
+class gui_tempocontrol_input final : public guibutton {
     gui_tempocontrol* const parentInput;
 public:
     gui_tempocontrol_input(gui_tempocontrol* parent)
@@ -36,7 +36,7 @@ public:
     }
     void onKeyInputChangeValue(ivec2 direction);
 };
-class gui_tempocontrol : public guictr_base {
+class gui_tempocontrol final : public guictr_base {
     gui_tempocontrol_input tempoInput;
     gui_textfield editfield;
 public:
@@ -53,7 +53,7 @@ public:
     void showEditField();
 };
 
-class gui_signaturecontrol_input : public guibutton {
+class gui_signaturecontrol_input final : public guibutton {
     const int idx;
 
 public:
@@ -70,7 +70,7 @@ public:
     void handleDraggedRelease(MouseEvent& evt) override {
     }
 };
-class gui_signaturecontrol : public guictr_base {
+class gui_signaturecontrol final : public guictr_base {
     gui_signaturecontrol_input inputNum;
     gui_signaturecontrol_input inputDen;
 
@@ -97,7 +97,7 @@ public:
 };
 
 class gui_timeinput;
-class gui_timeinput_field : public guibutton {
+class gui_timeinput_field final : public guibutton {
 public:
     const int idx;
     const bool isRelative;
@@ -116,7 +116,7 @@ public:
     void setNewValue(int32_t val);
     bool handleKeyInput(KeyEvent& kevt) override;
 };
-class gui_timeinput : public guictr_base {
+class gui_timeinput final : public guictr_base {
     SafeRef<guibase> ref;
     int32_t* refPtr = nullptr; //TODO: make this a safe reference
     gui_timeinput_field bar;
@@ -151,7 +151,7 @@ public:
     void showEditField();
 };
 
-class guibutton_audioengine : public guibuttonstate {
+class guibutton_audioengine final : public guibuttonstate {
     host_stats_t stats;
     float cpuUsage = 0.0f;
 
@@ -166,7 +166,7 @@ public:
 struct GlobalZoom {
     float zoom = 1.0f;
 };
-class guictr_tempocontrols : public guictr_base {
+class guictr_tempocontrols final : public guictr_base {
     project_globals_t& projectGlobals;
     gui_tempocontrol tempo;
     gui_signaturecontrol signature;

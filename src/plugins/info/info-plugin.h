@@ -30,7 +30,7 @@ namespace PluginHostInfo {
         float logBlocks    = 0.0f;
     };
 
-    class Program : public ProgramParameters {
+class Program final : public ProgramParameters {
         friend class PluginVST2_HostInfo;
 
     public:
@@ -42,7 +42,7 @@ namespace PluginHostInfo {
     };
 
     struct PluginVST2_HostInfo_impl_t;
-    class PluginVST2_HostInfo : public BasePluginVST2 {
+class PluginVST2_HostInfo final : public BasePluginVST2 {
         friend PluginVST2_HostInfo_impl_t* getImpl(PluginVST2_HostInfo*);
 
     protected:

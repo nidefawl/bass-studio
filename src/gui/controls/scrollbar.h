@@ -13,7 +13,7 @@ public:
     virtual void scrollOffsetChanged(int dir, float offset)                         = 0;
     virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) = 0;
 };
-class gui_scrollbar : public guibase {
+class gui_scrollbar final : public guibase {
     int dir;
     gui_scrollcontainer& ctr;
     float startOffset     = 0;

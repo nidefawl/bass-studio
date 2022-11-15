@@ -1084,7 +1084,7 @@ namespace PluginSynth {
             return this->unit;
         }
     };
-    struct SynthParam_Float : public SynthParamBase {
+struct SynthParam_Float final : public SynthParamBase {
         explicit SynthParam_Float(Parameters _enumParam) : SynthParamBase(ParamType::FLOAT, _enumParam) {
         }
         double fmin         = 0.0;
@@ -1165,7 +1165,7 @@ namespace PluginSynth {
             return { static_cast<float>(dVal), true };
         }
     };
-    struct SynthParam_Enum : public SynthParam_Int {
+struct SynthParam_Enum final : public SynthParam_Int {
         explicit SynthParam_Enum(Parameters _enumParam) : SynthParam_Int(ParamType::ENUM, _enumParam) {
         }
         std::vector<String> strings;
@@ -1202,7 +1202,7 @@ namespace PluginSynth {
 
     using ModulationSourceData = std::array<double, MathExprInputLen>;
     class module_synth;
-    class SynthImpl : public PluginLockable, public SynthState {
+class SynthImpl final : public PluginLockable, public SynthState {
     public:
         using UnisonVoiceList = std::array<int32_t, NUM_POLY_VOICES * NUM_UNISON_VOICES>;
         using PolyVoiceList   = std::array<int32_t, NUM_POLY_VOICES>;
@@ -2811,7 +2811,7 @@ namespace PluginSynth {
         }
     };
 
-    class module_synth : public internalplugin {
+    class module_synth final : public internalplugin {
         SynthImpl* const impl;
         std::vector<SynthParamBase*>& vecParams;
     public:
@@ -3277,7 +3277,7 @@ namespace PluginSynth {
         return gui->theme->get(GuiConstant::CONST_ROW_HEIGHT) * 1.33f;
     }
 
-    class guicontainer_modulation_slot_destination : public guictr_base {
+class guicontainer_modulation_slot_destination final : public guictr_base {
         SynthImpl* const synth;
         const int32_t slotIndex;
         const int32_t destSlotIndex;
@@ -3384,7 +3384,7 @@ namespace PluginSynth {
         }
     };
 
-    class guicontainer_modulation_slot_source : public guictr_base {
+class guicontainer_modulation_slot_source final : public guictr_base {
         SynthImpl* const synth;
         const int32_t slotIndex;
         const int32_t srcSlotIndex;
@@ -3684,7 +3684,7 @@ namespace PluginSynth {
         }
     };
 
-    class guicontainer_modulation_slot : public guictr_synth_title {
+class guicontainer_modulation_slot final : public guictr_synth_title {
         SynthImpl* const synth;
         const int32_t slotIndex;
         std::vector<guicontainer_modulation_slot_source*> sources;
@@ -3815,7 +3815,7 @@ namespace PluginSynth {
         }
     };
 
-    class guicontainer_modulation : public guictr_synth_title {
+class guicontainer_modulation final : public guictr_synth_title {
         guictr_scrollbar scrollContainerModulation;
         SynthImpl* const synth;
         std::vector<guicontainer_modulation_slot*> slots;
@@ -3900,7 +3900,7 @@ namespace PluginSynth {
         }
     };
 
-    class guiknob_synthparam : public guiknob_pluginparam {
+class guiknob_synthparam final : public guiknob_pluginparam {
         SynthImpl* const synth;
         const Parameters param;
 
@@ -3926,7 +3926,7 @@ namespace PluginSynth {
         }
     };
 
-    class gui_listsynthsettings : public gui_list_entry {
+class gui_listsynthsettings final : public gui_list_entry {
         SynthImpl* const synth;
         const Settings setting;
         const String name;
@@ -4019,7 +4019,7 @@ namespace PluginSynth {
         }
     };
 
-    class guictr_synth_param_container : public guictr_synth_title {
+class guictr_synth_param_container final : public guictr_synth_title {
         SynthImpl* const synth;
         std::vector<guiknob_synthparam*> knobs;
         vec2 sliderSize{ 0.0f, 0.0f };
@@ -4138,7 +4138,7 @@ namespace PluginSynth {
         }
     };
     
-    class guicontainer_plugin_synth_editor : public guictr_base, public splitter_cb {
+class guicontainer_plugin_synth_editor final : public guictr_base, public splitter_cb {
         struct _synth_gui_param_knob {
             Parameters param;
             guiknob_pluginparam* knob;
@@ -4172,7 +4172,7 @@ namespace PluginSynth {
         Splitter splitter;
         bool bGuiNeedsRefresh = true;
 
-        class gui_synth_stats_list_entry : public gui_list_entry {
+class gui_synth_stats_list_entry final : public gui_list_entry {
         public:
             String string;
             gui_synth_stats_list_entry() {
@@ -4698,7 +4698,7 @@ namespace PluginSynth {
         }
     };
 
-    class guicontainer_plugin_synth_voicestates : public guictr_base {
+class guicontainer_plugin_synth_voicestates final : public guictr_base {
         SynthImpl* const synth;
         SynthImpl::VoiceList list{};
     public:
@@ -4775,7 +4775,7 @@ namespace PluginSynth {
         }
     };
 
-    class guicontainer_plugin_synth_header : public guictr_base {
+class guicontainer_plugin_synth_header final : public guictr_base {
         SynthImpl* const synth;
         guicontainer_plugin_synth_voicestates voiceStates;
         guidropdown_select_preset selectPreset;
@@ -4860,7 +4860,7 @@ namespace PluginSynth {
         }
     };
 
-    class guicontainer_plugin_synth : public guictr_base {
+class guicontainer_plugin_synth final : public guictr_base {
         guicontainer_plugin_synth_editor editor;
         guicontainer_plugin_synth_header header;
 
@@ -4939,7 +4939,7 @@ namespace PluginSynth {
         return this->impl->createViewCtrImpl();
     }
 
-    class SynthPluginViewCtr : public PluginViewContainers {
+class SynthPluginViewCtr final : public PluginViewContainers {
     public:
         guicontainer_plugin_synth ctr_main;
         explicit SynthPluginViewCtr(module_synth* eff)

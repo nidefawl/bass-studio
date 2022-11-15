@@ -29,7 +29,7 @@ namespace PluginMacros {
     constexpr int32_t PARAM_MACROS_FIRST = 16;
     constexpr int32_t BINARY_SNAPSHOT_VERSION = 1;
 
-    class guictr_macro : public guictr_base {
+class guictr_macro final : public guictr_base {
         module_macros* const module;
         const int32_t idx;
         guiknob_pluginparam knob;
@@ -67,7 +67,7 @@ namespace PluginMacros {
         int32_t getParamIdx() const { return knob.getParamIdx(); }
         guiknob_pluginparam* getKnob() { return &knob; }
     };
-    class guictr_module_macros : public guictr_base {
+class guictr_module_macros final : public guictr_base {
         module_macros* const module;
         std::vector<guictr_macro*> macroCtrs;
         gui_textfield editfield;
@@ -182,7 +182,7 @@ namespace PluginMacros {
             return true;
         }
 
-        class ctxtmenu_macro_count : public ctxtmenu_entry {
+class ctxtmenu_macro_count final : public ctxtmenu_entry {
 
             struct _time_sel_entry {
                 int id;
@@ -279,7 +279,7 @@ namespace PluginMacros {
                 return -1;
             }
         };
-        class guictr_module_macros_context_menu : public guictxtmenu {
+class guictr_module_macros_context_menu final : public guictxtmenu {
             module_macros* const module;
             guictr_module_macros* const ctr;
         public:
@@ -308,7 +308,7 @@ namespace PluginMacros {
     };
 
     struct module_macros::macro_impl_t {
-        struct macro_automation_src_param_t : public automated_param_t {
+struct macro_automation_src_param_t final : public automated_param_t {
             module_macros* module = nullptr;
             bool isActive() const override { //??
                 return true;

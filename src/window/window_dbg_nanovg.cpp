@@ -21,7 +21,7 @@
 
 namespace windowdebug_dbgnanovg {
 
-class window_impl : public window_abstract_t {
+class window_impl final : public window_abstract_t {
     RenderResources::NvgImageTexture imgQuad;
     UIFont::font_instance instance{"jbmononf.ttf", -1};
     GLuint program2dTexture;

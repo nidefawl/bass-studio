@@ -18,7 +18,7 @@ struct dawruntime {
     bool enableClipRendererDebugLayer = false;
     bool copyAutomation = true;
 };
-struct appruntime : public dawruntime {
+struct appruntime final : public dawruntime {
     SafeRefStorage<guibase> safeRefs;
     render_clip_cache_stats_t renderClipCacheStats{};
     prof_stats_render_t renderStats{};

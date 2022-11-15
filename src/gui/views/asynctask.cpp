@@ -6,7 +6,7 @@
 #include "str_util.h"
 #include <nanovg.h>
 
-class async_test_task_impl : public DAW::async_task_t {
+class async_test_task_impl final : public DAW::async_task_t {
     static constexpr int MAX = 100;
     int32_t step = 0;
     int32_t step2 = 0;

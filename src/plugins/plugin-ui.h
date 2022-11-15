@@ -13,7 +13,7 @@
 #include "plugin.h"
 #include <vstsdk-plugin-2.4/audioeffectx.h>
 
-class guictr_vst2_simple : public guictr_base {
+class guictr_vst2_simple final : public guictr_base {
     effectbase* const module;
     std::vector<guiknob_pluginparam*> knobs;
     gui_textfield editfield;

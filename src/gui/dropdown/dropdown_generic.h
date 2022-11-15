@@ -13,7 +13,7 @@ public:
 };
 
 template<typename T>
-class guidropdown_generic : public guidropdownbase, public guidropdown_cb {
+class guidropdown_generic final : public guidropdownbase, public guidropdown_cb {
     std::vector<T> options;
     String current;
 
@@ -74,7 +74,7 @@ public:
     }
 };
 
-class guidropdown_generic_ctxt : public guictxtmenu {
+class guidropdown_generic_ctxt final : public guictxtmenu {
     guidropdown_cb* const parent;
     std::vector<String> options;
 

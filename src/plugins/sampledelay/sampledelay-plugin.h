@@ -13,7 +13,7 @@ namespace PluginSampleDelay {
             float delay;
     };
 
-    class module_sampledelay : public internalplugin {
+    class module_sampledelay final : public internalplugin {
 
     public:
         explicit module_sampledelay(int32_t _projectGlobalId, IHostCallback* _hostCallback);

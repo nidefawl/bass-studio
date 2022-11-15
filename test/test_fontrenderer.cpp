@@ -40,7 +40,7 @@ struct membuf : std::streambuf
     }
 };
 
-class MiniAppCtrl : public AppCtrl {
+class MiniAppCtrl final : public AppCtrl {
     std::vector<String> strings;    
     int numFrames = 0;
     float fTime = 0.0f;

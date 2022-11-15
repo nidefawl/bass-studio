@@ -76,7 +76,7 @@ struct midi_data_t {
     midi_input_events_t events;
 };
 
-class Host : public PluginManager {
+class Host final : public PluginManager {
 public:
     class host_impl;
     struct track_block_processing_task_t;

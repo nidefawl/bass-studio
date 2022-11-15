@@ -165,7 +165,7 @@ inline void mixDbfsScaleBands(const audio_spectrum* lf, const audio_spectrum* hf
     dbgassert(static_cast<size_t>(out.fftlen) == out.mags[0].size());
 }
 template <int INPUTLEN, int T>
-class fft_processor : public audio_spectrum {
+class fft_processor final : public audio_spectrum {
 public:
     fft_ctxt_t<INPUTLEN>* fftctxt;
     overlap_buffer_t<INPUTLEN, NUM_CHANNELS> buffer;

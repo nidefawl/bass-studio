@@ -4,7 +4,7 @@
 #include "host/plugin/internal/internal-plugin.h"
 
 namespace PluginLatency {
-class module_latency : public internalplugin {
+class module_latency final : public internalplugin {
 public:
     const float DBFS_MUTE_POS = -101.0f;
     const float MTR_CEIL      = 24.0f;

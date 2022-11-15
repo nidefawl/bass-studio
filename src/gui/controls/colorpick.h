@@ -6,7 +6,7 @@
 #include "textfield.h"
 
 
-class gui_color_pick : public guictr_base {
+class gui_color_pick final : public guictr_base {
     guiknob_labeled_base knH;
     guiknob_labeled_base knS;
     guiknob_labeled_base knL;

@@ -5,7 +5,7 @@
 #include "gui/controls/list.h"
 #include "gui/container/scrollcontainer.h"
 
-class gui_list_history : public gui_list {
+class gui_list_history final : public gui_list {
 public:
     gui_list_history() : gui_list() {
     }
@@ -17,7 +17,7 @@ public:
         }
     }
 };
-class gui_history_list_entry_t : public gui_list_entry {
+class gui_history_list_entry_t final : public gui_list_entry {
 public:
     String desc;
     gui_history_list_entry_t(action_base* const _entry)
@@ -32,7 +32,7 @@ public:
         return desc;
     }
 };
-class guictr_history_view : public guictr_base {
+class guictr_history_view final : public guictr_base {
     gui_list_history historyList;
     int64_t histRevision = -1;
 public:

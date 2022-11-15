@@ -4,7 +4,7 @@
 #include "event.h"
 #include "gui/container/container.h"
 
-class guitrack_timeline : public guictr_base, grid_changed_cb {
+class guitrack_timeline final : public guictr_base, grid_changed_cb {
     scaled_grid& grid;
 
 public:

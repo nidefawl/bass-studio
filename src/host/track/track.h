@@ -253,7 +253,7 @@ public:
     }
 };
 
-class track_t : public tracksettings_t {
+class track_t final : public tracksettings_t {
     trackdata_clips_t m_clips;
 
 public:
@@ -476,7 +476,7 @@ public:
 };
 
 class trackallcontainer_t;
-class trackcontainer_tracktype_t : public trackbasecontainer_t {
+class trackcontainer_tracktype_t final : public trackbasecontainer_t {
 public:
     trackcontainer_tracktype_t()  = default;
     ~trackcontainer_tracktype_t() = default;

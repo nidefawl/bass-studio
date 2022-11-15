@@ -38,7 +38,7 @@
 #define HLOG "Claphost: "
 
 namespace {
-    struct clap_snapshot_ostream : public clap_ostream {
+struct clap_snapshot_ostream final : public clap_ostream {
         std::vector<uint8_t>& dataChunk;
         explicit clap_snapshot_ostream(std::vector<uint8_t>& data) : clap_ostream(), dataChunk(data) {
             ctx   = this;
@@ -92,7 +92,7 @@ namespace {
         }
     }
 
-    struct clap_snapshot_istream : public clap_istream {
+struct clap_snapshot_istream final : public clap_istream {
         std::vector<uint8_t> dataChunk;
         mutable int64_t readPos = 0;
         explicit clap_snapshot_istream(std::vector<uint8_t> data) : clap_istream(), dataChunk(std::move(data)) {

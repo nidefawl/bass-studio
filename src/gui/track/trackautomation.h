@@ -10,7 +10,7 @@
 #include "host/track/trackctr_types.h"
 #include "host/automation/automation.h"
 
-class gui_track_automation : public guictr_base {
+class gui_track_automation final : public guictr_base {
 public:
     enum dragmode {
         drag_none = 0,

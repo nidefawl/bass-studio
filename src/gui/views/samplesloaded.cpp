@@ -2,7 +2,7 @@
 #include "gui/container/container_builder.h"
 
 
-class gui_samplesloaded : public guictr_base {
+class gui_samplesloaded final : public guictr_base {
 public:
     gui_samplesloaded() : guictr_base() {
         setBackgroundRendered(false);

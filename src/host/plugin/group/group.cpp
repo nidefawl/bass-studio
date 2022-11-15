@@ -31,7 +31,7 @@
 #include "host/host_pluginmanager.h"
 #include "host/host.h"
 
-class guimodule_group : public guiplugin {
+class guimodule_group final : public guiplugin {
 public:
     module_group* const module;
     int32_t uuid = 0;

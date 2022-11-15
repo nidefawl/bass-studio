@@ -20,7 +20,7 @@
 #include "seq_util.h"
 
 namespace {
-    class guigraph2d : public guictr_base {
+class guigraph2d final : public guictr_base {
         std::vector<vec2> m_data;
 
     public:
@@ -61,7 +61,7 @@ namespace {
             //}
         }
     };
-    class gui_test : public guictxtmenu_base {
+class gui_test final : public guictxtmenu_base {
         SafeRef<effectbase> ref;
         guigraph2d graph;
         bool hadMouseFocus = false;
@@ -144,7 +144,7 @@ namespace {
     };
 }// namespace
 
-class gui_pluginsloaded_list_entry : public gui_list_entry {
+class gui_pluginsloaded_list_entry final : public gui_list_entry {
     SafeRef<effectbase> ref;
     String tmp;
 
@@ -230,7 +230,7 @@ public:
     }
 };
 
-class gui_list_plugins : public guictr_base {
+class gui_list_plugins final : public guictr_base {
     std::vector<gui_pluginsloaded_list_entry*>& entries;
 
 public:
@@ -300,7 +300,7 @@ public:
         removeGuis();
     }
 };
-class gui_pluginsloaded_list : public guictr_base {
+class gui_pluginsloaded_list final : public guictr_base {
     std::vector<gui_pluginsloaded_list_entry*> listEntriesLoadedPlugins;
     std::vector<gui_pluginsloaded_list_entry*> listEntriesDef;
     gui_list_plugins listCtr;

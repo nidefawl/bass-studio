@@ -7,7 +7,7 @@
 #include "grid.h"
 
 
-class ctxtmenu_time_select : public ctxtmenu_entry {
+class ctxtmenu_time_select final : public ctxtmenu_entry {
     struct _time_sel_entry {
         int id;
         int x;

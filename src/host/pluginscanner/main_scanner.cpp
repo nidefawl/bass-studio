@@ -133,7 +133,7 @@ struct response_type_t {
     char szPath[1024]{ 0 };
     char szName[256]{ 0 };
 };
-struct request_type_vst24_t : response_type_t {
+struct request_type_vst24_t final : response_type_t {
     uint32_t uniqueID{ 0 };
 };
 struct response_type_vst24_t : response_type_t {
@@ -148,7 +148,7 @@ struct response_type_vst24_t : response_type_t {
     char szEffectName[256]{ 0 };
     char szShellPluginName[256]{ 0 };
 };
-struct response_type_clapplugin_t : response_type_t {
+struct response_type_clapplugin_t final : response_type_t {
     uint32_t pluginIndex{ 0 };
     uint32_t pluginCategory{ 0 };
     bool isSynth{ false };
@@ -157,9 +157,9 @@ struct response_type_clapplugin_t : response_type_t {
     char szProductName[256]{ 0 };
     char szEffectName[256]{ 0 };
 };
-struct response_type_vst24_plugin_t : response_type_vst24_t {
+struct response_type_vst24_plugin_t final : response_type_vst24_t {
 };
-struct response_type_shell_plugin_begin_t : response_type_t {
+struct response_type_shell_plugin_begin_t final : response_type_t {
     int numPlugins{};
 };
 struct recvbuf_t {

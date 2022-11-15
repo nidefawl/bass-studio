@@ -10,7 +10,7 @@ namespace DAW::Host {
     class Host;
 }
 
-struct audiotrack_split_t : public samplesource_t {
+struct audiotrack_split_t final : public samplesource_t {
     int64_t sampleId = 0;
     int64_t version  = 0;
     samplecount_t samplePos;

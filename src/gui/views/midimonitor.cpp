@@ -25,7 +25,7 @@
 namespace {
 
 
-class gui_midi_inspect_entry : public gui_list_entry {
+class gui_midi_inspect_entry final : public gui_list_entry {
     MidiIOEvent evt;
 public:
     MidiIOEvent& getEvt() {
@@ -71,7 +71,7 @@ public:
     }
 };
 
-class gui_midi_inspect_ctr : public guictr_base {
+class gui_midi_inspect_ctr final : public guictr_base {
 public:
     gui_list list;
     gui_midi_inspect_ctr() : guictr_base() {
@@ -94,7 +94,7 @@ public:
         }
     }
 };
-class gui_midi_inspect : public guictr_vert_layout {
+class gui_midi_inspect final : public guictr_vert_layout {
     std::vector<gui_midi_inspect_entry*> listEntriesMessages;
     gui_midi_inspect_ctr listCtr;
     guibutton btnClear;

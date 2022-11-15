@@ -155,7 +155,7 @@ public:
             return finished;
         }
     };
-struct consolidate_task_t : public async_task_t {
+struct consolidate_task_t final : public async_task_t {
     SafeRef<guibase> refGui;
     DawCtrl* dawCtrl;
     DawInstance* daw;

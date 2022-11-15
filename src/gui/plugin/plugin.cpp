@@ -407,7 +407,7 @@ guictxtmenu_base* guiplugin::getTooltip(AppCtrl* appctrl) {
 }
 
 
-class gui_plugin_paramlist_entry : public gui_list_entry {
+class gui_plugin_paramlist_entry final : public gui_list_entry {
 
     const float spacing = INSET_TITLE;
 
@@ -499,7 +499,7 @@ public:
     }
 };
 
-class guipluginview_preview : public guictr_base {
+class guipluginview_preview final : public guictr_base {
     vstplugin* const plugin;
     guipluginview* const guivst;
     int tex = -1;

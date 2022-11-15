@@ -62,7 +62,7 @@ bool guidropdown_setting_options_ctxt_t::clickedElement(ctxtmenu_entry* e, int _
     return true;
 }
 
-class gui_listentry_audiodevice : public gui_list_entry {
+class gui_listentry_audiodevice final : public gui_list_entry {
     String deviceAPI;
     String deviceName;
     const int32_t nChannels;
@@ -158,7 +158,7 @@ public:
     }
 };
 
-class guictr_input_channel : public guictr_base {
+class guictr_input_channel final : public guictr_base {
     std::shared_ptr<audiohost::HostIOStream::IOChannel> ioChannel;
     const bool isInput;
     std::shared_ptr<guibase> guimeter;
@@ -361,7 +361,7 @@ public:
         }
     }
 };
-class guictr_input_meters : public guictr_base, public gui_scrollcontainer  {
+class guictr_input_meters final : public guictr_base, public gui_scrollcontainer  {
     std::vector<std::shared_ptr<guictr_input_channel>> guiMeters;
     const bool isInput;
     int32_t prevStream = 0;
@@ -506,7 +506,7 @@ public:
         scrollbar.setControl(parentCtrl);
     }
 };
-class guidialog_audio_io : public setting_dialog {
+class guidialog_audio_io final : public setting_dialog {
     DawInstance* const daw;
     appsettings& settings;
     guibutton_audioengine* audioEngineOn;
@@ -856,7 +856,7 @@ public:
         }
     }
 };
-class gui_listentry_mididevice : public gui_list_entry {
+class gui_listentry_mididevice final : public gui_list_entry {
     appsettings& settings;
     String deviceAPI;
     String deviceName;
@@ -971,7 +971,7 @@ public:
 };
 
 
-class guidialog_midi_io : public setting_dialog {
+class guidialog_midi_io final : public setting_dialog {
     DawInstance* const daw;
     gui_list deviceListInput;
     gui_list deviceListOutput;
@@ -1073,7 +1073,7 @@ public:
 };
 
 
-class guidialog_settings_other : public setting_dialog {
+class guidialog_settings_other final : public setting_dialog {
     DawInstance* const daw;
     enum appsetting_type {
         VM_MODE,
@@ -1082,7 +1082,7 @@ class guidialog_settings_other : public setting_dialog {
     guictr_base listOptions;
     guidropdown_setting_options_t* autosave;
 public:
-    class gui_listentry_settings_other_bool : public gui_list_entry {
+class gui_listentry_settings_other_bool final : public gui_list_entry {
         appsetting_type type;
         String title;
         public:
@@ -1254,7 +1254,7 @@ public:
         }
     }
 };
-class guidialog_settings_plugins_path_config : public guictr_base {
+class guidialog_settings_plugins_path_config final : public guictr_base {
     DawInstance* const daw;
     appsettings& settings;
     guibutton scanNow;
@@ -1381,7 +1381,7 @@ public:
         updateOptions();
     }
 };
-class guidialog_settings_plugins : public setting_dialog {
+class guidialog_settings_plugins final : public setting_dialog {
     guidialog_settings_plugins_path_config settinsgPath;
     public:
     void onDialogShow() override { settinsgPath.onDialogShow(); }

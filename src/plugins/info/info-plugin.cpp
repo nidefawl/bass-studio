@@ -443,7 +443,7 @@ namespace PluginHostInfo {
 namespace PluginHostInfo {
 
 
-    class guicontainer_plugin_HostInfo : public guictr_base {
+class guicontainer_plugin_HostInfo final : public guictr_base {
         PluginVST2_HostInfo* const plugin;
         guiknob_pluginparam knobParam0;
 

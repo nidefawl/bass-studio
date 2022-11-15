@@ -75,7 +75,7 @@ public:
     bool isMenuOpen() const { return bIsMenuOpen; }
 };
 
-class ctxtmenu_splitter : public ctxtmenu_entry {
+class ctxtmenu_splitter final : public ctxtmenu_entry {
 public:
     ctxtmenu_splitter()
         : ctxtmenu_entry("-", -1) {

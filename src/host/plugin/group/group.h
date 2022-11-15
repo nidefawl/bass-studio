@@ -14,7 +14,7 @@ namespace DAW {
     struct processing_graph_t;
     using effect_processing_graph_t  = processing_graph_t;
 }
-class module_group : public internalplugin {
+class module_group final : public internalplugin {
     struct internal_handles_t;
     internal_handles_t* handle;
     audio_stage_t* audio;

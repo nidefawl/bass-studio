@@ -45,14 +45,6 @@ public:
     virtual void show()                                    = 0;
 };
 
-class window_overlay : public window_base {
-public:
-    ~window_overlay() override = default;
-    virtual void show()                                  = 0;
-    virtual void hide()                                  = 0;
-    virtual void positionOnScreen(ivec2 pos, ivec2 size) = 0;
-    virtual PopupCtrl* getCtrl()                         = 0;
-};
 class window_main : public window_base {
 public:
     ~window_main() override = default;

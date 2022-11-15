@@ -19,7 +19,7 @@ struct audiofile_path_t {
     String path;
 };
 
-struct audiofile_t : public samplesource_t {
+struct audiofile_t final : public samplesource_t {
     enum AudioFileStateFlags : uint8_t {
         AUDIOFILE_FLAGS_NONE = 0,
         AUDIOFILE_FLAG_LOADED = 1 << 0,

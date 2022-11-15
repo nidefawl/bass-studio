@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 
-class DawAppInstService : public AppInstanceService {
+class DawAppInstService final : public AppInstanceService {
     std::shared_ptr<MainCtrl> mainctrl;
     std::shared_ptr<DawInstance> dawInstance;
 public:

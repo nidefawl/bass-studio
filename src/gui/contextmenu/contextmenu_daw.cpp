@@ -64,11 +64,11 @@ void AddContextEntriesModulation(guictxtmenu* ctxt, automatable_t* atl, int para
     ctxt->addEntry(new ctxtmenu_entry("Edit Modulation", ID_EDIT_PARAM_MODULATION));
 }
 }
-class guictxtmenu_select_modulation : public guictxtmenu {
+class guictxtmenu_select_modulation final : public guictxtmenu {
     automatable_t* const atl;
     int32_t const paramIdx;
 
-    class ctxtmenu_modulation_entry : public ctxtmenu_entry {
+class ctxtmenu_modulation_entry final : public ctxtmenu_entry {
         const DAW::modulation_channel_ref ref;
     public:
         ctxtmenu_modulation_entry(String _title, int _id, DAW::modulation_channel_ref ref)

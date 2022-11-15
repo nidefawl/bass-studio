@@ -19,7 +19,7 @@
 #include "gui/meter/guimeter.h"
 #include "appconfig.h"
 
-class gui_performance_stats : public guictr_base {
+class gui_performance_stats final : public guictr_base {
     int32_t minHTop = 66;
     host_stats_t stats{};
     int64_t timeLastUpdate = 0L;
@@ -227,7 +227,7 @@ public:
     }
 };
 
-class gui_performance : public guictr_base {
+class gui_performance final : public guictr_base {
 public:
     gui_performance_stats textStats;
     guictr_scrollbar scrollTop;

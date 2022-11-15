@@ -4,7 +4,7 @@
 #include "host/plugin/modules.h"
 #include "str_util.h"
 
-class module_empty : public internalplugin {
+class module_empty final : public internalplugin {
     struct internal_handles_t;
     internal_handles_t* handle;
 

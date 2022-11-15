@@ -42,7 +42,7 @@ constexpr int32_t VEL_SELECT_DISTANCE = 16;
 constexpr int32_t PIANOROLL_MIN_SCALE = 4;
 constexpr int32_t PIANOROLL_MAX_SCALE = 48;
 
-class guictxtmenu_noteeditor : public guictxtmenu {
+class guictxtmenu_noteeditor final : public guictxtmenu {
     guictr_noteeditor* editor;
     ctxtmenu_color_select* sel = nullptr;
     ctxtmenu_time_select* timeSel1 = nullptr;

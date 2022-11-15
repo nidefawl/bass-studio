@@ -26,7 +26,7 @@
 #include <nanovg.h>
 
 static constexpr int32_t DROP_INDICATOR_WIDTH = 8;
-class guictr_layout_entry_handle_button : public guibutton {
+class guictr_layout_entry_handle_button final : public guibutton {
 public:
     guictr_layout_entry_handle_button() : guibutton() {
     }
@@ -54,7 +54,7 @@ public:
     }
 };
 
-class GuiCtrLayoutEntryHandle : public guictr_base {
+class GuiCtrLayoutEntryHandle final : public guictr_base {
     friend class guictr_layout_entry_handle_context_menu;
     guictr_layout_entry_handle_button btnClose;
     GuiCtrLayoutEntry* const parentCtr;
@@ -441,7 +441,7 @@ void GuiCtrLayoutEntryHandle::handleDraggedBegin(MouseEvent& evt) {
     }
 }
 
-class guictr_layout_entry_handle_context_menu : public guictxtmenu {
+class guictr_layout_entry_handle_context_menu final : public guictxtmenu {
     GuiCtrLayoutEntryHandle* const ctrHandle;
 public:
     explicit guictr_layout_entry_handle_context_menu(GuiCtrLayoutEntryHandle* _parent) : ctrHandle(_parent) {

@@ -26,12 +26,12 @@ public:
 
     bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
-class guictxtmenu_clip : public guictxtmenu_track_editor {
+class guictxtmenu_clip final : public guictxtmenu_track_editor {
 public:
     explicit guictxtmenu_clip(guitrack_editor* const _editor, gui_clip* const _gclip);
     bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
-class guictxtmenu_notrack : public guictxtmenu {
+class guictxtmenu_notrack final : public guictxtmenu {
 public:
     explicit guictxtmenu_notrack(guictr_tracks* const _editor) {
         dawCtrl = _editor->dawCtrl;
@@ -45,7 +45,7 @@ public:
 };
 
 
-class guictxtmenu_at_param : public guictxtmenu {
+class guictxtmenu_at_param final : public guictxtmenu {
     automatable_t* const atl;
     int32_t const paramIdx;
 
@@ -85,7 +85,7 @@ public:
 
 class effectbase;
 class guictr_plugins;
-class guictxtmenu_plugin : public guictxtmenu {
+class guictxtmenu_plugin final : public guictxtmenu {
     effectbase* const effectOptional;
     guictr_plugins* const pluginCtrOptional;
 public:

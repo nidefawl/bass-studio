@@ -9,7 +9,7 @@
 #define REQ_STATE 1
 #define GUI_CALL 2
 class project_controller_t;
-class PlaybackThread : public seqthreads::thread_base {
+class PlaybackThread final : public seqthreads::thread_base {
 
 private:
     class Impl;

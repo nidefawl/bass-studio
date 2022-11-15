@@ -44,7 +44,7 @@ public:
     }
 };
 
-class MultiLogger : public Logger {
+class MultiLogger final : public Logger {
     std::vector<Logger*> loggers;
 public:
     explicit MultiLogger(Logger* handle = nullptr) noexcept {

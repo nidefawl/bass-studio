@@ -157,7 +157,7 @@ void resize(track_gui_entry_t* const m_trackentry, T* al, int32_t mouseDragDist,
     }
 }
 
-class gui_slider_gain : public gui_slider_textfield {
+class gui_slider_gain final : public gui_slider_textfield {
 public:
     gui_slider_gain() : gui_slider_textfield() {
     }
@@ -208,7 +208,7 @@ public:
         return StringFormat("%.2f", dsp_util::dBFSClampInf6(gainDb));
     }
 };
-class gui_slider_pan : public gui_slider_textfield {
+class gui_slider_pan final : public gui_slider_textfield {
 public:
     gui_slider_pan() : gui_slider_textfield() {
     }
@@ -217,7 +217,7 @@ public:
     }
 };
 
-class guibutton_trackbypass : public guibuttonstate {
+class guibutton_trackbypass final : public guibuttonstate {
     track_t* const m_track;
     track_gui_entry_t* const m_trackentry;
 
@@ -239,7 +239,7 @@ public:
     }
 };
 
-class guibutton_track_solo : public guibuttonstate {
+class guibutton_track_solo final : public guibuttonstate {
     track_t* const m_track;
     track_gui_entry_t* const m_trackentry;
 
@@ -272,7 +272,7 @@ public:
     }
 };
 
-class guibutton_track_record_arm : public guibuttonstate {
+class guibutton_track_record_arm final : public guibuttonstate {
     track_t* const m_track;
     track_gui_entry_t* const m_trackentry;
 
@@ -322,13 +322,13 @@ public:
         return true;
     }
 };
-class ctxtmenu_entry_bus_external : public ctxtmenu_entry_bus {
+class ctxtmenu_entry_bus_external final : public ctxtmenu_entry_bus {
 public:
     ctxtmenu_entry_bus_external(int32_t _id, const String& name, audio_channel_ref_t _stageEndpoint)
         : ctxtmenu_entry_bus(_id, name, bus_type::external, _stageEndpoint) {
     }
 };
-class ctxtmenu_entry_bus_internal : public ctxtmenu_entry_bus {
+class ctxtmenu_entry_bus_internal final : public ctxtmenu_entry_bus {
     const audio_stage_ref_t busStage;
 
 public:
@@ -348,7 +348,7 @@ public:
     virtual channel_ref_t getEndpoint() = 0;
 };
 
-class ctxtmenu_entry_external_channel : public ctxtmenu_entry_endpoint {
+class ctxtmenu_entry_external_channel final : public ctxtmenu_entry_endpoint {
 public:
     const io_cfg_channel channel;
     const stage_bufferpoint isInput;
@@ -382,7 +382,7 @@ public:
                                       channel.type);
     }
 };
-class ctxtmenu_entry_stage_channel : public ctxtmenu_entry_endpoint {
+class ctxtmenu_entry_stage_channel final : public ctxtmenu_entry_endpoint {
 public:
     const audio_channel_ref_t endpoint;
 
@@ -415,7 +415,7 @@ public:
         return DAW::ChannelNone();
     }
 };
-class ctxtmenu_entry_default_channel : public ctxtmenu_entry_endpoint {
+class ctxtmenu_entry_default_channel final : public ctxtmenu_entry_endpoint {
 public:
     ctxtmenu_entry_default_channel(int32_t _id, const String& name)
         : ctxtmenu_entry_endpoint(_id, name) {
@@ -431,7 +431,7 @@ public:
 };
 
 /* top select menu */
-class guidropdown_select_bus_ctxt : public guictxtmenu {
+class guidropdown_select_bus_ctxt final : public guictxtmenu {
     const audio_stage_ref_t busStage;
     const audio_channel_ref_t stageEndpoint;
 
@@ -547,7 +547,7 @@ public:
     }
 };
 
-class guidropdown_select_bus : public guidropdownbase {
+class guidropdown_select_bus final : public guidropdownbase {
     track_t* const track;
     const bool isInput;
 
@@ -595,7 +595,7 @@ public:
     }
     virtual midichannel_ref_t getEndpoint() = 0;
 };
-class ctxtmenu_entry_external_midi_channel : public ctxtmenu_entry_midi_endpoint {
+class ctxtmenu_entry_external_midi_channel final : public ctxtmenu_entry_midi_endpoint {
 public:
     const midi_channel channel;
     const stage_bufferpoint isInput;
@@ -613,7 +613,7 @@ public:
                                       channel.deviceName);
     }
 };
-class ctxtmenu_entry_stage_midi_channel : public ctxtmenu_entry_midi_endpoint {
+class ctxtmenu_entry_stage_midi_channel final : public ctxtmenu_entry_midi_endpoint {
 public:
     const audio_channel_ref_t endpoint;
 
@@ -633,7 +633,7 @@ public:
         return DAW::MidiChannelNone();
     }
 };
-class ctxtmenu_entry_default_midi_channel : public ctxtmenu_entry_midi_endpoint {
+class ctxtmenu_entry_default_midi_channel final : public ctxtmenu_entry_midi_endpoint {
 public:
     ctxtmenu_entry_default_midi_channel(int32_t _id, const String& name)
         : ctxtmenu_entry_midi_endpoint(_id, name) {
@@ -648,7 +648,7 @@ public:
     }
 };
 
-class guidropdown_select_midi_ctxt : public guictxtmenu {
+class guidropdown_select_midi_ctxt final : public guictxtmenu {
     const audio_stage_ref_t busStage;
     const audio_channel_ref_t stageEndpoint;
 
@@ -764,7 +764,7 @@ public:
     }
 };
 
-class guidropdown_select_midi_input : public guidropdownbase {
+class guidropdown_select_midi_input final : public guidropdownbase {
     track_t* const track;
     const bool isInput;
 
@@ -804,7 +804,7 @@ public:
         this->dawCtrl->openAppMenu(0, popup, toScreenSpace({0, size.y}) + ivec2(0, 1), WINDOW_IS_BORDERLESS | WINDOW_POS_RELATIVE);
     }
 };
-class gui_trackcontrols_io : public guictr_base {
+class gui_trackcontrols_io final : public guictr_base {
     guidropdown_select_bus selectInput;
     guidropdown_select_bus selectOutput;
     guidropdown_select_midi_input selectMidiInput;
@@ -856,7 +856,7 @@ public:
         }
     }
 };
-class gui_trackcontrols_mixer : public guictr_base {
+class gui_trackcontrols_mixer final : public guictr_base {
     track_t* const m_track;
     track_gui_entry_t* const m_trackentry;
     gui_trackmeter m_guiMeter;
@@ -1069,7 +1069,7 @@ public:
 };
 
 
-class guidropdown_popup_sel_automation_device : public guictxtmenu {
+class guidropdown_popup_sel_automation_device final : public guictxtmenu {
     track_gui_entry_t* const m_trackentry;
 
 public:
@@ -1110,10 +1110,10 @@ public:
         return true;
     }
 };
-class guidropdown_popup_sel_automation_param : public guictxtmenu {
+class guidropdown_popup_sel_automation_param final : public guictxtmenu {
     track_gui_entry_t* const m_trackentry;
 public:
-    class ctxt_menu_entry_param : public ctxtmenu_entry {
+class ctxt_menu_entry_param final : public ctxtmenu_entry {
         bool m_automated;
     public:
         ctxt_menu_entry_param(int32_t _id, const String& name, bool automated)
@@ -1166,7 +1166,7 @@ public:
         return true;
     }
 };
-class guidropdown_automation_device : public guidropdownbase {
+class guidropdown_automation_device final : public guidropdownbase {
     track_gui_entry_t* const m_trackentry;
 
 public:
@@ -1183,7 +1183,7 @@ public:
         m_trackentry->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
     }
 };
-class guidropdown_automation_param : public guidropdownbase {
+class guidropdown_automation_param final : public guidropdownbase {
     track_gui_entry_t* const m_trackentry;
 
 public:
@@ -1202,7 +1202,7 @@ public:
         m_trackentry->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
     }
 };
-class gui_trackcontrols_title : public guictr_base {
+class gui_trackcontrols_title final : public guictr_base {
 
     track_t* const m_track;
     track_gui_entry_t* const m_trackentry;
@@ -1430,7 +1430,7 @@ public:
     }
 };
 
-class gui_track_subtrack_mixer : public guictr_base {
+class gui_track_subtrack_mixer final : public guictr_base {
     track_t* const m_track;
     track_gui_entry_t* const m_trackentry;
 
@@ -2111,7 +2111,7 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
         dawCtrl->updateVisibleTrackContents();
     }
 }
-class guictxtmenu_track : public guictxtmenu {
+class guictxtmenu_track final : public guictxtmenu {
     track_gui_entry_t* const m_trackentry;
     ctxtmenu_entry* cmdPickColor;
     ctxtmenu_entry* cmdDuplicateTrack;

@@ -20,7 +20,7 @@
 #include "gl/gl_util.h"
 #include "rand.h"
 
-struct testshader : gl_shader_pipeline {
+struct testshader final : gl_shader_pipeline {
     bool isValid = false;
     ivec2 lastBufSize = { -1, -1 };
     GLuint texture    = 0;

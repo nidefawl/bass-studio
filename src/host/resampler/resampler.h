@@ -36,7 +36,7 @@ struct oversample_config_t {
     }
 };
 
-struct oversampler_t : public oversample_config_t {
+struct oversampler_t final : public oversample_config_t {
     std::vector<float*> channelPtrsOut;
     std::vector<float*> channelPtrsIn;
     soxr_t soxr            = nullptr;

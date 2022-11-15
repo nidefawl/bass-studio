@@ -6,7 +6,7 @@
 #include "thread.h"
 #include "tls.h"
 
-class WorkerThread : public seqthreads::thread_base {
+class WorkerThread final : public seqthreads::thread_base {
 public:
     enum task_status {
         status_init,
@@ -84,7 +84,7 @@ private:
     Impl* m_threadImpl;
 };
 
-class ThreadTaskCallStdFn : public WorkerThread::ThreadTask {
+class ThreadTaskCallStdFn final : public WorkerThread::ThreadTask {
     std::function<void()> fn;
 
 public:

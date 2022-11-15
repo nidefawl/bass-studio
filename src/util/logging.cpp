@@ -35,7 +35,7 @@ String demangleName(const char* to_demangle)
 static const char* TERM_COL_YELLOW = "\x1b[93m";
 static const char* TERM_COL_RED = "\x1b[91m";
 static const char* TERM_COL_RESET = "\x1b[0m";
-class StdOutLogger : public Logger {
+class StdOutLogger final : public Logger {
 public:
     StdOutLogger() noexcept = default;
     ~StdOutLogger() override = default;
@@ -67,7 +67,7 @@ public:
     }
 };
 #ifndef PROJECT_UNITTEST
-class ThreadSafeFileLogger : public Logger {
+class ThreadSafeFileLogger final : public Logger {
     std::recursive_mutex mutex;
     IOFile* handle = nullptr;
 public:

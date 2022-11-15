@@ -31,7 +31,7 @@ enum class action_plugin_ctr {
 }
 
 // whats that?
-class guictr_test : public guictr_base {
+class guictr_test final : public guictr_base {
 public:
     guictr_test() : guictr_base() {
         setBackgroundRendered(true);
@@ -65,7 +65,7 @@ public:
     }
 };
 
-class guiplaceholder : public guibase {
+class guiplaceholder final : public guibase {
 public:
     String message;
     guiplaceholder() : guibase() {
@@ -91,7 +91,7 @@ public:
     }
 };
 
-class guictr_dragged_plugins : public guictr_base {
+class guictr_dragged_plugins final : public guictr_base {
     const int HEIGHT_ENTRY = 20;
 
 public:
@@ -119,7 +119,7 @@ public:
     void dragReleaseOn(guibase* target, ivec2 mousepos) override;
 };
 
-class guictr_plugins : public guictr_base {
+class guictr_plugins final : public guictr_base {
 public:
     guiplaceholder pluginCtrEmpty;
     guictr_dragged_plugins dragged;
@@ -230,7 +230,7 @@ public:
     void handleRightClick(MouseEvent& evt) override;
     bool getSelected(std::vector<effectbase*>& out);
 };
-class guictr_pluginview : public guictr_base {
+class guictr_pluginview final : public guictr_base {
     SPLayoutEntry pluginCtr;
 public:
     int lastscrolloffset = 0;
@@ -251,7 +251,7 @@ public:
     void layout() override;
 };
 
-class action_remove_modules : public action_base {
+class action_remove_modules final : public action_base {
     std::vector<effectbase*> effects;
     audio_stage_ref_t ref;
     int32_t dstSlot;
@@ -265,7 +265,7 @@ public:
     void releaseResources(DawInstance* daw) override;
 };
 
-class action_shift_modules : public action_base {
+class action_shift_modules final : public action_base {
     audio_stage_ref_t ref;
     int32_t dst;
     int32_t src;
@@ -297,7 +297,7 @@ public:
     }
 };
 
-class action_move_modules : public action_base {
+class action_move_modules final : public action_base {
     audio_stage_ref_t refdst;
     audio_stage_ref_t refsrc;
     int32_t dst;
@@ -314,7 +314,7 @@ public:
     void redo(DawInstance* daw) override;
 };
 
-class action_insert_effect : public action_base {
+class action_insert_effect final : public action_base {
     effectbase* effect;
     audio_stage_ref_t ref;
     int32_t dstSlot;

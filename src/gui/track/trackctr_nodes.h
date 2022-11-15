@@ -68,7 +68,7 @@ public:
     bool setScissorTransformContainer(NVGcontext* vg) override;
 };
 class gui_graph_n;
-class gui_graph : public guictr_base {
+class gui_graph final : public guictr_base {
 public:
     class guictr_graph_impl;
 private:
@@ -139,7 +139,7 @@ public:
     void handleRightClick(MouseEvent& evt) override;
 };
 
-class guictr_nodes_editor : public guictr_base, te_constants, public gui_scrollcontainer {
+class guictr_nodes_editor final : public guictr_base, te_constants, public gui_scrollcontainer {
     class guictr_nodes_editor_impl;
     guictr_nodes_editor_impl* const impl;
 
@@ -196,7 +196,7 @@ public:
     void handleRightClick(MouseEvent& evt) override;
 };
 
-class guictr_nodes_splitview : public guictr_base, public splitter_cb {
+class guictr_nodes_splitview final : public guictr_base, public splitter_cb {
 public:
     project_t& project;
 

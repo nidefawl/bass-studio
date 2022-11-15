@@ -41,7 +41,7 @@ struct ClapPluginDescription {
     String description;
     std::vector<String> features;
 };
-class clapplugin : public effectbase {
+class clapplugin final : public effectbase {
 private:
 
     struct ParamModulation {

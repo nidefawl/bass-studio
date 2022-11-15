@@ -8,7 +8,7 @@
 #include "math/seq_math.h"
 #include "seq_util.h"
 
-class guiknob_arp : public guiknob {
+class guiknob_arp final : public guiknob {
     const DAW::midiarp::arp_param_entry_t& param;
     public:
     explicit guiknob_arp(const DAW::midiarp::arp_param_entry_t& _param)

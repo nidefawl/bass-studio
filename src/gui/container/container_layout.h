@@ -14,7 +14,7 @@ class BaseCtrl;
 struct guitheme_t;
 
 
-class guictr_stacked : public guictr_base, public splitter_cb {
+class guictr_stacked final : public guictr_base, public splitter_cb {
     struct stacked_entry;
     std::vector<stacked_entry*> entries;
 
@@ -35,7 +35,7 @@ public:
     ivec2 getContainerSize() override;
     int32_t getCollapsedCtrHeight(guictr_base* ctr);
 };
-class guictr_tabbed : public guictr_base {
+class guictr_tabbed final : public guictr_base {
 
     struct tabbed_entry;
     std::vector<tabbed_entry*> entries;

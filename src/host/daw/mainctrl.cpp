@@ -102,7 +102,7 @@ void dragdrop_midifile::reset() {
     clipboard.reset();
 }
 
-class MainCtrlErrorStatusBarLogger : public Logger {
+class MainCtrlErrorStatusBarLogger final : public Logger {
     gui_statusbar* const statusbar;
 public:
     explicit MainCtrlErrorStatusBarLogger(gui_statusbar* _statusbar) noexcept 
@@ -183,7 +183,7 @@ std::shared_ptr<guictr_layout> makeTabListCtr2(DawCtrl* const dawCtrl) {
     return ctr;
 }
 
-class DawViewContainersMain : public DawViewContainers {
+class DawViewContainersMain final : public DawViewContainers {
     enum SplitterPos : uint32_t {
         LEFT = 0,
         RIGHT,

@@ -6,7 +6,7 @@
 #include "MidiMessage.h"
 #include <vector>
 
-class MidiEvent : public MidiMessage {
+class MidiEvent final : public MidiMessage {
 public:
     MidiEvent();
     explicit MidiEvent(int command);

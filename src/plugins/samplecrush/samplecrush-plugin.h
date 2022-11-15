@@ -10,7 +10,7 @@ namespace PluginSampleCrush {
     static constexpr int32_t BITCRUSH_BITS_MIN = 0;
     static constexpr int32_t BITCRUSH_BITS_MAX = 4;
 
-    class module_samplecrush : public internalplugin {
+    class module_samplecrush final : public internalplugin {
 
     public:
         explicit module_samplecrush(int32_t _projectGlobalId, IHostCallback* _hostCallback);

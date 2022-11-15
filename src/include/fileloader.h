@@ -8,7 +8,7 @@
 #include "logging.h"
 #include "host/daw/clipboard.h"
 
-class LoadMidiTask : public WorkerThread::ThreadTask {
+class LoadMidiTask final : public WorkerThread::ThreadTask {
     String path;
     std::shared_ptr<clip_clipboard> clipboard;
     void loadFile();

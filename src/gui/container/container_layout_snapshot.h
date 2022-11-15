@@ -14,7 +14,7 @@ struct guictrlayout_entry_snapshot_t {
     int32_t entryTag = -1;
 };
 
-struct guictrlayout_snapshot_t : public guictrlayout_entry_snapshot_t {
+struct guictrlayout_snapshot_t final : public guictrlayout_entry_snapshot_t {
     ~guictrlayout_snapshot_t() override = default;
     container_layout ctrLayout = container_layout::SOLE;
     int32_t activePosition     = -1;

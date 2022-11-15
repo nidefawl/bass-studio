@@ -1,7 +1,7 @@
 #pragma once
 #include "gui/dialog/dialog.h"
 
-class gui_asyc_progress : public guidialog_base {
+class gui_asyc_progress final : public guidialog_base {
     guibutton btnCancel;
     String desc;
 public:

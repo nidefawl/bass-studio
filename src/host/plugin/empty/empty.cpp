@@ -18,7 +18,7 @@
 #include "types.h"
 
 
-class guimodule_empty : public guiplugin {
+class guimodule_empty final : public guiplugin {
 public:
     module_empty* const module;
     explicit guimodule_empty(module_empty* _vst);

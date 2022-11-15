@@ -243,7 +243,7 @@ public:
 };
 
 struct effect_deferred_impl;
-class effect_deferred : public effectbase {
+class effect_deferred final : public effectbase {
 public:
     effect_deferred_impl* mImpl = nullptr;
 

@@ -10,7 +10,7 @@
 #include "host/midiarp/midiarp.h"
 
 class guiknob_arp;
-class gui_arp : public guictr_base {
+class gui_arp final : public guictr_base {
     gui_textfield editfield;
     guibuttontoggle buttonBypass;
     clip_view_t& clipview;

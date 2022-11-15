@@ -17,7 +17,7 @@ struct AudioBlock;
 struct handles_t;
 class host_plugin_window;
 
-class auplugin : public effectbase {
+class auplugin final : public effectbase {
 public:
     handles_t* const handle;
     String sDir;

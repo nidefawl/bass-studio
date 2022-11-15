@@ -1206,7 +1206,7 @@ track_t* DawInstance::insertNewTrack(int trackInsertPos, int trackType, int flag
     return newTrack;
 }
 
-class action_modify_track_add : public action_base {
+class action_modify_track_add final : public action_base {
 public:
     int32_t trackIdx  = -1;
     int32_t localIdx  = -1;
@@ -1268,7 +1268,7 @@ public:
     }
 };
 
-class action_modify_track_remove : public action_base {
+class action_modify_track_remove final : public action_base {
 public:
     int32_t trackIdx = -1;
     int32_t localIdx = -1;

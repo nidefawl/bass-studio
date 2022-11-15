@@ -67,7 +67,7 @@ namespace DAW {
     gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry, scaled_grid&);// trackcontrols.cpp
 }
 
-class guitrack_editor : public guictr_base {
+class guitrack_editor final : public guictr_base {
 public:
     track_gui_manager_i& iGuiMgr;
     DAW::Cursor& cursor;
@@ -161,7 +161,7 @@ public:
 };
 
 
-class guitrack_mixers : public guictr_base {
+class guitrack_mixers final : public guictr_base {
     track_gui_manager_i& iGuiMgr;
     project_t& project;
 
@@ -196,7 +196,7 @@ protected:
     const uint32_t heightLoopIndicators   = 24;
     const uint32_t heightTimelineControls = heightLoopIndicators + heightSeperator;
 };
-class guictr_tracks_loophandles : public guibase, te_constants {
+class guictr_tracks_loophandles final : public guibase, te_constants {
     //project_t& project;
     project_globals_t& projectGlobals;
     scaled_grid& grid;
@@ -421,7 +421,7 @@ public:
         yOffset += heightLoopIndicators;
     }
 };
-class track_gui_manager_t : public track_gui_manager_i {
+class track_gui_manager_t final : public track_gui_manager_i {
     friend class guictr_tracks;
     track_gui_vector_td entries;
     track_gui_vector_td trackEntriesTop;
@@ -563,7 +563,7 @@ public:
         return true;
     }
 };
-class guitrack_topleft : public guictr_base {
+class guitrack_topleft final : public guictr_base {
     guictr_tracks& ctrTracks;
     track_gui_manager_i& iGuiMgr;
     project_t& project;
@@ -599,7 +599,7 @@ public:
         }
     }
 };
-class guictr_tracks : public guictr_base, grid_changed_cb, te_constants, public gui_scrollcontainer {
+class guictr_tracks final : public guictr_base, grid_changed_cb, te_constants, public gui_scrollcontainer {
     friend class guitrack_editor;
     int32_t globalIndex = 0;
 

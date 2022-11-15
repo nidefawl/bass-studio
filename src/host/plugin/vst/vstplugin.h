@@ -45,7 +45,7 @@ enum vst_workarounds : uint64_t {
     VST2_BUG_NEED_SHOW_WINDOW_TO_LOAD_PRESET = 2
 };
 
-class vstplugin : public effectbase {
+class vstplugin final : public effectbase {
 public:
     handles_t* const handle;
     /** -1 for external, >= 0 for internal plugins */

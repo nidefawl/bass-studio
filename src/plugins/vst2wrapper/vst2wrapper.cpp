@@ -46,7 +46,7 @@ namespace PluginWrapper {
     static constexpr int32_t PARAM_OFFSET = 1;
 
     class guictr_effectbase_vst2;
-    class PluginInternalVST2 : public BasePluginVST2 {
+class PluginInternalVST2 final : public BasePluginVST2 {
         internalplugin* const effect;
         std::vector<std::shared_ptr<std::vector<uint8_t>>> dataChunks;
     public:
@@ -314,7 +314,7 @@ namespace PluginWrapper {
             }
         }
     };
-    class guictr_effectbase_vst2 : public guictr_base {
+class guictr_effectbase_vst2 final : public guictr_base {
         PluginWrapper::PluginInternalVST2* const vstInstance;
         effectbase* const module;
         std::vector<guiknob_pluginparam*> knobs;
@@ -434,7 +434,7 @@ namespace PluginWrapper {
     };
 
     template<typename PluginGUI, typename Plugin>
-    class VST2PluginViewContainer : public PluginViewContainers {
+class VST2PluginViewContainer final : public PluginViewContainers {
         PluginGUI ctr_main;
         uint32_t width;
         uint32_t height;
@@ -480,7 +480,7 @@ namespace PluginWrapper {
 
 
 #ifdef BUILD_EXTERNAL_VST2_PLUGIN
-class HostCallbackVST2Wrapper : public IHostCallback {
+class HostCallbackVST2Wrapper final : public IHostCallback {
     audioMasterCallback const host;
     PluginWrapper::PluginInternalVST2* vstInstance = nullptr;
     public:

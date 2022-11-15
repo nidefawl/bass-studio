@@ -29,7 +29,7 @@ public:
 
     void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool drawInset);
 };
-class gui_vstpluginlist_entry : public gui_pluginlist_entry {
+class gui_vstpluginlist_entry final : public gui_pluginlist_entry {
     const pluginentry_t entry;
 public:
     gui_vstpluginlist_entry(const pluginentry_t _entry) : gui_pluginlist_entry(), entry(_entry) {
@@ -55,7 +55,7 @@ public:
 
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };
-class guictr_pluginlibrary : public guictr_base {
+class guictr_pluginlibrary final : public guictr_base {
     const int32_t heightTextField = HEIGHT_DEFAULT_INPUT;
     gui_textfield textField;
     gui_textfield textField2;
@@ -142,7 +142,7 @@ struct module_desc_t {
     String name;
     bool isSynth;
 };
-class gui_modulelist_entry : public gui_pluginlist_entry {
+class gui_modulelist_entry final : public gui_pluginlist_entry {
 public:
     const module_desc_t entry;
     gui_modulelist_entry(const module_desc_t _entry) : gui_pluginlist_entry(), entry(_entry) {
@@ -163,7 +163,7 @@ public:
         return entry.isSynth;
     }
 };
-class guictr_modulelibrary : public guictr_base {
+class guictr_modulelibrary final : public guictr_base {
     const int32_t heightTextField = 30;
     gui_textfield textField;
     gui_list pluginListCtr;

@@ -18,7 +18,7 @@ public:
 };
 
 template<typename T>
-class SafeRefStorage : public SafeRefHandler<T> {
+class SafeRefStorage final : public SafeRefHandler<T> {
     struct RefStored {
         T* ptr;
         size_t refId;

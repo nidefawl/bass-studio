@@ -3,7 +3,7 @@
 #include "gui/views/pluginlist.h"
 
 
-class gui_library : public guictr_base {
+class gui_library final : public guictr_base {
 public:
     gui_library() : guictr_base() {
         setBackgroundRendered(false);
@@ -42,7 +42,7 @@ namespace DAW::UI {
     }
 }
 
-class guictr_effectlibrary : public guictr_base {
+class guictr_effectlibrary final : public guictr_base {
 public:
     guictr_pluginlibrary ctr_pluginlist;
     guictr_modulelibrary ctr_effectlist;

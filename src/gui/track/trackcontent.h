@@ -118,7 +118,7 @@ public:
     virtual void updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) = 0;
 };
 struct midi_clip_render_cache_t;
-class gui_midi_clip : public gui_clip {
+class gui_midi_clip final : public gui_clip {
     midi_clip_render_cache_t* const impl;
 
 public:
@@ -158,7 +158,7 @@ protected:
     void updateWaveformTexture(const audioclip_texture_t& newShape);
     void releaseWaveformTexture();
 };
-class gui_audio_clip : public gui_clip, public rendered_audio_clip_t {
+class gui_audio_clip final : public gui_clip, public rendered_audio_clip_t {
 public:
     struct fade_layout_t {
         vec2 pos;
@@ -308,7 +308,7 @@ public:
     virtual void renderDebugPass(NVGcontext* vg) {
     }
 };
-class gui_track_automationlane : public gui_track_subtrack {
+class gui_track_automationlane final : public gui_track_subtrack {
 public:
     gui_track_automationlane(track_gui_entry_t* _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param);
     int subtrackType() override { return gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION; }
@@ -316,7 +316,7 @@ public:
     void handleRightClick(MouseEvent& evt) override;
 };
 
-class gui_track : public gui_track_content_base {
+class gui_track final : public gui_track_content_base {
 protected:
     gui_track_automation automation;
     int subtrackIdx = -1;

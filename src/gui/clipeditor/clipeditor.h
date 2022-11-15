@@ -37,7 +37,7 @@
 
 class i_ctr_shape_editor;
 
-class action_modify_notes : public action_base {
+class action_modify_notes final : public action_base {
 protected:
 public:
     int32_t trackIdx = 0;
@@ -110,7 +110,7 @@ public:
     }
 };
 
-class action_modify_clip : public action_base {
+class action_modify_clip final : public action_base {
 protected:
 public:
     int32_t trackIdx = 0;
@@ -175,7 +175,7 @@ public:
     }
 };
 
-class action_modify_clip_control_data : public action_base {
+class action_modify_clip_control_data final : public action_base {
 protected:
 public:
     int32_t trackIdx = 0;
@@ -310,7 +310,7 @@ public:
     }
 };
 
-class gui_pianoroll : public guibase, public piano_scale {
+class gui_pianoroll final : public guibase, public piano_scale {
     enum class dragmode {
         drag_none,
         drag_move_resize,
@@ -339,7 +339,7 @@ public:
     vec2 getNoteFromPos(vec2 pos);
 };
 
-class gui_quantizationsettings : public guictr_base {
+class gui_quantizationsettings final : public guictr_base {
     tick_t tickStart = 0;
     tick_t tickEnd = 0;
     gui_timeinput inputStarts;
@@ -414,7 +414,7 @@ public:
 };
 
 
-class gui_clipsettings : public guictr_base {
+class gui_clipsettings final : public guictr_base {
     guictr_clipeditor& parentClipEditor;
 public:
     clip_view_t& view;
@@ -494,7 +494,7 @@ protected:
     void setGlobalSelectionFromClipSelection();
 };
 
-class gui_clipcontent_notes : public gui_clipcontent {
+class gui_clipcontent_notes final : public gui_clipcontent {
     void renderClipNoteRects(NVGcontext* vg, const std::vector<note_t>& clipNotes, vec2 renderPos, vec2 renderSize, 
                                 tick_t tickOffset, float scale, float inset, NVGcolor color, bool renderMuted);
 public:
@@ -504,7 +504,7 @@ public:
     void render(NVGcontext* vg) override;
 };
 
-class gui_clipcontent_velocities : public gui_clipcontent {
+class gui_clipcontent_velocities final : public gui_clipcontent {
 public:
     gui_clipcontent_velocities(scaled_grid& _grid, clip_view_t& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, true) {
         setGuiType(gui_type::CTR_TYPE_CLIPEDITOR_VELOCITY);
@@ -517,7 +517,7 @@ struct scaled_pos_t {
     vec2 shapeScale;
     vec2 scaledMouse;
 };
-class CCEdit : public DAW::Shape::ShapeEdit {
+class CCEdit final : public DAW::Shape::ShapeEdit {
     scaled_grid& grid;
     clip_view_t& view;
     ivec2 editorSize{};
@@ -580,7 +580,7 @@ public:
         callback(curveTmp, true);
     }
 };
-class gui_clipcontent_control_data : public gui_clipcontent {
+class gui_clipcontent_control_data final : public gui_clipcontent {
     CCEdit shapeEdit;
     DAW::Shape::shape_t tmpShape;
     int32_t cc = 0;
@@ -612,7 +612,7 @@ protected:
 };
 
 class guictr_editor_base;
-class guictr_cliphandles : public guibase, ce_constants {
+class guictr_cliphandles final : public guibase, ce_constants {
 public:
     enum dragmode {
         drag_handle_none,
@@ -626,7 +626,7 @@ public:
         float dist    = 0;
         dragmode mode = drag_handle_none;
     };
-    struct dist_dragzone_handle : public dist_dragzone {
+struct dist_dragzone_handle final : public dist_dragzone {
         guictr_cliphandles* handle = nullptr;
     };
 private:
@@ -796,7 +796,7 @@ public:
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 };
 
-class gui_audiocontent : public gui_clipcontent_base {
+class gui_audiocontent final : public gui_clipcontent_base {
     audioclip_texture_t updatedWaveform;
     gui_waveform_texture_ref* waveformRef;
     int32_t tickTimerRefresh  = 0;
@@ -890,7 +890,7 @@ public:
     void updatePosition();
 };
 
-class guictr_audioeditor : public guictr_editor_base {
+class guictr_audioeditor final : public guictr_editor_base {
 public:
     gui_audiocontent content;
 public:
@@ -918,7 +918,7 @@ public:
         return content.size;
     }
 };
-class guictr_clipeditor : public guictr_base {
+class guictr_clipeditor final : public guictr_base {
     clip_view_t view;
 public:
     guictr_noteeditor noteeditor;
@@ -954,7 +954,7 @@ public:
 };
 
 
-class guictr_clipeditorview : public guictr_base {
+class guictr_clipeditorview final : public guictr_base {
     SPLayoutEntry clipEditor;
     scaled_grid m_grid;
     clip_view_t m_view;

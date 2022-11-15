@@ -63,7 +63,7 @@ public:
 };
 
 
-class guictr_dragged_container_instance : public guictr_base {
+class guictr_dragged_container_instance final : public guictr_base {
 public:
     std::vector<DropAreaUILayout> boxes;
     dock_pos dockPos  = dock_pos::NONE;
@@ -393,7 +393,7 @@ public:
     void dragContainerRelayout(drag_ctr_event evt) override {}
 };
 class guictr_scrollbar;
-class PopupCtrl : public AppCtrl {
+class PopupCtrl final : public AppCtrl {
     guictr_scrollbar* popupCtrs = nullptr;
     bool bResizeable            = false;
 
@@ -409,7 +409,6 @@ public:
     void initApp(const std::vector<String>& args) override { };
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
     void startApp() override {};
-    bool initPopup(window_overlay* window, NVGcontext* nanovg);
     void onWindowClose() override;
     void onTick() override;
     bool mouseDownPre() override;

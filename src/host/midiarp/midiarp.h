@@ -34,12 +34,12 @@
 struct arp_snapshot;
 namespace DAW {
 
-struct arp_note_t : note_t {
+struct arp_note_t final : note_t {
     int32_t arpNoteUid = 0;
     float wallTime     = 0.0f;
 };
 
-class midiarp : public automatable_t {
+class midiarp final : public automatable_t {
 public:
     enum ResetMode : int {
         NOTE,

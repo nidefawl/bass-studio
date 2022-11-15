@@ -8,7 +8,7 @@
 #include <vector>
 
 
-class gui_ctr_debug : public guictr_base {
+class gui_ctr_debug final : public guictr_base {
     struct ctr_debug_impl_t;
     ctr_debug_impl_t* const impl;
 public:

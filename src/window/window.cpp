@@ -195,7 +195,6 @@ void invalidateWindowContents(GLFWwindow* glfw) {
 }
 
 class appwindow_dialog;
-class appwindow_overlay;
 
 #ifdef _WIN32
 void syncMenu(HWND hwnd, ngui::MenuBar& menubar);       // menu_win32.cpp
@@ -1154,7 +1153,7 @@ void appwindow_main::onChildOverlayClose(appwindow* child) {
     }
 }
 
-class appwindow_dialog : public appwindow, public window_dialog {
+class appwindow_dialog final : public appwindow, public window_dialog {
     std::shared_ptr<window_abstract_t> impl;
     const bool disablesParent = false;
 public:
@@ -2080,7 +2079,7 @@ void windowTickTimerRun() {
 static LRESULT pluginHostWindowOverrideProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 #endif
 
-class appwindow_plugin_client_vst2 : public appwindow_main, public pluginwindow {
+class appwindow_plugin_client_vst2 final : public appwindow_main, public pluginwindow {
     bool isInitialized = false;
 
 public:
@@ -2476,7 +2475,7 @@ static LRESULT pluginHostWindowOverrideProc(HWND _hwnd, UINT Msg, WPARAM wParam,
 }
 #endif
 
-class appwindow_plugin_internal : public appwindow_main, public window_plugin {
+class appwindow_plugin_internal final : public appwindow_main, public window_plugin {
     bool isInitialized = false;
     std::shared_ptr<PluginControl> const ctrlShared;
     ivec2 windowSize = {0, 0};

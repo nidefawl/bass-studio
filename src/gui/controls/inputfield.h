@@ -48,7 +48,7 @@ public:
     virtual void onKeyInputChangeValue(ivec2 direction)        = 0;
 };
 template<typename T>
-class gui_numberinput_field_generic : public gui_numberinput_field_base {
+class gui_numberinput_field_generic final : public gui_numberinput_field_base {
 protected:
     T* number;
     const char* strFormat = nullptr;
@@ -103,7 +103,7 @@ using gui_numberinput_u32 = gui_numberinput_field_generic<uint32_t>;
 using gui_numberinput_double = gui_numberinput_field_generic<double>;
 using gui_numberinput_float = gui_numberinput_field_generic<float>;
 
-class gui_input_filtered : public guibutton {
+class gui_input_filtered final : public guibutton {
     uint32_t* number;
     gui_textfield field;
     input_filter_hex32 filter;

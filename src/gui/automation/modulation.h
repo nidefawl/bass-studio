@@ -22,7 +22,7 @@ namespace DAW::UI {
     };
 }
 namespace DAW::UI::Modulation {
-    class guictr_edit_modulation_slot : public guictr_base {
+class guictr_edit_modulation_slot final : public guictr_base {
         automatable_t* paramAutomatable = nullptr;
         int32_t paramIdx = 0;
         int32_t slotIdx = 0;
@@ -53,7 +53,7 @@ namespace DAW::UI::Modulation {
         void buttonClicked(guibase* _button) override;
     };
 
-    class guictr_edit_modulation : public guictxtmenu_base {
+class guictr_edit_modulation final : public guictxtmenu_base {
         automatable_t* paramAutomatable = nullptr;
         int32_t paramIdx = 0;
         guibutton btnAddModulation;
@@ -93,7 +93,7 @@ namespace DAW::UI::Modulation {
         void buttonClicked(guibase* _button) override;
     };
 
-    class gui_dragged_modulation : 
+class gui_dragged_modulation final : 
         public guitooltip<gui_dragged_modulation>, public IDraggedModulationSource {
         DAW::modulation_channel_ref ref;
     public:
@@ -119,7 +119,7 @@ namespace DAW::UI::Modulation {
         void dragReleaseOn(guibase* target, ivec2 mousepos) override;
     };
 
-    class guibutton_modulate : public guibutton, public IDraggedModulationSource {
+class guibutton_modulate final : public guibutton, public IDraggedModulationSource {
         const DAW::modulation_channel_ref ref;
         gui_dragged_modulation dragged;
         bool hasDragged        = false;

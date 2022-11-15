@@ -31,7 +31,7 @@
 class guictr_layout;
 struct dawview_layout_t;
 
-class guictr_layout : public guictr_base, public guictr_layout_base, public splitter_cb {
+class guictr_layout final : public guictr_base, public guictr_layout_base, public splitter_cb {
     bool setOverlayPos(DropAreaUILayout* area, dock_pos dockPos, ivec2 overlayPos, ivec2 overlaySize, int32_t dockPosOfffset, int32_t childContainerIndex);
     bool setOverlayPosForTab(DropAreaUILayout* area, dock_pos dockPos, int32_t dockOffset, bool rightSideHandle);
     DropAreaUILayout* makeDropArea(int32_t idx);

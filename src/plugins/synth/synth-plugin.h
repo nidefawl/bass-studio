@@ -362,7 +362,7 @@ namespace PluginSynth {
     struct snapshot_t;
     struct SynthParamBase;
     class SynthImpl;
-    class PluginVST2_Synth : public BasePluginVST2 {
+class PluginVST2_Synth final : public BasePluginVST2 {
     public:
         using ThreadLock = std::lock_guard<std::recursive_mutex>;
         explicit PluginVST2_Synth(audioMasterCallback audioMaster);

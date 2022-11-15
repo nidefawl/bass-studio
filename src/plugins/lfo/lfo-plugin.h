@@ -20,7 +20,7 @@ struct snapshot_t {
     std::vector<impl_channel_snapshot_t> channels;
 };
 
-class module_lfo : public internal_modulator {
+class module_lfo final : public internal_modulator {
     friend class guictr_module_lfo;
     struct lfo_impl_t;
     lfo_impl_t* const impl;

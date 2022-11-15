@@ -94,14 +94,14 @@ public:
     
 };
 
-class guidropdown_select_program : public guictxtmenu {
+class guidropdown_select_program final : public guictxtmenu {
     effectbase* const plugin;
 
 public:
     guidropdown_select_program(effectbase* _plugin);
     bool clickedElement(ctxtmenu_entry* e, int _id) override;
 };
-class guidropdownprogram : public guidropdownbase {
+class guidropdownprogram final : public guidropdownbase {
     effectbase* plugin = nullptr;
 
 public:
@@ -148,21 +148,21 @@ public:
     void makeSnapshot(plugin_ui_snapshot_t& ps, const tracksnapshot_store_opts_t& opts) override;
     void loadSnapshot(const plugin_ui_snapshot_t& puis) override;
 };
-class guivstplugin : public guipluginview {
+class guivstplugin final : public guipluginview {
 public:
     guivstplugin(vstplugin* _vst);
     ~guivstplugin() override;
     vstplugin* const vst;
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };
-class guiclapplugin : public guipluginview {
+class guiclapplugin final : public guipluginview {
 public:
     guiclapplugin(clapplugin* _clap);
     ~guiclapplugin() override;
     clapplugin* const clap;
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };
-class guiinternalpluginview : public guipluginview {
+class guiinternalpluginview final : public guipluginview {
     internalplugin* const plugin;
 
 public:

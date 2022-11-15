@@ -117,7 +117,7 @@ namespace Table {
 
 using namespace Table;
 
-class guidropdown_selectfont_ctxt : public guictxtmenu {
+class guidropdown_selectfont_ctxt final : public guictxtmenu {
     guitheme_mgr* themeMgr;
     std::vector<String> strFontNames;
     UIFont::font_type_t fonttype;
@@ -150,7 +150,7 @@ public:
     }
 };
 
-class guidropdown_selectfont : public guidropdownbase {
+class guidropdown_selectfont final : public guidropdownbase {
 public:
     String current;
     UIFont::font_type_t fonttype;
@@ -178,7 +178,7 @@ public:
 };
 
 template <typename T>
-class guiproperties_table : public guictr_properties_table {
+class guiproperties_table final : public guictr_properties_table {
 protected:
     struct cellclicked_t {
         ivec2 idx{-1,-1};
@@ -980,7 +980,7 @@ void guiproperties_table<guitheme_t>::setDebugPropertyHandle(void *vPtr) {
     }
 }
 
-class guidropdown_selecttheme_ctxt : public guictxtmenu {
+class guidropdown_selecttheme_ctxt final : public guictxtmenu {
     guitheme_mgr* themeMgr;
     std::vector<String> strThemeNames;
 public:
@@ -1005,7 +1005,7 @@ public:
     }
 };
 
-class guidropdown_selecttheme : public guidropdownbase {
+class guidropdown_selecttheme final : public guidropdownbase {
 public:
     guidropdown_selecttheme() :
         guidropdownbase() {
@@ -1023,7 +1023,7 @@ public:
     }
 };
 
-class guictr_theme_settings : public guictr_base {
+class guictr_theme_settings final : public guictr_base {
     guiproperties_table<guitheme_t> themeProperties;
     guictr_scrollbar scrollContainer;
     guidropdown_selecttheme selectTheme;

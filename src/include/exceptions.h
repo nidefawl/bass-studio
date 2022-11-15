@@ -4,7 +4,7 @@
 #include "assert_dbg.h"
 
 String FormatErrorMessage(uint32_t error, const String& msg = "");
-class FileIOException : public std::runtime_error {
+class FileIOException final : public std::runtime_error {
 private:
     int32_t m_error;
 
@@ -16,7 +16,7 @@ public:
 
     int32_t GetErrorCode() const { return m_error; }
 };
-class SystemException : public std::runtime_error {
+class SystemException final : public std::runtime_error {
 private:
     int32_t m_error;
 
@@ -27,14 +27,14 @@ public:
     int32_t GetErrorCode() const { return m_error; }
 };
 
-class appexception : public std::runtime_error {
+class appexception final : public std::runtime_error {
 public:
     explicit appexception(const String& str) : runtime_error(str) {
         dbgassert(0);
     }
 };
 
-class applogicexception : public std::runtime_error {
+class applogicexception final : public std::runtime_error {
 public:
     explicit applogicexception(const String& str) : runtime_error(str) {
         dbgassert(0);
