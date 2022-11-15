@@ -948,8 +948,11 @@ public:
         return view;
     }
     void setControl(BaseCtrl* parentCtrl) override {
-        resetClipView();
+        if (this->parentCtrl)
+            resetClipView();
         guictr_base::setControl(parentCtrl);
+        if (parentCtrl)
+            resetClipView();
     }
 };
 

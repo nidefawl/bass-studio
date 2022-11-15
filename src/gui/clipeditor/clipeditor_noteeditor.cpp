@@ -12,6 +12,7 @@
 #include "gui/container/container.h"
 #include "gui/track/trackctr.h"
 #include "guiconstant.h"
+#include "host/clip/clip.h"
 #include "math/seq_math.h"
 #include "gui/gui.h"
 #include "guicolors.h"
@@ -497,7 +498,7 @@ void guictr_noteeditor::buttonClicked(guibase* button) {
         if (!currentClip)
             return;
         if (view.isAbsoluteTimeMode()) {
-            m_grid.showRange(view.m_selectionView.minClipStart, view.m_selectionView.maxClipEnd);
+            m_grid.showRange(view.m_selectionView.viewBegin, view.m_selectionView.viewEnd);
         } else {
             m_grid.showRange(currentClip->notes.firstNote.start(), math::max<tick_t>(currentClip->notes.lastNote.end(), currentClip->loopStart + currentClip->loopLen));
         }
@@ -540,8 +541,7 @@ void guictr_noteeditor::renderBackground(NVGcontext* vg) {
 
 
 void guictr_noteeditor::gridChanged(scaled_grid& _grid) {
-    ivec2 cs = getSizeContent();
-    _grid.update(ivec2(timeline.size.x, cs.y - 30));
+    _grid.update(sizeContentArea);
 }
 
 void guictr_noteeditor::handleDraggedBegin(MouseEvent& evt) {
@@ -695,11 +695,13 @@ void guictr_editor_base::onClipChanged() {
     //TODO: this should only be done when the clip or m_selectionView changes
     if (bIsAbsMode) {
         if (view.m_selectionView.totalClipCount) {
-            getGrid().showRange(view.m_selectionView.minClipStart, view.m_selectionView.maxClipEnd);
+            getGrid().showRange(view.m_selectionView.viewBegin, view.m_selectionView.viewEnd);
+            storeEditorLayout();
         }
     } else if (currentClip) {
         if (currentClip->editorLayout.noLayout) {
             getGrid().showRange(currentClip->notes.firstNote.start(), math::max<tick_t>(currentClip->notes.lastNote.end(), currentClip->loopStart + currentClip->loopLen));
+            storeEditorLayout();
         }
     }
 }
@@ -747,8 +749,10 @@ void guictr_editor_base::storeEditorLayout() {
 
 void guictr_noteeditor::storeEditorLayout() {
     clip_t* currentClip = view.clip();
-    bool bIsAbsMode = 
-    view.isAbsoluteTimeMode();
+    if (currentClip && currentClip->clipType != CLIP_MIDI) {
+        return;
+    }
+    bool bIsAbsMode = view.isAbsoluteTimeMode();
     clip_editor_layout_t* layoutDst = nullptr;
     if (bIsAbsMode && view.m_selectionView.totalClipCount) {
         layoutDst = &view.m_selectionView.editorLayout;
@@ -1223,7 +1227,9 @@ void guictr_audioeditor::relayout() {
 }
 
 void guictr_audioeditor::storeEditorLayout() {
-    guictr_editor_base::storeEditorLayout();
+    auto clip = view.clip();
+    if (clip && clip->clipType == CLIP_AUDIO)
+        guictr_editor_base::storeEditorLayout();
 }
 
 bool guictr_audioeditor::handleKeyInput(KeyEvent& kevt) {

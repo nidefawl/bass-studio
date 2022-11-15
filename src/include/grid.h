@@ -45,8 +45,6 @@ public:
 class scaled_grid final : public layout_grid_t {
 protected:
     std::vector<grid_changed_cb*> callbacks;
-    int lastOffset  = 0;
-    double lastZoom = DEFAULT_ZOOM;
     int lastW       = 200;
     bool dirty      = false;
     uint8_t gridMaxDens = 8;
@@ -76,8 +74,6 @@ public:
     void update(ivec2 contentsize) {
         dirty = false;
         calcLen(offset, zoom, contentsize.x);
-        lastOffset = offset;
-        lastZoom   = zoom;
         lastW      = contentsize.x;
     }
     tick_t getTickLength() const;

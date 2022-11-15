@@ -176,7 +176,8 @@ void guictr_clipeditor::selectEditClip(clip_t* clip) {
         updateClipViewReferences();
         noteeditor.selectEditClip(clip);
         audioeditor.selectEditClip(clip);
-        parent->layout();
+        if (parent)
+            layout();
     }
 }
 
@@ -184,6 +185,8 @@ void guictr_clipeditor::setSingleClip(clip_t* clip) {
     bool bChanged = clip != view.clip();
     storeEditorLayout();
     view.setSingleClip(clip);
+    if (parent)
+        layout();
     if (bChanged || !clip) {
         updateClipViewReferences();
         noteeditor.onClipChanged();
@@ -191,7 +194,7 @@ void guictr_clipeditor::setSingleClip(clip_t* clip) {
         noteeditor.relayout();
         audioeditor.relayout();
         if (parent)
-            parent->layout();
+            layout();
     }
 }
 
@@ -201,6 +204,8 @@ void guictr_clipeditor::setEditorSelection(clip_t* clip, const editor_view_selec
         storeEditorLayout();
     }
     view.setEditorSelection(clip, clipboardView);
+    if (parent)
+        layout();
     if (bChanged || !clip) {
         updateClipViewReferences();
         noteeditor.onClipChanged();
@@ -208,7 +213,7 @@ void guictr_clipeditor::setEditorSelection(clip_t* clip, const editor_view_selec
         noteeditor.relayout();
         audioeditor.relayout();
         if (parent)
-            parent->layout();
+            layout();
     }
 }
 
@@ -217,12 +222,13 @@ void guictr_clipeditor::resetClipView() {
     bool bChanged = nullptr != view.clip();
     storeEditorLayout();
     view.reset();
+    if (parent)
+        layout();
     if (bChanged) {
         updateClipViewReferences();
         noteeditor.relayout();
         audioeditor.relayout();
-        if (parent)
-            parent->layout();
+        layout();
     }
 }
 
@@ -2326,7 +2332,7 @@ float guictr_clipeditorview::getScaleX() {
         contentLenTicks = clip->getLen();
     }
     if (view.isAbsoluteTimeMode()) {
-        contentLenTicks = view.m_selectionView.maxClipEnd;
+        contentLenTicks = view.m_selectionView.viewEnd;
     }
     auto clipEditor = getClipEditor();
     if (!clipEditor) {

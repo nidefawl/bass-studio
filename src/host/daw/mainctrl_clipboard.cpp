@@ -397,12 +397,12 @@ namespace DAW {
                 auto szBefore = trackView.second.size();
                 midi.getClipsInRange(cursorCopy.getTickBegin(), cursorCopy.getTickEnd(), trackView.second);
                 if (view.totalClipCount == 0 && trackView.second.size()) {
-                    view.minClipStart = trackView.second.front()->start();
-                    view.maxClipEnd   = trackView.second.back()->end();
+                    view.viewBegin = trackView.second.front()->start();
+                    view.viewEnd   = trackView.second.back()->end();
                 }
                 for (auto it = trackView.second.begin() + int64_t(szBefore); it != trackView.second.end(); ++it) {
-                    view.minClipStart = math::min(view.minClipStart, (*it)->start());
-                    view.maxClipEnd   = math::max(view.maxClipEnd, (*it)->end());
+                    view.viewBegin = math::min(view.viewBegin, (*it)->start());
+                    view.viewEnd   = math::max(view.viewEnd, (*it)->end());
                 }
                 if (trackView.second.empty())
                     continue;

@@ -198,8 +198,8 @@ namespace DAW {
         editor_view_selection_t view;
         view.tracks.emplace_back<track_view_selection_t>({*guiClip->m_trackentry, {guiClip->m_clip}});
         view.totalClipCount = 1;
-        view.minClipStart   = guiClip->m_clip->start();
-        view.maxClipEnd     = guiClip->m_clip->end();
+        view.viewBegin   = guiClip->m_clip->start();
+        view.viewEnd     = guiClip->m_clip->end();
         return view;
     }
     gui_clip* GetClipGuiFromTimeAndTrackIdx(track_gui_manager_i& iGuiMgr, int32_t trackIdx, tick_t time) {
@@ -709,6 +709,10 @@ void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& ev
                 if (1) {
                     editor_view_selection_t view;
                     DAW::GetClipboardView(iGuiMgr, cursor, view, gClip);
+                    if (cursor.getRange()) {
+                        view.viewBegin = cursor.getTickBegin();
+                        view.viewEnd   = cursor.getTickEnd();
+                    }
                     daw->setEditorSelection(gClip ? gClip->m_clip : nullptr, view);
                 }
             // }
@@ -944,6 +948,8 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
             if (cursor.getRange() > 0) {
                 DAW::GetClipboardView(iGuiMgr, cursor, view, gui);
                 if (view.totalClipCount > 1) {
+                    view.viewBegin = cursor.getTickBegin();
+                    view.viewEnd   = cursor.getTickEnd();
                     daw->setEditorSelection(gui->m_clip, view);
                     return;
                 }

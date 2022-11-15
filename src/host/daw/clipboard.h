@@ -34,8 +34,8 @@ using track_view_selection_t = std::pair<track_gui_entry_t, std::vector<clip_t*>
 struct editor_view_selection_t {
     std::vector<track_view_selection_t> tracks{};
     size_t totalClipCount = 0;
-    tick_t minClipStart = 0;
-    tick_t maxClipEnd   = 0;
+    tick_t viewBegin = 0;
+    tick_t viewEnd   = 0;
     clip_editor_layout_t editorLayout;
 };
 
