@@ -1421,6 +1421,9 @@ void DawCtrl::setSelectedTrack(track_t* track) {
             auto spCtrPlugins = std::static_pointer_cast<guictr_plugins>(entry->getSharedGui());
             spCtrPlugins->showTrack(track ? track->audio : nullptr, spCtrPlugins);
         }
+        if (entry->getType() == gui_type::CTR_TYPE_NODES) {
+            guictr_cast<guictr_nodes_splitview>(entry)->refresh();
+        }
         return true;
     });
 }
@@ -1438,10 +1441,13 @@ void DawCtrl::revealPlugin(effectbase* effect) {
 
 void DawCtrl::addTrackToView(track_t* track, int flags) {
     int32_t nTrackViews =0;
-    view->visitEntries([track, flags, &nTrackViews](SPLayoutEntry& ctr) {
-        if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
+    view->visitEntries([track, flags, &nTrackViews](SPLayoutEntry& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
             nTrackViews++;
-            guictr_cast<guictr_tracks>(ctr)->addTrack(track, flags);
+            guictr_cast<guictr_tracks>(entry)->addTrack(track, flags);
+        }
+        if (entry->getType() == gui_type::CTR_TYPE_NODES) {
+            guictr_cast<guictr_nodes_splitview>(entry)->refresh();
         }
         return true;
     });
@@ -1450,10 +1456,13 @@ void DawCtrl::addTrackToView(track_t* track, int flags) {
 
 void DawCtrl::removeTrackFromView(track_t* track, int flags) {
     int32_t nTrackViews =0;
-    view->visitEntries([track, flags, &nTrackViews](SPLayoutEntry& ctr) {
-        if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
+    view->visitEntries([track, flags, &nTrackViews](SPLayoutEntry& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
             nTrackViews++;
-            guictr_cast<guictr_tracks>(ctr)->removeTrack(track, flags);
+            guictr_cast<guictr_tracks>(entry)->removeTrack(track, flags);
+        }
+        if (entry->getType() == gui_type::CTR_TYPE_NODES) {
+            guictr_cast<guictr_nodes_splitview>(entry)->refresh();
         }
         return true;
     });
@@ -1461,9 +1470,9 @@ void DawCtrl::removeTrackFromView(track_t* track, int flags) {
 }
 
 void DawCtrl::onPostUnloadProject() {
-    view->visitEntries([](SPLayoutEntry& ctr) {
-        if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
-            auto trackCtr = guictr_cast<guictr_tracks>(ctr);
+    view->visitEntries([](SPLayoutEntry& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
+            auto trackCtr = guictr_cast<guictr_tracks>(entry);
             auto& trackView = trackCtr->trackView;
             trackView.m_resizePreModifyState.reset();
             trackView.action.clipboard.reset();
@@ -1475,9 +1484,9 @@ void DawCtrl::onPostUnloadProject() {
 }
 
 void DawCtrl::updateVisibleTrackContents() {
-    view->visitEntries([](SPLayoutEntry& ctr) {
-        if (ctr->getType() == gui_type::CTR_TYPE_TRACKS) {
-            auto trackCtr = guictr_cast<guictr_tracks>(ctr);
+    view->visitEntries([](SPLayoutEntry& entry) {
+        if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
+            auto trackCtr = guictr_cast<guictr_tracks>(entry);
             trackCtr->updateVisibleTracks();
             if (trackCtr->isVisible()) {
                 double scrollPixelOffset = trackCtr->getScrollOffsetPixels();
