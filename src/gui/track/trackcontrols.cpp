@@ -805,18 +805,18 @@ public:
     }
 };
 class gui_trackcontrols_io final : public guictr_base {
-    guidropdown_select_bus selectInput;
     guidropdown_select_bus selectOutput;
+    guidropdown_select_bus selectInput;
     guidropdown_select_midi_input selectMidiInput;
 
 public:
     explicit gui_trackcontrols_io(track_gui_entry_t* _entry)
         : guictr_base(),
-          selectInput(_entry, true),
           selectOutput(_entry, false),
+          selectInput(_entry, true),
           selectMidiInput(_entry, true) {
-        add(&selectInput);
         add(&selectOutput);
+        add(&selectInput);
         add(&selectMidiInput);
         selectInput.setLabel("Audio In");
         selectOutput.setLabel("Audio Out");
@@ -825,16 +825,16 @@ public:
     }
     ~gui_trackcontrols_io() override {
         remove(&selectMidiInput);
-        remove(&selectOutput);
         remove(&selectInput);
+        remove(&selectOutput);
     }
     void layout() override {
         const int32_t TRACK_HEIGHT_STEP   = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         const int32_t CONST_PADDING_TRACK_CONTROLS = theme->get(GuiConstant::CONST_PADDING_TRACK_CONTROLS);
 
         int32_t inset      = CONST_PADDING_TRACK_CONTROLS;
-        selectInput.pos    = ivec2(inset, inset);
-        selectOutput.pos   = ivec2(inset, TRACK_HEIGHT_STEP + inset);
+        selectOutput.pos    = ivec2(inset, inset);
+        selectInput.pos   = ivec2(inset, TRACK_HEIGHT_STEP + inset);
         selectMidiInput.pos   = ivec2(inset, (TRACK_HEIGHT_STEP + inset)*2);
         selectInput.size   = getSizeContent() - ivec2(inset * 2);
         selectInput.size.y = TRACK_HEIGHT_STEP - inset * 2;
