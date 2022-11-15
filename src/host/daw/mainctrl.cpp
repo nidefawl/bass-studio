@@ -1625,7 +1625,7 @@ class clipreset {
     dragdrop_midifile& clip;
 
 public:
-    clipreset(dragdrop_midifile& _clip) : clip(_clip){};
+    explicit clipreset(dragdrop_midifile& _clip) : clip(_clip){};
     ~clipreset() {
         clip.reset();
     }
@@ -1913,7 +1913,7 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
         }
         renderStats.numWaveFormsRendered += nUpdates;
         renderStats.timeUpdateWaveforms = timer.getTime();
-        if (nUpdates > 15 || renderStats.timeUpdateWaveforms > 20 * 1000) {
+        if (nUpdates > 15 || renderStats.timeUpdateWaveforms > 20L * 1000) {
             log_printf("%d updates took %zd\n", nUpdates, renderStats.timeUpdateWaveforms);
             auto timings = waveformRenderer->getTimings();
             log_lf(Log::L_DEBUG, "waveform.tmPassed\t\t%zd\n", timings.tmPassed);
@@ -2216,7 +2216,8 @@ void load_project_task::getPreciseProgress(double& progressOverall, double& prog
     } else {
         progressDetail = step < 2 ? 0 : 1;
     }
-    progressOverall = (step / 2 + progressDetail) / 2.0;
+    auto stepFinished = step / 2;
+    progressOverall = math::clamp((stepFinished + progressDetail) / 2.0, 0.0, 1.0);
 }
 
 } // namespace DAW
