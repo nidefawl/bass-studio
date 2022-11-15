@@ -1001,16 +1001,6 @@ void gui_graph::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
     }
-    const int htt = theme->get(GuiConstant::CONST_SMALL_LABEL_HEIGHT);
-    renderTextLabel(vg,
-                    vec2(pos) + vec2(htt/4, size.y),
-                    vec2(size.x, math::min(htt, size.y)),
-                    getLabel(),
-                    theme,
-                    htt,
-                    theme->getColor(GuiColor::COL_LABEL_AUTOMATION_TRACK),
-                    NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM
-                    );
     const auto posIn = ivec2(parentCtrl->m_mousePos);
     const auto mouseLocal = toControlsObjectSpace(posIn, this);
     nvgSave(vg);
@@ -1390,6 +1380,16 @@ void guictr_nodes_editor::render(NVGcontext* vg) {
     nvgSave(vg);
     graph.render(vg);
     nvgRestore(vg);
+    const int htt = theme->get(GuiConstant::CONST_SMALL_LABEL_HEIGHT);
+    renderTextLabel(vg,
+                    vec2(htt/4, cs.y - htt/4),
+                    vec2(cs.x, math::min(htt, cs.y)),
+                    graph.getLabel(),
+                    theme,
+                    htt,
+                    theme->getColor(GuiColor::COL_LABEL_AUTOMATION_TRACK),
+                    NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM
+                    );
 }
 
 void guictr_nodes_editor::refresh() {

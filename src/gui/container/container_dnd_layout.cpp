@@ -93,8 +93,9 @@ public:
         }
     }
     void layout() override {
-        btnClose.size = ivec2(size.y);
-        btnClose.pos  = ivec2(getSizeContent().x - btnClose.size.x, 0);
+        auto cs = getSizeContent();
+        btnClose.size = ivec2(math::max(4, size.y*2/3));
+        btnClose.pos  = ivec2(cs.x - btnClose.size.x, 0 + cs.y/2 - btnClose.size.y/2);
         for (auto gui: guis) {
             gui->layout();
         }
@@ -530,13 +531,18 @@ void GuiCtrLayoutEntryHandle::render(NVGcontext* vg) {
     nvgFill(vg);
     String str = parentCtr->getGui()->label;
     if (str.length()) {
-
-        ivec2 renderPos(size.y / 2, size.y / 2);
-        if (str.length() > 0) {
-            int fontScale = 12;
-            UTIL_setFont(vg, theme, fontScale, theme->getColor(getLabelColor()), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-            nvgText(vg, renderPos.x, renderPos.y, str.c_str(), &str.back() + 1);
-        }
+        const int htt = theme->get(GuiConstant::CONST_SMALL_LABEL_HEIGHT);
+        vec2 renderPos(htt/2, size.y/2);
+        auto fontScale = math::clamp(size.y, 4, 48);
+        renderTextLabel(vg,
+                        renderPos,
+                        vec2(btnClose.getLeftTop().x - htt/2, size.y),
+                        str,
+                        theme,
+                        fontScale,
+                        theme->getColor(getLabelColor()),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE
+                        );
     }
     for (auto c: guis) {
         if (!c->isVisible()) {
