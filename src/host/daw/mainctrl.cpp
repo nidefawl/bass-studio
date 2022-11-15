@@ -1416,10 +1416,11 @@ void DawCtrl::setSelectedTrackEntry(track_gui_entry_t* trackEntry) {
 
 void DawCtrl::setSelectedTrack(track_t* track) {
     selectedTrack = track;
-    view->visitEntries([track](SPLayoutEntry& entry) {
+    view->visitEntries([&](SPLayoutEntry& entry) {
         if (entry->getType() == gui_type::CTR_TYPE_PLUGINS) {
             auto spCtrPlugins = std::static_pointer_cast<guictr_plugins>(entry->getSharedGui());
             spCtrPlugins->showTrack(track ? track->audio : nullptr, spCtrPlugins);
+            view->ctr_pluginview.setPluginCtr(entry);
         }
         if (entry->getType() == gui_type::CTR_TYPE_NODES) {
             guictr_cast<guictr_nodes_splitview>(entry)->refresh();
