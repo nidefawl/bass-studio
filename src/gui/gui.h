@@ -205,11 +205,15 @@ public:
         //  return false;
         return (flags & FLG_VISIBLE) != 0;
     }
+    virtual void onVisibleChanged(bool b) { }
     void setVisible(bool b) {
-        if (!b)
-            flags &= ~FLG_VISIBLE;
-        else
-            flags |= FLG_VISIBLE;
+        if (b != !!(flags & FLG_VISIBLE)) {
+            if (b)
+                flags |= FLG_VISIBLE;
+            else
+                flags &= ~FLG_VISIBLE;
+            onVisibleChanged(b);
+        }
     }
     int getFlags() const {
         return flags;
