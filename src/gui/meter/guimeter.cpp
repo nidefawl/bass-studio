@@ -63,7 +63,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
         mixedlevels[2]  = math::max(mixedlevels[2], fPeak);
         float levels[3] = { fMax, fRms, fPeak };
         //    float levels[3] = {fMax, fRms, fPeak};
-        if (mtrSize.y > 4) {
+        if (mtrSize.y > 4 && channelW >= 1.0f) {
             nvgBeginPath(vg);
             nvgRect(vg, x, mtrPos.y, channelW, mtrSize.y);
             nvgFillColor(vg, theme->getFrameColorOutline());
@@ -228,7 +228,7 @@ void renderMeterHorizontal(NVGcontext *vg, guitheme_t *theme, const vec2 &pos, c
         mixedlevels[2]  = math::max(mixedlevels[2], fPeak);
         float levels[3] = { fMax, fRms, fPeak };
         //    float levels[3] = {fMax, fRms, fPeak};
-        if (mtrSize.x > 4) {
+        if (mtrSize.x > 4 && channelH >= 1.0f) {
             nvgBeginPath(vg);
             nvgRect(vg, mtrPos.x, y, mtrSize.x, channelH);
             nvgFillColor(vg, theme->getFrameColorOutline());
