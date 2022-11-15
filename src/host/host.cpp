@@ -1972,14 +1972,14 @@ void Host::onTick() {
     if (isStreaming()
             && this->impl->audioStream
             && this->impl->audioStream->getNumCallbacks()
-            && getTimeMillis() - this->impl->tmLastError > 10000) {
+            && getTimeMillis() - this->impl->tmLastError > 30000) {
         auto timings = impl->audioStream->getStreamTimings();
         this->impl->tmLastError = getTimeMillis();
         double msec = timings.tmDeltaCbAvg / 1000.0;
         auto sr = impl->audioStream->getSampleRate();
         auto bs = impl->audioStream->getBlockSize();
         auto expectedTimeDelta = double(bs) / double(sr) * 1000.0;
-        double maxError = 0.1;
+        double maxError = 0.15;
         if (msec > expectedTimeDelta + maxError) {
             log_lf(Log::L_WARN, "audioCallback: time delta too large: %.5f ms avg, %.5f ms min, %.5f ms max (expected %f ms)\n", msec, timings.tmDeltaCbMin / 1000.0, timings.tmDeltaCbMax / 1000.0, expectedTimeDelta);
         } else if (msec < expectedTimeDelta - maxError) {
