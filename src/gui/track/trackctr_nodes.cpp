@@ -1597,6 +1597,25 @@ void guictr_nodes_splitview::reset() {
     graphTop.reset();
     graphBottom.reset();
 }
+
+void guictr_nodes_splitview::onRemove() {
+    reset();
+    guictr_base::onRemove();
+}
+
+void guictr_nodes_splitview::onVisibleChanged(bool b) {
+    if (b) {
+        graphTop.refresh();
+        graphBottom.refresh();
+    }
+}
+
+void guictr_nodes_splitview::onAdded() {
+    guictr_base::onAdded();
+    graphTop.refresh();
+    graphBottom.refresh();
+}
+
 void guictr_nodes_splitview::refresh() {
     graphTop.refresh();
     graphBottom.refresh();

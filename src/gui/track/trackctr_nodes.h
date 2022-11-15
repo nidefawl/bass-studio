@@ -223,4 +223,7 @@ public:
     guibase* getFocusedContainer() override {
         return &this->graphTop;
     }
+    void onRemove() override;
+    void onAdded() override;
+    void onVisibleChanged(bool b) override;
 };
