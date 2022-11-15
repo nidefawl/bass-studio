@@ -85,16 +85,17 @@ namespace DAW {
             return false;
         }
         void setTrackBegin(int32_t track) {
-            this->selTrackRange = getTrackEnd() - track;
-            this->cursorTrack   = track;
+            auto diff = this->cursorTrack - track;
+            this->cursorTrack -= track;
+            this->selTrackRange += diff;
         }
         void setTrackEnd(int32_t track) {
-            dbgassert(track >= getTrackBegin());
             this->selTrackRange = track - getTrackBegin();
         }
         void setBegin(tick_t t) {
-            this->selRange  = t - getTickBegin();
-            this->cursorPos = t;
+            auto diff = this->cursorPos - t;
+            this->cursorPos -= diff;
+            this->selRange += diff;
         }
         void setEnd(tick_t t) {
             this->selRange = t - getTickBegin();

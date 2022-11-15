@@ -696,26 +696,23 @@ void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& ev
                 dbgassert(cursor.getSubTrackBegin() < (int) subTr->m_trackentry->subtracks.size());
                 dbgassert(cursor.getSubTrackEnd() < (int) subTr->m_trackentry->subtracks.size());
             }
-        } else if(trSelected && trNxtSelected) {
-            cursor.selTrackRange = (trNxtSelected->idx  - trSelected->idx);
+        } else if (trSelected && trNxtSelected) {
+            cursor.selTrackRange = (trNxtSelected->idx - trSelected->idx);
         } else {
             cursor.selTrackRange = 0;
         }
         // beatbar16th_t songPos = daw->toBeatBar16th(tick, false);
         // log_printf("Select at Track %d - %d %d %d %d = %u.%u.%u\n", trSelected->idx, cursor.cursorPos, tick, cursor.selRange, local.x, songPos.bar, songPos.beat, songPos.th);
-        if (!cursor.isSubtrackSelection()) {
-            // if (cursor.inTrackRange(trNxtSelected->idx)) {
-                auto gClip = DAW::GetClipGuiFromTime(trNxtSelected, tick);
-                if (1) {
-                    editor_view_selection_t view;
-                    DAW::GetClipboardView(iGuiMgr, cursor, view, gClip);
-                    if (cursor.getRange()) {
-                        view.viewBegin = cursor.getTickBegin();
-                        view.viewEnd   = cursor.getTickEnd();
-                    }
-                    daw->setEditorSelection(gClip ? gClip->m_clip : nullptr, view);
-                }
-            // }
+        auto editCursor = cursor.getLeftAligned();
+        if (!editCursor.isSubtrackSelection()) {
+            auto gClip = DAW::GetClipGuiFromTime(trNxtSelected, tick);
+            editor_view_selection_t view;
+            DAW::GetClipboardView(iGuiMgr, editCursor, view, gClip);
+            if (editCursor.getRange()) {
+                view.viewBegin = editCursor.getTickBegin();
+                view.viewEnd   = editCursor.getTickEnd();
+            }
+            daw->setEditorSelection(gClip ? gClip->m_clip : nullptr, view);
         }
     }
     trSelected    = nullptr;
@@ -945,6 +942,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
         action.dragtype = DRAG_NONE;
         if (showclip) {
             editor_view_selection_t view;
+            auto cursor = this->cursor.getLeftAligned();
             if (cursor.getRange() > 0) {
                 DAW::GetClipboardView(iGuiMgr, cursor, view, gui);
                 if (view.totalClipCount > 1) {
