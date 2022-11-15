@@ -48,6 +48,11 @@ namespace daw_tls {
         dbgassert(tls.settings);
         return *tls.settings;
     }
+    appruntime& getRuntime() {
+        dbgassert(tls.tlsInitialized);
+        dbgassert(tls.runtime);
+        return *tls.runtime;
+    }
     app_daw_settings& getDawSettings() {
         dbgassert(tls.tlsInitialized);
         dbgassert(tls.settings);

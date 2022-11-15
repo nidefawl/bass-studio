@@ -39,5 +39,6 @@ namespace daw_tls {
     void setTls(tlsinstance& tls);
     tlsinstance& getTls();
     appsettings& getSettings();
+    appruntime& getRuntime();
     app_daw_settings& getDawSettings();
 };// namespace daw_tls

@@ -149,6 +149,10 @@ private:
     int32_t nextStreamId = 0;
     samplerate_t lSampleRate = 0;
     blocksize_t lBlockSize      = 0;
+    String lastErrorMessage;
+
+
+    bool onError(const char* msg, int err);
 
 public:
     audiohost()  = default;
@@ -160,6 +164,9 @@ public:
     void deinitPa();
     void removeStream(HostIOStream* stream);
     bool startAudio(app_iosettings& settings);
+    const String& getLastErrorMessage() const {
+        return lastErrorMessage;
+    }
     bool stopAudio();
     bool isStreaming() {
         return !streams.empty();

@@ -1,5 +1,6 @@
 #include "controls.h"
 
+#include "gui/dialog/dialog_io.h"
 #include "keyboard.h"
 #include "seq_time.h"
 #include "tls.h"
@@ -22,6 +23,7 @@
 #include "basectrl.h"
 #include "host/daw/mainctrl.h"
 #include "appsettings.h"
+#include <nanovg.h>
 
 
 using Table::table_entry_t;
@@ -314,11 +316,12 @@ void gui_timeinput::buttonClicked(guibase* button) {
 
 
 void guictr_tempocontrols::buttonClicked(guibase* button) {
+    auto daw = dawCtrl->getDaw();
     if (button == &this->btnPlay) {
-        dawCtrl->getDaw()->startPlaying();
+        daw->startPlaying();
     }
     if (button == &this->btnStop) {
-        dawCtrl->getDaw()->stopPlaying();
+        daw->stopPlaying();
     }
     if (button == &this->btnRecord) {
         projectGlobals.recordArmed = !projectGlobals.recordArmed;
@@ -328,8 +331,17 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
     }
     if (button == &this->btnAudioOnOff) {
         auto& settings = daw_tls::getSettings();
-        settings.dawsettings.audioEnabled = !settings.dawsettings.audioEnabled;
-        dawCtrl->getDaw()->configureSampleRate();
+        if (daw->getAudioHost()->isStreaming()) {
+            settings.dawsettings.audioEnabled = false;
+        } else {
+            settings.dawsettings.audioEnabled = true;
+        }
+        if (!daw->configureSampleRate()) {
+            settings.dawsettings.audioEnabled = false;
+            daw->getMainControl()->openDialog(new DAW::DialogSettings::guidialog_settings(daw));
+        } else {
+            settings.dawsettings.audioEnabled = true;
+        }
     }
     if (button == &this->btnUiLayoutLock) {
         auto& settings = daw_tls::getSettings();
@@ -353,15 +365,33 @@ void guibutton_audioengine::prerender(NVGcontext* vg) {
 void guibutton_audioengine::render(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg))
         return;
-    audiohost* ahost = audiohost::getInstance();
-    if (!ahost || !ahost->isStreaming()) {
-        setText("Off");
-    } else {
-        setText(StringFormat("%.0f%%", this->cpuUsage * 100.0));
-    }
+    if (!dawCtrl)
+        return;
     int32_t fl = getStateFlags();
     renderWidgetBorder(vg, fl);
-    renderButtonLabel(vg, fl);
+    if (size.y > 10 && size.x > 10) {
+        nvgSave(vg);
+        setScissorTransform(vg);
+        auto fontSizeScaled = math::clamp(size.y, 4, 48) * FONT_AUTOSCALE;
+        auto posText = vec2(0) + vec2(size.x - 3, size.y * 0.5f);
+        float textWidth = renderTextLabel(vg,
+                        posText,
+                        vec2(size),
+                        str,
+                        theme,
+                        fontSizeScaled,
+                        theme->getColor(getLabelColor()),
+                        NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+        renderTextLabel(vg,
+                        vec2(0) + vec2(3.0f, size.y * 0.5f),
+                        vec2(size.x - textWidth - 6.0f, size.y),
+                        label,
+                        theme,
+                        fontSizeScaled,
+                        theme->getColor(GuiColor::COL_LABEL_INACTIVE),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        nvgRestore(vg);
+    }
 }
 
 void guibutton_audioengine::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const {
@@ -726,4 +756,25 @@ int32_t gui_timeinput::clampValue(int32_t val) {
         return math::max(0, val);
     }
     return val;
+}
+void guibutton_audioengine::onTick(AppCtrl* ctrl) {
+    auto ahost = dawCtrl->getDaw()->getAudioHost();
+    if (!ahost || !ahost->isStreaming()) {
+        if (size.x > 100) {
+            setText("Off");
+            setLabel("Audio Enabled");
+        } else {
+            setText("Off");
+            setLabel("Audio");
+        }
+        setTooltipText("Audio Engine is not running");
+    } else {
+        setText(StringFormat("%.0f%%", this->cpuUsage * 100.0));
+        if (size.x > 100) {
+            setLabel("Audio CPU");
+        } else {
+            setLabel("Audio");
+        }
+        setTooltipText("Audio Engine is running");
+    }
 }

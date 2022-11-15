@@ -189,7 +189,8 @@ void DawInstance::triggerAutoSave() {
 String DawInstance::getAutoSaveFilename() {
     return DAW::getProjectAutosaveFilename(projectPath);
 }
-void DawInstance::configureSampleRate() {
+bool DawInstance::configureSampleRate() {
+    bool bSuccess = true;
     const bool wasPlaying = isPlaying();
     if (wasPlaying) {
         stopPlaying();
@@ -215,6 +216,7 @@ void DawInstance::configureSampleRate() {
             if (ahost->startAudio(settings.iosettings)) {
                 host->setOutput(ahost->getStreamSharedPtr(0));
             } else {
+                bSuccess = false;
                 //settings.dawsettings.audioEnabled = false;
             }
         }
@@ -226,6 +228,7 @@ void DawInstance::configureSampleRate() {
             setAudioThreadState(playback_state::status_stop);
         }
     }
+    return bSuccess;
 }
 void DawInstance::processTasksMainThread() {
     using state = DAW::async_task_t::state;
@@ -1407,7 +1410,7 @@ void DawInstance::initProcessingResources() {
 void DawInstance::initRealtimeResources() {
     dbgassert(initState == 3);
     initState++;
-    if (tls.settings->dawsettings.audioEnabled) {
+    if (tls.runtime->enableAudioIO) {
         tls.audioHost->initPa();
     }
     tls.midiHost->initPm();

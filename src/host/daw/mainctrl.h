@@ -487,7 +487,7 @@ public:
     void setTrackArmed(audio_stage_ref_t ref, bool enabledArmed);
     void triggerAutoSave();
     String getAutoSaveFilename();
-    void configureSampleRate();
+    bool configureSampleRate();
 private:
     void onDawCompanionWindowClose(DawWindowCompanion& entry);
     void saveProjectBundle(const String& path);

@@ -146,14 +146,6 @@ namespace DAW::AudioIO {
 }// namespace DAW::AudioIO
 
 
-using namespace DAW::AudioIO;
-using DAW::channel_pairing;
-
-bool error(const char* msg, PaError err) {
-    log_lf(Log::L_ERROR, "%s (%d): %s\n", msg, err, Pa_GetErrorText(err));
-    return false;
-}
-
 /*
 ** This routine will be called by the PortAudio engine when audio is needed.
 ** It may called at interrupt level on some machines so don't do anything
@@ -294,7 +286,10 @@ static void StreamFinished(void* userData) {
     stream->streamFinished         = true;
 }
 
-audiohost::HostIOStream::HostIOStream(audiohost* const _host, int32_t _streamId, int32_t _streamIdx, io_cfg_tracks& cfg, channelnum_t _nOutputChannels, channelnum_t _nInputChannels)
+// using namespace DAW::AudioIO;
+using DAW::channel_pairing;
+
+audiohost::HostIOStream::HostIOStream(audiohost* const _host, int32_t _streamId, int32_t _streamIdx, DAW::AudioIO::io_cfg_tracks& cfg, channelnum_t _nOutputChannels, channelnum_t _nInputChannels)
     : metersInput(meterDataInput.data(), meterDataInput.size()),
       metersOutput(meterDataOutput.data(), meterDataOutput.size()),
       meterCallbackInput(!_nInputChannels ? nullptr : std::make_shared<DAW::rmsmeter>(meterDataCBInput.data(), math::min<channelnum_t>(_nInputChannels, 2))),
@@ -305,7 +300,7 @@ audiohost::HostIOStream::HostIOStream(audiohost* const _host, int32_t _streamId,
     allocRingBuffer(ringbuffer, math::max<channelnum_t>(nInputChannels, 2));
     channelsInput.resize(cfg.input.size());
     channelsOutput.resize(cfg.output.size());
-    for (io_cfg_channel& track : cfg.input) {
+    for (auto& track : cfg.input) {
         dbgassert(track.idx < CtrSize(channelsInput));
         if (track.idx >= CtrSize(channelsInput)) {
             continue;
@@ -313,9 +308,9 @@ audiohost::HostIOStream::HostIOStream(audiohost* const _host, int32_t _streamId,
         channelsInput[track.idx] = std::make_shared<HostIOStream::IOChannel>(track.idx,
                                                                      track.type,
                                                                      track.offset,
-                                                                     metersInput.getSubChannelMeter(track.offset, getNumChannelsFromTrackType(track.type)));
+                                                                     metersInput.getSubChannelMeter(track.offset, DAW::AudioIO::getNumChannelsFromTrackType(track.type)));
     }
-    for (io_cfg_channel& track : cfg.output) {
+    for (auto& track : cfg.output) {
         dbgassert(track.idx < CtrSize(channelsOutput));
         if (track.idx >= CtrSize(channelsOutput)) {
             continue;
@@ -323,7 +318,7 @@ audiohost::HostIOStream::HostIOStream(audiohost* const _host, int32_t _streamId,
         channelsOutput[track.idx] = std::make_shared<HostIOStream::IOChannel>(track.idx,
                                                                       track.type,
                                                                       track.offset,
-                                                                      metersOutput.getSubChannelMeter(track.offset, getNumChannelsFromTrackType(track.type)));
+                                                                      metersOutput.getSubChannelMeter(track.offset, DAW::AudioIO::getNumChannelsFromTrackType(track.type)));
     }
 }
 
@@ -359,7 +354,7 @@ bool audiohost::initPa() {
         PaError err = Pa_Initialize();
         if (err != paNoError) {
             Pa_Terminate();
-            error("Pa_Initialize", err);
+            onError("Pa_Initialize", err);
         } else {
             paIsInitalized = true;
         }
@@ -459,8 +454,11 @@ bool audiohost::HostIOStream::try_dequeue(AudioBuffer*& buf) {
 }
 
 bool audiohost::startAudio(app_iosettings& iosettings) {
-    if (!initPa())
+    lastErrorMessage.clear();
+    if (!initPa()) {
+        lastErrorMessage = "Failed to initialize PortAudio";
         return false;
+    }
     stopAudio();
 
     int apiCount               = Pa_GetHostApiCount();
@@ -493,7 +491,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
         for (int i = 0; i < deviceCount; i++) {
             const PaDeviceInfo* info = Pa_GetDeviceInfo(i);
             if (!info) {
-                error("!info for Pa_GetDeviceInfo", i);
+                onError("!info for Pa_GetDeviceInfo", i);
                 continue;
             }
             if (info->hostApi == deviceApiIdxSelected) {
@@ -527,8 +525,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     }
 
     if (deviceIdxSelectedOutput == paNoDevice && deviceIdxSelectedInput == paNoDevice) {
-        log_lf(Log::L_ERROR, "Error: No input or output device\n");
-        return false;
+        return onError("No input or output device", paBadIODeviceCombination);
     }
 
     const PaDeviceInfo* devInfo      = deviceIdxSelectedOutput == paNoDevice ? nullptr : Pa_GetDeviceInfo(deviceIdxSelectedOutput);
@@ -567,6 +564,8 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     log_printf("With %d input channels\n", inputParams.channelCount);
 
     int32_t streamId = ++nextStreamId;
+    using DAW::AudioIO::io_cfg_tracks;
+    using DAW::AudioIO::io_cfg_channel;
     io_cfg_tracks chCfg;
 
     if (channelConfig.isInit &&
@@ -583,9 +582,9 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
             } else {
                 channels.type = channel_pairing::MONO;
             }
-            channels.name = getTrackName(channels.type, channels.idx, false);
+            channels.name = DAW::AudioIO::getTrackName(channels.type, channels.idx, false);
             channels.offset = i;
-            i += getNumChannelsFromTrackType(channels.type);
+            i += DAW::AudioIO::getNumChannelsFromTrackType(channels.type);
             chCfg.output.push_back(channels);
         }
         chIdx = 0;
@@ -597,9 +596,9 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
             } else {
                 channels.type = channel_pairing::MONO;
             }
-            channels.name = getTrackName(channels.type, channels.idx, true);
+            channels.name = DAW::AudioIO::getTrackName(channels.type, channels.idx, true);
             channels.offset = i;
-            i += getNumChannelsFromTrackType(channels.type);
+            i += DAW::AudioIO::getNumChannelsFromTrackType(channels.type);
             chCfg.input.push_back(channels);
         }
         chCfg.isInit  = true;
@@ -632,14 +631,14 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
             stream.get());
 
     if (err != paNoError) {
-        return error("Pa_OpenStream", err);
+        return onError("Pa_OpenStream", err);
     }
     auto info = Pa_GetStreamInfo(paStream);
     if (info->sampleRate > 0)
         samplerate = static_cast<samplerate_t>(info->sampleRate);
     err = Pa_SetStreamFinishedCallback(paStream, &StreamFinished);
     if (err != paNoError)
-        return error("Pa_SetStreamFinishedCallback", err);
+        return onError("Pa_SetStreamFinishedCallback", err);
 
     stream->stream = paStream;
     this->streams.push_back(stream);
@@ -648,7 +647,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
 
     err = Pa_StartStream(paStream);
     if (err != paNoError)
-        return error("Pa_StartStream", err);
+        return onError("Pa_StartStream", err);
 
     return true;
 }
@@ -674,7 +673,7 @@ bool audiohost::stopAudio() {
         dbgassert(sharedPtrStream->stream);
         PaError err = Pa_StopStream(sharedPtrStream->stream);
         if (err != paNoError) {
-            error("Pa_StopStream", err);
+            onError("Pa_StopStream", err);
         }
         numStreamsStopped++;
     }
@@ -692,10 +691,15 @@ bool audiohost::stopAudio() {
     for (auto& sharedPtrStream : streamsCopy) {
         PaError err = Pa_CloseStream(sharedPtrStream->stream);
         if (err != paNoError) {
-            error("Pa_CloseStream", err);
+            onError("Pa_CloseStream", err);
         }
         removeStream(sharedPtrStream.get());
     }
     dbgassert(streams.empty());
     return numStreamsStopped > 0;
+}
+bool audiohost::onError(const char* msg, int err) {
+    lastErrorMessage = StringFormat("%s (%d): %s", msg, err, Pa_GetErrorText(err));
+    log_lf(Log::L_ERROR, "%s\n", lastErrorMessage.c_str());
+    return false;
 }

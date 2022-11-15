@@ -1,4 +1,5 @@
 #include "dialog_io.h"
+#include "appconfig.h"
 #include "appsettings.h"
 #include "gui/controls/button.h"
 #include "dialog.h"
@@ -11,6 +12,8 @@
 #include "gui/container/scrollcontainer.h"
 #include "gui/contextmenu/contextmenu.h"
 #include "gui/contextmenu/contextmenu_base.h"
+#include "guicolors.h"
+#include "guiconstant.h"
 #include "host/audiohost/audio_host.h"
 #include "host/daw/mainctrl.h"
 #include "host/midihost/midi_host.h"
@@ -233,7 +236,6 @@ public:
     void buttonClicked(guibase* gui) override {
         using namespace ::DAW::AudioIO;
         if (gui == &btnTrackType) {
-            log_printf("Switch track type\n");
             auto& settings = daw_tls::getSettings();
             auto& cnf = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
             io_cfg_tracks newConfig = cnf;
@@ -514,19 +516,48 @@ class guidialog_audio_io final : public setting_dialog {
     guidropdownbase* audioSampleRate;
     guidropdownbase* audioInternalBlockSize;
     guidropdownbase* audioInternalSampleRate;
-    guidropdownbase* selectAPI;
-    guidropdownbase* asioDevice;
+    guidropdown_setting_options_t* selectAPI;
+    guidropdown_setting_options_t* asioDevice;
     gui_list* deviceListInput;
     gui_list* deviceListOutput;
     guictr_input_meters metersInput;
     guictr_input_meters metersOutput;
 
+    bool bHadError = false;
+    String strLastError;
 public:
     void onDialogShow() override { updateOptions(); }
     void updateOptions() {
         auto& settings = daw_tls::getSettings();
         auto audiohost = daw->getAudioHost();
-        if (settings.dawsettings.audioEnabled && audiohost->initPa()) {
+        if (daw_tls::getRuntime().enableAudioIO && audiohost->initPa()) {
+            {
+                this->selectAPI->options.clear();
+                this->asioDevice->options.clear();
+                int apiCnt     = Pa_GetHostApiCount();
+                int apiIdxASIO = -1;
+                for (int i = 0; i < apiCnt; i++) {
+                    auto info = Pa_GetHostApiInfo(i);
+                    if (info) {
+                        if (info->type == PaHostApiTypeId::paASIO) {
+                            apiIdxASIO = i;
+                        } else {
+                            if (settings.iosettings.device_api.empty()) {
+                                settings.iosettings.device_api = info->name;
+                            }
+                        }
+                        this->selectAPI->options.emplace_back(info->name);
+                    }
+                }
+                int devCount = Pa_GetDeviceCount();
+                for (int i = 0; i < devCount; i++) {
+                    auto info = Pa_GetDeviceInfo(i);
+                    if (info && info->hostApi == apiIdxASIO) {
+                        this->asioDevice->options.emplace_back(info->name);
+                    }
+                }
+            }
+
             String deviceAPIName     = settings.iosettings.device_api;
             int apiCount             = Pa_GetHostApiCount();
             int deviceApiIdxSelected = -1;
@@ -668,32 +699,6 @@ public:
         intBlockSize->fnGetCurrentVal = [this]() -> String {
             return StringFormat("%u", settings.iosettings.internalBlocksize);
         };
-
-        {
-            int apiCnt     = Pa_GetHostApiCount();
-            int apiIdxASIO = -1;
-            for (int i = 0; i < apiCnt; i++) {
-                auto info = Pa_GetHostApiInfo(i);
-                if (info) {
-                    if (info->type == PaHostApiTypeId::paASIO) {
-                        apiIdxASIO = i;
-                    } else {
-                        if (settings.iosettings.device_api.empty()) {
-                            settings.iosettings.device_api = info->name;
-                        }
-                    }
-                    api->options.emplace_back(info->name);
-                }
-            }
-            int devCount = Pa_GetDeviceCount();
-            for (int i = 0; i < devCount; i++) {
-                auto info = Pa_GetDeviceInfo(i);
-                if (info && info->hostApi == apiIdxASIO) {
-                    asio->options.emplace_back(info->name);
-                }
-            }
-        }
-        updateOptions();
         api->cbOnOptionSelected = [this, api](int option) {
             if (option >= 0 && option < CtrSize(api->options)) {
                 settings.iosettings.device_api = api->options[option];
@@ -744,8 +749,8 @@ public:
         extSampleRate->setLabel("External Samplerate");
         intBlockSize->setLabel("Internal Blocksize");
         intSampleRate->setLabel("Internal Samplerate");
-        deviceListInput->setLabel("Audio input device");
-        deviceListOutput->setLabel("Audio output device");
+        deviceListInput->setLabel("Input: Select Audio device");
+        deviceListOutput->setLabel("Output: Select Audio device");
         metersInput.setFlag(FLG_RENDER_LABEL, true);
         metersOutput.setFlag(FLG_RENDER_LABEL, true);
         selectAPI->setFlag(FLG_RENDER_LABEL, true);
@@ -774,10 +779,39 @@ public:
         dbgassert(metersInput.dawCtrl);
         dbgassert(metersOutput.dawCtrl);
     }
+    void onAdded() override {
+        setting_dialog::onAdded();
+        updateOptions();
+    }
+    void render(NVGcontext* vg) override {
+        setting_dialog::render(vg);
+        if (strLastError.empty())
+            return;
+        const int htt = theme->get(GuiConstant::CONST_ROW_HEIGHT);
+        renderTextLabel(vg,
+                        vec2(htt * 0.5f),
+                        vec2(size),
+                        strLastError,
+                        theme,
+                        htt,
+                        theme->getColor(GuiColor::COL_INVALID_INPUT),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE
+                        );
+    }
 
     void onTick(AppCtrl* ctrl) override {
         for (guibase* gui : guis) {
             gui->onTick(ctrl);
+        }
+        if (dawCtrl) {
+            auto daw = dawCtrl->getDaw();
+            auto audiohost = daw->getAudioHost();
+            auto err = audiohost->getLastErrorMessage();
+            if (err.length() != bHadError) {
+                bHadError = !err.empty();
+                strLastError = err;
+                layout();
+            }
         }
     }
 
@@ -785,10 +819,14 @@ public:
         const ivec2 cs = getSizeContent();
 
         int32_t inset  = 5;
+        int32_t insetY = inset;
         const int32_t height = theme->get(GuiConstant::CONST_ROW_HEIGHT);
+        if (bHadError) {
+            insetY += height + inset;
+        }
 
         audioEngineOn->size           = ivec2(cs.x - inset * 2, height);
-        audioEngineOn->pos            = ivec2(inset, inset);
+        audioEngineOn->pos            = ivec2(inset, insetY);
         audioInternalBlockSize->size  = ivec2(cs.x - inset * 2, height);
         audioInternalBlockSize->pos   = ivec2(inset, audioEngineOn->bottom() + inset);
         audioInternalSampleRate->size = ivec2(cs.x - inset * 2, height);
@@ -843,8 +881,16 @@ public:
 
     void buttonClicked(guibase* button) override {
         if (button == this->audioEngineOn) {
-            settings.dawsettings.audioEnabled = !settings.dawsettings.audioEnabled;
-            daw->configureSampleRate();
+            if (daw->getAudioHost()->isStreaming()) {
+                settings.dawsettings.audioEnabled = false;
+            } else {
+                settings.dawsettings.audioEnabled = true;
+            }
+            if (!daw->configureSampleRate()) {
+                settings.dawsettings.audioEnabled = false;
+            } else {
+                settings.dawsettings.audioEnabled = true;
+            }
             return;
         }
         if ((button->id & 0x0F) == 0xF) {

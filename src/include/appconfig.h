@@ -25,4 +25,5 @@ struct appruntime final : public dawruntime {
     prof_stats_render_t prevRenderStats{};
     appsysteminfo systeminfo{};
     bool printWindowFps = false;
+    bool enableAudioIO = true;
 };

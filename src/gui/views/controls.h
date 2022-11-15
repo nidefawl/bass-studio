@@ -161,7 +161,7 @@ public:
     void render(NVGcontext* vg) override;
     void prerender(NVGcontext* vg) override;
     void renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const override;
-
+    void onTick(AppCtrl* ctrl) override;
 };
 struct GlobalZoom {
     float zoom = 1.0f;
