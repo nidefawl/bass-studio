@@ -2051,12 +2051,16 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
         if (clipSampleEnd <= 0) {
             continue;
         }
+        if (clipSampleBegin > 0 && clipSampleEnd < out.samples) {
+            bool bDbg;
+            bDbg = true;
+        }
 
         // 0 if clip starts before samplePosBegin, otherwise clipSampleBegin
-        samplecount_t numSamplesOffsetDst = math::max<samplecount_t>(0, clipSampleBegin);
-        auto numSamplesWritableData = out.samples - numSamplesOffsetDst; 
-        auto readSamples = math::min(clipSampleEnd, numSamplesWritableData);
-        if (!(readSamples > 0)) {
+        samplecount_t sampleReadBegin = math::max<samplecount_t>(0, clipSampleBegin);
+        auto readSamples = math::min(clipSampleEnd, out.samples)  - sampleReadBegin;
+
+        if (readSamples < 1) {
             continue;
         }
 
@@ -2084,9 +2088,7 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
         for (auto ch = channelnum_t(0); ch < numChannels; ++ch) {
             auto srcChannel = sample->nChannels == 1 ? 0 : ch;
             auto* dst = (ch >= out.channels) ? out.buf[out.channels - 1] : out.buf[ch];
-            samplecount_t start = 0;
-            if (clipSampleBegin > 0)
-                start = clipSampleBegin;
+            samplecount_t start = sampleReadBegin;
             auto end = start + readSamples;
             for (auto s = start; s < end; ++s) {
                 auto dstOffset = s;
