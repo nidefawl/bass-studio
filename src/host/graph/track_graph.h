@@ -49,7 +49,7 @@ namespace DAW {
         PROCESSING,
         PROCESSED
     };
-struct processing_track_node_t final : public track_node_t {
+    struct processing_track_node_t final : public track_node_t {
         processing_track_node_t()  = default;
         track_t* trackOptional     = nullptr;
         effectbase* effectOptional = nullptr;
@@ -134,6 +134,7 @@ struct processing_track_node_t final : public track_node_t {
      */
     bool buildProcessingGraph(const Host::Host* host, const project_t* project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph);
     bool validateTrackRoutings(const Host::Host* host, const track_vector& tracksFlat);
+    int32_t GetUnqiueProcessingNodeId(const DAW::processing_track_node_t& node);
 
     void updateSoloFlag(const Host::Host* host, const project_t* project, const track_vector& tracksFlat);
     void unsoloAll(const Host::Host* host, const project_t* project, const track_vector& tracksFlat);

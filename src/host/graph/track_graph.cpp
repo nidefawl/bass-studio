@@ -501,4 +501,14 @@ namespace DAW {
             delete ptr;
         }
     }
+    int32_t GetUnqiueProcessingNodeId(const DAW::processing_track_node_t& node) {
+        switch(node.type) {
+            case track_node_type_t::TRACK:
+            case track_node_type_t::AUDIOSTAGE:
+                return static_cast<int32_t>(node.stageId);
+            case track_node_type_t::EFFECT:
+                return static_cast<int32_t>(node.stageId) + (1<<30);
+        }
+        return -1;
+    }
 }

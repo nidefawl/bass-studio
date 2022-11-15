@@ -386,7 +386,7 @@ void guitooltip<gui_graph_port>::setContent() {
 }
 
 class guinodeinfo_text final : public guictr_base {
-    const DAW::processing_track_node_t* const node;
+    const DAW::processing_track_node_t* node;
     float posY = 0;
 public:
     explicit guinodeinfo_text(const DAW::processing_track_node_t* const _node)
@@ -398,6 +398,9 @@ public:
         setBackgroundRendered(true);
         setBackgroundRenderedInset(false);
         // setCanMouseHit(true);
+    }
+    void setNode(const DAW::processing_track_node_t* _node) {
+        node = _node;
     }
     void text(NVGcontext* vg, const String& text) {
         nvgText(vg, INSET_TITLE, posY, StringAsCStr(text), nullptr);
@@ -443,7 +446,7 @@ class gui_graph_n final : public gui_graph_entry {
     friend class gui_graph;
     friend class gui_graph_port;
     gui_graph::guictr_graph_impl* const graphImpl;
-    DAW::processing_track_node_t* const node;
+    DAW::processing_track_node_t* node;
     std::vector<gui_graph_port*> guiPorts;
     std::vector<gui_graph_port*> portsInput;
     std::vector<gui_graph_port*> portsOutput;
@@ -510,6 +513,19 @@ public:
 
     DAW::processing_track_node_t* getProcessingNodePointer() {
         return node;
+    }
+
+    void setNode(DAW::processing_track_node_t* _node) {
+        node = _node;
+        guiText.setNode(_node);
+        for (auto port : guiPorts) {
+            remove(port);
+            delete port;
+        }
+        guiPorts.clear();
+        portsInput.clear();
+        portsOutput.clear();
+        setPorts();
     }
 
     void layout() override {
@@ -897,7 +913,6 @@ public:
 class gui_graph::guictr_graph_impl {
 public:
     std::shared_ptr<DAW::processing_graph_t> procList;
-    std::vector<gui_graph_entry*> listGuis;
     std::vector<gui_graph_n*> listNodes;
     std::vector<NodeGraph::edge_t> edgeList;
     guictr_graph_impl() = default;
@@ -911,9 +926,7 @@ public:
         float distanceEdgeMouse = 0.0f;
     };
     hit_result hitTest(vec2 mouseLocal);
-    void updateEdgeList(std::shared_ptr<DAW::processing_graph_t>&& _graph, std::vector<gui_graph_n*>&& _listNodes) {
-        listNodes = _listNodes;
-        procList  = _graph;
+    void updateEdgeList() {
         edgeList.clear();
         std::vector<DAW::track_source_t> allSources;
         for (gui_graph_n* const graphNode : listNodes) {
@@ -938,7 +951,7 @@ public:
                     }
                 }
                 if (portInput && portOutput) {
-                    edgeList.push_back(NodeGraph::edge_t{ portInput, portOutput });
+                    edgeList.emplace_back(portInput, portOutput);
                 } else {
                     log_lf(Log::L_WARN, "Did not find UI graph entry for stage %d\n", static_cast<int32_t>(procNode->stageId));
                 }
@@ -988,7 +1001,6 @@ void gui_graph::refresh() {
 }
 void gui_graph::reset() {
     impl->edgeList.clear();
-    impl->listGuis.clear();
     impl->listNodes.clear();
     destroyGuis();
     impl->procList   = nullptr;
@@ -1223,8 +1235,8 @@ void gui_graph::updateList(bool resetPositions) {
     ivec2 cs = getSizeContent();
     cs.x = math::max(400, cs.x);
     cs.y = math::max(400, cs.y);
-    std::vector<gui_graph_n*> listNodes;
-    std::vector<gui_graph_entry*> listEntries;
+    std::vector<gui_graph_n*> tmpListNew;
+    std::vector<gui_graph_n*> tmpListPrev = impl->listNodes;
     if (lastProcessingList) {
         auto& graphLayouts    = daw->getProject()->graphLayouts;
         const auto& procGraph = *lastProcessingList;
@@ -1234,11 +1246,65 @@ void gui_graph::updateList(bool resetPositions) {
         const vec2 nodeSize   = GRAPH_NODE_SIZE * math::max<float>(1.0f, scale / 10.0f);
         const vec2 gridStep   = nodeSize * vec2(1.5f, 1.2f);
         const auto inset = 8*scale;
-        vec2 posGrid(inset+gridStep.x,inset);
+        vec2 posGrid(inset + gridStep.x, inset);
         for (DAW::processing_track_node_t* node : allNodes) {
-            auto* entry = new gui_graph_n(impl, node);
-            entry->id   = static_cast<int32_t>(node->stageId);
-
+            int32_t stageIdI32 = DAW::GetUnqiueProcessingNodeId(*node);
+            if (!assert_expr(stageIdI32 >= 0)) {
+                continue;
+            }
+            gui_graph_n* entry  = nullptr;
+            // find matching entry in impl->listNodes and remove it
+            for (auto it = tmpListPrev.begin(); it != tmpListPrev.end(); ++it) {
+                if ((*it)->id == stageIdI32) {
+                    entry = *it;
+                    tmpListNew.push_back(entry);
+                    it = tmpListPrev.erase(it);
+                    break;
+                }
+            }
+            bool bNewEntry = false;
+            if (!entry) {
+                bNewEntry = true;
+                entry = new gui_graph_n(impl, node);
+                entry->id = stageIdI32;
+                if (node->trackOptional) {
+                    entry->meterOut = new gui_trackmeter(&node->trackOptional->audio->meter);
+                    entry->meterIn  = new gui_trackmeter(&node->trackOptional->audio->meterInput);
+                }
+                if (node->effectOptional) {
+                    entry->meterOut = new gui_trackmeter(&node->effectOptional->meter);
+                    entry->meterIn  = new gui_trackmeter(&node->effectOptional->meterIn);
+                }
+                if (node->stage) {
+                    if (node->stageId == node->stage->stageId.inputStageId) {
+                        entry->meterIn = new gui_trackmeter(&node->stage->meterInput);
+                    } else {
+                        entry->meterOut = new gui_trackmeter(&node->stage->meter);
+                    }
+                }
+                if (entry->meterIn)
+                    entry->add(entry->meterIn);
+                if (entry->meterOut)
+                    entry->add(entry->meterOut);
+                if (node->type == DAW::track_node_type_t::EFFECT && node->effectOptional) {
+                    auto intEffect = dynamic_cast<internalplugin*>(node->effectOptional);
+                    if (intEffect) {
+                        entry->viewCtr = intEffect->openViewCtr(UID_VIEW_CTR_NODES);
+                        if (entry->viewCtr) {
+                            entry->viewCtr->addTo(entry->viewCtrs);
+                        }
+                    }
+                }
+                for (auto* ctr : entry->viewCtrs) {
+                    entry->add(ctr);
+                }
+                if (entry->viewCtr)
+                    entry->viewCtr->onGuiOpen();
+                add(entry);
+                tmpListNew.push_back(entry);
+            } else {
+                entry->setNode(node);
+            }
             if (!graphLayouts.count(entry->id) || resetPositions) {
                 auto nodePos = posGrid;
                 if (node->parents.empty()) {
@@ -1264,57 +1330,29 @@ void gui_graph::updateList(bool resetPositions) {
                         posGrid.x += gridStep.x;
                     }
                 }
+                bNewEntry = true;
             }
-            auto const nodeLayout = &graphLayouts[entry->id];
-
-            entry->pos    = nodeLayout->pos;
-            entry->size   = nodeLayout->size;
-            if (node->trackOptional) {
-                entry->meterOut = new gui_trackmeter(&node->trackOptional->audio->meter);
-                entry->meterIn = new gui_trackmeter(&node->trackOptional->audio->meterInput);
+            if (bNewEntry || resetPositions) {
+                auto const nodeLayout = &graphLayouts[entry->id];
+                entry->pos  = nodeLayout->pos;
+                entry->size = nodeLayout->size;
             }
-            if (node->effectOptional) {
-                entry->meterOut = new gui_trackmeter(&node->effectOptional->meter);
-                entry->meterIn = new gui_trackmeter(&node->effectOptional->meterIn);
-            }
-            if (node->stage) {
-                if (node->stageId == node->stage->stageId.inputStageId) {
-                    entry->meterIn = new gui_trackmeter(&node->stage->meterInput);
-                } else {
-                    entry->meterOut = new gui_trackmeter(&node->stage->meter);
-                }
-            }
-            if (entry->meterIn)
-                entry->add(entry->meterIn);
-            if (entry->meterOut)
-                entry->add(entry->meterOut);
-            if (node->type == DAW::track_node_type_t::EFFECT && node->effectOptional) {
-                auto intEffect = dynamic_cast<internalplugin*>(node->effectOptional);
-                if (intEffect) {
-                    entry->viewCtr = intEffect->openViewCtr(UID_VIEW_CTR_NODES);
-                    if (entry->viewCtr) {
-                        entry->viewCtr->addTo(entry->viewCtrs);
-                    }
-                }
-            }
-            for (auto* ctr : entry->viewCtrs) {
-                entry->add(ctr);
-            }
-            if (entry->viewCtr)
-                entry->viewCtr->onGuiOpen();
-            listEntries.push_back(entry);
-            listNodes.push_back(entry);
         }
     }
-    setList(listEntries);
-    impl->updateEdgeList(std::move(lastProcessingList), std::move(listNodes));
+    for (auto* entry : tmpListPrev) {
+        remove(entry);
+        delete entry;
+    }
+    impl->listNodes = std::move(tmpListNew);
+    impl->procList  = std::move(lastProcessingList);
+    impl->updateEdgeList();
     layout();
 }
 
 void gui_graph::layout() {
     auto const daw = dawCtrl->getDaw();
     auto& graphLayouts    = daw->getProject()->graphLayouts;
-    for (gui_graph_entry* entry : impl->listGuis) {
+    for (auto* entry : impl->listNodes) {
         auto const nodeLayout = &graphLayouts[entry->id];
         entry->size = nodeLayout->size;
         entry->determineSize(entry->size);
@@ -1325,15 +1363,6 @@ void gui_graph::layout() {
 }
 
 void gui_graph::setList(std::vector<gui_graph_entry*> _newList) {
-    for (gui_graph_entry* g : impl->listGuis) {
-        remove(g);
-        delete g;
-    }
-    impl->listGuis = std::move(_newList);
-    for (gui_graph_entry* g : impl->listGuis) {
-        add(g);
-    }
-    layout();
 }
 
 void gui_graph::onTick(AppCtrl* appctrl) {

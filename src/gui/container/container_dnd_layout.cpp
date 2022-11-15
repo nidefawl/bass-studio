@@ -6,6 +6,7 @@
 #include "gui/container/container.h"
 #include "gui/contextmenu/contextmenu.h"
 #include "gui/gui.h"
+#include "guiglobals.h"
 #include "host/daw/mainctrl.h"
 #include "gui/container/container_layout_types.h"
 #include "gui/dropdown/dropdown_generic.h"
@@ -533,7 +534,7 @@ void GuiCtrLayoutEntryHandle::render(NVGcontext* vg) {
     if (str.length()) {
         const int htt = theme->get(GuiConstant::CONST_SMALL_LABEL_HEIGHT);
         vec2 renderPos(htt/2, size.y/2);
-        auto fontScale = math::clamp(size.y, 4, 48);
+        auto fontScale = math::clamp(size.y, 4, 48) * 0.8f;
         renderTextLabel(vg,
                         renderPos,
                         vec2(btnClose.getLeftTop().x - htt/2, size.y),
