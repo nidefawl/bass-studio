@@ -1,39 +1,52 @@
-name: Build CMake Project
+name: DAW CMake Build
 
-on: [push, pull_request]
+on: [push]
 
 env:
-  BUILD_TYPE: Release
+  BUILD_TYPE: RelWithDebInfo
+  BUILD_TYPE_DEPS: release
+  CC_MINGW: x86_64-w64-mingw32-gcc
+  CXX_MINGW: x86_64-w64-mingw32-g++
+  CC_LINUX: clang-16
+  CXX_LINUX: clang++-16
+  LLVM_MINGW_PATH: /opt/llvm-mingw
 
 jobs:
-  build:
-    name: ${{ matrix.config.name }}
-    runs-on: ${{ matrix.config.os }}
+  build-project:
+    name: "Build linux + win32"
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: /build
     strategy:
       fail-fast: false
-      matrix:
-        config:
-        - {
-            name: "Crosscompile Win32",
-            cachekey: "crosscompile-win32",
-            os: ubuntu-22.04,
-            cc: "x86_64-w64-mingw32-clang",
-            cxx: "x86_64-w64-mingw32-clang++"
-          }
 
     steps:
 
     - name: apt update
-      run: >
-        sudo apt-get update -qq && sudo apt-get install -qqy --no-install-recommends
-        wget python3 zip unzip git libbsd0 libtinfo6
-        libxml2 libatomic1 libncursesw6 nsis
-
-    - name: Prepare build environment
+      working-directory: /
       run: |
-        mkdir bin
-        mkdir installer
-        echo /opt/llvm-mingw/bin >> $GITHUB_PATH
+        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+        sudo bash -c "echo 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy main' >> /etc/apt/sources.list"
+        sudo apt-get update -yqq
+        sudo apt-get install -qqy --no-install-recommends wget        \
+          python3 zip unzip git libbsd0 libbsd-dev libtinfo6 libxml2  \
+          libncursesw6 nsis libx11-dev libxrandr-dev libxinerama-dev  \
+          libxcursor-dev libxi-dev libasound2-dev libgtk-3-dev        \
+          libssl-dev cmake curl wget gnupg2 clang-16 clang-tidy-16    \
+          lld-16 libc++-16-dev libc++abi-16-dev libunwind-16-dev      \
+          e2fslibs-dev libatomic1 libattr1-dev
+
+    - name: create directories
+      working-directory: /
+      run: |
+        sudo mkdir /build && sudo chown $USER:$USER /build
+        mkdir -p /build/bin
+        mkdir -p /build/installer
+        mkdir -p /build/daw
+        mkdir -p /build/daw-deps
+        ln -s /build/daw $GITHUB_WORKSPACE/daw
+        ln -s /build/daw-deps $GITHUB_WORKSPACE/daw-deps
         echo /opt/cmake/bin >> $GITHUB_PATH
 
     - name: git clone nidefawl/daw-deps 
@@ -50,13 +63,15 @@ jobs:
         path: daw
         repository: nidefawl/daw
         token: ${{ secrets.PAT }}
-        # submodules: true
 
     - name: Parse revision
       id: get-dep-rev
       run: |
-        echo "DAW_REVISION=$(git -C daw rev-parse --short HEAD)" >> $GITHUB_ENV
-        echo "DEPS_REVISION=$(git -C daw-deps rev-parse --short HEAD)" >> $GITHUB_ENV
+        DAW_REVISION=$(git -C /build/daw rev-parse --short HEAD)
+        DEPS_REVISION=$(git -C /build/daw-deps rev-parse --short HEAD)
+        echo "DAW_REVISION=$DAW_REVISION" >> $GITHUB_ENV
+        echo "DEPS_REVISION=$DEPS_REVISION" >> $GITHUB_ENV
+        echo "cachekey=build-cache-$DEPS_REVISION" >> $GITHUB_ENV
 
     - name: Restore build cache
       id: build-cache
@@ -65,51 +80,51 @@ jobs:
         path: |
           /opt/llvm-mingw
           /opt/cmake
-          install-deps
-        key: build-cache-key-${{ matrix.config.cachekey }}-${{ env.DEPS_REVISION }}
+          /build/install-deps
+        key: ${{ env.cachekey }}
 
 
     - name: Download ninja, cmake and clang mingw toolchain
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: |
         pushd /opt
+        sudo mkdir download && sudo chown $USER:$USER download
+        pushd download
         wget --no-check-certificate -nv https://github.com/nidefawl/llvm-project/releases/download/v15.0.0-1-mingw/llvm-mingw-linux-x86_64-llvm-15.tar.gz
         tar -zxf llvm-mingw-linux-x86_64-*.tar.gz && rm *.tar.gz
-        ls -la .
-        mv llvm-mingw-linux-x86_64-* llvm-mingw
+        sudo rm -Rf ${{ env.LLVM_MINGW_PATH }}
+        sudo mv llvm-mingw-linux-x86_64-* ${{ env.LLVM_MINGW_PATH }}
         wget --no-check-certificate -nv https://github.com/Kitware/CMake/releases/download/v3.25.0-rc4/cmake-3.25.0-rc4-linux-$(uname -m).tar.gz
         tar -zxf cmake-*.tar.gz && rm *.tar.gz
-        mv cmake-* cmake
+        sudo rm -Rf /opt/cmake
+        sudo mv cmake-* /opt/cmake
         wget --no-check-certificate -nv https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip
-        unzip ninja-linux.zip -d ./cmake/bin  && rm *.zip
-        ls -la .
+        unzip ninja-linux.zip -d /opt/cmake/bin  && rm *.zip
+        popd
         popd
 
-    - name: Build dependencies
+    - name: Build win32 dependencies
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: |
-        echo "CC = ${CC}"
-        echo "CXX = ${CXX}"
-        ldd /opt/llvm-mingw/bin/clang
-        /opt/llvm-mingw/bin/clang --version
-        clang --version
-        cmake --version
-        ninja --version
-        CC=${{ matrix.config.cc }} CXX=${{ matrix.config.cxx }} python3 ${{ github.workspace }}/daw-deps/build.py build-deps install-deps -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_RC_COMPILER=/opt/llvm-mingw/bin/x86_64-w64-mingw32-windres
+        PATH=${{ env.LLVM_MINGW_PATH }}/bin:$PATH CC=${{ env.CC_MINGW }} CXX=${{ env.CXX_MINGW }} python3 ${{ github.workspace }}/daw-deps/build.py ./build-deps/win32 ./install-deps/win32 -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres -${{ env.BUILD_TYPE_DEPS }}
 
+    - name: Build linux dependencies
+      if: steps.build-cache.outputs.cache-hit != 'true'
+      run: |
+        CC=${{ env.CC_LINUX }} CXX=${{ env.CXX_LINUX }} python3 ${{ github.workspace }}/daw-deps/build.py ./build-deps/linux ./install-deps/linux -${{ env.BUILD_TYPE_DEPS }}
 
-    - name: Configure
+    - name: Configure win32
       run: >
-        CC=${{ matrix.config.cc }} CXX=${{ matrix.config.cxx }} cmake
+        PATH=${{ env.LLVM_MINGW_PATH }}/bin:$PATH CC=${{ env.CC_MINGW }} CXX=${{ env.CXX_MINGW }} cmake
         -S"daw"
-        -B"build-daw"
+        -B"build/win32"
         -G"Ninja Multi-Config"
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-        -DPROJECT_DEPS_PATH:PATH=$(realpath ./daw-deps)
-        -DPROJECT_DEPS_INSTALL_PATH:PATH=$(realpath ./install-deps)
-        -DPROJECT_INSTALLER_OUTPUT_PATH:PATH=$(realpath ./installer)
-        -DPROJECT_WORKING_DIR:PATH=$(realpath ./bin)
-        -DPROJECT_VST2_OUTPUT_PATH:PATH=$(realpath ./bin)
+        -DPROJECT_DEPS_PATH:PATH=/build/daw-deps
+        -DPROJECT_DEPS_INSTALL_PATH:PATH=/build/install-deps/win32
+        -DPROJECT_INSTALLER_OUTPUT_PATH:PATH=/build/installer/win32
+        -DPROJECT_WORKING_DIR:PATH=/build/bin/win32
+        -DPROJECT_VST2_OUTPUT_PATH:PATH=/build/bin/win32
         -DCMAKE_SYSTEM_NAME=Windows
         -DCMAKE_C_FLAGS=-D_WIN32=1
         -DCMAKE_CXX_FLAGS=-D_WIN32=1
@@ -125,105 +140,79 @@ jobs:
         -DCMAKE_UNITY_BUILD=OFF
         -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
 
-    - name: Build
-      run: |
-        cmake --build build-daw --config RelWithDebInfo --target DAW
-        cmake --build build-daw --config RelWithDebInfo --target windows-installer
-        FIRST_FILENAME=$(ls -AU ./installer | head -1)
-        echo "ARTIFACT_NAME=${FIRST_FILENAME}"
-        echo "ARTIFACT_NAME=${FIRST_FILENAME}" >> $GITHUB_ENV
+    - name: Configure linux
+      run: >
+        CC=${{ env.CC_LINUX }} CXX=${{ env.CXX_LINUX }} cmake
+        -S"daw"
+        -B"build/linux"
+        -G"Ninja Multi-Config"
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        -DPROJECT_DEPS_PATH:PATH=/build/daw-deps
+        -DPROJECT_DEPS_INSTALL_PATH:PATH=/build/install-deps/linux
+        -DPROJECT_INSTALLER_OUTPUT_PATH:PATH=/build/installer/linux
+        -DPROJECT_WORKING_DIR:PATH=/build/bin/linux
+        -DPROJECT_VST2_OUTPUT_PATH:PATH=/build/bin/linux
+        -DPROJECT_BUILD_TESTS_UI=ON
+        -DPROJECT_PRODUCT_NAME:STRING="DAW"
+        -DPROJECT_BINARY_NAME:STRING="DAW"
+        -DPRODUCT_HOST_NAME:STRING="DAW"
+        -DPROJECT_VENDOR_NAME:STRING="Michael Hept"
+        -DPRODUCT_URL_DOCS:STRING="https://github.com/nidefawl/daw-project"
+        -DPRODUCT_URL_VENDOR:STRING="https://github.com/nidefawl/daw-project"
+        -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF
+        -DCMAKE_VERBOSE_MAKEFILE=OFF
+        -DCMAKE_UNITY_BUILD=ON
+        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
 
-    - name: Collect build output
+    - name: Build linux
       run: |
-        FILENAME_FIRST_EXE_IN_INSTALLER=$(basename $(ls -AU ./installer/*.exe | head -1))
-        CUT_FILENAME=${FILENAME_FIRST_EXE_IN_INSTALLER:0:$((${#FILENAME_FIRST_EXE_IN_INSTALLER}-4))}
-        ARTIFACT_NAME="${CUT_FILENAME}-${{ env.DAW_REVISION }}"
-        echo "ARTIFACT_NAME=${ARTIFACT_NAME}" >> $GITHUB_ENV
-        cp ./build-daw/compile_commands.json ./installer/compile_commands.json
-        ls -laR > ./installer/filelist.txt
-        echo "DAW_REVISION=$(git -C daw rev-parse --short HEAD)" >> ./installer/revision.txt
+        cmake --build ./build/linux --config ${{ env.BUILD_TYPE }} --target DAW -- -j8
+        cmake --build ./build/linux --config ${{ env.BUILD_TYPE }} --target dist-installer
+
+    - name: Build win32
+      run: |
+        cmake --build ./build/win32 --config ${{ env.BUILD_TYPE }} --target DAW -- -j8
+        cmake --build ./build/win32 --config ${{ env.BUILD_TYPE }} --target dist-installer
+
+    - name: Create revision file
+      run: |
+        echo "DAW_REVISION=${{ env.DAW_REVISION }}" >> ./installer/revision.txt
         echo "DAW_LOG=$(git -C daw log -1)" >> ./installer/revision.txt
-        echo "DAW_DEPS_REVISION=$(git -C daw-deps rev-parse --short HEAD)" >> ./installer/revision.txt
-        echo "DAW_DEPS_LOG=$(git -C daw-deps log -1)" >> ./installer/revision.txt
+        echo "DEPS_REVISION=${{ env.DEPS_REVISION }}" >> ./installer/revision.txt
+        echo "DEPS_LOG=$(git -C daw-deps log -1)" >> ./installer/revision.txt
 
-    - name: Upload installer
+    - name: Prepare win32 artifacts
+      run: |
+        INSTALLER_FILENAME=$(basename $(ls -AU ./installer/win32/*.exe | head -1))
+        INSTALLER_NAME=${INSTALLER_FILENAME:0:$((${#INSTALLER_FILENAME}-4))}
+        ARTIFACT_NAME_WIN32="${INSTALLER_NAME}-${{ env.DAW_REVISION }}"
+        echo "ARTIFACT_NAME_WIN32=${ARTIFACT_NAME_WIN32}" >> $GITHUB_ENV
+
+    - name: Prepare linux artifacts
+      run: |
+        INSTALLER_FILENAME=$(basename $(ls -AU ./installer/linux/*.tar.gz | head -1))
+        INSTALLER_NAME=${INSTALLER_FILENAME:0:$((${#INSTALLER_FILENAME}-4))}
+        ARTIFACT_NAME_LINUX="${INSTALLER_NAME}-${{ env.DAW_REVISION }}"
+        echo "ARTIFACT_NAME_LINUX=${ARTIFACT_NAME_LINUX}" >> $GITHUB_ENV
+
+    - name: Upload win32 distributable
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ env.ARTIFACT_NAME }}.installer
-        path: ./installer
-        if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
+        name: ${{ env.ARTIFACT_NAME_WIN32 }}
+        path: |
+          /build/installer/revision.txt
+          /build/installer/win32
+          /build/build/win32/compile_commands.json
+          /build/build/win32/dist/bin/*.debug
+        if-no-files-found: warn # 'warn' or 'ignore' are also available, defaults to `warn`
 
-    - name: Upload dist
+    - name: Upload linux distributable
       uses: actions/upload-artifact@v3
       with:
-        name: ${{ env.ARTIFACT_NAME }}.dist
-        path: ./daw/dist
-        if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
-
-  # release:
-  #   if: contains(github.ref, 'tags/v')
-  #   runs-on: ubuntu-22.04
-  #   needs: build
-
-  #   steps:
-  #   - name: Create Release
-  #     id: create_release
-  #     uses: actions/create-release@v1
-  #     env:
-  #       GITHUB_TOKEN: ${{ secrets.PAT }}
-  #     with:
-  #       tag_name: ${{ github.ref }}
-  #       release_name: Release ${{ github.ref }}
-  #       draft: false
-  #       prerelease: false
-
-  #   - name: Store Release url
-  #     run: |
-  #       echo "${{ steps.create_release.outputs.upload_url }}" > ./upload_url
-
-  #   - uses: actions/upload-artifact@v3
-  #     with:
-  #       path: ./upload_url
-  #       name: upload_url
-
-  # publish:
-  #   if: contains(github.ref, 'tags/v')
-  #   name: ${{ matrix.config.name }}
-  #   runs-on: ${{ matrix.config.os }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       config:
-  #       - {
-  #           name: "Crosscompile Win32", artifact: "Linux.7z",
-  #           os: ubuntu-22.04
-  #         }
-  #   needs: release
-
-  #   steps:
-  #   - name: Download artifact
-  #     uses: actions/download-artifact@v3
-  #     with:
-  #       name: ${{ matrix.config.artifact }}
-  #       path: ./
-
-  #   - name: Download URL
-  #     uses: actions/download-artifact@v3
-  #     with:
-  #       name: upload_url
-  #       path: ./
-  #   - id: set_upload_url
-  #     run: |
-  #       upload_url=`cat ./upload_url`
-  #       echo upload_url=$upload_url >> $GITHUB_OUTPUT
-
-  #   - name: Upload to Release
-  #     id: upload_to_release
-  #     uses: actions/upload-release-asset@v1
-  #     env:
-  #       GITHUB_TOKEN: ${{ secrets.PAT }}
-  #     with:
-  #       upload_url: ${{ steps.set_upload_url.outputs.upload_url }}
-  #       asset_path: ./${{ matrix.config.artifact }}
-  #       asset_name: ${{ matrix.config.artifact }}
-  #       asset_content_type: application/x-gtar
+        name: ${{ env.ARTIFACT_NAME_LINUX }}
+        path: |
+          /build/installer/revision.txt
+          /build/installer/linux
+          /build/build/linux/compile_commands.json
+          /build/build/linux/dist/bin/*.debug
+        if-no-files-found: warn # 'warn' or 'ignore' are also available, defaults to `warn`

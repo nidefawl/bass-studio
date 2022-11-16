@@ -711,6 +711,24 @@ public:
     }
 
     void loadLayout(const dawview_layout_t& viewLayout) {
+        auto ctrCtrTop = findByTagEntry(GuiContainerTag::TAG_TAB_TOP);
+        auto ctrCtrBottom = findByTagEntry(GuiContainerTag::TAG_TAB_BOTTOM);
+        if (ctrCtrTop) {
+            ctrCtrTop->removeEntryFromParent();
+            ctrCtrTop->getAsLayoutCtr()->removeAllEntries();
+        } else {
+            ctrCtrTop = createGuiCtrLayoutEntry(std::make_shared<guictr_layout>());
+            ctrCtrTop->setEntryTag(GuiContainerTag::TAG_TAB_TOP);
+            ctrCtrTop->getAsLayoutCtr()->setLayout(container_layout::TABBED);
+        }
+        if (ctrCtrBottom) {
+            ctrCtrBottom->removeEntryFromParent();
+            ctrCtrBottom->getAsLayoutCtr()->removeAllEntries();
+        } else {
+            ctrCtrBottom = createGuiCtrLayoutEntry(std::make_shared<guictr_layout>());
+            ctrCtrBottom->setEntryTag(GuiContainerTag::TAG_TAB_BOTTOM);
+            ctrCtrBottom->getAsLayoutCtr()->setLayout(container_layout::TABBED);
+        }
         ctr_Right->removeAllEntries();
         ctr_Left->removeAllEntries();
         ctrEntryTracks->removeEntryFromParent();
@@ -731,6 +749,8 @@ public:
         context.entriesPreconstructed[GuiContainerTag::TAG_NODES] = { ctrEntryNodes };
         context.entriesPreconstructed[GuiContainerTag::TAG_CLIPEDIT] = { ctrEntryClipEdit };
         context.entriesPreconstructed[GuiContainerTag::TAG_PLUGINS] = { ctrEntryPlugins };
+        context.entriesPreconstructed[GuiContainerTag::TAG_TAB_TOP] = { ctrCtrTop };
+        context.entriesPreconstructed[GuiContainerTag::TAG_TAB_BOTTOM] = { ctrCtrBottom };
 
         if (viewLayout.left && viewLayout.right) {
             auto& fac = getContainerFactory();

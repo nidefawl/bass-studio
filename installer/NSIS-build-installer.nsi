@@ -38,7 +38,7 @@ Unicode True
 !endif
 
 !define LICENSE_TXT "${PROJ_LOC}/installer/license_en.rtf"
-!define INSTALLER_NAME "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_BINARY_NAME}-v${PRODUCT_VERSION}-setup.exe"
+!define INSTALLER_NAME "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_BINARY_NAME}-v${PRODUCT_VERSION}-windows-x86_64-setup.exe"
 !define MAIN_APP_EXE "${PROJECT_BINARY_NAME}-${PRODUCT_VERSION}.exe"
 !define INSTALL_TYPE "SetShellVarContext current"
 !define REG_ROOT "HKCU"
@@ -175,19 +175,6 @@ File "${PROJ_LOC}\res\cursors\cursor12.png"
 File "${PROJ_LOC}\res\cursors\cursor13.png"
 File "${PROJ_LOC}\res\cursors\cursor14.png"
 File "${PROJ_LOC}\res\cursors\cursor15.png"
-SetOutPath "$APPDATA\daw\data"
-File "${PROJ_LOC}\dist\userdata\view0.layout"
-File "${PROJ_LOC}\dist\userdata\view1.layout"
-File "${PROJ_LOC}\dist\userdata\view2.layout"
-File "${PROJ_LOC}\dist\userdata\view3.layout"
-File "${PROJ_LOC}\dist\userdata\view4.layout"
-File "${PROJ_LOC}\dist\userdata\view5.layout"
-File "${PROJ_LOC}\dist\userdata\view6.layout"
-File "${PROJ_LOC}\dist\userdata\view7.layout"
-File "${PROJ_LOC}\dist\userdata\view8.layout"
-File "${PROJ_LOC}\dist\userdata\view9.layout"
-File "${PROJ_LOC}\dist\userdata\settings.json"
-File "${PROJ_LOC}\dist\userdata\theme.json"
 
 SectionEnd
 

@@ -335,9 +335,15 @@ target_link_libraries(${LINK_TARGET} PUBLIC PortMidi::portmidi)
 target_link_libraries(${LINK_TARGET} PUBLIC kissfft::kissfft-float)
 target_link_libraries(${LINK_TARGET} PUBLIC ${SOXR_LIB})
 target_link_libraries(${LINK_TARGET} PUBLIC slowstacktrace)
-# target_link_libraries(${LINK_TARGET} PUBLIC optimized ${LIBARCHIVE_RELEASE} debug ${LIBARCHIVE_DEBUG})
 target_link_libraries(${LINK_TARGET} PUBLIC libarchive)
-target_link_libraries(${LINK_TARGET} PUBLIC optimized ${ZLIB_RELEASE} debug ${ZLIB_DEBUG})
+
+if (ZLIB_DEBUG AND ZLIB_RELEASE)
+  target_link_libraries(${LINK_TARGET} PUBLIC optimized ${ZLIB_RELEASE} debug ${ZLIB_DEBUG})
+elseif(ZLIB_RELEASE)
+  target_link_libraries(${LINK_TARGET} PUBLIC ${ZLIB_RELEASE})
+else(ZLIB_DEBUG)
+  target_link_libraries(${LINK_TARGET} PUBLIC ${ZLIB_DEBUG})
+endif()
 
 if (LINUX)
   target_link_libraries(${LINK_TARGET} PUBLIC Threads::Threads)
@@ -382,61 +388,138 @@ if (PROJECT_BUILD_TESTS)
   ADD_SUBDIRECTORY(test)
 endif()
 
-if (WIN32 AND NOT MSVC AND PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
-  find_program(NSIS_MAKE NAMES makensis PATH_SUFFIXES NSIS)
-  if (NOT NSIS_MAKE)
-    message(STATUS "Skip windows-installer: makensis not found")
-  else()
+if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
+  set(PATH_DIST "${CMAKE_BINARY_DIR}/dist/bin")
+  # clean dist/bin directory
+  file(REMOVE_RECURSE "${PATH_DIST}")
+  add_custom_target(dist-strip
+    VERBATIM
+    DEPENDS ${PROJECT_BINARY_NAME} pluginscanner
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND}
+      -E make_directory "${PATH_DIST}"
+    COMMAND ${CMAKE_COMMAND}
+      -E make_directory "${PROJECT_INSTALLER_OUTPUT_PATH}"
+    COMMAND ${CMAKE_OBJCOPY}
+      --only-keep-debug "$<TARGET_FILE:${PROJECT_BINARY_NAME}>" "${PATH_DIST}/${PROJECT_BINARY_NAME}.debug"
+    COMMAND ${CMAKE_OBJCOPY}
+      --strip-all "$<TARGET_FILE:${PROJECT_BINARY_NAME}>" "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+    COMMAND ${CMAKE_OBJCOPY}
+      "--add-gnu-debuglink=${PATH_DIST}/${PROJECT_BINARY_NAME}.debug" "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+    COMMAND ${CMAKE_OBJCOPY}
+      --only-keep-debug "$<TARGET_FILE:pluginscanner>" "${PATH_DIST}/pluginscanner.debug"
+    COMMAND ${CMAKE_OBJCOPY}
+      --strip-all "$<TARGET_FILE:pluginscanner>" "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+    COMMAND ${CMAKE_OBJCOPY}
+      "--add-gnu-debuglink=${PATH_DIST}/pluginscanner.debug" "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+  )
+  if (LINUX AND CLANG)
+    set(PROJECT_INSTALLER_NAME_UNIX "${PROJECT_BINARY_NAME}-v${PRODUCT_VERSION}-linux-x86_64")
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)
     get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
-    get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH) # remove /lib
-    set(PATH_RUNTIMES "${PATH_RUNTIMES}/bin")
-    set(PATH_DIST "${CMAKE_SOURCE_DIR}/dist/bin")
-    
-    add_custom_target(windows-installer
+    message(STATUS "PATH_RUNTIMES: ${PATH_RUNTIMES}")
+    add_custom_target(dist-copy-runtimes-clang-linux
       VERBATIM
-      DEPENDS ${PROJECT_BINARY_NAME} pluginscanner
-      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-      COMMAND ${CMAKE_COMMAND}
-        -E make_directory "${PATH_DIST}"
-      COMMAND ${CMAKE_COMMAND}
-        -E make_directory "${PROJECT_INSTALLER_OUTPUT_PATH}"
-      COMMAND ${CMAKE_OBJCOPY}
-        --only-keep-debug "$<TARGET_FILE:${PROJECT_BINARY_NAME}>" "${PATH_DIST}/${PROJECT_BINARY_NAME}.debug"
-      COMMAND ${CMAKE_OBJCOPY}
-        --strip-all "$<TARGET_FILE:${PROJECT_BINARY_NAME}>" "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
-      COMMAND ${CMAKE_OBJCOPY}
-        "--add-gnu-debuglink=${PATH_DIST}/${PROJECT_BINARY_NAME}.debug" "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
-      COMMAND ${CMAKE_OBJCOPY}
-        --only-keep-debug "$<TARGET_FILE:pluginscanner>" "${PATH_DIST}/pluginscanner.debug"
-      COMMAND ${CMAKE_OBJCOPY}
-        --strip-all "$<TARGET_FILE:pluginscanner>" "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
-      COMMAND ${CMAKE_OBJCOPY}
-        "--add-gnu-debuglink=${PATH_DIST}/pluginscanner.debug" "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+      DEPENDS dist-strip
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       COMMAND ${CMAKE_COMMAND} 
         -E copy
-        "${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
+        "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
         "${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
-      # COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}archive_release${CMAKE_SHARED_MODULE_SUFFIX} ${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}archive_release${CMAKE_SHARED_MODULE_SUFFIX}
+      # COMMAND ${CMAKE_COMMAND} 
+      #   -E copy
+      #   "${PATH_RUNTIMES}/libc++abi.so.1"
+      #   "${PATH_DIST}/libc++abi.so.1"
+      # COMMAND ${CMAKE_COMMAND} 
+      #   -E copy
+      #   "${PATH_RUNTIMES}/libc++.so.2"
+      #   "${PATH_DIST}/libc++.so.2"
+    )
+    # copy the following list
+    # res/fonts -> dist/bin/res/fonts
+    # res/icons -> dist/bin/res/icons
+    # res/cursors -> dist/bin/res/cursors
+    # res/*.png -> dist/bin/res/
+
+    add_custom_target(dist-copy-resources
+      VERBATIM
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      COMMAND ${CMAKE_COMMAND} 
+        -E copy_directory
+        "${PROJECT_SOURCE_DIR}/res/fonts"
+        "${PATH_DIST}/res/fonts"
+      COMMAND ${CMAKE_COMMAND} 
+        -E copy_directory
+        "${PROJECT_SOURCE_DIR}/res/icons"
+        "${PATH_DIST}/res/icons"
+      COMMAND ${CMAKE_COMMAND} 
+        -E copy_directory
+        "${PROJECT_SOURCE_DIR}/res/cursors"
+        "${PATH_DIST}/res/cursors"
       COMMAND ${CMAKE_COMMAND} 
         -E copy
-        "${PATH_RUNTIMES}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
-        "${PATH_DIST}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
-      # COMMAND ${CMAKE_COMMAND} -E copy ${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX} ${PATH_DIST}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}
-      COMMAND ${NSIS_MAKE}
-        "-V4"
-        "-DPROJECT_INSTALLER_OUTPUT_PATH=${PROJECT_INSTALLER_OUTPUT_PATH}"
-        "-DPROJ_LOC=${CMAKE_CURRENT_SOURCE_DIR}"
-        "-DDIST_LOC=${PATH_DIST}"
-        "-DPROJECT_BINARY_NAME=${PROJECT_BINARY_NAME}"
-        "-DPROJECT_BINARY_PATH=${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
-        "-DPRODUCT_NAME_DISPLAY=${PROJECT_PRODUCT_NAME}"
-        "-DPROJECT_VENDOR_NAME=${PROJECT_VENDOR_NAME}"
-        "-DPRODUCT_URL_VENDOR=${PRODUCT_URL_VENDOR}"
-        "-DPRODUCT_COPYRIGHT=${PRODUCT_COPYRIGHT}"
-        "-DPRODUCT_VERSION=${PRODUCT_VERSION}"
-        "-DPRODUCT_VERSION_MAJOR_MINOR_PATCH_REVISION=${PRODUCT_VERSION_MAJOR_MINOR_PATCH_REVISION}"
-        "installer/NSIS-build-installer.nsi"
+        "${PROJECT_SOURCE_DIR}/res/led.png"
+        "${PATH_DIST}/res/"
+      COMMAND ${CMAKE_COMMAND} 
+        -E copy
+        "${PROJECT_SOURCE_DIR}/res/led_off.png"
+        "${PATH_DIST}/res/"
+      COMMAND ${CMAKE_COMMAND} 
+        -E copy
+        "${PROJECT_SOURCE_DIR}/res/led_glow.png"
+        "${PATH_DIST}/res/"
     )
+    add_custom_target(dist-installer
+      VERBATIM
+      DEPENDS dist-strip dist-copy-runtimes-clang-linux dist-copy-resources
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/dist
+      COMMAND tar "--exclude=*.debug" "-cf" "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_INSTALLER_NAME_UNIX}.tar.gz" "--transform" "s%^bin%${PROJECT_INSTALLER_NAME_UNIX}%" bin
+    )
+  elseif(WIN32 AND CLANG AND MINGW)
+    find_program(NSIS_MAKE NAMES makensis PATH_SUFFIXES NSIS)
+    if (NOT NSIS_MAKE)
+      message(STATUS "Skip dist-installer: makensis not found")
+    else()
+      execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)
+      get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
+      get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH) # remove /lib
+      set(PATH_RUNTIMES "${PATH_RUNTIMES}/bin")
+      add_custom_target(dist-copy-runtimes-clang-win32
+        VERBATIM
+        DEPENDS dist-strip
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMAND ${CMAKE_COMMAND} 
+          -E copy
+          "${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
+          "${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
+        # COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}archive_release${CMAKE_SHARED_MODULE_SUFFIX} ${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}archive_release${CMAKE_SHARED_MODULE_SUFFIX}
+        COMMAND ${CMAKE_COMMAND} 
+          -E copy
+          "${PATH_RUNTIMES}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
+          "${PATH_DIST}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
+        # COMMAND ${CMAKE_COMMAND} -E copy ${PATH_RUNTIMES}/libunwind${CMAKE_SHARED_MODULE_SUFFIX} ${PATH_DIST}/libunwind${CMAKE_SHARED_MODULE_SUFFIX}
+      )
+      add_custom_target(dist-installer
+        VERBATIM
+        DEPENDS dist-copy-runtimes-clang-win32
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND ${NSIS_MAKE}
+          "-V4"
+          "-DPROJECT_INSTALLER_OUTPUT_PATH=${PROJECT_INSTALLER_OUTPUT_PATH}"
+          "-DPROJ_LOC=${CMAKE_CURRENT_SOURCE_DIR}"
+          "-DDIST_LOC=${PATH_DIST}"
+          "-DPROJECT_BINARY_NAME=${PROJECT_BINARY_NAME}"
+          "-DPROJECT_BINARY_PATH=${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+          "-DPRODUCT_NAME_DISPLAY=${PROJECT_PRODUCT_NAME}"
+          "-DPROJECT_VENDOR_NAME=${PROJECT_VENDOR_NAME}"
+          "-DPRODUCT_URL_VENDOR=${PRODUCT_URL_VENDOR}"
+          "-DPRODUCT_COPYRIGHT=${PRODUCT_COPYRIGHT}"
+          "-DPRODUCT_VERSION=${PRODUCT_VERSION}"
+          "-DPRODUCT_VERSION_MAJOR_MINOR_PATCH_REVISION=${PRODUCT_VERSION_MAJOR_MINOR_PATCH_REVISION}"
+          "installer/NSIS-build-installer.nsi"
+      )
+    endif ()
+  else()
+    message(STATUS "Skip dist-installer: Platform not supported: ${CMAKE_SYSTEM_NAME} ${CMAKE_CXX_COMPILER_ID}")
   endif()
 endif()
