@@ -2051,10 +2051,6 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
         if (clipSampleEnd <= 0) {
             continue;
         }
-        if (clipSampleBegin > 0 && clipSampleEnd < out.samples) {
-            bool bDbg;
-            bDbg = true;
-        }
 
         // 0 if clip starts before samplePosBegin, otherwise clipSampleBegin
         samplecount_t sampleReadBegin = math::max<samplecount_t>(0, clipSampleBegin);
