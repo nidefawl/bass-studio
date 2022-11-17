@@ -87,7 +87,7 @@ void AudioBlock::realloc(samplecount_t _samples) {
                 buf[i] = newBuf;
             }
             samples = _samples;
-        } else {
+        } else if (channels > 0) {
             dbgassert(0 && "Cannot reallocate externally allocated audiobuffer");
         }
     }
