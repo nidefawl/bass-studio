@@ -418,7 +418,8 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)
     get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
     message(STATUS "PATH_RUNTIMES: ${PATH_RUNTIMES}")
-    add_custom_target(dist-copy-runtimes-clang-linux
+    set(LIST_TARGETS_COPY "dist-copy-libs")
+    add_custom_target(dist-copy-libs
       VERBATIM
       DEPENDS dist-strip
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -426,15 +427,43 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
         -E copy
         "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
         "${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
-      # COMMAND ${CMAKE_COMMAND} 
-      #   -E copy
-      #   "${PATH_RUNTIMES}/libc++abi.so.1"
-      #   "${PATH_DIST}/libc++abi.so.1"
-      # COMMAND ${CMAKE_COMMAND} 
-      #   -E copy
-      #   "${PATH_RUNTIMES}/libc++.so.2"
-      #   "${PATH_DIST}/libc++.so.2"
     )
+    # this is a bit akward: copy files only if they exist
+    # copy ${PATH_RUNTIMES}/libc++abi.so.1 if exists
+    if(EXISTS "${PATH_RUNTIMES}/libc++abi.so.1")
+      add_custom_target(dist-copy-runtimes-clang-linux1
+        VERBATIM
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMAND ${CMAKE_COMMAND} 
+          -E copy
+          "${PATH_RUNTIMES}/libc++abi.so.1"
+          "${PATH_DIST}/libc++abi.so.1"
+      )
+      list(APPEND LIST_TARGETS_COPY "dist-copy-runtimes-clang-linux1")
+    endif()
+    # copy ${PATH_RUNTIMES}/libc++.so.2 if exists
+    if(EXISTS "${PATH_RUNTIMES}/libc++.so.2")
+      add_custom_target(dist-copy-runtimes-clang-linux2
+        VERBATIM
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMAND ${CMAKE_COMMAND} 
+          -E copy
+          "${PATH_RUNTIMES}/libc++.so.2"
+          "${PATH_DIST}/libc++.so.2"
+      )
+      list(APPEND LIST_TARGETS_COPY "dist-copy-runtimes-clang-linux2")
+    elseif(EXISTS "${PATH_RUNTIMES}/libc++.so.1")
+      add_custom_target(dist-copy-runtimes-clang-linux2
+        VERBATIM
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMAND ${CMAKE_COMMAND} 
+          -E copy
+          "${PATH_RUNTIMES}/libc++.so.1"
+          "${PATH_DIST}/libc++.so.1"
+      )
+      list(APPEND LIST_TARGETS_COPY "dist-copy-runtimes-clang-linux2")
+    endif()
+
     # copy the following list
     # res/fonts -> dist/bin/res/fonts
     # res/icons -> dist/bin/res/icons
@@ -469,9 +498,10 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
         "${PROJECT_SOURCE_DIR}/res/led_glow.png"
         "${PATH_DIST}/res/"
     )
+    list(APPEND LIST_TARGETS_COPY "dist-copy-resources")
     add_custom_target(dist-installer
       VERBATIM
-      DEPENDS dist-strip dist-copy-runtimes-clang-linux dist-copy-resources
+      DEPENDS dist-strip ${LIST_TARGETS_COPY}
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/dist
       COMMAND tar "--exclude=*.debug" "-cf" "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_INSTALLER_NAME_UNIX}.tar.gz" "--transform" "s%^bin%${PROJECT_INSTALLER_NAME_UNIX}%" bin
     )

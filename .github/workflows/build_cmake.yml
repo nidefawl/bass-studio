@@ -7,8 +7,9 @@ env:
   BUILD_TYPE_DEPS: release
   CC_MINGW: x86_64-w64-mingw32-gcc
   CXX_MINGW: x86_64-w64-mingw32-g++
-  CC_LINUX: clang-16
-  CXX_LINUX: clang++-16
+  CC_LINUX: clang
+  CXX_LINUX: clang++
+  LLVM_LINUX_PATH: /opt/llvm-linux
   LLVM_MINGW_PATH: /opt/llvm-mingw
 
 jobs:
@@ -26,16 +27,13 @@ jobs:
     - name: apt update
       working-directory: /
       run: |
-        wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-        sudo bash -c "echo 'deb https://apt.llvm.org/jammy/ llvm-toolchain-jammy main' >> /etc/apt/sources.list"
         sudo apt-get update -yqq
         sudo apt-get install -qqy --no-install-recommends wget        \
           python3 zip unzip git libbsd0 libbsd-dev libtinfo6 libxml2  \
           libncursesw6 nsis libx11-dev libxrandr-dev libxinerama-dev  \
           libxcursor-dev libxi-dev libasound2-dev libgtk-3-dev        \
-          libssl-dev cmake curl wget gnupg2 clang-16 clang-tidy-16    \
-          lld-16 libc++-16-dev libc++abi-16-dev libunwind-16-dev      \
-          e2fslibs-dev libatomic1 libattr1-dev
+          libssl-dev cmake curl wget gnupg2 e2fslibs-dev libatomic1   \
+          libattr1-dev
 
     - name: create directories
       working-directory: /
@@ -89,6 +87,10 @@ jobs:
         pushd /opt
         sudo mkdir download && sudo chown $USER:$USER download
         pushd download
+        wget --no-check-certificate -nv https://github.com/nidefawl/llvm-project/releases/download/v16.0.0-3-linux/llvm-clang-16.0.0-libc++-abi-2-ubuntu-22.04.bz2 -O llvm-clang-16.0.0-libc++-abi-2-ubuntu-22.04.bz2
+        tar -xjf llvm-clang-*.bz2 && rm *.bz2
+        sudo rm -Rf ${{ env.LLVM_LINUX_PATH }}
+        sudo mv llvm-clang-* ${{ env.LLVM_LINUX_PATH }}
         wget --no-check-certificate -nv https://github.com/nidefawl/llvm-project/releases/download/v15.0.0-1-mingw/llvm-mingw-linux-x86_64-llvm-15.tar.gz
         tar -zxf llvm-mingw-linux-x86_64-*.tar.gz && rm *.tar.gz
         sudo rm -Rf ${{ env.LLVM_MINGW_PATH }}
@@ -110,7 +112,7 @@ jobs:
     - name: Build linux dependencies
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: |
-        CC=${{ env.CC_LINUX }} CXX=${{ env.CXX_LINUX }} python3 ${{ github.workspace }}/daw-deps/build.py ./build-deps/linux ./install-deps/linux -${{ env.BUILD_TYPE_DEPS }}
+        LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH CC=${{ env.CC_LINUX }} CXX=${{ env.CXX_LINUX }} python3 ${{ github.workspace }}/daw-deps/build.py ./build-deps/linux ./install-deps/linux -${{ env.BUILD_TYPE_DEPS }}
 
     - name: Configure win32
       run: >
@@ -141,7 +143,7 @@ jobs:
 
     - name: Configure linux
       run: >
-        CC=${{ env.CC_LINUX }} CXX=${{ env.CXX_LINUX }} cmake
+        LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH CC=${{ env.CC_LINUX }} CXX=${{ env.CXX_LINUX }} cmake
         -S"daw"
         -B"build/linux"
         -G"Ninja Multi-Config"
@@ -165,13 +167,13 @@ jobs:
 
     - name: Build linux
       run: |
-        cmake --build ./build/linux --config ${{ env.BUILD_TYPE }} --target DAW -- -j8
-        cmake --build ./build/linux --config ${{ env.BUILD_TYPE }} --target dist-installer
+        LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH cmake --build ./build/linux --config ${{ env.BUILD_TYPE }} --target DAW -- -j8
+        LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH cmake --build ./build/linux --config ${{ env.BUILD_TYPE }} --target dist-installer
 
     - name: Build win32
       run: |
-        cmake --build ./build/win32 --config ${{ env.BUILD_TYPE }} --target DAW -- -j8
-        cmake --build ./build/win32 --config ${{ env.BUILD_TYPE }} --target dist-installer
+        PATH=${{ env.LLVM_MINGW_PATH }}/bin:$PATH cmake --build ./build/win32 --config ${{ env.BUILD_TYPE }} --target DAW -- -j8
+        PATH=${{ env.LLVM_MINGW_PATH }}/bin:$PATH cmake --build ./build/win32 --config ${{ env.BUILD_TYPE }} --target dist-installer
 
     - name: Create revision file
       run: |
