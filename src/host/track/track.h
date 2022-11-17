@@ -122,9 +122,8 @@ public:
 
     std::pair<clip_t*, clip_t*> getMinMax();
 
-    bool hasClip(clip_t* c) {
-        auto it = std::find(clips.begin(), clips.end(), c);
-        return it != clips.end();
+    bool hasClip(const clip_t* c) {
+        return std::find(clips.cbegin(), clips.cend(), c) != clips.cend();
     }
 
     clip_t* getNextClip(clip_t* c) {
@@ -537,7 +536,7 @@ public:
     bool validTrackIdx(int32_t idx) const {
         return idx >= 0 && idx < (int32_t) trackAllCtr.size();
     }
-    bool validTrack(track_t* tr) const {
+    bool validTrack(const track_t* tr) const {
         return tr && stl_contains(trackAllCtr.tracksFlat, tr);
     }
     bool validTrackTypeIdx(int32_t type, int32_t idx) const;

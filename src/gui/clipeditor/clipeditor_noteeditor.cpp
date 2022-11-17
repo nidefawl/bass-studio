@@ -655,9 +655,15 @@ void guictr_editor_base::relayout() {
     bool foundThis = false;
     for (size_t trackIdx = 0; trackIdx < numTracks; trackIdx++) {
         auto& [trackEntry, vecTrackClips] = view.m_selectionView.tracks[trackIdx];
+        if (!view.clipRef().isTrackValid(trackEntry.track)) {
+            continue;
+        }
         auto numClipsOnTrack = vecTrackClips.size();
         for (size_t clipIdx = 0; clipIdx < numClipsOnTrack && it != clipsHandles.end(); clipIdx++) {
             auto& selClip = vecTrackClips[clipIdx];
+            if (!view.clipRef().isClipValid(selClip)) {
+                continue;
+            }
             auto& clipHandles = **(it++);
             dbgassert(it <= clipsHandles.end());
             if (!assert_expr(trackEntry.clipsGuis.count(selClip))) {
@@ -715,9 +721,15 @@ void guictr_editor_base::selectEditClip(clip_t* clip) {
     auto it = clipsHandles.begin();
     for (size_t trackIdx = 0; trackIdx < numTracks; trackIdx++) {
         auto& [trackEntry, vecTrackClips] = view.m_selectionView.tracks[trackIdx];
+        if (!view.clipRef().isTrackValid(trackEntry.track)) {
+            continue;
+        }
         auto numClipsOnTrack = vecTrackClips.size();
         for (size_t clipIdx = 0; clipIdx < numClipsOnTrack && it != clipsHandles.end(); clipIdx++) {
             auto& selClip = vecTrackClips[clipIdx];
+            if (!view.clipRef().isClipValid(selClip)) {
+                continue;
+            }
             auto& clipHandles = **(it++);
             dbgassert(it <= clipsHandles.end());
             if (!assert_expr(trackEntry.clipsGuis.count(selClip))) {
@@ -839,6 +851,9 @@ void guictr_editor_base::renderClipHandles(NVGcontext* vg) {
         auto viewTrack = view.track();
         auto trackHandleHeight = (handlesHeight-heightSelIndicator) / math::max(1, CtrSize(view.m_selectionView.tracks));
         for (auto& [trackEntry, vecClips] : view.m_selectionView.tracks) {
+            if (!view.clipRef().isTrackValid(trackEntry.track)) {
+                continue;
+            }
                 // nvgRect(vg, handlesPos.x, handlesPos.y + heightSelIndicator + trackHandleHeight * trackIdx+trackHandleHeight-heightSelIndicator, timeline.size.x, heightSelIndicator);
             auto col = trackIdx % 2 == 0 ? GuiColor::COL_GRID_DRK : GuiColor::COL_GRID_BRT;
             auto nvgCol = viewTrack == trackEntry.track ? rgbToNvg(trackEntry.track->rgb) : theme->getColor(col);

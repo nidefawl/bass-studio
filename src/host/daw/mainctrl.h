@@ -123,7 +123,6 @@ namespace DAW {
     void OpenFloatingTextInput(DawCtrl* ctrl, ivec2 popupPos, ivec2 popupSize, const String& initialStr, const std::function<bool(const String& str)>& callback);
     void OpenRenameTrackPopup(DawCtrl* ctrl, track_gui_entry_t* trackentry);
     void GetClipboardView(const track_gui_manager_i& trackList, const DAW::Cursor& cursor, editor_view_selection_t& view, gui_clip* contextClip);
-    clip_t* GetClipFromTime(editor_view_selection_t& view, tick_t time);
 }// namespace DAW
 
 struct clip_cursor_t {
@@ -149,6 +148,8 @@ class clip_ref_t {
     clip_t* m_clip       = nullptr;
 public:
     clip_ref_t() = default;
+    bool isTrackValid(const track_t* track) const;
+    bool isClipValid(const clip_t* clip) const;
     bool isValid() const;
     bool isValidUpdate();
 

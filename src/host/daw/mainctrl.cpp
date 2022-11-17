@@ -1971,7 +1971,27 @@ bool clip_ref_t::isValid() const {
     }
     return false;
 }
-
+bool clip_ref_t::isClipValid(const clip_t* clip) const {
+    if (m_clip && m_project) {
+        if (!m_project->trackList.validTrack(m_track)) {
+            return false;
+        }
+        if (!m_track->getClips().hasClip(clip)) {
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+bool clip_ref_t::isTrackValid(const track_t* track) const {
+    if (m_clip && m_project) {
+        if (!m_project->trackList.validTrack(track)) {
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
 
 bool clip_ref_t::isValidUpdate() {
     bool b = isValid();

@@ -415,16 +415,6 @@ namespace DAW {
             }
         }
     }
-    clip_t* GetClipFromTime(editor_view_selection_t& view, tick_t time) {
-        for (auto& track : view.tracks) {
-            for (auto& clip : track.second) {
-                if (clip->start() <= time && clip->end() >= time) {
-                    return clip;
-                }
-            }
-        }
-        return nullptr;
-    }
 
 }// namespace DAW
 

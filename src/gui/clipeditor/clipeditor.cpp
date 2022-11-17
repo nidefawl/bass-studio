@@ -1068,8 +1068,12 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
     }
     auto& selView = view.m_selectionView;
     clip_t* currentClip = view.clip();
+    // this deref is not safe
     for (auto& [trackEntry, vecClips] : selView.tracks) {
         for (clip_t* clip : vecClips) {
+            if (!view.clipRef().isClipValid(clip)) {
+                continue;
+            }
             auto tickOffset = clip->time;
             if (!view.isAbsoluteTimeMode() && currentClip) {
                 tickOffset += currentClip->offsetStart;
