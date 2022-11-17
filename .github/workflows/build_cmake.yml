@@ -136,7 +136,7 @@ jobs:
         -DPRODUCT_URL_VENDOR:STRING="https://github.com/nidefawl/daw-project"
         -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF
         -DCMAKE_VERBOSE_MAKEFILE=OFF
-        -DCMAKE_UNITY_BUILD=OFF
+        -DCMAKE_UNITY_BUILD=ON
         -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
 
     - name: Configure linux
