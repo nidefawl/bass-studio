@@ -76,7 +76,8 @@ jobs:
       uses: actions/cache@v3
       with:
         path: |
-          /opt/llvm-mingw
+          ${{ env.LLVM_LINUX_PATH }}
+          ${{ env.LLVM_MINGW_PATH }}
           /opt/cmake
           /build/install-deps
         key: ${{ env.cachekey }}
