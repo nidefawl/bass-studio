@@ -404,14 +404,12 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       --only-keep-debug "$<TARGET_FILE:${PROJECT_BINARY_NAME}>" "${PATH_DIST}/${PROJECT_BINARY_NAME}.debug"
     COMMAND ${CMAKE_OBJCOPY}
       --strip-all "$<TARGET_FILE:${PROJECT_BINARY_NAME}>" "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
-    COMMAND chrpath -r '$ORIGIN' "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
     COMMAND ${CMAKE_OBJCOPY}
       "--add-gnu-debuglink=${PATH_DIST}/${PROJECT_BINARY_NAME}.debug" "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
     COMMAND ${CMAKE_OBJCOPY}
       --only-keep-debug "$<TARGET_FILE:pluginscanner>" "${PATH_DIST}/pluginscanner.debug"
     COMMAND ${CMAKE_OBJCOPY}
       --strip-all "$<TARGET_FILE:pluginscanner>" "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
-    COMMAND chrpath -r '$ORIGIN' "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
     COMMAND ${CMAKE_OBJCOPY}
       "--add-gnu-debuglink=${PATH_DIST}/pluginscanner.debug" "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
   )
