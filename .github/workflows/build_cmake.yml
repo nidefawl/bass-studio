@@ -92,10 +92,10 @@ jobs:
         tar -xjf llvm-clang-*.bz2 && rm *.bz2
         sudo rm -Rf ${{ env.LLVM_LINUX_PATH }}
         sudo mv llvm-clang-* ${{ env.LLVM_LINUX_PATH }}
-        wget --no-check-certificate -nv https://github.com/nidefawl/llvm-project/releases/download/v15.0.0-1-mingw/llvm-mingw-linux-x86_64-llvm-15.tar.gz
-        tar -zxf llvm-mingw-linux-x86_64-*.tar.gz && rm *.tar.gz
+        wget --no-check-certificate -nv https://github.com/nidefawl/llvm-mingw/releases/download/v16.0.0-linux-1/llvm-mingw-clang-16.0.0-libc++-abi-2-ubuntu-22.04-x86_64.bz2
+        tar -xjf llvm-mingw-*.bz2 && rm *.bz2
         sudo rm -Rf ${{ env.LLVM_MINGW_PATH }}
-        sudo mv llvm-mingw-linux-x86_64-* ${{ env.LLVM_MINGW_PATH }}
+        sudo mv llvm-mingw-* ${{ env.LLVM_MINGW_PATH }}
         wget --no-check-certificate -nv https://github.com/Kitware/CMake/releases/download/v3.25.0-rc4/cmake-3.25.0-rc4-linux-$(uname -m).tar.gz
         tar -zxf cmake-*.tar.gz && rm *.tar.gz
         sudo rm -Rf /opt/cmake
