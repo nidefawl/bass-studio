@@ -187,6 +187,7 @@ jobs:
         INSTALLER_NAME=${INSTALLER_FILENAME:0:$((${#INSTALLER_FILENAME}-4))}
         ARTIFACT_NAME_WIN32="${INSTALLER_NAME}-${{ env.DAW_REVISION }}"
         echo "ARTIFACT_NAME_WIN32=${ARTIFACT_NAME_WIN32}" >> $GITHUB_ENV
+        tar -cvjSf ./installer/win32/symbols.tar.bz2 ./build/win32/dist/bin/*.debug
 
     - name: Prepare linux artifacts
       run: |
@@ -194,6 +195,7 @@ jobs:
         INSTALLER_NAME=${INSTALLER_FILENAME:0:$((${#INSTALLER_FILENAME}-4))}
         ARTIFACT_NAME_LINUX="${INSTALLER_NAME}-${{ env.DAW_REVISION }}"
         echo "ARTIFACT_NAME_LINUX=${ARTIFACT_NAME_LINUX}" >> $GITHUB_ENV
+        tar -cvjSf ./installer/linux/symbols.tar.bz2 ./build/linux/dist/bin/*.debug
 
     - name: Upload win32 distributable
       uses: actions/upload-artifact@v3
@@ -203,7 +205,6 @@ jobs:
           /build/installer/revision.txt
           /build/installer/win32
           /build/build/win32/compile_commands.json
-          /build/build/win32/dist/bin/*.debug
         if-no-files-found: warn # 'warn' or 'ignore' are also available, defaults to `warn`
 
     - name: Upload linux distributable
@@ -214,5 +215,4 @@ jobs:
           /build/installer/revision.txt
           /build/installer/linux
           /build/build/linux/compile_commands.json
-          /build/build/linux/dist/bin/*.debug
         if-no-files-found: warn # 'warn' or 'ignore' are also available, defaults to `warn`
