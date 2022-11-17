@@ -420,16 +420,23 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)
     get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
     message(STATUS "PATH_RUNTIMES: ${PATH_RUNTIMES}")
-    set(LIST_TARGETS_COPY "dist-copy-libs")
-    add_custom_target(dist-copy-libs
+    add_custom_target(dist-set-rpath
       VERBATIM
       DEPENDS dist-strip
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      COMMAND chrpath -r '$ORIGIN' "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+      COMMAND chrpath -r '$ORIGIN' "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+    )
+    add_custom_target(dist-copy-libs
+      VERBATIM
+      DEPENDS dist-set-rpath
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
       COMMAND ${CMAKE_COMMAND} 
         -E copy
         "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.so.0"
         "${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.so.0"
     )
+    set(LIST_TARGETS_COPY "dist-copy-libs")
     # this is a bit akward: copy files only if they exist
     # copy ${PATH_RUNTIMES}/libc++abi.so.1 if exists
     if(EXISTS "${PATH_RUNTIMES}/libc++abi.so.1")
