@@ -132,13 +132,15 @@ void findFilesWithExt(
         if (!(fs_entry->fts_info & FTS_D))
             continue;
         FTSENT* child = fts_children(file_system, 0);
-        while (child && !(child->fts_info & FTS_DP)) {
+        while (child) {
+            if (!(child->fts_info & FTS_DP)) {
             String fileName, ext;
             SplitPath(child->fts_name, nullptr, nullptr, &ext, &fileName);
             if (ext == strExt) {
                 String path = String(child->fts_path) + child->fts_name;
                 const FileFound f = { std::move(path), child->fts_name, ext };
                 _out.push_back(f);
+            }
             }
             child = child->fts_link;
         }
