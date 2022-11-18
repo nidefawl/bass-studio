@@ -109,7 +109,7 @@ ${INSTALL_TYPE}
 SetOverwrite ifnewer
 SetOutPath "$INSTDIR"
 File /oname=${MAIN_APP_EXE} "${PROJECT_BINARY_PATH}"
-File /oname=daw-pluginscanner.exe "${DIST_LOC}\pluginscanner.exe"
+File /oname=daw-pluginscanner.exe "${DIST_LOC}\daw-pluginscanner.exe"
 File "${DIST_LOC}\libsoxr-clang-release.dll"
 File "${DIST_LOC}\libc++.dll"
 SetOutPath "$INSTDIR\res"

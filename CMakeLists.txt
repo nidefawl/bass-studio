@@ -403,11 +403,11 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     COMMAND ${CMAKE_OBJCOPY}
       "--add-gnu-debuglink=${PATH_DIST}/${PROJECT_BINARY_NAME}.debug" "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
     COMMAND ${CMAKE_OBJCOPY}
-      --only-keep-debug "$<TARGET_FILE:pluginscanner>" "${PATH_DIST}/pluginscanner.debug"
+      --only-keep-debug "$<TARGET_FILE:pluginscanner>" "${PATH_DIST}/daw-pluginscanner.debug"
     COMMAND ${CMAKE_OBJCOPY}
-      --strip-all "$<TARGET_FILE:pluginscanner>" "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+      --strip-all "$<TARGET_FILE:pluginscanner>" "${PATH_DIST}/daw-pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
     COMMAND ${CMAKE_OBJCOPY}
-      "--add-gnu-debuglink=${PATH_DIST}/pluginscanner.debug" "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+      "--add-gnu-debuglink=${PATH_DIST}/daw-pluginscanner.debug" "${PATH_DIST}/daw-pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
   )
   if (LINUX AND CLANG)
     set(PROJECT_INSTALLER_NAME_UNIX "${PROJECT_BINARY_NAME}-v${PRODUCT_VERSION}-linux-x86_64")
@@ -475,7 +475,7 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
         ${LIST_RUNTIMES}
         "${PATH_DIST}/lib/"
       COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
-      COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+      COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/daw-pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
       COMMAND tar "--exclude=*.debug" "-czf" "${PROJECT_INSTALLER_OUTPUT}" "--transform" "s%^.%${PROJECT_INSTALLER_NAME_UNIX}%" .
     )
     add_custom_target(dist-installer DEPENDS ${PROJECT_INSTALLER_OUTPUT})
