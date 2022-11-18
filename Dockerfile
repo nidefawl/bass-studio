@@ -29,8 +29,6 @@ RUN wget --no-check-certificate -nv https://github.com/ninja-build/ninja/release
 
 ENV STORED_PATH=$PATH
 
-ARG BUILD_TAG=221118-3
-RUN echo "set(OUTPUT_BINARY_SUFFIX \"${BUILD_TAG}\" CACHE STRING \"OUTPUT_BINARY_SUFFIX\" FORCE)\n" > ./CommonConfig.cmake
 RUN echo 'set(PROJECT_PRODUCT_NAME "DAW" CACHE STRING "")\n\
 set(PROJECT_BINARY_NAME "DAW" CACHE STRING "")\n\
 set(DPRODUCT_HOST_NAME "DAW" CACHE STRING "")\n\
