@@ -5,12 +5,12 @@ RUN mkdir /build
 WORKDIR /build
 
 RUN apt-get update -yqq
-RUN apt-get install -qqy --no-install-recommends wget           \
+RUN apt-get install -qqy --no-install-recommends wget sudo curl \
     python3 zip unzip git libbsd0 libbsd-dev libtinfo6 libxml2  \
     libncursesw6 nsis libx11-dev libxrandr-dev libxinerama-dev  \
-    libxcursor-dev libxi-dev libasound2-dev libgtk-3-dev        \
-    libssl-dev cmake curl gnupg2 e2fslibs-dev libatomic1        \
-    libattr1-dev chrpath bzip2 libstdc++-12-dev sudo
+    libxcursor-dev libxi-dev libasound2-dev libgtk-3-dev bzip2  \
+    libssl-dev gnupg2 e2fslibs-dev libatomic1 ca-certificates   \
+    libattr1-dev chrpath libstdc++-12-dev  
 
 # add user builder
 RUN useradd -ms /bin/bash builder
@@ -55,7 +55,7 @@ ENV PATH=$LLVM_MINGW_PATH/bin:/opt/cmake/bin:$STORED_PATH
 ENV CC=$LLVM_MINGW_PATH/bin/x86_64-w64-mingw32-clang
 ENV CXX=$LLVM_MINGW_PATH/bin/x86_64-w64-mingw32-clang++
 
-RUN echo "#include <stdio.h>\nint main() { printf(\"Hello World!\\n\"); return 0; }\n" > test.c
+RUN echo "#include <stdio.h>\nint main() { printf(\"Hello World!\\\\n\"); return 0; }\n" > test.c
 RUN $CC -o test.exe test.c 
 
 RUN python3 ./daw-deps/build.py ./build-deps/win32 ./install-deps/win32 -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres -release
