@@ -189,7 +189,7 @@ jobs:
         INSTALLER_NAME=${INSTALLER_FILENAME:0:$((${#INSTALLER_FILENAME}-4))}
         ARTIFACT_NAME_WIN32="${INSTALLER_NAME}-${{ env.DAW_REVISION }}"
         echo "ARTIFACT_NAME_WIN32=${ARTIFACT_NAME_WIN32}" >> $GITHUB_ENV
-        tar -cvjSf ./installer/win32/symbols.tar.bz2 ./build/win32/dist/bin/*.debug
+        tar -cvjSf ./installer/win32/symbols.tar.bz2 ./build/win32/dist/*.debug
 
     - name: Prepare linux artifacts
       run: |
@@ -197,7 +197,7 @@ jobs:
         INSTALLER_NAME=${INSTALLER_FILENAME:0:$((${#INSTALLER_FILENAME}-4))}
         ARTIFACT_NAME_LINUX="${INSTALLER_NAME}-${{ env.DAW_REVISION }}"
         echo "ARTIFACT_NAME_LINUX=${ARTIFACT_NAME_LINUX}" >> $GITHUB_ENV
-        tar -cvjSf ./installer/linux/symbols.tar.bz2 ./build/linux/dist/bin/*.debug
+        tar -cvjSf ./installer/linux/symbols.tar.bz2 ./build/linux/dist/*.debug
 
     - name: Upload win32 distributable
       uses: actions/upload-artifact@v3

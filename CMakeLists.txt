@@ -389,17 +389,14 @@ if (PROJECT_BUILD_TESTS)
 endif()
 
 if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
-  set(PATH_DIST "${CMAKE_BINARY_DIR}/dist/bin")
+  set(PATH_DIST "${CMAKE_BINARY_DIR}/dist")
   # clean dist/bin directory
-  file(REMOVE_RECURSE "${PATH_DIST}")
+  # file(REMOVE_RECURSE "${PATH_DIST}") #not here
   add_custom_target(dist-strip
     VERBATIM
     DEPENDS ${PROJECT_BINARY_NAME} pluginscanner
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMAND ${CMAKE_COMMAND}
-      -E make_directory "${PATH_DIST}"
-    COMMAND ${CMAKE_COMMAND}
-      -E make_directory "${PROJECT_INSTALLER_OUTPUT_PATH}"
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_INSTALLER_OUTPUT_PATH}"
     COMMAND ${CMAKE_OBJCOPY}
       --only-keep-debug "$<TARGET_FILE:${PROJECT_BINARY_NAME}>" "${PATH_DIST}/${PROJECT_BINARY_NAME}.debug"
     COMMAND ${CMAKE_OBJCOPY}
@@ -418,68 +415,30 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)
     get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
     message(STATUS "PATH_RUNTIMES: ${PATH_RUNTIMES}")
-    add_custom_target(dist-set-rpath
-      VERBATIM
-      DEPENDS dist-strip
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-      COMMAND chrpath -r \$ORIGIN "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
-      COMMAND chrpath -r \$ORIGIN "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
-    )
-    add_custom_target(dist-copy-libs
-      VERBATIM
-      DEPENDS dist-set-rpath
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-      COMMAND ${CMAKE_COMMAND} 
-        -E copy
-        "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.so.0"
-        "${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.so.0"
-    )
-    set(LIST_TARGETS_COPY "dist-copy-libs")
-    # this is a bit akward: copy files only if they exist
-    # copy ${PATH_RUNTIMES}/libc++abi.so.1 if exists
-    if(EXISTS "${PATH_RUNTIMES}/libc++abi.so.1")
-      add_custom_target(dist-copy-runtimes-clang-linux1
-        VERBATIM
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMAND ${CMAKE_COMMAND} 
-          -E copy
-          "${PATH_RUNTIMES}/libc++abi.so.1"
-          "${PATH_DIST}/libc++abi.so.1"
-      )
-      list(APPEND LIST_TARGETS_COPY "dist-copy-runtimes-clang-linux1")
+    set(LIST_RUNTIMES "")
+    if(EXISTS "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.so.0")
+      list(APPEND LIST_RUNTIMES "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.so.0")
     endif()
-    # copy ${PATH_RUNTIMES}/libc++.so.2 if exists
+    if(EXISTS "${PATH_RUNTIMES}/libc++abi.so.1")
+      list(APPEND LIST_RUNTIMES "${PATH_RUNTIMES}/libc++abi.so.1")
+    endif()
     if(EXISTS "${PATH_RUNTIMES}/libc++.so.2")
-      add_custom_target(dist-copy-runtimes-clang-linux2
-        VERBATIM
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMAND ${CMAKE_COMMAND} 
-          -E copy
-          "${PATH_RUNTIMES}/libc++.so.2"
-          "${PATH_DIST}/libc++.so.2"
-      )
-      list(APPEND LIST_TARGETS_COPY "dist-copy-runtimes-clang-linux2")
-    elseif(EXISTS "${PATH_RUNTIMES}/libc++.so.1")
-      add_custom_target(dist-copy-runtimes-clang-linux2
-        VERBATIM
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMAND ${CMAKE_COMMAND} 
-          -E copy
-          "${PATH_RUNTIMES}/libc++.so.1"
-          "${PATH_DIST}/libc++.so.1"
-      )
-      list(APPEND LIST_TARGETS_COPY "dist-copy-runtimes-clang-linux2")
+      list(APPEND LIST_RUNTIMES "${PATH_RUNTIMES}/libc++.so.2")
+    endif()
+    if(EXISTS "${PATH_RUNTIMES}/libc++.so.1")
+      list(APPEND LIST_RUNTIMES "${PATH_RUNTIMES}/libc++.so.1")
     endif()
 
     # copy the following list
-    # res/fonts -> dist/bin/res/fonts
-    # res/icons -> dist/bin/res/icons
-    # res/cursors -> dist/bin/res/cursors
-    # res/*.png -> dist/bin/res/
+    # res/fonts -> dist/res/fonts
+    # res/icons -> dist/res/icons
+    # res/cursors -> dist/res/cursors
+    # res/*.png -> dist/res/
 
     add_custom_target(dist-copy-resources
       VERBATIM
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}/res"
       COMMAND ${CMAKE_COMMAND} 
         -E copy_directory
         "${PROJECT_SOURCE_DIR}/res/fonts"
@@ -505,13 +464,22 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
         "${PROJECT_SOURCE_DIR}/res/led_glow.png"
         "${PATH_DIST}/res/"
     )
-    list(APPEND LIST_TARGETS_COPY "dist-copy-resources")
-    add_custom_target(dist-installer
+    set(PROJECT_INSTALLER_OUTPUT "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_INSTALLER_NAME_UNIX}.tar.gz")
+    add_custom_command(
+      OUTPUT ${PROJECT_INSTALLER_OUTPUT}
       VERBATIM
-      DEPENDS dist-strip ${LIST_TARGETS_COPY}
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/dist
-      COMMAND tar "--exclude=*.debug" "-czf" "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_INSTALLER_NAME_UNIX}.tar.gz" "--transform" "s%^bin%${PROJECT_INSTALLER_NAME_UNIX}%" bin
+      DEPENDS dist-strip dist-copy-resources
+      WORKING_DIRECTORY ${PATH_DIST}
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}/lib"
+      COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+      COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+      COMMAND ${CMAKE_COMMAND} 
+        -E copy
+        ${LIST_RUNTIMES}
+        "${PATH_DIST}/lib/"
+      COMMAND tar "--exclude=*.debug" "-czf" "${PROJECT_INSTALLER_OUTPUT}" "--transform" "s%^.%${PROJECT_INSTALLER_NAME_UNIX}%" .
     )
+    add_custom_target(dist-installer DEPENDS ${PROJECT_INSTALLER_OUTPUT})
   elseif(WIN32 AND CLANG AND MINGW)
     find_program(NSIS_MAKE NAMES makensis PATH_SUFFIXES NSIS)
     if (NOT NSIS_MAKE)
@@ -529,7 +497,6 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
           -E copy
           "${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
           "${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}${CMAKE_SHARED_MODULE_SUFFIX}"
-        # COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_DEPS_INSTALL_PATH}/bin/${CMAKE_SHARED_LIBRARY_PREFIX}archive_release${CMAKE_SHARED_MODULE_SUFFIX} ${PATH_DIST}/${CMAKE_SHARED_LIBRARY_PREFIX}archive_release${CMAKE_SHARED_MODULE_SUFFIX}
         COMMAND ${CMAKE_COMMAND} 
           -E copy
           "${PATH_RUNTIMES}/libc++${CMAKE_SHARED_MODULE_SUFFIX}"
