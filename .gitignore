@@ -1,6 +1,7 @@
 /build*/
 /.vscode/
 /.cache/
+/install/
 /.vs/
 /local/
 /compile_commands.json
