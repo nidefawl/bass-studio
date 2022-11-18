@@ -294,7 +294,6 @@ if (PROJECT_REQUIRE_LIB)
       if (slowstacktrace)
         set_target_properties(slowstacktrace PROPERTIES POSITION_INDEPENDENT_CODE ON)
       endif()
-      set_target_properties(libarchive PROPERTIES POSITION_INDEPENDENT_CODE ON)
     endif()
 
     set(SRC_FILES_VST2_PLUGIN
@@ -348,15 +347,8 @@ if (slowstacktrace)
   target_compile_definitions(${LINK_TARGET} PUBLIC HAVE_SLOWSTACKTRACE)
 endif()
 
+target_link_libraries(${LINK_TARGET} PUBLIC zlib)
 target_link_libraries(${LINK_TARGET} PUBLIC libarchive)
-
-if (ZLIB_DEBUG AND ZLIB_RELEASE)
-  target_link_libraries(${LINK_TARGET} PUBLIC optimized ${ZLIB_RELEASE} debug ${ZLIB_DEBUG})
-elseif(ZLIB_RELEASE)
-  target_link_libraries(${LINK_TARGET} PUBLIC ${ZLIB_RELEASE})
-else(ZLIB_DEBUG)
-  target_link_libraries(${LINK_TARGET} PUBLIC ${ZLIB_DEBUG})
-endif()
 
 if (LINUX)
   target_link_libraries(${LINK_TARGET} PUBLIC Threads::Threads)
