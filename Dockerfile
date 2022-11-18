@@ -43,8 +43,7 @@ RUN git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:$
 
 
 RUN chown builder:builder /build
-# COPY daw-deps daw-deps/
-# COPY daw-src daw/
+
 RUN chown builder:builder daw-deps -R
 RUN chown builder:builder daw -R
 
@@ -56,7 +55,7 @@ ENV PATH=$LLVM_MINGW_PATH/bin:/opt/cmake/bin:$STORED_PATH
 ENV CC=$LLVM_MINGW_PATH/bin/x86_64-w64-mingw32-clang
 ENV CXX=$LLVM_MINGW_PATH/bin/x86_64-w64-mingw32-clang++
 
-COPY test.c .
+RUN echo "#include <stdio.h>\nint main() { printf(\"Hello World!\\n\"); return 0; }\n" > test.c
 RUN $CC -o test.exe test.c 
 
 RUN python3 ./daw-deps/build.py ./build-deps/win32 ./install-deps/win32 -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres -release
