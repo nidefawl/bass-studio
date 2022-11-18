@@ -4,6 +4,7 @@
 #include <vector>
 
 void setGlobalLogger(Logger* logger) noexcept;
+volatile bool fatalError = false;
 
 namespace {
 #define LOG_BUFFER_SIZE 4096

@@ -77,7 +77,9 @@ else()
   set(PROJECT_CFG_OPTIMIZE "x86-64-v3" CACHE STRING "std-lib asserts + std::string debugging (OFF/x86-64-v3/native)")
   set_property(CACHE PROJECT_CFG_OPTIMIZE PROPERTY STRINGS "OFF" "x86-64-v3" "native")
 
-  add_link_options(-Wl,--gc-sections)
+  if (NOT APPLE)
+    add_link_options(-Wl,--gc-sections)
+  endif()
 
   if(NOT PROJECT_CFG_FSANITIZE STREQUAL "")
     set(PROJECT_BUILD_WITH_SANITIZER TRUE)

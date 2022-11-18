@@ -302,7 +302,7 @@ void audiocache::Downsample(audiosample_t* sample) {
     int64_t timeDiffDownsample = getTimeMicros() - timeBeginDownsample;
     double timeDiffInSeconds = timeDiffDownsample / 1000000.0;
     if (timeDiffInSeconds > 1.0) {
-        log_lf(Log::L_WARN, "Downsampling %zd samples took %fsec\n", sample->nSamples, timeDiffInSeconds);
+        log_lf(Log::L_WARN, "Downsampling %zu samples took %fsec\n", sample->nSamples, timeDiffInSeconds);
     }
 }
 audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String& workingDir, struct archive* ar, struct archive_entry* entry) {
@@ -385,7 +385,7 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String
         heapBuffer.resize(sizeToRead);
         auto sizeRead = archive_read_data(ar, heapBuffer.data(), heapBuffer.size());
         if (sizeRead != sizeToRead) {
-            log_lf(Log::L_WARN, "Failed to read file %s: read %zd bytes, expected %zd bytes\n", StringAsCStr(path), sizeRead, sizeToRead);
+            log_lf(Log::L_WARN, "Failed to read file %s: read %zd bytes, expected %zu bytes\n", StringAsCStr(path), sizeRead, sizeToRead);
         } else {
             bCanRead = drwav_init_memory(&wav, heapBuffer.data(), heapBuffer.size(), nullptr);
         }
@@ -509,7 +509,7 @@ samplecount_t saveSampleToFile(audiofile_t& file, const String& fOutWave) {
     auto toWrite = sample->nSamples;
     auto samplesWritten = samplecount_t(drwav_write_pcm_frames(&wav, toWrite, blockFull.buf[0]));
     if (samplesWritten != toWrite) {
-        log_lf(Log::L_WARN, "Failed writing %s. Only %zu/%zu samples written\n", StringAsCStr(fOutWave), samplesWritten, toWrite);
+        log_lf(Log::L_WARN, "Failed writing %s. Only %zd/%zd samples written\n", StringAsCStr(fOutWave), samplesWritten, toWrite);
     }
 
     return samplecount_t(samplesWritten);

@@ -2,6 +2,7 @@
 #include "common/test_common.h"
 #include "fileio.h"
 #include "platform.h"
+#include "buildinfo.h"
 #include <vector>
 
 namespace {

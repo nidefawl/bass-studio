@@ -1,4 +1,4 @@
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
 #include <exception>
 #include <vector>
 #include "assert_dbg.h"

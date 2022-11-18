@@ -66,6 +66,16 @@ String getModuleNameLinux() {
 }
 #endif
 
+#ifdef __APPLE__
+
+String getModuleNameApple() {
+    //TODO: Use _dyld_get_image_header()/_dyld_get_image_name()
+    String s;
+    dbgassert(0);
+    return s;
+}
+
+#endif
 
 
 bool isFirstPluginLoad = false;
@@ -266,7 +276,10 @@ void initColor();// gui/gui.cpp
 #ifdef _WIN32
 void onModuleLoad(HINSTANCE hInst) {
     String moduleName = getModuleName(hInst);
-#else
+#elif defined(__APPLE__)
+void onModuleLoad() {
+    String moduleName = getModuleNameApple();
+#elif defined(__linux__)
 void onModuleLoad() {
     String moduleName = getModuleNameLinux();
 #endif

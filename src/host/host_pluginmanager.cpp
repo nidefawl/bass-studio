@@ -584,15 +584,7 @@ LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
 
 #endif
 
-#if defined(__APPLE__)
-
-LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt);
-
-#define CLOSE_MODULE_HANDLE(handle) dlclose(handle)
-
-#endif
-
-#if defined(__linux__)
+#if defined(__linux__) || defined(__APPLE__)
 
 #define CLOSE_MODULE_HANDLE(handle) dlclose(handle)
 

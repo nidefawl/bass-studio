@@ -69,10 +69,10 @@ public:
 };
 template<typename T>
 struct SafeRef {
-    size_t refId = -1;
+    size_t refId = size_t(-1);
     SafeRefHandler<T>* handler = nullptr;// lifetime of handler must exceed refs lifetime
     bool isEmpty() const {
-        return refId == -1;
+        return refId == size_t(-1);
     }
 };
 template<typename T>

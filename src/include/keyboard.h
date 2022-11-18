@@ -47,7 +47,7 @@ inline bool isShiftKey(KeyboardKey key) {
 }
 inline bool isCtrlKey(KeyboardKey key) {
 #if defined(__APPLE__) || defined(DOXYGEN_DOCUMENTATION_BUILD)
-    return key == KEY_LEFT_SUPER || key == KEY_RIGHT_SUPER;
+    return key == KeyboardKey::DAW_KB_LEFT_SUPER || key == KeyboardKey::DAW_KB_RIGHT_SUPER;
 #else
     return key == KeyboardKey::DAW_KB_LEFT_CONTROL || key == KeyboardKey::DAW_KB_RIGHT_CONTROL;
 #endif

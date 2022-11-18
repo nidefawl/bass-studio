@@ -4,6 +4,8 @@ include(CheckCXXCompilerFlag)
 
 set(TC_WARNING_FLAGS "")
 
+set_directory_properties(PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
 add_compile_definitions("PROJECT_UNITTEST")
 
 # Enable high warning levels

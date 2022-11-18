@@ -197,8 +197,11 @@ public:
                 strFileOpenMode = "wb";
                 break;
         }
+#if !defined(__APPLE__)
         m_handle = fopen64(filename.c_str(), strFileOpenMode.c_str());
-
+#else
+        m_handle = fopen(filename.c_str(), strFileOpenMode.c_str());
+#endif
         ThrowLastErrorIf(m_handle == nullptr,
                          "fopen64 call failed on file named " + filename);
     }

@@ -36,7 +36,9 @@ message(STATUS "PROJECT_DEPS_INSTALL_PATH ${PROJECT_DEPS_INSTALL_PATH}")
 # Force linkage against Release if no explicit import target for config is provided
 set(CMAKE_MAP_IMPORTED_CONFIG_MINSIZEREL "MinSizeRel;Release;")
 set(CMAKE_MAP_IMPORTED_CONFIG_RELWITHDEBINFO "RelWithDebInfo;Release;")
-add_subdirectory("${PROJECT_DEPS_PATH}/slowstacktrace" "libstracktrace")
+if (NOT APPLE)
+  add_subdirectory("${PROJECT_DEPS_PATH}/slowstacktrace" "libstracktrace")
+endif()
 find_library(ZLIB_RELEASE PATHS ${PROJECT_DEPS_INSTALL_PATH} NO_DEFAULT_PATH NAMES "libz_release.a" "zlibstatic_release" "z_release" "zlib_release" "zlib_release.dll" PATH_SUFFIXES lib)
 find_library(ZLIB_DEBUG PATHS ${PROJECT_DEPS_INSTALL_PATH} NO_DEFAULT_PATH NAMES "libz_debug.a" "zlibstaticd" "z_debug" "zlibstatic_debug" "zlibd" "zlib_debug.dll" PATH_SUFFIXES lib)
 if (NOT ZLIB_RELEASE AND NOT ZLIB_DEBUG)
@@ -79,6 +81,33 @@ if (APPLE)
   find_library(APPLE_OPENGL_LIBRARY OpenGL REQUIRED)
   find_library(APPLE_COREVIDEO_LIBRARY CoreVideo REQUIRED)
   find_library(APPLE_COREMIDI_LIBRARY CoreMidi REQUIRED)
+  # For setting the filter list, macOS introduced allowedContentTypes in version 11.0 and deprecated allowedFileTypes in 12.0.
+  # By default (set to ON), NFDe will use allowedContentTypes when targeting macOS >= 11.0.
+  # Set this option to OFF to always use allowedFileTypes regardless of the target macOS version.
+  # This is mainly needed for applications that are built on macOS >= 11.0 but should be able to run on lower versions
+  # and should not be used otherwise.
+  option(NFD_USE_ALLOWEDCONTENTTYPES_IF_AVAILABLE "Use allowedContentTypes for filter lists on macOS >= 11.0" ON)
+
+  find_library(APPKIT_LIBRARY AppKit)
+  if(NFD_USE_ALLOWEDCONTENTTYPES_IF_AVAILABLE)
+    include(CheckCXXSourceCompiles)
+    check_cxx_source_compiles(
+      "
+      #include <Availability.h>
+      #if !defined(__MAC_OS_X_VERSION_MIN_REQUIRED) || !defined(__MAC_11_0) || __MAC_OS_X_VERSION_MIN_REQUIRED < __MAC_11_0
+      static_assert(false);
+      #endif
+      int main() { return 0; }
+      "
+      NFD_USE_ALLOWEDCONTENTTYPES
+    )
+    if(NFD_USE_ALLOWEDCONTENTTYPES)
+      find_library(UNIFORMTYPEIDENTIFIERS_LIBRARY UniformTypeIdentifiers)
+      if(NOT UNIFORMTYPEIDENTIFIERS_LIBRARY)
+        message(FATAL_ERROR "UniformTypeIdentifiers framework is not available even though we are targeting macOS >= 11.0")
+      endif()
+    endif()
+  endif()
 endif(APPLE)
 
 FUNCTION(CONFIGURE_TARGET_DEPS TARGETNAME)
@@ -89,6 +118,15 @@ FUNCTION(CONFIGURE_TARGET_DEPS TARGETNAME)
         ${X11_X11_INCLUDE_PATH}
         ${ALSA_INCLUDE_DIR})
   endif(LINUX)
+  if (APPLE)
+    if(NFD_USE_ALLOWEDCONTENTTYPES)
+      target_link_libraries(${TARGETNAME} PRIVATE ${APPKIT_LIBRARY} ${UNIFORMTYPEIDENTIFIERS_LIBRARY})
+      target_compile_definitions(${TARGETNAME} PRIVATE NFD_MACOS_ALLOWEDCONTENTTYPES=1)
+    else()
+      target_link_libraries(${TARGETNAME} PRIVATE ${APPKIT_LIBRARY})
+      target_compile_definitions(${TARGETNAME} PRIVATE NFD_MACOS_ALLOWEDCONTENTTYPES=0)
+    endif()
+  endif()
   
   target_include_directories(${TARGETNAME} PUBLIC ${MAIN_SRC_PATH})
   target_include_directories(${TARGETNAME} PUBLIC ${MAIN_SRC_PATH}/include)

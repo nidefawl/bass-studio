@@ -5,6 +5,7 @@
 #include "platform.h"
 #include "file/projectfile.h"
 #include "str_util.h"
+#include "buildinfo.h"
 #include <vector>
 #include <memory>
 

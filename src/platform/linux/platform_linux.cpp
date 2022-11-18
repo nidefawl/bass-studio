@@ -6,21 +6,23 @@
 #include "msgbox.h"
 #include "str_util.h"
 #include "platform.h"
-#ifdef __linux__
+#include <string.h>
 #include <unistd.h>
 #include <pwd.h>
 #include <sched.h>
-#endif
 #include <wordexp.h>
 
 #ifdef __linux__
-extern volatile bool fatalError;
 
 bool set_thread_priority_realtime() noexcept {
     sched_param params{};
     params.sched_priority = 5;
     return sched_setscheduler(0, SCHED_FIFO, &params) == 0;
 }
+
+#endif
+
+extern volatile bool fatalError;
 
 void SignalHandlerLinux(int signal) {
     if (!fatalError) {
@@ -29,8 +31,6 @@ void SignalHandlerLinux(int signal) {
     }
     abort();
 }
-
-#endif
 
 void timespec_diff(struct timespec* start, struct timespec* stop, struct timespec* result) {
     if ((stop->tv_nsec - start->tv_nsec) < 0) {
@@ -106,7 +106,12 @@ String getKeyName(int scancode) {
 String FormatErrorMessage(uint32_t error, const String& msg) {
     static const int BUFFERLENGTH = 1024;
     std::vector<char> buf(BUFFERLENGTH);
+#if !defined(__APPLE__)
     char* strErrBuf = strerror_r((int)error, buf.data(), BUFFERLENGTH);
+#else
+    char* strErrBuf = buf.data();
+    strerror_r((int)error, strErrBuf, BUFFERLENGTH);
+#endif
     if (strErrBuf) {
         String strErrMsg = String(strErrBuf);
         if (!msg.empty()) {
@@ -116,8 +121,6 @@ String FormatErrorMessage(uint32_t error, const String& msg) {
     }
     return msg;
 }
-
-#ifdef __linux__
 
 namespace App::Platform {
 
@@ -175,7 +178,5 @@ void sanitizePathToFile(String& pathString) {
 }
 
 } // namespace App::Platform
-
-#endif // __linux__
 
 #endif // defined(__linux__) || defined(__APPLE__)
