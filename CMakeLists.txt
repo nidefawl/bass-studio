@@ -21,7 +21,7 @@ option(PROJECT_CFG_USE_OPENGL3 "Use OpenGL 3.x instead of OpenGL 2" ON)
 option(PROJECT_FORCE_LIB "Force building a lib" ON)
 option(PROJECT_GENERATE_LINKER_MAP "Generate <build-dir>/<exe>_linker.map" OFF)
 set(PROJECT_VST2_OUTPUT_PATH "${ABS_WORKING_DIR}" CACHE STRING "VST2 output path")
-set(PROJECT_INSTALLER_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/installer" CACHE STRING "Installer output path")
+set(PROJECT_INSTALLER_OUTPUT_PATH "${CMAKE_BINARY_DIR}/installer" CACHE STRING "Installer output path")
 
 if (PROJECT_BUILD_BENCHMARKS
   OR PROJECT_BUILD_TESTS 
@@ -390,12 +390,11 @@ endif()
 
 if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
   set(PATH_DIST "${CMAKE_BINARY_DIR}/dist")
-  # clean dist/bin directory
-  # file(REMOVE_RECURSE "${PATH_DIST}") #not here
   add_custom_target(dist-strip
     VERBATIM
     DEPENDS ${PROJECT_BINARY_NAME} pluginscanner
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_INSTALLER_OUTPUT_PATH}"
     COMMAND ${CMAKE_OBJCOPY}
       --only-keep-debug "$<TARGET_FILE:${PROJECT_BINARY_NAME}>" "${PATH_DIST}/${PROJECT_BINARY_NAME}.debug"
@@ -471,12 +470,12 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       DEPENDS dist-strip dist-copy-resources
       WORKING_DIRECTORY ${PATH_DIST}
       COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}/lib"
-      COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
-      COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
       COMMAND ${CMAKE_COMMAND} 
         -E copy
         ${LIST_RUNTIMES}
         "${PATH_DIST}/lib/"
+      COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+      COMMAND chrpath -r \$ORIGIN/lib "${PATH_DIST}/pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
       COMMAND tar "--exclude=*.debug" "-czf" "${PROJECT_INSTALLER_OUTPUT}" "--transform" "s%^.%${PROJECT_INSTALLER_NAME_UNIX}%" .
     )
     add_custom_target(dist-installer DEPENDS ${PROJECT_INSTALLER_OUTPUT})
