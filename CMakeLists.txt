@@ -510,7 +510,7 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       VERBATIM
       DEPENDS dist-strip ${LIST_TARGETS_COPY}
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/dist
-      COMMAND tar "--exclude=*.debug" "-cf" "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_INSTALLER_NAME_UNIX}.tar.gz" "--transform" "s%^bin%${PROJECT_INSTALLER_NAME_UNIX}%" bin
+      COMMAND tar "--exclude=*.debug" "-czf" "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_INSTALLER_NAME_UNIX}.tar.gz" "--transform" "s%^bin%${PROJECT_INSTALLER_NAME_UNIX}%" bin
     )
   elseif(WIN32 AND CLANG AND MINGW)
     find_program(NSIS_MAKE NAMES makensis PATH_SUFFIXES NSIS)
