@@ -29,14 +29,26 @@ RUN wget --no-check-certificate -nv https://github.com/ninja-build/ninja/release
 
 ENV STORED_PATH=$PATH
 
-ARG GITHUB_USER="doccker-ci-builder"
+ARG BUILD_TAG=221118-3
+RUN echo "set(OUTPUT_BINARY_SUFFIX \"${BUILD_TAG}\" CACHE STRING \"OUTPUT_BINARY_SUFFIX\" FORCE)\n" > ./CommonConfig.cmake
+RUN echo 'set(PROJECT_PRODUCT_NAME "DAW" CACHE STRING "")\n\
+set(PROJECT_BINARY_NAME "DAW" CACHE STRING "")\n\
+set(DPRODUCT_HOST_NAME "DAW" CACHE STRING "")\n\
+set(PROJECT_VENDOR_NAME "Michael Hept" CACHE STRING "")\n\
+set(PRODUCT_URL_DOCS "https://github.com/nidefawl/daw-project" CACHE STRING "")\n\
+set(PRODUCT_URL_VENDOR "https://github.com/nidefawl/daw-project" CACHE STRING "")\n' >> ./CommonConfig.cmake
+
+RUN cat CommonConfig.cmake
+ARG GITHUB_USER="doccker-builder"
 ARG GITHUB_TOKEN
+
 WORKDIR /build
-# TODO: needs key or token
+
 RUN git config --global user.name $GITHUB_USER && \
     git config --global user.email root@localhost && \
     git config --global init.defaultBranch main && \
     git config --global advice.detachedHead false
+
 RUN git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw-deps.git daw-deps
 RUN git -C daw-deps submodule update --init
 RUN git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw.git daw
@@ -60,13 +72,6 @@ RUN $CC -o test.exe test.c
 
 RUN python3 ./daw-deps/build.py ./build-deps/win32 ./install-deps/win32 -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres -release
 
-RUN echo '\
-set(PROJECT_PRODUCT_NAME "DAW" CACHE STRING "")\n \
-set(PROJECT_BINARY_NAME "DAW" CACHE STRING "")\n \
-set(DPRODUCT_HOST_NAME "DAW" CACHE STRING "")\n \
-set(PROJECT_VENDOR_NAME "Michael Hept" CACHE STRING "")\n \
-set(PRODUCT_URL_DOCS "https://github.com/nidefawl/daw-project" CACHE STRING "")\n \
-set(PRODUCT_URL_VENDOR "https://github.com/nidefawl/daw-project" CACHE STRING "")\n' > ./CommonConfig.cmake
 
 RUN echo "#!/bin/bash\n# DUMP INPUT ARGS\nfor i in \"\$@\"\ndo\n  echo \"\$i\"\ndone\nexit 1" > dump_args.sh
 RUN cmake \
@@ -83,12 +88,11 @@ RUN cmake \
  -DCMAKE_SYSTEM_NAME=Windows \
  -DCMAKE_C_FLAGS=-D_WIN32=1 \
  -DCMAKE_CXX_FLAGS=-D_WIN32=1 \
- -DPROJECT_BUILD_TESTS_UI=ON \
+ -DPROJECT_BUILD_TESTS_UI=OFF \
  -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF \
  -DCMAKE_VERBOSE_MAKEFILE=OFF \
  -DCMAKE_UNITY_BUILD=ON \
- -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF \
- $COMMON_CONFIG
+ -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
 
 RUN cmake --build /build/build/win32 --config RelWithDebInfo --target dist-installer -- -j 8
 
@@ -116,8 +120,7 @@ RUN cmake \
  -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF \
  -DCMAKE_VERBOSE_MAKEFILE=OFF \
  -DCMAKE_UNITY_BUILD=ON \
- -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF \
- $COMMON_CONFIG
+ -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
 
 RUN cmake --build /build/build/linux --config RelWithDebInfo --target dist-installer -- -j 8
 
