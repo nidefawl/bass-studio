@@ -4,26 +4,18 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN mkdir /build
 WORKDIR /build
 
-RUN apt-get update && \
-    apt-get install -y openssh-server
-
-# add user builder
-RUN useradd -ms /bin/bash builder
-# add user builder to sudoers
-RUN echo "builder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
-RUN sed -i 's/PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config
-
-COPY docker_id_rsa.pub /home/builder/.ssh/authorized_keys
-RUN chmod 600 /home/builder/.ssh/authorized_keys
-RUN chown -R builder:builder /home/builder/.ssh
-
 RUN apt-get update -yqq
 RUN apt-get install -qqy --no-install-recommends wget           \
     python3 zip unzip git libbsd0 libbsd-dev libtinfo6 libxml2  \
     libncursesw6 nsis libx11-dev libxrandr-dev libxinerama-dev  \
     libxcursor-dev libxi-dev libasound2-dev libgtk-3-dev        \
     libssl-dev cmake curl gnupg2 e2fslibs-dev libatomic1        \
-    libattr1-dev chrpath bzip2 libstdc++-12-dev
+    libattr1-dev chrpath bzip2 libstdc++-12-dev sudo
+
+# add user builder
+RUN useradd -ms /bin/bash builder
+# add user builder to sudoers
+RUN echo "builder ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
 
 ENV LLVM_LINUX_PATH=/opt/llvm-linux
 ENV LLVM_MINGW_PATH=/opt/llvm-mingw
@@ -130,7 +122,5 @@ RUN cmake \
 
 RUN cmake --build /build/build/linux --config RelWithDebInfo --target dist-installer -- -j 8
 
-USER root
-RUN service ssh start
 USER builder
 ENTRYPOINT ["/bin/bash"]
