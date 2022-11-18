@@ -41,35 +41,28 @@ ARG GITHUB_USER="doccker-builder"
 ARG GITHUB_TOKEN
 
 WORKDIR /build
-
-RUN git config --global user.name $GITHUB_USER && \
-    git config --global user.email root@localhost && \
-    git config --global init.defaultBranch main && \
-    git config --global advice.detachedHead false
-
-RUN git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw-deps.git daw-deps
-RUN git -C daw-deps submodule update --init
-RUN git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw.git daw
-
-
-RUN chown builder:builder /build
-
-RUN chown builder:builder daw-deps -R
-RUN chown builder:builder daw -R
+RUN echo "Start git clone" && \
+git config --global user.name $GITHUB_USER && \
+git config --global user.email root@localhost && \
+git config --global init.defaultBranch main && \
+git config --global advice.detachedHead false && \
+git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw-deps.git daw-deps && \
+git -C daw-deps submodule update --init && \
+git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw.git daw && \
+chown builder:builder /build && \
+chown builder:builder daw-deps -R && \
+chown builder:builder daw -R
 
 # switch to user builder
 USER builder
-RUN mkdir -p bin && mkdir -p installer
-
 ENV PATH=$LLVM_MINGW_PATH/bin:/opt/cmake/bin:$STORED_PATH
 ENV CC=$LLVM_MINGW_PATH/bin/x86_64-w64-mingw32-clang
 ENV CXX=$LLVM_MINGW_PATH/bin/x86_64-w64-mingw32-clang++
 
-RUN echo "#include <stdio.h>\nint main() { printf(\"Hello World!\\\\n\"); return 0; }\n" > test.c
-RUN $CC -o test.exe test.c 
-
-RUN python3 ./daw-deps/build.py ./build-deps/win32 ./install-deps/win32 -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres -release
-
+RUN mkdir -p bin && mkdir -p installer && \
+echo "#include <stdio.h>\nint main() { printf(\"Hello World!\\\\n\"); return 0; }\n" > test.c && \
+$CC -o test.exe test.c && \
+python3 ./daw-deps/build.py ./build-deps/win32 ./install-deps/win32 -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres -release
 
 RUN echo "#!/bin/bash\n# DUMP INPUT ARGS\nfor i in \"\$@\"\ndo\n  echo \"\$i\"\ndone\nexit 1" > dump_args.sh
 RUN cmake \
@@ -99,9 +92,8 @@ ENV CC=$LLVM_LINUX_PATH/bin/clang
 ENV CXX=$LLVM_LINUX_PATH/bin/clang++
 ENV LD_LIBRARY_PATH=$LLVM_LINUX_PATH/lib/x86_64-unknown-linux-gnu
 
-RUN $CC -o test.elf test.c 
-
-RUN python3 ./daw-deps/build.py ./build-deps/linux ./install-deps/linux -release
+RUN $CC -o test.elf test.c && \
+python3 ./daw-deps/build.py ./build-deps/linux ./install-deps/linux -release
 
 RUN cmake \
  -C CommonConfig.cmake \
