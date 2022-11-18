@@ -753,17 +753,20 @@ void PluginManager::scanPlugins() {
             mgrImpl->threadPluginScannerProcess = std::make_unique<ProcessThread>();
             
             auto scannerNames = {
-                "daw-pluginscanner.exe", 
-                "pluginscanner-Clang-debug.exe",
-                "pluginscanner-MSVC-debug.exe"
+                "daw-pluginscanner", 
+                "pluginscanner-Clang-debug",
+                "pluginscanner-MSVC-debug"
             };
-            String filename = "daw-pluginscanner.exe";
+            String filename = "daw-pluginscanner";
             for (auto* name : scannerNames) {
                 if (FileExists(name)){
                     filename = name;
                     break;
                 }
             }
+#ifdef _WIN32
+            filename += ".exe";
+#endif //_WIN32
             mgrImpl->threadPluginScannerProcess->startProcess(filename, "-server -auto", "");
             seqthreads::threadSleep(200);
             if (!mgrImpl->threadPluginScannerProcess->isRunning()) {
