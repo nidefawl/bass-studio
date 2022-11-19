@@ -11,6 +11,7 @@
 #include <pwd.h>
 #include <sched.h>
 #include <wordexp.h>
+#include <unistd.h>
 
 #ifdef __linux__
 
@@ -176,6 +177,29 @@ void shellExpandPath(String& pathString) {
 void sanitizePathToFile(String& pathString) {
     replaceString(pathString, "\\", FILE_PATHSEP_STR);
 }
+
+#ifdef __APPLE__
+String GetExecutablePath() {
+    String ret = "plugin_scan";
+    char path[1024];
+    uint32_t size = sizeof(path);
+    if (_NSGetExecutablePath(path, &size) == 0) {
+        ret = path;
+    }
+    return ret;
+}
+#else 
+String GetExecutablePath() {
+    String exeName = "<null>";
+    char buff[4096];
+    ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff) - 1);
+    if (len != -1) {
+        buff[len] = '\0';
+        exeName   = buff;
+    }
+    return exeName;
+}
+#endif
 
 } // namespace App::Platform
 
