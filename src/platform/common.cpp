@@ -6,9 +6,6 @@
 #include "platform.h"
 #include "str_util.h"
 #include <stb/stb_image.h>
-#ifdef __APPLE__
-#include <mach-o/dyld.h>
-#endif
 
 namespace App::Platform {
 

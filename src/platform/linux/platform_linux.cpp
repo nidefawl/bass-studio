@@ -12,6 +12,9 @@
 #include <sched.h>
 #include <wordexp.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
 
 #ifdef __linux__
 
