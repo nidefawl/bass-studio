@@ -473,7 +473,11 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     endif()
     set(PROJECT_MACOS_BUNDLE_ID "${PROJECT_BINARY_NAME}")
     set(PROJECT_MACOS_BUNDLE_EXECUTABLE "${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}")
-    set(PROJECT_MACOS_BUNDLE_ICON_FILE "DAW.icns")
+    set(ICON_FILE "${PROJECT_SOURCE_DIR}/res/${PROJECT_BINARY_NAME}.icns")
+    if (NOT EXISTS "${ICON_FILE}")
+      set(ICON_FILE "${PROJECT_SOURCE_DIR}/res/DAW.icns")
+    endif()
+    set(PROJECT_MACOS_BUNDLE_ICON_FILE "${PROJECT_BINARY_NAME}.icns")
     configure_file(
       "${MAIN_SRC_PATH}/Info.plist.in"
       "${PATH_DIST}/Info.plist"
@@ -486,16 +490,13 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       VERBATIM
       DEPENDS dist-strip dist-copy-resources
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-      COMMAND ${CMAKE_COMMAND} 
-        -E copy
-        "${PROJECT_SOURCE_DIR}/res/DAW.icns"
-        "${PATH_DIST}/Resources/DAW.icns"
       COMMAND rm -Rf ${CMAKE_BINARY_DIR}/pack 
       COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/pack"
       COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_PACK_MACOS}/Contents"
       COMMAND ${CMAKE_COMMAND} -E copy "${PATH_DIST}/Info.plist" "${PATH_PACK_MACOS}/Contents"
       COMMAND ${CMAKE_COMMAND} -E copy_directory "${PATH_DIST}/MacOS" "${PATH_PACK_MACOS}/Contents/MacOS"
       COMMAND ${CMAKE_COMMAND} -E copy_directory "${PATH_DIST}/Resources" "${PATH_PACK_MACOS}/Contents/Resources"
+      COMMAND ${CMAKE_COMMAND} -E copy "${ICON_FILE}" "${PATH_PACK_MACOS}/Contents/Resources/${PROJECT_BINARY_NAME}.icns"
       COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_PACK_MACOS}/Contents/Frameworks"
       COMMAND ${CMAKE_COMMAND} -E copy ${LIST_RUNTIMES} "${PATH_PACK_MACOS}/Contents/Frameworks"
     )
