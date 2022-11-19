@@ -52,7 +52,6 @@ git config --global advice.detachedHead false && \
 git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw-deps.git daw-deps && \
 git -C daw-deps submodule update --init && \
 git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw.git daw && \
-COPY host directory ./daw to ./daw (symbolic link on host)
 
 RUN chown builder:builder /build && \
 chown builder:builder daw-deps -R && \
