@@ -1,6 +1,7 @@
 ---
 Checks: >
     *,
+    -cppcoreguidelines-avoid-const-or-ref-data-members,
     -cppcoreguidelines-avoid-non-const-global-variables,
     -cppcoreguidelines-non-private-member-variables-in-classes,
     -cppcoreguidelines-avoid-magic-numbers,
