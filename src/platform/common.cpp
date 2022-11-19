@@ -10,6 +10,9 @@
 #include <mach-o/dyld.h>
 #endif
 
+#if defined(__linux__) || defined(__APPLE__)
+#include <unistd.h>
+#endif
 
 namespace App::Platform {
 
