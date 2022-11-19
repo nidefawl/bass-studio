@@ -10,7 +10,7 @@ RUN apt-get install -qqy --no-install-recommends wget sudo curl \
     libncursesw6 nsis libx11-dev libxrandr-dev libxinerama-dev  \
     libxcursor-dev libxi-dev libasound2-dev libgtk-3-dev bzip2  \
     libssl-dev gnupg2 e2fslibs-dev libatomic1 ca-certificates   \
-    libattr1-dev chrpath libstdc++-12-dev  
+    libattr1-dev chrpath libstdc++-12-dev nano vim
 
 # add user builder
 RUN useradd -ms /bin/bash builder
@@ -41,17 +41,17 @@ ARG GITHUB_USER="doccker-builder"
 ARG GITHUB_TOKEN
 
 WORKDIR /build
-# COPY daw /build/daw/
-# COPY daw-deps /build/daw-deps/
+COPY daw /build/daw/
+COPY daw-deps /build/daw-deps/
 
-RUN echo "Start git clone" && \
-git config --global user.name $GITHUB_USER && \
-git config --global user.email root@localhost && \
-git config --global init.defaultBranch main && \
-git config --global advice.detachedHead false && \
-git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw-deps.git daw-deps && \
-git -C daw-deps submodule update --init && \
-git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw.git daw && \
+# RUN echo "Start git clone" && \
+# git config --global user.name $GITHUB_USER && \
+# git config --global user.email root@localhost && \
+# git config --global init.defaultBranch main && \
+# git config --global advice.detachedHead false && \
+# git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw-deps.git daw-deps && \
+# git -C daw-deps submodule update --init && \
+# git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw.git daw && \
 
 RUN chown builder:builder /build && \
 chown builder:builder daw-deps -R && \
