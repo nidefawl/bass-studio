@@ -41,6 +41,9 @@ ARG GITHUB_USER="doccker-builder"
 ARG GITHUB_TOKEN
 
 WORKDIR /build
+# COPY daw /build/daw/
+# COPY daw-deps /build/daw-deps/
+
 RUN echo "Start git clone" && \
 git config --global user.name $GITHUB_USER && \
 git config --global user.email root@localhost && \
@@ -49,7 +52,9 @@ git config --global advice.detachedHead false && \
 git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw-deps.git daw-deps && \
 git -C daw-deps submodule update --init && \
 git clone --depth=1 --branch=master --single-branch https://${GITHUB_USER}:${GITHUB_TOKEN}@github.com/nidefawl/daw.git daw && \
-chown builder:builder /build && \
+COPY host directory ./daw to ./daw (symbolic link on host)
+
+RUN chown builder:builder /build && \
 chown builder:builder daw-deps -R && \
 chown builder:builder daw -R
 
