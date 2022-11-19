@@ -102,7 +102,12 @@ int64_t getTimeMicros() {
     auto freqOver1M = time.freq / 1'000'000LL;
     return time.count / freqOver1M;
 }
-
+String GetExecutablePath() {
+    TCHAR szFileName[MAX_PATH + 1];
+    GetModuleFileName(nullptr, szFileName, MAX_PATH + 1);
+    String exeName = szFileName;
+    return exeName;
+}
 String getModuleName(HMODULE module) {
     std::vector<TCHAR> pathBuf;
     DWORD copied;

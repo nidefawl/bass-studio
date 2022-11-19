@@ -2,9 +2,14 @@
 #include "exceptions.h"
 #include <cstdlib>
 #include <cstdio>
+#include "logging.h"
 #include "platform.h"
 #include "str_util.h"
 #include <stb/stb_image.h>
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
 
 namespace App::Platform {
 
@@ -25,6 +30,14 @@ String toUserdataPath(const String& relPath) {
     return path;
 }
 
+String GetResourcePath() {
+    return App::Platform::pathResources;
+}
+
+String GetUserdataPath() {
+    return App::Platform::pathUserdata;
+}
+
 void setResourcePath(String cwd) {
     sanitizePathToDirectory(cwd);
     App::Platform::pathResources = cwd;
@@ -35,12 +48,61 @@ void setUserdataPath(String cwd) {
     pathUserdata = cwd;
 }
 
+#ifdef __APPLE__
+String GetExecutablePath() {
+    String ret = "plugin_scan";
+    char path[1024];
+    uint32_t size = sizeof(path);
+    if (_NSGetExecutablePath(path, &size) == 0) {
+        ret = path;
+    }
+    return ret;
+}
+#else 
+String GetExecutablePath() {
+    String exeName = "<null>";
+    char buff[4096];
+    ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff) - 1);
+    if (len != -1) {
+        buff[len] = '\0';
+        exeName   = buff;
+    }
+    return exeName;
+}
+#endif
+
 void initPlatformEnvironment(const String& appname, const String& optionalCwd) {
     String cwdPath = !optionalCwd.empty() ? optionalCwd : getCurrentWorkingDirectory();
+#ifdef __APPLE__
+    String resourcePath = cwdPath + "/res";
+    if (cwdPath.empty() || cwdPath == "/") {
+        cwdPath = GetExecutablePath();
+        auto p = cwdPath.find_last_of('/');
+        if (p != String::npos) {
+            cwdPath = cwdPath.substr(0, p);
+        }
+        resourcePath = cwdPath + "/../Resources/res";
+    }
+    if (!FileExists(resourcePath)) {
+        log_lf(Log::L_DEBUG, "resource path not found: %s", resourcePath.c_str());
+        resourcePath = cwdPath + "/res";
+    }
+    if (!FileExists(resourcePath)) {
+        log_lf(Log::L_DEBUG, "resource path not found: %s", resourcePath.c_str());
+        resourcePath = cwdPath + "/../Resources/res";
+    }
+    if (!FileExists(resourcePath)) {
+        log_lf(Log::L_DEBUG, "resource path not found: %s", resourcePath.c_str());
+        resourcePath = cwdPath + "/../res";
+    }
+    log_lf(Log::L_DEBUG, "Keeping resource path: %s", resourcePath.c_str());
+
+#else
     String resourcePath = cwdPath + FILE_PATHSEP_STR + "res";
     if (!FileExists(resourcePath)) {
         resourcePath = cwdPath + FILE_PATHSEP_STR + ".." + FILE_PATHSEP_STR + "res";
     }
+#endif
     setResourcePath(resourcePath);
 
     String userDataPath = appname;

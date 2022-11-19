@@ -45,20 +45,6 @@
 #include <unistd.h>
 #include <climits>
 #endif
-#ifdef __APPLE__
-#include <mach-o/dyld.h>
-namespace PluginScannerImplementation {
-inline String APPLE_getExecutablePath() {
-    String ret = "plugin_scan";
-    char path[1024];
-    uint32_t size = sizeof(path);
-    if (_NSGetExecutablePath(path, &size) == 0) {
-        ret = path;
-    }
-    return ret;
-}
-} // namespace PluginScannerImplementation
-#endif
 
 void createTables(SQLite::Database& db);
 
@@ -568,23 +554,7 @@ static int runScannerServer(const pluginscanner_server_options& options) {
         }
         auto& allFiles = filesClap;
         allFiles.insert(allFiles.end(), filesVst_.begin(), filesVst_.end());
-#ifdef _WIN32
-        TCHAR szFileName[MAX_PATH + 1];
-        GetModuleFileName(nullptr, szFileName, MAX_PATH + 1);
-        String exeName = szFileName;
-#endif
-#ifdef __APPLE__
-        String exeName = APPLE_getExecutablePath();
-#endif
-#ifdef __linux__
-        String exeName = "plugin_scan";
-        char buff[4096];
-        ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff) - 1);
-        if (len != -1) {
-            buff[len] = '\0';
-            exeName   = buff;
-        }
-#endif
+        String exeName = App::Platform::GetExecutablePath();
 
         ipc_server server;
         int ipc_status = server.server_open(SCAN_IPC_PIPE_NAME);

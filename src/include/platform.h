@@ -37,11 +37,14 @@ void getStackTrace(std::vector<String>& vec);
 
 namespace App::Platform {
 bool determineUserdataPath(String& path);
+String GetExecutablePath();
 String getCurrentWorkingDirectory();
 
 String toResourcePath(const String& relPath);
 String toUserdataPath(const String& relPath);
 void setResourcePath(String cwd);
+String GetResourcePath();
+String GetUserdataPath();
 void setUserdataPath(String pathHomeOrAppData);
 void initPlatformEnvironment(const String& appname, const String& optionalCwd = "");
 /**

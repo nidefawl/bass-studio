@@ -3,7 +3,7 @@ list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 set(PROJECT_NAME "DAW" CACHE STRING "Project name")
 set(PRODUCT_NAME "DAW" CACHE STRING "Product name")
 set(CMAKE_USER_MAKE_RULES_OVERRIDE FixCMakeInitFlags)
-project(${PROJECT_NAME} LANGUAGES C CXX VERSION 0.5.11)
+project(${PROJECT_NAME} LANGUAGES C CXX OBJC OBJCXX VERSION 0.5.11)
 include(GetGitRevision)
 include(CompilerConfig)
 include(BuildConfig)
@@ -395,8 +395,20 @@ endif()
 
 if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
   set(PATH_DIST "${CMAKE_BINARY_DIR}/dist")
+  set(PATH_RES "${PATH_DIST}/res")
+  if (APPLE)
+    set(PATH_RES "${PATH_DIST}/Resources/res")
+  endif()
+  set(PATH_BIN "${PATH_DIST}")
+  if (APPLE)
+    set(PATH_BIN "${PATH_DIST}/MacOS")
+  endif()
+  set(PATH_BINARY_MAIN_STRIPPED "${PATH_BIN}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}")
+  set(PATH_BINARY_SCANNER_STRIPPED "${PATH_BIN}/daw-pluginscanner${CMAKE_EXECUTABLE_SUFFIX}")
   add_custom_target(dist-strip
+    ALL
     VERBATIM
+    BYPRODUCTS ${PATH_BINARY_MAIN_STRIPPED} ${PATH_BINARY_SCANNER_STRIPPED}
     DEPENDS ${PROJECT_BINARY_NAME} pluginscanner
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}"
@@ -404,17 +416,96 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
     COMMAND ${CMAKE_OBJCOPY}
       --only-keep-debug "$<TARGET_FILE:${PROJECT_BINARY_NAME}>" "${PATH_DIST}/${PROJECT_BINARY_NAME}.debug"
     COMMAND ${CMAKE_OBJCOPY}
-      --strip-all "$<TARGET_FILE:${PROJECT_BINARY_NAME}>" "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+      --strip-all "$<TARGET_FILE:${PROJECT_BINARY_NAME}>" "${PATH_BINARY_MAIN_STRIPPED}"
     COMMAND ${CMAKE_OBJCOPY}
-      "--add-gnu-debuglink=${PATH_DIST}/${PROJECT_BINARY_NAME}.debug" "${PATH_DIST}/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+      "--add-gnu-debuglink=${PATH_DIST}/${PROJECT_BINARY_NAME}.debug" "${PATH_BINARY_MAIN_STRIPPED}"
     COMMAND ${CMAKE_OBJCOPY}
       --only-keep-debug "$<TARGET_FILE:pluginscanner>" "${PATH_DIST}/daw-pluginscanner.debug"
     COMMAND ${CMAKE_OBJCOPY}
-      --strip-all "$<TARGET_FILE:pluginscanner>" "${PATH_DIST}/daw-pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+      --strip-all "$<TARGET_FILE:pluginscanner>" "${PATH_BINARY_SCANNER_STRIPPED}"
     COMMAND ${CMAKE_OBJCOPY}
-      "--add-gnu-debuglink=${PATH_DIST}/daw-pluginscanner.debug" "${PATH_DIST}/daw-pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
+      "--add-gnu-debuglink=${PATH_DIST}/daw-pluginscanner.debug" "${PATH_BINARY_SCANNER_STRIPPED}"
   )
-  if (LINUX AND CLANG)
+  # copy the following list
+  # res/fonts -> dist/res/fonts
+  # res/icons -> dist/res/icons
+  # res/cursors -> dist/res/cursors
+  # res/*.png -> dist/res/
+  add_custom_target(dist-copy-resources
+    ALL
+    VERBATIM
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_RES}"
+    COMMAND ${CMAKE_COMMAND} 
+      -E copy_directory
+      "${PROJECT_SOURCE_DIR}/res/fonts"
+      "${PATH_RES}/fonts"
+    COMMAND ${CMAKE_COMMAND} 
+      -E copy_directory
+      "${PROJECT_SOURCE_DIR}/res/icons"
+      "${PATH_RES}/icons"
+    COMMAND ${CMAKE_COMMAND} 
+      -E copy_directory
+      "${PROJECT_SOURCE_DIR}/res/cursors"
+      "${PATH_RES}/cursors"
+    COMMAND ${CMAKE_COMMAND} 
+      -E copy
+      "${PROJECT_SOURCE_DIR}/res/led.png"
+      "${PATH_RES}"
+    COMMAND ${CMAKE_COMMAND} 
+      -E copy
+      "${PROJECT_SOURCE_DIR}/res/led_off.png"
+      "${PATH_RES}"
+    COMMAND ${CMAKE_COMMAND} 
+      -E copy
+      "${PROJECT_SOURCE_DIR}/res/led_glow.png"
+      "${PATH_RES}"
+  )
+  if (APPLE AND CLANG)
+    set(PROJECT_INSTALLER_NAME_APPLE "${PROJECT_BINARY_NAME}-v${PRODUCT_VERSION}-macos-x86_64")
+    set(LIST_RUNTIMES "")
+    if(EXISTS "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.0.dylib")
+      list(APPEND LIST_RUNTIMES "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.0.dylib")
+    endif()
+    set(PROJECT_MACOS_BUNDLE_ID "${PROJECT_BINARY_NAME}")
+    set(PROJECT_MACOS_BUNDLE_EXECUTABLE "${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}")
+    set(PROJECT_MACOS_BUNDLE_ICON_FILE "DAW.icns")
+    configure_file(
+      "${MAIN_SRC_PATH}/Info.plist.in"
+      "${PATH_DIST}/Info.plist"
+      NEWLINE_STYLE LF
+    )
+    set(PROJECT_INSTALLER_ARCHIVE "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_INSTALLER_NAME_APPLE}.zip")
+    message(STATUS "LIST_RUNTIMES: ${LIST_RUNTIMES}")
+    set(PATH_PACK_MACOS "${CMAKE_BINARY_DIR}/pack/${PROJECT_INSTALLER_NAME_APPLE}.app")
+    add_custom_target(dist-create-macos-bundle
+      VERBATIM
+      DEPENDS dist-strip dist-copy-resources
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+      COMMAND ${CMAKE_COMMAND} 
+        -E copy
+        "${PROJECT_SOURCE_DIR}/res/DAW.icns"
+        "${PATH_DIST}/Resources/DAW.icns"
+      COMMAND rm -Rf ${CMAKE_BINARY_DIR}/pack 
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/pack"
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_PACK_MACOS}/Contents"
+      COMMAND ${CMAKE_COMMAND} -E copy "${PATH_DIST}/Info.plist" "${PATH_PACK_MACOS}/Contents"
+      COMMAND ${CMAKE_COMMAND} -E copy_directory "${PATH_DIST}/MacOS" "${PATH_PACK_MACOS}/Contents/MacOS"
+      COMMAND ${CMAKE_COMMAND} -E copy_directory "${PATH_DIST}/Resources" "${PATH_PACK_MACOS}/Contents/Resources"
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_PACK_MACOS}/Contents/Frameworks"
+      COMMAND ${CMAKE_COMMAND} -E copy ${LIST_RUNTIMES} "${PATH_PACK_MACOS}/Contents/Frameworks"
+    )
+    add_custom_target(dist-compress-macos-bundle
+      BYPRODUCTS ${PROJECT_INSTALLER_ARCHIVE}
+      VERBATIM
+      DEPENDS dist-create-macos-bundle
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pack
+      COMMAND zip -rq9 ${PROJECT_INSTALLER_ARCHIVE} .
+      # COMMAND ${CMAKE_COMMAND} -E copy_directory . "${PROJECT_INSTALLER_OUTPUT_PATH}"
+
+    )
+    add_custom_target(dist-installer DEPENDS dist-compress-macos-bundle)
+  elseif (LINUX AND CLANG)
     set(PROJECT_INSTALLER_NAME_UNIX "${PROJECT_BINARY_NAME}-v${PRODUCT_VERSION}-linux-x86_64")
     execute_process(COMMAND ${CMAKE_CXX_COMPILER} ARGS -print-file-name=libc++.a OUTPUT_VARIABLE PATH_RUNTIMES)
     get_filename_component(PATH_RUNTIMES "${PATH_RUNTIMES}" PATH)
@@ -433,41 +524,6 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       list(APPEND LIST_RUNTIMES "${PATH_RUNTIMES}/libc++.so.1")
     endif()
 
-    # copy the following list
-    # res/fonts -> dist/res/fonts
-    # res/icons -> dist/res/icons
-    # res/cursors -> dist/res/cursors
-    # res/*.png -> dist/res/
-
-    add_custom_target(dist-copy-resources
-      VERBATIM
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-      COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}/res"
-      COMMAND ${CMAKE_COMMAND} 
-        -E copy_directory
-        "${PROJECT_SOURCE_DIR}/res/fonts"
-        "${PATH_DIST}/res/fonts"
-      COMMAND ${CMAKE_COMMAND} 
-        -E copy_directory
-        "${PROJECT_SOURCE_DIR}/res/icons"
-        "${PATH_DIST}/res/icons"
-      COMMAND ${CMAKE_COMMAND} 
-        -E copy_directory
-        "${PROJECT_SOURCE_DIR}/res/cursors"
-        "${PATH_DIST}/res/cursors"
-      COMMAND ${CMAKE_COMMAND} 
-        -E copy
-        "${PROJECT_SOURCE_DIR}/res/led.png"
-        "${PATH_DIST}/res/"
-      COMMAND ${CMAKE_COMMAND} 
-        -E copy
-        "${PROJECT_SOURCE_DIR}/res/led_off.png"
-        "${PATH_DIST}/res/"
-      COMMAND ${CMAKE_COMMAND} 
-        -E copy
-        "${PROJECT_SOURCE_DIR}/res/led_glow.png"
-        "${PATH_DIST}/res/"
-    )
     set(PROJECT_INSTALLER_OUTPUT "${PROJECT_INSTALLER_OUTPUT_PATH}/${PROJECT_INSTALLER_NAME_UNIX}.tar.gz")
     add_custom_command(
       OUTPUT ${PROJECT_INSTALLER_OUTPUT}

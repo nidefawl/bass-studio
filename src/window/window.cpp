@@ -1845,10 +1845,17 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         getGlobalLogger()->setLevel(logLevel);
 
         if (logLevel <= Log::L_DEBUG) {
+            
             char* pPath = getenv("PATH");
             if (pPath != nullptr) {
                 log_out("PATH: %s\n", pPath);
             }
+            String cwd = App::Platform::getCurrentWorkingDirectory();
+            String pathResources = App::Platform::GetResourcePath();
+            String pathUserdata = App::Platform::GetUserdataPath();
+            log_out("CWD: %s\n", StringAsCStr(cwd));
+            log_out("Resource path: %s\n", StringAsCStr(pathResources));
+            log_out("Userdata path: %s\n", StringAsCStr(pathUserdata));
 
             log_out("BUILD_BINARY_NAME %s\n", BuildInfo::BUILD_BINARY_NAME);
             log_out("COMPILER_ID %s\n", BuildInfo::COMPILER_ID);
