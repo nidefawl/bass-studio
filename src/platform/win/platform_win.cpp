@@ -102,12 +102,7 @@ int64_t getTimeMicros() {
     auto freqOver1M = time.freq / 1'000'000LL;
     return time.count / freqOver1M;
 }
-String GetExecutablePath() {
-    TCHAR szFileName[MAX_PATH + 1];
-    GetModuleFileName(nullptr, szFileName, MAX_PATH + 1);
-    String exeName = szFileName;
-    return exeName;
-}
+
 String getModuleName(HMODULE module) {
     std::vector<TCHAR> pathBuf;
     DWORD copied;
@@ -288,6 +283,14 @@ String FormatErrorMessage(uint32_t error, const String& msg) {
 }
 
 namespace App::Platform {
+
+    String GetExecutablePath() {
+        TCHAR szFileName[MAX_PATH + 1];
+        GetModuleFileName(nullptr, szFileName, MAX_PATH + 1);
+        String exeName = szFileName;
+        return exeName;
+    }
+
     String getCurrentWorkingDirectory() {
         std::vector<TCHAR> pathBuf;
         DWORD copied;
@@ -299,7 +302,6 @@ namespace App::Platform {
         String path(pathBuf.begin(), pathBuf.end());
         return path;
     }
-
 
     bool determineUserdataPath(String& path) {
         wchar_t *wPath = nullptr;
@@ -332,6 +334,7 @@ namespace App::Platform {
     
     void shellExpandPath(String& pathString) {
     }
+
 } // namespace App::Platform
 
 #endif
