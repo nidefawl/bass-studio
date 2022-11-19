@@ -131,7 +131,7 @@ namespace PluginSampleDelay {
         dbgassert(param);
         if (param->idx == PARAM_DELAY) {
             auto delaySamples = convertToSamples(value);
-            return {StringFormat("%lld", delaySamples), param->unit};
+            return {StringFormat("%zd", delaySamples), param->unit};
         }
         return internalplugin::convertParamValueToDisplay(idx, value);
     }
