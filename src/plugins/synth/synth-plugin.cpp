@@ -2099,7 +2099,7 @@ class SynthImpl final : public PluginLockable, public SynthState {
             bool bAllEqual = std::memcmp(voice.envelopeValuesCached.data(), envParamVals, sizeofarr) == 0;
             if (!bAllEqual) {
                 std::memcpy(voice.envelopeValuesCached.data(), envParamVals, sizeof(envParamVals));
-                using Vec4D      = glm::vec<4, FPType, glm::packed_highp>;
+                using Vec4D      = glm::vec<4, FPType, glm::aligned_highp>;
                 auto sse8Float   = reinterpret_cast<__m256*>(&envParamVals[0]);
                 *sse8Float       = math::simd::log_v8f(*sse8Float);
                 auto pIn         = &envParamVals[0];
