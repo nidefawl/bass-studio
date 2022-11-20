@@ -69,7 +69,7 @@ jobs:
       with:
         path: |
           ${{ env.LLVM_MACOS_PATH }}
-          ${{ env.BUILD_DIR }}/cmake/bin
+          ${{ env.BUILD_DIR }}/cmake
           ${{ env.BUILD_DIR }}/install-deps
         key: ${{ env.cachekey }}
 
@@ -212,7 +212,7 @@ jobs:
         path: |
           ${{ env.LLVM_LINUX_PATH }}
           ${{ env.LLVM_MINGW_PATH }}
-          ${{ env.BUILD_DIR }}/cmake/bin
+          ${{ env.BUILD_DIR }}/cmake
           ${{ env.BUILD_DIR }}/install-deps
         key: ${{ env.cachekey }}
 
