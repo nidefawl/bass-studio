@@ -76,7 +76,6 @@ jobs:
     - name: Download ninja, cmake and clang mingw toolchain
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: |
-        echo "Downloading powerfull tools"
         wget --no-check-certificate -nv https://github.com/nidefawl/llvm-project/releases/download/v15.0.0-2-macos/clang+llvm-15.0.3-x86_64-apple-darwin-minimal.tar.gz
         tar -xzf clang*.tar.gz && rm *.tar.gz
         sudo rm -Rf ${{ env.LLVM_MACOS_PATH }}
@@ -228,9 +227,6 @@ jobs:
         tar -xjf llvm-mingw-*.bz2 && rm *.bz2
         sudo rm -Rf ${{ env.LLVM_MINGW_PATH }}
         sudo mv llvm-mingw-* ${{ env.LLVM_MINGW_PATH }}
-        echo "LLVM MinGW Path: ${{ env.LLVM_MINGW_PATH }}"
-        ls -la ${{ env.LLVM_MINGW_PATH }}
-        ls -la ${{ env.LLVM_MINGW_PATH }}/bin
         wget --no-check-certificate -nv https://github.com/Kitware/CMake/releases/download/v3.25.0-rc4/cmake-3.25.0-rc4-linux-$(uname -m).tar.gz
         tar -zxf cmake-*.tar.gz && rm *.tar.gz
         sudo rm -Rf ${{ env.BUILD_DIR }}/cmake
