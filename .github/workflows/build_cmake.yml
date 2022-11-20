@@ -145,7 +145,7 @@ jobs:
         path: |
           ${{ env.BUILD_DIR }}/installer/revision.txt
           ${{ env.BUILD_DIR }}/installer/macos
-          ${{ env.BUILD_DIR }}/macos/compile_commands.json
+          ${{ env.BUILD_DIR }}/build/macos/compile_commands.json
         if-no-files-found: warn
 
   build-windows-and-linux:
