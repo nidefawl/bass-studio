@@ -88,7 +88,7 @@ jobs:
     - name: Build macos dependencies
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: |
-        PATH=${{ env.LLVM_MACOS_PATH }}/bin:$PATH CC=${{ env.CC_MACOS }} CXX=${{ env.CXX_MACOS }} python3 ${{ github.workspace }}/daw-deps/build.py ./build-deps/macos ./install-deps/macos -${{ env.BUILD_TYPE_DEPS }}
+        PATH=${{ env.LLVM_MACOS_PATH }}/bin:$PATH CC=${{ env.CC_MACOS }} CXX=${{ env.CXX_MACOS }} python3 ${{ github.workspace }}/daw-deps/build.py ./build-deps/macos ./install-deps/macos -DCMAKE_OSX_DEPLOYMENT_TARGET=11.5 -${{ env.BUILD_TYPE_DEPS }}
 
     - name: Configure macos
       run: >
