@@ -499,6 +499,20 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       COMMAND ${CMAKE_COMMAND} -E copy "${ICON_FILE}" "${PATH_PACK_MACOS}/Contents/Resources/${PROJECT_BINARY_NAME}.icns"
       COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_PACK_MACOS}/Contents/Frameworks"
       COMMAND ${CMAKE_COMMAND} -E copy ${LIST_RUNTIMES} "${PATH_PACK_MACOS}/Contents/Frameworks"
+      COMMAND install_name_tool
+        -id
+        "@executable_path/../Frameworks/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.0.dylib"
+        "${PATH_PACK_MACOS}/Contents/Frameworks/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.0.dylib"
+      COMMAND install_name_tool
+        -change 
+        "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.0.dylib"
+        "@executable_path/../Frameworks/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.0.dylib"
+        "${PATH_PACK_MACOS}/Contents/MacOS/${PROJECT_BINARY_NAME}${CMAKE_EXECUTABLE_SUFFIX}"
+      COMMAND install_name_tool
+        -change 
+        "${PROJECT_DEPS_INSTALL_PATH}/lib/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.0.dylib"
+        "@executable_path/../Frameworks/${CMAKE_SHARED_LIBRARY_PREFIX}${SOXR_DYNLIB_NAME}.0.dylib"
+        "${PATH_PACK_MACOS}/Contents/MacOS/daw-pluginscanner${CMAKE_EXECUTABLE_SUFFIX}"
     )
     add_custom_target(dist-compress-macos-bundle
       BYPRODUCTS ${PROJECT_INSTALLER_ARCHIVE}
@@ -507,7 +521,6 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/pack
       COMMAND zip -rq9 ${PROJECT_INSTALLER_ARCHIVE} .
       # COMMAND ${CMAKE_COMMAND} -E copy_directory . "${PROJECT_INSTALLER_OUTPUT_PATH}"
-
     )
     add_custom_target(dist-installer DEPENDS dist-compress-macos-bundle)
   elseif (LINUX AND CLANG)
