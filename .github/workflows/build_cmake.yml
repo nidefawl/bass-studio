@@ -5,47 +5,39 @@ on: [push]
 env:
   BUILD_TYPE: RelWithDebInfo
   BUILD_TYPE_DEPS: release
-  CC_MINGW: x86_64-w64-mingw32-gcc
-  CXX_MINGW: x86_64-w64-mingw32-g++
-  CC_LINUX: clang
-  CXX_LINUX: clang++
-  LLVM_LINUX_PATH: /opt/llvm-linux
-  LLVM_MINGW_PATH: /opt/llvm-mingw
+  LLVM_MACOS_PATH: ${{ github.workspace }}/llvm-macos
+  LLVM_LINUX_PATH: ${{ github.workspace }}/llvm-linux
+  LLVM_MINGW_PATH: ${{ github.workspace }}/llvm-mingw
+  CC_MINGW: ${{ github.workspace }}/llvm-mingw/bin/x86_64-w64-mingw32-gcc
+  CXX_MINGW: ${{ github.workspace }}/llvm-mingw/bin/x86_64-w64-mingw32-g++
+  CC_LINUX: ${{ github.workspace }}/llvm-linux/bin/clang
+  CXX_LINUX: ${{ github.workspace }}/llvm-linux/bin/clang++
+  CC_MACOS: ${{ github.workspace }}/llvm-macos/bin/clang
+  CXX_MACOS: ${{ github.workspace }}/llvm-macos/bin/clang++
+  BUILD_DIR: ${{ github.workspace }}
 
 jobs:
-  build-project:
-    name: "Build linux + win32"
-    runs-on: ubuntu-22.04
+  build-macos:
+    name: "Build MacOS"
+    runs-on: macos-latest
     defaults:
       run:
-        working-directory: /build
+        working-directory: ${{ github.workspace }}
     strategy:
       fail-fast: false
 
     steps:
 
-    - name: apt update
-      working-directory: /
-      run: |
-        sudo apt-get update -yqq
-        sudo apt-get install -qqy --no-install-recommends wget        \
-          python3 zip unzip git libbsd0 libbsd-dev libtinfo6 libxml2  \
-          libncursesw6 nsis libx11-dev libxrandr-dev libxinerama-dev  \
-          libxcursor-dev libxi-dev libasound2-dev libgtk-3-dev        \
-          libssl-dev cmake curl wget gnupg2 e2fslibs-dev libatomic1   \
-          libattr1-dev chrpath bzip2 libstdc++-12-dev
-
     - name: create directories
-      working-directory: /
+      working-directory: ${{ github.workspace }}
       run: |
-        sudo mkdir /build && sudo chown $USER:$USER /build
-        mkdir -p /build/bin
-        mkdir -p /build/installer
-        mkdir -p /build/daw
-        mkdir -p /build/daw-deps
-        ln -s /build/daw $GITHUB_WORKSPACE/daw
-        ln -s /build/daw-deps $GITHUB_WORKSPACE/daw-deps
-        echo /opt/cmake/bin >> $GITHUB_PATH
+        mkdir -p ${{ env.BUILD_DIR }}/bin
+        mkdir -p ${{ env.BUILD_DIR }}/installer
+        mkdir -p ${{ env.BUILD_DIR }}/daw
+        mkdir -p ${{ env.BUILD_DIR }}/daw-deps
+        ln -s ${{ env.BUILD_DIR }}/daw ${{ github.workspace }}/daw
+        ln -s ${{ env.BUILD_DIR }}/daw-deps ${{ github.workspace }}/daw-deps
+        echo ${{ env.BUILD_DIR }}/cmake/bin >> $GITHUB_PATH
 
     - name: git clone nidefawl/daw-deps 
       uses: actions/checkout@master
@@ -65,11 +57,153 @@ jobs:
     - name: Parse revision
       id: get-dep-rev
       run: |
-        DAW_REVISION=$(git -C /build/daw rev-parse --short HEAD)
-        DEPS_REVISION=$(git -C /build/daw-deps rev-parse --short HEAD)
+        DAW_REVISION=$(git -C ${{ env.BUILD_DIR }}/daw rev-parse --short HEAD)
+        DEPS_REVISION=$(git -C ${{ env.BUILD_DIR }}/daw-deps rev-parse --short HEAD)
         echo "DAW_REVISION=$DAW_REVISION" >> $GITHUB_ENV
         echo "DEPS_REVISION=$DEPS_REVISION" >> $GITHUB_ENV
-        echo "cachekey=build-cache-$DEPS_REVISION" >> $GITHUB_ENV
+        echo "cachekey=build-cache-macos-$DEPS_REVISION" >> $GITHUB_ENV
+
+    - name: Restore build cache
+      id: build-cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ${{ env.LLVM_MACOS_PATH }}
+          ${{ env.BUILD_DIR }}/cmake/bin
+          ${{ env.BUILD_DIR }}/install-deps
+        key: ${{ env.cachekey }}
+
+    - name: Download ninja, cmake and clang mingw toolchain
+      if: steps.build-cache.outputs.cache-hit != 'true'
+      run: |
+        echo "Downloading powerfull tools"
+        wget --no-check-certificate -nv https://github.com/nidefawl/llvm-project/releases/download/v15.0.0-2-macos/clang+llvm-15.0.3-x86_64-apple-darwin-minimal.tar.gz
+        tar -xzf clang*.tar.gz && rm *.tar.gz
+        sudo rm -Rf ${{ env.LLVM_MACOS_PATH }}
+        sudo mv clang* ${{ env.LLVM_MACOS_PATH }}
+        wget --no-check-certificate -nv https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-mac.zip
+        mkdir -p ${{ env.BUILD_DIR }}/cmake/bin
+        unzip ninja-mac.zip -d  ${{ env.BUILD_DIR }}/cmake/bin  && rm *.zip
+
+    - name: Build macos dependencies
+      if: steps.build-cache.outputs.cache-hit != 'true'
+      run: |
+        PATH=${{ env.LLVM_MACOS_PATH }}/bin:$PATH CC=${{ env.CC_MACOS }} CXX=${{ env.CXX_MACOS }} python3 ${{ github.workspace }}/daw-deps/build.py ./build-deps/macos ./install-deps/macos -${{ env.BUILD_TYPE_DEPS }}
+
+    - name: Configure macos
+      run: >
+        PATH=${{ env.LLVM_MACOS_PATH }}/bin:$PATH CC=${{ env.CC_MACOS }} CXX=${{ env.CXX_MACOS }} cmake
+        -S"daw"
+        -B"build/macos"
+        -G"Ninja Multi-Config"
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        -DPROJECT_DEPS_PATH:PATH=${{ env.BUILD_DIR }}/daw-deps
+        -DPROJECT_DEPS_INSTALL_PATH:PATH=${{ env.BUILD_DIR }}/install-deps/macos
+        -DPROJECT_INSTALLER_OUTPUT_PATH:PATH=${{ env.BUILD_DIR }}/installer/macos
+        -DPROJECT_WORKING_DIR:PATH=${{ env.BUILD_DIR }}/bin/macos
+        -DPROJECT_VST2_OUTPUT_PATH:PATH=${{ env.BUILD_DIR }}/bin/macos
+        -DPROJECT_BUILD_CLI_HOST=OFF,
+        -DPROJECT_BUILD_TESTS=OFF,
+        -DPROJECT_BUILD_TESTS_UI=OFF,
+        -DPROJECT_BUILD_BENCHMARKS=OFF,
+        -DPROJECT_BUILD_PLUGINS=OFF,
+        -DPROJECT_PRODUCT_NAME:STRING="DAW"
+        -DPROJECT_BINARY_NAME:STRING="DAW"
+        -DPRODUCT_HOST_NAME:STRING="DAW"
+        -DPROJECT_VENDOR_NAME:STRING="Michael Hept"
+        -DPRODUCT_URL_DOCS:STRING="https://github.com/nidefawl/daw-project"
+        -DPRODUCT_URL_VENDOR:STRING="https://github.com/nidefawl/daw-project"
+        -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF
+        -DCMAKE_VERBOSE_MAKEFILE=OFF
+        -DCMAKE_UNITY_BUILD=ON
+        -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
+
+    - name: Build macos
+      run: |
+        PATH=${{ env.LLVM_MACOS_PATH }}/bin:$PATH cmake --build ./build/macos --config ${{ env.BUILD_TYPE }} --target DAW -- -j8
+        PATH=${{ env.LLVM_MACOS_PATH }}/bin:$PATH cmake --build ./build/macos --config ${{ env.BUILD_TYPE }} --target dist-installer
+
+    - name: Create revision file
+      run: |
+        echo "DAW_REVISION=${{ env.DAW_REVISION }}" >> ./installer/revision.txt
+        echo "DAW_LOG=$(git -C daw log -1)" >> ./installer/revision.txt
+        echo "DEPS_REVISION=${{ env.DEPS_REVISION }}" >> ./installer/revision.txt
+        echo "DEPS_LOG=$(git -C daw-deps log -1)" >> ./installer/revision.txt
+
+    - name: Prepare macos artifacts
+      run: |
+        INSTALLER_FILENAME=$(basename $(ls -AU ./installer/macos/*.zip | head -1))
+        INSTALLER_NAME=${INSTALLER_FILENAME:0:$((${#INSTALLER_FILENAME}-4))}
+        ARTIFACT_NAME_MACOS="${INSTALLER_NAME}-${{ env.DAW_REVISION }}"
+        echo "ARTIFACT_NAME_MACOS=${ARTIFACT_NAME_MACOS}" >> $GITHUB_ENV
+        tar -cvjSf ./installer/macos/symbols.tar.bz2 ./build/macos/dist/*.debug
+
+    - name: Upload macos distributable
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.ARTIFACT_NAME_MACOS }}
+        path: |
+          ${{ env.BUILD_DIR }}/installer/revision.txt
+          ${{ env.BUILD_DIR }}/installer/macos
+          ${{ env.BUILD_DIR }}/macos/compile_commands.json
+        if-no-files-found: warn
+
+  build-windows-and-linux:
+    name: "Build Windows and Linux"
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}
+    strategy:
+      fail-fast: false
+
+    steps:
+
+    - name: apt update
+      working-directory: /
+      run: |
+        sudo apt-get update -yqq
+        sudo apt-get install -qqy --no-install-recommends wget        \
+          python3 zip unzip git libbsd0 libbsd-dev libtinfo6 libxml2  \
+          libncursesw6 nsis libx11-dev libxrandr-dev libxinerama-dev  \
+          libxcursor-dev libxi-dev libasound2-dev libgtk-3-dev        \
+          libssl-dev cmake curl wget gnupg2 e2fslibs-dev libatomic1   \
+          libattr1-dev chrpath bzip2 libstdc++-12-dev
+
+    - name: create directories
+      working-directory: ${{ github.workspace }}
+      run: |
+        mkdir -p ${{ env.BUILD_DIR }}/bin
+        mkdir -p ${{ env.BUILD_DIR }}/installer
+        mkdir -p ${{ env.BUILD_DIR }}/daw
+        mkdir -p ${{ env.BUILD_DIR }}/daw-deps
+        ln -s ${{ env.BUILD_DIR }}/daw ${{ github.workspace }}/daw
+        ln -s ${{ env.BUILD_DIR }}/daw-deps ${{ github.workspace }}/daw-deps
+        echo ${{ env.BUILD_DIR }}/cmake/bin >> $GITHUB_PATH
+
+    - name: git clone nidefawl/daw-deps 
+      uses: actions/checkout@master
+      with:
+        path: daw-deps
+        repository: nidefawl/daw-deps
+        token: ${{ secrets.PAT }}
+        submodules: true
+
+    - name: git clone nidefawl/daw 
+      uses: actions/checkout@master
+      with:
+        path: daw
+        repository: nidefawl/daw
+        token: ${{ secrets.PAT }}
+
+    - name: Parse revision
+      id: get-dep-rev
+      run: |
+        DAW_REVISION=$(git -C ${{ env.BUILD_DIR }}/daw rev-parse --short HEAD)
+        DEPS_REVISION=$(git -C ${{ env.BUILD_DIR }}/daw-deps rev-parse --short HEAD)
+        echo "DAW_REVISION=$DAW_REVISION" >> $GITHUB_ENV
+        echo "DEPS_REVISION=$DEPS_REVISION" >> $GITHUB_ENV
+        echo "cachekey=build-cache-linux-win32-$DEPS_REVISION" >> $GITHUB_ENV
 
     - name: Restore build cache
       id: build-cache
@@ -78,16 +212,13 @@ jobs:
         path: |
           ${{ env.LLVM_LINUX_PATH }}
           ${{ env.LLVM_MINGW_PATH }}
-          /opt/cmake
-          /build/install-deps
+          ${{ env.BUILD_DIR }}/cmake/bin
+          ${{ env.BUILD_DIR }}/install-deps
         key: ${{ env.cachekey }}
 
     - name: Download ninja, cmake and clang mingw toolchain
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: |
-        pushd /opt
-        sudo mkdir download && sudo chown $USER:$USER download
-        pushd download
         wget --no-check-certificate -nv https://github.com/nidefawl/llvm-project/releases/download/v16.0.0-3-linux/llvm-clang-16.0.0-libc++-abi-2-ubuntu-22.04.bz2 -O llvm-clang-16.0.0-libc++-abi-2-ubuntu-22.04.bz2
         tar -xjf llvm-clang-*.bz2 && rm *.bz2
         sudo rm -Rf ${{ env.LLVM_LINUX_PATH }}
@@ -96,14 +227,16 @@ jobs:
         tar -xjf llvm-mingw-*.bz2 && rm *.bz2
         sudo rm -Rf ${{ env.LLVM_MINGW_PATH }}
         sudo mv llvm-mingw-* ${{ env.LLVM_MINGW_PATH }}
+        echo "LLVM MinGW Path: ${{ env.LLVM_MINGW_PATH }}"
+        ls -la ${{ env.LLVM_MINGW_PATH }}
+        ls -la ${{ env.LLVM_MINGW_PATH }}/bin
         wget --no-check-certificate -nv https://github.com/Kitware/CMake/releases/download/v3.25.0-rc4/cmake-3.25.0-rc4-linux-$(uname -m).tar.gz
         tar -zxf cmake-*.tar.gz && rm *.tar.gz
-        sudo rm -Rf /opt/cmake
-        sudo mv cmake-* /opt/cmake
+        sudo rm -Rf ${{ env.BUILD_DIR }}/cmake
+        sudo mv cmake-* ${{ env.BUILD_DIR }}/cmake
         wget --no-check-certificate -nv https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip
-        unzip ninja-linux.zip -d /opt/cmake/bin  && rm *.zip
-        popd
-        popd
+        mkdir -p ${{ env.BUILD_DIR }}/cmake/bin
+        unzip ninja-linux.zip -d  ${{ env.BUILD_DIR }}/cmake/bin  && rm *.zip
 
     - name: Build win32 dependencies
       if: steps.build-cache.outputs.cache-hit != 'true'
@@ -122,15 +255,19 @@ jobs:
         -B"build/win32"
         -G"Ninja Multi-Config"
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-        -DPROJECT_DEPS_PATH:PATH=/build/daw-deps
-        -DPROJECT_DEPS_INSTALL_PATH:PATH=/build/install-deps/win32
-        -DPROJECT_INSTALLER_OUTPUT_PATH:PATH=/build/installer/win32
-        -DPROJECT_WORKING_DIR:PATH=/build/bin/win32
-        -DPROJECT_VST2_OUTPUT_PATH:PATH=/build/bin/win32
+        -DPROJECT_DEPS_PATH:PATH=${{ env.BUILD_DIR }}/daw-deps
+        -DPROJECT_DEPS_INSTALL_PATH:PATH=${{ env.BUILD_DIR }}/install-deps/win32
+        -DPROJECT_INSTALLER_OUTPUT_PATH:PATH=${{ env.BUILD_DIR }}/installer/win32
+        -DPROJECT_WORKING_DIR:PATH=${{ env.BUILD_DIR }}/bin/win32
+        -DPROJECT_VST2_OUTPUT_PATH:PATH=${{ env.BUILD_DIR }}/bin/win32
         -DCMAKE_SYSTEM_NAME=Windows
         -DCMAKE_C_FLAGS=-D_WIN32=1
         -DCMAKE_CXX_FLAGS=-D_WIN32=1
-        -DPROJECT_BUILD_TESTS_UI=ON
+        -DPROJECT_BUILD_CLI_HOST=OFF,
+        -DPROJECT_BUILD_TESTS=OFF,
+        -DPROJECT_BUILD_TESTS_UI=OFF,
+        -DPROJECT_BUILD_BENCHMARKS=OFF,
+        -DPROJECT_BUILD_PLUGINS=OFF,
         -DPROJECT_PRODUCT_NAME:STRING="DAW"
         -DPROJECT_BINARY_NAME:STRING="DAW"
         -DPRODUCT_HOST_NAME:STRING="DAW"
@@ -149,12 +286,16 @@ jobs:
         -B"build/linux"
         -G"Ninja Multi-Config"
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-        -DPROJECT_DEPS_PATH:PATH=/build/daw-deps
-        -DPROJECT_DEPS_INSTALL_PATH:PATH=/build/install-deps/linux
-        -DPROJECT_INSTALLER_OUTPUT_PATH:PATH=/build/installer/linux
-        -DPROJECT_WORKING_DIR:PATH=/build/bin/linux
-        -DPROJECT_VST2_OUTPUT_PATH:PATH=/build/bin/linux
-        -DPROJECT_BUILD_TESTS_UI=ON
+        -DPROJECT_DEPS_PATH:PATH=${{ env.BUILD_DIR }}/daw-deps
+        -DPROJECT_DEPS_INSTALL_PATH:PATH=${{ env.BUILD_DIR }}/install-deps/linux
+        -DPROJECT_INSTALLER_OUTPUT_PATH:PATH=${{ env.BUILD_DIR }}/installer/linux
+        -DPROJECT_WORKING_DIR:PATH=${{ env.BUILD_DIR }}/bin/linux
+        -DPROJECT_VST2_OUTPUT_PATH:PATH=${{ env.BUILD_DIR }}/bin/linux
+        -DPROJECT_BUILD_CLI_HOST=OFF,
+        -DPROJECT_BUILD_TESTS=OFF,
+        -DPROJECT_BUILD_TESTS_UI=OFF,
+        -DPROJECT_BUILD_BENCHMARKS=OFF,
+        -DPROJECT_BUILD_PLUGINS=OFF,
         -DPROJECT_PRODUCT_NAME:STRING="DAW"
         -DPROJECT_BINARY_NAME:STRING="DAW"
         -DPRODUCT_HOST_NAME:STRING="DAW"
@@ -204,17 +345,17 @@ jobs:
       with:
         name: ${{ env.ARTIFACT_NAME_WIN32 }}
         path: |
-          /build/installer/revision.txt
-          /build/installer/win32
-          /build/build/win32/compile_commands.json
-        if-no-files-found: warn # 'warn' or 'ignore' are also available, defaults to `warn`
+          ${{ env.BUILD_DIR }}/installer/revision.txt
+          ${{ env.BUILD_DIR }}/installer/win32
+          ${{ env.BUILD_DIR }}/build/win32/compile_commands.json
+        if-no-files-found: warn
 
     - name: Upload linux distributable
       uses: actions/upload-artifact@v3
       with:
         name: ${{ env.ARTIFACT_NAME_LINUX }}
         path: |
-          /build/installer/revision.txt
-          /build/installer/linux
-          /build/build/linux/compile_commands.json
-        if-no-files-found: warn # 'warn' or 'ignore' are also available, defaults to `warn`
+          ${{ env.BUILD_DIR }}/installer/revision.txt
+          ${{ env.BUILD_DIR }}/installer/linux
+          ${{ env.BUILD_DIR }}/build/linux/compile_commands.json
+        if-no-files-found: warn
