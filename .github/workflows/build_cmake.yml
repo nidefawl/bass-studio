@@ -44,29 +44,20 @@ jobs:
         ln -s ${{ env.BUILD_DIR }}/daw-deps ${{ github.workspace }}/daw-deps
         echo ${{ env.BUILD_DIR }}/cmake/bin >> $GITHUB_PATH
 
-    - name: git clone nidefawl/daw-deps 
+    - name: git clone nidefawl/daw-deps (fetch depth 0)
+      id: build-cache-clone-history
       uses: actions/checkout@master
       with:
-        path: daw-deps
+        path: daw-deps-history
         repository: nidefawl/daw-deps
         token: ${{ secrets.PAT }}
-        submodules: true
+        fetch-depth: 0
 
-    - name: git clone nidefawl/daw 
-      uses: actions/checkout@master
-      with:
-        path: daw
-        repository: nidefawl/daw
-        token: ${{ secrets.PAT }}
-
-    - name: Parse revision
-      id: get-dep-rev
+    - name: Get daw-deps-history head revision
+      id: build-cache-get-rev
       run: |
-        DAW_REVISION=$(git -C ${{ env.BUILD_DIR }}/daw rev-parse --short HEAD)
-        DEPS_REVISION=$(git -C ${{ env.BUILD_DIR }}/daw-deps rev-parse --short HEAD)
-        echo "DAW_REVISION=$DAW_REVISION" >> $GITHUB_ENV
-        echo "DEPS_REVISION=$DEPS_REVISION" >> $GITHUB_ENV
-        echo "cachekey=build-cache-dev-$DEPS_REVISION" >> $GITHUB_ENV
+        CACHE_DEPS_REVISION=$(git -C ${{ env.BUILD_DIR }}/daw-deps-history rev-parse --short HEAD)
+        echo "cachekey=build-cache-dev-$CACHE_DEPS" >> $GITHUB_ENV
 
     - name: Restore build cache
       id: build-cache
@@ -75,6 +66,8 @@ jobs:
         path: |
           ${{ env.LLVM_LINUX_PATH }}
           ${{ env.BUILD_DIR }}/cmake
+          ${{ env.BUILD_DIR }}/daw-deps
+          ${{ env.BUILD_DIR }}/daw
           ${{ env.BUILD_DIR }}/install-deps
         key: ${{ env.cachekey }}
 
@@ -92,6 +85,29 @@ jobs:
         wget --no-check-certificate -nv https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip
         mkdir -p ${{ env.BUILD_DIR }}/cmake/bin
         unzip ninja-linux.zip -d  ${{ env.BUILD_DIR }}/cmake/bin  && rm *.zip
+
+    - name: git clone nidefawl/daw-deps 
+      if: steps.build-cache.outputs.cache-hit != 'true'
+      uses: actions/checkout@master
+      with:
+        path: daw-deps
+        repository: nidefawl/daw-deps
+        token: ${{ secrets.PAT }}
+        submodules: true
+
+    - name: git clone nidefawl/daw 
+      uses: actions/checkout@master
+      with:
+        path: daw
+        token: ${{ secrets.PAT }}
+
+    - name: Parse revision
+      id: get-dep-rev
+      run: |
+        DAW_REVISION=$(git -C ${{ env.BUILD_DIR }}/daw rev-parse --short HEAD)
+        DEPS_REVISION=$(git -C ${{ env.BUILD_DIR }}/daw-deps rev-parse --short HEAD)
+        echo "DAW_REVISION=$DAW_REVISION" >> $GITHUB_ENV
+        echo "DEPS_REVISION=$DEPS_REVISION" >> $GITHUB_ENV
 
     - name: Build linux dependencies
       if: steps.build-cache.outputs.cache-hit != 'true'
