@@ -8,8 +8,10 @@
 #include "host/plugin/clap/clap-plugin.h"
 #include "host/plugin/vst/vstplugin.h"
 #include "host/plugin/vst/vstplugin-handles.h"
+#include "platform.h"
 #include "str_util.h"
 #include "host/track/track_impl.h"
+#include <MacTypes.h>
 #include <clap/clap.h>
 #include <memory>
 
@@ -18,6 +20,9 @@
 String getModuleName(HMODULE);
 #elif defined(__linux__) || defined(__APPLE__)
 #include <dlfcn.h>
+#endif
+#ifdef __APPLE__
+#include <CoreServices/CoreServices.h>
 #endif
 
 namespace DAW::Host {
@@ -592,7 +597,27 @@ LoadResultSharedLibrary loadLib(const String& filepath, int32_t moduleFmt) {
     if (!FileExists(filepath)) {
         return LoadResultSharedLibrary::FromError(SharedLibState::FILE_NOT_FOUND, "File not found");
     }
+#ifdef __APPLE__
     void* module = dlopen(StringAsCStr(filepath), RTLD_NOW);
+    if (!module) {
+        auto szStr = reinterpret_cast<const UInt8*>(filepath.c_str());
+        auto lenI32 = static_cast<int32_t>(filepath.length());
+        auto bundleUrl = CFURLCreateFromFileSystemRepresentation(nullptr, szStr, lenI32, true);
+        auto bundle = CFBundleCreate(nullptr, bundleUrl);
+        if (bundle) {
+            auto bundleExecURL = CFBundleCopyExecutableURL(bundle);
+            char executableFile[FILENAME_MAX]{};
+            if (CFURLGetFileSystemRepresentation(bundleExecURL, true, reinterpret_cast<UInt8*>(executableFile), FILENAME_MAX)) {
+                module = dlopen(executableFile, RTLD_NOW);
+            }
+            CFRelease(bundleExecURL);
+        }
+        CFRelease(bundle);
+        CFRelease(bundleUrl);
+    }
+#else
+    void* module = dlopen(StringAsCStr(filepath), RTLD_NOW);
+#endif
     if (!module) {
         auto dl_err = dlerror();
         return LoadResultSharedLibrary::FromError(SharedLibState::DL_OPEN_FAILED, StringFormat("dlopen failed: %s", dl_err));
@@ -746,17 +771,25 @@ void PluginManager::scanPlugins() {
             
             auto scannerNames = {
                 "daw-pluginscanner", 
-                "pluginscanner-Clang-debug",
-                "pluginscanner-MSVC-debug"
+                "pluginscanner",
+                "pluginscanner-debug",
+                "pluginscanner-release",
+                "pluginscanner-clang-debug",
+                "pluginscanner-clang-release",
+                "pluginscanner-msvc-debug",
+                "pluginscanner-msvc-release"
             };
             String filename = "daw-pluginscanner";
             for (auto* name : scannerNames) {
-                if (FileExists(name)){
-                    filename = name;
+                String absPath = App::Platform::getCurrentWorkingDirectory();
+                absPath += FILE_PATHSEP_STR;
+                absPath += name;
+                if ( FileExists(absPath)) {
+                    filename = absPath;
                     break;
                 }
             }
-#ifdef _WIN32
+#ifdef _WIN32 
             filename += ".exe";
 #endif //_WIN32
             mgrImpl->threadPluginScannerProcess->startProcess(filename, "-server -auto", "");

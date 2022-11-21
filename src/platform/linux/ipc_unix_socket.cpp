@@ -62,7 +62,7 @@ public:
     }
 
     int server_read(char* buf, uint32_t buflen) {
-        return recv(m_fdSockClient, buf, buflen, 0);
+        return recv(m_fdSockClient, buf, buflen, MSG_WAITALL);
     }
 
     int server_send(char* buf, uint32_t buflen) {
@@ -158,7 +158,7 @@ public:
         return IPC_OK;
     }
     int client_read(char* buf, uint32_t buflen) {
-        return static_cast<int32_t>(recv(m_fdSock, buf, buflen, 0));
+        return static_cast<int32_t>(recv(m_fdSock, buf, buflen, MSG_WAITALL));
     }
     int client_send(char* buf, uint32_t buflen) {
         return static_cast<int32_t>(send(m_fdSock, buf, buflen, 0));
