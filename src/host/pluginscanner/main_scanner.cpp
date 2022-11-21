@@ -981,7 +981,8 @@ int main(int argc, char* argv[]) {
         log_message("-dry    \t\t(server only)\tCheck for new plugins but does not scan them");
         log_message("-update <plugin-name>\t(server only)\tRescan a specific plugin. Does partial name matching, case-insensitive");
         log_message("-rescan \t\t(server only)\tRescan all registered VST2 plugins, even if their disk timestamp has not changed");
-        log_message("-path <directory>\t(server only)\tManually specify directory to scan for plugins");
+        log_message("-path <directory>\t(server only)\tManually specify directory to scan for vst plugins");
+        log_message("-clappath <directory>\t(server only)\tManually specify directory to scan for clap plugins");
         log_message("-timeout <seconds>\t(server only)\tSet the timeout for unresponsive plugins. Default is %d seconds", PluginScannerImplementation::timeoutdefault);
         log_message("\nThe default command to scan plugins is:");
         log_message("%s -server\n", argv[0]);

@@ -3,14 +3,20 @@
 #include <vector>
 #include "str_util.h"
 
-#ifdef _WIN32
+#if defined(_WIN32)
 #define FILE_PATHSEP_CHAR '\\'
 #define FILE_PATHSEP_STR "\\"
-#define DAW_PLATFORM_VST2_PATH_DEFAULT "C:\\Program Files\\Steinberg\\VstPlugins"
-#define DAW_PLATFORM_CLAP_PATH_DEFAULT "C:\\Program Files\\Common Files\\CLAP"
 #else
 #define FILE_PATHSEP_CHAR '/'
 #define FILE_PATHSEP_STR "/"
+#endif
+#if defined(_WIN32)
+#define DAW_PLATFORM_VST2_PATH_DEFAULT "C:\\Program Files\\Steinberg\\VstPlugins"
+#define DAW_PLATFORM_CLAP_PATH_DEFAULT "C:\\Program Files\\Common Files\\CLAP"
+#elif defined(__APPLE__)
+#define DAW_PLATFORM_VST2_PATH_DEFAULT "/Library/Audio/Plug-Ins/VST"
+#define DAW_PLATFORM_CLAP_PATH_DEFAULT "/Library/Audio/Plug-Ins/CLAP"
+#else
 #define DAW_PLATFORM_VST2_PATH_DEFAULT "~/.vst"
 #define DAW_PLATFORM_CLAP_PATH_DEFAULT "~/.clap"
 #endif
