@@ -5,15 +5,9 @@ on: [push]
 env:
   BUILD_TYPE: Debug
   BUILD_TYPE_DEPS: debug
-  LLVM_MACOS_PATH: ${{ github.workspace }}/llvm-macos
   LLVM_LINUX_PATH: ${{ github.workspace }}/llvm-linux
-  LLVM_MINGW_PATH: ${{ github.workspace }}/llvm-mingw
-  CC_MINGW: ${{ github.workspace }}/llvm-mingw/bin/x86_64-w64-mingw32-gcc
-  CXX_MINGW: ${{ github.workspace }}/llvm-mingw/bin/x86_64-w64-mingw32-g++
   CC_LINUX: ${{ github.workspace }}/llvm-linux/bin/clang
   CXX_LINUX: ${{ github.workspace }}/llvm-linux/bin/clang++
-  CC_MACOS: ${{ github.workspace }}/llvm-macos/bin/clang
-  CXX_MACOS: ${{ github.workspace }}/llvm-macos/bin/clang++
   BUILD_DIR: ${{ github.workspace }}
 
 jobs:
@@ -80,7 +74,6 @@ jobs:
       with:
         path: |
           ${{ env.LLVM_LINUX_PATH }}
-          ${{ env.LLVM_MINGW_PATH }}
           ${{ env.BUILD_DIR }}/cmake
           ${{ env.BUILD_DIR }}/install-deps
         key: ${{ env.cachekey }}
@@ -92,10 +85,6 @@ jobs:
         tar -xjf llvm-clang-*.bz2 && rm *.bz2
         sudo rm -Rf ${{ env.LLVM_LINUX_PATH }}
         sudo mv llvm-clang-* ${{ env.LLVM_LINUX_PATH }}
-        wget --no-check-certificate -nv https://github.com/nidefawl/llvm-mingw/releases/download/v16.0.0-linux-1/llvm-mingw-clang-16.0.0-libc++-abi-2-ubuntu-22.04-x86_64.bz2
-        tar -xjf llvm-mingw-*.bz2 && rm *.bz2
-        sudo rm -Rf ${{ env.LLVM_MINGW_PATH }}
-        sudo mv llvm-mingw-* ${{ env.LLVM_MINGW_PATH }}
         wget --no-check-certificate -nv https://github.com/Kitware/CMake/releases/download/v3.25.0-rc4/cmake-3.25.0-rc4-linux-$(uname -m).tar.gz
         tar -zxf cmake-*.tar.gz && rm *.tar.gz
         sudo rm -Rf ${{ env.BUILD_DIR }}/cmake
@@ -140,4 +129,3 @@ jobs:
     - name: Build linux
       run: |
         LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH cmake --build ./build/linux --config ${{ env.BUILD_TYPE }} --target DAW -- -j8
-        LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH cmake --build ./build/linux --config ${{ env.BUILD_TYPE }} --target dist-installer
