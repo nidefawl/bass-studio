@@ -11,7 +11,6 @@
 #include "platform.h"
 #include "str_util.h"
 #include "host/track/track_impl.h"
-#include <MacTypes.h>
 #include <clap/clap.h>
 #include <memory>
 
