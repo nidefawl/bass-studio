@@ -57,18 +57,14 @@ void initPlatformEnvironment(const String& appname, const String& optionalCwd) {
         resourcePath = cwdPath + "/../Resources/res";
     }
     if (!FileExists(resourcePath)) {
-        log_lf(Log::L_DEBUG, "resource path not found: %s", resourcePath.c_str());
         resourcePath = cwdPath + "/res";
     }
     if (!FileExists(resourcePath)) {
-        log_lf(Log::L_DEBUG, "resource path not found: %s", resourcePath.c_str());
         resourcePath = cwdPath + "/../Resources/res";
     }
     if (!FileExists(resourcePath)) {
-        log_lf(Log::L_DEBUG, "resource path not found: %s", resourcePath.c_str());
         resourcePath = cwdPath + "/../res";
     }
-    log_lf(Log::L_DEBUG, "Keeping resource path: %s", resourcePath.c_str());
 
 #else
     String resourcePath = cwdPath + FILE_PATHSEP_STR + "res";
