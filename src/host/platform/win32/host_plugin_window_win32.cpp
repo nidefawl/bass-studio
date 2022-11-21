@@ -398,4 +398,8 @@ void host_plugin_window::setPosition(ivec2 newPos) {
 WINDOW_HANDLE host_plugin_window::getHWND() const {
     return hwnd;
 }
+
+WINDOW_HANDLE host_plugin_window::getWindowHandle() const {
+    return hwnd;
+}
 #endif

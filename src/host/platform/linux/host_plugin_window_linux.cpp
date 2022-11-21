@@ -110,6 +110,7 @@ bool host_plugin_window::init(effectbase* plugin, const String& name, ivec2 size
 	#endif
 	#ifdef __APPLE__
 	hwnd = reinterpret_cast<WINDOW_HANDLE>(glfwGetCocoaWindow(glfw));
+	cocoaView = reinterpret_cast<WINDOW_HANDLE>(glfwGetCocoaNSView(glfw));
 	#endif
 	
 	//create native window
@@ -177,7 +178,16 @@ void host_plugin_window::setPosition(ivec2 newPos) {
 }
 
 
-WINDOW_HANDLE host_plugin_window::getHWND () const
+WINDOW_HANDLE host_plugin_window::getWindowHandle() const
+{
+#ifdef __APPLE__
+	return cocoaView;
+#else
+	return hwnd;
+#endif
+}
+
+WINDOW_HANDLE host_plugin_window::getHWND() const
 {
 	return hwnd;
 }

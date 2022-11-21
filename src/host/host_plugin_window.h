@@ -50,6 +50,7 @@ public:
     }
     bool init(effectbase* plugin, const String& name, ivec2 size, bool resizeable);
     WINDOW_HANDLE getHWND() const;
+    WINDOW_HANDLE getWindowHandle() const;
 
     void show(ivec4 posSize, bool bSetPos, bool bSetSize);
     void close();
@@ -82,7 +83,10 @@ public:
     WINDOW_HANDLE hwnd = nullptr;
 #endif
 #if defined(__linux__) || defined(__APPLE__)
+    GLFWwindow* glfw = nullptr;
     WINDOW_HANDLE hwnd = 0;
-    GLFWwindow* glfw   = NULL;
+#endif
+#if defined(__APPLE__)
+    WINDOW_HANDLE cocoaView = 0;
 #endif
 };

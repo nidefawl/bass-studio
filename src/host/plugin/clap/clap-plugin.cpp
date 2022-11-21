@@ -1955,7 +1955,7 @@ void clapplugin::onWindowResize(ivec2 size) {
 bool clapplugin::onShow(host_plugin_window* _window) {
     if (this->windowHost == _window) {
         bEditOpen = true;
-        setParentWindow(_window->getHWND());
+        setParentWindow(_window->getWindowHandle());
         this->updateFromMainThread();
     }
     return true;

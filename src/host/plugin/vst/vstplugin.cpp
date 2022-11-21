@@ -42,7 +42,7 @@ FUNC_NOINLINE int64_t vst_dispatch(vstplugin* plugin,
 bool vstplugin::onShow(host_plugin_window* _window) {
     if (this->windowHost == _window) {
         bEditOpen = true;
-        this->dispatch(effEditOpen, 0, 0, (void*) _window->getHWND());
+        this->dispatch(effEditOpen, 0, 0, (void*) _window->getWindowHandle());
         this->updateFromMainThread();
     }
     return true;
