@@ -57,6 +57,7 @@ jobs:
       id: build-cache-get-rev
       run: |
         CACHE_DEPS_REVISION=$(git -C ${{ env.BUILD_DIR }}/daw-deps-history rev-parse --short HEAD)
+        echo "better-cachekey=build-cache-${{ github.branch }}-${{ env.BUILD_TYPE_DEPS }}-${CACHE_DEPS_REVISION}" >> $GITHUB_ENV
         echo "cachekey=build-cache-dev-$CACHE_DEPS_REVISION" >> $GITHUB_ENV
 
     - name: Restore build cache
