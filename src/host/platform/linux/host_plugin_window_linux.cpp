@@ -16,9 +16,7 @@
 
 GLFWwindow* getTopLevelGlfwWindow();
 
-#ifdef __linux__
 void sendExposeEvent(GLFWwindow* glfw);
-#endif
 
 namespace {
 	std::vector<host_plugin_window*> host_plugin_window_list;
@@ -107,8 +105,7 @@ bool host_plugin_window::init(effectbase* plugin, const String& name, ivec2 size
 	hwnd = x11Window;
 	#endif
 	#ifdef __APPLE__
-	WINDOW_HANDLE x11Window = *reinterpret_cast<int32_t*>(glfwGetCocoaWindow(glfw));
-	hwnd = x11Window;
+	hwnd = reinterpret_cast<WINDOW_HANDLE>(glfwGetCocoaWindow(glfw));
 	#endif
 	
 	//create native window
@@ -158,9 +155,7 @@ ivec2 host_plugin_window::getContentSize() const
 }
 
 void host_plugin_window::updateFromMainThread() const {
-#ifdef __linux__
 	// sendExposeEvent(glfw);
-#endif
 }
 
 void host_plugin_window::resize (ivec2 newSize) const

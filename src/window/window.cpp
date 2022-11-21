@@ -70,6 +70,9 @@
 #include "platform/linux/x11_util.h"
 #include "platform/linux/nfd/nfd.h"
 #endif
+#ifdef __APPLE__
+void sendExposeEvent(GLFWwindow* glfw);
+#endif
 
 class appwindow;
 static std::vector<appwindow*> windowTimerHandleList;
@@ -186,10 +189,9 @@ static void initOGL() {
 }
 
 void invalidateWindowContents(GLFWwindow* glfw) {
-#ifdef _WIN32
+#if defined(_WIN32)
     InvalidateRect(glfwGetWin32Window(glfw), nullptr, FALSE);
-#endif
-#ifdef __linux__
+#elif defined(__linux__) || defined(__APPLE__)
     sendExposeEvent(glfw);
 #endif
 }
@@ -2453,6 +2455,10 @@ public:
 #ifndef _WIN32
             const double timeoutEvent = 0.001;
             glfwWaitEventsTimeout(timeoutEvent);
+            if (isValid() && isVisible()) {
+                renderWindowAndChildren();
+                swapBufferAndChildren();
+            }
 #else
             glfwUpdateWin32Internals();
 #endif
@@ -2550,6 +2556,10 @@ public:
 #ifndef _WIN32
             const double timeoutEvent = 0.001;
             glfwWaitEventsTimeout(timeoutEvent);
+            if (isValid() && isVisible()) {
+                renderWindowAndChildren();
+                swapBufferAndChildren();
+            }
 #else
             glfwUpdateWin32Internals();
 #endif

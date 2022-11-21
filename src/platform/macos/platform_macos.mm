@@ -1,3 +1,8 @@
+#include "types.h"
+#include "assert_dbg.h"
+#include <GLFW/glfw3.h>
+#define GLFW_EXPOSE_NATIVE_COCOA
+#include <GLFW/glfw3native.h>
 #include <stdint.h>
 #include <thread>
 
@@ -9,4 +14,10 @@ int32_t currentThreadsId() {
   return static_cast<int32_t>(pthread_mach_thread_np(pthread_self()));
 #endif
 }
+}
+void sendExposeEvent(GLFWwindow* glfw) {
+  if (!assert_expr(glfw)) return;
+  id handle = glfwGetCocoaWindow(glfw);
+  if (!assert_expr(handle)) return;
+  [handle display];
 }
