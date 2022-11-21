@@ -62,18 +62,24 @@ USER builder
 ENV PATH=$LLVM_MINGW_PATH/bin:/opt/cmake/bin:$STORED_PATH
 ENV CC=$LLVM_MINGW_PATH/bin/x86_64-w64-mingw32-clang
 ENV CXX=$LLVM_MINGW_PATH/bin/x86_64-w64-mingw32-clang++
-
+# ARG BUILD_TYPE_DEPS=release
+# ARG BUILD_TYPE=Release
+# ARG BUILD_TARGET=dist-installer
+ARG BUILD_TYPE_DEPS=debug
+ARG BUILD_TYPE=Debug
+ARG BUILD_TARGET=DAW
 RUN mkdir -p bin && mkdir -p installer && \
 echo "#include <stdio.h>\nint main() { printf(\"Hello World!\\\\n\"); return 0; }\n" > test.c && \
 $CC -o test.exe test.c && \
-python3 ./daw-deps/build.py ./build-deps/win32 ./install-deps/win32 -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres -release
+python3 ./daw-deps/build.py ./build-deps/win32 ./install-deps/win32 -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_RC_COMPILER=x86_64-w64-mingw32-windres -$BUILD_TYPE_DEPS
 
 RUN echo "#!/bin/bash\n# DUMP INPUT ARGS\nfor i in \"\$@\"\ndo\n  echo \"\$i\"\ndone\nexit 1" > dump_args.sh
 RUN cmake \
  -C CommonConfig.cmake \
  -S"daw" \
  -B"/build/build/win32" \
- -G"Ninja Multi-Config" \
+ -G"Ninja" \
+ -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
  -DPROJECT_DEPS_PATH:PATH=/build/daw-deps \
  -DPROJECT_DEPS_INSTALL_PATH:PATH=/build/install-deps/win32 \
@@ -89,7 +95,7 @@ RUN cmake \
  -DCMAKE_UNITY_BUILD=ON \
  -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
 
-RUN cmake --build /build/build/win32 --config RelWithDebInfo --target dist-installer -- -j 8
+RUN cmake --build /build/build/win32 --config $BUILD_TYPE --target $BUILD_TARGET -- -j 8
 
 ENV PATH=$LLVM_LINUX_PATH/bin:/opt/cmake/bin:$STORED_PATH
 ENV CC=$LLVM_LINUX_PATH/bin/clang
@@ -97,13 +103,14 @@ ENV CXX=$LLVM_LINUX_PATH/bin/clang++
 ENV LD_LIBRARY_PATH=$LLVM_LINUX_PATH/lib/x86_64-unknown-linux-gnu
 
 RUN $CC -o test.elf test.c && \
-python3 ./daw-deps/build.py ./build-deps/linux ./install-deps/linux -release
+python3 ./daw-deps/build.py ./build-deps/linux ./install-deps/linux -$BUILD_TYPE_DEPS
 
 RUN cmake \
  -C CommonConfig.cmake \
  -S"daw" \
  -B"/build/build/linux" \
- -G"Ninja Multi-Config" \
+ -G"Ninja" \
+ -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
  -DPROJECT_DEPS_PATH:PATH=/build/daw-deps \
  -DPROJECT_DEPS_INSTALL_PATH:PATH=/build/install-deps/linux \
@@ -116,7 +123,7 @@ RUN cmake \
  -DCMAKE_UNITY_BUILD=ON \
  -DCMAKE_INTERPROCEDURAL_OPTIMIZATION=OFF
 
-RUN cmake --build /build/build/linux --config RelWithDebInfo --target dist-installer -- -j 8
+RUN cmake --build /build/build/linux --config $BUILD_TYPE --target $BUILD_TARGET -- -j 8
 
 USER builder
 ENTRYPOINT ["/bin/bash"]

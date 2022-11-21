@@ -57,8 +57,7 @@ jobs:
       id: build-cache-get-rev
       run: |
         CACHE_DEPS_REVISION=$(git -C ${{ env.BUILD_DIR }}/daw-deps-history rev-parse --short HEAD)
-        echo "better-cachekey=build-cache-${{ github.branch }}-${{ env.BUILD_TYPE_DEPS }}-${CACHE_DEPS_REVISION}" >> $GITHUB_ENV
-        echo "cachekey=build-cache-dev-$CACHE_DEPS_REVISION" >> $GITHUB_ENV
+        echo "cachekey=build-cache-${{ github.branch }}-${{ env.BUILD_TYPE_DEPS }}-${CACHE_DEPS_REVISION}" >> $GITHUB_ENV
 
     - name: Restore build cache
       id: build-cache
@@ -120,7 +119,8 @@ jobs:
         LD_LIBRARY_PATH=${{ env.LLVM_LINUX_PATH }}/lib/x86_64-unknown-linux-gnu PATH=${{ env.LLVM_LINUX_PATH }}/bin:$PATH CC=${{ env.CC_LINUX }} CXX=${{ env.CXX_LINUX }} cmake
         -S"daw"
         -B"build/linux"
-        -G"Ninja Multi-Config"
+        -G"Ninja"
+        -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }}
         -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
         -DPROJECT_DEPS_PATH:PATH=${{ env.BUILD_DIR }}/daw-deps
         -DPROJECT_DEPS_INSTALL_PATH:PATH=${{ env.BUILD_DIR }}/install-deps/linux
