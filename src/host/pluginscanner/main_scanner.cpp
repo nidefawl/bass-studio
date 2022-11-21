@@ -180,25 +180,22 @@ bool readFromBuffer(recvbuf_t& buf, T& hdr) {
 template<typename IPC>
 bool IPCrecvBuffer(IPC& conn, recvbuf_t& bufferRecv) {
     bufferRecv.pos = bufferRecv.buf;
-    auto lenRcvd   = conn.readData(bufferRecv.pos, NUM_BUFS);
-    bufferRecv.end = bufferRecv.pos + lenRcvd;
+    auto lenRcvd = conn.readData(bufferRecv.buf, NUM_BUFS);
+    bufferRecv.end = bufferRecv.buf + lenRcvd;
     return NUM_BUFS == lenRcvd;
 }
 
 template<typename IPC>
 bool IPCsendBuffer(IPC& conn, recvbuf_t& bufferRecv) {
+    bufferRecv.end = bufferRecv.pos;
     bufferRecv.pos = bufferRecv.buf;
-    auto lenRcvd   = conn.sendData(bufferRecv.pos, NUM_BUFS);
-    bufferRecv.end = bufferRecv.pos + lenRcvd;
-    return NUM_BUFS == lenRcvd;
+    return NUM_BUFS == conn.sendData(bufferRecv.buf, NUM_BUFS);
 }
 
 /** uses function scope static buffer: NOT THREADSAFE */
 template<typename IPC, typename T>
 int readFromIPC(IPC& ipcConnection, T& hdr) {
     static recvbuf_t recvBuf;
-    recvBuf.pos = recvBuf.buf;
-    recvBuf.end = nullptr;
     if (!IPCrecvBuffer(ipcConnection, recvBuf)) {
         log_message("IPCrecvBuffer failed");
         return E_READ_ERR_PIPE;
@@ -216,7 +213,6 @@ int writeToIPC(IPC& ipcConnection, T& hdr) {
     static recvbuf_t sendBuffer;
     sendBuffer.pos = sendBuffer.buf;
     sendBuffer.end = nullptr;
-    writeToBuffer(sendBuffer, hdr);
     if (!writeToBuffer(sendBuffer, hdr)) {
         log_message("writeToBuffer failed");
         return E_WRITE_ERR_BUF_SIZE;
@@ -549,9 +545,15 @@ static int runScannerServer(const pluginscanner_server_options& options) {
             findFilesWithExt(options.clapPluginPath, PLATFORM_CLAP_PLUGIN_EXT, true, filesClap);
             log_message("Found %u .%s files in %s", CtrSize(filesClap), PLATFORM_CLAP_PLUGIN_EXT, StringAsCStr(options.clapPluginPath));
         }
+        filesVst_.clear();
         if (filesVst_.empty() && filesClap.empty()) {
             return 1;
         }
+
+        for (auto& file : filesClap) 
+            dbgassert(FileExists(file.path));
+        for (auto& file : filesVst_) 
+            dbgassert(FileExists(file.path));
         auto& allFiles = filesClap;
         allFiles.insert(allFiles.end(), filesVst_.begin(), filesVst_.end());
         String exeName = App::Platform::GetExecutablePath();

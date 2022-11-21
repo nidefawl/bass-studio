@@ -14,6 +14,10 @@
 #endif
 #include <GLFW/glfw3native.h>
 
+#ifdef __APPLE__
+static_assert(sizeof(WINDOW_HANDLE) == 8);
+#endif
+
 GLFWwindow* getTopLevelGlfwWindow();
 
 void sendExposeEvent(GLFWwindow* glfw);
