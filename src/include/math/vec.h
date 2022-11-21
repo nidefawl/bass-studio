@@ -10,7 +10,7 @@ using ivec4 = glm::ivec4;
 using vec2_unaligned = glm::vec<2, float, glm::qualifier::packed_highp>;
 using vec4_unaligned = glm::vec<4, float, glm::qualifier::packed_highp>;
 using vec2_aligned = glm::vec<2, float, glm::qualifier::aligned_highp>;
-using vec4_aligned = glm::vec<4, float, glm::qualifier::aligned>;
+using vec4_aligned = glm::vec<4, float, glm::qualifier::aligned_highp>;
 static_assert(sizeof(vec2_unaligned) == 2 * sizeof(float), "vec2_unaligned is not packed as expected");
 static_assert(sizeof(vec2_aligned) == 2 * sizeof(float), "vec2_aligned is not packed as expected");
 static_assert(sizeof(vec4_unaligned) == 4 * sizeof(float), "vec4_unaligned is not packed as expected");
