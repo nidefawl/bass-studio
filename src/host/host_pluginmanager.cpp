@@ -146,6 +146,7 @@ void PluginManager::unloadPlugin(effectbase* plugin) {
     if (plugin->getModuleType() == PLUGIN_TYPE_CLAP) {
         moduleHandleOpt = static_cast<clapplugin*>(plugin)->getModuleHandle();
     }
+    log_lf(Log::L_DEBUG, "Unload plugin %s\n", StringAsCStr(plugin->getName()));
     delete plugin;
     if (moduleHandleOpt) {
         moduleMgr->releaseModule(moduleHandleOpt);

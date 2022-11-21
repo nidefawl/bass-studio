@@ -188,14 +188,6 @@ static void initOGL() {
     }
 }
 
-void invalidateWindowContents(GLFWwindow* glfw) {
-#if defined(_WIN32)
-    InvalidateRect(glfwGetWin32Window(glfw), nullptr, FALSE);
-#elif defined(__linux__) || defined(__APPLE__)
-    sendExposeEvent(glfw);
-#endif
-}
-
 class appwindow_dialog;
 
 #ifdef _WIN32
@@ -416,7 +408,14 @@ public:
 
     virtual void flagNeedsRedraw() {
         appStats.numRedrawReq++;
-        invalidateWindowContents(glfw);
+    #if defined(_WIN32)
+        InvalidateRect(glfwGetWin32Window(glfw), nullptr, FALSE);
+    #elif defined(__linux__)
+        sendExposeEvent(glfw);
+    #elif defined(__APPLE__)
+        sendExposeEvent(glfw);
+    #endif
+        glfwMakeContextCurrent(nullptr);
     }
 
     void updateStats() {
