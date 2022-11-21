@@ -545,7 +545,7 @@ static int runScannerServer(const pluginscanner_server_options& options) {
             findFilesWithExt(options.clapPluginPath, PLATFORM_CLAP_PLUGIN_EXT, true, filesClap);
             log_message("Found %u .%s files in %s", CtrSize(filesClap), PLATFORM_CLAP_PLUGIN_EXT, StringAsCStr(options.clapPluginPath));
         }
-        filesVst_.clear();
+
         if (filesVst_.empty() && filesClap.empty()) {
             return 1;
         }
