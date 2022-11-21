@@ -78,7 +78,7 @@ jobs:
           ${{ env.BUILD_DIR }}/install-deps
         key: ${{ env.cachekey }}
 
-    - name: Download ninja, cmake and clang mingw toolchain
+    - name: Download ninja cmake and clang mingw toolchain
       if: steps.build-cache.outputs.cache-hit != 'true'
       run: |
         wget --no-check-certificate -nv https://github.com/nidefawl/llvm-project/releases/download/v16.0.0-3-linux/llvm-clang-16.0.0-libc++-abi-2-ubuntu-22.04.bz2 -O llvm-clang-16.0.0-libc++-abi-2-ubuntu-22.04.bz2
@@ -110,11 +110,11 @@ jobs:
         -DPROJECT_INSTALLER_OUTPUT_PATH:PATH=${{ env.BUILD_DIR }}/installer/linux
         -DPROJECT_WORKING_DIR:PATH=${{ env.BUILD_DIR }}/bin/linux
         -DPROJECT_VST2_OUTPUT_PATH:PATH=${{ env.BUILD_DIR }}/bin/linux
-        -DPROJECT_BUILD_CLI_HOST=OFF,
-        -DPROJECT_BUILD_TESTS=OFF,
-        -DPROJECT_BUILD_TESTS_UI=OFF,
-        -DPROJECT_BUILD_BENCHMARKS=OFF,
-        -DPROJECT_BUILD_PLUGINS=OFF,
+        -DPROJECT_BUILD_CLI_HOST=OFF
+        -DPROJECT_BUILD_TESTS=OFF
+        -DPROJECT_BUILD_TESTS_UI=OFF
+        -DPROJECT_BUILD_BENCHMARKS=OFF
+        -DPROJECT_BUILD_PLUGINS=OFF
         -DPROJECT_PRODUCT_NAME:STRING="DAW"
         -DPROJECT_BINARY_NAME:STRING="DAW"
         -DPRODUCT_HOST_NAME:STRING="DAW"
