@@ -39,9 +39,9 @@ namespace test_clap_plugin_host {
         TEST_BEGIN("test_clap_plugin_loader");
         auto host       = daw->getHost();
 #if defined(__linux__)
-#define PLATFORM_TEST_CLAP_EXT "so"
+#define PLATFORM_TEST_CLAP_EXT "clap"
 #elif defined(__APPLE__)
-#define PLATFORM_TEST_CLAP_EXT "dylib"
+#define PLATFORM_TEST_CLAP_EXT "clap"
 #else
 #define PLATFORM_TEST_CLAP_EXT "clap"
 #endif
@@ -53,6 +53,9 @@ namespace test_clap_plugin_host {
             TEST_ASSERT_THROW(res.clapPlugin != nullptr);
             host->onTick();
             host->unloadPlugin(res.plugin);
+        }
+        if (files.empty()) {
+            log_out("No clap plugins found in %s\n", TEST_PATH("plugins/clap"));
         }
         host->unload();
         host->destroy();
