@@ -2104,7 +2104,10 @@ void FillAudioBlockFromClips(audiocache* cache, const project_globals_t& prjGlob
 }
 void Host::onAudioStageChanged(audio_stage_t* stage) {
     DAW::validateEffectRoutings(this, stage);
-    this->impl->tls.dawInstance->onAudioStageChanged(stage);
+    auto daw = this->impl->tls.dawInstance;
+    if (daw) {
+        daw->onAudioStageChanged(stage);
+    }
 }
 
 std::shared_ptr<DAW::rmsmeter> Host::getMeterInput() {
