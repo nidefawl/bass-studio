@@ -243,6 +243,12 @@ public:
     }
 };
 
+plugindatabase_t::~plugindatabase_t() {
+    if (m_impl) {
+        delete m_impl;
+    }
+}
+
 bool plugindatabase_t::resolvePlugin(const plugin_snapshot_t& pluginSnapshot, pluginentry_t& _outResult, int loadFlags) {
     return m_impl->resolvePlugin(pluginSnapshot, _outResult, loadFlags);
 }
@@ -250,6 +256,7 @@ bool plugindatabase_t::resolvePlugin(const plugin_snapshot_t& pluginSnapshot, pl
 void plugindatabase_t::query(const String& q, std::vector<pluginentry_t>& _out) {
     m_impl->query(q, _out);
 }
+
 
 void plugindatabase_t::openDatabase() {
     revision++;
