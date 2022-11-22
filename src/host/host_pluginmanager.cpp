@@ -304,6 +304,7 @@ audio_stage_t* PluginManager::getAudioStage(const audio_stage_ref_t& ref) const 
 }
 
 bool PluginManager::movePluginsToStage(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
+    dbgassert(mgrImpl->tls.dawInstance);
     ThreadLock lock = mgrImpl->tls.dawInstance->lockPlayThread();
     dbgassert(dstTr);
     dbgassert(trp);
@@ -322,6 +323,7 @@ bool PluginManager::movePluginsToStage(audio_stage_t* dstTr, audio_stage_t* trp,
 }
 
 bool PluginManager::movePluginsOnStage(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
+    dbgassert(mgrImpl->tls.dawInstance);
     ThreadLock lock = mgrImpl->tls.dawInstance->lockPlayThread();
 #ifndef NDEBUG
     dbgassert(src >= 0 && dst >= 0);
@@ -387,7 +389,10 @@ void PluginManager::onTick() {
             }
         }
     }
-    ThreadLock lock = mgrImpl->tls.dawInstance->lockPlayThread();
+    auto daw = mgrImpl->tls.dawInstance;
+    if (!daw)
+        return;
+    ThreadLock lock = daw->lockPlayThread();
     for (auto* clapPlugin : pluginInstancesClap) {
         clapPlugin->updateFromMainThread();
     }
@@ -808,18 +813,22 @@ void PluginManager::scanPlugins() {
 }
 
 void PluginManager::checkScanner() {
+    auto daw = mgrImpl->tls.dawInstance;
+    if (!daw) {
+        return;
+    }
     try {
         static int nCalls = 0;
         if (mgrImpl->scanningState && mgrImpl->threadPluginScannerProcess) {
             if (!mgrImpl->threadPluginScannerProcess->isRunning()) {
                 mgrImpl->threadPluginScannerProcess->joinProcess();
                 mgrImpl->threadPluginScannerProcess.reset();
-                mgrImpl->tls.dawInstance->getPluginDatabase().reopen();
+                daw->getPluginDatabase().reopen();
                 this->mgrImpl->scanningState = 0;
             } else {
                 if (++nCalls >= 10) {
                     nCalls = 0;
-                    mgrImpl->tls.dawInstance->getPluginDatabase().reopen();
+                    daw->getPluginDatabase().reopen();
                 }
             }
 
