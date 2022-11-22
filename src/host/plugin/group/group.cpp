@@ -283,7 +283,7 @@ void module_group::process(const DAW::Host::Host* const host, AudioBlock* in, Au
     if (!DAW::buildEffectProcessingGraph(pluginMgr, nullptr, audio, effProcessingGraph)) {
         log_lf(Log::L_ERROR, "Failed building effect graph\n");
     }
-    host->processAudio(handle->scratch, audio, &audio->input, &audio->output, host->prjGlobals, tick, samplePos, numSamples, state, effProcessingGraph.get());
+    host->processAudio(handle->scratch, audio, &audio->input, &audio->output, host->prjGlobals, tick, samplePos, numSamples, state, effProcessingGraph.get(), audio);
     lastEffProcessingGraph = effProcessingGraph;
 #ifdef DAW_DEBUG_TRACK_GRAPHS
     //TODO: this code path runs on a workerthread. Store processing-graph add to pluginhost::lastProcessingGraphs from playback-thread

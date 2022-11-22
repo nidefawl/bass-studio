@@ -1410,7 +1410,7 @@ int32_t Host::processGraphNode(process_scratch_buf_t& tmp, track_block_processin
         if (effProcessingGraph) {
             /* Processes audio/midi tracks plugin chain */
             processAudio(tmp, trackImpl, &trackImpl->input, &trackImpl->output, req.projectGlobals, tickLatencyCompensated, sampleLatencyCompensated, (int32_t)sampleFormat.blockSize, playbackState,
-                        effProcessingGraph.get());
+                        effProcessingGraph.get(), trackImpl);
             trackImpl->procStats.numBlocksProcessed++;
         }
     }
@@ -1854,7 +1854,8 @@ void Host::processAudio(process_scratch_buf_t& tmp,
                            const samplecount_t sampleStageLatencyCompensated,
                            int32_t numSamples,
                            playback_state playbackState,
-                           const DAW::effect_processing_graph_t* const processingGraph) const
+                           const DAW::effect_processing_graph_t* const processingGraph,
+                           IDelayLineStorage* delayLines) const
 {
    
     hires_timer_t timer;
@@ -1894,7 +1895,7 @@ void Host::processAudio(process_scratch_buf_t& tmp,
             effectbase* const effect = effNode.effectOptional;
 
             timer.reset();
-            MixInputs(this, effNode, tmp, this->impl, blockIn, effNode.pulls, numChannelsTrack, effNode.inputLatency, tickLatencyCompensated, tickLatencyCompensated + getAudioStreamProperties().ticksPerBlock, playbackState, nullptr);
+            MixInputs(this, effNode, tmp, delayLines, blockIn, effNode.pulls, numChannelsTrack, effNode.inputLatency, tickLatencyCompensated, tickLatencyCompensated + getAudioStreamProperties().ticksPerBlock, playbackState, nullptr);
             AudioBlock* blockPostProcess = nullptr;
             int64_t timePassed = 0;
             if (effect) {
