@@ -744,7 +744,7 @@ guibase::guibase(gui_type guiType)
 #ifdef TRACK_ALLOCATIONS_GUIBASE
     allocId = DebugAlloc::getTracker<guibase>()->objConstructor(this);
 #endif
-    makeSafeRef();
+    // makeSafeRef();
 }
 guibase::~guibase() {
     dbgassert(seqthreads::CurrentThreadType() == seqthreads::ThreadType::MainThread);
@@ -760,6 +760,7 @@ SafeRef<guibase> guibase::makeSafeRef() {
     // dbgassert(parentCtrl);
     if (!safeRef.handler) {
         auto runtime = daw_tls::getTls().runtime;
+        dbgassert(runtime);
         auto& storage = runtime->safeRefs;
         safeRef = /* SafeRef<guibase> */{ storage.safeRefCreate(this), &storage };
     }

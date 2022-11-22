@@ -1014,6 +1014,8 @@ void BaseCtrl::closeAllAppMenus() {
     closeAppMenusAtLvl(0);
 }
 SafeRefStorage<guibase>& BaseCtrl::getRefStorage() {
+    // TODO: make runtime pointer a member of BaseCtrl
+    // runtime lifetime is guaranteed to exceed the lifetime of the BaseCtrl
     if (daw_tls::isTlsInitialized()) {
         auto runtime = daw_tls::getTls().runtime;
         dbgassert(runtime);
