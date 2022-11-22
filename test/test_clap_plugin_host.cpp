@@ -1,5 +1,6 @@
 #include "TestBase.hpp"
 #include "appsettings.h"
+#include "fileio.h"
 #include "host/daw/mainctrl.h"
 #include "host/plugin/clap/clap-plugin.h"
 #include "host/graph/effect_graph.h"
@@ -11,6 +12,7 @@
 #include "appconfig.h"
 #include "thread.h"
 #include <memory>
+#include <vector>
 
 namespace test_clap_plugin_host {
 
@@ -36,14 +38,22 @@ namespace test_clap_plugin_host {
     void test_clap_plugin(DawInstance* daw) {
         TEST_BEGIN("test_clap_plugin_loader");
         auto host       = daw->getHost();
-        String filepath = "/data/dev/clap/clap-plugins/builds/ninja-headless/plugins/Debug"
-                          "/"
-                          "clap-plugins.clap";
-        auto res        = host->loadPlugin({filepath, 0, 0, 0, 1});
-        TEST_ASSERT_THROW(res.library.isSuccess());
-        TEST_ASSERT_THROW(res.clapPlugin != nullptr);
-        host->onTick();
-        host->unloadPlugin(res.plugin);
+#if defined(__linux__)
+#define PLATFORM_TEST_CLAP_EXT "so"
+#elif defined(__APPLE__)
+#define PLATFORM_TEST_CLAP_EXT "dylib"
+#else
+#define PLATFORM_TEST_CLAP_EXT "clap"
+#endif
+        std::vector<FileFound> files;
+        findFilesWithExt(TEST_PATH("plugins/clap"), PLATFORM_TEST_CLAP_EXT, true, files);
+        for (const auto& file : files) {
+            auto res = host->loadPlugin({file.path, 0, 0, 0, 1});
+            TEST_ASSERT_THROW(res.library.isSuccess());
+            TEST_ASSERT_THROW(res.clapPlugin != nullptr);
+            host->onTick();
+            host->unloadPlugin(res.plugin);
+        }
         host->unload();
         host->destroy();
 

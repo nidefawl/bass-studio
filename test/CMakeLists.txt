@@ -130,7 +130,31 @@ DEFINE_TEST(test_host_minimal TRUE test_host_minimal.cpp common/test_common.cpp)
 DEFINE_TEST(test_projectfile TRUE test_projectfile.cpp)
 DEFINE_TEST(test_muparser TRUE test_muparser.cpp)
 DEFINE_TEST(test_libarchive TRUE test_libarchive.cpp)
+include(ExternalProject)
+
+set(CLAP_OS "Linux")
+set(DL_DIVA_HASH "c1d675baf9d2b6732a554e3a172929e746247eb6ec4378c4e33635a88f39340d")
+if (WIN32)
+  set(CLAP_OS "Windows")
+  set(DL_DIVA_HASH "53d749a1f951ced317d2197e0bd322315e11c9b1242599b62a292155eb4f3eb5")
+endif()
+if (APPLE)
+  set(CLAP_OS "Mac")
+  set(DL_DIVA_HASH "f33f6af3c834c1be264553da8f948dae0ea628d61f4ac766d0b47f51514ea3d5")
+  endif()
+ExternalProject_Add(
+    test_clap_download_diva_demo
+    URL https://uhe-dl.b-cdn.net/betas/public/diva/Diva_145_preview_13207_${CLAP_OS}.tar.xz
+    URL_HASH SHA256=${DL_DIVA_HASH}
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    BUILD_IN_SOURCE TRUE
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ${CMAKE_COMMAND} -E copy_directory . ${PROJECT_CTEST_DATA_PATH}/plugins/clap/diva
+)
 DEFINE_TEST(test_clap_plugin_host TRUE test_clap_plugin_host.cpp)
+
+add_dependencies(test_clap_plugin_host test_clap_download_diva_demo)
 
 if (PROJECT_BUILD_TESTS_UI) 
   DEFINE_TEST(test_vstplugins TRUE test_vstplugins.cpp common/test_common.cpp)
