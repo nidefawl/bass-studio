@@ -1,7 +1,12 @@
 #include <ctime>
 #include <memory>
 #include "appsettings.h"
-#include "platform.h"
+#if defined(__linux__) || defined(__APPLE__)
+#include "platform/linux/windowsize.h"
+#endif
+#ifdef _WIN32
+#include "platform/win/windowsize.h"
+#endif
 
 appwindowsettings::appwindowsettings()
     : size(std::make_shared<appwindow_size_t>())

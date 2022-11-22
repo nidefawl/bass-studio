@@ -35,7 +35,7 @@ void serialize(Archive& ar, appwindow_size_t& settings) {
        (int32_t&) p.rcNormalPosition.bottom);
 }
 #endif
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 #include "platform/linux/windowsize.h"
 
 template <class Archive>

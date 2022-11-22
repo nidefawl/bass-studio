@@ -71,7 +71,7 @@ struct app_iosettings {
         return midiconfigs[devApi];
     }
 };
-struct appwindow_size_t;
+
 struct appwindowsettings {
     std::shared_ptr<appwindow_size_t> size{};
     grid_density dens{};
