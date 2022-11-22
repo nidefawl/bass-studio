@@ -93,13 +93,12 @@ struct path_t {
 };
 class IPathRenderer {
 public:
-    uint32_t program2dLines;
+    uint32_t program2dLines = 0;
     virtual ~IPathRenderer()= default;
     virtual int init()     = 0;
     virtual void destroy() = 0;
-
+    virtual bool isValid() const = 0;
     virtual void bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) = 0;
-
     virtual void render(BakeGLPath& out, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) = 0;
 };
 class GLPathRendererDashLines final : public IPathRenderer {
@@ -115,15 +114,17 @@ class GLPathRendererDashLines final : public IPathRenderer {
 public:
     const uint32_t countUniforms = 32;
     const uint32_t sizeUniforms  = countUniforms * 4;
-    int32_t u_dash_atlas;
-    int32_t u_model;
-    int32_t u_view;
-    int32_t u_projection;
-    int32_t u_uniforms;
-    int32_t u_uniforms_shape;
+    int32_t u_dash_atlas         = 0;
+    int32_t u_model              = 0;
+    int32_t u_view               = 0;
+    int32_t u_projection         = 0;
+    int32_t u_uniforms           = 0;
+    int32_t u_uniforms_shape     = 0;
+
 public:
     int init() override;
     void destroy() override;
+    bool isValid() const override;
     void bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) override;
     void render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };
@@ -134,12 +135,13 @@ class GLPathRendererPolyline2d final : public IPathRenderer {
     };
 
 public:
-    int32_t u_mvp;
-    int32_t u_color;
+    int32_t u_mvp   = 0;
+    int32_t u_color = 0;
 
 public:
     int init() override;
     void destroy() override;
+    bool isValid() const override;
     void bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) override;
     void render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };
@@ -150,12 +152,13 @@ class GLPathRendererParBasic final : public IPathRenderer {
     };
     std::vector<float> tmpBuffer;
 
-    int32_t u_mvp;
-    int32_t u_linewidth;
+    int32_t u_mvp       = 0;
+    int32_t u_linewidth = 0;
 
 public:
     int init() override;
     void destroy() override;
+    bool isValid() const override;
     void bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) override;
     void render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };
@@ -167,13 +170,14 @@ class GLPathRendererParAdvanced final : public IPathRenderer {
     };
     std::vector<float> tmpBuffer;
 
-    int32_t u_mvp;
-    int32_t u_color;
-    int32_t u_linewidth;
+    int32_t u_mvp        = 0;
+    int32_t u_color      = 0;
+    int32_t u_linewidth  = 0;
 
 public:
     int init() override;
     void destroy() override;
+    bool isValid() const override;
     void bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) override;
     void render(BakeGLPath& bakedPath, const mat4x4& matProj, const mat4x4& matView, const mat4x4& matModel) override;
 };

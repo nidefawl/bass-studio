@@ -76,6 +76,9 @@ void waveformrender::destroy() {
     atlases.clear();
     queuedTasks.clear();
 }
+bool waveformrender::isValid() const {
+    return impl->renderer->isValid();
+}
 
 void waveformrender::getRenderedTextures(std::vector<TextureAtlas>& rendered) {
     for (auto& atlas : atlases) {
@@ -378,7 +381,7 @@ waveformrender::render_timings waveformrender::getTimings() {
 }
 int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
     impl->renderTimings = {};
-    auto renderer = impl->renderer;
+    auto pathRenderer = impl->renderer;
 
     bool preGlSet = false;
 
@@ -474,7 +477,9 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
         if (!preGlSet) {
             preGlSet = true;
             preGLState();
-            glUseProgram(renderer->program2dLines);
+            if (pathRenderer->isValid()) {
+                glUseProgram(pathRenderer->program2dLines);
+            }
         }
         if (!_atlas.fb) {
             preGlSet |= 1;
@@ -534,8 +539,8 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             for (auto& twf : tesselatedWaveForms) {
                 *it++ = path_t{std::move(twf), bakeOpt};
             }
-            if (!paths.empty()) {
-                renderer->bakePaths(paths, bakedPath);
+            if (!paths.empty() && pathRenderer->isValid()) {
+                pathRenderer->bakePaths(paths, bakedPath);
             }
             impl->renderTimings.tmBakePaths += impl->timer2.getTime();
             impl->timer2.reset();
@@ -550,8 +555,8 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
             impl->timer2.reset();
             glScissor(pos.x, FBO_HEIGHT - pos.y - size.y, size.x, size.y);
             glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            if (!paths.empty()) {
-                renderer->render(bakedPath, matProj, matView, matModel);
+            if (!paths.empty() && pathRenderer->isValid()) {
+                pathRenderer->render(bakedPath, matProj, matView, matModel);
             }
             impl->renderTimings.tmDrawGL += impl->timer2.getTime();
             TextureAtlasEntry e;

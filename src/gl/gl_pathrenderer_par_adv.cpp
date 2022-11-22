@@ -85,7 +85,12 @@ int GLPathRendererParAdvanced::init() {
     return 0;
 }
 void GLPathRendererParAdvanced::destroy() {
-    glDeleteProgram(program2dLines);
+    if (program2dLines)
+        glDeleteProgram(program2dLines);
+    program2dLines = 0;
+}
+bool GLPathRendererParAdvanced::isValid() const {
+    return program2dLines != 0;
 }
 void GLPathRendererParAdvanced::bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) {
     dbgassert(!paths.empty());

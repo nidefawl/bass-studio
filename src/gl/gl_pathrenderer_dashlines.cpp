@@ -203,7 +203,12 @@ int GLPathRendererDashLines::init() {
     return 0;
 }
 void GLPathRendererDashLines::destroy() {
-    glDeleteProgram(program2dLines);
+    if (program2dLines)
+        glDeleteProgram(program2dLines);
+    program2dLines = 0;
+}
+bool GLPathRendererDashLines::isValid() const {
+    return program2dLines != 0;
 }
 void GLPathRendererDashLines::bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) {
     std::vector<vert> outVdata;

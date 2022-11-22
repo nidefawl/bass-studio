@@ -74,7 +74,12 @@ int GLPathRendererPolyline2d::init() {
     return 0;
 }
 void GLPathRendererPolyline2d::destroy() {
-    glDeleteProgram(program2dLines);
+    if (program2dLines)
+        glDeleteProgram(program2dLines);
+    program2dLines = 0;
+}
+bool GLPathRendererPolyline2d::isValid() const {
+    return program2dLines != 0;
 }
 void GLPathRendererPolyline2d::bakePaths(const std::vector<path_t>& paths, BakeGLPath& out) {
     dbgassert(!paths.empty());

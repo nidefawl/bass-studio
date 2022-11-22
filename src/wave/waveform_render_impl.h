@@ -67,6 +67,7 @@ public:
     ~waveformrender();
     void destroy();
     void init();
+    bool isValid() const;
     void getRenderedTextures(std::vector<TextureAtlas>& rendered);
     bool findSimiliarWaveform(waveform_update_task_t& waveformQueueEntry);
     void assertWaveformRefIsUnbound(gui_waveform_texture_ref* waveformRef);
