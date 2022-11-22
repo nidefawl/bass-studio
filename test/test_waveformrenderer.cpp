@@ -202,7 +202,6 @@ namespace MiniApp {
             }
         }
         void initApp(const std::vector<String>& args) override {
-            daw_tls::initNewTls();
             waveformTest.init();
         }
 
@@ -390,6 +389,7 @@ public:
 int main(int argc, char* argv[]) {
     TestWaveformInstService instService;
     std::vector<String> vecArgs(&argv[0], &argv[argc]);
+    daw_tls::initNewTls();
     int ret = startApplication(vecArgs, instService);
     return ret;
 }

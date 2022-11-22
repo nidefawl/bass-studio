@@ -53,7 +53,6 @@ public:
     }
 
     void initApp(const std::vector<String>& args) override {
-        daw_tls::initNewTls();
         const auto filepath = TEST_PATH("word_dict.txt");
         try {
             std::vector<uint8_t> vec;
@@ -208,7 +207,12 @@ public:
 
   void startApp(std::shared_ptr<AppCtrl> &app) override { app->startApp(); }
 
-  void deleteApp() override { appctrl.reset(); }
+  void deleteApp() override { 
+    appctrl.reset();
+    daw_tls::tlsinstance& tls = daw_tls::getTls();
+    delete tls.runtime;
+    delete tls.settings;
+  }
 };
 
 }// namespace test_fontrenderer
@@ -216,6 +220,7 @@ public:
 int main(int argc, char* argv[]) {
     test_fontrenderer::Instance instService;
     std::vector<String> vecArgs(&argv[0], &argv[argc]);
+    daw_tls::initNewTls();
     int ret = startApplication(vecArgs, instService);
     return ret;
 }
