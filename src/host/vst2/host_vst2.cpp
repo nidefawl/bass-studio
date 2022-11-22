@@ -226,7 +226,8 @@ VstIntPtr audioMasterHost(::DAW::Host::PluginManager* host, ::DAW::Host::PluginH
             auto parent = plugin->trackImpl;
             while (parent->parent) parent = parent->parent;
             auto daw = host->getTls().dawInstance;
-            if (daw && daw->getTracks().resolveTrack(parent->toRef())) {
+            //TODO: add explicit flag for headleass mode. daw == nullptr could mean headless mode or end of lifetime (in which case we don't want to process)
+            if (!daw || daw->getTracks().resolveTrack(parent->toRef())) {
                 validProcessingState = true;
             }
         }

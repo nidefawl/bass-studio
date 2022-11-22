@@ -7,11 +7,12 @@
 int main(int, char*[]) {
     daw_test::currentTest = daw_test::TestCases::TEST_HOST_EXCEPTIONS;
     std::vector<String> args{
-        "-f", TEST_PATH("projects/serum-test.project"),
+        "-f", TEST_PATH("projects/test-vst.project"),
         "-s", "32.0",
         "-l", "4.0",
         "-o", "test-render",
         "--render"
     };
-    return HostCLI::runCommandLineHost(args);
+    int ret = HostCLI::runCommandLineHost(args);
+    return (ret == 1) ? 0 : 1;
 }
