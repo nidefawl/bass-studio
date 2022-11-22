@@ -652,7 +652,6 @@ void guictr_editor_base::relayout() {
         moveToBegin(&clipHandles);
         return;
     }
-    bool foundThis = false;
     for (size_t trackIdx = 0; trackIdx < numTracks; trackIdx++) {
         auto& [trackEntry, vecTrackClips] = view.m_selectionView.tracks[trackIdx];
         if (!view.clipRef().isTrackValid(trackEntry.track)) {
@@ -675,24 +674,8 @@ void guictr_editor_base::relayout() {
             dbgassert(clipHandles.getClipView().clip() == selClip);
             clipHandles.setHandleActive(selClip == currentClip);
             moveToBegin(&clipHandles);
-            if (clipHandles.isHandleActive()) {
-                foundThis = true;
-            }
         }
     }
-    (void) foundThis;
-#ifndef NDEBUG
-    dbgassert(!currentClip || !view.m_selectionView.totalClipCount || foundThis);
-    dbgassert(clipsHandles.size() >= view.m_selectionView.totalClipCount);
-    for (size_t i = 0; i < view.m_selectionView.totalClipCount; i++) {
-        dbgassert(clipsHandles[i]->isVisible());
-        dbgassert(clipsHandles[i]->getClipView().clip());
-    }
-    for (size_t i = view.m_selectionView.totalClipCount; i < clipsHandles.size(); i++) {
-        dbgassert(!clipsHandles[i]->isVisible());
-        dbgassert(!clipsHandles[i]->getClipView().clip());
-    }
-#endif
 }
 
 void guictr_editor_base::onClipChanged() {
