@@ -6,6 +6,7 @@
 #define USE_NANOVG_AA 1
 
 #define FILE_FORMAT_VERSION 3
+#define PROJECT_FILE_TYPE_DESC "Project File"
 #define PROJECT_FILE_EXT "project"
 #define PROJECT_BUNDLE_FILE_EXT "zip"
 #ifndef USE_GUI_MENU

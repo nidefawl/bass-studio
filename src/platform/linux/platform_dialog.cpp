@@ -29,14 +29,23 @@ int browseForFolder(const String& title, const String& pathStart, String& _out) 
 }
 int promptUserFilePath(window_base* w,
                        int mode,
-                       std::vector<SupportedFileType> fileTypes,
+                       SupportedFileTypes fileTypes,
                        String& _out,
                        String _defaultPath,
                        String _defaultName) {
     std::vector<nfdfilteritem_t> filterItems;
-    filterItems.reserve(fileTypes.size());
-    for (auto& fileType : fileTypes) {
+    filterItems.reserve(fileTypes.types.size() + 1);
+    String multiFilter = "";
+    String desc       = "";
+    for (auto& fileType : fileTypes.types) {
         filterItems.push_back({StringAsCStr(fileType.desc), StringAsCStr(fileType.ext)});
+        desc += fileType.desc + ",";
+        multiFilter += fileType.ext + ",";
+    }
+    if (fileTypes.types.size() > 1 && multiFilter.size() > 0) {
+        multiFilter.pop_back();
+        desc.pop_back();
+        filterItems.insert(filterItems.begin(), {StringAsCStr(desc), StringAsCStr(multiFilter)});
     }
     nfdchar_t* savePath{};
     nfdresult_t result{};

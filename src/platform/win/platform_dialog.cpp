@@ -39,28 +39,49 @@ int browseForFolder(const String& title, const String& pathStart, String& _out) 
     }
     return 1;
 }
-int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out, String _defaultPath, String _defaultName) {
-    char supportedFiles[MAX_PATH] = "";
+int promptUserFilePath(window_base* w, int mode, SupportedFileTypes fileTypes, String& _out, String _defaultPath, String _defaultName) {
 
-    int offset  = 0;
-    fileTypes.push_back(SupportedFileType{ "All Files", "*" });
-    for (SupportedFileType& type : fileTypes) {
-        //This doesn't look safe, truncating requires extra attention. Watch out!
-        int val = _snprintf(supportedFiles + offset, size_t(MAX_PATH) - offset, "%s (*.%s)", StringAsCStr(type.desc), StringAsCStr(type.ext));
-        if (val > 0) {
-            offset += val;
-            supportedFiles[offset] = 0;
-            offset++;
-        }
-        val = _snprintf(supportedFiles + offset, size_t(MAX_PATH) - offset, "*.%s", StringAsCStr(type.ext));
-        if (val > 0) {
-            offset += val;
-            supportedFiles[offset] = 0;
-            offset++;
-        }
+    std::vector<std::pair<String, String>> filterItems;
+    filterItems.reserve(fileTypes.types.size() + 1);
+    String multiFilter = "";
+    String desc       = "";
+    for (auto& fileType : fileTypes.types) {
+        String wildExt = "*." + fileType.ext;
+        String entryName = fileType.desc + " (" + wildExt + ")";
+        desc += entryName + "|";
+        filterItems.push_back({entryName, wildExt});
+        multiFilter += wildExt + ";";
     }
-    supportedFiles[offset] = 0;
-
+    if (fileTypes.types.size() > 1 && multiFilter.size() > 0) {
+        multiFilter.pop_back();
+        desc.pop_back();
+        filterItems.insert(filterItems.begin(), {StringAsCStr(desc), StringAsCStr(multiFilter)});
+    }
+    filterItems.push_back({ "All Files", "*" });
+    std::vector<char> supportedFiles;
+    // calculate length of null terminated string, so we can allocate the correct amount of memory
+    size_t slen = 0;
+    for (auto& filterItem : filterItems) {
+        slen += filterItem.first.size() + 1;
+        slen += filterItem.second.size() + 1;
+    }
+    slen += 1; // for the last null terminator
+    if (slen >= MAX_PATH - 2) {
+        dbgassert(0);
+        return 1;
+    }
+    supportedFiles.resize(slen);
+    size_t offset = 0;
+    for (auto& filterItem : filterItems) {
+        memcpy(supportedFiles.data() + offset, filterItem.first.c_str(), filterItem.first.size() + 1);
+        offset += filterItem.first.size() + 1;
+        memcpy(supportedFiles.data() + offset, filterItem.second.c_str(), filterItem.second.size() + 1);
+        offset += filterItem.second.size() + 1;
+    }
+    supportedFiles[slen - 1] = 0;
+    // assert that last two bytes are null
+    dbgassert((slen <= 1 || supportedFiles[slen - 2] == 0) && supportedFiles[slen - 1] == 0);
+    const char* filter = supportedFiles.data();
     if (mode == 0) {
 
         OPENFILENAME ofn;
@@ -70,11 +91,11 @@ int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> 
 
         ofn.lStructSize = sizeof(ofn);
         ofn.hwndOwner   = getMainHWND();
-        ofn.lpstrFilter = supportedFiles;
+        ofn.lpstrFilter = filter;
         ofn.lpstrFile   = szFileName;
         ofn.nMaxFile    = MAX_PATH;
         ofn.Flags       = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_NOCHANGEDIR;
-        ofn.lpstrDefExt = StringAsCStr(fileTypes[0].ext);
+        ofn.lpstrDefExt = fileTypes.types.empty() ? "" : fileTypes.types[0].ext.c_str();
         if (_defaultPath.length())
             ofn.lpstrInitialDir = StringAsCStr(_defaultPath);
 
@@ -94,11 +115,11 @@ int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> 
 
         ofn.lStructSize = sizeof(ofn);
         ofn.hwndOwner   = getMainHWND();
-        ofn.lpstrFilter = supportedFiles;
+        ofn.lpstrFilter = filter;
         ofn.lpstrFile   = szFileName;
         ofn.nMaxFile    = MAX_PATH;
         ofn.Flags       = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
-        ofn.lpstrDefExt = StringAsCStr(fileTypes[0].ext);
+        ofn.lpstrDefExt = fileTypes.types.empty() ? "" : fileTypes.types[0].ext.c_str();
         if (_defaultPath.length())
             ofn.lpstrInitialDir = StringAsCStr(_defaultPath);
         ofn.lpstrFileTitle = szFileTitle;

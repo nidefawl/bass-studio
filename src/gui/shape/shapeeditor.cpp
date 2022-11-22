@@ -727,12 +727,12 @@ public:
             CreateDirectoryIfNotExists(defaultPresetPath);
             String path;
             auto window = parentCtrl->window;
-            if (promptUserFilePath(window, 1, vFILE_TYPE_SHAPEPRESET, path, defaultPresetPath)) {
+            if (promptUserFilePath(window, 1, FILE_TYPES_SHAPEPRESET, path, defaultPresetPath)) {
                 String ext;
                 String name;
                 SplitPath(path, nullptr, &name, &ext);
                 if (ext.empty()) {
-                    path += "." + vFILE_TYPE_SHAPEPRESET[0].ext;
+                    path += "." + FILE_TYPES_SHAPEPRESET.types.front().ext;
                 }
                 shapePreset.curve.name = name;
                 controls.selectPreset.setString(name);

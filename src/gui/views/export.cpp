@@ -10,8 +10,7 @@
 
 namespace {
     constexpr int TEXT_FONT_SIZE = 20;
-    const SupportedFileType FILE_TYPE_EXPORT{ "*.wav", "wav" };
-    std::vector<SupportedFileType> vFILE_TYPE_EXPORT = { FILE_TYPE_EXPORT };
+    SupportedFileTypes FILE_TYPES_EXPORT = SupportedFileTypes{"Wave File", { SupportedFileType{ "*.wav", "wav" } } };
 }// namespace
 class gui_export;
 class guictr_timeframe final : public guictr_base {
@@ -193,7 +192,7 @@ public:
         auto window = parentCtrl->window;
 
         String path = lastPath;
-        if (promptUserFilePath(window, 1, vFILE_TYPE_EXPORT, path)) {
+        if (promptUserFilePath(window, 1, FILE_TYPES_EXPORT, path)) {
             settings.exportPath = path;
         } else {
             settings.exportPath = "";

@@ -1,3 +1,4 @@
+#include "fileio.h"
 #include "host/shape/shape.h"
 #include "exceptions.h"
 #include "shapefile.h"
@@ -94,7 +95,7 @@ bool saveShapePresetFile(const shape_preset_t& _preset, const String& path) {
     }
     return false;
 }
-const SupportedFileType FILE_TYPE_SHAPEPRESET{ "Shape Preset File", "shape" };
-std::vector<SupportedFileType> vFILE_TYPE_SHAPEPRESET = { FILE_TYPE_SHAPEPRESET };
+
+const SupportedFileTypes FILE_TYPES_SHAPEPRESET = SupportedFileTypes{"Shape Preset", { SupportedFileType{ "Shape Preset File", "shape" } } };
 
 } // namespace DAW::Shape

@@ -49,7 +49,7 @@ class guictr_plugins;
 struct track_params_snapshot_t;
 struct track_io_configuration_snapshot_t;
 struct audio_stage_t;
-extern const std::vector<SupportedFileType> vFILE_TYPES_TRACKSNAPSHOT;
+extern const SupportedFileTypes FILE_TYPES_TRACKSNAPSHOT;
 
 struct track_audio_src {
     std::vector<float*> channels;

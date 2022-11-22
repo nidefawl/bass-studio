@@ -389,7 +389,7 @@ bool guictxtmenu_plugin::clickedElement(ctxtmenu_entry* e, int _id) {
     if (_id == CMD_LOAD_PLUGIN && stage) {
         auto window = parentCtrl->window;
         String path;
-        if (promptUserFilePath(window, 0, vFILE_TYPE_PLUGINSNAPSHOT, path)) {
+        if (promptUserFilePath(window, 0, FILE_TYPES_PLUGINSNAPSHOT, path)) {
             ThreadLock lock                                   = dawCtrl->lockPlayThread();
             std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(path);
             dbgassert(pluginSnapshot);

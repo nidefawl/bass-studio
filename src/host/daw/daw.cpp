@@ -126,9 +126,9 @@ String getProjectAutosaveFilename(String projectPath) {
 
 static SupportedFileType FILE_TYPE_PROJECT{ "Project File", PROJECT_FILE_EXT };
 static SupportedFileType FILE_TYPE_PROJECT_BUNDLE{ "Project Bundle", PROJECT_BUNDLE_FILE_EXT };
-std::vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
-std::vector<SupportedFileType> vFILE_TYPE_BUNDLE = { FILE_TYPE_PROJECT_BUNDLE };
-std::vector<SupportedFileType> vFILE_TYPE_PROJECTS = { FILE_TYPE_PROJECT, FILE_TYPE_PROJECT_BUNDLE };
+SupportedFileTypes FILE_TYPES_PROJECT = SupportedFileTypes{PROJECT_FILE_TYPE_DESC " (json)", std::vector<SupportedFileType>{ FILE_TYPE_PROJECT } };
+SupportedFileTypes FILE_TYPES_BUNDLE = SupportedFileTypes{PROJECT_FILE_TYPE_DESC " (bundle)", { FILE_TYPE_PROJECT_BUNDLE } };
+SupportedFileTypes FILE_TYPES_PROJECTS = SupportedFileTypes{PROJECT_FILE_TYPE_DESC "s", { FILE_TYPE_PROJECT, FILE_TYPE_PROJECT_BUNDLE } };
 
 MainCtrl* DawInstance::getMainControl() {
     return this->tls.mainCtrl;
@@ -646,7 +646,7 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
             case CMD_IMPORT_TRACK: {
                 String path;
                 auto importDir = getProjectDirectory();
-                if (promptUserFilePath(mainCtrl->window, 0, vFILE_TYPES_TRACKSNAPSHOT, path, importDir)) {
+                if (promptUserFilePath(mainCtrl->window, 0, FILE_TYPES_TRACKSNAPSHOT, path, importDir)) {
                     std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(path);
                     dbgassert(ctr);
                     if (ctr) {
@@ -737,7 +737,7 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
             case CMD_FILE_OPEN: {
                 if (command.arg1.empty()) {
                     String path;
-                    if (promptUserFilePath(mainCtrl->window, 0, vFILE_TYPE_PROJECTS, path, lastProjectDirectory)) {
+                    if (promptUserFilePath(mainCtrl->window, 0, FILE_TYPES_PROJECTS, path, lastProjectDirectory)) {
                         loadFile(path, DAW::PluginLoadFlags::FLAG_INVOKE_USER_CB_DEFERLOAD);
                     }
                 } else {
@@ -747,7 +747,7 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
             }
             case CMD_BUNDLE_PROJECT_ZIP: {
                 String bundlePath;
-                if (!promptUserFilePath(tls.mainCtrl->window, 1, vFILE_TYPE_BUNDLE, bundlePath, lastProjectDirectory)) {
+                if (!promptUserFilePath(tls.mainCtrl->window, 1, FILE_TYPES_BUNDLE, bundlePath, lastProjectDirectory)) {
                     return true;
                 }
                 String ext;
@@ -784,7 +784,7 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                 }
                 String path = projectPath;
                 if (command.command == CMD_FILE_SAVEAS || path.empty()) {
-                    if (!promptUserFilePath(mainCtrl->window, 1, vFILE_TYPE_PROJECT, path, lastProjectDirectory)) {
+                    if (!promptUserFilePath(mainCtrl->window, 1, FILE_TYPES_PROJECT, path, lastProjectDirectory)) {
                         return true;
                     }
                     String ext;

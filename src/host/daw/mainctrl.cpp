@@ -1011,12 +1011,12 @@ bool DawCtrl::menuCommand(const menucmd_t& command) {
             trackContainerSnapshot.tracks.push_back(snapshot);
             String path;
             auto exportDir = daw.getProjectDirectory();
-            auto exportFilename = selTrack->name + "." + vFILE_TYPES_TRACKSNAPSHOT[0].ext;
-            if (promptUserFilePath(window, 1, vFILE_TYPES_TRACKSNAPSHOT, path, exportDir, exportFilename)) {
+            auto exportFilename = selTrack->name + "." + FILE_TYPES_TRACKSNAPSHOT.types.front().ext;
+            if (promptUserFilePath(window, 1, FILE_TYPES_TRACKSNAPSHOT, path, exportDir, exportFilename)) {
                 String ext;
                 SplitPath(path, nullptr, nullptr, &ext);
                 if (ext.empty()) {
-                    path += "." + vFILE_TYPES_TRACKSNAPSHOT[0].ext;
+                    path += "." + FILE_TYPES_TRACKSNAPSHOT.types.front().ext;
                 }
                 saveTrackContainer(trackContainerSnapshot, path);
             }

@@ -53,6 +53,6 @@ struct plugin_snapshot_t {
 };
 
 
-extern std::vector<SupportedFileType> vFILE_TYPE_PLUGINSNAPSHOT;
+extern const SupportedFileTypes FILE_TYPES_PLUGINSNAPSHOT;
 bool savePluginSnapshot(const plugin_snapshot_t& snapshot, const String& path);
 std::shared_ptr<plugin_snapshot_t> loadPluginSnapshot(const String& path);

@@ -126,11 +126,11 @@ void guiplugin::buttonClicked(guibase* _button) {
         CreateDirectoryIfNotExists(defaultPresetPath);
         String path;
         auto window = dawCtrl->window;
-        if (promptUserFilePath(window, 1, vFILE_TYPE_PLUGINSNAPSHOT, path, defaultPresetPath)) {
+        if (promptUserFilePath(window, 1, FILE_TYPES_PLUGINSNAPSHOT, path, defaultPresetPath)) {
             String ext;
             SplitPath(path, nullptr, nullptr, &ext);
             if (ext.empty()) {
-                path += "." + vFILE_TYPE_PLUGINSNAPSHOT[0].ext;
+                path += "." + FILE_TYPES_PLUGINSNAPSHOT.types.front().ext;
             }
             savePluginSnapshot(ps, path);
         }

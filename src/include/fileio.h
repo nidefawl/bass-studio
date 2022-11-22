@@ -29,6 +29,11 @@ struct SupportedFileType {
     String ext;
 };
 
+struct SupportedFileTypes {
+    String desc;
+    std::vector<SupportedFileType> types;
+};
+
 struct FileFound {
     String path;
     String name;
@@ -42,7 +47,7 @@ class window_base;
 int32_t WriteFileVector(const String& filename, const std::vector<uint8_t>& writebuffer);
 void ReadFileVector(const String& filename, std::vector<uint8_t>& out);
 int64_t ReadFileText(const String& filename, String& out, int resourceType = 0);
-int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out, String _defaultPath = "", String _defaultFilename = "");
+int promptUserFilePath(window_base* w, int mode, SupportedFileTypes fileTypes, String& _out, String _defaultPath = "", String _defaultFilename = "");
 int browseForFolder(const String& title, const String& pathStart, String& _out);
 
 size_t GetFileSizeSafe(const String& filename);

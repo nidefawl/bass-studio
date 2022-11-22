@@ -23,7 +23,7 @@ bool loadShapePresetFile(const String& path, shape_preset_t& preset);
 void writeShape(ByteBuffer::stream_write<std::vector<std::byte>>& out, const shape_snapshot_t& shape);
 bool readShape(ByteBuffer::stream_read& in, shape_snapshot_t& out);
 
-extern std::vector<SupportedFileType> vFILE_TYPE_SHAPEPRESET;
+extern const SupportedFileTypes FILE_TYPES_SHAPEPRESET;
 
 
 template <class Archive>

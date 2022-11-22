@@ -1807,10 +1807,10 @@ const char* TrackTypeToName(int type) {
 //vFILE_TYPES_TRACKSNAPSHOT
 //const SupportedFileType FILE_TYPE_TRACKSNAPSHOT;
 
-const SupportedFileType FILE_TYPE_TRACKSNAPSHOT{ "Track File", "tracks" };
-const std::vector<SupportedFileType> vFILE_TYPES_TRACKSNAPSHOT = { FILE_TYPE_TRACKSNAPSHOT };
+const SupportedFileType FILE_TYPE_TRACKSNAPSHOT{ "Track Preset File", "tracks" };
 const SupportedFileType FILE_TYPE_PLUGINSNAPSHOT{ "Plugin Preset File", "preset" };
-std::vector<SupportedFileType> vFILE_TYPE_PLUGINSNAPSHOT = { FILE_TYPE_PLUGINSNAPSHOT };
+const SupportedFileTypes FILE_TYPES_TRACKSNAPSHOT = SupportedFileTypes{ "Track Preset File", { FILE_TYPE_TRACKSNAPSHOT } };
+const SupportedFileTypes FILE_TYPES_PLUGINSNAPSHOT = SupportedFileTypes{ "Plugin Preset File", { FILE_TYPE_PLUGINSNAPSHOT } };
 
 bool storePluginPresetWithSnapshot = true;
 bool loadPluginPresetWithSnapshot  = false;
