@@ -744,7 +744,7 @@ guibase::guibase(gui_type guiType)
 #ifdef TRACK_ALLOCATIONS_GUIBASE
     allocId = DebugAlloc::getTracker<guibase>()->objConstructor(this);
 #endif
-    // makeSafeRef();
+    makeSafeRef();
 }
 guibase::~guibase() {
     dbgassert(seqthreads::CurrentThreadType() == seqthreads::ThreadType::MainThread);
