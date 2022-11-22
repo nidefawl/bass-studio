@@ -70,6 +70,7 @@ namespace test_saferef {
             for (size_t i = 0; i < 99; ++i) {
                 delete objects[i];
             }
+            auto last = objects[99];
             objects.clear();
 
             for (size_t i = 0; i < 99; ++i) {
@@ -77,6 +78,7 @@ namespace test_saferef {
                 TEST_ASSERT_THROW(obj == nullptr);
             }
             TEST_ASSERT_THROW(safeRefGet(objectsSafeRefs[99]) != nullptr);
+            delete last;
         test_saferef::safeRefs->onPreDestroy();
         delete test_saferef::safeRefs;
         TEST_END();
