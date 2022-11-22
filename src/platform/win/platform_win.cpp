@@ -3,7 +3,6 @@
 #include "str_util.h"
 #include "math/seq_math.h"
 #include "error.h"
-#include "platform.h"
 #include "str_win32.h"
 #include "logging.h"
 #include "assert_dbg.h"
@@ -27,25 +26,23 @@
 
 #include <GLFW/glfw3.h>
 
-#if WINDOW_RESTORE_POS
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
-#include "platform/win/windowsize.h"
+#include "platform.h"
 
-bool saveWindowPos(GLFWwindow* glfw, windowsize* size) {
+bool saveWindowPos(GLFWwindow* glfw, appwindow_size_t* size) {
     HWND hwnd = glfwGetWin32Window(glfw);
     size->valid = GetWindowPlacement(hwnd, &(size->p)) != 0;
     return true;
 }
 
-bool restoreWindowPos(GLFWwindow* glfw, windowsize* size) {
+bool restoreWindowPos(GLFWwindow* glfw, appwindow_size_t* size) {
     if (size->valid) {
         HWND hwnd = glfwGetWin32Window(glfw);
         return SetWindowPlacement(hwnd, &(size->p)) != 0;
     }
     return false;
 }
-#endif
 
 
 static HWND mainHWND = nullptr;

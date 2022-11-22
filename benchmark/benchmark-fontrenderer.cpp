@@ -52,7 +52,7 @@ struct membuf : std::streambuf
 };
 
 static void loadStrings(std::vector<String>& strings) {
-    const auto filepath = "cpp-test-data/word_dict.txt";
+    const auto filepath = TEST_PATH("word_dict.txt");
     try {
         std::vector<uint8_t> vec;
         ReadFileVector(filepath, vec);

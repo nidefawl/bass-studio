@@ -34,17 +34,10 @@
 #include <utility>
 #include <portaudio.h>
 #include <portmidi.h>
-#ifdef _WIN32
-#include "platform/win/windowsize.h"
-#endif
-#ifdef __linux__
-#include "platform/linux/windowsize.h"
-#endif
+#include "platform.h"
 
 
 namespace DAW::DialogSettings {
-
-
 
 guidropdown_setting_options_ctxt_t::guidropdown_setting_options_ctxt_t(guidropdown_setting_options_t* _parent)
     : parent(_parent) {

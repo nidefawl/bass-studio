@@ -13,9 +13,8 @@ namespace {
     void test_projectfile_loader() {
         TEST_BEGIN("test_projectfile_loader");
         std::vector<FileFound> midiFilesToTest;
-        log_printf("cwd %s\n",
-                   StringAsCStr(App::Platform::getCurrentWorkingDirectory()));
-        findFilesWithExt("cpp-test-data/projects", "project", true, midiFilesToTest);
+        findFilesWithExt(TEST_PATH("projects"), PROJECT_FILE_EXT, true, midiFilesToTest);
+        findFilesWithExt(TEST_PATH("project"), PROJECT_BUNDLE_FILE_EXT, true, midiFilesToTest);
         log_printf("projects: %zu files\n", midiFilesToTest.size());
         int64_t numSuccess  = 0;
         int64_t numFails    = 0;

@@ -2,6 +2,12 @@
 #include "types.h"
 #include <vector>
 #include "str_util.h"
+#if defined(__linux__) || defined(__APPLE__)
+#include "platform/linux/windowsize.h"
+#endif
+#ifdef _WIN32
+#include "platform/win/windowsize.h"
+#endif
 
 #if defined(_WIN32)
 #define FILE_PATHSEP_CHAR '\\'

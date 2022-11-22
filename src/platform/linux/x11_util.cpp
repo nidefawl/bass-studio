@@ -1,3 +1,4 @@
+#include "logging.h"
 #include <cstddef>
 #if defined(__linux__)
 #include <GLFW/glfw3.h>
@@ -7,7 +8,6 @@
 #include <X11/extensions/Xrandr.h>
 #include <X11/Xatom.h>
 #include "platform.h"
-#include "platform/linux/windowsize.h"
 
 extern "C" {
     static bool IsWindowManagerStateSet(Display* display,
@@ -117,7 +117,7 @@ static void SetWindowMaximizedFlag(Display* display,
                &e);
 }
 
-bool restoreWindowPos(GLFWwindow* glfw, windowsize* placement) {
+bool restoreWindowPos(GLFWwindow* glfw, appwindow_size_t* placement) {
     if (!placement->valid) {
         return false;
     }
@@ -149,8 +149,8 @@ bool restoreWindowPos(GLFWwindow* glfw, windowsize* placement) {
     return true;
 }
 
-bool saveWindowPos(GLFWwindow* glfw, windowsize* placement) {
-    *placement = windowsize{};
+bool saveWindowPos(GLFWwindow* glfw, appwindow_size_t* placement) {
+    *placement = appwindow_size_t{};
     
     Display* display = glfwGetX11Display();
     Window window    = glfwGetX11Window(glfw);
@@ -183,4 +183,3 @@ bool saveWindowPos(GLFWwindow* glfw, windowsize* placement) {
 }
 
 #endif
-

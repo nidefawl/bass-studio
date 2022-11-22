@@ -64,8 +64,8 @@ void test_libarchive(String outName = "test_libarchive.zip") {
     archive_entry_free(entry);
 
     // finish writing the archive
-    archive_write_close(a);
-    archive_write_free(a);
+    TEST_ASSERT_EQUAL(ARCHIVE_OK, archive_write_close(a));
+    TEST_ASSERT_EQUAL(ARCHIVE_OK, archive_write_free(a));
 
     // read the archive
     a = archive_read_new();
@@ -110,6 +110,8 @@ void test_libarchive(String outName = "test_libarchive.zip") {
             log_lf(Log::L_ERROR, "file type in archive: %s\n", pathName);
         }
     }
+    TEST_ASSERT_EQUAL(ARCHIVE_OK, archive_read_close(a));
+    TEST_ASSERT_EQUAL(ARCHIVE_OK, archive_read_free(a));
     TEST_END();
 }
 

@@ -13,8 +13,8 @@ void test_midifile_loader() {
   std::vector<FileFound> midiFilesToTest;
   log_printf("cwd %s\n",
              StringAsCStr(App::Platform::getCurrentWorkingDirectory()));
-  findFilesWithExt("cpp-test-data/midifiles/", "mid", true, midiFilesToTest);
-  log_printf("cpp-test-data/midifiles: %zu files\n", midiFilesToTest.size());
+  findFilesWithExt(TEST_PATH("midifiles"), "mid", true, midiFilesToTest);
+  log_printf(TEST_PATH("midifiles: %zu files\n"), midiFilesToTest.size());
   int64_t numFails = 0;
   int64_t numNoTracks = 0;
   for (const FileFound &file : midiFilesToTest) {

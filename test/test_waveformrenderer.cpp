@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 
 #include "appconfig.h"
+#include "appsettings.h"
 #include "window.h"
 #include "platform.h"
 #include "fileio.h"
@@ -49,15 +50,15 @@ struct waveform_test {
         daw_tls::tlsinstance& tls = daw_tls::getTls();
         int sampleRate            = 44100;
         tls.audioCache            = new audiocache(sampleRate);
-        rendererDashLines               = new waveformrender(pathrenderer_type_e::DASHLINES);
+        rendererDashLines         = new waveformrender(pathrenderer_type_e::DASHLINES);
         rendererPolyline          = new waveformrender(pathrenderer_type_e::POLYLINE2D);
-        rendererParBasic               = new waveformrender(pathrenderer_type_e::PAR_BASIC);
+        rendererParBasic          = new waveformrender(pathrenderer_type_e::PAR_BASIC);
         renderers.push_back(rendererDashLines);
         renderers.push_back(rendererPolyline);
         renderers.push_back(rendererParBasic);
         std::vector<waveform_test_entry> vec;
         std::vector<FileFound> files;
-        findFilesWithExt("./cpp-test-data/", "wav", false, files);
+        findFilesWithExt(TEST_PATH("samples"), "wav", true, files);
         log_printf("findFilesWithExt %d\n", files.size());
         for (auto i = 0u; i < files.size() && vec.size() < 8; i++) {
             size_t filesize = GetFileSizeSafe(files[i].path);
@@ -72,12 +73,23 @@ struct waveform_test {
                 vec.push_back(waveform_test_entry{ sample, gui_waveform_texture_ref{}, 0u });
             }
         }
-        if (vec.empty()) {
-            throw appexception("Failed loading test samples");
+        if (vec.size() < 1) {
+            log_printf("No samples found\n");
+            return;
         }
         for (auto i = 0u; i < NUM_RENDERERS; i++) {
             vecs.push_back(vec);
         }
+    }
+    void destroy() {
+        for (auto* renderer : renderers) {
+            renderer->destroy();
+            delete renderer;
+        }
+        renderers.clear();
+        daw_tls::tlsinstance& tls = daw_tls::getTls();
+        tls.audioCache->unloadAll();
+        delete tls.audioCache;
     }
     static void renderUpdate(NVGcontext* nanovgCtxt, waveformrender* renderer, waveform_test_entry* e, uint32_t renderStep) {
         auto& ref   = e->ref;
@@ -156,6 +168,7 @@ namespace MiniApp {
     class MiniAppCtrl final : public AppCtrl {
         T* view = nullptr;
         waveform_test& waveformTest;
+        uint64_t tmFirstFrame = 0;
         uint64_t tmLastRelease = 0;
         uint32_t renderStep      = 0;
         hires_timer_t timer;
@@ -172,13 +185,7 @@ namespace MiniApp {
             }
             isOK = false;
             delete view;
-
-            for (auto* renderer : waveformTest.renderers) {
-                renderer->destroy();
-            }
-            daw_tls::tlsinstance& tls = daw_tls::getTls();
-            delete tls.audioCache;
-            tls.audioCache = nullptr;
+            waveformTest.destroy();
         }
 
         bool menuCommand(const menucmd_t& command) override {
@@ -205,7 +212,7 @@ namespace MiniApp {
             nvgBeginFrame(vg, w, h, pixelRatio);
             nvgScale(vg, m_scale, m_scale);
             //ivec2 offsetPos(0, 0);
-            for (auto i = 0u; i < NUM_RENDERERS; i++) {
+            for (auto i = 0u; i < NUM_RENDERERS && i < waveformTest.vecs.size(); i++) {
                 std::vector<waveform_test_entry>& vec = waveformTest.vecs[i];
 
                 int yPos = 0;
@@ -244,15 +251,17 @@ namespace MiniApp {
                         yPos++;
                     }
                 }
-                ivec2 wvSize = waveformTest.vecs[0][0].ref.waveform.size;
-                ivec2 txt(70, 14);
-                ivec2 offsetPos(i * wvSize.x + 10, yPos * wvSize.y + 10);
-                nvgSave(vg);
-                nvgTranslate(nanovgCtxt, offsetPos.x, offsetPos.y);
-                UTIL_setFont(vg, &themes.getRef(), txt.y - 2, rgbaToNvg(0xffffffff), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-                String names[3] = { "ADV", "POLYLINE", "PAR" };
-                nvgTextBox(vg, 12, wvSize.y - txt.y / 2, txt.x, StringAsCStr(names[i]), nullptr);
-                nvgRestore(vg);
+                if (!vec.empty()) {
+                    ivec2 wvSize = vec.front().ref.waveform.size;
+                    ivec2 txt(70, 14);
+                    ivec2 offsetPos(i * wvSize.x + 10, yPos * wvSize.y + 10);
+                    nvgSave(vg);
+                    nvgTranslate(nanovgCtxt, offsetPos.x, offsetPos.y);
+                    UTIL_setFont(vg, &themes.getRef(), txt.y - 2, rgbaToNvg(0xffffffff), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+                    String names[3] = { "ADV", "POLYLINE", "PAR" };
+                    nvgTextBox(vg, 12, wvSize.y - txt.y / 2, txt.x, StringAsCStr(names[i]), nullptr);
+                    nvgRestore(vg);
+                }
             }
 
             nvgEndFrame(vg);
@@ -265,7 +274,7 @@ namespace MiniApp {
             }
             if (getTimeMillis() - tmLastRelease >= 60) {
                 tmLastRelease = getTimeMillis();
-                for (auto i = 0u; i < NUM_RENDERERS; i++) {
+                for (auto i = 0u; i < NUM_RENDERERS && i < waveformTest.vecs.size(); i++) {
                     std::vector<waveform_test_entry>& vec = waveformTest.vecs[i];
                     for (waveform_test_entry& e : vec) {
                         auto& ref = e.ref;
@@ -276,7 +285,7 @@ namespace MiniApp {
                     }
                 }
                 timerAll.reset();
-                for (auto i = 0u; i < NUM_RENDERERS; i++) {
+                for (auto i = 0u; i < NUM_RENDERERS && i < waveformTest.vecs.size(); i++) {
                     int64_t lTook                         = 0L;
                     std::vector<waveform_test_entry>& vec = waveformTest.vecs[i];
                     for (waveform_test_entry& e : vec) {
@@ -291,9 +300,14 @@ namespace MiniApp {
 
                 renderStep++;
             }
-            if (renderStep >= 100) {
-                log_printf("request close!\n");
-                this->mainWindow->requestClose();
+            if (tmFirstFrame == 0) {
+                tmFirstFrame = getTimeMillis();
+            } else {
+                int64_t tmNow = getTimeMillis();
+                if (tmNow - tmFirstFrame >= 10000 || renderStep >= 50) {
+                    log_printf("Test finished\n");
+                    this->mainWindow->requestClose();
+                }
             }
         }
         bool initAppWindow(window_main* window, NVGcontext* nanovg) override {
@@ -363,6 +377,9 @@ public:
   void startApp(std::shared_ptr<AppCtrl> &app) override { app->startApp(); }
 
   void deleteApp() override {
+    daw_tls::tlsinstance& tls = daw_tls::getTls();
+    delete tls.runtime;
+    delete tls.settings;
     for (auto i = 0u; i < NUM_RENDERERS; i++) {
       log_printf("Renderer %u took %llumicros\n", i, waveformTest.durations[i]);
     }

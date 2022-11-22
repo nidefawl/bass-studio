@@ -20,7 +20,7 @@ using namespace cereal;
 #include "platform/win/windowsize.h"
 
 template <class Archive>
-void serialize(Archive& ar, windowsize& settings) {
+void serialize(Archive& ar, appwindow_size_t& settings) {
     auto& p = settings.p;
     ar(settings.valid,
        p.flags,
@@ -39,7 +39,7 @@ void serialize(Archive& ar, windowsize& settings) {
 #include "platform/linux/windowsize.h"
 
 template <class Archive>
-void serialize(Archive& ar, windowsize& settings) {
+void serialize(Archive& ar, appwindow_size_t& settings) {
     ar(settings.valid,
        settings.x,
        settings.y,
@@ -128,9 +128,7 @@ void serialize(Archive& ar, app_plugin_configuration& settings) {
 template <class Archive>
 void serialize(Archive& ar, appwindowsettings& settings) {
     ar(make_nvp("grid", settings.dens));
-#if WINDOW_RESTORE_POS
-    make_optional_nvp(ar, "position", *(settings.size));
-#endif
+    make_optional_nvp(ar, "windowsize", settings.size);
 }
 
 template <class Archive>

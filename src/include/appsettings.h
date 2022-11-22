@@ -9,9 +9,7 @@
 #include <memory>
 #include <map>
 
-#if WINDOW_RESTORE_POS
-struct windowsize;
-#endif
+struct appwindow_size_t;
 
 struct io_channel {
     int32_t idx;
@@ -73,14 +71,11 @@ struct app_iosettings {
         return midiconfigs[devApi];
     }
 };
-
+struct appwindow_size_t;
 struct appwindowsettings {
-#if WINDOW_RESTORE_POS
-    std::unique_ptr<windowsize> size;
-#endif
-    grid_density dens;
-    appwindowsettings() noexcept;
-    ~appwindowsettings() = default;
+    std::shared_ptr<appwindow_size_t> size{};
+    grid_density dens{};
+    appwindowsettings();
     appwindowsettings(const appwindowsettings& other);
     appwindowsettings& operator=(const appwindowsettings& other);
     appwindowsettings(appwindowsettings&& other) = default;
@@ -129,7 +124,6 @@ struct app_daw_settings {
     bool uiShowSettingsArp = true;
 };
 struct appsettings {
-    appsettings() noexcept = default; // need noexcept for static storage
     uint32_t fileFmtVersion = 0;
     app_daw_settings dawsettings;
     app_autosave_settings autosave;

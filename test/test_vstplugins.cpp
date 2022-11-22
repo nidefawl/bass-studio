@@ -147,7 +147,7 @@ int main(int, char*[]) {
 #ifdef _WIN32
     dllFilesToTest.push_back(TestCaseEntry{ String("MISSING.dll"), SharedLibState::FILE_NOT_FOUND, SharedLibPluginType::UNKNOWN });
     std::vector<FileFound> files;
-    findFilesWithExt("cpp-test-data/plugins-vst2-ok/", PLATFORM_PLUGIN_EXT, true, files);
+    findFilesWithExt(TEST_PATH("plugins-vst2-ok/"), PLATFORM_PLUGIN_EXT, true, files);
     for (const FileFound& file : files) {
         dllFilesToTest.push_back(TestCaseEntry{ String(file.path), SharedLibState::SUCCESS, SharedLibPluginType::VST2 });
     }

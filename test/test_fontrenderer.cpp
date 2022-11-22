@@ -54,7 +54,7 @@ public:
 
     void initApp(const std::vector<String>& args) override {
         daw_tls::initNewTls();
-        const auto filepath = "cpp-test-data/word_dict.txt";
+        const auto filepath = TEST_PATH("word_dict.txt");
         try {
             std::vector<uint8_t> vec;
             ReadFileVector(filepath, vec);
@@ -117,7 +117,7 @@ public:
         BaseCtrl::render(nanovgCtxt, x, y, w, h, pixelRatio);
         nvgBeginFrame(vg, w, h, pixelRatio);
         nvgScale(vg, m_scale, m_scale);
-        size_t noffset = (getTimeMillis()/200L) % strings.size();
+        size_t noffset = strings.empty() ? 0 : (getTimeMillis()/200L) % strings.size();
         for (int quadrant = 0; quadrant < 4; ++quadrant) {
             vec2 sizeRender = vec2(w, h) * 0.5f;
             vec2 posRender = sizeRender * vec2(quadrant%2, quadrant/2);

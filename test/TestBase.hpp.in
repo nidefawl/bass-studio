@@ -7,7 +7,9 @@
 #cmakedefine CMAKE_MAJOR_VERSION      "@CMAKE_MAJOR_VERSION@"
 #cmakedefine CMAKE_MINOR_VERSION      "@CMAKE_MINOR_VERSION@"
 #cmakedefine CMAKE_PATCH_VERSION      "@CMAKE_PATCH_VERSION@"
+#cmakedefine PROJECT_CTEST_DATA_PATH  "@PROJECT_CTEST_DATA_PATH@"
 
+#define TEST_PATH(entry) PROJECT_CTEST_DATA_PATH "/" entry
 #include <iostream>
 #include <stdexcept>
 #include <string>

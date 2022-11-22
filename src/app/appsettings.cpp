@@ -1,40 +1,22 @@
 #include <ctime>
 #include <memory>
 #include "appsettings.h"
+#include "platform.h"
 
-
-#if WINDOW_RESTORE_POS
-#ifdef __linux__
-#include "platform/linux/windowsize.h"
-#endif
-#ifdef _WIN32
-#include "platform/win/windowsize.h"
-#endif
-#endif
-
-appwindowsettings::appwindowsettings() noexcept
-
-#if WINDOW_RESTORE_POS
-    : size(std::make_unique<windowsize>())
-#endif
+appwindowsettings::appwindowsettings()
+    : size(std::make_shared<appwindow_size_t>())
 {
 }
 
 appwindowsettings::appwindowsettings(const appwindowsettings& other)
-
-#if WINDOW_RESTORE_POS
-    : size(std::make_unique<windowsize>())
-#endif
+    : size(std::make_shared<appwindow_size_t>())
 {
     *this = other;
 }
 
 appwindowsettings& appwindowsettings::operator=(const appwindowsettings& other) {
     if (this != &other) {
-
-#if WINDOW_RESTORE_POS
-        *this->size = *other.size;
-#endif
+        this->size = other.size;
         this->dens = other.dens;
     }
     return *this;

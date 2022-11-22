@@ -11,12 +11,8 @@
 #include "host/audiocache/audiocache.h"
 #include "wave/waveform_render_impl.h"
 #include "thread.h"
-#ifdef _WIN32
-#include "platform/win/windowsize.h"
-#endif
-#ifdef __linux__
-#include "platform/linux/windowsize.h"
-#endif
+#include "platform.h"
+
 
 namespace daw_tls {
     static thread_local tlsinstance tls;

@@ -317,7 +317,7 @@ bool BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
         return false;
     }
     KeyEvent event = keyEvent(key, scancode, keyState, mods, key_name);
-    auto boundCommand = commands->matchKeyCombo(event);
+    Command* boundCommand = !commands ? nullptr : commands->matchKeyCombo(event);
     Command::CmdCtxtMatcher ctxtMatcher;
     if (boundCommand) {
         event.cmd = boundCommand;

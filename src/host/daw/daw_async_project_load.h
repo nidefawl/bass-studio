@@ -38,14 +38,24 @@ struct samplefile_index_incremental_loader_t {
         indexSize(index.list.size()),
         workingDir(std::move(workingDir)) {
     }
+    ~samplefile_index_incremental_loader_t() {
+        if (entry && !bFinished) {
+            archive_entry_free(entry);
+        }
+        if (ar && !bFinished) {
+            archive_read_free(ar);
+        }
+    }
     double getProgress() const {
         return !indexSize ? 1.0 : indexPos / double(indexSize);
     }
     void step() {
         if (ar) {
+            entry = nullptr;
             if (archive_read_next_header(ar, &entry) == ARCHIVE_OK) {
                 curFileName = archive_entry_pathname(entry);
             } else {
+                entry = nullptr;
                 bFinished = true;
                 archive_read_free(ar);
             }

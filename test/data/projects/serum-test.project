@@ -1,0 +1,1018 @@
+{
+    "project": {
+        "ptr_wrapper": {
+            "id": 2147483649,
+            "data": {
+                "cereal_class_version": 2,
+                "projectdata": {
+                    "masterTracks": {
+                        "tracklist": [
+                            {
+                                "cereal_class_version": 1,
+                                "idx": 0,
+                                "settings": {
+                                    "cereal_class_version": 0,
+                                    "name": "Master",
+                                    "rgb": 15580057,
+                                    "type": 0
+                                },
+                                "clips": [],
+                                "plugins": {
+                                    "plugins": [],
+                                    "track": {
+                                        "params": [
+                                            {
+                                                "idx": 4111,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4110,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4109,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4108,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4107,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4106,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4105,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4102,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4101,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4100,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4099,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4098,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4097,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4096,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4104,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 1,
+                                                "val": 0.7373871207237244,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4103,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 0,
+                                                "val": 1.0,
+                                                "flags": 0
+                                            }
+                                        ],
+                                        "automation": []
+                                    },
+                                    "arp": {
+                                        "params": [
+                                            {
+                                                "idx": 4101,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4100,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4099,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4098,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4097,
+                                                "val": 0.25,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4096,
+                                                "val": 0.625,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 1,
+                                                "val": 1.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 0,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            }
+                                        ],
+                                        "automation": []
+                                    },
+                                    "io": {
+                                        "input": {
+                                            "channelOffset": 0,
+                                            "externalInputId": -1,
+                                            "externalInputId": -1,
+                                            "externalInputType": 0,
+                                            "inputType": 0,
+                                            "stageEndPointType": 1,
+                                            "stageId": -1
+                                        },
+                                        "output": {
+                                            "channelOffset": 0,
+                                            "externalInputId": -1,
+                                            "externalInputId": -1,
+                                            "externalInputType": 0,
+                                            "inputType": 0,
+                                            "stageEndPointType": 1,
+                                            "stageId": -1
+                                        }
+                                    },
+                                    "routing": {
+                                        "inputRoutingOutputStage": [
+                                            {
+                                                "channelOffset": 0,
+                                                "externalInputId": -1,
+                                                "externalInputId": -1,
+                                                "externalInputType": 0,
+                                                "inputType": 0,
+                                                "stageEndPointType": 2,
+                                                "stageId": -1
+                                            }
+                                        ],
+                                        "inputRoutingEffects": [],
+                                        "routingState": 1
+                                    }
+                                },
+                                "stageIds": {
+                                    "stageId": 440,
+                                    "inputStageId": 441,
+                                    "outputStageId": 442,
+                                    "outputPostStageId": 443
+                                }
+                            }
+                        ],
+                        "hierachy": [
+                            -1
+                        ]
+                    },
+                    "returnTracks": {
+                        "tracklist": [],
+                        "hierachy": []
+                    },
+                    "tracks": {
+                        "tracklist": [
+                            {
+                                "idx": 0,
+                                "settings": {
+                                    "name": "1-Serum_x64",
+                                    "rgb": 15580057,
+                                    "type": 2
+                                },
+                                "clips": [
+                                    {
+                                        "name": "MIDICLIPSNAME_AND_COLOR",
+                                        "time": 524288,
+                                        "len": 131072,
+                                        "offsetStart": 0,
+                                        "loopLen": 131072,
+                                        "enabled": true,
+                                        "rgb": 3394611,
+                                        "loopStart": 0,
+                                        "loopEnabled": true,
+                                        "noLayout": false,
+                                        "editorLayout": {
+                                            "layoutGrid": {
+                                                "offset": 0,
+                                                "zoom": 0.03936039283871651
+                                            },
+                                            "layoutPianoRoll": {
+                                                "offset": -24.85714340209961,
+                                                "scale": 8.285714149475098,
+                                                "fold": false
+                                            }
+                                        },
+                                        "clip_notes": {
+                                            "notes": [
+                                                {
+                                                    "time": 16384,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 40960,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 65536,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 90112,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 8192,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 32768,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 57344,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 81920,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 0,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 24576,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 49152,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 73728,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                }
+                                            ]
+                                        },
+                                        "clip_audio": {
+                                            "id": -1
+                                        },
+                                        "type": 0,
+                                        "offsetSamples": 0,
+                                        "lenSamples": 0
+                                    },
+                                    {
+                                        "name": "MIDICLIPSNAME_AND_COLOR",
+                                        "time": 655360,
+                                        "len": 32768,
+                                        "offsetStart": 98304,
+                                        "loopLen": 131072,
+                                        "enabled": true,
+                                        "rgb": 3355443,
+                                        "loopStart": 0,
+                                        "loopEnabled": true,
+                                        "noLayout": false,
+                                        "editorLayout": {
+                                            "layoutGrid": {
+                                                "offset": 0,
+                                                "zoom": 0.03936039283871651
+                                            },
+                                            "layoutPianoRoll": {
+                                                "offset": 1116.0,
+                                                "scale": 21.461538314819337,
+                                                "fold": false
+                                            }
+                                        },
+                                        "clip_notes": {
+                                            "notes": [
+                                                {
+                                                    "time": 16384,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 40960,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 65536,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 90112,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 8192,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 32768,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 57344,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 81920,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 0,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 24576,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 49152,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 73728,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                }
+                                            ]
+                                        },
+                                        "clip_audio": {
+                                            "id": -1
+                                        },
+                                        "type": 0,
+                                        "offsetSamples": 0,
+                                        "lenSamples": 0
+                                    },
+                                    {
+                                        "name": "MIDICLIPSNAME_AND_COLOR",
+                                        "time": 688128,
+                                        "len": 32768,
+                                        "offsetStart": 98304,
+                                        "loopLen": 131072,
+                                        "enabled": true,
+                                        "rgb": 3355596,
+                                        "loopStart": 0,
+                                        "loopEnabled": true,
+                                        "noLayout": false,
+                                        "editorLayout": {
+                                            "layoutGrid": {
+                                                "offset": 0,
+                                                "zoom": 0.12464970350265503
+                                            },
+                                            "layoutPianoRoll": {
+                                                "offset": 1116.0,
+                                                "scale": 21.461538314819337,
+                                                "fold": false
+                                            }
+                                        },
+                                        "clip_notes": {
+                                            "notes": [
+                                                {
+                                                    "time": 16384,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 40960,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 65536,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 90112,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 8192,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 32768,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 57344,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 81920,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 0,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 24576,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 49152,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 73728,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                }
+                                            ]
+                                        },
+                                        "clip_audio": {
+                                            "id": -1
+                                        },
+                                        "type": 0,
+                                        "offsetSamples": 0,
+                                        "lenSamples": 0
+                                    },
+                                    {
+                                        "name": "MIDICLIPSNAME_AND_COLOR",
+                                        "time": 720896,
+                                        "len": 32768,
+                                        "offsetStart": 98304,
+                                        "loopLen": 131072,
+                                        "enabled": true,
+                                        "rgb": 3394611,
+                                        "loopStart": 0,
+                                        "loopEnabled": true,
+                                        "noLayout": false,
+                                        "editorLayout": {
+                                            "layoutGrid": {
+                                                "offset": 0,
+                                                "zoom": 0.15170195698738099
+                                            },
+                                            "layoutPianoRoll": {
+                                                "offset": 1116.0,
+                                                "scale": 21.461538314819337,
+                                                "fold": false
+                                            }
+                                        },
+                                        "clip_notes": {
+                                            "notes": [
+                                                {
+                                                    "time": 16384,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 40960,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 65536,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 90112,
+                                                    "len": 8192,
+                                                    "pitch": 54,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 8192,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 32768,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 57344,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 81920,
+                                                    "len": 8192,
+                                                    "pitch": 61,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 0,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 24576,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 49152,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                },
+                                                {
+                                                    "time": 73728,
+                                                    "len": 8192,
+                                                    "pitch": 62,
+                                                    "flags": 1,
+                                                    "velocity": 103.0
+                                                }
+                                            ]
+                                        },
+                                        "clip_audio": {
+                                            "id": -1
+                                        },
+                                        "type": 0,
+                                        "offsetSamples": 0,
+                                        "lenSamples": 0
+                                    }
+                                ],
+                                "plugins": {
+                                    "plugins": [
+                                        {
+                                            "cereal_class_version": 6,
+                                            "pluginType": 1,
+                                            "name": "Serum_x64",
+                                            "uId": 1483109208,
+                                            "slot": 0,
+                                            "present": true,
+                                            "parameters": [
+                                                {
+                                                    "idx": 65582,
+                                                    "val": 0.1701754331588745,
+                                                    "flags": 0
+                                                },
+                                                {
+                                                    "idx": 65581,
+                                                    "val": 0.2587719261646271,
+                                                    "flags": 0
+                                                }
+                                            ],
+                                            "automatedParams": [
+                                                {
+                                                    "param": 45,
+                                                    "data": [
+                                                        {
+                                                            "time": 522536,
+                                                            "val": 0.10606060922145844
+                                                        },
+                                                        {
+                                                            "time": 623864,
+                                                            "val": 1.0
+                                                        },
+                                                        {
+                                                            "time": 655360,
+                                                            "val": 1.0
+                                                        },
+                                                        {
+                                                            "time": 655360,
+                                                            "val": 0.9887750148773193
+                                                        },
+                                                        {
+                                                            "time": 656632,
+                                                            "val": 1.0
+                                                        },
+                                                        {
+                                                            "time": 688128,
+                                                            "val": 1.0
+                                                        },
+                                                        {
+                                                            "time": 688128,
+                                                            "val": 0.9887750148773193
+                                                        },
+                                                        {
+                                                            "time": 689400,
+                                                            "val": 1.0
+                                                        },
+                                                        {
+                                                            "time": 720896,
+                                                            "val": 1.0
+                                                        },
+                                                        {
+                                                            "time": 720896,
+                                                            "val": 0.9887750148773193
+                                                        },
+                                                        {
+                                                            "time": 722168,
+                                                            "val": 1.0
+                                                        }
+                                                    ],
+                                                    "active": true
+                                                }
+                                            ],
+                                            "globalId": 65636,
+                                            "enabled": true,
+                                            "sizeprogramdata": 0,
+                                            "programdata": "",
+                                            "sizeplugindata": 2623,
+                                            "plugindata": "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",
+                                            "plugins": [],
+                                            "currentProgram": -1,
+                                            "vendorVersion": 0,
+                                            "localDbId": 0
+                                        }
+                                    ],
+                                    "track": {
+                                        "params": [
+                                            {
+                                                "idx": 4111,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4110,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4109,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4108,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4107,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4106,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4105,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4102,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4101,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4100,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4099,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4098,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4097,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4096,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4104,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 1,
+                                                "val": 0.7373871207237244,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4103,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 0,
+                                                "val": 1.0,
+                                                "flags": 0
+                                            }
+                                        ],
+                                        "automation": []
+                                    },
+                                    "arp": {
+                                        "params": [
+                                            {
+                                                "idx": 4101,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4100,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4099,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4098,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4097,
+                                                "val": 0.25,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 4096,
+                                                "val": 0.625,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 1,
+                                                "val": 1.0,
+                                                "flags": 0
+                                            },
+                                            {
+                                                "idx": 0,
+                                                "val": 0.0,
+                                                "flags": 0
+                                            }
+                                        ],
+                                        "automation": []
+                                    },
+                                    "io": {
+                                        "input": {
+                                            "channelOffset": 0,
+                                            "externalInputId": -1,
+                                            "externalInputId": -1,
+                                            "externalInputType": 0,
+                                            "inputType": 0,
+                                            "stageEndPointType": 1,
+                                            "stageId": -1
+                                        },
+                                        "output": {
+                                            "channelOffset": 0,
+                                            "externalInputId": -1,
+                                            "externalInputId": -1,
+                                            "externalInputType": 0,
+                                            "inputType": 0,
+                                            "stageEndPointType": 1,
+                                            "stageId": -1
+                                        }
+                                    },
+                                    "routing": {
+                                        "inputRoutingOutputStage": [
+                                            {
+                                                "channelOffset": 0,
+                                                "externalInputId": -1,
+                                                "externalInputId": -1,
+                                                "externalInputType": 0,
+                                                "inputType": 0,
+                                                "stageEndPointType": 2,
+                                                "stageId": -1
+                                            }
+                                        ],
+                                        "inputRoutingEffects": [
+                                            {
+                                                "key": 65636,
+                                                "value": [
+                                                    {
+                                                        "channelOffset": 0,
+                                                        "externalInputId": -1,
+                                                        "externalInputId": -1,
+                                                        "externalInputType": 0,
+                                                        "inputType": 0,
+                                                        "stageEndPointType": 2,
+                                                        "stageId": -1
+                                                    }
+                                                ]
+                                            }
+                                        ],
+                                        "routingState": 1
+                                    }
+                                },
+                                "stageIds": {
+                                    "stageId": 444,
+                                    "inputStageId": 445,
+                                    "outputStageId": 446,
+                                    "outputPostStageId": 447
+                                }
+                            }
+                        ],
+                        "hierachy": [
+                            -1
+                        ]
+                    },
+                    "globals": {
+                        "loopEnabled": true,
+                        "loopStart": 524288,
+                        "loopLen": 196608,
+                        "tempo100": 10600,
+                        "signatureNum": 4,
+                        "signatureDenom": 2,
+                        "playbackPos": 3640769,
+                        "cursor": {
+                            "pos": 720896,
+                            "track": 0,
+                            "subtrack": -1,
+                            "range": 0,
+                            "trackrange": 0,
+                            "subtrackrange": 0
+                        }
+                    },
+                    "exportSettings": {
+                        "pos": 0,
+                        "len": 0,
+                        "path": "",
+                        "locked": false
+                    }
+                },
+                "layout": {
+                    "grid": {
+                        "offset": 800,
+                        "zoom": 0.2619965672492981
+                    },
+                    "scrollOffsetX": 0.0
+                },
+                "samples": {
+                    "list": []
+                }
+            }
+        }
+    }
+}

@@ -71,14 +71,8 @@
 #include "wave/waveform_render_impl.h"
 #include "window_impl.h"
 #include "window.h"
-
 #include "sse.h"
-#ifdef _WIN32
-#include "platform/win/windowsize.h"
-#endif
-#ifdef __linux__
-#include "platform/linux/windowsize.h"
-#endif
+#include "platform.h"
 
 
 std::shared_ptr<window_abstract_t> getWindowDebugWaveformCache();
@@ -1523,6 +1517,7 @@ void DawInstance::destroy() {
         log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
         ngui::showNotification(ngui::Style::Warning, "Couldn't write config file", "Some settings may have been reset");
     }
+    tls.audioCache->unloadAll();
     delete tls.commandManager;
     delete tls.settings;
     delete tls.audioCache;

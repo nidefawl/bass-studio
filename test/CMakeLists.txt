@@ -1,3 +1,5 @@
+set(PROJECT_CTEST_DATA_PATH ${CMAKE_CURRENT_LIST_DIR}/data)
+get_filename_component(PROJECT_CTEST_DATA_PATH ${PROJECT_CTEST_DATA_PATH} ABSOLUTE)
 configure_file( TestBase.hpp.in ${CMAKE_CURRENT_LIST_DIR}/TestBase.hpp )
 
 include(CheckCXXCompilerFlag)
@@ -51,12 +53,14 @@ function( DEFINE_TEST test_name link_lib first_source_file)
   add_test(NAME ${test_name} COMMAND ${test_name} WORKING_DIRECTORY ${ABS_WORKING_DIR})
 endfunction()
 
-DEFINE_TEST(
-  test_seh_exception_handling FALSE 
-  test_seh_exception_handling.cpp
-)
-if (NOT MSVC)
-  target_compile_options(test_seh_exception_handling PRIVATE "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections")
+if (WIN32)
+  DEFINE_TEST(
+    test_seh_exception_handling FALSE 
+    test_seh_exception_handling.cpp
+  )
+  if (NOT MSVC)
+    target_compile_options(test_seh_exception_handling PRIVATE "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections")
+  endif()
 endif()
 
 DEFINE_TEST(
@@ -123,7 +127,6 @@ DEFINE_TEST(test_seqtime TRUE test_seqtime.cpp common/test_common.cpp)
 DEFINE_TEST(test_threads TRUE test_threads.cpp common/test_common.cpp)
 DEFINE_TEST(test_host TRUE test_host.cpp common/test_common.cpp)
 DEFINE_TEST(test_host_minimal TRUE test_host_minimal.cpp common/test_common.cpp)
-DEFINE_TEST(test_memory_leak TRUE test_memory_leak.cpp)
 DEFINE_TEST(test_projectfile TRUE test_projectfile.cpp)
 DEFINE_TEST(test_muparser TRUE test_muparser.cpp)
 DEFINE_TEST(test_libarchive TRUE test_libarchive.cpp)
@@ -135,4 +138,8 @@ if (PROJECT_BUILD_TESTS_UI)
   DEFINE_TEST(test_host_project TRUE test_host_project.cpp common/test_common.cpp)
   DEFINE_TEST(test_waveformrenderer TRUE test_waveformrenderer.cpp)
   DEFINE_TEST(test_fontrenderer TRUE test_fontrenderer.cpp)
+endif()
+
+if (PROJECT_CFG_FSANITIZE STREQUAL "address" OR PROJECT_CFG_FSANITIZE STREQUAL "memory")
+  DEFINE_TEST(test_memory_leak TRUE test_memory_leak.cpp)
 endif()

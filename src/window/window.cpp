@@ -58,15 +58,14 @@
 #include "gl/gl_vbo.h"
 #include "gl/gl_util.h"
 #include "window_impl.h"
+#include "platform.h"
 
 #ifdef _WIN32
-#include "platform/win/windowsize.h"
 #include "platform/win/platform_win.h"
 #include "platform/win/DropTarget.h"
 #include "str_win32.h"
 #endif
 #ifdef __linux__
-#include "platform/linux/windowsize.h"
 #include "platform/linux/x11_util.h"
 #include "platform/linux/nfd/nfd.h"
 #endif
@@ -1374,7 +1373,6 @@ void appwindow_main::destroy() {
 #ifdef __linux__
     glfwSetDropCallback(glfw, nullptr);
 #endif
-#if WINDOW_RESTORE_POS
     if (!parent) {
         auto& settings = daw_tls::getSettings();
         if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
@@ -1383,7 +1381,6 @@ void appwindow_main::destroy() {
             saveWindowPos(glfw, settings.wndMain.size.get());
         }
     }
-#endif
 #endif
     if (this->ctrl) {
         glfwMakeContextCurrent(glfw);
@@ -1645,7 +1642,6 @@ void appwindow_main::initControl() {
 #ifdef __linux__
     glfwSetDropCallback(glfw, glfw_cb_dragdrop);
 #endif
-#if WINDOW_RESTORE_POS
 #ifdef __linux__
     if ((windowCreationFlags & WINDOW_IS_BORDERLESS) == 0)
         this->showWindow();
@@ -1663,7 +1659,6 @@ void appwindow_main::initControl() {
             }
         }
     }
-#endif
 #endif
     int w, h;
     glfwGetWindowSize(glfw, &w, &h);

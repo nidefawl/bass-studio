@@ -4,14 +4,14 @@
 struct GLFWwindow;
 #endif
 #include <windows.h>
-struct windowsize {
+struct appwindow_size_t {
     bool valid;
     WINDOWPLACEMENT p{};
-    windowsize() {
+    appwindow_size_t() {
         p.length = sizeof(WINDOWPLACEMENT);
         valid    = false;
     }
 };
-bool restoreWindowPos(GLFWwindow* glfw, windowsize* size);
-bool saveWindowPos(GLFWwindow* glfw, windowsize* size);
+bool restoreWindowPos(GLFWwindow* glfw, appwindow_size_t* size);
+bool saveWindowPos(GLFWwindow* glfw, appwindow_size_t* size);
 #endif
