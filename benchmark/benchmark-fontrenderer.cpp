@@ -26,7 +26,8 @@
 #include "renderresources.h"
 #include "mousecursor.h"
 #include "guifonts.h"
-
+#include "buildinfo.h"
+#include "../test/TestBase.hpp"
 
 namespace RenderResources {
     void initResources(NVGcontext* vg);// renderresources.cpp
