@@ -7,6 +7,8 @@ using vec4  = glm::vec4;
 using ivec2 = glm::ivec2;
 using ivec4 = glm::ivec4;
 
+static_assert(GLM_CONFIG_SIMD == GLM_ENABLE, "GLM_CONFIG_SIMD == GLM_ENABLE");
+
 using vec2_unaligned = glm::vec<2, float, glm::qualifier::packed_highp>;
 using vec4_unaligned = glm::vec<4, float, glm::qualifier::packed_highp>;
 using vec2_aligned = glm::vec<2, float, glm::qualifier::aligned_highp>;
