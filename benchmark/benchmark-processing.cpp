@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
             tickPos   = projGlobals.loopStart;
             samplePos = tickToSampleConvert<int32_t, roundmode::floor>(tickPos, tempo100, sr);
             //log_lf(Log::L_WARN, "START ON %s seconds: %.2f - sample %d\n", StringAsCStr(tickAsBeatString(tickPos)), toSeconds(tickPos, tempo100), samplePos);
-            int nIt = 0;
+            // int nIt = 0;
             host->onStartPlayback(dawInstance);
             for (auto _ : state) {
                 const bool isLoopAround = tickPos + ticksPerBlock >= projGlobals.loopStart + projGlobals.loopLen;
@@ -216,7 +216,7 @@ int main(int argc, char** argv) {
                 int32_t processedBlock = host->processPlayback(dawInstance, samplePos, tickPos, playback_state::status_playback, inLoop, isLoopAround);
                 // if (nIt == 8)
                     // DebugAlloc::endTrace();
-                nIt++;
+                // nIt++;
                 while (stream->getOutputQueueSize() > 0) {
                     AudioBuffer* dequeuedBuf = nullptr;
                     always_assert(stream->try_dequeue(dequeuedBuf));
