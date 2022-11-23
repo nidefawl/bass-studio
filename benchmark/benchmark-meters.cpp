@@ -13,7 +13,8 @@
 #include <functional>
 #include <memory>
 #include "sse.h"
-extern volatile bool fatalError;
+
+volatile bool fatalError;
 
 int main(int argc, char** argv) {
     std::vector<String> args(&argv[0], &argv[argc]);
