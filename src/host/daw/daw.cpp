@@ -401,9 +401,9 @@ void DawInstance::loadFileCStr(const char* str) {
 
 void DawInstance::saveFile(const String& path) {
     if (!path.empty()) {
-        std::shared_ptr<project_file> f = createProjectFile();
         bool bSuccess = false;
         if (projectFileType == PROJECT_FILETYPE_JSON) {
+            std::shared_ptr<project_file> f = createProjectFile();
             bSuccess = saveProjectToJsonFile(f, path);
         } else {
             saveProjectBundle(path);
