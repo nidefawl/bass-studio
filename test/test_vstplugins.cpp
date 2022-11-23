@@ -1,3 +1,4 @@
+#include "TestBase.hpp"
 #include "str_util.h"
 #include "common/test_common.h"
 #include "host/host_pluginmanager.h"

@@ -206,22 +206,11 @@ static const char* exc_as_str(DWORD excCode) {
     }
     return "UKNOWN_EXCEPTION";
 }
-static int toErrorCode(DWORD excCode) {
-    switch (excCode) {
-        case EXCEPTION_ACCESS_VIOLATION:
-            return ERR_ACCESSVIOLATION;
-        default:
-            return ERR_UNKNOWN;
-    }
-}
 
 extern volatile bool fatalError;
 #define WINAPI __stdcall
 static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
     DWORD excCode = pExceptionInfo && pExceptionInfo->ExceptionRecord ? pExceptionInfo->ExceptionRecord->ExceptionCode : 0;
-    if (handleFatalError(toErrorCode(excCode), static_cast<int32_t>(excCode))) {
-        return EXCEPTION_CONTINUE_EXECUTION;
-    }
     log_out("Fatal exception: %s (0x%08X)\n", exc_as_str(excCode), (int) excCode);
 #ifndef PROJECT_UNITTEST
     logStackTrace();

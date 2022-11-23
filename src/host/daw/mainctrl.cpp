@@ -2029,23 +2029,6 @@ GLFWwindow* getTopLevelGlfwWindow() {
     return nullptr;
 }
 
-int handleFatalError(int type, int implSpecType) {
-    /* auto daw = DawInstance::get();
-    seqthreads::thread_base* thread = daw->getPlayThread();
-    if (thread && seqthreads::getCurrentThreadId() == thread->getThreadId()) {
-        host_processing_stats_t processing;
-        auto host = daw->getHost();
-        host->getProcessingStats(processing);
-        if (processing.pluginId) {
-            effectbase* eff = daw->getPluginManager()->getPluginById(processing.pluginId);
-            if (eff) {
-                log_printf("Crash was most likely caused by %s\n", StringAsCStr(eff->getName()));
-            }
-        }
-    } */
-    return 0;
-}
-
 beatbar16th_t project_controller_t::toBeatBar16th(tick_t tick, bool isRelative) {
     return ::tickToBarBeat16th(tick, projectGlobals->signatureNum, projectGlobals->signatureDenom, isRelative);
 }
