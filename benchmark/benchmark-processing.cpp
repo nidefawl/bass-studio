@@ -113,6 +113,18 @@ public:
     channelnum_t getNumOutputChannels() const override {
         return numOutputChannels;
     }
+    DAW::AudioIO::AudioStream::stream_timings_t getStreamTimings() const override {
+        return {};
+    }
+    uint32_t getBufferUnderuns() const override {
+        return 0;
+    }
+    uint32_t getInputBufferUnderuns() const override {
+        return 0;
+    }
+    uint32_t getNumCallbacks() const override {
+        return 0;
+    }
 };
 }
 int main(int argc, char** argv) {
