@@ -127,8 +127,9 @@ void serialize(Archive& ar, app_plugin_configuration& settings) {
 }
 template <class Archive>
 void serialize(Archive& ar, appwindowsettings& settings) {
-    ar(make_nvp("grid", settings.dens));
-    make_optional_nvp(ar, "windowsize", settings.size);
+    // ar(make_nvp("grid", settings.dens));
+    // make_optional_nvp(ar, "windowsize", settings.size);
+    ar(make_nvp("grid", settings.dens), make_nvp("windowsize", settings.size), make_nvp("zoom", settings.zoom), make_nvp("flags", settings.flags));
 }
 
 template <class Archive>
@@ -152,10 +153,22 @@ void serialize(Archive& ar, app_daw_settings& settings) {
         make_nvp("debugMode", settings.debugMode),
         make_nvp("shaderDebug", settings.shaderDebug)
     );
-    make_optional_nvp(ar, "globalZoom", settings.globalZoom);
     make_optional_nvp(ar, "uiLayoutLocked", settings.uiLayoutLocked);
     make_optional_nvp(ar, "uiShowSettingsArp", settings.uiShowSettingsArp);
     make_optional_nvp(ar, "uiShowSettingsClip", settings.uiShowSettingsClip);
+}
+
+template<class Archive>
+void save(Archive& ar, appsettings const& settings, const std::uint32_t version) {
+    ar(
+        make_nvp("dawsettings", settings.dawsettings),
+        make_nvp("autosave", settings.autosave),
+        make_nvp("pluginsettings", settings.pluginsettings),
+        make_nvp("iosettings", settings.iosettings),
+        make_nvp("pathmapping", settings.pathmapping),
+        make_nvp("recentfiles", settings.recentfiles),
+        make_nvp("windowSettings", settings.windowSettings)
+    );
 }
 
 template<class Archive>
@@ -165,8 +178,8 @@ void load(Archive& ar, appsettings& settings, const std::uint32_t version) {
         bool bAudioEnabled = false;
         bool bVMMode = false;
         ar(
-            make_nvp("window.main", settings.wndMain), 
-            make_nvp("window.companion", settings.wndCompanion),
+            // make_nvp("window.main", settings.wndMain), 
+            // make_nvp("window.companion", settings.wndCompanion),
             make_nvp("io", settings.iosettings),
             make_nvp("startengine", bAudioEnabled),
             make_nvp("plugins", settings.pluginsettings),
@@ -179,6 +192,17 @@ void load(Archive& ar, appsettings& settings, const std::uint32_t version) {
         make_optional_nvp(ar, "autosave", settings.autosave);
         settings.dawsettings.shaderDebug = bShaderDebug;
         settings.dawsettings.audioEnabled = bAudioEnabled;
+    } else if (version < 3) {
+        ar(
+            make_nvp("dawsettings", settings.dawsettings),
+            make_nvp("autosave", settings.autosave),
+            make_nvp("pluginsettings", settings.pluginsettings),
+            make_nvp("iosettings", settings.iosettings),
+            make_nvp("pathmapping", settings.pathmapping),
+            make_nvp("recentfiles", settings.recentfiles)
+            // make_nvp("wndMain", settings.wndMain),
+            // make_nvp("wndCompanion", settings.wndCompanion)
+        );
     } else {
         ar(
             make_nvp("dawsettings", settings.dawsettings),
@@ -187,26 +211,11 @@ void load(Archive& ar, appsettings& settings, const std::uint32_t version) {
             make_nvp("iosettings", settings.iosettings),
             make_nvp("pathmapping", settings.pathmapping),
             make_nvp("recentfiles", settings.recentfiles),
-            make_nvp("wndMain", settings.wndMain),
-            make_nvp("wndCompanion", settings.wndCompanion)
+            make_nvp("windowSettings", settings.windowSettings)
         );
     }
 }
-
-template<class Archive>
-void save(Archive& ar, appsettings const& settings, const std::uint32_t version) {
-    ar(
-        make_nvp("dawsettings", settings.dawsettings),
-        make_nvp("autosave", settings.autosave),
-        make_nvp("pluginsettings", settings.pluginsettings),
-        make_nvp("iosettings", settings.iosettings),
-        make_nvp("pathmapping", settings.pathmapping),
-        make_nvp("recentfiles", settings.recentfiles),
-        make_nvp("wndMain", settings.wndMain),
-        make_nvp("wndCompanion", settings.wndCompanion)
-    );
-}
-CEREAL_CLASS_VERSION(appsettings, 2);
+CEREAL_CLASS_VERSION(appsettings, 3);
 
 
 void loadSettings(appsettings& settings) {

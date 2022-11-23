@@ -292,7 +292,6 @@ class DawInstance final : public project_controller_t, public delete_cb {
     std::vector<DawWindowCompanion> companionWindows;
     std::vector<DawCtrl*> dawCtrls;
     std::vector<dawview_layout_t> layoutsFromProjectFile;
-    std::array<dawview_layout_t, 10> layouts;
     edithistory hist;
     WorkerThread workerThread;
     PlaybackThread playThread;
@@ -324,9 +323,6 @@ private:
 public:
     DawInstance() : project_controller_t(&project, &projectGlobals) {
         setEmptyClipboard();
-    }
-    std::array<dawview_layout_t, 10>& getLayouts() {
-        return layouts;
     }
     void setEmptyClipboard();
     edithistory& getHist() {
@@ -508,6 +504,8 @@ protected:
 
     track_t* selectedTrack = nullptr;
     int32_t layoutIndex = 0;
+    size_t dawCtrlWindowIndex = 0; // (dawCtrlWindowIndex > 0) == isCompanion()
+    std::array<dawview_layout_t, 10> layouts;
 public:
     std::vector<guictr_base*> viewGuiContainers;
     gui_asyc_progress guiCtrProgress;
@@ -520,25 +518,32 @@ public:
     // scaled_grid grid;
     view_mode_t viewMode = view_mode_t::TRACK_TIMELINE;
     std::vector<String> tmpFileDragPaths;
-    explicit DawCtrl(AppCtrl* parent, DawInstance& _daw)
-    : AppCtrl(parent), daw(_daw)
+    explicit DawCtrl(AppCtrl* parent, DawInstance& _daw, int32_t _dawCtrlWindowIndex)
+    : AppCtrl(parent), dawCtrlWindowIndex(_dawCtrlWindowIndex), daw(_daw)
     {
 #if BUILD_DAW_HOST
         this->parentDawCtrl = this;
 #endif
         setWindowName(BuildInfo::PRODUCT_NAME_DISPLAY);
     }
-
     ~DawCtrl() override = default;
+    void updateViewGuiContainers();
+
+    size_t getDawWindowIndex() const {
+        return dawCtrlWindowIndex;
+    }
 
     int32_t& getLayoutIndex() {
         return layoutIndex;
     }
+
+    std::array<dawview_layout_t, 10>& getLayouts() {
+        return layouts;
+    }
+
     void setLayoutIndex(int32_t index) {
         layoutIndex = index;
     }
-
-    void updateViewGuiContainers();
 
     DawInstance* getDaw() {
         return &daw;
@@ -592,6 +597,7 @@ public:
 
     void initApp(const std::vector<String>& args) override { };
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
+    size_t getAppWindowIndex() override { return dawCtrlWindowIndex; }
     void startApp() override { };
 
     virtual DAW::Cursor& getCursor()              = 0;
@@ -610,8 +616,8 @@ public:
     virtual void setStatusText(String s) {
     }
 
-    virtual bool isCompanion() const {
-        return false;
+    bool isCompanion() const {
+        return dawCtrlWindowIndex > 0;
     }
 
     virtual void resetAutomationContext() {
@@ -730,9 +736,15 @@ class CompanionCtrl final : public DawCtrl {
     DAW::TrackSelection trackSelection;
 
 public:
-    explicit CompanionCtrl(AppCtrl* parent, DawInstance& _daw): DawCtrl(parent, _daw) { };
+    explicit CompanionCtrl(AppCtrl* parent, DawInstance& _daw, int32_t windowIndex = 1)
+    : DawCtrl(parent, _daw, windowIndex)
+    {
+        dbgassert(windowIndex > 0);
+    }
     ~CompanionCtrl() override = default;
     void destroy() override;
-    bool isCompanion() const override { return true; };
     DAW::Cursor& getCursor() override { return cursor; };
+    bool initAppWindow(window_main* window, NVGcontext* nanovg) override {
+        return DawCtrl::initAppWindow(window, nanovg);
+    }
 };

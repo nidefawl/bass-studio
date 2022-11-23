@@ -683,11 +683,17 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
             }
             case CMD_OPEN_SECOND_WINDOW:
                 if (companionWindows.empty()) {
-                    auto companionCtrlStdPtr = std::make_shared<CompanionCtrl>(mainCtrl, *this);
+                    size_t highestIndex = 0;
+                    for (auto& companionCtrl : this->dawCtrls) {
+                        if (companionCtrl->getDawWindowIndex() > highestIndex) {
+                            highestIndex = companionCtrl->getDawWindowIndex();
+                        }
+                    }
+                    auto companionCtrlStdPtr = std::make_shared<CompanionCtrl>(mainCtrl, *this, highestIndex + 1);
                     ivec2 windowSize;
                     mainCtrl->mainWindow->getSize(&windowSize);
-                    auto compWindowNew = mainCtrl->mainWindow->createOverlay(companionCtrlStdPtr, windowSize, WINDOW_IS_MAINWINDOW_SLAVE | WINDOW_IS_RESIZABLE);
-                    auto idxOfWindow = companionWindows.size();
+                    auto compWindowNew = mainCtrl->mainWindow->createOverlay(companionCtrlStdPtr, windowSize, WINDOW_STORE_WINDOW_POS_SIZE | WINDOW_IS_MAINWINDOW_SLAVE | WINDOW_IS_RESIZABLE);
+                    auto idxOfWindow = companionCtrlStdPtr->getDawWindowIndex();
                     companionWindows.push_back(DawWindowCompanion{ compWindowNew, companionCtrlStdPtr });
                     compWindowNew->initControl();
                     if (companionCtrlStdPtr->isOk()) {
@@ -1002,7 +1008,6 @@ void DawInstance::getTrackContainers(std::vector<guictr_tracks*>& trackContainer
 void DawInstance::setMainControl(MainCtrl* _mainCtrl) {
     dbgassert(!tls.mainCtrl);
     tls.mainCtrl = _mainCtrl;
-    _mainCtrl->updateZoomLevel(tls.settings->dawsettings.globalZoom);
     daw_tls::getTls().mainCtrl = tls.mainCtrl;
     tls.host->setTls(tls);
     this->dawCtrls.push_back(tls.mainCtrl);
@@ -1145,13 +1150,12 @@ bool DawInstance::loadProject1(const std::shared_ptr<project_file>& file, int fl
         tr->getStage()->pluginsChanged();
     }
     tls.host->onTrackLayoutChange();
-    /** validate cursor state */
-    auto ctrl = tls.mainCtrl;
-    if (ctrl) {
-        if (this->layoutsFromProjectFile.size() > 0) {
-            ctrl->loadLayout(this->layoutsFromProjectFile[0]);
+    /** load layout data */
+    for (auto& dawCtrl : dawCtrls) {
+        auto index = dawCtrl->getDawWindowIndex();
+        if (index < this->layoutsFromProjectFile.size()) {
+            dawCtrl->loadLayout(this->layoutsFromProjectFile[index]);
         }
-        ctrl->loadTrackLayouts(file);
     }
     updateVisibleTrackContents();
     return true;

@@ -15,6 +15,7 @@
 #include "basectrl.h"
 #include "color_util.h"
 #include "commands.h"
+#include "config.h"
 #include "cursor.h"
 #include "daw_async_project_load.h"
 #include "daw.h"
@@ -461,6 +462,35 @@ public:
         activateEntry(focusCtr);
     }
 
+    void destroy() {
+        
+        auto trackCtr = std::static_pointer_cast<guictr_tracks>(ctrEntryTracks->getSharedGui());
+        if (trackCtr) {
+            // onRemove is not called for nested layout container entries
+            // so we need to call it manually
+            trackCtr->removeAllTracks(); 
+        }
+        auto ctrCtrTop = findByTagEntry(GuiContainerTag::TAG_TAB_TOP);
+        if (ctrCtrTop) {
+            ctrCtrTop->getAsLayoutCtr()->removeAllEntries();
+            ctrCtrTop->removeEntryFromParent();
+            ctrCtrTop.reset();
+        }
+        auto ctrCtrBottom = findByTagEntry(GuiContainerTag::TAG_TAB_BOTTOM);
+        if (ctrCtrBottom) {
+            ctrCtrBottom->getAsLayoutCtr()->removeAllEntries();
+            ctrCtrBottom->removeEntryFromParent();
+            ctrCtrBottom.reset();
+        }
+        ctrEntryTracks->removeEntryFromParent();
+        ctrEntryNodes->removeEntryFromParent();
+        ctrEntryClipEdit->removeEntryFromParent();
+        ctrEntryPlugins->removeEntryFromParent();
+        ctr_Left->removeAllEntries();
+        ctr_Center->removeAllEntries();
+        ctr_Right->removeAllEntries();
+    }
+
     guictr_menubar* getMenu() override {
         return &ctr_menu;
     }
@@ -824,6 +854,12 @@ public:
 };
 
 void DawCtrl::setupView() {
+    for (size_t i = 1; i < layouts.size(); i++) {
+        std::shared_ptr<dawview_layout_t> viewLayout = loadDawViewLayoutSnapshot(StringFormat("data/view%zu.layout", i));
+        if (viewLayout) {
+            layouts[i] = *viewLayout.get();
+        }
+    }
     view = new DawViewContainersMain(this, menubar, getCursor(), daw.projectGlobals.trackSelection, daw.project, daw.projectGlobals, daw.dragdropclip, isCompanion() ? 2 : 1);
     view->init();
     view->addTo(this->viewGuiContainers);
@@ -1043,7 +1079,6 @@ bool DawCtrl::menuCommand(const menucmd_t& command) {
             dragContainerRelayout({ BaseCtrl::drag_ctr_event_type::DRAG_END });
             showClipEditor();
             setViewMode(view_mode_t::TRACK_TIMELINE);
-            daw.tls.settings->dawsettings.globalZoom = 1.0;
             for (auto& dawCtrl : daw.dawCtrls) {
                 dawCtrl->updateZoomLevel(1.0);
                 dawCtrl->updateVisibleTrackContents();
@@ -1076,17 +1111,20 @@ void MainCtrl::startApp() {
     } else {
         daw.setEmptyProject();
     }
-    auto& layouts = daw.getLayouts();
-    view->storeLayout(layouts[0]);
-    for (size_t i = 1; i < layouts.size(); i++) {
-        std::shared_ptr<dawview_layout_t> viewLayout = loadDawViewLayoutSnapshot(StringFormat("data/view%zu.layout", i));
-        if (viewLayout) {
-            layouts[i] = *viewLayout.get();
-        }
-    }
-    // view->loadLayout(layouts[1]);
+    auto& layouts = getLayouts();
+    // view->storeLayout(layouts[0]);
+    view->loadLayout(layouts[0]);
     dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
     DawCtrl::startApp();
+
+    auto& settings = daw_tls::getSettings();
+    for (size_t i = 0; i < settings.windowSettings.size(); ++i) {
+        auto& ws = settings.windowSettings[i];
+        if (ws.flags & 1) { // opened
+            auto temp = DAW::UI::CommandContext{GlobalCommandType::CMD_OPEN_SECOND_WINDOW, {}, int32_t(i)};
+            handleGlobalCommand(temp);
+        }
+    }
 }
 
 
@@ -1096,6 +1134,7 @@ void DawCtrl::destroy() {
     }
     isOK = false;
     if (view) {
+        view->destroy();
         delete view;
         view = nullptr;
     }
@@ -1104,7 +1143,7 @@ void DawCtrl::destroy() {
     waveformRenderer = nullptr;
 }
 
-MainCtrl::MainCtrl(DawInstance& _daw) : DawCtrl(nullptr, _daw) {
+MainCtrl::MainCtrl(DawInstance& _daw) : DawCtrl(nullptr, _daw, 0) {
 }
 
 void MainCtrl::initApp(const std::vector<String>& args) {
@@ -1215,19 +1254,17 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
 
     auto& settings = daw_tls::getSettings();
 
-    //TODO: layout settings should be handled on editor container level
-    view->visitEntries([&](SPLayoutEntry& entry) {
-        if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
-            auto tracks = guictr_cast<guictr_tracks>(entry);
-            auto& grid = tracks->getGrid();
-            if (isCompanion()) {
-                grid.grid_dens = settings.wndCompanion.dens;
-            } else {
-                grid.grid_dens = settings.wndMain.dens;
+    auto* optWindowSettings = settings.windowSettings.size() > this->dawCtrlWindowIndex ? &settings.windowSettings[this->dawCtrlWindowIndex] : nullptr;
+    if (optWindowSettings) {
+        view->visitEntries([&](SPLayoutEntry& entry) {
+            if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
+                auto tracks = guictr_cast<guictr_tracks>(entry);
+                auto& grid = tracks->getGrid();
+                grid.grid_dens = optWindowSettings->dens;
             }
-        }
-        return true;
-    });
+            return true;
+        });
+    }
 
     isOK = true;
     return isOK;
@@ -1745,15 +1782,18 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
         }
         case CMD_SWITCH_LAYOUT: {
             if (kevt.type == KeyboardState::K_PRESS) {
-                auto& layouts = daw.getLayouts();
+                auto& layouts = getLayouts();
                 if ((kevt.mods & KB_MOD_SHIFT) == kevt.mods && ctxt.argInt0 >= 0 && ctxt.argInt0 < CtrSize(layouts)) {
                     auto index = ctxt.argInt0 % CtrSize(layouts);
                     bool store    = (kevt.mods & KB_MOD_SHIFT);
-                    this->layoutIndex = index;
                     if (store) {
                         view->storeLayout(layouts[index]);
                         saveDawViewLayoutSnapshot(layouts[index], StringFormat("data/view%d.layout", index));
                     } else {
+                        if (this->layoutIndex >0 && this->layoutIndex < CtrSize(layouts)) {
+                            view->storeLayout(layouts[this->layoutIndex]);
+                        }
+                        this->layoutIndex = index;
                         loadLayout(layouts[index]);
                         dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
                     }
@@ -1834,7 +1874,10 @@ void DawCtrl::onPreDestroy() {
     //TODO: layout settings should be handled on editor container level
     if (ctrTracks) {
         auto& settings = daw_tls::getSettings();
-        settings.wndMain.dens = ctrTracks->getGrid().grid_dens;
+        while (settings.windowSettings.size() <= dawCtrlWindowIndex) {
+            settings.windowSettings.push_back({});
+        }
+        settings.windowSettings[dawCtrlWindowIndex].dens = ctrTracks->getGrid().grid_dens;
     }
 }
 void MainCtrl::onPreDestroy() {
@@ -1857,7 +1900,10 @@ void CompanionCtrl::destroy() {
         //TODO: layout settings should be handled on editor container level
         if (ctrTracks) {
             auto& settings = daw_tls::getSettings();
-            settings.wndCompanion.dens = ctrTracks->getGrid().grid_dens;
+            while (settings.windowSettings.size() <= dawCtrlWindowIndex) {
+                settings.windowSettings.push_back({});
+            }
+            settings.windowSettings[dawCtrlWindowIndex].dens = ctrTracks->getGrid().grid_dens;
         }
         ctrTracks.reset();
     }
@@ -2122,7 +2168,10 @@ void DawCtrl::updateZoomLevel(float f) {
     AppCtrl::updateZoomLevel(f);
     if (view) {
         view->ctr_tempo.onGlobalZoomChanged();
-        daw.tls.settings->dawsettings.globalZoom = f;
+        while (daw.tls.settings->windowSettings.size() <= dawCtrlWindowIndex) {
+            daw.tls.settings->windowSettings.emplace_back();
+        }
+        daw.tls.settings->windowSettings[dawCtrlWindowIndex].zoom = f;
     }
 }
 
@@ -2207,21 +2256,23 @@ void load_project_task::run() {
                         tr->getStage()->pluginsChanged();
                     }
                     daw->getHost()->onTrackLayoutChange();
-                    /** validate cursor state */
-                    auto ctrl = daw->getMainControl();
-                    if (ctrl) {
-                        if (daw->layoutsFromProjectFile.size() > 0) {
-                            ctrl->setLayoutIndex(0);
-                            ctrl->loadLayout(daw->layoutsFromProjectFile[0]);
+                    /** load layout data */
+                    for (auto& dawCtrl : daw->dawCtrls) {
+                        auto index = dawCtrl->getDawWindowIndex();
+                        if (daw->layoutsFromProjectFile.size() > index) {
+                            auto& layout = daw->layoutsFromProjectFile[index];
+                            dawCtrl->setLayoutIndex(0);
+                            dawCtrl->loadLayout(layout);
+                            dawCtrl->getLayouts()[0] = layout;
                         }
-                        ctrl->view->visitEntries([f = file](SPLayoutEntry& entry) {
+                        dawCtrl->view->visitEntries([f = file](SPLayoutEntry& entry) {
                             if (entry->getType() == gui_type::CTR_TYPE_TRACKS) {
                                 auto trackCtr = guictr_cast<guictr_tracks>(entry);
-                                trackCtr->getGrid().setLayout(f->layout.layoutGrid);
-                                trackCtr->loadTrackLayouts(f->project.trackCtr);
+                                trackCtr->getGrid().setLayout(f->layout.layoutGrid);  // TODO: per track editor / window
+                                trackCtr->loadTrackLayouts(f->project.trackCtr);      // OK: This loads per track editor / window
                                 trackCtr->loadTrackLayouts(f->project.trackReturnCtr);
                                 trackCtr->loadTrackLayouts(f->project.trackMasterCtr);
-                                trackCtr->setScrollOffset(f->layout.scrollOffsetX);
+                                trackCtr->setScrollOffset(f->layout.scrollOffsetX);   // TODO: per track editor / window
                             }
                             return true;
                         });

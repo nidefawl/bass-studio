@@ -199,7 +199,7 @@ public:
         for (auto& btn : btnViews) {
             btn.btnIndex = static_cast<int32_t>(&btn - btnViews.data());
             add(&btn);
-            btn.setTooltipText("Show View " + std::to_string(btn.btnIndex + 1));
+            btn.setTooltipText("Load UI Layout " + std::to_string(btn.btnIndex + 1));
             btn.setText(std::to_string(btn.btnIndex + 1));
             btn.setButtonColor(GuiColor::COL_BTN_BG_SHOW_ACTIVE);
         }

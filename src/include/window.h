@@ -13,6 +13,7 @@
 #define WINDOW_IS_TOOLTIP            64
 #define WINDOW_IS_MAINWINDOW_MASTER  128
 #define WINDOW_IS_MAINWINDOW_SLAVE   256
+#define WINDOW_STORE_WINDOW_POS_SIZE 512
 
 class BaseCtrl;
 class AppCtrl;

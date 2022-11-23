@@ -5,6 +5,7 @@
 #include <memory>
 #include <set>
 #include "commands.h"
+#include "math/seq_math.h"
 #include "tls.h"
 #include "types.h"
 #include <vector>
@@ -284,7 +285,7 @@ public:
         return false;
     }
     virtual void updateZoomLevel(float f) {
-        m_scale = f;
+        m_scale = f == 0.0f ? 1.0f : (math::clamp(f, 0.25f, 2.0f));
     }
 };
 
@@ -369,6 +370,7 @@ public:
     virtual bool initAppWindow(window_main* window, NVGcontext* nanovg) = 0;
     virtual void startApp()     = 0; /* OpenGL context exists in startApp */
     virtual void destroy()      = 0;
+    virtual size_t getAppWindowIndex() { return 0; }
     virtual void onPreDestroy() { };
     void onAppTick();
     virtual void onFastTick() {};

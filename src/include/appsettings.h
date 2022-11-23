@@ -73,13 +73,10 @@ struct app_iosettings {
 };
 
 struct appwindowsettings {
-    std::shared_ptr<appwindow_size_t> size{};
+    appwindow_size_t size{};
     grid_density dens{};
-    appwindowsettings();
-    appwindowsettings(const appwindowsettings& other);
-    appwindowsettings& operator=(const appwindowsettings& other);
-    appwindowsettings(appwindowsettings&& other) = default;
-    appwindowsettings& operator=(appwindowsettings&& other) = default;
+    float zoom = 1.0f;
+    uint32_t flags = 0;
 };
 
 struct recentfilelistentry {
@@ -118,7 +115,6 @@ struct app_daw_settings {
     bool vmmode = false;
     bool debugMode = false;
     bool shaderDebug = true;
-    float globalZoom = 1.0f;
     bool uiLayoutLocked = true;
     bool uiShowSettingsClip = true;
     bool uiShowSettingsArp = true;
@@ -131,8 +127,7 @@ struct appsettings {
     app_iosettings iosettings;
     app_path_remapping pathmapping;
     recentfilelist recentfiles;
-    appwindowsettings wndMain;
-    appwindowsettings wndCompanion;
+    std::vector<appwindowsettings> windowSettings = {appwindowsettings{}};
     bool saveOnExit = true;
 };
 

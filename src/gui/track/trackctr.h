@@ -601,7 +601,7 @@ public:
 };
 class guictr_tracks final : public guictr_base, grid_changed_cb, te_constants, public gui_scrollcontainer {
     friend class guitrack_editor;
-    int32_t globalIndex = 0;
+    int32_t trackContainerGlobalIndex = 0;
 
 public:
     scaled_grid m_grid;

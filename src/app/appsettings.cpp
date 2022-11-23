@@ -8,25 +8,6 @@
 #include "platform/win/windowsize.h"
 #endif
 
-appwindowsettings::appwindowsettings()
-    : size(std::make_shared<appwindow_size_t>())
-{
-}
-
-appwindowsettings::appwindowsettings(const appwindowsettings& other)
-    : size(std::make_shared<appwindow_size_t>())
-{
-    *this = other;
-}
-
-appwindowsettings& appwindowsettings::operator=(const appwindowsettings& other) {
-    if (this != &other) {
-        this->size = other.size;
-        this->dens = other.dens;
-    }
-    return *this;
-}
-
 void recentfilelist::add(const String& path) {
     while (sortedEntries.size() > 31) {
         String& s = sortedEntries.back();

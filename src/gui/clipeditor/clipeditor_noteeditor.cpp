@@ -862,7 +862,7 @@ void guictr_editor_base::renderClipHandles(NVGcontext* vg) {
                 auto clip = handle->getClipView().clip();
                 if (clip == thizClip) {
                     viewClipHandle = handle.get();
-                } else if (assert_expr(clip)) {
+                } else if (clip) {
                     nvgTranslate(vg, handle->pos.x, handle->pos.y);
                     handle->renderHandle(vg, -1);
                     nvgTranslate(vg, -handle->pos.x, -handle->pos.y);

@@ -799,6 +799,7 @@ void guictr_daw_viewmode_select::buttonClicked(guibase* button) {
     for (auto & btnView : btnViews) {
         if (button == &btnView) {
             auto temp = DAW::UI::CommandContext{GlobalCommandType::CMD_SWITCH_VIEW, {}, idx};
+            temp.kevt.mods = parentCtrl->lastMouseEvent.kbmods;
             dawCtrl->handleGlobalCommand(temp);
             break;
         }
@@ -810,6 +811,7 @@ void guictr_daw_layout_select::buttonClicked(guibase* button) {
     for (auto & btnView : btnViews) {
         if (button == &btnView) {
             auto temp = DAW::UI::CommandContext{GlobalCommandType::CMD_SWITCH_LAYOUT, {}, idx};
+            temp.kevt.mods = parentCtrl->lastMouseEvent.kbmods;
             dawCtrl->handleGlobalCommand(temp);
             break;
         }

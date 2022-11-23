@@ -4,9 +4,11 @@
 #include "glheaders.h"
 #include "hires_timer.h"
 #include "host/plugin/modules.h"
+#include "platform/linux/windowsize.h"
 #include "tls.h"
 #include "util/profiling.h"
 #include <GLFW/glfw3.h>
+#include <memory>
 #include <utility>
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -207,7 +209,7 @@ protected:
 
     std::vector<appwindow*> children;
 
-    int32_t windowCreationFlags      = 0;
+    int32_t windowCreationFlags = 0;
     bool isSharedContextSlave = false;
     bool noMouseCapture       = false;
     bool noRawInput           = false;
@@ -1377,13 +1379,15 @@ void appwindow_main::destroy() {
 #ifdef __linux__
     glfwSetDropCallback(glfw, nullptr);
 #endif
-    if (!parent) {
-        auto& settings = daw_tls::getSettings();
-        if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
-            saveWindowPos(glfw, settings.wndCompanion.size.get());
-        } else {
-            saveWindowPos(glfw, settings.wndMain.size.get());
+    auto& settings = daw_tls::getSettings();
+    if (windowCreationFlags & WINDOW_STORE_WINDOW_POS_SIZE) {
+        auto idx = ctrl->getAppWindowIndex();
+        while (idx >= settings.windowSettings.size()) {
+            settings.windowSettings.push_back({});
         }
+        auto& ws = settings.windowSettings[idx];
+        saveWindowPos(glfw, &ws.size);
+        ws.flags = 0; // flag closed
     }
 #endif
     if (this->ctrl) {
@@ -1650,17 +1654,17 @@ void appwindow_main::initControl() {
     if ((windowCreationFlags & WINDOW_IS_BORDERLESS) == 0)
         this->showWindow();
 #endif
-    if (!parent) {
-        auto& settings = daw_tls::getSettings();
-        if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
-            if (!restoreWindowPos(glfw, settings.wndCompanion.size.get())) {
+    auto& settings = daw_tls::getSettings();
+    if (windowCreationFlags & WINDOW_STORE_WINDOW_POS_SIZE) {
+        auto idx = ctrl->getAppWindowIndex();
+        if (idx < settings.windowSettings.size()) {
+            auto& ws = settings.windowSettings[idx];
+            if (!restoreWindowPos(glfw, &ws.size)) {
                 this->maximize();
+            } else {
+                ctrl->updateZoomLevel(ws.zoom);
             }
-        } else {
-
-            if (!restoreWindowPos(glfw, settings.wndMain.size.get())) {
-                this->maximize();
-            }
+            ws.flags = 1; // flag opened
         }
     }
 #endif
@@ -1889,7 +1893,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
         std::shared_ptr<AppCtrl> ctrl = appInstance.makeApp(args);
 
         std::unique_ptr<appwindow_main> mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl);
-        mainWindow->createMainWindow(1280, 720, WINDOW_IS_MAINWINDOW_MASTER | WINDOW_IS_RESIZABLE);
+        mainWindow->createMainWindow(1280, 720, WINDOW_STORE_WINDOW_POS_SIZE | WINDOW_IS_MAINWINDOW_MASTER | WINDOW_IS_RESIZABLE);
 #ifdef _WIN32
         setMainHWND(mainWindow->getHWND());
 #endif
