@@ -514,7 +514,11 @@ public:
 
     virtual void captureMouse() {
         if (!noMouseCapture) {
+#if defined(__APPLE__)
+            glfwSetInputMode(glfw, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+#else
             glfwSetInputMode(glfw, GLFW_CURSOR, noRawInput ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_DISABLED);
+#endif
             if (!noRawInput) {
                 glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 1);
             }
