@@ -550,10 +550,6 @@ static int runScannerServer(const pluginscanner_server_options& options) {
             return 1;
         }
 
-        for (auto& file : filesClap) 
-            dbgassert(FileExists(file.path));
-        for (auto& file : filesVst_) 
-            dbgassert(FileExists(file.path));
         auto& allFiles = filesClap;
         allFiles.insert(allFiles.end(), filesVst_.begin(), filesVst_.end());
         String exeName = App::Platform::GetExecutablePath();
