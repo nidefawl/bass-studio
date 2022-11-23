@@ -1833,25 +1833,7 @@ void gui_track_content_base::pluginMultiDragRelease(guictr_dragged_plugins* g, i
 }
 
 void gui_track_content_base::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
-    audio_stage_t* dstStage = this->m_track->getStage();
     dawCtrl->getDragDropTarget().reset();
-    if (g->isSynth()) {
-        if (dstStage->type != TRACK_TYPE_MIDI) {
-            return;
-        }
-        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
-            dragdrop_target_indicator_t::target_area,
-            0,
-            m_trackentry->mixer,
-            this->pos + this->size/2,
-            String("Insert ") + g->getLabel() + " on " + m_track->name
-        };
-        return;
-    }
-
-    int32_t dstSlot = g->isSynth() ? 0 : CtrSize(dstStage->effects);
-
-    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, dstSlot, this, this->pos };
     dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
         dragdrop_target_indicator_t::target_area,
         0,
@@ -1992,18 +1974,21 @@ namespace {
 
         dragdrop_target_indicator_t target;
         guibase* dropTarget = parent;
+        String trNameDest = "";
         if (targetTrack) {
             dropTarget = targetTrack->mixer;
+            trNameDest = targetTrack->track->name;
         }
+        String trName = entry->track->name;
         switch (slot.droptype) {
             case drop_type::track_on:
-                target = { dragdrop_target_indicator_t::target_area, treeIdx, dropTarget, slot.droppedTrack->mixer->pos + ivec2(0, slot.droppedTrack->mixer->size.y / 2) };
+                target = { dragdrop_target_indicator_t::target_area, treeIdx, dropTarget, slot.droppedTrack->mixer->pos + ivec2(0, slot.droppedTrack->mixer->size.y / 2), "Move Track '"+trName+"' to '"+trNameDest+"'" };
                 break;
             case drop_type::track_before:
-                target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget, slot.droppedTrack->mixer->pos + ivec2(0, 2) };
+                target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget, slot.droppedTrack->mixer->pos + ivec2(0, 2), "Move Track '"+trName+"' here" };
                 break;
             case drop_type::track_after:
-                target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget, slot.droppedTrack->mixer->pos + ivec2(0, slot.droppedTrack->mixer->size.y - 2) };
+                target = { dragdrop_target_indicator_t::target_line, treeIdx, dropTarget, slot.droppedTrack->mixer->pos + ivec2(0, slot.droppedTrack->mixer->size.y - 2), "Move Track '"+trName+"' here" };
                 break;
             case drop_type::none:
                 return;

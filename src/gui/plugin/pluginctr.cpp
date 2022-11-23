@@ -550,16 +550,7 @@ void guictr_plugins::relayout() {
 void guictr_plugins::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
     dawCtrl->getDragDropTarget().reset();
     if (!track) return;
-    if (g->isSynth()) {
-        if (track->type != TRACK_TYPE_MIDI) {
-            return;
-        }
-        dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, 0, this, this->pos };
-        return;
-    }
-
     auto slot = slotFromCoord(mousepos);
-
     dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, slot, this, this->pos };
 }
 int guictr_plugins::slotFromCoord(ivec2 _pos) {
