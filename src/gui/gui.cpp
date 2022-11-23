@@ -489,6 +489,15 @@ void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& col
     nvgFill(vg);
 }
 
+void drawSquareInset(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
+    float inset = math::max(4.0f, size.x / 10.0f);
+    nvgBeginPath(vg);
+    nvgRect(vg, pos.x + inset, pos.y + inset, size.x - inset * 2.0f, size.y - inset * 2.0f);
+    nvgStrokeColor(vg, getContrastFontColorNvg(color));
+    nvgStrokeWidth(vg, 1.0f);
+    nvgStroke(vg);
+}
+
 GuiColor::constant_t guibase::getLabelColor() const {
     if (isFlag(FLG_HAS_COLOR_BG) && theme) {
         auto colBgU32 = theme->getColorInt32(getBackgroundColor());

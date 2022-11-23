@@ -115,7 +115,7 @@ namespace DAW::UI {
         KeyCombo KC_ZOOM_OUT            = { 0, KeyboardKey::DAW_KB_KP_SUBTRACT, "" };
         commands.clear();
         auto Add = [this](GlobalCommandType type, CommandDesc&& desc, const KeyCombo& defaultCombo) {
-            this->commands.push_back({type, desc, {defaultCombo}, 0, defaultCombo, {}, 0, 0, ""});
+            this->commands.push_back({type, desc, {defaultCombo}, 0, defaultCombo, {}, -1, -1, ""});
         };
         Add(CMD_SWITCH_VIEW, {"Switch View", "Switch to the next view", ""}, { KB_MODS_NONE, KeyboardKey::DAW_KB_TAB, "" });
         Add(CMD_STARTSTOP_PLAYBOCK, {"Start/Stop Playback", "Start or stop playback", ""}, { KB_MODS_NONE, KeyboardKey::DAW_KB_SPACE, "" });

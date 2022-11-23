@@ -2,9 +2,11 @@
 #include <memory>
 #include <vector>
 #include "gui/controls/inputfield.h"
+#include "guicolors.h"
 #include "host/project/project.h"
 #include "host/track/track.h"
 #include "saferef.h"
+#include "seq_util.h"
 #include "types.h"
 #include "math/seq_math.h"
 #include "str_util.h"
@@ -166,7 +168,96 @@ public:
 struct GlobalZoom {
     float zoom = 1.0f;
 };
-class guictr_tempocontrols final : public guictr_base {
+class guibutton_select : public guibutton {
+public:
+    int32_t btnIndex = 0;
+public:
+    guibutton_select() = default;
+    int32_t getIndex() const {
+        return btnIndex;
+    }
+    void render(NVGcontext* vg) override {
+        if (!isRenderableSizeAndContext(vg))
+            return;
+        int32_t fl = getStateFlags();
+        renderWidgetBorder(vg, fl);
+        renderButtonLabel(vg, fl);
+    }
+    void renderButtonLabel(NVGcontext* vg, int32_t stateFlags);
+};
+class guictr_daw_layout_select final : public guictr_base {
+    class guibutton_layout_select : public guibutton_select {
+    public:
+        guibutton_layout_select() = default;
+        bool getState() const override;
+    };
+    std::array<guibutton_layout_select, 4> btnViews;
+public:
+    guictr_daw_layout_select() {
+        padding = 0;
+        setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
+        for (auto& btn : btnViews) {
+            btn.btnIndex = static_cast<int32_t>(&btn - btnViews.data());
+            add(&btn);
+            btn.setTooltipText("Show View " + std::to_string(btn.btnIndex + 1));
+            btn.setText(std::to_string(btn.btnIndex + 1));
+            btn.setButtonColor(GuiColor::COL_BTN_BG_SHOW_ACTIVE);
+        }
+    }
+    ~guictr_daw_layout_select() override {
+        removeGuis();
+    }
+    void layout() override {
+        auto pos = ivec2(0, 0);
+        for (auto& gui : btnViews) {
+            gui.pos = pos;
+            gui.size = ivec2(size.x / btnViews.size(), size.y);
+        }
+        guictr_base::layout();
+    }
+    int32_t getNumButtons() const {
+        return CtrSize(btnViews);
+    }
+    void buttonClicked(guibase* button) override;
+};
+class guictr_daw_viewmode_select final : public guictr_base {
+    class guibutton_viewmode_select : public guibutton_select {
+    public:
+        guibutton_viewmode_select() = default;
+        bool getState() const override;
+    };
+    std::array<guibutton_viewmode_select, 2> btnViews;
+public:
+    guictr_daw_viewmode_select() {
+        padding = 0;
+        setLayoutMode(autolayout_mode::LAYOUT_HORIZONTAL);
+        btnViews[0].setTooltipText("Show Tracks");
+        btnViews[1].setTooltipText("Show Nodes");
+        btnViews[0].setText("T");
+        btnViews[1].setText("N");
+        for (auto& btn : btnViews) {
+            btn.btnIndex = static_cast<int32_t>(&btn - btnViews.data());
+            add(&btn);
+            btn.setButtonColor(GuiColor::COL_BTN_BG_SHOW_ACTIVE);
+        }
+    }
+    ~guictr_daw_viewmode_select() override {
+        removeGuis();
+    }
+    void layout() override {
+        auto pos = ivec2(0, 0);
+        for (auto& gui : btnViews) {
+            gui.pos = pos;
+            gui.size = ivec2(size.x / btnViews.size(), size.y);
+        }
+        guictr_base::layout();
+    }
+    int32_t getNumButtons() const {
+        return CtrSize(btnViews);
+    }
+    void buttonClicked(guibase* button) override;
+};
+class guictr_daw_controls final : public guictr_base {
     project_globals_t& projectGlobals;
     gui_tempocontrol tempo;
     gui_signaturecontrol signature;
@@ -182,9 +273,11 @@ class guictr_tempocontrols final : public guictr_base {
     gui_numberinput_field_generic<GlobalZoom> zoom;
     GlobalZoom globalZoom;
     guibuttonstate btnUiLayoutLock;
+    guictr_daw_layout_select layoutSelect;
+    guictr_daw_viewmode_select viewSelect;
 public:
-    guictr_tempocontrols(project_t& _project, project_globals_t& _projectGlobals);
-    ~guictr_tempocontrols() override;
+    guictr_daw_controls(project_t& _project, project_globals_t& _projectGlobals);
+    ~guictr_daw_controls() override;
     void render(NVGcontext* vg) override;
     void layout() override;
     void buttonClicked(guibase* button) override;

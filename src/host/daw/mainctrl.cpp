@@ -202,7 +202,7 @@ public:
     std::vector<std::shared_ptr<guictr_clipeditor>> vecClipEditors;
 
     guictr_menubar ctr_menu;
-    guictr_tempocontrols ctr_tempo;
+    guictr_daw_controls ctr_tempo;
     guictr_test ctr_test;
     gui_statusbar statusbar;
     guictr_pluginview ctr_pluginview;
@@ -1747,11 +1747,12 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
             if (kevt.type == KeyboardState::K_PRESS) {
                 auto& layouts = daw.getLayouts();
                 if ((kevt.mods & KB_MOD_SHIFT) == kevt.mods && ctxt.argInt0 >= 0 && ctxt.argInt0 < CtrSize(layouts)) {
-                    auto index = ctxt.argInt0 % layouts.size();
+                    auto index = ctxt.argInt0 % CtrSize(layouts);
                     bool store    = (kevt.mods & KB_MOD_SHIFT);
+                    this->layoutIndex = index;
                     if (store) {
                         view->storeLayout(layouts[index]);
-                        saveDawViewLayoutSnapshot(layouts[index], StringFormat("data/view%zu.layout", index));
+                        saveDawViewLayoutSnapshot(layouts[index], StringFormat("data/view%d.layout", index));
                     } else {
                         loadLayout(layouts[index]);
                         dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
@@ -1763,11 +1764,17 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
         }
         case CMD_SWITCH_VIEW: {
             if (kevt.type != KeyboardState::K_RELEASE) {
-                if (this->viewMode == view_mode_t::TRACK_TIMELINE) {
-                    this->setViewMode(view_mode_t::NODE_EDITOR);
+                auto newMode = view_mode_t::NODE_EDITOR;
+                if (ctxt.argInt0 < 0) {
+                    if (this->viewMode == view_mode_t::TRACK_TIMELINE) {
+                        newMode = view_mode_t::NODE_EDITOR;
+                    } else {
+                        newMode = view_mode_t::TRACK_TIMELINE;
+                    }
                 } else {
-                    this->setViewMode(view_mode_t::TRACK_TIMELINE);
+                    newMode = static_cast<view_mode_t>(ctxt.argInt0);
                 }
+                this->setViewMode(newMode);
             }
             return true;
         }
@@ -2204,6 +2211,7 @@ void load_project_task::run() {
                     auto ctrl = daw->getMainControl();
                     if (ctrl) {
                         if (daw->layoutsFromProjectFile.size() > 0) {
+                            ctrl->setLayoutIndex(0);
                             ctrl->loadLayout(daw->layoutsFromProjectFile[0]);
                         }
                         ctrl->view->visitEntries([f = file](SPLayoutEntry& entry) {

@@ -58,7 +58,7 @@ class guictr_pluginview;
 class guitrack_editor;
 class guiplugin;
 class guictr_test;
-class guictr_tempocontrols;
+class guictr_daw_controls;
 class guictr_tracks;
 class guictr_nodes_splitview;
 class gui_statusbar;
@@ -507,6 +507,7 @@ protected:
     int64_t tmLastRenderUpdatesMs       = 0;
 
     track_t* selectedTrack = nullptr;
+    int32_t layoutIndex = 0;
 public:
     std::vector<guictr_base*> viewGuiContainers;
     gui_asyc_progress guiCtrProgress;
@@ -529,6 +530,13 @@ public:
     }
 
     ~DawCtrl() override = default;
+
+    int32_t& getLayoutIndex() {
+        return layoutIndex;
+    }
+    void setLayoutIndex(int32_t index) {
+        layoutIndex = index;
+    }
 
     void updateViewGuiContainers();
 

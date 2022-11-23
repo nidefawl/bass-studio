@@ -315,7 +315,7 @@ void gui_timeinput::buttonClicked(guibase* button) {
 }
 
 
-void guictr_tempocontrols::buttonClicked(guibase* button) {
+void guictr_daw_controls::buttonClicked(guibase* button) {
     auto daw = dawCtrl->getDaw();
     if (button == &this->btnPlay) {
         daw->startPlaying();
@@ -589,7 +589,7 @@ void gui_signaturecontrol::render(NVGcontext* vg) {
     setFont(vg, G_FONT_SCALE(size.y), THEMECOL_TEXT, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     nvgText(vg, size.x / 2.0f, G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(sigSep), NULL);
 }
-guictr_tempocontrols::guictr_tempocontrols(project_t& _project, project_globals_t& _projectGlobals)
+guictr_daw_controls::guictr_daw_controls(project_t& _project, project_globals_t& _projectGlobals)
     : guictr_base(),
       projectGlobals(_projectGlobals),
       cursorPos(false),
@@ -628,6 +628,8 @@ guictr_tempocontrols::guictr_tempocontrols(project_t& _project, project_globals_
     add(&tempo);
     add(&signature);
     add(&cursorPos);
+    add(&layoutSelect);
+    add(&viewSelect);
     add(&btnLoop);
     add(&btnStop);
     add(&btnPlay);
@@ -650,8 +652,10 @@ guictr_tempocontrols::guictr_tempocontrols(project_t& _project, project_globals_
     loopPos.setLabel("Loop Start Position");
     loopLen.setLabel("Loop Length");
     btnUiLayoutLock.setLabel("Lock UI Layout");
+    layoutSelect.setLabel("Select View");
+    viewSelect.setLabel("Switch between Tracks / Nodes View");
 }
-guictr_tempocontrols::~guictr_tempocontrols() {
+guictr_daw_controls::~guictr_daw_controls() {
     remove(&btnAudioOnOff);
     remove(&zoom);
     remove(&btnUiLayoutLock);
@@ -660,6 +664,8 @@ guictr_tempocontrols::~guictr_tempocontrols() {
     remove(&btnPlay);
     remove(&btnStop);
     remove(&btnLoop);
+    remove(&viewSelect);
+    remove(&layoutSelect);
     remove(&cursorPos);
     remove(&signature);
     remove(&tempo);
@@ -686,7 +692,7 @@ void gui_numberinput_field_generic<GlobalZoom>::onKeyInputChangeValue(ivec2 dire
         setValue(GlobalZoom{number->zoom - (-direction.y) * 0.125f});
     }
 }
-void guictr_tempocontrols::layout() {
+void guictr_daw_controls::layout() {
     ivec2 cs        = getSizeContent();
     int32_t spacing = 10;
     tempo.pos       = ivec2(5, 5);
@@ -695,6 +701,11 @@ void guictr_tempocontrols::layout() {
     signature.size  = ivec2(80, 28);
     cursorPos.pos   = ivec2(signature.right() + spacing, 5);
     cursorPos.size  = ivec2(120, 28);
+    // layoutSelect.pos  = ivec2(cursorPos.right() + spacing, 5);
+    // layoutSelect.size = ivec2(40*layoutSelect.getNumButtons(), 28);
+    // viewSelect.pos  = ivec2(layoutSelect.right() + spacing, 5);
+    // viewSelect.size = ivec2(40*viewSelect.getNumButtons(), 28);
+
 
     int32_t spacingCtrls = 5;
     btnRecord.size = btnLoop.size = btnStop.size = btnPlay.size = ivec2(32, 32);
@@ -726,11 +737,16 @@ void guictr_tempocontrols::layout() {
     zoom.pos = btnAudioOnOff.pos - ivec2(zoom.size.x+spacingCtrls, 0);
     btnUiLayoutLock.size = ivec2(32, 32);
     btnUiLayoutLock.pos  = zoom.pos - ivec2(btnUiLayoutLock.size.x+spacingCtrls, 0);
+    layoutSelect.size    = ivec2(40 * layoutSelect.getNumButtons(), 28);
+    layoutSelect.pos     = btnUiLayoutLock.pos - ivec2(layoutSelect.size.x+spacingCtrls, 0);
+    viewSelect.size      = ivec2(40 * viewSelect.getNumButtons(), 28);
+    viewSelect.pos       = layoutSelect.pos - ivec2(viewSelect.size.x+spacingCtrls, 0);
+
     for (guibase* gui : guis) {
         gui->layout();
     }
 }
-void guictr_tempocontrols::render(NVGcontext* vg) {
+void guictr_daw_controls::render(NVGcontext* vg) {
     if (!isRenderableSizeAndContext(vg))
         return;
     //guictr_base::setScissorTransform(vg);
@@ -777,4 +793,49 @@ void guibutton_audioengine::onTick(AppCtrl* ctrl) {
         }
         setTooltipText("Audio Engine is running");
     }
+}
+void guictr_daw_viewmode_select::buttonClicked(guibase* button) {
+    int32_t idx = 0;
+    for (auto & btnView : btnViews) {
+        if (button == &btnView) {
+            auto temp = DAW::UI::CommandContext{GlobalCommandType::CMD_SWITCH_VIEW, {}, idx};
+            dawCtrl->handleGlobalCommand(temp);
+            break;
+        }
+        idx++;
+    }
+}
+void guictr_daw_layout_select::buttonClicked(guibase* button) {
+    int32_t idx = 0;
+    for (auto & btnView : btnViews) {
+        if (button == &btnView) {
+            auto temp = DAW::UI::CommandContext{GlobalCommandType::CMD_SWITCH_LAYOUT, {}, idx};
+            dawCtrl->handleGlobalCommand(temp);
+            break;
+        }
+        idx++;
+    }
+}
+
+void guibutton_select::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
+    if ((drawFn || str.length()) && size.y > 10 && size.x > 10) {
+        nvgSave(vg);
+        setScissorTransform(vg);
+        ivec2 renderFrame = size;
+        ivec2 renderPos(0);
+        if (str.length() > 0) {
+            auto fontScale = math::clamp(math::min(size.y, size.x), 4, 48) * FONT_AUTOSCALE;
+            renderCenteredMultilineText(vg, theme, str, fontScale, getLabelColor(), renderPos, renderFrame);
+        }
+        drawSquareInset(vg, renderPos, renderFrame, theme->getColor(getBackgroundColor()), 0, 0);
+        nvgRestore(vg);
+    }
+}
+
+bool guictr_daw_layout_select::guibutton_layout_select::getState() const {
+    return dawCtrl->getLayoutIndex() == this->btnIndex;
+}
+
+bool guictr_daw_viewmode_select::guibutton_viewmode_select::getState() const {
+    return dawCtrl->getViewMode() == static_cast<view_mode_t>(this->btnIndex);
 }

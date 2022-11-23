@@ -34,8 +34,8 @@ enum class CommandContextType {
 struct CommandContext {
     GlobalCommandType type = GlobalCommandType::CMD_NONE;
     KeyEvent kevt{};
-    int32_t argInt0 = 0;
-    int32_t argInt1 = 0;
+    int32_t argInt0 = -1;
+    int32_t argInt1 = -1;
     String argStr0 = "";
 };
 struct Command {
@@ -51,8 +51,8 @@ struct Command {
     int initOrder = 0;
     KeyCombo defaultKeyCombo{};
     CmdCtxtMatcher contextMatcher{};
-    int32_t keybindContextDataArg0 = 0;
-    int32_t keybindContextDataArg1 = 0;
+    int32_t keybindContextDataArg0 = -1;
+    int32_t keybindContextDataArg1 = -1;
     String keybindContextDataStr0 = "";
     String toString() const {
         return desc.name;
