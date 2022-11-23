@@ -528,7 +528,6 @@ void AppCtrl::releaseGarbageGuis() {
     garbageGuis.clear();
 }
 void AppCtrl::destroyControl() {
-    onPreDestroy();
     dbgassert(!this->ctxtmenu);
     releaseGarbageGuis();
     dbgassert(garbageGuis.empty());

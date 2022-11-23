@@ -504,6 +504,14 @@ void DawInstance::onDawCompanionWindowClose(DawWindowCompanion& entry) {
         return pDawCtrl == pDawCtrlClosing;
     });
     if (it != dawCtrls.end()) {
+        if (initState > -1) {
+            auto ctrl = *it;
+            auto& settings = *tls.settings;
+            if (settings.windowSettings.size() > ctrl->getDawWindowIndex()) {
+                auto& ws = settings.windowSettings[ctrl->getDawWindowIndex()];
+                ws.flags = 0; // flag closed
+            }
+        }
         dawCtrls.erase(it);
     }
     entry.wnd->setInvalid();
@@ -681,7 +689,7 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                 }
                 return true;
             }
-            case CMD_OPEN_SECOND_WINDOW:
+            case CMD_OPEN_SECOND_WINDOW: {
                 if (companionWindows.empty()) {
                     size_t highestIndex = 0;
                     for (auto& companionCtrl : this->dawCtrls) {
@@ -711,6 +719,7 @@ bool DawInstance::menuCommand(const menucmd_t& command) {
                     companionWindows[0].wnd->show();
                 }
                 return true;
+            }
             case CMD_UNDO:
                 if (hist.canUndo()) {
                     ThreadLock lock = playThread.lockThread();
@@ -1477,7 +1486,7 @@ std::pair<String, String> DawInstance::createUniqueNonExistingFilename(const Str
     return {uniqueFilePath, uniqueFileName};
 }
 
-void DawInstance::destroy() {
+void DawInstance::onPreDestroy() {
     dbgassert(initState > 2);
     const bool isRealtimeInstance = initState > 3;
     initState = -1;
@@ -1490,29 +1499,29 @@ void DawInstance::destroy() {
     projectToLoad = nullptr;
     clipboardPlugins = nullptr;
     dragdropclip.reset();
-
     plugindb.closeDatabase();
 
-
     if (isRealtimeInstance) {
-
         this->workerThread.stopThread();
         this->workerThread.joinThread();
         this->playThread.stopThread();
         this->playThread.joinThread();
-#ifndef NDEBUG
-        for (auto& companion : companionWindows) {
-            dbgassert(!companion.ctrl->isOk());
-        }
-#endif // NDEBUG
-        companionWindows.clear();
         tls.audioHost->deinitPa();
         tls.midiHost->deinitPm();
     }
 
     tls.host->unload();
+    tls.audioCache->unloadAll();
     tls.host->destroy();
+}
 
+void DawInstance::destroy() {
+#ifndef NDEBUG
+        for (auto& companion : companionWindows) {
+            dbgassert(!companion.ctrl->isOk());
+        }
+#endif // NDEBUG
+    companionWindows.clear();
     try {
         if (tls.settings->saveOnExit) {
             saveSettings(*tls.settings);
@@ -1521,7 +1530,6 @@ void DawInstance::destroy() {
         log_lf(Log::L_ERROR, "Failed saving settings %s: %s\n", StringAsCStr(App::Platform::toUserdataPath(SETTINGS_NAME)), e.what());
         ngui::showNotification(ngui::Style::Warning, "Couldn't write config file", "Some settings may have been reset");
     }
-    tls.audioCache->unloadAll();
     delete tls.commandManager;
     delete tls.settings;
     delete tls.audioCache;

@@ -1359,6 +1359,7 @@ void appwindow_main::destroyOverlayWindows() {
 }
 
 void appwindow_main::destroy() {
+    ctrl->onPreDestroy();
     dbgassert(glfw);
     if (this->ctrl) {
         glfwMakeContextCurrent(glfw);
@@ -1387,7 +1388,6 @@ void appwindow_main::destroy() {
         }
         auto& ws = settings.windowSettings[idx];
         saveWindowPos(glfw, &ws.size);
-        ws.flags = 0; // flag closed
     }
 #endif
     if (this->ctrl) {

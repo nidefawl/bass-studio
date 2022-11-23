@@ -281,7 +281,7 @@ class DawInstance final : public project_controller_t, public delete_cb {
     ProjectFileType projectFileType = ProjectFileType::PROJECT_FILETYPE_JSON;
     project_t project;
     project_globals_t projectGlobals;
-    int initState      = 0;
+    int32_t initState      = 0;
     daw_tls::tlsinstance tls;
 
     struct DawWindowCompanion {
@@ -327,6 +327,9 @@ public:
     void setEmptyClipboard();
     edithistory& getHist() {
         return hist;
+    }
+    int32_t getInitState() const {
+        return initState;
     }
     DAW::async_task_t* getAsyncTask() {
         return asyncTask;
@@ -464,6 +467,7 @@ public:
     track_t* createNewTrack(int trackType);
     track_t* insertNewTrack(int trackInsertPos, int trackType, int flags = FLG_TRK_CHANGE_USER);
     bool menuCommand(const menucmd_t& command);
+    void onPreDestroy();
     void destroy();
     void updateClipViews(clip_t* notifyClip);
     void updateClipViewsAndCursor(clip_t* notifyClip, clip_cursor_t cursor);

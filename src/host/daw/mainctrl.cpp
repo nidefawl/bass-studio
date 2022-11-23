@@ -1118,7 +1118,8 @@ void MainCtrl::startApp() {
     DawCtrl::startApp();
 
     auto& settings = daw_tls::getSettings();
-    for (size_t i = 0; i < settings.windowSettings.size(); ++i) {
+
+    for (size_t i = 1; i < settings.windowSettings.size() && i < 2; ++i) {
         auto& ws = settings.windowSettings[i];
         if (ws.flags & 1) { // opened
             auto temp = DAW::UI::CommandContext{GlobalCommandType::CMD_OPEN_SECOND_WINDOW, {}, int32_t(i)};
@@ -1138,7 +1139,6 @@ void DawCtrl::destroy() {
         delete view;
         view = nullptr;
     }
-    waveformRenderer->destroy();
     delete waveformRenderer;
     waveformRenderer = nullptr;
 }
@@ -1879,14 +1879,18 @@ void DawCtrl::onPreDestroy() {
         }
         settings.windowSettings[dawCtrlWindowIndex].dens = ctrTracks->getGrid().grid_dens;
     }
+    waveformRenderer->destroy();
 }
 void MainCtrl::onPreDestroy() {
     DawCtrl::onPreDestroy();
-    ThreadLock lock = daw.playThread.lockThread();
-    //TODO: MultiLogger::removeLogger is not thread safe. This will eventually cause a race condition 
-    // and a crash since not all threads and modules are synchronized here (just playthread and workerthreads)
-    getMultiLogger().removeLogger(statusbarLogger.get());
-    daw.unloadProject();
+    {
+        ThreadLock lock = daw.playThread.lockThread();
+        //TODO: MultiLogger::removeLogger is not thread safe. This will eventually cause a race condition 
+        // and a crash since not all threads and modules are synchronized here (just playthread and workerthreads)
+        getMultiLogger().removeLogger(statusbarLogger.get());
+        daw.unloadProject();
+    }
+    daw.onPreDestroy();
 }
 
 void MainCtrl::destroy() {
