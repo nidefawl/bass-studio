@@ -628,6 +628,7 @@ public:
 
     int32_t setTrackPosition(track_gui_entry_t* e, int32_t y, bool isBottom);
     int32_t getTrackTotalHeight(track_gui_entry_t* e);
+    bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
     void render(NVGcontext* vg) override;
     void layout() override;
     void updateVisibleTracks();
@@ -689,4 +690,9 @@ public:
         return guiMgr.isVisible(entry);
     }
     void resetView();
+
+    void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override;
+    void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
+    void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override;
+    void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override;
 };

@@ -1771,7 +1771,8 @@ void gui_track_content_base::pluginMultiDragMove(guictr_dragged_plugins* g, ivec
         dragdrop_target_indicator_t::target_area,
         highlightSlot,
         m_trackentry->mixer,
-        this->pos + this->size/2
+        this->pos + this->size/2,
+        String("Move Plugins to ") + m_track->name
     };
 }
 
@@ -1842,7 +1843,8 @@ void gui_track_content_base::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 
             dragdrop_target_indicator_t::target_area,
             0,
             m_trackentry->mixer,
-            this->pos + this->size/2
+            this->pos + this->size/2,
+            String("Insert ") + g->getLabel() + " on " + m_track->name
         };
         return;
     }
@@ -1854,33 +1856,32 @@ void gui_track_content_base::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 
         dragdrop_target_indicator_t::target_area,
         0,
         m_trackentry->mixer,
-        this->pos + this->size/2
+        this->pos + this->size/2,
+        String("Insert ") + g->getLabel() + " on " + m_track->name
     };
 }
 
 void gui_track_content_base::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
+    log_printf("Insert effect on %s, parent %s\n", StringAsCStr(getClassName()), parent ? StringAsCStr(parent->getClassName()) : "<null>");
     auto daw = dawCtrl->getDaw();
     dawCtrl->showPluginView();
     dawCtrl->setSelectedTrackEntry(m_trackentry);  
     auto const pluginMgr = daw->getPluginManager();
     auto& dragDropTarget = dawCtrl->getDragDropTarget();
-    dragDropTarget.reset();
     audio_stage_t* dstStage = this->m_track->getStage();
-    ThreadLock lock    = daw->lockPlayThread();
     effectbase* effect = g->makeInstance();
     if (effect) {
+        ThreadLock lock = daw->lockPlayThread();
         int32_t dstSlot = effect->isSynth ? 0 : CtrSize(dstStage->effects);
-        log_printf("Insert effect on %s, parent %s\n", StringAsCStr(getClassName()), parent ? StringAsCStr(parent->getClassName()) : "<null>");
         pluginMgr->insertNewPlugin(dstStage, effect, dstSlot);
         effect->onEnable();
-        audio_stage_ref_t refdst = dstStage->toRef();
-        auto* track_action = new action_insert_effect("Insert plugin", effect, refdst, dstSlot);
-        daw->pushHist(track_action);
+        daw->pushHist(new action_insert_effect("Insert plugin", effect, dstStage->toRef(), dstSlot));
         daw->onPluginsChanged();
         for (auto& gui : dstStage->gui) {
             gui->scrollToPluginGui(effect);
         }
     }
+    dragDropTarget.reset();
 }
 
 class gui_track_drop_position_t {

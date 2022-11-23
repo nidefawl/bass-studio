@@ -23,6 +23,7 @@
 #include "appconfig.h"
 #include "gui/contextmenu/contextmenu_daw.h"
 #include "gui/plugin/pluginctr.h"
+#include "gui/views/pluginlist.h"
 #include "host/track/trackctr_types.h"
 
 void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, const ivec2& cs) {
@@ -435,6 +436,7 @@ void guictr_tracks::render(NVGcontext* vg) {
         nvgSave(vg);
         nvgTranslate(vg, 0, trackView.top());
         int ySplit = DAW::getPosYFirstReturnTrack(guiMgr.tracksVisibleFlat);
+        track_gui_entry_t* lastEntry = nullptr;
         if (ySplit > 0) {
             nvgSave(vg);
             nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
@@ -443,6 +445,7 @@ void guictr_tracks::render(NVGcontext* vg) {
                 if (guiMgr.getTrackEntry(t, &entry) && guiMgr.isVisible(entry)) {
                     drawSeperator(vg, theme, entry->mixer->bottom() + TRACK_HEIGHT_SPACING_HALF, cs);
                 }
+                lastEntry = entry;
             }
             nvgRestore(vg);
         }
@@ -460,37 +463,54 @@ void guictr_tracks::render(NVGcontext* vg) {
             }
         }
         nvgRestore(vg);
-    }
 
-    dragdrop_target_indicator_t& dragDropTarget = dawCtrl->getDragDropTarget();
-    if (dragDropTarget.dst && (dragDropTarget.dst->parent == &trackControls || dragDropTarget.dst->parent == &trackView)) {
-        nvgSave(vg);
-        nvgTranslate(vg, 0, trackView.top());
-        int n       = this->theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
-        auto bgPos  = ivec2(n);
-        auto bgSize = this->getSizeContent() - ivec2(n * 2);
-        if (bgSize.x > 0 && bgSize.y > 0) {
-            nvgGlobalAlpha(vg, 0.5f);
-            nvgBeginPath(vg);
-            nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
-            if (dragdrop_target_indicator_t::target_area == dragDropTarget.type) {
-                nvgPathWinding(vg, NVGwinding::NVG_CW);
-                nvgRect(vg, dragDropTarget.dst->pos.x, dragDropTarget.dst->pos.y, dragDropTarget.dst->size.x, dragDropTarget.dst->size.y);
-                nvgPathWinding(vg, NVGwinding::NVG_CCW);
+        dragdrop_target_indicator_t& dragDropTarget = dawCtrl->getDragDropTarget();
+        if (dragDropTarget.dst && (dragDropTarget.dst == this || dragDropTarget.dst->parent == &trackControls || dragDropTarget.dst->parent == &trackView)) {
+            nvgSave(vg);
+            nvgTranslate(vg, 0, trackView.top());
+            int n       = this->theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
+            auto bgPos  = ivec2(n);
+            auto bgSize = this->getSizeContent() - ivec2(n * 2);
+            if (bgSize.x > 0 && bgSize.y > 0) {
+                nvgGlobalAlpha(vg, 0.5f);
+                nvgBeginPath(vg);
+                nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
+                if (dragdrop_target_indicator_t::target_area == dragDropTarget.type) {
+                    nvgPathWinding(vg, NVGwinding::NVG_CW);
+                    if (dragDropTarget.slotIdx == -2) {
+                        // render at end of tracks 
+                        if (ySplit > 0 && lastEntry) {
+                            // auto heightEmpty = lastEntry->mixer->bottom() - ySplit;
+                            // nvgRect(vg, bgPos.x, ySplit, bgSize.x, bgSize.y - ySplit);
+                            auto trackDefaultHeight = 4;
+                            const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+                            const auto trackHeight = trackDefaultHeight * TRACK_HEIGHT_STEP;
+                            nvgRect(vg, bgPos.x, lastEntry->mixer->bottom() + TRACK_HEIGHT_SPACING_HALF*2.0f, bgSize.x, trackHeight);
+                            dragDropTarget.targetPos = ivec2(0, lastEntry->mixer->bottom() + TRACK_HEIGHT_SPACING_HALF*2.0f + trackHeight * 0.5f);
+                        }
+                    } else {
+                        nvgRect(vg, dragDropTarget.dst->pos.x, dragDropTarget.dst->pos.y, dragDropTarget.dst->size.x, dragDropTarget.dst->size.y);
+                    }
+                    nvgPathWinding(vg, NVGwinding::NVG_CCW);
+                }
+                nvgFillColor(vg, theme->getColor(getBackgroundColor()));
+                nvgFill(vg);
+                nvgGlobalAlpha(vg, 1.0f);
             }
-            nvgFillColor(vg, theme->getColor(getBackgroundColor()));
-            nvgFill(vg);
-            nvgGlobalAlpha(vg, 1.0f);
+            const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+            ivec2 indicatorPos    = dragDropTarget.targetPos;
+            horizontalLineAt(this, vg, indicatorPos);
+
+            int fontScale = titleHeight;
+            auto desc = dragDropTarget.desc;
+            if (desc.empty()) {
+                // desc = "Drop " dragDropTarget.dst->getLabel() + StringFormat("[%d]", dragDropTarget.slotIdx)
+                desc = "Drop here";
+            }
+            renderCenteredMultilineText(vg, theme, desc, fontScale, getLabelColor(), indicatorPos, ivec2(titleHeight * 30, titleHeight * 2));
+
+            nvgRestore(vg);
         }
-        const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-        ivec2 indicatorPos    = dragDropTarget.targetPos;
-        horizontalLineAt(this, vg, indicatorPos);
-
-        int fontScale = titleHeight;
-        auto str = dragDropTarget.dst->getLabel() + StringFormat("[%d]", dragDropTarget.slotIdx);
-        renderCenteredMultilineText(vg, theme, str, fontScale, getLabelColor(), indicatorPos, ivec2(titleHeight * 30, titleHeight * 2));
-
-        nvgRestore(vg);
     }
 
     nvgBeginPath(vg);
@@ -939,4 +959,71 @@ bool guictr_tracks::handleMouseScroll(MouseEvent& evt, double xoffset, double yo
         return true;
     }
     return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
+}
+
+bool guictr_tracks::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+    bool bHit = guictr_base::mouseHitTest(mpos, evt);
+    if (bHit
+            && evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT
+            && contains(mpos)
+            && evt.getDraggedThing()
+            && (!evt.getGuiHit() || evt.getGuiHit()->parent == this)) {
+        auto type = evt.getDraggedThing()->getGuiType();
+        if (type == gui_type::CTR_TYPE_PLUGINS_DRAGGED
+            || type == gui_type::CTR_TYPE_PLUGIN
+            || type == gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY
+            || type == gui_type::CTR_TYPE_TRACK_TITLE) {
+            evt.requestFocus(this);
+            return true;
+        }
+    }
+    return bHit;
+}
+
+void guictr_tracks::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
+    dawCtrl->getDragDropTarget().reset();
+    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
+        dragdrop_target_indicator_t::target_area,
+        -2,
+        this,
+        this->pos + this->size/2,
+        "Insert " + g->getLabel() + " on new track"
+    };
+}
+
+void guictr_tracks::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
+    auto daw = dawCtrl->getDaw();
+    auto track = daw->insertNewTrack(-1, TRACK_TYPE_MIDI);
+    if (!track)
+        return;
+    track_gui_entry_t* entry = nullptr;
+    if (!this->guiMgr.getTrackEntry(track, &entry))
+        return;
+    dawCtrl->setSelectedTrackEntry(entry);
+    entry->content->pluginEntryDragRelease(g, mousepos);
+    dawCtrl->getDragDropTarget().reset();
+}
+
+void guictr_tracks::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) {
+    dawCtrl->getDragDropTarget().reset();
+    dawCtrl->getDragDropTarget() = dragdrop_target_indicator_t{
+        dragdrop_target_indicator_t::target_area,
+        -2,
+        this,
+        this->pos + this->size/2,
+        "Move Plugins to new track"
+    };
+}
+
+void guictr_tracks::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
+    auto daw = dawCtrl->getDaw();
+    auto track = daw->insertNewTrack(-1, TRACK_TYPE_MIDI);
+    if (!track)
+        return;
+    track_gui_entry_t* entry = nullptr;
+    if (!this->guiMgr.getTrackEntry(track, &entry))
+        return;
+    dawCtrl->setSelectedTrackEntry(entry);
+    entry->content->pluginMultiDragRelease(g, mousepos);
+    dawCtrl->getDragDropTarget().reset();
 }

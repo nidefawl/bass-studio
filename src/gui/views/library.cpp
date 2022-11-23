@@ -1,6 +1,10 @@
 #include "gui/container/container.h"
 #include "gui/container/container_builder.h"
+#include "gui/plugin/pluginctr.h"
 #include "gui/views/pluginlist.h"
+#include "host/plugin/base/base-plugin.h"
+#include "host/track/trackctr_types.h"
+#include "host/track/track_impl.h"
 
 
 class gui_library final : public guictr_base {
@@ -79,6 +83,35 @@ public:
         if (dawCtrl) {
             this->revision = dawCtrl->getDaw()->getPluginDatabase().getRevision();
         }
+    }
+    void buttonClicked(guibase* button) override {
+        if (parentCtrl->lastMouseEvent.type == MouseEventType::M_EVT_DOUBLECLICK) {
+            auto track = dawCtrl->getSelectedTrack();
+            if (!track)
+                return;
+            auto guiListEntry = gui_cast<gui_pluginlist_entry, gui_type::CTR_TYPE_PLUGINS_LIST_ENTRY>(button);
+            if (!guiListEntry)
+                return;
+            auto daw = dawCtrl->getDaw();
+            dawCtrl->showPluginView();
+            auto& dragDropTarget = dawCtrl->getDragDropTarget();
+            dragDropTarget.reset();
+            auto dstStage = track->getStage();
+            effectbase* effect = guiListEntry->makeInstance();
+            if (effect) {
+                ThreadLock lock = daw->lockPlayThread();
+                int32_t dstSlot = effect->isSynth ? 0 : CtrSize(dstStage->effects);
+                daw->getPluginManager()->insertNewPlugin(dstStage, effect, dstSlot);
+                effect->onEnable();
+                daw->pushHist(new action_insert_effect("Insert plugin", effect, dstStage->toRef(), dstSlot));
+                daw->onPluginsChanged();
+                for (auto& gui : dstStage->gui) {
+                    gui->scrollToPluginGui(effect);
+                }
+            }
+            return;       
+        }
+        guictr_base::buttonClicked(button);
     }
 };
 

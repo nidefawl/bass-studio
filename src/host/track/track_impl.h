@@ -210,7 +210,7 @@ struct audio_stage_t : public IDelayLineStorage {
         }
         return effDelayLines[id].get();
     }
-    void removePlugin(effectbase* _vst);
+    void removePlugin(effectbase* _effect);
     void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
     samplecount_t getInternalLatency() const;
     samplecount_t getOutputLatency() const;
