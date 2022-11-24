@@ -1790,7 +1790,7 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
                         view->storeLayout(layouts[index]);
                         saveDawViewLayoutSnapshot(layouts[index], StringFormat("data/view%d.layout", index));
                     } else {
-                        if (this->layoutIndex >0 && this->layoutIndex < CtrSize(layouts)) {
+                        if (this->layoutIndex >= 0 && this->layoutIndex < CtrSize(layouts)) {
                             view->storeLayout(layouts[this->layoutIndex]);
                         }
                         this->layoutIndex = index;
