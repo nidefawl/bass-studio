@@ -869,8 +869,8 @@ void BaseCtrl::dropContainer(SPLayoutEntry& ctrContent, DropAreaUILayout* area) 
         newContainer->setLayout(updatedCtrLayout);
         if (updatedCtrLayout == container_layout::TABBED) {
             auto& ctrEntries = layoutCtr->getEntries();
-            dbgassert(area->dockPosOffset >= 0 && area->dockPosOffset <= CtrSize(ctrEntries));
-            auto entryToReplace            = ctrEntries[math::min<int32_t>(CtrSize(ctrEntries) - 1, area->dockPosOffset)];
+            dbgassert(area->tabPosition >= 0 && area->tabPosition <= CtrSize(ctrEntries));
+            auto entryToReplace            = ctrEntries[math::min<int32_t>(CtrSize(ctrEntries) - 1, area->tabPosition)];
             auto ctrEntry = createGuiCtrLayoutEntry(newContainer);
             auto oldEntryThatIsNowTabEntry = layoutCtr->replaceContainerWith(entryToReplace->getGui(), ctrEntry);
 

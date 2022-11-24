@@ -69,7 +69,7 @@ public:
     ivec2 size{0, 0};
     int32_t priority            = 0;
     dock_pos dockPos            = dock_pos::NONE;
-    int32_t dockPosOffset       = -1;
+    int32_t tabPosition         = -1;
     int32_t childContainerIndex = -1;
     String label;
     bool bAlwaysShow = false;
@@ -78,7 +78,7 @@ public:
         size = {};
         priority = 0;
         dockPos = dock_pos::NONE;
-        dockPosOffset = -1;
+        tabPosition = -1;
         childContainerIndex = -1;
         label = "";
         bAlwaysShow = false;

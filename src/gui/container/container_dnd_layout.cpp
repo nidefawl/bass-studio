@@ -82,10 +82,10 @@ public:
         remove(&btnClose);
     }
     ivec2 paddingTL(int _padding) const override {
-        return ivec2(_padding - margin * snapSides.x, 0 - margin * snapSides.y);
+        return { _padding - margin * snapSides.x, 0 - margin * snapSides.y };
     }
     ivec2 paddingBR(int _padding) const override {
-        return ivec2(_padding - margin * snapSides.z, 0 - margin * snapSides.w);
+        return { _padding - margin * snapSides.z, 0 - margin * snapSides.w };
     }
     void buttonClicked(guibase* button) override {
         if (button == &btnClose) {
@@ -115,7 +115,7 @@ public:
     void handleRightClick(MouseEvent& evt) override;
 };
 
-bool guictr_layout::setOverlayPos(DropAreaUILayout* area, const dock_pos dockPos, ivec2 overlayPos, ivec2 overlaySize, int32_t dockPosOfffset, int32_t childContainerIndex) {
+bool guictr_layout::setOverlayPos(DropAreaUILayout* area, const dock_pos dockPos, ivec2 overlayPos, ivec2 overlaySize, int32_t childContainerIndex) {
     ivec2 relPos  = overlayPos;
     ivec2 relSize = overlaySize;
     switch (dockPos) {
@@ -145,12 +145,9 @@ bool guictr_layout::setOverlayPos(DropAreaUILayout* area, const dock_pos dockPos
         default:
             dbgassert(0);
             return false;
-            //layoutGui->validPreview = false;
-            //layoutGui->boxes.clear();
-            //return false;
     }
     area->dockPos             = dockPos;
-    area->dockPosOffset       = 0;
+    area->tabPosition         = 0;
     area->childContainerIndex = childContainerIndex;
     area->pos                 = toScreenSpace(relPos - paddingTL(padding));
     area->size                = math::maxvec2(ivec2(relSize), ivec2(10, 10));
@@ -180,11 +177,11 @@ bool guictr_layout::setOverlayPosForTab(DropAreaUILayout* area, const dock_pos d
             relSize = ivec2(DROP_INDICATOR_WIDTH, FONT_SIZE_CTXT_SMALL);
         }
         area->dockPos = dockPos;
-        area->dockPosOffset = dockOffset;
+        area->tabPosition = dockOffset;
         area->priority++;
         area->pos   = toScreenSpace(relPos - paddingTL(padding));
         area->size  = math::maxvec2(ivec2(relSize), ivec2(10, 10));
-        area->label = "Tab Pos " + std::to_string(static_cast<int32_t>(area->dockPosOffset)) + " of " + this->getLayoutCtrName();
+        area->label = "Tab Pos " + std::to_string(area->tabPosition) + " of " + this->getLayoutCtrName();
         return true;
     }
     return false;
@@ -210,7 +207,7 @@ DropAreaUILayout* guictr_layout::makeDropArea(int32_t idx) {
 void guictr_layout::getOverlays(MouseEvent&, std::vector<std::weak_ptr<DropAreaUILayout>>& vecHandles) {
     int32_t areaOffset = 0;
     if (this->entries.empty() || !parent) {
-        setOverlayPos(makeDropArea(areaOffset), dock_pos::CENTER, ivec2(0), size, -1, -1);
+        setOverlayPos(makeDropArea(areaOffset), dock_pos::CENTER, ivec2(0), size, -1);
         auto& area = dragdropContainerAreaHelpers[areaOffset];
         area->pos = toScreenSpace({});
         area->size = math::maxvec2(toScreenSpace(size) - area->pos, {0, 0});
@@ -257,7 +254,7 @@ void guictr_layout::getOverlays(MouseEvent&, std::vector<std::weak_ptr<DropAreaU
         if (!parent && ctrLayout == container_layout::TABBED) {
             // return overlays for all 4 sides of each container entry that is not of type guictr_layout
             for (int j = 0; j < 4; j++) {
-                setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::LEFT) + j), vec2(0), size, -1, -1);
+                setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::LEFT) + j), vec2(0), size, -1);
                 vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
                 areaOffset++;
             }
@@ -266,7 +263,7 @@ void guictr_layout::getOverlays(MouseEvent&, std::vector<std::weak_ptr<DropAreaU
             // return overlays for all 4 sides of each container entry that is not of type guictr_layout
             for (size_t i = 0; i < entries.size(); i++) {
                 for (int j = 0; j < 4; j++) {
-                    setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::LEFT) + j), entries[i]->pos, entries[i]->size, -1, i);
+                    setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::LEFT) + j), entries[i]->pos, entries[i]->size, i);
                     vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
                     areaOffset++;
                 }
@@ -274,29 +271,29 @@ void guictr_layout::getOverlays(MouseEvent&, std::vector<std::weak_ptr<DropAreaU
         }
         if (ctrLayout == container_layout::SPLIT_V) {
             //subdivide by attaching to top or bottom
-            setOverlayPos(makeDropArea(areaOffset), dock_pos::TOP, ivec2(0), size, -1, -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::TOP, ivec2(0), size, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
-            setOverlayPos(makeDropArea(areaOffset), dock_pos::BOTTOM, ivec2(0), size, -1, -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::BOTTOM, ivec2(0), size, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
 
             //keep layout, add new child
-            setOverlayPos(makeDropArea(areaOffset), dock_pos::LEFT, ivec2(0), size, -1, -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::LEFT, ivec2(0), size, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
-            setOverlayPos(makeDropArea(areaOffset), dock_pos::RIGHT, ivec2(0), size, entries.size(), -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::RIGHT, ivec2(0), size, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
         }
         if (ctrLayout == container_layout::SPLIT_H) {
             //subdivide by attaching to left and right
-            setOverlayPos(makeDropArea(areaOffset), dock_pos::LEFT, ivec2(0), size, -1, -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::LEFT, ivec2(0), size, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
-            setOverlayPos(makeDropArea(areaOffset), dock_pos::RIGHT, ivec2(0), size, -1, -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::RIGHT, ivec2(0), size, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
 
 
             //keep layout, add new child
-            setOverlayPos(makeDropArea(areaOffset), dock_pos::TOP, ivec2(0), size, -1, -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::TOP, ivec2(0), size, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
-            setOverlayPos(makeDropArea(areaOffset), dock_pos::BOTTOM, ivec2(0), size, entries.size(), -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::BOTTOM, ivec2(0), size, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
         }
     }
@@ -409,7 +406,7 @@ void guictr_layout::layout() {
                     splitterPos  = guiHandle->pos;
                     splitterSize = entry->size + guiHandle->size;
                 }
-                splitters[entryIdx - 1]->pos  = splitterPos - ivec2(vec2(Splitter::SPLITTER_LAYOUT_THICKNESS/2) * axis);
+                splitters[entryIdx - 1]->pos  = splitterPos - ivec2(vec2(Splitter::SPLITTER_LAYOUT_THICKNESS * 0.5f) * axis);
                 auto invAxis                  = ivec2(axis.y, axis.x);
                 splitters[entryIdx - 1]->size = (splitterSize) *invAxis + ivec2(vec2(Splitter::SPLITTER_LAYOUT_THICKNESS) * axis);
             }
@@ -876,7 +873,7 @@ SPLayoutEntry guictr_layout::findByGuiType(gui_type guitype) {
     return nullptr;
 }
 
-void guictr_layout::addEntry(SPLayoutEntry entry, int32_t posOffset) {
+void guictr_layout::addEntry(const SPLayoutEntry& entry, int32_t posOffset) {
     auto it = std::find(entries.begin(), entries.end(), entry);
     if (it != entries.end()) {
         throw applogicexception(StringFormat("%s - attempt to add element twice", StringAsCStr(getClassName())));
@@ -913,7 +910,7 @@ bool guictr_layout::placeContainer(SPLayoutEntry entry, DropAreaUILayout* area) 
     }
 
     dock_pos dockPos      = area->dockPos;
-    int32_t dockPosOffset = area->dockPosOffset;
+    int32_t dockPosOffset = area->tabPosition;
     auto updatedCtrLayout = DockPosToContainerLayout(dockPos);
 
     SPLayoutEntry out;
@@ -1034,7 +1031,7 @@ void guictr_layout::render(NVGcontext* vg) {
         }
     }
 }
-// std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(newContainer);
+
 SPLayoutEntry guictr_layout::replaceContainerWith(guictr_base* ctr,
                                                                          SPLayoutEntry& newEntry) {
     std::shared_ptr<guictr_layout> retCtr;
@@ -1132,9 +1129,7 @@ void GuiCtrLayoutEntry::updateLabel() {
     }
 }
 void GuiCtrLayoutEntry::setEntryTag(int32_t tag) {
-    if (tag < 0)
-        entryTag = -1;
-    else if (tag < 100)
+    if (tag < 100)
         entryTag = -1;
     else
         entryTag = tag;
@@ -1291,9 +1286,6 @@ void guictr_layout::simplify() {
         index++;
     }
     if (canSimplify()) {
-        if (!entriesToRemove.empty()) {
-            log_lf(Log::L_DEBUG, "remove %zu container entries\n", entriesToRemove.size());
-        }
         for (const auto& entry : entriesToRemove) {
             SPLayoutEntry out;
             getContainerRef(entry.get(), out, true);
@@ -1354,7 +1346,6 @@ bool guictr_layout::isEntryVisible(GuiCtrLayoutEntry* entry) {
 }
 
 void guictr_layout::onChildLayoutChanged(guibase* g) {
-    //postContentChanged();
     if (!parent&&parentCtrl) {
         layout();
     }

@@ -32,8 +32,8 @@ class guictr_layout;
 struct dawview_layout_t;
 
 class guictr_layout final : public guictr_base, public guictr_layout_base, public splitter_cb {
-    bool setOverlayPos(DropAreaUILayout* area, dock_pos dockPos, ivec2 overlayPos, ivec2 overlaySize, int32_t dockPosOfffset, int32_t childContainerIndex);
-    bool setOverlayPosForTab(DropAreaUILayout* area, dock_pos dockPos, int32_t dockOffset, bool rightSideHandle);
+    bool setOverlayPos(DropAreaUILayout* area, dock_pos dockPos, ivec2 overlayPos, ivec2 overlaySize, int32_t childContainerIndex);
+    bool setOverlayPosForTab(DropAreaUILayout* area, dock_pos dockPos, int32_t tabOffset, bool rightSideHandle);
     DropAreaUILayout* makeDropArea(int32_t idx);
 
 private:
@@ -99,7 +99,7 @@ public:
     void postContentChanged() override;
     void assertEntries() const;
     void setLayout(container_layout ctrLayoutNew);
-    void addEntry(SPLayoutEntry ctr, int32_t posOffset = -2);
+    void addEntry(const SPLayoutEntry& entry, int32_t posOffset = -2);
     void removeAllEntries();
     void setActiveEntry(int32_t idx);
     bool isEntryVisible(GuiCtrLayoutEntry* entry) override;
