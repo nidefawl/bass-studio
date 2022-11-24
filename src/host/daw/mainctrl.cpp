@@ -1057,7 +1057,8 @@ bool DawCtrl::menuCommand(const menucmd_t& command) {
                 String ext;
                 SplitPath(path, nullptr, nullptr, &ext);
                 if (ext.empty()) {
-                    path += "." + FILE_TYPES_TRACKSNAPSHOT.types.front().ext;
+                    path += ".";
+                    path += FILE_TYPES_TRACKSNAPSHOT.types.front().ext;
                 }
                 saveTrackContainer(trackContainerSnapshot, path);
             }

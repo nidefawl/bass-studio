@@ -25,12 +25,12 @@ struct ImageBuf {
 };
 
 struct SupportedFileType {
-    String desc;
-    String ext;
+    const char* desc;
+    const char* ext;
 };
 
 struct SupportedFileTypes {
-    String desc;
+    const char* desc;
     std::vector<SupportedFileType> types;
 };
 

@@ -46,8 +46,10 @@ int promptUserFilePath(window_base* w, int mode, SupportedFileTypes fileTypes, S
     String multiFilter = "";
     String desc       = "";
     for (auto& fileType : fileTypes.types) {
-        String wildExt = "*." + fileType.ext;
-        String entryName = fileType.desc + " (" + wildExt + ")";
+        String wildExt = "*.";
+        wildExt += fileType.ext;
+        String entryName = fileType.desc;
+        entryName += " (" + wildExt + ")";
         desc += entryName + "|";
         filterItems.push_back({entryName, wildExt});
         multiFilter += wildExt + ";";
@@ -95,7 +97,7 @@ int promptUserFilePath(window_base* w, int mode, SupportedFileTypes fileTypes, S
         ofn.lpstrFile   = szFileName;
         ofn.nMaxFile    = MAX_PATH;
         ofn.Flags       = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_NOCHANGEDIR;
-        ofn.lpstrDefExt = fileTypes.types.empty() ? "" : fileTypes.types[0].ext.c_str();
+        ofn.lpstrDefExt = fileTypes.types.empty() ? "" : fileTypes.types[0].ext;
         if (_defaultPath.length())
             ofn.lpstrInitialDir = StringAsCStr(_defaultPath);
 
@@ -119,7 +121,7 @@ int promptUserFilePath(window_base* w, int mode, SupportedFileTypes fileTypes, S
         ofn.lpstrFile   = szFileName;
         ofn.nMaxFile    = MAX_PATH;
         ofn.Flags       = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
-        ofn.lpstrDefExt = fileTypes.types.empty() ? "" : fileTypes.types[0].ext.c_str();
+        ofn.lpstrDefExt = fileTypes.types.empty() ? "" : fileTypes.types[0].ext;
         if (_defaultPath.length())
             ofn.lpstrInitialDir = StringAsCStr(_defaultPath);
         ofn.lpstrFileTitle = szFileTitle;

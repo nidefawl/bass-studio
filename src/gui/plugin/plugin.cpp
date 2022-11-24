@@ -130,7 +130,8 @@ void guiplugin::buttonClicked(guibase* _button) {
             String ext;
             SplitPath(path, nullptr, nullptr, &ext);
             if (ext.empty()) {
-                path += "." + FILE_TYPES_PLUGINSNAPSHOT.types.front().ext;
+                path += ".";
+                path += FILE_TYPES_PLUGINSNAPSHOT.types.front().ext;
             }
             savePluginSnapshot(ps, path);
         }

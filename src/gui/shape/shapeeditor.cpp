@@ -732,7 +732,8 @@ public:
                 String name;
                 SplitPath(path, nullptr, &name, &ext);
                 if (ext.empty()) {
-                    path += "." + FILE_TYPES_SHAPEPRESET.types.front().ext;
+                    path += ".";
+                    path += FILE_TYPES_SHAPEPRESET.types.front().ext;
                 }
                 shapePreset.curve.name = name;
                 controls.selectPreset.setString(name);

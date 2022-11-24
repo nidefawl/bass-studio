@@ -38,9 +38,11 @@ int promptUserFilePath(window_base* w,
     String multiFilter = "";
     String desc       = "";
     for (auto& fileType : fileTypes.types) {
-        filterItems.push_back({StringAsCStr(fileType.desc), StringAsCStr(fileType.ext)});
-        desc += fileType.desc + ",";
-        multiFilter += fileType.ext + ",";
+        filterItems.push_back({fileType.desc, fileType.ext});
+        desc += fileType.desc;
+        desc += ",";
+        multiFilter += fileType.ext;
+        multiFilter += ",";
     }
     if (fileTypes.types.size() > 1 && multiFilter.size() > 0) {
         multiFilter.pop_back();
