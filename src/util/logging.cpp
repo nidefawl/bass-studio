@@ -284,7 +284,7 @@ void getStackTrace(std::vector<String>& vec) {
         bufPtr = lineEnd + 1;
     }
 #else
-    vec.emplace_back("Stacktrace not available");
+    vec.emplace_back("Stacktrace not available\n");
 #endif
 }
 
@@ -294,7 +294,8 @@ void logStackTrace() {
     get_thread_stacktrace(buf, sizeof(buf), nullptr);
     ::getGlobalLogger()->log(Log::L_INFO, buf, strnlen(buf, sizeof(buf)));
 #else
-    ::getGlobalLogger()->log(Log::L_INFO, "Stacktrace not available", 24);
+    String warn = "Stacktrace not available\n";
+    ::getGlobalLogger()->log(Log::L_INFO, StringAsCStr(warn), warn.length());
 #endif
     // print_thread_stacktrace();
 }
