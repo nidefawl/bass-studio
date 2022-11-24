@@ -1886,7 +1886,6 @@ void DawCtrl::onPreDestroy() {
     waveformRenderer->destroy();
 }
 void MainCtrl::onPreDestroy() {
-    DawCtrl::onPreDestroy();
     {
         ThreadLock lock = daw.playThread.lockThread();
         //TODO: MultiLogger::removeLogger is not thread safe. This will eventually cause a race condition 
@@ -1894,6 +1893,7 @@ void MainCtrl::onPreDestroy() {
         getMultiLogger().removeLogger(statusbarLogger.get());
         daw.unloadProject();
     }
+    DawCtrl::onPreDestroy();
     daw.onPreDestroy();
 }
 
