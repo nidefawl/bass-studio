@@ -15,12 +15,12 @@
 #include "types.h"
 
 int32_t indexOfTick(const std::vector<automation_point_t>& dataPoints, tick_t tick) {
-    int32_t idx;
-    for (idx = 0; idx < (int) dataPoints.size(); idx++) {
-        const automation_point_t& pt = dataPoints[idx];
-        if (pt.time > tick) {
+    int32_t idx = 0;
+    for (const auto& point : dataPoints) {
+        if (point.time > tick) {
             break;
         }
+        idx++;
     }
     return idx;
 }

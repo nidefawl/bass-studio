@@ -611,23 +611,25 @@ void gui_track_automation::render(NVGcontext* vg) {
                 float pxSelectionEnd = grid.tickToScreenD(cursor.getTickEnd());
                 nvgSave(vg);
                 nvgIntersectScissor(vg, pxSelectionBegin, 0, pxSelectionEnd - pxSelectionBegin, sizeInset.y);
-                dbgassert(firstPtIdx < CtrSize(data.points));
-                dbgassert(lastPtIdx < CtrSize(data.points));
-                automation_point_t apFirst = data.points.front();
-                apFirst.time = 0;
-                auto dataFirst = firstPtIdx < 0 ? apFirst : data.points[firstPtIdx];
-                auto dataLast = lastPtIdx < 0 ? apFirst : data.points[lastPtIdx];
-                if (firstPtIdx == 0 && apFirst.time >= cursor.getTickBegin()) {
-                    dataFirst.time = cursor.getTickBegin();
+                dbgassert(firstPtIdx >= -1);
+                dbgassert(lastPtIdx >= 0);
+                if (firstPtIdx >= 0 && firstPtIdx < CtrSize(data.points)) {
+                    auto dataFirst = data.points[firstPtIdx];
+                    if (firstPtIdx == 0 && dataFirst.time >= cursor.getTickBegin()) {
+                        dataFirst.time = cursor.getTickBegin();
+                    }
+                    nvgBeginPath(vg);
+                    nvgCircle(vg, grid.tickToScreenD(dataFirst.time), sizeInset.y * (1.0f - dataFirst.val), 5);
+                    nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_PLAYING));
+                    nvgFill(vg);
                 }
-                nvgBeginPath(vg);
-                nvgCircle(vg, grid.tickToScreenD(dataFirst.time), sizeInset.y * (1.0f - dataFirst.val), 5);
-                nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_PLAYING));
-                nvgFill(vg);
-                nvgBeginPath(vg);
-                nvgCircle(vg, grid.tickToScreenD(dataLast.time), sizeInset.y * (1.0f - dataLast.val), 5);
-                nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_PLAYING));
-                nvgFill(vg);
+                if (lastPtIdx >= 0 && lastPtIdx < CtrSize(data.points)) {
+                    auto dataLast = data.points[lastPtIdx];
+                    nvgBeginPath(vg);
+                    nvgCircle(vg, grid.tickToScreenD(dataLast.time), sizeInset.y * (1.0f - dataLast.val), 5);
+                    nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_PLAYING));
+                    nvgFill(vg);
+                }
             }
             if (bRender && !cachedShape.empty()) {
                 bool first = true;
@@ -712,8 +714,8 @@ void gui_track_automation::render(NVGcontext* vg) {
     if (mouseTick != INVALID_TICK) {
         if (currentDragged.mode == dragmode::drag_segment 
                 && bIsDragging && !data.points.empty()
-                && currentDragged.segidx >= 0
-                && currentDragged.segidx < CtrSize(data.points)) {
+                && currentDragged.dataPt >= 0
+                && currentDragged.dataPt < CtrSize(data.points)) {
             mouseTick = data.points[currentDragged.dataPt].time;
             valAtMouse = data.points[currentDragged.dataPt].val;
         }
