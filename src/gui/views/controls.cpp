@@ -736,9 +736,9 @@ void guictr_daw_controls::layout() {
     viewSelect.size      = ivec2((smallHeight+5) * viewSelect.getNumButtons(), smallHeight);
     btnAudioOnOff.pos  = ivec2(math::max(songPos.right() + verticalSpacing, cs.x - 5 - btnAudioOnOff.size.x), (cs.y - btnAudioOnOff.size.y) / 2);
     zoom.pos = ivec2(btnAudioOnOff.left() - zoom.size.x + spacingCtrls, (cs.y - zoom.size.y) / 2);
-    btnUiLayoutLock.pos = ivec2(zoom.left() - btnUiLayoutLock.size.x + spacingCtrls, (cs.y - btnUiLayoutLock.size.y) / 2);
-    layoutSelect.pos = ivec2(btnUiLayoutLock.left() - layoutSelect.size.x + spacingCtrls, (cs.y - layoutSelect.size.y) / 2);
-    viewSelect.pos = ivec2(layoutSelect.left() - viewSelect.size.x + spacingCtrls, (cs.y - viewSelect.size.y) / 2);
+    btnUiLayoutLock.pos = ivec2(zoom.left() - btnUiLayoutLock.size.x - spacingCtrls, (cs.y - btnUiLayoutLock.size.y) / 2);
+    layoutSelect.pos = ivec2(btnUiLayoutLock.left() - layoutSelect.size.x - spacingCtrls, (cs.y - layoutSelect.size.y) / 2);
+    viewSelect.pos = ivec2(layoutSelect.left() - viewSelect.size.x - spacingCtrls, (cs.y - viewSelect.size.y) / 2);
 
     for (guibase* gui : guis) {
         gui->layout();
