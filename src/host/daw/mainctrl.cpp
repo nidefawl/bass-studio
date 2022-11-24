@@ -833,6 +833,11 @@ public:
         ctr_Right->assertEntries();
         ctr_Center->assertEntries();
         ctrEntryPlugins->assertState();
+        if (ctrEntryTracks->isVisible()) {
+            dawCtrl->viewMode = view_mode_t::TRACK_TIMELINE;
+        } else if (ctrEntryNodes->isVisible()) {
+            dawCtrl->viewMode = view_mode_t::NODE_EDITOR;
+        }
     }
 
     void storeLayout(dawview_layout_t& layout) {
@@ -1795,7 +1800,6 @@ bool DawCtrl::handleGlobalCommand(DAW::UI::CommandContext& ctxt) {
                         }
                         this->layoutIndex = index;
                         loadLayout(layouts[index]);
-                        dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
                     }
                     return true;
                 }
