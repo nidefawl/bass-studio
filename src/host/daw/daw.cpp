@@ -504,14 +504,6 @@ void DawInstance::onDawCompanionWindowClose(DawWindowCompanion& entry) {
         return pDawCtrl == pDawCtrlClosing;
     });
     if (it != dawCtrls.end()) {
-        if (initState > -1) {
-            auto ctrl = *it;
-            auto& settings = *tls.settings;
-            if (settings.windowSettings.size() > ctrl->getDawWindowIndex()) {
-                auto& ws = settings.windowSettings[ctrl->getDawWindowIndex()];
-                ws.flags = 0; // flag closed
-            }
-        }
         dawCtrls.erase(it);
     }
     entry.wnd->setInvalid();

@@ -1359,7 +1359,6 @@ void appwindow_main::destroyOverlayWindows() {
 }
 
 void appwindow_main::destroy() {
-    ctrl->onPreDestroy();
     dbgassert(glfw);
     if (this->ctrl) {
         glfwMakeContextCurrent(glfw);
@@ -1369,6 +1368,7 @@ void appwindow_main::destroy() {
         glfwMakeContextCurrent(glfw);
     }
     destroyOverlayWindows();
+    ctrl->onPreDestroy();
     appwindow::killTimer();
 #if BUILD_DAW_HOST
 #ifdef _WIN32

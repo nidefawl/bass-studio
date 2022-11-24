@@ -1141,7 +1141,6 @@ void DawCtrl::destroy() {
     }
     isOK = false;
     if (view) {
-        view->destroy();
         delete view;
         view = nullptr;
     }
@@ -1884,8 +1883,12 @@ void DawCtrl::onPreDestroy() {
         }
         settings.windowSettings[dawCtrlWindowIndex].dens = ctrTracks->getGrid().grid_dens;
     }
+    dbgassert(view);
+    if (view)
+        view->destroy();
     waveformRenderer->destroy();
 }
+
 void MainCtrl::onPreDestroy() {
     {
         ThreadLock lock = daw.playThread.lockThread();
@@ -2496,4 +2499,13 @@ void DawInstance::onPluginsChanged() {
             return true;
         });
     }
+}
+
+bool DawCtrl::onWindowCloseRequest() {
+    auto& settings = *daw.tls.settings;
+    if (settings.windowSettings.size() > getAppWindowIndex()) {
+        auto& ws = settings.windowSettings[getAppWindowIndex()];
+        ws.flags = 0; // flag closed
+    }
+    return true;
 }

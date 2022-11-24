@@ -602,6 +602,7 @@ public:
     void initApp(const std::vector<String>& args) override { };
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
     size_t getAppWindowIndex() override { return dawCtrlWindowIndex; }
+    bool onWindowCloseRequest() override;
     void startApp() override { };
 
     virtual DAW::Cursor& getCursor()              = 0;
