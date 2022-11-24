@@ -603,7 +603,7 @@ void gui_track_automation::render(NVGcontext* vg) {
                     bRender = false;
                 }   
             }
-            if (currentDragged.mode == dragmode::drag_selection) {
+            if (currentDragged.mode == dragmode::drag_selection && !data.points.empty()) {
                 firstPtIdx = indexOfTick(data.points, cursor.getTickBegin()) - 1;
                 lastPtIdx = indexOfTick(data.points, cursor.getTickEnd());
                 bIntersect = true;
@@ -611,8 +611,8 @@ void gui_track_automation::render(NVGcontext* vg) {
                 float pxSelectionEnd = grid.tickToScreenD(cursor.getTickEnd());
                 nvgSave(vg);
                 nvgIntersectScissor(vg, pxSelectionBegin, 0, pxSelectionEnd - pxSelectionBegin, sizeInset.y);
-                // dbgassert(firstPtIdx >= 0 && firstPtIdx < CtrSize(data.points));
-                // dbgassert(lastPtIdx >= 0 && lastPtIdx < CtrSize(data.points));
+                dbgassert(firstPtIdx < CtrSize(data.points));
+                dbgassert(lastPtIdx < CtrSize(data.points));
                 automation_point_t apFirst = data.points.front();
                 apFirst.time = 0;
                 auto dataFirst = firstPtIdx < 0 ? apFirst : data.points[firstPtIdx];
@@ -629,7 +629,7 @@ void gui_track_automation::render(NVGcontext* vg) {
                 nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_PLAYING));
                 nvgFill(vg);
             }
-            if (bRender) {
+            if (bRender && !cachedShape.empty()) {
                 bool first = true;
                 auto ptStart = &cachedShape.front();
                 auto ptEnd = &cachedShape.back();
@@ -710,7 +710,10 @@ void gui_track_automation::render(NVGcontext* vg) {
         nvgStroke(vg);
     }
     if (mouseTick != INVALID_TICK) {
-        if (currentDragged.mode == dragmode::drag_segment && bIsDragging) {
+        if (currentDragged.mode == dragmode::drag_segment 
+                && bIsDragging && !data.points.empty()
+                && currentDragged.segidx >= 0
+                && currentDragged.segidx < CtrSize(data.points)) {
             mouseTick = data.points[currentDragged.dataPt].time;
             valAtMouse = data.points[currentDragged.dataPt].val;
         }
