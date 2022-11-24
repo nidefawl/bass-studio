@@ -694,53 +694,51 @@ void gui_numberinput_field_generic<GlobalZoom>::onKeyInputChangeValue(ivec2 dire
 }
 void guictr_daw_controls::layout() {
     ivec2 cs        = getSizeContent();
-    int32_t spacing = 10;
-    tempo.pos       = ivec2(5, 5);
-    tempo.size      = ivec2(80, 28);
-    signature.pos   = ivec2(tempo.right() + spacing, 5);
-    signature.size  = ivec2(80, 28);
-    cursorPos.pos   = ivec2(signature.right() + spacing, 5);
-    cursorPos.size  = ivec2(120, 28);
-    // layoutSelect.pos  = ivec2(cursorPos.right() + spacing, 5);
-    // layoutSelect.size = ivec2(40*layoutSelect.getNumButtons(), 28);
-    // viewSelect.pos  = ivec2(layoutSelect.right() + spacing, 5);
-    // viewSelect.size = ivec2(40*viewSelect.getNumButtons(), 28);
+    int32_t verticalSpacing = 10;
+    int32_t smallHeight = 28;
+    int32_t bigHeight = 32;
+    tempo.size      = ivec2(bigHeight * 3, smallHeight);
+    signature.size  = ivec2(bigHeight * 3, smallHeight);
+    cursorPos.size  = ivec2(bigHeight * 3, smallHeight);
+    tempo.pos       = ivec2(verticalSpacing >> 1, (cs.y - tempo.size.y) / 2);
+    signature.pos   = ivec2(tempo.right() + verticalSpacing, (cs.y - signature.size.y) / 2);
+    cursorPos.pos   = ivec2(signature.right() + verticalSpacing, (cs.y - cursorPos.size.y) / 2);
 
 
     int32_t spacingCtrls = 5;
-    btnRecord.size = btnLoop.size = btnStop.size = btnPlay.size = ivec2(32, 32);
+    btnRecord.size = btnLoop.size = btnStop.size = btnPlay.size = ivec2(bigHeight, bigHeight);
 
-    btnLoop.size.x = 48;
-    loopPos.size   = ivec2(100, 32);
-    loopLen.size   = ivec2(100, 32);
-    songPos.size   = ivec2(140, 32);
+    btnLoop.size.x = bigHeight + (bigHeight >> 1);
+    loopPos.size   = ivec2(bigHeight * 3, bigHeight);
+    loopLen.size   = ivec2(bigHeight * 3, bigHeight);
+    songPos.size   = ivec2(bigHeight * 4, bigHeight);
 
     int32_t transportWidth = btnPlay.size.x + spacingCtrls + btnStop.size.x + spacingCtrls + songPos.size.x;
-    int32_t transportCtrls = math::max(cs.x / 2 - transportWidth / 2, cursorPos.right() + spacing);
+    int32_t transportCtrls = math::max(cs.x / 2 - transportWidth / 2, cursorPos.right() + verticalSpacing);
 
-    std::vector<guibase*> v{ &btnRecord, &btnPlay, &btnStop, &songPos };
-    std::vector<guibase*> v2{ &btnLoop, &loopPos, &loopLen };
+    std::vector<guibase*> playbackControls{ &btnRecord, &btnPlay, &btnStop, &songPos };
+    std::vector<guibase*> loopControls{ &btnLoop, &loopPos, &loopLen };
     int posX = transportCtrls;
-    for (auto el : v) {
-        el->pos = ivec2(posX, 5);
+    for (auto el : playbackControls) {
+        el->pos = ivec2(posX, (cs.y - el->size.y) / 2);
         posX    = el->right() + spacingCtrls;
     }
     posX += spacingCtrls * 3;
-    for (auto el : v2) {
-        el->pos = ivec2(posX, 5);
+    for (auto el : loopControls) {
+        el->pos = ivec2(posX, (cs.y - el->size.y) / 2);
         posX    = el->right() + spacingCtrls;
     }
 
-    btnAudioOnOff.size = ivec2(100, 28);
-    btnAudioOnOff.pos  = ivec2(math::max(songPos.right() + spacing, cs.x - 5 - btnAudioOnOff.size.x), 5);
-    zoom.size          = ivec2(90, 28);
-    zoom.pos = btnAudioOnOff.pos - ivec2(zoom.size.x+spacingCtrls, 0);
-    btnUiLayoutLock.size = ivec2(32, 32);
-    btnUiLayoutLock.pos  = zoom.pos - ivec2(btnUiLayoutLock.size.x+spacingCtrls, 0);
-    layoutSelect.size    = ivec2(40 * layoutSelect.getNumButtons(), 28);
-    layoutSelect.pos     = btnUiLayoutLock.pos - ivec2(layoutSelect.size.x+spacingCtrls, 0);
-    viewSelect.size      = ivec2(40 * viewSelect.getNumButtons(), 28);
-    viewSelect.pos       = layoutSelect.pos - ivec2(viewSelect.size.x+spacingCtrls, 0);
+    btnAudioOnOff.size = ivec2(smallHeight*3, smallHeight);
+    zoom.size          = ivec2(smallHeight*3, smallHeight);
+    btnUiLayoutLock.size = ivec2(smallHeight, smallHeight);
+    layoutSelect.size    = ivec2((smallHeight+5) * layoutSelect.getNumButtons(), smallHeight);
+    viewSelect.size      = ivec2((smallHeight+5) * viewSelect.getNumButtons(), smallHeight);
+    btnAudioOnOff.pos  = ivec2(math::max(songPos.right() + verticalSpacing, cs.x - 5 - btnAudioOnOff.size.x), (cs.y - btnAudioOnOff.size.y) / 2);
+    zoom.pos = ivec2(btnAudioOnOff.left() - zoom.size.x + spacingCtrls, (cs.y - zoom.size.y) / 2);
+    btnUiLayoutLock.pos = ivec2(zoom.left() - btnUiLayoutLock.size.x + spacingCtrls, (cs.y - btnUiLayoutLock.size.y) / 2);
+    layoutSelect.pos = ivec2(btnUiLayoutLock.left() - layoutSelect.size.x + spacingCtrls, (cs.y - layoutSelect.size.y) / 2);
+    viewSelect.pos = ivec2(layoutSelect.left() - viewSelect.size.x + spacingCtrls, (cs.y - viewSelect.size.y) / 2);
 
     for (guibase* gui : guis) {
         gui->layout();
