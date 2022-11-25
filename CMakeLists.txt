@@ -497,6 +497,10 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       COMMAND ${CMAKE_COMMAND} -E copy "${PATH_DIST}/Info.plist" "${PATH_PACK_MACOS}/Contents"
       COMMAND ${CMAKE_COMMAND} -E copy_directory "${PATH_DIST}/MacOS" "${PATH_PACK_MACOS}/Contents/MacOS"
       COMMAND ${CMAKE_COMMAND} -E copy_directory "${PATH_DIST}/Resources" "${PATH_PACK_MACOS}/Contents/Resources"
+      COMMAND ${CMAKE_COMMAND} 
+        -E copy_directory
+        "${PROJECT_SOURCE_DIR}/dist/docs"
+        "${PATH_PACK_MACOS}/Contents/Resources/docs"
       COMMAND ${CMAKE_COMMAND} -E copy "${ICON_FILE}" "${PATH_PACK_MACOS}/Contents/Resources/${PROJECT_BINARY_NAME}.icns"
       COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_PACK_MACOS}/Contents/Frameworks"
       COMMAND ${CMAKE_COMMAND} -E copy ${LIST_RUNTIMES} "${PATH_PACK_MACOS}/Contents/Frameworks"
@@ -549,6 +553,10 @@ if (PROJECT_BUILD_DAW AND PROJECT_BUILD_SCANNER)
       VERBATIM
       DEPENDS dist-strip dist-copy-resources
       WORKING_DIRECTORY ${PATH_DIST}
+      COMMAND ${CMAKE_COMMAND} 
+        -E copy_directory
+        "${PROJECT_SOURCE_DIR}/dist/docs"
+        "${PATH_DIST}/docs"
       COMMAND ${CMAKE_COMMAND} -E make_directory "${PATH_DIST}/lib"
       COMMAND ${CMAKE_COMMAND} 
         -E copy
