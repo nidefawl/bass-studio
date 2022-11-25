@@ -147,7 +147,7 @@ def main(DAW_DEPS_PATH, DAW_SRC_PATH):
     lib_lic_list.sort(key=lambda x: x.name.lower())
 
     # create markdown
-    with open('installer/licenses-thirdparty.md', 'w') as f:
+    with open('licenses-thirdparty.md', 'w') as f:
         f.write('This file contains the licenses of all third party libraries used by DAW.\n')
         for liblic in lib_lic_list:
             f.write(f'- [{liblic.name}](#lib-{string_to_valid_href_anchor(liblic.name)})\n')
@@ -164,7 +164,9 @@ def main(DAW_DEPS_PATH, DAW_SRC_PATH):
                     f.write('\n```\n\n')
 
     #convert markdown to html using python grip
-    # run_subprocess(['grip', '--export', 'installer/licenses-thirdparty.md', 'installer/licenses-thirdparty.html'])
+    run_subprocess(['grip', '--export', 'licenses-thirdparty.md', 'licenses-thirdparty.html'])
+    # convert to pdf using chrome print to pdf
+    run_subprocess(['chromium', '--headless', '--print-to-pdf-no-header', '--print-to-pdf=dist/docs/licenses-thirdparty.pdf', 'licenses-thirdparty.html'])
 
 
 if __name__ == '__main__':
