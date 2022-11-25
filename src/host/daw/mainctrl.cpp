@@ -2037,14 +2037,6 @@ bool clip_ref_t::isValid() const {
     return false;
 }
 
-bool clip_ref_t::isClipValid(const clip_t* clip) const {
-    if (m_track && m_project) {
-        return m_project->trackList.validTrack(m_track)
-               && m_track->getClips().hasClip(clip);
-    }
-    return false;
-}
-
 bool clip_ref_t::isTrackValid(const track_t* track) const {
     return m_project && m_project->trackList.validTrack(track);
 }

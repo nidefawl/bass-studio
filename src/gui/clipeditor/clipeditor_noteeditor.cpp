@@ -661,11 +661,11 @@ void guictr_editor_base::relayout() {
         auto numClipsOnTrack = vecTrackClips.size();
         for (size_t clipIdx = 0; clipIdx < numClipsOnTrack && it != clipsHandles.end(); clipIdx++) {
             auto& selClip = vecTrackClips[clipIdx];
-            auto& clipHandles = **(it++);
-            dbgassert(it <= clipsHandles.end());
-            if (!assert_expr(trackEntry.clipsGuis.count(selClip))) {
+            if (!trackEntry.track->getClips().hasClip(selClip)) {
                 continue;
             }
+            auto& clipHandles = **(it++);
+            dbgassert(it <= clipsHandles.end());
             clipHandles.setVisible(true);
             clipHandles.getClipView().setSingleClip(selClip);
             clipHandles.setTrackSelectionIdx(trackIdx);
@@ -708,14 +708,11 @@ void guictr_editor_base::selectEditClip(clip_t* clip) {
         auto numClipsOnTrack = vecTrackClips.size();
         for (size_t clipIdx = 0; clipIdx < numClipsOnTrack && it != clipsHandles.end(); clipIdx++) {
             auto& selClip = vecTrackClips[clipIdx];
-            if (!view.clipRef().isClipValid(selClip)) {
+            if (!trackEntry.track->getClips().hasClip(selClip)) {
                 continue;
             }
             auto& clipHandles = **(it++);
             dbgassert(it <= clipsHandles.end());
-            if (!assert_expr(trackEntry.clipsGuis.count(selClip))) {
-                continue;
-            }
             clipHandles.setHandleActive(selClip == currentClip);
             if (clipHandles.isHandleActive()) {
                 moveToBegin(&clipHandles);

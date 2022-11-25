@@ -149,7 +149,6 @@ class clip_ref_t {
 public:
     clip_ref_t() = default;
     bool isTrackValid(const track_t* track) const;
-    bool isClipValid(const clip_t* clip) const;
     bool isValid() const;
     bool isValidUpdate();
 

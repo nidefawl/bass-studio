@@ -626,7 +626,7 @@ public:
         float dist    = 0;
         dragmode mode = drag_handle_none;
     };
-struct dist_dragzone_handle final : public dist_dragzone {
+    struct dist_dragzone_handle final : public dist_dragzone {
         guictr_cliphandles* handle = nullptr;
     };
 private:
