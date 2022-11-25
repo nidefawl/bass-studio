@@ -82,6 +82,7 @@ def main(DAW_DEPS_PATH, DAW_SRC_PATH):
         if os.path.isdir(file):
             continue
         file_is_ignored = False
+        # TODO: don't check patterns against absolute path
         for pattern in IGNORE_PATH_PATTERNS:
             if pattern in file:
                 print('Ignoring file', file)
@@ -124,9 +125,6 @@ def main(DAW_DEPS_PATH, DAW_SRC_PATH):
         repo_url = repo_url.rstrip('.git')
         
         found = False
-        # if file not in DAW_SRC_PATH
-        # check if parent of file is in DAW_SRC_PATH
-        
         if not file_is_in_directory(file, DAW_SRC_PATH):
             for liblic in lib_lic_list:
                 if liblic.url == repo_url:
@@ -163,7 +161,7 @@ def main(DAW_DEPS_PATH, DAW_SRC_PATH):
                     f.write(f2.read())
                     f.write('\n```\n\n')
 
-    #convert markdown to html using python grip
+    # convert markdown to html using python grip
     run_subprocess(['grip', '--export', 'licenses-thirdparty.md', 'licenses-thirdparty.html'])
     # convert to pdf using chrome print to pdf
     run_subprocess(['chromium', '--headless', '--print-to-pdf-no-header', '--print-to-pdf=dist/docs/licenses-thirdparty.pdf', 'licenses-thirdparty.html'])
