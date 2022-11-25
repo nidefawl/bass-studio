@@ -1071,7 +1071,8 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
     // this deref is not safe
     for (auto& [trackEntry, vecClips] : selView.tracks) {
         for (clip_t* clip : vecClips) {
-            if (!view.clipRef().isClipValid(clip)) {
+            if (!view.clipRef().isTrackValid(trackEntry.track)
+                || !trackEntry.track->getClips().hasClip(clip)) {
                 continue;
             }
             auto tickOffset = clip->time;

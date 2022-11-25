@@ -2036,26 +2036,17 @@ bool clip_ref_t::isValid() const {
     }
     return false;
 }
+
 bool clip_ref_t::isClipValid(const clip_t* clip) const {
-    if (m_clip && m_project) {
-        if (!m_project->trackList.validTrack(m_track)) {
-            return false;
-        }
-        if (!m_track->getClips().hasClip(clip)) {
-            return false;
-        }
-        return true;
+    if (m_track && m_project) {
+        return m_project->trackList.validTrack(m_track)
+               && m_track->getClips().hasClip(clip);
     }
     return false;
 }
+
 bool clip_ref_t::isTrackValid(const track_t* track) const {
-    if (m_clip && m_project) {
-        if (!m_project->trackList.validTrack(track)) {
-            return false;
-        }
-        return true;
-    }
-    return false;
+    return m_project && m_project->trackList.validTrack(track);
 }
 
 bool clip_ref_t::isValidUpdate() {
@@ -2333,8 +2324,13 @@ void clip_view_t::updateNotePitches(bool reset) {
     if (currentClip)
         currentClip->notes.getNotePitches(notePitches);
     for (auto& [trackEntry, vecClips] : this->m_selectionView.tracks) {
+        if (!clipRef().isTrackValid(trackEntry.track)) {
+            continue;
+        }
+        auto& trackClipList = trackEntry.track->getClips();
         for (clip_t* clip : vecClips) {
-            if (clip == currentClip) {
+            if (clip == currentClip
+                || !trackClipList.hasClip(clip)) {
                 continue;
             }
             clip->notes.getNotePitches(notePitches);
@@ -2351,7 +2347,17 @@ void clip_view_t::copySelectedNoteList() {
 void clip_view_t::setEditorSelection(clip_t* clip, const editor_view_selection_t& clipboardView) {
     m_selectionView = clipboardView;
     bIsAbsoluteMode = clipboardView.totalClipCount > 1;
-    m_clipRef.set(clip);
+    if (clip) {
+        m_clipRef.set(clip);
+    } else if (clipboardView.totalClipCount 
+                && !clipboardView.tracks.empty()
+                && !clipboardView.tracks.begin()->second.empty()) {
+        auto firstClip = clipboardView.tracks.front().second.front();
+        m_clipRef.set(firstClip);
+        m_clipRef.resetClipOnly();
+    } else {
+        m_clipRef.set(nullptr);
+    }
     updateNotePitches(true);
 }
 
@@ -2459,8 +2465,8 @@ void DawCtrl::onViewCreated(SPLayoutEntry& ctrEntry) {
 
 void clip_ref_t::set(clip_t* clip) {
     if (!clip || clip->trackEntries.empty()) {
-        m_project = nullptr;
-        m_track   = nullptr;
+        // m_project = nullptr;
+        // m_track   = nullptr;
         m_clip    = nullptr;
         return;
     }

@@ -651,6 +651,7 @@ void guictr_editor_base::relayout() {
         clipHandles.setHandleActive(true);
         moveToBegin(&clipHandles);
         return;
+    } else {
     }
     for (size_t trackIdx = 0; trackIdx < numTracks; trackIdx++) {
         auto& [trackEntry, vecTrackClips] = view.m_selectionView.tracks[trackIdx];
@@ -660,9 +661,6 @@ void guictr_editor_base::relayout() {
         auto numClipsOnTrack = vecTrackClips.size();
         for (size_t clipIdx = 0; clipIdx < numClipsOnTrack && it != clipsHandles.end(); clipIdx++) {
             auto& selClip = vecTrackClips[clipIdx];
-            if (!view.clipRef().isClipValid(selClip)) {
-                continue;
-            }
             auto& clipHandles = **(it++);
             dbgassert(it <= clipsHandles.end());
             if (!assert_expr(trackEntry.clipsGuis.count(selClip))) {

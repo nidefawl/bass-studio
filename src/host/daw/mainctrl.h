@@ -143,9 +143,9 @@ struct notes_clipboard {
 };
 
 class clip_ref_t {
-    project_t* m_project = nullptr;
-    track_t* m_track     = nullptr;
-    clip_t* m_clip       = nullptr;
+    project_t* m_project = nullptr; // Pointer must be null or valid!
+    track_t* m_track     = nullptr; // Can be dangling pointer!
+    clip_t* m_clip       = nullptr; // Can be dangling pointer!
 public:
     clip_ref_t() = default;
     bool isTrackValid(const track_t* track) const;
@@ -156,6 +156,9 @@ public:
     clip_t* clip() const;
     track_t* track() const;
     void set(clip_t* clip);
+    void resetClipOnly() {
+        m_clip = nullptr;
+    }
 };
 
 class clip_view_t {
