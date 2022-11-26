@@ -475,7 +475,9 @@ public:
                     layoutCtr->replaceContainerWith(ctrHandle->ctr, ctrEntry);
                     ctrl->relayout();
                 }
+#if BUILD_DAW_HOST
                 dawCtrl->onViewCreated(ctrEntry);
+#endif
             }
             closeContextMenu();
         } else if (_id == 0) {

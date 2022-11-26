@@ -35,7 +35,7 @@ public:
     ivec2 getContainerSize() override;
     int32_t getCollapsedCtrHeight(guictr_base* ctr);
 };
-class guictr_tabbed final : public guictr_base {
+class guictr_tabbed : public guictr_base {
 
     struct tabbed_entry;
     std::vector<tabbed_entry*> entries;

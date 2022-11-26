@@ -48,7 +48,7 @@ public:
     virtual void onKeyInputChangeValue(ivec2 direction)        = 0;
 };
 template<typename T>
-class gui_numberinput_field_generic final : public gui_numberinput_field_base {
+class gui_numberinput_field_generic : public gui_numberinput_field_base {
 protected:
     T* number;
     const char* strFormat = nullptr;
