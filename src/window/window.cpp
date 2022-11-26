@@ -1838,7 +1838,7 @@ int startApplication(const std::vector<String>& args, AppInstanceService& appIns
 #ifdef _WIN32
         enableVirtTermProc();
 #endif
-#ifdef __linux__
+#if defined(__linux__) && !defined(BUILD_USE_SANITIZER)
         NFD_Init();
 #endif
 
