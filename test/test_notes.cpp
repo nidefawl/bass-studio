@@ -569,7 +569,7 @@ namespace {
         midiCopy.deleteClips(nullptr);
         midiCopy2.deleteClips(nullptr);
         for (int iLoopEnabled = 0; iLoopEnabled < 2; iLoopEnabled++) {
-            for (int i = 0; i < 14; i++) {
+            for (int i = 0; i < 14; i+=2) {
                 clip->len         = clip->notes.lastNote.time;
                 clip->loopLen     = clip->len;
                 clip->loopEnabled = iLoopEnabled != 0;
@@ -580,8 +580,9 @@ namespace {
 
                 midi.sortClips();
                 std::vector<note_t> notes;
-                int step = 1;
-                for (int j = 0; j < TICKS_BAR * 1024; j += step) {
+                tick_t step = 1;
+                tick_t tEnd = TICKS_BAR * 1024;
+                for (tick_t j = 0; j < tEnd; j += step) {
                     clip->len     = j;
                     clip->loopLen = clip->len;
                     clip->setDirty();
@@ -590,7 +591,7 @@ namespace {
                     midi.getNotesInRange(math::max(0, j - TICKS_BAR * 64), j * 2, -1, -1, notes);
                     testNoteProperties(notes);
                     clip->setDirty();
-                    step += step / 60 + 1;
+                    step += step / 20 + 1;
                     clip->loopEnabled = true;
                     tick_t rangeBegin;
                     tick_t rangeEnd;
