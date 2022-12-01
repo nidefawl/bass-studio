@@ -13,7 +13,6 @@ public:
     double timeSwitchEffect = 0;
     std::unique_ptr<fft_processor_hf> analyzerHf;
     std::unique_ptr<fft_processor_lf> analyzerLf;
-    audiohost* host      = nullptr;
     int64_t nSamples     = 0;
     double processedTime = 0.0;
 
@@ -24,9 +23,7 @@ public:
     bool processInput     = true;
     audioanaylzer() : tLast(getTimeMicros()) {
     }
-    void init(audiohost* _host, blocksize_t _blockSize, samplerate_t _sampleRate) {
-        dbgassert(_host);
-        this->host = _host;
+    void init(blocksize_t _blockSize, samplerate_t _sampleRate) {
         analyzerHf = std::make_unique<fft_processor_hf>(_blockSize, _sampleRate);
         analyzerLf = std::make_unique<fft_processor_lf>(_blockSize, _sampleRate);
     }

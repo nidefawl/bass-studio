@@ -100,34 +100,43 @@ foreach (f ${CPP_ALL_FILES})
 endforeach ()
 
 set_source_files_properties(${MM_SRC_FILES} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+
 foreach (f ${CPP_ALL_FILES})
   if (f MATCHES ".*host/plugin/.*"
+    OR f MATCHES ".*.mm"
     OR f MATCHES "/main_.*"
-    OR f MATCHES ".*platform/linux/.*")
-    set_source_files_properties(${f} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+    OR f MATCHES ".*platform/linux/.*"
+    OR f MATCHES ".*/plugins/synth/synth-plugin.cpp"
+    OR f MATCHES ".*/util/fp_math.cpp"
+    OR f MATCHES ".*/gui/linetess/linetess.cpp"
+    OR f MATCHES ".*/gui/linetess/pymachine.cpp"
+    OR f MATCHES ".*/plugins/eq/eq-plugin.cpp")
+    set_source_files_properties(${f} PROPERTIES 
+        SKIP_UNITY_BUILD_INCLUSION ON
+        SKIP_PRECOMPILE_HEADERS ON
+    )
+    message(STATUS "Skipping PCH/Unity for ${f}")
   endif()
 endforeach ()
-
 
 if (MINGW)
   # The SEH assembly will not work correctly on clang mingw if any level of optimization is applied
   set(SRC_FILES_NO_OPTIMIZE src/host/plugin/vst/vstplugin-dispatch.cpp)
   set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections")
-  set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 endif()
 
 if (CLANG)
   set_source_files_properties(src/util/fp_math.cpp PROPERTIES
-    SKIP_UNITY_BUILD_INCLUSION ON
-    SKIP_PRECOMPILE_HEADERS ON
     COMPILE_OPTIONS "-fno-lto;-mtune=generic;-fno-function-sections;-fno-data-sections;-fno-fast-math;-O2"
   )
-  set_source_files_properties(src/plugins/synth/synth-plugin.cpp PROPERTIES
-    SKIP_UNITY_BUILD_INCLUSION ON
-    SKIP_PRECOMPILE_HEADERS ON
-    # COMPILE_OPTIONS "-fno-lto;-Rpass-analysis=loop-vectorize;-Rpass=loop-vectorize;-Rpass-missed=loop-vectorize"
-  )
 endif()
+add_compile_definitions(TINYSPLINE_FLOAT_PRECISION=1)
+include_directories(SYSTEM "${PROJECT_DEPS_PATH}/tinyspline/src/")
+set(PROJECT_DEP_TINYSPLINE_SRC_FILES
+  tinyspline/src/parson.c
+  tinyspline/src/tinyspline.c
+  tinyspline/src/tinysplinecxx.cxx
+)
 set(PROJECT_DEP_MUPARSERS_SRC_FILES
   muparser/src/muParser.cpp
   muparser/src/muParserBase.cpp
@@ -140,6 +149,7 @@ set(PROJECT_DEP_MUPARSERS_SRC_FILES
 set(PROJECT_DEPS_SRC_FILES
   glad/gl-3.2-core/src/glad.c
   ${PROJECT_DEP_MUPARSERS_SRC_FILES}
+  ${PROJECT_DEP_TINYSPLINE_SRC_FILES}
 )
 
 list(TRANSFORM PROJECT_DEPS_SRC_FILES PREPEND "${PROJECT_DEPS_PATH}/")
@@ -353,6 +363,12 @@ if (TARGET slowstacktrace)
   target_compile_definitions(${LINK_TARGET} PUBLIC HAVE_SLOWSTACKTRACE=1)
 else()
   message(WARNING "slowstacktrace not found")
+endif()
+if (TARGET pybind11::embed)
+  target_link_libraries(${LINK_TARGET} PUBLIC pybind11::embed)
+  target_compile_definitions(${LINK_TARGET} PUBLIC HAVE_PYTHON_INTERPRETER=1)
+else()
+  message(WARNING "pybind11::embed not found")
 endif()
 
 target_link_libraries(${LINK_TARGET} PUBLIC zlib)

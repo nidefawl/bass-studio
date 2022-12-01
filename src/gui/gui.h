@@ -148,6 +148,7 @@ enum gui_type : uint16_t {
     CTR_TYPE_NODES,
     CTR_TYPE_TRACKS_TIMELINE,
     CTR_TYPE_TRACKS_EDITOR,
+    CTR_TYPE_AUDIO_VISUALIZER
 };
 namespace DebugAlloc {
     template<typename T>

@@ -4,6 +4,9 @@ endif()
 if (NOT DEFINED MAIN_SRC_PATH)
   set(MAIN_SRC_PATH ${PROJECT_SRC_PATH})
 endif()
+if (NOT DEFINED PROJECT_ENABLE_PYTHON)
+  set(PROJECT_ENABLE_PYTHON ON)
+endif()
 
 # check if build.py is present, not actually used 
 find_path(PROJECT_DEPS_PATH
@@ -50,8 +53,10 @@ find_package(PortAudio  PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_P
 find_package(PortMidi   PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH)
 find_package(kissfft    PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH)
 
-find_package(Python COMPONENTS Interpreter Development)
-find_package(pybind11   PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH) 
+if (PROJECT_ENABLE_PYTHON)
+  find_package(Python COMPONENTS Interpreter Development)
+  find_package(pybind11   PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH) 
+endif()
 string(TOLOWER "soxr-${CMAKE_CXX_COMPILER_ID}-release" SOXR_DYNLIB_NAME)
 find_library(SOXR_LIB   PATHS ${PROJECT_DEPS_INSTALL_PATH} REQUIRED NO_DEFAULT_PATH NAMES ${SOXR_DYNLIB_NAME} PATH_SUFFIXES lib)
 message(STATUS "SOXR_LIB ${SOXR_LIB}")

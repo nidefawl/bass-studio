@@ -7,6 +7,7 @@
 #include "host/clip/clip.h"
 #include "config.h"
 #include "host/plugin/modules.h"
+#include "samplerate.h"
 #include "str_util.h"
 #include "seq_time.h"
 #include "dsp_util.h"
@@ -138,6 +139,8 @@ public:
     void onAudioStageChanged(audio_stage_t* stage) override;
     void setTls(daw_tls::tlsinstance& tls);
     void destroy();
+    sampleformat_t getSampleFormatInternal() const { return m_sampleFormatInternal; }
+    sampleformat_t getSampleFormatExternal() const { return m_sampleFormatExternal; }
 
     void initThreads();
     void setThreadCount(uint32_t threadCount);

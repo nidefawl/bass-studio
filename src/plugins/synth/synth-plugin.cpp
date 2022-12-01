@@ -4939,7 +4939,7 @@ class guicontainer_plugin_synth final : public guictr_base {
         return this->impl->createViewCtrImpl();
     }
 
-class SynthPluginViewCtr final : public PluginViewContainers {
+    class SynthPluginViewCtr final : public PluginViewContainers {
     public:
         guicontainer_plugin_synth ctr_main;
         explicit SynthPluginViewCtr(module_synth* eff)

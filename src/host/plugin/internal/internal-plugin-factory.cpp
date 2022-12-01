@@ -1,8 +1,10 @@
 #include "host/plugin/base/base-plugin.h"
 #include "host/plugin/empty/empty.h"
 #include "host/plugin/group/group.h"
+#include "plugins/eq/eq-plugin.h"
 #include "plugins/gain/gain-plugin.h"
 #include "plugins/latency/latency-plugin.h"
+#include "plugins/eq/eq-plugin.h"
 #include "plugins/lfo/lfo-plugin.h"
 #include "plugins/macros/macros-plugin.h"
 #include "plugins/samplecrush/samplecrush-plugin.h"
@@ -21,6 +23,7 @@ extern template effectbase* makeInstance<PluginSampleCrush::module_samplecrush>(
 extern template effectbase* makeInstance<PluginStereoWidth::module_stereowidth>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 extern template effectbase* makeInstance<PluginMacros::module_macros>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 extern template effectbase* makeInstance<PluginLFO::module_lfo>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
+extern template effectbase* makeInstance<PluginEQ::module_eq>(int32_t _projectGlobalId, IHostCallback* _hostCallback);
 
 namespace PluginSynth {
     class module_synth;
@@ -62,6 +65,9 @@ effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t module
         case PLUGIN_TYPE_LFO:
             effect = makeInstance<PluginLFO::module_lfo>(getNextGlobalModuleId(globalid), hostcallback);
             break;
+        case PLUGIN_TYPE_EQ:
+            effect = makeInstance<PluginEQ::module_eq>(getNextGlobalModuleId(globalid), hostcallback);
+            break;
         case PLUGIN_TYPE_INTERNAL_EFFECT: {
             LoadResultPlugin res = loadInternalPlugin(moduleId, globalid);
             if (res.library.isSuccess()) {
@@ -83,6 +89,7 @@ effectbase* PluginManager::makeModuleInstance(int32_t moduleType, int32_t module
         case PLUGIN_TYPE_SYNTH:
         case PLUGIN_TYPE_MACROS:
         case PLUGIN_TYPE_LFO:
+        case PLUGIN_TYPE_EQ:
             if (effect) {
                 effect->load(this);
                 pluginInstancesInternal.push_back(effect);
