@@ -561,6 +561,10 @@ static int glnvg__recompileShader(GLNVGshader* shader, const char* name, const c
 	prog = glCreateProgram();
 	vert = glCreateShader(GL_VERTEX_SHADER);
 	frag = glCreateShader(GL_FRAGMENT_SHADER);
+	if (prog == 0 || vert == 0 || frag == 0) {
+		fprintf(stderr, "glCreateProgram/glCreateShader returned 0\n");
+		return 0;
+	}
 	str[numOpts+1] = vshader;
 	glShaderSource(vert, numOpts+2, str, 0);
 	str[numOpts+1] = fshader;

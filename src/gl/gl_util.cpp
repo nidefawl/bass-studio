@@ -113,6 +113,11 @@ bool isGLContextPresent() {
 }
 int compileShader(int type, const String& src) {
     int iShader = glCreateShader(type);
+    if (iShader == 0) {
+        log_lf(Log::L_ERROR, "glCreateShader failed\n");
+        checkGLError("glCreateShader");
+        return 0;
+    }
     checkGLError("glCreateShader");
     const auto* szSrc = (const GLchar*) StringAsCStr(src);
     glShaderSource(iShader, 1, &szSrc, nullptr);
