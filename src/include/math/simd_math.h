@@ -189,7 +189,7 @@ inline float sine1(float x) {
     return (y);
     //left out the higher precision.
 }
-float sine2(float x) {
+inline float sine2(float x) {
     const auto PI = XM_PI;
     // Convert the input value to a range of -1 to 1
     x = x * (1.0f / PI);
@@ -252,7 +252,7 @@ void cos_test(
     }
 }
 
-__m128 exp_v4f(__m128 x) {
+inline __m128 exp_v4f(__m128 x) {
     const __m128 a  = _mm_set1_ps((1 << 22) / XM_LN2);// to get exp(x/2)
     const __m128i b = _mm_set1_epi32(127 * (1 << 23));      // NB: zero shift!
     __m128i r       = _mm_cvtps_epi32(_mm_mul_ps(a, x));
