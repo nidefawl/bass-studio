@@ -1,4 +1,5 @@
 #include "eq-plugin.h"
+#include "assert_dbg.h"
 #include "host/automation/automation.h"
 #include "dsp_util.h"
 #include "event.h"
@@ -20,17 +21,59 @@
 #include "host/audiobuffer/audioblock.h"
 #include "host/meter/meter.h"
 #include "snapshot/snapshot.h"
+#include "types.h"
 #include "window.h"
 #include "dsp_util.h"
 #include <algorithm>
+#include <memory>
 #include <vector>
 
 namespace PluginEQ {
 
-    struct impl_data_t {
-        DAW::Host::process_scratch_buf_t buf;
+    enum BandType {
+        BandTypePeak,
+        BandTypeLowShelf,
+        BandTypeHighShelf,
+        BandTypeLowPass,
+        BandTypeHighPass,
+        BandTypeBandPass,
+        BandTypeNotch,
+        BandTypeAllPass,
+        NumBandTypes
     };
 
+    struct band_t {
+        float freq    = 1000.0;
+        float gain    = 1.0;
+        float q       = 1.0;
+        float bw      = 1.0;
+        BandType type = BandTypePeak;
+    };
+    constexpr static std::array<band_t, 10> defaultBands = {{
+        { 32.0, 0.0, 0.707, 1.0, BandTypeLowShelf },
+        { 64.0, 0.0, 0.707, 1.0, BandTypePeak },
+        { 125.0, 0.0, 0.707, 1.0, BandTypePeak },
+        { 250.0, 0.0, 0.707, 1.0, BandTypePeak },
+        { 500.0, 0.0, 0.707, 1.0, BandTypePeak },
+        { 1000.0, 0.0, 0.707, 1.0, BandTypePeak },
+        { 2000.0, 0.0, 0.707, 1.0, BandTypePeak },
+        { 4000.0, 0.0, 0.707, 1.0, BandTypePeak },
+        { 8000.0, 0.0, 0.707, 1.0, BandTypePeak },
+        { 16000.0, 0.0, 0.707, 1.0, BandTypeHighShelf },
+    }};
+    class EQFilter;
+    struct impl_data_t {
+        DAW::Host::process_scratch_buf_t buf;
+        std::array<band_t, defaultBands.size()> bands = defaultBands;
+        std::array<std::vector<std::shared_ptr<EQFilter>>, defaultBands.size()> filters;
+        AudioBlock tmpBlock;
+    };
+    float freqToParam(float f) {
+        return (f - 10.0f) / 40000.0f;
+    }
+    float paramToFreq(float p) {
+        return p * 40000.0f + 10.0f;
+    }
     module_eq::module_eq(int32_t _projectGlobalId, IHostCallback* _hostCallback)
         : internalplugin("EQ", getModuleType(), _projectGlobalId, _hostCallback),
         impl(new impl_data_t)
@@ -49,16 +92,285 @@ namespace PluginEQ {
             registerParam(paramEntry.id)->initValue(paramEntry);
         }
         getParam(PARAM_TRACK_PAN)->isBiPolar = true;
+        const int PARAMID_FIRST_BAND = 16;
+        const int PER_BAND_PARAMS = 16;
+        for (size_t i = 0; i < impl->bands.size(); ++i) {
+            const auto& band = impl->bands[i];
+            const int paramId = PARAMID_FIRST_BAND + i * PER_BAND_PARAMS;
+            auto paramGain = registerParam(paramId);
+            paramGain->initValue(effectgain_param_entry{
+                paramId,
+                String("Band ") + std::to_string(i + 1),
+                "dB",
+                dsp_util::gainToLinScaleWithRange(band.gain, MTR_CEIL, DBFS_MUTE_POS)
+            });
+            paramGain->isBiPolar = true;
+            auto paramFreq = registerParam(paramId + 1);
+            paramFreq->initValue(effectgain_param_entry{
+                paramId + 1,
+                String("Band ") + std::to_string(i + 1) + " Freq",
+                "Hz",
+                freqToParam(band.freq)
+            });
+            auto paramQ = registerParam(paramId + 2);
+            paramQ->initValue(effectgain_param_entry{
+                paramId + 2,
+                String("Band ") + std::to_string(i + 1) + " Q",
+                "%",
+                band.q
+            });
+            auto paramBW = registerParam(paramId + 3);
+            paramBW->initValue(effectgain_param_entry{
+                paramId + 3,
+                String("Band ") + std::to_string(i + 1) + " BW",
+                "%",
+                band.bw
+            });
+            auto paramType = registerParam(paramId + 4);
+            paramType->initValue(effectgain_param_entry{
+                paramId + 4,
+                String("Band ") + std::to_string(i + 1) + " Type",
+                "",
+                static_cast<float>(band.type)
+            });
+        }
     }
     module_eq::~module_eq() {
         delete impl;
     }
-
+    class EQFilter {
+        using FPType = float;
+        std::array<double,16> state{};
+    public:
+        void eq(BandType type, float* buf, samplecount_t len, double freq, double gain, double q, double bw, double sampleRate) {
+            switch (type) {
+                case BandTypePeak:
+                    peak(buf, len, freq, gain, q, sampleRate);
+                    break;
+                case BandTypeLowShelf:
+                    lowShelf(buf, len, freq, gain, q, sampleRate);
+                    break;
+                case BandTypeHighShelf:
+                    highShelf(buf, len, freq, gain, q, sampleRate);
+                    break;
+                case BandTypeLowPass:
+                    lowPass(buf, len, freq, gain, bw, sampleRate);
+                    break;
+                case BandTypeHighPass:
+                    highPass(buf, len, freq, gain, bw, sampleRate);
+                    break;
+                case BandTypeBandPass:
+                    bandPass(buf, len, freq, gain, bw, sampleRate);
+                    break;
+                case BandTypeNotch:
+                    notch(buf, len, freq, gain, bw, sampleRate);
+                    break;
+                case BandTypeAllPass:
+                    allPass(buf, len, freq, gain, bw, sampleRate);
+                    break;
+                default:
+                    break;
+            }
+        }
+        void peak(float* buf, samplecount_t len, double freq, double gain, double q, double sampleRate) {
+            const double w0 = 2.0 * M_PI * freq / sampleRate;
+            const double alpha = std::sin(w0) / (2.0 * q);
+            const double A = std::pow(10.0, gain / 40.0);
+            const double a0 = 1.0 + alpha / A;
+            const double a1 = -2.0 * std::cos(w0);
+            const double a2 = 1.0 - alpha / A;
+            const double b0 = 1.0 + alpha * A;
+            const double b1 = -2.0 * std::cos(w0);
+            const double b2 = 1.0 - alpha * A;
+            for (samplecount_t i = 0; i < len; ++i) {
+                const double x = buf[i];
+                const double y = (b0 / a0) * x + (b1 / a0) * state[0] + (b2 / a0) * state[1] - (a1 / a0) * state[2] - (a2 / a0) * state[3];
+                state[1] = state[0];
+                state[0] = x;
+                state[3] = state[2];
+                state[2] = y;
+                buf[i] = y;
+            }
+        }
+        void lowShelf(float* buf, samplecount_t len, double freq, double gain, double q, double sampleRate) {
+            const double w0 = 2.0 * M_PI * freq / sampleRate;
+            const double A = std::pow(10.0, gain / 40.0);
+            const double alpha = std::sin(w0) / (2.0 * q);
+            const double a0 = 1.0 + alpha / A;
+            const double a1 = -2.0 * std::cos(w0);
+            const double a2 = 1.0 - alpha / A;
+            const double b0 = A * ((A + 1.0) - (A - 1.0) * std::cos(w0) + 2.0 * std::sqrt(A) * alpha);
+            const double b1 = 2.0 * A * ((A - 1.0) - (A + 1.0) * std::cos(w0));
+            const double b2 = A * ((A + 1.0) - (A - 1.0) * std::cos(w0) - 2.0 * std::sqrt(A) * alpha);
+            for (samplecount_t i = 0; i < len; ++i) {
+                const double x = buf[i];
+                const double y = (b0 / a0) * x + (b1 / a0) * state[0] + (b2 / a0) * state[1] - (a1 / a0) * state[2] - (a2 / a0) * state[3];
+                state[1] = state[0];
+                state[0] = x;
+                state[3] = state[2];
+                state[2] = y;
+                buf[i] = y;
+            }
+        }
+        void highShelf(float* buf, samplecount_t len, double freq, double gain, double q, double sampleRate) {
+            const double w0 = 2.0 * M_PI * freq / sampleRate;
+            const double A = std::pow(10.0, gain / 40.0);
+            const double alpha = std::sin(w0) / (2.0 * q);
+            const double a0 = 1.0 + alpha / A;
+            const double a1 = -2.0 * std::cos(w0);
+            const double a2 = 1.0 - alpha / A;
+            const double b0 = A * ((A + 1.0) + (A - 1.0) * std::cos(w0) + 2.0 * std::sqrt(A) * alpha);
+            const double b1 = -2.0 * A * ((A - 1.0) + (A + 1.0) * std::cos(w0));
+            const double b2 = A * ((A + 1.0) + (A - 1.0) * std::cos(w0) - 2.0 * std::sqrt(A) * alpha);
+            for (samplecount_t i = 0; i < len; ++i) {
+                const double x = buf[i];
+                const double y = (b0 / a0) * x + (b1 / a0) * state[0] + (b2 / a0) * state[1] - (a1 / a0) * state[2] - (a2 / a0) * state[3];
+                state[1] = state[0];
+                state[0] = x;
+                state[3] = state[2];
+                state[2] = y;
+                buf[i] = y;
+            }
+        }
+        void lowPass(float* buf, samplecount_t len, double freq, double gain, double bw, double sampleRate) {
+            const double w0 = 2.0 * M_PI * freq / sampleRate;
+            const double alpha = std::sin(w0) * std::sinh(std::log(2.0) / 2.0 * bw * w0 / std::sin(w0));
+            const double a0 = 1.0 + alpha;
+            const double a1 = -2.0 * std::cos(w0);
+            const double a2 = 1.0 - alpha;
+            const double b0 = (1.0 - std::cos(w0)) / 2.0;
+            const double b1 = 1.0 - std::cos(w0);
+            const double b2 = (1.0 - std::cos(w0)) / 2.0;
+            for (samplecount_t i = 0; i < len; ++i) {
+                const double x = buf[i];
+                const double y = (b0 / a0) * x + (b1 / a0) * state[0] + (b2 / a0) * state[1] - (a1 / a0) * state[2] - (a2 / a0) * state[3];
+                state[1] = state[0];
+                state[0] = x;
+                state[3] = state[2];
+                state[2] = y;
+                buf[i] = y;
+            }
+        }
+        void highPass(float* buf, samplecount_t len, double freq, double gain, double bw, double sampleRate) {
+            const double w0 = 2.0 * M_PI * freq / sampleRate;
+            const double alpha = std::sin(w0) * std::sinh(std::log(2.0) / 2.0 * bw * w0 / std::sin(w0));
+            const double a0 = 1.0 + alpha;
+            const double a1 = -2.0 * std::cos(w0);
+            const double a2 = 1.0 - alpha;
+            const double b0 = (1.0 + std::cos(w0)) / 2.0;
+            const double b1 = -(1.0 + std::cos(w0));
+            const double b2 = (1.0 + std::cos(w0)) / 2.0;
+            for (samplecount_t i = 0; i < len; ++i) {
+                const double x = buf[i];
+                const double y = (b0 / a0) * x + (b1 / a0) * state[0] + (b2 / a0) * state[1] - (a1 / a0) * state[2] - (a2 / a0) * state[3];
+                state[1] = state[0];
+                state[0] = x;
+                state[3] = state[2];
+                state[2] = y;
+                buf[i] = y;
+            }
+        }
+        void bandPass(float* buf, samplecount_t len, double freq, double gain, double bw, double sampleRate) {
+            const double w0 = 2.0 * M_PI * freq / sampleRate;
+            const double alpha = std::sin(w0) * std::sinh(std::log(2.0) / 2.0 * bw * w0 / std::sin(w0));
+            const double a0 = 1.0 + alpha;
+            const double a1 = -2.0 * std::cos(w0);
+            const double a2 = 1.0 - alpha;
+            const double b0 = alpha;
+            const double b1 = 0.0;
+            const double b2 = -alpha;
+            for (samplecount_t i = 0; i < len; ++i) {
+                const double x = buf[i];
+                const double y = (b0 / a0) * x + (b1 / a0) * state[0] + (b2 / a0) * state[1] - (a1 / a0) * state[2] - (a2 / a0) * state[3];
+                state[1] = state[0];
+                state[0] = x;
+                state[3] = state[2];
+                state[2] = y;
+                buf[i] = y;
+            }
+        }
+        void notch(float* buf, samplecount_t len, double freq, double gain, double bw, double sampleRate) {
+            const double w0 = 2.0 * M_PI * freq / sampleRate;
+            const double alpha = std::sin(w0) * std::sinh(std::log(2.0) / 2.0 * bw * w0 / std::sin(w0));
+            const double a0 = 1.0 + alpha;
+            const double a1 = -2.0 * std::cos(w0);
+            const double a2 = 1.0 - alpha;
+            const double b0 = 1.0;
+            const double b1 = -2.0 * std::cos(w0);
+            const double b2 = 1.0;
+            for (samplecount_t i = 0; i < len; ++i) {
+                const double x = buf[i];
+                const double y = (b0 / a0) * x + (b1 / a0) * state[0] + (b2 / a0) * state[1] - (a1 / a0) * state[2] - (a2 / a0) * state[3];
+                state[1] = state[0];
+                state[0] = x;
+                state[3] = state[2];
+                state[2] = y;
+                buf[i] = y;
+            }
+        }
+        void allPass(float* buf, samplecount_t len, double freq, double gain, double bw, double sampleRate) {
+            const double w0 = 2.0 * M_PI * freq / sampleRate;
+            const double alpha = std::sin(w0) * std::sinh(std::log(2.0) / 2.0 * bw * w0 / std::sin(w0));
+            const double a0 = 1.0 + alpha;
+            const double a1 = -2.0 * std::cos(w0);
+            const double a2 = 1.0 - alpha;
+            const double b0 = 1.0 - alpha;
+            const double b1 = -2.0 * std::cos(w0);
+            const double b2 = 1.0 + alpha;
+            for (samplecount_t i = 0; i < len; ++i) {
+                const double x = buf[i];
+                const double y = (b0 / a0) * x + (b1 / a0) * state[0] + (b2 / a0) * state[1] - (a1 / a0) * state[2] - (a2 / a0) * state[3];
+                state[1] = state[0];
+                state[0] = x;
+                state[3] = state[2];
+                state[2] = y;
+                buf[i] = y;
+            }
+        }
+        /* void peakingEQ(float* buf, samplecount_t len, double freq, double gain, double bw, double sampleRate) {
+            const double w0 = 2.0 * M_PI * freq / sampleRate;
+            const double alpha = std::sin(w0) * std::sinh(std::log(2.0) / 2.0 * bw * w0 / std::sin(w0));
+            const double a0 = 1.0 + alpha;
+            const double a1 = -2.0 * std::cos(w0);
+            const double a2 = 1.0 - alpha;
+            const double b0 = 1.0 + alpha * gain;
+            const double b1 = -2.0 * std::cos(w0);
+            const double b2 = 1.0 - alpha * gain;
+            for (samplecount_t i = 0; i < len; ++i) {
+                const double x = buf[i];
+                const double y = (b0 / a0) * x + (b1 / a0) * state[0] + (b2 / a0) * state[1] - (a1 / a0) * state[2] - (a2 / a0) * state[3];
+                state[1] = state[0];
+                state[0] = x;
+                state[3] = state[2];
+                state[2] = y;
+                buf[i] = y;
+            }
+        } */
+    };
     void module_eq::process(const DAW::Host::Host* const host, AudioBlock* in, AudioBlock* out, double tick, double samplePos, int32_t numSamples, playback_state state) {
         dbgassert(in->samples == format.blockSize
                 && out->samples == format.blockSize
                 && format.blockSize > 0
                 && format.sampleRate > 0);
+        if (impl->tmpBlock.samples != format.blockSize || impl->tmpBlock.channels != out->channels) {
+            impl->tmpBlock = AudioBlock(out->channels, format.blockSize);
+        }
+
+        auto* bufEqd = &impl->tmpBlock;
+        bufEqd->copyFrom(in);
+        auto channelCount = bufEqd->channels;
+        for (size_t bandIdx = 0; bandIdx < impl->bands.size(); ++bandIdx) {
+            const auto& band = impl->bands[bandIdx];
+            auto filters = impl->filters[bandIdx];
+            while (filters.size() < out->channels) {
+                filters.emplace_back();
+            }
+            for (channelnum_t ch = 0; ch < channelCount; ++ch) {
+                auto& filter = filters[ch];
+                auto* buf = bufEqd->buf[ch];
+                filter->eq(band.type, buf, bufEqd->samples, band.freq, band.gain, band.q, band.bw, format.sampleRate);
+            }
+        }
         const auto autParGain = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_GAIN));
         const auto autParPan = DAW::GetParameterModulationFromRouting(pluginMgr, DAW::GetRoutingFromDestinationParam(this, PARAM_PAN));
         out->clear();
@@ -78,9 +390,9 @@ namespace PluginEQ {
                 }
                 /* fast path: center pan */
                 if (math::abs(fPanTrack - 0.5f) < 0.005f) {
-                    out->addFromOp(in, AudioBlock::mix_op::ADD, fGain);
+                    out->addFromOp(bufEqd, AudioBlock::mix_op::ADD, fGain);
                 } else {
-                    DAW::Panning::MultiplyConstant(in, out, fGain * (1.0f/DAW::Panning::GetCenterGain()), fPanTrack);
+                    DAW::Panning::MultiplyConstant(bufEqd, out, fGain * (1.0f/DAW::Panning::GetCenterGain()), fPanTrack);
                 }
             } else {
                 /* fast path: fully muted */
@@ -89,7 +401,7 @@ namespace PluginEQ {
         }
         const auto tickBegin = tick;
         const auto tickEnd = tickBegin + host->getAudioStreamProperties().ticksPerBlock;
-        DAW::Host::MixWithGainAndPanAutomation(host, impl->buf, in, out, autParGain, autParPan, tickBegin, tickEnd, state, MTR_CEIL, DBFS_MUTE_POS);
+        DAW::Host::MixWithGainAndPanAutomation(host, impl->buf, bufEqd, out, autParGain, autParPan, tickBegin, tickEnd, state, MTR_CEIL, DBFS_MUTE_POS);
     }
 
     param_converted_t module_eq::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
