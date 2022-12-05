@@ -363,7 +363,7 @@ namespace PluginEQ {
             const auto& band = impl->bands[bandIdx];
             auto filters = impl->filters[bandIdx];
             while (filters.size() < out->channels) {
-                filters.emplace_back();
+                filters.emplace_back(std::make_shared<EQFilter>());
             }
             for (channelnum_t ch = 0; ch < channelCount; ++ch) {
                 auto& filter = filters[ch];
