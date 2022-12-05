@@ -9,8 +9,8 @@ Unicode True
 !ifndef DIST_LOC
 !error "DIST_LOC not defined"
 !endif
-!ifndef PROJECT_BINARY_PATH
-!error "PROJECT_BINARY_PATH not defined"
+!ifndef PROJECT_MAIN_BINARY
+!error "PROJECT_MAIN_BINARY not defined"
 !endif
 !ifndef PRODUCT_VERSION
 !error "PRODUCT_VERSION not defined"
@@ -55,7 +55,7 @@ VIProductVersion "${PRODUCT_VERSION_MAJOR_MINOR_PATCH_REVISION}"
 VIAddVersionKey "ProductName"  "${PRODUCT_NAME_DISPLAY}"
 VIAddVersionKey "CompanyName"  "${PROJECT_VENDOR_NAME}"
 VIAddVersionKey "LegalCopyright"  "${PRODUCT_COPYRIGHT}"
-VIAddVersionKey "FileDescription"  "${PROJECT_PRODUCT_NAME} ${PRODUCT_VERSION}"
+VIAddVersionKey "FileDescription"  "${PRODUCT_NAME_DISPLAY} ${PRODUCT_VERSION}"
 VIAddVersionKey "FileVersion"  "${PRODUCT_VERSION}"
 
 ######################################################################
@@ -108,7 +108,7 @@ Section -MainProgram
 ${INSTALL_TYPE}
 SetOverwrite ifnewer
 SetOutPath "$INSTDIR"
-File /oname=${MAIN_APP_EXE} "${PROJECT_BINARY_PATH}"
+File /oname=${MAIN_APP_EXE} "${DIST_LOC}\${PROJECT_MAIN_BINARY}"
 File /oname=daw-pluginscanner.exe "${DIST_LOC}\daw-pluginscanner.exe"
 File "${DIST_LOC}\libsoxr-clang-release.dll"
 File "${DIST_LOC}\libc++.dll"
