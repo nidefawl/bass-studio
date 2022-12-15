@@ -1814,10 +1814,10 @@ void Host::resetResamplers() {
 }
 
 void Host::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
-    impl->audioStream = stream;
-    if (stream) {
-        const auto numInputChannels = math::max<channelnum_t>(stream->getNumInputChannels(), impl->inputChannels);
-        const auto numOutputChannels = math::max<channelnum_t>(stream->getNumOutputChannels(), impl->outputChannels);
+    impl->audioStream = std::move(stream);
+    if (impl->audioStream) {
+        const auto numInputChannels = math::max<channelnum_t>(impl->audioStream->getNumInputChannels(), impl->inputChannels);
+        const auto numOutputChannels = math::max<channelnum_t>(impl->audioStream->getNumOutputChannels(), impl->outputChannels);
 
         if (numInputChannels != impl->inputChannels || numOutputChannels != impl->outputChannels) {
             impl->destroyResamplers();
@@ -1833,8 +1833,8 @@ void Host::setOutput(std::shared_ptr<DAW::AudioIO::AudioStream> stream) {
         impl->outputChannels = numOutputChannels;
     }
     auto sampleFormatExternal = this->m_sampleFormatExternal;
-    auto extSampleRate = stream ? stream->getSampleRate() : sampleFormatExternal.sampleRate;
-    auto extBlockSize = stream ? stream->getBlockSize() : sampleFormatExternal.blockSize;
+    auto extSampleRate = impl->audioStream ? impl->audioStream->getSampleRate() : sampleFormatExternal.sampleRate;
+    auto extBlockSize = impl->audioStream ? impl->audioStream->getBlockSize() : sampleFormatExternal.blockSize;
     sampleFormatExternal = { extSampleRate, extBlockSize, sampleformat_bits_t::FLOAT_32 };
     this->m_sampleFormatExternal        = sampleFormatExternal;
 }
