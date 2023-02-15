@@ -4626,7 +4626,6 @@ class gui_synth_stats_list_entry final : public gui_list_entry {
 
         void buttonClicked(guibase* button) override {
             auto param = dynamic_cast<guiknob_pluginparam*>(button);
-            dbgassert(moduleInstance);
             if (param && moduleInstance) {
                 auto paramIdx          = param->getParamIdx();
                 auto paramValue        = moduleInstance->getParamValueDisplay(paramIdx);
@@ -4978,7 +4977,7 @@ class guicontainer_plugin_synth final : public guictr_base {
             return uiId != UID_VIEW_CTR_NODES;
         }
     };
-
+    void fml() {/*NO*/}
     void module_synth::getUiSnapshot(snapshot_t& snapshot) {
         for (auto& view : views) {
             auto implCtrType = dynamic_cast<SynthPluginViewCtr*>(view.get());
