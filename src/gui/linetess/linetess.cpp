@@ -456,6 +456,9 @@ namespace lineplot {
         static constexpr int INSET_OUTER = 8;
         static constexpr int INSET_INNER = 24;
         DawInstance* daw;
+        audiothread_ringbuffer_t ringbuffer;
+        moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
+        samplecount_t audioQueueSamplePos = 0;
         std::unique_ptr<audioanaylzer> audioAnalyzer;
         audiohost* optionalAudioHost{}; // only set when running in standalone mode 
         audio_spectrum spectrum;
@@ -512,6 +515,7 @@ namespace lineplot {
 
 
         //    PathMode curMode = PLOT_EXPRESSION;
+        bool bIsIdle = true;
         bool bInit = false;
         int curSplineMode        = 1;
         uint32_t curPath         = 0;
@@ -688,6 +692,7 @@ void main(void) {
         explicit guictr_audiovis(DawInstance* daw) 
             : guictr_base(), daw(daw), curRenderer(pathRenderers[curRendererType])
         {
+            allocRingBuffer(ringbuffer, 2);
             setGuiType(gui_type::CTR_TYPE_AUDIO_VISUALIZER);
             for (int32_t i = 0; i < audio_spectrum::NUM_CHANNELS; i++) {
                 auto& buf = bufferProcessed[i];
@@ -716,25 +721,41 @@ void main(void) {
             for (auto* input : controlsParameters) {
                 delete input;
             }
-            // PyMachine::deinitPython();
+        }
+        void enqueue(AudioBlock* buf) {
+            auto& writePos = ringbuffer.writePos;
+            AudioBuffer** buffers = ringbuffer.buffers;
+            AudioBuffer* const qBuf = buffers[writePos%RING_BUF_SIZE];
+            dbgassert(!qBuf->inUse);
+            qBuf->submitted = false;
+            qBuf->output->realloc(buf->samples);
+            qBuf->output->copyFrom(buf);
+            // if (enableProfiling) time1 += timerBlock.getTimeReset();
+            qBuf->inUse = true;
+            qBuf->submitted = true;
+            // qBuf->time = bufferTimeInfo;
+            // writePos = (writePos+1) & RING_BUF_MASK;
+            // stream->enqueue(qBuf);
+            this->audioQueue.enqueue(qBuf);
+        }
+
+        bool try_dequeue(AudioBuffer*& buf) {
+            auto success = this->audioQueue.try_dequeue(buf);
+            if (success) {
+                buf->time.samplePosOutput = audioQueueSamplePos;
+                audioQueueSamplePos += buf->output->samples;
+            }
+            return success;
         }
         void onRemove() override {
-            for (auto& framebuffer : framebuffers) {
-                framebuffer->destroy();
-                framebuffer.reset();
-            }
+            guictr_base::onRemove();
             if (optionalAudioHost) {
                 optionalAudioHost->stopAudio();
                 // delete optionalAudioHost;
                 // optionalAudioHost = nullptr;
             } else {
             }
-            bInit = false;
-            // for (auto* input : controlsParameters) {
-            //     delete input;
-            // }
-            // controlsParameters.clear();
-            // PyMachine::deinitPython();
+            bIsIdle = true;
         }
         void init() {
             reloadPythonModule();
@@ -1903,17 +1924,15 @@ void main(void) {
             }
         }
         void prerender(NVGcontext* vg) override {
-            static bool first = true;
-            if (first && ((daw&&daw->getAudioHost()&&daw->getAudioHost()->isStreaming())||optionalAudioHost)) {
-                first = false;
-#ifdef HAVE_PYTHON_INTERPRETER
-                PyMachine::initPython();
-#endif
-                init();
-                bInit = true;
+            if (bIsIdle && ((daw&&daw->getAudioHost()&&daw->getAudioHost()->isStreaming())||optionalAudioHost)) {
+                bIsIdle = false;
+            }
+            if (bIsIdle) {
+                return;
             }
             if (!bInit) {
-                return;
+                init();
+                bInit = true;
             }
             static int a = 0;
             hires_timer_t timer;
@@ -1978,35 +1997,42 @@ void main(void) {
             int nR        = 0;
             bool rendered = false;
             const bool renderAudio = curPreset.mode == FFT_SPECTRUM || curPreset.mode == PATH_SCRIPT;
-
-            if (optionalAudioHost && audioAnalyzer) {
-                auto stream = optionalAudioHost->getStream(0);
-                if (stream) {
-                    AudioBuffer* bufInput = nullptr;
-                    while (stream->try_dequeueInput(bufInput)) {
-                        if (bufInput->output->channels) {
-                            audioAnalyzer->processBlock(bufInput->output, curPreset.fGain);
-                            mixDbfsScaleBands(audioAnalyzer->analyzerLf.get(), audioAnalyzer->analyzerHf.get(), spectrum);
-                            if (curPreset.mode == AUDIO_WAVEFORM) {
-                                if (buffer.feed(bufInput->output, bufferProcessed)) {
-                                    waveformWindowOffset  = waveformWindowOffset2 - (WAVEFORM_BUFFER_SIZE / 2);
-                                    waveformWindowOffset2 = 0;
-                                }
-                            }
+            DAW::AudioIO::AudioStream* stream = nullptr;
+            if (optionalAudioHost) {
+                stream = optionalAudioHost->getStream(0);
+            }
+            auto processAudioBuffer = [&](AudioBuffer* bufInput) {
+                if (bufInput->output->channels) {
+                    audioAnalyzer->processBlock(bufInput->output, curPreset.fGain);
+                    mixDbfsScaleBands(audioAnalyzer->analyzerLf.get(), audioAnalyzer->analyzerHf.get(), spectrum);
+                    if (curPreset.mode == AUDIO_WAVEFORM) {
+                        if (buffer.feed(bufInput->output, bufferProcessed)) {
+                            waveformWindowOffset  = waveformWindowOffset2 - (WAVEFORM_BUFFER_SIZE / 2);
+                            waveformWindowOffset2 = 0;
                         }
-
-                        bufInput->inUse = false;
-                        if (renderAudio) {
-                            renderPass(w, h, oversampleFactor);
-                            rendered = true;
-                        }
-                        nR++;
-                        if (nR >= 3) 
-                            break;
                     }
                 }
-            } else if (audioAnalyzer) {
-
+                if (renderAudio) {
+                    renderPass(w, h, oversampleFactor);
+                    rendered = true;
+                }
+                nR++;
+            };
+            AudioBuffer* bufInput = nullptr;
+            if (stream && audioAnalyzer) {
+                while (stream->try_dequeueInput(bufInput)) {
+                    processAudioBuffer(bufInput);
+                    bufInput->inUse = false;
+                    if (nR >= 3) 
+                        break;
+                }
+            } else {
+                while (try_dequeue(bufInput)) {
+                    processAudioBuffer(bufInput);
+                    bufInput->inUse = false;
+                    if (nR >= 3) 
+                        break;
+                }
             }
             // log_printf("processed %d blocks\n", nR);
             if (!renderAudio || !rendered) {
@@ -2450,6 +2476,7 @@ CEREAL_CLASS_VERSION(lineplot::settings_preset_t, 1);
 // }
 
 namespace DAW::UI {
+static bool gPythonInitialized = false;
 
 guictr_base* MakeAudioVisualizer(DawInstance* daw) {
     // glad_PrevglBindVertexArray = glad_glBindVertexArray;
@@ -2458,6 +2485,24 @@ guictr_base* MakeAudioVisualizer(DawInstance* daw) {
     // glad_glBindVertexArray = myBindArr;
     auto ctr = new lineplot::guictr_audiovis(daw);
     return ctr;
+}
+
+void InitPythonInterpreter() {
+#ifdef HAVE_PYTHON_INTERPRETER
+    if (!gPythonInitialized) {
+        gPythonInitialized = true;
+        PyMachine::initPython();
+    }
+#endif
+}
+
+void DeinitPythonInterpreter() {
+#ifdef HAVE_PYTHON_INTERPRETER
+    if (gPythonInitialized) {
+        gPythonInitialized = false;
+        PyMachine::deinitPython();
+    }
+#endif
 }
 
 } // namespace DAW::UI
