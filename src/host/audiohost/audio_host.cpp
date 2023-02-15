@@ -337,6 +337,7 @@ audiohost::HostIOStream* audiohost::getStream(size_t idx) {
     }
     return nullptr;
 }
+
 std::shared_ptr<audiohost::HostIOStream> audiohost::getStreamSharedPtr(size_t idx) {
     if (streams.size() > idx) {
         auto it = std::find_if(streams.begin(), streams.end(), [idx](std::shared_ptr<HostIOStream>& ptr) {
@@ -397,6 +398,7 @@ void audiohost::HostIOStream::enqueueInput(AudioBuffer* buf) {
     AudioBlock* blockIn = buf->output;
     metersInput.update(blockIn, 1.0f);
     metersInput.onTick(blockIn->samples / (double) this->host->lSampleRate);
+    //TODO: skip this copy step if guictr_input_meters is not visible
     for (auto & nTrack : channelsInput) {
         auto* track = nTrack.get();
         //if (track->buf.channels != buf->output->channels) {

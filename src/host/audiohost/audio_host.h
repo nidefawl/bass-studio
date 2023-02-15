@@ -19,7 +19,7 @@ class audiohost {
     friend class HostIOStream;
     friend class audiohost_callback;
 public:
-class HostIOStream final : public DAW::AudioIO::AudioStream {
+    class HostIOStream final : public DAW::AudioIO::AudioStream {
         public:
         struct IOChannel {
             AudioBlock buf;
