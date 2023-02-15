@@ -359,7 +359,7 @@ namespace PluginEQ {
         auto* bufEqd = &impl->tmpBlock;
         bufEqd->copyFrom(in);
         auto channelCount = bufEqd->channels;
-        for (size_t bandIdx = 0; bandIdx < impl->bands.size(); ++bandIdx) {
+        for (size_t bandIdx = 0; bandIdx < 1 && bandIdx < impl->bands.size(); ++bandIdx) {
             const auto& band = impl->bands[bandIdx];
             auto filters = impl->filters[bandIdx];
             while (filters.size() < out->channels) {
