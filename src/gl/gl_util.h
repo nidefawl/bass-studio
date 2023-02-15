@@ -9,6 +9,17 @@ int getStatus(unsigned int obj, unsigned int type);
 String getLog(int logtype, unsigned int obj);
 int compileShader(int type, const String& src);
 bool isGLContextPresent();
+
+class OpenGLResource {
+    void *glfwWindowHandle;
+    // TODO: store previous context and restore it in destructor
+public:
+    OpenGLResource();
+    virtual ~OpenGLResource() = default;
+    virtual void destroy() = 0;
+    bool makeContextCurrent(); 
+};
+
 inline void gldPerspective(double* mat4x4, double fovy, double aspect, double zNear, double zFar) {
     const double f = 1.0 / tan(fovy * M_PI / 360);
     const double xform[16] = {

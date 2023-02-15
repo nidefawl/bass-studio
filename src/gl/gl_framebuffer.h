@@ -12,7 +12,7 @@
 #define MAX_COLOR_ATT 8
 #define GL_ERROR_CHECKS true
 
-class FrameBuffer {
+class FrameBuffer : public OpenGLResource {
 public:
     static int32_t instanceCount;
     static void unbindFramebuffer() {
@@ -33,16 +33,16 @@ public:
     }
 
 
-    const GLint renderWidth;
-    const GLint renderHeight;
+    const GLint renderWidth  = 0;
+    const GLint renderHeight = 0;
     GLuint fb                = 0;
     bool isComplete          = false;
     bool hasDepth            = false;
     bool isShadowDepthBuffer = false;
     bool hasCustomClearColor = false;
-    GLint numColorTextures     = 0;
+    GLint numColorTextures   = 0;
     GLenum highestColorAtt   = 0;
-    GLuint depthTexture         = 0;
+    GLuint depthTexture      = 0;
     std::array<vec4, MAX_COLOR_ATT> clearColor{};
     std::array<GLuint, MAX_COLOR_ATT> colorAttTextures{};
     std::array<GLint, MAX_COLOR_ATT> colorAttFormats{};
@@ -55,19 +55,17 @@ public:
     GLint mipmapLevels           = 0;
     GLint anisotropicFilterLevel = -1;
 
-    FrameBuffer(int w, int h, int type = GL_RGBA16F, bool depthBuffer = true, vec4 clrCol = vec4(0.0f)) : renderWidth(w), renderHeight(h) {
+    FrameBuffer(int w, int h, int type = GL_RGBA16F, bool depthBuffer = true, vec4 clrCol = vec4(0.0f)) 
+        : renderWidth(w), renderHeight(h) {
         setColorAtt(GL_COLOR_ATTACHMENT0, type);
         setFilter(GL_COLOR_ATTACHMENT0, GL_LINEAR, GL_LINEAR);
         setClearColor(GL_COLOR_ATTACHMENT0, clrCol);
         if (depthBuffer)
             setHasDepthAttachment();
     }
-    FrameBuffer() : FrameBuffer(0, 0) {
-    }
-    ~FrameBuffer() {
-        dbgassert(isGLContextPresent());
-        if (isGLContextPresent())
-            destroy();
+    FrameBuffer() = delete;
+    ~FrameBuffer() override {
+        destroy();
     }
     void setColorTexExtFmt(int _colorTexExtFmt) {
         colorTexExtFmt = _colorTexExtFmt;
@@ -340,8 +338,8 @@ public:
         }
     }
 
-    void destroy() {
-        if (fb != 0) {
+    void destroy() override {
+        if (fb != 0 && makeContextCurrent()) {
             glDeleteFramebuffers(1, &fb);
             fb = 0;
             if (GL_ERROR_CHECKS) checkGLError("FrameBuffers.glDeleteFramebuffers");

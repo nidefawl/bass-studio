@@ -33,17 +33,16 @@ int compileShaderCombo(T* owner, const char* fnameVsh, const char* fnameFsh) {
     return buildShaderProgram(glSourceLoader->sources);
 }
 
-struct gl_shader_program_base_t {
+struct gl_shader_program_base_t : public OpenGLResource {
     GLint program = 0;
     std::vector<VertexAttr> attributes;
-    ~gl_shader_program_base_t() {
-        //TODO: glDelete call may not work reliably
-        // if this is a global it might get called after opengl-context is gone
-        if (isGLContextPresent()) {
-            if (program) {
-                glDeleteProgram(program);
-                checkGLError("glDeleteProgram");
-            }
+    ~gl_shader_program_base_t() override {
+        destroy();
+    };
+    void destroy() override {
+        if (program && makeContextCurrent()) {
+            glDeleteProgram(program);
+            checkGLError("glDeleteProgram");
         }
     }
     int setAttributeLocations() {

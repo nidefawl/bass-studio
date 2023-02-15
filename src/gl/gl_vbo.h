@@ -1,8 +1,9 @@
 #pragma once
+#include "gl/gl_util.h"
 #include "types.h"
 #include "logging.h"
 
-struct DrawVBO {
+struct DrawVBO : public OpenGLResource {
     static int32_t instanceCount;
     uint32_t vaoId      = 0;
     uint32_t vboVertId  = 0;
@@ -10,8 +11,8 @@ struct DrawVBO {
     int32_t  nIndices   = 0;
     size_t vboVertSize = 0;
     size_t vboIdxSize  = 0;
-    ~DrawVBO();
-    void destroy();
+    ~DrawVBO() override;
+    void destroy() override;
     void genBuffers();
 
     void uploadBuffer(uint32_t bufferType, void* ptr, size_t len);

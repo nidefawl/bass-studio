@@ -1,3 +1,4 @@
+#include "gl/gl_util.h"
 #include "glheaders.h"
 #include <GLFW/glfw3.h>
 #include <vector>
@@ -108,9 +109,7 @@ String getLog(int logtype, GLuint obj) {
     if (!infoLog.empty()) s = infoLog.data();
     return s;
 }
-bool isGLContextPresent() {
-    return glfwIsContextPresent();
-}
+
 int compileShader(int type, const String& src) {
     int iShader = glCreateShader(type);
     if (iShader == 0) {
@@ -224,32 +223,48 @@ void DrawVBO::uploadBuffer(uint32_t bufferType, void* ptr, size_t len) {
     checkGLError("DrawVBO::uploadBuffer");
 }
 void DrawVBO::destroy() {
-    if (vaoId) {
-        glDeleteVertexArrays(1, &vaoId);
+    if (makeContextCurrent()) {
+        if (vaoId) {
+            glDeleteVertexArrays(1, &vaoId);
+        }
+        if (vboIdxId && vboVertId) {
+            const GLuint buffers[] = {vboIdxId, vboVertId};
+            glDeleteBuffers(2, buffers);
+        } else if (vboVertId) {
+            glDeleteBuffers(1, &vboVertId);
+        } else if (vboIdxId) {
+            glDeleteBuffers(1, &vboIdxId);
+        }
     }
     if (vboIdxId || vboVertId) {
         --instanceCount;
     }
-    if (vboIdxId && vboVertId) {
-        const GLuint buffers[] = {vboIdxId, vboVertId};
-        glDeleteBuffers(2, buffers);
-    } else if (vboVertId) {
-        glDeleteBuffers(1, &vboVertId);
-    } else if (vboIdxId) {
-        glDeleteBuffers(1, &vboIdxId);
-    }
-    vaoId       = 0;
 
+    vaoId       = 0;
     vboVertId   = 0;
     vboIdxId    = 0;
     nIndices    = 0;
     vboVertSize = 0;
     vboIdxSize  = 0;
 }
-DrawVBO::~DrawVBO() {
-    if (isGLContextPresent()) {
-        destroy();
-    }
+
+bool isGLContextPresent() {
+    return glfwIsContextPresent();
 }
+
+OpenGLResource::OpenGLResource() : glfwWindowHandle(glfwGetCurrentContext()) {}
+
+bool OpenGLResource::makeContextCurrent() {
+    if (glfwWindowHandle) {
+        glfwMakeContextCurrent(static_cast<GLFWwindow*>(glfwWindowHandle));
+        return true;
+    }
+    return false;
+}
+
+DrawVBO::~DrawVBO() {
+    destroy();
+}
+
 int32_t FrameBuffer::instanceCount = 0;
 int32_t DrawVBO::instanceCount = 0;
