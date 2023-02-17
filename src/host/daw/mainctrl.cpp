@@ -1106,9 +1106,6 @@ void MainCtrl::startApp() {
         String((char*)glGetString(GL_VERSION))
     };
 
-    DawCtrl::relayout();
-    updateVisibleTrackContents();
-
     //TODO: move this out of here
     if (!loadProject.empty()) {
         String file;
@@ -1117,6 +1114,7 @@ void MainCtrl::startApp() {
     } else {
         daw.setEmptyProject();
     }
+
     auto& layouts = getLayouts();
     // view->storeLayout(layouts[0]);
     view->loadLayout(layouts[0]);
@@ -1132,6 +1130,9 @@ void MainCtrl::startApp() {
             handleGlobalCommand(temp);
         }
     }
+
+    DawCtrl::relayout();
+    updateVisibleTrackContents();
 }
 
 
