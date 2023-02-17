@@ -278,7 +278,7 @@ struct lfo_automation_src_param_t final : public automated_param_t {
                 auto& channelSnapshot = snapshot.channels[i];
                 macroAutomationSrcParams[i].shape.pts = channelSnapshot.shape.shape.curve.pts;
                 if (snapshot.version > 2) {
-                    macroAutomationSrcParams[i].syncFlags = channelSnapshot.syncFlags;
+                    setSyncRatio(i, channelSnapshot.syncFlags);
                 }
             }
             return true;
