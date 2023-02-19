@@ -21,6 +21,7 @@ public:
     void loadSnapshot(const plugin_snapshot_t& snapshot) override;
     std::shared_ptr<PluginViewContainers> createViewCtrInternal() override;
 
+    impl_data_t* getImpl() const { return impl; }
 };
 
 } // namespace PluginEQ
