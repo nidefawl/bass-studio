@@ -198,7 +198,7 @@ public:
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GAIN, 0, "Gain", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GROUP, 0, "Group", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_LATENCY, 0, "Latency", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SAMPLE_CRUSH, 0, "Sample Crush", false });
+        // effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SAMPLE_CRUSH, 0, "Sample Crush", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SAMPLE_DELAY, 0, "Sample Delay", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_STEREO_WIDTH, 0, "Stereo Width", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_SYNTH, 0, "Synth", true });
