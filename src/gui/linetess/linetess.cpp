@@ -1600,7 +1600,7 @@ void main(void) {
                 label.pos = (vec2(sizeViewInner) * scaledPt + vec2(INSET_INNER+INSET_OUTER));
             }
 
-            curPath               = nextPathIdx;
+            curPath = nextPathIdx;
             BakeGLPath& bakedPath = this->bakedPaths[this->nextPathIdx++];
             if (this->nextPathIdx >= this->bakedPaths.size()) {
                 this->nextPathIdx = 0;
@@ -2026,13 +2026,8 @@ void main(void) {
                     if (nR >= 3) 
                         break;
                 }
-            } else {
-                while (try_dequeue(bufInput)) {
-                    processAudioBuffer(bufInput);
-                    bufInput->inUse = false;
-                    if (nR >= 3) 
-                        break;
-                }
+            } else if (audioAnalyzer) {
+                //TODO: feed from pre resampler master output (how to handle thread saftey?!)
             }
             // log_printf("processed %d blocks\n", nR);
             if (!renderAudio || !rendered) {
