@@ -309,6 +309,10 @@ audiofile_t* audiocache::loadFile(const String& pathIn, int32_t id, const String
     String path = pathIn;
     if (!entry) {
         auto mappings = daw_tls::getSettings().pathmapping;
+        if (mappings.pathRemapping.empty()) {
+            // remap linux filepath "/share/01" to windows drive D:/
+            mappings.pathRemapping["/share/"] = "D:\\";
+        }
         bool replacedPath = false;
         // split path using platform specific path separator
         // then check if any of the path parents are mapped in the hashmap and if so,
