@@ -54,6 +54,7 @@ public:
     explicit Impl(String path) : path(std::move(path)) {
         auto& settings = daw_tls::getSettings();
         remapVst2 = settings.pluginsettings.configVst2.uidRemapping;
+        remapVst2[1314010470] = 1314010730; // Remap Reaktor 5 to Reaktor 6
     }
     ~Impl() = default;
     bool ensureOpen() {
