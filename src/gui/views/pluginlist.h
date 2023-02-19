@@ -194,7 +194,7 @@ public:
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_LFO, 0, "LFO", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_MACROS, 0, "Macros", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_EMPTY, 0, "Empty", false });
-        effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_EQ, 0, "EQ", false });
+        // effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_EQ, 0, "EQ", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GAIN, 0, "Gain", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_GROUP, 0, "Group", false });
         effectEntries.push_back(module_desc_t{ PLUGIN_TYPE_LATENCY, 0, "Latency", false });
