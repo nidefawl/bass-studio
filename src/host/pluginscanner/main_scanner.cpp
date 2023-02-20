@@ -964,7 +964,7 @@ static int runScannerClient() {
 int main(int argc, char* argv[]) {
     seqthreads::registerThread("mainthread", seqthreads::ThreadType::MainThread);
     App::Platform::initPlatformEnvironment(BuildInfo::PRODUCT_NAME_LOWER);
-    if (argc < 1) {
+    if (argc < 2 || String(argv[1]) == "--help"|| String(argv[1]) == "-h") {
         String cwdPathDB = App::Platform::toUserdataPath("data/plugins.db3");
         log_message("Daw VST scanner version %s\n", BuildInfo::BUILD_BINARY_VERSION);
         log_message("This program can be run in server or client mode.");
@@ -994,7 +994,7 @@ int main(int argc, char* argv[]) {
 #endif
     auto& tls = daw_tls::initNewTls();
 
-    if (argc == 1 || (argc > 1 && !strcmp("-server", argv[1]))) {
+    if (argc == 1 || (argc > 1 && !strcmp("-server", argv[1]))) { //TODO: default args changed
         PluginScannerImplementation::logPrefixIdx = PROC_SIDE_SERVER;
         PluginScannerImplementation::pluginscanner_server_options options;
         options.launchProcess              = true;
