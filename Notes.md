@@ -226,11 +226,3 @@ Test handling of tasks and threads not responding (stuck in inf loop)
 # TODOs GUI / Rendering
 determine_string_width can access opengl context in rare cases from guibase::layout() when context isn't present/bound
 
-# BaseCtrl gui context pointers
-Right now the onRemove function of guibase calls BaseCtrl to reset the following pointers. 
-This would not be required if the following pointers were saferefs:
-    guibase* guiOver       = nullptr; // updates on mouse move "current mouseover"
-    guibase* guiDragged    = nullptr; // updates on mouse click "currently dragged", set from guiOver
-    guibase* guiCaptured   = nullptr; // updates when cursor is hidden, set from guiDragged
-    guibase* guiFocused    = nullptr; // updates on mouse click, set from guiOver
-    guibase* guiCtrFocused = nullptr; // updates on mouse click, handles keyboard input
