@@ -8,6 +8,12 @@
 #include "gl/gl_attr.h"
 #include "gl/gl_vbo.h"
 
+extern const char* const TEXTURED_GLSL_FRAG;
+extern const char* const TEXTURED_GLSL_VERT;
+extern const char* const TEST_GLSL_FRAG;
+extern const char* const TEST_GLSL_VERT;
+extern const char* const PERFGRAPH_GLSL_FRAG;
+
 struct glshader_src {
     int32_t stage;
     String filepath;
@@ -28,6 +34,17 @@ int compileShaderCombo(T* owner, const char* fnameVsh, const char* fnameFsh) {
     if (!glSourceLoader->addStageSrc(GL_VERTEX_SHADER, fnameVsh))
         return -2;
     if (!glSourceLoader->addStageSrc(GL_FRAGMENT_SHADER, fnameFsh))
+        return -2;
+    owner->preprocessSources(glSourceLoader->sources);
+    return buildShaderProgram(glSourceLoader->sources);
+}
+
+template<typename T>
+int compileBuiltinShader(T* owner, const char* szVertexShader, const char* szFragmentShader) {
+    auto glSourceLoader = std::make_unique<glshader_srcloader>();
+    if (!glSourceLoader->setStageSrc(GL_VERTEX_SHADER, "<buitin-vsh>", szVertexShader))
+        return -2;
+    if (!glSourceLoader->setStageSrc(GL_FRAGMENT_SHADER, "<buitin-fsh>", szFragmentShader))
         return -2;
     owner->preprocessSources(glSourceLoader->sources);
     return buildShaderProgram(glSourceLoader->sources);

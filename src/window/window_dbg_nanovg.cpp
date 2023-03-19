@@ -8,10 +8,11 @@
 #include "math/mat.h"
 #include "fileio.h"
 #include "str_util.h"
-#include "../gl/gl_util.h"
-#include "../gl/gl_attr.h"
-#include "../gl/gl_vbo.h"
-#include "../gl/gl_tess2d.h"
+#include "gl/gl_util.h"
+#include "gl/gl_attr.h"
+#include "gl/gl_vbo.h"
+#include "gl/gl_tess2d.h"
+#include "gl/gl_shader.h"
 #include "renderresources.h"
 #include "color_util.h"
 #include "rand.h"
@@ -35,18 +36,18 @@ class window_impl final : public window_abstract_t {
     };
     DrawVBO vbo;
     int loadShader() {
-        String srcVertex;
-        String srcFragment;
-        int64_t ret = ReadFileText("textured.vsh", srcVertex);
-        if (ret <= 0) {
-            log_lf(Log::L_ERROR, "Cannot read file textured.vsh\n");
-            return 1;
-        }
-        ret = ReadFileText("textured.fsh", srcFragment);
-        if (ret <= 0) {
-            log_lf(Log::L_ERROR, "Cannot read file textured.fsh\n");
-            return 1;
-        }
+        String srcVertex = TEXTURED_GLSL_VERT;
+        String srcFragment = TEXTURED_GLSL_FRAG;
+        // int64_t ret = ReadFileText("textured.vsh", srcVertex);
+        // if (ret <= 0) {
+        //     log_lf(Log::L_ERROR, "Cannot read file textured.vsh\n");
+        //     return 1;
+        // }
+        // ret = ReadFileText("textured.fsh", srcFragment);
+        // if (ret <= 0) {
+        //     log_lf(Log::L_ERROR, "Cannot read file textured.fsh\n");
+        //     return 1;
+        // }
 
         GLuint vertex_shader, fragment_shader;
         vertex_shader = compileShader(GL_VERTEX_SHADER, srcVertex);

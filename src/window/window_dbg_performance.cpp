@@ -113,7 +113,6 @@ void setSamples(ProfilingDataChannelBase* const ch,
     ch->valueMax  = valueMax;
 }
 
-
 struct gl_shader_perfgraph final : gl_shader_pipeline {
     bool isValid = false;
     GLint u_renderColor     = 0;
@@ -134,9 +133,7 @@ struct gl_shader_perfgraph final : gl_shader_pipeline {
     }
     template<typename T>
     int load(T* srcParser) {
-        const char* fnameVsh = "textured.vsh";
-        const char* fnameFsh = "perfgraph.fsh";
-        int newprogram       = compileShaderCombo(srcParser, fnameVsh, fnameFsh);
+        int newprogram       = compileBuiltinShader(srcParser, TEXTURED_GLSL_VERT, PERFGRAPH_GLSL_FRAG);
         if (newprogram < 0) {
             dbgassert(newprogram != -2);
             return -1;

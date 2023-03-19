@@ -12,6 +12,18 @@ def main():
         "PATH": "nanovg.vsh",
         "VAR_NAME": "NVG_GLSL_VERT"
       },
+      {
+        "PATH": "textured.fsh",
+        "VAR_NAME": "TEXTURED_GLSL_FRAG"
+      },
+      {
+        "PATH": "textured.vsh",
+        "VAR_NAME": "TEXTURED_GLSL_VERT"
+      },
+      {
+        "PATH": "perfgraph.fsh",
+        "VAR_NAME": "PERFGRAPH_GLSL_FRAG"
+      },
     ]
 
     cVarDefs = ['#include <stdint.h>\n']
