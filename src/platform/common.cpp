@@ -76,7 +76,11 @@ void initPlatformEnvironment(const String& appname, const String& optionalCwd) {
 
     String userDataPath = appname;
     if(determineUserdataPath(userDataPath)) {
+#if defined(__linux__) || defined(__APPLE__)
+        userDataPath = userDataPath + FILE_PATHSEP_STR + "." + appname;
+#else
         userDataPath = userDataPath + FILE_PATHSEP_STR + appname;
+#endif
     }
     setUserdataPath(userDataPath);
     if (!App::Platform::pathUserdata.empty()) {
