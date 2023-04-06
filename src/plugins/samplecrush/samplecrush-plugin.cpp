@@ -37,8 +37,12 @@
 #include "window.h"
 
 namespace PluginSampleCrush {
-    int32_t convertToBits(float value) {
+    int32_t convertToSamples(float value) {
         return math::clamp<int32_t>(math::floorfS32(value * (BITCRUSH_BITS_MAX - BITCRUSH_BITS_MIN) + BITCRUSH_BITS_MIN), BITCRUSH_BITS_MIN, BITCRUSH_BITS_MAX);
+    }
+    
+    int32_t convertToBits(float value) {
+        return math::clamp<int32_t>(math::floorfS32(value * BITCRUSH_BITS_MAX), BITCRUSH_BITS_MIN, BITCRUSH_BITS_MAX);
     }
     
     int32_t convertToMode(float value) {
@@ -143,16 +147,17 @@ namespace PluginSampleCrush {
         dbgassert(in->channels >= 2 && out->channels >= 2);
         int mode = convertToMode(getParamValue(PARAM_CRUSH_MODE));
         if (mode == 0) {
-            processSampleSampleCrush(in->buf, out->buf, numSamples, convertToBits(getParamValue(PARAM_NUM_SAMPLES)));
+            processSampleSampleCrush(in->buf, out->buf, numSamples, convertToSamples(getParamValue(PARAM_NUM_SAMPLES)));
         } else if (mode == 1) {
             processSampleBitCrush(in->buf, out->buf, numSamples, convertToBits(getParamValue(PARAM_NUM_SAMPLES)));
         } else {
-            processSampleHardClip(in->buf, out->buf, numSamples, convertToBits(getParamValue(PARAM_NUM_SAMPLES)));
+            processSampleHardClip(in->buf, out->buf, numSamples, convertToSamples(getParamValue(PARAM_NUM_SAMPLES)));
         }
     }
 
     param_converted_t module_samplecrush::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
         //TODO: use std::from_chars when floating point version arrives in libc++
+    
         auto fTextFieldVal = static_cast<float>(atof(StringAsCStr(displayValue.value)));
         switch (idx) {
             case PARAM_NUM_SAMPLES: {
@@ -175,9 +180,21 @@ namespace PluginSampleCrush {
     param_unit_t module_samplecrush::convertParamValueToDisplay(int32_t idx, float value) {
         auto param = getParam(idx);
         dbgassert(param);
+        // if (param->idx == PARAM_NUM_SAMPLES) {
+        //     auto nPow2 = (1 << convertToBits(value));
+        //     return {StringFormat("%d", nPow2), param->unit};
+        // }
         if (param->idx == PARAM_NUM_SAMPLES) {
-            auto nPow2 = (1 << convertToBits(value));
-            return {StringFormat("%d", nPow2), param->unit};
+            switch (convertToMode(getParamValue(PARAM_CRUSH_MODE))) {
+                case 0:
+                    return {StringFormat("%d", convertToSamples(value)), "Samples"};
+                case 1:
+                    return {StringFormat("%d", convertToSamples(value)), "Bits"};
+                case 2:
+                    return {StringFormat("%d", convertToSamples(value)), "Samples"};
+                default:
+                    break;
+            }
         }
         if (param->idx == PARAM_CRUSH_MODE) {
             int mode = convertToMode(getParamValue(PARAM_CRUSH_MODE));
