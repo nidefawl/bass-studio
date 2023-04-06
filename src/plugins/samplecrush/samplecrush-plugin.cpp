@@ -40,8 +40,12 @@ namespace PluginSampleCrush {
     int32_t convertToBits(float value) {
         return math::clamp<int32_t>(math::floorfS32(value * (BITCRUSH_BITS_MAX - BITCRUSH_BITS_MIN) + BITCRUSH_BITS_MIN), BITCRUSH_BITS_MIN, BITCRUSH_BITS_MAX);
     }
+    
+    int32_t convertToMode(float value) {
+        return math::clamp<int32_t>(math::floorfS32(value * (BITCRUSH_MODE_MAX - BITCRUSH_MODE_MIN) + BITCRUSH_MODE_MIN), BITCRUSH_MODE_MIN, BITCRUSH_MODE_MAX);
+    }
 
-    static void processSampleCrush(float** inputs, float** outputs, VstInt32 sampleFrames, const int32_t sampleCrushLevel) {
+    static void processSampleHardClip(float** inputs, float** outputs, VstInt32 sampleFrames, const int32_t sampleCrushLevel) {
         float* out1 = outputs[0];
         float* out2 = outputs[1];
         float* in1  = inputs[0];
@@ -69,7 +73,36 @@ namespace PluginSampleCrush {
         }
     }
 
+    static void processSampleBitcrush(float** inputs, float** outputs, VstInt32 sampleFrames, const int32_t sampleCrushLevel) {
+        float* out1 = outputs[0];
+        float* out2 = outputs[1];
+        float* in1  = inputs[0];
+        float* in2  = inputs[1];
+        int steps   = 1 << (sampleCrushLevel);
+        if (steps <= 1) {
+            for (int a = 0; a < sampleFrames; a++) {
+                (*out1++) = (*in1++);
+                (*out2++) = (*in2++);
+            }
+        } else {
+            for (int a = 0; a < sampleFrames; a += steps) {
+                float accL = 0;
+                float accR = 0;
+
+                for (int b = 0; b < steps; b++) {
+                    accL += (*in1++);
+                    accR += (*in2++);
+                }
+                for (int b = 0; b < steps; b++) {
+                    (*out1++) = (accL) / steps;
+                    (*out2++) = (accR) / steps;
+                }
+            }
+        }
+    }
+
     static constexpr int32_t PARAM_NUM_SAMPLES = 1;
+    static constexpr int32_t PARAM_CRUSH_MODE  = 2;
 
     module_samplecrush::module_samplecrush(int32_t _projectGlobalId, IHostCallback* _hostCallback)
         : internalplugin("Sample Crush", getModuleType(), _projectGlobalId, _hostCallback)
@@ -80,8 +113,9 @@ namespace PluginSampleCrush {
             String unit;
             float val;
         };
-        const std::array<effectgain_param_entry, 1> parameterTypes{ {
-            { PARAM_NUM_SAMPLES, "#Samples", "samples",  0.0f }
+        const std::array<effectgain_param_entry, 2> parameterTypes{ {
+            { PARAM_NUM_SAMPLES, "#Samples", "samples",  0.0f },
+            { PARAM_CRUSH_MODE, "Mode", "a/b",  0.0f }
         } };
         for (const auto& paramEntry : parameterTypes) {
             registerParam(paramEntry.id)->initValue(paramEntry);
@@ -95,7 +129,12 @@ namespace PluginSampleCrush {
                 && format.sampleRate > 0);
         out->clear();
         dbgassert(in->channels >= 2 && out->channels >= 2);
-        processSampleCrush(in->buf, out->buf, numSamples, convertToBits(getParamValue(PARAM_NUM_SAMPLES)));
+        int mode = convertToMode(getParamValue(PARAM_CRUSH_MODE));
+        if (mode == 0) {
+            processSampleBitcrush(in->buf, out->buf, numSamples, convertToBits(getParamValue(PARAM_NUM_SAMPLES)));
+        } else {
+            processSampleHardClip(in->buf, out->buf, numSamples, convertToBits(getParamValue(PARAM_NUM_SAMPLES)));
+        }
     }
 
     param_converted_t module_samplecrush::convertParamValueDisplay(int32_t idx, const param_unit_t& displayValue) {
